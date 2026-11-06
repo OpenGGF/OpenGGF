@@ -1950,11 +1950,14 @@ its original drawing priority.
 
 ## Maintenance and release preparation
 
-- Contributor readability: name the object rewind reconstruction/restoration
-  stages, group object-side solid latch expiry without releasing player state,
-  and make rewind HUD decisions and HCZ wall-event scheduling easier to follow.
-  Buzz Bomber lifetime checks now exercise the production badnik, and the testing
-  guide provides a focused trace diagnosis path without duplicate status claims.
+- Contributor readability: give live objects, slots and stable identities one
+  population owner, separate rewind reconstruction from world orchestration,
+  and group contact memory and its lifetime in a dedicated capability. Retiring
+  multipart solids expires piece-scoped contact bits and frame history without
+  releasing player state, and contact restore discards uncaptured future frame
+  observations. Rewind HUD decisions and HCZ wall-event scheduling
+  are easier to follow. Buzz Bomber lifetime checks exercise the production
+  badnik; focused lifecycle and trace commands have discoverable entry points.
 
 - `AGENTS.md` is now the only project instruction file. Claude Code loads it
   because the repository has no `CLAUDE.md`, and the commit hook rejects one.

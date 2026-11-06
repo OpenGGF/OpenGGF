@@ -16,6 +16,10 @@ import com.openggf.mods.ModRuntimeFindingStore;
 import com.openggf.mods.ModStateSaveResult;
 import com.openggf.mods.code.ModFaultBoundary;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
+import com.openggf.tests.TestEnvironment;
+import com.openggf.game.session.SessionManager;
 
 import java.util.List;
 import java.util.Map;
@@ -32,6 +36,17 @@ import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.any;
 
 class TestObjectSolidContactController {
+
+    @BeforeEach
+    void openGameplayServices() {
+        TestEnvironment.resetAll();
+    }
+
+    @AfterEach
+    void closeGameplayServices() {
+        SessionManager.clear();
+    }
+
 
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.ValueSource(ints = {0x10, 0x1F, 0x20, 0x21, 0x22, 0x23})
@@ -106,7 +121,140 @@ class TestObjectSolidContactController {
     }
 
     @Test
-    void pieceStandingAndClearedKeysKeepSiblingScopeAndCanonicalOrder() {
+    void transitionContactsRetainLiveCarriedPieceWithoutRecreatingClearedOrNoncarriedBits() {
+        var retained = new PieceSolid(spawn(), true, true);
+        var source = boundaryEnabledManager(retained);
+        var notCarried = new PieceSolid(new ObjectSpawn(300, 100, 0, 0, 0, false, 0), true, true);
+        notCarried.setSlotIndex(retained.getSlotIndex() + 1);
+        source.addDynamicObject(notCarried);
+        retained.snapshotPreUpdatePosition();
+        notCarried.snapshotPreUpdatePosition();
+        var lower = landOnPiece(source, retained, 0, "sonic-transition-lower");
+        var upper = landOnPiece(source, retained, 1, "tails-transition-upper");
+        var excluded = landOnPiece(source, notCarried, 0, "excluded-transition-rider");
+
+        // Use actual object-bit release and one ordinary continued-ride checkpoint:
+        // both rides survive, but only lower's native piece bit is re-established.
+        source.solidContacts().releaseObjectStandingLatchForAllPlayers(retained);
+        SolidObjectPassTestSupport.participantCheckpoint(source, retained, lower, false);
+        var sourceBefore = source.solidContacts().captureRewindState();
+        var livePiece = new ObjectManagerSnapshot.SolidContactLatchKey(
+                retained.getSpawn(), retained.getSlotIndex(), true, 0);
+        assertEquals(List.of(livePiece), keysFor(sourceBefore.standingBits(), lower));
+        assertTrue(keysFor(sourceBefore.standingBits(), upper).isEmpty());
+        assertFalse(keysFor(sourceBefore.standingBits(), excluded).isEmpty());
+        assertSame(retained, source.getRidingObject(lower));
+        assertSame(retained, source.getRidingObject(upper));
+
+        var target = boundaryEnabledManager(retained);
+        ObjectTransitionContacts.inherit(target, source, List.of(retained));
+
+        var transferred = target.solidContacts().captureRewindState();
+        assertEquals(List.of(livePiece), keysFor(transferred.standingBits(), lower));
+        assertTrue(keysFor(transferred.standingBits(), upper).isEmpty(),
+                "a retained ride does not recreate an explicitly cleared piece bit");
+        assertTrue(keysFor(transferred.standingBits(), excluded).isEmpty(),
+                "the noncarried object's live bit belongs only to the old manager");
+        assertSame(retained, target.getRidingObject(lower));
+        assertSame(retained, target.getRidingObject(upper));
+        assertEquals(0, target.getRidingPieceIndex(lower));
+        assertEquals(1, target.getRidingPieceIndex(upper));
+        assertNull(target.getRidingObject(excluded));
+        assertTrue(lower.isOnObject());
+        assertTrue(upper.isOnObject());
+        assertSame(notCarried, source.getRidingObject(excluded));
+        assertEquals(sourceBefore, source.solidContacts().captureRewindState(),
+                "contact transfer must not mutate the source manager's memory");
+    }
+
+    @Test
+    void freshMultipartLandingSurvivesSameFrameAirborneStateButReleasesAtTheNextFrame() {
+        var owner = new PieceSolid(spawn(), true, true);
+        var manager = boundaryEnabledManager(owner);
+        owner.snapshotPreUpdatePosition();
+        var player = landOnPiece(manager, owner, 0, "sonic-fresh-standing");
+        int landingFrame = manager.solidContacts().captureRewindState().frameCounter();
+        player.setAir(true);
+        player.setYSpeed((short) -0x600);
+
+        SolidObjectPassTestSupport.participantCheckpoint(manager, owner, player, false);
+
+        assertSame(owner, manager.getRidingObject(player));
+        assertTrue(player.isOnObject());
+        assertEquals((short) -0x600, player.getYSpeed());
+        assertEquals(landingFrame, manager.solidContacts().captureRewindState().frameCounter());
+        assertFalse(keysFor(manager.solidContacts().captureRewindState().standingBits(), player).isEmpty());
+
+        manager.solidContacts().beginInlineFrame(player, List.of(), false);
+        SolidObjectPassTestSupport.participantCheckpoint(manager, owner, player, false);
+
+        assertNull(manager.getRidingObject(player));
+        assertFalse(player.isOnObject());
+        assertTrue(player.getAir());
+        assertEquals((short) -0x600, player.getYSpeed());
+        assertTrue(keysFor(manager.solidContacts().captureRewindState().standingBits(), player).isEmpty());
+    }
+
+    @Test
+    void keyProviderInvalidationCancelsTheProductionInitialDispatchAdapterBeforePublishingState() {
+        ObjectManager[] manager = new ObjectManager[1];
+        boolean[] armed = {false};
+        int[] keyCalls = {0};
+        var owner = new PieceSolid(spawn(), true, true) {
+            @Override
+            public boolean usesInstanceSolidStateLatchKey() {
+                keyCalls[0]++;
+                if (armed[0]) {
+                    armed[0] = false;
+                    manager[0].reset(0);
+                }
+                return true;
+            }
+        };
+        manager[0] = boundaryEnabledManager(owner);
+        var player = new ContactSonic("sonic-initial-key");
+        try (var scope = manager[0].beginInitialProcessSprites(0, player, List.of())) {
+            assertTrue(manager[0].hasActiveInitialProcessSpritesDispatch());
+            keyCalls[0] = 0;
+            armed[0] = true;
+
+            RuntimeException failure = assertThrows(RuntimeException.class,
+                    () -> manager[0].solidContacts().releaseObjectPushLatchForAllPlayers(owner));
+
+            assertTrue(ObjectManagerInternalAccess.isInitialDispatchCancellation(failure));
+            assertEquals(1, keyCalls[0], "the first invalidating callback must stop the key operation");
+            assertFalse(manager[0].hasActiveInitialProcessSpritesDispatch());
+            assertTrue(manager[0].solidContacts().captureRewindState().standingBits().isEmpty());
+            assertTrue(manager[0].solidContacts().captureRewindState().pushingBits().isEmpty());
+        }
+    }
+
+    @Test
+    void removingDynamicMultipartSolidExpiresBothPlayersObjectBitsWithoutReleasingTheirRides() {
+        var owner = new PieceSolid(spawn(), true, true);
+        var manager = boundaryEnabledManager(owner);
+        owner.snapshotPreUpdatePosition();
+        var lowerRider = landOnPiece(manager, owner, 0, "sonic-lower-retirement");
+        var upperRider = landOnPiece(manager, owner, 1, "sonic-upper-retirement");
+        var before = manager.solidContacts().captureRewindState();
+        assertEquals(2, before.standingBits().size(), "both real landings must establish an object-side bit");
+        assertTrue(before.standingBits().stream()
+                .flatMap(entry -> entry.keys().stream()).allMatch(key -> key.instanceKey()));
+
+        manager.removeDynamicObject(owner);
+
+        var retired = manager.solidContacts().captureRewindState();
+        assertTrue(retired.standingBits().isEmpty(),
+                "deleting a dynamic solid must not capture piece keys for its freed owner slot");
+        assertTrue(retired.pushingBits().isEmpty());
+        assertSame(owner, manager.getRidingObject(lowerRider), "object deletion does not release the player");
+        assertSame(owner, manager.getRidingObject(upperRider));
+        assertTrue(lowerRider.isOnObject());
+        assertTrue(upperRider.isOnObject());
+    }
+
+    @Test
+    void pieceStandingSnapshotsKeepSiblingScopeAndCanonicalOrder() {
         var owner = new PieceSolid(spawn(), false, true);
         var player = mock(PlayableEntity.class);
         var manager = mock(ObjectManager.class);
@@ -115,12 +263,12 @@ class TestObjectSolidContactController {
         var first = new ObjectManagerSnapshot.SolidContactLatchKey(owner.getSpawn(), -1, false, 0);
         var second = new ObjectManagerSnapshot.SolidContactLatchKey(owner.getSpawn(), -1, false, 1);
 
-        controller.restoreRewindState(contactState(player, owner, List.of(second, first), List.of(second, first)));
+        controller.restoreRewindState(contactState(player, owner, List.of(second, first)));
         var captured = controller.captureRewindState();
         assertEquals(List.of(first, second), keysFor(captured.standingBits(), player));
         assertFalse(controller.hasStandingLatch(player, owner), "piece keys never become an aggregate key");
 
-        controller.restoreRewindState(contactState(player, owner, List.of(first, second), List.of(first, second)));
+        controller.restoreRewindState(contactState(player, owner, List.of(first, second)));
         assertEquals(captured, controller.captureRewindState(), "insertion order cannot change a saved world");
     }
 
@@ -137,7 +285,7 @@ class TestObjectSolidContactController {
         var second = new ObjectManagerSnapshot.SolidContactLatchKey(
                 originalOwner.getSpawn(), originalOwner.getSlotIndex(), true, 1);
         originalController.restoreRewindState(contactState(
-                originalPlayer, originalOwner, List.of(second, first), List.of(first)));
+                originalPlayer, originalOwner, List.of(second, first)));
         var originalIds = new RewindIdentityTable();
         originalIds.registerPlayer(originalPlayer, PlayerRefId.mainPlayer());
         var captured = originalController.captureRewindState(RewindCaptureContext.withIdentityTable(originalIds));
@@ -169,15 +317,13 @@ class TestObjectSolidContactController {
     }
 
     @Test
-    void retainedPieceRideDoesNotManufactureAnExplicitlyClearedStandingBit() {
+    void snapshotRestoreKeepsPieceRideWithoutManufacturingAnExplicitlyClearedStandingBit() {
         var owner = new PieceSolid(spawn(), false, true);
         var player = mock(PlayableEntity.class);
         var manager = mock(ObjectManager.class);
         when(manager.findRestoredRidingObject(owner.getSpawn(), owner.getSlotIndex())).thenReturn(owner);
         var controller = new ObjectSolidContactController(manager);
-        var cleared = new ObjectManagerSnapshot.SolidContactLatchKey(owner.getSpawn(), -1, false, 0);
-
-        controller.restoreRewindState(contactState(player, owner, List.of(), List.of(cleared)));
+        controller.restoreRewindState(contactState(player, owner, List.of()));
         var captured = controller.captureRewindState();
         assertSame(owner, controller.getRidingObject(player));
         assertEquals(0, controller.getRidingPieceIndex(player));
@@ -193,7 +339,7 @@ class TestObjectSolidContactController {
         var controller = new ObjectSolidContactController(manager);
         var legacy = new ObjectManagerSnapshot.SolidContactLatchKey(owner.getSpawn(), -1, false);
 
-        controller.restoreRewindState(contactState(player, owner, List.of(legacy), List.of(legacy)));
+        controller.restoreRewindState(contactState(player, owner, List.of(legacy)));
         assertTrue(controller.hasStandingLatch(player, owner));
         var captured = controller.captureRewindState();
         assertEquals(-1, captured.standingBits().getFirst().keys().getFirst().pieceIndex());
@@ -230,9 +376,7 @@ class TestObjectSolidContactController {
     }
 
     private static ObjectManagerSnapshot.SolidContactState contactState(PlayableEntity player, PieceSolid owner,
-            List<ObjectManagerSnapshot.SolidContactLatchKey> live,
-            List<ObjectManagerSnapshot.SolidContactLatchKey> cleared) {
-        // The per-frame pre-clear snapshot (cleared) is rebuilt every frame and not rewound.
+            List<ObjectManagerSnapshot.SolidContactLatchKey> live) {
         return new ObjectManagerSnapshot.SolidContactState(17,
                 List.of(new ObjectManagerSnapshot.SolidContactRidingEntry(player, owner.getSpawn(),
                         owner.getSlotIndex(), 0)),
@@ -240,7 +384,7 @@ class TestObjectSolidContactController {
                 List.of());
     }
 
-    private static final class PieceSolid extends AbstractObjectInstance implements MultiPieceSolidProvider {
+    private static class PieceSolid extends AbstractObjectInstance implements MultiPieceSolidProvider {
         private final boolean instanceKey;
         private final boolean pieceScoped;
 

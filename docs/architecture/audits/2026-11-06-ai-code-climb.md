@@ -448,3 +448,227 @@ and acknowledged after preserving the identity/assertion comparison above. The
 clean, owned baseline worktree was removed; ai-code-climb and its worktree are
 retained for draft review. Final PR URL/head and delivery status belong to the
 task handoff. Broader packaging and ownership changes remain future increments.
+
+## Structural increment: accepted target and design
+
+User authorised continuing beyond local cleanup: target 85/100 for each task,
+no dimension below 3, and 4 for owner discovery, behaviour comprehension and
+source readability. Start from `0480854d9`, continuing draft PR 266. Scores must
+come from fresh walkthroughs and evidence, not be assigned to meet the target.
+
+Chosen boundaries:
+
+- `contact.SolidContactState` owns ride membership, object-side keys/bits,
+  frame history, retirement and snapshot encoding. Collision decisions and
+  player writes remain in the compatible controller. A three-operation access
+  seam resolves occurrence identity/restored occupants and retains the existing
+  dispatch validity guard; no maps or manager escape into the state owner.
+- `ObjectPopulation` replaces the old population view and becomes the single
+  live membership/slot/identity authority. No manager aliases or copied maps.
+- `ObjectRewindLifecycle` owns reconstruction state, reuse/adoption/retries,
+  player-bound admissions and the identity-before-fields-before-settling phases.
+  Manager retains world clocks, placement and collision orchestration. Existing
+  recreation probing remains unchanged; no new general Host/Surface framework.
+- Preserve public facades and API pins. Package navigation explains capability
+  boundaries without adding another required document hierarchy.
+
+Rejected: more private helper extraction; a large getter/callback adapter that
+  recreates the manager's field graph; moving callback classes to public scope
+  solely for package cosmetics; rewriting constructor heuristics during this
+  state-ownership migration. The first two repeat the original knowledge burden;
+  the latter two enlarge compatibility risk without serving the contributor task.
+
+Owners: collision_structure (contact state/controller/tests), rewind_structure
+(population/lifecycle/manager integration), contributor_paths (existing guide
+and package navigation), lead (cross-boundary reconciliation, guards, probes,
+validation and delivery). Workers edit disjoint files without builds or commits;
+lead freezes the combined source before runtime validation.
+
+Fresh assessment holds out same-frame landing/jump, retained-SST contact transfer
+and late shield reconstruction. The reviewer must account for access machinery,
+new concepts and all required cross-reading. A moved implementation earns no
+automatic score. Any remaining floor/target miss must be reported explicitly.
+
+Validation baseline: a separate detached cow checkout at 0480854d9. Shared
+ownership changes select all bounded smoke plus guards (4,467 candidates before
+new tests); use two workers, the runner's 40-minute execution bound excluding
+queue wait, Java 25, explicit Lua 5.4 and surfaceless EGL. No public release
+full-suite or exhaustive audit. Compare identity/assertion/skip differences and
+run focused lifecycle tests and the HCZ replay separately. Initial checkpoint:
+implementation in progress; no achieved-score or correctness claim.
+
+Structural checkpoint: source extraction is complete and frozen for focused
+validation and independent review. The original constructor-probing policy and
+public signatures remain intact. Existing private trace diagnostics now follow
+the population owner; package-local slot tests use that owner directly rather
+than retain compatibility fields or add public test-only getters.
+
+Two actual lifetime defects were reproduced before their respective fixes:
+
+1. Production landings on two pieces of an instance-keyed dynamic solid,
+   followed by normal removal, left captured keys for the freed owner slot.
+   `removingDynamicMultipartSolidExpiresBothPlayersObjectBitsWithoutReleasingTheirRides`
+   failed its empty-standing-bits assertion. Owner retirement removed a bare key
+   but missed piece wrappers. Expiry now matches each key's owning object.
+2. With that fix, the production deletion witness passed, while the new state
+   test `permanentInstanceRetirementExpiresPieceHistoryWithoutDroppingTheRide`
+   still failed: the established-this-frame marker survived owner retirement.
+   Permanent expiry now removes that owned history as well. Ordinary bit release
+   still differs from retirement and does not indiscriminately clear frame state.
+
+The reference was checked against pinned skdisasm
+`8b2cf3c4178f2382f844da67798de4befc50c5e0`: Delete_Current_Sprite /
+Delete_Referenced_Sprite (sonic3k.asm:36148-36165) zeroes the whole object slot.
+No trace row, frame-specific gate or observed gameplay value supplies the fix.
+Player ride/status retention remains part of both boundary witnesses.
+
+The first standalone witness exposed a missing gameplay-session fixture, not
+the defect. Its class now explicitly opens/closes gameplay services, making
+the focused command independent of prior tests. A compile-time leftover field
+reference was replaced with the lifecycle setter. The no-active-dispatch read
+path reuses one no-op validity guard rather than allocating a closure per query.
+No achieved score is assigned here; fresh held-out assessment is running.
+
+The first frozen structural draft passed 283 focused cases (no failures/errors/
+skips) and all 3,519 HCZ trace frames (no comparison/bootstrap errors or warnings).
+Independent correctness review found no new behavioural defect, but identified
+storage-only ownership: callers still coordinated raw publication mutations.
+
+A separate fresh assessment, without prior scores or this audit, rated the
+held-out collision path `[4,3,2,3,2,2,3,2]` (67.5) and late-shield path
+`[3,3,2,2,2,3,3,3]` (65), in rubric order. These held-out tasks differ from the
+original samples, so the numbers are not a direct before/after measurement.
+They do not meet the agreed target. The assessment credited actual ownership
+and browsing gains, while identifying remaining coordination and verification
+barriers. Work continues rather than relabelling the draft as successful.
+
+Next refinements address the observed barriers: coherent freshness/airborne
+transitions; positive retained-piece and actual dispatch-boundary witnesses;
+population admission/retirement/publication operations preserving callback
+interleaving; and one late player-bound completion owner with a production
+reverse-refresh witness. The guide's initial selector omitted the new state
+and solid-manager tests, and incorrectly described a snapshot test as transfer
+coverage; those concrete guidance defects were corrected. Historical phase
+names and moved-owner references in current source docs were corrected too.
+
+A second independent source walkthrough rated the refined held-out tasks
+`[3,3,3,3,3,2,3,3]` (72.5) and `[3,3,3,2,2,3,2,3]` (66.25). It did not read
+this audit or receive numerical targets, and gave no runtime-success credit.
+Its remaining concrete objections were a component-only positive multipart
+transfer witness, population mutations still coordinated by callers, an
+overbroad identity-before-fields guarantee that omitted deferred effects, and
+incomplete identity/adoption test guidance. These results still miss the target.
+
+The successful-restore witness also exposed a third real lifetime defect:
+`successfulRestoreDiscardsUncapturedFutureFrameObservationsWithoutAdvancingTheSavedClock`
+failed both its fresh-standing and controller-release observations. A successful
+restore now discards those uncaptured future observations after all required
+player roles resolve, retaining the saved frame counter. A failed role lookup
+must leave the existing state intact. Frame-boundary clearing shares the history
+operation, but keeps the separate monitor-bounce lifetime unchanged.
+
+The expanded candidate check was cancelled before execution after approximately
+19 minutes of shared-capacity waiting because the assessment required additional
+source changes. It supplies no verification result. The baseline category job
+remained active; no queue files, limits or unrelated jobs were changed. The lead
+owns the replacement focused check after the revised source is frozen.
+
+The final bounded refinement gives standing-helper entry one visible result:
+continue, own ride released, or no contact. Ride release, object-bit consumption
+and early return keep their original lazy callback order and dispatch reservation.
+Continued-riding and piece iteration retain their own provider reads; an eager
+combined preflight was rejected because it changes callback cadence.
+
+Positive live transfer now has a production witness in
+`TestObjectSolidContactController#transitionContactsRetainLiveCarriedPieceWithoutRecreatingClearedOrNoncarriedBits`.
+Three real landings establish source contacts. Public object-bit release plus
+one continued-ride checkpoint leaves a live carried piece, a cleared carried
+piece/player and a noncarried live control. `ObjectTransitionContacts.inherit`
+must preserve that distinction, both retained rides and source independence.
+The snapshot-only example is named accurately and its unused history argument
+was removed. The guide points to the actual transfer and adoption/order checks.
+
+Population operations now own dynamic identity/membership publication, auxiliary
+classification/admission, reconstruction/reset clears, copied child reservations,
+captured-order sorting and destroyed-actor iterator retirement. The ordinary
+admission callback explicitly leaves live execution-cursor policy with the
+manager between membership publication and cache invalidation. Native slot,
+reservation and occurrence writers remain documented trusted paths; no new
+general Host interface or copied population was added. `DynamicObjectOwnership`
+supplies classification/order metadata and cannot mutate caller lists or IDs.
+
+The normal graph's identity/fields/settling guarantee now states its exception:
+deferred player effects complete through actual player refresh with captured
+identity/order and the existing scalar-only restore overload. They cannot be
+required reference targets in the earlier graph pass, and optional absent
+references receive no automatic later fixup. This documents existing behavior;
+it does not silently broaden the late-effect reconstruction contract.
+
+Current checkpoint: implementation owners are stopped, source is frozen, and
+the 22-class focused command is queued as `code-climb-structural-focused-v3.log`.
+The baseline category job remains live. Fresh independent source assessment is
+read-only and receives the rubric and held-out task families without numerical
+targets or prior scores. No final correctness or achieved-score claim yet.
+
+The frozen refinement passed the 22-class command: 290 cases, no failures,
+errors or skips; Maven execution 1m49s after 694s shared admission wait. This
+includes the successful-restore history witness and actual reverse-refresh
+witness. Read-only review caught a fixture prerequisite before execution:
+the latter assigned creator owners while retaining `ENGINE_ONLY`, which rejects
+non-null owners. Its resolver now authorises only the engine shield class for
+the two test owners, delegating every other case to `ENGINE_ONLY`. The guide's
+refresh symbol was corrected to `refreshPowerUpObjectsAfterRewindRestore`.
+
+That review found no open material production regression. It scored contact
+`[4,3,3,4,3,3,4,3]` (85) and late completion `[4,3,3,3,3,3,4,3]` (81.25).
+The remaining concrete handoff obstacle was an unnecessary control inversion:
+lifecycle called population, which called manager admission and returned to
+population before resuming lifecycle. The population helper had no transaction
+or rollback guarantee. It is removed. Lifecycle now directly installs captured
+identity, invokes ordinary admission, restores captured order, binds collision
+identity, then restores scalar state. Each storage write remains a population
+operation. Legacy null-ID handling and native admission callbacks are unchanged.
+
+A fresh reviewer assessed only the changed late-completion task, without the
+audit, numerical targets or previous scores: `[4,4,3,3,3,4,3,3]` (85). No open
+material correctness issue was found by source comparison. Reviewer variation
+contributes to these ratings; the difference cannot be attributed solely to
+the linearisation. This reaches the 85 weighted floor for both held-out tasks
+and leaves no dimension below 3. The stronger aim of 4 for understanding and
+readability is **not achieved**: collision still requires choosing among distinct
+routine contexts, and native admission still demands deliberate cross-reading.
+These are static contributor assessments, not human onboarding measurements.
+
+The four-class late-completion/adoption/order/callback recheck and final HCZ
+replay are queued. Broad candidate smoke/guards and exact baseline comparison
+remain required before delivery. New/moved citation debt was repaired against
+the pinned disassembly; `check-staged` passes without changing reference pins.
+The unrestricted repository citation scan still reports inherited debt outside
+this increment; it is not represented as a clean whole-repository check.
+
+Final focused recheck after linearisation:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestShieldRewindPendingRestore,TestObjectRewindExactAdoption,TestTwoPhaseRestoreOrdering,TestObjectRemovalCallbackOwnership' test
+```
+
+31 cases passed, no failures/errors/skips; Maven execution 1m32s after 990s
+admission wait. The final HCZ command was:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay \
+  '-Dtest=TestS3kSonicTailsHczSegmentTraceReplay' \
+  -Dopenggf.headless.gl=surfaceless-egl test
+```
+
+One test passed with no skips; 3,519 compared frames, no comparison or bootstrap
+errors/warnings, comparison gate reached for the 3,574-row plan. Available
+verification groups are physics and animation. Eight advertised auxiliary
+schemas are absent; this does not certify unavailable comparison fields.
+Maven execution 40.520s after 816s admission wait. Both commands used Java 25,
+Lua 5.4, original verified ROM discovery and unset display variables.
+
+Implementation is ready for the required frozen candidate smoke/guards. The
+baseline job is still active; delivery and its exact failure/skip comparison
+remain pending. No broad green verdict is claimed.

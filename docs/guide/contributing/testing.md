@@ -150,6 +150,48 @@ baseline changes require explicit review; an audit failure is never ignored.
 The rewind system has both ordinary regression tests and an opt-in benchmark. See
 [Rewind System](rewind-system.md) for usage, limitations, and architecture details.
 
+### Object population and contact boundaries
+
+For contact lifetime or object reconstruction changes, start with these production
+boundary checks rather than selecting every rewind test:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestSolidContactState,TestObjectSolidContactController,TestSolidObjectManager,TestObjectManagerRewindSnapshot,TestShieldRewindPendingRestore,TestObjectManagerDynamicChainRewindRestore' test
+```
+
+The first three classes cover contact memory, real solid calls and retained-SST
+transfer; the manager snapshot class covers population round trips. The last pair
+exercises late player-bound admission and children that precede their parents in
+capture order. For a transfer walkthrough, start at
+`TestObjectSolidContactController#transitionContactsRetainLiveCarriedPieceWithoutRecreatingClearedOrNoncarriedBits`:
+real landings establish the bits, an object release and continued ride leave one
+piece live, then the production transition carries only the surviving owner.
+`TestSolidObjectManager` supplies the non-surviving-object control. For late
+effects, follow reverse player-refresh/identity and retry in
+`TestShieldRewindPendingRestore`. Snapshot piece-key restoration is a separate
+boundary from live-manager transfer.
+
+For identity publication, construction-child adoption or field-order changes,
+also run the exact-adoption and forward-reference boundaries:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestObjectRewindExactAdoption,TestTwoPhaseRestoreOrdering' test
+```
+
+The late-effect witness calls actual player refresh hooks in reverse order and
+compares captured identities and the complete object snapshot. It covers the
+deferred scalar restore path; `TestTwoPhaseRestoreOrdering` covers references
+between actors reconstructed in the ordinary graph pass.
+
+Use the [ownership map](architecture.md#finding-an-object-lifecycle-owner) to find
+the production entry. Check which cases executed and why any skipped. This
+bounded command does not replace change-based smoke, guards or affected ROM/trace
+checks required by the change.
+
+### General rewind coverage
+
 Run the regular rewind suite:
 
 ```bash

@@ -48,7 +48,11 @@ com.openggf/
     objects/                 -- Base object classes, registry interface, spawn records
       AbstractObjectInstance.java  -- Base class for all game objects
       ObjectRegistry.java         -- Interface: maps object IDs to factories
-      ObjectManager.java          -- Active object tracking, spawn/despawn
+      ObjectManager.java          -- Runtime entry: admission, execution, removal
+      ObjectPopulation.java       -- Live membership, slots, child reservations, identities
+      ObjectRewindLifecycle.java  -- Reconstruct captured populations and restore their state
+      ObjectSolidContactController.java -- Solid geometry and gameplay contact decisions
+      contact/                    -- Ride/latch state, frame lifetime, expiry and snapshot codec
       ObjectServices.java         -- Contextual services available to objects
       ObjectSpawn.java            -- Data record: x, y, objectId, subtype, flags
     render/                  -- Sprite rendering (PatternSpriteRenderer)
@@ -79,6 +83,51 @@ com.openggf/
   debug/                     -- Debug overlays and visualization
   tools/                     -- Offline tools (RomOffsetFinder, rewind inventory, etc.)
 ```
+
+### Finding an object lifecycle owner
+
+Start at the responsibility, rather than reading `ObjectManager` end to end:
+
+| Change or investigation | Owner |
+| --- | --- |
+| Which objects are live, which slots they own, or which identity they retain | `ObjectPopulation` |
+| Recreate linked objects, adopt construction children, or order a restore | `ObjectRewindLifecycle` |
+| Standing/pushing latch identity, ride lifetime, frame markers, or saved contacts | `contact.SolidContactState` |
+| Classify a solid contact or decide its gameplay response | `ObjectSolidContactController` |
+
+`ObjectManager` keeps the existing runtime entry points. The capability owners
+hold the state and rules behind them; they are not alternate public creator APIs.
+Their Javadoc defines the local invariants. For example, removing a solid clears
+its object-side bits without clearing the player's riding flags.
+
+Contact changes start with three different lifetimes:
+
+| State | Authority and lifetime |
+| --- | --- |
+| Player's ride and piece index | The player's support; clearing an object's bit alone does not release it |
+| Object's standing/pushing bits | Persist until the owning routine clears them or the object retires; transfer only with that exact surviving owner |
+| Fresh landing and pre-clear observations | Explain later calls in the same frame; expire at the next frame and are not restored from a snapshot |
+
+The controller decides when those states change. A newly landed airborne rider
+can retain a fresh bit when its collision rules or provider permit it; the same
+bit is stale on the next frame. Start at `retainsFreshStandingContact` for that
+policy, then follow only the relevant entry, continued-ride or multipart caller.
+
+Reconstruction has one ordinary order: create/adopt actors and register their
+identities, restore their fields/references, then settle derived state. Deferred
+player effects are an explicit exception. Their recreation hook queues a
+captured entry; `AbstractPlayableSprite.refreshPowerUpObjectsAfterRewindRestore` later creates the
+effect, and `ObjectRewindLifecycle.completePendingPlayerBoundObject` matches its
+concrete class and current player, admits it with its captured identity/order,
+then restores scalar state. Such a pending effect is unavailable as a required
+reference target during the earlier graph restore; there is no later reference
+fixup. Start at the completion method for matching/publication changes, and at
+`restorePopulation` for graph ordering or constructor-child adoption.
+
+Use the [focused object lifecycle checks](testing.md#object-population-and-contact-boundaries)
+to follow those boundaries through real production calls. See
+[`level.objects` package documentation](../../../src/main/java/com/openggf/level/objects/package-info.java)
+for the short source entry map.
 
 ## The GameModule / Provider Pattern
 
