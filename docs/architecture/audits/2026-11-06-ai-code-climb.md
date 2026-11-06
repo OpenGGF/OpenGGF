@@ -865,3 +865,33 @@ branch switch or destination push was performed.
 No validation job remains live. Keep `ai-code-climb` and its task worktree for
 [open draft PR 266](https://github.com/OpenGGF/OpenGGF/pull/266) against `develop`.
 Delivery remains stage-to-PR, with no merge or task-worktree cleanup.
+
+### Guard completeness follow-up
+
+Independent review of the validation repair found a remaining enforcement gap:
+`Class.getDeclaredClasses()` sees member types but misses local and anonymous
+actors inside factories. Two new counterexamples compiled and failed their
+actual classification assertions: 2 failures, 0 errors/skips. The classifier
+now parses top-level declaration names and examines their compiled lexical
+nests without initializing actors. This also covers secondary top-level actors;
+a separate source fixture pins that case. A non-actor factory in the same nest
+remains excluded. Parse errors and missing compiled top-level types fail the
+scan, and existing override/annotation debt maps remain unchanged.
+
+```bash
+# RED before the classifier correction: two real assertion failures.
+python3 tools/testing/maven_queue.py -Dmse=off -Pguards \
+  '-Dtest=TestRewindArchitectureGuard#objectOverrideClassificationIncludesLocalActors+objectOverrideClassificationIncludesAnonymousActors' test
+
+# Final guard suite after correction: 841 passed, no failures/errors/skips.
+python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B
+```
+
+Both commands used Java 25, Lua 5.4, unset display variables and the existing
+ROM discovery. Recorded admission wait was zero for each; Maven execution was
+38.708 seconds for RED and 10m15s for the final guard run. All eight rewind
+architecture checks passed, including the new positive and negative controls.
+Only guard tests, their fixture and this evidence changed after `c7971220b`;
+runtime code remains at `6bd548335`. The ordinary smoke verdicts and historical
+unattributed socket assertion above remain unchanged. No fresh ordinary or
+trace success is inferred from this guard-only follow-up.
