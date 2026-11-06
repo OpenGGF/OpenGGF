@@ -6,6 +6,11 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Sonic 1's Sonic on Sonic 3&K tumble objects:** Sonic 1 has no tumble frames,
+  so a donated Sonic 1 Sonic riding a Flying Battery wire cage or another tumble
+  object vanished. He now keeps his own walk and run frames there, and a donor's
+  own tumble frame base (Sonic 2 Tails') carries into its translated profile.
+
 ## Modding and tools
 
 ## Maintenance and release preparation

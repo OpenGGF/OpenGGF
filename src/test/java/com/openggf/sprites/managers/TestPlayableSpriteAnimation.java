@@ -314,6 +314,30 @@ public class TestPlayableSpriteAnimation {
     }
 
     @Test
+    public void profileWithoutTumbleFramesKeepsWalkRunOnHostTumbleObject() {
+        // Donated S1 Sonic on S3K Obj_FBZWireCage: SonicMap has no tumble frames.
+        TestablePlayableSprite sprite = createSprite(GameRules.SONIC_3K);
+        ((ScriptedVelocityAnimationProfile) sprite.getAnimationProfile())
+                .setTumbleFrameBase(ScriptedVelocityAnimationProfile.NO_TUMBLE_FRAMES);
+        SpriteAnimationSet animations = new SpriteAnimationSet();
+        animations.addScript(0, new SpriteAnimationScript(0xFF,
+                List.of(0x10), SpriteAnimationEndAction.LOOP, 0));
+        animations.addScript(1, new SpriteAnimationScript(0xFF,
+                List.of(0x20), SpriteAnimationEndAction.LOOP, 0));
+        sprite.setAnimationSet(animations);
+        sprite.setAnimationId(0);
+        sprite.setMovementInputActive(true);
+        sprite.setGSpeed((short) 0x0600);
+        sprite.setFlipType(0x80);
+        sprite.setFlipAngle(0x40);
+
+        sprite.getAnimationManager().update(0);
+
+        assertEquals(0x20, sprite.getMappingFrame(),
+                "a profile without tumble frames publishes its run frame, not base $5F + angle");
+    }
+
+    @Test
     public void s3kNegativeFlipTypeEntersTumbleBeforeAngleAdvances() {
         TestablePlayableSprite sprite = createSprite(GameRules.SONIC_3K);
         ((ScriptedVelocityAnimationProfile) sprite.getAnimationProfile())
