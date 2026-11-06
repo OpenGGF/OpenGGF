@@ -1,5 +1,11 @@
 package com.openggf.game.soniccd.objects;
 
+import com.openggf.game.soniccd.CdNativeFile;
+import com.openggf.game.soniccd.CdReleaseVariant;
+import com.openggf.game.soniccd.CdStagePayload;
+import com.openggf.game.soniccd.media.CdMmdImage;
+import com.openggf.game.soniccd.level.CdR12bObjectAssets;
+import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdObjectVisualAssets;
 import com.openggf.game.soniccd.level.CdR11bAssets;
@@ -43,6 +49,19 @@ public final class CdBigRing {
             Objects.requireNonNull(flash); Objects.requireNonNull(flashAnimations);
             staticVisual(ring, 4, 106); staticVisual(flash, 8, 77);
         }
+        /** Actual retained original-USA R12B data only; no body/Frame/World or current-art authority. */
+        public static Assets fromAct2PastAssets(CdR12bObjectAssets owner) {
+            Objects.requireNonNull(owner, "actual R12B metadata"); var identity = owner.identity();
+            if (identity.variant() != CdReleaseVariant.USA || identity.file() != CdNativeFile.R12B
+                    || identity.domain() != CdMmdImage.Domain.ORIGINAL_WORD_RAM
+                    || !identity.stage().equals(CdStagePayload.R12B.stage()))
+                throw new IllegalArgumentException("Actual original USA R12B metadata required");
+            return new Assets(owner.bigRing(), CdR12bObjectAssets.View.MAP_SPR_BIG_RING.range().nativeAddress(),
+                    owner.view(CdR12bObjectAssets.View.ANI_BIG_RING), owner.bigRingFlash(),
+                    CdR12bObjectAssets.View.MAP_SPR_BIG_RING_FLASH.range().nativeAddress(),
+                    owner.view(CdR12bObjectAssets.View.ANI_BIG_RING_FLASH));
+        }
+
         public static Assets fromPastAssets(CdR11bAssets owner) {
             Objects.requireNonNull(owner, "actual original Past assets");
             var ring = owner.view(CdR11bAssets.Asset.MAP_SPR_BIG_RING);
@@ -173,6 +192,15 @@ public final class CdBigRing {
     private final SoundPort sound;
     private final DrawObjectCall drawObject;
     private boolean running;
+
+    /** Source-pair ingress only; caller retains every actual helper/publication authority. */
+    public static CdBigRing fromAct2PastAssets(CdObjectPlacementRuntime placement, CdR12bTerrainAssets owner,
+                                              NativeRead read, SpecialStageStore special, PlayerCommit player,
+                                              ScrollLockStore scroll, SoundPort sound, DrawObjectCall draw) {
+        Objects.requireNonNull(placement); Objects.requireNonNull(owner);
+        if (!placement.sameAct2PastSource(owner)) throw new IllegalArgumentException("BigRing placement/assets source differs");
+        return new CdBigRing(placement, Assets.fromAct2PastAssets(owner.objects()), read, special, player, scroll, sound, draw);
+    }
 
     public CdBigRing(CdObjectPlacementRuntime placement, Assets assets, NativeRead nativeRead,
                      SpecialStageStore specialStage, PlayerCommit playerCommit, ScrollLockStore scrollLock,

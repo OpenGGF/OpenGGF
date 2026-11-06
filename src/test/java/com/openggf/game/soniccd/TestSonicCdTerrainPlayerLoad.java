@@ -462,11 +462,11 @@ class TestSonicCdTerrainPlayerLoad {
     private static Harness load(CdGameDataSource source) throws Exception {
         var module = SonicCdGameModule.terrainOnlyDevelopmentPlayer();
         var mode = open(module, source);
+        mode.getLevelManager().loadLevel(0, LevelLoadMode.FULL, SonicCdPlayerInitProfile.terrainPlayerContext());
         var loop = new GameLoop(EngineServices.current());
         loop.setGameplayMode(mode);
         loop.setInputHandler(new InputHandler());
         loop.setGameMode(GameMode.LEVEL);
-        mode.getLevelManager().loadLevel(0, LevelLoadMode.FULL, SonicCdPlayerInitProfile.terrainPlayerContext());
         return new Harness(module, mode, loop);
     }
 

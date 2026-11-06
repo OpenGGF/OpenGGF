@@ -125206,3 +125206,42 @@ Develop integration, post-integration focused/source checks, push verification
 and fully accounted cleanup follow this qualification and are recorded by the
 lead. Explicit old AIZ worktree, all native/tmp evidence and main user changes
 remain preserved.
+
+
+## 2026-11-06 — private Sonic CD Projector/Hurt controller continuation (not a native trace)
+
+At private source d032c114807f3ee30752bdb9a8f05f745fbea652 plus this checkpoint's
+qualified Java changes, the original-USA ordinary GameLoop returns15717,1782 R12B
+services, then first15718 OBJECT_KIND whole51/value34. Actual Spawn created the
+unchanged Spin Tunnel64 bytes at2348/0180, routine0; its body did not run. Original
+Right prefix, fixed earlier inputs and Right+B15601..15632 only; no actor/physics/
+source/camera/queue/cursor edits, trace hydration or native timing simulation.
+
+Projector14516 and four later children, real damage14534/LostRings, native Hurt
+14535 and landing now have full/course replay. R7 selects all5 permanent
+TestSonicCdAct2ControllerRoute cases:5/0/0/0, unchanged source/dependency observations,
+no skipped prerequisites. Both scopes compare complete checkpoint-aware state
+before and after forward edges. Temporary observer and formatting helpers are removed.
+R6's1/0/1/0 exploratory run supplies the first15718 boundary, not a positive test.
+R5 separately passes192/0/0/0 (13classes), including27 EGL/audio/boot and publication
+checks; R4 had436/3/26/0. These are distinct invocations, not one invented green fleet.
+
+Reproduction from the private checkout, Java25, real original-USA media:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS LUA_BIN=lua5.4 \
+  python3 -B tools/soniccd/integration_packet.py run --worktree "$I" \
+  --spec "$E/.work/r12b-projector-batch-root-20261106/handoff-r7.json" \
+  --lane normal --execute --compact-output --maven-progress concise \
+  --evidence "$E/research/<new-exclusive-r7-evidence>.json"
+```
+
+The external R7 spec pins the five-case source and explicit surfaceless-EGL,
+media and opening-EGL properties; it is historical evidence, not a reusable pass
+cache after edits. Original full source-bound result SHA256
+`af88d69f90b45d4c470d3e594a8130f6a392666725bac29338a72ef902e91210`.
+R5 result SHA256 `5e01513d2e58001caabf63c1d411f209e82a9e1a7f9d786c32ebdcfea8d508c3`.
+All observations and exact cases remain under Downloads/Sonic-CD, outside the repo.
+The separate parent smoke on frozen0db4d826e remains live/incomplete; no final
+VERDICT, matched baseline attribution, full-suite, new-pixel, native-image/audio,
+complete-act or regional qualification follows. Main/remotes untouched.

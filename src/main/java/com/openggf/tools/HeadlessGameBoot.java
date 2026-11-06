@@ -666,14 +666,14 @@ public final class HeadlessGameBoot implements AutoCloseable {
             if (mode.getWorldSession().resolvedGameModule() != root) {
                 throw new IllegalStateException("CD terrain PLAYER does not admit resolved module decorators");
             }
-            GameLoop loop = attachLevelLoop(mode);
+            GameplaySessionFactory.attachManagers(mode, services, createGameplayCamera(services));
             GameModuleRegistry.setCurrent(root);
             // Required on every boot, including AUDIO_ENABLED=false and reused JVMs.
             installAudioBackend();
             TraceReplaySessionBootstrap.resetLevelSubsystemsForReplay();
             mode.getLevelManager().loadLevel(0, com.openggf.game.LevelLoadMode.FULL,
                     com.openggf.game.soniccd.SonicCdPlayerInitProfile.terrainPlayerContext());
-            return loop;
+            return createLevelLoop(mode);
         } catch (IOException | RuntimeException | Error failure) {
             try { retireBootSession(); }
             catch (RuntimeException | Error cleanupFailure) { failure.addSuppressed(cleanupFailure); }
@@ -714,14 +714,14 @@ public final class HeadlessGameBoot implements AutoCloseable {
             if (mode.getWorldSession().resolvedGameModule() != root) {
                 throw new IllegalStateException("CD USA opening objects PLAYER does not admit resolved module decorators");
             }
-            GameLoop loop = attachLevelLoop(mode);
+            GameplaySessionFactory.attachManagers(mode, services, createGameplayCamera(services));
             GameModuleRegistry.setCurrent(root);
             // Required on every boot, including AUDIO_ENABLED=false and reused JVMs.
             installAudioBackend();
             TraceReplaySessionBootstrap.resetLevelSubsystemsForReplay();
             mode.getLevelManager().loadLevel(0, com.openggf.game.LevelLoadMode.FULL,
                     com.openggf.game.soniccd.SonicCdPlayerInitProfile.openingObjectsContext());
-            return loop;
+            return createLevelLoop(mode);
         } catch (IOException | RuntimeException | Error failure) {
             try { retireBootSession(); }
             catch (RuntimeException | Error cleanupFailure) { failure.addSuppressed(cleanupFailure); }
@@ -732,6 +732,11 @@ public final class HeadlessGameBoot implements AutoCloseable {
     /** Common session/loop attachment for cartridge gameplay and prepared static terrain. */
     private GameLoop attachLevelLoop(GameplayModeContext mode) {
         GameplaySessionFactory.attachManagers(mode, engineServices, createGameplayCamera(engineServices));
+        return createLevelLoop(mode);
+    }
+
+    /** CD player profiles load their fixed roster before the loop installs rewind capture. */
+    private GameLoop createLevelLoop(GameplayModeContext mode) {
         if (!mode.isGameplayRuntimeReady()) {
             throw new IllegalStateException("Gameplay runtime not ready after attachManagers");
         }

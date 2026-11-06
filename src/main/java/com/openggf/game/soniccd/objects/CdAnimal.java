@@ -13,12 +13,13 @@ import java.util.function.IntSupplier;
  * the live dynamic pool and saved bank of one CdObjectPlacementRuntime. One {@link #run} is one RunObjects
  * dispatch of the slot.
  *
- * <p>Admitted source paths read no asset bytes. With oSubtype bit 7 clear, a signed timeZone byte below 2 and
+ * <p>Legacy constructor/two-argument factory source paths read no asset bytes. With oSubtype bit 7 clear, a signed timeZone byte below 2 and
  * projDestroyed zero, CheckAnimalPrescence discards the body's return address (ADDQ.L #4,SP) and jumps to
  * CheckObjDespawn: Init never runs, nothing is drawn, no map/tile/flag/routine byte is written, and the slot
  * lives until its current-X chunk leaves the $280 window. With a signed timeZone of 2 or more and goodFuture
  * zero it jumps to DeleteObject. Every path that would run an Animal body (hologram subtype, destroyed
- * projector, good future) stops at its predicate before any write.</p>
+ * projector, good future) stops at its predicate before any write on those legacy instances.
+ * The explicit nine-argument actual-source factory binds CdActiveAnimal only at those reached continuations.</p>
  *
  * <p>No private queue, renderer, audio owner, retained pool snapshot or player mutation exists here, and nothing is keyed
  * on a fixture, frame or route coordinate.</p>
@@ -31,7 +32,7 @@ public final class CdAnimal {
     public enum DespawnEntry { CURRENT_X_OFFSCREEN, TIME_WARP }
 
     /** Ordered return metadata. Pool/bank effects describe completed writes and must not be replayed. */
-    public sealed interface Effect permits CallReturned, Despawn, Deleted { }
+    public sealed interface Effect permits CallReturned, Despawn, Deleted, ActiveReturned { }
     public record CallReturned(NativeCall call) implements Effect {
         public CallReturned { Objects.requireNonNull(call, "call"); }
     }
@@ -50,6 +51,8 @@ public final class CdAnimal {
     }
     /** .ChkGoodFuture with goodFuture zero: JMP DeleteObject, the 64-byte delete without any saved-bank read or write. */
     public record Deleted() implements Effect { }
+    /** Completed actual active continuation; metadata only, never a command to run it again. */
+    public record ActiveReturned(CdActiveAnimal.Result result) implements Effect {public ActiveReturned{Objects.requireNonNull(result);}}
 
     /**
      * Read-only conditional native operands. Each getter is called only at its reached source read and
@@ -94,7 +97,8 @@ public final class CdAnimal {
             Objects.requireNonNull(state, "state");
             effects = List.copyOf(effects);
         }
-        public boolean deleted() { return effects.stream().anyMatch(e -> e instanceof Despawn || e instanceof Deleted); }
+        public boolean deleted() { return effects.stream().anyMatch(e -> e instanceof Despawn || e instanceof Deleted
+                || e instanceof ActiveReturned active && active.result().effects().stream().anyMatch(CdActiveAnimal.Deleted.class::isInstance)); }
     }
 
     public enum UnsupportedBoundary {
@@ -121,6 +125,20 @@ public final class CdAnimal {
     }
 
     private final CdObjectPlacementRuntime runtime;
+    private CdActiveAnimal activeBody;
+    private boolean activeDispatchRunning;
+
+    public boolean isCurrentCall(Object call){return activeBody!=null&&activeDispatchRunning&&activeBody.isCurrentCall(call);}
+    public long currentCallOrdinal(Object call){if(!isCurrentCall(call))throw new IllegalStateException("Not original current active Animal call");return activeBody.currentCallOrdinal(call);}
+
+    /** Actual active closure only; the two-argument factory and public constructor retain their legacy stops. */
+    public static CdAnimal fromAct2PastAssets(CdObjectPlacementRuntime placement,CdR12bTerrainAssets owner,
+            com.openggf.game.soniccd.level.CdR12bPlayerAssets player,com.openggf.game.soniccd.player.CdPlayerMath math,
+            com.openggf.game.soniccd.player.CdPlayerTerrain terrain,CdActiveAnimal.PrimaryAngleCommit angle,
+            CdActiveAnimal.DrawObjectCall draw,CdActiveAnimal.DispatchObserver observer,CdActiveAnimal.ReceiptGuard guard){
+        var active=CdActiveAnimal.fromAct2PastAssets(placement,owner,player,math,terrain,angle,draw,observer,guard);
+        var body=new CdAnimal(placement);body.activeBody=active;return body;
+    }
 
     /** Actual R12B placement relation only; admitted presence/despawn branches consume no Animal assets. */
     public static CdAnimal fromAct2PastAssets(CdObjectPlacementRuntime placement, CdR12bTerrainAssets owner) {
@@ -142,6 +160,12 @@ public final class CdAnimal {
 
     /** One ObjAnimal dispatch with only genuinely reached, read-only native operands requested. */
     public Result runWithReads(int wholeIndex, Reads reads) {
+        if(activeBody==null)return runPresence(wholeIndex,reads);
+        if(activeDispatchRunning)throw new IllegalStateException("Animal cannot reenter its active physical dispatch");
+        activeDispatchRunning=true;try{return runPresence(wholeIndex,reads);}finally{activeDispatchRunning=false;}
+    }
+
+    private Result runPresence(int wholeIndex, Reads reads) {
         Objects.requireNonNull(reads, "reads");
         var pool = runtime.pool();
         var state = pool.state(wholeIndex);
@@ -152,6 +176,7 @@ public final class CdAnimal {
         var effects = new ArrayList<Effect>();
         // CheckAnimalPrescence (Object Time Check.asm:55-85): subtype precedes every global read.
         if ((state.subtype() & 0x80) != 0) {                                   // TST.B oSubtype(a0) / BMI.S .End
+            if(activeBody!=null)return active(wholeIndex,reads,effects);
             throw new UnsupportedAnimal(UnsupportedBoundary.HOLOGRAM_BODY, wholeIndex,
                     "oSubtype $" + Integer.toHexString(state.subtype()) + " selects the hologram body");
         }
@@ -159,6 +184,7 @@ public final class CdAnimal {
         if ((byte) timeZone >= 2) {                                           // CMPI.B #2,timeZone / BGE.S .ChkGoodFuture (signed)
             int goodFuture = readNative(reads::goodFuture, false, "goodFuture");
             if (goodFuture != 0) {                                            // TST.B goodFuture / BNE.S .End
+                if(activeBody!=null)return active(wholeIndex,reads,effects);
                 throw new UnsupportedAnimal(UnsupportedBoundary.GOOD_FUTURE_BODY, wholeIndex,
                         "timeZone $" + Integer.toHexString(timeZone) + " with goodFuture set runs the roaming body");
             }
@@ -170,6 +196,7 @@ public final class CdAnimal {
         }
         int projDestroyed = readNative(reads::projDestroyed, false, "projDestroyed");
         if (projDestroyed != 0) {                                             // TST.B projDestroyed / BNE.S .End
+            if(activeBody!=null)return active(wholeIndex,reads,effects);
             throw new UnsupportedAnimal(UnsupportedBoundary.PROJECTOR_DESTROYED_BODY, wholeIndex,
                     "projDestroyed $" + Integer.toHexString(projDestroyed) + " runs the freed body");
         }
@@ -179,6 +206,8 @@ public final class CdAnimal {
         effects.add(new CallReturned(NativeCall.CHECK_OBJ_DESPAWN));
         return new Result(pool.state(wholeIndex), effects);
     }
+
+    private Result active(int wholeIndex,Reads reads,List<Effect> effects){effects.add(new CallReturned(NativeCall.CHECK_ANIMAL_PRESENCE));var result=activeBody.run(wholeIndex,reads);effects.add(new ActiveReturned(result));return new Result(result.state(),effects);}
 
     /** CheckObjDespawn / CheckObjDespawn2 / DespawnObjTimeWarp (Object Spawner.asm:385-399,442-446). */
     private void checkObjDespawn(CdObjectState state, Reads reads, List<Effect> effects) {

@@ -1492,11 +1492,11 @@ class TestSonicCdOpeningWorldLoad {
         var mode = SessionManager.openGameplaySession(module, module, source, null);
         GameplaySessionFactory.attachManagers(mode, EngineServices.current());
         GameModuleRegistry.setCurrent(module);
-        var loop = new GameLoop(EngineServices.current());
-        loop.setGameplayMode(mode); loop.setInputHandler(new InputHandler()); loop.setGameMode(GameMode.LEVEL);
         mode.getLevelManager().loadLevel(0, LevelLoadMode.FULL,
                 player ? (module.openingObjectsAdmission() ? SonicCdPlayerInitProfile.openingObjectsContext()
                         : SonicCdPlayerInitProfile.terrainPlayerContext()) : SonicCdLevelInitProfile.staticStageContext());
+        var loop = new GameLoop(EngineServices.current());
+        loop.setGameplayMode(mode); loop.setInputHandler(new InputHandler()); loop.setGameMode(GameMode.LEVEL);
         return new Harness(module, mode, loop);
     }
     private static CdOpeningObjectRuntime objects(Harness h) {

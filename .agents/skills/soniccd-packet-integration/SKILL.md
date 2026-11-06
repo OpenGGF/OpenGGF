@@ -1023,6 +1023,38 @@ literal `class#test` strings, with no identity repair or rule changes. Capabilit
 must name existing policy inputs and are caller declarations, not detected tools.
 Evidence paths are not checked. Normalized summaries are not raw runner records.
 
+
+The observer accepts the immutable d032c114 parent additions as strictly typed,
+bounded **declarations**. Plan `rom_properties`, `skip_capabilities` and
+`skip_policy` must appear together; ROM `found`/`caller`/`missing` lists form a
+complete disjoint partition of the six supported property names. Capability values
+are booleans for the five names the matched runner can emit. The declared policy
+is the fixed repository-relative path or its lexical absolute form; it is never
+opened or selected as authority. An absolute path comparison is lexical only;
+a relative declaration remains unresolved. Unknown and partial groups reject.
+
+Lane `batches`, `skip_classification`, `unexplained_skips` and
+`unexplained_skips_omitted` also form one optional group. Batch index, candidate
+width, worker, resource/queue shape, status, exit and progress relations are
+validated against the immutable serializer. Its two qualification pools can need
+one extra ordinary batch; the old shape keeps its exact-width count guard.
+A parent lane with every batch completed, nonempty coverage, no failures/errors or
+nonzero exit, and declared unexplained skips may precede guards while its status
+remains incomplete. Legacy and unfinished-lane guard ordering still rejects. The
+paired `slowest_classes`/`slowest_cases` rows retain finite reported JUnit timings.
+Batch state, queue reservations and timing rows remain claims, with no inferred
+execution or per-batch testcase allocation. Old supported records remain valid.
+
+`runner_declarations` separates this metadata from the observer's classification.
+Only the explicit `--policy` snapshot and `--capabilities` declarations classify
+retained literal skips. Plan capabilities never fill missing CLI inputs; declared
+ROM properties never establish available or verified media. Policy-path,
+capability and classification/count discrepancies stay visible, including their
+different aggregate-versus-retained scopes. Runner `unidentified` counts and
+unexplained-row input omissions remain distinct from observer output omissions.
+Neither a matching declaration nor a runner-declared pass grants policy authority,
+a normal VERDICT, completion evidence or successful certification.
+
 JSON separates declared source/selection/batch progress, counts, retained failures,
 allowed/unclassified/required-skipped/undeclared-input skips, input omissions and
 observer output omissions. Partial aggregates may include the next uncompleted
@@ -1043,9 +1075,12 @@ import, write, cache, receipt, report deletion or diagnostic acknowledgement occ
 Bounds: status/preparation16KiB each, plan/policy2MiB each, results16MiB,
 combined20MiB per snapshot pass (then one recheck), stdout16MiB, 10000 candidate
 classes, two lanes, 1000 retained skip
-and1000 failure/error records per lane, JSON depth32/nodes250000. Output samples retain at most100 candidate
-paths,50 failure/reason records and100 classified rows per group, with explicit
-omission counts. These bounds do not relax any source, context or runner budget.
+and1000 failure/error records per lane, JSON depth32/nodes250000. Parent metadata
+allows201 batch rows,1000 unexplained-skip rows and20 rows per timing kind per lane;
+plan ROM lists hold at most6 names each and the capability map at most5 entries.
+Output samples retain at most100 candidate paths and100 batch declarations per
+lane,50 failure/reason records and50 unexplained declarations per lane, and100
+classified rows per group, with explicit input and output omission counts. These bounds do not relax any source, context or runner budget.
 Run [the synthetic standard-library controls](../../../tools/soniccd/test_category_observation.py)
 with `python3 -B`, `PYTHONDONTWRITEBYTECODE=1` and an owned `TMPDIR` for tool edits.
 The owning task still controls real diagnostics inspection and acknowledgement.

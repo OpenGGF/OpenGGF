@@ -1,5 +1,7 @@
 package com.openggf.game.soniccd.objects;
 
+import com.openggf.game.soniccd.level.CdR12bObjectAssets;
+import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
 import com.openggf.game.soniccd.CdNativeFile;
 import com.openggf.game.soniccd.CdReleaseVariant;
 import com.openggf.game.soniccd.CdStagePayload;
@@ -106,6 +108,17 @@ public final class CdTunnelDoor {
                 throw new IllegalArgumentException("Door mappings need an aligned bounded native pointer");
             }
         }
+        /** Actual retained original-USA R12B data only; no body/Frame/World or current-art authority. */
+        public static Assets fromAct2PastAssets(CdR12bObjectAssets owner) {
+            Objects.requireNonNull(owner, "actual R12B metadata"); var identity = owner.identity();
+            if (identity.variant() != CdReleaseVariant.USA || identity.file() != CdNativeFile.R12B
+                    || identity.domain() != CdMmdImage.Domain.ORIGINAL_WORD_RAM
+                    || !identity.stage().equals(CdStagePayload.R12B.stage()))
+                throw new IllegalArgumentException("Actual original USA R12B metadata required");
+            return new Assets(owner.tunnelDoor(), CdR12bObjectAssets.View.MAP_SPR_TUNNEL_DOOR.range().nativeAddress(),
+                    owner.view(CdR12bObjectAssets.View.OBJECT_TILE_IDS));
+        }
+
         public static Assets fromObjectAssets(CdR11aObjectAssets owner) {
             Objects.requireNonNull(owner);
             return new Assets(owner.tunnelDoor(),
@@ -269,6 +282,15 @@ public final class CdTunnelDoor {
     private SecondarySource secondarySource;
     private PrefixSolidOwner prefixSolidOwner;
     private boolean prefixRunning;
+
+    /** Source-pair ingress only; caller retains every actual helper/publication authority. */
+    public static CdTunnelDoor fromAct2PastAssets(CdObjectPlacementRuntime runtime, CdR12bTerrainAssets owner,
+                                                  SecondarySource secondary, CdSolidObject solid, PrefixSolidOwner commit,
+                                                  DrawObjectCall draw, PlayFmCall fm, DispatchObserver observer) {
+        Objects.requireNonNull(runtime); Objects.requireNonNull(owner);
+        if (!runtime.sameAct2PastSource(owner)) throw new IllegalArgumentException("Door placement/assets source differs");
+        return withPrefixOwner(runtime, secondary, Assets.fromAct2PastAssets(owner.objects()), solid, commit, draw, fm, observer);
+    }
 
     public CdTunnelDoor(CdObjectPlacementRuntime runtime, CdReservedObjectBank reserved, Assets assets,
                         CdSolidObject solid, SolidOwner solidOwner, DrawObjectCall drawObject, PlayFmCall playFm) {

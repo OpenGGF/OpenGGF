@@ -1,5 +1,11 @@
 package com.openggf.game.soniccd.objects;
 
+import com.openggf.game.soniccd.CdNativeFile;
+import com.openggf.game.soniccd.CdReleaseVariant;
+import com.openggf.game.soniccd.CdStagePayload;
+import com.openggf.game.soniccd.media.CdMmdImage;
+import com.openggf.game.soniccd.level.CdR12bObjectAssets;
+import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdObjectVisualAssets;
 import com.openggf.game.soniccd.level.CdR11bAssets;
@@ -45,6 +51,17 @@ public final class CdGoalPost {
                 if (piece.tileOffset() > (frame == 5 ? 24 : 76) - piece.tileCount())
                     throw new IllegalArgumentException("GoalPost mapping exceeds its declared native source tiles");
         }
+        /** Actual retained original-USA R12B data only; no body/Frame/World or current-art authority. */
+        public static Assets fromAct2PastAssets(CdR12bObjectAssets owner) {
+            Objects.requireNonNull(owner, "actual R12B metadata"); var identity = owner.identity();
+            if (identity.variant() != CdReleaseVariant.USA || identity.file() != CdNativeFile.R12B
+                    || identity.domain() != CdMmdImage.Domain.ORIGINAL_WORD_RAM
+                    || !identity.stage().equals(CdStagePayload.R12B.stage()))
+                throw new IllegalArgumentException("Actual original USA R12B metadata required");
+            return new Assets(owner.goalSignpost(), CdR12bObjectAssets.View.MAP_SPR_GOAL_SIGNPOST.range().nativeAddress(),
+                    owner.view(CdR12bObjectAssets.View.GOAL_POST_BASE_TILES));
+        }
+
         public static Assets fromPastAssets(CdR11bAssets owner) {
             Objects.requireNonNull(owner, "actual Past assets");
             var map = owner.view(CdR11bAssets.Asset.MAP_SPR_GOAL_SIGNPOST);
@@ -121,6 +138,15 @@ public final class CdGoalPost {
     private boolean running;
 
     /** plcHeadRead may be absent: it stops only the genuinely reached Tidal Tempest wait read. */
+    /** Source-pair ingress only; caller retains every actual helper/publication authority. */
+    public static CdGoalPost fromAct2PastAssets(CdObjectPlacementRuntime placement, CdR12bTerrainAssets owner,
+                                               PlayerWordRead read, GoalReached goal, LoadPlc plc,
+                                               PlcHeadRead head, DrawObjectCall draw) {
+        Objects.requireNonNull(placement); Objects.requireNonNull(owner);
+        if (!placement.sameAct2PastSource(owner)) throw new IllegalArgumentException("Goal placement/assets source differs");
+        return new CdGoalPost(placement, Assets.fromAct2PastAssets(owner.objects()), read, goal, plc, head, draw);
+    }
+
     public CdGoalPost(CdObjectPlacementRuntime placement, Assets assets, PlayerWordRead playerRead,
                       GoalReached goalReached, LoadPlc loadPlc, PlcHeadRead plcHeadRead, DrawObjectCall drawObject) {
         this.placement = Objects.requireNonNull(placement); this.assets = Objects.requireNonNull(assets);

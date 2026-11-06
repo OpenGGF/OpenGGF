@@ -2,7 +2,9 @@
 """Observe four explicit category-runner JSON claims, without running or certifying anything.
 
 Origin: 2026-11-05 retained partial-smoke observation task. Input schema is the
-immutable e472 category runner, not normalized summaries, XML or rolling logs.
+immutable e472 and d032c114 parent runner contracts, not summaries, XML or logs.
+Parent additions are validated declarations, never detected launch inputs or policy
+selection. Origin: 2026-11-06 matched-parent schema compatibility packet.
 Only plan.json, preparation.json, results.json, status.json, the explicit policy
 and the pinned classifier dependency are read. No directory discovery or writes.
 """
@@ -32,10 +34,19 @@ MAX_NODES=250000
 CASE_CAP=1000
 OUTPUT_CASES=50
 OUTPUT_CLASSIFIED=100
+MAX_BATCHES=201  # 10000 classes, two independently chunked qualification pools.
+TIMING_CAP=20
+ROM_PROPERTY_NAMES=frozenset(('sonic1.rev00.rom.path','sonic2.rev00.rom.path','sonic1.rom.path',
+                             'sonic2.rom.path','s3k.rom.path','kis2.rom.path'))
+RUNNER_CAPABILITY_NAMES=frozenset(('gl','s2_bk2','s3k_observations','s1_bizhawk_reference','audio_reference_files'))
+SKIP_KINDS=('allowed','unclassified','required_skipped','undeclared_input','unidentified')
+PLAN_DECLARATIONS=('rom_properties','skip_capabilities','skip_policy')
+LANE_DECLARATIONS=('batches','skip_classification','unexplained_skips','unexplained_skips_omitted')
 SCOPE='bounded smoke suite and guards; full-suite is public-release-only; trace/native profiles are separate'
 LIMITATIONS=[
  'Input records are non-atomic claims, not command completion, authenticated source, JUnit discovery or certification.',
  'The supported runner stores only the initial source fingerprint; no final after-state or normal VERDICT is observed.',
+ 'Parent media, capabilities, policy paths, batch states and JUnit timings are declarations only; explicit observer policy/CLI inputs alone classify retained skips.',
  'Partial aggregate counts can already include the next uncompleted batch; no per-batch testcase breakdown is inferred.',
  'Only retained literal identities are classified; omitted, capped or missing evidence remains explicit.',
  'Policy evidence paths, original XML, logs, source trees, jobs, processes, locks and runtime capabilities are not inspected.',
@@ -168,7 +179,7 @@ def unique_strings(value,cap,item_cap=4096):
 
 def validate_plan(value):
     keys(value,('schema','head','base','mode','full','categories','reasons','tests','inventory_count','guards','workers','suite','scope',
-                'working_tree_fingerprint','max_minutes','ordinary_batch_classes'),('headless_gl','rom_directory'))
+                'working_tree_fingerprint','max_minutes','ordinary_batch_classes'),('headless_gl','rom_directory',*PLAN_DECLARATIONS))
     require(type(value['schema'])is int and value['schema']==1,'Unsupported category plan schema')
     hex_value(value['head'],40);hex_value(value['working_tree_fingerprint'],64)
     if value['base']is not None:hex_value(value['base'],40)
@@ -189,6 +200,123 @@ def validate_plan(value):
         keys(row,('path','categories','reason'));string(row['path']);string(row['reason'],2048);unique_strings(row['categories'],100,256)
     if 'headless_gl'in value:require(value['headless_gl']=='surfaceless-egl','Unsupported declared graphics backend')
     if 'rom_directory'in value:string(value['rom_directory'])
+    validate_plan_declarations(value)
+
+
+def optional_group(value,fields):
+    present=set(value)&set(fields)
+    require(not present or present==set(fields),'Ambiguous partial parent declaration group')
+    return bool(present)
+
+
+def bounded_rows(value,cap):
+    require(type(value)is list,'Require a record list')
+    require(len(value)<=cap,'Parent metadata list budget exceeded',3)
+
+
+def validate_plan_declarations(value):
+    if not optional_group(value,PLAN_DECLARATIONS):return
+    roms=value['rom_properties'];keys(roms,('found','caller','missing'))
+    declared=[]
+    for field in ('found','caller','missing'):
+        unique_strings(roms[field],len(ROM_PROPERTY_NAMES),64)
+        require(set(roms[field])<=ROM_PROPERTY_NAMES,'Unknown declared ROM property')
+        declared.extend(roms[field])
+    require(len(declared)==len(set(declared)) and set(declared)==ROM_PROPERTY_NAMES,
+            'ROM property declarations must form a disjoint complete partition')
+    caps=value['skip_capabilities']
+    require(type(caps)is dict and set(caps)<=RUNNER_CAPABILITY_NAMES,'Unsupported runner capability declarations')
+    for flag in caps.values():require(type(flag)is bool,'Runner capability declarations must be bools')
+    path=string(value['skip_policy'])
+    relative='tools/testing/release-skip-policy.json'
+    require(path==relative or (path.startswith('/') and path.endswith('/'+relative) and
+            str(Path(path))==path and all(part not in('.','..','')for part in path.split('/')[1:])),
+            'Unsupported declared runner policy path')
+    require('\\'not in path and '\0'not in path and '\n'not in path and '\r'not in path,
+            'Unsupported declared runner policy path')
+
+
+def batch_counts(candidate_count):
+    minimum=(candidate_count+49)//50
+    # Two stable pools can need one extra batch, except at one modulo 50.
+    maximum=minimum+(candidate_count>1 and candidate_count%50!=1)
+    return minimum,maximum
+
+
+def validate_batches(lane,plan):
+    rows=lane['batches'];bounded_rows(rows,MAX_BATCHES)
+    planned=lane['batches_planned'];completed=lane['batches_completed']
+    require(completed<=len(rows)<=min(planned,completed+1),'Batch declarations contradict lane progress')
+    terminal=0;candidates=0;pool_ends=0
+    for index,row in enumerate(rows,1):
+        keys(row,('index','candidate_classes','workers','low_heap','small_job','queue','status','exit_code','elapsed_seconds'))
+        require(integer(row['index'],MAX_BATCHES)==index,'Batch indices must be consecutive')
+        size=integer(row['candidate_classes'],50);candidates+=size
+        require(size>0 if lane['lane']=='ordinary' else size==0,'Unsupported batch candidate count')
+        if lane['lane']=='ordinary'and size<50 and index<planned:
+            pool_ends+=1;require(pool_ends<=1,'Batch widths require more than two qualification pools')
+        require(type(row['workers'])is int and row['workers']==lane['workers'],'Batch worker declaration differs from lane')
+        for field in ('low_heap','small_job'):require(type(row[field])is bool,'Batch resource flags must be bools')
+        require(not row['small_job']or(row['low_heap']and row['workers']==1 and lane['lane']=='ordinary'),
+                'Contradictory small-job declaration')
+        if lane['lane']=='guards':require(not row['low_heap']and not row['small_job'],'Unsupported guard resource flags')
+        queue=row['queue'];keys(queue,('exclusive','kind','reservation','small_job'))
+        require(type(queue['exclusive'])is bool and type(queue['small_job'])is bool,'Queue flags must be bools')
+        lean=queue['kind']=='category-batch-lean'
+        if lane['lane']=='guards':require(queue['kind']=='category-guards','Unsupported guard queue kind')
+        else:require(queue['kind']in('category-batch','category-batch-lean'),'Unsupported ordinary queue kind')
+        if lean:
+            require(row['low_heap']and not queue['exclusive'],'Contradictory lean queue declaration')
+            reservation=queue['reservation'];expected=[4*1024**3,4]if row['workers']==1 else[5*1024**3,8]
+            require(type(reservation)is list and len(reservation)==2 and all(type(v)is int for v in reservation)
+                    and reservation==expected,'Unsupported lean reservation declaration')
+        else:
+            require(queue['reservation']is None,'Non-lean queue reservation must be null')
+            if lane['lane']=='ordinary'and(row['workers']==2 or row['low_heap']):
+                require(queue['exclusive'],'Contradictory exclusive queue declaration')
+        require(queue['small_job']==(lean and row['small_job']),'Contradictory queue small-job declaration')
+        require(row['status']in('queued','running','incomplete','passed','failed'),'Unsupported batch status')
+        number(row['elapsed_seconds'])
+        if row['status']in('passed','failed'):
+            exit_code(row['exit_code']);terminal+=1
+            if row['status']=='passed':require(row['exit_code']==0,'Passed batch needs exit0')
+        else:
+            require(index==len(rows) and row['exit_code']is None,'Nonterminal batch must be last with null exit')
+            if row['status']in('queued','running'):require(row['elapsed_seconds']==0,'Unfinished batch duration unsupported')
+    require(terminal==completed,'Batch terminal declarations contradict completed count')
+    if plan is not None and lane['lane']=='ordinary':
+        require(candidates<=len(plan['tests']),'Batch candidates exceed declared selection')
+        if len(rows)==planned:require(candidates==len(plan['tests']),'Complete batch list omits candidate classes')
+
+
+def validate_lane_declarations(lane,plan):
+    if optional_group(lane,('slowest_classes','slowest_cases')):
+        for field in ('slowest_classes','slowest_cases'):
+            bounded_rows(lane[field],TIMING_CAP)
+            for row in lane[field]:
+                keys(row,('class','reported_seconds')if field=='slowest_classes'else('class','test','reported_seconds'))
+                string(row['class'],512,True);number(row['reported_seconds'])
+                if 'test'in row:string(row['test'],512,True)
+    if not optional_group(lane,LANE_DECLARATIONS):return
+    validate_batches(lane,plan)
+    counts=lane['skip_classification'];keys(counts,SKIP_KINDS)
+    for count in counts.values():integer(count)
+    bounded_rows(lane['unexplained_skips'],CASE_CAP)
+    omitted=integer(lane['unexplained_skips_omitted'])
+    require(not omitted or len(lane['unexplained_skips'])==CASE_CAP,'Unexplained omissions contradict runner cap')
+    for row in lane['unexplained_skips']:
+        require(type(row)is dict and row.get('kind')in SKIP_KINDS[1:],'Unsupported unexplained skip kind')
+        kind=row['kind'];fields=('identity','message','kind')
+        if kind in('required_skipped','undeclared_input'):fields+=('category','evidence','input')
+        keys(row,fields)
+        string(row['identity'],8192);string(row['message'],200,True)
+        if kind=='unidentified':require(row['identity']=='<no report identity>','Unsupported unidentified skip identity')
+        elif kind=='unclassified':require('#'in row['identity'],'Unsupported unexplained literal identity')
+        if 'category'in row:
+            require(row['category']in('gl-context','optional-fixture','opt-in-benchmark','opt-in-gate',
+                    'opt-in-diagnostic','opt-in-capture','scenario-assumption'),'Unsupported declared skip category')
+            require('#'in row['identity'],'Unsupported unexplained literal identity')
+            string(row['evidence'],4096);string(row['input'],64)
 
 
 def validate_preparation(value):
@@ -211,18 +339,27 @@ def validate_lanes(value,plan):
     seen=set()
     for index,lane in enumerate(value):
         keys(lane,('lane','workers','batches_planned','batches_completed','exit_code','elapsed_seconds','status','reports','tests','failures','errors','skipped',
-                   'skipped_cases','failed_cases','skipped_cases_omitted','failed_cases_omitted'),('reason','failed_batch'))
+                   'skipped_cases','failed_cases','skipped_cases_omitted','failed_cases_omitted'),('reason','failed_batch',*LANE_DECLARATIONS,'slowest_classes','slowest_cases'))
         require(lane['lane']==('ordinary' if index==0 else 'guards'),'Unsupported lane order/name')
         require(lane['status']in('passed','failed','incomplete'),'Unsupported lane status')
         require(type(lane['workers'])is int and lane['workers']in(1,2),'Unsupported lane workers')
-        planned=integer(lane['batches_planned'],200);completed=integer(lane['batches_completed'],200)
+        batch_cap=MAX_BATCHES if 'batches'in lane else 200
+        planned=integer(lane['batches_planned'],batch_cap);completed=integer(lane['batches_completed'],batch_cap)
         require(planned>0 and completed<=planned,'Inconsistent batch progress')
         exit_code(lane['exit_code']);number(lane['elapsed_seconds'])
         if plan is not None:
-            expected=(len(plan['tests'])+49)//50 if index==0 else 1
-            require(planned==expected and lane['workers']==(plan['workers']if index==0 else 1),'Lane selection/worker claim differs from plan')
+            minimum,maximum=batch_counts(len(plan['tests']))if index==0 else(1,1)
+            if 'batches'not in lane:maximum=minimum  # Preserve the legacy exact-width guard.
+            require(minimum<=planned<=maximum and lane['workers']==(plan['workers']if index==0 else 1),'Lane selection/worker claim differs from plan')
             if index==1:require(plan['guards'],'Unrequested guard lane')
-        if index==1:require(value[0]['batches_completed']==value[0]['batches_planned'] and value[0]['status']!='incomplete','Guard lane before ordinary completion')
+        if index==1:
+            previous=value[0]
+            # Parent runner continues after fully batched, nonempty skip-incomplete coverage.
+            skip_incomplete=('batches'in previous and any(previous['skip_classification'][key]for key in SKIP_KINDS[1:])
+                and not(previous['exit_code']or previous['failures']or previous['errors'])
+                and previous['reports']>0 and previous['tests']>previous['skipped'])
+            require(previous['batches_completed']==previous['batches_planned'] and
+                    (previous['status']!='incomplete' or skip_incomplete),'Guard lane before ordinary completion')
         for field in('reports','tests','failures','errors','skipped','skipped_cases_omitted','failed_cases_omitted'):integer(lane[field])
         require(lane['failures']+lane['errors']+lane['skipped']<=lane['tests'],'Impossible testcase totals')
         for field in('skipped_cases','failed_cases'):
@@ -252,6 +389,7 @@ def validate_lanes(value,plan):
         if lane['status']=='passed':require(lane['exit_code']==0 and not(lane['failures']or lane['errors']) and lane['reports']>0 and lane['tests']>lane['skipped'],'Contradictory passed lane')
         if 'failed_batch'in lane:require(1<=integer(lane['failed_batch'],planned)<=planned,'Invalid failed batch')
         if 'reason'in lane:string(lane['reason'],4096,True)
+        validate_lane_declarations(lane,plan)
 
 
 def classifier(saved,policy):
@@ -267,6 +405,41 @@ def classifier(saved,policy):
     try:validated=module.load_policy(str(policy.path))
     except module.PolicyError as error:raise ObservationError(str(error))from error
     return module,validated
+
+
+def plan_declarations(plan,policy_path,caps):
+    present=plan is not None and 'rom_properties'in plan
+    runner=plan['skip_capabilities']if present else{}
+    comparison={key:dict(runner=runner.get(key),observer=caps.get(key),
+                        equal=key in runner and key in caps and runner[key]==caps[key])
+                for key in sorted(set(runner)|set(caps))}
+    path=plan['skip_policy']if present else None
+    policy_comparison=('not-declared'if path is None else 'relative-unresolved'if not path.startswith('/')
+                       else 'same-absolute-path'if path==policy_path else 'different-absolute-path')
+    return dict(metadata_declared_only=True,rom_properties=plan['rom_properties']if present else None,
+                skip_capabilities=runner if present else None,skip_policy=path,
+                media_observed=False,runtime_capabilities_observed=False,policy_path_authenticated=False,
+                policy_path_comparison=policy_comparison,capability_comparison=comparison)
+
+
+def lane_declarations(lane,module,policy,caps):
+    result=dict(metadata_declared_only=True,slowest_classes=lane.get('slowest_classes'),slowest_cases=lane.get('slowest_cases'))
+    if 'batches'not in lane:return result
+    # Same retained-identity projection and explicit inputs as the global classifier.
+    skipped={}
+    for case in lane['skipped_cases']:
+        message=case['reason'].strip().splitlines()
+        skipped[case_identity(case)]=message[0][:200]if message else''
+    retained=module.classify(skipped,policy,caps)
+    comparison={key:dict(runner_declared=lane['skip_classification'][key],observer_retained=len(retained[key]),
+                        equal=lane['skip_classification'][key]==len(retained[key]))for key in SKIP_KINDS[:4]}
+    result.update(batches=lane['batches'][:100],batches_output_omitted=max(0,len(lane['batches'])-100),
+        skip_classification=lane['skip_classification'],unexplained_skips=lane['unexplained_skips'][:OUTPUT_CASES],
+        unexplained_skips_omitted=lane['unexplained_skips_omitted'],
+        unexplained_skips_output_omitted=max(0,len(lane['unexplained_skips'])-OUTPUT_CASES),
+        classification_comparison=comparison,classification_scopes='Runner aggregate declarations versus observer retained literal identities; policies and capabilities may differ',
+        declared_skip_count_equal=sum(lane['skip_classification'].values())==lane['skipped'])
+    return result
 
 
 def observe(run_dir,policy_path,capabilities=''):
@@ -344,13 +517,24 @@ def observe(run_dir,policy_path,capabilities=''):
     for case in failures[:OUTPUT_CASES]:
         shown_failures.append({**case,'detail':case['detail'][:1024],'detail_omitted_chars':max(0,len(case['detail'])-1024),
                               'message':case['message'][:512],'message_omitted_chars':max(0,len(case['message'])-512)})
+    runner=plan_declarations(plan,str(policy.path),caps)
+    if any(not row['equal']for row in runner['capability_comparison'].values())and runner['skip_capabilities']is not None:
+        issues.append('runner_capability_declaration_disagreement')
+    if runner['policy_path_comparison']=='different-absolute-path':issues.append('runner_policy_path_declaration_disagreement')
     summaries=[]
     for lane in lanes:
         completed=lane['batches_completed'];planned=lane['batches_planned']
+        declaration=lane_declarations(lane,module,policy_value,caps)
+        if 'batches'in lane:
+            if any(not row['equal']for row in declaration['classification_comparison'].values()):
+                if 'runner_retained_skip_classification_disagreement'not in issues:issues.append('runner_retained_skip_classification_disagreement')
+            if not declaration['declared_skip_count_equal']and 'runner_skip_count_declaration_disagreement'not in issues:
+                issues.append('runner_skip_count_declaration_disagreement')
         summaries.append({**{key:lane[key]for key in('lane','status','workers','exit_code','elapsed_seconds','reports','tests','failures','errors','skipped')},
                           'reason':lane.get('reason'),'progress':dict(planned=planned,completed=completed,uncompleted_batches=planned-completed,
                             next_uncompleted_batch=completed+1 if completed<planned else None,per_batch_testcase_breakdown_observed=False),
-                          'skipped_cases_omitted':lane['skipped_cases_omitted'],'failed_cases_omitted':lane['failed_cases_omitted']})
+                          'skipped_cases_omitted':lane['skipped_cases_omitted'],'failed_cases_omitted':lane['failed_cases_omitted'],
+                          'runner_declarations':declaration})
     def provenance(saved):return dict(path=str(saved.path),bytes=len(saved.data),sha256=hashlib.sha256(saved.data).hexdigest())if saved.data is not None else None
     result=dict(version=1,status='incomplete',certification=False,source_after_state_observed=False,normal_verdict_observed=False,
         declared=dict(status=status['status']if status else None,head=plan['head']if plan else None,
@@ -359,7 +543,7 @@ def observe(run_dir,policy_path,capabilities=''):
             selected_classes=len(plan['tests']),inventory_count=plan['inventory_count'],candidate_paths=plan['tests'][:100],
             candidate_paths_output_omitted=max(0,len(plan['tests'])-100),changed_reasons=plan['reasons'][:20],
             changed_reasons_output_omitted=max(0,len(plan['reasons'])-20),headless_gl=plan.get('headless_gl'),rom_directory=plan.get('rom_directory')),
-        issues=issues,preparation=preparation,lanes=summaries,guards=dict(requested=plan['guards']if plan else None,observed=guard is not None,
+        runner_declarations=runner,issues=issues,preparation=preparation,lanes=summaries,guards=dict(requested=plan['guards']if plan else None,observed=guard is not None,
             status=guard['status']if guard else('not-started'if plan is None or plan['guards']else'not-requested')),
         counts={field:sum(lane[field]for lane in lanes)for field in('reports','tests','failures','errors','skipped')}if lanes else None,
         failures=dict(retained=len(failures),input_omitted=failed_omitted,cases=shown_failures,output_omitted=max(0,len(failures)-OUTPUT_CASES)),
@@ -371,7 +555,8 @@ def observe(run_dir,policy_path,capabilities=''):
         inputs={**{name:provenance(saved)for name,saved in snapshots.items()},'policy':provenance(policy)},
         dependency=provenance(dependency),limits=dict(max_file_bytes=FILE_LIMITS,max_policy_bytes=MAX_POLICY_BYTES,max_total_bytes=MAX_TOTAL_BYTES,
             max_output_bytes=MAX_OUTPUT_BYTES,max_selected_classes=MAX_CLASSES,max_json_nodes=MAX_NODES,max_json_depth=32,
-            max_retained_per_kind_per_lane=CASE_CAP,max_failure_cases_output=OUTPUT_CASES,max_classified_per_group_output=OUTPUT_CLASSIFIED),limitations=LIMITATIONS)
+            max_retained_per_kind_per_lane=CASE_CAP,max_batch_declarations_per_lane=MAX_BATCHES,max_timing_rows_per_kind_per_lane=TIMING_CAP,
+            max_batch_declarations_output=100,max_unexplained_skip_declarations_output=OUTPUT_CASES,max_failure_cases_output=OUTPUT_CASES,max_classified_per_group_output=OUTPUT_CLASSIFIED),limitations=LIMITATIONS)
     require(len(json.dumps(result,ensure_ascii=True).encode())<=MAX_OUTPUT_BYTES,'Output byte budget exceeded',3)
     for saved in files:recheck(saved)
     for path,identity in parents:require(directory_identity(path.lstat())==identity,'Run directory changed during observation',3)

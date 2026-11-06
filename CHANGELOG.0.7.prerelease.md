@@ -286,13 +286,13 @@ Unreleased. The earlier development themes remain in
   section PLCs, scroll/planes and white fade now complete with selected terrain,
   full/course replay and real renderer checks. A batched metadata owner supplies
   twelve initial object kinds without relabelling Present tables. Actual-source
-  body factories now bind those kinds, and one catalogue resolves twenty counted
-  roots plus eight monitor icons; legacy constructors retain their contracts. The first unpaused
+  body factories now bind those kinds; later finite views retain forty-two counted
+  roots plus eight monitor icons, with legacy constructors preserving their contracts. The first unpaused
   R12B physical walk now runs actual Sonic Init, reserved HUD and live dynamic
   slots through camera, CPU SAT and the ordinary tail, with full/course replay
   in the constructed exit fixture. Genuine Main/touch publication now continues
-  the fixed controller through 580 target services, with selected Sonic
-  provenance and rewind. The target Boulder, Breakable Wall and Floating Block
+  the fixed controller through 1,782 target services, with selected Sonic
+  provenance and full/course rewind. The target Boulder, Breakable Wall and Floating Block
   bind their actual mappings and shared Solid publication. Wall FM and signed
   velocity publication retain native order; Floating Block threads its two or
   four original Top-Solid calls through the same Frame. The natural controller
@@ -305,9 +305,17 @@ Unreleased. The earlier development themes remain in
   publication through existing owners. A fixed jump clears the earlier Platform
   obstruction. Pata-Bata now reuses authenticated normal/damaged views and the
   existing shared Math through an original Draw receipt; a second fixed input
-  segment reaches the next explicit Projector boundary with full/course replay. A separate
-  real-World entry fixture retains its own visible-Sonic checks. No full-act or
-  native/regional parity is claimed.
+  segment reaches the native Projector and its four later physical children.
+  Projector, active animals, Scenery and Springboard now retain their original
+  source-ordered stores, PLC requests and shared player/terrain publications;
+  Explosion, Points, Flower, LostRing, Monitor Item and Mosqui reuse their source-bound
+  bodies and existing art owners. Genuine Hurt now rejoins the same ordinary Frame
+  publication without running Main's movement/touch tail. The controller recovers
+  from real damage, lands and passes the next obstruction with a fixed jump before
+  stopping at the unbound Spin Tunnel. CD player headless boot loads the fixed
+  roster before rewind controller creation while keeping no-device audio before
+  playback. A separate real-World entry fixture retains its own visible-Sonic
+  checks. No full-act or native/regional parity is claimed.
   Authenticated Act2 Spikes mapping and a named retained-source prefix factory
   reuse the existing common body and Std art owner; live Spikes dispatch remains
   separate from the qualified route.

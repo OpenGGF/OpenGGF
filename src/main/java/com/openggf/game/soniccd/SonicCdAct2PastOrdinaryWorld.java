@@ -198,6 +198,20 @@ final class SonicCdAct2PastOrdinaryWorld implements SonicCdAct2PastLoadingVisit.
                 throw new IllegalStateException("No actual R12B physical pass");
         }
         @Override public SonicCdAct2PastObjectPass.Cut read(){require();return objectCut();}
+        /** Source LoadPLC4/5 only. Both actual lists are one descriptor; no service/current writes here. */
+        @Override public void submitPlc(SonicCdAct2PastObjectPass.PlcSubmission submission){
+            require();if(submission.owner()!=objects||!objects.isCurrentPlcSubmission(submission)||cut!=SonicCdAct2PastOrdinaryLoop.Cut.RUN_OBJECTS)
+                throw new IllegalArgumentException("Not actual Projector LoadPLC producer");
+            submission.validate();var before=active.state();
+            // appendList is pure. A full16-entry4/5 append exposes SOURCE_SCAN96 before any store;
+            // its stopped diagnostic cannot enter Core.prepare. Preserve the original exception and live Core.
+            var section=art.appendList(before.section(),submission.nativeId());
+            if(section.residency()!=before.section().residency())throw new IllegalStateException("PLC append changed current knowledge");
+            var ready=active.prepare(before,section,before.level(),before.hudSlots(),before.normalPalette(),before.displayedPalette());
+            var hostReady=host.prepareOrdinary(host.globals(),host.video(),host.globals(),List.of(),host.video().completedCpu());
+            active.validate(before);host.validateOrdinary(hostReady);submission.validate();
+            active.adopt(before,ready);host.adoptOrdinary(hostReady);submission.acknowledge();
+        }
         @Override public void adopt(SonicCdAct2PastObjectPass.Adoption publication){
             require();if(!objects.isCurrentAdoption(publication)||!sameCut(publication.expected(),objectCut()))throw new IllegalArgumentException("Stale/foreign object publication");
             var next=publication.next();var before=active.state();

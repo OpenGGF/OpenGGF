@@ -1,5 +1,7 @@
 package com.openggf.game.soniccd.objects;
 
+import com.openggf.game.soniccd.level.CdR12bObjectAssets;
+import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
 import com.openggf.game.soniccd.CdNativeFile;
 import com.openggf.game.soniccd.CdReleaseVariant;
 import com.openggf.game.soniccd.CdStagePayload;
@@ -68,6 +70,17 @@ public final class CdPoints {
                     || !identity.stage().equals(CdStagePayload.R12A.stage()))
                 throw new IllegalArgumentException("Points Act2 assets require the authenticated original USA R12A source");
             return new Assets(owner.points(), owner.profile().range(CdR12aProfile.Asset.MAP_SPR_POINTS).nativeAddress());
+        }
+
+        /** Actual retained R12B views; values convey no dispatch or art authority. */
+        public static Assets fromAct2PastAssets(CdR12bObjectAssets owner) {
+            Objects.requireNonNull(owner, "owner");
+            var identity = Objects.requireNonNull(owner.identity(), "identity");
+            if (identity.variant() != CdReleaseVariant.USA || identity.file() != CdNativeFile.R12B
+                    || identity.domain() != CdMmdImage.Domain.ORIGINAL_WORD_RAM
+                    || !identity.stage().equals(CdStagePayload.R12B.stage()))
+                throw new IllegalArgumentException("Points Act2 assets require the authenticated original USA R12B source");
+            return new Assets(owner.points(), CdR12bObjectAssets.View.MAP_SPR_POINTS.range().nativeAddress());
         }
 
         /** Original Word RAM address of the authenticated mapping view; this is the stored native long. */
@@ -197,6 +210,18 @@ public final class CdPoints {
         if (!runtime.sameAct2Source(owner)) throw new IllegalArgumentException("Child-effect placement/assets source differs");
         var body = new CdPoints(runtime, Assets.fromAct2Assets(owner), (pool, identity) -> {
             throw new IllegalStateException("R12A child effect requires its actual source Draw");
+        });
+        body.observer = Objects.requireNonNull(observer); body.sourceDraw = Objects.requireNonNull(draw);
+        body.receiptGuard = Objects.requireNonNull(guard); return body;
+    }
+
+    /** Explicit same-placement R12B ingress; the original source algorithm and receipts are reused. */
+    public static CdPoints fromAct2PastAssets(CdObjectPlacementRuntime runtime, CdR12bTerrainAssets owner,
+                                              DispatchObserver observer, SourceDraw draw, ReceiptGuard guard) {
+        Objects.requireNonNull(runtime, "runtime"); Objects.requireNonNull(owner, "owner");
+        if (!runtime.sameAct2PastSource(owner)) throw new IllegalArgumentException("Child-effect placement/assets source differs");
+        var body = new CdPoints(runtime, Assets.fromAct2PastAssets(owner.objects()), (pool, identity) -> {
+            throw new IllegalStateException("R12B child effect requires its actual source Draw");
         });
         body.observer = Objects.requireNonNull(observer); body.sourceDraw = Objects.requireNonNull(draw);
         body.receiptGuard = Objects.requireNonNull(guard); return body;

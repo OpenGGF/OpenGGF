@@ -1,5 +1,9 @@
 # Sonic CD handover — paused after Sonic Hole
 
+> Historical pause handover. The user subsequently resumed implementation; see the
+> [current implementation checkpoint](2026-10-23-sonic-cd-implementation.md).
+> Present work stays private/local, with no new push, PR or main-workspace mutation.
+
 Source milestone: 26 October 2026; delivery: 27 October 2026. The ordinary controller route returns through **5414**; first **5415** reaches unsupported ordinary time warp. Sonic Hole is implemented within the limits below. Full USA completion, followed by Japan/Europe certification, remains unfinished.
 
 [Delivery branch](https://github.com/OpenGGF/OpenGGF/tree/feature/ai-nothing-to-see-here) is based on pinned next **58e1abb44c716415bf308cc591776d2429c85a41**. The verified Java implementation is **a8e73909bc287431b75e1078c3af331898a02097**. Final code/reference commit **be5e5594f10e03a642a45f5a4d4327a04dcb5c81** adds only the reference-tracking corrections below and was pushed with its remote SHA verified on 27 October. Next remains in first-parent ancestry; private final **2d9c2734bb087c6115ac135b40abe6a3abf49cab** is retained through merge **affc54d14c0280a7432f5ab52f108533eb3b7b35**. This stable code pin precedes the documentation-only handover commit.

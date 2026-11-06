@@ -72,7 +72,39 @@ LOG_SHADOW_BASE_TILES 8794 16 16 b9a30c86ce81139722854af604422196b077c78a0e79dca
 MAP_SPR_PATA_BATA_NORMAL b2e4 34 34 9165ad8d9f95bda2639172fe900f16dad44924af5f896a0223e6b9cb8bb7087b 9165ad8d9f95bda2639172fe900f16dad44924af5f896a0223e6b9cb8bb7087b
 MAP_SPR_PATA_BATA_DAMAGED b306 40 40 96d4c533000d636452afa838266996b9c4853824e7b3377868f7876492858889 96d4c533000d636452afa838266996b9c4853824e7b3377868f7876492858889
 ANI_PATA_BATA b2d2 18 18 a68b2c9721811294f0f2ae43e0f78acc91ed8211a5d0da2d08d2ba230b6a25f3 a68b2c9721811294f0f2ae43e0f78acc91ed8211a5d0da2d08d2ba230b6a25f3
-            """;
+MAP_SPR_EXPLOSION 1d714 146 146 0b509dfbd51d21babeb6f551b2032e8e82325c5a518f8c5e976b88b039624d44 0b509dfbd51d21babeb6f551b2032e8e82325c5a518f8c5e976b88b039624d44
+ANI_EXPLOSION 1d700 20 20 9119f6ae5b68628549bb895b3bb7dcc3a6d4d9cc81918efc848846f745359649 9119f6ae5b68628549bb895b3bb7dcc3a6d4d9cc81918efc848846f745359649
+MAP_SPR_FLOWER 36ab0 90 90 48b7482f83af1300d834e07ec7326e670740d8c5f89f5c8a2253de123e46bb41 48b7482f83af1300d834e07ec7326e670740d8c5f89f5c8a2253de123e46bb41
+ANI_FLOWER 36a94 28 28 74105bb36227383768d51cd9084560633d8315a9c940e23e80c707532a5353e9 74105bb36227383768d51cd9084560633d8315a9c940e23e80c707532a5353e9
+MAP_SPR_POINTS aa1a 82 82 24a65d4f2732e077fa1d9c881479a5e52cb46c7a9a371f6f30f0efa67ecf459e 24a65d4f2732e077fa1d9c881479a5e52cb46c7a9a371f6f30f0efa67ecf459e
+MAP_SPR_MOSQUI_NORMAL b49c 60 60 5a10487e5e92e1c60e5885d832b90239c22d45f3c84bb49cd8886c590d8aba2e 5a10487e5e92e1c60e5885d832b90239c22d45f3c84bb49cd8886c590d8aba2e
+MAP_SPR_MOSQUI_DAMAGED b4d8 66 66 23f8799c277fc89e4f94ccf75e0b488de9fca30a05a658cde5eaf0be8fec7313 23f8799c277fc89e4f94ccf75e0b488de9fca30a05a658cde5eaf0be8fec7313
+ANI_MOSQUI_NORMAL b480 14 14 24b00d5597a3482b4bf9f5e692be5ea38534c1f5265408b8c7273d672949c1a2 24b00d5597a3482b4bf9f5e692be5ea38534c1f5265408b8c7273d672949c1a2
+ANI_MOSQUI_DAMAGED b48e 13 14 6718cb74ab9b1ce59a3a122b0dee40b38ece57b7fdacd1f4baf7b76bc38c1a6e cf64e547e8082aac25e26ac28799500505b45169aababaed6d42e9b144990408
+MAP_SPR_PROJECTOR e9f0 68 68 2e180977b04b20230e5aced68385346b6f992bed19139df617477bd30780cda3 2e180977b04b20230e5aced68385346b6f992bed19139df617477bd30780cda3
+ANI_METAL_SONIC_HOLOGRAM e9ac 68 68 2b431fb6fc08fbccef96299a1c83c99327b680924c8420b2eb56ef98eff4aa6f 2b431fb6fc08fbccef96299a1c83c99327b680924c8420b2eb56ef98eff4aa6f
+PROJECTOR_EXPLOSION_SCHEDULE ea34 38 38 5830294609ca462a39688a5a11982198b43d6b04058c4335d0b9d923064a74a3 5830294609ca462a39688a5a11982198b43d6b04058c4335d0b9d923064a74a3
+MAP_SPR_SCENERY 86d8 62 62 5c73de36900992cd776411f9b2b2e9c2007ee3fc070d74cf1a842db6e4217a12 5c73de36900992cd776411f9b2b2e9c2007ee3fc070d74cf1a842db6e4217a12
+SCENERY_BASE_TILES 86cc 12 12 90b119329f4db25def8b3f2b246da7076cf0cee8b236806ad54079b7c5371227 90b119329f4db25def8b3f2b246da7076cf0cee8b236806ad54079b7c5371227
+MAP_SPR_SPRINGBOARD be7c 84 84 a5b367d30a33cd6d503930c42c8ac86f8155235475b57094740a62ee242b0a3f a5b367d30a33cd6d503930c42c8ac86f8155235475b57094740a62ee242b0a3f
+ANI_SPRINGBOARD be46 54 54 66b7d5d2f75e5d7ff1977d7d3f1cc4ec7635c1f1db4da5b7568f72ea142067ba 66b7d5d2f75e5d7ff1977d7d3f1cc4ec7635c1f1db4da5b7568f72ea142067ba
+SPRINGBOARD_HITBOXES bb78 32 32 48c0ebee94aed675266f2c3b8ffbb5f609aeac6e40c7d72d792ef851c7e2735c 48c0ebee94aed675266f2c3b8ffbb5f609aeac6e40c7d72d792ef851c7e2735c
+            MAP_SPR_SPINNING_DISC 937c 36 36 c74d267322eb765b6dc9677a3b53824fbeeb48328d419631199798257f7ddeb4 c74d267322eb765b6dc9677a3b53824fbeeb48328d419631199798257f7ddeb4
+ANI_SPINNING_DISC 9374 8 8 bebbcc2ef135a5349ad7b24690b63ab06bdf5ddae18b774d7fcde1824b340260 bebbcc2ef135a5349ad7b24690b63ab06bdf5ddae18b774d7fcde1824b340260
+SPINNING_DISC_PLAYER_FRAMES 924c 16 16 51995b0191d2a4a3dff61e17629c017c209c1170fbf06d5172a5ce046b325389 51995b0191d2a4a3dff61e17629c017c209c1170fbf06d5172a5ce046b325389
+MAP_SPR_TUNNEL_DOOR 1d6c4 28 28 7260a75372713a37c9acb8b62f653a3d17c824b5e2eb88d6661789dd9cdaca92 7260a75372713a37c9acb8b62f653a3d17c824b5e2eb88d6661789dd9cdaca92
+ANI_TUNNEL_DOOR 1d6b6 14 14 398c620335d02e870c94e8f8144c33e355b9bd1440fe530eff2031ea16600fb0 398c620335d02e870c94e8f8144c33e355b9bd1440fe530eff2031ea16600fb0
+MAP_SPR_POWERUP 1d528 274 274 d79b2da45d7a63478f2f38d9288704bea375982e1d35d8aa97863cfdffb5f3fc d79b2da45d7a63478f2f38d9288704bea375982e1d35d8aa97863cfdffb5f3fc
+MAP_SPR_TUNNEL_DOOR_VERTICAL cb52 28 28 954bf4fd9df8e85b782482c17f65e68d32101f1e43e21fd4a7fe4058a91b5275 954bf4fd9df8e85b782482c17f65e68d32101f1e43e21fd4a7fe4058a91b5275
+MAP_SPR_BIG_RING 1d8f6 176 176 c6edd39fb1e1cc977c264d87e2301816d01ff2c10660fb63f89d9148afdb30c4 c6edd39fb1e1cc977c264d87e2301816d01ff2c10660fb63f89d9148afdb30c4
+ANI_BIG_RING 1d8ee 8 8 b8997affb40b5e6a6e2aff4f5013c56226e1ce0ff2d25c8396f6193939ba1ba6 b8997affb40b5e6a6e2aff4f5013c56226e1ce0ff2d25c8396f6193939ba1ba6
+MAP_SPR_BIG_RING_FLASH d652 416 416 b48a9c17b2359210ba747bf79d3c07a7af111639eef836d7315811b285226e10 b48a9c17b2359210ba747bf79d3c07a7af111639eef836d7315811b285226e10
+ANI_BIG_RING_FLASH d646 12 12 b4dbc8e16c7b27313dd1d0443cc0a9f6226470e751fd826adaac47dcc12a4d0f b4dbc8e16c7b27313dd1d0443cc0a9f6226470e751fd826adaac47dcc12a4d0f
+MAP_SPR_GOAL_SIGNPOST 1d9b4 126 126 610a02baa99d911f509b5fc06a1e4c0c72bc7ef71fa56ecd72640e409734bad8 610a02baa99d911f509b5fc06a1e4c0c72bc7ef71fa56ecd72640e409734bad8
+ANI_SIGNPOST 1d9a6 14 14 9912394f852b914651884191ea8532d60421a3bd40293510a3f356f86c69e691 9912394f852b914651884191ea8532d60421a3bd40293510a3f356f86c69e691
+GOAL_POST_BASE_TILES d3fa 112 112 82fd77609648d39ac2f50bc4c0e3762fccf3ef0986bf6bc8cef7f4cdeb3b3724 82fd77609648d39ac2f50bc4c0e3762fccf3ef0986bf6bc8cef7f4cdeb3b3724
+LEVEL_END_TIME_BONUSES d5e4 42 42 be40c9a172da6d18e694f0b8cfe698fa674eb88ab210958f4fa82713e0cf0861 be40c9a172da6d18e694f0b8cfe698fa674eb88ab210958f4fa82713e0cf0861
+""";
     private static final String OPERANDS="""
 3d3e 0020b1d0
 b234 43fa00ae
@@ -140,7 +172,61 @@ befa 700a4eba0ce0
 8744 217c002087a40004
 8786 317b000c0002
 8764 7000103900ff152e0200007f0c0000026606d03900ff156ad040d03900ff1507d040317b000c00020068400000024e75
-            """;
+3c8a 00209d18
+9d74 237c00209eb00004
+9d82 337ca7ae0002
+3ca6 00205e7c
+5eb2 217c0021d7140004
+5ee0 43f90021d700
+3cc2 00205f0a
+5f4c 217c00236ab00004
+5fd4 43f900236a94
+3cb6 0020aa6c
+a9ee 217c0020aa1a0004
+3cae 0020a594
+a5e4 227c0020a804d000d2f10000524921490004
+3d3a 0020b32e
+b398 43fa0102
+b39c 45fa00e2
+b3a8 43fa012e
+b3ac 45fa00e0
+3cfe 0020e716
+3d0e 00208652
+3ce6 0020bb98
+e7ae 217c0020e9f00004
+e972 217c0020e9f00004
+e7b6 217c0020ea34002c
+e99c 43fa000e
+867a 217c002086d80004
+86bc d040317b000c00020068400000024e75
+bbba 217c0020be7c0004
+baec 45f90020bb780240
+bbe0 70074eba0ffa
+bc1a 43fa022a
+            3c6a 0020915c
+3c7a 00206096
+3d16 002063e8
+3d1a 0020ca88
+3c96 0020d1ae
+3c9e 0020d2e6
+3ca2 0020d46a
+9172 43f900209374
+919c 217c0020937c0004
+922c 137b001e001b
+610c 217c0021d6c40004
+6152 43f90021d6b6
+641e 217c0021d5280004
+cabe 217c0020cb520004
+d216 217c0021d8f60004
+d29a 43f90021d8ee
+d194 217c0020d6520004
+d19c 43f90020d646
+d354 217c0021d9b40004
+d4c0 217c0021d9b40004
+d524 43f90021d9a6
+d3e2 317b00160002
+d5ce 31fb0014f7d2
+""";
     private record VisualCase(String method,View map,View script,int frames,int scripts,int root,int maxEnd,String digest){}
     private static final List<VisualCase> VISUALS=List.of(
         new VisualCase("rings", View.MAP_SPR_RING, View.ANI_RING, 9, 1, 0, 14, "111b9242f93bb7f44806482a9c0d84bcfb855633178d300d8bed9ffa3f310c69"),
@@ -169,13 +255,30 @@ befa 700a4eba0ce0
         new VisualCase("logShadow", View.MAP_SPR_LOG_SHADOW, null, 2, 0, 0, 16, "4832eeeee66550838053053d5b721a2ff138dc8134d9768b96939f3eac008e11"),
         new VisualCase("pataBataNormal", View.MAP_SPR_PATA_BATA_NORMAL, View.ANI_PATA_BATA, 3, 2, 0, 41, "9bd5004e11869515307a4fd84c6d9e21a04b715b5a0c32fb2732e91c60c106b5"),
         new VisualCase("pataBataDamaged", View.MAP_SPR_PATA_BATA_DAMAGED, View.ANI_PATA_BATA, 3, 2, 0, 50, "9e44f22ff5f65c5bdb9223c2cee3a019db6f7447d991ce2c82d34e0f234da0b6")
+,
+        new VisualCase("explosion", View.MAP_SPR_EXPLOSION, View.ANI_EXPLOSION, 7, 2, 0, 70, "76bacca4cca6beccb0c2b802b66d3b275bf4b111212204e6ed5ef17c3ef2097d"),
+        new VisualCase("flower", View.MAP_SPR_FLOWER, View.ANI_FLOWER, 8, 4, 0, 39, "40f4cc6873b06fab029cd7dfcebbaad730b3429935ab9c1f5fb3d295311f799e"),
+        new VisualCase("points", View.MAP_SPR_POINTS, null, 6, 0, 0, 5, "b59208a14a29f197008a87099ab38f83f8d0d25d2e986700256a781b92d16ce0"),
+        new VisualCase("normalMosqui", View.MAP_SPR_MOSQUI_NORMAL, View.ANI_MOSQUI_NORMAL, 5, 2, 0, 50, "dfba20fe0fc8a0609978083f80fbc789e5aa04fa26567f22d48c25e2c63e1ae1"),
+        new VisualCase("damagedMosqui", View.MAP_SPR_MOSQUI_DAMAGED, View.ANI_MOSQUI_DAMAGED, 5, 2, 0, 70, "ed5cb56ecd6b14d8c6984e8df7d5c4b4515a0e6fd83e68e23a0534d0d3bc18bb")
+,
+        new VisualCase("projector", View.MAP_SPR_PROJECTOR, View.ANI_METAL_SONIC_HOLOGRAM, 6, 2, 0, 51, "6b24c1eb0c96eff2ce1325abc38d9fb1a9702ca724634fa03cd2eca7b1c90d24"),
+        new VisualCase("scenery", View.MAP_SPR_SCENERY, null, 3, 0, 0, 17, "d96816c35b7a2bb1e1d5ea42995436b9326b363a2793aea56227b64c82b0f296"),
+        new VisualCase("springboard", View.MAP_SPR_SPRINGBOARD, View.ANI_SPRINGBOARD, 6, 5, 0, 21, "bd92f531f55c1c075d804f8ef6291c87b527f0b1e0275937f8b0f37672dc6405")
+,
+        new VisualCase("spinningDisc", View.MAP_SPR_SPINNING_DISC, View.ANI_SPINNING_DISC, 3, 1, 0, 12, "b4cf984fe2008e985a2e45cb2fa89e7989fad888e0d90a34702bf7760fe680bf"),
+        new VisualCase("tunnelDoor", View.MAP_SPR_TUNNEL_DOOR, View.ANI_TUNNEL_DOOR, 2, 1, 0, 12, "040b1f891414b4a65724107afe5920458533b559191aaf01b333880e00335516"),
+        new VisualCase("tunnelDoorVertical", View.MAP_SPR_TUNNEL_DOOR_VERTICAL, null, 2, 0, 0, 12, "6bbe7185af04c1f5f1a727af30da09a63695352568d398d2aeb1c7e16b7ae2f1"),
+        new VisualCase("bigRing", View.MAP_SPR_BIG_RING, null, 4, 0, 0, 106, "b5e59a53c86d05fcfa45955e0e356f7b568d19cb7bd93e05afca70e5da00c3a8"),
+        new VisualCase("bigRingFlash", View.MAP_SPR_BIG_RING_FLASH, null, 8, 0, 0, 77, "f76319dd2ac404010f79a0d7700a654dcfbd1a26cc55259145cf9463d198f92a"),
+        new VisualCase("goalSignpost", View.MAP_SPR_GOAL_SIGNPOST, null, 6, 0, 0, 76, "a63351bbc19655e4e72202c317847a45f32f94af3eba2d21ccb4d9761889d858")
     );
 
-    @Test void publicSurfaceIsOnlyThirtyThreeMetadataMethodsWithPrivateOwnerConstruction() throws Exception {
+    @Test void publicSurfaceIsOnlyFortySevenMetadataMethodsWithPrivateOwnerConstruction() throws Exception {
         var type=CdR12bObjectAssets.class;assertTrue(Modifier.isFinal(type.getModifiers()));
         assertEquals(1,type.getDeclaredConstructors().length);assertTrue(Modifier.isPrivate(type.getDeclaredConstructors()[0].getModifiers()));assertEquals(1,type.getDeclaredConstructors()[0].getParameterCount());
-        assertEquals(List.of("anton","boulder","breakableWall","collapsePlatform1","collapsePlatform2","collapsePlatform3","collapsePlatform4","floatBlock","flyingAnimal","fromAssets","groundAnimal","hudAssets","hudVisuals","identity","logShadow","monitorTime","pataBataDamaged","pataBataNormal","placements","platform","ringDeltas","rings","robotGenerator","spikes","springDiagonal","springHorizontal","springMappings","springVertical","swing","tamabbohDamaged","tamabbohMissile","tamabbohNormal","view"),Arrays.stream(type.getDeclaredMethods()).filter(m->Modifier.isPublic(m.getModifiers())).map(java.lang.reflect.Method::getName).sorted().toList());
-        assertEquals(52,View.values().length);assertEquals(26,VISUALS.size());
+        assertEquals(List.of("anton","bigRing","bigRingFlash","boulder","breakableWall","collapsePlatform1","collapsePlatform2","collapsePlatform3","collapsePlatform4","damagedMosqui","explosion","floatBlock","flower","flyingAnimal","fromAssets","goalSignpost","groundAnimal","hudAssets","hudVisuals","identity","logShadow","monitorTime","normalMosqui","pataBataDamaged","pataBataNormal","placements","platform","points","projector","ringDeltas","rings","robotGenerator","scenery","spikes","spinningDisc","springDiagonal","springHorizontal","springMappings","springVertical","springboard","swing","tamabbohDamaged","tamabbohMissile","tamabbohNormal","tunnelDoor","tunnelDoorVertical","view"),Arrays.stream(type.getDeclaredMethods()).filter(m->Modifier.isPublic(m.getModifiers())).map(java.lang.reflect.Method::getName).sorted().toList());
+        assertEquals(84,View.values().length);assertEquals(40,VISUALS.size());
         var getter=CdR12bTerrainAssets.class.getMethod("objects");assertEquals(type,getter.getReturnType());assertTrue(Modifier.isSynchronized(getter.getModifiers()));
         var seam=CdR12bTerrainAssets.class.getDeclaredMethod("objectView",View.class);assertFalse(Modifier.isPublic(seam.getModifiers()));
         assertTrue(Arrays.stream(type.getDeclaredConstructors()).noneMatch(c->Arrays.asList(c.getParameterTypes()).contains(CdMmdImage.class)));
@@ -193,8 +296,8 @@ befa 700a4eba0ce0
     }
 
     @Test void everyOrderedFiniteViewPinsItsFullOriginalRangeCanonicalExtentHashAndImmutableCache() throws Exception {
-        var o=fromAssets(retail().assets());var lines=MANIFEST.lines().filter(s->!s.isBlank()).toList();assertEquals(52,lines.size());
-        for(int i=0;i<lines.size();i++){var c=lines.get(i).split(" ");var v=View.values()[i];assertEquals(c[0],v.name());var r=v.range();var canonical=v.canonicalRange();
+        var o=fromAssets(retail().assets());var lines=MANIFEST.lines().filter(s->!s.isBlank()).toList();assertEquals(84,lines.size());
+        for(int i=0;i<lines.size();i++){var c=lines.get(i).strip().split("\\s+");var v=View.values()[i];assertEquals(c[0],v.name());var r=v.range();var canonical=v.canonicalRange();
             assertEquals(Integer.parseInt(c[1],16),r.fileOffset());assertEquals(Integer.parseInt(c[2]),canonical.length());assertEquals(Integer.parseInt(c[3]),r.length());
             assertEquals(r.fileOffset(),canonical.fileOffset());assertEquals(CdNativeFile.R12B,r.file());assertEquals(CdMmdImage.Domain.ORIGINAL_WORD_RAM,r.domain());assertEquals(0x200000+r.fileOffset(),r.nativeAddress());
             var bytes=o.view(v);assertSame(bytes,o.view(v));assertEquals(c[4],v.canonicalSha256());assertEquals(c[5],v.sha256());
@@ -206,13 +309,13 @@ befa 700a4eba0ce0
     }
 
     @Test void actualInitAnimateAndScalarOperandsSelectTheDeclaredR12bRootsIncludingNestedOnes() throws Exception {
-        var original=retail().original();for(var line:OPERANDS.lines().filter(s->!s.isBlank()).toList()){var c=line.split(" ");assertEquals(c[1],HexFormat.of().formatHex(original.readFile(Integer.parseInt(c[0],16),c[1].length()/2)),line);}
+        var original=retail().original();for(var line:OPERANDS.lines().filter(s->!s.isBlank()).toList()){var c=line.strip().split("\\s+");assertEquals(c[1],HexFormat.of().formatHex(original.readFile(Integer.parseInt(c[0],16),c[1].length()/2)),line);}
         assertEquals(0x20995C,View.MAP_SPRING.range().nativeAddress()+6);assertEquals(0x2099A6,View.MAP_SPRING.range().nativeAddress()+80);
         assertEquals(0x20B734,View.MAP_SPR_TAMABBOH.range().nativeAddress()+22);assertEquals(0x20ECEC,View.MAP_SPR_SWING.range().nativeAddress());
         assertEquals(0x002E,fromAssets(retail().assets()).view(View.DIAGONAL_SPRING_HEADER).unsignedWord(0));
     }
 
-    @Test void allTwentySixVisualsDecodeCompleteSourceRootsScriptsFlipsAndCountedBodiesWithLiteralDigests() throws Exception {
+    @Test void allFortyVisualsDecodeCompleteSourceRootsScriptsFlipsAndCountedBodiesWithLiteralDigests() throws Exception {
         var o=fromAssets(retail().assets());for(var c:VISUALS){var method=CdR12bObjectAssets.class.getMethod(c.method());var v=(CdObjectVisualAssets)method.invoke(o);assertSame(v,method.invoke(o));
             assertEquals(c.frames(),v.mappingFrames().size(),c.method());assertEquals(c.scripts(),v.animations().size(),c.method());assertEquals(c.root(),v.mappingTableOffset());
             assertArrayEquals(o.view(c.map()).copy(),v.mappings().copy());assertArrayEquals(c.script()==null?new byte[0]:o.view(c.script()).copy(),v.animationTable().copy());
@@ -257,7 +360,7 @@ befa 700a4eba0ce0
         assertSame(a.directArtSources().hudAssets(),o.hudAssets());assertSame(o.hudAssets(),o.hudAssets());
         assertEquals(14,registry.source(CdR12bSectionSources.SourceId.ART_RINGS).tileCount());assertEquals(36,registry.source(CdR12bSectionSources.SourceId.ART_SPRINGS).tileCount());
         assertEquals(57,registry.source(CdR12bSectionSources.SourceId.ART_PLATFORM).tileCount());assertEquals(23,registry.source(CdR12bSectionSources.SourceId.ART_ROBOT_TRANSPORT_B).tileCount());
-        assertEquals(52,View.values().length);assertEquals(37,registry.sources().size());assertSame(pointers,a.loadPlan().sourcePointers());assertEquals(25,CdR12bProfile.Asset.values().length);
+        assertEquals(84,View.values().length);assertEquals(37,registry.sources().size());assertSame(pointers,a.loadPlan().sourcePointers());assertEquals(25,CdR12bProfile.Asset.values().length);
         assertEquals(63,o.hudVisuals().mappingFrames().stream().flatMap(f->f.pieces().stream()).mapToInt(p->p.tileOffset()+p.tileCount()).max().orElse(0));
     }
 
@@ -503,6 +606,101 @@ befa 700a4eba0ce0
         var o=CdR12bObjectAssets.bind(mock);var old=new ArrayList<CdAssetBytes>();for(int i=0;i<49;i++)old.add(o.view(View.values()[i]));var visuals=new ArrayList<CdObjectVisualAssets>();for(int i=0;i<24;i++)visuals.add((CdObjectVisualAssets)CdR12bObjectAssets.class.getMethod(VISUALS.get(i).method()).invoke(o));
         assertThrows(IllegalArgumentException.class,o::pataBataNormal);assertSame(actual,o.view(View.ANI_PATA_BATA));assertSame(o.pataBataNormal(),o.pataBataNormal());assertSame(o.pataBataDamaged(),o.pataBataDamaged());verify(mock,times(2)).objectView(View.ANI_PATA_BATA);
         for(int i=0;i<49;i++)assertSame(old.get(i),o.view(View.values()[i]));for(int i=0;i<24;i++)assertSame(visuals.get(i),CdR12bObjectAssets.class.getMethod(VISUALS.get(i).method()).invoke(o));
+    }
+
+    @Test void effectsAndMosquiHaveOnlyTheAuthenticNativeRootsAndCompleteSourceExtents()throws Exception{
+        var f=retail();var o=fromAssets(f.assets());int[] offsets={0x1D714,0x1D700,0x36AB0,0x36A94,0xAA1A,0xB49C,0xB4D8,0xB480,0xB48E};int[] canonical={146,20,90,28,82,60,66,14,13};int[] reads={146,20,90,28,82,60,66,14,14};
+        for(int i=0;i<9;i++){var v=View.values()[52+i];assertEquals(offsets[i],v.range().fileOffset());assertEquals(canonical[i],v.canonicalRange().length());assertEquals(reads[i],o.view(v).length());}
+        // Both original Flower includes occur twice; only these actual Init/LEA operands select the admitted pair.
+        assertEquals("217c00236ab00004",HexFormat.of().formatHex(f.original().readFile(0x5F4C,8)));assertEquals("43f900236a94",HexFormat.of().formatHex(f.original().readFile(0x5FD4,6)));
+        assertArrayEquals(f.original().readFile(0x1DF92,90),o.view(View.MAP_SPR_FLOWER).copy());assertArrayEquals(f.original().readFile(0x1DF76,28),o.view(View.ANI_FLOWER).copy());assertNotEquals(0x21DF92,View.MAP_SPR_FLOWER.range().nativeAddress());
+        assertEquals(70,f.assets().sectionSources().source(CdR12bSectionSources.SourceId.ART_EXPLOSIONS).tileCount());assertEquals(39,f.assets().sectionSources().source(CdR12bSectionSources.SourceId.ART_FLOWER).tileCount());assertEquals(5,f.assets().sectionSources().source(CdR12bSectionSources.SourceId.ART_POINTS).tileCount());assertEquals(70,f.assets().sectionSources().source(CdR12bSectionSources.SourceId.ART_MOSQUI).tileCount());
+    }
+    @Test void allNewScriptDelaysFramesAndRealAlignmentBytesMatchNativeLiterals()throws Exception{
+        var o=fromAssets(retail().assets());assertArrayEquals(HexFormat.of().parseHex("0004000c030005060304fc00030001020304fc00"),o.view(View.ANI_EXPLOSION).copy());assertArrayEquals(HexFormat.of().parseHex("0008000c00120018030001ff0302030203fc0105050406fc130607ff"),o.view(View.ANI_FLOWER).copy());
+        assertArrayEquals(HexFormat.of().parseHex("00040008010001ff06020304fc00"),o.view(View.ANI_MOSQUI_NORMAL).copy());assertArrayEquals(HexFormat.of().parseHex("00040008040001ff0e020304fc00"),o.view(View.ANI_MOSQUI_DAMAGED).copy());
+        assertEquals(List.of(3,3),o.explosion().animations().stream().map(CdObjectVisualAssets.AnimationScript::delay).toList());assertEquals(List.of(3,3,1,19),o.flower().animations().stream().map(CdObjectVisualAssets.AnimationScript::delay).toList());assertEquals(List.of(1,6),o.normalMosqui().animations().stream().map(CdObjectVisualAssets.AnimationScript::delay).toList());assertEquals(List.of(4,14),o.damagedMosqui().animations().stream().map(CdObjectVisualAssets.AnimationScript::delay).toList());
+        assertEquals(List.of(0,5,6,3,4),o.explosion().animations().getFirst().frameBytes());assertEquals(List.of(5,5,4,6),o.flower().animations().get(2).frameBytes());assertEquals(List.of(2,3,4),o.normalMosqui().animations().get(1).frameBytes());assertEquals(List.of(2,3,4),o.damagedMosqui().animations().get(1).frameBytes());
+        assertEquals(CdObjectVisualAssets.Terminal.ADVANCE_ROUTINE_FC,o.explosion().animations().getFirst().terminal());assertEquals(CdObjectVisualAssets.Terminal.LOOP_FF,o.flower().animations().getFirst().terminal());assertEquals(0,o.view(View.MAP_SPR_EXPLOSION).unsignedByte(145));assertEquals(0,o.view(View.MAP_SPR_MOSQUI_DAMAGED).unsignedByte(65));assertEquals(0,o.view(View.ANI_MOSQUI_DAMAGED).unsignedByte(13));assertEquals(14,o.damagedMosqui().animationTable().length());
+    }
+    @Test void sharedBodyAssetFormatsReuseRingAndMonitorRootsWithoutRelaxingMosqui74Contract()throws Exception{
+        var o=fromAssets(retail().assets());assertSame(o.explosion(),new CdExplosion.Assets(o.explosion(),0x21D714).explosion());assertSame(o.flower(),new CdFlower.Assets(o.flower(),0x236AB0).flower());assertSame(o.points(),new CdPoints.Assets(o.points(),0x20AA1A).points());
+        var lost=new CdLostRing.Assets(o.rings(),View.MAP_SPR_RING.range().nativeAddress(),0xA7AE);assertSame(o.rings(),lost.rings());assertEquals(0x209EB0,lost.mappingsAddress());assertEquals(0xA7AE,lost.baseTileWord());
+        var monitor=CdMonitor.Assets.fromAct2PastAssets(o);assertSame(o.monitorTime(),monitor.visual());assertEquals(8,CdObjectMappings.act2PastMonitorItemStaticPieces(o).size());assertEquals(72,o.view(View.OBJECT_TILE_IDS).length());assertEquals(0x24,o.view(View.OBJECT_TILE_IDS).unsignedWord(0));assertEquals(0x23EA,o.view(View.OBJECT_TILE_IDS).unsignedWord(0x24));
+        assertThrows(IllegalArgumentException.class,()->new CdMosqui.Assets(o.view(View.OBJECT_TILE_IDS),o.normalMosqui(),o.damagedMosqui(),0x20B49C,0x20B480,0x20B4D8,0x20B48E));
+        assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decode(o.view(View.MAP_SPR_EXPLOSION).copy(),7,o.view(View.ANI_EXPLOSION).copy(),2,69));assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decode(o.view(View.MAP_SPR_FLOWER).copy(),8,o.view(View.ANI_FLOWER).copy(),4,38));assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decodeStatic(o.view(View.MAP_SPR_POINTS).copy(),6,4));
+    }
+    @Test void everyNewRawViewFaultRetainsAllFiftyTwoPriorViewAndTwentySixVisualIdentities()throws Exception{
+        var real=retail().assets();for(int target=52;target<61;target++){var source=View.values()[target];var actual=real.objectView(source);byte[] bad=actual.copy();bad[0]^=1;var mock=mock(CdR12bTerrainAssets.class);when(mock.identity()).thenReturn(real.identity());when(mock.profile()).thenReturn(real.profile());when(mock.sectionSources()).thenReturn(real.sectionSources());when(mock.objectView(any(View.class))).thenAnswer(c->real.objectView(c.getArgument(0,View.class)));when(mock.objectView(source)).thenReturn(CdAssetBytes.copyOf(bad),actual);
+            var o=CdR12bObjectAssets.bind(mock);var prior=new ArrayList<CdAssetBytes>();for(int i=0;i<52;i++)prior.add(o.view(View.values()[i]));var visuals=new ArrayList<CdObjectVisualAssets>();for(int i=0;i<26;i++)visuals.add((CdObjectVisualAssets)CdR12bObjectAssets.class.getMethod(VISUALS.get(i).method()).invoke(o));
+            assertThrows(IllegalArgumentException.class,()->o.view(source));assertSame(actual,o.view(source));assertSame(actual,o.view(source));verify(mock,times(2)).objectView(source);for(int i=0;i<52;i++)assertSame(prior.get(i),o.view(View.values()[i]));for(int i=0;i<26;i++)assertSame(visuals.get(i),CdR12bObjectAssets.class.getMethod(VISUALS.get(i).method()).invoke(o));
+        }
+    }
+    @Test void eachNewVisualFailureCannotPublishItsCacheBeforeTheActualSourceValidates()throws Exception{
+        var real=retail().assets();for(int target=26;target<31;target++){var c=VISUALS.get(target);var source=c.script()==null?c.map():c.script();var actual=real.objectView(source);byte[] bad=actual.copy();bad[bad.length-1]^=1;var mock=mock(CdR12bTerrainAssets.class);when(mock.identity()).thenReturn(real.identity());when(mock.profile()).thenReturn(real.profile());when(mock.sectionSources()).thenReturn(real.sectionSources());when(mock.objectView(any(View.class))).thenAnswer(call->real.objectView(call.getArgument(0,View.class)));when(mock.objectView(source)).thenReturn(CdAssetBytes.copyOf(bad),actual);
+            var o=CdR12bObjectAssets.bind(mock);var method=CdR12bObjectAssets.class.getMethod(c.method());var error=assertThrows(java.lang.reflect.InvocationTargetException.class,()->method.invoke(o));assertInstanceOf(IllegalArgumentException.class,error.getCause());var field=CdR12bObjectAssets.class.getDeclaredField("visuals");field.setAccessible(true);assertNull(((CdObjectVisualAssets[])field.get(o))[target]);var first=method.invoke(o);assertSame(first,method.invoke(o));verify(mock,times(2)).objectView(source);
+        }
+    }
+
+    @Test void projectorSceneryAndSpringboardUseOriginalSelectedPointersAndAllEightFiniteSpans()throws Exception{
+        var f=retail();var o=fromAssets(f.assets());int[] offsets={0xE9F0,0xE9AC,0xEA34,0x86D8,0x86CC,0xBE7C,0xBE46,0xBB78};int[] lengths={68,68,38,62,12,84,54,32};for(int i=0;i<8;i++){var source=View.values()[61+i];assertEquals(offsets[i],source.range().fileOffset());assertEquals(lengths[i],source.canonicalRange().length());assertEquals(lengths[i],o.view(source).length());}
+        assertEquals(0x20E716L,o.view(View.OBJECT_INDEX).unsignedLong((0x2E-1)*4));assertEquals(0x208652L,o.view(View.OBJECT_INDEX).unsignedLong((0x32-1)*4));assertEquals(0x20BB98L,o.view(View.OBJECT_INDEX).unsignedLong((0x28-1)*4));
+        assertEquals("217c0020e9f00004",HexFormat.of().formatHex(f.original().readFile(0xE7AE,8)));assertEquals("217c0020e9f00004",HexFormat.of().formatHex(f.original().readFile(0xE972,8)));assertEquals("217c0020ea34002c",HexFormat.of().formatHex(f.original().readFile(0xE7B6,8)));assertEquals("45f90020bb780240",HexFormat.of().formatHex(f.original().readFile(0xBAEC,8)));
+    }
+    @Test void projectorKeepsAllSixCountedFramesIncludingTheRealEmptyFlickerAndOriginalSchedule()throws Exception{
+        var o=fromAssets(retail().assets());var v=o.projector();assertSame(v,o.projector());assertEquals(List.of(12,18,19,25,31,47),v.mappingFrames().stream().map(CdObjectVisualAssets.MappingFrame::relativeOffset).toList());assertEquals(List.of(1,0,1,1,3,4),v.mappingFrames().stream().map(f->f.pieces().size()).toList());assertArrayEquals(new byte[]{0},v.mappingFrames().get(1).bytes().copy());assertEquals(List.of(0,0),v.animations().stream().map(CdObjectVisualAssets.AnimationScript::delay).toList());assertEquals(List.of(2,1,3,1),v.animations().getFirst().frameBytes());assertEquals(56,v.animations().get(1).frameBytes().size());assertTrue(v.animations().stream().allMatch(a->a.terminal()==CdObjectVisualAssets.Terminal.LOOP_FF));
+        var schedule=o.view(View.PROJECTOR_EXPLOSION_SCHEDULE);assertArrayEquals(HexFormat.of().parseHex("01000005eef60af60a0f00ee14f612160817190df61cfde71e0a1420f602230df628f60aff00"),schedule.copy());int[] ticks={1,5,10,15,20,22,25,28,30,32,35,40};for(int i=0;i<12;i++)assertEquals(ticks[i],schedule.unsignedByte(i*3));assertEquals(-18,schedule.signedByte(4));assertEquals(-25,schedule.signedByte(23));assertEquals(255,schedule.unsignedByte(36));assertEquals(0,schedule.unsignedByte(37));assertThrows(IndexOutOfBoundsException.class,()->schedule.unsignedByte(38));
+        assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decode(v.mappings().copy(),6,v.animationTable().copy(),2,50));
+    }
+    @Test void sceneryPreservesThreeCompleteNativeFramesAndThePastSeventeenTileSource()throws Exception{
+        var o=fromAssets(retail().assets());var v=o.scenery();assertSame(v,o.scenery());assertEquals(List.of(6,18,40),v.mappingFrames().stream().map(CdObjectVisualAssets.MappingFrame::relativeOffset).toList());assertEquals(List.of(2,4,4),v.mappingFrames().stream().map(f->f.pieces().size()).toList());assertTrue(v.animations().isEmpty());assertEquals(0,v.animationTable().length());assertEquals(62,v.mappings().length());assertEquals(0,v.mappings().unsignedByte(61));
+        assertArrayEquals(HexFormat.of().parseHex("03db046e0438039f0438038f"),o.view(View.SCENERY_BASE_TILES).copy());assertEquals(0x46E,o.view(View.SCENERY_BASE_TILES).unsignedWord(2));assertEquals(17,retail().assets().sectionSources().source(CdR12bSectionSources.SourceId.ART_SCENERY_B).tileCount());assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decodeStatic(v.mappings().copy(),3,16));
+    }
+    @Test void springboardPreservesSixFramesFiveScriptsAndEverySignedHitboxByte()throws Exception{
+        var o=fromAssets(retail().assets());var v=o.springboard();assertSame(v,o.springboard());assertEquals(List.of(12,24,36,48,60,72),v.mappingFrames().stream().map(CdObjectVisualAssets.MappingFrame::relativeOffset).toList());assertTrue(v.mappingFrames().stream().allMatch(f->f.pieces().size()==2));assertEquals(List.of(2,2,2,0,0),v.animations().stream().map(CdObjectVisualAssets.AnimationScript::delay).toList());assertTrue(v.animations().stream().allMatch(a->a.terminal()==CdObjectVisualAssets.Terminal.LOOP_FF));assertEquals(List.of(0,1,0,2,0,1,0,3,4,3,5,3,4,3),v.animations().getFirst().frameBytes());assertEquals(List.of(0),v.animations().get(3).frameBytes());assertEquals(List.of(3),v.animations().get(4).frameBytes());
+        assertArrayEquals(HexFormat.of().parseHex("10f010f010f004fc09f7381000e804fc00e80c00180004fc18000c0020e020e0"),o.view(View.SPRINGBOARD_HITBOXES).copy());assertEquals(-24,o.view(View.SPRINGBOARD_HITBOXES).signedByte(13));assertEquals(56,o.view(View.SPRINGBOARD_HITBOXES).unsignedByte(10));assertThrows(IndexOutOfBoundsException.class,()->o.view(View.SPRINGBOARD_HITBOXES).unsignedByte(32));assertEquals(0x32,o.view(View.OBJECT_TILE_IDS).unsignedWord(14));assertEquals(0x041E,o.view(View.OBJECT_TILE_IDS).unsignedWord(0x32));assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decode(v.mappings().copy(),6,v.animationTable().copy(),5,20));
+    }
+    @Test void onlyExistingGenuineArtAliasesAndTwoExistingAnimalMappingFamiliesAreReused()throws Exception{
+        var a=retail().assets();var o=fromAssets(a);var registry=a.sectionSources();assertEquals(37,registry.sources().size());var hologram=registry.source(CdR12bSectionSources.SourceId.ART_HOLOGRAM);var regular=registry.source(CdR12bSectionSources.SourceId.ART_ANIMALS);var projected=registry.source(CdR12bSectionSources.SourceId.ART_HOLOGRAM_ANIMALS);assertEquals(51,hologram.tileCount());assertEquals(20,regular.tileCount());assertEquals(20,projected.tileCount());assertEquals(21,registry.source(CdR12bSectionSources.SourceId.ART_SPRINGBOARD).tileCount());
+        var load=a.loadPlan().plcs().get(5).entries();var restore=a.loadPlan().plcs().get(4).entries();assertEquals(1,load.size());assertEquals(1,restore.size());assertEquals(projected.nativeAddress(),load.getFirst().sourceNativeAddress());assertEquals(regular.nativeAddress(),restore.getFirst().sourceNativeAddress());assertEquals(0x9EE0,load.getFirst().vramAddress());assertEquals(0x9EE0,restore.getFirst().vramAddress());assertTrue(a.loadPlan().plcs().get(9).entries().stream().anyMatch(e->e.sourceNativeAddress()==hologram.nativeAddress()&&e.vramAddress()==0x75E0));
+        assertEquals(3,o.flyingAnimal().mappingFrames().size());assertEquals(5,o.groundAnimal().mappingFrames().size());assertArrayEquals(o.view(View.MAP_SPR_FLYING_ANIMAL).copy(),o.flyingAnimal().mappings().copy());assertArrayEquals(o.view(View.MAP_SPR_GROUND_ANIMAL).copy(),o.groundAnimal().mappings().copy());assertSame(o.flyingAnimal(),o.flyingAnimal());assertSame(o.groundAnimal(),o.groundAnimal());
+    }
+    @Test void newViewAndVisualFailuresCannotReplaceAnyOfThePriorSixtyOneViewsOrThirtyOneVisuals()throws Exception{
+        var real=retail().assets();for(int target=61;target<69;target++){var source=View.values()[target];var actual=real.objectView(source);byte[] bad=actual.copy();bad[0]^=1;var mock=mock(CdR12bTerrainAssets.class);when(mock.identity()).thenReturn(real.identity());when(mock.profile()).thenReturn(real.profile());when(mock.sectionSources()).thenReturn(real.sectionSources());when(mock.objectView(any(View.class))).thenAnswer(c->real.objectView(c.getArgument(0,View.class)));when(mock.objectView(source)).thenReturn(CdAssetBytes.copyOf(bad),actual);var o=CdR12bObjectAssets.bind(mock);var old=new ArrayList<CdAssetBytes>();for(int i=0;i<61;i++)old.add(o.view(View.values()[i]));var visuals=new ArrayList<CdObjectVisualAssets>();for(int i=0;i<31;i++)visuals.add((CdObjectVisualAssets)CdR12bObjectAssets.class.getMethod(VISUALS.get(i).method()).invoke(o));assertThrows(IllegalArgumentException.class,()->o.view(source));assertSame(actual,o.view(source));verify(mock,times(2)).objectView(source);for(int i=0;i<61;i++)assertSame(old.get(i),o.view(View.values()[i]));for(int i=0;i<31;i++)assertSame(visuals.get(i),CdR12bObjectAssets.class.getMethod(VISUALS.get(i).method()).invoke(o));}
+        for(int target=31;target<34;target++){var c=VISUALS.get(target);var source=c.script()==null?c.map():c.script();var actual=real.objectView(source);byte[] bad=actual.copy();bad[bad.length-1]^=1;var mock=mock(CdR12bTerrainAssets.class);when(mock.identity()).thenReturn(real.identity());when(mock.profile()).thenReturn(real.profile());when(mock.sectionSources()).thenReturn(real.sectionSources());when(mock.objectView(any(View.class))).thenAnswer(call->real.objectView(call.getArgument(0,View.class)));when(mock.objectView(source)).thenReturn(CdAssetBytes.copyOf(bad),actual);var o=CdR12bObjectAssets.bind(mock);var method=CdR12bObjectAssets.class.getMethod(c.method());assertInstanceOf(IllegalArgumentException.class,assertThrows(java.lang.reflect.InvocationTargetException.class,()->method.invoke(o)).getCause());var field=CdR12bObjectAssets.class.getDeclaredField("visuals");field.setAccessible(true);assertNull(((CdObjectVisualAssets[])field.get(o))[target]);assertSame(method.invoke(o),method.invoke(o));verify(mock,times(2)).objectView(source);}
+    }
+
+    @Test void remainingRouteViewsUseOnlyReachedOriginalOperandsAndCompleteNativeIncludes()throws Exception{
+        var o=fromAssets(retail().assets());var original=retail().original();String[] names={"MAP_SPR_SPINNING_DISC","ANI_SPINNING_DISC","SPINNING_DISC_PLAYER_FRAMES","MAP_SPR_TUNNEL_DOOR","ANI_TUNNEL_DOOR","MAP_SPR_POWERUP","MAP_SPR_TUNNEL_DOOR_VERTICAL","MAP_SPR_BIG_RING","ANI_BIG_RING","MAP_SPR_BIG_RING_FLASH","ANI_BIG_RING_FLASH","MAP_SPR_GOAL_SIGNPOST","ANI_SIGNPOST","GOAL_POST_BASE_TILES","LEVEL_END_TIME_BONUSES"};
+        for(int i=0;i<names.length;i++){var v=View.valueOf(names[i]);assertEquals(69+i,v.ordinal());assertEquals(v.canonicalRange(),v.range());assertArrayEquals(original.readFile(v.range().fileOffset(),v.range().length()),o.view(v).copy());}
+        assertEquals("00000001010202020303030404050505",HexFormat.of().formatHex(o.view(View.SPINNING_DISC_PLAYER_FRAMES).copy()));
+        assertEquals("0700010203ff",HexFormat.of().formatHex(o.view(View.ANI_BIG_RING).slice(2,6).copy()));assertEquals("020001020304050607fc",HexFormat.of().formatHex(o.view(View.ANI_BIG_RING_FLASH).slice(2,10).copy()));
+        assertEquals(0x209374,View.ANI_SPINNING_DISC.range().nativeAddress());assertEquals(0x21D6B6,View.ANI_TUNNEL_DOOR.range().nativeAddress());assertEquals(0x21D528,View.MAP_SPR_POWERUP.range().nativeAddress());
+    }
+    @Test void endRawTablesRetainAllSourceWordsAndReachedPastActTwoSelectorWithoutCurrentPolicy()throws Exception{
+        var o=fromAssets(retail().assets());var base=o.view(View.GOAL_POST_BASE_TILES);assertEquals(112,base.length());int[] pp={0x35A,0x4F7,0x4F7,0x4F7,0x381,0x4F7,0x4F7,0x4F7};for(int i=0;i<pp.length;i++)assertEquals(pp[i],base.unsignedWord(2*i));assertEquals(0x381,base.unsignedWord(8));
+        int[] bonus={50000,50000,10000,5000,4000,4000,3000,3000,2000,2000,2000,2000,1000,1000,1000,1000,500,500,500,500,0};var table=o.view(View.LEVEL_END_TIME_BONUSES);assertEquals(42,table.length());for(int i=0;i<bonus.length;i++)assertEquals(bonus[i],table.unsignedWord(2*i));
+        assertEquals(0xD3FA,View.GOAL_POST_BASE_TILES.range().fileOffset());assertEquals(0xD5E4,View.LEVEL_END_TIME_BONUSES.range().fileOffset());
+    }
+    @Test void sharedGoalSignpostHullKeepsSeparateNativeSignpostAndGoalProducerBounds()throws Exception{
+        var a=retail().assets();var o=fromAssets(a);var v=o.goalSignpost();assertSame(v,o.goalSignpost());assertEquals(76,a.sectionSources().source(CdR12bSectionSources.SourceId.ART_SIGNPOST).tileCount());assertEquals(24,a.sectionSources().source(CdR12bSectionSources.SourceId.ART_GOAL_POST).tileCount());
+        for(int frame=0;frame<6;frame++){int bound=frame==5?24:76;int max=v.mappingFrames().get(frame).pieces().stream().mapToInt(p->p.tileOffset()+p.tileCount()).max().orElse(0);assertEquals(bound,max);for(var piece:v.mappingFrames().get(frame).pieces())assertTrue(piece.tileOffset()<=bound-piece.tileCount());}
+        assertEquals(0x21D9B4,View.MAP_SPR_GOAL_SIGNPOST.range().nativeAddress());assertEquals(6,v.mappingFrames().size());assertTrue(v.animations().isEmpty());
+    }
+    @Test void existingPureBodyAssetFormatsKeepActualRaw72AndLegacyVertical74Barrier()throws Exception{
+        var o=fromAssets(retail().assets());var tiles=o.view(View.OBJECT_TILE_IDS);
+        assertNotNull(new CdSpinningDisc.Assets(tiles,o.spinningDisc(),View.MAP_SPR_SPINNING_DISC.range().nativeAddress(),o.view(View.SPINNING_DISC_PLAYER_FRAMES)));
+        assertNotNull(new CdTunnelDoor.Assets(o.tunnelDoor(),View.MAP_SPR_TUNNEL_DOOR.range().nativeAddress(),tiles));assertNotNull(new CdSpinTunnelTag.Assets(View.MAP_SPR_POWERUP.range().nativeAddress()));
+        assertThrows(IllegalArgumentException.class,()->new CdTunnelDoorVertical.Assets(o.tunnelDoorVertical(),View.MAP_SPR_TUNNEL_DOOR_VERTICAL.range().nativeAddress(),tiles));
+        assertNotNull(new CdBigRing.Assets(o.bigRing(),View.MAP_SPR_BIG_RING.range().nativeAddress(),o.view(View.ANI_BIG_RING),o.bigRingFlash(),View.MAP_SPR_BIG_RING_FLASH.range().nativeAddress(),o.view(View.ANI_BIG_RING_FLASH)));
+        assertNotNull(new CdGoalPost.Assets(o.goalSignpost(),View.MAP_SPR_GOAL_SIGNPOST.range().nativeAddress(),o.view(View.GOAL_POST_BASE_TILES)));
+        assertNotNull(new CdSignpost.Assets(o.goalSignpost(),View.MAP_SPR_GOAL_SIGNPOST.range().nativeAddress(),o.view(View.ANI_SIGNPOST),o.view(View.LEVEL_END_TIME_BONUSES)));
+    }
+    @Test void everyNewRouteViewFaultRejectsBeforeCachingAndRetainsAllSixtyNineHistoricalViews()throws Exception{
+        var real=retail().assets();for(int target=69;target<84;target++){var selected=View.values()[target];var actual=real.objectView(selected);byte[] bad=actual.copy();bad[bad.length-1]^=1;var mock=mock(CdR12bTerrainAssets.class);when(mock.identity()).thenReturn(real.identity());when(mock.profile()).thenReturn(real.profile());when(mock.sectionSources()).thenReturn(real.sectionSources());when(mock.objectView(any(View.class))).thenAnswer(call->real.objectView(call.getArgument(0,View.class)));when(mock.objectView(selected)).thenReturn(CdAssetBytes.copyOf(bad),actual);var o=CdR12bObjectAssets.bind(mock);var retained=new ArrayList<CdAssetBytes>();for(int i=0;i<69;i++)retained.add(o.view(View.values()[i]));assertThrows(IllegalArgumentException.class,()->o.view(selected));var field=CdR12bObjectAssets.class.getDeclaredField("views");field.setAccessible(true);assertNull(((CdAssetBytes[])field.get(o))[target]);assertSame(o.view(selected),o.view(selected));for(int i=0;i<69;i++)assertSame(retained.get(i),o.view(View.values()[i]));verify(mock,times(2)).objectView(selected);}
+    }
+    @Test void newRouteVisualFailureNeverPublishesCacheAndCannotReplaceEarlierThirtyFourVisuals()throws Exception{
+        var real=retail().assets();for(int target=34;target<40;target++){var c=VISUALS.get(target);var source=c.script()==null?c.map():c.script();var actual=real.objectView(source);byte[] bad=actual.copy();bad[bad.length-1]^=1;var mock=mock(CdR12bTerrainAssets.class);when(mock.identity()).thenReturn(real.identity());when(mock.profile()).thenReturn(real.profile());when(mock.sectionSources()).thenReturn(real.sectionSources());when(mock.objectView(any(View.class))).thenAnswer(call->real.objectView(call.getArgument(0,View.class)));when(mock.objectView(source)).thenReturn(CdAssetBytes.copyOf(bad),actual);var o=CdR12bObjectAssets.bind(mock);var prior=new ArrayList<Object>();for(int i=0;i<34;i++)prior.add(CdR12bObjectAssets.class.getMethod(VISUALS.get(i).method()).invoke(o));var method=CdR12bObjectAssets.class.getMethod(c.method());assertThrows(java.lang.reflect.InvocationTargetException.class,()->method.invoke(o));var field=CdR12bObjectAssets.class.getDeclaredField("visuals");field.setAccessible(true);assertNull(((CdObjectVisualAssets[])field.get(o))[target]);assertSame(method.invoke(o),method.invoke(o));for(int i=0;i<34;i++)assertSame(prior.get(i),CdR12bObjectAssets.class.getMethod(VISUALS.get(i).method()).invoke(o));verify(mock,times(2)).objectView(source);}
     }
 
     private static String sha(byte[] bytes)throws Exception{return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));}

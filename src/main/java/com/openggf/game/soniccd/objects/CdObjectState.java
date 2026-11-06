@@ -60,7 +60,9 @@ public final class CdObjectState {
         // Results/Main.asm:8 defines oResultsTimer=oVar32; Level End/Main.asm:842 writes MOVE.B #16.
         RESULTS_TIMER(0x32),
         // ObjSwing (Swing/Main.asm:14-16): overlapping part/count/reversing BYTE storage only.
-        SWING_PART(0x3C), SWING_COUNT(0x2F), SWING_REVERSING(0x3D);
+        SWING_PART(0x3C), SWING_COUNT(0x2F), SWING_REVERSING(0x3D),
+        // oSprBrdFling EQU oVar2A (src/Level/Palmtree Panic/Objects/Springboard/Main.asm:7): storage alias only.
+        SPRINGBOARD_FLING(0x2A);
         private final int offset;
         ByteField(int offset) { this.offset = offset; }
         public int byteOffset() { return offset; }

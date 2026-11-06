@@ -962,10 +962,14 @@ class TestSonicCdAct2ControllerRoute {
         assertInstanceOf(SonicCdPastDisplay.Ready.class,targetSelected.projection(),"Actual completed target loading selects genuine current planes");
         assertTrue(targetSelected.inputs().selectedCpu().isEmpty(),"No ordinary CPU SAT or visible Sonic was fabricated during load");
         boolean targetSonicSelected=false;
-        for(int ordinary=1;ordinary<=580;ordinary++){
+        var afterProjectorRight=LogicalInputSnapshot.ofPlayers(PlayerInputState.of(8,0,0,0,false,false),PlayerInputState.neutral());
+        var afterProjectorJump=LogicalInputSnapshot.ofPlayers(PlayerInputState.of(8,0,2,0,false,false),PlayerInputState.neutral());
+        for(int ordinary=1;ordinary<=1782;ordinary++){
             int call=targetReturnedCall+ordinary;
+            var actualInput=call<=14516?controller(call):call>=15601&&call<=15632?afterProjectorJump:afterProjectorRight;
+            var beforeMotion=targetFrame.state().motion();
             var beforeOrdinary=captureNative(h);var fullOrdinary=registry.capture();var courseOrdinary=registry.captureCourse();
-            try{step(h,controller(call));}
+            try{step(h,actualInput);}
             catch(RuntimeException|Error original){throw new AssertionError("R12B continuation: last returned="+(call-1)+", first failed="+call+", primary prefix="+targetFrame.state()+", failure="+original,original);}
             var afterOrdinary=captureNative(h);
             assertFalse(targetFrame.closed(),"Target ordinary call"+call);assertEquals(ordinary,targetFrame.environment().globals().levelFrames());
@@ -987,24 +991,50 @@ class TestSonicCdAct2ControllerRoute {
                 assertEquals(0x20A1B0,actualBlock.longBits(com.openggf.game.soniccd.objects.CdObjectState.LongField.MAPPINGS));
                 assertEquals(0x434C,actualBlock.word(com.openggf.game.soniccd.objects.CdObjectState.WordField.TILE));
             }
-            if(ordinary==1||ordinary==4||ordinary==12||ordinary==15||ordinary==16||ordinary==17||ordinary==31||ordinary==32||ordinary==33||ordinary==64||ordinary==128||ordinary==208||ordinary==209||ordinary==216||ordinary==217||ordinary==240||ordinary==272||ordinary==312||ordinary==313||ordinary==314||ordinary==384||ordinary==472||ordinary==473||ordinary==488||ordinary==489||ordinary==579||ordinary==580){
-                registry.restore(fullOrdinary);assertNativeCapture(beforeOrdinary,h);step(h,controller(call));assertNativeCapture(afterOrdinary,h);
-                registry.restoreCourse(courseOrdinary);assertNativeCapture(beforeOrdinary,h);step(h,controller(call));assertNativeCapture(afterOrdinary,h);
+            if(call==14516){
+                var parent=targetHost.placement().pool().state(32);
+                assertEquals(0x2E,parent.id());assertEquals(2,parent.routine());
+                assertEquals(0x20E9F0,parent.longBits(com.openggf.game.soniccd.objects.CdObjectState.LongField.MAPPINGS));
+                assertEquals(0x3AF,parent.word(com.openggf.game.soniccd.objects.CdObjectState.WordField.TILE));
+                var actualChildren=targetHost.placement().pool().capture().slots().stream()
+                        .filter(v->(v.id()==0x2E||v.id()==0x24)&&v.word(com.openggf.game.soniccd.objects.CdObjectState.WordField.EXPLOSION_POINTS_FRAME)==0xD800&&v.identity().wholeIndex()!=32).toList();
+                assertEquals(java.util.List.of(0xFF,1,0x80,0x81),actualChildren.stream().map(com.openggf.game.soniccd.objects.CdObjectState::subtype).toList());
+                assertEquals(java.util.List.of(2,2,4,4),actualChildren.stream().map(com.openggf.game.soniccd.objects.CdObjectState::routine).toList());
+                assertTrue(actualChildren.stream().allMatch(v->v.identity().wholeIndex()>32));
+            }
+            if(call==14534){
+                assertEquals(4,targetFrame.state().motion().routine(),"Actual damage enters native Hurt after the earlier Main prefix");
+                assertEquals(0,targetHost.globals().ring().rings());
+                assertTrue(targetHost.placement().pool().capture().slots().stream().anyMatch(v->v.id()==0x11),"The real damage prefix created LostRing children");
+            }
+            if(call==14535){
+                var afterHurt=targetFrame.state().motion();assertEquals(4,beforeMotion.routine());assertEquals(4,afterHurt.routine());
+                assertEquals(beforeMotion.centreX16_16()+(beforeMotion.xVelocity()<<8),afterHurt.centreX16_16());
+                assertEquals(beforeMotion.centreY16_16()+(beforeMotion.yVelocity()<<8),afterHurt.centreY16_16());
+                assertEquals(beforeMotion.xVelocity(),afterHurt.xVelocity());assertEquals(beforeMotion.yVelocity()+0x30,afterHurt.yVelocity());
+            }
+            if(call==14580){assertEquals(2,targetFrame.state().motion().routine());assertEquals(0,targetFrame.state().motion().flags()&2,"Native Hurt landing returned to Main");}
+            if(ordinary==1||ordinary==4||ordinary==12||ordinary==15||ordinary==16||ordinary==17||ordinary==31||ordinary==32||ordinary==33||ordinary==64||ordinary==128||ordinary==208||ordinary==209||ordinary==216||ordinary==217||ordinary==240||ordinary==272||ordinary==312||ordinary==313||ordinary==314||ordinary==384||ordinary==472||ordinary==473||ordinary==488||ordinary==489||ordinary==579||ordinary==580||ordinary==581||ordinary==599||ordinary==600||ordinary==601||ordinary==645||ordinary==709||ordinary==773||ordinary==1665||ordinary==1666||ordinary==1697||ordinary==1733||ordinary==1782){
+                registry.restore(fullOrdinary);assertNativeCapture(beforeOrdinary,h);step(h,actualInput);assertNativeCapture(afterOrdinary,h);
+                registry.restoreCourse(courseOrdinary);assertNativeCapture(beforeOrdinary,h);step(h,actualInput);assertNativeCapture(afterOrdinary,h);
             }
         }
-        assertTrue(targetSonicSelected,"Fixed580 real target services must expose native Blink/Draw/DPLC/next8 provenance without actor or art injection");
-        System.out.println("Controller-only Act2: WARP returned13885, actual R12B FULL13886, loading returned"+targetReturnedCall+
-                ", 580 unpaused target ordinary calls returned through"+(targetReturnedCall+580)+". Genuine Boulder/Wall/FloatBlock, primary Main, live128-slot/camera/SAT/tail; selected Sonic provenance and full/course replay at native admissions and later cuts. No new screenshot, native/regional/audio or full-act parity claim.");
-        System.out.println("R12B closed14515 comparison-only actor="+targetFrame.state()+", scroll="+targetHost.scroll()+", placement="+targetHost.placement().status());
-        // First reached missing source owner after the exact fixed input prefix above.
-        var actualTargetPlacement=targetHost.placement(); // Retain genuine owner before native failure closes its public Host ingress.
-        var projectorStop=assertThrows(SonicCdAct2PastObjectPass.Unowned.class,()->step(h,controller(14516)));
-        assertEquals(SonicCdAct2PastObjectPass.Boundary.OBJECT_KIND,projectorStop.boundary());
-        assertEquals(32,projectorStop.wholeIndex());assertEquals(0x2E,projectorStop.value());
-        assertTrue(targetFrame.closed(),"Failed Projector visit closes the actual Frame after reached earlier owners");
-        var stoppedProjector=actualTargetPlacement.pool().state(32);
-        assertEquals(0x2E,stoppedProjector.id());assertEquals(0,stoppedProjector.routine());
-        assertEquals(0xDD,stoppedProjector.savedFlagsId());
+        assertTrue(targetSonicSelected,"Fixed1782 real target services retain native Blink/Draw/DPLC/next8 provenance without actor or art injection");
+        assertEquals(15717,targetReturnedCall+1782);assertFalse(targetFrame.closed());
+        var closedBeforeSpin=targetFrame.state().motion();assertEquals(2,closedBeforeSpin.routine());
+        assertEquals(561324800,closedBeforeSpin.centreX16_16());assertEquals(35794432,closedBeforeSpin.centreY16_16());
+        assertEquals(1523,closedBeforeSpin.xVelocity());assertEquals(626,closedBeforeSpin.yVelocity());
+        assertEquals(1653,closedBeforeSpin.groundVelocity());assertEquals(16,closedBeforeSpin.angle());
+        assertEquals(0,target.state().section().queue().headSource());assertEquals(0,target.state().section().remainingTilesWord());
+        System.out.println("Controller-only Act2: WARP13885, actual R12B FULL13886, loading returned"+targetReturnedCall+
+                ",1782 real target services returned through15717; native Projector/four later children, damage/LostRing prefix, Hurt/landing and fixedRight+B15601..15632. Full/course replay includes the actual damage, Hurt, landing, jump and later cuts. No new pixels, native/regional/audio or full-act parity claim.");
+        // Actual first missing owner, preserved after every earlier physical prefix of call15718.
+        var actualTargetPlacement=targetHost.placement();
+        var spinStop=assertThrows(SonicCdAct2PastObjectPass.Unowned.class,()->step(h,afterProjectorRight));
+        assertEquals(SonicCdAct2PastObjectPass.Boundary.OBJECT_KIND,spinStop.boundary());
+        assertEquals(51,spinStop.wholeIndex());assertEquals(0x34,spinStop.value());assertTrue(targetFrame.closed());
+        var expectedSpin=new byte[64];expectedSpin[0]=0x34;expectedSpin[8]=0x23;expectedSpin[9]=0x48;expectedSpin[12]=1;expectedSpin[13]=(byte)0x80;
+        assertArrayEquals(expectedSpin,actualTargetPlacement.pool().state(51).copyBytes(),"Real source placement2348/0180 reached routine0; no Spin body ran");
         // END measured natural TimeWarp230 old exit.
         // END measured natural TimeWarp save continuation.
         // END measured Swing promotion.
@@ -2036,4 +2066,5 @@ class TestSonicCdAct2ControllerRoute {
                 +"ENGINE/native-source evidence only; no emulator/native-image/audio/regional or full-act parity claim.\n");
     }
     // END natural R12B Wall EGL proof.
+
 }

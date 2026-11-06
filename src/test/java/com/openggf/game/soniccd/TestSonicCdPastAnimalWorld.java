@@ -66,17 +66,18 @@ class TestSonicCdPastAnimalWorld {
         assertNotSame(e.oldFrame(), p.frame());
         assertEquals(SonicCdGameModule.PastLoadPhase.FIRST_PLC, p.harness().module().pastLoadState().phase());
         assertEquals(0x80, p.frame().environment().movement().gates().timeZone());
-        assertEquals(17, nested(SonicCdGameModule.class, "PastCarry").getRecordComponents().length);
-        assertEquals(10, nested(SonicCdPastLoadingVisit.class, "LoadingGlobals").getRecordComponents().length);
+        assertEquals(18, nested(SonicCdGameModule.class, "PastCarry").getRecordComponents().length);
+        assertEquals(11, nested(SonicCdPastLoadingVisit.class, "LoadingGlobals").getRecordComponents().length);
         assertEquals(18, nested(SonicCdPastLoadingVisit.class, "Values").getRecordComponents().length);
         assertEquals(7L, Arrays.stream(nested(SonicCdPastLoadingVisit.class, "Snapshot").getDeclaredFields())
                 .filter(f -> !Modifier.isStatic(f.getModifiers())).count());
         assertEquals(11, SonicCdGameModule.PastLoadState.class.getRecordComponents().length);
         assertEquals(1, SonicCdPastLoadingVisit.class.getDeclaredConstructors().length);
-        assertEquals(16, SonicCdPastLoadingVisit.class.getDeclaredConstructors()[0].getParameterCount());
+        assertEquals(17, SonicCdPastLoadingVisit.class.getDeclaredConstructors()[0].getParameterCount());
         var carryFields = nested(SonicCdGameModule.class, "PastCarry").getRecordComponents();
         assertEquals("retainedDev", carryFields[16].getName());
         assertEquals(CdOpeningObjectRuntime.DevGlobals.class, carryFields[16].getType());
+        assertEquals("checkpointSaved", carryFields[17].getName());
         var calls = SonicCdGameModule.PastLoadCall.values();
         var oldNames = ("LOAD_LEVEL_PCM INIT_VDP INIT_CONTROLLERS NORMAL_LOAD LEVEL_SERVICE PROCESS_PLCS "
                 + "PLAY_LEVEL_MUSIC IMMEDIATE_LEVEL IMMEDIATE_STANDARD CLEAR_FLOWERS CLEAR_OBJECTS CLEAR_MISC "
@@ -167,14 +168,17 @@ class TestSonicCdPastAnimalWorld {
         // Pure immutable data only. NEVER install this record into a Visit/Frame/World.
         var type = nested(SonicCdPastLoadingVisit.class, "LoadingGlobals"); var components = type.getRecordComponents();
         assertEquals(List.of("live", "contact", "score", "drownTimerWord", "tail", "bonus", "layoutRam",
-                "debugBlockWord", "pauseMusicBit", "retainedDev"), Arrays.stream(components).map(x -> x.getName()).toList());
+                "debugBlockWord", "pauseMusicBit", "retainedDev", "checkpointSaved"), Arrays.stream(components).map(x -> x.getName()).toList());
         var ctor = type.getDeclaredConstructor(Arrays.stream(components).map(x -> x.getType()).toArray(Class<?>[]::new));
         ctor.setAccessible(true);
         var pair = new CdOpeningObjectRuntime.DevGlobals(0xA5, 0xFF);
         var live = CdCheckpointLiveAux.unknown();
+        byte[] savedBytes = new byte[31], savedMask = new byte[31];
+        for (int i = 0; i < savedBytes.length; i++) { savedBytes[i] = (byte) (0x53 + 7 * i); savedMask[i] = 1; }
+        var saved = CdCheckpointSaveData.State.supplied(CdAssetBytes.copyOf(savedBytes), CdAssetBytes.copyOf(savedMask));
         Object[] arguments = {live, new CdPlayerBody.ContactGlobals(0, 0, 0),
                 new CdOpeningObjectRuntime.ScoreGlobals(123, 456, 0xA5), OptionalInt.empty(), Optional.empty(),
-                Optional.empty(), Optional.empty(), OptionalInt.empty(), OptionalInt.empty(), pair};
+                Optional.empty(), Optional.empty(), OptionalInt.empty(), OptionalInt.empty(), pair, saved};
         var original = ctor.newInstance(arguments);
         var copies = List.of(
                 copy(original, "withLive", new Class<?>[]{CdCheckpointLiveAux.State.class}, CdCheckpointLiveAux.unknown()),
@@ -186,6 +190,7 @@ class TestSonicCdPastAnimalWorld {
                 copy(original, "finishMainStores", new Class<?>[0]));
         for (var value : copies) {
             assertNotSame(original, value); assertSame(pair, actualField(value, "retainedDev"));
+            assertSame(saved, actualField(value, "checkpointSaved"));
             var raw = assertInstanceOf(CdOpeningObjectRuntime.DevGlobals.class, actualField(value, "retainedDev"));
             assertEquals(0xA5, raw.goodFuture()); assertEquals(0xFF, raw.projDestroyed());
         }
@@ -193,6 +198,9 @@ class TestSonicCdPastAnimalWorld {
         arguments[9] = null;
         var rejected = assertThrowsExactly(InvocationTargetException.class, () -> ctor.newInstance(arguments));
         assertInstanceOf(NullPointerException.class, rejected.getCause());
+        arguments[9] = pair; arguments[10] = null;
+        var missingSaved = assertThrowsExactly(InvocationTargetException.class, () -> ctor.newInstance(arguments));
+        assertInstanceOf(NullPointerException.class, missingSaved.getCause());
     }
 
     @Test void natural7808ReturnsAnimalPresenceAndReplaysCompleteMainThroughFullAndCourseRestoration() throws Throwable {

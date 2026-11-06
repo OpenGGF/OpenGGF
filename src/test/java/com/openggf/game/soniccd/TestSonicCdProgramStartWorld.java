@@ -280,9 +280,9 @@ class TestSonicCdProgramStartWorld {
     private static Harness load(SonicCdGameModule module, CdGameDataSource source) throws Exception {
         var mode = SessionManager.openGameplaySession(module, module, source, null);
         GameplaySessionFactory.attachManagers(mode, EngineServices.current()); GameModuleRegistry.setCurrent(module);
+        mode.getLevelManager().loadLevel(0, LevelLoadMode.FULL, SonicCdPlayerInitProfile.openingObjectsContext());
         var loop = new GameLoop(EngineServices.current()); loop.setGameplayMode(mode); loop.setInputHandler(new InputHandler());
         loop.setGameMode(GameMode.LEVEL);
-        mode.getLevelManager().loadLevel(0, LevelLoadMode.FULL, SonicCdPlayerInitProfile.openingObjectsContext());
         return new Harness(module, mode, loop);
     }
     private static void step(Harness h) { step(h, LogicalInputSnapshot.neutral()); }

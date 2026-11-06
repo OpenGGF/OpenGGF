@@ -1,5 +1,6 @@
 package com.openggf.game.soniccd.objects;
 
+import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
 import com.openggf.game.soniccd.player.CdPlayerMovement;
 
 import java.util.ArrayList;
@@ -193,6 +194,16 @@ public final class CdMonitorItem {
         void failedOperation(Object call, Throwable original);
     }
     public interface ReceiptGuard { void prepared(Object call); void completed(Object call); }
+
+    /** Actual source-paired R12B ingress over the unchanged finite reward/receipt owner. */
+    public static CdMonitorItem fromAct2PastAssets(CdObjectPlacementRuntime runtime, CdR12bTerrainAssets owner,
+                                                  AwardPort shoes, ShieldAwardPort shield, RingAwardPort rings,
+                                                  CdMonitor.DrawObjectCall draw, DispatchObserver observer,
+                                                  ReceiptGuard guard) {
+        Objects.requireNonNull(runtime, "runtime"); Objects.requireNonNull(owner, "owner");
+        if (!runtime.sameAct2PastSource(owner)) throw new IllegalArgumentException("Monitor item placement/assets source differs");
+        return withWorldOwner(runtime, CdMonitor.Assets.fromAct2PastAssets(owner.objects()), shoes, shield, rings, draw, observer, guard);
+    }
 
     public CdMonitor.Assets assets() { return assets; }
     public boolean isCurrentCall(Object call) { return running && call != null && call == pendingOperation; }

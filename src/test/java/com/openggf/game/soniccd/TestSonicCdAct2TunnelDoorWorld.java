@@ -233,7 +233,7 @@ class TestSonicCdAct2TunnelDoorWorld {
         assertEquals(1L,rawCalls(s).stream().filter(c->c==SonicCdGameModule.Act2LoadCall.TUNNEL_DOOR_PRIMARY_TOP).count());retired(s);
     }
 
-    @Test void realSubtypeZeroAllocationAndFmRemainConditionalAndEarlierUnboundSplashStopsHonestlyNextPass() throws Exception {
+    @Test void realSubtypeZeroAllocationAndFmRemainConditionalAndEarlierDirtySplashStopsAtItsNativeRoutineNextPass() throws Exception {
         var s=scene();assertEquals(0,s.frame().state().motion().flags()&2);var m=s.frame().state().motion();
         // Declared ID0 dynamic64 ingress: FindObjSlot must not clear its dirty child image.
         for(var free:s.placement().pool().capture().slots())if(free.id()==0 && free.identity().wholeIndex()!=127)
@@ -244,7 +244,10 @@ class TestSonicCdAct2TunnelDoorWorld {
         var child=children.getFirst();assertTrue(child.identity().wholeIndex()<127,"actual first-free child earlier than parent prerequisite");
         assertEquals(6,child.routine());assertEquals(0xA5,child.subtype());assertEquals(0xEE,child.subtype2());assertEquals(0x6C,child.unsignedByte(ANIMATION));
         assertEquals(0x1357,child.word(X_FRACTION));assertEquals(0x2468,child.word(Y_FRACTION));assertEquals(1L,count(s,SonicCdGameModule.Act2LoadCall.TUNNEL_DOOR_FM));
-        beforeForward(s);var failure=assertThrows(SonicCdGameModule.UnsupportedAct2Loading.class,()->step(s.h(),neutral()));assertEquals(SonicCdGameModule.Act2Boundary.DYNAMIC_OBJECTS,failure.boundary());retired(s);
+        beforeForward(s);var failure=assertThrows(com.openggf.game.soniccd.objects.CdTunnelDoorSplash.UnsupportedTunnelDoorSplash.class,()->step(s.h(),neutral()));
+        assertEquals(com.openggf.game.soniccd.objects.CdTunnelDoorSplash.UnsupportedBoundary.ROUTINE_DISPATCH,failure.boundary());
+        assertEquals(6,failure.value());assertEquals(child.identity().wholeIndex(),failure.wholeIndex());
+        assertEquals(child,s.placement().pool().state(child.identity().wholeIndex()));retired(s);
     }
 
     @Test void noOpParentFmCannotPermitSecondaryReadsAfterItsRealDirtyChildPublication() throws Exception {

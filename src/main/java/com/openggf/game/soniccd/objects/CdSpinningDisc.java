@@ -1,5 +1,11 @@
 package com.openggf.game.soniccd.objects;
 
+import com.openggf.game.soniccd.CdNativeFile;
+import com.openggf.game.soniccd.CdReleaseVariant;
+import com.openggf.game.soniccd.CdStagePayload;
+import com.openggf.game.soniccd.media.CdMmdImage;
+import com.openggf.game.soniccd.level.CdR12bObjectAssets;
+import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdObjectVisualAssets;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
@@ -97,6 +103,18 @@ public final class CdSpinningDisc {
             }
             // No eager tileWord, pose-byte read or extent claim: those reads belong to reached code.
         }
+        /** Actual retained original-USA R12B data only; no body/Frame/World or current-art authority. */
+        public static Assets fromAct2PastAssets(CdR12bObjectAssets owner) {
+            Objects.requireNonNull(owner, "actual R12B metadata"); var identity = owner.identity();
+            if (identity.variant() != CdReleaseVariant.USA || identity.file() != CdNativeFile.R12B
+                    || identity.domain() != CdMmdImage.Domain.ORIGINAL_WORD_RAM
+                    || !identity.stage().equals(CdStagePayload.R12B.stage()))
+                throw new IllegalArgumentException("Actual original USA R12B metadata required");
+            return new Assets(owner.view(CdR12bObjectAssets.View.OBJECT_TILE_IDS), owner.spinningDisc(),
+                    CdR12bObjectAssets.View.MAP_SPR_SPINNING_DISC.range().nativeAddress(),
+                    owner.view(CdR12bObjectAssets.View.SPINNING_DISC_PLAYER_FRAMES));
+        }
+
         public static Assets fromObjectAssets(CdR11aObjectAssets owner) {
             Objects.requireNonNull(owner, "owner");
             return new Assets(owner.view(CdR11aObjectAssets.Table.OBJECT_TILE_IDS).bytes(), owner.spinningDisc(),
@@ -185,7 +203,25 @@ public final class CdSpinningDisc {
     private final PlayerOwner playerOwner;
     private final PlayFmCall playFm;
     private final DrawObjectCall drawObject;
+    @FunctionalInterface private interface TileOperand { int read(int secondary); }
+    private TileOperand sourceTile;
     private boolean running;
+
+    /** Source-pair ingress only; caller retains every actual helper/publication authority. */
+    public static CdSpinningDisc fromAct2PastAssets(CdObjectPlacementRuntime placement, CdR12bTerrainAssets owner,
+                                                    CdPlayerMath math, CdSolidObject solid, SolidCommit commit,
+                                                    PlayerOwner player, PlayFmCall fm, DrawObjectCall draw) {
+        Objects.requireNonNull(placement); Objects.requireNonNull(owner);
+        if (!placement.sameAct2PastSource(owner)) throw new IllegalArgumentException("Disc placement/assets source differs");
+        var body = new CdSpinningDisc(placement, Assets.fromAct2PastAssets(owner.objects()), math, solid, commit, player, fm, draw);
+        var tiles = body.assets.objectTileIds();
+        if (tiles.length() != 72) throw new IllegalArgumentException("Actual R12B ObjectTileIDs extent");
+        body.sourceTile = secondary -> {
+            try { return tiles.unsignedWord((short) tiles.unsignedWord(TILE_SELECTOR * 2) + 2 * secondary); }
+            catch (IndexOutOfBoundsException missing) { throw new IllegalArgumentException("Actual R12B selected tile WORD", missing); }
+        };
+        return body;
+    }
 
     public CdSpinningDisc(CdObjectPlacementRuntime placement, Assets assets, CdPlayerMath math, CdSolidObject sharedSolid,
                           SolidCommit solidCommit, PlayerOwner playerOwner, PlayFmCall playFm, DrawObjectCall drawObject) {
@@ -219,7 +255,8 @@ public final class CdSpinningDisc {
                 .moveLong(MAPPINGS, assets.mappingAddressBits()); c.publish();
         if (c.state.subtype2() != 0) throw unsupported(UnsupportedBoundary.TILE_ENTRY, c, c.state.subtype2());
         int tile;
-        try { tile = CdR11aObjectAssets.decodeTileWord(assets.objectTileIds().copy(), TILE_SELECTOR, c.state.subtype2()); }
+        try { tile = sourceTile == null ? CdR11aObjectAssets.decodeTileWord(assets.objectTileIds().copy(), TILE_SELECTOR, c.state.subtype2())
+                : sourceTile.read(c.state.subtype2()); }
         catch (IllegalArgumentException missing) { throw unsupported(UnsupportedBoundary.TILE_ADDRESS, c, TILE_SELECTOR * 2); }
         c.state = c.state.moveWord(TILE, tile); c.publish(); c.returned(NativeCall.SET_OBJECT_TILE_ID);
         c.state = c.state.moveByte(WIDTH, 0x10).moveByte(Y_RADIUS, 8); c.publish();

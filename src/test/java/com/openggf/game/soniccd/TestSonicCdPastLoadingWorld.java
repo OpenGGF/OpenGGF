@@ -317,8 +317,10 @@ class TestSonicCdPastLoadingWorld {
         var m = SonicCdGameModule.openingObjectsDevelopmentPlayerFromColdProgramStart(new CdProgramInitialization.ExecutionEnvironment(
                 Optional.of(new CdProgramInitialization.ExecutionRegion(0x80))));
         var mode = SessionManager.openGameplaySession(m, m, selectedSource, null); GameplaySessionFactory.attachManagers(mode, EngineServices.current());
-        GameModuleRegistry.setCurrent(m); var loop = new GameLoop(EngineServices.current()); loop.setGameplayMode(mode); loop.setInputHandler(new InputHandler()); loop.setGameMode(GameMode.LEVEL);
-        mode.getLevelManager().loadLevel(0, LevelLoadMode.FULL, SonicCdPlayerInitProfile.openingObjectsContext()); return new Harness(m,mode,loop);
+        GameModuleRegistry.setCurrent(m);
+        mode.getLevelManager().loadLevel(0, LevelLoadMode.FULL, SonicCdPlayerInitProfile.openingObjectsContext());
+        var loop = new GameLoop(EngineServices.current()); loop.setGameplayMode(mode); loop.setInputHandler(new InputHandler()); loop.setGameMode(GameMode.LEVEL);
+        return new Harness(m,mode,loop);
     }
     static LogicalInputSnapshot route(int call) {
         int actions = call >= 1201 && call <= 1232 || call >= 1770 && call <= 1801 || call >= 3002 && call <= 3033

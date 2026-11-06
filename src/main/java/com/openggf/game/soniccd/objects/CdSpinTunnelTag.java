@@ -1,5 +1,11 @@
 package com.openggf.game.soniccd.objects;
 
+import com.openggf.game.soniccd.CdNativeFile;
+import com.openggf.game.soniccd.CdReleaseVariant;
+import com.openggf.game.soniccd.CdStagePayload;
+import com.openggf.game.soniccd.media.CdMmdImage;
+import com.openggf.game.soniccd.level.CdR12bObjectAssets;
+import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
 import com.openggf.game.soniccd.player.CdPlayerMotionState;
 
@@ -48,6 +54,18 @@ public final class CdSpinTunnelTag {
          * mapping decode, embedded bytes, guessed address or fallback. Compile prerequisite: Root's
          * separately owned Table.POWERUP_MAPPINGS binding for the exact raw 274-byte include.
          */
+        /** Actual retained original-USA R12B data only; no body/Frame/World or current-art authority. */
+        public static Assets fromAct2PastAssets(CdR12bObjectAssets owner) {
+            Objects.requireNonNull(owner, "actual R12B metadata"); var identity = owner.identity();
+            if (identity.variant() != CdReleaseVariant.USA || identity.file() != CdNativeFile.R12B
+                    || identity.domain() != CdMmdImage.Domain.ORIGINAL_WORD_RAM
+                    || !identity.stage().equals(CdStagePayload.R12B.stage()))
+                throw new IllegalArgumentException("Actual original USA R12B metadata required");
+            if (owner.view(CdR12bObjectAssets.View.MAP_SPR_POWERUP).length() != MAPPING_BYTES)
+                throw new IllegalArgumentException("Complete actual raw Powerup mapping source required");
+            return new Assets(CdR12bObjectAssets.View.MAP_SPR_POWERUP.range().nativeAddress());
+        }
+
         public static Assets fromObjectAssets(CdR11aObjectAssets owner) {
             Objects.requireNonNull(owner, "object assets");
             var view = owner.view(CdR11aObjectAssets.Table.POWERUP_MAPPINGS);
@@ -141,6 +159,13 @@ public final class CdSpinTunnelTag {
     }
 
     private final Assets assets;
+
+    /** Source-pair ingress only; caller retains every actual helper/publication authority. */
+    public static CdSpinTunnelTag fromAct2PastAssets(CdObjectPlacementRuntime placement, CdR12bTerrainAssets owner) {
+        Objects.requireNonNull(placement); Objects.requireNonNull(owner);
+        if (!placement.sameAct2PastSource(owner)) throw new IllegalArgumentException("SpinTunnel placement/assets source differs");
+        return new CdSpinTunnelTag(Assets.fromAct2PastAssets(owner.objects()));
+    }
 
     public CdSpinTunnelTag(Assets assets) { this.assets = Objects.requireNonNull(assets, "assets"); }
 

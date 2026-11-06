@@ -24,6 +24,8 @@ final class SonicCdAct2PastObjectPass {
         Cut read();
         /** Preflight all actual scalar owners; applyNative once, then adopt next with no callback gap. */
         void adopt(Adoption adoption);
+        /** Actual Core/section owner must bind this native submission; no successful unbound queue stub. */
+        default void submitPlc(PlcSubmission submission){submission.validate();throw stop(Boundary.PLC_OWNER,submission.wholeIndex(),submission.nativeId());}
     }
     record Cut(SonicCdAct2PastWorldHost.Globals globals,CdLevelGlobals level,int goodFutureByte,
                OptionalInt goodFutureFlags,CdAssetBytes reservedSlots,CdAssetBytes cpuSat,
@@ -37,7 +39,7 @@ final class SonicCdAct2PastObjectPass {
             Objects.requireNonNull(layerByte);if(layerByte.isPresent())octet(layerByte.getAsInt());
         }
     }
-    enum Boundary { OBJECT_KIND, OBJECT_INDEX, SONIC_MAIN, PLAYER_SLOT, UNKNOWN_LAYER, UNKNOWN_VINT }
+    enum Boundary { OBJECT_KIND, OBJECT_INDEX, SONIC_MAIN, PLAYER_SLOT, UNKNOWN_LAYER, UNKNOWN_VINT, PLC_OWNER, MONITOR_REWARD_OWNER, SPILL_GLOBALS_OWNER }
     static final class Unowned extends UnsupportedOperationException {
         private final Boundary boundary;private final int wholeIndex,value;
         private Unowned(Boundary boundary,int wholeIndex,int value){super(boundary+" at R12B whole "+wholeIndex+", value $"+Integer.toHexString(value));this.boundary=boundary;this.wholeIndex=wholeIndex;this.value=value;}
@@ -71,8 +73,24 @@ final class SonicCdAct2PastObjectPass {
             afterActor=frame.captureActor();afterShared=frame.captureShared();afterPlacement=placement.capture();
         }
     }
+    /** Opaque original Projector request, never a general section setter or retained snapshot token. */
+    final class PlcSubmission {
+        private final CdProjector.PlcCallRequest request;
+        private final Cut expected;
+        private final CdPlayerFrameRuntime.ActorState actor;
+        private final CdPlayerFrameRuntime.SharedState shared;
+        private final CdObjectPlacementRuntime.Snapshot placementCut;
+        private boolean adopted;
+        private PlcSubmission(CdProjector.PlcCallRequest request){this.request=request;expected=read();actor=frame.captureActor();shared=frame.captureShared();placementCut=placement.capture();}
+        SonicCdAct2PastObjectPass owner(){return SonicCdAct2PastObjectPass.this;}
+        int nativeId(){return request.request().nativeId();}
+        int wholeIndex(){return request.expectedSource().identity().wholeIndex();}
+        void validate(){if(!isCurrentPlcSubmission(this)||adopted)throw new IllegalStateException("Escaped/repeated Projector PLC submission");guard();requireCut(expected);requireFrame(actor,shared);requirePlacement(placementCut);placementCut(request.actualCut());source(request.expectedSource());}
+        void acknowledge(){validate();adopted=true;}
+    }
+    boolean isCurrentPlcSubmission(PlcSubmission submission){return submission!=null&&submission==pendingPlc&&plcPort&&phase==Phase.WALKING&&dispatch!=null&&dispatch.kind==Kind.PROJECTOR&&dispatch.operation==submission.request&&dispatch.prepared&&dispatch.used&&projector.isCurrentCall(submission.request);}
     private enum Phase { READY,WALKING,WALKED,DRAINING,DONE,FAILED,DISCARDED }
-    private enum Kind { PRIMARY,RESERVED,RING,SPRING,MONITOR,TIME_POST,COLLAPSE,PLATFORM,TAM,ANIMAL,SWING,ROBOT,ANTON,BOULDER,WALL,FLOAT_BLOCK,SPIKES,LOG_SHADOW,NULL,PATA_BATA }
+    private enum Kind { PRIMARY,RESERVED,RING,SPRING,MONITOR,TIME_POST,COLLAPSE,PLATFORM,TAM,ANIMAL,SWING,ROBOT,ANTON,BOULDER,WALL,FLOAT_BLOCK,SPIKES,LOG_SHADOW,NULL,PATA_BATA,PROJECTOR,EXPLOSION,FLOWER,POINTS,LOST_RING,MONITOR_ITEM,MOSQUI,SCENERY,SPRINGBOARD }
     private final Ports ports;private final CdR12bTerrainAssets terrain;private final CdR12bPlayerAssets player;
     private final CdPlayerFrameRuntime frame;private final CdObjectPlacementRuntime placement;
     private final CdAssetBytes objectIndex;private final CdObjectMappings mappings;
@@ -86,8 +104,12 @@ final class SonicCdAct2PastObjectPass {
     private CdFloatBlock floatBlock;
     private CdSpikes spikes;private CdLogShadow logShadow;
     private CdPataBata pataBata;
+    private CdProjector projector;
+    private CdExplosion explosion;private CdFlower flower;private CdPoints points;
+    private CdLostRing lostRing;private CdMonitorItem monitorItem;private CdMosqui mosqui;
+    private CdScenery scenery;private CdSpringboard springboard;
     private Phase phase=Phase.READY;private CdObjectDrawQueue queue;private Dispatch dispatch;
-    private boolean port,queuePort;private Adoption pending;
+    private boolean port,queuePort,plcPort;private Adoption pending;private PlcSubmission pendingPlc;
     private static final class Dispatch {
         final Kind kind;final int whole;final Set<Object> consumed=Collections.newSetFromMap(new IdentityHashMap<>());
         boolean drawn;long ordinal;Object operation;boolean prepared,completed,used;
@@ -100,6 +122,9 @@ final class SonicCdAct2PastObjectPass {
         CdObjectPool.Snapshot spikePool;CdObjectPlacementRuntime.Snapshot spikeBase,spikeDrawCut;
         CdSolidObject.Result spikeSolid;boolean spikeVertical,spikeStopped,spikeY,spikeHurt;
         int spikeSolids,logInitialRoutine,logInitStores;boolean logSavedCleared,logDeleted;
+        final Deque<EffectScope> effects=new ArrayDeque<>();long effectOrdinal,publications;
+        CdMonitorItem.Result monitorResult;CdLostRing.Inputs lostInputs;CdLostRing.Ports lostPorts;boolean collecting;
+        DecorScope decor;int decorInitialRoutine,sceneryInitStores;boolean decorSavedCleared,decorDeleted;
         Dispatch(Kind kind,int whole){this.kind=kind;this.whole=whole;}
     }
     SonicCdAct2PastObjectPass(Ports ports,CdR12bTerrainAssets terrain,CdR12bPlayerAssets player,
@@ -181,6 +206,36 @@ final class SonicCdAct2PastObjectPass {
             if(d.operation!=c||d.used||!logShadow.isCurrentCall(c))throw new IllegalStateException("Not the original Log Draw");
             claim(c,()->logShadow.isCurrentCall(c));placementCut(c.cut());source(c.source());d.used=true;
             drawDynamic(Kind.LOG_SHADOW,placement.pool(),c.source().identity(),()->logShadow.isCurrentCall(c));});
+        // Actual retained object metadata follows the constructor's exact Frame/pair/layout gate.
+        // No constructed Identity, visual hull or standalone body can establish World admission.
+        var decorAssets=terrain.objects();
+        if(decorAssets.identity()!=terrain.identity()||decorAssets.placements()!=placement.placements())
+            throw new IllegalArgumentException("Scenery/Springboard require the retained R12B metadata/layout");
+        scenery=new CdScenery(placement,new CdScenery.Assets(decorAssets.view(CdR12bObjectAssets.View.SCENERY_BASE_TILES),
+                decorAssets.scenery(),CdR12bObjectAssets.View.MAP_SPR_SCENERY.range().nativeAddress()),new CdScenery.DispatchObserver(){
+            public void beforePublication(CdScenery.Publication c){decorPublication(c,c.ordinal(),c.cut(),c.source(),c.output(),c.savedIndex());}
+            public void afterPublication(CdScenery.Publication c){decorAfter(c);}
+            public void beforeCall(Object c){var call=(CdScenery.DrawCall)c;decorDrawBefore(call,call.cut(),call.source());}
+            public void afterCall(Object c){decorAfter(c);}
+        },c->decorDraw(c,c.source()));
+        springboard=new CdSpringboard(placement,CdSpringboard.Assets.fromAct2PastAssets(decorAssets),this::springboardPrimary,
+                c->decorDraw(c,c.source()),new CdSpringboard.DispatchObserver(){
+            public void beforePublication(CdSpringboard.Publication c){decorPublication(c,c.ordinal(),c.cut(),c.source(),c.output(),c.savedIndex());}
+            public void afterPublication(CdSpringboard.Publication c){decorAfter(c);}
+            public void beforeCall(Object c){
+                if(c instanceof CdSpringboard.PrimaryCall call){var scope=decorBegin(call,call.ordinal(),call.cut(),call.source(),true,false);
+                    if(call.expectedState()!=frame.state()||call.expectedEnvironment()!=frame.environment())
+                        throw new IllegalArgumentException("Springboard requires the original complete primary pair");
+                    // Root-verified narrow Frame dependency; source pin is recorded in the packet report.
+                    // Build all output references before this callback can publish any owner value.
+                    scope.primary=frame.prepareObjectSpringboardPlayerStore(call);
+                    if(scope.primary.expectedState()!=call.expectedState()||scope.primary.expectedEnvironment()!=call.expectedEnvironment()
+                            ||scope.primary.finalState()!=call.outputState()||scope.primary.finalEnvironment()!=call.expectedEnvironment())
+                        throw new IllegalArgumentException("Frame did not prepare the actual Springboard one-store references");
+                }else{var call=(CdSpringboard.DrawCall)c;decorDrawBefore(call,call.cut(),call.source());}
+            }
+            public void afterCall(Object c){decorAfter(c);}
+        });
         monitor=CdMonitor.fromAct2PastAssets(placement,terrain,solid,probes,new CdMonitor.PrefixSolidOwner(){
             public CdMonitor.LiveSolid preflight(CdMonitor.PrefixSolidCut c){requireKind(Kind.MONITOR);requireIdentity(c.objectIdentity());poolCut(c.callCut());
                 if(!c.expectedPlayer().equals(primary())||!c.expectedGates().equals(gates())||!c.expectedGlobals().equals(solidGlobals()))throw new IllegalArgumentException("Stale Monitor readback");
@@ -214,7 +269,15 @@ final class SonicCdAct2PastObjectPass {
                     if(placement.pool().findObjSlot().orElse(-1)!=c.firstFreeWholeIndex())throw new IllegalArgumentException("Stale Tam first-free receipt");
                     sound(new SonicCdGameModule.PastTamabbohFm(c.sound()));},
                 (p,id)->drawDynamic(Kind.TAM,p,id,()->tam.isCurrentDrawCall(p,id)));
-        animal=CdAnimal.fromAct2PastAssets(placement,terrain);
+        animal=CdAnimal.fromAct2PastAssets(placement,terrain,player,math,probes,
+                c->{requireKind(Kind.ANIMAL);claim(c,()->animal.isCurrentCall(c));placementCut(c.actualCut());source(c.expectedSource());angle(c.expectedPrimaryAngle(),c.value());},
+                c->{requireKind(Kind.ANIMAL);claim(c,()->animal.isCurrentCall(c));placementCut(c.actualCut());source(c.expectedSource());drawDynamic(Kind.ANIMAL,placement.pool(),c.expectedSource().identity(),()->animal.isCurrentCall(c));},
+                new CdActiveAnimal.DispatchObserver(){
+                    public void beforePublication(CdActiveAnimal.Publication c){observeBefore(c,c.ordinal(),c.actualCut(),c.kind().name(),c.expectedSource(),c.before(),c.output(),c.savedByteIndex(),c.previousValue(),c.value());}
+                    public void afterPublication(CdActiveAnimal.Publication c){observeAfter(c,true);}
+                    public void beforeCall(Object c){observeBeforeCall(c,animal.currentCallOrdinal(c));}
+                    public void afterCall(Object c){observeAfter(c,false);}
+                },new CdActiveAnimal.ReceiptGuard(){public void prepared(Object c){receiptPrepared(c);}public void completed(Object c){receiptCompleted(c);}});
         swing=CdSwing.fromAct2PastAssets(placement,terrain,player,solid,new CdSwing.PlayerPort(){
             public CdSwing.PlayerCut read(CdSwing.PlayerReadCall c){requireKind(Kind.SWING);claim(c,()->swing.isCurrentCall(c));placementCut(c.actualPoolCut());source(c.expectedSource());
                 var raw=reserved(SonicCdAct2PastObjectPass.this.read(),1);var selected=c.slot()==CdSolidObject.PlayerSlot.PRIMARY?primary():secondary(raw);
@@ -247,6 +310,84 @@ final class SonicCdAct2PastObjectPass {
                 },new CdRobotGenerator.ReceiptGuard(){public void prepared(Object c){receiptPrepared(c);}public void completed(Object c){receiptCompleted(c);}});
         pataBata=CdPataBata.fromAct2PastAssets(placement,terrain,player,math,
                 (p,id)->drawDynamic(Kind.PATA_BATA,p,id,()->pataBata.isCurrentDrawCall(p,id)));
+        projector=CdProjector.fromAct2PastAssets(placement,terrain,solid,
+                c->{requireKind(Kind.PROJECTOR);claim(c,()->projector.isCurrentCall(c));placementCut(c.actualCut());source(c.expectedSource());commitSolid(c.actualCut().pool(),c.expectedPlayer(),c.expectedGlobals(),c.outcome());},
+                c->{requireKind(Kind.PROJECTOR);claim(c,()->projector.isCurrentCall(c));placementCut(c.actualCut());source(c.expectedSource());var cut=read();var g=cut.globals();
+                    var next=new SonicCdAct2PastWorldHost.Globals(g.ring(),g.live(),g.contact(),g.score(),c.value(),g.checkpointSaved(),g.drownTimerWord(),g.debugBlockWord(),g.pauseMusicBit(),g.bonus(),g.tail(),g.animations(),g.paletteSteps7(),g.paletteTimers7());
+                    publish(cut,withGlobals(cut,next),null,()->{},()->{});},
+                this::submitProjectorPlc,
+                c->{requireKind(Kind.PROJECTOR);claim(c,()->projector.isCurrentCall(c));placementCut(c.actualCut());source(c.expectedSource());sound(new SonicCdGameModule.PastProjectorFm(c.nativeId()));},
+                c->{requireKind(Kind.PROJECTOR);claim(c,()->projector.isCurrentCall(c));placementCut(c.actualCut());source(c.expectedSource());drawDynamic(Kind.PROJECTOR,placement.pool(),c.expectedSource().identity(),()->projector.isCurrentCall(c));},
+                new CdProjector.DispatchObserver(){
+                    public void beforePublication(CdProjector.Publication c){observeBefore(c,c.ordinal(),c.actualCut(),c.kind().name(),c.expectedSource(),c.before(),c.output(),c.savedByteIndex(),c.previousValue(),c.value());}
+                    public void afterPublication(CdProjector.Publication c){observeAfter(c,true);}
+                    public void beforeCall(Object c){observeBeforeCall(c,projector.currentCallOrdinal(c));}
+                    public void afterCall(Object c){observeAfter(c,false);}
+                },new CdProjector.ReceiptGuard(){public void prepared(Object c){receiptPrepared(c);}public void completed(Object c){receiptCompleted(c);}});
+        explosion=CdExplosion.fromAct2PastAssets(placement,terrain,new CdExplosion.DispatchObserver(){
+            public void beforePublication(CdExplosion.Publication c){effectPublication(c,c.ordinal(),c.cut(),c.source(),c.before(),c.output(),-1);}
+            public void afterPublication(CdExplosion.Publication c){effectAfter(c);}
+            public void beforeCall(Object c){var v=(CdExplosion.DrawCall)c;effectCall(c,0,v.cut(),v.source(),true);}
+            public void afterCall(Object c){effectAfter(c);}
+        },c->effectPort(c,()->drawDynamic(Kind.EXPLOSION,placement.pool(),c.source().identity(),()->explosion.isCurrentCall(c))),
+                new CdExplosion.ReceiptGuard(){public void prepared(Object c){effectPrepared(c);}public void completed(Object c){effectCompleted(c);}});
+        points=CdPoints.fromAct2PastAssets(placement,terrain,new CdPoints.DispatchObserver(){
+            public void beforePublication(CdPoints.Publication c){effectPublication(c,c.ordinal(),c.cut(),c.source(),c.before(),c.output(),-1);}
+            public void afterPublication(CdPoints.Publication c){effectAfter(c);}
+            public void beforeCall(Object c){var v=(CdPoints.DrawCall)c;effectCall(c,0,v.cut(),v.source(),true);}
+            public void afterCall(Object c){effectAfter(c);}
+        },c->effectPort(c,()->drawDynamic(Kind.POINTS,placement.pool(),c.source().identity(),()->points.isCurrentCall(c))),
+                new CdPoints.ReceiptGuard(){public void prepared(Object c){effectPrepared(c);}public void completed(Object c){effectCompleted(c);}});
+        flower=CdFlower.fromAct2PastAssets(placement,terrain,probes,new CdFlower.DispatchObserver(){
+            public void beforePublication(CdFlower.Publication c){effectPublication(c,c.ordinal(),c.cut(),c.source(),c.source(),c.output(),-1);}
+            public void afterPublication(CdFlower.Publication c){effectAfter(c);}
+            public void beforeCall(Object c){switch(c){
+                case CdFlower.FloorCall v->effectCall(c,v.ordinal(),v.cut(),v.source(),false);
+                case CdFlower.PrimaryAngleCall v->effectCall(c,v.ordinal(),v.cut(),v.source(),false);
+                case CdFlower.DrawCall v->effectCall(c,v.ordinal(),v.cut(),v.source(),true);
+                default->throw new IllegalArgumentException("Unknown Flower native operation");}}
+            public void afterCall(Object c){effectAfter(c);}
+        },c->effectPort(c,()->angle(solidGlobals().primaryAngle(),c.value())),
+                c->effectPort(c,()->drawDynamic(Kind.FLOWER,placement.pool(),c.source().identity(),()->flower.isCurrentCall(c))),
+                new CdFlower.ReceiptGuard(){public void prepared(Object c){effectPrepared(c);}public void completed(Object c){effectCompleted(c);}});
+        mosqui=CdMosqui.fromAct2PastAssets(placement,terrain,probes,
+                c->effectPort(c,()->angle(solidGlobals().primaryAngle(),c.value())),
+                c->effectPort(c,()->sound(new SonicCdGameModule.PastMosquiFm(c.sound()))),new CdMosqui.DispatchObserver(){
+            public void beforePublication(CdMosqui.Publication c){effectPublication(c,c.ordinal(),c.cut(),c.source(),c.source(),c.output(),c.savedIndex());effectPrepared(c);}
+            public void afterPublication(CdMosqui.Publication c){effectAfter(c);effectCompleted(c);}
+            public void beforeCall(Object c){switch(c){
+                case CdMosqui.DrawCall v->effectCall(c,0,v.cut(),v.source(),true);
+                case CdMosqui.PrimaryAngleCall v->{poolCut(v.actualCut());effectCall(c,0,placement.capture(),v.expectedSource(),false);}
+                case CdMosqui.FmCall v->{poolCut(v.actualCut());effectCall(c,0,placement.capture(),v.expectedSource(),false);}
+                default->throw new IllegalArgumentException("Unknown Mosqui native operation");}effectPrepared(c);}
+            public void afterCall(Object c){effectAfter(c);effectCompleted(c);}
+        },c->effectPort(c,()->drawDynamic(Kind.MOSQUI,placement.pool(),c.source().identity(),()->mosqui.isCurrentCall(c))));
+        // Seven-argument original owner binding deliberately leaves unsupported Ring rewards ungranted.
+        // The pass constructor already authenticates the retained pair and placement; Assets is descriptive.
+        monitorItem=CdMonitorItem.withWorldOwner(placement,CdMonitor.Assets.fromAct2PastAssets(terrain.objects()),
+                request->{var c=monitorOperation(CdMonitorItem.ShoesCall.class);if(c.request()!=request)throw new IllegalStateException("Foreign Shoes request");
+                    effectUse(c);throw stop(Boundary.MONITOR_REWARD_OWNER,dispatch.whole,4);},
+                request->{var c=monitorOperation(CdMonitorItem.ShieldCall.class);if(c.request()!=request)throw new IllegalStateException("Foreign Shield request");
+                    effectUse(c);throw stop(Boundary.MONITOR_REWARD_OWNER,dispatch.whole,2);},
+                (pool,identity)->{var c=monitorOperation(CdMonitorItem.DrawCall.class);effectPort(c,()->drawDynamic(Kind.MONITOR_ITEM,pool,identity,()->monitorItem.isCurrentPrimitive(c)));},
+                new CdMonitorItem.DispatchObserver(){
+                    public void beforeOperation(Object c){monitorBefore(c);}
+                    public void afterOperation(Object c){effectAfter(c);}
+                    public void failedOperation(Object c,Throwable original){effectFailed(c);}
+                },new CdMonitorItem.ReceiptGuard(){public void prepared(Object c){effectPrepared(c);}public void completed(Object c){effectCompleted(c);}});
+        lostRing=CdLostRing.fromAct2PastAssets(placement,terrain,math,probes,
+                c->{lostCall(c,c.cut());angle(solidGlobals().primaryAngle(),c.value());},
+                c->{lostCall(c,c.cut());switch(c.request()){
+                    case CdLostRing.SoundRequest v->sound(new SonicCdGameModule.PastLostRingFm(v.sound()));
+                    case CdLostRing.RewardFmRequest v->sound(new SonicCdGameModule.PastRingFm(v.sound()));
+                    case CdLostRing.RewardSubCpuRequest v->sound(new SonicCdGameModule.PastRingSubCpu(v.command()));
+                    default->throw new IllegalArgumentException("Unknown actual LostRing FM request");}},
+                (pool,identity)->{lostInvocation();if(!lostRing.isCurrentDrawCall(pool,identity))throw new IllegalStateException("Foreign LostRing Draw");
+                    lostCall(identity,lostRing.currentSource(identity));drawDynamic(Kind.LOST_RING,pool,identity,()->lostRing.isCurrentDrawCall(pool,identity));},
+                (globals,calls)->{lostInvocation();var d=dispatch;if(d.collecting||!lostRing.isCurrentCollectCall(globals,calls)||!d.consumed.add(globals)||!d.consumed.add(calls))throw new IllegalStateException("Foreign/reentrant LostRing CollectRing");
+                    var placed=placement.capture();var actor=frame.captureActor();var shared=frame.captureShared();d.collecting=true;Throwable original=null;
+                    try{CdLostRing.collectRing(globals,calls);}catch(RuntimeException|Error failure){original=failure;throw failure;}
+                    finally{try{requirePlacement(placed);requireFrame(actor,shared);}catch(RuntimeException|Error verification){if(original==null)throw verification;if(verification!=original)original.addSuppressed(verification);}finally{d.collecting=false;}}});
     }
     boolean isCurrentAdoption(Adoption a){return a!=null&&pending==a&&port&&(phase==Phase.WALKING||phase==Phase.DRAINING);}
     /** Caller has already admitted selector8, incremented levelFrames once and run actual SpawnObjects. */
@@ -280,7 +421,7 @@ final class SonicCdAct2PastObjectPass {
     private void execute(Kind kind,int whole,int actualLevelFrame){
         var cut=read();var e=frame.environment();var g=e.movement().gates();
         switch(kind){
-            case PRIMARY->{if(frame.state().motion().routine()==2){runPrimaryMain(actualLevelFrame);break;}
+            case PRIMARY->{if(frame.state().motion().routine()==2||frame.state().motion().routine()==4){runPrimaryMain(actualLevelFrame);break;}
                 if(frame.state().motion().routine()!=0)throw stop(Boundary.SONIC_MAIN,whole,frame.state().motion().routine());
                 var publication=frame.runBody(actualLevelFrame);checkpoint();if(publication.result().boundary()!=CdPlayerBody.Boundary.INIT_RETURN||frame.display().isPresent())throw new IllegalStateException("Primary Init did not return its native no-draw boundary");
                 if(!publication.sounds().isEmpty()){var after=read();var sounds=new ArrayList<>(after.sounds());for(var sound:publication.sounds())sounds.add(new SonicCdGameModule.PastFrameSound(sound));
@@ -325,16 +466,41 @@ final class SonicCdAct2PastObjectPass {
                 requireKind(Kind.LOG_SHADOW);if(dispatch.operation!=null||!dispatch.drawn||dispatch.logInitialRoutine==0&&dispatch.logInitStores!=3
                         ||!result.state().equals(placement.pool().state(whole))||result.deleted()!=dispatch.logDeleted)
                     throw new IllegalStateException("Log omitted original native completion");}
+            case SCENERY->{dispatch.decorInitialRoutine=placement.pool().state(whole).routine();
+                try{var r=scenery.run(whole,new CdScenery.Globals(g.timeZone(),cut.goodFutureByte(),g.zoneAct()&255,g.timeWarpDirection(),cut.cameraXWord()));
+                    decorResult(r.state(),r.deleted(),true);
+                }catch(RuntimeException|Error original){decorFailed(original);throw original;}finally{dispatch.decor=null;}}
+            case SPRINGBOARD->{dispatch.decorInitialRoutine=placement.pool().state(whole).routine();
+                try{var r=springboard.run(whole,new CdSpringboard.Globals(g.timeZone(),g.timeWarpDirection(),cut.cameraXWord()),
+                        new CdSpringboard.PrimaryInputs(frame.state(),frame.environment()));
+                    decorResult(r.state(),r.deleted(),dispatch.decorInitialRoutine!=0);
+                    if(r.primary()!=frame.state()||r.environment()!=frame.environment())throw new IllegalStateException("Springboard omitted its actual complete primary result");
+                }catch(RuntimeException|Error original){decorFailed(original);throw original;}finally{dispatch.decor=null;}}
             case MONITOR->monitor.runPast(whole,monitorGlobals(),new CdMonitor.SolidInputs(primary(),gates(),solidGlobals()));
             case TIME_POST->post.runPast(whole,postGlobals());
             case COLLAPSE->collapse.run(whole,new CdCollapsePlatform.DespawnGlobals(g.timeZone(),g.timeWarpDirection(),cut.cameraXWord()),new CdCollapsePlatform.Inputs(primary(),gates(),solidGlobals()));
             case PLATFORM->platform.run(whole,new CdPlatform.Globals(g.zoneAct(),cut.globals().ring().timeStopTimer(),cut.cameraXWord(),cut.cameraYWord(),g.timeZone()),new CdPlatform.Inputs(primary(),gates(),solidGlobals()));
             case PATA_BATA->pataBata.run(whole,new CdPataBata.Globals(cut.goodFutureByte(),g.timeZone(),g.timeWarpDirection(),cut.cameraXWord()));
+            case EXPLOSION->{var r=explosion.run(whole);effectResult(r.state());}
+            case FLOWER->{var r=flower.run(whole);effectResult(r.state());}
+            case POINTS->{var r=points.run(whole);effectResult(r.state());}
+            case MOSQUI->{var r=mosqui.run(whole,new CdMosqui.Globals(cut.goodFutureByte(),g.timeZone(),g.timeWarpDirection(),e.globals().debugMode(),cut.cameraXWord(),frame.state().motion().centreX16_16()>>>16,frame.state().motion().centreY16_16()>>>16));effectResult(r.state());}
+            case MONITOR_ITEM->{var r=monitorItem.run(whole,Optional.of(new CdMonitorItem.PrimarySupport(frame.state().header().slotId(),frame.state().motion().flags())));
+                if(r!=dispatch.monitorResult)throw new IllegalStateException("MonitorItem did not return its original completed Result");effectResult(r.state());}
+            case LOST_RING->{dispatch.lostInputs=new CdLostRing.Inputs(vIntWord(),127-whole,g.zoneAct()>>>8,e.movement().bounds().bottom());
+                dispatch.lostPorts=lostPorts();try{var r=lostRing.run(whole,dispatch.lostInputs,dispatch.lostPorts);effectResult(r.state());}finally{dispatch.lostInputs=null;dispatch.lostPorts=null;}}
+
             case ANTON->anton.run(whole,new CdAnton.Globals(cut.goodFutureByte(),g.timeZone(),g.timeWarpDirection(),cut.cameraXWord(),solidGlobals().primaryAngle()));
             case TAM->tam.run(whole,new CdTamabboh.Globals(cut.goodFutureByte(),g.timeZone(),g.timeWarpDirection(),e.globals().debugMode(),cut.cameraXWord(),solidGlobals().primaryAngle()));
-            case ANIMAL->animal.runWithReads(whole,new CdAnimal.Reads(){public int timeZone(){return reached().movement().gates().timeZone();}public int goodFuture(){requireKind(Kind.ANIMAL);return read().goodFutureByte();}
+            case ANIMAL->{var result=animal.runWithReads(whole,new CdActiveAnimal.Reads(){public int timeZone(){return reached().movement().gates().timeZone();}public int goodFuture(){requireKind(Kind.ANIMAL);return read().goodFutureByte();}
                 public int projDestroyed(){requireKind(Kind.ANIMAL);return read().globals().projectorByte();}public int timeWarpDir(){return reached().movement().gates().timeWarpDirection();}
-                public int cameraXWord(){requireKind(Kind.ANIMAL);return read().cameraXWord();}private CdPlayerBody.Environment reached(){requireKind(Kind.ANIMAL);return frame.environment();}});
+                public int cameraXWord(){requireKind(Kind.ANIMAL);return read().cameraXWord();}public int act(){return reached().movement().gates().zoneAct()&255;}public int primaryAngle(){requireKind(Kind.ANIMAL);return solidGlobals().primaryAngle();}
+                private CdPlayerBody.Environment reached(){requireKind(Kind.ANIMAL);return frame.environment();}});
+                if(dispatch.operation!=null||!result.state().equals(placement.pool().state(whole)))throw new IllegalStateException("Animal omitted original completion");}
+            case PROJECTOR->{var result=projector.run(whole,new CdProjector.Reads(){public int projDestroyed(){requireKind(Kind.PROJECTOR);return read().globals().projectorByte();}
+                public int act(){return reached().zoneAct()&255;}public int timeZone(){return reached().timeZone();}public int timeWarpDirection(){return reached().timeWarpDirection();}public int cameraXWord(){requireKind(Kind.PROJECTOR);return read().cameraXWord();}
+                private CdPlayerMovement.Gates reached(){requireKind(Kind.PROJECTOR);return frame.environment().movement().gates();}},new CdProjector.Inputs(primary(),gates(),solidGlobals()));
+                if(dispatch.operation!=null||!result.state().equals(placement.pool().state(whole)))throw new IllegalStateException("Projector omitted original completion");}
             case SWING->swing.run(whole,new CdSwing.Globals(cut.cameraXWord(),g.timeZone(),g.timeWarpDirection()));
             case ROBOT->robot.run(whole,new CdRobotGenerator.Globals(cut.goodFutureByte(),g.timeZone(),g.zoneAct()&255,g.timeWarpDirection(),cut.cameraXWord()),new CdRobotGenerator.Inputs(primary(),gates(),solidGlobals()));
         }
@@ -378,7 +544,8 @@ final class SonicCdAct2PastObjectPass {
         if(whole<32){if((whole==2||whole==3||whole==5)&&id==0x1C||whole==31&&id==0x19)return Kind.RESERVED;
             throw stop(Boundary.PLAYER_SLOT,whole,id);}
         return switch(id){case 0x0A->Kind.SPRING;case 0x10->Kind.RING;case 0x12->Kind.FLOAT_BLOCK;case 0x1B->Kind.BOULDER;case 0x36->Kind.WALL;case 0x26->Kind.SPIKES;case 0x33->Kind.LOG_SHADOW;case 0x19->placement.pool().state(whole).subtype()<8?Kind.MONITOR:Kind.TIME_POST;
-            case 0x20->Kind.COLLAPSE;case 0x21->Kind.PLATFORM;case 0x22->Kind.TAM;case 0x24->Kind.ANIMAL;case 0x29->Kind.SWING;case 0x2D->Kind.ROBOT;case 0x3F->Kind.ANTON;case 0x3E->Kind.PATA_BATA;
+            case 0x20->Kind.COLLAPSE;case 0x21->Kind.PLATFORM;case 0x22->Kind.TAM;case 0x24->Kind.ANIMAL;case 0x29->Kind.SWING;case 0x2D->Kind.ROBOT;case 0x3F->Kind.ANTON;case 0x3E->Kind.PATA_BATA;case 0x2E->Kind.PROJECTOR;case 0x18->Kind.EXPLOSION;case 0x1F->Kind.FLOWER;case 0x11->Kind.LOST_RING;case 0x1A->Kind.MONITOR_ITEM;case 0x3D->Kind.MOSQUI;case 0x1C->{if((placement.pool().state(whole).subtype()&128)==0)throw stop(Boundary.OBJECT_KIND,whole,id);yield Kind.POINTS;}
+            case CdScenery.OBJECT_ID->Kind.SCENERY;case CdSpringboard.OBJECT_ID->Kind.SPRINGBOARD;
             default->throw stop(Boundary.OBJECT_KIND,whole,id);};
     }
     private void guard(){
@@ -404,13 +571,20 @@ final class SonicCdAct2PastObjectPass {
     private void requireKind(Kind kind){if(phase!=Phase.WALKING||dispatch==null||dispatch.kind!=kind||port||queuePort)throw new IllegalStateException("No private current "+kind+" dispatch");guard();if(dispatch.ownerActor!=null){requireFrame(dispatch.ownerActor,dispatch.ownerShared);requireCut(dispatch.ownerCut);}}
     private void requireWhole(Kind kind,int whole){requireKind(kind);if(dispatch.whole!=whole)throw new IllegalStateException("Wrong callback whole index");}
     private void claim(Object call,BooleanSupplier actual){if(dispatch==null||call==null||!actual.getAsBoolean()||!dispatch.consumed.add(call))throw new IllegalStateException("Cloned/repeated/foreign native callback");
-        if(dispatch.kind==Kind.SWING||dispatch.kind==Kind.ROBOT){if(dispatch.operation!=call||!dispatch.prepared||dispatch.used)throw new IllegalStateException("Missing original prepared receipt");dispatch.used=true;}}
+        if(observedKind()){if(dispatch.operation!=call||!dispatch.prepared||dispatch.used)throw new IllegalStateException("Missing original prepared receipt");dispatch.used=true;}}
     private void wallCall(Object call,CdBreakableWall.SourceCut cut){requireKind(Kind.WALL);wall.validateCurrentCall(call);
         claim(call,()->wall.matchesPendingOperation(call));placementCut(cut.placement());source(cut.source());}
     private void wallAck(Object call){dispatch.operation=call;wall.acknowledgeCurrentCall(call);}
     private void floatNonwrites(){var actual=placement.capture();
         if(dispatch.floatStatus==null||!dispatch.floatStatus.equals(actual.status())||!same(dispatch.floatBank,actual.savedFlags()))
             throw new IllegalStateException("FloatBlock changed placement status or saved bank");}
+    private void submitProjectorPlc(CdProjector.PlcCallRequest call){
+        requireKind(Kind.PROJECTOR);claim(call,()->projector.isCurrentCall(call));placementCut(call.actualCut());source(call.expectedSource());
+        if(plcPort||pendingPlc!=null)throw new IllegalStateException("Recursive Projector PLC submission");
+        var submission=new PlcSubmission(call);pendingPlc=submission;plcPort=true;
+        try{submission.validate();ports.submitPlc(submission);if(!submission.adopted)throw new IllegalStateException("Section owner omitted actual PLC receipt");requireCut(submission.expected);requireFrame(submission.actor,submission.shared);requirePlacement(submission.placementCut);checkpoint();}
+        finally{pendingPlc=null;plcPort=false;}
+    }
     private void publish(Cut expected,Cut next,CdObjectPool.Snapshot pool,Runnable preflight,Runnable write){
         if(port||pending!=null)throw new IllegalStateException("Recursive R12B adoption");var a=new Adoption(expected,next,pool,preflight,write);pending=a;port=true;
         try{requireCut(expected);ports.adopt(a);if(!a.applied)throw new IllegalStateException("Root omitted actual adoption receipt");requireCut(next);requireFrame(a.afterActor,a.afterShared);requirePlacement(a.afterPlacement);if(dispatch!=null)checkpoint();}
@@ -496,6 +670,100 @@ final class SonicCdAct2PastObjectPass {
         for(int n=0;n<96;n++)if(!Arrays.equals(d.expectedImages.get(n),actual.pool().slots().get(n).copyBytes()))throw new IllegalStateException("Log native full96 output mismatch");
         if(publication)d.ordinal++;d.operation=null;d.observedCut=null;d.observedGlobals=null;d.actor=null;d.shared=null;d.expectedImages=null;d.expectedSaved=null;checkpoint();
     }
+    /** Transient original-operation scope only; no gameplay image or capture key is retained. */
+    private static final class DecorScope {
+        final Object call;final CdObjectPlacementRuntime.Snapshot before;final Cut cut;
+        final CdPlayerFrameRuntime.ActorState actor;final CdPlayerFrameRuntime.SharedState shared;
+        final boolean ordinal,publication;final List<byte[]> images;final byte[] saved;
+        CdPlayerFrameRuntime.ObjectSolidPublication primary;boolean used,returned;
+        DecorScope(Object call,CdObjectPlacementRuntime.Snapshot before,Cut cut,
+                   CdPlayerFrameRuntime.ActorState actor,CdPlayerFrameRuntime.SharedState shared,boolean ordinal,boolean publication){
+            this.call=call;this.before=before;this.cut=cut;this.actor=actor;this.shared=shared;this.ordinal=ordinal;this.publication=publication;
+            images=new ArrayList<>();for(var state:before.pool().slots())images.add(state.copyBytes());saved=before.savedFlags().copy();
+        }
+    }
+    private boolean actualDecor(Object call){return dispatch!=null&&switch(dispatch.kind){
+        case SCENERY->scenery.isCurrentCall(call);case SPRINGBOARD->springboard.isCurrentCall(call);default->false;};}
+    private DecorScope decorBegin(Object call,long ordinal,CdObjectPlacementRuntime.Snapshot before,CdObjectState source,boolean counted,boolean publication){
+        if(dispatch==null||dispatch.decor!=null||port||queuePort||plcPort||!actualDecor(call))
+            throw new IllegalStateException("No original next Scenery/Springboard operation");
+        requireKind(dispatch.kind);placementCut(before);source(source);
+        if(terrain.objects().identity()!=terrain.identity()||terrain.objects().placements()!=placement.placements())
+            throw new IllegalStateException("Foreign retained Scenery/Springboard source");
+        if(counted&&ordinal!=dispatch.ordinal+1)throw new IllegalStateException("Scenery/Springboard native ordinal mismatch");
+        var scope=new DecorScope(call,before,read(),frame.captureActor(),frame.captureShared(),counted,publication);dispatch.decor=scope;return scope;
+    }
+    private DecorScope decorCurrent(Object call){var scope=dispatch==null?null:dispatch.decor;
+        if(scope==null||scope.call!=call||!actualDecor(call))throw new IllegalStateException("Escaped/cloned Scenery/Springboard receipt");return scope;}
+    private void decorPublication(Object call,long ordinal,CdObjectPlacementRuntime.Snapshot before,CdObjectState source,CdObjectState output,int savedIndex){
+        var scope=decorBegin(call,ordinal,before,source,true,true);var d=dispatch;
+        if(!d.consumed.add(call))throw new IllegalStateException("Repeated native Scenery/Springboard publication");
+        if(savedIndex>=0){int at=savedTailIndex(source);
+            if(!outsideOrWarp(source)||d.decorSavedCleared||source.savedFlagsId()==0||savedIndex!=at||at<2||at>=scope.saved.length||output!=source)
+                throw new IllegalArgumentException("Scenery/Springboard saved clear exceeds its native tail");
+            scope.saved[at]&=127;d.decorSavedCleared=true;
+        }else if(output==null){
+            if(!outsideOrWarp(source)||d.decorDeleted||source.savedFlagsId()!=0&&!d.decorSavedCleared)
+                throw new IllegalArgumentException("Scenery/Springboard Delete before native tail");
+            scope.images.set(d.whole-32,new byte[64]);d.decorDeleted=true;
+        }else{
+            requireIdentity(output.identity());CdObjectPool.overlay(before.pool(),List.of(output));
+            if(d.kind==Kind.SCENERY){
+                if(d.decorInitialRoutine!=0||d.drawn||d.sceneryInitStores>=3)throw new IllegalStateException("Scenery publication outside Init");
+                var expected=switch(d.sceneryInitStores){
+                    case 0->source.addByte(ROUTINE,2).moveByte(SPRITE_FLAGS,source.spriteFlags()|4)
+                            .moveLong(MAPPINGS,CdR12bObjectAssets.View.MAP_SPR_SCENERY.range().nativeAddress())
+                            .moveByte(MAP_FRAME,source.subtype()).moveByte(WIDTH,16).moveByte(Y_RADIUS,24);
+                    case 1->source.moveWord(TILE,sceneryBaseWord());case 2->source.moveWord(TILE,source.word(TILE)|0x4000);
+                    default->throw new AssertionError();};
+                if(!expected.equals(output))throw new IllegalArgumentException("Scenery Init changed a native store/nonwrite");d.sceneryInitStores++;
+            }
+            scope.images.set(d.whole-32,output.copyBytes());
+        }
+    }
+    private int sceneryBaseWord(){var g=frame.environment().movement().gates();int index=g.timeZone()&127;
+        if(index==2)index=(1+read().goodFutureByte())&255;
+        index=(index+index)&65535;index=(index&0xFF00)|((index+(g.zoneAct()&255))&255);int at=(short)((index+index)&65535);
+        var table=terrain.objects().view(CdR12bObjectAssets.View.SCENERY_BASE_TILES);
+        if(at<0||(at&1)!=0||at>10||at>table.length()-2)throw new IllegalArgumentException("Unowned Scenery selected base");return table.unsignedWord(at);}
+    private void decorDrawBefore(Object call,CdObjectPlacementRuntime.Snapshot before,CdObjectState source){
+        var scope=decorBegin(call,0,before,source,false,false);var d=dispatch;
+        if(d.drawn||d.kind==Kind.SCENERY&&d.decorInitialRoutine==0&&d.sceneryInitStores!=3
+                ||d.kind==Kind.SPRINGBOARD&&d.decorInitialRoutine==0)throw new IllegalStateException("Scenery/Springboard Draw at wrong native point");
+        scope.images.set(d.whole-32,source.moveByte(SPRITE_FLAGS,source.spriteFlags()&127).copyBytes());
+    }
+    private void decorUse(Object call){var scope=decorCurrent(call);requireKind(dispatch.kind);requireFrame(scope.actor,scope.shared);requireCut(scope.cut);requirePlacement(scope.before);
+        if(scope.used||scope.publication||!dispatch.consumed.add(call))throw new IllegalStateException("Repeated native Scenery/Springboard callback");scope.used=true;}
+    private void decorDraw(Object call,CdObjectState source){decorUse(call);drawDynamic(dispatch.kind,placement.pool(),source.identity(),()->actualDecor(call));}
+    private void springboardPrimary(CdSpringboard.PrimaryCall call){var scope=decorCurrent(call);
+        if(dispatch.kind!=Kind.SPRINGBOARD||scope.primary==null)throw new IllegalStateException("No actual prepared Springboard primary store");
+        decorUse(call);var prepared=scope.primary;
+        publish(scope.cut,scope.cut,null,()->{decorCurrent(call);frame.validatePreparedObjectSolidPublication(prepared);},
+                ()->frame.applyPreparedObjectSolidPublication(prepared));
+    }
+    private boolean decorPlacementMatches(DecorScope scope,boolean output){var live=placement.capture();
+        if(!scope.before.status().equals(live.status())||!Arrays.equals(output?scope.saved:scope.before.savedFlags().copy(),live.savedFlags().copy()))return false;
+        for(int n=0;n<96;n++)if(!Arrays.equals(output?scope.images.get(n):scope.before.pool().slots().get(n).copyBytes(),live.pool().slots().get(n).copyBytes()))return false;return true;
+    }
+    private void decorVerify(DecorScope scope,boolean completed){guard();requireCut(scope.cut);
+        if(!decorPlacementMatches(scope,true)&&(completed||!decorPlacementMatches(scope,false)))
+            throw new IllegalStateException("Scenery/Springboard changed full96/bank/status nonwrites");
+        var actor=scope.actor;if(scope.primary!=null){var prepared=scope.primary;
+            var after=new CdPlayerFrameRuntime.ActorState(actor.owner(),prepared.finalState(),actor.display());
+            if(frame.state()==prepared.finalState()&&frame.environment()==prepared.finalEnvironment())actor=after;
+            else if(completed||frame.state()!=prepared.expectedState()||frame.environment()!=prepared.expectedEnvironment())
+                throw new IllegalStateException("Springboard did not retain the original prepared Frame references");
+        }
+        requireFrame(actor,scope.shared);
+    }
+    private void decorAfter(Object call){var scope=decorCurrent(call);scope.returned=true;
+        if(!scope.publication&&!scope.used)throw new IllegalStateException("Scenery/Springboard omitted original callback consumption");
+        decorVerify(scope,true);if(scope.ordinal)dispatch.ordinal++;dispatch.decor=null;checkpoint();}
+    private void decorFailed(Throwable original){var scope=dispatch.decor;if(scope!=null)try{decorVerify(scope,scope.returned);}catch(RuntimeException|Error check){if(check!=original)original.addSuppressed(check);}}
+    private void decorResult(CdObjectState state,boolean deleted,boolean drawn){requireKind(dispatch.kind);
+        if(dispatch.decor!=null||dispatch.drawn!=drawn||deleted!=dispatch.decorDeleted||!state.equals(placement.pool().state(dispatch.whole))
+                ||dispatch.kind==Kind.SCENERY&&dispatch.decorInitialRoutine==0&&dispatch.sceneryInitStores!=3)
+            throw new IllegalStateException("Scenery/Springboard omitted original native completion");}
     private void commitSolid(CdObjectPool.Snapshot pool,CdSolidObject.Player expected,CdSolidObject.Globals globals,CdSolidObject.Outcome outcome){
         poolCut(pool);CdObjectState image;List<CdObjectState> others;List<CdPlayerTouchResponse.FmSound> fm;CdPlayerFrameRuntime.ObjectSolidPublication prepared;
         if(outcome instanceof CdSolidObject.Completed c){var r=c.completedResult();image=r.object();others=r.otherSlots();fm=r.fmRequests();prepared=frame.prepareObjectSolidResult(expected,globals,r);}
@@ -549,7 +817,111 @@ final class SonicCdAct2PastObjectPass {
             publish(cut,cut,CdObjectPool.overlay(before,List.of(after)),()->{},()->{});
         }
     }
-    private boolean actualObserved(Object call){return dispatch.kind==Kind.SWING?swing.isCurrentCall(call):dispatch.kind==Kind.ROBOT&&robot.isCurrentCall(call);}
+    /** Per-dispatch observer stack, not a retained native owner. Only Flower floor→angle may nest. */
+    private static final class EffectScope {
+        final Object call;final CdObjectPlacementRuntime.Snapshot before;final boolean publication;
+        CdPlayerFrameRuntime.ActorState actor;CdPlayerFrameRuntime.SharedState shared;Cut cut;
+        List<CdObjectState> expected;byte[] saved;boolean prepared,used,after;
+        EffectScope(Object call,CdObjectPlacementRuntime.Snapshot before,boolean publication,
+                    CdPlayerFrameRuntime.ActorState actor,CdPlayerFrameRuntime.SharedState shared,Cut cut){
+            this.call=call;this.before=before;this.publication=publication;this.actor=actor;this.shared=shared;this.cut=cut;
+            expected=before.pool().slots();saved=before.savedFlags().copy();
+        }
+    }
+    private boolean actualEffect(Object c){return dispatch!=null&&switch(dispatch.kind){
+        case EXPLOSION->explosion.isCurrentCall(c);case FLOWER->flower.isCurrentCall(c);case POINTS->points.isCurrentCall(c);
+        case MONITOR_ITEM->monitorItem.isCurrentCall(c);case MOSQUI->mosqui.isCurrentCall(c);default->false;};}
+    private EffectScope effectTop(Object c){var d=dispatch;if(d==null||d.effects.isEmpty()||d.effects.peek().call!=c||!actualEffect(c))throw new IllegalStateException("No original current effect operation");return d.effects.peek();}
+    private EffectScope effectBegin(Object call,long ordinal,CdObjectPlacementRuntime.Snapshot cut,CdObjectState source,boolean publication){
+        if(dispatch==null||port||queuePort||plcPort||!actualEffect(call))throw new IllegalStateException("No private current effect dispatch");
+        requireKind(dispatch.kind);placementCut(cut);source(source);var d=dispatch;
+        if(!d.effects.isEmpty()){var parent=d.effects.peek();if(!(parent.call instanceof CdFlower.FloorCall)||!(call instanceof CdFlower.PrimaryAngleCall)||!parent.prepared||parent.after)
+                throw new IllegalStateException("Unsupported nested effect operation");effectVerify(parent);}
+        long next=d.effectOrdinal+1;if(ordinal!=0&&ordinal!=next)throw new IllegalStateException("Not next original effect ordinal");d.effectOrdinal=next;
+        var scope=new EffectScope(call,cut,publication,frame.captureActor(),frame.captureShared(),read());d.effects.push(scope);return scope;
+    }
+    private void effectPublication(Object call,long ordinal,CdObjectPlacementRuntime.Snapshot cut,CdObjectState source,CdObjectState before,CdObjectState output,int savedIndex){
+        if(dispatch==null||!actualEffect(call))throw new IllegalStateException("No original effect publication");
+        boolean operationOrdinal=dispatch.kind==Kind.FLOWER||dispatch.kind==Kind.MONITOR_ITEM;
+        if(!operationOrdinal&&ordinal!=dispatch.publications+1)throw new IllegalStateException("Not next original native publication");
+        var scope=effectBegin(call,operationOrdinal?ordinal:0,cut,source,true);if(!operationOrdinal)dispatch.publications=ordinal;
+        var images=new ArrayList<>(cut.pool().slots());
+        if(savedIndex>=0){if(output!=source||savedIndex>=scope.saved.length)throw new IllegalArgumentException("Bad Mosqui BCLR publication");scope.saved[savedIndex]&=127;}
+        else if(output==null){ /* Delete is checked as all64 zero in effectVerify; no synthetic image or write. */ }
+        else{if(before==null||!before.identity().equals(output.identity())||!cut.pool().slots().get(before.identity().dynamicIndex()).equals(before))throw new IllegalArgumentException("Stale native effect publication preimage");
+            CdObjectPool.overlay(cut.pool(),List.of(output));images.set(output.identity().dynamicIndex(),output);}
+        // DeleteObject clears all64 bytes. Compare bytes separately; no fabricated state is written back.
+        scope.expected=List.copyOf(images);
+    }
+    private void effectCall(Object call,long ordinal,CdObjectPlacementRuntime.Snapshot cut,CdObjectState source,boolean draw){
+        var scope=effectBegin(call,ordinal,cut,source,false);
+        if(draw){var images=new ArrayList<>(scope.expected);images.set(source.identity().dynamicIndex(),source.moveByte(SPRITE_FLAGS,source.spriteFlags()&127));scope.expected=List.copyOf(images);}
+    }
+    private boolean effectDelete(EffectScope s){return switch(s.call){
+        case CdExplosion.Publication c->c.output()==null;case CdPoints.Publication c->c.output()==null;
+        case CdMosqui.Publication c->c.output()==null&&c.savedIndex()<0;case CdMonitorItem.DeleteCall ignored->true;default->false;};}
+    private int effectSourceWhole(EffectScope s){return switch(s.call){
+        case CdExplosion.Publication c->c.source().identity().wholeIndex();case CdPoints.Publication c->c.source().identity().wholeIndex();
+        case CdMosqui.Publication c->c.source().identity().wholeIndex();case CdMonitorItem.DeleteCall c->c.source().identity().wholeIndex();
+        default->dispatch.whole;};}
+    private void effectVerify(EffectScope s){
+        guard();requireFrame(s.actor,s.shared);requireCut(s.cut);var live=placement.capture();
+        if(!s.before.status().equals(live.status())||!Arrays.equals(s.saved,live.savedFlags().copy()))throw new IllegalStateException("Effect changed placement status or saved nonwrites");
+        int deleted=effectDelete(s)?effectSourceWhole(s):-1;
+        for(int n=0;n<96;n++){byte[] expected=deleted==n+32?new byte[64]:s.expected.get(n).copyBytes();
+            if(!Arrays.equals(expected,live.pool().slots().get(n).copyBytes()))throw new IllegalStateException("Effect changed an unowned full96 byte at whole "+(n+32));}
+    }
+    private void effectPrepared(Object call){var s=effectTop(call);if(s.prepared||s.after)throw new IllegalStateException("Repeated effect preparation");
+        requireFrame(s.actor,s.shared);requireCut(s.cut);requirePlacement(s.before);s.prepared=true;}
+    private void effectUse(Object call){var s=effectTop(call);if(!s.prepared||s.used||s.after||!dispatch.consumed.add(call))throw new IllegalStateException("Repeated/cloned/unprepared effect callback");
+        requireKind(dispatch.kind);requirePlacement(s.before);s.used=true;}
+    private void effectPort(Object call,Runnable work){var s=effectTop(call);effectUse(call);work.run();s.actor=frame.captureActor();s.shared=frame.captureShared();s.cut=read();}
+    private void effectAfter(Object call){var s=effectTop(call);if(!s.prepared||s.after)throw new IllegalStateException("Missing original effect preparation");
+        if(call instanceof CdFlower.FloorCall c){Objects.requireNonNull(flower.currentFloorResult(c));s.used=true;}
+        if(dispatch.kind==Kind.MONITOR_ITEM&&!s.publication&&!(call instanceof CdMonitorItem.DrawCall)&&!(call instanceof CdMonitorItem.DeleteCall)){
+            Object result=monitorItem.currentResult(call);
+            if(call instanceof CdMonitorItem.MappingReadCall){if(!(result instanceof Integer))throw new IllegalStateException("Missing actual mapping-read result");}
+            else if(call instanceof CdMonitorItem.MotionCall){if(!(result instanceof CdPlayerMovement.RawObjectMoveResult))throw new IllegalStateException("Missing actual ObjMove result");}
+            else if(call instanceof CdMonitorItem.CompletionCall){if(!(result instanceof CdMonitorItem.Result r))throw new IllegalStateException("Missing original MonitorItem completion");dispatch.monitorResult=r;}
+            else throw new IllegalStateException("Unexpected completed Monitor reward port");s.used=true;
+        }
+        if(!s.publication&&!s.used&&!(call instanceof CdMonitorItem.DeleteCall))throw new IllegalStateException("Native callback omitted private receipt");
+        effectVerify(s);s.after=true;
+    }
+    private void effectCompleted(Object call){var s=effectTop(call);if(!s.after)throw new IllegalStateException("Missing original effect completion");effectVerify(s);dispatch.effects.pop();checkpoint();
+        if(!dispatch.effects.isEmpty()){var parent=dispatch.effects.peek();if(!(parent.call instanceof CdFlower.FloorCall)||!(call instanceof CdFlower.PrimaryAngleCall))throw new IllegalStateException("Unsupported completed effect nesting");
+            // Only the genuine angle adoption crosses the suspended floor's Frame image.
+            parent.actor=s.actor;parent.shared=s.shared;effectVerify(parent);}}
+    private void effectFailed(Object call){var s=effectTop(call);effectVerify(s);dispatch.effects.pop();}
+    private void effectResult(CdObjectState state){if(!dispatch.effects.isEmpty()||!placement.pool().state(dispatch.whole).equals(state))throw new IllegalStateException("Incomplete/foreign completed native effect result");}
+    private <T> T monitorOperation(Class<T> type){requireKind(Kind.MONITOR_ITEM);var s=dispatch.effects.peek();if(s==null||!type.isInstance(s.call)||!monitorItem.isCurrentPrimitive(s.call))throw new IllegalStateException("No actual Monitor primitive callback");return type.cast(s.call);}
+    private void monitorBefore(Object call){long ordinal=monitorItem.currentOrdinal(call);switch(call){
+        case CdMonitorItem.Publication c->effectPublication(c,ordinal,c.cut(),c.source(),c.source(),c.output(),-1);
+        case CdMonitorItem.MappingReadCall c->effectCall(c,ordinal,c.cut(),c.source(),false);
+        case CdMonitorItem.MotionCall c->effectCall(c,ordinal,c.cut(),c.source(),false);
+        case CdMonitorItem.ShoesCall c->effectCall(c,ordinal,c.cut(),c.source(),false);
+        case CdMonitorItem.ShieldCall c->effectCall(c,ordinal,c.cut(),c.source(),false);
+        case CdMonitorItem.RingCall c->effectCall(c,ordinal,c.cut(),c.source(),false);
+        case CdMonitorItem.DeleteCall c->effectCall(c,ordinal,c.cut(),c.source(),false);
+        case CdMonitorItem.DrawCall c->effectCall(c,ordinal,c.cut(),c.source(),true);
+        case CdMonitorItem.CompletionCall c->effectCall(c,ordinal,c.cut(),c.source(),false);
+        default->throw new IllegalArgumentException("Unknown original Monitor operation");}}
+    private int vIntWord(){var value=frame.vIntClock().absoluteValue();if(value.isEmpty())throw stop(Boundary.UNKNOWN_VINT,dispatch.whole,0);return(int)value.getAsLong()&65535;}
+    private void lostInvocation(){requireKind(Kind.LOST_RING);if(dispatch.lostInputs==null||dispatch.lostPorts==null||!lostRing.isCurrentInvocation(dispatch.whole,dispatch.lostInputs,dispatch.lostPorts))throw new IllegalStateException("No original LostRing invocation");}
+    private void lostCall(Object operation,CdLostRing.SourceCut cut){lostInvocation();if(cut!=lostRing.currentSource(operation)||!dispatch.consumed.add(cut))throw new IllegalStateException("Cloned/repeated LostRing source receipt");placementCut(cut.placement());source(cut.source());}
+    private CdGlobalObjectAnimation.Extras spillOwner(){var value=read().globals().animations();if(value.isEmpty())throw stop(Boundary.SPILL_GLOBALS_OWNER,dispatch.whole,0);return value.orElseThrow();}
+    private CdLostRing.Ports lostPorts(){return new CdLostRing.Ports(new CdRing.GlobalsPort(){
+        public CdRingGlobals read(){lostInvocation();return SonicCdAct2PastObjectPass.this.read().globals().ring();}
+        public void write(CdRingGlobals value){lostCall(value,lostRing.currentSource(value));var cut=SonicCdAct2PastObjectPass.this.read();publish(cut,withRing(cut,Objects.requireNonNull(value)),null,()->{},()->{});}
+    },new CdLostRing.SpillGlobalsPort(){
+        public CdRingSpillGlobals read(){lostInvocation();return spillOwner().spill();}
+        public void write(CdRingSpillGlobals value){lostCall(value,lostRing.currentSource(value));var old=spillOwner();var cut=SonicCdAct2PastObjectPass.this.read();var g=cut.globals();
+            var next=new CdGlobalObjectAnimation.Extras(old.logSpikeTimerByte(),old.logSpikeFrameByte(),old.unusedTimerByte(),old.unusedFrameByte(),Objects.requireNonNull(value));
+            var globals=new SonicCdAct2PastWorldHost.Globals(g.ring(),g.live(),g.contact(),g.score(),g.projectorByte(),g.checkpointSaved(),g.drownTimerWord(),g.debugBlockWord(),g.pauseMusicBit(),g.bonus(),g.tail(),Optional.of(next),g.paletteSteps7(),g.paletteTimers7());
+            publish(cut,withGlobals(cut,globals),null,()->{},()->{});}
+    });}
+    private boolean observedKind(){return dispatch.kind==Kind.SWING||dispatch.kind==Kind.ROBOT||dispatch.kind==Kind.PROJECTOR||dispatch.kind==Kind.ANIMAL;}
+    private boolean actualObserved(Object call){return switch(dispatch.kind){case SWING->swing.isCurrentCall(call);case ROBOT->robot.isCurrentCall(call);case PROJECTOR->projector.isCurrentCall(call);case ANIMAL->animal.isCurrentCall(call);default->false;};}
     private void observeBeforeCall(Object call,long ordinal){
         observedStart(call,ordinal);dispatch.expectedImages=null;dispatch.expectedSaved=null;
     }
@@ -567,7 +939,7 @@ final class SonicCdAct2PastObjectPass {
         d.expectedImages=List.copyOf(images);d.expectedSaved=saved;
     }
     private void observedStart(Object call,long ordinal){
-        if(dispatch==null||dispatch.kind!=Kind.SWING&&dispatch.kind!=Kind.ROBOT||port||queuePort||dispatch.operation!=null||!actualObserved(call)||ordinal!=dispatch.ordinal+1)throw new IllegalStateException("No original next native operation");
+        if(dispatch==null||!observedKind()||port||queuePort||plcPort||dispatch.operation!=null||!actualObserved(call)||ordinal!=dispatch.ordinal+1)throw new IllegalStateException("No original next native operation");
         guard();var d=dispatch;d.operation=call;d.prepared=false;d.completed=false;d.used=false;d.observedCut=placement.capture();d.observedGlobals=read();d.actor=frame.captureActor();d.shared=frame.captureShared();
     }
     private void receiptPrepared(Object call){var d=dispatch;if(d==null||d.operation!=call||d.prepared||!actualObserved(call))throw new IllegalStateException("Missing original preparation receipt");

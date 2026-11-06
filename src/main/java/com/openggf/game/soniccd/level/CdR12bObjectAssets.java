@@ -12,8 +12,8 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * Detached original-USA R12B metadata for eighteen kinds: Ring, Spring, HUD, TimeIcon,
- * Monitor/TimePost, CollapsePlatform, Tamabboh, Animal, Swing, RobotGenerator, Anton, Platform, Boulder, BreakableWall, FloatBlock, Spikes, LogShadow, PataBata.
+ * Detached original-USA R12B metadata for the retained object families: Ring, Spring, HUD, TimeIcon,
+ * Monitor/TimePost, CollapsePlatform, Tamabboh, Animal, Swing, RobotGenerator, Anton, Platform, Boulder, BreakableWall, FloatBlock, Spikes, LogShadow, PataBata, Explosion, Flower, Points, LostRing, MonitorItem, Mosqui, Projector, Scenery, Springboard, SpinningDisc, TunnelDoor, SpinTunnel, TunnelDoorVertical, BigRing/Flash, GoalPost/Signpost.
  * N1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff: actual Act2Past includes and Init/Animate
  * operands are pinned in the companion report/tests. Authored by OpenAI Codex GPT-6.1 Sol.
  * Every byte is read from the authenticated terrain owner's retained original image.
@@ -74,7 +74,39 @@ public final class CdR12bObjectAssets {
         LOG_SHADOW_BASE_TILES(0x8794,16,16,"b9a30c86ce81139722854af604422196b077c78a0e79dcac3cca3b506c06d637","b9a30c86ce81139722854af604422196b077c78a0e79dcac3cca3b506c06d637"),
         MAP_SPR_PATA_BATA_NORMAL(0xB2E4,34,34,"9165ad8d9f95bda2639172fe900f16dad44924af5f896a0223e6b9cb8bb7087b","9165ad8d9f95bda2639172fe900f16dad44924af5f896a0223e6b9cb8bb7087b"),
         MAP_SPR_PATA_BATA_DAMAGED(0xB306,40,40,"96d4c533000d636452afa838266996b9c4853824e7b3377868f7876492858889","96d4c533000d636452afa838266996b9c4853824e7b3377868f7876492858889"),
-        ANI_PATA_BATA(0xB2D2,18,18,"a68b2c9721811294f0f2ae43e0f78acc91ed8211a5d0da2d08d2ba230b6a25f3","a68b2c9721811294f0f2ae43e0f78acc91ed8211a5d0da2d08d2ba230b6a25f3");
+        ANI_PATA_BATA(0xB2D2,18,18,"a68b2c9721811294f0f2ae43e0f78acc91ed8211a5d0da2d08d2ba230b6a25f3","a68b2c9721811294f0f2ae43e0f78acc91ed8211a5d0da2d08d2ba230b6a25f3"),
+        MAP_SPR_EXPLOSION(0x1D714,146,146,"0b509dfbd51d21babeb6f551b2032e8e82325c5a518f8c5e976b88b039624d44","0b509dfbd51d21babeb6f551b2032e8e82325c5a518f8c5e976b88b039624d44"),
+        ANI_EXPLOSION(0x1D700,20,20,"9119f6ae5b68628549bb895b3bb7dcc3a6d4d9cc81918efc848846f745359649","9119f6ae5b68628549bb895b3bb7dcc3a6d4d9cc81918efc848846f745359649"),
+        MAP_SPR_FLOWER(0x36AB0,90,90,"48b7482f83af1300d834e07ec7326e670740d8c5f89f5c8a2253de123e46bb41","48b7482f83af1300d834e07ec7326e670740d8c5f89f5c8a2253de123e46bb41"),
+        ANI_FLOWER(0x36A94,28,28,"74105bb36227383768d51cd9084560633d8315a9c940e23e80c707532a5353e9","74105bb36227383768d51cd9084560633d8315a9c940e23e80c707532a5353e9"),
+        MAP_SPR_POINTS(0xAA1A,82,82,"24a65d4f2732e077fa1d9c881479a5e52cb46c7a9a371f6f30f0efa67ecf459e","24a65d4f2732e077fa1d9c881479a5e52cb46c7a9a371f6f30f0efa67ecf459e"),
+        MAP_SPR_MOSQUI_NORMAL(0xB49C,60,60,"5a10487e5e92e1c60e5885d832b90239c22d45f3c84bb49cd8886c590d8aba2e","5a10487e5e92e1c60e5885d832b90239c22d45f3c84bb49cd8886c590d8aba2e"),
+        MAP_SPR_MOSQUI_DAMAGED(0xB4D8,66,66,"23f8799c277fc89e4f94ccf75e0b488de9fca30a05a658cde5eaf0be8fec7313","23f8799c277fc89e4f94ccf75e0b488de9fca30a05a658cde5eaf0be8fec7313"),
+        ANI_MOSQUI_NORMAL(0xB480,14,14,"24b00d5597a3482b4bf9f5e692be5ea38534c1f5265408b8c7273d672949c1a2","24b00d5597a3482b4bf9f5e692be5ea38534c1f5265408b8c7273d672949c1a2"),
+        ANI_MOSQUI_DAMAGED(0xB48E,13,14,"6718cb74ab9b1ce59a3a122b0dee40b38ece57b7fdacd1f4baf7b76bc38c1a6e","cf64e547e8082aac25e26ac28799500505b45169aababaed6d42e9b144990408"),
+        MAP_SPR_PROJECTOR(0xE9F0,68,68,"2e180977b04b20230e5aced68385346b6f992bed19139df617477bd30780cda3","2e180977b04b20230e5aced68385346b6f992bed19139df617477bd30780cda3"),
+        ANI_METAL_SONIC_HOLOGRAM(0xE9AC,68,68,"2b431fb6fc08fbccef96299a1c83c99327b680924c8420b2eb56ef98eff4aa6f","2b431fb6fc08fbccef96299a1c83c99327b680924c8420b2eb56ef98eff4aa6f"),
+        PROJECTOR_EXPLOSION_SCHEDULE(0xEA34,38,38,"5830294609ca462a39688a5a11982198b43d6b04058c4335d0b9d923064a74a3","5830294609ca462a39688a5a11982198b43d6b04058c4335d0b9d923064a74a3"),
+        MAP_SPR_SCENERY(0x86D8,62,62,"5c73de36900992cd776411f9b2b2e9c2007ee3fc070d74cf1a842db6e4217a12","5c73de36900992cd776411f9b2b2e9c2007ee3fc070d74cf1a842db6e4217a12"),
+        SCENERY_BASE_TILES(0x86CC,12,12,"90b119329f4db25def8b3f2b246da7076cf0cee8b236806ad54079b7c5371227","90b119329f4db25def8b3f2b246da7076cf0cee8b236806ad54079b7c5371227"),
+        MAP_SPR_SPRINGBOARD(0xBE7C,84,84,"a5b367d30a33cd6d503930c42c8ac86f8155235475b57094740a62ee242b0a3f","a5b367d30a33cd6d503930c42c8ac86f8155235475b57094740a62ee242b0a3f"),
+        ANI_SPRINGBOARD(0xBE46,54,54,"66b7d5d2f75e5d7ff1977d7d3f1cc4ec7635c1f1db4da5b7568f72ea142067ba","66b7d5d2f75e5d7ff1977d7d3f1cc4ec7635c1f1db4da5b7568f72ea142067ba"),
+        SPRINGBOARD_HITBOXES(0xBB78,32,32,"48c0ebee94aed675266f2c3b8ffbb5f609aeac6e40c7d72d792ef851c7e2735c","48c0ebee94aed675266f2c3b8ffbb5f609aeac6e40c7d72d792ef851c7e2735c"),
+        MAP_SPR_SPINNING_DISC(0x937C,36,36,"c74d267322eb765b6dc9677a3b53824fbeeb48328d419631199798257f7ddeb4","c74d267322eb765b6dc9677a3b53824fbeeb48328d419631199798257f7ddeb4"),
+        ANI_SPINNING_DISC(0x9374,8,8,"bebbcc2ef135a5349ad7b24690b63ab06bdf5ddae18b774d7fcde1824b340260","bebbcc2ef135a5349ad7b24690b63ab06bdf5ddae18b774d7fcde1824b340260"),
+        SPINNING_DISC_PLAYER_FRAMES(0x924C,16,16,"51995b0191d2a4a3dff61e17629c017c209c1170fbf06d5172a5ce046b325389","51995b0191d2a4a3dff61e17629c017c209c1170fbf06d5172a5ce046b325389"),
+        MAP_SPR_TUNNEL_DOOR(0x1D6C4,28,28,"7260a75372713a37c9acb8b62f653a3d17c824b5e2eb88d6661789dd9cdaca92","7260a75372713a37c9acb8b62f653a3d17c824b5e2eb88d6661789dd9cdaca92"),
+        ANI_TUNNEL_DOOR(0x1D6B6,14,14,"398c620335d02e870c94e8f8144c33e355b9bd1440fe530eff2031ea16600fb0","398c620335d02e870c94e8f8144c33e355b9bd1440fe530eff2031ea16600fb0"),
+        MAP_SPR_POWERUP(0x1D528,274,274,"d79b2da45d7a63478f2f38d9288704bea375982e1d35d8aa97863cfdffb5f3fc","d79b2da45d7a63478f2f38d9288704bea375982e1d35d8aa97863cfdffb5f3fc"),
+        MAP_SPR_TUNNEL_DOOR_VERTICAL(0xCB52,28,28,"954bf4fd9df8e85b782482c17f65e68d32101f1e43e21fd4a7fe4058a91b5275","954bf4fd9df8e85b782482c17f65e68d32101f1e43e21fd4a7fe4058a91b5275"),
+        MAP_SPR_BIG_RING(0x1D8F6,176,176,"c6edd39fb1e1cc977c264d87e2301816d01ff2c10660fb63f89d9148afdb30c4","c6edd39fb1e1cc977c264d87e2301816d01ff2c10660fb63f89d9148afdb30c4"),
+        ANI_BIG_RING(0x1D8EE,8,8,"b8997affb40b5e6a6e2aff4f5013c56226e1ce0ff2d25c8396f6193939ba1ba6","b8997affb40b5e6a6e2aff4f5013c56226e1ce0ff2d25c8396f6193939ba1ba6"),
+        MAP_SPR_BIG_RING_FLASH(0xD652,416,416,"b48a9c17b2359210ba747bf79d3c07a7af111639eef836d7315811b285226e10","b48a9c17b2359210ba747bf79d3c07a7af111639eef836d7315811b285226e10"),
+        ANI_BIG_RING_FLASH(0xD646,12,12,"b4dbc8e16c7b27313dd1d0443cc0a9f6226470e751fd826adaac47dcc12a4d0f","b4dbc8e16c7b27313dd1d0443cc0a9f6226470e751fd826adaac47dcc12a4d0f"),
+        MAP_SPR_GOAL_SIGNPOST(0x1D9B4,126,126,"610a02baa99d911f509b5fc06a1e4c0c72bc7ef71fa56ecd72640e409734bad8","610a02baa99d911f509b5fc06a1e4c0c72bc7ef71fa56ecd72640e409734bad8"),
+        ANI_SIGNPOST(0x1D9A6,14,14,"9912394f852b914651884191ea8532d60421a3bd40293510a3f356f86c69e691","9912394f852b914651884191ea8532d60421a3bd40293510a3f356f86c69e691"),
+        GOAL_POST_BASE_TILES(0xD3FA,112,112,"82fd77609648d39ac2f50bc4c0e3762fccf3ef0986bf6bc8cef7f4cdeb3b3724","82fd77609648d39ac2f50bc4c0e3762fccf3ef0986bf6bc8cef7f4cdeb3b3724"),
+        LEVEL_END_TIME_BONUSES(0xD5E4,42,42,"be40c9a172da6d18e694f0b8cfe698fa674eb88ab210958f4fa82713e0cf0861","be40c9a172da6d18e694f0b8cfe698fa674eb88ab210958f4fa82713e0cf0861");
         private final int offset,canonicalLength,length;
         private final String canonicalSha,sha;
         View(int offset,int canonicalLength,int length,String canonicalSha,String sha) {
@@ -115,7 +147,21 @@ public final class CdR12bObjectAssets {
         SPIKES(View.MAP_SPR_SPIKES,1,null,0,8,0,0,0,SourceId.ART_SPIKES_V2),
         LOGSHADOW(View.MAP_SPR_LOG_SHADOW,2,null,0,16,0,0,0,SourceId.ART_LOG_SHADOW),
         PATABATANORMAL(View.MAP_SPR_PATA_BATA_NORMAL,3,View.ANI_PATA_BATA,2,50,0,0,0,SourceId.ART_PATA_BATA),
-        PATABATADAMAGED(View.MAP_SPR_PATA_BATA_DAMAGED,3,View.ANI_PATA_BATA,2,50,0,0,0,SourceId.ART_PATA_BATA);
+        PATABATADAMAGED(View.MAP_SPR_PATA_BATA_DAMAGED,3,View.ANI_PATA_BATA,2,50,0,0,0,SourceId.ART_PATA_BATA),
+        EXPLOSION(View.MAP_SPR_EXPLOSION,7,View.ANI_EXPLOSION,2,70,0,0,0,SourceId.ART_EXPLOSIONS),
+        FLOWER(View.MAP_SPR_FLOWER,8,View.ANI_FLOWER,4,39,0,0,0,SourceId.ART_FLOWER),
+        POINTS(View.MAP_SPR_POINTS,6,null,0,5,0,0,0,SourceId.ART_POINTS),
+        MOSQUINORMAL(View.MAP_SPR_MOSQUI_NORMAL,5,View.ANI_MOSQUI_NORMAL,2,70,0,0,0,SourceId.ART_MOSQUI),
+        MOSQUIDAMAGED(View.MAP_SPR_MOSQUI_DAMAGED,5,View.ANI_MOSQUI_DAMAGED,2,70,0,0,0,SourceId.ART_MOSQUI),
+        PROJECTOR(View.MAP_SPR_PROJECTOR,6,View.ANI_METAL_SONIC_HOLOGRAM,2,51,0,0,0,SourceId.ART_HOLOGRAM),
+        SCENERY(View.MAP_SPR_SCENERY,3,null,0,17,0,0,0,SourceId.ART_SCENERY_B),
+        SPRINGBOARD(View.MAP_SPR_SPRINGBOARD,6,View.ANI_SPRINGBOARD,5,21,0,0,0,SourceId.ART_SPRINGBOARD),
+        SPINNINGDISC(View.MAP_SPR_SPINNING_DISC,3,View.ANI_SPINNING_DISC,1,12,0,0,0,SourceId.ART_SPINNING_DISC),
+        TUNNELDOOR(View.MAP_SPR_TUNNEL_DOOR,2,View.ANI_TUNNEL_DOOR,1,12,0,0,0,SourceId.ART_TUNNEL_DOOR),
+        TUNNELDOORVERTICAL(View.MAP_SPR_TUNNEL_DOOR_VERTICAL,2,null,0,12,0,0,0,SourceId.ART_TUNNEL_DOOR),
+        BIGRING(View.MAP_SPR_BIG_RING,4,null,0,106,0,0,0,SourceId.ART_BIG_RING),
+        BIGRINGFLASH(View.MAP_SPR_BIG_RING_FLASH,8,null,0,77,0,0,0,SourceId.ART_BIG_RING_FLASH),
+        GOALSIGNPOST(View.MAP_SPR_GOAL_SIGNPOST,6,null,0,76,0,0,0,null);
         final View map,script;final int frames,scripts,bound,root,start,end;final SourceId art;
         Key(View map,int frames,View script,int scripts,int bound,int root,int start,int end,SourceId art){
             this.map=map;this.frames=frames;this.script=script;this.scripts=scripts;this.bound=bound;this.root=root;this.start=start;this.end=end;this.art=art;
@@ -180,6 +226,35 @@ public final class CdR12bObjectAssets {
     public CdObjectVisualAssets logShadow() { return visual(Key.LOGSHADOW); }
     public CdObjectVisualAssets pataBataNormal() { return visual(Key.PATABATANORMAL); }
     public CdObjectVisualAssets pataBataDamaged() { return visual(Key.PATABATADAMAGED); }
+    public CdObjectVisualAssets explosion() { return visual(Key.EXPLOSION); }
+    public CdObjectVisualAssets flower() { return visual(Key.FLOWER); }
+    public CdObjectVisualAssets points() { return visual(Key.POINTS); }
+    public CdObjectVisualAssets normalMosqui() { return visual(Key.MOSQUINORMAL); }
+    public CdObjectVisualAssets damagedMosqui() { return visual(Key.MOSQUIDAMAGED); }
+    public CdObjectVisualAssets projector() { return visual(Key.PROJECTOR); }
+    public CdObjectVisualAssets scenery() { return visual(Key.SCENERY); }
+    public CdObjectVisualAssets springboard() { return visual(Key.SPRINGBOARD); }
+
+    public CdObjectVisualAssets spinningDisc() { return visual(Key.SPINNINGDISC); }
+    public CdObjectVisualAssets tunnelDoor() { return visual(Key.TUNNELDOOR); }
+    public CdObjectVisualAssets tunnelDoorVertical() { return visual(Key.TUNNELDOORVERTICAL); }
+    /** Static counted mappings; the reached manual animation owner reads ANI_BIG_RING separately. */
+    public CdObjectVisualAssets bigRing() { return visual(Key.BIGRING); }
+    public CdObjectVisualAssets bigRingFlash() { return visual(Key.BIGRINGFLASH); }
+    /** Shared metadata hull only: frames0..4 native Signpost76, frame5 native GoalPost24. */
+    public CdObjectVisualAssets goalSignpost() { return visual(Key.GOALSIGNPOST); }
+
+    private void validateGoalSignpostBounds(CdObjectVisualAssets result) {
+        int signpost = assets.sectionSources().source(SourceId.ART_SIGNPOST).tileCount();
+        int goal = assets.sectionSources().source(SourceId.ART_GOAL_POST).tileCount();
+        if (signpost != 76 || goal != 24) throw new IllegalArgumentException("Original R12B end-item bounds differ");
+        for (int frame = 0; frame < 6; frame++) {
+            int bound = frame == 5 ? goal : signpost;
+            for (var piece : result.mappingFrames().get(frame).pieces())
+                if (piece.tileOffset() > bound - piece.tileCount())
+                    throw new IllegalArgumentException("Goal/Signpost frame exceeds its actual source");
+        }
+    }
 
     private synchronized CdObjectVisualAssets visual(Key key){
         var cached=visuals[key.ordinal()];if(cached!=null)return cached;
@@ -193,6 +268,7 @@ public final class CdR12bObjectAssets {
         if(key.end!=0)result=CdObjectVisualAssets.decodeIndexed(map,key.root,key.frames,key.start,key.end,script,key.scripts,bound);
         else if(key.script==null)result=CdObjectVisualAssets.decodeStatic(map,key.frames,bound);
         else result=CdObjectVisualAssets.decode(map,key.frames,script,key.scripts,bound,key==Key.TAMABBOHNORMAL?Map.of(0,12):Map.of());
+        if(key==Key.GOALSIGNPOST)validateGoalSignpostBounds(result);
         visuals[key.ordinal()]=result;return result;
     }
 }

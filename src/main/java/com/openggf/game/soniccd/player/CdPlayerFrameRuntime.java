@@ -20,6 +20,7 @@ import com.openggf.game.soniccd.objects.CdSolidObject;
 import com.openggf.game.soniccd.objects.CdSignpost;
 import com.openggf.game.soniccd.objects.CdSpinningDisc;
 import com.openggf.game.soniccd.objects.CdSpring;
+import com.openggf.game.soniccd.objects.CdSpringboard;
 import com.openggf.game.soniccd.objects.CdSpinTunnelTag;
 import com.openggf.game.soniccd.objects.CdTunnelPath;
 import com.openggf.game.soniccd.objects.CdTimeWarpLoadData;
@@ -2017,6 +2018,80 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
         var nextState = new CdPlayerBody.State(nextMotion, s.animation(), s.header(), s.timers(), s.history(),
                 s.rotationDistance(), s.objectLinks(), s.rotationAngle());
         return new ObjectSolidPublication(s, environment, nextState, environment);
+    }
+
+    /**
+     * Prepare one ObjSpringBoard primary store at the complete closed Frame value cut. Native pin
+     * 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff, Springboard/Main.asm:165-373, owns these nine targets.
+     * WORD Y preserves the existing fraction; LONG Y replaces both words. Independently check the
+     * old scalar, native widths and the entire prebuilt output against exactly that declared store.
+     * Every other State value and the complete Environment survive; no Frame owner is assigned.
+     *
+     * The private caller authenticates its cached-body invocation, original pending call, full pool,
+     * actual source, site, ordinal and prepare-before-publication order. Public call metadata and this
+     * reusable four-value carrier supply no receipt, origin or exactly-once authority. No Body, input,
+     * clock, callback, object, display, art, sound, capture or reconstruction service executes here.
+     * Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>
+     */
+    public ObjectSolidPublication prepareObjectSpringboardPlayerStore(CdSpringboard.PrimaryCall call) {
+        requireOpenIdle(); requireClosedFrame(); Objects.requireNonNull(call, "Springboard primary call");
+        var expectedState = call.expectedState(); var expectedEnvironment = call.expectedEnvironment();
+        if (!state.equals(expectedState) || !environment.equals(expectedEnvironment)) {
+            throw new IllegalArgumentException("Stale Springboard player State/Environment cut");
+        }
+        var field = call.field(); int old = call.expectedValue(), value = call.value();
+        switch (field) {
+            case CENTRE_Y_LONG -> { } // Every int is a native LONG bit pattern.
+            case CENTRE_Y_WORD -> {
+                if (((old | value) & ~0xFFFF) != 0)
+                    throw new IllegalArgumentException("Springboard Y requires unsigned native words");
+            }
+            case Y_VELOCITY -> {
+                if (old != (short) old || value != (short) value)
+                    throw new IllegalArgumentException("Springboard Y velocity requires signed native words");
+            }
+            case FLAGS, PLAYER_JUMP, STICK, Y_RADIUS, X_RADIUS, ANIMATION -> {
+                if (((old | value) & ~0xFF) != 0)
+                    throw new IllegalArgumentException("Springboard byte store exceeds its native width");
+            }
+        }
+        var m = expectedState.motion();
+        int current = switch (field) {
+            case CENTRE_Y_LONG -> m.centreY16_16();
+            case CENTRE_Y_WORD -> m.centreY16_16() >>> 16;
+            case Y_VELOCITY -> m.yVelocity();
+            case FLAGS -> m.flags();
+            case PLAYER_JUMP -> m.playerJump();
+            case STICK -> m.stick();
+            case Y_RADIUS -> m.yRadius();
+            case X_RADIUS -> m.xRadius();
+            case ANIMATION -> m.animation();
+        };
+        if (old != current) throw new IllegalArgumentException("Stale Springboard primary field value");
+        int y = m.centreY16_16(), yVelocity = m.yVelocity(), flags = m.flags(), jump = m.playerJump();
+        int stick = m.stick(), yRadius = m.yRadius(), xRadius = m.xRadius(), animation = m.animation();
+        switch (field) {
+            case CENTRE_Y_LONG -> y = value;
+            case CENTRE_Y_WORD -> y = (value << 16) | (y & 0xFFFF);
+            case Y_VELOCITY -> yVelocity = value;
+            case FLAGS -> flags = value;
+            case PLAYER_JUMP -> jump = value;
+            case STICK -> stick = value;
+            case Y_RADIUS -> yRadius = value;
+            case X_RADIUS -> xRadius = value;
+            case ANIMATION -> animation = value;
+        }
+        var projectedMotion = new CdPlayerMotionState(m.centreX16_16(), y, m.xVelocity(), yVelocity,
+                m.groundVelocity(), m.routine(), m.angle(), flags, m.spriteFlags(), xRadius, yRadius,
+                animation, m.previousAnimation(), jump, m.charge(), m.moveLock(), stick,
+                m.playerControl(), m.previousPrimaryAngle(), m.previousSecondaryAngle());
+        var projectedState = new CdPlayerBody.State(projectedMotion, expectedState.animation(), expectedState.header(),
+                expectedState.timers(), expectedState.history(), expectedState.rotationDistance(),
+                expectedState.objectLinks(), expectedState.rotationAngle());
+        if (!projectedState.equals(call.outputState())) {
+            throw new IllegalArgumentException("Springboard output changes values outside its declared primary store");
+        }
+        return new ObjectSolidPublication(expectedState, expectedEnvironment, call.outputState(), expectedEnvironment);
     }
 
     /** A secondary StandOnObject can clear only bit3 in the actual primary projection. */

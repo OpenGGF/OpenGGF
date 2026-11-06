@@ -7,11 +7,11 @@ import com.openggf.game.soniccd.player.*;
 import java.util.*;
 
 /**
- * Pure external-value staging for an ORIGINAL completed routine2 Frame publication.
+ * Pure external-value staging for an ORIGINAL completed routine2/4 Frame publication.
  * Caller authenticates producer identity, actual closed Frame/pool pair and one invocation.
  * No value here grants execution, helper, Frame, World, callback or publication authority.
  * N1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff: ObjSonic_Main/ObjSonic_Display
- * (Level/_Objects/Sonic/Main.asm:285-351,373-386); Player_ObjCollide
+ * (Level/_Objects/Sonic/Main.asm:285-351,373-386); ObjSonic_Hurt (Main.asm:2351-2366); Player_ObjCollide
  * (Level/Palmtree Panic/Player Object Collision.asm:7-98).
  * J07615047f Act2LoadingVisit.preparePrimary:3218-3328.
  */
@@ -41,7 +41,9 @@ final class SonicCdAct2PastPrimaryPublication {
         Objects.requireNonNull(publication);Objects.requireNonNull(expectedPool);Objects.requireNonNull(globals);Objects.requireNonNull(level);
         if(Objects.requireNonNull(reserved).length()!=1984)throw new IllegalArgumentException("Complete reserved1984 required");
         var result=publication.result();
-        if(result.boundary()!=CdPlayerBody.Boundary.MAIN_RETURN && result.boundary()!=CdPlayerBody.Boundary.CONTROLLED_MAIN_RETURN)
+        // The completed Body boundary identifies the incoming dispatch, not the outgoing actor routine.
+        if(result.boundary()!=CdPlayerBody.Boundary.MAIN_RETURN && result.boundary()!=CdPlayerBody.Boundary.CONTROLLED_MAIN_RETURN
+                && result.boundary()!=CdPlayerBody.Boundary.HURT_RETURN)
             throw new UnsupportedPrimaryPublication(Boundary.NON_MAIN_RESULT);
         // Reject the owning TimeWarp component before a preceding restart LevelWrite obscures its boundary.
         CdPlayerTimeWarp.Result warp=null;

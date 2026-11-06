@@ -43,6 +43,7 @@ import com.openggf.game.soniccd.objects.CdBigRing;
 import com.openggf.game.soniccd.objects.CdResults;
 import com.openggf.game.soniccd.objects.CdTamabboh;
 import com.openggf.game.soniccd.objects.CdMosqui;
+import com.openggf.game.soniccd.objects.CdLostRing;
 import com.openggf.game.soniccd.objects.CdRingGlobals;
 import com.openggf.game.soniccd.objects.CdTimeWarpSaveData;
 import com.openggf.game.soniccd.player.CdPlayerBody;
@@ -557,7 +558,7 @@ public final class SonicCdGameModule implements GameModule {
         PastLoadBoundary boundary() { return boundary; }
     }
     // Typed request metadata and one native music-latch projection; no audio synthesis.
-    sealed interface PastSound permits PastCheckpointFm, PastFrameSound, PastSubCpuSound, PastRingFm, PastRingSubCpu, PastSpringFm, PastTunnelDoorFm, PastMonitorFm, PastTimePostSubCpu, PastTamabbohFm, PastCollapsePlatformFm, PastMosquiFm, PastRobotGeneratorFm, PastSignpostSound, PastBigRingFm, PastResultsSound, PastProgrammeSound, PastWallFm, PastTunnelPathFm, PastMonitorItemShieldFm, PastMonitorItemRing, PastTunnelDoorSplashFm { }
+    sealed interface PastSound permits PastCheckpointFm, PastFrameSound, PastSubCpuSound, PastRingFm, PastRingSubCpu, PastSpringFm, PastTunnelDoorFm, PastMonitorFm, PastTimePostSubCpu, PastTamabbohFm, PastCollapsePlatformFm, PastMosquiFm, PastLostRingFm, PastRobotGeneratorFm, PastProjectorFm, PastSignpostSound, PastBigRingFm, PastResultsSound, PastProgrammeSound, PastWallFm, PastTunnelPathFm, PastMonitorItemShieldFm, PastMonitorItemRing, PastTunnelDoorSplashFm { }
     public record PastMonitorItemRing(CdMonitorItem.RingAwardSound sound) implements PastSound {
         public PastMonitorItemRing { Objects.requireNonNull(sound); }
     }
@@ -598,6 +599,10 @@ public final class SonicCdGameModule implements GameModule {
     record PastTamabbohFm(CdTamabboh.FmSound sound) implements PastSound {
         PastTamabbohFm { Objects.requireNonNull(sound); }
     }
+    /** Completed immutable native LostRing FM scalar; no request, SourceCut or invocation token. */
+    record PastLostRingFm(CdLostRing.Sound sound) implements PastSound {
+        PastLostRingFm { Objects.requireNonNull(sound); }
+    }
     record PastMosquiFm(CdMosqui.Sound sound) implements PastSound {
         PastMosquiFm { Objects.requireNonNull(sound); }
     }
@@ -614,6 +619,9 @@ public final class SonicCdGameModule implements GameModule {
     record PastResultsSound(CdResults.Sound sound) implements PastSound {
         PastResultsSound { Objects.requireNonNull(sound); }
         int nativeId() { return sound.nativeId(); }
+    }
+    record PastProjectorFm(int nativeId) implements PastSound {
+        PastProjectorFm { if(nativeId!=0x9E)throw new IllegalArgumentException("Projector native FM9E only"); }
     }
     record PastRobotGeneratorFm(int nativeId) implements PastSound {
         PastRobotGeneratorFm { if (nativeId != 0x9E && nativeId != 0xD9) throw new IllegalArgumentException("Robot Generator native FM"); }

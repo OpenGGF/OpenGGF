@@ -1,5 +1,11 @@
 package com.openggf.game.soniccd.objects;
 
+import com.openggf.game.soniccd.CdNativeFile;
+import com.openggf.game.soniccd.CdReleaseVariant;
+import com.openggf.game.soniccd.CdStagePayload;
+import com.openggf.game.soniccd.media.CdMmdImage;
+import com.openggf.game.soniccd.level.CdR12bObjectAssets;
+import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdObjectVisualAssets;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
@@ -162,6 +168,61 @@ public final class CdTunnelDoorVertical {
     private final DrawObjectCall drawObject;
     private final PlayFmCall playFm;
 
+    @FunctionalInterface private interface TileOperand { int read(int secondary); }
+    private record NativeAssets(CdObjectVisualAssets visual, int mappingsAddress, TileOperand tile) { }
+    private NativeAssets nativeAssets;
+    private PrefixSolidCommit prefixCommit;
+    private boolean running;
+    private PrefixSolidCall pendingSolid;
+    private CdObjectPool pendingDrawPool;
+    private CdObjectState.Identity pendingDrawIdentity;
+
+    /** Comparison values from one original shared call, never Frame/World/publication authority. */
+    public record PrefixSolidCall(CdObjectPool.Snapshot callCut, CdObjectState expectedSource,
+                                  CdSolidObject.Player expectedPlayer, CdSolidObject.Gates expectedGates,
+                                  CdSolidObject.Globals expectedGlobals, CdSolidObject.Outcome outcome) {
+        public PrefixSolidCall {
+            Objects.requireNonNull(callCut); Objects.requireNonNull(expectedSource); Objects.requireNonNull(expectedPlayer);
+            Objects.requireNonNull(expectedGates); Objects.requireNonNull(expectedGlobals); Objects.requireNonNull(outcome);
+            int index = expectedSource.identity().wholeIndex() - CdObjectPool.FIRST_WHOLE_INDEX;
+            if (!callCut.slots().get(Objects.checkIndex(index, CdObjectPool.DYNAMIC_COUNT)).equals(expectedSource))
+                throw new IllegalArgumentException("DoorV prefix source differs from its actual cut");
+            var entry = outcome instanceof CdSolidObject.Completed done ? done.completedResult().entry()
+                    : ((CdSolidObject.NativeStopped) outcome).prefix().entry();
+            if (entry != CdSolidObject.Entry.SOLID_OBJECT) throw new IllegalArgumentException("DoorV calls plain SolidObject");
+        }
+    }
+    @FunctionalInterface public interface PrefixSolidCommit { void commit(PrefixSolidCall call); }
+    public boolean isCurrentPrefixSolidCall(PrefixSolidCall call) { return running && call != null && call == pendingSolid; }
+    public boolean isCurrentDrawCall(CdObjectPool pool, CdObjectState.Identity identity) {
+        return running && pool != null && identity != null && pool == pendingDrawPool && identity == pendingDrawIdentity;
+    }
+    /** Same retained source before metadata; legacy Assets3 remains74 and no synthetic table is constructed. */
+    public static CdTunnelDoorVertical fromAct2PastAssets(CdObjectPlacementRuntime runtime, CdR12bTerrainAssets owner,
+                                                         CdSolidObject solid, PrefixSolidCommit commit,
+                                                         DrawObjectCall draw, PlayFmCall fm) {
+        Objects.requireNonNull(runtime); Objects.requireNonNull(owner);
+        if (!runtime.sameAct2PastSource(owner)) throw new IllegalArgumentException("DoorV placement/assets source differs");
+        var objects = owner.objects(); var tiles = objects.view(CdR12bObjectAssets.View.OBJECT_TILE_IDS);
+        if (tiles.length() != 72) throw new IllegalArgumentException("Actual R12B ObjectTileIDs extent");
+        var nativeAssets = new NativeAssets(objects.tunnelDoorVertical(),
+                CdR12bObjectAssets.View.MAP_SPR_TUNNEL_DOOR_VERTICAL.range().nativeAddress(),
+                secondary -> tiles.unsignedWord((short) tiles.unsignedWord(TILE_SELECTOR * 2) + 2 * secondary));
+        return new CdTunnelDoorVertical(runtime, nativeAssets, solid, commit, draw, fm, true);
+    }
+    private CdTunnelDoorVertical(CdObjectPlacementRuntime runtime, NativeAssets assets, CdSolidObject solid,
+                                 PrefixSolidCommit commit, DrawObjectCall draw, PlayFmCall fm, boolean target) {
+        if (!target) throw new IllegalArgumentException("Private R12B native format required");
+        this.runtime = Objects.requireNonNull(runtime); this.assets = null; this.nativeAssets = Objects.requireNonNull(assets);
+        this.solid = Objects.requireNonNull(solid); this.solidCommit = null; this.prefixCommit = Objects.requireNonNull(commit);
+        this.drawObject = Objects.requireNonNull(draw); this.playFm = Objects.requireNonNull(fm);
+    }
+    private int nativeMappingsAddress() { return nativeAssets == null ? assets.mappingsAddress() : nativeAssets.mappingsAddress(); }
+    private int nativeTileWord(int secondary) {
+        return nativeAssets == null ? CdR11aObjectAssets.decodeTileWord(assets.objectTileIds().copy(), TILE_SELECTOR, secondary)
+                : nativeAssets.tile().read(secondary);
+    }
+
     public CdTunnelDoorVertical(CdObjectPlacementRuntime runtime, Assets assets, CdSolidObject solid,
                                 SolidCommit solidCommit, DrawObjectCall drawObject, PlayFmCall playFm) {
         this.runtime = Objects.requireNonNull(runtime); this.assets = Objects.requireNonNull(assets);
@@ -171,6 +232,13 @@ public final class CdTunnelDoorVertical {
 
     /** Main.asm:7-20: routine call, DrawObject, then JMP CheckObjDespawn, for this one physical slot. */
     public Result run(int wholeIndex, Globals globals, SolidInputs inputs) {
+        if (nativeAssets == null) return runSelected(wholeIndex, globals, inputs);
+        if (running) throw new IllegalStateException("Reentrant R12B DoorV dispatch");
+        running = true;
+        try { return runSelected(wholeIndex, globals, inputs); }
+        finally { running = false; }
+    }
+    private Result runSelected(int wholeIndex, Globals globals, SolidInputs inputs) {
         Objects.requireNonNull(globals); Objects.requireNonNull(inputs);
         var pool = runtime.pool(); var state = pool.state(wholeIndex);
         if (state.id() != OBJECT_ID) throw new IllegalArgumentException("DoorV dispatch requires live ID $35, slot " + wholeIndex);
@@ -192,14 +260,14 @@ public final class CdTunnelDoorVertical {
     /** ObjTunnelDoorV_Init (:34-42): no timer, frame, animation, velocity, fraction or flags clear. */
     private void init(Cursor c) {
         c.enter(NativeRoutine.INIT);
-        c.state = c.state.addByte(ROUTINE, 2).moveLong(MAPPINGS, assets.mappingsAddress())
+        c.state = c.state.addByte(ROUTINE, 2).moveLong(MAPPINGS, nativeMappingsAddress())
                 .moveByte(PRIORITY, 1).moveByte(SPRITE_FLAGS, c.state.spriteFlags() | 4)
                 .moveByte(WIDTH, 4).moveByte(Y_RADIUS, 0x18);
         c.publish(); // Prefix precedes JSR SetObjectTileID, including when its reached read is unsupported.
         if (c.state.subtype2() != 0) {
             throw new UnsupportedTunnelDoorVertical(UnsupportedBoundary.TILE_ID_SUBTYPE2, c.wholeIndex, c.state.subtype2());
         }
-        int tile = CdR11aObjectAssets.decodeTileWord(assets.objectTileIds().copy(), TILE_SELECTOR, c.state.subtype2());
+        int tile = nativeTileWord(c.state.subtype2());
         c.state = c.state.moveWord(TILE, tile);
     }
 
@@ -217,7 +285,7 @@ public final class CdTunnelDoorVertical {
                 c.state = c.state.moveWord(TUNNEL_DOOR_TIMER, 0).moveByte(ROUTINE, 4);
                 if ((c.state.spriteFlags() & 0x80) != 0) {
                     c.publish(); // CLR.W/routine4 are live while sound runs; frame1 is not written yet.
-                    playFm.playFm(FmSound.FM_A4);
+                    nativeFm(c);
                     c.effects.add(new PlayedFm(FmSound.FM_A4));
                     c.state = c.state.moveByte(MAP_FRAME, 1);
                 }
@@ -228,6 +296,7 @@ public final class CdTunnelDoorVertical {
 
     /** ObjTunnelDoorV_SolidObj (:26-29): d3/d4 X/Y loads are unused by the shared Solid owner. */
     private void solid(Cursor c) {
+        if (nativeAssets != null) { solidAct2Past(c); return; }
         c.publish();
         var callCut = c.pool.capture();
         var result = solid.run(CdSolidObject.Entry.SOLID_OBJECT, c.state, c.player, c.gates, c.globals, callCut);
@@ -244,6 +313,66 @@ public final class CdTunnelDoorVertical {
         c.effects.add(new Solid(result));
     }
 
+    private void verifyTargetStorage(CdObjectPlacementRuntime.Snapshot before, CdObjectPool.Snapshot expected, boolean complete) {
+        runtime.validateRestore(before); runtime.pool().validateRestore(expected); var actual = runtime.capture();
+        if (!actual.status().equals(before.status()) || !java.util.Arrays.equals(actual.savedFlags().copy(), before.savedFlags().copy()))
+            throw new IllegalStateException("DoorV port changed placement status or saved bank");
+        for (int i = 0; i < CdObjectPool.DYNAMIC_COUNT; i++) {
+            var live = actual.pool().slots().get(i);
+            if (!live.equals(expected.slots().get(i)) && !( !complete && live.equals(before.pool().slots().get(i))))
+                throw new IllegalStateException("DoorV port changed an unowned pool byte or omitted native output");
+        }
+    }
+    private void solidAct2Past(Cursor c) {
+        c.publish(); var before = runtime.capture(); var cut = before.pool();
+        var outcome = solid.runWithPrefix(CdSolidObject.Entry.SOLID_OBJECT, c.state, c.player, c.gates, c.globals, cut);
+        CdObjectState object; CdSolidObject.Player player; CdSolidObject.Globals globals; List<CdObjectState> others;
+        if (outcome instanceof CdSolidObject.Completed done) {
+            var r = done.completedResult(); object = r.object(); player = r.player(); globals = r.globals(); others = r.otherSlots();
+        } else {
+            var r = ((CdSolidObject.NativeStopped) outcome).prefix(); object = r.object(); player = r.player(); globals = r.globals(); others = r.otherSlots();
+        }
+        var images = new ArrayList<CdObjectState>(); images.add(object); images.addAll(others);
+        var prepared = CdObjectPool.overlay(cut, images); runtime.pool().validateRestore(prepared);
+        var call = new PrefixSolidCall(cut, c.state, c.player, c.gates, c.globals, outcome);
+        if (pendingSolid != null || pendingDrawPool != null) throw new IllegalStateException("Nested DoorV prefix operation");
+        verifyTargetStorage(before, cut, true); pendingSolid = call; Throwable original = null; boolean complete = false;
+        try { prefixCommit.commit(call); complete = true; verifyTargetStorage(before, prepared, true); }
+        catch (RuntimeException | Error failure) { original = failure; throw failure; }
+        finally {
+            try { verifyTargetStorage(before, prepared, complete); }
+            catch (RuntimeException | Error verification) { if (original == null) throw verification; if (verification != original) original.addSuppressed(verification); }
+            finally { pendingSolid = null; }
+        }
+        c.state = object; c.player = player; c.globals = globals;
+        if (outcome instanceof CdSolidObject.NativeStopped stopped) throw stopped.stop().originalException();
+        c.effects.add(new Solid(((CdSolidObject.Completed) outcome).completedResult()));
+    }
+    private void nativeDraw(Cursor c) {
+        if (nativeAssets == null) { drawObject.drawObject(c.pool, c.state.identity()); return; }
+        var before = runtime.capture(); var identity = c.state.identity();
+        var expected = CdObjectPool.overlay(before.pool(), List.of(c.state.moveByte(SPRITE_FLAGS, c.state.spriteFlags() & 127)));
+        if (pendingSolid != null || pendingDrawPool != null) throw new IllegalStateException("Nested DoorV Draw");
+        pendingDrawPool = c.pool; pendingDrawIdentity = identity; Throwable original = null; boolean complete = false;
+        try { drawObject.drawObject(c.pool, identity); complete = true; }
+        catch (RuntimeException | Error failure) { original = failure; throw failure; }
+        finally {
+            try { verifyTargetStorage(before, expected, complete); }
+            catch (RuntimeException | Error verification) { if (original == null) throw verification; if (verification != original) original.addSuppressed(verification); }
+            finally { pendingDrawPool = null; pendingDrawIdentity = null; }
+        }
+    }
+    private void nativeFm(Cursor c) {
+        if (nativeAssets == null) { playFm.playFm(FmSound.FM_A4); return; }
+        var before = runtime.capture(); Throwable original = null;
+        try { playFm.playFm(FmSound.FM_A4); }
+        catch (RuntimeException | Error failure) { original = failure; throw failure; }
+        finally {
+            try { verifyTargetStorage(before, before.pool(), true); }
+            catch (RuntimeException | Error verification) { if (original == null) throw verification; if (verification != original) original.addSuppressed(verification); }
+        }
+    }
+
     /** ObjTunnelDoorV_Reset (:76-83): ADDQ.B addresses HIGH $3A; low $3B is untouched. */
     private static void reset(Cursor c) {
         c.enter(NativeRoutine.RESET);
@@ -256,7 +385,7 @@ public final class CdTunnelDoorVertical {
 
     private void draw(Cursor c) {
         c.publish();
-        drawObject.drawObject(c.pool, c.state.identity());
+        nativeDraw(c);
         c.state = c.pool.state(c.wholeIndex); // DrawObject clears bit7 even when culled or its bucket is full.
         c.effects.add(new CallReturned(NativeCall.DRAW_OBJECT));
     }

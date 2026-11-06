@@ -269,6 +269,24 @@ public final class CdObjectMappings implements CdDrawMappings {
         addAct2PastObject(tables, objects, CdR12bObjectAssets.View.MAP_SPR_LOG_SHADOW, objects.logShadow());
         addAct2PastObject(tables, objects, CdR12bObjectAssets.View.MAP_SPR_PATA_BATA_NORMAL, objects.pataBataNormal());
         addAct2PastObject(tables, objects, CdR12bObjectAssets.View.MAP_SPR_PATA_BATA_DAMAGED, objects.pataBataDamaged());
+        addAct2PastObject(tables, objects, CdR12bObjectAssets.View.MAP_SPR_EXPLOSION, objects.explosion());
+        addAct2PastObject(tables, objects, CdR12bObjectAssets.View.MAP_SPR_FLOWER, objects.flower());
+        addAct2PastObject(tables, objects, CdR12bObjectAssets.View.MAP_SPR_POINTS, objects.points());
+        addAct2PastObject(tables, objects, CdR12bObjectAssets.View.MAP_SPR_MOSQUI_NORMAL, objects.normalMosqui());
+        addAct2PastObject(tables, objects, CdR12bObjectAssets.View.MAP_SPR_MOSQUI_DAMAGED, objects.damagedMosqui());
+        addAct2PastObject(tables, objects, CdR12bObjectAssets.View.MAP_SPR_PROJECTOR, objects.projector());
+        addAct2PastObject(tables, objects, CdR12bObjectAssets.View.MAP_SPR_SCENERY, objects.scenery());
+        addAct2PastObject(tables, objects, CdR12bObjectAssets.View.MAP_SPR_SPRINGBOARD, objects.springboard());
+        addAct2PastObject(tables, objects, CdR12bObjectAssets.View.MAP_SPR_SPINNING_DISC, objects.spinningDisc());
+        addAct2PastObject(tables, objects, CdR12bObjectAssets.View.MAP_SPR_TUNNEL_DOOR, objects.tunnelDoor());
+        addAct2PastObject(tables, objects, CdR12bObjectAssets.View.MAP_SPR_TUNNEL_DOOR_VERTICAL, objects.tunnelDoorVertical());
+        addAct2PastObject(tables, objects, CdR12bObjectAssets.View.MAP_SPR_BIG_RING, objects.bigRing());
+        addAct2PastObject(tables, objects, CdR12bObjectAssets.View.MAP_SPR_BIG_RING_FLASH, objects.bigRingFlash());
+        addAct2PastObject(tables, objects, CdR12bObjectAssets.View.MAP_SPR_GOAL_SIGNPOST, objects.goalSignpost());
+        // SpinTunnel's actual map21D528:13 selected counted frames; empty frame0 lies inside frame1.
+        // Preserve the complete raw source and existing per-selected-frame resolver, never a uniform decode.
+        var powerup = objects.view(CdR12bObjectAssets.View.MAP_SPR_POWERUP);
+        tables.add(new DeclaredTable(CdR12bObjectAssets.View.MAP_SPR_POWERUP.range().nativeAddress(), powerup, 0, 13));
         return declaredSourceViews(tables, act2PastMonitorItemStaticPieces(objects));
     }
 

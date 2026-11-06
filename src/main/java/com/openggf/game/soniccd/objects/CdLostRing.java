@@ -1,5 +1,11 @@
 package com.openggf.game.soniccd.objects;
 
+import com.openggf.game.soniccd.CdNativeFile;
+import com.openggf.game.soniccd.CdReleaseVariant;
+import com.openggf.game.soniccd.CdStagePayload;
+import com.openggf.game.soniccd.media.CdMmdImage;
+import com.openggf.game.soniccd.level.CdR12bObjectAssets;
+import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
 import com.openggf.game.soniccd.level.CdObjectVisualAssets;
 import com.openggf.game.soniccd.level.CdR11aAsset;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
@@ -184,6 +190,17 @@ public final class CdLostRing {
             if ((baseTileWord & ~0xFFFF) != 0) { throw new IllegalArgumentException("oTile must be a native word"); }
         }
 
+        /** Actual original R12B mapping and native Init tile operand; no new art owner. */
+        public static Assets fromAct2PastAssets(CdR12bObjectAssets owner) {
+            Objects.requireNonNull(owner, "owner");
+            var identity = owner.identity();
+            if (identity.variant() != CdReleaseVariant.USA || identity.file() != CdNativeFile.R12B
+                    || identity.domain() != CdMmdImage.Domain.ORIGINAL_WORD_RAM
+                    || !identity.stage().equals(CdStagePayload.R12B.stage()))
+                throw new IllegalArgumentException("LostRing requires the authenticated original USA R12B source");
+            return new Assets(owner.rings(), CdR12bObjectAssets.View.MAP_SPR_RING.range().nativeAddress(), 0xA7AE);
+        }
+
         /**
          * MOVE.L #MapSpr_Ring,oMap(a1) / MOVE.W #$A7AE,oTile(a1) (Ring/Main.asm:359,361): the authenticated
          * RING_MAPPINGS view address and the ART_RINGS base word (PLC_Std, VRAM $F5C0) that ObjRing also uses.
@@ -255,10 +272,142 @@ public final class CdLostRing {
         aniRing = new CdObjectAnimation.AnimationTable(assets.rings().animationTable(), 0, assets.rings().animations().size());
     }
 
+    /** Ephemeral component observations, never a current World/Frame or publication capability. */
+    public record SourceCut(CdObjectPlacementRuntime.Snapshot placement, CdObjectState source) {
+        public SourceCut {
+            Objects.requireNonNull(placement); Objects.requireNonNull(source);
+            if (!placement.pool().slots().contains(source)) throw new IllegalArgumentException("Source absent from actual cut");
+        }
+    }
+    public record PrimaryAngleCall(SourceCut cut, int value) {
+        public PrimaryAngleCall { Objects.requireNonNull(cut); if ((value & ~255) != 0) throw new IllegalArgumentException("angle byte"); }
+    }
+    public record SoundCall(SourceCut cut, Effect request) {
+        public SoundCall {
+            Objects.requireNonNull(cut); Objects.requireNonNull(request);
+            if (!(request instanceof SoundRequest || request instanceof RewardFmRequest || request instanceof RewardSubCpuRequest))
+                throw new IllegalArgumentException("Only a native LostRing sound request");
+        }
+    }
+    @FunctionalInterface public interface PrimaryAngleCommit { void commit(PrimaryAngleCall call); }
+    @FunctionalInterface public interface SoundPort { void play(SoundCall call); }
+    private boolean sourceBinding, running;
+    private PrimaryAngleCommit sourceAngle;
+    private SoundPort sourceSound;
+    private int activeWhole;
+    private Inputs activeInputs;
+    private Ports activePorts;
+    private Object pendingOperation;
+    private SourceCut pendingCut;
+    private CdObjectPool pendingDrawPool;
+    private CdObjectState.Identity pendingDrawIdentity;
+    private CdRing.GlobalsPort pendingCollectGlobals;
+    private CdRing.SourceCalls pendingCollectCalls;
+
+    /** Same retained source before metadata/helper admission. Legacy six-port construction remains opt-out.
+     * On this path returned sound/angle effects describe completed ports and must never be replayed. */
+    public static CdLostRing fromAct2PastAssets(CdObjectPlacementRuntime runtime, CdR12bTerrainAssets owner,
+                                               CdPlayerMath math, CdPlayerTerrain terrain,
+                                               PrimaryAngleCommit angle, SoundPort sound,
+                                               DrawObjectCall draw, CollectRingCall collect) {
+        Objects.requireNonNull(runtime, "runtime"); Objects.requireNonNull(owner, "owner");
+        if (!runtime.sameAct2PastSource(owner)) throw new IllegalArgumentException("LostRing placement/assets source differs");
+        var body = new CdLostRing(runtime, Assets.fromAct2PastAssets(owner.objects()), math, terrain, draw, collect);
+        body.sourceAngle = Objects.requireNonNull(angle); body.sourceSound = Objects.requireNonNull(sound);
+        body.sourceBinding = true; return body;
+    }
+    /** Executes the existing shared reward helper once; supplies no scalar/sound owner. */
+    public static void collectRing(CdRing.GlobalsPort globals, CdRing.SourceCalls calls) { CdRing.collectRing(globals, calls); }
+    public boolean isCurrentInvocation(int whole, Inputs inputs, Ports ports) {
+        return sourceBinding && running && whole == activeWhole && inputs == activeInputs && ports == activePorts;
+    }
+    public boolean isCurrentCall(Object call) { return sourceBinding && running && call != null && call == pendingOperation; }
+    public SourceCut currentSource(Object call) {
+        if (!isCurrentCall(call)) throw new IllegalStateException("No original LostRing port call");
+        return pendingCut;
+    }
+    public boolean isCurrentDrawCall(CdObjectPool pool, CdObjectState.Identity identity) {
+        return sourceBinding && running && pool != null && identity != null && pool == pendingDrawPool && identity == pendingDrawIdentity;
+    }
+    public boolean isCurrentCollectCall(CdRing.GlobalsPort globals, CdRing.SourceCalls calls) {
+        return sourceBinding && running && globals != null && calls != null && globals == pendingCollectGlobals && calls == pendingCollectCalls;
+    }
+    private SourceCut sourceCut() { return new SourceCut(runtime.capture(), runtime.pool().state(activeWhole)); }
+    private void verifySourceCut(SourceCut cut, boolean draw, boolean completed) {
+        runtime.validateRestore(cut.placement());
+        if (!runtime.status().equals(cut.placement().status())
+                || !java.util.Arrays.equals(runtime.capture().savedFlags().copy(), cut.placement().savedFlags().copy()))
+            throw new IllegalStateException("LostRing port changed placement status or saved bank");
+        for (var before : cut.placement().pool().slots()) {
+            var actual = runtime.pool().state(before.identity().wholeIndex());
+            var expected = draw && before.identity().wholeIndex() == activeWhole
+                    ? before.moveByte(SPRITE_FLAGS, before.spriteFlags() & 127) : before;
+            if (!actual.equals(expected) && !(draw && !completed && actual.equals(before)))
+                throw new IllegalStateException("LostRing port changed an unowned pool byte");
+        }
+    }
+    private <T> T sourcePort(Object operation, SourceCut cut, boolean draw, java.util.function.Supplier<T> work) {
+        if (pendingCut != null) throw new IllegalStateException("Nested LostRing port");
+        pendingOperation = operation; pendingCut = cut; Throwable original = null; boolean completed = false;
+        try { T result = work.get(); completed = true; return result; }
+        catch (RuntimeException | Error failure) { original = failure; throw failure; }
+        finally {
+            try { verifySourceCut(cut, draw, completed); }
+            catch (RuntimeException | Error verification) { if (original == null) throw verification; if (verification != original) original.addSuppressed(verification); }
+            finally { pendingOperation = null; pendingCut = null; }
+        }
+    }
+    private Ports sourcePorts(Ports original) {
+        return new Ports(new CdRing.GlobalsPort() {
+            public CdRingGlobals read() { return sourcePort(null, sourceCut(), false, () -> original.ringGlobals().read()); }
+            public void write(CdRingGlobals value) { sourcePort(value, sourceCut(), false, () -> { original.ringGlobals().write(value); return null; }); }
+        }, new SpillGlobalsPort() {
+            public CdRingSpillGlobals read() { return sourcePort(null, sourceCut(), false, () -> original.spillGlobals().read()); }
+            public void write(CdRingSpillGlobals value) { sourcePort(value, sourceCut(), false, () -> { original.spillGlobals().write(value); return null; }); }
+        });
+    }
+    private void emitSound(List<Effect> effects, Effect request) {
+        if (sourceBinding) {
+            var cut = sourceCut(); var call = new SoundCall(cut, request);
+            sourcePort(call, cut, false, () -> { sourceSound.play(call); return null; });
+        }
+        effects.add(request);
+    }
+    private void commitAngle(int value) {
+        var cut = sourceCut(); var call = new PrimaryAngleCall(cut, value);
+        sourcePort(call, cut, false, () -> { sourceAngle.commit(call); return null; });
+    }
+    private void sourceDraw(CdObjectPool pool, CdObjectState.Identity identity) {
+        if (!sourceBinding) { drawObject.drawObject(pool, identity); return; }
+        var cut = sourceCut(); pendingDrawPool = pool; pendingDrawIdentity = identity;
+        try { sourcePort(identity, cut, true, () -> { drawObject.drawObject(pool, identity); return null; }); }
+        finally { pendingDrawPool = null; pendingDrawIdentity = null; }
+    }
+    private void sourceCollect(CdRing.GlobalsPort globals, CdRing.SourceCalls calls) {
+        if (!sourceBinding) { collectRing.collectRing(globals, calls); return; }
+        if (pendingCollectGlobals != null) throw new IllegalStateException("Nested LostRing CollectRing");
+        var cut = sourceCut(); pendingCollectGlobals = globals; pendingCollectCalls = calls; Throwable original = null;
+        try { collectRing.collectRing(globals, calls); }
+        catch (RuntimeException | Error failure) { original = failure; throw failure; }
+        finally {
+            try { verifySourceCut(cut, false, true); }
+            catch (RuntimeException | Error verification) { if (original == null) throw verification; if (verification != original) original.addSuppressed(verification); }
+            finally { pendingCollectGlobals = null; pendingCollectCalls = null; }
+        }
+    }
+
     public Assets assets() { return assets; }
 
     /** One ObjLostRing dispatch for the whole-pool dynamic slot currently holding ID $11. */
     public Result run(int wholeIndex, Inputs inputs, Ports ports) {
+        if (!sourceBinding) return runSelected(wholeIndex, inputs, ports);
+        if (running) throw new IllegalStateException("Reentrant source LostRing dispatch");
+        Objects.requireNonNull(inputs); Objects.requireNonNull(ports);
+        running = true; activeWhole = wholeIndex; activeInputs = inputs; activePorts = ports;
+        try { return runSelected(wholeIndex, inputs, sourcePorts(ports)); }
+        finally { running = false; activeInputs = null; activePorts = null; }
+    }
+    private Result runSelected(int wholeIndex, Inputs inputs, Ports ports) {
         Objects.requireNonNull(inputs, "inputs");
         Objects.requireNonNull(ports, "ports");
         var pool = runtime.pool();
@@ -363,7 +512,7 @@ public final class CdLostRing {
         var g = Objects.requireNonNull(ports.ringGlobals().read(), "ring globals");
         ports.ringGlobals().write(new CdRingGlobals(0, g.lives(), 0, 0x80, g.updateHudLives(),
                 g.timeStopTimer(), g.ringAnimationTimer(), g.ringAnimationFrame()));
-        effects.add(new SoundRequest(Sound.FM_RINGLOSS));                         // MOVE.W #FM_RINGLOSS,d0 / JSR PlayFMSound
+        emitSound(effects, new SoundRequest(Sound.FM_RINGLOSS));                         // MOVE.W #FM_RINGLOSS,d0 / JSR PlayFMSound
     }
 
     /** ObjLostRing_Main (Ring/Main.asm:410-435). Time stop is not tested here, unlike ObjRing_Main. */
@@ -377,7 +526,8 @@ public final class CdLostRing {
         if ((state.word(Y_VELOCITY) & 0x8000) == 0) {                             // BMI.S .ChkDel tests the ADDI result
             int phase = ((in.levelVIntCounter() & 0xFF) + (in.runObjectsD7() & 0xFF)) & 3; // MOVE.B levelVIntCounter+3,d0
             if (phase == 0) {                                                      // ADD.B d7,d0 / ANDI.B #3,d0 / BNE.S .ChkDel
-                var floor = CdObjectCollisionCheck.objGetFloorDist(terrain, state);  // JSR ObjGetFloorDist
+                var floor = sourceBinding ? CdObjectCollisionCheck.objGetFloorDist(terrain, state, this::commitAngle)
+                        : CdObjectCollisionCheck.objGetFloorDist(terrain, state);  // JSR ObjGetFloorDist
                 effects.add(new GlobalWrite(GlobalField.PRIMARY_ANGLE, floor.primaryAngle()));
                 if (floor.distance() < 0) {                                        // TST.W d1 / BPL.S .ChkDel
                     state = state.addWord(Y, floor.distance());                    // ADD.W d1,oY(a0): integer word only
@@ -399,7 +549,7 @@ public final class CdLostRing {
             delete(whole, DeleteEntry.BELOW_BOTTOM_BOUND, effects);
             return;
         }
-        drawObject.drawObject(pool, state.identity());                             // BRA.W DrawObject
+        sourceDraw(pool, state.identity());                             // BRA.W DrawObject
         effects.add(new CallReturned(NativeCall.DRAW_OBJECT));
     }
 
@@ -425,7 +575,7 @@ public final class CdLostRing {
                 .moveByte(PRIORITY, 1));                                           // MOVE.B #1,oPriority(a0)
         var globals = new CountingGlobals(ports.ringGlobals());
         var requests = new RewardRequests(effects);
-        collectRing.collectRing(globals, requests);                                // BSR.W CollectRing
+        sourceCollect(globals, requests);                                // BSR.W CollectRing
         if (globals.writes != 1 || requests.count != 1) {
             throw new IllegalStateException("CollectRing (Ring/Main.asm:290-312) makes one reward write and one tail-called"
                     + " request; the bound helper made " + globals.writes + " write(s) and " + requests.count + " request(s)");
@@ -446,7 +596,7 @@ public final class CdLostRing {
                 .moveByte(FLAGS, out.statusFlags()).moveByte(ROUTINE, out.routine()).moveByte(ROUTINE_2, out.routine2());
         pool.write(next);
         effects.add(new CallReturned(NativeCall.SPARKLE));
-        drawObject.drawObject(pool, next.identity());                              // BRA.W DrawObject
+        sourceDraw(pool, next.identity());                              // BRA.W DrawObject
         effects.add(new CallReturned(NativeCall.DRAW_OBJECT));
     }
 
@@ -471,17 +621,17 @@ public final class CdLostRing {
     }
 
     /** CollectRing's tail-called requests, recorded in call order; CollectRing never draws. */
-    private static final class RewardRequests implements CdRing.SourceCalls {
+    private final class RewardRequests implements CdRing.SourceCalls {
         private final List<Effect> effects;
         private int count;
         private RewardRequests(List<Effect> effects) { this.effects = effects; }
         @Override public void playFmSound(CdRing.FmSound sound) {
             count++;
-            effects.add(new RewardFmRequest(sound));
+            emitSound(effects, new RewardFmRequest(sound));
         }
         @Override public void subCpuCommand(CdRing.SubCpuCommand command) {
             count++;
-            effects.add(new RewardSubCpuRequest(command));
+            emitSound(effects, new RewardSubCpuRequest(command));
         }
         @Override public void drawObject(CdObjectPool pool, int wholeIndex) {
             throw new IllegalStateException("CollectRing (Ring/Main.asm:290-312) has no DrawObject call");

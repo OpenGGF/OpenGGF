@@ -1,5 +1,7 @@
 package com.openggf.game.soniccd.objects;
 
+import com.openggf.game.soniccd.level.CdR12bObjectAssets;
+import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
 import com.openggf.game.soniccd.CdNativeFile;
 import com.openggf.game.soniccd.CdReleaseVariant;
 import com.openggf.game.soniccd.CdStagePayload;
@@ -229,6 +231,7 @@ public final class CdMosqui {
     private final PrimaryAngleCommit angleCommit;
     private final PlayFmSound playFm;
     private final boolean prefixMode;
+    private boolean act2PastBinding;
     private boolean running;
     private PrimaryAngleCall pendingAngle;
     private FmCall pendingFm;
@@ -271,12 +274,14 @@ public final class CdMosqui {
         observePublication(call, () -> runtime.bclrSavedFlag(savedId, period, CdObjectPlacementRuntime.SavedBit.LOADED));
     }
     private void observePublication(Publication call, Runnable nativeStore) {
+        if (act2PastBinding) { observeAct2PastPublication(call, nativeStore); return; }
         if (pendingPublication != null) throw new IllegalStateException("Nested family publication");
         pendingPublication = call;
         try { observer.beforePublication(call); nativeStore.run(); observer.afterPublication(call); }
         finally { pendingPublication = null; }
     }
     private void observedDraw(CdObjectPool pool, CdObjectState.Identity identity) {
+        if (act2PastBinding) { observeAct2PastDraw(pool, identity); return; }
         if (observer == null) { drawObject.drawObject(pool, identity); return; }
         var call = new DrawCall(runtime.capture(), pool.state(identity.wholeIndex()));
         if (pendingDraw != null) throw new IllegalStateException("Nested family DrawObject");
@@ -285,6 +290,65 @@ public final class CdMosqui {
         finally { pendingDraw = null; }
     }
 
+
+    private void verifyAct2PastPublication(Publication call, boolean stored) {
+        runtime.validateRestore(call.cut()); var actual = runtime.capture();
+        byte[] expectedBank = call.cut().savedFlags().copy();
+        if (stored && call.savedIndex() >= 0) expectedBank[call.savedIndex()] &= 127;
+        if (!actual.status().equals(call.cut().status()) || !java.util.Arrays.equals(expectedBank, actual.savedFlags().copy()))
+            throw new IllegalStateException("Mosqui publication changed unowned status/bank");
+        for (var before : call.cut().pool().slots()) {
+            byte[] expected = before.copyBytes();
+            if (stored && call.savedIndex() < 0 && before.identity().wholeIndex() == call.source().identity().wholeIndex())
+                expected = call.output() == null ? new byte[64] : call.output().copyBytes();
+            var current = runtime.pool().state(before.identity().wholeIndex());
+            if (!current.identity().equals(before.identity()) || !java.util.Arrays.equals(expected, current.copyBytes()))
+                throw new IllegalStateException("Mosqui publication changed an unowned pool byte");
+        }
+    }
+    private void observeAct2PastPublication(Publication call, Runnable nativeStore) {
+        if (pendingPublication != null || pendingDraw != null || pendingAngle != null || pendingFm != null)
+            throw new IllegalStateException("Nested R12B Mosqui operation");
+        pendingPublication = call; boolean stored = false; Throwable original = null;
+        try {
+            verifyAct2PastPublication(call, false); observer.beforePublication(call); verifyAct2PastPublication(call, false);
+            nativeStore.run(); stored = true; verifyAct2PastPublication(call, true);
+            observer.afterPublication(call); verifyAct2PastPublication(call, true);
+        } catch (RuntimeException | Error failure) { original = failure; throw failure; }
+        finally {
+            try { verifyAct2PastPublication(call, stored); }
+            catch (RuntimeException | Error verification) { if (original == null) throw verification; if (verification != original) original.addSuppressed(verification); }
+            finally { pendingPublication = null; }
+        }
+    }
+    private void verifyAct2PastDraw(DrawCall call, boolean completed) {
+        runtime.validateRestore(call.cut()); var actual = runtime.capture();
+        if (!actual.status().equals(call.cut().status()) || !java.util.Arrays.equals(actual.savedFlags().copy(), call.cut().savedFlags().copy()))
+            throw new IllegalStateException("Mosqui Draw changed status/bank");
+        for (var before : call.cut().pool().slots()) {
+            var expected = before.identity().wholeIndex() == call.source().identity().wholeIndex()
+                    ? before.moveByte(SPRITE_FLAGS, before.spriteFlags() & 127) : before;
+            var current = runtime.pool().state(before.identity().wholeIndex());
+            if (!current.equals(expected) && !( !completed && current.equals(before)))
+                throw new IllegalStateException("Mosqui Draw changed an unowned pool byte");
+        }
+    }
+    private void observeAct2PastDraw(CdObjectPool pool, CdObjectState.Identity identity) {
+        if (pendingPublication != null || pendingDraw != null || pendingAngle != null || pendingFm != null)
+            throw new IllegalStateException("Nested R12B Mosqui Draw");
+        var call = new DrawCall(runtime.capture(), pool.state(identity.wholeIndex())); pendingDraw = call;
+        Throwable original = null; boolean completed = false;
+        try {
+            verifyPastPortCut(call.cut(), call.source()); observer.beforeCall(call); verifyPastPortCut(call.cut(), call.source());
+            sourceDraw.draw(call); completed = true; verifyAct2PastDraw(call, true);
+            observer.afterCall(call); verifyAct2PastDraw(call, true);
+        } catch (RuntimeException | Error failure) { original = failure; throw failure; }
+        finally {
+            try { verifyAct2PastDraw(call, completed); }
+            catch (RuntimeException | Error verification) { if (original == null) throw verification; if (verification != original) original.addSuppressed(verification); }
+            finally { pendingDraw = null; }
+        }
+    }
 
     /** The runtime supplies the single live pool and saved bank; the terrain is the production floor owner. */
     public CdMosqui(CdObjectPlacementRuntime runtime, Assets assets, CdPlayerTerrain terrain, DrawObjectCall drawObject) {
@@ -322,6 +386,27 @@ public final class CdMosqui {
         body.observer = Objects.requireNonNull(observer); body.sourceDraw = Objects.requireNonNull(draw); return body;
     }
 
+    /** Exact retained R12B source pair, raw B72 operands and existing synchronous native ports. */
+    public static CdMosqui fromAct2PastAssets(CdObjectPlacementRuntime runtime, CdR12bTerrainAssets owner,
+                                              CdPlayerTerrain terrain, PrimaryAngleCommit angle, PlayFmSound fm,
+                                              DispatchObserver observer, SourceDraw draw) {
+        Objects.requireNonNull(runtime, "runtime"); Objects.requireNonNull(owner, "owner");
+        if (!runtime.sameAct2PastSource(owner)) throw new IllegalArgumentException("Mosqui placement/assets source differs");
+        var objects = owner.objects(); var tiles = objects.view(CdR12bObjectAssets.View.OBJECT_TILE_IDS);
+        if (tiles.length() != 72) throw new IllegalArgumentException("R12B ObjectTileIDs extent");
+        var a = new NativeAssets(secondary -> tiles.unsignedWord((short) tiles.unsignedWord(0) + 2 * secondary),
+                objects.normalMosqui(), objects.damagedMosqui(),
+                CdR12bObjectAssets.View.MAP_SPR_MOSQUI_NORMAL.range().nativeAddress(),
+                CdR12bObjectAssets.View.ANI_MOSQUI_NORMAL.range().nativeAddress(),
+                CdR12bObjectAssets.View.MAP_SPR_MOSQUI_DAMAGED.range().nativeAddress(),
+                CdR12bObjectAssets.View.ANI_MOSQUI_DAMAGED.range().nativeAddress());
+        var body = new CdMosqui(runtime, a, terrain, angle, fm, (pool, identity) -> {
+            throw new IllegalStateException("R12B Mosqui requires its actual source Draw");
+        });
+        body.observer = Objects.requireNonNull(observer); body.sourceDraw = Objects.requireNonNull(draw);
+        body.act2PastBinding = true; return body;
+    }
+
     /** Actual B72 tile selector and the four complete B views; no new art or reader owner. */
     public static CdMosqui fromPastAssets(CdObjectPlacementRuntime runtime, CdR11bAssets owner, CdPlayerTerrain terrain,
                                          PrimaryAngleCommit angleCommit, PlayFmSound playFm, DrawObjectCall drawObject) {
@@ -351,8 +436,25 @@ public final class CdMosqui {
         if (!prefixMode) return execute(wholeIndex, globals);
         if (running) throw new IllegalStateException("Named Past Mosqui cannot reenter its active dispatch");
         running = true; publicationOrdinal = 0;
-        try { return execute(wholeIndex, globals); }
+        try { return act2PastBinding ? executeAct2Past(wholeIndex, globals) : execute(wholeIndex, globals); }
         finally { running = false; }
+    }
+
+    /** Object Time Check.asm:12-44, shipped non-R43 path. Delete clears flags before the FM test. */
+    private Result executeAct2Past(int wholeIndex, Globals globals) {
+        Objects.requireNonNull(globals, "globals");
+        var source = runtime.pool().state(wholeIndex);
+        if (source.id() != OBJECT_ID) throw new IllegalArgumentException("Mosqui requires live ID $3D");
+        if (globals.goodFuture() != 0 && !(globals.timeZone() == 1 && source.subtype() == 0)) {
+            int x = source.centreX(), y = source.centreY();
+            observedDelete(source);
+            observedWrite(runtime.pool().state(wholeIndex).moveWord(X, x));
+            observedWrite(runtime.pool().state(wholeIndex).moveWord(Y, y));
+            observedWrite(runtime.pool().state(wholeIndex).moveByte(ID, 0x18));
+            // TST.B oSprFlags sees DeleteObject's zero: no FM; ADDQ.L #4,SP skips the Mosqui wrapper.
+            return new Result(runtime.pool().state(wholeIndex), List.of(new CallReturned(NativeCall.DESTROY_ON_GOOD_FUTURE)));
+        }
+        return execute(wholeIndex, globals);
     }
 
     private Result execute(int wholeIndex, Globals globals) {

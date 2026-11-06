@@ -1,5 +1,44 @@
 # Implement Sonic CD with complete regional parity
 
+## 6 November 2026 — Projector, Hurt and permanent R12B continuation
+
+The user resumed full private USA implementation, followed by JP/EU; the historical
+26 October pause handover is not the current execution plan. Main remains untouched.
+The private parent merge retains next 0d8ffdcd6480d432bab3822b11e550285c44ed23
+through 0db4d826edc201bc8cade522b691a0db4a232bd8; broad qualification is still active
+in its separate frozen worktree and is not a green smoke claim.
+
+Actual original-USA controller input now returns15717 after1782 R12B target services.
+Projector14516 initializes four later physical children; native damage14534 creates
+LostRings, Hurt14535 runs the real separate Body tail, and landing returns Main.
+Fixed Right+B15601..15632 passes the real obstruction. Full/course replay includes
+those source cuts and the later movement. First15718 remains explicit OBJECT_KIND
+whole51/value34, newly spawned Spin Tunnel at2348/0180/routine0. No failed state is
+captured, resumed or used as gameplay input. All five permanent controller cases
+pass in R7 with zero failures/errors/skips and unchanged source observations.
+
+The batch retains84 finite raw views,42 counted roots and eight static icons;
+source-bound Projector/Animal/Scenery/Springboard and six effect/Mosqui factories
+reuse existing art, terrain, math, slot and publication owners. No new clock, PLC
+service or captured bank is introduced. The corrected boot path attaches managers,
+installs silent/offline audio, loads the actual roster, then installs GameLoop and
+rewind. R5 separately passes192 focused cases, including27 opening EGL products
+and existing audio identities. R4 had407 passes/3 failures/26 errors; the precisely
+corrected assertions/boot ordering and subsequent positives are separate runs.
+Tool-schema changes pass49 Python cases; unsupported lexical enum observations
+remain incomplete, not a complete consumer proof.
+
+Exact commands, source fingerprints, case identities, failure limits, queue and
+execution timing and bounded source reviews are retained under external
+`$SCD_ARTIFACT_ROOT/research/` and `.work/r12b-projector-batch-root-20261106`
+within that explicitly selected external artifact directory.
+Next: actual Spin/Disc/Door bindings and retained-pair preparation, Results metadata,
+then native Goal/Signpost/Results end-of-act ownership. A prepared Spin binding has
+a reviewed internal preflight/port contradiction being corrected outside the tree;
+it is not admitted by this checkpoint. Next-act selection is R13C/R13D according
+to goodFuture, not a synthetic R13A. Full acts, later zones, natural new pixels,
+audible synthesis and regional/native parity remain open. No push/PR/public release.
+
 ## 5 November — static Monitor Item icon views qualified
 
 The additive act2MonitorItemStaticPieces/1 factory borrows the authenticated

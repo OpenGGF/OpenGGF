@@ -16,13 +16,14 @@ import static com.openggf.game.soniccd.SonicCdAct2PastPrimaryPublication.*;
 import static com.openggf.game.soniccd.objects.CdObjectState.ByteField.*;
 import static com.openggf.game.soniccd.objects.CdObjectState.WordField.*;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /** Actual-source Frame/Body component products; synthetic metadata controls are explicitly named. Java UNRUN. */
 class TestSonicCdAct2PastPrimaryPublication {
     static CdR12bTerrainAssets terrain;
     static CdR12bPlayerAssets player;
     @BeforeAll static void actualOriginalUsa() throws Exception {
-        String root=System.getProperty("soniccd.media.root");assertNotNull(root);assertFalse(root.isBlank());
+        String root=System.getProperty("soniccd.media.root");assumeTrue(root!=null&&!root.isBlank(),"Set soniccd.media.root to original USA media");
         Path cue;try(var files=Files.list(Path.of(root).resolve("USA"))){var cues=files.filter(p->p.toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();assertEquals(1,cues.size());cue=cues.getFirst();}
         try(var programs=CdProgramAssets.open(cue,Optional.of(CdReleaseVariant.USA),Optional.empty())){
             terrain=CdR12bTerrainAssets.fromPrograms(programs);player=CdR12bPlayerAssets.fromPrograms(programs);
@@ -135,6 +136,119 @@ class TestSonicCdAct2PastPrimaryPublication {
         assertThrows(IllegalArgumentException.class,()->prepare(synthetic(f,List.of(warp,warp,display(f.publication))),f.base.pool(),g,f.level,f.reserved));
         assertThrows(IllegalArgumentException.class,()->prepare(synthetic(f,List.of(new CdPlayerBody.ObjectTouchResult(CdPlayerObjectTouch.NoTouch.INSTANCE),warp,display(f.publication))),f.base.pool(),g,f.level,f.reserved));unchanged(f,before);
     }
+
+    /**
+     * Real R12B-bound Frame execution from declared component ingress, not a replay of Root's controller.
+     * N1ecc5f3a ObjSonic_Hurt (Level/_Objects/Sonic/Main.asm:2351-2366),
+     * ObjSonic_HurtChkLand (Main.asm:2372-2391); ObjSonic_SpecialCol
+     * (Level/Palmtree Panic/Player Special Collision.asm:7-8) is the actual RTS.
+     */
+    @Test void genuineHurtRunsTheNativeTailWithoutModeTimeWarpOrMainTouchAndAlwaysDraws() {
+        for(int flags:new int[]{2,0x42})for(int control:new int[]{0,0xC1}){
+            var f=returnedRoutine(4,flags,control,false);var result=f.publication.result();
+            assertEquals(CdPlayerBody.Boundary.HURT_RETURN,result.boundary());assertTrue(result.modeBoundary().isEmpty());
+            assertEquals(List.of(CdPlayerBody.NativeCall.CHARGE_BEFORE_DISPATCH,CdPlayerBody.NativeCall.OBJ_MOVE,
+                    CdPlayerBody.NativeCall.PP_SPECIAL_COLLISION,CdPlayerBody.NativeCall.LEVEL_COLLISION_IN_AIR,
+                    CdPlayerBody.NativeCall.HURT_CHECK_LAND,CdPlayerBody.NativeCall.LEVEL_BOUND,
+                    CdPlayerBody.NativeCall.RECORD_POSITION,CdPlayerBody.NativeCall.ANIMATE,CdPlayerBody.NativeCall.DRAW_OBJECT),calls(f.publication));
+            assertFalse(result.effects().stream().anyMatch(e->e instanceof CdPlayerBody.ModeEffect||e instanceof CdPlayerBody.TimeWarpCall
+                    ||e instanceof CdPlayerBody.ObjectTouchResult||e instanceof CdPlayerBody.ObjectTouchResponse||e instanceof CdPlayerBody.TouchScanCompleted));
+            var gravity=result.effects().stream().filter(CdPlayerBody.ActorWrite.class::isInstance).map(CdPlayerBody.ActorWrite.class::cast)
+                    .filter(w->w.field()==CdPlayerBody.ActorField.Y_VELOCITY).map(CdPlayerBody.ActorWrite::value).toList();
+            assertEquals(flags==2?List.of(-1024+0x30):List.of(-1024+0x30,-1024+0x10),gravity);
+            var centreWrites=result.effects().stream().filter(CdPlayerBody.ActorWrite.class::isInstance).map(CdPlayerBody.ActorWrite.class::cast)
+                    .filter(w->w.field()==CdPlayerBody.ActorField.CENTRE_X_LONG||w.field()==CdPlayerBody.ActorField.CENTRE_Y_LONG).toList();
+            assertEquals(List.of(new CdPlayerBody.ActorWrite(CdPlayerBody.ActorField.CENTRE_X_LONG,513268480+(-512<<8)),
+                    new CdPlayerBody.ActorWrite(CdPlayerBody.ActorField.CENTRE_Y_LONG,34384640+(-1024<<8))),centreWrites);
+            assertEquals(new CdPlayerBody.Timers(1,1,1,0x3456),result.state().timers(),"Hurt never calls Main Display's timer service");
+            assertEquals(0x12,result.environment().controls().logicalHeld());assertEquals(0x34,result.environment().controls().logicalTap());
+            assertEquals(1,result.environment().globals().invincible());assertEquals(1,result.environment().movement().gates().speedShoes());
+            var cut=display(f.publication);var pose=result.display().orElseThrow();assertTrue(cut.eligible());assertTrue(pose.queued());
+            assertEquals(result.state().motion().centreX16_16()>>>16,cut.centreXWord());assertEquals(result.state().motion().centreY16_16()>>>16,cut.centreYWord());
+            assertEquals(result.state().motion().spriteFlags(),cut.spriteFlags());assertEquals(pose.spriteFlags(),cut.spriteFlags());
+            assertEquals(result.state().motion().yRadius(),cut.yRadius());assertEquals(result.state().header().width(),cut.width());assertEquals(result.state().header().priority(),cut.priority());
+            assertSame(cut,plan(f).display());assertSame(result.state(),f.frame.state());assertSame(result.environment(),f.frame.environment());
+        }
+    }
+    @Test void genuineHurtPreparationKeepsEveryExternalImageScalarSoundAndOriginalFrameCut() {
+        var f=returnedRoutine(4,2,0,false);var before=f.placement.capture();var actor=f.frame.captureActor();var shared=f.frame.captureShared();
+        var source=f.frame.stageSource();var cut=display(f.publication);var pose=f.frame.display();var sounds=f.publication.sounds();
+        var originalImages=f.base.pool().slots().stream().map(CdObjectState::copyBytes).toList();var reserved=f.reserved.copy();
+        var first=plan(f);var again=plan(f);
+        assertSame(f.base.pool(),first.pool());assertSame(f.globals,first.globals());assertSame(f.level,first.level());assertSame(f.reserved,first.reserved());
+        assertSame(cut,first.display());assertEquals(first,again);assertSounds(f.publication,first);assertEquals(sounds,f.publication.sounds());
+        for(int i=0;i<96;i++)assertArrayEquals(originalImages.get(i),first.pool().slots().get(i).copyBytes());
+        assertArrayEquals(reserved,first.reserved().copy());assertSame(source,f.frame.stageSource());assertEquals(actor,f.frame.captureActor());
+        assertEquals(shared,f.frame.captureShared());assertSame(pose,f.frame.display());assertSame(f.publication.result().state(),f.frame.state());
+        assertSame(f.publication.result().environment(),f.frame.environment());assertThrows(IllegalStateException.class,()->f.frame.runBody(2));unchanged(f,before);
+        // Later legitimate owners cannot mutate this old source image or the already selected DrawObject cut.
+        var oldImage=f.base.pool().slots().get(16);var oldBytes=oldImage.copyBytes();
+        f.placement.pool().write(oldImage.moveByte(ANIMATION,oldImage.unsignedByte(ANIMATION)+1));f.frame.applyObjectYVelocity(0x123);
+        assertArrayEquals(oldBytes,oldImage.copyBytes());assertSame(oldImage,first.pool().slots().get(16));assertSame(cut,first.display());
+        assertSame(actor.state(),f.publication.result().state());assertSame(pose.orElseThrow(),f.publication.result().display().orElseThrow());
+        assertEquals(first,plan(f),"Pure preparation reads its original immutable ingress, never the later live owners");
+    }
+    @Test void genuineHurtMayReturnAnOutgoingDeadRoutineWithoutAdmittingAnIncomingDeadOrRestartCall() {
+        var f=returnedRoutine(4,2,0,true);var result=f.publication.result();var before=f.placement.capture();
+        assertEquals(CdPlayerBody.Boundary.HURT_RETURN,result.boundary());assertEquals(6,result.state().motion().routine());
+        assertTrue(result.effects().stream().anyMatch(CdPlayerBody.KillPlayerCall.class::isInstance));
+        assertFalse(calls(f.publication).contains(CdPlayerBody.NativeCall.DEAD_CHECK_GONE));assertTrue(display(f.publication).eligible());
+        assertFalse(f.publication.sounds().isEmpty());var actor=f.frame.captureActor();var shared=f.frame.captureShared();var plan=plan(f);
+        assertSame(f.base.pool(),plan.pool());assertSame(f.globals,plan.globals());assertSame(f.level,plan.level());assertSame(f.reserved,plan.reserved());
+        assertSame(display(f.publication),plan.display());assertSounds(f.publication,plan);assertEquals(actor,f.frame.captureActor());assertEquals(shared,f.frame.captureShared());unchanged(f,before);
+        for(int routine:new int[]{6,8}){
+            var incoming=returnedRoutine(routine,2,0,false);var old=incoming.placement.capture();
+            assertEquals(routine==6?CdPlayerBody.Boundary.DEAD_RETURN:CdPlayerBody.Boundary.RESTART_RETURN,incoming.publication.result().boundary());
+            assertEquals(Boundary.NON_MAIN_RESULT,assertThrows(UnsupportedPrimaryPublication.class,()->plan(incoming)).boundary());unchanged(incoming,old);
+        }
+    }
+    @Test void constructedHurtDisplayControlsRejectMissingDuplicateAndInconsistentCuts() {
+        var f=returnedRoutine(4,2,0,false);var before=f.placement.capture();var original=f.publication.result().effects();
+        var missing=new ArrayList<CdPlayerBody.Effect>(original);missing.removeIf(CdPlayerBody.DisplayEligibility.class::isInstance);
+        assertThrows(IllegalArgumentException.class,()->prepare(synthetic(f,missing),f.base.pool(),f.globals,f.level,f.reserved));
+        var duplicate=new ArrayList<CdPlayerBody.Effect>(original);duplicate.add(display(f.publication));
+        assertThrows(IllegalArgumentException.class,()->prepare(synthetic(f,duplicate),f.base.pool(),f.globals,f.level,f.reserved));
+        var d=display(f.publication);missing.add(new CdPlayerBody.DisplayEligibility(false,d.centreXWord(),d.centreYWord(),d.yRadius(),d.spriteFlags(),d.width(),d.priority()));
+        assertThrows(IllegalArgumentException.class,()->prepare(synthetic(f,missing),f.base.pool(),f.globals,f.level,f.reserved));unchanged(f,before);
+    }
+    @Test void constructedHurtLifecycleAndWrittenWarpControlsKeepTheExistingPublicationFences() {
+        var f=returnedRoutine(4,2,0,false);var before=f.placement.capture();
+        for(var effect:List.<CdPlayerBody.Effect>of(new CdPlayerBody.LevelWrite(CdPlayerBody.LevelField.LEVEL_RESTART,1),
+                new CdPlayerBody.DeadCheckGone(3,4,5,Optional.empty(),Optional.empty()),new CdPlayerBody.RestartCut(f.level,true),
+                new CdPlayerBody.ResetSavedObjectFlagsRequest(),new CdPlayerBody.UncheckedAliasWrite(0xFFF000,0x3B),new CdPlayerBody.Z80RamWrite(0x1C3E,1))){
+            assertEquals(Boundary.PRIMARY_LIFECYCLE_PUBLICATION,assertThrows(UnsupportedPrimaryPublication.class,
+                    ()->prepare(synthetic(f,List.of(effect,display(f.publication))),f.base.pool(),f.globals,f.level,f.reserved)).boundary());
+        }
+        var warp=warp(returned(0x81,false,false,false).publication).result().state();
+        var saved=CdTimeWarpSaveData.State.supplied(bytes(42,0),bytes(42,0));var save=new CdPlayerTimeWarp.SaveResult(0,0,0,0,0,0,saved,saved,List.of());
+        assertWarpBoundary(f,new CdPlayerTimeWarp.Result(warp,List.of(),List.of(),Optional.of(save)),Boundary.TIME_WARP_SAVE_PUBLICATION);
+        assertWarpBoundary(f,new CdPlayerTimeWarp.Result(warp,List.of(new CdPlayerTimeWarp.ReservedWrite(12,CdPlayerTimeWarp.ReservedField.ID,0,3)),List.of()),Boundary.TIME_WARP_RESERVED_PUBLICATION);
+        assertWarpBoundary(f,new CdPlayerTimeWarp.Result(warp,List.of(),List.of(),Optional.empty(),Optional.of(new CdPlayerTimeWarp.RestartResult(0,0x100))),Boundary.TIME_WARP_RESTART_PUBLICATION);
+        assertWarpBoundary(f,new CdPlayerTimeWarp.Result(warp,List.of(new CdPlayerTimeWarp.GlobalWrite(CdPlayerTimeWarp.GlobalField.TIMER_WORD,0,1)),List.of()),Boundary.TIME_WARP_SCALAR_PUBLICATION);unchanged(f,before);
+    }
+
+    /** Only explicit actor/environment ingress is constructed; every successful product below is the original shared Frame/Body result. */
+    private static Fixture returnedRoutine(int routine,int flags,int control,boolean beyondBottom) {
+        var placement=CdObjectPlacementRuntime.fromAssets(terrain,bytes(CdObjectPlacementRuntime.SAVED_BANK_BYTES,0xA6));
+        for(int whole=32;whole<128;whole++)placement.pool().write(dirty(placement.pool().state(whole)).moveByte(ID,0).moveByte(SPRITE_FLAGS,0).moveByte(COLLISION_TYPE,0));
+        var base=placement.capture();var g=globals();var bounds=terrain.loadPlan().bounds();
+        int y=beyondBottom?((bounds.bottom()+225)&0xFFFF)<<16:34384640;
+        var motion=new CdPlayerMotionState(513268480,y,beyondBottom?0:-512,beyondBottom?0:-1024,0,routine,0,flags,132,9,19,0x1A,0x1A,0,0,0,0,control,0,0);
+        var state=new CdPlayerBody.State(motion,new CdPlayerBody.AnimationCursor(0,0,0),new CdPlayerBody.Header(1,0x230F60,0x780,2,24),
+                new CdPlayerBody.Timers(1,1,1,0x3456),new CdPlayerBody.History(bytes(256,0x34),0),0,new CdPlayerBody.ObjectLinks(0,0),0);
+        var environment=new CdPlayerBody.Environment(new CdPlayerMovement.Environment(new CdPlayerMovement.Physics(0x600,0xC,0x80),
+                new CdPlayerMovement.Bounds(bounds.left(),bounds.right(),bounds.bottom(),0),new CdPlayerMovement.Gates(1,0,0,0,0,1,0),
+                new CdPlayerMovement.Globals(0,96,0,0,0,0,0,0,0,0)),new CdPlayerBody.Controls(0,0,0x12,0x34,0),
+                new CdPlayerBody.Globals(0,160,0,0,0,210,1,0),CdPlayerBody.DynamicSlots.UNIMPLEMENTED);
+        var level=new CdLevelGlobals(0,0x23,0x34,2,0x45,0x123456,0x56,0,0);
+        var frame=CdPlayerFrameRuntime.fromAct2PastEntry(terrain,player,state,environment,new CdPlayerArtRuntime.State(new byte[768],new byte[768],0,false),new CdPlayerFrameRuntime.VIntClock(OptionalLong.empty(),17));
+        frame.bindArtPublication((request,image)->fail("initial mapFrame0 already compared; no DPLC cue may be invented"));
+        var sample=frame.prepareInput(0x10);frame.serviceVBlank(sample.phase());
+        var publication=frame.runBody(1,Optional.empty(),Optional.of(new CdPlayerBody.LevelContext(base.pool(),g.ring(),level)),Optional.empty(),Optional.empty());
+        assertTrue(frame.stageSource().ownsAct2Past(terrain,player));assertSame(publication.result().state(),frame.state());assertSame(publication.result().environment(),frame.environment());
+        return new Fixture(frame,placement,base,g,level,bytes(1984,0x67),publication);
+    }
+    private static List<CdPlayerBody.NativeCall> calls(CdPlayerFrameRuntime.BodyPublication p){return p.result().effects().stream().filter(CdPlayerBody.CallReturned.class::isInstance).map(CdPlayerBody.CallReturned.class::cast).map(CdPlayerBody.CallReturned::call).toList();}
 
     record Fixture(CdPlayerFrameRuntime frame,CdObjectPlacementRuntime placement,CdObjectPlacementRuntime.Snapshot base,
                    SonicCdAct2PastWorldHost.Globals globals,CdLevelGlobals level,CdAssetBytes reserved,CdPlayerFrameRuntime.BodyPublication publication) { }
