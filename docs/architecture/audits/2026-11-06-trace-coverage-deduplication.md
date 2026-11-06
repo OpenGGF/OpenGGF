@@ -80,3 +80,272 @@ The existing single entry-state import now reads S2-family stage-exit destinatio
 ## Upstream reconciliation before candidate freeze
 
 Develop advanced from `0d8ffdcd6` to `df96b343c` during the lanes. Its 0.7 release and 0.8 rollover, editor input fix, route/controller tests, policy/tooling and release metadata are preserved. POM changes merge cleanly. The sole conflict is the rolled-over 0.7 prerelease changelog: the upstream file is retained exactly, and this batch's Crawl/coverage/entry notes move into `CHANGELOG.0.8.prerelease.md`. No released notes or version are overwritten. The original 0d8 baseline remains archived. Because executable source differs, a fresh once-per-profile updated-base measurement is taken rather than relabelling those old archives. One final combined candidate sweep is compared against both epochs; one change-based smoke qualifies the frozen updated candidate.
+
+## Frozen combined gate and maintenance qualification
+
+The measured candidate is `93a8196459c662fc59a054724586f2d859ae4c6b`.
+Fresh baseline `0d8ffdcd6` and the actual integration base `df96b343c` each ran
+one serial three-profile selection. All 1,089 baseline outcomes, complete
+messages/bodies and 428 corresponding JSON reports are identical between those
+bases after only literal worktree-prefix normalization. The older a89 archives
+are not reused as a baseline. The candidate ran one combined three-profile sweep:
+
+| Profile | Updated-base cases / F / E / skips | Frozen cases / F / E / skips | New cases | Added JUnit seconds |
+| --- | --- | --- | ---: | ---: |
+| trace-replay | 898 / 9 / 0 / 7 | 957 / 60 / 0 / 7 | 59 | 91.325 |
+| trace-replay-r7 | 121 / 66 / 0 / 0 | 214 / 133 / 1 / 0 | 93 | 174.475 |
+| trace-segments | 70 / 40 / 0 / 0 | 70 / 40 / 0 / 0 | 0 | 0 |
+
+The new strict identities account for 32 passes, 117 assertion failures and one
+FIFO execution error, with zero skips. Their measured 264.388 JUnit seconds plus
+1.412 seconds for two new team/bootstrap controls add 265.800 profile seconds.
+These are test execution sums, not elapsed sweep or queue time. All six standalone
+slices have direct comparisons; 150 new identities and 19 existing identities
+cover the 169 requested fixtures without duplicating the four canonical Mega
+bonus/special-stage consumers.
+
+No existing identity or report disappears. All existing r7 and trace-segments
+outcomes and reports are exact. The two changed r6 chain reports are exactly the
+clean D-lane candidate reports. CNZ2 improves from 188,220 raw ERROR observations
+at row 7849 to 49,194 at row 10361; chain boundary ownership advances from segment
+21/CNZ2 at movie cursor 138828 to segment 23/HTZ2 at 155218. Actual common-row
+comparison finds zero added errors on the 7,849 baseline-clean rows. Later
+additions follow the existing divergence and newly reached HTZ suffixes remain
+unqualified. ARZ2 remains 4,442 errors at row 5512; its actual witness is capsule
+Obj3E admission, not the earlier unverified Obj89 hypothesis. Four special-stage
+return gaps retain their one-frame disagreement. The owning Crawl routines and
+rejected shortcuts are in [the S2 audit](2026-11-06-s2-crawl-enemy-handoff.md).
+
+The frozen sweep catches one new existing maintenance failure: the animation
+header inventory still expects 22 root S3K directories after three duplicate
+bonus directories were removed. Commit `6de8264fb` pins 19 root directories and
+adds the three canonical bonus paths to the same checks, retaining all 62 logical
+headers. Its isolated trace-replay test passes. No known-red list or baseline is
+rewritten, and no comparison is relaxed.
+
+One change-based smoke ran against `df96b343c`, with workers 2 and a 40-minute
+Maven execution cap per invocation (queue excluded). It completed all 4,468
+selected classes, 91/91 ordinary batches and the guard batch. All 836 guards
+pass; all 49 skips are classified allowed, with no missing ROM property or
+unexplained skip. Its raw verdict remains:
+
+```text
+VERDICT FAILED: head=93a8196459c6 source=07d27bb7de6a change-based 4468/4468 candidate classes; ordinary 91/91 batches; guards 1/1 batches; tests=37837 failures=29 errors=2 skipped=49 (allowed=49 unexplained=0); missing ROM properties=none; skip inputs audio_reference_files=false,gl=false,s1_bizhawk_reference=false,s2_bk2=false,s3k_observations=false; bounded smoke selection, not a full-suite pass
+```
+
+Five disjoint focused selections actually executed on `df96b343c` reproduce all
+29 assertion failures across 88 cases (59 pass / 29 fail / no errors or skips).
+Twenty-eight complete messages and bodies are literal matches. The remaining
+Three Islands message differs only in the Java `Screen@` object identity display;
+both full strings are retained, and the examples/mod source is unchanged. The
+inherited failures belong to Three Islands/private-lobby, native route/physical
+checks and the fixed S3K audio request-manifest guard. No unrelated repair or
+blanket flakiness claim is made.
+
+The two new smoke errors are missing deleted standalone paths in the typed
+`TestSpecialStageVisualTraceSession` consumers. The same maintenance commit
+repoints both to retained canonical fixtures; all four cases then pass with no
+skip. It also repoints the upstream hero-reel manifest's Gumball path; all 21
+media-tooling unit cases pass. These focused repairs retain the original
+assertions. The frozen run is not relabelled as a later-SHA sweep or a broad pass.
+
+The final source boundary is explicit: since the frozen candidate, only those
+two maintenance test classes, the hero manifest and qualification prose change.
+Production source, fixture resources, POM and testing-runner subtrees are exact
+Git objects from the frozen candidate. Replay helpers and strict identities are
+also unchanged. The reviewed smoke diagnostics are archived with a 101-file
+hash receipt before the original run is acknowledged. Full commands, uncapped
+XML/JSON, baseline controls, row gates, source/ROM hashes and focused repair
+results remain under `/tmp/trace-coverage-20261106/`. No second broad sweep or
+smoke is claimed. Delivery is qualified against inherited failures; after the
+focused repairs there is no newly red existing identity, earlier existing
+frontier or added error on a baseline-clean row.
+
+Both deleted standalone movie copies are exact Git blobs retained in the
+canonical S1 run and S3K movie/run roots. No movie input is lost. The four
+obsolete standalone hardware publication rows were removed with their proven
+copies; canonical publication pins, recorder gitlink and all six ROM images
+remain unchanged.
+
+## Cost and remaining ownership
+
+Before post-integration focus, 136 owned Maven queue requests sum to 30,574.0
+seconds of waiting and 9,751.5 seconds of slot hold. Of the latter, 338.4 seconds
+belong to the cancelled mixed-selection attempt, rather than completed checks.
+These are overlapping per-request sums, not end-to-end elapsed time; slot hold
+includes compile, launch, testing and teardown. Smoke preparation adds 96.13
+seconds outside those queued holds. The smoke command wall is 8,466.298 seconds.
+Post-integration costs are recorded separately in the delivery receipt. User
+input wait is zero. Off-job analysis, archival and coordination time is unknown;
+it is not manufactured from residuals or called execution time.
+
+C remains blocked at S1 readiness publication/timed preparation and the real
+resumable ending-load owner. E remains blocked at shared monitor producer phase
+and allocation/rewind, Egg Prison/end-checker retirement, and native Obj1E call
+inputs/dispatch. The other fleet retains KiS2 glide/history and the protected
+LBZ2/CNZ/FBZ footprint; there is no evidence that CPZ's observed wrong writer has
+the glide flag set. The seven newly exposed lock-on special-stage art-owner
+frontiers belong to the shared special-stage presentation owner. The Knuckles
+LRZ2 FIFO exception retains a partial report (5,956 of 8,945 rows); its 2,989-row
+suffix is unknown. No new recorder field, recording, tolerance, fitted delay,
+CPU simulation or protected-bootstrap edit is introduced.
+
+
+## New strict replay identities and frozen first frontiers
+
+Measured on frozen `93a819645`: 150 new strict replays, 32 pass / 117 assertion failures / one FIFO execution error / zero skips. Report error counts are grouped diagnostics, not expanded per-row observations. Each pass is conditional segment replay. Bootstrap/frontier errors are retained, and a partial report does not certify its missing suffix.
+
+| Exact identity | Outcome | First frontier (expected / actual) | Report errors | Compared rows | JUnit seconds |
+| --- | --- | --- | ---: | ---: | ---: |
+| `com.openggf.tests.trace.kis2.completeemeralds.TestKis2CompleteEmeraldsSeg10Cpz2SegmentTraceReplay#replayMatchesTrace` | pass | none | 0 | 6410 | 1.601 |
+| `com.openggf.tests.trace.kis2.completeemeralds.TestKis2CompleteEmeraldsSeg11Cpz2SegmentTraceReplay#replayMatchesTrace` | failure | 245 `y`: 0x059C / 0x059E | 2720 | 5510 | 1.411 |
+| `com.openggf.tests.trace.kis2.completeemeralds.TestKis2CompleteEmeraldsSeg12Arz1SegmentTraceReplay#replayMatchesTrace` | failure | 2647 `x_speed`: -04F0 / 0x0000 | 2098 | 4591 | 1.330 |
+| `com.openggf.tests.trace.kis2.completeemeralds.TestKis2CompleteEmeraldsSeg13Arz2SegmentTraceReplay#replayMatchesTrace` | failure | 643 `dynamic_art.outstanding_transfer_ids`: [] / [181] | 754 | 1998 | 0.693 |
+| `com.openggf.tests.trace.kis2.completeemeralds.TestKis2CompleteEmeraldsSeg14Arz2SegmentTraceReplay#replayMatchesTrace` | failure | 0 `rings`: 7 / 0 | 2118 | 5183 | 1.408 |
+| `com.openggf.tests.trace.kis2.completeemeralds.TestKis2CompleteEmeraldsSeg15Cnz1SegmentTraceReplay#replayMatchesTrace` | failure | 3750 `y`: 0x03C1 / 0x03CB | 5300 | 8294 | 2.045 |
+| `com.openggf.tests.trace.kis2.completeemeralds.TestKis2CompleteEmeraldsSeg16Cnz2SegmentTraceReplay#replayMatchesTrace` | failure | 688 `y_speed`: 0x0000 / 0x01B2 | 11675 | 11564 | 2.673 |
+| `com.openggf.tests.trace.kis2.completeemeralds.TestKis2CompleteEmeraldsSeg17Htz1SegmentTraceReplay#replayMatchesTrace` | failure | entry 0 `player_history.y[26]`: 0x03F3 / 0x03F4 | 4732 | 8911 | 1.617 |
+| `com.openggf.tests.trace.kis2.completeemeralds.TestKis2CompleteEmeraldsSeg18Htz2SegmentTraceReplay#replayMatchesTrace` | failure | entry 0 `player_history.y[26]`: 0x06B3 / 0x06B4 | 6062 | 8373 | 1.721 |
+| `com.openggf.tests.trace.kis2.completeemeralds.TestKis2CompleteEmeraldsSeg19Mcz1SegmentTraceReplay#replayMatchesTrace` | failure | 4439 `rings`: 56 / 46 | 1851 | 7009 | 1.546 |
+| `com.openggf.tests.trace.kis2.completeemeralds.TestKis2CompleteEmeraldsSeg1Ehz1SegmentTraceReplay#replayMatchesTrace` | failure | entry 0 `player_history.y[26]`: 0x0293 / 0x0294 | 39 | 3180 | 0.862 |
+| `com.openggf.tests.trace.kis2.completeemeralds.TestKis2CompleteEmeraldsSeg20Mcz2SegmentTraceReplay#replayMatchesTrace` | failure | 2555 `y`: 0x0263 / 0x0265 | 7662 | 11014 | 2.273 |
+| `com.openggf.tests.trace.kis2.completeemeralds.TestKis2CompleteEmeraldsSeg21Ooz1SegmentTraceReplay#replayMatchesTrace` | failure | 699 `player_animation_id`: 0x0000 / 0x0020 | 5633 | 12332 | 2.127 |
+| `com.openggf.tests.trace.kis2.completeemeralds.TestKis2CompleteEmeraldsSeg22Ooz2SegmentTraceReplay#replayMatchesTrace` | failure | 1661 `g_speed`: 0x0464 / 0x01F8 | 1412 | 15141 | 2.858 |
+| `com.openggf.tests.trace.kis2.completeemeralds.TestKis2CompleteEmeraldsSeg23Mtz1SegmentTraceReplay#replayMatchesTrace` | failure | 2527 `rings`: 1 / 0 | 6672 | 11358 | 2.410 |
+| `com.openggf.tests.trace.kis2.completeemeralds.TestKis2CompleteEmeraldsSeg24Mtz2SegmentTraceReplay#replayMatchesTrace` | failure | 2766 `x`: 0x0635 / 0x063B | 5446 | 11893 | 2.523 |
+| `com.openggf.tests.trace.kis2.completeemeralds.TestKis2CompleteEmeraldsSeg25Mtz3SegmentTraceReplay#replayMatchesTrace` | failure | 4486 `dynamic_art.edge[0].mapping_frame`: 86 / 161 | 8665 | 13804 | 3.000 |
+| `com.openggf.tests.trace.kis2.completeemeralds.TestKis2CompleteEmeraldsSeg26Scz1SegmentTraceReplay#replayMatchesTrace` | failure | entry 0 `player_history.x[0]`: 0x0120 / 0x0135 | 1182 | 1644 | 0.588 |
+| `com.openggf.tests.trace.kis2.completeemeralds.TestKis2CompleteEmeraldsSeg27Scz1SegmentTraceReplay#replayMatchesTrace` | failure | entry 0 `player_history.x[0]`: 0x0120 / 0x0135 | 5876 | 7638 | 1.875 |
+| `com.openggf.tests.trace.kis2.completeemeralds.TestKis2CompleteEmeraldsSeg28Wfz1SegmentTraceReplay#replayMatchesTrace` | failure | entry 0 `player_history.x[0]`: 0x0060 / 0x0077 | 8855 | 14347 | 2.914 |
+| `com.openggf.tests.trace.kis2.completeemeralds.TestKis2CompleteEmeraldsSeg29Dez1SegmentTraceReplay#replayMatchesTrace` | failure | entry 0 `player_history.y[26]`: 0x0131 / 0x0130 | 2962 | 9331 | 1.871 |
+| `com.openggf.tests.trace.kis2.completeemeralds.TestKis2CompleteEmeraldsSeg2Ehz1SegmentTraceReplay#replayMatchesTrace` | failure | 826 `rings`: 95 / 85 | 1 | 1316 | 0.483 |
+| `com.openggf.tests.trace.kis2.completeemeralds.TestKis2CompleteEmeraldsSeg3Ehz1SegmentTraceReplay#replayMatchesTrace` | pass | none | 0 | 2525 | 0.746 |
+| `com.openggf.tests.trace.kis2.completeemeralds.TestKis2CompleteEmeraldsSeg4Ehz1SegmentTraceReplay#replayMatchesTrace` | failure | 155 `dynamic_art.frame`: 155 / 154 | 431 | 2392 | 0.639 |
+| `com.openggf.tests.trace.kis2.completeemeralds.TestKis2CompleteEmeraldsSeg5Ehz2SegmentTraceReplay#replayMatchesTrace` | failure | entry 0 `player_history.y[26]`: 0x02B3 / 0x02B4 | 38 | 3561 | 0.955 |
+| `com.openggf.tests.trace.kis2.completeemeralds.TestKis2CompleteEmeraldsSeg6Ehz2SegmentTraceReplay#replayMatchesTrace` | pass | none | 0 | 1177 | 0.470 |
+| `com.openggf.tests.trace.kis2.completeemeralds.TestKis2CompleteEmeraldsSeg7Ehz2SegmentTraceReplay#replayMatchesTrace` | pass | none | 0 | 2215 | 0.651 |
+| `com.openggf.tests.trace.kis2.completeemeralds.TestKis2CompleteEmeraldsSeg8Ehz2SegmentTraceReplay#replayMatchesTrace` | failure | entry 0 `player_history.y[0]`: 0x03E9 / 0x03F0 | 1568 | 3222 | 0.855 |
+| `com.openggf.tests.trace.kis2.completeemeralds.TestKis2CompleteEmeraldsSeg9Cpz1SegmentTraceReplay#replayMatchesTrace` | pass | none | 0 | 5574 | 1.253 |
+| `com.openggf.tests.trace.kis2.completeemeralds.TestKis2CompleteEmeraldsSs2SpecialStageTraceReplay#replayProducesFaithfulReport` | failure | 108 `dynamic_art.edge[0].owner`: ss-knuckles / ss-sonic | 16559 | 5926 | 0.525 |
+| `com.openggf.tests.trace.kis2.completeemeralds.TestKis2CompleteEmeraldsSs3SpecialStageTraceReplay#replayProducesFaithfulReport` | failure | 108 `dynamic_art.edge[0].owner`: ss-knuckles / ss-sonic | 17861 | 6664 | 1.093 |
+| `com.openggf.tests.trace.kis2.completeemeralds.TestKis2CompleteEmeraldsSs4SpecialStageTraceReplay#replayProducesFaithfulReport` | failure | 108 `dynamic_art.edge[0].owner`: ss-knuckles / ss-sonic | 20582 | 6663 | 0.431 |
+| `com.openggf.tests.trace.kis2.completeemeralds.TestKis2CompleteEmeraldsSs5SpecialStageTraceReplay#replayProducesFaithfulReport` | failure | 108 `dynamic_art.edge[0].owner`: ss-knuckles / ss-sonic | 17892 | 6210 | 0.389 |
+| `com.openggf.tests.trace.kis2.completeemeralds.TestKis2CompleteEmeraldsSs6SpecialStageTraceReplay#replayProducesFaithfulReport` | failure | 108 `dynamic_art.edge[0].owner`: ss-knuckles / ss-sonic | 22147 | 7705 | 0.428 |
+| `com.openggf.tests.trace.kis2.completeemeralds.TestKis2CompleteEmeraldsSs7SpecialStageTraceReplay#replayProducesFaithfulReport` | failure | 108 `dynamic_art.edge[0].owner`: ss-knuckles / ss-sonic | 29296 | 8104 | 0.445 |
+| `com.openggf.tests.trace.kis2.completeemeralds.TestKis2CompleteEmeraldsSsSpecialStageTraceReplay#replayProducesFaithfulReport` | failure | 108 `dynamic_art.edge[0].owner`: ss-knuckles / ss-sonic | 13588 | 5270 | 0.369 |
+| `com.openggf.tests.trace.s2.completeemeralds.TestS2CompleteEmeraldsSeg12Arz1SegmentTraceReplay#replayMatchesTrace` | failure | 0 `tails_y_sub`: 0x3E00 / 0x1E00 | 8528 | 4889 | 1.545 |
+| `com.openggf.tests.trace.s2.completeemeralds.TestS2CompleteEmeraldsSeg13Arz2SegmentTraceReplay#replayMatchesTrace` | failure | 2175 `x_speed`: 0x01DE / 0x018A | 9130 | 6409 | 1.890 |
+| `com.openggf.tests.trace.s2.completeemeralds.TestS2CompleteEmeraldsSeg14Cnz1SegmentTraceReplay#replayMatchesTrace` | failure | 4089 `x_speed`: 0x0235 / 0x01ED | 17841 | 12145 | 3.320 |
+| `com.openggf.tests.trace.s2.completeemeralds.TestS2CompleteEmeraldsSeg15Cnz2SegmentTraceReplay#replayMatchesTrace` | failure | 5719 `x_speed`: 0x01EF / 0x01A7 | 27837 | 13045 | 3.778 |
+| `com.openggf.tests.trace.s2.completeemeralds.TestS2CompleteEmeraldsSeg16Htz1SegmentTraceReplay#replayMatchesTrace` | failure | 605 `y_speed`: 0x00B1 / -004F | 18690 | 7535 | 1.938 |
+| `com.openggf.tests.trace.s2.completeemeralds.TestS2CompleteEmeraldsSeg17Htz2SegmentTraceReplay#replayMatchesTrace` | failure | 4676 `x_speed`: 0x024D / 0x0205 | 18001 | 8460 | 2.147 |
+| `com.openggf.tests.trace.s2.completeemeralds.TestS2CompleteEmeraldsSeg18Mcz1SegmentTraceReplay#replayMatchesTrace` | failure | 2294 `dynamic_art.edge[1].present`: true / false | 15262 | 6213 | 1.641 |
+| `com.openggf.tests.trace.s2.completeemeralds.TestS2CompleteEmeraldsSeg19Mcz2SegmentTraceReplay#replayMatchesTrace` | failure | 416 `dynamic_art.edge[0].mapping_frame`: 1 / 200 | 26199 | 8610 | 2.228 |
+| `com.openggf.tests.trace.s2.completeemeralds.TestS2CompleteEmeraldsSeg20Ooz1SegmentTraceReplay#replayMatchesTrace` | failure | 229 `tails_y`: 0x0746 / 0x0747 | 23935 | 11557 | 2.546 |
+| `com.openggf.tests.trace.s2.completeemeralds.TestS2CompleteEmeraldsSeg21Ooz2SegmentTraceReplay#replayMatchesTrace` | failure | 2882 `x`: 0x1445 / 0x1448 | 9846 | 8591 | 2.012 |
+| `com.openggf.tests.trace.s2.completeemeralds.TestS2CompleteEmeraldsSeg22Mtz1SegmentTraceReplay#replayMatchesTrace` | failure | 2106 `x_speed`: 0x01AF / 0x01F7 | 24019 | 7590 | 2.074 |
+| `com.openggf.tests.trace.s2.completeemeralds.TestS2CompleteEmeraldsSeg23Mtz2SegmentTraceReplay#replayMatchesTrace` | failure | 759 `tails_g_speed`: 0x0000 / 0x000C | 21569 | 6542 | 1.843 |
+| `com.openggf.tests.trace.s2.completeemeralds.TestS2CompleteEmeraldsSeg24Mtz3SegmentTraceReplay#replayMatchesTrace` | failure | 336 `player_animation_id`: 0x0005 / 0x000C | 31987 | 11341 | 3.087 |
+| `com.openggf.tests.trace.s2.completeemeralds.TestS2CompleteEmeraldsSeg25Scz1SegmentTraceReplay#replayMatchesTrace` | failure | entry 0 `player_history.x[0]`: 0x0120 / 0x0135 | 5635 | 4707 | 1.252 |
+| `com.openggf.tests.trace.s2.completeemeralds.TestS2CompleteEmeraldsSeg26Scz1SegmentTraceReplay#replayMatchesTrace` | failure | entry 0 `player_history.x[0]`: 0x0120 / 0x0135 | 8785 | 7611 | 1.883 |
+| `com.openggf.tests.trace.s2.completeemeralds.TestS2CompleteEmeraldsSeg27Wfz1SegmentTraceReplay#replayMatchesTrace` | failure | entry 0 `player_history.x[0]`: 0x0060 / 0x0077 | 5154 | 9667 | 2.032 |
+| `com.openggf.tests.trace.s2.completeemeralds.TestS2CompleteEmeraldsSeg28Dez1SegmentTraceReplay#replayMatchesTrace` | failure | 1748 `y_speed`: 0x0588 / -0588 | 2315 | 5578 | 1.204 |
+| `com.openggf.tests.trace.s2.completeemeralds.TestS2CompleteEmeraldsSeg3Ehz1SegmentTraceReplay#replayMatchesTrace` | pass | none | 0 | 3960 | 1.131 |
+| `com.openggf.tests.trace.s2.completeemeralds.TestS2CompleteEmeraldsSeg4Ehz1SegmentTraceReplay#replayMatchesTrace` | failure | 1 `rings`: 1 / 2 | 1 | 1288 | 0.483 |
+| `com.openggf.tests.trace.s2.completeemeralds.TestS2CompleteEmeraldsSeg5Ehz2SegmentTraceReplay#replayMatchesTrace` | pass | none | 0 | 6046 | 1.659 |
+| `com.openggf.tests.trace.s2.completeemeralds.TestS2CompleteEmeraldsSeg7Ehz2SegmentTraceReplay#replayMatchesTrace` | failure | entry 0 `player_history.y[0]`: 0x03E9 / 0x03F0 | 364 | 3997 | 1.142 |
+| `com.openggf.tests.trace.s3k.TestS3kDdzCompleteRunTraceReplay#replayMatchesTrace` | failure | 0 `g_speed`: 0x0800 / 0x0000 | 33 | 719 | 0.723 |
+| `com.openggf.tests.trace.s3k.TestS3kDezCompleteRunTraceReplay#replayMatchesTrace` | failure | 0 `camera_y`: 0x0010 / 0x0020 | 738 | 6040 | 2.667 |
+| `com.openggf.tests.trace.s3k.TestS3kHpz22CompleteRunTraceReplay#replayMatchesTrace` | failure | 0 `rings`: 144 / 0 | 3545 | 15960 | 5.559 |
+| `com.openggf.tests.trace.s3k.TestS3kHpzCompleteRunTraceReplay#replayMatchesTrace` | failure | 158 `queue.s3k_kos_direct.busy`: true / false | 3342 | 18462 | 6.384 |
+| `com.openggf.tests.trace.s3k.TestS3kLrzCompleteRunTraceReplay#replayMatchesTrace` | failure | 34 `queue.s3k_kos_direct.busy`: true / false | 8022 | 38637 | 11.436 |
+| `com.openggf.tests.trace.s3k.TestS3kSszCompleteRunTraceReplay#replayMatchesTrace` | failure | 0 `camera_x`: 0x0040 / 0x0000 | 8143 | 44083 | 13.297 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperAiz2SegmentTraceReplay#replayMatchesTrace` | failure | 127 `x`: 0x1CE1 / 0x1CD9 | 649 | 5019 | 1.877 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperAiz3SegmentTraceReplay#replayMatchesTrace` | failure | 39 `x`: 0x0275 / 0x0271 | 1222 | 9137 | 2.986 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperAiz4SegmentTraceReplay#replayMatchesTrace` | failure | 47 `rings`: 108 / 109 | 375 | 6262 | 2.123 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperAiz5SegmentTraceReplay#replayMatchesTrace` | failure | 1349 `queue.s3k_kos_module.queued_fingerprints`:  / 5e515d8e2d56da8c7f1de79839441f3ef10611aa7770adcd8cd66161dc08f5e1 | 235 | 3886 | 1.580 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperAizSegmentTraceReplay#replayMatchesTrace` | pass | none | 0 | 1653 | 0.763 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperCnz2SegmentTraceReplay#replayMatchesTrace` | failure | 1600 `g_speed`: 0x00C0 / -00C0 | 692 | 11125 | 2.845 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperCnzSegmentTraceReplay#replayMatchesTrace` | failure | 0 `x_sub`: 0x0000 / 0x0C00 | 779 | 4362 | 1.365 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperDez232SegmentTraceReplay#replayMatchesTrace` | failure | 0 `queue.s3k_kos_module.queued_fingerprints`: ff6c936ffb5dbccf76f2ed01c6135150ff6fb58d3769410d6061d913e414711b /  | 4 | 147 | 0.409 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperDez233SegmentTraceReplay#replayMatchesTrace` | failure | 0 `queue.s3k_kos_module.queued_fingerprints`: ff6c936ffb5dbccf76f2ed01c6135150ff6fb58d3769410d6061d913e414711b /  | 4 | 171 | 0.426 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperDez234SegmentTraceReplay#replayMatchesTrace` | failure | 0 `queue.s3k_kos_module.queued_fingerprints`: ff6c936ffb5dbccf76f2ed01c6135150ff6fb58d3769410d6061d913e414711b /  | 4 | 194 | 0.448 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperDez235SegmentTraceReplay#replayMatchesTrace` | failure | 0 `queue.s3k_kos_module.queued_fingerprints`: ff6c936ffb5dbccf76f2ed01c6135150ff6fb58d3769410d6061d913e414711b /  | 4 | 186 | 0.423 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperDez236SegmentTraceReplay#replayMatchesTrace` | failure | 0 `queue.s3k_kos_module.queued_fingerprints`: ff6c936ffb5dbccf76f2ed01c6135150ff6fb58d3769410d6061d913e414711b /  | 4 | 209 | 0.423 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperDez237SegmentTraceReplay#replayMatchesTrace` | failure | 0 `queue.s3k_kos_module.queued_fingerprints`: ff6c936ffb5dbccf76f2ed01c6135150ff6fb58d3769410d6061d913e414711b /  | 4 | 418 | 0.480 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperDez23SegmentTraceReplay#replayMatchesTrace` | failure | 0 `queue.s3k_kos_module.queued_fingerprints`: ff6c936ffb5dbccf76f2ed01c6135150ff6fb58d3769410d6061d913e414711b /  | 4 | 988 | 0.657 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperFbz2SegmentTraceReplay#replayMatchesTrace` | failure | 152 `rings`: 189 / 190 | 34 | 2024 | 0.973 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperFbz3SegmentTraceReplay#replayMatchesTrace` | failure | 6593 `y_speed`: -0378 / -0478 | 455 | 13990 | 4.338 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperFbz4SegmentTraceReplay#replayMatchesTrace` | failure | 4348 `player_animation_id`: 0x0000 / 0x001F | 140 | 8188 | 3.058 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperFbzSegmentTraceReplay#replayMatchesTrace` | failure | 1610 `rings`: 31 / 32 | 99 | 11489 | 3.376 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperGumball2BonusTraceReplay#replayMatchesTrace` | pass | none | 0 | 613 | 0.599 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperGumball3BonusTraceReplay#replayMatchesTrace` | pass | none | 0 | 761 | 0.614 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperGumballBonusTraceReplay#replayMatchesTrace` | pass | none | 0 | 508 | 0.533 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperHcz2SegmentTraceReplay#replayMatchesTrace` | failure | 51 `rings`: 215 / 216 | 177 | 5142 | 1.851 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperHcz3SegmentTraceReplay#replayMatchesTrace` | failure | 592 `x`: 0x0000 / 0x359E | 35 | 584 | 0.577 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperHcz4SegmentTraceReplay#replayMatchesTrace` | failure | 2176 `x_speed`: 0x044C / 0x0000 | 454 | 11055 | 3.288 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperHcz5SegmentTraceReplay#replayMatchesTrace` | failure | 789 `player_mapping_frame`: 0x00A1 / 0x009F | 61 | 5476 | 1.998 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperHcz6SegmentTraceReplay#replayMatchesTrace` | failure | 1110 `player_animation_id`: 0x001B / 0x0002 | 2 | 1974 | 1.017 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperHcz7SegmentTraceReplay#replayMatchesTrace` | failure | 3762 `player_animation_id`: 0x0000 / 0x0008 | 399 | 9263 | 3.042 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperHczSegmentTraceReplay#replayMatchesTrace` | failure | 0 `player_mapping_frame`: 0x00CB / 0x00CA | 557 | 4096 | 1.388 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperHpz22SegmentTraceReplay#replayMatchesTrace` | failure | 0 `x_sub`: 0x0000 / 0x0C00 | 282 | 875 | 0.591 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperHpzSegmentTraceReplay#replayMatchesTrace` | failure | 575 `status_byte`: 0x0002 / 0x0003 | 371 | 21439 | 5.152 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperIczSegmentTraceReplay#replayMatchesTrace` | failure | 1693 `y_speed`: -003C / 0x0000 | 1267 | 20008 | 5.750 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperLbzSegmentTraceReplay#replayMatchesTrace` | failure | 0 `y`: 0x0650 / 0x064C | 3035 | 24832 | 5.545 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperLrz2SegmentTraceReplay#replayMatchesTrace` | error | 34 `queue.s3k_kos_direct.busy`: true / false; execution abort: KosM FIFO full; suffix unobserved | 803 | 5956 | 2.318 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperLrz3SegmentTraceReplay#replayMatchesTrace` | failure | 34 `queue.s3k_kos_direct.busy`: true / false | 631 | 6891 | 2.602 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperLrzSegmentTraceReplay#replayMatchesTrace` | failure | 34 `queue.s3k_kos_direct.busy`: true / false | 280 | 3199 | 1.239 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperMgz2SegmentTraceReplay#replayMatchesTrace` | failure | 223 `rings`: 225 / 224 | 3103 | 30981 | 7.483 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperMgzSegmentTraceReplay#replayMatchesTrace` | failure | 1131 `rings`: 49 / 50 | 1365 | 8832 | 2.506 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperMhz2SegmentTraceReplay#replayMatchesTrace` | failure | 1120 `y`: 0x09F1 / 0x09F0 | 901 | 6345 | 1.990 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperMhz3SegmentTraceReplay#replayMatchesTrace` | failure | 1483 `y_speed`: -0096 / 0x0096 | 568 | 10691 | 3.182 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperMhz4SegmentTraceReplay#replayMatchesTrace` | failure | 1795 `y_speed`: 0x0450 / -0450 | 142 | 2685 | 1.164 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperMhz5SegmentTraceReplay#replayMatchesTrace` | failure | 256 `rings`: 135 / 136 | 17 | 1537 | 0.840 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperMhz6SegmentTraceReplay#replayMatchesTrace` | failure | 168 `y_speed`: 0x0000 / -0400 | 377 | 5181 | 1.787 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperMhzSegmentTraceReplay#replayMatchesTrace` | failure | 0 `y_speed`: 0x0038 / 0x0000 | 25 | 533 | 0.507 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperPachinko2BonusTraceReplay#replayMatchesTrace` | pass | none | 0 | 127 | 0.384 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperPachinko3BonusTraceReplay#replayMatchesTrace` | failure | 1451 `rings`: 66 / 65 | 11 | 2973 | 1.348 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperPachinko4BonusTraceReplay#replayMatchesTrace` | failure | 1567 `rings`: 70 / 71 | 12 | 3177 | 1.388 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperPachinko5BonusTraceReplay#replayMatchesTrace` | pass | none | 0 | 2730 | 1.265 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperPachinkoBonusTraceReplay#replayMatchesTrace` | failure | 151 `rings`: 39 / 38 | 13 | 2589 | 1.167 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperSlots2BonusTraceReplay#replayMatchesTrace` | failure | 2007 `player_mapping_frame`: 0x0096 / 0x009A | 2 | 2062 | 0.834 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperSlotsBonusTraceReplay#replayMatchesTrace` | failure | 232 `rings`: 156 / 157 | 405 | 1919 | 0.775 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperSoz2SegmentTraceReplay#replayMatchesTrace` | failure | 99 `rings`: 252 / 251 | 3388 | 34010 | 9.621 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperSozSegmentTraceReplay#replayMatchesTrace` | failure | 3216 `x`: 0x0000 / 0x1A33 | 36 | 3208 | 1.172 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperSs10SpecialStageTraceReplay#replayProducesFaithfulReport` | pass | none | 0 | 4624 | 0.416 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperSs11SpecialStageTraceReplay#replayProducesFaithfulReport` | pass | none | 0 | 5200 | 0.417 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperSs12SpecialStageTraceReplay#replayProducesFaithfulReport` | pass | none | 0 | 5020 | 0.402 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperSs13SpecialStageTraceReplay#replayProducesFaithfulReport` | pass | none | 0 | 8403 | 0.471 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperSs14SpecialStageTraceReplay#replayProducesFaithfulReport` | pass | none | 0 | 4463 | 0.407 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperSs2SpecialStageTraceReplay#replayProducesFaithfulReport` | pass | none | 0 | 5415 | 0.419 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperSs3SpecialStageTraceReplay#replayProducesFaithfulReport` | pass | none | 0 | 5566 | 0.430 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperSs4SpecialStageTraceReplay#replayProducesFaithfulReport` | pass | none | 0 | 4981 | 0.421 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperSs5SpecialStageTraceReplay#replayProducesFaithfulReport` | pass | none | 0 | 4494 | 0.400 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperSs6SpecialStageTraceReplay#replayProducesFaithfulReport` | pass | none | 0 | 5887 | 0.414 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperSs7SpecialStageTraceReplay#replayProducesFaithfulReport` | pass | none | 0 | 4788 | 0.402 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperSs8SpecialStageTraceReplay#replayProducesFaithfulReport` | pass | none | 0 | 4948 | 0.405 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperSs9SpecialStageTraceReplay#replayProducesFaithfulReport` | pass | none | 0 | 3834 | 0.388 |
+| `com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperSsSpecialStageTraceReplay#replayProducesFaithfulReport` | pass | none | 0 | 4344 | 0.392 |
+| `com.openggf.tests.trace.s3k.megarun.TestS3kMegaAiz2SegmentTraceReplay#replayMatchesTrace` | failure | 92 `rings`: 70 / 69 | 375 | 2021 | 0.709 |
+| `com.openggf.tests.trace.s3k.megarun.TestS3kMegaAiz3SegmentTraceReplay#replayMatchesTrace` | failure | 97 `rings`: 85 / 86 | 516 | 7446 | 2.113 |
+| `com.openggf.tests.trace.s3k.megarun.TestS3kMegaAiz4SegmentTraceReplay#replayMatchesTrace` | failure | 96 `rings`: 35 / 34 | 213 | 3115 | 1.054 |
+| `com.openggf.tests.trace.s3k.megarun.TestS3kMegaAiz5SegmentTraceReplay#replayMatchesTrace` | failure | 729 `rings`: 80 / 0 | 212 | 3502 | 1.246 |
+| `com.openggf.tests.trace.s3k.megarun.TestS3kMegaAizSegmentTraceReplay#replayMatchesTrace` | failure | 4568 `x`: 0x0000 / 0x2775 | 35 | 4560 | 1.364 |
+| `com.openggf.tests.trace.s3k.megarun.TestS3kMegaGumball2BonusTraceReplay#replayMatchesTrace` | pass | none | 0 | 1475 | 0.620 |
+| `com.openggf.tests.trace.s3k.megarun.TestS3kMegaHcz2SegmentTraceReplay#replayMatchesTrace` | failure | 91 `rings`: 44 / 43 | 1038 | 11909 | 3.274 |
+| `com.openggf.tests.trace.s3k.megarun.TestS3kMegaHcz3SegmentTraceReplay#replayMatchesTrace` | failure | 3834 `x`: 0x0000 / 0x357B | 39 | 3830 | 1.305 |
+| `com.openggf.tests.trace.s3k.megarun.TestS3kMegaHcz4SegmentTraceReplay#replayMatchesTrace` | failure | 1110 `player_animation_id`: 0x001B / 0x0002 | 2 | 2097 | 0.772 |
+| `com.openggf.tests.trace.s3k.megarun.TestS3kMegaHcz5SegmentTraceReplay#replayMatchesTrace` | failure | 3320 `x`: 0x0000 / 0x42C2 | 39 | 3316 | 1.028 |
+| `com.openggf.tests.trace.s3k.megarun.TestS3kMegaHcz6SegmentTraceReplay#replayMatchesTrace` | failure | 2109 `player_animation_id`: 0x0021 / 0x0020 | 303 | 8294 | 2.600 |
+| `com.openggf.tests.trace.s3k.megarun.TestS3kMegaHczSegmentTraceReplay#replayMatchesTrace` | failure | 0 `player_mapping_frame`: 0x00CB / 0x00CA | 36 | 3057 | 0.848 |
+| `com.openggf.tests.trace.s3k.megarun.TestS3kMegaMgz2SegmentTraceReplay#replayMatchesTrace` | failure | 1854 `y`: 0x026E / 0x0265 | 2 | 2076 | 0.620 |
+| `com.openggf.tests.trace.s3k.megarun.TestS3kMegaMgz3SegmentTraceReplay#replayMatchesTrace` | failure | 267 `rings`: 151 / 150 | 919 | 8515 | 2.056 |
+| `com.openggf.tests.trace.s3k.megarun.TestS3kMegaMgzSegmentTraceReplay#replayMatchesTrace` | failure | 1516 `g_speed`: 0x0000 / 0x0398 | 529 | 8584 | 2.029 |
+| `com.openggf.tests.trace.s3k.megarun.TestS3kMegaSlots2BonusTraceReplay#replayMatchesTrace` | pass | none | 0 | 1096 | 0.359 |
+| `com.openggf.tests.trace.s3k.megarun.TestS3kMegaSlots3BonusTraceReplay#replayMatchesTrace` | failure | 248 `rings`: 80 / 81 | 867 | 5225 | 1.272 |
+| `com.openggf.tests.trace.s3k.megarun.TestS3kMegaSlots4BonusTraceReplay#replayMatchesTrace` | failure | 232 `rings`: 124 / 123 | 295 | 1455 | 0.431 |
+| `com.openggf.tests.trace.s3k.megarun.TestS3kMegaSlots5BonusTraceReplay#replayMatchesTrace` | pass | none | 0 | 1637 | 0.481 |
+| `com.openggf.tests.trace.s3k.megarun.TestS3kMegaSs2SpecialStageTraceReplay#replayProducesFaithfulReport` | pass | none | 0 | 7059 | 0.188 |
+| `com.openggf.tests.trace.s3k.megarun.TestS3kMegaSs3SpecialStageTraceReplay#replayProducesFaithfulReport` | pass | none | 0 | 6402 | 0.189 |
+
+The root additionally adds two recorded-team bootstrap controls (both pass), one destination-ring resolver control, and the S1 lane adds three held-tail controls; the Crawl lane adds four object controls. These are separated from the 150 replay frontiers above. Existing report-backed known-red expectations are not rewritten.
