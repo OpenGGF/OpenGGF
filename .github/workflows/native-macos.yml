@@ -1,0 +1,45 @@
+name: macOS native build
+
+# Exercise the release recipe on the actual free 7 GiB Apple Silicon runner.
+# This is packaging qualification, not a replacement for release test gates.
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/native-macos.yml'
+      - 'tools/native-image/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  macos-native:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check native build tooling
+        run: python -m unittest discover -s tools/native-image -p 'test_*.py'
+      - name: Set up pinned GraalVM Community
+        run: python tools/native-image/toolchain.py --output "$RUNNER_TEMP/openggf-graalvm"
+      - name: Prepare native image
+        run: mvn -Dmse=off package -Pnative -Dmaven.test.skip=true -Dnative.python=python -Dnative.stage=prepare -Dnative.macos.package.skip=true -B
+      - name: Report available runner memory
+        run: |
+          sysctl hw.memsize vm.swapusage
+          vm_stat
+      - name: Build native image within the standard runner budget
+        timeout-minutes: 20
+        run: /usr/bin/time -l python tools/native-image/build.py --stage compile
+      - name: Package and check native member retention and bundled code mods
+        shell: bash
+        run: |
+          bash src/packaging/assemble-macos-app.sh target/OpenGGF target
+          mkdir -p "$RUNNER_TEMP/native-mod-check"
+          cd "$RUNNER_TEMP/native-mod-check"
+          "$GITHUB_WORKSPACE/target/OpenGGF.app/Contents/MacOS/OpenGGF.bin" --audit
+          "$GITHUB_WORKSPACE/target/OpenGGF.app/Contents/MacOS/OpenGGF.bin" --check-engine time-attack
+          "$GITHUB_WORKSPACE/target/OpenGGF.app/Contents/MacOS/OpenGGF.bin" --check-master-discovery multi.openggf.com

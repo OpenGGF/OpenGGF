@@ -8,6 +8,8 @@ import json
 from unittest.mock import patch
 import os
 from toolchain import ASSETS
+from build import jdk_retention, JDK_PACKAGES
+import zipfile
 
 class NativeBuildTests(unittest.TestCase):
     def test_platform_recipes_and_heap_override(self):
@@ -17,19 +19,35 @@ class NativeBuildTests(unittest.TestCase):
                     options = compiler_options()
                 self.assertEqual(system == 'Darwin', '-Os' in options)
                 self.assertFalse(any(option.startswith('-O') and option != '-Os' for option in options))
-                self.assertIn('-J-Xmx5g' if system == 'Darwin' else '-J-Xmx8g', options)
+                self.assertIn('-J-Xmx4608m' if system == 'Darwin' else '-J-Xmx8g', options)
                 self.assertIn('-J-XX:+UseG1GC', options)
                 self.assertIn('-J-XX:ActiveProcessorCount=3', options)
-                self.assertIn('--parallelism=2', options)
+                self.assertIn('--parallelism=1' if system == 'Darwin' else '--parallelism=2', options)
+                self.assertEqual(system == 'Darwin', '-J-XX:+UseCompactObjectHeaders' in options)
                 with patch.dict(os.environ, {'OPENGGF_NATIVE_IMAGE_HEAP': '10g'}, clear=True):
                     overridden = compiler_options()
                 self.assertEqual([option for option in options if not option.startswith('-J-Xmx')],
                                  [option for option in overridden if not option.startswith('-J-Xmx')])
                 self.assertIn('-J-Xmx10g', overridden)
 
-    def test_compile_stage_reuses_the_prepared_recipe(self):
+    def test_jdk_retention_preserves_core_and_exact_additional_types(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
+            (root / 'jmods').mkdir()
+            with zipfile.ZipFile(root / 'jmods/java.base.jmod', 'w') as module:
+                for name in ('java/lang/Object', 'java/lang/String', 'java/time/Duration',
+                             'java/time/Instant', 'java/time/Duration$Helper'):
+                    module.writestr('classes/' + name + '.class', b'')
+            modules, exclusions = jdk_retention(root, JDK_PACKAGES | {'java.time'},
+                                                {'java.time.Duration', 'java.time.Duration$Helper'})
+            self.assertEqual({'java.base'}, modules)
+            self.assertEqual({'java.time.Instant'}, exclusions)
+            with self.assertRaisesRegex(ValueError, 'absent.*java.time.Missing'):
+                jdk_retention(root, JDK_PACKAGES | {'java.time'}, {'java.time.Missing'})
+
+    def test_compile_stage_reuses_the_prepared_recipe(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp).resolve()
             graal, output = root / 'jdk', root / 'target'
             graal.mkdir()
             (graal / 'release').write_text(f'IMPLEMENTOR="GraalVM Community"\nGRAALVM_VERSION="{VERSION.split("+")[0]}"\n')

@@ -45,6 +45,7 @@ public final class NativeModMemberContract {
     private final Set<String> retained = new TreeSet<>();
     private final Set<String> contract = new TreeSet<>();
     private final Set<String> jdkPackages = new TreeSet<>();
+    private final Set<String> jdkClasses = new TreeSet<>();
     private final Set<String> dependencyPaths = new TreeSet<>();
     private final Set<String> inspectedExternalTypes = new HashSet<>();
     private boolean auditJdkStaticFields;
@@ -130,6 +131,7 @@ public final class NativeModMemberContract {
         }
         Files.write(output.resolve("members.tsv"), contract, StandardCharsets.UTF_8);
         Files.write(output.resolve("jdk-preserve-packages.txt"), jdkPackages, StandardCharsets.UTF_8);
+        Files.write(output.resolve("jdk-preserve-classes.txt"), jdkClasses, StandardCharsets.UTF_8);
         Files.write(output.resolve("dependency-preserve-paths.txt"), dependencyPaths, StandardCharsets.UTF_8);
         System.out.println("PASS generated contract: api-types=" + apiTypes + "; retained-types="
                 + retained.size() + "; member-entries=" + contract.size() + "; mod-jars=" + jars.size());
@@ -176,6 +178,7 @@ public final class NativeModMemberContract {
             contract.add("C\t" + declaring.getName());
             contract.add("F\t" + declaring.getName() + "\t" + name + "\t" + descriptor);
             jdkPackages.add(declaring.getPackageName());
+            jdkClasses.add(declaring.getName());
         } catch (ReflectiveOperationException failure) {
             throw new IllegalStateException("MISSING input JDK static field: " + owner + "." + name + descriptor, failure);
         }
@@ -196,6 +199,7 @@ public final class NativeModMemberContract {
             contract.add("C\t" + declaring.getName());
             contract.add("M\t" + declaring.getName() + "\t" + name + "\t" + descriptor);
             jdkPackages.add(declaring.getPackageName());
+            jdkClasses.add(declaring.getName());
         } catch (ReflectiveOperationException failure) {
             throw new IllegalStateException("MISSING input JDK method: " + owner + "." + name + descriptor, failure);
         }
@@ -247,6 +251,14 @@ public final class NativeModMemberContract {
 
     private void retain(String name) {
         if (!engine(name)) {
+            // Preserve types in descriptors, class literals and symbolic owners too,
+            // not just the declaring classes of invoked methods or static fields.
+            if (auditJdkMethods && name != null && (name.startsWith("java/") || name.startsWith("javax/"))) {
+                String type = name.replace('/', '.');
+                jdkClasses.add(type);
+                jdkPackages.add(type.substring(0, type.lastIndexOf('.')));
+                contract.add("C\t" + type);
+            }
             retainDependency(name);
             return;
         }
@@ -332,7 +344,7 @@ public final class NativeModMemberContract {
     private void reference(String owner, String name, String desc, boolean field) {
         descriptor(desc);
         if (!engine(owner)) {
-            retainDependency(owner);
+            retain(owner);
             if (!field) jdkMethod(owner, name, desc);
             return;
         }
