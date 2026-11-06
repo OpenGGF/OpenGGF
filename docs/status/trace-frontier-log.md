@@ -124676,6 +124676,15 @@ unchanged. The sole remaining axis is terminal ending art, 4,704 native versus
 The matched 45-class S1 trace selection retains all 71 identities: 70 pass
 and the chain remains red on its one ending axis. All other outcomes are
 exact. Eight of 92 reports, including cold-start queue controls, improve to
-zero errors; no report is lost or added. Ordinary and change-based smoke
-gates must complete before this major gain is delivered.
+zero errors; no report is lost or added. Focused ordinary guards pass all
+400 cases. Change-based smoke at `394ebb014` completes 4,469 classes, all
+91 ordinary batches and 836 passing guards: 37,839 tests, 29 inherited failures,
+zero errors and 49 allowed skips. Its raw verdict remains FAILED. Fresh matched
+pre-task controls attribute all 29 failure occurrences across 456 cases; 25
+assertions match literally and four differ only in set order/object identities.
+Three Islands' exact 50-class/two-fork batch is repeated in the prepared checkout
+to preserve its machine-local ROM catalogue; no ROM is linked or changed.
+No existing identity is newly red, no frontier moves earlier and no new clean-row
+error remains. The gate passes for this four-axis major gain; ending remains
+separate. Recorder publication and the pin update are user-approved after gate.
 [Recorder semantics, controls and publication evidence](../architecture/audits/2026-11-06-s1-chain-plc-timing.md).

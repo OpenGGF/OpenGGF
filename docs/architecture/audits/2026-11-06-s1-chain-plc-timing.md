@@ -88,7 +88,41 @@ alphabetical order and all six explicit ROM paths from the fleet brief:
 - `-Ptrace-replay -Dtest=<45 explicit S1 trace classes> test`
 - Ordinary queue, timing, source, gitlink, schema and compression guards.
 
-The change-based smoke gate, final integration and post-integration checks
-are pending at this local implementation checkpoint. No delivery is claimed.
+The ordinary focused guard selection has 400 passing cases versus 345
+existing baseline cases. The change-based smoke command is:
+
+```bash
+python3 tools/testing/run_categories.py --base 34b8830b1856395c4ea7d3f9da02bbee9c3355c7 --workers 2 --headless-gl surfaceless-egl --run --keep-diagnostics
+```
+
+At candidate `394ebb014`, all 91 ordinary batches and the guard batch complete:
+37,839 tests, 29 failures, zero errors and 49 allowed skips, with no unexplained
+skip or missing ROM. The raw verdict is **FAILED**, reflecting those inherited
+ordinary failures; all 836 guard cases pass. This is a bounded smoke selection,
+not a full-suite pass.
+
+Fresh pre-task controls cover 456 testcase occurrences. Every one of the
+29 candidate failure occurrences matches an existing baseline failure; no
+baseline failure is lost. Twenty-five assertion messages are literal matches.
+Three differ only in Java Set display order and one only in Java object identity
+addresses. The original assertions and their complete messages are retained;
+no comparison or test semantics change.
+
+Three Islands requires the same machine-local ROM catalogue, which scans the
+working directory in addition to the test ROM properties. A second worktree
+without the prepared checkout's existing ROM links produces six failures rather
+than eight. Replaying its exact 50-class/two-fork batch in the prepared checkout,
+with `src` and `examples` temporarily restored to the exact pre-task source,
+reproduces all eight original failures across 367 cases. No ROM is linked,
+copied, moved or edited for this control. The candidate's original file hashes
+and clean status are restored afterward. Other focused baseline controls cover
+the remaining failure identities. No newly red class, earlier frontier or added
+error on a clean compared row remains; the delivery gate therefore passes.
+
+The candidate was rebased onto develop `f2ad93c143` before validation. Its
+upstream change concerns S3K beta-notice wording; no S1 conflict or behavior
+change was introduced. A final fetch finds the same destination. The user
+approved publication of recorder `d54cc514` and its OpenGGF pin after this gate.
+Final integration and bounded post-integration checks remain delivery steps.
 Detailed commands, raw observations, complete assertions, input hashes and
-queue/execution receipts are retained in the task's external evidence directory.
+queue/execution receipts are retained under `/tmp/trace-s1-chain-20261106/`.
