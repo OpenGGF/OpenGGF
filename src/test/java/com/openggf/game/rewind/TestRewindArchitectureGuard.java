@@ -1,6 +1,10 @@
 package com.openggf.game.rewind;
 
 import org.junit.jupiter.api.Test;
+import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.contact.SolidContactState;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -15,6 +19,8 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestRewindArchitectureGuard {
     private static final Path MAIN_ROOT = Path.of("src/main/java");
@@ -393,6 +399,20 @@ class TestRewindArchitectureGuard {
     }
 
     @Test
+    void objectOverrideClassificationUsesActorTypesIncludingNestedActors() {
+        assertTrue(containsObjectType(AbstractObjectInstance.class));
+        assertTrue(containsObjectType(ActorContainer.class));
+        assertFalse(containsObjectType(SolidContactState.class));
+        assertFalse(containsObjectType(ObjectManager.class));
+    }
+
+    private static final class ActorContainer {
+        private abstract static class Actor extends AbstractObjectInstance {
+            Actor() { super(null, "rewind-guard-actor"); }
+        }
+    }
+
+    @Test
     void objectRewindAnnotationsDoNotGrowWithoutExplicitBaselineTriage() throws IOException {
         Map<String, Integer> actual = objectRewindAnnotationCounts();
 
@@ -458,12 +478,43 @@ class TestRewindArchitectureGuard {
         Map<String, Integer> counts = new LinkedHashMap<>();
         for (Path source : objectSources()) {
             String text = Files.readString(source);
+            // Package placement also includes state owners. Only actors (including
+            // actors nested in a support class) incur per-object override debt.
+            if (!containsObjectType(source)) {
+                continue;
+            }
             addCount(counts, normalize(source) + "#captureRewindState",
                     CAPTURE_OVERRIDE.matcher(text).results().count());
             addCount(counts, normalize(source) + "#restoreRewindState",
                     RESTORE_OVERRIDE.matcher(text).results().count());
         }
         return counts;
+    }
+
+    private static boolean containsObjectType(Path source) throws IOException {
+        String name = com.openggf.tests.ObjectGuardSourceScanner.className(MAIN_ROOT, source);
+        if (name.endsWith("package-info")) {
+            return false;
+        }
+        try {
+            // Inspect compiled types without running object/ROM initializers.
+            return containsObjectType(Class.forName(name, false,
+                    TestRewindArchitectureGuard.class.getClassLoader()));
+        } catch (ClassNotFoundException error) {
+            throw new IOException("Missing compiled source in object override scan: " + source, error);
+        }
+    }
+
+    private static boolean containsObjectType(Class<?> type) {
+        if (ObjectInstance.class.isAssignableFrom(type)) {
+            return true;
+        }
+        for (Class<?> nested : type.getDeclaredClasses()) {
+            if (containsObjectType(nested)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static Map<String, Integer> objectRewindAnnotationCounts() throws IOException {

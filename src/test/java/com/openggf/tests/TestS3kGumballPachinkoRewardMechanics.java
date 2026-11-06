@@ -412,7 +412,7 @@ class TestS3kGumballPachinkoRewardMechanics {
             assertEquals(ballSlot, recreated.getSlotIndex());
             var recreatedParent = assertInstanceOf(AbstractObjectInstance.class, field(recreated, "parentRef"));
             assertEquals(parentSlot, recreatedParent.getSlotIndex());
-            var rawRoster = (java.util.List<?>) field(objects, "dynamicObjects");
+            var rawRoster = (java.util.List<?>) field(field(objects, "population"), "dynamic");
             assertTrue(rawRoster.stream().anyMatch(actor -> actor == recreated));
             assertTrue(rawRoster.stream().anyMatch(actor -> actor == recreatedParent));
             assertFalse(rawRoster.stream().anyMatch(actor -> actor == item));

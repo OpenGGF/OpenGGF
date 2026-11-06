@@ -513,7 +513,7 @@ final class ObjectRewindLifecycle {
         callbacks.registerOwnerIfAbsent(object, captured.ownerModId());
         if (captured.objectId() != null) {
             population.restoreCapturedIdentity(object, captured.objectId());
-            manager.addDynamicObjectAtSlot(object, captured.slotIndex());
+            ObjectLifetimeOps.addDynamicAtReservedSlot(manager, object, captured.slotIndex());
             population.restoreCapturedOrder();
             manager.bindRestoredCollisionObject(captured.objectId(), object);
         } else {
