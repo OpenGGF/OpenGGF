@@ -184,10 +184,10 @@ public class CrawlBadnikInstance extends AbstractBadnikInstance implements Touch
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
 
         // ROM: each routine handles its own state transitions; proximity check
-        // (loc_3D416) is called AFTER movement in the walking routine only.
+        // (loc_3D416) follows walking movement and the nonnegative pause timer.
         switch (state) {
             case WALKING -> updateWalking(player);
-            case PAUSING -> updatePausing();
+            case PAUSING -> updatePausing(player);
             case ATTACKING -> updateAttacking(player);
         }
 
@@ -232,6 +232,10 @@ public class CrawlBadnikInstance extends AbstractBadnikInstance implements Touch
         // absolute horizontal distance, then tests d2/d3 (Crawl_pos - char_pos).
         // ROM box: addi.w #$40,d; cmpi.w #$80,d; bhs rts  -> keep when -$40 <= d < $40.
         // ROM does NOT check rolling here; the bounce check is in loc_3D2D4.
+        enterAttackIfNear(player);
+    }
+
+    private void enterAttackIfNear(AbstractPlayableSprite player) {
         AbstractPlayableSprite closest = closestCharacter(player);
         if (closest != null && withinOrientationBox(closest)) {
             previousState = state;
@@ -280,13 +284,17 @@ public class CrawlBadnikInstance extends AbstractBadnikInstance implements Touch
     /**
      * Pausing state (Routine 4) — mirrors loc_3D2A6 (s2.asm:82505).
      */
-    private void updatePausing() {
+    private void updatePausing(AbstractPlayableSprite player) {
         pauseTimer--;
-        if (pauseTimer <= 0) {
+        // loc_3D2A6 (s2.asm:82505-82517) branches only on a negative
+        // timer and checks loc_3D416 proximity on every nonnegative pass.
+        if (pauseTimer < 0) {
             facingLeft = !facingLeft;
             xVelocity = facingLeft ? -WALK_VELOCITY : WALK_VELOCITY;
             walkTimer = WALK_DURATION;
             state = State.WALKING;
+        } else {
+            enterAttackIfNear(player);
         }
     }
 
@@ -356,7 +364,9 @@ public class CrawlBadnikInstance extends AbstractBadnikInstance implements Touch
         if (!isRolling) {
             // ROM loc_3D36C: non-rolling contact turns the bouncer into a HURT touch object
             // for the next touch pass; invincibility downgrades it to normal ENEMY flags.
-            attackingCollisionFlags = player.getInvincibleFrames() > 0 ? 0x17 : 0x97;
+            // loc_3D36C (s2.asm:82573-82581) reads native invincibility,
+            // which also covers Super Sonic while his timed power-up is zero.
+            attackingCollisionFlags = player.isSuperSonic() || player.getInvincibleFrames() > 0 ? 0x17 : 0x97;
             animFrame = FRAME_WALK_2;
             return;
         }
@@ -389,50 +399,12 @@ public class CrawlBadnikInstance extends AbstractBadnikInstance implements Touch
             return;
         }
 
-        // ROM Reference: lines 81847-81876
-        // Player must be in Roll animation for any special interaction
-        boolean isRolling = player.getRolling() || player.getRollingJump();
-        boolean inAir = player.getAir();
-
-        if (!isRolling) {
-            // Not rolling - standard enemy collision ($97)
-            // Touch response system handles hurting the player
-            return;
-        }
-
-        // ROM lines 81849-81850: If rolling AND in air, ALWAYS bounce (no direction check)
-        // This includes jumping on top, jump attacks from any direction, etc.
-        if (inAir) {
-            applyBounce(player, FRAME_IMPACT_AIR);
-            return;
-        }
-
-        // ROM lines 81851-81857: Rolling on ground - direction check determines outcome
-        // Obj_GetOrientationToPlayer returns d0=0 if player LEFT, d0=2 if RIGHT
-        // If x_flip set (facing RIGHT), subtract 2 from d0
-        // If d0=0 after adjustment → BOUNCE (shield side)
-        // If d0≠0 → VULNERABLE (back side, collision_flags = $17)
-        boolean playerToLeft = player.getCentreX() < currentX;
-
-        // Shield is on the SAME side as the facing direction:
-        // - facingLeft=true (x_flip=0): shield is on LEFT, player to left = bounce
-        // - facingLeft=false (x_flip=1): shield is on RIGHT, player to right = bounce
-        boolean hittingFromFront;
-        if (facingLeft) {
-            hittingFromFront = playerToLeft;
-        } else {
-            hittingFromFront = !playerToLeft;
-        }
-
-        if (hittingFromFront) {
-            // Shield side - bounce player away (radial bounce)
-            applyBounce(player, FRAME_IMPACT_GROUND);
-        } else {
-            // Back side - vulnerable, destroy like normal badnik.
-            // applyEnemyBounce in handleTouchResponse applies the Touch_KillEnemy y_speed change.
-            vulnerable = true;
-            destroyBadnik(player);
-        }
+        // Touch_Enemy / Touch_KillEnemy (s2.asm:85478-85561) already
+        // accepted this attack, including uncurled Super/invincible players.
+        // The shield/direction checks belong to loc_3D2D4 (s2.asm:82520-82584),
+        // reached through Touch_Special, and must not veto the ordinary kill.
+        // The touch controller applies the single native rebound after retirement.
+        super.onPlayerAttack(player, result);
     }
 
     /**
