@@ -1,12 +1,12 @@
 # OpenGGF Roadmap
 
-Current release planning is owned by the [0.7 campaign roadmap](docs/project/v0.7-roadmap.md)
-and [0.8 feature roadmap](docs/project/v0.8-roadmap.md). Master retains
-0.6.20260917; develop and next both carry the 0.7.prerelease candidate version,
-but are distinct refs (checked 2026-10-29: develop `c4cd6ae0e`, next `58e1abb44`).
-0.8 remains future scope, reserved by the release-policy descriptor. Implemented additions remain on develop with explicit
-experimental/support limits; 0.8 graduation does not require removing them
-from 0.7. See the [availability matrix](docs/project/v0.7-roadmap.md#feature-availability-during-07).
+Current release planning is owned by the [0.8 feature roadmap](docs/project/v0.8-roadmap.md).
+0.7 shipped as 0.7.20261105, re-scoped: the [0.7 campaign roadmap](docs/project/v0.7-roadmap.md)
+milestones it did not meet moved to 0.8 as accepted limitations (see the
+[release summary](docs/changelog/v0.7-release-summary.md#known-limitations-and-release-status)).
+Master carries 0.7.20261105, develop 0.8.prerelease and next 0.9.prerelease. Implemented
+additions keep their explicit experimental/support limits; 0.8 graduation does
+not require removing them from 0.7. See the [availability matrix](docs/project/v0.7-roadmap.md#feature-availability-during-07).
 
 The proposal and retrospectives below record planning after `v0.4.20260304`;
 their dated measurements and former scope statements are historical.

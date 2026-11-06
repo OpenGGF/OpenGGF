@@ -23,28 +23,27 @@ API publication or changing compatibility ranges.
 
 | Branch | Role | Version form | Today |
 |---|---|---|---|
-| `master` | last released | `<major>.<YYYYMMDD>` | `0.6.20260911` |
-| `develop` | in development | `<major>.prerelease` | `0.7.prerelease` |
-| `next` | temporarily tracks `develop` | `<major>.prerelease` | `0.7.prerelease` |
+| `master` | last released | `<major>.<YYYYMMDD>` | `0.7.<YYYYMMDD>` |
+| `develop` | in development | `<major>.prerelease` | `0.8.prerelease` |
+| `next` | the release after `develop` | `<major>.prerelease` | `0.9.prerelease` |
 
 A release stamps the date at the moment it is cut; prerelease branches never
 carry a date.
 
 ## Shared development line
 
-As of 2026-10-20, `develop` and `next` intentionally share one commit and
-`0.7.prerelease`. The descriptor uses `targetBranch=develop` with optional
-`candidateBranchAliases=next`; its ordered line fields reserve 0.8 for a future
-split. Current changes from either branch belong in `CHANGELOG.0.7.prerelease.md`.
-This does not publish the candidate API or move `master`. The integration record
+From 2026-10-20 until the 0.7 release, `develop` and `next` shared one commit and
+`0.7.prerelease`, with `targetBranch=develop` and `candidateBranchAliases=next`.
+The 0.7 promotion ended that arrangement: master carries `targetBranch=master`
+with no alias, and develop (0.8) and next (0.9) resume separate lines with their
+own `targetBranch`. The integration record
 [explains the fixed imported-history boundary](../architecture/validation/2026-10-20-shared-development-line.md#imported-history-audit)
 for old next trailer/API-coupling debt; it never exempts resource checks or later work.
 
-To resume separate release lines, remove the alias from both branch descriptors,
-retain `targetBranch=develop` on develop, and advance next's POM, bundle version,
-examples and `targetBranch=next` together. Update the shared-line guidance at the
-same time. The following rollover describes the separate-line model; a release
-promotion to master must always clear aliases and use its own destination.
+To share a line again, give the follower branch the leader's POM, bundle version
+and examples, keep the leader's `targetBranch`, and name the follower in
+`candidateBranchAliases`. A release promotion to master must always clear aliases
+and use its own destination.
 
 ## Rollover steps
 
@@ -215,3 +214,15 @@ those shared commits rather than rewrite their messages. The existing master
 release range handling is unchanged. Every commit after the immutable release
 boundary retains normal checks, and the complete delivered resource tree is
 still audited independently.
+
+`REVIEWED_TRAILER_EXEMPT_COMMITS` admits two exact published `develop` commits
+to the trailer and API-coupling replay only (approved 2026-11-05). Both
+landed while CI did not validate `develop`/`next` pushes, and both fail the
+0.7 promotion replay. `aafbb4ba77d87b91050a3ab982dbf2398038bf92` (2026-11-02)
+has no documentation trailers; its changelog entry landed in `2c87d32a6`.
+`306b960af2be7cea46dc8d1358d6c4507962fa40` (2026-10-22) changed the `@ModApi`
+surface without updating the candidate pin; the current pin covers it. The list
+names commits rather than an ancestor boundary, so their neighbours, the
+resource audit and current pin checks are unaffected. `push-policy.yml` now
+validates those pushes from the last successful check, so new debt is
+reported on `develop` before promotion.

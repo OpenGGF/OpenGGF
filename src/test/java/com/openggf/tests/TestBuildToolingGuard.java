@@ -1551,6 +1551,55 @@ class TestBuildToolingGuard {
         }
     }
 
+    /**
+     * Develop and next pushes run ci-push policy in push-policy.yml, outside
+     * ci.yml's cancelling concurrency group, and every push check (master too)
+     * validates from the last successful check rather than its own event base,
+     * so a superseded or failed run cannot leave its commits unvalidated.
+     */
+    @Test
+    void pushPolicyShouldRevalidateFromTheLastSuccessfulCheck() throws Exception {
+        String pushPolicy = normalizeLineEndings(Files.readString(Path.of(".github/workflows/push-policy.yml")));
+        String release = normalizeLineEndings(Files.readString(Path.of(".github/workflows/release.yml")));
+        List<String> violations = new ArrayList<>();
+
+        String triggers = workflowTriggers(pushPolicy);
+        if (!workflowTriggerEvents(triggers).equals(List.of("push"))
+                || !yamlIndentedBlock(triggers, "  push:", 2).stripTrailing().equals(
+                        "  push:\n    branches:\n      - develop\n      - next")) {
+            violations.add(".github/workflows/push-policy.yml must trigger on develop and next pushes only");
+        }
+        if (!pushPolicy.contains("  group: push-policy-${{ github.ref }}\n  cancel-in-progress: false\n")) {
+            violations.add(".github/workflows/push-policy.yml must let a running check finish");
+        }
+        String job = yamlJobBlocks(pushPolicy).getOrDefault("policy", "");
+        if (!job.contains("fetch-depth: 0")) {
+            violations.add(".github/workflows/push-policy.yml must fetch full history and master");
+        }
+        if (!job.contains("actions: read") || !release.contains("      actions: read\n")) {
+            violations.add("push policy jobs need actions: read to find the last successful check");
+        }
+        if (!job.contains("--workflow push-policy.yml --branch \"$REF_NAME\"")
+                || !job.contains("--floor-ref refs/remotes/origin/master")
+                || !job.contains("bash .githooks/validate-policy.sh ci-push \"$base\" \"$GITHUB_SHA\" \"$REF_NAME\"")) {
+            violations.add(".github/workflows/push-policy.yml must validate ci-push from the resolved base");
+        }
+        if (job.contains("continue-on-error: true")) {
+            violations.add(".github/workflows/push-policy.yml policy job is non-blocking");
+        }
+        String releasePolicy = yamlJobBlocks(release).getOrDefault("policy", "");
+        if (!releasePolicy.contains("--workflow release.yml --job policy --branch \"$REF_NAME\"")
+                || !releasePolicy.contains("bash .githooks/validate-policy.sh ci-push \"$base\" \"$GITHUB_SHA\" \"$REF_NAME\"")
+                || releasePolicy.contains("ci-push \"${{ github.event.before }}\"")) {
+            violations.add(".github/workflows/release.yml must validate ci-push from the last successful policy job");
+        }
+
+        if (!violations.isEmpty()) {
+            fail("push policy must re-cover superseded and failed runs:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
     @Test
     void modApiDestinationValidationShouldCoverEveryPullRequestAndPushTestPath() throws Exception {
         String ci = normalizeLineEndings(Files.readString(Path.of(".github/workflows/ci.yml")));
@@ -2389,6 +2438,35 @@ class TestBuildToolingGuard {
     }
 
     @Test
+    void onlyTheMacosNativeLegMayFailWithoutBlockingPublication() throws Exception {
+        String workflow = normalizeLineEndings(Files.readString(Path.of(".github/workflows/release.yml")));
+        Map<String, String> jobs = yamlJobBlocks(workflow);
+        String build = jobs.get("build");
+        String release = jobs.get("release");
+        assertNotNull(build);
+        assertNotNull(release);
+        assertTrue(build.contains("    continue-on-error: ${{ matrix.platform == 'macos' }}\n"),
+                "only the macOS leg, which exceeds the free runner's memory, may fail without blocking");
+        assertEquals(1, build.split("continue-on-error", -1).length - 1,
+                "no other build leg or step may tolerate failure");
+        assertTrue(build.contains("timeout-minutes: ${{ matrix.platform == 'macos' && 45 || 120 }}"),
+                "a stalled macOS image compiler must not hold publication for hours");
+        assertTrue(release.contains("!cancelled() && needs.universal-jar.result == 'success'"),
+                "publication runs after a tolerated macOS failure but never without the universal jar");
+        assertTrue(release.contains("fail_on_unmatched_files: true"),
+                "every selected release file must exist");
+        assertTrue(release.contains("files: ${{ steps.files.outputs.list }}"),
+                "the release publishes the selected file list");
+        String macos = release.substring(release.indexOf("- name: Download macOS distribution"),
+                release.indexOf("- name: Download Linux distribution"));
+        assertTrue(macos.contains("continue-on-error: true"), "a missing macOS package must not stop publication");
+        assertEquals(1, release.split("continue-on-error", -1).length - 1,
+                "Windows, Linux and universal-jar downloads must fail the release when missing");
+        assertTrue(release.contains("if [[ \"${{ steps.macos.outcome }}\" != \"success\" ]]; then"),
+                "attach the macOS package only when it was downloaded");
+    }
+
+    @Test
     void nativeImageCompilationMustFollowMavenPreparation() throws Exception {
         String workflow = normalizeLineEndings(Files.readString(Path.of(".github/workflows/release.yml")));
         String build = yamlJobBlocks(workflow).get("build");
@@ -2928,6 +3006,23 @@ class TestBuildToolingGuard {
             }
         });
 
+        // Exact reviewed published commits; see docs/project/release-rollover.md.
+        List<String> expectedExemptCommits = List.of(
+                "aafbb4ba77d87b91050a3ab982dbf2398038bf92",
+                "306b960af2be7cea46dc8d1358d6c4507962fa40");
+        List<String> shellExemptCommits = commitIds(
+                policyAssignment(shellPolicy, "REVIEWED_TRAILER_EXEMPT_COMMITS"));
+        List<String> powershellExemptCommits = commitIds(
+                policyAssignment(powershellPolicy, "script:ReviewedTrailerExemptCommits"));
+        if (!expectedExemptCommits.equals(shellExemptCommits)) {
+            violations.add(".githooks/validate-policy.sh exempts " + shellExemptCommits
+                    + " instead of " + expectedExemptCommits);
+        }
+        if (!expectedExemptCommits.equals(powershellExemptCommits)) {
+            violations.add(".githooks/validate-policy.ps1 exempts " + powershellExemptCommits
+                    + " instead of " + expectedExemptCommits);
+        }
+
         String shellStagedCandidates = scriptFunction(shellPolicy, "staged_candidates() {");
         String powershellStagedCandidates = scriptFunction(powershellPolicy, "function Get-StagedCandidates()");
         String shellCommitCandidates = scriptFunction(shellPolicy, "commit_candidates() {");
@@ -2967,6 +3062,10 @@ class TestBuildToolingGuard {
         if (!shellCiRange.contains("if [ \"$#\" -gt 2 ]; then")
                 || !powershellCiRange.contains("if ($parentFields.Count -gt 2)")) {
             violations.add("CI commit-range implementations do not both limit trailer checks to non-merge commits");
+        }
+        if (!shellCiRange.contains("case \" $REVIEWED_TRAILER_EXEMPT_COMMITS \" in")
+                || !powershellCiRange.contains("$script:ReviewedTrailerExemptCommits -ccontains $commit")) {
+            violations.add("CI commit-range implementations do not both skip the reviewed exempt commits");
         }
 
         if (!violations.isEmpty()) {
@@ -3079,10 +3178,11 @@ class TestBuildToolingGuard {
      *       when their input is ticked.</li>
      * </ul>
      *
-     * <p>Branch policy is not part of the push path in ci.yml: the
-     * {@code .githooks} enforce it at commit time on every branch, and master
-     * pushes are validated by release.yml's own {@code ci-push} step, which
-     * {@link #branchPolicyShouldRunOnPullRequestsAndMasterPushes()} pins.
+     * <p>Branch policy is not part of the push path in ci.yml: develop and
+     * next pushes are validated by push-policy.yml, outside this workflow's
+     * cancelling concurrency group, and master pushes by release.yml's own
+     * {@code ci-push} step; {@link #branchPolicyShouldRunOnPullRequestsAndMasterPushes()}
+     * and {@link #pushPolicyShouldRevalidateFromTheLastSuccessfulCheck()} pin them.
      */
     @Test
     void ciAndReleaseTriggersShouldMatchTheBranchPolicy() throws Exception {
@@ -3221,6 +3321,7 @@ class TestBuildToolingGuard {
         List<Path> protectedFiles = new ArrayList<>();
         protectedFiles.add(Path.of(".github/workflows/ci.yml"));
         protectedFiles.add(Path.of(".github/workflows/release.yml"));
+        protectedFiles.add(Path.of(".github/workflows/push-policy.yml"));
         protectedFiles.add(Path.of(".mvn/maven.config"));
         protectedFiles.add(Path.of("src/packaging/assemble-macos-app.sh"));
         try (Stream<Path> hooks = Files.walk(Path.of(".githooks"))) {
@@ -5113,6 +5214,18 @@ class TestBuildToolingGuard {
             }
         }
         return null;
+    }
+
+    private static List<String> commitIds(String assignment) {
+        if (assignment == null) {
+            return List.of();
+        }
+        List<String> ids = new ArrayList<>();
+        var matcher = Pattern.compile("\\b[0-9a-f]{40}\\b").matcher(assignment);
+        while (matcher.find()) {
+            ids.add(matcher.group());
+        }
+        return ids;
     }
 
     private static String scriptFunction(String source, String declaration) {

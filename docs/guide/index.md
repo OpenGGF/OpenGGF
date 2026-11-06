@@ -6,9 +6,9 @@ runs its own implementation of the game logic, physics, rendering, and audio. No
 assets are included. You must supply your own legally obtained ROM files.
 
 The engine currently supports Sonic the Hedgehog (S1), Sonic the Hedgehog 2 (S2), and
-Sonic 3 & Knuckles (S3K) at varying levels of completeness. This guide follows the current `0.7.prerelease`
-development line; the [published 0.6 summary](../changelog/v0.6-release-summary.md)
-records the older release scope.
+Sonic 3 & Knuckles (S3K) at varying levels of completeness. This guide follows the `0.9.prerelease`
+development line, after the 0.7.20261105 release; the [0.7 release summary](../changelog/v0.7-release-summary.md)
+records its scope and limits.
 
 For a tour of everything the engine can do, see [Features](features.md).
 

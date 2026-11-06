@@ -42,6 +42,10 @@ class TestRenderedRewindCacheMatrix {
 
     @Test
     void unchangedWorldsDoNotRebuildFullLayoutTerrain() throws Exception {
+        org.junit.jupiter.api.Assumptions.assumeTrue(RomTestUtils.ensureSonic1RomAvailable() != null
+                        && RomTestUtils.ensureSonic2RomAvailable() != null
+                        && RomTestUtils.ensureSonic3kRomAvailable() != null,
+                "the matrix covers Sonic 1, Sonic 2 and Sonic 3&K acts and needs all three ROMs");
         Path output = Path.of(System.getProperty("openggf.cacheAudit.output", "target/rewind-cache-matrix.json"));
         Files.createDirectories(output.toAbsolutePath().getParent());
         List<Result> results = new ArrayList<>();

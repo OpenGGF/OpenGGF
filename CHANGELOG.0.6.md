@@ -1,5 +1,22 @@
 # OpenGGF v0.6 Changelog
 
+## v0.6.20260917
+
+A packaging fix release on top of `0.6.20260911`; no gameplay behaviour changed.
+
+### Packaging
+
+- **Native builds no longer crash on Sonic 3 & Knuckles.** GraalVM native-image
+  embeds only the classpath resources named by its `resource-config.json`, and the
+  S3K load-time manifests (`load-time-profiles/s3k-fast-v1.json` and
+  `s3k-v1.json`) had never been added to that list. In a native build the
+  manifest lookup returned a null stream and `Sonic3kGameModule` threw while
+  building the load-time profile, so S3K failed to start under the default `FAST`
+  load-time simulation. The window icon set (`icon/*.png`) was missing from the
+  same file and is now embedded as well. A structural guard now fails whenever a
+  runtime resource under `src/main/resources` is unreachable from the native-image
+  config, so the drift cannot reach a shipped bundle again.
+
 ## v0.6.20260911
 
 Analysis range: `v0.5.20260411..develop` at `77c244548` (`11653` commits, `9762` non-merge
