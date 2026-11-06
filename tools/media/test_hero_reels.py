@@ -58,6 +58,10 @@ class ManifestValidation(unittest.TestCase):
     def test_valid_manifest_passes(self):
         hero.validate_manifest(manifest(), 's1', root=self.root)
 
+    def test_missing_save_seed_file_is_rejected(self):
+        self.assertRejected(lambda d: d['shots'][1].update(setup={'save_slots': 'inputs/missing.json'}),
+                            'save_slots inputs/missing.json not found')
+
     def test_duplicate_shot_ids_are_rejected(self):
         self.assertRejected(lambda d: d['shots'].append(copy.deepcopy(d['shots'][0])), 'duplicated')
 
@@ -117,6 +121,13 @@ class Commands(unittest.TestCase):
         self.assertEqual('sonic,sonic', args[args.index('--sidekick') + 1])
         self.assertIn('--title-screen', args)
         self.assertNotIn('--interactive-pacing', args)
+
+    def test_data_select_setup_passes_seed_file_absolutely_and_extra_teams_verbatim(self):
+        shot = dict(manifest()['shots'][1],
+                    setup={'save_slots': 'inputs/saves.json', 'extra_teams': 'sonic,knuckles;knuckles,tails'})
+        args = hero.capture_args('s3k', shot, '/rom.gen', Path('/out'), root=Path('/repo'))
+        self.assertEqual('/repo/inputs/saves.json', args[args.index('--save-slots') + 1])
+        self.assertEqual('sonic,knuckles;knuckles,tails', args[args.index('--extra-teams') + 1])
 
     def test_jvm_runs_display_free_in_isolated_user_dir(self):
         command = hero.java_command('cp', Path('/work/runtime'), 'Main', ['--x'])

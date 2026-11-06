@@ -24,6 +24,45 @@ class TestGameplayCaptureToolArgs {
 
 
     @Test
+    void dataSelectSetupNeedsTheTitleScreen() {
+        String[] base = {"--game", "s3k", "--zone", "aiz", "--act", "1", "--out-dir", "out",
+                "--save-slots", "saves.json", "--extra-teams", "sonic,knuckles;knuckles,tails"};
+        assertThrows(IllegalArgumentException.class, () -> GameplayCaptureTool.Arguments.parse(base));
+        var flags = new java.util.ArrayList<>(java.util.List.of(base));
+        flags.add("--title-screen");
+        var args = GameplayCaptureTool.Arguments.parse(flags.toArray(String[]::new));
+        assertEquals(Path.of("saves.json"), args.saveSlots());
+        assertEquals("sonic,knuckles;knuckles,tails", args.extraTeams());
+        assertNull(GameplayCaptureTool.Arguments.parse(new String[] {
+                "--zone", "aiz", "--act", "1", "--out-dir", "out"}).saveSlots());
+    }
+
+    @Test
+    void seededSaveSlotsUseTheProductionEnvelopeOnlyUnderAnExplicitRoot(@org.junit.jupiter.api.io.TempDir Path temp)
+            throws Exception {
+        Path seeds = temp.resolve("saves.json");
+        java.nio.file.Files.writeString(seeds, """
+                {"2": {"zone": 3, "act": 1, "mainCharacter": "knuckles", "sidekicks": ["tails"],
+                       "lives": 6, "continues": 2, "chaosEmeralds": [0, 1], "clear": false}}
+                """);
+        String previous = System.getProperty(com.openggf.game.save.SavePaths.ROOT_PROPERTY);
+        try {
+            System.clearProperty(com.openggf.game.save.SavePaths.ROOT_PROPERTY);
+            assertThrows(IllegalArgumentException.class, () -> GameplayCaptureTool.seedSaveSlots(seeds, "s3k"));
+            Path root = temp.resolve("saves");
+            System.setProperty(com.openggf.game.save.SavePaths.ROOT_PROPERTY, root.toString());
+            GameplayCaptureTool.seedSaveSlots(seeds, "s3k");
+            var summary = new com.openggf.game.save.SaveManager(root).readSlotSummary("s3k", 2);
+            assertEquals(com.openggf.game.save.SaveSlotState.VALID, summary.state());
+            assertEquals("knuckles", summary.payload().get("mainCharacter"));
+            assertEquals(java.util.List.of("tails"), summary.payload().get("sidekicks"));
+        } finally {
+            if (previous == null) System.clearProperty(com.openggf.game.save.SavePaths.ROOT_PROPERTY);
+            else System.setProperty(com.openggf.game.save.SavePaths.ROOT_PROPERTY, previous);
+        }
+    }
+
+    @Test
     void parsesHexPositionsOneBasedActsAndStills() {
         GameplayCaptureTool.Arguments args = GameplayCaptureTool.Arguments.parse(new String[] {
                 "--game", "s3k", "--zone", "fbz", "--act", "2", "--x", "0x1CF0", "--y", "$76C",

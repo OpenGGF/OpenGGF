@@ -91,6 +91,8 @@ Use a task directory outside the repository for captures the user should keep.
 | `--camera-x-sub <n>` | fresh | Declared inherited `Camera_X_pos` low word; only zones that keep a camera fraction (S3K DDZ) accept it |
 | `--rings <n>` | unchanged | Declared ring count the route carried in; a boss filmed from a positioned start otherwise begins on 0 rings, where the first touch is fatal |
 | `--title-screen` | off | Initialize the production title before first assembly; first zone/act only, no positioned/checkpoint/clock/donor seeds |
+| `--save-slots <file.json>` | none | Declared Data Select setup (`--title-screen` only): a JSON object mapping slot numbers to save payloads, written through the production `SaveManager` before boot. Refuses to run without an explicit `-Dopenggf.saveRoot`, so it never touches the user's saves |
+| `--extra-teams <combos>` | config | Session override of `DATA_SELECT_EXTRA_PLAYER_COMBOS` (`--title-screen` only), e.g. `sonic,knuckles;knuckles,tails` |
 | `--interactive-pacing` | off | Use production presentation/input pacing, including menus and gameplay observer callbacks; P1 controller input only, fps 60, no debug stage completion |
 | `--audio` | off | Write `audio.wav` from one final SMPS PCM packet per outer frame; every=1, capture-from=0, matching 60-Hz presentation. Video remains silent until muxed. Music and SFX are one mix; there is no SFX-only stem |
 | `--title-card` | off | Keep and draw title-card presentations instead of omitting them. Additive mod zones skip their card by default (`mods.skipModZoneTitleCards`); custom zone-name cards are unsupported |
