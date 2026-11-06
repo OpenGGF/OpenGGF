@@ -420,11 +420,11 @@ work. Contributor learning times have not been measured.
 | `com.openggf.mods.code.TestThreeIslandsScene.explorationUsesTwoAxesAndStoryDiscoveriesPersistAcrossContinue` | failure / org.opentest4j.AssertionFailedError | `a discovery opens dialogue ==> expected: <STORY> but was: <FIELD>` |
 | `com.openggf.mods.scene.host.TestPrivateLobbyScreenRendering.actualLobbyAndFullTextPixelsSupportMultipleReadablePages` | failure / org.opentest4j.AssertionFailedError | `Right reaches new full-text pixels ==> expected: <false> but was: <true>` |
 | `com.openggf.tests.TestLrzSszCheckpointRoutes.ordinarySszOpeningPhysicallySavesTheFirstAuthoredPost` | failure / org.opentest4j.AssertionFailedError | `ordinary opening remains alive at input 6499 ==> expected: <false> but was: <true>` |
-| `com.openggf.tests.TestS3kCnz1MinibossCompletionEdge.placedMinibossOrdinaryHitsDriveDefeatResultsAndReleasedCnz2(Row)[2]` | failure / org.opentest4j.AssertionFailedError | `sonic+solo@<identity>: fixed input did not complete the edge: spawn=190 gate=288 release=408 hits=[1150, 1593, 2046] kill=-1 sign=-1 results=-1 load=-1 apparent=-1 title=-1 last=p=3375,032C v=12,0 g=12 a=false r=false h=false ring=0 c=3260,02B8 s=3375,0330 b=32C2,029A/6/1/false t=32A0,02D6 {CnzMinibossCoilInstance=1, CnzMinibossInstance=1, CnzMinibossScrollControlInstance=1, CnzMinibossTopInstance=1} act=0/0 bg=8 flag=true rel=true` |
-| `com.openggf.tests.TestS3kCnz1MinibossCompletionEdge.placedMinibossOrdinaryHitsDriveDefeatResultsAndReleasedCnz2(Row)[4]` | failure / org.opentest4j.AssertionFailedError | `sonic+solo@<identity> frame 1564: P1 died p=328B,02EC v=0,-1792 g=0 a=true r=false h=false ring=0 c=31E0,028C s=32A1,02B5 b=3277,029C/A/3/false t=3334,02AE {CnzMinibossCoilInstance=1, CnzMinibossInstance=1, CnzMinibossScrollControlInstance=1, CnzMinibossSparkInstance=3, CnzMinibossTopInstance=1} act=0/0 bg=8 flag=true rel=true ==> expected: <false> but was: <true>` |
-| `com.openggf.tests.TestS3kCnz1MinibossCompletionEdge.recordedOrdinaryInputReplaysAndRewindsEveryEdgeBoundaryTwice(Row)[2]` | failure / org.opentest4j.AssertionFailedError | `sonic+solo@<identity>: fixed input did not complete the edge: spawn=190 gate=288 release=408 hits=[1150, 1593, 2046] kill=-1 sign=-1 results=-1 load=-1 apparent=-1 title=-1 last=p=3375,032C v=12,0 g=12 a=false r=false h=false ring=0 c=3260,02B8 s=3375,0330 b=32C2,029A/6/1/false t=32A0,02D6 {CnzMinibossCoilInstance=1, CnzMinibossInstance=1, CnzMinibossScrollControlInstance=1, CnzMinibossTopInstance=1} act=0/0 bg=8 flag=true rel=true` |
-| `com.openggf.tests.TestS3kCnz1MinibossCompletionEdge.recordedOrdinaryInputReplaysAndRewindsEveryEdgeBoundaryTwice(Row)[4]` | failure / org.opentest4j.AssertionFailedError | `sonic+solo@<identity> frame 1564: P1 died p=328B,02EC v=0,-1792 g=0 a=true r=false h=false ring=0 c=31E0,028C s=32A1,02B5 b=3277,029C/A/3/false t=3334,02AE {CnzMinibossCoilInstance=1, CnzMinibossInstance=1, CnzMinibossScrollControlInstance=1, CnzMinibossSparkInstance=3, CnzMinibossTopInstance=1} act=0/0 bg=8 flag=true rel=true ==> expected: <false> but was: <true>` |
-| `com.openggf.tests.TestS3kCnz1MinibossCompletionEdge.truncatedAfterApproachNeverCompletesTheEdge` | failure / org.opentest4j.AssertionFailedError | `sonic+solo@<identity>: fixed input did not complete the edge: spawn=190 gate=288 release=408 hits=[1150, 1593, 2046] kill=-1 sign=-1 results=-1 load=-1 apparent=-1 title=-1 last=p=3375,032C v=12,0 g=12 a=false r=false h=false ring=0 c=3260,02B8 s=3375,0330 b=32C2,029A/6/1/false t=32A0,02D6 {CnzMinibossCoilInstance=1, CnzMinibossInstance=1, CnzMinibossScrollControlInstance=1, CnzMinibossTopInstance=1} act=0/0 bg=8 flag=true rel=true` |
+| `com.openggf.tests.TestS3kCnz1MinibossCompletionEdge.placedMinibossOrdinaryHitsDriveDefeatResultsAndReleasedCnz2(Row)[2]` | failure / org.opentest4j.AssertionFailedError | `sonic+solo@320: fixed input did not complete the edge: spawn=190 gate=288 release=408 hits=[1150, 1593, 2046] kill=-1 sign=-1 results=-1 load=-1 apparent=-1 title=-1 last=p=3375,032C v=12,0 g=12 a=false r=false h=false ring=0 c=3260,02B8 s=3375,0330 b=32C2,029A/6/1/false t=32A0,02D6 {CnzMinibossCoilInstance=1, CnzMinibossInstance=1, CnzMinibossScrollControlInstance=1, CnzMinibossTopInstance=1} act=0/0 bg=8 flag=true rel=true` |
+| `com.openggf.tests.TestS3kCnz1MinibossCompletionEdge.placedMinibossOrdinaryHitsDriveDefeatResultsAndReleasedCnz2(Row)[4]` | failure / org.opentest4j.AssertionFailedError | `sonic+solo@800 frame 1564: P1 died p=328B,02EC v=0,-1792 g=0 a=true r=false h=false ring=0 c=31E0,028C s=32A1,02B5 b=3277,029C/A/3/false t=3334,02AE {CnzMinibossCoilInstance=1, CnzMinibossInstance=1, CnzMinibossScrollControlInstance=1, CnzMinibossSparkInstance=3, CnzMinibossTopInstance=1} act=0/0 bg=8 flag=true rel=true ==> expected: <false> but was: <true>` |
+| `com.openggf.tests.TestS3kCnz1MinibossCompletionEdge.recordedOrdinaryInputReplaysAndRewindsEveryEdgeBoundaryTwice(Row)[2]` | failure / org.opentest4j.AssertionFailedError | `sonic+solo@320: fixed input did not complete the edge: spawn=190 gate=288 release=408 hits=[1150, 1593, 2046] kill=-1 sign=-1 results=-1 load=-1 apparent=-1 title=-1 last=p=3375,032C v=12,0 g=12 a=false r=false h=false ring=0 c=3260,02B8 s=3375,0330 b=32C2,029A/6/1/false t=32A0,02D6 {CnzMinibossCoilInstance=1, CnzMinibossInstance=1, CnzMinibossScrollControlInstance=1, CnzMinibossTopInstance=1} act=0/0 bg=8 flag=true rel=true` |
+| `com.openggf.tests.TestS3kCnz1MinibossCompletionEdge.recordedOrdinaryInputReplaysAndRewindsEveryEdgeBoundaryTwice(Row)[4]` | failure / org.opentest4j.AssertionFailedError | `sonic+solo@800 frame 1564: P1 died p=328B,02EC v=0,-1792 g=0 a=true r=false h=false ring=0 c=31E0,028C s=32A1,02B5 b=3277,029C/A/3/false t=3334,02AE {CnzMinibossCoilInstance=1, CnzMinibossInstance=1, CnzMinibossScrollControlInstance=1, CnzMinibossSparkInstance=3, CnzMinibossTopInstance=1} act=0/0 bg=8 flag=true rel=true ==> expected: <false> but was: <true>` |
+| `com.openggf.tests.TestS3kCnz1MinibossCompletionEdge.truncatedAfterApproachNeverCompletesTheEdge` | failure / org.opentest4j.AssertionFailedError | `sonic+solo@320: fixed input did not complete the edge: spawn=190 gate=288 release=408 hits=[1150, 1593, 2046] kill=-1 sign=-1 results=-1 load=-1 apparent=-1 title=-1 last=p=3375,032C v=12,0 g=12 a=false r=false h=false ring=0 c=3260,02B8 s=3375,0330 b=32C2,029A/6/1/false t=32A0,02D6 {CnzMinibossCoilInstance=1, CnzMinibossInstance=1, CnzMinibossScrollControlInstance=1, CnzMinibossTopInstance=1} act=0/0 bg=8 flag=true rel=true` |
 | `com.openggf.tests.TestS3kFreshLevelRngState.actualFreshBoundaryClearsRngAndTheRegisteredWorldRestoresIt(int, int)[2]` | failure / org.opentest4j.AssertionFailedError | `native D01 skips the ordinary title owner ==> expected: <false> but was: <true>` |
 | `com.openggf.tests.TestS3kIcz1PhysicalLowerPlatformReplay.nativeSonicContactsAndRidesTheLowerPieceWithTwoFreshWorldReplays` | failure / org.opentest4j.AssertionFailedError | `actual final neutral crosses the sampled turn ==> expected: <true> but was: <false>` |
 | `com.openggf.tests.TestS3kMhzAct2AuthoredRoute.incomingRoutesCompleteActTwoWithLiveRewindBoundaries(String, int)[1]` | failure / org.opentest4j.AssertionFailedError | `expected: <[defeat, ship-carry, capsule-results, weather-fade, chase-hit, fbz-loaded, ship, admission, last-hit]> but was: <[]>` |
@@ -672,3 +672,196 @@ Lua 5.4, original verified ROM discovery and unset display variables.
 Implementation is ready for the required frozen candidate smoke/guards. The
 baseline job is still active; delivery and its exact failure/skip comparison
 remain pending. No broad green verdict is claimed.
+
+## Structural validation and draft delivery
+
+Validation resumed with the implementation frozen at
+`57ab3e81dc6ee29342c3a7541794653826e1e7a1`, compared with its parent
+`0480854d99b6ea162e3a52bf6c264130dbd29b82`. The implementation delegate owned
+both existing jobs, their comparison, repairs and delivery; no replacement
+category job or additional implementation/review agent was launched. Both jobs
+completed all 91 ordinary batches and the guard lane before the candidate tree
+was edited. The bounded execution limit was 40 minutes excluding queue wait.
+
+| Original run | Baseline `0480854d9` | Frozen candidate `57ab3e81d` |
+| --- | --- | --- |
+| Candidate classes | 4,467 | 4,468 |
+| Ordinary cases | 36,998; 31 failures, 1 error, 49 allowed skips | 37,014; 32 failures, 5 errors, 49 allowed skips |
+| Guards | 834; 0 failures/errors/skips | 834; 2 failures, 0 errors/skips |
+| Final verdict | FAILED | FAILED |
+
+Exact final runner lines:
+
+```text
+VERDICT FAILED: head=0480854d99b6 source=789bb195e215 focused 4467/4467 candidate classes; ordinary 91/91 batches; guards 1/1 batches; tests=37832 failures=31 errors=1 skipped=49 (allowed=49 unexplained=0); missing ROM properties=none; skip inputs audio_reference_files=false,gl=false,s1_bizhawk_reference=false,s2_bk2=false,s3k_observations=false; bounded smoke selection, not a full-suite pass
+VERDICT FAILED: head=57ab3e81dc6e source=44428d3977ce change-based 4468/4468 candidate classes; ordinary 91/91 batches; guards 1/1 batches; tests=37848 failures=34 errors=5 skipped=49 (allowed=49 unexplained=0); missing ROM properties=none; skip inputs audio_reference_files=false,gl=false,s1_bizhawk_reference=false,s2_bk2=false,s3k_observations=false; bounded smoke selection, not a full-suite pass
+```
+
+Both commands used the following environment and surfaceless backend, with
+verified original ROM discovery (no missing ROM properties):
+
+```bash
+# Frozen candidate, existing job; 4,468 change-based candidates, workers=2.
+env -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/run_categories.py \
+  --base 0480854d99b6ea162e3a52bf6c264130dbd29b82 \
+  --workers 2 --headless-gl surfaceless-egl --run
+
+# Detached baseline at 0480854d9, existing all-category job; same environment.
+env -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/run_categories.py \
+  --category all --workers 2 --headless-gl surfaceless-egl --run
+```
+
+### Failure and skip reconciliation
+
+All 32 ordinary baseline failure/error records in the earlier table recur with
+identical class, parameterized test identity, kind, exception type and assertion
+values. Comparison normalizes only fully qualified Java object identity hashes
+and expected Set display order in the three MHZ assertions already cited above.
+Set membership and actual displays, numeric values, row labels, frames and all
+other assertion text are retained. The earlier table's five CNZ row labels are
+corrected to `@320`/`@800`: they are numbers, not Java object identity hashes.
+
+All 49 complete skip dictionaries match without normalization, including exact
+identities, reasons and reason-projection metadata. No failed/skipped cases were
+omitted, no failure fields reached their report caps, and no required or
+unexplained skips remain. The SHA-256 of sorted `(class, test, reason)` triples,
+serialized as UTF-8 JSON with `ensure_ascii=False` and separators `(',', ':')`,
+is `4a52e537035ddc08d22e7a97a7fbef5d8dbcd2b743424e1d894276f1554618b9`
+on both sources.
+
+The frozen candidate also reported these five extra ordinary records:
+
+| Test identity | Kind / exception / assertion |
+| --- | --- |
+| `TestS3kGumballPachinkoRewardMechanics.actualRepresentativeProductsReplayEveryMechanism(Row, Mechanism)[1]` | error / `java.lang.NoSuchFieldException: dynamicObjects` |
+| `TestS3kGumballPachinkoRewardMechanics.actualRepresentativeProductsReplayEveryMechanism(Row, Mechanism)[6]` | same error |
+| `TestS3kGumballPachinkoRewardMechanics.actualRepresentativeProductsReplayEveryMechanism(Row, Mechanism)[11]` | same error |
+| `TestS3kGumballPachinkoRewardMechanics.actualNativeContactAndNaturalLifecycleReplaysItsCompleteWorldTwice(Mechanism)[1]` | same error |
+| `openggf.racing.e2e.TestDirectConnectEndToEnd.fullRoundWithLatencyProxiedGuest(RaceHostImpl, Path)[1]` | failure / `org.opentest4j.AssertionFailedError` / `latency-proxied guest never rendered host ghost ==> expected: <true> but was: <false>` |
+
+The four reward errors came from one stale fixture reflection path at line 415.
+It now reads the same raw dynamic roster through `ObjectPopulation.dynamic`.
+The existing assertions still require both recreated ball/parent identities and
+exclude the retired ball. All 26 ordinary cases in that class pass afterward.
+
+The socket assertion did not recur in either focused baseline/candidate pair:
+both host implementations passed on each source. The 273 production network
+classes, 129 network test classes and 278 racing/server/test classes were
+byte-for-byte identical between compiled trees (680 class files). The same
+variant `[1]` and assertion predates this task in the
+[October 15 retirement audit](../designs/2026-10-15-editor-controller-hud-prototype.md#retirement-validation);
+[October 22 evidence](../plans/2026-10-22-time-attack-names-and-palettes.md)
+records another occurrence. Its causal attribution remains unresolved. This is
+an additional recurrence of the historical intermittent assertion, not an exact
+match to this task's baseline category outcome. No networking code, deadlines
+or test assertions were changed to obtain the focused passes.
+
+### Corrected validation contracts and source follow-up
+
+The original two guard failures were:
+
+- `TestRewindArchitectureGuard.objectRewindOverridesDoNotGrowWithoutExplicitBaselineTriage`
+  counted `SolidContactState.java#restoreRewindState = 3` as actor override growth.
+  That state owner is not an `ObjectInstance`. Classification now uses compiled
+  actor assignability, including nested actors, without initializing classes.
+  A new positive/negative control checks actual actor types, nested actors and
+  standalone state/manager types. Override/annotation debt baselines are unchanged.
+- `TestObjectPhysicsStandardizationGuard.productionObjectPhysicsStandardizationHasNoUnapprovedViolations`
+  flagged full-roster identity registration and captured fixed-slot admission
+  in `ObjectRewindLifecycle`. Registration retains every indexed `PlayerRefId`
+  rather than selecting native P2; only its exact, unique roster read inside
+  `registerPlayersInto` is admitted. Three new guard cases pin full indexed-role
+  registration and reject raw P2 shortcuts, raw admission, other files and reads
+  outside that method. No whole-file owner exemption was added. Captured effect
+  admission now uses the existing `ObjectLifetimeOps.addDynamicAtReservedSlot`
+  helper, preserving the captured identity/admission/order/binding/scalar sequence.
+
+These four-file corrections are commit `6bd5483358657d9601001a4185b812fa9d3053ea`. The runtime edit beyond `57ab`
+is that single helper call; the other edits repair fixture/guard ownership.
+The first follow-up attempt stopped at compilation because the new nested guard
+fixture omitted the base constructor's name argument. Correcting the fixture
+allowed the next run to execute; the failed attempt supplies no test-success
+credit.
+
+The follow-up commands below used the same Java/Lua/display/ROM environment as
+the category runs:
+
+```bash
+# Baseline at 0480854d9: 28 passed, no failures/errors/skips.
+python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestS3kGumballPachinkoRewardMechanics,TestDirectConnectEndToEnd' \
+  -Dopenggf.headless.gl=surfaceless-egl test
+
+# Repaired candidate: 59 passed, no failures/errors/skips.
+python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestS3kGumballPachinkoRewardMechanics,TestDirectConnectEndToEnd,TestShieldRewindPendingRestore,TestObjectRewindExactAdoption,TestTwoPhaseRestoreOrdering,TestObjectRemovalCallbackOwnership' \
+  -Dopenggf.headless.gl=surfaceless-egl test
+
+# Repaired candidate: all 838 guards passed, no failures/errors/skips.
+python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B
+```
+
+The four extra fixture errors and two guard failures are resolved by those
+fresh checks; the original red category verdict is retained. The bounded
+ordinary category run was not repeated for this localized validation repair.
+The earlier 290-case focused run and final 31-case linearization check remain
+evidence for `57ab`. The HCZ replay at `57ab` compared 3,519 frames with zero
+comparison/bootstrap errors or warnings and reached its 3,574-row comparison
+gate. It covers physics/animation; eight advertised auxiliary schemas were
+absent. No unavailable-field parity or release full-suite result is claimed.
+
+### Baseline defect witness and cost
+
+After the baseline category job ended, the baseline was verified clean. Only
+candidate `TestObjectSolidContactController.java` was copied into it for:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestObjectSolidContactController#removingDynamicMultipartSolidExpiresBothPlayersObjectBitsWithoutReleasingTheirRides' test
+```
+
+This compiled and ran one case: 1 failure, 0 errors/skips, at the actual
+freed-owner assertion: `deleting a dynamic solid must not capture piece keys
+for its freed owner slot ==> expected: <true> but was: <false>`. The same witness
+passed in the candidate's 290-case focused run. This is an actual old-engine
+RED / candidate GREEN pair, rather than a fixture setup failure. The copied
+file was restored to baseline HEAD; baseline status was clean afterward.
+
+| Validation | Queue wait (seconds) | Preparation / Maven execution (seconds) |
+| --- | ---: | --- |
+| Baseline category | 6,973 | preparation 83.78; ordinary 1,641.64; guards 164.09 |
+| Frozen candidate category | 7,010 | preparation 36.97; ordinary 1,698.30; guards 170.93 |
+| Baseline defect witness | 78 | Maven 34.788 |
+| Baseline paired follow-up | 160 | Maven 74 |
+| First repair attempt, compile failure | 133 | Maven 91; no tests executed |
+| Repaired candidate focused | 221 | Maven 79 |
+| Repaired candidate full guards | 534 | Maven 209 |
+
+Category queue totals sum all 92 rounded acquired-wait values in each original
+log. Preparation and lane execution are reported separately; Maven follow-up
+times include compilation where applicable. The earlier 290/31-case and HCZ
+queue/execution costs are recorded above. User-wait time was zero; other work
+time was not measured and remains unknown.
+
+Validation jobs are finished. The latest held-out static scores remain 85/85
+for two paths, with no dimension below 3; the stronger understanding/readability
+rating of 4 remains unmet. The four other original task ratings were not
+reassessed. These are neither a repository grade nor causal human measurements.
+
+Both retained failed category diagnostics were inspected and acknowledged with
+`run_categories.py --acknowledge 20261106T120816Z-9e226fa5` in the baseline and
+`run_categories.py --acknowledge 20261106T141915Z-38da1f9b` in the task worktree,
+after this evidence was preserved. Native `git worktree remove` then removed
+only the clean detached structural baseline. Ignored examples, reports, caches
+and sample-mod saves were generated by tests; shared resources were existing
+hook-owned symlinks. Shared ROM target device/inode/size/mtime metadata matched
+before and after native removal. No manual ROM operation, main-checkout edit,
+branch switch or destination push was performed.
+
+No validation job remains live. Keep `ai-code-climb` and its task worktree for
+[open draft PR 266](https://github.com/OpenGGF/OpenGGF/pull/266) against `develop`.
+Delivery remains stage-to-PR, with no merge or task-worktree cleanup.
