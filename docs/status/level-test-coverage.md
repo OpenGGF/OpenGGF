@@ -402,6 +402,24 @@ engine13486 capture follows complete cleanup; no matched native image or Swing
 visible-pixel claim follows. Broader change-based smoke remains pending. The
 Act2 matrix records source, failure attribution and remaining coverage.
 
+The subsequent6November timer210 save now qualifies16World and25Presentation
+checks; the two initial fixture expectations were corrected without changing
+native behavior. A later owned-draw admission regression was reproduced by the
+old real EGL cases and repaired without relaxing public reentry guards. Its
+29-case follow-up (four permanent routes plus25Presentation cases) passes with
+zero skips. The same controller now qualifies full/course through13506/timer229;
+separate13507 reaches restart0100/FADECDA and all objects, then stops LEVEL_FLOW
+before scroll/SAT. All23old selected-Sonic pixel endpoints remain. Detached USA
+R12Bdata/terrain45checks pass separately; no destination World or37reader registry
+is certified. No single90-case or full-suite pass is claimed.
+
+Broader Swing smoke is INCOMPLETE after40minutes:65complete+partial66/91,
+34302recorded tests/8failures/4errors/72skips, no guards/final normal verdict.
+All12nonpasses reproduce before Swing in exact matched controls; one unrelated
+baseline ROM-dependent skip remains an input-coverage difference. Skip policy
+was not weakened:8allowed/62unclassified/2requiredGL skips remain. Local feature
+checkpoints preserve these limits rather than claiming release validation.
+
 ### Historical26October pause checkpoint
 
 The [pause handover](../architecture/plans/2026-10-26-sonic-cd-handover.md)

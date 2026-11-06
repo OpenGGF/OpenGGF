@@ -263,9 +263,12 @@ Unreleased. The earlier development themes remain in
   and art owners. Swing now allocates its multipart children and visits both the
   primary and raw reserved secondary through the same shared Solid kernel, with
   prepared same-Frame publications and source-ordered failure prefixes. Existing
-  art and checkpoint owners remain unchanged. Full/course controller replay now
-  reaches the next time-warp save boundary, with twenty-three selected Sonic
-  render checkpoints. Swing parts remain offscreen at the checked route cuts.
+  art and checkpoint owners remain unchanged. The native timer-210 time-warp save
+  now publishes its saved state, marked period and camera lock through the existing
+  Frame and World owners. Full/course controller replay continues through timer229,
+  retaining twenty-three selected Sonic render checkpoints. Swing parts remain
+  offscreen at the checked route cuts. Authenticated Act2 Past terrain and load
+  metadata are available separately; destination gameplay loading remains pending.
   Authenticated Act2 Spikes mapping and a named retained-source prefix factory
   reuse the existing common body and Std art owner; live Spikes dispatch remains
   separate from the qualified route.

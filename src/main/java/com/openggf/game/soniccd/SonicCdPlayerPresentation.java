@@ -1915,6 +1915,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
                         CdR11aForegroundScroll.State foreground,
                         CdR11aBackgroundScroll.State backgroundImage,
                         CdR11aBackgroundPlane.State plane, DrawCopies copies) {
+        requireAct2TimeWarpIdle();
         requirePastRenderIdle();
         Objects.requireNonNull(sourceAssets, "actual Act2 aggregate");
         Objects.requireNonNull(sourceFrame, "actual Act2 Frame");
@@ -1965,14 +1966,127 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         return source;
     }
 
+    // BEGIN actual Act2 TimeWarp lock/source value seam.
+    // N1ecc5f3 Sonic/Main.asm:618 is MOVE.B at the HIGH scrollLock WORD byte.
+    // Same R12A programme under80..82 requires World's original completed save/custody proof.
+    // Existing carriers are observations; only World's exact original staged publication can store.
+    // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>
+    private boolean act2TimeWarpAdmission;
+
+    /** No Frame capture inside the reached Body read. World owns its actual Primary/source cut. */
+    CdOpeningObjectRuntime.TimeWarpWorldCut borrowAct2TimeWarpWorld(CdPlayerFrameRuntime sourceFrame) {
+        var source = requireAct2TimeWarpFrame(sourceFrame);
+        readAct2TimeWarpAdmission(source);
+        return new CdOpeningObjectRuntime.TimeWarpWorldCut(scrollState, backgroundState);
+    }
+
+    /** Reference authority AND the complete actual FG/BG CAS precede the sole HIGH-byte store. */
+    void validateAct2TimeWarpLock(CdPlayerFrameRuntime sourceFrame,
+                                  CdOpeningObjectRuntime.TimeWarpLockPublication publication) {
+        Objects.requireNonNull(publication, "original prepared Act2 TimeWarp publication");
+        var source = requireAct2TimeWarpFrame(sourceFrame);
+        if (readAct2TimeWarpAdmission(source) != publication) {
+            throw new IllegalStateException("No original Act2 Primary TimeWarp publication window");
+        }
+        var expected = publication.expected(); var before = expected.foreground(); var after = publication.finalForeground();
+        if (scrollState != before || backgroundState != expected.background() || after == before
+                || after.cameraX() != before.cameraX() || after.cameraY16_16() != before.cameraY16_16()
+                || after.horizontalCrossed() != before.horizontalCrossed() || after.verticalCrossed() != before.verticalCrossed()
+                || after.scrollXDiff() != before.scrollXDiff() || after.scrollYDiff() != before.scrollYDiff()
+                || after.scrollFlags() != before.scrollFlags() || after.destBottomBound() != before.destBottomBound()
+                || after.destLeftBound() != before.destLeftBound() || after.bottomBoundShift() != before.bottomBoundShift()
+                || after.scrollLock() != ((before.scrollLock() & 0xFF) | 0x100)) {
+            throw new IllegalStateException("Act2 TimeWarp lock differs from its exact source pair or HIGH-byte-only store");
+        }
+    }
+
+    void applyAct2TimeWarpLock(CdPlayerFrameRuntime sourceFrame,
+                               CdOpeningObjectRuntime.TimeWarpLockPublication publication) {
+        validateAct2TimeWarpLock(sourceFrame, publication);
+        // No allocation, callback or Module reentry after this assignment: World immediately
+        // advances its private Primary expected FG before adopting saved/spawn2 Values.
+        scrollState = publication.finalForeground();
+    }
+
+    private void requireAct2TimeWarpIdle() {
+        if (act2TimeWarpAdmission) throw new IllegalStateException("Act2 TimeWarp admission is active");
+    }
+    private Act2Source requireAct2TimeWarpFrame(CdPlayerFrameRuntime sourceFrame) {
+        requireAct2TimeWarpIdle(); requirePastRenderIdle(); Objects.requireNonNull(sourceFrame, "actual Act2 TimeWarp Frame");
+        var source = requireAct2BoundSource();
+        if (source.frame() != sourceFrame) throw new IllegalArgumentException("Foreign Act2 TimeWarp Frame");
+        var gates = sourceFrame.environment().movement().gates(); int period = gates.timeZone();
+        if (gates.zoneAct() != 1 || period != 1 && (period < 0x80 || period > 0x82)) {
+            throw new IllegalArgumentException("Act2 TimeWarp source family differs");
+        }
+        return source;
+    }
+
+    /** Ephemeral readonly guard over existing references; no new arithmetic/capture/custody owner. */
+    private record Act2TimeWarpImages(Act2Source source, Object captureOwner,
+            CdR11aForegroundScroll.State foreground, CdR11aBackgroundScroll.State background,
+            CdR11aBackgroundPlane.State plane, DrawCopies copies, CdR11aBackgroundPlane.State publishedPlane,
+            LevelSpritePresentation.ScrollFrame prepared, LevelSpritePresentation.ScrollFrame published,
+            PlcLifecyclePhase held, boolean load, boolean setup, Act2RenderBinding render,
+            Object pastRender, Object projection, boolean drawingPast, boolean drawingAct2) { }
+
+    /** World's single predicate returns null for ordinary/completed admission, original only in its staged window. */
+    private CdOpeningObjectRuntime.TimeWarpLockPublication readAct2TimeWarpAdmission(Act2Source source) {
+        requireAct2TimeWarpIdle(); requirePastRenderIdle();
+        var expected = new Act2TimeWarpImages(source, scrollCaptureOwner, scrollState, backgroundState,
+                planeState, drawCopies, publishedPlane, preparedScroll, publishedScroll, heldPhase,
+                loadScrollPending, checkpointSetupPending, act2RenderBinding, pastRenderBinding,
+                scroll.projection, drawingPast, drawingAct2);
+        act2TimeWarpAdmission = true;
+        try {
+            CdOpeningObjectRuntime.TimeWarpLockPublication publication;
+            try { publication = module.requireAct2TimeWarpAdmission(source.frame()); }
+            catch (RuntimeException | Error original) {
+                try { validateAct2TimeWarpImages(expected); }
+                catch (RuntimeException | Error verification) { if (verification != original) original.addSuppressed(verification); }
+                throw original;
+            }
+            validateAct2TimeWarpImages(expected); return publication;
+        } finally { act2TimeWarpAdmission = false; }
+    }
+    private void validateAct2TimeWarpImages(Act2TimeWarpImages expected) {
+        if (!act2TimeWarpAdmission || requireAct2BoundSource() != expected.source()
+                || scrollCaptureOwner != expected.captureOwner() || scrollState != expected.foreground()
+                || backgroundState != expected.background() || planeState != expected.plane()
+                || drawCopies != expected.copies() || publishedPlane != expected.publishedPlane()
+                || preparedScroll != expected.prepared() || publishedScroll != expected.published()
+                || heldPhase != expected.held() || loadScrollPending != expected.load()
+                || checkpointSetupPending != expected.setup() || act2RenderBinding != expected.render()
+                || pastRenderBinding != expected.pastRender() || scroll.projection != expected.projection()
+                || drawingPast != expected.drawingPast() || drawingAct2 != expected.drawingAct2()) {
+            throw new IllegalStateException("Readonly Act2 TimeWarp admission changed the complete Presentation preimage");
+        }
+    }
+
+    /** Keep unmarked old-programme observation; a raw marker alone never grants capture admission. */
+    private Act2Source requireAct2ObservedSource() {
+        requireAct2TimeWarpIdle(); var source = requireAct2BoundSource();
+        var gates = source.frame().environment().movement().gates(); int period = gates.timeZone();
+        if ((period & 0x80) != 0) {
+            if (gates.zoneAct() != 1 || period > 0x82) throw new IllegalArgumentException("Act2 observed marked source differs");
+            readAct2TimeWarpAdmission(source);
+        } else if (period == 1) {
+            readAct2TimeWarpAdmission(source);
+        }
+        return source;
+    }
+    // END actual Act2 TimeWarp lock/source value seam.
+
     /** Ordinary source admission is stricter than observing the old programme's retained images. */
     private Act2Source requireAct2Source() {
+        requireAct2TimeWarpIdle();
         var source = requireAct2BoundSource();
         var gates = source.frame().environment().movement().gates();
         int period = gates.timeZone();
-        if (gates.zoneAct() != 1 || period != 1) {
+        if (gates.zoneAct() != 1 || period != 1 && (period < 0x80 || period > 0x82)) {
             throw new IllegalArgumentException("Act2 loading source family differs");
         }
+        readAct2TimeWarpAdmission(source);
         return source;
     }
 
@@ -2087,7 +2201,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
 
     ScrollCapture captureAct2Scroll() {
         requirePastRenderIdle();
-        requireAct2BoundSource().frame().captureShared();
+        requireAct2ObservedSource().frame().captureShared();
         return new ScrollCapture(scrollCaptureOwner, scrollState, backgroundState, planeState, drawCopies);
     }
     void validateAct2Scroll(ScrollCapture value) {
@@ -2099,7 +2213,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
     }
     boolean sameAct2Scroll(ScrollCapture value) {
         // Observation only: restore/prepared adoption still use strict validateAct2Scroll/source admission.
-        requireAct2BoundSource().frame().captureShared(); Objects.requireNonNull(value);
+        requireAct2ObservedSource().frame().captureShared(); Objects.requireNonNull(value);
         if (value.owner() != scrollCaptureOwner) throw new IllegalArgumentException("Retired Act2 scroll capture");
         // Immutable exact references: these checks authenticate the actual preimage,
         // never allow public values to mint a loading callback.
@@ -2273,6 +2387,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
 
     private void drawAct2SelectedDisplay() {
         requirePastRenderIdle();
+        var actualSource = requireAct2ClosedSource();
         var selected = module.act2SelectedDisplay();
         if (selected.projection() instanceof SonicCdPastDisplay.Blocked blocked)
             throw new UnsupportedOperationException("Actual Act2 selected display is blocked: " + blocked.failure());
@@ -2281,7 +2396,6 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         drawingAct2 = true;
         try {
             if (act2RenderBinding == null) {
-                var actualSource = requireAct2ClosedSource();
                 var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
                 var world = mode.getWorldSession(); var levels = mode.getLevelManager();
                 var graphics = GameServices.graphics(); var camera = mode.getCamera();
@@ -2299,8 +2413,13 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
     }
 
     private void requireAct2RenderBinding(SonicCdAct2Display.Selection selected) {
+        if (!drawingAct2 || drawingPast) throw new IllegalStateException("No owned Act2 selected draw");
+        requireAct2TimeWarpIdle();
         var binding = act2RenderBinding;
-        var actualSource = requireAct2ClosedSource();
+        var actualSource = requireAct2BoundSource();
+        actualSource.frame().captureShared();
+        // The actual selectedDisplay query below validates World/source and completed-save custody
+        // during this private readonly draw; public capture/mutation ports keep their idle guard.
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         if (binding == null || module.act2SelectedDisplay() != selected || actualSource != binding.source()
                 || mode != binding.mode() || mode.getWorldSession() != binding.world()

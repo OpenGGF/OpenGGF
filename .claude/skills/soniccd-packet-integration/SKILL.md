@@ -1001,3 +1001,51 @@ tags, smoke/default/all inventory, guards, JVM/backend settings, queue admission
 release-only full-suite or explicit exhaustive-audit policy. Required original
 media, EGL, native/trace and domain checks remain separate. Check actual skips and
 failures, keep the existing diagnostic cleanup, and create no pass cache or receipt.
+
+## Observe retained category diagnostics without running checks
+
+Use the read-only [category observer](../../../tools/soniccd/category_observation.py)
+for one explicit canonical run directory and policy, without parsing rolling logs:
+
+```bash
+python3 -B tools/soniccd/category_observation.py \
+  --run-dir "$CANONICAL_CATEGORY_RUN" \
+  --policy "$DESTINATION_WORKTREE/tools/testing/release-skip-policy.json" \
+  --capabilities gl=true
+```
+
+It reads only `plan.json`, `preparation.json`, `status.json` and **list-shaped**
+`results.json`, plus the explicit policy and the hash-pinned existing sibling
+`tools/testing/classify_surefire_skips.py` (8564 bytes; SHA256
+`89a7fb137f1ee1f63a0f848f29702cfb9d313d4dd8c54f8d615108a540c2049c`).
+Policy classification and capability parsing reuse that dependency; names are
+literal `class#test` strings, with no identity repair or rule changes. Capabilities
+must name existing policy inputs and are caller declarations, not detected tools.
+Evidence paths are not checked. Normalized summaries are not raw runner records.
+
+JSON separates declared source/selection/batch progress, counts, retained failures,
+allowed/unclassified/required-skipped/undeclared-input skips, input omissions and
+observer output omissions. Partial aggregates may include the next uncompleted
+batch; no per-batch testcase breakdown is invented. A timeout has no observed normal
+VERDICT. Missing records, partial lanes and guards not run stay explicit. The
+current runner has no final source after-state, so **even declared passes remain
+incomplete**; counts or source fingerprints never become certification.
+
+Exit3 means an accepted incomplete observation, or an explicit byte/list/output
+budget or changing-input stop. Exit2 rejects unsafe paths, malformed/unknown record
+shapes/statuses, duplicate keys/identities, nonfinite numbers, boolean counts or
+inconsistent omissions. Read the JSON, not just totals. Current-schema observation
+has no successful certification exit. Inputs/parents are rechecked non-atomically;
+change-and-restore remains outside the proof. Symlinks and selected hardlink aliases
+reject. No directory scan, source/Git/job/process/XML/log inspection, lease, runner,
+import, write, cache, receipt, report deletion or diagnostic acknowledgement occurs.
+
+Bounds: status/preparation16KiB each, plan/policy2MiB each, results16MiB,
+combined20MiB per snapshot pass (then one recheck), stdout16MiB, 10000 candidate
+classes, two lanes, 1000 retained skip
+and1000 failure/error records per lane, JSON depth32/nodes250000. Output samples retain at most100 candidate
+paths,50 failure/reason records and100 classified rows per group, with explicit
+omission counts. These bounds do not relax any source, context or runner budget.
+Run [the synthetic standard-library controls](../../../tools/soniccd/test_category_observation.py)
+with `python3 -B`, `PYTHONDONTWRITEBYTECODE=1` and an owned `TMPDIR` for tool edits.
+The owning task still controls real diagnostics inspection and acknowledgement.

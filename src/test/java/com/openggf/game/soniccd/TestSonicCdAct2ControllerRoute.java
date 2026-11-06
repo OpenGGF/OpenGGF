@@ -664,21 +664,151 @@ class TestSonicCdAct2ControllerRoute {
         assertEquals(209,frame.environment().globals().timeWarpTimer(),"Last closed13486 timer before the next primary save boundary");
         var swingClosed13486=captureNative(h);var swingRegistry=h.mode().getRewindRegistry();var swingEndFull=swingRegistry.capture();var swingEndCourse=swingRegistry.captureCourse();
         swingRegistry.restore(swingEndFull);assertNativeCapture(swingClosed13486,h);swingRegistry.restoreCourse(swingEndCourse);assertNativeCapture(swingClosed13486,h);
-        // A separate negative terminal attempt13487, never part of the closed positive13486 qualification.
-        var swingLastClosed=module.act2LoadState();
-        var timeWarpStop=assertThrows(com.openggf.game.soniccd.player.CdPlayerTimeWarp.UnsupportedTimeWarp.class,()->step(h,controller(13487)));
-        assertEquals(com.openggf.game.soniccd.player.CdPlayerTimeWarp.UnsupportedBoundary.SCROLL_LOCK_WRITE,timeWarpStop.boundary());
-        assertEquals("SCROLL_LOCK_WRITE",timeWarpStop.getMessage());assertTrue(frame.closed());
-        // Raw placement and retained Values ledger are legal after failure. Do not call Module/Frame/registry capture.
-        var swingFailedPlacement=livePlacement.capture();
-        assertEquals(swingLastClosed.placement().status(),swingFailedPlacement.status());
-        assertArrayEquals(swingLastClosed.placement().savedFlags().copy(),swingFailedPlacement.savedFlags().copy());
-        for(var image:swingLastClosed.placement().pool().slots())assertEquals(image,swingFailedPlacement.pool().slots().get(image.identity().dynamicIndex()),"Failed primary13487 ran no dynamic source writes");
-        var swingFailedPoolBytes=java.nio.ByteBuffer.allocate(96*64);for(var image:swingFailedPlacement.pool().slots())swingFailedPoolBytes.put(image.copyBytes());
-        assertEquals("55a8daea087a6bbfa8077ad3289475e9768673097626c0ac18609e8c03c60214",java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(swingFailedPoolBytes.array())));
-        var swingFailedCalls=(java.util.List<?>)actualField(actualField(swingVisit,"values"),"calls");
-        assertEquals(java.util.List.of("ORDINARY_PUBLICATION","UPDATE_ANIMATED_TILES","ORDINARY_DRAW_LEVEL","ORDINARY_SLOW_PLC","UPDATE_HUD","ORDINARY_SERVICE","LEVEL_FRAME_INCREMENT","SPAWN_OBJECTS"),swingFailedCalls.stream().map(Object::toString).toList());
-        System.out.println("Controller-only Act2 closed13486: real Swing13451 parent42 and later children51/53/57/58 all complete Init in one physical walk;13452 Main and13486 endpoint retain exact source64/native geometry/receipt order and separate completed-vs-selected CPU comparisons, with full/course before-forward replay. Separate13487 primary TimeWarp SCROLL_LOCK_WRITE retains the exact raw failed pool/status/saved and eight-receipt prefix ending SpawnObjects; no closed Frame capture or completed13487 claim.");
+        // BEGIN measured natural TimeWarp save continuation; expected values are comparison only.
+        var warpPresentation=(SonicCdPlayerPresentation)actualField(swingVisit,"presentation");
+        var warpBeforeState=module.act2LoadState();var warpBeforeActor=frame.state();var warpBeforeEnvironment=frame.environment();
+        var warpBeforeForeground=warpPresentation.act2ForegroundImage();var warpBeforeBackground=warpPresentation.act2BackgroundImage();
+        var warpBeforeCustody=actualField(actualField(actualField(swingVisit,"values"),"globals"),"timeWarpCustody");
+        var warpBeforeSaved=actualField(warpBeforeCustody,"saved");assertTrue(((java.util.Optional<?>)actualField(warpBeforeCustody,"completed")).isEmpty());
+        var warpPreviousCpu=assertInstanceOf(com.openggf.game.soniccd.objects.CdObjectDrawQueue.CpuSat.class,
+                ((java.util.Optional<?>)actualField(actualField(actualField(swingVisit,"values"),"loop"),"completedDraw")).orElseThrow());
+        com.openggf.game.soniccd.objects.CdTimeWarpSaveData.State warpSaved210=null;Object warpReceipt210=null;
+        var warpLockedForeground=warpBeforeForeground;
+        byte[] warpExpectedSaved=java.util.HexFormat.of().parseHex("0023000019b60116060310195600910cab001b04c0001b032a001b00000000100006000a480000300c00");
+        byte[] warpExpectedKnown=java.util.HexFormat.of().parseHex("01".repeat(42));
+        int[][] warpActorNumbers={
+            {0x19BC9000,0x01205F00,1536,2688,4096,2,0,6,132,7,14,2,2,0}, // 13487
+            {0x19C29000,0x012ADF00,1536,2744,4096,2,0,6,132,7,14,2,2,0}, // 13488
+            {0x19C89000,0x01359700,1536,2800,4096,2,0,6,132,7,14,2,2,0}, // 13489
+            {0x19CE9000,0x01408700,1536,2856,4096,2,0,6,132,7,14,2,2,0}, // 13490
+            {0x19D49000,0x014BAF00,1536,2912,4096,2,0,6,132,7,14,2,2,0}, // 13491
+            {0x19DA9000,0x01570F00,1536,2968,4096,2,0,6,132,7,14,2,2,0}, // 13492
+            {0x19E09000,0x0162A700,1536,3024,4096,2,0,6,132,7,14,2,2,0}, // 13493
+            {0x19E69000,0x016E7700,1536,3080,4096,2,0,6,132,7,14,2,2,0}, // 13494
+            {0x19EC9000,0x016B7F00,1536,0,1536,2,0,0,132,9,19,0,0,0}, // 13495
+            {0x19F29000,0x016B7F00,1536,0,1536,2,0,0,132,9,19,0,0,0}, // 13496
+            {0x19F89000,0x016B7F00,1536,0,1536,2,0,0,132,9,19,0,0,0}, // 13497
+            {0x19FE9000,0x016B7F00,1536,0,1536,2,0,0,132,9,19,0,0,0}, // 13498
+            {0x1A049000,0x016B7F00,1536,0,1536,2,0,0,132,9,19,0,0,0}, // 13499
+            {0x1A0A9000,0x016B7F00,1536,0,1536,2,0,0,132,9,19,0,0,0}, // 13500
+            {0x1A109000,0x016B7F00,1536,0,1536,2,0,0,132,9,19,0,0,0}, // 13501
+            {0x1A169000,0x016B7F00,1536,0,1536,2,0,0,132,9,19,0,0,0}, // 13502
+            {0x1A1C9000,0x016B7F00,1536,0,1536,2,0,0,132,9,19,0,0,0}, // 13503
+            {0x1A229000,0x016B7F00,1536,0,1536,2,0,0,132,9,19,0,0,0}, // 13504
+            {0x1A289000,0x016B7F00,1536,0,1536,2,0,0,132,9,19,0,0,0}, // 13505
+            {0x1A2E9000,0x016B7F00,1536,0,1536,2,0,0,132,9,19,0,0,0}, // 13506
+        };
+        int[] warpCpuCounts={32,21,36,29,24,37,30,25,36,29,24,21,36,33,24,37,26,25,36,33};
+        String[] warpCpuHashes={
+            "5922f5b1292ad98b2be1d4a13ce7f474a51bbe38a10b45ff8be66272ec73aa2c", // 13487
+            "956dfb12ab7f9695919935aee84be4f68fbbda425c19279138169cfc35b9ccfa", // 13488
+            "296b545a95bc046c90772a42bffdfc744d754a0fd454741645a796c85418a7c5", // 13489
+            "fe90a1ac76342606317ce74daab68f634ff85e3eeeb5522391e8d26632be4ae1", // 13490
+            "217ba6c9b5b223a3320f27ad90fc86efe9869b945d64f3431548592fcc47690d", // 13491
+            "068fba8977ea17e0afef3bd544155b597324ad649d053589eee6b94ca6d23b3e", // 13492
+            "437c3c7b131d003d0f13eebc1582938191f5d0844d89dc2285d5ae33d37b7be2", // 13493
+            "a77a83e366dd487c57f8de5bdd1d8db982494e543e863b944d7d08da90288633", // 13494
+            "108a6cf977f1eab39374d68ed885903cc6d64fc3f5eb312c939bf77a5ba84154", // 13495
+            "b5df6eb9b88d481d878631a19fc759b35c1eeb5fc1ce28ec7668b73299e592a6", // 13496
+            "1d31ac09d636df8af6b57e5b597c5ee894974fc978a40058073aa3e41a6a59ba", // 13497
+            "3c542cd7493b63bc6d38a205804f83f483e6fc5400c67063a47c43a7f7aedf8e", // 13498
+            "a1e4fac638c9dc0e2fa9085e30f31381ac2e68d4156c217503e4a42af5e0febc", // 13499
+            "704003ccd39b451098ea93c1f8ca48f5bc8c2cf3b83a8ab22e24ebfac1928328", // 13500
+            "12953d2ad58e35d847bc531bae155ce5087063d18d79a09fad10bd755af8790e", // 13501
+            "046fc402996e9baae73cef64445617f218c10bfc9495f0e42d194e081fdf9019", // 13502
+            "5e848f7a1e74efb94b28474ee8716b24107f3338ea4d958cd1259d0a4bdd75fd", // 13503
+            "8416d5ce97973e5cfe014efde41b1a061597b3d281ac90e4810619dbdf75a723", // 13504
+            "dc365bbde640328eaef470174897c8f400b6c4b1a93a07fbae3d4d503406a3e5", // 13505
+            "1a8f631b1bf342ccdb6aa588ff812c8d024f57ea3a10c29ab48cabc87f6faa1f", // 13506
+        };
+        for(int call=13487;call<=13506;call++) {
+            var input=controller(call);
+            if(call==13487 || call==13488 || call==13506)replayNextRight(h,input); // Before-forward full/course; no net extra call.
+            step(h,input);assertLaterRouteOwners(h,frame,source,world,generation);
+            assertSame(swingVisit,actualField(module,"act2Loading"));assertTrue(module.act2LoadingSelected());
+            assertEquals(CdStageKey.parse("R12A"),source.stage()); // The marked cut still owns the old programme, not a destination load.
+            int row=call-13487;var warpState=module.act2LoadState();var warpMotion=frame.state().motion();
+            assertArrayEquals(warpActorNumbers[row],new int[]{warpMotion.centreX16_16(),warpMotion.centreY16_16(),warpMotion.xVelocity(),warpMotion.yVelocity(),warpMotion.groundVelocity(),warpMotion.routine(),warpMotion.angle(),warpMotion.flags(),warpMotion.spriteFlags(),warpMotion.xRadius(),warpMotion.yRadius(),warpMotion.animation(),warpMotion.previousAnimation(),warpMotion.playerControl()});
+            assertEquals(210+row,frame.environment().globals().timeWarpTimer());assertEquals(3043+row,frame.environment().globals().levelFrames());
+            assertEquals(3066L+row,frame.vIntClock().absoluteValue().orElseThrow());
+            assertEquals(0x80,frame.environment().movement().gates().timeZone());assertEquals(1,frame.environment().movement().gates().zoneAct());
+            assertEquals(255,frame.environment().movement().gates().timeWarpDirection());
+            assertEquals(8,frame.environment().controls().rawHeld());assertEquals(0,frame.environment().controls().rawTap());
+            assertEquals(8,frame.environment().controls().logicalHeld());assertEquals(0,frame.environment().controls().logicalTap());assertEquals(0,frame.environment().controls().controlLocked());
+            assertEquals("BEGIN_LEVEL",warpState.phase().name());assertEquals(2,warpState.level().spawnMode());assertEquals(0,warpState.level().levelRestart());
+            assertEquals(35,warpState.ring().rings());assertEquals(3,warpState.ring().lives());
+            var warpValues=actualField(swingVisit,"values");var warpGlobals=actualField(warpValues,"globals");var warpCustody=actualField(warpGlobals,"timeWarpCustody");
+            var warpSaved=assertInstanceOf(com.openggf.game.soniccd.objects.CdTimeWarpSaveData.State.class,actualField(warpCustody,"saved"));
+            var warpReceipt=((java.util.Optional<?>)actualField(warpCustody,"completed")).orElseThrow();
+            assertArrayEquals(warpExpectedSaved,(byte[])actualField(warpSaved,"bytes"));
+            assertArrayEquals(warpExpectedKnown,(byte[])actualField(warpSaved,"knownMask"));assertArrayEquals(warpExpectedKnown,warpSaved.knownMask().copy());
+            var warpCanonical=java.nio.ByteBuffer.allocate(42);
+            for(int[] range:new int[][]{{0xFF1528,2},{0xFF1545,2},{0xFF1548,5},{0xFF154E,28},{0xFF1570,4},{0xFF1593,1}})
+                for(int address=range[0];address<range[0]+range[1];address++)warpCanonical.put((byte)warpSaved.knownByte(address).orElseThrow());
+            assertArrayEquals(warpExpectedSaved,warpCanonical.array(),"All42 addressed canonical saved bytes, without padding or inferred unknowns");
+            if(call==13487) {
+                assertNotSame(warpBeforeSaved,warpSaved);warpSaved210=warpSaved;warpReceipt210=warpReceipt;warpLockedForeground=warpPresentation.act2ForegroundImage();
+                var m=warpBeforeActor.motion();var e=warpBeforeEnvironment.movement();var fg=warpBeforeForeground;var bg=warpBeforeBackground;
+                var live=assertInstanceOf(com.openggf.game.soniccd.objects.CdCheckpointLiveAux.State.class,actualField(warpGlobals,"live"));
+                // Native local8 read before the original MODE tail; other sources come from this real save's owners.
+                int[] warpSourceValues={warpBeforeState.level().spawnMode(),m.centreX16_16()>>>16,m.centreY16_16()>>>16,m.groundVelocity()&65535,m.xVelocity()&65535,m.yVelocity()&65535,m.flags()&~0x48,
+                        com.openggf.game.soniccd.objects.CdCheckpointLiveAux.read(live,com.openggf.game.soniccd.objects.CdCheckpointLiveAux.Field.WATER_ROUTINE),e.bounds().bottom(),fg.cameraX(),fg.cameraYWord(),bg.cameraBgXWord(),bg.cameraBgYWord(),bg.cameraBg2XWord(),bg.cameraBg2YWord(),bg.cameraBg3XWord(),bg.cameraBg3YWord(),
+                        com.openggf.game.soniccd.objects.CdCheckpointLiveAux.read(live,com.openggf.game.soniccd.objects.CdCheckpointLiveAux.Field.WATER_HEIGHT2),com.openggf.game.soniccd.objects.CdCheckpointLiveAux.read(live,com.openggf.game.soniccd.objects.CdCheckpointLiveAux.Field.WATER_FULLSCREEN),warpState.ring().rings(),warpState.ring().livesFlags(),
+                        com.openggf.game.soniccd.objects.CdCheckpointLiveAux.read(live,com.openggf.game.soniccd.objects.CdCheckpointLiveAux.Field.TIME_LONG),e.gates().miniSonic()};
+                var warpFields=com.openggf.game.soniccd.objects.CdTimeWarpSaveData.SavedField.values();assertEquals(23,warpFields.length);assertEquals(warpFields.length,warpSourceValues.length);
+                for(int index=0;index<warpFields.length;index++)assertEquals(warpSourceValues[index],warpSaved.read(warpFields[index]),warpFields[index].name());
+                assertEquals(0,warpBeforeState.level().spawnMode());assertEquals(0,warpBeforeForeground.scrollLock());assertNotSame(warpBeforeForeground,warpLockedForeground);
+                assertEquals(6582,warpSaved.read(com.openggf.game.soniccd.objects.CdTimeWarpSaveData.SavedField.PRIMARY_X));
+                assertEquals(278,warpSaved.read(com.openggf.game.soniccd.objects.CdTimeWarpSaveData.SavedField.PRIMARY_Y));
+                assertNotEquals(warpMotion.centreX16_16()>>>16,warpSaved.read(com.openggf.game.soniccd.objects.CdTimeWarpSaveData.SavedField.PRIMARY_X),"Saved local position precedes the genuine MODE continuation");
+            }
+            assertSame(warpSaved210,warpSaved);assertSame(warpReceipt210,warpReceipt); // Spawn2 returns do not create a second save or receipt.
+            assertSame(swingVisit,actualField(warpReceipt,"owner"));assertSame(frame,actualField(warpReceipt,"frame"));assertSame(source,actualField(warpReceipt,"stageSource"));
+            assertSame(warpState.assets(),actualField(warpReceipt,"assets"));assertSame(world,actualField(warpReceipt,"world"));assertEquals(generation,((Number)actualField(warpReceipt,"generation")).longValue());
+            assertEquals(0x80,(int)actualField(warpReceipt,"rawPeriod"));assertSame(warpSaved,actualField(warpReceipt,"saved"));
+            assertSame(warpLockedForeground,warpPresentation.act2ForegroundImage());assertSame(warpBeforeBackground,warpPresentation.act2BackgroundImage());
+            assertEquals(0x0100,warpPresentation.act2ForegroundImage().scrollLock());assertEquals(6486,warpPresentation.act2ForegroundImage().cameraX());assertEquals(145,warpPresentation.act2ForegroundImage().cameraYWord());
+            var warpCpu=assertInstanceOf(com.openggf.game.soniccd.objects.CdObjectDrawQueue.CpuSat.class,((java.util.Optional<?>)actualField(actualField(warpValues,"loop"),"completedDraw")).orElseThrow());
+            String warpCpuHash=java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(warpCpu.bytes()));
+            assertEquals(warpCpuCounts[row],warpCpu.spriteCount());assertEquals(warpCpuHashes[row],warpCpuHash);
+            assertTrue(warpCpu.provenance().stream().noneMatch(piece->piece.slotRef().wholeIndex()==0),"This call's Main DrawObject is suppressed at timer>=210");
+            var warpSelected=module.act2SelectedDisplay();assertInstanceOf(SonicCdPastDisplay.Ready.class,warpSelected.projection());var warpSelectedCpu=warpSelected.inputs().selectedCpu().orElseThrow();
+            assertArrayEquals(warpPreviousCpu.bytes(),warpSelectedCpu.bytes());assertEquals(warpPreviousCpu.spriteCount(),warpSelectedCpu.spriteCount());assertEquals(warpPreviousCpu.provenance(),warpSelectedCpu.provenance());
+            assertNotEquals(warpCpuHash,java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(warpSelectedCpu.bytes())),"Already selected VInt CPU precedes this call's completed Main CPU; no new pixel/visibility claim");
+            warpPreviousCpu=warpCpu;
+        }
+        var warpClosed13506=captureNative(h);var warpEndFull=registry.capture();var warpEndCourse=registry.captureCourse();
+        registry.restore(warpEndFull);assertNativeCapture(warpClosed13506,h);registry.restoreCourse(warpEndCourse);assertNativeCapture(warpClosed13506,h);
+        assertLaterRouteOwners(h,frame,source,world,generation);
+        var warpLastClosed=module.act2LoadState();var warpLastPoolBytes=java.nio.ByteBuffer.allocate(96*64);
+        for(var image:warpLastClosed.placement().pool().slots())warpLastPoolBytes.put(image.copyBytes());
+        assertEquals("7988061948ffd8ed3d38a52bbd7f5d9a73b90fa513a340f47c0b85e58d1558bf",java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(warpLastPoolBytes.array())));
+        // Separate partial13507: all physical bodies ran, then restart branches before scroll/SAT. No closed capture/restore follows.
+        var warpStop=assertThrows(SonicCdGameModule.UnsupportedAct2Loading.class,()->step(h,controller(13507)));
+        assertEquals(SonicCdGameModule.Act2Boundary.LEVEL_FLOW,warpStop.boundary());assertEquals("Actual R12A stopped at LEVEL_FLOW",warpStop.getMessage());assertTrue(frame.closed());
+        var warpFailedPlacement=livePlacement.capture();assertEquals(warpLastClosed.placement().status(),warpFailedPlacement.status());
+        assertArrayEquals(warpLastClosed.placement().savedFlags().copy(),warpFailedPlacement.savedFlags().copy());
+        var warpFailedPoolBytes=java.nio.ByteBuffer.allocate(96*64);for(var image:warpFailedPlacement.pool().slots())warpFailedPoolBytes.put(image.copyBytes());
+        assertEquals("ac10a9caa06b3d89aa1ff49d699e204efffe037ff4b1f0965952c283272ffba6",java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(warpFailedPoolBytes.array())));
+        assertFalse(java.util.Arrays.equals(warpLastPoolBytes.array(),warpFailedPoolBytes.array()),"The failed13507 walk retains genuine dynamic writes, not an unchanged pool");
+        var warpFailedValues=actualField(swingVisit,"values");var warpFailedCalls=(java.util.List<?>)actualField(warpFailedValues,"calls");
+        assertEquals(java.util.List.of(
+                "ORDINARY_PUBLICATION","UPDATE_ANIMATED_TILES","ORDINARY_DRAW_LEVEL","ORDINARY_SLOW_PLC","UPDATE_HUD","ORDINARY_SERVICE","LEVEL_FRAME_INCREMENT","SPAWN_OBJECTS",
+                "PRIMARY_MAIN","SHIELD_ACTIVE","SHIELD_BODY","TIME_STARS_ACTIVE","TIME_STARS_BODY","TIME_STARS_ACTIVE","TIME_STARS_BODY","TIME_STARS_ACTIVE",
+                "TIME_STARS_BODY","TIME_STARS_ACTIVE","TIME_STARS_BODY","RESERVED_OBJECTS","SPRING_BODY","RING_BODY","RING_BODY","SPRING_BODY",
+                "RING_BODY","RING_BODY","MOVING_SPRING_BODY","RING_BODY","SPRING_BODY","RING_BODY","SPRING_BODY","FLOWER_BODY",
+                "SPRING_BODY","RING_BODY","RING_BODY","SPRING_BODY","RING_BODY","RING_BODY","SPRING_BODY","DYNAMIC_OBJECTS"),warpFailedCalls.stream().map(Object::toString).toList());
+        var warpFailedLevel=assertInstanceOf(com.openggf.game.soniccd.objects.CdLevelGlobals.class,actualField(warpFailedValues,"level"));
+        // Source oracles, not preobserved failed-cut diagnostics: Main.asm:608 HIGH-byte restart and Sub CPU.asm:11-12 fade command.
+        assertEquals(0x0100,warpFailedLevel.levelRestart());assertEquals(2,warpFailedLevel.spawnMode());
+        var warpFailedSounds=(java.util.List<?>)actualField(swingVisit,"sounds");
+        assertEquals(java.util.List.of(new SonicCdGameModule.PastFrameSound(new com.openggf.game.soniccd.player.CdPlayerFrameRuntime.BodySound(com.openggf.game.soniccd.player.CdPlayerBody.Sound.SCMD_FADECDA))),
+                warpFailedSounds.stream().filter(SonicCdGameModule.PastFrameSound.class::isInstance).toList());
+        var warpFailedCustody=actualField(actualField(warpFailedValues,"globals"),"timeWarpCustody");
+        assertSame(warpSaved210,actualField(warpFailedCustody,"saved"));assertSame(warpReceipt210,((java.util.Optional<?>)actualField(warpFailedCustody,"completed")).orElseThrow());
+        assertSame(warpPreviousCpu,((java.util.Optional<?>)actualField(actualField(warpFailedValues,"loop"),"completedDraw")).orElseThrow(),"No new Main SAT build at the restart branch");
+        System.out.println("Controller-only Act2 closed13506: original World/Frame/R12A source/epoch survive natural save13487 timer210 through229, exact saved42/knownmask and old local8/current scalar-scroll sources, raw80/spawn2/lock0100, saved/receipt identity nonwrites, three before-forward full/course edges and endpoint complete-value restore. Current Main Sonic draw is suppressed; selected prior VInt CPU remains separate. Partial13507 reaches all objects then LEVEL_FLOW before scroll/SAT, with exact40 receipts/raw96 and source-oracle restart0100/typed FADECDA. No closed13507, destination-load, new pixels or visibility claim.");
+        // END measured natural TimeWarp save continuation.
         // END measured Swing promotion.
     }
 

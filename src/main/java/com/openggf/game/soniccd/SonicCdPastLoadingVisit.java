@@ -9011,13 +9011,14 @@ final class SonicCdPastLoadingVisit {
     /** Retained MAINVARS data only, borrowed at the actual completed old IPX return. */
     record ExitCarry(CdCheckpointLiveAux.State live, CdPlayerBody.ContactGlobals contact,
                      CdOpeningObjectRuntime.ScoreGlobals score, CdOpeningObjectRuntime.DevGlobals retainedDev,
-                     CdAssetBytes savedFlags, int demoDataIndexWord, CdCheckpointSaveData.State checkpointSaved) { }
+                     CdAssetBytes savedFlags, int demoDataIndexWord, CdCheckpointSaveData.State checkpointSaved,
+                     CdTimeWarpSaveData.State timeWarpSaved) { }
     ExitCarry oldIpxReturnCarry() {
         requireCurrent();
         if (values.phase() != OLD_IPX_RETURNED)
             throw new IllegalStateException("MAINVARS carry requires the actual old IPX return");
         var g = values.globals();
-        return new ExitCarry(g.live(), g.contact(), g.score(), g.retainedDev(), placement.capture().savedFlags(), values.loop().demoDataIndexWord().orElseThrow(), g.checkpointSaved());
+        return new ExitCarry(g.live(), g.contact(), g.score(), g.retainedDev(), placement.capture().savedFlags(), values.loop().demoDataIndexWord().orElseThrow(), g.checkpointSaved(), saved);
     }
 
     SonicCdGameModule.PastLoadState observation() {

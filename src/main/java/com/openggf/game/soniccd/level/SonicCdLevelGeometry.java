@@ -70,7 +70,7 @@ class SonicCdLevelGeometry extends AbstractLevel {
     }
 
     private static String stageLabel(CdStageTerrain terrain) {
-        return switch (terrain.shape()) { case PPZ1_PRESENT -> "R11A"; case PPZ1_PAST -> "R11B"; case PPZ1_GOOD_FUTURE -> "R11C"; case PPZ1_BAD_FUTURE -> "R11D"; case PPZ2_PRESENT -> "R12A"; };
+        return switch (terrain.shape()) { case PPZ1_PRESENT -> "R11A"; case PPZ1_PAST -> "R11B"; case PPZ1_GOOD_FUTURE -> "R11C"; case PPZ1_BAD_FUTURE -> "R11D"; case PPZ2_PRESENT -> "R12A"; case PPZ2_PAST -> "R12B"; };
     }
 
     private void loadPalettes(CdAssetBytes initial) {

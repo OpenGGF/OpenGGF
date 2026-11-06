@@ -203,6 +203,13 @@ public final class SonicCdGameModule implements GameModule {
         if (mode.getCamera().getWidth() != 320 || mode.getCamera().getHeight() != 224)
             throw SonicCd.unsupported("Act2 requires actual native viewport");
     }
+    /** Null denotes a normal or captured completed-save cut; only the private original
+     * Primary publication window can return its exact prepared lock reference. */
+    CdOpeningObjectRuntime.TimeWarpLockPublication requireAct2TimeWarpAdmission(CdPlayerFrameRuntime sourceFrame) {
+        requireAct2LoadingVisit(act2Loading);
+        if (sourceFrame != playerFrame) throw new IllegalStateException("TimeWarp admission belongs to another Act2 Frame");
+        return act2Loading.requireTimeWarpAdmission(sourceFrame);
+    }
     void validateAct2LoadingCut() { requireAct2LoadingVisit(act2Loading); playerFrame.captureShared(); }
     SonicCdAct2Display.Selection act2SelectedDisplay() { validateAct2LoadingCut(); return act2Loading.selectedDisplay(); }
     void serviceAct2Loading(int held) {
@@ -829,7 +836,7 @@ public final class SonicCdGameModule implements GameModule {
             retainedDev = new CdOpeningObjectRuntime.DevGlobals(1, retainedDev.projDestroyed());
         act2Loading = new SonicCdAct2LoadingVisit(this, c.data().terrain(), playerFrame, playerPresentation,
                 c.data().player(), c.ring(), c.level(), c.sectionWord(), video, c.mainvars().live(), c.mainvars().contact(), c.mainvars().score(),
-                c.displayedVScrollLongBits(), c.mainvars().savedFlags(), retainedDev, runMmdClearedWaterPalette, c.mainvars().demoDataIndexWord(), c.mainvars().checkpointSaved());
+                c.displayedVScrollLongBits(), c.mainvars().savedFlags(), retainedDev, runMmdClearedWaterPalette, c.mainvars().demoDataIndexWord(), c.mainvars().checkpointSaved(), c.mainvars().timeWarpSaved());
         var p = c.program();
         levelProgram = new LevelProgramState(0, p.timeStones(), 0, 0, p.palFadeFlags() | 1,
                 0x80, 0, 0, LevelProgramPhase.ACT2_LOADING, p.goodFutureFlags());

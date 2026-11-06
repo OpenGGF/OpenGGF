@@ -867,3 +867,52 @@ byte-identical. Final route153043/SHA
 `220052a22579297b28f53907c514764c05dd1fa0711a8144e1e33466ae160583`.
 The prior two-case run remains the main-route qualification; no repeated combined
 result is invented. Broader smoke remains pending.
+
+## Timer210 save and retained old programme — 6 November
+
+The actual original-controller route completes13487/timer210: saved42all-known,
+raw period1→80, live spawn0→2 and scrollLock0000→0100. It continues through13506/
+timer229 in the same R12A World/Frame/source/load epoch. Saved local positions
+6582/278 precede the same-call MODE continuation to6588/288; observation rows
+never hydrate gameplay. The existing complete-result Body/Frame staging limit is
+preserved on later faults. Private captured save custody and original prepared
+lock identity admit this marked old programme; forged1/81marker substitutions
+cannot borrow its receipt. Full/course before-forward checks cover13486→13487,
+13487→13488 and13505→13506 plus endpoint restoration, comparing complete loading
+and scroll partitions. Current Main has no primary Draw after210; already-selected
+V-int CPU is compared separately with the preceding completed CPU.
+
+Separate13507 reaches native restart HIGH-byte0100 and typed FADECDA before the
+full physical walk, then stops at LEVEL_FLOW before scroll/SAT/ordinary tail.
+Its40completed receipts/raw96hash are partial failure diagnostics, not a closed
+checkpoint. Old-LevelStart exit/fade/return, WARP and live R12B destination remain
+separate next work. No new screenshot, visibility or regional/native parity is
+claimed; all23previous selected-Sonic pixel endpoints remain qualified.
+
+Qualification is explicit: the initial87run records84pass/2fixture failures/
+1native observer error/0skips. Its detached R12B13data+12retail+20oldterrain
+cases pass45/0/0/0. Corrected save/Presentation41passes16+25/0/0/0, after exact
+animation-guard and full semantic background-clone fixture repairs. The first
+permanent4run has2passes/2render errors, exposing new idle admission inside a
+legitimate owned draw. Root validates/captures the source before drawing and
+keeps full World/custody revalidation in the private guarded renderer; public
+capture/mutation/reentry guards remain. Follow-up29passes4permanent+25Presentation
+with0failures/errors/skips, source fingerprint
+`f0754e137e6d3cad2c629aa691ded18ea0679e8583d07edfac2a7b52a6d6a2bd`.
+Execution6November01:48:26.080935–01:48:49.135713Z,23.054778s,0s admission;
+normal-memory test preparation reported1:31. All20sourcepins,10external dependencies,
+exact29identities, Java25/media/EGL properties and fresh XML matched. Owned
+reports were consumed under the normal worktree lock after attribution. These
+separate results do not create a single90-case or full-suite pass.
+
+Detached R12BUSA profile/load-plan/terrain uses the original MMD identity and
+existing decoders; PPZ2_PAST appends one shape.19PLC lists/37pointers are metadata,
+not a qualified finite reader/current-art/scroll/Frame/World pipeline. Independent
+static data review has no P1/P2; JP/EU executable admission remains separate.
+
+The prior broad Swing smoke is terminal INCOMPLETE at40minutes,65complete plus
+partial66/91,34302recorded tests/8failures/4errors/72skips; guards did not run.
+All12nonpasses reproduce on pre-Swing16bd matched controls. One baseline missing
+S1ROM skip versus candidate pass is separately recorded. Skip classification
+remains8allowed/62unclassified/2requiredGL, with no policy relaxation. Unknown
+coverage and absent normal verdict prevent broader certification.

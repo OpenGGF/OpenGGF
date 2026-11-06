@@ -14,6 +14,7 @@ import com.openggf.game.session.EngineTiming;
 
 import java.util.*;
 import java.util.function.UnaryOperator;
+import java.util.function.Supplier;
 
 import static com.openggf.game.soniccd.SonicCdGameModule.Act2LoadCall.*;
 import static com.openggf.game.soniccd.SonicCdGameModule.Act2LoadPhase.*;
@@ -131,6 +132,15 @@ final class SonicCdAct2LoadingVisit {
         return new SourceView(assets.profile().range(key), key == CdR12aProfile.Asset.MAP_SPRING
                 ? assets.objects().springMappings() : assets.view(key));
     }
+    /** Existing Values captures the sole saved42 reference and its optional immutable source receipt.
+     * A receipt contains no callback, result/effects, producer command or independent capture owner. */
+    private record TimeWarpCustody(CdTimeWarpSaveData.State saved, Optional<TimeWarpReceipt> completed) {
+        private TimeWarpCustody { Objects.requireNonNull(saved); Objects.requireNonNull(completed); }
+    }
+    private record TimeWarpReceipt(SonicCdAct2LoadingVisit owner, CdPlayerFrameRuntime frame,
+                                   Object stageSource, CdR12aTerrainAssets assets, Object world,
+                                   long generation, int rawPeriod, CdTimeWarpSaveData.State saved) { }
+
     /** Reached fixed programme stores; subsequent HUD/fade operations preserve their other values. */
     private record TailValues(int player2ControlsWord, int player2BoredWord, int unknownLevelByte,
                               int demoS1IndexWord, int paletteFadeInfoWord) { }
@@ -138,9 +148,10 @@ final class SonicCdAct2LoadingVisit {
                                   CdOpeningObjectRuntime.ScoreGlobals score, OptionalInt drownTimerWord,
                                   Optional<TailValues> tail, Optional<CdLevelHud.BonusValues> bonus,
                                   Optional<CdAssetBytes> layoutRam, OptionalInt debugBlockWord, OptionalInt pauseMusicBit,
-                                  CdOpeningObjectRuntime.DevGlobals retainedDev, CdCheckpointSaveData.State checkpointSaved) {
+                                  CdOpeningObjectRuntime.DevGlobals retainedDev, CdCheckpointSaveData.State checkpointSaved,
+                                  TimeWarpCustody timeWarpCustody) {
         private LoadingGlobals {
-            Objects.requireNonNull(checkpointSaved); Objects.requireNonNull(live); Objects.requireNonNull(contact);
+            Objects.requireNonNull(timeWarpCustody); Objects.requireNonNull(checkpointSaved); Objects.requireNonNull(live); Objects.requireNonNull(contact);
             Objects.requireNonNull(score); Objects.requireNonNull(drownTimerWord); Objects.requireNonNull(tail);
             Objects.requireNonNull(bonus); Objects.requireNonNull(layoutRam); Objects.requireNonNull(debugBlockWord);
             Objects.requireNonNull(pauseMusicBit); Objects.requireNonNull(retainedDev);
@@ -148,32 +159,32 @@ final class SonicCdAct2LoadingVisit {
                 throw new IllegalArgumentException("Only PauseMusic's bit7 belongs to this projection");
         }
         LoadingGlobals withCheckpointSaved(CdCheckpointSaveData.State next) {
-            return new LoadingGlobals(live,contact,score,drownTimerWord,tail,bonus,layoutRam,debugBlockWord,pauseMusicBit,retainedDev,next);
+            return new LoadingGlobals(live,contact,score,drownTimerWord,tail,bonus,layoutRam,debugBlockWord,pauseMusicBit,retainedDev,next, timeWarpCustody);
         }
         LoadingGlobals withLive(CdCheckpointLiveAux.State next) {
-            return new LoadingGlobals(next, contact, score, drownTimerWord, tail, bonus, layoutRam, debugBlockWord, pauseMusicBit, retainedDev, checkpointSaved);
+            return new LoadingGlobals(next, contact, score, drownTimerWord, tail, bonus, layoutRam, debugBlockWord, pauseMusicBit, retainedDev, checkpointSaved, timeWarpCustody);
         }
         LoadingGlobals withDrownTimer(int word) {
-            return new LoadingGlobals(live, contact, score, OptionalInt.of(word), tail, bonus, layoutRam, debugBlockWord, pauseMusicBit, retainedDev, checkpointSaved);
+            return new LoadingGlobals(live, contact, score, OptionalInt.of(word), tail, bonus, layoutRam, debugBlockWord, pauseMusicBit, retainedDev, checkpointSaved, timeWarpCustody);
         }
         LoadingGlobals clearBonus() {
             return new LoadingGlobals(live, contact, score, drownTimerWord, tail,
-                    Optional.of(new CdLevelHud.BonusValues(0, 0, 0)), layoutRam, debugBlockWord, pauseMusicBit, retainedDev, checkpointSaved);
+                    Optional.of(new CdLevelHud.BonusValues(0, 0, 0)), layoutRam, debugBlockWord, pauseMusicBit, retainedDev, checkpointSaved, timeWarpCustody);
         }
         LoadingGlobals clearDebugBlock() {
-            return new LoadingGlobals(live, contact, score, drownTimerWord, tail, bonus, layoutRam, OptionalInt.of(0), pauseMusicBit, retainedDev, checkpointSaved);
+            return new LoadingGlobals(live, contact, score, drownTimerWord, tail, bonus, layoutRam, OptionalInt.of(0), pauseMusicBit, retainedDev, checkpointSaved, timeWarpCustody);
         }
         LoadingGlobals withLayout(CdAssetBytes bytes) {
-            return new LoadingGlobals(live, contact, score, drownTimerWord, tail, bonus, Optional.of(bytes), debugBlockWord, pauseMusicBit, retainedDev, checkpointSaved);
+            return new LoadingGlobals(live, contact, score, drownTimerWord, tail, bonus, Optional.of(bytes), debugBlockWord, pauseMusicBit, retainedDev, checkpointSaved, timeWarpCustody);
         }
         LoadingGlobals withPauseMusicBit(int bit) {
             return new LoadingGlobals(live, contact, score, drownTimerWord, tail, bonus, layoutRam,
-                    debugBlockWord, OptionalInt.of(bit), retainedDev, checkpointSaved);
+                    debugBlockWord, OptionalInt.of(bit), retainedDev, checkpointSaved, timeWarpCustody);
         }
         LoadingGlobals finishMainStores() {
             return new LoadingGlobals(live, new CdPlayerBody.ContactGlobals(0, 0, contact.combineRing()),
                     new CdOpeningObjectRuntime.ScoreGlobals(score.score(), score.nextLifeScore(), 0x80),
-                    drownTimerWord, Optional.of(new TailValues(0, 0, 0, 0, 0x202F)), bonus, layoutRam, debugBlockWord, pauseMusicBit, retainedDev, checkpointSaved);
+                    drownTimerWord, Optional.of(new TailValues(0, 0, 0, 0, 0x202F)), bonus, layoutRam, debugBlockWord, pauseMusicBit, retainedDev, checkpointSaved, timeWarpCustody);
         }
     }
 
@@ -237,7 +248,8 @@ final class SonicCdAct2LoadingVisit {
                             SonicCdPlayerPresentation.Act2VideoInit video, CdCheckpointLiveAux.State live,
                             CdPlayerBody.ContactGlobals contact, CdOpeningObjectRuntime.ScoreGlobals score,
                             int displayedVScrollLongBits, CdAssetBytes savedObjectFlags, CdOpeningObjectRuntime.DevGlobals retainedDev,
-                            CdAssetBytes runMmdClearedWaterPalette, int retainedDemoDataIndexWord, CdCheckpointSaveData.State checkpointSaved) {
+                            CdAssetBytes runMmdClearedWaterPalette, int retainedDemoDataIndexWord, CdCheckpointSaveData.State checkpointSaved,
+                            CdTimeWarpSaveData.State timeWarpSaved) {
         this.module=Objects.requireNonNull(module); this.assets=Objects.requireNonNull(assets);
         this.frame=Objects.requireNonNull(frame); this.presentation=Objects.requireNonNull(presentation); this.player=Objects.requireNonNull(player);
         placement=CdObjectPlacementRuntime.fromAssets(assets, savedObjectFlags);
@@ -461,7 +473,7 @@ final class SonicCdAct2LoadingVisit {
                 new CdLevelGlobals(0,level.updateHudTime(),level.checkpoint(),level.spawnMode(),level.plcLoadFlags()|1,
                         level.flowerCount(),level.fadeEnableDisplay(),level.powerup(),level.timeOver()),
                 new LoadingGlobals(CdCheckpointLiveAux.clearMiscAtLevelStart(live),contact,score,OptionalInt.empty(),Optional.empty(),
-                        Optional.empty(),Optional.empty(),OptionalInt.empty(),OptionalInt.empty(),retainedDev, checkpointSaved),zero(31*64),
+                        Optional.empty(),Optional.empty(),OptionalInt.empty(),OptionalInt.empty(),retainedDev, checkpointSaved, new TimeWarpCustody(timeWarpSaved, Optional.empty())),zero(31*64),
                 new FadeProgress(0,false),List.of(LOAD_LEVEL_PCM,INIT_VDP,INIT_CONTROLLERS,NORMAL_LOAD),
                 new LoopGlobals(OptionalInt.of(retainedDemoDataIndexWord),Optional.empty(),zero(7),zero(7),Optional.empty(),initialSelection, Optional.empty()));
     }
@@ -480,6 +492,7 @@ final class SonicCdAct2LoadingVisit {
                 || drawingReserved || drawingRing || drawingSpring || drawingTitle)
             throw new IllegalStateException("Act2 native operation is active");
         frame.captureShared();
+        requireTimeWarpAdmission(frame);
     }
     private void requireCallback() {
         requireBoulderPlatformIdle();
@@ -2051,7 +2064,7 @@ final class SonicCdAct2LoadingVisit {
         replace(values.phase(), next.section(), values.cpuPalette(), values.fadePalette(), values.displayedPalette(),
                 values.cpuSat(), values.displayedSat(), values.displayedHScroll(), values.foregroundPlane(), next.ring(),
                 next.level(), new LoadingGlobals(next.liveTime(), g.contact(), next.score(), g.drownTimerWord(), g.tail(),
-                        next.bonus(), g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit(), g.retainedDev(), g.checkpointSaved()), values.hudObjects(), values.calls());
+                        next.bonus(), g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit(), g.retainedDev(), g.checkpointSaved(), g.timeWarpCustody()), values.hudObjects(), values.calls());
     }
 
     private void representedServiceCompleted() {
@@ -2744,7 +2757,7 @@ final class SonicCdAct2LoadingVisit {
         if(programme.phase()!=SonicCdGameModule.LevelProgramPhase.ACT2_LOADING
                 || programme.levelStarted()!=(begun?1:0) || ((programme.gameMode()&0x80)==0)!=begun
                 || capture.shared.environment().movement().gates().zoneAct()!=1
-                || capture.shared.environment().movement().gates().timeZone()!=1
+                || !admittedTimeWarpPeriod(v,capture.shared.environment())
                 || capture.flags.load()!=first || capture.flags.setup()!=first
                 || (fading && steps>=22) || (begun && steps!=22) || (!fading && !begun && steps!=0)
                 || v.fadeProgress().displayEnabled()!=(steps!=0)) throw new IllegalArgumentException("Act2 captured native progress/source mismatch");
@@ -2757,6 +2770,165 @@ final class SonicCdAct2LoadingVisit {
         validateRestore(capture,programme); frame.restoreActor(capture.actor); frame.restoreShared(capture.shared); placement.restore(capture.placement);
         values=capture.values; sounds=capture.sounds; presentation.restoreAct2LoadFlags(capture.flags); restorePlayerBank();
     }
+    /** Same old R12A programme only. The raw marker alone supplies no save or load authority. */
+    CdOpeningObjectRuntime.TimeWarpLockPublication requireTimeWarpAdmission(CdPlayerFrameRuntime sourceFrame) {
+        module.requireAct2LoadingVisit(this);
+        if (sourceFrame != frame) throw new IllegalStateException("TimeWarp admission requires the actual Act2 Frame");
+        var i = activePrimary;
+        if (i != null && i.publishingLock) {
+            verifyPrimary(i);
+            if (i.readingBody || i.returnedPublication == null || i.originalWarp == null || i.originalSave == null
+                    || i.originalWarp.saveResult().orElse(null) != i.originalSave
+                    || i.returnedPublication.result().effects().stream().noneMatch(e ->
+                            e instanceof CdPlayerBody.TimeWarpCall call && call.result() == i.originalWarp)
+                    || i.readyLock == null || i.readyLock != i.warpReads.readyLock || i.lockApplied
+                    || values != i.base || i.expectedValues != i.base
+                    || i.expectedEnvironment.movement().gates().timeZone() != i.originalSave.finalPeriodByte())
+                throw new IllegalStateException("TimeWarp lock lacks its original prepared Primary publication window");
+            return i.readyLock;
+        }
+        if (!admittedTimeWarpPeriod(values,frame.environment()))
+            throw new IllegalStateException("Act2 marked period lacks its captured completed-save/spawn/source custody");
+        return null;
+    }
+
+    private boolean admittedTimeWarpPeriod(Values cut, CdPlayerBody.Environment environment) {
+        var custody = cut.globals().timeWarpCustody();
+        int period = environment.movement().gates().timeZone();
+        if (period == 1) return custody.completed().isEmpty();
+        if (period < 0x80 || period > 0x82 || cut.phase() != BEGIN_LEVEL || cut.level().spawnMode() != 2
+                || custody.completed().isEmpty()) return false;
+        var proof = custody.completed().orElseThrow();
+        var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+        return proof.owner() == this && proof.frame() == frame && proof.stageSource() == frame.stageSource()
+                && proof.assets() == assets && proof.world() == mode.getWorldSession()
+                && proof.generation() == mode.getLevelManager().getCompletedProductionLoadGeneration()
+                && proof.rawPeriod() == period && proof.saved() == custody.saved();
+    }
+
+    /** Ephemeral reads from this original Primary cut; Body supplies its eight local fields itself. */
+    private final class Act2TimeWarpReads implements CdPlayerTimeWarp.SaveReads {
+        private final PrimaryInvocation invocation;
+        private final List<CdTimeWarpSaveData.Source> sources = new ArrayList<>();
+        private final List<Integer> values = new ArrayList<>();
+        private CdOpeningObjectRuntime.TimeWarpLockPublication readyLock;
+        private boolean reading;
+        private Act2TimeWarpReads(PrimaryInvocation invocation) { this.invocation = invocation; }
+        private void verify() {
+            verifyPrimary(invocation);
+            if (!invocation.readingBody || invocation.returnedPublication != null
+                    || invocation.warpReads != this || invocation.base != invocation.expectedValues)
+                throw new IllegalStateException("TimeWarp reads require the original active Primary Body call");
+        }
+        private int readChecked(Supplier<Integer> operation) {
+            verify();
+            if (reading) throw new IllegalStateException("Nested TimeWarp source read");
+            reading = true;
+            try { int result = operation.get(); verify(); return result; }
+            catch (RuntimeException | Error original) {
+                try { verify(); } catch (RuntimeException | Error verification) {
+                    if (original != verification) original.addSuppressed(verification);
+                }
+                throw original;
+            } finally { reading = false; }
+        }
+        @Override public int readScrollLockWord() {
+            return readChecked(() -> {
+                if (readyLock != null) throw new IllegalStateException("Primary TimeWarp read its lock twice");
+                var cut = Objects.requireNonNull(presentation.borrowAct2TimeWarpWorld(frame));
+                var old = cut.foreground();
+                if (old != invocation.foreground || cut.background() != invocation.background)
+                    throw new IllegalStateException("TimeWarp did not borrow the actual original scroll pair");
+                var next = new CdR11aForegroundScroll.State(old.cameraX(),old.cameraY16_16(),old.horizontalCrossed(),
+                        old.verticalCrossed(),old.scrollXDiff(),old.scrollYDiff(),old.scrollFlags(),old.destBottomBound(),
+                        old.destLeftBound(),old.bottomBoundShift(),(old.scrollLock() & 255) | 0x100);
+                readyLock = new CdOpeningObjectRuntime.TimeWarpLockPublication(cut,next);
+                return old.scrollLock();
+            });
+        }
+        @Override public int read(CdTimeWarpSaveData.Source source) {
+            return readChecked(() -> {
+                Objects.requireNonNull(source,"reached TimeWarp source");
+                if (readyLock == null) throw new IllegalStateException("TimeWarp source preceded its lock read");
+                var v = invocation.base; var fg = invocation.foreground; var bg = invocation.background;
+                int value = switch (source) {
+                    case SPAWN_MODE -> v.level().spawnMode();
+                    case RINGS -> v.ring().rings();
+                    case LIVES_FLAGS -> v.ring().livesFlags();
+                    case WATER_ROUTINE -> CdCheckpointLiveAux.read(v.globals().live(),CdCheckpointLiveAux.Field.WATER_ROUTINE);
+                    case WATER_HEIGHT2 -> CdCheckpointLiveAux.read(v.globals().live(),CdCheckpointLiveAux.Field.WATER_HEIGHT2);
+                    case WATER_FULLSCREEN -> CdCheckpointLiveAux.read(v.globals().live(),CdCheckpointLiveAux.Field.WATER_FULLSCREEN);
+                    case TIME_LONG -> CdCheckpointLiveAux.read(v.globals().live(),CdCheckpointLiveAux.Field.TIME_LONG);
+                    case FG_X -> fg.cameraX(); case FG_Y -> fg.cameraYWord();
+                    case BG_X -> bg.cameraBgXWord(); case BG_Y -> bg.cameraBgYWord();
+                    case BG2_X -> bg.cameraBg2XWord(); case BG2_Y -> bg.cameraBg2YWord();
+                    case BG3_X -> bg.cameraBg3XWord(); case BG3_Y -> bg.cameraBg3YWord();
+                    case PRIMARY_X,PRIMARY_Y,PRIMARY_GVEL,PRIMARY_X_VELOCITY,PRIMARY_Y_VELOCITY,PRIMARY_FLAGS,MINI_SONIC,BOTTOM_BOUND ->
+                            throw new IllegalStateException("Body must supply its actual local TimeWarp save source");
+                };
+                sources.add(source); values.add(value); return value;
+            });
+        }
+    }
+
+    /** Validate original completed helper metadata; never replay effects or execute a helper twice. */
+    private CdOpeningObjectRuntime.TimeWarpLockPublication preparePrimaryTimeWarpSave(
+            PrimaryInvocation i,CdPlayerTimeWarp.SaveResult saved) {
+        verifyPrimary(i);
+        var reads = i.warpReads; var lock = reads.readyLock;
+        if (i.originalSave != saved || i.originalWarp.saveResult().orElse(null) != saved || lock == null
+                || i.readingBody || saved.expectedSavedState() != i.base.globals().timeWarpCustody().saved()
+                || saved.expectedScrollLockWord() != i.foreground.scrollLock()
+                || saved.finalScrollLockWord() != lock.finalForeground().scrollLock()
+                || saved.expectedPeriodByte() != i.originalEnvironment.movement().gates().timeZone()
+                || saved.finalPeriodByte() != i.expectedEnvironment.movement().gates().timeZone()
+                || saved.expectedSpawnByte() != i.base.level().spawnMode() || saved.expectedSpawnByte() == 2
+                || saved.finalSpawnByte() != 2 || i.originalWarp.state().timer() < 210)
+            throw new IllegalStateException("Primary TimeWarp save differs from its original source/cut");
+        int period = (saved.expectedPeriodByte() + i.originalEnvironment.movement().gates().timeWarpDirection()) & 255;
+        if ((byte)period < 0) period = 0; else if (period >= 3) period = 2;
+        if (saved.finalPeriodByte() != (period | 0x80)) throw new IllegalStateException("TimeWarp raw marker arithmetic differs");
+        var effects = saved.effects(); int at = 0;
+        if (saved.expectedPeriodByte() == 0 || effects.size() != CdTimeWarpSaveData.Store.values().length + 3
+                || effects.stream().anyMatch(CdPlayerTimeWarp.SubCpuRequest.class::isInstance)
+                || !(effects.get(at++) instanceof CdPlayerTimeWarp.LockWrite lw)
+                || lw.expected() != saved.expectedScrollLockWord() || lw.value() != saved.finalScrollLockWord()
+                || !(effects.get(at++) instanceof CdPlayerTimeWarp.PeriodWrite pw)
+                || pw.expected() != saved.expectedPeriodByte() || pw.value() != saved.finalPeriodByte())
+            throw new IllegalStateException("Unadmitted PCM or native TimeWarp lock/period order");
+        var current = saved.expectedSavedState(); int external = 0;
+        for (var store : CdTimeWarpSaveData.Store.values()) {
+            if (!(effects.get(at++) instanceof CdPlayerTimeWarp.SavedWrite write)
+                    || write.call().store() != store || write.call().expectedState() != current)
+                throw new IllegalStateException("TimeWarp original ordered saved-state chain differs");
+            var call = ((CdPlayerTimeWarp.SavedWrite)effects.get(at-1)).call();
+            if (store.source().isPresent()) {
+                var source = store.source().orElseThrow();
+                boolean local = switch (source) {
+                    case PRIMARY_X,PRIMARY_Y,PRIMARY_GVEL,PRIMARY_X_VELOCITY,PRIMARY_Y_VELOCITY,PRIMARY_FLAGS,MINI_SONIC,BOTTOM_BOUND -> true;
+                    default -> false;
+                };
+                if (!local) {
+                    int expected = external < reads.values.size() ? reads.values.get(external) : 0;
+                    if (store == CdTimeWarpSaveData.Store.TIME_LONG && Integer.compareUnsigned(expected,0x50000) >= 0)
+                        expected = 0x50000;
+                    if (external >= reads.sources.size() || reads.sources.get(external) != source
+                            || call.rawValue() != expected)
+                        throw new IllegalStateException("TimeWarp saved store lacks its actual ordered source read");
+                    external++;
+                }
+            }
+            current = call.finalState();
+        }
+        if (external != reads.sources.size() || external != 16 || current != saved.finalSavedState()
+                || !(effects.get(at++) instanceof CdPlayerTimeWarp.SpawnWrite spawn)
+                || spawn.expected() != saved.expectedSpawnByte() || spawn.value() != 2 || at != effects.size())
+            throw new IllegalStateException("TimeWarp completed saved42/spawn publication differs");
+        for (byte known : current.knownMask().copy()) if (known != 1)
+            throw new IllegalStateException("Complete TimeWarp save omitted a represented byte");
+        return lock;
+    }
+
     private final class PrimaryInvocation {
         private final SonicCdAct2LoadingVisit owner = SonicCdAct2LoadingVisit.this;
         private final CdPlayerFrameRuntime sourceFrame = frame;
@@ -2781,6 +2953,13 @@ final class SonicCdAct2LoadingVisit {
         private final CdObjectPlacementRuntime.Snapshot placed = placement.capture();
         private final Values base = values;
         private final List<SonicCdGameModule.PastSound> originalSounds = sounds;
+        private CdR11aForegroundScroll.State expectedForeground = foreground;
+        private final Act2TimeWarpReads warpReads = new Act2TimeWarpReads(this);
+        private CdPlayerFrameRuntime.BodyPublication returnedPublication;
+        private CdPlayerTimeWarp.Result originalWarp;
+        private CdPlayerTimeWarp.SaveResult originalSave;
+        private CdOpeningObjectRuntime.TimeWarpLockPublication readyLock;
+        private boolean readingBody, publishingLock, lockApplied;
         private CdPlayerBody.State expectedState = originalState;
         private CdPlayerBody.Environment expectedEnvironment = originalEnvironment;
         private Optional<CdPlayerBody.DisplayPublication> expectedDisplay = originalDisplay;
@@ -2834,15 +3013,21 @@ final class SonicCdAct2LoadingVisit {
             var support = new CdPlayerMovement.ObjectContext(cut, player.objectLinks().standObject(),
                     player.header().slotId(), player.header().width());
             // Borrow the original post-SpawnObjects reserved cut from the existing Values owner.
-            // Save/scroll-lock ownership remains absent; no failed helper prefix is published.
+            // Reads are lazy and invocation-local; only a complete original Body result can publish a save.
             invocation.reservedCut = timeStarBank.capture();
             verifyPrimary(invocation);
             var warp = new CdPlayerTimeWarp.Context(OptionalInt.of(v.level().spawnMode()),
-                    Optional.of(invocation.reservedCut), Optional.empty(), OptionalInt.of(v.level().levelRestart()));
-            var publication = frame.runBody(levelFrame,
-                    Optional.of(new CdPlayerBody.TouchContext(primaryScanner, cut, response)),
-                    Optional.of(new CdPlayerBody.LevelContext(cut, v.ring(), v.level())),
-                    Optional.of(support), Optional.of(new CdPlayerBody.TimeWarpContext(warp, v.globals().contact())));
+                    Optional.of(invocation.reservedCut), Optional.of(new CdPlayerTimeWarp.SaveContext(
+                            v.globals().timeWarpCustody().saved(), invocation.warpReads)), OptionalInt.of(v.level().levelRestart()));
+            final CdPlayerFrameRuntime.BodyPublication publication;
+            invocation.readingBody = true;
+            try {
+                publication = frame.runBody(levelFrame,
+                        Optional.of(new CdPlayerBody.TouchContext(primaryScanner, cut, response)),
+                        Optional.of(new CdPlayerBody.LevelContext(cut, v.ring(), v.level())),
+                        Optional.of(support), Optional.of(new CdPlayerBody.TimeWarpContext(warp, v.globals().contact())));
+            } finally { invocation.readingBody = false; }
+            invocation.returnedPublication = publication;
             // Only the successful Frame call can advance these expected values. Before
             // it returns, entitlement forbids captures; the raw preimages above are legal.
             invocation.expectedState = publication.result().state();
@@ -2852,6 +3037,17 @@ final class SonicCdAct2LoadingVisit {
             verifyPrimary(invocation);
             // All validation, overlays, immutable Values and sounds precede the first
             // live external write. Frame already adopted its own complete result once.
+            if (invocation.readyLock != null) {
+                invocation.publishingLock = true;
+                try {
+                    presentation.validateAct2TimeWarpLock(frame, invocation.readyLock);
+                    verifyPrimary(invocation);
+                    presentation.applyAct2TimeWarpLock(frame, invocation.readyLock);
+                    invocation.expectedForeground = invocation.readyLock.finalForeground();
+                    invocation.lockApplied = true;
+                } finally { invocation.publishingLock = false; }
+                verifyPrimary(invocation);
+            }
             invocation.pool.restore(ready.pool());
             values = ready.values(); sounds = ready.sounds();
             invocation.expectedPool = ready.pool();
@@ -2876,6 +3072,8 @@ final class SonicCdAct2LoadingVisit {
 
     private PrimaryReady preparePrimary(PrimaryInvocation invocation, CdPlayerFrameRuntime.BodyPublication publication) {
         verifyPrimary(invocation);
+        if (invocation.returnedPublication != publication || invocation.readingBody)
+            throw new IllegalStateException("Primary preparation requires its original completed Frame publication");
         var result = publication.result();
         if (result.boundary() != CdPlayerBody.Boundary.MAIN_RETURN
                 && result.boundary() != CdPlayerBody.Boundary.CONTROLLED_MAIN_RETURN)
@@ -2892,6 +3090,7 @@ final class SonicCdAct2LoadingVisit {
         var nextRing = old.ring(); var nextLevel = old.level();
         var nextReserved = old.hudObjects();
         var nextScore = old.globals().score(); var nextContact = old.globals().contact();
+        var nextCustody = old.globals().timeWarpCustody();
         Optional<CdPlayerBody.DisplayEligibility> display = Optional.empty();
         boolean touchSeen = false, warpSeen = false;
         var effects = result.effects();
@@ -2913,8 +3112,20 @@ final class SonicCdAct2LoadingVisit {
                 if (warpSeen) throw new IllegalStateException("Primary returned multiple TimeWarp calls");
                 warpSeen = true;
                 var warped = warp.result();
-                if (warped.saveResult().isPresent())
-                    throw new IllegalStateException("Primary produced an output for an absent warp save owner");
+                invocation.originalWarp = warped;
+                if (warped.saveResult().isPresent()) {
+                    var saved = warped.saveResult().orElseThrow();
+                    invocation.originalSave = saved;
+                    invocation.readyLock = preparePrimaryTimeWarpSave(invocation, saved);
+                    nextCustody = new TimeWarpCustody(saved.finalSavedState(), Optional.of(new TimeWarpReceipt(
+                            this, frame, invocation.sourceStage, assets, invocation.world, invocation.generation,
+                            saved.finalPeriodByte(), saved.finalSavedState())));
+                    var l = nextLevel;
+                    nextLevel = new CdLevelGlobals(l.levelRestart(), l.updateHudTime(), l.checkpoint(),
+                            saved.finalSpawnByte(), l.plcLoadFlags(), l.flowerCount(), l.fadeEnableDisplay(), l.powerup(), l.timeOver());
+                } else if (invocation.warpReads.readyLock != null || !invocation.warpReads.sources.isEmpty()) {
+                    throw new IllegalStateException("Reached warp-save reads omitted their completed original save result");
+                }
                 nextReserved = preparePrimaryReserved(invocation, warped);
                 nextContact = new CdPlayerBody.ContactGlobals(warped.state().timeWarp(),
                         nextContact.shield(), nextContact.combineRing());
@@ -2961,7 +3172,7 @@ final class SonicCdAct2LoadingVisit {
         invocation.pool.validateRestore(pool);
         var g = old.globals();
         var globals = new LoadingGlobals(g.live(), nextContact, nextScore, g.drownTimerWord(), g.tail(),
-                g.bonus(), g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit(), g.retainedDev(), g.checkpointSaved());
+                g.bonus(), g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit(), g.retainedDev(), g.checkpointSaved(), nextCustody);
         var readyValues = new Values(old.phase(), old.section(), old.cpuPalette(), old.fadePalette(), old.waterPalette(), old.displayedPalette(),
                 old.cpuSat(), old.displayedSat(), old.displayedHScroll(), old.displayedVScrollLongBits(),
                 old.foregroundPlane(), nextRing, nextLevel, globals, nextReserved, old.fadeProgress(), old.calls(), old.loop());
@@ -3019,7 +3230,7 @@ final class SonicCdAct2LoadingVisit {
                 || frame.environment() != invocation.expectedEnvironment || frame.display() != invocation.expectedDisplay
                 || frame.artState() != invocation.originalArt || frame.vIntClock() != invocation.originalClock
                 || frame.paused() != invocation.originalPaused
-                || presentation.act2ForegroundImage() != invocation.foreground
+                || presentation.act2ForegroundImage() != invocation.expectedForeground
                 || presentation.act2BackgroundImage() != invocation.background
                 || presentation.act2PlaneImage() != invocation.plane || presentation.act2DrawCopies() != invocation.copies
                 || !now.status().equals(invocation.placed.status()) || !now.pool().slots().equals(invocation.expectedPool.slots())
@@ -8887,7 +9098,7 @@ final class SonicCdAct2LoadingVisit {
             // All publications are prepared before the first store; no allocation, slot clear or art touch.
             var v=i.expectedValues;var g=v.globals();var contact=g.contact();
             var next=new LoadingGlobals(g.live(),new CdPlayerBody.ContactGlobals(contact.timeWarp(),1,contact.combineRing()),
-                    g.score(),g.drownTimerWord(),g.tail(),g.bonus(),g.layoutRam(),g.debugBlockWord(),g.pauseMusicBit(),g.retainedDev(),g.checkpointSaved());
+                    g.score(),g.drownTimerWord(),g.tail(),g.bonus(),g.layoutRam(),g.debugBlockWord(),g.pauseMusicBit(),g.retainedDev(),g.checkpointSaved(), g.timeWarpCustody());
             i.awardContact=itemShieldGlobals(v,next);
             i.awardImage=timeStarBank.state(6).moveByteAt(0,3);
             i.awardReserved=reservedValues(i.awardContact,replaceTimeStar(v.hudObjects(),6,i.awardImage));
