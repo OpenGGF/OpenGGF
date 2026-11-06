@@ -92,7 +92,11 @@ def compiler_options():
     heap = os.environ.get('OPENGGF_NATIVE_IMAGE_HEAP', '5g' if small_runner else '8g')
     return [*(['-Os'] if small_runner else []), '-J-Xmx' + heap,
             '-J-XX:-UseParallelGC', '-J-XX:+UseG1GC',
-            '-J-XX:ActiveProcessorCount=3', '--parallelism=2']
+            # These affect the builder JVM, not the native executable's object layout.
+            # Compact headers reduce the live analysis graph; one compiler worker
+            # bounds transient compilation memory on the free 7 GiB ARM64 runner.
+            *(['-J-XX:+UseCompactObjectHeaders'] if small_runner else []),
+            '-J-XX:ActiveProcessorCount=3', '--parallelism=' + ('1' if small_runner else '2')]
 
 
 def build(graal, classes, dependencies, output, mods=None, compile_image=True):
@@ -160,9 +164,9 @@ def build(graal, classes, dependencies, output, mods=None, compile_image=True):
                    for name in contents.namelist()):
                 computed.add(module.stem)
     modules = image_modules(computed)
-    # macos-15 has 7 GiB: retain its qualified small-runner recipe. The
+    # macos-15 has 7 GiB: use compact builder headers and one compiler worker. The
     # 16 GiB Linux/Windows runners can afford default -O2 and an 8 GiB heap.
-    # Two workers / three active processors bound compiler and G1 overhead;
+    # Three active processors bound compiler and G1 overhead;
     # Linux -O2 qualification with these limits peaked at 9.14 GiB RSS.
     arguments = ['--enable-native-access=ALL-UNNAMED', '-march=compatibility',
         *compiler_options(),

@@ -1904,7 +1904,10 @@ its original drawing priority.
   boundaries; native packages include first-party bundled mods such as Time Attack.
   Friends packages add the maintained examples and launch shortcuts using the same
   native build recipe. macOS keeps size optimization and a 5 GiB compiler heap
-  on the standard runner; Linux and Windows use default optimization and 8 GiB.
+  on the standard runner, with compact builder object headers and one compiler
+  worker to reduce memory pressure; Linux and Windows use default optimization
+  and 8 GiB. A focused macOS native workflow checks packaging and bundled code-mod
+  loading on the free Apple Silicon runner when native build tooling changes.
   Maven preparation and image compilation run separately in CI to reduce build memory. Runtime loading remains an
   experimental VM facility.
 - **Multi-game controlled mods:** one code mod can provide per-game patches with shared

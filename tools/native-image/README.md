@@ -11,9 +11,21 @@ Use `-Dnative.python=python` on Windows if `python3` is unavailable.
 The shared recipe selects `-Os` and a 5 GiB compiler heap on macOS, keeping
 its standard `macos-15` runner. Linux and Windows use the default optimization
 level (`-O2`) and an 8 GiB compiler heap on their 16 GiB standard runners.
-All platforms use G1, three active processors and two compiler workers to bound
-compiler and collection overhead. The Linux comparison peaked at 9.14 GiB RSS
-with `-O2`; macOS ARM64 and Windows memory peaks remain unverified locally.
+All platforms use G1 and three active processors. macOS uses compact object
+headers in the Java 25 **builder JVM** and one compiler worker; Linux and Windows
+retain two workers. These settings do not change the native executable's object
+layout or trim the code-mod retention contract. The Linux comparison peaked at
+9.14 GiB RSS with `-O2`.
+
+On Apple Silicon, the full contract built in 6m02s at 6.22 GiB peak RSS with
+the compact-header, one-worker recipe (2026-11-06, engine source `0d8ffdcd64`,
+plus local catalog-loading edits). Its 25,046-member audit and bundled Time
+Attack boot registration passed. A 4.5 GiB heap trial stalled in universe
+construction and was stopped; keep the 5 GiB default. This local measurement
+does not certify the hosted runner. The `macOS native build` workflow exercises
+the same recipe and packaged mod-loading checks on free `macos-15` for native
+tooling pull requests, or via manual dispatch. It has a bounded compiler timeout
+and never publishes a release. Windows memory peaks remain unverified locally.
 Keep native builds in the exclusive lane, including their non-heap overhead.
 The outer `exec:exec` queues the complete build, including its native compiler;
 a skipped-test package command by itself bypasses test admission:
@@ -31,8 +43,8 @@ on each target and audits the finished image. It prepares with
 `-Dnative.stage=prepare -Dmaven.test.skip=true -Dnative.macos.package.skip=true`,
 then runs `python tools/native-image/build.py --stage compile` after Maven exits,
 so the two heaps do not overlap. The upstream release test job remains mandatory.
-The standard `macos-15` runner stays selected; its actual ARM64 memory peak is
-unverified locally. No paid runner or older-toolchain fallback is selected.
+The standard `macos-15` runner stays selected. No paid runner or older-toolchain
+fallback is selected.
 `OPENGGF_NATIVE_IMAGE_HEAP` overrides the platform heap limit (for example,
 `OPENGGF_NATIVE_IMAGE_HEAP=10g` for a larger reference set). The audit itself needs no ROMs. Release preparation retains its separate full-suite gates.
 

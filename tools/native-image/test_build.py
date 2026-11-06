@@ -20,7 +20,8 @@ class NativeBuildTests(unittest.TestCase):
                 self.assertIn('-J-Xmx5g' if system == 'Darwin' else '-J-Xmx8g', options)
                 self.assertIn('-J-XX:+UseG1GC', options)
                 self.assertIn('-J-XX:ActiveProcessorCount=3', options)
-                self.assertIn('--parallelism=2', options)
+                self.assertIn('--parallelism=1' if system == 'Darwin' else '--parallelism=2', options)
+                self.assertEqual(system == 'Darwin', '-J-XX:+UseCompactObjectHeaders' in options)
                 with patch.dict(os.environ, {'OPENGGF_NATIVE_IMAGE_HEAP': '10g'}, clear=True):
                     overridden = compiler_options()
                 self.assertEqual([option for option in options if not option.startswith('-J-Xmx')],
@@ -29,7 +30,7 @@ class NativeBuildTests(unittest.TestCase):
 
     def test_compile_stage_reuses_the_prepared_recipe(self):
         with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
+            root = Path(temp).resolve()
             graal, output = root / 'jdk', root / 'target'
             graal.mkdir()
             (graal / 'release').write_text(f'IMPLEMENTOR="GraalVM Community"\nGRAALVM_VERSION="{VERSION.split("+")[0]}"\n')
