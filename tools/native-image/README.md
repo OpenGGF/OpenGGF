@@ -8,7 +8,7 @@ Windows x64, Linux x64 and macOS ARM64 archives and SHA-256 digests are pinned i
 `toolchain.py`, from the [official Community release](https://github.com/graalvm/graalvm-ce-builds/releases/tag/graal-25.4.4.1.1).
 Use `-Dnative.python=python` on Windows if `python3` is unavailable.
 
-The shared recipe selects `-Os` and a 5 GiB compiler heap on macOS, keeping
+The shared recipe selects `-Os` and a 4.5 GiB compiler heap on macOS, keeping
 its standard `macos-15` runner. Linux and Windows use the default optimization
 level (`-O2`) and an 8 GiB compiler heap on their 16 GiB standard runners.
 All platforms use G1 and three active processors. macOS uses compact object
@@ -17,15 +17,23 @@ retain two workers. These settings do not change the native executable's object
 layout or trim the code-mod retention contract. The Linux comparison peaked at
 9.14 GiB RSS with `-O2`.
 
-On Apple Silicon, the full contract built in 6m02s at 6.22 GiB peak RSS with
-the compact-header, one-worker recipe (2026-11-06, engine source `0d8ffdcd64`,
-plus local catalog-loading edits). Its 25,046-member audit and bundled Time
-Attack boot registration passed. A 4.5 GiB heap trial stalled in universe
-construction and was stopped; keep the 5 GiB default. This local measurement
-does not certify the hosted runner. The `macOS native build` workflow exercises
-the same recipe and packaged mod-loading checks on free `macos-15` for native
-tooling pull requests, or via manual dispatch. It has a bounded compiler timeout
-and never publishes a release. Windows memory peaks remain unverified locally.
+The initial compact-header-only, 5 GiB recipe built locally but timed out in
+analysis on the free runner. Reducing the unchanged contract to 4.5 GiB also
+stalled locally. The revised recipe therefore retains additional JDK packages
+by referenced type, while keeping every core JDK package and every generated
+API/member requirement. This reduces blanket preservation rather than disabling
+runtime class loading or excluding code-mod kinds.
+
+The revised recipe built on Apple Silicon in 6m12s at 5.74 GiB peak RSS
+(2026-11-06; engine `0d8ffdcd64` plus local catalog-loading edits). Its packaged
+25,091-entry member audit, Time Attack boot registration and master DNS discovery
+passed. Compiler analysis-option changes and a 4 GiB precise-retention trial
+still saturated their heaps and were stopped; they are not selected.
+
+The `macOS native build` workflow exercises the same recipe and packaged
+mod-loading checks on free `macos-15` for native-tooling pull requests, or via
+manual dispatch. It reports runner memory, has a bounded compiler timeout and
+never publishes a release. Local builds alone do not certify that runner.
 Keep native builds in the exclusive lane, including their non-heap overhead.
 The outer `exec:exec` queues the complete build, including its native compiler;
 a skipped-test package command by itself bypasses test admission:
@@ -54,10 +62,16 @@ then follows erased Class-keyed service factories. Bundled mod bytecode adds
 static engine/JDK references. Referenced runtime dependency jars are preserved
 as whole jars, including methods not reachable from engine code (for example,
 Jackson calls made directly by Time Attack). Creator jars stay off the image classpath. The image retains original engine class resources
-for structural validation and JDK bootstrap, reflection, charset, stream and file
-helpers for external code. `-Dnative.mod.references=/absolute/mod-jar-directory`
-adds reference inputs without putting those mod classes on the image classpath;
-friends packaging uses this same recipe for its examples.
+for structural validation and whole core JDK packages for bootstrap, reflection,
+charset, stream and file helpers. Additional JDK types come from engine API
+signatures and supplied mod bytecode: descriptors, class literals, symbolic
+owners and resolved declaring types all enter the audit. The builder preserves
+those types, not every unrelated class in each additional package; normal
+reachability still includes their implementations. Unreferenced helpers outside
+the core packages are not a full-JVM compatibility promise. Use
+`-Dnative.mod.references=/absolute/mod-jar-directory` when packaging mods that
+need additional helpers or dependencies. These reference inputs never put the
+creator classes on the image classpath; friends packaging uses the same recipe.
 
 Preservation keeps the Java reflection/member contract, but does not also export
 every preserved member through JNI (`-H:-PreserveIncludesJNI`). Real JNI uses,

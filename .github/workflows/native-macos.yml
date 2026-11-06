@@ -27,6 +27,10 @@ jobs:
         run: python tools/native-image/toolchain.py --output "$RUNNER_TEMP/openggf-graalvm"
       - name: Prepare native image
         run: mvn -Dmse=off package -Pnative -Dmaven.test.skip=true -Dnative.python=python -Dnative.stage=prepare -Dnative.macos.package.skip=true -B
+      - name: Report available runner memory
+        run: |
+          sysctl hw.memsize vm.swapusage
+          vm_stat
       - name: Build native image within the standard runner budget
         timeout-minutes: 20
         run: /usr/bin/time -l python tools/native-image/build.py --stage compile
@@ -38,3 +42,4 @@ jobs:
           cd "$RUNNER_TEMP/native-mod-check"
           "$GITHUB_WORKSPACE/target/OpenGGF.app/Contents/MacOS/OpenGGF.bin" --audit
           "$GITHUB_WORKSPACE/target/OpenGGF.app/Contents/MacOS/OpenGGF.bin" --check-engine time-attack
+          "$GITHUB_WORKSPACE/target/OpenGGF.app/Contents/MacOS/OpenGGF.bin" --check-master-discovery multi.openggf.com

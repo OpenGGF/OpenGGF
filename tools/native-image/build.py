@@ -68,6 +68,32 @@ def image_modules(computed):
     return {'java.logging', DNS_PROVIDER_MODULE, *computed}
 
 
+def jdk_retention(graal, packages, required_classes):
+    """Keep the core JDK contract, but retain extra packages by referenced type.
+
+    Preserve has package/path selectors, not a class selector. Exclusions remove
+    only blanket preservation; ordinary reachability still retains implementations.
+    """
+    modules, exclusions, found = set(), set(), set()
+    for module in (graal / 'jmods').glob('java.*.jmod'):
+        with zipfile.ZipFile(module) as contents:
+            for name in contents.namelist():
+                if not (name.startswith('classes/') and name.endswith('.class')):
+                    continue
+                cls = name.removeprefix('classes/').removesuffix('.class').replace('/', '.')
+                package = cls.rpartition('.')[0]
+                if package not in packages:
+                    continue
+                modules.add(module.stem)
+                found.add(cls)
+                if package not in JDK_PACKAGES and cls not in required_classes:
+                    exclusions.add(cls)
+    missing = required_classes - found
+    if missing:
+        raise ValueError('JDK retention types absent from selected modules: ' + ', '.join(sorted(missing)))
+    return modules, exclusions
+
+
 def verify_master_discovery(arguments, reflect_json):
     """Refuse a recipe that lost the DNS provider master discovery needs at run time."""
     modules = [module for argument in arguments if argument.startswith('--add-modules=')
@@ -89,7 +115,7 @@ def compile_prepared(graal, output):
 
 def compiler_options():
     small_runner = platform.system() == 'Darwin'
-    heap = os.environ.get('OPENGGF_NATIVE_IMAGE_HEAP', '5g' if small_runner else '8g')
+    heap = os.environ.get('OPENGGF_NATIVE_IMAGE_HEAP', '4608m' if small_runner else '8g')
     return [*(['-Os'] if small_runner else []), '-J-Xmx' + heap,
             '-J-XX:-UseParallelGC', '-J-XX:+UseG1GC',
             # These affect the builder JVM, not the native executable's object layout.
@@ -155,14 +181,8 @@ def build(graal, classes, dependencies, output, mods=None, compile_image=True):
     native_cp = os.pathsep.join((str(host), str(contract / 'preserved-engine.jar'), str(engine), dependencies))
     # Preserve requests are resolved before ordinary reachability resolves modules.
     # Include the owning JDK modules.
-    computed = set()
-    requested_paths = {p.replace('.', '/') for p in packages}
-    for module in (graal / 'jmods').glob('java.*.jmod'):
-        with zipfile.ZipFile(module) as contents:
-            if any(name.startswith('classes/') and name.endswith('.class')
-                   and name.removeprefix('classes/').rsplit('/', 1)[0] in requested_paths
-                   for name in contents.namelist()):
-                computed.add(module.stem)
+    required_classes = set((contract / 'jdk-preserve-classes.txt').read_text().splitlines())
+    computed, exclusions = jdk_retention(graal, packages, required_classes)
     modules = image_modules(computed)
     # macos-15 has 7 GiB: use compact builder headers and one compiler worker. The
     # 16 GiB Linux/Windows runners can afford default -O2 and an 8 GiB heap.
@@ -174,6 +194,7 @@ def build(graal, classes, dependencies, output, mods=None, compile_image=True):
         # Preserve Java members, without blanket JNI exports of every member.
         # Actual JNI users (including LWJGL) retain their normal JNI metadata.
         '-H:+UnlockExperimentalVMOptions', '-H:+RuntimeClassLoading', '-H:-PreserveIncludesJNI', '-H:Preserve=' + preserve,
+        *(['-H:IgnorePreserveForClasses=' + ','.join(sorted(exclusions))] if exclusions else []),
         r'-H:IncludeResources=com/openggf/.*\.class|META-INF/openggf/bundled-mods.json|native-mod-members.tsv',
         '-H:ConfigurationFileDirectories=' + str(metadata),
         '-J--add-exports=org.graalvm.nativeimage.builder/com.oracle.svm.core.hub=ALL-UNNAMED',

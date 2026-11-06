@@ -125,6 +125,11 @@ public final class NativeModMemberContractTest implements Opcodes {
                 "M\tjava.lang.Object\twait\t(J)V"}) {
             if (!methodContract.contains(expected)) throw new AssertionError("Dormant/inherited JDK method omitted: " + expected);
         }
+        var retainedJdkClasses = Files.readAllLines(jdkMethods.resolve("jdk-preserve-classes.txt"));
+        for (String type : java.util.List.of("java.io.StringWriter", "java.lang.Object", "java.time.Instant", "java.time.Duration")) {
+            if (!retainedJdkClasses.contains(type) || !methodContract.contains("C\t" + type))
+                throw new AssertionError("JDK symbolic/declaring/class-literal type omitted: " + type);
+        }
         writeMod(mods, "jdk-constructor");
         try {
             NativeModMemberContract.main(new String[] {engine.toString(), mods.toString(), root.resolve("jdk-constructor").toString(),
@@ -190,6 +195,9 @@ public final class NativeModMemberContractTest implements Opcodes {
     private static void writeMod(Path mods, String mode) throws Exception {
         var writer = new ClassWriter(0);
         writer.visit(V21, ACC_PUBLIC, "fixture/Mod", null, "java/lang/Object", null);
+        if (mode.equals("jdk-methods")) {
+            writer.visitField(ACC_PUBLIC, "descriptorOnly", "[Ljava/time/Duration;", null, null).visitEnd();
+        }
         var method = writer.visitMethod(ACC_PUBLIC | ACC_STATIC, "laterCallback", "()V", null, null);
         method.visitCode();
         switch (mode) {
@@ -207,6 +215,8 @@ public final class NativeModMemberContractTest implements Opcodes {
             case "jdk-methods" -> {
                 method.visitMethodInsn(INVOKESPECIAL, "java/io/StringWriter", "<init>", "()V", false);
                 method.visitMethodInsn(INVOKEVIRTUAL, "java/io/StringWriter", "wait", "(J)V", false);
+                method.visitLdcInsn(Type.getType("Ljava/time/Instant;"));
+                method.visitInsn(POP);
             }
             case "jdk-constructor" -> method.visitMethodInsn(INVOKESPECIAL, "java/io/StringWriter", "<init>", "(Ljava/lang/Object;)V", false);
             case "jdk-fields" -> {
