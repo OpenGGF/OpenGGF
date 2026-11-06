@@ -209,6 +209,26 @@ public final class CdR11aForegroundScroll {
         return step(state, input, true, rawTimeZoneByte, eventRoutine);
     }
 
+    // BEGIN completed-event foreground arithmetic seam; all legacy event paths remain unchanged.
+    /**
+     * ScrollCamX/ScrollCamY only, after caller-owned entry flag clears and complete RunLevelEvents.
+     * The supplied current bounds/destinations/shift/Y centre and flags are explicit semantic values,
+     * not a completed-event receipt or Frame/World authority. In USA the real caller must run events
+     * before this cut; this method selects no event routine, boss state, stage or period.
+     * Reuses the same X/Y arithmetic and unowned actor/background-wrap fences. No clock/adoption.
+     */
+    public static Result stepAfterEvents(State state, Input input) {
+        Objects.requireNonNull(state, "state"); Objects.requireNonNull(input, "input");
+        requireViewport(input.viewportWidth(), input.viewportHeight());
+        if (highByte(state.scrollLock()) != 0)
+            return new Result(state, input.bounds(), input.cameraYCentre(), Boundary.SCROLL_LOCKED);
+        var c = new Cursor(state, input);
+        c.flags = state.scrollFlags(); // Entry clears/events belong to the caller, not this continuation.
+        horizontal(c); vertical(c);
+        return c.finish(Boundary.FOREGROUND_COMPLETE_FOR_BACKGROUND);
+    }
+    // END completed-event foreground arithmetic seam.
+
     private static Result step(State state, Input input, boolean forBackground) {
         return step(state, input, forBackground, 1);
     }

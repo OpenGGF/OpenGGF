@@ -71,6 +71,16 @@ final class SonicCdAct2PastOrdinaryWorld implements SonicCdAct2PastLoadingVisit.
         require();if(pass!=objects||access!=active||cut!=SonicCdAct2PastOrdinaryLoop.Cut.RUN_OBJECTS)
             throw new IllegalStateException("No actual Results World/pass stack");
     }
+    void requireOldExitOwner(SonicCdAct2PastLoadingVisit.OrdinaryAccess access) {
+        require();if(active!=access||cut!=SonicCdAct2PastOrdinaryLoop.Cut.POST_OBJECT_CAMERA)
+            throw new IllegalStateException("No actual completed-walk R12B LevelStart branch");
+    }
+    // BEGIN R12B BigRing actual World stack guard.
+    void requireBigRingOwner(SonicCdAct2PastObjectPass pass,SonicCdAct2PastLoadingVisit.OrdinaryAccess access){
+        require();if(pass!=objects||access!=active||cut!=SonicCdAct2PastOrdinaryLoop.Cut.RUN_OBJECTS)
+            throw new IllegalStateException("No actual BigRing World/Pass stack");
+    }
+    // END R12B BigRing actual World stack guard.
     private void playerArt(CdPlayerArtRuntime.DmaRequest request,CdPlayerArtRuntime.State complete) {
         require();
         if(cut!=SonicCdAct2PastOrdinaryLoop.Cut.PUBLISH_LEVEL||request.vramByteAddress()!=0xF000
@@ -156,11 +166,18 @@ final class SonicCdAct2PastOrdinaryWorld implements SonicCdAct2PastLoadingVisit.
         @Override public void settleSelectedCpu(Optional<CdObjectDrawQueue.CpuSat> selected){require();host.settleOrdinary(selected);}
         @Override public void spawnObjects(){require();host.placement().spawnObjects(host.scroll().foreground().cameraX(),frame.environment().movement().gates().timeZone());}
         @Override public void runObjects(int levelFrame){require();objects.runWalk(levelFrame);}
-        @Override public void postObjectCamera(){
+        @Override public void postObjectCamera(){postObjectCameraTransferred();}
+        @Override public boolean postObjectCameraTransferred(){
             require();var s=active.state();
-            if(s.program().demoDataIndexWord()==0x800||s.level().levelRestart()!=0)throw new Stopped(Boundary.LEVEL_FLOW);
+            if(s.program().demoDataIndexWord()==0x800)throw new Stopped(Boundary.LEVEL_FLOW);
+            if(s.level().levelRestart()!=0){
+                if(s.level().levelRestart()!=2)throw new Stopped(Boundary.LEVEL_FLOW);
+                active.beginOldExit(SonicCdAct2PastOrdinaryWorld.this,module);
+                // Entire physical walk returned; abandon its undrained pointers, retain prior CPU SAT.
+                objects.abandonCompletedWalk();return true;
+            }
             if(frame.environment().globals().debugMode()==0&&frame.state().motion().routine()>=6)throw new Stopped(Boundary.PRIMARY_DEATH_CAMERA);
-            host.scrollOrdinary(s.level().updateHudTime());
+            host.scrollOrdinary(s.level().updateHudTime());return false;
         }
         @Override public void drawObjects(){
             require();var s=host.scroll();var bg=s.background();
@@ -201,6 +218,15 @@ final class SonicCdAct2PastOrdinaryWorld implements SonicCdAct2PastLoadingVisit.
                     ||(cut!=SonicCdAct2PastOrdinaryLoop.Cut.RUN_OBJECTS&&cut!=SonicCdAct2PastOrdinaryLoop.Cut.DRAW_OBJECTS))
                 throw new IllegalStateException("No actual R12B physical pass");
         }
+        // BEGIN R12B BigRing original complete-owner port.
+        @Override public SonicCdAct2PastObjectPass.BigRingOwners bigRingOwners(SonicCdAct2PastObjectPass.BigRingOwners expected){
+            require();if(!objects.isCurrentBigRingOwnersRead()||cut!=SonicCdAct2PastOrdinaryLoop.Cut.RUN_OBJECTS)
+                throw new IllegalStateException("Not the actual BigRing owner borrow");
+            var before=active.state();var programme=module.act2PastBigRingProgram(core,objects);
+            if(expected!=null){if(expected.core()!=before||expected.programme()!=programme)throw new IllegalStateException("BigRing replaced another Core/module image");host.validateOrdinary(expected.hostFence());return expected;}
+            return new SonicCdAct2PastObjectPass.BigRingOwners(before,programme,host.prepareOrdinary(host.globals(),host.video(),host.globals(),List.of(),host.video().completedCpu()));
+        }
+        // END R12B BigRing original complete-owner port.
         // BEGIN R12B Results original owner ports.
         @Override public SonicCdAct2PastObjectPass.ResultsOwners resultsOwners(SonicCdAct2PastObjectPass.ResultsOwners expected){
             require();if(!objects.isCurrentResultsOwnersRead()||cut!=SonicCdAct2PastOrdinaryLoop.Cut.RUN_OBJECTS)throw new IllegalStateException("Not the actual Results owner borrow");
@@ -256,6 +282,9 @@ final class SonicCdAct2PastOrdinaryWorld implements SonicCdAct2PastLoadingVisit.
         @Override public void adopt(SonicCdAct2PastObjectPass.Adoption publication){
             require();if(!objects.isCurrentAdoption(publication)||!sameCut(publication.expected(),objectCut()))throw new IllegalArgumentException("Stale/foreign object publication");
             var next=publication.next();var before=active.state();
+            // BEGIN R12B BigRing original native store selection.
+            boolean bigRingSpecial=objects.isCurrentBigRingSpecialAdoption(publication),bigRingScroll=objects.isCurrentBigRingScrollAdoption(publication);
+            // END R12B BigRing original native store selection.
             var resultsFlags=objects.isCurrentResultsFlagsAdoption(publication);
             if(!next.goodFutureFlags().equals(module.act2PastGoodFutureFlags(core))&&!resultsFlags)
                 throw new IllegalArgumentException("Unbound good-future programme writer");
@@ -263,13 +292,22 @@ final class SonicCdAct2PastOrdinaryWorld implements SonicCdAct2PastLoadingVisit.
             var programme=resultsFlags?module.prepareAct2PastResultsGoodFutureFlags(core,frame,objects,publication,publication.resultsOwners().programme(),next.goodFutureFlags().orElseThrow()):null;
             var ready=active.prepare(before,section,next.level(),next.reservedSlots(),before.normalPalette(),before.displayedPalette());
             ready=active.prepareGoodFuture(before,ready,next.goodFutureByte());
+            // BEGIN R12B BigRing special-only Core prebuild before any native publication.
+            if(bigRingSpecial)ready=active.prepareBigRingSpecialStage(before,objects,publication);
+            // END R12B BigRing special-only Core prebuild.
             var oldSounds=host.sounds();if(next.sounds().size()<oldSounds.size()||!next.sounds().subList(0,oldSounds.size()).equals(oldSounds))throw new IllegalArgumentException("Sound prefix replaced");
             var hostReady=publication.destinationLeftWord()<0
                     ?host.prepareOrdinary(host.globals(),host.video(),next.globals(),next.sounds().subList(oldSounds.size(),next.sounds().size()),next.completedCpu())
                     :host.prepareOrdinaryGoalDestination(host.globals(),host.video(),next.globals(),next.sounds().subList(oldSounds.size(),next.sounds().size()),next.completedCpu(),publication.destinationLeftWord());
+            // BEGIN R12B BigRing scroll-only Host prebuild before any native publication.
+            if(bigRingScroll)hostReady=host.prepareOrdinaryBigRingScrollLock(host.globals(),host.video(),next.globals(),next.sounds().subList(oldSounds.size(),next.sounds().size()),next.completedCpu());
+            // END R12B BigRing scroll-only Host prebuild.
             active.validate(before);host.validateOrdinary(hostReady);if(programme!=null)module.validatePreparedAct2PastResultsGoodFutureFlags(programme);publication.applyNative();
             if(programme!=null)module.applyPreparedAct2PastResultsGoodFutureFlags(programme);
-            active.adopt(before,ready);host.adoptOrdinary(hostReady);
+            // BEGIN R12B BigRing authoritative Core specialStage BYTE adoption.
+            if(bigRingSpecial)active.adoptBigRingSpecialStage(before,ready,objects,publication);else active.adopt(before,ready);
+            // END R12B BigRing authoritative Core specialStage BYTE adoption.
+            host.adoptOrdinary(hostReady);
         }
     }
 }

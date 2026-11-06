@@ -407,8 +407,13 @@ final class SonicCdAct2PastWorldHost implements SonicCdAct2PastLoadingVisit.Host
             throw new IllegalStateException("Publication must borrow this actual Core cut");
         publishing=true;
         try {
-            var s=image.scroll();var v=image.video();
-            var inputs=new SonicCdAct2PastDisplay.Inputs(v.completedCpu(),v.cpuSat(),selected.normalPalette(),s.background().hscrollRam(),
+            var s=image.scroll();var v=image.video();var hscroll=s.background().hscrollRam();
+            if(owner.oldProgrammeSelected()){
+                if(!(v.selected() instanceof Published previous))throw new HostBoundary(Boundary.SELECTED_DISPLAY);
+                byte[] retained=previous.selection().inputs().hscroll().copy();
+                System.arraycopy(hscroll.copy(),0,retained,0,0x380);hscroll=CdAssetBytes.copyOf(retained);
+            }
+            var inputs=new SonicCdAct2PastDisplay.Inputs(v.completedCpu(),v.cpuSat(),selected.normalPalette(),hscroll,
                     s.background().vscroll(),selected.displayEnabled(),s.foregroundPlane(),s.backgroundPlane(),v.current(),frame.artState());
             var output=new Published(SonicCdAct2PastDisplay.project(inputs));
             video(new Video(v.cpuSat(),v.completedCpu(),inputs.player(),v.current(),output));bound();
@@ -479,6 +484,40 @@ final class SonicCdAct2PastWorldHost implements SonicCdAct2PastLoadingVisit.Host
         var after=new Image(this,nextGlobals,image.scroll(),v,image.clears(),image.geometryReady(),image.setupDone(),image.collisionPointer(),sounds);
         return new Prepared(image,after);
     }
+    /** Main19-57 scalar partition, prepared only on the actual Core old-exit stack. */
+    Prepared prepareOldExitPrelude(boolean reset) {
+        ordinaryIdle();owner.requireOldExitStore();var g=image.globals();var r=g.ring();
+        if(reset!=((owner.state().level().plcLoadFlags()&1)==0))throw new IllegalStateException("Wrong old BSET preimage");
+        var ring=reset?new CdRingGlobals(r.rings(),frame.environment().globals().timeAttackMode()==0?3:1,r.livesFlags(),
+                r.updateHudRings(),r.updateHudLives(),r.timeStopTimer(),r.ringAnimationTimer(),r.ringAnimationFrame()):r;
+        var score=reset?new CdOpeningObjectRuntime.ScoreGlobals(0,5000,g.score().updateHudScore()):g.score();
+        var ready=new Globals(ring,g.live(),g.contact(),score,g.projectorByte(),g.checkpointSaved(),g.drownTimerWord(),g.debugBlockWord(),
+                g.pauseMusicBit(),g.bonus(),g.tail(),g.animations(),g.paletteSteps7(),g.paletteTimers7());
+        return prepareOrdinary(g,image.video(),ready,List.of(),image.video().completedCpu());
+    }
+    /** FadeToBlack's actual full normal/water fade descriptor, without another palette owner. */
+    Prepared prepareOldExitFadeInfo() {
+        ordinaryIdle();owner.requireOldExitStore();
+        if(owner.state().phase()!=SonicCdAct2PastLoadingVisit.Phase.OLD_BLACK_FADE)throw new IllegalStateException("No old black fade");
+        var g=image.globals();var t=g.tail().orElseThrow();
+        var ready=new Globals(g.ring(),g.live(),g.contact(),g.score(),g.projectorByte(),g.checkpointSaved(),g.drownTimerWord(),g.debugBlockWord(),
+                g.pauseMusicBit(),g.bonus(),Optional.of(new Tail(t.player2ControlsWord(),t.player2BoredWord(),t.unknownLevelByte(),t.demoS1IndexWord(),0x003F)),
+                g.animations(),g.paletteSteps7(),g.paletteTimers7());
+        return prepareOrdinary(g,image.video(),ready,List.of(),image.video().completedCpu());
+    }
+    /** IPX1373-1385: one prepared selected-display disable plus completed semantic STOP_FM request. */
+    Prepared prepareOldExitBlank() {
+        ordinaryIdle();owner.requireOldExitStore();
+        if(owner.state().phase()!=SonicCdAct2PastLoadingVisit.Phase.OLD_RETURNED)throw new IllegalStateException("No actual R12B MMD return");
+        var v=image.video();if(!(v.selected() instanceof Published p))throw new HostBoundary(Boundary.SELECTED_DISPLAY);
+        var i=p.selection().inputs();var disabled=new SonicCdAct2PastDisplay.Inputs(i.selectedCpu(),i.selectedSat(),i.palette(),i.hscroll(),
+                i.vscrollLongBits(),false,i.foreground(),i.background(),i.current(),i.player());
+        var video=new Video(v.cpuSat(),v.completedCpu(),v.playerArt(),v.current(),new Published(SonicCdAct2PastDisplay.project(disabled)));
+        var sounds=new ArrayList<SonicCdGameModule.PastSound>(image.sounds());
+        sounds.add(new SonicCdGameModule.PastProgrammeSound(SonicCdGameModule.ProgramSound.STOP_FM));
+        return new Prepared(image,new Image(this,image.globals(),image.scroll(),video,image.clears(),image.geometryReady(),image.setupDone(),image.collisionPointer(),sounds));
+    }
+
     /** Pure native Goal/Signpost destination WORD value; the private World owns admission/order. */
     Prepared prepareOrdinaryGoalDestination(Globals expectedGlobals,Video expectedVideo,Globals nextGlobals,
                                              List<SonicCdGameModule.PastSound> sounds,
@@ -493,6 +532,18 @@ final class SonicCdAct2PastWorldHost implements SonicCdAct2PastLoadingVisit.Host
                 after.geometryReady(),after.setupDone(),after.collisionPointer(),after.sounds()));
     }
 
+    // BEGIN R12B BigRing pure scroll HIGH-byte1 preparation; World owns admission/order.
+    Prepared prepareOrdinaryBigRingScrollLock(Globals expectedGlobals,Video expectedVideo,Globals nextGlobals,
+                                               List<SonicCdGameModule.PastSound> sounds,Optional<CdObjectDrawQueue.CpuSat> cpu) {
+        var prepared=prepareOrdinary(expectedGlobals,expectedVideo,nextGlobals,sounds,cpu);
+        var after=prepared.after;var old=after.scroll();var f=old.foreground();
+        var foreground=new CdR11aForegroundScroll.State(f.cameraX(),f.cameraY16_16(),f.horizontalCrossed(),f.verticalCrossed(),
+                f.scrollXDiff(),f.scrollYDiff(),f.scrollFlags(),f.destBottomBound(),f.destLeftBound(),f.bottomBoundShift(),(f.scrollLock()&255)|0x100);
+        var scroll=new Scroll(foreground,old.background(),old.foregroundPlane(),old.backgroundPlane(),old.copies(),old.foregroundXFractionWord());
+        return new Prepared(prepared.before,new Image(this,after.globals(),scroll,after.video(),after.clears(),
+                after.geometryReady(),after.setupDone(),after.collisionPointer(),after.sounds()));
+    }
+    // END R12B BigRing pure scroll HIGH-byte1 preparation.
     void validateOrdinary(Prepared prepared) {
         ordinaryIdle();
         if(Objects.requireNonNull(prepared).before!=image)throw new IllegalStateException("Stale or foreign prepared Host image");

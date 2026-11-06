@@ -18,8 +18,8 @@ import static com.openggf.game.soniccd.level.CdR12bProfile.Asset.*;
  * Host is the existing World's private loading projection, not a second Frame or invocation owner.
  */
 final class SonicCdAct2PastLoadingVisit {
-    enum Phase { ENTRY, INITIAL_WHITE, FIRST_PLC, SECTION_PLC, FROM_WHITE, BEGIN_LEVEL }
-    enum Boundary { ENTRY, FRESH_RESET, TITLE_CARD, DEMO_RETURN, LEVEL_RESTART, POWERUP_ART, ORDINARY_OBJECT_PASS }
+    enum Phase { ENTRY, INITIAL_WHITE, FIRST_PLC, SECTION_PLC, FROM_WHITE, BEGIN_LEVEL, OLD_EXIT_PRELUDE, OLD_BLACK_FADE, OLD_CLEAR_WAIT, OLD_RETURNED, OLD_IPX_RETURNED }
+    enum Boundary { ENTRY, FRESH_RESET, TITLE_CARD, DEMO_RETURN, LEVEL_RESTART, POWERUP_ART, ORDINARY_OBJECT_PASS, OLD_EXIT_SPECIAL_STAGE, OLD_EXIT_MARKED_PERIOD, IPX_LEVEL_GAME_OVER, IPX_LEVEL_TIME_WARP, IPX_LEVEL_SPECIAL_STAGE, NEXT_ACT_PROGRAMME_ADMISSION }
     enum Action {
         ENTRY_STORES, WHITE_PRELUDE_END, NORMAL_LOAD_PALETTE, PLAY_LEVEL_MUSIC,
         CLEAR_POWERUP_FLOWERS, CLEAR_DRAW_QUEUE, CLEAR_FLOWERS, CLEAR_OBJECTS, CLEAR_UNKNOWN_BUFFER,
@@ -37,7 +37,9 @@ final class SonicCdAct2PastLoadingVisit {
         BEGIN_LEVEL, ENABLE_DISPLAY, COPY_AND_DRAW, CURRENT_ART, VINT_COMPLETED,
         CLEAR_PLCS, INITIAL_WHITE_SERVICE, INITIAL_WHITE_COLOURS, FIRST_WAIT, SECTION_WAIT, PROCESS_PLCS,
         IMMEDIATE_LEVEL, IMMEDIATE_STANDARD, PALETTE_SONIC, LOAD_SAVED, SAVED_STORE, BLOCKS_RAM,
-        PALETTE_LEVEL, SECTION_ART, LOAD_PLAYER, LIFE_ICON, RESERVED_TIME_ICON, FROM_WHITE_SERVICE, FROM_WHITE_COLOURS
+        PALETTE_LEVEL, SECTION_ART, LOAD_PLAYER, LIFE_ICON, RESERVED_TIME_ICON, FROM_WHITE_SERVICE, FROM_WHITE_COLOURS,
+        OLD_EXIT_PRELUDE, OLD_EXIT_CLEAR_PLCS, OLD_EXIT_FADE_SERVICE, OLD_EXIT_BLACK_COLOURS, OLD_EXIT_CLEAR_PALETTE,
+        OLD_EXIT_LOAD_SERVICE, OLD_EXIT_RETURN, OLD_IPX_BLANK
     }
     static final class UnsupportedLoading extends UnsupportedOperationException {
         private final Boundary boundary;
@@ -85,6 +87,12 @@ final class SonicCdAct2PastLoadingVisit {
             return new Program(demoModeWord,timeStonesByte,value,usePlayer2Byte,specialStageByte,palFadeFlagsByte,
                     palClearFlagBit0,gameModeByte,levelStartedByte,demoDataIndexWord);
         }
+        // BEGIN R12B BigRing specialStage BYTE store; every other programme field is retained.
+        private Program bigRingSpecialStage() {
+            return new Program(demoModeWord,timeStonesByte,goodFutureByte,usePlayer2Byte,1,palFadeFlagsByte,
+                    palClearFlagBit0,gameModeByte,levelStartedByte,demoDataIndexWord);
+        }
+        // END R12B BigRing specialStage BYTE store.
         private Program started() {
             return new Program(demoModeWord, timeStonesByte, goodFutureByte, usePlayer2Byte, specialStageByte,
                     palFadeFlagsByte, palClearFlagBit0, gameModeByte & 0x7F, 1, demoDataIndexWord);
@@ -179,6 +187,18 @@ final class SonicCdAct2PastLoadingVisit {
         State prepareGoodFuture(State expected,State ready,int value) {
             validate(expected);return ready.program(expected.program().goodFuture(value));
         }
+        // BEGIN R12B BigRing actual special-only Core publication, separate from ordinary adoption.
+        State prepareBigRingSpecialStage(State expected,SonicCdAct2PastObjectPass pass,SonicCdAct2PastObjectPass.Adoption operation) {
+            validate(expected);requireBigRingOwner(pass);pass.validateBigRingSpecialPublication(operation,expected,false);
+            return expected.program(expected.program().bigRingSpecialStage());
+        }
+        void adoptBigRingSpecialStage(State expected,State ready,SonicCdAct2PastObjectPass pass,SonicCdAct2PastObjectPass.Adoption operation) {
+            validate(expected);requireBigRingOwner(pass);pass.validateBigRingSpecialPublication(operation,expected,true);
+            if(!Objects.requireNonNull(ready).equals(expected.program(expected.program().bigRingSpecialStage())))
+                throw new IllegalArgumentException("BigRing changed another complete Core field");
+            values=ready;
+        }
+        // END R12B BigRing actual special-only Core publication.
         /** Distinct terminal-only receipt. It never enters prepare/adopt's healthy lane. */
         final class GoalTerminalPrefix {
             private final OrdinaryAccess access=OrdinaryAccess.this;
@@ -197,6 +217,12 @@ final class SonicCdAct2PastLoadingVisit {
         void adoptGoalAppendTerminal(GoalTerminalPrefix ready) {
             validateGoalAppendTerminal(ready);values=ready.ready;goalTerminal=true;
             // Only the original throw may leave this actual stack. Outer terminal closes Frame.
+        }
+
+        /** Only the real completed physical walk at World POST_OBJECT_CAMERA can take this branch. */
+        void beginOldExit(SonicCdAct2PastOrdinaryWorld world,SonicCdGameModule module) {
+            require();if(ordinary!=world)throw new IllegalStateException("Another ordinary World");
+            world.requireOldExitOwner(this);beginOldProgrammeExit(module);
         }
 
         void adopt(State expected,State ready) {
@@ -218,6 +244,13 @@ final class SonicCdAct2PastLoadingVisit {
         world.requireResultsOwner(pass,activeOrdinary);
     }
 
+    // BEGIN R12B BigRing actual Core -> World -> physical Pass relation.
+    void requireBigRingOwner(SonicCdAct2PastObjectPass pass) {
+        if(activeOrdinary==null||!running||failed||!(ordinary instanceof SonicCdAct2PastOrdinaryWorld world))
+            throw new IllegalStateException("No active R12B BigRing Core owner");
+        world.requireBigRingOwner(pass,activeOrdinary);
+    }
+    // END R12B BigRing actual Core -> World -> physical Pass relation.
     private final Host host;
     private final CdR12bTerrainAssets terrain;
     private final CdR12bPlayerAssets player;
@@ -225,7 +258,7 @@ final class SonicCdAct2PastLoadingVisit {
     private final CdR12bSectionArt art;
     private final CdTimeWarpSaveData.State saved;
     private State values;
-    private boolean running, failed, loadingSaved;
+    private boolean running, failed, loadingSaved, oldExitStore;
     private int savedCursor;
 
     SonicCdAct2PastLoadingVisit(Host host,CdR12bTerrainAssets terrain,CdR12bPlayerAssets player,
@@ -254,7 +287,7 @@ final class SonicCdAct2PastLoadingVisit {
     private void act(Action action) { validateHost();host.act(action,values);validateHost();call(Call.valueOf(action.name())); }
     private void call(Call call) { var c=new ArrayList<>(values.calls());c.add(call);values=values.calls(c); }
     private void stop(Boundary boundary) { throw new UnsupportedLoading(boundary); }
-    private void terminal(Throwable failure) { failed=true;try{frame.close();}catch(RuntimeException close){failure.addSuppressed(close);} }
+    private void terminal(Throwable failure) { failed=true;try{frame.close();}catch(RuntimeException|Error close){if(close!=failure)failure.addSuppressed(close);} }
 
     void begin() {
         current();if(values.phase()!=Phase.ENTRY)throw new IllegalStateException("R12B entry already began");
@@ -281,13 +314,112 @@ final class SonicCdAct2PastLoadingVisit {
         act(Action.NORMAL_LOAD_PALETTE); // Marked native branch fills normal CPU palette; no selected-WARP substitution.
     }
 
+    void requireServiceIdle() { current(); }
+    boolean oldProgrammeSelected() { return oldPhase(values.phase()); }
+    int oldExitSteps() { return Collections.frequency(values.calls(),Call.OLD_EXIT_BLACK_COLOURS); }
+    private static boolean oldPhase(Phase phase) {
+        return phase==Phase.OLD_EXIT_PRELUDE||phase==Phase.OLD_BLACK_FADE||phase==Phase.OLD_CLEAR_WAIT
+                ||phase==Phase.OLD_RETURNED||phase==Phase.OLD_IPX_RETURNED;
+    }
+    /** Actual private Core stack, never a public phase/value receipt. */
+    void requireOldExitStore() {
+        validateHost();
+        if(!running||failed||loadingSaved||!oldExitStore||!(host instanceof SonicCdAct2PastWorldHost)
+                ||(!oldPhase(values.phase())&&(values.phase()!=Phase.BEGIN_LEVEL||activeOrdinary==null)))
+            throw new IllegalStateException("No actual R12B old-programme continuation");
+        var gates=frame.environment().movement().gates();
+        if(gates.zoneAct()!=2||gates.timeZone()!=2)throw new IllegalStateException("Old R12B requires actual Results2/2 stores");
+    }
+    private SonicCdAct2PastWorldHost oldHost() {
+        requireOldExitStore();return (SonicCdAct2PastWorldHost)host;
+    }
+    /** Main19-115: first-load BSET uses its OLD bit; ClearPLCs precedes all exit branch reads. */
+    private void beginOldProgrammeExit(SonicCdGameModule module) {
+        if(values.level().levelRestart()!=2)stop(Boundary.LEVEL_RESTART);
+        oldExitStore=true;SonicCdGameModule.PreparedAct2PastOldExitReset moduleReady=null;
+        try {
+            requireOldExitStore();module.requireAct2PastLoadingVisit(this);
+            var before=values;var actor=frame.captureActor();var shared=frame.captureShared();
+            var placed=oldHost().placement().capture();var programmeBefore=module.levelProgramState();
+            var p=before.program();var l=before.level();boolean reset=(l.plcLoadFlags()&1)==0;
+            var programme=p.prelude(p.timeStonesByte()==0x7F&&frame.environment().globals().timeAttackMode()==0)
+                    .fadeFlag(reset?0:p.palFadeFlagsByte());
+            var nextLevel=new CdLevelGlobals(l.levelRestart(),l.updateHudTime(),reset?0:l.checkpoint(),reset?0:l.spawnMode(),
+                    l.plcLoadFlags()|1,l.flowerCount(),l.fadeEnableDisplay(),l.powerup(),l.timeOver());
+            var ready=before.program(programme).level(nextLevel).phase(Phase.OLD_EXIT_PRELUDE);
+            var hostReady=oldHost().prepareOldExitPrelude(reset);
+            moduleReady=reset?module.prepareAct2PastOldExitReset(this):null;
+            oldHost().validateOrdinary(hostReady);if(moduleReady!=null)module.validateAct2PastOldExitReset(moduleReady);
+            var fresh=oldHost().placement().capture();
+            if(values!=before||!actor.equals(frame.captureActor())||!shared.equals(frame.captureShared())
+                    ||!placed.status().equals(fresh.status())||!placed.pool().slots().equals(fresh.pool().slots())
+                    ||!Arrays.equals(placed.savedFlags().copy(),fresh.savedFlags().copy())||!programmeBefore.equals(module.levelProgramState()))
+                throw new IllegalStateException("Old LevelStart complete cut changed during preparation");
+            // Every aggregate is ready before the first owner write; no effect/result replay.
+            values=ready;oldHost().adoptOrdinary(hostReady);
+            frame.beginLevelStart();if(reset){oldHost().placement().resetSavedObjectFlags();module.applyAct2PastOldExitReset(moduleReady);}
+            call(Call.OLD_EXIT_PRELUDE);
+            artOp(art::clearPlcs);call(Call.OLD_EXIT_CLEAR_PLCS);
+            if(values.program().specialStageByte()!=0)stop(Boundary.OLD_EXIT_SPECIAL_STAGE);
+            if((frame.environment().movement().gates().timeZone()&0x80)!=0)stop(Boundary.OLD_EXIT_MARKED_PERIOD);
+            boolean fade=(values.program().palFadeFlagsByte()&1)!=0;
+            values=values.program(values.program().fadeFlag(values.program().palFadeFlagsByte()|1))
+                    .phase(fade?Phase.OLD_BLACK_FADE:Phase.OLD_CLEAR_WAIT);
+            if(fade){var h=oldHost().prepareOldExitFadeInfo();oldHost().adoptOrdinary(h);}else clearOldExitPalette();
+        } finally {module.retireAct2PastOldExitReset(moduleReady);oldExitStore=false;}
+    }
+    private void clearOldExitPalette() {
+        requireOldExitStore();var l=values.level();
+        if(l.levelRestart()!=2)throw new IllegalStateException("Old black exit lost restart2");
+        var ready=values.level(new CdLevelGlobals(0,l.updateHudTime(),l.checkpoint(),l.spawnMode(),l.plcLoadFlags(),
+                l.flowerCount(),l.fadeEnableDisplay(),l.powerup(),l.timeOver()))
+                .program(values.program().fadeFlag(0)).palettes(zero(128),values.fadePalette(),values.waterPalette(),values.displayedPalette())
+                .phase(Phase.OLD_CLEAR_WAIT);
+        values=ready;call(Call.OLD_EXIT_CLEAR_PALETTE);
+    }
+    private void serviceOldExit(int held) {
+        oldExitStore=true;
+        try {
+            requireOldExitStore();
+            if(values.phase()==Phase.OLD_RETURNED){
+                var ready=values.progress(values.initialWhiteSteps(),values.fromWhiteSteps(),false);
+                var h=oldHost().prepareOldExitBlank();oldHost().validateOrdinary(h);
+                values=ready;oldHost().adoptOrdinary(h); // IPX stop request/disable precede its own VSync.
+                act(Action.VINT_COMPLETED);values=values.phase(Phase.OLD_IPX_RETURNED);call(Call.OLD_IPX_BLANK);return;
+            }
+            boolean fade=values.phase()==Phase.OLD_BLACK_FADE;
+            if(!fade&&values.phase()!=Phase.OLD_CLEAR_WAIT)throw new IllegalStateException("No old exit wait");
+            var selected=oldHost().video().completedCpu();var actor=frame.state();var environment=frame.environment();
+            if(fade)frame.serviceOldProgrammeExitPaletteFade(held,actor,environment,()->publish(0x12),()->artOp(art::serviceFast));
+            else frame.serviceOldProgrammeExitLoad(held,actor,environment,()->publish(0xC),()->act(Action.COPY_AND_DRAW),()->artOp(art::serviceFast));
+            act(Action.VINT_COMPLETED);call(fade?Call.OLD_EXIT_FADE_SERVICE:Call.OLD_EXIT_LOAD_SERVICE);
+            if(fade){
+                var colours=CdLevelPaletteFade.stepToBlack(new CdLevelPaletteFade.Palettes(values.normalPalette(),values.waterPalette()));
+                values=values.palettes(colours.palette(),values.fadePalette(),colours.waterPalette(),values.displayedPalette());
+                call(Call.OLD_EXIT_BLACK_COLOURS);artOp(art::prepare);call(Call.PROCESS_PLCS);
+                if(oldExitSteps()==22)clearOldExitPalette();
+            }else{values=values.phase(Phase.OLD_RETURNED);call(Call.OLD_EXIT_RETURN);}
+            oldHost().settleOrdinary(selected);
+        } finally {oldExitStore=false;}
+    }
+    private void stopOldIpxReturn() {
+        // IPX LevelLoop549-584 then RunR13: no new programme/asset/load admission here.
+        var h=(SonicCdAct2PastWorldHost)host;
+        if(h.globals().ring().lives()==0)stop(Boundary.IPX_LEVEL_GAME_OVER);
+        if((frame.environment().movement().gates().timeZone()&0x80)!=0)stop(Boundary.IPX_LEVEL_TIME_WARP);
+        if(values.program().specialStageByte()!=0)stop(Boundary.IPX_LEVEL_SPECIAL_STAGE);
+        stop(Boundary.NEXT_ACT_PROGRAMME_ADMISSION);
+    }
+
     void service(int held) {
         current();nativeByte(held);
+        if(values.phase()==Phase.OLD_IPX_RETURNED){stopOldIpxReturn();return;}
         if(values.phase()==Phase.ENTRY)throw new IllegalStateException("Install then begin actual loading first");
         if(values.phase()==Phase.BEGIN_LEVEL&&ordinary==null)stop(Boundary.ORDINARY_OBJECT_PASS);
         running=true;
         try {
             switch(values.phase()) {
+                case OLD_BLACK_FADE,OLD_CLEAR_WAIT,OLD_RETURNED -> serviceOldExit(held);
                 case INITIAL_WHITE -> whiteService(held,true);
                 case FROM_WHITE -> whiteService(held,false);
                 case FIRST_PLC,SECTION_PLC -> plcService(held);
@@ -461,7 +593,17 @@ final class SonicCdAct2PastLoadingVisit {
         frame.validateActorRestore(snapshot.actor);frame.validateSharedRestore(snapshot.shared);host.validateRestore(snapshot.host);validateHost();
         var v=snapshot.state;art.withSectionWord(v.section(),v.section().sectionWord());if(v.section().stopped())throw new IllegalArgumentException("Stopped loading capture");
         int period=snapshot.shared.environment().movement().gates().timeZone();
-        if(snapshot.shared.environment().movement().gates().zoneAct()!=1||period!=(v.phase()==Phase.FROM_WHITE||v.phase()==Phase.BEGIN_LEVEL?0:0x80)
+        boolean exit=oldPhase(v.phase());int zoneAct=snapshot.shared.environment().movement().gates().zoneAct();
+        int steps=Collections.frequency(v.calls(),Call.OLD_EXIT_BLACK_COLOURS);
+        if(exit){
+            boolean fade=v.phase()==Phase.OLD_BLACK_FADE;
+            if(v.phase()==Phase.OLD_EXIT_PRELUDE||zoneAct!=2||period!=2||v.fromWhiteSteps()!=22||steps<0||steps>22
+                    ||(fade&&steps>=22)||(!fade&&steps!=0&&steps!=22)
+                    ||v.level().levelRestart()!=(fade?2:0)||v.program().demoModeWord()!=0||v.program().usePlayer2Byte()!=0
+                    ||v.program().levelStartedByte()!=0||(v.program().gameModeByte()&0x80)==0
+                    ||(v.program().palFadeFlagsByte()&1)!=(fade?1:0)
+                    ||v.displayEnabled()!=(v.phase()!=Phase.OLD_IPX_RETURNED))throw new IllegalArgumentException("Captured R12B old exit differs");
+        }else if(zoneAct!=1||period!=(v.phase()==Phase.FROM_WHITE||v.phase()==Phase.BEGIN_LEVEL?0:0x80)
                 ||(v.phase()==Phase.BEGIN_LEVEL?v.fromWhiteSteps()!=22:v.fromWhiteSteps()==22)
                 ||(v.phase()==Phase.INITIAL_WHITE&&v.initialWhiteSteps()>=22))throw new IllegalArgumentException("Captured R12B phase/source/progress differs");
     }

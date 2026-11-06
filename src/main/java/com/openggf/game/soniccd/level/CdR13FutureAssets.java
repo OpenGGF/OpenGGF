@@ -210,6 +210,8 @@ public final class CdR13FutureAssets {
         }
     }
     CdAssetBytes nativeObjectLayout(){return view(Asset.OBJECT_LAYOUTS);}
+    /** Same-package immutable source seam; public callers still have only fixed named views. */
+    CdMmdImage originalImage(){return image;}
 
     private List<PlcList> decodePlcs() {
         var raw=view(Asset.PLC_LISTS);var result=new ArrayList<PlcList>();

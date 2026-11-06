@@ -24,6 +24,7 @@ final class SonicCdAct2PastObjectPass {
         void validate(SonicCdAct2PastObjectPass pass,CdPlayerFrameRuntime frame,CdR12bTerrainAssets terrain,
                       CdR12bPlayerAssets player,CdObjectPlacementRuntime placement);
         Cut read();
+        default BigRingOwners bigRingOwners(BigRingOwners expected){throw new IllegalStateException("No actual BigRing owner borrow");}
         default ResultsOwners resultsOwners(ResultsOwners expected){throw new IllegalStateException("No actual Results owner borrow");}
         default void submitResultsPlc(ResultsPlcSubmission value){value.validate();throw stop(Boundary.PLC_OWNER,value.wholeIndex(),0x10);}
         /** Preflight all actual scalar owners; applyNative once, then adopt next with no callback gap. */
@@ -61,6 +62,9 @@ final class SonicCdAct2PastObjectPass {
         private boolean applied;
         private int destinationLeftWord=-1;private Object endOperation;
         private Object resultsOperation;private ResultsOwners resultsOwners;private int resultsSectionWord=-1;
+        // BEGIN R12B BigRing original publication metadata.
+        private Object bigRingOperation;private BigRingOwners bigRingOwners;
+        // END R12B BigRing original publication metadata.
         private CdPlayerFrameRuntime.ActorState afterActor;
         private CdPlayerFrameRuntime.SharedState afterShared;
         private CdObjectPlacementRuntime.Snapshot afterPlacement;
@@ -100,7 +104,7 @@ final class SonicCdAct2PastObjectPass {
     }
     boolean isCurrentPlcSubmission(PlcSubmission submission){return submission!=null&&submission==pendingPlc&&plcPort&&phase==Phase.WALKING&&dispatch!=null&&dispatch.kind==Kind.PROJECTOR&&dispatch.operation==submission.request&&dispatch.prepared&&dispatch.used&&projector.isCurrentCall(submission.request);}
     private enum Phase { READY,WALKING,WALKED,DRAINING,DONE,FAILED,DISCARDED }
-    private enum Kind { PRIMARY,RESERVED,RING,SPRING,MONITOR,TIME_POST,COLLAPSE,PLATFORM,TAM,ANIMAL,SWING,ROBOT,ANTON,BOULDER,WALL,FLOAT_BLOCK,SPIKES,LOG_SHADOW,NULL,PATA_BATA,PROJECTOR,EXPLOSION,FLOWER,POINTS,LOST_RING,MONITOR_ITEM,MOSQUI,SCENERY,SPRINGBOARD,DISC,DOOR,VERTICAL_DOOR,SPIN_TAG,GOAL,SIGNPOST,RESULTS,DOOR_SPLASH }
+    private enum Kind { PRIMARY,RESERVED,RING,SPRING,MONITOR,TIME_POST,COLLAPSE,PLATFORM,TAM,ANIMAL,SWING,ROBOT,ANTON,BOULDER,WALL,FLOAT_BLOCK,SPIKES,LOG_SHADOW,NULL,PATA_BATA,PROJECTOR,EXPLOSION,FLOWER,POINTS,LOST_RING,MONITOR_ITEM,MOSQUI,SCENERY,SPRINGBOARD,DISC,DOOR,VERTICAL_DOOR,SPIN_TAG,GOAL,SIGNPOST,RESULTS,DOOR_SPLASH,BIG_RING }
     private final Ports ports;private final CdR12bTerrainAssets terrain;private final CdR12bPlayerAssets player;
     private final CdPlayerFrameRuntime frame;private final CdObjectPlacementRuntime placement;
     private final CdAssetBytes objectIndex;private final CdObjectMappings mappings;
@@ -119,6 +123,9 @@ final class SonicCdAct2PastObjectPass {
     private CdLostRing lostRing;private CdMonitorItem monitorItem;private CdMosqui mosqui;
     private CdScenery scenery;private CdSpringboard springboard;
     private CdTunnelDoorSplash doorSplash;private SplashInvocation splashInvocation;
+    // BEGIN R12B BigRing cached body/private stack.
+    private CdBigRing bigRing;private BigRingInvocation bigRingInvocation;private boolean bigRingBorrow;
+    // END R12B BigRing cached body/private stack.
     private CdGoalPost goalPost;private CdSignpost signpost;private EndInvocation endInvocation;private GoalPlcSubmission pendingGoalPlc;
     private CdResults results;private ResultsInvocation resultsInvocation;private ResultsPlcSubmission pendingResultsPlc;private boolean resultsBorrow;
     // BEGIN R12B Disc/Door bindings fields.
@@ -162,6 +169,9 @@ final class SonicCdAct2PastObjectPass {
         goalPost=CdGoalPost.fromAct2PastAssets(placement,terrain,this::goalRead,this::goalReached,this::goalPlc,null,this::goalDraw);
         signpost=CdSignpost.fromAct2PastAssets(placement,terrain,this::signRead,this::signStore,this::signSound,this::signDraw);
         results=CdResults.fromAct2PastAssets(placement,terrain,this::resultsRead,this::resultsBonus,this::resultsPoints,this::resultsPlc,this::resultsSound,this::resultsDraw,this::resultsProgramme,this::resultsAction);
+        // BEGIN R12B BigRing original cached source factory.
+        bigRing=CdBigRing.fromAct2PastAssets(placement,terrain,this::bigRingRead,this::bigRingSpecial,this::bigRingPlayer,this::bigRingScroll,this::bigRingSound,this::bigRingDraw);
+        // END R12B BigRing original cached source factory.
         // BEGIN R12B Disc/Door cached source factories.
         routeObjects();
         spinningDisc=CdSpinningDisc.fromAct2PastAssets(placement,terrain,math,solid,this::discSolid,
@@ -474,6 +484,18 @@ final class SonicCdAct2PastObjectPass {
             queue.close();queue=null;phase=Phase.DONE;return cpu;
         }catch(RuntimeException|Error failure){phase=Phase.FAILED;if(queue!=null)queue.close();throw failure;}
     }
+    // BEGIN R12B old-exit completed-walk retirement (no capture or value authority).
+    void abandonCompletedWalk() {
+        if(phase!=Phase.WALKED||queue==null||queue.phase()!=CdObjectDrawQueue.Phase.COLLECTING
+                ||dispatch!=null||port||queuePort||plcPort||pending!=null||pendingPlc!=null||pendingGoalPlc!=null
+                ||pendingResultsPlc!=null||resultsBorrow||resultsInvocation!=null||endInvocation!=null
+                ||splashInvocation!=null||discInvocation!=null||doorScope!=null||verticalInvocation!=null||spinInvocation!=null
+                ||bigRingInvocation!=null||bigRingBorrow)
+            throw new IllegalStateException("No completed unborrowed R12B walk to abandon");
+        if(frame.closed()||!frame.stageSource().ownsAct2Past(terrain,player))throw new IllegalStateException("R12B walk source retired");
+        queue.close();queue=null;phase=Phase.DONE;
+    }
+    // END R12B old-exit completed-walk retirement.
     void discard(){if(port||queuePort||phase==Phase.WALKING||phase==Phase.DRAINING)throw new IllegalStateException("Active R12B pass");if(queue!=null)queue.close();queue=null;phase=Phase.DISCARDED;}
     private void execute(Kind kind,int whole,int actualLevelFrame){
         var cut=read();var e=frame.environment();var g=e.movement().gates();
@@ -577,6 +599,7 @@ final class SonicCdAct2PastObjectPass {
             case GOAL->runGoal(whole);
             case SIGNPOST->runSignpost(whole);
             case RESULTS->runResults(whole);
+            case BIG_RING->runBigRing(whole);
             case SWING->swing.run(whole,new CdSwing.Globals(cut.cameraXWord(),g.timeZone(),g.timeWarpDirection()));
             case ROBOT->robot.run(whole,new CdRobotGenerator.Globals(cut.goodFutureByte(),g.timeZone(),g.zoneAct()&255,g.timeWarpDirection(),cut.cameraXWord()),new CdRobotGenerator.Inputs(primary(),gates(),solidGlobals()));
         }
@@ -630,6 +653,7 @@ final class SonicCdAct2PastObjectPass {
             // END R12B SpinTunnel R2 retained native-index dispatch.
             // END R12B Disc/Door retained native-index dispatch.
             case CdTunnelDoorSplash.OBJECT_ID->Kind.DOOR_SPLASH;
+            case CdBigRing.OBJECT_ID->Kind.BIG_RING;
             case CdGoalPost.OBJECT_ID->Kind.GOAL;case CdSignpost.OBJECT_ID->Kind.SIGNPOST;case CdResults.OBJECT_ID->Kind.RESULTS;
             case CdScenery.OBJECT_ID->Kind.SCENERY;case CdSpringboard.OBJECT_ID->Kind.SPRINGBOARD;
             default->throw stop(Boundary.OBJECT_KIND,whole,id);};
@@ -1610,6 +1634,141 @@ final class SonicCdAct2PastObjectPass {
         endDraw(i,c,c.actualCut(),c.expectedSource());
     }
     // END R12B Goal/Signpost actual private World binding.
+
+    // BEGIN R12B BigRing/Flash original private World binding.
+    // N1ecc5f3a Level/_Objects/Level End/Main.asm:385-562, USA/FixBugs=0; no effects replay.
+    record BigRingOwners(SonicCdAct2PastLoadingVisit.State core,SonicCdGameModule.LevelProgramState programme,
+                         SonicCdAct2PastWorldHost.Prepared hostFence) {
+        BigRingOwners {Objects.requireNonNull(core);Objects.requireNonNull(programme);Objects.requireNonNull(hostFence);}
+    }
+    private enum BigRingStep { RINGS,STONES,ATTACK,XR,X,YR,Y,SPECIAL,CAMERA_TOUCH,PLAYER_X,LOCK,HOLD,XV,GV,
+        SCROLL,FM,CAMERA_DESPAWN,PERIOD_DESPAWN,COPIED_PERIOD,DIRECTION,TAIL,DRAW,RETURN }
+    /** Public component records are descriptive: this actual cached invocation and cursor own calls. */
+    private final class BigRingInvocation {
+        final CdBigRing body=bigRing;final CdObjectPool pool=placement.pool();final CdObjectDrawQueue collector=queue;
+        final int whole;final CdObjectPlacementRuntime.Snapshot before;final CdObjectState entry;final boolean flash;
+        CdObjectState source,drawBefore,childImage;int child=-1,width,height,cameraTouch,copiedPeriod,direction;
+        Cut cut;CdPlayerFrameRuntime.ActorState actor;CdPlayerFrameRuntime.SharedState shared;BigRingOwners owners;
+        BigRingStep step;Object operation;boolean lowRings,remove,animate,deleted,drawn;
+        BigRingInvocation(int whole){this.whole=whole;before=placement.capture();entry=pool.state(whole);source=entry;flash=entry.subtype()!=0;
+            cut=read();actor=frame.captureActor();shared=frame.captureShared();step=flash?BigRingStep.TAIL:BigRingStep.RINGS;}
+    }
+    boolean isCurrentBigRingOwnersRead(){var i=bigRingInvocation;return bigRingBorrow&&i!=null&&i.body==bigRing&&i.pool==placement.pool()
+            &&phase==Phase.WALKING&&dispatch!=null&&dispatch.kind==Kind.BIG_RING&&dispatch.whole==i.whole&&!queuePort&&!plcPort
+            &&(!port||pending!=null&&pending.bigRingOperation==i.operation&&pending.bigRingOwners==i.owners);}
+    private BigRingOwners bigRingOwners(BigRingInvocation i,BigRingOwners expected){
+        if(bigRingBorrow||bigRingInvocation!=i)throw new IllegalStateException("Recursive/retired BigRing owner borrow");bigRingBorrow=true;
+        try{return Objects.requireNonNull(ports.bigRingOwners(expected));}finally{bigRingBorrow=false;}
+    }
+    private void bigRingVerify(BigRingInvocation i){
+        if(bigRingInvocation!=i||i.body!=bigRing||i.pool!=placement.pool()||i.collector!=queue||queue==null||queue.phase()!=CdObjectDrawQueue.Phase.COLLECTING
+                ||phase!=Phase.WALKING||dispatch==null||dispatch.kind!=Kind.BIG_RING||dispatch.whole!=i.whole||plcPort)
+            throw new IllegalStateException("No actual cached BigRing/Flash invocation");
+        guard();routeObjects();requireFrame(i.actor,i.shared);requireCut(i.cut);if(i.owners!=null)bigRingOwners(i,i.owners);
+    }
+    private void bigRingImages(BigRingInvocation i,boolean tail,boolean drawFailure){
+        var now=placement.capture();placement.validateRestore(i.before);
+        for(var old:i.before.pool().slots()){
+            int whole=old.identity().wholeIndex();var expected=whole==i.whole?i.source:tail&&whole==i.child?i.childImage:old;
+            if(!expected.equals(i.pool.state(whole))&&!(drawFailure&&whole==i.whole&&i.drawBefore!=null&&i.drawBefore.equals(i.pool.state(whole))))
+                throw new IllegalStateException("BigRing differs from native source64/full96 prefix at "+whole);
+        }
+        byte[] bank=i.before.savedFlags().copy();
+        if(tail&&i.lowRings&&i.remove&&i.entry.savedFlagsId()!=0){int period=i.copiedPeriod&127;
+            if((i.copiedPeriod&128)!=0)period=Math.max(0,Math.min((short)((period-(byte)i.direction)&65535),2));
+            int at=2+(short)((3*i.entry.savedFlagsId()+period)&65535);if(at<2||at>=bank.length)throw new IllegalStateException("Unrepresented reached BigRing saved address");bank[at]&=127;
+        }
+        if(!i.before.status().equals(now.status())||!Arrays.equals(bank,now.savedFlags().copy()))throw new IllegalStateException("BigRing changed bank/status nonwrites");
+    }
+    private BigRingInvocation bigRingCurrent(){requireKind(Kind.BIG_RING);var i=bigRingInvocation;
+        if(i==null||i.operation!=null||bigRingBorrow||plcPort)throw new IllegalStateException("No original next BigRing callback");bigRingVerify(i);return i;}
+    private void bigRingCall(BigRingInvocation i,Object call,CdObjectPlacementRuntime.Snapshot cut,CdObjectState source,BigRingStep step,boolean tail){
+        if(i.step!=step||call==null||i.operation!=null||!dispatch.consumed.add(call))throw new IllegalStateException("Repeated/reordered/foreign BigRing callback");
+        bigRingVerify(i);bigRingImages(i,tail,false);placementCut(cut);source(source);if(!i.source.equals(source))throw new IllegalArgumentException("Not the actual BigRing full64 prefix");i.operation=call;
+    }
+    private void bigRingRefresh(BigRingInvocation i){i.actor=frame.captureActor();i.shared=frame.captureShared();i.cut=read();i.owners=bigRingOwners(i,null);}
+    private boolean bigRingAdoption(Adoption p){var i=bigRingInvocation;return i!=null&&isCurrentAdoption(p)&&p.bigRingOperation!=null&&p.bigRingOperation==i.operation
+            &&p.bigRingOwners==i.owners&&p.expected==i.cut&&dispatch!=null&&dispatch.kind==Kind.BIG_RING&&dispatch.whole==i.whole;}
+    boolean isCurrentBigRingSpecialAdoption(Adoption p){return bigRingAdoption(p)&&!p.applied&&bigRingInvocation.step==BigRingStep.SPECIAL&&p.bigRingOperation instanceof CdBigRing.SpecialStageCall;}
+    boolean isCurrentBigRingScrollAdoption(Adoption p){return bigRingAdoption(p)&&!p.applied&&bigRingInvocation.step==BigRingStep.SCROLL&&p.bigRingOperation instanceof CdBigRing.ScrollLockHighByteOne;}
+    void validateBigRingSpecialPublication(Adoption p,SonicCdAct2PastLoadingVisit.State expected,boolean applied){
+        if(!bigRingAdoption(p)||p.applied!=applied||bigRingInvocation.step!=BigRingStep.SPECIAL||!(p.bigRingOperation instanceof CdBigRing.SpecialStageCall)
+                ||p.bigRingOwners.core()!=expected||p.next!=p.expected||queuePort||plcPort)throw new IllegalStateException("Not the original BigRing specialStage1 site");
+        bigRingVerify(bigRingInvocation);bigRingImages(bigRingInvocation,false,false);
+    }
+    private void bigRingPublish(BigRingInvocation i,Object call,Cut next,CdPlayerFrameRuntime.ObjectSolidPublication frameReady){
+        if(port||pending!=null||i.operation!=call)throw new IllegalStateException("Recursive BigRing publication");
+        var p=new Adoption(i.cut,next,null,()->{if(!bigRingAdoption(pending)||pending.applied||i.operation!=call)throw new IllegalStateException("No original BigRing publication");bigRingVerify(i);bigRingImages(i,false,false);if(frameReady!=null)frame.validatePreparedObjectSolidPublication(frameReady);},
+                ()->{if(frameReady!=null)frame.applyPreparedObjectSolidPublication(frameReady);});p.bigRingOperation=call;p.bigRingOwners=i.owners;pending=p;port=true;
+        try{ports.adopt(p);if(!p.applied)throw new IllegalStateException("Missing actual BigRing adoption receipt");requireCut(next);requireFrame(p.afterActor,p.afterShared);requirePlacement(p.afterPlacement);}
+        finally{pending=null;port=false;}
+        checkpoint();bigRingRefresh(i);
+    }
+    private static boolean bigRingReadAt(BigRingStep site,CdBigRing.ReadField field){return switch(field){
+        case RINGS_WORD->site==BigRingStep.RINGS;case TIME_STONES_BYTE->site==BigRingStep.STONES;case TIME_ATTACK_BYTE->site==BigRingStep.ATTACK;
+        case PLAYER_X_RADIUS_BYTE->site==BigRingStep.XR;case PLAYER_X_WORD->site==BigRingStep.X;case PLAYER_Y_RADIUS_BYTE->site==BigRingStep.YR;case PLAYER_Y_WORD->site==BigRingStep.Y;
+        case CAMERA_X_WORD->site==BigRingStep.CAMERA_TOUCH||site==BigRingStep.CAMERA_DESPAWN;case TIME_ZONE_BYTE->site==BigRingStep.PERIOD_DESPAWN||site==BigRingStep.COPIED_PERIOD;case TIME_WARP_DIRECTION_BYTE->site==BigRingStep.DIRECTION;};}
+    private static BigRingStep bigRingRemoval(BigRingInvocation i){return i.entry.savedFlagsId()==0?BigRingStep.TAIL:BigRingStep.COPIED_PERIOD;}
+    private int bigRingRead(CdBigRing.ReadCall c){var i=bigRingCurrent();if(!bigRingReadAt(i.step,c.field()))throw new IllegalStateException("Not a reached BigRing scalar read");bigRingCall(i,c,c.actualCut(),c.expectedSource(),i.step,false);
+        try{int value=switch(c.field()){
+            case RINGS_WORD->read().globals().ring().rings();case TIME_STONES_BYTE->i.owners.core().program().timeStonesByte();case TIME_ATTACK_BYTE->read().timeAttackModeByte();
+            case PLAYER_X_RADIUS_BYTE->frame.state().motion().xRadius();case PLAYER_Y_RADIUS_BYTE->frame.state().motion().yRadius();
+            case PLAYER_X_WORD->frame.state().motion().centreX16_16()>>>16;case PLAYER_Y_WORD->frame.state().motion().centreY16_16()>>>16;
+            case CAMERA_X_WORD->read().cameraXWord();case TIME_ZONE_BYTE->frame.environment().movement().gates().timeZone();case TIME_WARP_DIRECTION_BYTE->frame.environment().movement().gates().timeWarpDirection();};
+            switch(c.field()){
+                case RINGS_WORD->{i.lowRings=value<50;i.step=i.lowRings?(i.entry.signedByte(SPRITE_FLAGS)>=0?BigRingStep.CAMERA_DESPAWN:BigRingStep.PERIOD_DESPAWN):switch(i.entry.routine()){case 0->BigRingStep.STONES;case 2->BigRingStep.XR;default->BigRingStep.TAIL;};if(!i.lowRings&&i.entry.routine()==4)i.animate=true;}
+                case TIME_STONES_BYTE->{i.deleted=value==127;i.step=i.deleted?BigRingStep.TAIL:BigRingStep.ATTACK;}
+                case TIME_ATTACK_BYTE->{i.deleted=value!=0;i.step=i.deleted?BigRingStep.TAIL:BigRingStep.XR;if(!i.deleted)i.source=i.source.addByte(ROUTINE,2).moveByte(SPRITE_FLAGS,i.source.spriteFlags()|4).moveWord(TILE,0x2488).moveLong(MAPPINGS,bigRing.assets().ringMappingsAddress()).moveByte(X_RADIUS,32).moveByte(WIDTH,32).moveByte(Y_RADIUS,32);}
+                case PLAYER_X_RADIUS_BYTE->{i.width=((byte)value+16)&65535;i.step=BigRingStep.X;}
+                case PLAYER_X_WORD->{int dx=(value-i.source.centreX()+i.width)&65535;i.step=(short)dx<0||dx>=((2*i.width)&65535)?BigRingStep.TAIL:BigRingStep.YR;if(i.step==BigRingStep.TAIL)i.animate=true;}
+                case PLAYER_Y_RADIUS_BYTE->{i.height=((byte)value+32)&65535;i.step=BigRingStep.Y;}
+                case PLAYER_Y_WORD->{int dy=(value-i.source.centreY()+i.height)&65535;i.step=(short)dy<0||dy>=((2*i.height)&65535)?BigRingStep.TAIL:BigRingStep.SPECIAL;if(i.step==BigRingStep.TAIL)i.animate=true;}
+                case CAMERA_X_WORD->{if(i.step==BigRingStep.CAMERA_TOUCH){i.cameraTouch=value;i.step=BigRingStep.PLAYER_X;}else{int d=((i.entry.centreX()&0xFF80)-(((value-128)&65535)&0xFF80))&65535;i.remove=d>0x280;i.step=i.remove?bigRingRemoval(i):BigRingStep.PERIOD_DESPAWN;}}
+                case TIME_ZONE_BYTE->{if(i.step==BigRingStep.PERIOD_DESPAWN){i.remove=(value&128)!=0;i.step=i.remove?bigRingRemoval(i):BigRingStep.TAIL;}else{i.copiedPeriod=value;i.step=(value&128)!=0?BigRingStep.DIRECTION:BigRingStep.TAIL;}}
+                case TIME_WARP_DIRECTION_BYTE->{i.direction=value;i.step=BigRingStep.TAIL;}
+            }
+            bigRingVerify(i);return value;
+        }finally{i.operation=null;}
+    }
+    private void bigRingSpecial(CdBigRing.SpecialStageCall c){var i=bigRingCurrent();bigRingCall(i,c,c.actualCut(),c.expectedSource(),BigRingStep.SPECIAL,false);
+        try{bigRingPublish(i,c,i.cut,null);i.source=i.source.addByte(ROUTINE,2);i.step=BigRingStep.CAMERA_TOUCH;}finally{i.operation=null;}}
+    private void bigRingPlayer(CdBigRing.PlayerStore c){var i=bigRingCurrent();var step=switch(c){case CdBigRing.PlayerXWord x->BigRingStep.PLAYER_X;case CdBigRing.ControlLockBit0 x->BigRingStep.LOCK;case CdBigRing.ControlHold0808 x->BigRingStep.HOLD;case CdBigRing.XVelocityZero x->BigRingStep.XV;case CdBigRing.GroundVelocityZero x->BigRingStep.GV;};bigRingCall(i,c,c.actualCut(),c.expectedSource(),step,false);
+        try{if(c instanceof CdBigRing.PlayerXWord x&&x.value()!=((i.cameraTouch+336)&65535))throw new IllegalArgumentException("Not actual camera plus336");
+            var ready=frame.prepareObjectBigRingPlayerStore(i.actor.state(),i.shared.environment(),c);bigRingPublish(i,c,i.cut,ready);
+            i.step=switch(step){case PLAYER_X->BigRingStep.LOCK;case LOCK->BigRingStep.HOLD;case HOLD->BigRingStep.XV;case XV->BigRingStep.GV;case GV->BigRingStep.SCROLL;default->throw new IllegalStateException("BigRing player cursor");};
+        }finally{i.operation=null;}}
+    private void bigRingScroll(CdBigRing.ScrollLockHighByteOne c){var i=bigRingCurrent();bigRingCall(i,c,c.actualCut(),c.expectedSource(),BigRingStep.SCROLL,false);
+        try{bigRingPublish(i,c,i.cut,null);i.step=BigRingStep.FM;}finally{i.operation=null;}}
+    private void bigRingSound(CdBigRing.SoundCall c){var i=bigRingCurrent();bigRingCall(i,c,c.actualCut(),c.expectedSource(),BigRingStep.FM,false);
+        try{var ledger=new ArrayList<>(i.cut.sounds());ledger.add(new SonicCdGameModule.PastBigRingFm());int first=-1;CdObjectState child=null;
+            for(var old:c.actualCut().pool().slots())if(old.id()==0){first=old.identity().wholeIndex();child=old.moveByte(ID,0x14).moveWord(X,i.source.centreX()).moveWord(Y,i.source.centreY()).moveByte(SUBTYPE,1);break;}
+            bigRingPublish(i,c,withSounds(i.cut,ledger),null);i.child=first;i.childImage=child;i.step=first<0?BigRingStep.XR:BigRingStep.TAIL;i.animate=first>=0;
+        }finally{i.operation=null;}}
+    /** Independent verification of reached raw script stores; does not rerun the animator. */
+    private CdObjectState bigRingAnimationImage(CdObjectState original,boolean flash,CdBigRing.UnsupportedBoundary stop){
+        var out=original;int id=original.unsignedByte(ANIMATION);if(id!=original.unsignedByte(PREVIOUS_ANIMATION))out=out.moveByte(PREVIOUS_ANIMATION,id).moveByte(ANIMATION_FRAME,0).moveByte(ANIMATION_TIME,0);
+        out=out.addByte(ANIMATION_TIME,-1);if(out.signedByte(ANIMATION_TIME)>=0||stop==CdBigRing.UnsupportedBoundary.ANIMATION_DIRECTORY_READ||stop==CdBigRing.UnsupportedBoundary.ANIMATION_SPEED_READ)return out;
+        if(id!=0)throw new IllegalStateException("BigRing successful animation has no directory row");var bytes=flash?bigRing.assets().flashAnimations():bigRing.assets().ringAnimations();int script=(short)bytes.unsignedWord(0),index=out.unsignedByte(ANIMATION_FRAME);out=out.moveByte(ANIMATION_TIME,bytes.unsignedByte(script));if(stop!=null)return out;
+        int selected=bytes.unsignedByte(script+1+index);if(selected==255){index=0;selected=bytes.unsignedByte(script+1);}if(selected==252)return out.addByte(ROUTINE,2);if(selected>=128)throw new IllegalStateException("BigRing selected an undeclared raw command");int rotated=((selected<<3)|(selected>>>5))&255;
+        return out.moveByte(MAP_FRAME,selected&31).moveByte(ANIMATION_FRAME,(index+1)&255).moveByte(SPRITE_FLAGS,(out.spriteFlags()&252)|((rotated^out.flags())&3));
+    }
+    private void bigRingTail(BigRingInvocation i,CdBigRing.UnsupportedBoundary stop){if(i.drawn||i.step!=BigRingStep.TAIL)return;
+        if(i.flash)switch(i.entry.routine()){case 0->{i.source=i.entry.moveByte(SPRITE_FLAGS,i.entry.spriteFlags()|4).addByte(ROUTINE,2).moveWord(TILE,0x03EF).moveLong(MAPPINGS,bigRing.assets().flashMappingsAddress());i.animate=true;}case 2->i.animate=true;case 4->i.deleted=true;default->{return;}}
+        if(i.deleted||i.lowRings&&i.remove){var cleared=i.pool.state(i.whole);if(!cleared.identity().equals(i.entry.identity())||!Arrays.equals(new byte[64],cleared.copyBytes()))throw new IllegalStateException("BigRing DeleteObject must clear actual64");i.source=cleared;}
+        else if(i.animate)i.source=bigRingAnimationImage(i.source,i.flash,stop);i.animate=false;
+    }
+    private void bigRingDraw(CdBigRing.DrawCall c){var i=bigRingCurrent();if(i.drawn||i.lowRings||i.step!=BigRingStep.TAIL)throw new IllegalStateException("No genuine BigRing conditional Draw tail");bigRingTail(i,null);
+        if(!i.flash&&i.source.routine()==4)throw new IllegalStateException("Parent routine4 suppresses Draw");bigRingCall(i,c,c.actualCut(),c.expectedSource(),BigRingStep.TAIL,true);i.drawBefore=i.source;var owners=i.owners;
+        try{drawDynamic(Kind.BIG_RING,i.pool,c.expectedSource().identity(),()->bigRingInvocation==i&&i.operation==c&&!i.drawn);i.source=i.source.moveByte(SPRITE_FLAGS,i.source.spriteFlags()&127);bigRingImages(i,true,false);requireFrame(i.actor,i.shared);requireCut(i.cut);
+            i.owners=bigRingOwners(i,null);if(!owners.core().equals(i.owners.core())||owners.programme()!=i.owners.programme())throw new IllegalStateException("BigRing Draw changed Core/module nonwrites");i.drawn=true;i.step=BigRingStep.RETURN;
+        }catch(RuntimeException|Error original){try{i.source=i.drawBefore.moveByte(SPRITE_FLAGS,i.drawBefore.spriteFlags()&127);bigRingImages(i,true,true);requireFrame(i.actor,i.shared);requireCut(i.cut);var actual=bigRingOwners(i,null);if(!owners.core().equals(actual.core())||owners.programme()!=actual.programme())throw new IllegalStateException("Failed BigRing Draw changed other owners");i.owners=actual;}catch(RuntimeException|Error verification){if(verification!=original)original.addSuppressed(verification);}throw original;
+        }finally{i.operation=null;}}
+    private void runBigRing(int whole){requireKind(Kind.BIG_RING);routeObjects();if(bigRingInvocation!=null||bigRingBorrow||plcPort)throw new IllegalStateException("Nested BigRing dispatch");var i=new BigRingInvocation(whole);bigRingInvocation=i;
+        try{i.owners=bigRingOwners(i,null);var result=bigRing.run(whole);bigRingVerify(i);bigRingTail(i,null);boolean draw=i.flash||!i.lowRings&&i.source.routine()!=4;
+            if(draw!=i.drawn||i.drawn&&i.step!=BigRingStep.RETURN||!i.drawn&&i.step!=BigRingStep.TAIL)throw new IllegalStateException("BigRing omitted its genuine conditional completion");bigRingImages(i,true,false);if(!result.state().equals(i.source))throw new IllegalStateException("BigRing lost original body receipt");
+        }catch(RuntimeException|Error original){try{bigRingVerify(i);if(original instanceof CdBigRing.UnsupportedBigRing stop){if(stop.wholeIndex()!=i.whole)throw new IllegalStateException("BigRing stopped at another source");switch(stop.boundary()){case ANIMATION_DIRECTORY_READ,ANIMATION_SPEED_READ,ANIMATION_FRAME_READ,ANIMATION_OPERAND_READ->bigRingTail(i,stop.boundary());case SAVED_FLAGS_ADDRESS->{bigRingImages(i,false,false);throw original;}default->{}}}bigRingImages(i,i.step==BigRingStep.TAIL||i.drawn,i.drawBefore!=null);}catch(RuntimeException|Error verification){if(verification!=original)original.addSuppressed(verification);}throw original;
+        }finally{bigRingInvocation=null;}}
+    // END R12B BigRing/Flash original private World binding.
 
     // BEGIN R12B Results actual private World binding.
     // N1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff Results/Main.asm:42-366; no FixBugs alternative.

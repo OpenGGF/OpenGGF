@@ -10,6 +10,7 @@ import com.openggf.game.soniccd.level.CdR12aPlayerAssets;
 import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
 import com.openggf.game.soniccd.level.CdR12bPlayerAssets;
 import com.openggf.game.soniccd.level.CdStagePlayerSource;
+import com.openggf.game.soniccd.level.CdR13FutureAssets;
 import com.openggf.game.soniccd.media.CdTimeWarpPrograms;
 import com.openggf.game.soniccd.release.CdRetailRelease;
 
@@ -22,7 +23,8 @@ import java.util.Optional;
 /**
  * Detached stock-disc capability for the first static R11A consumer. Instances come from
  * {@link CdStockLaunch}, which authenticates actual user media before publishing these assets.
- * USA also retains its authenticated FM bank, finite WARP/R11B program images and Act2 data pair.
+ * USA also retains its authenticated FM bank, finite WARP/R11B program images, Act2 data pairs
+ * and both Act3 future programmes.
  * JP/EU FM/program consumers remain explicitly unsupported.
  * No retained file handles, cartridge address space, creator root or runtime reference files.
  * This data identity is not a firmware, gameplay or execution-environment certificate.
@@ -48,12 +50,32 @@ public final class CdGameDataSource implements GameDataSource {
         }
     }
 
+    /** Detached original-USA Act3 pair. Presence/selection is data, never programme/World admission. */
+    public record Act3FutureAssets(CdR13FutureAssets goodFuture, CdR13FutureAssets badFuture) {
+        public Act3FutureAssets {
+            Objects.requireNonNull(goodFuture, "Act3 good-future assets");
+            Objects.requireNonNull(badFuture, "Act3 bad-future assets");
+            CdStagePlayerSource.fromAct3Future(goodFuture);
+            CdStagePlayerSource.fromAct3Future(badFuture);
+            if (!goodFuture.identity().stage().equals(CdStagePayload.R13C.stage())
+                    || !badFuture.identity().stage().equals(CdStagePayload.R13D.stage())
+                    || !goodFuture.identity().observedWholeDiscSha256().equals(badFuture.identity().observedWholeDiscSha256()))
+                throw new IllegalArgumentException("Actual same-disc R13C/R13D roles required");
+        }
+        /** RunBossLevel (CD Initial Program/IPX.asm:606-614 at N1ecc5f3a) uses TST.B; preserve all255 nonzero selections. No field is written. */
+        public CdR13FutureAssets select(int rawGoodFutureByte) {
+            if ((rawGoodFutureByte & ~255) != 0) throw new IllegalArgumentException("Native goodFuture BYTE required");
+            return rawGoodFutureByte == 0 ? badFuture : goodFuture;
+        }
+    }
+
     private final CdRetailRelease release;
     private final CdR11aAssets assets;
     private final Optional<CdFmSoundAssets> fmSoundAssets;
     private final Optional<CdTimeWarpPrograms> timeWarpPrograms;
     private final Optional<Act2Assets> act2Assets;
     private final Optional<Act2PastAssets> act2PastAssets;
+    private final Optional<Act3FutureAssets> act3FutureAssets;
     private final String identity;
 
     CdGameDataSource(CdRetailRelease release, CdR11aAssets assets, Optional<CdFmSoundAssets> fmSoundAssets) {
@@ -73,12 +95,19 @@ public final class CdGameDataSource implements GameDataSource {
     CdGameDataSource(CdRetailRelease release, CdR11aAssets assets, Optional<CdFmSoundAssets> fmSoundAssets,
                      Optional<CdTimeWarpPrograms> timeWarpPrograms, Optional<Act2Assets> act2Assets,
                      Optional<Act2PastAssets> act2PastAssets) {
+        this(release, assets, fmSoundAssets, timeWarpPrograms, act2Assets, act2PastAssets, Optional.empty());
+    }
+
+    CdGameDataSource(CdRetailRelease release, CdR11aAssets assets, Optional<CdFmSoundAssets> fmSoundAssets,
+                     Optional<CdTimeWarpPrograms> timeWarpPrograms, Optional<Act2Assets> act2Assets,
+                     Optional<Act2PastAssets> act2PastAssets, Optional<Act3FutureAssets> act3FutureAssets) {
         this.release = Objects.requireNonNull(release, "release");
         this.assets = Objects.requireNonNull(assets, "assets");
         this.fmSoundAssets = Objects.requireNonNull(fmSoundAssets, "fmSoundAssets");
         this.timeWarpPrograms = Objects.requireNonNull(timeWarpPrograms, "timeWarpPrograms");
         this.act2Assets = Objects.requireNonNull(act2Assets, "act2Assets");
         this.act2PastAssets = Objects.requireNonNull(act2PastAssets, "act2PastAssets");
+        this.act3FutureAssets = Objects.requireNonNull(act3FutureAssets, "act3FutureAssets");
         var binding = assets.identity();
         if (binding.variant() != release.variant()
                 || !binding.observedWholeDiscSha256().equals(release.normalizedSha256())) {
@@ -125,6 +154,13 @@ public final class CdGameDataSource implements GameDataSource {
                     || !pair.terrain().identity().observedWholeDiscSha256().equals(release.normalizedSha256()))
                 throw new IllegalArgumentException("Detached R12B pair, stage and observed retail content do not agree");
         }
+        if (act3FutureAssets.isPresent()) {
+            var pair = act3FutureAssets.orElseThrow();
+            if (release.variant() != CdReleaseVariant.USA
+                    || !pair.goodFuture().identity().observedWholeDiscSha256().equals(binding.observedWholeDiscSha256())
+                    || !pair.badFuture().identity().observedWholeDiscSha256().equals(release.normalizedSha256()))
+                throw new IllegalArgumentException("Detached R13 pair, stage and observed retail content do not agree");
+        }
         // Whole-disc content also covers retained Act2 bytes. Identity never certifies capability presence.
         identity = "scd:detached-stage-v1:" + release.key() + ":" + binding.stage().nativeId()
                 + ":" + binding.observedWholeDiscSha256() + ":" + binding.mmdSha256();
@@ -144,6 +180,9 @@ public final class CdGameDataSource implements GameDataSource {
 
     /** Detached actual USA R12B pair; no target entry or runtime readiness is implied. */
     public Optional<Act2PastAssets> act2PastAssets() { return act2PastAssets; }
+
+    /** Detached actual USA C/D pair; no Frame, epoch, selected programme or runtime readiness is implied. */
+    public Optional<Act3FutureAssets> act3FutureAssets() { return act3FutureAssets; }
 
     @Override public Optional<Rom> rom() { return Optional.empty(); }
     @Override public String identity() { return identity; }

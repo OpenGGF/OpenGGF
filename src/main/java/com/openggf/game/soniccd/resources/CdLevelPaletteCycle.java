@@ -67,32 +67,56 @@ public final class CdLevelPaletteCycle {
         List<Write> writes = new ArrayList<>();
         try {
             for (int cycle = 0; cycle < CYCLES; cycle++) {
-                timers[cycle] = (byte) (timers[cycle] - 1); // SUBQ.B, then BPL on the resulting byte.
-                if (timers[cycle] >= 0) continue; // No script header/body/colour read on a held timer.
-                Script selected = calls.get(cycle);
-                int paletteIndex = readByte(selected.script, 0, cycle, Access.SCRIPT);
-                int frameCount = readByte(selected.script, 1, cycle, Access.SCRIPT);
-                int paletteOffset = (short) (paletteIndex + paletteIndex); // MOVEQ/MOVE.B then ADD.W.
-                int step = ((steps[cycle] & 0xFF) + 1) & 0xFF; // ADDQ.B retains byte wrap.
-                if (step >= frameCount) step = 0; // CMP.B/BCS is an unsigned comparison.
-                steps[cycle] = (byte) step;
-                int frameOffset = (short) (step + step); // Zero-extended current step, doubled as a WORD.
-                timers[cycle] = (byte) readByte(selected.script, 2 + frameOffset, cycle, Access.SCRIPT);
-                int colourIndex = (byte) readByte(selected.script, 3 + frameOffset, cycle, Access.SCRIPT);
-                int colourOffset = (short) (colourIndex + colourIndex); // EXT.W then ADD.W, never unsigned/clamped.
-                int colour = readWord(selected.colours, colourOffset, cycle, Access.COLOURS);
-                // The native MOVE.W reads its source before storing its destination. Reject a reached destination
-                // outside the explicit normal palette only after the actual script and colour reads above.
-                bounded(palette.length, paletteOffset, 2, cycle, Access.NORMAL_PALETTE);
-                int before = ((palette[paletteOffset] & 0xFF) << 8) | (palette[paletteOffset + 1] & 0xFF);
-                palette[paletteOffset] = (byte) (colour >>> 8); palette[paletteOffset + 1] = (byte) colour;
-                writes.add(new Write(cycle, paletteIndex, before, colour));
+                cycle(calls.get(cycle), cycle, palette, timers, steps, writes);
             }
             return result(palette, timers, steps, writes, Optional.empty());
         } catch (Cut cut) {
             return result(palette, timers, steps, writes, Optional.of(cut.fault));
         }
     }
+
+    // BEGIN single-script semantic reuse; the legacy six-slot State/pass contracts are unchanged.
+    public record SingleState(CdAssetBytes palette, int timerByte, int stepByte) {
+        public SingleState {
+            exact(palette,128,"normal palette");
+            if((timerByte&~255)!=0 || (stepByte&~255)!=0)throw new IllegalArgumentException("Explicit native timer/step BYTE required");
+        }
+    }
+    public record SingleResult(SingleState state,List<Write> writes,Optional<Fault> fault) {
+        public SingleResult {Objects.requireNonNull(state);writes=List.copyOf(writes);Objects.requireNonNull(fault);}
+        public boolean completed(){return fault.isEmpty();}
+    }
+    /** One real script slot, no padding, clock, source admission or fabricated other timers. */
+    public static SingleResult single(Script script,SingleState source) {
+        Objects.requireNonNull(script,"script");Objects.requireNonNull(source,"source");
+        byte[] palette=source.palette().copy(),timers={(byte)source.timerByte()},steps={(byte)source.stepByte()};
+        var writes=new ArrayList<Write>();Optional<Fault> fault=Optional.empty();
+        try{cycle(script,0,palette,timers,steps,writes);}catch(Cut cut){fault=Optional.of(cut.fault);}
+        return new SingleResult(new SingleState(CdAssetBytes.copyOf(palette),timers[0]&255,steps[0]&255),writes,fault);
+    }
+    /** Identical old pass body, extracted once; ordered prefix and fault cycle indices are retained. */
+    private static void cycle(Script selected,int cycle,byte[] palette,byte[] timers,byte[] steps,List<Write> writes) {
+        timers[cycle] = (byte) (timers[cycle] - 1); // SUBQ.B, then BPL on the resulting byte.
+        if (timers[cycle] >= 0) return; // No script header/body/colour read on a held timer.
+        int paletteIndex = readByte(selected.script, 0, cycle, Access.SCRIPT);
+        int frameCount = readByte(selected.script, 1, cycle, Access.SCRIPT);
+        int paletteOffset = (short) (paletteIndex + paletteIndex); // MOVEQ/MOVE.B then ADD.W.
+        int step = ((steps[cycle] & 0xFF) + 1) & 0xFF; // ADDQ.B retains byte wrap.
+        if (step >= frameCount) step = 0; // CMP.B/BCS is an unsigned comparison.
+        steps[cycle] = (byte) step;
+        int frameOffset = (short) (step + step); // Zero-extended current step, doubled as a WORD.
+        timers[cycle] = (byte) readByte(selected.script, 2 + frameOffset, cycle, Access.SCRIPT);
+        int colourIndex = (byte) readByte(selected.script, 3 + frameOffset, cycle, Access.SCRIPT);
+        int colourOffset = (short) (colourIndex + colourIndex); // EXT.W then ADD.W, never unsigned/clamped.
+        int colour = readWord(selected.colours, colourOffset, cycle, Access.COLOURS);
+        // The native MOVE.W reads its source before storing its destination. Reject a reached destination
+        // outside the explicit normal palette only after the actual script and colour reads above.
+        bounded(palette.length, paletteOffset, 2, cycle, Access.NORMAL_PALETTE);
+        int before = ((palette[paletteOffset] & 0xFF) << 8) | (palette[paletteOffset + 1] & 0xFF);
+        palette[paletteOffset] = (byte) (colour >>> 8); palette[paletteOffset + 1] = (byte) colour;
+        writes.add(new Write(cycle, paletteIndex, before, colour));
+    }
+    // END single-script semantic reuse.
 
     private static Result result(byte[] palette, byte[] timers, byte[] steps, List<Write> writes, Optional<Fault> fault) {
         return new Result(new State(CdAssetBytes.copyOf(palette), CdAssetBytes.copyOf(timers), CdAssetBytes.copyOf(steps)), writes, fault);

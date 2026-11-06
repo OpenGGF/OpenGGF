@@ -12,6 +12,8 @@ import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
 import com.openggf.game.soniccd.level.CdR12bPlayerAssets;
 import com.openggf.game.soniccd.level.CdR12bObjectAssets;
 import com.openggf.game.soniccd.level.CdStagePlayerSource;
+import com.openggf.game.soniccd.level.CdR13FutureAssets;
+import com.openggf.game.soniccd.level.CdR13ObjectAssets;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -327,6 +329,57 @@ public final class CdObjectMappings implements CdDrawMappings {
         tables.add(new DeclaredTable(source.range().nativeAddress(), bytes,
                 visual.mappingTableOffset(), visual.mappingFrames().size()));
     }
+
+    // BEGIN R13 STARTUP METADATA JOIN 20261106
+    /** Actual original-USA R13C/D startup metadata:167-frame Sonic plus nine object roots.
+     * Full images and actual native operands are authenticated by the retained typed owners.
+     * N1ecc5f3af: Act3 ObjectIndex/includes; Spring/Main:188,201,216; Monitor/Main:455-459;
+     * Title Card/Main:46-58. This finite catalogue grants no dispatch, World, current art or pixels. */
+    public static CdObjectMappings fromAct3FutureAssets(CdR13FutureAssets assets, CdR13ObjectAssets objects) {
+        var relation = CdStagePlayerSource.fromAct3Future(assets);
+        Objects.requireNonNull(objects, "actual original R13 startup metadata");
+        if (!objects.ownsAssets(assets) || !objects.identity().equals(assets.identity())) {
+            throw new IllegalArgumentException("R13 mapping source owner differs");
+        }
+        var sonic = relation.sonic();
+        var sonicView = assets.view(CdR13FutureAssets.Asset.MAP_SPR_SONIC);
+        requireEqualBytes(sonicView, sonic.mappings());
+        for (var frame : sonic.mappingFrames()) {
+            requireEqualBytes(frame.bytes(), sonicView.slice(frame.relativeOffset(), 1 + frame.pieceCount() * 5));
+        }
+        var tables = new ArrayList<DeclaredTable>();
+        tables.add(new DeclaredTable(relation.mappingAddress(), sonicView, 0, sonic.mappingFrames().size()));
+        addAct3FutureObject(tables, objects, CdR13ObjectAssets.View.MAP_SPR_RING, objects.rings());
+        addAct3FutureObject(tables, objects, CdR13ObjectAssets.View.MAP_SPRING, objects.springVertical());
+        addAct3FutureObject(tables, objects, CdR13ObjectAssets.View.MAP_SPRING, objects.springHorizontal());
+        addAct3FutureObject(tables, objects, CdR13ObjectAssets.View.MAP_SPRING, objects.springDiagonal());
+        addAct3FutureObject(tables, objects, CdR13ObjectAssets.View.MAP_SPR_HUD, objects.hudVisuals());
+        addAct3FutureObject(tables, objects, CdR13ObjectAssets.View.MAP_SPR_MONITOR_TIME, objects.monitorTime());
+        addAct3FutureObject(tables, objects, CdR13ObjectAssets.View.MAP_SPR_FLYING_ANIMAL, objects.flyingAnimal());
+        addAct3FutureObject(tables, objects, CdR13ObjectAssets.View.MAP_SPR_GROUND_ANIMAL, objects.groundAnimal());
+        addAct3FutureObject(tables, objects, CdR13ObjectAssets.View.MAP_SPR_TITLE_CARD, objects.titleCard());
+        var source = objects.view(CdR13ObjectAssets.View.MAP_SPR_MONITOR_TIME);
+        int root = CdR13ObjectAssets.View.MAP_SPR_MONITOR_TIME.range(assets.identity().file()).nativeAddress();
+        var pieces = new ArrayList<DeclaredStaticPiece>(8);
+        for (int frame = 0; frame < 8; frame++) {
+            int firstPiece = (short) source.unsignedWord(frame * 2) + 1;
+            pieces.add(new DeclaredStaticPiece(root + firstPiece, source.slice(firstPiece, 5)));
+        }
+        return declaredSourceViews(tables, pieces);
+    }
+
+    private static void addAct3FutureObject(List<DeclaredTable> tables, CdR13ObjectAssets owner,
+                                           CdR13ObjectAssets.View source, CdObjectVisualAssets visual) {
+        var bytes = owner.view(source);
+        requireEqualBytes(bytes, visual.mappings());
+        for (var frame : visual.mappingFrames()) {
+            requireEqualBytes(frame.bytes(), bytes.slice(visual.mappingTableOffset() + frame.relativeOffset(),
+                    1 + frame.pieces().size() * 5));
+        }
+        tables.add(new DeclaredTable(source.range(owner.identity().file()).nativeAddress(), bytes,
+                visual.mappingTableOffset(), visual.mappingFrames().size()));
+    }
+    // END R13 STARTUP METADATA JOIN 20261106
 
     @Override public MappingBody resolve(int addressBits, boolean staticPiece, int mapFrameByte) {
         if (mapFrameByte < 0 || mapFrameByte > 255) {

@@ -164,10 +164,49 @@ public final class SonicCdGameModule implements GameModule {
     }
     void serviceAct2PastLoading(int held) {
         playerPresentation.requirePastRenderIdle(); // Reentry rejection precedes terminal failure closure.
+        validateAct2PastLoadingCut();act2PastLoading.requireServiceIdle();
+        if((held&~255)!=0)throw new IllegalArgumentException("Native held BYTE required");
         try {
-            validateAct2PastLoadingCut(); act2PastLoading.service(held);
-            act2PastHost.projectCamera(GameServices.camera());
-        } catch (RuntimeException | Error failure) { closePlayerCycleAfterFailure(failure); throw failure; }
+            act2PastLoading.service(held);act2PastHost.projectCamera(GameServices.camera());
+        } catch (RuntimeException | Error failure) {
+            boolean returned=failure instanceof SonicCdAct2PastLoadingVisit.UnsupportedLoading stopped
+                    &&act2PastLoading.state().phase()==SonicCdAct2PastLoadingVisit.Phase.OLD_IPX_RETURNED
+                    &&!act2PastLoading.failed()&&(stopped.boundary()==SonicCdAct2PastLoadingVisit.Boundary.NEXT_ACT_PROGRAMME_ADMISSION
+                    ||stopped.boundary()==SonicCdAct2PastLoadingVisit.Boundary.IPX_LEVEL_GAME_OVER
+                    ||stopped.boundary()==SonicCdAct2PastLoadingVisit.Boundary.IPX_LEVEL_TIME_WARP
+                    ||stopped.boundary()==SonicCdAct2PastLoadingVisit.Boundary.IPX_LEVEL_SPECIAL_STAGE);
+            if(!returned)closePlayerCycleAfterFailure(failure);throw failure;
+        }
+    }
+    /** Narrow first-load flags receipt. The private actual Core stack supplies authority. */
+    private PreparedAct2PastOldExitReset pendingAct2PastOldExitReset;
+    static final class PreparedAct2PastOldExitReset {
+        private final SonicCdGameModule owner;private final SonicCdAct2PastLoadingVisit visit;private boolean applied;
+        private final LevelProgramState before,after;
+        private PreparedAct2PastOldExitReset(SonicCdGameModule owner,SonicCdAct2PastLoadingVisit visit,LevelProgramState before,LevelProgramState after){this.owner=owner;this.visit=visit;this.before=before;this.after=after;}
+    }
+    PreparedAct2PastOldExitReset prepareAct2PastOldExitReset(SonicCdAct2PastLoadingVisit visit) {
+        requireAct2PastLoadingVisit(visit);visit.requireOldExitStore();var p=levelProgram;
+        if((visit.state().level().plcLoadFlags()&1)!=0||pendingAct2PastOldExitReset!=null)throw new IllegalStateException("No actual first-load old0 BSET");
+        var ready=new PreparedAct2PastOldExitReset(this,visit,p,new LevelProgramState(p.demoMode(),p.timeStones(),p.specialStage(),p.usePlayer2(),
+                p.palFadeFlags(),p.gameMode(),p.levelStarted(),p.whiteFadeSteps(),p.phase(),OptionalInt.of(0)));
+        pendingAct2PastOldExitReset=ready;return ready;
+    }
+    void validateAct2PastOldExitReset(PreparedAct2PastOldExitReset ready) {
+        Objects.requireNonNull(ready);requireAct2PastLoadingVisit(ready.visit);ready.visit.requireOldExitStore();
+        if(ready.owner!=this||pendingAct2PastOldExitReset!=ready||ready.applied||ready.before!=levelProgram)
+            throw new IllegalStateException("Stale/foreign old-exit reset receipt");
+    }
+    void applyAct2PastOldExitReset(PreparedAct2PastOldExitReset ready) {
+        validateAct2PastOldExitReset(ready);levelProgram=ready.after;ready.applied=true;pendingAct2PastOldExitReset=null;
+    }
+    /** Ephemeral retirement only: no image/value can become current through cleanup. */
+    void retireAct2PastOldExitReset(PreparedAct2PastOldExitReset ready) {if(pendingAct2PastOldExitReset==ready)pendingAct2PastOldExitReset=null;}
+    int act2PastOldProgrammeReturnCode() {
+        requireAct2PastLoadingVisit(act2PastLoading);var phase=act2PastLoading.state().phase();
+        if(phase!=SonicCdAct2PastLoadingVisit.Phase.OLD_RETURNED&&phase!=SonicCdAct2PastLoadingVisit.Phase.OLD_IPX_RETURNED)
+            throw new IllegalStateException("No completed old R12B MMD return");
+        return 0xFF; // ClearPLCs DBF651-658; VSync preserves that semantic BYTE, no CPU register owner.
     }
     void validateAct2PastLoadRequest(LevelLoadContext context) {
         var mode = SessionManager.getCurrentGameplayMode();
@@ -878,6 +917,13 @@ public final class SonicCdGameModule implements GameModule {
         levelProgram = ready.result;
     }
 
+    // BEGIN R12B BigRing read-only actual programme fence. Core.Program owns specialStage.
+    LevelProgramState act2PastBigRingProgram(SonicCdAct2PastLoadingVisit core,SonicCdAct2PastObjectPass pass) {
+        requireAct2PastLoadingVisit(core);core.requireBigRingOwner(pass);
+        if(pass==null||!pass.isCurrentBigRingOwnersRead())throw new IllegalStateException("No actual R12B BigRing owner borrow");
+        return Objects.requireNonNull(levelProgram);
+    }
+    // END R12B BigRing read-only actual programme fence.
     /** Prepared finite flag value; only the actual Results cursor can publish it. */
     // BEGIN R12B Results private Module publication.
     LevelProgramState act2PastResultsProgram(SonicCdAct2PastLoadingVisit core,SonicCdAct2PastObjectPass pass) {
@@ -1360,8 +1406,15 @@ public final class SonicCdGameModule implements GameModule {
         if (act2PastLoading != null) {
             var p = act2PastLoading.state().program();
             return new LevelProgramState(p.demoModeWord(),p.timeStonesByte(),p.specialStageByte(),p.usePlayer2Byte(),
-                    p.palFadeFlagsByte(),p.gameModeByte(),p.levelStartedByte(),act2PastLoading.state().initialWhiteSteps(),
-                    LevelProgramPhase.ACT2_PAST_LOADING,levelProgram.goodFutureFlags());
+                    p.palFadeFlagsByte(),p.gameModeByte(),p.levelStartedByte(),act2PastLoading.oldProgrammeSelected()?act2PastLoading.oldExitSteps():act2PastLoading.state().initialWhiteSteps(),
+                    switch(act2PastLoading.state().phase()){
+                        case OLD_EXIT_PRELUDE -> LevelProgramPhase.OLD_EXIT_PRELUDE;
+                        case OLD_BLACK_FADE -> LevelProgramPhase.OLD_BLACK_FADE;
+                        case OLD_CLEAR_WAIT -> LevelProgramPhase.OLD_CLEAR_WAIT;
+                        case OLD_RETURNED -> LevelProgramPhase.OLD_RETURNED;
+                        case OLD_IPX_RETURNED -> LevelProgramPhase.OLD_IPX_RETURNED;
+                        default -> LevelProgramPhase.ACT2_PAST_LOADING;
+                    },levelProgram.goodFutureFlags());
         }
         return Objects.requireNonNull(levelProgram, "No admitted native opening programme");
     }
@@ -1805,7 +1858,10 @@ public final class SonicCdGameModule implements GameModule {
             if (act2PastLoading != null) {
                 if (!(value instanceof Act2PastShared past)) throw new IllegalArgumentException("Foreign programme epoch in R12B");
                 validateAct2PastLoadingCut(); act2PastLoading.validateRestore(past.loading()); validateProgramServicesState(past.services());
-                if (!past.goodFutureFlags().equals(levelProgram.goodFutureFlags())) throw new IllegalArgumentException("R12B preserved programme knowledge changed");
+                // This private capture carries the actual mutable Results/first-load flag BYTE.
+                // Core's same-owner Snapshot was validated above; public equal values mint no restore.
+                if(past.goodFutureFlags().isPresent()&&(past.goodFutureFlags().getAsInt()&~255)!=0)
+                    throw new IllegalArgumentException("Captured R12B flag exceeds BYTE");
                 return;
             }
             if (act2Loading != null) {
@@ -1837,7 +1893,9 @@ public final class SonicCdGameModule implements GameModule {
         @Override public void restore(Object value) {
             validateRestore(value); // Keep direct adapter restore guarded as well as composite restore.
             if (value instanceof Act2PastShared past) {
-                try { act2PastLoading.restore(past.loading()); programServices = past.services(); }
+                var p=levelProgram;var ready=new LevelProgramState(p.demoMode(),p.timeStones(),p.specialStage(),p.usePlayer2(),
+                        p.palFadeFlags(),p.gameMode(),p.levelStarted(),p.whiteFadeSteps(),p.phase(),past.goodFutureFlags());
+                try { act2PastLoading.restore(past.loading());levelProgram=ready;programServices = past.services(); }
                 catch (RuntimeException | Error failure) { closePlayerCycleAfterFailure(failure); throw failure; }
                 return;
             }

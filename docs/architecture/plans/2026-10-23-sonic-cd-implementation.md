@@ -1,5 +1,61 @@
 # Implement Sonic CD with complete regional parity
 
+## 6 November 2026 — natural Act2 programme return and Act3 components
+
+The private original-USA controller now returns through16979. BigRing14 is first
+serviced at16188 under the actual fewer-than50 Ring branch; its parent remains
+routine0 and draws nothing. Source-placed Signpost/Results completes the native
+programme stores, followed by OLD_BLACK_FADE16955,22 waits to16977, selectorC
+return16978 and IPX blank16979. First16980 still rejects at the honest
+NEXT_ACT_PROGRAMME_ADMISSION boundary with the old Frame healthy. No actor,
+physics, camera, layout cursor, clock or current-art value was injected. The
+protected7-case controller class now includes792 further services and10 further
+complete FULL/course restore-before-forward checkpoints, including both sides
+of Results, fade, clear, return and blank. Its full7 cases pass in R24.
+
+The actual closed carry is known goodFuture0, spawnMode0, plcLoadFlags1,
+palClearFlagBit0 CLEAR,16 Rings and3 lives. Native RunBossLevel selects R13D.
+Module goodFutureFlags remains UNKNOWN; it is distinct from the known source
+programme goodFuture BYTE and is not silently initialized. The required next
+loading path creates the real reserved Title at physical4 and later lets its
+original completion request PLC2; no preloaded Title/current/readiness is assumed.
+Stock USA custody now detaches both actual C/D aggregates before the same CUE
+closes, preserves all legacy constructors/identity/three asset paths, and adds
+only a typed data selection by raw BYTE (zeroD, all255nonzeroC). Regions retain
+explicit absence; this data does not admit direct future boot or grant a World.
+
+R20's17-class original-media run passes257 cases with0F/E/S and unchanged source:
+full queued/immediate/RAM/life components, native no-section RTS, actual19-source
+metadata/17PLC IDs/5lists and all selected earlier-act art/decoder contracts.
+R21 first reported119P/3F/1E/0S in123 cases. The four defects were fixture-only:
+a second contact assumed persistence after an earlier BigRing teleport, a
+post-fault guarded Host borrow, a current-art comparison taken before the real
+V-int prefix, and an obsolete unimplemented LEVEL_FLOW expectation. Exact R21b
+rerun4P/0F/E/S changed no production source; the119 other passes remain separate,
+not an invented fresh123green. R22/23's201 startup/scroll/palette component cases
+pass with one separate temporary observer error at new16980; both source
+fingerprints are unchanged. The temporary observer is now removed byte-exact.
+
+R24 passes77/0F/E/S with unchanged source: all7 protected Controller/pixel/replay
+cases,36 existing stock-custody cases,8 new original-disc future-custody cases,
+14 authentic Boss metadata cases and12 original future aggregate cases. R24
+Maven execution was2m47s after5s resource admission wait. R20 was2m06s/wait0;
+R21 was10m29s/wait0; R21b1m00s/wait152s; R22/232m05s/wait55s. User wait was0;
+source observation/export and other overhead stay separately unmeasured.
+Actual Goal16102 current pixels and929pixel renderer-only omission have been
+verified and delivered privately; this is ENGINE/source evidence, not an emulator,
+audio, regional, whole-act or whole-game parity result. All source-only reviews
+and exact root deltas/evidence are retained under $SCD_ARTIFACT_ROOT/research and
+.work/r12b-projector-batch-root-20261106. Raw material never enters runtime from
+those research paths. Broad parent smoke remains INCOMPLETE with28 attributed
+inherited failures; no new broad/full-suite pass is claimed.
+
+Next: join actual RunR13/FULL/Host/Frame/loading and private startup dispatch,
+then its native boss/limb/bumper, capsule and outgoing programme owners. These
+are active parallel source-only work; components and metadata grant no actual
+loading/boss readiness. Full USA MVP remains first, then complete JP/EU parity.
+Main remains untouched. No merge into Main, push, PR or public disclosure.
+
 ## 6 November 2026 — Act3 data and natural Goal replay checkpoint
 
 Private local qualification now includes original-USA R13C/R13D data, preserving

@@ -45,6 +45,8 @@ final class SonicCdAct2PastOrdinaryLoop {
          * A reached LevelStart/unsupported transfer must not return ordinary-tail authority.
          */
         void postObjectCamera();
+        /** Existing component ports retain their ordinary tail; actual World alone overrides the native transfer. */
+        default boolean postObjectCameraTransferred(){postObjectCamera();return false;}
         void drawObjects();
         void paletteCycleIfTimeRunning();
         void updateSectionArt();
@@ -102,7 +104,8 @@ final class SonicCdAct2PastOrdinaryLoop {
             int actualLevelFrame = frame.advanceLevelMainFrame();
             at(Cut.SPAWN_OBJECTS, ports::spawnObjects);
             at(Cut.RUN_OBJECTS, () -> ports.runObjects(actualLevelFrame));
-            at(Cut.POST_OBJECT_CAMERA, ports::postObjectCamera);
+            check(Cut.POST_OBJECT_CAMERA);
+            if(ports.postObjectCameraTransferred())return; // Healthy native LevelStart transfer: no ordinary tail or failure retirement.
             at(Cut.DRAW_OBJECTS, ports::drawObjects);
             at(Cut.PALETTE_CYCLE_IF_TIME_RUNNING, ports::paletteCycleIfTimeRunning);
             at(Cut.UPDATE_SECTION_ART, ports::updateSectionArt);

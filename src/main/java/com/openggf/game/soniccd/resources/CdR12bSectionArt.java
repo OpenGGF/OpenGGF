@@ -149,6 +149,7 @@ public final class CdR12bSectionArt {
     private final CdSectionArtKernel.Source blocksInput;
     private final CdAssetBytes lifeIcon;
     private final CdSectionArtKernel<State, CdR12bCameraArtResidency.State> kernel;
+    private final CdImmediateArtKernel<State, CdR12bCameraArtResidency.State> immediate;
 
     private CdR12bSectionArt(CdR12bTerrainAssets assets) {
         this.assets = Objects.requireNonNull(assets, "actual R12B terrain assets");
@@ -196,6 +197,10 @@ public final class CdR12bSectionArt {
         for (var section : assets.loadPlan().sections())
             sections.add(new CdSectionArtKernel.Section(section.rightThresholdWord(), section.initialPlcId(), section.updatePlcId()));
         kernel = new CdSectionArtKernel<>(binding, lists, sections, sources, new KernelStates(), CLEARED);
+        var immediateSources = new HashMap<Long, CdSectionArtKernel.Source>();
+        for (var source : sources) immediateSources.put(source.nativeAddress(), source);
+        immediate = new CdImmediateArtKernel<>(lists, immediateSources, blocksInput, () -> assets.blocksDecode().bytes(),
+                lifeIcon, Integer.toUnsignedLong(CdR12bDirectArtSources.View.LIFE_ICON.range().nativeAddress()), new ImmediateStates());
     }
 
     /** Binds authenticated input views only; asset identity is not execution or known residency. */
@@ -323,103 +328,16 @@ public final class CdR12bSectionArt {
      * unowned here because its saved continuation would need the overwritten table.
      * A merely pending inactive descriptor is untouched and later prepares with the new table.
      */
-    public State loadImmediateList(State state, int id) {
-        checked(state); word(id); requireInactive(state, Operation.IMMEDIATE_LIST);
-        CdR12bLoadPlan.PlcList list = null;
-        for (var candidate : assets.loadPlan().plcs()) if (candidate.nativeId() == id) { list = candidate; break; }
-        if (list == null) throw failure(Reason.PLC_LIST, state, Operation.IMMEDIATE_LIST, 0, 0, null, null);
-        State current = state;
-        for (var entry : list.entries()) {
-            var source = inputs.get(sourceRegistry.source(entry.sourceNativeAddress()).id());
-            var decoder = prepareImmediate(current, source, Operation.IMMEDIATE_LIST, entry.vramAddress(), null);
-            current = withValues(current, decoder.codeTable(), current.residency);
-            int destination = entry.vramAddress();
-            while (decoder.remainingTiles() != 0) {
-                admitDestination(current, destination, Operation.IMMEDIATE_LIST, decoder.sourcePointer());
-                CdNemesisPlcDecoder.TileResult tile;
-                try { tile = CdNemesisPlcDecoder.decodeTile(decoder); }
-                catch (CdNemesisPlcDecoder.DecodeException fault) {
-                    throw failure(Reason.DECODE_TILE, current, Operation.IMMEDIATE_LIST,
-                            fault.diagnostic().sourcePointer(), destination, null, fault);
-                }
-                var resident = commitTile(current, destination, tile.bytes(), Operation.IMMEDIATE_LIST, decoder.sourcePointer());
-                current = withValues(current, current.codeTable, resident);
-                decoder = tile.state();
-                destination = (destination + 32) & 0xFFFF;
-            }
-        }
-        return current;
-    }
+    public State loadImmediateList(State state, int id) { return immediate.loadImmediateList(state, id); }
 
-    /**
-     * Native NemDecToRAM for LevelBlocks. Full successful output is compared with
-     * the already authenticated immutable format product, then that same value is
-     * returned; no second persistent block bank or pattern write is created.
-     */
+    /** Native NemDecToRAM; returns the existing product after the shared complete decode loop. */
     public BlocksResult decodeBlocksToRam(State state) {
-        checked(state); requireInactive(state, Operation.BLOCKS_RAM);
-        var empty = CdAssetBytes.copyOf(new byte[0]);
-        var decoder = prepareImmediate(state, blocksInput, Operation.BLOCKS_RAM, 0, empty);
-        State current = withValues(state, decoder.codeTable(), state.residency);
-        byte[] bytes = new byte[decoder.remainingTiles() * 32];
-        int at = 0;
-        while (decoder.remainingTiles() != 0) {
-            CdNemesisPlcDecoder.TileResult tile;
-            try { tile = CdNemesisPlcDecoder.decodeTile(decoder); }
-            catch (CdNemesisPlcDecoder.DecodeException fault) {
-                throw failure(Reason.DECODE_TILE, current, Operation.BLOCKS_RAM, fault.diagnostic().sourcePointer(),
-                        at, CdAssetBytes.copyOf(Arrays.copyOf(bytes, at)), fault);
-            }
-            System.arraycopy(tile.bytes().copy(), 0, bytes, at, 32);
-            at += 32; decoder = tile.state();
-        }
-        var actual = CdAssetBytes.copyOf(bytes);
-        var product = assets.blocksDecode().bytes();
-        if (!Arrays.equals(bytes, product.copy())) {
-            throw failure(Reason.BLOCK_PRODUCT_MISMATCH, current, Operation.BLOCKS_RAM, decoder.sourcePointer(),
-                    at, actual, null);
-        }
-        return new BlocksResult(current, product);
+        var result = immediate.decodeBlocksToRam(state);
+        return new BlocksResult(result.state(), result.bytes());
     }
 
-    /** Actual scratch (raw BYTE &7F)*128; raw period and every queued/table field are nonwrites. */
-    public State loadLifeIcon(State state, int rawTimeZoneByte) {
-        checked(state); nativeByte(rawTimeZoneByte);
-        int sourceOffset = (rawTimeZoneByte & 0x7F) * 128;
-        if (sourceOffset > lifeIcon.length() - 128) {
-            throw failure(Reason.LIFE_ICON_SOURCE, state, Operation.LIFE_ICON,
-                    Integer.toUnsignedLong(CdR12bDirectArtSources.View.LIFE_ICON.range().nativeAddress()) + sourceOffset, 0xB420, null, null);
-        }
-        State current = state;
-        for (int tile = 0; tile < 4; tile++) {
-            var resident = commitTile(current, 0xB420 + tile * 32, lifeIcon.slice(sourceOffset + tile * 32, 32),
-                    Operation.LIFE_ICON, Integer.toUnsignedLong(CdR12bDirectArtSources.View.LIFE_ICON.range().nativeAddress()) + sourceOffset + tile * 32L);
-            current = withValues(current, current.codeTable, resident);
-        }
-        return current;
-    }
-
-    private CdNemesisPlcDecoder.State prepareImmediate(State state, CdSectionArtKernel.Source source,
-                                                       Operation operation, int destination, CdAssetBytes ramPrefix) {
-        // NemDecMain403-410: row count is a WORD. 0 or >=8192 needs a separate
-        // native wrapping-row admission, not the queued zero-count skip.
-        int count = source.readerBytes().unsignedWord(0) & 0x7FFF;
-        if (count == 0 || count >= 8192) {
-            throw failure(Reason.IMMEDIATE_HEADER_COUNT, state, operation, source.nativeAddress(), destination, ramPrefix, null);
-        }
-        try { return CdNemesisPlcDecoder.prepare(source.readerBytes(), source.nativeAddress(), state.codeTable); }
-        catch (CdNemesisPlcDecoder.DecodeException fault) {
-            State prefix = withValues(state, fault.diagnostic().codeTable(), state.residency);
-            throw failure(Reason.DECODE_PREPARE, prefix, operation, fault.diagnostic().sourcePointer(), destination, ramPrefix, fault);
-        }
-    }
-
-    private void requireInactive(State state, Operation operation) {
-        if (state.remainingTilesWord != 0) {
-            throw failure(Reason.ACTIVE_QUEUED_DECODE, state, operation, state.queue.headSource(),
-                    state.queue.headDestination(), null, null);
-        }
-    }
+    /** Actual raw period selection, with all queued fields retained. */
+    public State loadLifeIcon(State state, int rawTimeZoneByte) { return immediate.loadLifeIcon(state, rawTimeZoneByte); }
 
     private static CdSectionArtKernel.Source source(CdR12bSectionSources registry, CdSectionArtKernel.Binding binding,
                                                     CdR12bSectionSources.Source profile) {
@@ -475,6 +393,28 @@ public final class CdR12bSectionArt {
                 state.savedDecoder, state.remainingTilesWord, state.processBudgetWord, state.hintWord,
                 state.padWord, state.residency, true);
         return new SectionArtException(reason, terminal, operation, source, destination, ramPrefix, cause);
+    }
+
+    private final class ImmediateStates implements CdImmediateArtKernel.States<State, CdR12bCameraArtResidency.State> {
+        @Override public void checked(State state) { CdR12bSectionArt.this.checked(state); }
+        @Override public CdAssetBytes codeTable(State state) { return state.codeTable; }
+        @Override public CdR12bCameraArtResidency.State residency(State state) { return state.residency; }
+        @Override public int remainingTilesWord(State state) { return state.remainingTilesWord; }
+        @Override public CdR11aPlcBuffer.State queue(State state) { return state.queue; }
+        @Override public State withValues(State state, CdAssetBytes table, CdR12bCameraArtResidency.State resident) {
+            return CdR12bSectionArt.this.withValues(state, table, resident);
+        }
+        @Override public SectionArtException failure(CdImmediateArtKernel.Reason reason, State state,
+                CdImmediateArtKernel.Operation operation, long source, int destination, CdAssetBytes prefix, Throwable cause) {
+            return CdR12bSectionArt.this.failure(Reason.valueOf(reason.name()), state, Operation.valueOf(operation.name()), source, destination, prefix, cause);
+        }
+        @Override public void admitDestination(State state, int destination, CdImmediateArtKernel.Operation operation, long source) {
+            CdR12bSectionArt.this.admitDestination(state, destination, Operation.valueOf(operation.name()), source);
+        }
+        @Override public CdR12bCameraArtResidency.State commitTile(State state, int destination, CdAssetBytes bytes,
+                CdImmediateArtKernel.Operation operation, long source) {
+            return CdR12bSectionArt.this.commitTile(state, destination, bytes, Operation.valueOf(operation.name()), source);
+        }
     }
 
     private final class KernelStates implements CdSectionArtKernel.States<State, CdR12bCameraArtResidency.State> {

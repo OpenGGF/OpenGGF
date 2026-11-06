@@ -7,6 +7,7 @@ import com.openggf.game.soniccd.level.CdR12aTerrainAssets;
 import com.openggf.game.soniccd.level.CdR12aPlayerAssets;
 import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
 import com.openggf.game.soniccd.level.CdR12bPlayerAssets;
+import com.openggf.game.soniccd.level.CdR13FutureAssets;
 import com.openggf.game.soniccd.media.CdProgramAssets;
 import com.openggf.game.soniccd.media.CdTimeWarpPrograms;
 import com.openggf.game.soniccd.release.CdRetailRelease;
@@ -66,7 +67,13 @@ public final class CdStockLaunch {
             Optional<CdGameDataSource.Act2PastAssets> act2Past = release.variant() == CdReleaseVariant.USA
                     ? Optional.of(new CdGameDataSource.Act2PastAssets(CdR12bTerrainAssets.fromPrograms(media),
                             CdR12bPlayerAssets.fromPrograms(media))) : Optional.empty();
-            return new CdGameDataSource(release, assets, fmSoundAssets, timeWarpPrograms, act2Assets, act2Past);
+            // Retain both actual future programme data roles while this same authenticated CUE is open.
+            // Native IPX chooses only later from its live goodFuture BYTE; no stage is selected here.
+            Optional<CdGameDataSource.Act3FutureAssets> act3Future = release.variant() == CdReleaseVariant.USA
+                    ? Optional.of(new CdGameDataSource.Act3FutureAssets(
+                            CdR13FutureAssets.fromPrograms(media, CdStagePayload.R13C.stage()),
+                            CdR13FutureAssets.fromPrograms(media, CdStagePayload.R13D.stage()))) : Optional.empty();
+            return new CdGameDataSource(release, assets, fmSoundAssets, timeWarpPrograms, act2Assets, act2Past, act3Future);
         }
     }
 

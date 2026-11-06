@@ -77,6 +77,7 @@ final class CdSectionArtKernel<S, R> {
 
     private final Binding binding;
     private final Map<Integer, List<CdR11aPlcBuffer.Entry>> lists;
+    private static final List<Section> NATIVE_RTS_SECTIONS = List.of();
     private final List<Section> sections;
     private final Map<Long, Source> programs;
     private final States<S, R> states;
@@ -119,7 +120,41 @@ final class CdSectionArtKernel<S, R> {
         this.programs = Map.copyOf(sourceMap);
     }
 
+    /** Semantic admission for native Init/UpdateSectionGfx bodies consisting only of RTS. */
+    static <S,R> CdSectionArtKernel<S,R> nativeSectionRts(Binding binding,
+            Map<Integer,List<CdR11aPlcBuffer.Entry>> lists, List<Source> programs,
+            States<S,R> states, SavedDecoder clearedDecoder) {
+        return new CdSectionArtKernel<>(binding, lists, programs, states, clearedDecoder);
+    }
+
+    private CdSectionArtKernel(Binding binding, Map<Integer,List<CdR11aPlcBuffer.Entry>> lists,
+            List<Source> programs, States<S,R> states, SavedDecoder clearedDecoder) {
+        this.binding = Objects.requireNonNull(binding, "binding");
+        this.states = Objects.requireNonNull(states, "states");
+        this.clearedDecoder = Objects.requireNonNull(clearedDecoder, "clearedDecoder");
+        var copiedLists = new HashMap<Integer,List<CdR11aPlcBuffer.Entry>>();
+        for (var entry : Objects.requireNonNull(lists, "lists").entrySet()) {
+            word(entry.getKey()); copiedLists.put(entry.getKey(), List.copyOf(entry.getValue()));
+        }
+        this.lists = Map.copyOf(copiedLists);
+        this.sections = NATIVE_RTS_SECTIONS;
+        var sourceMap = new HashMap<Long,Source>();
+        for (var source : List.copyOf(Objects.requireNonNull(programs, "programs"))) {
+            if (source.binding() != this.binding) throw new IllegalArgumentException("Foreign program/source binding");
+            if (sourceMap.putIfAbsent(source.nativeAddress(), source) != null)
+                throw new IllegalArgumentException("Duplicate native source program");
+        }
+        this.programs = Map.copyOf(sourceMap);
+    }
+
+    S nativeSectionRts(S state) {
+        if (sections != NATIVE_RTS_SECTIONS) throw new IllegalStateException("Native RTS profile required");
+        states.checked(state);
+        return state;
+    }
+
     S updateSection(S state, int cameraXword) {
+        if (sections == NATIVE_RTS_SECTIONS) return nativeSectionRts(state);
         states.checked(state); word(cameraXword);
         int index = sectionIndex(state, cameraXword);
         int selector = index * 2;
@@ -129,6 +164,7 @@ final class CdSectionArtKernel<S, R> {
     }
 
     S loadSection(S state, int cameraXword) {
+        if (sections == NATIVE_RTS_SECTIONS) return nativeSectionRts(state);
         states.checked(state); word(cameraXword);
         int index = sectionIndex(state, cameraXword);
         S selected = withSection(state, ((index * 2) << 8) | (states.sectionWord(state) & 0xFF));

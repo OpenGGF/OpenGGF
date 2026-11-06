@@ -280,14 +280,21 @@ matching area heading; see the
   results and prepared player publications; the real Door Splash child follows
   its parent's sound request. GoalPost, Signpost and Results now retain native
   field, bonus, score, saved-bank and sound order, including completed PLC failure
-  prefixes. Results' outgoing programme lifetime remains separately gated.
-  A natural Projector picture now has current-art and full/course pixel-replay
-  checks. The Past controller route now clears the diagonal Spring and Boulder
-  and triggers the Goal Post, with complete full/course restore-forward checks.
+  prefixes. Big Ring and Flash now preserve original conditional reads, physical
+  child order, prepared player stores and programme/scroll/sound ownership.
+  Results completes the full physical walk before the native old-programme
+  fade, clear, return and IPX blank. The Past controller route clears the diagonal
+  Spring and Boulder, triggers the Goal Post and returns through that exit with
+  complete full/course restore-forward checks. Natural Projector and Goal Post
+  pictures have selected-current-art, pixel-replay and renderer-retirement checks.
   Act3 Good/Bad Future data retains its original167-frame Sonic format, complete
-  art and native placement order, including the shipped X-order reversal. Both
-  terrain geometries and player/source relations use the existing decoders;
-  live later-stage loading and boss gameplay stay separate.
+  art and native placement order, including the shipped X-order reversal. Stock
+  USA preparation retains both authenticated future programmes after disc close;
+  the later native programme owner selects from its carried flag. Both terrain
+  geometries, startup object and boss metadata, scrolling and palette components
+  reuse existing decoders and arithmetic. Shared queued/immediate/RAM/life art
+  loading preserves earlier-act behavior and native empty section routines.
+  Live Act3 World loading, boss gameplay and regional parity remain separate.
   CD player headless boot loads the fixed
   roster before rewind controller creation while keeping no-device audio before
   playback. A separate real-World entry fixture retains its own visible-Sonic

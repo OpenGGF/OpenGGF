@@ -13,6 +13,7 @@ import com.openggf.game.soniccd.level.CdR12aTerrainAssets;
 import com.openggf.game.soniccd.level.CdR12aPlayerAssets;
 import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
 import com.openggf.game.soniccd.level.CdR12bPlayerAssets;
+import com.openggf.game.soniccd.level.CdR13FutureAssets;
 import com.openggf.game.soniccd.level.CdStagePlayerSource;
 import com.openggf.game.soniccd.objects.CdBigRing;
 import com.openggf.game.soniccd.objects.CdResults;
@@ -460,6 +461,26 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
         Objects.requireNonNull(clock, "Act2 Past player V-int clock");
         return new CdPlayerFrameRuntime(CdStagePlayerSource.fromAct2Past(terrain, player), state, environment, artIngress, clock);
     }
+
+    // BEGIN explicit original R13 Future Frame component ingress.
+    /**
+     * Fresh original-USA R13C/D binding over complete explicit component values. The authenticated
+     * aggregate supplies its exact terrain/player/167-frame visual relation and native mapping.
+     * This ingress performs no Init, clear, saved load, actor/camera/art/clock default, preparation,
+     * service, programme carry or World/FULL admission. The existing source and CaptureOwner are
+     * fresh for this Frame; art publication stays unbound and all existing service guards apply.
+     */
+    public static CdPlayerFrameRuntime fromAct3FutureEntry(CdR13FutureAssets assets, CdPlayerBody.State state,
+                                                          CdPlayerBody.Environment environment,
+                                                          CdPlayerArtRuntime.State artIngress, VIntClock clock) {
+        Objects.requireNonNull(assets, "Act3 Future assets");
+        Objects.requireNonNull(state, "Act3 Future player state");
+        Objects.requireNonNull(environment, "Act3 Future player environment");
+        Objects.requireNonNull(artIngress, "Act3 Future player art ingress");
+        Objects.requireNonNull(clock, "Act3 Future player V-int clock");
+        return new CdPlayerFrameRuntime(CdStagePlayerSource.fromAct3Future(assets), state, environment, artIngress, clock);
+    }
+    // END explicit original R13 Future Frame component ingress.
 
     /**
      * Explicit new terrain-only development ingress, not a generic constructor
@@ -1153,9 +1174,9 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
     }
 
     /**
-     * One old-programme selector12 after Results changed the actual raw Gates to act1/present.
+     * One old-programme selector12 after Results changed the actual raw Gates to1/1 or2/2.
      * N1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff Level/Main.asm:85-115,894-907,971-995.
-     * This component value service checks the full actual pair and retained old R11A/R11B data.
+     * This component value service checks the full actual pair and retained old R11A/R11B or R12B data.
      * Root alone authenticates the completed physical walk, programme exit phase and call order.
      * Equal values confer no World authority. Ordinary source admission remains unchanged.
      */
@@ -1208,14 +1229,16 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
                     && (identity == null || profile.stage().equals(identity.stage()) && identity.file() == profile.file()
                         && identity.domain() == profile.domain() && identity.variant() == profile.variant());
         } else {
-            // This retained immutable source was checked by the existing actual-Past factory.
-            boundOldSource = assets == null && pastSource.stage().equals(CdStagePayload.R11B.stage())
-                    && pastSource.ordinaryPeriod() == 0;
+            // Both retained pairs were authenticated by their exact existing entry factories.
+            boundOldSource = assets == null && (pastSource.stage().equals(CdStagePayload.R11B.stage())
+                    ||pastSource.stage().equals(CdStagePayload.R12B.stage())) && pastSource.ordinaryPeriod() == 0;
         }
         var gates = environment.movement().gates();
-        if (!boundOldSource || gates.zoneAct() != 1 || gates.timeZone() != 1)
+        boolean r12b=pastSource!=null&&pastSource.stage().equals(CdStagePayload.R12B.stage());
+        int destination=r12b?2:1;
+        if (!boundOldSource || gates.zoneAct() != destination || gates.timeZone() != destination)
             throw new UnsupportedFrame(UnsupportedBoundary.SOURCE_FAMILY,
-                    "Old programme exit requires retained act0 R11A/R11B data and actual raw act1/present Gates");
+                    "Old programme exit requires retained R11A/R11B with raw1/1 or retained R12B with actual Results2/2 Gates");
     }
 
     /** Shared controller/timer/failure kernel; selector12 has no camera-copy/DrawLevel cut. */
