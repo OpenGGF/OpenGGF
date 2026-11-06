@@ -28,6 +28,10 @@ Unreleased. The earlier development themes remain in
   An opt-in project-import preflight checks explicitly pinned Java type sources
   and flags possible missing imports while retaining lexical ambiguity and bounded
   header checks. It does not replace compilation or classpath resolution.
+  Explicit known-enum selections now flag absent member names, including nested
+  asset enums, before a costly compile. Imported qualifier shadows and annotated
+  generic parameter scopes retain incomplete results; shared budgets and immutable
+  source provenance remain unchanged.
   Source-census and import-preflight dependency pins now match their approved
   sibling helpers while retaining exact byte budgets, hash checks and explicit
   incomplete results for unsupported Java scopes.

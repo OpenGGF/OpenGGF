@@ -3,6 +3,7 @@
 
 Inputs: canonical Git metadata, full commit, explicit qualified type=source pairs,
 and one exact Git source or externally byte/hash-pinned FINAL Java file.
+Opt-in known enums compare only explicit owner.enum.MEMBER constant selectors.
 Origin: 2026-11-05 Sonic CD source-only handoff missed CdR12aCameraArtResidency
 import; 92-second Maven test-precompile rejected it before tests launched.
 Reuses hash-pinned enum lexer and census safe readers; never a Java compiler.
@@ -34,10 +35,12 @@ RESERVED = frozenset(('abstract assert boolean break byte case catch char class 
     'switch synchronized this throw throws transient try void volatile while true false null _').split())
 TYPE_WORDS = frozenset(('class', 'interface', 'enum', 'record'))
 DEPENDENCIES = {
-    'java_declaration_census.py': (43439, '10ec54d1e68c76a29a673634315acea0977d31761f3cfa7846b9f85310ed0e2f'),
+    'java_declaration_census.py': (45026, '91d710f6b8aefbe918ff19ef085113cd12ea3d5d1cc30ad856fb25ab192465ff'),
     'enum_contract_audit.py': (47279, 'bc4d7daf1689216391efd423b4628c728a1f0b63395e89398b09930f686a770d'),
 }
 LIMITATIONS = [
+    'Opt-in known enums compare fully spelled selected owner.enum.MEMBER tokens with immutable declared enum constants; method calls/class literals and unselected qualifiers stay out of scope. No static-field/member/accessibility or compiler resolution claim.',
+    'Known-enum value/type shadows, indirect receivers, competing imports and unsupported containing scopes block missing-member hints. Other unsupported scopes/import availability remain incomplete and may retain explicitly ambiguous hints.',
     'Source-only possible-missing-import hints for explicitly selected known project types; no compiler, ABI, accessibility, import-completeness, test or Java-resolution claim.',
     'Unselected project types and external-library symbols are out of scope. No classpath, inheritance, generated source, module, type inference or expression resolution is performed.',
     'Root identifiers matching a selected type are lexical candidates, including possible values/methods. Selected-name shadow clues, unknown static imports, competing explicit imports and unsupported scopes make observations incomplete. Undetected value/inherited/package shadowing can still cause false positives or false availability.',
@@ -278,6 +281,7 @@ class Scope:
     def __init__(self, java, limits, check):
         self.java, self.ts, self.limits, self.check = java, java.tokens, limits, check
         self.header_end, self.declarations, self.reasons = 0, [], []
+        self.unsupported_ranges = []
         self.parse_headers()
         self.parse_types()
 
@@ -358,8 +362,10 @@ class Scope:
             self.declarations.append(row)
             openings[j] = row
             if local:
+                self.unsupported_ranges.append((j, self.java.pairs[j]))
                 self.reasons.append('Local type scope unsupported at line ' + str(self.ts[i].line))
             if any(self.v(k) in ('extends', 'implements', 'permits', '<') for k in range(i+2, j)):
+                self.unsupported_ranges.append((j, self.java.pairs[j]))
                 self.reasons.append('Inheritance/generic type scope not resolved at line ' + str(self.ts[i].line))
         need(any(d['top_level'] for d in self.declarations), 'No ordinary top-level named type observed')
         # Anonymous bodies can contribute inherited/member names: do not guess.
@@ -370,6 +376,7 @@ class Scope:
                 while j >= self.header_end and self.v(j) not in (';', '{', '}', '='):
                     self.check()
                     if self.v(j) == 'new':
+                        self.unsupported_ranges.append((i+1, self.java.pairs[i+1]))
                         self.reasons.append('Anonymous type scope unsupported at line ' + str(self.ts[j].line))
                         break
                     j -= 1
@@ -458,12 +465,186 @@ def analyze(scope, known, engine):
     return uses, hints, sorted(set(reasons))
 
 
+
+def known_enum(scope, qualified, provenance, engine):
+    """One exact ordinary enum declaration; shared token extractor stays unchanged."""
+    engine.check()
+    need(not scope.reasons, 'Known enum source scope unsupported: ' + '; '.join(scope.reasons))
+    matches = [d for d in scope.declarations if d['qualified'] == qualified]
+    need(len(matches) <= 1, 'Selected enum declaration is lexically ambiguous: ' + qualified)
+    need(len(matches) == 1 and scope.v(matches[0]['start']) == 'enum' and not matches[0]['local'],
+         'Selected enum lacks exact ordinary declaration provenance: ' + qualified, 2)
+    declaration = matches[0]
+    roots = [d for d in scope.declarations if d['top_level'] and
+             d['opening'] <= declaration['opening'] < declaration['closing'] <= d['closing']]
+    need(len(roots) == 1, 'Known enum has ambiguous lexical top-level owner')
+    _, lexer = dependencies()
+    try:
+        constants, actual, local = lexer.enum_constants(scope.java, declaration['name'], qualified, engine.limits)
+    except lexer.AuditError as error:
+        raise PreflightError('Known enum constants incomplete: ' + str(error), 3) from error
+    engine.check()
+    need(actual == qualified, 'Known enum qualified token spelling differs')
+    return dict(qualified_name=qualified, local_name=local, owner_type=roots[0]['qualified'],
+                simple_owner=roots[0]['name'], package=scope.java.package, constants=constants,
+                declaration_line=scope.ts[declaration['name_at']].line, provenance=provenance)
+
+
+def analyze_enums(scope, known, engine, prior_hits):
+    """Compare only explicit owner.enum.MEMBER token chains, never inferred expressions."""
+    uses, hints, reasons, covered = [], [], [], set()
+    if not known:
+        return uses, hints, reasons
+    _, lexer = dependencies()
+    shadows = lexer.direct_shadow_names(scope.java, '<consumer>', '<immutable enum>', '')
+    annotated_generics = False
+    for i, token in enumerate(scope.ts):
+        engine.check()
+        if token.value in ('<', ',') and scope.v(i+1) == '@':
+            # An annotation can hide a method type-parameter name from the
+            # ordinary shadow heuristic. Do not infer its binding or scope.
+            annotated_generics = True
+            reasons.append('Annotated generic parameter scope unobserved at line ' + str(token.line))
+        if scope.v(i-1) in ('<', ',') and scope.v(i+1) in ('>', ',', 'extends', '&'):
+            shadows.add(token.value)
+    for i, token in enumerate(scope.ts):
+        engine.check()
+        if scope.v(i+1) == '-' and scope.v(i+2) == '>':
+            shadows.add(token.value)
+        if token.value == '(' and i in scope.java.pairs:
+            close = scope.java.pairs[i]
+            if scope.v(close+1) == '-' and scope.v(close+2) == '>':
+                need(close-i <= engine.limits.max_context_tokens, 'Lambda parameter context budget exhausted')
+                for at in range(i+1, close):
+                    engine.check()
+                    if IDENT.fullmatch(scope.v(at)) and scope.v(at+1) in (',', ')'):
+                        shadows.add(scope.v(at))
+    qualifiers = []
+    for item in known:
+        for spelling in dict.fromkeys([item['qualified_name'], item['local_name']]):
+            qualifiers.append((item, spelling.split('.'), spelling == item['qualified_name']))
+    for i in range(scope.header_end, len(scope.ts)):
+        engine.check()
+        if i in covered:
+            continue
+        matches = []
+        for item, parts, full in qualifiers:
+            if scope.v(i) != parts[0]:
+                continue
+            need(2 * len(parts) + 1 <= engine.limits.max_context_tokens,
+                 'Known-enum selector context budget exhausted')
+            matched = 0
+            for n, part in enumerate(parts):
+                if scope.v(i + n*2) != part or n and scope.v(i + n*2-1) != '.':
+                    break
+                matched += 1
+            if matched != len(parts):
+                # Never join split identifiers into an intended qualifier. Only inspect
+                # a malformed chain after an actually matched selected owner token.
+                threshold = len(item['package'].split('.')) + 1 if full and item['package'] else 1
+                if matched >= threshold and scope.v(i+1) == '.':
+                    end = min(len(scope.ts), i + 2*len(parts)+2)
+                    for at in range(i+1, end-1):
+                        if scope.v(at) == ';':
+                            break
+                        if scope.v(at) in ('*', '?', '<', '>', '@') or scope.v(at) == scope.v(at+1) == '.' or (
+                                IDENT.fullmatch(scope.v(at)) and IDENT.fullmatch(scope.v(at+1)) and
+                                scope.v(at) not in RESERVED and scope.v(at+1) not in RESERVED):
+                            reasons.append('Malformed known-enum qualifier tokens at line ' + str(scope.ts[i].line))
+                            break
+                continue
+            dot = i + 2*len(parts)-1
+            if scope.v(dot) != '.':
+                continue  # The enum type itself, not a selected constant.
+            member_at = dot + 1
+            member = scope.v(member_at)
+            if member == 'class' or IDENT.fullmatch(member) and member not in RESERVED and scope.v(member_at+1) == '(':
+                continue  # Class literals/method calls are not enum-constant selectors.
+            malformed = not IDENT.fullmatch(member) or member in RESERVED or (
+                IDENT.fullmatch(scope.v(member_at+1)) and scope.v(member_at+1) not in RESERVED) or (
+                scope.v(member_at+1) == '.' and not IDENT.fullmatch(scope.v(member_at+2)))
+            matches.append((item, parts, full, member_at, member, malformed))
+        if not matches:
+            continue
+        need(prior_hits + len(uses) < engine.limits.max_hits, 'Selected-type/enum hit budget exhausted')
+        # Two selected enums can share the same short owner.enum spelling. Never choose one.
+        unique = {m[0]['qualified_name'] for m in matches}
+        item, parts, full, member_at, member, malformed = matches[0]
+        covered.update(range(i, member_at+1))
+        blocked, uncertain, availability = False, False, 'fully_spelled_qualifier' if full else 'unobserved_qualifier'
+        local_reasons = []
+        if annotated_generics:
+            blocked = True
+            local_reasons.append('Known-enum binding blocked by annotated generic parameter scope')
+        if malformed:
+            blocked = True
+            local_reasons.append('Malformed known-enum member tokens at line ' + str(scope.ts[i].line))
+        if len(unique) != 1:
+            blocked = True
+            local_reasons.append('Several selected enums share qualifier at line ' + str(scope.ts[i].line))
+        if any(opening < i < closing for opening,closing in scope.unsupported_ranges):
+            blocked = True
+            local_reasons.append('Unsupported containing scope for known-enum selector at line ' + str(scope.ts[i].line))
+        elif scope.reasons:
+            uncertain = True
+            local_reasons.append('Other consumer scopes remain unresolved for known-enum selector at line ' + str(scope.ts[i].line))
+        if scope.v(i-1) == '.':
+            blocked = True
+            local_reasons.append('Indirect known-enum qualifier receiver at line ' + str(scope.ts[i].line))
+        if parts[0] in shadows or any(d['qualified'] == item['owner_type'] for d in scope.declarations):
+            blocked = True
+            local_reasons.append('Known-enum qualifier value/type shadow ambiguity at line ' + str(scope.ts[i].line))
+        if full:
+            # The first package-looking identifier can bind an imported type
+            # or value instead. Fully spelled tokens do not bypass shadowing.
+            if any(not name.endswith('.*') and name.rsplit('.',1)[-1] == parts[0]
+                   for _,name in scope.java.imports):
+                blocked = True
+                local_reasons.append('Imported first identifier shadows fully spelled known-enum qualifier at line ' + str(scope.ts[i].line))
+            if any(name.endswith('.*') for _,name in scope.java.imports):
+                uncertain = True
+                local_reasons.append('Wildcard import bindings unobserved for fully spelled known-enum qualifier at line ' + str(scope.ts[i].line))
+        else:
+            direct = [name for static,name in scope.java.imports if not static and name.rsplit('.',1)[-1] == parts[0]]
+            static = [name for is_static,name in scope.java.imports if is_static]
+            if direct and direct != [item['owner_type']] or any(not name.endswith('.*') and name.rsplit('.',1)[-1] == parts[0] for name in static):
+                blocked = True
+                local_reasons.append('Conflicting/static import for known-enum qualifier at line ' + str(scope.ts[i].line))
+            elif direct == [item['owner_type']]:
+                availability = 'explicit_import'
+            elif scope.java.package == item['package']:
+                availability = 'same_package'
+            elif (False,item['package']+'.*') in scope.java.imports:
+                availability = 'package_wildcard_import'
+                uncertain = uncertain or any(not static and name.endswith('.*') and name != item['package']+'.*' for static,name in scope.java.imports)
+            else:
+                uncertain = True
+            if any(name.endswith('.*') for name in static):
+                uncertain = True
+            if uncertain:
+                local_reasons.append('Known-enum qualifier availability unobserved at line ' + str(scope.ts[i].line))
+        reasons.extend(local_reasons)
+        exists = member in item['constants'] if len(unique) == 1 and not malformed else None
+        row = dict(enum=item['qualified_name'] if len(unique) == 1 else None, candidates=sorted(unique),
+                   qualifier='.'.join(parts), member=None if malformed else member,
+                   line=scope.ts[i].line, member_line=scope.ts[member_at].line if member_at < len(scope.ts) else scope.ts[i].line,
+                   known_constant=exists, ambiguous=blocked or uncertain, availability=availability)
+        uses.append(row)
+        if not blocked and not exists:
+            hints.append(dict(kind='possible_missing_enum_member', enum=item['qualified_name'],
+                              qualifier=row['qualifier'], member=member, line=row['member_line'],
+                              ambiguous=uncertain, reason='not_in_selected_enum_constants'))
+    return uses, hints, sorted(set(reasons))
+
+
 def parser():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--git-dir', required=True)
     p.add_argument('--revision', required=True, help='Full lowercase local commit SHA-1; never HEAD/ref')
-    p.add_argument('--known-type', required=True, action='append', metavar='FQCN=PATH',
+    p.add_argument('--known-type', action='append', default=[], metavar='FQCN=PATH',
                    help='Explicit ordinary top-level project type and exact immutable Java source')
+    p.add_argument('--known-enum', action='append', default=[], metavar='FQCN=PATH',
+                   help='Opt-in fully qualified ordinary enum (including nested owners) and exact immutable source')
     source = p.add_mutually_exclusive_group(required=True)
     source.add_argument('--source', help='Exact relative Java blob at revision')
     source.add_argument('--final', help='Canonical external FINAL Java file')
@@ -485,10 +666,13 @@ def run(args):
     root_id = directory_id(git_dir)
     need(engine.git(git_dir, ['cat-file', '-t', args.revision], min(128, limits.max_file_bytes)).strip() == b'commit',
          'Revision must be an existing local commit', 2)
-    need(1 <= len(args.known_type) <= limits.max_known_types and len(set(args.known_type)) == len(args.known_type),
-         'Select distinct known types within bound', 2)
-    known, saved, by_path = [], [], {}
-    for selection in args.known_type:
+    type_selections = args.known_type or []
+    enum_selections = getattr(args, 'known_enum', []) or []
+    need(1 <= len(type_selections) + len(enum_selections) <= limits.max_known_types and
+         len(set(type_selections)) == len(type_selections) and len(set(enum_selections)) == len(enum_selections),
+         'Select distinct known types/enums within shared bound', 2)
+    known, enums, saved, by_path = [], [], [], {}
+    for selection in type_selections:
         need(isinstance(selection, str) and len(selection) <= 8192 and selection.count('=') == 1,
              'Known type requires FQCN=exact/path.java', 2)
         fqcn, path = selection.split('=')
@@ -505,6 +689,21 @@ def run(args):
         known.append(dict(qualified_name=fqcn, simple_name=matches[0]['name'], package=scope.java.package,
                           declaration_line=scope.ts[matches[0]['name_at']].line, provenance=provenance))
     need(len({k['qualified_name'] for k in known}) == len(known), 'Duplicate selected qualified type', 2)
+    for selection in enum_selections:
+        need(isinstance(selection, str) and len(selection) <= 8192 and selection.count('=') == 1,
+             'Known enum requires FQCN=exact/path.java', 2)
+        qualified, path = selection.split('=')
+        need(all(IDENT.fullmatch(part) and part not in RESERVED for part in qualified.split('.')),
+             'Invalid qualified selected enum', 2)
+        relative(path)
+        if path not in by_path:
+            data, provenance = engine.blob(git_dir, args.revision, path)
+            scope = engine.parse(data)
+            by_path[path] = data, provenance, scope
+            saved.append((path, data, provenance))
+        _, provenance, scope = by_path[path]
+        enums.append(known_enum(scope, qualified, provenance, engine))
+    need(len({k['qualified_name'] for k in enums}) == len(enums), 'Duplicate selected qualified enum', 2)
     final_path = final_sig = None
     if args.final is not None:
         final_path = absolute(args.final)
@@ -526,6 +725,9 @@ def run(args):
             scope = engine.parse(data)
             saved.append((path, data, provenance))
     uses, hints, reasons = analyze(scope, known, engine)
+    enum_uses, enum_hints, enum_reasons = analyze_enums(scope, enums, engine, len(uses))
+    hints.extend(enum_hints)
+    reasons = sorted(set(reasons + enum_reasons))
     for path, previous, previous_provenance in saved:
         repeat, repeat_provenance = engine.blob(git_dir, args.revision, path, account=False)
         need(repeat == previous and repeat_provenance == previous_provenance, 'Immutable selected source changed on re-observation')
@@ -535,7 +737,7 @@ def run(args):
     need(directory_id(git_dir) == root_id, 'Git directory changed on re-observation')
     engine.check()
     result = dict(version=VERSION, status='incomplete' if reasons else 'observed',
-                  source=provenance, known_types=known, package=scope.java.package,
+                  source=provenance, known_types=known, known_enums=enums, enum_uses=enum_uses, package=scope.java.package,
                   imports=[dict(static=s, name=n) for s, n in scope.java.imports],
                   uses=uses, hints=hints, incomplete_reasons=reasons, limits=vars(limits),
                   selected_bytes=engine.bytes, selected_tokens=engine.tokens, limitations=LIMITATIONS)

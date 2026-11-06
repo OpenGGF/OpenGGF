@@ -1,20 +1,24 @@
 ---
 name: java-project-import-preflight
-description: Find fast source-only missing-import hints for explicitly selected project Java types before costly compile validation, using immutable Git type provenance and an exact source blob or pinned FINAL bytes. Does not resolve a classpath or certify compilation.
+description: Find bounded source-only missing-import and opt-in known-enum constant hints for explicitly selected project Java sources before costly compile validation, using immutable Git type provenance and an exact source blob or pinned FINAL bytes. Does not resolve a classpath or certify compilation.
 ---
 
 Use [java_project_import_preflight.py](../../../tools/soniccd/java_project_import_preflight.py)
 when a source handoff introduces or moves references to known project types,
 especially nested spellings such as `CameraArtResidency.Region`. Select a small
-reviewed type list. This helper does not search a checkout or infer a destination.
+reviewed type/enum list. This helper does not search a checkout or infer a destination.
 The [source-bound packet handoff workflow](../soniccd-packet-integration/SKILL.md)
 still owns source custody and the task's actual compile/test evidence.
 
 Supply a canonical absolute local Git metadata directory, an exact lowercase
-40-hex commit, and one or more `--known-type FQCN=exact/path.java` selections.
+40-hex commit, and at least one `--known-type FQCN=exact/path.java` or
+`--known-enum FQCN.Enum=exact/path.java` selection. The16-selection cap is shared.
 Each known type must have a matching ordinary top-level declaration and package
 in that exact regular Git blob. Filenames alone establish nothing. Use the owning
 Git/disassembly lookup separately if the type/path is not already known.
+Enum selections require one exact ordinary enum declaration, including its
+package and nested owners, in that immutable blob. Constants come from the
+unchanged shared enum token extractor, never a guessed filename or project scan.
 
 ```bash
 python3 -B tools/soniccd/java_project_import_preflight.py \
@@ -24,6 +28,17 @@ python3 -B tools/soniccd/java_project_import_preflight.py \
   --final-sha256 "$INDEPENDENT_FINAL_SHA256" --final-bytes "$INDEPENDENT_FINAL_BYTES"
 ```
 
+For an explicit enum check, substitute or add this option to the same pinned invocation:
+
+```bash
+--known-enum 'com.openggf.game.soniccd.level.CdR12bProfile.Asset=src/main/java/com/openggf/game/soniccd/level/CdR12bProfile.java'
+```
+
+This catches `CdR12bProfile.Asset.TOUCH_DIMENSIONS` and `.ENEMY_POINTS` as
+absent from the selected enum constants. The real declarations belong to
+`CdR12bPlayerAssets.Asset`; selecting that immutable enum accepts both names.
+The caller chooses the intended source family. The helper does not migrate it.
+
 For a committed consumer, replace the three FINAL options with
 `--source exact/consumer/path.java`; that blob comes from the same revision.
 FINAL pins must come from the agreed source handoff. The helper does not select
@@ -32,16 +47,33 @@ or authenticate the FINAL file for the caller. It reuses exact hash-pinned sibli
 `enum_contract_audit.py` lexer bytes. A dependency mismatch rejects; do not bypass
 pins or copy arbitrary Python helpers to obtain a result.
 
-Read `uses`, `hints`, `incomplete_reasons` and provenance together. Root identifiers
+Read `uses`, `enum_uses`, `hints`, `incomplete_reasons` and provenance together.
+Version1 adds `known_enums` with ordered constant names/source pins and
+`enum_uses` with literal qualifier/member spelling, line, known-constant and
+ambiguity observations. New hints use `possible_missing_enum_member` with
+reason `not_in_selected_enum_constants`. Existing import hints remain unchanged. Root identifiers
 matching selected simple type names are lexical candidates. Exact nonstatic
 imports, package wildcard imports, same-package names and selected-file
 ordinary top-level/member-type scopes can explain availability. Member scope is
 limited to its lexical owner. Tokens after `.` are excluded as root candidates;
 `Type.Member` produces one root candidate, while fully qualified spellings are
-ignored rather than certified. Comments and literal contents produce no hits.
+ignored by the import check rather than certified. Comments and literal contents produce no hits.
+
+The enum check recognizes only explicitly spelled selected owner chains such as
+`Type.Nested.MEMBER` or its complete package spelling. It preserves identifier/dot
+tokens across whitespace/comments; it never joins split identifiers. Short
+`Nested.MEMBER`, static-imported constants, class literals and method calls are
+out of scope. Member/static-field lookup, inherited names and executable-body
+grammar are not resolved. An absent declared enum constant is only a hint.
+Known-name declarations/values/type parameters/lambda parameters, indirect
+receivers, competing imports and unsupported containing scopes make the check incomplete;
+blocked bindings emit no missing-member hint. Missing or uncertain wildcard
+imports or unsupported scopes elsewhere in the file may retain explicitly
+ambiguous hints. The actual large-consumer control remains incomplete after
+fixing both names. Read those flags with the status.
 
 Exit0 means no hints within supported selected lexical scope. Exit1 means one or
-more possible missing imports. Exit2 rejects invalid inputs, pins or reads.
+more possible missing imports or selected enum constants. Exit2 rejects invalid inputs, pins or reads.
 Exit3 means incomplete/ambiguous/limited observation and can still contain hints.
 For example, the original Log/Mosqui test yields hints at lines46/49; the
 single-import correction removes those hints. Both remain incomplete because
@@ -58,13 +90,14 @@ validated. External libraries and unselected project types stay out of scope.
 Unicode preprocessing and unsupported non-ASCII identifier grammar reject
 incomplete; Unicode within ordinary comments/literals is merely redacted.
 
-Bounds can only be lowered:16 selected types,1MiB/file,4MiB aggregate selected
+Bounds can only be lowered:16 total selected types/enums,1MiB/file,4MiB aggregate selected
 source bytes,100000 aggregate tokens,4096-token contexts,32 brace levels,256 root
-hits,30 seconds checked between bounded operations and inside scope scans, and
+hits across both checks,30 seconds checked between bounded operations and inside scope scans, and
 1MiB accepted result JSON. Paths have at most4096 characters/64 components.
 The shared lexer also bounds delimiter nesting at128; its bounded lex pass and
 regular-file reads are checked before/after rather than interrupted mid-pass.
-Selected source bytes are read again for non-atomic correspondence, so actual
+The unchanged enum extractor also caps10000 constants per selected enum;
+aggregate token/output caps still apply. Selected source bytes are read again for non-atomic correspondence, so actual
 read volume includes those rechecks. JSON error responses use a separate small
 fixed shape and can exceed a caller's lowered accepted-result byte cap.
 
@@ -80,3 +113,11 @@ ceremony or authority to read a frozen worktree.
 Package/import spelling is checked as alternating identifier/dot tokens, with a
 final import wildcard only; split identifiers are incomplete. Type-header context
 limits include the entire span across parenthesis/array jumps and the final brace.
+
+Fully spelled enum qualifiers still check their first identifier against imports:
+exact imported type/value bindings block the selected-member hint; wildcard
+bindings keep the observation incomplete and any hint ambiguous. An annotated
+generic parameter-list clue (`<@` or `,@`) conservatively blocks enum-member
+hints for the consumer and reports incomplete. This includes type-use cases the
+helper cannot distinguish; ordinary annotations outside generic lists retain
+their existing behavior. No Java binding or compiler claim is added.

@@ -16,9 +16,9 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-REV = 'ff5835ef26a1192f94e43a3ca3018bb7a444c675'
+REV = '696f4138855502d900a044f034e4b3c2443f176e'
 DEPENDENCIES = {
-    'java_declaration_census.py': ('10ec54d1e68c76a29a673634315acea0977d31761f3cfa7846b9f85310ed0e2f', 43439),
+    'java_declaration_census.py': ('91d710f6b8aefbe918ff19ef085113cd12ea3d5d1cc30ad856fb25ab192465ff', 45026),
     'enum_contract_audit.py': ('bc4d7daf1689216391efd423b4628c728a1f0b63395e89398b09930f686a770d', 47279),
 }
 
@@ -89,6 +89,159 @@ class PreflightTests(unittest.TestCase):
 
     def result(self, text=None, extra=()):
         return self.p.run(self.args(text, extra))
+
+    def enum_result(self, text, extra=(), selections=None):
+        args = self.args(text, extra)
+        args.known_enum = selections or ['p.Known.Region=known/Known.java']
+        return self.p.run(args)
+
+    def test_known_enum_original_two_missing_members_are_reported_before_compile(self):
+        r=self.enum_result('package q; import p.Known; class S { Object a=Known.Region.TOUCH_DIMENSIONS; Object b=Known.Region.ENEMY_POINTS; }')
+        self.assertEqual(['TOUCH_DIMENSIONS','ENEMY_POINTS'],[h['member'] for h in r['hints']])
+        self.assertTrue(all(h['kind']=='possible_missing_enum_member' for h in r['hints']))
+        self.assertEqual('observed',r['status'])
+
+    def test_known_enum_valid_constants_comments_whitespace_methods_and_class_literal(self):
+        r=self.enum_result('package q; import p.Known; class S { Object a=Known /* split */ . Region . A; Object b=Known.Region.values(); Object c=Known.Region.class; String t="Known.Region.MISSING"; }')
+        self.assertEqual([],r['hints']);self.assertEqual('observed',r['status'])
+        self.assertEqual(['A'],[u['member'] for u in r['enum_uses']])
+        self.assertEqual(['A'],r['known_enums'][0]['constants'])
+
+    def test_known_enum_only_cli_and_fully_qualified_selector(self):
+        args=self.args('package q; class S { Object a=p.Known.Region.MISSING; }')
+        args.known_type=[];args.known_enum=['p.Known.Region=known/Known.java']
+        r=self.p.run(args);self.assertEqual([],r['known_types']);self.assertEqual('MISSING',r['hints'][0]['member'])
+        self.assertFalse(r['enum_uses'][0]['ambiguous'])
+        argv=['--git-dir',args.git_dir,'--revision',args.revision,'--known-enum',args.known_enum[0],
+              '--final',args.final,'--final-sha256',args.final_sha256,'--final-bytes',str(args.final_bytes)]
+        proc=subprocess.run([sys.executable,'-B',self.p.__file__,*argv],stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+        self.assertEqual(1,proc.returncode,proc.stderr);self.assertEqual('MISSING',json.loads(proc.stdout)['hints'][0]['member'])
+
+    def test_full_enum_spellings_keep_imported_first_identifier_ambiguity(self):
+        for imported, blocked in [('import r.p;', True), ('import static r.Outer.p;', True),
+                                  ('import static r.Outer.*;', False), ('import r.*;', False)]:
+            for member in ['A', 'MISSING']:
+                with self.subTest(imported=imported, member=member):
+                    args=self.args('package q; '+imported+' class S { Object x=p.Known.Region.'+member+'; }')
+                    args.known_type=[];args.known_enum=['p.Known.Region=known/Known.java']
+                    result=self.p.run(args)
+                    self.assertEqual('incomplete',result['status']);self.assertTrue(result['incomplete_reasons'])
+                    self.assertTrue(result['enum_uses'][0]['ambiguous'])
+                    if blocked:self.assertEqual([],result['hints'])
+                    else:self.assertTrue(all(h['ambiguous'] for h in result['hints']))
+
+    def test_annotated_generic_parameters_are_incomplete_without_enum_member_hints(self):
+        for parameters in ['<Known>', '<@Ann Known>', '<@Ann(value=1) Known>',
+                           '<T, @a.b.Ann(value={1,2}) Known>']:
+            for member in ['A','MISSING']:
+                with self.subTest(parameters=parameters,member=member):
+                    args=self.args('package q; import p.Known; class S { '+parameters+' Object f(){ return Known.Region.'+member+'; } }')
+                    args.known_type=[];args.known_enum=['p.Known.Region=known/Known.java']
+                    result=self.p.run(args)
+                    self.assertEqual('incomplete',result['status']);self.assertTrue(result['incomplete_reasons'])
+                    self.assertFalse(any(h['kind']=='possible_missing_enum_member' for h in result['hints']))
+        result=self.enum_result('package q; import p.Known; class S { @Ann Object f(){ return Known.Region.A; } }')
+        self.assertEqual('observed',result['status']);self.assertEqual([],result['hints'])
+
+    def test_known_enum_local_nested_value_and_type_parameter_shadowing_is_incomplete(self):
+        for body in ['class S { class Known { } Object a=Known.Region.MISSING; }',
+                     'class S { void f(){ class Known {} Object a=Known.Region.MISSING; } }',
+                     'class S { Object Known; Object a=Known.Region.MISSING; }',
+                     'class S<Known> { Object a=Known.Region.MISSING; }',
+                     'class S { Object p; Object a=p.Known.Region.MISSING; }',
+                     'class S { Object a=Known -> Known.Region.MISSING; }',
+                     'class S { Object a=(Known) -> Known.Region.MISSING; }']:
+            with self.subTest(body=body):
+                r=self.enum_result('package q; '+body)
+                self.assertEqual('incomplete',r['status']);self.assertTrue(r['incomplete_reasons'])
+                self.assertFalse(any(h['kind']=='possible_missing_enum_member' for h in r['hints']))
+
+    def test_known_enum_indirect_receiver_and_anonymous_scope_are_incomplete(self):
+        for body in ['class S { Object a=receiver.Known.Region.MISSING; }',
+                     'class S { Object a=new Object(){ Object x=Known.Region.MISSING; }; }']:
+            r=self.enum_result('package q; import p.Known; '+body)
+            self.assertEqual('incomplete',r['status'])
+            self.assertFalse(any(h['kind']=='possible_missing_enum_member' for h in r['hints']))
+
+    def test_known_enum_spelling_never_joins_split_tokens_and_malformed_selectors_are_incomplete(self):
+        for selector in ['Known.Region.', 'Known.Region..MISSING', 'Known..Region.MISSING', 'Known.Reg ion.MISSING','Known.Region.MISS ING', 'Known.*.Region.MISSING', 'Known.Region.MISSING..field']:
+            with self.subTest(selector=selector):
+                r=self.enum_result('package q; import p.Known; class S { Object a='+selector+'; }')
+                self.assertEqual('incomplete',r['status'])
+                self.assertFalse(any(h['kind']=='possible_missing_enum_member' for h in r['hints']))
+        r=self.enum_result('package q; import p.Known; class S { Object a=Known.Other.MISSING; }')
+        self.assertEqual([],r['enum_uses'])
+        self.assertEqual([],r['hints'])
+
+    def test_known_enum_competing_explicit_import_blocks_resolution(self):
+        r=self.enum_result('package q; import r.Known; class S { Object a=Known.Region.MISSING; }')
+        self.assertEqual('incomplete',r['status'])
+        self.assertFalse(any(h['kind']=='possible_missing_enum_member' for h in r['hints']))
+        other=self.enum_result('package q; import p.*; class S { Object a=Known.Region.MISSING; } class T extends Object {}')
+        self.assertEqual('incomplete',other['status']);self.assertTrue(other['hints'][0]['ambiguous'])
+
+    def test_known_enum_known_type_count_bytes_tokens_and_hits_share_existing_limits(self):
+        with self.assertRaises(self.p.PreflightError) as c:
+            self.enum_result('package q; import p.Known; class S { Object a=Known.Region.A; }',['--max-known-types','1'])
+        self.assertEqual(2,c.exception.code)
+        with self.assertRaises(self.p.PreflightError) as c:
+            self.enum_result('package q; import p.Known; class S { Object a=Known.Region.A; Object b=Known.Region.MISSING; }',['--max-hits','3'])
+        self.assertEqual(3,c.exception.code)
+        r=self.enum_result('package q; import p.Known; class S { Object a=Known.Region.A; }')
+        self.assertEqual(2,len(r['uses'])+len(r['enum_uses']))
+        self.assertEqual(self.result('package q; import p.Known; class S { Object a=Known.Region.A; }')['selected_bytes'],r['selected_bytes'])
+
+    def test_known_enum_selection_requires_exact_enum_provenance_and_distinct_names(self):
+        for selection in ['p.Known.Missing=known/Known.java','p.Known=known/Known.java','p.Known.Region=known/Wrong.java',
+                          'p..Known.Region=known/Known.java','p.Known.Region=known/Alias.java']:
+            with self.subTest(selection=selection):
+                with self.assertRaises(self.p.PreflightError):self.enum_result('class S {}',selections=[selection])
+        with self.assertRaises(self.p.PreflightError):
+            self.enum_result('class S {}',selections=['p.Known.Region=known/Known.java']*2)
+
+    def test_known_enum_duplicate_short_qualifiers_are_incomplete_without_a_false_member_hint(self):
+        (self.repo/'known'/'OtherEnum.java').write_text('package r; class Known { enum Region { B } }')
+        self.git('add','known/OtherEnum.java');self.git('commit','-qm','Owned enum ambiguity fixture')
+        args=self.args('package q; class S { Object a=Known.Region.MISSING; }');args.revision=self.git('rev-parse','HEAD').strip()
+        args.known_enum=['p.Known.Region=known/Known.java','r.Known.Region=known/OtherEnum.java']
+        r=self.p.run(args);self.assertEqual('incomplete',r['status'])
+        self.assertFalse(any(h['kind']=='possible_missing_enum_member' for h in r['hints']))
+
+    def test_known_enum_malformed_declaration_and_local_declaration_are_incomplete(self):
+        for index,source in enumerate(['package p; class Bad { enum Region { A B } }',
+                                       'package p; class Bad { void f(){ enum Region { A } } }',
+                                       'package p; class Bad { enum Region { A } enum Region { B } }']):
+            path='known/Bad'+str(index)+'.java';(self.repo/path).write_text(source)
+            self.git('add',path);self.git('commit','-qm','Owned malformed enum fixture')
+            args=self.args('class S {}');args.revision=self.git('rev-parse','HEAD').strip();args.known_enum=['p.Bad.Region='+path]
+            with self.assertRaises(self.p.PreflightError) as c:self.p.run(args)
+            self.assertEqual(3,c.exception.code)
+
+    @unittest.skipUnless(os.environ.get('PREFLIGHT_KNOWN_ENUM_GIT_DIR'),'explicit immutable actual enum source metadata not supplied')
+    def test_actual_profile_mistake_and_player_enum_correction(self):
+        git_dir=os.environ['PREFLIGHT_KNOWN_ENUM_GIT_DIR'];revision='696f4138855502d900a044f034e4b3c2443f176e'
+        for owner,expected in [('CdR12bProfile',['TOUCH_DIMENSIONS','ENEMY_POINTS']),('CdR12bPlayerAssets',[])]:
+            text='package q; import com.openggf.game.soniccd.level.'+owner+'; class S { Object a='+owner+'.Asset.TOUCH_DIMENSIONS; Object b='+owner+'.Asset.ENEMY_POINTS; }'
+            args=self.args(text);args.git_dir=git_dir;args.revision=revision;args.known_type=[]
+            args.known_enum=['com.openggf.game.soniccd.level.'+owner+'.Asset=src/main/java/com/openggf/game/soniccd/level/'+owner+'.java']
+            r=self.p.run(args);self.assertEqual(expected,[h['member'] for h in r['hints']]);self.assertEqual('observed',r['status'])
+            self.assertEqual(revision,r['known_enums'][0]['provenance']['revision'])
+
+    @unittest.skipUnless(os.environ.get('PREFLIGHT_KNOWN_ENUM_GIT_DIR'),'explicit immutable actual enum source metadata not supplied')
+    def test_actual_large_consumer_mistake_retains_ambiguous_hints_without_certifying_other_scopes(self):
+        git_dir=os.environ['PREFLIGHT_KNOWN_ENUM_GIT_DIR'];revision='696f4138855502d900a044f034e4b3c2443f176e'
+        path='src/main/java/com/openggf/game/soniccd/SonicCdAct2PastObjectPass.java'
+        original=subprocess.check_output(['git','--git-dir='+git_dir,'show',revision+':'+path]).decode()
+        anchor='primaryScanner=new CdPlayerObjectTouch(player.touchDimensions());'
+        replacement='primaryScanner=new CdPlayerObjectTouch(CdR11aObjectAssets.decodeTouchDimensions(terrain.view(CdR12bProfile.Asset.TOUCH_DIMENSIONS).copy()));'
+        self.assertEqual(1,original.count(anchor));self.assertEqual(1,original.count('CdR12bPlayerAssets.Asset.ENEMY_POINTS'))
+        bad=original.replace(anchor,replacement).replace('CdR12bPlayerAssets.Asset.ENEMY_POINTS','CdR12bProfile.Asset.ENEMY_POINTS')
+        fixed=bad.replace('terrain.view(CdR12bProfile.Asset.TOUCH_DIMENSIONS)','player.view(CdR12bPlayerAssets.Asset.TOUCH_DIMENSIONS)').replace('CdR12bProfile.Asset.ENEMY_POINTS','CdR12bPlayerAssets.Asset.ENEMY_POINTS')
+        for text,owner,expected in [(bad,'CdR12bProfile',['TOUCH_DIMENSIONS','ENEMY_POINTS']),(fixed,'CdR12bPlayerAssets',[])]:
+            args=self.args(text);args.git_dir=git_dir;args.revision=revision;args.known_type=[]
+            args.known_enum=['com.openggf.game.soniccd.level.'+owner+'.Asset=src/main/java/com/openggf/game/soniccd/level/'+owner+'.java']
+            r=self.p.run(args);self.assertEqual(expected,[h['member'] for h in r['hints']]);self.assertEqual('incomplete',r['status'])
+            self.assertTrue(all(h['ambiguous'] for h in r['hints']));self.assertTrue(r['incomplete_reasons'])
 
     def test_split_package_and_import_identifier_tokens_are_incomplete(self):
         for text in ['package q; import p.Kn own; class S { Known k; }',
