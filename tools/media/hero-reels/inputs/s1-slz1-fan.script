@@ -1,0 +1,7 @@
+# Source for s1-slz1-fan.txt (InputLogAuthorTool --script). Star Light Act 1, declared start
+# x 0x0A90 y 0x024C on the platform right of the always-on fan at x 0x0A08 (Obj5D, subtype 2,
+# x-flipped so it blows right). Settle, run left into the wind until he runs in place at
+# x 0x0A4E, then press Right: he skids and the fan carries him off to the right.
+40 -
+230 L
+80 R
