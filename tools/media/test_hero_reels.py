@@ -108,6 +108,16 @@ class Commands(unittest.TestCase):
         self.assertEqual('50', args[args.index('--rings') + 1])
         self.assertEqual('none', args[args.index('--sidekick') + 1])
 
+    def test_feature_setup_maps_donor_rewind_and_title_switches(self):
+        shot = dict(manifest()['shots'][1], sidekick='sonic,sonic',
+                    setup={'donor': 's2', 'rewind': '640:90', 'title_screen': True, 'interactive_pacing': False})
+        args = hero.capture_args('s1', shot, '/rom.gen', Path('/out'), root=Path('/repo'))
+        self.assertEqual('s2', args[args.index('--donor') + 1])
+        self.assertEqual('640:90', args[args.index('--rewind') + 1])
+        self.assertEqual('sonic,sonic', args[args.index('--sidekick') + 1])
+        self.assertIn('--title-screen', args)
+        self.assertNotIn('--interactive-pacing', args)
+
     def test_jvm_runs_display_free_in_isolated_user_dir(self):
         command = hero.java_command('cp', Path('/work/runtime'), 'Main', ['--x'])
         self.assertIn('-Dopenggf.headless.gl=surfaceless-egl', command)

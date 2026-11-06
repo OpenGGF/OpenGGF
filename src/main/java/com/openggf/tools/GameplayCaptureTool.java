@@ -88,6 +88,7 @@ public final class GameplayCaptureTool {
              BufferedWriter state = Files.newBufferedWriter(outDir.resolve("state.csv"), StandardCharsets.UTF_8)) {
             if (arguments.mod() != null) session.applyMod(arguments.mod());
             if (arguments.titleScreen()) session.startAtTitle();
+            if (arguments.rewindFrom() >= 0) session.enableLiveRewind();
             if (arguments.audio()) session.enableAudio();
             if (arguments.nativePcm()) {
                 // The stage taps the accurate (Nuked) chip's pins; this diagnostic capture selects that
@@ -121,6 +122,7 @@ public final class GameplayCaptureTool {
                     int movieIndex = scriptIndex + arguments.inputStart();
                     Bk2FrameInput input = movie != null && scriptIndex >= 0 && scriptIndex < scriptFrames
                             ? movie.getFrame(movieIndex) : null;
+                    if (arguments.rewindFrom() >= 0) session.holdLiveRewind(arguments.rewindHeldAt(frame));
                     if (presentationInput == null) session.step(input);
                     else session.stepPresentation(input, presentationInput);
                     if (arguments.audio()) {
@@ -246,7 +248,27 @@ public final class GameplayCaptureTool {
                             Path outDir, String emeralds, boolean titleCard, boolean completeSpecialStage,
                             Integer vIntRunCount, Integer cameraXSub, boolean starPost, Integer rings, boolean reverseGravity,
                             Path mod, boolean titleScreen, boolean audio, boolean interactivePacing,
-                            boolean nativePcm, boolean endOfLevel) {
+                            boolean nativePcm, boolean endOfLevel, int rewindFrom, int rewindFrames) {
+
+        /** Without a held-rewind window. */
+        public Arguments(String game, Path rom, String zone, int act, Integer startX, Integer startY, int width,
+                         String mainCharacter, String sidekickCharacter, String donor, Path donorRom, Path input,
+                         int settle, int inputStart, Integer frames, int captureFrom, int every, Set<Integer> stills,
+                         boolean stopOnDeath, int deathGrace, boolean video, int scale, int fps,
+                         Path outDir, String emeralds, boolean titleCard, boolean completeSpecialStage,
+                         Integer vIntRunCount, Integer cameraXSub, boolean starPost, Integer rings, boolean reverseGravity,
+                         Path mod, boolean titleScreen, boolean audio, boolean interactivePacing,
+                         boolean nativePcm, boolean endOfLevel) {
+            this(game, rom, zone, act, startX, startY, width, mainCharacter, sidekickCharacter, donor, donorRom, input,
+                    settle, inputStart, frames, captureFrom, every, stills, stopOnDeath, deathGrace, video, scale, fps,
+                    outDir, emeralds, titleCard, completeSpecialStage, vIntRunCount, cameraXSub, starPost, rings,
+                    reverseGravity, mod, titleScreen, audio, interactivePacing, nativePcm, endOfLevel, -1, 0);
+        }
+
+        /** True on frames inside the {@code --rewind} window, which holds the live rewind key. */
+        public boolean rewindHeldAt(int frame) {
+            return rewindFrom >= 0 && frame >= rewindFrom && frame < rewindFrom + rewindFrames;
+        }
 
         public Arguments(String game, Path rom, String zone, int act, Integer startX, Integer startY, int width,
                          String mainCharacter, String sidekickCharacter, String donor, Path donorRom, Path input,
@@ -298,6 +320,7 @@ public final class GameplayCaptureTool {
             boolean completeSpecialStage = false;
             Path mod = null;
             boolean titleScreen=false, audio=false, interactivePacing=false, nativePcm=false;
+            int rewindFrom = -1, rewindFrames = 0;
             for (int i = 0; i < argv.length; i++) {
                 String flag = argv[i];
                 switch (flag) {
@@ -348,6 +371,14 @@ public final class GameplayCaptureTool {
                     case "--camera-x-sub" -> cameraXSub = number(value(argv, ++i, flag), flag);
                     case "--rings" -> rings = number(value(argv, ++i, flag), flag);
                     case "--complete-special-stage" -> completeSpecialStage = true;
+                    case "--rewind" -> {
+                        String[] window = value(argv, ++i, flag).split(":", -1);
+                        if (window.length != 2) throw new IllegalArgumentException("--rewind takes FRAME:LENGTH");
+                        rewindFrom = number(window[0], flag);
+                        rewindFrames = number(window[1], flag);
+                        if (rewindFrom < 0 || rewindFrames <= 0)
+                            throw new IllegalArgumentException("--rewind needs a frame >= 0 and a positive length");
+                    }
                     default -> throw new IllegalArgumentException("Unknown argument: " + flag);
                 }
             }
@@ -372,11 +403,13 @@ public final class GameplayCaptureTool {
                 throw new IllegalArgumentException("--native-pcm requires --audio and a .bk2 --input whose SyncSettings select the output");
             if (interactivePacing && (completeSpecialStage || fps != 60))
                 throw new IllegalArgumentException("--interactive-pacing requires native 60 Hz presentation and no debug stage completion");
+            if (rewindFrom >= 0 && interactivePacing)
+                throw new IllegalArgumentException("--rewind holds the key between direct gameplay steps; it does not combine with --interactive-pacing");
             return new Arguments(game, rom, zone, act - 1, startX, startY, width, main, sidekick, donor, donorRom, input,
                     settle, inputStart, frames, captureFrom, every, Set.copyOf(stills), stopOnDeath, deathGrace,
                     video, scale, fps, outDir, emeralds, titleCard, completeSpecialStage,
                     vIntRunCount, cameraXSub, starPost, rings, reverseGravity, mod, titleScreen, audio, interactivePacing,
-                    nativePcm, endOfLevel);
+                    nativePcm, endOfLevel, rewindFrom, rewindFrames);
         }
 
         private static String value(String[] argv, int index, String flag) {

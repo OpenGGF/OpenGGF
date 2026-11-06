@@ -17,4 +17,9 @@ under the matching area heading; see the
   BK2 headlessly, and shots are joined with hard cuts. The build fails on a
   missing ROM, a short, black or frozen shot, or a death inside a shot. It
   writes a poster, a contact sheet and provenance (engine commit, manifest hash,
-  frame ranges) beside each reel.
+  frame ranges) beside each reel. The reels keep the 0.6 cut's feature beats as
+  well as its zones: live rewind, sidekick chains, Sonic 2 lending its art and
+  Super Sonic to Sonic 1, Knuckles in Sonic 2, two Tails, Knuckles as Sonic's
+  sidekick and the Data Select screen. `GameplayCaptureTool --rewind FRAME:LENGTH`
+  holds the live rewind key over a window and draws the rewind plate, and
+  `--emeralds` also takes Sonic 1 and Sonic 2's six emeralds.

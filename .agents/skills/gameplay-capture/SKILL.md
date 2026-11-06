@@ -83,7 +83,8 @@ Use a task directory outside the repository for captures the user should keep.
 | `--input <file>` | none | `Input Log.txt` or `.bk2`; neutral input after it ends |
 | `--settle <n>` | `0` | Neutral frames before the input log starts |
 | `--input-start <n>` | `0` | First movie frame to play (e.g. a level start late in a complete-run `.bk2`) |
-| `--emeralds <7 digits>` | unchanged | S3K `Collected_emeralds_array` setup (0 none, 1 Chaos, 2 grey Super, 3 Super), applied after boot |
+| `--emeralds <6-7 digits>` | unchanged | `Collected_emeralds_array` setup applied after boot: seven S3K values (0 none, 1 Chaos, 2 grey Super, 3 Super), or six for S1/S2 (1 collected) |
+| `--rewind FRAME:LENGTH` | off | Hold the live rewind key for `LENGTH` frames from capture frame `FRAME`: production held-key rewind with its VHS picture, reverse audio and transport plate. Play then resumes from the restored state with the movie's later input; not with `--interactive-pacing` |
 | `--vint-run-count <n>` | fresh | Declared inherited `V_int_run_count` (objects gating on its low bits, e.g. DDZ turret aim) |
 | `--end-of-level` | off | Direct-level only: seed declared inherited `End_of_level_flag` once after declared setup; does not prove boss or route completion |
 | `--rings <n>` | unchanged | Declared ring count the route carried in; a boss filmed from a positioned start otherwise begins on 0 rings, where the first touch is fatal |

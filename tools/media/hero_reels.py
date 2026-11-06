@@ -36,9 +36,12 @@ SOURCES = ('trace', 'capture')
 CAPTURE_FLAGS = {  # manifest key -> GameplayCaptureTool flag (values pass through verbatim)
     'x': '--x', 'y': '--y', 'rings': '--rings', 'emeralds': '--emeralds', 'settle': '--settle',
     'width': '--width', 'vint_run_count': '--vint-run-count',
+    'donor': '--donor',      # cross-game donation: the host borrows the donor's art and features
+    'rewind': '--rewind',    # 'FRAME:LENGTH' in capture frames: hold the live rewind key
 }
 CAPTURE_SWITCHES = {'star_post': '--star-post', 'title_card': '--title-card',
-                    'complete_special_stage': '--complete-special-stage'}
+                    'complete_special_stage': '--complete-special-stage',
+                    'title_screen': '--title-screen', 'interactive_pacing': '--interactive-pacing'}
 JVM_TIMEOUT_SECONDS = 1800
 
 

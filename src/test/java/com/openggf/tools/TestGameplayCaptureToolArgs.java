@@ -47,6 +47,31 @@ class TestGameplayCaptureToolArgs {
     }
 
     @Test
+    void rewindHoldsTheKeyOnlyInsideItsDeclaredWindow() {
+        String[] base = {"--zone", "ghz", "--act", "1", "--out-dir", "out"};
+        GameplayCaptureTool.Arguments bare = GameplayCaptureTool.Arguments.parse(base);
+        assertFalse(bare.rewindHeldAt(0));
+        var flags = new java.util.ArrayList<>(java.util.List.of(base));
+        flags.addAll(java.util.List.of("--rewind", "640:0x5A"));
+        GameplayCaptureTool.Arguments held = GameplayCaptureTool.Arguments.parse(flags.toArray(String[]::new));
+        assertEquals(640, held.rewindFrom());
+        assertEquals(90, held.rewindFrames());
+        assertFalse(held.rewindHeldAt(639));
+        assertTrue(held.rewindHeldAt(640));
+        assertTrue(held.rewindHeldAt(729));
+        assertFalse(held.rewindHeldAt(730));
+        for (String bad : new String[] {"640", "640:0", "-1:10", "a:b"}) {
+            var wrong = new java.util.ArrayList<>(java.util.List.of(base));
+            wrong.addAll(java.util.List.of("--rewind", bad));
+            assertThrows(IllegalArgumentException.class,
+                    () -> GameplayCaptureTool.Arguments.parse(wrong.toArray(String[]::new)), bad);
+        }
+        flags.add("--interactive-pacing");
+        assertThrows(IllegalArgumentException.class,
+                () -> GameplayCaptureTool.Arguments.parse(flags.toArray(String[]::new)));
+    }
+
+    @Test
     void ringsIsUnsetUntilAskedForAndThenCarriesTheDeclaredCount() {
         GameplayCaptureTool.Arguments bare = GameplayCaptureTool.Arguments.parse(new String[] {
                 "--zone", "ssz", "--act", "1", "--out-dir", "out"});

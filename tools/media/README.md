@@ -267,9 +267,13 @@ label and, where it differs from the source's own team, the characters:
   fixture's BK2; trace rows are only compared, never applied.
 - `"source": "capture"` boots `zone`/`act` directly with `GameplayCaptureTool`
   and drives it from a committed BK2 or input log (`input`, `input_start`).
-  `start` is the frame within the capture. `expect_mode` and the optional
-  `setup` keys (`x`, `y`, `rings`, `emeralds`, `star_post`, ...) map to the
-  tool's flags. Author any new inputs with the
+  `start` is the frame within the capture. `main` and `sidekick` name the team
+  (`sidekick` takes a comma-separated chain, such as `sonic,sonic,sonic`).
+  `expect_mode` and the optional `setup` keys (`x`, `y`, `rings`, `emeralds`,
+  `star_post`, `donor`, `rewind`, `title_screen`, `interactive_pacing`, ...)
+  map to the tool's flags. `rewind` is `"FRAME:LENGTH"` in capture frames and
+  holds the live rewind key; `donor` lends another game's art and features
+  (Sonic 1 only takes sidekicks with a donor). Author any new inputs with the
   [bk2-input-authoring](../../.agents/skills/bk2-input-authoring/SKILL.md) or
   Stageplay route planner workflows, never by hand.
 
