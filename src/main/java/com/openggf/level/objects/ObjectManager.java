@@ -517,8 +517,11 @@ public class ObjectManager {
         }
         playerBoundRewind.clear();
         nativeSpriteSubmissions.clear();
-        nativeSpriteExternalResolver = null;
-        nativeSpriteExternalSlotDispatch = null;
+        // The external resolver/dispatch is owner wiring, not SST state: keep it.
+        // Resets that leave the RingManager alive (trace-replay prelude, S3K
+        // title-only object system) never rebind, and an unbound pass leaves
+        // Obj_Attracted_Ring (sonic3k.asm:35750-35787) without its Draw_Sprite.
+        // A replacement RingManager rebinds itself on construction.
         clearActiveObjects();
         dynamicObjects.clear();
         objectCallbacks.clear();
@@ -651,8 +654,7 @@ public class ObjectManager {
             freeAllReservedChildSlots(entry.getKey());
         }
         nativeSpriteSubmissions.clear();
-        nativeSpriteExternalResolver = null;
-        nativeSpriteExternalSlotDispatch = null;
+        // External slot wiring survives a spawn-list resync, as in reset().
         clearActiveObjects();
         cachedActiveObjects.clear();
         nativeObjectIndex.clear();

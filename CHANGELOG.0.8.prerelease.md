@@ -10,6 +10,12 @@ under the matching area heading; see the
   so a donated Sonic 1 Sonic riding a Flying Battery wire cage or another tumble
   object vanished. He now keeps his own walk and run frames there, and a donor's
   own tumble frame base (Sonic 2 Tails') carries into its translated profile.
+- **Lightning-shield rings in Sonic 3&K replays and captures:** rings pulled in
+  by the lightning shield moved and counted correctly but were never drawn, so
+  they vanished from their places instead of flying to Sonic and sparkling.
+  An object-system reset (the trace-replay start, among others) dropped the
+  ring slots' link to the object pass. The link now survives resets. This
+  regressed in 0.7.
 
 ## Modding and tools
 
