@@ -40,7 +40,9 @@ Unreleased. The earlier development themes remain in
   control returns, so Crawl shield bounces use the original angles and Aquatic
   Ruin’s rising boss pillars begin colliding on the original frame. Crawl also
   keeps native touch active beyond the camera, so an off-screen CPU follower
-  receives the shipped game's hurt response.
+  receives the shipped game's hurt response. Pausing Crawls check approaching
+  players through the native timer edge, and an accepted enemy hit destroys
+  them with the normal rebound, including uncurled Super Sonic.
 
 - S3K bonus-stage entries and returns hold the destination players behind
   the title loop like any fresh level load: the slot is cleared first, the
