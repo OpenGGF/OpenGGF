@@ -152,10 +152,28 @@ class TestSonicCdAct2TimeWarpExit {
         replayNext(s);assertEquals(SonicCdGameModule.LevelProgramPhase.PAST_PENDING,s.h().module().levelProgramState().phase());
         assertEquals(List.of(SonicCdGameModule.ProgramSound.STOP_FM,SonicCdGameModule.ProgramSound.WARP_DIRECT_FM_D8,SonicCdGameModule.ProgramSound.STOP_FM),s.h().module().programSoundRequests());
         assertEquals(actor,s.frame().captureActor());assertEquals(shared,s.frame().captureShared());assertSame(oldValues,values(s));
-        var stop=assertThrows(SonicCdGameModule.UnsupportedAct2Loading.class,()->step(s.h(),neutral()));
-        assertEquals("R12B_LOAD",stop.boundary().name());assertTrue(s.frame().closed());
-        assertSame(world,s.h().mode().getWorldSession());assertEquals(generation,s.h().mode().getLevelManager().getCompletedProductionLoadGeneration());
-        assertSame(oldValues,values(s));assertSame(saved,saved(s));assertSame(source,s.frame().stageSource());
+        long retainedLong=s.frame().vIntClock().absoluteValue().orElseThrow();
+        step(s.h(),neutral());
+        var module=s.h().module();assertTrue(s.frame().closed());assertFalse(module.act2LoadingSelected());assertTrue(module.act2PastLoadingSelected());
+        assertSame(world,s.h().mode().getWorldSession());assertEquals(generation+1,s.h().mode().getLevelManager().getCompletedProductionLoadGeneration());
+        var next=module.requirePlayerFrame();assertNotSame(s.frame(),next);assertFalse(next.closed());assertNotSame(source,next.stageSource());
+        assertEquals(CdStageKey.parse("R12B"),next.stageSource().stage());assertEquals(1,next.environment().movement().gates().zoneAct());
+        assertEquals(0x80,next.environment().movement().gates().timeZone());assertEquals(retainedLong,next.vIntClock().absoluteValue().orElseThrow());
+        var loading=module.act2PastLoadingVisit();assertSame(saved,loading.saved());assertEquals(expectedWaits,loading.state().oldWhiteSteps());
+        assertEquals((paletteFlag&1)==0?SonicCdAct2PastLoadingVisit.Phase.FIRST_PLC:SonicCdAct2PastLoadingVisit.Phase.INITIAL_WHITE,loading.state().phase());
+        assertEquals(0,loading.state().initialWhiteSteps());assertEquals(0,loading.state().fromWhiteSteps());assertEquals(0,next.state().header().slotId());
+        assertFalse(loading.state().displayEnabled());assertTrue(loading.state().calls().contains(SonicCdAct2PastLoadingVisit.Call.CLEAR_PLCS));
+        assertFalse(loading.state().calls().contains(SonicCdAct2PastLoadingVisit.Call.PLAY_LEVEL_MUSIC));
+        for(int row=0;row<256&&loading.state().phase()!=SonicCdAct2PastLoadingVisit.Phase.BEGIN_LEVEL;row++)step(s.h(),neutral());
+        assertEquals(SonicCdAct2PastLoadingVisit.Phase.BEGIN_LEVEL,loading.state().phase());
+        assertEquals((paletteFlag&1)==0?0:22,loading.state().initialWhiteSteps());assertEquals(22,loading.state().fromWhiteSteps());
+        assertEquals(20,loading.completedSavedStores().size());assertEquals(0,next.environment().movement().gates().timeZone());
+        assertEquals(1,next.state().header().slotId());assertEquals(0,next.state().motion().routine(),"No ordinary Sonic Init during loading");
+        assertEquals(0,next.environment().globals().levelFrames());assertTrue(loading.state().displayEnabled());assertFalse(next.closed());
+        assertEquals(0,loading.state().section().queue().headSource());assertEquals(0,loading.state().section().remainingTilesWord());
+        var stop=assertThrows(SonicCdAct2PastLoadingVisit.UnsupportedLoading.class,()->step(s.h(),neutral()));
+        assertEquals(SonicCdAct2PastLoadingVisit.Boundary.ORDINARY_OBJECT_PASS,stop.boundary());assertTrue(next.closed());
+        assertSame(world,s.h().mode().getWorldSession());assertEquals(generation+1,s.h().mode().getLevelManager().getCompletedProductionLoadGeneration());
     }
 
     @Test void actualWarpRendererRestoresTheOldSelectionAndRejectsCaughtServiceReentryWithoutClosingTheFrame() throws Exception {
@@ -320,4 +338,205 @@ class TestSonicCdAct2TimeWarpExit {
         assertTrue(found,field);var ctor=value.getClass().getDeclaredConstructor(types);ctor.setAccessible(true);return (T)ctor.newInstance(args);
     }
     private static void set(Object owner,String name,Object value)throws Exception{var f=owner.getClass().getDeclaredField(name);f.setAccessible(true);f.set(owner,value);}
+    // BEGIN R12B LIVE WORLD PROOF APPEND — 2026-11-06.
+    // Actual prior World/354 WARP/FULL path. Only prepared229's openly constructed
+    // timer/flags differ from natural gameplay. No native owner, picture or decoder is mocked.
+
+    @Test void actualR12bFullAndCourseReplayOwnFirstSectionAndFromWhiteUntilTheOrdinaryBoundary() throws Exception {
+        var arrival=r12bArrive(prepared229(1));var budget=new R12bServiceBudget();
+        assertEquals(SonicCdAct2PastLoadingVisit.Phase.FIRST_PLC,arrival.visit().state().phase());
+        assertInstanceOf(SonicCdPastDisplay.Disabled.class,r12bSelected(arrival).projection());
+        r12bReplayNext(arrival,budget);
+        assertEquals(SonicCdAct2PastLoadingVisit.Phase.SECTION_PLC,arrival.visit().state().phase());
+        assertTrue(arrival.visit().state().section().queue().headSource()!=0
+                ||arrival.visit().state().section().remainingTilesWord()!=0,"A genuine queued section wait is required");
+        r12bAssertGeometry(arrival);r12bReplayNext(arrival,budget);
+        r12bDriveTo(arrival,budget,SonicCdAct2PastLoadingVisit.Phase.FROM_WHITE);
+        assertInstanceOf(SonicCdPastDisplay.Disabled.class,r12bSelected(arrival).projection());
+        assertSame(arrival.saved(),arrival.visit().saved());r12bReplayNext(arrival,budget);
+        assertEquals(1,arrival.visit().state().fromWhiteSteps());r12bReady(arrival);
+        r12bDriveTo(arrival,budget,SonicCdAct2PastLoadingVisit.Phase.BEGIN_LEVEL);r12bReady(arrival);
+        assertEquals(22,arrival.visit().state().fromWhiteSteps());assertFalse(arrival.frame().closed());
+        assertEquals(0,arrival.frame().state().motion().routine(),"Loading has not executed ordinary Sonic Init/body");
+        assertEquals(1,arrival.frame().state().header().slotId(),"Only genuine LoadPlayer is reached");
+        var beforeCore=arrival.visit().state();var beforeHost=field(arrival.host(),"image");
+        var beforeActor=arrival.frame().state();var beforeEnvironment=arrival.frame().environment();var beforeClock=arrival.frame().vIntClock();
+        var stop=assertThrows(SonicCdAct2PastLoadingVisit.UnsupportedLoading.class,
+                ()->arrival.old().h().module().serviceAct2PastLoading(0));
+        assertEquals(SonicCdAct2PastLoadingVisit.Boundary.ORDINARY_OBJECT_PASS,stop.boundary());
+        assertTrue(arrival.frame().closed(),"Existing Module failure closure retires this native stop");
+        assertSame(beforeCore,arrival.visit().state());assertSame(beforeHost,field(arrival.host(),"image"));
+        assertSame(beforeActor,field(arrival.frame(),"state"));assertSame(beforeEnvironment,field(arrival.frame(),"environment"));
+        assertSame(beforeClock,field(arrival.frame(),"vIntClock"));
+        assertTrue(budget.calls<=256,"All physical target services, including replay executions, are bounded");
+    }
+
+    @Test void actualR12bSelectedPixelsRepeatAcrossRewindAndCaughtReentryLeavesTheHealthyNativeCut() throws Exception {
+        assertInstanceOf(com.openggf.audio.NullAudioBackend.class,com.openggf.game.GameServices.audio().getBackend(),
+                "Existing fixture must establish no-device audio before real World work");
+        try(var egl=TestSonicCdPastResultsRoute.Egl.open()){
+            var arrival=r12bArrive(prepared229(1));var budget=new R12bServiceBudget();
+            r12bDriveTo(arrival,budget,SonicCdAct2PastLoadingVisit.Phase.BEGIN_LEVEL);
+            var ready=r12bReady(arrival);assertTrue(ready.scene().displayEnabled());r12bAssertGeometry(arrival);
+            var registry=arrival.old().h().mode().getRewindRegistry();var full=registry.capture();var course=registry.captureCourse();
+            var nativeBefore=r12bProof(arrival);var pixels=warpPixels(arrival.old());
+            r12bAssertPicture(pixels);r12bAssertProof(nativeBefore,arrival,"first real selected draw is observational");
+            assertArrayEquals(pixels,warpPixels(arrival.old()));
+            var scroll=arrival.old().h().module().getScrollHandlerProvider().getHandler(0);
+            assertSame(arrival.host().handler(),scroll);var scrollBinding=scroll.captureRewindState();
+            var graphics=com.openggf.game.GameServices.graphics();int[] caught={0};
+            graphics.registerCommand((x,y,width,height)->{
+                assertThrows(IllegalStateException.class,()->arrival.old().h().module().serviceAct2PastLoading(0));caught[0]++;
+                assertThrows(IllegalStateException.class,()->arrival.old().h().module().gameplayFrameController().drawOverlay());caught[0]++;
+                assertThrows(IllegalStateException.class,()->arrival.old().h().module().gameplayFrameController().close());caught[0]++;
+                assertThrows(IllegalStateException.class,()->arrival.old().h().module().gameplayFrameController().afterTick(null,false));caught[0]++;
+                assertThrows(IllegalStateException.class,registry::capture);caught[0]++;
+                assertThrows(IllegalStateException.class,()->scroll.restoreRewindState(scrollBinding));caught[0]++;
+                assertFalse(arrival.frame().closed(),"Rejected recursive entry cannot retire the healthy Frame");
+            });
+            assertArrayEquals(pixels,warpPixels(arrival.old()));assertEquals(6,caught[0],"Actual renderer FIFO must execute all rejection controls");
+            assertFalse(arrival.frame().closed());r12bAssertProof(nativeBefore,arrival,"caught FIFO reentry preserves all native values");
+            registry.restore(full);r12bAssertProof(nativeBefore,arrival,"full restore selected cut");
+            assertArrayEquals(pixels,warpPixels(arrival.old()));
+            registry.restoreCourse(course);r12bAssertProof(nativeBefore,arrival,"course restore selected cut");
+            assertArrayEquals(pixels,warpPixels(arrival.old()));
+            assertInstanceOf(com.openggf.audio.NullAudioBackend.class,com.openggf.game.GameServices.audio().getBackend());
+        }
+    }
+
+    @Test void actualR12bFullRejectsRetiredOldEpochAndUnscopedEqualPayloadBeforeAnyOwnerMutation() throws Exception {
+        var old=prepared229(1);var registry=old.h().mode().getRewindRegistry();
+        var oldFull=registry.capture();var oldCourse=registry.captureCourse();var oldNative=old.visit().capture();
+        var oldProgramme=old.h().module().levelProgramState();var oldScroll=presentation(old).captureAct2Scroll();
+        var arrival=r12bArrive(old);var before=r12bProof(arrival);
+        assertThrows(IllegalArgumentException.class,()->registry.restore(oldFull));r12bAssertProof(before,arrival,"old FULL epoch");
+        assertThrows(IllegalArgumentException.class,()->registry.restoreCourse(oldCourse));r12bAssertProof(before,arrival,"old course epoch");
+        assertThrows(IllegalStateException.class,()->old.visit().validateRestore(oldNative,oldProgramme));
+        r12bAssertProof(before,arrival,"retired old native owner");
+        assertThrows(IllegalArgumentException.class,()->arrival.host().handler().restoreRewindState(oldScroll));
+        r12bAssertProof(before,arrival,"old scroll token cannot adopt native fields");
+        var current=registry.capture();
+        var unscoped=new com.openggf.game.rewind.CompositeSnapshot(new LinkedHashMap<>(current.entries()));
+        assertThrows(IllegalArgumentException.class,()->registry.restore(unscoped));
+        assertThrows(IllegalArgumentException.class,()->registry.restoreCourse(unscoped));
+        r12bAssertProof(before,arrival,"equal public payload has no World/epoch authority");
+        assertFalse(arrival.frame().closed());assertTrue(old.frame().closed());
+        r12bReplayNext(arrival,new R12bServiceBudget());r12bAssertGeometry(arrival);
+    }
+
+    private record R12bArrival(Scene old,SonicCdAct2PastLoadingVisit visit,SonicCdAct2PastWorldHost host,
+                              CdPlayerFrameRuntime frame,CdTimeWarpSaveData.State saved,Object world,Object data,long generation){}
+    private static final class R12bServiceBudget {private int calls;}
+    private record R12bProof(Object visit,Object host,Object frame,Object source,Object world,Object data,Object level,long generation,
+                             Object saved,NativeCapture nativeCapture,long representedClock,int cameraX,int cameraY){}
+
+    private static R12bArrival r12bArrive(Scene old)throws Exception{
+        var h=old.h();var world=h.mode().getWorldSession();var data=world.getDataSource();
+        var saved=assertInstanceOf(CdTimeWarpSaveData.State.class,saved(old));
+        var oldSource=old.frame().stageSource();var oldLevel=h.mode().getLevelManager().getCurrentLevel();
+        long generation=h.mode().getLevelManager().getCompletedProductionLoadGeneration();
+        step(h,neutral());
+        for(int wait=0;h.module().levelProgramState().phase()==SonicCdGameModule.LevelProgramPhase.WHITE_FADE;wait++){
+            assertTrue(wait<22,"Old source fade may execute at most its genuine22 waits");step(h,neutral());
+        }
+        healthy(old,SonicCdGameModule.Act2LoadPhase.OLD_RETURNED);step(h,neutral());
+        assertEquals(SonicCdGameModule.LevelProgramPhase.WARP,h.module().levelProgramState().phase());
+        var kernel=new com.openggf.game.soniccd.scene.CdWarpScene(h.module().warpSceneAssets());var expected=kernel.initial(0);
+        for(int service=1;service<=354;service++){
+            expected=kernel.step(expected,0).state();step(h,neutral());
+            assertEquals(expected,h.module().warpSceneState().orElseThrow(),"Existing actual WARP service"+service);
+            assertSame(world,h.mode().getWorldSession());assertEquals(generation,h.mode().getLevelManager().getCompletedProductionLoadGeneration());
+            assertFalse(old.frame().closed());assertSame(saved,saved(old));
+        }
+        step(h,neutral());assertEquals(SonicCdGameModule.LevelProgramPhase.PAST_PENDING,h.module().levelProgramState().phase());
+        assertFalse(old.frame().closed());assertSame(oldLevel,h.mode().getLevelManager().getCurrentLevel());
+        step(h,neutral()); // The actual staged target dispatch, true FULL and synchronous begin; no target VSync is manufactured here.
+        assertTrue(h.module().act2PastLoadingSelected(),"Actual target dispatch must install the real R12B visit");
+        var visit=h.module().act2PastLoadingVisit();var host=h.module().act2PastWorldHost();var frame=h.module().requirePlayerFrame();
+        assertNotNull(visit);assertNotNull(host);assertNotSame(old.frame(),frame);assertNotSame(oldSource,frame.stageSource());
+        assertTrue(old.frame().closed());assertFalse(frame.closed());assertSame(world,h.mode().getWorldSession());assertSame(data,world.getDataSource());
+        assertEquals(generation+1,h.mode().getLevelManager().getCompletedProductionLoadGeneration());
+        assertNotSame(oldLevel,h.mode().getLevelManager().getCurrentLevel());assertSame(saved,visit.saved());
+        var terrain=assertInstanceOf(CdR12bTerrainAssets.class,field(visit,"terrain"));
+        var player=assertInstanceOf(CdR12bPlayerAssets.class,field(visit,"player"));
+        assertTrue(frame.stageSource().ownsAct2Past(terrain,player),"Actual new Frame must borrow the bound original R12B pair");
+        assertEquals(1,frame.environment().movement().gates().zoneAct());assertEquals(0x80,frame.environment().movement().gates().timeZone());
+        assertTrue(h.mode().getSpriteManager().getAllSprites().isEmpty(),"No ordinary Sonic/SAT object is invented during target loading");
+        assertEquals(SonicCdAct2PastLoadingVisit.Phase.FIRST_PLC,visit.state().phase(),
+                "The real old fade cleared bit0; target begin stops before its first mandatory selectorC");
+        return new R12bArrival(old,visit,host,frame,saved,world,data,generation+1);
+    }
+    private static void r12bStep(R12bArrival arrival,R12bServiceBudget budget){
+        assertTrue(budget.calls<256,"R12B loading exceeded256 physical services at "+arrival.visit().state().phase()
+                +", source="+arrival.visit().state().section().queue().headSource()+", remaining="+arrival.visit().state().section().remainingTilesWord());
+        budget.calls++;step(arrival.old().h(),neutral());
+        assertFalse(arrival.visit().failed());assertFalse(arrival.frame().closed());
+        assertSame(arrival.world(),arrival.old().h().mode().getWorldSession());
+        assertEquals(arrival.generation(),arrival.old().h().mode().getLevelManager().getCompletedProductionLoadGeneration());
+        assertSame(arrival.saved(),arrival.visit().saved());
+    }
+    private static void r12bDriveTo(R12bArrival arrival,R12bServiceBudget budget,SonicCdAct2PastLoadingVisit.Phase phase){
+        while(arrival.visit().state().phase()!=phase){
+            assertNotEquals(SonicCdAct2PastLoadingVisit.Phase.BEGIN_LEVEL,arrival.visit().state().phase(),
+                    "Requested loading cut was skipped; do not service ordinary selector8 to fit it");
+            r12bStep(arrival,budget);
+        }
+    }
+    private static void r12bReplayNext(R12bArrival arrival,R12bServiceBudget budget)throws Exception{
+        var registry=arrival.old().h().mode().getRewindRegistry();var full=registry.capture();var course=registry.captureCourse();
+        var before=r12bProof(arrival);r12bStep(arrival,budget);var after=r12bProof(arrival);
+        registry.restore(full);r12bAssertProof(before,arrival,"R12B full before");
+        r12bStep(arrival,budget);r12bAssertProof(after,arrival,"R12B full identical next service");
+        registry.restoreCourse(course);r12bAssertProof(before,arrival,"R12B course before");
+        r12bStep(arrival,budget);r12bAssertProof(after,arrival,"R12B course identical next service");
+    }
+    private static R12bProof r12bProof(R12bArrival arrival){
+        var h=arrival.old().h();assertSame(arrival.visit(),h.module().act2PastLoadingVisit());
+        assertSame(arrival.host(),h.module().act2PastWorldHost());assertSame(arrival.frame(),h.module().requirePlayerFrame());
+        assertSame(arrival.saved(),arrival.visit().saved());var nativeCapture=captureNative(h);
+        return new R12bProof(arrival.visit(),arrival.host(),arrival.frame(),arrival.frame().stageSource(),h.mode().getWorldSession(),
+                h.mode().getWorldSession().getDataSource(),h.mode().getLevelManager().getCurrentLevel(),
+                h.mode().getLevelManager().getCompletedProductionLoadGeneration(),arrival.visit().saved(),nativeCapture,
+                com.openggf.game.session.EngineTiming.vIntRunCounter().value(),h.mode().getCamera().getX(),h.mode().getCamera().getY());
+    }
+    private static SonicCdAct2PastDisplay.Selection r12bSelected(R12bArrival arrival){
+        return assertInstanceOf(SonicCdAct2PastWorldHost.Published.class,arrival.host().selected()).selection();
+    }
+    private static SonicCdPastDisplay.Ready r12bReady(R12bArrival arrival){
+        var selected=r12bSelected(arrival);
+        if(selected.projection() instanceof SonicCdPastDisplay.Blocked blocked)fail("Authentic R12B selected boundary: "+blocked.failure());
+        return assertInstanceOf(SonicCdPastDisplay.Ready.class,selected.projection(),"Actual enabled current pixels must be Ready; do not substitute static source art");
+    }
+    private static void r12bAssertGeometry(R12bArrival arrival)throws Exception{
+        var terrain=assertInstanceOf(CdR12bTerrainAssets.class,field(arrival.visit(),"terrain"));
+        assertTrue(arrival.host().geometryReady());assertSame(terrain.blocksDecode().bytes(),arrival.visit().state().blocksRam().orElseThrow());
+        assertSame(terrain.terrain().layout().ram(),arrival.visit().state().layoutRam().orElseThrow());
+        assertEquals(CdR12bProfile.Asset.LEVEL_COLLISION.nativeAddress(),arrival.host().collisionPointer().orElseThrow());
+        assertEquals(Arrays.asList(CdTimeWarpLoadData.NativeStore.values()).subList(0,20),arrival.visit().completedSavedStores());
+        assertSame(arrival.visit().state().section().residency(),arrival.host().video().current());
+        var fg=arrival.host().scroll().foregroundPlane().nameTable();boolean nonzero=false;
+        for(int at=0;at<fg.length();at+=2)nonzero|=fg.unsignedWord(at)!=0;
+        assertTrue(nonzero,"Actual InitLevelDraw must produce native foreground descriptors");
+    }
+    private static void r12bAssertPicture(byte[] rgba){
+        assertEquals(320*224*4,rgba.length);var rgb=new HashSet<Integer>();
+        for(int at=0;at<rgba.length;at+=4)rgb.add((rgba[at]&255)<<16|(rgba[at+1]&255)<<8|(rgba[at+2]&255));
+        assertTrue(rgb.size()>1,"Actual enabled R12B terrain must reject a stale or flat framebuffer");
+        assertFalse(rgb.size()==1&&rgb.contains(0xFF00FF),"The deliberate magenta clear cannot serve as selected output");
+    }
+    /** Uses the existing native comparator, including Root's explicit R12B Snapshot whitelist addition.
+     * The registry payload owns Core+Frame+one Host image; no test-side native canonicalization is added. */
+    private static void r12bAssertProof(R12bProof expected,R12bArrival arrival,String path)throws ReflectiveOperationException{
+        var actual=r12bProof(arrival);
+        assertSame(expected.visit(),actual.visit(),path+".visit");assertSame(expected.host(),actual.host(),path+".host");
+        assertSame(expected.frame(),actual.frame(),path+".frame");assertSame(expected.source(),actual.source(),path+".source");
+        assertSame(expected.world(),actual.world(),path+".World");assertSame(expected.data(),actual.data(),path+".data");
+        assertSame(expected.level(),actual.level(),path+".level");assertSame(expected.saved(),actual.saved(),path+".saved owner");
+        assertEquals(expected.generation(),actual.generation(),path+".FULL generation");
+        assertEquals(expected.representedClock(),actual.representedClock(),path+".represented VBlank");
+        assertEquals(expected.cameraX(),actual.cameraX(),path+".cameraX projection");assertEquals(expected.cameraY(),actual.cameraY(),path+".cameraY projection");
+        assertNativeCapture(expected.nativeCapture(),arrival.old().h());
+    }
+    // END R12B LIVE WORLD PROOF APPEND.
+
 }

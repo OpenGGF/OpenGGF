@@ -1,13 +1,14 @@
-# Sonic CD Palmtree Panic Act2 Past — prerequisite matrix
+# Sonic CD Palmtree Panic Act2 Past — partial coverage
 
-Status: **source/player/art/scroll/Frame prerequisites only; no live entry or playable
-route is qualified**. This follows the [level-test standard](../../../guide/contributing/level-test-standard.md)'s
+Status: **live FULL entry and loading through controller13935, with selected terrain
+and full/course replay qualified; ordinary objects and playable traversal remain open**. This follows the [level-test standard](../../../guide/contributing/level-test-standard.md)'s
 partial matrix format; loading/decoding is not act certification.
 
 Canonical stage is PPZ act2/Past, native file `R12B__.MMD` (`CdStagePayload.R12B`),
-original USA programme. The current live route still owns R12A, completes its WARP return at controller
-call 13885, then stops at R12B_LOAD on 13886 before actual target assembly. It has
-not entered this stage. USA-only aggregate
+original USA programme. The live controller route completes WARP at13885, performs
+one same-World FULL load at13886, and finishes target loading at13935. First13936
+stops before ordinary selector8 and the physical object pass. The old R12A Frame
+is retired; the original target pair and saved42 feed the actual new owner. USA-only aggregate
 admission is an explicit development boundary in `CdR12bTerrainAssets.fromPrograms`;
 JP/EU executable parity is unfinished, not inferred from shared source blobs.
 
@@ -28,9 +29,9 @@ source files provide research/hash oracles, never runtime replacement assets.
 | ORACLE EOF | Cursor-minus-one throws at real EOF, retaining only earlier complete tiles; no synthetic padding | `everyJavaCursorMinusOneIsAnActualEofRatherThanAZeroPaddedInput`, `nativeCursorMinusOneReachesFiniteEofWithOnlyEarlierCompleteTilesInTheProduct` | Qualified prerequisite |
 | LOAD ownership | Original retained image survives borrowed-program close; immutable descriptors/views/cache; no public arbitrary image/Identity ingress | `lazyAggregateAndEqualRangeViewsShareCachesAfterTheBorrowedProgramCloses`, `publicDescriptiveRecordsCannotConstructAnAuthenticatedAggregate`, corruption and copy-isolation controls | Qualified prerequisite |
 | Player data | Actual R12B mapping $230F60, 198 mapping/DPLC frames, 60 scripts, 69,472-byte bounded sheet, math and response bytes | `TestCdR12bPlayerAssets`, `TestCdR12bStagePlayerSource` | Qualified format; no target Body route |
-| Explicit Frame | Source act1/Past0, actual Init/DPLC component, saved helper20-store path and nine Frame ports, original capture ownership | `TestCdR12bPlayerFrameEntry`, 17 cases | Qualified ingress/component; not live FULL load |
+| Explicit Frame | Source act1/Past0, actual Init/DPLC component, saved helper20-store path and nine Frame ports, original capture ownership | `TestCdR12bPlayerFrameEntry`, 17 cases | Qualified component; actual FULL entry also qualified below |
 | Current/PLC facade | Eight sparse regions/1,614 tiles; 37-reader registry; queue, decoder, raw life/HUD and 1,152-byte shield upload preserve caller tail | R12B direct/current/section/HUD, 45 cases | Qualified component; no caller scheduling parity |
-| Camera/plane | Actual ROM CloudLineCounts (8 bytes), native 3/16 Y/eight accumulators; explicit PPZ2Past shared-plane binding | R12B scroll (14) and plane (7), plus existing R11A (43), R11B (28) and R12A (8) plane cases | Qualified component; no target camera route |
+| Camera/plane | Actual ROM CloudLineCounts (8 bytes), native 3/16 Y/eight accumulators; explicit PPZ2Past shared-plane binding | R12B scroll (14) and plane (7), plus existing R11A (43), R11B (28) and R12A (8) plane cases | Qualified component and loading publication; ordinary camera route pending |
 | Detached custody | Original USA pair retained while StockLaunch CUE is open; JP/EU capability explicitly absent, legacy constructors preserve omission | StockPreparation (36 cases), including the corrected exact 3/4/5/6 constructor inventory | Qualified data retention; no entry authority |
 | Terrain format | Existing geometry/collision projection and old-shape behavior; independent original data/hashes | R12Bdata/retail plus `TestCdStageTerrain` | Format only; no ground-contact route |
 
@@ -54,20 +55,55 @@ The original R12B player/scroll/reader and shared-plane cases passed in the earl
 selection. These are source-bound component receipts, not a single 355-case fleet,
 R12B gameplay, native-console execution or regional parity.
 
+## Live loading qualification — 6 November
+
+`TestSonicCdAct2ControllerRoute.actualUnlockedAct2RightRouteReturnsThroughTheLastMeasuredClosedCutWithFullAndCourseReplay`
+now continues the unchanged held-input suffix through the real target entry and
+all49 loading services after entry. It verifies one new load generation, genuine
+saved42, twenty native saved stores, original R12B Frame/source identity, actual
+scroll/plane/current publication, queue completion and22 FromWhite services.
+Every loading service has full and course restore-forward comparison of all
+Core/Frame/Host values. First13936 raises `ORDINARY_OBJECT_PASS` before selector8;
+ordinary Sonic Init, objects, SAT and loop tail have not been fabricated.
+
+Three new actual-World cases in `TestSonicCdAct2TimeWarpExit` qualify FIRST/SECTION/
+FROM_WHITE cuts, stale/foreign epoch rejection and genuine enabled terrain pixels
+across full/course restore. Six caught graphics-FIFO controls reject service,
+draw, close, afterTick, registry capture and scroll restore before mutation or
+terminal failure closure. The native ClearScreen644-byte sprite clear includes
+Core water-palette bytes0..3; its separate focused regression preserves124 tail
+bytes. No second palette/current/Frame/scroll owner or rewind key is added.
+
+`TestCdR12bObjectAssets` supplies fourteen passing cases for39 fixed views and19
+visual roots covering twelve initial kinds. Actual ObjectTileIDs is72 bytes and
+Swing root is20ECEC; legacy body DTO barriers remain explicit. Thirteen native
+ObjNull aliases clear only the ID byte. A malformed test header expectation was
+corrected from802E to independently hash-verified002E, without a production-data
+change. Metadata presence grants no body or art-service execution authority.
+
+Observed receipts remain separate:96 earlier component/placement cases passed;
+57 corrected Core/Host/profile/display cases passed in the70 selection whose two
+live-entry errors exposed the missing HOLD afterTick branch; thirteen fresh exit
+cases then passed. The final eighteen-case selection (one permanent natural,
+three live World/replay/EGL and fourteen metadata) passes with0F/0E/0S. Its exact
+source fingerprint is `aebf81776b8d8a256d89a3026dba0b156f90ad376ad42abbbdef7150c9e8aceb`.
+No single combined fleet, new screenshot, native/regional/audio or full-act parity
+is inferred. The older broad Swing smoke remains incomplete.
+
 ## Remaining act obligations
 
 | ID | Required next evidence | Current gap |
 | --- | --- | --- |
-| ENTRY | IPX/WARP/load dispatch, real saved pose, terrain/camera/control and post-entry player body | Explicit Frame/data custody exists; actual private FULL load, target World and source-ordered saved/scroll publication remain pending |
-| OBJECT | Actual stage mapping/placement/body bindings, contacts, children, despawn/re-entry | Metadata/placements alone do not run objects |
+| ENTRY | IPX/WARP/load dispatch, real saved pose, terrain/camera/control and post-entry player body | Actual private FULL/load/custody and saved/scroll publication qualify; ordinary primary Init/Main and selected Sonic remain pending |
+| OBJECT | Actual stage mapping/placement/body bindings, contacts, children, despawn/re-entry | Batched metadata and source-bound placement qualify; no target ordinary physical walk yet |
 | EVENT | Native stage gates, water/palette/background/terrain changes | Unimplemented target programme owners |
-| CAMERA | Correct stage scroll/parallax/culling and width-sensitive behavior | Pure source-specific scroll/plane components exist; their live target publication remains pending |
+| CAMERA | Correct stage scroll/parallax/culling and width-sensitive behavior | Live loading scroll/plane publication qualifies; ordinary camera/culling/width-sensitive traversal remains pending |
 | BOSS | Source inventory and route-specific applicability | Unassessed, not marked not-applicable |
 | LIFE | Real checkpoint/death/restart and native persistence/reset | No target lifecycle |
-| LOAD | Sparse current profile, actual section/PLC services, readiness, source replacement and next playable state | Sparse current/kernel/HUD facades now include direct writers; actual loading/ordinary service caller and World remain pending |
-| REWIND | Nondefault target before/active/after mechanics and in-timeline loads with full/course replay | No target timeline; R12Aexit replay is a separate stage |
-| PRESENT | Actual target mapping/current/plane/palette/scroll pixels and audio ownership | No target framebuffer, native comparison or audio proof |
-| ROUTE | Real target entry through mandatory mechanics/goal/results/next state | No target route |
+| LOAD | Sparse current profile, actual section/PLC services, readiness, source replacement and next playable state | Actual source-ordered loading/PLCs/current selection qualify; ordinary8/HUD/slow-PLC/object services remain pending |
+| REWIND | Nondefault target before/active/after mechanics and in-timeline loads with full/course replay | Target loading full/course and foreign-epoch controls qualify; ordinary mechanics/lifecycle timelines remain open |
+| PRESENT | Actual target mapping/current/plane/palette/scroll pixels and audio ownership | Actual selected terrain framebuffer/replay qualifies; ordinary Sonic, native comparison and audio proof remain open |
+| ROUTE | Real target entry through mandatory mechanics/goal/results/next state | Entry/loading only; ordinary route and completion remain open |
 | ORACLE | Actual native timing/reference comparisons across supported configurations | Source/media/decoder facts only |
 
 All viewport presets, supported donor/main/team combinations and their entry/

@@ -234,6 +234,15 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         return result;
     }
 
+    record Act2PastVideoInit(com.openggf.game.soniccd.resources.CdR12bCameraArtResidency.State currentPatterns,
+                             CdPlayerArtRuntime.State playerArt, ProgramVideoSelection selection) { }
+    Act2PastVideoInit initializeProgramVideo(com.openggf.game.soniccd.resources.CdR12bCameraArtResidency.State current,
+                                             CdPlayerArtRuntime.State player) {
+        requireProgramVideoInitializationCut(); Objects.requireNonNull(current); Objects.requireNonNull(player);
+        return new Act2PastVideoInit(com.openggf.game.soniccd.resources.CdR12bCameraArtResidency.clear(current),
+                clearProgramPlayerResident(player),programVideoSelection());
+    }
+
     private void requireProgramVideoInitializationCut() {
         if (!module.openingObjectsAdmission() || assets != null || frame != null || actor != null || openingObjects != null) {
             throw new IllegalStateException("Program video initialization requires the actual unbound opening-program load cut");
@@ -670,7 +679,13 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
     }
 
     void afterRestore() {
+        requirePastRenderIdle();
         try {
+            if (module.act2PastLoadingSelected()) {
+                module.validateAct2PastLoadingCut(); module.act2PastWorldHost().projectCamera(GameServices.camera());
+                GameServices.parallax().update(0,1,GameServices.camera(),GameServices.level().getFrameCounter());
+                heldPhase = null; return;
+            }
             if (module.act2LoadingSelected()) {
                 module.validateAct2LoadingCut();
                 projectAct2Camera(GameServices.camera());
@@ -814,6 +829,14 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         throw new IllegalStateException("CD uses the complete controlled-frame disposition");
     }
     @Override public GameplayFrameDisposition beforeFrame(CourseControl course, LogicalInputSnapshot input) {
+        if (module.act2PastLoadingSelected()) {
+            requirePastRenderIdle();
+            if (input != null && input.debugModeTogglePressed()) throw new UnsupportedOperationException("R12B loading has no debug movement");
+            if (input != null && !input.player2().equals(com.openggf.control.PlayerInputState.neutral()))
+                throw new UnsupportedOperationException("R12B loading requires neutral controller2");
+            int held = nativeHeldByte(input,SpriteManagerInternalAccess.inputSuppressed(GameServices.sprites()));
+            heldPhase = null; module.serviceAct2PastLoading(held); return GameplayFrameDisposition.HOLD;
+        }
         if (module.act2LoadingSelected()) {
             if (input != null && input.debugModeTogglePressed())
                 throw new UnsupportedOperationException("Act2 loading has no debug movement");
@@ -908,7 +931,13 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
 
     @Override public PlcLifecyclePhase heldVBlankPhase() { return heldPhase; }
     @Override public void afterTick(CourseControl course, boolean advanced) {
+        requirePastRenderIdle(); // Reentry rejection is observational, outside native failure closure.
         try {
+            if (module.act2PastLoadingSelected()) {
+                module.validateAct2PastLoadingCut();
+                if (advanced || heldPhase != null) throw new IllegalStateException("R12B load advanced ordinary gameplay");
+                return;
+            }
             if (module.act2LoadingSelected()) {
                 module.validateAct2LoadingCut();
                 if (advanced || heldPhase != null) throw new IllegalStateException("Act2 load advanced ordinary gameplay");
@@ -987,6 +1016,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
     }
 
     private void drawCompletedOverlay() {
+        if (module.act2PastLoadingSelected()) { module.act2PastWorldHost().draw(); return; }
         if (module.act2LoadingSelected()) {
             if (module.warpProgramSelected()) drawAct2WarpProgram(); else drawAct2SelectedDisplay();
             return;
@@ -1093,6 +1123,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
 
     /** Native service/capture/restore may not reenter from an old queued graphics command. */
     void requirePastRenderIdle() {
+        if (module.act2PastLoadingSelected()) module.act2PastWorldHost().requireRenderIdle();
         if (drawingPast || drawingAct2 || drawingWarp) throw new IllegalStateException("Past selected draw is active");
     }
 
@@ -1234,8 +1265,8 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         if (rom != null) throw new UnsupportedOperationException("CD scroll is source-bound, not cartridge-backed");
     }
     @Override public ZoneScrollHandler getHandler(int zoneIndex) {
-        if (zoneIndex != 0) throw new UnsupportedOperationException("Only R11A foreground is admitted");
-        return scroll;
+        if (zoneIndex != 0) throw new UnsupportedOperationException("Only Palmtree Panic is admitted");
+        return module.act2PastLoadingSelected() ? module.act2PastWorldHost().handler() : scroll;
     }
     @Override public ZoneConstants getZoneConstants() {
         return new ZoneConstants() {

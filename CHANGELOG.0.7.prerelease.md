@@ -272,10 +272,14 @@ Unreleased. The earlier development themes remain in
   offscreen at the checked route cuts. Authenticated Act2 Past terrain and all
   thirty-seven finite section-art readers now join an authenticated Act2 Past
   player source, explicit Frame ingress, native background scroll, sparse current
-  art and shared HUD services. The old Act2 programme now runs the existing WARP
-  scene with full/course rewind and selected rendering before its honest R12B
-  assembly boundary. Stock preparation retains the actual target pair before
-  closing the disc; destination gameplay loading remains pending.
+  art and shared HUD services. Stock preparation retains the actual target pair
+  before closing the disc. The old Act2 programme runs the existing WARP scene,
+  then performs the real same-World R12B FULL load. Source-ordered saved stores,
+  section PLCs, scroll/planes and white fade now complete with selected terrain,
+  full/course replay and real renderer checks. A batched metadata owner supplies
+  twelve initial object kinds without relabelling Present tables. The next honest
+  boundary remains before the ordinary R12B physical object pass; no destination
+  Sonic or full-act parity is claimed.
   Authenticated Act2 Spikes mapping and a named retained-source prefix factory
   reuse the existing common body and Std art owner; live Spikes dispatch remains
   separate from the qualified route.

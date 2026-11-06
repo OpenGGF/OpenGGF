@@ -110,9 +110,175 @@ public final class SonicCdGameModule implements GameModule {
     private com.openggf.game.soniccd.level.SonicCdPastLevel pastLevel;
     private long pastLoadGeneration = -1;
 
+    // Actual R12B FULL assembly. The transient carry only crosses the retired load epoch.
+    private final SonicCdAct2PastLevelInitProfile act2PastProfile = new SonicCdAct2PastLevelInitProfile(this);
+    private Act2PastCarry stagedAct2Past;
+    private LevelLoadContext stagedAct2PastContext;
+    private SonicCdAct2PastLoadingVisit act2PastLoading;
+    private SonicCdAct2PastWorldHost act2PastHost;
+    private com.openggf.game.soniccd.level.SonicCdAct2PastLevel act2PastLevel;
+    private long act2PastLoadGeneration = -1;
+    private record Act2PastCarry(CdGameDataSource.Act2PastAssets data,
+                                CdPlayerBody.Environment environment, CdPlayerFrameRuntime.VIntClock clock,
+                                CdLevelGlobals level, int sectionWord,
+                                SonicCdPlayerPresentation.ScrollCapture scroll,
+                                SonicCdAct2LoadingVisit.PastReturn retained, long generation,
+                                LevelProgramState program) { }
+    private record Act2PastShared(SonicCdAct2PastLoadingVisit.Snapshot loading,
+                                  ProgramServicesState services, OptionalInt goodFutureFlags) { }
+    boolean act2PastRegistrySelected() { return stagedAct2Past != null || act2PastLoading != null; }
+    boolean act2PastLoadingSelected() { return act2PastLoading != null; }
+    SonicCdAct2PastLoadingVisit act2PastLoadingVisit() { validateAct2PastLoadingCut(); return act2PastLoading; }
+    SonicCdAct2PastWorldHost act2PastWorldHost() {
+        return Objects.requireNonNull(act2PastHost, "No actual R12B World host");
+    }
+    void requireAct2PastLoadingVisit(SonicCdAct2PastLoadingVisit visit) {
+        var mode = SessionManager.getCurrentGameplayMode();
+        if (!coldProgramStartAdmission || visit == null || visit != act2PastLoading || act2PastHost == null
+                || playerFrame == null || playerFrame.closed() || playerActor != null || openingObjects != null
+                || pastLoading != null || act2Loading != null || mode == null || mode != playerMode
+                || mode.getWorldSession() != programWorld || programWorld.rootGameModule() != this
+                || programWorld.resolvedGameModule() != this || programWorld.getDataSource() != source
+                || !(mode.getLevelManager().getCurrentLevel() instanceof com.openggf.game.soniccd.level.SonicCdAct2PastLevel level)
+                || level != act2PastLevel
+                || !playerFrame.stageSource().ownsAct2Past(level.assets(), source.act2PastAssets().orElseThrow().player())
+                || mode.getLevelManager().getCompletedProductionLoadGeneration()
+                    != (stagedAct2Past == null ? act2PastLoadGeneration : stagedAct2Past.generation())
+                || !mode.getSpriteManager().getAllSprites().isEmpty()
+                || !mode.getSpriteManager().getRegisteredSidekicks().isEmpty())
+            throw new IllegalStateException("Actual R12B source/World/Frame/load lifetime changed");
+        if (mode.getCamera().getWidth() != 320 || mode.getCamera().getHeight() != 224)
+            throw SonicCd.unsupported("R12B requires the native viewport");
+    }
+    void validateAct2PastLoadingCut() {
+        playerPresentation.requirePastRenderIdle(); requireAct2PastLoadingVisit(act2PastLoading);
+        playerFrame.captureShared(); playerFrame.captureActor();
+    }
+    void serviceAct2PastLoading(int held) {
+        playerPresentation.requirePastRenderIdle(); // Reentry rejection precedes terminal failure closure.
+        try {
+            validateAct2PastLoadingCut(); act2PastLoading.service(held);
+            act2PastHost.projectCamera(GameServices.camera());
+        } catch (RuntimeException | Error failure) { closePlayerCycleAfterFailure(failure); throw failure; }
+    }
+    void validateAct2PastLoadRequest(LevelLoadContext context) {
+        var mode = SessionManager.getCurrentGameplayMode();
+        if (!coldProgramStartAdmission || stagedAct2Past == null || context == null || context != stagedAct2PastContext
+                || mode == null || programWorld == null || programWorld != mode.getWorldSession()
+                || programWorld.getDataSource() != source || programWorld.rootGameModule() != this
+                || programWorld.resolvedGameModule() != this || context.getLevelIndex() != 1
+                || context.getLoadMode() != LevelLoadMode.FULL
+                || context.getLoadCause() != LevelLoadCause.STAGE_RETURN_FULL_ASSEMBLY
+                || context.getAssemblyKind() != LevelAssemblyKind.FRESH_LEVEL_ASSEMBLY
+                || !context.isIncludePostLoadAssembly() || context.hasCheckpoint() || context.getRom() != null
+                || context.isShowTitleCard() || context.isTitleCardRequiredInHeadlessMode()
+                || context.isQueueFreshLevelRuntimeArt()
+                || source.act2PastAssets().orElseThrow() != stagedAct2Past.data())
+            throw SonicCd.unsupported("Actual R12B FULL load requires its privately staged completed WARP request");
+    }
+    private void loadActualAct2PastWorld() {
+        validateWarpProgrammeOwner(); act2Loading.requireReturnedProgrammeIdle();
+        var mode = playerMode; var old = act2Loading.observation(); var gates = playerFrame.environment().movement().gates();
+        var p = levelProgramState();
+        if (p.phase() != LevelProgramPhase.PAST_PENDING || gates.zoneAct() != 1 || gates.timeZone() != 0x80
+                || p.specialStage() != 0 || old.level().spawnMode() != 2 || old.level().levelRestart() != 0
+                || (old.level().plcLoadFlags() & 3) != 3 || old.ring().lives() == 0)
+            throw act2Boundary(Act2Boundary.ENTRY);
+        var actual = requireRuntimeSource().act2PastAssets().orElseThrow(
+                () -> SonicCd.unsupported("R12B was not authenticated and retained before media closure"));
+        var scroll = (SonicCdPlayerPresentation.ScrollCapture) playerPresentation.getHandler(0).captureRewindState();
+        stagedAct2Past = new Act2PastCarry(actual, playerFrame.environment(), playerFrame.vIntClock(), old.level(),
+                old.section().sectionWord(), scroll, act2Loading.pastReturnCarry(),
+                mode.getLevelManager().getCompletedProductionLoadGeneration(), p);
+        stagedAct2PastContext = SonicCdLevelInitProfile.staticStageContext();
+        stagedAct2PastContext.setLevelIndex(1); stagedAct2PastContext.setZone(0); stagedAct2PastContext.setAct(1);
+        stagedAct2PastContext.setLoadCause(LevelLoadCause.STAGE_RETURN_FULL_ASSEMBLY);
+        try {
+            mode.getLevelManager().loadLevel(1, LevelLoadMode.FULL, stagedAct2PastContext);
+            if (mode.getLevelManager().getCompletedProductionLoadGeneration() != act2PastLoadGeneration
+                    || mode.getLevelManager().getCurrentLevel() != act2PastLevel)
+                throw new IllegalStateException("Actual R12B FULL load did not commit its generation");
+        } catch (IOException failure) { throw new UncheckedIOException("Cannot load actual same-World R12B", failure); }
+        finally { stagedAct2Past = null; stagedAct2PastContext = null; }
+    }
+    void installAct2PastLoadingVisit() {
+        validateAct2PastLoadRequest(stagedAct2PastContext);
+        if (playerFrame != null || playerActor != null || openingObjects != null || pastLoading != null
+                || act2Loading != null || act2PastLoading != null)
+            throw new IllegalStateException("Retire old programme before actual R12B assembly");
+        var c = stagedAct2Past; playerMode = SessionManager.getCurrentGameplayMode();
+        if (!(playerMode.getLevelManager().getCurrentLevel() instanceof com.openggf.game.soniccd.level.SonicCdAct2PastLevel level)
+                || level.assets() != c.data().terrain()) throw act2Boundary(Act2Boundary.ENTRY);
+        try {
+            var loaded = SonicCdProgramLoadServices.loadLevelR1Pcm(programServices.loads(), requireRuntimeSource().timeWarpPrograms().orElseThrow());
+            programServices = withProgramCall(ProgramStartCall.LOAD_LEVEL_PCM, loaded, programServices.initialization());
+        } catch (SonicCdProgramLoadServices.Unsupported stopped) {
+            programServices = new ProgramServicesState(stopped.completedPrefix(), programServices.initialization(),
+                    programServices.environment(), programServices.completedCalls()); throw stopped;
+        }
+        if (CdProgramInitialization.selectStartBranch(programServices.initialization()) != CdProgramInitialization.Branch.GAME_INIT)
+            throw act2Boundary(Act2Boundary.ENTRY);
+        var emptyArt = new CdPlayerArtRuntime.State(new byte[CdPlayerArtRuntime.CPU_BUFFER_BYTES],
+                new byte[CdPlayerArtRuntime.RESIDENT_WINDOW_BYTES], 0, false);
+        var video = playerPresentation.initializeProgramVideo(com.openggf.game.soniccd.resources.CdR12bCameraArtResidency.unknown(), emptyArt);
+        programServices = withProgramCall(ProgramStartCall.INIT_VDP, programServices.loads(), programServices.initialization());
+        programServices = withProgramCall(ProgramStartCall.INIT_CONTROLLERS, programServices.loads(),
+                CdProgramInitialization.initializeControllers(programServices.initialization()));
+        // RunMMD clears represented player/control/camera storage in [FF2000,FFFB00).
+        // MAINVARS, including the independent LONG V-int counter, retain their actual values.
+        var old = c.environment(); var g = old.globals(); var m = old.movement(); var gate = m.gates(); var mg = m.globals();
+        var environment = new CdPlayerBody.Environment(new com.openggf.game.soniccd.player.CdPlayerMovement.Environment(
+                new com.openggf.game.soniccd.player.CdPlayerMovement.Physics(0,0,0),
+                new com.openggf.game.soniccd.player.CdPlayerMovement.Bounds(0,0,0,0),
+                new com.openggf.game.soniccd.player.CdPlayerMovement.Gates(gate.zoneAct(),gate.timeZone(),gate.miniSonic(),0,0,gate.speedShoes(),0),
+                new com.openggf.game.soniccd.player.CdPlayerMovement.Globals(0,0,0,0,0,0,
+                        mg.debugAngle(),mg.debugAngleShift(),mg.debugQuadrant(),mg.debugFloorDistance())),
+                new CdPlayerBody.Controls(0,0,0,0,0),
+                new CdPlayerBody.Globals(g.levelFrames(),0,g.timeAttackMode(),g.debugMode(),g.debugCheat(),0,g.invincible(),g.bossMusic()),old.dynamicSlots());
+        var state = new CdPlayerBody.State(new com.openggf.game.soniccd.player.CdPlayerMotionState(
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0),
+                new CdPlayerBody.AnimationCursor(0,0,0),new CdPlayerBody.Header(0,0,0,0,0),new CdPlayerBody.Timers(0,0,0,0),
+                new CdPlayerBody.History(CdAssetBytes.copyOf(new byte[256]),0),0,new CdPlayerBody.ObjectLinks(0,0),0);
+        playerFrame = CdPlayerFrameRuntime.fromAct2PastEntry(c.data().terrain(),c.data().player(),state,environment,video.playerArt(),c.clock());
+        var fg = new com.openggf.game.soniccd.scroll.CdR11aForegroundScroll.State(0,0,0,0,0,0,0,0,0,0,0);
+        // WARP cleared [8000,FC00); RunMMD repeats [2000,FB00). Deformation is consequently known zero.
+        var bg = new CdR11aBackgroundScroll.State(0,0,0,0,0,0,zeroPast(8),0,0,0,
+                c.scroll().background().cloudRam(),zeroPast(512),zeroPast(1024),0);
+        var copies = c.scroll().copies();
+        var hostScroll = new SonicCdAct2PastWorldHost.Scroll(fg,bg,video.selection().backgroundPlane(),video.selection().backgroundPlane(),
+                new SonicCdAct2PastWorldHost.Copies(copies.fgX16_16(),copies.fgY16_16(),copies.bg(),copies.fgFlags(),copies.bgFlags()),0);
+        var selected = SonicCdAct2PastDisplay.project(new SonicCdAct2PastDisplay.Inputs(java.util.Optional.empty(),
+                video.selection().displayedSat(),video.selection().displayedPalette(),zeroPast(1024),0,false,
+                video.selection().backgroundPlane(),video.selection().backgroundPlane(),video.currentPatterns(),video.playerArt()));
+        var hostVideo = new SonicCdAct2PastWorldHost.Video(zeroPast(640),java.util.Optional.empty(),video.playerArt(),video.currentPatterns(),
+                new SonicCdAct2PastWorldHost.Published(selected));
+        act2PastLevel = level; act2PastLoadGeneration = Math.incrementExact(c.generation()); levelProgram = c.program();
+        act2PastHost = new SonicCdAct2PastWorldHost(this,c.data().terrain(),c.data().player(),playerFrame,
+                new SonicCdAct2PastWorldHost.Initial(c.retained().globals(),hostScroll,hostVideo));
+        var art = com.openggf.game.soniccd.resources.CdR12bSectionArt.fromAssets(c.data().terrain());
+        var section = art.fromValues(zeroPast(512),video.currentPatterns(),c.sectionWord(),
+                com.openggf.game.soniccd.resources.CdR11aPlcBuffer.cleared(),java.util.Optional.empty(),
+                new com.openggf.game.soniccd.resources.CdR11aSectionArt.SavedDecoder(com.openggf.game.soniccd.resources.CdR11aSectionArt.Writer.CLEARED,0,0,0,0,0),0,0,0,0);
+        var p = c.program(); var programme = new SonicCdAct2PastLoadingVisit.Program(p.demoMode(),p.timeStones(),
+                c.retained().goodFuture(),p.usePlayer2(),p.specialStage(),p.palFadeFlags(),programServices.initialization().palClearFlagBit0(),
+                p.gameMode(),p.levelStarted(),0);
+        // WARP clears [FB00,FC00) CPU normal/target, then RunMMD clears [FA80,FB00) water.
+        // Selected WARP white pixels supply none of these CPU variable bytes.
+        act2PastLoading = new SonicCdAct2PastLoadingVisit(act2PastHost,c.data().terrain(),c.data().player(),playerFrame,art,
+                new SonicCdAct2PastLoadingVisit.Entry(c.retained().saved(),section,programme,c.level(),zeroPast(128),zeroPast(128),
+                        zeroPast(128),video.selection().displayedPalette(),zeroPast(31*64),p.whiteFadeSteps(),false));
+        act2PastLoading.begin(); act2PastHost.projectCamera(GameServices.camera());
+    }
+    private static CdAssetBytes zeroPast(int count) { return CdAssetBytes.copyOf(new byte[count]); }
+    void registerAct2PastRestoreProjection() {
+        validateAct2PastLoadingCut(); var registry = Objects.requireNonNull(playerMode.getRewindRegistry());
+        registry.deregisterPostRestoreCallback(RESTORE_CALLBACK_KEY);
+        registry.registerPostRestoreCallback(RESTORE_CALLBACK_KEY,playerPresentation::afterRestore);
+    }
+
     private final SonicCdAct2ZoneRegistry act2Zones = new SonicCdAct2ZoneRegistry(this);
     CdGameDataSource actualAct2RegistrySource() {
-        if (stagedAct2 == null && act2Loading == null) throw new IllegalStateException("No actual Act2 programme selection");
+        if (stagedAct2 == null && act2Loading == null && stagedAct2Past == null && act2PastLoading == null) throw new IllegalStateException("No actual Act2 programme selection");
         return requireRuntimeSource();
     }
     private final SonicCdAct2LevelInitProfile act2Profile = new SonicCdAct2LevelInitProfile(this);
@@ -292,7 +458,7 @@ public final class SonicCdGameModule implements GameModule {
                 if (playerFrame.environment().movement().gates().zoneAct() != 1
                         || (playerFrame.environment().movement().gates().timeZone() & 0x7F) != 0)
                     throw act2Boundary(Act2Boundary.ENTRY);
-                throw act2Boundary(Act2Boundary.R12B_LOAD);
+                loadActualAct2PastWorld(); return;
             }
             act2Loading.service(held); playerPresentation.projectAct2Loading();
         }
@@ -734,6 +900,11 @@ public final class SonicCdGameModule implements GameModule {
         }
     }
     @Override public Level loadLevelOverride(int levelIndex) {
+        if (stagedAct2Past != null) {
+            validateAct2PastLoadRequest(stagedAct2PastContext);
+            if (levelIndex != 1) throw SonicCd.unsupported("R12B level index");
+            return new com.openggf.game.soniccd.level.SonicCdAct2PastLevel(stagedAct2Past.data().terrain());
+        }
         if (stagedAct2 != null) {
             validateAct2LoadRequest(stagedAct2Context);
             if (levelIndex != 1) throw SonicCd.unsupported("Act2 level index");
@@ -1073,7 +1244,7 @@ public final class SonicCdGameModule implements GameModule {
     private CdWarpScene.State warpState;
     private List<ProgramSound> programSounds = List.of();
 
-    enum LevelProgramPhase { LEVEL, WHITE_FADE, RETURNED, WARP, PAST_PENDING, PAST_LOADING, OLD_EXIT_PRELUDE, OLD_BLACK_FADE, OLD_CLEAR_WAIT, OLD_RETURNED, OLD_IPX_RETURNED, ACT2_LOADING }
+    enum LevelProgramPhase { LEVEL, WHITE_FADE, RETURNED, WARP, PAST_PENDING, PAST_LOADING, OLD_EXIT_PRELUDE, OLD_BLACK_FADE, OLD_CLEAR_WAIT, OLD_RETURNED, OLD_IPX_RETURNED, ACT2_LOADING, ACT2_PAST_LOADING }
     /** Completed source requests only: no sound-driver execution or old Frame ledger mutation. */
     enum ProgramSound {
         STOP_FM(0xE0), WARP_DIRECT_FM_D8(0xD8);
@@ -1131,6 +1302,12 @@ public final class SonicCdGameModule implements GameModule {
 
     /** Pure value observation; no entry, fade, capture or native service is performed. */
     LevelProgramState levelProgramState() {
+        if (act2PastLoading != null) {
+            var p = act2PastLoading.state().program();
+            return new LevelProgramState(p.demoModeWord(),p.timeStonesByte(),p.specialStageByte(),p.usePlayer2Byte(),
+                    p.palFadeFlagsByte(),p.gameModeByte(),p.levelStartedByte(),act2PastLoading.state().initialWhiteSteps(),
+                    LevelProgramPhase.ACT2_PAST_LOADING,levelProgram.goodFutureFlags());
+        }
         return Objects.requireNonNull(levelProgram, "No admitted native opening programme");
     }
 
@@ -1550,6 +1727,10 @@ public final class SonicCdGameModule implements GameModule {
     private final NativeRewindRestoreGuard<Object> sharedOpeningAdapter = new NativeRewindRestoreGuard<>() {
         @Override public String key() { return OPENING_SHARED_REWIND_KEY; }
         @Override public Object capture() {
+            if (act2PastLoading != null) {
+                validateAct2PastLoadingCut(); validateProgramServicesState(programServices);
+                return new Act2PastShared(act2PastLoading.capture(),programServices,levelProgram.goodFutureFlags());
+            }
             if (act2Loading != null) {
                 validateAct2LoadingCut(); validateProgramServicesState(programServices);
                 return new Act2OpeningShared(act2Loading.capture(), programServices, levelProgramState(), warpState, programSounds);
@@ -1566,6 +1747,12 @@ public final class SonicCdGameModule implements GameModule {
                     playerPresentation.captureScrollPublication(), levelProgramState(), warpState, programSounds, programServices);
         }
         @Override public void validateRestore(Object value) {
+            if (act2PastLoading != null) {
+                if (!(value instanceof Act2PastShared past)) throw new IllegalArgumentException("Foreign programme epoch in R12B");
+                validateAct2PastLoadingCut(); act2PastLoading.validateRestore(past.loading()); validateProgramServicesState(past.services());
+                if (!past.goodFutureFlags().equals(levelProgram.goodFutureFlags())) throw new IllegalArgumentException("R12B preserved programme knowledge changed");
+                return;
+            }
             if (act2Loading != null) {
                 if (!(value instanceof Act2OpeningShared act2)) throw new IllegalArgumentException("Foreign programme epoch in Act2");
                 act2Loading.validateRestore(act2.loading(), act2.program()); validateProgramServicesState(act2.services());
@@ -1594,6 +1781,11 @@ public final class SonicCdGameModule implements GameModule {
         }
         @Override public void restore(Object value) {
             validateRestore(value); // Keep direct adapter restore guarded as well as composite restore.
+            if (value instanceof Act2PastShared past) {
+                try { act2PastLoading.restore(past.loading()); programServices = past.services(); }
+                catch (RuntimeException | Error failure) { closePlayerCycleAfterFailure(failure); throw failure; }
+                return;
+            }
             if (value instanceof Act2OpeningShared act2) {
                 try {
                     levelProgram = act2.program(); act2Loading.restore(act2.loading(), act2.program()); programServices = act2.services();
@@ -1698,10 +1890,11 @@ public final class SonicCdGameModule implements GameModule {
         if (playerAdmission && playerFrame != null && !playerFrame.closed()) {
             throw new IllegalStateException("Retire the admitted CD player before binding a fresh level");
         }
-        if (stagedPast == null && stagedAct2 == null && coldProgramStartAdmission) prepareColdProgramStart(candidate);
+        if (stagedPast == null && stagedAct2 == null && stagedAct2Past == null && coldProgramStartAdmission) prepareColdProgramStart(candidate);
         source = candidate;
         zones.bind(candidate);
-        if (stagedAct2 != null) validateAct2LoadRequest(stagedAct2Context);
+        if (stagedAct2Past != null) validateAct2PastLoadRequest(stagedAct2PastContext);
+        else if (stagedAct2 != null) validateAct2LoadRequest(stagedAct2Context);
         else if (stagedPast != null) validatePastLoadRequest(stagedPastContext);
         else if (playerAdmission) playerPresentation.bind(candidate.assets(), backgroundLoadBuffers());
         else presentation.bind(candidate.assets());
@@ -2321,6 +2514,7 @@ public final class SonicCdGameModule implements GameModule {
     }
 
     CdPlayerFrameRuntime requirePlayerFrame() {
+        if (act2PastLoading != null) { validateAct2PastLoadingCut(); return playerFrame; }
         if (act2Loading != null) { validateAct2LoadingCut(); return playerFrame; }
         if (pastLoading != null) { validatePastLoadingCut(); return playerFrame; }
         requireTerrainPlayerReady(); return playerFrame;
@@ -2346,6 +2540,7 @@ public final class SonicCdGameModule implements GameModule {
     /** Also called by the player controller's close(): session teardown does not run the profile. */
     void closeTerrainPlayer() {
         if (!playerAdmission) return;
+        playerPresentation.requirePastRenderIdle(); // Reject a caught recursive close before retiring any owner.
         var oldFrame = playerFrame;
         var oldObjects = openingObjects;
         var oldActor = playerActor;
@@ -2356,7 +2551,8 @@ public final class SonicCdGameModule implements GameModule {
             finally { if (oldFrame != null) oldFrame.close(); }
         } finally {
             try {
-                playerPresentation.unbind();
+                try { if (act2PastHost != null) act2PastHost.close(); }
+                finally { playerPresentation.unbind(); }
             } finally {
                 try {
                     try {
@@ -2373,6 +2569,7 @@ public final class SonicCdGameModule implements GameModule {
                     openingObjects = null;
                     pastLoading = null; pastLevel = null; pastLoadGeneration = -1;
                     act2Loading = null; act2Level = null; act2LoadGeneration = -1;
+                    act2PastLoading = null; act2PastHost = null; act2PastLevel = null; act2PastLoadGeneration = -1;
                     levelProgram = null;
                     warpState = null; warpScene = null; warpAssets = null; programSounds = List.of();
                     openingPlc = null;
@@ -2406,6 +2603,12 @@ public final class SonicCdGameModule implements GameModule {
 
     @Override public Level transformDecodedLevel(Level decoded) {
         var candidate = requireRuntimeSource();
+        if (stagedAct2Past != null) {
+            validateAct2PastLoadRequest(stagedAct2PastContext);
+            if (!(decoded instanceof com.openggf.game.soniccd.level.SonicCdAct2PastLevel past)
+                    || past.assets() != stagedAct2Past.data().terrain()) throw new IllegalArgumentException("Foreign R12B prepared terrain");
+            return past;
+        }
         if (stagedAct2 != null) {
             validateAct2LoadRequest(stagedAct2Context);
             if (!(decoded instanceof com.openggf.game.soniccd.level.SonicCdAct2Level act2)
@@ -2460,11 +2663,11 @@ public final class SonicCdGameModule implements GameModule {
         // Loading has no independently ticking host HUD. Native ring/time values live
         // once in PastLoadingVisit and its existing module capture. The generic level
         // adapter explicitly supports an absent HUD partition; never invent a timer.
-        if (pastLoading != null || act2Loading != null) return null;
+        if (pastLoading != null || act2Loading != null || act2PastLoading != null) return null;
         return playerAdmission ? new SonicCdDevelopmentPlayerState() : new SonicCdStaticState.Level();
     }
     @Override public ZoneRegistry getZoneRegistry() {
-        return stagedAct2 != null || act2Loading != null ? act2Zones : zones;
+        return stagedAct2 != null || act2Loading != null || stagedAct2Past != null || act2PastLoading != null ? act2Zones : zones;
     }
     @Override public ScrollHandlerProvider getScrollHandlerProvider() { return playerAdmission ? playerPresentation : presentation; }
     @Override public ZoneFeatureProvider getZoneFeatureProvider() { return null; }
@@ -2473,7 +2676,7 @@ public final class SonicCdGameModule implements GameModule {
     @Override public PhysicsProvider getPhysicsProvider() { return rules; }
     @Override public GameAudioProfile getAudioProfile() { return audio; }
     @Override public LevelInitProfile getLevelInitProfile() {
-        return stagedAct2 != null || act2Loading != null ? act2Profile : stagedPast != null || pastLoading != null ? pastProfile : playerAdmission ? playerProfile : profile;
+        return stagedAct2Past != null || act2PastLoading != null ? act2PastProfile : stagedAct2 != null || act2Loading != null ? act2Profile : stagedPast != null || pastLoading != null ? pastProfile : playerAdmission ? playerProfile : profile;
     }
     @Override public GameplayFrameController gameplayFrameController() { return playerAdmission ? playerPresentation : presentation; }
     @Override public PlayableCharacterRegistry getPlayableCharacterRegistry() { return characters; }

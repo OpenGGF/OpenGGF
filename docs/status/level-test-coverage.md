@@ -2426,3 +2426,15 @@ with 165 fresh positives after the explicit constructor-census repair. Live targ
 entry, mechanics, lifecycle, route and production configuration breadth remain
 open. Broader Swing smoke is still incomplete; this bounded qualification does
 not replace its unresolved skip/guard obligations.
+
+### 6 November — actual R12B loading and selected terrain
+
+The [Act2 Past partial matrix](../architecture/validation/levels/scd-palmtree-panic-act2-past.md)
+now records same-World FULL13886, target loading through13935 and first13936
+ORDINARY_OBJECT_PASS before ordinary selector8. Every real loading service has
+full/course restore-forward comparison; actual terrain pixels and six caught
+renderer-FIFO reentry controls pass. The final18 checks also qualify39 metadata
+views/19 visual roots for twelve initial kinds. Earlier component and13 exit
+receipts remain separate; no combined fleet/full-act/native/regional/audio pass
+or new visible Sonic is claimed. The next obligation is the first genuine
+unpaused physical walk, using the authentic72-byte table and native mapping roots.

@@ -40,6 +40,7 @@ public final class CdR12bTerrainAssets {
     private CdObjectPlacements placements;
     private CdR12bSectionSources sectionSources;
     private CdR12bDirectArtSources directArtSources;
+    private CdR12bObjectAssets objects;
 
     private CdR12bTerrainAssets(Identity identity,CdR12bProfile profile,CdMmdImage image,CdNemesisAsset.Decoded blocks,
                                 CdNemesisAsset.Decoded tiles,CdStageTerrain terrain,CdR12bLoadPlan plan) {
@@ -89,6 +90,15 @@ public final class CdR12bTerrainAssets {
         return directArtSources;
     }
     CdAssetBytes directArtView(CdR12bDirectArtSources.View source) {
+        return Objects.requireNonNull(source).range().read(image);
+    }
+    /** Lazy original object metadata only; no body, art/current bank or destination admission. */
+    public synchronized CdR12bObjectAssets objects() {
+        if(objects==null)objects=CdR12bObjectAssets.bind(this);
+        return objects;
+    }
+    /** Only fixed enum-owned original ranges; no arbitrary image/offset ingress. */
+    CdAssetBytes objectView(CdR12bObjectAssets.View source) {
         return Objects.requireNonNull(source).range().read(image);
     }
     public Identity identity() { return identity; }

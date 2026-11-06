@@ -978,3 +978,14 @@ owner. Independent static review found no concreteP1/P2. R12B data/player,
 Frame/current/HUD/scroll prerequisites and actual pre-CUE-close custody now
 qualify separately in the [Past matrix](scd-palmtree-panic-act2-past.md).
 The previous13530boundary above is historical and superseded by this receipt.
+
+### 6 November — WARP destination FULL and loading now qualified
+
+The previous13886R12B_LOAD stop is superseded: the unchanged controller now performs
+actual R12B FULL13886 and returns through target loading13935, with one target
+generation and retired old Frame. The source-ordered loading and real selected
+terrain/replay obligations are recorded in the [Act2 Past matrix](scd-palmtree-panic-act2-past.md).
+First13936 stops before ordinary selector8/objects. All previous old-stage route
+facts remain; no new R12A screenshot or native/audio/regional parity is inferred.
+The final18-case selection passes0F/0E/0S after the exact restore-act and metadata
+fixture repairs; broad smoke remains separately incomplete.

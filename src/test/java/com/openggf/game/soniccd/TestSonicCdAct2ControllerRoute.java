@@ -930,14 +930,42 @@ class TestSonicCdAct2ControllerRoute {
         registry.restoreCourse(ipxWarpEndCourse);assertNativeCapture(warpBeforeBlank,h);step(h,controller(13885));assertNativeCapture(warpAfterBlank,h);
         assertEquals(SonicCdGameModule.LevelProgramPhase.PAST_PENDING,module.levelProgramState().phase());
         assertEquals(java.util.List.of(SonicCdGameModule.ProgramSound.STOP_FM,SonicCdGameModule.ProgramSound.WARP_DIRECT_FM_D8,SonicCdGameModule.ProgramSound.STOP_FM),module.programSoundRequests());
-        var exitStop=assertThrows(SonicCdGameModule.UnsupportedAct2Loading.class,()->step(h,controller(13886)));
-        assertEquals("R12B_LOAD",exitStop.boundary().name());assertTrue(frame.closed());
-        var exitFailedValues=actualField(swingVisit,"values");assertSame(exitBeforeStopValues,exitFailedValues);assertSame(exitBeforeStopCalls,actualField(exitFailedValues,"calls"));
-        assertSame(exitBeforeStopClock,actualField(frame,"vIntClock"));assertEquals("OLD_RETURNED",actualField(exitFailedValues,"phase").toString());
-        var exitFailedCalls=(java.util.List<?>)actualField(exitFailedValues,"calls");assertEquals(109,exitFailedCalls.size());assertEquals("OLD_EXIT_RETURN",exitFailedCalls.getLast().toString());
-        var exitFailedLevel=assertInstanceOf(com.openggf.game.soniccd.objects.CdLevelGlobals.class,actualField(exitFailedValues,"level"));assertEquals(0,exitFailedLevel.levelRestart());assertEquals(2,exitFailedLevel.spawnMode());
-        assertSame(warpSaved210,actualField(actualField(actualField(exitFailedValues,"globals"),"timeWarpCustody"),"saved"));
-        System.out.println("Controller-only Act2 closed13885: old13529 save/exit retained;13530 actual IPX blank/STOP_FM and authenticated WARP setup,13531..13884 own354scene services,13885 WARP-return blank/STOP_FM. Full/course replay across scene phases and both blank cuts preserves original R12A World/Frame/source/load epoch/save42. First13886 selects R12SubCmds Past/R12B and stops before target assembly or old retirement. No new route pixels or native/regional/audio parity claim.");
+        // Actual R12SubCmds Past selection performs one FULL target load; no extra source V-int.
+        step(h,controller(13886));
+        assertTrue(frame.closed());assertFalse(module.act2LoadingSelected());assertTrue(module.act2PastLoadingSelected());
+        assertSame(world,h.mode().getWorldSession());assertEquals(generation+1,h.mode().getLevelManager().getCompletedProductionLoadGeneration());
+        var targetFrame=module.requirePlayerFrame();var target=module.act2PastLoadingVisit();var targetHost=module.act2PastWorldHost();
+        assertNotSame(frame,targetFrame);assertFalse(targetFrame.closed());assertEquals(CdStageKey.parse("R12B"),targetFrame.stageSource().stage());
+        assertEquals(1,targetFrame.environment().movement().gates().zoneAct());assertEquals(0x80,targetFrame.environment().movement().gates().timeZone());
+        assertEquals(3108L,targetFrame.vIntClock().absoluteValue().orElseThrow());assertEquals(3063,targetFrame.environment().globals().levelFrames());
+        assertEquals(SonicCdAct2PastLoadingVisit.Phase.FIRST_PLC,target.state().phase());assertEquals(22,target.state().oldWhiteSteps());
+        assertEquals(0,target.state().initialWhiteSteps());assertFalse(target.state().displayEnabled());assertSame(warpSaved210,target.saved());
+        assertEquals("14de4fdb4979125a8c0c197c926133353d20a2ca5b2d57db2e363c4e94460a64",((com.openggf.game.soniccd.level.SonicCdAct2PastLevel)h.mode().getLevelManager().getCurrentLevel()).assets().identity().mmdSha256());
+        assertSame(exitBeforeStopValues,actualField(swingVisit,"values"));assertSame(exitBeforeStopCalls,actualField(exitBeforeStopValues,"calls"));
+        assertSame(exitBeforeStopClock,actualField(frame,"vIntClock"));
+        int targetReturnedCall=13886;
+        for(int call=13887;call<=14142&&target.state().phase()!=SonicCdAct2PastLoadingVisit.Phase.BEGIN_LEVEL;call++) {
+            var beforeTarget=captureNative(h);var fullTarget=registry.capture();var courseTarget=registry.captureCourse();
+            step(h,controller(call));var afterTarget=captureNative(h);
+            registry.restore(fullTarget);assertNativeCapture(beforeTarget,h);step(h,controller(call));assertNativeCapture(afterTarget,h);
+            registry.restoreCourse(courseTarget);assertNativeCapture(beforeTarget,h);step(h,controller(call));assertNativeCapture(afterTarget,h);
+            assertSame(targetFrame,module.requirePlayerFrame());assertSame(world,h.mode().getWorldSession());assertFalse(targetFrame.closed());
+            assertEquals(generation+1,h.mode().getLevelManager().getCompletedProductionLoadGeneration());targetReturnedCall=call;
+        }
+        assertEquals(SonicCdAct2PastLoadingVisit.Phase.BEGIN_LEVEL,target.state().phase(),"Finite target loading must complete before any ordinary walk");
+        assertEquals(20,target.completedSavedStores().size());assertEquals(0,target.state().initialWhiteSteps());assertEquals(22,target.state().fromWhiteSteps());
+        assertEquals(0,targetFrame.environment().globals().levelFrames());assertEquals(0,targetFrame.environment().movement().gates().timeZone());
+        assertEquals(1,targetFrame.state().header().slotId());assertEquals(0,targetFrame.state().motion().routine());
+        assertEquals(0,target.state().section().queue().headSource());assertEquals(0,target.state().section().remainingTilesWord());
+        assertTrue(targetHost.geometryReady());assertTrue(target.state().displayEnabled());
+        var targetSelected=assertInstanceOf(SonicCdAct2PastWorldHost.Published.class,targetHost.selected()).selection();
+        assertInstanceOf(SonicCdPastDisplay.Ready.class,targetSelected.projection(),"Actual completed target loading selects genuine current planes");
+        assertTrue(targetSelected.inputs().selectedCpu().isEmpty(),"No ordinary CPU SAT or visible Sonic was fabricated during load");
+        int targetStopCall=targetReturnedCall+1;
+        var targetStop=assertThrows(SonicCdAct2PastLoadingVisit.UnsupportedLoading.class,()->step(h,controller(targetStopCall)));
+        assertEquals(SonicCdAct2PastLoadingVisit.Boundary.ORDINARY_OBJECT_PASS,targetStop.boundary());assertTrue(targetFrame.closed());
+        System.out.println("Controller-only Act2: WARP returned13885, actual R12B FULL13886, loading returned"+targetReturnedCall+
+                ", first"+targetStopCall+" ORDINARY_OBJECT_PASS before selector8. Same World, one target generation, actual saved42 and full/course replay of every loading service. Selected target planes Ready; no ordinary Sonic/objects, new screenshot, native/regional/audio parity claim.");
         // END measured natural TimeWarp230 old exit.
         // END measured natural TimeWarp save continuation.
         // END measured Swing promotion.
@@ -1705,7 +1733,7 @@ class TestSonicCdAct2ControllerRoute {
     }
 
     private static LogicalInputSnapshot controller(int call) {
-        if (call < 1 || call > 13886) throw new IllegalArgumentException("Fixed ordinary controller recipe is1..13886; final13886 tests the R12B load fence");
+        if (call < 1 || call > 14143) throw new IllegalArgumentException("Fixed ordinary controller recipe is1..14143; the finite tail observes R12B loading before ordinary objects");
         if (call > 10419) {
             // Exact old prefix through13098; then Left96, Left+B4, Left96, Right256.
             // The established held-Right suffix continues unchanged through the WARP return;

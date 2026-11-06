@@ -272,6 +272,7 @@ class TestSonicCdPastLoadingWorld {
             }
         } else if (Set.of("com.openggf.game.soniccd.SonicCdPastLoadingVisit$Snapshot",
                 "com.openggf.game.soniccd.SonicCdAct2LoadingVisit$Snapshot",
+                "com.openggf.game.soniccd.SonicCdAct2PastLoadingVisit$Snapshot",
                 "com.openggf.game.soniccd.objects.CdObjectPlacementRuntime$Snapshot",
                 "com.openggf.game.soniccd.objects.CdObjectPool$Snapshot").contains(expected.getClass().getName())) {
             assertEquals(expected.getClass(), actual.getClass(), field);

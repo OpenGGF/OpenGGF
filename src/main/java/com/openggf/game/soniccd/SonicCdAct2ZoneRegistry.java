@@ -15,9 +15,11 @@ final class SonicCdAct2ZoneRegistry implements ZoneRegistry {
             @Override public int levelIndex() { return act; }
             @Override public int startX() { var source = module.actualAct2RegistrySource(); return act == 0
                     ? source.assets().loadPlan().initialCentre().centreX()
+                    : module.act2PastRegistrySelected() ? source.act2PastAssets().orElseThrow().terrain().loadPlan().initialCentre().centreX()
                     : source.act2Assets().orElseThrow().terrain().loadPlan().initialCentre().centreX(); }
             @Override public int startY() { var source = module.actualAct2RegistrySource(); return act == 0
                     ? source.assets().loadPlan().initialCentre().centreY()
+                    : module.act2PastRegistrySelected() ? source.act2PastAssets().orElseThrow().terrain().loadPlan().initialCentre().centreY()
                     : source.act2Assets().orElseThrow().terrain().loadPlan().initialCentre().centreY(); }
         };
     }
