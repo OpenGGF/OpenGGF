@@ -721,17 +721,17 @@ final class SonicCdAct2LoadingVisit {
                 || frame.environment().movement().gates().timeWarpDirection() != 0)
             throw new IllegalStateException("No completed retained Act2 programme return");
     }
-    record PastReturn(CdTimeWarpSaveData.State saved, int goodFuture, SonicCdAct2PastWorldHost.Globals globals) { }
+    record PastReturn(CdTimeWarpSaveData.State saved, int goodFuture, SonicCdAct2PastWorldHost.Globals globals, CdAssetBytes savedFlags) { }
     PastReturn pastReturnCarry() {
         requireReturnedProgrammeIdle(); var g = values.globals(); var tail = g.tail().orElseThrow();
         // RunMMD clears F628..F680 water, pause, bonus, P2, demo and palette-cycle fields.
         // MAINVARS below2000, including time/drown/debug/animations and unknownLevel, survive.
         var globals = new SonicCdAct2PastWorldHost.Globals(values.ring(),CdCheckpointLiveAux.clearMiscAtLevelStart(g.live()),
-                g.contact(),g.score(),g.retainedDev().projDestroyed(),g.checkpointSaved(),placement.capture().savedFlags(),
+                g.contact(),g.score(),g.retainedDev().projDestroyed(),g.checkpointSaved(),
                 g.drownTimerWord(),g.debugBlockWord(),OptionalInt.of(0),Optional.of(new CdLevelHud.BonusValues(0,0,0)),
                 Optional.of(new SonicCdAct2PastWorldHost.Tail(0,0,tail.unknownLevelByte(),0,0)),
                 values.loop().animations(),zero(7),zero(7));
-        return new PastReturn(g.timeWarpCustody().saved(),g.retainedDev().goodFuture(),globals);
+        return new PastReturn(g.timeWarpCustody().saved(),g.retainedDev().goodFuture(),globals,placement.capture().savedFlags());
     }
     private boolean oldProgrammeExitSelected() { return values.phase() == OLD_WHITE_FADE || values.phase() == OLD_RETURNED; }
 

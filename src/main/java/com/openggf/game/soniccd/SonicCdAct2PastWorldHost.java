@@ -32,7 +32,7 @@ import static com.openggf.game.soniccd.SonicCdAct2PastLoadingVisit.Action;
  * N1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff, shipped FixBugs=0:
  * Level/Main.asm:19-329,860-907; Palmtree Panic/Scroll (Act 2 Past).asm:11-137,
  * 165-259,265-561,940-1043,1139-1201; Functions (General).asm:196-212.
- * Frame and Core keep their own values. This Host has one immutable capture image;
+ * Frame and Core keep their own values. This Host has one composite capture participant;
  * an unconsumed clear receipt grants no RAM, actor, queue, pixel or future-read authority.
  */
 final class SonicCdAct2PastWorldHost implements SonicCdAct2PastLoadingVisit.Host, AutoCloseable {
@@ -54,49 +54,49 @@ final class SonicCdAct2PastWorldHost implements SonicCdAct2PastLoadingVisit.Host
     /** Actual MAINVARS carries and reached knowledge, without Core.Program or Frame fields. */
     record Globals(CdRingGlobals ring, CdCheckpointLiveAux.State live, CdPlayerBody.ContactGlobals contact,
                    CdOpeningObjectRuntime.ScoreGlobals score, int projectorByte,
-                   CdCheckpointSaveData.State checkpointSaved, CdAssetBytes savedFlags,
+                   CdCheckpointSaveData.State checkpointSaved,
                    OptionalInt drownTimerWord, OptionalInt debugBlockWord, OptionalInt pauseMusicBit,
                    Optional<CdLevelHud.BonusValues> bonus, Optional<Tail> tail,
                    Optional<CdGlobalObjectAnimation.Extras> animations, CdAssetBytes paletteSteps7, CdAssetBytes paletteTimers7) {
         Globals {
             Objects.requireNonNull(ring); Objects.requireNonNull(live); Objects.requireNonNull(contact); Objects.requireNonNull(score);
-            octet(projectorByte); Objects.requireNonNull(checkpointSaved); Objects.requireNonNull(savedFlags);
+            octet(projectorByte); Objects.requireNonNull(checkpointSaved);
             Objects.requireNonNull(drownTimerWord); Objects.requireNonNull(debugBlockWord); Objects.requireNonNull(pauseMusicBit);
             Objects.requireNonNull(bonus); Objects.requireNonNull(tail); Objects.requireNonNull(animations);
-            extent(savedFlags, CdObjectPlacementRuntime.SAVED_BANK_BYTES); extent(paletteSteps7, 7); extent(paletteTimers7, 7);
+            extent(paletteSteps7, 7); extent(paletteTimers7, 7);
             drownTimerWord.ifPresent(SonicCdAct2PastWorldHost::word); debugBlockWord.ifPresent(SonicCdAct2PastWorldHost::word);
             if (pauseMusicBit.isPresent() && (pauseMusicBit.getAsInt() & ~0x80) != 0) throw new IllegalArgumentException("PauseMusic bit7 only");
         }
         private Globals scalars(CdRingGlobals r, CdCheckpointLiveAux.State l) {
-            return new Globals(r,l,contact,score,projectorByte,checkpointSaved,savedFlags,drownTimerWord,debugBlockWord,pauseMusicBit,bonus,tail,animations,paletteSteps7,paletteTimers7);
+            return new Globals(r,l,contact,score,projectorByte,checkpointSaved,drownTimerWord,debugBlockWord,pauseMusicBit,bonus,tail,animations,paletteSteps7,paletteTimers7);
         }
         private Globals flowers() {
             var r=ring;
             return new Globals(new CdRingGlobals(r.rings(),r.lives(),r.livesFlags(),r.updateHudRings(),r.updateHudLives(),0,0,0),
-                    live,contact,score,projectorByte,checkpointSaved,savedFlags,drownTimerWord,OptionalInt.of(0),pauseMusicBit,bonus,tail,
+                    live,contact,score,projectorByte,checkpointSaved,drownTimerWord,OptionalInt.of(0),pauseMusicBit,bonus,tail,
                     Optional.of(new CdGlobalObjectAnimation.Extras(0,0,0,0,new CdRingSpillGlobals(0,0,0))),paletteSteps7,paletteTimers7);
         }
         private Globals misc() {
-            return new Globals(ring,CdCheckpointLiveAux.clearMiscAtLevelStart(live),contact,score,projectorByte,checkpointSaved,savedFlags,
+            return new Globals(ring,CdCheckpointLiveAux.clearMiscAtLevelStart(live),contact,score,projectorByte,checkpointSaved,
                     drownTimerWord,debugBlockWord,OptionalInt.of(0),bonus,tail,animations,paletteSteps7,paletteTimers7);
         }
         private Globals camera() {
-            return new Globals(ring,live,contact,score,projectorByte,checkpointSaved,savedFlags,drownTimerWord,debugBlockWord,pauseMusicBit,
+            return new Globals(ring,live,contact,score,projectorByte,checkpointSaved,drownTimerWord,debugBlockWord,pauseMusicBit,
                     Optional.of(new CdLevelHud.BonusValues(0,0,0)),tail,animations,zero(7),zero(7));
         }
         private Globals drown() {
-            return new Globals(ring,live,contact,score,projectorByte,checkpointSaved,savedFlags,OptionalInt.of(30),debugBlockWord,pauseMusicBit,bonus,tail,animations,paletteSteps7,paletteTimers7);
+            return new Globals(ring,live,contact,score,projectorByte,checkpointSaved,OptionalInt.of(30),debugBlockWord,pauseMusicBit,bonus,tail,animations,paletteSteps7,paletteTimers7);
         }
         private Globals beginMain() {
             var r=ring;
             return new Globals(new CdRingGlobals(r.rings(),r.lives(),r.livesFlags(),0x80,1,r.timeStopTimer(),r.ringAnimationTimer(),r.ringAnimationFrame()),
                     live,new CdPlayerBody.ContactGlobals(0,0,contact.combineRing()),new CdOpeningObjectRuntime.ScoreGlobals(score.score(),score.nextLifeScore(),0x80),
-                    projectorByte,checkpointSaved,savedFlags,drownTimerWord,debugBlockWord,pauseMusicBit,bonus,
+                    projectorByte,checkpointSaved,drownTimerWord,debugBlockWord,pauseMusicBit,bonus,
                     Optional.of(new Tail(0,0,0,0,0x202F)),animations,paletteSteps7,paletteTimers7);
         }
         private Globals fromWhite() {
             var t=tail.orElseThrow(()->new IllegalStateException("FromWhite requires actual Main tail stores"));
-            return new Globals(ring,live,contact,score,projectorByte,checkpointSaved,savedFlags,drownTimerWord,debugBlockWord,pauseMusicBit,bonus,
+            return new Globals(ring,live,contact,score,projectorByte,checkpointSaved,drownTimerWord,debugBlockWord,pauseMusicBit,bonus,
                     Optional.of(new Tail(t.player2ControlsWord(),t.player2BoredWord(),t.unknownLevelByte(),t.demoS1IndexWord(),0x003F)),
                     animations,paletteSteps7,paletteTimers7);
         }
@@ -124,13 +124,37 @@ final class SonicCdAct2PastWorldHost implements SonicCdAct2PastLoadingVisit.Host
                 throw new IllegalArgumentException("CPU SAT/provenance disagree");
         }
     }
-    record Initial(Globals globals, Scroll scroll, Video video) {
-        Initial { Objects.requireNonNull(globals);Objects.requireNonNull(scroll);Objects.requireNonNull(video); }
+    record Initial(Globals globals, Scroll scroll, Video video, CdAssetBytes savedFlags) {
+        Initial {
+            Objects.requireNonNull(globals);Objects.requireNonNull(scroll);Objects.requireNonNull(video);
+            extent(savedFlags,CdObjectPlacementRuntime.SAVED_BANK_BYTES);
+        }
     }
     private record Image(SonicCdAct2PastWorldHost owner, Globals globals, Scroll scroll, Video video,
                          Set<Action> clears, boolean geometryReady, boolean setupDone,
-                         OptionalLong collisionPointer, List<CdPlayerFrameRuntime.BodySound> sounds) {
+                         OptionalLong collisionPointer, List<SonicCdGameModule.PastSound> sounds) {
         private Image { clears=Set.copyOf(clears);Objects.requireNonNull(collisionPointer);sounds=List.copyOf(sounds); }
+    }
+    /** One Host capture participant; the placement runtime remains the sole live pool/bank owner. */
+    private record Snapshot(Image image, CdObjectPlacementRuntime.Snapshot placement) {
+        private Snapshot { Objects.requireNonNull(image);Objects.requireNonNull(placement); }
+        @Override public boolean equals(Object other) {
+            return other instanceof Snapshot snapshot && image.equals(snapshot.image)
+                    && placement.status().equals(snapshot.placement.status())
+                    && Arrays.equals(placement.savedFlags().copy(),snapshot.placement.savedFlags().copy())
+                    && placement.pool().slots().equals(snapshot.placement.pool().slots());
+        }
+        @Override public int hashCode() {
+            int result=31*image.hashCode()+placement.status().hashCode();
+            result=31*result+Arrays.hashCode(placement.savedFlags().copy());
+            // CdObjectState equality/hash include the actual pool owner, slot identity and all64 bytes.
+            return 31*result+placement.pool().slots().hashCode();
+        }
+    }
+    /** Already-constructed Host values only; Root's private invocation owns cross-owner authority. */
+    static final class Prepared {
+        private final Image before, after;
+        private Prepared(Image before,Image after){this.before=before;this.after=after;}
     }
     /** Existing global scroll adapter stores lifetime only; Core alone restores native fields. */
     private record ScrollBinding(SonicCdAct2PastWorldHost owner,SonicCdAct2PastLoadingVisit visit) { }
@@ -142,6 +166,7 @@ final class SonicCdAct2PastWorldHost implements SonicCdAct2PastLoadingVisit.Host
     private final CdR12bTerrainAssets terrain;
     private final CdR12bPlayerAssets player;
     private final CdPlayerFrameRuntime frame;
+    private final CdObjectPlacementRuntime placement;
     private final CdR12bBackgroundScroll background;
     private final CdR11aBackgroundPlane backgroundPlane;
     private final CdR11bForegroundPlane foregroundPlane;
@@ -157,6 +182,9 @@ final class SonicCdAct2PastWorldHost implements SonicCdAct2PastLoadingVisit.Host
         this.frame=Objects.requireNonNull(frame);Objects.requireNonNull(initial);
         if(!frame.stageSource().ownsAct2Past(terrain,player))throw new IllegalArgumentException("Actual R12B Frame pair required");
         if(!samePlayer(frame.artState(),initial.video().playerArt()))throw new IllegalArgumentException("Ingress player image differs from Frame");
+        // Root already executed the actual RunMMD clear before this ingress. The runtime's zero pool
+        // retains that value; constructing a source relation grants no World/Spawn/body authority.
+        placement=CdObjectPlacementRuntime.fromAssets(terrain,initial.savedFlags());
         background=CdR12bBackgroundScroll.bind(terrain);backgroundPlane=CdR11aBackgroundPlane.bindAct2Past(terrain);
         var t=terrain.terrain();foregroundPlane=CdR11bForegroundPlane.fromTables(t.blocks(),t.chunks(),t.layout().ram());
         image=new Image(this,initial.globals(),initial.scroll(),initial.video(),Set.of(),false,false,OptionalLong.empty(),List.of());
@@ -184,12 +212,13 @@ final class SonicCdAct2PastWorldHost implements SonicCdAct2PastLoadingVisit.Host
         if(owner==null)owner=visit; // Once-only metadata binding after the actual Module's admission, never a value/capture key.
     }
     Globals globals(){current();return image.globals();}
+    CdObjectPlacementRuntime placement(){current();return placement;}
     Scroll scroll(){current();return image.scroll();}
     Video video(){current();return image.video();}
     Selected selected(){current();return image.video().selected();}
-    List<CdPlayerFrameRuntime.BodySound> sounds(){current();return image.sounds();}
+    List<SonicCdGameModule.PastSound> sounds(){current();return image.sounds();}
     /** Synchronous request extraction only; restore never submits audio. Core's completed-call cursor prevents replay. */
-    List<CdPlayerFrameRuntime.BodySound> takeSounds(){
+    List<SonicCdGameModule.PastSound> takeSounds(){
         current();if(acting||publishing)throw new IllegalStateException("R12B Host operation active");var pending=image.sounds();
         if(!pending.isEmpty())image=new Image(this,image.globals(),image.scroll(),image.video(),image.clears(),image.geometryReady(),image.setupDone(),image.collisionPointer(),List.of());
         return pending;
@@ -198,12 +227,16 @@ final class SonicCdAct2PastWorldHost implements SonicCdAct2PastLoadingVisit.Host
     boolean geometryReady(){current();return image.geometryReady();}
     OptionalLong collisionPointer(){current();return image.collisionPointer();}
     ZoneScrollHandler handler(){current();return handler;}
-    @Override public Object capture(){current();if(acting||publishing)throw new IllegalStateException("R12B Host operation active");return image;}
+    @Override public Object capture(){current();if(acting||publishing)throw new IllegalStateException("R12B Host operation active");return new Snapshot(image,placement.capture());}
     @Override public void validateRestore(Object snapshot) {
         current();if(acting||publishing)throw new IllegalStateException("R12B Host operation is active");
-        if(!(snapshot instanceof Image i)||i.owner()!=this)throw new IllegalArgumentException("Foreign R12B Host image");
+        if(!(snapshot instanceof Snapshot s)||s.image().owner()!=this)throw new IllegalArgumentException("Foreign R12B Host image");
+        placement.validateRestore(s.placement());
     }
-    @Override public void restore(Object snapshot){validateRestore(snapshot);image=(Image)snapshot;}
+    @Override public void restore(Object snapshot){
+        validateRestore(snapshot);var s=(Snapshot)snapshot;
+        placement.restore(s.placement());image=s.image();
+    }
     private void values(Globals g,Scroll s,Video v){image=new Image(this,g,s,v,image.clears(),image.geometryReady(),image.setupDone(),image.collisionPointer(),image.sounds());}
     private void scroll(Scroll s){values(image.globals(),s,image.video());}
     private void globals(Globals g){values(g,image.scroll(),image.video());}
@@ -226,14 +259,14 @@ final class SonicCdAct2PastWorldHost implements SonicCdAct2PastLoadingVisit.Host
                 case PLAY_LEVEL_MUSIC -> {
                     if(!image.sounds().isEmpty()||state.calls().contains(SonicCdAct2PastLoadingVisit.Call.PLAY_LEVEL_MUSIC))throw new IllegalStateException("Level music request cannot replay");
                     image=new Image(this,image.globals(),image.scroll(),image.video(),image.clears(),image.geometryReady(),image.setupDone(),image.collisionPointer(),
-                            List.of(new CdPlayerFrameRuntime.BodySound(CdPlayerBody.Sound.SCMD_PASTMUS)));
+                            List.of(new SonicCdGameModule.PastFrameSound(new CdPlayerFrameRuntime.BodySound(CdPlayerBody.Sound.SCMD_PASTMUS))));
                 }
                 case CLEAR_POWERUP_FLOWERS -> { if(state.level().powerup()!=0||state.level().flowerCount()!=0||state.level().fadeEnableDisplay()!=0)throw new IllegalStateException("Missing Core powerup/flower LONG stores"); }
                 case CLEAR_DRAW_QUEUE, CLEAR_UNKNOWN_BUFFER -> receipt(action);
                 case CLEAR_FLOWERS -> { clearFlowers();receipt(action); }
                 case CLEAR_OBJECTS -> {
                     if(frame.state().header().slotId()!=0||frame.state().motion().routine()!=0||!allZero(state.hudSlots()))throw new IllegalStateException("Missing actual primary/reserved clear");
-                    receipt(action); // No dynamic native object owner exists before ordinary selector8.
+                    receipt(action); // The sole dynamic owner retains the caller's RunMMD-cleared pool; no ordinary pass is executed.
                 }
                 case CLEAR_MISC -> { globals(image.globals().misc());receipt(action); }
                 case CLEAR_CAMERA -> { clearCamera();receipt(action); }
@@ -317,7 +350,8 @@ final class SonicCdAct2PastWorldHost implements SonicCdAct2PastLoadingVisit.Host
         image=new Image(this,image.globals(),new Scroll(fg,bg,s.foregroundPlane(),s.backgroundPlane(),s.copies(),s.foregroundXFractionWord()),
                 image.video(),image.clears(),image.geometryReady(),true,image.collisionPointer(),image.sounds());
     }
-    private void levelScroll(int hudTime) {
+    private void levelScroll(int hudTime) { levelScroll(hudTime,true); }
+    private void levelScroll(int hudTime,boolean forceLoadingColumn) {
         if(!image.setupDone())throw new IllegalStateException("LevelScroll precedes actual SetupCamera");
         var s=image.scroll();var m=frame.state().motion();var env=frame.environment();var movement=env.movement();
         var input=new CdR11aForegroundScroll.Input(new CdR11aForegroundScroll.Actor(m.centreX16_16()>>>16,m.centreY16_16()>>>16,
@@ -327,7 +361,7 @@ final class SonicCdAct2PastWorldHost implements SonicCdAct2PastLoadingVisit.Host
         var f=next.state();var bg=background.step(s.background(),new CdR12bBackgroundScroll.Input(f.cameraX(),f.cameraYWord(),(short)f.scrollXDiff(),(short)f.scrollYDiff(),f.scrollLock()>>>8));
         frame.applyScrollFeedback(next.bounds(),next.cameraYCentre());
         var fg=new CdR11aForegroundScroll.State(f.cameraX(),f.cameraY16_16(),f.horizontalCrossed(),f.verticalCrossed(),f.scrollXDiff(),f.scrollYDiff(),
-                f.scrollFlags()|0x400,f.destBottomBound(),f.destLeftBound(),f.bottomBoundShift(),f.scrollLock());
+                f.scrollFlags()|(forceLoadingColumn?0x400:0),f.destBottomBound(),f.destLeftBound(),f.bottomBoundShift(),f.scrollLock());
         scroll(new Scroll(fg,bg,s.foregroundPlane(),s.backgroundPlane(),s.copies(),s.foregroundXFractionWord()));
     }
     private void initialForeground(SonicCdAct2PastLoadingVisit.State state) {
@@ -380,6 +414,77 @@ final class SonicCdAct2PastWorldHost implements SonicCdAct2PastLoadingVisit.Host
             video(new Video(v.cpuSat(),v.completedCpu(),inputs.player(),v.current(),output));bound();
         } finally { publishing=false; }
     }
+    private void ordinaryIdle() {
+        current(); // Retained rendering and lifetime guards precede every operation/catch.
+        if(acting||publishing)throw new IllegalStateException("R12B Host operation active");
+    }
+    /** Native selector8 selects the previous CPU image before DPLC/planes/slow PLC/HUD work. */
+    void publishOrdinary(CdAssetBytes normalPalette,Optional<CdObjectDrawQueue.CpuSat> expectedCpu) {
+        ordinaryIdle();var core=owner.state();var v=image.video();var s=image.scroll();
+        if(Objects.requireNonNull(expectedCpu)!=v.completedCpu()||Objects.requireNonNull(normalPalette)!=core.normalPalette())
+            throw new IllegalArgumentException("Ordinary publication must borrow the actual CPU optional and Core normal palette");
+        if(!(v.selected() instanceof Published previous))throw new HostBoundary(Boundary.SELECTED_DISPLAY);
+        byte[] selectedHscroll=previous.selection().inputs().hscroll().copy();
+        System.arraycopy(s.background().hscrollRam().copy(),0,selectedHscroll,0,0x380);
+        publishing=true;
+        try {
+            var inputs=new SonicCdAct2PastDisplay.Inputs(expectedCpu,v.cpuSat(),normalPalette,CdAssetBytes.copyOf(selectedHscroll),
+                    s.background().vscroll(),core.displayEnabled(),s.foregroundPlane(),s.backgroundPlane(),v.current(),frame.artState());
+            var output=new Published(SonicCdAct2PastDisplay.project(inputs));
+            video(new Video(v.cpuSat(),v.completedCpu(),inputs.player(),v.current(),output));bound();
+        } finally { publishing=false; }
+    }
+    /** Same selector8 picture after physical bank/plane work; never reborrow a newer CPU SAT. */
+    void settleOrdinary(Optional<CdObjectDrawQueue.CpuSat> publishedCpu) {
+        ordinaryIdle();var v=image.video();var s=image.scroll();
+        if(!(v.selected() instanceof Published selected))throw new HostBoundary(Boundary.SELECTED_DISPLAY);
+        var old=selected.selection().inputs();
+        if(Objects.requireNonNull(publishedCpu)!=old.selectedCpu())throw new IllegalArgumentException("Another selected CPU optional");
+        var current=owner.state().section().residency();var playerArt=frame.artState();publishing=true;
+        try {
+            var inputs=new SonicCdAct2PastDisplay.Inputs(publishedCpu,old.selectedSat(),old.palette(),old.hscroll(),old.vscrollLongBits(),old.displayEnabled(),
+                    s.foregroundPlane(),s.backgroundPlane(),current,playerArt);
+            var output=new Published(SonicCdAct2PastDisplay.project(inputs));
+            video(new Video(v.cpuSat(),v.completedCpu(),playerArt,current,output));bound();
+        } finally { publishing=false; }
+    }
+    /** Root adopts genuine Core art/HUD results; this Host owns neither decoder nor art clock. */
+    void ordinaryCurrent(CdR12bSectionArt.State actualCoreSection) {
+        ordinaryIdle();
+        if(Objects.requireNonNull(actualCoreSection)!=owner.state().section())throw new IllegalArgumentException("Another Core section cut");
+        var v=image.video();video(new Video(v.cpuSat(),v.completedCpu(),frame.artState(),actualCoreSection.residency(),v.selected()));bound();
+    }
+    /** Main418 only; the load-only Main247 forced-left store is absent. No plane copy here. */
+    void scrollOrdinary(int hudTime) {
+        ordinaryIdle();octet(hudTime);acting=true;
+        try { levelScroll(hudTime,false);bound(); } finally { acting=false; }
+    }
+    /** VInt836-847 physical camera/flag copy and DrawLevel, independently of later Main418 scroll. */
+    void copyAndDrawOrdinary() {
+        ordinaryIdle();acting=true;
+        try { copyAndDraw();bound(); } finally { acting=false; }
+    }
+    /** Build every reference before Root publishes another owner; no state is adopted here. */
+    Prepared prepareOrdinary(Globals expectedGlobals,Video expectedVideo,Globals nextGlobals,
+                             List<SonicCdGameModule.PastSound> appendedSounds,Optional<CdObjectDrawQueue.CpuSat> nextCpu) {
+        ordinaryIdle();
+        if(expectedGlobals!=image.globals()||expectedVideo!=image.video())throw new IllegalStateException("Stale Host globals/video pair");
+        Objects.requireNonNull(nextGlobals);Objects.requireNonNull(nextCpu);
+        var append=List.copyOf(Objects.requireNonNull(appendedSounds));var v=expectedVideo;
+        if(nextCpu!=v.completedCpu()) {
+            if(nextCpu.isEmpty())throw new IllegalArgumentException("A completed CPU image cannot lose its provenance");
+            v=new Video(CdAssetBytes.copyOf(nextCpu.orElseThrow().bytes()),nextCpu,v.playerArt(),v.current(),v.selected());
+        }
+        var sounds=new ArrayList<SonicCdGameModule.PastSound>(image.sounds());sounds.addAll(append);
+        var after=new Image(this,nextGlobals,image.scroll(),v,image.clears(),image.geometryReady(),image.setupDone(),image.collisionPointer(),sounds);
+        return new Prepared(image,after);
+    }
+    void validateOrdinary(Prepared prepared) {
+        ordinaryIdle();
+        if(Objects.requireNonNull(prepared).before!=image)throw new IllegalStateException("Stale or foreign prepared Host image");
+    }
+    /** Exact original-Image CAS; adoption allocates nothing and replays no work. */
+    void adoptOrdinary(Prepared prepared) { validateOrdinary(prepared);image=prepared.after; }
     private void enableSelected() {
         var v=image.video();
         if(!(v.selected() instanceof Published p))throw new HostBoundary(Boundary.SELECTED_DISPLAY);

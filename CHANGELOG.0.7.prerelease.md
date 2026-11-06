@@ -279,9 +279,11 @@ Unreleased. The earlier development themes remain in
   full/course replay and real renderer checks. A batched metadata owner supplies
   twelve initial object kinds without relabelling Present tables. Actual-source
   body factories now bind those kinds, and one catalogue resolves twenty counted
-  roots plus eight monitor icons; legacy constructors retain their contracts. The next honest
-  boundary remains before the ordinary R12B physical object pass; no destination
-  Sonic or full-act parity is claimed.
+  roots plus eight monitor icons; legacy constructors retain their contracts. The first unpaused
+  R12B physical walk now runs actual Sonic Init, reserved HUD and live dynamic
+  slots through camera, CPU SAT and the ordinary tail, with full/course replay
+  in the constructed exit fixture. Later Sonic Main and selected Sonic remain
+  separate; no full-act parity is claimed.
   Authenticated Act2 Spikes mapping and a named retained-source prefix factory
   reuse the existing common body and Std art owner; live Spikes dispatch remains
   separate from the qualified route.

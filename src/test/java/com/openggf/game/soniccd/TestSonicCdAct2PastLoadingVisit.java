@@ -302,4 +302,136 @@ class TestSonicCdAct2PastLoadingVisit {
             long mask=call.target().width()==4?0xFFFFFFFFL:call.target().width()==2?0xFFFFL:0xFFL;targets.put(call.target(),Integer.toUnsignedLong(call.value())&mask);
         }
     }
+
+    // OrdinaryAccess cases: real loading/Frame, existing fake Host; no live World/placement authority.
+    @Test void ordinaryBindingRequiresActualHostEntryOnceAndAccessExpiresAfterEachCallback() {
+        var f=fixture(0,22,false);var retained=new SonicCdAct2PastLoadingVisit.OrdinaryAccess[1];var cuts=new State[1];var ready=new State[1];var helds=new ArrayList<Integer>();
+        assertThrows(IllegalStateException.class,()->f.visit.bindOrdinaryOwner(new FakeHost(),(held,access)->fail("foreign Host bound")));
+        f.visit.bindOrdinaryOwner(f.host,(held,access)->{
+            if(retained[0]!=null)assertThrows(IllegalStateException.class,retained[0]::state,"A previous callback cannot borrow the new active scope");
+            helds.add(held);retained[0]=access;cuts[0]=access.state();access.validate(cuts[0]);ready[0]=ordinaryPrepareSame(access,cuts[0]);
+        });
+        assertThrows(IllegalStateException.class,()->f.visit.bindOrdinaryOwner(f.host,(held,access)->fail("second owner bound")));
+        f.visit.begin();assertThrows(IllegalStateException.class,()->f.visit.bindOrdinaryOwner(f.host,(held,access)->fail("late owner bound")));until(f,Phase.BEGIN_LEVEL);
+        f.visit.service(0x35);var expired=retained[0];var expected=cuts[0];var prepared=ready[0];
+        assertThrows(IllegalStateException.class,expired::state);assertThrows(IllegalStateException.class,()->expired.validate(expected));
+        assertThrows(IllegalStateException.class,()->ordinaryPrepareSame(expired,expected));
+        assertThrows(IllegalStateException.class,()->expired.prepareGoodFuture(expected,prepared,0));
+        assertThrows(IllegalStateException.class,()->expired.adopt(expected,prepared));
+        f.visit.service(8);assertNotSame(expired,retained[0]);assertEquals(List.of(0x35,8),helds);assertFalse(f.visit.failed());assertFalse(f.frame.closed());
+        var late=fixture(0,22,false);late.visit.begin();
+        assertThrows(IllegalStateException.class,()->late.visit.bindOrdinaryOwner(late.host,(held,access)->fail("unbound late owner admitted")));
+    }
+
+    @Test void ordinaryAdoptRejectsAStaleEqualValueCoreReferenceBeforeMutation() {
+        var f=fixture(0,22,false);int[] observed={0};
+        f.visit.bindOrdinaryOwner(f.host,(held,access)->{
+            var before=access.state();var ready=ordinaryPrepareSame(access,before);assertNotSame(before,ready);assertEquals(before,ready,"Equal values do not replace the actual Core reference");
+            access.adopt(before,ready);assertSame(ready,access.state());
+            assertThrows(IllegalArgumentException.class,()->access.validate(before));
+            assertThrows(IllegalArgumentException.class,()->ordinaryPrepareSame(access,before));
+            assertThrows(IllegalArgumentException.class,()->access.adopt(before,ready));
+            assertSame(ready,access.state());observed[0]++;
+        });
+        ordinaryLoadToBegin(f);f.visit.service(8);assertEquals(1,observed[0]);assertFalse(f.visit.failed());assertFalse(f.frame.closed());
+    }
+
+    @Test void ordinaryPrepareAndAdoptRejectAnActualForeignSectionOwner() {
+        var f=fixture(0,22,false);var foreign=fixture(0,22,false);var foreignSection=foreign.entry.section();int[] observed={0};
+        f.visit.bindOrdinaryOwner(f.host,(held,access)->{
+            var before=access.state();assertNotSame(before.section(),foreignSection);
+            assertThrows(IllegalArgumentException.class,()->access.prepare(before,foreignSection,before.level(),before.hudSlots(),before.normalPalette(),before.displayedPalette()));
+            var forged=ordinaryRawState(before,foreignSection,before.program(),before.fadePalette(),before.fromWhiteSteps(),before.calls());
+            assertThrows(IllegalArgumentException.class,()->access.adopt(before,forged));assertSame(before,access.state());observed[0]++;
+        });
+        ordinaryLoadToBegin(f);f.visit.service(8);assertEquals(1,observed[0]);assertFalse(f.visit.failed());assertFalse(f.frame.closed());
+    }
+
+    @Test void ordinaryGoodFutureAloneMayChangeProgramAndLoadingNonwritesKeepTheirReferences() {
+        var f=fixture(0,22,false);int[] observed={0};
+        f.visit.bindOrdinaryOwner(f.host,(held,access)->{
+            var before=access.state();var prepared=ordinaryPrepareSame(access,before);assertSame(before.program(),prepared.program(),"prepare itself does not change Program");
+            var ready=access.prepareGoodFuture(before,prepared,0);var p=before.program();
+            assertEquals(new Program(p.demoModeWord(),p.timeStonesByte(),0,p.usePlayer2Byte(),p.specialStageByte(),p.palFadeFlagsByte(),p.palClearFlagBit0(),p.gameModeByte(),p.levelStartedByte(),p.demoDataIndexWord()),ready.program());
+            access.adopt(before,ready);assertSame(ready,access.state());
+            assertSame(before.section(),ready.section());assertSame(before.level(),ready.level());assertSame(before.hudSlots(),ready.hudSlots());
+            assertSame(before.normalPalette(),ready.normalPalette());assertSame(before.fadePalette(),ready.fadePalette());assertSame(before.waterPalette(),ready.waterPalette());assertSame(before.displayedPalette(),ready.displayedPalette());
+            assertSame(before.blocksRam(),ready.blocksRam());assertSame(before.layoutRam(),ready.layoutRam());assertSame(before.calls(),ready.calls());
+            assertEquals(before.phase(),ready.phase());assertEquals(before.oldWhiteSteps(),ready.oldWhiteSteps());assertEquals(before.initialWhiteSteps(),ready.initialWhiteSteps());assertEquals(22,ready.fromWhiteSteps());assertEquals(before.displayEnabled(),ready.displayEnabled());
+            assertThrows(IllegalArgumentException.class,()->access.prepareGoodFuture(ready,ready,256));assertSame(ready,access.state());
+            var q=ready.program();var changedDemo=new Program(q.demoModeWord()^1,q.timeStonesByte(),q.goodFutureByte(),q.usePlayer2Byte(),q.specialStageByte(),q.palFadeFlagsByte(),q.palClearFlagBit0(),q.gameModeByte(),q.levelStartedByte(),q.demoDataIndexWord());
+            var forgeries=List.of(
+                    ordinaryRawState(ready,ready.section(),changedDemo,ready.fadePalette(),22,ready.calls()),
+                    ordinaryRawState(ready,ready.section(),q,CdAssetBytes.copyOf(ready.fadePalette().copy()),22,ready.calls()),
+                    ordinaryRawState(ready,ready.section(),q,ready.fadePalette(),21,ready.calls()),
+                    ordinaryRawState(ready,ready.section(),q,ready.fadePalette(),22,new ArrayList<>(ready.calls())));
+            for(var forged:forgeries){assertThrows(IllegalArgumentException.class,()->access.adopt(ready,forged));assertSame(ready,access.state());}observed[0]++;
+        });
+        ordinaryLoadToBegin(f);f.visit.service(8);assertEquals(1,observed[0]);assertEquals(0,f.visit.state().program().goodFutureByte());assertFalse(f.visit.failed());
+    }
+
+    @Test void ordinaryReadPrepareAdoptDoesNotTickFrameOrExecuteAnyFakeHostPlacementWork() {
+        var f=fixture(0,22,false);var adopted=new State[1];
+        f.visit.bindOrdinaryOwner(f.host,(held,access)->{
+            var before=access.state();access.validate(before);var raw=before.hudSlots().copy();raw[raw.length-1]^=0x5A;
+            var ready=access.prepare(before,before.section(),before.level(),CdAssetBytes.copyOf(raw),colours(0x0246),colours(0x068A));
+            assertSame(before.program(),ready.program());access.adopt(before,ready);adopted[0]=ready;
+        });
+        ordinaryLoadToBegin(f);var actor=f.frame.captureActor();var shared=f.frame.captureShared();var host=(FakeHost.Image)f.host.capture();int executions=f.host.executions;var calls=f.visit.state().calls();var saved=f.visit.saved();
+        f.visit.service(0x35);assertSame(adopted[0],f.visit.state());assertEquals(actor,f.frame.captureActor());assertEquals(shared,f.frame.captureShared());
+        assertHost(host,(FakeHost.Image)f.host.capture());assertEquals(executions,f.host.executions);assertSame(calls,f.visit.state().calls());assertSame(saved,f.visit.saved());
+        // The fake Host has no physical placement owner; this asserts its observable targets/actions/VInt work only.
+    }
+
+    @Test void ordinarySameOwnerCaptureRestoreReplaysValuesWithoutCallingOwnerAndRejectsForeignVisit() {
+        var f=fixture(0,22,false);int[] calls={0};
+        f.visit.bindOrdinaryOwner(f.host,(held,access)->{
+            calls[0]++;var before=access.state();var raw=before.hudSlots().copy();raw[raw.length-1]^=0x5A;
+            var ready=access.prepare(before,before.section(),before.level(),CdAssetBytes.copyOf(raw),before.normalPalette(),before.displayedPalette());
+            ready=access.prepareGoodFuture(before,ready,before.program().goodFutureByte()^1);access.adopt(before,ready);
+        });
+        ordinaryLoadToBegin(f);var prior=f.visit.capture();f.visit.service(0x35);var expected=f.visit.state();var actor=f.frame.captureActor();var shared=f.frame.captureShared();var host=(FakeHost.Image)f.host.capture();int executions=f.host.executions;
+        f.visit.restore(prior);assertEquals(1,calls[0]);assertEquals(executions,f.host.executions);assertSame(prior.state(),f.visit.state());
+        f.visit.service(0x35);assertEquals(2,calls[0]);assertState(expected,f.visit.state());assertEquals(actor,f.frame.captureActor());assertEquals(shared,f.frame.captureShared());assertHost(host,(FakeHost.Image)f.host.capture());
+        var other=fixture(0,22,false);other.visit.bindOrdinaryOwner(other.host,(held,access)->fail("foreign restore called ordinary owner"));ordinaryLoadToBegin(other);
+        var otherState=other.visit.state();var otherActor=other.frame.captureActor();var otherShared=other.frame.captureShared();var otherHost=(FakeHost.Image)other.host.capture();
+        assertThrows(IllegalArgumentException.class,()->other.visit.restore(prior));assertSame(otherState,other.visit.state());assertEquals(otherActor,other.frame.captureActor());assertEquals(otherShared,other.frame.captureShared());assertHost(otherHost,(FakeHost.Image)other.host.capture());
+    }
+
+    @Test void ordinaryOriginalFailureClosesFrameAfterThePublishedCorePrefixWithoutRollback() {
+        var f=fixture(0,22,false);var published=new State[1];var fault=new IllegalArgumentException("constructed ordinary owner stopped after Core adoption");
+        f.visit.bindOrdinaryOwner(f.host,(held,access)->{
+            var before=access.state();var raw=before.hudSlots().copy();raw[raw.length-1]^=0xA5;
+            var ready=access.prepare(before,before.section(),before.level(),CdAssetBytes.copyOf(raw),before.normalPalette(),before.displayedPalette());
+            access.adopt(before,ready);published[0]=ready;throw fault;
+        });
+        ordinaryLoadToBegin(f);var prior=f.visit.capture();var actor=f.frame.state();var env=f.frame.environment();var art=f.frame.artState();var clock=f.frame.vIntClock();var host=(FakeHost.Image)f.host.capture();int executions=f.host.executions;
+        assertSame(fault,assertThrows(IllegalArgumentException.class,()->f.visit.service(8)));assertNotNull(published[0]);assertSame(published[0],f.visit.state());assertNotSame(prior.state(),f.visit.state());
+        assertTrue(f.visit.failed());assertTrue(f.frame.closed());assertSame(actor,f.frame.state());assertSame(env,f.frame.environment());assertSame(art,f.frame.artState());assertSame(clock,f.frame.vIntClock());
+        assertHost(host,(FakeHost.Image)f.host.capture());assertEquals(executions,f.host.executions);
+        assertThrows(IllegalStateException.class,f.visit::capture);assertThrows(IllegalStateException.class,()->f.visit.restore(prior));assertThrows(IllegalStateException.class,()->f.visit.service(8));assertSame(published[0],f.visit.state());
+    }
+
+    @Test void ordinaryCaughtCoreReentryDoesNotPoisonTheActiveOuterAccess() {
+        var f=fixture(0,22,false);var prior=new Snapshot[1];int[] calls={0};
+        f.visit.bindOrdinaryOwner(f.host,(held,access)->{
+            var before=access.state();assertThrows(IllegalStateException.class,f.visit::begin);assertThrows(IllegalStateException.class,()->f.visit.service(held));
+            assertThrows(IllegalStateException.class,f.visit::capture);assertThrows(IllegalStateException.class,()->f.visit.validateRestore(prior[0]));assertThrows(IllegalStateException.class,()->f.visit.restore(prior[0]));
+            assertThrows(IllegalStateException.class,()->f.visit.bindOrdinaryOwner(f.host,(otherHeld,otherAccess)->fail("reentrant owner bound")));
+            assertFalse(f.visit.failed());assertFalse(f.frame.closed());access.validate(before);var ready=access.prepareGoodFuture(before,ordinaryPrepareSame(access,before),before.program().goodFutureByte()^1);access.adopt(before,ready);calls[0]++;
+        });
+        ordinaryLoadToBegin(f);prior[0]=f.visit.capture();var actor=f.frame.captureActor();var shared=f.frame.captureShared();int executions=f.host.executions;
+        f.visit.service(8);assertEquals(1,calls[0]);assertEquals(0,f.visit.state().program().goodFutureByte());assertFalse(f.visit.failed());assertFalse(f.frame.closed());
+        assertEquals(actor,f.frame.captureActor());assertEquals(shared,f.frame.captureShared());assertEquals(executions,f.host.executions);
+        f.visit.service(8);assertEquals(2,calls[0]);assertEquals(1,f.visit.state().program().goodFutureByte());assertFalse(f.visit.failed());
+    }
+
+    private static void ordinaryLoadToBegin(Fixture f){f.visit.begin();until(f,Phase.BEGIN_LEVEL);assertEquals(22,f.visit.state().fromWhiteSteps());}
+    private static State ordinaryPrepareSame(SonicCdAct2PastLoadingVisit.OrdinaryAccess access,State s){
+        return access.prepare(s,s.section(),s.level(),s.hudSlots(),s.normalPalette(),s.displayedPalette());
+    }
+    /** Constructed rejection values cannot mint an OrdinaryAccess or World authority. */
+    private static State ordinaryRawState(State s,CdR12bSectionArt.State section,Program program,CdAssetBytes fade,int fromWhite,List<Call> calls){
+        return new State(s.phase(),section,program,s.level(),s.normalPalette(),fade,s.waterPalette(),s.displayedPalette(),s.hudSlots(),s.blocksRam(),s.layoutRam(),s.oldWhiteSteps(),s.initialWhiteSteps(),fromWhite,s.displayEnabled(),calls);
+    }
 }

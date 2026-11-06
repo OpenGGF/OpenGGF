@@ -150,6 +150,9 @@ public final class SonicCdGameModule implements GameModule {
         if (mode.getCamera().getWidth() != 320 || mode.getCamera().getHeight() != 224)
             throw SonicCd.unsupported("R12B requires the native viewport");
     }
+    OptionalInt act2PastGoodFutureFlags(SonicCdAct2PastLoadingVisit expected) {
+        requireAct2PastLoadingVisit(expected);return levelProgram.goodFutureFlags();
+    }
     void validateAct2PastLoadingCut() {
         playerPresentation.requirePastRenderIdle(); requireAct2PastLoadingVisit(act2PastLoading);
         playerFrame.captureShared(); playerFrame.captureActor();
@@ -254,7 +257,7 @@ public final class SonicCdGameModule implements GameModule {
                 new SonicCdAct2PastWorldHost.Published(selected));
         act2PastLevel = level; act2PastLoadGeneration = Math.incrementExact(c.generation()); levelProgram = c.program();
         act2PastHost = new SonicCdAct2PastWorldHost(this,c.data().terrain(),c.data().player(),playerFrame,
-                new SonicCdAct2PastWorldHost.Initial(c.retained().globals(),hostScroll,hostVideo));
+                new SonicCdAct2PastWorldHost.Initial(c.retained().globals(),hostScroll,hostVideo,c.retained().savedFlags()));
         var art = com.openggf.game.soniccd.resources.CdR12bSectionArt.fromAssets(c.data().terrain());
         var section = art.fromValues(zeroPast(512),video.currentPatterns(),c.sectionWord(),
                 com.openggf.game.soniccd.resources.CdR11aPlcBuffer.cleared(),java.util.Optional.empty(),
@@ -267,6 +270,9 @@ public final class SonicCdGameModule implements GameModule {
         act2PastLoading = new SonicCdAct2PastLoadingVisit(act2PastHost,c.data().terrain(),c.data().player(),playerFrame,art,
                 new SonicCdAct2PastLoadingVisit.Entry(c.retained().saved(),section,programme,c.level(),zeroPast(128),zeroPast(128),
                         zeroPast(128),video.selection().displayedPalette(),zeroPast(31*64),p.whiteFadeSteps(),false));
+        act2PastHost.validate(act2PastLoading,playerFrame,c.data().terrain(),c.data().player());
+        var ordinary=new SonicCdAct2PastOrdinaryWorld(this,act2PastLoading,act2PastHost,playerFrame,c.data().terrain(),c.data().player(),art);
+        act2PastLoading.bindOrdinaryOwner(act2PastHost,ordinary);
         act2PastLoading.begin(); act2PastHost.projectCamera(GameServices.camera());
     }
     private static CdAssetBytes zeroPast(int count) { return CdAssetBytes.copyOf(new byte[count]); }

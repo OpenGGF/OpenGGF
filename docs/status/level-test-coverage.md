@@ -2448,3 +2448,13 @@ across separate runs:49 new bindings,29 legacy Swing,nine mappings and three
 legacy API inventories. The corrected14-case run passes without skips; earlier
 fixture failures remain attributed. No ordinary R12B physical pass or selected
 Sonic is inferred from these component checks.
+
+### 6 November — first R12B ordinary World pass
+
+The [Act2 Past matrix](../architecture/validation/levels/scd-palmtree-panic-act2-past.md)
+now records actual first unpaused selector8, source-ordered physical128 walk,
+Sonic Init, camera/CPU SAT and tail with full/course replay in the constructed
+exit fixture. All104 distinct cases have positive outcomes across separate
+100-positive and repaired4-positive selections. No skips. The natural controller
+route remains qualified through loading13935; later Main and selected Sonic are
+next. No screenshot/native/regional/full-act certification follows.

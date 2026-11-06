@@ -11,7 +11,7 @@ import java.util.function.UnaryOperator;
 import static com.openggf.game.soniccd.level.CdR12bProfile.Asset.*;
 
 /**
- * Loading-only actual original-USA R12B continuation. N1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff:
+ * Actual original-USA R12B loading and privately delegated ordinary continuation. N1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff:
  * Main.asm:19-329; Scroll (Act 2 Past).asm:11-137; Load Saved Data.asm:7-45;
  * Palmtree Panic/Load Level Data.asm:11-98; Palette Fade.asm:178-201,273-309.
  * Explicit entry values are actual caller projections, never fresh-game defaults or route inputs.
@@ -81,6 +81,10 @@ final class SonicCdAct2PastLoadingVisit {
             return new Program(demoModeWord, timeStonesByte, goodFutureByte, usePlayer2Byte, specialStageByte,
                     palFadeFlagsByte, palClearFlagBit0, gameModeByte, levelStartedByte, 0);
         }
+        private Program goodFuture(int value) {
+            return new Program(demoModeWord,timeStonesByte,value,usePlayer2Byte,specialStageByte,palFadeFlagsByte,
+                    palClearFlagBit0,gameModeByte,levelStartedByte,demoDataIndexWord);
+        }
         private Program started() {
             return new Program(demoModeWord, timeStonesByte, goodFutureByte, usePlayer2Byte, specialStageByte,
                     palFadeFlagsByte, palClearFlagBit0, gameModeByte & 0x7F, 1, demoDataIndexWord);
@@ -141,6 +145,49 @@ final class SonicCdAct2PastLoadingVisit {
             this.owner=owner;this.state=state;this.actor=actor;this.shared=shared;this.host=host;
         }
         State state() { return state; }
+    }
+
+    /** Private actual-World continuation, cached before begin; no DTO can mint this operation. */
+    interface OrdinaryOwner { void run(int held, OrdinaryAccess access); }
+    private OrdinaryOwner ordinary;
+    private OrdinaryAccess activeOrdinary;
+
+    void bindOrdinaryOwner(Host expected, OrdinaryOwner owner) {
+        current();
+        if(expected!=host||values.phase()!=Phase.ENTRY||ordinary!=null)throw new IllegalStateException("Bind the actual ordinary owner once before entry");
+        ordinary=Objects.requireNonNull(owner);
+    }
+
+    /** Stack-bound access to the SAME Core values. Prepared values alone never authorize adoption. */
+    final class OrdinaryAccess {
+        private OrdinaryAccess() { }
+        private void require() {
+            if(this!=activeOrdinary||!running||failed||ordinary==null||values.phase()!=Phase.BEGIN_LEVEL)
+                throw new IllegalStateException("No actual R12B ordinary invocation");
+            validateHost();
+        }
+        State state() { require();return values; }
+        void validate(State expected) {require();if(expected!=values)throw new IllegalArgumentException("Stale complete ordinary Core cut");}
+        State prepare(State expected,CdR12bSectionArt.State section,CdLevelGlobals level,
+                      CdAssetBytes hud,CdAssetBytes normal,CdAssetBytes displayed) {
+            validate(expected);art.withSectionWord(section,section.sectionWord());Objects.requireNonNull(level);
+            extent(hud,31*64);palette(normal);palette(displayed);
+            return expected.section(section).level(level).hud(hud)
+                    .palettes(normal,expected.fadePalette(),expected.waterPalette(),displayed);
+        }
+        State prepareGoodFuture(State expected,State ready,int value) {
+            validate(expected);return ready.program(expected.program().goodFuture(value));
+        }
+        void adopt(State expected,State ready) {
+            validate(expected);Objects.requireNonNull(ready);
+            if(ready.phase()!=Phase.BEGIN_LEVEL||!ready.program().equals(expected.program().goodFuture(ready.program().goodFutureByte()))||ready.oldWhiteSteps()!=expected.oldWhiteSteps()
+                    ||ready.initialWhiteSteps()!=expected.initialWhiteSteps()||ready.fromWhiteSteps()!=22
+                    ||ready.fadePalette()!=expected.fadePalette()||ready.waterPalette()!=expected.waterPalette()
+                    ||ready.displayEnabled()!=expected.displayEnabled()||ready.calls()!=expected.calls()
+                    ||ready.blocksRam()!=expected.blocksRam()||ready.layoutRam()!=expected.layoutRam())
+                throw new IllegalArgumentException("Ordinary adoption changed a nonwritten loading partition");
+            art.withSectionWord(ready.section(),ready.section().sectionWord());values=ready;
+        }
     }
 
     private final Host host;
@@ -209,13 +256,17 @@ final class SonicCdAct2PastLoadingVisit {
     void service(int held) {
         current();nativeByte(held);
         if(values.phase()==Phase.ENTRY)throw new IllegalStateException("Install then begin actual loading first");
-        if(values.phase()==Phase.BEGIN_LEVEL)stop(Boundary.ORDINARY_OBJECT_PASS);
+        if(values.phase()==Phase.BEGIN_LEVEL&&ordinary==null)stop(Boundary.ORDINARY_OBJECT_PASS);
         running=true;
         try {
             switch(values.phase()) {
                 case INITIAL_WHITE -> whiteService(held,true);
                 case FROM_WHITE -> whiteService(held,false);
                 case FIRST_PLC,SECTION_PLC -> plcService(held);
+                case BEGIN_LEVEL -> {
+                    var access=new OrdinaryAccess();activeOrdinary=access;
+                    try{ordinary.run(held,access);}finally{activeOrdinary=null;}
+                }
                 default -> throw new IllegalStateException("Unserviceable loading phase");
             }
         } catch(RuntimeException|Error failure){terminal(failure);throw failure;}finally{running=false;}

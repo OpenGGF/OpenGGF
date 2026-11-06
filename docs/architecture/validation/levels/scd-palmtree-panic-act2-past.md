@@ -1,7 +1,7 @@
 # Sonic CD Palmtree Panic Act2 Past — partial coverage
 
 Status: **live FULL entry and loading through controller13935, with selected terrain
-and full/course replay qualified; ordinary objects and playable traversal remain open**. This follows the [level-test standard](../../../guide/contributing/level-test-standard.md)'s
+and full/course replay qualified; first unpaused World walk qualifies in a constructed exit fixture, while ordinary traversal remains open**. This follows the [level-test standard](../../../guide/contributing/level-test-standard.md)'s
 partial matrix format; loading/decoding is not act certification.
 
 Canonical stage is PPZ act2/Past, native file `R12B__.MMD` (`CdStagePayload.R12B`),
@@ -109,17 +109,45 @@ and API inventories. An earlier fixture constructor error ran no tests. These
 are separate attributed receipts, not a single90-case fleet. The ordinary
 unpaused physical walk remains the next live obligation.
 
+## First ordinary World pass — 6 November
+
+The same actual World now binds a private ordinary scheduler and physical pass.
+Selector8 selects the prior CPU SAT/palette/HScroll prefix, then real DPLC,
+planes/slow PLC/HUD, Finish/pause and one level-frame increment precede SpawnObjects
+and the increasing live128-slot walk. Actual Sonic Init, twelve cached source
+families and live reserved HUD proceed to post-object scroll, CPU SAT drain,
+palette/section preparation and global animations. The pool and766 saved bytes
+have one placement owner in the existing Host capture participant. Prepared
+Frame/pool/Core/Host outputs introduce no new native bank or rewind key.
+
+`actualR12bFirstUnpausedOrdinaryServiceRunsTheRealPhysicalPassAndRestoresItsCompleteCut`
+passes full/course restore-forward checks in the existing constructed timer229
+exit fixture. Both inherited old-fade histories also return the first unpaused
+service. This does not extend the measured natural controller endpoint13935.
+Sonic Init retains the native no-draw result; later routine2 is explicitly
+`SONIC_MAIN`, pending real touch/external publication and later selector8 pixels.
+
+The104-case selection executed100P/3F/1E/0S. All23Core and16scheduler cases passed,
+alongside the real first-World/replay case. Four fixture corrections then passed
+4/0F/0E/0S: old boundary assertions now expect the actual first return, bank reset
+checks header aliases1/1, and pre-Body discard checks raw immutable Frame values
+without minting a forbidden closed capture. Initial compilation failed on three
+test references and executed no cases. These separate source-bound receipts
+establish104 distinct positives, not one104-green fleet. A bounded static review
+found no concrete new P1/P2. No new screenshot, target Sonic pixel, native/audio/
+regional or full-act parity is claimed. Broad smoke remains incomplete.
+
 ## Remaining act obligations
 
 | ID | Required next evidence | Current gap |
 | --- | --- | --- |
-| ENTRY | IPX/WARP/load dispatch, real saved pose, terrain/camera/control and post-entry player body | Actual private FULL/load/custody and saved/scroll publication qualify; ordinary primary Init/Main and selected Sonic remain pending |
-| OBJECT | Actual stage mapping/placement/body bindings, contacts, children, despawn/re-entry | Actual-source body factories, mapping catalogue and placement qualify as components; no target ordinary physical walk yet |
+| ENTRY | IPX/WARP/load dispatch, real saved pose, terrain/camera/control and post-entry player body | Actual private FULL/load/custody and saved/scroll publication qualify; first primary Init qualifies in the constructed World fixture; natural Main/selected Sonic remain pending |
+| OBJECT | Actual stage mapping/placement/body bindings, contacts, children, despawn/re-entry | Actual-source body factories, mapping catalogue and placement qualify as components; first full walk qualifies in the constructed exit fixture; natural continuation pending |
 | EVENT | Native stage gates, water/palette/background/terrain changes | Unimplemented target programme owners |
 | CAMERA | Correct stage scroll/parallax/culling and width-sensitive behavior | Live loading scroll/plane publication qualifies; ordinary camera/culling/width-sensitive traversal remains pending |
 | BOSS | Source inventory and route-specific applicability | Unassessed, not marked not-applicable |
 | LIFE | Real checkpoint/death/restart and native persistence/reset | No target lifecycle |
-| LOAD | Sparse current profile, actual section/PLC services, readiness, source replacement and next playable state | Actual source-ordered loading/PLCs/current selection qualify; ordinary8/HUD/slow-PLC/object services remain pending |
+| LOAD | Sparse current profile, actual section/PLC services, readiness, source replacement and next playable state | Actual source-ordered loading/PLCs/current selection qualify; first ordinary8/HUD/slow-PLC/object services qualify in the constructed fixture; route breadth remains pending |
 | REWIND | Nondefault target before/active/after mechanics and in-timeline loads with full/course replay | Target loading full/course and foreign-epoch controls qualify; ordinary mechanics/lifecycle timelines remain open |
 | PRESENT | Actual target mapping/current/plane/palette/scroll pixels and audio ownership | Actual selected terrain framebuffer/replay qualifies; ordinary Sonic, native comparison and audio proof remain open |
 | ROUTE | Real target entry through mandatory mechanics/goal/results/next state | Entry/loading only; ordinary route and completion remain open |

@@ -171,8 +171,9 @@ class TestSonicCdAct2TimeWarpExit {
         assertEquals(1,next.state().header().slotId());assertEquals(0,next.state().motion().routine(),"No ordinary Sonic Init during loading");
         assertEquals(0,next.environment().globals().levelFrames());assertTrue(loading.state().displayEnabled());assertFalse(next.closed());
         assertEquals(0,loading.state().section().queue().headSource());assertEquals(0,loading.state().section().remainingTilesWord());
-        var stop=assertThrows(SonicCdAct2PastLoadingVisit.UnsupportedLoading.class,()->step(s.h(),neutral()));
-        assertEquals(SonicCdAct2PastLoadingVisit.Boundary.ORDINARY_OBJECT_PASS,stop.boundary());assertTrue(next.closed());
+        assertDoesNotThrow(()->step(s.h(),neutral()));assertFalse(next.closed());
+        assertEquals(2,next.state().motion().routine());assertEquals(1,next.environment().globals().levelFrames());
+        assertTrue(module.act2PastWorldHost().video().completedCpu().isPresent(),"First actual unpaused pass reaches CPU drain and tail");
         assertSame(world,s.h().mode().getWorldSession());assertEquals(generation+1,s.h().mode().getLevelManager().getCompletedProductionLoadGeneration());
     }
 
@@ -359,16 +360,25 @@ class TestSonicCdAct2TimeWarpExit {
         assertEquals(22,arrival.visit().state().fromWhiteSteps());assertFalse(arrival.frame().closed());
         assertEquals(0,arrival.frame().state().motion().routine(),"Loading has not executed ordinary Sonic Init/body");
         assertEquals(1,arrival.frame().state().header().slotId(),"Only genuine LoadPlayer is reached");
-        var beforeCore=arrival.visit().state();var beforeHost=field(arrival.host(),"image");
-        var beforeActor=arrival.frame().state();var beforeEnvironment=arrival.frame().environment();var beforeClock=arrival.frame().vIntClock();
-        var stop=assertThrows(SonicCdAct2PastLoadingVisit.UnsupportedLoading.class,
-                ()->arrival.old().h().module().serviceAct2PastLoading(0));
-        assertEquals(SonicCdAct2PastLoadingVisit.Boundary.ORDINARY_OBJECT_PASS,stop.boundary());
-        assertTrue(arrival.frame().closed(),"Existing Module failure closure retires this native stop");
-        assertSame(beforeCore,arrival.visit().state());assertSame(beforeHost,field(arrival.host(),"image"));
-        assertSame(beforeActor,field(arrival.frame(),"state"));assertSame(beforeEnvironment,field(arrival.frame(),"environment"));
-        assertSame(beforeClock,field(arrival.frame(),"vIntClock"));
         assertTrue(budget.calls<=256,"All physical target services, including replay executions, are bounded");
+    }
+
+    @Test void actualR12bFirstUnpausedOrdinaryServiceRunsTheRealPhysicalPassAndRestoresItsCompleteCut() throws Exception {
+        var arrival=r12bArrive(prepared229(1));var budget=new R12bServiceBudget();
+        r12bDriveTo(arrival,budget,SonicCdAct2PastLoadingVisit.Phase.BEGIN_LEVEL);
+        var frame=arrival.frame();var registry=arrival.old().h().mode().getRewindRegistry();
+        var before=r12bProof(arrival);var full=registry.capture();var course=registry.captureCourse();
+        assertEquals(0,frame.state().motion().routine());int oldFrame=frame.environment().globals().levelFrames();
+        assertDoesNotThrow(()->step(arrival.old().h(),neutral()),"First genuine unpaused R12B pass");
+        assertFalse(frame.closed());assertEquals((oldFrame+1)&65535,frame.environment().globals().levelFrames());
+        assertEquals(2,frame.state().motion().routine(),"Actual physical primary Init must run");
+        assertEquals(0x230F60,frame.state().header().mappingAddress());
+        assertTrue(arrival.host().video().completedCpu().isPresent(),"Real complete walk and camera must produce CPU SAT");
+        var after=r12bProof(arrival);
+        registry.restore(full);r12bAssertProof(before,arrival,"ordinary full before");
+        step(arrival.old().h(),neutral());r12bAssertProof(after,arrival,"ordinary full forward");
+        registry.restoreCourse(course);r12bAssertProof(before,arrival,"ordinary course before");
+        step(arrival.old().h(),neutral());r12bAssertProof(after,arrival,"ordinary course forward");
     }
 
     @Test void actualR12bSelectedPixelsRepeatAcrossRewindAndCaughtReentryLeavesTheHealthyNativeCut() throws Exception {
