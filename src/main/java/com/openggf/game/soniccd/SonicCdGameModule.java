@@ -157,7 +157,7 @@ public final class SonicCdGameModule implements GameModule {
         SWING_BODY,
         OLD_EXIT_PRELUDE, OLD_EXIT_CLEAR_PLCS, OLD_EXIT_FADE_SERVICE, OLD_EXIT_WHITE_COLOURS, OLD_EXIT_RETURN
     }
-    enum Act2Boundary { ENTRY, PRIMARY_BODY, RESERVED_HUD, DYNAMIC_OBJECTS, LEVEL_FLOW, POWERUP_ART, PALETTE_CYCLE, GLOBAL_ANIMATIONS, MONITOR_ITEM_REWARD, SHIELD_LAYER, OLD_EXIT_RESTART, OLD_EXIT_FIRST_LOAD, OLD_EXIT_SPECIAL_STAGE, OLD_EXIT_WARP_PROGRAMME }
+    enum Act2Boundary { ENTRY, PRIMARY_BODY, RESERVED_HUD, DYNAMIC_OBJECTS, LEVEL_FLOW, POWERUP_ART, PALETTE_CYCLE, GLOBAL_ANIMATIONS, MONITOR_ITEM_REWARD, SHIELD_LAYER, OLD_EXIT_RESTART, OLD_EXIT_FIRST_LOAD, OLD_EXIT_SPECIAL_STAGE, OLD_EXIT_WARP_PROGRAMME, OLD_EXIT_LEVEL_OVER, R12B_LOAD }
     static final class UnsupportedAct2Loading extends UnsupportedOperationException {
         private final Act2Boundary boundary;
         UnsupportedAct2Loading(Act2Boundary boundary) { super("Actual R12A stopped at " + boundary); this.boundary = boundary; }
@@ -178,7 +178,9 @@ public final class SonicCdGameModule implements GameModule {
                              SonicCdPastLoadingVisit.ExitCarry mainvars, int displayedVScrollLongBits,
                              long generation, LevelProgramState program) { }
     private record Act2OpeningShared(SonicCdAct2LoadingVisit.Snapshot loading, ProgramServicesState services,
-                                     LevelProgramState program) { }
+                                     LevelProgramState program, CdWarpScene.State warp, List<ProgramSound> sounds) {
+        private Act2OpeningShared { sounds = List.copyOf(sounds); }
+    }
 
     boolean act2LoadingSelected() { return act2Loading != null; }
     Act2LoadState act2LoadState() { validateAct2LoadingCut(); return act2Loading.observation(); }
@@ -206,7 +208,8 @@ public final class SonicCdGameModule implements GameModule {
     }
     private static boolean act2ProgrammePhase(LevelProgramPhase phase) {
         return phase == LevelProgramPhase.ACT2_LOADING || phase == LevelProgramPhase.OLD_EXIT_PRELUDE
-                || phase == LevelProgramPhase.WHITE_FADE || phase == LevelProgramPhase.OLD_RETURNED;
+                || phase == LevelProgramPhase.WHITE_FADE || phase == LevelProgramPhase.OLD_RETURNED
+                || phase == LevelProgramPhase.WARP || phase == LevelProgramPhase.PAST_PENDING;
     }
     /** Retained Act2 capture/rendering remains admitted; ordinary plane/camera mutations do not. */
     void requireAct2OrdinaryPresentation(CdPlayerFrameRuntime sourceFrame) {
@@ -277,7 +280,22 @@ public final class SonicCdGameModule implements GameModule {
         playerPresentation.requirePastRenderIdle();
         // Reject nested public ingress before the terminal failure owner is entered.
         if (act2Loading != null) { act2Loading.requireItemShieldServiceIdle(); act2Loading.requireOldProgrammeServiceIdle(); }
-        try { validateAct2LoadingCut(); act2Loading.service(held); playerPresentation.projectAct2Loading(); }
+        try {
+            validateAct2LoadingCut();
+            var phase = levelProgramState().phase();
+            if (phase == LevelProgramPhase.OLD_RETURNED) { beginAct2WarpProgram(); return; }
+            if (phase == LevelProgramPhase.WARP) { serviceWarpProgram(held); return; }
+            if (phase == LevelProgramPhase.PAST_PENDING) {
+                validateWarpProgrammeOwner();
+                // IPX.RunLevel557-563 uses the retained R12SubCmds row (653-654).
+                // Past0 does not read goodFuture or use either MMD's returned BYTE.
+                if (playerFrame.environment().movement().gates().zoneAct() != 1
+                        || (playerFrame.environment().movement().gates().timeZone() & 0x7F) != 0)
+                    throw act2Boundary(Act2Boundary.ENTRY);
+                throw act2Boundary(Act2Boundary.R12B_LOAD);
+            }
+            act2Loading.service(held); playerPresentation.projectAct2Loading();
+        }
         catch (RuntimeException | Error failure) { closePlayerCycleAfterFailure(failure); throw failure; }
     }
     void completeAct2LoadingBeginLevel(SonicCdAct2LoadingVisit visit) {
@@ -1091,8 +1109,9 @@ public final class SonicCdGameModule implements GameModule {
                     || (palFadeFlags & ~0xFF) != 0 || (gameMode & ~0xFF) != 0
                     || (levelStarted & ~0xFF) != 0 || whiteFadeSteps < 0 || whiteFadeSteps > 22
                     || (phase == LevelProgramPhase.LEVEL && whiteFadeSteps != 0)
-                    || ((phase == LevelProgramPhase.RETURNED || phase == LevelProgramPhase.WARP
-                            || phase == LevelProgramPhase.PAST_PENDING) && whiteFadeSteps != 22)) {
+                    || (phase == LevelProgramPhase.RETURNED && whiteFadeSteps != 22)
+                    || ((phase == LevelProgramPhase.WARP || phase == LevelProgramPhase.PAST_PENDING)
+                            && whiteFadeSteps != 0 && whiteFadeSteps != 22)) {
                 throw new IllegalArgumentException("Incomplete native level programme value");
             }
         }
@@ -1401,6 +1420,25 @@ public final class SonicCdGameModule implements GameModule {
         var program = levelProgramState();
         if (program.phase() != LevelProgramPhase.RETURNED || warpState != null || !programSounds.isEmpty())
             throw new IllegalStateException("WARP entry requires the actual completed old programme");
+        startWarpProgram(program);
+    }
+
+    /** Actual RunR12 caller after the completed old R12A return. No old Frame pulse. */
+    private void beginAct2WarpProgram() {
+        validateAct2LoadingCut(); act2Loading.requireReturnedProgrammeIdle();
+        var program = levelProgramState();
+        if (program.phase() != LevelProgramPhase.OLD_RETURNED || warpState != null || !programSounds.isEmpty())
+            throw new IllegalStateException("Act2 WARP requires its actual one-time MMD return");
+        var old = act2Loading.observation();
+        // RunMMD1373-1387 has returned/stopped FM and blanked before RunLevel's lives/marker gates.
+        programSounds = List.of(ProgramSound.STOP_FM);
+        if (old.ring().lives() == 0 || (playerFrame.environment().movement().gates().timeZone() & 0x80) == 0)
+            throw act2Boundary(Act2Boundary.OLD_EXIT_LEVEL_OVER);
+        startWarpProgram(program);
+    }
+
+    /** Shared authenticated scene binding; each actual caller establishes its own source authority. */
+    private void startWarpProgram(LevelProgramState program) {
         if (warpScene == null) {
             var retained = requireRuntimeSource().timeWarpPrograms().orElseThrow(
                     () -> new UnsupportedRestart(RestartBoundary.WARP_PROGRAM_START));
@@ -1424,8 +1462,9 @@ public final class SonicCdGameModule implements GameModule {
 
     /** One current controller HOLD row; neither draw nor restore calls this source owner. */
     void serviceWarpProgram(int rawHeldByte) {
+        playerPresentation.requirePastRenderIdle(); // Rejected callback reentry never closes a healthy Frame.
         try {
-            requireTerrainPlayerReady(); requireOpeningClosedCut(); playerActor.requireCompletedNativeFrame();
+            validateWarpProgrammeOwner();
             var program = levelProgramState();
             if (program.phase() != LevelProgramPhase.WARP || warpScene == null || warpState == null)
                 throw new IllegalStateException("No executing WARP programme");
@@ -1446,6 +1485,17 @@ public final class SonicCdGameModule implements GameModule {
             warpScene.validate(result.state());
             warpState = result.state(); programSounds = ready;
         } catch (RuntimeException | Error failure) { closePlayerCycleAfterFailure(failure); throw failure; }
+    }
+
+    /** Read-only actual source/World/closed-cut admission, also used during owned scene rendering. */
+    void validateWarpProgrammeOwner() {
+        if (act2Loading != null) {
+            validateAct2LoadingCut(); act2Loading.requireReturnedProgrammeIdle();
+        } else {
+            requireTerrainPlayerReady(); requireOpeningClosedCut(); playerActor.requireCompletedNativeFrame();
+        }
+        if (!warpProgramSelected()) throw new IllegalStateException("No selected actual WARP programme");
+        validateWarpProgramCut(levelProgramState(), warpState, programSounds);
     }
 
     private static LevelProgramState withProgramPhase(LevelProgramState p, LevelProgramPhase phase) {
@@ -1502,7 +1552,7 @@ public final class SonicCdGameModule implements GameModule {
         @Override public Object capture() {
             if (act2Loading != null) {
                 validateAct2LoadingCut(); validateProgramServicesState(programServices);
-                return new Act2OpeningShared(act2Loading.capture(), programServices, levelProgramState());
+                return new Act2OpeningShared(act2Loading.capture(), programServices, levelProgramState(), warpState, programSounds);
             }
             if (pastLoading != null) {
                 validatePastLoadingCut(); validateProgramServicesState(programServices);
@@ -1519,6 +1569,7 @@ public final class SonicCdGameModule implements GameModule {
             if (act2Loading != null) {
                 if (!(value instanceof Act2OpeningShared act2)) throw new IllegalArgumentException("Foreign programme epoch in Act2");
                 act2Loading.validateRestore(act2.loading(), act2.program()); validateProgramServicesState(act2.services());
+                validateWarpProgramCut(act2.program(), act2.warp(), act2.sounds());
                 return;
             }
             if (pastLoading != null) {
@@ -1546,6 +1597,7 @@ public final class SonicCdGameModule implements GameModule {
             if (value instanceof Act2OpeningShared act2) {
                 try {
                     levelProgram = act2.program(); act2Loading.restore(act2.loading(), act2.program()); programServices = act2.services();
+                    warpState = act2.warp(); programSounds = act2.sounds();
                 } catch (RuntimeException | Error failure) { closePlayerCycleAfterFailure(failure); throw failure; }
                 return;
             }
@@ -1587,7 +1639,7 @@ public final class SonicCdGameModule implements GameModule {
                 || program.levelStarted() != 0 || (program.gameMode() & 0x80) == 0
                 || frame.paused() || level.spawnMode() != 2 || gates.zoneAct() != 0
                 || gates.timeZone() < 0x80 || gates.timeZone() > 0x82
-                || (returned ? (program.palFadeFlags() & 1) != 0 || level.levelRestart() != 0
+                || (returned ? program.whiteFadeSteps() != 22 || (program.palFadeFlags() & 1) != 0 || level.levelRestart() != 0
                         || gates.timeWarpDirection() != 0
                         : (program.palFadeFlags() & 1) == 0 || program.whiteFadeSteps() >= 22
                                 || (level.levelRestart() & 0xFF00) != 0x0100)) {

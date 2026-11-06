@@ -32,6 +32,35 @@ public final class CdWarpPresentation {
 
     private CdWarpPresentation() { }
 
+    /**
+     * Same selected native products for the retained plane renderer. Start clears PlaneA and
+     * HScroll, writes the authenticated PlaneB, and VInterrupt selects BG VScroll (Main145-154,
+     * 249-287). The caller supplies IPX's display gate; false samples no unknown initial CRAM or
+     * unselected source bytes. Its zero staging palette is unsampled, never native knowledge.
+     * The pattern map keeps native IDs0..100; SAT tiles use the explicit logical base.
+     * This pure value grants no range or World authority.
+     */
+    public static com.openggf.graphics.RetainedPlaneSceneRenderer.Scene retainedScene(
+            CdWarpAssets assets, CdWarpScene.State selected, int logicalBase, boolean displayEnabled) {
+        check(assets, selected, logicalBase);
+        if (!displayEnabled) return new com.openggf.graphics.RetainedPlaneSceneRenderer.Scene(
+                null, null, new int[256], 0, new byte[128], false,
+                SpritePresentation.Frame.empty(), java.util.Map.of());
+        if (!selected.displayEnabled()) throw new IllegalArgumentException("WARP has not enabled its selected display");
+        int[] background = new int[2048];
+        if (assets.backgroundPlane().length() != 4096 || assets.art().length() != TILE_COUNT * 32)
+            throw new IllegalArgumentException("Incomplete selected WARP plane/art");
+        for (int cell = 0; cell < background.length; cell++) background[cell] = assets.backgroundPlane().unsignedWord(cell * 2);
+        var versions = new HashMap<Integer, SpritePresentation.PatternVersion>();
+        for (int tile = 0; tile < TILE_COUNT; tile++) versions.put(tile,
+                CdObjectPresentation.patternVersion(assets.art().slice(tile * 32, 32)));
+        return new com.openggf.graphics.RetainedPlaneSceneRenderer.Scene(
+                new com.openggf.graphics.RetainedPlaneSceneRenderer.PlaneImage(new int[2048]),
+                new com.openggf.graphics.RetainedPlaneSceneRenderer.PlaneImage(background), new int[256],
+                selected.displayedVscrollBgWord(), selected.displayedPalette().orElseThrow().copy(), true,
+                sprites(assets, selected, logicalBase), versions);
+    }
+
     /** The selected physical64x32 name table, at zero horizontal scroll and wrapped selected VScroll. */
     public static SpritePresentation.Frame background(CdWarpAssets assets, CdWarpScene.State selected, int logicalBase) {
         check(assets, selected, logicalBase);

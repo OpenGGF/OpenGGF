@@ -14,7 +14,7 @@ import java.util.Objects;
  * Detached original USA R12B source metadata, not programme, World or current-art admission.
  * N1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff: Palmtree Panic/Act 2 Past.asm:7-91;
  * Data (Act 2 Past).asm:11-26,68-86,346-384,390-418,442-498;
- * Load Level Data.asm:11-39,57-98; Scroll (Act 2 Past).asm:44-49,143-159,1172-1201;
+ * Load Level Data.asm:11-39,57-98; Scroll (Act 2 Past).asm:44-49,143-159,398-404,539-540,1172-1201;
  * Palette Data (Act 1 Past).asm:11-29,46-59; Graphics Lists (Act 2 Past).asm:7-26.
  * Complete native blobs and actual local operands were compared to the original retail file.
  */
@@ -34,7 +34,8 @@ public final class CdR12bProfile {
         PALETTE_TABLE(0x5C0,48), PAL_SONIC(0x6F0,32), PAL_LEVEL(0x710,96),
         PLC_LISTS(0xF03A,616), SECTION_DATA(0xCBC0,30), OBJECT_LAYOUTS(0x76F8,3930),
         SPEC_CHUNKS(0x29D8,4), BG_CAMERA_SECT_IDS(0x33AA,34), BG_CAMERA_SECTS(0x33CC,16),
-        PALETTE_CYCLE_DATA(0x2C0,84);
+        PALETTE_CYCLE_DATA(0x2C0,84),
+        CLOUD_LINE_COUNTS(0x2B6C,8);
         private final int offset, length;
         Asset(int offset,int length) { this.offset=offset; this.length=length; }
         public int fileOffset() { return offset; }

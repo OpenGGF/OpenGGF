@@ -908,18 +908,36 @@ class TestSonicCdAct2ControllerRoute {
         var exitBeforeStopValues=actualField(swingVisit,"values");var exitBeforeStopCalls=actualField(exitBeforeStopValues,"calls");
         var exitBeforeStopProgramme=module.levelProgramState();var exitBeforeStopClock=frame.vIntClock();
         assertEquals(3108L,exitBeforeStopClock.absoluteValue().orElseThrow());assertEquals(SonicCdGameModule.LevelProgramPhase.OLD_RETURNED,exitBeforeStopProgramme.phase());
-        // Separate13530 stops BEFORE the unowned IPX blank/FM/WARP/source-load continuation. No closed capture/restore follows.
-        var exitStop=assertThrows(SonicCdGameModule.UnsupportedAct2Loading.class,()->step(h,controller(13530)));
-        assertEquals(SonicCdGameModule.Act2Boundary.OLD_EXIT_WARP_PROGRAMME,exitStop.boundary());assertEquals("Actual R12A stopped at OLD_EXIT_WARP_PROGRAMME",exitStop.getMessage());assertTrue(frame.closed());
+        step(h,controller(13530));assertEquals(SonicCdGameModule.LevelProgramPhase.WARP,module.levelProgramState().phase());
+        assertEquals(com.openggf.game.soniccd.scene.CdWarpScene.Phase.DELAY,module.warpSceneState().orElseThrow().phase());
+        assertEquals(90,module.warpSceneState().orElseThrow().timerWord());
+        assertEquals(java.util.List.of(SonicCdGameModule.ProgramSound.STOP_FM),module.programSoundRequests());
+        for(int row=1;row<=354;row++){
+            int call=13530+row;boolean replay=row==1||row==91||row==115||row==330||row==354;
+            var ipxWarpFull=replay?registry.capture():null;var ipxWarpCourse=replay?registry.captureCourse():null;var ipxWarpBefore=replay?captureNative(h):null;
+            step(h,controller(call));
+            if(replay){var ipxWarpAfter=captureNative(h);registry.restore(ipxWarpFull);assertNativeCapture(ipxWarpBefore,h);step(h,controller(call));assertNativeCapture(ipxWarpAfter,h);
+                registry.restoreCourse(ipxWarpCourse);assertNativeCapture(ipxWarpBefore,h);step(h,controller(call));assertNativeCapture(ipxWarpAfter,h);}
+            assertSame(exitBeforeStopValues,actualField(swingVisit,"values"));assertSame(exitBeforeStopClock,frame.vIntClock());
+            assertEquals(row,module.warpSceneState().orElseThrow().vIntCounterWord());assertFalse(frame.closed());
+            assertSame(warpSaved210,actualField(actualField(actualField(actualField(swingVisit,"values"),"globals"),"timeWarpCustody"),"saved"));
+            assertEquals(22,module.levelProgramState().whiteFadeSteps());assertEquals(0,module.levelProgramState().palFadeFlags());
+        }
+        assertEquals(com.openggf.game.soniccd.scene.CdWarpScene.Phase.RETURNED,module.warpSceneState().orElseThrow().phase());
+        var ipxWarpEndFull=registry.capture();var ipxWarpEndCourse=registry.captureCourse();var warpBeforeBlank=captureNative(h);
+        step(h,controller(13885));var warpAfterBlank=captureNative(h);
+        registry.restore(ipxWarpEndFull);assertNativeCapture(warpBeforeBlank,h);step(h,controller(13885));assertNativeCapture(warpAfterBlank,h);
+        registry.restoreCourse(ipxWarpEndCourse);assertNativeCapture(warpBeforeBlank,h);step(h,controller(13885));assertNativeCapture(warpAfterBlank,h);
+        assertEquals(SonicCdGameModule.LevelProgramPhase.PAST_PENDING,module.levelProgramState().phase());
+        assertEquals(java.util.List.of(SonicCdGameModule.ProgramSound.STOP_FM,SonicCdGameModule.ProgramSound.WARP_DIRECT_FM_D8,SonicCdGameModule.ProgramSound.STOP_FM),module.programSoundRequests());
+        var exitStop=assertThrows(SonicCdGameModule.UnsupportedAct2Loading.class,()->step(h,controller(13886)));
+        assertEquals("R12B_LOAD",exitStop.boundary().name());assertTrue(frame.closed());
         var exitFailedValues=actualField(swingVisit,"values");assertSame(exitBeforeStopValues,exitFailedValues);assertSame(exitBeforeStopCalls,actualField(exitFailedValues,"calls"));
-        assertSame(exitBeforeStopProgramme,actualField(module,"levelProgram"));
-        // Source-oracle clock nonwrite: the partial JSON exposes no failed Frame clock; this raw field read does not capture/service a closed Frame.
-        assertSame(exitBeforeStopClock,actualField(frame,"vIntClock"));
-        assertEquals("OLD_RETURNED",actualField(exitFailedValues,"phase").toString());
+        assertSame(exitBeforeStopClock,actualField(frame,"vIntClock"));assertEquals("OLD_RETURNED",actualField(exitFailedValues,"phase").toString());
         var exitFailedCalls=(java.util.List<?>)actualField(exitFailedValues,"calls");assertEquals(109,exitFailedCalls.size());assertEquals("OLD_EXIT_RETURN",exitFailedCalls.getLast().toString());
         var exitFailedLevel=assertInstanceOf(com.openggf.game.soniccd.objects.CdLevelGlobals.class,actualField(exitFailedValues,"level"));assertEquals(0,exitFailedLevel.levelRestart());assertEquals(2,exitFailedLevel.spawnMode());
         assertSame(warpSaved210,actualField(actualField(actualField(exitFailedValues,"globals"),"timeWarpCustody"),"saved"));
-        System.out.println("Controller-only Act2 closed13529: the complete old13506 save route remains; natural13507 returns the post-all-objects prelude and ClearPLCs, then13508..13529 run exactly22 selector12 waits. Original World/Frame/R12A/source epoch/save42/receipt, frozen post13507 pool96/actor/reserved/HUD and retained CPU survive; selected palettes precede current normal/water colour work. Full/course before-forward edges cover13507,13508,13518,13529 plus complete endpoint restore. Separate13530 OLD_EXIT_WARP_PROGRAMME stops before IPX blank/FM/WARP/destination load. No closed13530, new sound semantics, pixels, visibility or native-parity claim.");
+        System.out.println("Controller-only Act2 closed13885: old13529 save/exit retained;13530 actual IPX blank/STOP_FM and authenticated WARP setup,13531..13884 own354scene services,13885 WARP-return blank/STOP_FM. Full/course replay across scene phases and both blank cuts preserves original R12A World/Frame/source/load epoch/save42. First13886 selects R12SubCmds Past/R12B and stops before target assembly or old retirement. No new route pixels or native/regional/audio parity claim.");
         // END measured natural TimeWarp230 old exit.
         // END measured natural TimeWarp save continuation.
         // END measured Swing promotion.
@@ -1687,10 +1705,11 @@ class TestSonicCdAct2ControllerRoute {
     }
 
     private static LogicalInputSnapshot controller(int call) {
-        if (call < 1 || call > 13550) throw new IllegalArgumentException("Fixed ordinary controller recipe is1..13550; positive qualification stops13385");
+        if (call < 1 || call > 13886) throw new IllegalArgumentException("Fixed ordinary controller recipe is1..13886; final13886 tests the R12B load fence");
         if (call > 10419) {
             // Exact old prefix through13098; then Left96, Left+B4, Left96, Right256.
-            // Positive tests stop at completed13385; calls13386..13550 remain recipe only.
+            // The established held-Right suffix continues unchanged through the WARP return;
+            // controller bounds are fixture input selection, never gameplay behavior.
             int directions = call >= 13099 && call <= 13294 ? 4 : 8;
             int actions = call <= 13098 ? (call >= 11214 && (call - 11214) % 128 < 32 ? 2 : 0)
                     : (call >= 13195 && call <= 13198 ? 2 : 0);

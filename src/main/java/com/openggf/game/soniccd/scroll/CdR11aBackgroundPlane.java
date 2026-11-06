@@ -7,6 +7,8 @@ import com.openggf.game.soniccd.level.CdR11aTerrain;
 import com.openggf.game.soniccd.level.CdR11bAssets;
 import com.openggf.game.soniccd.level.CdR12aProfile;
 import com.openggf.game.soniccd.level.CdR12aTerrainAssets;
+import com.openggf.game.soniccd.level.CdR12bProfile;
+import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
 import com.openggf.game.soniccd.level.CdStageTerrain;
 
 import java.util.ArrayList;
@@ -150,7 +152,9 @@ public final class CdR11aBackgroundPlane {
         Objects.requireNonNull(terrain, "terrain");
         if (terrain.shape() != expectedShape) {
             throw new IllegalArgumentException(expectedShape == CdStageTerrain.Shape.PPZ1_PAST
-                    ? "Expected the explicit PPZ1 Past terrain format" : "Expected the explicit PPZ2 Present terrain format");
+                    ? "Expected the explicit PPZ1 Past terrain format"
+                    : expectedShape == CdStageTerrain.Shape.PPZ2_PRESENT
+                    ? "Expected the explicit PPZ2 Present terrain format" : "Expected the explicit PPZ2 Past terrain format");
         }
         this.ids = Objects.requireNonNull(ids, "ids");
         this.livePointers = Objects.requireNonNull(livePointers, "livePointers");
@@ -200,6 +204,22 @@ public final class CdR11aBackgroundPlane {
         Objects.requireNonNull(assets, "assets");
         return fromAct2Tables(assets.terrain(), assets.view(CdR12aProfile.Asset.BG_CAMERA_SECT_IDS),
                 assets.view(CdR12aProfile.Asset.BG_CAMERA_SECTS));
+    }
+
+    /**
+     * Original USA R12B data binding. Scroll (Act 2 Past).asm:940-1043,1139-1201
+     * has the same plane algorithm,34 IDs/four pointers and initial mask$1F0.
+     * This aggregate authenticates original bytes only; no Frame/World/current-art admission.
+     */
+    public static CdR11aBackgroundPlane bindAct2Past(CdR12bTerrainAssets assets) {
+        Objects.requireNonNull(assets, "assets");
+        return fromAct2PastTables(assets.terrain(), assets.view(CdR12bProfile.Asset.BG_CAMERA_SECT_IDS),
+                assets.view(CdR12bProfile.Asset.BG_CAMERA_SECTS));
+    }
+
+    /** Explicit PPZ2 Past format-fixture seam; no media, programme or execution authority. */
+    public static CdR11aBackgroundPlane fromAct2PastTables(CdStageTerrain terrain, CdAssetBytes ids, CdAssetBytes pointers) {
+        return new CdR11aBackgroundPlane(terrain, ids, pointers, CdStageTerrain.Shape.PPZ2_PAST);
     }
 
     /** Explicit PPZ2 format-fixture seam; supplied values confer no media or execution authority. */

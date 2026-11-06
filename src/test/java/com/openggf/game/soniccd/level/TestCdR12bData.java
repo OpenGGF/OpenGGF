@@ -23,11 +23,11 @@ class TestCdR12bData {
         return CdR12bProfile.forStage(CdReleaseVariant.USA, CdStagePayload.R12B.stage());
     }
 
-    @Test void sourceProfileIsExplicitUsaR12bWithTwentyFourBoundedDescriptors() {
+    @Test void sourceProfileIsExplicitUsaR12bWithTwentyFiveBoundedDescriptors() {
         var p = profile();
         assertEquals(CdReleaseVariant.USA, p.variant()); assertEquals(CdStagePayload.R12B.stage(), p.stage());
         assertEquals(CdNativeFile.R12B, p.file()); assertEquals(CdMmdImage.Domain.ORIGINAL_WORD_RAM, p.domain());
-        assertEquals(262144, CdR12bProfile.FILE_BYTES); assertEquals(24, CdR12bProfile.Asset.values().length);
+        assertEquals(262144, CdR12bProfile.FILE_BYTES); assertEquals(25, CdR12bProfile.Asset.values().length);
         assertEquals("14de4fdb4979125a8c0c197c926133353d20a2ca5b2d57db2e363c4e94460a64", p.expectedMmdSha256());
         for (var variant : new CdReleaseVariant[]{CdReleaseVariant.JAPAN, CdReleaseVariant.EUROPE})
             assertThrows(UnsupportedOperationException.class, () -> CdR12bProfile.forStage(variant, CdStagePayload.R12B.stage()));

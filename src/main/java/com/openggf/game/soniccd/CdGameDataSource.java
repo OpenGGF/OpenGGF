@@ -7,6 +7,8 @@ import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdR11aAssets;
 import com.openggf.game.soniccd.level.CdR12aTerrainAssets;
 import com.openggf.game.soniccd.level.CdR12aPlayerAssets;
+import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
+import com.openggf.game.soniccd.level.CdR12bPlayerAssets;
 import com.openggf.game.soniccd.level.CdStagePlayerSource;
 import com.openggf.game.soniccd.media.CdTimeWarpPrograms;
 import com.openggf.game.soniccd.release.CdRetailRelease;
@@ -38,11 +40,20 @@ public final class CdGameDataSource implements GameDataSource {
         }
     }
 
+    /** Original-USA R12B data only; no execution, load or source-epoch authority. */
+    public record Act2PastAssets(CdR12bTerrainAssets terrain, CdR12bPlayerAssets player) {
+        public Act2PastAssets {
+            CdStagePlayerSource.fromAct2Past(Objects.requireNonNull(terrain, "Act2 Past terrain assets"),
+                    Objects.requireNonNull(player, "Act2 Past player assets"));
+        }
+    }
+
     private final CdRetailRelease release;
     private final CdR11aAssets assets;
     private final Optional<CdFmSoundAssets> fmSoundAssets;
     private final Optional<CdTimeWarpPrograms> timeWarpPrograms;
     private final Optional<Act2Assets> act2Assets;
+    private final Optional<Act2PastAssets> act2PastAssets;
     private final String identity;
 
     CdGameDataSource(CdRetailRelease release, CdR11aAssets assets, Optional<CdFmSoundAssets> fmSoundAssets) {
@@ -56,11 +67,18 @@ public final class CdGameDataSource implements GameDataSource {
 
     CdGameDataSource(CdRetailRelease release, CdR11aAssets assets, Optional<CdFmSoundAssets> fmSoundAssets,
                      Optional<CdTimeWarpPrograms> timeWarpPrograms, Optional<Act2Assets> act2Assets) {
+        this(release, assets, fmSoundAssets, timeWarpPrograms, act2Assets, Optional.empty());
+    }
+
+    CdGameDataSource(CdRetailRelease release, CdR11aAssets assets, Optional<CdFmSoundAssets> fmSoundAssets,
+                     Optional<CdTimeWarpPrograms> timeWarpPrograms, Optional<Act2Assets> act2Assets,
+                     Optional<Act2PastAssets> act2PastAssets) {
         this.release = Objects.requireNonNull(release, "release");
         this.assets = Objects.requireNonNull(assets, "assets");
         this.fmSoundAssets = Objects.requireNonNull(fmSoundAssets, "fmSoundAssets");
         this.timeWarpPrograms = Objects.requireNonNull(timeWarpPrograms, "timeWarpPrograms");
         this.act2Assets = Objects.requireNonNull(act2Assets, "act2Assets");
+        this.act2PastAssets = Objects.requireNonNull(act2PastAssets, "act2PastAssets");
         var binding = assets.identity();
         if (binding.variant() != release.variant()
                 || !binding.observedWholeDiscSha256().equals(release.normalizedSha256())) {
@@ -98,6 +116,15 @@ public final class CdGameDataSource implements GameDataSource {
                 throw new IllegalArgumentException("Detached Act2 pair, stage and observed retail content do not agree");
             }
         }
+        if (act2PastAssets.isPresent()) {
+            var pair = act2PastAssets.orElseThrow();
+            var next = CdStagePlayerSource.fromAct2Past(pair.terrain(), pair.player());
+            if (release.variant() != CdReleaseVariant.USA || next.variant() != binding.variant()
+                    || !binding.mmdSha256().equals(assets.profile().expectedMmdSha256())
+                    || !pair.terrain().identity().observedWholeDiscSha256().equals(binding.observedWholeDiscSha256())
+                    || !pair.terrain().identity().observedWholeDiscSha256().equals(release.normalizedSha256()))
+                throw new IllegalArgumentException("Detached R12B pair, stage and observed retail content do not agree");
+        }
         // Whole-disc content also covers retained Act2 bytes. Identity never certifies capability presence.
         identity = "scd:detached-stage-v1:" + release.key() + ":" + binding.stage().nativeId()
                 + ":" + binding.observedWholeDiscSha256() + ":" + binding.mmdSha256();
@@ -114,6 +141,9 @@ public final class CdGameDataSource implements GameDataSource {
 
     /** Detached USA Act2 source pair only; presence selects no stage and performs no load or execution. */
     public Optional<Act2Assets> act2Assets() { return act2Assets; }
+
+    /** Detached actual USA R12B pair; no target entry or runtime readiness is implied. */
+    public Optional<Act2PastAssets> act2PastAssets() { return act2PastAssets; }
 
     @Override public Optional<Rom> rom() { return Optional.empty(); }
     @Override public String identity() { return identity; }

@@ -959,3 +959,22 @@ The new [Act2 Past matrix](scd-palmtree-panic-act2-past.md) records the actual
 37finite source bindings and remaining destination obligations. Source-profile
 metadata, decode completion and EOF checks establish neither current pixels nor
 live target gameplay. Runtime assets still come only from original media.
+
+### 6 November — actual IPX/WARP caller and target prerequisites
+
+The permanent unchanged-controller suffix now returns from call 13530 through 13885:13530
+performs IPX's disabled-display/STOP_FM cut and authenticated WARP setup; the next
+354 services run the existing scene owner;13885owns its return blank/STOP_FM.
+First call 13886 stops at R12B_LOAD before target assembly or old retirement. The prior
+R12A World/Frame/source/generation/saved 42 bytes remain suspended; both 0/22 old fade
+branches and full/course scene/blank replay qualify. A real EGL component
+check restores the old selected level versus WARP through the same retained
+renderer, and caught nested service/draw/capture rejection retains a healthy
+Frame. No new route screenshot, target Sonic, audio synthesis or parity follows.
+
+Fresh 36 focused checks pass with no failures, errors or skips (13 exit/WARP, 19 projection,
+4 permanent routes);34 scene checks passed separately on the unchanged scene
+owner. Independent static review found no concreteP1/P2. R12B data/player,
+Frame/current/HUD/scroll prerequisites and actual pre-CUE-close custody now
+qualify separately in the [Past matrix](scd-palmtree-panic-act2-past.md).
+The previous13530boundary above is historical and superseded by this receipt.

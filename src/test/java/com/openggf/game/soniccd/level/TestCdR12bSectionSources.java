@@ -98,7 +98,8 @@ ART_BIG_RING_FLASH d7f2 384 804d 384 384 385 77 6106d2692b34f73a6d928e651c9547e5
                 assertEquals(0x200000L+range.fileOffset(),s.nativeAddress());
             }
         }
-        assertEquals(24,CdR12bProfile.Asset.values().length,"No replacement or expansion of the terrain profile");
+        assertEquals(25,CdR12bProfile.Asset.values().length,"Existing24 descriptors plus the finite cloud-count view");
+        assertEquals(24,CdR12bProfile.Asset.CLOUD_LINE_COUNTS.ordinal(),"Original descriptor ordinals remain unchanged");
         assertThrows(UnsupportedOperationException.class,()->sources.sources().clear());
     }
 

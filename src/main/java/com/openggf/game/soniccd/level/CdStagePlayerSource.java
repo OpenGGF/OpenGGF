@@ -11,7 +11,7 @@ import java.util.Objects;
 /**
  * Read-only stage/player format binding over an existing aggregate. Native pin1ecc5f3a:
  * Sonic/Main.asm:146 selects MapSpr_Sonic; the actual authenticated R11A profile and
- * R11B/R12A asset descriptors bind its program-local address. No source bytes are read here.
+ * R11B/R12A/R12B asset descriptors bind its program-local address. No source bytes are read here.
  *
  * <p>Aggregate factories own media authentication. Consistent constructed package
  * fixtures remain data, not authenticated media. Reference relations below confer
@@ -24,6 +24,8 @@ public final class CdStagePlayerSource {
     private final CdR11bAssets past;
     private final CdR12aTerrainAssets act2Terrain;
     private final CdR12aPlayerAssets act2Player;
+    private final CdR12bTerrainAssets act2PastTerrain;
+    private final CdR12bPlayerAssets act2PastPlayer;
     private final CdStageTerrain terrain;
     private final CdR11aPlayerAssets player;
     private final CdSonicVisualAssets sonic;
@@ -40,6 +42,8 @@ public final class CdStagePlayerSource {
         this.past = past;
         this.act2Terrain = null;
         this.act2Player = null;
+        this.act2PastTerrain = null;
+        this.act2PastPlayer = null;
         CdStageTerrain.Shape expectedShape;
         if (present != null) {
             var identity = Objects.requireNonNull(present.identity(), "Present identity");
@@ -84,6 +88,7 @@ public final class CdStagePlayerSource {
 
     private CdStagePlayerSource(CdR12aTerrainAssets terrainAssets, CdR12aPlayerAssets playerAssets) {
         present = null; past = null; act2Terrain = terrainAssets; act2Player = playerAssets;
+        act2PastTerrain = null; act2PastPlayer = null;
         var terrainIdentity = Objects.requireNonNull(terrainAssets.identity(), "Act2 terrain identity");
         var playerIdentity = Objects.requireNonNull(playerAssets.identity(), "Act2 player identity");
         var terrainProfile = Objects.requireNonNull(terrainAssets.profile(), "Act2 terrain profile");
@@ -111,6 +116,45 @@ public final class CdStagePlayerSource {
             throw new IllegalArgumentException("Player and Sonic visuals must be the same borrowed product");
         mappingAddress = playerProfile.range(CdR12aProfile.Asset.MAP_SPR_SONIC).nativeAddress();
         ordinaryPeriod = 1;
+    }
+
+    private CdStagePlayerSource(CdR12bTerrainAssets terrainAssets, CdR12bPlayerAssets playerAssets) {
+        present = null; past = null; act2Terrain = null; act2Player = null;
+        act2PastTerrain = terrainAssets; act2PastPlayer = playerAssets;
+        var terrainIdentity = Objects.requireNonNull(terrainAssets.identity(), "Act2 Past terrain identity");
+        var playerIdentity = Objects.requireNonNull(playerAssets.identity(), "Act2 Past player identity");
+        var terrainProfile = Objects.requireNonNull(terrainAssets.profile(), "Act2 Past terrain profile");
+        var playerProfile = Objects.requireNonNull(playerAssets.profile(), "Act2 Past player profile");
+        variant = Objects.requireNonNull(terrainIdentity.variant(), "Act2 Past variant");
+        stage = Objects.requireNonNull(terrainIdentity.stage(), "Act2 Past stage");
+        if (variant != CdReleaseVariant.USA || !stage.equals(CdStagePayload.R12B.stage())
+                || terrainIdentity.file() != CdNativeFile.R12B || terrainIdentity.domain() != CdMmdImage.Domain.ORIGINAL_WORD_RAM
+                || !terrainIdentity.equals(playerIdentity)
+                || variant != terrainProfile.variant() || variant != playerProfile.variant()
+                || !stage.equals(terrainProfile.stage()) || !stage.equals(playerProfile.stage())
+                || terrainIdentity.file() != terrainProfile.file() || terrainIdentity.file() != playerProfile.file()
+                || terrainIdentity.domain() != terrainProfile.domain() || terrainIdentity.domain() != playerProfile.domain()
+                || !terrainIdentity.mmdSha256().equals(terrainProfile.expectedMmdSha256())
+                || !terrainIdentity.mmdSha256().equals(playerProfile.expectedMmdSha256())
+                || !CdR12bPlayerAssets.Asset.SPEC_CHUNKS.range().equals(terrainProfile.range(CdR12bProfile.Asset.SPEC_CHUNKS))
+                || !CdR12bPlayerAssets.Asset.SPEC_CHUNKS.range().equals(playerProfile.range(CdR12bProfile.Asset.SPEC_CHUNKS))) {
+            throw new IllegalArgumentException("Act2 Past terrain/player original source, profiles or disc lineage differ");
+        }
+        terrain = Objects.requireNonNull(terrainAssets.terrain(), "Act2 Past terrain");
+        player = Objects.requireNonNull(playerAssets.player(), "Act2 Past player data");
+        sonic = Objects.requireNonNull(playerAssets.sonic(), "Act2 Past Sonic visuals");
+        if (terrain.shape() != CdStageTerrain.Shape.PPZ2_PAST)
+            throw new IllegalArgumentException("Act2 Past identity and explicit native terrain format differ");
+        if (player.sonic() != sonic)
+            throw new IllegalArgumentException("Player and Sonic visuals must be the same borrowed product");
+        mappingAddress = CdR12bPlayerAssets.Asset.MAP_SPR_SONIC.nativeAddress();
+        ordinaryPeriod = 0;
+    }
+
+    /** Original R12B data relation only. It does not select a destination or admit a Frame/load/World. */
+    public static CdStagePlayerSource fromAct2Past(CdR12bTerrainAssets terrain, CdR12bPlayerAssets player) {
+        return new CdStagePlayerSource(Objects.requireNonNull(terrain, "Act2 Past terrain assets"),
+                Objects.requireNonNull(player, "Act2 Past player assets"));
     }
 
     /**
@@ -148,5 +192,9 @@ public final class CdStagePlayerSource {
     /** Exact selected immutable pair only; equal metadata or one matching aggregate is insufficient. */
     public boolean ownsAct2(CdR12aTerrainAssets terrain, CdR12aPlayerAssets player) {
         return act2Terrain != null && act2Player != null && act2Terrain == terrain && act2Player == player;
+    }
+    /** Exact selected R12B immutable pair; R12A and act1 Past ownership remain distinct. */
+    public boolean ownsAct2Past(CdR12bTerrainAssets terrain, CdR12bPlayerAssets player) {
+        return act2PastTerrain != null && act2PastPlayer != null && act2PastTerrain == terrain && act2PastPlayer == player;
     }
 }

@@ -714,6 +714,13 @@ final class SonicCdAct2LoadingVisit {
                 || activeDrain != null || (!runningObjects && drawQueue != null))
             throw new IllegalStateException("No actual Act2 old programme store continuation");
     }
+    /** Suspended old level remains the actual source while the separate WARP owner runs. */
+    void requireReturnedProgrammeIdle() {
+        requireIdleOwners();
+        if (values.phase() != OLD_RETURNED || values.level().levelRestart() != 0
+                || frame.environment().movement().gates().timeWarpDirection() != 0)
+            throw new IllegalStateException("No completed retained Act2 programme return");
+    }
     private boolean oldProgrammeExitSelected() { return values.phase() == OLD_WHITE_FADE || values.phase() == OLD_RETURNED; }
 
     /** Same-call native LevelStart19-81 prefix; the first fade VSync belongs to the following service. */
@@ -2865,7 +2872,9 @@ final class SonicCdAct2LoadingVisit {
         boolean programmeMismatch;
         if(oldExit) {
             var gates=capture.shared.environment().movement().gates();
-            programmeMismatch=programme.phase()!=(oldWhite?SonicCdGameModule.LevelProgramPhase.WHITE_FADE:SonicCdGameModule.LevelProgramPhase.OLD_RETURNED)
+            boolean returnedProgramme=programme.phase()==SonicCdGameModule.LevelProgramPhase.OLD_RETURNED
+                    || programme.phase()==SonicCdGameModule.LevelProgramPhase.WARP || programme.phase()==SonicCdGameModule.LevelProgramPhase.PAST_PENDING;
+            programmeMismatch=(oldWhite ? programme.phase()!=SonicCdGameModule.LevelProgramPhase.WHITE_FADE : !returnedProgramme)
                     || programme.levelStarted()!=0 || (programme.gameMode()&0x80)==0 || programme.specialStage()!=0
                     || programme.whiteFadeSteps()!=steps || !v.fadeProgress().displayEnabled()
                     || (v.level().plcLoadFlags()&1)==0

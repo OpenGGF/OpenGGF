@@ -11,6 +11,8 @@ import com.openggf.game.soniccd.level.CdR11aAssets;
 import com.openggf.game.soniccd.level.CdR11bAssets;
 import com.openggf.game.soniccd.level.CdR12aTerrainAssets;
 import com.openggf.game.soniccd.level.CdR12aPlayerAssets;
+import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
+import com.openggf.game.soniccd.level.CdR12bPlayerAssets;
 import com.openggf.game.soniccd.level.CdStagePlayerSource;
 import com.openggf.game.soniccd.objects.CdBigRing;
 import com.openggf.game.soniccd.objects.CdResults;
@@ -436,6 +438,26 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
         Objects.requireNonNull(artIngress, "Act2 player art ingress");
         Objects.requireNonNull(clock, "Act2 player V-int clock");
         return new CdPlayerFrameRuntime(CdStagePlayerSource.fromAct2(terrain, player), state, environment, artIngress, clock);
+    }
+
+    /**
+     * Fresh actual-R12B binding over complete explicit existing values. The authenticated
+     * terrain/player pair supplies native act1, ordinary Past0 and its own mapping through
+     * the existing source relation. This ingress performs no Init, native clear, saved load,
+     * actor/camera/art/clock default, service, programme carry or World admission. The source
+     * and CaptureOwner are fresh for this visit; art publication remains unbound. Actual
+     * entry/load ordering and every native writer retain their existing private caller.
+     */
+    public static CdPlayerFrameRuntime fromAct2PastEntry(CdR12bTerrainAssets terrain, CdR12bPlayerAssets player,
+                                                         CdPlayerBody.State state, CdPlayerBody.Environment environment,
+                                                         CdPlayerArtRuntime.State artIngress, VIntClock clock) {
+        Objects.requireNonNull(terrain, "Act2 Past terrain assets");
+        Objects.requireNonNull(player, "Act2 Past player assets");
+        Objects.requireNonNull(state, "Act2 Past player state");
+        Objects.requireNonNull(environment, "Act2 Past player environment");
+        Objects.requireNonNull(artIngress, "Act2 Past player art ingress");
+        Objects.requireNonNull(clock, "Act2 Past player V-int clock");
+        return new CdPlayerFrameRuntime(CdStagePlayerSource.fromAct2Past(terrain, player), state, environment, artIngress, clock);
     }
 
     /**

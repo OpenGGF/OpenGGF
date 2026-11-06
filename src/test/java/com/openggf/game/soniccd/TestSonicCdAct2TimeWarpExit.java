@@ -115,15 +115,81 @@ class TestSonicCdAct2TimeWarpExit {
         assertThrows(IllegalStateException.class,()->s.visit().validateRestore(capture,programme));assertThrows(IllegalStateException.class,s.visit()::capture);
     }
 
-    @Test void returnStopsAtTheUnownedIpxWarpBridgeWithoutCreatingDestinationOrServicingAnOldFrame() throws Exception {
-        var s=prepared229(0);step(s.h(),neutral());healthy(s,SonicCdGameModule.Act2LoadPhase.OLD_RETURNED);
-        var v=values(s);var actor=s.frame().state();var clock=s.frame().vIntClock();var source=s.frame().stageSource();var world=s.h().mode().getWorldSession();
-        long generation=s.h().mode().getLevelManager().getCompletedProductionLoadGeneration();
+    @Test void actualFadeReturnRunsTheExistingWarpAndRetainsEveryOldOwnerUntilR12bAdmission() throws Exception {
+        assertWarpBridge(1);
+    }
+
+    @Test void zeroWaitReturnKeepsItsSetPaletteBitThroughWarpAndBothRewindScopes() throws Exception {
+        assertWarpBridge(0xA0);
+    }
+
+    private static void assertWarpBridge(int flags) throws Exception {
+        var s=prepared229(flags);step(s.h(),neutral());
+        for(int n=0;n<((flags&1)==0?0:22);n++)step(s.h(),neutral());
+        healthy(s,SonicCdGameModule.Act2LoadPhase.OLD_RETURNED);
+        var oldValues=values(s);var actor=s.frame().captureActor();var shared=s.frame().captureShared();
+        var placement=s.placement().capture();var saved=saved(s);var source=s.frame().stageSource();
+        var world=s.h().mode().getWorldSession();long generation=s.h().mode().getLevelManager().getCompletedProductionLoadGeneration();
+        int expectedWaits=(flags&1)==0?0:22;int paletteFlag=s.h().module().levelProgramState().palFadeFlags();
+        replayNext(s);assertEquals(SonicCdGameModule.LevelProgramPhase.WARP,s.h().module().levelProgramState().phase());
+        assertEquals(com.openggf.game.soniccd.scene.CdWarpScene.Phase.DELAY,s.h().module().warpSceneState().orElseThrow().phase());
+        assertEquals(90,s.h().module().warpSceneState().orElseThrow().timerWord());
+        assertEquals(List.of(SonicCdGameModule.ProgramSound.STOP_FM),s.h().module().programSoundRequests());
+        var kernel=new com.openggf.game.soniccd.scene.CdWarpScene(s.h().module().warpSceneAssets());
+        var expected=kernel.initial(0);
+        for(int row=1;row<=354;row++){
+            expected=kernel.step(expected,0).state();
+            if(row==1||row==91||row==115||row==330||row==354)replayNext(s);else step(s.h(),neutral());
+            assertEquals(expected,s.h().module().warpSceneState().orElseThrow(),"Actual existing scene owner at row"+row);
+            assertEquals(actor,s.frame().captureActor());assertEquals(shared,s.frame().captureShared());
+            assertEquals(placement.status(),s.placement().capture().status());assertEquals(placement.pool().slots(),s.placement().capture().pool().slots());assertArrayEquals(placement.savedFlags().copy(),s.placement().capture().savedFlags().copy());assertSame(oldValues,values(s));assertSame(saved,saved(s));
+            assertSame(source,s.frame().stageSource());assertSame(world,s.h().mode().getWorldSession());
+            assertEquals(generation,s.h().mode().getLevelManager().getCompletedProductionLoadGeneration());
+            assertEquals(expectedWaits,s.h().module().levelProgramState().whiteFadeSteps());
+            assertEquals(paletteFlag,s.h().module().levelProgramState().palFadeFlags());
+            assertEquals(row<=90?List.of(SonicCdGameModule.ProgramSound.STOP_FM):List.of(SonicCdGameModule.ProgramSound.STOP_FM,SonicCdGameModule.ProgramSound.WARP_DIRECT_FM_D8),s.h().module().programSoundRequests());
+        }
+        replayNext(s);assertEquals(SonicCdGameModule.LevelProgramPhase.PAST_PENDING,s.h().module().levelProgramState().phase());
+        assertEquals(List.of(SonicCdGameModule.ProgramSound.STOP_FM,SonicCdGameModule.ProgramSound.WARP_DIRECT_FM_D8,SonicCdGameModule.ProgramSound.STOP_FM),s.h().module().programSoundRequests());
+        assertEquals(actor,s.frame().captureActor());assertEquals(shared,s.frame().captureShared());assertSame(oldValues,values(s));
         var stop=assertThrows(SonicCdGameModule.UnsupportedAct2Loading.class,()->step(s.h(),neutral()));
-        assertEquals(SonicCdGameModule.Act2Boundary.OLD_EXIT_WARP_PROGRAMME,stop.boundary());assertTrue(s.frame().closed());
-        assertSame(v,values(s));assertSame(actor,s.frame().state());assertSame(clock,s.frame().vIntClock());assertSame(source,s.frame().stageSource());
+        assertEquals("R12B_LOAD",stop.boundary().name());assertTrue(s.frame().closed());
         assertSame(world,s.h().mode().getWorldSession());assertEquals(generation,s.h().mode().getLevelManager().getCompletedProductionLoadGeneration());
-        assertTrue(s.h().module().warpSceneState().isEmpty());assertEquals(SonicCdGameModule.Act2LoadCall.OLD_EXIT_RETURN,calls(s).getLast());
+        assertSame(oldValues,values(s));assertSame(saved,saved(s));assertSame(source,s.frame().stageSource());
+    }
+
+    @Test void actualWarpRendererRestoresTheOldSelectionAndRejectsCaughtServiceReentryWithoutClosingTheFrame() throws Exception {
+        try(var egl=TestSonicCdPastResultsRoute.Egl.open()){
+            var s=prepared229(0);step(s.h(),neutral());var registry=s.h().mode().getRewindRegistry();
+            var old=registry.capture();var before=captureNative(s.h());var oldPixels=warpPixels(s);
+            assertNativeCapture(before,s.h());step(s.h(),neutral());
+            var blank=warpPixels(s);for(int at=0;at<blank.length;at+=4)assertEquals(0,(blank[at]&255)|(blank[at+1]&255)|(blank[at+2]&255));
+            for(int row=1;row<=130;row++)step(s.h(),neutral());
+            var selected=s.h().module().warpSceneState().orElseThrow();assertTrue(selected.displayEnabled());
+            assertTrue(selected.displayedSpriteCount()>0,"The real WARP scene selects its actual native objects");
+            var current=registry.capture();var course=registry.captureCourse();var nativeCurrent=captureNative(s.h());
+            var pixels=warpPixels(s);assertFalse(Arrays.equals(blank,pixels));assertFalse(Arrays.equals(oldPixels,pixels));
+            var graphics=com.openggf.game.GameServices.graphics();
+            graphics.registerCommand((x,y,width,height)->{
+                assertThrows(IllegalStateException.class,()->s.h().module().serviceAct2Loading(0));
+                assertThrows(IllegalStateException.class,()->s.h().module().serviceWarpProgram(0));
+                assertThrows(IllegalStateException.class,()->s.h().module().gameplayFrameController().drawOverlay());
+                assertThrows(IllegalStateException.class,registry::capture);
+            });
+            assertArrayEquals(pixels,warpPixels(s));assertFalse(s.frame().closed());assertNativeCapture(nativeCurrent,s.h());
+            registry.restore(old);assertNativeCapture(before,s.h());assertArrayEquals(oldPixels,warpPixels(s));
+            registry.restore(current);assertNativeCapture(nativeCurrent,s.h());assertArrayEquals(pixels,warpPixels(s));
+            registry.restoreCourse(course);assertNativeCapture(nativeCurrent,s.h());assertArrayEquals(pixels,warpPixels(s));
+        }
+    }
+
+    private static byte[] warpPixels(Scene s){
+        org.lwjgl.opengl.GL11.glViewport(0,0,320,224);org.lwjgl.opengl.GL11.glClearColor(1,0,1,1);
+        org.lwjgl.opengl.GL11.glClear(org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT|org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT);
+        s.h().module().gameplayFrameController().drawOverlay();org.lwjgl.opengl.GL11.glFinish();
+        var b=org.lwjgl.BufferUtils.createByteBuffer(320*224*4);
+        org.lwjgl.opengl.GL11.glReadPixels(0,0,320,224,org.lwjgl.opengl.GL11.GL_RGBA,org.lwjgl.opengl.GL11.GL_UNSIGNED_BYTE,b);
+        assertEquals(org.lwjgl.opengl.GL11.GL_NO_ERROR,org.lwjgl.opengl.GL11.glGetError());var bytes=new byte[b.capacity()];b.get(bytes);return bytes;
     }
 
     @Test void idleAndNestedCallsCannotMintExitStoresOrOrdinaryMutations() throws Exception {

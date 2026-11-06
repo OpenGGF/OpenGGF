@@ -56,6 +56,7 @@ SPEC_CHUNKS 29d8 4 674d922d5583edfb5fba68eb6619dd121fe0387c3bbf2e0504d95420827b2
 BG_CAMERA_SECT_IDS 33aa 34 0c92ec374afc09f10b4348843a553bf8bf67c18641b7b88d3dd107d3f23d22f0
 BG_CAMERA_SECTS 33cc 16 2f5b9f478f4f44230ea76cb1574eca41017e2b09e378ea1be295aaef5f9cc6a1
 PALETTE_CYCLE_DATA 2c0 84 42c4b898e82d548a0ed3806eca7d398e3c7abaa0cd967c529c9ad1a8ca2891bc
+CLOUD_LINE_COUNTS 2b6c 8 04abc8821a06e5a30937967d11ad10221cb5ac3b5273e434f1284ee87129a061
             """;
 
     @Test void genuineOriginalUsaIngressBindsOnlyTheR12bOriginalFileAndExistingTerrainOwner() throws Exception {
@@ -72,9 +73,9 @@ PALETTE_CYCLE_DATA 2c0 84 42c4b898e82d548a0ed3806eca7d398e3c7abaa0cd967c529c9ad1
         assertEquals(4096, t.collision().heights().length()); assertEquals(4096, t.collision().widths().length());
     }
 
-    @Test void allTwentyFourViewsPinLiteralOrdinalsExtentsHashesAndOriginalDomain() throws Exception {
+    @Test void allTwentyFiveViewsPinLiteralOrdinalsExtentsHashesAndOriginalDomain() throws Exception {
         var a = retail().assets(); var lines = MANIFEST.lines().filter(line -> !line.isBlank()).toList();
-        assertEquals(24, lines.size()); assertEquals(24, CdR12bProfile.Asset.values().length);
+        assertEquals(25, lines.size()); assertEquals(25, CdR12bProfile.Asset.values().length);
         for (int i = 0; i < lines.size(); i++) {
             var columns = lines.get(i).split(" "); var asset = CdR12bProfile.Asset.values()[i]; var range = a.profile().range(asset);
             assertEquals(columns[0], asset.name()); assertEquals(Integer.parseInt(columns[1], 16), range.fileOffset());

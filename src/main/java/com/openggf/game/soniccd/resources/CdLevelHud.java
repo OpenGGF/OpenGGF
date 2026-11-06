@@ -67,6 +67,19 @@ public final class CdLevelHud {
         public Act2Result { Objects.requireNonNull(state); calls = List.copyOf(calls); }
     }
 
+    /** R12B value projection of the same six existing owners; no new persistent state or admission. */
+    public record Act2PastState(CdR12bSectionArt.State section, CdRingGlobals ring, CdLevelGlobals level,
+                            CdOpeningObjectRuntime.ScoreGlobals score, CdCheckpointLiveAux.State liveTime,
+                            Optional<BonusValues> bonus) {
+        public Act2PastState {
+            Objects.requireNonNull(section); Objects.requireNonNull(ring); Objects.requireNonNull(level);
+            Objects.requireNonNull(score); Objects.requireNonNull(liveTime); Objects.requireNonNull(bonus);
+        }
+    }
+    public record Act2PastResult(Act2PastState state, List<NativeCall> calls) {
+        public Act2PastResult { Objects.requireNonNull(state); calls = List.copyOf(calls); }
+    }
+
     /** Known together only when their actual writer/carry has supplied the three-field projection. */
     public record BonusValues(int timeBonusWord, int ringBonusWord, int updateHudBonusByte) {
         public BonusValues {
@@ -152,6 +165,27 @@ public final class CdLevelHud {
         public int destinationWord() { return destinationWord; }
     }
 
+    /** Complete Act2Past-typed prefix of the same reached HUD boundary, never a successful result. */
+    public static final class UnsupportedAct2PastHud extends UnsupportedOperationException {
+        private static final long serialVersionUID = 1L;
+        private final Boundary boundary;
+        private final Act2PastState state;
+        private final List<NativeCall> calls;
+        private final int sourceOffset;
+        private final int destinationWord;
+        private UnsupportedAct2PastHud(Boundary boundary, Act2PastState state, List<NativeCall> calls,
+                                   int sourceOffset, int destinationWord, Throwable cause) {
+            super(boundary + " at HUD source " + sourceOffset + ", destination " + destinationWord, cause);
+            this.boundary = boundary; this.state = state; this.calls = List.copyOf(calls);
+            this.sourceOffset = sourceOffset; this.destinationWord = destinationWord;
+        }
+        public Boundary boundary() { return boundary; }
+        public Act2PastState state() { return state; }
+        public List<NativeCall> calls() { return calls; }
+        public int sourceOffset() { return sourceOffset; }
+        public int destinationWord() { return destinationWord; }
+    }
+
     /** Explicit actual-R12A section/raw-view binding; no factory default, service or source authority. */
     public static final class Act2 {
         private final Assets assets;
@@ -171,6 +205,28 @@ public final class CdLevelHud {
                         failure.sourceOffset, failure.destinationWord, failure.getCause());
             }
             return new Act2Result(act2State(cursor.state, initial, state), cursor.calls);
+        }
+    }
+
+    /** Explicit actual-R12B section/raw-view binding; no factory default, service or source authority. */
+    public static final class Act2Past {
+        private final Assets assets;
+        private final CdR12bSectionArt art;
+        /** Production borrows its actual TerrainAssets.directArtSources().hudAssets() and section adapter. */
+        public Act2Past(Assets assets, CdR12bSectionArt art) {
+            this.assets = Objects.requireNonNull(assets); this.art = Objects.requireNonNull(art);
+        }
+        public Act2PastResult run(Act2PastState state, Inputs inputs) {
+            Objects.requireNonNull(state); Objects.requireNonNull(inputs);
+            if (state.section().stopped()) throw new IllegalStateException("Stopped section cannot resume HUD admission");
+            var initial = new Values<>(state.section(), state.ring(), state.level(), state.score(), state.liveTime(), state.bonus());
+            var cursor = new Cursor<>(initial, inputs, assets, art::writeCurrentTile);
+            try { cursor.run(); }
+            catch (Stop failure) {
+                throw new UnsupportedAct2PastHud(failure.boundary, act2PastState(cursor.state, initial, state), cursor.calls,
+                        failure.sourceOffset, failure.destinationWord, failure.getCause());
+            }
+            return new Act2PastResult(act2PastState(cursor.state, initial, state), cursor.calls);
         }
     }
 
@@ -217,6 +273,10 @@ public final class CdLevelHud {
     }
     private static Act2State act2State(Values<CdR12aSectionArt.State> value, Values<CdR12aSectionArt.State> initial, Act2State before) {
         return value == initial ? before : new Act2State(value.section(), value.ring(), value.level(), value.score(), value.liveTime(), value.bonus());
+    }
+
+    private static Act2PastState act2PastState(Values<CdR12bSectionArt.State> value, Values<CdR12bSectionArt.State> initial, Act2PastState before) {
+        return value == initial ? before : new Act2PastState(value.section(), value.ring(), value.level(), value.score(), value.liveTime(), value.bonus());
     }
 
     private enum Digits { SKIP_LEADING, ALWAYS, BLANK_LEADING }

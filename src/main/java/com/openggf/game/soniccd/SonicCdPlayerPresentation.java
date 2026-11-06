@@ -987,7 +987,10 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
     }
 
     private void drawCompletedOverlay() {
-        if (module.act2LoadingSelected()) { drawAct2SelectedDisplay(); return; }
+        if (module.act2LoadingSelected()) {
+            if (module.warpProgramSelected()) drawAct2WarpProgram(); else drawAct2SelectedDisplay();
+            return;
+        }
         if (module.pastLoadingSelected()) {
             drawPastSelectedDisplay();
             return;
@@ -1090,7 +1093,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
 
     /** Native service/capture/restore may not reenter from an old queued graphics command. */
     void requirePastRenderIdle() {
-        if (drawingPast || drawingAct2) throw new IllegalStateException("Past selected draw is active");
+        if (drawingPast || drawingAct2 || drawingWarp) throw new IllegalStateException("Past selected draw is active");
     }
 
     /** Pure selected-scene projection inside the existing controller draw; no native work occurs here. */
@@ -1905,6 +1908,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
             com.openggf.graphics.RetainedPlaneSceneRenderer renderer) { }
     private Act2RenderBinding act2RenderBinding;
     private boolean drawingAct2;
+    private boolean drawingWarp;
 
     /**
      * Borrows the actual B aggregate and the existing complete mutable images at this source cut.
@@ -2396,6 +2400,41 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         return result;
     }
 
+    /** The retained Act2 renderer owns the same atlas range across WARP and rewind.
+     * Reusing that exact owner lets its normal version checks replace101 WARP tiles and restore
+     * the old selected level pixels without overwriting a second producer's residency. */
+    private void drawAct2WarpProgram() {
+        requirePastRenderIdle();
+        var source = requireAct2ClosedSource(); module.validateWarpProgrammeOwner();
+        var program = module.levelProgramState(); var state = module.warpSceneState().orElseThrow();
+        var assets = module.warpSceneAssets();
+        var scene = com.openggf.game.soniccd.scene.CdWarpPresentation.retainedScene(assets, state, PatternAtlasRange.OBJECTS.base(),
+                program.phase() == SonicCdGameModule.LevelProgramPhase.WARP && state.displayEnabled());
+        drawingWarp = true;
+        try {
+            if (act2RenderBinding == null) act2RenderBinding = createAct2RenderBinding(source);
+            var binding = act2RenderBinding;
+            binding.renderer().draw(scene, binding.camera().getX(), binding.camera().getY(), () -> {
+                if (!drawingWarp || drawingAct2 || drawingPast || requireAct2BoundSource() != source
+                        || module.levelProgramState() != program || module.warpSceneState().orElseThrow() != state
+                        || module.warpSceneAssets() != assets)
+                    throw new IllegalStateException("Actual Act2 WARP selection changed during draw");
+                module.validateWarpProgrammeOwner(); requireAct2GraphicsBinding(binding, source);
+            });
+        } finally { drawingWarp = false; }
+    }
+
+    private Act2RenderBinding createAct2RenderBinding(Act2Source source) {
+        var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+        var world = mode.getWorldSession(); var levels = mode.getLevelManager();
+        var graphics = GameServices.graphics(); var camera = mode.getCamera();
+        var renderer = new com.openggf.graphics.RetainedPlaneSceneRenderer(graphics, PatternAtlasRange.OBJECTS);
+        return new Act2RenderBinding(source, mode, world, world.getDataSource(), levels,
+                levels.getCurrentLevel(), levels.getCompletedProductionLoadGeneration(), camera, graphics,
+                graphics.getPatternAtlas(), org.lwjgl.opengl.GL.getCapabilities(), Thread.currentThread(),
+                System.getProperty("openggf.headless.gl"), renderer);
+    }
+
     private void drawAct2SelectedDisplay() {
         requirePastRenderIdle();
         var actualSource = requireAct2ClosedSource();
@@ -2406,16 +2445,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
                 : ((SonicCdPastDisplay.Disabled) selected.projection()).scene();
         drawingAct2 = true;
         try {
-            if (act2RenderBinding == null) {
-                var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
-                var world = mode.getWorldSession(); var levels = mode.getLevelManager();
-                var graphics = GameServices.graphics(); var camera = mode.getCamera();
-                var renderer = new com.openggf.graphics.RetainedPlaneSceneRenderer(graphics, PatternAtlasRange.OBJECTS);
-                act2RenderBinding = new Act2RenderBinding(actualSource, mode, world, world.getDataSource(), levels,
-                        levels.getCurrentLevel(), levels.getCompletedProductionLoadGeneration(), camera, graphics,
-                        graphics.getPatternAtlas(), org.lwjgl.opengl.GL.getCapabilities(), Thread.currentThread(),
-                        System.getProperty("openggf.headless.gl"), renderer);
-            }
+            if (act2RenderBinding == null) act2RenderBinding = createAct2RenderBinding(actualSource);
             requireAct2RenderBinding(selected);
             var binding = act2RenderBinding;
             binding.renderer().draw(scene, binding.camera().getX(), binding.camera().getY(),
@@ -2431,8 +2461,14 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         actualSource.frame().captureShared();
         // The actual selectedDisplay query below validates World/source and completed-save custody
         // during this private readonly draw; public capture/mutation ports keep their idle guard.
+        if (module.act2SelectedDisplay() != selected)
+            throw new IllegalStateException("Act2 selected display changed during draw");
+        requireAct2GraphicsBinding(binding, actualSource);
+    }
+
+    private void requireAct2GraphicsBinding(Act2RenderBinding binding, Act2Source actualSource) {
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
-        if (binding == null || module.act2SelectedDisplay() != selected || actualSource != binding.source()
+        if (binding == null || actualSource != binding.source()
                 || mode != binding.mode() || mode.getWorldSession() != binding.world()
                 || binding.world().getDataSource() != binding.data()
                 || mode.getLevelManager() != binding.levels() || GameServices.level() != binding.levels()

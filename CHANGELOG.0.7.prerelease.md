@@ -270,8 +270,12 @@ Unreleased. The earlier development themes remain in
   return. Full/course controller replay covers that return while retaining all
   twenty-three prior selected Sonic render checkpoints. Swing parts remain
   offscreen at the checked route cuts. Authenticated Act2 Past terrain and all
-  thirty-seven finite section-art readers are available separately; the IPX/WARP
-  handoff and destination gameplay loading remain pending.
+  thirty-seven finite section-art readers now join an authenticated Act2 Past
+  player source, explicit Frame ingress, native background scroll, sparse current
+  art and shared HUD services. The old Act2 programme now runs the existing WARP
+  scene with full/course rewind and selected rendering before its honest R12B
+  assembly boundary. Stock preparation retains the actual target pair before
+  closing the disc; destination gameplay loading remains pending.
   Authenticated Act2 Spikes mapping and a named retained-source prefix factory
   reuse the existing common body and Std art owner; live Spikes dispatch remains
   separate from the qualified route.

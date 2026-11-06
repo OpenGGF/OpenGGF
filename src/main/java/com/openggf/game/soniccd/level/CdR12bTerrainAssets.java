@@ -39,6 +39,7 @@ public final class CdR12bTerrainAssets {
     private final CdR12bLoadPlan plan;
     private CdObjectPlacements placements;
     private CdR12bSectionSources sectionSources;
+    private CdR12bDirectArtSources directArtSources;
 
     private CdR12bTerrainAssets(Identity identity,CdR12bProfile profile,CdMmdImage image,CdNemesisAsset.Decoded blocks,
                                 CdNemesisAsset.Decoded tiles,CdStageTerrain terrain,CdR12bLoadPlan plan) {
@@ -81,6 +82,14 @@ public final class CdR12bTerrainAssets {
     /** Only enum-owned finite original-file spans; no arbitrary image/range/offset ingress. */
     CdAssetBytes sectionSourceView(CdR12bSectionSources.SourceId source,CdR12bSectionSources.ReaderKind kind) {
         return Objects.requireNonNull(source).range(Objects.requireNonNull(kind)).read(image);
+    }
+    /** Lazy finite raw writer views; source values confer no native/current publication authority. */
+    public synchronized CdR12bDirectArtSources directArtSources() {
+        if(directArtSources==null)directArtSources=CdR12bDirectArtSources.bind(this);
+        return directArtSources;
+    }
+    CdAssetBytes directArtView(CdR12bDirectArtSources.View source) {
+        return Objects.requireNonNull(source).range().read(image);
     }
     public Identity identity() { return identity; }
     public CdR12bProfile profile() { return profile; }

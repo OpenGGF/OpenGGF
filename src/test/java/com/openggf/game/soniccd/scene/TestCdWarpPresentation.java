@@ -209,6 +209,25 @@ class TestCdWarpPresentation {
                 stepSceneToPrep(scene), 8).state(), BASE));
     }
 
+    @Test void retainedProjectionKeepsBothPhysicalPlanesSelectedScrollAndOriginalPatternVersions() {
+        byte[] plane=new byte[4096];word(plane,0,0xE064);word(plane,4094,0x1801);
+        var assets=assets(plane,art());var selected=selected(0x1234,new byte[640],0);
+        when(selected.displayedPalette()).thenReturn(java.util.Optional.of(CdAssetBytes.copyOf(new byte[128])));
+        var result=CdWarpPresentation.retainedScene(assets,selected,BASE,true);
+        assertTrue(result.displayEnabled());assertEquals(0x1234,result.vscrollLongBits());
+        assertArrayEquals(new int[2048],result.foreground().words64x32());
+        assertEquals(0xE064,result.background().words64x32()[0]);assertEquals(0x1801,result.background().words64x32()[2047]);
+        assertArrayEquals(new int[256],result.packedHscroll256());assertEquals(101,result.nativePatterns().size());
+        assertEquals(com.openggf.game.soniccd.resources.CdObjectPresentation.patternVersion(assets.art().slice(100*32,32)),result.nativePatterns().get(100));
+        assertEquals(CdWarpPresentation.sprites(assets,selected,BASE),result.sprites());
+    }
+
+    @Test void ipxBlankRetainedProjectionDoesNotSampleUnknownPaletteOrUnselectedAssets() {
+        var disabled=CdWarpPresentation.retainedScene(mock(CdWarpAssets.class),selected(0,new byte[640],0),BASE,false);
+        assertFalse(disabled.displayEnabled());assertNull(disabled.foreground());assertNull(disabled.background());
+        assertTrue(disabled.nativePatterns().isEmpty());assertTrue(disabled.sprites().tiles().isEmpty());
+    }
+
     private static CdWarpScene.State stepSceneToPrep(CdWarpScene scene) {
         var state = scene.initial(0);
         for (int row = 0; row < 114; row++) state = scene.step(state, 8).state();

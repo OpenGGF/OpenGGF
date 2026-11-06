@@ -337,7 +337,7 @@ class TestSonicCdStockPreparation {
         assertSame(source.timeWarpPrograms().orElseThrow().r1Pcm(),full.timeWarpPrograms().orElseThrow().r1Pcm());
         var dataOnly=new CdGameDataSource(source.release(),source.assets(),source.fmSoundAssets(),Optional.empty(),Optional.of(pair));
         assertTrue(dataOnly.timeWarpPrograms().isEmpty());assertSame(pair,dataOnly.act2Assets().orElseThrow());assertEquals(source.identity(),dataOnly.identity());
-        assertEquals(java.util.List.of(3,4,5),java.util.Arrays.stream(CdGameDataSource.class.getDeclaredConstructors()).map(c->c.getParameterCount()).sorted().toList());
+        assertEquals(java.util.List.of(3,4,5,6),java.util.Arrays.stream(CdGameDataSource.class.getDeclaredConstructors()).map(c->c.getParameterCount()).sorted().toList());
         assertEquals(2,CdGameDataSource.Act2Assets.class.getRecordComponents().length);
     }
     @Test void retainedAct2AddsNoAssetPathAndTheThreeExistingStreamsStayIndependent() throws Exception {
@@ -387,4 +387,36 @@ class TestSonicCdStockPreparation {
         assertThrows(IllegalArgumentException.class,()->new CdGameDataSource(source.release(),wrong,source.fmSoundAssets(),source.timeWarpPrograms(),source.act2Assets()));
     }
     // END detached Act2 data custody.
+    @ParameterizedTest(name="{0}: explicit detached Act2 Past custody")
+    @EnumSource(CdReleaseVariant.class)
+    void stockPreparationRetainsOnlyTheAuthenticUsaR12bPairAfterClosingTheDisc(CdReleaseVariant variant) throws Exception {
+        var source=CdStockLaunch.prepare(suppliedCue(variant),CdStockLaunch.Request.r11a());
+        assertEquals(variant==CdReleaseVariant.USA,source.act2PastAssets().isPresent());
+        if(variant!=CdReleaseVariant.USA)return;
+        var pair=source.act2PastAssets().orElseThrow();
+        var bound=com.openggf.game.soniccd.level.CdStagePlayerSource.fromAct2Past(pair.terrain(),pair.player());
+        assertEquals(CdStageKey.parse("R12B"),bound.stage());assertEquals(0,bound.ordinaryPeriod());
+        assertTrue(bound.ownsAct2Past(pair.terrain(),pair.player()));
+        assertEquals("14de4fdb4979125a8c0c197c926133353d20a2ca5b2d57db2e363c4e94460a64",pair.terrain().identity().mmdSha256());
+        assertEquals(source.release().normalizedSha256(),pair.player().identity().observedWholeDiscSha256());
+        assertEquals(pair.terrain().identity(),pair.player().identity());assertEquals(0x230F60,bound.mappingAddress());
+        assertEquals(69472,pair.player().sonicArtReadRange().length());
+        // The original media owner is already closed. Reads use detached immutable actual data.
+        var art=pair.player().view(com.openggf.game.soniccd.level.CdR12bPlayerAssets.Asset.ART_SONIC);
+        byte first=art.copy()[0];var copy=art.copy();copy[0]^=0x7F;assertEquals(first,art.copy()[0]);
+        assertTrue(source.rom().isEmpty());assertThrows(FileNotFoundException.class,()->source.openAsset("R12B__.MMD;1"));
+    }
+
+    @Test void r12bCustodyCannotBeMintedByLegacyConstructorsOrNullPairs() throws Exception {
+        var source=CdStockLaunch.prepare(suppliedCue(CdReleaseVariant.USA),CdStockLaunch.Request.r11a());
+        var pair=source.act2PastAssets().orElseThrow();
+        assertThrows(NullPointerException.class,()->new CdGameDataSource.Act2PastAssets(null,pair.player()));
+        assertThrows(NullPointerException.class,()->new CdGameDataSource.Act2PastAssets(pair.terrain(),null));
+        var legacy=new CdGameDataSource(source.release(),source.assets(),source.fmSoundAssets(),source.timeWarpPrograms(),source.act2Assets());
+        assertTrue(legacy.act2PastAssets().isEmpty());assertEquals(source.identity(),legacy.identity());
+        assertSame(source.timeWarpPrograms().orElseThrow(),legacy.timeWarpPrograms().orElseThrow());
+        var rebuilt=new CdGameDataSource(source.release(),source.assets(),source.fmSoundAssets(),source.timeWarpPrograms(),source.act2Assets(),source.act2PastAssets());
+        assertSame(pair,rebuilt.act2PastAssets().orElseThrow());assertEquals(source.identity(),rebuilt.identity());
+        assertThrows(NullPointerException.class,()->new CdGameDataSource(source.release(),source.assets(),source.fmSoundAssets(),source.timeWarpPrograms(),source.act2Assets(),null));
+    }
 }

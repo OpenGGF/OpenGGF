@@ -2413,3 +2413,16 @@ Post-223 SSZ crumble first row (2026-10-26): the [act-1 component increment](../
 adds2 passing320/800 checks for native first-row allocation and carried render
 lifetime, with no production change. This preserves a useful old-draft stimulus;
 continuous launch and native/pixel acceptance remain separate.
+
+### 6 November — R12A WARP return and R12B prerequisite qualification
+
+The original-USA Act2 controller returns through 13885 with full/course WARP
+replay; first13886stops R12B_LOAD before actual target assembly/old retirement.
+Fresh 36 checks include the old 23 Sonic EGL endpoints plus a selected WARP
+component draw/restore/reentry check. No new route-image or audio/native/regional
+parity claim is made. Separate R12Bsource/player/Frame/art/HUD/scroll checks
+qualify the [Past prerequisites](../architecture/validation/levels/scd-palmtree-panic-act2-past.md),
+with 165 fresh positives after the explicit constructor-census repair. Live target
+entry, mechanics, lifecycle, route and production configuration breadth remain
+open. Broader Swing smoke is still incomplete; this bounded qualification does
+not replace its unresolved skip/guard obligations.

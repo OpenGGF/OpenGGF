@@ -5,6 +5,8 @@ import com.openggf.game.soniccd.level.CdR11aAssetLoader;
 import com.openggf.game.soniccd.level.CdR11aProfile;
 import com.openggf.game.soniccd.level.CdR12aTerrainAssets;
 import com.openggf.game.soniccd.level.CdR12aPlayerAssets;
+import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
+import com.openggf.game.soniccd.level.CdR12bPlayerAssets;
 import com.openggf.game.soniccd.media.CdProgramAssets;
 import com.openggf.game.soniccd.media.CdTimeWarpPrograms;
 import com.openggf.game.soniccd.release.CdRetailRelease;
@@ -61,7 +63,10 @@ public final class CdStockLaunch {
             Optional<CdGameDataSource.Act2Assets> act2Assets = release.variant() == CdReleaseVariant.USA
                     ? Optional.of(new CdGameDataSource.Act2Assets(CdR12aTerrainAssets.fromPrograms(media),
                             CdR12aPlayerAssets.fromPrograms(media))) : Optional.empty();
-            return new CdGameDataSource(release, assets, fmSoundAssets, timeWarpPrograms, act2Assets);
+            Optional<CdGameDataSource.Act2PastAssets> act2Past = release.variant() == CdReleaseVariant.USA
+                    ? Optional.of(new CdGameDataSource.Act2PastAssets(CdR12bTerrainAssets.fromPrograms(media),
+                            CdR12bPlayerAssets.fromPrograms(media))) : Optional.empty();
+            return new CdGameDataSource(release, assets, fmSoundAssets, timeWarpPrograms, act2Assets, act2Past);
         }
     }
 
