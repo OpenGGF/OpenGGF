@@ -2,6 +2,12 @@ package com.openggf.game.soniccd.objects;
 
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdR11bAssets;
+import com.openggf.game.soniccd.level.CdR12bObjectAssets;
+import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
+import com.openggf.game.soniccd.CdNativeFile;
+import com.openggf.game.soniccd.CdReleaseVariant;
+import com.openggf.game.soniccd.CdStagePayload;
+import com.openggf.game.soniccd.media.CdMmdImage;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -32,6 +38,24 @@ public final class CdReservedHud {
             return new Assets(
                     assets.view(CdR11bAssets.Asset.MAP_SPR_HUD).range().nativeAddress(),
                     assets.view(CdR11bAssets.Asset.MAP_SPR_MONITOR_TIME).range().nativeAddress());
+        }
+
+        /**
+         * Actual R12B pointer values for HUD and reserved TimeIcon's shared MonitorTime table.
+         * N1ecc5f3a HUD/Main.asm:87-90 and Monitor/Main.asm:36-40. Full MMD authentication belongs
+         * to Terrain; neither assigning a mapping pointer nor this value factory reads mappings/art.
+         */
+        public static Assets fromAct2PastAssets(CdR12bTerrainAssets owner) {
+            Objects.requireNonNull(owner, "actual R12B terrain");
+            var identity = Objects.requireNonNull(owner.identity());
+            if (identity.variant() != CdReleaseVariant.USA || identity.file() != CdNativeFile.R12B
+                    || identity.domain() != CdMmdImage.Domain.ORIGINAL_WORD_RAM
+                    || !identity.stage().equals(CdStagePayload.R12B.stage())) {
+                throw new IllegalArgumentException("HUD Act2 Past assets require authenticated original USA R12B Word RAM");
+            }
+            owner.objects(); // Canonical retained metadata owner; do not eagerly resolve either mapping.
+            return new Assets(CdR12bObjectAssets.View.MAP_SPR_HUD.range().nativeAddress(),
+                    CdR12bObjectAssets.View.MAP_SPR_MONITOR_TIME.range().nativeAddress());
         }
     }
 
@@ -113,6 +137,20 @@ public final class CdReservedHud {
         this.assets = Objects.requireNonNull(assets, "assets");
         this.slots = Objects.requireNonNull(slots, "slots");
         this.drawObject = Objects.requireNonNull(drawObject, "drawObject");
+    }
+
+    /**
+     * Explicit genuine R12B component ingress, including the reserved subtype0A TimeIcon.
+     * The placement relation is checked before any selected image/port is read. Ports must still bind
+     * the actual reserved owner and invocation; their public values cannot prove Frame or queue custody.
+     */
+    public static CdReservedHud fromAct2PastAssets(CdObjectPlacementRuntime placement, CdR12bTerrainAssets owner,
+                                                   Slots slots, DrawObjectCall drawObject) {
+        Objects.requireNonNull(placement, "placement"); Objects.requireNonNull(owner, "actual R12B terrain");
+        if (!placement.sameAct2PastSource(owner)) {
+            throw new IllegalArgumentException("Reserved HUD/placement retained R12B source mismatch or constructed placement");
+        }
+        return new CdReservedHud(Assets.fromAct2PastAssets(owner), slots, drawObject);
     }
 
     /** Globals are dereferenced only where the reached native path reads them. */

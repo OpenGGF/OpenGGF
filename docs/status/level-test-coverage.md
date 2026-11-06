@@ -2438,3 +2438,13 @@ views/19 visual roots for twelve initial kinds. Earlier component and13 exit
 receipts remain separate; no combined fleet/full-act/native/regional/audio pass
 or new visible Sonic is claimed. The next obligation is the first genuine
 unpaused physical walk, using the authentic72-byte table and native mapping roots.
+
+### 6 November — R12B initial body and mapping bindings
+
+The [Act2 Past matrix](../architecture/validation/levels/scd-palmtree-panic-act2-past.md)
+now records actual-source factories for twelve initial kinds and the20-root/
+eight-icon catalogue. Ninety distinct scoped identities have positive outcomes
+across separate runs:49 new bindings,29 legacy Swing,nine mappings and three
+legacy API inventories. The corrected14-case run passes without skips; earlier
+fixture failures remain attributed. No ordinary R12B physical pass or selected
+Sonic is inferred from these component checks.

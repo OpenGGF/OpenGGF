@@ -1,5 +1,7 @@
 package com.openggf.game.soniccd.objects;
 
+import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
+import com.openggf.game.soniccd.level.CdR12bObjectAssets;
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdObjectVisualAssets;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
@@ -126,6 +128,19 @@ public final class CdCollapsePlatform {
             Objects.requireNonNull(collapsePlatform4, "collapsePlatform4");
             Objects.requireNonNull(sizes1, "sizes1"); Objects.requireNonNull(sizes2, "sizes2");
         }
+        /** Actual Act2Past's complete556-byte data family; no Present or Act1Past root substitution. */
+        public static Assets fromAct2PastAssets(CdR12bObjectAssets owner) {
+            Objects.requireNonNull(owner, "actual R12B object assets");
+            var identity=Objects.requireNonNull(owner.identity(), "R12B identity");
+            if(identity.variant()!=CdReleaseVariant.USA || identity.file()!=CdNativeFile.R12B
+                    || identity.domain()!=CdMmdImage.Domain.ORIGINAL_WORD_RAM || !identity.stage().equals(CdStagePayload.R12B.stage()))
+                throw new IllegalArgumentException("Collapse requires actual original USA R12B metadata");
+            return new Assets(owner.collapsePlatform1(),owner.collapsePlatform2(),owner.collapsePlatform3(),owner.collapsePlatform4(),
+                    owner.view(CdR12bObjectAssets.View.COLLAPSE_PLATFORM_SIZES_1),owner.view(CdR12bObjectAssets.View.COLLAPSE_PLATFORM_SIZES_2),
+                    CdR12bObjectAssets.View.MAP_SPR_COLLAPSE_PLATFORM_1.range().nativeAddress(),CdR12bObjectAssets.View.MAP_SPR_COLLAPSE_PLATFORM_2.range().nativeAddress(),
+                    CdR12bObjectAssets.View.MAP_SPR_COLLAPSE_PLATFORM_3.range().nativeAddress(),CdR12bObjectAssets.View.MAP_SPR_COLLAPSE_PLATFORM_4.range().nativeAddress());
+        }
+
         public static Assets fromObjectAssets(CdR11aObjectAssets objects) {
             Objects.requireNonNull(objects, "objects");
             return new Assets(objects.collapsePlatform1(), objects.collapsePlatform2(),
@@ -292,6 +307,14 @@ public final class CdCollapsePlatform {
     private void observePublication(Object operation) {
         if (publicationObserver != null) publicationObserver.published(operation);
     }
+    /** Bind the actual R12B relation before metadata; native prefix observers/callbacks stay caller-owned. */
+    public static CdCollapsePlatform fromAct2PastAssets(CdObjectPlacementRuntime placement,CdR12bTerrainAssets owner,
+                                                        CdSolidObject solid,SolidCommit commit,DrawObjectCall draw,FmCommit fm,PublicationObserver observer) {
+        Objects.requireNonNull(placement, "actual R12B placement"); Objects.requireNonNull(owner, "actual R12B terrain");
+        if(!placement.sameAct2PastSource(owner))throw new IllegalArgumentException("Collapse requires the same retained R12B placement/source");
+        return new CdCollapsePlatform(placement,Assets.fromAct2PastAssets(owner.objects()),solid,commit,draw,fm,observer);
+    }
+
     public static CdCollapsePlatform fromAct2Assets(CdObjectPlacementRuntime placement,CdR12aObjectAssets owner,
                                                     CdSolidObject solid,SolidCommit commit,DrawObjectCall draw,FmCommit fm,PublicationObserver observer){
         Objects.requireNonNull(placement);Objects.requireNonNull(owner);

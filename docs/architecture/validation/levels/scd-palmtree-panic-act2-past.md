@@ -90,12 +90,31 @@ source fingerprint is `aebf81776b8d8a256d89a3026dba0b156f90ad376ad42abbbdef7150c
 No single combined fleet, new screenshot, native/regional/audio or full-act parity
 is inferred. The older broad Swing smoke remains incomplete.
 
+## Initial body and mapping prerequisites — 6 November
+
+Twelve existing bodies now have explicit R12B source factories, including the
+reserved HUD/TimeIcon source. They use the original72-byte tile table, shared
+terrain/math and original mapping roots; legacy Present constructors and public
+DTOs retain their contracts. The catalogue joins20 counted roots (288 frames,
+including198 Sonic frames) and eight header-free monitor icons. It adds no
+current-art writes, placement work or ordinary World execution authority.
+
+Separate source-bound runs establish90 distinct positive case identities:
+49 new binding cases,29 inherited Swing cases,nine mapping cases and three
+inherited API inventories. The78-case attempt had76 positives and two fixture
+failures; the repaired positions preserve native anchor words, and the queue
+failure assertion now checks its original cause through the contextual wrapper.
+The subsequent14-case run passes0F/0E/0S, including the two repairs, new mappings
+and API inventories. An earlier fixture constructor error ran no tests. These
+are separate attributed receipts, not a single90-case fleet. The ordinary
+unpaused physical walk remains the next live obligation.
+
 ## Remaining act obligations
 
 | ID | Required next evidence | Current gap |
 | --- | --- | --- |
 | ENTRY | IPX/WARP/load dispatch, real saved pose, terrain/camera/control and post-entry player body | Actual private FULL/load/custody and saved/scroll publication qualify; ordinary primary Init/Main and selected Sonic remain pending |
-| OBJECT | Actual stage mapping/placement/body bindings, contacts, children, despawn/re-entry | Batched metadata and source-bound placement qualify; no target ordinary physical walk yet |
+| OBJECT | Actual stage mapping/placement/body bindings, contacts, children, despawn/re-entry | Actual-source body factories, mapping catalogue and placement qualify as components; no target ordinary physical walk yet |
 | EVENT | Native stage gates, water/palette/background/terrain changes | Unimplemented target programme owners |
 | CAMERA | Correct stage scroll/parallax/culling and width-sensitive behavior | Live loading scroll/plane publication qualifies; ordinary camera/culling/width-sensitive traversal remains pending |
 | BOSS | Source inventory and route-specific applicability | Unassessed, not marked not-applicable |

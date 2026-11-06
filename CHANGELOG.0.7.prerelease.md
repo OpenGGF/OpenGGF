@@ -277,7 +277,9 @@ Unreleased. The earlier development themes remain in
   then performs the real same-World R12B FULL load. Source-ordered saved stores,
   section PLCs, scroll/planes and white fade now complete with selected terrain,
   full/course replay and real renderer checks. A batched metadata owner supplies
-  twelve initial object kinds without relabelling Present tables. The next honest
+  twelve initial object kinds without relabelling Present tables. Actual-source
+  body factories now bind those kinds, and one catalogue resolves twenty counted
+  roots plus eight monitor icons; legacy constructors retain their contracts. The next honest
   boundary remains before the ordinary R12B physical object pass; no destination
   Sonic or full-act parity is claimed.
   Authenticated Act2 Spikes mapping and a named retained-source prefix factory

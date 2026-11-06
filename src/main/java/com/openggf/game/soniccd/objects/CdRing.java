@@ -11,6 +11,8 @@ import com.openggf.game.soniccd.level.CdR11bAssets;
 import com.openggf.game.soniccd.level.CdR12aObjectAssets;
 import com.openggf.game.soniccd.level.CdR12aProfile;
 import com.openggf.game.soniccd.level.CdR12aTerrainAssets;
+import com.openggf.game.soniccd.level.CdR12bObjectAssets;
+import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
 import com.openggf.game.soniccd.media.CdMmdImage;
 
 import java.util.List;
@@ -96,10 +98,10 @@ public final class CdRing {
         private void requireSupportedDomain() {
             if (variant != CdReleaseVariant.USA
                     || !(stage.equals(CdStageKey.parse("R11A")) || stage.equals(CdStageKey.parse("R11B"))
-                    || stage.equals(CdStageKey.parse("R12A")))
+                    || stage.equals(CdStageKey.parse("R12A")) || stage.equals(CdStageKey.parse("R12B")))
                     || zoneByte != 0) {
                 // MMZ's explicit priority/subtype2/tile branch is not executed in PPZ zone 0 (:159-166).
-                throw new UnsupportedOperationException("ObjRing body is bounded to USA R11A/R11B/authenticated R12A zone 0; selected "
+                throw new UnsupportedOperationException("ObjRing body is bounded to USA R11A/R11B/authenticated R12A/R12B zone 0; selected "
                         + variant + " " + stage.nativeId() + " zone=" + zoneByte);
             }
             if ((timeZoneByte & 0x7F) > 2) {
@@ -123,6 +125,7 @@ public final class CdRing {
     private final Optional<CdR11aObjectAssets.ArtBinding> art;
     private final Optional<CdR11bAssets.Identity> pastIdentity;
     private final Optional<CdR12aTerrainAssets.Identity> act2Identity;
+    private final Optional<CdR12bTerrainAssets.Identity> act2PastIdentity;
 
     /** Pure declared-input consumer, like the placement/visual decoders; no asset identity is conferred. */
     public CdRing(CdObjectPlacementRuntime placement, SourceData data) {
@@ -146,11 +149,19 @@ public final class CdRing {
     private CdRing(CdObjectPlacementRuntime placement, SourceData data,
                    Optional<CdR11aAssets.Identity> identity, Optional<CdR11aObjectAssets.ArtBinding> art,
                    Optional<CdR11bAssets.Identity> pastIdentity, Optional<CdR12aTerrainAssets.Identity> act2Identity) {
+        this(placement, data, identity, art, pastIdentity, act2Identity, Optional.empty());
+    }
+
+    private CdRing(CdObjectPlacementRuntime placement, SourceData data,
+                   Optional<CdR11aAssets.Identity> identity, Optional<CdR11aObjectAssets.ArtBinding> art,
+                   Optional<CdR11bAssets.Identity> pastIdentity, Optional<CdR12aTerrainAssets.Identity> act2Identity,
+                   Optional<CdR12bTerrainAssets.Identity> act2PastIdentity) {
         this.placement = Objects.requireNonNull(placement, "placement");
         this.data = Objects.requireNonNull(data, "data");
         this.identity = identity; this.art = art;
         this.pastIdentity = pastIdentity;
         this.act2Identity = act2Identity;
+        this.act2PastIdentity = act2PastIdentity;
         sparkle = new CdObjectAnimation.AnimationTable(data.visuals().animationTable(), 0, 1);
     }
 
@@ -222,6 +233,29 @@ public final class CdRing {
         return new CdRing(placement, data, Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(identity));
     }
 
+    /**
+     * Actual original-USA R12B ingress over the same retained terrain/layout relation as placement.
+     * N1ecc5f3a Ring/Main.asm:20-35,150-174 uses the same native algorithm and literal A7AE;
+     * its actual R12B MapSpr_Ring is $209EB0. No R12A root or foreign art binding is borrowed.
+     * This component factory grants no ordinary-loop, Frame, mapping-catalogue or current-art authority.
+     */
+    public static CdRing fromAct2PastAssets(CdObjectPlacementRuntime placement, CdR12bTerrainAssets assets) {
+        Objects.requireNonNull(placement, "placement"); Objects.requireNonNull(assets, "actual R12B terrain");
+        var identity = assets.identity();
+        if (identity.variant() != CdReleaseVariant.USA || !identity.stage().equals(CdStageKey.parse("R12B"))
+                || identity.file() != CdNativeFile.R12B || identity.domain() != CdMmdImage.Domain.ORIGINAL_WORD_RAM) {
+            throw new UnsupportedOperationException("ObjRing assets must be authenticated original USA R12B");
+        }
+        if (!placement.sameAct2PastSource(assets)) {
+            throw new IllegalArgumentException("Ring/placement retained R12B source mismatch or constructed placement");
+        }
+        var objects = assets.objects();
+        var data = new SourceData(objects.ringDeltas(),
+                CdR12bObjectAssets.View.MAP_SPR_RING.range().nativeAddress(), 0xA7AE, objects.rings());
+        return new CdRing(placement, data, Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
+                Optional.of(identity));
+    }
+
     public SourceData sourceData() { return data; }
     public Optional<CdR11aAssets.Identity> sourceIdentity() { return identity; }
     public Optional<CdR11aObjectAssets.ArtBinding> artBinding() { return art; }
@@ -246,10 +280,13 @@ public final class CdRing {
         }
     }
 
-    /** Supported arithmetic alone cannot relabel a bound source or lend actual R12A admission to raw data. */
+    /** Supported arithmetic alone cannot relabel a bound source or lend R12A/R12B admission to raw data. */
     private void requireBoundSource(Inputs inputs) {
         if (inputs.stage().equals(CdStageKey.parse("R12A")) && act2Identity.isEmpty()) {
             throw new UnsupportedOperationException("R12A Ring requires its actual authenticated placement/object relation");
+        }
+        if (inputs.stage().equals(CdStageKey.parse("R12B")) && act2PastIdentity.isEmpty()) {
+            throw new UnsupportedOperationException("R12B Ring requires its actual authenticated placement/object relation");
         }
         if (identity.isPresent() && (identity.get().variant() != inputs.variant()
                 || !identity.get().stage().equals(inputs.stage()))) {
@@ -262,6 +299,10 @@ public final class CdRing {
         if (act2Identity.isPresent() && (act2Identity.get().variant() != inputs.variant()
                 || !act2Identity.get().stage().equals(inputs.stage()))) {
             throw new IllegalArgumentException("Ring inputs do not match the authenticated R12A source");
+        }
+        if (act2PastIdentity.isPresent() && (act2PastIdentity.get().variant() != inputs.variant()
+                || !act2PastIdentity.get().stage().equals(inputs.stage()))) {
+            throw new IllegalArgumentException("Ring inputs do not match the authenticated R12B source");
         }
     }
 

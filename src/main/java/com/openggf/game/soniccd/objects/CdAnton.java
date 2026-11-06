@@ -5,6 +5,8 @@ import com.openggf.game.soniccd.CdReleaseVariant;
 import com.openggf.game.soniccd.CdStagePayload;
 import com.openggf.game.soniccd.media.CdMmdImage;
 import com.openggf.game.soniccd.level.CdAssetBytes;
+import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
+import com.openggf.game.soniccd.level.CdR12bObjectAssets;
 import com.openggf.game.soniccd.level.CdObjectVisualAssets;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
 import com.openggf.game.soniccd.level.CdR11bAssets;
@@ -224,6 +226,25 @@ public final class CdAnton {
         this.placement = Objects.requireNonNull(placement, "placement"); this.assets = Objects.requireNonNull(assets, "assets");
         this.terrain = Objects.requireNonNull(terrain, "terrain"); this.angleCommit = Objects.requireNonNull(angleCommit, "angleCommit");
         this.drawObject = Objects.requireNonNull(drawObject, "drawObject");
+    }
+
+
+    /**
+     * Genuine original-USA R12B relation only. Public Assets3 retains its A74 contract.
+     * N1ecc5f3: Anton/Main.asm:24-63; Object Tile ID Set.asm:7-17.
+     * The actual B72 selector operand stays lazy; subtype2=1 reads the genuine next WORD.
+     * Detached source binding executes no body/callback/art/current or World work.
+     */
+    public static CdAnton fromAct2PastAssets(CdObjectPlacementRuntime placement, CdR12bTerrainAssets owner,
+                                             PrimaryAngleCommit angleCommit, DrawObjectCall drawObject) {
+        Objects.requireNonNull(placement, "actual placement"); Objects.requireNonNull(owner, "actual R12B source");
+        if (!placement.sameAct2PastSource(owner)) throw new IllegalArgumentException("Anton requires the same retained R12B placement/source");
+        var objects = owner.objects();
+        var tiles = objects.view(CdR12bObjectAssets.View.OBJECT_TILE_IDS);
+        if (tiles.length() != 72) throw new IllegalArgumentException("Anton R12B requires its actual72-byte tile directory");
+        var bound = new NativeAssets(secondary -> readPastTileWord(tiles, secondary), objects.anton(),
+                CdR12bObjectAssets.View.MAP_SPR_ANTON.range().nativeAddress());
+        return new CdAnton(placement, bound, CdPlayerTerrain.fromStageTerrain(owner.terrain()), angleCommit, drawObject);
     }
 
     /** ObjAnton (:7-15): good-future check FIRST, then raw byte-offset dispatch and wrapper. */

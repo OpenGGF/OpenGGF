@@ -5,6 +5,8 @@ import com.openggf.game.soniccd.CdReleaseVariant;
 import com.openggf.game.soniccd.CdStagePayload;
 import com.openggf.game.soniccd.media.CdMmdImage;
 import com.openggf.game.soniccd.level.CdAssetBytes;
+import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
+import com.openggf.game.soniccd.level.CdR12bObjectAssets;
 import com.openggf.game.soniccd.level.CdObjectVisualAssets;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
 import com.openggf.game.soniccd.level.CdR11bAssets;
@@ -312,6 +314,32 @@ public final class CdTamabboh {
         Objects.requireNonNull(placement,"actual placement"); Objects.requireNonNull(owner,"actual R12A source");
         if (!placement.sameAct2Source(owner)) throw new IllegalArgumentException("Tamabboh requires the same retained R12A placement/source");
         return new CdTamabboh(placement,Assets.fromAct2Assets(owner),terrain,angleCommit,playerRead,playFmSound,drawObject);
+    }
+
+
+    /**
+     * Genuine original-USA R12B binding. Public Assets9/A74 and all body policies remain unchanged.
+     * N1ecc5f3: Tamabboh/Main.asm:29-72,226-252; Object Tile ID Set.asm:7-17.
+     * Uses only cached original B visual roots and actual terrain, without an art/current/Frame owner.
+     */
+    public static CdTamabboh fromAct2PastAssets(CdObjectPlacementRuntime placement, CdR12bTerrainAssets owner,
+                                               PrimaryAngleCommit angleCommit, PlayerWordRead playerRead,
+                                               PlayFmSound playFmSound, DrawObjectCall drawObject) {
+        Objects.requireNonNull(placement, "actual placement"); Objects.requireNonNull(owner, "actual R12B source");
+        if (!placement.sameAct2PastSource(owner)) throw new IllegalArgumentException("Tamabboh requires the same retained R12B placement/source");
+        var objects = owner.objects();
+        var tiles = objects.view(CdR12bObjectAssets.View.OBJECT_TILE_IDS);
+        if (tiles.length() != 72) throw new IllegalArgumentException("Tamabboh R12B requires its actual72-byte tile directory");
+        int bodyRoot = CdR12bObjectAssets.View.MAP_SPR_TAMABBOH.range().nativeAddress();
+        var bound = new NativeAssets(secondary -> {
+                    int target = (short) tiles.unsignedWord(TILE_SELECTOR * 2);
+                    return tiles.unsignedWord(target + secondary * 2);
+                }, objects.tamabbohNormal(), objects.tamabbohDamaged(), objects.tamabbohMissile(),
+                bodyRoot, bodyRoot + 22, CdR12bObjectAssets.View.MAP_SPR_TAMABBOH_MISSILE.range().nativeAddress(),
+                CdR12bObjectAssets.View.ANI_TAMABBOH_NORMAL.range().nativeAddress(),
+                CdR12bObjectAssets.View.ANI_TAMABBOH_DAMAGED.range().nativeAddress());
+        return new CdTamabboh(placement, bound, CdPlayerTerrain.fromStageTerrain(owner.terrain()),
+                angleCommit, playerRead, playFmSound, drawObject);
     }
 
     /** ObjTamabboh:7-18 / ObjTamabbohMissile:213-224: subtype equality1 is FIRST. */

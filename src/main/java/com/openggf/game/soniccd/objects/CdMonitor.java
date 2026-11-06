@@ -1,5 +1,7 @@
 package com.openggf.game.soniccd.objects;
 
+import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
+import com.openggf.game.soniccd.level.CdR12bObjectAssets;
 import com.openggf.game.soniccd.CdNativeFile;
 import com.openggf.game.soniccd.CdReleaseVariant;
 import com.openggf.game.soniccd.CdStagePayload;
@@ -112,6 +114,16 @@ public final class CdMonitor {
                 throw new IllegalArgumentException("Monitor mappings require an aligned bounded native root");
             }
         }
+        /** Actual original-USA R12B complete shared Monitor/TimePost metadata; no body or current-art admission. */
+        public static Assets fromAct2PastAssets(CdR12bObjectAssets owner) {
+            Objects.requireNonNull(owner, "actual R12B object assets");
+            var identity=Objects.requireNonNull(owner.identity(), "R12B identity");
+            if(identity.variant()!=CdReleaseVariant.USA || identity.file()!=CdNativeFile.R12B
+                    || identity.domain()!=CdMmdImage.Domain.ORIGINAL_WORD_RAM || !identity.stage().equals(CdStagePayload.R12B.stage()))
+                throw new IllegalArgumentException("Monitor requires actual original USA R12B metadata");
+            return new Assets(owner.monitorTime(), CdR12bObjectAssets.View.MAP_SPR_MONITOR_TIME.range().nativeAddress());
+        }
+
         public static Assets fromObjectAssets(CdR11aObjectAssets owner) {
             Objects.requireNonNull(owner);
             return new Assets(owner.monitorTime(),
@@ -252,6 +264,15 @@ public final class CdMonitor {
         this.solid = Objects.requireNonNull(solid); this.terrain = Objects.requireNonNull(terrain);
         this.solidCommit = Objects.requireNonNull(solidCommit); this.primaryAngleCommit = Objects.requireNonNull(primaryAngleCommit);
         this.drawObject = Objects.requireNonNull(drawObject); this.playFm = Objects.requireNonNull(playFm);
+    }
+
+    /** Same retained R12B source; reuse the existing prefix Solid/readback path without a new owner. */
+    public static CdMonitor fromAct2PastAssets(CdObjectPlacementRuntime placement, CdR12bTerrainAssets owner,
+                                               CdSolidObject solid, CdPlayerTerrain terrain, PrefixSolidOwner prefix,
+                                               PrimaryAngleCommit angle, DrawObjectCall draw, PlayFmCall fm) {
+        Objects.requireNonNull(placement, "actual R12B placement"); Objects.requireNonNull(owner, "actual R12B terrain");
+        if(!placement.sameAct2PastSource(owner))throw new IllegalArgumentException("Monitor requires the same retained R12B placement/source");
+        return new CdMonitor(placement,Assets.fromAct2PastAssets(owner.objects()),solid,terrain,prefix,angle,draw,fm,true);
     }
 
     /**

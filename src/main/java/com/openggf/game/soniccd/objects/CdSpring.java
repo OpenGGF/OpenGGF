@@ -8,6 +8,8 @@ import com.openggf.game.soniccd.level.CdObjectTileIds;
 import com.openggf.game.soniccd.level.CdObjectVisualAssets;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
 import com.openggf.game.soniccd.level.CdR11bAssets;
+import com.openggf.game.soniccd.level.CdR12bObjectAssets;
+import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
 import com.openggf.game.soniccd.media.CdMmdImage;
 import com.openggf.game.soniccd.player.CdPlayerMath;
 import com.openggf.game.soniccd.player.CdPlayerMotionState;
@@ -166,6 +168,26 @@ public final class CdSpring {
                     owner.view(CdR11bAssets.Asset.OBJECT_TILE_IDS).bytes());
         }
 
+        /**
+         * Genuine original-USA R12B metadata only. Its retained 200-byte parent span, independent
+         * roots0/6/80, real script and unpadded Past72 tile table use the existing pure decoders.
+         * Native Spring/Main.asm:186-244,492-495 at N1ecc5f3a; no mapping/art service or current bank.
+         */
+        public static Assets fromAct2PastAssets(CdR12bTerrainAssets owner) {
+            Objects.requireNonNull(owner, "actual R12B terrain");
+            var identity = Objects.requireNonNull(owner.identity());
+            if (identity.variant() != CdReleaseVariant.USA || identity.file() != CdNativeFile.R12B
+                    || identity.domain() != CdMmdImage.Domain.ORIGINAL_WORD_RAM
+                    || !identity.stage().equals(CdStagePayload.R12B.stage())) {
+                throw new IllegalArgumentException("Spring Act2 Past assets require authenticated original USA R12B Word RAM");
+            }
+            var objects = owner.objects();
+            return new Assets(objects.springVertical(), objects.springHorizontal(), objects.springDiagonal(),
+                    CdR12bObjectAssets.View.MAP_SPRING.range().nativeAddress(),
+                    objects.view(CdR12bObjectAssets.View.SPRING_SPEEDS),
+                    objects.view(CdR12bObjectAssets.View.OBJECT_TILE_IDS));
+        }
+
         /** Only primary diagonal selector $F/subtype2 zero is owned for the genuine Past72 format. */
         private int diagonalTileWord(int subtype2) {
             if (objectTileIds.length() == 74) {
@@ -282,6 +304,21 @@ public final class CdSpring {
         this.solid = Objects.requireNonNull(solid); this.solidCommit = Objects.requireNonNull(solidCommit);
         this.launchCommit = Objects.requireNonNull(launchCommit); this.drawObject = Objects.requireNonNull(drawObject);
         this.playFm = Objects.requireNonNull(playFm);
+    }
+
+    /**
+     * Explicit R12B component ingress. Pair the actual retained layout before obtaining metadata or
+     * touching any caller port. Root still owns the real player/math/Solid bindings, invocation and draw.
+     * Every existing constructor and native body algorithm retains its original contract unchanged.
+     */
+    public static CdSpring fromAct2PastAssets(CdObjectPlacementRuntime runtime, CdR12bTerrainAssets owner,
+                                              CdPlayerMath math, CdSolidObject solid, SolidCommit solidCommit,
+                                              LaunchCommit launchCommit, DrawObjectCall drawObject, PlayFmCall playFm) {
+        Objects.requireNonNull(runtime, "placement"); Objects.requireNonNull(owner, "actual R12B terrain");
+        if (!runtime.sameAct2PastSource(owner)) {
+            throw new IllegalArgumentException("Spring/placement retained R12B source mismatch or constructed placement");
+        }
+        return new CdSpring(runtime, Assets.fromAct2PastAssets(owner), math, solid, solidCommit, launchCommit, drawObject, playFm);
     }
 
     /** ObjSpring (:130-169), including the reached control-table lookup and the special ObjSpring2 branch. */

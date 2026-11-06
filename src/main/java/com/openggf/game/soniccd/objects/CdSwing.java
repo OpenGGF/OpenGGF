@@ -4,6 +4,9 @@ import com.openggf.game.soniccd.CdNativeFile;
 import com.openggf.game.soniccd.CdReleaseVariant;
 import com.openggf.game.soniccd.CdStagePayload;
 import com.openggf.game.soniccd.level.CdAssetBytes;
+import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
+import com.openggf.game.soniccd.level.CdR12bObjectAssets;
+import com.openggf.game.soniccd.level.CdR12bPlayerAssets;
 import com.openggf.game.soniccd.level.CdObjectTileIds;
 import com.openggf.game.soniccd.level.CdObjectVisualAssets;
 import com.openggf.game.soniccd.level.CdR12aObjectAssets;
@@ -165,14 +168,14 @@ public final class CdSwing {
     public interface ReceiptGuard { void prepared(Object call); void completed(Object call); }
 
     private final CdObjectPlacementRuntime placement;
-    private final Assets assets; private final CdPlayerMath math; private final CdSolidObject sharedSolid;
+    private final NativeAssets assets; private final Assets legacyAssets; private final CdPlayerMath math; private final CdSolidObject sharedSolid;
     private final PlayerPort playerPort; private final DrawObjectCall drawObject;
     private DispatchObserver observer; private ReceiptGuard receiptGuard;
     private boolean running; private Object pendingOperation; private long ordinal, pendingOrdinal;
 
     public CdSwing(CdObjectPlacementRuntime placement, Assets assets, CdPlayerMath math,
                    CdSolidObject sharedSolid, PlayerPort playerPort, DrawObjectCall drawObject) {
-        this.placement = Objects.requireNonNull(placement); this.assets = Objects.requireNonNull(assets);
+        this.placement = Objects.requireNonNull(placement); this.assets = presentAssets(Objects.requireNonNull(assets)); this.legacyAssets = assets;
         this.math = Objects.requireNonNull(math); this.sharedSolid = Objects.requireNonNull(sharedSolid);
         this.playerPort = Objects.requireNonNull(playerPort); this.drawObject = Objects.requireNonNull(drawObject);
     }
@@ -184,7 +187,64 @@ public final class CdSwing {
         var body = new CdSwing(placement, Assets.fromAct2Assets(owner), math, sharedSolid, playerPort, drawObject);
         body.observer = Objects.requireNonNull(observer); body.receiptGuard = Objects.requireNonNull(guard); return body;
     }
-    public Assets assets() { return assets; }
+
+    @FunctionalInterface private interface TileOperand { int read(CdObjectState source); }
+    /** Finite private source view; historical public Assets4 cannot describe R12B's20ECEC root. */
+    private record NativeAssets(TileOperand tileOperand, CdAssetBytes motion, CdObjectVisualAssets visual,
+                                int mappingAddressBits) {
+        private int tileWord(CdObjectState source) { return tileOperand.read(source); }
+    }
+    private static NativeAssets presentAssets(Assets assets) {
+        return new NativeAssets(assets::tileWord, assets.motion(), assets.visual(), assets.mappingAddressBits());
+    }
+
+    /**
+     * Genuine original-USA R12B relation. Existing Solid/player/publication ownership is borrowed.
+     * N1ecc5f3: Swing/Main.asm:79-197; Object Tile ID Set.asm:7-17.
+     * No padded74 table, R12A metadata, state owner, dispatch, cue or current bank is created.
+     */
+    public static CdSwing fromAct2PastAssets(CdObjectPlacementRuntime placement, CdR12bTerrainAssets owner,
+                                            CdR12bPlayerAssets player, CdSolidObject sharedSolid, PlayerPort playerPort,
+                                            DrawObjectCall drawObject, DispatchObserver observer, ReceiptGuard guard) {
+        Objects.requireNonNull(placement, "actual placement"); Objects.requireNonNull(owner, "actual R12B terrain");
+        Objects.requireNonNull(player, "actual R12B player");
+        if (!placement.sameAct2PastSource(owner) || !owner.identity().equals(player.identity()))
+            throw new IllegalArgumentException("Swing requires the same retained R12B placement/terrain/player source");
+        var objects = owner.objects();
+        var tiles = objects.view(CdR12bObjectAssets.View.OBJECT_TILE_IDS);
+        if (tiles.length() != 72) throw new IllegalArgumentException("Swing R12B requires its actual72-byte tile directory");
+        var bound = new NativeAssets(source -> act2PastTileWord(tiles, source),
+                objects.view(CdR12bObjectAssets.View.SWING_MOTION), objects.swing(),
+                CdR12bObjectAssets.View.MAP_SPR_SWING.range().nativeAddress());
+        var body = new CdSwing(placement, bound, new CdPlayerMath(player.player()), sharedSolid, playerPort, drawObject);
+        body.observer = Objects.requireNonNull(observer); body.receiptGuard = Objects.requireNonNull(guard); return body;
+    }
+    private static int act2PastTileWord(CdAssetBytes objectTileIds, CdObjectState source) {
+        try {
+            int end = CdObjectTileIds.endOfBody(objectTileIds, TILE_SELECTOR);
+            int target = (short) objectTileIds.unsignedWord(TILE_SELECTOR * 2);
+            int at = target + source.subtype2() * 2;
+            if (end - target != 2 || at < target || at > end - 2) {
+                throw unsupported(UnsupportedBoundary.TILE_ID_SUBTYPE2, source, source.subtype2());
+            }
+            return objectTileIds.unsignedWord(at);
+        } catch (IllegalArgumentException | IndexOutOfBoundsException failure) {
+            var stopped = unsupported(UnsupportedBoundary.TILE_ID_SUBTYPE2, source, source.subtype2());
+            stopped.initCause(failure); throw stopped;
+        }
+    }
+    private CdSwing(CdObjectPlacementRuntime placement, NativeAssets assets, CdPlayerMath math,
+                    CdSolidObject sharedSolid, PlayerPort playerPort, DrawObjectCall drawObject) {
+        this.placement = Objects.requireNonNull(placement); this.assets = Objects.requireNonNull(assets); this.legacyAssets = null;
+        this.math = Objects.requireNonNull(math); this.sharedSolid = Objects.requireNonNull(sharedSolid);
+        this.playerPort = Objects.requireNonNull(playerPort); this.drawObject = Objects.requireNonNull(drawObject);
+    }
+
+    /** Historical A-only format observation. R12B callers use their authenticated object metadata owner. */
+    public Assets assets() {
+        if (legacyAssets == null) throw new IllegalStateException("R12B source cannot be represented by legacy Swing Assets4");
+        return legacyAssets;
+    }
     public boolean isCurrentCall(Object call) { return call != null && running && call == pendingOperation; }
     public long currentCallOrdinal(Object call) {
         if (!isCurrentCall(call)) throw new IllegalStateException("Not the original current Swing operation");

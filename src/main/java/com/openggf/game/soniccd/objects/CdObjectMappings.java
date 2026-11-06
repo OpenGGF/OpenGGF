@@ -8,6 +8,10 @@ import com.openggf.game.soniccd.level.CdR11aAssets;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
 import com.openggf.game.soniccd.level.CdR12aObjectAssets;
 import com.openggf.game.soniccd.level.CdR12aProfile;
+import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
+import com.openggf.game.soniccd.level.CdR12bPlayerAssets;
+import com.openggf.game.soniccd.level.CdR12bObjectAssets;
+import com.openggf.game.soniccd.level.CdStagePlayerSource;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -217,6 +221,75 @@ public final class CdObjectMappings implements CdDrawMappings {
             pieces.add(new DeclaredStaticPiece(root + firstPiece, source.slice(firstPiece, 5)));
         }
         return List.copyOf(pieces);
+    }
+
+
+    /**
+     * Complete genuine original-USA R12B data catalogue:19 object roots plus198-frame Sonic.
+     * The existing stage-pair gate validates family/profile/disc lineage. These immutable
+     * declarations grant no object invocation, Frame/World, art/current or pixel authority.
+     * N1ecc5f3: Act 2 Past.asm includes; Object Functions.asm:327-343; native object Init roots.
+     */
+    public static CdObjectMappings fromAct2PastAssets(CdR12bTerrainAssets terrain, CdR12bPlayerAssets player) {
+        var relation = CdStagePlayerSource.fromAct2Past(terrain, player);
+        var sonic = relation.sonic();
+        var sonicView = player.view(CdR12bPlayerAssets.Asset.MAP_SPR_SONIC);
+        requireEqualBytes(sonicView, sonic.mappings());
+        for (var frame : sonic.mappingFrames()) {
+            requireEqualBytes(frame.bytes(), sonicView.slice(frame.relativeOffset(), 1 + frame.pieceCount() * 5));
+        }
+        var tables = new ArrayList<DeclaredTable>();
+        tables.add(new DeclaredTable(relation.mappingAddress(), sonicView, 0, sonic.mappingFrames().size()));
+        var objects = terrain.objects();
+        addAct2PastObject(tables, objects, CdR12bObjectAssets.View.MAP_SPR_RING, objects.rings());
+        // Native Spring oMap roots0/6/80 retain one complete200-byte include and its actual parent EVEN.
+        addAct2PastObject(tables, objects, CdR12bObjectAssets.View.MAP_SPRING, objects.springVertical());
+        addAct2PastObject(tables, objects, CdR12bObjectAssets.View.MAP_SPRING, objects.springHorizontal());
+        addAct2PastObject(tables, objects, CdR12bObjectAssets.View.MAP_SPRING, objects.springDiagonal());
+        addAct2PastObject(tables, objects, CdR12bObjectAssets.View.MAP_SPR_HUD, objects.hudVisuals());
+        addAct2PastObject(tables, objects, CdR12bObjectAssets.View.MAP_SPR_MONITOR_TIME, objects.monitorTime());
+        addAct2PastObject(tables, objects, CdR12bObjectAssets.View.MAP_SPR_COLLAPSE_PLATFORM_1, objects.collapsePlatform1());
+        addAct2PastObject(tables, objects, CdR12bObjectAssets.View.MAP_SPR_COLLAPSE_PLATFORM_2, objects.collapsePlatform2());
+        addAct2PastObject(tables, objects, CdR12bObjectAssets.View.MAP_SPR_COLLAPSE_PLATFORM_3, objects.collapsePlatform3());
+        addAct2PastObject(tables, objects, CdR12bObjectAssets.View.MAP_SPR_COLLAPSE_PLATFORM_4, objects.collapsePlatform4());
+        // Both Tamabboh roots share the complete62-byte original source; damaged root is+22.
+        addAct2PastObject(tables, objects, CdR12bObjectAssets.View.MAP_SPR_TAMABBOH, objects.tamabbohNormal());
+        addAct2PastObject(tables, objects, CdR12bObjectAssets.View.MAP_SPR_TAMABBOH, objects.tamabbohDamaged());
+        addAct2PastObject(tables, objects, CdR12bObjectAssets.View.MAP_SPR_TAMABBOH_MISSILE, objects.tamabbohMissile());
+        addAct2PastObject(tables, objects, CdR12bObjectAssets.View.MAP_SPR_FLYING_ANIMAL, objects.flyingAnimal());
+        addAct2PastObject(tables, objects, CdR12bObjectAssets.View.MAP_SPR_GROUND_ANIMAL, objects.groundAnimal());
+        addAct2PastObject(tables, objects, CdR12bObjectAssets.View.MAP_SPR_SWING, objects.swing());
+        addAct2PastObject(tables, objects, CdR12bObjectAssets.View.MAP_SPR_ROBOT_GENERATOR, objects.robotGenerator());
+        addAct2PastObject(tables, objects, CdR12bObjectAssets.View.MAP_SPR_ANTON, objects.anton());
+        addAct2PastObject(tables, objects, CdR12bObjectAssets.View.MAP_SPR_PLATFORM, objects.platform());
+        return declaredSourceViews(tables, act2PastMonitorItemStaticPieces(objects));
+    }
+
+    /** Original MonitorItem Init:451-459, counted directory WORD then+1 to skip the count.
+     * Only the eight actual icon first pieces are admitted; all32 pointer bits survive. */
+    public static List<DeclaredStaticPiece> act2PastMonitorItemStaticPieces(CdR12bObjectAssets objects) {
+        Objects.requireNonNull(objects, "loaded original R12B object assets");
+        var source = objects.view(CdR12bObjectAssets.View.MAP_SPR_MONITOR_TIME);
+        int root = CdR12bObjectAssets.View.MAP_SPR_MONITOR_TIME.range().nativeAddress();
+        var pieces = new ArrayList<DeclaredStaticPiece>(8);
+        for (int frame = 0; frame < 8; frame++) {
+            int firstPiece = (short) source.unsignedWord(frame * 2) + 1;
+            pieces.add(new DeclaredStaticPiece(root + firstPiece, source.slice(firstPiece, 5)));
+        }
+        return List.copyOf(pieces);
+    }
+
+    /** Exact-byte join over the authenticated owner, including indexed roots, aliases and real tails. */
+    private static void addAct2PastObject(List<DeclaredTable> tables, CdR12bObjectAssets owner,
+                                          CdR12bObjectAssets.View source, CdObjectVisualAssets visual) {
+        var bytes = owner.view(source);
+        requireEqualBytes(bytes, visual.mappings());
+        for (var frame : visual.mappingFrames()) {
+            requireEqualBytes(frame.bytes(), bytes.slice(visual.mappingTableOffset() + frame.relativeOffset(),
+                    1 + frame.pieces().size() * 5));
+        }
+        tables.add(new DeclaredTable(source.range().nativeAddress(), bytes,
+                visual.mappingTableOffset(), visual.mappingFrames().size()));
     }
 
     @Override public MappingBody resolve(int addressBits, boolean staticPiece, int mapFrameByte) {

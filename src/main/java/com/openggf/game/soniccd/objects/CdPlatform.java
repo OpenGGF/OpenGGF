@@ -1,5 +1,7 @@
 package com.openggf.game.soniccd.objects;
 
+import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
+import com.openggf.game.soniccd.level.CdR12bObjectAssets;
 import com.openggf.game.soniccd.CdNativeFile;
 import com.openggf.game.soniccd.CdReleaseVariant;
 import com.openggf.game.soniccd.CdStagePayload;
@@ -117,6 +119,17 @@ public final class CdPlatform {
         public Assets {
             Objects.requireNonNull(visual, "visual"); Objects.requireNonNull(widths, "widths"); Objects.requireNonNull(ranges, "ranges");
         }
+        /** Actual original-USA R12B primary mapping and raw four-byte width/range tables. */
+        public static Assets fromAct2PastAssets(CdR12bObjectAssets owner) {
+            Objects.requireNonNull(owner, "actual R12B object assets");
+            var identity=Objects.requireNonNull(owner.identity(), "R12B identity");
+            if(identity.variant()!=CdReleaseVariant.USA || identity.file()!=CdNativeFile.R12B
+                    || identity.domain()!=CdMmdImage.Domain.ORIGINAL_WORD_RAM || !identity.stage().equals(CdStagePayload.R12B.stage()))
+                throw new IllegalArgumentException("Platform requires actual original USA R12B metadata");
+            return new Assets(owner.platform(),CdR12bObjectAssets.View.MAP_SPR_PLATFORM.range().nativeAddress(),
+                    owner.view(CdR12bObjectAssets.View.PLATFORM_WIDTHS),owner.view(CdR12bObjectAssets.View.PLATFORM_RANGES));
+        }
+
         public static Assets fromObjectAssets(CdR11aObjectAssets owner) {
             Objects.requireNonNull(owner, "owner");
             return new Assets(owner.platform(), owner.view(CdR11aObjectAssets.Table.PLATFORM_MAPPINGS).range().nativeAddress(),
@@ -233,6 +246,15 @@ public final class CdPlatform {
     }
     public boolean isCurrentPrimaryAngleCall(PrimaryAngleCall call) {
         return running && call != null && pendingPrimaryAngleCall == call;
+    }
+
+    /** Actual R12B source pairing; caller supplies its existing source-bound pure math/terrain/Solid helpers. */
+    public static CdPlatform fromAct2PastAssets(CdObjectPlacementRuntime placement,CdR12bTerrainAssets owner,
+                                                CdPlayerMath math,CdPlayerTerrain terrain,CdSolidObject solid,
+                                                SolidCommit commit,PrimaryAngleCommit angle,DrawObjectCall draw) {
+        Objects.requireNonNull(placement, "actual R12B placement"); Objects.requireNonNull(owner, "actual R12B terrain");
+        if(!placement.sameAct2PastSource(owner))throw new IllegalArgumentException("Platform requires the same retained R12B placement/source");
+        return new CdPlatform(placement,Assets.fromAct2PastAssets(owner.objects()),math,terrain,solid,commit,angle,draw);
     }
 
     public CdPlatform(CdObjectPlacementRuntime placement, Assets assets, CdPlayerMath math, CdPlayerTerrain terrain,

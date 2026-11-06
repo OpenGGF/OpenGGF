@@ -1,5 +1,6 @@
 package com.openggf.game.soniccd.objects;
 
+import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -120,6 +121,13 @@ public final class CdAnimal {
     }
 
     private final CdObjectPlacementRuntime runtime;
+
+    /** Actual R12B placement relation only; admitted presence/despawn branches consume no Animal assets. */
+    public static CdAnimal fromAct2PastAssets(CdObjectPlacementRuntime placement, CdR12bTerrainAssets owner) {
+        Objects.requireNonNull(placement, "actual R12B placement"); Objects.requireNonNull(owner, "actual R12B terrain");
+        if(!placement.sameAct2PastSource(owner))throw new IllegalArgumentException("Animal requires the same retained R12B placement/source");
+        return new CdAnimal(placement);
+    }
 
     /** The runtime supplies the single live pool and saved bank. No admitted branch consumes Animal assets. */
     public CdAnimal(CdObjectPlacementRuntime runtime) {

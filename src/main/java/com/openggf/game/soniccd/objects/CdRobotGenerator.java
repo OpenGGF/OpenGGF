@@ -1,5 +1,7 @@
 package com.openggf.game.soniccd.objects;
 
+import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
+import com.openggf.game.soniccd.level.CdR12bObjectAssets;
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdObjectVisualAssets;
 import com.openggf.game.soniccd.level.CdR11bAssets;
@@ -55,6 +57,18 @@ public final class CdRobotGenerator {
                 if (piece.tileOffset() > 23 - piece.tileCount())
                     throw new IllegalArgumentException("Robot Generator mapping exceeds its twenty-three source tiles");
         }
+        /** Actual R12B act/period table, maps and schedule only; no current art or programme writer. */
+        public static Assets fromAct2PastAssets(CdR12bObjectAssets owner) {
+            Objects.requireNonNull(owner, "actual R12B object assets");
+            var identity=Objects.requireNonNull(owner.identity(), "R12B identity");
+            if(identity.variant()!=CdReleaseVariant.USA || identity.file()!=CdNativeFile.R12B
+                    || identity.domain()!=CdMmdImage.Domain.ORIGINAL_WORD_RAM || !identity.stage().equals(CdStagePayload.R12B.stage()))
+                throw new IllegalArgumentException("Robot Generator requires actual original USA R12B metadata");
+            return new Assets(owner.view(CdR12bObjectAssets.View.ROBOT_GENERATOR_BASE_TILES),owner.robotGenerator(),
+                    CdR12bObjectAssets.View.MAP_SPR_ROBOT_GENERATOR.range().nativeAddress(),owner.view(CdR12bObjectAssets.View.ROBOT_GENERATOR_EXPLOSION_SCHEDULE),
+                    CdR12bObjectAssets.View.ROBOT_GENERATOR_EXPLOSION_SCHEDULE.range().nativeAddress());
+        }
+
         /** Original USA R12A finite source views; this binds metadata, never art decoding or residency. */
         public static Assets fromAct2Assets(CdR12aObjectAssets owner) {
             Objects.requireNonNull(owner, "actual R12A object assets");
@@ -206,6 +220,16 @@ public final class CdRobotGenerator {
         this.goodFutureStore = Objects.requireNonNull(goodFutureStore); this.addPoints = Objects.requireNonNull(addPoints);
         this.fmCall = Objects.requireNonNull(fmCall); this.drawObject = Objects.requireNonNull(drawObject);
     }
+    /** Actual R12B source pairing with the existing shared Solid, programme ports and receipt protocol. */
+    public static CdRobotGenerator fromAct2PastAssets(CdObjectPlacementRuntime placement,CdR12bTerrainAssets owner,
+                                                      CdSolidObject solid,SolidCommit commit,GoodFutureStore goodFuture,AddPointsCall points,
+                                                      FmCall fm,DrawObjectCall draw,DispatchObserver observer,ReceiptGuard guard) {
+        Objects.requireNonNull(placement, "actual R12B placement"); Objects.requireNonNull(owner, "actual R12B terrain");
+        if(!placement.sameAct2PastSource(owner))throw new IllegalArgumentException("Robot Generator requires the same retained R12B placement/source");
+        var body=new CdRobotGenerator(placement,Assets.fromAct2PastAssets(owner.objects()),solid,commit,goodFuture,points,fm,draw);
+        body.observer=Objects.requireNonNull(observer);body.receiptGuard=Objects.requireNonNull(guard);return body;
+    }
+
     /** Retains the constructor's native kernel and callbacks, with a paired original R12A source. */
     public static CdRobotGenerator fromAct2Assets(CdObjectPlacementRuntime placement, CdR12aObjectAssets owner,
                                                 CdSolidObject sharedSolid, SolidCommit solidCommit,

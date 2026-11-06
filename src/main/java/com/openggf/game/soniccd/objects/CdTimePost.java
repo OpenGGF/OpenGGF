@@ -1,5 +1,6 @@
 package com.openggf.game.soniccd.objects;
 
+import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.function.IntSupplier;
@@ -135,6 +136,14 @@ public final class CdTimePost {
         this.runtime = Objects.requireNonNull(runtime); this.assets = Objects.requireNonNull(assets);
         this.directionCommit = Objects.requireNonNull(directionCommit); this.subCpu = Objects.requireNonNull(subCpu);
         this.drawObject = Objects.requireNonNull(drawObject);
+    }
+
+    /** Same actual R12B source, retaining the lazy native Post path and reserved-TimeIcon boundary. */
+    public static CdTimePost fromAct2PastAssets(CdObjectPlacementRuntime placement, CdR12bTerrainAssets owner,
+                                                DirectionCommit direction, SubCpuCall subCpu, CdMonitor.DrawObjectCall draw) {
+        Objects.requireNonNull(placement, "actual R12B placement"); Objects.requireNonNull(owner, "actual R12B terrain");
+        if(!placement.sameAct2PastSource(owner))throw new IllegalArgumentException("Time Post requires the same retained R12B placement/source");
+        return new CdTimePost(placement,CdMonitor.Assets.fromAct2PastAssets(owner.objects()),direction,subCpu,draw,true);
     }
 
     /** Named bounded Past mode shares all native branch/animation algorithms and existing ports. */
