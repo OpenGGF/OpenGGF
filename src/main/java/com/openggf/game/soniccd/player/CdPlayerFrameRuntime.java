@@ -1527,15 +1527,36 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
         }
     }
 
+    // BEGIN R12B SpinTunnel prebuilt full-pair publication.
+    /**
+     * Prepare the existing SpinTunnel motion delta against the caller's complete closed value pair.
+     * ObjSpinTunnel_Main, N1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff,
+     * Level/_Objects/Spin Tunnel/Main (Tag).asm:37-161. No object/native invocation authority is
+     * carried by these values. The caller owns source/pool/order and preparation before publication.
+     */
+    public ObjectSolidPublication prepareObjectSpinTunnelResult(CdPlayerBody.State expectedState,
+                                                                CdPlayerBody.Environment expectedEnvironment,
+                                                                CdSpinTunnelTag.PlayerResult result) {
+        requireOpenIdle(); requireClosedFrame();
+        Objects.requireNonNull(expectedState, "SpinTunnel expected State");
+        Objects.requireNonNull(expectedEnvironment, "SpinTunnel expected Environment");
+        if (!state.equals(expectedState) || !environment.equals(expectedEnvironment)) {
+            throw new IllegalArgumentException("Stale SpinTunnel State/Environment cut");
+        }
+        validateObjectSpinTunnelResult(result);
+        var nextState = new CdPlayerBody.State(result.finalMotion(), state.animation(), state.header(), state.timers(),
+                state.history(), state.rotationDistance(), state.objectLinks(), state.rotationAngle());
+        return new ObjectSolidPublication(state, environment, nextState, environment);
+    }
+    // END R12B SpinTunnel prebuilt full-pair publication.
+
     /**
      * Adopt only the checked motion once at the existing closed object cut. Reuse the cursor, header,
      * all four timers, history, rotation byte39 and links20/3D. The earlier display and the entire
      * Environment/art/input/clock/service state remain owned by their existing source cuts.
      */
     public void applyObjectSpinTunnelResult(CdSpinTunnelTag.PlayerResult result) {
-        validateObjectSpinTunnelResult(result);
-        state = new CdPlayerBody.State(result.finalMotion(), state.animation(), state.header(), state.timers(),
-                state.history(), state.rotationDistance(), state.objectLinks(), state.rotationAngle());
+        applyPreparedObjectSolidPublication(prepareObjectSpinTunnelResult(state, environment, result));
     }
 
     private static int spinTunnelValue(CdPlayerMotionState motion, CdSpinTunnelTag.PlayerField field) {

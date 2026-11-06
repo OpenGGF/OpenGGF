@@ -3,6 +3,8 @@ package com.openggf.game.soniccd;
 import com.openggf.game.soniccd.level.*;
 import com.openggf.game.soniccd.objects.*;
 import com.openggf.game.soniccd.player.*;
+import com.openggf.game.soniccd.resources.CdLevelHud;
+import com.openggf.game.soniccd.resources.CdR12bSectionArt;
 import java.util.*;
 import java.util.function.BooleanSupplier;
 import static com.openggf.game.soniccd.objects.CdObjectState.ByteField.*;
@@ -22,10 +24,13 @@ final class SonicCdAct2PastObjectPass {
         void validate(SonicCdAct2PastObjectPass pass,CdPlayerFrameRuntime frame,CdR12bTerrainAssets terrain,
                       CdR12bPlayerAssets player,CdObjectPlacementRuntime placement);
         Cut read();
+        default ResultsOwners resultsOwners(ResultsOwners expected){throw new IllegalStateException("No actual Results owner borrow");}
+        default void submitResultsPlc(ResultsPlcSubmission value){value.validate();throw stop(Boundary.PLC_OWNER,value.wholeIndex(),0x10);}
         /** Preflight all actual scalar owners; applyNative once, then adopt next with no callback gap. */
         void adopt(Adoption adoption);
         /** Actual Core/section owner must bind this native submission; no successful unbound queue stub. */
         default void submitPlc(PlcSubmission submission){submission.validate();throw stop(Boundary.PLC_OWNER,submission.wholeIndex(),submission.nativeId());}
+        default void submitGoalPlc(GoalPlcSubmission submission){submission.validate();throw stop(Boundary.PLC_OWNER,submission.wholeIndex(),submission.nativeId());}
     }
     record Cut(SonicCdAct2PastWorldHost.Globals globals,CdLevelGlobals level,int goodFutureByte,
                OptionalInt goodFutureFlags,CdAssetBytes reservedSlots,CdAssetBytes cpuSat,
@@ -39,7 +44,7 @@ final class SonicCdAct2PastObjectPass {
             Objects.requireNonNull(layerByte);if(layerByte.isPresent())octet(layerByte.getAsInt());
         }
     }
-    enum Boundary { OBJECT_KIND, OBJECT_INDEX, SONIC_MAIN, PLAYER_SLOT, UNKNOWN_LAYER, UNKNOWN_VINT, PLC_OWNER, MONITOR_REWARD_OWNER, SPILL_GLOBALS_OWNER }
+    enum Boundary { OBJECT_KIND, OBJECT_INDEX, SONIC_MAIN, PLAYER_SLOT, UNKNOWN_LAYER, UNKNOWN_VINT, PLC_OWNER, MONITOR_REWARD_OWNER, SPILL_GLOBALS_OWNER, SPIN_SAVED_FLAGS, END_CLOCK, END_BONUS, RESULTS_BONUS, RESULTS_TAIL, RESULTS_FLAGS }
     static final class Unowned extends UnsupportedOperationException {
         private final Boundary boundary;private final int wholeIndex,value;
         private Unowned(Boundary boundary,int wholeIndex,int value){super(boundary+" at R12B whole "+wholeIndex+", value $"+Integer.toHexString(value));this.boundary=boundary;this.wholeIndex=wholeIndex;this.value=value;}
@@ -54,6 +59,8 @@ final class SonicCdAct2PastObjectPass {
         private final CdObjectPool.Snapshot poolOutput;
         private final Runnable preflight,nativeWrite;
         private boolean applied;
+        private int destinationLeftWord=-1;private Object endOperation;
+        private Object resultsOperation;private ResultsOwners resultsOwners;private int resultsSectionWord=-1;
         private CdPlayerFrameRuntime.ActorState afterActor;
         private CdPlayerFrameRuntime.SharedState afterShared;
         private CdObjectPlacementRuntime.Snapshot afterPlacement;
@@ -64,6 +71,9 @@ final class SonicCdAct2PastObjectPass {
         }
         SonicCdAct2PastObjectPass owner(){return SonicCdAct2PastObjectPass.this;}
         Cut expected(){return expected;}Cut next(){return next;}
+        int destinationLeftWord(){return destinationLeftWord;}
+        int resultsSectionWord(){return resultsSectionWord;}
+        ResultsOwners resultsOwners(){return resultsOwners;}
         void applyNative(){
             if(!isCurrentAdoption(this)||applied)throw new IllegalStateException("Escaped/repeated R12B adoption");
             guard();requireCut(expected);requireFrame(actor,shared);requirePlacement(placementCut);
@@ -90,7 +100,7 @@ final class SonicCdAct2PastObjectPass {
     }
     boolean isCurrentPlcSubmission(PlcSubmission submission){return submission!=null&&submission==pendingPlc&&plcPort&&phase==Phase.WALKING&&dispatch!=null&&dispatch.kind==Kind.PROJECTOR&&dispatch.operation==submission.request&&dispatch.prepared&&dispatch.used&&projector.isCurrentCall(submission.request);}
     private enum Phase { READY,WALKING,WALKED,DRAINING,DONE,FAILED,DISCARDED }
-    private enum Kind { PRIMARY,RESERVED,RING,SPRING,MONITOR,TIME_POST,COLLAPSE,PLATFORM,TAM,ANIMAL,SWING,ROBOT,ANTON,BOULDER,WALL,FLOAT_BLOCK,SPIKES,LOG_SHADOW,NULL,PATA_BATA,PROJECTOR,EXPLOSION,FLOWER,POINTS,LOST_RING,MONITOR_ITEM,MOSQUI,SCENERY,SPRINGBOARD }
+    private enum Kind { PRIMARY,RESERVED,RING,SPRING,MONITOR,TIME_POST,COLLAPSE,PLATFORM,TAM,ANIMAL,SWING,ROBOT,ANTON,BOULDER,WALL,FLOAT_BLOCK,SPIKES,LOG_SHADOW,NULL,PATA_BATA,PROJECTOR,EXPLOSION,FLOWER,POINTS,LOST_RING,MONITOR_ITEM,MOSQUI,SCENERY,SPRINGBOARD,DISC,DOOR,VERTICAL_DOOR,SPIN_TAG,GOAL,SIGNPOST,RESULTS,DOOR_SPLASH }
     private final Ports ports;private final CdR12bTerrainAssets terrain;private final CdR12bPlayerAssets player;
     private final CdPlayerFrameRuntime frame;private final CdObjectPlacementRuntime placement;
     private final CdAssetBytes objectIndex;private final CdObjectMappings mappings;
@@ -108,6 +118,16 @@ final class SonicCdAct2PastObjectPass {
     private CdExplosion explosion;private CdFlower flower;private CdPoints points;
     private CdLostRing lostRing;private CdMonitorItem monitorItem;private CdMosqui mosqui;
     private CdScenery scenery;private CdSpringboard springboard;
+    private CdTunnelDoorSplash doorSplash;private SplashInvocation splashInvocation;
+    private CdGoalPost goalPost;private CdSignpost signpost;private EndInvocation endInvocation;private GoalPlcSubmission pendingGoalPlc;
+    private CdResults results;private ResultsInvocation resultsInvocation;private ResultsPlcSubmission pendingResultsPlc;private boolean resultsBorrow;
+    // BEGIN R12B Disc/Door bindings fields.
+    private CdSpinningDisc spinningDisc;private CdTunnelDoor tunnelDoor;private CdTunnelDoorVertical verticalDoor;
+    private DiscInvocation discInvocation;private DoorScope doorScope;private BoundInvocation verticalInvocation;
+    // BEGIN R12B SpinTunnel R2 fields.
+    private CdSpinTunnelTag spinTunnel;private SpinInvocation spinInvocation;
+    // END R12B SpinTunnel R2 fields.
+    // END R12B Disc/Door bindings fields.
     private Phase phase=Phase.READY;private CdObjectDrawQueue queue;private Dispatch dispatch;
     private boolean port,queuePort,plcPort;private Adoption pending;private PlcSubmission pendingPlc;
     private static final class Dispatch {
@@ -139,6 +159,33 @@ final class SonicCdAct2PastObjectPass {
         solid=new CdSolidObject(CdPlayerMovement.fromStageSource(frame.stageSource()));
         primaryScanner=new CdPlayerObjectTouch(player.touchDimensions());
         primaryResponse=new CdPlayerTouchResponse(player.view(CdR12bPlayerAssets.Asset.ENEMY_POINTS));
+        goalPost=CdGoalPost.fromAct2PastAssets(placement,terrain,this::goalRead,this::goalReached,this::goalPlc,null,this::goalDraw);
+        signpost=CdSignpost.fromAct2PastAssets(placement,terrain,this::signRead,this::signStore,this::signSound,this::signDraw);
+        results=CdResults.fromAct2PastAssets(placement,terrain,this::resultsRead,this::resultsBonus,this::resultsPoints,this::resultsPlc,this::resultsSound,this::resultsDraw,this::resultsProgramme,this::resultsAction);
+        // BEGIN R12B Disc/Door cached source factories.
+        routeObjects();
+        spinningDisc=CdSpinningDisc.fromAct2PastAssets(placement,terrain,math,solid,this::discSolid,
+                new CdSpinningDisc.PlayerOwner(){public CdSpinningDisc.PlayerCut read(){return discRead();}
+                    public void commit(CdSpinningDisc.PlayerCall c){discPlayer(c);}},this::discFm,this::discDraw);
+        tunnelDoor=CdTunnelDoor.fromAct2PastAssets(placement,terrain,this::doorSecondary,solid,
+                new CdTunnelDoor.PrefixSolidOwner(){
+                    public CdTunnelDoor.LiveSolid preflight(CdTunnelDoor.PrefixSolidCut c){doorCut(c);doorUse(c);return doorLive();}
+                    public CdTunnelDoor.LiveSolid commit(CdTunnelDoor.PrefixSolidCall c){return doorSolid(c);}},
+                (p,id)->{var c=doorOperation(CdTunnelDoor.DrawCall.class);doorUse(c);drawDynamic(Kind.DOOR,p,id,()->tunnelDoor.isCurrentCall(c));},
+                sound->{var c=doorOperation(CdTunnelDoor.FmCall.class);if(c.sound()!=sound)throw new IllegalArgumentException("Foreign Door FM");
+                    doorUse(c);SonicCdAct2PastObjectPass.this.sound(new SonicCdGameModule.PastTunnelDoorFm(sound));},
+                new CdTunnelDoor.DispatchObserver(){
+                    public void beforePublication(CdTunnelDoor.Publication c){doorPublication(c);}
+                    public void afterPublication(CdTunnelDoor.Publication c){doorAfter(c,null);}
+                    public void beforeCall(Object c){doorBefore(c);}
+                    public void afterCall(Object c,Object result){doorAfter(c,result);}
+                    public void failedCall(Object c,Throwable original){doorFailure(c,original);}});
+        verticalDoor=CdTunnelDoorVertical.fromAct2PastAssets(placement,terrain,solid,this::verticalSolid,
+                this::verticalDraw,this::verticalFm);
+        // BEGIN R12B SpinTunnel R2 cached source factory.
+        spinTunnel=CdSpinTunnelTag.fromAct2PastAssets(placement,terrain);
+        // END R12B SpinTunnel R2 cached source factory.
+        // END R12B Disc/Door cached source factories.
         ring=CdRing.fromAct2PastAssets(placement,terrain);
         spring=CdSpring.fromAct2PastAssets(placement,terrain,math,solid,
                 c->{requireKind(Kind.SPRING);claim(c,()->true);poolCut(c.callCut());commitSolid(c.callCut(),c.expectedPlayer(),c.expectedGlobals(),new CdSolidObject.Completed(c.result()));},
@@ -324,6 +371,16 @@ final class SonicCdAct2PastObjectPass {
                     public void beforeCall(Object c){observeBeforeCall(c,projector.currentCallOrdinal(c));}
                     public void afterCall(Object c){observeAfter(c,false);}
                 },new CdProjector.ReceiptGuard(){public void prepared(Object c){receiptPrepared(c);}public void completed(Object c){receiptCompleted(c);}});
+        // BEGIN R12B Door Splash original cached producer binding.
+        doorSplash=CdTunnelDoorSplash.fromAct2PastAssets(placement,terrain,new CdTunnelDoorSplash.DispatchObserver(){
+            public void beforePublication(CdTunnelDoorSplash.Publication c){splashPublication(c);}
+            public void afterPublication(CdTunnelDoorSplash.Publication c){splashAfter(c);}
+            public void beforeCall(Object c){splashBeforeCall(c);}
+            public void afterCall(Object c){splashAfter(c);}
+        },c->{splashUse(c);drawDynamic(Kind.DOOR_SPLASH,placement.pool(),c.source().identity(),()->doorSplash.isCurrentCall(c)&&!doorSplash.isCurrentCallCompleted(c));},
+                c->{splashUse(c);sound(new SonicCdGameModule.PastTunnelDoorSplashFm(c.sound()));},
+                new CdTunnelDoorSplash.ReceiptGuard(){public void prepared(Object c){splashPrepared(c);}public void completed(Object c){splashCompleted(c);}});
+        // END R12B Door Splash original cached producer binding.
         explosion=CdExplosion.fromAct2PastAssets(placement,terrain,new CdExplosion.DispatchObserver(){
             public void beforePublication(CdExplosion.Publication c){effectPublication(c,c.ordinal(),c.cut(),c.source(),c.before(),c.output(),-1);}
             public void afterPublication(CdExplosion.Publication c){effectAfter(c);}
@@ -437,6 +494,21 @@ final class SonicCdAct2PastObjectPass {
                     new CdRing.SourceCalls(){public void playFmSound(CdRing.FmSound s){requireKind(Kind.RING);sound(new SonicCdGameModule.PastRingFm(s));}
                         public void subCpuCommand(CdRing.SubCpuCommand s){requireKind(Kind.RING);sound(new SonicCdGameModule.PastRingSubCpu(s));}
                         public void drawObject(CdObjectPool p,int w){requireWhole(Kind.RING,w);drawDynamic(Kind.RING,p,p.state(w).identity(),()->true);}});
+            // BEGIN R12B Disc/Door physical dispatch.
+            case DISC->runDisc(whole);
+            case DOOR->{requireKind(Kind.DOOR);routeObjects();if(doorScope!=null)throw new IllegalStateException("Nested Door dispatch");
+                try{var result=tunnelDoor.run(whole,new CdTunnelDoor.Globals(g.timeZone(),g.timeWarpDirection(),cut.cameraXWord()),new CdTunnelDoor.SolidInputs(primary(),gates(),solidGlobals()));
+                    if(doorScope!=null||!result.state().equals(placement.pool().state(whole))||!result.finalPrimary().equals(primary())||!result.finalGlobals().equals(solidGlobals()))throw new IllegalStateException("Incomplete Door return");}
+                finally{doorScope=null;}}
+            case VERTICAL_DOOR->{requireKind(Kind.VERTICAL_DOOR);routeObjects();if(verticalInvocation!=null)throw new IllegalStateException("Nested DoorV dispatch");
+                verticalInvocation=new BoundInvocation(verticalDoor,whole,placement.capture());
+                try{var result=verticalDoor.run(whole,new CdTunnelDoorVertical.Globals(g.timeZone(),g.timeWarpDirection(),cut.cameraXWord()),new CdTunnelDoorVertical.SolidInputs(primary(),gates(),solidGlobals()));
+                    if(!result.state().equals(placement.pool().state(whole))||!result.finalPlayer().equals(primary())||!result.finalGlobals().equals(solidGlobals()))throw new IllegalStateException("Incomplete DoorV return");}
+                finally{verticalInvocation=null;}}
+            // BEGIN R12B SpinTunnel R2 physical dispatch.
+            case SPIN_TAG->runSpinTunnel(whole);
+            // END R12B SpinTunnel R2 physical dispatch.
+            // END R12B Disc/Door physical dispatch.
             case SPRING->spring.run(whole,new CdSpring.Globals(cut.cameraXWord()),new CdSpring.SolidInputs(primary(),gates(),solidGlobals()));
             case BOULDER->boulder.run(whole,new CdBoulder.Globals(g.timeZone(),g.timeWarpDirection(),cut.cameraXWord()),
                     new CdBoulder.SolidInputs(primary(),gates(),solidGlobals()));
@@ -481,6 +553,7 @@ final class SonicCdAct2PastObjectPass {
             case COLLAPSE->collapse.run(whole,new CdCollapsePlatform.DespawnGlobals(g.timeZone(),g.timeWarpDirection(),cut.cameraXWord()),new CdCollapsePlatform.Inputs(primary(),gates(),solidGlobals()));
             case PLATFORM->platform.run(whole,new CdPlatform.Globals(g.zoneAct(),cut.globals().ring().timeStopTimer(),cut.cameraXWord(),cut.cameraYWord(),g.timeZone()),new CdPlatform.Inputs(primary(),gates(),solidGlobals()));
             case PATA_BATA->pataBata.run(whole,new CdPataBata.Globals(cut.goodFutureByte(),g.timeZone(),g.timeWarpDirection(),cut.cameraXWord()));
+            case DOOR_SPLASH->runDoorSplash(whole);
             case EXPLOSION->{var r=explosion.run(whole);effectResult(r.state());}
             case FLOWER->{var r=flower.run(whole);effectResult(r.state());}
             case POINTS->{var r=points.run(whole);effectResult(r.state());}
@@ -501,6 +574,9 @@ final class SonicCdAct2PastObjectPass {
                 public int act(){return reached().zoneAct()&255;}public int timeZone(){return reached().timeZone();}public int timeWarpDirection(){return reached().timeWarpDirection();}public int cameraXWord(){requireKind(Kind.PROJECTOR);return read().cameraXWord();}
                 private CdPlayerMovement.Gates reached(){requireKind(Kind.PROJECTOR);return frame.environment().movement().gates();}},new CdProjector.Inputs(primary(),gates(),solidGlobals()));
                 if(dispatch.operation!=null||!result.state().equals(placement.pool().state(whole)))throw new IllegalStateException("Projector omitted original completion");}
+            case GOAL->runGoal(whole);
+            case SIGNPOST->runSignpost(whole);
+            case RESULTS->runResults(whole);
             case SWING->swing.run(whole,new CdSwing.Globals(cut.cameraXWord(),g.timeZone(),g.timeWarpDirection()));
             case ROBOT->robot.run(whole,new CdRobotGenerator.Globals(cut.goodFutureByte(),g.timeZone(),g.zoneAct()&255,g.timeWarpDirection(),cut.cameraXWord()),new CdRobotGenerator.Inputs(primary(),gates(),solidGlobals()));
         }
@@ -545,6 +621,16 @@ final class SonicCdAct2PastObjectPass {
             throw stop(Boundary.PLAYER_SLOT,whole,id);}
         return switch(id){case 0x0A->Kind.SPRING;case 0x10->Kind.RING;case 0x12->Kind.FLOAT_BLOCK;case 0x1B->Kind.BOULDER;case 0x36->Kind.WALL;case 0x26->Kind.SPIKES;case 0x33->Kind.LOG_SHADOW;case 0x19->placement.pool().state(whole).subtype()<8?Kind.MONITOR:Kind.TIME_POST;
             case 0x20->Kind.COLLAPSE;case 0x21->Kind.PLATFORM;case 0x22->Kind.TAM;case 0x24->Kind.ANIMAL;case 0x29->Kind.SWING;case 0x2D->Kind.ROBOT;case 0x3F->Kind.ANTON;case 0x3E->Kind.PATA_BATA;case 0x2E->Kind.PROJECTOR;case 0x18->Kind.EXPLOSION;case 0x1F->Kind.FLOWER;case 0x11->Kind.LOST_RING;case 0x1A->Kind.MONITOR_ITEM;case 0x3D->Kind.MOSQUI;case 0x1C->{if((placement.pool().state(whole).subtype()&128)==0)throw stop(Boundary.OBJECT_KIND,whole,id);yield Kind.POINTS;}
+            // BEGIN R12B Disc/Door retained native-index dispatch.
+            case CdSpinningDisc.OBJECT_ID->Kind.DISC;
+            case CdTunnelDoor.OBJECT_ID->Kind.DOOR;
+            case CdTunnelDoorVertical.OBJECT_ID->Kind.VERTICAL_DOOR;
+            // BEGIN R12B SpinTunnel R2 retained native-index dispatch.
+            case CdSpinTunnelTag.OBJECT_ID->Kind.SPIN_TAG;
+            // END R12B SpinTunnel R2 retained native-index dispatch.
+            // END R12B Disc/Door retained native-index dispatch.
+            case CdTunnelDoorSplash.OBJECT_ID->Kind.DOOR_SPLASH;
+            case CdGoalPost.OBJECT_ID->Kind.GOAL;case CdSignpost.OBJECT_ID->Kind.SIGNPOST;case CdResults.OBJECT_ID->Kind.RESULTS;
             case CdScenery.OBJECT_ID->Kind.SCENERY;case CdSpringboard.OBJECT_ID->Kind.SPRINGBOARD;
             default->throw stop(Boundary.OBJECT_KIND,whole,id);};
     }
@@ -1013,4 +1099,769 @@ final class SonicCdAct2PastObjectPass {
     private static void extent(CdAssetBytes b,int n){if(Objects.requireNonNull(b).length()!=n)throw new IllegalArgumentException("Expected exact byte extent "+n);}
     private static void word(int value){if((value&~65535)!=0)throw new IllegalArgumentException("Unsigned native WORD");}
     private static void octet(int value){if((value&~255)!=0)throw new IllegalArgumentException("Unsigned native BYTE");}
+
+    // BEGIN R12B Disc/Door World publication. Java UNRUN; N1ecc5f3, PP Spinning Disc/Main15-223,
+    // PP Tunnel Door/Main7-94, Spin Tunnel/Main (Door)7-92. No returned effect executes work.
+    private void routeObjects(){var objects=terrain.objects();
+        if(objects.identity()!=terrain.identity()||objects.placements()!=placement.placements())
+            throw new IllegalStateException("Foreign retained R12B route metadata");
+        extent(objects.view(CdR12bObjectAssets.View.OBJECT_TILE_IDS),72);
+    }
+    private static class BoundInvocation {
+        final Object body;final int whole;final CdObjectPlacementRuntime.Snapshot before;int solids,fms;CdObjectState expectedSource;
+        BoundInvocation(Object body,int whole,CdObjectPlacementRuntime.Snapshot before){this.body=body;this.whole=whole;this.before=before;expectedSource=before.pool().slots().get(whole-32);}
+    }
+    private enum DiscStep { SOLID,ACQUIRE,ORBIT,INPUT,JUMP_CLEAR,JUMP_VELOCITY,FM,HITBOX,DONE,STOPPED }
+    private static final class DiscInvocation extends BoundInvocation {
+        DiscStep next=DiscStep.SOLID;CdObjectPool.Snapshot pool;
+        DiscInvocation(CdSpinningDisc body,int whole,CdObjectPlacementRuntime.Snapshot before){super(body,whole,before);pool=before.pool();}
+    }
+    private void routeNonwrites(BoundInvocation invocation){routeObjects();var actual=placement.capture();
+        if(!invocation.before.status().equals(actual.status())||!same(invocation.before.savedFlags(),actual.savedFlags()))
+            throw new IllegalStateException("Route callback changed status/saved-bank nonwrites");
+    }
+    private void runDisc(int whole){requireKind(Kind.DISC);if(discInvocation!=null)throw new IllegalStateException("Nested Disc dispatch");
+        var g=frame.environment().movement().gates();var cut=read();discInvocation=new DiscInvocation(spinningDisc,whole,placement.capture());
+        try{var result=spinningDisc.run(whole,new CdSpinningDisc.Globals(cut.globals().ring().timeStopTimer(),cut.cameraXWord(),g.timeZone(),g.timeWarpDirection()));
+            if(!dispatch.drawn||!result.state().equals(placement.pool().state(whole)))throw new IllegalStateException("Incomplete Disc native return");}
+        finally{discInvocation=null;}
+    }
+    private CdObjectState discCurrent(){requireKind(Kind.DISC);var invocation=discInvocation;
+        if(invocation==null||invocation.body!=spinningDisc||invocation.whole!=dispatch.whole||dispatch.drawn||plcPort)
+            throw new IllegalStateException("No actual cached Disc body/whole invocation");
+        routeNonwrites(invocation);var state=placement.pool().state(dispatch.whole);
+        if(state.id()!=CdSpinningDisc.OBJECT_ID||state.routine()!=2||state.signedByte(SPRITE_FLAGS)>=0)
+            throw new IllegalStateException("Disc callback outside visible native Main");
+        poolCut(invocation.pool);return state;
+    }
+    private CdSpinningDisc.PlayerCut discRead(){discCurrent();return new CdSpinningDisc.PlayerCut(frame.state(),frame.environment());}
+    private void discCut(CdObjectPool.Snapshot pool,CdObjectState source,CdSpinningDisc.PlayerCut pair){
+        var actual=discCurrent();poolCut(pool);source(source);
+        if(!actual.equals(source)||pair.state()!=frame.state()||pair.environment()!=frame.environment())throw new IllegalArgumentException("Stale full Disc source/pair");
+    }
+    private void discSolid(CdSpinningDisc.SolidCall call){discCut(call.actualCut(),call.expectedSource(),call.expectedPlayer());
+        if(discInvocation.next!=DiscStep.SOLID||!dispatch.consumed.add(call))throw new IllegalStateException("Disc plain Solid order");
+        CdObjectState object;List<CdObjectState> others;DiscStep next;
+        if(call.outcome() instanceof CdSolidObject.Completed done){var r=done.completedResult();
+            if(r.entry()!=CdSolidObject.Entry.SOLID_OBJECT||r.d0().isEmpty())throw new IllegalArgumentException("Not genuine plain Solid return");
+            object=r.object();others=r.otherSlots();next=r.d0().orElseThrow()==0?DiscStep.DONE:DiscStep.ACQUIRE;
+        }else{var prefix=((CdSolidObject.NativeStopped)call.outcome()).prefix();if(prefix.entry()!=CdSolidObject.Entry.SOLID_OBJECT)throw new IllegalArgumentException("Not genuine plain Solid prefix");
+            object=prefix.object();others=prefix.otherSlots();next=DiscStep.STOPPED;}
+        var images=new ArrayList<CdObjectState>();images.add(object);images.addAll(others);var pool=CdObjectPool.overlay(call.actualCut(),images);
+        commitSolid(call.actualCut(),primary(),solidGlobals(),call.outcome());discInvocation.pool=pool;discInvocation.next=next;
+    }
+    private DiscStep discNext(CdSpinningDisc.PlayerCall call){
+        var fields=new ArrayList<CdSpinningDisc.DiscPlayerField>();var p=call.expectedPlayer();var s=p.state();var m=s.motion();DiscStep next;
+        switch(discInvocation.next){
+            case ACQUIRE->{fields.add(CdSpinningDisc.DiscPlayerField.CONTROL_ACQUIRE);
+                if((m.playerControl()&1)==0){fields.add(CdSpinningDisc.DiscPlayerField.ANIMATION_ACQUIRE);fields.add(CdSpinningDisc.DiscPlayerField.ROTATION_ZERO);
+                    if((m.centreX16_16()>>>16)<call.expectedSource().centreX())fields.add(CdSpinningDisc.DiscPlayerField.ROTATION_LEFT);fields.add(CdSpinningDisc.DiscPlayerField.DISTANCE_ACQUIRE);}
+                if(m.routine()<6){fields.add(CdSpinningDisc.DiscPlayerField.ROTATION_ADVANCE);next=DiscStep.ORBIT;}else next=DiscStep.DONE;}
+            case ORBIT->{fields.addAll(List.of(CdSpinningDisc.DiscPlayerField.ORBIT_X_BASE,CdSpinningDisc.DiscPlayerField.ORBIT_X_OFFSET));next=DiscStep.INPUT;}
+            case INPUT->{fields.add(CdSpinningDisc.DiscPlayerField.SCRIPT_INDEX);if((s.rotationAngle()&0x3F)==0)fields.add(CdSpinningDisc.DiscPlayerField.DISTANCE_CARDINAL);
+                fields.add(CdSpinningDisc.DiscPlayerField.LOGICAL_CONTROLS);boolean left=(m.centreX16_16()>>>16)<call.expectedSource().centreX();int held=p.environment().controls().rawHeld();
+                if((held&(left?4:8))!=0)fields.add(CdSpinningDisc.DiscPlayerField.DISTANCE_GROW);
+                else if((held&(left?8:4))!=0){int index=fields.size();fields.add(CdSpinningDisc.DiscPlayerField.DISTANCE_SHRINK);
+                    if(call.result().stores().size()<=index)throw new IllegalArgumentException("Missing Disc native shrink");
+                    if(call.result().stores().get(index).expectedRaw()==0)fields.add(CdSpinningDisc.DiscPlayerField.DISTANCE_CLAMP);}
+                next=DiscStep.JUMP_CLEAR;}
+            case JUMP_CLEAR->{if((p.environment().controls().logicalTap()&0x70)==0)throw new IllegalStateException("Disc jump not reached");fields.add(CdSpinningDisc.DiscPlayerField.CONTROL_CLEAR);next=DiscStep.JUMP_VELOCITY;}
+            case JUMP_VELOCITY->{fields.addAll(List.of(CdSpinningDisc.DiscPlayerField.JUMP_X_VELOCITY,CdSpinningDisc.DiscPlayerField.JUMP_Y_VELOCITY,CdSpinningDisc.DiscPlayerField.FLAGS_AIR,
+                    CdSpinningDisc.DiscPlayerField.FLAGS_PUSH_CLEAR,CdSpinningDisc.DiscPlayerField.JUMP_SET,CdSpinningDisc.DiscPlayerField.STICK_CLEAR));next=DiscStep.FM;}
+            case HITBOX->{boolean mini=p.environment().movement().gates().miniSonic()!=0;
+                fields.add(mini?CdSpinningDisc.DiscPlayerField.JUMP_Y_RADIUS_MINI:CdSpinningDisc.DiscPlayerField.JUMP_Y_RADIUS_NORMAL);fields.add(mini?CdSpinningDisc.DiscPlayerField.JUMP_X_RADIUS_MINI:CdSpinningDisc.DiscPlayerField.JUMP_X_RADIUS_NORMAL);
+                if((m.flags()&4)!=0)fields.add(CdSpinningDisc.DiscPlayerField.FLAGS_ROLL_JUMP);
+                else{fields.add(mini?CdSpinningDisc.DiscPlayerField.ROLL_Y_RADIUS_MINI:CdSpinningDisc.DiscPlayerField.ROLL_Y_RADIUS_NORMAL);fields.add(mini?CdSpinningDisc.DiscPlayerField.ROLL_X_RADIUS_MINI:CdSpinningDisc.DiscPlayerField.ROLL_X_RADIUS_NORMAL);
+                    if(!mini)fields.add(CdSpinningDisc.DiscPlayerField.ROLL_Y_ADVANCE);fields.add(CdSpinningDisc.DiscPlayerField.FLAGS_ROLL);fields.add(CdSpinningDisc.DiscPlayerField.ANIMATION_ROLL);}next=DiscStep.DONE;}
+            default->throw new IllegalStateException("Repeated/out-of-order Disc native player site");
+        }
+        if(call.result().stores().size()!=fields.size())throw new IllegalArgumentException("Disc native store count");
+        for(int n=0;n<fields.size();n++)if(call.result().stores().get(n).field()!=fields.get(n))throw new IllegalArgumentException("Disc native store order at "+n);return next;
+    }
+    private void discPlayer(CdSpinningDisc.PlayerCall call){discCut(call.actualCut(),call.expectedSource(),call.expectedPlayer());
+        if(!dispatch.consumed.add(call))throw new IllegalStateException("Repeated Disc direct result");
+        frame.validateObjectDiscPlayerResult(call.expectedPlayer().state(),call.expectedPlayer().environment(),call.result());var next=discNext(call);var cut=read();var before=placement.capture();
+        // PlayerResult already contains both immutable aggregates; no result construction after a pool write.
+        publish(cut,cut,null,()->frame.validateObjectDiscPlayerResult(call.expectedPlayer().state(),call.expectedPlayer().environment(),call.result()),
+                ()->frame.applyObjectDiscPlayerResult(call.expectedPlayer().state(),call.expectedPlayer().environment(),call.result()));
+        requirePlacement(before);discInvocation.next=next;
+    }
+    private void discFm(CdSpinningDisc.FmCall call){discCut(call.actualCut(),call.expectedSource(),call.expectedPlayer());
+        if(discInvocation.next!=DiscStep.FM||call.sound()!=CdSpinningDisc.FmSound.FM_A0||!dispatch.consumed.add(call))throw new IllegalStateException("Disc FM outside actual jump prefix");
+        var before=placement.capture();var actor=frame.captureActor();var shared=frame.captureShared();sound(new SonicCdGameModule.PastDiscFm(call.sound()));
+        requirePlacement(before);requireFrame(actor,shared);discInvocation.next=DiscStep.HITBOX;
+    }
+    private void discDraw(CdObjectPool pool,CdObjectState.Identity identity){requireKind(Kind.DISC);var invocation=discInvocation;
+        if(invocation==null||invocation.body!=spinningDisc||invocation.whole!=dispatch.whole||pool!=placement.pool())throw new IllegalStateException("No actual Disc Draw invocation");
+        routeNonwrites(invocation);requireIdentity(identity);
+        if(invocation.next!=DiscStep.DONE&&invocation.next!=DiscStep.SOLID&&!(invocation.next==DiscStep.JUMP_CLEAR&&(frame.environment().controls().logicalTap()&0x70)==0))
+            throw new IllegalStateException("Disc Draw before actual returning Main prefix");
+        var expectedSource=invocation.pool.slots().get(dispatch.whole-32);
+        if(expectedSource.routine()==0)expectedSource=expectedSource.addByte(ROUTINE,2).moveByte(SPRITE_FLAGS,4).moveByte(PRIORITY,4)
+                .moveLong(MAPPINGS,CdR12bObjectAssets.View.MAP_SPR_SPINNING_DISC.range().nativeAddress()).moveWord(TILE,routeTile(6)).moveByte(WIDTH,16).moveByte(Y_RADIUS,8);
+        if(invocation.next==DiscStep.SOLID&&(expectedSource.spriteFlags()&128)!=0)throw new IllegalStateException("Visible Disc omitted actual Solid");
+        var liveSource=pool.state(dispatch.whole);byte[] expectedBytes=expectedSource.copyBytes(),actualBytes=liveSource.copyBytes();
+        if(read().globals().ring().timeStopTimer()==0)for(var field:List.of(ANIMATION,PREVIOUS_ANIMATION,ANIMATION_FRAME,ANIMATION_TIME,MAP_FRAME,SPRITE_FLAGS,FLAGS,ROUTINE,ROUTINE_2))expectedBytes[field.byteOffset()]=actualBytes[field.byteOffset()];
+        if(!Arrays.equals(expectedBytes,actualBytes))throw new IllegalStateException("Disc changed a non-native source byte before Draw");
+        var before=placement.capture();for(int n=0;n<96;n++)if(n!=dispatch.whole-32&&!before.pool().slots().get(n).equals(invocation.pool.slots().get(n)))throw new IllegalStateException("Disc animation changed another slot");
+        var actor=frame.captureActor();var shared=frame.captureShared();var cut=read();drawDynamic(Kind.DISC,pool,identity,()->discInvocation==invocation);
+        requireCut(cut);requireFrame(actor,shared);routeNonwrites(invocation);
+        var expected=CdObjectPool.overlay(before.pool(),List.of(before.pool().slots().get(dispatch.whole-32).moveByte(SPRITE_FLAGS,before.pool().slots().get(dispatch.whole-32).spriteFlags()&127)));poolCut(expected);
+    }
+    private static final class DoorScope {
+        final Object call;final CdObjectPlacementRuntime.Snapshot before;final Cut cut;final CdPlayerFrameRuntime.ActorState actor;final CdPlayerFrameRuntime.SharedState shared;
+        CdObjectPool.Snapshot pool;byte[] saved;Cut next;CdPlayerFrameRuntime.ObjectSolidPublication primary;boolean used,deleted;
+        DoorScope(Object call,CdObjectPlacementRuntime.Snapshot before,Cut cut,CdPlayerFrameRuntime.ActorState actor,CdPlayerFrameRuntime.SharedState shared){
+            this.call=call;this.before=before;this.cut=cut;this.next=cut;this.actor=actor;this.shared=shared;pool=before.pool();saved=before.savedFlags().copy();}
+    }
+    private DoorScope doorBegin(Object call,CdObjectPlacementRuntime.Snapshot before,CdObjectState source){requireKind(Kind.DOOR);routeObjects();
+        if(doorScope!=null||!tunnelDoor.isCurrentCall(call)||plcPort)throw new IllegalStateException("No original next Door operation");
+        placementCut(before);source(source);var scope=new DoorScope(call,before,read(),frame.captureActor(),frame.captureShared());doorScope=scope;return scope;
+    }
+    private DoorScope doorCurrent(Object call){requireKind(Kind.DOOR);var scope=doorScope;
+        if(scope==null||scope.call!=call||!tunnelDoor.isCurrentCall(call))throw new IllegalStateException("Cloned/escaped Door receipt");return scope;
+    }
+    /** Only the original matching pending Adoption may preflight its own Door Solid publication. */
+    private void doorPublicationCurrent(DoorScope scope,Object call){
+        if(scope==null||doorScope!=scope||scope.call!=call||!scope.used||phase!=Phase.WALKING
+                ||dispatch==null||dispatch.kind!=Kind.DOOR||queuePort||plcPort
+                ||!isCurrentAdoption(pending)||pending.applied||pending.expected!=scope.cut
+                ||pending.next!=scope.next||pending.poolOutput!=scope.pool||!tunnelDoor.isCurrentCall(call))
+            throw new IllegalStateException("No matching private Door adoption preflight");
+        guard();if(dispatch.ownerActor!=null){requireFrame(dispatch.ownerActor,dispatch.ownerShared);requireCut(dispatch.ownerCut);}
+        requirePlacement(scope.before);requireFrame(scope.actor,scope.shared);requireCut(scope.cut);
+    }
+    private <T> T doorOperation(Class<T> type){var scope=doorScope;if(scope==null||!type.isInstance(scope.call))throw new IllegalStateException("Wrong native Door callback");doorCurrent(scope.call);return type.cast(scope.call);}
+    private void doorUse(Object call){var scope=doorCurrent(call);if(scope.used||!dispatch.consumed.add(call))throw new IllegalStateException("Repeated Door callback");
+        requirePlacement(scope.before);requireFrame(scope.actor,scope.shared);requireCut(scope.cut);scope.used=true;
+    }
+    private CdTunnelDoor.LiveSolid doorLive(){return new CdTunnelDoor.LiveSolid(primary(),gates(),solidGlobals());}
+    private void doorCut(CdTunnelDoor.PrefixSolidCut cut){doorCurrent(cut);poolCut(cut.callCut());requireIdentity(cut.objectIdentity());
+        if(!cut.expectedPrimary().equals(primary())||!cut.expectedGates().equals(gates())||!cut.expectedGlobals().equals(solidGlobals()))throw new IllegalArgumentException("Stale Door primary/gates/globals");
+        if(cut.participant()==CdTunnelDoor.Participant.SECONDARY&&!same(cut.secondary().orElseThrow(),reserved(read(),1)))throw new IllegalArgumentException("Foreign Door actual reserved full64");
+    }
+    private CdAssetBytes doorSecondary(){var c=doorOperation(CdTunnelDoor.SecondaryReadCall.class);doorUse(c);return reserved(read(),1);}
+    private void doorBefore(Object call){
+        switch(call){
+            case CdTunnelDoor.PrefixSolidCut c->{doorBegin(c,placement.capture(),placement.pool().state(dispatch.whole));}
+            case CdTunnelDoor.PrefixSolidCall c->{var scope=doorBegin(c,placement.capture(),placement.pool().state(dispatch.whole));var cut=c.cut();poolCut(cut.callCut());requireIdentity(cut.objectIdentity());
+                if(!cut.expectedPrimary().equals(primary())||!cut.expectedGates().equals(gates())||!cut.expectedGlobals().equals(solidGlobals()))throw new IllegalArgumentException("Stale Door commit readback");
+                CdObjectState image;List<CdObjectState> others;List<CdPlayerTouchResponse.FmSound> fm;CdSolidObject.Player after;CdSolidObject.Globals globals;
+                if(c.outcome() instanceof CdSolidObject.Completed done){var r=done.completedResult();image=r.object();others=r.otherSlots();fm=r.fmRequests();after=r.player();globals=r.globals();
+                    if(cut.participant()==CdTunnelDoor.Participant.PRIMARY)scope.primary=frame.prepareObjectSolidResult(primary(),solidGlobals(),r);
+                    else if(!after.equals(secondary(reserved(scope.cut,1)))||!globals.equals(solidGlobals())||!r.playerWrites().isEmpty()||!r.globalWrites().isEmpty()||!others.isEmpty()||!fm.isEmpty())throw new IllegalArgumentException("Inactive Door secondary changes primary/shared state");
+                }else{if(cut.participant()!=CdTunnelDoor.Participant.PRIMARY)throw new IllegalArgumentException("Inactive Door secondary cannot stop");var r=((CdSolidObject.NativeStopped)c.outcome()).prefix();image=r.object();others=r.otherSlots();fm=r.fmRequests();after=r.player();globals=r.globals();scope.primary=frame.prepareObjectSolidPrefix(primary(),solidGlobals(),r);}
+                if(cut.secondary().isPresent()&&!same(cut.secondary().orElseThrow(),reserved(scope.cut,1)))throw new IllegalArgumentException("Stale Door secondary full64");
+                var images=new ArrayList<CdObjectState>();images.add(image);images.addAll(others);scope.pool=CdObjectPool.overlay(cut.callCut(),images);
+                var sounds=new ArrayList<>(scope.cut.sounds());for(var sound:fm)sounds.add(new SonicCdGameModule.PastFrameSound(new CdPlayerFrameRuntime.ContactFmSound(sound)));scope.next=withSounds(scope.cut,sounds);}
+            case CdTunnelDoor.SecondaryReadCall c->doorBegin(c,c.cut(),c.source());
+            case CdTunnelDoor.FmCall c->{var scope=doorBegin(c,c.cut(),c.source());var sounds=new ArrayList<>(scope.cut.sounds());sounds.add(new SonicCdGameModule.PastTunnelDoorFm(c.sound()));scope.next=withSounds(scope.cut,sounds);}
+            case CdTunnelDoor.DrawCall c->{var scope=doorBegin(c,c.cut(),c.source());scope.pool=CdObjectPool.overlay(scope.pool,List.of(c.source().moveByte(SPRITE_FLAGS,c.source().spriteFlags()&127)));}
+            default->throw new IllegalArgumentException("Unknown original Door operation");
+        }
+    }
+    private CdTunnelDoor.LiveSolid doorSolid(CdTunnelDoor.PrefixSolidCall call){var scope=doorCurrent(call);doorUse(call);var prepared=scope.primary;
+        publish(scope.cut,scope.next,scope.pool,()->{doorPublicationCurrent(scope,call);if(prepared!=null)frame.validatePreparedObjectSolidPublication(prepared);},()->{if(prepared!=null)frame.applyPreparedObjectSolidPublication(prepared);});return doorLive();
+    }
+    private void doorPublication(CdTunnelDoor.Publication call){var scope=doorBegin(call,call.cut(),call.source());
+        if(call.ordinal()!=dispatch.ordinal+1||!dispatch.consumed.add(call))throw new IllegalStateException("Door publication ordinal/repetition");scope.used=true;
+        switch(call.kind()){
+            case SOURCE,CHILD->{Objects.requireNonNull(call.output());scope.pool=CdObjectPool.overlay(scope.pool,List.of(call.output()));
+                if(call.kind()==CdTunnelDoor.MutationKind.SOURCE)requireIdentity(call.output().identity());}
+            case SAVED->{int at=call.savedIndex();if(!dispatch.drawn||!outsideOrWarp(call.source())||at!=savedTailIndex(call.source())||at<2||at>=scope.saved.length)throw new IllegalArgumentException("Door saved tail address");scope.saved[at]&=127;}
+            case DELETE->{if(!dispatch.drawn||!outsideOrWarp(call.source()))throw new IllegalArgumentException("Door delete before tail");scope.deleted=true;}
+        }
+    }
+    private void doorVerify(DoorScope scope,boolean completed){routeObjects();var actual=placement.capture();
+        boolean before=actual.status().equals(scope.before.status())&&same(actual.savedFlags(),scope.before.savedFlags())&&actual.pool().slots().equals(scope.before.pool().slots());
+        boolean after=actual.status().equals(scope.before.status())&&Arrays.equals(actual.savedFlags().copy(),scope.saved);
+        for(int n=0;n<96;n++)after&=scope.deleted&&n==dispatch.whole-32?Arrays.equals(new byte[64],actual.pool().slots().get(n).copyBytes()):actual.pool().slots().get(n).equals(scope.pool.slots().get(n));
+        if(!after&&(completed||!before))throw new IllegalStateException("Door full96/bank/status publication mismatch");
+        boolean finalPair=scope.primary!=null&&frame.state()==scope.primary.finalState()&&frame.environment()==scope.primary.finalEnvironment();
+        var actor=finalPair?new CdPlayerFrameRuntime.ActorState(scope.actor.owner(),scope.primary.finalState(),scope.actor.display()):scope.actor;
+        var shared=finalPair?new CdPlayerFrameRuntime.SharedState(scope.shared.owner(),scope.primary.finalEnvironment(),scope.shared.artState(),scope.shared.paused(),scope.shared.vIntClock()):scope.shared;
+        requireFrame(actor,shared);if(completed&&scope.primary!=null&&!finalPair)throw new IllegalStateException("Door omitted prebuilt Frame pair");
+        if(completed)requireCut(scope.next);else{try{requireCut(scope.next);}catch(RuntimeException failure){requireCut(scope.cut);}}
+    }
+    private void doorAfter(Object call,Object actualReturn){var scope=doorCurrent(call);if(!scope.used)throw new IllegalStateException("Door omitted private callback receipt");doorVerify(scope,true);
+        if(call instanceof CdTunnelDoor.PrefixSolidCut||call instanceof CdTunnelDoor.PrefixSolidCall){if(!doorLive().equals(actualReturn))throw new IllegalStateException("Door returned foreign live readback");}
+        if(call instanceof CdTunnelDoor.SecondaryReadCall&&(!(actualReturn instanceof CdAssetBytes raw)||!same(raw,reserved(read(),1))))throw new IllegalStateException("Door returned foreign secondary");
+        if(call instanceof CdTunnelDoor.Publication)dispatch.ordinal++;doorScope=null;checkpoint();
+    }
+    private void doorFailure(Object call,Throwable original){if(doorScope==null)return;try{doorCurrent(call);doorVerify(doorScope,false);}catch(RuntimeException|Error verification){if(verification!=original)original.addSuppressed(verification);}finally{doorScope=null;}}
+    private int routeTile(int selector){var table=terrain.objects().view(CdR12bObjectAssets.View.OBJECT_TILE_IDS);return table.unsignedWord((short)table.unsignedWord(selector*2));}
+    private CdObjectState verticalInitial(){var source=verticalInvocation.before.pool().slots().get(dispatch.whole-32);
+        if(source.routine()==0)source=source.addByte(ROUTINE,2).moveLong(MAPPINGS,CdR12bObjectAssets.View.MAP_SPR_TUNNEL_DOOR_VERTICAL.range().nativeAddress()).moveByte(PRIORITY,1).moveByte(SPRITE_FLAGS,source.spriteFlags()|4).moveByte(WIDTH,4).moveByte(Y_RADIUS,24).moveWord(TILE,routeTile(12));return source;
+    }
+    private boolean verticalOpening(CdObjectState source){var motion=frame.state().motion();int oy=source.centreY(),py=motion.centreY16_16()>>>16;
+        int dy=(oy-py)&65535;if(oy<py)dy=(-dy)&65535;int ox=source.centreX(),px=motion.centreX16_16()>>>16;return dy<32&&ox>=px&&((ox-px)&65535)<48;
+    }
+    private CdObjectState verticalBeforeSolid(){var source=verticalInitial();if(verticalOpening(source)){source=source.moveWord(TUNNEL_DOOR_TIMER,0).moveByte(ROUTINE,4);if((source.spriteFlags()&128)!=0)source=source.moveByte(MAP_FRAME,1);}return source;}
+    private void verticalDraw(CdObjectPool pool,CdObjectState.Identity identity){var invocation=verticalCurrent();
+        if(invocation.before.pool().slots().get(dispatch.whole-32).routine()==4){var expected=verticalInitial();int sum=expected.unsignedByte(TUNNEL_DOOR_TIMER_HIGH)+8;expected=expected.moveByte(TUNNEL_DOOR_TIMER_HIGH,sum);
+            if(sum>255)expected=expected.addByte(ROUTINE,-2).moveByte(MAP_FRAME,0);invocation.expectedSource=expected;
+        }else if(invocation.solids!=1)throw new IllegalStateException("DoorV Draw omitted actual plain Solid");
+        if(!placement.pool().state(dispatch.whole).equals(invocation.expectedSource))throw new IllegalArgumentException("DoorV native source sequence before Draw");
+        drawDynamic(Kind.VERTICAL_DOOR,pool,identity,()->verticalDoor.isCurrentDrawCall(pool,identity));
+    }
+    private BoundInvocation verticalCurrent(){requireKind(Kind.VERTICAL_DOOR);var invocation=verticalInvocation;
+        if(invocation==null||invocation.body!=verticalDoor||invocation.whole!=dispatch.whole||plcPort)throw new IllegalStateException("No actual cached DoorV invocation");routeNonwrites(invocation);return invocation;}
+    private void verticalSolid(CdTunnelDoorVertical.PrefixSolidCall call){var invocation=verticalCurrent();
+        if(invocation.solids!=0||!verticalDoor.isCurrentPrefixSolidCall(call)||!dispatch.consumed.add(call))throw new IllegalStateException("Foreign/repeated DoorV Solid");
+        poolCut(call.callCut());source(call.expectedSource());if(!call.expectedSource().equals(verticalBeforeSolid()))throw new IllegalArgumentException("DoorV original native prefix");if(!call.expectedPlayer().equals(primary())||!call.expectedGates().equals(gates())||!call.expectedGlobals().equals(solidGlobals()))throw new IllegalArgumentException("Stale DoorV full player/gates/globals");
+        commitSolid(call.callCut(),call.expectedPlayer(),call.expectedGlobals(),call.outcome());invocation.expectedSource=placement.pool().state(dispatch.whole);invocation.solids++;
+    }
+    private void verticalFm(CdTunnelDoorVertical.FmSound value){var invocation=verticalCurrent();var source=placement.pool().state(dispatch.whole);
+        if(invocation.fms!=0||invocation.solids!=0||value!=CdTunnelDoorVertical.FmSound.FM_A4||source.routine()!=4||source.word(TUNNEL_DOOR_TIMER)!=0||(source.spriteFlags()&128)==0)
+            throw new IllegalStateException("DoorV FM outside original opening prefix");
+        var expected=verticalInitial();if(!verticalOpening(expected)||!source.equals(expected.moveWord(TUNNEL_DOOR_TIMER,0).moveByte(ROUTINE,4)))throw new IllegalArgumentException("DoorV FM native source prefix");
+        var before=placement.capture();var actor=frame.captureActor();var shared=frame.captureShared();sound(new SonicCdGameModule.PastVerticalDoorFm(value));requirePlacement(before);requireFrame(actor,shared);invocation.fms++;
+    }
+    // END R12B Disc/Door World publication.
+
+    // BEGIN R12B SpinTunnel R2 World binding. All Java UNRUN.
+    private enum SpinPhase { STEP,PREPARED,PUBLISHED,DRAW,TAIL,DONE }
+    private static final class SpinInvocation {
+        final CdSpinTunnelTag body;final int whole;final CdObjectPlacementRuntime.Snapshot before;final Cut cut;
+        final CdPlayerFrameRuntime.ActorState actor;final CdPlayerFrameRuntime.SharedState shared;
+        final CdPlayerBody.State state;final CdPlayerBody.Environment environment;
+        CdObjectPool.Snapshot pool;CdObjectState source;byte[] saved;SpinPhase phase=SpinPhase.STEP;
+        CdSpinTunnelTag.Result result;CdSpinTunnelTag.DespawnResult tail;CdPlayerFrameRuntime.ObjectSolidPublication prepared;
+        boolean playerPublished;
+        SpinInvocation(CdSpinTunnelTag body,int whole,CdObjectPlacementRuntime.Snapshot before,Cut cut,
+                       CdPlayerFrameRuntime.ActorState actor,CdPlayerFrameRuntime.SharedState shared){
+            this.body=body;this.whole=whole;this.before=before;this.cut=cut;this.actor=actor;this.shared=shared;
+            state=actor.state();environment=shared.environment();pool=before.pool();source=pool.slots().get(whole-32);saved=before.savedFlags().copy();
+        }
+    }
+    private void spinCurrent(SpinInvocation invocation,SpinPhase phase){requireKind(Kind.SPIN_TAG);spinValues(invocation,phase);}
+    /** Only the matching private pending Adoption may run this read-only preflight with port active. */
+    private void spinPublicationCurrent(SpinInvocation invocation,SpinPhase expectedPhase){
+        if(invocation==null||phase!=Phase.WALKING||dispatch==null||dispatch.kind!=Kind.SPIN_TAG||queuePort
+                ||!isCurrentAdoption(pending)||pending.applied||pending.expected!=invocation.cut||pending.next!=invocation.cut)
+            throw new IllegalStateException("No matching private SpinTunnel adoption preflight");
+        guard();if(dispatch.ownerActor!=null){requireFrame(dispatch.ownerActor,dispatch.ownerShared);requireCut(dispatch.ownerCut);}
+        spinValues(invocation,expectedPhase);
+    }
+    private void spinValues(SpinInvocation invocation,SpinPhase phase){routeObjects();
+        if(invocation==null||spinInvocation!=invocation||invocation.body!=spinTunnel||invocation.whole!=dispatch.whole||invocation.phase!=phase||plcPort)
+            throw new IllegalStateException("No original current SpinTunnel body/whole/phase");
+        extent(terrain.objects().view(CdR12bObjectAssets.View.MAP_SPR_POWERUP),274);requireCut(invocation.cut);
+        var actor=invocation.playerPublished?new CdPlayerFrameRuntime.ActorState(invocation.actor.owner(),invocation.prepared.finalState(),invocation.actor.display()):invocation.actor;
+        requireFrame(actor,invocation.shared);
+        if(frame.state()!=(invocation.playerPublished?invocation.prepared.finalState():invocation.state)||frame.environment()!=invocation.environment)
+            throw new IllegalArgumentException("SpinTunnel lost the original complete Frame references");
+        var actual=placement.capture();if(!actual.status().equals(invocation.before.status())||!Arrays.equals(actual.savedFlags().copy(),invocation.saved))
+            throw new IllegalArgumentException("SpinTunnel changed saved/status nonwrites");
+        poolCut(invocation.pool);source(invocation.source);
+    }
+    /** One synchronous pure native body visit, with its original result held only by this private call. */
+    private void runSpinTunnel(int whole){requireKind(Kind.SPIN_TAG);routeObjects();
+        if(spinInvocation!=null)throw new IllegalStateException("Nested SpinTunnel native visit");
+        var invocation=new SpinInvocation(spinTunnel,whole,placement.capture(),read(),frame.captureActor(),frame.captureShared());spinInvocation=invocation;
+        try{
+            spinCurrent(invocation,SpinPhase.STEP);var e=invocation.environment;var gates=e.movement().gates();
+            invocation.result=spinTunnel.step(invocation.source,invocation.state.motion(),new CdSpinTunnelTag.Gates(gates.zoneAct()>>>8,e.globals().debugMode(),e.globals().debugCheat(),e.controls().rawHeld()));
+            spinCurrent(invocation,SpinPhase.STEP);var result=invocation.result;var expected=invocation.source;
+            if(expected.routine()==0)expected=expected.addByte(ROUTINE,2).moveByte(SPRITE_FLAGS,expected.spriteFlags()|4).moveWord(TILE,0x0544)
+                    .moveLong(MAPPINGS,CdR12bObjectAssets.View.MAP_SPR_POWERUP.range().nativeAddress()).moveByte(MAP_FRAME,expected.subtype()).addByte(MAP_FRAME,1);
+            if(result.expectedObject()!=invocation.source||!result.object().equals(expected)||result.player().expectedMotion()!=invocation.state.motion()
+                    ||result.drawObject()!=((e.globals().debugCheat()>>>8)!=0))throw new IllegalArgumentException("Not the actual SpinTunnel source/Main receipt");
+            var output=CdObjectPool.overlay(invocation.pool,List.of(result.object()));
+            // Frame owns full-pair CAS and the exact native motion whitelist. Every aggregate is ready
+            // before source Init stores; source publication precedes the existing typed player adoption.
+            invocation.prepared=frame.prepareObjectSpinTunnelResult(invocation.state,invocation.environment,result.player());
+            if(invocation.prepared.expectedState()!=invocation.state||invocation.prepared.expectedEnvironment()!=invocation.environment||invocation.prepared.finalEnvironment()!=invocation.environment)
+                throw new IllegalArgumentException("SpinTunnel preparation did not retain its actual complete pair");
+            invocation.phase=SpinPhase.PREPARED;spinCurrent(invocation,SpinPhase.PREPARED);
+            boolean sourceStores=invocation.source.routine()==0,playerStores=!result.player().executedWrites().isEmpty();
+            if(sourceStores||playerStores)publish(invocation.cut,invocation.cut,sourceStores?output:null,
+                    ()->{spinPublicationCurrent(invocation,SpinPhase.PREPARED);frame.validatePreparedObjectSolidPublication(invocation.prepared);},
+                    ()->{if(playerStores)frame.applyPreparedObjectSolidPublication(invocation.prepared);});
+            invocation.pool=sourceStores?output:invocation.pool;invocation.source=result.object();invocation.playerPublished=playerStores;invocation.phase=SpinPhase.PUBLISHED;
+            spinCurrent(invocation,SpinPhase.PUBLISHED);
+            if(result.drawObject()){
+                invocation.phase=SpinPhase.DRAW;spinCurrent(invocation,SpinPhase.DRAW);var before=invocation.pool;var source=invocation.source;
+                drawDynamic(Kind.SPIN_TAG,placement.pool(),source.identity(),()->spinInvocation==invocation&&invocation.result==result&&invocation.phase==SpinPhase.DRAW);
+                invocation.source=source.moveByte(SPRITE_FLAGS,source.spriteFlags()&127);invocation.pool=CdObjectPool.overlay(before,List.of(invocation.source));
+                spinCurrent(invocation,SpinPhase.DRAW);
+            }
+            // Reload the LIVE post-Draw full64; never adopt step.object() over Draw's bit7 write.
+            invocation.phase=SpinPhase.TAIL;spinCurrent(invocation,SpinPhase.TAIL);var live=placement.pool().state(whole);
+            invocation.tail=spinTunnel.despawn(live,new CdSpinTunnelTag.DespawnGlobals(gates.timeZone(),gates.timeWarpDirection(),invocation.cut.cameraXWord()));
+            spinCurrent(invocation,SpinPhase.TAIL);var tail=invocation.tail;boolean delete=outsideOrWarp(live);
+            if(tail.deleteObject()!=delete||tail.loadedClear().isPresent()!=(delete&&live.savedFlagsId()!=0))throw new IllegalArgumentException("SpinTunnel native despawn gate mismatch");
+            if(tail.loadedClear().isPresent()){
+                var clear=tail.loadedClear().orElseThrow();int at=savedTailIndex(live);
+                if(clear.savedId()!=live.savedFlagsId()||clear.index()!=at||clear.index()!=2+3*clear.savedId()+clear.period())throw new IllegalArgumentException("SpinTunnel reached saved address mismatch");
+                if(at<2||at>=invocation.saved.length)throw stop(Boundary.SPIN_SAVED_FLAGS,whole,at);
+                byte[] saved=invocation.saved.clone();saved[at]&=127;
+                publish(invocation.cut,invocation.cut,null,()->spinPublicationCurrent(invocation,SpinPhase.TAIL),
+                        ()->placement.bclrSavedFlag(clear.savedId(),clear.period(),CdObjectPlacementRuntime.SavedBit.LOADED));
+                invocation.saved=saved;spinCurrent(invocation,SpinPhase.TAIL);
+            }
+            if(delete){
+                // Actual DeleteObject owns the zero64 store. No manufactured foreign cleared image or
+                // generic placement/Frame restoration is used to publish a pure decision.
+                var before=invocation.pool;publish(invocation.cut,invocation.cut,null,()->spinPublicationCurrent(invocation,SpinPhase.TAIL),()->placement.pool().deleteObject(whole));
+                var actual=placement.capture();if(!actual.status().equals(invocation.before.status())||!Arrays.equals(actual.savedFlags().copy(),invocation.saved))throw new IllegalStateException("SpinTunnel delete changed bank/status");
+                for(int n=0;n<96;n++)if(n==whole-32?!Arrays.equals(new byte[64],actual.pool().slots().get(n).copyBytes()):!actual.pool().slots().get(n).equals(before.slots().get(n)))throw new IllegalStateException("SpinTunnel DeleteObject full96 mismatch");
+                invocation.pool=actual.pool();invocation.source=actual.pool().slots().get(whole-32);
+            }
+            invocation.phase=SpinPhase.DONE;spinCurrent(invocation,SpinPhase.DONE);
+            if(dispatch.drawn!=result.drawObject())throw new IllegalStateException("SpinTunnel omitted/repeated original optional Draw");
+        }finally{spinInvocation=null;}
+    }
+    // END R12B SpinTunnel R2 World binding.
+
+    // BEGIN R12B Goal/Signpost actual private World binding.
+    private enum EndStep { INVALID,ZONE,Y,X,CAMERA_LEFT,LEFT,CAMERA_DEST,DEST,HUD,SHOES,INVINCIBLE,FM,
+        PERIOD,FADE,MUSIC,LOCK,HOLD,ZONE_ACT,BONUS,MINUTES,SECONDS,TIME_BONUS,RINGS,RING_BONUS,
+        GOAL_STORE,PLC,SPIN_DRAW,DRAW,DONE }
+    private final class EndInvocation {
+        final Kind kind;final int whole;final CdObjectState entry;final CdObjectPlacementRuntime.Snapshot before;
+        final byte[] saved;CdObjectPool.Snapshot pool;CdObjectState source,drawBefore;Cut cut;
+        CdPlayerFrameRuntime.ActorState actor;CdPlayerFrameRuntime.SharedState shared;
+        EndStep step;Object operation;boolean drawn,deleted;int value,minutes,seconds;
+        CdR12bSectionArt.SectionArtException terminalFailure;
+        EndInvocation(Kind kind,int whole){this.kind=kind;this.whole=whole;before=placement.capture();pool=before.pool();
+            entry=pool.slots().get(whole-32);source=entry;saved=before.savedFlags().copy();cut=read();actor=frame.captureActor();shared=frame.captureShared();}
+    }
+    /** Opaque receipt for the ORIGINAL reached Goal cue12 call, not a queue/state capability. */
+    final class GoalPlcSubmission {
+        private final EndInvocation invocation;private final CdGoalPost.PlcCall request;
+        private final CdObjectPlacementRuntime.Snapshot placed;private boolean adopted;
+        private GoalPlcSubmission(EndInvocation i,CdGoalPost.PlcCall request){invocation=i;this.request=request;placed=placement.capture();}
+        SonicCdAct2PastObjectPass owner(){return SonicCdAct2PastObjectPass.this;}
+        int nativeId(){return request.nativeId();}int wholeIndex(){return invocation.whole;}
+        void validate(){if(!isCurrentGoalPlcSubmission(this)||adopted)throw new IllegalStateException("Escaped/repeated Goal PLC receipt");
+            endVerify(invocation,false);requirePlacement(placed);placementCut(request.actualCut());source(request.expectedSource());}
+        void acknowledge(){validate();adopted=true;}
+        /** Failure receipt only: Core is now terminal, so no healthy scalar accessor may run. */
+        void retainTerminal(CdR12bSectionArt.SectionArtException original){
+            if(!isCurrentGoalPlcSubmission(this)||adopted||invocation.terminalFailure!=null||!original.state().stopped())
+                throw new IllegalStateException("Not the actual pending Goal terminal throw");
+            invocation.terminalFailure=original;
+        }
+    }
+    boolean isCurrentGoalPlcSubmission(GoalPlcSubmission value){return value!=null&&pendingGoalPlc==value&&plcPort&&!port&&!queuePort
+            &&phase==Phase.WALKING&&dispatch!=null&&dispatch.kind==Kind.GOAL&&endInvocation==value.invocation
+            &&value.invocation.step==EndStep.PLC&&value.invocation.operation==value.request&&value.request.nativeId()==0x12
+            &&value.request.site()==CdGoalPost.PlcSite.GOAL_REACHED;}
+    private EndInvocation endCurrent(Kind kind){
+        requireKind(kind);var i=endInvocation;if(i==null||i.kind!=kind||i.whole!=dispatch.whole||port||queuePort||plcPort||i.operation!=null)
+            throw new IllegalStateException("No actual private End callback");endVerify(i,false);return i;
+    }
+    private void endPool(EndInvocation i,boolean failure){
+        var actual=placement.capture();if(!actual.status().equals(i.before.status())||!Arrays.equals(actual.savedFlags().copy(),i.saved))
+            throw new IllegalStateException("End changed spawner/saved nonwrites");
+        for(int n=0;n<96;n++){
+            var expected=i.pool.slots().get(n);var live=actual.pool().slots().get(n);
+            if(i.deleted&&n==i.whole-32){if(!Arrays.equals(live.copyBytes(),new byte[64]))throw new IllegalStateException("Goal deletion lost zero64");}
+            else if(!expected.equals(live)&&!(failure&&n==i.whole-32&&i.drawBefore!=null&&i.drawBefore.equals(live)))
+                throw new IllegalStateException("End changed an unowned full64 at "+(n+32));
+        }
+    }
+    private void endVerify(EndInvocation i,boolean failure){
+        if(endInvocation!=i||phase!=Phase.WALKING||dispatch==null||dispatch.kind!=i.kind||dispatch.whole!=i.whole)
+            throw new IllegalStateException("Retired/foreign End invocation");
+        requireFrame(i.actor,i.shared);endPool(i,failure);
+        if(i.terminalFailure==null){guard();requireCut(i.cut);} // Terminal-only prefix has no healthy continuation.
+    }
+    private void endSource(EndInvocation i,CdObjectState value){i.source=value;i.pool=CdObjectPool.overlay(i.pool,List.of(value));}
+    private void endCall(EndInvocation i,Object call,CdObjectPlacementRuntime.Snapshot cut,CdObjectState source,EndStep step){
+        if(i.step!=step||i.operation!=null||call==null||!dispatch.consumed.add(call))throw new IllegalStateException("Cloned/reordered End call");
+        endVerify(i,false);placementCut(cut);source(source);if(!i.source.equals(source))throw new IllegalArgumentException("Wrong native End source prefix");i.operation=call;
+    }
+    private void endRefresh(EndInvocation i){i.actor=frame.captureActor();i.shared=frame.captureShared();i.cut=read();}
+    /** Preflight accepts ONLY its own pending End Adoption while port=true; ordinary reentry stays closed. */
+    private void endPublicationPreflight(EndInvocation i,Object call,CdPlayerFrameRuntime.ObjectSolidPublication ready){
+        if(!isCurrentAdoption(pending)||pending.applied||pending.endOperation!=call||i.operation!=call||pending.expected!=i.cut
+                ||endInvocation!=i||dispatch==null||dispatch.kind!=i.kind||dispatch.whole!=i.whole||plcPort||queuePort)
+            throw new IllegalStateException("Not the matching pending End adoption");
+        endVerify(i,false);if(ready!=null)frame.validatePreparedObjectSolidPublication(ready);
+    }
+    private void endPublish(EndInvocation i,Object call,Cut next,CdPlayerFrameRuntime.ObjectSolidPublication ready,int destination){
+        if(port||pending!=null||i.operation!=call)throw new IllegalStateException("Recursive End publication");
+        var publication=new Adoption(i.cut,next,null,()->endPublicationPreflight(i,call,ready),()->{if(ready!=null)frame.applyPreparedObjectSolidPublication(ready);});
+        publication.destinationLeftWord=destination;publication.endOperation=call;pending=publication;port=true;
+        try{requireCut(i.cut);ports.adopt(publication);if(!publication.applied)throw new IllegalStateException("Missing End adoption receipt");
+            requireCut(next);requireFrame(publication.afterActor,publication.afterShared);requirePlacement(publication.afterPlacement);
+            checkpoint();endRefresh(i);
+        }finally{pending=null;port=false;}
+    }
+    private static Cut endLevel(Cut c,CdLevelGlobals level){return new Cut(c.globals(),level,c.goodFutureByte(),c.goodFutureFlags(),c.reservedSlots(),c.cpuSat(),c.completedCpu(),c.sounds(),c.cameraXWord(),c.cameraYWord(),c.timeAttackModeByte(),c.layerByte());}
+    private static SonicCdAct2PastWorldHost.Globals endGlobals(SonicCdAct2PastWorldHost.Globals g,CdPlayerBody.ContactGlobals contact,Optional<CdLevelHud.BonusValues> bonus){
+        return new SonicCdAct2PastWorldHost.Globals(g.ring(),g.live(),contact,g.score(),g.projectorByte(),g.checkpointSaved(),g.drownTimerWord(),g.debugBlockWord(),g.pauseMusicBit(),bonus,g.tail(),g.animations(),g.paletteSteps7(),g.paletteTimers7());}
+    private void beginEnd(Kind kind,int whole){requireKind(kind);if(endInvocation!=null||plcPort)throw new IllegalStateException("End reentry");
+        var gates=frame.environment().movement().gates();if(gates.zoneAct()!=1||gates.timeZone()!=0)throw new IllegalStateException("Only the actual R12B ordinary period is bound");endInvocation=new EndInvocation(kind,whole);}
+    private void endFailure(EndInvocation i,Throwable original){
+        try{
+            if(i.kind==Kind.SIGNPOST&&i.entry.routine()==4&&i.step==EndStep.SPIN_DRAW&&original instanceof CdSignpost.UnsupportedSignpost){
+                var head=i.entry;if(head.unsignedByte(ANIMATION)!=head.unsignedByte(PREVIOUS_ANIMATION))head=head.moveByte(PREVIOUS_ANIMATION,head.unsignedByte(ANIMATION)).moveByte(ANIMATION_FRAME,0).moveByte(ANIMATION_TIME,0);
+                head=head.addByte(ANIMATION_TIME,-1);
+                if(head.signedByte(ANIMATION_TIME)<0&&head.unsignedByte(ANIMATION)==0){var script=terrain.objects().view(CdR12bObjectAssets.View.ANI_SIGNPOST);head=head.moveByte(ANIMATION_TIME,script.unsignedByte((short)script.unsignedWord(0)));}
+                endSource(i,head);
+            }
+            if(i.terminalFailure!=null&&i.terminalFailure!=original)throw new IllegalStateException("Replaced original Goal terminal throw");
+            endVerify(i,true);
+        }catch(RuntimeException|Error verification){if(verification!=original)original.addSuppressed(verification);}
+    }
+    private void runGoal(int whole){
+        beginEnd(Kind.GOAL,whole);var i=endInvocation;
+        try{
+            i.step=switch(i.entry.routine()){case 0,2->EndStep.Y;case 4->EndStep.DRAW;default->EndStep.INVALID;};
+            if(i.entry.routine()==0)endSource(i,i.entry.addByte(ROUTINE,2).moveByte(SPRITE_FLAGS,i.entry.spriteFlags()|4).moveByte(PRIORITY,4)
+                    .moveLong(MAPPINGS,CdR12bObjectAssets.View.MAP_SPR_GOAL_SIGNPOST.range().nativeAddress()).moveByte(X_RADIUS,16).moveByte(WIDTH,16).moveByte(Y_RADIUS,32).moveByte(MAP_FRAME,5)
+                    .moveWord(TILE,terrain.objects().view(CdR12bObjectAssets.View.GOAL_POST_BASE_TILES).unsignedWord(8)|0x8000));
+            var gates=frame.environment().movement().gates();var r=goalPost.run(whole,new CdGoalPost.Globals(gates.zoneAct(),gates.timeZone(),i.cut.goodFutureByte(),gates.timeWarpDirection(),i.cut.cameraXWord()));
+            if(i.step!=EndStep.DONE||!i.drawn)throw new IllegalStateException("Goal omitted Draw tail");
+            boolean deleted=i.source.signedByte(SPRITE_FLAGS)>=0&&(((i.source.centreX()&0xFF80)-((i.cut.cameraXWord()-0x80)&0xFF80))&65535)>0x280;
+            if(deleted){int id=i.source.savedFlagsId();if(id!=0){int at=2+3*id;if(at>=i.saved.length)throw new IllegalStateException("Goal admitted an unowned saved byte");i.saved[at]&=0x7F;}i.deleted=true;}
+            endVerify(i,false);if(r.deleted()!=deleted||!r.state().equals(placement.pool().state(whole)))throw new IllegalStateException("Goal lost its native return");
+        }catch(RuntimeException|Error original){endFailure(i,original);throw original;}finally{endInvocation=null;}
+    }
+    private int goalRead(CdGoalPost.ReadCall c){var i=endCurrent(Kind.GOAL);var step=c.field()==CdGoalPost.PlayerField.Y_WORD?EndStep.Y:EndStep.X;endCall(i,c,c.actualCut(),c.expectedSource(),step);
+        try{int value=c.field()==CdGoalPost.PlayerField.Y_WORD?frame.state().motion().centreY16_16()>>>16:frame.state().motion().centreX16_16()>>>16;
+            if(step==EndStep.Y){int dy=(value-i.source.centreY()+128)&65535;i.step=(short)dy<0||dy>=256?EndStep.DRAW:EndStep.X;}
+            else{if(value<i.source.centreX())i.step=EndStep.DRAW;else{endSource(i,i.source.addByte(ROUTINE,2));i.step=EndStep.GOAL_STORE;}}
+            return value;
+        }finally{i.operation=null;}}
+    private void goalReached(CdGoalPost.GoalReachedCall c){var i=endCurrent(Kind.GOAL);endCall(i,c,c.actualCut(),c.expectedSource(),EndStep.GOAL_STORE);
+        try{if(c.cameraXWord()!=i.cut.cameraXWord())throw new IllegalArgumentException("Stale Goal camera");var ready=frame.prepareObjectGoalPostReached(i.actor.state(),i.shared.environment(),c.cameraXWord());
+            var g=i.cut.globals();var contact=g.contact();var next=withGlobals(i.cut,endGlobals(g,new CdPlayerBody.ContactGlobals(0,contact.shield(),contact.combineRing()),g.bonus()));
+            endPublish(i,c,next,ready,c.cameraXWord());i.step=EndStep.PLC;
+        }finally{i.operation=null;}}
+    private void goalPlc(CdGoalPost.PlcCall c){var i=endCurrent(Kind.GOAL);endCall(i,c,c.actualCut(),c.expectedSource(),EndStep.PLC);
+        try{if(c.site()!=CdGoalPost.PlcSite.GOAL_REACHED||c.nativeId()!=0x12||pendingGoalPlc!=null)throw new IllegalArgumentException("Not Goal cue12");
+            var submission=new GoalPlcSubmission(i,c);pendingGoalPlc=submission;plcPort=true;
+            try{submission.validate();ports.submitGoalPlc(submission);if(!submission.adopted)throw new IllegalStateException("Missing Goal PLC completion");endRefresh(i);i.step=EndStep.DRAW;}
+            finally{pendingGoalPlc=null;plcPort=false;}
+        }finally{i.operation=null;}}
+    private void endDraw(EndInvocation i,Object c,CdObjectPlacementRuntime.Snapshot cut,CdObjectState source){
+        endCall(i,c,cut,source,EndStep.DRAW);i.drawBefore=i.source;endSource(i,i.source.moveByte(SPRITE_FLAGS,i.source.spriteFlags()&127));
+        try{drawDynamic(i.kind,placement.pool(),source.identity(),()->endInvocation==i&&i.operation==c&&i.step==EndStep.DRAW&&!i.drawn);
+            endPool(i,false);i.drawn=true;i.step=EndStep.DONE;
+        }finally{i.operation=null;}}
+    private void goalDraw(CdGoalPost.DrawCall c){var i=endCurrent(Kind.GOAL);endDraw(i,c,c.actualCut(),c.expectedSource());}
+    private void runSignpost(int whole){
+        beginEnd(Kind.SIGNPOST,whole);var i=endInvocation;
+        try{
+            switch(i.entry.routine()){
+                case 0->{endSource(i,i.entry.addByte(ROUTINE,2).moveByte(SPRITE_FLAGS,i.entry.spriteFlags()|4).moveByte(X_RADIUS,24).moveByte(WIDTH,24).moveByte(Y_RADIUS,32).moveByte(PRIORITY,4).moveWord(TILE,0x043C));i.step=EndStep.ZONE;}
+                case 2->i.step=EndStep.Y;case 4->i.step=EndStep.SPIN_DRAW;
+                case 6->{endSource(i,i.entry.addByte(LEVEL_END_TIMER,-1));i.step=i.source.unsignedByte(LEVEL_END_TIMER)==0?EndStep.PERIOD:EndStep.DRAW;}
+                case 8->i.step=EndStep.DRAW;default->i.step=EndStep.INVALID;
+            }
+            var r=signpost.run(whole);endVerify(i,false);if(i.step!=EndStep.DONE||!i.drawn||!r.state().equals(placement.pool().state(whole)))throw new IllegalStateException("Signpost omitted native Draw/return");
+        }catch(RuntimeException|Error original){endFailure(i,original);throw original;}finally{endInvocation=null;}
+    }
+    private int signRead(CdSignpost.ReadCall c){var i=endCurrent(Kind.SIGNPOST);EndStep required=switch(c.field()){
+        case ZONE_BYTE->EndStep.ZONE;case PLAYER_Y_WORD->EndStep.Y;case PLAYER_X_WORD->EndStep.X;case CAMERA_X_WORD->i.step==EndStep.CAMERA_LEFT?EndStep.CAMERA_LEFT:EndStep.CAMERA_DEST;
+        case TIME_ZONE_BYTE->EndStep.PERIOD;case ZONE_ACT_WORD->EndStep.ZONE_ACT;case TIME_MINUTES_BYTE->EndStep.MINUTES;case TIME_SECONDS_BYTE->EndStep.SECONDS;case RINGS_WORD->EndStep.RINGS;};
+        endCall(i,c,c.actualCut(),c.expectedSource(),required);
+        try{int value;switch(c.field()){
+            case ZONE_BYTE->{value=frame.environment().movement().gates().zoneAct()>>>8;endSource(i,i.source.moveWord(TILE,value==3?0x043C:0x843C).moveLong(MAPPINGS,CdR12bObjectAssets.View.MAP_SPR_GOAL_SIGNPOST.range().nativeAddress()));i.step=EndStep.Y;}
+            case PLAYER_Y_WORD->{value=frame.state().motion().centreY16_16()>>>16;int dy=(value-i.source.centreY()+128)&65535;i.step=(short)dy<0||dy>=256?EndStep.DRAW:EndStep.X;}
+            case PLAYER_X_WORD->{value=frame.state().motion().centreX16_16()>>>16;i.step=value>i.source.centreX()?EndStep.CAMERA_LEFT:EndStep.DRAW;}
+            case CAMERA_X_WORD->{value=i.cut.cameraXWord();i.value=value;i.step=required==EndStep.CAMERA_LEFT?EndStep.LEFT:EndStep.DEST;}
+            case TIME_ZONE_BYTE->{value=frame.environment().movement().gates().timeZone();i.step=value==0?EndStep.FADE:EndStep.MUSIC;}
+            case ZONE_ACT_WORD->{value=frame.environment().movement().gates().zoneAct();if(value!=1)throw new IllegalStateException("Foreign Signpost programme");
+                endSource(i,i.source.moveByte(LEVEL_END_TIMER,180).addByte(ROUTINE,2));
+                for(var image:i.pool.slots())if(image.id()==0){i.pool=CdObjectPool.overlay(i.pool,List.of(image.moveByte(ID,CdSignpost.RESULTS_ID).moveByte(RESULTS_TIMER,16)));break;}i.step=EndStep.BONUS;}
+            case TIME_MINUTES_BYTE->{value=endClock(i,CdCheckpointLiveAux.TimeByte.MINUTES);i.minutes=value;i.step=EndStep.SECONDS;}
+            case TIME_SECONDS_BYTE->{value=endClock(i,CdCheckpointLiveAux.TimeByte.SECONDS);i.seconds=value;int index=Math.min(((i.minutes*60+value)&65535)/15,20);i.value=terrain.objects().view(CdR12bObjectAssets.View.LEVEL_END_TIME_BONUSES).unsignedWord(index*2);i.step=EndStep.TIME_BONUS;}
+            case RINGS_WORD->{value=i.cut.globals().ring().rings();i.value=(value*100)&65535;i.step=EndStep.RING_BONUS;}
+            default->throw new IllegalStateException("Unknown Signpost read");}return value;
+        }finally{i.operation=null;}}
+    private int endClock(EndInvocation i,CdCheckpointLiveAux.TimeByte field){return i.cut.globals().live().knownByte(field.nativeAddress()).orElseThrow(()->stop(Boundary.END_CLOCK,i.whole,field.nativeAddress()));}
+    private void signStore(CdSignpost.StoreCall c){var i=endCurrent(Kind.SIGNPOST);var required=switch(c.field()){
+        case LEFT_BOUND_WORD->EndStep.LEFT;case DEST_LEFT_BOUND_WORD->EndStep.DEST;case UPDATE_HUD_TIME_BYTE->EndStep.HUD;case SPEED_SHOES_BYTE->EndStep.SHOES;case INVINCIBLE_BYTE->EndStep.INVINCIBLE;
+        case CONTROL_LOCK_BIT0->EndStep.LOCK;case PLAYER_CONTROL_HOLD_WORD->EndStep.HOLD;case UPDATE_HUD_BONUS_BYTE->EndStep.BONUS;case TIME_BONUS_WORD->EndStep.TIME_BONUS;case RING_BONUS_WORD->EndStep.RING_BONUS;};
+        endCall(i,c,c.actualCut(),c.expectedSource(),required);
+        try{int expected=switch(required){case LEFT,DEST,TIME_BONUS,RING_BONUS->i.value;case LOCK,BONUS->1;case HOLD->0x0808;default->0;};
+            if(c.value()!=expected)throw new IllegalArgumentException("Wrong reached Signpost store");var next=i.cut;CdPlayerFrameRuntime.ObjectSolidPublication ready=null;int destination=-1;
+            switch(c.field()){
+                case LEFT_BOUND_WORD,SPEED_SHOES_BYTE,INVINCIBLE_BYTE,CONTROL_LOCK_BIT0,PLAYER_CONTROL_HOLD_WORD->ready=frame.prepareObjectSignpostStore(i.actor.state(),i.shared.environment(),c.field(),c.value());
+                case DEST_LEFT_BOUND_WORD->destination=c.value();
+                case UPDATE_HUD_TIME_BYTE->{var l=i.cut.level();next=endLevel(i.cut,new CdLevelGlobals(l.levelRestart(),0,l.checkpoint(),l.spawnMode(),l.plcLoadFlags(),l.flowerCount(),l.fadeEnableDisplay(),l.powerup(),l.timeOver()));}
+                case UPDATE_HUD_BONUS_BYTE,TIME_BONUS_WORD,RING_BONUS_WORD->{var g=i.cut.globals();var b=g.bonus().orElseThrow(()->stop(Boundary.END_BONUS,i.whole,c.field().ordinal()));
+                    var bonus=new CdLevelHud.BonusValues(c.field()==CdSignpost.StoreField.TIME_BONUS_WORD?c.value():b.timeBonusWord(),c.field()==CdSignpost.StoreField.RING_BONUS_WORD?c.value():b.ringBonusWord(),c.field()==CdSignpost.StoreField.UPDATE_HUD_BONUS_BYTE?c.value():b.updateHudBonusByte());next=withGlobals(i.cut,endGlobals(g,g.contact(),Optional.of(bonus)));}
+            }
+            endPublish(i,c,next,ready,destination);
+            i.step=switch(required){case LEFT->EndStep.CAMERA_DEST;case DEST->EndStep.HUD;case HUD->EndStep.SHOES;case SHOES->EndStep.INVINCIBLE;case INVINCIBLE->EndStep.FM;
+                case LOCK->EndStep.HOLD;case HOLD->EndStep.ZONE_ACT;case BONUS->EndStep.MINUTES;case TIME_BONUS->EndStep.RINGS;case RING_BONUS->EndStep.DRAW;default->throw new IllegalStateException("Unknown completed Signpost store");};
+            if(required==EndStep.HUD)endSource(i,i.source.moveByte(LEVEL_END_TIMER,120).moveByte(MAP_FRAME,0).addByte(ROUTINE,2));
+        }finally{i.operation=null;}}
+    private void signSound(CdSignpost.SoundCall c){var i=endCurrent(Kind.SIGNPOST);var required=switch(c.sound()){case FM_SIGNPOST->EndStep.FM;case SCMD_FADEPCM->EndStep.FADE;case SCMD_RESULTMUS->EndStep.MUSIC;};endCall(i,c,c.actualCut(),c.expectedSource(),required);
+        try{var sounds=new ArrayList<>(i.cut.sounds());sounds.add(new SonicCdGameModule.PastSignpostSound(c.sound()));endPublish(i,c,withSounds(i.cut,sounds),null,-1);
+            i.step=required==EndStep.FM?EndStep.DRAW:required==EndStep.FADE?EndStep.MUSIC:EndStep.LOCK;
+        }finally{i.operation=null;}}
+    private void signDraw(CdSignpost.DrawCall c){
+        EndInvocation i;
+        if(endInvocation!=null&&endInvocation.step==EndStep.SPIN_DRAW){
+            requireKind(Kind.SIGNPOST);i=endInvocation;
+            if(i.kind!=Kind.SIGNPOST||i.whole!=dispatch.whole||i.operation!=null||port||queuePort||plcPort)throw new IllegalStateException("No actual Signpost animation tail");
+            requireFrame(i.actor,i.shared);requireCut(i.cut);
+        }else i=endCurrent(Kind.SIGNPOST);
+        if(i.step==EndStep.SPIN_DRAW){var s=i.entry;var out=CdObjectAnimation.step(new CdObjectAnimation.State(s.unsignedByte(ANIMATION),s.unsignedByte(PREVIOUS_ANIMATION),s.unsignedByte(ANIMATION_FRAME),s.unsignedByte(ANIMATION_TIME),s.unsignedByte(MAP_FRAME),s.spriteFlags(),s.flags(),s.routine(),s.unsignedByte(ROUTINE_2)),new CdObjectAnimation.AnimationTable(terrain.objects().view(CdR12bObjectAssets.View.ANI_SIGNPOST),0,1));
+            s=s.moveByte(ANIMATION,out.animationId()).moveByte(PREVIOUS_ANIMATION,out.previousId()).moveByte(ANIMATION_FRAME,out.scriptIndex()).moveByte(ANIMATION_TIME,out.timer()).moveByte(MAP_FRAME,out.mapFrame()).moveByte(SPRITE_FLAGS,out.spriteFlags()).moveByte(FLAGS,out.statusFlags()).moveByte(ROUTINE,out.routine()).moveByte(ROUTINE_2,out.routine2()).addByte(LEVEL_END_TIMER,-1);
+            if(s.unsignedByte(LEVEL_END_TIMER)==0)s=s.addByte(ROUTINE,2).moveByte(MAP_FRAME,3).moveByte(LEVEL_END_TIMER,60);endSource(i,s);i.step=EndStep.DRAW;}
+        endDraw(i,c,c.actualCut(),c.expectedSource());
+    }
+    // END R12B Goal/Signpost actual private World binding.
+
+    // BEGIN R12B Results actual private World binding.
+    // N1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff Results/Main.asm:42-366; no FixBugs alternative.
+    // Physical source stores stay in CdResults; these images verify native prefixes, never replay them.
+    /** Existing complete-owner references, no capture participant or caller authority. */
+    record ResultsOwners(SonicCdAct2PastLoadingVisit.State core,SonicCdGameModule.LevelProgramState programme,SonicCdAct2PastWorldHost.Prepared hostFence) {
+        ResultsOwners {Objects.requireNonNull(core);Objects.requireNonNull(programme);Objects.requireNonNull(hostFence);}
+    }
+    private enum ResultsStep { INVALID,PLC,HEAD,WAIT_ZONE,CAMERA,PLAYER_X,ROW_ZONE,ROW_GOOD,ROW_ACT,
+        UPDATE,TIME,TIME_STORE,RING,RING_STORE,CHECK_TIME,CHECK_RING,SPECIAL,TALLY,KACHING,WARP,POINTS,DRAW,RETURN,ALLOCATION_STOP,
+        PROGRAMME,SPAWN,SECTION,FLOWERS,UNKNOWN,PROJ,CHECKPOINT,INITIAL_ATTACK,PLC_BIT0,PLC_BIT1,PERIOD_PRESENT,ZONE_OPERAND,
+        PERIOD_FUTURE,ZONE_STORE,RESET,FADE,TAIL_ACT,TAIL_ATTACK,TAIL_STONES,TAIL_GOOD,GOOD_CLEAR,FLAGS_SET,FLAGS_COMPARE,GOOD_SET,FLAGS_CLEAR }
+    private final class ResultsInvocation {
+        final int whole;final CdObjectState entry;final CdObjectPlacementRuntime.Snapshot before;
+        CdObjectPool.Snapshot expectedPool;CdObjectPlacementRuntime.Status status;CdAssetBytes saved;
+        CdPlayerFrameRuntime.ActorState actor;CdPlayerFrameRuntime.SharedState shared;Cut cut;ResultsOwners owners;
+        ResultsStep step;Object operation;CdObjectState drawBefore;boolean drawn;
+        int row,selected,root,edge,time,rings,points,nextZoneAct,actBit;
+        ResultsInvocation(int whole){this.whole=whole;before=placement.capture();expectedPool=before.pool();status=before.status();saved=before.savedFlags();entry=placement.pool().state(whole);cut=read();actor=frame.captureActor();shared=frame.captureShared();}
+    }
+    boolean isCurrentResultsOwnersRead(){return resultsBorrow&&resultsInvocation!=null&&phase==Phase.WALKING&&dispatch!=null
+            &&dispatch.kind==Kind.RESULTS&&dispatch.whole==resultsInvocation.whole&&!queuePort
+            &&(!plcPort||pendingResultsPlc!=null&&isCurrentResultsPlcSubmission(pendingResultsPlc))
+            &&(!port||pending!=null&&pending.resultsOperation==resultsInvocation.operation&&pending.resultsOwners==resultsInvocation.owners&&(!pending.applied||resultsFlagsField(pending)));}
+    private ResultsOwners resultsOwners(ResultsInvocation i,ResultsOwners expected){
+        if(resultsBorrow||resultsInvocation!=i)throw new IllegalStateException("Recursive/retired Results owner borrow");resultsBorrow=true;
+        try{return Objects.requireNonNull(ports.resultsOwners(expected));}finally{resultsBorrow=false;}
+    }
+    private CdObjectState resultsSource(ResultsInvocation i){return i.expectedPool.slots().get(i.whole-32);}
+    private void resultsImage(ResultsInvocation i,CdObjectState image){i.expectedPool=CdObjectPool.overlay(i.expectedPool,List.of(image));}
+    private void resultsPool(ResultsInvocation i,boolean failure){var now=placement.capture();
+        if(!i.status.equals(now.status())||!same(i.saved,now.savedFlags()))throw new IllegalStateException("Results changed saved bank/spawner nonwrites");
+        for(int n=0;n<96;n++)if(!i.expectedPool.slots().get(n).equals(now.pool().slots().get(n))
+                &&!(failure&&n==i.whole-32&&i.drawBefore!=null&&i.drawBefore.equals(now.pool().slots().get(n))))throw new IllegalStateException("Results differs from actual full96/source64 prefix at "+(n+32));
+    }
+    private void resultsVerify(ResultsInvocation i,boolean failure){
+        if(resultsInvocation!=i||phase!=Phase.WALKING||dispatch==null||dispatch.kind!=Kind.RESULTS||dispatch.whole!=i.whole)throw new IllegalStateException("No actual private Results invocation");
+        requireFrame(i.actor,i.shared);requireCut(i.cut);resultsPool(i,failure);if(i.owners!=null)resultsOwners(i,i.owners);
+    }
+    private ResultsInvocation currentResults(){requireKind(Kind.RESULTS);var i=resultsInvocation;if(i==null||i.operation!=null||port||queuePort||plcPort||resultsBorrow)throw new IllegalStateException("No original Results callback");resultsVerify(i,false);return i;}
+    private void resultsCall(ResultsInvocation i,Object call,CdObjectPlacementRuntime.Snapshot cut,CdObjectState source,ResultsStep site){
+        if(i.step!=site||call==null||i.operation!=null||!dispatch.consumed.add(call))throw new IllegalStateException("Cloned/repeated/reordered Results callback");resultsVerify(i,false);placementCut(cut);source(source);if(!resultsSource(i).equals(source))throw new IllegalArgumentException("Not actual Results source prefix");i.operation=call;
+    }
+    private void refreshResults(ResultsInvocation i){i.actor=frame.captureActor();i.shared=frame.captureShared();i.cut=read();i.owners=resultsOwners(i,null);}
+    private boolean resultsAdoption(Adoption p){var i=resultsInvocation;return i!=null&&isCurrentAdoption(p)&&p.resultsOperation!=null&&p.resultsOperation==i.operation&&p.resultsOwners==i.owners&&p.expected==i.cut&&dispatch!=null&&dispatch.kind==Kind.RESULTS&&dispatch.whole==i.whole;}
+    boolean isCurrentResultsSectionAdoption(Adoption p){return resultsAdoption(p)&&!p.applied&&resultsInvocation.step==ResultsStep.SECTION&&p.resultsSectionWord==0&&p.resultsOperation instanceof CdResults.ProgrammeStoreCall c&&c.field()==CdResults.ProgrammeField.SECTION_ID_WORD&&c.value()==0;}
+    boolean isCurrentResultsFlagsAdoption(Adoption p){return resultsAdoption(p)&&!p.applied&&resultsFlagsField(p);}
+    private boolean resultsFlagsField(Adoption p){var i=resultsInvocation;return i!=null&&p.resultsOperation instanceof CdResults.ProgrammeStoreCall c&&(i.step==ResultsStep.FLAGS_CLEAR&&c.field()==CdResults.ProgrammeField.GOOD_FUTURE_FLAGS_CLEAR_BYTE||i.step==ResultsStep.FLAGS_SET&&c.field()==CdResults.ProgrammeField.GOOD_FUTURE_FLAGS_SET_BIT);}
+    void validateResultsFlagsPublication(Adoption p,SonicCdGameModule.LevelProgramState expected,boolean nativeApplied){
+        if(!resultsAdoption(p)||p.applied!=nativeApplied||!resultsFlagsField(p)||p.resultsOwners.programme()!=expected||plcPort||queuePort)throw new IllegalStateException("Not original matching Results flag publication");resultsVerify(resultsInvocation,false);if(p.next.goodFutureFlags().isEmpty())throw new IllegalArgumentException("Missing actual flag result");
+    }
+    private void resultsPreflight(ResultsInvocation i,Object call,CdPlayerFrameRuntime.ObjectSolidPublication frameReady){
+        if(!resultsAdoption(pending)||pending.applied||i.operation!=call||plcPort||queuePort)throw new IllegalStateException("Not matching unapplied Results Adoption");resultsVerify(i,false);if(frameReady!=null)frame.validatePreparedObjectSolidPublication(frameReady);
+    }
+    private void resultsPublish(ResultsInvocation i,Object call,Cut next,CdPlayerFrameRuntime.ObjectSolidPublication frameReady,int section){
+        if(port||pending!=null||i.operation!=call)throw new IllegalStateException("Recursive Results publication");var p=new Adoption(i.cut,next,null,()->resultsPreflight(i,call,frameReady),()->{if(frameReady!=null)frame.applyPreparedObjectSolidPublication(frameReady);});p.resultsOperation=call;p.resultsOwners=i.owners;p.resultsSectionWord=section;pending=p;port=true;
+        try{ports.adopt(p);if(!p.applied)throw new IllegalStateException("Missing Results adoption receipt");requireCut(next);requireFrame(p.afterActor,p.afterShared);requirePlacement(p.afterPlacement);}finally{pending=null;port=false;}
+        checkpoint();refreshResults(i);
+    }
+    final class ResultsPlcSubmission {
+        private final ResultsInvocation invocation;private final CdResults.PlcCall call;private final CdObjectPlacementRuntime.Snapshot placed;private boolean adopted;
+        private ResultsPlcSubmission(ResultsInvocation i,CdResults.PlcCall call){invocation=i;this.call=call;placed=placement.capture();}
+        SonicCdAct2PastObjectPass owner(){return SonicCdAct2PastObjectPass.this;}int wholeIndex(){return invocation.whole;}
+        void validate(){if(!isCurrentResultsPlcSubmission(this)||adopted)throw new IllegalStateException("Escaped/repeated Results cue10");resultsVerify(invocation,false);requirePlacement(placed);placementCut(call.actualCut());source(call.expectedSource());}
+        void acknowledge(SonicCdAct2PastLoadingVisit.State ready){
+            if(!isCurrentResultsPlcSubmission(this)||adopted)throw new IllegalStateException("Not pending Results completion");requireFrame(invocation.actor,invocation.shared);requireCut(invocation.cut);requirePlacement(placed);var actual=resultsOwners(invocation,null);
+            if(actual.core()!=ready||actual.programme()!=invocation.owners.programme())throw new IllegalStateException("Results PLC did not adopt its prepared existing Core");invocation.owners=actual;adopted=true;
+        }
+    }
+    boolean isCurrentResultsPlcSubmission(ResultsPlcSubmission p){return p!=null&&p==pendingResultsPlc&&plcPort&&!port&&!queuePort&&resultsInvocation==p.invocation&&phase==Phase.WALKING&&dispatch!=null&&dispatch.kind==Kind.RESULTS&&dispatch.whole==p.invocation.whole&&p.invocation.step==ResultsStep.PLC&&p.invocation.operation==p.call&&p.call.nativeId()==0x10;}
+    private void runResults(int whole){requireKind(Kind.RESULTS);if(resultsInvocation!=null||resultsBorrow||plcPort)throw new IllegalStateException("Results reentry");var i=new ResultsInvocation(whole);resultsInvocation=i;
+        try{i.owners=resultsOwners(i,null);i.step=switch(i.entry.routine()){case 0->ResultsStep.PLC;case 2->ResultsStep.HEAD;case 4->ResultsStep.DRAW;case 6->ResultsStep.UPDATE;case 8->ResultsStep.PROGRAMME;default->ResultsStep.INVALID;};
+            if(i.entry.routine()==0){resultsImage(i,i.entry.addByte(RESULTS_TIMER,-1));if(resultsSource(i).unsignedByte(RESULTS_TIMER)!=0)i.step=ResultsStep.RETURN;}else if(i.entry.routine()==4)resultsMove(i);
+            var r=results.run(whole);resultsVerify(i,false);if(i.step!=ResultsStep.RETURN||!r.state().equals(resultsSource(i)))throw new IllegalStateException("Results omitted actual conditional tail");
+        }catch(RuntimeException|Error original){try{resultsVerify(i,true);}catch(RuntimeException|Error verification){if(verification!=original)original.addSuppressed(verification);}throw original;}finally{resultsInvocation=null;}
+    }
+    private void resultsMove(ResultsInvocation i){var s=resultsSource(i);if(s.word(RESULTS_TIMER_WORD)!=0)s=s.addWord(RESULTS_TIMER_WORD,-1);int x=s.centreX(),dest=s.word(RESULTS_DEST_X);if(x!=dest)s=s.addWord(X,(short)dest<(short)x?-8:8);else if(s.unsignedByte(MAP_FRAME)==0)s=s.addByte(ROUTINE,2);resultsImage(i,s);i.step=s.word(RESULTS_TIMER_WORD)<472?ResultsStep.DRAW:ResultsStep.RETURN;}
+    private void beginResultsRows(ResultsInvocation i){resultsImage(i,resultsSource(i).moveWord(RESULTS_TIMER_WORD,480));i.row=0;i.selected=i.whole;prepareResultsRow(i);}
+    private void prepareResultsRow(ResultsInvocation i){resultsImage(i,i.expectedPool.slots().get(i.selected-32).moveWord(RESULTS_TIMER_WORD,480).moveByte(ID,0x3A).moveByte(ROUTINE,4).moveWord(TILE,0x83C4));i.step=ResultsStep.ROW_ZONE;}
+    private void finishResultsRow(ResultsInvocation i){if(++i.row==3){i.step=ResultsStep.RETURN;return;}i.selected=-1;for(var s:i.expectedPool.slots())if(s.id()==0){i.selected=s.identity().wholeIndex();break;}if(i.selected<0){i.step=ResultsStep.ALLOCATION_STOP;return;}prepareResultsRow(i);}
+    private void resultsRowData(ResultsInvocation i){var data=terrain.objects().view(CdR12bObjectAssets.View.RESULTS_INIT_DATA);int at=i.row*8;resultsImage(i,i.expectedPool.slots().get(i.selected-32).moveWord(RESULTS_SCREEN_Y_WORD,data.unsignedWord(at)).moveWord(X,data.unsignedWord(at+2)).moveWord(RESULTS_DEST_X,data.unsignedWord(at+4)).moveByte(MAP_FRAME,data.unsignedByte(at+7)));if(i.row==2)i.step=ResultsStep.ROW_ACT;else finishResultsRow(i);}
+    private void resultsNoBonus(ResultsInvocation i){var s=resultsSource(i).addWord(RESULTS_TIMER_WORD,-1);int timer=s.word(RESULTS_TIMER_WORD);if((short)timer<0)s=s.addByte(ROUTINE,2);resultsImage(i,s);i.step=timer==30?ResultsStep.SPECIAL:ResultsStep.DRAW;}
+    private void resultsHaveBonus(ResultsInvocation i){var s=resultsSource(i);if(s.word(RESULTS_TIMER_WORD)!=0)s=s.addWord(RESULTS_TIMER_WORD,-1);resultsImage(i,s);i.step=(s.unsignedByte(RESULTS_TIMER)&1)==0?ResultsStep.TALLY:ResultsStep.POINTS;}
+    private CdLevelHud.BonusValues resultsBonusValue(ResultsInvocation i){return i.cut.globals().bonus().orElseThrow(()->stop(Boundary.RESULTS_BONUS,i.whole,i.step.ordinal()));}
+    private int resultsFlags(ResultsInvocation i){return i.cut.goodFutureFlags().orElseThrow(()->stop(Boundary.RESULTS_FLAGS,i.whole,i.step.ordinal()));}
+    private int resultsRead(CdResults.ReadCall c){var i=currentResults();var site=i.step;boolean reached=switch(c.field()){
+        case PLC_HEAD_LONG->site==ResultsStep.HEAD;case ZONE_ACT_WORD->site==ResultsStep.WAIT_ZONE||site==ResultsStep.ROW_ZONE||site==ResultsStep.ZONE_OPERAND;case CAMERA_X_WORD->site==ResultsStep.CAMERA;case PLAYER_X_WORD->site==ResultsStep.PLAYER_X;case GOOD_FUTURE_BYTE->site==ResultsStep.ROW_GOOD||site==ResultsStep.TAIL_GOOD;case ACT_BYTE->site==ResultsStep.ROW_ACT||site==ResultsStep.TAIL_ACT;case TIME_BONUS_WORD->site==ResultsStep.TIME||site==ResultsStep.CHECK_TIME;case RING_BONUS_WORD->site==ResultsStep.RING||site==ResultsStep.CHECK_RING;case SPECIAL_STAGE_BYTE->site==ResultsStep.SPECIAL;case TIME_ATTACK_MODE_BYTE->site==ResultsStep.INITIAL_ATTACK||site==ResultsStep.TAIL_ATTACK;case TIME_STONES_BYTE->site==ResultsStep.TAIL_STONES;case GOOD_FUTURE_FLAGS_BYTE->site==ResultsStep.FLAGS_COMPARE;};if(!reached)throw new IllegalStateException("Wrong reached Results read");resultsCall(i,c,c.actualCut(),c.expectedSource(),site);
+        try{int value=switch(c.field()){
+            case PLC_HEAD_LONG->(int)i.owners.core().section().queue().headSource();case ZONE_ACT_WORD->frame.environment().movement().gates().zoneAct();case CAMERA_X_WORD->i.cut.cameraXWord();case PLAYER_X_WORD->frame.state().motion().centreX16_16()>>>16;case GOOD_FUTURE_BYTE->i.cut.goodFutureByte();case ACT_BYTE->frame.environment().movement().gates().zoneAct()&255;case TIME_BONUS_WORD->resultsBonusValue(i).timeBonusWord();case RING_BONUS_WORD->resultsBonusValue(i).ringBonusWord();case SPECIAL_STAGE_BYTE->i.owners.core().program().specialStageByte();case TIME_ATTACK_MODE_BYTE->i.cut.timeAttackModeByte();case TIME_STONES_BYTE->i.owners.core().program().timeStonesByte();case GOOD_FUTURE_FLAGS_BYTE->resultsFlags(i);};
+            switch(site){
+                case HEAD->i.step=value==0?ResultsStep.WAIT_ZONE:ResultsStep.RETURN;
+                case WAIT_ZONE->{if(value==0x502)beginResultsRows(i);else i.step=ResultsStep.CAMERA;}
+                case CAMERA->{i.edge=(value+336)&65535;i.step=ResultsStep.PLAYER_X;}
+                case PLAYER_X->{if(i.edge<value)beginResultsRows(i);else i.step=ResultsStep.RETURN;}
+                case ROW_ZONE->{var s=i.expectedPool.slots().get(i.selected-32);if(value==0x502)s=s.moveWord(TILE,0x82F2);i.root=CdR12bObjectAssets.View.MAP_SPR_RESULTS.range().nativeAddress()+(value==0x502?10:0);resultsImage(i,s.moveLong(MAPPINGS,i.root));i.step=ResultsStep.ROW_GOOD;}
+                case ROW_GOOD->{if(value!=0)resultsImage(i,i.expectedPool.slots().get(i.selected-32).moveLong(MAPPINGS,i.root+20));resultsRowData(i);}
+                case ROW_ACT->{resultsImage(i,i.expectedPool.slots().get(i.selected-32).addByte(MAP_FRAME,value));finishResultsRow(i);}
+                case TIME->{i.time=value;i.step=value==0?ResultsStep.RING:ResultsStep.TIME_STORE;}
+                case RING->{i.rings=value;if(value!=0)i.step=ResultsStep.RING_STORE;else if(i.time==0)resultsNoBonus(i);else i.step=ResultsStep.CHECK_TIME;}
+                case CHECK_TIME->{if(value!=0)resultsHaveBonus(i);else i.step=ResultsStep.CHECK_RING;}
+                case CHECK_RING->{if(value!=0)resultsHaveBonus(i);else i.step=ResultsStep.KACHING;}
+                case SPECIAL->i.step=value==0?ResultsStep.DRAW:ResultsStep.WARP;
+                case INITIAL_ATTACK->i.step=value==0?ResultsStep.PLC_BIT1:ResultsStep.PLC_BIT0;
+                case ZONE_OPERAND->{int act=(value+1)&255;i.nextZoneAct=(value&0xFF00)|act;if(act==3)i.nextZoneAct=((value&0xFF00)+0x100)&0xFF00;i.step=act==2?ResultsStep.PERIOD_FUTURE:ResultsStep.ZONE_STORE;}
+                case TAIL_ACT->{i.actBit=(value-1)&255;i.step=(byte)i.actBit<0?ResultsStep.FLAGS_CLEAR:ResultsStep.TAIL_ATTACK;}
+                case TAIL_ATTACK->i.step=value!=0?ResultsStep.RETURN:ResultsStep.TAIL_STONES;
+                case TAIL_STONES->i.step=value==0x7F?ResultsStep.GOOD_SET:ResultsStep.TAIL_GOOD;
+                case TAIL_GOOD->i.step=value==0?ResultsStep.RETURN:ResultsStep.GOOD_CLEAR;
+                case FLAGS_COMPARE->i.step=value==3?ResultsStep.GOOD_SET:ResultsStep.RETURN;
+                default->throw new IllegalStateException("Unowned Results read transition");}
+            return value;
+        }finally{i.operation=null;}
+    }
+    private void resultsBonus(CdResults.BonusStoreCall c){var i=currentResults();var site=switch(c.field()){case UPDATE_HUD_BONUS_BYTE->ResultsStep.UPDATE;case TIME_BONUS_WORD->ResultsStep.TIME_STORE;case RING_BONUS_WORD->ResultsStep.RING_STORE;};resultsCall(i,c,c.actualCut(),c.expectedSource(),site);
+        try{int value=site==ResultsStep.UPDATE?1:((site==ResultsStep.TIME_STORE?i.time:i.rings)-100)&65535;if(c.value()!=value)throw new IllegalArgumentException("Wrong Results bonus subtract");var b=resultsBonusValue(i);var g=i.cut.globals();var bonus=new CdLevelHud.BonusValues(site==ResultsStep.TIME_STORE?value:b.timeBonusWord(),site==ResultsStep.RING_STORE?value:b.ringBonusWord(),site==ResultsStep.UPDATE?1:b.updateHudBonusByte());resultsPublish(i,c,withGlobals(i.cut,endGlobals(g,g.contact(),Optional.of(bonus))),null,-1);if(site==ResultsStep.UPDATE)i.step=ResultsStep.TIME;else{i.points+=10;i.step=site==ResultsStep.TIME_STORE?ResultsStep.RING:ResultsStep.CHECK_TIME;}
+        }finally{i.operation=null;}
+    }
+    private void resultsPoints(CdResults.PointsCall c){var i=currentResults();resultsCall(i,c,c.actualCut(),c.expectedSource(),ResultsStep.POINTS);
+        try{if(c.points()!=i.points||i.points!=10&&i.points!=20)throw new IllegalArgumentException("Not original Results subtract points");var g=i.cut.globals();var r=g.ring();var score=g.score();var out=CdPlayerTouchResponse.addPoints(new CdPlayerTouchResponse.WorldGlobals(r.rings(),r.lives(),r.updateHudLives(),score.score(),score.nextLifeScore(),score.updateHudScore()),c.points());var w=out.world();var ring=new CdRingGlobals(w.rings(),w.lives(),r.livesFlags(),r.updateHudRings(),w.updateHudLives(),r.timeStopTimer(),r.ringAnimationTimer(),r.ringAnimationFrame());var next=withGlobals(i.cut,globals(g,ring,new CdOpeningObjectRuntime.ScoreGlobals(w.score(),w.nextLifeScore(),w.updateHudScore())));var ledger=new ArrayList<>(next.sounds());out.command().ifPresent(command->ledger.add(new SonicCdGameModule.PastFrameSound(new CdPlayerFrameRuntime.ContactSubCpuCommand(command))));resultsPublish(i,c,withSounds(next,ledger),null,-1);i.step=ResultsStep.DRAW;
+        }finally{i.operation=null;}
+    }
+    private void resultsPlc(CdResults.PlcCall c){var i=currentResults();resultsCall(i,c,c.actualCut(),c.expectedSource(),ResultsStep.PLC);
+        try{if(c.nativeId()!=0x10||pendingResultsPlc!=null)throw new IllegalArgumentException("Not Results cue10");var p=new ResultsPlcSubmission(i,c);pendingResultsPlc=p;plcPort=true;
+            try{p.validate();ports.submitResultsPlc(p);if(!p.adopted)throw new IllegalStateException("Missing Results cue10 receipt");}finally{pendingResultsPlc=null;plcPort=false;}
+            refreshResults(i);resultsImage(i,resultsSource(i).addByte(ROUTINE,2));i.step=ResultsStep.HEAD;
+        }finally{i.operation=null;}
+    }
+    private void resultsSound(CdResults.SoundCall c){var i=currentResults();var site=switch(c.sound()){case FM_TALLY->ResultsStep.TALLY;case DRIVER_KACHING->ResultsStep.KACHING;case FM_SSWARP->ResultsStep.WARP;};resultsCall(i,c,c.actualCut(),c.expectedSource(),site);
+        try{var ledger=new ArrayList<>(i.cut.sounds());ledger.add(new SonicCdGameModule.PastResultsSound(c.sound()));resultsPublish(i,c,withSounds(i.cut,ledger),null,-1);if(site==ResultsStep.KACHING&&resultsSource(i).word(RESULTS_TIMER_WORD)<45)resultsImage(i,resultsSource(i).moveWord(RESULTS_TIMER_WORD,45));i.step=site==ResultsStep.WARP?ResultsStep.DRAW:ResultsStep.POINTS;
+        }finally{i.operation=null;}
+    }
+    private static Cut resultsFlagsCut(Cut c,int flags){return new Cut(c.globals(),c.level(),c.goodFutureByte(),OptionalInt.of(flags),c.reservedSlots(),c.cpuSat(),c.completedCpu(),c.sounds(),c.cameraXWord(),c.cameraYWord(),c.timeAttackModeByte(),c.layerByte());}
+    private void resultsProgramme(CdResults.ProgrammeStoreCall c){var i=currentResults();var site=switch(c.field()){
+        case LEVEL_RESTART_WORD->ResultsStep.PROGRAMME;case SPAWN_MODE_BYTE->ResultsStep.SPAWN;case SECTION_ID_WORD->ResultsStep.SECTION;case FLOWER_COUNT_LONG->ResultsStep.FLOWERS;case UNKNOWN_LEVEL_BYTE->ResultsStep.UNKNOWN;case PROJ_DESTROYED_BYTE->ResultsStep.PROJ;case CHECKPOINT_BYTE->ResultsStep.CHECKPOINT;case PLC_LOAD_FLAGS_CLEAR_BIT0->ResultsStep.PLC_BIT0;case PLC_LOAD_FLAGS_CLEAR_BIT1->ResultsStep.PLC_BIT1;case TIME_ZONE_BYTE->i.step==ResultsStep.PERIOD_FUTURE?ResultsStep.PERIOD_FUTURE:ResultsStep.PERIOD_PRESENT;case ZONE_ACT_WORD->ResultsStep.ZONE_STORE;case GOOD_FUTURE_BYTE->i.step==ResultsStep.GOOD_CLEAR?ResultsStep.GOOD_CLEAR:ResultsStep.GOOD_SET;case GOOD_FUTURE_FLAGS_CLEAR_BYTE->ResultsStep.FLAGS_CLEAR;case GOOD_FUTURE_FLAGS_SET_BIT->ResultsStep.FLAGS_SET;};resultsCall(i,c,c.actualCut(),c.expectedSource(),site);
+        try{int value=switch(site){case PROGRAMME->2;case PLC_BIT1,PERIOD_PRESENT,GOOD_SET->1;case PERIOD_FUTURE->2;case ZONE_STORE->i.nextZoneAct;case FLAGS_SET->i.actBit&7;default->0;};if(c.value()!=value)throw new IllegalArgumentException("Wrong reached Results programme operand");var next=i.cut;var l=next.level();var g=next.globals();CdPlayerFrameRuntime.ObjectSolidPublication ready=null;int section=-1;
+            switch(c.field()){
+                case LEVEL_RESTART_WORD->next=endLevel(next,new CdLevelGlobals(2,l.updateHudTime(),l.checkpoint(),l.spawnMode(),l.plcLoadFlags(),l.flowerCount(),l.fadeEnableDisplay(),l.powerup(),l.timeOver()));
+                case SPAWN_MODE_BYTE->next=endLevel(next,new CdLevelGlobals(l.levelRestart(),l.updateHudTime(),l.checkpoint(),0,l.plcLoadFlags(),l.flowerCount(),l.fadeEnableDisplay(),l.powerup(),l.timeOver()));
+                case SECTION_ID_WORD->section=0;
+                case FLOWER_COUNT_LONG->next=endLevel(next,new CdLevelGlobals(l.levelRestart(),l.updateHudTime(),l.checkpoint(),l.spawnMode(),l.plcLoadFlags(),0,0,l.powerup(),l.timeOver()));
+                case UNKNOWN_LEVEL_BYTE->{var t=g.tail().orElseThrow(()->stop(Boundary.RESULTS_TAIL,i.whole,c.field().ordinal()));var tail=new SonicCdAct2PastWorldHost.Tail(t.player2ControlsWord(),t.player2BoredWord(),0,t.demoS1IndexWord(),t.paletteFadeInfoWord());next=withGlobals(next,new SonicCdAct2PastWorldHost.Globals(g.ring(),g.live(),g.contact(),g.score(),g.projectorByte(),g.checkpointSaved(),g.drownTimerWord(),g.debugBlockWord(),g.pauseMusicBit(),g.bonus(),Optional.of(tail),g.animations(),g.paletteSteps7(),g.paletteTimers7()));}
+                case PROJ_DESTROYED_BYTE->next=withGlobals(next,new SonicCdAct2PastWorldHost.Globals(g.ring(),g.live(),g.contact(),g.score(),0,g.checkpointSaved(),g.drownTimerWord(),g.debugBlockWord(),g.pauseMusicBit(),g.bonus(),g.tail(),g.animations(),g.paletteSteps7(),g.paletteTimers7()));
+                case CHECKPOINT_BYTE->next=endLevel(next,new CdLevelGlobals(l.levelRestart(),l.updateHudTime(),0,l.spawnMode(),l.plcLoadFlags(),l.flowerCount(),l.fadeEnableDisplay(),l.powerup(),l.timeOver()));
+                case PLC_LOAD_FLAGS_CLEAR_BIT0,PLC_LOAD_FLAGS_CLEAR_BIT1->next=endLevel(next,new CdLevelGlobals(l.levelRestart(),l.updateHudTime(),l.checkpoint(),l.spawnMode(),l.plcLoadFlags()&~(1<<value),l.flowerCount(),l.fadeEnableDisplay(),l.powerup(),l.timeOver()));
+                case TIME_ZONE_BYTE,ZONE_ACT_WORD->ready=frame.prepareObjectResultsProgrammeGates(i.actor.state(),i.shared.environment(),c.field(),value);
+                case GOOD_FUTURE_BYTE->next=withGoodFuture(next,value);
+                case GOOD_FUTURE_FLAGS_CLEAR_BYTE->next=resultsFlagsCut(next,0);
+                case GOOD_FUTURE_FLAGS_SET_BIT->next=resultsFlagsCut(next,resultsFlags(i)|(1<<value));
+            }
+            resultsPublish(i,c,next,ready,section);i.step=switch(site){case PROGRAMME->ResultsStep.SPAWN;case SPAWN->ResultsStep.SECTION;case SECTION->ResultsStep.FLOWERS;case FLOWERS->ResultsStep.UNKNOWN;case UNKNOWN->ResultsStep.PROJ;case PROJ->ResultsStep.CHECKPOINT;case CHECKPOINT->ResultsStep.INITIAL_ATTACK;case PLC_BIT0->ResultsStep.PLC_BIT1;case PLC_BIT1->ResultsStep.PERIOD_PRESENT;case PERIOD_PRESENT->ResultsStep.ZONE_OPERAND;case PERIOD_FUTURE->ResultsStep.ZONE_STORE;case ZONE_STORE->ResultsStep.RESET;case GOOD_CLEAR->ResultsStep.FLAGS_SET;case FLAGS_SET->ResultsStep.FLAGS_COMPARE;case GOOD_SET,FLAGS_CLEAR->ResultsStep.RETURN;default->throw new IllegalStateException("Unknown Results programme transition");};
+        }finally{i.operation=null;}
+    }
+    private void resultsAction(CdResults.ProgrammeActionCall c){var i=currentResults();var site=c.action()==CdResults.ProgrammeAction.RESET_SAVED_OBJECT_FLAGS?ResultsStep.RESET:ResultsStep.FADE;resultsCall(i,c,c.actualCut(),c.expectedSource(),site);
+        try{if(site==ResultsStep.RESET){byte[] bytes=new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES];bytes[0]=bytes[1]=1;var saved=CdAssetBytes.copyOf(bytes);var s=i.status;var status=new CdObjectPlacementRuntime.Status(s.routine(),s.previousChunkWord(),s.rightRecordIndex(),s.leftRecordIndex(),1,1,s.nullRightByteOffset(),s.nullLeftByteOffset());resultsVerify(i,false);placement.resetSavedObjectFlags();i.saved=saved;i.status=status;resultsVerify(i,false);i.step=ResultsStep.FADE;}
+            else{var ledger=new ArrayList<>(i.cut.sounds());ledger.add(new SonicCdGameModule.PastFrameSound(new CdPlayerFrameRuntime.BodySound(CdPlayerBody.Sound.SCMD_FADECDA)));resultsPublish(i,c,withSounds(i.cut,ledger),null,-1);i.step=ResultsStep.DRAW;}
+        }finally{i.operation=null;}
+    }
+    private void resultsDraw(CdResults.DrawCall c){var i=currentResults();resultsCall(i,c,c.actualCut(),c.expectedSource(),ResultsStep.DRAW);if(i.drawn)throw new IllegalStateException("Repeated Results Draw");i.drawBefore=resultsSource(i);resultsImage(i,i.drawBefore.moveByte(SPRITE_FLAGS,i.drawBefore.spriteFlags()&127));
+        var old=i.owners;
+        try{drawDynamic(Kind.RESULTS,placement.pool(),c.expectedSource().identity(),()->resultsInvocation==i&&i.operation==c&&!i.drawn);resultsPool(i,false);requireFrame(i.actor,i.shared);requireCut(i.cut);
+            // Only actual queue BCLR7 publication replaced the complete Core/Host references.
+            refreshResults(i);if(!old.core().equals(i.owners.core())||old.programme()!=i.owners.programme())throw new IllegalStateException("Results Draw changed Core/module values");i.drawn=true;i.step=i.entry.routine()==8?ResultsStep.TAIL_ACT:ResultsStep.RETURN;
+        }catch(RuntimeException|Error original){
+            try{resultsPool(i,true);requireFrame(i.actor,i.shared);requireCut(i.cut);var actual=resultsOwners(i,null);
+                if(!old.core().equals(actual.core())||old.programme()!=actual.programme())throw new IllegalStateException("Failed Results Draw changed Core/module values");
+                i.owners=actual; // Verifier fence only after actual queue publication; no store or continuation.
+            }catch(RuntimeException|Error verification){if(verification!=original)original.addSuppressed(verification);}throw original;
+        }finally{i.operation=null;}
+    }
+    // END R12B Results actual private World binding.
+    // BEGIN R12B Door Splash original private World receipts.
+    // N1ecc5f3a Spin Tunnel/Main (Door).asm:135-177; R12B Init map21D652, Main animation21D63A, tile selectorD=0.
+    private final class SplashInvocation {
+        final CdTunnelDoorSplash producer;final int whole,entryRoutine;
+        final CdPlayerFrameRuntime.ActorState actor;final CdPlayerFrameRuntime.SharedState shared;
+        CdObjectPlacementRuntime.Snapshot closed;Cut cut;SplashOperation operation;long ordinal;boolean deleted;
+        SplashInvocation(int whole){producer=doorSplash;this.whole=whole;closed=placement.capture();cut=read();entryRoutine=closed.pool().slots().get(whole-32).routine();actor=frame.captureActor();shared=frame.captureShared();}
+    }
+    private static final class SplashOperation {
+        final Object original;final CdObjectPlacementRuntime.Snapshot before;final Cut cut;final boolean publication;
+        CdObjectPool.Snapshot expected;Cut next;boolean deleted,prepared,used,after;
+        SplashOperation(Object original,CdObjectPlacementRuntime.Snapshot before,Cut cut,boolean publication){this.original=original;this.before=before;this.cut=cut;this.publication=publication;expected=before.pool();next=cut;}
+    }
+    private SplashInvocation splashCurrent(){
+        requireKind(Kind.DOOR_SPLASH);routeObjects();var i=splashInvocation;
+        if(i==null||i.producer!=doorSplash||i.whole!=dispatch.whole||plcPort)throw new IllegalStateException("No private original Door Splash invocation");
+        requireFrame(i.actor,i.shared);return i;
+    }
+    private SplashOperation splashOperation(Object call,boolean completed){var i=splashCurrent();var op=i.operation;
+        if(op==null||op.original!=call||!doorSplash.isCurrentCall(call)||doorSplash.isCurrentCallCompleted(call)!=completed)
+            throw new IllegalStateException("Cloned, retired or wrong-phase original Door Splash operation");return op;
+    }
+    private SplashOperation splashBegin(Object call,CdObjectPlacementRuntime.Snapshot before,CdObjectState image,boolean publication){var i=splashCurrent();
+        if(i.operation!=null||!doorSplash.isCurrentCall(call)||doorSplash.isCurrentCallCompleted(call)||!dispatch.consumed.add(call))
+            throw new IllegalStateException("Missing next original Door Splash producer operation");
+        requireCut(i.cut);requirePlacement(i.closed);placementCut(before);source(image);
+        var op=new SplashOperation(call,before,i.cut,publication);i.operation=op;return op;
+    }
+    private void splashPublication(CdTunnelDoorSplash.Publication call){var op=splashBegin(call,call.cut(),call.source(),true);var i=splashInvocation;
+        if(call.ordinal()!=i.ordinal+1||!call.source().equals(call.before()))throw new IllegalArgumentException("Door Splash publication ordinal/source preimage");
+        if(call.output()==null){if(call.kind()!=CdTunnelDoorSplash.StoreKind.DELETE)throw new IllegalArgumentException("Door Splash missing native output");op.deleted=true;}
+        else{if(call.kind()==CdTunnelDoorSplash.StoreKind.DELETE)throw new IllegalArgumentException("Door Splash Delete supplied an image");requireIdentity(call.output().identity());
+            op.expected=CdObjectPool.overlay(call.cut().pool(),List.of(call.output()));}
+    }
+    private void splashBeforeCall(Object call){switch(call){
+        case CdTunnelDoorSplash.DrawCall c->{var op=splashBegin(c,c.cut(),c.source(),false);op.expected=CdObjectPool.overlay(c.cut().pool(),List.of(c.source().moveByte(SPRITE_FLAGS,c.source().spriteFlags()&127)));}
+        case CdTunnelDoorSplash.FmCall c->{var op=splashBegin(c,c.cut(),c.source(),false);var sounds=new ArrayList<>(op.cut.sounds());sounds.add(new SonicCdGameModule.PastTunnelDoorSplashFm(c.sound()));op.next=withSounds(op.cut,sounds);}
+        default->throw new IllegalArgumentException("Unknown original Door Splash call");
+    }}
+    private void splashPrepared(Object call){var op=splashOperation(call,false);var i=splashInvocation;
+        if(op.prepared||op.after)throw new IllegalStateException("Repeated Door Splash preparation");requireFrame(i.actor,i.shared);requireCut(op.cut);requirePlacement(op.before);op.prepared=true;if(op.publication)op.used=true;
+    }
+    private void splashUse(Object call){var op=splashOperation(call,false);var i=splashInvocation;
+        if(!op.prepared||op.publication||op.used||op.after)throw new IllegalStateException("Repeated or unprepared Door Splash port");
+        requireFrame(i.actor,i.shared);requireCut(op.cut);requirePlacement(op.before);op.used=true;
+    }
+    private boolean splashPoolMatches(CdObjectPlacementRuntime.Snapshot before,CdObjectPool.Snapshot expected,int zeroWhole){
+        placement.validateRestore(before);var actual=placement.capture();if(!before.status().equals(actual.status())||!same(before.savedFlags(),actual.savedFlags()))return false;
+        for(int n=0;n<96;n++){
+            var image=actual.pool().slots().get(n);if(n+32==zeroWhole){if(!Arrays.equals(new byte[64],image.copyBytes()))return false;}
+            else if(!expected.slots().get(n).equals(image))return false;
+        }return true;
+    }
+    private static boolean splashCutMatches(Cut a,Cut b){return a.globals().equals(b.globals())&&a.level().equals(b.level())
+            &&a.goodFutureByte()==b.goodFutureByte()&&a.goodFutureFlags().equals(b.goodFutureFlags())&&same(a.reservedSlots(),b.reservedSlots())
+            &&same(a.cpuSat(),b.cpuSat())&&a.completedCpu().equals(b.completedCpu())&&a.sounds().equals(b.sounds())
+            &&a.cameraXWord()==b.cameraXWord()&&a.cameraYWord()==b.cameraYWord()&&a.timeAttackModeByte()==b.timeAttackModeByte()&&a.layerByte().equals(b.layerByte());}
+    private void splashVerify(SplashInvocation i,SplashOperation op,boolean completed){
+        guard();routeObjects();requireFrame(i.actor,i.shared);var cut=read();
+        boolean after=splashPoolMatches(op.before,op.expected,op.deleted?i.whole:-1)&&splashCutMatches(op.next,cut);
+        boolean before=!completed&&splashPoolMatches(op.before,op.before.pool(),-1)&&splashCutMatches(op.cut,cut);
+        if(!after&&(completed||!before))throw new IllegalStateException("Door Splash changed full96/status/saved/Frame/reserved/CPU/sound nonwrites");
+        if(completed&&!op.used)throw new IllegalStateException("Door Splash omitted actual callback consumption");
+    }
+    private void splashAfter(Object call){var op=splashOperation(call,true);var i=splashInvocation;
+        if(!op.prepared||op.after)throw new IllegalStateException("Door Splash omitted original preparation");splashVerify(i,op,true);op.after=true;
+    }
+    private void splashCompleted(Object call){var op=splashOperation(call,true);var i=splashInvocation;
+        if(!op.after)throw new IllegalStateException("Door Splash omitted original completion");splashVerify(i,op,true);
+        if(op.publication)i.ordinal++;if(op.deleted)i.deleted=true;i.closed=placement.capture();i.cut=op.next;i.operation=null;checkpoint();
+    }
+    private void splashFailure(SplashInvocation i,Throwable original){try{
+        guard();routeObjects();requireFrame(i.actor,i.shared);
+        if(i.operation!=null)splashVerify(i,i.operation,i.operation.after);else{requirePlacement(i.closed);requireCut(i.cut);}
+    }catch(RuntimeException|Error check){if(check!=original)original.addSuppressed(check);}}
+    private void runDoorSplash(int whole){requireKind(Kind.DOOR_SPLASH);routeObjects();if(splashInvocation!=null)throw new IllegalStateException("Nested Door Splash dispatch");
+        var i=new SplashInvocation(whole);splashInvocation=i;
+        try{var result=doorSplash.run(whole);splashCurrent();requirePlacement(i.closed);requireCut(i.cut);
+            if(i.operation!=null||!result.state().equals(placement.pool().state(whole))||result.deleted()!=i.deleted||i.deleted!=(i.entryRoutine==4)||dispatch.drawn==i.deleted)
+                throw new IllegalStateException("Door Splash omitted native store/call/Draw completion");
+        }catch(RuntimeException|Error original){splashFailure(i,original);throw original;}finally{splashInvocation=null;}
+    }
+    // END R12B Door Splash original private World receipts.
+
 }

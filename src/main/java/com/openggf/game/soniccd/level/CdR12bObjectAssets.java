@@ -106,7 +106,11 @@ public final class CdR12bObjectAssets {
         MAP_SPR_GOAL_SIGNPOST(0x1D9B4,126,126,"610a02baa99d911f509b5fc06a1e4c0c72bc7ef71fa56ecd72640e409734bad8","610a02baa99d911f509b5fc06a1e4c0c72bc7ef71fa56ecd72640e409734bad8"),
         ANI_SIGNPOST(0x1D9A6,14,14,"9912394f852b914651884191ea8532d60421a3bd40293510a3f356f86c69e691","9912394f852b914651884191ea8532d60421a3bd40293510a3f356f86c69e691"),
         GOAL_POST_BASE_TILES(0xD3FA,112,112,"82fd77609648d39ac2f50bc4c0e3762fccf3ef0986bf6bc8cef7f4cdeb3b3724","82fd77609648d39ac2f50bc4c0e3762fccf3ef0986bf6bc8cef7f4cdeb3b3724"),
-        LEVEL_END_TIME_BONUSES(0xD5E4,42,42,"be40c9a172da6d18e694f0b8cfe698fa674eb88ab210958f4fa82713e0cf0861","be40c9a172da6d18e694f0b8cfe698fa674eb88ab210958f4fa82713e0cf0861");
+        LEVEL_END_TIME_BONUSES(0xD5E4,42,42,"be40c9a172da6d18e694f0b8cfe698fa674eb88ab210958f4fa82713e0cf0861","be40c9a172da6d18e694f0b8cfe698fa674eb88ab210958f4fa82713e0cf0861"),
+        RESULTS_INIT_DATA(0xDED4,24,24,"8fdebd3a15a4a74f401c329bbbaf9750596828e9578df9121565cd24f4c165f8","8fdebd3a15a4a74f401c329bbbaf9750596828e9578df9121565cd24f4c165f8"),
+        MAP_SPR_RESULTS(0xDEEC,621,622,"f6c8b2d7fb6daadaff8d8111268383b7a6a68ae2ca65fdbcfc51339e409d3621","3421ca10ca8d30d20ebc792104211ebc360321c4e6a4509abf2fa0b9a6ea73e9"),
+        MAP_SPR_TUNNEL_DOOR_SPLASH(0x1D652,100,100,"2b299478fd46998784b63b1609fd5d0926fb5fba2cce73edb3921cab43b83287","2b299478fd46998784b63b1609fd5d0926fb5fba2cce73edb3921cab43b83287"),
+        ANI_TUNNEL_DOOR_SPLASH(0x1D63A,24,24,"c7f11aacb360c364e160035e4434f7dd90bc33bdae383e3086b1904233b42bce","c7f11aacb360c364e160035e4434f7dd90bc33bdae383e3086b1904233b42bce");
         private final int offset,canonicalLength,length;
         private final String canonicalSha,sha;
         View(int offset,int canonicalLength,int length,String canonicalSha,String sha) {
@@ -161,7 +165,8 @@ public final class CdR12bObjectAssets {
         TUNNELDOORVERTICAL(View.MAP_SPR_TUNNEL_DOOR_VERTICAL,2,null,0,12,0,0,0,SourceId.ART_TUNNEL_DOOR),
         BIGRING(View.MAP_SPR_BIG_RING,4,null,0,106,0,0,0,SourceId.ART_BIG_RING),
         BIGRINGFLASH(View.MAP_SPR_BIG_RING_FLASH,8,null,0,77,0,0,0,SourceId.ART_BIG_RING_FLASH),
-        GOALSIGNPOST(View.MAP_SPR_GOAL_SIGNPOST,6,null,0,76,0,0,0,null);
+        GOALSIGNPOST(View.MAP_SPR_GOAL_SIGNPOST,6,null,0,76,0,0,0,null),
+        TUNNELDOORSPLASH(View.MAP_SPR_TUNNEL_DOOR_SPLASH,7,View.ANI_TUNNEL_DOOR_SPLASH,3,86,0,0,0,null);
         final View map,script;final int frames,scripts,bound,root,start,end;final SourceId art;
         Key(View map,int frames,View script,int scripts,int bound,int root,int start,int end,SourceId art){
             this.map=map;this.frames=frames;this.script=script;this.scripts=scripts;this.bound=bound;this.root=root;this.start=start;this.end=end;this.art=art;
@@ -243,6 +248,8 @@ public final class CdR12bObjectAssets {
     public CdObjectVisualAssets bigRingFlash() { return visual(Key.BIGRINGFLASH); }
     /** Shared metadata hull only: frames0..4 native Signpost76, frame5 native GoalPost24. */
     public CdObjectVisualAssets goalSignpost() { return visual(Key.GOALSIGNPOST); }
+    /** Native selector D stores tile0 in R12B; the finite86 mapping bound creates no art/residency claim. */
+    public CdObjectVisualAssets tunnelDoorSplash() { return visual(Key.TUNNELDOORSPLASH); }
 
     private void validateGoalSignpostBounds(CdObjectVisualAssets result) {
         int signpost = assets.sectionSources().source(SourceId.ART_SIGNPOST).tileCount();

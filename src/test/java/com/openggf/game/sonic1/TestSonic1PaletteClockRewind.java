@@ -61,16 +61,46 @@ class TestSonic1PaletteClockRewind {
             var fixture = HeadlessTestFixture.builder().withSharedLevel(shared).build();
             fixture.stepIdleFrames(2);
             var registry = fixture.gameplayMode().getRewindRegistry();
-            var entries = new LinkedHashMap<>(registry.capture().entries());
-            var patterns = (PatternAnimatorSnapshot) entries.get("pattern-animator");
-            entries.put("pattern-animator", new PatternAnimatorSnapshot(patterns.scriptCounters(), patterns.handlerCounters(), null));
+            var legacy = captureLegacyPatternOnly(fixture);
             fixture.stepIdleFrames(3);
             var palette = (Sonic1PaletteCycler) GameServices.level().getAnimatedPaletteManager();
             byte[] live = palette.captureCyclerState();
-            registry.restore(new CompositeSnapshot(entries));
+            registry.restore(legacy);
             assertArrayEquals(live, palette.captureCyclerState(), "legacy snapshots carry no authoritative palette phase");
             palette.restoreCyclerState(new byte[]{1, 2, 3});
             assertArrayEquals(live, palette.captureCyclerState(), "incomplete private payload cannot partially restore cycles");
+        } finally { shared.dispose(); }
+    }
+
+    @Test void registryRejectsUnscopedLegacyPayloadBeforeChangingPalettePhase() throws Exception {
+        var shared = SharedLevel.load(SonicGame.SONIC_1, 4, 0);
+        try {
+            var fixture = HeadlessTestFixture.builder().withSharedLevel(shared).build();
+            fixture.stepIdleFrames(2);
+            var legacy = captureLegacyPatternOnly(fixture);
+            var unscoped = new CompositeSnapshot(new LinkedHashMap<>(legacy.entries()));
+            fixture.stepIdleFrames(3);
+            assertScopeRejectionPreservesPaletteAndWorld(fixture, unscoped);
+        } finally { shared.dispose(); }
+    }
+
+    @Test void registryRejectsLegacyCaptureFromRetiredWorldBeforeChangingPalettePhase() throws Exception {
+        CompositeSnapshot retired;
+        Object retiredWorld;
+        var previous = SharedLevel.load(SonicGame.SONIC_1, 4, 0);
+        try {
+            var fixture = HeadlessTestFixture.builder().withSharedLevel(previous).build();
+            fixture.stepIdleFrames(2);
+            retired = captureLegacyPatternOnly(fixture);
+            retiredWorld = fixture.gameplayMode().getWorldSession();
+        } finally { previous.dispose(); }
+
+        var shared = SharedLevel.load(SonicGame.SONIC_1, 4, 0);
+        try {
+            var fixture = HeadlessTestFixture.builder().withSharedLevel(shared).build();
+            assertNotSame(retiredWorld, fixture.gameplayMode().getWorldSession());
+            fixture.stepIdleFrames(5);
+            assertScopeRejectionPreservesPaletteAndWorld(fixture, retired);
         } finally { shared.dispose(); }
     }
 
@@ -90,6 +120,40 @@ class TestSonic1PaletteClockRewind {
             assertArrayEquals(oldState, oldPatterns.capture().extra());
             assertCycle(newPalette, 0, 0);
         } finally { shared.dispose(); }
+    }
+
+    private static CompositeSnapshot captureLegacyPatternOnly(HeadlessTestFixture fixture) {
+        var level = fixture.gameplayMode().getLevelManager();
+        var patterns = (Sonic1PatternAnimator) level.getAnimatedPatternManager();
+        var palette = (Sonic1PaletteCycler) level.getAnimatedPaletteManager();
+        assertNotNull(palette);
+        assertNotNull(patterns.capture().extra(), "the live fixture must begin with its palette owner attached");
+        // Emit the genuine legacy payload through the registered owner while retaining this world's scope.
+        // Reattach before any gameplay step or restore; no snapshot layout/admission is constructed here.
+        patterns.attachPaletteCycler(null);
+        try {
+            var legacy = fixture.gameplayMode().getRewindRegistry().capture();
+            assertNull(((PatternAnimatorSnapshot) legacy.get("pattern-animator")).extra());
+            return legacy;
+        } finally {
+            patterns.attachPaletteCycler(palette);
+        }
+    }
+
+    private static void assertScopeRejectionPreservesPaletteAndWorld(
+            HeadlessTestFixture fixture, CompositeSnapshot rejected) {
+        var registry = fixture.gameplayMode().getRewindRegistry();
+        var palette = (Sonic1PaletteCycler) fixture.gameplayMode().getLevelManager().getAnimatedPaletteManager();
+        var before = registry.capture();
+        byte[] live = palette.captureCyclerState();
+        var fullFailure = assertThrows(IllegalArgumentException.class, () -> registry.restore(rejected));
+        assertEquals("Rewind snapshot belongs to a different world scope", fullFailure.getMessage());
+        assertArrayEquals(live, palette.captureCyclerState());
+        assertSameState(before, registry.capture());
+        var courseFailure = assertThrows(IllegalArgumentException.class, () -> registry.restoreCourse(rejected));
+        assertEquals("Rewind snapshot belongs to a different world scope", courseFailure.getMessage());
+        assertArrayEquals(live, palette.captureCyclerState());
+        assertSameState(before, registry.capture());
     }
 
     private static void assertCycle(Sonic1PaletteCycler palette, int frame, int timer) {

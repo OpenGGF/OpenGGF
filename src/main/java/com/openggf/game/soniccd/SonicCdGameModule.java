@@ -32,6 +32,10 @@ import com.openggf.game.soniccd.objects.CdObjectPlacementRuntime;
 import com.openggf.game.soniccd.objects.CdRing;
 import com.openggf.game.soniccd.objects.CdSpring;
 import com.openggf.game.soniccd.objects.CdTunnelDoor;
+// BEGIN R12B Disc/Door imports.
+import com.openggf.game.soniccd.objects.CdSpinningDisc;
+import com.openggf.game.soniccd.objects.CdTunnelDoorVertical;
+// END R12B Disc/Door imports.
 import com.openggf.game.soniccd.objects.CdTunnelDoorSplash;
 import com.openggf.game.soniccd.objects.CdTunnelPath;
 import com.openggf.game.soniccd.objects.CdMonitor;
@@ -558,10 +562,18 @@ public final class SonicCdGameModule implements GameModule {
         PastLoadBoundary boundary() { return boundary; }
     }
     // Typed request metadata and one native music-latch projection; no audio synthesis.
-    sealed interface PastSound permits PastCheckpointFm, PastFrameSound, PastSubCpuSound, PastRingFm, PastRingSubCpu, PastSpringFm, PastTunnelDoorFm, PastMonitorFm, PastTimePostSubCpu, PastTamabbohFm, PastCollapsePlatformFm, PastMosquiFm, PastLostRingFm, PastRobotGeneratorFm, PastProjectorFm, PastSignpostSound, PastBigRingFm, PastResultsSound, PastProgrammeSound, PastWallFm, PastTunnelPathFm, PastMonitorItemShieldFm, PastMonitorItemRing, PastTunnelDoorSplashFm { }
+    sealed interface PastSound permits PastCheckpointFm, PastFrameSound, PastSubCpuSound, PastRingFm, PastRingSubCpu, PastSpringFm, PastTunnelDoorFm, PastMonitorFm, PastTimePostSubCpu, PastTamabbohFm, PastCollapsePlatformFm, PastMosquiFm, PastLostRingFm, PastRobotGeneratorFm, PastProjectorFm, PastSignpostSound, PastBigRingFm, PastResultsSound, PastProgrammeSound, PastWallFm, PastTunnelPathFm, PastMonitorItemShieldFm, PastMonitorItemRing, PastTunnelDoorSplashFm, PastDiscFm, PastVerticalDoorFm { }
     public record PastMonitorItemRing(CdMonitorItem.RingAwardSound sound) implements PastSound {
         public PastMonitorItemRing { Objects.requireNonNull(sound); }
     }
+    // BEGIN R12B Disc/Door immutable FM alternatives; no operation/cut is retained.
+    record PastDiscFm(CdSpinningDisc.FmSound sound) implements PastSound {
+        PastDiscFm { Objects.requireNonNull(sound); }
+    }
+    record PastVerticalDoorFm(CdTunnelDoorVertical.FmSound sound) implements PastSound {
+        PastVerticalDoorFm { Objects.requireNonNull(sound); }
+    }
+    // END R12B Disc/Door immutable FM alternatives.
     record PastMonitorItemShieldFm(CdMonitorItem.ShieldSound sound) implements PastSound {
         PastMonitorItemShieldFm { Objects.requireNonNull(sound); }
     }
@@ -867,6 +879,35 @@ public final class SonicCdGameModule implements GameModule {
     }
 
     /** Prepared finite flag value; only the actual Results cursor can publish it. */
+    // BEGIN R12B Results private Module publication.
+    LevelProgramState act2PastResultsProgram(SonicCdAct2PastLoadingVisit core,SonicCdAct2PastObjectPass pass) {
+        requireAct2PastLoadingVisit(core);core.requireResultsOwner(pass);
+        if(pass==null||!pass.isCurrentResultsOwnersRead())throw new IllegalStateException("No actual R12B Results owner borrow");
+        return Objects.requireNonNull(levelProgram);
+    }
+    static final class Act2PastResultsProgramPublication {
+        private final SonicCdAct2PastLoadingVisit core;private final CdPlayerFrameRuntime frame;
+        private final SonicCdAct2PastObjectPass pass;private final SonicCdAct2PastObjectPass.Adoption operation;
+        private final LevelProgramState expected,result;
+        private Act2PastResultsProgramPublication(SonicCdAct2PastLoadingVisit core,CdPlayerFrameRuntime frame,SonicCdAct2PastObjectPass pass,
+                SonicCdAct2PastObjectPass.Adoption operation,LevelProgramState expected,LevelProgramState result){this.core=core;this.frame=frame;this.pass=pass;this.operation=operation;this.expected=expected;this.result=result;}
+    }
+    Act2PastResultsProgramPublication prepareAct2PastResultsGoodFutureFlags(SonicCdAct2PastLoadingVisit core,CdPlayerFrameRuntime frame,
+            SonicCdAct2PastObjectPass pass,SonicCdAct2PastObjectPass.Adoption operation,LevelProgramState expected,int flags) {
+        requireAct2PastLoadingVisit(core);core.requireResultsOwner(pass);if(playerFrame!=frame||levelProgram!=expected||(flags&~255)!=0)throw new IllegalArgumentException("Stale R12B Results programme cut");
+        pass.validateResultsFlagsPublication(operation,expected,false);var p=expected;
+        var ready=new LevelProgramState(p.demoMode(),p.timeStones(),p.specialStage(),p.usePlayer2(),p.palFadeFlags(),p.gameMode(),p.levelStarted(),p.whiteFadeSteps(),p.phase(),OptionalInt.of(flags));
+        return new Act2PastResultsProgramPublication(core,frame,pass,operation,expected,ready);
+    }
+    void validatePreparedAct2PastResultsGoodFutureFlags(Act2PastResultsProgramPublication p) {
+        Objects.requireNonNull(p);requireAct2PastLoadingVisit(p.core);p.core.requireResultsOwner(p.pass);
+        if(playerFrame!=p.frame||levelProgram!=p.expected)throw new IllegalStateException("Stale R12B Results programme publication");p.pass.validateResultsFlagsPublication(p.operation,p.expected,false);
+    }
+    void applyPreparedAct2PastResultsGoodFutureFlags(Act2PastResultsProgramPublication p) {
+        Objects.requireNonNull(p);requireAct2PastLoadingVisit(p.core);p.core.requireResultsOwner(p.pass);
+        if(playerFrame!=p.frame||levelProgram!=p.expected)throw new IllegalStateException("Stale R12B Results programme adoption");p.pass.validateResultsFlagsPublication(p.operation,p.expected,true);levelProgram=p.result;
+    }
+    // END R12B Results private Module publication.
     static final class ResultsProgramPublication {
         private final SonicCdPastLoadingVisit visit;
         private final CdPlayerFrameRuntime frame;

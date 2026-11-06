@@ -225,7 +225,7 @@ public final class CdObjectMappings implements CdDrawMappings {
 
 
     /**
-     * Complete genuine original-USA R12B data catalogue:26 object roots plus198-frame Sonic.
+     * Complete genuine original-USA R12B data catalogue:46 object roots plus198-frame Sonic.
      * The existing stage-pair gate validates family/profile/disc lineage. These immutable
      * declarations grant no object invocation, Frame/World, art/current or pixel authority.
      * N1ecc5f3: Act 2 Past.asm includes; Object Functions.asm:327-343; native object Init roots.
@@ -287,6 +287,17 @@ public final class CdObjectMappings implements CdDrawMappings {
         // Preserve the complete raw source and existing per-selected-frame resolver, never a uniform decode.
         var powerup = objects.view(CdR12bObjectAssets.View.MAP_SPR_POWERUP);
         tables.add(new DeclaredTable(CdR12bObjectAssets.View.MAP_SPR_POWERUP.range().nativeAddress(), powerup, 0, 13));
+        // ObjResults_WaitPLC at native pin1ecc5f3a Results/Main.asm:90-148 selects four
+        // original R12B roots20DEEC/20DEF6/20DF00/20DF0A. Retain the SAME complete622-byte
+        // source, all shared bodies and real parent EVEN. Score pieces also reference the
+        // existing raw HUD digit slots: ART_RESULTS120 is not a uniform mapping tile hull.
+        var results = CdResults.Assets.fromAct2PastAssets(objects);
+        for (int offset : new int[]{0, 10, 20, 30}) {
+            tables.add(new DeclaredTable(results.mappingsAddress(), results.mappings(), offset, 5));
+        }
+        // ObjTunnelDoorSplash_Init/Main:153,169 (Spin Tunnel/Main (Door).asm, N1ecc5f3a)
+        // actually select R12B21D652/21D63A; preserve the complete100-byte counted mapping source.
+        addAct2PastObject(tables, objects, CdR12bObjectAssets.View.MAP_SPR_TUNNEL_DOOR_SPLASH, objects.tunnelDoorSplash());
         return declaredSourceViews(tables, act2PastMonitorItemStaticPieces(objects));
     }
 

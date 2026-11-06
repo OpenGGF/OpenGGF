@@ -161,8 +161,9 @@ final class SonicCdAct2PastLoadingVisit {
     /** Stack-bound access to the SAME Core values. Prepared values alone never authorize adoption. */
     final class OrdinaryAccess {
         private OrdinaryAccess() { }
+        private boolean goalTerminal;
         private void require() {
-            if(this!=activeOrdinary||!running||failed||ordinary==null||values.phase()!=Phase.BEGIN_LEVEL)
+            if(this!=activeOrdinary||!running||failed||goalTerminal||ordinary==null||values.phase()!=Phase.BEGIN_LEVEL)
                 throw new IllegalStateException("No actual R12B ordinary invocation");
             validateHost();
         }
@@ -178,6 +179,26 @@ final class SonicCdAct2PastLoadingVisit {
         State prepareGoodFuture(State expected,State ready,int value) {
             validate(expected);return ready.program(expected.program().goodFuture(value));
         }
+        /** Distinct terminal-only receipt. It never enters prepare/adopt's healthy lane. */
+        final class GoalTerminalPrefix {
+            private final OrdinaryAccess access=OrdinaryAccess.this;
+            private final State before,ready;private final CdR12bSectionArt.SectionArtException failure;
+            private GoalTerminalPrefix(State before,State ready,CdR12bSectionArt.SectionArtException failure){this.before=before;this.ready=ready;this.failure=failure;}
+        }
+        GoalTerminalPrefix prepareGoalAppendTerminal(State expected,CdR12bSectionArt.SectionArtException failure) {
+            validate(expected);var original=art.validateGoalAppendFailure(expected.section(),failure);
+            return new GoalTerminalPrefix(expected,expected.section(original),failure);
+        }
+        void validateGoalAppendTerminal(GoalTerminalPrefix ready) {
+            require();Objects.requireNonNull(ready);if(ready.access!=this||ready.before!=values
+                    ||ready.ready.section()!=art.validateGoalAppendFailure(ready.before.section(),ready.failure))
+                throw new IllegalArgumentException("Stale/foreign Goal terminal receipt");
+        }
+        void adoptGoalAppendTerminal(GoalTerminalPrefix ready) {
+            validateGoalAppendTerminal(ready);values=ready.ready;goalTerminal=true;
+            // Only the original throw may leave this actual stack. Outer terminal closes Frame.
+        }
+
         void adopt(State expected,State ready) {
             validate(expected);Objects.requireNonNull(ready);
             if(ready.phase()!=Phase.BEGIN_LEVEL||!ready.program().equals(expected.program().goodFuture(ready.program().goodFutureByte()))||ready.oldWhiteSteps()!=expected.oldWhiteSteps()
@@ -188,6 +209,13 @@ final class SonicCdAct2PastLoadingVisit {
                 throw new IllegalArgumentException("Ordinary adoption changed a nonwritten loading partition");
             art.withSectionWord(ready.section(),ready.section().sectionWord());values=ready;
         }
+    }
+
+    /** Exact active Core -> private World -> physical pass relation, not value ingress. */
+    void requireResultsOwner(SonicCdAct2PastObjectPass pass) {
+        if(activeOrdinary==null||!running||failed||!(ordinary instanceof SonicCdAct2PastOrdinaryWorld world))
+            throw new IllegalStateException("No active R12B Results Core owner");
+        world.requireResultsOwner(pass,activeOrdinary);
     }
 
     private final Host host;

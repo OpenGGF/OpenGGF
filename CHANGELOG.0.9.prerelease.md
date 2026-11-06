@@ -275,8 +275,16 @@ matching area heading; see the
   Explosion, Points, Flower, LostRing, Monitor Item and Mosqui reuse their source-bound
   bodies and existing art owners. Genuine Hurt now rejoins the same ordinary Frame
   publication without running Main's movement/touch tail. The controller recovers
-  from real damage, lands and passes the next obstruction with a fixed jump before
-  stopping at the unbound Spin Tunnel. CD player headless boot loads the fixed
+  from real damage, lands and passes the next obstruction with a fixed jump.
+  Spinning Disc, both Tunnel Doors and Spin Tunnel now use genuine shared Solid
+  results and prepared player publications; the real Door Splash child follows
+  its parent's sound request. GoalPost, Signpost and Results now retain native
+  field, bonus, score, saved-bank and sound order, including completed PLC failure
+  prefixes. Results' outgoing programme lifetime remains separately gated.
+  A natural Projector picture now has current-art and full/course pixel-replay
+  checks. Later-stage Sonic visuals have an explicit source format that retains
+  complete art without invented padding; live later-stage loading stays separate.
+  CD player headless boot loads the fixed
   roster before rewind controller creation while keeping no-device audio before
   playback. A separate real-World entry fixture retains its own visible-Sonic
   checks. No full-act or native/regional parity is claimed.

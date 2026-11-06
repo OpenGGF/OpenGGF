@@ -479,6 +479,20 @@ final class SonicCdAct2PastWorldHost implements SonicCdAct2PastLoadingVisit.Host
         var after=new Image(this,nextGlobals,image.scroll(),v,image.clears(),image.geometryReady(),image.setupDone(),image.collisionPointer(),sounds);
         return new Prepared(image,after);
     }
+    /** Pure native Goal/Signpost destination WORD value; the private World owns admission/order. */
+    Prepared prepareOrdinaryGoalDestination(Globals expectedGlobals,Video expectedVideo,Globals nextGlobals,
+                                             List<SonicCdGameModule.PastSound> sounds,
+                                             Optional<CdObjectDrawQueue.CpuSat> cpu,int destinationWord) {
+        word(destinationWord);var prepared=prepareOrdinary(expectedGlobals,expectedVideo,nextGlobals,sounds,cpu);
+        var after=prepared.after;var old=after.scroll();var f=old.foreground();
+        var foreground=new com.openggf.game.soniccd.scroll.CdR11aForegroundScroll.State(f.cameraX(),f.cameraY16_16(),
+                f.horizontalCrossed(),f.verticalCrossed(),f.scrollXDiff(),f.scrollYDiff(),f.scrollFlags(),
+                f.destBottomBound(),destinationWord,f.bottomBoundShift(),f.scrollLock());
+        var scroll=new Scroll(foreground,old.background(),old.foregroundPlane(),old.backgroundPlane(),old.copies(),old.foregroundXFractionWord());
+        return new Prepared(prepared.before,new Image(this,after.globals(),scroll,after.video(),after.clears(),
+                after.geometryReady(),after.setupDone(),after.collisionPointer(),after.sounds()));
+    }
+
     void validateOrdinary(Prepared prepared) {
         ordinaryIdle();
         if(Objects.requireNonNull(prepared).before!=image)throw new IllegalStateException("Stale or foreign prepared Host image");

@@ -248,6 +248,36 @@ public final class CdR12bSectionArt {
     public State clearPlcs(State state) { return kernel.clearPlcs(state); }
     public State initList(State state, int id) { return kernel.initList(state, id); }
     public State appendList(State state, int id) { return kernel.appendList(state, id); }
+    /**
+     * Pure validation of ONLY the actual cue12 partial-descriptor failure. No append/service,
+     * setter, continuation or success receipt is executed. Return the ORIGINAL terminal image.
+     * Native LoadPLC, Functions (General).asm:588-614; PP Graphics Lists (Act 2 Past):249-256.
+     */
+    public State validateGoalAppendFailure(State before, SectionArtException failure) {
+        checked(before);Objects.requireNonNull(failure,"original cue12 failure");var prefix=failure.state();
+        if(failure.reason()!=Reason.DESCRIPTOR_BUFFER||failure.operation()!=Operation.QUEUED
+                ||!(failure.getCause() instanceof CdR11aPlcBuffer.BufferBoundary boundary)
+                ||boundary.access()!=CdR11aPlcBuffer.Access.SOURCE_WRITE||boundary.byteOffset()!=96
+                ||prefix.owner!=this||!prefix.stopped||prefix.queue!=boundary.state()
+                ||failure.completedRamPrefix().isPresent()||failure.sourcePointer()!=prefix.queue.headSource()
+                ||failure.destinationByteOffset()!=prefix.queue.headDestination()
+                ||prefix.sectionWord!=before.sectionWord||prefix.codeTable!=before.codeTable
+                ||prefix.decoder!=before.decoder||prefix.savedDecoder!=before.savedDecoder
+                ||prefix.remainingTilesWord!=before.remainingTilesWord||prefix.processBudgetWord!=before.processBudgetWord
+                ||prefix.hintWord!=before.hintWord||prefix.padWord!=before.padWord||prefix.residency!=before.residency)
+            throw new IllegalArgumentException("Not this owner's original cue12 descriptor-only failure");
+        int free=-1;for(int at=0;at+4<=96;at+=6)if(before.queue.bytes().unsignedLong(at)==0){free=at;break;}
+        if(free!=84&&free!=90)throw new IllegalArgumentException("Not a partial cue12 append at the actual free row");
+        var list=assets.loadPlan().plcs().get(0x12);
+        if(list.nativeId()!=0x12||list.entries().size()!=3)throw new IllegalStateException("Actual cue12 source differs");
+        byte[] expected=before.queue.bytes().copy();int complete=(96-free)/6;
+        for(int row=0;row<complete;row++){var entry=list.entries().get(row);int at=free+row*6;
+            long source=entry.sourceNativeAddress();for(int n=0;n<4;n++)expected[at+n]=(byte)(source>>>(24-8*n));
+            expected[at+4]=(byte)(entry.vramAddress()>>>8);expected[at+5]=(byte)entry.vramAddress();}
+        if(!Arrays.equals(expected,prefix.queue.bytes().copy()))throw new IllegalArgumentException("Cue12 terminal descriptor prefix differs");
+        return prefix;
+    }
+
     public State loadSection(State state, int cameraXword) { return kernel.loadSection(state, cameraXword); }
     public State updateSection(State state, int cameraXword) { return kernel.updateSection(state, cameraXword); }
     public State prepare(State state) { return kernel.prepare(state); }

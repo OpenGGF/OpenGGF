@@ -2,6 +2,12 @@ package com.openggf.game.soniccd.objects;
 
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdR11bAssets;
+import com.openggf.game.soniccd.CdNativeFile;
+import com.openggf.game.soniccd.CdReleaseVariant;
+import com.openggf.game.soniccd.CdStagePayload;
+import com.openggf.game.soniccd.level.CdR12bObjectAssets;
+import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
+import com.openggf.game.soniccd.media.CdMmdImage;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -41,6 +47,18 @@ public final class CdResults {
     /** Original finite views, retaining the four mapping roots at +0/+10/+20/+30. */
     public record Assets(CdAssetBytes initData, CdAssetBytes mappings, int mappingsAddress) {
         public Assets { Objects.requireNonNull(initData); Objects.requireNonNull(mappings); }
+        /** Actual retained original-USA R12B bytes; no programme, art/current or World authority. */
+        public static Assets fromAct2PastAssets(CdR12bObjectAssets owner) {
+            Objects.requireNonNull(owner, "actual R12B metadata"); var identity = owner.identity();
+            if (identity.variant() != CdReleaseVariant.USA || identity.file() != CdNativeFile.R12B
+                    || identity.domain() != CdMmdImage.Domain.ORIGINAL_WORD_RAM
+                    || !identity.stage().equals(CdStagePayload.R12B.stage()))
+                throw new IllegalArgumentException("Actual original USA R12B metadata required");
+            return new Assets(owner.view(CdR12bObjectAssets.View.RESULTS_INIT_DATA),
+                    owner.view(CdR12bObjectAssets.View.MAP_SPR_RESULTS),
+                    CdR12bObjectAssets.View.MAP_SPR_RESULTS.range().nativeAddress());
+        }
+
         public static Assets fromPastAssets(CdR11bAssets owner) {
             Objects.requireNonNull(owner, "actual Past assets");
             var map = owner.view(CdR11bAssets.Asset.MAP_SPR_RESULTS);
@@ -188,6 +206,17 @@ public final class CdResults {
     private final ProgrammeStore programmeStore;
     private final ProgrammeActionPort programmeAction;
     private boolean running;
+
+    /** Source-pair ingress only; the caller retains every reached publication/helper authority. */
+    public static CdResults fromAct2PastAssets(CdObjectPlacementRuntime placement, CdR12bTerrainAssets owner,
+                                               NativeRead read, BonusStore bonus, PointsPort points, LoadPlc plc,
+                                               SoundPort sound, DrawObject draw, ProgrammeStore programme,
+                                               ProgrammeActionPort action) {
+        Objects.requireNonNull(placement); Objects.requireNonNull(owner);
+        if (!placement.sameAct2PastSource(owner)) throw new IllegalArgumentException("Results placement/assets source differs");
+        return new CdResults(placement, Assets.fromAct2PastAssets(owner.objects()), read, bonus, points, plc,
+                sound, draw, programme, action);
+    }
 
     /** Absent owners are admitted until, and only until, their first actually reached operation. */
     public CdResults(CdObjectPlacementRuntime placement, Assets assets, NativeRead nativeRead,

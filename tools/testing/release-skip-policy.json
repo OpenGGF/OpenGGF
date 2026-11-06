@@ -631,6 +631,13 @@
       "evidence": "src/test/java/com/openggf/tests/trace/runs/TestTraceRunDescriptorPlanningPerformance.java:30",
       "allowed_when_absent": null,
       "note": "Explicit retained-heap benchmark; -Dopenggf.trace.segmentDescriptorBenchmark=true."
+    },
+    {
+      "match": "com.openggf.game.soniccd.service.graphics.TestCdStampOwnerLedgerSourceModel#comparesEveryR4SubmissionRemainingCountCostRebaseAndBothCompletionPhases",
+      "category": "opt-in-gate",
+      "evidence": "src/test/java/com/openggf/game/soniccd/service/graphics/TestCdStampOwnerLedgerSourceModel.java:59",
+      "allowed_when_absent": null,
+      "note": "Explicit soniccd.stamp.ownerLedger external native R4 comparison; absent/blank property assumes at59, configured invalid path/hash fails at61+."
     }
   ]
 }

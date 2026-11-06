@@ -274,7 +274,7 @@ class TestSonicCdPastResultsRoute {
         assertEquals(scene.sprites().tiles().size(), at); assertTrue(tiles.size() < at, "Selected CPU must actually contain whole" + whole);
         var picture = new SpritePresentation.Frame(tiles, List.of(), scene.sprites().patternVersions());
         return new RetainedPlaneSceneRenderer.Scene(scene.foreground(), scene.background(), scene.packedHscroll256(),
-                scene.vscrollLongBits(), scene.selectedPalette128(), true, picture, scene.nativePatterns());
+                scene.vscrollLongBits(), scene.selectedPalette128(), scene.displayEnabled(), picture, scene.nativePatterns(), scene.selectedBackdropPaletteIndex());
     }
 
     /** Optional engine pixels only; no expected image/runtime state is read from this output. */

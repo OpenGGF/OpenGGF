@@ -67,6 +67,10 @@ final class SonicCdAct2PastOrdinaryWorld implements SonicCdAct2PastLoadingVisit.
             throw original;
         } finally {cut=null;active=null;}
     }
+    void requireResultsOwner(SonicCdAct2PastObjectPass pass,SonicCdAct2PastLoadingVisit.OrdinaryAccess access){
+        require();if(pass!=objects||access!=active||cut!=SonicCdAct2PastOrdinaryLoop.Cut.RUN_OBJECTS)
+            throw new IllegalStateException("No actual Results World/pass stack");
+    }
     private void playerArt(CdPlayerArtRuntime.DmaRequest request,CdPlayerArtRuntime.State complete) {
         require();
         if(cut!=SonicCdAct2PastOrdinaryLoop.Cut.PUBLISH_LEVEL||request.vramByteAddress()!=0xF000
@@ -197,6 +201,21 @@ final class SonicCdAct2PastOrdinaryWorld implements SonicCdAct2PastLoadingVisit.
                     ||(cut!=SonicCdAct2PastOrdinaryLoop.Cut.RUN_OBJECTS&&cut!=SonicCdAct2PastOrdinaryLoop.Cut.DRAW_OBJECTS))
                 throw new IllegalStateException("No actual R12B physical pass");
         }
+        // BEGIN R12B Results original owner ports.
+        @Override public SonicCdAct2PastObjectPass.ResultsOwners resultsOwners(SonicCdAct2PastObjectPass.ResultsOwners expected){
+            require();if(!objects.isCurrentResultsOwnersRead()||cut!=SonicCdAct2PastOrdinaryLoop.Cut.RUN_OBJECTS)throw new IllegalStateException("Not the actual Results owner borrow");
+            var before=active.state();var programme=module.act2PastResultsProgram(core,objects);
+            if(expected!=null){if(expected.core()!=before||expected.programme()!=programme)throw new IllegalStateException("Results replaced another Core/module image");host.validateOrdinary(expected.hostFence());return expected;}
+            return new SonicCdAct2PastObjectPass.ResultsOwners(before,programme,host.prepareOrdinary(host.globals(),host.video(),host.globals(),List.of(),host.video().completedCpu()));
+        }
+        @Override public void submitResultsPlc(SonicCdAct2PastObjectPass.ResultsPlcSubmission p){
+            require();if(p.owner()!=objects||!objects.isCurrentResultsPlcSubmission(p)||cut!=SonicCdAct2PastOrdinaryLoop.Cut.RUN_OBJECTS)throw new IllegalArgumentException("Not actual Results cue10");
+            p.validate();var before=active.state();var section=art.appendList(before.section(),0x10);
+            var ready=active.prepare(before,section,before.level(),before.hudSlots(),before.normalPalette(),before.displayedPalette());
+            var hostReady=host.prepareOrdinary(host.globals(),host.video(),host.globals(),List.of(),host.video().completedCpu());
+            active.validate(before);host.validateOrdinary(hostReady);p.validate();active.adopt(before,ready);host.adoptOrdinary(hostReady);p.acknowledge(ready);
+        }
+        // END R12B Results original owner ports.
         @Override public SonicCdAct2PastObjectPass.Cut read(){require();return objectCut();}
         /** Source LoadPLC4/5 only. Both actual lists are one descriptor; no service/current writes here. */
         @Override public void submitPlc(SonicCdAct2PastObjectPass.PlcSubmission submission){
@@ -212,16 +231,44 @@ final class SonicCdAct2PastOrdinaryWorld implements SonicCdAct2PastLoadingVisit.
             active.validate(before);host.validateOrdinary(hostReady);submission.validate();
             active.adopt(before,ready);host.adoptOrdinary(hostReady);submission.acknowledge();
         }
+        /** Actual Goal12 only; append first, and retain only its original completed terminal prefix. */
+        @Override public void submitGoalPlc(SonicCdAct2PastObjectPass.GoalPlcSubmission submission){
+            require();if(submission.owner()!=objects||!objects.isCurrentGoalPlcSubmission(submission)
+                    ||cut!=SonicCdAct2PastOrdinaryLoop.Cut.RUN_OBJECTS)
+                throw new IllegalArgumentException("Not the actual Goal LoadPLC producer");
+            submission.validate();var before=active.state();CdR12bSectionArt.State section;
+            try{section=art.appendList(before.section(),submission.nativeId());}
+            catch(CdR12bSectionArt.SectionArtException original){
+                // Full16 is SOURCE_SCAN96 with no stores: retain the existing healthy Core bytes.
+                if(!Arrays.equals(before.section().queue().bytes().copy(),original.state().queue().bytes().copy())){
+                    try{var terminal=active.prepareGoalAppendTerminal(before,original);submission.validate();
+                        active.validateGoalAppendTerminal(terminal);active.adoptGoalAppendTerminal(terminal);
+                        submission.retainTerminal(original);
+                    }catch(RuntimeException|Error verification){if(verification!=original)original.addSuppressed(verification);}
+                }
+                throw original;
+            }
+            var ready=active.prepare(before,section,before.level(),before.hudSlots(),before.normalPalette(),before.displayedPalette());
+            var hostReady=host.prepareOrdinary(host.globals(),host.video(),host.globals(),List.of(),host.video().completedCpu());
+            active.validate(before);host.validateOrdinary(hostReady);submission.validate();
+            active.adopt(before,ready);host.adoptOrdinary(hostReady);submission.acknowledge();
+        }
         @Override public void adopt(SonicCdAct2PastObjectPass.Adoption publication){
             require();if(!objects.isCurrentAdoption(publication)||!sameCut(publication.expected(),objectCut()))throw new IllegalArgumentException("Stale/foreign object publication");
             var next=publication.next();var before=active.state();
-            if(!next.goodFutureFlags().equals(module.act2PastGoodFutureFlags(core)))
+            var resultsFlags=objects.isCurrentResultsFlagsAdoption(publication);
+            if(!next.goodFutureFlags().equals(module.act2PastGoodFutureFlags(core))&&!resultsFlags)
                 throw new IllegalArgumentException("Unbound good-future programme writer");
-            var ready=active.prepare(before,before.section(),next.level(),next.reservedSlots(),before.normalPalette(),before.displayedPalette());
+            var section=before.section();if(publication.resultsSectionWord()>=0){if(!objects.isCurrentResultsSectionAdoption(publication))throw new IllegalArgumentException("Not original Results section0");section=art.withSectionWord(section,0);}
+            var programme=resultsFlags?module.prepareAct2PastResultsGoodFutureFlags(core,frame,objects,publication,publication.resultsOwners().programme(),next.goodFutureFlags().orElseThrow()):null;
+            var ready=active.prepare(before,section,next.level(),next.reservedSlots(),before.normalPalette(),before.displayedPalette());
             ready=active.prepareGoodFuture(before,ready,next.goodFutureByte());
             var oldSounds=host.sounds();if(next.sounds().size()<oldSounds.size()||!next.sounds().subList(0,oldSounds.size()).equals(oldSounds))throw new IllegalArgumentException("Sound prefix replaced");
-            var hostReady=host.prepareOrdinary(host.globals(),host.video(),next.globals(),next.sounds().subList(oldSounds.size(),next.sounds().size()),next.completedCpu());
-            active.validate(before);host.validateOrdinary(hostReady);publication.applyNative();
+            var hostReady=publication.destinationLeftWord()<0
+                    ?host.prepareOrdinary(host.globals(),host.video(),next.globals(),next.sounds().subList(oldSounds.size(),next.sounds().size()),next.completedCpu())
+                    :host.prepareOrdinaryGoalDestination(host.globals(),host.video(),next.globals(),next.sounds().subList(oldSounds.size(),next.sounds().size()),next.completedCpu(),publication.destinationLeftWord());
+            active.validate(before);host.validateOrdinary(hostReady);if(programme!=null)module.validatePreparedAct2PastResultsGoodFutureFlags(programme);publication.applyNative();
+            if(programme!=null)module.applyPreparedAct2PastResultsGoodFutureFlags(programme);
             active.adopt(before,ready);host.adoptOrdinary(hostReady);
         }
     }

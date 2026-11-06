@@ -1028,13 +1028,7 @@ class TestSonicCdAct2ControllerRoute {
         assertEquals(0,target.state().section().queue().headSource());assertEquals(0,target.state().section().remainingTilesWord());
         System.out.println("Controller-only Act2: WARP13885, actual R12B FULL13886, loading returned"+targetReturnedCall+
                 ",1782 real target services returned through15717; native Projector/four later children, damage/LostRing prefix, Hurt/landing and fixedRight+B15601..15632. Full/course replay includes the actual damage, Hurt, landing, jump and later cuts. No new pixels, native/regional/audio or full-act parity claim.");
-        // Actual first missing owner, preserved after every earlier physical prefix of call15718.
-        var actualTargetPlacement=targetHost.placement();
-        var spinStop=assertThrows(SonicCdAct2PastObjectPass.Unowned.class,()->step(h,afterProjectorRight));
-        assertEquals(SonicCdAct2PastObjectPass.Boundary.OBJECT_KIND,spinStop.boundary());
-        assertEquals(51,spinStop.wholeIndex());assertEquals(0x34,spinStop.value());assertTrue(targetFrame.closed());
-        var expectedSpin=new byte[64];expectedSpin[0]=0x34;expectedSpin[8]=0x23;expectedSpin[9]=0x48;expectedSpin[12]=1;expectedSpin[13]=(byte)0x80;
-        assertArrayEquals(expectedSpin,actualTargetPlacement.pool().state(51).copyBytes(),"Real source placement2348/0180 reached routine0; no Spin body ran");
+        // The first formerly unowned15718 Spin34 visit is explored separately as its real binding is integrated.
         // END measured natural TimeWarp230 old exit.
         // END measured natural TimeWarp save continuation.
         // END measured Swing promotion.
@@ -1476,6 +1470,8 @@ class TestSonicCdAct2ControllerRoute {
             assertArrayEquals(scene.packedHscroll256(), omitted.packedHscroll256());
             assertEquals(scene.vscrollLongBits(), omitted.vscrollLongBits());
             assertArrayEquals(scene.selectedPalette128(), omitted.selectedPalette128());
+            assertEquals(scene.displayEnabled(), omitted.displayEnabled());
+            assertEquals(scene.selectedBackdropPaletteIndex(), omitted.selectedBackdropPaletteIndex());
             assertEquals(scene.nativePatterns(), omitted.nativePatterns());
             var camera = h.mode().getCamera(); clearPixels();
             renderer.draw(omitted, camera.getX(), camera.getY(), module::validateAct2LoadingCut);
@@ -1488,6 +1484,8 @@ class TestSonicCdAct2ControllerRoute {
             assertArrayEquals(scene.packedHscroll256(),omitted.packedHscroll256());
             assertEquals(scene.vscrollLongBits(),omitted.vscrollLongBits());
             assertArrayEquals(scene.selectedPalette128(),omitted.selectedPalette128());
+            assertEquals(scene.displayEnabled(),omitted.displayEnabled());
+            assertEquals(scene.selectedBackdropPaletteIndex(),omitted.selectedBackdropPaletteIndex());
             assertEquals(scene.nativePatterns(),omitted.nativePatterns());
             var camera=h.mode().getCamera();clearPixels();
             renderer.draw(omitted,camera.getX(),camera.getY(),module::validateAct2LoadingCut);
@@ -1501,6 +1499,8 @@ class TestSonicCdAct2ControllerRoute {
             assertArrayEquals(scene.packedHscroll256(),omitted.packedHscroll256());
             assertEquals(scene.vscrollLongBits(),omitted.vscrollLongBits());
             assertArrayEquals(scene.selectedPalette128(),omitted.selectedPalette128());
+            assertEquals(scene.displayEnabled(),omitted.displayEnabled());
+            assertEquals(scene.selectedBackdropPaletteIndex(),omitted.selectedBackdropPaletteIndex());
             assertEquals(scene.nativePatterns(),omitted.nativePatterns());
             var camera=h.mode().getCamera();clearPixels();
             renderer.draw(omitted,camera.getX(),camera.getY(),module::validateAct2LoadingCut);
@@ -1516,6 +1516,7 @@ class TestSonicCdAct2ControllerRoute {
             assertArrayEquals(scene.packedHscroll256(),omitted.packedHscroll256());
             assertEquals(scene.vscrollLongBits(),omitted.vscrollLongBits());
             assertArrayEquals(scene.selectedPalette128(),omitted.selectedPalette128());
+            assertEquals(scene.selectedBackdropPaletteIndex(),omitted.selectedBackdropPaletteIndex());
             assertEquals(scene.displayEnabled(),omitted.displayEnabled());
             assertEquals(scene.nativePatterns(),omitted.nativePatterns());
             assertEquals(scene.sprites().patternVersions(),omitted.sprites().patternVersions());
@@ -1719,7 +1720,7 @@ class TestSonicCdAct2ControllerRoute {
         assertEquals(scene.sprites().tiles().size(),at);assertTrue(tiles.size()<at,"Selected native SAT contains TimeStars");
         var picture=new SpritePresentation.Frame(tiles,java.util.List.of(),scene.sprites().patternVersions());
         return new RetainedPlaneSceneRenderer.Scene(scene.foreground(),scene.background(),scene.packedHscroll256(),
-                scene.vscrollLongBits(),scene.selectedPalette128(),scene.displayEnabled(),picture,scene.nativePatterns());
+                scene.vscrollLongBits(),scene.selectedPalette128(),scene.displayEnabled(),picture,scene.nativePatterns(),scene.selectedBackdropPaletteIndex());
     }
 
     /** Executed only after module/session/graphics/context/boot fixture cleanup; never a test input. */
@@ -1997,6 +1998,7 @@ class TestSonicCdAct2ControllerRoute {
         assertSame(actual.foreground(),omitted.foreground());assertSame(actual.background(),omitted.background());
         assertArrayEquals(actual.packedHscroll256(),omitted.packedHscroll256());assertEquals(actual.vscrollLongBits(),omitted.vscrollLongBits());
         assertArrayEquals(actual.selectedPalette128(),omitted.selectedPalette128());assertEquals(actual.displayEnabled(),omitted.displayEnabled());
+        assertEquals(actual.selectedBackdropPaletteIndex(),omitted.selectedBackdropPaletteIndex());
         assertEquals(actual.nativePatterns(),omitted.nativePatterns());assertEquals(actual.sprites().patternVersions(),omitted.sprites().patternVersions());
     }
 
@@ -2066,5 +2068,151 @@ class TestSonicCdAct2ControllerRoute {
                 +"ENGINE/native-source evidence only; no emulator/native-image/audio/regional or full-act parity claim.\n");
     }
     // END natural R12B Wall EGL proof.
+
+    // BEGIN natural R12B Projector EGL proof; independent cold route, comparison-only observations.
+    @Test void actualEglNaturalR12bProjectorUsesServicedSelectedPixelsAndReplays() throws Exception {
+        byte[] exportPixels=null,exportOmitted=null;int exportCall=-1;String exportDetails=null;
+        var selectedCalls=new java.util.ArrayList<Integer>();var visibleCalls=new java.util.ArrayList<Integer>();
+        try(var egl=TestSonicCdPastResultsRoute.Egl.open()) {
+            assertInstanceOf(NullAudioBackend.class,GameServices.audio().getBackend());
+            var prepared=ready();var h=prepared.harness();var module=h.module();var world=h.mode().getWorldSession();
+            var right=LogicalInputSnapshot.ofPlayers(PlayerInputState.of(8,0,0,0,false,false),PlayerInputState.neutral());
+            R12bNaturalOwners owners=null;long beforeTargetGeneration=-1;
+            for(int call=prepared.returned()+1;call<=14707;call++) {
+                if(call==13886)beforeTargetGeneration=h.mode().getLevelManager().getCompletedProductionLoadGeneration();
+                try {step(h,call<=14516?controller(call):right);}
+                catch(RuntimeException|Error failure){throw new AssertionError("Fixed Projector EGL prefix: last returned="+(call-1)+", first failed="+call,failure);}
+                assertSame(world,h.mode().getWorldSession());
+                if(call==13886) {
+                    assertTrue(module.act2PastLoadingSelected());assertFalse(module.act2LoadingSelected());
+                    var frame=module.requirePlayerFrame();assertNotSame(prepared.frame(),frame);assertTrue(prepared.frame().closed());
+                    assertEquals(beforeTargetGeneration+1,h.mode().getLevelManager().getCompletedProductionLoadGeneration());
+                    owners=new R12bNaturalOwners(frame,frame.stageSource(),module.act2PastWorldHost(),module.act2PastLoadingVisit(),world,beforeTargetGeneration+1);
+                }
+                if(owners!=null) {
+                    assertSame(owners.frame(),module.requirePlayerFrame());assertSame(owners.source(),module.requirePlayerFrame().stageSource());
+                    assertSame(owners.host(),module.act2PastWorldHost());assertSame(owners.visit(),module.act2PastLoadingVisit());
+                    assertEquals(owners.generation(),h.mode().getLevelManager().getCompletedProductionLoadGeneration());assertFalse(owners.frame().closed());
+                }
+            }
+            assertNotNull(owners,"The unchanged controller prefix must perform the genuine R12B FULL");assertNaturalR12bRenderOwners(h,owners);
+            var registry=h.mode().getRewindRegistry();
+            // Ascending fixed cuts only: the first selected parent whose omission changes actual pixels wins.
+            for(int call=14708;call<=14716&&exportCall<0;call++) {
+                assertNaturalR12bRenderOwners(h,owners);var host=owners.host();
+                var before=captureNative(h);var full=registry.capture();var course=registry.captureCourse();
+                var beforeSelected=assertInstanceOf(SonicCdAct2PastWorldHost.Published.class,host.selected()).selection();
+                var previousCpu=host.video().completedCpu().orElseThrow();var previousParent=host.placement().pool().state(32);
+                var beforePixels=drawNaturalR12bImage(h);assertNativeCapture(before,h);
+                assertNaturalR12bSnapshotValue(full,registry.capture(),"Projector full before pixels/forward");
+                assertNaturalR12bSnapshotValue(course,registry.captureCourse(),"Projector course before pixels/forward");
+                try {step(h,right);}
+                catch(RuntimeException|Error failure){throw new AssertionError("Fixed Projector EGL window: last returned="+(call-1)+", first failed="+call,failure);}
+                assertNaturalR12bRenderOwners(h,owners);
+                var after=captureNative(h);var fullAfter=registry.capture();var courseAfter=registry.captureCourse();
+                var publication=assertInstanceOf(SonicCdAct2PastWorldHost.Published.class,host.selected());var selected=publication.selection();var inputs=selected.inputs();
+                var scene=assertInstanceOf(SonicCdPastDisplay.Ready.class,selected.projection(),"Actual Projector-window Ready at"+call).scene();
+                assertTrue(inputs.displayEnabled());assertTrue(scene.displayEnabled());
+                assertEquals(com.openggf.game.soniccd.level.SonicCdLevel.LEVEL_BACKDROP_PALETTE_INDEX,scene.selectedBackdropPaletteIndex());
+                var cpu=inputs.selectedCpu().orElseThrow();assertArrayEquals(cpu.bytes(),inputs.selectedSat().copy());
+                assertArrayEquals(previousCpu.bytes(),cpu.bytes());assertEquals(previousCpu.spriteCount(),cpu.spriteCount());assertEquals(previousCpu.provenance(),cpu.provenance());
+                var actual=drawNaturalR12bImage(h);assertNativeCapture(after,h);assertArrayEquals(actual,drawNaturalR12bImage(h));assertNativeCapture(after,h);
+                assertNaturalR12bSnapshotValue(fullAfter,registry.capture(),"Projector full after pixels");
+                assertNaturalR12bSnapshotValue(courseAfter,registry.captureCourse(),"Projector course after pixels");
+                if(cpu.provenance().stream().noneMatch(piece->piece.slotRef().wholeIndex()==32))continue;
+                selectedCalls.add(call);
+                assertEquals(0x2E,previousParent.id());assertEquals(2,previousParent.routine());
+                assertEquals(0x20E9F0,previousParent.longBits(com.openggf.game.soniccd.objects.CdObjectState.LongField.MAPPINGS),"The genuinely selected prior CPU came from the native Projector32 source");
+                assertEquals(0x20E9F0,com.openggf.game.soniccd.level.CdR12bObjectAssets.View.MAP_SPR_PROJECTOR.range().nativeAddress());
+                // Read final selected pattern IDs only; never preload, service, clear or supply known art.
+                var parentPatterns=new java.util.TreeSet<Integer>();var raw=cpu.bytes();
+                for(int index=0;index<cpu.spriteCount();index++)if(cpu.provenance().get(index).slotRef().wholeIndex()==32) {
+                    int size=raw[index*8+2]&15,count=(((size>>>2)&3)+1)*((size&3)+1);
+                    int first=(((raw[index*8+4]&255)<<8)|(raw[index*8+5]&255))&0x7FF;
+                    for(int tile=0;tile<count;tile++)parentPatterns.add((first+tile)&0x7FF);
+                }
+                assertFalse(parentPatterns.isEmpty());
+                for(int id:parentPatterns) {
+                    var serviced=com.openggf.game.soniccd.resources.CdR12bCameraArtResidency.readTile(inputs.current(),id);
+                    var version=com.openggf.game.soniccd.resources.CdObjectPresentation.patternVersion(serviced);
+                    assertEquals(version,scene.nativePatterns().get(id),"Selected native current pattern"+id);
+                    assertEquals(version,scene.sprites().patternVersions().get(PatternAtlasRange.OBJECTS.base()+id));
+                }
+                var binding=actualField(host,"render");assertNotNull(binding);
+                var renderer=assertInstanceOf(RetainedPlaneSceneRenderer.class,actualField(binding,"renderer"));
+                assertSame(world,actualField(binding,"world"));assertEquals(owners.generation(),actualField(binding,"generation"));
+                var cut=TestSonicCdPastResultsRoute.omitWhole(scene,cpu,32);
+                // The older generic helper defaults backdrop0; carry the actual source-backed backdrop explicitly.
+                var omitted=new RetainedPlaneSceneRenderer.Scene(cut.foreground(),cut.background(),cut.packedHscroll256(),cut.vscrollLongBits(),
+                        cut.selectedPalette128(),cut.displayEnabled(),cut.sprites(),cut.nativePatterns(),scene.selectedBackdropPaletteIndex());
+                assertNaturalR12bOmissionPartitions(scene,omitted);assertEquals(scene.selectedBackdropPaletteIndex(),omitted.selectedBackdropPaletteIndex());
+                assertEquals(scene.sprites().primitives(),omitted.sprites().primitives());assertSame(cut.sprites(),omitted.sprites());
+                assertTrue(omitted.sprites().tiles().size()<scene.sprites().tiles().size());
+                var camera=h.mode().getCamera();var level=assertInstanceOf(com.openggf.level.AbstractLevel.class,h.mode().getLevelManager().getCurrentLevel());
+                long epoch=level.currentEpoch();clearPixels();renderer.draw(omitted,camera.getX(),camera.getY(),module::validateAct2PastLoadingCut);var withoutParent=pixels();
+                assertSame(level,h.mode().getLevelManager().getCurrentLevel());assertEquals(epoch,level.currentEpoch());assertNativeCapture(after,h);
+                assertSame(publication,host.selected());assertSame(inputs.current(),selected.inputs().current());assertSame(inputs.player(),selected.inputs().player());
+                assertSame(inputs.foreground(),selected.inputs().foreground());assertSame(inputs.background(),selected.inputs().background());
+                assertSame(binding,actualField(host,"render"));assertSame(renderer,actualField(binding,"renderer"));
+                assertNaturalR12bSnapshotValue(fullAfter,registry.capture(),"Projector full after omission");
+                assertNaturalR12bSnapshotValue(courseAfter,registry.captureCourse(),"Projector course after omission");
+                assertArrayEquals(actual,drawNaturalR12bImage(h));assertNativeCapture(after,h);
+                if(Arrays.equals(actual,withoutParent))continue;
+                visibleCalls.add(call);
+                // Replay this already observed ordinary edge into the chosen cut; no service beyond14716.
+                for(int scope=0;scope<2;scope++) {
+                    if(scope==0)registry.restore(full);else registry.restoreCourse(course);
+                    assertNaturalR12bRenderOwners(h,owners);assertNativeCapture(before,h);
+                    assertEquals(beforeSelected,assertInstanceOf(SonicCdAct2PastWorldHost.Published.class,host.selected()).selection());
+                    assertNaturalR12bSnapshotValue(full,registry.capture(),"Projector full at restored before"+scope);
+                    assertNaturalR12bSnapshotValue(course,registry.captureCourse(),"Projector course at restored before"+scope);
+                    assertArrayEquals(beforePixels,drawNaturalR12bImage(h));assertNativeCapture(before,h);
+                    assertNaturalR12bSnapshotValue(full,registry.capture(),"Projector full before replay forward"+scope);
+                    assertNaturalR12bSnapshotValue(course,registry.captureCourse(),"Projector course before replay forward"+scope);
+                    step(h,right);assertNaturalR12bRenderOwners(h,owners);assertNativeCapture(after,h);
+                    assertEquals(selected,assertInstanceOf(SonicCdAct2PastWorldHost.Published.class,host.selected()).selection());
+                    assertNaturalR12bSnapshotValue(fullAfter,registry.capture(),"Projector full replay after"+scope);
+                    assertNaturalR12bSnapshotValue(courseAfter,registry.captureCourse(),"Projector course replay after"+scope);
+                    assertArrayEquals(actual,drawNaturalR12bImage(h));assertNativeCapture(after,h);
+                    assertNaturalR12bSnapshotValue(fullAfter,registry.capture(),"Projector full replay pixels"+scope);
+                    assertNaturalR12bSnapshotValue(courseAfter,registry.captureCourse(),"Projector course replay pixels"+scope);
+                }
+                exportCall=call;exportPixels=actual.clone();exportOmitted=withoutParent.clone();
+                var selectedChildren=cpu.provenance().stream().map(piece->piece.slotRef().wholeIndex()).filter(whole->whole==64||whole==65).distinct().toList();
+                exportDetails="selected parent32 source20E9F0; current patterns="+parentPatterns+"; selected whole slots64/65="+selectedChildren+" (selection only; Hologram identity/visibility not claimed)";
+            }
+            assertTrue(exportCall>=14708&&exportCall<=14716,"Bounded14708..14716 gap: no genuinely selected/render-visible Projector32; selected="+selectedCalls);
+            assertNotNull(exportPixels);assertNotNull(exportOmitted);assertFalse(Arrays.equals(exportPixels,exportOmitted));assertNaturalR12bRenderOwners(h,owners);
+            System.out.println("ENGINE natural R12B Projector: first selected/render-visible parent32 at returned"+exportCall+", selected="+selectedCalls+", visible="+visibleCalls+
+                    "; full/course complete checkpoint-aware native values and actual pixels replayed before/after its fixed Right edge; "+exportDetails+". No native-image/audio/regional/full-act parity claim.");
+        } finally {fixture.cleanup();}
+        writeOptionalNaturalR12bProjectorCapture(exportPixels,exportOmitted,exportCall,exportDetails);
+    }
+
+    /** Optional artifacts only after module/session/graphics/EGL/fixture cleanup; never gameplay ingress. */
+    private static void writeOptionalNaturalR12bProjectorCapture(byte[] actual,byte[] withoutParent,int call,String details) throws Exception {
+        String output=System.getenv("SONICCD_R12B_PROJECTOR_OUTPUT");if(output==null||output.isBlank())return;
+        assertNotNull(actual);assertNotNull(withoutParent);assertEquals(320*224*4,actual.length);assertEquals(actual.length,withoutParent.length);assertTrue(call>=14708&&call<=14716);
+        var directory=Path.of(output);assertTrue(directory.isAbsolute());assertEquals(directory,directory.normalize());assertEquals(output,directory.toString());
+        String root=System.getenv("SONICCD_ENGINE_CAPTURE_ROOT");assertNotNull(root,"Explicit canonical ENGINE capture root required");
+        var owned=Path.of(root).toRealPath();assertEquals(Path.of(System.getProperty("user.home"),"Downloads","Sonic-CD","captures","engine").toRealPath(),owned);
+        assertTrue(directory.startsWith(owned)&&!directory.equals(owned),"Projector output needs its own canonical directory under E/captures/engine");
+        for(var ancestor=directory;ancestor!=null;ancestor=ancestor.getParent()) {
+            assertFalse(Files.isSymbolicLink(ancestor),"Capture output cannot traverse symlinks");
+            if(Files.exists(ancestor,java.nio.file.LinkOption.NOFOLLOW_LINKS))assertTrue(Files.isDirectory(ancestor,java.nio.file.LinkOption.NOFOLLOW_LINKS));
+        }
+        Files.createDirectories(directory);assertEquals(directory,directory.toRealPath());
+        String stem="ENGINE-R12B-natural-projector-call-"+call;var png=directory.resolve(stem+".png");var omitted=directory.resolve(stem+"-without-parent32.png");var text=directory.resolve(stem+".txt");
+        for(var path:java.util.List.of(png,omitted,text))assertFalse(Files.exists(path,java.nio.file.LinkOption.NOFOLLOW_LINKS));
+        writeEngineCapturePng(actual,png);writeEngineCapturePng(withoutParent,omitted);
+        Files.writeString(text,"ENGINE OpenGGF original-USA natural R12B Projector; actual returned call"+call+".\n"
+                +"Fixed original controller1..14516 then Right; first selected/render-visible parent32 in14708..14716.\n"
+                +"320x224 bottom-up RGBA, production retained native planes/sprites/current pixels and source-backed backdrop on configured EGL.\n"
+                +"Comparison omits only selected parent32 sprites; all other scene partitions and native slot values retained.\n"
+                +"Full/course complete checkpoint-aware native values and actual before/after pixels replayed. "+details+".\n"
+                +"Exported after module/session/graphics/EGL/fixture cleanup; pixels never feed gameplay.\n"
+                +"ENGINE/native-source evidence only; no emulator/native-image/audio/regional/full-act parity claim.\n");
+    }
+    // END natural R12B Projector EGL proof.
 
 }

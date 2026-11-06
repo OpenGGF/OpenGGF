@@ -8,6 +8,8 @@ import com.openggf.game.soniccd.level.CdObjectTileIds;
 import com.openggf.game.soniccd.level.CdObjectVisualAssets;
 import com.openggf.game.soniccd.level.CdR12aObjectAssets;
 import com.openggf.game.soniccd.level.CdR12aProfile;
+import com.openggf.game.soniccd.level.CdR12bObjectAssets;
+import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
 import com.openggf.game.soniccd.media.CdMmdImage;
 
 import java.util.ArrayList;
@@ -53,11 +55,11 @@ public final class CdTunnelDoorSplash {
     public record Assets(CdAssetBytes objectTileIds, CdObjectVisualAssets visual, int mappingsAddress) {
         public Assets {
             Objects.requireNonNull(objectTileIds); Objects.requireNonNull(visual);
-            if (objectTileIds.length() != 74 || visual.mappingFrames().size() != 7
+            if ((objectTileIds.length() != 74 && objectTileIds.length() != 72) || visual.mappingFrames().size() != 7
                     || visual.mappingTableOffset() != 0 || visual.mappings().length() != MAPPING_BYTES
                     || visual.animations().size() != 3 || visual.animationTable().length() != ANIMATION_BYTES
                     || mappingsAddress != MAPPING_ADDRESS) {
-                throw new IllegalArgumentException("Door Splash needs original R12A tile74/map100/animation24 views");
+                throw new IllegalArgumentException("Door Splash needs original R12A tile74 or R12B tile72, map100/animation24 views");
             }
             for (var frame : visual.mappingFrames()) for (var piece : frame.pieces()) {
                 if (piece.tileOffset() > ART_TILES - piece.tileCount()) {
@@ -77,6 +79,19 @@ public final class CdTunnelDoorSplash {
             }
             return new Assets(owner.view(CdR12aProfile.Asset.OBJECT_TILE_IDS), owner.tunnelDoorSplash(),
                     owner.profile().range(CdR12aProfile.Asset.MAP_SPR_TUNNEL_DOOR_SPLASH).nativeAddress());
+        }
+
+        /** Actual original USA R12B operands select these complete views; no equal-R12A address inference. */
+        public static Assets fromAct2PastAssets(CdR12bObjectAssets owner) {
+            Objects.requireNonNull(owner, "actual R12B object assets");
+            var identity = Objects.requireNonNull(owner.identity(), "R12B source identity");
+            if (identity.variant() != CdReleaseVariant.USA || identity.file() != CdNativeFile.R12B
+                    || identity.domain() != CdMmdImage.Domain.ORIGINAL_WORD_RAM
+                    || !identity.stage().equals(CdStagePayload.R12B.stage())) {
+                throw new IllegalArgumentException("Door Splash requires authenticated original USA R12B Word RAM");
+            }
+            return new Assets(owner.view(CdR12bObjectAssets.View.OBJECT_TILE_IDS), owner.tunnelDoorSplash(),
+                    CdR12bObjectAssets.View.MAP_SPR_TUNNEL_DOOR_SPLASH.range().nativeAddress());
         }
 
         /** SetObjectTileID (:7-17): only selector D's declared one-WORD body, never its next neighbour. */
@@ -145,6 +160,7 @@ public final class CdTunnelDoorSplash {
     private long publicationOrdinal;
     private Publication pendingPublication;
     private Object pendingCall;
+    private boolean operationCompleted;
 
     /** Constructed source behavior only; production uses the paired authenticated factory below. */
     public CdTunnelDoorSplash(CdObjectPlacementRuntime runtime, Assets assets,
@@ -168,9 +184,28 @@ public final class CdTunnelDoorSplash {
         return body;
     }
 
+    /** Same body and original pending-operation receipts over the paired actual original-USA R12B source. */
+    public static CdTunnelDoorSplash fromAct2PastAssets(CdObjectPlacementRuntime runtime, CdR12bTerrainAssets terrain,
+                                                       DispatchObserver observer, SourceDraw draw, SourceSound sound,
+                                                       ReceiptGuard guard) {
+        Objects.requireNonNull(runtime); Objects.requireNonNull(terrain);
+        if (!runtime.sameAct2PastSource(terrain)) throw new IllegalArgumentException("Door Splash placement/assets source differs");
+        var body = new CdTunnelDoorSplash(runtime, Assets.fromAct2PastAssets(terrain.objects()), (pool, identity) -> {
+            throw new IllegalStateException("R12B Door Splash requires its actual source Draw");
+        }, soundId -> { throw new IllegalStateException("R12B Door Splash requires its actual source FM"); });
+        body.observer = Objects.requireNonNull(observer); body.sourceDraw = Objects.requireNonNull(draw);
+        body.sourceSound = Objects.requireNonNull(sound); body.receiptGuard = Objects.requireNonNull(guard);
+        return body;
+    }
+
     public Assets assets() { return assets; }
     public boolean isCurrentCall(Object call) {
         return call != null && dispatching && (call == pendingPublication || call == pendingCall);
+    }
+
+    /** Original active identity only, after its actual store/helper/port returned; never a retained receipt. */
+    public boolean isCurrentCallCompleted(Object call) {
+        return isCurrentCall(call) && operationCompleted;
     }
 
     /** One physical RunObjects dispatch of the dynamic slot currently holding ID $0B. */
@@ -271,12 +306,12 @@ public final class CdTunnelDoorSplash {
         observePublication(call, () -> runtime.pool().deleteObject(activeWhole));
     }
     private void observePublication(Publication call, Runnable nativeStore) {
-        requireNoPending(); pendingPublication = call;
+        requireNoPending(); pendingPublication = call; operationCompleted = false;
         try {
             readOnly(() -> observer.beforePublication(call)); readOnly(() -> receiptGuard.prepared(call));
-            nativeStore.run();
+            nativeStore.run(); operationCompleted = true;
             readOnly(() -> observer.afterPublication(call)); readOnly(() -> receiptGuard.completed(call));
-        } finally { pendingPublication = null; }
+        } finally { pendingPublication = null; operationCompleted = false; }
     }
     private void observedSound(FmSound sound) {
         if (observer == null) { readOnly(() -> playFm.playFm(sound)); return; }
@@ -292,11 +327,12 @@ public final class CdTunnelDoorSplash {
         observedCall(call, () -> checkedDraw(() -> sourceDraw.draw(call)));
     }
     private void observedCall(Object call, Runnable nativeCall) {
-        requireNoPending(); pendingCall = call;
+        requireNoPending(); pendingCall = call; operationCompleted = false;
         try {
             readOnly(() -> observer.beforeCall(call)); readOnly(() -> receiptGuard.prepared(call)); nativeCall.run();
+            operationCompleted = true;
             readOnly(() -> observer.afterCall(call)); readOnly(() -> receiptGuard.completed(call));
-        } finally { pendingCall = null; }
+        } finally { pendingCall = null; operationCompleted = false; }
     }
     private void requireNoPending() {
         if (pendingPublication != null || pendingCall != null) throw new IllegalStateException("Nested Door Splash producer operation");

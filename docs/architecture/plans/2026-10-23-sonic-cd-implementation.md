@@ -1,5 +1,62 @@
 # Implement Sonic CD with complete regional parity
 
+## 6 November 2026 — native Results/Splash and source-format qualification
+
+Private/local work continues toward the full USA MVP, followed by JP/EU. Main
+remains untouched; no push, PR or public release. The private parent merge
+fb996760803cb5d0b2839059728da64849a4407a retains next
+38c69faeb505f9ac82d0189380d661eb9baa2d1c and its current 0.9 development notes.
+
+R11's 13-class source-bound run passes 187 tests with zero failures, errors or
+skips. Its source fingerprint 43c9e7071dac6b69f2780a64419930027ce5df6a030ab7cda87e949dc02dbafb
+is unchanged before/after. This covers Disc/Doors/Spin 23, Goal/Signpost 18,
+Splash 13, Results 16, controller 7, explicit R13-format 11, four legacy player
+asset classes 37, S1 palette/scope 8, render-order 21 and scroll-scope 33.
+Admission wait was 16 seconds; Maven reported 14 minutes 20 seconds. User wait
+was zero; other setup/hash/export overhead is separate and unmeasured.
+
+Actual original-USA controller observation returns through 17200. The additional
+Right+B window 16031..16062 produces a genuine accepted roll jump, but later
+recontact with diagonal Spring 38 still repeats. Goal 33 executes Init/routine 2;
+a natural Goal trigger, Signpost crossing and Results edge are not established.
+The permanent full/course endpoint stays 15717/1782 target services. Six permanent
+controller tests, including actual Projector14708 current pixels and full/course
+replay, are byte-exact from the successful run; its seventh temporary observer
+and three readout helpers were removed before saving and retained externally.
+No gameplay state was supplied from observations.
+
+The new bindings reuse cached source-authenticated components and existing
+Frame, pool, Host/Core, art, PLC and rewind owners. Original cue12 partial2/1
+append prefixes and cue10 full-buffer no-store faults retain their actual native
+stores and original exception. Results finishes the increasing physical walk
+before the explicit restart2 LEVEL_FLOW boundary. Old LevelStart/exit, R13 FULL,
+boss and positive offscreen Results allocation branches remain unqualified.
+Metadata now retains 88 raw views, 47 counted roots/429 frames and eight icons;
+no art-source count changed. Explicit167 visual data retains all57120 source art
+bytes and rejects an invented alignment byte while legacy198 keeps its contract.
+No R13 runtime admission follows from data decoding.
+
+Matched parent/candidate attribution used the same 53 identities and profiles:
+parent25 passed/28 failed, candidate23 passed/29 failed/1 error, no skips. The
+candidate's two extra failures were fixture contracts: Map-copying a snapshot
+lost real world scope, and a source-order guard named the old public capture
+entry. R11 now verifies actual scoped legacy payloads, foreign/unscoped rejection,
+and the guarded private renderer producer; shared production stayed unchanged.
+The remaining 28 failures recur on the clean parent. Raw object-hash/Set-order
+message differences are retained. This is not a full green smoke: the older
+broad run stopped after89/97 ordinary batches, with guards unrun and373 candidates
+unfinished. Its explicit optional owner-ledger skip now has a verified policy.
+
+Three fresh bounded static reviews report no concrete P1/P2 in composed World,
+167-format and parent fixture scopes. Commands, exact case identities, source and
+report hashes, failure history, inverse proofs and captures remain under
+`$SCD_ARTIFACT_ROOT/research/` and `.work/r12b-projector-batch-root-20261106`.
+The actual ENGINE Projector14708 image and renderer-only omission differ in476
+visible pixels; no emulator/native-image, audio, whole-act or regional parity
+claim follows. Next: diagnose the recorded Spring recontact, qualify the natural
+exit and old programme lifecycle, and prepare real R13C/D assets. R13A does not
+exist. Later source-data work remains external/unrun until separately qualified.
+
 ## 6 November 2026 — Projector, Hurt and permanent R12B continuation
 
 The user resumed full private USA implementation, followed by JP/EU; the historical

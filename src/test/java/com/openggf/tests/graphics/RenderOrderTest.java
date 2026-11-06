@@ -258,10 +258,14 @@ public class RenderOrderTest {
 
         assertTrue(regular.contains("drawPublishedSprites("));
         assertTrue(regular.contains("prepareOrDrawLiveSprites(spriteManager);"));
-        assertTrue(regular.contains("captureSceneSpriteTable(spriteManager)"));
+        assertTrue(regular.contains("captureSceneSpriteTableForDraw(spriteManager)"));
         assertTrue(filtered.contains("drawPublishedSprites("));
-        assertTrue(filtered.contains("captureSceneSpriteTable(spriteManager)"));
+        assertTrue(filtered.contains("captureSceneSpriteTableForDraw(spriteManager)"));
         assertTrue(capture.contains("prepareOrDrawLiveSprites(sprites)"));
+        int publicGuard = capture.indexOf("rejectScrollOperation();");
+        int privateProducer = capture.indexOf("return captureSceneSpriteTableForDraw(sprites);");
+        assertTrue(publicGuard >= 0 && publicGuard < privateProducer,
+                "external captures reject reentry before delegating to the renderer-owned full table producer");
         assertTrue(publication.contains("renderSpriteObjectPass(sprites, false);"));
         assertEquals(0, countOccurrences(regular + filtered, "drawStageRingsForBucket(ringManager,"),
                 "draw consumers replay the shared table instead of submitting duplicate ring entries");
