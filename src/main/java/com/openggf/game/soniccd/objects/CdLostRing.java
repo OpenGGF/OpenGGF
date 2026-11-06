@@ -1,5 +1,8 @@
 package com.openggf.game.soniccd.objects;
 
+import com.openggf.game.soniccd.level.CdR13FutureAssets;
+import com.openggf.game.soniccd.level.CdR13ReusedObjectAssets;
+
 import com.openggf.game.soniccd.CdNativeFile;
 import com.openggf.game.soniccd.CdReleaseVariant;
 import com.openggf.game.soniccd.CdStagePayload;
@@ -125,7 +128,9 @@ public final class CdLostRing {
      * (Misc).asm:69-76, Functions (General).asm:288-310, Object Functions.asm:91-128). zoneByte is $FF1506 and
      * bottomBoundWord is $FFF72E, sampled at the call; this body writes neither.
      */
-    public record Inputs(int levelVIntCounter, int runObjectsD7, int zoneByte, int bottomBoundWord) {
+    /** Actual scalar callbacks; VInt is read only at Main's reached descending phase test. */
+    public interface InputReads {int levelVIntCounter();int runObjectsD7();int zoneByte();int bottomBoundWord();}
+    public record Inputs(int levelVIntCounter, int runObjectsD7, int zoneByte, int bottomBoundWord) implements InputReads {
         public Inputs {
             if ((runObjectsD7 & ~0xFFFF) != 0) { throw new IllegalArgumentException("RunObjects d7 is a DBF word"); }
             if ((zoneByte & ~0xFF) != 0) { throw new IllegalArgumentException("zone must be an unsigned native byte"); }
@@ -295,7 +300,7 @@ public final class CdLostRing {
     private PrimaryAngleCommit sourceAngle;
     private SoundPort sourceSound;
     private int activeWhole;
-    private Inputs activeInputs;
+    private InputReads activeInputs;
     private Ports activePorts;
     private Object pendingOperation;
     private SourceCut pendingCut;
@@ -303,6 +308,16 @@ public final class CdLostRing {
     private CdObjectState.Identity pendingDrawIdentity;
     private CdRing.GlobalsPort pendingCollectGlobals;
     private CdRing.SourceCalls pendingCollectCalls;
+
+    // BEGIN R13 SOURCE FACTORY 20261106
+    public static CdLostRing fromAct3FutureAssets(CdObjectPlacementRuntime runtime,CdR13FutureAssets assets,CdR13ReusedObjectAssets owner,
+            CdPlayerMath math,CdPlayerTerrain terrain,PrimaryAngleCommit angle,SoundPort sound,DrawObjectCall draw,CollectRingCall collect) {
+        Objects.requireNonNull(runtime,"actual placement");Objects.requireNonNull(assets,"actual original future source");Objects.requireNonNull(owner,"actual reuse metadata");
+        if(!runtime.ownsAct3FutureAssets(assets)||!owner.ownsAssets(assets,owner.startup()))throw new IllegalArgumentException("R13 reused body requires exact retained source/placement/metadata");
+        var data=new Assets(owner.startup().rings(),com.openggf.game.soniccd.level.CdR13ObjectAssets.View.MAP_SPR_RING.range(assets.identity().file()).nativeAddress(),0xA7AE);
+        var body=new CdLostRing(runtime,data,math,terrain,draw,collect);body.sourceAngle=Objects.requireNonNull(angle);body.sourceSound=Objects.requireNonNull(sound);body.sourceBinding=true;return body;
+    }
+    // END R13 SOURCE FACTORY 20261106
 
     /** Same retained source before metadata/helper admission. Legacy six-port construction remains opt-out.
      * On this path returned sound/angle effects describe completed ports and must never be replayed. */
@@ -318,7 +333,8 @@ public final class CdLostRing {
     }
     /** Executes the existing shared reward helper once; supplies no scalar/sound owner. */
     public static void collectRing(CdRing.GlobalsPort globals, CdRing.SourceCalls calls) { CdRing.collectRing(globals, calls); }
-    public boolean isCurrentInvocation(int whole, Inputs inputs, Ports ports) {
+    public boolean isCurrentInvocation(int whole, Inputs inputs, Ports ports) {return isCurrentInvocation(whole,(InputReads)inputs,ports);}
+    public boolean isCurrentInvocation(int whole, InputReads inputs, Ports ports) {
         return sourceBinding && running && whole == activeWhole && inputs == activeInputs && ports == activePorts;
     }
     public boolean isCurrentCall(Object call) { return sourceBinding && running && call != null && call == pendingOperation; }
@@ -399,7 +415,8 @@ public final class CdLostRing {
     public Assets assets() { return assets; }
 
     /** One ObjLostRing dispatch for the whole-pool dynamic slot currently holding ID $11. */
-    public Result run(int wholeIndex, Inputs inputs, Ports ports) {
+    public Result run(int wholeIndex, Inputs inputs, Ports ports) {return run(wholeIndex,(InputReads)inputs,ports);}
+    public Result run(int wholeIndex, InputReads inputs, Ports ports) {
         if (!sourceBinding) return runSelected(wholeIndex, inputs, ports);
         if (running) throw new IllegalStateException("Reentrant source LostRing dispatch");
         Objects.requireNonNull(inputs); Objects.requireNonNull(ports);
@@ -407,7 +424,7 @@ public final class CdLostRing {
         try { return runSelected(wholeIndex, inputs, sourcePorts(ports)); }
         finally { running = false; activeInputs = null; activePorts = null; }
     }
-    private Result runSelected(int wholeIndex, Inputs inputs, Ports ports) {
+    private Result runSelected(int wholeIndex, InputReads inputs, Ports ports) {
         Objects.requireNonNull(inputs, "inputs");
         Objects.requireNonNull(ports, "ports");
         var pool = runtime.pool();
@@ -516,7 +533,7 @@ public final class CdLostRing {
     }
 
     /** ObjLostRing_Main (Ring/Main.asm:410-435). Time stop is not tested here, unlike ObjRing_Main. */
-    private void main(int whole, Inputs in, Ports ports, List<Effect> effects) {
+    private void main(int whole, InputReads in, Ports ports, List<Effect> effects) {
         var pool = runtime.pool();
         int frame = Objects.requireNonNull(ports.spillGlobals().read(), "spill globals").frameByte();
         var state = pool.state(whole).moveByte(MAP_FRAME, frame);                 // MOVE.B ringLossAnimFrame,oMapFrame(a0)

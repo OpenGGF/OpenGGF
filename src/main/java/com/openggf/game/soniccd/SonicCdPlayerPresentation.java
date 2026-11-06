@@ -249,6 +249,15 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         }
     }
 
+    record Act3FutureVideoInit(com.openggf.game.soniccd.resources.CdR13ArtResidency.State currentPatterns,
+                              CdPlayerArtRuntime.State playerArt,ProgramVideoSelection selection) { }
+    Act3FutureVideoInit initializeProgramVideo(com.openggf.game.soniccd.resources.CdR13ArtResidency.State current,
+                                              CdPlayerArtRuntime.State player) {
+        requireProgramVideoInitializationCut();Objects.requireNonNull(current);Objects.requireNonNull(player);
+        return new Act3FutureVideoInit(com.openggf.game.soniccd.resources.CdR13ArtResidency.clear(current),
+                clearProgramPlayerResident(player),programVideoSelection());
+    }
+
     private static ProgramVideoSelection programVideoSelection() {
         // The source clears 64 selected colour WORDs and physical displayed storage.
         // It does not load the CPU target palette, clear CPU sprites, or prime a Sonic pose.
@@ -681,6 +690,10 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
     void afterRestore() {
         requirePastRenderIdle();
         try {
+            if(module.act3FutureLoadingSelected()) {
+                module.validateAct3FutureLoadingCut();module.act3FutureWorldHost().projectCamera(GameServices.camera());
+                GameServices.level().recomputeParallaxAfterRewindRestore();heldPhase=null;return;
+            }
             if (module.act2PastLoadingSelected()) {
                 module.validateAct2PastLoadingCut(); module.act2PastWorldHost().projectCamera(GameServices.camera());
                 // Restoring projection must not consume the generic handler's pending init cursor.
@@ -830,6 +843,14 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         throw new IllegalStateException("CD uses the complete controlled-frame disposition");
     }
     @Override public GameplayFrameDisposition beforeFrame(CourseControl course, LogicalInputSnapshot input) {
+        if(module.act3FutureLoadingSelected()) {
+            requirePastRenderIdle();
+            if(input!=null&&input.debugModeTogglePressed())throw SonicCd.unsupported("R13 has no debug movement");
+            if(input!=null&&!input.player2().equals(com.openggf.control.PlayerInputState.neutral()))
+                throw SonicCd.unsupported("R13 requires neutral controller2");
+            int held=nativeHeldByte(input,SpriteManagerInternalAccess.inputSuppressed(GameServices.sprites()));
+            heldPhase=null;module.serviceAct3FutureLoading(held);return GameplayFrameDisposition.HOLD;
+        }
         if (module.act2PastLoadingSelected()) {
             requirePastRenderIdle();
             if (input != null && input.debugModeTogglePressed()) throw new UnsupportedOperationException("R12B loading has no debug movement");
@@ -934,6 +955,11 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
     @Override public void afterTick(CourseControl course, boolean advanced) {
         requirePastRenderIdle(); // Reentry rejection is observational, outside native failure closure.
         try {
+            if(module.act3FutureLoadingSelected()) {
+                module.validateAct3FutureLoadingCut();
+                if(advanced||heldPhase!=null)throw new IllegalStateException("R13 advanced the generic gameplay owner");
+                return;
+            }
             if (module.act2PastLoadingSelected()) {
                 module.validateAct2PastLoadingCut();
                 if (advanced || heldPhase != null) throw new IllegalStateException("R12B load advanced ordinary gameplay");
@@ -1017,6 +1043,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
     }
 
     private void drawCompletedOverlay() {
+        if(module.act3FutureLoadingSelected()){module.act3FutureWorldHost().draw();return;}
         if (module.act2PastLoadingSelected()) { module.act2PastWorldHost().draw(); return; }
         if (module.act2LoadingSelected()) {
             if (module.warpProgramSelected()) drawAct2WarpProgram(); else drawAct2SelectedDisplay();
@@ -1124,6 +1151,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
 
     /** Native service/capture/restore may not reenter from an old queued graphics command. */
     void requirePastRenderIdle() {
+        if(module.act3FutureLoadingSelected())module.act3FutureWorldHost().requireRenderIdle();
         if (module.act2PastLoadingSelected()) module.act2PastWorldHost().requireRenderIdle();
         if (drawingPast || drawingAct2 || drawingWarp) throw new IllegalStateException("Past selected draw is active");
     }
@@ -1267,6 +1295,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
     }
     @Override public ZoneScrollHandler getHandler(int zoneIndex) {
         if (zoneIndex != 0) throw new UnsupportedOperationException("Only Palmtree Panic is admitted");
+        if(module.act3FutureLoadingSelected())return module.act3FutureWorldHost().handler();
         return module.act2PastLoadingSelected() ? module.act2PastWorldHost().handler() : scroll;
     }
     @Override public ZoneConstants getZoneConstants() {

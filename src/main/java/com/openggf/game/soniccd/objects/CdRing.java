@@ -13,6 +13,8 @@ import com.openggf.game.soniccd.level.CdR12aProfile;
 import com.openggf.game.soniccd.level.CdR12aTerrainAssets;
 import com.openggf.game.soniccd.level.CdR12bObjectAssets;
 import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
+import com.openggf.game.soniccd.level.CdR13FutureAssets;
+import com.openggf.game.soniccd.level.CdR13ObjectAssets;
 import com.openggf.game.soniccd.media.CdMmdImage;
 
 import java.util.List;
@@ -98,7 +100,8 @@ public final class CdRing {
         private void requireSupportedDomain() {
             if (variant != CdReleaseVariant.USA
                     || !(stage.equals(CdStageKey.parse("R11A")) || stage.equals(CdStageKey.parse("R11B"))
-                    || stage.equals(CdStageKey.parse("R12A")) || stage.equals(CdStageKey.parse("R12B")))
+                    || stage.equals(CdStageKey.parse("R12A")) || stage.equals(CdStageKey.parse("R12B"))
+                    || stage.equals(CdStageKey.parse("R13C")) || stage.equals(CdStageKey.parse("R13D")))
                     || zoneByte != 0) {
                 // MMZ's explicit priority/subtype2/tile branch is not executed in PPZ zone 0 (:159-166).
                 throw new UnsupportedOperationException("ObjRing body is bounded to USA R11A/R11B/authenticated R12A/R12B zone 0; selected "
@@ -126,6 +129,7 @@ public final class CdRing {
     private final Optional<CdR11bAssets.Identity> pastIdentity;
     private final Optional<CdR12aTerrainAssets.Identity> act2Identity;
     private final Optional<CdR12bTerrainAssets.Identity> act2PastIdentity;
+    private final Optional<CdR13FutureAssets.Identity> act3FutureIdentity;
 
     /** Pure declared-input consumer, like the placement/visual decoders; no asset identity is conferred. */
     public CdRing(CdObjectPlacementRuntime placement, SourceData data) {
@@ -156,6 +160,14 @@ public final class CdRing {
                    Optional<CdR11aAssets.Identity> identity, Optional<CdR11aObjectAssets.ArtBinding> art,
                    Optional<CdR11bAssets.Identity> pastIdentity, Optional<CdR12aTerrainAssets.Identity> act2Identity,
                    Optional<CdR12bTerrainAssets.Identity> act2PastIdentity) {
+        this(placement, data, identity, art, pastIdentity, act2Identity, act2PastIdentity, Optional.empty());
+    }
+
+    private CdRing(CdObjectPlacementRuntime placement, SourceData data,
+                   Optional<CdR11aAssets.Identity> identity, Optional<CdR11aObjectAssets.ArtBinding> art,
+                   Optional<CdR11bAssets.Identity> pastIdentity, Optional<CdR12aTerrainAssets.Identity> act2Identity,
+                   Optional<CdR12bTerrainAssets.Identity> act2PastIdentity, Optional<CdR13FutureAssets.Identity> act3FutureIdentity) {
+        this.act3FutureIdentity = act3FutureIdentity;
         this.placement = Objects.requireNonNull(placement, "placement");
         this.data = Objects.requireNonNull(data, "data");
         this.identity = identity; this.art = art;
@@ -256,6 +268,17 @@ public final class CdRing {
                 Optional.of(identity));
     }
 
+    // BEGIN R13 RETAINED RING ADAPTER 20261106
+    /** Same ObjRing algorithm; actual C/D Init map operand and literal A7AE, not an R12B relabel. */
+    public static CdRing fromAct3FutureAssets(CdObjectPlacementRuntime placement, CdR13FutureAssets assets, CdR13ObjectAssets objects) {
+        Objects.requireNonNull(placement, "actual placement");Objects.requireNonNull(assets, "actual R13 aggregate");Objects.requireNonNull(objects, "actual R13 metadata");
+        if (!placement.ownsAct3FutureAssets(assets) || !objects.ownsAssets(assets))
+            throw new IllegalArgumentException("Ring requires the exact retained R13 source/placement");
+        var data = new SourceData(objects.ringDeltas(), CdR13ObjectAssets.View.MAP_SPR_RING.range(assets.identity().file()).nativeAddress(), 0xA7AE, objects.rings());
+        return new CdRing(placement, data, Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(assets.identity()));
+    }
+    // END R13 RETAINED RING ADAPTER 20261106
+
     public SourceData sourceData() { return data; }
     public Optional<CdR11aAssets.Identity> sourceIdentity() { return identity; }
     public Optional<CdR11aObjectAssets.ArtBinding> artBinding() { return art; }
@@ -282,6 +305,11 @@ public final class CdRing {
 
     /** Supported arithmetic alone cannot relabel a bound source or lend R12A/R12B admission to raw data. */
     private void requireBoundSource(Inputs inputs) {
+        // Original R13 C/D metadata alone cannot lend domain admission to declared/raw Ring data.
+        if ((inputs.stage().equals(CdStageKey.parse("R13C")) || inputs.stage().equals(CdStageKey.parse("R13D"))) && act3FutureIdentity.isEmpty())
+            throw new UnsupportedOperationException("R13 Ring requires its actual retained source/placement relation");
+        if (act3FutureIdentity.isPresent() && (act3FutureIdentity.get().variant() != inputs.variant() || !act3FutureIdentity.get().stage().equals(inputs.stage())))
+            throw new IllegalArgumentException("Ring inputs do not match the retained R13 source");
         if (inputs.stage().equals(CdStageKey.parse("R12A")) && act2Identity.isEmpty()) {
             throw new UnsupportedOperationException("R12A Ring requires its actual authenticated placement/object relation");
         }

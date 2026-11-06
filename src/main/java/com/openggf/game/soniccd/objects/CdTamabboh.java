@@ -1,5 +1,8 @@
 package com.openggf.game.soniccd.objects;
 
+import com.openggf.game.soniccd.level.CdR13FutureAssets;
+import com.openggf.game.soniccd.level.CdR13ReusedObjectAssets;
+
 import com.openggf.game.soniccd.CdNativeFile;
 import com.openggf.game.soniccd.CdReleaseVariant;
 import com.openggf.game.soniccd.CdStagePayload;
@@ -155,7 +158,8 @@ public final class CdTamabboh {
     }
 
     /** Raw bytes except debug/camera WORDs. Never normalize timeZone before native saved addressing. */
-    public record Globals(int goodFuture, int timeZone, int timeWarpDirection, int debugMode, int cameraXWord, int primaryAngle) {
+    public interface Reads {int goodFuture();int timeZone();int timeWarpDirection();int debugMode();int cameraXWord();int primaryAngle();}
+    public record Globals(int goodFuture, int timeZone, int timeWarpDirection, int debugMode, int cameraXWord, int primaryAngle) implements Reads {
         public Globals {
             byteValue(goodFuture); byteValue(timeZone); byteValue(timeWarpDirection);
             wordValue(debugMode); wordValue(cameraXWord); byteValue(primaryAngle);
@@ -317,6 +321,23 @@ public final class CdTamabboh {
     }
 
 
+    // BEGIN R13 SOURCE FACTORY 20261106
+    public static CdTamabboh fromAct3FutureAssets(CdObjectPlacementRuntime runtime,CdR13FutureAssets assets,CdR13ReusedObjectAssets owner,
+            PrimaryAngleCommit angle,PlayerWordRead read,PlayFmSound fm,DrawObjectCall draw) {
+        Objects.requireNonNull(runtime,"actual placement");Objects.requireNonNull(assets,"actual original future source");Objects.requireNonNull(owner,"actual reuse metadata");
+        if(!runtime.ownsAct3FutureAssets(assets)||!owner.ownsAssets(assets,owner.startup()))throw new IllegalArgumentException("R13 reused body requires exact retained source/placement/metadata");
+        var tiles=owner.startup().view(com.openggf.game.soniccd.level.CdR13ObjectAssets.View.OBJECT_TILE_IDS);
+        if(tiles.length()!=68)throw new IllegalArgumentException("R13 actual68-byte tile directory");
+        int root=CdR13ReusedObjectAssets.View.MAP_SPR_TAMABBOH.range(assets.identity().file()).nativeAddress();
+        var data=new NativeAssets(secondary->{int target=(short)tiles.unsignedWord(TILE_SELECTOR*2);return tiles.unsignedWord(target+secondary*2);},
+            owner.tamabbohNormal(),owner.tamabbohDamaged(),owner.tamabbohMissile(),root,root+22,
+            CdR13ReusedObjectAssets.View.MAP_SPR_TAMABBOH_MISSILE.range(assets.identity().file()).nativeAddress(),
+            CdR13ReusedObjectAssets.View.ANI_TAMABBOH_NORMAL.range(assets.identity().file()).nativeAddress(),
+            CdR13ReusedObjectAssets.View.ANI_TAMABBOH_DAMAGED.range(assets.identity().file()).nativeAddress());
+        return new CdTamabboh(runtime,data,CdPlayerTerrain.fromStageTerrain(assets.terrain()),angle,read,fm,draw);
+    }
+    // END R13 SOURCE FACTORY 20261106
+
     /**
      * Genuine original-USA R12B binding. Public Assets9/A74 and all body policies remain unchanged.
      * N1ecc5f3: Tamabboh/Main.asm:29-72,226-252; Object Tile ID Set.asm:7-17.
@@ -343,7 +364,9 @@ public final class CdTamabboh {
     }
 
     /** ObjTamabboh:7-18 / ObjTamabbohMissile:213-224: subtype equality1 is FIRST. */
-    public Result run(int wholeIndex, Globals globals) {
+    public Result run(int wholeIndex, Globals globals) { return run(wholeIndex,(Reads)globals); }
+    /** Lazy actual scalar reads preserve subtype1-before-parent-presence order. No default values. */
+    public Result run(int wholeIndex, Reads globals) {
         if (running) throw new IllegalStateException("Tamabboh cannot reenter its synchronous physical dispatch");
         running = true;
         try {
@@ -378,7 +401,7 @@ public final class CdTamabboh {
     }
 
     /** Object Time Check.asm:12-44: Delete64, restore only XY WORDs, ID18, skip body wrapper. */
-    private static boolean destroyOnGoodFuture(Cursor c, Globals globals) {
+    private static boolean destroyOnGoodFuture(Cursor c, Reads globals) {
         if (globals.goodFuture() == 0 || (globals.timeZone() == 1 && c.state.subtype() == 0)) {
             c.returned(NativeCall.DESTROY_ON_GOOD_FUTURE); return false;
         }
@@ -409,7 +432,7 @@ public final class CdTamabboh {
         if (floor(c).distance() < 0) { c.state = c.state.addByte(ROUTINE, 2); c.publish(); }
     }
     /** ObjTamabboh_Main:76-126: every reversal re-enters the entire Main range/cooldown path. */
-    private void main(Cursor c, Globals globals) {
+    private void main(Cursor c, Reads globals) {
         Set<MainCut> seen = new HashSet<>();
         while (true) {
             if (!seen.add(new MainCut(c.state, c.primaryAngle))) {
@@ -615,7 +638,7 @@ public final class CdTamabboh {
         c.returned(NativeCall.DRAW_OBJECT);
     }
     /** CheckObjDespawn2:388-399,442-446 / DespawnObject:403-438; raw anchor loaded AFTER draw. */
-    private void despawn(Cursor c, Globals globals) {
+    private void despawn(Cursor c, Reads globals) {
         int anchor = c.state.word(TAMABBOH_ANCHOR_X);
         boolean outside = c.state.signedByte(SPRITE_FLAGS) >= 0
                 && (((anchor & 0xFF80) - ((globals.cameraXWord() - 0x80) & 0xFF80)) & 0xFFFF) > 0x280;
@@ -631,7 +654,7 @@ public final class CdTamabboh {
     }
     private record SavedAddress(int id, int period, int byteIndex) { }
     /** Native linear aliases and actual bounds FIRST; canonical API arguments only after that. */
-    private static SavedAddress savedAddress(Cursor c, Globals globals) {
+    private static SavedAddress savedAddress(Cursor c, Reads globals) {
         int period = globals.timeZone() & 0x7F;
         if ((globals.timeZone() & 0x80) != 0) {
             int adjusted = (period - (byte) globals.timeWarpDirection()) & 0xFFFF;

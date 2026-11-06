@@ -1,5 +1,60 @@
 # Implement Sonic CD with complete regional parity
 
+## 6 November 2026 — actual Act3 loading and first visible Sonic
+
+The original fixed controller route now reaches the actual same-World R13D
+programme. Native loading returns Ready at17004, first selected and renderer-visible
+Sonic at17007, the original Title requests PLC2 at17133 and genuine service and
+control release complete at17142. The incoming Core.goodFuture0 selects D;
+Module goodFutureFlags remains a distinct knowledge-bearing owner. No actor,
+physics, camera, clock, queue or current-art values are fitted or hydrated.
+RunMMD/Start clears and retained MainVars remain separate. Actual prior CPU SAT,
+full planes, palettes and current/resident patterns feed the original renderer.
+
+Complete FULL/course captures precede forward work and pixels; independent
+restore-forward/value/pixel checks and resource retirement pass. The actual
+ENGINE image at17007 is retained externally under $SCD_ARTIFACT_ROOT/captures,
+not committed as runtime data or an emulator reference. It is unchanged byte-for-byte
+after the host metadata correction. Boss combat, defeat, full acts, audible/native
+visual parity and regional gameplay are not certified by this checkpoint.
+
+R28's33-class run discovered1831 cases:1828P/3F/0E/S with stable source. Root's
+literal-source planning counter missed six LostRing rows after a parenthesized
+comment; all79 actual LostRing cases pass and source stays exact. The three new
+fixture failures were an observer counting an unchanged FM ledger twice, native
+saved-flag headers0101 expected as zero, and a PLC append expected to discard an
+already active decoder. Corrected tests preserve the real writer/append semantics.
+R29R3 passes109/0F/E/S:52 corrected tests,24 new authenticated Results cases,
+32 legacy Results controls and one genuine natural EGL route. The1779 unaffected
+R28 cases remain separate evidence; no combined1831 all-green run is invented.
+
+Independent review found a host metadata defect: profile reset kept manager and
+same-World act0 despite native Frame gates2/2. This prevented the existing ACT
+rewind budget from recognizing the new act. Four regression tests first produce
+1P/3F/0E/S. The engine-only NativeLevelCourseReset load adapter delegates to
+package-owned LevelManager.resetForCourse, using existing metadata writers after
+validating coordinates and preserving the entire old no-argument reset body.
+The R13 profile publishes0/2. The creator API, descriptor and normalized candidate
+pin remain unchanged. R31R3 passes50/0F/E/S including actual manager/World metadata
+after every natural/replayed/render cut, once-only rewind allowance refill,
+existing manager/rewind controls, twelve signature guards and the same complete
+natural EGL route.
+Each qualification has unchanged source before/after; these are focused runs,
+not a broad smoke/full-suite certificate.
+
+The first-fast Boss component review also exposed a live native continuation:
+sub_20C500 finishes at arm1's bumper (or raw zero) and shoulder, consumed by Body
+routineC. Both semantic targets now survive the helper; reached link faults and
+all earlier stores remain source-ordered. Three intended RED assertions precede
+46/46 component positives. This models observable object links, not CPU execution.
+
+Next: integrate the FINAL cached Boss/limb/bumper World and opt-in SPECIAL join,
+then actual Capsule/Results publications and the honest next-zone programme
+boundary. Shared component factories add no current art or readiness. Parallel
+source research identifies the actual next-zone branch rather than inferring it
+from stage names. Main remains untouched; no push, PR or public disclosure.
+Earlier checkpoints below are historical and retain their original limitations.
+
 ## 6 November 2026 — natural Act2 programme return and Act3 components
 
 The private original-USA controller now returns through16979. BigRing14 is first

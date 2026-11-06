@@ -147,6 +147,22 @@ public final class CdAnimal {
         return new CdAnimal(placement);
     }
 
+    // BEGIN R13 RETAINED ACTIVE ANIMAL ADAPTER 20261106
+    /** Shared presence/active algorithms, actual C/D22-byte tile table and two authenticated native mapping roots. */
+    public static CdAnimal fromAct3FutureAssets(CdObjectPlacementRuntime placement,
+            com.openggf.game.soniccd.level.CdR13FutureAssets owner, com.openggf.game.soniccd.level.CdR13ObjectAssets objects,
+            com.openggf.game.soniccd.player.CdPlayerMath math, com.openggf.game.soniccd.player.CdPlayerTerrain terrain,
+            CdActiveAnimal.PrimaryAngleCommit angle, CdActiveAnimal.DrawObjectCall draw,
+            CdActiveAnimal.DispatchObserver observer, CdActiveAnimal.ReceiptGuard guard) {
+        Objects.requireNonNull(placement);Objects.requireNonNull(owner);Objects.requireNonNull(objects);
+        if(!placement.ownsAct3FutureAssets(owner)||!objects.ownsAssets(owner))throw new IllegalArgumentException("Animal requires the exact retained R13 source/placement");
+        var data=new CdActiveAnimal.Assets(objects.view(com.openggf.game.soniccd.level.CdR13ObjectAssets.View.ANIMAL_BASE_TILES),
+                objects.flyingAnimal(),com.openggf.game.soniccd.level.CdR13ObjectAssets.View.MAP_SPR_FLYING_ANIMAL.range(owner.identity().file()).nativeAddress(),
+                objects.groundAnimal(),com.openggf.game.soniccd.level.CdR13ObjectAssets.View.MAP_SPR_GROUND_ANIMAL.range(owner.identity().file()).nativeAddress());
+        var body=new CdAnimal(placement);body.activeBody=new CdActiveAnimal(placement,data,math,terrain,angle,draw,observer,guard);return body;
+    }
+    // END R13 RETAINED ACTIVE ANIMAL ADAPTER 20261106
+
     /** The runtime supplies the single live pool and saved bank. No admitted branch consumes Animal assets. */
     public CdAnimal(CdObjectPlacementRuntime runtime) {
         this.runtime = Objects.requireNonNull(runtime, "runtime");

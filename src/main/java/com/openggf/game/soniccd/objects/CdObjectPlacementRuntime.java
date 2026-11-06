@@ -10,6 +10,8 @@ import com.openggf.game.soniccd.level.CdR11bAssets;
 import com.openggf.game.soniccd.level.CdR12aObjectAssets;
 import com.openggf.game.soniccd.level.CdR12aTerrainAssets;
 import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
+import com.openggf.game.soniccd.level.CdR13FutureAssets;
+import com.openggf.game.soniccd.level.CdStagePlayerSource;
 import com.openggf.game.soniccd.media.CdMmdImage;
 
 import java.util.Arrays;
@@ -79,6 +81,7 @@ public final class CdObjectPlacementRuntime {
     private final Optional<CdR11bAssets.Identity> pastIdentity;
     private final Optional<CdR12aTerrainAssets.Identity> act2Identity;
     private final Optional<CdR12bTerrainAssets.Identity> act2PastIdentity;
+    private final CdR13FutureAssets act3Future; // Exact retained aggregate, never a public identity certificate.
     private final CdObjectPool pool = new CdObjectPool();
     private final byte[] savedFlags = new byte[SAVED_BANK_BYTES];
     private int routine;
@@ -114,6 +117,14 @@ public final class CdObjectPlacementRuntime {
                                      Optional<CdR11bAssets.Identity> pastIdentity,
                                      Optional<CdR12aTerrainAssets.Identity> act2Identity,
                                      Optional<CdR12bTerrainAssets.Identity> act2PastIdentity) {
+        this(placements, identity, pastIdentity, act2Identity, act2PastIdentity, null);
+    }
+
+    private CdObjectPlacementRuntime(CdObjectPlacements placements, Optional<CdR11aAssets.Identity> identity,
+                                     Optional<CdR11bAssets.Identity> pastIdentity,
+                                     Optional<CdR12aTerrainAssets.Identity> act2Identity,
+                                     Optional<CdR12bTerrainAssets.Identity> act2PastIdentity, CdR13FutureAssets act3Future) {
+        this.act3Future = act3Future;
         this.placements = Objects.requireNonNull(placements);
         this.identity = identity;
         this.pastIdentity = pastIdentity;
@@ -239,11 +250,27 @@ public final class CdObjectPlacementRuntime {
         return runtime;
     }
 
+    // BEGIN R13 RETAINED PLACEMENT ADAPTER 20261106
+    /** Every bank byte is supplied by the caller's real native clear/carry owner. No clear/spawn/World entry. */
+    public static CdObjectPlacementRuntime fromAct3FutureAssets(CdR13FutureAssets assets, CdAssetBytes exactSavedBank) {
+        Objects.requireNonNull(exactSavedBank, "exact carried saved-object bank");
+        if (exactSavedBank.length() != SAVED_BANK_BYTES)
+            throw new IllegalArgumentException("Carried saved-object bank must be 2+$2FC bytes, was " + exactSavedBank.length());
+        CdStagePlayerSource.fromAct3Future(Objects.requireNonNull(assets, "actual original R13 future aggregate"));
+        var runtime = new CdObjectPlacementRuntime(assets.placements(), Optional.empty(), Optional.empty(),
+                Optional.empty(), Optional.empty(), assets);
+        exactSavedBank.buffer().get(runtime.savedFlags);
+        return runtime;
+    }
+    /** Actual retained source identity. Equal public records/layout values do not create this relation. */
+    public boolean ownsAct3FutureAssets(CdR13FutureAssets assets) { return assets != null && act3Future == assets && placements == assets.placements(); }
+    // END R13 RETAINED PLACEMENT ADAPTER 20261106
+
     public CdObjectPlacements placements() { return placements; }
     public Optional<CdR11aAssets.Identity> sourceIdentity() { return identity; }
 
     /** Package-local admission guards; the public identity accessor retains its A-only contract. */
-    boolean hasAuthenticatedSource() { return identity.isPresent() || pastIdentity.isPresent() || act2Identity.isPresent() || act2PastIdentity.isPresent(); }
+    boolean hasAuthenticatedSource() { return identity.isPresent() || pastIdentity.isPresent() || act2Identity.isPresent() || act2PastIdentity.isPresent() || act3Future != null; }
     boolean sameBSource(CdR11bAssets assets) {
         return pastIdentity.equals(Optional.of(Objects.requireNonNull(assets, "assets").identity()));
     }

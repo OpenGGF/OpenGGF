@@ -44,7 +44,7 @@ class TestCdR12bPlacementRuntime {
         var factory=CdObjectPlacementRuntime.class.getMethod("fromAssets",CdR12bTerrainAssets.class,CdAssetBytes.class);
         assertTrue(Modifier.isPublic(factory.getModifiers()));assertTrue(Modifier.isStatic(factory.getModifiers()));assertEquals(CdObjectPlacementRuntime.class,factory.getReturnType());
         assertThrows(NoSuchMethodException.class,()->CdObjectPlacementRuntime.class.getMethod("fromAssets",CdR12bTerrainAssets.class));
-        assertEquals(List.of(1,2,3,4,5),Arrays.stream(CdObjectPlacementRuntime.class.getDeclaredConstructors()).map(c->c.getParameterCount()).sorted().toList());
+        assertEquals(List.of(1,2,3,4,5,6),Arrays.stream(CdObjectPlacementRuntime.class.getDeclaredConstructors()).map(c->c.getParameterCount()).sorted().toList());
         var snapshot=CdObjectPlacementRuntime.Snapshot.class;assertTrue(Modifier.isFinal(snapshot.getModifiers()));assertFalse(snapshot.isRecord());
         assertEquals(1,snapshot.getDeclaredConstructors().length);assertTrue(Modifier.isPrivate(snapshot.getDeclaredConstructors()[0].getModifiers()));
         assertEquals(9,snapshot.getDeclaredConstructors()[0].getParameterCount());assertEquals(0,snapshot.getConstructors().length);

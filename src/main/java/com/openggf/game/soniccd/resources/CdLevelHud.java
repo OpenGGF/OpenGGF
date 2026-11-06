@@ -279,6 +279,81 @@ public final class CdLevelHud {
         return value == initial ? before : new Act2PastState(value.section(), value.ring(), value.level(), value.score(), value.liveTime(), value.bonus());
     }
 
+    /** R13 value projection of the same six existing owners; no new persistent state or admission. */
+    public record Act3FutureState(CdR13SectionArt.State section, CdRingGlobals ring, CdLevelGlobals level,
+                            CdOpeningObjectRuntime.ScoreGlobals score, CdCheckpointLiveAux.State liveTime,
+                            Optional<BonusValues> bonus) {
+        public Act3FutureState {
+            Objects.requireNonNull(section); Objects.requireNonNull(ring); Objects.requireNonNull(level);
+            Objects.requireNonNull(score); Objects.requireNonNull(liveTime); Objects.requireNonNull(bonus);
+        }
+    }
+    public record Act3FutureResult(Act3FutureState state, List<NativeCall> calls) {
+        public Act3FutureResult { Objects.requireNonNull(state); calls = List.copyOf(calls); }
+    }
+
+    /** Complete Act3Future-typed prefix of the same reached HUD boundary, never a successful result. */
+    public static final class UnsupportedAct3FutureHud extends UnsupportedOperationException {
+        private static final long serialVersionUID = 1L;
+        private final Boundary boundary;
+        private final Act3FutureState state;
+        private final List<NativeCall> calls;
+        private final int sourceOffset;
+        private final int destinationWord;
+        private UnsupportedAct3FutureHud(Boundary boundary, Act3FutureState state, List<NativeCall> calls,
+                                   int sourceOffset, int destinationWord, Throwable cause) {
+            super(boundary + " at HUD source " + sourceOffset + ", destination " + destinationWord, cause);
+            this.boundary = boundary; this.state = state; this.calls = List.copyOf(calls);
+            this.sourceOffset = sourceOffset; this.destinationWord = destinationWord;
+        }
+        public Boundary boundary() { return boundary; }
+        public Act3FutureState state() { return state; }
+        public List<NativeCall> calls() { return calls; }
+        public int sourceOffset() { return sourceOffset; }
+        public int destinationWord() { return destinationWord; }
+    }
+
+    /** Explicit actual-R13 section/raw-view binding; no factory default, service or source authority. */
+    public static final class Act3Future {
+        private final Assets assets;
+        private final CdR13SectionArt art;
+        /** Production borrows its actual TerrainAssets.directArtSources().hudAssets() and section adapter. */
+        public Act3Future(Assets assets, CdR13SectionArt art) {
+            this.assets = Objects.requireNonNull(assets); this.art = Objects.requireNonNull(art);
+        }
+        public Act3FutureResult run(Act3FutureState state, Inputs inputs) {
+            Objects.requireNonNull(state); Objects.requireNonNull(inputs);
+            if (state.section().stopped()) throw new IllegalStateException("Stopped section cannot resume HUD admission");
+            var initial = new Values<>(state.section(), state.ring(), state.level(), state.score(), state.liveTime(), state.bonus());
+            var cursor = new Cursor<>(initial, inputs, assets, art::writeCurrentTile);
+            try { cursor.run(); }
+            catch (Stop failure) {
+                throw new UnsupportedAct3FutureHud(failure.boundary, act3FutureState(cursor.state, initial, state), cursor.calls,
+                        failure.sourceOffset, failure.destinationWord, failure.getCause());
+            }
+            catch (CdR13SectionArt.SectionArtException original) {
+                var prefix = new Act3FutureState(original.state(), cursor.state.ring(), cursor.state.level(), cursor.state.score(), cursor.state.liveTime(), cursor.state.bonus());
+                throw new Act3FutureArtFailure(original, prefix, cursor.calls);
+            }
+            return new Act3FutureResult(act3FutureState(cursor.state, initial, state), cursor.calls);
+        }
+    }
+
+    private static Act3FutureState act3FutureState(Values<CdR13SectionArt.State> value, Values<CdR13SectionArt.State> initial, Act3FutureState before) {
+        return value == initial ? before : new Act3FutureState(value.section(), value.ring(), value.level(), value.score(), value.liveTime(), value.bonus());
+    }
+    /** Carries only the original failing glyph writer and its actual completed external prefix.
+     * The owning caller retains this prefix and rethrows original(), never executes it again. */
+    public static final class Act3FutureArtFailure extends RuntimeException {
+        private final CdR13SectionArt.SectionArtException original;
+        private final Act3FutureState state; private final List<NativeCall> calls;
+        private Act3FutureArtFailure(CdR13SectionArt.SectionArtException original, Act3FutureState state, List<NativeCall> calls) {
+            super(original); this.original=original; this.state=state; this.calls=List.copyOf(calls);
+        }
+        public CdR13SectionArt.SectionArtException original(){return original;}
+        public Act3FutureState state(){return state;} public List<NativeCall> calls(){return calls;}
+    }
+
     private enum Digits { SKIP_LEADING, ALWAYS, BLANK_LEADING }
     /** Ephemeral local cursor; no mutable field is retained by the component. */
     private static final class Cursor<S> {

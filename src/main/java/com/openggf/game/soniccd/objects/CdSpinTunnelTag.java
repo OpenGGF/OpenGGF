@@ -1,5 +1,8 @@
 package com.openggf.game.soniccd.objects;
 
+import com.openggf.game.soniccd.level.CdR13FutureAssets;
+import com.openggf.game.soniccd.level.CdR13ReusedObjectAssets;
+
 import com.openggf.game.soniccd.CdNativeFile;
 import com.openggf.game.soniccd.CdReleaseVariant;
 import com.openggf.game.soniccd.CdStagePayload;
@@ -159,6 +162,18 @@ public final class CdSpinTunnelTag {
     }
 
     private final Assets assets;
+
+    // BEGIN R13 SOURCE FACTORY 20261106
+    /** Actual ObjRollTunnel, Collision Chaos/Objects/Roll Tunnel/Main.asm:7-212.
+     * REGION=USA|STAGE_R13 selects the same finite control/roll branches as the shared tag body;
+     * .Reverse jumps after the old-Y-sign test. Uses its own actual Powerup mapping operand. */
+    public static CdSpinTunnelTag fromAct3FutureAssets(CdObjectPlacementRuntime runtime,CdR13FutureAssets assets,CdR13ReusedObjectAssets owner) {
+        Objects.requireNonNull(runtime,"actual placement");Objects.requireNonNull(assets,"actual original future source");Objects.requireNonNull(owner,"actual reuse metadata");
+        if(!runtime.ownsAct3FutureAssets(assets)||!owner.ownsAssets(assets,owner.startup()))throw new IllegalArgumentException("R13 reused body requires exact retained source/placement/metadata");
+        if(owner.view(CdR13ReusedObjectAssets.View.MAP_SPR_POWERUP).length()!=274)throw new IllegalArgumentException("Actual R13 Powerup274");
+        return new CdSpinTunnelTag(new Assets(CdR13ReusedObjectAssets.View.MAP_SPR_POWERUP.range(assets.identity().file()).nativeAddress()));
+    }
+    // END R13 SOURCE FACTORY 20261106
 
     /** Source-pair ingress only; caller retains every actual helper/publication authority. */
     public static CdSpinTunnelTag fromAct2PastAssets(CdObjectPlacementRuntime placement, CdR12bTerrainAssets owner) {

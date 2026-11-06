@@ -294,7 +294,16 @@ matching area heading; see the
   geometries, startup object and boss metadata, scrolling and palette components
   reuse existing decoders and arithmetic. Shared queued/immediate/RAM/life art
   loading preserves earlier-act behavior and native empty section routines.
-  Live Act3 World loading, boss gameplay and regional parity remain separate.
+  The actual Act2/IPX return now installs Act3 Bad Future in the same World,
+  with a fresh native Frame, retained programme data and source-ordered loading,
+  fades and deferred Title art. Its original physical startup walk reuses the
+  shared object bodies; current planes, prior CPU sprites and Sonic art render
+  through the existing renderer. Fixed-controller state and selected-pixel
+  replay cover the first visible Sonic and completed Title art service. Host
+  course reset publishes Act3 consistently to the manager and World so the
+  act-scoped rewind allowance refills once. Boss, Capsule and Results components
+  use authenticated future metadata; live boss combat and regional parity remain
+  separate.
   CD player headless boot loads the fixed
   roster before rewind controller creation while keeping no-device audio before
   playback. A separate real-World entry fixture retains its own visible-Sonic

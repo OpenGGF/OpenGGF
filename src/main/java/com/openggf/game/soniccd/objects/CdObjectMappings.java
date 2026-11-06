@@ -14,6 +14,7 @@ import com.openggf.game.soniccd.level.CdR12bObjectAssets;
 import com.openggf.game.soniccd.level.CdStagePlayerSource;
 import com.openggf.game.soniccd.level.CdR13FutureAssets;
 import com.openggf.game.soniccd.level.CdR13ObjectAssets;
+import com.openggf.game.soniccd.level.CdR13ReusedObjectAssets;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -380,6 +381,27 @@ public final class CdObjectMappings implements CdDrawMappings {
                 visual.mappingTableOffset(), visual.mappingFrames().size()));
     }
     // END R13 STARTUP METADATA JOIN 20261106
+
+    // BEGIN R13 REUSED MAPPING JOIN 20261106
+    /** Additive actual C/D roots; the original two-argument startup catalogue remains unchanged. */
+    public static CdObjectMappings fromAct3FutureAssets(CdR13FutureAssets assets,CdR13ObjectAssets startup,CdR13ReusedObjectAssets reused) {
+        var base=fromAct3FutureAssets(assets,startup);Objects.requireNonNull(reused,"actual original reuse metadata");
+        if(!reused.ownsAssets(assets,startup))throw new IllegalArgumentException("R13 reused mapping source differs");
+        var tables=new ArrayList<>(base.tables.values());
+        addAct3Reused(tables,reused,CdR13ReusedObjectAssets.View.MAP_SPR_TAMABBOH,reused.tamabbohNormal());
+        addAct3Reused(tables,reused,CdR13ReusedObjectAssets.View.MAP_SPR_TAMABBOH,reused.tamabbohDamaged());
+        addAct3Reused(tables,reused,CdR13ReusedObjectAssets.View.MAP_SPR_TAMABBOH_MISSILE,reused.tamabbohMissile());
+        addAct3Reused(tables,reused,CdR13ReusedObjectAssets.View.MAP_SPR_EXPLOSION,reused.explosion());
+        addAct3Reused(tables,reused,CdR13ReusedObjectAssets.View.MAP_SPR_FLOWER,reused.flower());
+        addAct3Reused(tables,reused,CdR13ReusedObjectAssets.View.MAP_SPR_POINTS,reused.points());
+        tables.add(new DeclaredTable(CdR13ReusedObjectAssets.View.MAP_SPR_POWERUP.range(assets.identity().file()).nativeAddress(),reused.view(CdR13ReusedObjectAssets.View.MAP_SPR_POWERUP),0,13));
+        return declaredSourceViews(tables,new ArrayList<>(base.staticPieces.values()));
+    }
+    private static void addAct3Reused(List<DeclaredTable> tables,CdR13ReusedObjectAssets owner,CdR13ReusedObjectAssets.View source,CdObjectVisualAssets visual) {
+        var raw=owner.view(source);requireEqualBytes(raw,visual.mappings());for(var frame:visual.mappingFrames())requireEqualBytes(frame.bytes(),raw.slice(visual.mappingTableOffset()+frame.relativeOffset(),1+frame.pieces().size()*5));
+        tables.add(new DeclaredTable(source.range(owner.identity().file()).nativeAddress(),raw,visual.mappingTableOffset(),visual.mappingFrames().size()));
+    }
+    // END R13 REUSED MAPPING JOIN 20261106
 
     @Override public MappingBody resolve(int addressBits, boolean staticPiece, int mapFrameByte) {
         if (mapFrameByte < 0 || mapFrameByte > 255) {

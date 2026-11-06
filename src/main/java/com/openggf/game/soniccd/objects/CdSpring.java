@@ -289,7 +289,7 @@ public final class CdSpring {
     }
 
     private final CdObjectPlacementRuntime runtime;
-    private final Assets assets;
+    private final SourceProfile assets;
     private final CdPlayerMath math;
     private final CdSolidObject solid;
     private final SolidCommit solidCommit;
@@ -299,7 +299,7 @@ public final class CdSpring {
 
     public CdSpring(CdObjectPlacementRuntime runtime, Assets assets, CdPlayerMath math, CdSolidObject solid,
                     SolidCommit solidCommit, LaunchCommit launchCommit, DrawObjectCall drawObject, PlayFmCall playFm) {
-        this.runtime = Objects.requireNonNull(runtime); this.assets = Objects.requireNonNull(assets);
+        this.runtime = Objects.requireNonNull(runtime); this.assets = new SourceProfile(Objects.requireNonNull(assets));
         this.math = Objects.requireNonNull(math);
         this.solid = Objects.requireNonNull(solid); this.solidCommit = Objects.requireNonNull(solidCommit);
         this.launchCommit = Objects.requireNonNull(launchCommit); this.drawObject = Objects.requireNonNull(drawObject);
@@ -320,6 +320,40 @@ public final class CdSpring {
         }
         return new CdSpring(runtime, Assets.fromAct2PastAssets(owner), math, solid, solidCommit, launchCommit, drawObject, playFm);
     }
+
+    // BEGIN R13 FINITE SPRING PROFILE 20261106
+    /** Private format split: the public legacy Assets constructor remains strict200/72-or74. */
+    private static final class SourceProfile {
+        private final Assets legacy;
+        private final com.openggf.game.soniccd.level.CdR13ObjectAssets future;
+        SourceProfile(Assets legacy) { this.legacy=legacy;this.future=null; }
+        SourceProfile(com.openggf.game.soniccd.level.CdR13ObjectAssets future) {
+            this.future=Objects.requireNonNull(future);this.legacy=null;
+            if(future.springMappings().length()!=199 || future.view(com.openggf.game.soniccd.level.CdR13ObjectAssets.View.OBJECT_TILE_IDS).length()!=68
+                    ||future.view(com.openggf.game.soniccd.level.CdR13ObjectAssets.View.SPRING_SPEEDS).length()!=4)
+                throw new IllegalArgumentException("R13 Spring requires genuine199/68/4 metadata");
+        }
+        CdObjectVisualAssets vertical(){return legacy!=null?legacy.vertical():future.springVertical();}
+        CdObjectVisualAssets horizontal(){return legacy!=null?legacy.horizontal():future.springHorizontal();}
+        CdObjectVisualAssets diagonal(){return legacy!=null?legacy.diagonal():future.springDiagonal();}
+        int mappingsAddress(){return legacy!=null?legacy.mappingsAddress():com.openggf.game.soniccd.level.CdR13ObjectAssets.View.MAP_SPRING.range(future.identity().file()).nativeAddress();}
+        int speedWord(int subtype){if(legacy!=null)return legacy.speedWord(subtype);if((subtype&~255)!=0)throw new IllegalArgumentException("Spring subtype exceeds a native byte");return (short)future.view(com.openggf.game.soniccd.level.CdR13ObjectAssets.View.SPRING_SPEEDS).unsignedWord(subtype&2);}
+        int diagonalTileWord(int subtype){if(legacy!=null)return legacy.diagonalTileWord(subtype);if(subtype!=0)throw new UnsupportedOperationException("Only primary diagonal Spring selector $F at subtype2 0 is reviewed");var bytes=future.view(com.openggf.game.soniccd.level.CdR13ObjectAssets.View.OBJECT_TILE_IDS);int target=(short)bytes.unsignedWord(30);if(CdObjectTileIds.endOfBody(bytes,15)-target<2)throw new IllegalArgumentException("R13 diagonal tile read exceeds its actual selected body");return bytes.unsignedWord(target);}
+    }
+    private CdSpring(CdObjectPlacementRuntime runtime, SourceProfile profile, CdPlayerMath math, CdSolidObject solid,
+                     SolidCommit solidCommit, LaunchCommit launchCommit, DrawObjectCall drawObject, PlayFmCall playFm, boolean actualFuture) {
+        if(!actualFuture)throw new IllegalArgumentException("Private Spring future profile");
+        this.runtime=Objects.requireNonNull(runtime);this.assets=Objects.requireNonNull(profile);this.math=Objects.requireNonNull(math);this.solid=Objects.requireNonNull(solid);
+        this.solidCommit=Objects.requireNonNull(solidCommit);this.launchCommit=Objects.requireNonNull(launchCommit);this.drawObject=Objects.requireNonNull(drawObject);this.playFm=Objects.requireNonNull(playFm);
+    }
+    public static CdSpring fromAct3FutureAssets(CdObjectPlacementRuntime runtime, com.openggf.game.soniccd.level.CdR13FutureAssets owner,
+            com.openggf.game.soniccd.level.CdR13ObjectAssets objects, CdPlayerMath math, CdSolidObject solid,
+            SolidCommit solidCommit, LaunchCommit launchCommit, DrawObjectCall drawObject, PlayFmCall playFm) {
+        Objects.requireNonNull(runtime);Objects.requireNonNull(owner);Objects.requireNonNull(objects);
+        if(!runtime.ownsAct3FutureAssets(owner)||!objects.ownsAssets(owner))throw new IllegalArgumentException("Spring requires the exact retained R13 source/placement");
+        return new CdSpring(runtime,new SourceProfile(objects),math,solid,solidCommit,launchCommit,drawObject,playFm,true);
+    }
+    // END R13 FINITE SPRING PROFILE 20261106
 
     /** ObjSpring (:130-169), including the reached control-table lookup and the special ObjSpring2 branch. */
     public Result run(int wholeIndex, Globals globals, SolidInputs inputs) {

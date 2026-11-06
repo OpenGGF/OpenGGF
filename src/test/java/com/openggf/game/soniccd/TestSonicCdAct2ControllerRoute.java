@@ -211,7 +211,12 @@ class TestSonicCdAct2ControllerRoute {
                 callsAfterMain + 1, frame.state().motion().centreX16_16() >>> 16);
     }
 
-    @Test void actualUnlockedAct2RightRouteReturnsThroughTheLastMeasuredClosedCutWithFullAndCourseReplay() throws Exception {
+    @Test void actualEglNaturalR13dLoadingSelectsVisibleSonicAndReplays() throws Exception {
+        String futureMediaRoot=System.getProperty("soniccd.media.root");
+        org.junit.jupiter.api.Assumptions.assumeTrue(futureMediaRoot!=null&&!futureMediaRoot.isBlank(),"Optional configured USA CD media absent");
+        assertTrue(Files.isDirectory(Path.of(futureMediaRoot).resolve("USA")),"Configured USA CD media root must exist; no cached-source fallback");
+        byte[] futureImageForExport=null;int futureVisibleCallForExport=-1;
+        try(var egl=TestSonicCdPastResultsRoute.Egl.open()) {
         var old = ready(); var h = old.harness(); var module = h.module();
         var right = controller(10419);
         for (int call = old.returned() + 1; call <= 10865; call++) {
@@ -1156,21 +1161,317 @@ class TestSonicCdAct2ControllerRoute {
         assertEquals(new SonicCdGameModule.PastProgrammeSound(SonicCdGameModule.ProgramSound.STOP_FM),targetHost.sounds().getLast());
         System.out.println("R12B_NATURAL_END16979 {program:"+target.state().program()+",level:"+target.state().level()
                 +",module:"+module.levelProgramState()+",clock:"+targetFrame.vIntClock()+",ring:"+targetHost.globals().ring()+"}");
-        var endClosed=endRegistry.capture();
-        for(int rejected=0;rejected<2;rejected++) {
-            var stopped=assertThrows(SonicCdAct2PastLoadingVisit.UnsupportedLoading.class,()->step(h,right));
-            assertEquals(SonicCdAct2PastLoadingVisit.Boundary.NEXT_ACT_PROGRAMME_ADMISSION,stopped.boundary());
-            assertFalse(targetFrame.closed());assertFalse(target.failed());
-            assertNaturalR12bSnapshotValue(endClosed,endRegistry.capture(),"honest next programme boundary");
+        // BEGIN finite natural R13D loading/first-Sonic regression candidate; author Java/EGL UNRUN.
+        // The actual incoming programme byte selects the retained original D; no new input recipe follows16979.
+        assertEquals(0,target.state().program().goodFutureByte(),"Source prerequisite: actual incoming bad Future selection");
+        assertEquals(0,target.state().program().specialStageByte(),"RunBossLevel must follow the genuine non-SpecialStage branch");
+        var actualData=assertInstanceOf(CdGameDataSource.class,world.getDataSource());
+        var futureAssets=actualData.act3FutureAssets().orElseThrow(()->new AssertionError("R13_NATIVE_PREREQUISITE: retained original C/D programmes absent"))
+                .select(target.state().program().goodFutureByte());
+        assertEquals(CdNativeFile.R13D,futureAssets.identity().file());
+        assertEquals(actualData.assets().identity().observedWholeDiscSha256(),futureAssets.identity().observedWholeDiscSha256());
+        long previousGeneration=h.mode().getLevelManager().getCompletedProductionLoadGeneration();
+        var servicesBeforeFuture=module.programServicesState();
+        R13NaturalOwners futureOwners=null;
+        var futurePhases=java.util.EnumSet.noneOf(SonicCdAct3FutureLoadingVisit.Phase.class);
+        int firstReady=-1,firstSelectedSonic=-1,firstVisibleSonic=-1,firstTitlePlc=-1,positiveEnd=-1;
+        boolean title4Created=false,originalSonicInit=false,originalSonicMain=false,loadingReplay=false,deferredTitleServiced=false;
+        for(int actualCall=16980;actualCall<=20000;actualCall++) {
+            var r13Registry=h.mode().getRewindRegistry();
+            boolean canReplay=module.act3FutureLoadingSelected();
+            var fullBefore=canReplay?r13Registry.capture():null;var courseBefore=canReplay?r13Registry.captureCourse():null;
+            var beforePhase=canReplay?module.act3FutureLoadingVisit().state().phase():null;
+            int beforeRoutine=canReplay?module.requirePlayerFrame().state().motion().routine():-1;
+            int beforeLevelFrame=canReplay?module.requirePlayerFrame().environment().globals().levelFrames():-1;
+            var oldCpu=canReplay?module.act3FutureWorldHost().video().completedCpu():java.util.Optional.<com.openggf.game.soniccd.objects.CdObjectDrawQueue.CpuSat>empty();
+            // Actual before-forward pixels, when the retained selection is already a complete Ready picture.
+            byte[] pixelsBefore=canReplay&&beforePhase==SonicCdAct3FutureLoadingVisit.Phase.READY
+                    &&module.act3FutureWorldHost().selected() instanceof SonicCdAct3FutureWorldHost.Published p
+                    &&p.selection().projection() instanceof SonicCdPastDisplay.Ready?drawNaturalR13Image(h,futureOwners):null;
+            if(canReplay)assertNaturalR13Snapshots(h,fullBefore,courseBefore,"before actual forward"+actualCall);
+            try {step(h,right);} // The exact same held Right; no search, pulse, seed or corrective store.
+            catch(RuntimeException|Error original) {
+                System.out.println("R13_NATIVE_PREREQUISITE_STOP actualCall="+actualCall+", priorPhase="+beforePhase+", original="+original);
+                throw original;
+            }
+            assertTrue(module.act3FutureLoadingSelected(),"R13_NATIVE_PREREQUISITE: genuine old return did not select Future FULL");
+            if(futureOwners==null) {
+                var futureFrame=module.requirePlayerFrame();var futureVisit=module.act3FutureLoadingVisit();var futureHost=module.act3FutureWorldHost();
+                futureOwners=new R13NaturalOwners(futureFrame,futureFrame.stageSource(),futureHost,futureVisit,
+                        assertInstanceOf(SonicCdAct3FutureOrdinaryWorld.class,actualField(module,"act3FutureWorld")),futureAssets,
+                        assertInstanceOf(com.openggf.game.soniccd.level.SonicCdAct3FutureLevel.class,h.mode().getLevelManager().getCurrentLevel()),
+                        world,Math.incrementExact(previousGeneration));
+                assertTrue(targetFrame.closed());assertNotSame(targetFrame,futureFrame);assertNotSame(endSource,futureFrame.stageSource());
+                var completed=module.programServicesState().completedCalls();var earlier=servicesBeforeFuture.completedCalls();
+                assertEquals(earlier,completed.subList(0,earlier.size()),"Prior real programme calls remain an exact prefix");
+                assertEquals(java.util.List.of(SonicCdGameModule.ProgramStartCall.LOAD_LEVEL_PCM,SonicCdGameModule.ProgramStartCall.INIT_VDP,
+                        SonicCdGameModule.ProgramStartCall.INIT_CONTROLLERS),completed.subList(earlier.size(),completed.size()),
+                        "Actual RunMMD/Start assembly, not a preloaded Frame fixture");
+            }
+            assertNaturalR13Owners(h,futureOwners);
+            var core=futureOwners.visit().state();var phase=core.phase();futurePhases.add(phase);
+            if(core.hudSlots().unsignedByte(3*64)==CdTitleCard.OBJECT_ID)title4Created=true;
+            if(beforePhase==SonicCdAct3FutureLoadingVisit.Phase.READY) {
+                assertFalse(futureOwners.frame().paused());
+                assertEquals((beforeLevelFrame+1)&0xFFFF,futureOwners.frame().environment().globals().levelFrames(),"One genuine native ordinary Main");
+                if(beforeRoutine==0) {assertEquals(2,futureOwners.frame().state().motion().routine());originalSonicInit=true;}
+                else if(beforeRoutine==2) {assertEquals(2,futureOwners.frame().state().motion().routine());assertTrue(futureOwners.frame().display().isPresent());originalSonicMain=true;}
+                var selected=assertInstanceOf(SonicCdAct3FutureWorldHost.Published.class,futureOwners.host().selected()).selection();
+                assertNaturalR13SnapshotValue(oldCpu,selected.inputs().selectedCpu(),"selector8 retains the actual prior CPU, not the just-finished NOW CPU");
+                if(oldCpu.isPresent())assertSame(oldCpu.orElseThrow(),selected.inputs().selectedCpu().orElseThrow());
+                assertEquals("DONE",actualField(actualField(futureOwners.ordinary(),"objects"),"phase").toString(),"Original increasing physical walk and drain completed");
+            }
+            var fullAfter=r13Registry.capture();var courseAfter=r13Registry.captureCourse();
+            assertNaturalR13Snapshots(h,fullAfter,courseAfter,"after actual forward before pixels"+actualCall);
+            boolean newlySelected=false,selectedSonic=false;R13NaturalPixels selectedPixels=null;
+            if(phase==SonicCdAct3FutureLoadingVisit.Phase.READY) {
+                if(firstReady<0)firstReady=actualCall;
+                assertEquals(22,core.fromFadeSteps(),"Native22-source-step palette fade completed");
+                if(futureOwners.host().selected() instanceof SonicCdAct3FutureWorldHost.Published p
+                        &&p.selection().inputs().selectedCpu().isPresent()
+                        &&p.selection().inputs().selectedCpu().orElseThrow().provenance().stream().anyMatch(v->v.slotRef().wholeIndex()==0)) {
+                    selectedSonic=true;
+                    // A blocked selected-native image is a hard prerequisite failure, never a passing fallback or a fitted input.
+                    if(firstSelectedSonic<0){firstSelectedSonic=actualCall;newlySelected=true;}
+                    if(firstVisibleSonic<0) {
+                        selectedPixels=drawNaturalR13SelectedSonic(h,futureOwners,actualCall);
+                        assertNaturalR13Snapshots(h,fullAfter,courseAfter,"after first selected-Sonic pixels"+actualCall);
+                        if(!Arrays.equals(selectedPixels.rgba(),selectedPixels.withoutSonic())) {
+                            firstVisibleSonic=actualCall;futureVisibleCallForExport=actualCall;futureImageForExport=selectedPixels.rgba();
+                        }
+                    }
+                }
+            }
+            long titlePlcs=core.calls().stream().filter(c->c==SonicCdAct3FutureLoadingVisit.Call.TITLE_PLC_APPEND).count();
+            assertTrue(titlePlcs<=1,"Original whole4 Title must not replay its deferred PLC2");
+            boolean newTitle=titlePlcs==1&&firstTitlePlc<0;
+            if(newTitle) {
+                firstTitlePlc=actualCall;
+                assertTrue(core.section().queue().headSource()!=0||core.section().remainingTilesWord()!=0,
+                        "Original deferred2 must create real pending source work before a later V-int services it");
+            }
+            if(firstTitlePlc>=0&&actualCall>firstTitlePlc&&core.section().queue().headSource()==0&&core.section().remainingTilesWord()==0)
+                deferredTitleServiced=true;
+            boolean end=firstVisibleSonic>=0&&deferredTitleServiced&&futureOwners.frame().environment().controls().controlLocked()==0;
+            boolean replay=canReplay&&(phase!=beforePhase||newlySelected||newTitle||end);
+            if(replay) {
+                // All snapshots were captured from this real epoch before pixel work and the actual forward call.
+                if(selectedPixels==null&&selectedSonic)selectedPixels=drawNaturalR13SelectedSonic(h,futureOwners,actualCall);
+                assertNaturalR13Snapshots(h,fullAfter,courseAfter,"before FULL/course replay"+actualCall);
+                for(boolean courseScope:new boolean[]{false,true}) {
+                    if(courseScope)r13Registry.restoreCourse(courseBefore);else r13Registry.restore(fullBefore);
+                    assertNaturalR13Owners(h,futureOwners);assertNaturalR13Snapshots(h,fullBefore,courseBefore,"restored before"+courseScope+"/"+actualCall);
+                    if(pixelsBefore!=null)assertArrayEquals(pixelsBefore,drawNaturalR13Image(h,futureOwners),"Actual before-forward pixels restored");
+                    assertNaturalR13Snapshots(h,fullBefore,courseBefore,"before replay forward"+courseScope+"/"+actualCall);
+                    step(h,right);assertNaturalR13Owners(h,futureOwners);
+                    assertNaturalR13Snapshots(h,fullAfter,courseAfter,"after replay forward"+courseScope+"/"+actualCall);
+                    if(selectedPixels!=null) {
+                        var replayPixels=drawNaturalR13SelectedSonic(h,futureOwners,actualCall);
+                        assertArrayEquals(selectedPixels.rgba(),replayPixels.rgba(),"Actual after-forward pixels restored");
+                        assertArrayEquals(selectedPixels.withoutSonic(),replayPixels.withoutSonic(),"Same retained Scene omission contrast");
+                    }
+                    assertNaturalR13Snapshots(h,fullAfter,courseAfter,"after replay pixels"+courseScope+"/"+actualCall);
+                }
+                if(phase!=SonicCdAct3FutureLoadingVisit.Phase.READY)loadingReplay=true;
+            }
+            if(end) {positiveEnd=actualCall;break;}
         }
-        System.out.println("Controller-only R12B: actual16979 returned through native low-ring BigRing, Signpost/Results"
-                +",22black waits,clear/RTS and IPX blank; ten more complete FULL/course replay cuts."
-                +" First16980 remains actual RunR13 programme admission; no R13World, pixels, regional or full-game claim.");
+        assertNotNull(futureOwners,"R13_NATIVE_PREREQUISITE: no retained Future FULL by finite20000");
+        assertTrue(firstReady>=16980&&firstSelectedSonic>=firstReady&&firstVisibleSonic>=firstSelectedSonic,
+                "R13_NATIVE_PREREQUISITE: no actual Ready/selected/visible Sonic by20000");
+        assertTrue(positiveEnd>=firstVisibleSonic&&firstTitlePlc>=firstReady,
+                "R13_NATIVE_PREREQUISITE: original Title2 and its actual queue did not complete by20000");
+        assertTrue(title4Created&&originalSonicInit&&originalSonicMain&&loadingReplay,
+                "Genuine whole4 Title creation, native Init/Main and loading checkpoint replay are required");
+        assertTrue(futurePhases.contains(SonicCdAct3FutureLoadingVisit.Phase.FIRST_PLC));
+        assertTrue(futurePhases.contains(SonicCdAct3FutureLoadingVisit.Phase.LEVEL_PLC));
+        assertTrue(futurePhases.contains(SonicCdAct3FutureLoadingVisit.Phase.FROM_BLACK)
+                ||futurePhases.contains(SonicCdAct3FutureLoadingVisit.Phase.FROM_WHITE));
+        var finalCore=futureOwners.visit().state();
+        for(var required:java.util.List.of(SonicCdAct3FutureLoadingVisit.Call.CLEAR_PLCS,SonicCdAct3FutureLoadingVisit.Call.FIRST_WAIT,
+                SonicCdAct3FutureLoadingVisit.Call.LEVEL_WAIT,SonicCdAct3FutureLoadingVisit.Call.IMMEDIATE_LEVEL,
+                SonicCdAct3FutureLoadingVisit.Call.IMMEDIATE_STANDARD,SonicCdAct3FutureLoadingVisit.Call.TITLE_CARD_CREATE,
+                SonicCdAct3FutureLoadingVisit.Call.BEGIN_MAIN,SonicCdAct3FutureLoadingVisit.Call.LOAD_PLAYER,
+                SonicCdAct3FutureLoadingVisit.Call.FROM_FADE_SERVICE,SonicCdAct3FutureLoadingVisit.Call.BEGIN_LEVEL,
+                SonicCdAct3FutureLoadingVisit.Call.TITLE_PLC_APPEND))assertTrue(finalCore.calls().contains(required),"Original loading call required: "+required);
+        assertEquals(22,finalCore.calls().stream().filter(c->c==SonicCdAct3FutureLoadingVisit.Call.FROM_FADE_SERVICE).count());
+        assertNaturalR13Owners(h,futureOwners);
+        var finalFull=h.mode().getRewindRegistry().capture();var finalCourse=h.mode().getRewindRegistry().captureCourse();
+        drawNaturalR13SelectedSonic(h,futureOwners,positiveEnd);assertNaturalR13Snapshots(h,finalFull,finalCourse,"final state before retirement");
+        retireNaturalR13Renderer(h,futureOwners);
+        System.out.println("ENGINE original-USA natural same-World R13D: firstReady="+firstReady+", firstSelectedSonic="+firstSelectedSonic
+                +", firstVisibleSonic="+firstVisibleSonic+", originalTitle2="+firstTitlePlc+", positiveEnd="+positiveEnd
+                +"; fixed Right after16979, genuine loading/native Body, complete FULL/course and pixel replay. Actual values when executed; no native-image/boss/full-act/parity claim.");
+        // END finite natural R13D loading/first-Sonic regression candidate.
         // END measured native BigRing/Results/old-programme return through closed16979.
         // END measured natural TimeWarp230 old exit.
         // END measured natural TimeWarp save continuation.
         // END measured Swing promotion.
+        } finally {fixture.cleanup();}
+        // Export is optional and occurs after all module/session/graphics/EGL/fixture cleanup.
+        writeOptionalNaturalR13Capture(futureImageForExport,futureVisibleCallForExport);
     }
+
+    // BEGIN finite natural R13D comparison/render helpers 20261106.
+    /** Comparison-only retained actual owners, never input to a production factory or publication. */
+    private record R13NaturalOwners(com.openggf.game.soniccd.player.CdPlayerFrameRuntime frame,
+            com.openggf.game.soniccd.level.CdStagePlayerSource source,SonicCdAct3FutureWorldHost host,
+            SonicCdAct3FutureLoadingVisit visit,SonicCdAct3FutureOrdinaryWorld ordinary,
+            com.openggf.game.soniccd.level.CdR13FutureAssets assets,com.openggf.game.soniccd.level.SonicCdAct3FutureLevel level,
+            Object world,long generation) { }
+    private record R13NaturalPixels(byte[] rgba,byte[] withoutSonic) {
+        private R13NaturalPixels {rgba=rgba.clone();withoutSonic=withoutSonic.clone();}
+        @Override public byte[] rgba(){return rgba.clone();}
+        @Override public byte[] withoutSonic(){return withoutSonic.clone();}
+    }
+    private static void assertNaturalR13Owners(Harness h,R13NaturalOwners o) throws Exception {
+        assertNotNull(o);var m=h.module();m.validateAct3FutureLoadingCut();o.visit().requireServiceIdle();
+        assertTrue(m.act3FutureLoadingSelected());assertFalse(m.act2PastLoadingSelected());assertFalse(m.act2LoadingSelected());
+        assertSame(o.frame(),m.requirePlayerFrame());assertSame(o.source(),o.frame().stageSource());assertFalse(o.frame().closed());
+        assertSame(o.host(),m.act3FutureWorldHost());assertSame(o.visit(),m.act3FutureLoadingVisit());assertSame(o.assets(),o.visit().assets());
+        assertSame(o.ordinary(),actualField(m,"act3FutureWorld"));assertFalse(o.ordinary().isOrdinaryRunning());assertFalse(o.visit().failed());
+        assertSame(o.world(),h.mode().getWorldSession());assertSame(m,h.mode().getWorldSession().rootGameModule());
+        assertSame(m,h.mode().getWorldSession().resolvedGameModule());assertSame(m.actualAct3RegistrySource(),h.mode().getWorldSession().getDataSource());
+        assertSame(o.assets(),m.actualAct3RegistryAssets());assertSame(o.level(),h.mode().getLevelManager().getCurrentLevel());assertSame(o.assets(),o.level().assets());
+        assertEquals(o.generation(),h.mode().getLevelManager().getCompletedProductionLoadGeneration());
+        assertEquals(0,h.mode().getLevelManager().getCurrentZone());assertEquals(0,h.mode().getWorldSession().getCurrentZone());
+        assertEquals(2,h.mode().getLevelManager().getCurrentAct());assertEquals(2,h.mode().getWorldSession().getCurrentAct());
+        assertEquals(2,h.mode().getLevelManager().getApparentAct());assertEquals(2,h.mode().getWorldSession().getApparentAct());
+        assertTrue(o.source().ownsAct3Future(o.assets()));assertTrue(o.host().placement().ownsAct3FutureAssets(o.assets()));
+        assertSame(o.assets().placements(),o.host().placement().placements());
+        assertEquals(CdStageKey.parse("R13D"),o.source().stage());assertEquals(CdReleaseVariant.USA,o.assets().identity().variant());
+        assertEquals(CdNativeFile.R13D,o.assets().identity().file());assertEquals(0,o.host().selectedGoodFutureByte());
+        assertEquals(2,o.frame().environment().movement().gates().zoneAct());assertEquals(2,o.frame().environment().movement().gates().timeZone());
+        assertEquals(o.visit().state().program().specialStageByte(),m.levelProgramState().specialStage());
+        assertEquals(o.visit().state().program().timeStonesByte(),m.levelProgramState().timeStones());
+        assertSame(o.visit(),actualField(o.host(),"owner"));assertSame(o.ordinary(),actualField(o.host(),"world"));
+        assertSame(o.frame(),actualField(o.host(),"frame"));assertSame(o.assets(),actualField(o.host(),"assets"));
+        assertSame(actualField(m,"act3FutureArt"),actualField(o.host(),"art"));
+        assertTrue(o.host().video().current().ownsAssets(o.assets()));assertTrue(o.host().video().current().hasNativeHudProfile());
+        assertSame(o.visit().state().section().residency(),o.host().video().current());
+        o.frame().captureActor();o.frame().captureShared(); // Existing actual closed-Frame guard, no fabricated captures.
+    }
+    private static void assertNaturalR13Snapshots(Harness h,Object full,Object course,String label) throws Exception {
+        var registry=h.mode().getRewindRegistry();
+        assertNaturalR13SnapshotValue(full,registry.capture(),label+" FULL");
+        assertNaturalR13SnapshotValue(course,registry.captureCourse(),label+" course");
+    }
+    /** Extend comparison only for the new opaque snapshot. Existing checkpoint/COW rules remain the sole Level rule. */
+    private static void assertNaturalR13SnapshotValue(Object expected,Object actual,String label) throws Exception {
+        if(expected instanceof com.openggf.game.rewind.CompositeSnapshot e) {
+            var a=assertInstanceOf(com.openggf.game.rewind.CompositeSnapshot.class,actual);
+            assertNaturalR13SnapshotValue(e.entries(),a.entries(),label);return;
+        }
+        if(expected instanceof java.util.Map<?,?> e) {
+            var a=assertInstanceOf(java.util.Map.class,actual);assertEquals(e.keySet(),a.keySet(),label+" complete owner keys");
+            for(var key:e.keySet())assertNaturalR13SnapshotValue(e.get(key),a.get(key),label+"["+key+"]");return;
+        }
+        if(expected instanceof SonicCdAct3FutureLoadingVisit.Snapshot) {
+            assertEquals(expected.getClass(),actual.getClass());var names=new java.util.TreeSet<String>();
+            for(var f:expected.getClass().getDeclaredFields()) {
+                if(java.lang.reflect.Modifier.isStatic(f.getModifiers()))continue;names.add(f.getName());f.setAccessible(true);
+                assertNaturalR13SnapshotValue(f.get(expected),f.get(actual),label+"."+f.getName());
+            }
+            assertEquals(java.util.Set.of("owner","state","actor","shared","host"),names,"No opaque R13 snapshot field may be omitted");return;
+        }
+        if(expected!=null&&expected.getClass().getName().equals("com.openggf.game.soniccd.SonicCdGameModule$Act3FutureShared")) {
+            assertEquals(expected.getClass(),actual.getClass());var names=new java.util.TreeSet<String>();
+            for(var c:expected.getClass().getRecordComponents()) {
+                names.add(c.getName());var getter=c.getAccessor();getter.setAccessible(true);
+                assertNaturalR13SnapshotValue(getter.invoke(expected),getter.invoke(actual),label+"."+c.getName());
+            }
+            assertEquals(java.util.Set.of("loading","services","goodFutureFlags"),names,"Complete actual module shared capture");return;
+        }
+        assertNaturalR12bSnapshotValue(expected,actual,label);
+    }
+    /** Ordinary production overlay only; neither pixel collection nor comparison changes the retained selected image. */
+    private static byte[] drawNaturalR13Image(Harness h,R13NaturalOwners o) throws Exception {
+        assertNaturalR13Owners(h,o);long epoch=o.level().currentEpoch();var selected=o.host().selected();
+        var full=h.mode().getRewindRegistry().capture();var course=h.mode().getRewindRegistry().captureCourse();
+        long drawEpoch=o.level().currentEpoch();var actual=draw(h);
+        assertEquals(drawEpoch,o.level().currentEpoch(),"R13 draw may not advance the live COW epoch");
+        assertTrue(drawEpoch>=epoch);assertSame(selected,o.host().selected());assertNaturalR13Owners(h,o);
+        assertNaturalR13Snapshots(h,full,course,"production R13 draw nonwrites");return actual;
+    }
+    /** Pixel oracle is renderer-only Sonic omission against the exact immutable selected Scene, not a golden/native screenshot. */
+    private static R13NaturalPixels drawNaturalR13SelectedSonic(Harness h,R13NaturalOwners o,int call) throws Exception {
+        assertNaturalR13Owners(h,o);assertEquals(SonicCdAct3FutureLoadingVisit.Phase.READY,o.visit().state().phase());
+        var selected=assertInstanceOf(SonicCdAct3FutureWorldHost.Published.class,o.host().selected()).selection();var inputs=selected.inputs();
+        var scene=assertInstanceOf(SonicCdPastDisplay.Ready.class,selected.projection(),"R13_NATIVE_PREREQUISITE: selected-native Ready image at actual"+call+": "+selected.projection()).scene();
+        var cpu=inputs.selectedCpu().orElseThrow(()->new AssertionError("R13_NATIVE_PREREQUISITE: no original prior CPU at"+call));
+        assertTrue(cpu.provenance().stream().anyMatch(v->v.slotRef().wholeIndex()==0),"Actual selected prior CPU must contain Sonic0");
+        assertArrayEquals(cpu.bytes(),inputs.selectedSat().copy());assertTrue(inputs.displayEnabled());assertTrue(scene.displayEnabled());
+        assertTrue(o.host().geometryReady());assertEquals(o.assets().range(com.openggf.game.soniccd.level.CdR13FutureAssets.Asset.LEVEL_COLLISION).nativeAddress(),o.host().collisionPointer().orElseThrow());
+        assertArrayEquals(o.assets().terrain().blocks().copy(),o.visit().state().blocksRam().orElseThrow().copy());
+        assertArrayEquals(o.assets().terrain().layout().ram().copy(),o.visit().state().layoutRam().orElseThrow().copy());
+        assertSame(o.host().video().current(),inputs.current());
+        assertArrayEquals(o.frame().artState().cpuBuffer().copy(),inputs.player().cpuBuffer().copy());
+        assertArrayEquals(o.frame().artState().residentBank().copy(),inputs.player().residentBank().copy());
+        assertEquals(o.frame().artState().lastFrame(),inputs.player().lastFrame());assertEquals(o.frame().artState().dirty(),inputs.player().dirty());
+        var fg=scene.foreground().words64x32();var bg=scene.background().words64x32();
+        for(int y=0;y<32;y++)for(int x=0;x<64;x++) {
+            assertEquals(inputs.foreground().word(x,y),fg[y*64+x],"Selected physical FG descriptor");
+            assertEquals(inputs.background().word(x,y),bg[y*64+x],"Selected physical BG descriptor");
+        }
+        var packed=scene.packedHscroll256();for(int i=0;i<256;i++)assertEquals((int)inputs.hscroll().unsignedLong(i*4),packed[i],"Full selected HScroll including retained tail");
+        assertEquals(inputs.vscrollLongBits(),scene.vscrollLongBits());assertArrayEquals(inputs.palette().copy(),scene.selectedPalette128());
+        assertEquals(0x20,scene.selectedBackdropPaletteIndex(),"Source-declared LevelStart line2/color0 selection, no guessed pixel color");
+        assertFalse(scene.nativePatterns().isEmpty());
+        for(var entry:scene.nativePatterns().entrySet()) {
+            int id=entry.getKey();var raw=id>=0x780&&id<0x798?inputs.player().residentBank().slice((id-0x780)*32,32)
+                    :com.openggf.game.soniccd.resources.CdR13ArtResidency.readTile(inputs.current(),id);
+            assertEquals(com.openggf.game.soniccd.resources.CdObjectPresentation.patternVersion(raw),entry.getValue(),"Actual current-native bytes for selected pattern"+id);
+        }
+        assertEquals(com.openggf.game.soniccd.resources.CdObjectPresentation.convert(cpu,id->
+                new com.openggf.game.soniccd.resources.CdObjectPresentation.TilePattern(PatternAtlasRange.OBJECTS.base()+id,
+                        java.util.Objects.requireNonNull(scene.nativePatterns().get(id)))),scene.sprites(),"Exact original selected SAT geometry and current versions");
+        var full=h.mode().getRewindRegistry().capture();var course=h.mode().getRewindRegistry().captureCourse();
+        var actual=drawNaturalR13Image(h,o);assertArrayEquals(actual,drawNaturalR13Image(h,o));
+        var binding=actualField(o.host(),"render");var renderer=assertInstanceOf(RetainedPlaneSceneRenderer.class,actualField(binding,"renderer"));
+        assertSame(o.world(),actualField(binding,"world"));assertSame(o.level(),actualField(binding,"level"));assertEquals(o.generation(),actualField(binding,"generation"));
+        assertSame(GameServices.graphics(),actualField(binding,"graphics"));assertSame(GameServices.graphics().getPatternAtlas(),actualField(binding,"atlas"));
+        assertSame(h.mode().getCamera(),actualField(binding,"camera"));assertSame(Thread.currentThread(),actualField(binding,"thread"));
+        assertEquals("surfaceless-egl",actualField(binding,"backend"));assertSame(org.lwjgl.opengl.GL.getCapabilities(),actualField(binding,"capabilities"));
+        var omitted=TestSonicCdPastResultsRoute.omitWhole(scene,cpu,0);assertNaturalR12bOmissionPartitions(scene,omitted);
+        var camera=h.mode().getCamera();long epoch=o.level().currentEpoch();clearPixels();
+        renderer.draw(omitted,camera.getX(),camera.getY(),h.module()::validateAct3FutureLoadingCut);var without=pixels();
+        assertEquals(epoch,o.level().currentEpoch());assertNaturalR13Snapshots(h,full,course,"Sonic omission nonwrites");
+        assertSame(selected,assertInstanceOf(SonicCdAct3FutureWorldHost.Published.class,o.host().selected()).selection());
+        assertArrayEquals(actual,drawNaturalR13Image(h,o));assertNaturalR13Snapshots(h,full,course,"selected image reinstated without gameplay publication");
+        return new R13NaturalPixels(actual,without);
+    }
+    /** Existing renderer retirement, plus a GPU-only unrelated producer retained until its graphics owner closes. */
+    private static void retireNaturalR13Renderer(Harness h,R13NaturalOwners o) throws Exception {
+        var graphics=GameServices.graphics();var atlas=graphics.getPatternAtlas();var binding=actualField(o.host(),"render");
+        var renderer=assertInstanceOf(RetainedPlaneSceneRenderer.class,actualField(binding,"renderer"));
+        var touched=assertInstanceOf(java.util.Map.class,actualField(renderer,"touched"));var installed=new java.util.ArrayList<Integer>();
+        for(var id:touched.keySet()){installed.add(assertInstanceOf(Integer.class,id));assertNotNull(atlas.getEntry((Integer)id));}
+        assertFalse(installed.isEmpty());
+        atlas.registerRange(PatternAtlasRange.HUD);int other=PatternAtlasRange.HUD.base()+19;
+        if(atlas.getEntry(other)==null)graphics.cachePatternTexture(new com.openggf.level.Pattern(),other); // GPU-only contrast; no gameplay/source art.
+        var unrelated=atlas.getEntry(other);var sample=SpritePresentation.patternSample(graphics,other);
+        var mask=graphics.getTilePriorityFBO();assertNotNull(mask);int texture=mask.getTextureId();
+        SessionManager.closeGameplaySession();
+        assertTrue(o.frame().closed());assertTrue((boolean)actualField(o.host(),"closed"));assertNull(actualField(o.host(),"render"));
+        assertTrue((boolean)actualField(renderer,"closed"));assertTrue(touched.isEmpty());
+        for(int id:installed){assertNull(atlas.getEntry(id));assertNull(SpritePresentation.patternSample(graphics,id));}
+        assertSame(unrelated,atlas.getEntry(other));assertEquals(sample,SpritePresentation.patternSample(graphics,other));
+        assertSame(mask,graphics.getTilePriorityFBO());assertTrue(glIsTexture(texture));
+    }
+    /** ENGINE output only after session/module/graphics/context/fixture close. No output is read as an oracle. */
+    private static void writeOptionalNaturalR13Capture(byte[] rgba,int call) throws Exception {
+        String output=System.getenv("SONICCD_R13_FIRST_SONIC_OUTPUT");if(output==null||output.isBlank())return;
+        assertNotNull(rgba);assertTrue(call>=16980&&call<=20000);
+        var directory=Path.of(output).toAbsolutePath().normalize();
+        var owned=Path.of(System.getProperty("user.home"),"Downloads","Sonic-CD","captures","engine").toAbsolutePath().normalize();
+        assertTrue(directory.startsWith(owned)&&!directory.equals(owned),"Optional ENGINE export requires its own directory under captures/engine");
+        Files.createDirectories(directory);assertEquals(directory,directory.toRealPath(),"No symbolic-link capture traversal");
+        String stem="ENGINE-R13D-natural-first-Sonic-call-"+call;writeEngineCapturePng(rgba,directory.resolve(stem+".png"));
+        Files.writeString(directory.resolve(stem+".txt"),"ENGINE OpenGGF original-USA actual same-World R13D, first renderer-visible selected Sonic at returned"+call+".\n"
+                +"Fixed held Right after16979; actual original loading and native Body; full/course value and pixel replay; renderer-only Sonic omission contrast.\n"
+                +"Written after module/session/graphics/EGL/fixture cleanup. No native screenshot, boss/fight/full-act/audio/regional/parity claim.\n");
+    }
+    // END finite natural R13D comparison/render helpers 20261106.
 
     // BEGIN later-route EGL case: additive to the three pinned controller cases.
     @Test void actualLaterAct2ControllerCutsRenderSelectedSonicAndReplayTheirCompleteValuesAndPixels() throws Exception {

@@ -1,5 +1,8 @@
 package com.openggf.game.soniccd.objects;
 
+import com.openggf.game.soniccd.level.CdR13FutureAssets;
+import com.openggf.game.soniccd.level.CdR13ReusedObjectAssets;
+
 import com.openggf.game.soniccd.level.CdR12bObjectAssets;
 import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
 import com.openggf.game.soniccd.CdNativeFile;
@@ -264,6 +267,17 @@ public final class CdExplosion {
         body.observer = Objects.requireNonNull(observer); body.sourceDraw = Objects.requireNonNull(draw);
         body.receiptGuard = Objects.requireNonNull(guard); return body;
     }
+
+    // BEGIN R13 SOURCE FACTORY 20261106
+    public static CdExplosion fromAct3FutureAssets(CdObjectPlacementRuntime runtime,CdR13FutureAssets assets,CdR13ReusedObjectAssets owner,
+            DispatchObserver observer,SourceDraw draw,ReceiptGuard guard) {
+        Objects.requireNonNull(runtime,"actual placement");Objects.requireNonNull(assets,"actual original future source");Objects.requireNonNull(owner,"actual reuse metadata");
+        if(!runtime.ownsAct3FutureAssets(assets)||!owner.ownsAssets(assets,owner.startup()))throw new IllegalArgumentException("R13 reused body requires exact retained source/placement/metadata");
+        var data=new Assets(owner.explosion(),CdR13ReusedObjectAssets.View.MAP_SPR_EXPLOSION.range(assets.identity().file()).nativeAddress());
+        var body=new CdExplosion(runtime,data,(pool,id)->{throw new IllegalStateException("Actual R13 effect requires original source Draw");}, true);
+        body.observer=Objects.requireNonNull(observer);body.sourceDraw=Objects.requireNonNull(draw);body.receiptGuard=Objects.requireNonNull(guard);return body;
+    }
+    // END R13 SOURCE FACTORY 20261106
 
     /** Explicit same-placement R12B ingress; the original source algorithm and receipts are reused. */
     public static CdExplosion fromAct2PastAssets(CdObjectPlacementRuntime runtime, CdR12bTerrainAssets owner,

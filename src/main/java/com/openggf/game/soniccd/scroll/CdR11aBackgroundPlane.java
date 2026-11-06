@@ -10,6 +10,7 @@ import com.openggf.game.soniccd.level.CdR12aTerrainAssets;
 import com.openggf.game.soniccd.level.CdR12bProfile;
 import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
 import com.openggf.game.soniccd.level.CdStageTerrain;
+import com.openggf.game.soniccd.level.CdR13PlaneSources;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -164,6 +165,21 @@ public final class CdR11aBackgroundPlane {
         this.terrainChunks = terrain.chunks();
         this.terrainLayout = terrain.layout().ram();
         this.initialRowMask = 0x1F0;
+    }
+
+    /** Authenticated original C/D data binding only; no execution or current-art grant. */
+    public static CdR11aBackgroundPlane bindAct3Future(CdR13PlaneSources sources) {
+        return new CdR11aBackgroundPlane(Objects.requireNonNull(sources, "actual C/D plane source"));
+    }
+    private CdR11aBackgroundPlane(CdR13PlaneSources sources) {
+        var terrain = sources.terrain();
+        if (terrain.shape() != CdStageTerrain.Shape.PPZ3_GOOD_FUTURE
+                && terrain.shape() != CdStageTerrain.Shape.PPZ3_BAD_FUTURE)
+            throw new IllegalArgumentException("Actual original C/D terrain required");
+        this.ids = sources.ids(); this.livePointers = sources.pointers();
+        shape(ids, 34, Boundary.TABLE_SHAPE); shape(livePointers, 16, Boundary.TABLE_SHAPE);
+        this.terrainBlocks = terrain.blocks(); this.terrainChunks = terrain.chunks();
+        this.terrainLayout = terrain.layout().ram(); this.initialRowMask = 0x1F0;
     }
 
     // Past InitLevelDrawBG:899-914, BGCameraSectIDs/BGCameraSects:934-947, N1ecc5f3a.

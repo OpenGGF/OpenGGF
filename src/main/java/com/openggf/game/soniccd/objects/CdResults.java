@@ -2,6 +2,8 @@ package com.openggf.game.soniccd.objects;
 
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdR11bAssets;
+import com.openggf.game.soniccd.level.CdR13FutureAssets;
+import com.openggf.game.soniccd.level.CdR13ResultsAssets;
 import com.openggf.game.soniccd.CdNativeFile;
 import com.openggf.game.soniccd.CdReleaseVariant;
 import com.openggf.game.soniccd.CdStagePayload;
@@ -21,7 +23,7 @@ import static com.openggf.game.soniccd.objects.CdObjectState.WordField.*;
 import static com.openggf.game.soniccd.objects.CdObjectState.LongField.MAPPINGS;
 
 /**
- * Selected USA/Past ObjResults ($3A), native pin 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff,
+ * Selected USA ObjResults ($3A), native pin 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff,
  * Level/_Objects/Results/Main.asm:42-366. No FixBugs alternative occurs in this body.
  * Object Spawner.asm:11-20,329-340 owns the saved-bank reset and ID-only free-slot search;
  * HUD and Points/Main.asm:157-180 owns the existing shared AddPoints value operation.
@@ -57,6 +59,12 @@ public final class CdResults {
             return new Assets(owner.view(CdR12bObjectAssets.View.RESULTS_INIT_DATA),
                     owner.view(CdR12bObjectAssets.View.MAP_SPR_RESULTS),
                     CdR12bObjectAssets.View.MAP_SPR_RESULTS.range().nativeAddress());
+        }
+
+        /** Authenticated finite future views, not a World/Frame/PLC/current grant. */
+        public static Assets fromAct3FutureAssets(CdR13ResultsAssets owner) {
+            Objects.requireNonNull(owner, "actual R13 Results metadata");
+            return new Assets(owner.initData(), owner.mappings(), owner.mappingAddress());
         }
 
         public static Assets fromPastAssets(CdR11bAssets owner) {
@@ -206,6 +214,29 @@ public final class CdResults {
     private final ProgrammeStore programmeStore;
     private final ProgrammeActionPort programmeAction;
     private boolean running;
+    private final CdR13ResultsAssets futureSource;
+    private Object pendingCall;
+
+    /** Data relation only; exact reference identity cannot confer a native invocation. */
+    public boolean ownsAct3FutureAssets(CdR13FutureAssets owner) {
+        return futureSource != null && futureSource.ownsAssets(owner) && placement.ownsAct3FutureAssets(owner);
+    }
+    /** Only the original callback object while its actual port is running, never completion/replay authority.
+     * Legacy construction has no future receipt lane. Root additionally owns full Frame/Core/Host scope. */
+    public boolean isCurrentCall(Object call) {
+        return call != null && futureSource != null && running && pendingCall == call;
+    }
+
+    public static CdResults fromAct3FutureAssets(CdObjectPlacementRuntime placement, CdR13FutureAssets owner,
+                                               CdR13ResultsAssets metadata, NativeRead read, BonusStore bonus,
+                                               PointsPort points, LoadPlc plc, SoundPort sound, DrawObject draw,
+                                               ProgrammeStore programme, ProgrammeActionPort action) {
+        Objects.requireNonNull(placement); Objects.requireNonNull(owner); Objects.requireNonNull(metadata);
+        if (!placement.ownsAct3FutureAssets(owner) || !metadata.ownsAssets(owner))
+            throw new IllegalArgumentException("Results requires the exact original R13 placement/aggregate/metadata");
+        return new CdResults(placement, Assets.fromAct3FutureAssets(metadata), read, bonus, points, plc,
+                sound, draw, programme, action, metadata);
+    }
 
     /** Source-pair ingress only; the caller retains every reached publication/helper authority. */
     public static CdResults fromAct2PastAssets(CdObjectPlacementRuntime placement, CdR12bTerrainAssets owner,
@@ -222,10 +253,18 @@ public final class CdResults {
     public CdResults(CdObjectPlacementRuntime placement, Assets assets, NativeRead nativeRead,
                      BonusStore bonusStore, PointsPort pointsPort, LoadPlc loadPlc, SoundPort soundPort,
                      DrawObject drawObject, ProgrammeStore programmeStore, ProgrammeActionPort programmeAction) {
+        this(placement, assets, nativeRead, bonusStore, pointsPort, loadPlc, soundPort, drawObject,
+                programmeStore, programmeAction, null);
+    }
+    private CdResults(CdObjectPlacementRuntime placement, Assets assets, NativeRead nativeRead,
+                      BonusStore bonusStore, PointsPort pointsPort, LoadPlc loadPlc, SoundPort soundPort,
+                      DrawObject drawObject, ProgrammeStore programmeStore, ProgrammeActionPort programmeAction,
+                      CdR13ResultsAssets futureSource) {
         this.placement = Objects.requireNonNull(placement); this.assets = Objects.requireNonNull(assets);
         this.nativeRead = nativeRead; this.bonusStore = bonusStore; this.pointsPort = pointsPort;
         this.loadPlc = loadPlc; this.soundPort = soundPort; this.drawObject = drawObject;
         this.programmeStore = programmeStore; this.programmeAction = programmeAction;
+        this.futureSource = futureSource;
     }
     public Result run(int wholeIndex) {
         if (running) throw new IllegalStateException("Reentrant ObjResults dispatch");
@@ -375,7 +414,7 @@ public final class CdResults {
     private int read(Cursor c, ReadField field) {
         if (nativeRead == null) throw unsupported(UnsupportedBoundary.READ_OWNER, c.whole, field.ordinal());
         var cut = capture(c); var call = new ReadCall(field, cut, c.state);
-        int value = readValue(cut, () -> nativeRead.read(call));
+        int value = readValue(cut, () -> invokeRead(call, () -> nativeRead.read(call)));
         if (field.widthBits() != 32 && (value < 0 || value >= 1 << field.widthBits()))
             throw unsupported(UnsupportedBoundary.READ_VALUE_WIDTH, c.whole, value);
         c.effects.add(new ReadReturned(field, value)); return value;
@@ -383,39 +422,39 @@ public final class CdResults {
     private void bonusStore(Cursor c, BonusField field, int value) {
         if (bonusStore == null) throw unsupported(UnsupportedBoundary.BONUS_STORE_OWNER, c.whole, field.ordinal());
         var cut = capture(c); var call = new BonusStoreCall(field, value, cut, c.state);
-        readOnly(cut, () -> bonusStore.store(call)); c.effects.add(new BonusStored(field, value));
+        readOnly(cut, () -> invoke(call, () -> bonusStore.store(call))); c.effects.add(new BonusStored(field, value));
     }
     private void points(Cursor c, int points) {
         if (pointsPort == null) throw unsupported(UnsupportedBoundary.POINTS_OWNER, c.whole, points);
         var cut = capture(c); var call = new PointsCall(points, cut, c.state);
-        readOnly(cut, () -> pointsPort.addPoints(call)); c.effects.add(new PointsReturned(points));
+        readOnly(cut, () -> invoke(call, () -> pointsPort.addPoints(call))); c.effects.add(new PointsReturned(points));
     }
     private void plc(Cursor c) {
         if (loadPlc == null) throw unsupported(UnsupportedBoundary.PLC_OWNER, c.whole, PLC_ID);
         var cut = capture(c); var call = new PlcCall(PLC_ID, cut, c.state);
-        readOnly(cut, () -> loadPlc.load(call)); c.effects.add(new PlcRequested(PLC_ID));
+        readOnly(cut, () -> invoke(call, () -> loadPlc.load(call))); c.effects.add(new PlcRequested(PLC_ID));
     }
     private void sound(Cursor c, Sound sound) {
         if (soundPort == null) throw unsupported(UnsupportedBoundary.SOUND_OWNER, c.whole, sound.nativeId());
         var cut = capture(c); var call = new SoundCall(sound, cut, c.state);
-        readOnly(cut, () -> soundPort.request(call)); c.effects.add(new SoundRequested(sound));
+        readOnly(cut, () -> invoke(call, () -> soundPort.request(call))); c.effects.add(new SoundRequested(sound));
     }
     private void programmeStore(Cursor c, ProgrammeField field, int value) {
         if (programmeStore == null) throw unsupported(UnsupportedBoundary.PROGRAMME_STORE_OWNER, c.whole, field.ordinal());
         var cut = capture(c); var call = new ProgrammeStoreCall(field, value, cut, c.state);
-        readOnly(cut, () -> programmeStore.store(call)); c.effects.add(new ProgrammeStored(field, value));
+        readOnly(cut, () -> invoke(call, () -> programmeStore.store(call))); c.effects.add(new ProgrammeStored(field, value));
     }
     private void action(Cursor c, ProgrammeAction action) {
         if (programmeAction == null) throw unsupported(UnsupportedBoundary.PROGRAMME_ACTION_OWNER, c.whole, action.ordinal());
         var cut = capture(c); var call = new ProgrammeActionCall(action, cut, c.state);
-        if (action != ProgrammeAction.RESET_SAVED_OBJECT_FLAGS) readOnly(cut, () -> programmeAction.perform(call));
+        if (action != ProgrammeAction.RESET_SAVED_OBJECT_FLAGS) readOnly(cut, () -> invoke(call, () -> programmeAction.perform(call)));
         else {
             byte[] expectedSaved = new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES];
             expectedSaved[0] = expectedSaved[1] = 1;
             var s = cut.status();
             var expectedStatus = new CdObjectPlacementRuntime.Status(s.routine(), s.previousChunkWord(),
                     s.rightRecordIndex(), s.leftRecordIndex(), 1, 1, s.nullRightByteOffset(), s.nullLeftByteOffset());
-            try { programmeAction.perform(call); }
+            try { invoke(call, () -> programmeAction.perform(call)); }
             catch (RuntimeException | Error original) {
                 suppress(original, () -> {
                     if (!samePlacement(cut.status(), cut.pool(), cut.savedFlags().copy()))
@@ -430,7 +469,7 @@ public final class CdResults {
         if (drawObject == null) throw unsupported(UnsupportedBoundary.DRAW_OWNER, c.whole, c.state.routine());
         var cut = capture(c); var call = new DrawCall(cut, c.state);
         var expected = CdObjectPool.overlay(cut.pool(), List.of(c.state.moveByte(SPRITE_FLAGS, c.state.spriteFlags() & 0x7F)));
-        try { drawObject.drawObject(call); }
+        try { invoke(call, () -> drawObject.drawObject(call)); }
         catch (RuntimeException | Error original) {
             suppress(original, () -> {
                 if (!samePlacement(cut.status(), cut.pool(), cut.savedFlags().copy())) assertPlacement(cut, expected);
@@ -438,6 +477,18 @@ public final class CdResults {
         }
         assertPlacement(cut, expected);
         c.state = placement.pool().state(c.whole); c.effects.add(new DrawReturned());
+    }
+    private void invoke(Object call, Runnable operation) {
+        if (futureSource == null) { operation.run(); return; }
+        if (pendingCall != null) throw new IllegalStateException("Nested original Results callback");
+        pendingCall = call;
+        try { operation.run(); } finally { pendingCall = null; }
+    }
+    private <T> T invokeRead(Object call, java.util.function.Supplier<T> operation) {
+        if (futureSource == null) return operation.get();
+        if (pendingCall != null) throw new IllegalStateException("Nested original Results callback");
+        pendingCall = call;
+        try { return operation.get(); } finally { pendingCall = null; }
     }
     private CdObjectPlacementRuntime.Snapshot capture(Cursor c) {
         var cut = placement.capture(); requireSource(cut, c.state); assertPlacement(cut, cut.pool()); return cut;

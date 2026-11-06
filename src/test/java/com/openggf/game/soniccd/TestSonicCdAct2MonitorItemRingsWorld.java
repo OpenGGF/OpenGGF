@@ -212,8 +212,9 @@ class TestSonicCdAct2MonitorItemRingsWorld {
         assertEquals(119,SonicCdGameModule.Act2LoadCall.MONITOR_ITEM_RING_AWARD.ordinal());
         assertEquals(List.of("PastCheckpointFm","PastFrameSound","PastSubCpuSound","PastRingFm","PastRingSubCpu","PastSpringFm",
                 "PastTunnelDoorFm","PastMonitorFm","PastTimePostSubCpu","PastTamabbohFm","PastCollapsePlatformFm","PastMosquiFm",
-                "PastRobotGeneratorFm","PastSignpostSound","PastBigRingFm","PastResultsSound","PastProgrammeSound","PastWallFm",
-                "PastTunnelPathFm","PastMonitorItemShieldFm","PastMonitorItemRing","PastTunnelDoorSplashFm"),
+                "PastLostRingFm","PastRobotGeneratorFm","PastProjectorFm","PastSignpostSound","PastBigRingFm","PastResultsSound",
+                "PastProgrammeSound","PastWallFm","PastTunnelPathFm","PastMonitorItemShieldFm","PastMonitorItemRing","PastTunnelDoorSplashFm",
+                "PastDiscFm","PastVerticalDoorFm","PastSpeedShoesSubCpu","PastLevelMusic"),
                 Arrays.stream(SonicCdGameModule.PastSound.class.getPermittedSubclasses()).map(Class::getSimpleName).toList());
         assertThrows(NullPointerException.class,()->new SonicCdGameModule.PastMonitorItemRing(null));
         assertEquals(1,ringSounds(s).size());retired(s);

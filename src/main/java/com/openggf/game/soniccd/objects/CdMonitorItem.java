@@ -1,5 +1,8 @@
 package com.openggf.game.soniccd.objects;
 
+import com.openggf.game.soniccd.level.CdR13FutureAssets;
+import com.openggf.game.soniccd.level.CdR13ReusedObjectAssets;
+
 import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
 import com.openggf.game.soniccd.player.CdPlayerMovement;
 
@@ -194,6 +197,16 @@ public final class CdMonitorItem {
         void failedOperation(Object call, Throwable original);
     }
     public interface ReceiptGuard { void prepared(Object call); void completed(Object call); }
+
+    // BEGIN R13 SOURCE FACTORY 20261106
+    public static CdMonitorItem fromAct3FutureAssets(CdObjectPlacementRuntime runtime,CdR13FutureAssets assets,CdR13ReusedObjectAssets owner,
+            AwardPort shoes,ShieldAwardPort shield,RingAwardPort rings,CdMonitor.DrawObjectCall draw,DispatchObserver observer,ReceiptGuard guard) {
+        Objects.requireNonNull(runtime,"actual placement");Objects.requireNonNull(assets,"actual original future source");Objects.requireNonNull(owner,"actual reuse metadata");
+        if(!runtime.ownsAct3FutureAssets(assets)||!owner.ownsAssets(assets,owner.startup()))throw new IllegalArgumentException("R13 reused body requires exact retained source/placement/metadata");
+        var data=new CdMonitor.Assets(owner.startup().monitorTime(),com.openggf.game.soniccd.level.CdR13ObjectAssets.View.MAP_SPR_MONITOR_TIME.range(assets.identity().file()).nativeAddress());
+        return withWorldOwner(runtime,data,shoes,shield,rings,draw,observer,guard);
+    }
+    // END R13 SOURCE FACTORY 20261106
 
     /** Actual source-paired R12B ingress over the unchanged finite reward/receipt owner. */
     public static CdMonitorItem fromAct2PastAssets(CdObjectPlacementRuntime runtime, CdR12bTerrainAssets owner,

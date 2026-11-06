@@ -16,6 +16,7 @@ import com.openggf.game.soniccd.level.CdR12bPlayerAssets;
 import com.openggf.game.soniccd.level.CdR13FutureAssets;
 import com.openggf.game.soniccd.level.CdStagePlayerSource;
 import com.openggf.game.soniccd.objects.CdBigRing;
+import com.openggf.game.soniccd.objects.CdR13Boss;
 import com.openggf.game.soniccd.objects.CdResults;
 import com.openggf.game.soniccd.objects.CdSolidObject;
 import com.openggf.game.soniccd.objects.CdSignpost;
@@ -1503,6 +1504,122 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
         state = next;
     }
 
+    // BEGIN R13 BOSS SCALAR PREPARATION 20261106
+    /**
+     * Pure projection of ONE Frame-owned Boss store (N1ecc5f3a objects/r1/boss.asm30-64,
+     * 232-330,474-514,619-696; ObjGetFloorDist Collision Check.asm157-179). BOSS_FIGHT is
+     * movement.bounds().bossFight(), not the independent bossMusic flag. Destination bounds,
+     * bossFlags/goodFuture and read-only player fields remain outside this Frame port.
+     *
+     * expectedRaw and operand are canonical unsigned native BYTE/WORD values, matching the
+     * issued Boss StoreCall metadata. ASSIGN replaces that value; XOR uses expectedRaw XOR
+     * operand. Signed velocity storage is a final WORD interpretation, never a position/physics
+     * calculation. The native XOR site is only PLAYER_ANGLE/80; these public pure metadata
+     * values cannot authenticate that site or any native call. Root must guard its original
+     * cached Boss invocation, actual source/full96/order and SAME Frame/complete earlier pair
+     * before preparing, then publish through the existing adoption method after all preflight.
+     *
+     * Preparation compares the current scalar and captures this complete actual State8/Env4
+     * pair in the unchanged opaque carrier. It cannot detect an earlier different pair whose
+     * scalar still matches. Adoption retains the existing complete VALUE CAS: equal Frames,
+     * same-value repeats and restored equal pairs are indistinguishable, not invocation receipts.
+     * No owner assignment, callback/body, art/display, clock, capture, score or other work runs.
+     */
+    public ObjectSolidPublication prepareObjectBossScalar(CdR13Boss.Field field,
+                                                          CdR13Boss.StoreForm form,
+                                                          int expectedRaw, int operand) {
+        requireOpenIdle(); requireClosedFrame();
+        Objects.requireNonNull(field, "Boss scalar field");
+        Objects.requireNonNull(form, "Boss scalar store form");
+        var currentState = state; var currentEnvironment = environment;
+        var motion = currentState.motion(); var movement = currentEnvironment.movement();
+        var bounds = movement.bounds(); var globals = movement.globals();
+        int actualRaw = switch (field) {
+            case BOSS_FIGHT -> bounds.bossFight();
+            case BOTTOM_BOUND -> bounds.bottom();
+            case LEFT_BOUND -> bounds.left();
+            case RIGHT_BOUND -> bounds.right();
+            case CAMERA_Y_CENTRE -> globals.cameraYCentre();
+            case PLAYER_ANGLE -> motion.angle();
+            case PLAYER_GROUND_SPEED -> motion.groundVelocity() & 0xFFFF;
+            case PLAYER_X_SPEED -> motion.xVelocity() & 0xFFFF;
+            case PLAYER_Y_SPEED -> motion.yVelocity() & 0xFFFF;
+            case PRIMARY_ANGLE -> globals.primaryAngle();
+            default -> throw new IllegalArgumentException("Boss scalar is not Frame-owned: " + field);
+        };
+        int mask = field.bits() == 8 ? 0xFF : 0xFFFF;
+        if (((expectedRaw | operand) & ~mask) != 0)
+            throw new IllegalArgumentException("Boss scalar requires canonical unsigned native values: " + field);
+        if (actualRaw != expectedRaw)
+            throw new IllegalArgumentException("Stale Boss Frame scalar: " + field);
+        int value = form == CdR13Boss.StoreForm.ASSIGN ? operand : expectedRaw ^ operand;
+        var nextState = currentState; var nextEnvironment = currentEnvironment;
+        if (value != actualRaw) {
+            switch (field) {
+                case BOSS_FIGHT, BOTTOM_BOUND, LEFT_BOUND, RIGHT_BOUND -> {
+                    var nextBounds = new CdPlayerMovement.Bounds(
+                            field == CdR13Boss.Field.LEFT_BOUND ? value : bounds.left(),
+                            field == CdR13Boss.Field.RIGHT_BOUND ? value : bounds.right(),
+                            field == CdR13Boss.Field.BOTTOM_BOUND ? value : bounds.bottom(),
+                            field == CdR13Boss.Field.BOSS_FIGHT ? value : bounds.bossFight());
+                    var nextMovement = new CdPlayerMovement.Environment(movement.physics(), nextBounds,
+                            movement.gates(), globals);
+                    nextEnvironment = new CdPlayerBody.Environment(nextMovement, currentEnvironment.controls(),
+                            currentEnvironment.globals(), currentEnvironment.dynamicSlots());
+                }
+                case CAMERA_Y_CENTRE, PRIMARY_ANGLE -> {
+                    var nextGlobals = new CdPlayerMovement.Globals(globals.lookMode(),
+                            field == CdR13Boss.Field.CAMERA_Y_CENTRE ? value : globals.cameraYCentre(),
+                            field == CdR13Boss.Field.PRIMARY_ANGLE ? value : globals.primaryAngle(),
+                            globals.secondaryAngle(), globals.boredTimer(), globals.scoreChain(), globals.debugAngle(),
+                            globals.debugAngleShift(), globals.debugQuadrant(), globals.debugFloorDistance());
+                    var nextMovement = new CdPlayerMovement.Environment(movement.physics(), bounds,
+                            movement.gates(), nextGlobals);
+                    nextEnvironment = new CdPlayerBody.Environment(nextMovement, currentEnvironment.controls(),
+                            currentEnvironment.globals(), currentEnvironment.dynamicSlots());
+                }
+                case PLAYER_ANGLE, PLAYER_GROUND_SPEED, PLAYER_X_SPEED, PLAYER_Y_SPEED -> {
+                    var nextMotion = new CdPlayerMotionState(motion.centreX16_16(), motion.centreY16_16(),
+                            field == CdR13Boss.Field.PLAYER_X_SPEED ? (short) value : motion.xVelocity(),
+                            field == CdR13Boss.Field.PLAYER_Y_SPEED ? (short) value : motion.yVelocity(),
+                            field == CdR13Boss.Field.PLAYER_GROUND_SPEED ? (short) value : motion.groundVelocity(),
+                            motion.routine(), field == CdR13Boss.Field.PLAYER_ANGLE ? value : motion.angle(),
+                            motion.flags(), motion.spriteFlags(), motion.xRadius(), motion.yRadius(), motion.animation(),
+                            motion.previousAnimation(), motion.playerJump(), motion.charge(), motion.moveLock(),
+                            motion.stick(), motion.playerControl(), motion.previousPrimaryAngle(), motion.previousSecondaryAngle());
+                    nextState = new CdPlayerBody.State(nextMotion, currentState.animation(), currentState.header(),
+                            currentState.timers(), currentState.history(), currentState.rotationDistance(),
+                            currentState.objectLinks(), currentState.rotationAngle());
+                }
+                default -> throw new IllegalArgumentException("Boss scalar is not Frame-owned: " + field);
+            }
+        }
+        return new ObjectSolidPublication(currentState, currentEnvironment, nextState, nextEnvironment);
+    }
+    // END R13 BOSS SCALAR PREPARATION 20261106
+
+    // BEGIN R13 REUSABLE COMPLETE FRAME PREPARATIONS 20261106
+    /** Pure floor scratch-angle projection, preserving the full actor/display/art/clock and every other environment field. */
+    public ObjectSolidPublication prepareObjectPrimaryAngle(int expectedByte, int valueByte) {
+        requireOpenIdle();requireClosedFrame();
+        if(((expectedByte|valueByte)&~255)!=0)throw new IllegalArgumentException("Primary collision angle requires bytes");
+        var currentState=state;var currentEnvironment=environment;var m=currentEnvironment.movement();var g=m.globals();
+        if(g.primaryAngle()!=expectedByte)throw new IllegalArgumentException("Stale primary collision angle");
+        var nextGlobals=new CdPlayerMovement.Globals(g.lookMode(),g.cameraYCentre(),valueByte,g.secondaryAngle(),g.boredTimer(),g.scoreChain(),g.debugAngle(),g.debugAngleShift(),g.debugQuadrant(),g.debugFloorDistance());
+        var nextMovement=new CdPlayerMovement.Environment(m.physics(),m.bounds(),m.gates(),nextGlobals);
+        var nextEnvironment=new CdPlayerBody.Environment(nextMovement,currentEnvironment.controls(),currentEnvironment.globals(),currentEnvironment.dynamicSlots());
+        return new ObjectSolidPublication(currentState,currentEnvironment,currentState,nextEnvironment);
+    }
+    /** Existing strict launch validator and the same complete actor projection, prepared before any owner assignment. */
+    public ObjectSolidPublication prepareObjectSpringLaunch(CdSpring.LaunchCall call) {
+        validateObjectSpringLaunch(call);
+        var currentState=state;var currentEnvironment=environment;
+        var next=new CdPlayerBody.State(call.finalPlayer().actor().motion(),currentState.animation(),currentState.header(),currentState.timers(),
+                currentState.history(),currentState.rotationDistance(),currentState.objectLinks(),currentState.rotationAngle());
+        return new ObjectSolidPublication(currentState,currentEnvironment,next,currentEnvironment);
+    }
+    // END R13 REUSABLE COMPLETE FRAME PREPARATIONS 20261106
+
     private static int springLaunchValue(CdSolidObject.Player player, CdSpring.LaunchPlayerField field) {
         var m = player.actor().motion();
         return switch (field) {
@@ -1637,6 +1754,24 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
         state = nextState;
         environment = nextEnvironment;
     }
+    // BEGIN R13 PREBUILT SHOES PUBLICATION 20261106
+    public ObjectSolidPublication prepareObjectSpeedShoesReward(CdPlayerSpeedShoesReward.State expectedState,
+                                            CdPlayerSpeedShoesReward.Result result) {
+        validateObjectSpeedShoesReward(expectedState, result);
+        var value = result.state(); var timers = state.timers();
+        var nextState = new CdPlayerBody.State(state.motion(), state.animation(), state.header(),
+                new CdPlayerBody.Timers(timers.hurt(), timers.invincibility(), value.speedShoesTimer(), timers.reset()),
+                state.history(), state.rotationDistance(), state.objectLinks(), state.rotationAngle());
+        var movement = environment.movement(); var gates = movement.gates();
+        var nextGates = new CdPlayerMovement.Gates(gates.zoneAct(), gates.timeZone(), gates.miniSonic(),
+                gates.waterSlide(), gates.windTunnel(), value.speedShoes(), gates.timeWarpDirection());
+        var nextMovement = new CdPlayerMovement.Environment(value.physics(), movement.bounds(), nextGates, movement.globals());
+        var nextEnvironment = new CdPlayerBody.Environment(nextMovement, environment.controls(),
+                environment.globals(), environment.dynamicSlots());
+        return new ObjectSolidPublication(state,environment,nextState,nextEnvironment);
+    }
+    // END R13 PREBUILT SHOES PUBLICATION 20261106
+
     // END shared native GiveSpeedShoes value port.
 
     /**

@@ -4675,6 +4675,21 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     }
 
     /**
+     * Resets host state for a freshly selected course and publishes its position
+     * to this manager and the same World. This neither loads terrain nor grants
+     * level-entry authority; the caller still owns the admitted load sequence.
+     */
+    void resetForCourse(int zone, int act) {
+        if (zone < 0 || act < 0) {
+            throw new IllegalArgumentException("Course coordinates must be nonnegative");
+        }
+        resetState();
+        writeCurrentZone(zone);
+        writeCurrentAct(act);
+        writeApparentAct(act);
+    }
+
+    /**
      * Reset the frame counter to 0.
      * Used for deterministic visual regression testing to ensure animations
      * are in a consistent state between reference generation and test runs.

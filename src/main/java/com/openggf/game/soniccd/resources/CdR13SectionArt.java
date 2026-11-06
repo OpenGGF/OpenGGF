@@ -239,6 +239,11 @@ public final class CdR13SectionArt {
         return withValues(state, state.codeTable, CdR13ArtResidency.clear(state.residency));
     }
 
+    /** Complete native caller-owned tile value; exact source/operation admission belongs to actual World. */
+    public State writeCurrentTile(State state,int destinationWord,CdAssetBytes tile32) {
+        checked(state);return withValues(state,state.codeTable,commitTile(state,destinationWord,tile32,Operation.QUEUED,0));
+    }
+
     /**
      * Native LoadPLCImm, not InitPLC/append/service/POP. Active queued decoding is
      * unowned here because its saved continuation would need the overwritten table.

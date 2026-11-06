@@ -62,7 +62,10 @@ public final class CdObjectState {
         // ObjSwing (Swing/Main.asm:14-16): overlapping part/count/reversing BYTE storage only.
         SWING_PART(0x3C), SWING_COUNT(0x2F), SWING_REVERSING(0x3D),
         // oSprBrdFling EQU oVar2A (src/Level/Palmtree Panic/Objects/Springboard/Main.asm:7): storage alias only.
-        SPRINGBOARD_FLING(0x2A);
+        SPRINGBOARD_FLING(0x2A),
+        // R13 objects/r1/boss.asm: raw overlapping BYTE aliases only, no boss owner/state added.
+        BOSS_ANIMATION_FLAGS(0x1F), BOSS_TIMER(0x2A), BOSS_COUNTER(0x2B), BOSS_FLAGS(0x2C),
+        BOSS_PARAMETER(0x2D), BOSS_HIT_TIMER(0x34), BOSS_SHAKE(0x35), BOSS_LIMB_SPEED(0x3C);
         private final int offset;
         ByteField(int offset) { this.offset = offset; }
         public int byteOffset() { return offset; }
@@ -118,7 +121,10 @@ public final class CdObjectState {
         TITLE_CARD_DEST_Y(0x2E), TITLE_CARD_START_Y(0x30),
         // ObjSwing (Swing/Main.asm:7-13): overlapping centres and motion WORD storage only.
         SWING_CENTRE_X(0x36), SWING_CENTRE_Y(0x32), SWING_ANGLE(0x30), SWING_PHASE(0x3A),
-        SWING_STEP(0x3E), SWING_MAX(0x34), SWING_MIN(0x38);
+        SWING_STEP(0x3E), SWING_MAX(0x34), SWING_MIN(0x38),
+        // R13 boss native WORD links retain their raw low address; reached dereferences remain bounded.
+        BOSS_PARENT(0x2E), BOSS_NEXT(0x30), BOSS_BRANCH(0x32), BOSS_ANGLE(0x2A),
+        BOSS_DX(0x34), BOSS_DX_FRACTION(0x36), BOSS_DY(0x38), BOSS_DY_FRACTION(0x3A), BOSS_SAVED_X(0x3C);
         private final int offset;
         WordField(int offset) { this.offset = offset; }
         public int byteOffset() { return offset; }
@@ -143,7 +149,9 @@ public final class CdObjectState {
         // ID07 oTunnelData (Tunnel Path/Main.asm:115,194,274): retain the complete raw32 pointer bits.
         TUNNEL_PATH_DATA(0x3C),
         // Robot Generator/Main.asm:64,130,138: full raw schedule pointer bits, not a retained Java index.
-        ROBOT_GENERATOR_SCHEDULE(0x2C);
+        ROBOT_GENERATOR_SCHEDULE(0x2C),
+        // R13 boss 16.16 offsets/ballistic deltas. $10 overlaps BOTH native velocity WORDs.
+        BOSS_FALL_Y(0x10), BOSS_DX_LONG(0x34), BOSS_DY_LONG(0x38), BOSS_VX_LONG(0x3C);
         private final int offset;
         LongField(int offset) { this.offset = offset; }
         public int byteOffset() { return offset; }

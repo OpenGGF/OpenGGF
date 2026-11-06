@@ -1,5 +1,8 @@
 package com.openggf.game.soniccd.objects;
 
+import com.openggf.game.soniccd.level.CdR13FutureAssets;
+import com.openggf.game.soniccd.level.CdR13ReusedObjectAssets;
+
 import com.openggf.game.soniccd.level.CdR12bObjectAssets;
 import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
 import com.openggf.game.soniccd.CdNativeFile;
@@ -266,6 +269,17 @@ public final class CdFlower {
         body.observer = Objects.requireNonNull(observer); body.angleCommit = Objects.requireNonNull(angle);
         body.sourceDraw = Objects.requireNonNull(draw); body.receiptGuard = Objects.requireNonNull(guard); return body;
     }
+
+    // BEGIN R13 SOURCE FACTORY 20261106
+    public static CdFlower fromAct3FutureAssets(CdObjectPlacementRuntime runtime,CdR13FutureAssets assets,CdR13ReusedObjectAssets owner,
+            CdPlayerTerrain terrain, DispatchObserver observer,PrimaryAngleCommit angle, SourceDraw draw,ReceiptGuard guard) {
+        Objects.requireNonNull(runtime,"actual placement");Objects.requireNonNull(assets,"actual original future source");Objects.requireNonNull(owner,"actual reuse metadata");
+        if(!runtime.ownsAct3FutureAssets(assets)||!owner.ownsAssets(assets,owner.startup()))throw new IllegalArgumentException("R13 reused body requires exact retained source/placement/metadata");
+        var data=new Assets(owner.flower(),CdR13ReusedObjectAssets.View.MAP_SPR_FLOWER.range(assets.identity().file()).nativeAddress());
+        var body=new CdFlower(runtime,data,terrain, (pool,id)->{throw new IllegalStateException("Actual R13 effect requires original source Draw");});
+        body.observer=Objects.requireNonNull(observer);body.sourceDraw=Objects.requireNonNull(draw);body.receiptGuard=Objects.requireNonNull(guard);body.angleCommit=Objects.requireNonNull(angle);return body;
+    }
+    // END R13 SOURCE FACTORY 20261106
 
     /** Explicit same-placement R12B ingress; the original source algorithm and receipts are reused. */
     public static CdFlower fromAct2PastAssets(CdObjectPlacementRuntime runtime, CdR12bTerrainAssets owner,

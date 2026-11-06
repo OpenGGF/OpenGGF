@@ -40,6 +40,24 @@ final class SonicCdAct2PastPrimaryPublication {
                         SonicCdAct2PastWorldHost.Globals globals, CdLevelGlobals level, CdAssetBytes reserved) {
         Objects.requireNonNull(publication);Objects.requireNonNull(expectedPool);Objects.requireNonNull(globals);Objects.requireNonNull(level);
         if(Objects.requireNonNull(reserved).length()!=1984)throw new IllegalArgumentException("Complete reserved1984 required");
+        var projected=new Values(globals.ring(),globals.score(),globals.contact());
+        var plan=prepareValues(publication,expectedPool,projected,level,reserved);
+        var v=plan.values();var next=globals;
+        if(v!=projected)next=new SonicCdAct2PastWorldHost.Globals(v.ring(),globals.live(),v.contact(),v.score(),globals.projectorByte(),globals.checkpointSaved(),globals.drownTimerWord(),globals.debugBlockWord(),globals.pauseMusicBit(),globals.bonus(),globals.tail(),globals.animations(),globals.paletteSteps7(),globals.paletteTimers7());
+        return new Plan(plan.pool(),next,plan.level(),plan.reserved(),plan.display(),plan.sounds());
+    }
+    /** Pure external values only; no source or invocation capability. Shared by original Main/Hurt callers. */
+    record Values(CdRingGlobals ring,CdOpeningObjectRuntime.ScoreGlobals score,CdPlayerBody.ContactGlobals contact){
+        Values{Objects.requireNonNull(ring);Objects.requireNonNull(score);Objects.requireNonNull(contact);}
+    }
+    record ValuePlan(CdObjectPool.Snapshot pool,Values values,CdLevelGlobals level,CdAssetBytes reserved,
+                     CdPlayerBody.DisplayEligibility display,List<SonicCdGameModule.PastSound> sounds){
+        ValuePlan{sounds=List.copyOf(sounds);}
+    }
+    static ValuePlan prepareValues(CdPlayerFrameRuntime.BodyPublication publication,CdObjectPool.Snapshot expectedPool,
+                                   Values values,CdLevelGlobals level,CdAssetBytes reserved){
+        Objects.requireNonNull(publication);Objects.requireNonNull(expectedPool);Objects.requireNonNull(values);Objects.requireNonNull(level);
+        if(Objects.requireNonNull(reserved).length()!=1984)throw new IllegalArgumentException("Complete reserved1984 required");
         var result=publication.result();
         // The completed Body boundary identifies the incoming dispatch, not the outgoing actor routine.
         if(result.boundary()!=CdPlayerBody.Boundary.MAIN_RETURN && result.boundary()!=CdPlayerBody.Boundary.CONTROLLED_MAIN_RETURN
@@ -52,7 +70,7 @@ final class SonicCdAct2PastPrimaryPublication {
         }
         if(warp!=null)requireNoWriteWarp(warp);
         var changed=new LinkedHashMap<Integer,CdObjectState>();
-        var ring=globals.ring();var score=globals.score();var contact=globals.contact();
+        var ring=values.ring();var score=values.score();var contact=values.contact();
         CdPlayerBody.DisplayEligibility display=null;boolean touchSeen=false;
         for(var effect:result.effects()) {
             if(effect instanceof CdPlayerBody.ModeEffect mode && mode.effect() instanceof CdPlayerMovement.ObjectPatch write) {
@@ -96,14 +114,10 @@ final class SonicCdAct2PastPrimaryPublication {
         if(display==null)throw malformed("Completed Main omitted Display");
         if(display.eligible()!=result.display().orElseThrow().queued())throw malformed("Display eligibility differs from the returned pose");
         var pool=CdObjectPool.overlay(expectedPool,List.copyOf(changed.values()));
-        var next=globals;
-        if(ring!=globals.ring()||score!=globals.score()||contact!=globals.contact())
-            next=new SonicCdAct2PastWorldHost.Globals(ring,globals.live(),contact,score,globals.projectorByte(),globals.checkpointSaved(),
-                    globals.drownTimerWord(),globals.debugBlockWord(),globals.pauseMusicBit(),globals.bonus(),globals.tail(),globals.animations(),
-                    globals.paletteSteps7(),globals.paletteTimers7());
+        var next=ring==values.ring()&&score==values.score()&&contact==values.contact()?values:new Values(ring,score,contact);
         var sounds=new ArrayList<SonicCdGameModule.PastSound>(publication.sounds().size());
         for(var sound:publication.sounds())sounds.add(new SonicCdGameModule.PastFrameSound(sound));
-        return new Plan(pool,next,level,reserved,display,sounds);
+        return new ValuePlan(pool,next,level,reserved,display,sounds);
     }
     private static void requireNoWriteWarp(CdPlayerTimeWarp.Result warp) {
         if(warp.saveResult().isPresent())throw new UnsupportedPrimaryPublication(Boundary.TIME_WARP_SAVE_PUBLICATION);

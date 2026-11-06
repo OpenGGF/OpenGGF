@@ -233,6 +233,97 @@ public final class CdPlayerTouchResponse {
                 .view(CdR11aObjectAssets.Table.ENEMY_POINTS).bytes());
     }
 
+    // BEGIN original R13 boss SPECIAL continuation; no legacy handler admission change.
+    /** Authenticated original C/D EnemyPoints only; runtime invocation/source authority stays with the caller. */
+    public static CdPlayerTouchResponse fromAct3FutureAssets(
+            com.openggf.game.soniccd.level.CdR13PlayerCollisionAssets assets) {
+        return new CdPlayerTouchResponse(Objects.requireNonNull(assets, "actual R13 collision metadata").enemyPoints());
+    }
+    public static boolean ownsBossSpecialCollision(int rawCollisionTypeByte) {
+        byteValue(rawCollisionTypeByte);
+        return (rawCollisionTypeByte & 0xC0) == 0xC0 && (rawCollisionTypeByte & 0x3F) >= 0x3C;
+    }
+    /** Immutable completed/prefixed values; neither an invocation receipt nor a publication/restore command. */
+    public record BossSpecialValues(Actor actor, PlayerGlobals player, WorldGlobals world,
+                                    List<CdObjectState> changedSlots, List<Call> calls) {
+        public BossSpecialValues {
+            Objects.requireNonNull(actor); Objects.requireNonNull(player); Objects.requireNonNull(world);
+            changedSlots = List.copyOf(changedSlots); calls = List.copyOf(calls);
+        }
+    }
+    public sealed interface BossSpecialOutcome permits BossSpecialCompleted, BossSpecialStopped {
+        BossSpecialValues values();
+        /** Original common Enemy result BEFORE the SPECIAL tail, absent when inactive or stopped within it. */
+        Optional<Result> commonResult();
+    }
+    public record BossSpecialCompleted(BossSpecialValues values, Optional<Result> commonResult)
+            implements BossSpecialOutcome {
+        public BossSpecialCompleted { Objects.requireNonNull(values); Objects.requireNonNull(commonResult); }
+    }
+    /** Caller prebuilds/adopts exactly this prefix against its actual full pairs/cut, then rethrows this same fault. */
+    public record BossSpecialStopped(BossSpecialValues values, Optional<Result> commonResult,
+                                    RuntimeException originalException) implements BossSpecialOutcome {
+        public BossSpecialStopped {
+            Objects.requireNonNull(values); Objects.requireNonNull(commonResult); Objects.requireNonNull(originalException);
+            if (!(originalException instanceof UnsupportedResponse)
+                    && !(originalException instanceof UnownedBossSpecialTarget))
+                throw new IllegalArgumentException("Not a reached native boss SPECIAL stop");
+        }
+    }
+    public static final class UnownedBossSpecialTarget extends UnsupportedOperationException {
+        private final int wholeIndex;
+        private UnownedBossSpecialTarget(int whole) {
+            super("Boss SPECIAL continuation needs the returned object outside the dynamic pool: " + whole);
+            wholeIndex = whole;
+        }
+        public int wholeIndex() { return wholeIndex; }
+    }
+    /**
+     * PP Player Object Collision.asm:323-336,383-385 (N1ecc5f3a), FixBugs=0.
+     * Caller owns actual bossFight read, scanner/Body gates and complete source/full-pair freshness.
+     * Only SPECIAL FC..FF is admitted; legacy respond/flag ownership is unchanged. bossFight !=1 is
+     * a complete no-write return, represented without inventing an Enemy exit or default state.
+     *
+     * The original touchEnemy/Hurt/ResetOnFloor/AddPoints algorithms run once. Hurt's actual FindObjSlot
+     * leaves the continuation target at its real result while recoil still reads original selected a2
+     * through the working map. That target is observable in the three SPECIAL tail stores; it is not a
+     * generic register/bus model and is not reconstructed from returned/public call observations.
+     * Exhaustion stops BEFORE its first consumed colType read, retaining the completed common prefix.
+     * Odd EnemyPoints preserves its real earlier flags/chain/frame stores without fabricating an exit.
+     * Results contain values only. Actual Frame/World/score/pool/sound adoption is caller-owned.
+     */
+    public BossSpecialOutcome respondBossSpecial(CdPlayerObjectTouch.HandlerBoundary selected,
+            Actor actor, PlayerGlobals player, WorldGlobals world, int bossFight,
+            CdObjectPool.Snapshot callCut) {
+        Objects.requireNonNull(selected, "selected boss handler"); Objects.requireNonNull(actor);
+        Objects.requireNonNull(player); Objects.requireNonNull(world); Objects.requireNonNull(callCut);
+        byteValue(bossFight);
+        var source = selected.selectedSlot().orElseThrow();
+        int originalWhole = source.identity().wholeIndex();
+        if (selected.kind() != CdPlayerObjectTouch.Kind.SPECIAL
+                || !ownsBossSpecialCollision(source.unsignedByte(CdObjectState.ByteField.COLLISION_TYPE)))
+            throw new IllegalArgumentException("Only selected SPECIAL FC..FF belongs to this boss continuation");
+        if (!source.equals(callCut.slots().get(source.identity().dynamicIndex())))
+            throw new IllegalArgumentException("Boss SPECIAL source is not the complete same-owner call-cut image");
+        var c = new Cursor(actor, player, world, callCut);
+        if (bossFight != 1) return new BossSpecialCompleted(c.bossValues(), Optional.empty());
+        c.bossContinuationWhole = originalWhole;
+        try { touchEnemy(c, originalWhole); }
+        catch (UnsupportedResponse original) {
+            return new BossSpecialStopped(c.bossValues(), Optional.empty(), original);
+        }
+        var common = c.finish();
+        int target = c.bossContinuationWhole;
+        if (target == CdObjectPool.END_WHOLE_INDEX)
+            return new BossSpecialStopped(c.bossValues(), Optional.of(common), new UnownedBossSpecialTarget(target));
+        if (c.slot(target).unsignedByte(CdObjectState.ByteField.COLLISION_TYPE) == 0)
+            c.write(c.slot(target).addByte(CdObjectState.ByteField.COLLISION_STATUS, 3));
+        c.write(c.slot(target).moveByte(CdObjectState.ByteField.COLLISION_TYPE, 0));
+        c.write(c.slot(target).addByte(CdObjectState.ByteField.COLLISION_STATUS, 1));
+        return new BossSpecialCompleted(c.bossValues(), Optional.of(common));
+    }
+    // END original R13 boss SPECIAL continuation.
+
     /**
      * Exact selected Player_TouchSpecial flag ownership (:302-322), including the $C0 group.
      * Raw native byte only; $0B hazard, $0C MechaBlu, boss and .End3 paths remain unowned.
@@ -491,6 +582,9 @@ public final class CdPlayerTouchResponse {
         int rings, lives, updateHudLives, score, nextLifeScore, updateHudScore;
         OptionalInt d0 = OptionalInt.empty();
         Exit exit;
+        // BEGIN boss-only semantic continuation target; legacy calls leave this disabled.
+        int bossContinuationWhole = -1;
+        // END boss-only semantic continuation target.
 
         Cursor(Actor actor, PlayerGlobals g, WorldGlobals w, CdObjectPool.Snapshot callCut) {
             callCut.slots().toArray(slots);
@@ -517,6 +611,9 @@ public final class CdPlayerTouchResponse {
                 if (slot(whole).id() == 0) { found = OptionalInt.of(whole); break; }
             }
             calls.add(new FindObjSlot(found));
+            // BEGIN actual reached return target, never reconstructed from public effects.
+            if (bossContinuationWhole >= 0) bossContinuationWhole = found.orElse(CdObjectPool.END_WHOLE_INDEX);
+            // END actual reached return target.
             return found;
         }
         /** BSR Player_ResetOnFloor through the single shared implementation. */
@@ -543,6 +640,14 @@ public final class CdPlayerTouchResponse {
             jump = m.playerJump(); charge = m.charge(); lock = m.moveLock(); stick = m.stick();
             ctrl = m.playerControl(); pri = m.previousPrimaryAngle(); sec = m.previousSecondaryAngle();
         }
+        // BEGIN boss-only immutable prefix packing; no Exit/d0 invented before common completion.
+        BossSpecialValues bossValues() {
+            return new BossSpecialValues(new Actor(motion(), tile, priority, hurt, rotationDistance),
+                    new PlayerGlobals(timeWarp, invincible, shield, combineRing, debugCheat, debugMode, scoreChain, miniSonic),
+                    new WorldGlobals(rings, lives, updateHudLives, score, nextLifeScore, updateHudScore),
+                    List.copyOf(changed.values()), calls);
+        }
+        // END boss-only immutable prefix packing.
         Result finish() {
             return new Result(new Actor(motion(), tile, priority, hurt, rotationDistance),
                     new PlayerGlobals(timeWarp, invincible, shield, combineRing, debugCheat, debugMode, scoreChain, miniSonic),
