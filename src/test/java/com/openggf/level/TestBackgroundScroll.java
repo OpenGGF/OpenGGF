@@ -1,5 +1,7 @@
 package com.openggf.level;
 
+import com.openggf.tests.RomTestUtils;
+
 import org.junit.jupiter.api.Test;
 import com.openggf.data.Rom;
 import com.openggf.game.sonic2.Sonic2;
@@ -58,9 +60,9 @@ public class TestBackgroundScroll {
     }
 
     @Test
-    public void testEhzScroll() {
+    public void testEhzScroll() throws IOException {
         MockRom rom = new MockRom();
-        Sonic2 game = new Sonic2(rom);
+        Sonic2 game = new Sonic2(RomTestUtils.openSparseReadFixture(rom));
 
         // Level 0 (EHZ 1)
         int[] scroll = game.getBackgroundScroll(0, 100, 200);
@@ -72,9 +74,9 @@ public class TestBackgroundScroll {
     }
 
     @Test
-    public void testCpzScroll() {
+    public void testCpzScroll() throws IOException {
         MockRom rom = new MockRom();
-        Sonic2 game = new Sonic2(rom);
+        Sonic2 game = new Sonic2(RomTestUtils.openSparseReadFixture(rom));
 
         // Level 2 (CPZ 1) -> Zone 2
         // Uses 0x00C2E4
@@ -89,9 +91,9 @@ public class TestBackgroundScroll {
     }
 
     @Test
-    public void testActDependentScroll() {
+    public void testActDependentScroll() throws IOException {
         MockRom rom = new MockRom();
-        Sonic2 game = new Sonic2(rom);
+        Sonic2 game = new Sonic2(RomTestUtils.openSparseReadFixture(rom));
 
         // Level 11 -> Zone 11 -> 0x00C332
         // Act 0 (Act 1)
@@ -109,9 +111,9 @@ public class TestBackgroundScroll {
     }
 
     @Test
-    public void testMultiLayerScroll() {
+    public void testMultiLayerScroll() throws IOException {
         MockRom rom = new MockRom();
-        Sonic2 game = new Sonic2(rom);
+        Sonic2 game = new Sonic2(RomTestUtils.openSparseReadFixture(rom));
 
         // Level 13 -> Zone 13 -> 0x00C372
         // X = camX >>> 2

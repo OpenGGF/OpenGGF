@@ -149,11 +149,17 @@ public final class GameplayTeamBootstrap {
     }
 
     public static void repositionRegisteredSidekicks(GameModule module, LevelManager levelManager) {
+        repositionRegisteredSidekicks(module, levelManager, LevelEntryProvenance.UNCLASSIFIED_ENTRY);
+    }
+
+    public static void repositionRegisteredSidekicks(GameModule module, LevelManager levelManager,
+                                                     LevelEntryProvenance provenance) {
         Objects.requireNonNull(module, "module");
         Objects.requireNonNull(levelManager, "levelManager");
-
+        Objects.requireNonNull(provenance, "provenance");
         SidekickSpawnOffset offset = module.getLevelInitProfile().sidekickSpawnOffset();
-        levelManager.spawnSidekicks(offset.xOffset(), offset.yOffset());
+        com.openggf.level.LevelEntryInitialization.repositionSidekicks(
+                levelManager, offset.xOffset(), offset.yOffset(), provenance);
     }
 
     /** Rejects a required launch-local team unless every exact key is playable. */

@@ -12,6 +12,7 @@ class TestPixelFont {
         private int immediateDrawCalls;
         private int batchDrawCalls;
         private int lastBatchQuadCount;
+        private float[] lastBatchVertices;
 
         @Override
         public void drawTextureRegion(int textureId, float x, float y, float w, float h,
@@ -25,6 +26,7 @@ class TestPixelFont {
                                      float r, float g, float b, float a) {
             batchDrawCalls++;
             lastBatchQuadCount = quadCount;
+            lastBatchVertices = vertexData.clone();
         }
     }
 
@@ -39,6 +41,20 @@ class TestPixelFont {
         assertEquals(0, renderer.immediateDrawCalls);
         assertEquals(1, renderer.batchDrawCalls);
         assertEquals(3, renderer.lastBatchQuadCount);
+    }
+
+    @Test
+    void drawText_keepsEarlierGlyphsWhenTheBatchBufferGrowsMidString() throws Exception {
+        PixelFont font = new PixelFont();
+        RecordingTexturedQuadRenderer renderer = new RecordingTexturedQuadRenderer();
+        primeFont(font, renderer, 'A', 0, 0);
+
+        // Longer than the initial 16-quad buffer, on the very first draw.
+        font.drawText("A".repeat(20), 12, 34, 1.0f, 1f, 1f, 1f, 1f);
+
+        assertEquals(20, renderer.lastBatchQuadCount);
+        assertEquals(12f, renderer.lastBatchVertices[0],
+                "The first glyph must survive buffer growth; a discarded buffer leaves it at 0");
     }
 
     private static void primeFont(PixelFont font, TexturedQuadRenderer renderer,

@@ -9,6 +9,7 @@ import com.openggf.tests.*;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.Arguments;
@@ -28,7 +29,17 @@ class TestSozAct1VictoryProduction {
         return rows.stream();
     }
     @ParameterizedTest @MethodSource("configurations")
+    @Tag("exhaustive-audit")
     void positionedApproachLuresGolemIntoSandThenEntersAct2(String character,int width,String donor){
+        verifyPositionedApproachLuresGolemIntoSandThenEntersAct2(character,width,donor);
+    }
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"sonic,320,off", "tails,400,off", "knuckles,800,off",
+            "sonic,512,s1", "sonic,640,s2", "tails,800,s2"})
+    void representativeSupportedTeamsLureGolemIntoSandThenEnterAct2(String character,int width,String donor){
+        verifyPositionedApproachLuresGolemIntoSandThenEntersAct2(character,width,donor);
+    }
+    private void verifyPositionedApproachLuresGolemIntoSandThenEntersAct2(String character,int width,String donor){
         var config=SonicConfigurationService.getInstance();config.clearSessionOverrides();
         config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE,character);
         String followers=character.equals("sonic")&&!donor.equals("s1")?"tails":"";

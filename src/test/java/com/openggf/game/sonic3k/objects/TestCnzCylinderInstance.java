@@ -264,6 +264,22 @@ class TestCnzCylinderInstance {
     }
 
     @Test
+    void unloadingInactiveCylinderDoesNotReleaseAnotherCylindersRider() throws Exception {
+        CnzCylinderInstance cylinder = new CnzCylinderInstance(spawn());
+        cylinder.setServices(new TestObjectServices());
+        TestPlayableSprite player = new TestPlayableSprite();
+        Object slot = playerOneSlot(cylinder);
+        setSlotField(slot, "player", player);
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
+        player.setObjectMappingFrameControl(true);
+
+        cylinder.onUnload();
+
+        assertTrue(player.isObjectControlled(), "an inactive cylinder does not own this rider");
+        assertTrue(player.isObjectMappingFrameControl());
+    }
+
+    @Test
     void standingContactCaptureRestoresDefaultRadiiAndClearsRolling() {
         CnzCylinderInstance cylinder = new CnzCylinderInstance(spawn());
         cylinder.setServices(new TestObjectServices());

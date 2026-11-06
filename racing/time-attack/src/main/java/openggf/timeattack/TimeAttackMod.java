@@ -11,6 +11,8 @@ import com.openggf.mods.code.ModContext;
 public final class TimeAttackMod implements GgfMod {
     @Override
     public void register(ModContext context) {
-        context.registerTitleEntry("Time Attack", TimeAttackScene::new);
+        // The build's default master comes from the generated asset, read while registration is open.
+        String buildDefaultMaster = NetworkDefaults.defaultMaster(context.modAssets());
+        context.registerTitleEntry("Time Attack", () -> new TimeAttackScene(buildDefaultMaster));
     }
 }

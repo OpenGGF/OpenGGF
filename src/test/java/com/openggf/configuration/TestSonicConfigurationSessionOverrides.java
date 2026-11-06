@@ -125,13 +125,13 @@ class TestSonicConfigurationSessionOverrides {
     @Test
     void resetToDefaultsClearsSessionOverrides() {
         SonicConfigurationService cfg = SonicConfigurationService.createStandalone(tempDir);
-        cfg.setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, true);
+        cfg.setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, false);
         assertTrue(cfg.hasSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED));
-        assertTrue(cfg.getBoolean(SonicConfiguration.LIVE_REWIND_ENABLED));
+        assertFalse(cfg.getBoolean(SonicConfiguration.LIVE_REWIND_ENABLED));
 
         cfg.resetToDefaults();
 
         assertFalse(cfg.hasSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED));
-        assertFalse(cfg.getBoolean(SonicConfiguration.LIVE_REWIND_ENABLED));
+        assertTrue(cfg.getBoolean(SonicConfiguration.LIVE_REWIND_ENABLED));
     }
 }

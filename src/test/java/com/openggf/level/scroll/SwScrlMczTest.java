@@ -1,5 +1,7 @@
 package com.openggf.level.scroll;
 
+import com.openggf.tests.RomTestUtils;
+
 import com.openggf.tests.TestEnvironment;
 import com.openggf.game.session.SessionManager;
 import org.junit.jupiter.api.AfterEach;
@@ -43,7 +45,7 @@ public class SwScrlMczTest {
     public void setUp() throws IOException {
         TestEnvironment.resetAll();
         mockRom = new MockMczRom();
-        ParallaxTables tables = new ParallaxTables(mockRom);
+        ParallaxTables tables = new ParallaxTables(RomTestUtils.openSparseReadFixture(mockRom));
         handler = new SwScrlMcz(tables);
     }
 
@@ -232,7 +234,7 @@ public class SwScrlMczTest {
         // Need a fresh mock with ripple data set BEFORE ParallaxTables is created
         MockMczRom shakeRom = new MockMczRom();
         shakeRom.setRippleData(10, (byte) 5, (byte) 3);
-        ParallaxTables shakeTables = new ParallaxTables(shakeRom);
+        ParallaxTables shakeTables = new ParallaxTables(RomTestUtils.openSparseReadFixture(shakeRom));
         SwScrlMcz shakeHandler = new SwScrlMcz(shakeTables);
 
         int[] hScroll = new int[VISIBLE_LINES];

@@ -135,6 +135,12 @@ public final class PressCounter implements ModScene {
   presented frame (it may be skipped or repeated, so it must not change state), and `exit`
   when the scene closes for any reason: it asked to leave, the player held Escape (always
   back to the master title), or the engine shut down.
+- Audio effects belong to the current visit, including its retained native act.
+  Ended, replaced or exiting contexts cannot issue them. `SceneAudio` argument
+  validation still runs. Title-exit commands require the current active scene.
+  Finite `SceneMusic` preparation and start requests reject suspended or inactive
+  visits with `IllegalStateException`; retained player controls cannot change playback.
+  Resuming the same suspended visit restores those scene commands.
 - Every call runs inside the **fault boundary**. An exception disables the mod and returns
   the player to the master title with a finding in the Mod Manager instead of crashing.
 - **No mutable static state.** Keep gameplay state on the scene or its owned
@@ -167,6 +173,16 @@ Input comes as named buttons and keys, never raw numbers:
 - By Genesis convention **A or C (or Start) confirms and B goes back**; scenes follow it, so
   `input().menuAccept()` is A, C or Start and `input().menuBack()` is B. `input()` also has
   both players' raw state.
+- Name those buttons as the player presses them with `ctx.buttonLabel(button, controller)`
+  (`ButtonPrompts.Button.A`, `B`, `C`, `START`): `false` gives player 1's bound key ("Space" for
+  A by default, remaps followed), `true` the physical button on player 1's assigned pad in that
+  pad's family. Genesis A is the west button ("X" on Xbox, "Square" on PlayStation, "West"
+  otherwise) and B the south one ("A", "Cross", "South"), so a fixed "A" cap points an Xbox player
+  at the button that goes back. Your scene decides which device to name, for example from the
+  last press in `physicalInput()`; an empty result (unbound, no pad, or a headless or test context
+  without live input) means name the Genesis button. The label never changes what a press does.
+  If you also read Enter or Escape yourself, compare a binding with `ButtonPrompts.keyName(key)`
+  so a key the player bound to the opposite button does one thing; Time Attack and Act Practice do.
 
 Slay the Robotnik's `ui/Controls` turns all of this into the few verbs its screens use.
 
@@ -179,6 +195,13 @@ printable or editing keys (display filters, recording chords) then read those ke
 up, and the claim lapses on its own one tick after you stop renewing it. Escape,
 function keys, modifiers and gamepads stay with the host; your own `keyDown`,
 `keyPressed` and `physicalInput()` still see the claimed keys.
+
+For a scene with focused text fields, override `capturesTextInput()` to return
+true while a field is active. The host establishes that scene's capture before
+global shortcuts or keyboard mappings run, including on the first typed frame;
+you do not need a separate `captureKeyboardText()` call for that declaration.
+Playback shortcuts are held back too. Return false when the field closes so
+ordinary shortcuts resume after the final input claim expires.
 
 For five-button instruments or other device-specific controls, use
 `ctx.physicalInput()`: an immutable snapshot of keys, standard GLFW gamepads and
@@ -417,8 +440,21 @@ bounded, cached player-message history. Room hosts enforce Full Chat, Quick Chat
 or Off independently of those personal display choices. Full Chat includes Quick
 Chat; quick requests transmit semantic phrase IDs and hosts attach the current
 track context. The unpublished 0.7 candidate includes these additions with racing
-protocol 7, which also includes private-room admission and invitations; rebuild
-client mods against its regenerated signature pin.
+protocol 8, which also includes broker-bound listed joins, explicit listener
+admission, complete `DirectRoomRegistration` ownership, owner-acknowledged route
+retirement and host-frozen round launches. Start a listed listener with
+`JdkRaceHostServer.startTlsBrokerPending`, then await
+`DirectRoomRegistration.register` before sharing its room ID. Close the
+registration when leaving, together with the caller-owned listener and master
+socket. A listed host joining its own room uses
+`DirectRoomRegistration.joinOwner` with its prepared broker grant; the handle
+connects through the local listener even when the published address is remote.
+When a hosted level loads, submit its `TrackValidationProfile` with
+`JdkRaceHostServer.applyTrackValidationProfile`. The host coalesces updates on
+a reserved room control slot, so a full data mailbox cannot discard the bounds.
+Rebuild
+client mods against its regenerated candidate signature pin; older peers reject
+the protocol version during admission.
 
 ## 3. Drawing
 

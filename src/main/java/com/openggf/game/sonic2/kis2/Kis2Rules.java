@@ -62,18 +62,17 @@ public final class Kis2Rules {
                 movement.slopeResistAppliesAtZeroInertia(),
                 movement.tailsRollSpeedUsesEffectiveDecelQuarter(),
                 movement.waterVelocityChangeGatedByObjectControl(),
-                movement.landingWalkWriteSkippedWhileSpindashing());
+                movement.landingWalkWriteSkippedWhileSpindashing(),
+                movement.poweredRollFriction());
         ObjectInteractionRules interaction = base.objectInteraction();
         ObjectInteractionRules kis2Interaction = new ObjectInteractionRules(
                 interaction.bossHitNegatesGroundSpeed(),
                 interaction.bossHitHalvesBounceVelocity(),
                 interaction.sidekickDespawnUsesObjectIdMismatch(),
-                interaction.sidekickNormalDespawnDelaysFreshRenderEntry(),
                 interaction.sidekickDespawnUsesRidingInstanceLoss(),
                 interaction.sidekickDespawnUsesInteractCodeWordChange(),
                 interaction.sidekickNormalCpuSkipsHurtRoutine(),
                 interaction.permanentRespawnTableLatch(),
-                interaction.objectsExecuteAfterPlayerPhysics(),
                 interaction.touchResponseUsesRenderFlagYGate(),
                 interaction.touchResponseUsesPreviousCollisionResponseList(),
                 interaction.animalObjectPreservesObjectMoveXSubpixel(),
@@ -90,8 +89,7 @@ public final class Kis2Rules {
                 new AirCollisionRules(true, true, c.air().rightWallHitContinuesIntoCeilingSeparation(),
                         c.air().leftWallHitContinuesIntoCeilingSeparation(), c.air().probesResetStaleGroundMode()),
                 c.fullSolidBottomOverlapUsesCurrentYRadiusOnly(), c.solidObjectOffscreenGate(),
-                c.solidObjectRequiresSidekickOnScreen(), c.sidekickPushBypassUsesGraceStatus(),
-                c.sidekickSuppressesFastLeaderTinyFollowNudge(), c.sidekickClearsStalePushVelocityBeforeGroundMove(),
+                c.solidObjectRequiresSidekickOnScreen(),
                 c.solidObjectTopBranchAlwaysLiftsOnUpwardVelocity(), c.rightWallDeepProbePreservesPenetration(),
                 false, c.solidObjectKeepsOnObjWhenJumpedOffSameFrame(),
                 c.advanceWaterLevelBeforePlayerPhysics(), c.defaultCollisionLayoutYMask(), c.layoutYMaskAppliesToAllLookups());

@@ -169,6 +169,11 @@ public class Sonic1FloatingBlockObjectInstance extends AbstractObjectInstance
     // Whether the object is in LZ (uses door art)
     private boolean isLZ;
 
+    // FBlock_Action reads the previous BuildSprites result, before this pass's
+    // DisplaySprite. These scalar latches are included in generic object rewind.
+    private boolean romRenderOnScreen;
+    private boolean romDisplayedLastPass;
+
     // Art key for rendering
     private final String artKey;
 
@@ -261,11 +266,11 @@ public class Sonic1FloatingBlockObjectInstance extends AbstractObjectInstance
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         Sonic1FloatingBlockState blockState = services().gameService(Sonic1FloatingBlockState.class);
-        if (syz3TunnelRealBlock && blockState != null && blockState.isTunnelBlockAtDestination()) {
+        if (!com.openggf.game.sonic1.Sonic1RomProfile.isRev00(services()) && syz3TunnelRealBlock && blockState != null && blockState.isTunnelBlockAtDestination()) {
             setDestroyed(true);
             return;
         }
-        if (syz3TunnelProxyBlock) {
+        if (!com.openggf.game.sonic1.Sonic1RomProfile.isRev00(services()) && syz3TunnelProxyBlock) {
             if (blockState == null || !blockState.isTunnelBlockAtDestination()) {
                 setDestroyed(true);
                 return;
@@ -276,6 +281,27 @@ public class Sonic1FloatingBlockObjectInstance extends AbstractObjectInstance
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         applyMovement();
         updateDynamicSpawn(x, y);
+        romDisplayedLastPass = true;
+    }
+
+    @Override
+    public void refreshPostCameraRenderState() {
+        if (!romDisplayedLastPass) return;
+        romDisplayedLastPass = false;
+        romRenderOnScreen = isWithinRenderSpriteBounds(halfWidth, 32);
+    }
+
+    @Override
+    public int getOnScreenHalfWidth() {
+        // FBlock_Main (_incObj/56 SYZ, SLZ Floating Blocks and LZ Doors.asm:46-52).
+        return halfWidth;
+    }
+
+    @Override
+    public int getOnScreenHalfHeight() {
+        // FBlock_Main sets only sprite_cam_field. BuildSprites .assumeHeight
+        // (_inc/BuildSprites.asm:86-94) uses 32, not the collision height.
+        return 32;
     }
 
     @Override
@@ -326,6 +352,21 @@ public class Sonic1FloatingBlockObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean isSkipSolidContactThisFrame() {
+        // FBlock_Action (_incObj/56 SYZ, SLZ Floating Blocks and LZ Doors.asm:141-150)
+        // skips the entire SolidObject call when obRender bit 7 is clear.
+        return !romRenderOnScreen;
+    }
+
+    @Override
+    public boolean suppressSlopeSampleThisFrame(PlayableEntity player) {
+        // The same omitted call also leaves an existing rider's status untouched,
+        // even beyond the standing bounds. Reuse the solid controller's skipped-
+        // routine contract: no carry, surface sample, or airborne/bounds release.
+        return isSkipSolidContactThisFrame();
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         return !isDestroyed();
     }
@@ -338,7 +379,10 @@ public class Sonic1FloatingBlockObjectInstance extends AbstractObjectInstance
     @Override
     public boolean isPersistent() {
         // out_of_range.w DeleteObject,fb_origX(a0)
-        return !isDestroyed() && isInRangeAt(origX);
+        boolean movingRevision01TunnelBlock = syz3TunnelRealBlock && activated
+                && com.openggf.game.sonic1.Sonic1RomProfile.isKnownRetail(tryServices())
+                && !com.openggf.game.sonic1.Sonic1RomProfile.isRev00(tryServices());
+        return !isDestroyed() && (movingRevision01TunnelBlock || isInRangeAt(origX));
     }
 
     @Override
@@ -514,12 +558,14 @@ public class Sonic1FloatingBlockObjectInstance extends AbstractObjectInstance
 
         // addq.w #1,obX(a0)
         x++;
+        // move.w obX(a0),fb_origX(a0): culling follows the travelling block.
+        if (com.openggf.game.sonic1.Sonic1RomProfile.isKnownRetail(services())) origX = x;
         // addq.w #1,fb_height(a0)
         fbHeight++;
         // cmpi.w #$380,fb_height(a0)
         if (fbHeight >= TYPE07_MAX_DISTANCE) {
             Sonic1FloatingBlockState blockState = services().gameService(Sonic1FloatingBlockState.class);
-            if (syz3TunnelRealBlock && blockState != null) {
+            if (!com.openggf.game.sonic1.Sonic1RomProfile.isRev00(services()) && syz3TunnelRealBlock && blockState != null) {
                 blockState.markTunnelBlockAtDestination();
             }
             // clr.b obSubtype(a0) -> stationary

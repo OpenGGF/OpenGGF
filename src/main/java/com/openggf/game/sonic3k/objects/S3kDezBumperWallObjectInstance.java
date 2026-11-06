@@ -37,7 +37,7 @@ import java.util.List;
  *       {@code width_pixels = 8}, {@code height_pixels = subtype}, and the solid takes
  *       {@code d1 = $13} with {@code d2 = height} and {@code d3 = height + 1}. Records 305/306
  *       and 329/330 are {@code $18}; 327/328 are {@code $38}.</li>
- *   <li><b>A negative subtype</b> ({@code loc_497B4}, :96022-96027) is the room's exit gate. It
+ *   <li><b>A negative subtype</b> ({@code loc_497B4}, :96027-96032) is the room's exit gate. It
  *       is the full-height wall <em>plus</em> one test run before the solid every update:
  *       {@code cmpi.b #$3F,(MHZ_pollen_counter).w / bne / move.w #$7F00,x_pos(a0)}. When all six
  *       bits of the byte the {@code $61} gravity puzzle writes are set, the wall moves itself to
@@ -99,7 +99,7 @@ public final class S3kDezBumperWallObjectInstance extends AbstractObjectInstance
         if (!isGate()) {
             return;
         }
-        // loc_497B4 :96023-96027. The test runs before the solid every update, so the gate
+        // loc_497B4 :96028-96032. The test runs before the solid every update, so the gate
         // stops being solid on the same update the sixth panel is pressed.
         boolean open = panelBits() == ALL_PANELS;
         updateDynamicSpawn(open ? PARKED_X : spawn.x() & 0xFFFF, getY());

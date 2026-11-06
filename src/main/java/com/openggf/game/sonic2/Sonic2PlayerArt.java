@@ -1,4 +1,6 @@
 package com.openggf.game.sonic2;
+
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 
@@ -175,7 +177,7 @@ public class Sonic2PlayerArt {
 
     private SpriteAnimationSet loadSonicAnimations() {
         SpriteAnimationSet set = new SpriteAnimationSet();
-        int base = Sonic2Constants.SONIC_ANIM_DATA_ADDR;
+        int base = address(reader, Sonic2Constants.SONIC_ANIM_DATA_ADDR);
         int count = Sonic2Constants.SONIC_ANIM_SCRIPT_COUNT;
 
         for (int i = 0; i < count; i++) {
@@ -234,7 +236,7 @@ public class Sonic2PlayerArt {
      * @return merged animation set, or null if ROM address is unknown
      */
     public SpriteAnimationSet loadSuperSonicAnimationSet() {
-        int base = Sonic2Constants.SUPER_SONIC_ANIM_DATA_ADDR;
+        int base = address(reader, Sonic2Constants.SUPER_SONIC_ANIM_DATA_ADDR);
         int count = Sonic2Constants.SUPER_SONIC_ANIM_SCRIPT_COUNT;
         if (base == 0) {
             return null;
@@ -302,7 +304,7 @@ public class Sonic2PlayerArt {
 
     private SpriteAnimationSet loadTailsAnimations() {
         SpriteAnimationSet set = new SpriteAnimationSet();
-        int base = Sonic2Constants.TAILS_ANIM_DATA_ADDR;
+        int base = address(reader, Sonic2Constants.TAILS_ANIM_DATA_ADDR);
         int count = Sonic2Constants.TAILS_ANIM_SCRIPT_COUNT;
 
         for (int i = 0; i < count; i++) {

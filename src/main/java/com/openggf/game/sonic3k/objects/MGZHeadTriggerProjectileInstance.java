@@ -15,7 +15,7 @@ import java.util.List;
 /**
  * MGZ Head Trigger rock-spike projectile.
  *
- * <p>ROM: loc_34518 / loc_34530 (sonic3k.asm:70923-70932). A simple
+ * <p>ROM: loc_34518 / loc_34530 (sonic3k.asm:70928-70937). A simple
  * constant-velocity projectile:
  * <ul>
  *   <li>{@code jsr MoveSprite2} — signed 8:8 x_vel / y_vel without gravity</li>

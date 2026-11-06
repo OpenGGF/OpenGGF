@@ -140,6 +140,22 @@ public final class PracticeHost implements RunHost {
 
     String persistenceNotice() { return saveNotice; }
 
+    /** The game the last practice run was prepared for, or empty. */
+    String game() { return game; }
+
+    /**
+     * The best time saved for {@code game}, or -1 when there is none or it cannot be read; the menu
+     * shows it before a run. Reading never writes, so a rejected file stays as it is.
+     */
+    static int storedBest(SceneStorage storage, String game) {
+        if (storage == null) return -1;
+        try {
+            return storage.read("best-" + game + ".txt").map(PracticeHost::parse).orElse(-1);
+        } catch (RuntimeException unreadable) {
+            return -1;
+        }
+    }
+
     int lastTimeFrames() {
         return lastTimeFrames;
     }
@@ -161,12 +177,15 @@ public final class PracticeHost implements RunHost {
         }
     }
 
-    /** Frames at 60 Hz as m'ss"cc. */
+    /**
+     * Frames at 60 Hz as m:ss.cc, the form Time Attack uses. Every character is in the compact
+     * overlay face (it has no double quote, which the older m'ss"cc form needed).
+     */
     static String format(int frames) {
         if (frames < 0) {
-            return "--'--\"--";
+            return "-:--.--";
         }
         int centis = frames * 100 / 60;
-        return "%d'%02d\"%02d".formatted(centis / 6000, centis / 100 % 60, centis % 100);
+        return "%d:%02d.%02d".formatted(centis / 6000, centis / 100 % 60, centis % 100);
     }
 }

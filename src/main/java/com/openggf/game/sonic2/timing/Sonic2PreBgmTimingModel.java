@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.timing;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.data.Rom;
 import com.openggf.game.sonic2.Sonic2PlcLoader;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
@@ -66,7 +68,7 @@ public final class Sonic2PreBgmTimingModel {
                                      Region region,
                                      boolean priorWaterFlag) {
         try {
-        int zoneCount = (Sonic2Constants.ART_LOAD_CUES_ADDR - Sonic2Constants.LEVEL_DATA_DIR)
+        int zoneCount = (address(rom, Sonic2Constants.ART_LOAD_CUES_ADDR) - address(rom, Sonic2Constants.LEVEL_DATA_DIR))
                 / Sonic2Constants.LEVEL_DATA_DIR_ENTRY_SIZE;
         if (zoneId < 0 || zoneId >= zoneCount) {
             return new Unresolved("Sonic 2 zone id out of range: " + zoneId,
@@ -166,7 +168,7 @@ public final class Sonic2PreBgmTimingModel {
         // PalPointers' final word is bytesToLcnt(size), i.e. longword count - 1
         // (s2.asm:3830-3876). Read it from the user ROM so modified palette
         // lengths change the loop cost rather than sharing a retail constant.
-        return rom.read16BitAddr(PALETTE_POINTERS + paletteId * 8 + 6) + 1;
+        return rom.read16BitAddr(address(rom, PALETTE_POINTERS) + paletteId * 8 + 6) + 1;
     }
 
     private static CpuWork cpuWork(NemesisWork vram, NemesisWork ram,

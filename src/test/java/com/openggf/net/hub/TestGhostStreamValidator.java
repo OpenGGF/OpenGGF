@@ -102,6 +102,26 @@ class TestGhostStreamValidator {
     }
 
     @Test
+    void rejectedLateFrameDoesNotSpendAcceptedStreamRateBudget() {
+        GhostStreamValidator v = validator(PROFILE);
+        v.onAttemptStart(1);
+        now += 5_000;
+        for (int index = 0; index < 294; index += 3) {
+            assertNotEquals(GhostStreamValidator.Verdict.DROP,
+                    v.onBatch(batch(1, index, frames(100 + index * 2, 2, 3))));
+        }
+
+        byte[] invalid = frames(688, 2, 3);
+        GhostFrameCodec.encode(new GhostFrame(5_000, 0x0100, 1,
+                false, false, false, 2, false), invalid, 2 * GhostFrameCodec.BYTES);
+        assertEquals(GhostStreamValidator.Verdict.DROP, v.onBatch(batch(1, 294, invalid)));
+        assertNotEquals(GhostStreamValidator.Verdict.DROP,
+                v.onBatch(batch(1, 294, frames(688, 2, 3))));
+        assertNotEquals(GhostStreamValidator.Verdict.DROP,
+                v.onBatch(batch(1, 297, frames(694, 2, 3))));
+    }
+
+    @Test
     void outOfBoundsViolatesOnlyWithProfile() {
         GhostStreamValidator withProfile = validator(PROFILE);
         withProfile.onAttemptStart(1);

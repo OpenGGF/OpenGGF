@@ -82,6 +82,35 @@ class TestBonusBlockObjectInstance {
     }
 
     @Test
+    void spentBlockStaysATouchTargetUntilItsHitScriptEnds() throws Exception {
+        BonusBlockObjectInstance block = new BonusBlockObjectInstance(
+                new ObjectSpawn(0x11D0, 0x05A0, Sonic2ObjectIds.BONUS_BLOCK, 0, 0, false, 0),
+                "BonusBlock");
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x11DE, (short) 0x05A9);
+        player.setXSpeed((short) 0x0284);
+        player.setYSpeed((short) 0x0762);
+        // Third hit: loc_2C806 sets routine 4 and leaves collision_flags=$D7.
+        java.lang.reflect.Field spent = BonusBlockObjectInstance.class.getDeclaredField("spentPasses");
+        spent.setAccessible(true);
+        spent.setInt(block, 0);
+        java.lang.reflect.Field property = BonusBlockObjectInstance.class.getDeclaredField("collisionProperty");
+        property.setAccessible(true);
+
+        for (int pass = 1; pass < 12; pass++) {
+            // TouchResponse still takes this block as its single overlap.
+            assertEquals(0xD7, block.getCollisionFlags());
+            property.setInt(block, 0x01);
+            block.update(pass, player);
+            assertFalse(block.isDestroyed(), "routine 4 pass " + pass);
+            assertEquals((short) 0x0284, player.getXSpeed(), "loc_2C884 never reads collision_property");
+            assertEquals((short) 0x0762, player.getYSpeed());
+        }
+        block.update(12, player);
+        assertTrue(block.isDestroyed(),
+                "the hit script's $FD returns anim below 3 on the twelfth pass, where loc_2C884 deletes");
+    }
+
+    @Test
     void bonusBlockDoesNotPollCurrentOverlapInOwnUpdate() {
         BonusBlockObjectInstance block = new BonusBlockObjectInstance(
                 new ObjectSpawn(0x1B78, 0x02E0, Sonic2ObjectIds.BONUS_BLOCK, 0x40, 0, false, 0),

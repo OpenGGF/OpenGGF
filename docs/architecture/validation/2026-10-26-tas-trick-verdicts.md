@@ -1,5 +1,10 @@
 # Representative TAS trick verdicts — 2026-10-26
 
+**Subsequent implementation:** [native-accuracy repairs](2026-10-26-tas-accuracy-repairs.md)
+record the accepted low/medium changes, new evidence and current classifications.
+The counts, negative results and estimates below describe the original audit
+source; they are preserved as history rather than silently relabeled.
+
 This follow-up records executed verdicts for concrete named tricks from the
 previous audit. The final Sandopolis flame-dash under-slope zip now has a
 reached native contradiction and an explicit limitation regression. The user clarified

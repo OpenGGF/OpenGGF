@@ -296,7 +296,7 @@ public final class Fbz2SubbossInstance extends AbstractObjectInstance
         controlBits |= 1 << CONTROL_CHARACTER_ESCAPE;
         phaseOrdinal = Phase.DEFEAT_RESTORE_WAIT.ordinal(); timer = 0x5F;
         if (tryServices() != null && services().objectManager() != null)
-            spawnFreeChild(() -> new SongFadeTransitionInstance(120, Sonic3kMusic.FBZ2.id));
+            spawnFreeChild(() -> SongFadeTransitionInstance.toLevelMusic(Sonic3kMusic.FBZ2.id));
     }
 
     private void releaseArena() {

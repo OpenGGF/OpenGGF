@@ -40,6 +40,12 @@ public class SwScrlSlz extends AbstractZoneScrollHandler implements Sonic1Checkp
     private static final int LINES_PER_GROUP = 16;
 
     // Persistent BG camera (16.16 fixed point)
+    private final boolean revision00;
+
+    public SwScrlSlz() { this(false); }
+
+    SwScrlSlz(boolean revision00) { this.revision00 = revision00; }
+
     private long bgXPos;
     private long bgYPos;
 
@@ -54,7 +60,7 @@ public class SwScrlSlz extends AbstractZoneScrollHandler implements Sonic1Checkp
 
     public void init(int cameraX, int cameraY) {
         // BgScroll_SLZ REV01 clears bgscreenposx after the common seed.
-        bgXPos = 0;
+        bgXPos = revision00 ? (long) cameraX << 16 : 0;
         // BgScroll_SLZ: bgscreenposy = screenposy / 2 + 0xC0
         bgYPos = (long) ((cameraY >> 1) + 0xC0) << 16;
         lastCameraX = cameraX;

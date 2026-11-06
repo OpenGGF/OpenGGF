@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * inside the small-overlap window receives the +(3 - distY) px shift even
  * though no standing/landing state changes.  S1 {@code Solid_Landed}
  * (s1disasm/_incObj/sub SolidObject.asm:267-286) and S2
- * {@code SolidObject_Landed} (s2.asm:35368-35388) bail at the
+ * {@code SolidObject_Landed} (s2.asm:35588-35608) bail at the
  * {@code tst.w y_vel(a1) / bmi.s SolidObject_Miss} test before any position
  * write.  The engine encodes that divergence on
  * {@link GameRules#solidObjectTopBranchAlwaysLiftsOnUpwardVelocity()};

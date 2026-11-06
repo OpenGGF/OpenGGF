@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.sonic3k.S3kTopSolidProvider;
 import com.openggf.level.objects.ObjectVisualFacing;
 
 import com.openggf.game.PlayableEntity;
@@ -15,7 +16,6 @@ import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
-import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -34,7 +34,7 @@ import java.util.List;
  * settles when released.
  */
 public final class CnzRisingPlatformInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
+        implements S3kTopSolidProvider, SolidObjectListener, RewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
 
     /**
      * Word 0 of this object's S3K SST holds its live ROM code pointer.
@@ -176,7 +176,7 @@ public final class CnzRisingPlatformInstance extends AbstractObjectInstance
 
     @Override
     public SolidRoutineProfile getSolidRoutineProfile() {
-        return SolidRoutineProfile.topSolid(usesStickyContactBuffer());
+        return SolidRoutineProfile.fromProvider(this);
     }
 
     @Override

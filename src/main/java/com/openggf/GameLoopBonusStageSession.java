@@ -61,6 +61,17 @@ final class GameLoopBonusStageSession {
 
     BonusStageProvider provider() { return activeBonusStageProvider; }
     boolean isTransitionPending() { return bonusStageTransitionPending; }
+    void retireForSessionReset() {
+        if (activeBonusStageProvider != null) activeBonusStageProvider.onExit();
+        if (deferredBonusProvider != null && deferredBonusProvider != activeBonusStageProvider) {
+            deferredBonusProvider.onExit();
+        }
+        bonusStageTransitionPending = false;
+        activeBonusStageProvider = null;
+        deferredBonusProvider = null;
+        pendingBonusReturnStarPostMark = -1;
+        pendingBonusStageShieldRestore = null;
+    }
 
     void handleBonusStageDebugKey(BonusStageType type) {
         if (host.currentMode() == GameMode.LEVEL) {
@@ -75,23 +86,8 @@ final class GameLoopBonusStageSession {
      * Captures current state, fades to black, loads the bonus zone.
      */
     void enterBonusStage(BonusStageType type) {
-        if (host.currentMode() != GameMode.LEVEL || !host.runPolicy().bonusStageEntry()) {
-            return;
-        }
-
-        BonusStageProvider provider = host.module().getBonusStageProvider();
-        if (!provider.hasBonusStages()) {
-            LOGGER.fine("Current game module has no bonus stages; ignoring entry request");
-            return;
-        }
-
-        if (type == null || type == BonusStageType.NONE) {
-            LOGGER.fine("Bonus stage entry ignored: NONE type");
-            return;
-        }
-
-        if (host.fade().isActive()) {
-            LOGGER.fine("Bonus stage entry ignored: fade already in progress");
+        BonusStageProvider provider = admittedBonusStageProvider(type);
+        if (provider == null) {
             return;
         }
 
@@ -109,15 +105,47 @@ final class GameLoopBonusStageSession {
         BonusStageState savedState = capture.savedState();
         pendingBonusReturnStarPostMark = capture.pendingStarPostActivationMark();
 
+        beginBonusEntryFade(provider, type, savedState);
+    }
+
+    private void beginBonusEntryFade(BonusStageProvider provider, BonusStageType type,
+                                     BonusStageState savedState) {
         // Fade out music
         audioManager.fadeOutMusic();
 
         bonusStageTransitionPending = true;
-        host.fade().startFadeToBlack(() -> {
-            doEnterBonusStage(provider, type, savedState);
-        });
+        // Level/loc_5FF6 enters Pal_FadeToBlack before the loc_62CC title loop.
+        // Keep its completion iteration fade-owned when the callback installs
+        // TITLE_CARD, just as on bonus return; newly queued title work must not
+        // acquire the VBlank that completed the fade.
+        GameLoopPlcLifecycle.startToBlack(host.resolvedGameplayContext(), host.fade(),
+                () -> doEnterBonusStage(provider, type, savedState));
 
         LOGGER.info("Starting fade-to-black for Bonus Stage " + type);
+    }
+
+    /** The bonus provider when an entry request may start, otherwise null. */
+    private BonusStageProvider admittedBonusStageProvider(BonusStageType type) {
+        if (host.currentMode() != GameMode.LEVEL || !host.runPolicy().bonusStageEntry()) {
+            return null;
+        }
+
+        BonusStageProvider provider = host.module().getBonusStageProvider();
+        if (!provider.hasBonusStages()) {
+            LOGGER.fine("Current game module has no bonus stages; ignoring entry request");
+            return null;
+        }
+
+        if (type == null || type == BonusStageType.NONE) {
+            LOGGER.fine("Bonus stage entry ignored: NONE type");
+            return null;
+        }
+
+        if (host.fade().isActive()) {
+            LOGGER.fine("Bonus stage entry ignored: fade already in progress");
+            return null;
+        }
+        return provider;
     }
 
     /**
@@ -149,6 +177,7 @@ final class GameLoopBonusStageSession {
         int zone = (zoneId >> 8) & 0xFF;
         int act = zoneId & 0xFF;
 
+        BonusStageTitleBoundary source = BonusStageTitleBoundary.capture(host);
         try {
             // Suppress auto-music: bonus music plays later in applyDeferredBonusStageSetup
             host.level().setSuppressNextMusicChange(true);
@@ -169,13 +198,20 @@ final class GameLoopBonusStageSession {
         }
         GameMode oldMode = host.enterBonusTitleCardAfterLevelLoadBoundary();
 
-        prepareBonusStageForTitleCard(type, savedState);
+        com.openggf.level.NativeLevelLoadAccess.afterPlayerAssembly(host.level(),
+                () -> prepareBonusStageForTitleCard(type, savedState));
 
         // Defer bonus-stage-specific setup to exitTitleCard() when the title card completes
         deferredBonusProvider = provider;
 
+        com.openggf.level.NativeLevelLoadAccess.afterTitlePrefix(host.level(),
+                () -> initializeBonusTitle(provider, type, zoneId, oldMode, source));
+    }
+
+    private void initializeBonusTitle(BonusStageProvider provider, BonusStageType type, int zoneId, GameMode oldMode, BonusStageTitleBoundary source) {
         // Initialize the bonus title card
         TitleCardProvider tcp = host.titleCard();
+        source.holdDestinationPlayers(host, tcp);
         if (tcp != null) {
             tcp.initializeBonus();
         }
@@ -218,7 +254,7 @@ final class GameLoopBonusStageSession {
         }
         host.level().setBonusStageHudLayout(true);
         if (savedState != null) {
-            applyBonusStageEntryShieldRestore(
+            BonusStageShieldRestoration.restoreOnEntry(activeBonusStageProvider,
                     host.mainPlayable(), savedState.savedStatusSecondary());
         }
         restorePlayableStateForBonusTitleCard();
@@ -332,6 +368,7 @@ final class GameLoopBonusStageSession {
         // Restore previous zone
         int zone = (savedState.savedZoneAndAct() >> 8) & 0xFF;
         int act = savedState.savedZoneAndAct() & 0xFF;
+        BonusStageTitleBoundary source = BonusStageTitleBoundary.capture(host);
 
         try {
             // Arm Level_FromSavedGame and suppress auto-music before preparing the
@@ -339,53 +376,53 @@ final class GameLoopBonusStageSession {
             bonusStageTransitionCoordinator.prepareReturnLoad(host::level, savedState);
             // Publish the return cause immediately before the synchronous load.
             TraceSessionLauncher.markNextRunInteriorReturnLoad();
-            host.level().loadZoneAndAct(zone, act);
-            // Consume the auto-generated title card request — we initialize it ourselves below
-            host.level().consumeTitleCardRequest();
+            loadBonusReturn(zone, act, savedState);
         } catch (IOException e) {
             throw new RuntimeException("Failed to reload level after bonus stage", e);
         } finally {
-            host.level().clearBonusStageReturn();
+            // The return bank remains owned by the attempted assembly through
+            // Get_LevelSizeStart/ScreenInit, including a held display prefix.
+            var cleanupLevel = host.level();
+            com.openggf.level.NativeLevelLoadAccess.afterAttempt(cleanupLevel, cleanupLevel::clearBonusStageReturn);
         }
 
-        var sprite = host.sprites().getSprite(host.mainCharacterCode());
-        AbstractPlayableSprite playable = sprite instanceof AbstractPlayableSprite candidate
-                ? candidate
-                : null;
-        ShieldType shieldToRestore = playable != null
-                ? resolveShieldToRestore(rewards, savedState.savedStatusSecondary())
-                : null;
-        if (playable != null) {
-            pendingBonusStageShieldRestore = shieldToRestore;
-        }
-        bonusStageTransitionCoordinator.restoreReturnState(
-                host.level(),
-                host.camera(),
-                host.water(),
-                playable,
-                host.module().getLevelEventProvider(),
-                savedState,
-                pendingBonusReturnStarPostMark,
-                interiorExitRingCount,
-                shieldToRestore,
-                rewards,
-                host.gameState()::addLife);
+        int returnStarPostMark = pendingBonusReturnStarPostMark;
         pendingBonusReturnStarPostMark = -1;
-
-        // Level/loc_62B6 spawns Obj_TitleCard on this reload for every zone but $1701
-        // or Act3_flag (sonic3k.asm:7762-7767); the recorded gumball exit shows it.
-        int apparentZone = (savedState.savedApparentZoneAndAct() >> 8) & 0xFF;
-        int apparentAct = savedState.savedApparentZoneAndAct() & 0xFF;
-        TitleCardProvider tcp = host.titleCard();
-        if (tcp != null) {
-            tcp.initialize(apparentZone, apparentAct);
-        }
+        com.openggf.level.NativeLevelLoadAccess.afterPlayerAssembly(host.level(), () -> {
+            var sprite = host.sprites().getSprite(host.mainCharacterCode());
+            AbstractPlayableSprite playable = sprite instanceof AbstractPlayableSprite candidate ? candidate : null;
+            ShieldType shieldToRestore = playable != null
+                    ? resolveShieldToRestore(rewards, savedState.savedStatusSecondary()) : null;
+            if (playable != null) pendingBonusStageShieldRestore = shieldToRestore;
+            bonusStageTransitionCoordinator.restoreReturnState(
+                    host.level(), host.camera(), host.water(), playable,
+                    host.module().getLevelEventProvider(), savedState,
+                    returnStarPostMark, interiorExitRingCount, shieldToRestore,
+                    rewards, host.gameState()::addLife);
+        });
 
         // Enter TITLE_CARD mode — exitTitleCard will transition to LEVEL
         host.titleDestination(PostTitleCardDestination.LEVEL);
         GameMode oldMode = host.changeMode(GameMode.TITLE_CARD);
         host.lockTitleControls(true);
 
+        com.openggf.level.NativeLevelLoadAccess.afterTitlePrefix(host.level(),
+                () -> initializeReturnTitle(savedState, source, oldMode));
+        LOGGER.info("Exiting bonus stage, entering zone title card for zone " + zone + " act " + act);
+    }
+
+    private void loadBonusReturn(int zone, int act, BonusStageState savedState) throws IOException {
+        host.level().loadZoneAndAct(zone, act);
+        // loc_6034 / loc_2D2C2 restore Saved2_apparent_zone_and_act
+        // (sonic3k.asm:7580-7582,61835-61838). The caller-owned title holds
+        // this load before ScreenInit; retain the saved apparent act there.
+        host.level().setApparentAct(savedState.savedApparentZoneAndAct() & 0xFF);
+        // The caller initializes the return title after its actual prefix is ready.
+        host.level().consumeTitleCardRequest();
+    }
+
+    private void initializeReturnTitle(BonusStageState savedState, BonusStageTitleBoundary source, GameMode oldMode) {
+        TitleCardProvider tcp = prepareReturnTitleCard(savedState, source);
         // Play zone music (ROM: Restore_LevelMusic during title card wait)
         host.level().playCurrentLevelMusic();
 
@@ -393,87 +430,35 @@ final class GameLoopBonusStageSession {
         GameLoopPlcLifecycle.revealLevelRoutineEntry(host.resolvedGameplayContext(), host.fade(), tcp);
 
         host.notifyModeChanged(oldMode);
-        LOGGER.info("Exiting bonus stage, entering zone title card for zone " + zone + " act " + act);
+    }
+
+    private TitleCardProvider prepareReturnTitleCard(BonusStageState savedState, BonusStageTitleBoundary source) {
+        // Level/loc_62B6 spawns Obj_TitleCard on this reload for every zone but $1701
+        // or Act3_flag (sonic3k.asm:7762-7767); the recorded gumball exit shows it.
+        int apparentZone = (savedState.savedApparentZoneAndAct() >> 8) & 0xFF;
+        int apparentAct = savedState.savedApparentZoneAndAct() & 0xFF;
+        TitleCardProvider tcp = host.titleCard();
+        source.holdDestinationPlayers(host, tcp);
+        if (tcp != null) {
+            tcp.initialize(apparentZone, apparentAct);
+        }
+        return tcp;
     }
 
     static int encodeSavedShieldStatus(AbstractPlayableSprite playable) {
-        if (playable == null || !playable.hasShield()) {
-            return 0;
-        }
-        ShieldType shieldType = playable.getShieldType();
-        if (shieldType == null) {
-            return 0;
-        }
-        return switch (shieldType) {
-            case FIRE -> 1 << STATUS_FIRE_SHIELD_BIT;
-            case LIGHTNING -> 1 << STATUS_LIGHTNING_SHIELD_BIT;
-            case BUBBLE -> 1 << STATUS_BUBBLE_SHIELD_BIT;
-            default -> 0;
-        };
+        return BonusStageShieldRestoration.encodeSavedShieldStatus(playable);
     }
 
     static ShieldType resolveShieldToRestore(BonusStageProvider.BonusStageRewards rewards, int savedStatusSecondary) {
-        if (rewards.fireShield()) {
-            return ShieldType.FIRE;
-        }
-        if (rewards.bubbleShield()) {
-            return ShieldType.BUBBLE;
-        }
-        if (rewards.lightningShield()) {
-            return ShieldType.LIGHTNING;
-        }
-        if (rewards.shield()) {
-            return ShieldType.BASIC;
-        }
-
-        return savedShieldType(savedStatusSecondary);
+        return BonusStageShieldRestoration.resolveShieldToRestore(rewards, savedStatusSecondary);
     }
 
-    /**
-     * ROM {@code SpawnLevelMainSprites_SpawnPowerup} {@code loc_6A02}
-     * (docs/skdisasm/sonic3k.asm:8326-8355) tests the saved elemental bits in
-     * fire -> lightning -> bubble order and re-gives that shield.
-     */
     static ShieldType savedShieldType(int savedStatusSecondary) {
-        int savedShieldBits = savedStatusSecondary & SAVED_SHIELD_MASK;
-        if ((savedShieldBits & (1 << STATUS_FIRE_SHIELD_BIT)) != 0) {
-            return ShieldType.FIRE;
-        }
-        if ((savedShieldBits & (1 << STATUS_LIGHTNING_SHIELD_BIT)) != 0) {
-            return ShieldType.LIGHTNING;
-        }
-        if ((savedShieldBits & (1 << STATUS_BUBBLE_SHIELD_BIT)) != 0) {
-            return ShieldType.BUBBLE;
-        }
-        return null;
+        return BonusStageShieldRestoration.savedShieldType(savedStatusSecondary);
     }
 
-    /**
-     * ROM {@code SpawnLevelMainSprites_SpawnPowerup}
-     * (docs/skdisasm/sonic3k.asm:8296-8322) runs on every level spawn, and the
-     * bonus zones are explicitly routed into its restore arm --
-     * {@code cmpi.b #$13,(Current_zone).w / beq loc_69E0} and the same for
-     * {@code #$14} (:8302-8305). It re-gives Player 1 the shield saved in
-     * {@code Saved_status_secondary}, so the ROM's player keeps its elemental
-     * shield for the DURATION of the bonus stage, not only after returning to
-     * the level.
-     *
-     * <p>The engine captured the value at entry
-     * ({@link #encodeSavedShieldStatus}) but consumed it only on the way out
-     * ({@link #resolveShieldToRestore}), leaving the bonus-stage player
-     * shieldless. In Pachinko that removes {@code Test_Ring_Collisions}'
-     * {@code Status_LtngShield} arm (:18486-18489), which allocates
-     * {@code Obj_Attracted_Ring} and pulls a nearby ring into the player.
-     */
-    static void applyBonusStageEntryShieldRestore(
-            AbstractPlayableSprite playable, int savedStatusSecondary) {
-        if (playable == null) {
-            return;
-        }
-        ShieldType shieldType = savedShieldType(savedStatusSecondary);
-        if (shieldType != null) {
-            playable.giveShield(shieldType);
-        }
+    static void applyBonusStageEntryShieldRestore(AbstractPlayableSprite playable, int savedStatusSecondary) {
+        BonusStageShieldRestoration.applyBonusStageEntryShieldRestore(playable, savedStatusSecondary);
     }
 
     void applyPendingBonusStageShieldRestore(AbstractPlayableSprite playable) {

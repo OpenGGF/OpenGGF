@@ -11,7 +11,7 @@ class TestPrivateRoomContract {
     void sourceOverloadsAreExplicitlyPublicButWireRequiresPolicy() {
         var room = new ControlMessage.RoomDescriptor("Room", "s3k", 0, 0, "OPEN", null, 8, false);
         assertEquals(RoomAccessPolicy.PUBLIC, room.accessPolicy());
-        String wire = codec.encode(null, new ControlMessage.RoomCreate(room, "DIRECT", 1234, "build"));
+        String wire = codec.encode(null, new ControlMessage.RoomCreate(room, "RELAY", 0, "build"));
         assertEquals(room, ((ControlMessage.RoomCreate) codec.decode(wire).message()).room());
         assertThrows(ProtocolViolationException.class, () -> codec.decode(wire.replace(
                 ",\"accessPolicy\":{\"mode\":\"PUBLIC\",\"membersCanInvite\":true}", "")));

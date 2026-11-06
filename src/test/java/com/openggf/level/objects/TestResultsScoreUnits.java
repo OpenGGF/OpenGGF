@@ -48,6 +48,13 @@ class TestResultsScoreUnits {
         S3kResultsScreenObjectInstance results = constructor.newInstance(true);
         ObjectSpriteSheet sheet = mock(ObjectSpriteSheet.class);
         when(sheet.getFrameCount()).thenReturn(32);
+        when(sheet.getFrame(anyInt())).thenReturn(new com.openggf.level.render.SpriteMappingFrame(
+                java.util.List.of(new com.openggf.level.render.SpriteMappingPiece(0, 0, 1, 1, 0,
+                        false, false, 0, false))));
+        var camera = mock(com.openggf.camera.Camera.class);
+        var graphics = mock(com.openggf.graphics.GraphicsManager.class);
+        when(graphics.getProjectionWidth()).thenReturn(320);
+        results.setServices(new TestObjectServices().withCamera(camera).withGraphicsManager(graphics));
         field(results, "spriteSheet").set(results, sheet);
         PatternSpriteRenderer renderer = mock(PatternSpriteRenderer.class);
         field(results, "renderer").set(results, renderer);
@@ -55,8 +62,8 @@ class TestResultsScoreUnits {
                 "renderBonusDigits", int.class, int.class, int.class);
         digits.setAccessible(true);
         digits.invoke(results, 100, 100, 5000);
-        verify(renderer).drawFrameIndex(eq(6), anyInt(), anyInt(), eq(false), eq(false));
-        verify(renderer, times(4)).drawFrameIndex(eq(1), anyInt(), anyInt(), eq(false), eq(false));
+        verify(renderer).drawFramePieceByIndex(eq(6), eq(0), anyInt(), anyInt(), eq(false), eq(false));
+        verify(renderer, times(4)).drawFramePieceByIndex(eq(1), eq(0), anyInt(), anyInt(), eq(false), eq(false));
     }
 
     private static void checkTally(AbstractResultsScreen results, int initialScore) throws Exception {

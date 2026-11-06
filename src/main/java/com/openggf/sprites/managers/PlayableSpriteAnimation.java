@@ -1,5 +1,6 @@
 package com.openggf.sprites.managers;
 
+import com.openggf.level.objects.ObjectManagerInternalAccess;
 import com.openggf.game.ZoneFeatureProvider;
 import com.openggf.game.resources.DynamicArtDecisionOwner;
 import com.openggf.game.rules.GameRules;
@@ -115,6 +116,36 @@ public class PlayableSpriteAnimation {
     @com.openggf.game.ModApi
     public record RewindState(int lastAnimationId, int lastGroundMovementAnimId) {}
 
+    PlayableAnimationInternalAccess.PresentationState capturePresentationState() {
+        return new PlayableAnimationInternalAccess.PresentationState(lastAnimationId, lastGroundMovementAnimId,
+                groundMovementAnimSpeedSnapshot, groundMovementAnimationSuppressed,
+                nextUpdateSuppressed, animationUpdateSuppressedThisFrame,
+                bootstrapDynamicArtPrime, mappingPublishedThisUpdate, levelFrameCounterThisTick);
+    }
+
+    void restorePresentationState(PlayableAnimationInternalAccess.PresentationState state) {
+        lastAnimationId = state.lastAnimationId();
+        lastGroundMovementAnimId = state.lastGroundMovementAnimId();
+        groundMovementAnimSpeedSnapshot = state.groundMovementAnimSpeedSnapshot();
+        groundMovementAnimationSuppressed = state.groundMovementAnimationSuppressed();
+        nextUpdateSuppressed = state.nextUpdateSuppressed();
+        animationUpdateSuppressedThisFrame = state.animationUpdateSuppressedThisFrame();
+        bootstrapDynamicArtPrime = state.bootstrapDynamicArtPrime();
+        mappingPublishedThisUpdate = state.mappingPublishedThisUpdate();
+        levelFrameCounterThisTick = state.levelFrameCounterThisTick();
+    }
+
+    /** Publish an admitted Move/Roll pose before terrain contact can change dispatch state. */
+    void publishGroundPoseAnimation(int frameCounter) {
+        // The existing forced-byte owner must also govern this earlier publication entry.
+        if (sprite.getForcedAnimationId() >= 0) return;
+        if (sprite.getAnimationProfile() instanceof ScriptedVelocityAnimationProfile profile) {
+            int scriptCount = sprite.getAnimationSet() != null ? sprite.getAnimationSet().getScriptCount() : 0;
+            Integer selected = profile.resolveAnimationId(sprite, frameCounter, scriptCount, false);
+            if (selected != null) sprite.setAnimationId(selected);
+        }
+    }
+
     public void captureGroundMovementAnimSpeed(short speed) {
         groundMovementAnimSpeedSnapshot = speed;
     }
@@ -210,6 +241,12 @@ public class PlayableSpriteAnimation {
             int frame = sprite.getMappingFrame();
             sink.playerLoadPlc(sprite, frame, renderer.dplcFrame(frame));
         }
+    }
+
+    private void clearSineCosineInputFraction() {
+        var level = sprite.currentLevelManagerIfAvailable();
+        var objects = level != null ? level.getObjectManager() : null;
+        if (objects != null) ObjectManagerInternalAccess.publishSineCosineInputFraction(objects, sprite, 0);
     }
 
     private void publishMappingFrame(int frame) {
@@ -433,6 +470,8 @@ public class PlayableSpriteAnimation {
     }
 
     private void updateWalkRun(SpriteAnimationScript baseScript, int remaining) {
+        clearSineCosineInputFraction(); // loc_126C8/loc_12724 (sonic3k.asm:24852-24904)
+
         int flipAngle = sprite.getFlipAngle();
         // S3K tests signed flip_type before flip_angle. Obj31 deliberately
         // captures a rider with flip_type=$80 and flip_angle=0 after the
@@ -486,7 +525,7 @@ public class PlayableSpriteAnimation {
         if (pushUsesWalkSpecialHandler() && sprite.getPushing()) {
             // S2 Sonic publishes the already-selected walk/run mapping before
             // its timer gate. A push that begins while that timer is live does
-            // not select SAnim_Push until the step expires (s2.asm:38449-38474,
+            // not select SAnim_Push until the step expires (s2.asm:38614-38639,
             // 38627-38649). Tails and S1 return at the earlier outer timer gate.
             if (walkRunPublishesFrameBeforeTimerAdvance(baseScript.delay() & 0xFF)
                     && remaining >= 0) {
@@ -722,6 +761,9 @@ public class PlayableSpriteAnimation {
             return;
         }
 
+        // loc_1265A (sonic3k.asm:24802-24804): reading an animation index
+        // replaces the whole arithmetic input; a timer-only return preserves it.
+        clearSineCosineInputFraction();
         sprite.setAnimationTick(delay);
 
         int frameIndex = sprite.getAnimationFrameIndex();

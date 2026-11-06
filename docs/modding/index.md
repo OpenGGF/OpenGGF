@@ -13,20 +13,33 @@ launch-only teams, deterministic input filters, and row-only HUD profiles; the
 defines their ordering, replay, persistence, width, stock-default, and owner-fault
 contracts.
 
+For a specific behavior change, use the [task decision guide](task-recipes.md):
+stock-act badniks, scoped movement, gameplay menus, persistent upgrades, native
+enemy recipes, and original campaigns. Agents can use the repository
+[mod-authoring skill](../../.agents/skills/mod-authoring/SKILL.md) to read only the
+relevant recipe and owning source.
+
+Your mod's licence is your choice. The engine is GPL-3.0-only, but the
+[OpenGGF Mod Exception](../../LICENSES/OpenGGF-Mod-Exception.txt) lets a mod that
+calls, implements or extends engine types be released under any terms, and `ggfmod init`
+adds no licence (its output is [MIT-0](../../LICENSES/MIT-0.txt)). Copying engine
+code into a mod is not covered by the exception. The example mods are MIT: copy one
+as a starting point and keep its `LICENSE` notice with the parts you reuse.
+
 ## Native builds vs. the JVM jar
 
-Code-bearing mods (objects, characters, zones, scenes, and standalone games) require the
-**JVM jar**. They are loaded at runtime by the engine's mod classloader, which a
-GraalVM native-image binary cannot use under closed-world AOT. Native builds do
-not load these mods: the Mod Manager marks them `UNSUPPORTED` and refuses to
-enable them, and a boot notice lists any that were enabled. **Data-only music
-packs and reskins are unaffected and work on native builds.** To use code-bearing
-mods, run `OpenGGF-<ver>-jar-with-dependencies.jar` (or the universal jar).
+Native packages and the JVM jar load code mods (objects, characters, zones,
+scenes and standalone games) through the same mod classloader, validation,
+trust prompts and owner fault boundaries. Data-only music packs and reskins
+also work in both. Native packages include the same first-party bundled mods,
+including Time Attack; no separate Java installation is required.
 
-Experimental GraalVM runtime class loading provides a possible future path.
-The [native mod feasibility study](../architecture/research/2026-10-08-graalvm-native-mod-feasibility.md)
-records Community Edition licensing, external-JAR controls, registration results,
-and the remaining qualification work. This does not change native mod support.
+Default native builds use pinned GraalVM Community 25.4.4.1.1+1.1 runtime class
+loading with generated API and service retention. The VM feature is still
+experimental: arbitrary reflection, generated code or third-party/JDK facilities
+outside the retained contract need execution coverage. The
+[native mod feasibility study](../architecture/research/2026-10-08-graalvm-native-mod-feasibility.md)
+records the licence assessment, qualification limits and promotion decision.
 
 1. [Music pack](quickstarts/music-pack.md)
 2. [Data-only art reskin](quickstarts/reskin.md)

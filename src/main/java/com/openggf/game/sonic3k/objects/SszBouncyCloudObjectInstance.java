@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.sonic3k.S3kTopSolidProvider;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -12,7 +13,6 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectParams;
-import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
@@ -60,7 +60,7 @@ import java.util.logging.Logger;
  * way — while {@code byte_466A0} feeds the cloud a damped recoil from index {@code $26} down.
  */
 public final class SszBouncyCloudObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+        implements S3kTopSolidProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     // The native cloud and puff children draw unflipped; stored launch facing belongs to separate player slots.
     private static final Logger LOGGER =

@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.competition.specialstage;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.data.RomByteReader;
 import com.openggf.game.sonic2.specialstage.Sonic2PerspectiveData;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageBomb;
@@ -137,7 +139,7 @@ public final class CompetitiveHalfpipeItems {
                 return;
             }
             if (animation != 10) {
-                animation = rom.readU8(DEPTH_ANIMATIONS + Math.min(depthFixed >>> 16, 30));
+                animation = rom.readU8(address(rom, DEPTH_ANIMATIONS) + Math.min(depthFixed >>> 16, 30));
             }
         }
 
@@ -187,7 +189,7 @@ public final class CompetitiveHalfpipeItems {
         }
 
         private int scriptAddress() {
-            int table = bomb ? BOMB_ANIMATIONS : RING_ANIMATIONS;
+            int table = bomb ? address(rom, BOMB_ANIMATIONS) : address(rom, RING_ANIMATIONS);
             return table + rom.readU16BE(table + animation * 2);
         }
 

@@ -45,7 +45,7 @@ import java.util.List;
 import java.util.logging.Logger;
 
 public class MonitorObjectInstance extends AbstractMonitorObjectInstance implements TouchResponseProvider, TouchResponseListener,
-        SolidObjectProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+        SolidObjectProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.NonDirectional, com.openggf.level.objects.homing.HomingTargetSource {
     // Obj26 owns the monitor shell, rising reward icon and explosion; none has horizontal facing.
 
     private static final Logger LOGGER = Logger.getLogger(MonitorObjectInstance.class.getName());
@@ -201,7 +201,7 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
                 : player.getAnimationSet().getScriptCount();
 
         // Hitting from below (Moving Up)
-        // ROM reference: Touch_Monitor (s2.asm lines 84742-84763)
+        // ROM reference: Touch_Monitor (s2.asm lines 85418-85439)
         // Check: player.y - 0x10 >= monitor.y (player center minus 16 must be >= monitor y)
         if (player.getYSpeed() < 0) {
             int playerCenterY = player.getCentreY();
@@ -258,13 +258,16 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
         // Mark as broken in persistence table
         ObjectManager objectManager = services().objectManager();
         ObjectLifetimeOps.markSpawnRemembered(objectManager, spawn);
-        if (objectManager != null) {
-            objectManager.clearRidingObject(player);
-        }
 
         // ROM Obj26_Break only forces the character airborne when the monitor's
-        // own standing/pushing bits were set for that character.
+        // own standing/pushing bits were set for that character
+        // (docs/s2disasm/s2.asm:25675-25688). Touch_Monitor's break branch
+        // otherwise only negates y_vel (s2.asm:85463-85473), so a roller
+        // carried by another platform keeps that support.
         if (touchingMonitorAsSolid) {
+            if (objectManager != null) {
+                objectManager.clearRidingObject(player);
+            }
             player.setOnObject(false);
             player.setPushing(false);
             player.setAir(true);
@@ -406,7 +409,7 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
             // SolidObject_cont before checking roll anim (docs/s2disasm/s2.asm:25459-25466).
             return true;
         }
-        // ROM: SolidObject_Monitor_Sonic (s2disasm/s2.asm:25586-25616):
+        // ROM: SolidObject_Monitor_Sonic (s2disasm/s2.asm:25592-25622):
         //   btst d6,status(a0)              ; is Sonic already standing on the monitor?
         //   bne.s Obj26_ChkOverEdge         ; if yes → carry him regardless of rolling
         //   cmpi.b #AniIDSonAni_Roll,anim(a1) ; is Sonic's ANIMATION the ball/jump anim?
@@ -521,31 +524,6 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
     }
 
     @Override
-    public boolean projectsPreMovementGroundXForSolidContact(PlayableEntity player) {
-        // Obj26 calls SolidObject_Monitor for Sonic and Tails from Obj26_Main
-        // after the player slots have already run for the frame
-        // (docs/s2disasm/s2.asm:25579-25605). The helper then branches to
-        // SolidObject_cont for a fresh side hit (docs/s2disasm/s2.asm:25617-25636),
-        // whose left-side path zeroes x_vel/inertia when the player has crossed
-        // into the monitor (docs/s2disasm/s2.asm:35424-35439). The engine's
-        // object pass runs before grounded player movement, so project that
-        // pending flat-ground X step only for Obj26's new side-entry check.
-        return true;
-    }
-
-    @Override
-    public boolean projectsPreMovementAirYForSolidContact(PlayableEntity player) {
-        // Same execution-order compensation as the X hook above, but only for
-        // airborne top crossings. ROM Obj26_Main reaches
-        // SolidObject_Monitor_Sonic after Obj01 has already applied y_vel to
-        // y_pos (docs/s2disasm/s2.asm:25579-25623), then SolidObject_cont
-        // accepts the crossed top band via SolidObject_Landed
-        // (docs/s2disasm/s2.asm:35344-35500). In the pre-movement engine pass
-        // the monitor would otherwise see the player still just above the box.
-        return true;
-    }
-
-    @Override
     public boolean bypassesOffscreenSolidGate() {
         // Obj26's monitor wrappers branch directly to SolidObject_cont, not to
         // SolidObject_OnScreenTest (docs/s2disasm/s2.asm:25617-25636). Keep
@@ -656,7 +634,19 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
         switch (MonitorType.fromSubtype(subtype)) {
             case RINGS -> {
                 if (!com.openggf.game.mutators.LevelMutatorPolicyAccess.ringsAllowed(services)) return;
-                player.addRings(RING_MONITOR_REWARD);
+                var module = services.gameModule();
+                var revision = module == null ? null : module.getGameService(
+                        com.openggf.game.sonic2.Sonic2RevisionProfile.class);
+                if (revision != null && revision.revision() != com.openggf.data.RetailRomRevision.UNKNOWN) {
+                    // super_ring owns a distinct award: REV00 never clamps its
+                    // ADDI.W, whereas ordinary CollectRing still stops at 999.
+                    boolean extraLife = com.openggf.game.sonic2.Sonic2RingAwards.monitor(
+                            revision, player.currentLevelState(), player.currentGameState());
+                    if (extraLife) {
+                        services.playMusic(GameMusic.EXTRA_LIFE);
+                        return;
+                    }
+                } else player.addRings(RING_MONITOR_REWARD);
                 // ROM super_ring reaches the driver through the music mailbox,
                 // not the SFX queue: it ends `move.w #SndID_Ring,d0 /
                 // jmp (PlayMusic).l` (s2.asm:25864, :25913-25914). The driver
@@ -678,10 +668,21 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
                 services.playMusic(Sonic2SmpsConstants.CMD_SPEED_UP);
             }
             case INVINCIBILITY -> {
-                // ROM: tst.b (Super_Sonic_flag).w / bne.s +++ - skip when Super Sonic
-                if (!player.isSuperSonic()) {
+                // invincible_monitor tests the global Super_Sonic_flag even
+                // when the recipient is Tails, rather than Tails' own form.
+                var main = services.playerQuery().mainPlayerOrNull();
+                boolean superActive = main instanceof AbstractPlayableSprite mainSprite
+                        ? mainSprite.isSuperSonic() : player.isSuperSonic();
+                if (!superActive) {
                     player.giveInvincibility();
-                    services.playMusic(GameMusic.INVINCIBILITY);
+                    // invincible_monitor preserves boss/countdown music. Its BLS
+                    // skips at air_left == 12 as well as below (fixBugs = 0).
+                    var gameState = services.gameState();
+                    var drowning = player.getDrowningController();
+                    if ((gameState == null || gameState.getCurrentBossId() == 0)
+                            && (drowning == null || drowning.getRemainingAir() > 12)) {
+                        services.playMusic(GameMusic.INVINCIBILITY);
+                    }
                 }
             }
             case SONIC, TAILS -> {
@@ -689,13 +690,13 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
                 services.gameState().addLife();
             }
             case EGGMAN, STATIC -> {
-                // ROM: robotnik_monitor (s2.asm:25656-25658)
+                // ROM: robotnik_monitor (s2.asm:25834-25836)
                 // Both Static (subtype 0) and Eggman (subtype 3) call Touch_ChkHurt2.
                 // Hurts the player as if touching a badnik.
                 player.setHurt(true);
             }
             case TELEPORT -> {
-                // ROM: teleport_monitor (s2.asm:25825-25845)
+                // ROM: teleport_monitor (s2.asm:25999-26019)
                 // Swaps player positions in 2P mode. No-op in 1P mode.
                 // 2P mode is not yet implemented.
             }
@@ -775,5 +776,9 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
             }
             return STATIC;
         }
+    }
+    /** Homing: an intact monitor; the native roll contact breaks it. */
+    @Override public com.openggf.level.objects.homing.HomingTarget homingTarget(com.openggf.game.PlayableEntity player) {
+        return broken ? null : com.openggf.level.objects.HomingTargets.at(this, com.openggf.level.objects.homing.HomingTargetKind.BREAKABLE);
     }
 }

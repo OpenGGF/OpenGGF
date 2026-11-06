@@ -30,6 +30,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -43,6 +44,13 @@ import org.junit.jupiter.api.io.TempDir;
 @RequiresRom(SonicGame.SONIC_3K)
 class TestEggmansSkyScene {
     private static final Path PROJECT = Path.of("examples/eggmans-sky");
+
+    @TempDir static Path compiledRoot;
+    private static ExampleModHarness.CompiledExample compiled;
+
+    @BeforeAll static void compileExample() throws Exception {
+        compiled = ExampleModHarness.compile(PROJECT, compiledRoot);
+    }
 
     @TempDir
     Path work;
@@ -61,7 +69,7 @@ class TestEggmansSkyScene {
     private ExampleModHarness open(Path scenario) throws Exception {
         if (level != null) level.dispose();
         level = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
-        ExampleModHarness harness = ExampleModHarness.build(PROJECT, scenario.resolve("build"));
+        ExampleModHarness harness = compiled.open(scenario.resolve("build/storage"));
         GameModule effective = harness.apply(GameServices.module());
         harness.open(effective, scenario.resolve("saves"), 400, 224);
         return harness;
@@ -624,7 +632,7 @@ class TestEggmansSkyScene {
 
     @Test
     void newFloraSilhouettesAreRepeatableAndVaryBySeed() throws Exception {
-        try (ExampleModHarness harness = ExampleModHarness.build(PROJECT, work.resolve("flora-build"))) {
+        try (ExampleModHarness harness = compiled.open(work.resolve("flora-build/storage"))) {
             var plant = harness.loader().loadClass("eggsky.art.PixelArt").getMethod("plant",
                     int.class, long.class, int.class, int.class, int.class, float.class);
             java.util.Set<Integer> silhouettes = new java.util.HashSet<>();

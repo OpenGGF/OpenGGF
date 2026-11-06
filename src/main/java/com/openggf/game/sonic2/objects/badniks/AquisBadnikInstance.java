@@ -120,7 +120,7 @@ public class AquisBadnikInstance extends AbstractBadnikInstance implements Rewin
     }
 
     private void updateWaitForScreen() {
-        // ROM Obj50_CheckIfOnScreen (docs/s2disasm/s2.asm:60662-60671)
+        // ROM Obj50_CheckIfOnScreen (docs/s2disasm/s2.asm:60777-60786)
         // observes render_flags.on_screen from BuildSprites. Obj50_Init sets
         // width_pixels=$10 and does not set explicit_height (s2.asm:60567-60574),
         // so S2 BuildSprites takes its approximate-Y path: X uses width_pixels
@@ -128,7 +128,7 @@ public class AquisBadnikInstance extends AbstractBadnikInstance implements Rewin
         // contact gate uses the object's 16px half-height and keeps this Aquis
         // waiting 37 frames too long in the OOZ2 route.
         if (isWithinRenderSpriteBounds(WIDTH_PIXELS, 32)) {
-            // ROM Obj50_CheckIfOnScreen (s2.asm:60607-60614) only advances
+            // ROM Obj50_CheckIfOnScreen (s2.asm:60785-60792) only advances
             // routine_secondary to Obj50_Chase; it does NOT initialise
             // Obj50_timer. The SST timer byte is therefore still 0 from the
             // cleared object slot, so the very first Obj50_FollowPlayer frame
@@ -145,14 +145,14 @@ public class AquisBadnikInstance extends AbstractBadnikInstance implements Rewin
     }
 
     private void updateChase(AbstractPlayableSprite player) {
-        // ROM Obj50_FollowPlayer (s2.asm:60669-60697) decrements the timer and
+        // ROM Obj50_FollowPlayer (s2.asm:60838-60866) decrements the timer and
         // bails to Obj50_DoneFollowing (-> Obj_MoveStop) BEFORE running
         // GetOrientationToPlayer / accel / CapSpeed / ObjectMove. Mirror that
         // ordering: on the expiry frame the object must NOT accelerate or move.
         // subq.b #1 / bmi fires when the byte underflows (0x00 -> 0xFF).
         timer = (byte) (timer - 1);
         if (timer < 0) {
-            // Obj50_DoneFollowing (s2.asm:60693-60697): Obj_MoveStop clears
+            // Obj50_DoneFollowing (s2.asm:60871-60875): Obj_MoveStop clears
             // x_vel/y_vel, then routine -> Obj50_Shooting with timer = $20.
             xVelocity = 0;
             yVelocity = 0;
@@ -163,8 +163,8 @@ public class AquisBadnikInstance extends AbstractBadnikInstance implements Rewin
         }
 
         if (player != null && !player.isDebugMode()) {
-            // Obj_GetOrientationToPlayer (s2.asm:72755-72781) indexes
-            // Obj50_Speeds {-$10, +$10} (s2.asm:60689-60691): the object
+            // Obj_GetOrientationToPlayer (s2.asm:72953-72979) indexes
+            // Obj50_Speeds {-$10, +$10} (s2.asm:60867-60869): the object
             // accelerates TOWARD the closest player on both axes, and faces
             // toward the player on X. d2 = obj.x - player.x; player to the left
             // (d2 >= 0) -> index 0 = -$10 (accel left); player to the right
@@ -301,7 +301,7 @@ public class AquisBadnikInstance extends AbstractBadnikInstance implements Rewin
     }
 
     /**
-     * Bug 3 fix: ROM Obj_GetOrientationToPlayer (s2.asm:72320-72346) picks the
+     * Bug 3 fix: ROM Obj_GetOrientationToPlayer (s2.asm:72949-72975) picks the
      * closer of MainCharacter and Sidekick by |x_pos - obX|. Engine previously
      * only used the main player. Walk the sidekick list and return the player
      * with minimum absolute X distance.
@@ -437,10 +437,10 @@ public class AquisBadnikInstance extends AbstractBadnikInstance implements Rewin
         }
 
         /**
-         * ROM {@code Obj50_Wing} (docs/s2disasm/s2.asm:60642-60653) ends with
+         * ROM {@code Obj50_Wing} (docs/s2disasm/s2.asm:60757-60768) ends with
          * {@code jmpto JmpTo32_DisplaySprite} -- it never calls
          * {@code MarkObjGone}. Unlike {@code Obj50_Main} (s2.asm:60632) and
-         * {@code Obj50_Bullet} (s2.asm:60665), which both tail into
+         * {@code Obj50_Bullet} (s2.asm:60780), which both tail into
          * {@code JmpTo33_MarkObjGone}, the wing has no off-screen delete of its
          * own: its only deletion paths are the three parent checks at the top of
          * {@code Obj50_Wing} (empty parent slot, parent id no longer

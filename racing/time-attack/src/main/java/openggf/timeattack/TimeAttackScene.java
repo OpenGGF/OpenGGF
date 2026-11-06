@@ -8,7 +8,6 @@ import com.openggf.mods.scene.SceneCanvas;
 import com.openggf.mods.scene.SceneContext;
 import com.openggf.mods.scene.SceneRomArt;
 import com.openggf.net.identity.PlayerAppearance;
-import com.openggf.mods.ui.TextLayout;
 import com.openggf.net.protocol.ControlMessage;
 import openggf.timeattack.mp.RaceLobbyView;
 import openggf.timeattack.mp.RaceSession;
@@ -20,6 +19,8 @@ import com.openggf.net.protocol.RoomAccessPolicy;
 import com.openggf.net.protocol.RoomPassword;
 import com.openggf.mods.ui.NameFont;
 import openggf.timeattack.ui.MenuCue;
+import openggf.timeattack.ui.MenuPage;
+import openggf.timeattack.ui.FullTextReader;
 import openggf.timeattack.ui.OverLevelCanvas;
 import openggf.timeattack.ui.TextEntry;
 import openggf.timeattack.ui.ViewInput;
@@ -42,14 +43,6 @@ import java.util.Optional;
  * when this scene exits for any reason.
  */
 public final class TimeAttackScene implements ModScene {
-    private static final int BACKGROUND = 0x101830;
-    private static final int TITLE = 0xFFFFE070;
-    private static final int LABEL = 0xFFB0C8E8;
-    private static final int VALUE = 0xFFFFFFFF;
-    private static final int FOCUS = 0x803060C0;
-    private static final int HINT = 0xFF8090B0;
-    private static final int ROW_HEIGHT = 15;
-    private static final int FIRST_ROW_Y = 44;
     /** Characters accepted in a LAN invite besides letters and digits (IPv6 brackets included). */
     private static final String INVITE_CHARACTERS = ".:/#-_[]";
     /** {@code PlayerIdentity}'s key file: its absence means this player has never raced online. */
@@ -65,6 +58,7 @@ public final class TimeAttackScene implements ModScene {
     private TimeAttackRuntime runtime;
     private int focus;
     private String status = "";
+    private final FullTextReader reader = new FullTextReader();
     private String joinInvite = "";
     private TextEntry inviteEditor;
     private TextEntry namePrompt;
@@ -78,16 +72,29 @@ public final class TimeAttackScene implements ModScene {
     private ServerBrowserView browser;
     private RaceLobbyView lobby;
     private Object lobbyCoordinator;
+    /** Hints name controller buttons after a pad press, keyboard keys after a key press. */
+    private MenuPage.Keys keys = MenuPage.Keys.keyboard();
+    private final String buildDefaultMaster;
 
-    /** The scene as the title entry opens it: ghosts and identity in the working directory. */
-    public TimeAttackScene() {
-        this(Path.of("ghosts"), Path.of("identity"));
+    /**
+     * The scene as the title entry opens it: ghosts and identity in the working directory.
+     *
+     * @param buildDefaultMaster this build's default master address, read once at registration
+     *                           (empty when the build has none)
+     */
+    public TimeAttackScene(String buildDefaultMaster) {
+        this(Path.of("ghosts"), Path.of("identity"), buildDefaultMaster);
     }
 
     TimeAttackScene(Path ghostsRoot, Path identityDir) {
+        this(ghostsRoot, identityDir, "");
+    }
+
+    TimeAttackScene(Path ghostsRoot, Path identityDir, String buildDefaultMaster) {
         this.ghostStore = new GhostStore(ghostsRoot);
         this.identityDir = identityDir;
         this.legacyConfigDirectory = ghostsRoot.toAbsolutePath().getParent();
+        this.buildDefaultMaster = java.util.Objects.requireNonNull(buildDefaultMaster, "buildDefaultMaster");
     }
 
     @Override
@@ -101,6 +108,7 @@ public final class TimeAttackScene implements ModScene {
             status = "Previous settings could not be imported";
             settings = TimeAttackSettings.load(storage);
         }
+        settings.setBuildDefaultMaster(buildDefaultMaster);
         joinInvite = "";
         session = new RaceSession(identityDir, ghostStore, settings, storage,
                 (spec, host) -> ctx.gameplay().launch(spec, host), this::newRuntime, System::currentTimeMillis);
@@ -158,6 +166,8 @@ public final class TimeAttackScene implements ModScene {
         session.poll();
         syncViews();
         ViewInput input = ViewInput.of(ctx);
+        keys = MenuPage.Keys.of(input, keys);
+        if (session.state() != RaceSession.State.IDLE && session.state() != RaceSession.State.CONNECTING) reader.close();
         if (accessView != null) {
             accessView.update(input);
             return;
@@ -182,6 +192,7 @@ public final class TimeAttackScene implements ModScene {
         if (passwordEditor != null) { passwordEditor.clear(); passwordEditor = null; }
         switch (session.state()) {
             case CONNECTING -> {
+                if (reader.handle(input, this::detailsText)) return;
                 if (input.back()) {
                     session.cancel();
                 }
@@ -201,6 +212,7 @@ public final class TimeAttackScene implements ModScene {
             case IDLE, PASSWORD_REQUIRED -> { }
         }
         if (state == null) {
+            if (reader.handle(input, this::detailsText)) return;
             if (input.back() || input.accept()) {
                 ctx.exitToMasterTitle();
             }
@@ -244,6 +256,7 @@ public final class TimeAttackScene implements ModScene {
             }
             return;
         }
+        if (reader.handle(input, this::detailsText)) return;
         updateMenu(ctx, input);
     }
 
@@ -273,7 +286,7 @@ public final class TimeAttackScene implements ModScene {
             String identity = prompt == null ? "" : prompt.hostIdentity();
             if (identity != null && identity.length() > 12) identity = identity.substring(0, 12);
             passwordEditor = TextEntry.password("ROOM PASSWORD")
-                    .withPrompt("Host " + (identity == null ? "unavailable" : identity));
+                    .withPrompt("This room is private. Host ID " + (identity == null ? "unavailable" : identity));
         }
         switch (passwordEditor.update(input)) {
             case ACCEPTED -> {
@@ -340,7 +353,7 @@ public final class TimeAttackScene implements ModScene {
             return;
         }
         if (overLevel && input.start() && lobby.isOnMainPage()
-                && session.coordinator().session().isLocalReady()) {
+                && session.coordinator().session().isLocalReady() && !lobby.opensDetails(input)) {
             session.setLobbyMenuShown(false);
             cue(MenuCue.CONFIRM);
             return;
@@ -372,7 +385,8 @@ public final class TimeAttackScene implements ModScene {
                 state.pressGo();
             } else if (focus == inviteRow) {
                 inviteEditor = new TextEntry("LAN INVITE", joinInvite, TimeAttackSettings.MAX_TEXT_LENGTH,
-                        INVITE_CHARACTERS).masked();
+                        INVITE_CHARACTERS).masked()
+                        .withPrompt("Type the invite the host shared, with HOST_IP replaced. It stays hidden.");
             } else if (focus == settingsRow) {
                 settingsView = new SettingsView(settings, this::settingsChanged, this::cue,
                         state.currentGameId(), state.currentCharacter(),
@@ -508,8 +522,19 @@ public final class TimeAttackScene implements ModScene {
         // The scene ROM path has no KiS2 Knuckles line; it would return the Sonic/Tails one.
         if (gameId.equals("s2") && character.equalsIgnoreCase("knuckles")) return null;
         SceneRomArt rom = context.art().rom(gameId);
-        int[] argb = rom == null ? null : rom.characterPalette(character);
+        return stockLineFrom(rom == null ? null : rom.characterPalette(character));
+    }
+
+    /**
+     * A ROM palette line as colour words, or null when there is none. The scene's ROM art answers
+     * transparent zeros when its game has no character palette loaded: that is no line at all, not
+     * sixteen black entries, and the profile page then says it cannot show the ROM colours.
+     */
+    static int[] stockLineFrom(int[] argb) {
         if (argb == null || argb.length < 16) return null;
+        boolean any = false;
+        for (int i = 1; i < 16; i++) any |= (argb[i] >>> 24) != 0;
+        if (!any) return null;
         int[] line = new int[16];
         for (int i = 0; i < 16; i++) line[i] = PlayerAppearance.fromRgb(argb[i] & 0xFFFFFF);
         return line;
@@ -643,60 +668,58 @@ public final class TimeAttackScene implements ModScene {
 
     /** The lobby level with the menu hidden: only a reminder of how to bring it back. */
     private void drawPlayHint(SceneCanvas canvas) {
-        String hint = "START  LOBBY MENU";
-        int x = canvas.width() - 8 - canvas.textWidth(hint);
-        canvas.fill(x - 4, 206, canvas.textWidth(hint) + 8, 14, 0x80101830);
-        canvas.text(hint, x, 208, HINT);
+        String key = keys.start();
+        java.util.List<MenuPage.Hint> hint = java.util.List.of(MenuPage.hint(key, "Lobby menu"));
+        int width = MenuPage.hintsWidth(hint);
+        int x = canvas.width() - 8 - width;
+        canvas.fill(x - 4, 205, width + 8, 15, 0xC002081C);
+        MenuPage.hints(canvas, x, 207, hint, MenuPage.TEXT);
     }
 
     private void drawConnecting(SceneCanvas canvas) {
-        canvas.clear(BACKGROUND);
-        canvas.text("TIME ATTACK", 10, 10, TITLE);
-        canvas.text(fit(canvas, session.status(), canvas.width() - 20), 10, 60, VALUE);
-        canvas.text("B cancel", 10, 208, HINT);
+        if (reader.draw(canvas)) return;
+        MenuPage.page(canvas, "TIME ATTACK", null, "Connecting");
+        int width = canvas.width();
+        MenuPage.notice(canvas, MenuPage.Tone.INFO, session.status(), 14, MenuPage.BODY_TOP + 8, width - 28);
+        MenuPage.footerWithDetails(canvas, keys, "", MenuPage.TEXT, java.util.List.of(MenuPage.hint(keys.back(), "Cancel")));
     }
 
+    private static final int MENU_TOP = MenuPage.BODY_TOP - 2;
+
     private void drawMenu(SceneCanvas canvas) {
-        canvas.clear(BACKGROUND);
-        canvas.text("TIME ATTACK", 10, 10, TITLE);
+        if (reader.draw(canvas)) return;
+        int width = canvas.width();
         if (state == null) {
-            canvas.text("No game ROM is available.", 10, 40, VALUE);
-            canvas.text("Configure ROMs in Settings, then come back.", 10, 56, HINT);
+            MenuPage.page(canvas, "TIME ATTACK", null, "Race a route against your best");
+            // An empty choice is information, not a warning: what is missing, then the next step.
+            int y = MENU_TOP + 8;
+            MenuPage.icon(canvas, MenuPage.Tone.INFO, 14, y + 3);
+            NameFont.draw(canvas, "No games to race yet", 24, y, MenuPage.TEXT);
+            MenuPage.paragraph(canvas, "Add your games from the title screen, then come back.", 24,
+                    y + NameFont.LINE_HEIGHT + 2, width - 38, 3, MenuPage.MUTED);
+            MenuPage.footerWithDetails(canvas, keys, "", MenuPage.TEXT, java.util.List.of(MenuPage.hint(keys.back(), "Title")));
             return;
         }
-        canvas.text("Choose a route and race mode", 10, 24, HINT);
+        MenuPage.page(canvas, "TIME ATTACK", MenuPage.gameName(state.currentGameId()), subtitle());
+        java.util.List<TimeAttackMenuState.Row> rows = state.visibleRows();
+        java.util.List<String> labels = new java.util.ArrayList<>();
+        for (TimeAttackMenuState.Row row : rows) labels.add(label(row));
+        if (joining()) labels.add("Invite");
+        int valueX = MenuPage.MARGIN + 6 + MenuPage.labelColumn(labels);
+        int y = MENU_TOP;
         int index = 0;
-        for (TimeAttackMenuState.Row row : state.visibleRows()) {
-            String label;
-            String value;
-            switch (row) {
-                case GAME -> { label = "Game"; value = state.currentGameId().toUpperCase(); }
-                case TRACK -> { label = "Track"; value = state.currentTrack() == null ? "No tracks" : state.currentTrack().label(); }
-                case CHARACTER -> { label = "Character"; value = state.currentCharacter() == null ? "None" : state.currentCharacter().toUpperCase(); }
-                case MODE -> { label = "Mode"; value = state.mode().name().replace('_', ' '); }
-                case POLICY -> { label = "Policy"; value = state.characterPolicy().equals("OPEN") ? "OPEN" : "LOCKED " + state.currentCharacter().toUpperCase(); }
-                case WINDOW -> { label = "Window"; value = (state.windowSeconds() / 60) + " minutes"; }
-                case POOL -> {
-                    String pool = state.currentPoolName();
-                    if (!pool.isEmpty()) {
-                        // Pool names are display text in any script.
-                        drawRow(canvas, "Vote pool", "", index);
-                        int y = FIRST_ROW_Y + index * ROW_HEIGHT;
-                        canvas.text("<", 112, y, VALUE);
-                        NameFont.draw(canvas, NameFont.fit(pool, canvas.width() - 150), 122, y - 2, VALUE);
-                        canvas.text(">", 124 + NameFont.width(NameFont.fit(pool, canvas.width() - 150)), y, VALUE);
-                        index++;
-                        continue;
-                    }
-                    label = "Vote pool";
-                    value = "DEFAULT";
-                }
-                default -> throw new IllegalStateException("Unexpected row " + row);
-            }
-            drawRow(canvas, label, "< " + value + " >", index++);
+        for (TimeAttackMenuState.Row row : rows) {
+            MenuPage.field(canvas, y, valueX, label(row), value(row), MenuPage.TEXT, focus == index, true);
+            y += MenuPage.ROW_H;
+            index++;
         }
         if (joining()) {
-            drawRow(canvas, "Invite", joinInvite.isBlank() ? "Select to enter" : "*** ***", index++);
+            boolean set = !joinInvite.isBlank();
+            int x = MenuPage.field(canvas, y, valueX, "Invite", set ? "   Entered" : "Not entered",
+                    set ? MenuPage.TEXT : MenuPage.DIM, focus == index, false);
+            if (set) MenuPage.lock(canvas, x, y + 3, MenuPage.CYAN);
+            y += MenuPage.ROW_H;
+            index++;
         }
         String action = switch (state.mode()) {
             case SOLO -> "START RUN";
@@ -704,35 +727,100 @@ public final class TimeAttackScene implements ModScene {
             case JOIN_LAN -> "JOIN LAN ROOM";
             case BROWSE -> "BROWSE ROOMS";
         };
-        drawAction(canvas, action, index++);
-        drawAction(canvas, "SETTINGS", index);
-        canvas.text(fit(canvas, (state.bestExists() ? "Best: saved" : "Best: none")
-                + " / Imported ghosts: " + state.importCount(), canvas.width() - 20), 10, 181, LABEL);
+        y += 3;
+        MenuPage.button(canvas, MenuPage.MARGIN, y, width - 2 * MenuPage.MARGIN, action, focus == index, true);
+        y += MenuPage.BUTTON_H + 3;
+        index++;
+        MenuPage.action(canvas, y, "Settings", focus == index, true);
+        y += MenuPage.ROW_H + 3;
+        int lines = Math.max(1, (MenuPage.FOOTER_Y - 1 - y) / NameFont.LINE_HEIGHT);
         if (!status.isEmpty()) {
-            canvas.text(fit(canvas, status, canvas.width() - 20), 10, 194, TITLE);
+            MenuPage.Tone tone = statusTone(status);
+            MenuPage.icon(canvas, tone, 14, y + 3);
+            MenuPage.paragraph(canvas, status, 24, y, width - 38, lines, MenuPage.colour(tone));
+        } else {
+            String best = state.bestExists() ? "Best ghost saved" : "No best ghost yet";
+            NameFont.draw(canvas, NameFont.fit(best + "   Imported ghosts: " + state.importCount(), width - 28), 14, y,
+                    MenuPage.DIM);
         }
-        String hint = state.focusedRow() == TimeAttackMenuState.Row.POOL && focus < state.visibleRows().size()
-                ? "Left/Right pool  Enter edit"
-                : "Up/Down select  Left/Right change  Start go  B back";
-        canvas.text(fit(canvas, hint, canvas.width() - 20), 10, 210, HINT);
+        MenuPage.footerWithDetails(canvas, keys, "", MenuPage.TEXT, menuHints(rows.size()));
     }
 
-    private void drawRow(SceneCanvas canvas, String label, String value, int index) {
-        int y = FIRST_ROW_Y + index * ROW_HEIGHT;
-        if (focus == index) canvas.fill(8, y - 3, canvas.width() - 16, 15, FOCUS);
-        canvas.text(label, 14, y, LABEL);
-        canvas.text(fit(canvas, value, canvas.width() - 124), 112, y, VALUE);
+    /** A field row's value as the menu shows it (the details page repeats it). */
+    private String value(TimeAttackMenuState.Row row) {
+        return switch (row) {
+            case GAME -> MenuPage.gameName(state.currentGameId());
+            case TRACK -> state.currentTrack() == null ? "No tracks" : MenuPage.words(state.currentTrack().label());
+            case CHARACTER -> state.currentCharacter() == null ? "None" : MenuPage.words(state.currentCharacter().toUpperCase());
+            case MODE -> switch (state.mode()) {
+                case SOLO -> "Solo";
+                case HOST_LAN -> "Host a LAN room";
+                case JOIN_LAN -> "Join a LAN room";
+                case BROWSE -> "Browse online rooms";
+            };
+            case POLICY -> state.characterPolicy().equals("OPEN") ? "Any character"
+                    : "Only " + MenuPage.words(state.currentCharacter().toUpperCase());
+            case WINDOW -> (state.windowSeconds() / 60) + (state.windowSeconds() == 60 ? " minute" : " minutes");
+            // Pool names are display text in any script.
+            case POOL -> state.currentPoolName().isEmpty() ? "Default" : state.currentPoolName();
+        };
     }
 
-    private void drawAction(SceneCanvas canvas, String action, int index) {
-        int y = FIRST_ROW_Y + index * ROW_HEIGHT;
-        if (focus == index) canvas.fill(8, y - 3, canvas.width() - 16, 15, FOCUS);
-        canvas.text(action, 14, y, VALUE);
+    /** The page's subtitle for the chosen mode. */
+    private String subtitle() {
+        return switch (state.mode()) {
+            case SOLO -> "Race the route against your best ghost";
+            case HOST_LAN -> "Open a room for players on your network";
+            case JOIN_LAN -> "Join a room with the host's LAN invite";
+            case BROWSE -> "Find rooms on the master server";
+        };
     }
 
-    private static String fit(SceneCanvas canvas, String text, int maxWidth) {
-        return TextLayout.ellipsis(text == null ? "" : text, Math.max(0, maxWidth), canvas::textWidth);
+    /** Saved/complete reports read as success; everything else the menu reports needs attention. */
+    private static MenuPage.Tone statusTone(String status) {
+        String lower = status.toLowerCase(java.util.Locale.ROOT);
+        return lower.equals("run complete") || lower.contains("saved") && !lower.contains("not")
+                && !lower.contains("pending") ? MenuPage.Tone.GOOD : MenuPage.Tone.WARNING;
     }
+
+    private static String label(TimeAttackMenuState.Row row) {
+        return switch (row) {
+            case GAME -> "Game";
+            case TRACK -> "Track";
+            case CHARACTER -> "Character";
+            case MODE -> "Mode";
+            case POLICY -> "Characters";
+            case WINDOW -> "Round length";
+            case POOL -> "Vote pool";
+        };
+    }
+
+    /** What the keys do on the focused row (accept on a field row moves to the next row). */
+    private java.util.List<MenuPage.Hint> menuHints(int fieldRows) {
+        String confirm = keys.confirm();
+        java.util.List<MenuPage.Hint> hints = new java.util.ArrayList<>();
+        hints.add(MenuPage.hint(MenuPage.ARROWS_UD, "Choose"));
+        int go = fieldRows + (joining() ? 1 : 0);
+        if (focus < fieldRows) {
+            boolean pool = state.visibleRows().get(focus) == TimeAttackMenuState.Row.POOL;
+            hints.add(MenuPage.hint(MenuPage.ARROWS_LR, pool ? "Pool" : "Change"));
+            hints.add(MenuPage.hint(confirm, pool ? "Edit pools" : "Next"));
+        } else if (focus < go) {
+            hints.add(MenuPage.hint(confirm, "Edit invite"));
+        } else if (focus == go) {
+            hints.add(MenuPage.hint(confirm, switch (state.mode()) {
+                case SOLO -> "Start";
+                case HOST_LAN -> "Create";
+                case JOIN_LAN -> "Join";
+                case BROWSE -> "Browse";
+            }));
+        } else {
+            hints.add(MenuPage.hint(confirm, "Open"));
+        }
+        hints.add(MenuPage.hint(keys.back(), "Title"));
+        return hints;
+    }
+
 
     /** Field rows, the invite row while joining, the action row and the settings row. */
     private int menuRowCount() {
@@ -753,6 +841,16 @@ public final class TimeAttackScene implements ModScene {
         return session;
     }
 
+    /** The keys the pages name this tick (tests). */
+    MenuPage.Keys keysForTest() {
+        return keys;
+    }
+
+    /** True while the settings page is open (tests). */
+    boolean isShowingSettings() {
+        return settingsView != null;
+    }
+
     /** The menu's status line (tests). */
     String status() {
         return status;
@@ -767,4 +865,30 @@ public final class TimeAttackScene implements ModScene {
     TimeAttackSettings settings() {
         return settings;
     }
+
+    /** The details page for the menu, the connecting page and the no-game page: their complete text. */
+    private FullTextReader.Text detailsText() {
+        if (session.state() == RaceSession.State.CONNECTING) {
+            return FullTextReader.Text.of("TIME ATTACK", "Connecting").field("Connection", session.status());
+        }
+        if (state == null) {
+            return FullTextReader.Text.of("TIME ATTACK", "Race a route against your best")
+                    .line("No game ROM is available.")
+                    .line("Add your games from the title screen, then come back.")
+                    .field("Status", status);
+        }
+        FullTextReader.Text text = FullTextReader.Text.of("TIME ATTACK", subtitle());
+        for (TimeAttackMenuState.Row row : state.visibleRows()) text.field(label(row), value(row));
+        if (joining()) text.field("Invite", joinInvite.isBlank() ? "Not entered" : "Entered (hidden; select Invite to change it)");
+        text.field("Best ghost", state.bestExists() ? "Saved" : "None yet");
+        text.field("Imported ghosts", Integer.toString(state.importCount()));
+        text.field("Status", status);
+        text.field("Connection", session.status());
+        return text;
+    }
+
+    List<String> detailsVisibleLines() { return reader.visibleLines(); }
+
+    int detailsFirstLine() { return reader.firstVisibleLine(); }
+
 }

@@ -6,7 +6,7 @@ Companion skills:
 - [`.agents/skills/s3k-zone-analysis/SKILL.md`](../../../.agents/skills/s3k-zone-analysis/SKILL.md) — produce a structured zone analysis spec first.
 - [`.agents/skills/s3k-zone-bring-up/SKILL.md`](../../../.agents/skills/s3k-zone-bring-up/SKILL.md) — orchestrates the whole bring-up.
 - [`.agents/skills/s3k-zone-events/SKILL.md`](../../../.agents/skills/s3k-zone-events/SKILL.md), [`s3k-parallax`](../../../.agents/skills/s3k-parallax/SKILL.md), [`s3k-animated-tiles`](../../../.agents/skills/s3k-animated-tiles/SKILL.md), [`s3k-palette-cycling`](../../../.agents/skills/s3k-palette-cycling/SKILL.md).
-- [`.agents/skills/s3k-zone-validate/SKILL.md`](../../../.agents/skills/s3k-zone-validate/SKILL.md) — visual validation.
+- [`.agents/skills/s3k-zone-bring-up/SKILL.md`](../../../.agents/skills/s3k-zone-bring-up/SKILL.md) — route and visual verification (the former `s3k-zone-validate` skill was removed).
 
 ---
 
@@ -81,7 +81,7 @@ mvn "-Dtest=TestSonic3kDecodingUtils" test
 mvn "-Dtest=Test<Zone><Feature>..." test "-Ds3k.rom.path=s3k.gen"
 ```
 
-Zone-state guards to keep green where relevant: `S3kRuntimeStateReadGuard`, `S3kAizWriteBridgeGuard`, `S3kTransitionBridgeGuard`, `S3kHczPaletteOwnershipMigrationGuard`, `TestZoneEventRuntimeAccessGuard`. Visual validation via the `s3k-zone-validate` skill.
+Zone-state guards to keep green where relevant: `S3kRuntimeStateReadGuard`, `S3kAizWriteBridgeGuard`, `S3kTransitionBridgeGuard`, `S3kHczPaletteOwnershipMigrationGuard`, `TestZoneEventRuntimeAccessGuard`. Visual validation via the `s3k-zone-bring-up` skill's verification steps.
 
 ---
 
@@ -107,5 +107,5 @@ Cite `sonic3k.asm` labels + verified S&K-side offsets for each table. Note when 
 
 - `CHANGELOG.md` + `Changelog: updated`.
 - `docs/S3K_KNOWN_DISCREPANCIES.md` + `S3K-Known-Discrepancies: updated` for parity gaps.
-- Skill changes mirrored across `.agents/skills/` and `.claude/skills/`, `Skills: updated`.
+- Skill changes made in `.agents/skills/` and synced with `python3 tools/git/sync_skills.py`, `Skills: updated`.
 - Fill all trailers; never `--no-verify`.

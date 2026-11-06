@@ -124,7 +124,7 @@ public class IczSnowPileObjectInstance extends AbstractObjectInstance implements
             return;
         }
         if (waitingForOnScreen) {
-            if (retainedOnScreen || isWithinSolidContactBounds()) {
+            if (retainedOnScreen || isWithinOnScreenRenderBounds()) {
                 // loc_85AD2 restores Obj_ICZSnowPile and returns. The restored
                 // operation does not dispatch until the following SST pass.
                 waitingForOnScreen = false;
@@ -398,7 +398,7 @@ public class IczSnowPileObjectInstance extends AbstractObjectInstance implements
     @Override
     public void refreshPostCameraRenderState() {
         if (waitingForOnScreen) {
-            retainedOnScreen = isWithinSolidContactBounds();
+            retainedOnScreen = isWithinOnScreenRenderBounds();
         }
     }
 
@@ -641,7 +641,7 @@ public class IczSnowPileObjectInstance extends AbstractObjectInstance implements
         @Override
         public void refreshPostCameraRenderState() {
             if (initialized && drawThisFrame) {
-                retainedOnScreen = isWithinSolidContactBounds();
+                retainedOnScreen = isWithinOnScreenRenderBounds();
             }
         }
 

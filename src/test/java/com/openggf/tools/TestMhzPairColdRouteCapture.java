@@ -10,6 +10,7 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -26,6 +27,7 @@ class TestMhzPairColdRouteCapture {
         SessionManager.clear();
     }
 
+    @Tag("exhaustive-audit")
     @Test void pairedColdCompletionIsolatesTheLiveTimelineAtTheActualFbzLoad() throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
                 "src/test/resources/routes/s3k/mhz2-team-incoming-320.bk2"));

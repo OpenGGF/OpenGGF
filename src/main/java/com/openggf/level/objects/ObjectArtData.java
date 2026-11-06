@@ -6,7 +6,7 @@ import com.openggf.sprites.animation.SpriteAnimationSet;
 /**
  * Bundles object art and animations loaded from ROM.
  */
-public class ObjectArtData {
+public final class ObjectArtData {
         private final ObjectSpriteSheet monitorSheet;
         private final ObjectSpriteSheet spikeSheet;
         private final ObjectSpriteSheet spikeSideSheet;

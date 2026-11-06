@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectManagerInternalAccess;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -22,7 +23,7 @@ import java.util.List;
 /**
  * Object 0x53 - MGZ Swinging Platform.
  *
- * <p>ROM: Obj_MGZSwingingPlatform (sonic3k.asm:70499-70598).
+ * <p>ROM: Obj_MGZSwingingPlatform (sonic3k.asm:70504-70602).
  * A platform on a chain of 4 links that rotates continuously around its pivot
  * at a constant angular velocity of 1 angle unit per frame. The player can
  * stand on the platform piece at the end of the chain (SolidObjectTop).
@@ -110,7 +111,7 @@ public class MGZSwingingPlatformObjectInstance extends AbstractObjectInstance
         }
 
         reserveRomChildSlot();
-        updateChainPositions(playerEntity);
+        updateChainPositionsFromNativeInput();
 
         // ROM: move.b $36(a0),d0; add.b d0,$34(a0) -- constant angular velocity
         angleByte = (angleByte + angleStep) & 0xFF;
@@ -132,7 +133,7 @@ public class MGZSwingingPlatformObjectInstance extends AbstractObjectInstance
         }
         // ROM Obj_MGZSwingingPlatform allocates a visual child immediately
         // after the parent with AllocateObjectAfterCurrent before entering
-        // loc_3403A (docs/skdisasm/sonic3k.asm:70508-70539). The engine draws
+        // loc_3403A (docs/skdisasm/sonic3k.asm:70504-70546). The engine draws
         // that child inline, but its SST slot must remain reserved so later
         // ObjPosLoad/AllocateObject calls see the same low-slot pressure.
         svc.objectManager().allocateChildSlotsAfter(spawn, ROM_CHILD_SLOT_COUNT, getSlotIndex());
@@ -146,13 +147,24 @@ public class MGZSwingingPlatformObjectInstance extends AbstractObjectInstance
      * the pivot and adds one step per link, with the platform at the 5th step.
      */
     private void updateChainPositions() {
-        updateChainPositions(null);
+        computeChainPositions(0);
     }
 
-    private void updateChainPositions(PlayableEntity playerEntity) {
-        // ROM: GetSineCosine -> d0=sin, d1=cos; swap; asr.l #4
+    private void updateChainPositionsFromNativeInput() {
+        var manager = tryServices() != null ? services().objectManager() : null;
+        int fraction = manager != null ? ObjectManagerInternalAccess.sineCosineInputFraction(manager) : 0;
+        computeChainPositions(fraction);
+        // loc_3403A (sonic3k.asm:70552-70554) zeroes the width accumulator
+        // before SolidObjectTop; subsequent platforms inherit that zero.
+        if (manager != null) ObjectManagerInternalAccess.publishSineCosineInputFraction(manager, 0);
+    }
+
+    private void computeChainPositions(int fraction) {
         int sinStep = TrigLookupTable.sinHex(angleByte) << 12;
-        int cosStep = TrigLookupTable.cosHex(angleByte) << 12;
+        // GetSineCosine (sonic3k.asm:3053-3060) replaces the cosine word;
+        // sub_34074 (sonic3k.asm:70569-70602) retains the incoming unsigned
+        // fraction through the swap and arithmetic shift, for EACH chain step.
+        int cosStep = cosineStep(angleByte, fraction);
 
         // ROM: d3 = pivotX << 16, d2 = pivotY << 16
         int accumX = pivotX << 16;
@@ -171,67 +183,10 @@ public class MGZSwingingPlatformObjectInstance extends AbstractObjectInstance
         accumY += sinStep;
         platformX = accumX >> 16;
         platformY = accumY >> 16;
-
-        // KNOWN FITTED MODEL -- see docs/S3K_KNOWN_DISCREPANCIES.md.
-        //
-        // GetSineCosine writes only d1.w (`move.w SineTable(pc,d0.w),d1`,
-        // sonic3k.asm:3057), so the high word of d1 entering sub_34074 survives
-        // `swap d1 / asr.l #4` (sonic3k.asm:70527-70530) as the low twelve bits
-        // of the X step. Writing H for that inherited high word and C for the
-        // cosine word, the exact ROM endpoint is
-        //
-        //     platformX = pivotX + ((20480*C + 5*(H >> 4)) >> 16)
-        //
-        // and the engine computes the H == 0 case. The extra term is at most
-        // 5*$FFF = $4FFB, so it can only ever carry one pixel, and only when
-        //
-        //   k = (5 * (C & $F)) & $F >= 11  and  (H >> 4) >= ($10000 - k*$1000)/5
-        //
-        // The first half is ROM-derived and holds for every angle in the table
-        // below (measured: k is 12..15 for all thirteen). The second half needs
-        // H, which is whatever the previously executed SST slot left in d1; the
-        // engine does not model inter-object register carry, so the angle/slot
-        // table is a stand-in for it and is NOT reliable for an unseen
-        // recording. It is measured wrong for slot 6 / angle $62 in the
-        // s3k-sonic-tails MGZ segment (frame 10709: the +1 is taken, the ROM
-        // does not take it); removing the table fixes that frame but loses the
-        // slot 7 carry TestS3kMgzTraceReplay needs at frame 25770. Replacing it
-        // correctly requires modelling d1's inherited high word.
-        //
-        // The sine side needs no term: Process_Sprites does `move.l (a0),d0`
-        // before `jsr (a1)` (sonic3k.asm:36023-36028), so d0's high word is the
-        // high word of loc_3403A's own address, $0003, and `asr.l #4` of $0003
-        // is zero.
-        if (hasLaterSlotRiderCosineResidue(angleByte, getSlotIndex())
-                && hasMainPlayerStandingBit(playerEntity)) {
-            platformX++;
-        }
     }
 
-    static boolean hasLaterSlotRiderCosineResidue(int angle, int slotIndex) {
-        // These are native byte-angle/SST register states, not route or frame
-        // predicates. The pattern repeats whenever the byte angle wraps.
-        int byteAngle = angle & 0xFF;
-        return switch (slotIndex) {
-            case 6 -> switch (byteAngle) {
-                case 0x62, 0x6F, 0x7A, 0x91, 0x9A, 0xA5, 0xB4, 0xC1, 0xD3 -> true;
-                default -> false;
-            };
-            case 7 -> switch (byteAngle) {
-                case 0x6D, 0x6F, 0x91, 0x93, 0x9A, 0xA3 -> true;
-                default -> false;
-            };
-            default -> false;
-        };
-    }
-
-    private boolean hasMainPlayerStandingBit(PlayableEntity playerEntity) {
-        if (playerEntity == null) {
-            return false;
-        }
-        ObjectServices svc = tryServices();
-        return svc != null && svc.objectManager() != null
-                && svc.objectManager().hasObjectStandingBit(playerEntity, this);
+    static int cosineStep(int angle, int inputFraction) {
+        return (TrigLookupTable.cosHex(angle) << 12) + ((inputFraction & 0xFFFF) >>> 4);
     }
 
     // ===== SolidObjectProvider (SolidObjectTop) =====

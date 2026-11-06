@@ -2,6 +2,7 @@ package openggf.racing.server.master;
 
 import com.openggf.net.hub.HostHandshake;
 import com.openggf.net.hub.HubConnection;
+import com.openggf.net.flow.WorkBudget;
 import com.openggf.net.hub.SessionTokenIssuer;
 import com.openggf.net.hub.RoomInviteService;
 import com.openggf.net.identity.PlayerIdentity;
@@ -53,14 +54,18 @@ public final class RoomBroker {
         }
         void noteGuestTier(String fingerprint, boolean isNew);
         boolean attach(HubConnection connection, String roomId, String fingerprint,
-                       String displayName);
+                       String displayName, String instanceId,
+                       String grantReference, long routeGeneration);
         void hostLeft(String roomId);
     }
 
     public interface DirectTunnelDirectory {
-        void registerHost(String roomId, HubConnection hostConnection);
-        OptionalInt openGuest(String roomId, HubConnection guestConnection);
-        void unregisterHost(String roomId);
+        void registerHost(String roomId, SessionRegistry.RegistrationLease registration);
+        OptionalInt openGuest(String roomId, HubConnection guestConnection,
+                              String instanceId, String fingerprint,
+                              String grantReference, long routeGeneration,
+                              SessionRegistry.RegistrationLease registration);
+        void unregisterHost(String roomId, SessionRegistry.RegistrationLease registration);
     }
 
     public enum AttachMode { ROOM, TUNNEL_GUEST }
@@ -83,26 +88,67 @@ public final class RoomBroker {
     private static final int MAX_PENDING_CREATES = 64;
     private static final int MAX_PENDING_PER_CONNECTION = 2;
     private static final int MAX_RECENT_CREATES = 8;
+    private static final int MAX_PENDING_RETIREMENTS = 64;
+    private static final long ROUTE_RETIRE_TIMEOUT_MILLIS = 5_000;
 
-    private record AttachGrant(String instanceId, long accessEpoch, long inviteEpoch,
-                               long expiresAtMillis, InviteDirectory.Resolution invite) { }
+    private record AttachGrant(String roomId, String instanceId, long accessEpoch,
+                               long inviteEpoch, long expiresAtMillis,
+                               InviteDirectory.Resolution invite,
+                               SessionRegistry.RegistrationLease lease,
+                               String reference, long generation) { }
 
     private static final class AttachGrants {
         private final LinkedHashMap<String, AttachGrant> grants = new LinkedHashMap<>();
+        private final LinkedHashMap<String, AttachGrant> redeemed = new LinkedHashMap<>();
+        private final LinkedHashMap<String, AttachGrant> retiring = new LinkedHashMap<>();
+        private long nextGeneration;
 
-        void grant(SessionRegistry.RoomEntry room, long now, InviteDirectory.Resolution invite) {
+        AttachGrant grant(SessionRegistry.RoomEntry room, long now, InviteDirectory.Resolution invite) {
             expire(now);
+            if (redeemed.containsKey(room.roomId()) || retiring.containsKey(room.roomId())
+                    || redeemed.size() + retiring.size() >= JOIN_LIMIT) return null;
             long deadline = now + JOIN_GRANT_TTL_MILLIS;
             if (invite != null) deadline = Math.min(deadline, invite.expiresAtMillis());
             grants.remove(room.roomId());
-            grants.put(room.roomId(), new AttachGrant(room.instanceId(), room.accessEpoch(),
-                    room.inviteEpoch(), deadline, invite));
+            AttachGrant issued = new AttachGrant(room.roomId(), room.instanceId(),
+                    room.accessEpoch(), room.inviteEpoch(), deadline, invite, room.lease(),
+                    java.util.UUID.randomUUID().toString(), ++nextGeneration);
+            grants.put(room.roomId(), issued);
             while (grants.size() > JOIN_LIMIT) grants.pollFirstEntry();
+            return issued;
         }
 
-        AttachGrant consume(String roomId, long now) {
-            AttachGrant grant = grants.remove(roomId);
-            return grant != null && now < grant.expiresAtMillis() ? grant : null;
+        AttachGrant consume(String roomId, String reference, long generation, long now) {
+            AttachGrant grant = issued(roomId, reference, generation, now);
+            return grant != null && grants.remove(roomId, grant) ? grant : null;
+        }
+
+        AttachGrant issued(String roomId, String reference, long generation, long now) {
+            AttachGrant grant = grants.get(roomId);
+            return grant != null && now < grant.expiresAtMillis()
+                    && grant.reference().equals(reference) && grant.generation() == generation
+                    ? grant : null;
+        }
+
+        void redeem(AttachGrant grant) {
+            if (grants.remove(grant.roomId(), grant)) redeemed.put(grant.roomId(), grant);
+        }
+
+        AttachGrant retire(String roomId, String reference, long generation, long now) {
+            AttachGrant grant = issued(roomId, reference, generation, now);
+            if (grant != null) grants.remove(roomId, grant);
+            else {
+                grant = redeemed.get(roomId);
+                if (grant == null || !grant.reference().equals(reference)
+                        || grant.generation() != generation) return null;
+                redeemed.remove(roomId, grant);
+            }
+            retiring.put(roomId, grant);
+            return grant;
+        }
+
+        boolean finishRetire(AttachGrant grant) {
+            return retiring.remove(grant.roomId(), grant);
         }
 
         void expire(long now) { grants.values().removeIf(grant -> now >= grant.expiresAtMillis()); }
@@ -113,6 +159,8 @@ public final class RoomBroker {
     private record CreatedRequest(SessionRegistry.RoomEntry entry, long expiresAtMillis) { }
     private record AccessChange(SessionRegistry.RegistrationLease lease, String instanceId,
                                 long accessEpoch, long fromInviteEpoch, long toInviteEpoch) { }
+    private record PendingRetire(Member guest, Member host, AttachGrant grant,
+                                 long requestId, long expiresAtMillis, boolean renew) { }
 
     /** Broker-loop-confined LRU set with expiry fixed at the latest grant. */
     private static final class ExpiringGrants {
@@ -162,6 +210,8 @@ public final class RoomBroker {
         final SessionRegistry.RegistrationLease lease;
         final AttachGrants joinGrantedRooms = new AttachGrants();
         final Map<Long, PendingCreate> pendingCreates = new HashMap<>();
+        final WorkBudget.Account creationWork = WorkBudget.PROCESS.account(
+                MAX_PENDING_PER_CONNECTION, 2L * Protocol.MAX_CONTROL_BYTES * MAX_PENDING_PER_CONNECTION);
         final Map<Long, CreatedRequest> createdRequests = new HashMap<>();
         final ArrayDeque<Long> joinRequests = new ArrayDeque<>();
         State state = State.HANDSHAKE;
@@ -193,6 +243,12 @@ public final class RoomBroker {
     private final LongSupplier clock;
     private final RelayRoomDirectory relays;
     private final DirectTunnelDirectory tunnels;
+    private final WorkBudget.Account inboundWork = WorkBudget.PROCESS.account(4096,
+            32L * 1024 * 1024);
+    private final WorkBudget.Account lifecycleWork = WorkBudget.PROCESS.account(8192, 1);
+
+    WorkBudget.Account inboundWork() { return inboundWork; }
+    WorkBudget.Account lifecycleWork() { return lifecycleWork; }
     private final Predicate<String> knownTrack;
     private final VerifierRegistry verifiers;
     private final Executor brokerLoop;
@@ -206,6 +262,8 @@ public final class RoomBroker {
     private final ExpiringGrants identityPowStamps;
     private final Map<HubConnection, AttachResult> attachResults = new HashMap<>();
     private final Map<String, AccessChange> accessChanges = new HashMap<>();
+    private final Map<Long, PendingRetire> pendingRetires = new HashMap<>();
+    private long nextRetirementId;
     private long nextGcMillis;
     private long registrationGeneration;
     private int pendingCreateCount;
@@ -293,7 +351,7 @@ public final class RoomBroker {
         }
         final ControlCodec.DecodedControl decoded;
         try {
-            decoded = ControlCodec.decode(text, Protocol.MAX_MASTER_FRAME_BYTES);
+            decoded = ControlCodec.decodeMasterClient(text, Protocol.MAX_MASTER_FRAME_BYTES);
         } catch (ProtocolViolationException e) {
             strike(member, "protocol violation");
             return;
@@ -336,6 +394,16 @@ public final class RoomBroker {
 
     public void tick() {
         long now = clock.getAsLong();
+        for (Map.Entry<Long, PendingRetire> entry : List.copyOf(pendingRetires.entrySet())) {
+            if (now >= entry.getValue().expiresAtMillis()
+                    && pendingRetires.remove(entry.getKey(), entry.getValue())) {
+                PendingRetire pending = entry.getValue();
+                if (members.get(pending.guest().connection) == pending.guest()) {
+                    send(pending.guest(), new ControlMessage.RoomRouteUnavailable(
+                            "direct route retirement unavailable"), pending.requestId());
+                }
+            }
+        }
         identityPowStamps.expire(now);
         invites.prune();
         for (Member member : List.copyOf(members.values())) {
@@ -361,7 +429,7 @@ public final class RoomBroker {
             if (registry.find(room.roomId()).isEmpty()) {
                 invites.remove(room.roomId(), room.lease());
                 accessChanges.remove(room.roomId());
-                tunnels.unregisterHost(room.roomId());
+                tunnels.unregisterHost(room.roomId(), room.lease());
             }
         }
         if (now >= nextGcMillis) {
@@ -526,12 +594,16 @@ public final class RoomBroker {
     private void dispatch(Member member, ControlMessage message, long requestId) {
         switch (message) {
             case ControlMessage.RoomCreate create -> createRoom(member, create, requestId);
+            case ControlMessage.RoomActivate activate -> activateRoom(member, activate, requestId);
             case ControlMessage.RoomListRequest request -> listRooms(member, request, requestId);
             case ControlMessage.RoomJoinRequest request -> joinRoom(member, request, requestId);
+            case ControlMessage.RoomGrantRedeem redeem -> redeemGrant(member, redeem, requestId);
+            case ControlMessage.RoomRouteRetire retire -> retireRoute(member, retire, requestId);
+            case ControlMessage.RoomRouteRetireAck ack -> acknowledgeRetirement(member, ack);
             case ControlMessage.RoomInviteResolve request -> resolveInvite(member, request, requestId);
             case ControlMessage.RoomInviteControl request -> controlInvite(member, request, requestId);
             case ControlMessage.MasterRequestCancel cancel -> cancelCreate(member, cancel.requestId());
-            case ControlMessage.RelayAttach attach -> attach(member, attach.roomId(), requestId);
+            case ControlMessage.RelayAttach attach -> attach(member, attach, requestId);
             case ControlMessage.Heartbeat heartbeat -> heartbeat(member, heartbeat);
             case ControlMessage.RoomLeave leave -> leaveRoom(member, leave.roomId());
             case ControlMessage.RoomTrackUpdate update -> updateTrack(member, update);
@@ -642,25 +714,34 @@ public final class RoomBroker {
                     create.certificateSha256(), member.lease, instanceId,
                     direct ? create.accessEpoch() : 0);
             if (direct) {
-                tunnels.registerHost(entry.roomId(), member.connection);
-                if (entry.instanceId() != null) {
-                    invites.register(entry.roomId(), member.lease, entry.instanceId());
+                if (!registry.publishPendingDirect(entry)) {
+                    throw new IllegalStateException("registration canceled");
                 }
-                if (!registry.publish(entry)) throw new IllegalStateException("registration canceled");
                 sendCreated(member, entry, requestId);
                 return;
             }
             PendingCreate pending = new PendingCreate(member, requestId, entry,
                     clock.getAsLong() + CREATE_TIMEOUT_MILLIS);
+            WorkBudget.Reservation completion = WorkBudget.PROCESS.tryReserve(member.creationWork,
+                    inboundWork, new WorkBudget.Cost(1, 2L * Protocol.MAX_CONTROL_BYTES)).orElseThrow(
+                            () -> new IllegalStateException("room completion capacity unavailable"));
             member.pendingCreates.put(requestId, pending);
             pendingCreateCount++;
-            relays.prepareRelayRoom(entry, create.password()).whenComplete((prepared, error) -> {
-                try {
-                    brokerLoop.execute(() -> completeCreate(pending, prepared, error));
-                } catch (RuntimeException stopped) {
-                    if (prepared != null) prepared.close();
-                }
-            });
+            try {
+                relays.prepareRelayRoom(entry, create.password()).whenComplete((prepared, error) -> {
+                    WorkBudget.Task task = WorkBudget.Task.reserved(completion, List.of(completion),
+                            () -> completeCreate(pending, prepared, error),
+                            () -> { if (prepared != null) prepared.close(); });
+                    try { brokerLoop.execute(task); }
+                    catch (RuntimeException | Error stopped) {
+                        task.close();
+                        if (stopped instanceof Error fatal) throw fatal;
+                    }
+                });
+            } catch (RuntimeException | Error failure) {
+                completion.close();
+                throw failure;
+            }
         } catch (SessionRegistry.RoomCreateException | RuntimeException failure) {
             PendingCreate pending = member.pendingCreates.get(requestId);
             if (pending != null) cancelPendingCreate(pending);
@@ -720,6 +801,28 @@ public final class RoomBroker {
                 entry.accessEpoch(), entry.inviteEpoch()), requestId);
     }
 
+    private void activateRoom(Member member, ControlMessage.RoomActivate request, long requestId) {
+        SessionRegistry.RoomEntry room = registry.find(request.roomId()).orElse(null);
+        boolean active = room != null && "DIRECT".equals(room.routing())
+                && member.lease.equals(room.lease())
+                && room.instanceId().equals(request.instanceId());
+        if (active && !registry.isJoinable(room)) {
+            try {
+                tunnels.registerHost(room.roomId(), room.lease());
+                invites.register(room.roomId(), room.lease(), room.instanceId());
+                active = registry.activateDirect(room);
+            } catch (InviteDirectory.UnavailableException unavailable) {
+                removeRoom(room);
+                active = false;
+            } catch (RuntimeException | Error failure) {
+                removeRoom(room);
+                throw failure;
+            }
+        }
+        send(member, new ControlMessage.RoomActivated(request.roomId(), request.instanceId(), active),
+                requestId);
+    }
+
     private void cancelPendingCreate(PendingCreate pending) {
         if (pending.member().pendingCreates.remove(pending.requestId(), pending)) {
             pendingCreateCount--;
@@ -772,6 +875,7 @@ public final class RoomBroker {
 
     private void joinRoom(Member member, ControlMessage.RoomJoinRequest request, long requestId) {
         SessionRegistry.RoomEntry room = registry.find(request.roomId()).orElse(null);
+        if (!registry.isJoinable(room)) room = null;
         if (room != null && room.descriptor().accessPolicy().passwordRequired()
                 && !room.hostFingerprint().equals(member.fingerprint)) room = null;
         joinRoom(member, room, null, requestId);
@@ -789,7 +893,7 @@ public final class RoomBroker {
             case InviteDirectory.Lookup.Found found -> {
                 InviteDirectory.Resolution invite = found.resolution();
                 SessionRegistry.RoomEntry room = registry.find(invite.roomId()).orElse(null);
-                if (room == null || !invite.lease().equals(room.lease())
+                if (!registry.isJoinable(room) || !invite.lease().equals(room.lease())
                         || !invite.instanceId().equals(room.instanceId())
                         || invite.epoch() != room.inviteEpoch()) {
                     send(member, new ControlMessage.RoomInviteRejected("invite unavailable", 0), requestId);
@@ -818,14 +922,130 @@ public final class RoomBroker {
             send(member, new ControlMessage.RoomJoinRejected(problem), requestId);
             return;
         }
-        member.joinGrantedRooms.grant(room, now, invite);
-        send(member, new ControlMessage.RoomJoinResult(room.roomId(), room.routing(),
+        AttachGrant grant = member.joinGrantedRooms.grant(room, now, invite);
+        if (grant == null) {
+            send(member, new ControlMessage.RoomJoinRejected("join route still active"), requestId);
+            return;
+        }
+        send(member, joinResult(room, grant, invite), requestId);
+    }
+
+    private ControlMessage.RoomJoinResult joinResult(SessionRegistry.RoomEntry room,
+                                                      AttachGrant grant,
+                                                      InviteDirectory.Resolution invite) {
+        return new ControlMessage.RoomJoinResult(room.roomId(), room.routing(),
                 "DIRECT".equals(room.routing()) ? room.hostAddress() : null,
                 room.directPort(), "DIRECT".equals(room.routing())
                 ? room.hostFingerprint() : masterIdentity.fingerprint(),
                 room.determinismFingerprint(), room.certificateSha256(), room.instanceId(),
                 room.descriptor().accessPolicy(), room.accessEpoch(), room.inviteEpoch(),
-                invite == null ? 0 : invite.expiresAtMillis()), requestId);
+                invite == null ? 0 : invite.expiresAtMillis(),
+                grant.reference(), grant.generation());
+    }
+
+    private void redeemGrant(Member host, ControlMessage.RoomGrantRedeem request,
+                             long requestId) {
+        SessionRegistry.RoomEntry room = registry.find(request.roomId()).orElse(null);
+        long now = clock.getAsLong();
+        boolean allowed = false;
+        if (room != null && "DIRECT".equals(room.routing())
+                && room.lease().equals(host.lease)
+                && room.instanceId().equals(request.instanceId())) {
+            for (Member guest : members.values()) {
+                if (!request.fingerprint().equals(guest.fingerprint)
+                        || guest.state != State.ADMITTED) continue;
+                AttachGrant grant = guest.joinGrantedRooms.issued(request.roomId(),
+                        request.grantReference(), request.routeGeneration(), now);
+                if (grant == null || !room.lease().equals(grant.lease())
+                        || !room.instanceId().equals(grant.instanceId())
+                        || room.accessEpoch() != grant.accessEpoch()
+                        || room.inviteEpoch() != grant.inviteEpoch()
+                        || grant.invite() != null && !invites.isCurrent(grant.invite())
+                        || joinProblem(guest, room) != null) continue;
+                guest.joinGrantedRooms.redeem(grant);
+                allowed = true;
+                break;
+            }
+        }
+        send(host, new ControlMessage.RoomGrantDecision(request.roomId(),
+                request.instanceId(), request.grantReference(), request.routeGeneration(),
+                request.fingerprint(), allowed), requestId);
+    }
+
+    private void retireRoute(Member guest, ControlMessage.RoomRouteRetire request,
+                             long requestId) {
+        SessionRegistry.RoomEntry room = registry.find(request.roomId()).orElse(null);
+        Member host = room == null || room.lease() == null ? null
+                : members.get(room.lease().source());
+        if (requestId <= 0 || room == null || !"DIRECT".equals(room.routing())
+                || !room.instanceId().equals(request.instanceId())
+                || host == null || host.state != State.ADMITTED
+                || !host.lease.equals(room.lease())
+                || pendingRetires.size() >= MAX_PENDING_RETIREMENTS
+                || nextRetirementId == Long.MAX_VALUE) {
+            send(guest, new ControlMessage.RoomRouteUnavailable(
+                    "direct route retirement unavailable"), requestId);
+            return;
+        }
+        AttachGrant grant = guest.joinGrantedRooms.retire(request.roomId(),
+                request.grantReference(), request.routeGeneration(), clock.getAsLong());
+        if (grant == null || !room.lease().equals(grant.lease())
+                || !room.instanceId().equals(grant.instanceId())) {
+            send(guest, new ControlMessage.RoomRouteUnavailable(
+                    "direct route retirement unavailable"), requestId);
+            return;
+        }
+        long retirementId = ++nextRetirementId;
+        pendingRetires.put(retirementId, new PendingRetire(guest, host, grant, requestId,
+                clock.getAsLong() + ROUTE_RETIRE_TIMEOUT_MILLIS, request.renew()));
+        try {
+            send(host, new ControlMessage.RoomRouteRetireNotice(request.roomId(),
+                    request.instanceId(), grant.reference(), grant.generation(), retirementId));
+        } catch (RuntimeException | Error failure) {
+            pendingRetires.remove(retirementId);
+            if (!(failure instanceof java.util.concurrent.RejectedExecutionException)) throw failure;
+            send(guest, new ControlMessage.RoomRouteUnavailable(
+                    "direct route retirement unavailable"), requestId);
+        }
+    }
+
+    private void acknowledgeRetirement(Member host, ControlMessage.RoomRouteRetireAck ack) {
+        PendingRetire pending = pendingRetires.get(ack.retirementId());
+        if (pending == null || pending.host() != host) return;
+        AttachGrant old = pending.grant();
+        if (!old.roomId().equals(ack.roomId())
+                || !old.instanceId().equals(ack.instanceId())
+                || !old.reference().equals(ack.grantReference())
+                || old.generation() != ack.routeGeneration()) return;
+        pendingRetires.remove(ack.retirementId(), pending);
+        Member guest = pending.guest();
+        if (members.get(guest.connection) != guest) return;
+        if (!guest.joinGrantedRooms.finishRetire(old)) return;
+        if (!pending.renew()) {
+            send(guest, new ControlMessage.RoomRouteRetired(old.roomId(), old.instanceId(),
+                    old.reference(), old.generation()), pending.requestId());
+            return;
+        }
+        SessionRegistry.RoomEntry room = registry.find(old.roomId()).orElse(null);
+        if (room == null || !"DIRECT".equals(room.routing())
+                || !room.lease().equals(host.lease)
+                || !old.instanceId().equals(room.instanceId())
+                || old.accessEpoch() != room.accessEpoch()
+                || old.inviteEpoch() != room.inviteEpoch()
+                || old.invite() != null && !invites.isCurrent(old.invite())
+                || joinProblem(guest, room) != null) {
+            send(guest, new ControlMessage.RoomRouteUnavailable(
+                    "room access changed during route retirement"), pending.requestId());
+            return;
+        }
+        AttachGrant fresh = guest.joinGrantedRooms.grant(room, clock.getAsLong(), old.invite());
+        if (fresh == null) {
+            send(guest, new ControlMessage.RoomRouteUnavailable(
+                    "fresh join route unavailable"), pending.requestId());
+            return;
+        }
+        send(guest, new ControlMessage.RoomRouteRenewed(
+                joinResult(room, fresh, old.invite())), pending.requestId());
     }
 
     private String joinProblem(Member member, SessionRegistry.RoomEntry room) {
@@ -848,8 +1068,10 @@ public final class RoomBroker {
         return null;
     }
 
-    private void attach(Member member, String roomId, long requestId) {
-        AttachGrant grant = member.joinGrantedRooms.consume(roomId, clock.getAsLong());
+    private void attach(Member member, ControlMessage.RelayAttach attach, long requestId) {
+        String roomId = attach.roomId();
+        AttachGrant grant = member.joinGrantedRooms.consume(roomId,
+                attach.grantReference(), attach.routeGeneration(), clock.getAsLong());
         SessionRegistry.RoomEntry room = registry.find(roomId).orElse(null);
         if (grant == null || room == null || !java.util.Objects.equals(grant.instanceId(), room.instanceId())
                 || grant.accessEpoch() != room.accessEpoch()
@@ -863,16 +1085,24 @@ public final class RoomBroker {
             send(member, new ControlMessage.RoomJoinRejected(problem), requestId);
             return;
         }
+        if ("DIRECT".equals(room.routing()) && room.hostFingerprint().equals(member.fingerprint)) {
+            send(member, new ControlMessage.RoomJoinRejected(
+                    "host cannot tunnel into its own direct room"), requestId);
+            return;
+        }
         if ("RELAY".equals(room.routing())) {
             boolean isNew = ladder.tierOf(member.fingerprint) == TrustLadder.Tier.NEW;
             relays.noteGuestTier(member.fingerprint, isNew);
-            if (!relays.attach(member.connection, roomId, member.fingerprint, member.displayName)) {
+            if (!relays.attach(member.connection, roomId, member.fingerprint, member.displayName,
+                    grant.instanceId(), grant.reference(), grant.generation())) {
                 send(member, new ControlMessage.RoomJoinRejected("room not found"), requestId);
                 return;
             }
             attachResults.put(member.connection, new AttachResult(AttachMode.ROOM, roomId, -1));
         } else {
-            OptionalInt guestId = tunnels.openGuest(roomId, member.connection);
+            OptionalInt guestId = tunnels.openGuest(roomId, member.connection,
+                    grant.instanceId(), member.fingerprint, grant.reference(),
+                    grant.generation(), grant.lease());
             if (guestId.isEmpty()) {
                 send(member, new ControlMessage.RoomJoinRejected("relay unavailable"), requestId);
                 return;
@@ -890,19 +1120,28 @@ public final class RoomBroker {
     }
 
     private RoomInviteService inviteService(SessionRegistry.RoomEntry registration) {
+        WorkBudget.Account source = WorkBudget.PROCESS.account(128, 1024 * 1024);
         return (instanceId, accessEpoch, inviteEpoch, operation, membersCanInvite) -> {
             CompletableFuture<ControlMessage.RoomInviteControlResult> result = new CompletableFuture<>();
+            long bytes = 2L * registration.roomId().length()
+                    + (instanceId == null ? 0 : 2L * instanceId.length());
+            WorkBudget.Reservation reservation = WorkBudget.PROCESS.tryReserve(source,
+                    inboundWork, new WorkBudget.Cost(1, bytes)).orElse(null);
+            if (reservation == null) return CompletableFuture.failedFuture(
+                    new IllegalStateException("room invite capacity unavailable"));
+            WorkBudget.Task task = WorkBudget.Task.reserved(reservation, List.of(reservation), () -> {
+                try {
+                    result.complete(applyInviteControl(registration.roomId(), registration.lease(),
+                            instanceId, accessEpoch, inviteEpoch, operation, membersCanInvite));
+                } catch (RuntimeException failure) {
+                    result.completeExceptionally(failure);
+                }
+            }, () -> result.completeExceptionally(new IllegalStateException("broker unavailable")));
             try {
-                brokerLoop.execute(() -> {
-                    try {
-                        result.complete(applyInviteControl(registration.roomId(), registration.lease(),
-                                instanceId, accessEpoch, inviteEpoch, operation, membersCanInvite));
-                    } catch (RuntimeException failure) {
-                        result.completeExceptionally(failure);
-                    }
-                });
-            } catch (RuntimeException stopped) {
-                result.completeExceptionally(stopped);
+                brokerLoop.execute(task);
+            } catch (RuntimeException | Error stopped) {
+                task.close();
+                if (stopped instanceof Error fatal) throw fatal;
             }
             return result;
         };
@@ -1070,7 +1309,7 @@ public final class RoomBroker {
         if ("RELAY".equals(room.routing())) {
             relays.hostLeft(roomId);
         } else {
-            tunnels.unregisterHost(roomId);
+            tunnels.unregisterHost(roomId, room.lease());
         }
     }
 
@@ -1108,7 +1347,7 @@ public final class RoomBroker {
             if ("RELAY".equals(room.routing())) {
                 relays.hostLeft(room.roomId());
             } else {
-                tunnels.unregisterHost(room.roomId());
+                tunnels.unregisterHost(room.roomId(), room.lease());
             }
         }
     }

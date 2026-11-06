@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.audio.GameMusic;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.CrossGameFeatureProvider;
@@ -154,7 +156,7 @@ public class Sonic2SuperStateController extends SuperStateController
 
     @Override
     public void loadRomData(RomByteReader reader) {
-        int addr = Sonic2Constants.CYCLING_PAL_SS_TRANSFORMATION_ADDR;
+        int addr = address(reader, Sonic2Constants.CYCLING_PAL_SS_TRANSFORMATION_ADDR);
         int len = Sonic2Constants.CYCLING_PAL_SS_TRANSFORMATION_LEN;
         if (addr == 0 || addr + len > reader.size()) {
             LOGGER.warning("Super Sonic palette data not available at ROM address 0x"
@@ -258,7 +260,7 @@ public class Sonic2SuperStateController extends SuperStateController
         // animation or a counter does. Nothing in Sonic's own code clears
         // obj_control after Sonic_CheckGoSuper sets it to $81 (s2.asm:37479):
         // there is no `clr.b obj_control(a0)` anywhere in s2.asm, and
-        // SupSonAni_Transform terminates `$FD, 0` (:38818), which SAnim_End_FD
+        // SupSonAni_Transform terminates `$FD, 0` (:38819), which SAnim_End_FD
         // handles by writing anim(a0) and nothing else (:38439). The one clear
         // that runs on this path is PalCycle_SuperSonic's, on the pass that
         // takes Palette_frame to $30:

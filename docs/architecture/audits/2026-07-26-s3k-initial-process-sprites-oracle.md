@@ -32,7 +32,7 @@ one-based lines: line 1 is `ADJACENT_MINUS_ONE_PRE_SETUP`, line 2 is
 Thus the initial pass does not advance the level, VInt, emulator-frame, or
 observed oscillation epochs. The ordinary boundary advances level and VInt
 once. Control remains neutral throughout setup, consistent with the locked
-control writes before `loc_6468` (`sonic3k.asm:7797-7806`).
+control writes before `loc_6468` (`sonic3k.asm:7877-7886`).
 `Water_flag` is the byte at `$F730`
 (`sonic3k.constants.asm:637-652`; byte reads at
 `sonic3k.asm:7809,8506-8510`) and remains 1 at all three boundaries: AIZ1 has

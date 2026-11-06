@@ -3,8 +3,10 @@ package openggf.timeattack;
 import com.openggf.mods.scene.SceneCanvas;
 import com.openggf.net.protocol.ChatMode;
 import com.openggf.mods.ui.NameFont;
-import com.openggf.mods.ui.TextLayout;
+import java.util.List;
 import openggf.timeattack.ui.MenuCue;
+import openggf.timeattack.ui.MenuPage;
+import openggf.timeattack.ui.FullTextReader;
 import openggf.timeattack.ui.TextEntry;
 import openggf.timeattack.ui.ViewInput;
 
@@ -13,22 +15,13 @@ import java.util.function.Consumer;
 
 /**
  * The Time Attack settings page: multiplayer display name and look ({@link ProfileView}), host
- * port, master server URL, the development-only master TLS switch, the multiplayer minimap and
- * the retry key. Every change attempts immediate checked publication; failed saves remain active
+ * port, master server (build default, a custom host name or URL, or Off), the development-only
+ * master TLS switch, the multiplayer minimap and the retry key. Every change attempts immediate checked publication; failed saves remain active
  * and retry.
  */
 public final class SettingsView {
-    private static final int BACKGROUND = 0x101830;
-    private static final int TITLE = 0xFFFFE070;
-    private static final int LABEL = 0xFFB0C8E8;
-    private static final int VALUE = 0xFFFFFFFF;
-    private static final int WARNING = 0xFFFF8060;
-    private static final int FOCUS = 0x803060C0;
-    private static final int HINT = 0xFF8090B0;
-    private static final int FIRST_ROW_Y = 40;
-    private static final int ROW_HEIGHT = 16;
 
-    enum Row { DISPLAY_NAME, LOOK, HOST_PORT, MASTER_URL, MASTER_TLS, MINIMAP, RETRY_KEY, CHAT_MODE, BACK }
+    enum Row { DISPLAY_NAME, LOOK, HOST_PORT, MASTER_SERVER, MASTER_TLS, MINIMAP, RETRY_KEY, CHAT_MODE, BACK }
 
     private final TimeAttackSettings settings;
     private final Runnable changed;
@@ -42,7 +35,9 @@ public final class SettingsView {
     private Row editing;
     private boolean capturingKey;
     private String status = "";
+    private final FullTextReader reader = new FullTextReader();
     private boolean closeRequested;
+    private MenuPage.Keys keys = MenuPage.Keys.keyboard();
 
     /**
      * @param changed runs after every change (the owner saves and applies the settings)
@@ -72,6 +67,7 @@ public final class SettingsView {
     }
 
     public void update(ViewInput input) {
+        keys = MenuPage.Keys.of(input, keys);
         if (profile != null) {
             profile.update(input);
             if (profile.consumeCloseRequested()) {
@@ -106,6 +102,7 @@ public final class SettingsView {
             }
             return;
         }
+        if (reader.handle(input, this::detailsText)) return;
         if (input.back()) {
             closeRequested = true;
             cues.accept(MenuCue.CANCEL);
@@ -121,6 +118,15 @@ public final class SettingsView {
         }
         boolean toggle = input.left() || input.right() || input.accept();
         switch (focus) {
+            case MASTER_SERVER -> {
+                if (input.left() || input.right()) {
+                    cycleMaster(input.left() ? -1 : 1);
+                    changed();
+                } else if (input.accept()) {
+                    openEditor(focus);
+                    cues.accept(MenuCue.CONFIRM);
+                }
+            }
             case MASTER_TLS -> {
                 if (toggle) {
                     settings.setMasterTrustInsecure(!settings.masterTrustInsecure());
@@ -174,8 +180,10 @@ public final class SettingsView {
             case DISPLAY_NAME -> TextEntry.name("DISPLAY NAME", settings.displayName())
                     .withPrompt("Shown to other racers, in any script");
             case HOST_PORT -> new TextEntry("HOST PORT (1-65535)", Integer.toString(settings.hostPort()), 5, "");
-            case MASTER_URL -> new TextEntry("MASTER SERVER URL", settings.masterUrl(),
-                    TimeAttackSettings.MAX_TEXT_LENGTH, ".:/-_");
+            // Brackets admit IPv6 literal URLs such as wss://[2001:db8::5]:27900/master.
+            case MASTER_SERVER -> new TextEntry("MASTER SERVER", settings.customMasterText(),
+                    TimeAttackSettings.MAX_TEXT_LENGTH, ".:/-_[]")
+                    .withPrompt("Host name or wss:// URL. Empty: build default");
             default -> throw new IllegalStateException("Row " + row + " has no editor");
         };
     }
@@ -187,7 +195,7 @@ public final class SettingsView {
         editing = null;
         switch (row) {
             case DISPLAY_NAME -> settings.setDisplayName(value); // canonical: the field only accepts valid names
-            case MASTER_URL -> settings.setMasterUrl(value);
+            case MASTER_SERVER -> settings.setMasterSelection(MasterSelection.typed(value));
             case HOST_PORT -> {
                 int port;
                 try {
@@ -217,7 +225,7 @@ public final class SettingsView {
         return result;
     }
 
-    /** True while a text field (name, port, master URL) takes keyboard text. */
+    /** True while a text field (name, port, master server) takes keyboard text. */
     public boolean isEditingText() {
         return editor != null || capturingKey || (profile != null && profile.isEditingText());
     }
@@ -227,11 +235,16 @@ public final class SettingsView {
     }
 
     public void draw(SceneCanvas canvas) {
+        int width = canvas.width();
         if (capturingKey) {
-            canvas.clear(BACKGROUND);
-            canvas.text("RETRY KEY", 10, 10, TITLE);
-            canvas.text("Press a key to retry an act", 10, 60, VALUE);
-            canvas.text("Escape cancels", 10, 208, HINT);
+            MenuPage.page(canvas, "RETRY KEY", null, "Press the key that restarts the act");
+            int y = MenuPage.BODY_TOP + 6;
+            NameFont.draw(canvas, "Current key", MenuPage.MARGIN + 6, y, MenuPage.MUTED);
+            MenuPage.cap(canvas, MenuPage.MARGIN + 6 + NameFont.width("Current key") + 8, y + 1,
+                    RetryKey.label(settings.retryKey()));
+            MenuPage.notice(canvas, MenuPage.Tone.INFO, "Letters, digits and function keys can be used.",
+                    MenuPage.MARGIN + 6, y + 22, width - 28);
+            MenuPage.footer(canvas, "", MenuPage.TEXT, List.of(MenuPage.hint("ESC", "Cancel")));
             return;
         }
         if (editor != null) {
@@ -242,45 +255,110 @@ public final class SettingsView {
             profile.draw(canvas);
             return;
         }
-        int width = canvas.width();
-        canvas.clear(BACKGROUND);
-        canvas.text("TIME ATTACK SETTINGS", 10, 10, TITLE);
-        canvas.text("Run controls and multiplayer", 10, 24, HINT);
+        if (reader.draw(canvas)) return;
+        MenuPage.page(canvas, "SETTINGS", "Time Attack", "Your name, controls and multiplayer");
+        List<String> labels = List.of("Name", "Look", "Host port", "Master server", "Master TLS", "Minimap",
+                "Retry key", "Room chat");
+        int valueX = MenuPage.MARGIN + 6 + MenuPage.labelColumn(labels);
         if (settings.displayName().isBlank()) {
-            row(canvas, Row.DISPLAY_NAME, "Name", "(identity prefix)", VALUE);
+            row(canvas, Row.DISPLAY_NAME, valueX, "Name", "Not set (identity prefix)", MenuPage.DIM, false);
         } else {
-            row(canvas, Row.DISPLAY_NAME, "Name", "", VALUE);
-            NameFont.draw(canvas, NameFont.fit(settings.displayName(), width - 132), 120,
-                    FIRST_ROW_Y + Row.DISPLAY_NAME.ordinal() * ROW_HEIGHT - 2,
-                    settings.appearanceFor(gameId, character).nameArgb());
+            row(canvas, Row.DISPLAY_NAME, valueX, "Name", "", MenuPage.TEXT, false);
+            NameFont.draw(canvas, NameFont.fit(settings.displayName(), width - valueX - 14), valueX,
+                    y(Row.DISPLAY_NAME), settings.appearanceFor(gameId, character).nameArgb());
         }
-        row(canvas, Row.LOOK, "Look", LookPresets.label(settings, gameId, character), VALUE);
-        row(canvas, Row.HOST_PORT, "Host port", Integer.toString(settings.hostPort()), VALUE);
-        row(canvas, Row.MASTER_URL, "Master",
-                settings.masterUrl().isBlank() ? "(not set)" : settings.masterUrl(), VALUE);
-        row(canvas, Row.MASTER_TLS, "Master TLS",
-                settings.masterTrustInsecure() ? "< TRUST ALL >" : "< VERIFY >",
-                settings.masterTrustInsecure() ? WARNING : VALUE);
-        row(canvas, Row.MINIMAP, "Minimap", settings.minimap() ? "< ON >" : "< OFF >", VALUE);
-        row(canvas, Row.RETRY_KEY, "Retry key", RetryKey.label(settings.retryKey()), VALUE);
-        row(canvas, Row.CHAT_MODE, "Room chat", "< " + settings.chatMode().label() + " >", VALUE);
-        int backY = FIRST_ROW_Y + Row.BACK.ordinal() * ROW_HEIGHT;
-        if (focus == Row.BACK) canvas.fill(8, backY - 3, width - 16, 16, FOCUS);
-        canvas.text("BACK", 14, backY, VALUE);
+        row(canvas, Row.LOOK, valueX, "Look", LookPresets.label(settings, gameId, character), MenuPage.TEXT, false);
+        row(canvas, Row.HOST_PORT, valueX, "Host port", Integer.toString(settings.hostPort()), MenuPage.TEXT, false);
+        row(canvas, Row.MASTER_SERVER, valueX, "Master server", masterLabel(),
+                settings.masterAddress().isEmpty() ? MenuPage.DIM : MenuPage.TEXT, true);
+        row(canvas, Row.MASTER_TLS, valueX, "Master TLS",
+                settings.masterTrustInsecure() ? "Trust any (local testing)" : "Verify certificate",
+                settings.masterTrustInsecure() ? MenuPage.AMBER : MenuPage.TEXT, true);
+        row(canvas, Row.MINIMAP, valueX, "Minimap", settings.minimap() ? "On" : "Off", MenuPage.TEXT, true);
+        row(canvas, Row.RETRY_KEY, valueX, "Retry key", "", MenuPage.TEXT, false);
+        MenuPage.cap(canvas, valueX, y(Row.RETRY_KEY) + 1, RetryKey.label(settings.retryKey()));
+        row(canvas, Row.CHAT_MODE, valueX, "Room chat", MenuPage.sentence(settings.chatMode().label()), MenuPage.TEXT, true);
+        MenuPage.action(canvas, y(Row.BACK), "Back", focus == Row.BACK, true);
         String outcome = settings.publicationNotice();
         // Validation feedback takes precedence; publication feedback survives navigation and retry.
         String message = status.startsWith("Port ") || outcome.isEmpty() ? status : outcome;
-        String guidance = "Chat filters: Engine Settings";
-        canvas.text(TextLayout.ellipsis(message.isEmpty() ? guidance : message, width - 20, canvas::textWidth),
-                10, 194, message.isEmpty() ? HINT : TITLE);
-        canvas.text(TextLayout.ellipsis("Up/Down select  Enter edit  B back", width - 20, canvas::textWidth),
-                10, 208, HINT);
+        int noteY = y(Row.BACK) + MenuPage.ROW_H + 5;
+        if (message.isEmpty()) {
+            MenuPage.notice(canvas, MenuPage.Tone.INFO, "Chat filters and hiding are in Settings > Gameplay",
+                    MenuPage.MARGIN + 6, noteY, width - 28);
+        } else {
+            MenuPage.notice(canvas, tone(message), message, MenuPage.MARGIN + 6, noteY, width - 28);
+        }
+        List<MenuPage.Hint> hints = new java.util.ArrayList<>();
+        hints.add(MenuPage.hint(MenuPage.ARROWS_UD, "Choose"));
+        switch (focus) {
+            case MASTER_SERVER -> {
+                hints.add(MenuPage.hint(MenuPage.ARROWS_LR, "Mode"));
+                hints.add(MenuPage.hint(keys.confirm(), "Edit"));
+            }
+            case MASTER_TLS, MINIMAP, CHAT_MODE -> hints.add(MenuPage.hint(MenuPage.ARROWS_LR, "Change"));
+            case LOOK -> hints.add(MenuPage.hint(keys.confirm(), "Open"));
+            case RETRY_KEY -> hints.add(MenuPage.hint(keys.confirm(), "Rebind"));
+            case BACK -> { }
+            default -> hints.add(MenuPage.hint(keys.confirm(), "Edit"));
+        }
+        hints.add(MenuPage.hint(keys.back(), "Back"));
+        MenuPage.footerWithDetails(canvas, keys, "", MenuPage.TEXT, hints);
     }
 
-    private void row(SceneCanvas canvas, Row row, String label, String value, int valueColour) {
-        int y = FIRST_ROW_Y + row.ordinal() * ROW_HEIGHT;
-        if (focus == row) canvas.fill(8, y - 3, canvas.width() - 16, 16, FOCUS);
-        canvas.text(label, 14, y, LABEL);
-        canvas.text(TextLayout.ellipsis(value, canvas.width() - 132, canvas::textWidth), 120, y, valueColour);
+    /** Build default, then the last custom text when there is one, then Off. */
+    private void cycleMaster(int step) {
+        List<MasterSelection> modes = new java.util.ArrayList<>();
+        modes.add(new MasterSelection.BuildDefault());
+        if (!settings.customMasterText().isEmpty()) modes.add(new MasterSelection.Custom(settings.customMasterText()));
+        modes.add(new MasterSelection.Off());
+        int current = modes.indexOf(settings.masterSelection());
+        settings.setMasterSelection(modes.get(Math.floorMod(Math.max(current, 0) + step, modes.size())));
     }
+
+    /** "Build default (multi-dev.openggf.com)", the custom text, or "Off (LAN only)". */
+    String masterLabel() {
+        return switch (settings.masterSelection()) {
+            case MasterSelection.BuildDefault ignored -> settings.buildDefaultMaster().isEmpty()
+                    ? "Build default (none)" : "Build default (" + settings.buildDefaultMaster() + ")";
+            case MasterSelection.Custom custom -> custom.address();
+            case MasterSelection.Off ignored -> "Off (LAN only)";
+        };
+    }
+
+    private static MenuPage.Tone tone(String message) {
+        if (message.startsWith("Port ")) return MenuPage.Tone.ERROR;
+        String lower = message.toLowerCase(java.util.Locale.ROOT);
+        if (message.equals("Changed") || lower.contains("saved") && !lower.contains("not")) return MenuPage.Tone.GOOD;
+        return MenuPage.Tone.WARNING;
+    }
+
+    private static int y(Row row) {
+        return MenuPage.BODY_TOP - 2 + row.ordinal() * MenuPage.ROW_H;
+    }
+
+    private void row(SceneCanvas canvas, Row row, int valueX, String label, String value, int valueColour,
+                     boolean stepper) {
+        MenuPage.field(canvas, y(row), valueX, label, value, valueColour, focus == row, stepper);
+    }
+    /** The page's complete text: every value as the rows show it, whole. */
+    private FullTextReader.Text detailsText() {
+        String outcome = settings.publicationNotice();
+        return FullTextReader.Text.of("SETTINGS", "Your name, controls and multiplayer")
+                .field("Name", settings.displayName().isBlank() ? "Not set (identity prefix)" : settings.displayName())
+                .field("Look", LookPresets.label(settings, gameId, character))
+                .field("Host port", Integer.toString(settings.hostPort()))
+                .field("Master server", masterLabel())
+                .field("Master TLS", settings.masterTrustInsecure() ? "Trust any (local testing)" : "Verify certificate")
+                .field("Minimap", settings.minimap() ? "On" : "Off")
+                .field("Retry key", RetryKey.label(settings.retryKey()))
+                .field("Room chat", MenuPage.sentence(settings.chatMode().label()))
+                .field("Status", status.startsWith("Port ") || outcome.isEmpty() ? status : outcome)
+                .line("Chat filters and hiding are in Settings > Gameplay.");
+    }
+
+    java.util.List<String> detailsVisibleLines() { return reader.visibleLines(); }
+
+    int detailsFirstLine() { return reader.firstVisibleLine(); }
+
 }

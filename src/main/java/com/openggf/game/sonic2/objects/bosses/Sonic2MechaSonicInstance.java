@@ -136,7 +136,7 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance implements Re
     // Anim 2: dash start (speed 3, stall) — used in Dash Across second half
     private static final int[] ANIM_2_DASH = {4, 5, 4, 3};
     // Anim 3: speed-up ball form (speed 3, stall) — aim phase wind-up.
-    // ROM byte_39DFE (s2.asm:78141-78142):
+    // ROM byte_39DFE (s2.asm:78348-78349):
     //   dc.b 3, 3,3, 6,6,6, 7,7,7, 8,8,8, 6,6, 7,7, 8,8, 6,7,8, $FC
     // byte[0]=$3 is the animation SPEED (held separately in ANIM_SPEEDS[3]), NOT a
     // displayed frame. The displayed-frame list is the 20 bytes after it (two leading
@@ -185,7 +185,7 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance implements Re
     private int defeatTimer;
     private int currentFrame;
     /**
-     * ROM loc_398C0 (s2.asm:77570-77584) calls loc_39D1C to refresh collision_flags
+     * ROM loc_398C0 (s2.asm:77768-77782) calls loc_39D1C to refresh collision_flags
      * from mapping_frame BEFORE the routine handler runs AnimateSprite_Checked (which
      * mutates mapping_frame). collision_flags therefore reflects the PREVIOUS frame's
      * mapping_frame -- a 1-frame lag between the displayed frame and the touch
@@ -264,7 +264,7 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance implements Re
     @Override
     protected void updateBossLogic(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        // ROM loc_39D1C (s2.asm:78013-78039) runs at the top of the main routine,
+        // ROM loc_39D1C (s2.asm:78211-78237) runs at the top of the main routine,
         // BEFORE the per-routine handler animates the sprite. Latch the collision
         // frame from the value mapping_frame held going into this update so the touch
         // response category lags the displayed frame by one frame, exactly as ROM.
@@ -350,7 +350,8 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance implements Re
             camera.setMinX((short) CAMERA_LOCK_X);
             camera.setMaxX((short) CAMERA_LOCK_X);
             services().gameState().setCurrentBossId(9);
-            services().fadeOutMusic();
+            // Shipped PlaySound route: SFX admission may crowd out this fade.
+            services().playSfx(0xF9);
         }
     }
 
@@ -936,7 +937,7 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance implements Re
     public int getCollisionFlags() {
         if (state.invulnerable || state.defeated) return 0;
         if (state.routine < ROUTINE_IDLE) return 0;
-        // ROM loc_39D24 (s2.asm:78017-78039): collision_flags is $9A only when the
+        // ROM loc_39D24 (s2.asm:78215-78237): collision_flags is $9A only when the
         // mapping_frame latched at the top of the update (collisionFrame) is a ball
         // frame (6/7/8); otherwise $1A. Using the latched frame, not the live one,
         // preserves the loc_39D1C one-frame lag.
@@ -967,14 +968,14 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance implements Re
 
     /**
      * ObjAF selects defeat by overwriting the <strong>primary {@code routine}</strong>
-     * ({@code loc_39CF0}: {@code move.b #$C,routine(a0)}, docs/s2disasm/s2.asm:78003-78004)
+     * ({@code loc_39CF0}: {@code move.b #$C,routine(a0)}, docs/s2disasm/s2.asm:78210-78211)
      * and dispatches on {@code routine(a0)} read once at the top of {@code ObjAF}
      * (docs/s2disasm/s2.asm:77412-77415). Routine $C's defeat countdown
-     * ({@code loc_39B92}: {@code subq.w #1,objoff_32}, docs/s2disasm/s2.asm:77848-77853)
+     * ({@code loc_39B92}: {@code subq.w #1,objoff_32}, docs/s2disasm/s2.asm:78055-78060)
      * therefore first runs the frame after the hit. Because the engine runs touch
      * responses before this object's own update, this boss needs the one-frame defeat
      * dispatch deferral to match the ROM Camera_Max_X release timing
-     * ({@code loc_39BA4}, docs/s2disasm/s2.asm:77856-77857). WFZ (ObjC5) uses
+     * ({@code loc_39BA4}, docs/s2disasm/s2.asm:78063-78064). WFZ (ObjC5) uses
      * {@code routine_secondary} instead and is correctly left undeferred.
      */
     @Override

@@ -23,7 +23,11 @@ public final class MutatorWorldProvider implements WorldSessionPolicyProvider {
     @Override public WorldSessionPolicyState open(WorldSession world) {
         // The explicit presentation patch may add support outside the backing catalog module.
         var support=world.resolvedGameModule().getGameService(MutatorSupportProfile.class);
-        var owner=catalog.definitions().isEmpty() || support==null?null:new MutatorWorldState(world,catalog,support);
+        var observers=world.resolvedGameModule().getGameService(
+                com.openggf.mods.code.GameplayObserverRegistry.class);
+        boolean observes=observers!=null && !observers.entries().isEmpty();
+        var owner=observes || support!=null && !catalog.definitions().isEmpty()
+                ?new MutatorWorldState(world,catalog,support):null;
         return com.openggf.game.session.CompositeWorldSessionPolicyState.of(owner,
                 engineChildren==null?null:engineChildren.open(world));
     }

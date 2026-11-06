@@ -87,7 +87,7 @@ Under this design: **yes.** The submitted work is one Nemesis PLC entry — a RO
 address and a VRAM destination read out of the engine's own `NemesisPlcServiceQueue`,
 which was populated from `Sonic1Constants.ART_LOAD_CUES_ADDR` through
 `PlcParser.parse`. The ROM identifies a PLC entry by exactly those two values;
-the 6-byte `v_plc_buffer` slot is `plc_slot_size: equ 4+2` (`_Variables.asm:163`).
+the 6-byte `v_plc_buffer` slot is `plc_slot_size: equ 4+2` (`_Variables.asm:167`).
 Nothing about the job comes from the trace. §7.1 specifies the submission point.
 
 This criterion is the one the rejected `LEVEL_LOAD` proposal failed outright

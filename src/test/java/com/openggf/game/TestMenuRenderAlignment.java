@@ -22,6 +22,17 @@ import static org.mockito.Mockito.mock;
 
 /** Focus frames centre the glyph cells they hold, in Settings and Game Setup, at native and wide widths. */
 class TestMenuRenderAlignment {
+    @Test
+    void holdToastStaysRightOfTheNativeHudColumnAndInsideTheFrame() {
+        for (int width : new int[] {320, 400, 640}) {
+            int w = MenuChrome.holdToastWidth("Esc", "Hold to return to games");
+            int x = MenuChrome.holdToastX(width, w);
+            int hudRight = Math.max(0, (width - 320) / 2) + MenuChrome.GAMEPLAY_HUD_RIGHT;
+            org.junit.jupiter.api.Assertions.assertTrue(x > hudRight, "score digits stay visible at " + width);
+            org.junit.jupiter.api.Assertions.assertTrue(x + w <= width - 8, "toast stays inside the frame at " + width);
+        }
+    }
+
     @TempDir Path directory;
 
     @Test
@@ -99,7 +110,9 @@ class TestMenuRenderAlignment {
         final List<Rect> focus = new ArrayList<>();
         final MenuPixelFont font = mock(MenuPixelFont.class, invocation -> {
             Object[] args = invocation.getArguments();
-            if (invocation.getMethod().getName().equals("drawText") && args.length == 8) {
+            if (invocation.getMethod().getName().equals("withHorizontalOffset")) {
+                ((Runnable) args[1]).run();
+            } else if (invocation.getMethod().getName().equals("drawText") && args.length == 8) {
                 lines.add(new Line((String) args[0], ((Number) args[1]).intValue(),
                         ((Number) args[2]).intValue(), ((Number) args[3]).floatValue()));
             } else if (invocation.getMethod().getName().equals("fillRect")

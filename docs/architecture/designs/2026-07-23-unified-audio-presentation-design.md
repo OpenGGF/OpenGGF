@@ -260,9 +260,16 @@ the final presentation stream. It does not:
 - migrate source cursors;
 - change command routing.
 
-Each submitted video frame receives exactly one stereo PCM packet. If no fresh
-audio exists for that presented frame, the packet is explicit silence rather
-than stale PCM.
+Each submitted video frame receives exactly one capture-clock-sized stereo PCM
+packet. The tap retains final published samples in a preallocated two-second
+FIFO, allowing multiple producer packets before a drain and retaining unused
+sample tails across drains. Draining never advances synthesis or history. An
+empty or partial FIFO supplies explicit silence for the missing samples rather
+than stale PCM. If publication would exceed the bound, the tap fails permanently;
+its next drain fails before advancing capture phase, using the existing silence
+fallback below. Producer publication remains nonblocking and other taps, history
+and speakers continue. This does not select video timestamps or enable independent
+live scheduling; see the [bounded separation and outstanding clock owners](2026-09-14-independent-render-frame-rate-design.md#bounded-audio-capture-repacketization--2026-10-30).
 
 The capture sample rate and frame clock are selected before tap attachment. If
 attachment fails, `LiveCaptureController` substitutes a

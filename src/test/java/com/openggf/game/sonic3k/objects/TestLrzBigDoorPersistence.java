@@ -67,4 +67,22 @@ class TestLrzBigDoorPersistence {
         manager.removeDynamicObject(restored);
         assertEquals(0x680,create(services,FIRST).getY());
     }
+    @Test void openingFinishesAndClearsShakeAfterCameraLeavesNativeWindow() {
+        var services=setup();var manager=services.objectManager();
+        var door=create(services,FIRST);open(door,FIRST);
+        var state=(LrzZoneRuntimeState)services.zoneRuntimeRegistry().current();
+        assertEquals(-1,state.screenShake().flag());
+        for(int frame=2;frame<=64;frame++) {
+            manager.update(0x2000,null,List.of(),frame);
+            assertTrue(manager.activeObjectsOfType(LrzBigDoorObjectInstance.class).contains(door),
+                    "loc_42AAE draws without Sprite_OnScreen_Test, including completion tick "+frame);
+            assertEquals(frame,door.openTimer());
+        }
+        assertTrue(door.isFullyOpen());
+        assertEquals(0,state.screenShake().flag(),"completion still owns the native global clear");
+        manager.update(0x2000,null,List.of(),65);
+        assertFalse(manager.activeObjectsOfType(LrzBigDoorObjectInstance.class).contains(door),
+                "the following loc_42B08 dispatch resumes Sprite_OnScreen_Test");
+    }
+
 }

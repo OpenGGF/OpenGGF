@@ -9,6 +9,7 @@ import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.game.solid.ContactKind;
 import com.openggf.game.solid.PlayerSolidContactResult;
 import com.openggf.game.solid.PlayerStandingState;
+import com.openggf.game.solid.SolidCall;
 import com.openggf.game.solid.SolidCheckpointBatch;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
@@ -68,15 +69,11 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
     private boolean mainHorizontalPushingThisFrame;
     private boolean sidekickHorizontalPushingThisFrame;
     private boolean horizontalLaunchRequiresCurrentPush;
-    private boolean mainFreshOrderedCarry;
-    private boolean sidekickFreshOrderedCarry;
     private PlayableEntity mainHorizontalStateOwner;
     private PlayableEntity sidekickHorizontalStateOwner;
     private final Set<PlayableEntity> extensionPendingHorizontalLaunch =
             Collections.newSetFromMap(new IdentityHashMap<>());
     private final Set<PlayableEntity> extensionHorizontalPushingThisFrame =
-            Collections.newSetFromMap(new IdentityHashMap<>());
-    private final Set<PlayableEntity> extensionFreshOrderedCarry =
             Collections.newSetFromMap(new IdentityHashMap<>());
 
     public OOZSpringObjectInstance(ObjectSpawn spawn, String name) {
@@ -129,18 +126,20 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
         bindHorizontalStateOwners(participants);
         pruneOmittedHorizontalState(participants);
         if (horizontalLaunchRequiresCurrentPush) {
-            SolidCheckpointBatch batch = checkpointAll();
-            for (int i = 0; i < participants.size(); i++) {
-                PlayableEntity participant = participants.get(i);
-                PlayerSolidContactResult result = batch.perPlayer().get(participant);
-                if (result != null && result.kind() == ContactKind.SIDE
+            // Obj45_Horizontal loads d4 = x_pos once, then restores that saved
+            // d4 before each character's SolidObject_Always_SingleCharacter
+            // (s2.asm:50399-50430). A character resolved after an earlier
+            // character's push is therefore carried by the push.
+            var solid = services().solidExecution();
+            SolidCall call = solid.entryCall();
+            for (PlayableEntity participant : participants) {
+                PlayerSolidContactResult result = solid.solidFor(participant, call);
+                if (result.kind() == ContactKind.SIDE
                         && participant instanceof AbstractPlayableSprite player) {
                     if (result.pushingNow()) {
                         markHorizontalPushingThisFrame(player);
                     }
-                    int beforeX = currentX;
                     handleHorizontalPush(player, result.sideDistX(), result.pushingNow());
-                    carryLaterStandingRiders(participants, i + 1, player, currentX - beforeX);
                 }
             }
         }
@@ -258,65 +257,6 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
         updateDynamicSpawn(currentX, currentY);
     }
 
-    private void carryLaterStandingRiders(
-            List<PlayableEntity> participants,
-            int startIndex,
-            AbstractPlayableSprite pusher,
-            int deltaX) {
-        if (deltaX == 0) {
-            return;
-        }
-        ObjectServices services = tryServices();
-        if (services == null || services.solidExecutionRegistry() == null) {
-            return;
-        }
-        for (int i = startIndex; i < participants.size(); i++) {
-            PlayableEntity participant = participants.get(i);
-            if (participant == pusher || !(participant instanceof AbstractPlayableSprite rider) || rider.getAir()) {
-                continue;
-            }
-            if (consumeFreshOrderedCarry(rider)) {
-                continue;
-            }
-            PlayerStandingState previous = services.solidExecutionRegistry().previousStanding(this, participant);
-            if (previous.standing()) {
-                // ROM Obj45_Horizontal restores routine-entry d4 before the later
-                // Sidekick SolidObject call, so later existing riders inherit
-                // another player's first push delta (s2.asm:50393-50510). The
-                // engine-side riding baseline observes that carry one frame
-                // later, so suppress this same ordered carry on the next pass.
-                NativePositionOps.addXPosPreserveSubpixel(rider, deltaX);
-                markFreshOrderedCarry(rider);
-            }
-        }
-    }
-
-    private boolean consumeFreshOrderedCarry(AbstractPlayableSprite rider) {
-        if (isExtensionPlayer(rider)) {
-            return extensionFreshOrderedCarry.remove(rider);
-        }
-        if (isNativeSidekick(rider)) {
-            boolean pending = sidekickFreshOrderedCarry;
-            sidekickFreshOrderedCarry = false;
-            return pending;
-        }
-        boolean pending = mainFreshOrderedCarry;
-        mainFreshOrderedCarry = false;
-        return pending;
-    }
-
-    private void markFreshOrderedCarry(AbstractPlayableSprite rider) {
-        if (isExtensionPlayer(rider)) {
-            extensionFreshOrderedCarry.add(rider);
-            return;
-        }
-        if (isNativeSidekick(rider)) {
-            sidekickFreshOrderedCarry = true;
-        } else {
-            mainFreshOrderedCarry = true;
-        }
-    }
-
     private void releaseHorizontalSpring(List<PlayableEntity> participants) {
         if (currentX == originalX) {
             return;
@@ -358,31 +298,24 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
             PlayableEntity previous, PlayableEntity current, boolean mainSlot) {
         if (previous == current) return current;
         boolean pending = mainSlot ? pendingMainHorizontalLaunch : pendingSidekickHorizontalLaunch;
-        boolean freshCarry = mainSlot ? mainFreshOrderedCarry : sidekickFreshOrderedCarry;
         if (previous == null && current != null
-                && !extensionPendingHorizontalLaunch.contains(current)
-                && !extensionFreshOrderedCarry.contains(current)) {
+                && !extensionPendingHorizontalLaunch.contains(current)) {
             return current;
         }
-        if (previous != null) {
-            if (pending) extensionPendingHorizontalLaunch.add(previous);
-            if (freshCarry) extensionFreshOrderedCarry.add(previous);
+        if (previous != null && pending) {
+            extensionPendingHorizontalLaunch.add(previous);
         }
         boolean restoredPending = current != null && extensionPendingHorizontalLaunch.remove(current);
-        boolean restoredFreshCarry = current != null && extensionFreshOrderedCarry.remove(current);
         if (mainSlot) {
             pendingMainHorizontalLaunch = restoredPending;
-            mainFreshOrderedCarry = restoredFreshCarry;
         } else {
             pendingSidekickHorizontalLaunch = restoredPending;
-            sidekickFreshOrderedCarry = restoredFreshCarry;
         }
         return current;
     }
 
     private void pruneOmittedHorizontalState(List<PlayableEntity> participants) {
         extensionPendingHorizontalLaunch.removeIf(player -> !containsIdentity(participants, player));
-        extensionFreshOrderedCarry.removeIf(player -> !containsIdentity(participants, player));
         extensionHorizontalPushingThisFrame.removeIf(player -> !containsIdentity(participants, player));
     }
 

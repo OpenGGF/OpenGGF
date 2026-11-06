@@ -106,6 +106,11 @@ public final class SszTailsArrivalHelperObjectInstance extends AbstractObjectIns
                     return;
                 }
                 NativePositionOps.writeXPosPreserveSubpixel(sidekick, x);
+                // Obj_57DCC (sonic3k.asm:116935-116946): $2E is
+                // object_control. Value 1 replaces the dormant $83, allowing
+                // Animate_Tails at loc_138C8 while movement remains scripted.
+                ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(sidekick);
+                sidekick.setObjectMappingFrameControl(false);
                 sidekick.setAnimationId(Sonic3kAnimationIds.ROLL);
                 sidekick.setRollingFlagPreserveRadii(true);
                 sidekick.setYSpeed((short) -1);

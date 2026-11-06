@@ -51,8 +51,8 @@ def main():
         try:
             classes = work / "classes"
             run("compile", ["javac", "--release", "25", "-cp", engine, "-d", classes,
-                sources / "NativeModMemberContract.java", sources / "NativeModMemberAudit.java",
-                sources / "NativeModRegistrationProbe.java", sources / "NativeModMemberContractTest.java"], work)
+                sources.parents[1] / "native-image/NativeModMemberContract.java", sources.parents[1] / "native-image/NativeModMemberAudit.java",
+                sources / "NativeModRegistrationProbe.java", sources.parents[1] / "native-image/NativeModMemberContractTest.java"], work)
             classpath = f"{classes}:{engine}"
             print(run("contract-tests", ["java", "--enable-native-access=ALL-UNNAMED", "-cp", classpath,
                 "com.openggf.tools.NativeModMemberContractTest", work / "contract-tests"], work).strip(), flush=True)

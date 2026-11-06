@@ -67,8 +67,8 @@ public class CNZRectBlocksObjectInstance extends BoxObjectInstance
 
     // Animation state
     private int mappingFrame = 0;
-    // ROM ObjD2_Init (s2.asm:58524-58538) never writes objoff_3A, so it is
-    // zero-initialized. The first ObjD2_Main tick (s2.asm:58547-58549) does
+    // ROM ObjD2_Init (s2.asm:58693-58707) never writes objoff_3A, so it is
+    // zero-initialized. The first ObjD2_Main tick (s2.asm:58716-58718) does
     // subq.w #1,objoff_3A on 0 -> -1 -> bmi -> immediately advances mapping_frame
     // and resets objoff_3A to $F. Thus mapping_frame 0 shows for only 1 tick.
     // Mirror that by starting animTimer at 0 (not FRAMES_PER_TICK-1) so the engine
@@ -216,10 +216,10 @@ public class CNZRectBlocksObjectInstance extends BoxObjectInstance
     }
 
     @Override
-    public boolean carriesRiderOnHorizontalMove(PlayableEntity player) {
+    public int tailCallD4(int routineEntryX) {
         // ObjD2 stores the current x_pos in d4 immediately before SolidObject,
         // so MvSonicOnPtfm observes zero object delta for this routine.
-        return false;
+        return getX();
     }
 
     @Override

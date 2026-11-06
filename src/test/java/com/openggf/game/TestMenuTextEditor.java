@@ -122,8 +122,10 @@ class TestMenuTextEditor {
                     assertTrue(line.x + font.measureWidth(line.text, line.scale) <= width, line.toString());
                     assertTrue(line.y + (line.scale < 1 ? 8 : 10) <= 224, line.toString());
                     assertTrue(line.scale == MenuStyle.COMPACT || line.scale == 1, line.toString());
-                    if (line.y == 45 || line.y >= 91 && line.y <= 166 || line.y == 212) {
-                        assertEquals(1f, line.scale, "Typed value, grid and controls use full-size glyphs: " + line);
+                    // The typed value and every character key use full-size glyphs; action keys
+                    // and the footer use the shared compact control face.
+                    if (line.y == 43 || line.y >= 87 && line.y <= 162 && line.text.length() == 1) {
+                        assertEquals(1f, line.scale, "Typed value and character keys use full-size glyphs: " + line);
                     }
                 }
             }
@@ -200,7 +202,7 @@ class TestMenuTextEditor {
         var font = org.mockito.Mockito.mock(com.openggf.graphics.MenuPixelFont.class, invocation -> {
             Object[] args = invocation.getArguments();
             if (invocation.getMethod().getName().equals("fillRect")
-                    && (float) args[4] == .08f && (float) args[5] == .23f) {
+                    && (float) args[4] == MenuChrome.FOCUS_FILL[0] && (float) args[5] == MenuChrome.FOCUS_FILL[1]) {
                 focusRows.add((int) args[1]);
             }
             return org.mockito.Answers.RETURNS_DEFAULTS.answer(invocation);
@@ -217,6 +219,77 @@ class TestMenuTextEditor {
         f.padPress(GLFW_GAMEPAD_BUTTON_DPAD_RIGHT);
         f.editor.render(font, 320);
         assertEquals(List.of(keypadRow), focusRows, "Changing device must preserve keypad focus");
+    }
+
+    @Test
+    void everyNumericKeypadCellIsARealKeyWithTruthfulHelp() {
+        for (MenuTextEditor.Mode mode : new MenuTextEditor.Mode[] {MenuTextEditor.Mode.INTEGER, MenuTextEditor.Mode.DECIMAL}) {
+            String keys = mode == MenuTextEditor.Mode.INTEGER ? "1234567890-+" : "1234567890-+.e";
+            Set<String> descriptions = new HashSet<>();
+            for (int cell = 0; cell < 20; cell++) {
+                for (boolean pad : new boolean[] {false, true}) {
+                    Fixture f = new Fixture("123", 8, mode);
+                    if (pad) { f.padPress(GLFW_GAMEPAD_BUTTON_DPAD_DOWN); f.padPress(GLFW_GAMEPAD_BUTTON_DPAD_RIGHT, cell); }
+                    else { f.press(GLFW_KEY_DOWN); f.press(GLFW_KEY_RIGHT, cell); }
+                    for (int width : new int[] {320, 400}) {
+                        RecordingFont font = new RecordingFont();
+                        f.editor.render(font, width);
+                        String help = font.lines.stream().filter(line -> line.y == 192).map(Line::text).findFirst().orElse("");
+                        assertFalse(help.isBlank(), mode + " cell " + cell + " has no help");
+                        assertTrue(font.measureWidth(help, MenuStyle.COMPACT) <= width - 18, help);
+                        assertFalse(help.endsWith("..."), "Keypad help fits whole: " + help);
+                        assertFalse(help.contains("space"), mode + " cell " + cell + ": " + help);
+                        assertEquals(expectedHelp(keys, cell), help, mode + " cell " + cell + " says what it does");
+                        descriptions.add(help);
+                    }
+                    String expected = expectNumericCell(f, keys, cell, pad);
+                    if (expected.equals("SET")) assertEquals(MenuTextEditor.Result.ACCEPTED, f.editor.consumeResult());
+                    else assertEquals(expected, f.editor.value(), mode + " cell " + cell + (pad ? " (pad)" : ""));
+                }
+            }
+            assertEquals(20, descriptions.size(), mode + ": every key says what it does: " + descriptions);
+        }
+    }
+
+    private static String expectedHelp(String keys, int cell) {
+        if (cell < keys.length()) return switch (keys.charAt(cell)) {
+            case '-' -> "Insert a minus sign";
+            case '+' -> "Insert a plus sign";
+            case '.' -> "Insert a decimal point";
+            case 'e' -> "Insert e for an exponent, as in 1e3";
+            default -> "Insert " + keys.charAt(cell);
+        };
+        return switch (cell) {
+            case 12 -> "Move to the beginning";
+            case 13 -> "Move to the end";
+            case 14 -> "Delete the character before the cursor";
+            case 15 -> "Move the cursor left";
+            case 16 -> "Move the cursor right";
+            case 17 -> "Clear this field";
+            case 18 -> "Restore the value when this editor opened";
+            case 19 -> "Set this value and close the editor";
+            default -> throw new AssertionError(cell);
+        };
+    }
+
+    /** Presses the focused cell (and any cursor setup) and returns the value it must produce. */
+    private static String expectNumericCell(Fixture f, String keys, int cell, boolean pad) {
+        Runnable choose = () -> { if (pad) f.padPress(GLFW_GAMEPAD_BUTTON_A); else f.press(GLFW_KEY_ENTER); };
+        Runnable right = () -> { if (pad) f.padPress(GLFW_GAMEPAD_BUTTON_DPAD_RIGHT); else f.press(GLFW_KEY_RIGHT); };
+        Runnable left = () -> { if (pad) f.padPress(GLFW_GAMEPAD_BUTTON_DPAD_LEFT); else f.press(GLFW_KEY_LEFT); };
+        if (cell < keys.length()) { choose.run(); return "123" + keys.charAt(cell); }
+        boolean integer = keys.length() == 12;
+        if (integer && cell == 12) { choose.run(); f.type(GLFW_KEY_9, "9"); return "9123"; }
+        if (integer && cell == 13) { left.run(); choose.run(); right.run(); choose.run(); f.type(GLFW_KEY_9, "9"); return "1239"; }
+        return switch (cell) {
+            case 14 -> { choose.run(); yield "12"; }
+            case 15 -> { choose.run(); f.type(GLFW_KEY_9, "9"); yield "1293"; }
+            case 16 -> { left.run(); choose.run(); choose.run(); right.run(); choose.run(); f.type(GLFW_KEY_9, "9"); yield "1293"; }
+            case 17 -> { choose.run(); yield ""; }
+            case 18 -> { for (int i = 0; i < 4; i++) left.run(); choose.run(); for (int i = 0; i < 4; i++) right.run(); choose.run(); yield "123"; }
+            case 19 -> { choose.run(); yield "SET"; }
+            default -> throw new AssertionError("cell " + cell);
+        };
     }
 
     @Test
@@ -254,12 +327,210 @@ class TestMenuTextEditor {
         f.press(GLFW_KEY_DOWN, 30);
         font.lines.clear(); f.editor.render(font, 320);
         assertTrue(font.lines.stream().anyMatch(l -> l.text.contains("FINAL ERROR")));
-        assertTrue(font.lines.stream().anyMatch(l -> l.text.contains("[U+E9][U+1F600]")));
+        assertTrue(font.lines.stream().anyMatch(l -> l.text.contains("caf\u00e9[U+1F600]")),
+                "Drawable letters stay readable; only undrawable clusters keep codepoint escapes");
         f.press(GLFW_KEY_ESCAPE);
         assertEquals("caf\u00e9\uD83D\uDE00", f.editor.value());
         assertEquals(MenuTextEditor.Result.NONE, f.editor.consumeResult());
         f.press(GLFW_KEY_BACKSPACE);
         assertEquals("caf\u00e9", f.editor.value());
+    }
+
+    @Test
+    void caretSitsAfterTheMeasuredPrefixAndTheFieldScrollsByPixels() throws Exception {
+        for (String value : new String[] {"iiiiWWWW", "WWWWiiii"}) {
+            Fixture f = new Fixture(value, 64);
+            f.press(GLFW_KEY_HOME);
+            f.press(GLFW_KEY_RIGHT, 4);
+            assertEquals(15 + com.openggf.graphics.MenuPixelFont.textWidth(value.substring(0, 4), 1), caretX(f.editor, 320),
+                    "Caret after " + value.substring(0, 4));
+        }
+        // A long narrow value scrolls so the caret stays inside the 279 px field.
+        Fixture f = new Fixture("i".repeat(100) + "W".repeat(60), 4096);
+        int x = caretX(f.editor, 320);
+        assertTrue(x > 15 && x <= 15 + 279, "caret " + x);
+        RecordingFont font = new RecordingFont();
+        f.editor.render(font, 320);
+        Line field = font.lines.stream().filter(line -> line.y == 43).findFirst().orElseThrow();
+        assertTrue(field.text.endsWith("WWW") && com.openggf.graphics.MenuPixelFont.textWidth(field.text, 1) <= 279, field.text);
+    }
+
+    /** Renders through a real menu font and returns the one-pixel gold caret's x. */
+    private static int caretX(MenuTextEditor editor, int width) throws Exception {
+        var font = new com.openggf.graphics.MenuPixelFont();
+        List<float[]> quads = new ArrayList<>();
+        var renderer = new com.openggf.graphics.TexturedQuadRenderer() {
+            @Override public void drawColoredTextureBatch(int texture, float[] vertices, int count) {
+                for (int q = 0; q < count; q++) quads.add(java.util.Arrays.copyOfRange(vertices, q * 48, q * 48 + 48));
+            }
+        };
+        var field = com.openggf.graphics.MenuPixelFont.class.getDeclaredField("menuRenderer");
+        field.setAccessible(true);
+        field.set(font, renderer);
+        editor.render(font, width);
+        // Caret: one pixel wide, twelve tall, top at y 42 (GL y 224 - 42).
+        return quads.stream().filter(v -> v[16] - v[0] == 1 && v[1] - v[9] == 12 && v[1] == 224 - 42)
+                .mapToInt(v -> Math.round(v[0])).findFirst().orElseThrow();
+    }
+
+    @Test
+    void legacyFontsKeepTheEditedEndOfALongAsciiPathVisible() {
+        Fixture f = new Fixture("START_" + "folder/".repeat(30) + "SUFFIX.gen", 4096, MenuTextEditor.Mode.PATH);
+        RecordingFont font = new RecordingFont();
+        f.editor.render(font, 320);
+        assertTrue(font.lines.stream().filter(l -> l.y == 43).anyMatch(l -> l.text.endsWith("SUFFIX.gen")));
+        f.press(GLFW_KEY_HOME);
+        font.lines.clear();
+        f.editor.render(font, 320);
+        assertTrue(font.lines.stream().filter(l -> l.y == 43).anyMatch(l -> l.text.startsWith("START_")));
+    }
+
+    @Test
+    void arabicCaretStartsAtVisualEndAndRightArrowEditsThePreviousLogicalBoundary() {
+        Fixture f = new Fixture("ابت", 64);
+        RecordingFont font = new RecordingFont();
+        f.editor.render(font, 320);
+        Line caret = font.lines.stream().filter(l -> l.text.equals("_") && l.y == 54).findFirst().orElseThrow();
+        assertEquals(15, caret.x, "The logical end of pure RTL text is its visual left edge");
+        f.press(GLFW_KEY_RIGHT);
+        f.type(GLFW_KEY_X, "X");
+        assertEquals("ابXت", f.editor.value(), "Right moves toward the previous logical Arabic character");
+    }
+
+    @Test
+    void rtlHomeEndChooseVisualEdgesWhileDeletionKeepsLogicalGraphemes() {
+        Fixture home = new Fixture("ابت", 64);
+        home.press(GLFW_KEY_HOME);
+        home.type(GLFW_KEY_X, "X");
+        assertEquals("ابتX", home.editor.value());
+        Fixture end = new Fixture("ابت", 64);
+        end.press(GLFW_KEY_END);
+        end.type(GLFW_KEY_X, "X");
+        assertEquals("Xابت", end.editor.value());
+        Fixture backspace = new Fixture("ابت", 64);
+        backspace.press(GLFW_KEY_RIGHT);
+        backspace.press(GLFW_KEY_BACKSPACE);
+        assertEquals("ات", backspace.editor.value());
+        Fixture delete = new Fixture("ابت", 64);
+        delete.press(GLFW_KEY_RIGHT);
+        delete.press(GLFW_KEY_DELETE);
+        assertEquals("اب", delete.editor.value());
+    }
+
+    @Test
+    void longRtlFieldScrollsItsFullShapedLineAndKeepsCaretInsideTheViewport() {
+        String value = "حفظ الإعدادات العربية ".repeat(15);
+        Fixture f = new Fixture(value, 4096);
+        List<Integer> offsets = new ArrayList<>(), caretXs = new ArrayList<>();
+        var font = org.mockito.Mockito.mock(com.openggf.graphics.MenuPixelFont.class, invocation -> {
+            Object[] args = invocation.getArguments();
+            if (invocation.getMethod().getName().equals("drawTextWindow")) {
+                assertEquals(value, ((com.openggf.graphics.text.ShapedLine) args[0]).text(),
+                        "Scrolling must preserve the original shaping context");
+                offsets.add((int) args[4]);
+            }
+            if (invocation.getMethod().getName().equals("fillRect") && (int) args[2] == 1
+                    && (float) args[4] == .3f) caretXs.add((int) args[0]);
+            return org.mockito.Answers.RETURNS_DEFAULTS.answer(invocation);
+        });
+        f.press(GLFW_KEY_END);
+        f.editor.render(font, 320);
+        assertTrue(offsets.getLast() > 0, "The visual right edge of a long line requires scrolling");
+        assertEquals(293, caretXs.getLast());
+        f.press(GLFW_KEY_HOME);
+        f.editor.render(font, 320);
+        assertEquals(0, offsets.getLast());
+        assertEquals(15, caretXs.getLast());
+        assertEquals(value, f.editor.value());
+    }
+
+    @Test
+    void caretMovementAndDeletionNeverSplitAGraphemeCluster() {
+        Fixture f = new Fixture("cafe\u0301 \u0915\u094D\u0937", 64);
+        f.press(GLFW_KEY_BACKSPACE);
+        assertEquals("cafe\u0301 ", f.editor.value(), "A Devanagari conjunct deletes as one character");
+        f.press(GLFW_KEY_BACKSPACE, 2);
+        assertEquals("caf", f.editor.value(), "A decomposed accent deletes with its base letter");
+        Fixture family = new Fixture("a\uD83D\uDC68\u200D\uD83D\uDC69\u200D\uD83D\uDC67b", 64);
+        family.press(GLFW_KEY_LEFT);
+        family.press(GLFW_KEY_BACKSPACE);
+        assertEquals("ab", family.editor.value(), "An emoji ZWJ sequence deletes as one character");
+    }
+
+    @Test
+    void compositionPersistsWithoutCommittingAndCommitClearEnterDoesNotAcceptInEitherOrder() {
+        for (boolean clearFirst : new boolean[] {true, false}) {
+            Fixture f = new Fixture("prefix", 64);
+            var session = com.openggf.control.InputHandlerInternalAccess.textInput(f.input);
+            session.preedit(com.openggf.control.Composition.fromCodepoints("日本語".codePoints().toArray(), new int[] {2, 1}, 0, 2));
+            f.frame(); f.frame();
+            assertEquals("prefix", f.editor.value());
+            if (clearFirst) session.preedit(com.openggf.control.Composition.EMPTY);
+            "日本語".codePoints().forEach(cp -> MenuInput.handleCharEvent(f.input, cp));
+            if (!clearFirst) session.preedit(com.openggf.control.Composition.EMPTY);
+            f.input.handleKeyEvent(GLFW_KEY_ENTER, GLFW_PRESS);
+            f.frame();
+            assertEquals("prefix日本語", f.editor.value());
+            assertEquals(MenuTextEditor.Result.NONE, f.editor.consumeResult());
+            f.input.handleKeyEvent(GLFW_KEY_ENTER, GLFW_RELEASE); f.frame();
+            f.press(GLFW_KEY_ENTER);
+            assertEquals(MenuTextEditor.Result.ACCEPTED, f.editor.consumeResult());
+        }
+    }
+
+    @Test
+    void gamepadBackCancelsCompositionBeforeClosingAndNumericCommitStillFilters() {
+        Fixture f = new Fixture("12", 64, MenuTextEditor.Mode.INTEGER);
+        var session = com.openggf.control.InputHandlerInternalAccess.textInput(f.input);
+        session.preedit(com.openggf.control.Composition.fromCodepoints("三".codePoints().toArray(), new int[] {1}, 0, 1));
+        f.padPress(GLFW_GAMEPAD_BUTTON_B);
+        assertEquals(MenuTextEditor.Result.NONE, f.editor.consumeResult());
+        assertEquals("12", f.editor.value());
+        session.preedit(com.openggf.control.Composition.EMPTY); session.endEvents(); f.frame();
+        f.type(GLFW_KEY_A, "3a4");
+        assertEquals("1234", f.editor.value());
+        f.padPress(GLFW_GAMEPAD_BUTTON_B);
+        assertEquals(MenuTextEditor.Result.CANCELLED, f.editor.consumeResult());
+    }
+
+    @Test
+    void secondGamepadBackClosesTheEditorWhileNoOpNativeResetStillDrains() {
+        Fixture f = new Fixture("kept", 64);
+        var session = com.openggf.control.InputHandlerInternalAccess.textInput(f.input);
+        session.preedit(com.openggf.control.Composition.fromCodepoints("古い".codePoints().toArray(), new int[] {2}, 0, 2));
+        f.padPress(GLFW_GAMEPAD_BUTTON_B);
+        assertEquals(MenuTextEditor.Result.NONE, f.editor.consumeResult());
+        f.padPress(GLFW_GAMEPAD_BUTTON_B);
+        assertEquals(MenuTextEditor.Result.CANCELLED, f.editor.consumeResult());
+        assertEquals("kept", f.editor.value());
+        MenuInput.handleCharEvent(f.input, '旧');
+        assertEquals("", f.input.consumeTypedText());
+        assertFalse(session.suppressCommands(), "The closed field cannot starve gameplay while native cancellation waits");
+    }
+
+    @Test
+    void inlineRtlCompositionCaretStaysAttachedToItsEndBeforeACommittedSuffix() {
+        Fixture f = new Fixture("abc xyz", 64);
+        f.press(GLFW_KEY_HOME); f.press(GLFW_KEY_RIGHT, 3);
+        var session = com.openggf.control.InputHandlerInternalAccess.textInput(f.input);
+        session.preedit(com.openggf.control.Composition.fromCodepoints("سلام".codePoints().toArray(), new int[] {4}, 0, 4));
+        List<com.openggf.graphics.text.ShapedLine> lines = new ArrayList<>();
+        List<Integer> caretXs = new ArrayList<>();
+        var font = org.mockito.Mockito.mock(com.openggf.graphics.MenuPixelFont.class, invocation -> {
+            Object[] args = invocation.getArguments();
+            if (invocation.getMethod().getName().equals("drawTextWindow"))
+                lines.add((com.openggf.graphics.text.ShapedLine) args[0]);
+            if (invocation.getMethod().getName().equals("fillRect") && (int) args[2] == 1
+                    && (float) args[4] == .3f && (float) args[5] == .9f) caretXs.add((int) args[0]);
+            return org.mockito.Answers.RETURNS_DEFAULTS.answer(invocation);
+        });
+        f.editor.render(font, 320);
+        var line = lines.getLast();
+        assertEquals("abcسلام xyz", line.text());
+        int expected = line.caretX(new com.openggf.graphics.text.ShapedLine.Caret(7, true));
+        assertNotEquals(line.caretX(7), expected, "The leading edge belongs to the suffix at the other side of the RTL run");
+        assertEquals(15 + expected, caretXs.getLast());
+        assertEquals("abc xyz", f.editor.value());
     }
 
     private final class Fixture {
@@ -301,6 +572,10 @@ class TestMenuTextEditor {
     private record Line(String text, int x, int y, float scale) { }
     private static final class RecordingFont extends PixelFont {
         final List<Line> lines = new ArrayList<>();
+        // Measure with the production menu face, as MenuChrome does.
+        @Override public int measureWidth(String text, float scale) {
+            return com.openggf.graphics.MenuPixelFont.textWidth(text, scale);
+        }
         @Override public void drawText(String text, int x, int y, float scale, float r, float g, float b, float a) {
             lines.add(new Line(text, x, y, scale));
         }

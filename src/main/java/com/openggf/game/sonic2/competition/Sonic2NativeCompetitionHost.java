@@ -166,6 +166,9 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
             // Verify/decode the destination before retiring the outgoing mode.
             var nextProfile = Sonic2CompetitionLevelProfile.load(services.roms().getRom(), zone, act);
             if (world == null) {
+                supplied.bindRevisionProfile(Objects.requireNonNullElse(rootModule.getGameService(
+                        com.openggf.game.sonic2.Sonic2RevisionProfile.class),
+                        com.openggf.game.sonic2.Sonic2RevisionProfile.COMPATIBLE));
                 session = supplied;
                 // Bind identities and banks BEFORE NativeCompetitionWorld.open chooses managers.
                 supplied.bindPlayers(Sonic2CompetitionSession.createNativeParticipant(0, "sonic"),
@@ -224,9 +227,8 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
                     pauseAudio.requestPause();
                 var pauseResult = requireWorld().pauseVBlank(frame);
                 // VintRet (s2.asm:507-508) advances even when Pause_Loop has
-                // no RunObjects. The bound power-on counter delegates to this
-                // actual object clock; the ordinary body owns its own tick.
-                context().getObjectManager().advanceVblaCounter();
+                // no RunObjects. pauseVBlank owns that actual object-clock
+                // tick after art service; the ordinary body owns its own tick.
                 pause.acceptSample(sampleNativeInput(), nativeSlowMotionFlag.getAsBoolean());
                 if (pause.continuation() == Sonic2CompetitionPause.Continuation.ORDINARY_WAIT)
                     pauseAudio.requestResume(); // SlowMo also writes FF while Game_paused remains one.

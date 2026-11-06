@@ -32,7 +32,7 @@ import static org.mockito.Mockito.when;
  * the full boss instance infrastructure (art loading, render manager, etc.)
  * and is documented below for reference.
  *
- * <p>ROM reference: BossCollision_MCZ (s2.asm:85217-85274)
+ * <p>ROM reference: BossCollision_MCZ (s2.asm:85876-85933)
  *
  * <p><b>Mode 0 (diggers pointing up):</b>
  * Two collision checks at x+$14 and x-$14, each with height=$10, width=4,
@@ -71,7 +71,7 @@ public class TestTodo4_MCZBossCollision {
 
     /**
      * MCZ Act 1 has no events (returns early).
-     * ROM reference: LevEvents_MCZ (s2.asm:20777)
+     * ROM reference: LevEvents_MCZ (s2.asm:21408)
      */
     @Test
     public void testMCZAct1_NoEvents() {
@@ -232,7 +232,7 @@ public class TestTodo4_MCZBossCollision {
      * Boss_CollisionRoutine = 0 checks both upward drills:
      * x_pos + $14 and x_pos - $14, y_pos - $20, height=$10, width=4.
      *
-     * <p>ROM reference: BossCollision_MCZ2 (s2.asm:85768-85783)
+     * <p>ROM reference: BossCollision_MCZ2 (s2.asm:85930-85945)
      */
     @Test
     public void testObj57VerticalDrillsReportBothHurtRegions() throws Exception {

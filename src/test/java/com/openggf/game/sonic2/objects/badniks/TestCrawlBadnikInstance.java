@@ -30,7 +30,7 @@ class TestCrawlBadnikInstance {
 
         assertEquals(TouchCategoryDecodeMode.SONIC2_SPECIAL_PROPERTY, profile.categoryDecodeMode());
         assertFalse(profile.continuousCallbacks());
-        assertTrue(profile.requiresRenderFlagForTouch());
+        assertFalse(profile.requiresRenderFlagForTouch());
         assertFalse(profile.multiRegionSource());
         assertEquals(TouchShieldDeflectCapability.NONE, profile.shieldDeflectCapability());
         assertEquals(0, profile.shieldReactionFlags());
@@ -41,7 +41,7 @@ class TestCrawlBadnikInstance {
 
         assertTrue(crawl.usesSonic2TouchSpecialPropertyResponse());
         assertFalse(crawl.requiresContinuousTouchCallbacks());
-        assertTrue(crawl.requiresRenderFlagForTouch());
+        assertFalse(crawl.requiresRenderFlagForTouch());
         assertEquals(0x17, crawl.getCollisionFlags());
         assertEquals(0, crawl.getCollisionProperty());
         assertEquals(profile, crawl.getTouchResponseProfile(false));

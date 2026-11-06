@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.credits;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.data.Rom;
 import com.openggf.data.RomManager;
 import com.openggf.game.GameServices;
@@ -77,7 +79,7 @@ public class Sonic2CreditsTextRenderer {
 
         // Load Nemesis-compressed credit text font from ROM
         creditTextPatterns = PatternDecompressor.nemesis(rom,
-                Sonic2Constants.ART_NEM_CREDIT_TEXT_ADDR, 4096, "credit text");
+                address(rom, Sonic2Constants.ART_NEM_CREDIT_TEXT_ADDR), 4096, "credit text");
         if (creditTextPatterns == null || creditTextPatterns.length == 0) {
             LOGGER.warning("Credit text patterns not available from ROM");
             return;
@@ -87,7 +89,12 @@ public class Sonic2CreditsTextRenderer {
         endingPalettes = loadEndingPalettes(rom);
 
         // Build mapping frames for all 21 credit screens
-        mappingFrames = Sonic2CreditsMappings.createFrames();
+        try {
+            mappingFrames = Sonic2CreditsMappings.createFrames(rom);
+        } catch (IOException failure) {
+            LOGGER.warning("Cannot load credits text from supplied ROM: " + failure.getMessage());
+            return;
+        }
 
         // Create sprite sheet with paletteIndex = -1 (absolute mode: each piece
         // carries its own palette line, 0 for names, 1 for roles)

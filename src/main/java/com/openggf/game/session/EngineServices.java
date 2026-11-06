@@ -13,12 +13,21 @@ public final class EngineServices {
 
     public static synchronized void configure(EngineContext services) {
         current = Objects.requireNonNull(services, "services");
+        bindGraphicsPreferences(current);
     }
 
     public static synchronized EngineContext current() {
         if (current == null) {
             current = EngineContext.fromLegacySingletonsForBootstrap();
+            bindGraphicsPreferences(current);
         }
         return current;
+    }
+
+    private static void bindGraphicsPreferences(EngineContext services) {
+        var configuration = services.configuration();
+        com.openggf.graphics.SpriteSatInternalAccess.bindLineLimitSource(services.graphics(),
+                () -> configuration.getBoolean(
+                        com.openggf.configuration.SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT));
     }
 }

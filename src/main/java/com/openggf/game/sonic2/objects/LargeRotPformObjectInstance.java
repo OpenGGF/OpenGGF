@@ -269,7 +269,7 @@ public class LargeRotPformObjectInstance extends AbstractObjectInstance
      */
     private void renderLevelArt(List<GLCommand> commands) {
         List<SpriteMappingFrame> mappings = MAPPINGS.get(
-                Sonic2Constants.MAP_UNC_OBJ6E_ADDR, S2SpriteDataLoader::loadMappingFrames, "Obj6E");
+                Sonic2Constants.MAP_UNC_OBJ6E_ADDR, S2SpriteDataLoader::loadStockMappingFrames, "Obj6E");
         if (mappings.isEmpty() || mappingFrame >= mappings.size()) {
             return;
         }

@@ -368,7 +368,6 @@ class TestRewindSchemaRegistry {
         assertPolicy(grabberSchema, "pendingGrabPlayer", RewindFieldPolicy.CAPTURED);
         assertPolicy(launcherBallSchema, "playerCooldowns", RewindFieldPolicy.CAPTURED);
         assertPolicy(launcherBallSchema, "playerStates", RewindFieldPolicy.CAPTURED);
-        assertPolicy(launcherBallSchema, "playerVelocities", RewindFieldPolicy.CAPTURED);
         assertPolicy(launcherSpringSchema, "playerStates", RewindFieldPolicy.CAPTURED);
         assertPolicy(oozLauncherSchema, "playerStates", RewindFieldPolicy.CAPTURED);
         assertPolicy(flipperSchema, "launchCooldown", RewindFieldPolicy.CAPTURED);

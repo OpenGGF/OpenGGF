@@ -58,7 +58,7 @@ class TestLrzFlameThrower {
         return object;
     }
 
-    /** {@code bpl.s loc_43DC4} (sonic3k.asm:89281) and the two {@code $32} seeds. */
+    /** {@code bpl.s loc_43DC4} (sonic3k.asm:89297) and the two {@code $32} seeds. */
     @Test
     void subtypeBitSevenPicksTheVariantAndTheRestIsTheIdleLength() {
         LrzFlameThrowerObjectInstance horizontal = thrower(0x13, false);

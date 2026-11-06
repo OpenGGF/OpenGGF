@@ -1,5 +1,23 @@
 # Audio frontier log
 
+## Reading historical measurements — 2026-10-29 reconciliation
+
+Entries below retain their exact dated commands, runtimes, source/fixture
+identities and observed differences. No audio comparison was run for this
+reconciliation, so no frontier moved and no parity result is added. Old raw
+Maven/JDK 21 invocations are historical evidence; current work uses JDK 25 and
+`tools/testing/maven_queue.py` with focused selectors and original absolute ROM
+paths, under root validation/cleanup policy.
+
+The [reimplementation boundary](../architecture/engine-map.md#reimplementation-boundary)
+supersedes historical recommendations for 68000/Z80 cost models or instruction
+accounting. Unsupported sub-frame/startup/service timing remains a documented
+limit, not a prerequisite to add CPU, bus or virtual video emulation. Model
+ROM driver algorithms and semantic lifecycle owners; chip-synthesis emulation
+is the bounded exception. The dedicated timing-input contract grants no new
+audio/gameplay state authority. Historical proposals below do not authorize
+fixture-fitted waits, shifted captures or broader parity claims.
+
 The audio counterpart of [trace-frontier-log.md](trace-frontier-log.md): the
 running record of driver-oracle comparisons between the engine's SMPS driver
 and reference captures recorded from the real driver running in the pinned
@@ -40,7 +58,10 @@ defined by `com.openggf.tools.audio.parity`.
   issues `cmd_SEGA` before `Wait_SegaS3K` reads Start, and leaves the SEGA wait through `loc_3FE4` on Start.
 - **Open owners for the remaining 20 rows:** the cold boot before `Title_Screen` (native rows 0-12), the
   interrupt-masked decompression span (native rows 35-40), and the Z80's service time inside the frame. All
-  need a 68000/Z80 cost model; none was fitted.
+  were attributed here to unmodelled startup/service timing; none was fitted.
+  **Policy correction (2026-10-29):** this does not require or authorize a
+  68000/Z80 cost model. Preserve the measured residual while investigating
+  source-owned semantic boundaries within the reimplementation contract.
 
 ## 2026-10-17 - S3K title start: the stereo-frame-11 PCM difference was the ThreeBand cutoff pi; first difference now row 16
 
@@ -329,7 +350,7 @@ defined by `com.openggf.tools.audio.parity`.
   reference `FF`, engine `00`; the first 1,594 services match.
 - **ROM owner:** `zFinishTrackUpdate` resets `VolEnv` on an attacked note, but
   `zUpdatePSGTrack` returns on the music track's override bit before calling
-  `zDoVolEnv` (`Sound/Z80 Sound Driver.asm:1055-1069, :4058-4115`). The first
+  `zDoVolEnv` (`Sound/Z80 Sound Driver.asm:1055-1069, :4101-4158`). The first
   envelope byte is consumed only on the first pass after release.
 - **Evidence:** a focused red test observed cursor `1` under override; it now
   pins reset cursor `0`, no volume latch before release, and one first-step
@@ -854,7 +875,7 @@ defined by `com.openggf.tools.audio.parity`.
 - **Not an ordering fault, which is worth recording.** `zUpdatePSGTrack` sends
   the frequency first and reads the volume envelope after, and an `83h`
   terminator then jumps to `zRestTrack`, which falls through into
-  `zSilencePSGChannel` (Sound/Z80 Sound Driver.asm:4058-4130, :4189-4194,
+  `zSilencePSGChannel` (Sound/Z80 Sound Driver.asm:4058-4130, :4232-4237,
   :4220-4245). Frequency-then-silence is exactly what the ROM would emit. The
   engine's order was right; it simply reached the terminator and the ROM did
   not.
@@ -4849,7 +4870,7 @@ stream.
 - **Next.** Tick 150's `MUS_DAC.resting`. The engine sets a DAC track's rest
   bit from its note, but none of the three drivers' DAC paths touch it: S3K's
   `zUpdateDACTrack` jumps a rest straight to
-  `zUpdateDACTrack_GetDuration` (:2889-2896) without setting
+  `zUpdateDACTrack_GetDuration` (:2901-2908) without setting
   `PlaybackControl` bit 4, and S1's `DACUpdateTrack`
   (s1.sounddriver.asm:277-307) and S2's `zDACUpdateTrack`
   (s2.sounddriver.asm:759-790) have no rest test at all. That looks like a
@@ -5101,7 +5122,7 @@ stream.
   ticks 139 and 140. S3K re-sends it anyway: `zUpdateFMorPSGTrack`'s
   `.note_going` path calls `zUpdateFreq`, returns early only on the
   sustain-frequency bit, then calls `zDoModulation` and **falls through** to
-  `zFMSendFreq` (Sound/Z80 Sound Driver.asm:783-799), and that
+  `zFMSendFreq` (Sound/Z80 Sound Driver.asm:799-815), and that
   `zDoModulation` is an ordinary subroutine whose `ret z` on inactive
   modulation lands on the fall-through (:1279-1283).
   S2 is genuinely different and the engine currently implements S2's shape:
@@ -5183,13 +5204,17 @@ stream.
   only quantity that closes that gap is the per-frame service duration, and
   supplying it as a constant is precisely the fitted model hard rule 3
   forbids.
-- **The honest next step is a decision, not a fix.** Either the driver gains a
+- **Historical proposed next step (superseded by the reimplementation boundary):** Either the driver gains a
   Z80 cycle account for its own service (a large piece of work, and the only
   route that keeps the partition derivable), or the comparison stops
   partitioning the DAC stream by service boundary and compares the byte stream
   and its ordering while excusing the per-tick split, with the limit written
   into the known-discrepancies entry in the same change. Do not close it by
   measuring this fixture's counts.
+  **Policy correction (2026-10-29):** do not implement CPU cycle accounting to
+  satisfy this proposal. Retain the measured timing limit and seek semantic
+  source-owned fixes; any future comparator scope change needs explicit evidence
+  and must not relabel unmatched per-service timing as parity.
 
 
 ## 2026-09-04 - S2 request oracle reaches MATCH on every replayable window

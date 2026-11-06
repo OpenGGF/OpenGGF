@@ -74,7 +74,7 @@ public class MCZDrawbridgeObjectInstance extends AbstractObjectInstance
 
     // Collision parameters. Obj81 selects d1/d2/d3 (x_radius/halfWidth,
     // y_radius/airHalfHeight, y_radius+1/groundHalfHeight) by ANGLE, not by a
-    // bridge-down boolean, in loc_2A18A (docs/s2disasm/s2.asm:56982-57000).
+    // bridge-down boolean, in loc_2A18A (docs/s2disasm/s2.asm:57151-57169).
     //
     // RAISED / vertical wall (loc_2A18A defaults; reached when angle == $40 or
     // angle in $C0..$FF): move.w #$13,d1 / move.w #$40,d2 / move.w #$41,d3
@@ -352,7 +352,7 @@ public class MCZDrawbridgeObjectInstance extends AbstractObjectInstance
 
     @Override
     public SolidObjectParams getSolidParams() {
-        // ROM loc_2A18A (docs/s2disasm/s2.asm:56982-56996) selects the solid
+        // ROM loc_2A18A (docs/s2disasm/s2.asm:57151-57165) selects the solid
         // bounding box from the CURRENT angle byte, not a bridge-down flag:
         //   d1/d2/d3 default to $13/$40/$41 (raised vertical wall);
         //   move.b angle(a0),d0

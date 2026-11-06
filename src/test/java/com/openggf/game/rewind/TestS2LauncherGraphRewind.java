@@ -344,8 +344,6 @@ class TestS2LauncherGraphRewind {
         writeInt(launcher, "animFrameDuration", 3);
         mapPut(launcher, "playerStates", main, 2);
         mapPut(launcher, "playerStates", sidekick, 4);
-        mapPut(launcher, "playerVelocities", main, new int[] {0x1000, 0});
-        mapPut(launcher, "playerVelocities", sidekick, new int[] {0, -0x1000});
         mapPut(launcher, "playerCooldowns", sidekick, 6);
     }
 
@@ -358,16 +356,13 @@ class TestS2LauncherGraphRewind {
         assertEquals(5, readInt(restored, "mappingFrame"));
         assertEquals(3, readInt(restored, "animFrameDuration"));
         Map<?, ?> states = readMap(restored, "playerStates");
-        Map<?, ?> velocities = readMap(restored, "playerVelocities");
         Map<?, ?> cooldowns = readMap(restored, "playerCooldowns");
-        for (Map<?, ?> map : List.of(states, velocities, cooldowns)) {
+        for (Map<?, ?> map : List.of(states, cooldowns)) {
             assertFalse(map.containsKey(oldMain), "restored map must not retain stale main-player key");
             assertFalse(map.containsKey(oldSidekick), "restored map must not retain stale sidekick key");
         }
         assertEquals(2, states.get(restoredMain));
         assertEquals(4, states.get(restoredSidekick));
-        assertArrayEquals(new int[] {0x1000, 0}, (int[]) velocities.get(restoredMain));
-        assertArrayEquals(new int[] {0, -0x1000}, (int[]) velocities.get(restoredSidekick));
         assertEquals(6, cooldowns.get(restoredSidekick));
     }
 

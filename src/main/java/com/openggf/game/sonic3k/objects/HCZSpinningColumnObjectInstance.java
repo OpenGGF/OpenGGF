@@ -406,12 +406,27 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public boolean carriesRiderOnHorizontalMove(PlayableEntity player) {
+    public boolean preservesZeroDistanceSideContactMotion() {
+        // SolidObjectFull loc_1E042 (sonic3k.asm:41513-41519) branches directly
+        // to position-only separation for d0 == 0, preserving both velocities.
+        return true;
+    }
+
+    @Override
+    public boolean zeroXSpeedStopsOnLeftSideContact() {
+        // HCZSpinningColumn_Main (sonic3k.asm:68176-68198) calls SolidObjectFull.
+        // Its loc_1E042 / loc_1E056 left-side branch (sonic3k.asm:41513-41528)
+        // rejects only negative x_vel; zero still clears x_vel and ground_vel.
+        return true;
+    }
+
+    @Override
+    public int tailCallD4(int routineEntryX) {
         // loc_326B6 moves the column before loading its updated x_pos into d4
         // for SolidObjectFull. MvSonicOnPtfm then subtracts that same current
         // x_pos, producing a zero horizontal carry delta
         // (sonic3k.asm:68172-68197,41056-41082,41682-41719).
-        return false;
+        return getX();
     }
 
     @Override

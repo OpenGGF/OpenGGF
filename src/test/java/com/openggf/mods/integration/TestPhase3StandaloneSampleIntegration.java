@@ -237,6 +237,8 @@ class TestPhase3StandaloneSampleIntegration {
         EngineContext previous = EngineServices.current();
         previousEngineContext = previous;
         SonicConfigurationService config = SonicConfigurationService.createStandalone(temp.resolve("config"));
+        assertTrue(config.getBoolean(SonicConfiguration.LIVE_REWIND_ENABLED),
+                "fresh settings exercise the enabled rewind default during a real standalone launch");
         config.setConfigValue(SonicConfiguration.AUDIO_ENABLED, false);
         config.setConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
         EngineContext services = new EngineContext(config, previous.graphics(), previous.audio(),
@@ -266,6 +268,8 @@ class TestPhase3StandaloneSampleIntegration {
         launchThroughTitleScreen(engine, MasterTitleEntry.Action.NEW_GAME);
 
         assertEquals(GameMode.LEVEL, engine.getCurrentGameMode());
+        assertNull(SessionManager.getCurrentGameplayMode().getRewindController(),
+                "custom level geometry must not install the native COW rewind adapter");
         assertTrue(SessionManager.getCurrentWorldSession().getDataSource().rom().isEmpty());
         var saveContext = SessionManager.getCurrentWorldSession().getSaveSessionContext();
         assertEquals(1, saveContext.activeSlot().orElseThrow());

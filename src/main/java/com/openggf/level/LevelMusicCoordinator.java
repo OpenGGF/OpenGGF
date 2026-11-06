@@ -5,6 +5,7 @@ import com.openggf.game.Game;
 import com.openggf.game.LevelInitProfile;
 import com.openggf.game.ZoneKey;
 import com.openggf.game.ZoneRegistry;
+import com.openggf.level.objects.ObjectCallbackAbortException;
 
 import java.io.IOException;
 import java.util.List;
@@ -85,7 +86,11 @@ final class LevelMusicCoordinator {
         }
         try {
             return resolveMusicId(game, registry, levels.get(currentZone).get(currentAct).levelIndex());
+        } catch (ObjectCallbackAbortException aborted) {
+            throw aborted;
         } catch (Exception error) {
+            var aborted = DeferredLevelLoadException.callbackAbortInLoadFailure(error);
+            if (aborted != null) throw aborted;
             logger.warning("Failed to get music ID for current level: " + error.getMessage());
             return -1;
         }

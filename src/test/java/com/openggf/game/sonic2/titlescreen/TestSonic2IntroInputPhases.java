@@ -134,7 +134,8 @@ class TestSonic2IntroInputPhases {
             tick(players(allButtons(), allButtons()), false);
         }
         assertEquals(TitleScreenProvider.State.FADE_IN, manager.getState());
-        assertTrue(((boolean[]) field("sparklePlayedAt"))[0], "natural title init owns the twinkle");
+        assertTrue((boolean) field("introComplete"), "the final text sample retains P2 into initial Obj0E");
+        assertFalse(((boolean[]) field("sparklePlayedAt"))[0], "that initial skip precedes the twinkle owner");
 
         // A new screen lifetime must not inherit the completed handoff. Exercise
         // P1 independently after P2 owned the previous screen's exit.

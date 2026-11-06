@@ -7,7 +7,7 @@ The parent owns scene wiring, release prose, combined validation, merge/push and
 
 ## Runtime contract
 
-[PerformerArt](../../../examples/sitar-hero/src/main/java/sitarhero/PerformerArt.java)
+[PerformerArt](../../../examples/sitar-hero/src/main/java/sitarhero/stage/PerformerArt.java)
 retains `draw(SceneCanvas, int x, int y, long ticks, String instrument, boolean playing)`
 and adds exactly this package-local hook:
 
@@ -27,7 +27,7 @@ a pre-pause strike. Both drawing and hit admission clear stale state on a backwa
 tick. There is quiet one-pixel breathing and Tails' native standing-tail swish;
 neither creates instrument attacks. An active display without hits stays idle.
 
-[PerformerMotion](../../../examples/sitar-hero/src/main/java/sitarhero/PerformerMotion.java)
+[PerformerMotion](../../../examples/sitar-hero/src/main/java/sitarhero/stage/PerformerMotion.java)
 stores only bounded cosmetic note-on envelopes per role/lane. Preparation, contact,
 rebound and settling finish within 12 ticks; sparse sound arcs expire at 18 ticks.
 Drum bits 0/2 drive the left pad, bits 1/3 the right pad and bit 4 the pedal/native
@@ -37,9 +37,9 @@ restarts the attack or emits repeated waves.
 
 ## Native pixels and layer ownership
 
-[PerformerRig](../../../examples/sitar-hero/src/main/java/sitarhero/PerformerRig.java)
+[PerformerRig](../../../examples/sitar-hero/src/main/java/sitarhero/stage/PerformerRig.java)
 contains only reference polygons and native mapping origins/pivots.
-[PerformerCutout](../../../examples/sitar-hero/src/main/java/sitarhero/PerformerCutout.java)
+[PerformerCutout](../../../examples/sitar-hero/src/main/java/sitarhero/stage/PerformerCutout.java)
 partitions the **owning mapping frame**, preserving its untouched pixels, then
 composes backing layers. Every arm/hand/foot pixel comes from `SceneRomArt`.
 Nearest-neighbour rotations are cached; there is no generic painted humanoid arm,

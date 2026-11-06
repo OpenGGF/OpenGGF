@@ -70,7 +70,8 @@ class CreatorKitTest(unittest.TestCase):
         for relative in ("src/test/java/demo/ModelTest.java", "src/test/resources/fixture.txt",
                          "tools/generate_maps.py", "generate_resources.py"):
             self.assertEqual((project / relative).read_bytes(), entries["examples/model-demo/" + relative])
-        self.assertFalse(any("__pycache__" in name or "target/test-classes" in name for name in entries))
+        self.assertFalse(any("__pycache__" in name or "target/test-classes" in name
+                             or "ggfmod.local.json" in name for name in entries))
         readme = entries["examples/model-demo/README.md"].decode()
         self.assertIn("--test", readme)
         pom = ET.fromstring(entries["examples/model-demo/pom.xml"])
@@ -88,6 +89,9 @@ class CreatorKitTest(unittest.TestCase):
                 if file.is_file():
                     self.assertEqual(file.read_bytes(), entries["examples/" + name + "/" + file.relative_to(project).as_posix()])
         self.assertIn("examples/three-islands/tools/generate_maps.py", entries)
+        for name, project in kit.exported_projects(root).items():
+            self.assertIn("MIT License", (project / "LICENSE").read_text(), name)
+            self.assertEqual((project / "LICENSE").read_bytes(), entries["examples/" + name + "/LICENSE"])
 
     def test_archive_preserves_authored_walkthroughs_without_runtime_outputs(self):
         project = self.root / "examples/walkthrough-demo"
@@ -362,6 +366,15 @@ class CreatorKitTest(unittest.TestCase):
         self.assertIn(b"<skipTests>false</skipTests>", pom)
         self.assertIn(b"<classifier>mod-testkit</classifier><scope>test</scope>", pom)
         self.assertIn(b"<artifactId>maven-surefire-plugin</artifactId><version>3.2.5", pom)
+
+    def test_actual_export_builds_only_pending_migration_examples_in_the_expert_lane(self):
+        root = Path(__file__).resolve().parents[2]
+        pending = kit.pending_migration(root)
+        self.assertTrue(pending <= set(kit.exported_projects(root)), pending)
+        entries = kit.export_examples(root)
+        for name in kit.exported_projects(root):
+            readme = entries["examples/" + name + "/README.md"].decode()
+            self.assertEqual(name in pending, "build_project.py . --expert-legacy" in readme, name)
 
     def test_exported_readme_leads_with_artifact_build_and_run_instructions(self):
         project = self.root / "examples/hello-scene"

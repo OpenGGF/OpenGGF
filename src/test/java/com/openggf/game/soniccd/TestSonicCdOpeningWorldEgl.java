@@ -25,7 +25,7 @@ import com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane;
 import com.openggf.sprites.render.PlayerResidentBanks;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tools.HeadlessGameBoot;
-import com.openggf.tools.InputScriptCompiler;
+import com.openggf.route.InputScriptCompiler;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;

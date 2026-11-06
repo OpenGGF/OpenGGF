@@ -51,8 +51,16 @@ class TestRoomHostProfiles {
     @Test
     void malformedLooksAreRejectedAtJoin() throws Exception {
         FakeHubConnection bad = new FakeHubConnection();
-        assertNull(admit(bad, "Ana", "00F", dir.resolve("a")), "odd nibbles are not Mega Drive colours");
-        assertEquals("invalid appearance", rejection(bad));
+        var identity = PlayerIdentity.loadOrCreate(dir.resolve("a"));
+        var handshake = new ClientHandshake(identity, "Ana", "00F", FP, null,
+                AuthenticationTranscript.Role.ROOM_DIRECT, () -> AuthenticationTranscript.LOCAL_PLAINTEXT);
+        room.onConnected(bad);
+        room.onText(bad, ControlCodec.encode(null, handshake.hello()));
+        assertNotNull(bad.closedReason);
+        assertTrue(bad.closedReason.contains("invalid appearance"));
+        assertTrue(messages(bad).stream().noneMatch(message -> message instanceof ControlMessage.Welcome
+                || message instanceof ControlMessage.JoinAccepted));
+        assertEquals(0, room.playerCount());
     }
 
     @Test
@@ -104,13 +112,27 @@ class TestRoomHostProfiles {
         assertEquals(1, looks(b).size(), "a second update inside the interval is ignored");
         now += Protocol.PROFILE_MIN_INTERVAL_MILLIS;
         room.onText(a, ControlCodec.encode(joinA.sessionToken(), new ControlMessage.UpdateProfile(" Ana ", GREEN)));
-        room.onText(a, ControlCodec.encode(joinA.sessionToken(), new ControlMessage.UpdateProfile("Ana", "zz")));
-        assertEquals(1, looks(b).size(), "non-canonical names and malformed looks are ignored");
+        assertEquals(1, looks(b).size(), "non-canonical names are ignored");
+        assertNull(a.closedReason);
         now += Protocol.PROFILE_MIN_INTERVAL_MILLIS;
         room.requestStartRound(new ControlMessage.RoundConfig("s3k", 0, 0, 300, "OPEN", null));
         room.onText(a, ControlCodec.encode(joinA.sessionToken(), new ControlMessage.UpdateProfile("Ana", GREEN)));
         assertEquals(1, looks(b).size(), "profiles are fixed once a round starts");
         assertTrue(renames.isEmpty());
+    }
+
+    @Test
+    void malformedProfileUpdatesRetireTheSenderWithoutPublishingALook() throws Exception {
+        FakeHubConnection a = new FakeHubConnection();
+        FakeHubConnection b = new FakeHubConnection();
+        var joined = admit(a, "Ana", "", dir.resolve("a"));
+        admit(b, "Bo", "", dir.resolve("b"));
+        b.text.clear();
+        room.onText(a, ControlCodec.encode(joined.sessionToken(),
+                new ControlMessage.UpdateProfile("Ana", "zz")));
+        assertNotNull(a.closedReason);
+        assertTrue(looks(b).isEmpty());
+        assertEquals(1, room.playerCount());
     }
 
     private ControlMessage.JoinAccepted admit(FakeHubConnection connection, String name, String look,

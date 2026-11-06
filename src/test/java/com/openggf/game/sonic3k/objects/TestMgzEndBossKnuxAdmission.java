@@ -76,6 +76,25 @@ class TestMgzEndBossKnuxAdmission {
         // No retry after this discarded frame: the actual host owns teardown.
     }
 
+    @Test void activeKnucklesBossBlinkAdvancesOnUpdatesRatherThanPictures() throws Exception {
+        var f = new Fixture(true);
+        f.atDestination();
+        f.tick();
+        for (int i = 0; i < 122; i++) f.tick();
+        var boss = f.boss();
+        assertFalse(boss.isHidden());
+        int before = number(boss, "renderTick");
+        for (int i = 0; i < 5; i++) boss.appendCompositeChild(MgzEndBossRenderChild.ROLE_POD);
+        assertEquals(before, number(boss, "renderTick"));
+        f.tick();
+        assertEquals(before + 1, number(boss, "renderTick"));
+        f.roundTrip();
+        boss = f.boss();
+        assertEquals(before + 1, number(boss, "renderTick"));
+        f.tick();
+        assertEquals(before + 2, number(f.boss(), "renderTick"));
+    }
+
     @Test void raw120WaitAndCameraApproachFinishBeforeTheNextFightDispatch() throws Exception {
         var f=new Fixture(true);f.camera.setX((short)0x3C78);f.camera.setY((short)0);
         f.camera.setMinY((short)7);f.camera.setMaxYTarget((short)0x400);
@@ -88,7 +107,7 @@ class TestMgzEndBossKnuxAdmission {
         assertEquals(1,f.fades);assertEquals(1,f.manager.getActiveObjects().size());
         for(int i=0;i<120;i++)f.tick();
         assertEquals(0,f.music);assertEquals(0,gate(boss).captureRewindStateValue().musicWaitTimer());
-        f.tick();assertEquals(1,f.music);assertEquals(Sonic3kMusic.MINIBOSS.id,f.musicId);
+        f.tick();assertEquals(1,f.music);assertEquals(Sonic3kMusic.MINIBOSS_S3.id,f.musicId);
         assertEquals(1,number(boss,"admissionPhase"),"music alone does not complete camera approach");
         assertEquals(0,f.camera.getMinY());assertEquals(0x3C78,f.camera.getMinX()&65535);
         assertEquals(1,f.manager.getActiveObjects().size());

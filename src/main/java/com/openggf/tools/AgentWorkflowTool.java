@@ -364,7 +364,7 @@ public final class AgentWorkflowTool {
         line(sb, "  - CHANGELOG.md            (Changelog: updated -- engine src/main change)");
         line(sb, "  - docs/status/known-discrepancies.md / AGENTS_S3K.md S3K discrepancies if behaviour diverges");
         line(sb, "  - docs/status/trace-frontier-log.md if a trace frontier moves/regresses");
-        line(sb, "  - rom-pitfalls.md (mirror BOTH .agents/skills/ and .claude/skills/) for reusable pitfalls");
+        line(sb, "  - rom-pitfalls.md (edit .agents/skills/, then python3 tools/git/sync_skills.py) for reusable pitfalls");
         line(sb, "  - Trailers required on non-master commits: Changelog, Guide, Known-Discrepancies,");
         line(sb, "    S3K-Known-Discrepancies, Agent-Docs, Configuration-Docs, Skills.");
         line(sb, "");

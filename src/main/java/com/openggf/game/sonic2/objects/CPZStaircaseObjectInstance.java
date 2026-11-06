@@ -194,7 +194,7 @@ public class CPZStaircaseObjectInstance extends AbstractObjectInstance
         // `btst d6,status(a0)` (docs/s2disasm/s2.asm:35070-35072), so each step
         // owns its own standing bit and a landing on a neighbouring step
         // re-seats the rider onto that step via SolidObject_Landed ->
-        // RideObject_SetRide (docs/s2disasm/s2.asm:35619-35626). Folding the
+        // RideObject_SetRide (docs/s2disasm/s2.asm:35988-35995). Folding the
         // four slots into one engine instance must keep the bits piece-scoped
         // or the rider stays latched to the step it first landed on.
         return true;
@@ -221,53 +221,6 @@ public class CPZStaircaseObjectInstance extends AbstractObjectInstance
         // child SolidObject slots can leave the current Status_Push bit visible
         // before TailsCPU_Normal samples Tails and the delayed leader status.
         return isFacingAdjacentStepSide(playerEntity, false);
-    }
-
-    @Override
-    public boolean preservesSidekickCpuPushGraceWhileRiding(PlayableEntity playerEntity) {
-        // TailsCPU_Normal tests Tails' current Status_Push before later Obj78
-        // child SolidObject calls can refresh or clear the live SST push bits
-        // (docs/s2disasm/s2.asm:39291-39294; Obj78 SolidObject at 56006-56021).
-        // The lower-neighbouring-step face is already modelled by the ordinary
-        // live push-status latch above. The CPU-only bridge covers the opposite
-        // folded child-slot ordering case without extending that latch into
-        // later lower-step windows.
-        return playerEntity != null && playerEntity.isCpuControlled()
-                && yOffsets[0] != 0
-                && isFacingAdjacentStepSide(playerEntity, false);
-    }
-
-    @Override
-    public int sidekickCpuPushGraceMinimumFramesWhileRiding(PlayableEntity playerEntity) {
-        return preservesSidekickCpuPushGraceWhileRiding(playerEntity) ? 8 : Integer.MAX_VALUE;
-    }
-
-    @Override
-    public boolean usesSidekickCpuPushBypassObjectOrderStatusDelay(PlayableEntity playerEntity) {
-        // Obj78's child SolidObject status can be visible to TailsCPU_Normal at
-        // the adjacent object-order status sample even when the final frame
-        // trace has the leader pushing on the staircase. This lets the first
-        // child-side case branch like ROM without extending the delayed leader
-        // push bridge into CPZ2 f5285.
-        return playerEntity != null && playerEntity.isCpuControlled()
-                && yOffsets[0] != 0
-                && nearestPieceIndex(playerEntity.getCentreX()) == 1
-                && isFacingAdjacentStepSide(playerEntity, false);
-    }
-
-    @Override
-    public boolean preservesSidekickDelayedLeaderPushWhileRiding(PlayableEntity playerEntity) {
-        // Obj78 runs as four separate SST slots: the parent plus three children
-        // allocated after it (docs/s2disasm/s2.asm:55967-55995). Each child calls
-        // SolidObject and ORs its contact bits back into the parent accumulator
-        // (docs/s2disasm/s2.asm:56006-56021), so TailsCPU_Normal's delayed
-        // Sonic_Stat_Record_Buf sample can still see later child-slot push bits
-        // while the folded engine object has already reconciled the visible
-        // parent state. The first child side has already aged out of that delayed
-        // leader window in CPZ2 f5285; keep the bridge to the later child slots.
-        return playerEntity != null && playerEntity.isCpuControlled()
-                && yOffsets[0] != 0
-                && nearestPieceIndex(playerEntity.getCentreX()) >= 2;
     }
 
     /**
@@ -577,5 +530,4 @@ public class CPZStaircaseObjectInstance extends AbstractObjectInstance
             ctx.drawLine(left, bottom, left, top, 0.6f, 0.8f, 0.3f);
         }
     }
-
 }

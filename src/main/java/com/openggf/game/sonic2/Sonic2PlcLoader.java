@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.data.Rom;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.level.resources.PlcParser;
@@ -37,7 +39,7 @@ public final class Sonic2PlcLoader {
                     plcId, Sonic2Constants.ART_LOAD_CUES_ENTRY_COUNT - 1));
             return new PlcDefinition(plcId, List.of());
         }
-        return PlcParser.parse(rom, Sonic2Constants.ART_LOAD_CUES_ADDR, plcId);
+        return PlcParser.parse(rom, address(rom, Sonic2Constants.ART_LOAD_CUES_ADDR), plcId);
     }
 
     /**
@@ -61,7 +63,7 @@ public final class Sonic2PlcLoader {
             LOG.warning("Zone index " + zoneIndex + " out of range for LEVEL_DATA_DIR (max 16)");
             return new int[]{0, 0};
         }
-        int base = Sonic2Constants.LEVEL_DATA_DIR + zoneIndex * Sonic2Constants.LEVEL_DATA_DIR_ENTRY_SIZE;
+        int base = address(rom, Sonic2Constants.LEVEL_DATA_DIR) + zoneIndex * Sonic2Constants.LEVEL_DATA_DIR_ENTRY_SIZE;
         // The first byte of each 4-byte longword holds the PLC ID
         // (the remaining 3 bytes are the ROM art address, already handled by level loader)
         int plc1Id = rom.readByte(base) & 0xFF;

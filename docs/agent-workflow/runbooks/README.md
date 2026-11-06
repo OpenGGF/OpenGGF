@@ -21,7 +21,7 @@ These runbooks implement **Option 1** of
 
 ## Non-negotiable project rules (apply to every runbook)
 
-These come from [`CLAUDE.md`](../../../CLAUDE.md) and [`AGENTS.md`](../../../AGENTS.md). Violating them fails code review or a guard test even when behavior looks correct.
+These come from [`AGENTS.md`](../../../AGENTS.md). Violating them fails code review or a guard test even when behavior looks correct.
 
 1. **ROM-only runtime assets.** Object art, mappings, DPLCs, animation scripts, PLC data, and any other runtime asset bytes must come from the user-supplied ROM through the engine loader. Never read runtime asset bytes from `docs/` disassembly — `docs/` is for research, labels, and offset discovery only.
 2. **S3K = prefer S&K-side addresses.** Use `sonic3k.asm` addresses (`< 0x200000`) in `Sonic3kConstants.java` and always run `RomOffsetFinder --game s3k`; pick the `sonic3k.asm` hit when both halves match. Rare exception: if an object has no S&K equivalent it may reference the `s3.asm` (S3-half) asset directly — use it after verifying, rather than looping on a non-existent S&K variant.
@@ -31,11 +31,11 @@ These come from [`CLAUDE.md`](../../../CLAUDE.md) and [`AGENTS.md`](../../../AGE
 6. **Object code uses injected `ObjectServices`.** Call `services()`; never `getInstance()` in object code; never call `services()` in a constructor.
 7. **ROM positions use center coordinates.** Use `getCentreX()`/`getCentreY()` / `NativePositionOps` for interactions, not top-left `getX()`/`getY()`.
 8. **Tests are JUnit 5 / Jupiter only.** No `org.junit.*` (JUnit 4) imports, rules, or runners.
-9. **Mirror skills.** If you create/modify a file under `.agents/skills/` or `.claude/skills/`, make the identical change in the mirrored tree.
+9. **Edit skills in one place.** Create or modify skill files only under `.agents/skills/`, then run `python3 tools/git/sync_skills.py` to regenerate the `.claude/skills/` copy.
 
 ## Commit-trailer obligations (non-merge, non-`master` commits)
 
-Each non-merge commit on a non-`master` branch must carry these trailers, each starting with `updated` or `n/a` (the `prepare-commit-msg` hook auto-appends the block — fill it in). Merge commits skip trailer validation and are covered by the merge policy in `AGENTS.md` / `CLAUDE.md`:
+Each non-merge commit on a non-`master` branch must carry these trailers, each starting with `updated` or `n/a` (the `prepare-commit-msg` hook auto-appends the block — fill it in). Merge commits skip trailer validation and are covered by the merge policy in `AGENTS.md`:
 
 `Changelog`, `Guide`, `Known-Discrepancies`, `S3K-Known-Discrepancies`, `Agent-Docs`, `Configuration-Docs`, `Skills`.
 

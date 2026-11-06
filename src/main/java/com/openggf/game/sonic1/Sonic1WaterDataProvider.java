@@ -1,5 +1,7 @@
 package com.openggf.game.sonic1;
 
+import static com.openggf.game.sonic1.Sonic1RomProfile.resolve;
+
 import com.openggf.level.PaletteLoader;
 import com.openggf.data.Rom;
 import com.openggf.game.DynamicWaterHandler;
@@ -64,11 +66,11 @@ public class Sonic1WaterDataProvider implements WaterDataProvider {
         int sonicUnderwaterAddr;
 
         if (zoneId == Sonic1Constants.ZONE_LZ) {
-            zoneUnderwaterAddr = Sonic1Constants.PAL_LZ_UNDERWATER_ADDR;          // 0x2460
-            sonicUnderwaterAddr = Sonic1Constants.PAL_LZ_SONIC_UNDERWATER_ADDR;   // 0x2820
+            zoneUnderwaterAddr = resolve(rom, Sonic1Constants.PAL_LZ_UNDERWATER_ADDR);          // 0x2460
+            sonicUnderwaterAddr = resolve(rom, Sonic1Constants.PAL_LZ_SONIC_UNDERWATER_ADDR);   // 0x2820
         } else if (zoneId == Sonic1Constants.ZONE_SBZ) {
-            zoneUnderwaterAddr = Sonic1Constants.PAL_SBZ3_UNDERWATER_ADDR;        // 0x27A0
-            sonicUnderwaterAddr = Sonic1Constants.PAL_SBZ3_SONIC_UNDERWATER_ADDR; // 0x2840
+            zoneUnderwaterAddr = resolve(rom, Sonic1Constants.PAL_SBZ3_UNDERWATER_ADDR);        // 0x27A0
+            sonicUnderwaterAddr = resolve(rom, Sonic1Constants.PAL_SBZ3_SONIC_UNDERWATER_ADDR); // 0x2840
         } else {
             return null;
         }

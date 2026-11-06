@@ -77,7 +77,9 @@
     "com.openggf.tools.TestTasS3kSpecialStageEntryInput#currentLimitationPreLoadPulseIsLostBeforeFirstSpecialStagePlayerUpdate[2]": "TestReelCapture.step(GameplayCaptureSession, Bk2FrameInput)",
     "com.openggf.tools.TestTasS3kSpecialStageEntryInput#currentLimitationPreLoadPulseIsLostBeforeFirstSpecialStagePlayerUpdate[3]": "TestReelCapture.step(GameplayCaptureSession, Bk2FrameInput)",
     "com.openggf.tools.TestTasS3kTallyDeath#deathAfterResultsDrivenActLoadAbandonsTally[1]": "TestReelCapture.step(GameplayCaptureSession, Bk2FrameInput)",
-    "com.openggf.tools.TestTasS3kTallyDeath#deathAfterResultsDrivenActLoadAbandonsTally[2]": "TestReelCapture.step(GameplayCaptureSession, Bk2FrameInput)"
+    "com.openggf.tools.TestTasS3kTallyDeath#deathAfterResultsDrivenActLoadAbandonsTally[2]": "TestReelCapture.step(GameplayCaptureSession, Bk2FrameInput)",
+    "com.openggf.game.sonic3k.features.TestTasS3kWaterSkimLifetime#waterSkimOwnerRetiresAfterParticipantExitAndRangeDeparture": "S3kTestReelPresentation.afterWaterSkim",
+    "com.openggf.game.sonic3k.objects.TestTasS3kMemoryLimitations#selfOccupiedCutsceneSlotPressesButtonAfterRealKnucklesRetirement": "S3kTestReelPresentation.afterObjects"
   },
   "non_drawable": {
     "com.openggf.game.sonic1.TestTasS1Damage": "Bare Sonic damage/timer state and a standalone spike callback with StubObjectServices; no loaded ROM, registered drawable sprite, art renderer or world. Three timer calls and the separate shielded Sonic remain component assertions.",
@@ -129,6 +131,21 @@
     "com.openggf.sprites.playable.TestTasS3kRespawnBypass#manualJumpOrStartBypassesCadenceAndControlledLeader[4]": "Both methods create a private FixtureSprite whose draw, speed definition and sensor creation are deliberately empty. The CPU controller updates real return gates, but no drawable player/frame/art owner exists. Sonic/Tails ROM sprites would be replacement owners.",
     "com.openggf.level.objects.TestEnemyChainPointsMapping": "Mock PatternSpriteRenderer verifies drawFrameIndex arguments only; there is no framebuffer, ROM art, or time-stepped scene.",
     "com.openggf.sprites.playable.TestBadnikChainScoring": "Bare Sonic scoring-ledger arithmetic and reset checks; no loaded level, renderer, animation/update loop, or drawable world.",
-    "com.openggf.sprites.playable.TestAbstractPlayableSpriteRewindCapture#rewindReplaysNormalAndPoweredAwardsAcrossBonusAndWordWrapBoundaries": "Bare Sonic counter capture/restore and award arithmetic; no loaded art or time-stepped scene."
+    "com.openggf.sprites.playable.TestAbstractPlayableSpriteRewindCapture#rewindReplaysNormalAndPoweredAwardsAcrossBonusAndWordWrapBoundaries": "Bare Sonic counter capture/restore and award arithmetic; no loaded art or time-stepped scene.",
+    "com.openggf.game.sonic2.TestTasS2CurrentLimitations#underflowClampsToUnsignedNativeFarRight": "Actual player mappingFrame0 is the native zero-piece pose; the fixture has no visible object or visual terrain. Production art attachment yielded zero pixels through every existing update. No animation tick/pose substitution is authorized.",
+    "com.openggf.physics.TestTasS3kTerrainEntry#leftUnderflowUsesUnsignedRightBoundary": "Real physics/sensors run against Mockito LevelManager/Level with authored SolidTile/ChunkDesc answers; no terrain patterns/layout/palette or drawable player owner exists. No ROM route or debug geometry is substituted."
+  },
+  "method_renames": {
+    "com.openggf.game.sonic1.objects.TestTasS1SlopeVerdict#currentLimitationOffscreenPlatformReleasesStandingInsteadOfKeepingSlopeLockTrigger": "offscreenPlatformSkipsSolidReleaseAndRetainsSlopeLockTrigger",
+    "com.openggf.game.sonic2.TestTasS2CurrentLimitations#currentLimitationUnderflowClampsLeftInsteadOfNativeFarRight": "underflowClampsToUnsignedNativeFarRight",
+    "com.openggf.game.sonic2.TestTasS2CurrentLimitations#currentLimitationHurtLauncherRejectsNativeRoutineFourEntry": "hurtLauncherAdmitsNativeRoutineFourEntry",
+    "com.openggf.physics.TestTasS3kTerrainEntry#currentLimitationLeftUnderflowClampsLeftInsteadOfUnsignedRightBoundary": "leftUnderflowUsesUnsignedRightBoundary",
+    "com.openggf.tests.TestTasS1TerrainVerdicts#currentLimitationHorizontalUnderflowClampsLeftInsteadOfNativeRight": "horizontalUnderflowUsesUnsignedNativeRightBoundary",
+    "com.openggf.tests.TestTasS3kFlameSlope#currentLimitationFireDashSlopeEntryUsesVerticalCorrectionAndMissesNativeReverseZip": "fireDashSlopeEntryUsesNativeHorizontalCorrectionAndReverseZip",
+    "com.openggf.game.sonic2.objects.TestTasS2ArzBossEndpoint#currentLimitationEndpointFinalHitRestartsAttackInsteadOfSkippingExplosions": "endpointAddsToLiveRoutineAfterFinalTouch",
+    "com.openggf.game.sonic3k.features.TestTasS3kWaterSkimLifetime#currentLimitationWaterSkimOwnerSurvivesParticipantExitAndRangeDeparture": "waterSkimOwnerRetiresAfterParticipantExitAndRangeDeparture",
+    "com.openggf.game.sonic3k.objects.TestTasS3kMemoryLimitations#currentLimitationSelfOccupiedSlotSixCannotActAsCutsceneKnuckles": "selfOccupiedCutsceneSlotPressesButtonAfterRealKnucklesRetirement",
+    "com.openggf.tools.TestTasS3kSpecialStageEntryInput#currentLimitationPreLoadPulseIsLostBeforeFirstSpecialStagePlayerUpdate": "finalEntryFadeInputOwnsBootAndNormalSamplingResumes",
+    "com.openggf.game.sonic3k.objects.bosses.TestTasS3kMhzRapidHit#currentLimitationEarlyProxyHitDoesNotRepeatDamageAfterWeatherDestruction": "oneEarlyProxyHitRepeatsNativeDamageAfterWeatherDestruction"
   }
 }

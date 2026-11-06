@@ -45,6 +45,6 @@ class TestS3kKnucklesSuperEmeraldRunChain extends AbstractRunChainTest {
      */
     @Test
     void aiz1ToDoomsdayAcrossEverySpecialAndBonusStage() throws Exception {
-        assertChainReplay(RUN_DIR);
+        assertCompleteCampaignReplay(RUN_DIR);
     }
 }

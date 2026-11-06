@@ -1,6 +1,7 @@
 package com.openggf.tests;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.io.TempDir;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -39,6 +40,9 @@ class TestBuildToolingGuard {
     /** Full CI in ci.yml: every non-draft pull request, plus deliberate manual runs. */
     private static final String FULL_CI_JOB_CONDITION = "github.event_name == 'workflow_dispatch'"
             + " || (github.event_name == 'pull_request' && !github.event.pull_request.draft)";
+    private static final String NATIVE_PREPARE_COMMAND =
+            "mvn -Dmse=off package -Pnative -Dmaven.test.skip=true -Dnative.python=python"
+                    + " -Dnative.stage=prepare -Dnative.macos.package.skip=true -B";
 
     private static final Path POLICY_SCRIPT = Path.of(".githooks/validate-policy.sh").toAbsolutePath();
     private static final Path POWERSHELL_POLICY_SCRIPT =
@@ -63,7 +67,7 @@ class TestBuildToolingGuard {
     private static final String FRONTIER_GRANDFATHER_BASELINE = "9fb9f4011";
     private static final String FRONTIER_LOG_PATH = "docs/status/trace-frontier-log.md";
     private static final List<String> SESSION_DOCUMENTATION_FILES = List.of(
-            "AGENTS.md", "CLAUDE.md", "README.md",
+            "AGENTS.md", "README.md",
             "docs/guide/contributing/dev-setup.md",
             "docs/guide/contributing/testing.md",
             "docs/guide/contributing/trace-replay.md",
@@ -272,6 +276,8 @@ class TestBuildToolingGuard {
             // timing-produced runtime payload is stored in this cache.
             "src/main/java/com/openggf/game/sonic3k/events/S3kSeamlessMutationExecutor.java - private static volatile AizFireTerrainData cachedAizFireTerrain;",
             "src/main/java/com/openggf/game/sonic3k/events/Sonic3kAIZEvents.java - private static volatile PendingFireSequence pendingFireSequence;",
+            // Retired-slot state is reset and included in the water-skim snapshot.
+            "src/main/java/com/openggf/game/sonic3k/features/HCZWaterSkimHandler.java - private static boolean slotRetired;",
             "src/main/java/com/openggf/game/sonic3k/features/HCZWaterSkimHandler.java - private static boolean skimActiveP1;",
             "src/main/java/com/openggf/game/sonic3k/features/HCZWaterSkimHandler.java - private static boolean skimActiveP2;",
             "src/main/java/com/openggf/game/sonic3k/features/HCZWaterSkimHandler.java - private static int splashAnimFrameP1;",
@@ -292,6 +298,8 @@ class TestBuildToolingGuard {
             "src/main/java/com/openggf/game/sonic3k/objects/Aiz2BossEndSequenceState.java - private static volatile boolean buttonPressed;",
             "src/main/java/com/openggf/game/sonic3k/objects/Aiz2BossEndSequenceState.java - private static volatile boolean eggCapsuleReleased;",
             "src/main/java/com/openggf/game/sonic3k/objects/Aiz2BossEndSequenceState.java - private static volatile boolean cutsceneOverrideObjectsActive;",
+            // This slot is reset and captured by Aiz2BossEndSequenceStaticAdapter.
+            "src/main/java/com/openggf/game/sonic3k/objects/Aiz2BossEndSequenceState.java - private static volatile int cutsceneKnucklesSlot = -1;",
             // This cross-act latch is captured by Aiz2BossEndSequenceStaticAdapter.
             "src/main/java/com/openggf/game/sonic3k/objects/Aiz2BossEndSequenceState.java - private static volatile int tailsControlReleaseDelay = -1;",
             // This cross-act latch is explicitly captured by Aiz2BossEndSequenceStaticAdapter.
@@ -673,14 +681,25 @@ class TestBuildToolingGuard {
                 defaultGroups, "plain Maven and smoke must select the same bounded suite");
         assertTrue(defaultGroups.contains("slow-suite"));
         assertTrue(defaultGroups.contains("performance-measurement"));
+        assertTrue(defaultGroups.contains("exhaustive-audit"));
 
         Element full = profileById(pom, "full-suite");
         assertNotNull(full, "public release validation needs an explicit full-suite profile");
         assertNull(directChild(full, "activation"), "full-suite must never activate implicitly");
         String fullGroups = directChildText(directChild(full, "properties"), "surefire.excludedGroups");
         assertEquals(Set.of("tracechaser-integration", "audio-reference", "audio-stress",
-                        "audio-local-wave", "fbz-route"), Set.of(fullGroups.split(",")),
-                "release validation must restore the previous complete ordinary suite");
+                        "audio-local-wave", "fbz-route", "exhaustive-audit"), Set.of(fullGroups.split(",")),
+                "release validation includes slow oracles but keeps exceptional audits separate");
+
+        Element audit = profileById(pom, "exhaustive-audit");
+        assertNotNull(audit);
+        assertNull(directChild(audit, "activation"), "exceptional audits must be explicitly requested");
+        assertEquals("exhaustive-audit", audit.getElementsByTagName("groups").item(0).getTextContent());
+        assertEquals("exhaustive-audit", TestBuildToolingGuard.class.getDeclaredMethod(
+                "releaseGateToolsShouldRejectCorruptAndChangedEvidence").getAnnotation(Tag.class).value(),
+                "routine guards must not launch the complete Python release-tool suites");
+        assertTrue(profileById(pom, "guards").getElementsByTagName("excludedGroups")
+                .item(0).getTextContent().contains("exhaustive-audit"));
 
         String ci = Files.readString(Path.of(".github/workflows/ci.yml"));
         assertFalse(ci.contains("-Pfull-suite"), "routine CI must not run full-suite");
@@ -980,8 +999,7 @@ class TestBuildToolingGuard {
                         .forEach(prescriptive::add);
             }
         }
-        for (Path doc : List.of(Path.of("CLAUDE.md"), Path.of("AGENTS.md"),
-                Path.of("AGENTS_S3K.md"))) {
+        for (Path doc : List.of(Path.of("AGENTS.md"), Path.of("AGENTS_S3K.md"))) {
             if (Files.isRegularFile(doc)) {
                 prescriptive.add(doc);
             }
@@ -1004,16 +1022,16 @@ class TestBuildToolingGuard {
     @Test
     void supportedDocumentationMustUseQueuedMavenAndExplicitHookBootstrap() throws Exception {
         Path agentsPath = Path.of("AGENTS.md");
-        Path claudePath = Path.of("CLAUDE.md");
         String agents = Files.readString(agentsPath, StandardCharsets.UTF_8);
         List<String> violations = new ArrayList<>();
 
-        if (Files.mismatch(agentsPath, claudePath) != -1) {
-            violations.add("AGENTS.md and CLAUDE.md are no longer byte-identical");
+        // Claude Code loads AGENTS.md only when the project has no CLAUDE.md.
+        if (Files.exists(Path.of("CLAUDE.md"))) {
+            violations.add("CLAUDE.md must not exist; AGENTS.md is the sole project instruction file");
         }
         if (!agents.contains("tools/testing/install-hooks.sh")
                 || !agents.contains("tools/testing/install-hooks.ps1")) {
-            violations.add("AGENTS.md/CLAUDE.md do not document explicit hook bootstrap");
+            violations.add("AGENTS.md does not document explicit hook bootstrap");
         }
         // Local Maven goes through the shared queue wrapper (tools/testing/maven_queue.py),
         // never bare mvn: direct mvn bypasses admission and the worktree slot.
@@ -1027,7 +1045,7 @@ class TestBuildToolingGuard {
                 "Do not share or\n  copy build trees.",
                 "Direct `mvn` bypasses the queue; use the wrapper for local builds/tests.")) {
             if (!agents.contains(requiredText)) {
-                violations.add("AGENTS.md/CLAUDE.md do not contain required queued-Maven guidance: "
+                violations.add("AGENTS.md does not contain required queued-Maven guidance: "
                         + requiredText);
             }
         }
@@ -1082,7 +1100,7 @@ class TestBuildToolingGuard {
                 Path.of("src/main"), Path.of("tools/audio"), Path.of("tools/bizhawk"),
                 Path.of("tools/testing"), Path.of("pom.xml"), Path.of("dev.sh"),
                 Path.of("dev.cmd"), Path.of("run.sh"), Path.of("run.cmd"),
-                Path.of(".github/workflows"), Path.of("AGENTS.md"), Path.of("CLAUDE.md"),
+                Path.of(".github/workflows"), Path.of("AGENTS.md"),
                 Path.of("README.md"), Path.of("ROADMAP.md"), Path.of("docs/guide"),
                 Path.of("docs/agent-workflow"), Path.of(".agents/skills"),
                 Path.of(".claude/skills"));
@@ -1175,7 +1193,8 @@ class TestBuildToolingGuard {
     private static boolean isTextSource(Path path) {
         String name = path.getFileName().toString().toLowerCase(Locale.ROOT);
         return !List.of(".png", ".jpg", ".jpeg", ".gif", ".bmp", ".ico", ".wav", ".mp3",
-                ".gen", ".bin", ".zip", ".gz", ".jar", ".so", ".dll", ".dylib", ".pyc").stream()
+                ".gen", ".bin", ".zip", ".gz", ".jar", ".so", ".dll", ".dylib", ".pyc",
+                ".ttf", ".otf", ".ttc", ".woff", ".woff2").stream()
                 .anyMatch(name::endsWith);
     }
 
@@ -1824,6 +1843,7 @@ class TestBuildToolingGuard {
     }
 
     @Test
+    @Tag("exhaustive-audit")
     void releaseGateToolsShouldRejectCorruptAndChangedEvidence() throws Exception {
         Process process = new ProcessBuilder("python3", "-m", "unittest", "discover", "-s", "tools/testing",
                 "-p", "test_*release*.py").redirectErrorStream(true).start();
@@ -2369,6 +2389,22 @@ class TestBuildToolingGuard {
     }
 
     @Test
+    void nativeImageCompilationMustFollowMavenPreparation() throws Exception {
+        String workflow = normalizeLineEndings(Files.readString(Path.of(".github/workflows/release.yml")));
+        String build = yamlJobBlocks(workflow).get("build");
+        assertNotNull(build);
+        int prepare = build.indexOf("run: " + NATIVE_PREPARE_COMMAND);
+        int compileStep = build.indexOf("- name: Build native image");
+        int compile = build.indexOf("run: python tools/native-image/build.py --stage compile");
+        assertTrue(prepare >= 0 && compileStep > prepare && compile > compileStep,
+                "Maven preparation must end in a separate step before the image compiler starts");
+        assertTrue(build.contains("python tools/native-image/toolchain.py --output"),
+                "all targets must use the shared checksum-pinned Community installer");
+        assertTrue(build.contains("os: macos-15\n"), "retain the standard Apple Silicon runner");
+        assertFalse(build.contains("macos-15-xlarge"), "native builds must not silently select a paid runner");
+    }
+
+    @Test
     void ciAndReleaseMavenCommandsShouldDisableSilentExtension() throws Exception {
         List<String> violations = new ArrayList<>();
         String ci = Files.readString(Path.of(".github/workflows/ci.yml"));
@@ -2383,7 +2419,7 @@ class TestBuildToolingGuard {
         if (!release.contains("mvn -Dmse=off test -Ptrace-replay -B")) {
             violations.add(".github/workflows/release.yml trace replay command must pass -Dmse=off");
         }
-        if (!release.contains("mvn -Dmse=off package -Pnative -DskipTests -B")) {
+        if (!release.contains(NATIVE_PREPARE_COMMAND)) {
             violations.add(".github/workflows/release.yml native package command must pass -Dmse=off");
         }
 
@@ -2409,7 +2445,7 @@ class TestBuildToolingGuard {
         for (String command : List.of(
                 "mvn -Dmse=off -Pfull-suite test -B",
                 "mvn -Dmse=off test -Ptrace-replay -B",
-                "mvn -Dmse=off package -Pnative -DskipTests -B",
+                NATIVE_PREPARE_COMMAND,
                 "mvn -Dmse=off package -Puniversal-jar -DskipTests -B")) {
             if (!release.contains(command)) {
                 violations.add(".github/workflows/release.yml does not run directly: " + command);
@@ -4155,7 +4191,7 @@ class TestBuildToolingGuard {
         assertTrue(developerSetup.contains("git submodule update --init"),
                 "disassembly-backed development must retain an explicit opt-in command");
 
-        for (String agentGuide : List.of("AGENTS.md", "CLAUDE.md")) {
+        for (String agentGuide : List.of("AGENTS.md")) {
             String guidance = Files.readString(Path.of(agentGuide))
                     .toLowerCase(Locale.ROOT)
                     .replaceAll("\\s+", " ");
@@ -4197,14 +4233,17 @@ class TestBuildToolingGuard {
         assertTrue(modules.contains("url = https://github.com/OpenGGF/TraceChaser.git"));
         assertFalse(modules.substring(modules.indexOf("[submodule \"tools/tracechaser\"]"))
                 .contains("branch ="), "TraceChaser must never float on a branch");
-        assertEquals("160000 703bd92d32634ce5ebac60625b48c60ef5500427 0\ttools/tracechaser",
+        assertEquals("160000 e6ea72332b559a4a52519166f0e5c108cb8d5385 0\ttools/tracechaser",
                 gitOutput(Path.of("."), "ls-files", "-s", "--", "tools/tracechaser").strip());
 
         String pom = Files.readString(Path.of("pom.xml"));
-        assertTrue(pom.contains("<surefire.excludedGroups>tracechaser-integration,audio-reference,audio-stress,audio-local-wave,fbz-route</surefire.excludedGroups>"));
+        String releaseGroups = directChildText(directChild(profileById(parsePom("pom.xml"),
+                "full-suite"), "properties"), "surefire.excludedGroups");
+        assertTrue(Set.of(releaseGroups.split(",")).contains("tracechaser-integration"),
+                "release validation must keep the optional TraceChaser subprocesses separate");
         assertTrue(pom.contains("<excludedGroups>${surefire.excludedGroups}</excludedGroups>"));
         assertTrue(pom.contains("<id>tracechaser-integration</id>"));
-        for (String agentGuide : List.of("AGENTS.md", "CLAUDE.md")) {
+        for (String agentGuide : List.of("AGENTS.md")) {
             String guidance = Files.readString(Path.of(agentGuide));
             assertTrue(guidance.contains("optional pinned `tools/tracechaser/` submodule"));
             assertTrue(guidance.contains(

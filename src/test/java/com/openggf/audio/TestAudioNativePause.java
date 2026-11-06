@@ -49,13 +49,13 @@ class TestAudioNativePause {
         assertEquals(tracks, tracks());
         assertEquals(0x7F, source().pipeline().stopMusic());
         assertNull(source().pendingNativePause());
-        drainFresh(capture);
+        drainPublishedPacket(capture);
         long pcmBefore = capture.totalStereoFrames();
         audio.playSfx(0xB5);
         step(11);
-        drainFresh(capture);
+        drainPublishedPacket(capture);
         step(12);
-        drainFresh(capture);
+        drainPublishedPacket(capture);
         assertEquals(tracks, tracks());
         assertTrue(capture.totalStereoFrames() > pcmBefore, "native pause must keep presenting PCM");
         assertEquals(publicCount, audio.commandTimeline().entryCount());
@@ -92,15 +92,15 @@ class TestAudioNativePause {
         assertFalse(state().presentation().smpsSession().nativePause().paused());
         assertEquals(cursor, AudioTimelineInternalAccess.cursor(audio.commandTimeline()));
         assertEquals(pcm, capture.totalStereoFrames());
-        assertFalse(fresh(capture), "failed forward work cannot publish a capture packet");
+        assertEquals(0, pendingFrames(capture), "failed forward work cannot publish a capture packet");
         step(20);
-        drainFresh(capture);
+        drainPublishedPacket(capture);
         assertTrue(state().presentation().smpsSession().nativePause().paused());
         assertEquals(cursor + 1, AudioTimelineInternalAccess.cursor(audio.commandTimeline()));
         port.requestResume();
         faults.failPrepare = true;
         assertThrows(IllegalStateException.class, () -> step(21));
-        assertFalse(fresh(capture), "failed resume must also keep PCM private");
+        assertEquals(0, pendingFrames(capture), "failed resume must also keep PCM private");
         assertTrue(state().presentation().smpsSession().nativePause().paused());
         assertEquals(0xFF, source().pipeline().music0().requestByte(),
                 "rollback must retain resume before its bridge consumption");
@@ -343,17 +343,17 @@ class TestAudioNativePause {
     }
 
     private AudioLogicalSnapshot state() { return audio.captureLogicalSnapshot(); }
-    private boolean fresh(LiveCaptureAudioHandle capture) {
+    private int pendingFrames(LiveCaptureAudioHandle capture) {
         try {
-            var field = capture.getClass().getDeclaredField("fresh");
+            var field = capture.getClass().getDeclaredField("pendingStereoFrames");
             field.setAccessible(true);
-            return field.getBoolean(capture);
+            return field.getInt(capture);
         } catch (ReflectiveOperationException failure) { throw new AssertionError(failure); }
     }
-    private void drainFresh(LiveCaptureAudioHandle capture) {
-        assertTrue(fresh(capture), "the producer must publish a real packet, not merely a capture clock tick");
-        assertTrue(capture.drainPresentationFrame(new short[capture.maxStereoFramesPerPacket() * 2]) > 0);
-        assertFalse(fresh(capture));
+    private void drainPublishedPacket(LiveCaptureAudioHandle capture) {
+        assertEquals(800, pendingFrames(capture), "one 48 kHz / 60 Hz packet must be published");
+        assertEquals(800, capture.drainPresentationFrame(new short[capture.maxStereoFramesPerPacket() * 2]));
+        assertEquals(0, pendingFrames(capture), "the single committed packet must be consumed exactly");
     }
     private Sonic2SoundRequestService.Snapshot source() {
         return (Sonic2SoundRequestService.Snapshot) state().forwardServiceSnapshot();

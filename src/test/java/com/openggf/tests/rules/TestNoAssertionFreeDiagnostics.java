@@ -58,6 +58,8 @@ class TestNoAssertionFreeDiagnostics {
             // In-flight diagnostic probes owned by other active branches; do not
             // disturb concurrent sessions. Remove once those branches land and
             // either assert or demote them.
+            // This fixture intentionally passes its body so teardown failure is the only outcome.
+            "TestTestReelExtension#bodyPasses",
             "DebugS1Mz2BatbrainProbe",
             "TestS3kMhz1GroundWallProbe"
     );

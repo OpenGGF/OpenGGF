@@ -16,6 +16,26 @@ import com.openggf.level.render.PatternSpriteRenderer;
  * rig that the owning object ticks and renders.
  */
 public final class LbzMinibossBoxRig implements RewindStateful<LbzMinibossBoxRig.Snapshot> {
+    /** Permanent rewind owner for a rig created after its containing object. */
+    static final class OptionalRig implements RewindStateful<Snapshot> {
+        LbzMinibossBoxRig value;
+
+        @Override
+        public Snapshot captureRewindStateValue() {
+            return value == null ? null : value.captureRewindStateValue();
+        }
+
+        @Override
+        public void restoreRewindStateValue(Snapshot state) {
+            if (state == null) {
+                value = null;
+            } else {
+                value = new LbzMinibossBoxRig(0, 0);
+                value.restoreRewindStateValue(state);
+            }
+        }
+    }
+
     /** ROM byte_8D1D4: mapping frame, render-flag OR bits, child_dx, child_dy. */
     private static final int[][] PIECE_PARTS = {
             {6, 0, -0x10, 0},
@@ -56,7 +76,7 @@ public final class LbzMinibossBoxRig implements RewindStateful<LbzMinibossBoxRig
     public static final int PIECE_PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x100);
     /**
      * ROM loc_8CF10: when a drifting piece's late Animate_Raw script ends ($F4 -> $34 callback),
-     * the callback installs loc_8CF1E and writes priority $380 (sonic3k.asm:192601-192604). The
+     * the callback installs loc_8CF1E and writes priority $380 (sonic3k.asm:192606-192609). The
      * six burst pieces Go_Delete_Sprite instead (off_8D1AC, sonic3k.asm:192832-192838).
      */
     public static final int LINGER_PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x380);

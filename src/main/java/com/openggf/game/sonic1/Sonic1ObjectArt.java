@@ -1,5 +1,7 @@
 package com.openggf.game.sonic1;
 
+import static com.openggf.game.sonic1.Sonic1RomProfile.resolve;
+
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.level.Pattern;
@@ -47,7 +49,7 @@ public class Sonic1ObjectArt {
 
         List<SpriteMappingFrame> frames;
         try {
-            frames = S1SpriteDataLoader.loadMappingFrames(reader, mappingAddr);
+            frames = S1SpriteDataLoader.loadMappingFrames(reader, resolve(reader, mappingAddr));
         } catch (IllegalArgumentException e) {
             LOG.warning("Failed to load S1 mappings at 0x" + Integer.toHexString(mappingAddr)
                     + ": " + e.getMessage());
@@ -63,7 +65,7 @@ public class Sonic1ObjectArt {
      */
     public List<SpriteMappingFrame> loadMappingFrames(int mappingAddr) {
         try {
-            return S1SpriteDataLoader.loadMappingFrames(reader, mappingAddr);
+            return S1SpriteDataLoader.loadMappingFrames(reader, resolve(reader, mappingAddr));
         } catch (IllegalArgumentException e) {
             LOG.warning("Failed to load S1 mappings at 0x" + Integer.toHexString(mappingAddr)
                     + ": " + e.getMessage());
@@ -76,7 +78,7 @@ public class Sonic1ObjectArt {
      */
     public List<SpriteMappingFrame> loadMappingFrames(int mappingAddr, int frameCount) {
         try {
-            return S1SpriteDataLoader.loadMappingFrames(reader, mappingAddr, frameCount);
+            return S1SpriteDataLoader.loadMappingFrames(reader, resolve(reader, mappingAddr), frameCount);
         } catch (IllegalArgumentException e) {
             LOG.warning("Failed to load S1 mappings at 0x" + Integer.toHexString(mappingAddr)
                     + ": " + e.getMessage());
@@ -169,7 +171,7 @@ public class Sonic1ObjectArt {
 
     public Pattern[] loadNemesisPatterns(int address) {
         try {
-            return PatternDecompressor.nemesis(rom, address);
+            return PatternDecompressor.nemesis(rom, resolve(rom, address));
         } catch (IOException e) {
             LOG.warning("Failed to decompress Nemesis art at 0x"
                     + Integer.toHexString(address) + ": " + e.getMessage());
@@ -182,7 +184,7 @@ public class Sonic1ObjectArt {
      */
     public Pattern[] loadUncompressedPatterns(int address, int size) {
         try {
-            byte[] data = rom.readBytes(address, size);
+            byte[] data = rom.readBytes(resolve(rom, address), size);
             if (data.length % Pattern.PATTERN_SIZE_IN_ROM != 0) {
                 LOG.warning("Inconsistent uncompressed art size at 0x"
                         + Integer.toHexString(address));

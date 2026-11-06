@@ -17,6 +17,7 @@ import com.openggf.tests.rules.SonicGame;
 import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.Set;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import static org.junit.jupiter.api.Assertions.*;
@@ -25,16 +26,32 @@ import static org.junit.jupiter.api.Assertions.*;
 @RequiresRom(SonicGame.SONIC_3K)
 class TestS3kKnucklesEndingLifecycleCapture {
     @ParameterizedTest
-    @CsvSource({"320,0000000,-2","320,1111111,0","320,3333333,2",
-            "800,0000000,-2","800,1111111,0","800,3333333,2"})
+    @CsvSource({"320,0000000,-2", "800,3333333,2"})
     void finalFightDepartsThroughBothCreditPartsAndTheActualTerminalWithPhaseReplay(
             int width,String emeralds,int progress) throws Exception {
         runEnding(width, emeralds, progress, false);
     }
 
     @ParameterizedTest
-    @CsvSource({"0000000,-2", "1111111,0", "3333333,2"})
+    @CsvSource({"1111111,0"})
     void palFinalFightDepartsThroughBothCreditPartsAndTheActualTerminalWithPhaseReplay(
+            String emeralds, int progress) throws Exception {
+        runEnding(320, emeralds, progress, true);
+    }
+
+    @Tag("exhaustive-audit")
+    @ParameterizedTest
+    @CsvSource({"320,0000000,-2","320,1111111,0","320,3333333,2",
+            "800,0000000,-2","800,1111111,0","800,3333333,2"})
+    void everyFinalFightDepartsThroughBothCreditPartsAndTheActualTerminalWithPhaseReplay(
+            int width, String emeralds, int progress) throws Exception {
+        runEnding(width, emeralds, progress, false);
+    }
+
+    @Tag("exhaustive-audit")
+    @ParameterizedTest
+    @CsvSource({"0000000,-2", "1111111,0", "3333333,2"})
+    void everyPalFinalFightDepartsThroughBothCreditPartsAndTheActualTerminalWithPhaseReplay(
             String emeralds, int progress) throws Exception {
         runEnding(320, emeralds, progress, true);
     }

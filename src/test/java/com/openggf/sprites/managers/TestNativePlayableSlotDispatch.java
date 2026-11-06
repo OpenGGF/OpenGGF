@@ -45,7 +45,6 @@ class TestNativePlayableSlotDispatch {
         GameplayModeContext context = TestEnvironment.activeGameplayMode();
         sprites = new SpriteManager();
         level = mock(LevelManager.class);
-        when(level.objectsExecuteAfterPlayerPhysics()).thenReturn(true);
         when(level.getFrameCounter()).thenReturn(0x10023);
         doAnswer(call -> { events.add("water"); return null; }).when(level)
                 .updatePlayableWaterStateForCurrentLevel(any());

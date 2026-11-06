@@ -1,5 +1,7 @@
 package com.openggf.game.sonic1.objects.bosses;
 
+import static com.openggf.game.sonic1.Sonic1RomProfile.resolve;
+
 import com.openggf.data.RomByteReader;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
@@ -127,7 +129,7 @@ public final class S1EggmanVisualComponent extends AbstractObjectInstance implem
         if (animationTimer >= 0) {
             return;
         }
-        int script = reader.readPointer16(ANIMATION_TABLE, animation);
+        int script = reader.readPointer16(resolve(reader, ANIMATION_TABLE), animation);
         animationTimer = reader.readU8(script);
         int frame = reader.readU8(script + 1 + nextFrame);
         if (frame == 0xFF) {

@@ -24,20 +24,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * pre-{@code Level_MainLoop} object pass, and both pins moved on to the next
  * divergence in their segment.
  *
- * <p>This boots the run <em>at</em> segment 22 via
+ * <p>This boots the run at segment 22 via
  * {@link AbstractRunChainTest#assertChainReplayFromSegment}, carrying none of
- * the state segments 0-21 would have left. All three segments diverge
- * identically to the full chain -- same first-error frame, same field, same
- * ROM and engine values, and the same error counts. They are therefore owned
- * by their own entry conditions, are not carry-in, and are not caused by
- * whatever let the chain arrive there.
- *
- * <p><b>This is a characterisation pin, in the shape of
- * {@link TestS1CompleteEmeraldRunPrefix}'s ratcheting pins.</b> It asserts that
- * the defects are still <em>present and unchanged from a cold start</em>, which
- * is what makes them attributable. Fixing a defect will fail this test: update
- * the pin, and never relax one to keep it quiet. It is not a claim that the
- * divergences are acceptable.
+ * the state segments 0-21 would have left. The three segments now compare
+ * without divergences from this cold start. Keep these pins strict: a new
+ * divergence must be investigated rather than accepted as a revised baseline.
  */
 @RequiresRom(SonicGame.SONIC_1)
 class TestS1ColdStartAttribution extends AbstractRunChainTest {
@@ -97,20 +88,12 @@ class TestS1ColdStartAttribution extends AbstractRunChainTest {
         // real segment 0 lands on the same path from a parallel fork and used
         // to overwrite this one -- see AbstractRunChainTest#writtenSegmentReport.
         String bootReport = writtenSegmentReport(0);
-        // Was 15,564 errors leading with x_sub at frame 8115. That whole axis
-        // was one frame of speed-shoes: the shoes taken in this segment expired
-        // one movement frame early, so the boosted acceleration was dropped a
-        // frame before the ROM dropped it and every downstream position,
-        // animation and dynamic-art field drifted for the rest of the segment.
-        // What remains is the unrelated camera_y cluster in frames 475-518,
-        // which self-heals; segment 22 now has NO non-camera physics mismatch
-        // over its full 12,072 frames.
+        // The old self-healing camera cluster has cleared as well. Require
+        // zero errors across all comparison groups for the boot segment.
         assertTrue(
-                bootReport.contains("\"errorCount\" : 44")
-                        && !bootReport.contains("firstNonCameraPhysicsMismatch"),
-                "segment 22 must still diverge identically from a cold start; "
-                        + "if it was fixed, update this pin. Report:\n"
-                        + bootReport);
+                bootReport.contains("\"errorCount\" : 0")
+                        && bootReport.contains("\"warningCount\" : 0"),
+                "segment 22 must stay clean from a cold start. Report:\n" + bootReport);
         // Re-pinned from "16 errors leading with dynamic_art.edges at frame
         // 3124" to GREEN when Sonic_HurtStop's landing branch began writing the
         // walk animation (docs/s1disasm/_incObj/"01 Sonic.asm":1949). Those 16

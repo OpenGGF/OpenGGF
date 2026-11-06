@@ -35,7 +35,8 @@ class TestS3kSlotCellPainterPixels {
 
     private static void assertCellOrderAndPassivity(boolean collect) throws Exception {
         var saved = TraceReplaySessionBootstrap.snapshotGameplayConfig();
-        try (var session = enterSlot()) {
+        try (var session = enterSlot();
+             var limits = com.openggf.graphics.NativeSpriteLimits.enable()) {
             var level = GameServices.level();
             var camera = GameServices.camera();
             var graphics = GameServices.graphics();
@@ -124,7 +125,8 @@ class TestS3kSlotCellPainterPixels {
     @Test
     void nativeLowForegroundKeepsItsPriorityAndDoesNotOccludeTheRomPeppermint() throws Exception {
         var saved = TraceReplaySessionBootstrap.snapshotGameplayConfig();
-        try (var session = enterSlot()) {
+        try (var session = enterSlot();
+             var limits = com.openggf.graphics.NativeSpriteLimits.enable()) {
             var manager = GameServices.level();
             var level = manager.getCurrentLevel();
             var graphics = GameServices.graphics();

@@ -380,7 +380,6 @@ class TestNativeDrowningDispatch {
         TestEnvironment.configureGameModuleFixture(game);
         sprites = GameServices.sprites();
         level = mock(LevelManager.class);
-        when(level.objectsExecuteAfterPlayerPhysics()).thenReturn(true);
         TestEnvironment.activeGameplayMode().attachLevelManagers(new com.openggf.level.WaterSystem(),
                 new com.openggf.level.ParallaxManager(), mock(com.openggf.physics.TerrainCollisionManager.class),
                 mock(com.openggf.physics.CollisionSystem.class), sprites, level);

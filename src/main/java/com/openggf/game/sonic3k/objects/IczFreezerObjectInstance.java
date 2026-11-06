@@ -43,7 +43,7 @@ import java.util.List;
 /**
  * Object 0xB2 - ICZ Freezer.
  *
- * <p>ROM reference: {@code Obj_ICZFreezer} at sonic3k.asm:188246.
+ * <p>ROM reference: {@code Obj_ICZFreezer} at sonic3k.asm:188251.
  * The parent starts a frost jet when a player is within 0x40 pixels on X,
  * toggles the jet every 0x40 frames, spawns visible frost puffs every other
  * active frame, and creates a delayed capture cloud that freezes nearby players.
@@ -271,6 +271,8 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
+        // ObjDat_ICZFreezer (sonic3k.asm:188718-188722): ordinary $10/$0C bounds.
+        if (!isWithinRenderSpriteBounds(HALF_WIDTH, HALF_HEIGHT)) return;
         PatternSpriteRenderer renderer = getRenderer(ART_KEY);
         if (renderer != null) {
             renderer.drawFrameIndex(MAPPING_FRAME, x, y, hFlip, verticalFlip, 1);

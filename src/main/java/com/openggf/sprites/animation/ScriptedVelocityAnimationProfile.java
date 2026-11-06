@@ -402,6 +402,19 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
             // canonical case: Sonic_Move writes Wait, then AnglePos sets air.
             PlayableSpriteAnimation animation = sprite.getAnimationManager();
             if (animation != null && animation.hasGroundMovementAnimSpeed()) {
+                // The standing Move tail selects LookUp before terrain detaches
+                // the player, just as it selects Duck. The ground owner has
+                // already resolved input precedence and later Roll writes.
+                if (sprite.getLookingUp() && lookUpAnimId >= 0) {
+                    return lookUpAnimId;
+                }
+                // loc_172A8 (sonic3k.asm:31928-31932) selects Duck before
+                // Knux_Stand_Path reaches AnglePos and loses floor support.
+                // Crouch is that ground dispatch's pending animation write;
+                // reconstructing Wait from zero inertia would discard it.
+                if (sprite.getCrouching() && duckAnimId >= 0) {
+                    return duckAnimId;
+                }
                 // A later grounded subroutine can replace Move's selection
                 // before AnglePos detaches the player. In S3K, Tails_Roll
                 // publishes Duck after Tails_InputAcceleration_Path; neither

@@ -12,6 +12,7 @@ import com.openggf.game.sonic3k.objects.LrzEndBossObjectInstance;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
@@ -25,6 +26,7 @@ import static com.openggf.GameLoopRewindTestAccess.owner;
 /** Cold widescreen traversal, placed shield, real mine fight, capsule and playable HPZ. */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestLrzWideBossColdRouteCapture {
+    @Tag("exhaustive-audit")
     @Test
     void coldWideTeamClearsBossAndReleasesHiddenPalaceWithRepeatableWorld() throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(

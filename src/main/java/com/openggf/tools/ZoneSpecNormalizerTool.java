@@ -14,7 +14,7 @@ import java.util.Map;
  * Zone Analysis Spec Normalizer (Option 6 in {@code docs/agent-workflow/support-options.md}).
  *
  * <p>Reads a loose / partial S3K zone-analysis Markdown spec (as produced by the
- * {@code s3k-zone-analysis} skill, see {@code .claude/skills/s3k-zone-analysis/SKILL.md})
+ * {@code s3k-zone-analysis} skill, see {@code .agents/skills/s3k-zone-analysis/SKILL.md})
  * and rewrites it into the STABLE canonical section layout so follow-on implementation
  * agents can consume one feature category without repeating the full disassembly pass.
  *

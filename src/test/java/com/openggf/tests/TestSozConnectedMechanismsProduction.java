@@ -8,6 +8,7 @@ import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.session.SessionManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Tag;
 import java.util.EnumMap;
 import com.openggf.game.GameServices;
 import com.openggf.game.rewind.CompositeSnapshot;
@@ -53,9 +54,34 @@ class TestSozConnectedMechanismsProduction {
                 rows.add(Arguments.of(scene,aspect,donor));
         return rows.stream();
     }
+
+    static Stream<Arguments> representativeConfigurations() {
+        var rows = new java.util.ArrayList<Arguments>();
+        var aspects = WidescreenAspect.values();
+        int donatedPreset = 0;
+        for (var scene : SozConnectedMechanismRoute.Scene.values()) {
+            rows.add(Arguments.of(scene, WidescreenAspect.NATIVE_4_3, "off"));
+            for (String donor : new String[]{"s1", "s2"}) {
+                rows.add(Arguments.of(scene, aspects[1 + donatedPreset++ % (aspects.length - 1)], donor));
+            }
+        }
+        return rows.stream();
+    }
+
     @ParameterizedTest
     @MethodSource("configurations")
+    @Tag("exhaustive-audit")
     void corkCarryWrapAndPlacedSwitchUseTheProductionGraph(SozConnectedMechanismRoute.Scene scene,WidescreenAspect aspect,String donor) {
+        checkConnectedProductionGraph(scene, aspect, donor);
+    }
+
+    @ParameterizedTest(name = "representative connected mechanism {0} {1} donor={2}")
+    @MethodSource("representativeConfigurations")
+    void everyMechanismRetainsItsNativeAndDonatedProductionGraph(SozConnectedMechanismRoute.Scene scene,WidescreenAspect aspect,String donor) {
+        checkConnectedProductionGraph(scene, aspect, donor);
+    }
+
+    private void checkConnectedProductionGraph(SozConnectedMechanismRoute.Scene scene,WidescreenAspect aspect,String donor) {
         var config=SonicConfigurationService.getInstance();
         SozAcceptanceConfigurations.selectDisplay(aspect);
         config.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED,!donor.equals("off"));
@@ -101,6 +127,9 @@ class TestSozConnectedMechanismsProduction {
             boolean wrap = previousY < 0x80 && y > 0x700;
             activated |= activation;
             wrapped |= wrap;
+            if (wrap) {
+                com.openggf.level.SozWrapPresentationAssertions.assertPlayerArtPresent();
+            }
             carried |= events.backgroundCollision() && !fixture.sprite().getAir()
                     && y < previousY && (scene == SozConnectedMechanismRoute.Scene.UPPER ? y < 0xA0 : y < 0x500);
             charged |= SozZoneRuntimeState.trigger(11) == 128;

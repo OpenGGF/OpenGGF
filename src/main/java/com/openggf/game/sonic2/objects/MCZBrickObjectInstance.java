@@ -355,7 +355,7 @@ public class MCZBrickObjectInstance extends AbstractObjectInstance
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         List<SpriteMappingFrame> mappings = MAPPINGS.get(
-                Sonic2Constants.MAP_UNC_OBJ75_ADDR, S2SpriteDataLoader::loadMappingFrames, "Obj75");
+                Sonic2Constants.MAP_UNC_OBJ75_ADDR, S2SpriteDataLoader::loadStockMappingFrames, "Obj75");
         if (mappings.isEmpty()) {
             return;
         }

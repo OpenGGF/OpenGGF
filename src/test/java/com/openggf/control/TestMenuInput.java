@@ -19,7 +19,37 @@ class TestMenuInput {
         assertEquals(MenuInput.Pointer.none(), MenuInput.pointer(input, 320, 224));
         assertEquals(MenuInput.Pointer.none(), MenuInput.pointer(null, 320, 224));
         assertThrows(IllegalArgumentException.class, () -> MenuInput.pointer(input, 0, 224));
-        assertFalse(new MenuInput.Pointer(10, 10, true, true, false).over(0, 0, -1, 20));
+        assertFalse(new MenuInput.Pointer(10, 10, true, true, false, 0).over(0, 0, -1, 20));
+    }
+
+    @Test void wheelNotchesLastOneInputPassAndKeepTheirFraction() {
+        var input = new InputHandler();
+        var wheel = MouseWheel.of(input);
+        wheel.scroll(1.5);
+        assertEquals(1, wheel.notches());
+        assertEquals(1, wheel.notches(), "every menu reading the pass sees its notch");
+        input.update();
+        assertEquals(0, wheel.notches(), "the notch ends with its pass");
+        wheel.scroll(0.5);
+        assertEquals(1, wheel.notches(), "the half notch carried over");
+        input.update();
+        wheel.scroll(-3);
+        input.update();
+        assertEquals(0, wheel.notches(), "notches nobody read never reach a later menu");
+    }
+
+    @Test
+    void nativePreeditSelectsKeyboardHintsBeforeTheTextIsCommitted() {
+        Fixture fixture = new Fixture();
+        fixture.pad(0, GLFW_GAMEPAD_BUTTON_A);
+        fixture.frame();
+        assertTrue(MenuInput.controller(fixture.input));
+        InputHandlerInternalAccess.textInput(fixture.input).claim(new Object());
+        InputHandlerInternalAccess.textInput(fixture.input).preedit(
+                Composition.fromCodepoints("日本語".codePoints().toArray(), new int[] {3}, 0, 3));
+        fixture.frame();
+        assertEquals("Enter", MenuInput.confirmLabel(fixture.input), "A composition is keyboard input before commit");
+        assertEquals("Esc", MenuInput.backLabel(fixture.input));
     }
 
     @Test

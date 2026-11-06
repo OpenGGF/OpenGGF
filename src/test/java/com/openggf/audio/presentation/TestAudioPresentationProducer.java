@@ -548,6 +548,151 @@ class TestAudioPresentationProducer {
         assertEquals(sinkCount, fixture.sink.acceptCount);
     }
 
+    @ParameterizedTest
+    @CsvSource({"50,25", "60,30", "50,50", "60,60", "50,100", "60,120", "50,144", "60,144"})
+    void captureRepacketsASecondOfUndrainedProductionWithoutLoss(int producerHz, int captureHz) {
+        int sampleRate = 1001; // Deliberately fractional at both region rates.
+        DecodedPcm source = new DecodedPcm("cadence", 2, sampleRate,
+                rampStereo("samples", sampleRate).copySamples());
+        Fixture fixture = fixture(sampleRate, producerHz, source);
+        fixture.submitTone();
+        try (var capture = fixture.producer.attachCapture(captureHz)) {
+            // Production does not need a picture or a recorder drain.
+            for (int tick = 0; tick < producerHz; tick++) {
+                fixture.producer.present(tick, PresentationMode.FORWARD);
+            }
+            var beforeDrain = fixture.producer.transactionFingerprint();
+            short[] result = new short[sampleRate * 2];
+            short[] packet = new short[capture.maxStereoFramesPerPacket() * 2];
+            int written = 0;
+            for (int picture = 0; picture < captureHz; picture++) {
+                int count = capture.drainPresentationFrame(packet);
+                System.arraycopy(packet, 0, result, written * 2, count * 2);
+                written += count;
+            }
+            assertEquals(sampleRate, written);
+            assertEquals(sampleRate, capture.totalStereoFrames());
+            assertArrayEquals(source.copySamples(), result);
+            assertEquals(beforeDrain, fixture.producer.transactionFingerprint(),
+                    "zero, one or multiple drains must never advance a voice, history or producer clock");
+        }
+    }
+
+    @Test
+    void captureOverflowFailsOnlyTheTapBeforeConsumingItsClock() {
+        Fixture fixture = fixture(5, 2, rampStereo("bounded", 32));
+        fixture.submitTone();
+        try (var stalled = fixture.producer.attachCapture(2)) {
+            for (int tick = 0; tick < 5; tick++) fixture.producer.present(tick, PresentationMode.FORWARD);
+            assertEquals(12, fixture.sink.totalStereoFrames, "speaker production must continue past tap capacity");
+            var phase = stalled.clockSnapshot();
+            assertThrows(IllegalStateException.class, () -> stalled.drainPresentationFrame(new short[6]));
+            assertEquals(phase, stalled.clockSnapshot(), "fallback silence must inherit the unconsumed phase");
+            try (var fresh = fixture.producer.attachCapture(2)) {
+                fixture.producer.present(5, PresentationMode.FORWARD);
+                short[] packet = new short[6];
+                assertEquals(3, fresh.drainPresentationFrame(packet));
+                assertArrayEquals(fixture.sink.lastPacket(3), packet,
+                        "an exhausted tap cannot poison another capture or the producer");
+            }
+        }
+    }
+
+    @Test
+    void queuedCaptureKeepsForwardSilenceAndReversePacketsInAudibleOrder() {
+        Fixture fixture = fixture(4, 2, rampStereo("modes", 16));
+        fixture.submitTone();
+        fixture.producer.setHistoryArmed(true);
+        try (var capture = fixture.producer.attachCapture(2)) {
+            fixture.producer.present(0, PresentationMode.FORWARD);
+            short[] forward = fixture.sink.lastPacket(2);
+            fixture.producer.present(1, PresentationMode.SILENT); // pause / frame-step
+            assertEquals(2L << 32, sampleCursor(fixture.registry));
+            fixture.producer.beginReverse(1.0);
+            fixture.producer.present(2, PresentationMode.REVERSE);
+            short[] reverse = fixture.sink.lastPacket(2);
+            short[] packet = new short[4];
+            var beforeDrain = fixture.producer.transactionFingerprint();
+            capture.drainPresentationFrame(packet);
+            assertArrayEquals(forward, packet);
+            capture.drainPresentationFrame(packet);
+            assertArrayEquals(new short[4], packet);
+            capture.drainPresentationFrame(packet);
+            assertArrayEquals(reverse, packet);
+            assertEquals(beforeDrain, fixture.producer.transactionFingerprint());
+        }
+    }
+
+    @Test
+    void captureRetainsSplitPacketTailsAcrossRingWraps() {
+        Fixture fixture = fixture(5, 2, rampStereo("wrap", 32));
+        fixture.submitTone();
+        try (var capture = fixture.producer.attachCapture(3)) {
+            short[] packet = new short[4];
+            int produced = 0, drained = 0, tick = 0;
+            AudioFrameClock output = new AudioFrameClock(5, 3);
+            // Three seconds passes through a two-second ring, in fractional
+            // producer packets and differently sized capture packets.
+            for (int picture = 0; picture < 9; picture++) {
+                int requested = output.samplesForNextFrame();
+                while (produced < drained + requested) {
+                    fixture.producer.present(tick++, PresentationMode.FORWARD);
+                    produced = (int) fixture.sink.totalStereoFrames;
+                }
+                assertEquals(requested, capture.drainPresentationFrame(packet));
+                for (int frame = 0; frame < requested; frame++) {
+                    assertEquals(drained + frame, packet[frame * 2]);
+                    assertEquals(drained + frame + 100, packet[frame * 2 + 1]);
+                }
+                drained += requested;
+            }
+            assertEquals(15, drained);
+            assertEquals(6, tick);
+        }
+    }
+
+    @Test
+    void emptyDrainsDoNotReplaySamplesOrDiscardAFuturePacketTail() {
+        Fixture fixture = fixture(8, 2, rampStereo("underflow", 32));
+        fixture.submitTone();
+        try (var capture = fixture.producer.attachCapture(4)) {
+            short[] packet = new short[4];
+            capture.drainPresentationFrame(packet);
+            assertArrayEquals(new short[4], packet);
+            assertEquals(0, fixture.sink.acceptCount);
+            fixture.producer.present(0, PresentationMode.FORWARD);
+            capture.drainPresentationFrame(packet);
+            assertArrayEquals(new short[] {0, 100, 1, 101}, packet);
+            capture.drainPresentationFrame(packet);
+            assertArrayEquals(new short[] {2, 102, 3, 103}, packet);
+            capture.drainPresentationFrame(packet);
+            assertArrayEquals(new short[4], packet);
+            assertEquals(1, fixture.sink.acceptCount);
+        }
+    }
+
+    @Test
+    void offOwnerDrainRejectsBeforeMovingTheCaptureClockOrQueue() throws InterruptedException {
+        Fixture fixture = fixture(4, 2, rampStereo("owner", 8));
+        fixture.submitTone();
+        try (var capture = fixture.producer.attachCapture(2)) {
+            fixture.producer.present(0, PresentationMode.FORWARD);
+            var phase = capture.clockSnapshot();
+            var failure = new AtomicReference<Throwable>();
+            Thread thread = new Thread(() -> {
+                try { capture.drainPresentationFrame(new short[4]); }
+                catch (Throwable problem) { failure.set(problem); }
+            });
+            thread.start();
+            thread.join();
+            assertInstanceOf(IllegalStateException.class, failure.get());
+            assertEquals(phase, capture.clockSnapshot());
+            short[] packet = new short[4];
+            capture.drainPresentationFrame(packet);
+            assertArrayEquals(fixture.sink.lastPacket(2), packet);
+        }
+    }
+
     @Test
     void captureClockSnapshotPreservesFractionalPhaseExactly() {
         AudioPresentationProducer producer =

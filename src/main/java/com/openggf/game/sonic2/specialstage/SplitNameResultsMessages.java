@@ -67,7 +67,12 @@ public final class SplitNameResultsMessages {
         nameX -= 32; // Obj6F_Knuckles observes routine $30 in the same object pass.
     }
 
-    public boolean complete() { return phase == Phase.COMPLETE; }
+    /**
+     * Published on the TimedDisplay expiry pass that hands the message to
+     * DisplayOnly, the same point of the shared Obj6F tail as the ordinary wait
+     * (s2.asm:28367-28373, 28427-28429).
+     */
+    public boolean complete() { return phase.ordinal() >= Phase.DISPLAY_ONLY.ordinal(); }
     public List<Line> lines() {
         List<Line> result = new ArrayList<>();
         boolean superMessage = phase.ordinal() >= Phase.ENTER_SUPER.ordinal();

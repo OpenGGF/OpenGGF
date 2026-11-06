@@ -22,6 +22,63 @@ import static org.mockito.Mockito.*;
 
 class TestEditorCanvasInput {
     @Test
+    void quarterZoomPaintsTheWorldCellUnderThePointer() {
+        var level = TestEditorInteractionSafety.level();
+        var controller = controller(level);
+        controller.selectBlock(1);
+        var editor = mouse(controller);
+        controller.canvasView().zoomAt(-2, 0, 0);
+        var input = new InputHandler();
+        input.handleMouseMove(100, 20);
+        input.handleMouseButton(GLFW_MOUSE_BUTTON_LEFT, GLFW_PRESS);
+        editor.update(input); input.update();
+        input.handleMouseButton(GLFW_MOUSE_BUTTON_LEFT, GLFW_RELEASE);
+        editor.update(input);
+        assertEquals(1, level.getMap().getValue(0, 12, 2));
+        assertEquals(0, level.getMap().getValue(0, 3, 0));
+        controller.undo();
+        assertEquals(0, level.getMap().getValue(0, 12, 2));
+    }
+
+    @Test
+    void arrowsStepBlockCentersWithRepeatAndRespectMapEdges() {
+        var level = TestEditorInteractionSafety.level();
+        var controller = controller(level);
+        controller.setCanvasNavigationSupplier(() -> true);
+        controller.setWorldCursor(new EditorCursorState(40, 45));
+        var editor = new EditorInputHandler(controller);
+        var input = new InputHandler();
+        input.handleKeyEvent(GLFW_KEY_RIGHT, GLFW_PRESS);
+        editor.update(input); input.update();
+        assertEquals(new EditorCursorState(80, 48), controller.worldCursor());
+        for (int i = 0; i < 23; i++) { editor.update(input); input.update(); }
+        assertEquals(new EditorCursorState(80, 48), controller.worldCursor(), "held keys use menu repeat");
+        editor.update(input); input.update();
+        assertEquals(new EditorCursorState(112, 48), controller.worldCursor());
+        input.handleKeyEvent(GLFW_KEY_RIGHT, GLFW_RELEASE);
+        editor.update(input); input.update();
+        input.handleKeyEvent(GLFW_KEY_LEFT, GLFW_PRESS);
+        input.handleKeyEvent(GLFW_KEY_UP, GLFW_PRESS);
+        controller.setWorldCursor(new EditorCursorState(1, 1));
+        editor.update(input);
+        assertEquals(new EditorCursorState(0, 0), controller.worldCursor());
+        assertFalse(controller.hasUndoHistory());
+    }
+
+    @Test
+    void arrowsUseEightPixelSpawnSteps() {
+        var controller = controller(TestEditorInteractionSafety.level());
+        controller.setSpawnEditMode(EditorSpawnEditMode.OBJECTS);
+        controller.setWorldCursor(new EditorCursorState(43, 45));
+        var input = new InputHandler();
+        input.handleKeyEvent(GLFW_KEY_LEFT, GLFW_PRESS);
+        input.handleKeyEvent(GLFW_KEY_DOWN, GLFW_PRESS);
+        new EditorInputHandler(controller).update(input);
+        assertEquals(new EditorCursorState(35, 53), controller.worldCursor());
+        assertFalse(controller.hasUndoHistory());
+    }
+
+    @Test
     void controlCopyDoesNotAlsoDeleteTheSelectedSpawnThroughLogicalActionC() {
         MutableLevel level = TestEditorInteractionSafety.level();
         var object = new CommonObjectPlacementEncoding().create(80, 80, 1, 0, 0, false, 5);

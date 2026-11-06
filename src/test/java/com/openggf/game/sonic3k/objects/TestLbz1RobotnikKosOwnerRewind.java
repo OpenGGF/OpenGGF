@@ -265,7 +265,6 @@ class TestLbz1RobotnikKosOwnerRewind {
 
     private static CompositeSnapshot captureWithTransientOwnerStateCleared(
             HeadlessTestFixture fixture, Lbz1RobotnikEventController controller) throws Exception {
-        setField(controller, "boxRig", null);
         setField(controller, "initialBoxArtHandle", null);
         setField(controller, "collapseBoxArtHandle", null);
         setField(controller, "minibossArtHandle", null);

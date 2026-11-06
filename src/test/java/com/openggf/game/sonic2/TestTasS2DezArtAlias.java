@@ -12,11 +12,16 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import static org.junit.jupiter.api.Assertions.*;
 
-/** 335M/658S: DEZ's late animal PLC overwrites the same $580 tile base as Obj58. */
+/**
+ * s2-dez-art-corruption:1: native PLC slot reuse, independently of the author's quick-kill route.
+ * The 2026-10-26 audit at 4f5eb1ee2de0b6128c39728289516c079d71064e
+ * reached both orders but observed the dedicated explosion sheet staying fiery.
+ * Keep that historical negative evidence; this regression now requires the ROM result.
+ */
 @RequiresRom(SonicGame.SONIC_2)
 class TestTasS2DezArtAlias {
     @ParameterizedTest @ValueSource(booleans = {false, true})
-    void currentLimitationAnimalPlcCannotOverwriteTheExplosionSheet(boolean animalsLast) throws Exception {
+    void nativeLastWriterOwnsTheExplosionTiles(boolean animalsLast) throws Exception {
         var rom = GameServices.rom().getRom();
         var fiery = Sonic2PlcLoader.parsePlc(rom, Sonic2Constants.PLC_FIERY_EXPLOSION).entries();
         var animals = Sonic2PlcLoader.parsePlc(rom, Sonic2Constants.PLC_ANIMALS_DEZ).entries();
@@ -26,6 +31,9 @@ class TestTasS2DezArtAlias {
         assertEquals(0x594, animals.get(1).tileIndex());
         var expectedFiery = PatternDecompressor.nemesis(rom, fiery.getFirst().romAddr());
         var expectedAnimal = PatternDecompressor.nemesis(rom, animals.getFirst().romAddr());
+        assertEquals(100, expectedFiery.length);
+        assertEquals(18, expectedAnimal.length);
+        assertEquals(16, PatternDecompressor.nemesis(rom, animals.get(1).romAddr()).length);
         assertFalse(java.util.Arrays.equals(pixels(expectedFiery[0]), pixels(expectedAnimal[0])),
                 "control art must be distinguishable");
         GameServices.graphics().initHeadless();
@@ -37,11 +45,10 @@ class TestTasS2DezArtAlias {
         assertNotNull(sheet); assertTrue(sheet.getFrameCount() > 0);
         var renderer = provider.getRenderer(ObjectArtKeys.BOSS_EXPLOSION);
         assertNotNull(renderer, "Obj58's actual render consumer must exist");
-        assertArrayEquals(pixels(expectedFiery[0]), pixels(sheet.getPatterns()[0]),
-                "current limitation: both orders retain dedicated explosion art instead of native last-writer VRAM");
+        assertArrayEquals(pixels(animalsLast ? expectedAnimal[0] : expectedFiery[0]),
+                pixels(sheet.getPatterns()[0]), "native ordered publication must reach the actual Obj58 sheet");
         com.openggf.tests.reel.S2TestReelPresentation.explosionSheet(renderer);
-        if (animalsLast) assertFalse(java.util.Arrays.equals(pixels(expectedAnimal[0]), pixels(sheet.getPatterns()[0])),
-                "independent native expectation is Pig art after the DEZ animal PLC");
+
     }
     private static byte[] pixels(Pattern pattern) {
         byte[] pixels = new byte[64];

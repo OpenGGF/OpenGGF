@@ -9,6 +9,18 @@ questions. For the full reference of every key, see the
 
 ---
 
+## How do I change the interface language?
+
+Open **Settings > Display > Language / Idioma**, choose a language by its own name,
+then save your changes. **Automatic** follows your system language. Cancelling the
+picker or Settings leaves the active language unchanged; a failed save can be retried.
+
+The startup legal notice also shows a **Language / Idioma** shortcut, so a language
+can be chosen before any ROM loads. Confirming there saves immediately. The preference
+is `ui.language` in `config.yaml`; `auto`, `pt-BR` and `zh-Hant` are examples.
+Original game text remains ROM-owned. A partial translation uses English for missing
+or outdated messages.
+
 ## How do I change the window size?
 
 You can resize or maximise the window normally. **Settings → Display → Scaling**
@@ -95,8 +107,18 @@ characters:
 ```
 
 To keep Sonic as the main character and add a CPU Tails follower instead, use
-`main: "sonic"` and `sidekick: "tails"`. Hub launches use their per-game setup;
-these global character keys configure direct launches.
+`main: "sonic"` and `sidekick: "tails"`. A comma-separated value such as
+`"tails,knuckles"` adds several CPU sidekicks in follow order. In the engine,
+**Settings > Advanced > Direct-launch sidekicks** edits that line as a list:
+change each sidekick's character, add, move or remove sidekicks, then save Settings.
+Hub launches use their per-game setup; these global character keys configure
+direct launches.
+
+The save screen (Data Select) offers its built-in teams, followed by any extra
+teams in `characters.dataSelectExtraCombos`, written as
+`main,sidekick;main,sidekick` (for example `"sonic,knuckles;knuckles,tails"`).
+**Settings > Advanced > Extra character teams** edits them without typing: add a
+team, choose its player and sidekicks, and reorder or remove teams.
 
 Sonic 2 does not currently expose the ROM's native two-player/competition mode
 (`Two_player_mode`), so Player 2 bindings do not create a human second player.
@@ -209,19 +231,29 @@ its authored start. See the [level editor guide](../creating/level-editor.md).
 
 ## How do I enable live rewind?
 
-Enable **Rewind** in Settings → Gameplay, or override it for one game in
+Choose **Rewind** in Settings → Gameplay, or override it for one game in
 **Game Setup**. The equivalent global setting is:
 
 ```yaml
 rewind:
   liveEnabled: true
+  budgetScope: act
+  budgetSeconds: "10"
+  refillOnLifeLoss: true
+  bonusStages: true
+  specialStages: true
   liveKey: R
 ```
 
 With that enabled, hold the configured live rewind key during normal level play to rewind the live
 gameplay buffer. The on-screen live rewind HUD is hidden during ordinary play and
-appears only while the key is held, showing the current rewind frame. Rewind history
-resets at committed level and act transition boundaries.
+shows remaining seconds and a draining bar while rewinding. At zero, rewind stops immediately; pressing again shows an amber empty frame and dashed meter for one second.
+
+Choose **Off**, **Per checkpoint**, **Per act** (default), or **Per zone** to set when the consumable allowance refills. **Rewind budget** defaults to **10 seconds**, with **Unlimited** available instead of zero. Starting a new game always starts a fresh allowance. Forward play does not refund time, and replaying the same refill boundary does not refill again. **Refill on life loss** defaults to On and refills after respawn completes.
+
+**Bonus-stage rewind** and **Special-stage rewind** both default to On. Each supported stage visit gets a fresh allowance using the same maximum; your main-stage balance is preserved until you return. These options and the budget controls are inactive while Rewind is Off. Unlimited still uses the retained gameplay history; it does not remove storage limits. Rewind history resets at committed level and act transition boundaries.
+
+Live rewind currently requires native level geometry. Standalone creator levels using custom geometry run normally without live rewind.
 
 Live rewind also reverses audio presentation from the recent mixed PCM history
 and freezes graphical fade progression to the restored rewind snapshots. The
@@ -313,8 +345,11 @@ audio:
   region: "PAL"
 ```
 
-PAL fixes the engine frame rate at 50 Hz and changes audio timing; NTSC uses
-`display.fps` (60 by default). The logical display height stays 224 pixels.
+PAL selects 50 Hz simulation and audio service; NTSC selects 60 Hz.
+`display.fps` limits window rendering independently and applies immediately.
+`display.pacing: "AUTO"` (the default) locks those services to a display that refreshes
+at a whole multiple of the region rate; `"EXACT"` keeps them on the system clock.
+The logical display height stays 224 pixels.
 This setting does not select a different ROM revision or establish complete PAL parity.
 
 ## How do I use different ROM filenames?

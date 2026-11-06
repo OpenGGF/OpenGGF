@@ -111,8 +111,15 @@ edit, and pick with West (X / Square). LB/RB change brush along the hotbar.*
 *North (Y / Triangle) or `Tab` opens the library for the current brush kind;
 choosing an entry puts it on the hotbar. RT edits the block under the cursor and
 then its chunk; LT or East goes back up. Hold View (or press `Q`) for a wheel of
-tools for the current view, and press Menu (or `F1`) for save, playtest, export,
-project commands and every editor command.*
+tools for the current view, and press Menu (or `F1`) for the editor menu. Its front
+page holds Resume, Save, both playtests, the level pages (library, object properties,
+level settings, palette, Stageplay), **Projects and files** and **Exit to title**.
+**All commands and shortcuts** opens the command sheet (East or `Esc` steps back): every
+editor command once, grouped as Editor (the HUD's own pages and the Stageplay
+workspace), Edit (Undo and Redo first), Region, Pattern and tile, Objects, View,
+Playtest and Project, each with the keyboard shortcut it really has (or, on a pad,
+the pad control). Panning is a held control (Ctrl+arrows, or LB+RB with the left stick), so
+it has no menu row.*
 
 The full pad table is in the [configuration guide](../../../CONFIGURATION.md#level-editor-experimental). The
 keyboard shortcuts below apply to the HUD and world editing canvas.
@@ -149,14 +156,14 @@ H/J for flips, and T for priority. Escape returns to Block, then World.*
 
 | Input | Action |
 |---|---|
-| Arrows / menu directions | Move the canvas cursor or selection in an open library |
+| Arrows / menu directions | Step the canvas cursor by a whole block (8 pixels for objects/rings), or move selection in an open library |
 | `Tab` | Open the library sheet |
 | `Page Up` / `Page Down` | Move through pages in an open library |
 | `Enter` / South in a library | Select the highlighted brush |
 | `Space` / left click | Place or apply the brush |
 | Left drag in World | Paint terrain as one undoable stroke |
 | `E` / right click | Pick content near the cursor |
-| `Delete` | Erase terrain at the selected cell or delete the selected spawn |
+| `Delete` | Delete the selected region; otherwise erase terrain at the selected cell, or delete the object at the cursor in object mode |
 | `L` | Switch FG / BG |
 | `Enter` / `Escape` | Descend / ascend the hierarchy |
 | `O` | Cycle terrain, objects, and rings |
@@ -170,7 +177,9 @@ H/J for flips, and T for priority. Escape returns to Block, then World.*
 | `R` with an object selected | Toggle its respawn tracking |
 | `M` with a spawn selected | Move it to the world cursor |
 | `Ctrl+Z` / `Ctrl+Y` | Undo / redo |
-| `F1` | Open the editor menu |
+| `Ctrl+=` / `Ctrl+-` / `Ctrl+0` | Zoom in / out / reset (Ctrl+0 never picks hotbar slot 10) |
+| `Ctrl+S` / `Ctrl+Shift+E` | Save the project / export the level |
+| `F1` | Open the editor menu (front page, command sheet and Exit to title) |
 
 Picking an existing object lets you edit its subtype, flips, and respawn
 tracking without changing the brush for future placements. In spawn mode the HUD
@@ -189,15 +198,16 @@ uses existing collision data; this tool does not draw new height/width profiles.
 ## Select, copy and fill regions
 
 In World view, **Shift + left drag** selects a rectangle of map cells. For a
-keyboard or controller, move to the first corner, choose **Region: set corner /
-finish** (keyboard **F6**), move to the opposite corner, then choose it again.
+keyboard or controller, move to the first corner, choose **Set corner / finish
+region** (keyboard **F6**), move to the opposite corner, then choose it again.
 The rectangle covers terrain on the active FG/BG layer and object/ring centres
 inside it. Native object-backed ring groups are indivisible: selecting any member
 includes the whole group, even if other members cross the rectangle edge.
 
 **Ctrl+C**, **Ctrl+X**, and **Ctrl+V** copy, cut, and open a paste preview. The desktop
-World inspector and HUD editor menu expose the same actions, plus **Delete region**,
-**Fill rectangle**, **Flood fill at cursor**, and **Clear region / cancel paste**.
+World inspector and HUD editor menu expose the same actions, plus **Delete region**
+(`Delete`), **Fill region with brush**, **Flood fill at cursor**, and **Clear region**
+(`Escape`, which also cancels an open paste preview).
 Choose a block brush before filling. Flood fill uses four-neighbour connectivity
 on the active layer; rectangle fill changes terrain only. Delete/cut use actual
 transparent, noncolliding terrain, and report an error if none exists.
@@ -214,12 +224,14 @@ existing derived-definition behavior.
 ### Canvas navigation
 
 Middle-drag pans independently of the editing cursor. The mouse wheel zooms around
-the pointer in integer steps from **1× to 8×**. Keyboard **Ctrl+arrows** pans,
-**Ctrl+= / Ctrl+-** zooms, and **Ctrl+0** resets zoom. Every navigation command is
+the pointer through **0.25×, 0.5× and whole steps from 1× to 8×**. Keyboard **Ctrl+arrows** pans,
+**Ctrl+= / Ctrl+-** zooms, and **Ctrl+0** resets zoom. Zoom and reset are
 also in the command menu. In the HUD, hold **LB+RB**, steer the left stick to pan,
 and use D-pad up/down to zoom. Navigation does not enter undo history or change
-playtest bounds. **1× is the minimum**: zoom magnifies the native world render;
-zooming out to show more terrain is not yet implemented.
+playtest bounds. Zooming out reveals more terrain: **0.25×** shows four times the
+world width and height of 1×. Reset returns to **1×**. Arrow keys step between
+block centres for terrain, or by eight pixels for objects and rings, with the
+same held-key repeat timing as menus and the controller D-pad.
 
 ## Named object properties
 
@@ -405,6 +417,12 @@ fails the clone. An unplaced library chunk keeps its index and collision, and
 its unavailable tiles draw transparent (stock Sonic 2 Emerald Hill has 32 such
 references).
 
+**Exit to title** on the editor menu leaves the editor for the master title, with a
+project or a native stock layout open. With unsaved work it offers **Save and exit to
+title**, **Exit without saving** and **Keep editing**; an unsaved Stageplay scene is asked
+about first. Native editing replaces the gameplay it was entered from, so leaving never
+resumes that run; use a playtest to keep playing the edited level.
+
 **Close project** asks about unsaved changes. **Save and continue** saves before
 closing; **Discard changes and continue** closes without saving; **Continue
 editing** keeps the document open. Replacing a project uses the same choices.
@@ -412,10 +430,65 @@ Application quit and the window close button also offer **Save and quit**,
 **Quit without saving**, and **Cancel quit**. A failed save keeps the application
 open; cancelling restores the editor or active playtest.
 
+## Edit route tapes
+
+A route tape is a recorded controller route: `<stem>.route.json` (how the route
+starts: ROM, level, team, width and start clock) and `<stem>.script` (one row per
+controller poll, both pads, physical buttons). Open the **Routes** workspace from
+the plate beside **Stageplay** or from the command sheet, then **Open route**
+(`Ctrl+O`) or **New route** from the route menu (`F1`), which starts a cold-level
+draft over neutral rows.
+
+The timeline shows P1's eight buttons above P2's. Move the cursor with
+**Left/Right** (`Shift` steps 60 rows, the bumpers page) and the button with
+**Up/Down**; **Space** or South toggles the button, **M** or West marks a range,
+North (or `Insert`/`Delete`) opens row actions. Every edit is one undo step.
+
+**Replay** (`R`) plays the working rows from a cold boot in a separate worker and
+reports **Qualified**, **Passes replay; not saved** or **Not qualified: stopped
+at row N**, moving the cursor to that row. When the editor shows the route's
+level, the replayed path is drawn over it and the view follows the cursor.
+**Save qualified** (`Ctrl+S`) replays first and writes the files only after a
+passing replay. **Save draft** keeps unfinished work: the manifest is marked as a
+draft, tests and native checks refuse it, and a draft never replaces a qualified
+route. The panel lists the route's goals, which replay checks on every row.
+
+**Repair** keeps the rows before the first editable row, then follows a reference
+(the route's saved rows, another route, a route script, a BizHawk movie, or a
+track recorded on the engine a movie's rows were authored against) and
+searches new rows only where play drifts from it. A solved repair replaces the
+working rows as one undo step, reports how many original rows it kept, and marks
+kept and searched spans on the timeline; it still needs **Save qualified**. A
+stopped repair names the furthest row it reached and offers **Use best attempt**
+to inspect that unqualified attempt.
+
+**Goals** are the route's legs, checked on every row of a replay: reach a region,
+board or ride an object, attach or hold (grab, hang, tube, airflow and so on),
+wait for an object's phase, defeat a boss, or cross into the next level. **Add leg**
+builds one; its target is the placed object nearest a point (the player's position
+at the cursor by default) or an object picked from **Scan objects here**, which plays
+the rows to the cursor in a separate worker and lists the live objects that report
+a phase, an attachment or hit points, including ones spawned at runtime such as a
+replica boss. **Edit goals as text** edits the whole program in the manifest's format.
+**Plan** keeps the rows before a chosen row and searches rows that complete every
+leg in order; a solved plan replaces the rows and goals as one undo step and still
+needs **Save qualified**.
+
+Stageplay input rows (an applied **Plan route**) open here too, from **Edit input
+rows** in Stageplay. Then the panel names the actor and frames, file, replay and
+repair commands are off, and **Apply to scene** returns the rows to the scene as
+one Stageplay undo step.
+
+Rows are numbered from 0 throughout: the timeline's **Row 156 of 226** is the
+157th of 226 rows, as in replay messages and **Go to row**. **Export BK2** writes a new BizHawk movie of the rows and never
+overwrites a file. The panel lists the manifest's native observations, such as
+lag frames seen on BizHawk; they are display only and never change a replay.
+
 ## Playtest and return
 
-For a project, choose **Playtest from level start** for the authored start or
-**Playtest from cursor** for a validated cursor position. Project launches use
+Choose **Playtest from level start** (`F5`) for the authored start or **Playtest
+from cursor** (`Shift+Tab`) for a validated cursor position; the menu's Playtest
+group lists both, for projects and native layouts alike. Project launches use
 its authored bounds and body-clearance checks, so the final runway beyond Camera
 maximum X cannot be a launch point. Native cursor launches use the loaded terrain
 bounds and native collision mapping; native camera-origin limits do not bound

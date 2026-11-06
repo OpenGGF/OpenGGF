@@ -71,6 +71,19 @@ class TestLiveRewindOwnerLifetime {
     }
 
     @Test
+    void physicalRunDriverDefersInstallationUntilItDetaches() {
+        GameplayModeContext owner = privateOwner();
+        registerStage(owner, 0);
+        var driver = new com.openggf.trace.replay.runs.TraceRunFrameDriver();
+        owner.installTraceRunFrameDriver(driver);
+        bind(owner);
+        assertNull(owner.getRewindController(), "the physical run driver owns this transient timeline");
+        owner.clearTraceRunFrameDriver(driver);
+        bind(owner);
+        assertNotNull(owner.getRewindController(), "ordinary live rewind remains available after the driver detaches");
+    }
+
+    @Test
     void installedOwnerReplaysItsRegisteredProviderWhileAnotherSessionIsAmbient() {
         GameplayModeContext ambient = TestEnvironment.activeGameplayMode();
         CountingStage ambientStage = registerStage(ambient, 40);
@@ -512,6 +525,204 @@ class TestLiveRewindOwnerLifetime {
         assertNull(ambient.getRewindController());
         org.mockito.Mockito.verify(script).requested();
         assertSame(ambient, SessionManager.getCurrentGameplayMode());
+    }
+
+    @Test
+    void exhaustedBudgetReleasesImmediatelyAndDeniedPressShowsOneSecondOfFeedback() {
+        config.setConfigValue(SonicConfiguration.REWIND_BUDGET_SECONDS, "1");
+        GameplayModeContext owner = privateOwner();
+        CountingStage stage = registerStage(owner, 0);
+        InputHandler input = new InputHandler();
+        bind(owner);
+        record(stage, input, 70);
+        RewindController controller = owner.getRewindController();
+        for (int frame = 0; frame < 60; frame++) holdRewind(input);
+        assertEquals(10, controller.currentFrame());
+        assertEquals(0, manager.budgetHudState().remainingFrames());
+        assertFalse(manager.isRewindingOrReleasing());
+        assertFalse(audio.isReverseAudioPresentationActive());
+        assertFalse(owner.getFadeManager().isReversePresentationActive());
+        assertFalse(manager.handleRealtimeRewindInput(GameMode.SPECIAL_STAGE, false, input));
+        assertEquals(10, controller.currentFrame(), "holding cannot overspend or resume rewind");
+        releaseKey(input);
+        manager.handleRealtimeRewindInput(GameMode.SPECIAL_STAGE, false, input);
+        for (int frame = 0; frame < 60; frame++) {
+            manager.handleRealtimeRewindInput(GameMode.SPECIAL_STAGE, false, input);
+        }
+        assertFalse(manager.budgetHudState().visible());
+        input.handleKeyEvent(config.getInt(SonicConfiguration.LIVE_REWIND_KEY), GLFW_PRESS);
+        assertFalse(manager.handleRealtimeRewindInput(GameMode.SPECIAL_STAGE, false, input));
+        assertTrue(manager.budgetHudState().visible());
+        assertTrue(manager.budgetHudState().empty());
+        assertFalse(manager.canEngageHeldRewind());
+        for (int frame = 0; frame < 59; frame++) {
+            assertFalse(manager.handleRealtimeRewindInput(GameMode.SPECIAL_STAGE, false, input));
+        }
+        assertTrue(manager.budgetHudState().visible());
+        manager.handleRealtimeRewindInput(GameMode.SPECIAL_STAGE, false, input);
+        assertFalse(manager.budgetHudState().visible(), "held key does not keep extending the toast");
+    }
+
+    @Test
+    void doubleSpeedSpendsTwoTicksAndSnapshotRestoreCannotRefundThem() {
+        GameplayModeContext owner = privateOwner();
+        CountingStage stage = registerStage(owner, 0);
+        InputHandler input = new InputHandler();
+        bind(owner);
+        record(stage, input, 5);
+        input.handleKeyEvent(config.getInt(SonicConfiguration.LIVE_REWIND_DOUBLE_SPEED_KEY), GLFW_PRESS);
+        holdRewind(input);
+        assertEquals(3, owner.getRewindController().currentFrame());
+        assertEquals(598, manager.budgetHudState().remainingFrames());
+        owner.getRewindController().seekTo(5);
+        assertEquals(598, manager.budgetHudState().remainingFrames());
+    }
+
+    @Test
+    void completedLifeLossRefillsOnlyWhenEnabledAndReplayCannotGrantIt() {
+        GameplayModeContext owner = privateOwner();
+        CountingStage stage = registerStage(owner, 0);
+        InputHandler input = new InputHandler();
+        bind(owner);
+        record(stage, input, 5);
+        stage.afterRestore = () -> owner.markRewindBoundary(RewindBoundary.LIFE_LOSS_RESPAWN);
+        holdRewind(input);
+        assertEquals(599, manager.budgetHudState().remainingFrames(),
+                "a life-loss event replayed during restore has no authority");
+        releaseKey(input);
+        manager.handleRealtimeRewindInput(GameMode.SPECIAL_STAGE, false, input);
+        config.setConfigValue(SonicConfiguration.REWIND_REFILL_ON_LIFE_LOSS, false);
+        owner.markRewindBoundary(RewindBoundary.LIFE_LOSS_RESPAWN);
+        assertEquals(599, manager.budgetHudState().remainingFrames());
+        config.setConfigValue(SonicConfiguration.REWIND_REFILL_ON_LIFE_LOSS, true);
+        owner.markRewindBoundary(RewindBoundary.LIFE_LOSS_RESPAWN);
+        assertEquals(600, manager.budgetHudState().remainingFrames());
+    }
+
+    @Test
+    void specialStageToggleAndOffScopeRejectPlayerRewind() {
+        GameplayModeContext owner = privateOwner();
+        registerStage(owner, 0);
+        config.setConfigValue(SonicConfiguration.REWIND_SPECIAL_STAGES, false);
+        bind(owner);
+        assertNull(owner.getRewindController());
+        config.setConfigValue(SonicConfiguration.REWIND_SPECIAL_STAGES, true);
+        config.setConfigValue(SonicConfiguration.REWIND_BUDGET_SCOPE, "off");
+        bind(owner);
+        assertNull(owner.getRewindController());
+    }
+
+    @Test
+    void respawnRefillSurvivesRetirementOfTheHistoryButNotAnOutgoingOwner() {
+        GameplayModeContext owner = privateOwner();
+        CountingStage stage = registerStage(owner, 0);
+        InputHandler input = new InputHandler();
+        bind(owner);
+        record(stage, input, 3);
+        holdRewind(input);
+        releaseKey(input);
+        manager.handleRealtimeRewindInput(GameMode.SPECIAL_STAGE, false, input);
+        assertEquals(599, manager.budgetHudState().remainingFrames());
+        owner.markRewindBoundary(RewindBoundary.MODE_EXIT_TO_NON_REWINDABLE);
+        assertNull(owner.getRewindController());
+        owner.markRewindBoundary(RewindBoundary.LIFE_LOSS_RESPAWN);
+        assertEquals(600, manager.budgetHudState().remainingFrames(),
+                "the completed live respawn refills even after transition history was retired");
+
+        GameplayModeContext incoming = privateOwner();
+        CountingStage incomingStage = registerStage(incoming, 0);
+        bind(incoming);
+        record(incomingStage, input, 3);
+        holdRewind(input);
+        assertEquals(599, manager.budgetHudState().remainingFrames());
+        owner.markRewindBoundary(RewindBoundary.LIFE_LOSS_RESPAWN);
+        assertEquals(599, manager.budgetHudState().remainingFrames(),
+                "the outgoing owner cannot refill its replacement's allowance");
+    }
+
+    @Test
+    void disabledStageRewindStillObservesExitsAndAFreshVisitWithTheSameProvider() {
+        GameplayModeContext owner = privateOwner();
+        CountingStage stage = registerStage(owner, 0);
+        InputHandler input = new InputHandler();
+        bind(owner);
+        record(stage, input, 3);
+        holdRewind(input);
+        releaseKey(input);
+        manager.handleRealtimeRewindInput(GameMode.SPECIAL_STAGE, false, input);
+        assertEquals(599, manager.budgetHudState().remainingFrames());
+        config.setConfigValue(SonicConfiguration.REWIND_SPECIAL_STAGES, false);
+        mode.set(GameMode.MASTER_TITLE_SCREEN);
+        manager.bindOwner(null, false, GameMode.MASTER_TITLE_SCREEN);
+        bind(owner);
+        assertEquals(600, manager.budgetHudState().remainingFrames(),
+                "a new visit begins even while its rewind toggle is disabled");
+        config.setConfigValue(SonicConfiguration.REWIND_SPECIAL_STAGES, true);
+        bind(owner);
+        assertEquals(600, manager.budgetHudState().remainingFrames());
+        record(stage, input, 2);
+        holdRewind(input);
+        assertEquals(599, manager.budgetHudState().remainingFrames());
+        config.setConfigValue(SonicConfiguration.REWIND_SPECIAL_STAGES, false);
+        manager.handleRealtimeRewindInput(GameMode.SPECIAL_STAGE, false, input);
+        config.setConfigValue(SonicConfiguration.REWIND_SPECIAL_STAGES, true);
+        bind(owner);
+        assertEquals(599, manager.budgetHudState().remainingFrames(),
+                "toggling rewind within the same visit does not refill");
+    }
+
+    @Test
+    void explicitNativeTitleStartRefillsTheSameWorldWithLifeRefillOff() {
+        GameplayModeContext main = privateOwner();
+        mode.set(GameMode.LEVEL);
+        manager.bindOwner(main, false, GameMode.LEVEL);
+        config.setConfigValue(SonicConfiguration.REWIND_REFILL_ON_LIFE_LOSS, false);
+        InputHandler input = new InputHandler();
+        manager.recordExternalFrame(GameMode.LEVEL, false, input);
+        input.handleKeyEvent(config.getInt(SonicConfiguration.LIVE_REWIND_KEY), GLFW_PRESS);
+        assertTrue(manager.handleRealtimeRewindInput(GameMode.LEVEL, false, input));
+        releaseKey(input);
+        manager.handleRealtimeRewindInput(GameMode.LEVEL, false, input);
+        assertEquals(599, manager.budgetHudState().remainingFrames());
+        manager.startNewRun();
+        manager.bindOwner(main, false, GameMode.LEVEL);
+        assertEquals(600, manager.budgetHudState().remainingFrames());
+    }
+
+    @Test
+    void mainAllowanceSurvivesAContextRebuildAcrossAStageVisitButANewWorldStartsFresh() {
+        GameplayModeContext main = privateOwner();
+        mode.set(GameMode.LEVEL);
+        manager.bindOwner(main, false, GameMode.LEVEL);
+        InputHandler input = new InputHandler();
+        manager.recordExternalFrame(GameMode.LEVEL, false, input);
+        input.handleKeyEvent(config.getInt(SonicConfiguration.LIVE_REWIND_KEY), GLFW_PRESS);
+        assertTrue(manager.handleRealtimeRewindInput(GameMode.LEVEL, false, input));
+        releaseKey(input);
+        manager.handleRealtimeRewindInput(GameMode.LEVEL, false, input);
+        assertEquals(599, manager.budgetHudState().remainingFrames());
+
+        GameplayModeContext stageOwner = privateOwner();
+        CountingStage stage = registerStage(stageOwner, 0);
+        bind(stageOwner);
+        assertEquals(600, manager.budgetHudState().remainingFrames());
+        record(stage, input, 2);
+        holdRewind(input);
+        releaseKey(input);
+        manager.handleRealtimeRewindInput(GameMode.SPECIAL_STAGE, false, input);
+        WorldSession suspendedWorld = main.getWorldSession();
+        main.destroy();
+        GameplayModeContext rebuiltMain = new GameplayModeContext(suspendedWorld);
+        GameplaySessionFactory.attachManagers(rebuiltMain, EngineServices.current());
+        privateOwners.add(rebuiltMain);
+        mode.set(GameMode.LEVEL);
+        manager.bindOwner(rebuiltMain, false, GameMode.LEVEL);
+        assertEquals(599, manager.budgetHudState().remainingFrames(),
+                "rebuilding runtime managers does not replace the suspended world's allowance");
+
+        GameplayModeContext newGame = privateOwner();
+        manager.bindOwner(newGame, false, GameMode.LEVEL);
+        assertEquals(600, manager.budgetHudState().remainingFrames(), "a genuinely new world starts fresh");
     }
 
     private GameplayModeContext privateOwner() {

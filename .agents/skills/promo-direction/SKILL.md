@@ -487,6 +487,11 @@ signature move is what makes it a brand.
 
 ### Pacing
 
+- For menu comparisons, scorecards and instructional cards, separate reveal time,
+  settled reading time and transition time. Budget the reading hold from what the
+  viewer must understand after the last important element settles; a three-second
+  shot can still provide almost no reading time. Reduce simultaneous facts or extend
+  the settled hold before adding captions or speeding transitions.
 - For a music-led showcase, aim around 3–5 s per shot, watch the 10-cuts-in-20-s
   warning and give the eye a rest after a busy passage. A dialogue take can be
   longer to complete the exchange; do not force it into a grid or cut quota.

@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.competition.specialstage;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.data.compression.NemesisReader;
@@ -150,7 +152,7 @@ public final class CompetitiveHalfpipeRomData {
     private static Palette[][] loadCompetitivePalettes(RomByteReader rom) throws IOException {
         Palette[] main = new Palette[3];
         for (int line = 0; line < main.length; line++) {
-            main[line] = readPalette(rom, (int) Sonic2SpecialStageConstants.PALETTE_MAIN_OFFSET + line * 32);
+            main[line] = readPalette(rom, (int) address(rom, Sonic2SpecialStageConstants.PALETTE_MAIN_OFFSET) + line * 32);
         }
         Palette[][] result = new Palette[STAGE_COUNT][4];
         for (int stage = 0; stage < STAGE_COUNT; stage++) {
@@ -159,8 +161,8 @@ public final class CompetitiveHalfpipeRomData {
             // SS6/SS7 and then all three competitive palettes; it is not the
             // ordinary seven-palette order. No global palette cache/fallback.
             int paletteIndex = stage + (stage >= 2 ? 3 : 0);
-            int paletteId = rom.readU16BE(STAGE_PALETTE_IDS + paletteIndex * 2);
-            int descriptor = PALETTE_POINTERS + paletteId * 8;
+            int paletteId = rom.readU16BE(address(rom, STAGE_PALETTE_IDS) + paletteIndex * 2);
+            int descriptor = address(rom, PALETTE_POINTERS) + paletteId * 8;
             if (rom.readU16BE(descriptor + 4) != 0xFB60
                     || rom.readU16BE(descriptor + 6) != 7) {
                 throw new IOException("Invalid native halfpipe palette descriptor");

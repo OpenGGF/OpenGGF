@@ -24,7 +24,8 @@ class TestCoordinatorVoteInput {
         int before = sent.size();
         coordinator.castVote(2);
         coordinator.castVote(-1);
-        session.onControl(new ControlMessage.TrackVoteResult("s3k:1:0"));
+        session.onControl(new ControlMessage.TrackVoteResult("s3k:1:0",
+                new ControlMessage.RoundConfig("s3k", 1, 0, 60, "OPEN", null), 1));
         coordinator.castVote(0);
         assertEquals(before, sent.size());
         assertEquals(List.of("s3k:1:0"),

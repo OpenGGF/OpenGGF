@@ -26,6 +26,7 @@ import java.util.logging.Logger;
  *
  * Spawns 2 AizIntroBoosterChild sub-objects for the booster flame animation.
  */
+@com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.SCREEN_POSITION)
 public class AizIntroPlaneChild extends AbstractObjectInstance implements RewindRecreatable {
     private static final Logger LOG = Logger.getLogger(AizIntroPlaneChild.class.getName());
 

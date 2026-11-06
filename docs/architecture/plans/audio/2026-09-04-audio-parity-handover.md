@@ -1,5 +1,26 @@
 # Audio parity programme: handover (2026-09-04)
 
+## Current use — reconciled 2026-10-29
+
+Dated baselines, checklists, measurements and branch handoffs below remain
+historical evidence. They do not certify the current candidate or select its
+next frontier. Read the [audio frontier log](../../../status/audio-frontier-log.md)
+and [0.7 roadmap](../../../project/v0.7-roadmap.md) against current source first.
+The [engine boundary](../../../architecture/engine-map.md#reimplementation-boundary)
+supersedes any proposal to require 68000/Z80 instruction/cycle accounting;
+translate ROM driver behavior into semantic owners, retain unsupported timing
+limits and keep chip synthesis distinct from system emulation. Do not fit waits,
+hydrate expected driver/gameplay state or infer listening approval from a pass.
+
+Reusable commands use JDK 25, Lua 5.4 where required, absolute original ROM
+paths and worktree-local `target/`. Queue Maven tests with
+`python3 tools/testing/maven_queue.py`; select focused affected cases first.
+Shared changes use the inspected change-based batched smoke plan; full-suite is
+public-release preparation only. Current repository delivery and diagnostic
+cleanup policy supersedes old baseline/development/post-merge repeat runs,
+report archives and fixed agent/review recipes. Earlier JDK 21 measurements
+remain attributed to their historical runtime, not current instructions.
+
 Debrief and handover for whoever picks up the SMPS audio parity work after the
 2026-09-03/04 lead session. Everything below is on `develop` unless a branch is
 named. Numbers are stamped with the commit they were measured on; re-measure
@@ -8,7 +29,7 @@ before relying on any of them (see the measurement-hazard table in
 
 ## September 5 next milestone (delivered)
 
-### Active per-game driver parity campaign
+### Historical per-game driver parity campaign (September baseline)
 
 Branch `feature/ai-audio-trace-coverage` carries the
 [revised roadmap](2026-09-05-audio-trace-coverage-roadmap.md). The objective is
@@ -379,7 +400,22 @@ five silently dropped settings on its first run).
 - BizHawk exits 0 on Lua errors; treat a silent capture as failed until its
   output exists.
 
-## Commands
+## Current focused command pattern
+
+Use JDK 25 and discovered absolute ROM/movie paths with current authenticated
+fixtures. Select the affected exact driver tests through the queue; do not
+restart the historical broad audio/replay sweep by default. For example:
+
+```bash
+LUA_BIN=lua5.4 python3 tools/testing/maven_queue.py -Dmse=off \
+  "-Ds3k.rom.path=$S3K_ROM_PATH" \
+  -Dtest=TestS3kOracleRequestSidecarWiring test
+```
+
+## Historical September commands and observer identity
+
+The following raw Maven commands and observer pins record the original session;
+they are not reusable current execution instructions or current producer trust.
 
 ```bash
 # audio parity + audio packages, three ROM paths, S2 request movie

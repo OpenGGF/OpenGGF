@@ -46,6 +46,7 @@ public enum GameMode {
     LEGAL_DISCLAIMER,
 
     /** Native-build notice: enabled code mods cannot load on the native binary. */
+    /** Reserved compatibility value; native builds now load code mods. */
     NATIVE_MOD_NOTICE,
 
     /** Post-credits "TRY AGAIN" or "END" screen (Sonic 1) */

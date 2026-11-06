@@ -95,7 +95,7 @@ public final class TimeAttackVideoPeers implements AutoCloseable {
 
     private MasterClient master(PlayerIdentity identity, String name) throws Exception {
         MasterClient client = awaitOwned(
-                MasterClient.connect(endpoint(), identity, name, fingerprint, null), MasterClient::close);
+                MasterClient.connect(endpoint().toString(), identity, name, fingerprint, null), MasterClient::close);
         masters.add(client);
         CompletableFuture<Void> promoted = new CompletableFuture<>();
         server.execute(() -> {

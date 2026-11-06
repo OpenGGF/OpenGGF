@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
+import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.tools.Sonic3kObjectProfile;
 import org.junit.jupiter.api.Test;
 
@@ -33,6 +34,7 @@ class TestCnzMinibossRegistered {
     void numericSlotIsImplementedInBothPointerTables() {
         // Shared coverage means both numeric slots are implemented, not that
         // the two pointer tables select the same boss class.
-        assertTrue(Sonic3kObjectProfile.SHARED_IMPLEMENTED_IDS.contains(Sonic3kObjectIds.CNZ_MINIBOSS));
+        assertTrue(Sonic3kObjectProfile.implementedIdsForZone(Sonic3kZoneIds.ZONE_CNZ).contains(Sonic3kObjectIds.CNZ_MINIBOSS));
+        assertTrue(Sonic3kObjectProfile.implementedIdsForZone(Sonic3kZoneIds.ZONE_DEZ).contains(Sonic3kObjectIds.CNZ_MINIBOSS));
     }
 }

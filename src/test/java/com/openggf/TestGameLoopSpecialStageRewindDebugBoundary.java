@@ -181,6 +181,50 @@ class TestGameLoopSpecialStageRewindDebugBoundary {
     }
 
     @Test
+    void moviePlaybackSuppressesSpecialStageShortcut() throws Exception {
+        RecordingProvider provider = new RecordingProvider(order);
+        activateSpecialStage(provider);
+        forceFadeHoldWhite();
+        var playback = com.openggf.game.GameServices.playbackDebug();
+        playback.startSession(new com.openggf.debug.playback.Bk2Movie(
+                java.nio.file.Path.of("shortcut-test.bk2"), "", java.util.Map.of(),
+                java.util.List.of(new com.openggf.debug.playback.Bk2FrameInput(0, 0, 0, false, "")), 1), 0);
+        try {
+            var overlays = DebugOverlayManager.getInstance();
+            overlays.setEnabled(DebugOverlayToggle.OBJECT_ART_VIEWER, true);
+            boolean viewerWasInPatternMode = overlays.getObjectArtViewer().isPatternMode();
+            var hud = new com.openggf.testmode.TraceHudOverlay(
+                    org.mockito.Mockito.mock(com.openggf.trace.live.LiveTraceComparator.class));
+            input.handleKeyEvent(config.getInt(SonicConfiguration.SPECIAL_STAGE_KEY), GLFW_PRESS);
+            hud.handleInput(input);
+            loop.step();
+            assertTrue(hud.detailsVisible());
+            assertEquals(GameMode.SPECIAL_STAGE, loop.getCurrentGameMode());
+            assertTrue(boundaries.isEmpty());
+            assertEquals(viewerWasInPatternMode, overlays.getObjectArtViewer().isPatternMode());
+        } finally {
+            playback.endSession();
+        }
+    }
+
+    @Test
+    void recordingSuppressesSpecialStageShortcut() throws Exception {
+        RecordingProvider provider = new RecordingProvider(order);
+        activateSpecialStage(provider);
+        forceFadeHoldWhite();
+        var recording = org.mockito.Mockito.mock(
+                com.openggf.game.recording.UserRecordingSessionLauncher.class);
+        org.mockito.Mockito.when(recording.hasActiveRecordingSession()).thenReturn(true);
+        setField(loop, "userRecordingSessionLauncher", recording);
+
+        input.handleKeyEvent(config.getInt(SonicConfiguration.SPECIAL_STAGE_KEY), GLFW_PRESS);
+        loop.step();
+
+        assertEquals(GameMode.SPECIAL_STAGE, loop.getCurrentGameMode());
+        assertTrue(boundaries.isEmpty());
+    }
+
+    @Test
     void globalSpecialStageKeyMarksBoundaryOnceAndStillRunsSharedResultsTail() throws Exception {
         RecordingProvider provider = new RecordingProvider(order);
         activateSpecialStage(provider);

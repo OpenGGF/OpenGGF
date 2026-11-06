@@ -169,8 +169,26 @@ public class Sonic2LevelEventManager extends AbstractLevelEventManager {
         // Dispatch to zone-specific event handler
         Sonic2ZoneEvents handler = getActiveHandler();
         if (handler != null) {
-            handler.update(currentAct, frameCounter);
+            handler.update(currentAct, levelFrameCounter());
         }
+    }
+
+    /**
+     * The native {@code Level_frame_counter} word the zone handlers read
+     * (for example LevEvents_HTZ, docs/s2disasm/s2.asm:20772-20786, and
+     * LevEvents_MCZ2_Routine4, :21498). {@code Level} clears it
+     * (s2.asm:4772-4773) and only {@code Level_MainLoop} advances it
+     * (:5092), so the leave loop's single {@code DeformBgLayer} reads zero.
+     * This manager's own update count also counts that locked call and is not
+     * the ROM word.
+     */
+    private int levelFrameCounter() {
+        var title = GameServices.module().getTitleCardProvider();
+        if (title != null && !title.shouldReleaseControl()) {
+            return 0;
+        }
+        var sprites = GameServices.spritesOrNull();
+        return (sprites != null ? sprites.getFrameCounter() : frameCounter) & 0xFFFF;
     }
 
     @Override
@@ -189,7 +207,7 @@ public class Sonic2LevelEventManager extends AbstractLevelEventManager {
     public void updateFixedInLevelObjectsBeforeDynamicObjects() {
         // ROM's reserved object-RAM band (CPZPylon / WaterSurface1 aliased with
         // Oil / WaterSurface2) sits between the player object slots and
-        // Dynamic_Object_RAM (docs/s2disasm/s2.constants.asm:1128-1137), so it
+        // Dynamic_Object_RAM (docs/s2disasm/s2.constants.asm:1135-1144), so it
         // runs after player physics and before every dynamic level object.
         Sonic2ZoneEvents handler = getActiveHandler();
         if (handler != null) {
@@ -259,7 +277,7 @@ public class Sonic2LevelEventManager extends AbstractLevelEventManager {
      * locks the left boundary to that value and submits {@code PLCID_Signpost}
      * through {@code LoadPLC2} — ClearPLC-then-copy, i.e. a replace, not an
      * append (docs/s2disasm/s2.asm:2103-2124). {@code PLCptr_Signpost} is index
-     * 39 in {@code ArtLoadCues} (docs/s2disasm/s2.asm:89194-89262) and holds a
+     * 39 in {@code ArtLoadCues} (docs/s2disasm/s2.asm:89309-89377) and holds a
      * single {@code plreq ArtTile_ArtNem_Signpost, ArtNem_Signpost}
      * (docs/s2disasm/s2.asm:89658-89660), i.e. 78 patterns into tile $0434.
      * <p>

@@ -307,9 +307,10 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
         Camera camera = camera();
         AbstractPlayableSprite player = focusedPlayer();
         int playerY = player == null ? 0 : player.getCentreY() & 0xFFFF;
-        // sub_54B80 tests SK_alone_flag, not character_id. The supported
-        // locked-on ROM keeps that flag clear even when playing as Knuckles.
-        int minX = playerY >= ACT1_MIN_X_PLAYER_Y_THRESHOLD
+        // sub_54B80 (sonic3k.asm:112290-112305) selects $680 for the
+        // standalone cartridge, regardless of the selected character or Y.
+        int minX = com.openggf.game.sonic3k.Sonic3kCartridgePolicy.isStandaloneSk() ? 0x680
+                : playerY >= ACT1_MIN_X_PLAYER_Y_THRESHOLD
                 ? ACT1_MIN_X_LOWER_ROUTE
                 : ACT1_MIN_X_UPPER_ROUTE;
         camera.setMinX((short) minX);
@@ -977,7 +978,7 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
     private void applyEndBossCameraX(int cameraX, boolean mirrorMaxX) {
         Camera camera = camera();
         if (mirrorMaxX) {
-            camera.setMaxX((short) cameraX);
+            camera.setMaxXCurrent((short) cameraX);
         }
         // loc_5569E writes one native word to Camera_X/min/max. Keep those
         // boundary words intact and project only the engine display coordinate.

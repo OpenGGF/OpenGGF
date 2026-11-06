@@ -98,6 +98,135 @@ For resource accounting, use `git diff --ignore-submodules=none` and inspect
 records the restored optional reference. A summary alone does not prove that
 the reference is present.
 
+A native recorder test can inspect a different checkout from the one that was
+built (2026-11-03, S3K loading). Positional parent-directory walks in a nested
+producer worktree selected the wrong consumer root and producer sources. A
+matched baseline/candidate run therefore reproduced 125 failures without
+qualifying the intended source paths. Use an explicit consumer repository and
+fixture root, and locate producer sources from the running build's own checkout.
+Correcting those paths exposed 52 inherited audio/source-lock failures in both
+trees; the new initialization cases passed. Compare identities and assertions,
+including build-dependent executable seals, rather than totals alone.
+
+Grouped report counts are not raw field-error totals. `DivergenceReport` counts
+error groups and records only each group's starting values; an unchanged group
+can hide a changed engine value later in its span. Live comparator counts instead
+accumulate field mismatches. For an exact added-error gate, compare complete
+`FrameComparison` fields at the actual compared rows; do not expand group spans
+into assumed observations. The [Mega segment2 audit](../architecture/audits/2026-11-03-s3k-mega-segment2.md)
+uses a full standalone capture to distinguish these metrics.
+
+A comparison-only observer can change which run-context outcome is reproduced
+(2026-11-04, ICZ2). Pairing two observed sources proves equality only for those
+observed runs; first reproduce the disputed unobserved outcome before assigning
+its cause. Preserve full assertions, input hashes and actual row fields. The
+[exact field comparator](../../tools/traces/compare_frame_comparisons.py) reports
+added tuples and unmatched coverage, but does not turn grouped summaries,
+missing suffixes or identical observed controls into a universal parity proof.
+
+An aborted replay may never construct a final report containing every row
+(2026-11-04, AIZ2). Capture each already-completed `FrameComparison` before the
+frontier stopper, using the repository's existing serializer; close the stream
+on abort. Reproduce the unmodified full-profile report on each source, then
+require the observed control to reproduce it before interpreting raw tuples.
+The paired AIZ2 capture has 996 common rows and reduces raw ERRORs despite more
+grouped spans. Preserve missing/suffix scope, actual expected values and the
+number of baseline clean rows; zero additions on zero clean rows is not a
+universal parity claim. Restore all instrumentation before integration.
+
+Editing a running shell driver can produce a trailing parse error after every
+Maven run has completed (2026-11-03, Mega segment2). Bash had already parsed the
+profile loop, executed all three invocations and copied their reports, then read
+the rewritten file at an obsolete offset. Finish driver edits before launch.
+After a collection error, inspect each completed Maven result and copied XML;
+the shell exit alone proves neither missing validation nor successful collection.
+See the [segment2 audit](../architecture/audits/2026-11-03-s3k-mega-segment2.md).
+
+A Java object reference can become stale after whole-world restore (2026-11-02,
+MHZ2 boss capture). The captured world and replayed pixels matched, but a local
+boss reference still pointed at the retired instance. Sampling it logged a frozen
+routine/timer, and a later staged hit changed that retired object. Reacquire live
+objects from ObjectManager after restore before sampling or staging another action.
+The [MHZ2 lifecycle record](../architecture/validation/levels/s3k-mhz-act2.md#end-boss-lifecycle-follow-up--2026-11-02)
+records the fixture correction; no runtime timer was changed to accommodate it.
+
+A callback's row label does not establish its sampling boundary (2026-10-29,
+starpost continuation). `productionOutputRowObserver` is called by
+`stateMovieLogicalRow()` before `loop.step()`, with upcoming movie row + 1.
+A pre-step print labelled98468 therefore observes the state after completed
+input98467. Use `afterProductionStep` for an end-of-step observation, or label
+and translate the pre-step state explicitly; do not fit a one-frame gameplay
+adjustment to the misleading print. See the [bounded starpost record](../architecture/audits/2026-10-29-s3k-campaign-terminal-certification.md#starpost-invitation-correction-and-bounded-continuation--2026-10-29).
+
+A reached run-prefix assertion need not grade its active destination segment
+(2026-10-29, S3K terminal candidate). `ReplayPrefixReached` stops before normal
+source-closure reporting, so a first returned row can log strict animation errors
+while the prefix method passes. Inspect the logged comparison and completed
+segment reports; use a bounded target beyond that segment when its graded
+outcome is required. Canonical and candidate first-return witnesses both passed,
+then matched at the later ownership rejection with identical incomplete segment
+reports. See the [candidate consumption audit](../architecture/audits/2026-10-29-s3k-native-terminal-evidence.md#current-source-candidate-consumption--bounded-java-evidence).
+
+Quantized RGB differences can disappear during grayscale conversion (2026-10-29,
+parity design). A one-pixel Pillow control yields RGB `(0, 0, 1)` but luminance
+zero. `compare_trace_checkpoint_pixels.py` converts its 0..7 channel differences
+to luminance before thresholding, so a blue-only mismatch can disappear. Do not
+qualify that path as exact pixel evidence until channel-wise adversarial controls
+and its measurement provenance pass. The raw-RGB comparator has a separate
+comparison contract; its success does not qualify this path. See the
+[parity measurement design](../architecture/designs/2026-10-29-quantitative-stock-parity.md#domain-diagnostics).
+
+Successful cases do not validate their memory observer (2026-10-28, local
+throughput qualification). A Maven exit of zero and complete case inventory
+coexisted with a missing `/proc` swap field in three diagnostics. Those memory
+reports remain invalid. Process teardown can remove the memory fields before
+the process presents as a zombie. The bounded profiler now accepts that race
+only with matching process identity, positive exit flags, zero address-space/RSS
+and a fresh status with at most one remaining thread; a dying leader must not hide live sibling
+threads. Missing/unreadable live-process data still invalidates qualification.
+Count verified exit races and require sampled overlap when qualifying multiple
+JVMs; a requested fork count alone does not establish concurrent execution.
+A passing 1 GiB test heap does not qualify whole-project Java compilation at
+that heap. Separate normal-memory preparation from the measured test invocation,
+and register only the execution lane actually qualified.
+See the [local cost record](../architecture/research/2026-10-27-local-validation-cost.md).
+
+Native gdb PC sampling needs an external interrupt timer (2026-10-27 native
+ablation). `continue` holds gdb Python's GIL, so `threading.Timer` cannot stop it.
+Use an external timer signalling the owned child through a pidfd; a late timer
+signalling gdb itself can produce `Quit` after an end breakpoint.
+`handle SIGINT noprint` also sets `nostop`, so explicitly set `stop` afterward. Linux native images normally strip local
+symbols: retain linker symbols in a nonloaded sidecar before stripping the timed
+binary. On the native-image loader here, gdb's automatic solib list exposed
+only the ELF loader; read the child's mappings and load missing DSO symbols with
+`add-symbol-file -o <bias>` before classifying unknown PCs. Every stopped thread
+has a tracing-stop state; that state cannot identify which threads were runnable before interruption. PC frequencies include GPU/futex
+waits and startup unless the sampling window excludes them, and stacks without
+Java DWARF/frame-pointer support may not unwind. Keep debugger timings out of the
+acceptance matrix; absent samples or symbols alone do not prove inlining.
+
+Linux process-CPU counters can report nanoseconds while resolving only in clock
+ticks (2026-10-27 native optimization study). HotSpot's process CPU MXBean uses
+`times(2)` on Linux; sub-millisecond per-frame medians and p99 values from its
+deltas can become zeros and 10 ms spikes. Use a checked high-resolution
+`clock_gettime(CLOCK_PROCESS_CPUTIME_ID)` counter for cross-runtime per-frame CPU
+comparisons, and keep elapsed update/render time separate: `glFinish` includes
+GPU waits, while all-thread process CPU can exceed elapsed time. Exclude digest,
+readback and output work from both timing boundaries. See the
+[native study](../architecture/research/2026-10-08-graalvm-native-mod-feasibility.md#linux-optimization-and-oracle-comparison-2026-10-27).
+
+A JUnit case can hide a whole subprocess suite (2026-10-27, local validation).
+`TestBuildToolingGuard#releaseGateToolsShouldRejectCorruptAndChangedEvidence`
+reported one case and 256.922 seconds while launching every Python release-tool
+test plus the skip-classifier suite. Top-level case counts omit that inner
+breadth, and batch totals cannot identify individual expensive owners after raw
+XML is removed. Inspect nested invocations and retain bounded timing attribution;
+do not infer value or cost from class/case counts alone. In the matched smoke
+measurement, three `TestSitarHeroCharts` cases spent 522.438 seconds preparing
+the full ROM song catalogues and checking every supported role/difficulty;
+their outer class reported 522.705 seconds. See the
+[local cost record](../architecture/research/2026-10-27-local-validation-cost.md).
+
 Passing gameplay assertions do not qualify recorded pixels (2026-10-26, full TAS
 test reel). Enabling GL replaced a headless atlas while sprite renderers retained
 their allocated tile bases, so terrain and tests looked correct but capsules,
@@ -1899,7 +2028,9 @@ repair an unsupported debug combination by changing shared combat rules.
 | 118a | Clearing `target/test-tmp` costs the NEXT run | The first classes to run in the cleared tree fail to extract the natives and report mass `UnsatisfiedLinkError`; discard that run and rerun with the natives present rather than quoting it. Three separate runs today. Rule 118 is still right -- the cost is one throwaway run, not a reason to keep a stale dir |
 | 119 | "No arithmetic exists between them" is an argument, not a measurement | Measure both ends first; a chain read bounds only that chain |
 | 120 | Model coverage is a per-branch question, not a per-routine one | Two +4 writes on two arms; the engine implemented one and cited the routine |
-| 121 | A probe log without a frame delimiter fits two readings | Print the driver row index per frame; both groupings match the bytes |
+| 121 | A probe log without a frame delimiter fits two readings | Print the driver row index per frame; both groupings match the bytes. Capture that row before production: a post-step playback cursor can already name the next row and hide the terminal fade tick. |
+| 122a | Interstitial completed-frame provenance resembles a raw input row | `bk2_frame` in the old interstitial file is completed-frame provenance. Dedicated initialization `raw_frame` is zero-based: completed advance N belongs to input N−1. Verify both on the same advance; do not turn provenance into readiness input or adjust terrain to compensate for the apparent row difference. |
+| 122b | One physical frame need not contain one clock service | The independent S3K special-stage startup has 113 flat counter rows followed by one two-tick row. Sample the named ROM counter at frame end and retain multiple same-row services; do not price movie rows as interrupts or use this diagnostic counter delta as timing input. |
 | 122 | A CLI `-DargLine` never reaches the surefire fork | A silent probe, indistinguishable from a branch that never ran; gate on an env var |
 | 123 | Run a survey so the known member must appear in its output | An empty result and a broken matcher look identical |
 | 124 | A stall in the reference series makes two offsets match identically | Classify only where it is strictly monotonic; walk, do not sample |
@@ -3653,7 +3784,7 @@ owning routine for writes to anything shared — a register the caller relies on
 the loop reads, a field another object owns. And read the disassembly's comments: the
 un-fixed path is often annotated as a known bug by the people who disassembled it.
 
-**When you model one,** name the flag and the branch in a comment as CLAUDE.md requires.
+**When you model one,** name the flag and the branch in a comment as AGENTS.md requires.
 Once the side effect is implemented it becomes invisible again, and the comment is the
 only thing that will make a future bug-fixed-revision effort tractable.
 
@@ -4811,7 +4942,7 @@ than an obviously broken probe. It was caught only by going to read *why* a resu
 instead of banking it.
 
 **Related, on scope:** the same batch settled its ROM half from **one routine per game**
-(`Touch_Enemy`'s boss path, `sonic3k.asm:20944-20961`; `Touch_Enemy_Part2`, `s2.asm:85373-85382`)
+(`Touch_Enemy`'s boss path, `sonic3k.asm:20944-20961`; `Touch_Enemy_Part2`, `s2.asm:85499-85508`)
 rather than nine readings — neither writes a routine, so the install is in each boss's own
 dispatch. Same fingerprint, same lever, one reading. But the engine half reached only 1 of 9: the
 rest are blocked on **fixture depth, not analysis** — objects no trace reaches, needing real level
@@ -4889,10 +5020,10 @@ shape matches.
 1. **Do not take a ROM fact from an engine javadoc.** The margin rested on `explicit_height` being
    clear, taken from the engine class's own javadoc rather than the disassembly — the exact
    failure the surrounding audit was written about, committed while writing it. Re-derived at
-   source: `LoadSubObject_Part3` (`s2.asm:72715-72726`) applies mappings, art_tile, render_flags,
+   source: `LoadSubObject_Part3` (`s2.asm:72830-72841`) applies mappings, art_tile, render_flags,
    priority, width_pixels and collision_flags, and **never writes `y_radius`**.
 2. **`ApproxYCheck`'s 32 generalises within its class; the x margin never does.** A second row on
-   the same object (`ObjB8`, `s2.asm:80297`) is also `explicit_height`-clear — so also 32 — but
+   the same object (`ObjB8`, `s2.asm:80317`) is also `explicit_height`-clear — so also 32 — but
    carries `width_pixels` `$10` rather than 4. Per-object width, shared approximate height.
 
 ## One hundred and fourteenth rule: a true general principle can explain away the one piece of evidence pointing at the answer

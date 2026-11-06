@@ -1,6 +1,7 @@
 package com.openggf.game.sonic2.resources;
 
 import com.openggf.data.Rom;
+import com.openggf.data.RomByteReader;
 import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.level.resources.NemesisPlcServiceQueue;
 import org.junit.jupiter.api.Test;
@@ -14,7 +15,8 @@ import static org.mockito.Mockito.verify;
 
 class TestSonic2PlcLifecycle {
     private final NemesisPlcServiceQueue queue = mock(NemesisPlcServiceQueue.class);
-    private final Sonic2PlcService service = new Sonic2PlcService(mock(Rom.class), queue);
+    private final Sonic2PlcService service = new Sonic2PlcService(
+            Rom.fromReader(RomByteReader.fromBytes(new byte[0]), "PLC phase fixture"), queue);
 
     @Test
     void mapsEveryPhaseToReviewedBudget() {

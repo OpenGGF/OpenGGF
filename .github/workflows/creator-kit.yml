@@ -52,8 +52,15 @@ jobs:
             # Unpublished expert candidates may use internal APIs; retain their reported warnings.
             sh ggfmod validate "$RUNNER_TEMP/creator-project-$kind/target/creator-$kind-mod.jar" --format json --warnings allow
           done
+          # Examples awaiting supported facades keep the expert lane until their
+          # names leave the shrink-only list; every other example builds strictly.
+          pending="$GITHUB_WORKSPACE/tools/modding/supported-consumption-pending.txt"
           for project in examples/*; do
-            python3 tools/build_project.py "$project"
+            if grep -qxF "$(basename "$project")" "$pending"; then
+              python3 tools/build_project.py "$project" --expert-legacy
+            else
+              python3 tools/build_project.py "$project"
+            fi
           done
           version=$(python3 -c 'import json; print(json.load(open("creator-kit.json"))["engineVersion"])')
           python3 tools/build_project.py examples/hello-scene --testkit "$PWD/mod-testkit.jar" --verify-only

@@ -85,6 +85,15 @@ class TestCreatorFeedback {
         Path jsonJar = temp.resolve("json-warn.jar");
         assertEquals(0, GgfModCli.run(new String[]{"package", "--input", input.toString(), "--out", jsonJar.toString(), "--format", "json"}, new PrintStream(packageJson)));
         assertEquals(report.path("findings"), new ObjectMapper().readTree(packageJson.toByteArray()).path("findings"));
+        Path cliBlocked = temp.resolve("cli-blocked.jar");
+        ByteArrayOutputStream strictJson = new ByteArrayOutputStream();
+        assertEquals(1, GgfModCli.run(new String[]{"package", "--input", input.toString(), "--out",
+                cliBlocked.toString(), "--format", "json", "--warnings", "error"}, new PrintStream(strictJson)));
+        var strict = new ObjectMapper().enable(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
+                .readTree(strictJson.toByteArray());
+        assertTrue(strict.path("valid").asBoolean());
+        assertEquals(report.path("findings"), strict.path("findings"));
+        assertFalse(Files.exists(cliBlocked));
         Path blocked = temp.resolve("blocked.jar");
         assertThrows(IllegalArgumentException.class,
                 () -> JarPackager.packageDirectoryWithReport(input, blocked, true));

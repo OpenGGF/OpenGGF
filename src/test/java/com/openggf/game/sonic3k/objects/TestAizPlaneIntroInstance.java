@@ -34,6 +34,17 @@ public class TestAizPlaneIntroInstance {
     }
 
     @Test
+    public void drawingDoesNotContinueAtUntranslatedCoordinatesAfterCameraFailure() {
+        intro.update(0, null); // Loads the real ROM renderer before replacing only the failed service.
+        var services = org.mockito.Mockito.spy(TestEnvironment.objectServices());
+        var failure = new IllegalStateException("camera owner failed while drawing");
+        org.mockito.Mockito.doThrow(failure).when(services).camera();
+        intro.setServices(services);
+        assertSame(failure, assertThrows(IllegalStateException.class,
+                () -> intro.appendRenderCommands(new java.util.ArrayList<>())));
+    }
+
+    @Test
     public void initialRoutineIsZero() {
         assertEquals(0, intro.getRoutine());
     }

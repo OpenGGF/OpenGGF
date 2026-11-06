@@ -134,7 +134,7 @@ final class WebSocketFrames {
     /** One unfragmented, unmasked server frame. */
     static byte[] encode(int opcode, byte[] payload) {
         int length = payload.length;
-        int header = length < 126 ? 2 : length <= 0xFFFF ? 4 : 10;
+        int header = encodedLength(length) - length;
         byte[] frame = new byte[header + length];
         frame[0] = (byte) (0x80 | opcode);
         if (length < 126) {
@@ -152,6 +152,11 @@ final class WebSocketFrames {
         }
         System.arraycopy(payload, 0, frame, header, length);
         return frame;
+    }
+
+    static int encodedLength(int payloadLength) {
+        return Math.addExact(payloadLength,
+                payloadLength < 126 ? 2 : payloadLength <= 0xFFFF ? 4 : 10);
     }
 
     /** Close payload with the reason cut on a code-point boundary to fit a control frame. */

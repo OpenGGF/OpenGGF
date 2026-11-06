@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.sonic3k.S3kSlopedTopSolidProvider;
 import com.openggf.level.objects.ObjectVisualFacing;
 
 import com.openggf.debug.DebugRenderContext;
@@ -37,11 +38,11 @@ import java.util.List;
  * If the object's status bit 0 (X-flip) is set, the animation direction is
  * reversed (-1) and the max frame is decremented by 1.
  * <p>
- * ROM references: Obj_AIZFlippingBridge (sonic3k.asm:58912), loc_2AA56,
+ * ROM references: Obj_AIZFlippingBridge (sonic3k.asm:58917), loc_2AA56,
  * sub_2AA7E, sub_2ABF2, sub_2AC08, SolidObjSloped2.
  */
 public class AizFlippingBridgeObjectInstance extends AbstractObjectInstance
-        implements SlopedSolidProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+        implements S3kSlopedTopSolidProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     // ===== Constants =====
     private static final int SEGMENT_COUNT = 8;
@@ -66,14 +67,6 @@ public class AizFlippingBridgeObjectInstance extends AbstractObjectInstance
             new int[]{-12, -8, -4, 0, 4, 8, 12, 16});
     // @formatter:on
 
-    private static byte[] negateTable(byte[] src) {
-        byte[] dst = new byte[src.length];
-        for (int i = 0; i < src.length; i++) {
-            dst[i] = (byte) -src[i];
-        }
-        return dst;
-    }
-
     private static byte[] buildHeightTable(int[] segmentValues) {
         byte[] table = new byte[128];
         for (int seg = 0; seg < 8; seg++) {
@@ -88,9 +81,9 @@ public class AizFlippingBridgeObjectInstance extends AbstractObjectInstance
     // ===== Instance fields =====
     private int x;
     private int y;
+    // Placement status direction; ROM render_flags are reset independently.
     private boolean hFlip;
     private final byte[] heightTable;
-    private final byte[] negatedHeightTable;
     private int animPeriod;        // ROM: $25(a0) — timer reload value
     private int maxFrame;          // ROM: $37(a0) — wrap limit
     private int animDirection;     // ROM: $36(a0) — +1 or -1
@@ -112,8 +105,7 @@ public class AizFlippingBridgeObjectInstance extends AbstractObjectInstance
 
         // Bit 7: height table selection
         // ROM: bpl.s loc_2A98E; move.l #word_2AB72,$32(a0)
-        this.heightTable = (subtype & 0x80) != 0 ? HEIGHT_TABLE_SHALLOW : HEIGHT_TABLE_STEEP;
-        this.negatedHeightTable = negateTable(this.heightTable);
+        this.heightTable = ((subtype & 0x80) != 0 ? HEIGHT_TABLE_SHALLOW : HEIGHT_TABLE_STEEP).clone();
 
         // Bits 6-4: animation period
         // ROM: lsr.b #4,d1; andi.w #7,d1; move.b d1,$25(a0)
@@ -186,17 +178,18 @@ public class AizFlippingBridgeObjectInstance extends AbstractObjectInstance
 
     @Override
     public byte[] getSlopeData() {
-        // The ROM height table uses the convention: surface_y = obj_y - height_value,
-        // where negative values mean the surface is ABOVE obj_y (higher on screen).
-        // The engine's SlopedSolidProvider convention is the opposite: negative slope
-        // values = surface is LOWER. Negate to match the engine convention.
-        // (Cf. Sonic1BridgeObjectInstance.updateSlopeData() which also negates.)
-        return negatedHeightTable;
+        // loc_2AC82 (sonic3k.asm:59198-59215) subtracts the signed raw sample
+        // from objectY, exactly as the shared sloped resolver does. Negating it
+        // moves the landing window to the opposite side of the bridge.
+        return heightTable;
     }
 
     @Override
     public boolean isSlopeFlipped() {
-        return hFlip;
+        // Obj_AIZFlippingBridge (sonic3k.asm:58917-58942) clears render_flags
+        // to 4. Placement status bit 0 reverses animation only; the collision
+        // entry tests the cleared render flip, not that status bit.
+        return false;
     }
 
     @Override
@@ -330,7 +323,7 @@ public class AizFlippingBridgeObjectInstance extends AbstractObjectInstance
         if (renderer == null || !renderer.isReady()) return;
 
         for (int i = 0; i < SEGMENT_COUNT; i++) {
-            renderer.drawFrameIndex(segmentFrames[i], segmentX[i], segmentY[i], hFlip, false);
+            renderer.drawFrameIndex(segmentFrames[i], segmentX[i], segmentY[i], false, false);
         }
     }
 

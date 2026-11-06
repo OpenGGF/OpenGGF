@@ -42,6 +42,8 @@ import java.util.function.IntConsumer;
 
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE;
 
+import static com.openggf.control.InputHandlerInternalAccess.nativeMenuKeyPressed;
+
 public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
     private static final int ENTRY_FADE_DURATION = 21;
     private static final int[] DELETE_MAIN_FRAMES = {0xD, 0xE, 0xD, 0xE, 0xD, 0xE, 0xD, 0xE, 0xD, 0xE, 0xD, 0xD, 0xD, 0xD};
@@ -204,12 +206,12 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
         int leftKey = config.getInt(SonicConfiguration.LEFT);
         int rightKey = config.getInt(SonicConfiguration.RIGHT);
         int jumpKey = config.getInt(SonicConfiguration.JUMP);
-        boolean upPressed = input.isKeyPressed(upKey) || input.logical().menuUp();
-        boolean downPressed = input.isKeyPressed(downKey) || input.logical().menuDown();
-        boolean leftPressed = input.isKeyPressed(leftKey) || input.logical().menuLeft();
-        boolean rightPressed = input.isKeyPressed(rightKey) || input.logical().menuRight();
-        boolean backPressed = input.isKeyPressed(GLFW_KEY_ESCAPE) || input.logical().menuBack();
-        boolean confirmPressed = input.isKeyPressed(jumpKey) || input.menuAcceptExcludingBackAction();
+        boolean upPressed = nativeMenuKeyPressed(input, upKey) || input.logical().menuUp();
+        boolean downPressed = nativeMenuKeyPressed(input, downKey) || input.logical().menuDown();
+        boolean leftPressed = nativeMenuKeyPressed(input, leftKey) || input.logical().menuLeft();
+        boolean rightPressed = nativeMenuKeyPressed(input, rightKey) || input.logical().menuRight();
+        boolean backPressed = nativeMenuKeyPressed(input, GLFW_KEY_ESCAPE) || input.logical().menuBack();
+        boolean confirmPressed = nativeMenuKeyPressed(input, jumpKey) || input.menuAcceptExcludingBackAction();
 
         if (deleteRobotnikState == DeleteRobotnikState.PROMPT_CHOICE) {
             if (leftPressed) {

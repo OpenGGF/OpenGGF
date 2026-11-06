@@ -117,6 +117,24 @@ public final class LevelFrameStep {
      */
     public static void serviceVBlankOnly(
             LevelFrameContext context, PlcLifecycleFrame frame, PlcLifecyclePhase phase) {
+        serviceVBlankOnly(context, frame, phase, () -> {
+            var level = context.levelManager();
+            var objects = level != null ? level.getObjectManager() : null;
+            if (objects != null) objects.advanceVblaCounter();
+        });
+    }
+
+    /**
+     * Services a VBlank-only row whose loop supplies its current pause clock.
+     * The callback is the sole pause tick owner and runs only for the first
+     * successful pause claim, after VBlank art service. Lag and fade clocks
+     * retain their own owners. Supplying the clock keeps alternate native
+     * loops independent of the parked level's gameplay dispatcher.
+     */
+    public static void serviceVBlankOnly(
+            LevelFrameContext context, PlcLifecycleFrame frame, PlcLifecyclePhase phase,
+            Runnable advancePauseClock) {
+        Objects.requireNonNull(advancePauseClock, "advancePauseClock");
         if (phase != PlcLifecyclePhase.LAG
                 && phase != PlcLifecyclePhase.NORMAL_PAUSE
                 && phase != PlcLifecyclePhase.SPECIAL_STAGE_PAUSE) {
@@ -146,7 +164,7 @@ public final class LevelFrameStep {
         // The S2 Vint_CtrlDMA case is the genuinely different one: a real lag
         // V-blank that still reaches ProcessDMAQueue. It is resolved
         // structurally in PlcFrameLifecycleCoordinator#latchBeforeFadeUpdate.
-        frame.claim(phase);
+        boolean claimed = frame.claim(phase);
         if (frame.consumedHeldLoopTailPreparation()) {
             context.runtimeArtCoordinator()
                     .deferProductionSubmissionForHeldLoopTailClosure();
@@ -163,12 +181,37 @@ public final class LevelFrameStep {
                 instanceof com.openggf.game.internal.RuntimeObjectArtQueue runtimeQueue) {
             runtimeQueue.processRuntimeArtQueueBeforeObjects();
         }
+        // Pause_Loop still advances the game-visible clock at VBlank exit:
+        // VBlank_Exit (docs/s1disasm/sonic.asm:684-685),
+        // VintRet (docs/s2disasm/s2.asm:507-508), and
+        // VInt_Done (docs/skdisasm/sonic3k.asm:558-561).
+        // No object/level/RNG update runs.
+        // Ordinary, lag and fade iterations retain their existing tick owners.
+        // A repeated or losing claim must not spend their clock tick again.
+        if (claimed && (phase == PlcLifecyclePhase.NORMAL_PAUSE
+                || phase == PlcLifecyclePhase.SPECIAL_STAGE_PAUSE)) {
+            advancePauseClock.run();
+        }
     }
 
-    public static void serviceHardwareVBlankOnly(
-            LevelFrameContext context, PlcLifecycleFrame frame) {
+    /**
+     * Services one caller-requested held VBlank, then advances its clock.
+     * No gameplay body or playback row is consumed here. A frozen fade's
+     * service is token-idempotent so its pre-callback and held-body paths share
+     * one tick. Other held loops may request multiple service and clock steps
+     * under the same token. Pause has a separate claim policy in
+     * {@link #serviceVBlankOnly}.
+     *
+     * <p>The supplied clock preserves the caller's captured or live binding.
+     * A failed service never spends its clock tick.
+     */
+    static void serviceHeldVBlank(
+            LevelFrameContext context, PlcLifecycleFrame frame, Runnable advanceClock) {
+        Objects.requireNonNull(advanceClock, "advanceClock");
+        if (!frame.claimHeldVBlankService()) return;
         dispatchGameVBlank(context, frame);
         serviceBoundary(context, HardwareServiceBoundary.VINT_SERVICE);
+        advanceClock.run();
     }
 
     /**
@@ -337,7 +380,6 @@ public final class LevelFrameStep {
             wrapper.wrap("water-move", levelManager::advanceDynamicWaterLevel);
         }
 
-        boolean inlineSolidResolution = levelManager.objectsExecuteAfterPlayerPhysics();
         SpriteManager spriteManager = context.spriteManager();
         // ROM RunObjects covers the level-only fixed slots (Tails' tails, dust,
         // shields, bubbles, stars) only while the game mode carries no title-card
@@ -351,60 +393,43 @@ public final class LevelFrameStep {
                 ? spriteManager
                 : null;
         if (nativeDynamicPass != null) {
-            // Native placement can precede reserved/player dispatch while dynamic
-            // execution follows it. Resolve the owner once, before any service.
+            // Resolve once before service: placement precedes reserved/player
+            // dispatch, while the native dynamic pass follows those slots.
             wrapper.wrap("native-dynamic-spawn", nativeDynamicPass::spawnBeforeReservedSlots);
         }
-        if (inlineSolidResolution) {
-            // 2. Inline-order modules need a frame-start snapshot of object touch
-            //    state because player-slot ReactToItem runs before ExecuteObjects.
-            if (nativeDynamicPass == null) levelManager.prepareTouchResponseSnapshots();
 
-            // 2. Inline solid-resolution path: player physics first. Touch responses
-            //    run per-player inside tickPlayablePhysics after movement, matching
-            //    the player-slot-first ROM ordering.
-            wrapper.wrap("physics", spriteUpdate);
+        // S2's locked title loop can omit scroll/events; retain its production
+        // gate without reviving the removed object-before-player model.
+        boolean runsLevelScrollAndEvents = phase != PlcLifecyclePhase.LEVEL_TITLE_CARD
+                || !(context.gameModule().getTitleCardProvider()
+                        instanceof com.openggf.game.internal.LockedTitleCardLevelStepGate gate)
+                || gate.runsLevelScrollAndEventsThisLockedPass();
+        // A native pass owns its own touch/current observations. The shared
+        // cartridge path snapshots touches before its player-first dispatch.
+        if (nativeDynamicPass == null) levelManager.prepareTouchResponseSnapshots();
 
-            LevelEventProvider fixedSlotEvents = context.levelEventProvider();
-            if (fixedSlotEvents != null) {
-                wrapper.wrap("fixed-objects-pre", fixedSlotEvents::updateFixedInLevelObjectsBeforeDynamicObjects);
-            }
-            runNativeFixedObjectsBeforeDynamic(context, wrapper);
+        wrapper.wrap("physics", spriteUpdate);
+        LevelEventProvider fixedSlotEvents = context.levelEventProvider();
+        if (fixedSlotEvents != null) {
+            wrapper.wrap("fixed-objects-pre", fixedSlotEvents::updateFixedInLevelObjectsBeforeDynamicObjects);
+        }
+        runNativeFixedObjectsBeforeDynamic(context, wrapper);
 
-            // 3. Object execution after player physics, with inline solid checkpoints
-            //    so later objects see earlier contact adjustments.
-            if (nativeDynamicPass != null) {
-                wrapper.wrap("native-dynamic-objects", nativeDynamicPass::runDynamicSlotsAfterReservedSlots);
-            } else {
-                Runnable afterExecBeforePlacement = levelOnlyFixedSlots != null
-                        ? () -> {
-                            levelOnlyFixedSlots.advancePlayableFixedSlotsAfterObjectExecution();
-                            levelManager.updateZoneFeaturesAfterObjectExecution();
-                        }
-                        : levelManager::updateZoneFeaturesAfterObjectExecution;
-                wrapper.wrap("objects",
-                        () -> levelManager.updateObjectPositionsPostPhysicsWithoutTouches(
-                                afterExecBeforePlacement, false));
-            }
+        if (nativeDynamicPass != null) {
+            wrapper.wrap("native-dynamic-objects", nativeDynamicPass::runDynamicSlotsAfterReservedSlots);
         } else {
-            LevelEventProvider fixedSlotEvents = context.levelEventProvider();
-            if (fixedSlotEvents != null) {
-                wrapper.wrap("fixed-objects-pre", fixedSlotEvents::updateFixedInLevelObjectsBeforeDynamicObjects);
-            }
-            runNativeFixedObjectsBeforeDynamic(context, wrapper);
-
-            // 2. Legacy compatibility path keeps objects before physics. Touch
-            //    responses are still deferred to tickPlayablePhysics after movement.
-            wrapper.wrap("objects", () -> levelManager.updateObjectPositionsWithoutTouches(false));
-
-            // 3. Sprite / player physics update (caller-provided).
-            wrapper.wrap("physics", spriteUpdate);
-
-            // 3b. Some later SST-slot scripts read Sonic after his movement has
-            //     completed and only write globals for the next frame. Legacy
-            //     object-order modules need an explicit post-player hook for
-            //     those cases because regular object updates already ran.
-            wrapper.wrap("post-player-hooks", levelManager::updateObjectPostPlayerHooks);
+            Runnable zoneFeaturesAfterObjects = runsLevelScrollAndEvents
+                    ? levelManager::updateZoneFeaturesAfterObjectExecution
+                    : () -> { };
+            Runnable afterExecBeforePlacement = levelOnlyFixedSlots != null
+                    ? () -> {
+                        levelOnlyFixedSlots.advancePlayableFixedSlotsAfterObjectExecution();
+                        zoneFeaturesAfterObjects.run();
+                    }
+                    : zoneFeaturesAfterObjects;
+            wrapper.wrap("objects",
+                    () -> levelManager.updateObjectPositionsPostPhysicsWithoutTouches(
+                            afterExecBeforePlacement, false));
         }
 
         // 4. Camera scroll + dynamic level events, in ROM order.
@@ -424,7 +449,8 @@ public final class LevelFrameStep {
         //    before post-camera placement/level scroll without moving event writes
         //    ahead of the ROM camera scroll.
         LevelEventProvider levelEvents = context.levelEventProvider();
-        boolean cameraDrivenScroll = levelManager.advanceCameraDrivenScrollForFrame();
+        boolean cameraDrivenScroll = runsLevelScrollAndEvents
+                && levelManager.advanceCameraDrivenScrollForFrame();
 
         BonusStageProvider bonusStageProvider = context.bonusStageProvider();
         boolean integratedBonusStageUpdate = bonusStageProvider != null
@@ -459,7 +485,7 @@ public final class LevelFrameStep {
 
         // 4a. Camera scroll (ROM ScrollHoriz + ScrollVertical): move + clamp to the
         //     prior-frame bottom boundary, BEFORE the zone event handler runs.
-        if (!suppressDefaultCamera && !cameraDrivenScroll
+        if (runsLevelScrollAndEvents && !suppressDefaultCamera && !cameraDrivenScroll
                 && !bonusStageExitRequestedThisFrame
                 && !levelExitRequestedDuringObjects) {
             wrapper.wrap("camera-scroll", camera::updatePosition);
@@ -471,9 +497,6 @@ public final class LevelFrameStep {
         if (levelEvents != null && !levelExitRequestedDuringObjects) {
             wrapper.wrap("fixed-objects", levelEvents::updateFixedInLevelObjects);
         }
-        if (levelOnlyFixedSlots != null && !inlineSolidResolution) {
-            wrapper.wrap("fixed-dust", levelOnlyFixedSlots::advancePlayableFixedSlotsAfterObjectExecution);
-        }
 		// ROM ScreenEvents publishes Camera_*_pos_copy before the zone event
 		// handlers. Event-owned camera motion after this point must not move the
 		// render/visibility camera until the next loop publication. A restart
@@ -482,7 +505,8 @@ public final class LevelFrameStep {
 		if (!levelExitRequestedDuringObjects) {
 		    camera.captureRenderCopy();
 		}
-		if (levelEvents != null && !levelExitRequestedDuringObjects) {
+		if (runsLevelScrollAndEvents && levelEvents != null
+                && !levelExitRequestedDuringObjects) {
             levelEvents.update();
         }
 
@@ -491,9 +515,9 @@ public final class LevelFrameStep {
         // still reaches this loop tail on that row unless the transition's
         // provider already performed the ROM-owned oscillator dispatch. The
         // latter is the CNZ/LBZ-style transition contract; AIZ/HCZ/MGZ retain
-        // the ordinary loop tail. Outer frame-boundary reloads consume their
-        // own dispatch in LevelSeamlessTransitionExecutor before this method
-        // is entered.
+        // the ordinary loop tail. Outer frame-boundary reloads own their
+        // dispatch in LevelSeamlessTransitionExecutor and publish no markers
+        // into this level frame.
         boolean actTransitionExecutedDuringFrame =
                 levelManager.consumeActTransitionExecutedDuringFrame();
         boolean actTransitionOscillationAdvancedDuringFrame =
@@ -560,7 +584,7 @@ public final class LevelFrameStep {
         // 4d. Boundary easing (ROM DynamicLevelEvents boundary tail): ease the
         //     bottom boundary toward target reading the post-scroll camera, and
         //     record the boundary state for the NEXT frame's scroll clamp.
-        if (!suppressDefaultCamera && !cameraDrivenScroll
+        if (runsLevelScrollAndEvents && !suppressDefaultCamera && !cameraDrivenScroll
                 && !bonusStageExitRequestedThisFrame
                 && !levelExitRequestedDuringObjects) {
             wrapper.wrap("camera-boundary", camera::updateBoundaryEasing);

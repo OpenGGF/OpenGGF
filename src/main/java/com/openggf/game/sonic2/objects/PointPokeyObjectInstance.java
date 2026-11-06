@@ -155,7 +155,7 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
     public boolean bypassesOffscreenSolidGate() {
         // ROM ObjD6 (PointPokey) reaches SolidObject_cont via
         // SolidObject_Always_SingleCharacter (s2.asm:59013), bypassing the
-        // SolidObject_OnScreenTest render_flags(a0) gate at s2.asm:35330-35336.
+        // SolidObject_OnScreenTest render_flags(a0) gate at s2.asm:35336-35342.
         // Off-screen pokeys still resolve solid contact in ROM. Required so
         // enabling CollisionRules.solidObjectOffscreenGate for S2 does not
         // change CNZ pokey solid behaviour off-screen.
@@ -448,6 +448,10 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
                 activePrizeCount[0] = 0;  // No prizes on screen yet
                 prizeAngle = 0;
                 playerState = STATE_SPAWNING_PRIZES;
+                // loc_2BDF8's "beq.w loc_2BC86" enters the payout in this same
+                // invocation (s2.asm:59315-59322), so this pass can already
+                // create the first prize on an odd Level_frame_counter.
+                runPayoutPass(player, vIntRunCount);
             }
         } else {
             // Play sound at 16-frame intervals using the global counter
@@ -471,16 +475,21 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
      * - Eject when all prizes spawned AND all collected/expired (activePrizeCount == 0)
      */
     private void updateSpawningPrizes(AbstractPlayableSprite player, int vIntRunCount) {
+        // Keep player locked
+        keepPlayerLocked(player);
+
+        // Animate cage (Bug fix #2: toggle between frames 0 and 1)
+        updateCageAnimation();
+
+        runPayoutPass(player, vIntRunCount);
+    }
+
+    /** One pass of loc_2BC86 / loc_2BD4E after the occupied cage's shared prelude. */
+    private void runPayoutPass(AbstractPlayableSprite player, int vIntRunCount) {
         try {
-            // Keep player locked
-            keepPlayerLocked(player);
-
-            // Animate cage (Bug fix #2: toggle between frames 0 and 1)
-            updateCageAnimation();
-
             // NO SFX during prize spawning - ROM only plays sound during waiting/countdown
 
-            // loc_2BD4E (rings, s2.asm:59156-59193) and its identical twin at
+            // loc_2BD4E (rings, s2.asm:59271-59308) and its identical twin at
             // loc_2BC86 (bombs, s2.asm:59110-59148) gate on the *global* clock:
             // "btst #0,(Level_frame_counter+1).w / beq.w return_2BDF6". A prize is
             // therefore only ever created on an odd Level_frame_counter, and that
@@ -547,8 +556,8 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
     private boolean releaseIfOccupiedOffScreen(AbstractPlayableSprite player) {
         // ROM ObjD6 occupied routine tests render_flags.on_screen before the
         // simple countdown or linked-slot handling. If bit 7 is clear, it jumps
-        // directly to loc_2BE2E and releases the player (s2.asm:59152-59156).
-        if (isWithinSolidContactBounds()) {
+        // directly to loc_2BE2E and releases the player (s2.asm:59334-59338).
+        if (isWithinOnScreenRenderBounds()) {
             return false;
         }
         ejectPlayer(player);

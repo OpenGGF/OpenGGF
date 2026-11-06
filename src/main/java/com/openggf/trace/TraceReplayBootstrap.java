@@ -257,7 +257,7 @@ public final class TraceReplayBootstrap {
      *
      * <p>Sonic 2 runs level objects during the title-card sequence before
      * {@code Level_started_flag} is set and before {@code Level_frame_counter}
-     * begins ticking in {@code Level_MainLoop}: see s2.asm:5004-5008,
+     * begins ticking in {@code Level_MainLoop}: see s2.asm:5087-5091,
      * s2.asm:5060-5066, and s2.asm:5077-5092. Headless replay starts directly
      * at gameplay frame 1, so it must reproduce that native object prelude
      * without copying pre-trace SST snapshots back into the engine.
@@ -311,29 +311,20 @@ public final class TraceReplayBootstrap {
     }
 
     /**
-     * Frame count of the ROM title-card object prelude that S2 traces sampled
-     * at {@code frame -1}. The recorded {@code player_history_snapshot}
-     * {@code history_pos=0x68 = 104} is the raw byte index of
-     * {@code Sonic_Pos_Record_Index} (s2.asm:36043-36048). Each
-     * {@code Sonic_RecordPos} call advances the index by 4 (one 4-byte
-     * Pos_table entry), so {@code history_pos = 4 * frames_recorded}.
-     * Therefore the actual prelude length is {@code 104 / 4 = 26} frames of
-     * the ROM title-card {@code RunObjects} loop running Obj01_Control after
-     * Obj01_Init has completed its 64-entry pre-fill.
+     * Native object dispatches between player initialization and Level_MainLoop.
+     * Level_FromCheckpoint performs one RunObjects before arming the exit.
+     * Obj34_LeftPartOut takes five passes ($A,6,2,0,-4), BottomPartOut
+     * takes eleven (0 through $28 in steps of 4), and BackgroundOutInit/Out
+     * takes nine ($F0 through the computed -$30 in steps of $20).
+     * These are object-dispatch counts, not Level_frame_counter ticks or a
+     * count inferred from comparison history. See KiS2 c336fed Level_FromCheckpoint,
+     * Obj34_LeftPartOut, Obj34_BottomPartOut and Obj34_BackgroundOutInit/Out;
+     * stock S2 retains the same title-card state transitions.
      */
-    private static final int S2_TITLE_CARD_PRELUDE_FRAMES = 26;
+    private static final int S2_TITLE_CARD_PRELUDE_FRAMES = 1 + 5 + 11 + 9;
 
-    /**
-     * S2 native-prelude traces start comparison at the first gameplay row, but
-     * headless replay does not run the ROM title-card object loop before that
-     * row. Obj01_Control records Sonic's position before Obj02_Control advances
-     * Tails during that loop; ten native sidekick-only ticks put Tails at the
-     * same control/speed phase that frame 0 then advances and compares. The
-     * recorder's frame -1 {@code Sonic_Pos_Record_Index} is {@code 0x68}; S2
-     * advances the byte index by 4 per {@code Sonic_RecordPos} call, so the
-     * native title-card window contributes 26 leader-history writes.
-     */
-    private static final int S2_SIDEKICK_TITLE_CARD_PRELUDE_FRAMES = 26;
+    /** Leader recording and sidekick dispatch share the native RunObjects passes. */
+    private static final int S2_SIDEKICK_TITLE_CARD_PRELUDE_FRAMES = S2_TITLE_CARD_PRELUDE_FRAMES;
 
     private static final int S1_LEVEL_START_OBJECT_PRELUDE_FRAMES = 1;
 
@@ -466,8 +457,64 @@ public final class TraceReplayBootstrap {
                 && replaySeedTraceIndexForTraceReplay(trace) == 0;
     }
 
+    public static com.openggf.game.session.LevelEntryProvenance entryProvenanceForTraceReplay(TraceData trace) {
+        // A recorded pre-level input prefix already owns the production load.
+        // Otherwise only the recorder-observed placement branch classifies the
+        // entry; neither coordinates nor manifest topology select it.
+        return hasRecordedPreLevelPrefix(trace)
+                ? com.openggf.game.session.LevelEntryProvenance.NATIVE_LEVEL_START
+                : recordedEntryPlacementProvenance(trace);
+    }
+
+    /**
+     * Entry kind from the recorder's {@code level_entry_placement_source}: the
+     * placement branch the ROM itself took when this segment's load began.
+     * Missing evidence keeps the unclassified compatibility path.
+     *
+     * <ul>
+     *   <li>Start table with a native title-card prelude (S2/KiS2): the
+     *       production load places the body from the same start table
+     *       ({@code LevelSizeLoad}, s2.asm:14774-14792) and the prelude replays
+     *       the frames up to row 0, so the production load owns placement.</li>
+     *   <li>Start table without a prelude (S3K level/bonus segments): a fresh
+     *       post-{@code SpawnPlayers} body. {@code Get_LevelSizeStart} derives
+     *       the camera from that placement (loc_1BE5E/loc_1BF74,
+     *       sonic3k.asm:38195-38316).</li>
+     *   <li>S3K restore: {@code Load_Starpost_Settings} restores the saved
+     *       position and then branches to the same camera derivation
+     *       (loc_1BE46, sonic3k.asm:38186-38192), and SpawnLevelMainSprites
+     *       skips every zone intro (sonic3k.asm:8147-8150).</li>
+     *   <li>S2/KiS2 restore: {@code Obj79_LoadData} (s2.asm:44776-44812) also
+     *       returns to the shared camera derivation, but the native-prelude
+     *       S2 boot replays its title card from a start-table production load,
+     *       and no published S2 fixture yet shows the recorded body is the
+     *       post-spawn origin. It keeps the unclassified setup.</li>
+     * </ul>
+     */
+    static com.openggf.game.session.LevelEntryProvenance recordedEntryPlacementProvenance(
+            TraceData trace) {
+        return recordedEntryPlacementProvenance(trace == null ? null : trace.metadata());
+    }
+
+    static com.openggf.game.session.LevelEntryProvenance recordedEntryPlacementProvenance(
+            TraceMetadata meta) {
+        LevelEntryPlacementSource source = meta == null ? null : meta.levelEntryPlacementSource();
+        if (source == null) {
+            return com.openggf.game.session.LevelEntryProvenance.UNCLASSIFIED_ENTRY;
+        }
+        if (!source.isRestore()) {
+            return meta.hasNativePreludeBootstrap()
+                    ? com.openggf.game.session.LevelEntryProvenance.NATIVE_LEVEL_START
+                    : com.openggf.game.session.LevelEntryProvenance.POSITIONED_FRESH_SPAWN;
+        }
+        return "s3k".equals(meta.game())
+                ? com.openggf.game.session.LevelEntryProvenance.POSITIONED_RETURN_SPAWN
+                : com.openggf.game.session.LevelEntryProvenance.UNCLASSIFIED_ENTRY;
+    }
+
     public static boolean shouldApplyMetadataStartPositionForTraceReplay(TraceData trace) {
-        return replaySeedTraceIndexForTraceReplay(trace) == 0
+        return entryProvenanceForTraceReplay(trace).isPositioned()
+                && replaySeedTraceIndexForTraceReplay(trace) == 0
                 && !hasRecordedPreLevelPrefix(trace)
                 && !isS2TornadoRideStartMetadataCandidate(trace);
     }

@@ -2,11 +2,35 @@ package com.openggf.tests;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.data.Rom;
+import com.openggf.data.RomByteReader;
 
 import java.io.File;
+import java.io.IOException;
+
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.spy;
 
 public final class RomTestUtils {
     private RomTestUtils() {
+    }
+
+    /**
+     * Gives sparse public-read fixtures an open, immutable UNKNOWN identity.
+     * Reads still delegate to the supplied fixture, preserving mutable table
+     * aliases and intentional IO failures. This is not an asset byte-reader.
+     */
+    public static Rom openSparseReadFixture(Rom reads) throws IOException {
+        Rom rom = spy(Rom.fromReader(RomByteReader.fromBytes(new byte[0]), "sparse synthetic reads"));
+        doAnswer(call -> reads.readBytes(call.<Long>getArgument(0), call.<Integer>getArgument(1)))
+                .when(rom).readBytes(anyLong(), anyInt());
+        doAnswer(call -> reads.readByte(call.<Long>getArgument(0)))
+                .when(rom).readByte(anyLong());
+        doAnswer(call -> reads.read16BitAddr(call.<Long>getArgument(0)))
+                .when(rom).read16BitAddr(anyLong());
+        return rom;
     }
 
     // Sonic 2 (default / backward-compatible)

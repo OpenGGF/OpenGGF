@@ -35,6 +35,30 @@ class TestS3kBossExplosionChild {
     }
 
     @Test
+    void offsetVariantRebasesOnItsFirstOwnEntryAndRetainsTheModeAcrossRewind() {
+        var services = new RecordingServices();
+        when(services.runtime.levelRepeatOffset()).thenReturn(0x200);
+        var offset = S3kBossExplosionChild.createWithNativeInitSfx(0x4280, 0x2E0);
+        offset.setNativeLevelRepeatOffset(true);
+        offset.setServices(services);
+        var before = offset.captureRewindState();
+        offset.update(0, null);
+        assertEquals(0x4080, offset.getX(), "newly allocated offset explosions also consume this frame's repeat");
+        var expected = offset.captureRewindState();
+        var restored = new S3kBossExplosionChild(0x4280, 0x2E0);
+        restored.setServices(services);
+        restored.restoreRewindState(before);
+        restored.update(0, null);
+        assertEquals(0x4080, restored.getX());
+        assertEquals(List.of(), com.openggf.game.rewind.RewindSnapshotDiff.diffKey(
+                "explosion", expected, restored.captureRewindState()));
+        var stationary = S3kBossExplosionChild.createWithNativeInitSfx(0x4280, 0x2E0);
+        stationary.setServices(services);
+        stationary.update(0, null);
+        assertEquals(0x4280, stationary.getX(), "Explosion1 remains at its fixed world point");
+    }
+
+    @Test
     void nativeInitSfxFactoryIsSilentUntilFirstOwnEntryAndPlaysOnce() {
         RecordingServices services = new RecordingServices();
         S3kBossExplosionChild child =
@@ -162,6 +186,8 @@ class TestS3kBossExplosionChild {
 
     private static final class RecordingServices extends StubObjectServices {
         private final List<Integer> sfx = new ArrayList<>();
+        private final com.openggf.game.zone.ZoneRuntimeState runtime = mock(com.openggf.game.zone.ZoneRuntimeState.class);
+        @Override public com.openggf.game.zone.ZoneRuntimeState zoneRuntimeState() { return runtime; }
         private final RomByteReader reader = testRomReader();
         private final ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
         private final PatternSpriteRenderer renderer = mock(PatternSpriteRenderer.class);

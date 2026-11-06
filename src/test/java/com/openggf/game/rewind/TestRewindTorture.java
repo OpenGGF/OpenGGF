@@ -12,6 +12,7 @@ import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -26,6 +27,7 @@ import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 /**
@@ -33,7 +35,8 @@ import static org.junit.jupiter.api.Assertions.fail;
  * forward with periodic rewinds, exercising edge cases around keyframe
  * boundaries by sheer volume rather than enumerated cases.
  *
- * <p>Three pluggable {@link RewindTorturePattern}s drive five test methods:
+ * <p>Three pluggable {@link RewindTorturePattern}s drive full-trace audits and
+ * a bounded adjacent smoke witness alongside one complete seeded smoke run:
  * <ul>
  *   <li>{@link RewindTorturePattern.FixedAdjacent} — adjacent rewinds (forward=2,
  *       rewind=1) repeated until trace end. Most adversarial against keyframe
@@ -84,14 +87,21 @@ class TestRewindTorture {
     // -------------------------------------------------------------------------
     // Test methods
     //
-    // Torture patterns are enabled in the normal test suite. Failures report
-    // path-based snapshot diffs through RewindSnapshotDiff.
+    // Smoke retains one complete seeded gameplay timeline and checks every
+    // adjacent rewind around four keyframes. Full pattern/seed coverage is an audit.
     // -------------------------------------------------------------------------
 
-    @Test
+    @Test @Tag("exhaustive-audit")
     void tortureFixedAdjacent() throws Exception {
         runTorture("fixed-adjacent",
                 RewindTorturePattern.FixedAdjacent::new, false);
+    }
+
+    @Test
+    void boundedAdjacentReplaysBothSidesOfFourKeyframes() throws Exception {
+        runTorture("bounded-fixed-adjacent",
+                RewindTorturePattern.FixedAdjacent::new, true, KEYFRAME_INTERVAL * 4 + 4,
+                Set.of(59, 60, 61, 119, 120, 121, 179, 180, 181, 239, 240, 241));
     }
 
     @Test
@@ -109,13 +119,13 @@ class TestRewindTorture {
                 () -> new RewindTorturePattern.Random_(42L), false);
     }
 
-    @Test
+    @Test @Tag("exhaustive-audit")
     void tortureRandomSeed1337() throws Exception {
         runTorture("random-seed-1337",
                 () -> new RewindTorturePattern.Random_(1337L), false);
     }
 
-    @Test
+    @Test @Tag("exhaustive-audit")
     void tortureRandomSeed8675309() throws Exception {
         runTorture("random-seed-8675309",
                 () -> new RewindTorturePattern.Random_(8675309L), false);
@@ -138,19 +148,32 @@ class TestRewindTorture {
     private void runTorture(String name,
                             Supplier<RewindTorturePattern> patternFactory,
                             boolean verifyEveryCycle) throws Exception {
+        runTorture(name, patternFactory, verifyEveryCycle, Integer.MAX_VALUE, Set.of());
+    }
+
+    private void runTorture(String name,
+                            Supplier<RewindTorturePattern> patternFactory,
+                            boolean verifyEveryCycle, int maximumFrameCount,
+                            Set<Integer> requiredCheckpoints) throws Exception {
         Assumptions.assumeTrue(Files.isDirectory(EHZ1_TRACE),
                 "EHZ1 trace directory not found: " + EHZ1_TRACE);
         Path bk2Path = findBk2(EHZ1_TRACE);
         Assumptions.assumeTrue(bk2Path != null, "No .bk2 file found in " + EHZ1_TRACE);
 
         Bk2Movie movie = new Bk2MovieLoader().load(bk2Path);
-        int frameCount = movie.getFrames().size();
+        if (maximumFrameCount != Integer.MAX_VALUE) {
+            assertTrue(movie.getFrames().size() >= maximumFrameCount,
+                    "bounded witness requires its complete declared input prefix");
+        }
+        int frameCount = Math.min(movie.getFrames().size(), maximumFrameCount);
 
         // Discover which logical frames we need reference snapshots at by
         // simulating the pattern without driving the engine. This keeps memory
         // bounded — we only snapshot the trace at the frames we'll verify.
         TortureSchedule schedule = simulateSchedule(patternFactory.get(),
                 frameCount, verifyEveryCycle);
+        assertTrue(schedule.checkpointFrames().containsAll(requiredCheckpoints),
+                "the bounded schedule must compare both sides of every declared keyframe");
 
         // Build a single fixture and rewind controller. Use it for both phases:
         // phase A (forward-only reference run) and phase B (torture run, which
@@ -166,7 +189,7 @@ class TestRewindTorture {
         RewindController controller = new RewindController(
                 registry,
                 new InMemoryKeyframeStore(),
-                new MovieInputSource(movie),
+                new MovieInputSource(movie, frameCount),
                 new FixtureStepper(fixture),
                 KEYFRAME_INTERVAL);
 
@@ -400,9 +423,9 @@ class TestRewindTorture {
         private final Bk2Movie movie;
         private final int frameCount;
 
-        MovieInputSource(Bk2Movie movie) {
+        MovieInputSource(Bk2Movie movie, int frameCount) {
             this.movie = movie;
-            this.frameCount = movie.getFrames().size();
+            this.frameCount = frameCount;
         }
 
         @Override

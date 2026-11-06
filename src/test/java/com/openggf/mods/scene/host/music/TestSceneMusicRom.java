@@ -251,6 +251,8 @@ class TestSceneMusicRom {
         AtomicLong consumed = new AtomicLong();
         OpenAlPcmSink.Device device = mock(OpenAlPcmSink.Device.class);
         when(device.initialize()).thenReturn(48_000);
+        // Flush starts a new source coordinate, just as the native device does.
+        doAnswer(ignored -> { consumed.set(0); return null; }).when(device).flush();
         when(device.consumedStereoFrames()).thenAnswer(ignored -> consumed.get());
         var sink = new OpenAlPcmSink(device, failure -> fail(failure), now::get, ignored -> { });
         var config = SonicConfigurationService.createStandalone();
@@ -425,26 +427,28 @@ class TestSceneMusicRom {
             assertEquals(-800, player.samplePosition());
             short[] packet = new short[1600];
             audio.presentFrame(PresentationMode.FORWARD);
-            capture.drainPresentationFrame(packet);
+            assertEquals(800, capture.drainPresentationFrame(packet));
             assertArrayEquals(new short[1600], packet);
             assertEquals(0, player.samplePosition());
             short[] first = new short[48_000 * 2];
             for (int frame = 0; frame < 60; frame++) {
                 audio.presentFrame(PresentationMode.FORWARD);
-                capture.drainPresentationFrame(packet);
+                assertEquals(800, capture.drainPresentationFrame(packet));
                 System.arraycopy(packet, 0, first, frame * 1600, 1600);
             }
             assertTrue(acVariance(first) > 1, "captured song must vary, not merely contain DC");
             player.pause();
             long paused = player.samplePosition();
             audio.presentFrame(PresentationMode.FORWARD);
+            assertEquals(800, capture.drainPresentationFrame(packet), "pause still publishes one clocked packet");
+            assertArrayEquals(new short[1600], packet, "consume and verify the exact paused packet before restart");
             assertEquals(paused, player.samplePosition());
             player.resume();
             player = music.start(song, fm, psg, false, 0);
             short[] restarted = new short[first.length];
             for (int frame = 0; frame < 60; frame++) {
                 audio.presentFrame(PresentationMode.FORWARD);
-                capture.drainPresentationFrame(packet);
+                assertEquals(800, capture.drainPresentationFrame(packet));
                 System.arraycopy(packet, 0, restarted, frame * 1600, 1600);
             }
             assertArrayEquals(first, restarted);
@@ -462,7 +466,7 @@ class TestSceneMusicRom {
                 short[] missed = new short[first.length];
                 for (int frame = 0; frame < 60; frame++) {
                     audio.presentFrame(PresentationMode.FORWARD);
-                    capture.drainPresentationFrame(packet);
+                    assertEquals(800, capture.drainPresentationFrame(packet));
                     System.arraycopy(packet, 0, missed, frame * 1600, 1600);
                 }
                 assertFalse(Arrays.equals(first, missed), "PSG3 hi-hat must mute its physical noise output");
@@ -494,7 +498,7 @@ class TestSceneMusicRom {
         short[] packet = new short[1600];
         for (int frame = 0; frame < frames; frame++) {
             audio.presentFrame(PresentationMode.FORWARD);
-            capture.drainPresentationFrame(packet);
+            assertEquals(800, capture.drainPresentationFrame(packet));
             System.arraycopy(packet, 0, result, frame * 1600, 1600);
         }
         return result;

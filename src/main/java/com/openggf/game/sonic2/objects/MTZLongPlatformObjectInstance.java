@@ -65,7 +65,7 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.NonDirectional {
     // Obj65 owns a platform and cog child; mirrored attachment/travel is geometry, not facing.
 
-    // Obj65_Properties table (s2.asm line 52362)
+    // Obj65_Properties table (s2.asm line 52844)
     // {width_pixels, y_radius, movementData, childSubtype}
     private static final int[][] PROPERTIES = {
             {0x40, 0x0C},  // Index 0: frame 0
@@ -86,7 +86,6 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
 
     // Movement speed for subtype 5: addq.w #2,x_pos(a0)
     private static final int CONVEYOR_SPEED = 2;
-    private static final int STALE_LOGICAL_HORIZONTAL_FRAMES = 3;
 
     // Proximity detection speed: addi.w #$10,objoff_3A(a0) / subi.w #$10
     private static final int PROXIMITY_SPEED = 0x10;
@@ -106,9 +105,6 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
     // MTZ Act 3 (metropolis_zone_2): two stop points
     private static final int MTZ3_STOP_1 = 0x1CC0;
     private static final int MTZ3_STOP_2 = 0x2940;
-    private static final int MTZ3_STOP_1_STALE_INPUT_LEFT = 0x1C80;
-    private static final int MTZ3_STOP_2_STALE_INPUT_LEFT = 0x28A0;
-    private static final int MTZ3_STOP_2_STALE_INPUT_RIGHT = 0x28C0;
     // MTZ Acts 1&2: single stop point
     private static final int MTZ12_STOP = 0x1BC0;
     // MTZ Acts 1&2 reverse direction limit
@@ -233,30 +229,8 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
      * rider stands still while the platform glides underneath.
      */
     @Override
-    public boolean carriesRiderOnHorizontalMove(PlayableEntity player) {
-        return moveSubtype == 5;
-    }
-
-    @Override
-    public int staleHorizontalLogicalInputFramesWhileRiding(PlayableEntity player, int rideFrames) {
-        // Obj65 subtype 5 updates x_pos directly in loc_26E4A before reaching
-        // SolidObject; Sonic_Move then consumes Ctrl_1_Held_Logical rather than
-        // the current raw input row. The MTZ3 ROM sample keeps that logical word
-        // stale for three frames only once Sonic is already facing right. The
-        // level-select route shows the same helper timing on both MTZ3 stop
-        // approaches: $1CC0 and $2940.
-        return moveSubtype == 5
-                && player != null
-                && !player.isCpuControlled()
-                && player.getDirection() == Direction.RIGHT
-                && isNearMtz3ConveyorStop()
-                ? STALE_LOGICAL_HORIZONTAL_FRAMES
-                : 0;
-    }
-
-    private boolean isNearMtz3ConveyorStop() {
-        return (x >= MTZ3_STOP_1_STALE_INPUT_LEFT && x < MTZ3_STOP_1)
-                || (x >= MTZ3_STOP_2_STALE_INPUT_LEFT && x < MTZ3_STOP_2_STALE_INPUT_RIGHT);
+    public int tailCallD4(int routineEntryX) {
+        return moveSubtype == 5 ? routineEntryX : getX();
     }
 
     @Override
@@ -291,7 +265,7 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
         }
         executeMovement(vIntRunCount, player);
         updateDynamicSpawn(x, y);
-        // ROM loc_26C1C tail (s2.asm:52469-52484) marks the object gone + clears
+        // ROM loc_26C1C tail (s2.asm:52916-52931) marks the object gone + clears
         // its respawn bit from objoff_34; getOutOfRangeReferenceX exposes that
         // anchor to the shared ObjectManager out_of_range path.
     }
@@ -314,7 +288,7 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
 
         List<SpriteMappingFrame> mappings = MAPPINGS.get(
                 Sonic2Constants.MAP_UNC_MTZ_PLATFORM_LEVELART_ADDR,
-                S2SpriteDataLoader::loadMappingFrames, "Obj65a");
+                S2SpriteDataLoader::loadStockMappingFrames, "Obj65a");
         if (mappings.isEmpty() || frame >= mappings.size()) {
             return;
         }

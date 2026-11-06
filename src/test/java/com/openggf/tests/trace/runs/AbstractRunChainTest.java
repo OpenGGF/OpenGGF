@@ -32,10 +32,12 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.SessionInvocationExtension;
 import com.openggf.tests.TestSessionOutputPaths;
+import com.openggf.tests.trace.TraceReplayRomCatalogueExtension;
 import com.openggf.trace.SpecialStageRunObjectsPassBinder;
 import com.openggf.trace.ToleranceConfig;
 import com.openggf.trace.FrameComparison;
 import com.openggf.trace.TraceData;
+import com.openggf.trace.TraceFrame;
 import com.openggf.trace.DynamicArtTransfer;
 import com.openggf.trace.TraceReplayBootstrap;
 import com.openggf.trace.TraceRunManifest;
@@ -119,7 +121,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * state; every comparator and boundary assertion observes an engine that reached
  * its position by replaying the recorded BK2 inputs.
  */
-@ExtendWith(SessionInvocationExtension.class)
+@ExtendWith({SessionInvocationExtension.class, TraceReplayRomCatalogueExtension.class})
 abstract class AbstractRunChainTest {
 
     /**
@@ -189,6 +191,9 @@ abstract class AbstractRunChainTest {
             TraceRunReplayWalker::openActiveSegment;
     Runnable afterInitialHeadlessPayloadOpen = () -> { };
     Runnable afterProductionStep = () -> { };
+    int productionMovieRow = -1;
+    java.util.function.Consumer<com.openggf.trace.timing.HardwareTimingReplaySnapshot>
+            sourceLoadTailTimingObserver = snapshot -> { };
     IntConsumer productionOutputRowObserver = row -> { };
     HeadlessSlotProbeFactory slotProbeFactory =
             AbstractRunChainTest::createSlotProbe;
@@ -717,7 +722,9 @@ abstract class AbstractRunChainTest {
                                 + " before its comparator publication completed");
             }
             RunPlaybackObservation current = observation(mode, true, 0, false);
-            RunPlaybackObservation production = productionOwnerSegmentIndex == source
+            RunPlaybackObservation production = coordinator.phase()
+                            != TraceRunPlaybackCoordinator.Phase.SOURCE_LOAD_TAIL
+                    && productionOwnerSegmentIndex == source
                     && productionOwnerObservation != null
                     ? withProductionOwner(current, productionOwnerObservation)
                     : current;
@@ -1076,6 +1083,20 @@ abstract class AbstractRunChainTest {
         return assertChainReplay(runDir, null);
     }
 
+    /**
+     * Complete-campaign gate: require a native movie-end observation before
+     * driving the ordinary continuous replay and its terminal mode/art checks.
+     * Prefixes and partial round trips keep using the optional-endpoint helper.
+     */
+    protected DynamicArtGapJournalEvidence assertCompleteCampaignReplay(Path runDir)
+            throws Exception {
+        TraceRunManifest run = TraceRunManifest.load(runDir.resolve("run_manifest.json"));
+        run.requireRecordedMovieEndMode();
+        Bk2Movie movie = new Bk2MovieLoader().load(resolveRunBk2(runDir, run.sourceBk2()));
+        TraceRunReplayWalker.planCompleteCampaignMovieTail(run, movie.getFrameCount());
+        return assertChainReplay(runDir);
+    }
+
     protected DynamicArtGapJournalEvidence assertChainReplayThroughSegmentRow(
             Path runDir, int segmentIndex, int committedRows) throws Exception {
         if (segmentIndex < 0 || committedRows <= 0) {
@@ -1305,7 +1326,11 @@ abstract class AbstractRunChainTest {
                         TraceRunReplayWalker.descriptorHardwareTimingSegments(
                                 descriptors),
                         com.openggf.trace.timing.HardwareTimingInterstitialStreamLoader
-                                .load(runDir));
+                                .load(runDir),
+                        com.openggf.trace.timing.InitializationTimingStreamLoader.loadRun(
+                                runDir, run, movie.getFrameCount()),
+                        com.openggf.trace.timing.InitializationHardwareTimingStream.loadRun(
+                                runDir, run, movie.getFrameCount()));
         activeHardwareTiming = hardwareTiming;
         GameplayModeContext gameplayMode =
                 SessionManager.getCurrentGameplayMode();
@@ -1662,6 +1687,13 @@ abstract class AbstractRunChainTest {
                         "Interior exit boundary (stage_exit) was never observed within the "
                                 + "boundary window for " + runDir);
                 assertReturnBoundary(descriptors, i, runDir);
+                // Read before the payload closes: the interior's recorded rows
+                // after the engine's release, as main-loop admission bits only.
+                List<RecordedTailRow> unadmittedInteriorTail =
+                        uncomparedInterior || activeComparator == null
+                                ? null
+                                : unadmittedRecordedTail(
+                                        activeTrace(seg), activeComparator.cursor());
                 closeHeadlessPayloadOrThrow();
                 activeComparator = null;
                 dynamicArtGapJournal.gapOpened(seg.segment().dir());
@@ -1671,9 +1703,9 @@ abstract class AbstractRunChainTest {
                 // row by running it, which is the sole footing on which an
                 // opening row can be adopted. Production's
                 // destinationRowsConsumedForAdmission() is cursor-derived and
-                // therefore always organic; OPTION B below re-anchors the
-                // cursor past rows the engine never ran, so its "1" names no
-                // executed row zero.
+                // therefore always organic. OPTION B below re-anchors a
+                // non-row-matched transition at its still-pending row zero;
+                // it supplies no executed opening row to adopt.
                 boolean returnCursorArrivedOrganically;
                 if (uncomparedInterior) {
                     // Pre-seeked SS interior: its single title-card-exit fall-through
@@ -1767,23 +1799,34 @@ abstract class AbstractRunChainTest {
                     // rows. The engine reproduces the fade and shows the title card, but
                     // its S3K title-card/load span is not row-matched to that tail, so the
                     // cursor cannot organically reach returnOffset (see
-                    // docs/S3K_KNOWN_DISCREPANCIES.md, gumball exit choreography). The
-                    // BONUS->LEVEL title-card-exit fall-through already ran the return
-                    // segment's frame 0. Re-anchor the cursor to returnOffset+1 and
-                    // compare the return level from frame 1. Input-cursor alignment only.
-                    playback.startSession(movie, returnOffset + 1);
+                    // docs/S3K_KNOWN_DISCREPANCIES.md, gumball exit choreography).
+                    // Title release completes only loc_6468's initial Process_Sprites
+                    // and loc_64DC setup (sonic3k.asm:7880-7915). LevelLoop's first
+                    // Wait_VSync/object dispatch is still pending. Re-anchor BEFORE
+                    // row zero: skipping it also skips a real Obj_TitleCardWait2
+                    // dispatch, submitting LoadEnemyArt after its completion edge.
+                    //
+                    // CONTRACT 1 (main-loop admission) for the recorded rows the
+                    // interior still holds after that release: when every one is a
+                    // row the main loop never ran on, each services only its
+                    // V-int, exactly as a census lag row does.
+                    driveUnadmittedRecordedTail(
+                            unadmittedInteriorTail, fixture, gameplayMode, loop, playback);
+                    driveLagOnlyGapCensus(exit, returnOffset, fixture,
+                            gameplayMode, loop, playback);
+                    playback.startSession(movie, returnOffset);
                     runCoordinator.admitLevel(
                             exit, obs.observedBk2Frame(),
-                            loop.getCurrentGameMode(), 1, false,
+                            loop.getCurrentGameMode(), 0, false,
                             runCoordinator.latestLoadReceipt());
                     int destinationIndex = i + 1;
                     activeComparator = openAndAttachHeadlessPayload(
                             returnSegment, destinationIndex,
                             payload -> attachReturnedLevelSegment(
-                                    probe, returnSegment, fixture, 1,
+                                    probe, returnSegment, fixture, 0,
                                     destinationIndex));
                     activeSegmentInitialCursor = cursorOrZero(activeComparator);
-                    returnRowsConsumed = 1;
+                    returnRowsConsumed = 0;
                     returnCursorArrivedOrganically = false;
                 }
                 dynamicArtSegments.beginSegment();
@@ -1875,13 +1918,14 @@ abstract class AbstractRunChainTest {
                             var fadeObjects =
                                     GameServices.level().getObjectManager();
                             int fadeVblank = fadeObjects.getVblaCounter();
+                            boolean loadOwnedRow = com.openggf.level.NativeLevelLoadAccess.isPending(GameServices.level());
                             stepEngineFrame(loop);
                             if (fadeVblankRow) {
                                 // Every one of Pal_FadeToBlack's passes is a
                                 // V-int that reaches VintRet; see
                                 // serviceSuppressedRowVint.
                                 serviceSuppressedRowVint(
-                                        fadeObjects, fadeVblank);
+                                        fadeObjects, fadeVblank, loadOwnedRow);
                                 playback.onLevelFrameAdvanced();
                             }
                             latchSourceTailVblank(seg.segment(), rowBeingPlayed);
@@ -1925,6 +1969,9 @@ abstract class AbstractRunChainTest {
                 int prepared = prepareAcrossLevelBoundary(
                         loop, playback, probe, movie, seg, next, stepCap,
                         levelAtSegmentStart);
+                anchorInterLevelVblankBeforeGapWalk(
+                        seg, next, prepared, semanticSourceTailVblank,
+                        playback.getCursorFrame());
                 int rowsConsumed = admitLevelWhenReady(
                         gameplayMode, loop, playback, runCoordinator, exit, obs, next,
                         prepared, stepCap,
@@ -1968,12 +2015,23 @@ abstract class AbstractRunChainTest {
                 completeSourceTailReportingOnFailure(
                         run.runId(), i, loop, activeComparator, seg, stepCap,
                         activeSegmentInitialCursor, levelAtSegmentStart);
+                // The source's recorded rows after its reload are the ROM's own
+                // Level: entry for the interior. Drive them as represented rows,
+                // so the recorded readiness of the work the load submits stays
+                // authoritative, then admit whatever recorded tail is left after
+                // the engine's title release as lag rows (CONTRACT 1).
+                List<RecordedTailRow> entryLagTail =
+                        TraceRunReplayWalker.isUncomparedInterior(interior.segment())
+                                ? null
+                                : driveRepresentedEntryTail(
+                                        loop, activeComparator, seg, interior, stepCap);
                 // Report BEFORE asserting -- see the stage_exit branch above for
                 // why: a level segment's own interior divergence is the usual
                 // cause of a missed entry boundary, and this is the only report
                 // this segment's comparator will ever get if the assert throws.
                 activeComparator.finalizeTerminalDynamicArtComparison();
                 requireComparatorComplete(seg, activeComparator);
+                retainSourceBonusLoadTail(loop, playback, probe, seg, obs, fixture);
                 dynamicArtSegments.enterGap();
                 // Observed after the window actually closes: the close is what
                 // records the state the gap opens on, so reading the snapshot
@@ -1997,8 +2055,12 @@ abstract class AbstractRunChainTest {
                 closeHeadlessPayloadOrThrow();
                 activeComparator = null;
                 dynamicArtGapJournal.gapOpened(seg.segment().dir());
+                driveUnadmittedRecordedTail(
+                        entryLagTail, fixture, gameplayMode, loop, playback);
+                driveLagOnlyGapCensus(exit, interior.segment().bk2FrameOffset(),
+                        fixture, gameplayMode, loop, playback);
                 int rowsConsumed = prepareIntoInterior(
-                        loop, playback, probe, movie, interior, stepCap);
+                        loop, playback, probe, movie, interior, stepCap, inputHandler, fixture);
                 runCoordinator.admitInterior(
                         exit, obs.observedBk2Frame(),
                         loop.getCurrentGameMode(), rowsConsumed);
@@ -2451,7 +2513,10 @@ abstract class AbstractRunChainTest {
         private final ReplayPrefixTarget prefixTarget;
         private final List<UncomparedInteriorPhysicalRow> physicalRows;
         private final int destinationOffset;
+        // Census index of the gap's last non-admitted row (InitPlayers), or -1.
+        private final int levelEntryLoadCompletionIndex;
         private int physicalRowIndex;
+        private boolean levelEntryPlayerArtHoldArmed;
         private TraceRunSpecialStageRows specialRows;
         private TraceRunSpecialStageRowDriver rowDriver;
         private SpecialStageRunObjectsPassBinder passBinder;
@@ -2503,10 +2568,17 @@ abstract class AbstractRunChainTest {
             driveInterior = uncomparedInteriorStep(
                     loop, inputHandler, movie, segment, specialRows,
                     passBinder);
+            boolean[] gapLag = expandGapAdmissionCensus(segment.exitBoundary());
             physicalRows = uncomparedInteriorPhysicalRows(
                     segment.segment().bk2FrameOffset(), specialRows.rowCount(),
-                    destinationOffset,
-                    expandGapAdmissionCensus(segment.exitBoundary()));
+                    destinationOffset, gapLag);
+            // The same CONTRACT 1 ordering as admitLevelWhenReady: the return's
+            // Level: load creates the playables at InitPlayers
+            // (docs/s2disasm/s2.asm:4946), at the end of its synchronous load.
+            // A return gap can also carry lone lag rows from passes of the
+            // title-card leave loop (s2.asm:5060-5066) that overran their wait, so the load is
+            // located as the last non-admitted run spanning more than one V-int.
+            levelEntryLoadCompletionIndex = lastSynchronousLoadRow(gapLag);
         }
 
         @Override
@@ -2654,9 +2726,29 @@ abstract class AbstractRunChainTest {
             assertEquals(physicalRow.movieRow(), playback.getCursorFrame(),
                     "interstitial physical cursor");
             fixture.enterHardwareTimingGap();
+            if (!levelEntryPlayerArtHoldArmed) {
+                // Engine-created playable art stays invisible until the census
+                // row the ROM's load completes on; this moves only WHEN it
+                // publishes and carries no recorded value.
+                holdPlayerArtForLevelEntryLoad(levelEntryLoadCompletionIndex >= 0);
+                levelEntryPlayerArtHoldArmed = true;
+            }
+            int gapIndex = physicalRow.movieRow() - destinationOffset
+                    + interstitialRowCount();
             stepEngineFrameInTransitionGap(
                     gameplayMode, loop, playback, physicalRow.movieRow(),
-                    physicalRow.lagGapRow());
+                    physicalRow.lagGapRow(),
+                    gapIndex == levelEntryLoadCompletionIndex);
+        }
+
+        private int interstitialRowCount() {
+            int rows = 0;
+            for (UncomparedInteriorPhysicalRow row : physicalRows) {
+                if (!row.representedSpecialRow()) {
+                    rows++;
+                }
+            }
+            return rows;
         }
 
         private UncomparedInteriorPhysicalRow nextPhysicalRow(
@@ -2684,6 +2776,9 @@ abstract class AbstractRunChainTest {
                 }
                 driveInterstitialRow();
             }
+            // Fail-safe: a census without a load-completion row publishes the
+            // held decisions here rather than leaking them into the destination.
+            releasePlayerArtForLevelEntryLoad();
             assertEquals(destinationOffset, playback.getCursorFrame(),
                     "uncompared-interior walk must stop at destination offset");
         }
@@ -3234,7 +3329,8 @@ abstract class AbstractRunChainTest {
                     @Override
                     public void prepareHardwareTiming(
                             TraceRunFrameDriver.Step step) {
-                        fixture.enterHardwareTimingGap();
+                        if (activeHardwareTiming != null) activeHardwareTiming.beginGapFrame(playback.currentFrameOrThrow());
+                        else fixture.enterHardwareTimingGap();
                     }
 
                     @Override
@@ -3441,14 +3537,97 @@ abstract class AbstractRunChainTest {
      * ENTRY = 0, special = uncompared) follows the COMPARATOR FRAME BASE contract
      * on {@link #attachReturnedLevelSegment}.
      */
+    private void retainSourceBonusLoadTail(
+            GameLoop loop, PlaybackDebugManager playback, BoundaryProbe probe,
+            TraceRunSegmentDescriptor source, BoundaryObservation boundary,
+            LiveEngineFixture fixture) {
+        if (boundary.bonusType() == null) {
+            return;
+        }
+        var adapter = activeRunCoordinator;
+        adapter.coordinator.observeBoundary(new RunBoundarySignal.BonusRequest(
+                boundary.observedBk2Frame(), boundary.bonusType()));
+        var actions = adapter.coordinator.beginSourceLoadTail(
+                adapter.observation(loop.getCurrentGameMode(), true, 0, false));
+        adapter.actions.addAll(actions);
+        if (actions.isEmpty()) {
+            // The production adapter may already have compared the full tail.
+            // Observe the same retained source schedule before its handoff.
+            sourceLoadTailTimingObserver.accept(fixture.hardwareTimingReplayPort.capture());
+            return;
+        }
+        // Comparison has ended, but its payload, timing schedule and art
+        // window remain owned until production releases or coverage runs out.
+        probe.detachDelegate();
+        productionComparator = null;
+        int end = Math.addExact(source.segment().bk2FrameOffset(), source.rowCount());
+        var gameplay = SessionManager.getCurrentGameplayMode();
+        var driver = new TraceRunFrameDriver();
+        gameplay.installTraceRunFrameDriver(driver);
+        try {
+            while (loop.getCurrentGameMode() != GameMode.BONUS_STAGE
+                    && playback.getCursorFrame() < end) {
+                driver.execute(new TraceRunFrameDriver.Step(
+                                TraceRunFrameDriver.Disposition.SOURCE_LOAD_ROW,
+                                playback.getCursorFrame(), false),
+                        new TraceRunFrameDriver.Hooks<Void>() {
+                            public void preparePhysicalRow(TraceRunFrameDriver.Step row) {
+                                playback.prepareCurrentFrame();
+                            }
+                            public void prepareHardwareTiming(TraceRunFrameDriver.Step row) { }
+                            public Void captureBefore(TraceRunFrameDriver.Step row) { return null; }
+                            public void runProductionLifecycle(TraceRunFrameDriver.Step row) {
+                                stepEngineFrame(loop);
+                            }
+                            public void advancePhysicalRow(TraceRunFrameDriver.Step row) {
+                                playback.onLevelFrameAdvanced();
+                            }
+                            public Void captureAfter(TraceRunFrameDriver.Step row) { return null; }
+                            public void compare(TraceRunFrameDriver.Step row, Void before, Void after) { }
+                            public void afterStep(TraceRunFrameDriver.Step row) { }
+                        });
+            }
+        } finally {
+            gameplay.clearTraceRunFrameDriver(driver);
+        }
+        sourceLoadTailTimingObserver.accept(fixture.hardwareTimingReplayPort.capture());
+        if (playback.getCursorFrame() < end) {
+            System.out.println("Source load released with "
+                    + (end - playback.getCursorFrame())
+                    + " unrepresented synchronous-load source rows in " + source.segment().dir());
+        }
+    }
+
     private int prepareIntoInterior(
             GameLoop loop, PlaybackDebugManager playback, BoundaryProbe probe,
-            Bk2Movie movie, TraceRunSegmentDescriptor interior, int stepCap) {
+            Bk2Movie movie, TraceRunSegmentDescriptor interior, int stepCap,
+            InputHandler inputHandler, LiveEngineFixture fixture) {
         probe.setDelegate(null);
         declareHardwareTimingTransitionGap();
         productionComparator = null;
         int offset = interior.segment().bk2FrameOffset();
         GameMode target = TraceRunReplayWalker.expectedMode(interior.segment());
+        if (activeHardwareTiming != null && activeHardwareTiming.hasInitializationTiming()) {
+            // Continue real loading rows before parking destination input.
+            // Seeking first would discard represented phase observations.
+            var gameplay = SessionManager.getCurrentGameplayMode();
+            var rows = new TraceRunFrameDriver();
+            gameplay.installTraceRunFrameDriver(rows);
+            int steps = 0;
+            try {
+                while (loop.getCurrentGameMode() != target) {
+                    if (steps++ >= stepCap) throw new AssertionError("Native initialization never released " + target);
+                    driveHeadlessTransitionRow(rows, TraceRunFrameDriver.Disposition.SHARED_GAP,
+                            loop, inputHandler, movie, playback, fixture, activeRunCoordinator);
+                }
+            } finally {
+                gameplay.clearTraceRunFrameDriver(rows);
+            }
+            com.openggf.level.NativeLevelLoadAccess.requireComplete(GameServices.level());
+            playback.startSession(movie, offset);
+            primeInteriorEntryRngFromMetadata(interior);
+            return 0;
+        }
         if (!TraceRunReplayWalker.isUncomparedInterior(interior.segment())) {
             // Title-card release is setup-only. Park input at the first interior
             // row before releasing control; the next loop step owns its first
@@ -3532,6 +3711,10 @@ abstract class AbstractRunChainTest {
      */
     private void primeInteriorEntryRngFromMetadata(
             TraceRunSegmentDescriptor interior) {
+        // A represented native continuation has performed its real seed read.
+        // Reapplying metadata here would hide a missing load interrupt and erase
+        // any RNG use performed by the initial object pass.
+        if (activeHardwareTiming != null && activeHardwareTiming.hasInitializationTiming()) return;
         TraceReplaySessionBootstrap.applyInitialRngSeedForReplay(
                 interior.metadata());
     }
@@ -3564,9 +3747,9 @@ abstract class AbstractRunChainTest {
      *
      * <p>Unlike {@link #attachLevelSegment}, this method does not itself re-seek
      * the BK2 cursor. Its caller first establishes the required alignment: an
-     * uncompared special-stage return keeps the pre-seeked cursor advanced by its
-     * fall-through frame, while the bonus/Option-B return explicitly re-anchors
-     * to {@code returnOffset + 1}. In both cases the cursor reaches
+     * uncompared special-stage return retains its organically advanced cursor,
+     * while a setup-only compared-bonus return explicitly re-anchors to
+     * {@code returnOffset}, with {@code framesConsumed == 0}. The cursor reaches
      * {@code returnOffset + framesConsumed} before this method attaches.
      * Starting the comparator at {@code framesConsumed} keeps the recording-frame
      * index and the BK2 cursor in lockstep, so the already-run leading frame(s)
@@ -3595,13 +3778,12 @@ abstract class AbstractRunChainTest {
      *   <li><b>0</b> — a compared bonus interior ENTRY: title-card release
      *       completes setup only. The first gameplay tick and its input are
      *       still pending when the comparator attaches.</li>
-     *   <li><b>1</b> — a level RETURN after a special-stage (uncompared) interior
-     *       (this method): the pre-seeked frozen cursor's one fall-through frame
-     *       consumed the return segment's frame 0.</li>
-     *   <li><b>1</b> — a level RETURN after a compared bonus interior (this
-     *       method): Option B has already run the return segment's frame 0, then
-     *       explicitly re-seeks the input cursor to {@code returnOffset + 1}
-     *       before attaching the comparator at frame 1.</li>
+     *   <li><b>0 or 1</b> — a level RETURN after an uncompared special stage:
+     *       the organic input cursor determines whether a real destination
+     *       gameplay iteration has already executed.</li>
+     *   <li><b>0</b> — a level RETURN after a compared bonus interior: title
+     *       release completes setup only. Option B re-seeks to
+     *       {@code returnOffset} and compares the first gameplay tick too.</li>
      * </ul>
      */
     private LiveTraceComparator attachReturnedLevelSegment(
@@ -3855,6 +4037,64 @@ abstract class AbstractRunChainTest {
             // count (notably S1's six-row death/act seam).
             objectManager.initVblaCounter(sourceTailVblank + requiredTicks);
         }
+    }
+
+    /**
+     * Re-anchors the object V-blank clock before {@link #admitLevelWhenReady}
+     * walks the rest of a level-entry gap, so the walk ENDS on the movie budget
+     * instead of starting there.
+     *
+     * <p>{@link #prepareAcrossLevelBoundary} reconciles the clock to the
+     * destination's first-row budget the moment the destination level is
+     * active. On a census-driven entry that moment is the start of the ROM's
+     * {@code Level:} work, not its end: the walk then plays every remaining
+     * gap row -- the masked load block, the title-card arrival, the
+     * {@code LoadZoneTiles} upload, the load lag and the leave loop -- and
+     * each of those rows ticks the clock exactly once
+     * ({@link #serviceLagRowVint} on a lag row, the engine step or
+     * {@link #serviceSuppressedRowVint} on an admitted one). Every clock read
+     * during the title card was therefore the gap's whole length ahead, and
+     * the post-walk reconcile rewound it only after title-card work had
+     * consumed it: CNZ's {@code SlotMachine_Routine1} seeds the reels from
+     * {@code Vint_runcount} (docs/s2disasm/s2.asm:59438-59460) on a leave-loop
+     * iteration, and kept a seed the ROM never drew.
+     *
+     * <p>Subtracting the rows still to be walked places the anchor where the
+     * walk's own one-tick-per-row ends on the same budget. The budget's masked
+     * rows (the interrupt-masked block at docs/s2disasm/s2.asm:4768-4772 that
+     * clears the screen and loads the title-card art) are the gap's first
+     * non-admitted rows, which the walk still ticks; the clock is exact
+     * from the end of that block on, and no object or title-card owner runs
+     * inside it. The post-walk reconcile stays as the check that the
+     * choreography spent the movie rows it was given.
+     *
+     * <p>Movie-clock pacing only: the inputs are the engine's own source-tail
+     * counter, the manifest budget and the BK2 cursor. No trace field is read
+     * into engine state.
+     */
+    private void anchorInterLevelVblankBeforeGapWalk(
+            TraceRunSegmentDescriptor currentLevel,
+            TraceRunSegmentDescriptor nextLevel,
+            int preparedFramesConsumed,
+            int sourceTailVblank,
+            int cursorFrame) {
+        var profile = GameServices.module().getTracePlaybackProfile();
+        if (!profile.alignsInterLevelVblank()) {
+            return;
+        }
+        int rowsStillToWalk = nextLevel.segment().bk2FrameOffset()
+                + preparedFramesConsumed - cursorFrame;
+        if (rowsStillToWalk <= 0) {
+            return;
+        }
+        int requiredTicks = TraceRunReplayWalker.interLevelVblankBudget(
+                currentLevel.segment(), nextLevel.segment(), preparedFramesConsumed,
+                TraceRunVblankClock.maskedLevelEntryLoss(
+                        profile, nextLevel.segment()));
+        GameServices.level().getObjectManager().initVblaCounter(
+                Math.subtractExact(
+                        Math.addExact(sourceTailVblank, requiredTicks),
+                        rowsStillToWalk));
     }
 
     /**
@@ -4553,7 +4793,7 @@ abstract class AbstractRunChainTest {
      * ordinary logical iteration, because a lag V-blank does not run the mode's
      * handler at all: {@code V_Int} branches to {@code Vint_Lag} while
      * {@code Vint_routine} is still 0 (docs/s2disasm/s2.asm:483-484, 529) —
-     * S1's {@code VBlank_Lag} (docs/s1disasm/sonic.asm:709) has the same shape
+     * S1's {@code VBlank_Lag} (docs/s1disasm/sonic.asm:712) has the same shape
      * — so an in-progress blocking fade's per-V-blank work
      * ({@code Pal_FadeFromWhite}, s2.asm:3460-3482, whose body runs in the main
      * loop between its own {@code WaitForVint}s) does not advance on that
@@ -4884,7 +5124,7 @@ abstract class AbstractRunChainTest {
 
     /**
      * The whole of a lag row's engine-visible V-int work: the ROM's
-     * {@code VintRet} increments {@code Vint_runcount} (s2.asm:505-506) on
+     * {@code VintRet} increments {@code Vint_runcount} (s2.asm:507-508) on
      * every dispatch, lag included, and that counter is what
      * {@code ObjectInstance.update} sees as {@code vblaCounter}. Everything
      * else {@code Vint_Lag} does on the in-level path (sound-driver input,
@@ -4976,7 +5216,7 @@ abstract class AbstractRunChainTest {
      *
      * <p>{@code VintRet: addq.l #1,(Vint_runcount).w}
      * (docs/s2disasm/s2.asm:507-508) sits AFTER the
-     * {@code jsr Vint_SwitchTbl(pc,d0.w)} dispatch (:504) and is reached by
+     * {@code jsr Vint_SwitchTbl(pc,d0.w)} dispatch (:515) and is reached by
      * every V-int the ROM takes, whichever routine the dispatch selected —
      * {@code Vint_Lag}, {@code Vint_Level}, {@code Vint_TitleCard} or
      * {@code Vint_Fade}. The object-visible clock therefore advances exactly
@@ -5008,10 +5248,16 @@ abstract class AbstractRunChainTest {
      *
      * <p>This carries no position, speed, object state or any physics/aux
      * comparison value, and reads no trace field: the only input is the
-     * engine's own counter before the row.
+     * engine's own counter before the row. A resumable native load is excluded:
+     * its dedicated admission can represent a masked interrupt, so an unchanged
+     * counter on that row is intentional rather than an unserviced gap tick.
      */
     private static void serviceSuppressedRowVint(
-            Object objectManagerBefore, int counterBefore) {
+            Object objectManagerBefore, int counterBefore, boolean nativeLoadPendingBefore) {
+        // A native HOLD may mask the interrupt. Its phase port owns whether this
+        // row ticks, including the rows that start or complete the load.
+        if (nativeLoadPendingBefore
+                || com.openggf.level.NativeLevelLoadAccess.isPending(GameServices.level())) return;
         var objectManager = GameServices.level().getObjectManager();
         if (suppressedRowOwesVint(
                 objectManager == objectManagerBefore,
@@ -5084,6 +5330,155 @@ abstract class AbstractRunChainTest {
      * (docs/s2disasm/s2.asm:4946): every span after it waits on V-int per pass
      * (the leave loop, :5060-5066) and so admits the main loop.
      */
+    /** One recorded row the main loop never ran on: a lag V-int, or no V-int at all. */
+    record RecordedTailRow(int row, boolean vintServiced) {
+    }
+
+    /**
+     * The recorded rows from {@code firstRow} to the segment's end, when the
+     * main loop was admitted on none of them; otherwise {@code null}.
+     *
+     * <p>Only main-loop admission is read, as the per-row lag outcome of
+     * CONTRACT 1. A row whose {@code Lag_frame_count} advanced took the lag
+     * V-int path (S3K {@code VInt_0}, sonic3k.asm:588-592). A row whose
+     * V-int counter did not advance had no V-int at all, as under the
+     * {@code move #$2700,sr} around j_LevelSetup in loc_6310
+     * (sonic3k.asm:7789-7797).
+     * Any other row waited in a loop's {@code Wait_VSync}, which the engine
+     * has already left; such a tail is not expressible as lag admission, so
+     * the caller keeps its re-anchor. No position, speed or object value is
+     * read, and nothing keys on a frame, zone, route or game.
+     */
+    static List<RecordedTailRow> unadmittedRecordedTail(TraceData trace, int firstRow) {
+        if (trace == null || firstRow <= 0 || firstRow >= trace.frameCount()) {
+            return null;
+        }
+        List<RecordedTailRow> rows = new ArrayList<>();
+        for (int row = firstRow; row < trace.frameCount(); row++) {
+            TraceFrame previous = trace.getFrame(row - 1);
+            TraceFrame current = trace.getFrame(row);
+            if (previous.lagCounter() < 0 || current.lagCounter() < 0
+                    || previous.vblankCounter() < 0 || current.vblankCounter() < 0) {
+                return null;
+            }
+            boolean vint = current.vblankCounter() != previous.vblankCounter();
+            boolean lag = current.lagCounter() > previous.lagCounter();
+            if (vint && !lag) {
+                return null;
+            }
+            rows.add(new RecordedTailRow(row, vint));
+        }
+        return List.copyOf(rows);
+    }
+
+    /**
+     * Drives a level segment's recorded rows after its reload while production
+     * is still inside the interior's {@code Level:} entry, one represented row
+     * per engine iteration, and returns the recorded rows left after the
+     * engine's title release when every one of them is non-admitted.
+     *
+     * <p>Represented rows keep the source segment's recorded completion edges
+     * authoritative for the work the entry submits (hardware-timing contract,
+     * "membership is fixed at submission"). Nothing is read into engine state.
+     * A remaining tail containing a row that waited in a loop is not expressible
+     * as lag admission; the caller then keeps its existing parked admission.
+     */
+    private List<RecordedTailRow> driveRepresentedEntryTail(
+            GameLoop loop, LiveTraceComparator comparator,
+            TraceRunSegmentDescriptor source, TraceRunSegmentDescriptor interior,
+            int stepCap) {
+        if (comparator == null || !"level".equals(source.segment().kind())) {
+            return null;
+        }
+        GameMode interiorMode = TraceRunReplayWalker.expectedMode(interior.segment());
+        int steps = 0;
+        while (comparator.cursor() < source.rowCount()
+                && loop.getCurrentGameMode() != interiorMode) {
+            if (steps++ >= stepCap) {
+                throw new AssertionError("represented entry tail of "
+                        + source.segment().dir() + " did not finish within "
+                        + stepCap + " steps (cursor " + comparator.cursor()
+                        + " of " + source.rowCount() + ")");
+            }
+            stepEngineFrame(loop);
+        }
+        if (comparator.cursor() >= source.rowCount()) {
+            return null;
+        }
+        return unadmittedRecordedTail(activeTrace(source), comparator.cursor());
+    }
+
+    /**
+     * CONTRACT 1 across a gap the recorder covers only by its admission census:
+     * when the walk stands on the gap's first row and every census row is
+     * non-admitted, each services only its V-int. A census with an admitted row
+     * names a main-loop iteration whose owning loop is not identified here, so
+     * it is left to the caller's existing re-anchor.
+     */
+    private void driveLagOnlyGapCensus(
+            TraceRunManifest.Transition exit, int destinationOffset,
+            LiveEngineFixture fixture, GameplayModeContext gameplayMode,
+            GameLoop loop, PlaybackDebugManager playback) {
+        boolean[] gap = expandGapAdmissionCensus(exit);
+        if (gap.length == 0
+                || playback.getCursorFrame() != destinationOffset - gap.length) {
+            return;
+        }
+        for (boolean lag : gap) {
+            if (!lag) {
+                return;
+            }
+        }
+        fixture.enterHardwareTimingGap();
+        for (int row = 0; row < gap.length; row++) {
+            stepEngineFrameInTransitionGap(
+                    gameplayMode, loop, playback, playback.getCursorFrame(), true);
+        }
+    }
+
+    private void driveUnadmittedRecordedTail(
+            List<RecordedTailRow> rows, LiveEngineFixture fixture,
+            GameplayModeContext gameplayMode, GameLoop loop,
+            PlaybackDebugManager playback) {
+        if (rows == null || rows.isEmpty()) {
+            return;
+        }
+        // The interior's recorded timing has no edge left after the release;
+        // these rows are walked as gap rows, one physical movie row each.
+        fixture.enterHardwareTimingGap();
+        for (RecordedTailRow row : rows) {
+            stepEngineFrameInTransitionGap(
+                    gameplayMode, loop, playback, playback.getCursorFrame(),
+                    true, false, row.vintServiced());
+        }
+    }
+
+    /**
+     * Index of the last row of the gap's synchronous level load, or {@code -1}.
+     * The load holds the main loop across consecutive V-ints, so it is a
+     * non-admitted run longer than one row; a single lag row between admitted
+     * rows is one pass of the title-card leave loop
+     * (docs/s2disasm/s2.asm:5060-5066) that overran its wait, and cannot
+     * contain {@code InitPlayers}.
+     */
+    static int lastSynchronousLoadRow(boolean[] gapLag) {
+        int index = gapLag.length - 1;
+        while (index >= 0) {
+            if (!gapLag[index]) {
+                index--;
+                continue;
+            }
+            int end = index;
+            while (index >= 0 && gapLag[index]) {
+                index--;
+            }
+            if (end - index > 1) {
+                return end;
+            }
+        }
+        return -1;
+    }
+
     private static int lastNonAdmittedRow(boolean[] gapLag) {
         for (int index = gapLag.length - 1; index >= 0; index--) {
             if (gapLag[index]) {
@@ -5113,6 +5508,19 @@ abstract class AbstractRunChainTest {
             GameplayModeContext gameplayMode, GameLoop loop,
             PlaybackDebugManager playback, int movieRow, boolean lag,
             boolean levelEntryLoadCompletes) {
+        stepEngineFrameInTransitionGap(gameplayMode, loop, playback, movieRow,
+                lag, levelEntryLoadCompletes, true);
+    }
+
+    /**
+     * {@code lagVint} is false only for a non-admitted row on which no V-int
+     * ran at all (interrupts masked across its whole V-blank): it services
+     * nothing and only consumes its physical movie row.
+     */
+    private void stepEngineFrameInTransitionGap(
+            GameplayModeContext gameplayMode, GameLoop loop,
+            PlaybackDebugManager playback, int movieRow, boolean lag,
+            boolean levelEntryLoadCompletes, boolean lagVint) {
         TraceRunFrameDriver gapRows = new TraceRunFrameDriver();
         gameplayMode.installTraceRunFrameDriver(gapRows);
         try {
@@ -5128,6 +5536,7 @@ abstract class AbstractRunChainTest {
 
                         @Override
                         public void prepareHardwareTiming(TraceRunFrameDriver.Step step) {
+                            if (activeHardwareTiming != null) activeHardwareTiming.beginGapFrame(step.movieRow());
                         }
 
                         @Override
@@ -5137,8 +5546,10 @@ abstract class AbstractRunChainTest {
 
                         @Override
                         public void runProductionLifecycle(TraceRunFrameDriver.Step step) {
-                            if (lag) {
-                                serviceLagRowVint();
+                            if (lag && !com.openggf.level.NativeLevelLoadAccess.isPending(GameServices.level())) {
+                                if (lagVint) {
+                                    serviceLagRowVint();
+                                }
                                 if (levelEntryLoadCompletes) {
                                     // The ROM's level-entry load finishes on
                                     // this row, at InitPlayers
@@ -5155,11 +5566,12 @@ abstract class AbstractRunChainTest {
                             var gapObjects =
                                     GameServices.level().getObjectManager();
                             int gapVblank = gapObjects.getVblaCounter();
+                            boolean loadOwnedRow = com.openggf.level.NativeLevelLoadAccess.isPending(GameServices.level());
                             stepEngineFrame(loop);
                             // TRANSITION_GAP suppresses the source level body,
                             // so a non-lag gap row can end without the ROM's
                             // VintRet tick; see serviceSuppressedRowVint.
-                            serviceSuppressedRowVint(gapObjects, gapVblank);
+                            serviceSuppressedRowVint(gapObjects, gapVblank, loadOwnedRow);
                             if (levelEntryLoadCompletes) {
                                 releasePlayerArtForLevelEntryLoad();
                             }
@@ -5253,6 +5665,9 @@ abstract class AbstractRunChainTest {
         if (coordinator != null) {
             coordinator.beforeProduction(loop.getCurrentGameMode());
         }
+        // Publication can advance playback inside the step; observations
+        // belong to the input row that actually drove production.
+        productionMovieRow = GameServices.playbackDebug().getCursorFrame();
         // Capture the row index BEFORE production: the single-segment path
         // observes with the index of the frame just produced, and the comparator
         // may or may not have advanced its cursor inside loop.step() depending on
@@ -5696,6 +6111,25 @@ abstract class AbstractRunChainTest {
             gameplayMode().setHardwareTimingBoundaryObserver(hardwareTimingObserver);
             gameplayMode().setHardwareTimingReplayCloseHook(
                     this::closeHardwareTimingReplayRun);
+        }
+
+        @Override
+        public void beginInitializationGapReplay(
+                com.openggf.trace.timing.InitializationTimingReplayPort.RepresentedLoadRow row,
+                HardwareTimingSchedule readiness,
+                java.util.Map<com.openggf.game.timing.HardwareWorkKind, com.openggf.game.timing.RecordedOrdinalSpan> prefix) {
+            hardwareTimingReplayPort.beginInitializationGapReplay(row, readiness, prefix);
+        }
+
+        @Override
+        public void beginInitializationGapFrame(int rawFrame) {
+            hardwareTimingReplayPort.beginRawFrame(rawFrame);
+        }
+
+        @Override
+        public void endInitializationGapReplay(
+                com.openggf.trace.timing.InitializationTimingReplayPort.CompletedLoadRow row) {
+            hardwareTimingReplayPort.endInitializationGapReplay(row);
         }
 
         @Override

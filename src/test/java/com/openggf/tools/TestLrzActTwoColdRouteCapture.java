@@ -8,6 +8,7 @@ import com.openggf.game.sonic3k.objects.LrzDoorObjectInstance;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
@@ -19,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Cold Act1 arrival is part of the input, never a hydrated Act2 checkpoint. */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestLrzActTwoColdRouteCapture {
+    @Tag("exhaustive-audit")
     @Test void coldTeamClimbsTurbinesAndOpensDoorEightWithRepeatableWorldState() throws Exception {
         // Opening pillars, stepped climb, lift, two turbine captures/releases,
         // upper spring/drop, descending platforms, orbiting balls, button/door,
@@ -30,6 +32,7 @@ class TestLrzActTwoColdRouteCapture {
         runRoute("pipe-passage", spots, 36204, 9, 1, 6741, 1484, 1);
     }
 
+    @Tag("exhaustive-audit")
     @Test void coldTeamCompletesActTwoAndReachesBossActWithRepeatableWorldState() throws Exception {
         // Pipe exits, enemy corridor, turbine bank, springs/tunnel, floor and
         // side buttons, collapsing bridges, lift phases, inverted ceiling run,

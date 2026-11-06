@@ -52,6 +52,26 @@ class TestDisplayWindowController {
         assertEquals(desktop.normal, desktop.restored);
     }
 
+    @Test void outputEpochFollowsMonitorAndModeChangesButNotUnchangedReapplication() {
+        var desktop = new DesktopStub();
+        var controller = new DisplayWindowController(desktop);
+        assertEquals(DisplayOutput.UNKNOWN, controller.output());
+        controller.apply("WINDOWED");
+        var first = controller.output();
+        assertEquals(60, first.advertisedRefreshHz());
+        for (int poll = 0; poll < 3; poll++) controller.apply("WINDOWED");
+        assertEquals(first, controller.output(), "per-loop re-application keeps the epoch");
+        desktop.screen = new Monitor(3, 0, 0, 1920, 1080, 60);
+        controller.apply("WINDOWED");
+        assertTrue(controller.output().epoch() > first.epoch(), "moving to another monitor is a new output");
+        var moved = controller.output();
+        controller.apply("BORDERLESS");
+        assertTrue(controller.output().epoch() > moved.epoch(), "a window mode change is a new output");
+        desktop.screen = null;
+        controller.apply("BORDERLESS");
+        assertEquals(0, controller.output().advertisedRefreshHz(), "no monitor reports an unknown refresh");
+    }
+
     @Test void monitorOverlapSupportsNegativeDesktopCoordinates() {
         var left = new Monitor(2, -1920, 0, 1920, 1080, 60);
         assertEquals(960L * 672, overlap(-1700, 80, 960, 672, left));

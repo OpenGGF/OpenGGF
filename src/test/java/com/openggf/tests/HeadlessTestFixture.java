@@ -166,6 +166,25 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
     }
 
     @Override
+    public void beginInitializationGapReplay(
+            com.openggf.trace.timing.InitializationTimingReplayPort.RepresentedLoadRow row,
+            HardwareTimingSchedule readiness,
+            java.util.Map<com.openggf.game.timing.HardwareWorkKind, com.openggf.game.timing.RecordedOrdinalSpan> prefix) {
+        hardwareTimingReplayPort.beginInitializationGapReplay(row, readiness, prefix);
+    }
+
+    @Override
+    public void beginInitializationGapFrame(int rawFrame) {
+        hardwareTimingReplayPort.beginRawFrame(rawFrame);
+    }
+
+    @Override
+    public void endInitializationGapReplay(
+            com.openggf.trace.timing.InitializationTimingReplayPort.CompletedLoadRow row) {
+        hardwareTimingReplayPort.endInitializationGapReplay(row);
+    }
+
+    @Override
     public void beginTraceRow(int traceIndex, int rawFrame) {
         runner.beginTraceRow(traceIndex, rawFrame);
     }
@@ -284,6 +303,12 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
         private boolean startPositionIsCentre;
         private Boolean skipZoneIntro;
         private boolean customStartPositionProvided;
+        private com.openggf.game.session.LevelEntryProvenance entryProvenance;
+
+        public Builder withEntryProvenance(com.openggf.game.session.LevelEntryProvenance provenance) {
+            this.entryProvenance = java.util.Objects.requireNonNull(provenance);
+            return this;
+        }
         private String crossGameDonorCode;
         private boolean freshLevelStartLifecycle;
         private HardwareReadinessAdmissionPolicy hardwareAdmissionPolicy =
@@ -364,6 +389,8 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
         }
 
         public HeadlessTestFixture build() {
+            var entryProvenance = this.entryProvenance != null ? this.entryProvenance
+                    : com.openggf.game.session.LevelEntryProvenance.UNCLASSIFIED_ENTRY;
             if (sharedLevel == null && zone < 0) {
                 throw new IllegalStateException(
                         "HeadlessTestFixture.Builder requires either withSharedLevel() or withZoneAndAct() before build()");
@@ -436,6 +463,10 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
             boolean needsSharedLevelReload = sharedLevel != null
                     && GameServices.level().getCurrentLevel() == null;
 
+            // Reused assets have no production load for the new team. Native
+            // placement must be initialized once, rather than treated as a reanchor.
+            boolean initializeNativeTeam = sharedLevel != null && !needsSharedLevelReload
+                    && !entryProvenance.isPositioned();
             AbstractPlayableSprite sprite = null;
             if (sharedLevel == null || needsSharedLevelReload) {
                 sprite = GameplayTeamBootstrap.registerActiveTeam(
@@ -447,6 +478,8 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
 
             // 4. Load or rewire the requested level.
             if (sharedLevel == null) {
+                com.openggf.level.LevelEntryInitialization.declareNextLoad(
+                        GameServices.level(), entryProvenance);
                 try {
                     GameServices.level().loadZoneAndAct(zone, act);
                 } catch (IOException e) {
@@ -454,6 +487,8 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
                             "Failed to load zone " + zone + " act " + act, e);
                 }
             } else if (GameServices.level().getCurrentLevel() == null) {
+                com.openggf.level.LevelEntryInitialization.declareNextLoad(
+                        GameServices.level(), entryProvenance);
                 try {
                     GameServices.level().loadZoneAndAct(sharedLevel.zone(), sharedLevel.act());
                 } catch (IOException e) {
@@ -511,7 +546,7 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
             // sprite roster but not re-run LevelManager.spawnPlayerAtStartPosition();
             // place the freshly registered team at the level's ROM start before
             // sidekick anchoring and ground snap.
-            if (customStartPositionProvided) {
+            if (customStartPositionProvided && entryProvenance.isPositioned()) {
                 if (startPositionIsCentre) {
                     sprite.setCentreX(startX);
                     sprite.setCentreY(startY);
@@ -528,22 +563,36 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
             }
 
             // 7. Re-anchor registered sidekicks to the current player position.
-            GameplayTeamBootstrap.repositionRegisteredSidekicks(
-                    GameServices.module(),
-                    GameServices.level());
+            if (initializeNativeTeam) {
+                var offset = GameServices.module().getLevelInitProfile().sidekickSpawnOffset();
+                GameServices.level().spawnSidekicks(offset.xOffset(), offset.yOffset());
+            } else {
+                GameplayTeamBootstrap.repositionRegisteredSidekicks(
+                        GameServices.module(), GameServices.level(), entryProvenance);
+            }
 
             // 8. Wire GroundSensor
             GroundSensor.setLevelManager(GameServices.level());
 
             // 9. Initialize camera via production path
-            if (customStartPositionProvided) {
-                com.openggf.level.LevelCameraInitialization.recenterPositionedEntry(GameServices.level());
-            } else {
-                GameServices.level().initCameraForLevel();
+            // A native load already placed the camera before sprite initialization.
+            if (initializeNativeTeam
+                    || entryProvenance.isPositioned()) {
+                if (entryProvenance.isPositioned()
+                        && (customStartPositionProvided || entryProvenance
+                        != com.openggf.game.session.LevelEntryProvenance.UNCLASSIFIED_ENTRY)) {
+                    com.openggf.level.LevelEntryInitialization.initializeCamera(
+                            GameServices.level(), entryProvenance);
+                } else {
+                    GameServices.level().initCameraForLevel();
+                }
             }
 
             // 10. Initialize level events via production path
-            GameServices.level().initLevelEventsForLevel();
+            if (initializeNativeTeam
+                    || entryProvenance.isPositioned()) {
+                GameServices.level().initLevelEventsForLevel();
+            }
 
             // 10b. Re-apply S3K zone player state after sidekick reposition.
             // ROM's SpawnLevelMainSprites_SpawnPlayers (sonic3k.asm:8367-8459)
@@ -553,7 +602,9 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
             // 7 clears the in-air bit via spawnSidekicks, so the zone-event
             // handler must run again to restore the falling-intro state.
             var levelEventProvider = GameServices.module().getLevelEventProvider();
-            if (levelEventProvider instanceof com.openggf.game.sonic3k.Sonic3kLevelEventManager s3kLem) {
+            if ((initializeNativeTeam
+                    || entryProvenance.isPositioned())
+                    && levelEventProvider instanceof com.openggf.game.sonic3k.Sonic3kLevelEventManager s3kLem) {
                 s3kLem.applyZonePlayerState();
             }
 
@@ -574,8 +625,7 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
                     && GameServices.module().getLevelInitProfile()
                             .preserveFreshGroundedStatusUntilFirstDispatch();
             if (!preserveFreshGroundedStatus) {
-                GameServices.collision().resolveGroundAttachment(
-                        sprite, 14, () -> false);
+                GameServices.collision().placeOnTerrain(sprite, 14);
             }
 
             // 13. Resolve the active session context and create runner

@@ -1,6 +1,8 @@
 package com.openggf.level.objects;
 
 import com.openggf.camera.Camera;
+import com.openggf.configuration.SonicConfiguration;
+import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelState;
 import com.openggf.game.internal.HudSatLayout;
@@ -118,24 +120,31 @@ class TestHudSatProjection {
 
     @Test
     void oneNativeNamePieceAdmitsItsManyFragmentsAsOneSprite() {
-        // Native second lives piece spans x32..64, y200..216. Its label and
-        // two number fragments must consume one SAT slot, not one per art tile.
-        var nameOnly = new SpriteMappingFrame(List.of(piece(16, 64, 4, 0x10E)));
-        hud.setSatLayout(new HudSatLayout(Collections.nCopies(4, nameOnly)));
-        when(gameState.getLives()).thenReturn(12);
-        var frame = prepare(320, () -> {
-            SpritePresentation.layer(graphics, SpritePresentation.Layer.OBJECT);
-            for (int i = 0; i < 20; i++) {
-                graphics.submitSpriteSatPiece(new SpritePieceRenderer.PreparedPiece(
-                        CAMERA_X + 144, CAMERA_Y + 208, 1, 1, 500 + i, 0,
-                        0, false, false, false, false, SpriteMaskReplayRole.NORMAL,
-                        0, 1, 0, 1, null));
-            }
-        });
-        assertEquals(19, frame.tiles().stream().filter(tile -> tile.patternId() >= 500 && tile.patternId() < 520).count());
-        assertTrue(frame.tiles().stream().anyMatch(tile -> tile.patternId() == 518));
-        assertFalse(frame.tiles().stream().anyMatch(tile -> tile.patternId() == 519));
-        assertEquals(2, lifeDigits(frame).size(), "both numbers replay within that one admitted piece");
+        var configuration = GameServices.configuration();
+        Object previousLimit = configuration.getConfigValue(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT);
+        configuration.setConfigValue(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT, true);
+        try {
+            // Native second lives piece spans x32..64, y200..216. Its label and
+            // two number fragments must consume one SAT slot, not one per art tile.
+            var nameOnly = new SpriteMappingFrame(List.of(piece(16, 64, 4, 0x10E)));
+            hud.setSatLayout(new HudSatLayout(Collections.nCopies(4, nameOnly)));
+            when(gameState.getLives()).thenReturn(12);
+            var frame = prepare(320, () -> {
+                SpritePresentation.layer(graphics, SpritePresentation.Layer.OBJECT);
+                for (int i = 0; i < 20; i++) {
+                    graphics.submitSpriteSatPiece(new SpritePieceRenderer.PreparedPiece(
+                            CAMERA_X + 144, CAMERA_Y + 208, 1, 1, 500 + i, 0,
+                            0, false, false, false, false, SpriteMaskReplayRole.NORMAL,
+                            0, 1, 0, 1, null));
+                }
+            });
+            assertEquals(19, frame.tiles().stream().filter(tile -> tile.patternId() >= 500 && tile.patternId() < 520).count());
+            assertTrue(frame.tiles().stream().anyMatch(tile -> tile.patternId() == 518));
+            assertFalse(frame.tiles().stream().anyMatch(tile -> tile.patternId() == 519));
+            assertEquals(2, lifeDigits(frame).size(), "both numbers replay within that one admitted piece");
+        } finally {
+            configuration.setConfigValue(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT, previousLimit);
+        }
     }
 
     private SpritePresentation.Frame prepare(int width, Runnable afterHud) {

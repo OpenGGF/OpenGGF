@@ -14,6 +14,64 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestRomRingMappings {
     @Test
     @RequiresRom(SonicGame.SONIC_1)
+    void rev01PlacedRingTouchStillCollectsAfterControlRelease() {
+        verifyNativePlacedTouchControl(true, false);
+    }
+
+    @Test
+    @RequiresRom(SonicGame.SONIC_2)
+    void sonic2Rev01RingSweepStillCollectsAfterControlRelease() {
+        verifyNativePlacedTouchControl(false, false);
+    }
+
+    @Test
+    @RequiresRom(SonicGame.SONIC_3K)
+    void lockedOnSuppressedLightningLeavesTheNativeSourceForLaterOrdinaryTouch() {
+        verifyNativePlacedTouchControl(false, true);
+    }
+
+    private void verifyNativePlacedTouchControl(boolean objectTouch, boolean lightning) {
+        var fixture = com.openggf.tests.HeadlessTestFixture.builder()
+                .withZoneAndAct(0, 0).withSkippedZoneIntro().build();
+        try {
+            var level = com.openggf.game.GameServices.level();
+            var rings = level.getRingManager();
+            var player = fixture.sprite();
+            // Declared component contact with an actual original-ROM placement;
+            // no trace, replacement placement, timer or gameplay clock is supplied.
+            var placement = level.getCurrentLevel().getRings().stream()
+                    .filter(ring -> !rings.isCollected(ring)).findFirst().orElseThrow();
+            fixture.camera().setX((short) placement.x());
+            player.setCentreX((short) placement.x());
+            player.setCentreY((short) placement.y());
+            player.setInvulnerableFrames(0);
+            player.removeShield();
+            rings.update(fixture.camera().getX(), player, level.getFrameCounter(), false);
+            assertTrue(rings.getActiveSpawns().contains(placement));
+            int before = player.getRingCount();
+            if (lightning) player.giveShield(com.openggf.game.ShieldType.LIGHTNING);
+            com.openggf.sprites.playable.ObjectControlState.nativeBit7FullControl().applyTo(player);
+            rings.attractStageRings(player);
+            if (objectTouch) assertFalse(rings.collectPlacedRing(placement, player, level.getFrameCounter()));
+            else rings.collectStageRings(player, level.getFrameCounter());
+            assertFalse(rings.isCollected(placement));
+            assertEquals(0, rings.capture().attractedRings().length);
+            assertEquals(before, player.getRingCount());
+
+            player.removeShield();
+            com.openggf.sprites.playable.ObjectControlState.none().applyTo(player);
+            if (objectTouch) assertTrue(rings.collectPlacedRing(placement, player, level.getFrameCounter()));
+            else rings.collectStageRings(player, level.getFrameCounter());
+            assertTrue(rings.isCollected(placement));
+            assertTrue(player.getRingCount() > before, "ordinary original-ROM source still awards");
+            assertEquals(0, rings.capture().attractedRings().length);
+        } finally {
+            com.openggf.game.session.SessionManager.clear();
+        }
+    }
+
+    @Test
+    @RequiresRom(SonicGame.SONIC_1)
     void rev01MappingsUseThePlacedAndLostRingObjectsRomPointer() throws Exception {
         var rom = TestEnvironment.currentRom();
         var reader = RomByteReader.fromRom(rom);

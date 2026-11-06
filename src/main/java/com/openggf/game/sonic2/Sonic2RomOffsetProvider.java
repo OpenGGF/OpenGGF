@@ -24,8 +24,14 @@ public class Sonic2RomOffsetProvider implements RomOffsetProvider {
 
     // Cache of offsets by category and name
     private final Map<String, Map<String, Integer>> offsetCache = new HashMap<>();
+    private final com.openggf.data.RetailRomRevision revision;
 
     public Sonic2RomOffsetProvider() {
+        this(com.openggf.data.RetailRomRevision.UNKNOWN);
+    }
+
+    public Sonic2RomOffsetProvider(com.openggf.data.RetailRomRevision revision) {
+        this.revision = java.util.Objects.requireNonNull(revision, "revision");
         initializeCache();
     }
 
@@ -34,6 +40,11 @@ public class Sonic2RomOffsetProvider implements RomOffsetProvider {
         for (Map.Entry<String, Integer> entry : allOffsets.entrySet()) {
             String name = entry.getKey();
             int value = entry.getValue();
+            // The legacy catalogue also contains sizes, IDs, tile indices and
+            // overlay destinations. Only actual ROM address entries relocate.
+            if (name.endsWith("_ADDR") || name.endsWith("_ADDR_LOC") || name.endsWith("_DIR")) {
+                value = Sonic2RomAddresses.address(revision, value);
+            }
             String category = categorizeOffset(name);
             offsetCache.computeIfAbsent(category, k -> new HashMap<>())
                     .put(name, value);

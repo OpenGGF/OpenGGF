@@ -97,6 +97,7 @@ public class GraphicsManager {
 	private boolean spriteSatCollectionActive = false;
 	private boolean spriteMaskRequested = false;
 	private SpriteSatMaskPostProcessor.LogicalViewport spriteSatViewport;
+    private java.util.function.BooleanSupplier spriteScanlineLimitSource = () -> true;
 	private List<SpriteSatEntry> spriteSatFragments;
     private boolean submittingNativeSpriteOwnership;
     SpriteSatEntry.PixelOperation currentSpritePixelOperation = SpriteSatEntry.PixelOperation.NORMAL;
@@ -176,6 +177,10 @@ public class GraphicsManager {
 	private boolean headlessMode = false;
 	SpritePresentation.Builder spritePresentationBuilder;
 	SpritePresentation.Subject spritePresentationSubject = SpritePresentation.Subject.WORLD;
+    SpriteMotionInternalAccess.Collection spriteMotionCollection;
+    MotionPacket.Binding spriteMotionOwner;
+    SpriteMotionProjection spriteMotionProjection;
+    SpriteMotionProjection.Offset sceneMotionOffset;
 
 	/**
 	 * When true, the batch renderer will use the underwater palette texture
@@ -618,7 +623,9 @@ public class GraphicsManager {
 	public void flush() {
 		if (spritePresentationBuilder != null) return;
 		Camera cam = getCamera();
-		flushWithCamera(cam.getXWithShake(), cam.getYWithShake(), cam.getWidth(), cam.getHeight());
+        var offset = sceneMotionOffset;
+        flushScene(cam.getXWithShake() + (offset == null ? 0 : offset.x()),
+                cam.getYWithShake() + (offset == null ? 0 : offset.y()), cam.getWidth(), cam.getHeight());
 	}
 
 	/** Discards queued draw commands after an aborted frame without executing them. */
@@ -633,6 +640,10 @@ public class GraphicsManager {
 	 * Use this for screen-space rendering by passing (0, 0) for camera position.
 	 */
 	public void flushWithCamera(short cameraX, short cameraY, short cameraWidth, short cameraHeight) {
+        flushScene(cameraX, cameraY, cameraWidth, cameraHeight);
+    }
+
+    private void flushScene(int cameraX, int cameraY, int cameraWidth, int cameraHeight) {
         // Never recycle companions still referenced by native SAT entries awaiting admission.
         boolean retireHeadBanks=!spriteSatCollectionActive && spriteSatEntries.isEmpty();
 		if (headlessMode || commands.isEmpty() || !glInitialized) {
@@ -1613,6 +1624,7 @@ public class GraphicsManager {
 	/**
 	 * Singleton access to the GraphicsManager instance.
 	 */
+	@com.openggf.game.EngineOnly
 	public static synchronized final GraphicsManager getInstance() {
 		if (graphicsManager == null) {
 			graphicsManager = new GraphicsManager();
@@ -2006,6 +2018,10 @@ public class GraphicsManager {
 		return spriteSatCollectionActive;
 	}
 
+    void bindSpriteScanlineLimitSource(java.util.function.BooleanSupplier source) {
+        spriteScanlineLimitSource = java.util.Objects.requireNonNull(source, "sprite line-limit source");
+    }
+
 	public void requestSpriteMask() {
 		SpriteCaptureControl.control(
 				"SAT sprite-mask controls require native display-list replay");
@@ -2020,7 +2036,7 @@ public class GraphicsManager {
 		SpriteCaptureControl.control(
 				"SAT control entries require native display-list replay");
 		if (!spriteSatCollectionActive) return;
-		spriteSatEntries.add(new SpriteSatEntry(currentSpriteSatBucket, new SpritePiece(x, y,
+		spriteSatEntries.add(new SpriteSatEntry(currentSpriteSatBucket, new SpritePiece(x, adjustVerticalWrapY(y),
 				widthTiles, heightTiles, 0, rawTileWordLow11, 0,
 				false, false, false, currentSpriteHighPriority,
 				SpriteMaskReplayRole.NORMAL, 0, widthTiles, 0, heightTiles,
@@ -2042,7 +2058,15 @@ public class GraphicsManager {
 		String presentationSource = spritePresentationBuilder == null ? currentSpriteSatDebugSource
 				: spritePresentationBuilder.layer.name();
 		// The pinned producer type is copied only at this compatibility ingress.
-		SpritePiece admitted = new SpritePiece(piece.x(), piece.y(), piece.widthTiles(), piece.heightTiles(),
+        // Normal mapping expansion reserves X=0 for explicit mask controls:
+        // loc_1AF76 (sonic3k.asm:36604-36618).
+        // Expanded viewports retain their logical coordinates instead of nine-bit wrapping.
+        int admittedX = piece.x();
+        int biasedX = admittedX - spriteSatViewport.x() + 128;
+        if ((spriteSatViewport.width() <= 320 ? biasedX & 0x1FF : biasedX) == 0) admittedX++;
+		// Admission precedes replay, which can run after the producer's wrap scope ends.
+        // Normalize here just as renderPatternWithId does, before scanline rejection.
+        SpritePiece admitted = new SpritePiece(admittedX, adjustVerticalWrapY(piece.y()), piece.widthTiles(), piece.heightTiles(),
 				piece.firstPatternIndex(), piece.rawTileWordLow11(), piece.paletteIndex(),
 				piece.hFlip(), piece.vFlip(), piece.piecePriority(), piece.globalHighPriority(),
 				piece.maskReplayRole(), piece.startColTile(), piece.colCountTiles(),
@@ -2057,6 +2081,7 @@ public class GraphicsManager {
 		if (spritePresentationSubject != SpritePresentation.Subject.WORLD) {
 			entry = entry.withPresentationSubject(spritePresentationSubject);
 		}
+		if (spriteMotionOwner != null) entry = entry.withMotionOwner(spriteMotionOwner);
 		if (ghostRenderEffectActive) {
 			// The SAT replay runs after the ghost renderer has ended its effect; carry it.
 			entry = entry.withGhost(new SpriteSatEntry.Ghost(ghostRenderAlpha, ghostRenderPreservesColour));
@@ -2123,11 +2148,12 @@ public class GraphicsManager {
 
 		boolean applyMask = spriteMaskRequested;
 
-		// Evaluation always runs, including zones without S3K's marker rewrite.
+		// Evaluation retains explicit masks even when sprite budgets are disabled.
 		// Use logical display dimensions: a wide trace can retain a native-width camera.
 		// Results are thread-owned scratch, consumed synchronously before collection clears.
 		List<SpriteSatEntry> processedEntries = SpriteSatMaskPostProcessor.processLogicalReusable(
-                spriteSatEntries, applyMask, spriteSatViewport);
+                spriteSatEntries, applyMask, spriteSatViewport,
+                spriteScanlineLimitSource.getAsBoolean());
 
 		spriteSatCollectionActive = false;
 		spriteMaskRequested = false;
@@ -2284,8 +2310,14 @@ public class GraphicsManager {
 	}
 
 	private void appendBatchedReplayCommands(SpriteSatEntry entry, int paletteTextureId) {
-        withSpritePixelOperation(entry.pixelOperation(),
-                () -> withSatEntryGhost(entry, () -> appendBatchedReplayTiles(entry, paletteTextureId)));
+        if (spriteMotionCollection == null) {
+            withSpritePixelOperation(entry.pixelOperation(),
+                    () -> withSatEntryGhost(entry, () -> appendBatchedReplayTiles(entry, paletteTextureId)));
+        } else {
+            withSpritePixelOperation(entry.pixelOperation(),
+                    () -> withSatEntryGhost(entry, () -> SpriteMotionInternalAccess.withOwner(this, entry.motionOwner(),
+                            () -> appendBatchedReplayTiles(entry, paletteTextureId))));
+        }
 	}
 
 	/**

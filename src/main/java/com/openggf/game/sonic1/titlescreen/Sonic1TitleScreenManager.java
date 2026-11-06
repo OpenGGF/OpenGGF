@@ -24,6 +24,8 @@ import java.util.logging.Logger;
 
 import static org.lwjgl.opengl.GL11.glClearColor;
 
+import static com.openggf.control.InputHandlerInternalAccess.nativeMenuKeyPressed;
+
 /**
  * Manages the Sonic 1 Title Screen.
  *
@@ -184,7 +186,7 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
 
     // Background scroll using GHZ parallax scroll handler
     private int bgCameraX = 0;
-    private SwScrlGhz scrollHandler;
+    private com.openggf.level.scroll.ZoneScrollHandler scrollHandler;
     private final int[] horizScrollBuf = new int[M68KMath.VISIBLE_LINES];
 
     // Palette cycling (water animation)
@@ -290,7 +292,8 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
         bgCameraX = 0;
         palCycleTimer = 0;
         palCycleFrame = 0;
-        scrollHandler = new SwScrlGhz();
+        scrollHandler = com.openggf.game.sonic1.scroll.Sonic1ScrollHandlerProvider.createGreenHillHandler(
+                GameServices.module().getGameService(com.openggf.data.RetailRomRevision.class));
 
         // Reset TitleSonic
         sonicRoutine = 0;
@@ -403,7 +406,7 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
      * matching {@link com.openggf.game.MasterTitleScreen}'s gamepad-aware confirm gate.
      */
     private static boolean confirmPressed(InputHandler input, int startKey) {
-        return input.isKeyPressed(startKey) || input.logical().menuAccept();
+        return nativeMenuKeyPressed(input, startKey) || input.logical().menuAccept();
     }
 
     private void updateSegaLogo(InputHandler input) {
@@ -466,7 +469,8 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
         bgCameraX = 0;
         palCycleTimer = 0;
         palCycleFrame = 0;
-        scrollHandler = new SwScrlGhz();
+        scrollHandler = com.openggf.game.sonic1.scroll.Sonic1ScrollHandlerProvider.createGreenHillHandler(
+                GameServices.module().getGameService(com.openggf.data.RetailRomRevision.class));
 
         // QueueSound2(Title) precedes the first title object pass in GM_Title.
         GameServices.audio().playMusic(Sonic1Music.TITLE.id);

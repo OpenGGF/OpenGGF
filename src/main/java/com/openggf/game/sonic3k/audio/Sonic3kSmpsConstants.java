@@ -111,8 +111,8 @@ public final class Sonic3kSmpsConstants {
     /** First DAC note ID. */
     public static final int DAC_NOTE_BASE = 0x81;
 
-    /** Last DAC note ID in vanilla S&K (sounds 0x9C+ point to locked-on S3). */
-    public static final int DAC_NOTE_MAX = 0xDF;
+    /** Last entry of DAC_Banks; later bytes are executable code, not sample banks. */
+    public static final int DAC_NOTE_MAX = 0xC4;
 
     // -----------------------------------------------------------------------
     // S3 standalone driver (uncompressed in combined S3&K ROM)
@@ -120,6 +120,12 @@ public final class Sonic3kSmpsConstants {
 
     /** S3 Z80 driver ROM address (uncompressed, raw data). */
     public static final int S3_Z80_DRIVER_ADDR = 0x0E6000;
+
+    /** Original S3 stores both driver and tables raw, ending after 35 universal voices. */
+    public static final int S3_Z80_DATA_SIZE = 0x1B43;
+
+    /** DAC_Banks in the original S3 driver; S&K's shorter preamble puts it six bytes earlier. */
+    public static final int S3_Z80_DAC_BANK_LIST = 0x00DC;
 
     /** S3 music bank list Z80 RAM offset (1-byte entries). */
     public static final int S3_Z80_MUSIC_BANK_LIST = 0x0B48;

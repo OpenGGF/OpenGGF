@@ -94,6 +94,11 @@ public class InvisibleBlockObjectInstance extends BoxObjectInstance
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
+        // Obj74_Main, gameRevision=0/fixBugs=0: native placement mode draws it.
+        if (com.openggf.game.sonic2.Sonic2NativeDebugGeometry.visible(services())) {
+            com.openggf.game.sonic2.Sonic2NativeDebugGeometry.draw(services(),
+                    0x20F66, 0, spawn.x(), spawn.y(), false, false);
+        }
         // Only render in debug mode
         if (isDebugViewEnabled()) {
             super.appendRenderCommands(commands);

@@ -29,7 +29,6 @@ import javax.tools.JavaFileObject;
 import javax.tools.SimpleJavaFileObject;
 import javax.tools.ToolProvider;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -130,7 +129,9 @@ class TestArchitecturalSourceGuard {
         Set<String> methods = SourceFile.fromText(owner).methods().stream().filter(method -> method.identity().startsWith("GameLoopSuspension#"))
                 .map(MethodSpan::name).collect(java.util.stream.Collectors.toSet());
         if (!methods.containsAll(SUSPENSION_METHODS)) violations.add("complete visit choreography belongs to owner");
-        Set<String> rootEntries = Set.of("setEffects", "retireGameplay", "discardSuspendedGame", "installCard", "betweenFrames", "afterScene");
+        if (!Pattern.compile("boolean\\s+requiresScenePicture\\(\\)\\s*\\{\\s*return\\s+suspendThumbnailRequested;\\s*}")
+                .matcher(ownerCode).find()) violations.add("scheduler reads the owner's picture request only");
+        Set<String> rootEntries = Set.of("setEffects", "retireGameplay", "discardSuspendedGame", "installCard", "betweenFrames", "afterScene", "requiresScenePicture");
         Matcher entries = Pattern.compile("\\bsuspension\\.(\\w+)\\(").matcher(rootCode);
         while (entries.find()) if (!rootEntries.contains(entries.group(1))) violations.add("root retains decision: " + entries.group(1));
         for (var contract : SUSPENSION_EFFECT_CONTRACTS.entrySet()) {
@@ -571,9 +572,17 @@ class TestArchitecturalSourceGuard {
                 "liveCapturePresentation.present(");
         assertOrdered(source, "handleLiveCaptureShortcut();",
                 "updateDisplayShaderInput()");
-        assertOrdered(source, "sceneFocusPresentation.displayAndSwap(this::display,",
-                "glfwSwapBuffers(window),");
-        assertOrdered(source, "glfwSwapBuffers(window),", "gameLoop.modSceneHost::renderedSubmissions");
+        assertTrue(source.contains("createLiveFrameRuntime(new LiveEndpoints(this::renderScheduledFrame, () -> glfwSwapBuffers(window),"));
+        // Engine.loop polls, iterates and waits; the runtime owns its clock and the swap interval.
+        assertTrue(source.contains("org.lwjgl.glfw.GLFW::glfwSwapInterval, displayWindowController::output,"));
+        assertTrue(source.contains("() -> com.openggf.audio.AudioManagerInternalAccess.speakerRateRegulated(audioManager), System::nanoTime));"));
+        assertTrue(source.contains("waitForFrameDeadline(liveFrames.iterate().wakeAtNanos());"));
+        assertEquals(1, source.split("glfwSwapInterval", -1).length - 1,
+                "LiveFrameRuntime is the sole live swap-interval writer");
+        assertTrue(source.contains("sceneFocusPresentation.swapPrepared(swap, liveSceneSubmissionsBefore, gameLoop.modSceneHost.renderedSubmissions())"));
+        String coordinator = Files.readString(SRC_MAIN.resolve("com/openggf/LiveFrameRuntime.java"));
+        assertOrdered(coordinator, "owner.tick(active)", "owner.draw(exactPicture(host.captureActive()))");
+        assertOrdered(coordinator, "owner.draw(picture)", "owner.swap()");
         String presenter = Files.readString(SRC_MAIN.resolve("com/openggf/SceneFocusPresentation.java"));
         assertOrdered(presenter, "Engine.displayAndSwap(display, swap)",
                 "scenePresented = sceneSubmissions.getAsLong() != before");
@@ -643,7 +652,7 @@ class TestArchitecturalSourceGuard {
             // seamless-transition surface plus develop's bootstrap, VBlank and
             // transient oscillation/respawn handoff wiring.
             // 2026-10-09: 3145 -> 3144; the time-attack gate became a generic host-return request.
-            "com/openggf/level/LevelManager.java", 3142,
+            "com/openggf/level/LevelManager.java", 3139,
             // 2026-07-02: 2888 -> 2890 for the live-rewind VHS effect envelope tick
             // (RewindEffectEnvelope wiring + intensity/speed accessors).
             // 2026-07-04: 2890 -> 2962. The solo-ghost-racing phase-1 tasks (time
@@ -678,7 +687,8 @@ class TestArchitecturalSourceGuard {
             TITLE_CARD_LIFECYCLE_PATH, 253,
             GAME_LOOP_PATH, 2367
     );
-    private static final List<String> ENGINE_LARGE_METHOD_OWNERS = List.of("Engine#displayFrame()", "Engine#init()");
+    private static final List<String> ENGINE_LARGE_METHOD_OWNERS = List.of(
+            "Engine#init()", "Engine#renderAdvancedFrame(FrameAdvance,boolean,boolean)");
     private static final int ENGINE_LARGE_METHOD_THRESHOLD = 100;
     private static final Map<String, Integer> ROOT_CONCRETE_SONIC_REFERENCE_BUDGETS = Map.of(
             ENGINE_PATH, 0,
@@ -688,7 +698,7 @@ class TestArchitecturalSourceGuard {
     private static final int LOW_LEVEL_GAMEPLAY_SERVICE_LOOKUP_BUDGET = 0;
     private static final List<MethodBudget> ROOT_DISPATCH_METHOD_BUDGETS = List.of(
             new MethodBudget(ENGINE_PATH, "draw", 3),
-            new MethodBudget(ENGINE_PATH, "init", 164),
+            new MethodBudget(ENGINE_PATH, "init", 156),
             // 2026-07-02: display 206 -> 217 for the live-rewind VHS picture-search
             // pass (RewindVhsEffectPass.apply between the fade pass and the
             // PRESENTATION display-shader phase; the pass itself is a collaborator).
@@ -702,22 +712,27 @@ class TestArchitecturalSourceGuard {
             // phase-1 HUD-overlay task; not re-ratcheted at the time.
             // The profiling wrappers must not conceal growth in the actual dispatchers.
             new MethodBudget(ENGINE_PATH, "display", 4),
-            new MethodBudget(ENGINE_PATH, "displayFrame", 224),
+            // The live advance/presentation extraction keeps each new owner ratcheted.
+            new MethodBudget(ENGINE_PATH, "displayFrame", 5),
+            new MethodBudget(ENGINE_PATH, "renderScheduledFrame", 32),
+            new MethodBudget(ENGINE_PATH, "advanceFrame", 32),
+            new MethodBudget(ENGINE_PATH, "renderAdvancedFrame", 153),
             // 2026-07-07: stepInternal 213 -> 235 in the develop->next merge (develop's
             // bonus-stage rewind capture/engage hooks stack onto next's time-attack hooks).
-            new MethodBudget(TITLE_CARD_LIFECYCLE_PATH, "update", 131),
+            new MethodBudget(TITLE_CARD_LIFECYCLE_PATH, "update", 86),
             new MethodBudget(TITLE_CARD_LIFECYCLE_PATH, "enterTitleCard", 47),
             new MethodBudget(TITLE_CARD_LIFECYCLE_PATH, "exitTitleCard", 65),
             new MethodBudget(TITLE_CARD_LIFECYCLE_PATH, "runInputNeutralTitleCardPlayerPrelude", 19),
-            new MethodBudget(GAME_LOOP_PATH, "stepInternal", 58),
-            new MethodBudget(GAME_LOOP_PATH, "stepInternalBody", 276),
-            new MethodBudget(BONUS_SESSION_PATH, "doExitBonusStage", 111),
+            new MethodBudget(GAME_LOOP_PATH, "stepInternal", 52),
+            // 2026-10-27: native code mods remove the obsolete boot-notice dispatch.
+            new MethodBudget(GAME_LOOP_PATH, "stepInternalBody", 256),
+            new MethodBudget(BONUS_SESSION_PATH, "doExitBonusStage", 90),
             new MethodBudget(SPECIAL_STAGE_LIFECYCLE_PATH, "updateSpecialStageInput", 9),
             new MethodBudget(ENDING_SESSION_PATH, "loadEndingDemoZone", 84),
             // 2026-08-26: exact merged spans after title-card destination/return
             // synthesis and bonus-stage rewind-adapter handoff.
-            new MethodBudget(SPECIAL_STAGE_LIFECYCLE_PATH, "enterTitleCardFromResults", 60),
-            new MethodBudget(BONUS_SESSION_PATH, "enterBonusStage", 45)
+            new MethodBudget(SPECIAL_STAGE_LIFECYCLE_PATH, "enterTitleCardFromResults", 8),
+            new MethodBudget(BONUS_SESSION_PATH, "enterBonusStage", 22)
     );
     private static final List<String> LOW_LEVEL_SERVICE_SCAN_ROOTS = List.of(
             "com/openggf/graphics",
@@ -1120,12 +1135,11 @@ class TestArchitecturalSourceGuard {
     }
 
     @Test
-    void hardwareTimingAuthorityExceptionStaysDocumentedAndAgentGuidanceStaysMirrored() throws IOException {
+    void hardwareTimingAuthorityExceptionStaysDocumentedAndAgentGuidanceHasOneSource() throws IOException {
         Path agents = Path.of("AGENTS.md");
-        Path claude = Path.of("CLAUDE.md");
         byte[] agentsBytes = Files.readAllBytes(agents);
-        assertArrayEquals(agentsBytes, Files.readAllBytes(claude),
-                "AGENTS.md and CLAUDE.md must remain byte-identical");
+        assertFalse(Files.exists(Path.of("CLAUDE.md")),
+                "AGENTS.md is the sole project instruction file; CLAUDE.md would replace it in Claude Code");
 
         String agentGuidance = new String(agentsBytes, StandardCharsets.UTF_8);
         assertTrue(agentGuidance.contains("Trace data is comparison-only by default."),

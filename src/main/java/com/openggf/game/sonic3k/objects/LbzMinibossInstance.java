@@ -36,7 +36,7 @@ import java.util.List;
 /**
  * Launch Base Zone Act 1 miniboss.
  *
- * <p>ROM: {@code Obj_LBZMiniboss} at {@code sonic3k.asm:151434}. This object is
+ * <p>ROM: {@code Obj_LBZMiniboss} at {@code sonic3k.asm:151439}. This object is
  * spawned by {@code Obj_LBZ1Robotnik}'s {@code ChildObjDat_8D264} handoff after
  * Robotnik drops the carried yellow box, by {@code Obj_LBZMinibossBox} on a
  * star-post restart, and twice (subtypes 0/2) by {@code Obj_LBZMinibossBoxKnux}
@@ -44,7 +44,7 @@ import java.util.List;
  */
 public final class LbzMinibossInstance extends AbstractObjectInstance
         implements TouchResponseProvider, TouchResponseAttackable, SpawnRewindRecreatable,
-        MultiBucketRenderable, ObjectVisualFacing.Source {
+        MultiBucketRenderable, ObjectVisualFacing.Source, com.openggf.level.objects.boss.InstagibBossTarget {
     @Override public ObjectVisualFacing.Basis nativeFacing() {
         // The fixed frontal cylinder and independently moving panels have no logical horizontal facing.
         return ObjectVisualFacing.Basis.NON_DIRECTIONAL;
@@ -314,7 +314,7 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
     /**
      * ROM: each arm child (ChildObjDat_72976/ChildObjDat_7297C, subtypes 0..$A) first takes
      * word_72968 priority $180 at loc_7261C (sonic3k.asm:151664-151665, 151977-151978) and then,
-     * still in the same init dispatch, loc_727B0 writes word_727E2[subtype] (sonic3k.asm:151805,
+     * still in the same init dispatch, loc_727B0 writes word_727E2[subtype] (sonic3k.asm:151820,
      * 151749-151750). loc_727B0 is re-run on every angle-table reset with the same subtype, and the
      * detached sub_72910 -> loc_7279E flight (sonic3k.asm:151946-151957) leaves priority alone, so
      * the word is fixed per link for the child's life. Indexed by link (subtype / 2).
@@ -755,7 +755,7 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
         int levelMusicId = services().getCurrentLevelMusicId();
         if (levelMusicId > 0) {
             // ROM loc_72562 allocates Obj_Song_Fade_ToLevelMusic.
-            spawnFreeChild(() -> new SongFadeTransitionInstance(LEVEL_MUSIC_FADE_FRAMES, levelMusicId));
+            spawnFreeChild(() -> SongFadeTransitionInstance.toLevelMusic(levelMusicId));
         }
         // ROM loc_72562 restores x_pos from $3C before Obj_EndSignControl, so the
         // signpost falls at the boss's home X. AfterBoss_LBZ shares AfterBoss_MHZ
@@ -1140,4 +1140,6 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
 
     private record PanelAnchor(int x, int y, int xSub, int ySub) {
     }
+    /** Instagib: the next native hit becomes the defeating one; phases and defeat stay native. */
+    @Override public void collapseToFinalHit() { if (hitCount > 1) hitCount = 1; }
 }

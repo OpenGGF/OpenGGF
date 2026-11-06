@@ -67,9 +67,14 @@ final class ObjectCollisionResponseList {
     }
 
     void addToCurrentBuild(ObjectInstance instance) {
-        if (isEligible(instance) && currentSlots.size() < S3K_MAX_ENTRIES) {
+        addToCurrentBuild(instance, eligibilityCallbacks);
+    }
+
+    void addToCurrentBuild(ObjectInstance instance, ObjectCallbackRouter callbacks) {
+        if (isEligible(instance, callbacks) && currentSlots.size() < S3K_MAX_ENTRIES) {
+            int slot = physicalSlot(instance, callbacks);
             currentObjects.add(instance);
-            currentSlots.add(physicalSlot(instance));
+            currentSlots.add(slot);
             currentBuildCursor++;
             buildStage = ObjectManagerSnapshot.CollisionBuildStage.CURRENT_BUILDING;
         }
@@ -99,10 +104,15 @@ final class ObjectCollisionResponseList {
 
     /** Explicit transient admission before the player slot, retaining native capacity and existing relative order. */
     boolean admitBeforePlayer(ObjectInstance instance) {
-        if (!isEligible(instance) || previousSlots.size() >= S3K_MAX_ENTRIES) return false;
+        return admitBeforePlayer(instance, eligibilityCallbacks);
+    }
+
+    boolean admitBeforePlayer(ObjectInstance instance, ObjectCallbackRouter callbacks) {
+        if (!isEligible(instance, callbacks) || previousSlots.size() >= S3K_MAX_ENTRIES) return false;
         if (!playerReadView().contains(instance)) {
+            int slot = physicalSlot(instance, callbacks);
             previousObjects.addFirst(instance);
-            previousSlots.addFirst(physicalSlot(instance));
+            previousSlots.addFirst(slot);
         }
         return true;
     }
@@ -210,9 +220,12 @@ final class ObjectCollisionResponseList {
     }
 
     private int physicalSlot(ObjectInstance instance) {
+        return physicalSlot(instance, eligibilityCallbacks);
+    }
+
+    private int physicalSlot(ObjectInstance instance, ObjectCallbackRouter callbacks) {
         if (!(instance instanceof AbstractObjectInstance object)) return -1;
-        return eligibilityCallbacks != null
-                ? eligibilityCallbacks.call(instance, object::getSlotIndex) : object.getSlotIndex();
+        return callbacks != null ? callbacks.call(instance, object::getSlotIndex) : object.getSlotIndex();
     }
 
     Object captureNativePointers() {
@@ -263,6 +276,10 @@ final class ObjectCollisionResponseList {
     }
 
     private boolean isEligible(ObjectInstance instance) {
+        return isEligible(instance, eligibilityCallbacks);
+    }
+
+    private boolean isEligible(ObjectInstance instance, ObjectCallbackRouter callbacks) {
         // Add_SpriteToCollisionResponseList has no camera-range gate; the
         // object routine decides whether to publish, and this helper only
         // enforces the native $7E-byte list capacity
@@ -270,7 +287,6 @@ final class ObjectCollisionResponseList {
         if (!(instance instanceof TouchResponseProvider)) {
             return false;
         }
-        ObjectCallbackRouter callbacks = eligibilityCallbacks;
         if (callbacks == null) {
             return !instance.isDestroyed()
                     && instance.publishesTouchResponseListEntryThisFrame();

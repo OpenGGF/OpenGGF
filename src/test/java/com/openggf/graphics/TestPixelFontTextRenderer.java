@@ -12,6 +12,15 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class TestPixelFontTextRenderer {
+    @Test
+    void compactMenuUsesNativeSixByEightGlyphsAtScaleOne() {
+        var text=PixelFontTextRenderer.compactMenu();
+        assertEquals(48,text.measureWidth("REC F:44",1));
+        assertEquals(10,text.lineHeight(1));
+        assertEquals(6,MenuPixelFont.compact().measureWidth("M",1));
+        assertEquals(8,MenuPixelFont.compact().nativeLineHeight(1));
+    }
+
 
     private static final float[] PROJECTION_A = {
             1f, 2f, 3f, 4f,

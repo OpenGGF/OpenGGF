@@ -109,9 +109,12 @@ final class DezFinalEscapeShip extends DezFinalBossSprite
         // sub_80F0E stores only values <= $40000 but uses the unstored $41000
         // on every subsequent pass. Keep that shipped overshoot, not a clamp.
         if(Integer.compareUnsigned(next,0x40000)<=0) state.escapeCameraSpeed(next);
-        int fixed=(cameraX()<<16)|state.escapeCameraFraction(); fixed+=next;
-        state.escapeCameraFraction(fixed); short x=(short)(fixed>>>16);
-        var camera=services().camera(); camera.setXAfterRenderCopy(DezFinalCamera.visibleX(camera, x & 0xFFFF)); camera.setMinX(x); camera.setMaxX(x);
+        // loc_80F24 (sonic3k.asm:172688-172691) adds to the whole Camera_X_pos long; its low
+        // word is the one the next level (Doomsday) inherits.
+        var camera=services().camera();
+        int fixed=(cameraX()<<16)|com.openggf.camera.CameraSubpixelAccess.xFraction(camera); fixed+=next;
+        com.openggf.camera.CameraSubpixelAccess.setXFraction(camera, fixed); short x=(short)(fixed>>>16);
+        camera.setXAfterRenderCopy(DezFinalCamera.visibleX(camera, x & 0xFFFF)); camera.setMinX(x); camera.setMaxX(x);
     }
     private void swing() {
         int velocity=(short)yVelocity;

@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Objects;
+import java.net.URI;
 import java.nio.file.Path;
 import java.util.function.Consumer;
 import java.util.function.LongSupplier;
@@ -56,7 +57,8 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     private final LongSupplier clockMillis;
     private final AttemptRecordingVault recordingVault;
     private final RecordingUploader recordingUploader;
-    private final String configuredMasterUrl;
+    /** The admitted master endpoint (upload origin), or null when the room has no master. */
+    private final URI masterEndpoint;
     private final GhostStore ghostStore;
 
     private TimeAttackRuntime runtime;
@@ -65,6 +67,7 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     private int pendingAttemptOrdinal = -1;
     private List<GhostPose> remoteGhosts = List.of();
     private boolean connectionLost;
+    private boolean terminal;
     private long lastPingAtMillis = Long.MIN_VALUE;
     private long lastStandingsPageRequestAt = Long.MIN_VALUE;
     private int localRank = -1;
@@ -89,25 +92,25 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     static final int SPECTATE_PAN_SPEED_PX = 8;
 
     public MultiplayerRaceCoordinator(RaceTransport transport, ClientRaceSession session) {
-        this(transport, session, System::currentTimeMillis, "", false,
+        this(transport, session, System::currentTimeMillis, null, false,
                 new GhostStore(Path.of("ghosts")));
     }
 
     public MultiplayerRaceCoordinator(RaceTransport transport, ClientRaceSession session,
                                       LongSupplier clockMillis) {
-        this(transport, session, clockMillis, "", false,
+        this(transport, session, clockMillis, null, false,
                 new GhostStore(Path.of("ghosts")));
     }
 
     public MultiplayerRaceCoordinator(RaceTransport transport, ClientRaceSession session,
-                                      LongSupplier clockMillis, String configuredMasterUrl,
+                                      LongSupplier clockMillis, URI masterEndpoint,
                                       boolean trustInsecure, GhostStore ghostStore) {
         this.transport = Objects.requireNonNull(transport, "transport");
         this.session = Objects.requireNonNull(session, "session");
         session.setQuickChatFormatter(TimeAttackQuickChat::format);
         this.clockMillis = Objects.requireNonNull(clockMillis, "clockMillis");
         this.recordingVault = new AttemptRecordingVault(clockMillis);
-        this.configuredMasterUrl = configuredMasterUrl == null ? "" : configuredMasterUrl;
+        this.masterEndpoint = masterEndpoint;
         this.ghostStore = Objects.requireNonNull(ghostStore, "ghostStore");
         String token = transport.sessionToken();
         this.recordingUploader = token == null || token.isBlank()
@@ -171,11 +174,24 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
 
     /** Single network drain, used by both lobby and gameplay contexts. */
     public void pump() {
+        if (terminal) return;
         session.setChatPreferences(censorChat.getAsBoolean(), disableChat.getAsBoolean());
         for (RaceClient.InboundEvent event : transport.drainInbound()) {
             switch (event) {
                 case RaceClient.Control control -> {
-                    session.onControl(control.message());
+                    long previousLaunchId = session.launch() == null ? -1 : session.launch().roundId();
+                    try {
+                        session.onControl(control.message());
+                    } catch (IllegalArgumentException invalidHostMessage) {
+                        connectionLost = true;
+                        retireConnection();
+                        transport.close();
+                        break;
+                    }
+                    if (control.message() instanceof ControlMessage.Kick) {
+                        retireConnection();
+                        break;
+                    }
                     if (control.message() instanceof ControlMessage.RoomAccessState
                             || control.message() instanceof ControlMessage.RoomInvite
                             || control.message() instanceof ControlMessage.RoomInviteInvalidated
@@ -192,7 +208,9 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
                     } else if (control.message() instanceof ControlMessage.PlayerLeft left) {
                         registry.onPlayerLeft(left.slot());
                         lobbyRegistry.onPlayerLeft(left.slot());
-                    } else if (control.message() instanceof ControlMessage.RoundStart) {
+                    } else if (control.message() instanceof ControlMessage.RoundStart
+                            && session.launch() != null
+                            && session.launch().roundId() != previousLaunchId) {
                         quickChat.close();
                         roundsStarted++;
                         latestRoundClosed = false;
@@ -236,11 +254,28 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
                 case RaceClient.GhostData ghost -> registry.onAggregate(ghost.aggregate());
                 case RaceClient.LobbyGhostData lobby -> lobbyRegistry.onAggregate(lobby.aggregate());
                 case RaceClient.Roster roster -> registry.onRoster(roster.entries());
-                case RaceClient.Disconnected ignored -> connectionLost = true;
+                case RaceClient.Disconnected ignored -> {
+                    connectionLost = true;
+                    retireConnection();
+                }
             }
+            if (terminal) break;
         }
-        maybePing();
+        if (!terminal) maybePing();
         recordingVault.evictExpired();
+    }
+
+    private void retireConnection() {
+        if (terminal) return;
+        terminal = true;
+        quickChat.close();
+        if (publisherActive && publisher != null) publisher.abandonAttempt();
+        publisherActive = false;
+        pendingAttemptOrdinal = -1;
+        if (runtime != null && !leaveRequested) {
+            leaveRequested = true;
+            runtime.leaveRun();
+        }
     }
 
     public void beforeLevelFrame() {
@@ -259,6 +294,7 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     @Override
     public boolean admit(com.openggf.mods.run.RunInput input) {
         pump();
+        if (terminal) return false;
         leaveIfRoundOver();
         pollLocalInput(input);
         return !holdGameplay();
@@ -491,8 +527,7 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
         if (lobbyPublisher == null || !betweenRounds() || !transport.isOpen()) {
             return;
         }
-        lobbyPublisher.onFrame(new GhostFrame(pose.centreX(), pose.centreY(), pose.mappingFrame(),
-                pose.hFlip(), pose.vFlip(), false, pose.priorityBucket(), pose.highPriority(), pose.hurt()));
+        lobbyPublisher.onFrame(pose.toGhostFrame(false));
     }
 
     /** The lobby level ended. */
@@ -522,10 +557,13 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     }
 
     public void sendRoundConfigure(ControlMessage.RoundConfig config) {
-        transport.sendControl(new ControlMessage.RoundConfigure(config));
+        long revision = config != null && config.equals(session.nextRoundConfig())
+                ? session.nextPlanRevision() : 0;
+        transport.sendControl(new ControlMessage.RoundConfigure(config, revision));
     }
 
     public void pollLocalInput(com.openggf.mods.run.RunInput input) {
+        if (terminal) return;
         chatKeyConsumed = false;
         if (input.resumedAfterPause()) quickChat.resetRaceInput();
         boolean raceInput = runtime != null && !leaveRequested && roundsStarted == attachedRound
@@ -580,6 +618,7 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
      */
     @Override
     public void onAttemptBegan(int attemptOrdinal) {
+        if (terminal) return;
         requirePublisher();
         if (publisherActive) {
             // The runtime voids before every reload, so this is defensive: never throw here.
@@ -595,6 +634,7 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
 
     @Override
     public void onFrameSampled(int attemptOrdinal, GhostFrame frame) {
+        if (terminal) return;
         requirePublisher();
         if (!publisherActive && pendingAttemptOrdinal == attemptOrdinal) {
             if (session.phase() != ClientRaceSession.Phase.RUNNING) {
@@ -615,6 +655,7 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
                                   int firstInputFrame, int finishFrame,
                                   byte[] inputRecordingSha256,
                                   AttemptInputRecording recording) {
+        if (terminal) return;
         requirePublisher();
         if (!publisherActive && pendingAttemptOrdinal == attemptOrdinal) {
             // Every frame was dropped outside the window, so the host never saw this attempt.
@@ -636,6 +677,7 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
 
     @Override
     public void onAttemptVoided(int attemptOrdinal) {
+        if (terminal) return;
         requirePublisher();
         if (!publisherActive && pendingAttemptOrdinal == attemptOrdinal) {
             pendingAttemptOrdinal = -1;
@@ -661,6 +703,7 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     }
 
     private void uploadRequestedRecording(ControlMessage.RecordingRequest request) {
+        if (terminal) return;
         if (recordingUploader == null) {
             LOGGER.warning("Ignoring recording request without an upload session token");
             return;
@@ -681,7 +724,7 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
         }
         try {
             String url = RecordingUploader.resolveUploadUrl(
-                    request.uploadUrl(), configuredMasterUrl);
+                    request.uploadUrl(), masterEndpoint);
             RecordingUploader.Admission admission = recordingUploader.upload(url, recording, success -> {
                 if (!success) {
                     LOGGER.warning("Attempt recording upload failed: "

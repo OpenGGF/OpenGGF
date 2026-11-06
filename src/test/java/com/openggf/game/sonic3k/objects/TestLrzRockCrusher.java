@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * {@code Obj_LRZRockCrusher} (sonic3k.asm:197095-197507, ROM {@code $900E4}) and its timer child
- * {@code loc_90502} (:197322-197367).
+ * {@code loc_90502} (:197429-197474).
  *
  * <p>Every number here is a ROM table entry or a ROM comparison: the two {@code Check_CameraInRange}
  * windows {@code word_901B8}/{@code word_901C4}, the new camera limits those tables' entries 4 and
@@ -301,7 +301,7 @@ class TestLrzRockCrusher {
                 "Camera_stored_max_Y_pos handed back");
     }
 
-    /** {@code word_902EC} entry 1 is the other subtype's drop target (:197245). */
+    /** {@code word_902EC} entry 1 is the other subtype's drop target (:197250). */
     @Test
     void theOtherSubtypeDropsToItsOwnTarget() {
         LrzRockCrusher harness = harness(2, 0x500, 0x700);
@@ -311,8 +311,8 @@ class TestLrzRockCrusher {
     }
 
     /**
-     * {@code loc_90502}/{@code loc_90512} (:197322-197352): {@code (3*60)-1} frames, then the
-     * NEGATIVE request for subtype 0 -- {@code st (Events_bg+$0C)} sets the whole word -- and the
+     * {@code loc_90502}/{@code loc_90512} (:197429-197459): {@code (3*60)-1} frames, then the
+     * NEGATIVE request for subtype 0 -- {@code st (Events_bg+$0C)} writes its high byte -- and the
      * screen shake cleared.
      */
     @Test
@@ -323,23 +323,24 @@ class TestLrzRockCrusher {
         timer.setServices(harness.services);
 
         timer.update(1, null);
-        assertEquals(LrzRockCrusherTimerChildInstance.COUNTDOWN, timer.countdown());
+        assertEquals(LrzRockCrusherTimerChildInstance.COUNTDOWN - 1, timer.countdown(),
+                "loc_90502 falls through into loc_90512 on its first dispatch");
         assertEquals(-1, harness.state.screenShake().flag(), "st (Screen_shake_flag).w");
         assertEquals(0, harness.state.chunkEditRequest(), "nothing requested yet");
 
-        for (int frame = 2; frame <= 1 + LrzRockCrusherTimerChildInstance.COUNTDOWN; frame++) {
+        for (int frame = 2; frame <= LrzRockCrusherTimerChildInstance.COUNTDOWN; frame++) {
             timer.update(frame, null);
             assertEquals(0, harness.state.chunkEditRequest(),
                     "still counting on frame " + frame);
         }
-        timer.update(2 + LrzRockCrusherTimerChildInstance.COUNTDOWN, null);
+        timer.update(1 + LrzRockCrusherTimerChildInstance.COUNTDOWN, null);
         assertEquals(-1, (short) harness.state.chunkEditRequest(), "st (Events_bg+$0C).w");
         assertEquals(0, harness.state.screenShake().flag(), "clr.b (Screen_shake_flag).w");
         assertTrue(timer.isDestroyed(), "Delete_Current_Sprite");
     }
 
     /**
-     * {@code loc_9056E} (:197355-197363): the other subtype writes the LOW byte only, so the same
+     * {@code loc_9056E} (:197469-197477): the other subtype writes the LOW byte only, so the same
      * word reads POSITIVE and {@code LRZ1_ScreenEvent} takes its other branch, and the shake is
      * left running.
      */
@@ -349,7 +350,7 @@ class TestLrzRockCrusher {
         LrzRockCrusherTimerChildInstance timer = new LrzRockCrusherTimerChildInstance(2);
         timer.setServices(harness.services);
 
-        for (int frame = 1; frame <= 2 + LrzRockCrusherTimerChildInstance.COUNTDOWN; frame++) {
+        for (int frame = 1; frame <= 1 + LrzRockCrusherTimerChildInstance.COUNTDOWN; frame++) {
             timer.update(frame, null);
         }
         assertEquals(0x00FF, harness.state.chunkEditRequest() & 0xFFFF, "st (Events_bg+$0D).w");

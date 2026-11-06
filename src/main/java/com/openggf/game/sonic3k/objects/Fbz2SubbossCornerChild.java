@@ -52,6 +52,6 @@ final class Fbz2SubbossCornerChild extends AbstractFbz2SubbossChild
     @Override public int getPriorityBucket() { return 1; }
     @Override public void appendRenderCommands(List<GLCommand> commands) {
         PatternSpriteRenderer r=getRenderer(Sonic3kObjectArtKeys.FBZ2_SUBBOSS);
-        if(r!=null&&r.isReady())r.drawFrameIndex(1,x,y,false,false);
+        if(r!=null&&r.isReady())r.drawFrameIndex(1,x,y,false,nativeSubtype < 4); // loc_70302: roof render_flags bit 1
     }
 }

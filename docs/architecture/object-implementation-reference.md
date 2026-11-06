@@ -13,6 +13,43 @@ including interaction breadth and applicable rewind capture/restore/replay spots
 Update the owning act's matrix and [backlog](../status/level-test-coverage.md);
 object-local tests do not substitute for production registration/lifecycle evidence.
 
+## Shared ROM routine ownership
+
+A zone-specific continuation does not justify copying the common ROM routine.
+Keep initialization, arithmetic, state transitions and drawing in one owner;
+express native child-slot graphs and retained boss/results continuations through
+adapters. Preserve allocation order, failure semantics and rewind storage when
+sharing an algorithm. Scalar rewind fields can call a pure transition; they do
+not require an inline copy of that transition.
+
+S3K fixed capsules share `AbstractS3kEggCapsuleInstance` opening writes, native
+sprite/plane priority, P2 CPU-lock acquisition/release and body drawing. HCZ inherits the upright capsule's opening, effects and geometry, retaining
+its real button SST and results/geyser handoff. FBZ retains its five fragments,
+nine animals and independent explosion SST instead of being folded into a virtual
+button graph. `AbstractS3kCutsceneButtonInstance` owns common button proximity,
+press and presentation; subtype actions remain adapters. `S3kExplosionOffsets`
+owns the low-word X/high-word Y arithmetic used by the real-SST and folded
+explosion controllers. Their timer/parent/lifetime adapters remain distinct. The MHZ following burst
+captures its exact parent reference through the central rewind policy.
+Recreation builds a pure shell; reference hydration restores the saved owner.
+
+The 2026-11-02 ownership audit scanned 827 S3K object files and triaged 74
+repeated pre-class `Obj_*` citation groups. Camera-boundary workers and Robotnik
+head/flame wrappers remain consolidation candidates; no additional supported-route
+defect was established for them. Repeated helper citations, parent/child roles and
+distinct native entrypoints were rejected as duplication evidence. The audit
+also checked S1/S2 registries and common platform,
+spring, spike, monitor, capsule/results and explosion families; S3K checks covered
+capsules, explosions, cutscene buttons, teleporters, springs and collapsing
+bridges. It found no additional confirmed same-routine owner in those S1/S2
+families. Similar names and different native entrypoints are not duplication
+proof. This is a bounded static audit, not whole-engine parity certification.
+HCZ/CNZ cutscene buttons still obtain their actor positions from their existing
+typed providers; only AIZ currently reads the current saved native SST occupant.
+That pointer-authority gap remains open. The obsolete, unregistered
+`CnzTeleporterBeamInstance` remains a legacy rewind fixture, not a production
+alternative to `TeleporterBeamObjectInstance`.
+
 ## Registration and lifecycle
 
 Objects use a factory pattern with game-specific registries. `ObjectRegistry` creates an

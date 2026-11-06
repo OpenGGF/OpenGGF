@@ -112,7 +112,7 @@ public final class S2ObjectWindowing implements ViewportAwareObjectWindowingStra
     public enum LoadOutcome { LOADED, ALREADY_LOADED_CONTINUE, SST_FULL_STOP }
 
     /**
-     * ROM ChkLoadObj (s2.asm:33592): bset #7 tests-and-sets the respawn entry.
+     * ROM ChkLoadObj (s2.asm:33598): bset #7 tests-and-sets the respawn entry.
      * If bit 7 was already set, the object is already loaded → advance the list
      * pointer and CONTINUE scanning (success). Otherwise allocate; only a full SST
      * (no allocatable slot) STOPS the scan.

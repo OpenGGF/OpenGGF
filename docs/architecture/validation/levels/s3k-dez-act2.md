@@ -1,5 +1,12 @@
 # S3K Death Egg Zone act 2 coverage matrix
 
+Routine selection update (2026-10-27): the reviewed full configuration products
+and long cold-campaign qualifications in the [local budget record](../../research/2026-10-27-local-validation-cost.md#thirty-minute-local-command-target)
+now require explicit `exhaustive-audit`. Short real contact, lifecycle and
+restore/forward witnesses remain routine. Historical qualification rows retain
+their original source/input scope; a current smoke pass does not renew deferred
+cold reachability, accumulated route state or every replay window.
+
 **Current route revalidation (2026-09-25, based on `3881f549a`):** the
 preserved cold ordinary ending movie initially died at input21410 after the
 native spike correction. Its controller inputs are now repaired:40316 frames
@@ -83,7 +90,7 @@ does not withdraw the independent authored cold completion evidence below.
 | GRAVITY: `$58` writer — toggle on the 4th update, both faces, rider release, occupancy-blocked rearm | `loc_48AD6`/`loc_48B7E`/`loc_48B9C` (sonic3k.asm:94846-94956); `eori.b #1`, `d6 & $14`, `move.w #20-1,$30` | — | `TestS3kDezGravityObjectsHeadless` | implemented (`S3kDezGravitySwitchObjectInstance`) | pass 20/20 + `TestS3kDezGravitySwitchArt` 2/2 | Art and sound landed with the class's presentation pass: `Map_DEZGravitySwitch` ($48BEA) at `ArtTile_DEZMisc+$143` palette 1, two frames, and `sfx_Transporter` ($73) on the press frame only. Clip `033-gravity-switch-pad` |
 | REWIND spot: `$58` mid-count | capture between the press and the toggle, run past it, restore, replay | — | `TestS3kDezGravityObjectsHeadless` | implemented | pass | Replay toggles on the same update as the first run |
 | GRAVITY: `$59` teleporter — mirrored capture window, four refusals, spin ramp, midpoint write, exit nudge, release | `loc_48C44`/`loc_48D2C`/`loc_48DCA`/`loc_48E94` (sonic3k.asm:94959-95214); subtype bit 7 via `rol.b #1,d0 / andi.b #1,d0`, `cmpa.w #Player_1` (`loc_48DF2`, :95126) | — | `TestS3kDezTeleporterHeadless` | implemented (`S3kDezTeleporterObjectInstance`) | pass 10/10 | Nine mechanisms, nine breaks, nine reds. `_unkFAB8` bit 0 (:95011) is deliberately not modelled: its only writer is `Ending_ScreenInit`'s `Obj_5D86A` (:123815), so that refusal is unreachable during Death Egg gameplay. No clip: the object is invisible and its 21 placements are not reachable until the act 2 route |
-| GRAVITY: `$5A` gravity tube — both bodies, subtype span and band, mount angle tables, cosine ride, inverted `flip_angle` reflection on exit | `loc_48EEC`/`sub_48F12` (horizontal) and `loc_4906A`/`sub_49090` (vertical), sonic3k.asm:95215-95447; `loc_48FBA` :95324 and `loc_4904A` :95366 are its two flag reads | — | `TestS3kDezGravityTubeHeadless` | implemented (`S3kDezGravityTubeObjectInstance`) | pass 11/11 | Ten mechanisms, ten breaks, ten reds. The vertical body reads the flag nowhere, which is asserted rather than assumed |
+| GRAVITY: `$5A` gravity tube — both bodies, subtype span and band, mount angle tables, cosine ride, inverted `flip_angle` reflection on exit | `loc_48EEC`/`sub_48F12` (horizontal) and `loc_4906A`/`sub_49090` (vertical), sonic3k.asm:95215-95447; `loc_48FBA` :95324 and `loc_4904A` :95368 are its two flag reads | — | `TestS3kDezGravityTubeHeadless` | implemented (`S3kDezGravityTubeObjectInstance`) | pass 11/11 | Ten mechanisms, ten breaks, ten reds. The vertical body reads the flag nowhere, which is asserted rather than assumed |
 | GRAVITY: `$5C` gravity hub — capture window, per-axis centring, the press-masked four-way exit and the launched-state reset | `sub_492D4`, sonic3k.asm:95591-95736; `word_49420` :95718 | — | `TestS3kDezGravityHubHeadless` | implemented (`S3kDezGravityHubObjectInstance`) | pass 10/10 | Eight mechanisms, eight breaks, eight reds. Contains no `Reverse_gravity_flag` reference |
 | GRAVITY: `$5F` room, `$61` puzzle | neither contains a `Reverse_gravity_flag` reference; they move the player with `object_control` | — | `TestS3kDezGravityRoomHeadless`, `TestS3kDezGravityPuzzleHeadless` | implemented | pass 8/8 and 12/12 | Both are act 1 placements; the act 1 matrix owns their rows |
 | HAZARD: SKL `$6D` invisible shock block | `Obj_InvisibleShockBlock` bit 5; `sub_1F58C` shield reaction, status bits 0/1 choose face | unit: all four flip combinations and five shield states; placed DEZ1 floor: native Sonic 320 | `TestSonic3kInvisibleHurtBlockHObjectInstance`, `TestS3kDezShockBlockHeadless`, placement census | implemented after `674a99f72` | unit and five shield/rewind cases pass | Act-2 placement census verified; act-2 inverted-contact routes, donor/team breadth and native comparison remain open |
@@ -1638,3 +1645,46 @@ and graph-recreation oracles remain intact. This is component/lifecycle coverage
 not a cold route or native timing certificate; the original same-movie DEZ1
 cold intake at offset468982 still needs requalification. Existing roster, donor,
 viewport and native acceptance gaps above remain.
+
+## Shared Spikebonker creation maintenance — 2026-10-29
+
+The shared mace owner now preserves its native initialization pass before orbit
+or slam dispatch. The [Act 1 maintenance matrix](s3k-dez-act1.md#spikebonker-creation-and-the-original-cold-opening--2026-10-29)
+records the native decision, component checks, actual recreation/forward check
+and original-movie opening coverage. These component contracts also govern Act 2
+placements; no Act 2 cold/incoming route, width/donor/team product or native
+trajectory qualification is inferred for this change.
+
+
+## Staircase airborne-standing ownership — 2026-10-30
+
+The shared DEZ staircase owner retains each moving section's standing bits until
+that section's own full-solid checkpoint. Its native airborne-standing branch
+clears support without the new-contact lift under either gravity direction.
+The [Act 1 evidence and test binding](s3k-dez-act1.md#staircase-moving-standing-bit-ownership--2026-10-30)
+records P1/P2 parent/child component coverage, held/released recreation and
+slot isolation. The existing
+`TestS3kDezStaircaseHeadless#invertedActTwoLandingActivatesTheFlippedPlacedStaircase`
+checks the actual inverted Act 2 placement's activation, carry and 180-frame
+restore/forward replay. This adds no original-input Act 2 route, donor/roster/
+viewport breadth or whole-act certification; those inherited gaps remain open.
+
+
+## Conveyor walk-off standing-bit ownership — 2026-10-30
+
+The shared DEZ conveyor owner consumes only the exiting participant's standing
+bit on full-solid walk-off, retaining in-bounds controlled latches. The
+[Act 1 causal evidence and component binding](s3k-dez-act1.md#conveyor-walk-off-standing-bit-retirement--2026-10-30)
+cover both native player slots, travel directions and gravity modes, physical
+slot recreation/replacement and forward replay. Existing
+`TestS3kDezConveyorPadHeadless#declaredInvertedAct2EntryRidesTheUndersideAndReplays`
+separately covers an actual inverted Act 2 pad's carry and 80-frame rewind replay.
+No original-input Act 2 trajectory, expanded donor/roster/viewport product,
+whole-act native or pixel/audio claim follows from this local change.
+
+
+The [2026-10-30 tube interact-word correction](s3k-dez-act1.md#gravity-tube-live-interact-word--2026-10-30)
+adds the existing CPU contract's routine-word provider to both tube bodies. Its
+native320 component lifecycle/rewind checks and original-input observation are
+DEZ1 evidence; this leaf does not remeasure an Act2 route or close Act2 breadth,
+entry/respawn or native-parity obligations.

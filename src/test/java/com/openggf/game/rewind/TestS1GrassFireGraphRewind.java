@@ -158,6 +158,26 @@ class TestS1GrassFireGraphRewind {
     }
 
     @Test
+    void platformUnloadImmediatelyRetiresAllFlamesAndReleasesTheirSlots() {
+        Harness harness = Harness.create(List.of(CAPTURED_PLATFORM_SPAWN));
+        ObjectManager objects = harness.objectManager();
+        Sonic1LargeGrassyPlatformObjectInstance platform = platformAt(objects, CAPTURED_PLATFORM_SPAWN);
+        FireGraph graph = createCapturedFireGraph(objects, platform);
+        List<Sonic1GrassFireObjectInstance> fires = graph.allFires();
+        List<Integer> slots = fires.stream().map(Sonic1GrassFireObjectInstance::getSlotIndex).toList();
+
+        platform.onUnload();
+
+        assertTrue(fires.stream().noneMatch(objects.getActiveObjects()::contains),
+                "native DeleteChild clears every flame before another slot can dispatch");
+        for (int slot : slots) {
+            assertFalse(objects.occupiedDynamicSlotIds().containsKey(slot),
+                    "retired flame slot must be immediately available");
+        }
+        objects.validateRewindReferenceClosure();
+    }
+
+    @Test
     void grassFireMissingParentRefsFailCaptureAndRestoreLoudly() {
         Harness captureHarness = Harness.create(List.of());
         Sonic1LargeGrassyPlatformObjectInstance unmanagedParent =

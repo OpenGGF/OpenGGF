@@ -15,6 +15,18 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /** Literal controller paths through the native menu state machine; no production terrain surrogate. */
 class TestS3kCompetitionScreen {
+    @Test void menuAndResultMusicFollowNativeEntriesAndResetDoesNotRestartMenuMusic() {
+        Fixture f = new Fixture();
+        assertEquals(List.of(0x2D), f.music);
+        f.press(1, 0, InputActionMasks.ACTION_A);
+        assertEquals(List.of(0x2D, 0x2D), f.music);
+        f.press(0, 0, InputActionMasks.ACTION_A); f.press(1, 0, InputActionMasks.ACTION_A);
+        f.screen.requestResults(f.screen.session().result()); f.idle(1);
+        assertEquals(List.of(0x2D, 0x2D, 0x28), f.music);
+        f.screen.reset();
+        assertEquals(List.of(0x2D, 0x2D, 0x28), f.music, "retirement cannot restart menu music");
+    }
+
     @Test void arenaSetupWaitsForFrameCompletionAndGrandPrixRequestsDoNotReenterTheHost() {
         Fixture f = new Fixture();
         f.press(0, 0, InputActionMasks.ACTION_A);
@@ -304,6 +316,8 @@ class TestS3kCompetitionScreen {
     }
 
     private static final class Fixture implements S3kCompetitionScreen.Host {
+        final List<Integer> music = new ArrayList<>();
+        @Override public void playMusic(int nativeMusicId) { music.add(nativeMusicId); }
         final S3kCompetitionScreen screen = new S3kCompetitionScreen(this);
         final List<S3kCompetitionScreen.Launch> launches = new ArrayList<>();
         final List<S3kCompetitionSession.PlayerResult> savedRecords = new ArrayList<>();

@@ -49,13 +49,13 @@ launches. To use it:
        catalogDir: "src/test/resources/traces"
    ```
 
-2. Launch the engine and choose a trace from the picker with `Enter`.
+2. Launch the engine and choose a trace from the Playback browser with `Enter`.
 3. Hold `debug.traceRewind.key` while the trace is running. The default key is `R`.
 
 The HUD shows `Hold R Rewind` while rewind is available and changes to `REWIND <frame>`
 while the key is held. Releasing the key resumes the BK2-driven replay from the
 restored frame. `Enter` still pauses/resumes the trace, `Q` still frame-steps while
-paused, and `Esc` exits the trace back to the picker.
+paused, and `Esc` exits the trace back to the Playback browser.
 
 While the key is held, trace rewind also enters reverse presentation for both
 audio and fades. Audio drains the PCM history ring backward and keeps updating
@@ -95,7 +95,8 @@ rewind:
 While playing a level, hold `rewind.liveKey` to step backward through the live
 gameplay buffer. Releasing the key resumes normal gameplay from the restored frame.
 The small live HUD is hidden during ordinary play and appears only while the key is
-held, showing `LIVE REWIND` plus `REWIND <frame>`.
+held, showing a one-row `REW F:<frame>` plate above the lives counter. Its translucent
+navy backing keeps scenery visible; status icons have the same dark outline as the text.
 
 By default live rewind steps backward one frame per visual frame while the key is
 held, with no movement after release. The experimental tape-coast layer remains
@@ -474,6 +475,20 @@ not as a routine subsystem coverage gate. Timing evidence must follow the
 including prebuilt commands and `tools/performance/run_isolated.py` for isolated
 measurements. If a benchmark reports a divergent key, investigate it as a coverage
 gap unless the comparator itself is demonstrably wrong.
+
+### Derived terrain caches
+
+S3K collision-layout restoration preserves the captured map-byte reference. A new
+array containing identical bytes would manufacture a geometry change for the next
+shared level restore and force both tilemaps to rebuild. Encoded layout bytes,
+map dimensions and layer dimensions still trigger geometry rebinding when changed.
+The ending scene resource adapter restores resident art; the later collision-layout
+adapter restores scene geometry. Calling `setLevel` from both owners would reset
+animated-content ownership and invalidate otherwise reusable tilemaps on every step.
+Full-layout backgrounds can retain their derived image across unchanged restores.
+Camera-window, descriptor-owned and retained-plane backgrounds keep their separate
+restore rules. The rendered performance probe is listed in the
+[agent workflow index](../../agent-workflow/README.md).
 
 ### Performance attribution
 

@@ -58,7 +58,7 @@ public class MTZTwinStompersObjectInstance extends AbstractObjectInstance
     private static final boolean DEBUG_VIEW_ENABLED = staticDebugViewEnabled();
     private static final DebugOverlayManager OVERLAY_MANAGER = staticDebugOverlay();
 
-    // Obj64_Properties flat byte array (s2.asm:52214-52220)
+    // Obj64_Properties flat byte array (s2.asm:52692-52698)
     // Accessed as a3 = Properties + byteOffset, then 3 sequential reads: (a3)+, (a3)+, (a3)+
     private static final int[] PROPERTIES = {
             0x40, 0x0C,  // Offset 0: width_pixels=0x40, objoff_2E=0x0C
@@ -223,7 +223,7 @@ public class MTZTwinStompersObjectInstance extends AbstractObjectInstance
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (isDestroyed()) return;
 
-        // ROM Obj64_Main (s2.asm:52254-52278) runs the movement mode first, then
+        // ROM Obj64_Main (s2.asm:52719-52743) runs the movement mode first, then
         // (gated on render_flags.on_screen) JmpTo9_SolidObject, then the
         // coarse-X delete test. Solid participation is provided to the engine via
         // SolidObjectProvider (getSolidParams), so movement runs here first.
@@ -339,6 +339,24 @@ public class MTZTwinStompersObjectInstance extends AbstractObjectInstance
     public int getPriorityBucket() {
         // move.b #4,priority(a0) (s2.asm:52242)
         return RenderPriority.clamp(4);
+    }
+
+    @Override
+    public int getOnScreenHalfWidth() {
+        // Obj64_Init: move.b (a3)+,width_pixels(a0) from Obj64_Properties (s2.asm:52713).
+        return widthPixels;
+    }
+
+    @Override
+    protected boolean usesCustomRenderHeight() {
+        // Obj64_Init sets render_flags.explicit_height only for mapping frame 0
+        // (s2.asm:52716-52718); BuildSprites then tests y_radius (s2.asm:30580-30593).
+        return renderYRadius != 0;
+    }
+
+    @Override
+    public int getOnScreenHalfHeight() {
+        return renderYRadius != 0 ? renderYRadius : super.getOnScreenHalfHeight();
     }
 
     /**

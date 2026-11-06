@@ -170,7 +170,7 @@ public final class LrzTurbineSpritesObjectInstance extends AbstractObjectInstanc
 
         mappingFrame = (levelFrame >> 1) & 3;
         // tst.b render_flags(a0) / bpl, then andi.b #$F on the clock (:89687-89693).
-        if (isWithinSolidContactBounds() && (levelFrame & 0x0F) == 0) {
+        if (isWithinOnScreenRenderBounds() && (levelFrame & 0x0F) == 0) {
             playSfx(com.openggf.game.sonic3k.audio.Sonic3kSfx.FAN_BIG.id);
         }
     }

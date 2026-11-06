@@ -1,5 +1,20 @@
 # S3K Lava Reef Act 1 coverage matrix
 
+Big-door lifetime maintenance (2026-11-03):
+`TestLrzBigDoorPersistence.openingFinishesAndClearsShakeAfterCameraLeavesNativeWindow`
+checks that opening runs through tick 64 and clears shake after the camera leaves,
+then permits ordinary unload on the next dispatch. Existing placement-bit and rewind
+checks remain alongside it; the Sonic+Tails LRZ segment grades the resulting CPU
+visibility boundary. Broader cold-route, viewport, donor and team gaps below remain inherited.
+
+
+Routine selection update (2026-10-27): the reviewed full configuration products
+and long cold-campaign qualifications in the [local budget record](../../research/2026-10-27-local-validation-cost.md#thirty-minute-local-command-target)
+now require explicit `exhaustive-audit`. Short real contact, lifecycle and
+restore/forward witnesses remain routine. Historical qualification rows retain
+their original source/input scope; a current smoke pass does not renew deferred
+cold reachability, accumulated route state or every replay window.
+
 Game / canonical zone / act: S3K `S3K_LAVA_REEF_1`, engine zone `$09` act index 0,
 ROM `Current_zone_and_act = $900`, SKL object set (`Sprite_ListingK`, SK Set 2).
 Character routes: Sonic + Tails, Sonic, Tails (falling intro at `($100,$20)`) and Knuckles
@@ -366,6 +381,8 @@ already models the native early return; the elevator now opts into it together
 with `airborneRiderUnseatRequiresOwnCheckpoint`. The first flag alone fails the
 same regression: earlier checkpoints have already consumed the riding record.
 Both declarations are required to retain ownership through the native return.
+(2026-10-31: the second declaration was deleted; every object now releases an
+airborne rider only at its own helper call.)
 Shared collision code is unchanged. The real cold-route regression fails before this
 change (expected1421,actual1417), preserving the exact native launch assertion.
 
@@ -1851,3 +1868,107 @@ byte-identical to8d064688. Their inherited input5027 negatives and longer
 Act2/HPZ/campaign controllers remain pending. This is bounded maintained Java
 route/rewind coverage, not full-act, broader-product, native-clock/pixel or reset
 parity qualification.
+
+
+## Native crusher timer first dispatch — 2026-10-29
+
+A leaf based on pushed develop `bca1c3ae2` uses the unchanged Knuckles first-door
+and middle-corridor controllers. Read-only baseline observation proves the
+first-door death15323 comes from the attached Toxomister cloud's zero-ring
+drain. Middle death5027 comes from the `$21` smashing spike platform's full-solid
+squash branch with the platform active at5840/2818, subtype09; the nearby `$6B` does not issue that
+kill. These remain Act1 incoming-route endpoints, before the Act2 windows.
+
+An original-ROM cold native reference binds input0 to `Knuckles_Init` and
+records completed `Process_Sprites` boundaries. The first difference in the
+nine sampled position/fraction/velocity/inertia/angle/ring fields is input722:
+native Y2096/angle0/standing on a generated `$31` bridge at1344/2144, engine
+Y2097/angle6 with no rider until723. This is not a sinking-rock contact.
+Native execute callbacks prove timer initialization and its first decrement on
+level tick543, then expiry, bridge allocation and bridge initialization on722.
+The independent baseline test fails178 expected/179 actual. Removing the timer
+initializer's early return models its native fallthrough; its constant and
+negative-underflow branch are unchanged.
+
+The [frontier entry](../../../status/trace-frontier-log.md#2026-10-29--lrz-crusher-timer-first-dispatch-and-route-death-attribution)
+records exact commands, source/ROM/movie identities, measured extents and final
+qualification. This is a local timer obligation: broader viewport, donor,
+roster, native clock/pixel/terrain, positive-ring handoff and complete-act gaps
+remain inherited. No shared loop, loading, timing, audio or rewind implementation
+is changed.
+
+
+Corrected-source result: the focused owner/allocation/rewind/four-anchor
+selection passes93 tests without failures/errors/skips. Both unchanged maintained
+Knuckles route methods still fail in Act1, at15323 (9765/2479) and5027
+(5782/2869), before all17/48 destination windows. The observed bridge contact
+moves from723 to the native722, and the nine sampled fields match completed
+native object passes through level732. Per-input comparison still differs at
+native admission hold723; it is not waived. No new Act2 qualification follows.
+
+
+## Native input admission after crusher expiry — 2026-10-29
+
+On requested develop `e815aad643ac8cd62467d500e2336ef979e80ef8`, a fresh800-input
+first-door comparison matches all nine sampled motion/angle/ring fields through
+input722. At723 native VInt takes routine0 at the return from synchronous plane
+refresh: no controller poll or new body runs, direct Kos count is0, and the
+level counter remains722. The ordinary engine capture advances to723, producing
+the first strict Y2096/2097 difference. A second native lag occurs at732 during
+sprite rendering. Counter-matched diagnostics agree through native level797;
+that alignment is not an input-aligned parity pass.
+
+The [bounded frontier evidence](../../../status/trace-frontier-log.md#2026-10-29--lrz-input-723-hold-is-native-lag-at-direct-plane-refresh)
+records exact source/input identities, callbacks, command, warnings, timing and
+coverage limits. The engine observation shell is1T/0F/0E/0S, not a route test
+pass. No further LRZ-local cause is proven, so no runtime, controller or shared
+loop/timing owner is changed. Allocation/rewind/anchor results from the earlier
+timer repair remain historical; no new qualification is claimed. The later
+Act1 death endpoints, Act2 windows, complete route, native pixels and broader
+viewport/donor/roster obligations remain inherited and unmeasured here.
+
+## Music ownership follow-up (2026-11-02)
+
+The [cross-game music audit](../../audits/2026-11-02-music-transitions.md)
+records corrected native request IDs and/or level-restore selection affecting
+this route. Restoration selects the apparent playlist and P1 invincibility at
+the native boundary. These local checks do not requalify this matrix’s inherited
+route, viewport/donor/team, lifecycle or audible-comparison gaps.
+
+## Iwamodoki rider release (2026-11-02)
+
+Iwamodoki's self-destruct tail calls `Displace_PlayerOffObject` after setting
+status bit 7. The local regression in `TestIwamodokiBadnikInstance` establishes
+real solid contacts for P1/P2, burns the fuse with each shield type, and checks
+that both riders become airborne while a third player's separate support survives.
+The focused object run passes eight tests without skips on the refreshed develop
+base. This corrects the missing object-owned release; general destroyed-support ROM
+bugs remain unchanged. This short object check does not qualify cold routes,
+viewport/donor breadth, or whole-world rewind and forward replay; those inherited
+matrix obligations remain open.
+
+## Grinding boulder lifetime (2026-11-03)
+
+`loc_1B666` uses the placed X and coarse-back camera. The local regression now
+checks both unsigned boundaries and a camera crossing inside the placed-X block.
+The four LRZ r7 replays and 69 object/keep-green tests were measured on
+`e6a8b4a34`; see the [audit](../../audits/2026-11-03-lrz-boulder-lifetime.md).
+This repairs the Sonic+Tails row-2726 hurt and solo-Tails row-2592 cascade.
+Solo row2120 ring collection and bonus-return LRZ2/LRZ3 inlet debt remain distinct;
+viewport/donor breadth, whole-route rewind and complete-act certification remain inherited gaps.
+
+## Corkscrew P2 dispatch (2026-11-03)
+
+The [corkscrew audit](../../audits/2026-11-03-lrz-corkscrew-p2.md) records the
+executed P1 DPLC frame transition, native held P2 pass, two-player unit witness
+and three existing capture/restore/forward-replay spots. The S+T frontier moves
+3415 ->3791; solo LRZ and both bonus-return reports are identical. The 83-test
+object/keep-green selection passes without skips. Broader matrix gaps remain inherited.
+
+## Invisible support edge balance (2026-11-03)
+
+The [status7 audit](../../audits/2026-11-03-lrz-invisible-balance.md) binds the
+real slot6 support and player balance diagnostic at3791 to native status88.
+The local object-family override removes that animation-only disagreement,
+with no added error cells;103 object/rewind/keep-green checks pass without skips.
+The next frontier is4630 status_byte. The existing broader matrix gaps remain open.

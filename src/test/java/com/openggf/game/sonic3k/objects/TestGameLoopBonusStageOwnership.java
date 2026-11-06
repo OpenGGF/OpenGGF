@@ -76,6 +76,22 @@ class TestGameLoopBonusStageOwnership {
     }
 
     @Test
+    void playbackSuppressesLiveBonusStageDebugFilters() throws Exception {
+        var provider = new Sonic3kBonusStageCoordinator();
+        provider.onEnter(BonusStageType.GUMBALL, null);
+        for (int key : new int[] {GLFW_KEY_F11, GLFW_KEY_INSERT}) {
+            GumballMachineObjectInstance.resetDebugFiltersForTest();
+            Fixture fixture = fixture(provider);
+            fixture.config.setConfigValue(SonicConfiguration.DEBUG_VIEW_ENABLED, true);
+            when(fixture.playback.hasActiveOrScheduledSession()).thenReturn(true);
+            fixture.input.handleKeyEvent(key, GLFW_PRESS);
+            fixture.update();
+            assertTrue(GumballMachineObjectInstance.shouldDebugRender(1, false, "machine-main"));
+            assertNull(GumballMachineObjectInstance.getCurrentDebugSourceFilterForTest());
+        }
+    }
+
+    @Test
     void pachinkoRepairFollowsOverlayAndPrecedesTheFrozenFrameTailWithoutDuplicating() throws Exception {
         TestEnvironment.configureGameModuleFixture(new Sonic3kGameModule());
         var provider = new Sonic3kBonusStageCoordinator();
@@ -209,10 +225,14 @@ class TestGameLoopBonusStageOwnership {
         set(loop, "gameplayMode", TestEnvironment.activeGameplayMode());
         com.openggf.TitleCardLifecycleTestAccess.provider(loop, title);
         set(loop, "playbackDebugManager", playback);
+        set(loop, "userRecordingSessionLauncher",
+                mock(com.openggf.game.recording.UserRecordingSessionLauncher.class));
         BonusStageSessionTestAccess.provider(loop, provider);
         BonusStageSessionTestAccess.pending(loop, true);
         set(loop, "audioUpdatedThisStep", true);
-        set(loop, "activePlcLifecycleFrame", mock(PlcLifecycleFrame.class));
+        var frame = mock(PlcLifecycleFrame.class);
+        when(frame.claimHeldVBlankService()).thenReturn(true);
+        set(loop, "activePlcLifecycleFrame", frame);
         return new Fixture(loop, config, input, levels, title, playback);
     }
 

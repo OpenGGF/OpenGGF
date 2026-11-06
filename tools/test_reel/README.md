@@ -35,6 +35,22 @@ source union. The integrated scope includes S3K follow-up
 `57e89fb6c5e2a0a68691892b641f9c27033b37b0`. Use the explicit overlay option
 for later unmerged work only. No worktree is changed.
 
+### Renamed tests and repaired behavior
+
+The scope's explicit `method_renames` map resolves a historical method only when
+that method is absent from the selected source. The new method must exist;
+its current JUnit identity is inventoried and the old name remains in
+`historical_methods`. Selecting historical source keeps its original identity.
+This mapping never transfers recordings, hashes or outcomes between methods.
+Provider changes need reviewed invocation dispositions; an old parameter index
+is not proof of the new case's meaning.
+
+The delivered 249-invocation reel records source `58e1abb44` before the accuracy
+repairs. It remains unchanged. The rename map lets later inventories locate
+repaired descendants of that original scope; it does not add every new repair
+control. Use explicit `--add-commit` scope and review any new provider types
+before requesting a fresh complete reel.
+
 ## Record a bounded selection
 
 Use Java 25 and the original absolute ROM files. Output roots must be new so stale

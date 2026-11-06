@@ -903,7 +903,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     }
 
     /**
-     * ROM: MGZ2_QuakeEvent1Cont (sonic3k.asm:106801-106805). Once the player
+     * ROM: MGZ2_QuakeEvent1Cont (sonic3k.asm:106806-106810). Once the player
      * passes {@link #EVENT1_CONT_RELEASE_X}, restore default camera_max_Y and
      * return to {@link #QUAKE_CHECK} so the remaining quakes can still trigger.
      */
@@ -930,7 +930,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     }
 
     /**
-     * ROM: MGZ2_QuakeEvent3Cont (sonic3k.asm:106821-106824). Release when the
+     * ROM: MGZ2_QuakeEvent3Cont (sonic3k.asm:106826-106829). Release when the
      * player moves back past {@link #EVENT3_CONT_RELEASE_X}. In the ROM this
      * is where the end-of-act boss route continues; the engine fires
      * {@link #onMgz2BossArenaReached()} as a route-transition marker while
@@ -2463,7 +2463,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
                         .targetZoneAct(Sonic3kZoneIds.ZONE_MGZ, 1)
                         .runtimeArtAdmissionPolicy(RuntimeArtAdmissionPolicy.TITLE_OWNER)
                         .deactivateLevelNow(false)
-                        // Results screen already started act 2 music.
+                        // The in-level title wait gate owns the Act 2 music request.
                         .preserveMusic(true)
                         // Obj_LevelResults and its ring/time globals remain live
                         // while MGZ1BGE_Transition reloads the act behind them.
@@ -2495,8 +2495,13 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
                         // and all four bounds; it does not recenter after Load_Level.
                         .preserveOffsetCameraPosition(true)
                         .postTransitionMinX(postTransitionMinX)
+                        .postTransitionMinXTarget(postTransitionMinX)
                         .postTransitionMaxX(postTransitionMaxX)
+                        // MGZ1BGE_Transition (sonic3k.asm:106358-106390) shifts the live lock.
+                        // Keep the engine easing destination at that lock until native release.
+                        .postTransitionMaxXTarget(postTransitionMaxX)
                         .postTransitionMinY(postTransitionMinY)
+                        .postTransitionMinYTarget(postTransitionMinY)
                         .postTransitionMaxY(postTransitionMaxY)
                         .postTransitionMaxYTarget(postTransitionMaxYTarget)
                         .playerOffset(TRANSITION_OFFSET_X, TRANSITION_OFFSET_Y)

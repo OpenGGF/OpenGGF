@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.credits;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.data.Rom;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
@@ -292,7 +294,7 @@ public class Sonic2EndingArt {
         //   Line 3 (+96): "Ending Background.bin" pt.1 (32 bytes) - sky gradient
         // IMPORTANT: PAL_ENDING_BACKGROUND_ADDR (0xACDE) is line 3, NOT line 2!
         // Line 2 is at PAL_ENDING_FULL_ADDR + 64 = 0xACBE (second half of Tails file).
-        int baseAddr = Sonic2Constants.PAL_ENDING_FULL_ADDR;
+        int baseAddr = address(rom, Sonic2Constants.PAL_ENDING_FULL_ADDR);
         endingPalettes[1] = loadPalette(rom, baseAddr + 32, "EndingPalLine1");
         endingPalettes[2] = loadPalette(rom, baseAddr + 64, "EndingPalLine2");
         endingPalettes[3] = loadPalette(rom, baseAddr + 96, "EndingPalLine3");
@@ -300,7 +302,7 @@ public class Sonic2EndingArt {
         // Palette line 0: character-specific (Super Sonic replaces line 0)
         int charPalAddr = switch (routine) {
             case SONIC -> baseAddr;
-            case SUPER_SONIC -> Sonic2Constants.PAL_ENDING_SUPER_SONIC_ADDR;
+            case SUPER_SONIC -> address(rom, Sonic2Constants.PAL_ENDING_SUPER_SONIC_ADDR);
             case TAILS -> baseAddr; // Tails ending still uses Sonic line 0
         };
         endingPalettes[0] = loadPalette(rom, charPalAddr, "EndingPalLine0");

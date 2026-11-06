@@ -116,6 +116,84 @@ class TestSonic3kSpecialStageManagerSnapshot {
     }
 
     @Test
+    void finalFadeLatchRestoresAcrossBootWithoutOverwritingTheNextSample() {
+        attachRuntime();
+        var manager = new Sonic3kSpecialStageManager();
+        seedInitializedManager(manager);
+        set(manager, "preBootFadeHoldFrames", 1);
+        set(manager, "postBootFadeHoldFrames", 22);
+        set(manager, "firstUpdateCall", true);
+        set(manager, "stagePalettesUploaded", true);
+        manager.getPlayer().initialize(0x8000, 0x1000, 0x1000, false);
+        manager.getBanner().initialize();
+        var beforeFinalFade = manager.captureRewindSnapshot();
+        manager.handleInput(0x11, 0x10); // Up + a newly pressed jump
+        manager.handlePlayer2Input(0x10, 0x10);
+        manager.update();
+        assertEquals(0, manager.getFrameCounter(), "the fade itself never runs sprites");
+        manager.handleInput(0, 0);
+        manager.handlePlayer2Input(0, 0);
+        var beforeBoot = manager.captureRewindSnapshot();
+        manager.update();
+        var boot = manager.captureRewindSnapshot();
+        assertTrue(manager.getPlayer().isStarted());
+        assertEquals(0x200, manager.getPlayer().getVelocity());
+        assertEquals(0x80, manager.getPlayer().getJumping(), "the pre-load pressed edge also survives");
+        assertEquals(0x80, boot.tailsJumping(), "P2 reads its final fade sample at the same boundary");
+        assertEquals(0, boot.heldButtons(), "the boot latch must not overwrite the following sampled input");
+        assertEquals(0, boot.pressedButtons());
+        assertEquals(0, boot.p2HeldButtons());
+        manager.restoreRewindSnapshot(beforeBoot);
+        manager.update();
+        assertSameSnapshot(boot, manager.captureRewindSnapshot(), "restore pending latch then boot");
+        manager.restoreRewindSnapshot(beforeFinalFade);
+        manager.handleInput(0x11, 0x10);
+        manager.handlePlayer2Input(0x10, 0x10);
+        manager.update();
+        manager.handleInput(0, 0);
+        manager.handlePlayer2Input(0, 0);
+        manager.update();
+        assertSameSnapshot(boot, manager.captureRewindSnapshot(), "restore before latch then replay");
+        for (int i = 0; i < 22; i++) {
+            manager.handleInput(0, 0);
+            manager.update();
+            assertEquals(boot.player(), manager.captureRewindSnapshot().player(), "all 22 fade holds freeze the player");
+        }
+        var beforeMain = manager.captureRewindSnapshot();
+        manager.handleInput(8, 0); // new Right sample, independent of the latched Up/jump
+        manager.update();
+        var main = manager.captureRewindSnapshot();
+        assertEquals(0x400, manager.getPlayer().getVelocity());
+        assertEquals(-4, manager.getPlayer().getTurning());
+        manager.restoreRewindSnapshot(beforeMain);
+        manager.handleInput(8, 0);
+        manager.update();
+        assertSameSnapshot(main, manager.captureRewindSnapshot(), "restore post-boot then resume normal input");
+    }
+
+    @Test
+    void fastEntryWithoutSampledFadeUsesItsFirstInputNormally() {
+        attachRuntime();
+        var manager = new Sonic3kSpecialStageManager();
+        seedInitializedManager(manager);
+        set(manager, "preBootFadeHoldFrames", 22);
+        set(manager, "firstUpdateCall", true);
+        set(manager, "stagePalettesUploaded", true);
+        manager.getPlayer().initialize(0x8000, 0x1000, 0x1000, false);
+        manager.getBanner().initialize();
+        manager.advanceThroughEntryFade();
+        manager.handleInput(1, 0);
+        manager.update();
+        assertEquals(0x200, manager.getPlayer().getVelocity());
+    }
+
+    private static void assertSameSnapshot(Sonic3kSpecialStageSnapshot expected,
+                                           Sonic3kSpecialStageSnapshot actual, String label) {
+        var diff = com.openggf.game.rewind.RewindSnapshotDiff.diffKey("specialStage", expected, actual);
+        assertTrue(diff.isEmpty(), () -> label + ": " + diff);
+    }
+
+    @Test
     void managerRestoreRejectsUninitializedLiveOrSnapshotState() {
         Sonic3kSpecialStageManager manager = new Sonic3kSpecialStageManager();
         assertThrows(IllegalStateException.class, manager::captureRewindSnapshot);

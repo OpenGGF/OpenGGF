@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.scroll;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.data.Rom;
 
 import java.io.IOException;
@@ -62,24 +64,24 @@ public class ParallaxTables {
     }
 
     private void loadTables(Rom rom) throws IOException {
-        rippleData = rom.readBytes(SWSCRL_RIPPLE_DATA_ADDR, SWSCRL_RIPPLE_DATA_SIZE);
+        rippleData = rom.readBytes(address(rom, SWSCRL_RIPPLE_DATA_ADDR), SWSCRL_RIPPLE_DATA_SIZE);
         LOGGER.fine("Loaded ripple data: " + rippleData.length + " bytes from 0x" +
-                Integer.toHexString(SWSCRL_RIPPLE_DATA_ADDR));
+                Integer.toHexString(address(rom, SWSCRL_RIPPLE_DATA_ADDR)));
 
-        wfzTransArray = rom.readBytes(SWSCRL_WFZ_TRANS_ADDR, SWSCRL_WFZ_TRANS_SIZE);
-        wfzNormalArray = rom.readBytes(SWSCRL_WFZ_NORMAL_ADDR, SWSCRL_WFZ_NORMAL_SIZE);
+        wfzTransArray = rom.readBytes(address(rom, SWSCRL_WFZ_TRANS_ADDR), SWSCRL_WFZ_TRANS_SIZE);
+        wfzNormalArray = rom.readBytes(address(rom, SWSCRL_WFZ_NORMAL_ADDR), SWSCRL_WFZ_NORMAL_SIZE);
 
-        mczRowHeights = rom.readBytes(SWSCRL_MCZ_ROW_HEIGHTS_ADDR, SWSCRL_MCZ_ROW_HEIGHTS_SIZE);
-        mcz2PRowHeights = rom.readBytes(SWSCRL_MCZ_2P_ROW_HEIGHTS_ADDR, SWSCRL_MCZ_2P_ROW_HEIGHTS_SIZE);
+        mczRowHeights = rom.readBytes(address(rom, SWSCRL_MCZ_ROW_HEIGHTS_ADDR), SWSCRL_MCZ_ROW_HEIGHTS_SIZE);
+        mcz2PRowHeights = rom.readBytes(address(rom, SWSCRL_MCZ_2P_ROW_HEIGHTS_ADDR), SWSCRL_MCZ_2P_ROW_HEIGHTS_SIZE);
 
-        cnzRowHeights = rom.readBytes(SWSCRL_CNZ_ROW_HEIGHTS_ADDR, SWSCRL_CNZ_ROW_HEIGHTS_SIZE);
-        dezRowHeights = rom.readBytes(SWSCRL_DEZ_ROW_HEIGHTS_ADDR, SWSCRL_DEZ_ROW_HEIGHTS_SIZE);
-        arzRowHeights = rom.readBytes(SWSCRL_ARZ_ROW_HEIGHTS_ADDR, SWSCRL_ARZ_ROW_HEIGHTS_SIZE);
+        cnzRowHeights = rom.readBytes(address(rom, SWSCRL_CNZ_ROW_HEIGHTS_ADDR), SWSCRL_CNZ_ROW_HEIGHTS_SIZE);
+        dezRowHeights = rom.readBytes(address(rom, SWSCRL_DEZ_ROW_HEIGHTS_ADDR), SWSCRL_DEZ_ROW_HEIGHTS_SIZE);
+        arzRowHeights = rom.readBytes(address(rom, SWSCRL_ARZ_ROW_HEIGHTS_ADDR), SWSCRL_ARZ_ROW_HEIGHTS_SIZE);
 
         // CPZ camera sections - determines which BG camera applies per block row
-        cpzCameraSections = rom.readBytes(CPZ_CAMERA_SECTIONS_ADDR, CPZ_CAMERA_SECTIONS_SIZE);
+        cpzCameraSections = rom.readBytes(address(rom, CPZ_CAMERA_SECTIONS_ADDR), CPZ_CAMERA_SECTIONS_SIZE);
         LOGGER.fine("Loaded CPZ camera sections: " + cpzCameraSections.length + " bytes from 0x" +
-                Integer.toHexString(CPZ_CAMERA_SECTIONS_ADDR));
+                Integer.toHexString(address(rom, CPZ_CAMERA_SECTIONS_ADDR)));
 
         LOGGER.info("All parallax tables loaded successfully.");
     }

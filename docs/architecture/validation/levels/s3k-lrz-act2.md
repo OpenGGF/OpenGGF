@@ -1,5 +1,12 @@
 # S3K Lava Reef Act 2 coverage matrix
 
+Routine selection update (2026-10-27): the reviewed full configuration products
+and long cold-campaign qualifications in the [local budget record](../../research/2026-10-27-local-validation-cost.md#thirty-minute-local-command-target)
+now require explicit `exhaustive-audit`. Short real contact, lifecycle and
+restore/forward witnesses remain routine. Historical qualification rows retain
+their original source/input scope; a current smoke pass does not renew deferred
+cold reachability, accumulated route state or every replay window.
+
 Game / canonical zone / act: S3K `S3K_LAVA_REEF_2`, engine zone `$09` act index 1,
 ROM `Current_zone_and_act = $901`, SKL object set (`Sprite_ListingK`, SK Set 2).
 Character routes: Sonic + Tails, Sonic, Tails (seamless arrival from Act 1, then the boulder
@@ -1838,3 +1845,37 @@ the [matched source comparison](../../plans/2026-10-22-native-gap-swarm.md#match
 The two-request matched scope is closed. A separate current-source diagnostic
 preparation permits source and pure-unit work only; its gameplay driver and
 all historical passive observation packages remain disabled.
+
+
+## Incoming crusher timer causal correction — 2026-10-29
+
+The [Act1 timer record](s3k-lrz-act1.md#native-crusher-timer-first-dispatch--2026-10-29)
+attributes the incoming route deaths and corrects the crusher timer's first
+native decrement. Its first measured bridge-contact difference is in Act1 at
+input722; the old first-door15323 and middle5027 endpoints are not Act2 failures.
+The [current qualification record](../../../status/trace-frontier-log.md#2026-10-29--lrz-crusher-timer-first-dispatch-and-route-death-attribution)
+keeps maintained route outcomes separate from short object/rewind checks.
+Historical17/48 destination windows, complete Act2, HPZ/campaign propagation,
+positive-ring handoff and broader supported configurations are not qualified by
+this timer correction alone.
+
+
+Corrected-source result: the focused owner/allocation/rewind/four-anchor
+selection passes93 tests without failures/errors/skips. Both unchanged maintained
+Knuckles route methods still fail in Act1, at15323 (9765/2479) and5027
+(5782/2869), before all17/48 destination windows. The observed bridge contact
+moves from723 to the native722, and the nine sampled fields match completed
+native object passes through level732. Per-input comparison still differs at
+native admission hold723; it is not waived. No new Act2 qualification follows.
+
+## Iwamodoki rider release (2026-11-02)
+
+Iwamodoki's self-destruct tail calls `Displace_PlayerOffObject` after setting
+status bit 7. The local regression in `TestIwamodokiBadnikInstance` establishes
+real solid contacts for P1/P2, burns the fuse with each shield type, and checks
+that both riders become airborne while a third player's separate support survives.
+The focused object run passes eight tests without skips on the refreshed develop
+base. This corrects the missing object-owned release; general destroyed-support ROM
+bugs remain unchanged. This short object check does not qualify cold routes,
+viewport/donor breadth, or whole-world rewind and forward replay; those inherited
+matrix obligations remain open.

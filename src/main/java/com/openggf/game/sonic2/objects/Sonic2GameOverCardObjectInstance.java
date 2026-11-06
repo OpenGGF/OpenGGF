@@ -18,6 +18,7 @@ import com.openggf.level.objects.AbstractGameOverCardObjectInstance;
  *       delegates dismissal to that world's competition lifecycle owner.</li>
  * </ul>
  */
+@com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.SCREEN_POSITION)
 public final class Sonic2GameOverCardObjectInstance extends AbstractGameOverCardObjectInstance {
 
     // A scalar native parent word survives graph recreation without retaining an old actor.

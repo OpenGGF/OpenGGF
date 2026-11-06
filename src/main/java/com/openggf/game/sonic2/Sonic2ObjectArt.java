@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.game.GameServices;
 import com.openggf.data.RomChannel;
 import com.openggf.game.ZoneArtProvider;
@@ -157,7 +159,7 @@ public class Sonic2ObjectArt {
 
         Pattern[] waterfallPatterns = safeLoadNemesisPatterns(Sonic2Constants.ART_NEM_EHZ_WATERFALL_ADDR,
                 "EHZWaterfall");
-        List<SpriteMappingFrame> waterfallMappings = loadMappingFrames(Sonic2Constants.MAP_UNC_WATERFALL_ADDR);
+        List<SpriteMappingFrame> waterfallMappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_WATERFALL_ADDR));
         int waterfallMaxTile = computeMaxTileIndex(waterfallMappings);
         if (waterfallMaxTile >= waterfallPatterns.length) {
             Pattern[] extended = new Pattern[waterfallMaxTile + 1];
@@ -179,16 +181,16 @@ public class Sonic2ObjectArt {
                 Sonic2Constants.ANI_OBJ26_ADDR,
                 Sonic2Constants.ANI_OBJ26_SCRIPT_COUNT);
         SpriteAnimationSet springAnimations = loadAnimationSet(
-                Sonic2Constants.ANI_OBJ41_ADDR,
+                address(reader, Sonic2Constants.ANI_OBJ41_ADDR),
                 Sonic2Constants.ANI_OBJ41_SCRIPT_COUNT);
-        List<SpriteMappingFrame> springMappings = loadMappingFrames(Sonic2Constants.MAP_UNC_SPRING_ADDR);
+        List<SpriteMappingFrame> springMappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_SPRING_ADDR));
 
         // Checkpoint/Starpost art
         ObjectSpriteSheet checkpointSheet = loadCheckpointSheet();
         ObjectSpriteSheet checkpointStarSheet = loadCheckpointStarSheet();
-        List<SpriteMappingFrame> checkpointMappings = loadMappingFrames(Sonic2Constants.MAP_UNC_CHECKPOINT_ADDR);
+        List<SpriteMappingFrame> checkpointMappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_CHECKPOINT_ADDR));
         SpriteAnimationSet checkpointAnimations = loadAnimationSet(
-                Sonic2Constants.ANI_OBJ79_ADDR,
+                address(reader, Sonic2Constants.ANI_OBJ79_ADDR),
                 Sonic2Constants.ANI_OBJ79_SCRIPT_COUNT);
 
         // Badnik sheets are loaded separately via Sonic2ObjectArtProvider
@@ -225,7 +227,7 @@ public class Sonic2ObjectArt {
         // We build a pattern array aligned to VRAM_BASE_NUMBERS so that
         // mapping tile indices can be offset by -VRAM_BASE_NUMBERS.
         Pattern[] hudDigitPatterns = safeLoadUncompressedPatterns(
-                Sonic2Constants.ART_UNC_HUD_NUMBERS_ADDR,
+                address(reader, Sonic2Constants.ART_UNC_HUD_NUMBERS_ADDR),
                 Sonic2Constants.ART_UNC_HUD_NUMBERS_SIZE,
                 "HUDNumbers");
         Pattern[] hudTextPatterns = safeLoadNemesisPatterns(
@@ -255,9 +257,9 @@ public class Sonic2ObjectArt {
         ObjectSpriteSheet resultsSheet = new ObjectSpriteSheet(resultsPatterns, resultsMappings, 0, 1);
 
         Pattern[] hudLivesPatterns = safeLoadNemesisPatterns(Sonic2Constants.ART_NEM_SONIC_LIFE_ADDR, "SonicLife");
-        Pattern[] hudLivesNumbers = safeLoadUncompressedPatterns(Sonic2Constants.ART_UNC_LIVES_NUMBERS_ADDR,
+        Pattern[] hudLivesNumbers = safeLoadUncompressedPatterns(address(reader, Sonic2Constants.ART_UNC_LIVES_NUMBERS_ADDR),
                 Sonic2Constants.ART_UNC_LIVES_NUMBERS_SIZE, "LivesNumbers");
-        Pattern[] debugFontPatterns = safeLoadUncompressedPatterns(Sonic2Constants.ART_UNC_DEBUG_FONT_ADDR,
+        Pattern[] debugFontPatterns = safeLoadUncompressedPatterns(address(reader, Sonic2Constants.ART_UNC_DEBUG_FONT_ADDR),
                 Sonic2Constants.ART_UNC_DEBUG_FONT_SIZE, "DebugFont");
         ObjectArtData artData = new ObjectArtData(
                 monitorSheet,
@@ -388,44 +390,44 @@ public class Sonic2ObjectArt {
 
     public ObjectSpriteSheet loadSpringVerticalSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_SPRING_VERTICAL_ADDR,
-                Sonic2Constants.MAP_UNC_SPRING_ADDR, 0, 1);
+                address(reader, Sonic2Constants.MAP_UNC_SPRING_ADDR), 0, 1);
     }
 
     public ObjectSpriteSheet loadSpringHorizontalSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_SPRING_HORIZONTAL_ADDR,
-                Sonic2Constants.MAP_UNC_SPRING_ADDR, 0, 1);
+                address(reader, Sonic2Constants.MAP_UNC_SPRING_ADDR), 0, 1);
     }
 
     public ObjectSpriteSheet loadSpringDiagonalSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_SPRING_DIAGONAL_ADDR,
-                Sonic2Constants.MAP_UNC_SPRING_ADDR, 0, 1);
+                address(reader, Sonic2Constants.MAP_UNC_SPRING_ADDR), 0, 1);
     }
 
     public ObjectSpriteSheet loadSpringVerticalRedSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_SPRING_VERTICAL_ADDR,
-                Sonic2Constants.MAP_UNC_SPRING_RED_ADDR, 1, 1);
+                address(reader, Sonic2Constants.MAP_UNC_SPRING_RED_ADDR), 1, 1);
     }
 
     public ObjectSpriteSheet loadSpringHorizontalRedSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_SPRING_HORIZONTAL_ADDR,
-                Sonic2Constants.MAP_UNC_SPRING_RED_ADDR, 1, 1);
+                address(reader, Sonic2Constants.MAP_UNC_SPRING_RED_ADDR), 1, 1);
     }
 
     public ObjectSpriteSheet loadSpringDiagonalRedSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_SPRING_DIAGONAL_ADDR,
-                Sonic2Constants.MAP_UNC_SPRING_RED_ADDR, 1, 1);
+                address(reader, Sonic2Constants.MAP_UNC_SPRING_RED_ADDR), 1, 1);
     }
 
     public ObjectSpriteSheet loadExplosionSheet() {
         // ROM: make_art_tile(ArtTile_ArtNem_Explosion,0,0) — palette 0.
         // Mapping pieces encode palette 1 for frames 1-4, so sheet palette must be 0.
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_EXPLOSION_ADDR,
-                Sonic2Constants.MAP_UNC_EXPLOSION_ADDR, 0, 1);
+                address(reader, Sonic2Constants.MAP_UNC_EXPLOSION_ADDR), 0, 1);
     }
 
     public ObjectSpriteSheet loadShieldSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_SHIELD_ADDR,
-                Sonic2Constants.MAP_UNC_SHIELD_ADDR, 0, 1);
+                address(reader, Sonic2Constants.MAP_UNC_SHIELD_ADDR), 0, 1);
     }
 
     public ObjectSpriteSheet loadInvincibilityStarsSheet() {
@@ -433,64 +435,64 @@ public class Sonic2ObjectArt {
                 "InvincibilityStars");
         if (patterns.length == 0) return null;
         List<SpriteMappingFrame> rawMappings = loadMappingFrames(
-                Sonic2Constants.MAP_UNC_INVINCIBILITY_STARS_ADDR);
+                address(reader, Sonic2Constants.MAP_UNC_INVINCIBILITY_STARS_ADDR));
         List<SpriteMappingFrame> mappings = normalizeMappings(rawMappings);
         return new ObjectSpriteSheet(patterns, mappings, 0, 1);
     }
 
     public ObjectSpriteSheet loadBridgeSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_BRIDGE_ADDR,
-                Sonic2Constants.MAP_UNC_BRIDGE_ADDR, 2, 1);
+                address(reader, Sonic2Constants.MAP_UNC_BRIDGE_ADDR), 2, 1);
     }
 
     public ObjectSpriteSheet loadCheckpointSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_CHECKPOINT_ADDR,
-                Sonic2Constants.MAP_UNC_CHECKPOINT_ADDR, 0, 1);
+                address(reader, Sonic2Constants.MAP_UNC_CHECKPOINT_ADDR), 0, 1);
     }
 
     public ObjectSpriteSheet loadCheckpointStarSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_CHECKPOINT_ADDR,
-                Sonic2Constants.MAP_UNC_CHECKPOINT_STAR_ADDR, 0, 1);
+                address(reader, Sonic2Constants.MAP_UNC_CHECKPOINT_STAR_ADDR), 0, 1);
     }
 
     public ObjectSpriteSheet loadPointsSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_NUMBERS_ADDR,
-                Sonic2Constants.MAP_UNC_POINTS_ADDR, 0, 1);
+                address(reader, Sonic2Constants.MAP_UNC_POINTS_ADDR), 0, 1);
     }
 
     public ObjectSpriteSheet loadSignpostSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_SIGNPOST_ADDR,
-                Sonic2Constants.MAP_UNC_SIGNPOST_A_ADDR, 0, 1);
+                address(reader, Sonic2Constants.MAP_UNC_SIGNPOST_A_ADDR), 0, 1);
     }
 
     public ObjectSpriteSheet loadBumperSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_BUMPER_ADDR,
-                Sonic2Constants.MAP_UNC_BUMPER_ADDR, 2, 1);
+                address(reader, Sonic2Constants.MAP_UNC_BUMPER_ADDR), 2, 1);
     }
 
     public ObjectSpriteSheet loadHexBumperSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_HEX_BUMPER_ADDR,
-                Sonic2Constants.MAP_UNC_HEX_BUMPER_ADDR, 2, 1);
+                address(reader, Sonic2Constants.MAP_UNC_HEX_BUMPER_ADDR), 2, 1);
     }
 
     public ObjectSpriteSheet loadBonusBlockSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_BONUS_BLOCK_ADDR,
-                Sonic2Constants.MAP_UNC_BONUS_BLOCK_ADDR, 2, 1);
+                address(reader, Sonic2Constants.MAP_UNC_BONUS_BLOCK_ADDR), 2, 1);
     }
 
     public ObjectSpriteSheet loadFlipperSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_FLIPPER_ADDR,
-                Sonic2Constants.MAP_UNC_FLIPPER_ADDR, 2, 1);
+                address(reader, Sonic2Constants.MAP_UNC_FLIPPER_ADDR), 2, 1);
     }
 
     public ObjectSpriteSheet loadSpeedBoosterSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_SPEED_BOOSTER_ADDR,
-                Sonic2Constants.MAP_UNC_SPEED_BOOSTER_ADDR, 3, 1);
+                address(reader, Sonic2Constants.MAP_UNC_SPEED_BOOSTER_ADDR), 3, 1);
     }
 
     public ObjectSpriteSheet loadBlueBallsSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_CPZ_DROPLET_ADDR,
-                Sonic2Constants.MAP_UNC_BLUE_BALLS_ADDR, 3, 0);
+                address(reader, Sonic2Constants.MAP_UNC_BLUE_BALLS_ADDR), 3, 0);
     }
 
     public ObjectSpriteSheet loadBreakableBlockSheet(int zoneIndex) {
@@ -503,8 +505,8 @@ public class Sonic2ObjectArt {
         String assetName = (zoneIndex == Sonic2Constants.ZONE_HTZ) ? "HTZRock" : "CPZMetalBlock";
         Pattern[] patterns = safeLoadNemesisPatterns(artAddr, assetName);
         int mappingAddr = (zoneIndex == Sonic2Constants.ZONE_HTZ)
-                ? Sonic2Constants.MAP_UNC_OBJ32_HTZ_ADDR
-                : Sonic2Constants.MAP_UNC_OBJ32_CPZ_ADDR;
+                ? address(reader, Sonic2Constants.MAP_UNC_OBJ32_HTZ_ADDR)
+                : address(reader, Sonic2Constants.MAP_UNC_OBJ32_CPZ_ADDR);
         List<SpriteMappingFrame> mappings = loadMappingFrames(mappingAddr);
         return new ObjectSpriteSheet(patterns, mappings, palette, 1);
     }
@@ -514,7 +516,7 @@ public class Sonic2ObjectArt {
         Pattern[] tiles = new Pattern[level.getPatternCount()];
         for (int i = 0; i < tiles.length; i++) tiles[i] = level.getPattern(i);
         int address = zoneIndex == Sonic2ZoneConstants.ROM_ZONE_ARZ
-                ? Sonic2Constants.MAP_UNC_OBJ18_B_ADDR : Sonic2Constants.MAP_UNC_OBJ18_A_ADDR;
+                ? address(reader, Sonic2Constants.MAP_UNC_OBJ18_B_ADDR) : address(reader, Sonic2Constants.MAP_UNC_OBJ18_A_ADDR);
         return new ObjectSpriteSheet(tiles, loadMappingFrames(address), 2, 0);
     }
 
@@ -526,7 +528,7 @@ public class Sonic2ObjectArt {
                 : Sonic2Constants.ART_NEM_CPZ_ELEVATOR_ADDR;
         int palette = artConfig != null ? artConfig.palette() : 3;
         Pattern[] patterns = safeLoadNemesisPatterns(artAddr, "GenericPlatformB");
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_OBJ19_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_OBJ19_ADDR));
         return new ObjectSpriteSheet(patterns, mappings, palette, 0);
     }
 
@@ -582,7 +584,7 @@ public class Sonic2ObjectArt {
 
     public ObjectSpriteSheet loadCpzPylonSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_CPZ_METAL_THINGS_ADDR,
-                Sonic2Constants.MAP_UNC_CPZ_PYLON_ADDR, 2, 1);
+                address(reader, Sonic2Constants.MAP_UNC_CPZ_PYLON_ADDR), 2, 1);
     }
 
     public ObjectSpriteSheet loadPipeExitSpringSheet() {
@@ -592,12 +594,12 @@ public class Sonic2ObjectArt {
 
     public ObjectSpriteSheet loadTippingFloorSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_CPZ_ANIMATED_BITS_ADDR,
-                Sonic2Constants.MAP_UNC_TIPPING_FLOOR_ADDR, 3, 1);
+                address(reader, Sonic2Constants.MAP_UNC_TIPPING_FLOOR_ADDR), 3, 1);
     }
 
     public ObjectSpriteSheet loadBarrierSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_CONSTRUCTION_STRIPES_ADDR,
-                Sonic2Constants.MAP_UNC_BARRIER_ADDR, 1, 1);
+                address(reader, Sonic2Constants.MAP_UNC_BARRIER_ADDR), 1, 1);
     }
 
     /** Obj2D_Init uses ArtKos_LevelArt, palette 3, in both Metropolis zone slots. */
@@ -612,12 +614,12 @@ public class Sonic2ObjectArt {
             patterns[i] = level.getPattern(i);
         }
         return new ObjectSpriteSheet(patterns,
-                loadMappingFrames(Sonic2Constants.MAP_UNC_BARRIER_ADDR), 3, 1);
+                loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_BARRIER_ADDR)), 3, 1);
     }
 
     public ObjectSpriteSheet loadSpringboardSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_LEVER_SPRING_ADDR,
-                Sonic2Constants.MAP_UNC_SPRINGBOARD_ADDR, 0, 1);
+                address(reader, Sonic2Constants.MAP_UNC_SPRINGBOARD_ADDR), 0, 1);
     }
 
     public ObjectSpriteSheet loadBubblesSheet() {
@@ -646,7 +648,7 @@ public class Sonic2ObjectArt {
         }
         System.arraycopy(countdownPatterns, 0, patterns, countdownOffset, countdownPatterns.length);
 
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_SMALL_BUBBLES_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_SMALL_BUBBLES_ADDR));
         // Obj0A frames 8-$D all map the same six-tile VRAM window. The ROM's
         // Obj0A_LoadCountdownArt replaces that window with one of six blocks
         // from ArtUnc_Countdown. Keep the blocks side-by-side in this immutable
@@ -668,7 +670,7 @@ public class Sonic2ObjectArt {
 
     public ObjectSpriteSheet loadLeavesSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_LEAVES_ADDR,
-                Sonic2Constants.MAP_UNC_LEAVES_ADDR, 3, 1);
+                address(reader, Sonic2Constants.MAP_UNC_LEAVES_ADDR), 3, 1);
     }
 
     /**
@@ -705,7 +707,7 @@ public class Sonic2ObjectArt {
      */
     public ObjectSpriteSheet loadOOZSwingPlatformSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_OOZ_SWING_PLAT_ADDR,
-                Sonic2Constants.MAP_UNC_OBJ15_A_ADDR, 2, 1);
+                address(reader, Sonic2Constants.MAP_UNC_OBJ15_A_ADDR), 2, 1);
     }
 
     /**
@@ -719,7 +721,7 @@ public class Sonic2ObjectArt {
      */
     public ObjectSpriteSheet loadOOZBurnerLidSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_BURNER_LID_ADDR,
-                Sonic2Constants.MAP_UNC_OBJ33_A_ADDR, 3, 1);
+                address(reader, Sonic2Constants.MAP_UNC_OBJ33_A_ADDR), 3, 1);
     }
 
     /**
@@ -733,7 +735,7 @@ public class Sonic2ObjectArt {
      */
     public ObjectSpriteSheet loadOOZBurnFlameSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_OOZ_BURN_ADDR,
-                Sonic2Constants.MAP_UNC_OBJ33_B_ADDR, 3, 1);
+                address(reader, Sonic2Constants.MAP_UNC_OBJ33_B_ADDR), 3, 1);
     }
 
     /**
@@ -742,7 +744,7 @@ public class Sonic2ObjectArt {
      */
     public ObjectSpriteSheet loadOOZSlidingSpikeSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_SPIKY_THING_ADDR,
-                Sonic2Constants.MAP_UNC_OBJ43_ADDR, 2, 1);
+                address(reader, Sonic2Constants.MAP_UNC_OBJ43_ADDR), 2, 1);
     }
 
     /**
@@ -751,7 +753,7 @@ public class Sonic2ObjectArt {
      */
     public ObjectSpriteSheet loadOOZPressureSpringSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_PUSH_SPRING_ADDR,
-                Sonic2Constants.MAP_UNC_OBJ45_ADDR, 2, 1);
+                address(reader, Sonic2Constants.MAP_UNC_OBJ45_ADDR), 2, 1);
     }
 
     /**
@@ -809,7 +811,7 @@ public class Sonic2ObjectArt {
         if (patterns.length == 0) {
             return null;
         }
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_LAUNCH_BALL_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_LAUNCH_BALL_ADDR));
         return new ObjectSpriteSheet(patterns, mappings, 3, 1);
     }
 
@@ -826,7 +828,7 @@ public class Sonic2ObjectArt {
         if (patterns.length == 0) {
             return null;
         }
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_OBJ3D_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_OBJ3D_ADDR));
         return new ObjectSpriteSheet(patterns, mappings, 3, 1);
     }
 
@@ -843,7 +845,7 @@ public class Sonic2ObjectArt {
         if (patterns.length == 0) {
             return null;
         }
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_OBJ3D_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_OBJ3D_ADDR));
         return new ObjectSpriteSheet(patterns, mappings, 3, 1);
     }
 
@@ -860,7 +862,7 @@ public class Sonic2ObjectArt {
         if (patterns.length == 0) {
             return null;
         }
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_OBJ1F_B_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_OBJ1F_B_ADDR));
         return new ObjectSpriteSheet(patterns, mappings, 3, 1);
     }
 
@@ -877,7 +879,7 @@ public class Sonic2ObjectArt {
         if (patterns.length == 0) {
             return null;
         }
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_OBJ1F_C_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_OBJ1F_C_ADDR));
         return new ObjectSpriteSheet(patterns, mappings, 3, 1);
     }
 
@@ -1033,7 +1035,7 @@ public class Sonic2ObjectArt {
         if (patterns.length == 0) {
             return null;
         }
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_OBJBB_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_OBJBB_ADDR));
         return new ObjectSpriteSheet(patterns, mappings, 1, 1);
     }
 
@@ -1048,7 +1050,7 @@ public class Sonic2ObjectArt {
         if (patterns.length == 0) {
             return null;
         }
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_OBJ19_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_OBJ19_ADDR));
         return new ObjectSpriteSheet(patterns, mappings, 1, 1);
     }
 
@@ -1062,7 +1064,7 @@ public class Sonic2ObjectArt {
         if (patterns.length == 0) {
             return null;
         }
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_OBJB2_A_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_OBJB2_A_ADDR));
         Pattern[] combined = createTornadoCombinedPatterns(patterns, mappings);
         return new ObjectSpriteSheet(combined, mappings, 0, 1);
     }
@@ -1077,7 +1079,7 @@ public class Sonic2ObjectArt {
         if (patterns.length == 0) {
             return null;
         }
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_OBJB2_B_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_OBJB2_B_ADDR));
         return new ObjectSpriteSheet(patterns, mappings, 0, 1);
     }
 
@@ -1091,7 +1093,7 @@ public class Sonic2ObjectArt {
         if (patterns.length == 0) {
             return null;
         }
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_OBJBC_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_OBJBC_ADDR));
         return new ObjectSpriteSheet(patterns, mappings, 2, 1);
     }
 
@@ -1113,7 +1115,7 @@ public class Sonic2ObjectArt {
         if (patterns.length == 0) {
             return null;
         }
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_OBJB6_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_OBJB6_ADDR));
         // Palette line 1, priority bit set (from ObjB6_SubObjData)
         return new ObjectSpriteSheet(patterns, mappings, 1, 1);
     }
@@ -1136,7 +1138,7 @@ public class Sonic2ObjectArt {
         if (patterns.length == 0) {
             return null;
         }
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_OBJBD_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_OBJBD_ADDR));
         // ROM make_art_tile(ArtTile_ArtNem_WfzBeltPlatform,3,1): palette line 3 (passed directly).
         return new ObjectSpriteSheet(patterns, mappings, 3, 1);
     }
@@ -1154,7 +1156,7 @@ public class Sonic2ObjectArt {
         if (patterns.length == 0) {
             return null;
         }
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_OBJBF_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_OBJBF_ADDR));
         return new ObjectSpriteSheet(patterns, mappings, 3, 1);
     }
 
@@ -1174,7 +1176,7 @@ public class Sonic2ObjectArt {
         if (patterns.length == 0) {
             return null;
         }
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_OBJB9_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_OBJB9_ADDR));
         return new ObjectSpriteSheet(patterns, mappings, 2, 1);
     }
 
@@ -1198,7 +1200,7 @@ public class Sonic2ObjectArt {
         if (patterns.length == 0) {
             return null;
         }
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_OBJB7_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_OBJB7_ADDR));
         // Palette line 2, priority bit set (from ObjB7_SubObjData)
         return new ObjectSpriteSheet(patterns, mappings, 2, 1);
     }
@@ -1217,7 +1219,7 @@ public class Sonic2ObjectArt {
         if (patterns.length == 0) {
             return null;
         }
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_OBJBE_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_OBJBE_ADDR));
         return new ObjectSpriteSheet(patterns, mappings, 3, 1);
     }
 
@@ -1235,7 +1237,7 @@ public class Sonic2ObjectArt {
         if (patterns.length == 0) {
             return null;
         }
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_OBJC0_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_OBJC0_ADDR));
         return new ObjectSpriteSheet(patterns, mappings, 1, 1);
     }
 
@@ -1256,7 +1258,7 @@ public class Sonic2ObjectArt {
         if (patterns.length == 0) {
             return null;
         }
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_OBJC1_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_OBJC1_ADDR));
         // Palette line 3, priority bit set (from ObjC1_SubObjData: make_art_tile(ArtTile_ArtNem_BreakPanels,3,1))
         return new ObjectSpriteSheet(patterns, mappings, 3, 1);
     }
@@ -1282,7 +1284,7 @@ public class Sonic2ObjectArt {
         if (patterns.length == 0) {
             return null;
         }
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_OBJC2_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_OBJC2_ADDR));
         // Palette line 1, priority bit set (from ObjC2_SubObjData: make_art_tile(ArtTile_ArtNem_WfzSwitch,1,1))
         return new ObjectSpriteSheet(patterns, mappings, 1, 1);
     }
@@ -1306,7 +1308,7 @@ public class Sonic2ObjectArt {
         if (patterns.length == 0) {
             return null;
         }
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_OBJBA_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_OBJBA_ADDR));
         // Palette line 2 = paletteIndex 2 (engine maps directly to VDP palette lines)
         return new ObjectSpriteSheet(patterns, mappings, 2, 1);
     }
@@ -1325,7 +1327,7 @@ public class Sonic2ObjectArt {
         if (patterns.length == 0) {
             return null;
         }
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_WFZ_WALL_TURRET_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_WFZ_WALL_TURRET_ADDR));
         return new ObjectSpriteSheet(patterns, mappings, 0, 1);
     }
 
@@ -1342,7 +1344,7 @@ public class Sonic2ObjectArt {
         if (patterns.length == 0) {
             return null;
         }
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_CLOUD_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_CLOUD_ADDR));
         return new ObjectSpriteSheet(patterns, mappings, 2, 1);
     }
 
@@ -1364,7 +1366,7 @@ public class Sonic2ObjectArt {
         if (patterns.length == 0) {
             return null;
         }
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_VPROPELLER_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_VPROPELLER_ADDR));
         return new ObjectSpriteSheet(patterns, mappings, 1, 1);
     }
 
@@ -1387,7 +1389,7 @@ public class Sonic2ObjectArt {
         if (patterns.length == 0) {
             return null;
         }
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_HPROPELLER_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_HPROPELLER_ADDR));
         // Palette line 1, priority bit set (make_art_tile with pal=1, pri=1)
         return new ObjectSpriteSheet(patterns, mappings, 1, 1);
     }
@@ -1401,7 +1403,7 @@ public class Sonic2ObjectArt {
      */
     public ObjectSpriteSheet loadLauncherSpringVertSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_CNZ_VERT_PLUNGER_ADDR,
-                Sonic2Constants.MAP_UNC_LAUNCHER_SPRING_VERT_ADDR, 0, 1);
+                address(reader, Sonic2Constants.MAP_UNC_LAUNCHER_SPRING_VERT_ADDR), 0, 1);
     }
 
     /**
@@ -1413,7 +1415,7 @@ public class Sonic2ObjectArt {
      */
     public ObjectSpriteSheet loadLauncherSpringDiagSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_CNZ_DIAG_PLUNGER_ADDR,
-                Sonic2Constants.MAP_UNC_LAUNCHER_SPRING_DIAG_ADDR, 0, 1);
+                address(reader, Sonic2Constants.MAP_UNC_LAUNCHER_SPRING_DIAG_ADDR), 0, 1);
     }
 
     /**
@@ -1426,7 +1428,7 @@ public class Sonic2ObjectArt {
      */
     public ObjectSpriteSheet loadCNZRectBlocksSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_CNZ_SNAKE_ADDR,
-                Sonic2Constants.MAP_UNC_CNZ_RECT_BLOCKS_ADDR, 2, 1);
+                address(reader, Sonic2Constants.MAP_UNC_CNZ_RECT_BLOCKS_ADDR), 2, 1);
     }
 
     /**
@@ -1439,7 +1441,7 @@ public class Sonic2ObjectArt {
      */
     public ObjectSpriteSheet loadCNZBigBlockSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_CNZ_BIG_BLOCK_ADDR,
-                Sonic2Constants.MAP_UNC_CNZ_BIG_BLOCK_ADDR, 2, 1);
+                address(reader, Sonic2Constants.MAP_UNC_CNZ_BIG_BLOCK_ADDR), 2, 1);
     }
 
     /**
@@ -1452,7 +1454,7 @@ public class Sonic2ObjectArt {
      */
     public ObjectSpriteSheet loadCNZElevatorSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_CNZ_ELEVATOR_ADDR,
-                Sonic2Constants.MAP_UNC_CNZ_ELEVATOR_ADDR, 2, 1);
+                address(reader, Sonic2Constants.MAP_UNC_CNZ_ELEVATOR_ADDR), 2, 1);
     }
 
     /**
@@ -1466,7 +1468,7 @@ public class Sonic2ObjectArt {
      */
     public ObjectSpriteSheet loadCNZCageSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_CNZ_CAGE_ADDR,
-                Sonic2Constants.MAP_UNC_CNZ_CAGE_ADDR, 0, 1);
+                address(reader, Sonic2Constants.MAP_UNC_CNZ_CAGE_ADDR), 0, 1);
     }
 
     /**
@@ -1478,7 +1480,7 @@ public class Sonic2ObjectArt {
      */
     public ObjectSpriteSheet loadCNZBonusSpikeSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_CNZ_BONUS_SPIKE_ADDR,
-                Sonic2Constants.MAP_UNC_CNZ_BONUS_SPIKE_ADDR, 0, 1);
+                address(reader, Sonic2Constants.MAP_UNC_CNZ_BONUS_SPIKE_ADDR), 0, 1);
     }
 
     // ========== Badnik Sheet Loaders ==========
@@ -1490,7 +1492,7 @@ public class Sonic2ObjectArt {
      */
     public ObjectSpriteSheet loadMasherSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_MASHER_ADDR,
-                Sonic2Constants.MAP_UNC_MASHER_ADDR, 0, 1);
+                address(reader, Sonic2Constants.MAP_UNC_MASHER_ADDR), 0, 1);
     }
 
     /**
@@ -1499,7 +1501,7 @@ public class Sonic2ObjectArt {
      */
     public ObjectSpriteSheet loadBuzzerSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_BUZZER_ADDR,
-                Sonic2Constants.MAP_UNC_BUZZER_ADDR, 0, 1);
+                address(reader, Sonic2Constants.MAP_UNC_BUZZER_ADDR), 0, 1);
     }
 
     /**
@@ -1508,7 +1510,7 @@ public class Sonic2ObjectArt {
      */
     public ObjectSpriteSheet loadCoconutsSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_COCONUTS_ADDR,
-                Sonic2Constants.MAP_UNC_COCONUTS_ADDR, 0, 1);
+                address(reader, Sonic2Constants.MAP_UNC_COCONUTS_ADDR), 0, 1);
     }
 
     /**
@@ -1518,7 +1520,7 @@ public class Sonic2ObjectArt {
      */
     public ObjectSpriteSheet loadCrawltonSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_CRAWLTON_ADDR,
-                Sonic2Constants.MAP_UNC_CRAWLTON_ADDR, 1, 1);
+                address(reader, Sonic2Constants.MAP_UNC_CRAWLTON_ADDR), 1, 1);
     }
 
     /**
@@ -1527,12 +1529,12 @@ public class Sonic2ObjectArt {
      */
     public ObjectSpriteSheet loadFlasherSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_FLASHER_ADDR,
-                Sonic2Constants.MAP_UNC_FLASHER_ADDR, 0, 1);
+                address(reader, Sonic2Constants.MAP_UNC_FLASHER_ADDR), 0, 1);
     }
 
     public ObjectSpriteSheet loadAsteronSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_MTZ_SUPERNOVA_ADDR,
-                Sonic2Constants.MAP_UNC_ASTERON_ADDR, 0, 1);
+                address(reader, Sonic2Constants.MAP_UNC_ASTERON_ADDR), 0, 1);
     }
 
     /**
@@ -1549,7 +1551,7 @@ public class Sonic2ObjectArt {
      */
     public ObjectSpriteSheet loadShellcrackerSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_SHELLCRACKER_ADDR,
-                Sonic2Constants.MAP_UNC_SHELLCRACKER_ADDR, 0, 0);
+                address(reader, Sonic2Constants.MAP_UNC_SHELLCRACKER_ADDR), 0, 0);
     }
 
     /**
@@ -1569,7 +1571,7 @@ public class Sonic2ObjectArt {
      */
     public ObjectSpriteSheet loadSlicerSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_MTZ_MANTIS_ADDR,
-                Sonic2Constants.MAP_UNC_SLICER_ADDR, 1, 0);
+                address(reader, Sonic2Constants.MAP_UNC_SLICER_ADDR), 1, 0);
     }
 
     /**
@@ -1578,7 +1580,7 @@ public class Sonic2ObjectArt {
      */
     public ObjectSpriteSheet loadSpinySheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_SPINY_ADDR,
-                Sonic2Constants.MAP_UNC_SPINY_ADDR, 1, 1);
+                address(reader, Sonic2Constants.MAP_UNC_SPINY_ADDR), 1, 1);
     }
 
     /**
@@ -1587,7 +1589,7 @@ public class Sonic2ObjectArt {
      */
     public ObjectSpriteSheet loadGrabberSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_GRABBER_ADDR,
-                Sonic2Constants.MAP_UNC_GRABBER_ADDR, 1, 1);
+                address(reader, Sonic2Constants.MAP_UNC_GRABBER_ADDR), 1, 1);
     }
 
     /**
@@ -1597,7 +1599,7 @@ public class Sonic2ObjectArt {
      */
     public ObjectSpriteSheet loadGrabberStringSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_GRABBER_ADDR,
-                Sonic2Constants.MAP_UNC_GRABBER_STRING_ADDR, 1, 1);
+                address(reader, Sonic2Constants.MAP_UNC_GRABBER_STRING_ADDR), 1, 1);
     }
 
     /**
@@ -1606,7 +1608,7 @@ public class Sonic2ObjectArt {
      */
     public ObjectSpriteSheet loadChopChopSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_CHOPCHOP_ADDR,
-                Sonic2Constants.MAP_UNC_CHOPCHOP_ADDR, 1, 1);
+                address(reader, Sonic2Constants.MAP_UNC_CHOPCHOP_ADDR), 1, 1);
     }
 
     /**
@@ -1617,7 +1619,7 @@ public class Sonic2ObjectArt {
      */
     public ObjectSpriteSheet loadWhispSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_WHISP_ADDR,
-                Sonic2Constants.MAP_UNC_WHISP_ADDR, 1, 1);
+                address(reader, Sonic2Constants.MAP_UNC_WHISP_ADDR), 1, 1);
     }
 
     /**
@@ -1627,7 +1629,7 @@ public class Sonic2ObjectArt {
      */
     public ObjectSpriteSheet loadArrowShooterSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_ARROW_SHOOTER_ADDR,
-                Sonic2Constants.MAP_UNC_ARROW_SHOOTER_ADDR, 0, 1);
+                address(reader, Sonic2Constants.MAP_UNC_ARROW_SHOOTER_ADDR), 0, 1);
     }
 
     /**
@@ -1637,7 +1639,7 @@ public class Sonic2ObjectArt {
      */
     public ObjectSpriteSheet loadGrounderSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_GROUNDER_ADDR,
-                Sonic2Constants.MAP_UNC_GROUNDER_ADDR, 1, 1);
+                address(reader, Sonic2Constants.MAP_UNC_GROUNDER_ADDR), 1, 1);
     }
 
     /**
@@ -1647,7 +1649,7 @@ public class Sonic2ObjectArt {
      */
     public ObjectSpriteSheet loadGrounderRockSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_GROUNDER_ADDR,
-                Sonic2Constants.MAP_UNC_GROUNDER_ROCK_ADDR, 2, 0);
+                address(reader, Sonic2Constants.MAP_UNC_GROUNDER_ROCK_ADDR), 2, 0);
     }
 
     /**
@@ -1694,7 +1696,7 @@ public class Sonic2ObjectArt {
         // ROM: art_tile = make_art_tile(ArtTile_ArtKos_LevelArt, 0, 0) — tile indices
         // are absolute VRAM addresses. Offset by -baseTile to convert to array indices.
         List<SpriteMappingFrame> mappings = loadMappingFramesWithTileOffset(
-                Sonic2Constants.MAP_UNC_SPIKER_ADDR, -baseTile);
+                address(reader, Sonic2Constants.MAP_UNC_SPIKER_ADDR), -baseTile);
         return new ObjectSpriteSheet(combined, mappings, 0, 1);
     }
 
@@ -1749,7 +1751,7 @@ public class Sonic2ObjectArt {
         // use absolute VRAM tile indices ($3DE for body, $3AE for fireball). Offset by
         // -baseTile to convert to array indices within the combined pattern array.
         List<SpriteMappingFrame> mappings = loadMappingFramesWithTileOffset(
-                Sonic2Constants.MAP_UNC_SOL_ADDR, -baseTile);
+                address(reader, Sonic2Constants.MAP_UNC_SOL_ADDR), -baseTile);
         return new ObjectSpriteSheet(combined, mappings, 0, 1);
     }
 
@@ -1764,7 +1766,7 @@ public class Sonic2ObjectArt {
      */
     public ObjectSpriteSheet loadRexonSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_REXON_ADDR,
-                Sonic2Constants.MAP_UNC_REXON_ADDR, 3, 1);
+                address(reader, Sonic2Constants.MAP_UNC_REXON_ADDR), 3, 1);
     }
 
     /**
@@ -1775,7 +1777,7 @@ public class Sonic2ObjectArt {
     public ObjectSpriteSheet loadCrawlSheet() {
         // ROM: make_art_tile(ArtTile_ArtNem_Crawl, 0, 1) — palette 0
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_CRAWL_ADDR,
-                Sonic2Constants.MAP_UNC_CRAWL_ADDR, 0, 1);
+                address(reader, Sonic2Constants.MAP_UNC_CRAWL_ADDR), 0, 1);
     }
 
     /**
@@ -1786,7 +1788,7 @@ public class Sonic2ObjectArt {
      */
     public ObjectSpriteSheet loadNebulaSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_NEBULA_ADDR,
-                Sonic2Constants.MAP_UNC_NEBULA_ADDR, 1, 1);
+                address(reader, Sonic2Constants.MAP_UNC_NEBULA_ADDR), 1, 1);
     }
 
     /**
@@ -1797,7 +1799,7 @@ public class Sonic2ObjectArt {
      */
     public ObjectSpriteSheet loadTurtloidSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_TURTLOID_ADDR,
-                Sonic2Constants.MAP_UNC_TURTLOID_ADDR, 0, 1);
+                address(reader, Sonic2Constants.MAP_UNC_TURTLOID_ADDR), 0, 1);
     }
 
     /**
@@ -1809,7 +1811,7 @@ public class Sonic2ObjectArt {
      */
     public ObjectSpriteSheet loadBalkirySheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_BALKIRY_ADDR,
-                Sonic2Constants.MAP_UNC_BALKIRY_ADDR, 0, 1);
+                address(reader, Sonic2Constants.MAP_UNC_BALKIRY_ADDR), 0, 1);
     }
 
     /**
@@ -1820,7 +1822,7 @@ public class Sonic2ObjectArt {
      */
     public ObjectSpriteSheet loadCluckerSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_WFZ_SCRATCH_ADDR,
-                Sonic2Constants.MAP_UNC_CLUCKER_ADDR, 0, 1);
+                address(reader, Sonic2Constants.MAP_UNC_CLUCKER_ADDR), 0, 1);
     }
 
     /**
@@ -1830,7 +1832,7 @@ public class Sonic2ObjectArt {
      */
     public ObjectSpriteSheet loadOctusSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_OCTUS_ADDR,
-                Sonic2Constants.MAP_UNC_OCTUS_ADDR, 1, 1);
+                address(reader, Sonic2Constants.MAP_UNC_OCTUS_ADDR), 1, 1);
     }
 
     /**
@@ -1840,7 +1842,7 @@ public class Sonic2ObjectArt {
      */
     public ObjectSpriteSheet loadAquisSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_AQUIS_ADDR,
-                Sonic2Constants.MAP_UNC_AQUIS_ADDR, 1, 1);
+                address(reader, Sonic2Constants.MAP_UNC_AQUIS_ADDR), 1, 1);
     }
 
     /**
@@ -1850,7 +1852,7 @@ public class Sonic2ObjectArt {
      */
     public ObjectSpriteSheet loadSeesawSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_HTZ_SEESAW_ADDR,
-                Sonic2Constants.MAP_UNC_SEESAW_ADDR, 0, 0);
+                address(reader, Sonic2Constants.MAP_UNC_SEESAW_ADDR), 0, 0);
     }
 
     /**
@@ -1860,7 +1862,7 @@ public class Sonic2ObjectArt {
      */
     public ObjectSpriteSheet loadSeesawBallSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_SOL_ADDR,
-                Sonic2Constants.MAP_UNC_SEESAW_BALL_ADDR, 0, 1);
+                address(reader, Sonic2Constants.MAP_UNC_SEESAW_BALL_ADDR), 0, 1);
     }
 
     /**
@@ -1875,7 +1877,7 @@ public class Sonic2ObjectArt {
      */
     public ObjectSpriteSheet loadHTZLiftSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_HTZ_ZIPLINE_ADDR,
-                Sonic2Constants.MAP_UNC_HTZ_LIFT_ADDR, 2, 1);
+                address(reader, Sonic2Constants.MAP_UNC_HTZ_LIFT_ADDR), 2, 1);
     }
 
     /**
@@ -1887,7 +1889,7 @@ public class Sonic2ObjectArt {
      */
     public ObjectSpriteSheet loadHTZBarrierSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_HTZ_VALVE_BARRIER_ADDR,
-                Sonic2Constants.MAP_UNC_BARRIER_ADDR, 1, 1);
+                address(reader, Sonic2Constants.MAP_UNC_BARRIER_ADDR), 1, 1);
     }
 
     /**
@@ -1906,7 +1908,7 @@ public class Sonic2ObjectArt {
         if (patterns.length == 0) {
             return null;
         }
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_MTZ_COG_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_MTZ_COG_ADDR));
         return new ObjectSpriteSheet(patterns, mappings, 3, 1);
     }
 
@@ -1924,7 +1926,7 @@ public class Sonic2ObjectArt {
         if (patterns.length == 0) {
             return null;
         }
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_BUTTON_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_BUTTON_ADDR));
         // Palette line 0: make_art_tile(ArtTile_ArtNem_Button,0,0)
         return new ObjectSpriteSheet(patterns, mappings, 0, 1);
     }
@@ -1973,7 +1975,7 @@ public class Sonic2ObjectArt {
         if (patterns.length == 0) {
             return null;
         }
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_MTZ_SPIKE_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_MTZ_SPIKE_ADDR));
         // Palette line 1: make_art_tile(ArtTile_ArtNem_MtzSpike,1,0)
         return new ObjectSpriteSheet(patterns, mappings, 1, 1);
     }
@@ -1986,7 +1988,7 @@ public class Sonic2ObjectArt {
      */
     public ObjectSpriteSheet loadMTZSteamSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_MTZ_STEAM_ADDR,
-                Sonic2Constants.MAP_UNC_MTZ_STEAM_ADDR, 1, 1);
+                address(reader, Sonic2Constants.MAP_UNC_MTZ_STEAM_ADDR), 1, 1);
     }
 
     /**
@@ -2512,7 +2514,7 @@ public class Sonic2ObjectArt {
      */
     public ObjectSpriteSheet loadEggPrisonSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_EGG_PRISON_ADDR,
-                Sonic2Constants.MAP_UNC_EGG_PRISON_ADDR, 1, 1);
+                address(reader, Sonic2Constants.MAP_UNC_EGG_PRISON_ADDR), 1, 1);
     }
 
     /**
@@ -2525,7 +2527,7 @@ public class Sonic2ObjectArt {
         if (patterns.length == 0) {
             return null;
         }
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_CPZ_BOSS_EGGPOD_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_CPZ_BOSS_EGGPOD_ADDR));
         return new ObjectSpriteSheet(patterns, mappings, 1, 1);
     }
 
@@ -2539,7 +2541,7 @@ public class Sonic2ObjectArt {
         if (patterns.length == 0) {
             return null;
         }
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_CPZ_BOSS_PARTS_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_CPZ_BOSS_PARTS_ADDR));
         return new ObjectSpriteSheet(patterns, mappings, 1, 1);
     }
 
@@ -2553,7 +2555,7 @@ public class Sonic2ObjectArt {
         if (patterns.length == 0) {
             return null;
         }
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_CPZ_BOSS_JETS_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_CPZ_BOSS_JETS_ADDR));
         return new ObjectSpriteSheet(patterns, mappings, 0, 1);
     }
 
@@ -2566,7 +2568,7 @@ public class Sonic2ObjectArt {
         if (patterns.length == 0) {
             return null;
         }
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_CPZ_BOSS_SMOKE_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_CPZ_BOSS_SMOKE_ADDR));
         return new ObjectSpriteSheet(patterns, mappings, 1, 1);
     }
 
@@ -2611,7 +2613,7 @@ public class Sonic2ObjectArt {
             combinedPatterns[eggpodOffset + i] = eggpodPatterns[i];
         }
 
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_ARZ_BOSS_MAIN_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_ARZ_BOSS_MAIN_ADDR));
         return new ObjectSpriteSheet(combinedPatterns, mappings, 0, 1);
     }
 
@@ -2625,7 +2627,7 @@ public class Sonic2ObjectArt {
         if (patterns.length == 0) {
             return null;
         }
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_ARZ_BOSS_PARTS_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_ARZ_BOSS_PARTS_ADDR));
         return new ObjectSpriteSheet(patterns, mappings, 0, 1);
     }
 
@@ -2639,7 +2641,7 @@ public class Sonic2ObjectArt {
         if (patterns.length == 0) {
             return null;
         }
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_BOSS_EXPLOSION_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_BOSS_EXPLOSION_ADDR));
         return new ObjectSpriteSheet(patterns, mappings, 0, 1);
     }
 
@@ -2653,7 +2655,7 @@ public class Sonic2ObjectArt {
         if (patterns.length == 0) {
             return null;
         }
-        List<SpriteMappingFrame> rawMappings = loadMappingFrames(Sonic2Constants.MAP_UNC_SUPER_SONIC_STARS_ADDR);
+        List<SpriteMappingFrame> rawMappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_SUPER_SONIC_STARS_ADDR));
         List<SpriteMappingFrame> mappings = normalizeMappings(rawMappings);
         return new ObjectSpriteSheet(patterns, mappings, 0, 1);
     }
@@ -2691,9 +2693,9 @@ public class Sonic2ObjectArt {
         int choppersOffset = eggpodPatterns.length + ehzBossPatterns.length;
 
         List<SpriteMappingFrame> mappings = new ArrayList<>();
-        mappings.addAll(loadMappingFramesWithTileOffset(Sonic2Constants.MAP_UNC_EHZ_BOSS_A_ADDR, choppersOffset));
-        mappings.addAll(loadMappingFramesWithTileOffset(Sonic2Constants.MAP_UNC_EHZ_BOSS_B_ADDR, vehicleOffset));
-        mappings.addAll(loadMappingFramesWithTileOffset(Sonic2Constants.MAP_UNC_EHZ_BOSS_C_ADDR, eggpodOffset));
+        mappings.addAll(loadMappingFramesWithTileOffset(address(reader, Sonic2Constants.MAP_UNC_EHZ_BOSS_A_ADDR), choppersOffset));
+        mappings.addAll(loadMappingFramesWithTileOffset(address(reader, Sonic2Constants.MAP_UNC_EHZ_BOSS_B_ADDR), vehicleOffset));
+        mappings.addAll(loadMappingFramesWithTileOffset(address(reader, Sonic2Constants.MAP_UNC_EHZ_BOSS_C_ADDR), eggpodOffset));
 
         return new ObjectSpriteSheet(allPatterns, mappings, 1, 1);
     }
@@ -2790,7 +2792,7 @@ public class Sonic2ObjectArt {
 
         // ROM mapping tiles use fudge base $03A7 = CNZBoss VRAM $0407 - $60.
         // Tile $60 in ROM = CNZBoss[0] in our array → tileOffset = -0x60.
-        List<SpriteMappingFrame> mappings = loadMappingFramesWithTileOffset(Sonic2Constants.MAP_UNC_CNZ_BOSS_ADDR, -0x60);
+        List<SpriteMappingFrame> mappings = loadMappingFramesWithTileOffset(address(reader, Sonic2Constants.MAP_UNC_CNZ_BOSS_ADDR), -0x60);
         return new ObjectSpriteSheet(combinedPatterns, mappings, 0, 1);
     }
 
@@ -2846,7 +2848,7 @@ public class Sonic2ObjectArt {
             patterns[i] = level.getPattern(i);
         }
 
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_SMASHABLE_GROUND_A_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_SMASHABLE_GROUND_A_ADDR));
         return new ObjectSpriteSheet(patterns, mappings, 2, 1);
     }
 
@@ -2874,7 +2876,7 @@ public class Sonic2ObjectArt {
             patterns[i] = level.getPattern(i);
         }
 
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_MTZ_STEAM_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_MTZ_STEAM_ADDR));
         // Palette line 3: make_art_tile(ArtTile_ArtKos_LevelArt,3,0)
         return new ObjectSpriteSheet(patterns, mappings, 3, 1);
     }
@@ -2933,7 +2935,7 @@ public class Sonic2ObjectArt {
 
         // ROM tiles: Eggpod at 0-$5F, HTZ boss at $60+. Matches our combined array layout.
         // art_tile = make_art_tile(Eggpod_2, 0, 0) → palette 0, so ROM piece palettes are final.
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_HTZ_BOSS_MAIN_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_HTZ_BOSS_MAIN_ADDR));
         return new ObjectSpriteSheet(combinedPatterns, mappings, 0, 1);
     }
 
@@ -2946,7 +2948,7 @@ public class Sonic2ObjectArt {
      */
     public ObjectSpriteSheet loadHTZBossSmokeSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_BOSS_SMOKE_ADDR,
-                Sonic2Constants.MAP_UNC_HTZ_BOSS_SMOKE_ADDR, 0, 1);
+                address(reader, Sonic2Constants.MAP_UNC_HTZ_BOSS_SMOKE_ADDR), 0, 1);
     }
 
     /**
@@ -2956,7 +2958,7 @@ public class Sonic2ObjectArt {
      */
     public ObjectSpriteSheet loadLavaBubbleSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_HTZ_FIREBALL2_ADDR,
-                Sonic2Constants.MAP_UNC_LAVA_BUBBLE_ADDR, 0, 1);
+                address(reader, Sonic2Constants.MAP_UNC_LAVA_BUBBLE_ADDR), 0, 1);
     }
 
     /**
@@ -2966,7 +2968,7 @@ public class Sonic2ObjectArt {
      */
     public ObjectSpriteSheet loadGroundFireSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_HTZ_FIREBALL1_ADDR,
-                Sonic2Constants.MAP_UNC_GROUND_FIRE_ADDR, 0, 1);
+                address(reader, Sonic2Constants.MAP_UNC_GROUND_FIRE_ADDR), 0, 1);
     }
 
     /**
@@ -3001,7 +3003,7 @@ public class Sonic2ObjectArt {
             combined[eggpodOffset + i] = eggpodPatterns[i];
         }
 
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_MCZ_BOSS_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_MCZ_BOSS_ADDR));
         return new ObjectSpriteSheet(combined, mappings, 0, 1);
     }
 
@@ -3020,7 +3022,7 @@ public class Sonic2ObjectArt {
         if (rockPatterns.length == 0) {
             return null;
         }
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_MCZ_BOSS_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_MCZ_BOSS_ADDR));
         return new ObjectSpriteSheet(rockPatterns, mappings, 0, 0);
     }
 
@@ -3063,7 +3065,7 @@ public class Sonic2ObjectArt {
             combined[eggpodOffset + i] = eggpodPatterns[i];
         }
 
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_MTZ_BOSS_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_MTZ_BOSS_ADDR));
         return new ObjectSpriteSheet(combined, mappings, 0, 0);
     }
 
@@ -3072,7 +3074,7 @@ public class Sonic2ObjectArt {
         if (patterns.length == 0) {
             return null;
         }
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_OOZ_BOSS_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_OOZ_BOSS_ADDR));
         return new ObjectSpriteSheet(patterns, mappings, 0, 1);
     }
 
@@ -3091,7 +3093,7 @@ public class Sonic2ObjectArt {
         if (patterns.length == 0) {
             return null;
         }
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_SILVER_SONIC_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_SILVER_SONIC_ADDR));
         return new ObjectSpriteSheet(patterns, mappings, 1, 1);
     }
 
@@ -3144,7 +3146,7 @@ public class Sonic2ObjectArt {
             System.arraycopy(robotnikPatterns, 0, combined, robotnikOffset, copyLen);
         }
 
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_DEZ_WINDOW_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_DEZ_WINDOW_ADDR));
         return new ObjectSpriteSheet(combined, mappings, 0, 1);
     }
 
@@ -3163,7 +3165,7 @@ public class Sonic2ObjectArt {
         if (patterns.length == 0) {
             return null;
         }
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_DEZ_BOSS_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_DEZ_BOSS_ADDR));
         return new ObjectSpriteSheet(patterns, mappings, 0, 1);
     }
 
@@ -3221,7 +3223,7 @@ public class Sonic2ObjectArt {
 
         // Mappings reference absolute VRAM tiles starting at $0500; shift by -$0500
         List<SpriteMappingFrame> mappings = loadMappingFramesWithTileOffset(
-                Sonic2Constants.MAP_UNC_WFZ_ROBOTNIK_ADDR, -0x0500);
+                address(reader, Sonic2Constants.MAP_UNC_WFZ_ROBOTNIK_ADDR), -0x0500);
         return new ObjectSpriteSheet(combined, mappings, 0, 1);
     }
 
@@ -3235,7 +3237,7 @@ public class Sonic2ObjectArt {
      */
     public ObjectSpriteSheet loadDEZWallSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_CONSTRUCTION_STRIPES_ADDR,
-                Sonic2Constants.MAP_UNC_DEZ_WALL_ADDR, 1, 1);
+                address(reader, Sonic2Constants.MAP_UNC_DEZ_WALL_ADDR), 1, 1);
     }
 
     // ========== MTZ Nut (Object 0x69) ==========
@@ -3268,7 +3270,7 @@ public class Sonic2ObjectArt {
         if (patterns.length == 0) {
             return null;
         }
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_MTZ_LAVA_BUBBLE_B_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_MTZ_LAVA_BUBBLE_B_ADDR));
         // Palette line 2: make_art_tile(ArtTile_ArtNem_MtzLavaBubble,2,0)
         return new ObjectSpriteSheet(patterns, mappings, 2, 1);
     }
@@ -3287,7 +3289,7 @@ public class Sonic2ObjectArt {
         if (patterns.length == 0) {
             return null;
         }
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_WFZ_BOSS_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_WFZ_BOSS_ADDR));
         return new ObjectSpriteSheet(patterns, mappings, 0, 1);
     }
 
@@ -3325,7 +3327,7 @@ public class Sonic2ObjectArt {
         }
 
         List<SpriteMappingFrame> mappings = loadMappingFramesWithTileOffset(
-                Sonic2Constants.MAP_UNC_WFZ_ROBOTNIK_ADDR, -0x0500);
+                address(reader, Sonic2Constants.MAP_UNC_WFZ_ROBOTNIK_ADDR), -0x0500);
         return new ObjectSpriteSheet(combined, mappings, 0, 1);
     }
 
@@ -3341,7 +3343,7 @@ public class Sonic2ObjectArt {
         if (patterns.length == 0) {
             return null;
         }
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_WFZ_ROBOTNIK_PLATFORM_ADDR);
+        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_WFZ_ROBOTNIK_PLATFORM_ADDR));
         return new ObjectSpriteSheet(patterns, mappings, 1, 1);
     }
 

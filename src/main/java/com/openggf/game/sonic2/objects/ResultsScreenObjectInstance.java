@@ -32,6 +32,7 @@ import java.util.logging.Logger;
  * 3. WAIT: Brief pause after tally
  * 4. TRANSITION: Load next level
  */
+@com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.SCREEN_POSITION)
 public class ResultsScreenObjectInstance extends AbstractResultsScreen
         implements ZeroScalarArgsRewindRecreatable, ObjectVisualFacing.NonDirectional {
     // Obj3A owns text and tally digits; slide-in offsets are layout, not horizontal body facing.
@@ -258,7 +259,7 @@ public class ResultsScreenObjectInstance extends AbstractResultsScreen
             // The ROM does not fade back in here. `Level:` runs
             // ClearPLC + Pal_FadeToBlack (docs/s2disasm/s2.asm:4764-4765) and
             // then, with no Pal_FadeFromBlack anywhere between `Level:`
-            // (:4757) and `Level_MainLoop` (:5087), writes the level palette
+            // (:4757) and `Level_MainLoop` (:5091), writes the level palette
             // straight to the active palette with `bsr.w PalLoad_Now` (:4881).
             // So the title card appears at full intensity on the first V-blank
             // of `Level_TtlCard`'s loop (:4914-4915). Running a reveal fade

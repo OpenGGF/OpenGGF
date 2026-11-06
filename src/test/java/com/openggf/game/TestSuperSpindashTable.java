@@ -9,7 +9,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Tests Super spindash speed table rule.
  * <p>S3K Super/Hyper forms use a higher speed table (sonic3k.asm:23783 word_11D04).
- * S2 Super Sonic uses SpindashSpeedsSuper (s2.asm:37305).
+ * S2 Super Sonic uses SpindashSpeedsSuper (s2.asm:37654).
  * S1 has no Super-specific spindash table.
  */
 class TestSuperSpindashTable {

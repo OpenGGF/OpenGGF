@@ -1,6 +1,7 @@
 package com.openggf.graphics.shaderlib;
 
 import com.openggf.control.InputHandler;
+import com.openggf.util.Graphemes;
 
 import java.util.List;
 import java.util.Objects;
@@ -44,6 +45,7 @@ public final class DisplayShaderPickerController {
         }
         if (input.isKeyPressed(GLFW_KEY_ENTER)) {
             DisplayShaderSelectionModel.SelectionItem selected = selectedItem();
+            if (selected == null) return Action.none();
             if (selected.directory()) {
                 if (selected.parentDirectory()) {
                     selectionModel.enterParentFolder();
@@ -103,7 +105,7 @@ public final class DisplayShaderPickerController {
     }
 
     public DisplayShaderSelectionModel.SelectionItem selectedItem() {
-        return visibleItems.get(selectedIndex);
+        return visibleItems.isEmpty() ? null : visibleItems.get(selectedIndex);
     }
 
     public void replaceSelectionModel(DisplayShaderSelectionModel newSelectionModel, DisplayShaderPresetRef currentRef) {
@@ -125,6 +127,12 @@ public final class DisplayShaderPickerController {
         open = false;
     }
 
+    /** Moves the selection by wheel notches (positive = away from the user, up the list), stopping at either end. */
+    public void scroll(int notches) {
+        if (!open || visibleItems.isEmpty()) return;
+        selectedIndex = Math.clamp(selectedIndex - notches, 0, visibleItems.size() - 1);
+    }
+
     private void moveSelection(int delta) {
         if (visibleItems.isEmpty()) {
             selectedIndex = 0;
@@ -135,7 +143,7 @@ public final class DisplayShaderPickerController {
 
     private void deleteLastQueryCharacter() {
         if (!query.isEmpty()) {
-            query = query.substring(0, query.length() - 1);
+            query = query.substring(0, Graphemes.previous(query, query.length()));
             refreshVisibleItems();
         } else if (!selectionModel.currentFolder().isEmpty()) {
             selectionModel.enterParentFolder();

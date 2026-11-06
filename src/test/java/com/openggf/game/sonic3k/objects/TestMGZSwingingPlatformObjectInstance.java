@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectManagerInternalAccess;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.session.SessionManager;
 
@@ -53,14 +54,11 @@ class TestMGZSwingingPlatformObjectInstance {
     }
 
     @Test
-    void riderCosineResidueUsesTheNativeSstSpecificAngleSequence() {
-        assertTrue(MGZSwingingPlatformObjectInstance.hasLaterSlotRiderCosineResidue(0x62, 6));
-        assertFalse(MGZSwingingPlatformObjectInstance.hasLaterSlotRiderCosineResidue(0x62, 7),
-                "Slot 7 inherits an ordinary d1 high word at angle $62");
-        assertFalse(MGZSwingingPlatformObjectInstance.hasLaterSlotRiderCosineResidue(0x6D, 6));
-        assertTrue(MGZSwingingPlatformObjectInstance.hasLaterSlotRiderCosineResidue(0x6D, 7),
-                "Slot 7 inherits the rounding residue at angle $6D");
-        assertFalse(MGZSwingingPlatformObjectInstance.hasLaterSlotRiderCosineResidue(0x6D, 8));
+    void cosineFractionIsAddedToEveryLinkBeforeIntegerExtraction() {
+        assertEquals(0xFFF43000, MGZSwingingPlatformObjectInstance.cosineStep(0x62, 0));
+        assertEquals(0xFFF1CFD0, MGZSwingingPlatformObjectInstance.cosineStep(0x6D, 0xFD00));
+        assertEquals(0x2A71, 0x2AB8 + ((5 * MGZSwingingPlatformObjectInstance.cosineStep(0x6D, 0xFD00)) >> 16));
+        assertEquals(0x2A70, 0x2AB8 + ((5 * MGZSwingingPlatformObjectInstance.cosineStep(0x6D, 0)) >> 16));
     }
 
     @Test
@@ -123,6 +121,28 @@ class TestMGZSwingingPlatformObjectInstance {
                 "ROM Obj_MGZSwingingPlatform allocates one loc_3406E child after the parent "
                         + "(docs/skdisasm/sonic3k.asm:70468-70499), so the next free slot after "
                         + "the parent must skip that reserved child SST entry");
+    }
+
+    @Test
+    void platformConsumesLiveFractionThenClearsItForTheNextObject() {
+        camera.setX((short) 0x2A00);
+        ObjectSpawn spawn = new ObjectSpawn(0x2AB8, 0x08C0,
+                Sonic3kObjectIds.MGZ_SWINGING_PLATFORM, 0x6D, 0, false, 0);
+        TrackingRegistry registry = new TrackingRegistry();
+        ObjectManager[] managerRef = new ObjectManager[1];
+        ObjectServices objectServices = new StubObjectServices() {
+            @Override public Camera camera() { return camera; }
+            @Override public ObjectManager objectManager() { return managerRef[0]; }
+        };
+        ObjectManager manager = new ObjectManager(List.of(spawn), registry, 0, null, null,
+                null, camera, objectServices);
+        managerRef[0] = manager;
+        manager.reset(0x2A00);
+        ObjectManagerInternalAccess.publishSineCosineInputFraction(manager, 0xFD00);
+        assertEquals(0x2A70, registry.instance.getX());
+        manager.update(0x2A00, null, List.of(), 1, false);
+        assertEquals(0x2A71, registry.instance.getX());
+        assertEquals(0, ObjectManagerInternalAccess.sineCosineInputFraction(manager));
     }
 
     private ObjectServices services() {

@@ -1,6 +1,5 @@
 package com.openggf.game.sonic2.competition.interlace;
 
-import com.openggf.game.GameId;
 import com.openggf.game.GameModule;
 import com.openggf.game.RuntimeArtCoordinator;
 import com.openggf.game.internal.PlayerDplcDmaSink;
@@ -41,7 +40,7 @@ class TestSonic2InterlaceTailPublication {
         RecordingSink sink = new RecordingSink();
         PlayerSpriteRenderer ownerRenderer = mock(PlayerSpriteRenderer.class);
         var lifecycle = activeLifecycle();
-        var owner = new DynamicArtDecisionOwner(lifecycle, GameId.S2, "tails-tails", ownerRenderer);
+        var owner = new DynamicArtDecisionOwner(lifecycle, "tails-tails", ownerRenderer);
         var harness = harness(sink, null, false, owner, true);
 
         harness.advance(3);
@@ -80,7 +79,7 @@ class TestSonic2InterlaceTailPublication {
         var plan = new SpriteDplcFrame(List.of(new TileLoadRequest(2, 1)));
         when(renderer.dplcFrame(0x81)).thenReturn(plan);
         var lifecycle = activeLifecycle();
-        var owner = new DynamicArtDecisionOwner(lifecycle, GameId.S2, "tails-tails", renderer);
+        var owner = new DynamicArtDecisionOwner(lifecycle, "tails-tails", renderer);
         var harness = harness(RuntimeArtCoordinator.NONE, renderer, false, owner, true);
 
         harness.advance(1);
@@ -101,7 +100,7 @@ class TestSonic2InterlaceTailPublication {
         RecordingSink sink = new RecordingSink();
         PlayerSpriteRenderer ownerRenderer = mock(PlayerSpriteRenderer.class);
         var lifecycle = activeLifecycle();
-        var owner = new DynamicArtDecisionOwner(lifecycle, GameId.S2, "tails-tails", ownerRenderer);
+        var owner = new DynamicArtDecisionOwner(lifecycle, "tails-tails", ownerRenderer);
         var harness = harness(sink, null, true, owner, true);
 
         harness.advance(4);
@@ -117,7 +116,7 @@ class TestSonic2InterlaceTailPublication {
         PlayerSpriteRenderer ownerRenderer = mock(PlayerSpriteRenderer.class);
         var plan = new SpriteDplcFrame(List.of(new TileLoadRequest(5, 4)));
         when(renderer.dplcFrame(1)).thenReturn(plan);
-        var owner = new DynamicArtDecisionOwner(activeLifecycle(), GameId.S2, "tails-tails", ownerRenderer);
+        var owner = new DynamicArtDecisionOwner(activeLifecycle(), "tails-tails", ownerRenderer);
         var harness = harness(sink, renderer, true, owner, true);
 
         harness.advance(2);
@@ -152,7 +151,8 @@ class TestSonic2InterlaceTailPublication {
     }
 
     private static DynamicArtLifecycleService activeLifecycle() {
-        var lifecycle = new DynamicArtLifecycleService();
+        var lifecycle = new DynamicArtLifecycleService(
+                new com.openggf.game.sonic2.Sonic2GameModule().getGameService(com.openggf.game.resources.PlayerArtTransferPlan.class));
         lifecycle.beginRun();
         lifecycle.openComparisonSegment();
         return lifecycle;

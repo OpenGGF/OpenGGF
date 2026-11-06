@@ -1,5 +1,12 @@
 # S3K Hidden Palace sanctuary coverage matrix
 
+Routine selection update (2026-10-27): the reviewed full configuration products
+and long cold-campaign qualifications in the [local budget record](../../research/2026-10-27-local-validation-cost.md#thirty-minute-local-command-target)
+now require explicit `exhaustive-audit`. Short real contact, lifecycle and
+restore/forward witnesses remain routine. Historical qualification rows retain
+their original source/input scope; a current smoke pass does not renew deferred
+cold reachability, accumulated route state or every replay window.
+
 Game / slot: S3K `S3K_SPECIAL_STAGE_ARENA`, engine zone `$17` act index 1, ROM `$1701`
 (`HPZS_*` screen events, `HPZMini_Sprites`). Entry: `SSEntryFlash_GoSS` giant ring with seven
 Chaos Emeralds in an S&K level (`sonic3k.asm:128471`); exit back to the origin level.
@@ -806,3 +813,72 @@ focused GPU/resource checks and exact capture protocol](../../plans/2026-10-13-s
 record the bounded result. This repairs the sampled overlap gap without an
 accepted ROM deviation; complete timelines, other native configurations,
 cold/donor/PAL/PCM and strict timing/trace products remain separate obligations.
+
+### Sanctuary foreground initialization (2026-11-02)
+
+`HPZS_ScreenInit` clears foreground chunk cells (41,4), (43,4), and
+(41,5) before drawing the sanctuary. The same initialization applies to the
+Super Emerald results rebuild, preventing neighboring Hidden Palace terrain
+from appearing above the left pedestals during the camera descent.
+`TestS3kSanctuaryResultsBackdropHeadless#sanctuaryScreenInitClearsForegroundAboveLeftPedestalsOnLoadAndResultsRebuild`
+checks both loads and preserves the intervening terrain. Existing results
+load/history isolation and reveal timing checks remain applicable; this local
+layout regression does not add native pixel or wider route certification.
+
+Validation: queued Maven `test` with `-Dmse=off`, the verified original S3&K
+ROM (CRC32 `63522553`), and exact selector
+`TestS3kSanctuaryResultsBackdropHeadless,TestS3kSpecialStageResultsReveal,TestS3kHpzSanctuaryHeadless,TestS3kSanctuaryRuntimeState,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`:
+93 tests, zero failures/errors/skips. The added regression first failed on the
+unchanged runtime with foreground chunk 4 instead of 0 at (41,4).
+The broad change-based plan selects all smoke classes because the event manager
+is shared; focused coverage replaces that disproportionate selection for these
+three sanctuary-only layout writes. No fresh native pixel comparison was run.
+
+### Selected pedestal standing state (2026-11-04)
+
+`loc_908DE` (sonic3k.asm:197812-197826) resolves `SolidObjectTop` before
+selecting a pedestal and setting player control `$81`. The following
+`loc_90926` (sonic3k.asm:197832-197846) only counts down and draws, publishing
+the special-stage request on word underflow. In the shipped `FixBugs=0`
+build this routine has no alternate fixed-bug branch and makes no further
+solid calls for either player. The selected pedestal now follows that
+routine; neighboring and unselected completed pedestals retain their solid
+calls. No player status is repaired afterward.
+
+All fourteen Sonic+Tails and solo-Tails `dez23` through `dez23_7` fixtures
+are shrine `$1701` subsegments. Their native aux records show `$90926` and
+pedestal standing bit `$08` throughout the countdown. The representative
+Sonic+Tails `dez23_4` owner-only probe reproduced the archived four grouped
+errors, first row183 `air`: its extra engine solid call at VInt `$DE75`
+changed grounded to airborne and cleared on-object. These are boolean
+standing-state observations, not drowning counters. Both `dez23_8` fixtures
+remain outside this correction because their first mismatch is entry X.
+
+`TestHpzSanctuaryObjects` checks the countdown through underflow and
+post-publication, plus independent neighboring and unselected state1/2/3
+solid calls. `TestS3kSanctuaryPedestalLifecycle` checks actual placed
+landing, ordinary jump-off, and grounded/on-object/pedestal-standing state
+on every tick of two eight-tick whole-world restore/forward cycles, with
+forced object recreation and live-identity reacquisition. These local
+contracts do not certify cold routes, all configured products, native
+presentation, or the independent fresh-shrine initial-camera defect.
+
+Focused `trace-replay-r7` validation selects exactly the fourteen classes:
+`TestS3kSonicTailsDez23SegmentTraceReplay` and its `Dez232`–`Dez237`
+siblings, plus the corresponding `TestS3kTailsFullChain` classes.
+All fourteen pass without skips: zero report errors or warnings across the
+same 4,563 rows as the delivered wave8 baseline, removing 73 grouped errors.
+There are no added errors or newly reached rows in this selection. This is
+bounded field/row parity; both `Dez238` classes and full campaign/profile
+validation remain separate. The queued Maven command uses `-Dmse=off`,
+`-Ptrace-replay-r7`, one alphabetical fork and verified absolute ROM paths.
+
+The focused ordinary selection passes 238 cases without failures, errors or
+skips: 37 sanctuary object cases, 15 physical pedestal lifecycle cases
+(seven stage ordinals and eight configured representatives), shrine graph
+rewind, the four required S3K keep-green classes (including both existing
+level-loading classes), and architecture, timing-authority and TraceChaser
+boundary guards. Every physical selection checks the live grounded standing
+owner through two forced-recreation eight-tick replay cycles. Ordinary
+jump-off still becomes airborne and retires its old ride. The inherited
+route/configuration/presentation and initial-camera gaps above remain open.

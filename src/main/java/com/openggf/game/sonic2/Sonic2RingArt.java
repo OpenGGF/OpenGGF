@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.level.Pattern;
@@ -55,7 +57,7 @@ public class Sonic2RingArt {
         int lastOffset = -1;
 
         for (int i = 0; i < 32; i++) {
-            int offset = reader.readU16BE(RING_MAPPING_BASE_ADDR + i * 2);
+            int offset = reader.readU16BE(address(reader, RING_MAPPING_BASE_ADDR) + i * 2);
             if (offset <= lastOffset) {
                 break;
             }
@@ -72,7 +74,7 @@ public class Sonic2RingArt {
         int sparkleFrameCount = Math.max(0, totalFrames - spinFrameCount);
         List<RingFrame> frames = new ArrayList<>(totalFrames);
         for (int i = 0; i < totalFrames; i++) {
-            int frameAddr = RING_MAPPING_BASE_ADDR + offsets.get(i);
+            int frameAddr = address(reader, RING_MAPPING_BASE_ADDR) + offsets.get(i);
             int pieceCount = reader.readU16BE(frameAddr);
             frameAddr += 2;
 

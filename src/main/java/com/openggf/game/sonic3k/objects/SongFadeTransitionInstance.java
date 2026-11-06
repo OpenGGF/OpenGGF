@@ -44,6 +44,9 @@ public class SongFadeTransitionInstance extends AbstractObjectInstance implement
     /** Music ID to play when the delay expires. */
     private int musicId;
 
+    /** Obj_Song_Fade_ToLevelMusic resolves apparent act and P1 invincibility at expiry. */
+    private boolean restoreLevelMusic;
+
     /** Number of update executions since creation. */
     private int elapsedUpdates;
 
@@ -73,6 +76,7 @@ public class SongFadeTransitionInstance extends AbstractObjectInstance implement
     public static SongFadeTransitionInstance createNativeLevelMusicFade(int musicId) {
         SongFadeTransitionInstance transition = new SongFadeTransitionInstance(2 * 60, musicId);
         transition.nativeLevelMusicFade = true;
+        transition.restoreLevelMusic = true;
         transition.nativeRemaining = 2 * 60;
         return transition;
     }
@@ -104,12 +108,23 @@ public class SongFadeTransitionInstance extends AbstractObjectInstance implement
 
     /** Creates the locked-on level-music restore helper (120 -> update 121). */
     public static SongFadeTransitionInstance toLevelMusic(int musicId) {
-        return new SongFadeTransitionInstance(TO_LEVEL_MUSIC_WAIT_WORD, musicId);
+        return restoring(new SongFadeTransitionInstance(TO_LEVEL_MUSIC_WAIT_WORD, musicId));
     }
 
     /** Re-evaluates Restore_LevelMusic state (including invincibility) at expiry. */
     public static SongFadeTransitionInstance toCurrentLevelMusic() {
-        return new SongFadeTransitionInstance(TO_LEVEL_MUSIC_WAIT_WORD, -1);
+        return toLevelMusic(-1);
+    }
+
+    private static SongFadeTransitionInstance restoring(SongFadeTransitionInstance transition) {
+        transition.restoreLevelMusic = true;
+        return transition;
+    }
+
+    private int resolveMusicId() {
+        if (!restoreLevelMusic) return musicId >= 0 ? musicId : services().getCurrentLevelMusicId();
+        return com.openggf.game.sonic3k.audio.S3kLevelMusicRestore.resolve(services(),
+                musicId >= 0 ? musicId : services().getCurrentLevelMusicId());
     }
 
     SongFadeTransitionInstance(ObjectSpawn spawn) {
@@ -153,7 +168,7 @@ public class SongFadeTransitionInstance extends AbstractObjectInstance implement
             }
             nativeRemaining--;
             if (nativeRemaining < 0) {
-                services().playMusic(musicId);
+                services().playMusic(resolveMusicId());
                 ObjectLifetimeOps.expireDynamic(this);
             }
             return;
@@ -170,7 +185,7 @@ public class SongFadeTransitionInstance extends AbstractObjectInstance implement
         // Native helpers decrement a signed wait word and complete only after it underflows:
         // a word of 90 completes on update 91; a word of 120 completes on update 121.
         if (elapsedUpdates++ >= nativeWaitWord) {
-            int resolvedMusicId = musicId >= 0 ? musicId : services().getCurrentLevelMusicId();
+            int resolvedMusicId = resolveMusicId();
             if (resolvedMusicId >= 0) services().playMusic(resolvedMusicId);
             setDestroyed(true);
         }

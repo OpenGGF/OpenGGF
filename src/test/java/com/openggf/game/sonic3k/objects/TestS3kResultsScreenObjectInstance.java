@@ -279,7 +279,44 @@ class TestS3kResultsScreenObjectInstance {
     }
 
     @Test
-    void cnzActOneExitStartsActTwoTitleCardAndMusic() throws Exception {
+    void actOneResultsNeverStartMusicBeforeTheTitleWaitGate() throws Exception {
+        for (int zone : new int[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11}) {
+            ActTransitionRecordingServices services =
+                    new ActTransitionRecordingServices(zone, Sonic3kMusic.AIZ2.id);
+            S3kResultsScreenObjectInstance results = transitionShell(
+                    services, PlayerCharacter.SONIC_AND_TAILS, 0);
+            results.setServices(services);
+            results.onExitReady();
+            assertTrue(services.playedMusic.isEmpty(),
+                    "Results exit must defer music to the title wait gate: zone " + zone);
+        }
+    }
+
+    @Test
+    void carriedTitleWaitStartsMusicExactlyOnce() throws Exception {
+        ActTransitionRecordingServices services =
+                new ActTransitionRecordingServices(0, Sonic3kMusic.AIZ2.id);
+        S3kResultsScreenObjectInstance results = transitionShell(
+                services, PlayerCharacter.SONIC_AND_TAILS, 0);
+        results.setServices(services);
+        results.onExitReady();
+        // Exercise the wait owner with the recording provider, independently
+        // of native child rendering (covered by TestS3kAizResultsNativeTitleGraph).
+        setPrivate(results, "nativeTitleChildrenOwned", false);
+        Method updateTitle = S3kResultsScreenObjectInstance.class
+                .getDeclaredMethod("updateCarriedTitleCard");
+        updateTitle.setAccessible(true);
+        setPrivateEnum(results, "carriedTitlePhase", "TITLE_CARD_WAIT");
+        updateTitle.invoke(results);
+        assertEquals(List.of(Sonic3kMusic.AIZ2.id), services.playedMusic,
+                "Only Obj_TitleCardWait restores the next act music");
+        updateTitle.invoke(results);
+        assertEquals(List.of(Sonic3kMusic.AIZ2.id), services.playedMusic,
+                "Wait2 must not restart the song");
+    }
+
+    @Test
+    void cnzActOneExitDefersMusicToTitleCard() throws Exception {
         ActTransitionRecordingServices services = new ActTransitionRecordingServices(0x03, Sonic3kMusic.CNZ2.id);
         S3kResultsScreenObjectInstance results = transitionShell(
                 services, PlayerCharacter.SONIC_AND_TAILS, 0);
@@ -290,9 +327,8 @@ class TestS3kResultsScreenObjectInstance {
         onExitReady.invoke(results);
         onExitReady.invoke(results);
 
-        assertEquals(List.of(Sonic3kMusic.CNZ2.id), services.playedMusic,
-                "Obj_LevelResults exit for CNZ Act 1 must start the next act's level music "
-                        + "after the act-clear results leave (docs/skdisasm/sonic3k.asm:62708-62720)");
+        assertTrue(services.playedMusic.isEmpty(),
+                "loc_2DD06 only hands off to Obj_TitleCard; its wait gate owns music");
         assertEquals(List.of("3:1"), services.titleCard.calls,
                 "Obj_LevelResults exit for CNZ Act 1 mutates into the in-level Act 2 title card "
                         + "(docs/skdisasm/sonic3k.asm:62708-62720)");

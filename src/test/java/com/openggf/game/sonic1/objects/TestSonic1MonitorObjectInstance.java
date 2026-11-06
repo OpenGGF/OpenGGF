@@ -22,6 +22,8 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.util.Collection;
 import java.util.List;
@@ -46,6 +48,33 @@ class TestSonic1MonitorObjectInstance {
     @AfterEach
     void tearDown() {
         graphicsManager.resetState();
+    }
+
+    @ParameterizedTest
+    @CsvSource({"false,13,false,true", "false,12,false,false", "false,11,false,false",
+            "true,30,false,false", "false,12,true,true", "true,30,true,false"})
+    void invincibilityMusicRespectsBossAndRevisionAirGates(
+            boolean bossActive, int air, boolean rev00, boolean expectedMusic) {
+        var player = mock(AbstractPlayableSprite.class);
+        var drowning = mock(com.openggf.sprites.playable.DrowningController.class);
+        when(player.getDrowningController()).thenReturn(drowning);
+        when(drowning.getRemainingAir()).thenReturn(air);
+        var events = mock(com.openggf.game.sonic1.events.Sonic1LevelEventManager.class);
+        when(events.isBossActive()).thenReturn(bossActive);
+        var module = mock(com.openggf.game.GameModule.class);
+        when(module.getGameService(com.openggf.data.RetailRomRevision.class)).thenReturn(rev00
+                ? com.openggf.data.RetailRomRevision.S1_REV00 : com.openggf.data.RetailRomRevision.S1_REV01);
+        java.util.List<com.openggf.audio.GameMusic> played = new java.util.ArrayList<>();
+        ObjectServices services = new StubObjectServices() {
+            @Override public com.openggf.game.LevelEventProvider levelEventProvider() { return events; }
+            @Override public com.openggf.game.GameModule gameModule() { return module; }
+            @Override public boolean playMusic(com.openggf.audio.GameMusic music) { played.add(music); return true; }
+        };
+
+        Sonic1MonitorObjectInstance.applyMonitorPowerup(5, player, services);
+
+        org.mockito.Mockito.verify(player).giveInvincibility();
+        assertEquals(expectedMusic ? List.of(com.openggf.audio.GameMusic.INVINCIBILITY) : List.of(), played);
     }
 
     @Test

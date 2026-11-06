@@ -19,7 +19,7 @@ import java.util.logging.Logger;
 /**
  * AIZ2 Flying Battery battleship — crosses the screen dropping bombs.
  *
- * <p>ROM: Obj_AIZBattleship (sonic3k.asm:105303).
+ * <p>ROM: Obj_AIZBattleship (sonic3k.asm:105308).
  * The ship moves left via a 16:16 fixed-point secondary camera X counter
  * (ROM: _unkEE98 -= $8800 per frame ≈ 0.53 px/frame).
  * A scripted bomb table drives 21 bomb drops. Bombs are positioned relative

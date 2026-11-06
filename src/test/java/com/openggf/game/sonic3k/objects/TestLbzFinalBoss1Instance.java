@@ -201,6 +201,46 @@ class TestLbzFinalBoss1Instance {
     }
 
     @Test
+    void knucklesHeadInitSubmitsItsNativeModuleExactlyOnce() throws Exception {
+        HarnessServices services = new HarnessServices(PlayerCharacter.KNUCKLES);
+        services.withPlayers(new com.openggf.sprites.playable.Knuckles("knuckles", (short) 0, (short) 0));
+        LbzFinalBoss1Instance boss = newBoss(services);
+        boss.update(0, null);
+        var head = assertInstanceOf(LbzFinalBoss1Instance.RobotnikHeadChild.class,
+                services.childrenOfKind(ChildKind.ROBOTNIK_HEAD).get(0));
+        var timing = TestEnvironment.objectServices().hardwareTiming();
+        var kind = com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE;
+        long before = timing.capture().nextOrdinals().getOrDefault(kind, 0L);
+        head.update(1, null);
+        var handle = timing.pendingHandle(kind, before).orElseThrow();
+        var queue = com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator
+                .from(TestEnvironment.activeGameplayMode().runtimeArtCoordinator()).moduleQueue();
+        var descriptor = queue.descriptor(handle);
+        assertEquals(com.openggf.game.sonic3k.constants.Sonic3kConstants.ART_KOSM_EGG_ROBO_HEAD_ADDR,
+                descriptor.sourceAddress());
+        assertEquals(com.openggf.game.sonic3k.constants.Sonic3kConstants.ART_TILE_ROBOTNIK_SHIP * 32,
+                descriptor.destinationAddress());
+        head.update(2, null);
+        assertEquals(before + 1, timing.capture().nextOrdinals().getOrDefault(kind, 0L),
+                "head MAIN must not resubmit the INIT job");
+    }
+
+    @Test
+    void sonicMainDoesNotSubmitEggRoboHeadFromKnucklesZoneState() throws Exception {
+        HarnessServices services = new HarnessServices(PlayerCharacter.KNUCKLES);
+        services.withPlayers(new TestablePlayableSprite("sonic", (short) 0, (short) 0));
+        LbzFinalBoss1Instance boss = newBoss(services);
+        boss.update(0, null);
+        var head = assertInstanceOf(LbzFinalBoss1Instance.RobotnikHeadChild.class,
+                services.childrenOfKind(ChildKind.ROBOTNIK_HEAD).get(0));
+        var timing = TestEnvironment.objectServices().hardwareTiming();
+        var kind = com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE;
+        long before = timing.capture().nextOrdinals().getOrDefault(kind, 0L);
+        head.update(1, null);
+        assertEquals(before, timing.capture().nextOrdinals().getOrDefault(kind, 0L));
+    }
+
+    @Test
     void robotnikHeadFacesInwardAfterRandomSideReposition() throws Exception {
         HarnessServices services = new HarnessServices(PlayerCharacter.SONIC_AND_TAILS);
         LbzFinalBoss1Instance boss = newBoss(services);
@@ -678,7 +718,7 @@ class TestLbzFinalBoss1Instance {
         services.rng().setSeed(0x13572468L);
         GameRng expected = new GameRng(GameRng.Flavour.S3K, 0x13572468L);
         expected.nextRaw();
-        AbstractObjectInstance shower = newExplosionShowerForTest(boss, 0x44A0, 0x0780, 0);
+        AbstractObjectInstance shower = newExplosionShowerForTest(services, 0x44A0, 0x0780, 0);
 
         shower.update(0, null);
         shower.update(1, null);
@@ -898,17 +938,24 @@ class TestLbzFinalBoss1Instance {
     }
 
     private static AbstractObjectInstance newExplosionShowerForTest(
-            LbzFinalBoss1Instance boss,
+            HarnessServices services,
             int x,
             int y,
             int subtype)
             throws Exception {
         Class<?> cls = Class.forName(
                 "com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$ExplosionShowerChild");
-        Constructor<?> ctor = cls.getDeclaredConstructor(
-                LbzFinalBoss1Instance.class, int.class, int.class, int.class);
+        Constructor<?> ctor = cls.getDeclaredConstructor(int.class, int.class, int.class);
         ctor.setAccessible(true);
-        return (AbstractObjectInstance) ctor.newInstance(boss, x, y, subtype);
+        return ObjectConstructionContext.construct(services, () -> {
+            try {
+                var shower = (AbstractObjectInstance) ctor.newInstance(x, y, subtype);
+                shower.setServices(services);
+                return shower;
+            } catch (ReflectiveOperationException failure) {
+                throw new AssertionError(failure);
+            }
+        });
     }
 
     private static void writeIntField(Object target, String fieldName, int value) throws Exception {
@@ -1023,6 +1070,11 @@ class TestLbzFinalBoss1Instance {
         @Override
         public com.openggf.game.timing.HardwareTimingService hardwareTiming() {
             return resultsTiming.hardwareTiming();
+        }
+
+        @Override
+        public com.openggf.level.resources.KosinskiModuleQueue kosinskiModuleQueue() {
+            return TestEnvironment.objectServices().kosinskiModuleQueue();
         }
 
         @Override

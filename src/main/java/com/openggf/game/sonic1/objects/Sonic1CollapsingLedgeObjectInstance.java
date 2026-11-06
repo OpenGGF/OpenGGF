@@ -229,8 +229,23 @@ public class Sonic1CollapsingLedgeObjectInstance extends AbstractObjectInstance
                 // loc_82D0: WalkOff behavior while collapsing
                 collapseDelay--;
                 var objectManager = services().objectManager();
-                boolean playerRiding = objectManager != null && player != null
+                boolean riding = objectManager != null && player != null
                         && objectManager.isAnyPlayerRiding(this);
+                // .delayCollapse calls Ledge_WalkOff BEFORE it tests Sonic's
+                // Status_OnObj (docs/s1disasm/_incObj/1A, 53 Collapsing Ledges
+                // and Floors.asm:94-101). Its ExitPlatform reads only v_player and
+                // clears that bit when Sonic is airborne or outside [-48, 48),
+                // whichever object set it (_incObj/sub ExitPlatform.asm:9-36), so
+                // a jump on the delay's last frame starts the collapse without the
+                // obPrevAni restart below. The engine's solid pass for this ledge
+                // runs after update and releases a rider of this ledge itself.
+                boolean exits = player != null
+                        && exitsPlatform(player.getAir(), player.getCentreX(), x);
+                if (exits && !riding) {
+                    player.setOnObject(false);
+                }
+                // lea (v_player).w,a1 / btst #3,obStatus(a1) / beq.s .startCollapse
+                boolean playerRiding = player != null && player.isOnObject() && !exits;
 
                 if (!playerRiding) {
                     // loc_82FC: Player walked off - clear flag, stay in routine 6
@@ -290,6 +305,19 @@ public class Sonic1CollapsingLedgeObjectInstance extends AbstractObjectInstance
         if (!renderedLastFrame) {
             destroyWithWindowGatedRespawn();
         }
+    }
+
+    /**
+     * ExitPlatform's release test with Ledge_WalkOff's {@code d1 = 96/2}: Sonic
+     * airborne, or {@code obX(a1) - obX(a0) + d1} outside {@code [0, 2*d1)} as an
+     * unsigned word compare (_incObj/sub ExitPlatform.asm:9-36).
+     */
+    static boolean exitsPlatform(boolean playerAirborne, int playerX, int objectX) {
+        if (playerAirborne) {
+            return true;
+        }
+        int relX = (short) (playerX - objectX + PLATFORM_HALF_WIDTH);
+        return relX < 0 || relX >= PLATFORM_HALF_WIDTH * 2;
     }
 
     /**

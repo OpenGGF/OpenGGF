@@ -12,6 +12,7 @@ import com.openggf.level.objects.PlaceholderObjectInstance;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.tests.FullReset;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.SingletonResetExtension;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.AfterEach;
@@ -305,6 +306,47 @@ class TestMhzMushroomParachuteObjectInstance {
                 "loc_3F544/loc_3F572 write x_pos=$7F00 when the falling parachute is off-screen");
         assertFalse(player.isObjectControlled(),
                 "offscreen parachute cleanup clears the carried player's object_control byte");
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void floorCollisionChangesVelocityAndReleasesOnFollowingCarryPass(boolean nativeP2) {
+        var collision = mock(com.openggf.physics.CollisionSystem.class);
+        var parachute = new MhzMushroomParachuteObjectInstance(
+                new ObjectSpawn(0x1500, 0x0500, MHZ_MUSHROOM_PARACHUTE, 0, 0, false, 0));
+        com.openggf.game.GameModuleRegistry.setCurrent(new com.openggf.game.sonic3k.Sonic3kGameModule());
+        var player = new com.openggf.sprites.playable.Sonic("sonic", (short) 0x1500, (short) 0x0525);
+        player.setYSpeed((short) 0x200);
+        player.setAir(true);
+        var lead = nativeP2
+                ? new com.openggf.sprites.playable.Sonic("sonic", (short) 0x1500, (short) 0x0525)
+                : player;
+        lead.setYSpeed((short) 0x200);
+        lead.setAir(true);
+        parachute.setServices(new TestObjectServices().withCollisionSystem(collision)
+                .withSidekicks(nativeP2 ? List.of(player) : List.of()));
+        // P1 starts the fall, even when this test grades native P2's landing.
+        parachute.update(0, lead);
+        org.mockito.Mockito.doAnswer(invocation -> {
+            AbstractPlayableSprite landed = invocation.getArgument(1);
+            assertEquals(parachute.getY() + 0x25, landed.getCentreY() & 0xFFFF);
+            landed.setCentreY((short) 0x0526);
+            landed.setAngle((byte) 0);
+            java.util.function.Consumer<AbstractPlayableSprite> landing = invocation.getArgument(2);
+            landing.accept(landed);
+            return null;
+        }).when(collision).resolveAirCollision(
+                org.mockito.ArgumentMatchers.any(com.openggf.physics.FrameCollisionPlan.class),
+                org.mockito.ArgumentMatchers.same(player), org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.eq(false));
+
+        parachute.update(1, lead);
+        assertEquals(0, player.getYSpeed(), "terrain landing must survive the carry pass");
+        assertEquals(0x0526, player.getCentreY() & 0xFFFF);
+        parachute.update(2, lead);
+        assertFalse(player.isObjectControlled());
+        assertFalse(player.isObjectMappingFrameControl());
+        assertEquals(-0x100, player.getYSpeed(), "loc_3F660 releases after velocity mismatch");
     }
 
     @Test

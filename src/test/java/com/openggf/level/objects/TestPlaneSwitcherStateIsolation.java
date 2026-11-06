@@ -13,6 +13,53 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class TestPlaneSwitcherStateIsolation {
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"2, false", "2, true", "3, false", "3, true"})
+    void initialEqualityExecutesNativeCrossing(int objectId, boolean horizontal) {
+        // SOZ2 begins at $140,$3AC on Obj_PathSwap $140,$380 subtype $01.
+        // Both S2 Obj03_Init and S3K loc_1CD3C initialize with strict >,
+        // then execute the crossing routine (>=) in the same object pass.
+        ObjectSpawn marker = new ObjectSpawn(0x140, horizontal ? 0x3AC : 0x380,
+                objectId, horizontal ? 5 : 1, 0, false, 0);
+        ObjectManager manager = objectManager(marker);
+        TestableSprite sonic = new TestableSprite("sonic");
+        sonic.setCentreX((short) 0x140);
+        sonic.setCentreY((short) 0x3AC);
+        sonic.setHighPriority(true);
+        manager.applyInlinePlaneSwitcher(marker, sonic);
+        assertEquals(false, sonic.isHighPriority(), "native init fallthrough clears inherited priority");
+        assertEquals(1, manager.getPlaneSwitcherSideState(marker));
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {-1, 1})
+    void initialPositionOffTheMarkerDoesNotInventACrossing(int offset) {
+        ObjectSpawn marker = new ObjectSpawn(0x140, 0x380, 2, 1, 0, false, 0);
+        ObjectManager manager = objectManager(marker);
+        TestableSprite sonic = new TestableSprite("sonic");
+        sonic.setCentreX((short) (0x140 + offset));
+        sonic.setCentreY((short) 0x3AC);
+        sonic.setHighPriority(true);
+        manager.applyInlinePlaneSwitcher(marker, sonic);
+        assertEquals(true, sonic.isHighPriority(), "init writes priority only at equality");
+    }
+
+    @Test
+    void initialEqualityStillHonoursTheGroundedGateAndConsumesTheCrossing() {
+        ObjectSpawn marker = new ObjectSpawn(0x140, 0x380, 2, 0x81, 0, false, 0);
+        ObjectManager manager = objectManager(marker);
+        TestableSprite sonic = new TestableSprite("sonic");
+        sonic.setCentreX((short) 0x140);
+        sonic.setCentreY((short) 0x3AC);
+        sonic.setAir(true);
+        sonic.setHighPriority(true);
+        manager.applyInlinePlaneSwitcher(marker, sonic);
+        assertEquals(true, sonic.isHighPriority());
+        sonic.setAir(false);
+        manager.applyInlinePlaneSwitcher(marker, sonic);
+        assertEquals(true, sonic.isHighPriority(), "landing cannot replay an already consumed crossing");
+    }
+
     @Test
     void inlinePlaneSwitcherDefersCrossingUntilItsObjectSlot() {
         ObjectSpawn switcher = new ObjectSpawn(0x06A8, 0x02C8, 0x03, 0x11, 0x00, false, 0);
@@ -185,7 +232,7 @@ class TestPlaneSwitcherStateIsolation {
         sonic.setLrbSolidBit((byte) 0x0D);
 
         objectManager.applyPlaneSwitcher(switcher, sonic);
-        assertEquals(0, sonic.getLayer(), "first object execution only seeds the current side");
+        assertEquals(0, sonic.getLayer(), "initial equality executes the side-1 write, selecting path 0");
 
         sonic.setCentreX((short) 0x06A2);
         objectManager.applyPlaneSwitcher(switcher, sonic);

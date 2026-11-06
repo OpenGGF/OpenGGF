@@ -1,5 +1,7 @@
 package com.openggf.game.sonic1;
 
+import static com.openggf.game.sonic1.Sonic1RomProfile.resolve;
+
 import com.openggf.data.Rom;
 import com.openggf.data.RomChannel;
 import com.openggf.game.GameServices;
@@ -264,7 +266,7 @@ public class Sonic1Level extends AbstractLevel implements com.openggf.level.obje
     }
 
     private void applyPaletteEntry(Rom rom, int paletteId) throws IOException {
-        int entryAddr = Sonic1Constants.PALETTE_TABLE_ADDR + paletteId * 8;
+        int entryAddr = resolve(rom, Sonic1Constants.PALETTE_TABLE_ADDR) + paletteId * 8;
         int sourceAddr = rom.read32BitAddr(entryAddr);
         int destinationAddr = rom.read16BitAddr(entryAddr + 4) & 0xFFFF;
         int countWord = rom.read16BitAddr(entryAddr + 6) & 0xFFFF;

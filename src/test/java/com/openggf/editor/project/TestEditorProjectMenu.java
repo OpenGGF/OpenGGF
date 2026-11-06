@@ -39,8 +39,8 @@ class TestEditorProjectMenu {
         font.text.clear();font.y.clear();menu.render(font,320);
         assertTrue(font.text.contains("Find route"));
         assertEquals(initialRows.get("Who"),font.y.get("Who"),"Selecting Apply must not scroll the default form");
-        assertTrue(font.text.stream().anyMatch(t->t.contains("Enter Apply")&&t.endsWith("F1 Help")),
-                "Keep the complete footer when scrolling to Apply");
+        assertTrue(font.text.containsAll(List.of("MOVE", "ENTER", "APPLY", "ESC", "CLOSE", "F1", "HELP")),
+                "Keep all four primary key-cap hints when scrolling to Apply");
         assertTrue(font.y.get("Find route")-font.y.get("+ Advanced")>=19,
                 "Keep at least twenty displayed pixels clear above the primary button");
     }
@@ -82,7 +82,7 @@ class TestEditorProjectMenu {
     }
 
     @Test
-    void dialoguePreviewUsesTwoRealLinesAndOnlyTheLastLineEllipsizes() {
+    void dialoguePreviewPagesTwoMeasuredLinesWithoutEllipsisOrChangingTheStoredValue() {
         var menu=new EditorProjectMenu();
         String raw="Ready?\\nLet's go!";
         menu.showForm("Dialogue line",List.of(new EditorProjectMenu.Field("text","Text",raw,MenuTextEditor.Mode.TEXT)),"Apply",v->{});
@@ -91,8 +91,17 @@ class TestEditorProjectMenu {
         assertTrue(font.text.contains("Ready?"));assertTrue(font.text.contains("Let's go!"));assertFalse(font.text.contains(raw));
         assertEquals(raw,menu.values().get("text"),"Preview never rewrites the stored escaped value");
         menu.setValue("text","First line\\nSecond line\\nA third line");font.text.clear();menu.render(font,320);
-        assertTrue(font.text.contains("First line"));assertTrue(font.text.contains("Second line..."));
+        assertTrue(font.text.contains("First line"));assertTrue(font.text.contains("Second line"));
         assertFalse(font.text.contains("A third line"));
+        assertFalse(font.text.stream().anyMatch(text -> text.contains("...")));
+        var input = new InputHandler();
+        for (int i = 0; i < 150; i++) { menu.update(input); input.update(); }
+        font.text.clear(); menu.render(font,320);
+        assertTrue(font.text.contains("A third line"), "The two-line preview eventually shows its complete tail");
+        assertFalse(font.text.contains("First line"));
+        assertFalse(font.text.stream().anyMatch(text -> text.contains("...")));
+        assertTrue(menu.detailsText().contains("First line\nSecond line\nA third line"));
+        assertEquals("First line\\nSecond line\\nA third line", menu.values().get("text"));
     }
 
     @Test
@@ -138,8 +147,70 @@ class TestEditorProjectMenu {
         menu.showActions("Cast",java.util.stream.IntStream.range(0,40)
                 .mapToObj(i->new EditorProjectMenu.Action("Actor "+i,()->{})).toList());
         menu.openDetails();var font=new RecordingFont();menu.render(font,320);
-        assertTrue(font.text.contains("Back"));assertTrue(font.text.contains("+ More"));
+        assertTrue(font.text.contains("Back"));assertTrue(font.text.contains("+ Show technical details"));
         assertTrue(font.y.get("Back")>=180);assertTrue(menu.detailsText().contains("Actor 39"));
+    }
+
+    @Test
+    void actionsWithNotesReadAsTwoLineRowsOnTheSharedPitch() {
+        var menu=new EditorProjectMenu();
+        menu.showActions("Editor projects",List.of(
+                new EditorProjectMenu.Action("New blank level","Choose a game, zone and act to start from",()->{}),
+                new EditorProjectMenu.Action("Open project","Load a saved .ogfproject file",()->{}),
+                new EditorProjectMenu.Action("Sonic 2",()->{})));
+        menu.onShow(m->{});
+        var font=new RecordingFont();menu.render(font,320);
+        assertEquals(9,font.y.get("Choose a game, zone and act to start from")-font.y.get("New blank level"),"the note sits under its label");
+        assertEquals(22,font.y.get("Open project")-font.y.get("New blank level"),"a noted row is 22 pixels");
+        assertEquals(22,font.y.get("Sonic 2")-font.y.get("Open project"),"the next row follows the note");
+        assertTrue(font.text.contains("Load a saved .ogfproject file"),"notes are drawn whole");
+        assertTrue(menu.detailsText().contains("Open project: Load a saved .ogfproject file"),"details list each consequence");
+        var input=new InputHandler();press(menu,input,GLFW_KEY_DOWN);press(menu,input,GLFW_KEY_DOWN);
+        font.text.clear();font.y.clear();menu.render(font,320);
+        assertTrue(font.text.contains("Sonic 2"),"the last row stays reachable");
+    }
+
+    @Test
+    void notedActionPagesShowScrollPositionAndReachEveryAction() {
+        var menu=new EditorProjectMenu();
+        menu.showActions("Editor projects",java.util.stream.IntStream.range(0,13)
+                .mapToObj(i->new EditorProjectMenu.Action("Action "+i,"Consequence "+i,()->{})).toList());
+        for (int width : new int[] {320,400}) {
+            var input=new InputHandler();
+            for(int i=0;i<13;i++) {
+                var font=org.mockito.Mockito.mock(com.openggf.graphics.MenuPixelFont.class);menu.render(font,width);
+                var text=org.mockito.ArgumentCaptor.forClass(String.class);
+                org.mockito.Mockito.verify(font,org.mockito.Mockito.atLeastOnce()).drawText(text.capture(),
+                        org.mockito.ArgumentMatchers.anyInt(),org.mockito.ArgumentMatchers.anyInt(),org.mockito.ArgumentMatchers.anyFloat(),
+                        org.mockito.ArgumentMatchers.anyFloat(),org.mockito.ArgumentMatchers.anyFloat(),org.mockito.ArgumentMatchers.anyFloat(),
+                        org.mockito.ArgumentMatchers.anyFloat());
+                assertTrue(text.getAllValues().contains((i+1)+" / 13"),"selection count reveals the full list");
+                assertTrue(text.getAllValues().contains("Action "+i),"the selected action remains visible");
+                org.mockito.Mockito.verify(font,org.mockito.Mockito.atLeastOnce()).fillRect(
+                        org.mockito.ArgumentMatchers.eq(width-10),org.mockito.ArgumentMatchers.anyInt(),org.mockito.ArgumentMatchers.eq(4),
+                        org.mockito.ArgumentMatchers.anyInt(),org.mockito.ArgumentMatchers.anyFloat(),org.mockito.ArgumentMatchers.anyFloat(),
+                        org.mockito.ArgumentMatchers.anyFloat(),org.mockito.ArgumentMatchers.anyFloat());
+                press(menu,input,GLFW_KEY_DOWN);
+            }
+            menu.setStatusLine("Saved",EditorProjectMenu.Tone.SUCCESS);
+            var font=new RecordingFont();menu.render(font,width);
+            assertTrue(font.text.contains("1 / 13"),"status lines must not hide the scroll cue");
+            menu.setStatusLine("",EditorProjectMenu.Tone.INFO);
+        }
+        assertEquals("",new EditorProjectMenu.ActionRow("Existing caller",0,false).note());
+    }
+
+    @Test void completeInventoryUsesPresentedActionLabelsAndPreservesUnitsAndSectionSummaries() {
+        var menu = new EditorProjectMenu();
+        menu.showActions("Commands", List.of(new EditorProjectMenu.Action("Original", () -> {})));
+        menu.setActionLabel(0, "Presented action END_MARKER");
+        assertTrue(menu.detailsText().contains("Presented action END_MARKER"));
+        menu.showForm("Values", List.of(new EditorProjectMenu.Field("value", "Value", "100", MenuTextEditor.Mode.TEXT)), "Apply", values -> {});
+        menu.setUnit("value", "Long unit END_MARKER");
+        menu.setSection("Advanced", "value");
+        menu.setSectionSummary("Advanced", "Full section summary SUMMARY_END_MARKER");
+        assertTrue(menu.detailsText().contains("Long unit END_MARKER"));
+        assertTrue(menu.detailsText().contains("Full section summary SUMMARY_END_MARKER"));
     }
 
     private static final class RecordingFont extends com.openggf.graphics.PixelFont {

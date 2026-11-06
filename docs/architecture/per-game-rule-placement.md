@@ -12,6 +12,10 @@ This guide describes the ownership model for per-game rule gates. Game-wide shar
 4. If the behavior is character ability availability or cross-game donation, use `PlayerCapabilityRules` or current `DonorCapabilities`, as appropriate. Cross-game donation may only donate explicitly listed capability fields.
 5. If the behavior is shared runtime logic that differs by game across broad systems, target the narrowest `GameRules` record consumed by that system:
    - `PlayerMovementRules`: movement, roll, slope, jump, control, and boundary movement rules.
+     Landing animation writes belong to its `PlayerLandingRules` group, including
+     the native spindash Walk-write gate. The unpublished 0.7 candidate retains
+     the flat constructor/accessor for compatibility; record components use the
+     nested landing group.
    - `CollisionRules`: collision model, terrain probe, wall-push, platform contact, and collision ordering.
    - `PlayerAnimationRules`: animation-state divergences tied to shared player animation logic.
    - `CameraRules`: camera scroll, wrap, visibility, and tracking rules.
@@ -42,6 +46,12 @@ Every new per-game divergence must document:
 - Prefer provider/profile ownership when a divergence is not shared runtime behavior.
 - Prefer a new narrow rule group over growing an unrelated rule record.
 - Do not add raw game-name branches in shared runtime code.
+- `game.internal.StandingInputPolicy`, supplied by the host module service, owns the standing Move tail's controller
+  precedence: S1/S2/KiS2 are Up-first, S3K is Down-first, and donor composition
+  retains the host value. It is independent of the later low-speed Roll Duck
+  write described by `movingCrouchThreshold`. This internal immutable composition
+  preserves the existing public three-component record and API signature pin. See the
+  [ground-owner evidence](audits/trace/2026-10-29-knuckles-return-animation.md#native-ordering-and-semantic-owner).
 - `PlayerAirMovementRules.glideFloorContactPrecedesWallGrab` selects the native
   response to simultaneous glide contacts: S3K checks floor before wall grab,
   while KiS2 checks wall grab first. This policy is independent of temporary

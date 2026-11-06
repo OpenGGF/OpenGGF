@@ -27,7 +27,7 @@ class TestLrzBossAutoscroll {
         var state = new LrzBossActState(); state.setAutoscrollRoutine(stage);
         LrzBossAutoscroll.advance(state, camera, main, List.of());
         assertEquals(next, state.autoscrollRoutine());
-        assertEquals((x << 16) + dx, (camera.getX() << 16) | state.cameraFractionX());
+        assertEquals((x << 16) + dx, (camera.getX() << 16) | com.openggf.camera.CameraSubpixelAccess.xFraction(camera));
         assertEquals((y << 16) + dy, (camera.getY() << 16) | state.cameraFractionY());
         assertEquals(camera.getX(), camera.getMinX()); assertEquals(camera.getX(), camera.getMaxX());
         assertEquals(camera.getY(), camera.getMinY()); assertEquals(camera.getY(), camera.getMaxY());
@@ -42,12 +42,13 @@ class TestLrzBossAutoscroll {
         for (int i=0;i<45;i++) LrzBossAutoscroll.advance(state, camera, main, List.of());
         assertEquals(0x920, camera.getX()); assertFalse(camera.getFrozen());
         LrzBossAutoscroll.advance(state, camera, main, List.of());
-        assertEquals(0x921, camera.getX()); assertEquals(0xD900, state.cameraFractionX());
+        assertEquals(0x921, camera.getX()); assertEquals(0xD900, com.openggf.camera.CameraSubpixelAccess.xFraction(camera));
         assertEquals(0xC400, state.cameraFractionY());
-        byte[] before = runtime.captureBytes(); short x=camera.getX(), y=camera.getY();
+        byte[] before = runtime.captureBytes(); short x=camera.getX(), y=camera.getY(); int fx=com.openggf.camera.CameraSubpixelAccess.xFraction(camera);
         LrzBossAutoscroll.advance(state, camera, main, List.of());
         byte[] after = runtime.captureBytes(); short afterX=camera.getX(), afterY=camera.getY();
         runtime.restoreBytes(before); camera.setX(x); camera.setY(y);
+        com.openggf.camera.CameraSubpixelAccess.setXFraction(camera, fx);
         LrzBossAutoscroll.advance(state, camera, main, List.of());
         assertArrayEquals(after, runtime.captureBytes()); assertEquals(afterX,camera.getX()); assertEquals(afterY,camera.getY());
     }

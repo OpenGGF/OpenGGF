@@ -79,6 +79,10 @@ audio QA that automated gates cannot cover. Record the evidence in
   [the documentation obligation checklist](../agent-workflow/documentation-obligation-checklist.md).
 - `RELEASE_NOTES_v0.6.prerelease.md` → `RELEASE_NOTES_v0.6.<YYYYMMDD>.md`,
   still a pointer to the release summary.
+- After committing the intended source/version metadata, rebuild, review and
+  commit the [project atlas](release-publishing.md#refresh-the-project-atlas-for-a-release)
+  from that reviewed source SHA. Use the resulting final candidate SHA for
+  release qualification; the atlas retains its input SHA as provenance.
 
 ### 3. Release
 
@@ -116,10 +120,9 @@ Confirm the GitHub release and all four downloads before promoting branches.
 
 ### 6. Update the stated mapping
 
-The following files describe the current branch topology. Update them,
-keeping `CLAUDE.md` and `AGENTS.md` byte-identical:
+The following files describe the current branch topology. Update them:
 
-- `CLAUDE.md` and `AGENTS.md` — delivery and documentation section.
+- `AGENTS.md` — delivery and documentation section.
 - `docs/agent-workflow/documentation-obligation-checklist.md` — "Which version
   am I writing for?".
 - This guide, the README, and the current roadmap.
@@ -149,6 +152,10 @@ the ones that needed it last time.
 
 ## Verification
 
+- Confirm the [required atlas refresh](release-publishing.md#refresh-the-project-atlas-for-a-release)
+  is committed before final candidate qualification and the publishing push.
+  Source/version changes require a new refresh and qualification of the resulting
+  candidate. Do not pre-create a tag; the master-push workflow owns it.
 - After committing the final promotion/version metadata, run the
   [local exact-candidate ROM pilot](release-publishing.md#local-exact-candidate-rom-qualification)
   with `--expected-candidate` set to the reviewed final SHA in that candidate's

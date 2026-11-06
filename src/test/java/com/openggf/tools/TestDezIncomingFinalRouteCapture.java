@@ -14,6 +14,7 @@ import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -35,6 +36,7 @@ class TestDezIncomingFinalRouteCapture {
                 "src/test/resources/routes/s3k/dez2-through-ddz-" + width + ".bk2"), 1);
     }
 
+    @Tag("exhaustive-audit")
     @org.junit.jupiter.api.Test
     void coldEmeraldTeamClearsBothActsFinalFightAndDoomsday() throws Exception {
         // Emerald inventory is declared once at the real DEZ1 boot. Position,
@@ -143,6 +145,7 @@ class TestDezIncomingFinalRouteCapture {
         }
     }
 
+    @Tag("exhaustive-audit")
     @org.junit.jupiter.api.Test
     void coldOrdinaryTeamClearsHandsCoreAndEscapeShipAndLoadsEnding() throws Exception {
         var settings = new GameplayCaptureSession.Settings(320, "sonic", "tails", "off", null,
@@ -221,6 +224,7 @@ class TestDezIncomingFinalRouteCapture {
         }
     }
 
+    @Tag("exhaustive-audit")
     @org.junit.jupiter.api.Test
     void coldOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding() throws Exception {
         var settings = new GameplayCaptureSession.Settings(320, "sonic", "", "off", null,
@@ -301,6 +305,7 @@ class TestDezIncomingFinalRouteCapture {
         }
     }
 
+    @Tag("exhaustive-audit")
     @org.junit.jupiter.api.Test
     void coldWideOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding() throws Exception {
         var settings = new GameplayCaptureSession.Settings(800, "sonic", "", "off", null,
@@ -479,6 +484,7 @@ class TestDezIncomingFinalRouteCapture {
         }
     }
 
+    @Tag("exhaustive-audit")
     @org.junit.jupiter.api.Test
     void coldOrdinarySoloTailsClearsAllFinalPhasesAndLoadsEnding() throws Exception {
         var settings = new GameplayCaptureSession.Settings(320, "tails", "", "off", null,

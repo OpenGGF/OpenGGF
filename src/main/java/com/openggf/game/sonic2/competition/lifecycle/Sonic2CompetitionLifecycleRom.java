@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.competition.lifecycle;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 
@@ -18,34 +20,34 @@ final record Sonic2CompetitionLifecycleRom(int gravity, int deathMargin, int res
         RomByteReader rom = RomByteReader.fromRom(Objects.requireNonNull(source, "rom"));
         try {
             // ObjectMoveAndFall (s2.asm:30164-30177): ADDI.W #gravity,y_vel(a0).
-            requireWords(rom, 0x16396, 0x0668);
-            requireWords(rom, 0x1639A, 0x0012);
-            int gravity = rom.readS16BE(0x16398);
+            requireWords(rom, address(rom, 0x16396), 0x0668);
+            requireWords(rom, address(rom, 0x1639A), 0x0012);
+            int gravity = rom.readS16BE(address(rom, 0x16398));
 
             // CheckGameOver (s2.asm:38274-38280) and Obj02_CheckGameOver
             // (s2.asm:41142-41150) compare centre Y against their own camera limit plus a word.
-            int deathMargin = deathMargin(rom, 0x1B228, 0xEECE);
-            requireEqual("death margins", deathMargin, deathMargin(rom, 0x1CC82, 0xEEFE));
+            int deathMargin = deathMargin(rom, address(rom, 0x1B228), 0xEECE);
+            requireEqual("death margins", deathMargin, deathMargin(rom, address(rom, 0x1CC82), 0xEEFE));
 
             // Obj01_ResetLevel_Part2 (s2.asm:38319-38337) and Obj02_ResetLevel_Part3
             // (s2.asm:41211-41226) write the same respawn animation byte.
-            int animation = respawnAnimation(rom, 0x1B2F0);
-            requireEqual("respawn animations", animation, respawnAnimation(rom, 0x1CD6A));
+            int animation = respawnAnimation(rom, address(rom, 0x1B2F0));
+            requireEqual("respawn animations", animation, respawnAnimation(rom, address(rom, 0x1CD6A)));
 
             // Adjust2PArtPointer (s2.asm:31456-31466) halves only tile bits, preserving flags.
-            requireWords(rom, ART_ADJUSTMENT, 0x4A78, 0xFFD8, 0x6714, 0x3028, 0x0002,
+            requireWords(rom, address(rom, ART_ADJUSTMENT), 0x4A78, 0xFFD8, 0x6714, 0x3028, 0x0002,
                     0x0240, 0x07FF, 0xE248, 0x0268, 0xF800, 0x0002, 0xD168, 0x0002, 0x4E75);
-            int tileMask = rom.readU16BE(ART_ADJUSTMENT + 12);
-            int flagMask = rom.readU16BE(ART_ADJUSTMENT + 18);
+            int tileMask = rom.readU16BE(address(rom, ART_ADJUSTMENT) + 12);
+            int flagMask = rom.readU16BE(address(rom, ART_ADJUSTMENT) + 18);
             // Obj01_Init (s2.asm:36192-36200) and Obj02_Init_2Pmode (s2.asm:38926-38938).
-            int sonicArt = adjustedInitialArt(rom, 0x19FB8, tileMask, flagMask);
-            int tailsArt = adjustedInitialArt(rom, 0x1B952, tileMask, flagMask);
+            int sonicArt = adjustedInitialArt(rom, address(rom, 0x19FB8), tileMask, flagMask);
+            int tailsArt = adjustedInitialArt(rom, address(rom, 0x1B952), tileMask, flagMask);
             String fingerprint = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
                     .digest(rom.slice(0, rom.size())));
             return new Sonic2CompetitionLifecycleRom(gravity, deathMargin, animation,
                     sonicArt, tailsArt, fingerprint);
         } catch (IllegalArgumentException | IndexOutOfBoundsException failure) {
-            throw new IOException("Invalid Sonic 2 REV01 competition lifecycle program in supplied ROM", failure);
+            throw new IOException("Invalid Sonic 2 retail competition lifecycle program in supplied ROM", failure);
         } catch (NoSuchAlgorithmException failure) {
             throw new AssertionError("SHA-256 unavailable", failure);
         }
@@ -67,7 +69,7 @@ final record Sonic2CompetitionLifecycleRom(int gravity, int deathMargin, int res
         requireWords(rom, instruction, 0x317C);
         requireWords(rom, instruction + 4, 0x0002, 0x6100);
         int callTarget = instruction + 8 + rom.readS16BE(instruction + 8);
-        requireEqual("initial-art adjustment target", ART_ADJUSTMENT, callTarget);
+        requireEqual("initial-art adjustment target", address(rom, ART_ADJUSTMENT), callTarget);
         int artWord = rom.readU16BE(instruction + 2);
         return (artWord & flagMask) | ((artWord & tileMask) >>> 1);
     }

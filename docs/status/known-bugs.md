@@ -17,127 +17,167 @@ Entries should include:
 
 ---
 
-## Sonic CD remains an incomplete development entry — 2026-10-26
+## Sonic CD remains an incomplete development entry — updated 2026-11-06
 
-**Location:** `game/soniccd/`, especially the explicit opening-object DEV launch,
-player movement/time-warp gates, and remaining stock boot/mode/service owners.
+**Location:** `game/soniccd/`, its source-bound programme/level/actor owners,
+retained current display and remaining ordinary gameplay/lifecycle products.
 
-**Symptom:** the USA four-jump controller route reaches Sonic Hole Init/Main at
-calls 5323/5324, returns 5414, then stops at the explicit `TIME_WARP_ACTIVE`
-movement boundary on 5415. The preceding TimePost sets raw direction 255 and
-requests `SCMD_PASTSFX`; this does not execute a native time warp. The default
-static entry and the playable DEV opening remain separate. A full game, ordinary
-title/startup, whole-act completion, audible FM/PCM/CDDA, complete time travel,
-special stages and Japan/Europe certification are not delivered.
+**Symptom:** the fixed original-USA controller now returns14515 in Act2 Past
+R12B with full/course replay. First14516 reaches unowned Projector2E/whole32;
+it is not a completed service. The earlier Sonic Hole5414/TIME_WARP_ACTIVE5415
+stop is historical and has been passed. Whole-game, ordinary title/startup,
+complete act/lifecycle breadth, audible FM/PCM/CDDA, all time-travel products,
+special stages and Japan/Europe certification remain incomplete.
 
-**Cause:** bounded native owners are implemented incrementally and fail at
-unowned actions. Current-art, rewind and component positives do not certify
-native timing, images or gameplay parity. The natural Hole visit does not
-activate its control-gated response, and no new Hole World-pixel proof is claimed.
+**Cause:** bounded native owners fail at their first unowned action. Current-art,
+rewind and component positives do not certify native timing, images or gameplay
+parity. The retained level sky still samples palette0 instead of the native
+selected backdrop32; a source-backed selected-scene correction is in preparation.
 
 **Removal condition:** close the finite USA products in the
 [implementation plan](../architecture/plans/2026-10-23-sonic-cd-implementation.md),
-then verify Japan and Europe with actual media/native comparisons. Preserve the
-existing controller and full/course replay products in the
-[partial level matrix](../architecture/validation/levels/scd-palmtree-panic-act1-present.md).
-Implementation is paused after Sonic Hole; resume from the measured time-warp
-boundary rather than assuming another object or the controlled-player branch.
+then verify Japan and Europe with actual media/native comparisons. Preserve
+controller, full/course and selected-image products in the existing
+[Act1 matrix](../architecture/validation/levels/scd-palmtree-panic-act1-present.md)
+and [Act2 Past matrix](../architecture/validation/levels/scd-palmtree-panic-act2-past.md).
+Private local work is active; no full-game or regional certification is implied.
+
+## Solid on-screen gate: render-pass approximations — 2026-11-02
+
+The gate now reads `render_flags.on_screen` as the previous frame's BuildSprites /
+Render_Sprites pass wrote it, against the camera copy including the screen-shake
+offset ([solid-contact audit](../architecture/audits/2026-10-31-rom-owned-solid-contact.md#a-the-on-screen-gate-reads-the-previous-render-pass)).
+Three parts of that pass are still approximated.
+
+- **Location** — `AbstractObjectInstance.captureRenderFlagOnScreen` /
+  `isWithinSolidContactBounds`, `ObjectManager.refreshPostCameraRenderState`.
+- **Symptom** — none measured; each differs from the ROM only in the case named.
+  1. BuildSprites rewrites the bit only for objects queued through
+     `DisplaySprite` that frame (s2.asm:30560, sonic3k.asm:36378); the engine pass
+     rewrites it for every live, unsuspended object. An object that stops
+     displaying while crossing a screen edge keeps a stale bit in the ROM.
+  2. Multi-sprite objects (`render_flags.multi_sprite`) take S2
+     `BuildSprites_MultiDraw` (s2.asm:30664) / S3K `loc_1AE58`
+     (sonic3k.asm:36481) with `mainspr_width` /
+     `mainspr_height`; the engine tests the object's single render box.
+  3. Before the first pass has seen an object, the gate tests its current render
+     box against the cached camera. That models the level-init BuildSprites for
+     objects present at level start, but a child registered mid-frame into a later
+     slot reads its init `render_flags` (bit 7 clear) in the ROM.
+- **Suspected cause** — the engine has no per-object display queue.
+- **Removal condition** — the render pass consumes the objects' display requests,
+  multi-sprite boxes and a cleared bit for objects created after a pass.
+
+## S2 run-chain ARZ2 level clock runs 26 frames ahead — 2026-11-02
+
+- **Location** — `LevelManager.frameCounter` (the engine's `Level_frame_counter`)
+  across the `s2-sonic-tails-complete-emeralds` chain's `seg12_arz1 -> seg13_arz2`
+  load.
+- **Symptom** — `TestS2CompleteEmeraldRunChain` segment 19 (`seg13_arz2`) first
+  diverges at f4433 `sidekick_x` (ROM `$2B5E`, engine `$2B4D`). The engine clock is
+  `$1152` on row f4419 where the ROM's is `$1138`, so `SwScrl_ARZ`'s ripple index
+  (s2.asm:17712) and the shake it adds to `Camera_Y_pos_copy` are out of phase;
+  the on-screen gate turns the ARZ boss pillar solid for Tails one frame early.
+  The standalone `TestS2Arz2LevelSelectTraceReplay` keeps the clocks in step and
+  is green.
+- **Suspected cause** — the ROM clears the counter before the title card
+  (s2.asm:4773) and increments it only in `Level_MainLoop` (s2.asm:5092); the
+  engine's reload path counts frames the ROM does not (title-card or lag rows)
+  for this act-2 load. Not yet instrumented past the offset.
+- **Removal condition** — the engine clock equals the ROM's
+  `gameplay_frame_counter` column through the chain's ARZ2 segment.
+
+## Bottom kill plane runs the FixBugs branch — 2026-10-31
+
+- **Location:** `PlayableSpriteMovement.doLevelBoundary` and
+  `applyHurtStopBottomKill`, which compute `max(camera maxY, maxY target)`.
+- **Symptom:** shipped S2 `Sonic_Boundary_CheckBottom` (s2.asm:37254-37270) and
+  S3K `Player_Boundary_CheckBottom` (sonic3k.asm:23223-23231) read the live
+  `Camera_Max_Y_pos` alone. Taking the target as well is the S2 `if fixBugs`
+  block, so a player who outruns a lowering boundary survives where the
+  shipped game kills them. The S1 hurt-stop test also differs: it should read
+  only the target (`v_limitbtm2`).
+- **Suspected cause:** removing the expression regresses
+  `TestS2SczLevelSelectTraceReplay`. That suggests the engine's eased
+  `Camera_Max_Y_pos` lags or leads the ROM's somewhere on that route, and the
+  fixed branch hides it. Not yet measured.
+- **Removal condition:** the shipped branch is restored at both kill planes
+  together, with the SCZ trace green because the camera easing that feeds it
+  matches the ROM.
 
 ## TAS pause clock does not advance during native Start pause — 2026-10-26
 
-**Location:** `GameLoop.prepareAdmittedIteration`,
-`LevelFrameStep.serviceVBlankOnly`, and the `VIntRunCounter` binding to
-`ObjectManager`.
+**Resolved representative mechanism (2026-10-28):** the first successful native
+pause lifecycle claim advances the bound game-visible clock once while
+player/object/level gameplay and RNG wait. Held Start, fresh resume, duplicate
+claims, prepared PLC work and fades retain their own admission rules. Native pause
+state now restores through an internal rewind owner; S1 palette cycle phase also
+restores so complete pause/capsule snapshots replay exactly.
 
-**Symptom:** representative S1, S2 and S3K Start-pause checks at `c69447d77`
-reach paused iterations with no advance in the bound V-int counter. All reach
-ordinary gameplay and confirm that resume advances the counter.
-Native V-int continues while the level frame and player wait; the independent
-S1 GPGX control observes counter 629 through 633
-while level frame 181 holds. Pause-based capsule and RNG phase manipulation
-therefore cannot rely on the native clock behavior in these reached scenarios.
-The S2 capsule test reaches the consequence: resume still hits the original
-modulo-eight spawn phase, creates the late animal and delays results. Its
-ordinary off-mask control omits that animal and reaches results.
-Prepared S1 PLC work can still finish during pause, a separate supported action.
-
-**Cause identified in source:** the global carrier reads the bound object clock
-and deliberately avoids incrementing it. The paused frame services art and
-hardware boundaries, then returns without the object-clock increment performed
-by ordinary object execution.
-
-**Removal condition:** the real Start/release/resume paths advance the native
-counter once per represented V-int while preserving the paused level/player and
-existing art-service boundaries. Convert the explicit limitation regressions
-to native expectations and retain their running/resume controls. The
-[TAS verdict record](../architecture/validation/2026-10-26-tas-trick-verdicts.md#observed-limitations)
-records the tests and their scope. This is a parity defect, not an accepted
-deviation; the verdict pass does not repair production behavior.
+The [pause qualification](../architecture/validation/2026-10-28-tas-support-pause.md)
+covers all modulo-eight S1 capsule residues, the declared S2 late-animal release
+state, and S3K homing/signpost phase consequences with real Start and rewind
+controls. DDZ coverage proves the alignment prerequisite, not a complete missile
+impact or published route. The [composed receiving record](../architecture/validation/2026-10-28-tas-engine-support.md)
+also records actual post-reset pause/resume and movie-input ownership checks;
+combined delivery gates remain separate. Historical frozen-clock observations
+are preserved in the original verdict record. Seamless-boundary lag, title-card
+and special-stage results timing limits are separate from this repaired owner.
 
 ## TAS unsigned horizontal underflow — 2026-10-26
 
-**Location:** playable level-boundary prediction/clamping in `PlayableSpriteMovement`.
-
-**Symptom:** reached airborne left-underflow scenarios in S1, stock S2, KiS2
-and S3K clamp to the left edge (`$10`) and clear horizontal speed. Native word
-prediction wraps to a large unsigned X and takes the right-boundary branch:
-S1 GHZ1 expects 9767, S2/KiS2 expects `$2168`, and the S3K fixture expects `$1128`.
-Non-underflow controls exercise ordinary boundary behavior. These are local
-boundary checks, not claims about every published level-wrap route.
-
-**Suspected cause:** the engine's signed position/prediction reaches the left
-clamp before reproducing the native unsigned word comparison.
-
-**Removal condition:** pass the native right-clamp expectations and existing
-ordinary-boundary controls, preserving word/subpixel behavior. The
-[S1](../architecture/validation/2026-10-26-tas-verdicts-s1.md#s1_level_wrap),
-[S2](../architecture/validation/2026-10-26-tas-verdicts-s2.md), and
-[S3K](../architecture/validation/2026-10-26-tas-verdicts-s3k.md#s3k-hwrap--unsupported)
-matrices give the reached entries and retained limitation selectors.
+**Resolved local mechanism:** boundary prediction now performs the native
+unsigned word comparison, including fractional carry and each game's right-edge
+equality rule. S1, stock S2, KiS2 and S3K native right-clamp scenarios and ordinary
+controls pass. See the [repair record](../architecture/validation/2026-10-26-tas-accuracy-repairs.md)
+for the old red assertions, repaired checks and rewind coverage. Complete
+published wrap routes remain outside this bounded proof.
 
 ## S1 offscreen floating-platform standing retention — 2026-10-26
 
-**Location:** S1 floating-block solid dispatch and standing-release ownership.
-
-**Symptom:** `TestTasS1SlopeVerdict` lands on the real SBZ3 floating block,
-moves the camera offscreen and walks beyond its edge. The engine releases
-standing; native `FBlock_Action` omits `SolidObject` while offscreen, leaving the
-standing latch used by the documented slope-lock trigger. The object remains
-alive. The onscreen control correctly releases standing.
-
-**Suspected cause:** standing maintenance still runs when native render gating
-would omit the complete solid-object call.
-
-**Removal condition:** reproduce offscreen latch retention through the real
-object/collision seam while keeping the onscreen release control. See the
-[S1 mechanism evidence](../architecture/validation/2026-10-26-tas-verdicts-s1.md#s1_slope_glitch).
-The full SBZ3 shortcut is outside this local trigger check.
+**Resolved local trigger:** Obj56 now omits the complete solid checkpoint when
+its retained native render bit is offscreen. The actual SBZ3 ride/departure
+retains the standing latch; the visible control releases it. Render phase,
+width, jump, retirement and restore-forward controls are in the
+[repair record](../architecture/validation/2026-10-26-tas-accuracy-repairs.md).
+Native jump and object deletion do not themselves clear the player's OnObj bit;
+the repair preserves that ownership rather than adding cleanup. The complete
+SBZ3 shortcut remains outside this local trigger proof.
 
 ## S2 TAS launcher, boss, art and input limitations — 2026-10-26
 
 The [S2 verdict matrix](../architecture/validation/2026-10-26-tas-verdicts-s2.md)
 records native expectations, reached controls and exact commands at unchanged
 production `c69447d77`. Its first local test commit is `4f5eb1ee2de0b6128c39728289516c079d71064e`.
+The subsequent [accuracy repairs](../architecture/validation/2026-10-26-tas-accuracy-repairs.md)
+resolve actual hurt-state launcher admission/continuation and the live ARZ
+endpoint increment. Sonic/KiS2 transfer/exit/rewind and actual ARZ graph/escape/
+capsule controls pass. Complete repeated stacking, buried-ring collection and
+published boss approach routes remain unexecuted.
 
-| Owner / requirement | Observed limitation | Removal condition |
-|---|---|---|
-| OOZ sphere launcher | Actual hurt routine 4 at the sphere centre is rejected in stock S2 and KiS2; native `Obj48 loc_252F0` accepts routines below 6. Normal entry works. `TestTasS2CurrentLimitations`. | Accept the native hurt-state entry and qualify the downstream speed effect without a route-specific exception. |
-| ARZ final-hit endpoint | Real final-hit contact reaches the travel endpoint, but engine routine becomes 4 instead of native `$A`; ordinary defeat reaches 8. `TestTasS2ArzBossEndpoint`. | Preserve the native assignment/addition ordering and execute the resulting explosion-skip transition. |
-| DEZ shared art address | Explosion and animal PLCs both target tile `$580`, but the dedicated explosion sheet cannot display the animal pixels after the animals-last load; reverse-order control stays fiery. `TestTasS2DezArtAlias`. | Render the native last-writer art result for both load orders through the ROM art pipeline. |
-| Halfpipe live pacing | Actual jumps occur, but their rendering-cost dependency is absent from the fixed live pacing owner. Running/jumping keep the same measured schedule. `TestTasS2JumpLag`. | Model and exercise the relevant jump-dependent native service cost. The test does not measure a native delta in the same 240-update window. |
-| Intro P2 input | Actual P2 Start at the engine's final modeled visible text-fade step does not affect title admission; both controls take 17 updates. `TestTasS2IntroP2Start`. | Exercise the native P2-sensitive transition with a synchronized entry and verify its title-loading consequence. The engine's timer 21 is not asserted to be a synchronized native frame. |
+The [later support work](../architecture/validation/2026-10-28-tas-engine-support.md)
+implements the remaining DEZ art and P2 intro mechanisms with focused output and
+lifetime controls. Ordered native PLC writes now determine shared explosion and
+animal pixels in both load orders; the quick-kill causal approach remains
+unexecuted. A synchronized native probe establishes the final-text P2 edge,
+P1-only clear and initial title-object update; the engine reproduces the
+Tails-only palette consequence and actual EHZ1 launch. Full title-host rewind
+remains outside that intro qualification.
 
-The pause/capsule clock gap is tracked separately above. These entries describe
-local mechanisms or missing capabilities, not full publication synchronization.
-The DEZ author associates animal explosions with quick boss defeats; the test
-proves the independently identified PLC alias prerequisite, not that causal route.
+**Intentional boundary:** exact jump-dependent halfpipe hardware lag
+(`s2-special-stage-lag:1`) remains unsupported. It is recorded under
+[accepted TAS hardware limits](known-discrepancies.md#tas-hardware-level-limits),
+rather than as a pending promise to reproduce CPU/VDP execution. The live pacing
+check does not establish a native delta in its same 240-update window; this
+exclusion does not convert that unreached comparison into a native timing pass.
 
 ## S3K TAS memory, mode and entry-input limitations — 2026-10-26
 
 The [S3K bug record](s3k-known-bugs.md#tas-mechanism-limitations--2026-10-26)
-links reached slot-lifetime, allocation recovery, mode capability and
-special-stage input mismatches to their executable controls. These tests
-record compatibility gaps; they do not designate new intentional deviations.
+preserves the reached historical slot-lifetime, allocation, mode and input
+incompatibilities. Later semantic repairs and their route limits are linked
+there; the three KosM adjacent-memory corruption scenarios now have an explicit
+engine-boundary disposition in the S3K discrepancy ledger.
 
 ## Current stock parity frontiers — 2026-10-08
 
@@ -384,3 +424,7 @@ Unknown; the items predate the trace-replay suite and no trace exercises them.
 
 Remove each bullet once it is reproduced against the current engine and either fixed with a ROM citation or
 shown to match the ROM. Remove the entry when no bullet remains.
+
+## Music-transition audit follow-up — 2026-11-02
+
+S1 Japanese REV01 score-threshold jingles and S2 competition-results music ownership remain open. Frontend timing and audible equivalence are not certified. See the [cross-game audit](../architecture/audits/2026-11-02-music-transitions.md) for corrected owners, source revisions and remaining obligations.

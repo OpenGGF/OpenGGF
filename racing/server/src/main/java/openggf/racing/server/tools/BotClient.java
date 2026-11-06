@@ -23,6 +23,7 @@ public final class BotClient {
     private int slot = -1;
     private int nextFrame;
     private GhostStreamPublisher publisher;
+    private boolean finishObserved;
 
     public BotClient(RoomHost room, GhostLoadTestTool.Behavior behavior,
                      Path identityDir, String fingerprint) throws Exception {
@@ -81,6 +82,10 @@ public final class BotClient {
                 && (connection.closed || (slot >= 0 && room.hub().isAttemptFlagged(slot)));
     }
 
+    public boolean finishedObserved() {
+        return finishObserved;
+    }
+
     /** Largest emitted packet; this in-process sink does not simulate a queue. */
     public int maxEmittedPacketBytes() {
         return connection.maxPacketBytes;
@@ -120,7 +125,7 @@ public final class BotClient {
     }
 
     /** In-process load harness: no socket or remote peer supplies this explicit test binding. */
-    private static final class Connection implements HubConnection, com.openggf.net.hub.HandshakeTransport {
+    private final class Connection implements HubConnection, com.openggf.net.hub.HandshakeTransport {
         @Override public String authenticationBinding() { return com.openggf.net.protocol.AuthenticationTranscript.LOCAL_PLAINTEXT; }
         private ControlMessage lastControl;
         private ControlMessage.JoinAccepted joined;
@@ -135,6 +140,11 @@ public final class BotClient {
         }
         @Override public void sendBinary(byte[] data) {
             maxPacketBytes = Math.max(maxPacketBytes, data.length);
+            if (data.length > 0 && Byte.toUnsignedInt(data[0]) == GhostPackets.TYPE_ROSTER) {
+                finishObserved |= GhostPackets.decodeRoster(data).stream()
+                        .anyMatch(entry -> entry.playerSlot() == slot
+                                && entry.status() == GhostPackets.ROSTER_STATUS_FINISHED);
+            }
         }
         @Override public void close(String reason) { closed = true; }
         @Override public String remoteHost() { return "load-bot"; }

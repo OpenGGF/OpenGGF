@@ -1,7 +1,13 @@
 package com.openggf.editor.hud;
 
+import com.openggf.i18n.UiMessages;
+import java.util.Map;
+
+
+
 import com.openggf.control.InputHandler;
 import com.openggf.control.MenuInput;
+import com.openggf.control.MouseWheel;
 import com.openggf.editor.EditorCommandPalette;
 import com.openggf.editor.EditorFocusRegion;
 import com.openggf.editor.EditorHierarchyDepth;
@@ -18,8 +24,6 @@ import com.openggf.level.objects.ObjectSpawn;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
-import java.util.Map;
 import java.util.function.Consumer;
 
 import static com.openggf.editor.hud.EditorHudPad.Button.*;
@@ -42,9 +46,22 @@ public final class EditorHud {
 
     record Prompt(Glyph glyph, String key, String label) { }
     record WheelItem(String label, String detail, Runnable action) { }
-    record MenuItem(String label, String detail, Runnable action) {
+    /** A pad control for a menu row: a drawn glyph, or a stick press named in a keycap (L3, R3). */
+    record PadCap(Glyph glyph, String text) { }
+    /** A menu row: its label, keyboard shortcut ("" for none), pad control (null for none) and action (null for a caption). */
+    record MenuItem(String label, String detail, PadCap pad, Runnable action) {
+        MenuItem(String label, String detail, Runnable action) { this(label, detail, null, action); }
         boolean header() { return action == null; }
     }
+
+    /** Pad controls the HUD itself binds to editor actions (see {@link #updateCanvas} and the canvas pads). */
+    private static final java.util.Map<Action, PadCap> PAD_CAPS = java.util.Map.of(
+            Action.APPLY_PRIMARY_ACTION, new PadCap(Glyph.SOUTH, ""),
+            Action.PERFORM_EYEDROP, new PadCap(Glyph.WEST, ""),
+            Action.DESCEND, new PadCap(Glyph.RT, ""),
+            Action.ASCEND, new PadCap(Glyph.LT, ""),
+            Action.TOGGLE_LAYER, new PadCap(null, "L3"),
+            Action.TOGGLE_COLLISION_OVERLAY, new PadCap(null, "R3"));
     /** Pointer target recorded by the painter for the next update. */
     record Hit(EditorHudLayout.Rect rect, Modal modal, int kind, int index) { }
 
@@ -64,6 +81,7 @@ public final class EditorHud {
     private Consumer<Action> dispatch = action -> { };
     private MutableLevel seededLevel;
 
+    final EditorHudReader reader = new EditorHudReader();
     Modal modal = Modal.NONE;
     long tick;
     boolean controllerPrompts;
@@ -104,6 +122,8 @@ public final class EditorHud {
     private boolean wheelOpenedByHold;
     // Menu
     List<MenuItem> menuItems = List.of();
+    /** True on the full command sheet, whose Back returns to the front page. */
+    boolean menuSheet;
     int menuIndex;
     int propertyIndex;
     int settingsIndex;
@@ -145,6 +165,10 @@ public final class EditorHud {
         pad.sample(input.capturePhysicalInput().gamepads());
         controllerPrompts = MenuInput.controller(input);
         trackStatus();
+        if (reader.isOpen()) { reader.update(input, pad); return true; }
+        if (modal != Modal.NONE && (input.isKeyPressed(GLFW_KEY_F1) || pad.pressed(R3))) {
+            finishPendingEdits(); reader.open(detailsText()); pad.consumeHeld(); return true;
+        }
         MutableLevel level = controller.currentLevel();
         if (level == null) return false;
         seedHotbars(level);
@@ -224,7 +248,9 @@ public final class EditorHud {
         if (input.isKeyPressed(GLFW_KEY_TAB) && !shift) { openLibrary(); return true; }
         if (input.isKeyPressed(GLFW_KEY_F1)) { openMenu(); return true; }
         if (input.isKeyPressed(GLFW_KEY_Q)) { openWheel(false); return true; }
-        for (int slot = 0; slot < EditorHudHotbar.SLOTS; slot++) {
+        boolean control = input.isKeyDown(GLFW_KEY_LEFT_CONTROL) || input.isKeyDown(GLFW_KEY_RIGHT_CONTROL);
+        // Ctrl+0 resets the zoom (EditorInputHandler); only a plain digit picks a hotbar slot.
+        for (int slot = 0; slot < EditorHudHotbar.SLOTS && !control; slot++) {
             if (input.isKeyPressed(slot == 9 ? GLFW_KEY_0 : GLFW_KEY_1 + slot)) {
                 hotbar.select(kind(), slot);
                 applyBrush(kind(), hotbar.value(kind()));
@@ -269,16 +295,7 @@ public final class EditorHud {
         if (pad.repeated(DPAD_UP)) stepY--;
         if (pad.repeated(DPAD_DOWN)) stepY++;
         if (stepX != 0 || stepY != 0) {
-            EditorCursorState cursor = controller.worldCursor();
-            if (controller.isSpawnEditing()) {
-                controller.setWorldCursor(new EditorCursorState(cursor.x() + stepX * 8, cursor.y() + stepY * 8));
-            } else {
-                // Terrain paints whole blocks, so the D-pad steps from block centre to block centre.
-                int size = level.getBlockPixelSize();
-                controller.setWorldCursor(new EditorCursorState(
-                        (Math.floorDiv(cursor.x(), size) + stepX) * size + size / 2,
-                        (Math.floorDiv(cursor.y(), size) + stepY) * size + size / 2));
-            }
+            controller.stepWorldCursor(stepX, stepY);
         }
         if (pad.pressed(WEST)) act(Action.PERFORM_EYEDROP);
         if (controller.isSpawnEditing()) {
@@ -292,7 +309,7 @@ public final class EditorHud {
         if (stroke != null && pad.held(SOUTH)) {
             Integer brush = controller.selectedBlockIndex();
             if (brush == null) {
-                controller.setStatus("Choose a block from the library first");
+                controller.setStatus(UiMessages.text("editor.editor_hud.choose_a_block_from_the_library_first_12zdjb5"));
                 stroke = null;
             } else {
                 EditorCursorState cursor = controller.worldCursor();
@@ -369,7 +386,7 @@ public final class EditorHud {
     void openLibrary() {
         LibraryKind kind = kind();
         if (kind == LibraryKind.NONE) {
-            controller.setStatus("Rings need no brush; South places a ring");
+            controller.setStatus(UiMessages.text("editor.editor_hud.rings_need_no_brush_south_places_a_ring_16isg0z"));
             return;
         }
         libraryKind = kind;
@@ -394,6 +411,7 @@ public final class EditorHud {
         if (MenuInput.right(input)) dx++;
         if (MenuInput.up(input)) dy--;
         if (MenuInput.down(input)) dy++;
+        dy -= MouseWheel.of(input).notches();
         int page = libraryColumns * Math.max(1, libraryVisibleRows);
         int move = dx + dy * libraryColumns;
         if (pad.repeated(LB) || input.isKeyPressed(GLFW_KEY_PAGE_UP)) move -= page;
@@ -475,59 +493,59 @@ public final class EditorHud {
 
     List<WheelItem> wheelItems() {
         List<WheelItem> items = new ArrayList<>(8);
-        items.add(new WheelItem("Undo", "Last edit", () -> act(Action.UNDO)));
-        items.add(new WheelItem("Redo", "", () -> act(Action.REDO)));
-        if (controller.selectedObjectSpawn() != null) items.add(new WheelItem("Properties", "Named fields", this::openProperties));
+        items.add(new WheelItem(UiMessages.text("editor.editor_hud.undo_1klxg"), UiMessages.text("editor.editor_hud.last_edit_1tgvghg"), () -> act(Action.UNDO)));
+        items.add(new WheelItem(UiMessages.text("editor.editor_hud.redo_1iiam"), "", () -> act(Action.REDO)));
+        if (controller.selectedObjectSpawn() != null) items.add(new WheelItem(UiMessages.text("editor.editor_hud.properties_hnic7n"), UiMessages.text("editor.editor_hud.named_fields_blmtuo"), this::openProperties));
         if (controller.depth() == EditorHierarchyDepth.BLOCK) {
-            items.add(new WheelItem("Flip H", "This cell", () -> act(Action.TOGGLE_H_FLIP)));
-            items.add(new WheelItem("Flip V", "This cell", () -> act(Action.TOGGLE_V_FLIP)));
-            items.add(new WheelItem("Solid", "Cycle", () -> act(Action.CYCLE_COLLISION_MODE)));
-            items.add(new WheelItem("Shape +", "Height map", () -> act(Action.INCREMENT_SOLID_TILE_INDEX)));
-            items.add(new WheelItem("Shape -", "Height map", () -> act(Action.DECREMENT_SOLID_TILE_INDEX)));
-            items.add(new WheelItem("Erase", "Empty chunk", () -> act(Action.ERASE_SELECTION)));
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.flip_h_yugp6d"), UiMessages.text("editor.editor_hud.this_cell_mwizr8"), () -> act(Action.TOGGLE_H_FLIP)));
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.flip_v_yugp6r"), UiMessages.text("editor.editor_hud.this_cell_mwizr8"), () -> act(Action.TOGGLE_V_FLIP)));
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.solid_1bo3gr"), UiMessages.text("editor.editor_hud.cycle_131l8m"), () -> act(Action.CYCLE_COLLISION_MODE)));
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.shape_1pi2zpo"), UiMessages.text("editor.editor_hud.height_map_1ll9ssj"), () -> act(Action.INCREMENT_SOLID_TILE_INDEX)));
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.shape_1pi2zpq"), UiMessages.text("editor.editor_hud.height_map_1ll9ssj"), () -> act(Action.DECREMENT_SOLID_TILE_INDEX)));
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.erase_140o7a"), UiMessages.text("editor.editor_hud.empty_chunk_mql396"), () -> act(Action.ERASE_SELECTION)));
         } else if (controller.depth() == EditorHierarchyDepth.CHUNK) {
-            items.add(new WheelItem("Flip H", "Pattern", () -> act(Action.TOGGLE_H_FLIP)));
-            items.add(new WheelItem("Flip V", "Pattern", () -> act(Action.TOGGLE_V_FLIP)));
-            items.add(new WheelItem("Palette", "Next line", () -> act(Action.CYCLE_PATTERN_PALETTE)));
-            items.add(new WheelItem("Priority", "High/low", () -> act(Action.TOGGLE_PATTERN_PRIORITY)));
-            items.add(new WheelItem("Erase", "Blank", () -> act(Action.ERASE_SELECTION)));
-            items.add(new WheelItem("Back", "To block", () -> act(Action.ASCEND)));
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.flip_h_yugp6d"), UiMessages.text("editor.editor_hud.pattern_eg3hio"), () -> act(Action.TOGGLE_H_FLIP)));
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.flip_v_yugp6r"), UiMessages.text("editor.editor_hud.pattern_eg3hio"), () -> act(Action.TOGGLE_V_FLIP)));
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.palette_ebfv4r"), UiMessages.text("editor.editor_hud.next_line_1gb171d"), () -> act(Action.CYCLE_PATTERN_PALETTE)));
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.priority_1gtpq6c"), UiMessages.text("editor.editor_hud.high_low_187l4lj"), () -> act(Action.TOGGLE_PATTERN_PRIORITY)));
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.erase_140o7a"), UiMessages.text("editor.editor_hud.blank_129gdw"), () -> act(Action.ERASE_SELECTION)));
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.back_187if"), UiMessages.text("editor.editor_hud.to_block_iad9e0"), () -> act(Action.ASCEND)));
         } else if (controller.spawnEditMode() == EditorSpawnEditMode.OBJECTS) {
-            items.add(new WheelItem("Delete", "At cursor", () -> act(Action.DELETE_SPAWN)));
-            items.add(new WheelItem("Move", "To cursor", () -> act(Action.MOVE_SELECTED_SPAWN_TO_CURSOR)));
-            items.add(new WheelItem("Type +", "Subtype", () -> act(Action.INCREMENT_SELECTED_SUBTYPE)));
-            items.add(new WheelItem("Type -", "Subtype", () -> act(Action.DECREMENT_SELECTED_SUBTYPE)));
-            items.add(new WheelItem("Flip", "Selected", () -> act(Action.TOGGLE_H_FLIP)));
-            items.add(new WheelItem("Rings", "Mode", () -> setMode(EditorSpawnEditMode.RINGS)));
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.delete_xskn2j"), UiMessages.text("editor.editor_hud.at_cursor_11owjn"), () -> act(Action.DELETE_SPAWN)));
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.move_1fj75"), UiMessages.text("editor.editor_hud.to_cursor_1ybopyz"), () -> act(Action.MOVE_SELECTED_SPAWN_TO_CURSOR)));
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.type_15ocz51"), UiMessages.text("editor.editor_hud.subtype_1voaw62"), () -> act(Action.INCREMENT_SELECTED_SUBTYPE)));
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.type_15ocz53"), UiMessages.text("editor.editor_hud.subtype_1voaw62"), () -> act(Action.DECREMENT_SELECTED_SUBTYPE)));
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.flip_1azrh"), UiMessages.text("editor.editor_hud.selected_krx2nv"), () -> act(Action.TOGGLE_H_FLIP)));
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.rings_1b0ieb"), UiMessages.text("editor.editor_hud.mode_1firn"), () -> setMode(EditorSpawnEditMode.RINGS)));
         } else if (controller.spawnEditMode() == EditorSpawnEditMode.RINGS) {
-            items.add(new WheelItem("Delete", "At cursor", () -> act(Action.DELETE_SPAWN)));
-            items.add(new WheelItem("Move", "To cursor", () -> act(Action.MOVE_SELECTED_SPAWN_TO_CURSOR)));
-            items.add(new WheelItem("Terrain", "Mode", () -> setMode(EditorSpawnEditMode.TILES)));
-            items.add(new WheelItem("Objects", "Mode", () -> setMode(EditorSpawnEditMode.OBJECTS)));
-            items.add(new WheelItem("Collision", onOff(controller.isCollisionOverlayEnabled()),
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.delete_xskn2j"), UiMessages.text("editor.editor_hud.at_cursor_11owjn"), () -> act(Action.DELETE_SPAWN)));
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.move_1fj75"), UiMessages.text("editor.editor_hud.to_cursor_1ybopyz"), () -> act(Action.MOVE_SELECTED_SPAWN_TO_CURSOR)));
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.terrain_3zm3o5"), UiMessages.text("editor.editor_hud.mode_1firn"), () -> setMode(EditorSpawnEditMode.TILES)));
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.objects_2z9is"), UiMessages.text("editor.editor_hud.mode_1firn"), () -> setMode(EditorSpawnEditMode.OBJECTS)));
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.collision_1scywwi"), onOff(controller.isCollisionOverlayEnabled()),
                     () -> act(Action.TOGGLE_COLLISION_OVERLAY)));
             items.add(playtestItem());
         } else {
-            items.add(new WheelItem("Layer", controller.activeLayer() == 0 ? "FG > BG" : "BG > FG",
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.layer_17kv1t"), (controller.activeLayer() == 0 ? UiMessages.text("editor.editor_hud.fg_bg_1v53zhi") : UiMessages.text("editor.editor_hud.bg_fg_8fiuou")),
                     () -> act(Action.TOGGLE_LAYER)));
-            items.add(new WheelItem("Collision", onOff(controller.isCollisionOverlayEnabled()),
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.collision_1scywwi"), onOff(controller.isCollisionOverlayEnabled()),
                     () -> act(Action.TOGGLE_COLLISION_OVERLAY)));
-            items.add(new WheelItem("Path", controller.collisionPath().name().startsWith("P") ? "A > B" : "B > A",
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.path_1h5qd"), controller.collisionPath().name().startsWith("P") ? "A > B" : "B > A",
                     () -> act(Action.TOGGLE_COLLISION_PATH)));
-            items.add(new WheelItem("Erase", "Empty block", () -> act(Action.ERASE_SELECTION)));
-            items.add(new WheelItem("Objects", "Mode", () -> setMode(EditorSpawnEditMode.OBJECTS)));
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.erase_140o7a"), UiMessages.text("editor.editor_hud.empty_block_mq3pwa"), () -> act(Action.ERASE_SELECTION)));
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.objects_2z9is"), UiMessages.text("editor.editor_hud.mode_1firn"), () -> setMode(EditorSpawnEditMode.OBJECTS)));
             items.add(playtestItem());
         }
         return List.copyOf(items);
     }
 
     private WheelItem playtestItem() {
-        for (EditorCommandPalette.HostCommand command : allHostCommands()) {
-            if (command.label().toLowerCase(Locale.ROOT).contains("playtest")) {
-                return new WheelItem("Playtest", "From here", command.action());
+        for (EditorCommandPalette.WorkflowCommand command : allHostCommands()) {
+            if (command.kind() == EditorCommandPalette.WorkflowKind.PLAYTEST) {
+                return new WheelItem(UiMessages.text("editor.editor_hud.playtest_w5m8km"), UiMessages.text("editor.editor_hud.from_here_xialqe"), command.command().action());
             }
         }
-        return new WheelItem("Save", "Project", () -> act(Action.SAVE));
+        return new WheelItem(UiMessages.text("editor.editor_hud.save_1j2ql"), UiMessages.text("editor.editor_hud.project_mexp15"), () -> act(Action.SAVE));
     }
 
     private void setMode(EditorSpawnEditMode mode) {
@@ -539,18 +557,19 @@ public final class EditorHud {
         }
     }
 
-    private static String onOff(boolean on) { return on ? "On > Off" : "Off > On"; }
+    private static String onOff(boolean on) { return (on ? UiMessages.text("editor.editor_hud.on_off_ywxsc") : UiMessages.text("editor.editor_hud.off_on_1mb4nyq")); }
 
     void openSettings() {
         if (controller.projects() == null || controller.projects().document() == null) {
-            controller.setStatus("Open or create an authored project to edit level settings"); return;
+            controller.setStatus(UiMessages.text("editor.editor_hud.open_or_create_an_authored_project_to_edit_level_settin_1lelfb")); return;
         }
         finishPendingEdits(); settingsIndex = 0; modal = Modal.SETTINGS; pad.consumeHeld();
     }
     private void updateSettings(InputHandler input) {
         var workspace = controller.projects();
         if (workspace == null || workspace.document() == null) { closeModal(); return; }
-        int dy = pad.navY() + (MenuInput.down(input) ? 1 : 0) - (MenuInput.up(input) ? 1 : 0);
+        int dy = pad.navY() + (MenuInput.down(input) ? 1 : 0) - (MenuInput.up(input) ? 1 : 0)
+                - MouseWheel.of(input).notches();
         int dx = pad.navX() + (MenuInput.right(input) ? 1 : 0) - (MenuInput.left(input) ? 1 : 0);
         settingsIndex = Math.floorMod(settingsIndex + Integer.signum(dy), workspace.settingsRows().size());
         if (dx != 0) {
@@ -584,7 +603,7 @@ public final class EditorHud {
 
     void openProperties() {
         finishPendingEdits();
-        if (controller.selectedObjectSpawn() == null) { controller.setStatus("Pick an object before opening properties"); return; }
+        if (controller.selectedObjectSpawn() == null) { controller.setStatus(UiMessages.text("editor.editor_hud.pick_an_object_before_opening_properties_oe7u8f")); return; }
         propertyIndex = 0;
         modal = Modal.PROPERTIES;
         pad.consumeHeld();
@@ -597,6 +616,7 @@ public final class EditorHud {
         int dy = pad.navY(), dx = pad.navX();
         if (MenuInput.up(input)) dy--;
         if (MenuInput.down(input)) dy++;
+        dy -= MouseWheel.of(input).notches();
         if (MenuInput.left(input)) dx--;
         if (MenuInput.right(input)) dx++;
         propertyIndex = Math.floorMod(propertyIndex + dy, gizmoFields.isEmpty() ? fields.size() : gizmoFields.size());
@@ -610,42 +630,90 @@ public final class EditorHud {
 
     // ------------------------------------------------------------------ menu
 
+    /**
+     * The menu's front page: the handful of commands an author reaches for (resume, save, the two
+     * playtests, the level pages, projects) and the way out of the editor. Every other command sits
+     * one row further in, on {@link #openCommandSheet the command sheet}.
+     */
     void openMenu() {
+        EditorCommandPalette palette = EditorCommandPalette.forController(controller);
         List<MenuItem> items = new ArrayList<>();
-        items.add(new MenuItem("Editor", "", null));
-        items.add(new MenuItem("Resume", "", () -> { }));
-        items.add(new MenuItem("Object properties", "F2", this::openProperties));
-        items.add(new MenuItem("Level settings", "F3", this::openSettings));
-        items.add(new MenuItem("Level palette (Genesis colors)", "", this::openPalette));
-        items.add(new MenuItem("Region: set corner / finish", "F6", controller::toggleRegionCorner));
-        items.add(new MenuItem("Copy region", "Ctrl+C", () -> act(Action.COPY_REGION)));
-        items.add(new MenuItem("Cut region", "Ctrl+X", () -> act(Action.CUT_REGION)));
-        items.add(new MenuItem("Paste region preview", "Ctrl+V", () -> act(Action.PASTE_REGION)));
-        items.add(new MenuItem("Delete region", "", () -> act(Action.DELETE_REGION)));
-        items.add(new MenuItem("Fill rectangle", "", () -> act(Action.FILL_REGION)));
-        items.add(new MenuItem("Flood fill at cursor", "", () -> act(Action.FLOOD_FILL)));
-        items.add(new MenuItem("Clear region / cancel paste", "", () -> act(Action.CLEAR_REGION)));
-        items.add(new MenuItem("Save project", "Ctrl+S", () -> act(Action.SAVE)));
-        Map<String, Runnable> extra = new LinkedHashMap<>();
-        for (EditorCommandPalette.HostCommand command : allHostCommands()) extra.put(command.label(), command.action());
-        extra.forEach((label, action) -> {
-            if (!label.toLowerCase(Locale.ROOT).contains("filter")) items.add(new MenuItem(label, "", action));
-        });
-        items.add(new MenuItem("Export level", "Ctrl+Shift+E", () -> act(Action.EXPORT)));
-        items.add(new MenuItem("Every command", "", null));
-        for (EditorCommandPalette.HostCommand command : EditorCommandPalette.forController(controller)
-                .actionCommands(this::act)) {
-            items.add(new MenuItem(command.label(), "", command.action()));
+        items.add(new MenuItem(UiMessages.text("editor.editor_hud.resume_14fc571"), "Esc", new PadCap(Glyph.EAST, ""), () -> { }));
+        items.add(new MenuItem(UiMessages.text("editor.menu.main.save"), "Ctrl+S", () -> act(Action.SAVE)));
+        for (EditorCommandPalette.HostCommand command : palette.extraCommands(EditorCommandPalette.Group.PLAYTEST)) {
+            items.add(new MenuItem(command.label(), command.shortcut(), command.action()));
         }
+        items.add(new MenuItem(UiMessages.text("editor.menu.main.group.level"), "", null));
+        items.add(new MenuItem(UiMessages.text("editor.editor_hud.library_ua1q57"), "Tab", new PadCap(Glyph.NORTH, ""), this::openLibrary));
+        items.add(new MenuItem(UiMessages.text("editor.editor_hud.object_properties_1cbq7pw"), "F2", this::openProperties));
+        items.add(new MenuItem(UiMessages.text("editor.editor_hud.level_settings_q9wkm7"), "F3", this::openSettings));
+        items.add(new MenuItem(UiMessages.text("editor.editor_hud.level_palette_genesis_colors_1xpy33u"), "", this::openPalette));
+        for (EditorCommandPalette.HostCommand command : palette.extraCommands(EditorCommandPalette.Group.EDITOR)) {
+            items.add(new MenuItem(command.label(), command.shortcut(), command.action()));
+        }
+        items.add(new MenuItem(UiMessages.text("editor.menu.main.group.more"), "", null));
+        if (controller.projects() != null) {
+            items.add(new MenuItem(UiMessages.text("editor.menu.main.projects"), "", controller.projects()::openMenu));
+        }
+        items.add(new MenuItem(UiMessages.text("editor.menu.main.all_commands"), "", this::openCommandSheet));
+        if (palette.exitAction() != null) {
+            items.add(new MenuItem(UiMessages.text("editor.menu.main.exit"), "", palette.exitAction()));
+        }
+        showMenu(items, false);
+    }
+
+    /**
+     * Every command as a captioned sheet built from the authored descriptors
+     * ({@link EditorCommandPalette#descriptors}): each command once, in its group, with the
+     * keyboard shortcut the editor really binds (or, on a pad, the pad control the HUD binds).
+     * Continuous panning is a held control, not a menu command. Back returns to the front page.
+     */
+    void openCommandSheet() {
+        List<MenuItem> items = new ArrayList<>();
+        Runnable exit = EditorCommandPalette.forController(controller).exitAction();
+        for (EditorCommandPalette.Group group : EditorCommandPalette.Group.values()) {
+            List<MenuItem> rows = new ArrayList<>();
+            if (group == EditorCommandPalette.Group.EDITOR) {
+                rows.add(new MenuItem(UiMessages.text("editor.editor_hud.object_properties_1cbq7pw"), "F2", this::openProperties));
+                rows.add(new MenuItem(UiMessages.text("editor.editor_hud.level_settings_q9wkm7"), "F3", this::openSettings));
+                rows.add(new MenuItem(UiMessages.text("editor.editor_hud.level_palette_genesis_colors_1xpy33u"), "", this::openPalette));
+                rows.add(new MenuItem(UiMessages.text("editor.editor_hud.library_ua1q57"), "Tab", new PadCap(Glyph.NORTH, ""), this::openLibrary));
+            }
+            for (EditorCommandPalette.Descriptor descriptor : EditorCommandPalette.descriptors()) {
+                if (descriptor.group() != group) continue;
+                Action action = descriptor.action();
+                rows.add(new MenuItem(descriptor.label(), descriptor.shortcut(), PAD_CAPS.get(action), () -> act(action)));
+            }
+            addHostCommands(rows, group);
+            if (group == EditorCommandPalette.Group.PROJECT && exit != null) {
+                rows.add(new MenuItem(UiMessages.text("editor.menu.main.exit"), "", exit));
+            }
+            if (rows.isEmpty()) continue;
+            items.add(new MenuItem(group.caption(), "", null));
+            items.addAll(rows);
+        }
+        showMenu(items, true);
+    }
+
+    private void showMenu(List<MenuItem> items, boolean sheet) {
         menuItems = List.copyOf(items);
-        menuIndex = 1;
+        menuSheet = sheet;
+        menuIndex = 0;
+        while (menuIndex < menuItems.size() - 1 && menuItems.get(menuIndex).header()) menuIndex++;
         menuScroll = 0;
         notePointer();
         modal = Modal.MENU;
     }
 
+    /** Workflow commands from the host (workspaces, playtest, projects, import) close their group. */
+    private void addHostCommands(List<MenuItem> items, EditorCommandPalette.Group group) {
+        for (EditorCommandPalette.HostCommand command : EditorCommandPalette.forController(controller).extraCommands(group)) {
+            items.add(new MenuItem(command.label(), command.shortcut(), command.action()));
+        }
+    }
+
     private void updateMenu(InputHandler input, boolean click) {
-        int dy = pad.navY();
+        int dy = pad.navY() - MouseWheel.of(input).notches();
         if (MenuInput.up(input)) dy--;
         if (MenuInput.down(input)) dy++;
         if (pad.repeated(LB) || input.isKeyPressed(GLFW_KEY_PAGE_UP)) dy -= 8;
@@ -665,6 +733,11 @@ public final class EditorHud {
             contentChanged = true;
             return;
         }
+        if (menuSheet && (pad.pressed(EAST) || MenuInput.back(input))) {
+            openMenu();
+            pad.consumeHeld();
+            return;
+        }
         if (pad.pressed(EAST) || pad.pressed(MENU) || MenuInput.back(input) || input.isKeyPressed(GLFW_KEY_F1)
                 || (click && hit == null)) {
             closeModal();
@@ -680,8 +753,8 @@ public final class EditorHud {
         menuIndex = target;
     }
 
-    private List<EditorCommandPalette.HostCommand> allHostCommands() {
-        return EditorCommandPalette.forController(controller).extraCommands();
+    private List<EditorCommandPalette.WorkflowCommand> allHostCommands() {
+        return EditorCommandPalette.forController(controller).extraWorkflowCommands();
     }
 
     // ------------------------------------------------------------------ brushes
@@ -815,7 +888,7 @@ public final class EditorHud {
         String status = controller.statusText();
         if (status != null && !status.equals(lastStatus)) {
             lastStatus = status;
-            if (!"Ready".equals(status)) {
+            if (controller.hasStatusNotification()) {
                 toast = status;
                 toastFrames = TOAST_FRAMES;
             }
@@ -848,52 +921,90 @@ public final class EditorHud {
         List<Prompt> prompts = new ArrayList<>(8);
         switch (modal) {
             case LIBRARY -> {
-                prompts.add(new Prompt(Glyph.DPAD, "Arrows", "Browse"));
-                prompts.add(new Prompt(Glyph.BUMPERS, "PgUp/PgDn", "Page"));
-                prompts.add(new Prompt(Glyph.SOUTH, "Enter", "Use"));
-                prompts.add(new Prompt(Glyph.EAST, "Esc", "Close"));
+                prompts.add(new Prompt(Glyph.DPAD, "Arrows", UiMessages.text("editor.editor_hud.browse_x1p0a2")));
+                prompts.add(new Prompt(Glyph.BUMPERS, "PgUp/PgDn", UiMessages.text("editor.editor_hud.page_1h5f3")));
+                if (libraryKind == LibraryKind.OBJECT)
+                    prompts.add(new Prompt(Glyph.WEST, "X", showInternalObjects ? UiMessages.text("editor.menu.editor_hud.placeable") : UiMessages.text("editor.menu.editor_hud.all_objects")));
+                prompts.add(new Prompt(Glyph.SOUTH, "Enter", UiMessages.text("editor.editor_hud.use_1tuv")));
+                prompts.add(new Prompt(Glyph.EAST, "Esc", UiMessages.text("editor.editor_hud.close_12tjh4")));
             }
             case WHEEL -> {
-                prompts.add(new Prompt(Glyph.LSTICK, "Arrows", "Choose"));
-                prompts.add(new Prompt(Glyph.SOUTH, "Enter", "Apply"));
-                prompts.add(new Prompt(Glyph.EAST, "Esc", "Cancel"));
+                prompts.add(new Prompt(Glyph.LSTICK, "Arrows", UiMessages.text("editor.editor_hud.choose_xd8it3")));
+                prompts.add(new Prompt(Glyph.SOUTH, "Enter", UiMessages.text("editor.editor_hud.apply_11sitq")));
+                prompts.add(new Prompt(Glyph.EAST, "Esc", UiMessages.text("editor.editor_hud.cancel_x9d2fu")));
             }
             case PALETTE -> {
-                prompts.add(new Prompt(Glyph.BUMPERS, "PgUp/PgDn", "Color"));
-                prompts.add(new Prompt(Glyph.DPAD, "Up/Down", "RGB channel"));
-                prompts.add(new Prompt(Glyph.DPAD, "Left/Right", "Value"));
-                prompts.add(new Prompt(Glyph.EAST, "Esc", "Close"));
+                prompts.add(new Prompt(Glyph.BUMPERS, "PgUp/PgDn", UiMessages.text("editor.editor_hud.color_12ve4j")));
+                prompts.add(new Prompt(Glyph.DPAD, "Up/Down", UiMessages.text("editor.editor_hud.rgb_channel_1mo75ow")));
+                prompts.add(new Prompt(Glyph.DPAD, "Left/Right", UiMessages.text("editor.editor_hud.value_1d2jpt")));
+                prompts.add(new Prompt(Glyph.EAST, "Esc", UiMessages.text("editor.editor_hud.close_12tjh4")));
             }
             case PROPERTIES, SETTINGS -> {
-                prompts.add(new Prompt(Glyph.DPAD, "Up/Down", "Field"));
-                prompts.add(new Prompt(Glyph.DPAD, "Left/Right", "Value"));
-                prompts.add(new Prompt(Glyph.EAST, "Esc", "Close"));
+                prompts.add(new Prompt(Glyph.DPAD, "Up/Down", UiMessages.text("editor.editor_hud.field_14espm")));
+                prompts.add(new Prompt(Glyph.DPAD, "Left/Right", UiMessages.text("editor.editor_hud.value_1d2jpt")));
+                prompts.add(new Prompt(Glyph.EAST, "Esc", UiMessages.text("editor.editor_hud.close_12tjh4")));
             }
             case MENU -> {
-                prompts.add(new Prompt(Glyph.DPAD, "Arrows", "Select"));
-                prompts.add(new Prompt(Glyph.SOUTH, "Enter", "Run"));
-                prompts.add(new Prompt(Glyph.EAST, "Esc", "Close"));
+                prompts.add(new Prompt(Glyph.DPAD, "Arrows", UiMessages.text("editor.editor_hud.select_14w8yl8")));
+                prompts.add(new Prompt(Glyph.SOUTH, "Enter", UiMessages.text("editor.editor_hud.run_1ror")));
+                prompts.add(new Prompt(Glyph.EAST, "Esc", UiMessages.text(menuSheet ? "editor.editor_hud.back_187if" : "editor.editor_hud.close_12tjh4")));
             }
             case NONE -> {
                 EditorHierarchyDepth depth = controller.depth();
                 boolean spawns = controller.isSpawnEditing();
                 prompts.add(new Prompt(depth == EditorHierarchyDepth.WORLD ? Glyph.LSTICK : Glyph.DPAD, "Arrows",
-                        depth == EditorHierarchyDepth.WORLD ? "Move" : "Cell"));
-                prompts.add(new Prompt(Glyph.SOUTH, "Space", spawns ? "Place" : "Paint"));
-                prompts.add(new Prompt(Glyph.WEST, "E", "Pick"));
+                        (depth == EditorHierarchyDepth.WORLD ? UiMessages.text("editor.editor_hud.move_1fj75") : UiMessages.text("editor.editor_hud.cell_18xoi"))));
+                prompts.add(new Prompt(Glyph.SOUTH, "Space", (spawns ? UiMessages.text("editor.editor_hud.place_19ykfb") : UiMessages.text("editor.editor_hud.paint_19rpry"))));
+                prompts.add(new Prompt(Glyph.WEST, "E", UiMessages.text("editor.editor_hud.pick_1hb9d")));
                 if (kind() != LibraryKind.NONE) {
-                    prompts.add(new Prompt(Glyph.NORTH, "Tab", "Library"));
-                    prompts.add(new Prompt(Glyph.BUMPERS, "1-0", "Brush"));
+                    prompts.add(new Prompt(Glyph.NORTH, "Tab", UiMessages.text("editor.editor_hud.library_ua1q57")));
+                    prompts.add(new Prompt(Glyph.BUMPERS, "1-0", UiMessages.text("editor.editor_hud.brush_12dp96")));
                 }
                 if (depth == EditorHierarchyDepth.WORLD && !spawns)
-                    prompts.add(new Prompt(Glyph.RT, "Enter", "Edit block"));
-                if (depth == EditorHierarchyDepth.BLOCK) prompts.add(new Prompt(Glyph.RT, "Enter", "Edit chunk"));
-                if (depth != EditorHierarchyDepth.WORLD) prompts.add(new Prompt(Glyph.EAST, "Esc", "Back"));
-                prompts.add(new Prompt(Glyph.VIEW, "Q", "Tools"));
-                prompts.add(new Prompt(Glyph.MENU, "F1", "Menu"));
+                    prompts.add(new Prompt(Glyph.RT, "Enter", UiMessages.text("editor.editor_hud.edit_block_14meqdz")));
+                if (depth == EditorHierarchyDepth.BLOCK) prompts.add(new Prompt(Glyph.RT, "Enter", UiMessages.text("editor.editor_hud.edit_chunk_14mw3qv")));
+                if (depth != EditorHierarchyDepth.WORLD) prompts.add(new Prompt(Glyph.EAST, "Esc", UiMessages.text("editor.editor_hud.back_187if")));
+                prompts.add(new Prompt(Glyph.VIEW, "Q", UiMessages.text("editor.editor_hud.tools_1c7yd7")));
+                prompts.add(new Prompt(Glyph.MENU, "F1", UiMessages.text("editor.editor_hud.menu_1fblr")));
             }
         }
         return prompts;
+    }
+
+    /** Complete presentation values, independent of clipped previews and command execution. */
+    String detailsText() {
+        StringBuilder text = new StringBuilder();
+        if (modal == Modal.MENU && !menuItems.isEmpty()) {
+            var item = menuItems.get(menuIndex);
+            text.append(item.label()).append("\n").append(item.detail()).append("\n\n");
+        }
+        if (modal == Modal.LIBRARY) text.append(EditorHudPainter.entryName(libraryKind,
+                libraryValue(libraryKind, libraryCursor), controller)).append("\n\n");
+        if (modal == Modal.WHEEL && wheelSlot >= 0 && wheelSlot < wheelItems.size()) {
+            var item = wheelItems.get(wheelSlot); text.append(item.label()).append("\n").append(item.detail()).append("\n\n");
+        }
+        text.append(UiMessages.text("editor.editor_hud_painter.world_1dvecy")).append(" / ").append(controller.depth()).append("\n")
+                .append(controller.isModified() ? UiMessages.text("editor.editor_hud_painter.unsaved_mxocq6") : UiMessages.text("editor.editor_hud_painter.saved_1bfcyv"))
+                .append("  ").append(controller.activeLayer() == 0 ? UiMessages.text("editor.editor_hud_painter.fg_1q9") : UiMessages.text("editor.editor_hud_painter.bg_1mt"))
+                .append("  ").append(UiMessages.text("editor.editor_hud_painter.zoom_x_1wqbs", Map.of("value0", controller.canvasView().zoomLabel())))
+                .append("\nX ").append(controller.worldCursor().x()).append("  Y ").append(controller.worldCursor().y()).append("\n\n");
+        if (controller.projects() != null && controller.projects().document() != null)
+            for (var row : controller.projects().settingsRows()) text.append(row.label()).append(": ").append(row.value()).append("\n");
+        var spawn = controller.selectedObjectSpawn();
+        if (spawn != null) {
+            var gizmos = controller.selectedGizmoFields();
+            if (gizmos.isEmpty()) for (var field : controller.selectedObjectProperties().editableFields())
+                text.append(field.label()).append(": ").append(field.display(spawn.subtype())).append("\n");
+            else for (var field : gizmos) text.append(field.label()).append(": ").append(field.value(spawn.authoredProperties())).append("\n");
+        }
+        for (var item : menuItems) text.append(item.label()).append("  ").append(item.detail()).append("\n");
+        for (var item : wheelItems) text.append(item.label()).append("  ").append(item.detail()).append("\n");
+        if (lastStatus != null) text.append("\n").append(lastStatus).append("\n");
+        for (var prompt : prompts()) text.append(prompt.key()).append(" / ").append(prompt.glyph()).append("  ").append(prompt.label()).append("\n");
+        text.append("\n").append(UiMessages.text("editor.editor_hud_painter.up_down_field_left_right_change_esc_close_1ebst2p"))
+                .append("\n").append(UiMessages.text("editor.editor_hud_painter.each_change_is_undoable_playtest_applies_the_environmen_zaxdlv"))
+                .append("\n").append(UiMessages.text("editor.editor_hud_painter.bumpers_color_up_down_channel_left_right_value_tophpt"));
+        return text.toString();
     }
 
     /** World-terrain drag painting: live preview, committed as one undoable stroke on release. */
@@ -928,7 +1039,7 @@ public final class EditorHud {
                 level.setBlockInMap(delta.layer(), delta.x(), delta.y(), delta.before());
             }
             controller.executeCommand(new StrokeCommand(level, painted));
-            controller.setStatus(painted.size() == 1 ? "Painted 1 block" : "Painted " + painted.size() + " blocks");
+            controller.setStatus((painted.size() == 1 ? ((UiMessages.text("editor.editor_hud.painted_1_block_1s7nguz"))) : String.valueOf((String.valueOf((UiMessages.text("editor.editor_hud.painted_blocks_vrfgm8", Map.of("value0", String.valueOf(painted.size())))))))));
         }
     }
 }

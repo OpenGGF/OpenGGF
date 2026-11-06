@@ -64,7 +64,8 @@ class TestExampleMutatorsPackage {
             assertEquals(Set.of("example-mutators:gravity","example-mutators:ringfall","example-mutators:big-head",
                     "example-mutators:stealth","example-mutators:no-powerups","example-mutators:no-checkpoints",
                     "example-mutators:no-rings","example-mutators:game-speed","example-mutators:no-special-stages",
-                    "example-mutators:no-bonus-stages","example-mutators:violent-explosions"),plan.mutators().keySet());
+                    "example-mutators:no-bonus-stages","example-mutators:violent-explosions",
+                    "example-mutators:homing-attack"),plan.mutators().keySet());
             assertEquals(3,plan.explicitPatches().size());assertTrue(plan.objectFactories().isEmpty());
             assertEquals(List.of("s1","s2","s3k"),plan.stockScenePlans().stream().map(ModRegistrationPlan::baseGameId).toList());
             for(var game:plan.stockScenePlans()) {

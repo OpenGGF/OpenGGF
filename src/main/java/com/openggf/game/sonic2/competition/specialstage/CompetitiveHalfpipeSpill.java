@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.competition.specialstage;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.data.RomByteReader;
 
 import java.util.Objects;
@@ -42,12 +44,12 @@ public final class CompetitiveHalfpipeSpill {
             throw new IllegalArgumentException("Invalid native spill count or successful ordinal");
         }
         RomByteReader rom = data.rom();
-        int table = (lostCount & 1) != 0 ? 0x353F4 : 0x353EA;
+        int table = (lostCount & 1) != 0 ? address(rom, 0x353F4) : address(rom, 0x353EA);
         int angle = (parentAngle + 0x40 + rom.readU8(table + emittedOrdinal)) & 0xFF;
         // CalcSine (s2.asm:4012-4024) indexes the ROM's 320-word sine table;
         // the extra quarter-turn words supply cosine without host trig math.
-        int sine = rom.readS16BE(0x33CE + angle * 2);
-        int cosine = rom.readS16BE(0x33CE + (angle + 0x40) * 2);
+        int sine = rom.readS16BE(address(rom, 0x33CE) + angle * 2);
+        int cosine = rom.readS16BE(address(rom, 0x33CE) + (angle + 0x40) * 2);
         return new Velocity((short) ((cosine * 0x400) >> 8), (short) ((sine * 0x1000) >> 8));
     }
 
@@ -81,7 +83,7 @@ public final class CompetitiveHalfpipeSpill {
         }
         frameDuration = (frameDuration - 1) & 0xFF;
         if ((byte) frameDuration >= 0) return;
-        int script = 0x362D2 + rom.readU16BE(0x362D2 + animation * 2);
+        int script = address(rom, 0x362D2) + rom.readU16BE(address(rom, 0x362D2) + animation * 2);
         frameDuration = rom.readU8(script);
         int next = rom.readU8(script + 1 + animationFrame);
         if (next == 0xFF) {

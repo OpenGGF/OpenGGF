@@ -351,6 +351,13 @@ class TestRewindPolicyRegistry {
     }
 
     @Test
+    void defaultObjectPolicyCapturesHczFanPlatformChild() throws NoSuchFieldException {
+        // The destructive graph test checks the restored reference resolves to the recreated fan.
+        assertDefaultPolicy("com.openggf.game.sonic3k.objects.HCZCGZFanObjectInstance$FanPlatformChild",
+                "fanChild", RewindFieldPolicy.CAPTURED);
+    }
+
+    @Test
     void defaultObjectPolicyCapturesTeleporterBeamsAndChargingGun() throws NoSuchFieldException {
         // These required live links use exact object-id fixups; they are not structural hints.
         assertDefaultPolicy("com.openggf.game.sonic3k.objects.CnzTeleporterInstance",

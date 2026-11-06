@@ -24,6 +24,16 @@ public final class UserRecordingCatalog {
     private final Path root;
     private final Bk2MovieLoader movieLoader;
 
+    public sealed interface InspectedMovie {
+        Path path();
+
+        record Recording(UserRecordingEntry entry) implements InspectedMovie {
+            @Override public Path path() { return entry.path(); }
+        }
+
+        record Movie(Path path, int rowCount, String loadError) implements InspectedMovie { }
+    }
+
     public UserRecordingCatalog() {
         this(Path.of("."));
     }
@@ -46,25 +56,50 @@ public final class UserRecordingCatalog {
         return new UserRecordingCatalog(root).scanFromRoot(gameId, currentIdentity);
     }
 
+    public static List<InspectedMovie> scanMovies(Path root, String gameId, BuildIdentity currentIdentity)
+            throws IOException {
+        List<InspectedMovie> entries = new ArrayList<>();
+        for (Path path : recordingPaths(root, gameId)) {
+            entries.add(inspectMovie(path, currentIdentity));
+        }
+        return List.copyOf(entries);
+    }
+
+    public static InspectedMovie inspectMovie(Path path, BuildIdentity currentIdentity) {
+        Objects.requireNonNull(path, "path");
+        Bk2MovieLoader loader = new Bk2MovieLoader();
+        try {
+            // Presence is classified before parsing so invalid private metadata cannot become a bare movie.
+            if (UserRecordingImport.hasManifest(path)) {
+                return new InspectedMovie.Recording(new UserRecordingCatalog().readEntry(path, currentIdentity));
+            }
+            return new InspectedMovie.Movie(path,
+                    UserRecordingImport.loadBareMovie(loader, path).getFrameCount(), null);
+        } catch (IOException | SecurityException ex) {
+            return new InspectedMovie.Movie(path, 0, loadError(path, ex));
+        }
+    }
+
     private List<UserRecordingEntry> scanFromRoot(String gameId, BuildIdentity currentIdentity) throws IOException {
         Objects.requireNonNull(gameId, "gameId");
-        Path gameRecordingDir = root.resolve("recordings").resolve(gameId);
-        if (!Files.isDirectory(gameRecordingDir)) {
-            return List.of();
-        }
-
         List<UserRecordingEntry> entries = new ArrayList<>();
-        try (var paths = Files.list(gameRecordingDir)) {
-            for (Path path : paths
-                    .filter(Files::isRegularFile)
-                    .filter(UserRecordingCatalog::isBk2)
-                    .toList()) {
-                entries.add(readEntry(path, currentIdentity));
-            }
+        for (Path path : recordingPaths(root, gameId)) {
+            entries.add(readEntry(path, currentIdentity));
         }
         entries.sort(Comparator.comparing(UserRecordingEntry::modifiedAt).reversed()
                 .thenComparing(entry -> entry.path().getFileName().toString()));
         return List.copyOf(entries);
+    }
+
+    private static List<Path> recordingPaths(Path root, String gameId) throws IOException {
+        Path gameRecordingDir = root.resolve("recordings").resolve(gameId);
+        if (!Files.isDirectory(gameRecordingDir)) return List.of();
+        try (var paths = Files.list(gameRecordingDir)) {
+            return paths.filter(Files::isRegularFile).filter(UserRecordingCatalog::isBk2)
+                    .sorted(Comparator.comparing(UserRecordingCatalog::modifiedAt).reversed()
+                            .thenComparing(path -> path.getFileName().toString()))
+                    .toList();
+        }
     }
 
     private UserRecordingEntry readEntry(Path path, BuildIdentity currentIdentity) {
@@ -179,7 +214,7 @@ public final class UserRecordingCatalog {
         return fileName;
     }
 
-    private static String loadError(Path path, IOException ex) {
+    private static String loadError(Path path, Exception ex) {
         return path.getFileName() + ": " + ex.getMessage();
     }
 

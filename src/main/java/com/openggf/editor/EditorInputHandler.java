@@ -3,6 +3,7 @@ package com.openggf.editor;
 import com.openggf.camera.Camera;
 import com.openggf.control.InputHandler;
 import com.openggf.control.InputActionMasks;
+import com.openggf.control.MenuRepeat;
 import com.openggf.editor.commands.StrokeCommand;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.MutableLevel;
@@ -50,6 +51,9 @@ public final class EditorInputHandler {
     }
 
     private FrontEnd frontEnd;
+    private final MenuRepeat cursorRepeat = new MenuRepeat();
+    private long inputFrame;
+    private java.util.function.Consumer<Action> dispatchListener = action -> { };
 
     public enum Action {
         DESCEND,
@@ -147,6 +151,7 @@ public final class EditorInputHandler {
 
     public void update(InputHandler inputHandler) {
         Objects.requireNonNull(inputHandler, "inputHandler");
+        inputFrame++;
         if (frontEnd != null && frontEnd.update(inputHandler)) {
             finishActiveStroke();
             return;
@@ -168,7 +173,12 @@ public final class EditorInputHandler {
             if (controlDown && controller.depth() == EditorHierarchyDepth.WORLD) {
                 controller.canvasView().panBy(dx * WORLD_MOVE_SPEED, dy * WORLD_MOVE_SPEED);
             } else if (controller.depth() == EditorHierarchyDepth.WORLD) {
-                controller.moveWorldCursor(dx * WORLD_MOVE_SPEED, dy * WORLD_MOVE_SPEED);
+                int stepX = 0, stepY = 0;
+                if (repeatDirection(inputHandler, GLFW_KEY_LEFT, AbstractPlayableSprite.INPUT_LEFT)) stepX--;
+                if (repeatDirection(inputHandler, GLFW_KEY_RIGHT, AbstractPlayableSprite.INPUT_RIGHT)) stepX++;
+                if (repeatDirection(inputHandler, GLFW_KEY_UP, AbstractPlayableSprite.INPUT_UP)) stepY--;
+                if (repeatDirection(inputHandler, GLFW_KEY_DOWN, AbstractPlayableSprite.INPUT_DOWN)) stepY++;
+                if (stepX != 0 || stepY != 0) controller.stepWorldCursor(stepX, stepY);
             } else {
                 controller.moveActiveSelection(dx, dy);
             }
@@ -188,7 +198,8 @@ public final class EditorInputHandler {
         if (inputHandler.isKeyPressed(GLFW_KEY_L)) {
             handleAction(Action.TOGGLE_LAYER);
         }
-        if (rawModeCycle || logical.menuStart()) {
+        // Enter owns descent even when it is also the configured P1 Start key.
+        if (rawModeCycle || (logical.menuStart() && !inputHandler.isKeyPressed(GLFW_KEY_ENTER))) {
             handleAction(Action.CYCLE_SPAWN_EDIT_MODE);
         }
         if (regionDelete) handleAction(Action.DELETE_REGION);
@@ -257,8 +268,14 @@ public final class EditorInputHandler {
         }
     }
 
+    private boolean repeatDirection(InputHandler input, int key, int direction) {
+        return cursorRepeat.pulse(key, inputFrame, input.isDirectionHeld(key, direction),
+                input.isKeyPressed(key) || (input.logical().player1().pressedMask() & direction) != 0);
+    }
+
     public void handleAction(Action action) {
         Objects.requireNonNull(action, "action");
+        dispatchListener.accept(action);
         finishPendingEdits();
         try {
         switch (action) {
@@ -325,6 +342,11 @@ public final class EditorInputHandler {
     }
 
     public void setFrontEnd(FrontEnd frontEnd) { this.frontEnd = frontEnd; }
+
+    /** Observes each action as it is dispatched, before it runs (tests check shortcuts reach their owner). */
+    public void setDispatchListener(java.util.function.Consumer<Action> listener) {
+        dispatchListener = Objects.requireNonNull(listener, "listener");
+    }
 
     public void finishActiveStroke() {
         if (activeStroke == null) {
@@ -400,7 +422,7 @@ public final class EditorInputHandler {
         var view = controller.canvasView();
         view.setViewportSize(graphics.getProjectionWidth(), Math.max(224, (int) graphics.getScreenHeight()));
         int[] point = EditorMouseTransform.logicalPoint(input, graphics);
-        int wheel = com.openggf.control.MouseWheel.of(input).takeNotches();
+        int wheel = com.openggf.control.MouseWheel.of(input).notches();
         boolean middle = input.isMouseButtonDown(org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_MIDDLE);
         if (!middle) panningCanvas = false;
         if (point[2] == 0) {

@@ -10,6 +10,7 @@ import com.openggf.sprites.playable.Sonic;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
@@ -21,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Ordinary cold 800px Sonic+Tails inputs; no position, clock, ring or boss-state seeds. */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestSszWidePairedColdRouteCapture {
+    @Tag("exhaustive-audit")
     @Test
     void coldFirstReplicaAndTransportReplayWithRetiredColumnDebris() throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
@@ -92,6 +94,7 @@ class TestSszWidePairedColdRouteCapture {
     }
 
 
+    @Tag("exhaustive-audit")
     @Test
     void coldCompleteWideRouteDefeatsAllBossesAndIsolatesTheDezTimeline() throws Exception {
         var loader = new Bk2MovieLoader();

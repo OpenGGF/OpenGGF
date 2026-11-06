@@ -107,7 +107,7 @@ public class TestTodo3_MonitorEffects {
     /**
      * Verify MonitorObjectInstance.MonitorType has 11 values (10 content types + broken).
      * Uses reflection because MonitorType is a private inner enum.
-     * ROM: Obj2E_Types table (s2.asm:25639-25649) defines 10 content types.
+     * ROM: Obj2E_Types table (s2.asm:25813-25823) defines 10 content types.
      */
     @Test
     public void testS2MonitorTypeCountMatchesRom() throws Exception {

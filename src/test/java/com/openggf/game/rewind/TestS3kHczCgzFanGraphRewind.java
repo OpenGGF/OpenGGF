@@ -50,7 +50,7 @@ class TestS3kHczCgzFanGraphRewind {
     }
 
     @Test
-    void hczCgzFanPlatformAndBubbleRestoreFreshExactStateAndRelinkParent() throws Exception {
+    void hczCgzFanPlatformAndBubbleRestoreFreshExactStateAndRelinkChild() throws Exception {
         Harness harness = Harness.create();
         ObjectManager objectManager = harness.objectManager();
         objectManager.setRewindInPlaceRestoreEnabledForTest(false);
@@ -70,10 +70,10 @@ class TestS3kHczCgzFanGraphRewind {
         RewindRegistry rewindRegistry = registryFor(objectManager);
         CompositeSnapshot snapshot = rewindRegistry.capture();
 
-        objectManager.removeDynamicObject(sourcePlatform);
+        ((com.openggf.level.objects.AbstractObjectInstance) sourcePlatform).setDestroyed(true);
         objectManager.removeDynamicObject(sourceBubble);
         ObjectInstance divergentPlatform = objectManager.createDynamicObject(
-                () -> constructPlatform(DIVERGENT_PLATFORM_SPAWN, sourceFan, 0x20, false));
+                () -> constructPlatform(DIVERGENT_PLATFORM_SPAWN));
         ObjectInstance divergentBubble = objectManager.createDynamicObject(
                 () -> constructBubble(DIVERGENT_BUBBLE_SPAWN));
         assertEquals(1, livePlatforms(objectManager).size(),
@@ -114,12 +114,10 @@ class TestS3kHczCgzFanGraphRewind {
         restoredBubble.update(1, null);
         assertEquals(0x04c4, readIntField(restoredBubble, "y"),
                 "fresh recreation must resume one native movement from captured state");
-        assertSame(restoredFan, readObjectField(restoredPlatform, "fanParent"),
-                "fan platform parent must resolve to the restored fan");
-        assertSame(restoredPlatform, readObjectField(restoredFan, "platformChild"),
-                "restored HCZ/CGZ fan must point at the restored platform child");
-        assertNotSame(sourceFan, readObjectField(restoredPlatform, "fanParent"),
-                "fan platform must not retain the stale pre-restore parent");
+        assertSame(restoredFan, readObjectField(restoredPlatform, "fanChild"),
+                "original-slot platform must resolve to its restored fan child");
+        assertNotSame(sourceFan, readObjectField(restoredPlatform, "fanChild"),
+                "fan platform must not retain the stale pre-restore child");
     }
 
     @Test
@@ -157,6 +155,7 @@ class TestS3kHczCgzFanGraphRewind {
                     services);
             holder[0] = objectManager;
             objectManager.reset(camera.getX());
+            objectManager.update(camera.getX(), null, List.of(), 0);
             return new Harness(objectManager, services);
         }
     }
@@ -167,17 +166,12 @@ class TestS3kHczCgzFanGraphRewind {
         return rewindRegistry;
     }
 
-    private static ObjectInstance constructPlatform(
-            ObjectSpawn spawn,
-            HCZCGZFanObjectInstance parent,
-            int maxSlideDistance,
-            boolean facingLeft) {
+    private static ObjectInstance constructPlatform(ObjectSpawn spawn) {
         try {
             Class<?> type = Class.forName(PLATFORM_CLASS);
-            Constructor<?> ctor = type.getDeclaredConstructor(
-                    ObjectSpawn.class, HCZCGZFanObjectInstance.class, int.class, boolean.class);
+            Constructor<?> ctor = type.getDeclaredConstructor(ObjectSpawn.class);
             ctor.setAccessible(true);
-            return (ObjectInstance) ctor.newInstance(spawn, parent, maxSlideDistance, facingLeft);
+            return (ObjectInstance) ctor.newInstance(spawn);
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("failed to construct HCZ/CGZ fan platform", e);
         }

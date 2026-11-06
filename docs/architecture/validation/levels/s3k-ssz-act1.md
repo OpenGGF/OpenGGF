@@ -1,5 +1,12 @@
 # S3K Sky Sanctuary Zone act 1 coverage matrix
 
+Routine selection update (2026-10-27): the reviewed full configuration products
+and long cold-campaign qualifications in the [local budget record](../../research/2026-10-27-local-validation-cost.md#thirty-minute-local-command-target)
+now require explicit `exhaustive-audit`. Short real contact, lifecycle and
+restore/forward witnesses remain routine. Historical qualification rows retain
+their original source/input scope; a current smoke pass does not renew deferred
+cold reachability, accumulated route state or every replay window.
+
 Game / canonical zone / act: S3K `S3K_SKY_SANCTUARY_1`, engine zone `$0A` act index 0,
 ROM `Current_zone_and_act = $A00`, SKL object set.
 Character routes: Sonic, Sonic + Tails, Tails (`LevelSelect_CheckKnuckles` denies Knuckles except
@@ -63,7 +70,7 @@ green label, and "implemented" alone never closes a row.
 | ARRIVAL: no-starpost screen init and controller | `SSZ1_ScreenInit`, `Obj_57C1E`/`loc_57CAC`/`loc_57CD2`/`loc_57D3C`, `Obj_57D64`, `loc_57DA2` | 320 + 800; Sonic, Sonic + Tails | `TestS3kSszArrivalHeadless` | yes | yes (cold load) | not exercised | forced camera, `Camera_Y + $65`, the 8 px rise and the skipped final camera step all match; one-frame phase against `hpz` row 0 open | `01-ssz-arrival-beam-sonic-tails.mp4` | Tails-solo row and the wide rewind spot open |
 | ARRIVAL: Tails helper and CPU routine | `Obj_57DCC`, `loc_13AB4` (`sub_13ECA`, `Tails_CPU_routine $A`, `object_control $83`) | Sonic + Tails, 320 | `TestS3kSszArrivalHeadless#theSidekickParksOffScreenUntilTheArrivalHelperReleasesHer` | yes | yes | not exercised | `($7F00,0)` park and in-air status match the fixture's row-0 sidekick sentinel | `01-ssz-arrival-beam-sonic-tails.mp4` | Her swing arc is not compared to native |
 | BOUNDS: act-1 dynamic Y bounds and Y-wrap | `sub_575EA` `word_5778A`/`word_5779A`; wrap `-$100 … $1000` | 320 | `TestS3kSszKnucklesBridgeHeadless#theCutsceneReleasesTheBridgeAndOpensTheAct` | yes | yes (the band is asserted at the bridge release) | not exercised | band values asserted from the tables | — | GHZ/MTZ bosses and positioned arena reachability are implemented; cold route and complete wrap coverage remain separate |
-| CUTSCENE: Knuckles spawner, button `$AF`, bridge `$77`, pseudo-starpost | `Obj_57E34` → `CutsceneKnux_SSZ` (11 routines `0..$14`), `loc_658F2`, `loc_65976`, `Obj_SSZCutsceneBridge` `loc_44FA2`/`loc_44FBA`/`loc_4501A` | 320 | `TestS3kSszKnucklesBridgeHeadless` | yes | yes: the bridge retracts 2 px/frame and clears `Events_bg+$05`, and a pre-set star post starts it extended with no arrival | not exercised | flag order, retract rate and the `($140,$C6C)` checkpoint match the routines; no native probe | `02a`/`02b` clips | 2026-09-24: palette/children implemented; native and engine landing both($3A0,$C64); matched full-scene pixels remain open |
+| CUTSCENE: Knuckles spawner, button `$AF`, bridge `$77`, pseudo-starpost | `Obj_57E34` → `CutsceneKnux_SSZ` (11 routines `0..$14`), `loc_658F2`, `loc_65976`, `Obj_SSZCutsceneBridge` `loc_44FA2`/`loc_44FBA`/`loc_4501A` | 320 | `TestS3kSszKnucklesBridgeHeadless` | yes | yes: the bridge retracts 2 px/frame and clears `Events_bg+$05`, and a pre-set star post starts it extended with no arrival | not exercised | flag order, retract rate and the `($140,$C6C)` checkpoint match the routines; 2026-11-02: both players' bridge standing bits match native on route inputs 1333-1437 (`TestS3kSsz1ColdRouteNativeTrace`), including the same-frame walk-off clears at 1416/1430 | `02a`/`02b` clips | 2026-09-24: palette/children implemented; native and engine landing both($3A0,$C64); matched full-scene pixels remain open. 2026-11-02: walk-off standing-bit lag fixed ([native cold-route fixture](#native-cold-route-fixture-and-bridge-walk-off-2026-11-02)) |
 | BG: plain sky framing and the `$1800` latch | `sub_579F0` `loc_57A12`/`loc_57A30`/`loc_57A4C` | 320 | `TestS3kSszScrollBands` | yes | yes (the arrival opens in plain sky) | n/a (derived per frame) | offsets and the latch's re-rounding asserted from the routine | `04a-ssz-sky-and-clouds.mp4` | The engine reads `Camera_X/Y_pos`, not the `_copy` words; identical until the launch's screen shake |
 | BG: cloud band, per-band deformation and drift | `sub_57A60`, `SSZ1_BGDeformArray`, `ApplyDeformation` | 320 + 800 | `TestS3kSszScrollBands`, `TestS3kSszBackgroundLayout` | yes | yes (the arrival rise crosses `$F00` into the band) | n/a | the thirty-word fan, the halved wrapped background Y, the seven visible bands at camera `($800,$E00)` and the `$500`/frame accumulator all asserted from `sub_57A60`; the background layout itself is decoded from the ROM and compared with the engine's layer column for column | `04a`/`04b` clips show the arrival band only, which the ROM's layout makes flat sky; the cloud source-window correction has historical footage; whole-scene comparison remains open | **Historical cloud-window defect, subsequently corrected.** Plain mode's flat sky at the arrival is correct (layout rows 0-2 are one repeated chunk and `Camera_Y $F49 + $160` wraps to row 1), but `loc_5786A`/`loc_57946`/`loc_5799A` pin the cloud plane to layout X `$1C00` (columns 56-59, `moveq #$20,d6`) and `SwScrlSsz` now supplies that source. The separate plain-mode pixel demonstration remains open in known bug #41 |
 | BG: mode transition machine | `SSZ1_BackgroundEvent` routines 0/4/8/`$C`, `Events_bg+$0C`/`+$0E` | 320 | `TestS3kSszScrollBands` | yes | yes | yes (the whole state is in `SszZoneRuntimeState`) | routine order and the frozen framing asserted; the ROM's multi-frame `Draw_PlaneVertBottomUp` completes in one engine frame | `04a` | Recorded difference: the cloud bands appear one frame after the ROM starts filling them |
@@ -83,11 +90,12 @@ green label, and "implemented" alone never closes a row.
 | BOSS: Mecha Sonic spawner, entry and attack loop | `loc_45A66`-`loc_45AB0`; `Obj_SSZEndBoss` `SSZEndBoss_Index` act-1 entries 0-`$28` (`loc_7B2DC`, `loc_7B308`, `loc_7B3E6`, `loc_7B41C`, `loc_7B44A`, `loc_7B462`, `loc_7B484`, `loc_7B4EC`, `loc_7B544`, `loc_7B57A`, `loc_7B5E8`, `loc_7B63A`-`loc_7B804`); `sub_7D2D8` / `byte_7D2FC`; `sub_7D312`; `sub_7D35A`; `loc_7D216`; `sub_7D236` / `byte_7D24C`; `DPLCPtr_MechaSonic` | 320 | `TestS3kSszMechaSpawnHeadless` | yes | declared restart at the pad's own `($1A40,$670)`: the final arena's lock fires, the camera eases to `$5C0`, and `loc_45A84`'s `Camera_Y == Camera_max_Y` gate allocates the boss through the plain-`AllocateObject` path. Selected cold Sonic + Tails routes at320/800 also reach and defeat this boss | yes: mid-entry, with the two `ChildObjDat_7D47A` after-images relinked | **compared, comparison-only.** The Sonic + Tails run's SSZ **third** segment, `hpz_3` (`zone_id 10`, start `($1880,$968)`), carries the whole fight; the first reading of this row said the `hpz` window ended before the arena, and that was wrong. Camera `($19A0,$5C0)` at the spawn, so `Cam_X + $160 = $1B00` and `Cam_Y + $A0 = $660` are the native spawn exactly, and the routine dump's resting X values `$1AC0` and `$19C0` are `_unkFAB6` and `_unkFAB4` — `loc_7D216`'s two limits. Pad at 358, boss at 402, routine 4 first dispatched 406, pad removed 460 (the boss passes `$1A40` about 426, plus `loc_45AB0`'s `$20`). The graph runs 4 → 8 → `$0A` → `$0C` → `$0E` → `$10` → `$12` → `$14` → `$16` → `$18` → `$0A`, then a long landing straight to `$14` → `$1A` → `$1C`, which is the two `loc_7B484` branches and `byte_7B62E` stepping 0 then 1. Defeat 1310, routine 2 on 1438 and routine 4 plus the `loc_7D056` slot on 1439. **Routine 6 never appears** in the dump because the boss is off screen for it, which is a recorder property and not a ROM fact | `23-ssz-mecha-sonic-entry-and-attacks.mp4` (`raw-38-ssz-mecha-line1`, frames 200/268/330/430/560): the entry from the right, the return along the top and the attack cycle on the arena floor. The pad's own explosion is driven by the test only — at this camera it sits where the column meets the floor — and subsequent `raw-43-mecha-complete-graph` covers implemented defeat/results/launch through DEZ1 | Stages 1 and 2 of slice 7. `loc_7B81A`'s act-1 routines 0/2/4 and `loc_7D056`'s handover are in; the later campaign implements palette/spark/defeat owners. The bare `loc_7B39C` allocation writes no SST and needs no object. Native hit-window/slot-reuse verification remains open |
 | BOSS: Mecha Sonic spawn / fight / defeat, results + save | `loc_45A84`, `sub_868F8`, `Check_TailsEndPose`, `loc_2DCA0` | 320 | `TestS3kSszMechaSpawnHeadless` | partial | declared final-pad checkpoint; real results reaches end flag | yes: real results graph restore and forward replay | ROM source | recording owed | Production results added in campaign; native P2 pose, allocation exhaustion, signed countdown. Save/launch and broader route matrix still open. |
 | EVENT: crumble, hot-swap, Death Egg BG, debris, ramp script, `$B00` request | `SSZ1_ScreenEvent` stages 0/4/8, `Obj_57E96`, `sub_5750C`, `sub_574DC`, `loc_58192`, `loc_581D2` | 320, 400, 800 | `TestS3kSszMechaSpawnHeadless`, `TestSszLaunchState`, `TestSszLaunchBackground` | partial | declared checkpoint and positioned boss hits; production results, first forced jump and neutral-input launch reach actual DEZ1 load | graph recreation and forward replay at four launch boundaries, including retained Plane B | source-backed; native parity not yet measured | clip 24: controller Hyper checkpoint clear, full 4800-frame capture through DEZ1 | Native Sonic 320/400/800, Sonic + Tails 320, Tails 400 and S1 donor 320 pass component handover. Cold320/800 paired and solo-Tails complete routes verify actual-load history isolation. Extra-followers, exhausted slots, other handover configurations and native comparison remain open. |
-| ROUTE: native320 paired all three bosses → released DEZ1 | Ordinary cold start; unchanged physical post2 and upper waypoints; Mecha/results/launch/destination owners | Sonic + Tails, donor off,320px | `TestLrzSszCheckpointRoutes#ordinarySszOpeningPhysicallySavesTheFirstAuthoredPost` (preserved3a prefix); whole `TestSszColdRouteCapture` (fresh follow-up) | existing owners; controller-only repair | yes, all20720 complete inputs alive, three real killing hits and actual DEZ1 | upper25/complete50 spots, two45-input full-registry restore/replay cycles each; actual full-load history retirement plus incoming intro/released windows | no new native comparison; selected-shot producer identity unknown | independent fully drawn engine capture; no native pixel claim | Runtime39eca8c35, parent3a plus841 post11051 input changes. Root owns later dependency/integration qualification; inherited configuration breadth remains open. |
+| ROUTE: native320 paired all three bosses → released DEZ1 | Ordinary cold start; unchanged physical post2 and upper waypoints; Mecha/results/launch/destination owners | Sonic + Tails, donor off,320px | `TestLrzSszCheckpointRoutes#ordinarySszOpeningPhysicallySavesTheFirstAuthoredPost` (preserved3a prefix); whole `TestSszColdRouteCapture` (fresh follow-up) | existing owners; controller-only repair | yes, all20720 complete inputs alive, three real killing hits and actual DEZ1 | upper25/complete50 spots, two45-input full-registry restore/replay cycles each; actual full-load history retirement plus incoming intro/released windows | no new native comparison; selected-shot producer identity unknown | independent fully drawn engine capture; no native pixel claim | Runtime39eca8c35, parent3a plus841 post11051 input changes. Root owns later dependency/integration qualification; inherited configuration breadth remains open. 2026-10-31: red from input 1366 on the ROM-owned solid contact branch ([opening-bridge jump](#rom-owned-solid-contact-opening-bridge-jump-2026-10-31)). 2026-11-02: native follows the current engine on these inputs through 1956; re-authoring waits for the route-planner programme ([native cold-route fixture](#native-cold-route-fixture-and-bridge-walk-off-2026-11-02)). |
 | ROUTE: native320 solo Sonic all three bosses → DEZ1 | Ordinary cold boot10/0; genuine eight-hit GHZ/MTZ/Mecha defeats, transports, results and actual load | Sonic solo, donor off,320px; zero CPU followers | whole `TestSszSoloColdRouteCapture` | existing owners; controller-only repair | yes,8300 replica/14544 complete inputs; no leader death | unchanged45 replica+49 complete full-registry45-input windows; actual-load live-history isolation | no native comparison or cause claim | independent ordinary cold captures; results and later incoming DEZ scene inspected | Runtime39eca8c35 / parent9cc plus exact solo input/data hashes below. Root owns current-POM/backend/composed qualification; widths/donors/native acceptance remain open. |
 | ROUTE: native800px paired all three bosses → released DEZ1 | Ordinary cold entry; GHZ/MTZ/Mecha native health8..0; `loc_7D056` results; `Obj_57E96`/`loc_581D2` launch; `loc_6468` destination assembly | Sonic + Tails, donor off,800px | `TestSszWidePairedColdRouteCapture#coldCompleteWideRouteDefeatsAllBossesAndIsolatesTheDezTimeline` | existing owners; current controller route unqualified | **fail on0e4f7a9f**: first forward branch11640+24 dies at11664 | Current run stops before MTZ/Mecha/DEZ; historical44 semantic two-cycle45 windows retain their original runtime | ROM-backed owners; no new native comparison | Ordinary fully drawn replay also dies11664; no native pixel claim | All21014 maintained inputs and all predicates retained. Bounded eight-candidate exploration does not qualify a replacement; see current frontier below. |
 | LOAD: `$B00` (DEZ) actual destination entry | DEZ campaign; `loc_6468`, `Obj_LevelIntro_PlayerRun`/`loc_44A26`/`loc_44A56` | Other qualified cold configurations; paired800 historical only | Complete cold-route checks; `TestSszWidePairedColdRouteCapture#coldCompleteWideRouteDefeatsAllBossesAndIsolatesTheDezTimeline` | yes on other qualified routes; current paired800 unreached | actual assembly and native entrance control release on qualified configurations | paired800 two-cycle45 intro/released windows and full-load history retirement are historical; current paired800 remains open | ROM start/floor seating and intro owner; native scene comparison open | independent live DEZ engine still | Destination entry only. Current paired800 stops before MTZ and cannot qualify DEZ. Full DEZ traversal and later endpoints belong to the DEZ campaign; no native pixel certification. |
 | BOSS: MTZ orb allocation / first dispatch | `loc_7A72C`, `loc_7ADA2`, `loc_7AE12`, global `AllocateObject` vs forward `CreateChild1_Normal` | Declared sparse SST component; native320 whole-world encounter boundaries | `TestSszMetropolisRecipeBirth#metropolisFirstOrbAboveParentReturnsFromItsOwnSetupWithoutOrbitOrPublication`; other `metropolis*` allocator/graph controls; `TestS3kSszMtzArenaHeadless` | one pending global first orb; own setup creates at most six global siblings and returns | Component pressure is not a cold-route result | pending setup, init, orbit and prefix failures; destructive graph replay and world checks | literal shipped-ROM source; no new native run | not measured | See [orb initialization evidence](#mtz-orb-allocation-and-first-dispatch--2026-10-21). Current-route impact remains unknown. |
+| ORACLE: native cold-route comparison, inputs 1-1956 | Composite of the complete-run prefix (rows 0-396718) and `ssz1-sonic-tails-cold-complete-320` rows 0-1999 as of `fa313dfa3`; native capture `ssz1_cold_route_native` (`zone_id` 10, labelled `hpz`) | Sonic + Tails, donor off, 320px; cold `boot(10,0)` as the route tests | `TestS3kSsz1ColdRouteNativeTrace` (`-Ptrace-replay-r7`) | yes | yes (the route's own cold entry) | — | **yes**: P1/P2 position, subpixel, speeds, angle, status, routine, camera and rings on every input 1-1956; bridge standing bits on 1333-1437 | — | Ends at the first native lag frame (input 1957). Comparison only; regenerate with `tools/traces/compose_route_on_movie_prefix.py` |
 | ORACLE: strict segment replay | `TestS3kSonicTailsHpz{,2,3}SegmentTraceReplay`, `TestS3kTailsFullChainHpz{,2}SegmentTraceReplay` | `-Ptrace-segments` | — | — | — | — | not measured | — | Slice 10 records each frontier |
 
 ## Opening Death Egg camera tracking (2026-09-30)
@@ -4681,3 +4689,157 @@ remain unchanged. Pinned `loc_584DE` uses the carried sign, so the old draft's
 X-only deletion rewrite is rejected. Historical engine RGB changes are not native
 pixel evidence. No continuous launch, native sprite-build or pixel check was run;
 existing route, donor/roster, display and full-world acceptance limits remain.
+
+## ROM-owned solid contact: opening-bridge jump (2026-10-31)
+
+On `bugfix/ai-rom-owned-solid-contact` (from `df93f7c13`), two engine-authored
+native320 cold routes leave their recorded path at input 1366:
+
+- `ssz1-tails-solo-cold-complete-320.bk2`: in
+  `TestSszBossInputAuthorTool#authoredFatalHitReplaysFromColdWithIdenticalObservedState`,
+  GHZ stops at `LIMIT_REACHED` instead of `DEFEATED`.
+- `ssz1-sonic-tails-cold-complete-320.bk2`: in
+  `TestLrzSszCheckpointRoutes#ordinarySszOpeningPhysicallySavesTheFirstAuthoredPost`,
+  post 2 is not reached by input 7912.
+
+Per-frame state at base `36aaddb37` and on the branch first differs at 1366 in
+both routes. P1 stands on the `$77` cutscene bridge at (755,3184), inside the
+`$14` updraft's band, and presses jump. For the Tails route, setter stack traces
+at both commits show:
+
+- At both commits, `Tails_Jump` writes `y_vel` −$680 and `Status_InAir`.
+  The updraft's `sub_3FBC4` (sonic3k.asm:84482-84533) then sets `Status_InAir`,
+  `y_vel` 0 and `ground_vel` 1.
+- At base, the bridge's solid call then landed P1 again in the same call
+  (`ground_vel` = `x_vel` 24, `Status_InAir` clear), so the jump never left the
+  bridge.
+- On the branch, the bridge still holds its standing bit, so
+  `SolidObjectTop_1P` takes the airborne release (`loc_1E2E0`,
+  sonic3k.asm:41852-41857) and returns without a landing check. P1 ends the frame
+  airborne with `y_vel` 0 and lands one frame later.
+
+The Sonic + Tails route differs in the same fields at the same frame. Its
+writers were not traced.
+
+The branch's frame is the ROM's routine order. The inputs were authored against
+the base engine's same-call re-landing. Row 93 and the Tails solo complete route
+stay open until the controllers are re-authored or native evidence settles
+1366. The branch does not re-fit them. `TestSszColdRouteCapture`,
+`TestSszTailsColdRouteCapture`, `TestSszSoloColdRouteCapture` and the other SSZ
+cold-route captures were not run. Any that jump from the opening bridge at the
+same place would share this frame.
+
+2026-11-01 (`bugfix/ai-rom-owned-solid-contact-2`): the lead ruled the route
+inputs re-authorable. All 16 `ssz1-*.script` routes share P1's inputs through
+1366, so all of them meet this frame. Captured side by side at `36aaddb37` and on
+the branch, the base engine's swallowed jump costs exactly one 2 px bridge carry;
+the corrected order costs two (release and landing frames) and dropping the press
+costs none. No local edit restores the base path: every airborne frame on the
+bridge also costs the landing frame, and grounded motion moves Sonic in
+12-subpixel steps, so the 512-subpixel difference is unreachable before the
+spindash. The no-jump variant re-converges in the coarse capture state from 2648
+to 3528 and then drifts. The routes need re-authoring from 1366 to their ends;
+that was not done ([audit](../../audits/2026-10-31-rom-owned-solid-contact.md#continuation-items-a-d-2026-11-01)).
+
+## Native cold-route fixture and bridge walk-off (2026-11-02)
+
+Branch `bugfix/ai-ssz1-native-routes` (from `feature/ai-weakness-pass` `fa313dfa3`).
+The 2026-11-01 native check replayed `ssz1-sonic-tails-cold-complete-320`'s
+first 2000 rows on BizHawk after the complete-run movie's prefix (route input k
+is movie row 396719 + k). Native follows the current engine through input 1955 in
+every physics field for both players and differs from base `36aaddb37` at 1366.
+That settles 1366: the ROM-order airborne release is native behaviour, and the
+routes' recorded path was the old same-call re-landing.
+
+The same capture showed one non-physics lag. `Obj_SSZCutsceneBridge`'s
+`sub_45026` calls `SolidObjectTop`. Its `loc_1E2E0` (sonic3k.asm:41852-41857)
+clears `Status_OnObj`, sets `Status_InAir` and clears the bridge's d6 bit in the
+same call. The engine cleared the bit one frame later, at input 1417 for P1 and
+1431 for P2. The bridge now opts into `clearsStandingBitOnContinuedRideExit`
+(`f02d2deaf`); `TestSszBridgeNativeTopContact` walks a rider off both ends.
+
+The capture is committed as `traces/s3k/ssz1_cold_route_native` with its
+composite movie under `_movies` (TraceChaser `703bd92`, BizHawk 2.11, 1998 rows;
+rows and aux events are byte-identical to the 2026-11-01 capture over the
+overlap). `TestS3kSsz1ColdRouteNativeTrace` boots SSZ1 cold as the route tests
+do, plays the composite's route rows and compares every input from 1 to 1956.
+The first native lag frame is input 1957. Corrupting one native `sidekick_x`, or
+reverting the bridge opt-in, turns it red at the expected input.
+
+Route re-authoring is not part of this branch. It waits for the route-planner
+programme, so row 93, the Tails solo complete route and the other SSZ1 cold
+routes stay red from 1366 as recorded above.
+
+## Shared-planner repair frontier (2026-11-02)
+
+The SSZ1 route tracks recorded on `36aaddb37` (`src/test/resources/routes/s3k/tracks/`) confirm that
+every measured route first leaves its old path at input 1366, the `Obj_SSZCutsceneBridge` walk-off.
+Fourteen of the sixteen route movies run clean to their end on `36aaddb37`; `middle-320` dies at
+6151 and `complete-800` at 11664, both at (4853, ~2915), so those two were already broken there.
+
+`RouteRepairTool` keeps rows to 1365 and follows the track. The paired `complete-320` repair stalls
+at input 3566: at 3489 the current engine lands P1 on terrain at Y 2540, while the `36aaddb37` run
+fell to the Y 2604 floor, where the `$74` retracting spring at (2656, 2608) launched it left. The
+solo Tails repair stalls at 3266 while flying 11-16 px off its track. No route was rewritten, so
+the SSZ1 rows remain **inherited gaps**: cold reachability past 1366 is not established for any
+SSZ1 route movie. Next: author the paired segment from 3489 as a goal program, and diagnose the
+solo Tails stall ([design record](../../designs/2026-11-02-shared-route-planner.md#deviations)).
+
+## Exact route repair and native check (2026-11-02)
+
+Branch `feature/ai-shared-route-planner-2` (from `d84b25bd8`). Every SSZ1 route movie still first
+left its `36aaddb37` run at input 1366, but the rows themselves were not stale: with the
+`36aaddb37` state transplanted (solo Tails: `x_sub` at row 2000) the current engine replays the old
+run field for field. The remaining difference was an engine regression: jumping off
+`Obj_SSZRotatingPlatform` or its carrier left `Status_OnObj` set (native clears it the next frame;
+see the [frontier log](../../../status/trace-frontier-log.md)), now fixed.
+
+`RouteRepairTool --exact` / `--exact-leader` then edits single rows until the tracked players'
+states equal the recorded run again; the original rows after the edit replay that run exactly.
+
+| Route | Edited rows | Rejoined | Goals checked on cold replay |
+| --- | --- | --- | --- |
+| `ssz1-tails-solo-cold-complete-320`, `-800` | 1495 | exact P1 | GHZ, MTZ, Mecha defeats; DEZ load |
+| `ssz1-tails-solo-cold-replicas-320`, `-800` | 1495 | exact P1 | GHZ, MTZ defeats |
+| `ssz1-tails-solo-cold-flight-320` | 1495 | exact P1 | clears the raised platform |
+| `ssz1-sonic-solo-cold-complete-320` | 1597, 2297 | exact P1 | GHZ, MTZ, Mecha defeats; DEZ load |
+| `ssz1-sonic-solo-cold-replicas-320` | 1597, 2297 | exact P1 | GHZ, MTZ defeats |
+| `ssz1-sonic-tails-cold-complete-320` | 1597 | exact P1 (P2 differs) | GHZ, MTZ, Mecha defeats; DEZ load |
+| `ssz1-sonic-tails-cold-upper-320` | 1597 | exact P1 (P2 differs) | GHZ, MTZ defeats |
+| `ssz1-sonic-tails-cold-first-replica-320`, `ghz-320`, `staircase-320` | 1597, 2199 | exact P1 (P2 differs) | route guard only (no boss is met on either engine) |
+
+Every route keeps all its other rows and its row count; the twelve are committed as
+`<stem>.route.json` + `<stem>.script` and their movies are derived on demand. Not repaired:
+`middle-320` (P1 died at 6151 on `36aaddb37`), `complete-800` (died at 11664 there),
+`first-replica-800` and `second-replica-800` (the 800-wide GHZ fight parts P1 from its run through
+the CPU Tails' different position; no single-row P1 edit re-synchronises it). Those four keep their
+movies and stay **inherited gaps**.
+
+The solo routes have no native entry movie (the only native SSZ1 entry is the Sonic+Tails
+complete run), so their native check is unsupported. The five Sonic+Tails routes were checked
+natively with `tools/traces/route_native_check.py` (TraceChaser `703bd92`, BizHawk 2.11): the
+complete-run movie's rows `[0, 396719)`, then the route's rows with one filler per observed lag
+frame. Native lags every other frame from route row 1958 (five lag frames, fillers before rows
+1958-1962), and with those fillers native and engine agree in every P1/P2 field through route row
+1968. At 1969 the engine lands P1 on `Obj_SSZFloatingPlatform` (1536, 3104) one frame early:
+P1's bottom plus four is exactly the platform top (`d0 = 0`), which `SolidObjectTop_1P`'s new
+landing check (`loc_1E45A`, sonic3k.asm:42044-42055: `bhi`, then `cmpi.w #-$10,d0 / blo`)
+rejects; native lands at 1970 with `d0 = -2`. The engine accepts `d0 = 0` for this object because
+it does not opt into `rejectsZeroDistanceTopSolidLanding()` (the shared S3K path keeps zero as a
+landing). `36aaddb37` landed at 1969 too, so this is an older engine difference, not part of the
+regression above. The five manifests carry the entry, the five lag facts and a `BIZHAWK` stamp:
+**engine-qualified, native-diverged at row 1969**. Fixing the landing would move the repaired
+routes off their `36aaddb37` run at 1969, so it is left for the solid-contact owner.
+
+## Diagonal bridge transfer and arrival animation (2026-11-03)
+
+`TestS3kSszDiagonalTransfers` exercises rolling transfers between the permanent
+native diagonal bridge placements for Sonic/Tails and Tails at320/800. All four
+cases retain rolling, restore/replay every registry key across the transfer,
+and reject re-grounding an actual jump. `TestS3kSszArrivalHeadless` now checks
+that the helper releases Tails' dormant mapping lock during the scripted swing.
+The existing four collapse-presentation and20compatibility cases pass, as do
+both cold-route checks and nine traversal cases. This is local contract coverage;
+full-act, donor and participant breadth beyond these cases remains inherited.
+See the [ROM and trace audit](../../audits/2026-11-03-s3k-ssz-diagonal-transfer.md)
+for executed branch evidence, profile coverage and the remaining frontiers.

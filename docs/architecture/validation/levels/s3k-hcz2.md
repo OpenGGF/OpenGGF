@@ -1,5 +1,29 @@
 # S3K Hydrocity Act 2 coverage matrix
 
+Screen-shake maintenance (2026-11-03):
+`TestSonic3kHCZEvents.wallShakePublishesPreviousSetupAndRestoresPendingPhase`
+checks the HCZ2 screen-event/setup ordering and restored pending phase; the existing
+`TestS3kHczMovingWallShakeRewind` remains the whole-world forward-replay witness.
+The Sonic+Tails zone-slice trace separately grades the resulting CPU visibility
+boundary. Broader route, viewport, donor and team obligations below remain inherited.
+
+
+Selection update (2026-10-27): routine canonical entry/reload checks cover supported
+axis pairs; bonus transitions retain their existing pilots. Full Cartesian
+products are explicitly manual `exhaustive-audit` coverage, excluded from routine
+and release gates. Historical exhaustive qualifications below are unchanged and
+are not renewed by a routine pass. See the [selection record](../../research/2026-10-27-local-validation-cost.md).
+
+
+Capsule ownership maintenance (2026-11-02): HCZ now shares upright capsule
+opening/effects/drawing/geometry and common rewind state, while retaining its
+real button SST, deferred ending pose and retained boss/results/geyser handoff.
+The common `$40` results wait uses signed pre-decrement underflow, and common
+animal creation supplies the upright count/offset. Focused capsule/effect replay,
+HCZ graph/control and transient recreation checks cover this maintenance;
+whole cold-route/pixel/audio and broader lifecycle/configuration gaps below
+remain inherited obligations.
+
 Canonical binding: `S3K_HYDROCITY_2`, engine zone 1/act 1, ROM `$0101`, S3KL object set.
 Edges: HCZ1 incoming structural act handoff; MGZ1 outgoing full entry.
 Character routes: Knuckles and Sonic/Tails use different native starts and end-route contexts.
@@ -900,3 +924,324 @@ one fixture correction, zero skips. P1/P2 ordering, first legitimate touch,
 destructive fresh restore of both publication phases, movement and both defeat
 paths are covered. This adds no viewport/donor/team or whole-act claim. See the
 [existing audit](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#jawz-final-delta-publication-phase-2026-10-26).
+
+
+## Fan initialization and repeated pulses — 2026-10-29
+
+Local candidate over `3835ee568`, `bugfix/ai-hcz-campaign-frontier-20261029`:
+`HCZCGZFanObjectInstance` preserves the initializer return and native idle
+reload. Two independent old-red cases fail, then 14 fan cases, two existing
+registered fan-family graph-restore cases and the 60 required S3K anchor cases
+pass without skips. The new controls replay fresh/initialized state restoration
+and three pulse cycles; the existing graph test retains destructive recreation.
+
+The original continuous Sonic+Tails stock route consumes all 14,208 segment-11
+and 5,393 segment-13 stored rows. Segment 11 retains 11 camera / 51 animation
+residuals with no non-camera physics mismatch. Segment 13 improves from 4,145
+to 364 residuals (182 physics / 182 animation); first non-camera physics moves
+from row 2147 to 2500, Y `$026E/$026B`. Native lift at 2147 now matches. SS7
+results still stop at movie cursor 97208. The separate original HCZ movie
+remains strict-red at row 9482; its matched attribution is in the
+[causal record](../../audits/2026-10-29-s3k-campaign-terminal-certification.md#corrected-route-and-second-movie-control).
+
+These are local pulse/restore and bounded route checks. Native slot/latch
+ownership at the remaining platform/fan disagreement, SS7 results/return,
+whole-act completion, alternate viewport/donor/character/team breadth and
+native pixel coverage remain inherited obligations. No full-act certification
+or comparison relaxation is claimed.
+
+## Platform allocation and native dispatch — 2026-10-29
+
+Local candidate over `b0dbd4825`, `bugfix/ai-hcz-campaign-causal-20261029`:
+the original bit-7 slot now owns the platform and allocates its fan from the
+native initializer. Platform and fan retain independent manager dispatches;
+failed allocation leaves the initializer available for retry. The source-owned
+row-2500 cause and read-only native/engine discrimination are in the
+[causal audit](../../audits/2026-10-29-s3k-campaign-terminal-certification.md#live-baseline-discrimination-and-object-repair).
+
+Three generic-coordinate controls prove the original-slot solid, initializer
+return followed by later fan Main, actual saturated-pool failure/recovery and
+fresh recreation, and the exact `-$30` latch read before a later fan moves P1,
+again after destructive recreation. The existing graph test recreates the
+placed platform, its dynamic fan and bubble, restores exact identities and
+links, and resumes native movement. All five corrected cases pass without
+skips. The same runtime also passes 13 existing fan cases and four native
+facing guards: 22 distinct focused checks, with the separate invocation and
+fixture-correction history retained in the audit.
+
+These local checks use one native P1 model at generic coordinates. The dispatch
+and allocation mechanism contains no viewport/donor/team selector; this does
+not certify traversal across those dimensions. Whole-act completion, alternate
+viewport/donor/character/team breadth and native pixel coverage remain inherited
+obligations. Shared execution, timing, loading, audio and rewind owners are
+unchanged. The omitted spin-down sound/bubble path remains a separate inherited
+risk, with its non-causality at row 2500 documented rather than silently fixed.
+
+The causally reached column inertia frontier is also closed through existing
+native full-solid provider contracts, with six new actual-ROM P2 contact/restore
+cases and five existing lifecycle cases, plus eight existing column unit cases:
+19/0F/0E/0S. Positive/zero/away velocity, opposite-side admission and exact-edge
+preservation of both velocity words are checked, including fresh world/object
+recreation. The source-owned zero-X stop and exact-edge opt-out leave shared
+solids unchanged. One exact-edge control caught and blocked an intermediate
+profile regression; it was retained and extended rather than weakened.
+
+Final affected qualification is 21/2F/0E/0S: the 19 column cases pass; both
+strict movie methods remain red. The continuous route consumes every segment-11
+and segment-13 row. Segment 13 now has zero physics differences and 182 animation
+differences, seven lag rows and zero bootstrap errors. Segment 11 retains 11
+camera physics / 51 animation differences, no non-camera physics mismatch.
+The alternate movie's entire 4,354 error-span list matches a fresh exact
+`b0dbd4825` baseline, first row 9482 `air`, with its inherited 29,302-frame extent
+and missing aux families. SS7 still stops in results at cursor 97208 before
+`hcz_4`; the empty native SS7 aux and unrepresented results interval do not
+attribute that next cause. Exact commands, runtime/source fingerprints,
+queue/execution timings and limits are in the causal audit. This closes the two
+local physics frontiers, not the outgoing boundary or inherited act matrix.
+
+
+## SS7 results release and outgoing route — 2026-10-29
+
+Local correction over pushed develop `2e35b5814`, branch
+`bugfix/ai-s3k-hcz-ss7-results`: the final Chaos Emerald message now owns one
+ROM countdown, with release on the zero-test pass after 240 decrements. Native
+original-movie results execution and the engine align through creation,
+pre-tally, perfect tally, continue wait, cleanup and release. The former
+SPECIAL_STAGE_RESULTS stop at cursor 97208 is closed; no gap frames, comparison
+rules or timing-port authority are changed. The
+[SS7 causal audit](../../audits/2026-10-29-s3k-campaign-terminal-certification.md#ss7-results-countdown-attribution--2026-10-29)
+records the input identities, executed-body clocks, commands and limits.
+
+Four generic Sonic 3/S&K-origin and below/at-continue-threshold cases fail on the
+old owner and pass after correction. All 140 focused/anchor/rewind/authority
+checks pass without skips. Results remain non-rewindable; the adjacent stage
+exit has its existing sixty-wait capture/restore/forward-completion checks.
+
+The strict continuous candidate consumes all 3,687 `hcz_4` rows with zero
+bootstrap errors, but remains red: first strict camera X row 940 `$3941/$3940`,
+first non-camera Y row 1748 `$0777/$0772`, 27,401 residuals (22,209 physics /
+5,192 animation), then MGZ destination admission denied at cursor 100896 and
+unmatched production timing work. The cause of that later frontier is unassigned.
+Earlier segment-11/13 reports remain identical to the fresh baseline, including
+segment 13's zero physics / 182 animation differences. No whole-act/campaign,
+later-HCZ rewind spots, alternate viewport/donor/roster breadth or native pixels
+are certified by this bounded results correction.
+
+
+## Seven-emerald starpost invitation — 2026-10-29
+
+The [bounded starpost correction](../../audits/2026-10-29-s3k-campaign-terminal-certification.md#starpost-invitation-correction-and-bounded-continuation--2026-10-29)
+removes the non-native Chaos Emerald completion gate while preserving the
+ring/run/consumption and existing graph/art owners. Short ordinary-contact
+eligibility cases cover 0/6/7 emeralds; separate actual-ROM native 320 solo-Sonic
+component cases exercise partial bonus allocation and destructive world
+restore/60-frame forward replay. These use a fixture contact in AIZ2 and are
+mechanism evidence, not traversed HCZ checkpoint/lifecycle coverage.
+
+The original native 320 Sonic+Tails continuous HCZ route restores four real
+bonus children and exact parent 189/direct 269 fingerprints at completed input 98467.
+All nine completed segment report JSONs remain canonically identical to the
+fresh baseline. HCZ segment 15 still consumes 3,687 rows with 27,401 differences,
+first non-camera row 1748 Y `$0777/$0772`, then MGZ admission fails at cursor 100896.
+The next unmatched work moves to raw 2680/2681 (direct 270/parent 190), after the
+earlier boss-hit/contact frontier. No comparison, fixture or timing authority
+is relaxed. The remaining boss/contact cause, actual HCZ checkpoint death/
+reload and later rewind spots, alternate widths/donors/characters/rosters,
+native pixels and full-act/campaign certification remain open. Eligibility is
+not viewport- or movement-rule-sensitive: this edit reads emerald/ring and
+entry-policy state, without changing geometry, motion or roster authority.
+That local sensitivity decision does not fulfill the inherited act matrix.
+
+The [independent lifecycle follow-up](../../audits/2026-10-29-s3k-campaign-terminal-certification.md#inherited-starpost-lifecycle-repair--2026-10-29)
+adds actual-ROM AIZ2 component checks for ordinary orbit allocation exhaustion
+(checkpoint saved, no bonus art) against successful-orbit/failed-bonus allocation
+(art still submitted), with destructive restoration and 60-frame replay. Ordinary
+20/35/50-ring activation followed by ring loss retains all three selected bonus
+families through entry and two destructive restores; disabled/outside contacts
+and consumed siblings remain negative controls. This extends the shared mechanism
+floor only. The HCZ checkpoint route, death/reload, later rewind, viewport/donor/
+roster and native-pixel obligations above remain inherited and unfulfilled.
+
+## Custom damage flash phase — 2026-11-02
+
+The custom palette owner now reads the 32-update hit counter before decrement,
+matching the ROM palette-copy tail. It writes the final normal row before
+collision re-admission. `TestMhzMinibossPaletteFlash` checks every palette row
+and countdown value for AIZ1 and both HCZ bosses through the public update.
+Existing route, donor/team/viewport and native pixel qualification gaps remain;
+this local correction does not renew whole-act certification.
+
+## Music ownership follow-up (2026-11-02)
+
+The [cross-game music audit](../../audits/2026-11-02-music-transitions.md)
+records corrected native request IDs and/or level-restore selection affecting
+this route. Restoration selects the apparent playlist and P1 invincibility at
+the native boundary. These local checks do not requalify this matrix’s inherited
+route, viewport/donor/team, lifecycle or audible-comparison gaps.
+
+
+## End-boss setup and platform animation — 2026-11-03
+
+`HCZEndBoss_StartMain` (sonic3k.asm:140871-140875) replaces the dispatch
+pointer and returns. The subsequent `HCZEndBoss_Init` dispatch
+(sonic3k.asm:140898-140918) initializes children and the descent timer;
+`HCZEndBoss_MoveWait` begins on the following pass. The consolidated owner
+now preserves both boundaries. `HCZEndBossPlatform_Init`
+(sonic3k.asm:141175-141194) leaves the new slot's animation timer cleared;
+`Animate_RawNoSST` (sonic3k.asm:177432-177446) advances first on dispatch 1,
+then every four dispatches, reaching the callback on dispatch 25.
+
+Two independent controls fail on the old source with assertion failures and
+pass with the correction. The focused boss/graph-rewind/keep-green selection
+passes 83 cases without skips. Native trace aux and temporary engine observers
+identify turbine activation/platform creation at 28623/28788 versus the old
+engine's 28621/28786, with identical 165-dispatch turbine acceleration.
+
+The HCZ slice advances from row 28814 `x` (608 error groups) to row 28856
+`tails_x` (644 groups). All ten sibling HCZ trace error lists remain identical,
+including both green siblings. These are bounded Sonic+Tails route observations;
+whole-act, viewport/donor/team breadth and pending-initialization graph restore
+remain unqualified. The existing graph controls pass but do not specifically
+capture the newly separated pending initialization dispatch.
+
+Error-list attribution: the first removed error is row 28814 `x`; the first
+added error is row 28884 `tails_cpu_ctrl2_held`, after existing Tails motion
+divergence at 28856. At 28884, ROM/engine P1 are both `(40D1,07B8)`, camera
+both `(4031,0738)`, while Tails is `(40CE,07F0)` / `(40D1,07E6)` and velocity
+`(00B0,0000)` / `(FD80,0000)`. The addition follows an already divergent P2,
+not an agreeing native state. No newly red class or earlier first error occurs.
+The next local owner is the shared displacement register in
+`HCZEndBossColumn_PushPlayersFromWater` (sonic3k.asm:141825-141854): both
+eligible players to the right negate the same register in succession.
+
+
+## End-boss paired suction — 2026-11-03
+
+`HCZEndBossColumn_PushPlayersFromWater` (sonic3k.asm:141825-141854)
+initializes the positional displacement once and retains negations across
+native P1/P2. An eligible P1 to the right makes it negative; an eligible P2
+to the right negates it back to positive. Skipped participants leave it
+unchanged; equality takes the unnegated path. Extension participants retain
+independent displacement transactions.
+
+Executed branch instrumentation at slice row 28856 observes P1 at `(40DB,07EC)`
+and P2 at `(4117,07EA)`, both right of column `40C8`, with water at `07E0`.
+The old branch shifts both by -2; native P1 finishes at `40D9` and P2 at
+`4119`. The corrected slice moves from 644 groups at 28856 to 635 at 28879.
+Nine sibling error lists are unchanged. The remaining sibling has 229 to 230
+groups solely because removing row 3796 `x` splits an existing span; expanded
+row/field sets contain no added mismatch and its first error stays at row 0
+`camera_y`. This is bounded route evidence; the earlier act/configuration and
+pending-initialization restore gaps remain open.
+
+The 83 unchanged focused boss/rewind/keep-green cases pass without skips;
+the new paired-suction control passes separately after correcting its fixture's
+inherited-field setup and below-water placement. That control covers paired
+right-side players, skipped P1, and exact X equality. Earlier fixture errors
+and a misplaced wrapper flag were failed attempts, not gameplay evidence.
+
+
+## End-boss paired grab range — 2026-11-03
+
+`HCZEndBossColumn_ProcessPlayers` (sonic3k.asm:141861-141874) selects the
+range once. `HCZEndBossColumn_PushHeldPlayer` (sonic3k.asm:141919-141925)
+consumes one word before its top check, including on a subsequent release.
+The native P2 therefore sees the shifted range after P1 reaches this path.
+The shipped FixBugs=0 behavior is preserved; extension participants use fresh
+ranges. A shifted final pair may read the following code word as data, obtained
+from the supplied ROM rather than clamped or interpreted as instructions.
+
+The temporary branch probe at row 28879 shows carried P1 `(40BD,07C4)`,
+uncontrolled P2 `(40D7,07F0)`, spray Y `07B8`, and segment 4. The old independent
+range grabs P2 and lifts it to `07EE`; the native retained cursor uses `+$88`
+as its top offset and excludes P2. These are local encounter observations,
+not new route/configuration or pending-setup restore qualification.
+
+The local grab-range control and focused boss/graph/keep-green selection pass
+85 cases without failures, errors or skips. The slice moves from 635 error
+groups at row 28879 to 600 at row 28970 `tails_y`; all ten sibling error lists
+remain identical to the paired-suction baseline. The next frontier is an early
+P2 turbine contact, with the native boss/turbine one pixel above the engine.
+
+
+## End-boss rise-to-swing ownership — 2026-11-03
+
+`HCZEndBoss_SetSidePassFromOrigin` (sonic3k.asm:140961-140967) writes only
+integer Y and retains `y_vel`; `Swing_UpAndDown` (sonic3k.asm:177947-177981)
+then reads that live velocity. The engine probe observes `075AD000/FF00`
+before the handoff, but the old owner discards `D000` and resumes cached
+`FFA0`. The boss now uses its live velocity throughout swing and preserves
+the fraction on the integer reset. Shared swing code is unchanged.
+
+The independent fractional-position/live-velocity control and the affected
+boss/rewind/keep-green selection pass 86 cases without skips. The slice moves
+from 600 errors at 28970 to 549 at 29136 `tails_x`, and all ten sibling HCZ
+error lists remain identical. Broader route/configuration and pending-main
+initialization restore obligations remain inherited.
+
+
+## End-boss attack and spray release dispatch — 2026-11-03
+
+`Obj_Wait` (sonic3k.asm:178040-178049) directly invokes
+`HCZEndBoss_StartSidePass` (sonic3k.asm:140969-140978) on underflow.
+`HCZEndBossColumn_Idle` (sonic3k.asm:141297-141310) completes its final
+interaction before selecting release movement on that same pass; the next
+release-movement dispatch does not interact with players. The engine probe
+records pending attack at 29135, setup/release at 29136, then extra spray
+interaction at 29137. Native aux selects attack/release at 29135.
+
+The extra deferrals are removed. Two older controls that pinned those deferrals
+are corrected to assert same-pass callback setup without extra movement and
+one final spray interaction without repetition. All 86 focused boss/rewind/
+keep-green cases pass without skips. The slice advances from 549 errors at
+29136 to 404 at 29530 `y_speed`. Nine siblings stay exact; the other returns
+from 230 to 229 groups by removing the previous split. The next frontier is
+blade-water-chute activation. Existing breadth and pending-main restore gaps
+remain open.
+
+
+## Blade completion and water-chute activation — 2026-11-03
+
+`HCZEndBossBomb_StartExplosion` (sonic3k.asm:141562-141566) only installs
+animation/callback pointers. `Child_DrawTouch_Sprite`
+(sonic3k.asm:178144-178150) publishes collision and draws without animation;
+the new raw-acceleration script therefore starts with the cleared timer.
+Executed probes show the old timer `1` on each first spin-down dispatch and
+chute setup/wait-callback/first-animation at 29529/29530/29531, compared with
+native 29528/29529/29530. The unsupported timer seed is removed; chute setup
+and wait dispatch separation remain intact. The older blade control is
+corrected to assert immediate first animation advancement and retained delay.
+
+The 86 focused boss/rewind/keep-green cases pass without skips. The slice
+advances from 404 errors at 29530 to 71 at 30646 `player_animation_id`, with
+all ten sibling error lists unchanged. The remaining frontier is the local
+capsule/results adapter; inherited breadth and pending-main restore gaps remain.
+
+
+## Native capsule/results handoff and green slice — 2026-11-03
+
+`sub_868F8` (sonic3k.asm:181991-182009) invokes `Set_PlayerEndingPose`
+(sonic3k.asm:182073-182084) during results creation. Its animation-byte write
+retains the already-published mapping until the next player pass. The retained
+adapter now publishes that pose immediately, queues native P2 for its next
+player slot, and permits `Obj_LevelResultsInit` (sonic3k.asm:62557-62571)
+to submit art on its own initialization dispatch. Allocation's separate
+first-dispatch boundary remains intact.
+
+Executed probes showed the old main pending flag at 30646, main pose/P2 queue
+and art deferral at 30647, and P2 freeze at 30648. Native comparison requires
+main pose at 30646 and P2/art at 30647. The corrected production component
+control and expanded focused/terminal/graph/keep-green selection pass 97 cases
+with zero failures, errors or skips. The final HCZ trace selection has 12 tests,
+eight inherited sibling failures, no errors or skips. Both methods in
+`TestS3kHczZoneSliceTraceReplay` pass: 71 groups at 30646 become zero errors /
+zero warnings, with 29,285 compared frames, 31,482 planned trace rows and the
+comparison gate reached. All ten sibling error lists exactly match the
+pre-task baseline; their carried-state/entry frontiers remain separate.
+
+The trace still advertises eight absent auxiliary schemas (cage state/execution,
+velocity/position writes, Sonic position history, CPU normal steps, and CNZ
+cylinder state/execution). No trace comparator, bootstrap, timing authority or
+fixture was changed. This is bounded native Sonic+Tails cross-act route evidence;
+configuration breadth, full-level certification and the pending-main-init
+restore spot remain unqualified.

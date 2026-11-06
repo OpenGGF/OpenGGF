@@ -1,5 +1,7 @@
 package com.openggf.game.sonic1;
 
+import static com.openggf.game.sonic1.Sonic1RomProfile.resolve;
+
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.GameServices;
@@ -3114,7 +3116,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
             // Expl_Main's move.l #Map_ExplodeBomb,obMap (REV01 $948A).
             // Unlike Map_ExplodeItem, this five-frame table references shared
             // frames BEFORE the table and uses fiery tiles $40/$50 in frames1/2.
-            int mappingAddress = romReader.readU32BE(0x948C);
+            int mappingAddress = romReader.readU32BE(resolve(romReader, 0x948C));
             List<SpriteMappingFrame> mappings = S1SpriteDataLoader.loadMappingFramesWithSignedOffsets(
                     romReader, mappingAddress, 5);
             registerSheet(ObjectArtKeys.BOSS_EXPLOSION, new ObjectSpriteSheet(
@@ -3422,7 +3424,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
                 throw new IllegalStateException("Unable to load Sonic 1 ROM mapping data", ex);
             }
         }
-        return S1SpriteDataLoader.loadMappingFrames(romReader, mappingAddr);
+        return S1SpriteDataLoader.loadMappingFrames(romReader, resolve(romReader, mappingAddr));
     }
 
     @Override

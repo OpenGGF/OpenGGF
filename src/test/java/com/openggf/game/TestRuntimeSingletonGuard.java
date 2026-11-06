@@ -1,5 +1,7 @@
 package com.openggf.game;
 
+import com.openggf.tests.ObjectGuardSourceScanner;
+import com.openggf.tests.ObjectGuardSourceScanner.SourceText;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -14,6 +16,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 
 /**
@@ -47,22 +50,7 @@ public class TestRuntimeSingletonGuard {
                     return FileVisitResult.CONTINUE;
                 }
 
-                SourceScanText source = sourceWithoutCommentOnlyLines(Files.readAllLines(file));
-                Matcher matcher = STRICT_GAME_SERVICES_NULL_CHECK.matcher(source.text);
-                while (matcher.find()) {
-                    String relativePath = srcMain.relativize(file).toString();
-                    violations.add(String.format(
-                            "%s:%d - GameServices.%s() %s null",
-                            relativePath, source.lineAt(matcher.start()), matcher.group(1), matcher.group(2)));
-                }
-                matcher = STRICT_GAME_SERVICES_LOCAL_NULL_CHECK.matcher(source.text);
-                while (matcher.find()) {
-                    String relativePath = srcMain.relativize(file).toString();
-                    violations.add(String.format(
-                            "%s:%d - %s = GameServices.%s(); if (%s %s null)",
-                            relativePath, source.lineAt(matcher.start()), matcher.group(1), matcher.group(2),
-                            matcher.group(1), matcher.group(3)));
-                }
+                violations.addAll(findViolations(srcMain.relativize(file).toString(), Files.readAllLines(file)));
 
                 return FileVisitResult.CONTINUE;
             }
@@ -88,39 +76,87 @@ public class TestRuntimeSingletonGuard {
         return null;
     }
 
-    private static SourceScanText sourceWithoutCommentOnlyLines(List<String> lines) {
-        StringBuilder source = new StringBuilder();
-        List<Integer> lineByOffset = new ArrayList<>();
-        for (int i = 0; i < lines.size(); i++) {
-            String line = lines.get(i);
-            String trimmed = line.trim();
-            String scannedLine = (trimmed.startsWith("//") || trimmed.startsWith("*") || trimmed.startsWith("/*"))
-                    ? ""
-                    : line;
-            source.append(scannedLine);
-            for (int j = 0; j < scannedLine.length(); j++) {
-                lineByOffset.add(i + 1);
-            }
-            source.append('\n');
-            lineByOffset.add(i + 1);
+    /** Each match requires this literal; unrelated files need no source map or regex scan. */
+    static List<String> findViolations(String relativePath, List<String> lines) {
+        if (lines.stream().noneMatch(line -> line.contains("GameServices."))) {
+            return List.of();
         }
-        return new SourceScanText(source.toString(), lineByOffset);
+        SourceText source = ObjectGuardSourceScanner.sourceWithoutCommentOnlyLines(lines);
+        List<String> violations = new ArrayList<>();
+        Matcher matcher = STRICT_GAME_SERVICES_NULL_CHECK.matcher(source.text());
+        while (matcher.find()) {
+            violations.add(String.format(
+                    "%s:%d - GameServices.%s() %s null",
+                    relativePath, source.lineAt(matcher.start()), matcher.group(1), matcher.group(2)));
+        }
+        matcher = STRICT_GAME_SERVICES_LOCAL_NULL_CHECK.matcher(source.text());
+        while (matcher.find()) {
+            violations.add(String.format(
+                    "%s:%d - %s = GameServices.%s(); if (%s %s null)",
+                    relativePath, source.lineAt(matcher.start()), matcher.group(1), matcher.group(2),
+                    matcher.group(1), matcher.group(3)));
+        }
+        return violations;
     }
 
-    private static final class SourceScanText {
-        private final String text;
-        private final List<Integer> lineByOffset;
+    @Test
+    void scannerPreservesHistoricalLineNumbersAndDiagnosticOrder() {
+        assertEquals(List.of(
+                "Fixture.java:2 - GameServices.camera() != null",
+                "Fixture.java:5 - GameServices.rng() == null",
+                "Fixture.java:6 - GameServices.fade() != null",
+                "Fixture.java:3 - level = GameServices.level(); if (level == null)",
+                "Fixture.java:10 - managers = GameServices.sprites(); if (managers != null)"),
+                findViolations("Fixture.java", List.of(
+                        "// GameServices.camera() == null",
+                        "if (GameServices.camera() != null) {}",
+                        "LevelManager level = com.openggf.game.GameServices.level();",
+                        "if (level == null) {}",
+                        "String text = \"GameServices.rng() == null\";",
+                        "int i = 0; // GameServices.fade() != null",
+                        "if (GameServices.levelOrNull() == null) {}",
+                        "GameServices",
+                        ".camera() == null",
+                        "var managers = GameServices.sprites();",
+                        "/* comment-only line */",
+                        "if (managers != null) {}")));
+    }
 
-        private SourceScanText(String text, List<Integer> lineByOffset) {
-            this.text = text;
-            this.lineByOffset = lineByOffset;
-        }
-
-        private int lineAt(int offset) {
-            if (lineByOffset.isEmpty()) {
-                return 1;
+    @Test
+    void scannerKeepsEveryStrictAccessorAndBothNullComparisons() {
+        for (String accessor : List.of("camera", "level", "gameState", "timers", "rng", "fade",
+                "sprites", "collision", "terrainCollision", "parallax", "water", "bonusStage")) {
+            for (String operator : List.of("==", "!=")) {
+                assertEquals(List.of("Access.java:2 - GameServices." + accessor + "() " + operator + " null",
+                                "Access.java:3 - value = GameServices." + accessor + "(); if (value " + operator + " null)"),
+                        findViolations("Access.java", List.of(
+                                "* omitted comment",
+                                "com.openggf.game.GameServices." + accessor + "() " + operator + " null",
+                                "var value = GameServices." + accessor + "();",
+                                "if (value " + operator + " null) {}")));
             }
-            return lineByOffset.get(Math.min(offset, lineByOffset.size() - 1));
         }
+    }
+
+    @Test
+    void prefilterKeepsCommentsAndUnrelatedSourceHarmless() {
+        assertEquals(List.of(), findViolations("NoAccess.java", List.of("z".repeat(80_000), "", "class Other {}")));
+        assertEquals(List.of(), findViolations("Comments.java", List.of("// GameServices.camera() == null",
+                "/* GameServices.level() != null", "* GameServices.rng() == null")));
+        assertEquals(List.of(), findViolations("Optional.java", List.of("GameServices.cameraOrNull() == null")));
+        assertEquals(List.of(), findViolations("Split.java", List.of("GameServices", ".camera() == null")));
+    }
+
+    @Test
+    void prefilterRetainsWhitespaceFormsAcceptedByTheExistingRegexes() {
+        assertEquals(List.of("Whitespace.java:2 - GameServices.camera() != null"),
+                findViolations("Whitespace.java", List.of(" /* ignored comment */",
+                        "\tcom.openggf.game.GameServices.camera()", "\t!=\t", "null")));
+        assertEquals(List.of("Whitespace.java:2 - value = GameServices.level(); if (value == null)"),
+                findViolations("Whitespace.java", List.of("// ignored comment",
+                        "\tManager value\t=\tGameServices.level()\t;",
+                        "\tif \t( \tvalue\t==\tnull\t)")));
+        // Inline comments inside required tokens are not stripped by the old scanner.
+        assertEquals(List.of(), findViolations("Inline.java", List.of("GameServices./* comment */camera() == null")));
     }
 }

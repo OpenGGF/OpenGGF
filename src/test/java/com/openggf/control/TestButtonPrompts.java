@@ -77,6 +77,22 @@ class TestButtonPrompts {
         assertEquals("Space", label(0, ButtonPrompts.Button.A), "a disconnected pad falls back to the bound key");
     }
 
+    @Test void scenesCanNameEitherDeviceWhicheverWasUsedLast() {
+        pads.set(List.of(pad(0, "Sony DualSense Wireless Controller"))); frame();
+        assertEquals("Space", label(0, ButtonPrompts.Button.A), "the keyboard is the last device");
+        assertEquals(Optional.of("Square"), InputHandlerInternalAccess.buttonLabel(input, 0, ButtonPrompts.Button.A, true),
+                "the pad label is still the assigned pad's physical button");
+        assertEquals(Optional.of("Cross"), InputHandlerInternalAccess.buttonLabel(input, 0, ButtonPrompts.Button.B, true));
+        pads.set(List.of(pad(0, "Sony DualSense Wireless Controller", GLFW_GAMEPAD_BUTTON_X))); frame();
+        assertEquals("Square", label(0, ButtonPrompts.Button.A));
+        assertEquals(Optional.of("Space"), InputHandlerInternalAccess.buttonLabel(input, 0, ButtonPrompts.Button.A, false),
+                "the key label is still the binding");
+        assertEquals(Optional.empty(), InputHandlerInternalAccess.buttonLabel(input, 1, ButtonPrompts.Button.A, true),
+                "P2 has no pad assigned");
+        assertEquals(Optional.empty(), InputHandlerInternalAccess.buttonLabel(null, 0, ButtonPrompts.Button.A, false),
+                "no live input, no label");
+    }
+
     @Test void replayOverridesDoNotChangeTheRememberedDevice() {
         input.setLogicalOverride(LogicalInputSnapshot.ofPlayers(
                 PlayerInputState.of(0, 0, InputActionMasks.ACTION_A, InputActionMasks.ACTION_A, false, false),

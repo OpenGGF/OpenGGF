@@ -499,7 +499,7 @@ class TestSonicCdOpeningWorldLoad {
             boundaries.add(boundary);
             if (h.mode().getLevelManager() == level) h.mode().markRewindBoundary(boundary);
         });
-        var log = com.openggf.tools.InputScriptCompiler.compileToInputLog(
+        var log = com.openggf.route.InputScriptCompiler.compileToInputLog(
                 "2 -;108 R;500 -;77 R;230 -;100 R;120 -");
         var movie = new com.openggf.debug.playback.Bk2MovieLoader().parseInputLogText(
                 Path.of("restart-controller-recipe"), log.lines().toList());
@@ -1699,7 +1699,7 @@ class TestSonicCdOpeningWorldLoad {
         GameServices.configuration().setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, false);
         GameServices.configuration().setSessionOverride(SonicConfiguration.LIVE_REWIND_DETERMINISM_AUDIT, false);
         final String controllerScript = "1200 R;32 R+B;1200 R";
-        var log = com.openggf.tools.InputScriptCompiler.compileToInputLog(controllerScript);
+        var log = com.openggf.route.InputScriptCompiler.compileToInputLog(controllerScript);
         var movie = new com.openggf.debug.playback.Bk2MovieLoader().parseInputLogText(
                 Path.of("natural-checkpoint-animals-controller"), log.lines().toList());
         assertEquals(2432, movie.getFrameCount());
@@ -2102,7 +2102,7 @@ class TestSonicCdOpeningWorldLoad {
         GameServices.configuration().setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, false);
         GameServices.configuration().setSessionOverride(SonicConfiguration.LIVE_REWIND_DETERMINISM_AUDIT, false);
         final String controllerScript = "1200 R;32 R+B;1200 R";
-        var log = com.openggf.tools.InputScriptCompiler.compileToInputLog(controllerScript);
+        var log = com.openggf.route.InputScriptCompiler.compileToInputLog(controllerScript);
         var movie = new com.openggf.debug.playback.Bk2MovieLoader().parseInputLogText(
                 Path.of("natural-checkpoint-goalpost-controller"), log.lines().toList());
         assertEquals(2432, movie.getFrameCount());
@@ -2665,7 +2665,7 @@ class TestSonicCdOpeningWorldLoad {
         GameServices.configuration().setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, false);
         GameServices.configuration().setSessionOverride(SonicConfiguration.LIVE_REWIND_DETERMINISM_AUDIT, false);
         final String controllerScript = "1200 R;32 R+B;537 R;32 R+B;1200 R;32 R+B;1200 R";
-        var log = com.openggf.tools.InputScriptCompiler.compileToInputLog(controllerScript);
+        var log = com.openggf.route.InputScriptCompiler.compileToInputLog(controllerScript);
         var movie = new com.openggf.debug.playback.Bk2MovieLoader().parseInputLogText(
                 Path.of("three-jump-natural-checkpoint-controller"), log.lines().toList());
         assertEquals(4233, movie.getFrameCount());
@@ -3573,7 +3573,7 @@ class TestSonicCdOpeningWorldLoad {
         // Source-only promotion; all author-side engine/build/test/media/native checks are UNRUN.
         // The inherited4233 input/proofs above remain byte-exact; extend only the ordinary input recipe.
         final String finalControllerScript = controllerScript + ";967 R;32 R+B;24 R";
-        var finalLog = com.openggf.tools.InputScriptCompiler.compileToInputLog(finalControllerScript);
+        var finalLog = com.openggf.route.InputScriptCompiler.compileToInputLog(finalControllerScript);
         var finalMovie = new com.openggf.debug.playback.Bk2MovieLoader().parseInputLogText(
                 Path.of("four-jump-natural-checkpoint-controller"), finalLog.lines().toList());
         assertEquals(5256, finalMovie.getFrameCount());

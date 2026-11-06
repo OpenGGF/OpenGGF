@@ -13,9 +13,31 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 **TAS mechanism verdicts (2026-10-26):** the
 [executed verdict record](../architecture/validation/2026-10-26-tas-trick-verdicts.md)
 separates supported tricks from reached compatibility gaps. Newly demonstrated
-limitations are linked from [known bugs](known-bugs.md); this test-only pass
-adds no accepted deviations. The local paused-clock mismatch is distinct from
-whole-run timing limits and is not waived by them.
+limitations are linked from [known bugs](known-bugs.md). The subsequent
+[native-accuracy repairs](../architecture/validation/2026-10-26-tas-accuracy-repairs.md)
+restore shipped behavior through existing semantic owners and add no accepted
+deviations. The later [engine-support record](../architecture/validation/2026-10-28-tas-engine-support.md)
+qualifies the accepted remaining semantic mechanisms, including the repaired
+pause clock, while preserving historical evidence and full-route limits. The
+authorized S2 sideways-platform exception remains unchanged.
+
+## TAS hardware-level limits
+
+Exact jump-dependent halfpipe hardware lag (`s2-special-stage-lag:1`) remains
+unsupported. OpenGGF implements game algorithms and output rather than CPU-cycle
+or VDP/bus execution; the live halfpipe pacing owner does not reproduce that
+hardware-work schedule. No fitted jump predicate or observed timing/gameplay rows
+were added to manufacture native behavior. The existing isolated hardware-timing
+input contract retains its matching prepared-work release and per-row admission
+to an existing ROM loop; neither supplies gameplay state or authorizes general
+hardware emulation. The
+historical running/jumping check is retained as limitation evidence, not a
+synchronized native-delta measurement. See the [support assessment](../architecture/validation/2026-10-26-tas-supportability.md#s2-special-stage-jump-dependent-lag).
+
+The three S3K KosM adjacent-memory scenarios have a separate
+[corruption disposition](../S3K_KNOWN_DISCREPANCIES.md#kosm-adjacent-memory-corruption).
+These four exclusions do not waive reachable game-state, allocation, clock or
+last-writer art behavior that can be represented by native semantic owners.
 
 **TraceChaser extraction note (2026-08-29):** moving recorder and analysis
 utilities to the optional pinned `tools/tracechaser` submodule changes source
@@ -855,7 +877,7 @@ latest frontier snapshot.
 
 ### Rationale for not patching from traces
 
-Per CLAUDE.md "Trace Replay Tests" the comparison-only invariant forbids hydrating engine state from `TraceEvent.StateSnapshot` events; trace data is read-only diagnostic input. Any per-credit override to mask these failures would be a spec violation. The bugs need to be diagnosed and fixed in the engine (likely physics, ring/object collision, or zone-specific systems such as LZ water/SBZ junction objects) and the failing tests turned green by ROM-accurate code paths, not bootstrap papering.
+Per AGENTS.md "Trace Replay Tests" the comparison-only invariant forbids hydrating engine state from `TraceEvent.StateSnapshot` events; trace data is read-only diagnostic input. Any per-credit override to mask these failures would be a spec violation. The bugs need to be diagnosed and fixed in the engine (likely physics, ring/object collision, or zone-specific systems such as LZ water/SBZ junction objects) and the failing tests turned green by ROM-accurate code paths, not bootstrap papering.
 
 ### Resolved MZ2 (`TestS1Credits01Mz2TraceReplay`) push-block/geyser root cause (2026-05-19)
 
@@ -899,7 +921,7 @@ applying the lamppost state". **It does not, and no longer should.** The
 bootstrap carries an explicit note in its place: the ROM's `v_vblank_count` is
 incremented once per V-blank at `VBlank_Exit` (`sonic.asm:685`) and written
 nowhere else in the entire ROM, so nothing resets it on level load and
-`EndDemo_LampVar` (`sonic.asm:3879`) carries no vblank field. Its value entering
+`EndDemo_LampVar` (`sonic.asm:3955`) carries no vblank field. Its value entering
 a credits demo is a free-running count since console reset, not level-derived
 state, and cannot be reconstructed from the lamppost table -- **seeding a
 measured phase there would be a fitted model**. The counter is instead
@@ -1401,59 +1423,36 @@ position for the segment. That is accepted frame-zero bootstrap debt, not
 per-frame trace hydration, and it must not expand into copying recorded trace
 rows or sidekick/camera state back into the engine.
 
-### Known Consequence: Run-Level Progression Is Absent
+### Carried Run State (resolved 2026-11-03)
 
-Position is not the only run-level state a mid-run segment lacks. Chaos and
-Super Emerald counts also start at zero, because the segment did not replay the
-special stages that earned them. This is deliberate -- seeding them from the run
-manifest's `emeralds_before` would be trace hydration under hard rule 4 -- but it
-makes some ROM branches unreachable in a standalone segment replay.
+Position is not the only run-level state a mid-run segment inherits. Until
+2026-11-03 rings, Chaos/Super Emerald progress, used giant rings and the shield
+all started at zero, and this entry refused to seed them as trace hydration.
+The user ruled on 2026-11-03: state may be carried from the previous segment
+into a new one (it is required for sync); state must not be invented mid-run.
 
-`loc_6170A` (skdisasm/sonic3k.asm:128330-128347) sends a special-stage entry ring
-to the 50-ring award at `loc_61794` (:128379-128387) when `Chaos_emerald_count`
-is 7 **and** either `SK_alone_flag` is set, or `SSEntry_CheckLevel` says the
-level is an S3-half one (:128487-128497), or the Super Emeralds are also
-complete. Otherwise it runs the capture sequence at `loc_6173A` (:128349-128355),
-which writes `move.b #$1C,anim(a1)`, `move.b #0,mapping_frame(a1)` and
-`move.b #$53,object_control(a1)` -- the player is locked and frozen. The engine's
-own branch (`Sonic3kSSEntryRingObjectInstance.awardsFiftyRingsInsteadOfCapture`)
-is ROM-correct; only the emerald count differs.
+The engine now imports that state once, at segment entry, through
+`TraceSegmentCarriedStateImport` and only from recorder observations. Rings and
+emerald counts come from the run manifest's boundary records. The emerald array
+is folded by the ROM's own rules over the recorded special-stage history. Used
+giant rings come from the touches recorded in the zone visit. The shield and
+path bits come from the segment's recorded entry row. See
+[segment carried run state](../architecture/designs/2026-11-03-segment-carried-run-state.md).
+The 50-ring frontiers this entry used to list close as the ROM runs them: with
+seven emeralds carried, `loc_6170A` pays the rings. ICZ moved from 2336 to a
+later frontier and LBZ from 958. The second defect suspected here (the award
+publishing one frame early) did not reproduce: neither frontier row now
+diverges.
 
-**Measured instances, re-stamped at the ICZ segment-column balance-width fix.**
-The earlier Tails-animation frontier that masked ICZ at 1983 (`tails_animation_id`
-`0x0005` vs `0x0006`) is closed, so ICZ reports this boundary directly at 2336
-again -- the citation that was stale at `2bab075aa` is accurate once more:
-
-| class | errors | first error |
-|---|---:|---|
-| `TestS3kSonicTailsLbzSegmentTraceReplay` | 7174 | 958, `player_animation_id` `0x0002` vs `0x001C` |
-| `TestS3kSonicTailsCnzSegmentTraceReplay` | 6300 | 5754, `player_animation_id` `0x0000` vs `0x001C` |
-| `TestS3kSonicTailsIczSegmentTraceReplay` | 2860 | 2336, `player_animation_id` `0x000D` vs `0x001C` |
-
-These are the three largest release-6 S3K reds and they are **one cause**, not three.
-At each frontier exactly two fields differ -- `player_animation_id` and
-`player_mapping_frame` -- with position, speed, sub-pixels, rings and camera all
-matching, and no error group starts before it. On the *next* frame the ROM's
-`rings` steps by exactly +50 (16 -> 66 in LBZ, 94 -> 144 in CNZ, 30 -> 80 in ICZ).
-The recorded run held 7 emeralds from segment 15 onward, and CNZ (zone 3),
-LBZ (zone 6) and ICZ (zone 5) are all S3-half, so the ROM awards while the replay
-captures.
-
-A temporary probe seeding 7 emeralds at bootstrap -- **not landed, and not
-landable: seeding from the manifest is trace hydration under hard rule 4** --
-moved LBZ to 5028 errors with every field at frame 958 matching except `rings`,
-confirming the diagnosis positively rather than by elimination.
-
-Behind this sits a **second, independent and still-open defect**: with emeralds
-present, the 50-ring award publishes exactly one frame early (one-frame,
-self-correcting `rings` spans at LBZ 958 and CNZ 5754). Whether that is an engine
-phase error or the recorder sampling `rings` before the object pass is not
-established; ordinary ring pickups show no such skew, which argues it is real. It
-is only observable with emeralds seeded, so no committed test can pin it today.
-Nothing was fitted to close it.
-
-Such frontiers are closed by the ordered run chain, not by the standalone segment
-harness.
+Since 2026-11-04 the recorder's `level_entry_ram` (the `Saved_*`/`Saved2_*`
+blocks and carried counters) supplies the water level, camera bounds, resize
+routine, timer, extra-life flags, lives and the full star-post checkpoint, and
+replaces the derived emerald and giant-ring state. Special-stage segments carry no
+`level_entry_ram`; their selection still uses the ledger. Return-entry
+provenance (zone intros skipped on a return) is the separate policy-B mechanism
+(`level_entry_placement_source`). The recorded `last_star_post_hit` byte is
+carried through the same import, so a star-post bonus return re-enters with its
+post already hit.
 
 ### Verification
 
@@ -1462,43 +1461,6 @@ checks current complete-run fixtures use metadata start position only, keep an
 unseeded replay start, and do not receive the S3K sidekick seed-row prelude.
 `TestBuildToolingGuard.traceReplayLegacyExceptionsShouldBeDocumentedAndBounded`
 keeps this release-debt entry present.
-
-### Measured Scope: Every Continuation Segment, Not Only Emerald Counts
-
-The consequence above is written for Chaos and Super Emerald counts, but it
-applies to every quantity a mid-run segment inherits rather than earns. Measured
-across the whole `-Ptrace-segments` profile (70 tests: 52 physics failures, 7
-`unmatched recorded hardware completions`, 1 FIFO-full):
-
-| group | first error at trace frame 0 | first error later |
-|---|---:|---:|
-| continuation segments | **29** | **0** |
-| first-of-zone / other | 5 | 18 |
-
-**Every continuation segment in the profile diverges at its first compared row,
-and none diverges later.** The correlation is total, and the fields are the
-carried run state a standalone segment cannot reconstruct:
-
-| field | classes | | field | classes |
-|---|---:|---|---|---:|
-| `rings` | 12 | | `y_speed` | 2 |
-| `tails_x` | 4 | | `x_sub` | 2 |
-| `camera_y` | 4 | | `x_speed` | 1 |
-| `tails_y` | 3 | | `tails_y_speed` | 1 |
-
-The twelve `rings` cases are identical in shape — trace frame 0, engine `0`, ROM
-carrying an accumulated count (8, 75, 77, 85, 96, 117, 126, 150, 156, 177, 180,
-201). Ring count is the same class of state as the emerald counts named above:
-run-level progression the segment never played. Seeding it — or the sidekick
-position, camera, or player sub-pixel and speed columns — from `physics.csv` row
-0 or from run-manifest metadata would be per-frame trace hydration under hard
-rule 4, which this debt exists to refuse. The fixtures carry no such fields:
-`aiz_3/metadata.json` supplies `start_x`/`start_y` and nothing else.
-
-**So these 29 red classes are this debt showing up as failures, not defects.**
-They must not be driven green by seeding entry state, and a report that counts
-them as regressions is overstating. A mid-run segment's frame-0 divergence on a
-carried field is expected until the Removal Condition below is met.
 
 ### Removal Condition
 
@@ -1881,7 +1843,9 @@ the stock ROM-backed SMPS path remains unchanged.
 
 ---
 
-## V-Int Run Counter Does Not Tick On Pause Or Seamless-Boundary Lag Rows
+<a id="v-int-run-counter-does-not-tick-on-pause-or-seamless-boundary-lag-rows"></a>
+
+## Remaining V-int Clock Limits Outside Native Start Pause
 
 The engine's `ObjectManager.vblaCounter` models the ROM V-int run counter --
 `Vint_runcount` (`docs/s2disasm/s2.asm:508`), `v_vblank_count`
@@ -1889,23 +1853,20 @@ The engine's `ObjectManager.vblaCounter` models the ROM V-int run counter --
 (`docs/skdisasm/sonic3k.asm:559`) -- which the ROM increments once at V-int
 exit regardless of which V-int routine the mode jump table dispatched.
 
-The engine holds the invariant **exactly one tick per serviced V-blank**: the
-gameplay row ticks inside `ObjectManager.update(...)`, and every row where the
-level loop did not run but the V-int was still serviced (lag skip, bonus-stage
-lag, bonus-exit fade hold, title-card overlay, seamless-reload transition,
-trace `VBLANK_ONLY` / `PLAYABLE_ANIMATION_ONLY`) calls
-`ObjectManager.advanceVblaCounter()` exactly once. **No guard test enforces this.**
-Earlier revisions of this note cited a `TestVblaCounterVBlankInvariant` pinning the
-single mutation statement and the per-row tick counts; no such class exists anywhere
-in `src/`, and the invariant is carried by the field javadoc alone. Anyone changing
-tick ownership should write the guard rather than assume it caught a missed site.
+Ordinary gameplay ticks inside `ObjectManager.update(...)`; existing lag,
+bonus-exit and transition callers have explicit tick sites. Native Start pause
+now advances exactly once after the first successful pause lifecycle claim,
+with no increment for a duplicate or fade-losing claim. Real Start/resume,
+prepared PLC, object/RNG freeze, capsule residues, DDZ phase and full rewind
+controls are recorded in the [pause qualification](../architecture/validation/2026-10-28-tas-support-pause.md).
+This is a repaired parity defect, not an intentional paused-clock exception.
+Those bounded checks do not establish every whole-run clock row.
 
-Three row kinds diverge:
+Remaining row-specific limits are unchanged:
 
-- **PAUSE rows** (deliberate). The ROM's pause loop still runs the V-int, so the
-  ROM counter advances while paused; the engine's does not.
-- **Seamless-boundary LAG rows** (deliberate). These service
-  `LevelFrameStep.serviceVBlankOnly` without ticking the counter.
+- **Seamless-boundary LAG rows** (deliberate). Some service
+  `LevelFrameStep.serviceVBlankOnly` without an explicit counter tick; the pause
+  repair changes only successful native pause claims.
 - **S1 and S2 title-card locked-phase rows** (deliberate, cross-game work
   pending). `Level_TtlCard` runs its scroll-in loop with a `WaitForVint` on
   every pass (`docs/s2disasm/s2.asm:4914-4916`; Sonic 1 has the identical
@@ -1942,13 +1903,13 @@ Three row kinds diverge:
   a bridge is back on the recorded clock. The bridge's own rows remain frozen;
   nothing observes the counter there.
 
-The first two are unobservable against the currently recorded traces.
-Closing either divergence is a phase change, not a refactor: the counter is the
-`vblaCounter` argument handed to every object instance each frame, so a one-tick
+The seamless-boundary and title-card gaps are separate from the reached pause
+consequences repaired above. Closing a remaining clock divergence is a phase
+change, not a refactor: the counter is the `vblaCounter` argument handed to every object instance each frame, so a one-tick
 shift moves spilled-ring floor-probe cadence in all three games, the S3K slot
 bonus-stage RNG seed, LBZ/MGZ/ICZ object phasing, and every rewind snapshot's
-stored scalar. Any such change needs a full S1/S2/S3K trace fleet plus rewind
-determinism measurement of its own.
+stored scalar. Any such change needs affected ROM/trace phase and rewind checks
+of its own; the pause repair does not qualify these remaining owners.
 
 ---
 
@@ -1977,7 +1938,7 @@ rather than repeating the sequence.
 
 `Vint_runcount` is free-running and absolute: `VintRet: addq.l #1,(Vint_runcount).w`
 (docs/s2disasm/s2.asm:508) is unconditional and every mode path reaches it. ROM objects
-gate on its parity and modulo — `Obj4B_ChkPlayers` `btst #0` (s2.asm:60989-60998,
+gate on its parity and modulo — `Obj4B_ChkPlayers` `btst #0` (s2.asm:61104-61113,
 period 2, "target Sidekick on uneven frames"), `Obj2C_Leaf` `& $1F`
 (s2.asm:52200-52208, period 32), and `Obj28_Main` `btst #4` for animal bounce
 direction (s2.asm:24660-24665, verified against the recording on all 31 floor-contact
@@ -2125,7 +2086,7 @@ justification below is **narrower than an earlier revision of this entry claimed
   (shooting flag plus a narrow x-window).
 - **Mod-8 phase is NOT invisible — the tripwire below has fired.** An earlier revision
   said "the comparison set does not consume clock phase." That is **wrong**. The Egg
-  Prison random-animal spawn gate (`loc_3F3A8`, `s2.asm:84935-84942`,
+  Prison random-animal spawn gate (`loc_3F3A8`, `s2.asm:85097-85104`,
   `move.b (Vint_runcount+3).w,d0 / andi.b #7,d0 / bne`) consumes mod-8 phase directly.
   The engine's counter is 6 rows (−2 mod 8) early at segment entry, which fires one extra
   random spawn, consumes an extra RNG draw pair, and shifts every later animal's position,
@@ -2500,85 +2461,45 @@ broke.
 stream — see the SST no-identity finding above — so it needs a different recording surface before
 it can be worked. **Do not close this by adjusting ring timing, slot allocation or the bounce.**
 
-## 30. S3K standalone Super-Emerald special stages cannot choose their layout set
+## 30. S3K standalone special stages choose their stage from carried state (resolved 2026-11-03)
 
-Seven Sonic+Tails special-stage segments (`ss_8`..`ss_14`) diverge at frame ~135 with
-large positional error (e.g. expected `x=5376`, actual `512`). The engine loads the
-**Chaos** layout set for stages the ROM ran with the **Super** set.
+Until 2026-11-03 the standalone special-stage harness initialised every stage
+from the recorded `special_stage_index` with the **Chaos** layout set. It was
+wrong twice over. Seven Sonic+Tails and seven Tails Super Emerald stages loaded
+the Chaos layouts (frame ~135, e.g. expected `x=5376`, actual `512`). Tails
+`ss_8` loaded stage 0, while the ROM's skip-collected search played stage 4,
+which `ss_5` had failed. The recorded index is `Current_special_stage` sampled
+at the arm, before `sub_85B0` searches.
 
 ### The ROM
 
-`sub_85B0` masks the index -- `andi.w #7,d0` / `move.b d0,(Current_special_stage).w`
-(`docs/skdisasm/sonic3k.asm:10894`) -- so **the stage index is 0-7 in both halves**. The
-layout set is chosen entirely by `SK_special_stage_flag` at `loc_85E4` (`:10824-10830`):
-set means `a2 = SSLayoutOffs_RAM` with `d3 = Super_emerald_count`, clear means
-`SStageLayoutPtrs` with `d3 = Chaos_emerald_count`, and the `adda.l #LockOnROM_Start,a2`
-S3-half rebase (`:10863-10868`) applies only when it is clear.
+`sub_85B0` (loc_85E4-loc_8630, sonic3k.asm:10861-10895) chooses the layout set
+from `SK_special_stage_flag` and searches `Collected_emeralds_array` from
+`Current_special_stage` for the first entry still `0` (Chaos) or `2` (Super). It
+stops when the set's counter is already 7, and masks the result to 0-7.
 
-Consequence: **`special_stage_index` is not a segment identity.** Index 0 names both `ss`
-(Chaos) and `ss_8` (Super). Seven test-class javadocs claimed the directory ordinal as the
-index (`ss_8` = "index 7" and so on); all seven were wrong and have been corrected.
+### Resolution
 
-### The engine's invented index space
+Under the 2026-11-03 carried-state ruling the harness imports the segment's
+carried run state (`TraceSegmentCarriedStateImport.importAtSpecialStageEntry`).
+`S3kSpecialStageSelection` (the ROM search) then picks the stage and set. The
+array and the set are folded from the run's recorded special-stage history by
+the ROM's own update rules. No fixture records `SK_special_stage_flag`, and no
+recorder export was added for stage identity. The fold rules and their citations
+are in the
+[segment carried run state](../architecture/designs/2026-11-03-segment-carried-run-state.md)
+design note. In gameplay only the giant ring (0) and the Hidden Palace pedestal
+(1) write the flag. A giant ring cannot open a stage with seven Chaos Emeralds
+held, so an arm with `emeralds_before == 7` is the Super set. The demo and
+level-select writers cannot occur inside a recorded campaign. A fixture whose run
+manifest cannot be resolved fails instead of defaulting to a set.
 
-`Sonic3kSpecialStageManager` branches on `currentStage < 8` for layouts and
-`superEmeraldMode || currentStage >= 8` for palettes (`:511-514`), an **0-15 index space
-the ROM does not have**. It is reachable only from `debugToggleLayoutSet()` (`:1444`),
-which initializes stage 8 and lets `debugNextStage()` cycle 8-15. Only the emerald-art
-archive site (`:1035`) consumes the flag cleanly.
+### Still open, independently
 
-### Why the obvious predicate is also wrong
-
-`superEmeraldMode` = `hasAllEmeralds() && !hasAllSuperEmeralds()` is a proxy for the normal
-route and is **not ROM-equivalent**:
-
-- the special-stage demo path sets `move.b #1,(SK_special_stage_flag).w` and then
-  `clr.w (Emerald_counts).w` (`sonic3k.asm:5734-5738`) -- flag set, counts zero;
-- level select picks the flag independently (`:10102`).
-
-So an unseen demo or level-select recording defeats the inference. Replacing the invented
-index space with this proxy would swap one non-ROM predicate for another.
-
-### What is blocked, and the decision required
-
-No committed fixture records the flag. The recorder samples only `$FFB0` (Chaos count,
-`tools/tracechaser/bizhawk-headless/src/Recording/S3KRam.cs:247`); SS `aux_state.jsonl.gz` is
-byte-empty by design (`S3KCompleteRunSegmenter.cs:24`). Note `run_manifest.json` **does**
-carry `emeralds_before`/`emeralds_after` -- an earlier claim here that it did not was
-wrong -- but that is the Chaos count, not the flag.
-
-Deriving the set from frame-0 position/spheres/rings, or by trying both layouts and keeping
-the match, is a trace oracle. Treating `ss_8`+ or the segment ordinal as "Super" is a route
-predicate that fails the any-BK2 bar.
-
-**Escalation, awaiting a decision that is not the engine's to make:**
-
-1. Recorder exports `sk_special_stage_flag` (`u8`, 0 or 1, ROM RAM `$FFBB`, sampled at the
-   special-stage arm beside `Current_special_stage` `$FE16`) into every S3K special-stage
-   `metadata.json` and the matching `run_manifest.json` entry. This makes the fixture
-   self-describing. **It does not by itself authorise feeding the value into gameplay.**
-2. Then one of:
-   - **bless** `{special_stage_index, sk_special_stage_flag}` as immutable segment-entry
-     identity -- analogous to choosing which test case to initialise, not to hydrating
-     state; or
-   - keep it **comparison-only**, accept that standalone Super-stage segments stay red, and
-     close them through continuous run-chain or predecessor replay instead.
-
-Reconstructing the selector natively instead would need `chaos_emerald_count` (`$FFB0`),
-`super_emerald_count` (`$FFB1`), the seven-byte `collected_emeralds_array`
-(`$FFB2..$FFB8`) -- necessary because the selector inspects individual entries when
-skipping collected stages (`sonic3k.asm:10877`) -- and optionally `emeralds_converted_flag`
-(`$FFBA`).
-
-### Landable today, independently
-
-Removing the 0-15 index space is verifiable **without any fixture**: keep `currentStage`
-strictly 0-7, represent the layout set as an explicit flag on the production stage-entry
-request, consume it at every site (layout, palette, emerald art, award inventory, rewind,
-debug), make `debugToggleLayoutSet()` toggle the flag rather than the stage number, and
-test `(stage 0, flag 0)` against `(stage 0, flag 1)` for distinct ROM-backed layout data.
-The ROM-faithful owner of the flag is the entry object -- `Obj_HPZSuperEmerald` writes it
-at `sonic3k.asm:197837` -- which is not implemented (registry name only).
+`Sonic3kSpecialStageManager` keeps an invented 0-15 index space for debug layout
+cycling (`debugToggleLayoutSet()`). Production entries pass the set explicitly
+(`EmeraldRewardKind`), and so does the harness now. Removing the debug index
+space remains landable without fixtures.
 
 ---
 
@@ -2735,7 +2656,7 @@ reports zero errors and zero warnings.
   (`s2.asm:78777-78813`).
 - **`objoff_2f` at WFZ rows 13378-13440.** The WFZ-end snapshot now encodes the low byte of
   the word incremented by `ObjB2_Wait_Leader_position`, then the jump countdown installed
-  by `ObjB2_Prepare_to_jump` (`s2.asm:78972-78979, 79042-79052`). The Java model already
+  by `ObjB2_Prepare_to_jump` (`s2.asm:78972-78979, 79157-79167`). The Java model already
   owned those values as `leaderWaitCounter` and `jumpTimer`; no trace value supplies them.
 
 The resolved SCZ `x` span at row 7103 was caused by the engine treating an airborne,

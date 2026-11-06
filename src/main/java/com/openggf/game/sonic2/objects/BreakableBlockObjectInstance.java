@@ -24,7 +24,7 @@ import java.util.logging.Logger;
 /**
  * CPZ Breakable Block (Object 0x32) - Metal blocks that shatter when Sonic rolls into them.
  *
- * Based on Obj32 in the Sonic 2 disassembly (s2.asm lines 48829-49020).
+ * Based on Obj32 in the Sonic 2 disassembly (s2.asm lines 49153-49344).
  *
  * Behavior:
  * - Acts as a solid platform that players can stand on
@@ -34,7 +34,7 @@ import java.util.logging.Logger;
  * - Plays SLOW_SMASH sound effect (0xCB)
  */
 public class BreakableBlockObjectInstance extends BoxObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.NonDirectional, com.openggf.level.objects.homing.HomingTargetSource {
     // Obj32 owns a block, debris and score popup; debris velocity is not body facing.
 
     private static final Logger LOGGER = Logger.getLogger(BreakableBlockObjectInstance.class.getName());
@@ -108,7 +108,7 @@ public class BreakableBlockObjectInstance extends BoxObjectInstance
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         ensureInitialized();
-        // ROM Obj32_Main (s2.asm:48889-48905) runs SolidObject and then checks the
+        // ROM Obj32_Main (s2.asm:49347-49363) runs SolidObject and then checks the
         // BLOCK's own standing_mask (status bits 6/7). No special "rolling player
         // moving up" detection is done here: side/below collisions are handled by
         // SolidObject's ceiling/push paths and never break the block. The per-player
@@ -209,8 +209,10 @@ public class BreakableBlockObjectInstance extends BoxObjectInstance
         // When hitting from below or side, player maintains their momentum
 
         // Set player state to in-air
-        // From disassembly: bset #status.player.in_air, bclr #status.player.on_object
+        // Obj32_BouncePlayer: bset #status.player.in_air, bclr #status.player.on_object
+        // (s2.asm:49405-49416). The block clears the rider's bit itself.
         player.setAir(true);
+        player.setOnObject(false);
 
         // Spawn fragment objects
         spawnFragments();
@@ -451,5 +453,10 @@ public class BreakableBlockObjectInstance extends BoxObjectInstance
         public int getPriorityBucket() {
             return RenderPriority.clamp(4);
         }
+    }
+    /** Homing: a CPZ block broken by landing on it in a roll, so the attack aims at its top. */
+    @Override public com.openggf.level.objects.homing.HomingTarget homingTarget(com.openggf.game.PlayableEntity player) {
+        return broken ? null : com.openggf.level.objects.HomingTargets.onTop(this,
+                com.openggf.level.objects.homing.HomingTargetKind.BREAKABLE, player);
     }
 }

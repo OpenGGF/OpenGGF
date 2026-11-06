@@ -175,7 +175,7 @@ public final class RacingScaleTool {
                 System.getProperty("java.version"), System.getProperty("os.name") + "/" + System.getProperty("os.arch"),
                 window, server, List.copyOf(loads), List.copyOf(failures), List.of(
                 "One scenario per invocation; repeat cells independently to estimate run-to-run variance.",
-                "Synthetic cosmetic ghosts exercise real authentication, browser, relay and standings; no engine simulation or verification replay.",
+                "Synthetic cosmetic ghosts exercise real authentication, browser, relay, coarse finish state and hidden casual standings; no engine simulation or verification replay.",
                 "Plaintext loopback and established identities exclude Internet/TLS/first-time proof difficulty and shared-NAT behavior.",
                 "Server metrics exclude load/proxy JVMs; loopback host CPU, memory bandwidth and scheduler contention remain shared.",
                 "TCP bytes count stream octets at the load proxy, including HTTP/WebSocket framing; exclude IP/TCP headers and retransmission.",

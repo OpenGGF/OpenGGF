@@ -44,7 +44,7 @@ import java.util.logging.Logger;
  *   <li>2 = fading out (reverting) - timer 3, retreat 6 bytes, stop at 0</li>
  * </ul>
  */
-public class Sonic3kSuperStateController extends SuperStateController {
+public class Sonic3kSuperStateController extends SuperStateController implements com.openggf.game.internal.RuntimeArtRefreshParticipant {
     private static final Logger LOGGER = Logger.getLogger(Sonic3kSuperStateController.class.getName());
 
     /** Palette fade state: 0=off, 1=fading in, -1=cycling, 2=fading out. */
@@ -99,6 +99,8 @@ public class Sonic3kSuperStateController extends SuperStateController {
      * snapshot's transformation word as {@link #DOOMSDAY_FORM_SNAPSHOT_BIT}.
      */
     private boolean doomsdayForm;
+    /** Transient call-site marker for the AnPal_Load pass; never spans a frame. */
+    private boolean doomsdayAnPalPass;
     private static final int DOOMSDAY_FORM_SNAPSHOT_BIT = 0x100;
     /** Native ending-script ownership, distinct from gameplay and Doomsday. */
     private boolean endingSceneForm;
@@ -224,6 +226,26 @@ public class Sonic3kSuperStateController extends SuperStateController {
      * done and {@code Palette_timer} 0, then install {@code Obj_HyperSonic_Stars} and the after-image
      * trail.
      */
+    /**
+     * {@code SuperHyper_PalCycle} for the {@code loc_8160A} form, at its native
+     * {@code AnPal_Load} position before {@code Process_Sprites} (LevelLoop,
+     * sonic3k.asm:7923-7926; AnPal_Load, sonic3k.asm:3137-3138). That object writes
+     * {@code Palette_timer} after Player_1's pass, so the player-tick pass below
+     * would release {@code object_control} after the player's movement instead of
+     * before it. Ordinary transformations keep the player-tick pass.
+     */
+    public void advanceDoomsdayTransformationAtAnPal() {
+        if (!doomsdayForm || getState() != SuperState.TRANSFORMING) return;
+        doomsdayAnPalPass = true;
+        try {
+            if (updateTransformationAnimation()) {
+                com.openggf.sprites.playable.SuperStateInternalAccess.finishNativeTransformationAfterPalette(this);
+            }
+        } finally {
+            doomsdayAnPalPass = false;
+        }
+    }
+
     public void upgradeDoomsdayFormToHyper() {
         if (!isSuper() || player instanceof Tails || player instanceof Knuckles) {
             return;
@@ -528,6 +550,28 @@ public class Sonic3kSuperStateController extends SuperStateController {
                         | (companionState << 24),
                 packPalette(savedNormalPalette),
                 packPalette(savedNormalUnderwaterPalette));
+    }
+
+    /**
+     * Rebinds rebuilt normal art without replacing the native form/palette clocks.
+     * The initializer has just installed normal resources; retain these for the
+     * eventual reversion and republish the active form's mapping presentation.
+     */
+    @Override
+    public void rebindAfterArtRefresh() {
+        normalRenderer = player.getSpriteRenderer();
+        normalAnimSet = player.getAnimationSet();
+        if (superArtSet != null) {
+            // Refresh rebuilt the team bank allocation and palette contexts too.
+            superRenderer = new PlayerSpriteRenderer(superArtSet);
+            superRenderer.setRenderContext(normalRenderer.getRenderContext());
+        }
+        // An ordinary art refresh owns no normal-form physics reset (for
+        // example a live speed-shoes profile). Powered forms need their
+        // animation profile and mappings republished after normal art setup.
+        if (getState() != SuperState.NORMAL || endingRescueRevertMappingsPending) {
+            reconcileRewindPresentation(getState());
+        }
     }
 
     @Override
@@ -944,12 +988,16 @@ public class Sonic3kSuperStateController extends SuperStateController {
      * {@code object_control}. {@code Palette_timer} counts down from {@code $F}; each expiry reloads
      * it with 1. Tails and Knuckles (Player_mode 2 and 3) finish on the first expiry. Sonic applies
      * one {@code PalCycle_SuperSonic} fade frame per expiry and finishes on the one that brings
-     * {@code Palette_frame} to {@code $24}. The engine runs this pass in the player's tick, which
-     * precedes the object pass; the ROM runs it after {@code Process_Sprites}. Either way the
-     * release is first visible to the next object and player updates.
+     * {@code Palette_frame} to {@code $24}. The ROM runs it from {@code AnPal_Load}
+     * (sonic3k.asm:3137-3138), before the next frame's {@code Process_Sprites}; the engine runs it
+     * at the end of the preceding player tick. Either way the release is first visible to the
+     * next player update. The {@code loc_8160A} form, whose object writes {@code Palette_timer}
+     * after that tick, runs the pass at the AnPal position instead.
      */
     @Override
     protected boolean updateTransformationAnimation() {
+        // The loc_8160A form owns its AnPal_Load pass (advanceDoomsdayTransformationAtAnPal).
+        if (doomsdayForm && !doomsdayAnPalPass) return false;
         // SuperHyper_PalCycle is a separate ROM routine from
         // SonicKnux_SuperHyper. This method owns its one palette pass for the
         // transformation tick; updateSuperPalette must not run it again after
@@ -1062,7 +1110,10 @@ public class Sonic3kSuperStateController extends SuperStateController {
         // period, this is how SonicKnux_SuperHyper.revertToNormal restores the
         // zone music: it plays none itself and lets Sonic_ChkInvin re-issue
         // Current_music when the timer expires.
-        player.setInvincibleFrames(1);
+        // Sonic_ChkInvin decrements the native timer only when Level_frame_counter & 7 is zero.
+        // Our public timer counts individual frames; preserve protection until that boundary.
+        LevelManager nativeLevel = GameServices.levelOrNull();
+        player.setInvincibleFrames(8 - ((nativeLevel == null ? 0 : nativeLevel.getFrameCounter()) & 7));
         if (normalAnimSet != null) {
             player.setAnimationSet(normalAnimSet);
         }

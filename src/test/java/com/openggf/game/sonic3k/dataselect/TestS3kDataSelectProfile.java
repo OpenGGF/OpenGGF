@@ -98,6 +98,25 @@ class TestS3kDataSelectProfile {
     }
 
     @Test
+    void payloadValidationRejectsMalformedOptionalSpecialStageProgress() {
+        var profile = new S3kDataSelectProfile();
+        var payload = validPayload();
+        assertTrue(profile.isPayloadValid(payload), "Old saves remain valid");
+        payload.put("collectedSpecialRings", 0xFFFF);
+        payload.put("currentSpecialStageIndex", 6);
+        assertTrue(profile.isPayloadValid(payload));
+        for (Object invalid : java.util.Arrays.asList(-1, 65536, 0.5, "1", Double.NaN, null)) {
+            payload.put("collectedSpecialRings", invalid);
+            assertFalse(profile.isPayloadValid(payload));
+        }
+        payload.put("collectedSpecialRings", 1);
+        for (Object invalid : java.util.Arrays.asList(-1, 7, 0.5, "1", Double.POSITIVE_INFINITY, null)) {
+            payload.put("currentSpecialStageIndex", invalid);
+            assertFalse(profile.isPayloadValid(payload));
+        }
+    }
+
+    @Test
     void builtInTeams_containsExpectedCharacters() {
         S3kDataSelectProfile profile = new S3kDataSelectProfile();
         List<SelectedTeam> teams = profile.builtInTeams();

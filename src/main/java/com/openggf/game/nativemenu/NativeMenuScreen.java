@@ -22,10 +22,14 @@ public interface NativeMenuScreen {
     enum Destination { NONE, LEVEL, COMPETITION, TITLE_SCREEN }
 
     /** A launch team applies to this launch only; native options retain emerald progress. */
-    record Exit(Destination destination, GameplayLaunchTeam team, boolean resetProgress) {
+    record Exit(Destination destination, GameplayLaunchTeam team, boolean resetProgress, int zone, int act) {
+        public Exit(Destination destination, GameplayLaunchTeam team, boolean resetProgress) {
+            this(destination, team, resetProgress, 0, 0);
+        }
         public static final Exit NONE = new Exit(Destination.NONE, null, false);
         public Exit {
             java.util.Objects.requireNonNull(destination, "destination");
+            if (zone < 0 || act < 0) throw new IllegalArgumentException("Negative native launch zone/act");
         }
     }
 }

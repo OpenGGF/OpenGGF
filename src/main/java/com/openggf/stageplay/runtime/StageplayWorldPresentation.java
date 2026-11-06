@@ -23,7 +23,7 @@ import static org.lwjgl.opengl.GL21.*;
 import static org.lwjgl.opengl.GL30.*;
 
 /**
- * Stageplay-only world composition. Native viewport tiles retain the native renderer's
+ * Native world composition for Stageplay and expanded editor views. Viewport tiles retain the renderer's
  * 224-line buffers; only the completed opaque picture is filtered. Text and transitions
  * are drawn by the host after this scope. No gameplay owner is ticked or resized.
  */

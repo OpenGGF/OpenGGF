@@ -9,6 +9,7 @@ import com.openggf.game.sonic3k.objects.LrzRockCrusherObjectInstance;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
@@ -20,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Cold widescreen traversal to the first crusher, independent of the longer native clear. */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestLrzWideColdRouteCapture {
+    @Tag("exhaustive-audit")
     @Test
     void coldTeamReachesCrusherCollapseAndCameraReleaseWithRepeatableWorldState() throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
@@ -90,6 +92,7 @@ class TestLrzWideColdRouteCapture {
         }
     }
 
+    @Tag("exhaustive-audit")
     @Test
     void coldTeamClearsActOneAndReleasesPlayableActTwoWithIsolatedHistory() throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(

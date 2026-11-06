@@ -73,6 +73,7 @@ class TestS3kSanctuaryPedestalLifecycle {
 
     @ParameterizedTest(name = "actual native-width selector {0}/stage{1}")
     @MethodSource("supportedNativeSelectors")
+    @org.junit.jupiter.api.Tag("exhaustive-audit")
     void everyNativeWidthProductPhysicallySelectsAllSevenNativeStageOwners(
             CanonicalEntryMatrixSupport.Row row, int stage) throws Exception {
         assertPhysicalEntry(row, stage);
@@ -80,6 +81,7 @@ class TestS3kSanctuaryPedestalLifecycle {
 
     @ParameterizedTest(name = "actual wider selector {0}/stage{1}")
     @MethodSource("supportedWiderSelectors")
+    @org.junit.jupiter.api.Tag("exhaustive-audit")
     void everyWiderProductPhysicallySelectsAllSevenNativeStageOwners(
             CanonicalEntryMatrixSupport.Row row, int stage) throws Exception {
         assertPhysicalEntry(row, stage);
@@ -103,6 +105,7 @@ class TestS3kSanctuaryPedestalLifecycle {
 
     @ParameterizedTest(name = "supported no-Saved2 developer-scene return {0}/{1}")
     @MethodSource("supportedOutcomes")
+    @org.junit.jupiter.api.Tag("exhaustive-audit")
     void everySupportedDirectSceneOutcomeReturnsAndReplaysWithoutSaved2(
             CanonicalEntryMatrixSupport.Row row, SanctuaryResultsLifecycleProbe.Outcome outcome)
             throws Exception {
@@ -219,12 +222,23 @@ class TestS3kSanctuaryPedestalLifecycle {
         // clamped to this real short phase; a45-tick raw restore would cross a fade/load.
         assertFalse(GameServices.fade().hasPendingCompletion());
         var registry=fixture.gameplayMode().getRewindRegistry();
-        var before=registry.capture();advance(loop,support,row,8);var after=registry.capture();
-        for(int cycle=0;cycle<2;cycle++) {
+        objects.setRewindInPlaceRestoreEnabledForTest(false);
+        assertSelectedPedestalStanding(stage);
+        var before = registry.capture();
+        for (int frame = 0; frame < 8; frame++) {
+            advance(loop, support, row, 1);
+            assertSelectedPedestalStanding(stage);
+        }
+        var after = registry.capture();
+        for (int cycle = 0; cycle < 2; cycle++) {
             registry.restore(before);
-            TestS3kCanonicalEntryLifecycle.assertSameWorld(before,registry.capture(),"physical selection restore",8);
-            advance(loop,support,row,8);
-            TestS3kCanonicalEntryLifecycle.assertSameWorld(after,registry.capture(),"physical selection replay",8);
+            TestS3kCanonicalEntryLifecycle.assertSameWorld(before, registry.capture(), "physical selection restore", 8);
+            assertNotSame(pedestal, assertSelectedPedestalStanding(stage), "selected owner is recreated");
+            for (int frame = 0; frame < 8; frame++) {
+                advance(loop, support, row, 1);
+                assertSelectedPedestalStanding(stage);
+            }
+            TestS3kCanonicalEntryLifecycle.assertSameWorld(after, registry.capture(), "physical selection replay", 8);
         }
         assertTrue(fixture.gameplayMode().getRewindController().currentFrame()>10);
         int outgoing=fixture.gameplayMode().getRewindController().currentFrame();
@@ -329,6 +343,19 @@ class TestS3kSanctuaryPedestalLifecycle {
             }
             assertTrue(errors.isEmpty(),()->"actual native B5 target/current publication: "+errors);
         } finally {loop.closePresence();}
+    }
+
+    private static HPZSuperEmeraldObjectInstance assertSelectedPedestalStanding(int stage) {
+        // Reacquire both identities after whole-world restoration.
+        var main = GameServices.sprites().getMainPlayable();
+        var objects = GameServices.level().getObjectManager();
+        var pedestal = objects.activeObjectsOfType(HPZSuperEmeraldObjectInstance.class).stream()
+                .filter(object -> object.getSpawn().subtype() == stage).findFirst().orElseThrow();
+        assertFalse(main.getAir(), "loc_90926 retains the native grounded landing state");
+        assertTrue(main.isOnObject(), "selected countdown does not clear Status_OnObj");
+        assertTrue(objects.hasObjectStandingBit(main, pedestal), "native pedestal P1 standing bit persists");
+        assertSame(pedestal, objects.getRidingObject(main));
+        return pedestal;
     }
 
     private static void bindIncomingPresentation(SpecialStageProvider provider, int width)

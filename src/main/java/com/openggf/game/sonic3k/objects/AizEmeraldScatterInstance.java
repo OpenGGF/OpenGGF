@@ -110,7 +110,7 @@ public class AizEmeraldScatterInstance extends AbstractObjectInstance implements
     /** Current phase of this emerald's lifecycle. */
     private Phase phase;
 
-    /** Exact live collector, captured by identity even after the intro parent has retired. */
+    /** Exact live collector; detached when its managed identity retires. */
     private CutsceneKnucklesAiz1Instance knuckles;
 
     // -----------------------------------------------------------------------
@@ -287,6 +287,13 @@ public class AizEmeraldScatterInstance extends AbstractObjectInstance implements
      */
     public void setKnuckles(CutsceneKnucklesAiz1Instance knux) {
         this.knuckles = knux;
+    }
+
+    /** Ends only this collector's graph edge; an emerald has its own native lifetime. */
+    void detachCollector(CutsceneKnucklesAiz1Instance retiredCollector) {
+        if (knuckles == retiredCollector) {
+            knuckles = null;
+        }
     }
 
     /**

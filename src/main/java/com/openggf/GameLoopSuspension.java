@@ -193,6 +193,8 @@ final class GameLoopSuspension {
     }
 
     /** After scene drawing/flush/SCENE; the request is consumed even when capture fails. */
+    boolean requiresScenePicture() { return suspendThumbnailRequested; }
+
     void afterScene(CaptureEffects capture) {
         if (!suspendThumbnailRequested) return;
         suspendThumbnailRequested = false;

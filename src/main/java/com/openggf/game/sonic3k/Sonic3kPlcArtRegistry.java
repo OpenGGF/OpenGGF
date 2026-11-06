@@ -1149,7 +1149,7 @@ public final class Sonic3kPlcArtRegistry {
                     -1
             ));
             // MGZ2 end-boss debris art (ArtKosM_MGZEndBossDebris + Map_MGZEndBossDebris).
-            // ROM: ObjDat3_6D7A8 (sonic3k.asm:144634) uses make_art_tile(ArtTile_MGZEndBossDebris,2,1)
+            // ROM: ObjDat3_6D7A8 (sonic3k.asm:144639) uses make_art_tile(ArtTile_MGZEndBossDebris,2,1)
             // — palette line 2. Used by the 10 debris chunks spawned during drilldown
             // (ChildObjDat_6D7EA at sonic3k.asm:144662).
             standalone.add(new StandaloneArtEntry(
@@ -2332,6 +2332,22 @@ public final class Sonic3kPlcArtRegistry {
 
     private static void addMhzAct1Art(List<StandaloneArtEntry> standalone,
                                       List<LevelArtEntry> levelArt) {
+        // CutsceneKnux_SKIntro switches between the laying, native-player and
+        // HPZ-grab DPLCs. All three sources are in the original SK cartridge.
+        standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.SK_INTRO_KNUCKLES,
+                Sonic3kConstants.ART_UNC_KNUCKLES_ADDR, CompressionType.UNCOMPRESSED,
+                Sonic3kConstants.ART_UNC_KNUCKLES_SIZE, Sonic3kConstants.MAP_KNUCKLES_ADDR, 0,
+                Sonic3kConstants.DPLC_KNUCKLES_ADDR,
+                S3kSpriteDataLoader.MappingFormat.STANDARD, -1, 0, DplcLayout.PLAYER));
+        standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.SK_INTRO_KNUCKLES_GRAB,
+                Sonic3kConstants.ART_UNC_HPZ_KNUCKLES_GRAB_ADDR, CompressionType.UNCOMPRESSED,
+                Sonic3kConstants.ART_UNC_HPZ_KNUCKLES_GRAB_SIZE, Sonic3kConstants.MAP_HPZ_KNUCKLES_GRAB_ADDR, 0,
+                Sonic3kConstants.DPLC_HPZ_KNUCKLES_GRAB_ADDR));
+        standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.SSZ_EGG_ROBO,
+                Sonic3kConstants.ART_KOSM_EGG_ROBO_BADNIK_ADDR, CompressionType.KOSINSKI_MODULED,
+                0, Sonic3kConstants.MAP_EGG_ROBO_ADDR, 0, -1));
+        standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.SK_INTRO_BOMB,
+                0x165000, CompressionType.KOSINSKI_MODULED, 0, 0x67412, 1, -1));
         standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.MHZ_MINIBOSS,
                 Sonic3kConstants.ART_KOSM_MHZ_MINIBOSS_ADDR,
                 CompressionType.KOSINSKI_MODULED, 0,
@@ -2367,6 +2383,13 @@ public final class Sonic3kPlcArtRegistry {
 
     private static void addMhzAct2Art(List<StandaloneArtEntry> standalone,
                                       List<LevelArtEntry> levelArt) {
+        // Obj_MHZEndBoss loads PLCID_7B; PLC_MHZEndBoss_Explosion later loads the capsule.
+        standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.ROBOTNIK_SHIP,
+                Sonic3kConstants.ART_NEM_ROBOTNIK_SHIP_ADDR, CompressionType.NEMESIS, 0,
+                Sonic3kConstants.MAP_ROBOTNIK_SHIP_ADDR, 0, -1));
+        standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.EGG_CAPSULE,
+                Sonic3kConstants.ART_NEM_EGG_CAPSULE_ADDR, CompressionType.NEMESIS, 0,
+                Sonic3kConstants.MAP_EGG_CAPSULE_ADDR, 0, -1));
         standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.MHZ_END_BOSS,
                 Sonic3kConstants.ART_KOSM_MHZ_END_BOSS_ADDR,
                 CompressionType.KOSINSKI_MODULED, 0,
@@ -2426,7 +2449,7 @@ public final class Sonic3kPlcArtRegistry {
         levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SOZ_SWINGING_PLATFORM,
                 Sonic3kConstants.MAP_SOZ_SWINGING_PLATFORM_ADDR, 1, 2, null));
         levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SOZ_RAPEL_WIRE,
-                Sonic3kConstants.MAP_SOZ_RAPEL_WIRE_ADDR, Sonic3kConstants.ARTTILE_SOZ_MISC + 0x48, 2, null));
+                0, Sonic3kConstants.ARTTILE_SOZ_MISC + 0x48, 0, "buildSozRapelWireSheet"));
         if (actIndex == 0) {
             levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SOZ_ACT1_END_DOOR,0x5611E,0x29,2,null));
             standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.SOZ_MINIBOSS,

@@ -55,6 +55,11 @@ abstract class Sonic1ZoneEvents {
         return GameServices.zoneLayoutMutationPipeline();
     }
 
+    protected boolean isRevision00() {
+        return gameService(com.openggf.data.RetailRomRevision.class)
+                == com.openggf.data.RetailRomRevision.S1_REV00;
+    }
+
     protected <T> T gameService(Class<T> type) {
         return currentGameService(type);
     }

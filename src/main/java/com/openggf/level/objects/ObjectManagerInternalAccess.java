@@ -14,9 +14,69 @@ import java.util.function.IntConsumer;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-/** Internal competition streaming seam; deliberately outside the creator API. */
+/** Internal native gameplay seams; deliberately outside the creator API. */
 public final class ObjectManagerInternalAccess {
+    public static void prepareInitialPlacementWindow(ObjectManager manager, List<ObjectSpawn> spawns,
+                                                     int cameraX, PersistentRespawnState respawn) {
+        manager.prepareInitialPlacementWindow(spawns, cameraX, respawn);
+    }
     private ObjectManagerInternalAccess() { }
+
+    public static void installDeferredFixedLevelObjects(ObjectManager manager) {
+        manager.installDeferredFixedLevelObjects();
+    }
+
+    /** Native chain arithmetic input; internal gameplay state, outside the creator API. */
+    public static int sineCosineInputFraction(ObjectManager manager) {
+        return manager.sineCosineInputFraction();
+    }
+
+    public static void publishSineCosineInputFraction(ObjectManager manager, int fraction) {
+        manager.publishSineCosineInputFraction(fraction);
+    }
+
+    public static void publishSineCosineInputFraction(ObjectManager manager,
+            com.openggf.sprites.playable.AbstractPlayableSprite producer, int fraction) {
+        manager.publishSineCosineInputFraction(producer, fraction);
+    }
+
+    public static InitialDispatch captureInitialDispatch(ObjectManager manager) {
+        return new InitialDispatch(manager);
+    }
+
+    public static void retireInitialDispatch(ObjectManager manager) {
+        if (manager != null) {
+            var controller = manager.initialDispatch();
+            if (controller != null) controller.retireState();
+        }
+    }
+
+    public static final class InitialDispatch {
+        private final ObjectManager manager;
+        private final InitialObjectDispatchController.Reservation original;
+
+        private InitialDispatch(ObjectManager manager) {
+            this.manager = Objects.requireNonNull(manager);
+            original = manager.initialDispatch().capture();
+        }
+
+        public void requireCurrent() { original.requireCurrent(); }
+
+        public InitialObjectDispatchScope begin(int cameraX, com.openggf.game.PlayableEntity player,
+                List<? extends com.openggf.game.PlayableEntity> sidekicks) {
+            return manager.initialDispatch().begin(original, cameraX, player, sidekicks);
+        }
+    }
+
+    private static final class SupersededInitialDispatch extends ObjectCallbackAbortException {
+        private SupersededInitialDispatch() { super("Initial object dispatch was superseded", null); }
+    }
+
+    static ObjectCallbackAbortException supersededInitialDispatch() { return new SupersededInitialDispatch(); }
+
+    public static boolean isInitialDispatchCancellation(Throwable failure) {
+        return failure instanceof SupersededInitialDispatch;
+    }
 
     /** S2's locked title leave runs RunObjects without another placement pass. */
     public static void runNativeCompetitionTitleObjectPass(ObjectManager manager) {

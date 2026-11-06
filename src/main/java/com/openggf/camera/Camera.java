@@ -43,6 +43,14 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	private short shakeOffsetX = 0;
 	private short shakeOffsetY = 0;
 
+    // Host presentation serial, intentionally outside gameplay snapshots.
+    long forcedRecentreSerial;
+
+    // Camera_X_pos low word (S3K): the 16.16 sub-pixel fraction. Level loads never
+    // clear it (Get_LevelSizeStart writes only the word); Title_Screen's Camera_RAM
+    // clear does. Owned by CameraSubpixelAccess and its own rewind entry.
+    int xFraction;
+
 	// Target boundaries for smooth easing (ROM: Camera_Max_Y_pos_target, etc.)
 	private short minXTarget;
 	private short minYTarget;
@@ -179,10 +187,20 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	}
 
 	public void updatePosition(boolean force) {
+		updatePosition(force, false);
+	}
+
+	/** S3K loc_6310's sole movement dispatch before LevelSetup installs its wrap mask. */
+	void moveBeforeLevelSetup() {
+		updatePosition(false, true);
+	}
+
+	private void updatePosition(boolean force, boolean beforeLevelSetup) {
 		if (updateObserver != null) {
 			updateObserver.onUpdatePosition(force);
 		}
 		if (force) {
+            forcedRecentreSerial++;
 			// Position camera using ROM's level-load formula:
 			//   v_screenposx = MainCharacter.x_pos - $A0  (subi.w #160,d1)
 			//   v_screenposy = MainCharacter.y_pos - $60  (subi.w  #96,d0)
@@ -240,7 +258,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		// updated by ground collision across the wrap boundary between frames).
 		short focusedSpriteRealY;
 		int focusCentreY = currentFocusCentreY();
-		if (verticalWrapEnabled) {
+		if (verticalWrapEnabled && !beforeLevelSetup) {
 			int diff = focusCentreY - (int) y;
 			diff = ((diff % verticalWrapRange) + verticalWrapRange) % verticalWrapRange;
 			if (diff > verticalWrapRange / 2) {
@@ -349,7 +367,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		// When wrapping is active, coordinate masking replaces normal Y clamping.
 		lastFrameWrapped = false;
 		wrapDeltaY = 0;
-		if (verticalWrapEnabled) {
+		if (verticalWrapEnabled && !beforeLevelSetup) {
 			// Upward wrap: camera Y at or below -256 (0xFF00 signed)
 			// ROM: cmpi.w #-$100,d1 / bgt.s .noupwrap — wraps when d1 <= -$100
 			if (y <= -0x100) {
@@ -423,14 +441,17 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		if (!lastFrameWrapped) {
 			if (y < yBeforeVerticalScroll) {
 				// Camera scrolled up -> SV_TopBoundary (top boundary only).
-				y = clampTopBoundary(y);
+				// loc_1C1E2 (sonic3k.asm:38584-38594): at/below -$100,
+				// the pre-setup $FFFF mask preserves the word instead of clamping.
+				y = beforeLevelSetup && y <= -0x100 ? y : clampTopBoundary(y);
 			} else if (y > yBeforeVerticalScroll) {
 				// Camera scrolled down -> SV_BottomBoundary (bottom boundary only).
-				y = clampBottomBoundary(y);
+				// Initial loc_1C202 subtracts word $FFFF+1 = 0 without borrow.
+				y = beforeLevelSetup ? y : clampBottomBoundary(y);
 			} else if (maxYChanging) {
 				// No scroll, but bottom boundary moved last frame
 				// (f_bgscrollvert) -> SV_BottomBoundaryMoving -> SV_BottomBoundary.
-				y = clampBottomBoundary(y);
+				y = beforeLevelSetup ? y : clampBottomBoundary(y);
 			}
 			// else: ROM SV_NoUpdate - no scroll, no boundary clamp.
 		}
@@ -650,7 +671,8 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 * takes the hard clamp {@code move.w 6(a2),d1} at {@code loc_1C216} only when
 	 * that subtraction borrows. {@code Get_LevelSizeStart} writes
 	 * {@code Screen_Y_wrap_value = -1} (sonic3k.asm:38133), which would make the
-	 * subtraction unable to borrow — but that write survives for exactly one
+	 * subtraction unable to borrow. {@link #moveBeforeLevelSetup()} preserves
+	 * that non-borrowing result only for the initial dispatch; the write survives for one
 	 * DeformBgLayer call, because {@code LevelSetup} (sonic3k.asm:102251) then
 	 * writes {@code #$FFF} unconditionally for every level before LevelLoop begins
 	 * (sonic3k.constants.asm:447 documents the field as "either $7FF or $FFF").
@@ -1482,6 +1504,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 */
 	public void resetState() {
 		viewportMaxX = Short.MAX_VALUE;
+		xFraction = 0;
 		boundaryDestination.resetForMissingSnapshot();
 		x = 0;
 		y = 0;
@@ -1600,6 +1623,11 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	/** Restores an isolated camera with its explicit owner; never consults the active session. */
 	public void restore(CameraSnapshot snapshot, AbstractPlayableSprite focusedSprite) {
 		java.util.Objects.requireNonNull(focusedSprite, "focusedSprite");
+		restorePresentation(snapshot, focusedSprite);
+	}
+
+	/** Internal drawing scopes also own cameras with no player, such as the editor. */
+	void restorePresentation(CameraSnapshot snapshot, AbstractPlayableSprite focusedSprite) {
 		restoreValues(snapshot);
 		this.focusedSprite = focusedSprite;
 	}

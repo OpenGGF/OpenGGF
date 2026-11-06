@@ -7,6 +7,7 @@
 .project
 .settings/
 .vscode/
+ggfmod.local.json
 /config.json
 /config.yaml
 /config.yaml.example
@@ -47,6 +48,13 @@ stable-retro-*.zip
 
 # Debug tools (uncompiled standalone scripts)
 tools/*
+!tools/git/
+!tools/parity/
+/tools/parity/__pycache__/
+!tools/i18n/
+/tools/i18n/__pycache__/
+!tools/native-image/
+!tools/project_atlas/
 !tools/performance/
 !tools/media/
 !tools/stageplay/

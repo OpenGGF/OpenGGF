@@ -9,11 +9,117 @@ This document tracks **intentional deviations** from the original Sonic 3 & Knuc
 
 Each entry describes what the ROM does, what we do, and why — focusing on *why* the divergence is acceptable.
 
+**DEZ tube interact word (2026-10-30):** fresh original-input callbacks
+[identify the row14502 owner](status/trace-frontier-log.md#2026-10-30--dez-gravity-tube-live-interact-word-at-p2-row-14502):
+S3K's existing CPU compare needs the tube's live routine high word4, which its
+object implementation did not expose. This local correction adds that provider;
+shared CPU, visibility, movement, collision and timing remain unchanged. No
+accepted ROM deviation or whole-act/campaign result is introduced. The prior
+marker frontier below is superseded only within the linked bounded evidence.
+
+**DEZ tube animation word (2026-10-30):** the
+[local correction](status/trace-frontier-log.md#2026-10-30--dez-gravity-tube-animation-word-behind-tails-row-14106)
+restores anim0/prev_anim1 at the tube's native word writes. It introduces no
+accepted deviation. The bounded original-input observer now matches P2's ten
+fields through14501 and the main15 fields through14520, removing the earlier
+14106/14316 differences. The next P2 marker mismatch at14502 remains open;
+whole-act/campaign, broader configurations and native pixels/audio are unqualified.
+
+**Tails suppressed-control dispatch (2026-10-30):** the bounded
+[shared-owner correction](status/trace-frontier-log.md#2026-10-30--tails-suppressed-control-flight-dispatch)
+clears the flight-dispatch byte on normal movement suppression, preserving fuel,
+radii and CPU/object animation ownership. It introduces no accepted deviation.
+DEZ's ten-field companion prefix advances to row14105; the next companion
+X/ground-speed mismatch at14106 and the unchanged main Y/cameraY mismatch at14316
+remain open. Broader smoke, whole-route and native pixel/audio qualification
+remain outside this implementation leaf.
+
+**DEZ puzzle display-child allocation (2026-10-30):** the bounded
+[original-input allocation investigation](status/trace-frontier-log.md#2026-10-30--dez-puzzle-display-child-allocation-behind-row-13731)
+restores the puzzle's one display-child SST reservation. The omitted child at
+row12420 caused later bumper allocations to execute before the turbine; reserving
+it preserves the native order without changing the shared allocator. No accepted
+ROM deviation or whole-act/companion parity claim is introduced. The linked record
+retains allocation-failure, configuration and native pixel/audio limits.
+
+**DEZ turbine direct floor landing (2026-10-30):** the bounded
+[original-input correction](status/trace-frontier-log.md#2026-10-30--dez-turbine-direct-floor-landing-at-row-13727)
+restores the room's direct-floor velocity and TouchFloor tail, while retaining
+its immediate airborne reassertion and the separate hurt-recovery owner. It adds no accepted ROM deviation. The
+linked record retains separate sensor, downward-motion, route and lifecycle limits.
+
+**DEZ gravity-puzzle landing width (2026-10-30):** the bounded
+[original-input correction](status/trace-frontier-log.md#2026-10-30--dez-gravity-puzzle-native-top-landing-width-at-row-13251)
+restores the shaft's native `$20` top-landing width, independently of its `$23`
+full-solid collision argument. It adds no accepted ROM deviation. Broader
+route/configuration/lifecycle parity and the separate solid-seat-before-room
+probe-activation concern remain subject to the linked evidence limits.
+
+**DEZ turbine terrain preparation (2026-10-30):** the bounded
+[original-input continuation](status/trace-frontier-log.md#2026-10-30--dez-turbine-owned-terrain-preparation-after-the-12000-row-prefix)
+restores the room's current-motion probe preparation before its existing terrain
+call. This adds no accepted deviation. The later gravity-puzzle correction above
+supersedes the row 13251 frontier; the incoming Act2 boundary remains open.
+
+**DEZ floor-launcher landing correction (2026-10-30):** the bounded
+[original-input continuation](status/trace-frontier-log.md#2026-10-30--dez-original-input-continuation-and-floor-launcher-landing-boundary)
+repairs the object's zero-distance top-contact selection using its native
+helper semantics. It adds no accepted deviation or whole-act/campaign claim.
+
+**DEZ conveyor ownership correction (2026-10-30):** the bounded
+[original-input investigation](status/trace-frontier-log.md#2026-10-30--dez-cold-conveyor-moving-standing-bit-owner)
+repairs moving-pad standing-bit identity and its native airborne return. The
+[later walk-off investigation](status/trace-frontier-log.md#2026-10-30--dez-conveyor-walk-off-standing-bit-retirement-at-original-row-8759)
+qualifies the same per-player bit's retirement on continued-ride exit. It adds
+no accepted ROM deviation; whole-act and campaign parity remain unqualified.
+
+**Fresh-entry focus correction (2026-10-28):** the bounded
+[salvage increment](architecture/plans/2026-10-22-native-gap-swarm.md#scoped-native-salvage--2026-10-28)
+restores `Get_LevelSizeStart`'s `$B0` focus-word addition for its selected entries,
+without changing player positions or minimum camera bounds. This repairs an
+implementation defect, adding no accepted deviation. The later title-boundary
+snap and the independent cold DEZ route in issue #229 remain outside this fix.
+
 **TAS mechanism verdicts (2026-10-26):** executed support and limitation checks
 are recorded in the [TAS verdict matrix](architecture/validation/2026-10-26-tas-verdicts-s3k.md).
-Reached gaps belong in [known bugs](status/s3k-known-bugs.md#tas-mechanism-limitations--2026-10-26),
-including raw-slot and mode-state incompatibilities. This test-only pass does not
-accept those mismatches as intentional deviations.
+Historical reached gaps remain in [known bugs](status/s3k-known-bugs.md#tas-mechanism-limitations--2026-10-26).
+The subsequent [native-accuracy repairs](architecture/validation/2026-10-26-tas-accuracy-repairs.md)
+and [engine-support record](architecture/validation/2026-10-28-tas-engine-support.md)
+restore bounded collision, input, object lifetime, clock, native host and
+standalone startup behavior without arbitrary RAM emulation. The three
+[KosM adjacent-memory scenarios](#kosm-adjacent-memory-corruption) now have an
+explicit exclusion; focused semantic repairs do not certify complete movies.
+
+**Starpost invitation correction (2026-10-29, local candidate):** the ordinary
+bonus invitation uses the native ring gate even after all seven Chaos Emeralds
+are collected. Run/mutator restrictions and consumed-entry state retain their
+existing ownership. This repairs an implementation defect and adds no accepted
+deviation. The [bounded correction record](architecture/audits/2026-10-29-s3k-campaign-terminal-certification.md#starpost-invitation-correction-and-bounded-continuation--2026-10-29)
+separates the focused checks from the strict continuous route's remaining gaps.
+The [independent lifecycle follow-up](architecture/audits/2026-10-29-s3k-campaign-terminal-certification.md#inherited-starpost-lifecycle-repair--2026-10-29)
+also restores checkpoint-only behavior when the ordinary orbit cannot allocate,
+and entry after ring loss using the activation-selected family. Neither repair
+introduces an accepted deviation or certifies the remaining campaign frontiers.
+
+**HCZ fan/platform and column correction (2026-10-29, local candidate):**
+fan initialization and pulse intervals retain the shipped return/reloads. A
+sliding platform now owns the original slot, allocates its fan during native
+initialization and retries rejected allocation. Independent platform/fan
+updates preserve native latch visibility. Spinning columns use the native
+zero-X left-side stop while preserving both velocity words at exact zero
+overlap. The strict original route consumes all 5,393 returned-HCZ2 rows with
+zero physics differences; 182 animation differences remain. Segment 11 retains
+its 62 camera/animation differences. The subsequent SS7 result correction removes
+an extra final reveal wait: one native 240-tick countdown now releases on its
+zero-test pass, admitting `hcz_4` at cursor 97208. All 140 focused checks pass;
+the strict continuous route remains red in newly reached `hcz_4` (first
+non-camera row 1748 Y `$0777/$0772`) and MGZ admission at cursor 100896.
+The [SS7 attribution](architecture/audits/2026-10-29-s3k-campaign-terminal-certification.md#ss7-results-countdown-attribution--2026-10-29)
+preserves those limits. This adds no accepted deviation and certifies no whole act or campaign.
+The [causal, matched-baseline and final evidence](architecture/audits/2026-10-29-s3k-campaign-terminal-certification.md#remaining-platformfan-dispatch-investigation--2026-10-29)
+retains the unchanged strict-red alternate movie and the earlier results/handoff
+question; the SS7 audit above records the current outgoing frontier. Spin-down
+sound/bubble side effects remain a separate inherited gap.
 
 **Enemy-chain scoring correction (2026-10-26):** ordinary chained kills now
 retain the native 10,000-point threshold and word wrap, and the points popup
@@ -126,7 +232,7 @@ control and full-product/integration qualification remain open.
 9. [AIZ2 Battleship Ship-Loop Display Compensation](#aiz2-battleship-ship-loop-display-compensation)
 10. [LBZ1 Miniboss Box Pieces: PLC VRAM Restore Skipped](#lbz1-miniboss-box-pieces-plc-vram-restore-skipped)
 11. [LBZ2 Launch Pad Collapse: Mutation Pipeline Offset](#lbz2-launch-pad-collapse-mutation-pipeline-offset)
-12. [Standalone Sonic & Knuckles Cartridge Behaviour Is Out of Scope](#standalone-sonic--knuckles-cartridge-behaviour-is-out-of-scope)
+12. [Standalone Cartridge Qualification Boundaries](#standalone-cartridge-qualification-boundaries)
 13. [Air Countdown Digits: Rebuilt Mapping Frames Instead of VRAM DMA](#air-countdown-digits-rebuilt-mapping-frames-instead-of-vram-dma)
 14. [s3k_kos_direct.prepared: a sub-frame ROM bit compared against a boundary-granular model](#s3k_kos_directprepared-a-sub-frame-rom-bit-compared-against-a-boundary-granular-model)
 15. [SEGA Screen: an engine addition the ROM does not have](#sega-screen-an-engine-addition-the-rom-does-not-have)
@@ -329,6 +435,22 @@ at the correct service points. Queue order, ROM archive identity, module
 count, prepared payload, readiness polling, and the consumer's downstream
 mutation remain native-owned and rewind-safe.
 
+Fresh native initialization now separates display clear, deferred terrain
+decoding, level setup, placement, object execution and initial presentation.
+The approved dedicated run-root input can schedule those real prepared phases;
+it cannot supply decoder output, clock values or gameplay state. This does not
+establish exact synchronous live-play loading duration. Active continuations
+reject rewind capture/restore, and unsupported native interrupt placements fail
+capture rather than being moved across clock/RNG reads. Qualification is tracked
+in the [synchronous-load design and evidence](architecture/designs/2026-11-03-synchronous-load-vint-accounting.md);
+its current implementation checkpoints are not a full-route certification.
+
+Special-stage startup is outside this Level-load phase contract. Its masked
+initialization can leave an earlier global-clock error even when the following
+Level load preserves its own native interval. The independent-movie observation
+and exact remaining offset are recorded in the same design artifact; absolute
+clock continuity through that startup is not certified.
+
 ### Verification
 
 `TestS3kKosModuleQueue`, `TestSonic3kTitleCardKosQueue`,
@@ -450,7 +572,7 @@ Every Knuckles animation frame displays the correct patterns at the correct posi
 
 ### Original Implementation
 
-The ROM stores save data directly in battery-backed SRAM at fixed offsets. Each of the 8 slots occupies a contiguous region with zone/act, character, emerald, and clear flags packed into specific byte positions. The save screen itself is object-driven, with authored selector/card objects and mappings rather than a debug-style overlay.
+The ROM stores save data directly in battery-backed SRAM at fixed offsets. Each of the 8 slots occupies a contiguous region with zone, character, emerald, giant-ring collection, Special Stage rotation, and clear flags packed into specific byte positions. Checkpoint positions remain in session RAM. The save screen itself is object-driven, with authored selector/card objects and mappings rather than a debug-style overlay.
 
 ### Our Implementation
 
@@ -472,9 +594,16 @@ ending and Knuckles LRZ StartNewLevel. The common ROM return `loc_C4CC` clears
 all 32 bits of `Collected_special_ring_array`, including zero Save_pointer and
 SK-alone branches; generic progression persistence, seamless loads, death/reload,
 and special-stage/lives saves preserve their distinct semantics. The mask already
-belongs to captured game state. Native clears after SRAM writing; Java clears
-before its asynchronous persistence request because that payload omits the mask.
-This does not claim identical SRAM ordering.
+belongs to captured game state. Special Stage saves persist its low 16 bits and
+the Chaos Special Stage rotation. Ordinary slot loads restore both. Completed-save
+zone selection clears the ring mask. Legacy JSON slots without these fields start
+with no collected rings and the initial rotation. Stock zone saves resume at the
+zone start, including the native Hidden Palace and Knuckles Sky Sanctuary acts.
+Checkpoints remain session-only.
+
+Native full SaveGame clears after SRAM writing. Java clears before capturing its
+asynchronous persistence request, so the next-zone payload also contains a zero
+mask. This does not claim identical SRAM ordering.
 
 ### Rationale
 
@@ -513,7 +642,7 @@ composition delivery remain separate.
 ## Tails Flying-With-Cargo Physics
 
 **Location:** Tails flight physics (`TailsFlightController`, `PlayableSpriteMovement.applyGravity`); CNZ1 carry and CPU flight routines (`SidekickCpuController`)
-**ROM Reference:** `sonic3k.asm:27632` `Tails_Move_FlySwim` (+0x08 flight gravity), `sonic3k.asm:27593` `Tails_Stand_Freespace` (branch on `double_jump_flag`)
+**ROM Reference:** `sonic3k.asm:27632` `Tails_Move_FlySwim` (+0x08 flight gravity), `sonic3k.asm:27633` `Tails_Stand_Freespace` (branch on `double_jump_flag`)
 
 ### Original Implementation
 
@@ -678,19 +807,43 @@ gameplay map writes.
 
 
 
-## Standalone Sonic & Knuckles Cartridge Behaviour Is Out of Scope
+<a id="standalone-sonic--knuckles-cartridge-behaviour-is-out-of-scope"></a>
 
-The engine runs the locked-on Sonic 3 & Knuckles image only. Every branch the ROM
-takes on `SK_alone_flag` (standalone S&K entry, the pulley-lift cheat's direct
-`Level_select_flag` write, S&K-only title and level-select paths) is modelled with the
-flag clear. This is a product-scope decision, not a parity gap: the standalone image is
-not a supported input.
+## Standalone Cartridge Qualification Boundaries
 
-Locked-on MHZ subtype `$30` follows that prerequisite before any P1 or camera
-claim (`CutsceneKnux_SKIntro`). The 2026-10-13 correction removes the former
-character-only admission. Five supported-width manager/restore cases and the
-existing cutscene cases pass; standalone component fixtures declare their mode
-explicitly. Full cold Knuckles traversal remains a separate route obligation.
+The former locked-on-only product restriction is superseded by the
+[standalone startup work](architecture/validation/2026-10-28-tas-support-standalone.md).
+Verified original SK startup and original S3 title/Competition paths now select
+their own cartridge-window resources.
+Actual SK title selection starts Knuckles at MHZ, owns the native intro/checkpoint
+restart and releases ordinary controls; Sonic and locked-on startup retain their
+own paths. Original S3 title and Competition host/arena resources are also
+qualified within the [Competition record](architecture/validation/2026-10-28-tas-support-competition.md).
+These proofs cover startup and bounded host consumers, not complete standalone
+campaigns, full race traversals, every viewport/team/revision or exact frame/pixel
+parity. They do not enable a corrupted locked-on mode flag to select another
+cartridge.
+
+Original-cartridge [audio qualification](architecture/validation/2026-10-28-tas-support-audio.md)
+covers NTSC ROM resources, PCM output and restore/reused-boot identity. Original
+S3 PAL compensation and SEGA mailbox timing still differ from the shared S&K
+sequencer; no full driver/waveform parity is claimed.
+
+## KosM Adjacent-Memory Corruption
+
+The shipped overflow can write beyond the KosM queue into adjacent native mode
+state. `s3k-standalone:3`, `s3k-legacy-mode:1` and `s3k-mode:1` remain unsupported:
+OpenGGF keeps semantic queue/admission ownership and rejects overflow instead of
+emulating a RAM layout, arbitrary cross-writes or CPU execution. This is an
+explicit reimplementation boundary, not an impossibility claim or a promise of
+future hardware emulation. The historical limitation and ordinary capacity/free-slot
+controls remain recorded in the [support assessment](architecture/validation/2026-10-26-tas-supportability.md#kosm-overflow-and-corrupted-mode-switch).
+
+The exclusion does not waive native ORT cursor/allocation recovery, typed reset
+state, logical art-slot last-writer behavior or existing prepared-work timing
+contracts. Those are represented by their own game-state owners. It introduces
+no global `FixBugs` switch and does not change the separately authorized S2
+sideways-platform safe-admission exception.
 
 ---
 
@@ -1145,6 +1298,15 @@ and refreshing the registered level sheet. Previously only palette/children
 were initialized, leaving the crusher's tile bank unloaded. The pre-existing
 `loc_90368` enemy-art requeue omission remains outside this visibility fix.
 
+LRZ crusher timer dispatch correction (2026-10-29): the timer child's initializer
+now falls through into its first decrement, matching `loc_90502` / `loc_90512`
+(`sonic3k.asm:197446-197453`). The previous initializer returned with179 instead
+of178, delaying the world-change request and generated collapsing bridge. Native
+same-input observations identify the bridge's first contact before the later
+Knuckles route deaths; this local correction does not certify those routes or
+Act2. See the [bounded causal record](status/trace-frontier-log.md#2026-10-29--lrz-crusher-timer-first-dispatch-and-route-death-attribution)
+and [Act1 matrix](architecture/validation/levels/s3k-lrz-act1.md#native-crusher-timer-first-dispatch--2026-10-29).
+
 LRZ fireball-launcher flip correction (2026-09-29): launcher rendering retains
 both placement flips, and `loc_42C1A`'s copied render flags now survive shot
 creation, movement and rewind recreation. Previously leftward shots retained
@@ -1515,6 +1677,14 @@ predecessor failed1T/1F at expected background8/actual4; the affected five-class
 selection passes29T/0F/0E/0S. This is later event progression, not the CNZ arrival
 at player X=$3640 or a cold Knuckles route/ICZ2 handoff qualification.
 [Source, commands and limits](architecture/validation/levels/s3k-icz-act1.md#knuckles-snow-free-camera-event-progression--2026-10-21).
+
+ICZ tension-platform rider order (2026-11-05): sequential impulses now consume
+native P1 then P2 and the existing extra-sidekick roster, rather than an identity
+map's allocation-dependent traversal. Three deterministic discriminators fail
+before the correction and pass afterward. The canonical ICZ2 replay remains red
+at row483 Y with1,724 grouped errors; the historical1,035 mode swapped the native
+launch velocities. Source-epoch and raw-row limits remain explicit in the
+[rider-order audit](architecture/audits/2026-11-05-icz-rider-order.md).
 
 ICZ2 crushing-column decoration reconstruction (2026-10-21): the ordinary
 partial crossing exposed a strict second-restore mismatch in the child's
@@ -1901,3 +2071,88 @@ and fresh graph restore controls reproduce three old-red assertion failures.
 Corrected focused qualification is 82 distinct cases across one fixture repair,
 zero skips, including both publication phases and ordinary defeat. See the
 [audit](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#jawz-final-delta-publication-phase-2026-10-26); historical Jawz69 is not a complete publication qualification.
+
+
+## Knuckles full-chain first-return pose — 2026-10-29
+
+The first returned AIZ row's Duck `$08` / Wait `$05` and mapping `$9B/$56` discrepancy is
+resolved by preserving the grounded crouch selection when terrain collision
+sets InAir before animation publication. Original-movie native callbacks prove
+the ordering; 170 focused cases, including real-ROM registered restore/replay,
+pass without skips. The [bounded audit](architecture/audits/trace/2026-10-29-knuckles-return-animation.md)
+records the independent old-reds and exact source/commands.
+
+The chain remains red: first error 446 X `$2026/$201B`, 37,726 incomplete-segment
+errors and the same production-ownership rejection at BK2 cursor 12011. Native
+vine capture is the next physical symptom; its causal phase/position/admission
+owner is not yet proven. Unmatched direct #35/module #24 timing completions remain
+strict failures. This local animation correction certifies no terminal tail,
+fixture endpoint, act-wide route or pixel parity.
+
+
+The [shared-owner qualification follow-up](architecture/audits/trace/2026-10-29-knuckles-return-animation.md#shared-owner-qualification-follow-up-2026-10-29)
+exposed native-correct Up and simultaneous-input failures across eight profiles.
+The [shared-owner implementation](architecture/audits/trace/2026-10-29-knuckles-return-animation.md#shared-ground-owner-implementation-2026-10-29)
+closes that bounded gap with host-owned precedence and an admitted pose
+write before terrain detachment. All 390 focused cases pass without skips,
+including the eight native/KiS2/donor configurations, steep-wall no-write controls
+and fresh-player registered replay. S1, S2 and S3K original-movie replays are
+clean; KiS2's 93-error bootstrap/animation frontier exactly matches baseline.
+The fresh original Knuckles closure still records Duck `$08` / mapping `$9B`
+on return and the same row-446 vine symptom, 37,726 errors and ownership
+rejection at cursor 12011. These remain bounded controls, not whole-act,
+all-product, native-pixel or campaign certification; no accepted ROM deviation
+or release/API publication is introduced.
+
+
+The [internal host-policy correction](architecture/audits/trace/2026-10-29-knuckles-return-animation.md#internal-host-composition-review-correction-2026-10-29)
+removes the rejected public ground-pose record extension while preserving the
+native movement ordering and existing rewind authority. Standing precedence is
+an immutable internal host service, independent of donor capabilities and power
+profiles. The public three-component record, ModApiVersion and signature pin
+retain their pre-task contracts. The earlier Knuckles chain frontier above is
+historical evidence, not a newly repeated closure or a complete-chain claim.
+
+DEZ staircase airborne release (2026-10-30): moving parent/child sections now
+retain each native participant's standing latch and consume an airborne rider
+only at that section's own `SolidObjectFull` checkpoint. The native return
+clears support without a position lift. See the [frontier evidence](status/trace-frontier-log.md#2026-10-30--dez-staircase-airborne-standing-decision-at-original-row-6797)
+for matched old/new checks and the bounded original-input continuation; expanded
+viewport/donor/roster, whole-act and campaign qualification remain separate.
+
+
+MGZ swinging-platform fractional input (2026-11-03): the fitted slot/angle carry
+table is replaced by the per-link arithmetic in `sub_34074
+(sonic3k.asm:70569-70602)`, with ordinary native input ownership and rewind
+capture. Spring solid reactions precede animation, preserving the fractional
+input on timer-only passes. See the [current discrepancy record](status/s3k-known-bugs.md#mgz-swinging-platform-endpoint-fractional-input-ownership)
+and [MGZ1 coverage](architecture/validation/levels/s3k-mgz-act1.md#swinging-platform-fractional-input--2026-11-03).
+The independent carried-emerald bootstrap remains policy A.
+
+
+DDZ recorded-entry bootstrap (2026-11-04): the strict Sonic+Tails Zone0c replay
+now passes from committed native entry data, including the camera long's
+persistent low word. This closes the recorded oracle's entry-state gap, not
+expanded native-pixel/team/viewport or ending coverage. The
+[current discrepancy record](status/s3k-known-bugs.md#doomsday-presentation-gaps-and-unseeded-entry)
+and [DDZ matrix](architecture/validation/levels/s3k-ddz.md) distinguish it from
+the older seeded cold-route witnesses and remaining breadth obligations.
+
+
+**AIZ2 collapsing-slope climbing landing (2026-11-05, bounded correction):**
+The ID `$04` platform selects `SolidObjCheckSloped2`'s direct 1–16-pixel feet
+overlap window even while Knuckles retains his 10-pixel climbing radius.
+Mega's original `aiz_3` recording now has zero errors across 7,430 actual
+compared rows (previously 2,589, first 6443 Y), with no added ERROR tuples or
+changed coverage. Other report payloads are unchanged. The chain still fails
+at segment 8's production ownership closure, movie cursor 25811; missing rows
+and later suffixes remain unknown. See the [bounded AIZ2 matrix](architecture/validation/levels/s3k-aiz2.md#collapsing-slope-landing-during-knuckles-ledge-climb-2026-11-05).
+
+
+Native initial camera admission (2026-11-05): stock Level assembly now runs
+the pre-LevelSetup camera movement, while actorless resource loads retain their
+camera state. The fresh shrine reaches `$326`; results retain `$240`. Checkpoint
+loads also take that native dispatch: FBZ2 starpost5 finishes at `$B06` with
+maxY `$B00`, rather than stopping at the intermediate clamp. The
+[FBZ2 matrix](architecture/validation/levels/s3k-fbz-act2.md#native-checkpoint-initial-camera--2026-11-05)
+records the ROM-backed derivation, retained route assertions and bounded checks.

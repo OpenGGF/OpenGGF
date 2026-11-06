@@ -34,16 +34,18 @@ class TestMutatorSessionState {
 
     @Test
     void configurationDetailWrapsWholeWordsIntoTwoCompactLinesAndEllipsizesOverflow() {
-        // 320 px panels give 46 compact columns; creator help text gets two lines.
-        assertEquals(List.of("Scale ordinary dry air acceleration; jump", "impulse and integration stay native."),
+        // 320 px panels give 276 px of proportional compact text; creator help text gets two lines.
+        assertEquals(List.of("Scale ordinary dry air acceleration; jump impulse and", "integration stay native."),
                 MutatorConfigurationScreen.wrap(
-                        "Scale ordinary dry air acceleration; jump impulse and integration stay native.", 46, 2));
-        assertEquals(List.of("One line."), MutatorConfigurationScreen.wrap("  One line.  ", 46, 2));
-        var overflow = MutatorConfigurationScreen.wrap("alpha beta gamma delta epsilon zeta eta", 11, 2);
+                        "Scale ordinary dry air acceleration; jump impulse and integration stay native.", 276, 2));
+        assertEquals(List.of("One line."), MutatorConfigurationScreen.wrap("  One line.  ", 276, 2));
+        // "alpha beta" is 52 px and "alpha beta gamma" 85 px, so a 66 px panel breaks after beta.
+        var overflow = MutatorConfigurationScreen.wrap("alpha beta gamma delta epsilon zeta eta", 66, 2);
         assertEquals(2, overflow.size());
         assertEquals("alpha beta", overflow.get(0));
-        assertTrue(overflow.get(1).endsWith("...") && overflow.get(1).length() == 11, overflow.toString());
-        assertEquals(List.of(""), MutatorConfigurationScreen.wrap("", 46, 2));
+        assertTrue(overflow.get(1).startsWith("gamma") && overflow.get(1).endsWith("...")
+                && com.openggf.game.MenuChrome.compactWidth(overflow.get(1)) <= 66, overflow.toString());
+        assertEquals(List.of(""), MutatorConfigurationScreen.wrap("", 276, 2));
     }
 
     @Test

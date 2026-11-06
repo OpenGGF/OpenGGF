@@ -6,6 +6,8 @@ import com.openggf.audio.AudioManager;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
+import com.openggf.control.InputHandlerInternalAccess;
+import com.openggf.InputBindingFactory;
 import com.openggf.data.RomManager;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.CrossGameFeatureProvider;
@@ -60,6 +62,37 @@ class TestS3kDataSelectManager {
     @AfterEach
     void tearDown() {
         SessionManager.clear();
+    }
+
+    @Test
+    void queuedActionThenHeldDownChangesTeamOnlyOnceAcrossTwoConsumingPasses() {
+        config.setConfigValue(SonicConfiguration.LEFT, org.lwjgl.glfw.GLFW.GLFW_KEY_A);
+        S3kDataSelectManager manager = createManager();
+        manager.initialize();
+        InputHandler input = new InputHandler(InputBindingFactory.supplier(config));
+        try (var pass = InputHandlerInternalAccess.openInputPass(input)) {
+            input.refreshLogicalSnapshot();
+            input.update();
+        }
+        // At the leftmost card the queued A/Left tap cannot move the cursor.
+        int action = config.getInt(SonicConfiguration.LEFT);
+        int down = config.getInt(SonicConfiguration.DOWN);
+        int initialTeam = manager.getSessionController().menuModel().getSelectedTeamIndex();
+        input.handleKeyEvent(action, GLFW_PRESS);
+        input.handleKeyEvent(action, GLFW_RELEASE);
+        input.handleKeyEvent(down, GLFW_PRESS);
+        var observedTeams = new java.util.ArrayList<Integer>();
+        for (int frame = 0; frame < 2; frame++) {
+            try (var pass = InputHandlerInternalAccess.openInputPass(input)) {
+                input.refreshLogicalSnapshot();
+                manager.update(input);
+                input.update();
+            }
+            observedTeams.add(manager.getSessionController().menuModel().getSelectedTeamIndex());
+        }
+        assertEquals(List.of(initialTeam,
+                        Math.floorMod(initialTeam - 1, manager.getSessionController().availableTeams().size())),
+                observedTeams, "native Down must wait for its admitted prefix, then change team once");
     }
 
     @Test

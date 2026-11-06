@@ -31,6 +31,9 @@ public interface EditorWindowChrome extends AutoCloseable {
 
         /** Shared directing workspace; null for hosts without Stageplay support. */
         default com.openggf.editor.stageplay.StageplayWorkspace stageplay() { return null; }
+
+        /** Shared route tape workspace; null for hosts without route tape support. */
+        default com.openggf.editor.route.RouteTapeWorkspace routeTapes() { return null; }
     }
 
     /** Requires a current GL context; initialisation failures propagate to the engine. */
@@ -65,6 +68,9 @@ public interface EditorWindowChrome extends AutoCloseable {
     default boolean key(int key, int action, int mods) { return true; }
 
     default boolean character(int codepoint) { return true; }
+
+    /** Active frontends retain their native text widgets unless a host field already owns input. */
+    default boolean preedit(com.openggf.control.Composition composition) { return !isActive(); }
 
     default void focus(boolean focused) { }
 

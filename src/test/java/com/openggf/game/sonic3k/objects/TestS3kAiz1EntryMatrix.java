@@ -8,6 +8,8 @@ import com.openggf.tests.rules.SonicGame;
 import com.openggf.configuration.WidescreenAspect;
 import com.openggf.tests.SozAcceptanceConfigurations;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.Arguments;
 
@@ -32,14 +34,36 @@ class TestS3kAiz1EntryMatrix {
 
     @ParameterizedTest(name = "AIZ1 production preset entry {0} donor={1}")
     @MethodSource("configurations")
+    @Tag("exhaustive-audit")
     void introReleasesInputAndEntryReplaysTwice(WidescreenAspect aspect, String donor) throws Exception {
+        verifyPresetEntry(aspect, donor);
+    }
+
+    @ParameterizedTest(name = "AIZ1 representative preset entry {0} donor={1}")
+    @CsvSource({"NATIVE_4_3,off", "WIDE_16_10,s1", "WIDE_16_9,s2", "ULTRA_21_9,off", "SUPER_32_9,s1"})
+    void representativePresetsReleaseInputAndReplayTwice(WidescreenAspect aspect, String donor) throws Exception {
+        verifyPresetEntry(aspect, donor);
+    }
+
+    private static void verifyPresetEntry(WidescreenAspect aspect, String donor) throws Exception {
         TestS3kAiz1CompatibilityRoutes.withConfiguration(aspect, donor,
                 setup -> verifyEntry(setup, aspect.pixelWidth(), donor, aspect));
     }
 
     @ParameterizedTest(name = "AIZ1 legacy custom geometry {0}px donor={1}")
     @MethodSource("legacyConfigurations")
+    @Tag("exhaustive-audit")
     void legacyCustomWidthRetainsIntroAndEntryReplay(int width, String donor) throws Exception {
+        verifyLegacyEntry(width, donor);
+    }
+
+    @ParameterizedTest(name = "AIZ1 representative legacy geometry {0}px donor={1}")
+    @CsvSource({"512,s1", "640,s2"})
+    void representativeLegacyWidthsRetainIntroAndEntryReplay(int width, String donor) throws Exception {
+        verifyLegacyEntry(width, donor);
+    }
+
+    private static void verifyLegacyEntry(int width, String donor) throws Exception {
         TestS3kAiz1CompatibilityRoutes.withConfiguration(width, donor,
                 setup -> verifyEntry(setup, width, donor, null));
     }

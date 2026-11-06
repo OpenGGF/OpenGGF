@@ -12,6 +12,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import javax.net.ssl.SSLHandshakeException;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 class TestPrivateRoomClient {
     @TempDir Path dir;
@@ -87,7 +88,8 @@ class TestPrivateRoomClient {
 
     ControlMessage.RoomJoinResult prepared(JdkRaceHostServer host, PlayerIdentity owner, String pin) {
         return new ControlMessage.RoomJoinResult("room", "DIRECT", "127.0.0.1", host.port(), owner.fingerprint(),
-                "test", pin, host.room().instanceId(), PRIVATE, 0, 1, System.currentTimeMillis()+600_000);
+                "test", pin, host.room().instanceId(), PRIVATE, 0, 1, System.currentTimeMillis()+600_000,
+                null, 0);
     }
 
     @Test
@@ -103,7 +105,9 @@ class TestPrivateRoomClient {
                     var result = prepared(host, owner, badPin ? "ab".repeat(32) : host.tlsCertificateSha256());
                     assertThrows(ExecutionException.class, () -> master.joinResolved(result, guest,
                             "Guest", "", "test", options).get(5, TimeUnit.SECONDS));
-                    assertTrue(socket.sent.isEmpty(), "terminal rejection must never send RelayAttach");
+                    assertTrue(socket.sent.stream().map(new ControlJsonCodec()::decode)
+                            .noneMatch(frame -> frame.message() instanceof ControlMessage.RelayAttach),
+                            "terminal rejection must never send RelayAttach");
                     assertEquals(0, count(host));
                 }
             }
@@ -124,6 +128,70 @@ class TestPrivateRoomClient {
     }
 
     @Test
+    void anInviteExpiringDuringDirectAdmissionStillReleasesItsPossiblyRedeemedRoute() throws Exception {
+        var socket = new TestMasterClientTimeoutRecovery.SilentSocket();
+        var codec = new ControlJsonCodec();
+        var direct = new CompletableFuture<RaceClient>();
+        PlayerIdentity guest = PlayerIdentity.loadOrCreate(dir.resolve("expired-guest"));
+        try (MasterClient master = TestMasterClientTimeoutRecovery.admittedClient(socket);
+             RoomJoinOptions options = new RoomJoinOptions(null, "instance", 0);
+             var transport = mockStatic(RaceClient.class)) {
+            transport.when(() -> RaceClient.connect(any(URI.class), any(PlayerIdentity.class),
+                    anyString(), anyString(), anyString(), anyString(), anyString(),
+                    any(RoomJoinOptions.class))).thenReturn(direct);
+            long expiry = System.currentTimeMillis() + 1_000;
+            var prepared = new ControlMessage.RoomJoinResult("room", "DIRECT", "127.0.0.1", 1,
+                    "host", "test", "ab".repeat(32), "instance", RoomAccessPolicy.PUBLIC,
+                    0, 1, expiry, "grant", 1);
+            var joined = master.joinResolved(prepared, guest, "Guest", "", "test", options);
+            TimeUnit.MILLISECONDS.sleep(Math.max(1, expiry - System.currentTimeMillis() + 1));
+            direct.completeExceptionally(new RaceClient.DirectRouteLostException("admission verdict lost"));
+            assertThrows(ExecutionException.class, () -> joined.get(5, TimeUnit.SECONDS));
+            assertEquals(1, socket.sent.size(), "expiry must release a route that may already be redeemed");
+            var release = assertInstanceOf(ControlMessage.RoomRouteRetire.class,
+                    codec.decode(socket.sent.getFirst()).message());
+            assertEquals("grant", release.grantReference());
+            assertEquals(1, release.routeGeneration());
+            assertFalse(release.renew(), "an expired invitation must never authorize fallback");
+        }
+    }
+
+    @Test
+    void failedDirectRetirementFencesCannotAccumulateWithoutAReconnectBound() throws Exception {
+        var socket = new TestMasterClientTimeoutRecovery.SilentSocket();
+        var codec = new ControlJsonCodec();
+        PlayerIdentity guest = PlayerIdentity.loadOrCreate(dir.resolve("retirement-guest"));
+        try (MasterClient master = TestMasterClientTimeoutRecovery.admittedClient(socket);
+             RoomJoinOptions options = new RoomJoinOptions(null, "instance", 0);
+             var transport = mockStatic(RaceClient.class)) {
+            transport.when(() -> RaceClient.connect(any(URI.class), any(PlayerIdentity.class),
+                    anyString(), anyString(), anyString(), anyString(), anyString(),
+                    any(RoomJoinOptions.class))).thenAnswer(ignored -> CompletableFuture.failedFuture(
+                            new RaceClient.JoinRejectedException("direct admission rejected")));
+            socket.onSend = text -> {
+                var sent = codec.decode(text);
+                assertInstanceOf(ControlMessage.RoomRouteRetire.class, sent.message());
+                assertDoesNotThrow(() -> TestMasterClientTimeoutRecovery.receive(master, socket,
+                        new ControlMessage.RoomRouteUnavailable("room no longer exists"), sent.requestId()));
+            };
+            for (int route = 0; route <= MasterClient.MAX_PENDING_REQUESTS; route++) {
+                var prepared = new ControlMessage.RoomJoinResult("room-" + route, "DIRECT", "127.0.0.1", 1,
+                        "host", "test", "ab".repeat(32), "instance", RoomAccessPolicy.PUBLIC,
+                        0, 0, 0, "grant-" + route, route + 1L);
+                assertThrows(ExecutionException.class, () -> master.joinResolved(prepared,
+                        guest, "Guest", "", "test", options).get(5, TimeUnit.SECONDS));
+                if (route == 0) {
+                    int sent = socket.sent.size();
+                    assertThrows(ExecutionException.class, () -> master.requestJoin("room-0")
+                            .get(5, TimeUnit.SECONDS));
+                    assertEquals(sent, socket.sent.size(), "failed cleanup must keep its route fenced");
+                }
+            }
+            assertFalse(master.isOpen(), "exhausted cleanup fences require a new master session");
+        }
+    }
+
+    @Test
     void classifiedConnectionRefusalUsesPreparedRelayGrant() throws Exception {
         int unavailablePort;
         try (ServerSocket reservation = new ServerSocket(0)) { unavailablePort = reservation.getLocalPort(); }
@@ -132,16 +200,30 @@ class TestPrivateRoomClient {
         try (MasterClient master = TestMasterClientTimeoutRecovery.admittedClient(socket);
              RoomJoinOptions options = new RoomJoinOptions(null, "instance", 0)) {
             socket.onSend = text -> {
-                if (codec.decode(text).message() instanceof ControlMessage.RelayAttach) {
+                var sent = codec.decode(text);
+                if (sent.message() instanceof ControlMessage.RoomRouteRetire retire) {
+                    assertEquals("grant-old", retire.grantReference());
+                    assertEquals(1, retire.routeGeneration());
+                    var renewed = new ControlMessage.RoomJoinResult("room", "DIRECT", "127.0.0.1",
+                            unavailablePort, "host", "test", "ab".repeat(32), "instance",
+                            RoomAccessPolicy.PUBLIC, 0, 0, 0, "grant-new", 2);
                     assertDoesNotThrow(() -> TestMasterClientTimeoutRecovery.receive(master, socket,
-                            new ControlMessage.RoomJoinRejected("relay unavailable"), 0));
+                            new ControlMessage.RoomRouteRenewed(renewed), sent.requestId()));
+                } else if (sent.message() instanceof ControlMessage.RelayAttach attach) {
+                    assertEquals("grant-new", attach.grantReference());
+                    assertEquals(2, attach.routeGeneration());
+                    assertDoesNotThrow(() -> TestMasterClientTimeoutRecovery.receive(master, socket,
+                            new ControlMessage.JoinRejected("relay unavailable"), 0));
                 }
             };
             var prepared = new ControlMessage.RoomJoinResult("room", "DIRECT", "127.0.0.1", unavailablePort,
-                    "host", "test", "ab".repeat(32), "instance", RoomAccessPolicy.PUBLIC, 0, 0, 0);
+                    "host", "test", "ab".repeat(32), "instance", RoomAccessPolicy.PUBLIC, 0, 0, 0,
+                    "grant-old", 1);
             assertThrows(ExecutionException.class, () -> master.joinResolved(prepared,
                     PlayerIdentity.loadOrCreate(dir.resolve("guest")), "Guest", "", "test", options)
                     .get(5, TimeUnit.SECONDS));
+            assertEquals(1, socket.sent.stream().map(codec::decode)
+                    .filter(frame -> frame.message() instanceof ControlMessage.RoomRouteRetire).count());
             assertEquals(1, socket.sent.stream().map(codec::decode)
                     .filter(frame -> frame.message() instanceof ControlMessage.RelayAttach).count());
         }
@@ -155,14 +237,15 @@ class TestPrivateRoomClient {
                  RoomPassword password = RoomPassword.of(PASSWORD)) {
                 long expiry = System.currentTimeMillis()+600_000;
                 var expected = new ControlMessage.RoomJoinResult("room", "DIRECT", "127.0.0.1", 9,
-                        "host", "test", "ab".repeat(32), "instance", PRIVATE, 0, 1, expiry);
+                        "host", "test", "ab".repeat(32), "instance", PRIVATE, 0, 1, expiry,
+                        "expected-grant", 1);
                 var operation = master.joinInvite("7K3M9X", expected,
                         PlayerIdentity.loadOrCreate(dir.resolve("guest"+change)), "Guest", "", "test", password);
                 long id = new ControlJsonCodec().decode(socket.sent.getFirst()).requestId();
                 var fresh = new ControlMessage.RoomJoinResult("room", "DIRECT", "127.0.0.1", 9,
                         "host", "test", change == 2 ? "cd".repeat(32) : "ab".repeat(32),
                         change == 0 ? "replacement" : "instance", PRIVATE, change == 1 ? 1 : 0,
-                        change == 3 ? 2 : 1, expiry);
+                        change == 3 ? 2 : 1, expiry, "fresh-grant", 2);
                 TestMasterClientTimeoutRecovery.receive(master, socket, fresh, id);
                 assertInstanceOf(RaceClient.JoinRejectedException.class,
                         assertThrows(ExecutionException.class, () -> operation.get(2, TimeUnit.SECONDS)).getCause());
@@ -177,7 +260,7 @@ class TestPrivateRoomClient {
         try (MasterClient master = TestMasterClientTimeoutRecovery.admittedClient(socket);
              RoomPassword password = RoomPassword.of(PASSWORD)) {
             var expired = new ControlMessage.RoomJoinResult("room", "RELAY", null, 0, "host", "test", null,
-                    "instance", PRIVATE, 0, 1, 1);
+                    "instance", PRIVATE, 0, 1, 1, "expired-grant", 1);
             assertThrows(ExecutionException.class, () -> master.joinInvite("7K3M9X", expired,
                     PlayerIdentity.loadOrCreate(dir.resolve("guest")), "Guest", "", "test", password)
                     .get(2, TimeUnit.SECONDS));
@@ -191,7 +274,8 @@ class TestPrivateRoomClient {
         var codec = new ControlJsonCodec();
         try (MasterClient master = TestMasterClientTimeoutRecovery.admittedClient(socket)) {
             var expected = new ControlMessage.RoomJoinResult("room", "RELAY", null, 0, "host", "test", null,
-                    "instance", RoomAccessPolicy.PUBLIC, 0, 1, System.currentTimeMillis()+600_000);
+                    "instance", RoomAccessPolicy.PUBLIC, 0, 1, System.currentTimeMillis()+600_000,
+                    "grant", 1);
             var joining = master.joinInvite("7K3M9X", expected,
                     PlayerIdentity.loadOrCreate(dir.resolve("guest")), "Guest", "", "test", null);
             long requestId = codec.decode(socket.sent.getFirst()).requestId();
@@ -209,6 +293,8 @@ class TestPrivateRoomClient {
         assertTrue(MasterClient.allowsRelayFallback(new UnknownHostException()));
         assertFalse(MasterClient.allowsRelayFallback(new TimeoutException()));
         assertFalse(MasterClient.allowsRelayFallback(new java.io.IOException()));
+        assertTrue(MasterClient.allowsRelayFallback(
+                new RaceClient.DirectRouteLostException("unacknowledged close")));
         for (Throwable terminal : List.of(new SSLHandshakeException("untrusted"),
                 new java.security.GeneralSecurityException("identity"), new ProtocolViolationException("protocol"),
                 new RaceClient.JoinRejectedException("denied"), new RoomInviteRejectedException(1000), new RoomAccessRequiredException("instance", 0, PRIVATE))) {

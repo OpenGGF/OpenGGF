@@ -2,11 +2,70 @@ package com.openggf.level;
 
 import com.openggf.level.resources.PreparedLevelBuild;
 import org.junit.jupiter.api.Test;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 
 class TestLevelLoadPreparer {
+    @Test
+    void retirementWaitsUntilRunningBuildReleasesItsResources() throws Exception {
+        assertRetirementWaits(false, false);
+    }
+
+    @Test
+    void interruptedRetirementStillWaitsAndPreservesInterruption() throws Exception {
+        assertRetirementWaits(true, false);
+    }
+
+    @Test
+    void interruptedTakeDrainsItsBuildBeforeSynchronousFallback() throws Exception {
+        assertRetirementWaits(true, true);
+    }
+
+    private void assertRetirementWaits(boolean interrupted, boolean take) throws Exception {
+        LevelLoadPreparer preparer = new LevelLoadPreparer();
+        Object owner = new Object();
+        CountDownLatch started = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        CountDownLatch finished = new CountDownLatch(1);
+        CountDownLatch retiring = new CountDownLatch(1);
+        try (var caller = Executors.newSingleThreadExecutor()) {
+            preparer.prepare(owner, 1, null, () -> {
+                started.countDown();
+                try {
+                    assertTrue(release.await(5, TimeUnit.SECONDS));
+                    return mock(PreparedLevelBuild.class);
+                } finally {
+                    finished.countDown();
+                }
+            });
+            try {
+                assertTrue(started.await(5, TimeUnit.SECONDS));
+                var retirement = caller.submit(() -> {
+                    if (interrupted) Thread.currentThread().interrupt();
+                    retiring.countDown();
+                    if (take) assertNull(preparer.take(owner, 1, null));
+                    else preparer.discard();
+                    assertEquals(0, finished.getCount(),
+                            "retirement must finish decoding before its caller closes the ROM");
+                    assertEquals(interrupted, Thread.currentThread().isInterrupted());
+                });
+                assertTrue(retiring.await(5, TimeUnit.SECONDS));
+                assertThrows(java.util.concurrent.TimeoutException.class,
+                        () -> retirement.get(100, TimeUnit.MILLISECONDS));
+                release.countDown();
+                retirement.get(5, TimeUnit.SECONDS);
+            } finally {
+                release.countDown();
+                assertTrue(finished.await(5, TimeUnit.SECONDS));
+                preparer.discard();
+            }
+        }
+    }
+
     @Test
     void matchingIdentityConsumesTheBuildOnlyOnce() {
         LevelLoadPreparer preparer = new LevelLoadPreparer();

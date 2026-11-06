@@ -99,6 +99,8 @@ public final class EndingSceneResourceHandoff {
                 S3kEndingPalette.targetLine(s,2,S3kEndingResources.PAL_SSZ2_REUNION);
             }
             state.installed();
+            // loc_5AE36's move.l #$2000000,(Camera_X_pos).w also clears its low word.
+            com.openggf.camera.CameraSubpixelAccess.setXFraction(s.camera(),0);
             int x=sceneId==S3kEndingSceneState.AIZ?0x1EB8:0x200;
             int y=sceneId==S3kEndingSceneState.AIZ?0x1E0:0x200;
             state.foreground().begin(x,y);
@@ -157,10 +159,10 @@ public final class EndingSceneResourceHandoff {
         @Override public void restore(GeometrySnapshot snapshot){
             if(snapshot.layout()==null)return;
             var manager=GameServices.level();var level=(Sonic3kLevel)manager.getCurrentLevel();
-            level.restoreSceneLayout(snapshot.layout());
             level.applyPatternOverlay(snapshot.patterns(),0,true);
             Sonic3kPlcLoader.refreshAffectedRenderers(List.of(new Sonic3kPlcLoader.TileRange(0,snapshot.patterns().length/32)),manager);
-            manager.setLevel(level);lastPatterns=snapshot.patterns();lastLayout=snapshot.layout();
+            // The later collision-layout adapter owns scene dimensions and COW map restoration.
+            lastPatterns=snapshot.patterns();lastLayout=snapshot.layout();
         }
         private static boolean sameLayout(Sonic3kLevel.SceneLayoutSnapshot a,Sonic3kLevel.SceneLayoutSnapshot b){
             return b!=null&&a.mapData()==b.mapData()&&a.width()==b.width()&&a.height()==b.height()

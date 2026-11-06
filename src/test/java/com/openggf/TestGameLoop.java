@@ -164,6 +164,69 @@ public class TestGameLoop {
     }
 
     @Test
+    void sceneTextClaimProtectsTheFirstTypedFrameFromGlobalShortcuts(
+            @org.junit.jupiter.api.io.TempDir Path temp) throws Exception {
+        InputHandler input = new InputHandler();
+        gameLoop.setInputHandler(input);
+        gameLoop.setGameMode(GameMode.MOD_SCENE);
+        var playback = com.openggf.debug.playback.PlaybackDebugManager.getInstance();
+        var overlays = com.openggf.debug.DebugOverlayManager.getInstance();
+        var performance = com.openggf.debug.DebugOverlayToggle.PERFORMANCE;
+        boolean previousPerformance = overlays.isEnabled(performance);
+        playback.endSession();
+        SonicConfigurationService.getInstance().setSessionOverride(SonicConfiguration.PLAYBACK_TOGGLE_KEY, GLFW_KEY_B);
+        SonicConfigurationService.getInstance().setSessionOverride(SonicConfiguration.PLAYBACK_MOVIE_PATH, "");
+        StringBuilder typed = new StringBuilder();
+        List<Boolean> ownerKeys = new java.util.ArrayList<>();
+        AtomicBoolean editing = new AtomicBoolean(true);
+        var boundary = new com.openggf.mods.code.ModFaultBoundary(Map.of(),
+                new com.openggf.mods.ModRuntimeFindingStore(),
+                owners -> new com.openggf.mods.ModStateSaveResult.Saved(), owners -> { });
+        gameLoop.modSceneHost.open(com.openggf.mods.code.ModContextTestAccess.ownedScene("typing", () ->
+                new com.openggf.mods.scene.ModScene() {
+                    @Override public boolean capturesTextInput() { return editing.get(); }
+                    @Override public void enter(com.openggf.mods.scene.SceneContext ctx) { }
+                    @Override public void update(com.openggf.mods.scene.SceneContext ctx) {
+                        typed.append(ctx.typedText());
+                        if (!ctx.typedText().isEmpty()) ownerKeys.add(ctx.keyPressed(GLFW_KEY_B) || ctx.keyPressed(GLFW_KEY_P));
+                    }
+                    @Override public void draw(com.openggf.mods.scene.SceneContext ctx,
+                                               com.openggf.mods.scene.SceneCanvas canvas) { }
+                }, boundary), new com.openggf.mods.scene.host.SceneServices(null, null, temp, null, () -> { }, () -> { }),
+                320, 224);
+        try {
+            // No warm-up tick: a declarative name field owns even the very first typed key.
+            for (int key : new int[] {GLFW_KEY_B, GLFW_KEY_P}) {
+                input.handleKeyEvent(key, GLFW_PRESS);
+                com.openggf.control.MenuInput.handleCharEvent(input, Character.toLowerCase(key));
+                gameLoop.step();
+                assertFalse(playback.isHudVisible(), "typing the playback key must not open its panel");
+                assertEquals(previousPerformance, overlays.isEnabled(performance), "typing P must not toggle performance");
+                input.handleKeyEvent(key, GLFW_RELEASE);
+                gameLoop.step();
+            }
+            assertEquals("bp", typed.toString());
+            assertEquals(List.of(true, true), ownerKeys, "the text field still receives its editing keys");
+            SonicConfigurationService.getInstance().setSessionOverride(SonicConfiguration.PLAYBACK_TOGGLE_KEY, GLFW_KEY_F9);
+            input.handleKeyEvent(GLFW_KEY_F9, GLFW_PRESS);
+            gameLoop.step();
+            assertFalse(playback.isHudVisible(), "a non-printable playback binding also stays with the text field");
+            input.handleKeyEvent(GLFW_KEY_F9, GLFW_RELEASE);
+            editing.set(false);
+            gameLoop.step();
+            gameLoop.step(); // Let the final text-input claim expire.
+            SonicConfigurationService.getInstance().setSessionOverride(SonicConfiguration.PLAYBACK_TOGGLE_KEY, GLFW_KEY_B);
+            input.handleKeyEvent(GLFW_KEY_B, GLFW_PRESS);
+            gameLoop.step();
+            assertTrue(playback.isHudVisible(), "after the field closes, a fresh shortcut works again");
+        } finally {
+            gameLoop.modSceneHost.close();
+            playback.endSession();
+            overlays.setEnabled(performance, previousPerformance);
+        }
+    }
+
+    @Test
     void setupPreservesBasePreferencesForFreshGameplay() throws Exception {
         SonicConfigurationService config = SonicConfigurationService.getInstance();
         var savedPreferences = new HashMap<>((Map<?, ?>) getPrivateField(config, "config"));
@@ -610,30 +673,19 @@ public class TestGameLoop {
     }
 
     @Test
-    public void userPauseIndicatorPlacementUsesLogicalBottomRightCorner() {
-        Engine.PauseIndicatorPlacement placement = Engine.userPauseIndicatorPlacement(
-                320, 224, 54, 11);
-
-        assertEquals(258, placement.x());
-        assertEquals(205, placement.y());
+    public void userPausePlateTakesTheTopRightLaneBelowAWindowVideoPlate() {
+        assertEquals(com.openggf.game.presentation.TransportHud.Placement.TOP_RIGHT, Engine.userPausePlacement(false));
+        assertEquals(com.openggf.game.presentation.TransportHud.Placement.TOP_RIGHT_SECOND, Engine.userPausePlacement(true));
     }
 
     @Test
-    public void userPauseIndicatorPlacementClampsInsideNarrowLogicalViewport() {
-        Engine.PauseIndicatorPlacement placement = Engine.userPauseIndicatorPlacement(
-                48, 40, 54, 11);
-
-        assertEquals(0, placement.x());
-        assertEquals(21, placement.y());
-    }
-
-    @Test
-    public void userPauseIndicatorAlphaSmoothlyFadesInAndOutEveryHalfSecond() {
-        assertEquals(255, Engine.userPauseIndicatorAlpha(0));
-        assertEquals(128, Engine.userPauseIndicatorAlpha(250_000_000L), 1);
-        assertEquals(0, Engine.userPauseIndicatorAlpha(500_000_000L), 1);
-        assertEquals(128, Engine.userPauseIndicatorAlpha(750_000_000L), 1);
-        assertEquals(255, Engine.userPauseIndicatorAlpha(1_000_000_000L));
+    public void liveCapturePlateNamesVideoAndShowsWhyARecordingStopped() {
+        var active = Engine.liveCapturePlate(null);
+        assertEquals(com.openggf.game.presentation.TransportHud.Status.RECORD, active.status());
+        assertEquals("VIDEO", active.title());
+        var stopped = Engine.liveCapturePlate(com.openggf.capture.LiveCaptureController.Interruption.WINDOW_RESIZED);
+        assertEquals(com.openggf.game.presentation.TransportHud.Status.ERROR, stopped.status());
+        assertEquals("STOPPED: RESIZED", stopped.value());
     }
 
     @Test
@@ -848,17 +900,16 @@ public class TestGameLoop {
     }
 
     @Test
-    public void playbackStartInputFeedsGameplayPauseEdge() throws Exception {
+    public void playbackStartInputFeedsNativePauseEdge() throws Exception {
         String source = Files.readString(Path.of("src/main/java/com/openggf/GameLoop.java"));
         int stepInternal = source.indexOf("private void stepInternal()");
         int admission = source.indexOf("private boolean prepareAdmittedIteration(", stepInternal);
         assertTrue(stepInternal >= 0 && admission > stepInternal, "stepInternal method must exist");
-        String outerFrameBody = source.substring(stepInternal, admission);
         int admissionEnd = source.indexOf("public boolean commitDeferredTraceRunModeBoundaryIfReady()", admission);
         String admissionBody = source.substring(admission, admissionEnd);
 
-        assertTrue(admissionBody.contains("playbackDebugManager.isCurrentForcedStartPress()"),
-                "Recorded P1 Start must route to the same gameplay pause edge as live Start");
+        assertTrue(admissionBody.contains("GameLoopPauseInput.nativeStartEdge(inputHandler, playbackDebugManager)"),
+                "Recorded P1 Start must route through the native pause owner");
     }
 
     @Test
@@ -1357,6 +1408,8 @@ public class TestGameLoop {
         TitleCardProvider titleCard = mock(TitleCardProvider.class);
         when(module.getTitleCardProvider()).thenReturn(titleCard);
         TestEnvironment.configureGameModuleFixture(module);
+        // This retained-module mock has no snapshot payload; live history is unrelated.
+        SonicConfigurationService.getInstance().setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, false);
         GameLoop loop = new GameLoop(mockInputHandler);
         assertSame(titleCard, loop.getTitleCardProvider());
         GameplayModeContext presentation =

@@ -28,7 +28,7 @@ import java.util.List;
 /**
  * Knuckles-route LBZ1 miniboss staging box.
  *
- * <p>ROM: {@code Obj_LBZMinibossBoxKnux} at {@code sonic3k.asm:192636}. It
+ * <p>ROM: {@code Obj_LBZMinibossBoxKnux} at {@code sonic3k.asm:192641}. It
  * locks the camera over the Knuckles arena ({@code word_8CF70}), hosts two
  * closed boxes ({@code loc_8D046}, dx ±$20), spawns two {@code Obj_LBZMiniboss}
  * instances (subtypes 0/2), and after both report defeat ({@code $38} bits 0/2)
@@ -177,7 +177,7 @@ public final class LbzMinibossBoxKnuxInstance extends AbstractObjectInstance imp
         // ROM loc_8CFB2 -> bit 1: the subtype-0 box child starts the miniboss
         // music fade and both children arm the 2*60-1 frame wait.
         spawnFreeChild(() -> new SongFadeTransitionInstance(
-                MUSIC_FADE_FRAMES, Sonic3kMusic.MINIBOSS.id));
+                MUSIC_FADE_FRAMES, Sonic3kMusic.MINIBOSS_S3.id));
         armTimer = ARM_WAIT_FRAMES;
         phase = Phase.ARM_WAIT;
     }
@@ -217,7 +217,7 @@ public final class LbzMinibossBoxKnuxInstance extends AbstractObjectInstance imp
         }
         int levelMusicId = services().getCurrentLevelMusicId();
         if (levelMusicId > 0) {
-            spawnFreeChild(() -> new SongFadeTransitionInstance(LEVEL_MUSIC_FADE_FRAMES, levelMusicId));
+            spawnFreeChild(() -> SongFadeTransitionInstance.toLevelMusic(levelMusicId));
         }
         maxYRaiseActive = true;
         maxYAccumulator = 0;

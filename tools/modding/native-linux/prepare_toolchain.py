@@ -12,11 +12,12 @@ from pathlib import Path
 import subprocess
 import tarfile
 import urllib.request
-from build_linux import GRAAL_SHA256
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "native-image"))
+from toolchain import install
 
 UBUNTU_URL="https://cdimage.ubuntu.com/ubuntu-base/releases/22.04/release/ubuntu-base-22.04.5-base-amd64.tar.gz"
 UBUNTU_SHA256="242cd8898b33ea806ef5f13b1076ed7c76f9f989d18384452f7166692438ff1a"
-GRAAL_URL="https://github.com/graalvm/graalvm-ce-builds/releases/download/graal-25.4.4.1.1/graalvm-community-jdk-25i4-25.0.4.1.1_linux-x64_bin.tar.gz"
 
 def rootfs_filter(member,destination):
     # Ubuntu alternatives use absolute links inside the future root. Make them
@@ -30,13 +31,13 @@ def rootfs_filter(member,destination):
 def prepare(output):
     output=output.resolve();output.mkdir(parents=True,exist_ok=False)
     for name,url,checksum,destination in [
-        ("ubuntu-base.tar.gz",UBUNTU_URL,UBUNTU_SHA256,output / "ubuntu-rootfs"),
-        ("graalvm.tar.gz",GRAAL_URL,GRAAL_SHA256,output)]:
+        ("ubuntu-base.tar.gz",UBUNTU_URL,UBUNTU_SHA256,output / "ubuntu-rootfs")]:
         archive=output / name;urllib.request.urlretrieve(url,archive)
         with archive.open('rb') as stream:
             if hashlib.file_digest(stream,'sha256').hexdigest()!=checksum:raise ValueError("Publisher checksum mismatch: "+name)
         destination.mkdir(parents=True,exist_ok=True)
         with tarfile.open(archive) as tar:tar.extractall(destination,filter=rootfs_filter)
+    install(output / "graalvm")
     # A one-user namespace cannot drop to the _apt account. Keep root *inside*
     # this namespace; all writes are still the invoking user's outside it.
     subprocess.run(["bwrap","--bind",str(output / "ubuntu-rootfs"),"/","--unshare-user","--uid","0","--gid","0",

@@ -1,12 +1,33 @@
 # Audio next milestone implementation plan
 
-> Agentic workers use subagent-driven-development with independent worktrees and review. Repository instructions override skill defaults for integration and artifact placement.
+## Current use — reconciled 2026-10-29
+
+Dated baselines, checklists, measurements and branch handoffs below remain
+historical evidence. They do not certify the current candidate or select its
+next frontier. Read the [audio frontier log](../../../status/audio-frontier-log.md)
+and [0.7 roadmap](../../../project/v0.7-roadmap.md) against current source first.
+The [engine boundary](../../../architecture/engine-map.md#reimplementation-boundary)
+supersedes any proposal to require 68000/Z80 instruction/cycle accounting;
+translate ROM driver behavior into semantic owners, retain unsupported timing
+limits and keep chip synthesis distinct from system emulation. Do not fit waits,
+hydrate expected driver/gameplay state or infer listening approval from a pass.
+
+Reusable commands use JDK 25, Lua 5.4 where required, absolute original ROM
+paths and worktree-local `target/`. Queue Maven tests with
+`python3 tools/testing/maven_queue.py`; select focused affected cases first.
+Shared changes use the inspected change-based batched smoke plan; full-suite is
+public-release preparation only. Current repository delivery and diagnostic
+cleanup policy supersedes old baseline/development/post-merge repeat runs,
+report archives and fixed agent/review recipes. Earlier JDK 21 measurements
+remain attributed to their historical runtime, not current instructions.
+
+> Historical worker recipe (superseded by current repository workflow): workers used subagent-driven-development with independent worktrees and review. Repository instructions override skill defaults for integration and artifact placement.
 
 **Goal:** Advance retail S3K audio correctness, prepare AIZ-to-HCZ listening evidence, and measure viable FM performance improvements.
 
 **Architecture:** Preserve Java Nuked as the production backend. Keep S3K variation in its existing sequencer profile; distinguish logical admission from physical chip execution before diagnosing DAC bytes. Native and alternative-core work stays opt-in research.
 
-**Tech stack:** Java 21, Maven/JUnit 5, pinned Nuked C, optional native compiler/JNI/GraalVM, existing BizHawk 2.11 trace tooling.
+**Tech stack (current execution):** Java 25, Maven/JUnit 5, pinned Nuked C, optional native compiler/JNI/GraalVM, existing BizHawk 2.11 trace tooling.
 
 **Spec:** The requirements and feature designs below implement the user's approved follow-on order in the September 4 audio correctness and evidence plan.
 
@@ -14,12 +35,12 @@
 
 - Base: main `develop` at `bbf28b7dc`; refresh before integration without switching main branches or overwriting user changes.
 - Preserve user-modified disassembly submodules and every pre-existing worktree.
-- All Maven output stays in the current worktree's `target/`; JDK 21 and `-Dmse=off` are mandatory. Use absolute verified ROM paths for all three games.
+- All Maven output stays in the current worktree's `target/`; JDK 25 and `-Dmse=off` are mandatory. Use absolute verified ROM paths for all three games.
 - Model shipped ROM behavior, including `fix_sndbugs=0`; never fit a frame, route, or timing constant to a fixture.
 - Trace data is comparison evidence, not gameplay state. No new trace authority or broad audio architecture migration.
 - No performance publication during competing builds. A fast desktop cannot establish a low-end budget, and generated clips cannot establish human listening approval.
 - Research sources must retain verified provenance and licensing. Do not commit ROMs, expanded traces, WAVs, upstream sources, JDKs, or compiled binaries.
-- Fetch/fast-forward, ordinary and guard baseline, development comparison, reviewed integration, post-merge comparison, push only develop, then remove only this task's clean fully merged worktrees and branches.
+- Follow the current authorized delivery flow and root validation policy; do not repeat unchanged broad checks on baseline/development/integrated trees. Preserve exact failures and compare disputed cases narrowly.
 
 ## Requirements
 

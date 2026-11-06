@@ -35,9 +35,10 @@ class TestStageplayRouteWorkspace {
         public void requestRouteApply(StageplayDocument document,Path root){applyRequests++;update=new StageplayRouteJob.Update(1,StageplayRouteJob.Phase.CHECKING,"checking contents",result());}
         public void cancelRoute(){cancelCalls++;}
         StageplayRouteResult result(){
-            var commands=List.of(new PuppetCommand("route.go",0,PuppetCommandKind.MOVE_TO,150,200,1,0),new PuppetCommand("route.stop",29,PuppetCommandKind.STOP,0,0,0,0));
-            var candidate=source.withPuppets(List.of(new PuppetTrack("hero",false,0,commands)));
-            return new StageplayRouteResult(StageplayRouteResult.Status.VERIFIED,"verified fixture","0".repeat(64),request,candidate,commands,List.of(),List.of(new StageplayRoutePoint(0,100,200,true),new StageplayRoutePoint(1,101,200,true)),1,30,true);
+            var rows=com.openggf.route.RouteFiles.tapeFromScript(request.maxFrames()+" R");
+            var track=com.openggf.stageplay.route.StageplayRoutes.track("route.rows.1","hero",request.startFrame(),rows);
+            var candidate=com.openggf.stageplay.route.StageplayRoutes.install(source,track);
+            return new StageplayRouteResult(StageplayRouteResult.Status.VERIFIED,"verified fixture","0".repeat(64),request,candidate,List.of(),List.of(),List.of(new StageplayRoutePoint(0,100,200,true),new StageplayRoutePoint(1,101,200,true)),1,30,true,track);
         }
     }
     private StageplayWorkspace start(Host host){
@@ -194,7 +195,7 @@ class TestStageplayRouteWorkspace {
         };
         workspace.menu().render(font,320);
         assertTrue(labels.contains("Hero"));assertFalse(labels.contains("hero"));
-        assertTrue(labels.contains("Motion"));assertTrue(labels.contains("+ Advanced"));
+        assertTrue(labels.contains("MOTION"));assertTrue(labels.contains("+ Advanced"));
         assertTrue(labels.contains("Find route"));
         assertFalse(labels.contains("Search nodes"));assertFalse(labels.contains("Probe ticks"));
         workspace.menu().setValue("x","150");workspace.menu().setValue("y","200");workspace.menu().submit();
@@ -268,7 +269,7 @@ class TestStageplayRouteWorkspace {
         var text=new java.util.ArrayList<String>();
         var font=new com.openggf.graphics.PixelFont(){@Override public void drawText(String t,int x,int y,float scale,float r,float g,float b,float a){text.add(t);}};
         workspace.menu().render(font,398);
-        assertTrue(text.contains("Route details"),text.toString());
+        assertTrue(text.contains("ROUTE DETAILS"),text.toString());
         assertTrue(text.contains("Search limit reached"));
         assertTrue(text.contains("Try"));assertTrue(text.contains("• Use Run"));assertTrue(text.contains("• Allow more frames"));
         assertTrue(text.contains("Settings"));assertTrue(text.contains("Search"));
@@ -298,6 +299,24 @@ class TestStageplayRouteWorkspace {
             }
             assertEquals(before,workspace.controller().document(),"Buttons retain the existing fresh-check and undo boundaries");
         }
+    }
+
+    @Test void routeDetailsActionsSurviveTranslatedAndDuplicateMenuLabels() {
+        var host = new Host();
+        var workspace = start(host);
+        host.update = new StageplayRouteJob.Update(1, StageplayRouteJob.Phase.READY, "ready", host.result());
+        workspace.tick(new InputHandler());
+        workspace.menu().onShow(menu -> {
+            var translated = menu.actionEntries().stream().map(action ->
+                    new com.openggf.editor.project.EditorProjectMenu.Action("Aktion", action.callback())).toList();
+            menu.onShow(null);
+            menu.showActions(menu.title(), translated);
+        });
+        workspace.invoke(ROUTE_HELPER);
+        workspace.menu().openDetails();
+
+        press(workspace, new InputHandler(), GLFW_KEY_ENTER);
+        assertEquals(1, host.applyRequests, "Primary Apply retains its semantic action after relabeling");
     }
 
     private static void choose(StageplayWorkspace workspace,int index){

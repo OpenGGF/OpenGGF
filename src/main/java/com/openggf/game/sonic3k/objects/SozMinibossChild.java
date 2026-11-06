@@ -13,7 +13,8 @@ import com.openggf.sprites.playable.*;
 import java.util.List;
 
 /** Actual child SST roles from ChildObjDat_773D6–ChildObjDat_7740A. */
-final class SozMinibossChild extends SozMinibossSprite implements RewindRecreatable,TouchResponseProvider,TouchResponseListener {
+final class SozMinibossChild extends SozMinibossSprite implements RewindRecreatable,TouchResponseProvider,TouchResponseListener,
+        com.openggf.level.objects.homing.HomingTargetSource {
     static final int HITBOX=0,PART=1,COVER=2,DUST=3,COLLAPSE_DUST=4;
     private SozMinibossInstance owner;
     private int kind;
@@ -103,6 +104,10 @@ final class SozMinibossChild extends SozMinibossSprite implements RewindRecreata
     @Override public int getPriorityBucket(){return debris?debrisPriority:kind>=DUST?3:kind==HITBOX?5:super.getPriorityBucket();}
     @Override public boolean isHighPriority(){return debris?debrisHighPriority:kind==HITBOX?inheritedHighPriority:kind>=DUST||super.isHighPriority();}
     @Override public int getCollisionFlags(){return isDestroyed()?0:collision;}
+    /** Homing priority 1: the vulnerable head hitbox ($D7, Touch_Special) is the boss's weak point. */
+    @Override public com.openggf.level.objects.homing.HomingTarget homingTarget(com.openggf.game.PlayableEntity player){
+        return kind==HITBOX&&collision==0xD7?com.openggf.level.objects.HomingTargets.bossPart(this,1):null;
+    }
     @Override public int getCollisionProperty(){return collisionProperty;}
     @Override public boolean usesS3kTouchSpecialPropertyResponse(){return true;}
     // Native Draw_And_Touch_Sprite polls the collision property on every overlap.

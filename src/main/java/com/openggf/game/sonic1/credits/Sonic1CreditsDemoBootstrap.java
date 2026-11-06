@@ -8,18 +8,18 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 /**
  * Deterministic per-credits-demo bootstrap. Establishes the engine-side
- * ROM-only state that {@code EndingDemoLoad} (sonic.asm:3827) sets up before
+ * ROM-only state that {@code EndingDemoLoad} (sonic.asm:3903) sets up before
  * each Sonic 1 credits demo runs.
  *
  * <p>Currently this only covers the LZ Act 3 lamppost variables that the ROM
- * copies from {@code EndDemo_LampVar} (sonic.asm:3879) into the lamppost
+ * copies from {@code EndDemo_LampVar} (sonic.asm:3955) into the lamppost
  * buffer when {@code v_creditsnum==4}. The per-credit zone/act, start
  * positions, and demo timers themselves are owned by
  * {@link Sonic1CreditsDemoData}; this class is the minimal seam for the
  * mid-level state ({@code v_rings}, camera, bottom boundary, water height)
  * that those constants alone don't apply.
  *
- * <p><b>Trace-replay invariant.</b> Per CLAUDE.md "Trace Replay Tests" the
+ * <p><b>Trace-replay invariant.</b> Per AGENTS.md "Trace Replay Tests" the
  * comparison-only invariant requires that engine state be derived from ROM
  * defaults, never hydrated from {@code TraceEvent.StateSnapshot} events. All
  * values written here come from the {@code EndDemo_LampVar} table in the
@@ -37,7 +37,7 @@ public final class Sonic1CreditsDemoBootstrap {
 
     /**
      * Applies the LZ-specific lamppost state for credit demo 3 (LZ Act 3).
-     * Mirrors {@code EndDemo_LampVar} (sonic.asm:3879) which the ROM copies
+     * Mirrors {@code EndDemo_LampVar} (sonic.asm:3955) which the ROM copies
      * into the lamppost buffer (and from there into the active level state)
      * before the LZ demo runs: ring count, camera position, bottom boundary,
      * and water height/routine.
@@ -82,7 +82,7 @@ public final class Sonic1CreditsDemoBootstrap {
         // v_vblank_count (s1disasm/_Variables.asm:350) is incremented once per
         // V-blank at VBlank_Exit (s1disasm/sonic.asm:685) and is written
         // nowhere else in the entire ROM -- nothing resets it on level load,
-        // and EndDemo_LampVar (sonic.asm:3879) carries no vblank field. Its
+        // and EndDemo_LampVar (sonic.asm:3955) carries no vblank field. Its
         // value entering a credits demo is therefore a free-running count
         // since console reset, not level-derived state, and cannot be
         // reconstructed from the lamppost table. Seeding a measured phase here

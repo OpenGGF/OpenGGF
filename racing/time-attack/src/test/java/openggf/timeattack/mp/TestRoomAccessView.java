@@ -60,7 +60,7 @@ class TestRoomAccessView {
         assertTrue(created.isEmpty());
         RecordingSceneCanvas canvas = new RecordingSceneCanvas(400);
         view.draw(canvas);
-        assertTrue(canvas.joined().contains("at least 15"));
+        assertTrue(canvas.shows("at least 15"));
         input.tapEscape(view::update);
         input.tapEnter(view::update);
         assertEquals(1, cancelled);
@@ -77,7 +77,7 @@ class TestRoomAccessView {
         assertTrue(created.isEmpty());
         RecordingSceneCanvas canvas = new RecordingSceneCanvas(640);
         view.draw(canvas);
-        assertTrue(canvas.joined().contains("NOT SET"));
+        assertTrue(canvas.shows("Not set"));
     }
 
     @ParameterizedTest
@@ -90,14 +90,28 @@ class TestRoomAccessView {
         enterPrivatePassword(secret);
         view.draw(canvas);
         canvas.assertFillsOnScreen();
-        assertFalse(canvas.joined().contains(secret));
-        assertTrue(canvas.joined().contains("************"));
+        assertFalse(canvas.shows(secret));
+        assertFalse(canvas.shows("Not set"), "a set password shows only its fixed mask");
         input.tapEnter(view::update);
         assertTrue(view.isEditingText());
         view.draw(canvas);
         canvas.assertFillsOnScreen();
-        assertFalse(canvas.joined().contains(secret));
+        assertFalse(canvas.shows(secret));
         view.close();
         assertFalse(view.isEditingText());
     }
+    @Test
+    void fullGuidanceCanBeReadWithoutCreatingOrDisclosingThePassword() {
+        enterPrivatePassword("PRIVATE_SECRET_VALUE");
+        input.tapKey(view::update, com.openggf.mods.scene.SceneKeys.F1);
+        String read = openggf.timeattack.ui.FullTextReaderProbe.readAll(input, view::update, view::draw,
+                view::detailsVisibleLines, view::detailsFirstLine);
+        assertTrue(read.contains("Hidden from the room browser"));
+        assertTrue(read.contains("Everyone in the room can share its code"));
+        assertFalse(read.contains("PRIVATE_SECRET_VALUE"));
+        input.tapEnter(view::update);
+        assertTrue(created.isEmpty());
+        assertEquals(0, cancelled);
+    }
+
 }

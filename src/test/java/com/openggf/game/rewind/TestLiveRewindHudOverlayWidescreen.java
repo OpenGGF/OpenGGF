@@ -18,12 +18,12 @@ class TestLiveRewindHudOverlayWidescreen {
 
         for (int width : new int[] {320, 352, 400}) {
             text.draws.clear();
-            overlay.render(text, width);
-            int expectedX = (width - 320) / 2 + 4;
-            assertTrue(text.draws.stream().anyMatch(draw -> draw.text.equals("LIVE REWIND")
-                    && draw.x == expectedX));
-            assertTrue(text.draws.stream().anyMatch(draw -> draw.text.equals("REWIND 12")
-                    && draw.x == expectedX && draw.color == DebugColor.CYAN));
+            overlay.render(text, null, width);
+            int expectedX = (width - 320) / 2 + 8;
+            assertTrue(text.draws.stream().anyMatch(draw -> draw.text.equals("REW")
+                    && draw.x == expectedX + 17));
+            assertTrue(text.draws.stream().anyMatch(draw -> draw.text.equals("F:12")
+                    && draw.x == expectedX + 17 + text.measureWidth("REW ")));
         }
     }
 

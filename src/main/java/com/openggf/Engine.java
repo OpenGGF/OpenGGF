@@ -49,6 +49,7 @@ import com.openggf.debug.DebugRenderer;
 import com.openggf.debug.PerformanceProfiler;
 import com.openggf.debug.DebugState;
 import com.openggf.level.LevelManager;
+import com.openggf.level.LevelMotionAccess;
 import com.openggf.level.Level;
 import com.openggf.level.MutableLevel;
 import com.openggf.game.session.EditorCursorState;
@@ -165,6 +166,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	private boolean editorChromeActive;
 	private final EditorProjectWorkspace editorProjects;
 	private final com.openggf.editor.stageplay.StageplayWorkspace stageplay;
+	private final com.openggf.editor.route.RouteTapeWorkspace routeTapes;
 	private final com.openggf.stageplay.editor.StageplayEditorSession stageplaySession;
 	private Path stageplayInitialAssetRoot;
 	private final EditorProjectMenuRenderer editorProjectMenuRenderer = new EditorProjectMenuRenderer();
@@ -181,23 +183,20 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	private NativeEditorSession nativeEditorSession;
 	private EditorQuitView editorQuitView;
 	private record EditorQuitView(GameMode mode, Camera camera, short x, short y, short renderX, short renderY) { }
-	// Match the rest of the debug overlay — no drop shadow.
-	private final PixelFontTextRenderer traceHudTextRenderer =
-		new PixelFontTextRenderer(PixelFontVariant.PIXEL_FONT_NO_SHADOW);
-	private final PixelFontTextRenderer pauseTextRenderer =
-		new PixelFontTextRenderer(PixelFontVariant.PIXEL_FONT_NO_SHADOW);
+	// Authored native 6x8 glyphs keep transport and trace details readable at 320x224.
+	private final PixelFontTextRenderer traceHudTextRenderer = PixelFontTextRenderer.compactMenu();
 	private final PixelFontTextRenderer menuOverlayTextRenderer = PixelFontTextRenderer.menu();
 	private static final int ESCAPE_TOAST_REST_Y = 6;
-	private final PixelFontTextRenderer liveCaptureTextRenderer =
-		new PixelFontTextRenderer(PixelFontVariant.PIXEL_FONT_NO_SHADOW);
-	private static final String USER_PAUSE_INDICATOR_TEXT = "PAUSED";
-	private static final int USER_PAUSE_INDICATOR_MARGIN = 8;
-	private static final long USER_PAUSE_INDICATOR_HALF_PERIOD_NANOS = 500_000_000L;
-	private static final long USER_PAUSE_INDICATOR_PERIOD_NANOS = USER_PAUSE_INDICATOR_HALF_PERIOD_NANOS * 2L;
+	// Engine-session plates (pause, window video capture) share the transport plates' face and backing.
+	static final com.openggf.game.presentation.TransportHud.Message USER_PAUSE_PLATE =
+		new com.openggf.game.presentation.TransportHud.Message(
+				com.openggf.game.presentation.TransportHud.Status.PAUSE, "PAUSE", "", "", -1);
 	private static final long USER_PAUSE_SCREENSHOT_HIDE_NANOS = 1_000_000_000L;
 	private DisplayColorProfileController displayColorProfileController;
+	private com.openggf.graphics.DisplayInterpolationController displayInterpolationController;
 	private DisplayShaderController displayShaderController;
 	private DisplayShaderPickerController displayShaderPickerController;
+	private final DisplayShaderPickerRenderer displayShaderPickerRenderer = new DisplayShaderPickerRenderer();
 	private RewindVhsEffectPass rewindVhsEffectPass;
 	private int displayShaderFrameCounter;
 	private volatile boolean displayShaderPackDownloadInProgress;
@@ -241,9 +240,6 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	record FramebufferDimensions(int width, int height) {
-	}
-
-	record PauseIndicatorPlacement(int x, int y) {
 	}
 
 	enum ConfiguredStartupBranch {
@@ -298,13 +294,16 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 	// Master title screen (game selection before ROM loading)
 	private MasterTitleScreen masterTitleScreen;
+	private final com.openggf.game.playback.PlaybackBrowser.SelectionMemory playbackSelection =
+			new com.openggf.game.playback.PlaybackBrowser.SelectionMemory();
 	private final GameLoopSuspension suspension;
 	private final GameLoopSuspension.Effects suspensionEffects;
 
 	// Legal disclaimer screen (pre-ROM disclaimer)
 	private LegalDisclaimerScreen legalDisclaimerScreen;
-	private com.openggf.game.NativeModNoticeScreen nativeModNoticeScreen;
 
+	private com.openggf.control.GlfwTextInputAdapter textInputWindow;
+	private final com.openggf.game.TextInputOverlay textInputOverlay = new com.openggf.game.TextInputOverlay();
 	// Viewport parameters for aspect-ratio-correct rendering
 	private int viewportX = 0;
 	private int viewportY = 0;
@@ -322,17 +321,26 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	// Static instance for singleton access
 	private static Engine instance;
 	private ModRuntime modRuntime = ModRuntime.empty();
-	private final boolean compiledModsSupported = !isNativeImage();
 	private java.util.function.BiConsumer<com.openggf.game.patch.ResolutionResult.LaunchAborted, Boolean>
 			patchLaunchAbortHandler = this::handlePatchLaunchAbort;
 
 	// Frame timing
-	private int targetFps;
+	private LiveFrameRuntime liveFrames;
+	private FrameAdvance liveFrame;
+	private com.openggf.game.rewind.RewindRegistry schedulingRegistry;
+	private long restoreEpoch;
+	private long windowActivationEpoch;
+	private int liveCaptureFrameRate;
+	private long liveSceneSubmissionsBefore;
+	private boolean screenshotRequested;
+	private boolean liveStepPicturePending;
+	private long pendingRegionWorkNanos;
+	private long pendingRegionAudioNanos;
+	private boolean measuringRegionWork;
 	private final LiveCaptureChord liveCaptureChord = new LiveCaptureChord();
 	private final LiveCaptureController liveCaptureController;
 	private final AsyncScreenshotWriter screenshotWriter = new AsyncScreenshotWriter();
 	private final LiveCapturePresentationCoordinator liveCapturePresentation;
-	private final LiveCaptureIndicatorRenderer liveCaptureIndicator;
 	/** How long a recording-interrupted notice stays on screen. */
 	private static final long LIVE_CAPTURE_NOTICE_NANOS = 3_000_000_000L;
 	private LiveCaptureController.Interruption liveCaptureInterruption;
@@ -390,8 +398,6 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		this.gameLoop.setStandaloneMasterTitleExitHandler(this::exitStandaloneMasterTitle);
 		this.gameLoop.setLegalDisclaimerScreenSupplier(() -> legalDisclaimerScreen);
 		this.gameLoop.setLegalDisclaimerExitHandler(this::exitLegalDisclaimer);
-		this.gameLoop.setNativeModNoticeScreenSupplier(() -> nativeModNoticeScreen);
-		this.gameLoop.setNativeModNoticeExitHandler(this::exitNativeModNotice);
 		this.gameLoop.setDataSelectActionHandler(this::launchGameplayFromDataSelect);
 		this.gameLoop.setReturnToMasterTitleHandler(this::returnToMasterTitleScreen);
 		this.gameLoop.setMasterTitleLaunchFailureHandler(this::rollbackLaunchSessionCachedConfig);
@@ -402,30 +408,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		this.debugViewEnabled = configService.getBoolean(SonicConfiguration.DEBUG_VIEW_ENABLED);
 		this.windowWidth = configService.getInt(SonicConfiguration.SCREEN_WIDTH);
 		this.windowHeight = configService.getInt(SonicConfiguration.SCREEN_HEIGHT);
-		this.targetFps = resolveTargetFps(configService);
 		this.liveCaptureController = createLiveCaptureController();
 		this.liveCapturePresentation = new LiveCapturePresentationCoordinator(liveCaptureController);
-		this.liveCaptureIndicator = new LiveCaptureIndicatorRenderer(
-				this::drawLiveCaptureDot,
-				(text, x, y, red, green, blue, alpha, fontScale) ->
-						liveCaptureTextRenderer.drawShadowedText(
-								text, x, y,
-								new DebugColor(Math.round(red * 255f),
-										Math.round(green * 255f),
-										Math.round(blue * 255f),
-										Math.round(alpha * 255f)),
-								fontScale),
-				new LiveCaptureIndicatorRenderer.TextMeasurer() {
-					@Override
-					public int width(String text, float fontScale) {
-						return liveCaptureTextRenderer.measureWidth(text, fontScale);
-					}
-
-					@Override
-					public int height(float fontScale) {
-						return liveCaptureTextRenderer.lineHeight(fontScale);
-					}
-				});
 		this.editorInputHandler = new EditorInputHandler(
 				levelEditorController, () -> camera, () -> graphicsManager, this::saveCurrentEditorLevel,
 				this::exportCurrentEditorLevel);
@@ -523,6 +507,28 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			public com.openggf.stageplay.editor.StageplayRouteJob.Update pollRoute() { return stageplaySession.pollRoute(); }
 			public void requestRouteApply(com.openggf.stageplay.StageplayDocument document, Path root) throws IOException { stageplaySession.requestRouteApply(document,root); }
 			public void cancelRoute() { stageplaySession.cancelRoute(); }
+			public void editInputRows(com.openggf.editor.route.RouteTapeWorkspace.SceneRows rows) {
+				routeTapes.openSceneRows(rows);
+				stageplay.deactivate();
+			}
+		});
+		this.routeTapes = new com.openggf.editor.route.RouteTapeWorkspace(new com.openggf.editor.route.RouteTapeWorkspace.Host() {
+			private final com.openggf.editor.route.RouteTapeJob job = new com.openggf.editor.route.RouteTapeJob(Engine.this::routeTapeRoms);
+			public void startJob(com.openggf.editor.route.RouteTapeJob.Request request) throws IOException { job.start(request); }
+			public com.openggf.editor.route.RouteTapeJob.Update pollJob() { return job.poll(); }
+			public void cancelJob() { job.cancel(); }
+			public java.util.Optional<com.openggf.route.LevelId> currentLevel() {
+				return levelEditorController.currentLevel() == null ? java.util.Optional.empty() : java.util.Optional.of(new com.openggf.route.LevelId(
+						GameServices.module().getGameId().code(), levelManager.getCurrentZone(), levelManager.getCurrentAct()));
+			}
+			public void focusWorld(int x, int y) { levelEditorController.setWorldCursor(new com.openggf.game.session.EditorCursorState(x, y)); }
+			public java.util.List<com.openggf.editor.route.RouteTapeWorkspace.PlacedObject> placements() {
+				var level = levelEditorController.currentLevel();
+				return level == null ? java.util.List.of() : level.getObjects().stream().filter(spawn -> spawn.layoutIndex() >= 0)
+						.map(spawn -> new com.openggf.editor.route.RouteTapeWorkspace.PlacedObject(spawn.layoutIndex(),
+								spawn.objectId(), spawn.subtype(), spawn.x(), spawn.y())).toList();
+			}
+			public void finishPendingEdits() { editorInputHandler.finishPendingEdits(); }
 		});
 		this.contentImportScreen = new ContentImportScreen(new ContentImportService(Path.of("mods"), () ->
 				ModSubsystem.current().processCatalog().scanned().stream()
@@ -552,10 +558,15 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
         com.openggf.editor.EditorCommandPalette.forController(levelEditorController)
                 .setHostActions(this::toggleEditorPlaytestMode, this::startGameplayFromBeginning);
-		var editorCommands = new ArrayList<>(editorProjects.commands());
-		editorCommands.add(new com.openggf.editor.EditorCommandPalette.HostCommand("Stageplay workspace (F4)", stageplay::activate));
+		// The host's playtest actions above already reach a project's playtests; the menu lists files only.
+		var editorCommands = new ArrayList<>(editorProjects.fileCommands());
 		editorCommands.add(new com.openggf.editor.EditorCommandPalette.HostCommand("Import content", this::openContentImport));
-		com.openggf.editor.EditorCommandPalette.forController(levelEditorController).setHostCommands(editorCommands);
+		var editorPalette = com.openggf.editor.EditorCommandPalette.forController(levelEditorController);
+		editorPalette.setWorkspaceCommands(java.util.List.of(
+				new com.openggf.editor.EditorCommandPalette.HostCommand("Stageplay workspace", "F4", stageplay::activate),
+				new com.openggf.editor.EditorCommandPalette.HostCommand("Route tapes workspace", routeTapes::activate)));
+		editorPalette.setHostCommands(editorCommands);
+		editorPalette.setExitAction(this::requestEditorExit);
 
 		// Set up game mode change listener to update projection width
 		gameLoop.setGameModeChangeListener((oldMode, newMode) -> {
@@ -577,7 +588,16 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 	private boolean updateEditorFrontEnd(InputHandler input) {
 		boolean owned = editorChromeActive && editorChrome.update(input);
-		return stageplay.tick(input) || owned;
+		return stageplay.tick(input) || routeTapes.tick(input) || owned;
+	}
+
+	/** Whole configured ROM images the isolated route worker may verify against a route's launch hash. */
+	private Map<String, Path> routeTapeRoms() {
+		var roms = new java.util.HashMap<String, Path>();
+		for (var identity : java.util.List.of(com.openggf.data.RomIdentity.S1, com.openggf.data.RomIdentity.S2, com.openggf.data.RomIdentity.S3K))
+			romManager.resolveLogicalRom(identity).flatMap(com.openggf.data.RomImageCatalogue.Resolution::wholeImagePath)
+					.ifPresent(path -> roms.put(identity == com.openggf.data.RomIdentity.S1 ? "s1" : identity == com.openggf.data.RomIdentity.S2 ? "s2" : "s3k", path));
+		return roms;
 	}
 
 	private boolean updateEditorProjectMenus(InputHandler input) {
@@ -586,6 +606,11 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			if (editorChromeActive && chromeOwnsStageplayMenu()) editorChrome.update(input);
 			else stageplay.tick(input);
 			if (!stageplay.menu().isOpen() && !editorProjects.menu().isOpen() && editorQuitView != null) restoreEditorQuitView();
+			return true;
+		}
+		if (routeTapes.menu().isOpen()) {
+			if (editorChromeActive && chromeOwnsRouteTapeMenu()) editorChrome.update(input);
+			else routeTapes.tick(input);
 			return true;
 		}
 		return editorProjects.update(input);
@@ -619,7 +644,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	static int resolveTargetFps(SonicConfigurationService config) {
-		return FrameRateResolver.effective(config);
+		return FrameRateResolver.presentation(config);
 	}
 
 	private LiveCaptureController createLiveCaptureController() {
@@ -696,6 +721,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		GLFWErrorCallback.createPrint(System.err).set();
 
 		// Initialize GLFW
+		com.openggf.control.GlfwTextInputAdapter.configureBeforeInit();
 		if (!glfwInit()) {
 			throw new IllegalStateException("Unable to initialize GLFW");
 		}
@@ -726,13 +752,6 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		// Apply the application icon (ignored on platforms that manage icons themselves)
 		WindowIconLoader.apply(window);
 
-		// Setup key callback
-		glfwSetKeyCallback(window, (windowHandle, key, scancode, action, mods) -> {
-			if (inputHandler != null && (editorChrome == null || editorChrome.key(key, action, mods))) {
-				inputHandler.handleKeyEvent(key, action);
-			}
-		});
-		installEditorTextInputCallback();
 		glfwSetDropCallback(window, (windowHandle, count, names) -> {
 			var paths = new ArrayList<String>(Math.min(count, 16));
 			// Copy callback-owned UTF-8 names before GLFW releases them; no files are read here.
@@ -794,11 +813,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			}
 		}
 
-		// Make the OpenGL context current
+		// Make the OpenGL context current. LiveFrameRuntime is the sole live swap-interval writer.
 		glfwMakeContextCurrent(window);
-
-		// Enable v-sync
-		glfwSwapInterval(1);
 
 		// Apply the saved desktop mode before showing the window.
 		displayWindowController = new DisplayWindowController(window);
@@ -820,6 +836,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		// Create input handler and set it
 		inputHandler = InputHandler.live(InputBindingFactory.supplier(configService));
 		setInputHandler(inputHandler);
+		installEditorTextInputCallback();
 
 		// Set window handle for clipboard operations (GLFW-based, no AWT dependency)
 		debugOverlayManager.setWindowHandle(window);
@@ -855,12 +872,17 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 	private void installWindowActivationCallbacks() {
 		glfwSetWindowFocusCallback(window, (windowHandle, focused) -> {
+			observeWindowActivation();
+			if (textInputWindow != null) textInputWindow.focus(focused);
 			if (editorChrome != null) editorChrome.focus(focused);
 			paused = applyWindowActivation(focused, inputHandler, gameLoop::pause, gameLoop::resume,
 					() -> gameLoop.modSceneHost.windowFocusChanged(focused),
 					() -> sceneFocusPresentation.withdraw(() -> glfwSwapBuffers(window)));
 		});
 		glfwSetWindowIconifyCallback(window, (windowHandle, iconified) -> {
+			observeWindowActivation();
+			if (iconified && textInputWindow != null) textInputWindow.focus(false);
+			else if (!iconified && textInputWindow != null) textInputWindow.focus(glfwGetWindowAttrib(window, GLFW_FOCUSED) == GLFW_TRUE);
 			paused = applyWindowActivation(!iconified, inputHandler, gameLoop::pause, gameLoop::resume,
 					() -> gameLoop.modSceneHost.windowIconifyChanged(iconified),
 					() -> sceneFocusPresentation.withdraw(() -> glfwSwapBuffers(window)));
@@ -868,11 +890,21 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private void installEditorTextInputCallback() {
-		glfwSetCharCallback(window, (windowHandle, codepoint) -> {
-			if (editorChrome != null && !editorChrome.character(codepoint)) return;
-			com.openggf.control.MenuInput.handleCharEvent(inputHandler, codepoint);
-		});
-	}
+        textInputWindow = new com.openggf.control.GlfwTextInputAdapter(inputHandler,
+                new com.openggf.control.GlfwTextInputAdapter.Filters() {
+                    public boolean key(int key, int action, int mods) {
+                        return editorChrome == null || editorChrome.key(key, action, mods);
+                    }
+                    public boolean character(int codepoint) {
+                        return editorChrome == null || editorChrome.character(codepoint);
+                    }
+                    public boolean preedit(com.openggf.control.Composition composition) {
+                        return editorChrome == null || editorChrome.preedit(composition);
+                    }
+                });
+        textInputWindow.install(window, () -> new com.openggf.control.GlfwTextInputAdapter.Viewport(
+                viewportX, viewportY, viewportWidth, viewportHeight, (int) projectionWidth, (int) realHeight));
+    }
 
 	/**
 	 * Initializes the ordinary configured startup graph without creating a
@@ -987,14 +1019,15 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private void initializeConfiguredStartup() {
+		com.openggf.game.UiLanguageSettings.activateSaved(configService);
 		switch (resolveConfiguredStartupBranch(configService)) {
 			case LEGAL_DISCLAIMER -> {
 				legalDisclaimerScreen = new LegalDisclaimerScreen(
-						graphicsManager.getFadeManager());
+						graphicsManager.getFadeManager(), configService);
 				legalDisclaimerScreen.initialize();
 				gameLoop.setGameMode(GameMode.LEGAL_DISCLAIMER);
 			}
-			case MASTER_TITLE, GAME -> enterBootModNoticeOrProceed(false);
+			case MASTER_TITLE, GAME -> proceedToMasterTitleOrGame(false);
 		}
 	}
 
@@ -1008,6 +1041,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	private void initializePresentationGraphics() throws IOException {
 		graphicsManager.init(RESOURCES_SHADERS_PIXEL_SHADER_GLSL);
 		com.openggf.graphics.GraphicsProjectionAccess.install(graphicsManager, this);
+		displayInterpolationController = new com.openggf.graphics.DisplayInterpolationController(configService);
 		displayColorProfileController = DisplayColorProfileController.fromConfig(
 				configService,
 				graphicsManager,
@@ -1603,12 +1637,6 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 						&& value.manifest().id().equals(standalone.owner()))
 				.findFirst().orElseThrow(() -> new IllegalArgumentException(
 						"Standalone entry is no longer effective: " + standalone.owner()));
-		if (com.openggf.mods.NativeUnsupportedMods.blocksStandalone(
-				descriptor, compiledModsSupported)) {
-			throw new IllegalStateException(
-					"Standalone mod requires the JVM build (code unsupported on native): "
-							+ standalone.owner());
-		}
 		refreshLaunchSessionCachedConfig();
 		applyResolvedDisplayDimensions();
 		if (masterTitleScreen != null) {
@@ -1628,12 +1656,18 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		editorInputHandler.finishPendingEdits();
 		var document = editorProjects.document();
 		if (!hasUnsavedNativeEditorEdits() && (document == null || !document.isModified())
-				&& !stageplay.controller().dirty()) { closeApplicationWindow(); return; }
+				&& !stageplay.controller().dirty() && !routeTapes.dirty()) { closeApplicationWindow(); return; }
 		editorQuitView = new EditorQuitView(getCurrentGameMode(), camera,
 				camera == null ? 0 : camera.getX(), camera == null ? 0 : camera.getY(),
 				camera == null ? 0 : camera.getXCopy(), camera == null ? 0 : camera.getYCopy());
 		gameLoop.setEditorProjectModalMode(GameMode.MASTER_TITLE_SCREEN, true);
-		stageplay.requestQuit(() -> editorProjects.requestQuit(this::closeApplicationWindow));
+		routeTapes.requestQuit(() -> stageplay.requestQuit(() -> editorProjects.requestQuit(this::closeApplicationWindow)));
+	}
+
+	/** Leaves the editor for the master title once Stageplay and the level have settled unsaved work. */
+	private void requestEditorExit() {
+		editorInputHandler.finishPendingEdits();
+		routeTapes.requestQuit(() -> stageplay.requestQuit(editorProjects::requestExit));
 	}
 
 	private void restoreEditorQuitView() {
@@ -1671,7 +1705,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			legalDisclaimerScreen = null;
 		}
 
-		enterBootModNoticeOrProceed(true);
+		proceedToMasterTitleOrGame(true);
 	}
 
 	private void proceedToMasterTitleOrGame(boolean fadeFromBlack) {
@@ -1709,40 +1743,9 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		}
 	}
 
-	private void enterBootModNoticeOrProceed(boolean fadeFromBlackWhenNoNotice) {
-		List<com.openggf.mods.ModDescriptor> unsupported =
-				com.openggf.mods.NativeUnsupportedMods.compute(
-						ModSubsystem.current().processCatalog().scanned(),
-						ModSubsystem.current().startupModState(),
-						compiledModsSupported);
-		if (unsupported.isEmpty()) {
-			proceedToMasterTitleOrGame(fadeFromBlackWhenNoNotice);
-			return;
-		}
-		List<String> names = unsupported.stream()
-				.map(descriptor -> descriptor.manifest().name()).toList();
-		LOGGER.warning(com.openggf.mods.NativeUnsupportedMods.NOTICE_HEADER + " "
-				+ String.join(", ", unsupported.stream()
-						.map(descriptor -> descriptor.manifest().id()).toList()));
-		nativeModNoticeScreen = new com.openggf.game.NativeModNoticeScreen(
-				graphicsManager.getFadeManager(),
-				com.openggf.mods.NativeUnsupportedMods.noticeLines(
-						names, Integer.MAX_VALUE));
-		nativeModNoticeScreen.initialize();
-		gameLoop.setNativeModNoticeExitHandler(this::exitNativeModNotice);
-		gameLoop.setGameMode(GameMode.NATIVE_MOD_NOTICE);
-	}
-
-	private void exitNativeModNotice() {
-		if (nativeModNoticeScreen != null) {
-			nativeModNoticeScreen.cleanup();
-			nativeModNoticeScreen = null;
-		}
-		proceedToMasterTitleOrGame(true);
-	}
-
 	private void resetForGameplayFromMasterTitle() {
 		if (stageplay != null) stageplay.deactivate();
+		if (routeTapes != null) routeTapes.deactivate();
 		if (stageplaySession != null) stageplaySession.release();
 		gameLoop.retireModScene();
 		resetGameplayRuntime();
@@ -2211,13 +2214,12 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				() -> Path.of("mods").toAbsolutePath().normalize(),
 				ModInputLimits.production(), StockMusicDomains::containsSupported,
 				ModSubsystem.SessionAudioBoundary.audioManager(audioManager),
-				com.openggf.mods.BundledModSource.Locator.production()),
-				compiledModsSupported);
+				com.openggf.mods.BundledModSource.Locator.production()));
 		try {
 			var effectiveMods = ModSubsystem.current().processCatalog().effective();
 			ModSubsystem.current().transferDevelopmentSourceOwnership();
 			installModRuntime(ModSubsystem.current(), new ModClassLoaderFactory(Engine.class.getClassLoader())
-					.create(effectiveMods, ModSubsystem.current().trustedCodeOwners(), compiledModsSupported));
+					.create(effectiveMods, ModSubsystem.current().trustedCodeOwners()));
 		} catch (IOException error) {
 			LOGGER.log(java.util.logging.Level.WARNING, "Compiled-mod runtime initialization failed", error);
 		}
@@ -2230,12 +2232,10 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				() -> Path.of("mods").toAbsolutePath().normalize(),
 				ModInputLimits.production(), StockMusicDomains::containsSupported,
 				ModSubsystem.SessionAudioBoundary.audioManager(audioManager)).get();
-		candidate.setCompiledModsSupported(compiledModsSupported);
 		ModRuntime replacement;
 		try {
 			replacement = new ModClassLoaderFactory(Engine.class.getClassLoader())
-					.create(candidate.processCatalog().effective(), candidate.trustedCodeOwners(),
-							compiledModsSupported);
+					.create(candidate.processCatalog().effective(), candidate.trustedCodeOwners());
 		} catch (IOException | RuntimeException failure) {
 			candidate.close();
 			throw new IllegalStateException("Unable to prepare mods", failure);
@@ -2285,6 +2285,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 						configService, moduleResolutionService, preparedLaunch),
 				masterTitleEntries(),
 				cue -> audioManager.playSfx(cue.sfxName()));
+		screen.setPlaybackSelectionMemory(playbackSelection);
 		screen.setEditorProjectsOpenHandler(editorProjects::openMenu);
 		suspension.installCard(screen, suspensionEffects);
 		if (ModSubsystem.current().policy().mayScanAtBoot())
@@ -2319,7 +2320,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				var manifest = descriptor.manifest();
 				if (manifest.type() != com.openggf.mods.ModType.PATCH
 						|| !(game.gameId.equals(manifest.baseGame()) || "any".equals(manifest.baseGame()))
-						|| descriptor.containsCode() && (!compiledModsSupported || !trusted.contains(manifest.id()))
+						|| descriptor.containsCode() && !trusted.contains(manifest.id())
 						|| rejected.contains(manifest.id()) || failed.contains(manifest.id())
 						|| disabled.contains(manifest.id())) continue;
 				gameNames.add(manifest.name());
@@ -2352,10 +2353,6 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		for (com.openggf.mods.ModDescriptor descriptor
 				: ModSubsystem.current().processCatalog().effective().orderedEnabled()) {
 			if (descriptor.manifest().type() != com.openggf.mods.ModType.STANDALONE) continue;
-			if (com.openggf.mods.NativeUnsupportedMods.blocksStandalone(
-					descriptor, compiledModsSupported)) {
-				continue;
-			}
 			String owner = descriptor.manifest().id();
 			boolean canContinue = false;
 			try {
@@ -2686,6 +2683,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	public void toggleEditorPlaytestMode() {
 		if (getCurrentGameMode() == GameMode.EDITOR) {
 			stageplay.deactivate();
+			routeTapes.deactivate();
 			resumePlaytestFromEditor();
 			return;
 		}
@@ -2835,7 +2833,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			var pan = view.consumePan();
 			if (pan.moved() && levelEditorController.currentLevel() != null) {
 				setEditorCanvasCamera(Short.toUnsignedInt(camera.getX()) + pan.dx(), camera.getY() + pan.dy());
-			} else if (followCursor && view.zoom() > 1 && levelEditorController.currentLevel() != null) {
+			} else if (followCursor && view.zoom() != 1 && levelEditorController.currentLevel() != null) {
 				setEditorCanvasCamera(cursor.x() - projectionWidth / (2 * view.zoom()),
 						cursor.y() - realHeight / (2 * view.zoom()));
 			} else if (followCursor) {
@@ -2907,69 +2905,146 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private void loop() {
-		long frameTimeNanos = 1_000_000_000L / targetFps;
-		long accumulator = 0;
-		long previousTime = System.nanoTime();
-
+		liveFrames = createLiveFrameRuntime(new LiveEndpoints(this::renderScheduledFrame, () -> glfwSwapBuffers(window),
+				org.lwjgl.glfw.GLFW::glfwSwapInterval, displayWindowController::output,
+				() -> com.openggf.audio.AudioManagerInternalAccess.speakerRateRegulated(audioManager), System::nanoTime));
 		while (!glfwWindowShouldClose(window)) {
-			long currentTime = System.nanoTime();
-			long deltaTime = currentTime - previousTime;
-			previousTime = currentTime;
-
-			if (!paused) {
-				accumulator += deltaTime;
-
-				// Process exactly one frame per target interval
-				if (accumulator >= frameTimeNanos) {
-					sceneFocusPresentation.displayAndSwap(this::display, () -> glfwSwapBuffers(window),
-							gameLoop.modSceneHost::renderedSubmissions);
-					// Preserve remainder to prevent timing drift
-					accumulator -= frameTimeNanos;
-
-					// Clamp accumulator to prevent spiral of death if frames take too long
-					if (accumulator > frameTimeNanos) {
-						accumulator = frameTimeNanos;
-					}
-				}
-			}
-
-			glfwPollEvents();
+			textInputWindow.pollEvents();
 			gameLoop.modSceneHost.flushClipboardWrites();
 			inputHandler.pollPhysicalGamepads();
-
 			boolean modeChanged = displayWindowController.apply(
 					com.openggf.configuration.DisplaySettingsTrial.forConfig(configService).windowMode());
 			if (modeChanged || !java.util.Objects.equals(displayScaling,
 					configService.getString(SonicConfiguration.DISPLAY_SCALING))) {
 				FramebufferDimensions framebuffer = readCurrentFramebufferDimensions();
-				windowWidth = framebuffer.width();
-				windowHeight = framebuffer.height();
+				windowWidth = framebuffer.width(); windowHeight = framebuffer.height();
 				reshape(windowWidth, windowHeight);
 			}
-
-			// Note: inputHandler.update() is called at the end of GameLoop.step()
-			// to properly handle isKeyPressed() edge detection. Do NOT call update()
-			// here or isKeyPressed() will always return false.
-
-			if (paused) {
-				// When unfocused/minimized, sleep longer — no need for frame-precise
-				// timing. Just poll events ~30 times/sec to stay responsive to focus.
-				try {
-					Thread.sleep(33);
-				} catch (InterruptedException e) {
-					Thread.currentThread().interrupt();
-				}
-				// Reset accumulator so we don't process a burst of frames on resume
-				accumulator = 0;
-				previousTime = System.nanoTime();
-				continue;
-			}
-
-			// Preserve the frame deadline while observing physical input between updates.
-			long targetTime = previousTime + (frameTimeNanos - accumulator);
-			waitForFrameDeadline(targetTime);
+			// Work, capture backpressure and swap time count against this absolute deadline.
+			waitForFrameDeadline(liveFrames.iterate().wakeAtNanos());
 		}
+		if (schedulingRegistry != null) schedulingRegistry.deregisterPostRestoreCallback("live-scheduling");
 	}
+
+	/** Window, device and clock endpoints the live runtime drives; tests substitute fakes. */
+	record LiveEndpoints(java.util.function.Consumer<LivePictureRequest> render, Runnable swap,
+			java.util.function.IntConsumer swapInterval, java.util.function.Supplier<DisplayOutput> output,
+			java.util.function.BooleanSupplier speakerRegulated, java.util.function.LongSupplier clock) { }
+
+	/** Same live coordinator for the window host and isolated production-path tests. */
+	LiveFrameRuntime createLiveFrameRuntime(LiveEndpoints endpoints) {
+		var render = endpoints.render();
+		var swap = endpoints.swap();
+		return new LiveFrameRuntime(new LiveFrameRuntime.Owner() {
+			public LiveFrameRuntime.HostState hostState() {
+				DisplayOutput output = endpoints.output().get();
+				return new LiveFrameRuntime.HostState(FrameRateResolver.simulation(configService),
+						FrameRateResolver.presentation(configService, output.advertisedRefreshHz()), !paused, gameLoop.isPaused(), liveSchedulingBoundary(),
+						liveCaptureController.state() == LiveCaptureController.State.ACTIVE,
+						suspension.requiresScenePicture() || liveStepPicturePending,
+						FrameRateResolver.pacing(configService), output,
+						endpoints.speakerRegulated().getAsBoolean(),
+						configService.getBoolean(SonicConfiguration.DISPLAY_INTERPOLATION), screenshotRequested,
+						FrameRateResolver.automaticPresentation(configService));
+			}
+			public boolean tick(boolean interpolationActive) {
+				return runFrameWithModAbort(() -> {
+					suspension.betweenFrames(suspensionEffects);
+					// Resource installation is a window-thread obligation even without a picture.
+					graphicsManager.runPendingRenderThreadTasks();
+					long started = System.nanoTime();
+					measuringRegionWork = true;
+					try { liveFrame = advanceFrame(); }
+					finally {
+						measuringRegionWork = false;
+						pendingRegionWorkNanos += System.nanoTime() - started;
+					}
+					graphicsManager.runPendingRenderThreadTasks();
+					observeLiveMotion(interpolationActive);
+				}, Engine.this::discardAbortedLiveFrame, gameLoop::returnToMasterTitle);
+			}
+			public boolean draw(LivePictureRequest picture) {
+				liveSceneSubmissionsBefore = gameLoop.modSceneHost.renderedSubmissions();
+				return runFrameWithModAbort(() -> {
+					render.accept(picture);
+					liveStepPicturePending = false;
+				},
+						Engine.this::discardAbortedLiveFrame, gameLoop::returnToMasterTitle);
+			}
+			public void swap() {
+				sceneFocusPresentation.swapPrepared(swap, liveSceneSubmissionsBefore, gameLoop.modSceneHost.renderedSubmissions());
+			}
+			public void swapInterval(int interval) { endpoints.swapInterval().accept(interval); }
+			public void serviceDevice() { com.openggf.audio.AudioManagerInternalAccess.serviceDevice(audioManager); }
+		}, endpoints.clock());
+	}
+
+	/** Host diagnostics; no gameplay or scheduler state is exposed through the Mod API. */
+	/** Short performance-panel lines; empty when no live window scheduler runs (offline tools). */
+	public static java.util.List<String> livePresentationPanelLines() {
+		if (instance == null || instance.liveFrames == null) return java.util.List.of();
+		var stats = instance.liveFrames.statistics();
+		return java.util.List.of(
+				String.format(java.util.Locale.ROOT, "pic %.1f svc %.1f", stats.picturesPerSecond(), stats.servicesPerSecond()),
+				String.format(java.util.Locale.ROOT, "blend %.1f a%.2f", stats.blendedPerSecond(), stats.lastAlpha()),
+				"int " + stats.interpolation(),
+				LevelMotionAccess.panelOutcome(instance.levelManager));
+	}
+
+	public static String liveSchedulingDiagnostics() {
+		if (instance == null || instance.liveFrames == null) return "Live scheduler: inactive\n";
+		var stats = instance.liveFrames.statistics();
+		return "Region services: " + stats.regionHz() + " Hz; display limit: " + stats.pictureCap()
+				+ " FPS\nCadence: " + stats.cadence() + " (interval " + stats.swapInterval() + ", reason "
+				+ stats.reason() + "); measured presents: " + String.format(java.util.Locale.ROOT, "%.3f", stats.measuredPresentHz())
+				+ " Hz\nCompleted services: " + stats.services() + "; pictures: " + stats.pictures()
+				+ "; swaps: " + stats.swaps() + "\nPending services: " + stats.pendingTicks()
+				+ "; discarded wall time: " + stats.discardedWallNanos() + " ns\n"
+				+ String.format(java.util.Locale.ROOT, "Interpolation: %s; alpha %.2f\nRates: %.1f pictures/s, %.1f blended/s, %.1f services/s\n",
+						stats.interpolation(), stats.lastAlpha(), stats.picturesPerSecond(), stats.blendedPerSecond(),
+						stats.servicesPerSecond())
+				+ LevelMotionAccess.diagnostics(instance.levelManager) + "\n";
+	}
+
+	private void discardAbortedLiveFrame() {
+		graphicsManager.discardQueuedCommands();
+		liveFrame = null;
+		liveStepPicturePending = screenshotRequested = false;
+		pendingRegionWorkNanos = pendingRegionAudioNanos = 0;
+		// A draw abort can follow PCM publication. Stop before another picture
+		// can drain that unmatched packet and shift the rest of the recording.
+		liveCaptureController.requestStop(LiveCaptureController.StopReason.CAPTURE_ERROR);
+	}
+
+	private Object liveSchedulingBoundary() {
+		var context = gameLoop.resolveGameplayModeContext();
+		var registry = context == null ? null : context.getRewindRegistry();
+		if (registry != schedulingRegistry) {
+			if (schedulingRegistry != null) schedulingRegistry.deregisterPostRestoreCallback("live-scheduling");
+			schedulingRegistry = registry;
+			if (registry != null) registry.registerPostRestoreCallback("live-scheduling", () -> {
+				// Reverse selection is itself the scheduled service. Its internal restores
+				// must not restart the reverse-service clock on every selected picture.
+				if (!audioManager.isReverseAudioOutputActive()) restoreEpoch++;
+				com.openggf.control.InputHandlerInternalAccess.discardOrderedGameplayInput(inputHandler);
+			});
+		}
+		int regionHz = FrameRateResolver.simulation(configService);
+		if (liveCaptureController.state() == LiveCaptureController.State.ACTIVE && liveCaptureFrameRate != regionHz) {
+			liveCaptureController.requestStop(LiveCaptureController.StopReason.USER);
+		}
+		return new LiveSchedulingBoundary(GameLoopPacingBoundary.capture(gameLoop, context,
+				gameLoop.levelManager == null ? null : gameLoop.levelManager.getCurrentLevel()), gameLoop.isPaused(),
+				gameLoop.presentationModeForOuterFrame(false, false), restoreEpoch, windowActivationEpoch,
+				suspension.requiresScenePicture());
+	}
+
+	/** Both edges count, even when focus is lost and regained in one event poll. */
+	void observeWindowActivation() { windowActivationEpoch++; }
+
+	private record LiveSchedulingBoundary(GameLoopPacingBoundary world, boolean paused,
+			com.openggf.audio.presentation.PresentationMode audio, long restoreEpoch, long activationEpoch,
+			boolean needsPicture) { }
 
 	/**
 	 * GLFW gamepads have polling state rather than queued button callbacks. Observe them
@@ -2977,9 +3052,10 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	 * can reach a scene. All GLFW calls stay on the window thread. This is an observation
 	 * cadence, not a hardware timestamp guarantee: rendering and OS scheduling can delay
 	 * a poll. Only the final quarter-millisecond retains the existing precision spin.
+	 * An unfocused window waits here too, on the runtime's longer deadline.
 	 */
 	private void waitForFrameDeadline(long deadlineNanos) {
-		while (!paused && !glfwWindowShouldClose(window)) {
+		while (!glfwWindowShouldClose(window)) {
 			long remainingNanos = deadlineNanos - System.nanoTime();
 			if (remainingNanos <= 0) return;
 			if (remainingNanos <= 250_000) {
@@ -2993,9 +3069,10 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				Thread.currentThread().interrupt();
 				return;
 			}
-			glfwPollEvents();
+			textInputWindow.pollEvents();
 			gameLoop.modSceneHost.flushClipboardWrites();
 			inputHandler.pollPhysicalGamepads();
+			com.openggf.audio.AudioManagerInternalAccess.serviceDevice(audioManager);
 		}
 	}
 
@@ -3009,12 +3086,31 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 	private void displayFrame() {
 		suspension.betweenFrames(suspensionEffects);
+		liveFrame = advanceFrame();
+		renderScheduledFrame(new LivePictureRequest.CaptureLatest());
+	}
+
+	/** The live window's only interpolation-history writer; offline drivers never retain history. */
+	private void observeLiveMotion(boolean interpolationActive) {
+		LevelMotionAccess.observeService(levelManager, spriteManager, interpolationActive);
+	}
+
+	private boolean beginPictureProfiling() {
 		boolean performanceOverlayEnabled =
 				debugOverlayManager.isEnabled(DebugOverlayToggle.PERFORMANCE);
 		profiler.setEnabled(shouldEnablePerformanceProfiler(
 				performanceOverlayEnabled,
 				isNativeImage()));
 		profiler.beginFrame();
+		profiler.recordSectionTime("update", Math.max(0, pendingRegionWorkNanos - pendingRegionAudioNanos));
+		profiler.recordSectionTime("audio", pendingRegionAudioNanos);
+		pendingRegionWorkNanos = pendingRegionAudioNanos = 0;
+
+		return performanceOverlayEnabled;
+	}
+
+	private void renderScheduledFrame(LivePictureRequest picture) {
+		boolean performanceOverlayEnabled = beginPictureProfiling();
 
 		syncEditorChromeViewport();
 		// Clear the entire window to black first (for letterbox/pillarbox bars)
@@ -3038,6 +3134,20 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 		glColorMask(true, true, true, true);
 
+		FrameAdvance frame = liveFrame != null ? liveFrame
+				: new FrameAdvance(graphicsManager.getUiRenderPipeline(), false, false);
+		LevelMotionAccess.present(levelManager, picture.selection(), () -> renderAdvancedFrame(frame, performanceOverlayEnabled, picture.capture()));
+
+		profiler.endFrame();
+		overlayStateReady = false;
+	}
+
+	/**
+	 * One region-clock opportunity: host controls, existing semantic admission and
+	 * one region-duration audio packet. Native zero/multiple iterations remain owned
+	 * by pacing/recording/trace. Pictures never enter this operation.
+	 */
+	FrameAdvance advanceFrame() {
 		// Update fade via unified UI render pipeline — process fade state first so
 		// that callbacks (e.g. credits transition flags) are available to step()
 		// in the same frame, preventing 1-frame gaps where the overlay would drop.
@@ -3050,30 +3160,58 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		profiler.beginSection("update");
 		contentImportWindow.update();
 		processDisplayShaderPackRescan();
-		handleLiveCaptureShortcut();
-		liveCaptureFailureReporter.observe(liveCaptureController);
-		boolean frameStepPresentation = gameLoop != null && gameLoop.isUserPaused()
-				&& inputHandler != null
-				&& inputHandler.isKeyPressed(
-						configService.getInt(SonicConfiguration.FRAME_STEP_KEY));
-		boolean displayShaderPickerHandledInput = com.openggf.game.TitleInputOwnership.routeDisplay(
+		boolean frameStepPresentation;
+		boolean displayShaderPickerHandledInput;
+		try (var hostInput = com.openggf.control.InputHandlerInternalAccess.openHostInputPass(inputHandler)) {
+			inputHandler.refreshLogicalSnapshot();
+			observeScreenshotRequests();
+			handleLiveCaptureShortcut();
+			liveCaptureFailureReporter.observe(liveCaptureController);
+			frameStepPresentation = gameLoop != null && gameLoop.isUserPaused()
+					&& inputHandler.isKeyPressed(configService.getInt(SonicConfiguration.FRAME_STEP_KEY));
+			displayShaderPickerHandledInput = routeDisplayInput();
+			if (displayShaderPickerHandledInput) inputHandler.update();
+			else hostInput.handoff(this::update);
+		}
+		if (gameLoop != null) presentRegionAudio(displayShaderPickerHandledInput, frameStepPresentation);
+		profiler.endSection("update");
+
+		liveStepPicturePending |= frameStepPresentation;
+		return new FrameAdvance(uiPipeline, displayShaderPickerHandledInput, frameStepPresentation);
+	}
+
+	private void observeScreenshotRequests() {
+		screenshotRequested |= inputHandler.isKeyPressed(GLFW_KEY_F12);
+		if (isUserPauseScreenshotSuppressionKeyPressed(inputHandler)) {
+			userPauseIndicatorHiddenUntilNanos = userPauseIndicatorHiddenUntilAfterScreenshotKey(System.nanoTime());
+		}
+	}
+
+	private void presentRegionAudio(boolean displayInputConsumed, boolean frameStepRequested) {
+		long started = System.nanoTime();
+		presentOuterAudioFrame(gameLoop, displayInputConsumed, frameStepRequested);
+		if (measuringRegionWork) pendingRegionAudioNanos += System.nanoTime() - started;
+	}
+
+	private boolean routeDisplayInput() {
+		return com.openggf.game.TitleInputOwnership.routeDisplay(
 				getCurrentGameMode(), masterTitleScreen, globalShortcutInputClaimed(),
 				displayShaderPickerController != null && displayShaderPickerController.isOpen(),
 				this::updateDisplayShaderInput,
-				() -> { if (displayColorProfileController != null) displayColorProfileController.update(inputHandler); },
+				() -> {
+					if (displayColorProfileController != null) displayColorProfileController.update(inputHandler);
+					if (displayInterpolationController != null) displayInterpolationController.update(inputHandler);
+				},
 				() -> { if (displayShaderController != null) displayShaderController.update(inputHandler); });
-		if (!displayShaderPickerHandledInput) {
-			update();
-		} else if (inputHandler != null) {
-			// Modal picker frames skip GameLoop.step(), so advance key edges here.
-			inputHandler.update();
-		}
-		if (gameLoop != null) {
-			presentOuterAudioFrame(gameLoop,
-					displayShaderPickerHandledInput, frameStepPresentation);
-		}
-		profiler.endSection("update");
+	}
 
+	/** Decisions sampled before input acknowledgment, retained through live capture. */
+	record FrameAdvance(com.openggf.graphics.pipeline.UiRenderPipeline uiPipeline,
+			boolean displayInputConsumed, boolean frameStepRequested) { }
+
+	/** Draws current state; capture consumes an interval only when its service tick requests it. */
+	private void renderAdvancedFrame(FrameAdvance frame, boolean performanceOverlayEnabled, boolean capture) {
+		var uiPipeline = frame.uiPipeline();
 		boolean userRecordingSceneSuppressed = gameLoop != null
 				&& gameLoop.shouldSuppressUserRecordingSceneRendering();
 		boolean performanceOverlayVisible = shouldRenderPerformanceOverlay(
@@ -3087,10 +3225,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		if (!userRecordingSceneSuppressed) {
 			draw();
 		}
-		graphicsManager.flush();
-		if (!userRecordingSceneSuppressed) {
-			applyDisplayShaderPhase(ShaderPhase.SCENE);
-		}
+		finishScenePass(userRecordingSceneSuppressed);
 		suspension.afterScene(suspensionEffects.capture());
 		profiler.endSection("render");
 
@@ -3220,16 +3355,21 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		// F12 screenshot capture (after all rendering is complete) is the middle
 		// callback: capture pixels first, then screenshot, then window-only REC.
 		LiveCapturePresentationState presentationState = resolveLiveCapturePresentationState(
-				displayShaderPickerHandledInput, userPaused, frameStepPresentation,
+				frame.displayInputConsumed(), userPaused, frame.frameStepRequested(),
 				gameLoop != null && gameLoop.liveRewindEffectIntensity() > 0.0f);
 		presentLiveCaptureFrame(getCurrentGameMode(), presentationState,
-				() -> liveCapturePresentation.present(currentCaptureViewport(),
+				() -> liveCapturePresentation.present(currentCaptureViewport(), capture,
 						this::captureScreenshotIfRequested,
 						this::renderLiveCaptureIndicatorIfActive));
 		liveCaptureFailureReporter.observe(liveCaptureController);
+	}
 
-		profiler.endFrame();
-		overlayStateReady = false;
+	private void finishScenePass(boolean sceneSuppressed) {
+		graphicsManager.flush();
+		if (!sceneSuppressed) {
+			textInputOverlay.render(inputHandler, getProjectionMatrixBuffer(), (int) projectionWidth, (int) realHeight);
+			applyDisplayShaderPhase(ShaderPhase.SCENE);
+		}
 	}
 
 	static boolean runFrameWithModAbort(Runnable frame, Runnable returnToTitle) {
@@ -3421,6 +3561,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private void handleLiveCaptureShortcut() {
+		liveCaptureFrameRate = FrameRateResolver.simulation(configService);
 		if (inputHandler == null) {
 			return;
 		}
@@ -3435,7 +3576,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			case ACTIVE -> liveCaptureController.requestStop(LiveCaptureController.StopReason.USER);
 			case INACTIVE, FAILED -> startLiveCaptureAttempt(
 					liveCaptureController, liveCaptureFailureReporter,
-					currentCaptureViewport(), targetFps);
+					currentCaptureViewport(), FrameRateResolver.simulation(configService));
 			case STARTING, STOPPING -> { }
 		}
 	}
@@ -3445,9 +3586,10 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private void captureScreenshotIfRequested() {
-		if (inputHandler == null || !inputHandler.isKeyPressed(GLFW_KEY_F12)) {
+		if (!screenshotRequested) {
 			return;
 		}
+		screenshotRequested = false;
 		try {
 			String timestamp = java.time.LocalDateTime.now()
 					.format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
@@ -3476,14 +3618,29 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			return;
 		}
 		prepareOverlayState();
-		liveCaptureTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
-		if (recording) {
-			liveCaptureIndicator.render((int) projectionWidth, (int) realHeight);
-		} else {
-			liveCaptureIndicator.renderInterruption(
-					liveCaptureNoticeText(liveCaptureInterruption),
-					(int) projectionWidth, (int) realHeight);
-		}
+		renderLiveCapturePlate(recording ? null : liveCaptureInterruption);
+	}
+
+	/**
+	 * Window-only video capture plate in the top-right lane: a red record glyph while recording,
+	 * or a red error plate naming why a recording ended without the user asking. Drawn after
+	 * the capture grab and the screenshot, so it reaches neither the recorded file nor a PNG.
+	 */
+	private void renderLiveCapturePlate(LiveCaptureController.Interruption interruption) {
+		traceHudTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
+		com.openggf.game.presentation.TransportHud.render(traceHudTextRenderer, graphicsManager, (int) projectionWidth,
+				com.openggf.game.presentation.TransportHud.Placement.TOP_RIGHT, liveCapturePlate(interruption));
+	}
+
+	/** Plate for an active window recording ({@code null}) or a recording that was interrupted. */
+	static com.openggf.game.presentation.TransportHud.Message liveCapturePlate(
+			LiveCaptureController.Interruption interruption) {
+		return interruption == null
+				? new com.openggf.game.presentation.TransportHud.Message(
+						com.openggf.game.presentation.TransportHud.Status.RECORD, "VIDEO", "", "", -1)
+				: new com.openggf.game.presentation.TransportHud.Message(
+						com.openggf.game.presentation.TransportHud.Status.ERROR, "VIDEO",
+						liveCaptureNoticeText(interruption), "", -1);
 	}
 
 	/**
@@ -3503,22 +3660,9 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	static String liveCaptureNoticeText(
 			LiveCaptureController.Interruption interruption) {
 		return switch (interruption) {
-			case WINDOW_RESIZED -> "REC STOPPED: RESIZED";
-			case CAPTURE_ERROR -> "REC STOPPED: ERROR";
+			case WINDOW_RESIZED -> "STOPPED: RESIZED";
+			case CAPTURE_ERROR -> "STOPPED: ERROR";
 		};
-	}
-
-	private void drawLiveCaptureDot(int x, int y, int diameter,
-									float red, float green, float blue, float alpha) {
-		int radius = diameter / 2;
-		for (int row = 0; row < diameter; row++) {
-			double dy = row + 0.5 - radius;
-			int halfWidth = (int) Math.floor(Math.sqrt(radius * radius - dy * dy));
-			new GLCommand(GLCommand.CommandType.RECTI, GL_TRIANGLE_FAN,
-					GLCommand.BlendType.SOLID, red, green, blue, alpha,
-					x + radius - halfWidth, y + row,
-					x + radius + halfWidth, y + row + 1).execute(0, 0, 0, 0);
-		}
 	}
 
 	private void applySpecialStageClearColor() {
@@ -3577,35 +3721,20 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private void renderUserPauseIndicator() {
-		pauseTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
-		PauseIndicatorPlacement placement = userPauseIndicatorPlacement(
-				(int) projectionWidth,
-				(int) realHeight,
-				pauseTextRenderer.measureWidth(USER_PAUSE_INDICATOR_TEXT),
-				pauseTextRenderer.lineHeight());
-		DebugColor color = new DebugColor(255, 255, 255, userPauseIndicatorAlpha(System.nanoTime()));
-		pauseTextRenderer.drawShadowedText(
-				USER_PAUSE_INDICATOR_TEXT,
-				placement.x(),
-				placement.y(),
-				color);
+		traceHudTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
+		boolean videoPlate = liveCaptureController.indicatorVisible() || liveCaptureInterruption != null;
+		com.openggf.game.presentation.TransportHud.render(traceHudTextRenderer, graphicsManager, (int) projectionWidth,
+				userPausePlacement(videoPlate), USER_PAUSE_PLATE);
 	}
 
-	static PauseIndicatorPlacement userPauseIndicatorPlacement(
-			int logicalWidth,
-			int logicalHeight,
-			int textWidth,
-			int textHeight) {
-		int x = Math.max(0, logicalWidth - textWidth - USER_PAUSE_INDICATOR_MARGIN);
-		int y = Math.max(0, logicalHeight - textHeight - USER_PAUSE_INDICATOR_MARGIN);
-		return new PauseIndicatorPlacement(x, y);
-	}
-
-	static int userPauseIndicatorAlpha(long elapsedNanos) {
-		long cycleNanos = Math.floorMod(elapsedNanos, USER_PAUSE_INDICATOR_PERIOD_NANOS);
-		double phase = cycleNanos / (double) USER_PAUSE_INDICATOR_PERIOD_NANOS;
-		double alpha = (0.5d + 0.5d * Math.cos(phase * Math.PI * 2.0d)) * 255.0d;
-		return Math.max(0, Math.min(255, (int) Math.round(alpha)));
+	/**
+	 * The pause plate takes the top-right lane, clear of the native score/time/rings and lives
+	 * and of the bottom-right playback plate it previously overlapped; a window video plate keeps
+	 * the first slot, so pause moves to the slot beneath it.
+	 */
+	static com.openggf.game.presentation.TransportHud.Placement userPausePlacement(boolean videoPlate) {
+		return videoPlate ? com.openggf.game.presentation.TransportHud.Placement.TOP_RIGHT_SECOND
+				: com.openggf.game.presentation.TransportHud.Placement.TOP_RIGHT;
 	}
 
 	static long userPauseIndicatorHiddenUntilAfterScreenshotKey(long keyPressNanos) {
@@ -3644,7 +3773,6 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 	private final class EngineDrawActions implements EngineRenderDispatcher.DrawActions {
 		@Override public void legalDisclaimer() { drawLegalDisclaimer(); }
-		@Override public void nativeModNotice() { drawNativeModNotice(); }
 		@Override public void masterTitle() { drawMasterTitle(); }
 		@Override public void editor() { drawEditor(); }
 		@Override public void specialStage() { drawSpecialStage(); }
@@ -3683,10 +3811,10 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private void renderDisplayColorProfileNotification() {
-		if (displayColorProfileController == null) {
-			return;
+		String text = displayInterpolationController != null ? displayInterpolationController.notificationText() : null;
+		if (text == null && displayColorProfileController != null) {
+			text = displayColorProfileController.notificationText();
 		}
-		String text = displayColorProfileController.notificationText();
 		if (text == null) {
 			return;
 		}
@@ -3761,12 +3889,15 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		glUseProgram(0);
 	}
 
+	private final EscapeToastMotion escapeToastMotion = new EscapeToastMotion();
+
 	private void renderEscapeToMasterTitlePrompt(RenderOrderRecorder postFadeRecorder) {
 		if (gameLoop == null) {
 			return;
 		}
 		EscapeToMasterTitleController controller = gameLoop.getEscapeToMasterTitleController();
 		if (controller == null || controller.presence() <= 0f) {
+			escapeToastMotion.reset();
 			return;
 		}
 		if (postFadeRecorder != null) {
@@ -3774,17 +3905,100 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		}
 		menuOverlayTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
 		PixelFont font = menuOverlayTextRenderer.font();
+		int width = (int) projectionWidth;
+		int toastWidth = MenuChrome.holdToastWidth("Esc", controller.message());
+		var plates = topRightSessionPlates(width);
+		int left = MenuChrome.holdToastX(width, toastWidth);
+		int restY = escapeToastMotion.restY(escapeToastRestY(width, toastWidth, plates), controller.shownFrames(),
+				left, width, plates);
+		int[] origin = escapeToastOrigin(width, toastWidth, restY, controller.presence());
 		font.beginMegaBatch();
-		MenuChrome.holdToast(font, (int) projectionWidth, escapeToastY(controller.presence()), "Esc",
+		MenuChrome.holdToast(font, width, origin[0] - MenuChrome.holdToastX(width, toastWidth), origin[1], "Esc",
 				controller.message(), (float) controller.progress(), controller.transitionStarted(),
 				controller.shownFrames());
 		font.endMegaBatch();
 	}
 
+	/**
+	 * Top-right session plates visible this frame (window video, then pause), with the same
+	 * visibility rules their own renderers use, including the screenshot-key pause hide.
+	 */
+	private java.util.List<com.openggf.game.presentation.TransportHud.Bounds> topRightSessionPlates(int width) {
+		var plates = new java.util.ArrayList<com.openggf.game.presentation.TransportHud.Bounds>(2);
+		boolean recording = liveCaptureController.indicatorVisible();
+		boolean videoPlate = recording || liveCaptureInterruption != null;
+		if (videoPlate) {
+			plates.add(com.openggf.game.presentation.TransportHud.bounds(traceHudTextRenderer, width,
+					com.openggf.game.presentation.TransportHud.Placement.TOP_RIGHT,
+					liveCapturePlate(recording ? null : liveCaptureInterruption)));
+		}
+		long now = System.nanoTime();
+		if (isUserPauseScreenshotSuppressionKeyPressed(inputHandler)) {
+			userPauseIndicatorHiddenUntilNanos = userPauseIndicatorHiddenUntilAfterScreenshotKey(now);
+		}
+		if (shouldRenderUserPauseIndicator(gameLoop.isUserPaused(), now, userPauseIndicatorHiddenUntilNanos)) {
+			plates.add(com.openggf.game.presentation.TransportHud.bounds(traceHudTextRenderer, width,
+					userPausePlacement(videoPlate), USER_PAUSE_PLATE));
+		}
+		return plates;
+	}
+
 	/** Slides the hold toast down from above the top edge to its resting row. */
 	static int escapeToastY(float presence) {
+		return escapeToastY(presence, ESCAPE_TOAST_REST_Y);
+	}
+
+	static int escapeToastY(float presence, int restY) {
 		int hidden = -MenuChrome.HOLD_TOAST_H - 2;
-		return Math.round(hidden + (ESCAPE_TOAST_REST_Y - hidden) * Math.clamp(presence, 0f, 1f));
+		return Math.round(hidden + (restY - hidden) * Math.clamp(presence, 0f, 1f));
+	}
+
+	/**
+	 * Where the toast's top-left corner is this frame. On the top row it slides down from above the
+	 * screen. Displaced below a top-right plate, a vertical slide would pass through that plate, so it
+	 * slides in from the right edge along its resting row instead, beneath every plate it cleared.
+	 */
+	static int[] escapeToastOrigin(int width, int toastWidth,
+			java.util.List<com.openggf.game.presentation.TransportHud.Bounds> plates, float presence) {
+		return escapeToastOrigin(width, toastWidth, escapeToastRestY(width, toastWidth, plates), presence);
+	}
+
+	/** As above for a resting row already chosen (an eased row while a plate comes or goes). */
+	static int[] escapeToastOrigin(int width, int toastWidth, int restY, float presence) {
+		int restX = MenuChrome.holdToastX(width, toastWidth);
+		if (restY == ESCAPE_TOAST_REST_Y) {
+			return new int[] {restX, escapeToastY(presence, restY)};
+		}
+		int hidden = width - restX + 2; // the toast and its one-pixel shadow fully off the right edge
+		return new int[] {restX + Math.round(hidden * (1f - Math.clamp(presence, 0f, 1f))), restY};
+	}
+
+	/**
+	 * The toast rests on the top row, right of the native HUD column. A pause or window video
+	 * plate already in the top-right slots keeps its place; a toast that would touch one rests
+	 * just below it instead (two pixels, clear of its one-pixel shadow).
+	 */
+	static int escapeToastRestY(int width, int toastWidth,
+			java.util.List<com.openggf.game.presentation.TransportHud.Bounds> plates) {
+		int left = MenuChrome.holdToastX(width, toastWidth);
+		int y = clearRow(left, left + toastWidth + 1, plates);
+		// Displaced, the toast slides in from the right edge along this row (escapeToastOrigin), so the
+		// row must also clear any lower plate between the toast and that edge.
+		return y == ESCAPE_TOAST_REST_Y ? y : clearRow(left, width, plates);
+	}
+
+	/** The first row from the top band down whose span [left, right) touches none of the plates. */
+	private static int clearRow(int left, int right,
+			java.util.List<com.openggf.game.presentation.TransportHud.Bounds> plates) {
+		int y = ESCAPE_TOAST_REST_Y;
+		var ordered = plates.stream()
+				.sorted(java.util.Comparator.comparingInt(com.openggf.game.presentation.TransportHud.Bounds::y)).toList();
+		for (var plate : ordered) {
+			boolean across = left < plate.right() + 3 && plate.x() < right + 3;
+			boolean down = y < plate.bottom() + 2 && plate.y() < y + MenuChrome.HOLD_TOAST_H + 1;
+			if (across && down) y = plate.bottom() + 2;
+		}
+		return y;
 	}
 
 	static int centeredDiagnosticOrigin(int logicalWidth) {
@@ -3804,7 +4018,9 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				? displayShaderController.currentRef()
 				: DisplayShaderPresetRef.OFF;
 		DisplayShaderPickerController.Action action =
-				displayShaderPickerController.update(inputHandler, currentRef);
+				displayShaderPickerRenderer.update(inputHandler, displayShaderPickerController, currentRef,
+						configService.getString(SonicConfiguration.DISPLAY_SHADER_LIBRARY_ROOT),
+						displayShaderPackStatus, (int) projectionWidth);
 		if (action.type() == DisplayShaderPickerController.ActionType.ACTIVATE && displayShaderController != null) {
 			displayShaderController.select(action.ref());
 		} else if (action.type() == DisplayShaderPickerController.ActionType.DOWNLOAD_LIBRETRO_GLSL) {
@@ -3826,101 +4042,11 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private void renderDisplayShaderPickerOverlay() {
-		if (displayShaderPickerController == null || !displayShaderPickerController.isOpen()) {
-			return;
-		}
-		renderDisplayShaderPickerBackdrop();
-		float scale = 1.0f;
-		int x = 4;
-		int y = 8;
-		int lineHeight = traceHudTextRenderer.lineHeight(scale);
-		int maxWidth = Math.max(48, (int) projectionWidth - x - 4);
-		traceHudTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
-		traceHudTextRenderer.drawShadowedText(
-				fitDisplayShaderPickerText(displayShaderPickerCurrentFolderText(), maxWidth, scale),
-				x,
-				y,
-				DebugColor.CYAN,
-				scale);
-		y += lineHeight;
-		traceHudTextRenderer.drawShadowedText(
-				fitDisplayShaderPickerText(displayShaderPickerController.query(), maxWidth, scale),
-				x,
-				y,
-				DebugColor.WHITE,
-				scale);
-		y += lineHeight;
-		traceHudTextRenderer.drawShadowedText(
-				fitDisplayShaderPickerText(DisplayShaderPickerController.downloadHintText(), maxWidth, scale),
-				x,
-				y,
-				DebugColor.LIGHT_GRAY,
-				scale);
-		y += lineHeight;
-		if (displayShaderPackStatus != null && !displayShaderPackStatus.isBlank()) {
-			traceHudTextRenderer.drawShadowedText(
-					fitDisplayShaderPickerText(displayShaderPackStatus, maxWidth, scale),
-					x,
-					y,
-					displayShaderPackDownloadInProgress ? DebugColor.CYAN : DebugColor.LIGHT_GRAY,
-					scale);
-			y += lineHeight;
-		}
-
-		List<DisplayShaderSelectionModel.SelectionItem> items = displayShaderPickerController.visibleItems();
-		int selectedIndex = items.indexOf(displayShaderPickerController.selectedItem());
-		int maxEntries = Math.max(1, (224 - y - 4) / Math.max(1, lineHeight));
-		int start = Math.max(0, Math.min(selectedIndex - maxEntries / 2, items.size() - maxEntries));
-		int end = Math.min(items.size(), start + maxEntries);
-		for (int i = start; i < end; i++) {
-			DisplayShaderSelectionModel.SelectionItem item = items.get(i);
-			boolean selected = i == selectedIndex;
-			String text = (selected ? "> " : "  ") + item.displayPath();
-			traceHudTextRenderer.drawShadowedText(
-					fitDisplayShaderPickerText(text, maxWidth, scale),
-					x,
-					y,
-					selected ? DebugColor.YELLOW : DebugColor.LIGHT_GRAY,
-					scale);
-			y += lineHeight;
-		}
-	}
-
-	private String displayShaderPickerCurrentFolderText() {
-		String root = configService.getString(SonicConfiguration.DISPLAY_SHADER_LIBRARY_ROOT);
-		String normalizedRoot = root == null || root.isBlank() ? "shaders" : root.trim().replace('\\', '/');
-		while (normalizedRoot.endsWith("/")) {
-			normalizedRoot = normalizedRoot.substring(0, normalizedRoot.length() - 1);
-		}
-		String folder = displayShaderPickerController.currentFolder();
-		return folder == null || folder.isBlank() ? normalizedRoot : normalizedRoot + "/" + folder;
-	}
-
-	private void renderDisplayShaderPickerBackdrop() {
-		new GLCommand(
-				GLCommand.CommandType.RECTI,
-				GL_TRIANGLE_FAN,
-				GLCommand.BlendType.ONE_MINUS_SRC_ALPHA,
-				0.0f,
-				0.0f,
-				0.0f,
-				0.58f,
-				0,
-				0,
-				(int) projectionWidth,
-				(int) realHeight).execute(0, 0, 0, 0);
-	}
-
-	private String fitDisplayShaderPickerText(String text, int maxWidth, float scale) {
-		if (text == null || traceHudTextRenderer.measureWidth(text, scale) <= maxWidth) {
-			return text == null ? "" : text;
-		}
-		String suffix = "...";
-		int end = text.length();
-		while (end > 0 && traceHudTextRenderer.measureWidth(text.substring(0, end) + suffix, scale) > maxWidth) {
-			end--;
-		}
-		return text.substring(0, end) + suffix;
+		displayShaderPickerRenderer.render(displayShaderPickerController,
+				displayShaderController == null ? DisplayShaderPresetRef.OFF : displayShaderController.currentRef(),
+				configService.getString(SonicConfiguration.DISPLAY_SHADER_LIBRARY_ROOT),
+				displayShaderPackStatus, displayShaderPackDownloadInProgress,
+				getProjectionMatrixBuffer(), (int) projectionWidth);
 	}
 
 	/**
@@ -3955,7 +4081,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private boolean globalShortcutInputClaimed() {
-		return contentImportScreen.isOpen() || editorProjects.menu().isOpen() || stageplay.menu().isOpen() || editorQuitView != null
+		return contentImportScreen.isOpen() || editorProjects.menu().isOpen() || stageplay.menu().isOpen()
+				|| routeTapes.menu().isOpen() || editorQuitView != null
 				|| (gameLoop != null && gameLoop.modSceneHost.capturesTextInput());
 	}
 
@@ -4005,6 +4132,10 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	 * and a test that constructed one has no handle on any earlier one.
 	 */
 	public static void clearGlobalInstance() {
+		if (instance != null && instance.schedulingRegistry != null) {
+			instance.schedulingRegistry.deregisterPostRestoreCallback("live-scheduling");
+			instance.schedulingRegistry = null;
+		}
 		instance = null;
 	}
 
@@ -4063,19 +4194,10 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		}
 	}
 
-	private void drawNativeModNotice() {
-		resetCameraForScreenSpaceIfPresent();
-		if (nativeModNoticeScreen != null) {
-			nativeModNoticeScreen.setProjectionMatrix(getProjectionMatrixBuffer());
-			nativeModNoticeScreen.setViewportWidth((int) realWidth);
-			nativeModNoticeScreen.draw();
-		}
-	}
-
 	private void drawMasterTitle() {
 		resetCameraForScreenSpaceIfPresent();
-		if (stageplay.menu().isOpen()) {
-			editorProjectMenuRenderer.render(stageplay.menu(), getProjectionMatrixBuffer(), (int) realWidth);
+		if (stageplay.menu().isOpen() || routeTapes.menu().isOpen()) {
+			editorProjectMenuRenderer.render(stageplay.menu().isOpen() ? stageplay.menu() : routeTapes.menu(), getProjectionMatrixBuffer(), (int) realWidth);
 			return;
 		}
 		if (contentImportScreen.isOpen()) {
@@ -4109,9 +4231,11 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			return;
 		}
 		flushEditorDirtyRegionsForRendering();
-		editorCanvasRenderPass.render(graphicsManager, levelEditorController.canvasView().zoom(),
+		float zoom = levelEditorController.canvasView().zoom();
+		editorCanvasRenderPass.renderWorld(graphicsManager, levelManager, camera, zoom,
 				(int) projectionWidth, (int) realHeight, () -> {
-			levelManager.drawWithSpritePriority(spriteManager);
+			if (zoom < 1) levelManager.drawCinematicWorld(spriteManager);
+			else levelManager.drawWithSpritePriority(spriteManager);
 			editorOverlayRenderer.renderWorldSpaceOverlay();
 			graphicsManager.flush();
 		});
@@ -4123,6 +4247,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			editorProjectMenuRenderer.render(editorProjects.menu(), getProjectionMatrixBuffer(), (int) realWidth);
 		else if (stageplay.menu().isOpen() && !chromeOwnsStageplayMenu())
 			editorProjectMenuRenderer.render(stageplay.menu(), getProjectionMatrixBuffer(), (int) realWidth);
+		else if (routeTapes.menu().isOpen() && !chromeOwnsRouteTapeMenu())
+			editorProjectMenuRenderer.render(routeTapes.menu(), getProjectionMatrixBuffer(), (int) realWidth);
 		graphicsManager.flushScreenSpace();
 	}
 
@@ -4136,6 +4262,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			editorChrome.init(new com.openggf.editor.EditorWindowChrome.Host() {
 				public LevelEditorController controller() { return levelEditorController; }
 				public com.openggf.editor.stageplay.StageplayWorkspace stageplay() { return stageplay; }
+				public com.openggf.editor.route.RouteTapeWorkspace routeTapes() { return routeTapes; }
 				public void dispatch(EditorInputHandler.Action action) { editorInputHandler.handleAction(action); }
 				public java.util.List<com.openggf.editor.EditorCommandPalette.HostCommand> commands() {
 					return com.openggf.editor.EditorCommandPalette.forController(levelEditorController).extraCommands();
@@ -4148,6 +4275,10 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 	private boolean chromeOwnsStageplayMenu() {
 		return editorChrome != null && stageplay.active() && editorChrome.handlesMenu(stageplay.menu());
+	}
+
+	private boolean chromeOwnsRouteTapeMenu() {
+		return editorChrome != null && routeTapes.active() && editorChrome.handlesMenu(routeTapes.menu());
 	}
 
 	/** Places the game inside the chrome's canvas while the window chrome owns the editor frame. */
@@ -4435,9 +4566,14 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 	private void cleanup() {
 		contentImportShutdown = true;
+		if (schedulingRegistry != null) {
+			schedulingRegistry.deregisterPostRestoreCallback("live-scheduling");
+			schedulingRegistry = null;
+		}
 		// First, while GL, audio and the session are intact: an open mod scene saves in ModScene.exit.
 		cleanupStep("mod scene", gameLoop.modSceneHost::cleanup);
 		cleanupStep("Stageplay", stageplaySession::close);
+		cleanupStep("route tape job", routeTapes::close);
 		cleanupStep("screenshots", screenshotWriter::close);
 		cleanupStep("live capture", liveCaptureController::close);
 		cleanupStep("pending saves", com.openggf.game.save.SessionSaveRequests::flushPendingSaves);
@@ -4453,11 +4589,12 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		});
 		cleanupStep("editor canvas", editorCanvasRenderPass::close);
 		cleanupStep("editor project menu", editorProjectMenuRenderer::close);
+		cleanupStep("text input overlay", textInputOverlay::close);
+		cleanupStep("text input window", () -> { if (textInputWindow != null) textInputWindow.close(); });
 		cleanupStep("content import", contentImportScreen::close);
 		cleanupStep("content import renderer", contentImportRenderer::close);
+		cleanupStep("display shader picker", displayShaderPickerRenderer::close);
 		cleanupStep("trace HUD renderer", traceHudTextRenderer::cleanup);
-		cleanupStep("pause text renderer", pauseTextRenderer::cleanup);
-		cleanupStep("live capture text renderer", liveCaptureTextRenderer::cleanup);
 		cleanupStep("VHS rewind effect", () -> {
 			if (rewindVhsEffectPass != null) {
 				rewindVhsEffectPass.dispose();

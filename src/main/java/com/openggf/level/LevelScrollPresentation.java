@@ -89,13 +89,37 @@ final class LevelScrollPresentation {
                 scroll.getHScrollForShader(), scroll.getVScrollPerLineBGForShader(),
                 scroll.getVScrollPerColumnBGForShader(), scroll.getVScrollPerColumnFGForShader(),
                 mode.foregroundPerColumnVScrollOverride(),
-                scroll.projectionPhase(),
+                level.authoringView ? authoringPhase(scroll) : scroll.projectionPhase(),
                 0,
                 scroll.getBgTilemapUpdateMode(),
                 scroll.backgroundColumnProjection(),
                 null,
                 java.util.Map.of(),
-                scroll.backgroundBuildParameters());
+                level.authoringView ? BackgroundBuildParameters.capture(level) : scroll.backgroundBuildParameters());
+    }
+
+    /** The paused editor has no native scroll dispatch. Sample its frozen background
+     * and straight world-space foreground without advancing a zone handler. */
+    private static com.openggf.level.scroll.ScrollProjectionPhase authoringPhase(ParallaxManager scroll) {
+        var frozen = new com.openggf.level.scroll.ScrollProjection(
+                scroll.getHScrollForShader(), scroll.getVScrollPerLineBGForShader(),
+                scroll.getVScrollPerColumnBGForShader(), scroll.getVScrollPerColumnFGForShader(),
+                scroll.getVscrollFactorFG(), scroll.getVscrollFactorBG(), scroll.getBgCameraX(),
+                scroll.getBgPeriodWidth(), 0, 0, scroll.getBgTilemapUpdateMode());
+        return view -> {
+            int[] nativeWords = frozen.horizontal();
+            short[] nativeLines = frozen.backgroundLines();
+            int[] words = new int[view.height()];
+            short[] lines = nativeLines == null ? null : new short[view.height()];
+            for (int row = 0; row < words.length; row++) {
+                int nativeRow = Math.min(row, nativeWords.length - 1);
+                words[row] = ((short) -view.cameraX() << 16) | (nativeWords[nativeRow] & 0xffff);
+                if (lines != null) lines[row] = (short) (nativeLines[nativeRow] + nativeRow - row);
+            }
+            return new com.openggf.level.scroll.ScrollProjection(words, lines,
+                    frozen.backgroundColumns(), frozen.foregroundColumns(), (short) view.cameraY(),
+                    frozen.backgroundY(), frozen.backgroundX(), frozen.backgroundPeriod(), 0, 0, frozen.tilemapMode());
+        };
     }
 
     /** A standalone scroll scope can draw the ordinary player before any mask transition was prepared.
@@ -203,6 +227,106 @@ final class LevelScrollPresentation {
         return new LevelScrollPresentation(view, reframed, backgroundLines, backgroundColumns,
                 foregroundColumns, overrideColumns, phase, columnPhaseX, tilemapMode,
                 columnProjection, columnsRemap, spritePositions, backgroundBuild);
+    }
+
+    record BackgroundMotion(short[] words, short[] lines, short[] columns,
+                            short y, short overrideY, short x, int largestStep) { }
+
+    BackgroundMotion backgroundMotionSince(LevelScrollPresentation previous, int bound, int width) {
+        if (registers.backgroundPeriod() != previous.registers.backgroundPeriod()
+                || registers.reversePlanes() != previous.registers.reversePlanes()
+                || registers.overrideBackgroundY() != previous.registers.overrideBackgroundY()
+                || tilemapMode != previous.tilemapMode || columnPhaseX != previous.columnPhaseX
+                || horizontal.length != previous.horizontal.length
+                || !sameSize(backgroundLines, previous.backgroundLines)
+                || !sameSize(backgroundColumns, previous.backgroundColumns)
+                || (registers.backgroundX() == Integer.MIN_VALUE) != (previous.registers.backgroundX() == Integer.MIN_VALUE)
+                || !sameBackgroundResidency(previous)) return null;
+        short[] words = new short[horizontal.length];
+        for (int i = 0; i < words.length; i++) words[i] = (short) (previous.horizontal[i] - horizontal[i]);
+        short[] lines = differences(previous.backgroundLines, backgroundLines);
+        short[] columns = differences(previous.backgroundColumns, backgroundColumns);
+        short y = (short) (previous.registers.backgroundY() - registers.backgroundY());
+        short overrideY = registers.overrideBackgroundY()
+                ? (short) (previous.registers.overriddenBackgroundY() - registers.overriddenBackgroundY()) : 0;
+        short x = registers.backgroundX() == Integer.MIN_VALUE ? 0
+                : (short) (previous.registers.backgroundX() - registers.backgroundX());
+        int largest = Math.max(Math.max(Math.abs(y), Math.abs(x)), Math.abs(overrideY));
+        for (short[] steps : new short[][]{words, lines, columns}) {
+            if (steps != null) for (short step : steps) largest = Math.max(largest, Math.abs(step));
+        }
+        if (largest > bound || tilemapMode == com.openggf.level.scroll.BgTilemapUpdateMode.PERSISTENT_NAMETABLE_64X32
+                && width + largest > 512) return null;
+        return new BackgroundMotion(words, lines, columns, y, overrideY, x, largest);
+    }
+
+    private boolean sameBackgroundResidency(LevelScrollPresentation previous) {
+        var now = backgroundBuild; var old = previous.backgroundBuild;
+        if (now == null || old == null) return now == old;
+        if (now.wraps() != old.wraps() || now.linearOverflow() != old.linearOverflow()
+                || now.fullWidthRequired() != old.fullWidthRequired() || now.persistentPlane() != old.persistentPlane()
+                || now.fullWidthWindow() != old.fullWidthWindow() || now.loopBandY() != old.loopBandY()
+                || now.introOcean() != old.introOcean()
+                || now.retainedBackground().revision() != old.retainedBackground().revision()
+                || now.retainedBackground().widthTiles() != old.retainedBackground().widthTiles()
+                || now.retainedBackground().heightTiles() != old.retainedBackground().heightTiles()) return false;
+        var a = now.projection(); var b = old.projection();
+        if (a == null || b == null) return a == b;
+        return a.descriptorRevision() == b.descriptorRevision()
+                && a.nametableBase().applyAsDouble(registers.cameraX())
+                == b.nametableBase().applyAsDouble(previous.registers.cameraX());
+    }
+
+    private static boolean sameSize(short[] a, short[] b) {
+        return a == null ? b == null : b != null && a.length == b.length;
+    }
+    private static short[] differences(short[] previous, short[] current) {
+        if (current == null) return null;
+        short[] result = new short[current.length];
+        for (int i = 0; i < result.length; i++) result[i] = (short) (previous[i] - current[i]);
+        return result;
+    }
+    private static int weighted(int value, double weight) { return (int) Math.rint(value * weight); }
+    private static short[] blended(short[] current, short[] steps, double weight) {
+        if (current == null) return null;
+        short[] result = current.clone();
+        for (int i = 0; i < result.length; i++) result[i] += (short) weighted(steps[i], weight);
+        return result;
+    }
+
+    LevelScrollPresentation forMotion(int dx, int dy, int width, BackgroundMotion background, double weight) {
+        if (dx == 0 && dy == 0 && (background == null || background.largestStep() == 0)) return this;
+        var view = forCinematicCamera(registers.cameraX() + dx, registers.cameraY() + dy,
+                motionArenaMask(dx, width));
+        if (background == null || background.largestStep() == 0) return view;
+        int[] words = view.horizontal.clone();
+        for (int i = 0; i < words.length; i++) words[i] = (words[i] & 0xffff0000)
+                | ((short) (words[i] + weighted(background.words()[i], weight)) & 0xffff);
+        var r = view.registers;
+        var mixed = new Registers(r.cameraX(), r.cameraY(), r.cameraXWithShake(), r.foregroundY(),
+                (short) (r.backgroundY() + weighted(background.y(), weight)),
+                r.backgroundX() == Integer.MIN_VALUE ? Integer.MIN_VALUE : r.backgroundX() + weighted(background.x(), weight),
+                r.backgroundPeriod(), r.heatHaze(), r.perLineForeground(), r.reversePlanes(),
+                r.overrideForegroundY(), r.overriddenForegroundY(), r.overrideBackgroundY(),
+                (short) (r.overriddenBackgroundY() + weighted(background.overrideY(), weight)), r.arenaMask());
+        return new LevelScrollPresentation(mixed, words, blended(backgroundLines, background.lines(), weight),
+                blended(backgroundColumns, background.columns(), weight), foregroundColumns, overrideColumns,
+                phase, columnPhaseX, tilemapMode, columnProjection, columnsRemap, spritePositions, backgroundBuild);
+    }
+
+    private ArenaMaskState motionArenaMask(int dx, int width) {
+        var current = registers.arenaMask();
+        if (current == null) return null;
+        var geometry = backgroundBuild == null || backgroundBuild.arenaBounds() == null
+                ? new ArenaMaskState(Math.clamp(current.left() - dx, 0, width),
+                        Math.clamp(current.right() - dx, 0, width), current.noiseFrame())
+                : arenaMaskForView(registers.cameraXWithShake() + dx, width);
+        float[] opacity = current.opacity();
+        if (opacity == null) return geometry;
+        // Keep the native tick's fade sample. A director reframe would replace it with opaque edges.
+        float[] shifted = new float[width];
+        for (int x = 0; x < width; x++) shifted[x] = opacity[Math.clamp(x + dx, 0, opacity.length - 1)];
+        return new ArenaMaskState(geometry.left(), geometry.right(), current.noiseFrame(), shifted);
     }
 
     /** Samples a frozen native phase once for the complete director raster. */

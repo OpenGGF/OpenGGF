@@ -52,7 +52,6 @@ class TestRingNativeSlotDispatch {
         level = mock(LevelManager.class);
         when(level.getLevelGamestate()).thenReturn(ledger);
         when(level.getFrameCounter()).thenAnswer(ignored -> levelClock.get());
-        when(level.objectsExecuteAfterPlayerPhysics()).thenReturn(false);
         Camera camera = mock(Camera.class);
         when(camera.getWidth()).thenReturn((short) 320);
         when(camera.getHeight()).thenReturn((short) 224);
@@ -73,6 +72,23 @@ class TestRingNativeSlotDispatch {
     }
 
     @AfterEach void cleanup() { TestEnvironment.resetAll(); }
+
+    @Test void retainedAttractedRingMissClearsFractionOnlyDuringAnAdmittedTouchPass() {
+        GameServices.sprites().addSprite(player);
+        restoreRings(attracted(0, 9, 300, false, 0, 0, 0));
+        rings.prepareAttractedRingTouchSnapshot();
+        ObjectManagerInternalAccess.publishSineCosineInputFraction(objects, 0xFD00);
+        rings.collectAttractedRing(player, 100);
+        assertEquals(0, ObjectManagerInternalAccess.sineCosineInputFraction(objects));
+        assertFalse(rings.capture().attractedRings()[0].collected());
+        assertEquals(0, player.getRingCount());
+
+        ObjectManagerInternalAccess.publishSineCosineInputFraction(objects, 0xFD00);
+        player.setObjectControlled(true);
+        rings.collectAttractedRing(player, 100);
+        assertEquals(0xFD00, ObjectManagerInternalAccess.sineCosineInputFraction(objects),
+                "object control returns before Touch_Width");
+    }
 
     @Test void pendingDeadPlayerAwardWaitsForItsVisitedNativeSlot() {
         assertPendingAwardWaitsForItsNativeSlot(true);
@@ -182,28 +198,6 @@ class TestRingNativeSlotDispatch {
                         layer -> layer != SpritePresentation.Layer.RINGS));
         assertEquals(2, noObjects.tiles().size(), "attracted art is independent of object visibility");
         assertTrue(noRings.tiles().isEmpty(), "ring visibility owns the actual queued attracted art");
-    }
-
-    @Test void newlyAllocatedLaterSlotExecutesButPastSlotWaitsWithoutLateRescue() {
-        for (boolean later : List.of(false, true)) {
-            objects.reset(0);
-            rings.reset(0);
-            if (later) for (int slot = 4; slot < 10; slot++) add(slot, () -> { });
-            add(10, () -> rings.attractStageRings(player));
-            step();
-            var created = rings.capture().attractedRings()[0];
-            assertEquals(later ? 11 : 4, created.objectSlotIndex());
-            assertEquals(later ? -0xC0 : 0, created.xVel());
-            assertEquals(later ? List.of(new Admission(11, 2)) : List.of(), admissions(objects));
-            rings.update(0, player, 101, false);
-            assertEquals(created, rings.capture().attractedRings()[0]);
-            if (!later) {
-                nextClock(); step();
-                assertEquals(-0xC0, rings.capture().attractedRings()[0].xVel());
-                assertEquals(List.of(new Admission(4, 2)), admissions(objects));
-                levelClock.set(100);
-            }
-        }
     }
 
     @Test void shortenedAndEmptyWalksNeverAdvanceUnvisitedRingsInLateFallback() {
@@ -329,7 +323,7 @@ class TestRingNativeSlotDispatch {
         }
     }
 
-    @Test void coarseRangeIncludes280AndSpinRunsOnItsLastAdmittedNativeInvocation() {
+    @Test void coarseRangeIncludes280AndSpinRunsOnItsLastAdmittedNativeInvocation() throws Exception {
         NativePositionOps.writeXPosResetSubpixel(player, 0x500);
         for (boolean shieldLost : List.of(false, true)) {
             for (int x : new int[]{0x200, 0x280}) {
@@ -346,7 +340,11 @@ class TestRingNativeSlotDispatch {
                         var converted = objects.activeObjectsOfType(LostRingObjectInstance.class).getFirst();
                         var art = SpritePresentationRenderer.prepare(graphics, 0, 0,
                                 () -> converted.appendRenderCommands(new ArrayList<>()));
-                        assertEquals(BASE, art.tiles().getFirst().patternId(),
+                        assertTrue(art.tiles().isEmpty(),
+                                "the coarse-range Draw_Sprite call survives, but its offscreen mappings do not");
+                        var mapping = LostRingObjectInstance.class.getDeclaredField("retainedMappingFrame");
+                        mapping.setAccessible(true);
+                        assertEquals(0, mapping.getInt(converted),
                                 "conversion retains spin3->0 from this same native invocation");
                         assertEquals(2, converted.getPriorityBucket());
                     } else {

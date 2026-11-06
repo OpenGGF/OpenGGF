@@ -25,6 +25,7 @@ import static org.lwjgl.glfw.GLFW.*;
 
 @com.openggf.game.ModApi
 public class SonicConfigurationService {
+	static final int MAX_PRESENTATION_FPS = 1_000_000_000;
 	private static final Logger LOGGER = Logger.getLogger(SonicConfigurationService.class.getName());
 	private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
 	private static SonicConfigurationService sonicConfigurationService;
@@ -269,6 +270,11 @@ public class SonicConfigurationService {
 			return getInt(SonicConfiguration.P2_A);
 		}
 		Object value = getConfigValue(sonicConfiguration);
+		if (sonicConfiguration == SonicConfiguration.FPS) {
+			if (FrameRateResolver.automaticPresentation(this)) return FrameRateResolver.simulation(this);
+			try { return sanitizeIntValue(sonicConfiguration, Integer.parseInt(value.toString())); }
+			catch (NumberFormatException ignored) { return 60; }
+		}
 		if (value instanceof Integer) {
 			return sanitizeIntValue(sonicConfiguration, (Integer) value);
 		} else {
@@ -318,7 +324,7 @@ public class SonicConfigurationService {
 
 	private int sanitizeIntValue(SonicConfiguration sonicConfiguration, int value) {
 		if (sonicConfiguration == SonicConfiguration.FPS) {
-			return Math.max(1, value);
+			return Math.clamp(value, 1, MAX_PRESENTATION_FPS);
 		}
 		return value;
 	}
@@ -378,6 +384,8 @@ public class SonicConfigurationService {
 	}
 
 	public boolean getBoolean(SonicConfiguration sonicConfiguration) {
+        if (sonicConfiguration == SonicConfiguration.LIVE_REWIND_ENABLED
+                && "off".equals(getString(SonicConfiguration.REWIND_BUDGET_SCOPE))) return false;
 		Object value = getConfigValue(sonicConfiguration);
 		if(value instanceof Boolean) {
 			return ((Boolean) value);
@@ -510,6 +518,11 @@ public class SonicConfigurationService {
 	void applySettings(Map<SonicConfiguration, Object> changes) throws IOException {
 		Map<String, Object> candidate = new HashMap<>(config);
 		changes.forEach((key, value) -> candidate.put(key.name(), value));
+        // The scope selector replaces the old UI switch. Publish its legacy
+        // launch/tool gate atomically without showing a duplicate unsaved row.
+        if (changes.containsKey(SonicConfiguration.REWIND_BUDGET_SCOPE))
+            candidate.put(SonicConfiguration.LIVE_REWIND_ENABLED.name(),
+                    !"off".equals(changes.get(SonicConfiguration.REWIND_BUDGET_SCOPE)));
 		preserveUnknownConfigFields();
 		writeStringAtomically(resolveConfigFile().toPath(), new ConfigYamlWriter().write(candidate));
 		configSourceNeedingPreservation = null;
@@ -642,6 +655,7 @@ public class SonicConfigurationService {
 		}
 	}
 
+	@com.openggf.game.EngineOnly
 	public synchronized static SonicConfigurationService getInstance() {
 		if (sonicConfigurationService == null) {
 			sonicConfigurationService = new SonicConfigurationService();
@@ -715,6 +729,7 @@ public class SonicConfigurationService {
 			config = new HashMap<>();
 		}
 		defaultInsertedSinceLastApply = false;
+		putDefault(SonicConfiguration.UI_LANGUAGE, "auto");
 		// Fill in core defaults if missing to keep tests and headless runs stable.
 		putDefault(SonicConfiguration.SCREEN_WIDTH, 640);
 		putDefault(SonicConfiguration.SCREEN_WIDTH_PIXELS, 320);
@@ -728,10 +743,12 @@ public class SonicConfigurationService {
 		putDefault(SonicConfiguration.DISPLAY_COLOR_PROFILE, "RAW_RGB");
 		putDefault(SonicConfiguration.DISPLAY_COLOR_EXPANSION, "FULL");
 		putDefaultKey(SonicConfiguration.DISPLAY_COLOR_PROFILE_TOGGLE_KEY, GLFW_KEY_V);
+		putDefaultKey(SonicConfiguration.DISPLAY_INTERPOLATION_TOGGLE_KEY, GLFW_KEY_N);
 		putDefault(SonicConfiguration.DISPLAY_ASPECT, "NATIVE_4_3");
 		putDefault(SonicConfiguration.WIDESCREEN_DEADZONE_MODE, "PROPORTIONAL");
 		putDefault(SonicConfiguration.DISPLAY_HUD_ANCHOR, "DEFAULT");
 		putDefault(SonicConfiguration.DISPLAY_HUD_TIME_HUNDREDTHS, false);
+		putDefault(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT, false);
 		putDefault(SonicConfiguration.DISPLAY_WINDOW_AUTOSIZE, true);
 		putDefault(SonicConfiguration.DISPLAY_WINDOW_MODE, "WINDOWED");
 		putDefault(SonicConfiguration.DISPLAY_SCALING, "INTEGER");
@@ -749,6 +766,7 @@ public class SonicConfigurationService {
         putDefault(SonicConfiguration.MULTIPLAYER_CENSOR_PROFANITY, true);
         putDefault(SonicConfiguration.MULTIPLAYER_CHAT_DISABLED, false);
         putDefault(SonicConfiguration.HUB_LAST_GAME, "s2");
+        putDefault(SonicConfiguration.HUB_DISMISSED_NOTICES, "");
         putDefault(SonicConfiguration.HUB_CONTINUE_S1_CHARACTER, "");
         putDefault(SonicConfiguration.HUB_CONTINUE_S1_ZONE, -1);
         putDefault(SonicConfiguration.HUB_CONTINUE_S1_ACT, 0);
@@ -768,7 +786,7 @@ public class SonicConfigurationService {
 		putDefaultKey(SonicConfiguration.P1_A, GLFW_KEY_SPACE);
 		putDefault(SonicConfiguration.P1_B, "");
 		putDefault(SonicConfiguration.P1_C, "");
-		putDefaultKey(SonicConfiguration.START, GLFW_KEY_BACKSPACE);
+		putDefaultKey(SonicConfiguration.START, GLFW_KEY_ENTER);
 		putDefaultKey(SonicConfiguration.P2_UP, GLFW_KEY_I);
 		putDefaultKey(SonicConfiguration.P2_DOWN, GLFW_KEY_K);
 		putDefaultKey(SonicConfiguration.P2_LEFT, GLFW_KEY_J);
@@ -776,7 +794,7 @@ public class SonicConfigurationService {
 		putDefaultKey(SonicConfiguration.P2_A, GLFW_KEY_RIGHT_SHIFT);
 		putDefault(SonicConfiguration.P2_B, "");
 		putDefault(SonicConfiguration.P2_C, "");
-		putDefaultKey(SonicConfiguration.P2_START, GLFW_KEY_RIGHT_CONTROL);
+		putDefaultKey(SonicConfiguration.P2_START, GLFW_KEY_BACKSPACE);
 		putDefault(SonicConfiguration.CONTROLLER_ENABLED, true);
 		putDefault(SonicConfiguration.CONTROLLER_DEADZONE, 0.35);
 		putDefault(SonicConfiguration.CONTROLLER_PLAYER1, "auto");
@@ -785,7 +803,9 @@ public class SonicConfigurationService {
 		putDefaultKey(SonicConfiguration.NEXT_ACT, GLFW_KEY_PAGE_UP);
 		putDefaultKey(SonicConfiguration.NEXT_ZONE, GLFW_KEY_PAGE_DOWN);
 		putDefaultKey(SonicConfiguration.DEBUG_MODE_KEY, GLFW_KEY_D);
-		putDefault(SonicConfiguration.FPS, 60);
+		putDefault(SonicConfiguration.FPS, "AUTO");
+		putDefault(SonicConfiguration.DISPLAY_PACING, "AUTO");
+		putDefault(SonicConfiguration.DISPLAY_INTERPOLATION, false);
 		putDefault(SonicConfiguration.LOAD_TIME_SIMULATION, "FAST");
 		putDefault(SonicConfiguration.CONFIG_PRESERVE_EXPLICIT_DEFAULTS, false);
 		putDefaultKey(SonicConfiguration.SPECIAL_STAGE_KEY, GLFW_KEY_TAB);
@@ -824,7 +844,12 @@ public class SonicConfigurationService {
 		putDefault(SonicConfiguration.CAPTURE_FFMPEG_PASS2_ARGS, "default");
 		// putDefault, not putDefaultKey: the default carries its own modifier.
 		putDefault(SonicConfiguration.CAPTURE_TOGGLE_KEY, "SHIFT+O");
-		putDefault(SonicConfiguration.LIVE_REWIND_ENABLED, false);
+		putDefault(SonicConfiguration.LIVE_REWIND_ENABLED, true);
+        putDefault(SonicConfiguration.REWIND_BUDGET_SCOPE, "act");
+        putDefault(SonicConfiguration.REWIND_BUDGET_SECONDS, "10");
+        putDefault(SonicConfiguration.REWIND_REFILL_ON_LIFE_LOSS, true);
+        putDefault(SonicConfiguration.REWIND_BONUS_STAGES, true);
+        putDefault(SonicConfiguration.REWIND_SPECIAL_STAGES, true);
 		putDefault(SonicConfiguration.LIVE_REWIND_DETERMINISM_AUDIT, false);
 		putDefaultKey(SonicConfiguration.LIVE_REWIND_KEY, GLFW_KEY_R);
 		putDefaultKey(SonicConfiguration.LIVE_REWIND_HALF_SPEED_KEY, GLFW_KEY_LEFT_CONTROL);

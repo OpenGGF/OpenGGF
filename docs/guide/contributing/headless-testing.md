@@ -104,11 +104,19 @@ donors; they do not certify every full route, viewport/donor combination, load,
 late event or intermediate rendered frame. Existing route assertions and inherited
 coverage gaps remain. Drawing gaps reduce every-frame presentation coverage.
 
+The D01 ending priority-pixel checks also omit unobserved prefix drawing. Every
+simulation pass and original producer/publication boundary remains; assertions
+still draw and read the actual pixels at 320/800 widths. A 320-width reunion
+control compares the full image, serialized native ending state and scroll
+against continuous drawing. Its contrast case separates logical facing from the
+native render flip. This does not certify every intermediate ending image. The comparison deliberately
+exercises both modes even when the every-frame override is requested.
+
 Add `-Dopenggf.tests.drawEveryFrame=true` to the focused Maven command for full
 traversal drawing in the adopted tests. The existing
 `-Dopenggf.soz.drawEveryFrame=true` remains an SOZ-only alias. Fully drawn mode
 omits discarded image readback; keep `render()` for screenshots and pixel
-comparisons. Capture tools and pixel tests retain their drawing/readback behavior.
+comparisons. Capture tools and other pixel tests retain their drawing/readback behavior.
 Use full drawing for investigations that require every-frame rendering evidence.
 The two frozen FBZ capture classes retain the separate `-Pfbz-routes` lane;
 ordinary selection still excludes their `fbz-route` tag.
@@ -150,8 +158,11 @@ services migration.
 
 ## ROM-backed tests
 
-Pass the ROM path discovered at the project root via the relevant
-`-D<game>.rom.path=...` property. `TestRomLogic` is skipped when its ROM is absent, and
+Queued test commands discover verified original ROMs in the worktree root and, from a
+linked worktree, the main checkout, then pass absolute `-D<game>.rom.path=...` properties
+(see [ROM discovery](../../../tools/testing/README.md#build-only-maven-execution-and-queued-tests)).
+Pass a property yourself only to pin a different dump or prove a skip; a command that names
+one keeps exactly its own ROM set. `TestRomLogic` is skipped when its ROM is absent, and
 `TestCollisionLogic` skips via an assumption when no ROM file is present — both are
 accepted conditional skips, not disabled tests.
 
@@ -171,8 +182,8 @@ lane:
 python3 tools/testing/maven_queue.py -Dmse=off -Paudio-stress test -B
 ```
 
-Run game-reference comparisons with an external fixture root and verified local
-ROM paths. The root uses `audio/parity/...` and `audio/nuked-opn2/port/...`; raw
+Run game-reference comparisons with an external fixture root and the verified local
+ROMs the queue discovers. The root uses `audio/parity/...` and `audio/nuked-opn2/port/...`; raw
 captures are never Maven resources or public build inputs. Maven validation
 removes retired capture copies from existing `target/test-classes` trees and
 refreshes FM expectations from the current synthetic resources. The reference lane
@@ -180,9 +191,7 @@ must fail when its prerequisites are missing. Independent reference expectations
 must not be regenerated from the engine under test to make a comparison pass.
 
 ```bash
-python3 tools/testing/maven_queue.py -Dmse=off -Paudio-reference -Dopenggf.audio.fixtures=/absolute/reference-root \
-  -Dsonic1.rom.path=/absolute/s1.gen -Dsonic2.rom.path=/absolute/s2.gen \
-  -Ds3k.rom.path=/absolute/s3k.gen test -B
+python3 tools/testing/maven_queue.py -Dmse=off -Paudio-reference -Dopenggf.audio.fixtures=/absolute/reference-root test -B
 ```
 
 The previous optional WAV comparisons use `-Paudio-local-wave` with WAV files
@@ -219,11 +228,10 @@ Run all eleven complete Act 2 routes explicitly for FBZ route changes and exhaus
 ROM validation (five teams, four additional widths, two active movement donors):
 
 ```bash
-python3 tools/testing/maven_queue.py -Dmse=off -Pfbz-routes -Dsonic1.rom.path=/absolute/s1.gen \
-  -Dsonic2.rom.path=/absolute/s2.gen -Ds3k.rom.path=/absolute/s3k.gen test -B
+python3 tools/testing/maven_queue.py -Dmse=off -Pfbz-routes test -B
 ```
 
-Use existing ROM paths with the documented identities. Verify eleven executed
+Check that the wrapper's ROM line lists all three properties as found. Verify eleven executed
 route cases and zero skips: like other `@RequiresRom` profiles, missing S3K ROMs
 can produce a successful invocation with skipped tests. `fbz-routes` selects only
 complete routes; run ordinary tests as well for local compatibility coverage.
@@ -238,4 +246,4 @@ Act 1 retains its existing 75 configuration combinations and lifecycle checks.
 presentation and session owners. Its synthetic scope tests complement native
 stock-identity and production pause/load/fault checks; they do not replace real
 ROM gameplay or GPU/PCM observations. Queue focused tests and the combined
-change-based selection. Use explicit absolute ROM properties and inspect skips.
+change-based selection. Confirm the wrapper found the required ROMs and inspect skips.

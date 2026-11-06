@@ -151,7 +151,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     int cachedBgHeightPx;
     Game game;
     GameModule gameModule;
-    private boolean levelEntryBegun;
+    boolean levelEntryBegun;
     private com.openggf.game.presentation.LoadedLevelScene sceneResources;
     private Level sceneResourceLevel;
     private long sceneResourceGeneration = -1;
@@ -277,9 +277,10 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     private int apparentAct = 0;
     int currentZone = 0;
     private boolean resetCounterPlacementAfterCameraSnap;
-    private long completedProductionLoadGeneration;
+    long completedProductionLoadGeneration;
 
-    private final FreshLevelTransitionBoundaryController freshLevelTransitionBoundary = new FreshLevelTransitionBoundaryController();
+    final FreshLevelTransitionBoundaryController freshLevelTransitionBoundary = new FreshLevelTransitionBoundaryController();
+    NativeLevelLoadController nativeLoads = new NativeLevelLoadController();
 
     void writeCurrentZone(int zone) {
         this.currentZone = zone;
@@ -296,7 +297,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         worldSession.setApparentAct(act);
     }
 
-    private void writeCurrentLevel(Level level) {
+    void writeCurrentLevel(Level level) {
         this.level = level;
         worldSession.setCurrentLevel(level);
         // BEGIN HCZ1_DIRECT_FF_TARGET_INSTALL: report the original write, never infer load success.
@@ -589,56 +590,16 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * @throws IOException if an I/O error occurs while loading the level
      */
     public void loadLevel(int levelIndex, LevelLoadMode loadMode, LevelLoadContext ctx) throws IOException {
-        discardInitialProcessSpritesLifecycle();
-        var attempt = new LevelLoadAttempt(worldSession, spriteManager, loadMode, ctx,
-                cause -> checkpointCoordinator.admitLoadPolicies(worldSession, cause, ctx, transitions));
-        // BEGIN HCZ1_DIRECT_FF_PROFILE_ADMISSION_BEGIN: all profile modes use their actual outcome.
-        var previousPlcAdmission = nativePlcLoadAdmission;
-        var plcAdmission = beginNativePlcLoadAdmission();
-        nativePlcLoadAdmission = plcAdmission;
-        boolean plcLoadCompleted = false;
-        // END HCZ1_DIRECT_FF_PROFILE_ADMISSION_BEGIN
-        try {
-            attempt.execute(this::activeGameModule, levelIndex);
-            // The LoadLevelData step stores the result in ctx
-            if (ctx.getLevel() != null) {
-                writeCurrentLevel(ctx.getLevel());
-            }
-            markRewindLevelLoadBoundary();
-            InitialProcessSpritesLifecycle requestedSetup =
-                    ctx.requestedInitialProcessSpritesLifecycle();
-            if (requestedSetup != InitialProcessSpritesLifecycle.NONE) {
-                spriteManager.setFrameCounter(0);
-            }
-            publishInitialProcessSpritesLifecycle(requestedSetup);
-            if (loadMode == LevelLoadMode.FULL) {
-                completedProductionLoadGeneration = Math.incrementExact(
-                        completedProductionLoadGeneration);
-            }
-            // BEGIN HCZ1_DIRECT_FF_PROFILE_ADMISSION_SUCCESS: no predicted generation is authority.
-            plcLoadCompleted = true;
-            // END HCZ1_DIRECT_FF_PROFILE_ADMISSION_SUCCESS
-        } catch (Exception e) {
-            // BEGIN HCZ1_DIRECT_FF_PROFILE_ADMISSION_FAILURE: before failure policies can throw.
-            finishNativePlcLoadAdmission(plcAdmission, false);
-            // END HCZ1_DIRECT_FF_PROFILE_ADMISSION_FAILURE
-            throw attempt.failure(e, this::activeGameModule, this::discardInitialProcessSpritesLifecycle, levelIndex);
-        } finally {
-            // BEGIN HCZ1_DIRECT_FF_PROFILE_ADMISSION_FINISH: include the original finally outcome.
-            boolean plcCleanupCompleted = false;
-            try {
-                // The suppress flag belongs to this load only. A load that fails before
-                // ScheduleLevelMusic — or a preview capture, which has no music step — must not
-                // leave it latched for the next level, which would start that level silent.
-                transitions.setSuppressNextMusicChange(false);
-                levelEntryBegun = false;
-                plcCleanupCompleted = true;
-            } finally {
-                finishNativePlcLoadAdmission(plcAdmission, plcLoadCompleted && plcCleanupCompleted);
-                nativePlcLoadAdmission = previousPlcAdmission;
-            }
-            // END HCZ1_DIRECT_FF_PROFILE_ADMISSION_FINISH
-        }
+        nativeLoads.execute(this, levelIndex, loadMode, ctx);
+    }
+
+    void resetNativePrefixSpriteTable() { levelRenderer.spriteTables.reset(); }
+
+    void resetNativeRuntimeFrameBridge() { seamlessTransitionExecutor.resetFrameCounterBridge(); }
+    void markNativeRespawnBoundary() { rewindBoundaryReporter.markBoundary(RewindBoundary.LIFE_LOSS_RESPAWN); }
+    void clearNativeRuntimeAssembly() {
+        resetCounterPlacementAfterCameraSnap = false;
+        checkpointCoordinator.clearPendingPersistentRespawn();
     }
 
     private void resetRewindBufferAfterLevelBoundary() {
@@ -666,6 +627,16 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         new InitialProcessSpritesExecutor().execute(
                 gameModule, spriteManager, objectManager, camera, zoneFeatureProvider,
                 animatedPatternManager, frameCounter);
+    }
+
+    InitialProcessSpritesExecutor.PresentationTail consumeNativeInitialObjectPass() {
+        var tail = new InitialProcessSpritesExecutor.PresentationTail[1];
+        boolean consumed = consumePendingInitialProcessSpritesPass(() ->
+                tail[0] = new InitialProcessSpritesExecutor().executeObjectsOnly(
+                        gameModule, spriteManager, objectManager, camera, zoneFeatureProvider,
+                        animatedPatternManager, frameCounter));
+        if (!consumed) throw new IllegalStateException("Native initial objects have no lifecycle authority");
+        return tail[0];
     }
 
     /**
@@ -893,7 +864,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         return loaded;
     }
 
-    private void installHudProfile() {
+    void installHudProfile() {
         HudProfile resolved = HudProfile.stock();
         if (gameModule != null) {
             ZoneKey destination = gameModule.getZoneRegistry().zoneKey(currentZone);
@@ -1054,9 +1025,13 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * Phase G: Create ObjectManager, TouchResponseTable, and wire CollisionSystem.
      */
     public void initObjectManager() throws IOException {
+        int inheritedClock = !nativeLoads.prefix ? 0 : objectManager != null ? objectManager.getVblaCounter()
+                : com.openggf.game.session.EngineTiming.vIntRunCounter(engineServices).objectClockSeed();
+        int inheritedPhase = objectManager != null ? objectManager.getVIntRunCounterPhaseOffset() : 0;
+        com.openggf.level.objects.ObjectManagerInternalAccess.retireInitialDispatch(objectManager);
         lostRingSpawnCoordinator.reset();
         touchResponseTable = gameModule.createTouchResponseTable(worldSession.getDataSource());
-        objectManager = new ObjectManager(level.getObjects(),
+        objectManager = new ObjectManager(nativeLoads.prefix ? java.util.List.of() : level.getObjects(),
                 gameModule.createObjectRegistry(),
                 gameModule.getPlaneSwitcherObjectId(),
                 gameModule.getPlaneSwitcherConfig(),
@@ -1066,6 +1041,10 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                 buildObjectServices());
         objectManager.setRewindClassResolver(rewindClassResolver);
         objectManager.initRingFloorCheckCounterPhase(ringFloorCheckCounterPhase);
+        if (nativeLoads.prefix) {
+            objectManager.initVblaCounter(inheritedClock);
+            objectManager.initVIntRunCounterPhaseOffset(inheritedPhase);
+        }
 
         // S1 parity: counter-based respawn tracking DISABLED pending fix for
         // load/unload/reload incompatibility. The counter system prevents respawns
@@ -1210,6 +1189,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         // Our full-layout renderer must discard source-act scroll addresses,
         // but clearing SAT here erased sprites until two later publications.
         levelRenderer.spriteTables.invalidateScrollForActReload();
+        levelRenderer.invalidateMotion();
         resetZoneScopedRenderRegistries();
         applyLevelLoadPaletteOverrides();
         initializeZoneFeatureProvider(zoneFeatureProvider);
@@ -1219,13 +1199,14 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
     void resetZoneScopedRegistriesForLevelLoad() {
         levelRenderer.spriteTables.reset();
+        levelRenderer.invalidateMotion();
         resetZoneScopedRenderRegistries();
     }
 
     private void resetZoneScopedRenderRegistries() {
         levelRenderer.boundsMask.reset();
         if (camera != null) com.openggf.camera.CameraBoundaryPresentation.reset(camera);
-        LevelZoneScopedRegistryResetter.reset();
+        LevelZoneScopedRegistryResetter.reset(this, worldSession);
     }
 
     private void applyLevelLoadPaletteOverrides() {
@@ -1272,26 +1253,10 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      */
     public void initArt() {
         initObjectArt();
-        // Level_ClrRam zeroes the RAM block holding the player
-        // last-loaded-DPLC registers on every level load, before the level's
-        // players are created and their art primed (S2:
-        // clearRAM Misc_Variables,Misc_Variables_End, with
-        // Sonic_LastLoadedDPLC / Tails_LastLoadedDPLC /
-        // TailsTails_LastLoadedDPLC inside it at
-        // docs/s2disasm/s2.constants.asm:1484, 1556, 1625-1626, 1629; S1:
-        // clearRAM v_levelvariables, docs/s1disasm/sonic.asm:2742, with
-        // v_sonframenum inside it at docs/s1disasm/_Variables.asm:179, 230,
-        // 301). A level entered after a special stage must therefore not dedup
-        // its first player transfer against the mapping frame that stage left
-        // in the shared register. Only the level-load phase does this;
-        // refreshPlayableSpriteArt rebuilds renderers mid-gameplay, where no
-        // clearRAM runs.
-        var levelLoadLifecycle = GameServices.dynamicArtLifecycleOrNull();
-        if (levelLoadLifecycle != null) {
-            levelLoadLifecycle.clearPlayerDplcDedupRegistersForLevelLoad();
-        }
-        playableArtInitializer.initialize();
+        initPlayableArt();
     }
+
+    void initPlayableArt() { playableArtInitializer.initializeForLoad(); }
 
     /**
      * Phase C: Reset player state, initialize checkpoint, and create level gamestate.
@@ -1316,7 +1281,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * Phase B: Initialize the water system for the current level.
      */
     public void initWater() throws IOException {
-        waterCoordinator.initialize();
+        // CheckLevelForWater reads the retained apparent identity on returns too.
+        waterCoordinator.initialize(currentAct != apparentAct);
     }
 
     /**
@@ -1381,23 +1347,6 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         // the previous frame's oscillation values, then OscillateNumDo advances
         // them for the next frame.
         frameRuntimeUpdater.advanceGlobalOscillation();
-    }
-
-    /**
-     * Returns true when the active module executes objects after player physics and
-     * solid checkpoints are resolved during object execution. Driven by the
-     * {@link ObjectInteractionRules#objectsExecuteAfterPlayerPhysics()} flag — independent
-     * of collision model so S1 (UNIFIED) and S2/S3K (DUAL_PATH) can share the
-     * post-physics ordering per the 2026-04-18-solid-ordering-rom-accuracy plan.
-     */
-    public boolean objectsExecuteAfterPlayerPhysics() {
-        GameModule activeModule = activeGameModule();
-        if (activeModule == null
-                || activeModule.getRules() == null
-                || activeModule.getRules().objectInteraction() == null) {
-            return false;
-        }
-        return activeModule.getRules().objectInteraction().objectsExecuteAfterPlayerPhysics();
     }
 
     /**
@@ -1491,21 +1440,6 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         if (advanceOscillation) {
             advanceGlobalOscillation();
         }
-    }
-
-    /**
-     * Runs legacy post-player object hooks after the playable step has completed.
-     * This is for ROM behaviors where later SST slots read Sonic's current
-     * post-movement state and write globals for the following frame.
-     */
-    public void updateObjectPostPlayerHooks() {
-        if (objectManager == null) {
-            return;
-        }
-        Sprite player = spriteManager.getSprite(resolveMainCharacterCode());
-        AbstractPlayableSprite playable =
-                player instanceof AbstractPlayableSprite ? (AbstractPlayableSprite) player : null;
-        objectManager.runPostPlayerHooks(playable, frameCounter);
     }
 
     /**
@@ -1637,7 +1571,6 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
     public void updateZoneFeaturesAfterPlayablePhysics(AbstractPlayableSprite playable) {
         if (zoneFeatureProvider != null && level != null && playable != null) {
-            playable.capturePreZoneFeatureSnapshot();
             zoneFeatureProvider.updateAfterPlayablePhysics(playable, camera.getX(), getFeatureZoneId());
         }
     }
@@ -1722,14 +1655,6 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         frameRuntimeUpdater.updateLevelState(playable, worldSession);
 
         frameRuntimeUpdater.updateParallaxAndAnimatedContent();
-
-        // Legacy object-before-physics modules update playable water state here.
-        // Inline-order modules run this immediately after the player slot in
-        // LevelFrameStep, before ExecuteObjects, matching S3K's Sonic_Water /
-        // Tails_Water ordering.
-        if (!objectsExecuteAfterPlayerPhysics()) {
-            updatePlayableWaterStatesForCurrentLevel();
-        }
     }
 
     /**
@@ -1799,7 +1724,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * gameplay, such as MGZ2's boss-transition Tails rescue object.
      */
     public void refreshPlayableSpriteArt() {
-        playableArtInitializer.initialize();
+        playableArtInitializer.refresh();
     }
 
     /**
@@ -1835,7 +1760,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         playableArtInitializer.clearPlayerArtDplcOwners();
     }
 
-    private void resetPlayerState() {
+    void resetPlayerState() {
         Sprite player = spriteManager.getSprite(resolveMainCharacterCode());
         if (player instanceof AbstractPlayableSprite playable) {
             playable.resetState();
@@ -2133,6 +2058,15 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     public void drawCinematicWorld(SpriteManager sprites) { levelRenderer.drawCinematicWorld(sprites); }
 
     public void drawWithRenderOptions(SpriteManager spriteManager, LevelRenderOptions renderOptions) {
+        if (nativeLoads.pending != null) {
+            // Clear_DisplayData owns empty planes while the title's own sprites
+            // remain visible. Never read absent terrain or retained source FBOs.
+            graphicsManager.registerCommand(new GLCommand(GLCommand.CommandType.RECTI, -1,
+                    0.0f, 0.0f, 0.0f, 0, 0,
+                    configService.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS),
+                    configService.getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS)));
+            return;
+        }
         levelRenderer.drawWithRenderOptions(spriteManager, renderOptions);
     }
 
@@ -2985,6 +2919,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     int observedViewportWidth() { return camera==null?320:camera.getWidth(); }
     int observedViewportHeight() { return camera==null?224:camera.getHeight(); }
 
+    final ObjectManager attachedObjectManager() { return objectManager; }
+
     public ObjectManager getObjectManager() {
         return objectManager;
     }
@@ -3021,7 +2957,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         checkpointCoordinator.restoreCheckpointState(ctx);
     }
 
-    private void restoreCheckpointRuntimeState(LevelLoadContext ctx) {
+    void restoreCheckpointRuntimeState(LevelLoadContext ctx) {
         checkpointCoordinator.restoreRuntimeState(ctx);
     }
 
@@ -3151,6 +3087,12 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     // Package-private entry used by LevelCameraInitialization for explicit
     // positioned captures/tests. Such a resnap is not Get_LevelSizeStart.
     void initCameraForLevel(boolean initializeLoadRegisters) {
+        initCameraForLevel(initializeLoadRegisters, null, null);
+    }
+
+    void initCameraForLevel(boolean initializeLoadRegisters,
+                            com.openggf.game.session.LevelEntryProvenance entryProvenance,
+                            Integer restoredCameraMaxY) {
         Sprite player = spriteManager.getSprite(resolveMainCharacterCode());
         if (!(player instanceof AbstractPlayableSprite playable)) {
             checkpointCoordinator.consumePersistentRespawnForCameraSnap();
@@ -3166,10 +3108,11 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         // before either camera update below; applying it only in the later
         // title-card handoff leaves the return one camera step behind.
         var checkpoint = checkpointCoordinator.state();
-        Integer savedCameraMaxY = null;
-        if (bigRingReturn != null) {
+        Integer savedCameraMaxY = restoredCameraMaxY;
+        if (savedCameraMaxY == null && bigRingReturn != null) {
             savedCameraMaxY = bigRingReturn.cameraMaxY();
-        } else if (checkpoint instanceof CheckpointState state && state.isActive() && state.hasS3kRuntimeState()) {
+        } else if (savedCameraMaxY == null && checkpoint instanceof CheckpointState state
+                && state.isActive() && state.hasS3kRuntimeState()) {
             savedCameraMaxY = state.getSavedCameraMaxY();
         }
         if (savedCameraMaxY != null) {
@@ -3209,11 +3152,17 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             camera.updatePosition(true);
             if (initializeLoadRegisters && getZoneFeatureProvider() instanceof
                     com.openggf.game.internal.LevelStartCameraPosition initialCamera) {
-                initialCamera.initializeLevelStartCamera(camera, playable, getFeatureZoneId(),
-                        getFeatureActId(), bigRingReturn != null
-                                || (checkpoint instanceof CheckpointState state && state.isActive()));
+                boolean savedEntry = bigRingReturn != null
+                        || (checkpoint instanceof CheckpointState state && state.isActive());
+                if (entryProvenance != null) {
+                    initialCamera.initializePositionedLevelStartCamera(camera, playable,
+                            getFeatureZoneId(), getFeatureActId(), entryProvenance);
+                } else {
+                    initialCamera.initializeLevelStartCamera(camera, playable,
+                            getFeatureZoneId(), getFeatureActId(), savedEntry);
+                }
             }
-            if (objectManager != null
+            if (!nativeLoads.prefix && objectManager != null
                     && (objectManager.usesTwoAxisCursorPlacement()
                             || (camera.getX() != preSnapCameraX
                                     && (!objectManager.usesCounterBasedRespawn()
@@ -3240,7 +3189,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                     objectManager.reset(camera.getX(), persistentRespawnState);
                 }
             }
-            com.openggf.level.rings.RingDrawInternalAccess.bindNativeSlots(ringManager);
+            // Get_LevelSizeStart precedes Load_Rings in a native fresh load.
+            // Bind an existing ring owner here; initRings binds the later owner.
+            if (ringManager != null) com.openggf.level.rings.RingDrawInternalAccess.bindNativeSlots(ringManager);
             // ROM parity: only when Get_LevelSizeStart had to clamp the camera
             // Y down to Camera_max_Y_pos does the immediately-following
             // DeformBgLayer call advance Camera_Y_pos past maxY. Levels whose
@@ -3301,12 +3252,25 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * @param yOffset sidekick Y offset from player. S2 uses 0, S3K uses +4.
      */
     public void spawnSidekicks(int xOffset, int yOffset) {
+        placeSidekicks(xOffset, yOffset, true);
+    }
+
+    /** Entry provenance determines whether native spawn side effects are already complete. */
+    void repositionSidekicks(int xOffset, int yOffset,
+                                   com.openggf.game.session.LevelEntryProvenance provenance) {
+        java.util.Objects.requireNonNull(provenance, "provenance");
+        if (!provenance.isPositioned()) return;
+        placeSidekicks(xOffset, yOffset,
+                provenance == com.openggf.game.session.LevelEntryProvenance.UNCLASSIFIED_ENTRY);
+    }
+
+    private void placeSidekicks(int xOffset, int yOffset, boolean initializeLeaderHistory) {
         spriteManager.removeTemporarySidekicks();
         Sprite player = spriteManager.getSprite(resolveMainCharacterCode());
         if (player == null) {
             return;
         }
-        if (player instanceof AbstractPlayableSprite leaderInit) {
+        if (initializeLeaderHistory && player instanceof AbstractPlayableSprite leaderInit) {
             // ROM Obj01_Init_Continued (s2.asm:36201-36217) / Sonic_Init_Continued
             // -> Reset_Player_Position_Array (sonic3k.asm:21967-21977, 22202-22214):
             // the leader's own init offsets its position by (-$20, +4), zeroes
@@ -3320,6 +3284,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                     (short) (leaderInit.getCentreY() + 4));
         }
         for (AbstractPlayableSprite sidekick : spriteManager.getSidekicks()) {
+            // Intentional positioned entries re-anchor the whole team. Native
+            // entries bypass this operation through their explicit provenance.
             // ROM writes only the x_pos/y_pos words here (S2 InitPlayers
             // s2.asm:5191-5195; S3K SpawnLevelMainSprites_SpawnPlayers
             // sonic3k.asm:8396-8399), which on a 68000 leaves the adjacent
@@ -3367,6 +3333,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                 sidekick.setLrbSolidBit(leaderPaths.getLrbSolidBit());
             }
             if (sidekick.getCpuController() != null) {
+                sidekick.getCpuController().setCarryTrigger(activeGameModule().getSidekickCarryTrigger());
                 applySidekickLevelBounds(sidekick);
                 // Capture the spawn centre for the deferred CPU placement. ROM
                 // SpawnLevelMainSprites_SpawnPlayers places the sidekick and fills
@@ -3421,27 +3388,32 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * Skipped in headless mode and when zone feature provider suppresses it.
      */
     public void requestTitleCardIfNeeded(LevelLoadContext ctx) {
+        requestTitleCardIfNeeded(ctx, LevelTitleRequestPolicy.select(this, ctx, zoneFeatureProvider));
+    }
+
+    Runnable selectNativeTitleRequest(LevelLoadContext ctx) {
+        LevelTitleRequestPolicy selected = LevelTitleRequestPolicy.select(this, ctx, activeGameModule().getZoneFeatureProvider());
+        return () -> requestTitleCardIfNeeded(ctx, selected);
+    }
+
+    boolean retainsNativeTitlePresentation(LevelLoadContext ctx) {
+        return LevelTitleRequestPolicy.select(this, ctx, activeGameModule().getZoneFeatureProvider()).keepPresentation();
+    }
+
+    private void requestTitleCardIfNeeded(LevelLoadContext ctx, LevelTitleRequestPolicy selected) {
         initialPresentationPlcsCompleted = false;
         initialPresentationOmitted = false;
-        if (LevelContinuationCarry.bypassInitialPresentation(transitions)) {
+        if (selected.bypass()) {
             // A continuation never creates a title owner or runs its locked PLC
             // loop. Do not use the omitted-presentation path, which does both.
             initialPresentationPlcsCompleted = true;
             return;
         }
-        boolean headlessWholeRunHandoff = graphicsManager.isHeadlessMode()
-                && GameServices.playbackDebug().hasScheduledLevelLoadSession();
-        if (!ctx.isShowTitleCard()) {
-            completeSkippedInitialTitleCardPresentation(ctx.isQueueFreshLevelRuntimeArt());
+        if (!selected.show()) {
+            completeSkippedInitialTitleCardPresentation(selected.omittedFreshArt());
             return;
         }
-        boolean callerOwnedReturnCard = transitions.isBonusStageReturn()
-                || transitions.isResultsReturnCardOwnedByCaller();
-        boolean presentationSuppressed = !callerOwnedReturnCard
-                && zoneFeatureProvider != null
-                && zoneFeatureProvider.shouldSuppressInitialTitleCard(
-                        currentZone, currentAct);
-        if (presentationSuppressed) {
+        if (selected.suppressed()) {
             // No title-card object exists on this path, so there is no residual
             // Obj_TitleCardWait2 owner to retire before gameplay begins.
             completeInitialTitleCardPresentation();
@@ -3455,10 +3427,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         // Arm only that handoff; a bonus title retains its own two-child graph.
         // Level's Saved_zone_and_act return still reaches loc_6310 -> LoadLevelLoadBlock
         // (S3K :7575..7577,7793,9737); Knuckles AIZ1 selects the saved-level table26.
-        var bonus = GameServices.bonusStageOrNull();
-        if (ctx.isQueueFreshLevelRuntimeArt()
-                || transitions.isBonusStageReturn()
-                || (bonus != null && bonus.getActiveType() != BonusStageType.NONE)) {
+        if (selected.freshArt()) {
             var titleCardProvider = activeGameModule().getTitleCardProvider();
             if (titleCardProvider != null) {
                 titleCardProvider.requestFreshLevelRuntimeArtHandoff(
@@ -3474,19 +3443,15 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         // GM_Level (docs/s1disasm/_incObj/3A Got Through Card.asm:200-211,
         // sonic.asm:3041-3055, 2814-2842). Its card is part of the restart, not
         // of a host entry a headless boundary may omit.
-        if (!graphicsManager.isHeadlessMode()
-                || headlessWholeRunHandoff
-                || ctx.isTitleCardRequiredInHeadlessMode()
-                || callerOwnedReturnCard
-                || transitions.isLevelRoutineReentry()) {
+        if (selected.keepPresentation()) {
             // ROM: title card reads Apparent_act, not Current_act.
             // After AIZ's seamless fire transition, Current_act is 1 but
             // Apparent_act stays 0 until the results screen exits.
-            requestTitleCard(currentZone, apparentAct);
+            requestTitleCard(selected.zone(), selected.apparentAct());
             return;
         }
 
-        completeSkippedInitialTitleCardPresentation(ctx.isQueueFreshLevelRuntimeArt());
+        completeSkippedInitialTitleCardPresentation(selected.omittedFreshArt());
     }
 
     /**
@@ -3552,7 +3517,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         profile.completeInitialPresentationPlcs();
         // Only an OMITTED presentation needs its player object passes replayed.
         // A presented card really dispatches them: the provider runs the ROM's
-        // own pre-Level_MainLoop passes (S2: the s2.asm:5006 RunObjects plus
+        // own pre-Level_MainLoop passes (S2: the s2.asm:5089 RunObjects plus
         // the 25 iterations of the s2.asm:5060-5066 leave loop) with player
         // physics live, so replaying them here would advance the animation and
         // the persistent last-loaded-DPLC byte a second time.
@@ -3726,13 +3691,15 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             ctx.snapshotCheckpoint(checkpointCoordinator.state());
 
             resetCounterPlacementAfterCameraSnap = runtimeReload;
+            long nativeLoadOrdinalBefore = nativeLoads.ordinal;
             loadLevel(levelData.levelIndex(), loadMode, ctx);
+            if (nativeLoads.deferRuntimeCompletion(this, ctx, loadMode, loadCause)) return;
             if (loadMode != LevelLoadMode.PREVIEW_CAPTURE) {
                 applyPersistedEditorEdits();
             }
             restoreCheckpointRuntimeState(ctx);
 
-            if (objectManager != null) {
+            if (objectManager != null && nativeLoads.ordinal == nativeLoadOrdinalBefore) {
                 objectManager.initVblaCounter(inheritedVblaCounter);
                 objectManager.initVIntRunCounterPhaseOffset(inheritedVIntRunCounterPhaseOffset);
             }
@@ -3750,14 +3717,21 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             // BEGIN HCZ1_DIRECT_FF_OUTER_LOAD_FINISH: include persisted edits/checkpoint/playback and cleanup.
             boolean plcOuterCleanupCompleted = false;
             try {
-                resetCounterPlacementAfterCameraSnap = false;
-                checkpointCoordinator.clearPendingPersistentRespawn();
+                if (nativeLoads.pending == null) {
+                    resetCounterPlacementAfterCameraSnap = false;
+                    checkpointCoordinator.clearPendingPersistentRespawn();
+                }
                 plcOuterCleanupCompleted = true;
             } finally {
-                if (!plcOuterLoadCompleted || !plcOuterCleanupCompleted)
+                if (nativeLoads.pending == null && (!plcOuterLoadCompleted || !plcOuterCleanupCompleted))
                     revokeNativePlcTargetAdmission();
             }
             // END HCZ1_DIRECT_FF_OUTER_LOAD_FINISH
+        }
+        // A budget refill belongs to the completed respawn, never the
+        // rewindable death animation or an attempted/failed reload/cleanup.
+        if (loadCause == com.openggf.game.LevelLoadCause.FULL_DEATH_RELOAD) {
+            rewindBoundaryReporter.markBoundary(RewindBoundary.LIFE_LOSS_RESPAWN);
         }
     }
 
@@ -3769,7 +3743,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * caller may continue into that player's first tick before the loop-top
      * playback bridge runs again.
      */
-    private void activateScheduledPlaybackForLoadedLevel() {
+    void activateScheduledPlaybackForLoadedLevel() {
         PlaybackDebugManager playback = GameServices.playbackDebug();
         if (!com.openggf.TraceSessionLauncher.activateScheduledPlaybackForLoadedLevel(playback)) {
             return;
@@ -3777,7 +3751,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         spriteManager.setPlaybackInputSuppressed(true);
     }
 
-    private void applyPersistedEditorEdits() {
+    void applyPersistedEditorEdits() {
         if (level == null || gameModule == null) {
             return;
         }
@@ -3907,6 +3881,18 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         freshLevelTransitionBoundary.load(this, zone, act);
     }
 
+    /** Engine-internal: see {@link FreshLevelBoundaryAccess#completeAtRelease}. */
+    boolean completeFreshLevelTransitionBoundaryReportingInitialPass() {
+        return freshLevelTransitionBoundary.completeReportingInitialPass(this);
+    }
+
+    /** Engine-internal: see {@link FreshLevelBoundaryAccess#beginAfterSetup}. */
+    void beginFreshLevelTransitionBoundaryAfterSetup(
+            short previousCameraX, short previousCameraY, int previousRings) {
+        freshLevelTransitionBoundary.beginAfterSetup(
+                this, previousCameraX, previousCameraY, previousRings);
+    }
+
     /** Completes the destination-player assembly after its title-card loop. */
     public void completeFreshLevelTransitionBoundary() {
         freshLevelTransitionBoundary.complete(this);
@@ -3957,11 +3943,12 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * @throws IOException if level data loading fails
      */
     public void executeActTransition(SeamlessLevelTransitionRequest request) throws IOException {
-        actTransitionExecutor.execute(request);
+        seamlessTransitionExecutor.publishLevelFrameCompletion(actTransitionExecutor.execute(request));
     }
 
-    void markActTransitionOscillationAdvancedDuringFrame() {
-        actTransitionExecutor.markOscillationAdvancedDuringFrame();
+    /** Executes a driver-owned transition-only row without publishing level-frame effects. */
+    void reloadActAtFrameBoundary(SeamlessLevelTransitionRequest request) throws IOException {
+        actTransitionExecutor.execute(request);
     }
 
     /**
@@ -3970,22 +3957,22 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * this frame's ordinary loop-tail advance.
      */
     public boolean consumeActTransitionExecutedDuringFrame() {
-        return actTransitionExecutor.consumeExecutedDuringFrame();
+        return seamlessTransitionExecutor.consumeExecutedDuringFrame();
     }
 
     /**
      * Consumes the one-shot rewind boundary published by a completed in-place
-     * act reload. Frame-top seamless transitions consume this signal through
-     * {@link LevelSeamlessTransitionExecutor}; reloads executed inside the
+     * act reload. Frame-top seamless transitions publish no level-frame marker;
+     * their driver owns the transition-only boundary. Reloads executed inside the
      * level-event pass leave it for {@code GameLoop} to apply after recording
      * the rest of the logical frame.
      */
     public boolean consumeActTransitionRewindBoundaryDuringFrame() {
-        return actTransitionExecutor.consumeRewindBoundaryDuringFrame();
+        return seamlessTransitionExecutor.consumeRewindBoundaryDuringFrame();
     }
 
     public boolean consumeActTransitionOscillationAdvancedDuringFrame() {
-        return actTransitionExecutor.consumeOscillationAdvancedDuringFrame();
+        return seamlessTransitionExecutor.consumeOscillationAdvancedDuringFrame();
     }
 
     /** @see LevelTransitionCoordinator#hasPendingLevelExit() */
@@ -4087,12 +4074,6 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                 playable.markInstaShieldForReregistration();
                 playable.getInstaShieldObject().invalidateDplcCache();
             }
-            // ROM Load_Level clears Dynamic_object_RAM. If the player was riding
-            // an act-1 transition helper, the next ExecuteObjects pass clears the
-            // stale on-object bit and produces the one-frame airborne handoff.
-            if (request.forceAirOnStaleObjectSupportLoss() && objectManager != null) {
-                objectManager.forceAirOnStaleObjectSupportLoss(playable);
-            }
         }
         for (AbstractPlayableSprite sidekick : spriteManager.getSidekicks()) {
             int newX = sidekick.getCentreX() + request.playerOffsetX();
@@ -4101,9 +4082,6 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             sidekick.setCentreYPreserveSubpixel((short) newY);
             if (sidekick.getSpriteRenderer() != null) {
                 sidekick.getSpriteRenderer().invalidateDplcCache();
-            }
-            if (request.forceAirOnStaleObjectSupportLoss() && objectManager != null) {
-                objectManager.forceAirOnStaleObjectSupportLoss(sidekick);
             }
         }
         // The transition owns both the live and copied camera words. Use the
@@ -4132,6 +4110,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
     void rebuildManagersForActTransition(Camera cam, List<TransitionSstOccupant> persistentDynamicObjects,
                                          SeamlessLevelTransitionRequest request, int cameraX) {
+        com.openggf.level.objects.ObjectManagerInternalAccess.retireInitialDispatch(objectManager);
         lostRingSpawnCoordinator.reset();
         ObjectManager previousObjectManager = objectManager;
         // V_int_run_count is global work RAM, outside Dynamic_object_RAM, and
@@ -4627,6 +4606,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * {@link com.openggf.game.session.WorldSession} level and zone metadata.
      */
     public void resetGameplayState() {
+        com.openggf.level.objects.ObjectManagerInternalAccess.retireInitialDispatch(objectManager);
         discardPreparedLevelLoad();
         discardInitialProcessSpritesLifecycle();
         lostRingSpawnCoordinator.reset();
@@ -4671,7 +4651,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         apparentAct = 0;
         frameCounter = 0;
         seamlessTransitionExecutor.resetFrameCounterBridge();
-        actTransitionExecutor.resetFrameMarkers();
+        seamlessTransitionExecutor.resetFrameMarkers();
         transitions.resetState();
         verticalWrapEnabled = false;
         touchResponseTable = null;
@@ -4702,7 +4682,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     public void resetFrameCounter() {
         this.frameCounter = 0;
         seamlessTransitionExecutor.resetFrameCounterBridge();
-        actTransitionExecutor.resetFrameMarkers();
+        seamlessTransitionExecutor.resetFrameMarkers();
     }
 
     public void setClearColor() {
@@ -4822,11 +4802,11 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     /**
      * Applies a seamless transition immediately.
      * <p>
-     * Routes through {@link #executeActTransition} for RELOAD types,
-     * which bypasses the profile system and matches ROM behavior.
+     * Runs RELOAD types as driver-owned frame-boundary operations, bypassing
+     * the profile system without publishing effects into the next level frame.
      */
     public void applySeamlessTransition(SeamlessLevelTransitionRequest request) {
-        seamlessTransitionExecutor.execute(request, true);
+        seamlessTransitionExecutor.execute(request);
     }
 
     /** Executes a ScreenEvents-owned reload before that same frame's tail work. */
@@ -4880,6 +4860,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
     /** @see LevelTransitionCoordinator#isLevelInactiveForTransition() */
     public boolean isLevelInactiveForTransition() { return transitions.isLevelInactiveForTransition(); }
+
+    /** @see LevelTransitionHostAccess#freezesHostIteration(LevelManager) */
+    boolean isLevelInactiveBeforeObjectPass() { return transitions.isLevelInactiveBeforeObjectPass(); }
 
     /** @see LevelTransitionCoordinator#setLevelInactiveForTransition(boolean) */
     public void setLevelInactiveForTransition(boolean inactive) {

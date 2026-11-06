@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectManagerInternalAccess;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
@@ -222,6 +223,12 @@ public class SinkingMudObjectInstance extends AbstractObjectInstance
             }
         }
         rawSurfaceByPlayer.put(player, rawSurface);
+        // loc_32AF4 (sonic3k.asm:68583-68585) and
+        // loc_32B4A (sonic3k.asm:68613-68615)
+        // start each surviving player's solid width from a full zero.
+        ObjectServices svc = tryServices();
+        if (svc != null && svc.objectManager() != null)
+            ObjectManagerInternalAccess.publishSineCosineInputFraction(svc.objectManager(), 0);
     }
 
     private Integer copiedSurfaceFromAdjacentMud(PlayableEntity player) {

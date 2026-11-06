@@ -447,10 +447,15 @@ public final class TimeAttackRuntime implements RunHost {
         attempt.onFrame(heldMask, endOfLevel, checkpointIndex);
         if (attempt.phase() == TimeAttackAttempt.Phase.VOID) return;
         inputRecording.appendFrame(heldMask, startHeld);
-        capture.capture(sampledFrame.x(), sampledFrame.y(), sampledFrame.mappingFrame(),
-                sampledFrame.hFlip(), sampledFrame.vFlip(), sampledFrame.priorityBucket(),
-                sampledFrame.highPriority(), attempt.phase() == TimeAttackAttempt.Phase.FINISHED);
-        offerFrame(sampledFrame);
+        GhostFrame streamed = new GhostFrame(sampledFrame.x(), sampledFrame.y(),
+                sampledFrame.mappingFrame(), sampledFrame.hFlip(), sampledFrame.vFlip(),
+                false,
+                sampledFrame.priorityBucket(), sampledFrame.highPriority(), sampledFrame.hurt());
+        capture.capture(attempt.phase() == TimeAttackAttempt.Phase.FINISHED
+                ? new GhostFrame(streamed.x(), streamed.y(), streamed.mappingFrame(), streamed.hFlip(),
+                        streamed.vFlip(), true, streamed.priorityBucket(), streamed.highPriority(),
+                        streamed.hurt()) : streamed);
+        offerFrame(streamed);
         if (before != TimeAttackAttempt.Phase.FINISHED
                 && attempt.phase() == TimeAttackAttempt.Phase.FINISHED) {
             // The finish needs its whole stream; a backlog only outlives the first seconds.
@@ -607,8 +612,7 @@ public final class TimeAttackRuntime implements RunHost {
         PlayerPose pose = step.player();
         localCentreX = pose.centreX();
         tickForTest(step.heldMask(), step.startHeld(), step.actComplete(), step.checkpointIndex(),
-                new GhostFrame(pose.centreX(), pose.centreY(), pose.mappingFrame(), pose.hFlip(),
-                        pose.vFlip(), false, pose.priorityBucket(), pose.highPriority(), pose.hurt()));
+                pose.toGhostFrame(false));
         localHurt = pose.hurt();
         if (restartLeadIn) {
             leadInSteps++;

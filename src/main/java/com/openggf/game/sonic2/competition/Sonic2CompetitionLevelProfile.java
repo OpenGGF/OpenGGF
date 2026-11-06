@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.competition;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.data.RomChannel;
@@ -91,7 +93,7 @@ public record Sonic2CompetitionLevelProfile(
     public static Sonic2CompetitionLevelProfile load(Rom rom, int romZone, int act) throws IOException {
         requireAct(romZone, act);
         var reader = RomByteReader.fromRom(rom);
-        int header = Sonic2Constants.LEVEL_DATA_DIR + romZone * 12;
+        int header = address(reader, Sonic2Constants.LEVEL_DATA_DIR) + romZone * 12;
         int pattern = reader.readU32BE(header);
         int block = reader.readU32BE(header + 4);
         int chunk = reader.readU32BE(header + 8);
@@ -99,30 +101,30 @@ public record Sonic2CompetitionLevelProfile(
         var art = new Art(pattern & 0xFFFFFF, block & 0xFFFFFF, chunk & 0xFFFFFF,
                 pattern >>> 24, block >>> 24, chunk >>> 24);
         int index = romZone * 2 + act;
-        int layouts = reader.readU32BE(Sonic2Constants.LEVEL_LAYOUT_DIR_ADDR_LOC);
+        int layouts = reader.readU32BE(address(reader, Sonic2Constants.LEVEL_LAYOUT_DIR_ADDR_LOC));
         int layout = reader.readPointer16(layouts, index);
         int objects = reader.readPointer16(Sonic2ObjectPlacement.OFF_OBJECTS_REV01, index);
         // ObjectsManager_Init (s2.asm:32943-32950) overrides only CNZ in native 2P mode.
-        if (romZone == 12) objects = act == 0 ? CNZ_1_OBJECTS : CNZ_2_OBJECTS;
+        if (romZone == 12) objects = act == 0 ? address(reader, CNZ_1_OBJECTS) : address(reader, CNZ_2_OBJECTS);
         int rings = reader.readPointer16(Sonic2RingPlacement.OFF_RINGS_REV01, index);
-        int paletteEntry = Sonic2Constants.LEVEL_PALETTE_DIR + art.paletteId() * 8;
+        int paletteEntry = address(reader, Sonic2Constants.LEVEL_PALETTE_DIR) + art.paletteId() * 8;
         int palette = reader.readU32BE(paletteEntry);
         int paletteSize = (reader.readU16BE(paletteEntry + 6) + 1) * 4;
-        int bounds = Sonic2Constants.LEVEL_BOUNDARIES_ADDR + index * 8;
+        int bounds = address(reader, Sonic2Constants.LEVEL_BOUNDARIES_ADDR) + index * 8;
         var cameraBounds = new Bounds(reader.readU16BE(bounds), reader.readU16BE(bounds + 2),
                 reader.readS16BE(bounds + 4), reader.readS16BE(bounds + 6));
-        int start = START_LOCATIONS + index * 4;
+        int start = address(reader, START_LOCATIONS) + index * 4;
         var sonicStart = new Position(reader.readU16BE(start), reader.readU16BE(start + 2));
         // InitPlayers (s2.asm:5193-5196) offsets Tails from Sonic's native centre.
         var tailsStart = new Position((sonicStart.x() - 0x20) & 0xFFFF, (sonicStart.y() + 4) & 0xFFFF);
-        int animation = romZone == 12 ? CNZ_2P_ANIMATED_MAP
-                : reader.readPointer16(Sonic2Constants.ANIM_PAT_MAPS_ADDR, romZone);
+        int animation = romZone == 12 ? address(reader, CNZ_2P_ANIMATED_MAP)
+                : reader.readPointer16(address(reader, Sonic2Constants.ANIM_PAT_MAPS_ADDR), romZone);
         int destination = reader.readU16BE(animation);
         var patch = new AnimationPatch(animation, destination,
                 destination == 0 ? 0 : reader.readU16BE(animation + 2) + 1, destination != 0);
         return new Sonic2CompetitionLevelProfile(new ZoneAct(romZone, act), art, layout, objects, rings,
-                reader.readU32BE(Sonic2Constants.COLLISION_LAYOUT_DIR_ADDR + romZone * 4),
-                reader.readU32BE(Sonic2Constants.ALT_COLLISION_LAYOUT_DIR_ADDR + romZone * 4),
+                reader.readU32BE(address(reader, Sonic2Constants.COLLISION_LAYOUT_DIR_ADDR) + romZone * 4),
+                reader.readU32BE(address(reader, Sonic2Constants.ALT_COLLISION_LAYOUT_DIR_ADDR) + romZone * 4),
                 palette, paletteSize, cameraBounds, sonicStart, tailsStart, patch,
                 CommonPlacementParser.parseObjectRecords(reader, objects),
                 new Sonic2RingPlacement(reader).load(new ZoneAct(romZone, act)));

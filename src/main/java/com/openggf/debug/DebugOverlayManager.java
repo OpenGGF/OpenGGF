@@ -48,6 +48,7 @@ public class DebugOverlayManager {
         }
     }
 
+    @com.openggf.game.EngineOnly
     public static synchronized DebugOverlayManager getInstance() {
         if (debugOverlayManager == null) {
             debugOverlayManager = new DebugOverlayManager();
@@ -191,6 +192,8 @@ public class DebugOverlayManager {
             }
             sb.append("\n");
         }
+
+        sb.append(com.openggf.Engine.liveSchedulingDiagnostics()).append("\n");
 
         // Memory stats
         MemoryStats.Snapshot memSnapshot = GameServices.profiler().memoryStats().snapshot();

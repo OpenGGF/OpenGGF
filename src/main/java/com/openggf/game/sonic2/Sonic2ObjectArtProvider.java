@@ -1,6 +1,11 @@
 package com.openggf.game.sonic2;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.game.GameServices;
+import com.openggf.game.rewind.snapshot.PlcProgressSnapshot;
+import com.openggf.game.rewind.snapshot.PlcProgressSnapshot.ArtSlotIdentity;
+import com.openggf.game.rewind.snapshot.PlcProgressSnapshot.ArtSlotRange;
 import com.openggf.game.ObjectArtProvider;
 import com.openggf.game.internal.HudSatLayout;
 import com.openggf.game.internal.HudSatLayoutSource;
@@ -25,6 +30,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.animation.SpriteAnimationSet;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -41,10 +47,12 @@ import java.util.logging.Logger;
 public class Sonic2ObjectArtProvider implements ObjectArtProvider, HudSatLayoutSource,
         com.openggf.level.metadata.ObjectArtPreviewSource,
         com.openggf.game.presentation.RomSceneArtSource,
-        com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.PlcProgressSnapshot> {
+        com.openggf.game.rewind.RewindSnapshottable<PlcProgressSnapshot> {
     private static final Logger LOGGER = Logger.getLogger(Sonic2ObjectArtProvider.class.getName());
     /** HUD_MapUnc_40A9A, World REV01; word counts and eight-byte pieces. */
     private static final int HUD_SAT_MAPPING_ADDR = 0x40A9A;
+    /** ArtTile_ArtNem_Animal_1; the second native animal starts $14 tiles later. */
+    private static final int ANIMAL_ART_TILE = 0x580;
 
     @FunctionalInterface
     private interface ZoneSheetBuilder {
@@ -72,6 +80,7 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
     private ObjectArtData artData;
     private int currentZoneIndex = -2; // Use -2 to distinguish from explicit -1
     private int loadEpoch = 0;
+    private Sonic2PlcArtSlots staticArtSlots;
 
     private final Map<String, PatternSpriteRenderer> renderers = new HashMap<>();
     private final Map<String, ObjectSpriteSheet> sheets = new HashMap<>();
@@ -158,7 +167,7 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
     }
 
     private static HudSatLayout loadHudSatLayout(RomByteReader reader) {
-        return new HudSatLayout(S2SpriteDataLoader.loadMappingFrames(reader, HUD_SAT_MAPPING_ADDR, 4));
+        return new HudSatLayout(S2SpriteDataLoader.loadMappingFrames(reader, address(reader, HUD_SAT_MAPPING_ADDR), 4));
     }
 
     /** Both stock life-counter source recipes stay resident independently of the lead character's VRAM slot.
@@ -171,18 +180,30 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
             return Map.of("life/sonic", com.openggf.util.PatternDecompressor.nemesis(sceneRom, Sonic2Constants.ART_NEM_SONIC_LIFE_ADDR),
                     "life/tails", com.openggf.util.PatternDecompressor.nemesis(sceneRom, Sonic2Constants.ART_NEM_TAILS_LIFE_ADDR));
         } catch (IOException e) {
-            throw new java.io.UncheckedIOException("Life-icon ROM recipes could not be decoded", e);
+            throw new UncheckedIOException("Life-icon ROM recipes could not be decoded", e);
         }
     }
 
     @Override
     public void loadArtForZone(int zoneIndex) throws IOException {
         if (artData != null && zoneIndex == currentZoneIndex) {
+            if (staticArtSlots != null) {
+                staticArtSlots.restore(staticArtSlots.identity(), List.of(), GameServices.graphics());
+            }
             return;
         }
 
         ensureArtLoader();
+        if (staticArtSlots == null) staticArtSlots = new Sonic2PlcArtSlots(sceneRom);
         artData = artLoader.loadForZone(zoneIndex);
+        // Outside the native table, the loader uses its default animal pair
+        // and the PLC parser falls back to Std1. These static bindings belong
+        // to the common-art world, not to an invalid native zone. Keep the raw
+        // selector for the existing parser boundary below; snapshot identities
+        // still reject invalid values and mismatched native worlds.
+        int staticArtZone = zoneIndex >= 0 && zoneIndex < Sonic2ObjectArt.ZONE_ANIMALS.length
+                ? zoneIndex : -1;
+        staticArtSlots.beginZone(staticArtZone);
         currentZoneIndex = zoneIndex;
         loadEpoch++;
 
@@ -197,7 +218,7 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
         // === Manual art (not in PLCs or needs complex construction) ===
         registerSheet(ObjectArtKeys.MONITOR, artData.monitorSheet());
         registerSheet(Sonic2ObjectArtKeys.WATERFALL, artData.waterfallSheet());
-        registerSheet(ObjectArtKeys.ANIMAL, artData.animalSheet());
+        registerSheet(ObjectArtKeys.ANIMAL, Sonic2PlcArtSlots.detached(artData.animalSheet()));
         registerEagerSheets(zoneIndex);
         // Red spring variants (share base spring art, different mappings — not PLC entries)
         registerSheet(ObjectArtKeys.SPRING_VERTICAL_RED, artData.springVerticalRedSheet());
@@ -209,7 +230,8 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
         // manually. The title-card teardown also requests PLCStdWtr, which carries
         // the small breathing-bubble art used by Obj0A.
         registerSheet(ObjectArtKeys.EXPLOSION, artLoader.loadExplosionSheet());
-        registerSheet(Sonic2ObjectArtKeys.BOSS_EXPLOSION, artLoader.loadBossExplosionSheet());
+        registerSheet(Sonic2ObjectArtKeys.BOSS_EXPLOSION,
+                Sonic2PlcArtSlots.detached(artLoader.loadBossExplosionSheet()));
         registerSheet(Sonic2ObjectArtKeys.SUPER_SONIC_STARS, artLoader.loadSuperSonicStarsSheet());
         // Signpost (PLC 39) and EggPrison (PLC 64) are loaded on-demand in the ROM
         // (at end-of-level and after boss defeat), but the engine loads them at zone init.
@@ -309,6 +331,12 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
         overrideMonitorIconArtForMainCharacter();
         applySheetPatches();
 
+        // Obj28 and Obj58 consume native tile ranges, not private asset identities.
+        // Obj58_Init (s2.asm:61314-61326), PlrList_DezAnimals (s2.asm:89909-89912).
+        // Only these ROM-static views participate; patched/dynamic composites keep their owners.
+        bindStaticArtSlots(ObjectArtKeys.ANIMAL, ANIMAL_ART_TILE);
+        bindStaticArtSlots(Sonic2ObjectArtKeys.BOSS_EXPLOSION, Sonic2Constants.ART_TILE_FIERY_EXPLOSION);
+
         LOGGER.info("Sonic2ObjectArtProvider loaded for zone " + zoneIndex +
                 " with " + rendererKeys.size() + " renderers (PLC-driven)");
     }
@@ -337,8 +365,8 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
 
     /**
      * Loads a Sonic 2 PLC on demand, matching runtime event-triggered PLC requests.
-     * Re-requesting an already loaded PLC is harmless because individual art keys
-     * are skipped when present.
+     * Existing sheets retain identity; every request still publishes its intersecting
+     * native tile writes in order, even when no renderer needs registering.
      *
      * @return {@code true} when the request registered at least one new sprite sheet
      */
@@ -354,12 +382,16 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
     /** Builds every absent sheet for an ordered PLC batch without registration. */
     public PreparedPlc preparePlcs(int... plcIds) throws IOException {
         ensureArtLoader();
-        Rom rom = GameServices.rom().getRom();
+        Rom rom = sceneRom;
         List<PreparedSheet> preparedSheets = new ArrayList<>();
+        List<ArtSlotRange> writes = new ArrayList<>();
         java.util.Set<String> preparedKeys = new java.util.HashSet<>();
         for (int plcId : plcIds) {
             var plc = Sonic2PlcLoader.parsePlc(rom, plcId);
             for (var entry : plc.entries()) {
+                if (staticArtSlots != null) {
+                    writes.addAll(staticArtSlots.prepare(entry.romAddr(), entry.tileIndex()));
+                }
                 var registration = Sonic2PlcArtRegistry.lookup(entry.romAddr());
                 if (registration != null && !sheets.containsKey(registration.key())
                         && preparedKeys.add(registration.key())) {
@@ -370,11 +402,13 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
                 }
             }
         }
-        return new PreparedPlc(List.copyOf(preparedSheets));
+        return new PreparedPlc(preparedSheets,
+                staticArtSlots == null ? null : staticArtSlots.identity(), writes);
     }
 
     /** Validates that committing a prepared PLC remains inside the object atlas range. */
     public void preflightPreparedPlc(PreparedPlc prepared) {
+        validateStaticArtSlots(prepared);
         long prospectiveCount = getRegularPatternCount();
         for (PreparedSheet sheet : prepared.sheets()) {
             prospectiveCount += sheet.sheet().getPatterns().length;
@@ -384,8 +418,9 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
         }
     }
 
-    /** Publishes already-built sheets. Registration does not perform ROM or GPU I/O. */
+    /** Publishes prepared ROM art and refreshes the ranges of already resident consumers. */
     public boolean publishPreparedPlc(PreparedPlc prepared) {
+        validateStaticArtSlots(prepared);
         int sheetCountBefore = sheetOrder.size();
         for (PreparedSheet preparedSheet : prepared.sheets()) {
             if (!sheets.containsKey(preparedSheet.key())) {
@@ -393,10 +428,38 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
             }
         }
         loadEpoch++;
+        if (staticArtSlots != null) staticArtSlots.publish(prepared.writes(), GameServices.graphics());
         return sheetOrder.size() > sheetCountBefore;
     }
 
-    public record PreparedPlc(List<PreparedSheet> sheets) {
+    public record PreparedPlc(List<PreparedSheet> sheets,
+            ArtSlotIdentity identity,
+            List<ArtSlotRange> writes) {
+        public PreparedPlc {
+            sheets = List.copyOf(sheets);
+            writes = List.copyOf(writes);
+        }
+        public PreparedPlc(List<PreparedSheet> sheets) { this(sheets, null, List.of()); }
+    }
+
+    private void validateStaticArtSlots(PreparedPlc prepared) {
+        if (staticArtSlots == null) {
+            if (prepared.identity() != null || !prepared.writes().isEmpty()) {
+                throw new IllegalArgumentException("Prepared art has no loaded ROM/world target");
+            }
+            return;
+        }
+        try {
+            staticArtSlots.validate(prepared.identity(), prepared.writes());
+        } catch (IOException e) {
+            throw new UncheckedIOException("Could not validate prepared ROM art", e);
+        }
+    }
+
+    private void bindStaticArtSlots(String key, int base) {
+        if (sheetPatches.stream().noneMatch(patch -> patch.sheetKey().equals(key))) {
+            staticArtSlots.bind(base, sheets.get(key), renderers.get(key));
+        }
     }
 
     public record PreparedSheet(String key, ObjectSpriteSheet sheet) {
@@ -874,12 +937,25 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
     }
 
     @Override
-    public com.openggf.game.rewind.snapshot.PlcProgressSnapshot capture() {
-        return new com.openggf.game.rewind.snapshot.PlcProgressSnapshot(loadEpoch);
+    public PlcProgressSnapshot capture() {
+        return staticArtSlots == null ? new PlcProgressSnapshot(loadEpoch)
+                : new PlcProgressSnapshot(
+                        loadEpoch, staticArtSlots.identity(), staticArtSlots.capture());
     }
 
     @Override
-    public void restore(com.openggf.game.rewind.snapshot.PlcProgressSnapshot snap) {
+    public void restore(PlcProgressSnapshot snap) {
+        if (staticArtSlots == null) {
+            if (snap.artSlotIdentity() != null || !snap.artSlotRanges().isEmpty()) {
+                throw new IllegalArgumentException("Art-slot snapshot has no loaded ROM/world target");
+            }
+        } else {
+            try {
+                staticArtSlots.restore(snap.artSlotIdentity(), snap.artSlotRanges(), GameServices.graphics());
+            } catch (IOException e) {
+                throw new UncheckedIOException("Could not restore ROM art", e);
+            }
+        }
         loadEpoch = snap.loadEpoch();
     }
 }

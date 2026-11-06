@@ -133,57 +133,6 @@ public class CollisionSystemTest {
     }
 
     @Test
-    public void testHasStandingContactDelegatesToLatestSnapshot() {
-        TrackingObjectManager objectManager = new TrackingObjectManager(true, 12);
-        collisionSystem.setObjectManager(objectManager);
-
-        AbstractPlayableSprite player = Mockito.mock(AbstractPlayableSprite.class);
-
-        assertTrue(collisionSystem.hasStandingContact(player));
-        assertEquals(1, objectManager.latestStandingCalls);
-        assertEquals(0, objectManager.fallbackStandingCalls);
-    }
-
-    @Test
-    public void testHasStandingContactIgnoresUpwardMotionBeforeDelegation() {
-        TrackingObjectManager objectManager = new TrackingObjectManager(true, 12);
-        collisionSystem.setObjectManager(objectManager);
-
-        AbstractPlayableSprite player = Mockito.mock(AbstractPlayableSprite.class);
-        Mockito.when(player.getYSpeed()).thenReturn((short) -1);
-
-        assertFalse(collisionSystem.hasStandingContact(player));
-        assertEquals(0, objectManager.latestStandingCalls);
-        assertEquals(0, objectManager.fallbackStandingCalls);
-    }
-
-    @Test
-    public void testClearRidingObjectInvalidatesStandingSnapshot() {
-        TrackingObjectManager objectManager = new TrackingObjectManager(true, 12);
-        collisionSystem.setObjectManager(objectManager);
-
-        AbstractPlayableSprite player = Mockito.mock(AbstractPlayableSprite.class);
-
-        assertTrue(collisionSystem.hasStandingContact(player));
-        collisionSystem.clearRidingObject(player);
-        assertFalse(collisionSystem.hasStandingContact(player));
-        assertEquals(2, objectManager.latestStandingCalls);
-        assertEquals(1, objectManager.clearRidingCalls);
-    }
-
-    @Test
-    public void testGetHeadroomDistanceDelegatesToLatestSnapshot() {
-        TrackingObjectManager objectManager = new TrackingObjectManager(true, 12);
-        collisionSystem.setObjectManager(objectManager);
-
-        AbstractPlayableSprite player = Mockito.mock(AbstractPlayableSprite.class);
-
-        assertEquals(12, collisionSystem.getHeadroomDistance(player, 0x40));
-        assertEquals(1, objectManager.latestHeadroomCalls);
-        assertEquals(0, objectManager.fallbackHeadroomCalls);
-    }
-
-    @Test
     public void testJumpHeadroomUsesTerrainOnly() {
         TrackingObjectManager objectManager = new TrackingObjectManager(true, 0);
         collisionSystem.setObjectManager(objectManager);
@@ -511,16 +460,6 @@ public class CollisionSystemTest {
     public void testSetTraceNullDefaultsToNoOp() {
         collisionSystem.setTrace(null);
         assertEquals(NoOpCollisionTrace.INSTANCE, collisionSystem.getTrace());
-    }
-
-    @Test
-    public void testHasStandingContact_noObjectManager() {
-        assertFalse(collisionSystem.hasStandingContact(null));
-    }
-
-    @Test
-    public void testGetHeadroomDistance_noObjectManager() {
-        assertEquals(Integer.MAX_VALUE, collisionSystem.getHeadroomDistance(null, 0));
     }
 
     @Test
@@ -978,17 +917,6 @@ public class CollisionSystemTest {
             standingSnapshotCleared = true;
         }
 
-        @Override
-        public boolean hasStandingContact(PlayableEntity player) {
-            fallbackStandingCalls++;
-            return false;
-        }
-
-        @Override
-        public int getHeadroomDistance(PlayableEntity player, int hexAngle) {
-            fallbackHeadroomCalls++;
-            return Integer.MAX_VALUE;
-        }
     }
 
     private static final class FixedSensor extends Sensor {

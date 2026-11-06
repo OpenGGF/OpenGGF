@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.sonic3k.S3kTopSolidProvider;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
@@ -14,7 +15,6 @@ import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectParams;
-import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -48,7 +48,7 @@ import java.util.List;
  * {@link SszCarriedPlayerPose}. Any A/B/C press releases with {@code y_vel -$680} and a roll.
  */
 public final class SszRotatingPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+        implements S3kTopSolidProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     // Native post/arm/carrier phases rotate geometric parts; captured players own their own facing.
     /** {@code move.w #$100,priority(a0)}. */
@@ -205,11 +205,22 @@ public final class SszRotatingPlatformObjectInstance extends AbstractObjectInsta
         releaseControl(player, services(), this);
     }
 
-    /** The A/B/C branch shared with the carrier: {@code y_vel -$680}, rolling, {@code sfx_Jump}. */
-    static void jumpOff(AbstractPlayableSprite sprite, com.openggf.level.objects.ObjectServices svc,
-            AbstractObjectInstance owner) {
+    /**
+     * The A/B/C branch shared with the carrier ({@code loc_45E90}, {@code loc_45FE4}):
+     * {@code y_vel -$680}, {@code object_control} cleared, rolling, {@code sfx_Jump}.
+     *
+     * <p>Neither branch touches the object's standing bit or the player's {@code Status_OnObj}.
+     * The next frame's {@code SolidObjectTop} (called before the player pass, at the routine's
+     * head) finds an airborne player with the standing bit still set and takes the airborne
+     * release {@code loc_1E2E0} (sonic3k.asm:41852-41857), which clears both. Releasing the ride
+     * here instead cleared the standing bit a frame early, so that release never ran and
+     * {@code Status_OnObj} stayed set until some other object cleared it; native SSZ1
+     * ({@code hpz_completerun} frames 3243/3314) clears it on the following frame.
+     */
+    static void jumpOff(AbstractPlayableSprite sprite, com.openggf.level.objects.ObjectServices svc) {
         sprite.setYSpeed((short) RELEASE_Y_VEL);
-        releaseControl(sprite, svc, owner);
+        ObjectControlState.none().applyTo(sprite);
+        sprite.setObjectMappingFrameControl(false);
         sprite.setRolling(true);
         sprite.setAir(true);
         sprite.setJumping(true);
@@ -219,7 +230,7 @@ public final class SszRotatingPlatformObjectInstance extends AbstractObjectInsta
 
     private void releasePlayer(int slot, AbstractPlayableSprite sprite) {
         setState(slot, 0);
-        jumpOff(sprite, services(), this);
+        jumpOff(sprite, services());
     }
 
     private boolean isRiding(AbstractPlayableSprite sprite) {

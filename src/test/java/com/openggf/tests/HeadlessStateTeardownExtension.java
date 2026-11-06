@@ -1,6 +1,7 @@
 package com.openggf.tests;
 
 import com.openggf.audio.driver.SmpsDriverTestAccess;
+import com.openggf.i18n.UiLocaleState;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
@@ -58,6 +59,7 @@ public final class HeadlessStateTeardownExtension
     public void beforeAll(ExtensionContext context) {
         context.getTestClass().ifPresent(OBSERVED_CLASSES::add);
         if (isTopLevel(context)) {
+            context.getStore(NAMESPACE).put(UiLocaleState.class, UiLocaleState.capture());
             context.getStore(NAMESPACE).put(BackendProperty.class,
                     new BackendProperty(System.getProperty(GRAPHICS_BACKEND_PROPERTY)));
         }
@@ -80,6 +82,8 @@ public final class HeadlessStateTeardownExtension
                 if (incoming != null) {
                     incoming.restore();
                 }
+                var language = context.getStore(NAMESPACE).remove(UiLocaleState.class, UiLocaleState.class);
+                if (language != null) language.restore();
             }
         }
     }

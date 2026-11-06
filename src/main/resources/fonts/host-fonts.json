@@ -1,0 +1,41 @@
+{
+  "schema": 1,
+  "about": "Host interface font fallback order. Each run uses the first face that supports its script and draws its clusters; 'preferredFor' BCP 47 tags move a face ahead for that language and reserve its line height. Faces with \"fallback\": false serve only their preferred languages. Bitmap faces never draw scripts that need OpenType shaping. Licences: NOTICE.md.",
+  "faces": [
+    { "id": "menu", "format": "native" },
+    { "id": "fusion-pixel-10-zh-hans", "format": "bdf",
+      "resource": "fonts/fusion-pixel-10px-proportional-zh_hans.bdf.gz",
+      "ascent": 10, "descent": 3, "fallback": false,
+      "preferredFor": ["zh", "zh-Hans", "zh-CN", "zh-SG", "zh-MY"] },
+    { "id": "fusion-pixel-10-zh-hant", "format": "bdf",
+      "resource": "fonts/fusion-pixel-10px-proportional-zh_hant.bdf.gz",
+      "ascent": 10, "descent": 3, "fallback": false,
+      "preferredFor": ["zh-Hant", "zh-TW", "zh-HK", "zh-MO"] },
+    { "id": "fusion-pixel-10-ja", "format": "bdf",
+      "resource": "fonts/fusion-pixel-10px-proportional-ja.bdf.gz",
+      "ascent": 10, "descent": 3,
+      "preferredFor": ["ja", "ko"] },
+    { "id": "noto-sans-arabic-ui", "format": "opentype", "scripts": ["ARABIC"],
+      "preferredFor": ["ar", "ur", "fa", "ps", "sd", "ug", "ckb"],
+      "roles": {
+        "COMPACT": { "resource": "fonts/NotoSansArabicUI-Regular.ttf", "pixels": 11 },
+        "LABEL": { "resource": "fonts/NotoSansArabicUI-Bold.ttf", "pixels": 13 } } },
+    { "id": "noto-sans-devanagari-ui", "format": "opentype", "scripts": ["DEVANAGARI"],
+      "preferredFor": ["hi", "mr", "ne", "sa", "mai", "kok", "bho"],
+      "roles": {
+        "COMPACT": { "resource": "fonts/NotoSansDevanagariUI-Regular.ttf", "pixels": 12 },
+        "LABEL": { "resource": "fonts/NotoSansDevanagariUI-Bold.ttf", "pixels": 13 } } },
+    { "id": "noto-sans-bengali-ui", "format": "opentype", "scripts": ["BENGALI"],
+      "preferredFor": ["bn", "as"],
+      "roles": {
+        "COMPACT": { "resource": "fonts/NotoSansBengaliUI-Regular.ttf", "pixels": 12 },
+        "LABEL": { "resource": "fonts/NotoSansBengaliUI-Bold.ttf", "pixels": 13 } } },
+    { "id": "noto-sans-thai", "format": "opentype", "scripts": ["THAI"],
+      "preferredFor": ["th"],
+      "roles": {
+        "COMPACT": { "resource": "fonts/NotoSansThai-Regular.ttf", "pixels": 11 },
+        "LABEL": { "resource": "fonts/NotoSansThai-Bold.ttf", "pixels": 13 } } },
+    { "id": "unifont", "format": "hex", "resource": "fonts/unifont-18.0.01.hex.gz",
+      "ascent": 14, "descent": 2, "overlayMarks": true }
+  ]
+}

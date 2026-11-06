@@ -226,13 +226,34 @@ class TestS3kSignpostInstance {
     }
 
     @Test
-    void resultsAllocationRetainsNativeControlSlotBoundaryAcrossSplitOwners() {
-        assertTrue(S3kSignpostInstance.usesFirstFreeResultsOwner(
-                false, true, false, 4, 7),
-                "a free slot below Obj_EndSignControl has already executed and must wait for the next pass");
-        assertFalse(S3kSignpostInstance.usesFirstFreeResultsOwner(
-                false, true, false, 5, 4),
-                "a first-free slot above Obj_EndSignControl belongs to the forward same-pass allocation boundary");
+    @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void resultsUseGlobalLowestFreeSlotWithAndWithoutWaitingForLanding() throws Exception {
+        for (boolean waitForLanding : new boolean[]{false, true}) {
+            Camera camera = new Camera();
+            TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+            player.setGameRulesForTest(GameRules.SONIC_3K);
+            camera.setFocusedSprite(player);
+            TestObjectServices services = new TestObjectServices().withCamera(camera)
+                    .withGameState(new GameStateManager()).withIsolatedObjectManager();
+            ObjectManager manager = services.objectManager();
+            int lowestFree = manager.firstFreeDynamicSlot();
+            S3kSignpostInstance signpost = new S3kSignpostInstance(0x200, 0);
+            manager.addDynamicObjectAtSlot(signpost, lowestFree + 4);
+            setPrivateField(signpost, "state", enumConstant(signpost, "State", "RESULTS"));
+            assertTrue(lowestFree < signpost.getSlotIndex(), "the scene has a lower free SST hole");
+            if (waitForLanding) {
+                player.setAir(true);
+                signpost.update(1, player);
+                assertTrue(manager.activeObjectsOfType(S3kResultsScreenObjectInstance.class).isEmpty(),
+                        "Obj_EndSignResults must wait for grounded P1 before allocating");
+            }
+            player.setAir(false);
+            signpost.update(2, player);
+            var results = manager.activeObjectsOfType(S3kResultsScreenObjectInstance.class);
+            assertEquals(1, results.size());
+            assertEquals(lowestFree, results.getFirst().getSlotIndex(),
+                    "Obj_EndSignResults always uses AllocateObject, including after an airborne wait");
+        }
     }
 
     @Test

@@ -61,11 +61,11 @@ class TestLobbyInviteController {
     private void disclose(long disclosure, long epoch) {
         pump(new ControlMessage.RoomInvite("7K3M9X", "instance", 1, epoch, now.get() + 60_000, disclosure));
     }
-    private String drawn() {
+    private RecordingSceneCanvas drawn() {
         RecordingSceneCanvas canvas = new RecordingSceneCanvas(400);
         panel.draw(canvas);
         canvas.assertFillsOnScreen();
-        return canvas.joined();
+        return canvas;
     }
 
     private List<String> codePixels() {
@@ -88,7 +88,7 @@ class TestLobbyInviteController {
         panel.poll(clipboard);
         assertEquals(List.of("7K3 M9X"), copied);
         input.idle(this::update);
-        assertTrue(drawn().contains("Copied"));
+        assertTrue(drawn().shows("Copied"));
         assertEquals(masked, codePixels());
     }
 
@@ -110,7 +110,7 @@ class TestLobbyInviteController {
         panel.focusLost();
         copyResult = SceneClipboard.Result.SUCCESS;
         input.idle(this::update);
-        assertFalse(drawn().contains("Copied"));
+        assertFalse(drawn().shows("Copied"));
     }
 
     @Test
@@ -138,7 +138,7 @@ class TestLobbyInviteController {
         assertTrue(copied.isEmpty());
         assertFalse(panel.isOpen());
         panel.open();
-        assertTrue(drawn().contains("Only the host can invite"));
+        assertTrue(drawn().shows("Only the host can invite"));
         panel.close();
         open(false, true, null);
         input.tapEnter(this::update);
@@ -146,7 +146,7 @@ class TestLobbyInviteController {
         now.addAndGet(60_001);
         input.idle(this::update);
         assertNull(session.invite());
-        assertFalse(drawn().contains("7K3 M9X"));
+        assertFalse(drawn().shows("7K3 M9X"));
     }
 
     @Test
@@ -156,19 +156,19 @@ class TestLobbyInviteController {
         input.tapEnter(this::update);
         assertInstanceOf(ControlMessage.RoomInviteSharing.class, sent.getLast());
         input.idle(this::update);
-        assertTrue(drawn().contains("Updating invite"));
+        assertTrue(drawn().shows("Updating invite"));
         assertTrue(session.accessPolicy().membersCanInvite());
         pump(new ControlMessage.RoomAccessState("instance", new RoomAccessPolicy(RoomAccessPolicy.Mode.PRIVATE, false), 1, 2));
         input.idle(this::update);
-        assertTrue(drawn().contains("Updating invite"));
+        assertTrue(drawn().shows("Updating invite"));
         pump(new ControlMessage.RoomInvite("7K3M9X", "instance", 1, 2, now.get() + 60_000, 0));
         input.idle(this::update);
-        assertTrue(drawn().contains("Invite updated"));
+        assertTrue(drawn().shows("Invite updated"));
         input.tapEnter(this::update);
         pump(new ControlMessage.RoomInviteRejected("7K3M9X secret endpoint password", 0));
         input.idle(this::update);
-        assertTrue(drawn().contains("Invite unavailable"));
-        assertFalse(drawn().contains("secret endpoint"));
+        assertTrue(drawn().shows("Invite unavailable"));
+        assertFalse(drawn().shows("secret endpoint"));
     }
 
     @Test
@@ -181,22 +181,22 @@ class TestLobbyInviteController {
         input.tapEnter(this::update);
         assertFalse(panel.isEditingText());
         assertInstanceOf(ControlMessage.RoomPasswordChange.class, sent.getLast());
-        assertTrue(drawn().contains("Changing password"));
+        assertTrue(drawn().shows("Changing password"));
         pump(new ControlMessage.RoomAccessState("instance", session.accessPolicy(), 2, 2));
         pump(new ControlMessage.RoomPasswordChanged(2));
         input.idle(this::update);
-        assertTrue(drawn().contains("Password changed"));
+        assertTrue(drawn().shows("Password changed"));
     }
 
     @Test
     void manualFallbackCopiesTheWholePinnedAddressAndStaysMasked() {
         String address = "HOST_IP:27900#" + "abcDEF_123-".repeat(9);
         open(true, true, address);
-        assertFalse(drawn().contains("HOST_IP"));
+        assertFalse(drawn().shows("HOST_IP"));
         input.tapDown(this::update);
         input.tapEnter(this::update);
         assertEquals(List.of(address), copied);
-        assertFalse(drawn().contains("HOST_IP"));
+        assertFalse(drawn().shows("HOST_IP"));
         panel.focusLost();
         assertFalse(panel.isEditingText());
     }
@@ -211,7 +211,7 @@ class TestLobbyInviteController {
         assertNull(session.invite());
         assertTrue(copied.isEmpty());
         input.idle(this::update);
-        assertFalse(drawn().contains("7K3 M9X"));
+        assertFalse(drawn().shows("7K3 M9X"));
     }
 
     @Test

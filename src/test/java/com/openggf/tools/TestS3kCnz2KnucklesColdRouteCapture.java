@@ -1,5 +1,6 @@
 package com.openggf.tools;
 
+import com.openggf.route.InputScriptCompiler;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.debug.playback.Bk2Movie;
@@ -23,6 +24,7 @@ import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -121,6 +123,7 @@ class TestS3kCnz2KnucklesColdRouteCapture {
                 "literal inverse preserves every original R5 row, including held/edge history");
     }
 
+    @Tag("exhaustive-audit")
     @Test
     @RequiresRom(SonicGame.SONIC_3K)
     void coldSoloKnucklesTraversesCapsuleAndReplaysTheReleasedIczHandoff() throws Exception {

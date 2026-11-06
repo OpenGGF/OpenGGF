@@ -18,6 +18,7 @@ final class ObjectCallbackRouter {
         }
     }
 
+    private final InitialObjectDispatchController initialDispatch;
     private final ObjectCallbackBoundary boundary;
     private final HostObjectKeyRegistry hostKeys;
     private final Supplier<String> scopedOwner;
@@ -28,7 +29,10 @@ final class ObjectCallbackRouter {
     private long[] bucketSnapshotKeys = new long[64];
     private int bucketSnapshotCount;
 
-    ObjectCallbackRouter(ObjectRegistry registry) {
+    ObjectCallbackRouter(ObjectRegistry registry) { this(registry, null); }
+
+    ObjectCallbackRouter(ObjectRegistry registry, InitialObjectDispatchController initialDispatch) {
+        this.initialDispatch = initialDispatch;
         hostKeys=HostObjectKeyRegistry.trusted(registry);
         Object candidate = registry instanceof Supplier<?> supplier ? supplier.get() : null;
         if (candidate instanceof java.util.Map.Entry<?, ?> entry
@@ -62,8 +66,11 @@ final class ObjectCallbackRouter {
     }
 
     <T> T call(ObjectInstance instance, Supplier<T> callback) {
+        var original = initialDispatch != null ? initialDispatch.currentReservation() : null;
         String owner = owners.get(instance);
-        return callWithOwner(owner, callback);
+        T result = callWithOwner(owner, callback);
+        InitialObjectDispatchController.requireCurrent(original);
+        return result;
     }
 
     private <T> T callWithOwner(String owner, Supplier<T> callback) {
@@ -98,11 +105,13 @@ final class ObjectCallbackRouter {
     }
 
     <T extends ObjectInstance> T construct(String owner, Supplier<T> factory) {
+        var original = initialDispatch != null ? initialDispatch.currentReservation() : null;
         String previous = currentOwner;
         currentOwner = owner;
         try {
             T instance = owner == null || boundary == null
                     ? factory.get() : boundary.call(owner, factory);
+            InitialObjectDispatchController.requireCurrent(original);
             if (instance != null) {
                 createdOwner.apply(instance);
                 if (owner == null) owners.remove(instance);
@@ -151,8 +160,9 @@ final class ObjectCallbackRouter {
     }
 
     void runAndUnregister(ObjectInstance instance, Runnable callback) {
+        var original = initialDispatch != null ? initialDispatch.currentReservation() : null;
         try { run(instance, callback); }
-        finally { owners.remove(instance); }
+        finally { if (original == null || original.ownsManager()) owners.remove(instance); }
     }
 
     void unregister(ObjectInstance instance) { owners.remove(instance); }

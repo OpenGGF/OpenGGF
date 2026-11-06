@@ -1,0 +1,10 @@
+# Official examples that still reference unmarked engine types (shrink-only).
+# TestOfficialModsSupportedSurface fails when a listed project builds clean or
+# an unlisted one does not; the creator-kit workflow and exported READMEs build
+# listed projects with --expert-legacy. Delete this file when it is empty.
+# See docs/architecture/designs/2026-11-01-supported-mod-consumption-design.md.
+infinite-sonic
+putt-putt-paradise
+sonic-survivors
+starpost-valley
+typing-of-the-hedgehog

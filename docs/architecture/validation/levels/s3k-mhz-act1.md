@@ -1,5 +1,12 @@
 # S3K Mushroom Hill Act 1 coverage matrix
 
+Routine selection update (2026-10-27): the reviewed full configuration products
+and long cold-campaign qualifications in the [local budget record](../../research/2026-10-27-local-validation-cost.md#thirty-minute-local-command-target)
+now require explicit `exhaustive-audit`. Short real contact, lifecycle and
+restore/forward witnesses remain routine. Historical qualification rows retain
+their original source/input scope; a current smoke pass does not renew deferred
+cold reachability, accumulated route state or every replay window.
+
 Canonical act `S3K_MUSHROOM_HILL_1`, ROM `$700`, engine zone 7 / act index 0.
 Incoming normal level entry; outgoing seamless MHZ2 (`$701`) with coordinate
 rebase, carried objects/resources and in-level title ownership. Status: integrated
@@ -30,6 +37,13 @@ implementation reviewed historically; current campaign act certification pending
 | PRESENT | `SwScrlMhzTest`, `TestS3kMhzPatternAnimation` and ROM-backed boss art tests; no native AnPal cycle is missing. User manually confirmed corrected miniboss explosions in the historical record. | Current captured moving gameplay, viewport edges and audio ownership. |
 | ROUTE | Prior component sequence reaches results and MHZ2. | Current representative real entry → mandatory mechanics → boss → next playable act; component transitions are insufficient. |
 | ORACLE | `mhz-analysis.md`, completion audit and focused correction records identify owning ROM routines and rejection evidence. | Current bounded regression evidence; respect stopped trace scope. |
+
+The carried-checkpoint follow-up (2026-11-04) adds
+`TestMhz1CutsceneReferenceClosure.parentRemovalDetachesDoorBeforeItsPendingDeletionIsProcessed`:
+parent removal must leave no captured door-to-button reference while child
+deletion is pending, and later child cleanup must be idempotent. This is a
+bounded lifetime/closure check; the wider restore/forward and configuration
+obligations in the table remain inherited.
 
 Historical follow-ups:
 [Miniboss lifetime](../2026-09-12-mhz1-boss-lifetime.md),
@@ -467,3 +481,200 @@ movement disagree; native backward loads keep the ROM borrow branch. The full
 route is requalified without changing the movie or supplying gameplay state.
 See the [repair and validation record](../../plans/2026-10-13-s3k-playable-completion.md#wide-route-coarse-camera-discontinuity--2026-10-17)
 for the matched baseline, causal controls, exact commands and remaining limits.
+
+## Miniboss flame palette — 2026-11-02
+
+`TestMhzBossObjects.mhzMinibossFlamesUsePaletteZeroInsteadOfBodyPalette`
+checks both child slots submit palette base 0, as `word_75E5E` specifies,
+while the body retains base 1. This local draw selection applies across
+viewport, donor and team configurations; native pixel comparison and complete
+route breadth remain inherited gaps. Flame graph restoration/forward replay
+is covered separately by `TestS3kMhzMinibossFlameGraphRewind`.
+The damage flash follow-up now uses the ROM four-colour table below.
+
+## Mushroom parachute landing correction — 2026-11-02
+
+`loc_3F678` calls `SonicKnux_DoLevelCollision` after copying the carried
+position and velocity. Terrain responses must survive until the next carry
+pass, where `sub_3F5C2` detects the velocity mismatch and `loc_3F660` releases
+the player with y velocity -$100. The focused parachute regression covers this
+ordering; full cold-route, viewport/donor breadth and carry/landing rewind
+remain inherited obligations rather than certification from this component check.
+
+## Miniboss damage flash — 2026-11-02
+
+`sub_75D80` / `sub_75DF4`, with `word_75E02` / `word_75E0A`, own the
+32-update line-1 flash at indices 7, 11, 13 and 14. The boss reads the
+counter before decrement, uses its bright row on even values and normal row
+on odd values, and restores collision after writing the final normal row.
+The normal row matches the original locked-on ROM's `Pal_MHZMiniboss` bytes.
+The shared boss flasher is unchanged; MHZ1 opts out of its update.
+
+`TestMhzMinibossPaletteFlash` checks natural hit admission, all 32 palette
+outputs, ownership, untouched palette entries, collision re-admission and
+missing-level timing. These are configuration-independent local contracts;
+native pixel and full donor/team/viewport route qualification remain inherited
+gaps. Existing encounter and flame graph checks remain separate.
+
+The mid-flash parent recreation case in
+`TestS3kMhzMinibossFlameGraphRewind` captures after five updates, forces fresh
+recreation, then compares all remaining 27 palette rows and the completion state.
+The cross-boss audit also corrected pre-decrement phase ownership in AIZ1 and
+both HCZ bosses; shared Sonic 1/2 flashing and other custom handlers are unchanged.
+
+Validation used queued Maven with `-Dmse=off` from task base
+`9b1fdf1dc4e388d5031d252d72907717991f99a7` plus the correction. Focused
+commands selected these classes with exact `-Dtest` selectors:
+
+- `TestMhzMinibossPaletteFlash,TestMhzBossObjects,TestS3kMhzMinibossFlameGraphRewind,TestAbstractBossPaletteOwnership,TestCnzMinibossPaletteOwnership,TestSonic2ArzBossPaletteFlash,TestSonic1FZBossDamageFlash`: 136 passed, zero skips.
+- `TestMhzMinibossPaletteFlash,TestS3kMhzMinibossFlameGraphRewind,TestMhzMinibossDefeat,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`: 69 passed, zero skips.
+- After the AIZ/HCZ phase correction, `TestMhzMinibossPaletteFlash,TestHczEndBossInstance,TestHczMinibossVisualParity,TestS3kAizMinibossGraphRewind,TestS3kHczEndBossGraphRewind,TestAizMinibossHistoryRewind`: 26 passed, zero skips.
+
+The latter two commands supplied the absolute original S3&K ROM path
+(`63522553` CRC32). Test totals overlap and are not summed. Tool preflight
+passed with `LUA_BIN=/usr/bin/lua5.4`. Focused behavior, collision and graph
+checks replace broad smoke for these local palette/timer owners; no shared
+algorithm, flasher, physics, fixture or selection policy changes. The source
+audit inspected all 18 S3K `AbstractBossInstance` subclasses: remaining owners
+use custom handlers, disable generic palette output or own their hit entry.
+This is bounded regression evidence, not an exhaustive native-pixel audit.
+
+Final HCZ collision/cleanup selection
+`TestHczMinibossRocketTouchRewind,TestHczMinibossWaterEffectCleanup,TestHczEndBossWaterColumnControlPolicy,TestS3kHczPaletteOwnershipMigrationGuard`
+passed 18 checks with zero skips using the same queued command shape and
+absolute original S3&K ROM path.
+
+## Music ownership follow-up (2026-11-02)
+
+The [cross-game music audit](../../audits/2026-11-02-music-transitions.md)
+records corrected native request IDs and/or level-restore selection affecting
+this route. Restoration selects the apparent playlist and P1 invincibility at
+the native boundary. These local checks do not requalify this matrix’s inherited
+route, viewport/donor/team, lifecycle or audible-comparison gaps.
+
+## Shared reload frame ownership (2026-11-03)
+
+`TestS3kActTransitionFrameOwnership` adds a positioned Act 1 → Act 2 reload,
+then steps the next production gameplay row and repeats it after two restores.
+It checks oscillator advancement and the captured object, sprite and level owners;
+the frame-boundary reload must not publish a second in-frame rewind marker.
+CNZ/LBZ also retain direct in-frame transition-owned oscillator marker controls.
+The seven shared cases passed in the focused run; this does not qualify cold
+reachability, live rewind-floor recording, other configurations or complete routes.
+Those inherited obligations remain open. See the
+[shared ownership design](../../designs/2026-11-03-seamless-request-retargeting.md).
+
+## Run-segment sanctuary camera blocker (2026-11-05)
+
+Four recorded MHZ fronts enter the Super Emerald sanctuary (`$1701`) before
+reporting their first error. The reused complete wave8 baseline, whose runtime
+and fixture inputs match `038296e2`, records these grouped reports:
+
+| Replay class suffix | First error row | Grouped errors | Camera Y, ROM / engine |
+| --- | ---: | ---: | --- |
+| SonicTailsMhz | 1276 | 12 | `$0326 / $0240` |
+| SonicTailsMhz4 | 1021 | 12 | `$0326 / $0240` |
+| SonicTailsMhz7 | 2107 | 12 | `$0326 / $0240` |
+| TailsFullChainMhz | 1389 | 11 | `$0326 / $0240` |
+
+Names expand to `TestS3k<suffix>SegmentTraceReplay`; these are r7 tests. The
+Sonic+Tails duplicates in the segment profile were not rerun. Their archived
+zone/act observations already identify the destination as zone `$17`, act 1.
+This is not evidence of a common MHZ screen-event error across all fourteen
+MHZ subsegments. The other ten first diverge earlier in player/sidekick state,
+animation, or camera X/Y and remain independent investigation fronts. The long
+zone-slice ring-loss frontier was not investigated.
+
+The native boundaries are distinct. `Get_LevelSizeStart` installs the sanctuary
+maximum Y `$0320` and `loc_1BF9C (sonic3k.asm:38305-38312)` clamps the start
+body's `$03AC - $60` to it. The following fresh-load
+`DeformBgLayer (sonic3k.asm:38320-38362)` calls `MoveCameraX/MoveCameraY` before
+`LevelSetup`. Grounded movement adds six pixels; at
+`loc_1C202 (sonic3k.asm:38601-38613)` the initial wrap word `$FFFF + 1` becomes
+zero, so subtraction does not borrow and the result remains `$0326`. This is
+the shipped behavior. The separate special-stage results path
+`loc_2E16C (sonic3k.asm:63184-63225)` explicitly installs `$0240` and selects
+camera X from the completed stage.
+
+One ROM-backed boundary observer on unchanged production source executed
+`InitCamera` and observed native `$15A0/$0320` overwritten to
+`$15A0/$0240`, including the render copies. Its checkpoint-context bypass
+retained `$0320`. Results reentry stage 2 selected `$1600/$0240` with matching
+copies, and the carried X fraction `$A400` survived both branches. Calling the
+existing ordinary camera movement owner at the native start still produced
+`$0320`, with maximum `$0320`. The observer passed 1 test with no failures,
+errors or skips; it was removed after archiving its source and complete output.
+
+A separate final-camera discriminator kept the native expectation `$0326` and
+failed against `$0240` (1 test, 1 failure, no errors or skips). This must not be
+replaced with an expectation of `$0320`: that value certifies only the earlier
+`Get_LevelSizeStart` boundary. Both checks used the queued ordinary selection,
+Java 25, surfaceless EGL and explicit original S3&K ROM input.
+
+The initial C2 investigation held its proposed profile-only restriction because
+preserving `$0320` alone could not close the final-camera gate. Production and
+permanent tests were unchanged in that earlier documentation-only delivery.
+The following authorized shared-camera work supersedes that held state.
+
+### Native initial movement follow-up (2026-11-05)
+
+The internal `NativeCameraInitialization` entry reuses ordinary movement with the
+call-local pre-setup `$FFFF` mask semantics. It neither changes destination bounds
+nor leaves a pending camera mode for gameplay/rewind. `initCameraStep` invokes it
+immediately after `Get_LevelSizeStart` for admitted stock fresh Level assembly;
+results retains its separate override. Initial copies are published for the
+following setup consumers, as `LevelSetup (sonic3k.asm:102254-102255)` does.
+Preview, decode, restoration and authored non-stock identity acquire no initial
+movement. `prepareInitialLevelScroll` remains parallax-only, avoiding a second move.
+
+An executed rejected placement put movement only in the later preparation hook:
+the native final discriminator returned `$0320` and a real synchronous fresh
+load observed zero movement calls. Both synchronous and resumable loads share
+`InitCamera`, so this earlier owner is required. The retained implementation has
+no fixture selectors, fitted `$326` write, bootstrap compensation, global clamp
+relaxation or gameplay/object/timer tick.
+
+The corrected existing ROM-backed load pin first failed `$0326/$0240` on
+`eeabd00a7b838e361922ff0449fffff45b134051`. After the shared sequence correction,
+it passes alongside explicit `$0320` pre-movement, ordinary clamp, `$1600/$0240`
+results-stage-2 plus `$A400` fraction, checkpoint bypass, lock, airborne/grounded,
+wrap and once-only fresh-load controls. Two full-registry restores replay the
+ordinary clamp without rearming initial movement. These controls do not certify
+all routes, widths or donor/team products.
+
+Five bounded matched-source/input replays exported every actual completed
+`FrameComparison` using the same comparison-only observer. The base observation
+reproduced the archived unobserved grouped results. Candidate data has identical
+row/field coverage and zero added ERROR tuples, including on baseline-clean rows.
+Each targeted shrine camera tuple is removed exactly once:
+
+| Replay suffix | Row | Actual raw errors before → after | Grouped errors before → after |
+| --- | ---: | ---: | ---: |
+| SonicTailsMhz | 1276 | 14 → 13 | 12 → 11 |
+| SonicTailsMhz4 | 1021 | 14 → 13 | 12 → 11 |
+| SonicTailsMhz7 | 2107 | 14 → 13 | 12 → 11 |
+| TailsFullChainMhz | 1389 | 13 → 12 | 11 → 10 |
+
+All four remain red at those same rows: `routine` expects `$0000`, engine `$0002`.
+The other existing entry-row mismatches are unchanged. No suffix is newly
+compared: common row counts are respectively 1265/1010/2096/1378, with no unmatched
+rows. The bounded MHZ3 sibling retains all 7041 actual ERROR tuples across 1249
+rows, 144 groups, first row914 camera Y `$060A/$0609`. It is an unrelated stopped
+camera/physics frontier, not authority for a global parity expansion. The other
+nine earlier MHZ first fronts were not rerun or attributed to this repair. No
+grouped span was expanded into guessed raw errors; fixtures and producer inputs
+remain unchanged. Broad combined-profile/shared-code validation belongs to the
+integration lead. Existing route/configuration and native-pixel gaps remain open.
+
+Final bounded verification on the scoped `eeabd00a7` candidate uses Java25,
+surfaceless EGL, all seven absolute original ROM properties, one alphabetical
+fork and the repository queue wrapper. The explicitly selected ordinary17-class
+run passes153 cases, zero skips, including all four required AIZ/load/bootstrap/
+decoder keepgreens. Eight targeted guard classes pass59 cases, zero skips,
+including the unchanged mod API surface, rewind coverage, headless isolation and
+hardware-timing authority. A final unobserved `trace-segments` eight-class run
+reproduces the five observed MHZ outcomes exactly; S1 GHZ1, S2 EHZ1 and KiS2 EHZ1
+pass their unchanged input controls (8 tests,5 existing failures,0 errors/skips).
+The comparison-only exporter is restored byte-for-byte; neither replay input nor
+protected bootstrap changes. This bounded pass is not broad smoke or full-suite
+qualification. The integration lead owns the remaining shared-code sweep.

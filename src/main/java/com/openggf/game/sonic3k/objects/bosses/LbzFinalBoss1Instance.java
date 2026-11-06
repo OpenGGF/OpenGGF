@@ -61,14 +61,14 @@ import java.util.logging.Logger;
 /**
  * LBZ2 Robotnik ship + hanging laser turret boss.
  *
- * <p>ROM: {@code Obj_LBZFinalBoss1} at {@code sonic3k.asm:152001}. The ship
+ * <p>ROM: {@code Obj_LBZFinalBoss1} at {@code sonic3k.asm:152006}. The ship
  * docks above a three-segment turret column whose laser heads sweep an arc
  * and fire horizontal bolts; an orbiting spiked pod circles the assembly.
  * The Sonic/Tails defeat branch runs the full Death Egg launch finale through
  * the results tally, auto-walk, look-up, and the MHZ transition.
  */
 public final class LbzFinalBoss1Instance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseAttackable, SpawnRewindRecreatable, ObjectVisualFacing.Source {
+        implements TouchResponseProvider, TouchResponseAttackable, SpawnRewindRecreatable, ObjectVisualFacing.Source, com.openggf.level.objects.boss.InstagibBossTarget {
     @Override public ObjectVisualFacing.Basis nativeFacing() {
         // The native side selector mirrors the left-facing encounter basis toward the player on the other side.
         return renderXFlip ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT;
@@ -620,7 +620,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         invulnerabilityTimer = 0;
         // The remaining (bottom) segment detaches.
         flags |= 1 << detachCount;
-        spawnChild(() -> new ExplosionShowerChild(this, getCentreX(), getCentreY(), 4));
+        spawnChild(() -> new ExplosionShowerChild(getCentreX(), getCentreY(), 4));
         if (currentPlayerCharacter() == PlayerCharacter.KNUCKLES) {
             finalePhase = FinalePhase.KNUCKLES_HANDOFF;
         } else {
@@ -777,7 +777,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         }
         int levelMusicId = services().getCurrentLevelMusicId();
         if (levelMusicId >= 0) {
-            services().playMusic(levelMusicId);
+            services().playMusic(com.openggf.game.sonic3k.audio.S3kLevelMusicRestore.resolve(services(), levelMusicId));
         }
         // ROM: Load_PLC_Raw PLC_BossExplosion happens with the music restore.
         loadBossExplosionPlcRaw();
@@ -1443,6 +1443,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         private RobotnikHeadChild(ObjectSpawn spawn) { super(spawn, "LBZFinalBoss1RobotnikHead"); }
         private int animTimer;
         private int rawFrame;
+        private boolean headArtInitialized;
 
         private RobotnikHeadChild(LbzFinalBoss1Instance boss) {
             super(boss, "LBZFinalBoss1RobotnikHead", 0, -0x1C);
@@ -1458,6 +1459,25 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
             if (boss.isDestroyed()) {
                 ObjectLifetimeOps.expireDynamic(this);
                 return;
+            }
+            if (!headArtInitialized) {
+                headArtInitialized = true;
+                // Obj_RobotnikHead3Init -> sub_67B14 submits once, with no
+                // readiness wait (sonic3k.asm:136252-136259, 136125-136132).
+                // Completion belongs to the global queue, beyond this SST's life.
+                var main = boss.services().playerQuery().mainPlayerOrNull();
+                if (main instanceof AbstractPlayableSprite sprite
+                        && com.openggf.game.CharacterKey.KNUCKLES.equals(sprite.characterKey())) {
+                    try {
+                        if (!S3kRuntimeArtCoordinator.queueGlobalPatternModule(boss.services(),
+                                Sonic3kConstants.ART_KOSM_EGG_ROBO_HEAD_ADDR,
+                                Sonic3kConstants.ART_TILE_ROBOTNIK_SHIP * 32)) {
+                            throw new IllegalStateException("LBZ EggRobo head module FIFO is full");
+                        }
+                    } catch (IOException failure) {
+                        throw new java.io.UncheckedIOException("Unable to submit LBZ EggRobo head art", failure);
+                    }
+                }
             }
             // The head rides the defeated ship down (frame 3), no auto-delete.
             refreshFromBoss();
@@ -1589,7 +1609,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
                 spawnCurrentChild(
                         () -> new DebrisChild(boss, debrisX, debrisY, debrisXVel, debrisYVel, frame));
             }
-            spawnCurrentChild(() -> new ExplosionShowerChild(boss, x, y, 0));
+            spawnCurrentChild(() -> new ExplosionShowerChild(x, y, 0));
         }
 
         public int getDyForTest() {
@@ -1716,7 +1736,14 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         /** byte_73849: charge anim frames at delay 0. */
         private static final int[] CHARGE_FRAMES = {0x17, 0x17, 0x18, 0x19, 0x1A, 0x1B};
 
+        /**
+         * parent3 until loc_732BA: the fired bolt never reads it again. Dropped earlier
+         * when the head retires, so no stage keeps a reference to a retired object.
+         */
         private LaserHeadChild head;
+        /** The parent3 position Refresh_ChildPositionAdjusted last read from the head. */
+        private int headX;
+        private int headY;
         private boolean fireFlip;
         private boolean detachedChainAtCreation;
         private int countdownTimer;
@@ -1731,6 +1758,8 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         private MuzzleLaserChild(LbzFinalBoss1Instance boss, LaserHeadChild head, int dx, int dy, boolean fireFlip) {
             super(boss, "LBZFinalBoss1MuzzleLaser", dx, dy);
             this.head = head;
+            this.headX = head.getX();
+            this.headY = head.getY();
             this.fireFlip = fireFlip;
             this.detachedChainAtCreation = (boss.flags & FLAG_DETACH_TOP) != 0
                     && (boss.statusBits & STATUS_HIT_SHIFT) == 0;
@@ -1764,11 +1793,28 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         }
 
         private void updateCharging() {
+            if (head != null && head.isDestroyed()) {
+                if (chargeIndex < 0 && !blinking) {
+                    // loc_73232: btst #7,status(parent3) / bne loc_7326A deletes the
+                    // counting-down muzzle. The engine retires the head where
+                    // Child_Draw_Sprite_FlickerMove sets that bit on a detached segment.
+                    ObjectLifetimeOps.expireDynamic(this);
+                    return;
+                }
+                // loc_73270 / loc_732A8 keep reading parent3 without that test. The
+                // ROM head is now Obj_FlickerMove debris, which the engine does not
+                // model; the muzzle holds the head's last position instead.
+                head = null;
+            }
+            if (head != null) {
+                headX = head.getX();
+                headY = head.getY();
+            }
             if (chargeIndex >= 0) {
                 // loc_732A8 refreshes the parent-relative position before
                 // every Animate_Raw dispatch, including the callback that fires.
-                x = (head.getX() + dx) & 0xFFFF;
-                y = (head.getY() + dy) & 0xFFFF;
+                x = (headX + dx) & 0xFFFF;
+                y = (headY + dy) & 0xFFFF;
                 // Charge anim, delay 0: one frame per entry, then fire.
                 chargeIndex++;
                 if (chargeIndex >= CHARGE_FRAMES.length) {
@@ -1778,8 +1824,8 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
                 mappingFrame = CHARGE_FRAMES[chargeIndex];
                 return;
             }
-            x = (head.getX() + dx) & 0xFFFF;
-            y = (head.getY() + dy) & 0xFFFF;
+            x = (headX + dx) & 0xFFFF;
+            y = (headY + dy) & 0xFFFF;
             if (!blinking) {
                 if (--countdownTimer < 0) {
                     countdownTimer = countdownStep--;
@@ -1803,6 +1849,8 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         /** ROM loc_732BA. */
         private void fire() {
             fired = true;
+            // loc_732F6 (MoveSprite2, Sprite_CheckDeleteTouch) never reads parent3 again.
+            head = null;
             collisionFlags = 0x9C;
             mappingFrame = 0x11;
             visible = true;
@@ -2110,21 +2158,36 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
     }
 
     /** Child6_CreateBossExplosion wrapper (subtype 0/4/$C parameter sets). */
-    public static final class ExplosionShowerChild extends BossChild {
+    public static final class ExplosionShowerChild extends AbstractObjectInstance implements SpawnRewindRecreatable {
 
         private ExplosionShowerChild(ObjectSpawn spawn) { super(spawn, "LBZFinalBoss1ExplosionShower"); }
+
+        @Override
+        public com.openggf.game.mutators.ObjectHeadRole headPresentationRole() {
+            return com.openggf.game.mutators.ObjectHeadRole.BOSS;
+        }
         private transient S3kBossExplosionController controller;
         private final com.openggf.game.rewind.RewindStateful<?> controllerRewind =
                 com.openggf.game.sonic3k.objects.S3kBossExplosionInternalAccess.rewindState(
                         () -> controller, value -> controller = value, () -> services().rng());
 
-        private ExplosionShowerChild(LbzFinalBoss1Instance boss, int x, int y, int subtype) {
-            super(boss, "LBZFinalBoss1ExplosionShower", 0, 0);
-            this.x = x & 0xFFFF;
-            this.y = y & 0xFFFF;
-            this.visible = false;
-            this.controller = new S3kBossExplosionController(this.x, this.y, subtype, boss.services().rng());
+        private ExplosionShowerChild(int x, int y, int subtype) {
+            // The native explosion controller owns copied coordinates and continues
+            // after the phase-one boss deletes itself during the Knuckles handoff.
+            // It therefore has no structural boss reference to retain across rewind.
+            super(new ObjectSpawn(x & 0xFFFF, y & 0xFFFF, OBJECT_ID, 0, 0, false, 0),
+                    "LBZFinalBoss1ExplosionShower");
+            this.controller = new S3kBossExplosionController(x & 0xFFFF, y & 0xFFFF, subtype, services().rng());
         }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) { }
+
+        @Override
+        public boolean isHighPriority() { return false; }
+
+        @Override
+        public int getPriorityBucket() { return 4; }
 
         @Override
         public void update(int vIntRunCount, PlayableEntity player) {
@@ -2135,9 +2198,9 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
             controller.tick();
             for (S3kBossExplosionController.PendingExplosion pending : controller.drainPendingExplosions()) {
                 if (pending.playSfx()) {
-                    boss.services().playSfx(Sonic3kSfx.EXPLODE.id);
+                    services().playSfx(Sonic3kSfx.EXPLODE.id);
                 }
-                spawnCurrentChild(() -> new S3kBossExplosionChild(pending.x(), pending.y()));
+                spawnChild(() -> new S3kBossExplosionChild(pending.x(), pending.y()));
             }
         }
     }
@@ -2357,7 +2420,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
             // ROM loc_72D92 creates this controller with CreateChild1_Normal
             // from the flame that just finished its stream.
             spawnCurrentChild(
-                    () -> new ExplosionShowerChild(boss, EXPLOSION_X, EXPLOSION_Y, 0x0C));
+                    () -> new ExplosionShowerChild(EXPLOSION_X, EXPLOSION_Y, 0x0C));
             if (subtype == 0) {
                 boss.spawnFreeChild(() -> new ExplosionSequencerChild(boss));
             }
@@ -2575,4 +2638,6 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
             }
         }
     }
+    /** Instagib: the next native hit becomes the defeating one; phases and defeat stay native. */
+    @Override public void collapseToFinalHit() { if (hp > 1) hp = 1; }
 }

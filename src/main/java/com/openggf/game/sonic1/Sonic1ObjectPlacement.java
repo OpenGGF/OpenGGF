@@ -1,5 +1,7 @@
 package com.openggf.game.sonic1;
 
+import static com.openggf.game.sonic1.Sonic1RomProfile.resolve;
+
 import com.openggf.data.RomByteReader;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.level.objects.ObjectSpawn;
@@ -50,7 +52,7 @@ public class Sonic1ObjectPlacement {
      *         column), immutable list of object spawns
      */
     public List<ObjectSpawn> load(int zone, int act) {
-        int baseAddr = Sonic1Constants.OBJ_POS_INDEX_ADDR;
+        int baseAddr = resolve(rom, Sonic1Constants.OBJ_POS_INDEX_ADDR);
         int indexOffset = (zone * ACT_SLOTS_PER_ZONE + act) * BYTES_PER_ACT_ENTRY;
         int listOffset = rom.readU16BE(baseAddr + indexOffset);
         int listAddr = baseAddr + listOffset;
@@ -94,26 +96,26 @@ public class Sonic1ObjectPlacement {
     }
 
     public int[][] loadLzPlatformChildren(int slotIndex) {
-        return loadPlatformChildren(Sonic1Constants.OBJ_POS_LZ_PLATFORM_INDEX_ADDR, slotIndex);
+        return loadPlatformChildren(resolve(rom, Sonic1Constants.OBJ_POS_LZ_PLATFORM_INDEX_ADDR), slotIndex);
     }
 
     public int[][] loadSbzPlatformChildren(int slotIndex) {
-        return loadPlatformChildren(Sonic1Constants.OBJ_POS_SBZ_PLATFORM_INDEX_ADDR, slotIndex);
+        return loadPlatformChildren(resolve(rom, Sonic1Constants.OBJ_POS_SBZ_PLATFORM_INDEX_ADDR), slotIndex);
     }
 
     public ConveyorPathData loadLzConveyorPath(int pathIndex) {
-        return loadConveyorPath(Sonic1Constants.LZ_CONVEYOR_PATH_TABLE_ADDR, pathIndex);
+        return loadConveyorPath(resolve(rom, Sonic1Constants.LZ_CONVEYOR_PATH_TABLE_ADDR), pathIndex);
     }
 
     public ConveyorPathData loadSbzSpinConveyorPath(int pathIndex) {
-        return loadConveyorPath(Sonic1Constants.SBZ_SPIN_CONVEYOR_PATH_TABLE_ADDR, pathIndex);
+        return loadConveyorPath(resolve(rom, Sonic1Constants.SBZ_SPIN_CONVEYOR_PATH_TABLE_ADDR), pathIndex);
     }
 
     private int[][] loadPlatformChildren(int tableAddr, int slotIndex) {
         if (slotIndex < 0 || slotIndex >= 8) {
             return null;
         }
-        int baseAddr = Sonic1Constants.OBJ_POS_INDEX_ADDR;
+        int baseAddr = resolve(rom, Sonic1Constants.OBJ_POS_INDEX_ADDR);
         int listOffset = rom.readU16BE(tableAddr + slotIndex * 2);
         int cursor = baseAddr + listOffset;
         int count = rom.readU16BE(cursor) + 1;

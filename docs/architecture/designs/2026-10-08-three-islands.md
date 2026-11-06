@@ -117,7 +117,10 @@ points, every boss, the map, village, shop, menu, story, battle menus, results, 
 ending. Raw captures were working material and are not kept.
 
 Not covered: a full unassisted playthrough to the ending at real speed, real-device audio
-latency, the native build (code mods do not load there) and the full engine suite.
+latency, the native build and the full engine suite. Native builds rejected code
+mods at this qualification date; the
+[2026-10-27 native promotion](../research/2026-10-08-graalvm-native-mod-feasibility.md#default-native-promotion-2026-10-27)
+removed that restriction, but did not qualify this example's full campaign.
 
 ## 2026-10-09: exploration and narrative revision
 

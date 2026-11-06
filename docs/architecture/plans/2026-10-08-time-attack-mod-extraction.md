@@ -10,7 +10,9 @@ Date: 2026-10-08. Line: 0.8 (`next`, after the develop sync merge). Supersedes t
   separate server artifact; in-process LAN hosting rewritten on the JDK so it can live in the mod.
 - The mod is **bundled and enabled by default** through a build-pinned trust manifest. It is validated
   like any other mod and the player can disable it.
-- Racing is **JVM-only**. Native builds reject code mods today; Time Attack never shipped on master.
+- Racing was initially **JVM-only** because native builds rejected code mods.
+  The [2026-10-27 native promotion](../research/2026-10-08-graalvm-native-mod-feasibility.md#default-native-promotion-2026-10-27)
+  supersedes that restriction: default native packages also bundle Time Attack.
 
 ## Review inputs and what they changed
 

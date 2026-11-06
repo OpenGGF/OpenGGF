@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.titlescreen;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.data.Rom;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 
@@ -31,7 +33,7 @@ public final class TitleScreenCopyrightText {
      * Reads the {@code CopyrightText} plane-map words from the ROM.
      */
     public static int[] readWords(Rom rom) throws IOException {
-        byte[] bytes = rom.readBytes(Sonic2Constants.TITLE_COPYRIGHT_TEXT_ADDR,
+        byte[] bytes = rom.readBytes(address(rom, Sonic2Constants.TITLE_COPYRIGHT_TEXT_ADDR),
                 Sonic2Constants.TITLE_COPYRIGHT_TEXT_WORDS * 2);
         int[] words = new int[Sonic2Constants.TITLE_COPYRIGHT_TEXT_WORDS];
         for (int i = 0; i < words.length; i++) {

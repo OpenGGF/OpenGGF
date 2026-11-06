@@ -50,11 +50,16 @@ range and factory outputs are bounded. Slider maxima/defaults must lie on the
 minimum-plus-step lattice. Checkbox values are booleans; choice values are declared
 stable tokens. No implicit scope inheritance or creator-specific widget is needed.
 
-The common screen draws on the native 320-pixel grid. Row labels fit about 30
-compact characters. The mutator description and each option's help appear in a
-two-line detail box of 46 columns, wrapped on whole words; anything longer ends
-with an ellipsis. Write help as one or two short sentences, as `Gravity.java`
-and `Stealth.java` do, and check them on the options page.
+The common screen uses the host menu's gold header and focus frame, on/off
+switches, cyan slider tracks and binding-aware key-cap footer on the native
+320-pixel grid (also supporting a 400-pixel viewport). Row labels fit about 30
+compact characters; slider rows reserve room for their track and numeric value.
+Status tags distinguish unavailable and pending edits; lifecycle guidance names
+the boundary that applies them. The mutator description and each option's help
+appear in a two-line description box of 47 columns at 320 pixels, wrapped on
+whole words; anything longer ends with an ellipsis. Write help as one or two
+short sentences, as `Gravity.java` and `Stealth.java` do, and check them on the
+options page.
 
 ## Admit settings at a real boundary
 
@@ -120,7 +125,9 @@ plan before slot allocation (`Ringfall(percent, hardCap, true)` lifts the native
 are slotless Obj37 continuations rather than claimed SST slots); the monitor/ring/checkpoint filters decide admission
 without reindexing native placements; stage-entry permits retain an already
 captured transition; Game Speed schedules complete presentation-loop ticks; and
-Violent Explosions amplifies only the resolved native badnik rebound. Big Head
+Violent Explosions amplifies only the resolved native badnik rebound;
+`HomingAttack(mode, characters)` steers the admitted leader's native roll at a live
+target, leaving contact, breakage and defeat to the native owners. Big Head
 composes reviewed anatomical masks after native SAT admission, with native
 fallbacks for ball, fully obscured, donor/custom and unreviewed poses. Do not scale the
 entire player quad or use `setHidden` to fake an appearance-only effect.
@@ -169,6 +176,11 @@ unavailable.
 with `GameServiceBundle.builder().gameplayObserver(localKey, observer)`; the same
 instance must implement `RewindSnapshottable`. The host aggregates verified
 observers from successive patches instead of replacing earlier observers.
+Observers can register without mutator definitions or a supported mutator profile.
+They still receive presentation, tick and boundary callbacks, participate in rewind,
+and receive one cleanup attempt when their world retires. Observer-only worlds do
+not create mutator preference files. Retirement releases the published world even
+when an observer's cleanup throws.
 `GameplayObservation` copies player, input, clock and phase values. It exposes no
 mutable gameplay managers, and observing a native tick does not replace it.
 

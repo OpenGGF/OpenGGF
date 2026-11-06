@@ -17,6 +17,8 @@ import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.level.Palette;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
@@ -138,7 +140,6 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
     private boolean defeatHandoffQueued;
     private boolean defeatWaitArmed;
     private final int[] savedFlashSegaWords = new int[FLASH_INDICES.length];
-    private S3kBossExplosionController defeatExplosionController;
     private DrillArmChild leftArm;
     private DrillArmChild rightArm;
 
@@ -180,7 +181,6 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
         flashColorsSaved = false;
         defeatHandoffQueued = false;
         defeatWaitArmed = false;
-        defeatExplosionController = null;
     }
 
     @Override
@@ -376,30 +376,20 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
     }
 
     private void updateDefeated(int vIntRunCount) {
-        if (defeatExplosionController != null && !defeatExplosionController.isFinished()) {
-            defeatExplosionController.tick();
-            ObjectManager objectManager = services().objectManager();
-            if (objectManager != null) {
-                for (var pending : defeatExplosionController.drainPendingExplosions()) {
-                    if (pending.playSfx()) {
-                        services().playSfx(Sonic3kSfx.EXPLODE.id);
-                    }
-                    objectManager.addDynamicObjectAfterCurrent(new S3kBossExplosionChild(pending.x(), pending.y()));
-                }
-            }
-        }
-
-        // The final hit changes the object's code pointer during the player
-        // touch pass. The ROM boss slot has already executed for that frame,
-        // so Wait_FadeToLevelMusic cannot consume $2E until the next pass.
+        // TunnelbotMiniboss_CheckHitOrDefeat (sonic3k.asm:185352-185360)
+        // consumes the touch-recorded final hit in this boss's own SST.
+        // Install its helpers here and leave the fresh $3F wait untouched
+        // until the next pass, when Wait_FadeToLevelMusic first dispatches.
         if (!defeatWaitArmed) {
             defeatWaitArmed = true;
+            // TunnelbotMiniboss_StartDefeat (sonic3k.asm:185383-185389) uses global
+            // AllocateObject for the camera helper.
+            // TunnelbotMiniboss_CreateExplosion (sonic3k.asm:185391-185394)
+            // uses CreateChild1_Normal after this boss for the independent explosion controller.
+            spawnFreeChild(() -> new MgzBossCameraScrollHelper(ARENA_LOCK_X));
+            spawnChildAfterSlot(getSlotIndex(), () -> new MgzMinibossExplosionController(state.x, state.y));
         } else if (!defeatHandoffQueued && --routineTimer < 0) {
             queuePostDefeatFlow();
-        }
-
-        if (defeatHandoffQueued && (defeatExplosionController == null || defeatExplosionController.isFinished())) {
-            setDestroyed(true);
         }
     }
 
@@ -494,7 +484,7 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
     }
 
     private void spawnMinibossMusicTransition() {
-        spawnChild(() -> new SongFadeTransitionInstance(MINIBOSS_MUSIC_FADE_TIME, Sonic3kMusic.MINIBOSS.id));
+        spawnFreeChild(() -> new SongFadeTransitionInstance(MINIBOSS_MUSIC_FADE_TIME, Sonic3kMusic.MINIBOSS_S3.id));
     }
 
     private void ensureSupportArtReady() {
@@ -549,15 +539,6 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
         }
     }
 
-    private void destroyArms() {
-        if (leftArm != null) {
-            leftArm.setDestroyed(true);
-        }
-        if (rightArm != null) {
-            rightArm.setDestroyed(true);
-        }
-    }
-
     private void spawnCeilingDebris() {
         var camera = services().camera();
         if (camera == null) {
@@ -576,10 +557,10 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
         }
     }
 
-    private void spawnDefeatFragments() {
+    private void spawnDefeatFragments(S3kBossDefeatSignpostFlow flow) {
         for (int i = 0; i < DEFEAT_FRAMES.length; i++) {
             int index = i;
-            spawnChild(() -> new DefeatFragmentChild(
+            flow.spawnHandoffChild(() -> new DefeatFragmentChild(
                     state.x + DEFEAT_X_OFFSETS[index],
                     state.y + DEFEAT_Y_OFFSETS[index],
                     DEFEAT_FRAMES[index],
@@ -690,15 +671,21 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
 
         int levelMusicId = services().getCurrentLevelMusicId();
         if (levelMusicId > 0) {
-            spawnChild(() -> new SongFadeTransitionInstance(LEVEL_MUSIC_FADE_TIME, levelMusicId));
+            spawnFreeChild(() -> SongFadeTransitionInstance.toLevelMusic(levelMusicId));
         }
-        // ROM: Obj_EndSignControlDoSign spawns the signpost via CreateChild6_Simple,
-        // inheriting the control object's x_pos — the miniboss's X at the moment of
-        // defeat, not the camera lock point.
-        int signpostX = state.x;
-        spawnChild(() -> new S3kBossDefeatSignpostFlow(
-                signpostX, services().currentAct(), S3kBossDefeatSignpostFlow.CleanupAction.NONE,
+        // loc_887CA (sonic3k.asm:185107-185110) changes this SAME SST to
+        // EndSignControl, then creates the five debris children after it.
+        // The independently allocated explosion controller remains live.
+        var retainedHeader = S3kChildDrawParentHeader.fromBoss(this);
+        int slot = ObjectLifetimeOps.detachSlotForTransfer(this);
+        ObjectLifetimeOps.deleteNoRespawn(this);
+        var flow = ObjectConstructionContext.construct(services(), () -> new S3kBossDefeatSignpostFlow(
+                state.x, services().currentAct(), S3kBossDefeatSignpostFlow.CleanupAction.NONE,
                 0, 0, 1));
+        ObjectLifetimeOps.addReplacementAtTransferredSlot(services().objectManager(), flow, slot);
+        flow.retainChildDrawHeader(retainedHeader);
+        flow.beginNativeReplacement(slot);
+        spawnDefeatFragments(flow);
     }
 
     private static int segaWordFromColor(Palette.Color color) {
@@ -785,19 +772,15 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
     protected void onDefeatStarted() {
         restoreFlashColors();
         clearScreenShake();
-        destroyArms();
+        // TunnelbotMiniboss_HitboxChild_Main (sonic3k.asm:185129-185140)
+        // retires each arm in its own SST. Keep those slots occupied while
+        // this boss's defeat dispatch allocates its independent helpers.
         state.invulnerable = false;
         state.invulnerabilityTimer = 0;
         state.routine = ROUTINE_DEFEATED;
         upsideDown = false;
         routineTimer = DEFEAT_WAIT_TIME;
         defeatWaitArmed = false;
-        defeatExplosionController = new S3kBossExplosionController(state.x, state.y, 0, services().rng());
-        spawnDefeatFragments();
-        // sub_88AB4 allocates loc_887DA immediately when the final hit is
-        // consumed. Its later SST slot advances Camera_X_pos once during the
-        // same ExecuteObjects pass, independently of the delayed sign flow.
-        spawnChild(() -> new MgzBossCameraScrollHelper(ARENA_LOCK_X));
     }
 
     @Override

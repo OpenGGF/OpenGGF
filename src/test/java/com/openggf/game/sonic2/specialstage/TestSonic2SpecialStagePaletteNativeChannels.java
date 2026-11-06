@@ -2,6 +2,7 @@ package com.openggf.game.sonic2.specialstage;
 
 import org.junit.jupiter.api.Test;
 import com.openggf.data.Rom;
+import com.openggf.data.RomByteReader;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -50,23 +51,27 @@ class TestSonic2SpecialStagePaletteNativeChannels {
 
     @Test
     void absentOrShortSessionRomDataFailsInsteadOfSubstitutingGreyOrStaleColours() throws Exception {
-        Rom unavailable = mock(Rom.class);
-        when(unavailable.readBytes(anyLong(), anyInt())).thenThrow(new IOException("ROM unavailable"));
+        Rom unavailable = openPaletteFixture();
+        doThrow(new IOException("ROM unavailable")).when(unavailable).readBytes(anyLong(), anyInt());
         var loader = new Sonic2SpecialStageDataLoader(unavailable);
         assertThrows(UncheckedIOException.class, () -> loader.getPalettes(0));
         assertThrows(UncheckedIOException.class, () -> loader.getEmeraldColors(0));
-        Rom shortRom = mock(Rom.class);
-        when(shortRom.readBytes(anyLong(), anyInt())).thenReturn(new byte[31]);
+        Rom shortRom = openPaletteFixture();
+        doReturn(new byte[31]).when(shortRom).readBytes(anyLong(), anyInt());
         assertThrows(UncheckedIOException.class,
                 () -> new Sonic2SpecialStageDataLoader(shortRom).getPalettes(0));
     }
 
     private static Rom paletteRom(int main, int stage, int emerald) throws Exception {
-        Rom rom = mock(Rom.class);
-        when(rom.readBytes(0x3162L, 96)).thenReturn(words(48, main));
-        when(rom.readBytes(0x3202L, 32)).thenReturn(words(16, stage));
-        when(rom.readBytes(0x35F92L, 42)).thenReturn(words(21, emerald));
+        Rom rom = openPaletteFixture();
+        doReturn(words(48, main)).when(rom).readBytes(0x3162L, 96);
+        doReturn(words(16, stage)).when(rom).readBytes(0x3202L, 32);
+        doReturn(words(21, emerald)).when(rom).readBytes(0x35F92L, 42);
         return rom;
+    }
+
+    private static Rom openPaletteFixture() {
+        return spy(Rom.fromReader(RomByteReader.fromBytes(new byte[0]), "palette fixture"));
     }
 
     private static byte[] words(int count, int word) {

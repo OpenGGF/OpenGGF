@@ -5,6 +5,7 @@ import com.openggf.trace.TraceMetadata;
 import com.openggf.trace.TraceRunManifest;
 
 import java.nio.file.Path;
+import java.util.OptionalInt;
 
 /**
  * One trace directory scanned by {@link TraceCatalog}. Constructed from
@@ -50,7 +51,7 @@ public record TraceEntry(
     /**
      * Builds a catalog entry for a multi-segment trace run. {@code team} and
      * {@code metadata} are derived from segment 0's {@code metadata.json} so
-     * existing consumers (e.g. {@code TestModeTracePicker.formatTeam},
+     * existing consumers (e.g. the playback browser,
      * {@code displayLabel()}) can dereference them without special-casing
      * runs. Zone/act are converted from segment 0 exactly as
      * {@link TraceCatalog}'s ordinary trace loading does, since they still
@@ -95,6 +96,12 @@ public record TraceEntry(
         return runManifest != null;
     }
 
+    public OptionalInt specialStageNumber() {
+        if (metadata == null || !isSpecialStageProfile(metadata.traceProfile())) return OptionalInt.empty();
+        Integer index = metadata.specialStageIndex();
+        return OptionalInt.of((index == null ? 0 : index) + 1);
+    }
+
     /**
      * Human-readable label for this entry, used by the trace test-mode
      * picker. Run entries are labeled by their run id and segment count.
@@ -106,10 +113,9 @@ public record TraceEntry(
         if (isRun()) {
             return "RUN " + runManifest.runId() + " (" + runManifest.segments().size() + " segments)";
         }
-        if (isSpecialStageProfile(metadata.traceProfile())) {
-            Integer index = metadata.specialStageIndex();
-            int oneIndexed = (index != null ? index : 0) + 1;
-            return gameId.toUpperCase() + " SPECIAL STAGE " + oneIndexed;
+        OptionalInt specialStage = specialStageNumber();
+        if (specialStage.isPresent()) {
+            return gameId.toUpperCase(java.util.Locale.ROOT) + " SPECIAL STAGE " + specialStage.getAsInt();
         }
         return String.format("Zone: %02X  Act: %d", zone, act);
     }

@@ -304,7 +304,7 @@ class TestVisualTraceRunTerminalTail {
                 List.of(new TraceRunReplayWalker.SegmentPlan(
                         segment, trace, null, null)), null, payloadClosed);
         DynamicArtLifecycleService lifecycle =
-                new DynamicArtLifecycleService();
+                new DynamicArtLifecycleService(null);
         lifecycle.beginRun();
         lifecycle.openComparisonSegment();
         lifecycle.closeComparisonSegment();

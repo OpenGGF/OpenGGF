@@ -1,5 +1,7 @@
 package com.openggf.tests.trace;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.openggf.tests.SessionInvocationExtension.SessionInvocation;
 import com.openggf.tests.TestSessionOutputPaths;
 import com.openggf.trace.DivergenceReport;
@@ -8,6 +10,8 @@ import com.openggf.trace.TraceVerificationScope;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Locale;
+import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -18,6 +22,17 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * output directory, prefix, and context radius so the three bases cannot drift.
  */
 public final class TraceReportWriter {
+
+    /** Completion of the driver's prescribed gate, distinct from gameplay comparison count. */
+    public record ReplayGate(int plannedTraceRows, boolean comparisonGateReached,
+                             TraceVerificationScope verification) {
+        public ReplayGate {
+            if (plannedTraceRows <= 0) {
+                throw new IllegalArgumentException("Replay gate requires positive planned trace rows");
+            }
+            Objects.requireNonNull(verification);
+        }
+    }
 
     private TraceReportWriter() {
     }
@@ -56,6 +71,23 @@ public final class TraceReportWriter {
             String logicalKey,
             TraceVerificationScope scope,
             int contextRadius) throws IOException {
+        return writeReport(outputDirectory, report, profile, invocation, laneId, logicalKey,
+                scope, contextRadius, null);
+    }
+
+    public static TestSessionOutputPaths.ReportAllocation writeReport(
+            Path outputDirectory,
+            DivergenceReport report,
+            String profile,
+            SessionInvocation invocation,
+            String laneId,
+            String logicalKey,
+            TraceVerificationScope scope,
+            int contextRadius,
+            ReplayGate replayGate) throws IOException {
+        if (replayGate != null && replayGate.verification() != scope) {
+            throw new IllegalArgumentException("Replay gate verification must match report scope");
+        }
         assertGroupAccountingHolds(report);
         TestSessionOutputPaths.ReportAllocation allocation =
                 outputDirectory == null
@@ -69,7 +101,7 @@ public final class TraceReportWriter {
                                 profile, invocation.className(), invocation.methodName(),
                                 invocation.parameterIndex(), invocation.invocationId(),
                                 laneId, logicalKey, ".json");
-        publish(allocation, allocation.physicalPath(), report.toJson(), "report");
+        publish(allocation, allocation.physicalPath(), reportJson(report, replayGate), "report");
         if (report.hasErrors(scope)) {
             Path contextPath = contextPath(allocation.physicalPath());
             publish(allocation, contextPath,
@@ -91,6 +123,21 @@ public final class TraceReportWriter {
                     failure);
         }
         return allocation;
+    }
+
+    private static String reportJson(DivergenceReport report, ReplayGate replayGate) throws IOException {
+        String json = report.toJson();
+        if (replayGate == null) {
+            return json;
+        }
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode payload = (ObjectNode) mapper.readTree(json);
+        ObjectNode gate = payload.putObject("replay_gate");
+        gate.put("schema", 1);
+        gate.put("comparison_gate_reached", replayGate.comparisonGateReached());
+        gate.put("planned_trace_rows", replayGate.plannedTraceRows());
+        gate.put("verification", replayGate.verification().name().toLowerCase(Locale.ROOT));
+        return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(payload);
     }
 
     private static void publish(

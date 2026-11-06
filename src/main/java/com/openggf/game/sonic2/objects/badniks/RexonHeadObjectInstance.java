@@ -67,7 +67,7 @@ public class RexonHeadObjectInstance extends AbstractObjectInstance
             0x80    // head 4
     };
 
-    // Oscillation lookup table (X, Y pairs, signed bytes) - from byte_376A8 (s2.asm:74068-74100)
+    // Oscillation lookup table (X, Y pairs, signed bytes) - from byte_376A8 (s2.asm:74704-74736)
     // Each head uses this to calculate offset to apply to the PREVIOUS head's position
     private static final int[] OSCILLATION_TABLE = {
             0x0F, 0x00,   // 0
@@ -162,7 +162,7 @@ public class RexonHeadObjectInstance extends AbstractObjectInstance
         this.headNumber = headIndex / 2;  // Convert 0,2,4,6,8 to 0,1,2,3,4
         this.xFlip = xFlip;
 
-        // Apply position offsets from Obj97_Init (s2.asm:73775-73784)
+        // Apply position offsets from Obj97_Init (s2.asm:74443-74452)
         // X offset: x_flip SET: +0x28 (40 pixels right), NOT set: -0x18 (-24 pixels left)
         int xOffset = xFlip ? 0x28 : -0x18;
         // Y offset: +0x10 (16 pixels down)
@@ -178,7 +178,7 @@ public class RexonHeadObjectInstance extends AbstractObjectInstance
         this.ySubpixel = 0;
         this.state = State.INIT;
         this.raiseTimer = 0;
-        // Initialize phase from byte_374BE based on head number (s2.asm:73866-73868)
+        // Initialize phase from byte_374BE based on head number (s2.asm:74541-74543)
         this.oscillationPhase = INITIAL_PHASES[headNumber];
         this.phaseDirection = 1;  // Start incrementing (objoff_38 = 1)
         // Obj97_Init seeds objoff_39 with the head number, not 0
@@ -189,7 +189,7 @@ public class RexonHeadObjectInstance extends AbstractObjectInstance
         // 4-frame cycle. Seeding every head at 0 collapsed that stagger and left
         // the wave a couple of pixels off; in HTZ2 that nudged the attackable tip
         // head just outside Sonic's 16x16 touch band, so the rolling kill bounce
-        // the ROM lands (Touch_KillEnemy "big bounce" neg.w y_vel, s2.asm:85385)
+        // the ROM lands (Touch_KillEnemy "big bounce" neg.w y_vel, s2.asm:85517)
         // was missed (HTZ2 trace f1078: y_speed should flip +0568 -> -0568).
         this.oscillationFrameCounter = headNumber;
         this.projectileTimer = PROJECTILE_INITIAL_DELAY;
@@ -264,7 +264,7 @@ public class RexonHeadObjectInstance extends AbstractObjectInstance
     }
 
     private void updateRaiseHead() {
-        // Obj97_RaiseHead always adds +$10 to x_vel (docs/s2disasm/s2.asm:73848).
+        // Obj97_RaiseHead always adds +$10 to x_vel (docs/s2disasm/s2.asm:74512).
         xVelocity += 0x10;
 
         // Decrement raise timer (s2.asm:73847)
@@ -314,7 +314,7 @@ public class RexonHeadObjectInstance extends AbstractObjectInstance
 
     /**
      * Update the oscillation phase with bouncing logic.
-     * From loc_3758A (s2.asm:73956-73969):
+     * From loc_3758A (s2.asm:74624-74637):
      *
      * The phase bounces between bounds. When (phase - 0x18) == 0, < 0, or >= 0x10,
      * the direction reverses.
@@ -335,7 +335,7 @@ public class RexonHeadObjectInstance extends AbstractObjectInstance
 
     /**
      * Apply oscillation offset to the linked (next) head toward the tip.
-     * From Obj97_Oscillate (s2.asm:74003-74029):
+     * From Obj97_Oscillate (s2.asm:74646-74672):
      *
      * Each head calculates an offset from the oscillation table and applies it
      * to the NEXT head's position (toward the tip). The tip head (head 4) has no

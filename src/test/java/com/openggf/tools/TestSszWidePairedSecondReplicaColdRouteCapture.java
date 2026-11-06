@@ -19,6 +19,7 @@ import com.openggf.sprites.playable.Tails;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -39,6 +40,7 @@ class TestSszWidePairedSecondReplicaColdRouteCapture {
 
     @TempDir Path temporary;
 
+    @Tag("exhaustive-audit")
     @Test
     void coldSecondReplicaAndReceiverReplayEveryRegistryKey() throws Exception {
         var loader = new Bk2MovieLoader();

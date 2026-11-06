@@ -179,7 +179,6 @@ class TestEngineRenderDispatcher {
         final List<String> calls = new ArrayList<>();
 
         @Override public void legalDisclaimer() { calls.add("legalDisclaimer"); }
-        @Override public void nativeModNotice() { calls.add("nativeModNotice"); }
         @Override public void masterTitle() { calls.add("masterTitle"); }
         @Override public void editor() { calls.add("editor"); }
         @Override public void specialStage() { calls.add("specialStage"); }

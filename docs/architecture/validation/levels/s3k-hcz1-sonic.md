@@ -1,5 +1,12 @@
 # S3K HCZ act 1 — Sonic route coverage
 
+Routine selection update (2026-10-27): the reviewed full configuration products
+and long cold-campaign qualifications in the [local budget record](../../research/2026-10-27-local-validation-cost.md#thirty-minute-local-command-target)
+now require explicit `exhaustive-audit`. Short real contact, lifecycle and
+restore/forward witnesses remain routine. Historical qualification rows retain
+their original source/input scope; a current smoke pass does not renew deferred
+cold reachability, accumulated route state or every replay window.
+
 Canonical game/zone/act: Sonic 3 & Knuckles, Hydrocity, act 1.
 Runtime slots: zone 1, act 0; outgoing production reload: zone 1, act 1.
 Representative configuration: native 320px Sonic with CPU Tails, movement donor off.
@@ -579,3 +586,31 @@ The existing audit records exact command/fingerprint, 58.066-second Maven /
 58.751-second wrapper timing with zero queue wait, separate receiving297,
 Jawz69, raw186 and Turbo81 focused qualifications, all zero-skip, and remaining
 fan/SS7 questions. Parent retains final review, combined smoke and delivery.
+
+## TAS mechanism accuracy — 2026-10-26
+
+The water-skim owner now retires after participants exit and the native P1-anchored range tail admits removal. Mixed-P2, range boundary, allocation reuse and restore-forward controls are bounded owner evidence. The full HCZ boss-overwrite/death route remains unexecuted. See the [repair record](../2026-10-26-tas-accuracy-repairs.md) for source identities, commands and limits.
+
+## Custom damage flash phase — 2026-11-02
+
+The custom palette owner now reads the 32-update hit counter before decrement,
+matching the ROM palette-copy tail. It writes the final normal row before
+collision re-admission. `TestMhzMinibossPaletteFlash` checks every palette row
+and countdown value for AIZ1 and both HCZ bosses through the public update.
+Existing route, donor/team/viewport and native pixel qualification gaps remain;
+this local correction does not renew whole-act certification.
+
+### Miniboss water-effect release (2026-11-02)
+
+`sub_6A9B8` (sonic3k.asm:140281-140301) records native players below the
+water effect independently of capture ownership. `loc_6A5FA`
+(sonic3k.asm:139925-139930) releases them at vortex end but retains those
+slots for `loc_6A636` (sonic3k.asm:139945-139952), whose deletion release
+sets InAir again through `sub_6A996` (sonic3k.asm:140254-140259).
+`TestHczMinibossWaterEffectCleanup` exercises non-captured players and a
+cooldown capture/restore followed by landing and deletion. The existing
+multi-sidekick tests cover extension-owner relinking and cleanup.
+
+These are local release/rewind obligations. The HCZ slice and sibling traces
+remain the route checks; inherited segment-start state differences, broader
+character/donor/viewport coverage and the matrix's other gaps remain open.

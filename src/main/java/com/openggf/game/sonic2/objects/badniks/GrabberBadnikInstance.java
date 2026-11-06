@@ -329,11 +329,11 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance implements Spa
         // ROM parity: the grab is NOT a self-computed loose AABB. In the ROM the
         // capture is driven by the Grabber's LEGS sub-object (ObjA8) through the
         // normal TouchResponse pipeline, then gated on the body actively diving:
-        //   - ObjA8 loc_38F88 (s2.asm:76756-76777) only sets the grab flag
+        //   - ObjA8 loc_38F88 (s2.asm:76954-76975) only sets the grab flag
         //     (objoff_30) when its collision_property was set by a touch overlap
         //     AND cmpi.b #4,routine_secondary(a1) (the body is in the DIVING
         //     sub-state).
-        //   - The body's dive routine loc_38EB4 (s2.asm:76653-76655) consumes
+        //   - The body's dive routine loc_38EB4 (s2.asm:76860-76862) consumes
         //     objoff_30 -> ObjA7_GrabCharacter.
         // This method is only ever called from updateDiving(), so the "body is
         // diving" gate is already satisfied; here we reproduce the ObjA8 legs
@@ -355,7 +355,7 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance implements Spa
         int legsX = currentX;
         int legsY = currentY + 0x10;
 
-        // Reproduce TouchResponse's player box (s2.asm:84966-84987):
+        // Reproduce TouchResponse's player box (s2.asm:85175-85196):
         //   d2 = player_x - 8 ; d4 = $10 (player box spans player_x-8 .. player_x+8)
         //   d5 = (y_radius - 3) ; player box spans player_y-d5 .. player_y+d5
         int playerX = player.getCentreX();
@@ -442,7 +442,7 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance implements Spa
 
     /**
      * Held direction bits (left=$04, right=$08, mask $0C), mirroring the high byte
-     * of the ROM {@code Ctrl_1_Held} word that loc_390BC reads (s2.asm:76916).
+     * of the ROM {@code Ctrl_1_Held} word that loc_390BC reads (s2.asm:77123).
      */
     private static int heldDirectionBits(AbstractPlayableSprite player) {
         int bits = 0;
@@ -464,8 +464,8 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance implements Spa
         }
 
         // === Blink mechanism (ObjA7_CheckExplode, s2.asm:76967-76975) ===
-        // ROM ordering: the carry routines loc_38F3E (s2.asm:76708-76710) and
-        // loc_38F58 (s2.asm:76722-76724) call ObjA7_CheckExplode BEFORE loc_390BC
+        // ROM ordering: the carry routines loc_38F3E (s2.asm:76915-76917) and
+        // loc_38F58 (s2.asm:76929-76931) call ObjA7_CheckExplode BEFORE loc_390BC
         // every frame. Run the blink countdown first so a same-frame blink-timeout
         // (ObjA7_Poof) wins over the escape evaluation exactly as the ROM does.
         blinkCounter--;
@@ -523,7 +523,7 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance implements Spa
             // objoff_31 set: now the window counts down (subq.b #1,objoff_37).
             inputCheckTimer--;
             if (inputCheckTimer <= 0) {
-                // loc_390FA (s2.asm:76942-76956): window expired. Escape only when
+                // loc_390FA (s2.asm:77140-77154): window expired. Escape only when
                 // >=4 toggles were tallied this window; either way reset the timer
                 // to $20 AND clear the first-input latch + toggle count so the next
                 // window again waits for first input.
@@ -553,7 +553,7 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance implements Spa
             ySubpixel = yPos32 & 0xFF;
         }
 
-        // Update grabbed player position. ROM ObjA8 loc_38FE8 (s2.asm:76790-76799)
+        // Update grabbed player position. ROM ObjA8 loc_38FE8 (s2.asm:76988-76997)
         // pins the grabbed player's x_pos/y_pos directly to the LEGS sub-object's
         // x_pos/y_pos. The legs are aligned to body_y + $10 via Obj_AlignChildXY
         // (moveq #$10,d1 at s2.asm:76593-76595), so the player's ROM-centre is
@@ -611,7 +611,7 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance implements Spa
         }
 
         if (escaped) {
-            // ROM loc_390FA (s2.asm:76942-76951): on a successful button-mash escape
+            // ROM loc_390FA (s2.asm:77140-77149): on a successful button-mash escape
             // the Grabber clears its own collision_flags (`clr.b collision_flags(a0)`,
             // s2.asm:76947) and frees the player WITHOUT imparting any velocity. The
             // freed player is still rolling, so without this clear the engine's
@@ -621,7 +621,7 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance implements Spa
             // touch scanner skips this object (ObjectManager.java:5181).
             collisionFlagsCleared = true;
 
-            // ROM loc_390FA sets routine_secondary=$A (s2.asm:76945). Routine $A is
+            // ROM loc_390FA sets routine_secondary=$A (s2.asm:77152). Routine $A is
             // BranchTo_ObjA7_CheckExplode (s2.asm:76610, off_38E46 entry $A): the
             // Grabber does NOT return to patrol or hunt again — it only continues the
             // ObjA7_CheckExplode blink countdown until ObjA7_Poof transforms it into
@@ -685,7 +685,7 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance implements Spa
         // at s2.asm:76610): the Grabber runs ONLY ObjA7_CheckExplode each frame
         // (s2.asm:76967-76975) — no patrol, no dive, no escape window. The blink
         // countdown (objoff_2A/objoff_2B) continues from where the escape left it,
-        // and when objoff_2B reaches 0 ObjA7_Poof (s2.asm:76977-76989) transforms the
+        // and when objoff_2B reaches 0 ObjA7_Poof (s2.asm:77175-77187) transforms the
         // Grabber into an Explosion. Because the player was freed at escape
         // (objoff_32 cleared, loc_390FA s2.asm:76951), Poof's player-hurt branch
         // (`tst.w objoff_32; beq +`, s2.asm:76981-76982) is skipped: NO player hurt.
@@ -749,7 +749,7 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance implements Spa
             return;
         }
 
-        // ROM parity: Touch_Enemy / Touch_KillEnemy (s2.asm:84807-84890) destroys
+        // ROM parity: Touch_Enemy / Touch_KillEnemy (s2.asm:85466-85549) destroys
         // the badnik whenever Sonic is rolling, spindashing, or invincible — the
         // touch response is direction-agnostic.  Only the bounce-back direction
         // depends on Sonic's relative position; the kill itself is unconditional.

@@ -175,38 +175,49 @@ class TestControlledVBlankOnlyOwner {
     }
 
     @Test void aBoundObjectVblankClockAdvancesOnceWithoutExecutingItsObjectPass() {
-        load(new HeldDecision(PlcLifecyclePhase.NORMAL_PAUSE));
-        var objects = new ObjectManager(List.of(), null, -1, null, null);
-        objects.initVblaCounter(99);
-        var original = context.getLevelManager();
-        var level = spy(original);
-        doReturn(objects).when(level).getObjectManager();
-        context.attachLevelManagers(context.getWaterSystem(), context.getParallaxManager(),
-                context.getTerrainCollisionManager(), context.getCollisionSystem(),
-                context.getSpriteManager(), level);
-        int objectFrames = objects.getFrameCounter();
-        assertEquals(LevelFrameResult.HELD, step());
-        assertEquals(100, EngineTiming.vIntRunCounter().value());
-        assertEquals(100, objects.getVblaCounter());
-        assertEquals(objectFrames, objects.getFrameCounter());
-        assertEquals(41, level.getFrameCounter());
+        for(var phase:List.of(PlcLifecyclePhase.NORMAL_PAUSE,PlcLifecyclePhase.LAG,
+                PlcLifecyclePhase.SPECIAL_STAGE_PAUSE)) {
+            load(new HeldDecision(phase));
+            var objects = new ObjectManager(List.of(), null, -1, null, null);
+            objects.initVblaCounter(99);
+            var original = context.getLevelManager();
+            var level = spy(original);
+            doReturn(objects).when(level).getObjectManager();
+            context.attachLevelManagers(context.getWaterSystem(), context.getParallaxManager(),
+                    context.getTerrainCollisionManager(), context.getCollisionSystem(),
+                    context.getSpriteManager(), level);
+            int objectFrames = objects.getFrameCounter();
+            var timers=context.getTimerManager().capture();var rng=context.getRng().capture();
+            assertEquals(LevelFrameResult.HELD, step());
+            assertEquals(100, EngineTiming.vIntRunCounter().value());
+            assertEquals(100, objects.getVblaCounter());
+            assertEquals(objectFrames, objects.getFrameCounter());
+            assertEquals(41, level.getFrameCounter());
+            assertEquals(timers,context.getTimerManager().capture());assertEquals(rng,context.getRng().capture());
+        }
     }
 
     @Test void fadeOwnerKeepsTheTokenAcrossItsCompletionAndGameVblankRunsOnceBeforeCallback() {
         HeldDecision controller = new HeldDecision(PlcLifecyclePhase.LAG);
         load(controller);
+        var objects=new ObjectManager(List.of(),null,-1,null,null);objects.initVblaCounter(99);
+        var level=spy(context.getLevelManager());doReturn(objects).when(level).getObjectManager();
+        context.attachLevelManagers(context.getWaterSystem(),context.getParallaxManager(),
+                context.getTerrainCollisionManager(),context.getCollisionSystem(),context.getSpriteManager(),level);
         var blocking = context.plcFrameLifecycle().beginNativeBlockingFade();
         fade.completion = blocking.wrapCompletion(() -> events.add("fade-complete"));
         assertEquals(LevelFrameResult.HELD, step());
         assertEquals(List.of("before", "phase", "service:PALETTE_FADE", "game-vblank", "fade",
                 "fade-complete", "prepare:PALETTE_FADE", "hardware-before:VINT_SERVICE",
                 "hardware-after:VINT_SERVICE", "boundary:VINT_SERVICE", "after:false"), events);
+        assertEquals(100,objects.getVblaCounter(),"Fade completion spends one bound tick without a second held service");
         events.clear();
         assertEquals(LevelFrameResult.HELD, step());
         assertEquals(List.of("before", "phase", "fade", "service:LAG", "game-vblank",
                 "hardware-before:VINT_SERVICE", "hardware-after:VINT_SERVICE",
                 "boundary:VINT_SERVICE", "after:false"), events);
         assertEquals(101, EngineTiming.vIntRunCounter().value());
+        assertEquals(101,objects.getVblaCounter(),"Following LAG owns one additional successful tick");
         assertEquals(2, controller.after);
     }
 
@@ -362,11 +373,18 @@ class TestControlledVBlankOnlyOwner {
     @Test void failedHardwareBoundaryPropagatesWithoutAnAfterTickAndReleasesTheToken() {
         HeldDecision controller = new HeldDecision(PlcLifecyclePhase.LAG);
         load(controller);
+        var objects=new ObjectManager(List.of(),null,-1,null,null);objects.initVblaCounter(99);
+        var level=spy(context.getLevelManager());doReturn(objects).when(level).getObjectManager();
+        context.attachLevelManagers(context.getWaterSystem(),context.getParallaxManager(),
+                context.getTerrainCollisionManager(),context.getCollisionSystem(),context.getSpriteManager(),level);
+        int objectFrames=objects.getFrameCounter();
         var failure = new IllegalStateException("hardware");
         context.setHardwareTimingBoundaryObserver(boundary -> { throw failure; });
         assertSame(failure, assertThrows(IllegalStateException.class, this::step));
         assertEquals(0, controller.after);
         assertFalse(events.contains("after:false"));
+        assertEquals(99,objects.getVblaCounter(),"Failed LAG hardware publication cannot complete its bound object-clock tick");
+        assertEquals(objectFrames,objects.getFrameCounter());
         assertTokenCompleted();
     }
 

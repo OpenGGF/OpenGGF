@@ -1,5 +1,7 @@
 package com.openggf.level.scroll;
 
+import com.openggf.tests.RomTestUtils;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -32,7 +34,7 @@ public class SwScrlCpzTest {
     @BeforeEach
     public void setUp() throws IOException {
         mockRom = new MockCpzRom();
-        tables = new ParallaxTables(mockRom);
+        tables = new ParallaxTables(RomTestUtils.openSparseReadFixture(mockRom));
         handler = new SwScrlCpz(tables);
         horizScrollBuf = new int[224];
     }

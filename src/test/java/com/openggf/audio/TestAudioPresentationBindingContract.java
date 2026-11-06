@@ -516,8 +516,9 @@ class TestAudioPresentationBindingContract {
         short[] pending = ((short[]) field(liveCapture, "pending")).clone();
         assertEquals(700, pending[0]);
         assertEquals(-900, pending[1]);
-        assertTrue((boolean) field(liveCapture, "fresh"));
+        assertFalse((boolean) field(liveCapture, "overflowed"));
         assertEquals(800, (int) field(liveCapture, "pendingStereoFrames"));
+        int pendingReadFrame = field(liveCapture, "pendingReadFrame");
         Object liveClock = live.clockSnapshot();
         long liveTotal = live.totalStereoFrames();
         var before = producer.transactionFingerprint();
@@ -566,7 +567,8 @@ class TestAudioPresentationBindingContract {
         assertFalse((boolean) field(live, "closed"));
         assertFalse((boolean) field(liveCapture, "closed"));
         assertArrayEquals(pending, field(liveCapture, "pending"));
-        assertTrue((boolean) field(liveCapture, "fresh"));
+        assertEquals(pendingReadFrame, (int) field(liveCapture, "pendingReadFrame"));
+        assertFalse((boolean) field(liveCapture, "overflowed"));
         assertEquals(800, (int) field(liveCapture, "pendingStereoFrames"));
         assertEquals(liveClock, live.clockSnapshot());
         assertEquals(liveTotal, live.totalStereoFrames());
@@ -581,7 +583,8 @@ class TestAudioPresentationBindingContract {
         short[] offlinePacket = new short[1600];
         assertEquals(800, live.drainPresentationFrame(livePacket));
         assertEquals(800, audio.drainCaptureFrame(offlinePacket));
-        assertArrayEquals(pending, livePacket);
+        assertArrayEquals(Arrays.copyOfRange(pending, pendingReadFrame * 2, pendingReadFrame * 2 + 1600), livePacket);
+        assertEquals(0, (int) field(liveCapture, "pendingStereoFrames"));
         assertArrayEquals(livePacket, offlinePacket);
     }
 

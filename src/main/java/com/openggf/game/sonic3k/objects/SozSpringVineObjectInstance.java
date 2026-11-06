@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.sonic3k.S3kSlopedTopSolidProvider;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -12,7 +13,7 @@ import java.util.List;
 
 /** SKL $3F, Obj_SOZSpringVine ($40786): shared tension, pixel slope and one display SST. */
 public final class SozSpringVineObjectInstance extends AbstractObjectInstance
-        implements SlopedSolidProvider, SolidObjectListener, SpawnRewindRecreatable,
+        implements S3kSlopedTopSolidProvider, SolidObjectListener, SpawnRewindRecreatable,
         RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
 
     // Native vine/platform display segments deform or swing as geometry without horizontal-facing bodies.

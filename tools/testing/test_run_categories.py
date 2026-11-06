@@ -17,6 +17,17 @@ class CategoryPolicyTests(unittest.TestCase):
     def setUp(self):
         self.policy = runner.policy()
 
+    def test_retail_revision_properties_match_engine_verified_identities(self):
+        expected = {
+            '6ddb7de1e17e7f6cdb88927bd906352030daa194': 'sonic1.rev00.rom.path',
+            '14dd06fc3aa19a59a818ea1f6de150c9061b14d4': 'sonic2.rev00.rom.path',
+        }
+        source = (runner.ROOT / 'src/main/java/com/openggf/data/RetailRomRevision.java').read_text()
+        for digest, property_name in expected.items():
+            with self.subTest(property=property_name):
+                self.assertIn(digest.upper(), source)
+                self.assertEqual(property_name, runner.ROM_PROPERTIES[digest])
+
     def test_rom_discovery_accepts_original_files_in_an_explicit_directory(self):
         import hashlib
         with tempfile.TemporaryDirectory() as tmp:
@@ -71,7 +82,8 @@ class CategoryPolicyTests(unittest.TestCase):
                     patch.object(runner, 'summarize', side_effect=lambda _: dict(summary)), \
                     patch.object(runner, 'run_logged', return_value=0) as process:
                 self.assertEqual(0, runner.run_plan(root, plan, rom_directory=originals))
-            self.assertEqual(2, discover.call_count)
+            # Discovered once, so the reported ROM properties match every command.
+            self.assertEqual(1, discover.call_count)
             for call in discover.call_args_list:
                 self.assertEqual((root, originals), call.args)
             for call in process.call_args_list[1:]:

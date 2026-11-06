@@ -26,6 +26,8 @@ import com.openggf.level.objects.StubObjectServices;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.lang.reflect.Field;
 import java.util.LinkedHashMap;
@@ -262,6 +264,64 @@ class TestS3kAizIntroGraphRewind {
         restoredUnbound.update(1, null);
         assertTrue(restored.isDestroyed(), "pickup must replay using the restored exact collector");
         assertFalse(restoredUnbound.isDestroyed());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void collectorRetirementDetachesOnlyItsSurvivingEmeraldsAndReplays(boolean inPlace) {
+        ObjectManager manager = Harness.createWithoutPlacedParent().objectManager();
+        manager.setRewindInPlaceRestoreEnabledForTest(inPlace);
+        CutsceneKnucklesAiz1Instance collector = manager.createDynamicObject(
+                () -> new CutsceneKnucklesAiz1Instance(spawn(0x500, 0x400, 460)));
+        CutsceneKnucklesAiz1Instance decoy = manager.createDynamicObject(
+                () -> new CutsceneKnucklesAiz1Instance(spawn(0x500, 0x400, 461)));
+        setIntField(collector, "routine", 14); // production title-card install/delete dispatch
+        setIntField(decoy, "routine", 2);
+        AizEmeraldScatterInstance survivor = manager.createDynamicObject(
+                () -> new AizEmeraldScatterInstance(spawn(0x300, 0x400, 2, 462)));
+        survivor.landOnGround(0x400); // outside pickup range; native emerald outlives the collector
+        survivor.setKnuckles(collector);
+        AizEmeraldScatterInstance other = manager.createDynamicObject(
+                () -> new AizEmeraldScatterInstance(spawn(0x300, 0x400, 2, 463)));
+        other.landOnGround(0x400);
+        other.setKnuckles(decoy);
+        ObjectRefId collectorId = objectId(manager, collector);
+        ObjectRefId survivorId = objectId(manager, survivor);
+        ObjectRefId otherId = objectId(manager, other);
+        RewindRegistry registry = registryFor(manager);
+        CompositeSnapshot before = registry.capture();
+
+        for (int replay = 0; replay < 2; replay++) {
+            if (replay != 0) registry.restore(before);
+            RewindIdentityTable identities = manager.captureIdentityContext().requireIdentityTable();
+            var liveCollector = (CutsceneKnucklesAiz1Instance) identities.resolve(collectorId);
+            var liveSurvivor = (AizEmeraldScatterInstance) identities.resolve(survivorId);
+            var liveOther = (AizEmeraldScatterInstance) identities.resolve(otherId);
+            assertSame(liveCollector, readObjectField(liveSurvivor, "knuckles"));
+            manager.update(0, null, null, 1);
+            assertTrue(liveCollector.isDestroyed(), "production routine14 retires the collector");
+            assertFalse(manager.getActiveObjects().contains(liveCollector));
+            assertNull(readObjectField(liveSurvivor, "knuckles"), "retirement must detach the dead identity");
+            assertNotNull(readObjectField(liveOther, "knuckles"), "another collector's graph must stay intact");
+            assertFalse(liveSurvivor.isDestroyed(), "surviving emeralds are independent native slots");
+            manager.validateRewindReferenceClosure();
+            CompositeSnapshot retired = registry.capture();
+            registry.restore(retired);
+            var restored = (AizEmeraldScatterInstance) manager.captureIdentityContext()
+                    .requireIdentityTable().resolve(survivorId);
+            assertNull(readObjectField(restored, "knuckles"));
+            restored.update(2, null);
+            assertFalse(restored.isDestroyed(), "retired collector must not be reacquired after restore");
+        }
+    }
+
+    @Test
+    void unmanagedEmeraldCollectorStillFailsStrictClosure() {
+        ObjectManager manager = Harness.createWithoutPlacedParent().objectManager();
+        AizEmeraldScatterInstance emerald = manager.createDynamicObject(
+                () -> new AizEmeraldScatterInstance(spawn(0x300, 0x400, 2, 464)));
+        emerald.setKnuckles(new CutsceneKnucklesAiz1Instance(spawn(0x500, 0x400, 465)));
+        assertThrows(IllegalStateException.class, manager::validateRewindReferenceClosure);
     }
 
     private record Harness(ObjectManager objectManager) {

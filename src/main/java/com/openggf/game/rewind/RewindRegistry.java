@@ -188,7 +188,14 @@ public final class RewindRegistry {
         }
     }
 
+    /** Captures one registered entry without capturing unrelated subsystems. */
+    Object captureEntry(String key) {
+        RewindSnapshottable<?> entry = entries.get(key);
+        return entry == null ? null : Objects.requireNonNull(entry.capture(), key);
+    }
+
     public CompositeSnapshot capture() {
+        requireSnapshotBoundary();
         if (profiler != null) {
             profiler.beginSection("rewind.capture");
         }
@@ -214,6 +221,8 @@ public final class RewindRegistry {
     }
 
     public void restore(CompositeSnapshot cs) {
+        Objects.requireNonNull(cs, "cs");
+        requireSnapshotBoundary();
         requireScope(cs);
         validateNativePublications(cs, false);
         if (profiler != null) {
@@ -241,6 +250,7 @@ public final class RewindRegistry {
 
     /** Captures a course partition, omitting only the session controller by identity. */
     public CompositeSnapshot captureCourse() {
+        requireSnapshotBoundary();
         var keys = new ArrayList<String>(entries.size());
         var values = new ArrayList<Object>(entries.size());
         entries.forEach((key, adapter) -> {
@@ -293,6 +303,7 @@ public final class RewindRegistry {
 
     /** Restores the exact course partition while retaining the match/mode ledger. */
     public void restoreCourse(CompositeSnapshot snapshot) {
+        requireSnapshotBoundary();
         requireCourseLayout(snapshot);
         for (var entry : entries.entrySet()) {
             String key = entry.getKey();
@@ -304,6 +315,12 @@ public final class RewindRegistry {
     }
 
     @SuppressWarnings("unchecked")
+    private void requireSnapshotBoundary() {
+        for (RewindSnapshottable<?> entry : entries.values()) {
+            if (entry instanceof RewindOperationGuard guard) guard.requireSnapshotBoundary();
+        }
+    }
+
     private static void restoreAdapter(RewindSnapshottable<?> adapter, Object snapshot) {
         ((RewindSnapshottable<Object>) adapter).restore(snapshot);
     }

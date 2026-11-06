@@ -305,18 +305,47 @@ class TestJdkRaceHostServer {
             // Never started: no writer drains, so every frame stays queued.
             WebSocketConnection connection = new WebSocketConnection(server, accepted,
                     "127.0.0.1", 1_000, limits);
-            String chunk = "x".repeat(30_000);
-            for (int i = 0; i < 3; i++) {
+            try {
+                String chunk = "x".repeat(30_000);
+                for (int i = 0; i < 3; i++) {
+                    connection.sendText(chunk);
+                }
+                assertFalse(accepted.isClosed(), "90 KB is within the 100 KB cap");
+                assertTrue(connection.queuedBytes() >= 90_000);
                 connection.sendText(chunk);
+                assertTrue(accepted.isClosed(), "the frame that crosses the cap aborts the peer");
+                assertTrue(connection.queuedBytes() <= limits.maxQueuedOutboundBytes());
+                connection.sendText(chunk);
+                assertTrue(connection.queuedBytes() <= limits.maxQueuedOutboundBytes(),
+                        "an aborted peer queues nothing more");
+            } finally {
+                connection.abort();
+                server.connectionFinished(connection);
             }
-            assertFalse(accepted.isClosed(), "90 KB is within the 100 KB cap");
-            assertTrue(connection.queuedBytes() >= 90_000);
-            connection.sendText(chunk);
-            assertTrue(accepted.isClosed(), "the frame that crosses the cap aborts the peer");
-            assertTrue(connection.queuedBytes() <= limits.maxQueuedOutboundBytes());
-            connection.sendText(chunk);
-            assertTrue(connection.queuedBytes() <= limits.maxQueuedOutboundBytes(),
-                    "an aborted peer queues nothing more");
+        }
+    }
+
+    @Test
+    void manyTinyFramesHitTheOutboundItemCapAndAbortReleasesReservations(@TempDir Path dir)
+            throws Exception {
+        JdkHostLimits limits = JdkHostLimits.defaults();
+        start(dir, false, limits);
+        try (ServerSocket listener = new ServerSocket(0);
+             Socket peer = new Socket("127.0.0.1", listener.getLocalPort());
+             Socket accepted = listener.accept()) {
+            WebSocketConnection connection = new WebSocketConnection(server, accepted,
+                    "127.0.0.1", 1_001, limits);
+            try {
+                int before = com.openggf.net.flow.WorkBudget.PROCESS.retainedItems();
+                for (int i = 0; i < 512; i++) connection.sendBinary(new byte[0]);
+                assertFalse(accepted.isClosed());
+                connection.sendBinary(new byte[0]);
+                assertTrue(accepted.isClosed(), "the 513th retained item must abort the peer");
+                assertEquals(before, com.openggf.net.flow.WorkBudget.PROCESS.retainedItems());
+            } finally {
+                connection.abort();
+                server.connectionFinished(connection);
+            }
         }
     }
 

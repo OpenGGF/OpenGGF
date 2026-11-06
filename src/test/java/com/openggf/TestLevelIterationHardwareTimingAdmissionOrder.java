@@ -132,6 +132,106 @@ class TestLevelIterationHardwareTimingAdmissionOrder {
         assertEquals(null, harness.port().capture().rawFrameLatch());
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void transitionFadeServicesVintRegardlessOfComparatorCursorOwnership(
+            boolean observerHasRows) throws Exception {
+        Harness harness = harness(1);
+        harness.port().beginRawFrame(1);
+        var playback = mock(com.openggf.debug.playback.PlaybackDebugManager.class);
+        when(playback.observerHasUnconsumedRecordedRows()).thenReturn(observerHasRows);
+        var objects = mock(com.openggf.level.objects.ObjectManager.class);
+        harness.context().setHardwareTimingBoundaryObserver(boundary -> {
+            harness.observer().onBoundary(boundary);
+            // Service callbacks can change observer state; consume from the
+            // ownership decision made before this physical step.
+            when(playback.observerHasUnconsumedRecordedRows()).thenReturn(!observerHasRows);
+        });
+        var lifecycle = new com.openggf.game.resources.PlcFrameLifecycleCoordinator(
+                harness.context().getWorldSession().getGameModule());
+        var frame = lifecycle.latchBeforeFadeUpdate();
+        frame.claim(com.openggf.game.resources.PlcLifecyclePhase.PALETTE_FADE);
+        try {
+            new LevelIterationAdmissionController().consumeTransitionFreezeRow(
+                    playback, objects, LevelFrameContext.from(harness.context()), frame);
+        } finally {
+            frame.finish();
+        }
+        assertTrue(harness.context().hardwareTiming().isReady(harness.handle()),
+                "the fade's VInt must service real prepared work even after comparison ends");
+        org.mockito.Mockito.verify(objects).advanceVblaCounter();
+        org.mockito.Mockito.verify(playback, org.mockito.Mockito.times(observerHasRows ? 1 : 0))
+                .onLevelFrameAdvanced();
+        assertEquals(1, harness.port().capture().rawFrameLatch());
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void fadeWithoutObjectManagerRetainsItsExistingServiceEligibility(boolean observerHasRows) {
+        var playback = mock(com.openggf.debug.playback.PlaybackDebugManager.class);
+        when(playback.observerHasUnconsumedRecordedRows()).thenReturn(observerHasRows);
+        var context = mock(LevelFrameContext.class);
+        var frame = mock(com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame.class);
+
+        new LevelIterationAdmissionController().consumeTransitionFreezeRow(
+                playback, null, context, frame);
+
+        org.mockito.Mockito.verifyNoInteractions(context, frame);
+        org.mockito.Mockito.verify(playback, org.mockito.Mockito.times(observerHasRows ? 1 : 0))
+                .onLevelFrameAdvanced();
+    }
+
+    @Test
+    void titleAdmissionRetainsPreparedSourceRowAndRealQueueMembership() throws Exception {
+        Harness harness = harness(1);
+        var session = TestRunPayloads.session(null, null, List.of(), null);
+        var fixture = mock(com.openggf.trace.replay.TraceReplayFixture.class);
+        org.mockito.Mockito.doAnswer(invocation -> {
+            harness.observer().enterUnrepresentedGap();
+            return null;
+        }).when(fixture).enterHardwareTimingGap();
+        var fixtureField = TraceSessionLauncher.class.getDeclaredField("fixture");
+        fixtureField.setAccessible(true);
+        fixtureField.set(session, fixture);
+        var dispositionField = TraceSessionLauncher.class.getDeclaredField("activeRunDisposition");
+        dispositionField.setAccessible(true);
+        dispositionField.set(session,
+                com.openggf.trace.replay.runs.TraceRunFrameDriver.Disposition.SOURCE_LOAD_ROW);
+        harness.observer().beginRawFrame(1);
+        harness.context().serviceHardwareTimingBoundary(VINT_SERVICE);
+        HardwareWorkHandle[] submitted = new HardwareWorkHandle[1];
+        Path romPath = tempDir.resolve("title-terrain-submission.gen");
+        Files.write(romPath, ABC_KOSM);
+        try (Rom rom = new Rom()) {
+            assertTrue(rom.open(romPath.toString()));
+            var result = new LevelIterationAdmissionController().admit(
+                    GameMode.TITLE_CARD,
+                    () -> {
+                        session.prepareHardwareTimingForAdmission(GameMode.TITLE_CARD);
+                        submitted[0] = org.junit.jupiter.api.Assertions.assertDoesNotThrow(() -> S3kRuntimeArtCoordinator.from(
+                                harness.context().runtimeArtCoordinator())
+                                .moduleQueue().queue(rom, 0, 0x400));
+                        return false;
+                    },
+                    () -> LevelFrameResult.SETUP_ONLY,
+                    mock(com.openggf.level.LevelManager.class), harness.context(),
+                    false, mock(UserRecordingRuntimeControls.class), () -> { },
+                    () -> session.prepareHardwareTimingForAdmission(GameMode.TITLE_CARD),
+                    session::deactivateHardwareTimingForAdmission);
+            assertEquals(LevelFrameResult.SETUP_ONLY, result);
+        }
+        assertEquals(1, harness.port().capture().rawFrameLatch());
+        assertEquals(VINT_SERVICE, harness.port().capture().lastAppliedBoundary(),
+                "title admission must neither clear nor re-begin the outer source row");
+        assertFalse(harness.context().hardwareTiming().capture()
+                .unrepresentedSubmissions().contains(submitted[0]),
+                "the actual title producer must submit represented terrain work");
+        dispositionField.set(session, null);
+        session.deactivateHardwareTimingForAdmission();
+        assertEquals(null, harness.port().capture().rawFrameLatch(),
+                "an explicit gap after physical ownership ends must still invalidate the latch");
+    }
+
     private Harness harness(int edgeRawFrame) throws Exception {
         GameplayModeContext context = new GameplayModeContext(
                 new WorldSession(new Sonic3kGameModule()),

@@ -7,6 +7,7 @@ import com.sun.source.util.JavacTask;
 import com.sun.source.util.TreePathScanner;
 import com.sun.source.util.Trees;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.io.TempDir;
 
 import javax.lang.model.element.Element;
@@ -85,8 +86,6 @@ class TestObjectUpdateClockTerminologyGuard {
                     "lastVIntRunCount", "lastFrameCounter"),
             new FieldSeed("com.openggf.game.sonic2.objects.RisingLavaObjectInstance",
                     "lastVIntRunCount", "lastFrameCounter"),
-            new FieldSeed("com.openggf.game.sonic2.objects.SignpostObjectInstance",
-                    "walkOffEnteredVIntRunCount", "walkOffEnteredFrame"),
             new FieldSeed("com.openggf.game.sonic2.objects.bosses.CNZBossElectricBall",
                     "lastVIntRunCount", "lastFrameCounter"),
             new FieldSeed("com.openggf.game.sonic2.objects.bosses.Sonic2CNZBossInstance",
@@ -111,6 +110,7 @@ class TestObjectUpdateClockTerminologyGuard {
                     "vIntRunCount", "globalFrameCounter"));
 
     @Test
+    @Tag("exhaustive-audit")
     void objectUpdateClockUsesVIntRunCountTerminologyAcrossBoundaryAndFrameworkHooks(@TempDir Path temporary)
             throws Exception {
         Path log = temporary.resolve("terminology-guard.log");

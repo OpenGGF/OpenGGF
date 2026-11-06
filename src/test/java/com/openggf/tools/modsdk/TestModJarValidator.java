@@ -251,6 +251,16 @@ class TestModJarValidator {
         String warningText = warningOut.toString(StandardCharsets.UTF_8);
         assertTrue(warningText.matches("(?s)1\\. WARNING NON_API_ENGINE_REFERENCE .*"), warningText);
 
+        ByteArrayOutputStream json = new ByteArrayOutputStream();
+        assertEquals(0, GgfModCli.run(new String[]{"validate", warningJar.toString(), "--format", "json"},
+                new PrintStream(json, true, StandardCharsets.UTF_8)));
+        var finding = new com.fasterxml.jackson.databind.ObjectMapper().readTree(json.toByteArray())
+                .path("findings").get(0);
+        assertEquals("NON_API_ENGINE_REFERENCE", finding.path("code").asText());
+        assertEquals("example/Entry", finding.path("location").asText());
+        assertFalse(finding.path("guidance").has("supportedReplacement"));
+        assertTrue(finding.path("guidance").path("nextAction").asText().contains("No general supported replacement"));
+
         Map<String, byte[]> errors = validEntries();
         errors.put("art/object.ggfsheet", new byte[] {1});
         ByteArrayOutputStream errorOut = new ByteArrayOutputStream();

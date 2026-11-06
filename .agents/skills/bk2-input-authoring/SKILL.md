@@ -53,6 +53,22 @@ and each frame line is `|UDLRSABC|UDLRSABC|` with `.` for released, the same wri
 `UserRecordingWriter` uses for user recordings. `Bk2MovieLoader.loadInputLog` reads the
 bare text file; `loadMovieOrInputLog` accepts either container by zip magic.
 
+## Routes from the shared planner
+
+`ReferencePathInputAuthor`, `RouteRepairTool` and the SSZ and DEZ boss authors write a
+route as `<stem>.route.json` (launch, goals, provenance, qualification stamps) plus
+`<stem>.script` in this grammar, with explicit letters for both pads. A route counts only
+after a cold replay of its frozen rows: `RouteFiles.read` refuses drafts and content without
+a passing engine stamp, and `RouteFiles.exportBk2` derives the BizHawk movie on demand.
+Repair keeps a route's rows up to a first editable row and follows the route's recorded
+track (`src/test/resources/routes/s3k/tracks/`), searching only where play drifts; a track is
+a scoring target and is never fed to gameplay. `RouteRepairTool --exact` (or `--exact-leader`
+for a CPU sidekick that cannot be re-synchronised) needs a `RouteTrackRecorder` track with full
+player states: it edits single rows until every tracked state equals the recorded run again,
+so the original rows after the edit replay that run exactly. Native composition (entry prefix
+plus one filler row per observed lag frame) is `tools/traces/route_native_check.py`. See the
+[design record](../../../docs/architecture/designs/2026-11-02-shared-route-planner.md).
+
 ## Trying alternatives after a long cold prefix
 
 `GameplayInputBranchTool` replays a prefix once and restores the engine's own

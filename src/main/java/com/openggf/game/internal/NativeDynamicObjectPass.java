@@ -34,7 +34,8 @@ public interface NativeDynamicObjectPass {
 
     private static void validate(NativeDynamicObjectPass owner, LevelManager level, PlcLifecyclePhase phase) {
         if (owner == null) return;
-        if (phase != PlcLifecyclePhase.ORDINARY_LEVEL || !level.objectsExecuteAfterPlayerPhysics()) {
+        // Shared execution is unconditionally player-first; only the actual ordinary phase admits this owner.
+        if (phase != PlcLifecyclePhase.ORDINARY_LEVEL) {
             throw new IllegalStateException("Native dynamic RAM requires an ordinary player-first object cycle");
         }
         if (level.getObjectManager() != null || level.getRingManager() != null) {

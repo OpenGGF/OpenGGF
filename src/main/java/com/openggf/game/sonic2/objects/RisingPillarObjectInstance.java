@@ -247,7 +247,7 @@ public class RisingPillarObjectInstance extends AbstractObjectInstance
      * Corresponds to loc_25ACE and loc_25BF6 in disassembly.
      */
     private void releasePlayerAndBreak(AbstractPlayableSprite player) {
-        // ROM loc_25AF6 (s2.asm:51393-51405) does: bset rolling; move.b #$E,y_radius;
+        // ROM loc_25AF6 (s2.asm:51864-51876) does: bset rolling; move.b #$E,y_radius;
         // move.b #7,x_radius; set Roll anim; bset in_air; bclr on_object; routine=2.
         // ROM y_pos is the CENTRE, so the y_radius change does not move the centre.
         // The engine stores top-left, so naively calling setRolling(true) here would
@@ -282,7 +282,7 @@ public class RisingPillarObjectInstance extends AbstractObjectInstance
 
         // Get debris frame (mapping_frame + 7)
         List<SpriteMappingFrame> mappings = MAPPINGS.get(
-                Sonic2Constants.MAP_UNC_OBJ2B_ADDR, S2SpriteDataLoader::loadMappingFrames, "Obj2B");
+                Sonic2Constants.MAP_UNC_OBJ2B_ADDR, S2SpriteDataLoader::loadStockMappingFrames, "Obj2B");
         if (mappings.isEmpty()) {
             setDestroyed(true);
             return;
@@ -342,7 +342,7 @@ public class RisingPillarObjectInstance extends AbstractObjectInstance
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         List<SpriteMappingFrame> mappings = MAPPINGS.get(
-                Sonic2Constants.MAP_UNC_OBJ2B_ADDR, S2SpriteDataLoader::loadMappingFrames, "Obj2B");
+                Sonic2Constants.MAP_UNC_OBJ2B_ADDR, S2SpriteDataLoader::loadStockMappingFrames, "Obj2B");
         if (mappings.isEmpty()) {
             return;
         }
@@ -358,7 +358,7 @@ public class RisingPillarObjectInstance extends AbstractObjectInstance
 
     private void renderFullFrame(List<GLCommand> commands) {
         List<SpriteMappingFrame> mappings = MAPPINGS.get(
-                Sonic2Constants.MAP_UNC_OBJ2B_ADDR, S2SpriteDataLoader::loadMappingFrames, "Obj2B");
+                Sonic2Constants.MAP_UNC_OBJ2B_ADDR, S2SpriteDataLoader::loadStockMappingFrames, "Obj2B");
         int frame = mappingFrame;
         if (frame < 0 || frame >= mappings.size()) {
             frame = 0;
@@ -569,7 +569,7 @@ public class RisingPillarObjectInstance extends AbstractObjectInstance
 
         private static SpriteMappingPiece debrisPiece(int mappingFrame, int pieceIndex) {
             List<SpriteMappingFrame> mappings = MAPPINGS.get(
-                    Sonic2Constants.MAP_UNC_OBJ2B_ADDR, S2SpriteDataLoader::loadMappingFrames, "Obj2B");
+                    Sonic2Constants.MAP_UNC_OBJ2B_ADDR, S2SpriteDataLoader::loadStockMappingFrames, "Obj2B");
             if (mappingFrame < 0 || mappingFrame >= mappings.size()) {
                 return null;
             }

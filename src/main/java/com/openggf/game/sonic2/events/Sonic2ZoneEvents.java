@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.events;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.camera.Camera;
 import com.openggf.audio.AudioManager;
 import com.openggf.data.Rom;
@@ -168,7 +170,7 @@ public abstract class Sonic2ZoneEvents {
         try {
             Rom rom = GameServices.rom().getRom();
             LevelManager levelManager = GameServices.level();
-            byte[] paletteData = rom.readBytes(romAddr, PALETTE_LINE_SIZE);
+            byte[] paletteData = rom.readBytes(address(rom, romAddr), PALETTE_LINE_SIZE);
             levelManager.updatePalette(paletteLine, paletteData);
         } catch (Exception e) {
             if (RomManager.isConfiguredRomMissing(e)) {

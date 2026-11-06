@@ -11,6 +11,7 @@ import com.openggf.sprites.playable.Sonic;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
@@ -24,6 +25,7 @@ import static com.openggf.GameLoopRewindTestAccess.owner;
 /** Ordinary cold Act1 entry owns every preceding clock and object admission. */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestLrzWideActTwoColdRouteCapture {
+    @Tag("exhaustive-audit")
     @Test
     void coldTeamCompletesWideActTwoWithRepeatableWorldAndIsolatedBossHistory() throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(

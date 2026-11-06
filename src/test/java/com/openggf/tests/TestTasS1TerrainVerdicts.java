@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Representative seeded S1 native-terrain scenarios; no trace state is imported. */
 @RequiresRom(SonicGame.SONIC_1)
 class TestTasS1TerrainVerdicts {
-    @Test void currentLimitationHorizontalUnderflowClampsLeftInsteadOfNativeRight() throws Exception {
+    @Test void horizontalUnderflowUsesUnsignedNativeRightBoundary() throws Exception {
         try (var scope = new Scope(0, 0, 16, 700)) {
             var f = scope.f; var s = f.sprite();
             s.setAir(true); s.setXSpeed((short)-0x2000); s.setYSpeed((short)0);
@@ -18,8 +18,7 @@ class TestTasS1TerrainVerdicts {
             assertEquals(16, s.getCentreX());
             assertEquals(0xfff0, (s.getCentreX() + (s.getXSpeed() >> 8)) & 0xffff);
             S1ReelFrames.step(f,false,false,false,false,false);
-            assertEquals(16, s.getCentreX(), "Confirmed limitation: signed compare clamps left instead of native unsigned right");
-            assertNotEquals(expected, s.getCentreX());
+            assertEquals(expected, s.getCentreX(), "Native unsigned predicted word clamps to the right boundary");
             assertEquals(0, s.getXSpeed());
         }
     }

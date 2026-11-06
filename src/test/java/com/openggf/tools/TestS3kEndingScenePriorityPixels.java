@@ -7,6 +7,7 @@ import com.openggf.game.sonic3k.runtime.EndingZoneRuntimeState;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import static org.junit.jupiter.api.Assertions.*;
@@ -23,7 +24,7 @@ class TestS3kEndingScenePriorityPixels {
         try(var session=new GameplayCaptureSession(settings)){
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(),13,1,settings);
             GameServices.rng().setSeed(0); // Independently declared scene authoring setup, only before setup dispatch.
-            for(int outer=0;outer<3071;outer++){session.step(null);session.renderFrame();}
+            advanceToProducer(session,3071);
             var zone=(EndingZoneRuntimeState)GameServices.zoneRuntimeState();
             assertEquals(4,zone.screen().backgroundRoutine);
             var scroll=GameServices.parallax().getHScrollForShader();int bgY=GameServices.parallax().getVscrollFactorBG();
@@ -59,7 +60,7 @@ class TestS3kEndingScenePriorityPixels {
         var settings=settings(width);
         try(var session=new GameplayCaptureSession(settings)){
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(),13,1,settings);GameServices.rng().setSeed(0);
-            for(int outer=0;outer<5119;outer++){session.step(null);session.renderFrame();}
+            advanceToProducer(session,5119);
             int[][] palette=new int[4][16];for(int line=0;line<4;line++)for(int c=0;c<16;c++)palette[line][c]=rgb(line,c);
             // The next VInt publishes the SAT prepared by this completed object pass.
             // Geometry and CRAM must come from that same producer generation.
@@ -84,7 +85,7 @@ class TestS3kEndingScenePriorityPixels {
         var settings=settings(width);
         try(var session=new GameplayCaptureSession(settings)){
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(),13,1,settings);GameServices.rng().setSeed(0);
-            for(int outer=0;outer<setupAndOrdinaryPasses;outer++){session.step(null);session.renderFrame();}
+            advanceToProducer(session,setupAndOrdinaryPasses);
             var zone=(EndingZoneRuntimeState)GameServices.zoneRuntimeState();assertEquals(4,zone.screen().backgroundRoutine);
             int[] producerScroll=GameServices.parallax().getHScrollForShader().clone();
             int bgY=GameServices.parallax().getVscrollFactorBG(),fgY=GameServices.parallax().getVscrollFactorFG();
@@ -118,7 +119,7 @@ class TestS3kEndingScenePriorityPixels {
         var settings=settings(width);
         try(var session=new GameplayCaptureSession(settings)){
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(),13,1,settings);GameServices.rng().setSeed(0);
-            for(int outer=0;outer<5119;outer++){session.step(null);session.renderFrame();}
+            advanceToProducer(session,5119);
             var player=session.player();assertEquals(0xBA,player.getMappingFrame());
             assertTrue(player.getRenderHFlip(),"loc_5E1F0 writes render_flags independently of status");
             var art=new com.openggf.game.sonic3k.Sonic3kPlayerArt(
@@ -157,7 +158,8 @@ class TestS3kEndingScenePriorityPixels {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(),13,1,settings);GameServices.rng().setSeed(0);
             int completedPasses=0;
             for(int producerPasses:new int[]{1535,5119}){
-                while(completedPasses<producerPasses){session.step(null);session.renderFrame();completedPasses++;}
+                advanceToProducer(session,producerPasses-completedPasses);
+                completedPasses=producerPasses;
                 var plane=GameServices.level().getObjectManager().activeObjectsOfType(
                         com.openggf.game.sonic3k.ending.EndingRescueDirectorObjectInstance.Actor.class).stream()
                         .filter(actor->actor.flightFrame()==1).findFirst().orElseThrow();
@@ -201,6 +203,65 @@ class TestS3kEndingScenePriorityPixels {
             }
         }
     }
+    /** Advance the real ending clock; only unobserved prefix drawing is omitted. */
+    private static void advanceToProducer(GameplayCaptureSession session,int passes){
+        var drawing=new RouteFrameDrawing();
+        advance(session,passes,drawing);
+        drawing.checkpoint(session);
+    }
+
+    private static void advance(GameplayCaptureSession session,int passes,RouteFrameDrawing drawing){
+        for(int pass=0;pass<passes;pass++){
+            session.step(null);
+            drawing.afterStep(session);
+        }
+    }
+
+    private record PublishedEnding(int[] pixels,byte[] nativeState,int[] scroll){}
+
+    @Test
+    void checkpointDrawingMatchesContinuousReunionPixelsAndNativeState()throws Exception{
+        var continuous=captureReunion(true);
+        var checkpoint=captureReunion(false);
+        assertArrayEquals(continuous.nativeState(),checkpoint.nativeState(),
+                "omitting unobserved drawing must retain the complete native ending state");
+        assertArrayEquals(continuous.scroll(),checkpoint.scroll(),
+                "the same completed producer must own the published scroll");
+        assertArrayEquals(continuous.pixels(),checkpoint.pixels(),
+                "reconstructed ending pixels must match continuous real drawing");
+    }
+
+    private PublishedEnding captureReunion(boolean everyFrame)throws Exception{
+        var settings=settings(320);
+        try(var session=new GameplayCaptureSession(settings)){
+            session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(),13,1,settings);
+            GameServices.rng().setSeed(0);
+            var drawing=new RouteFrameDrawing(everyFrame);
+            advance(session,5119,drawing);
+            drawing.checkpoint(session);
+            assertEquals(everyFrame?5119:1,drawing.drawnFrames());
+            assertEquals(everyFrame?0:5119,drawing.skippedFrames());
+            session.step(null);
+            var image=session.render();
+            long colors=java.util.Arrays.stream(image.pixels()).distinct().count();
+            assertTrue(colors>1,"the captured scene must be nonblank; colors="+colors+", everyFrame="+everyFrame);
+            var zone=(EndingZoneRuntimeState)GameServices.zoneRuntimeState();
+            assertEquals(4,zone.screen().backgroundRoutine);
+            var player=session.player();
+            var logicalFacing=player.getDirection();
+            try{
+                // This native pose writes render_flags separately from logical status.
+                // Force the two inputs apart so an accidental alias cannot pass both paths.
+                player.setDirection(com.openggf.physics.Direction.RIGHT);
+                assertTrue(player.getRenderHFlip(),"native render flip must not follow logical facing");
+            }finally{
+                player.setDirection(logicalFacing);
+            }
+            return new PublishedEnding(image.pixels().clone(),zone.captureBytes(),
+                    GameServices.parallax().getHScrollForShader().clone());
+        }
+    }
+
     private static int[] planeMappingPixels(int width,com.openggf.level.render.SpriteMappingFrame frame,
             int nativeX,int nativeY,int artTile,boolean flip){
         int[] colors=new int[width*224];java.util.Arrays.fill(colors,-1);
@@ -248,7 +309,7 @@ class TestS3kEndingScenePriorityPixels {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(),13,1,settings);GameServices.rng().setSeed(0);
             // Declared native setup + ordinary controller polls. This completed
             // producer is published by the following VInt, with no fitted shift.
-            for(int outer=0;outer<63;outer++){session.step(null);session.renderFrame();}
+            advanceToProducer(session,63);
             var player=session.player();assertEquals(0xC4,player.getMappingFrame());
             var art=new com.openggf.game.sonic3k.Sonic3kPlayerArt(
                     com.openggf.data.RomByteReader.fromRom(GameServices.rom().getRom())).loadTails();

@@ -80,16 +80,19 @@ public final class S3kCompetitionScroll implements RewindSnapshottable<S3kCompet
         this(rom,arena,0,totalLaps);
     }
     public S3kCompetitionScroll(Rom rom,Arena arena,int act,int totalLaps) throws IOException {
+        this(rom,arena,act,totalLaps,S3kCompetitionResources.LOCKED_ON);
+    }
+    public S3kCompetitionScroll(Rom rom,Arena arena,int act,int totalLaps,S3kCompetitionResources resources) throws IOException {
         this.arena=Objects.requireNonNull(arena);
         if(act<0 || act>1 || totalLaps<1 || totalLaps>255) throw new IllegalArgumentException("Invalid native competition act/lap count");
         this.act=act;this.totalLaps=totalLaps;
         int index=arena.zoneId()-0xE;
-        int[] words=readWords(rom,SCREEN_PROFILE_ADDRESS+index*16,8,false);
-        int[] bounds=readWords(rom,COMPETITION_LEVEL_SIZES_ADDRESS+index*16+act*8,4,true);
+        int[] words=readWords(rom,resources.at(SCREEN_PROFILE_ADDRESS)+index*16,8,false);
+        int[] bounds=readWords(rom,resources.at(COMPETITION_LEVEL_SIZES_ADDRESS)+index*16+act*8,4,true);
         profile=new Profile(words[0],words[1],words[2],words[3],words[4],words[5],words[6],words[7],
                 new CameraBounds(bounds[0],bounds[1],bounds[2],bounds[3]));
-        heights=DEFORM_WORDS[index]==0?new int[0]:readWords(rom,DEFORM_ADDRESS[index],DEFORM_WORDS[index],false);
-        alzDelta=arena==Arena.AZURE_LAKE?readWords(rom,ALZ_DELTA_ADDRESS,256,true):new int[0];
+        heights=DEFORM_WORDS[index]==0?new int[0]:readWords(rom,resources.at(DEFORM_ADDRESS[index]),DEFORM_WORDS[index],false);
+        alzDelta=arena==Arena.AZURE_LAKE?readWords(rom,resources.at(ALZ_DELTA_ADDRESS),256,true):new int[0];
     }
     private static int[] readWords(Rom rom,int address,int count,boolean signed) throws IOException {
         byte[] bytes=rom.readBytes(address,count*2);int[] result=new int[count];

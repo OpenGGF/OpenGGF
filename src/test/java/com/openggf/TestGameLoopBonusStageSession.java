@@ -76,6 +76,20 @@ class TestGameLoopBonusStageSession {
     }
     private void release() throws Exception { TitleCardLifecycleTestAccess.release(loop); }
 
+    @Test void slotsTitleCardDoesNotSpawnSavedShield() {
+        var nativeProvider = new com.openggf.game.sonic3k.Sonic3kBonusStageCoordinator();
+        nativeProvider.onEnter(BonusStageType.SLOT_MACHINE, null);
+        provider(loop, nativeProvider);
+        var saved = new BonusStageState(0, 0, 50, 0, 0,
+                1 << GameLoop.STATUS_FIRE_SHIELD_BIT, 0, 0, 0, 0, 0, 0,
+                (byte) 0, (byte) 0, 0, 0L, 0);
+        var session = (GameLoopBonusStageSession) read(loop, "bonusSession");
+        session.prepareBonusStageForTitleCard(BonusStageType.SLOT_MACHINE, saved);
+        verify(player, never()).giveShield(any());
+        assertEquals(ShieldType.FIRE, GameLoop.resolveShieldToRestore(
+                BonusStageProvider.BonusStageRewards.none(), saved.savedStatusSecondary()));
+    }
+
     @Test void admissionShortCircuitsBeforeCaptureOrPresentation() throws Exception {
         mode(GameMode.BONUS_STAGE); enter(loop, BonusStageType.GUMBALL);
         verifyNoInteractions(module, audio, fade, levels, sprites);
@@ -94,6 +108,21 @@ class TestGameLoopBonusStageSession {
         write(loop, "gameplayMode", context);
         enter(loop, BonusStageType.GUMBALL);
         verify(context).getRunPolicy(); verifyNoInteractions(module, fade, levels, audio, sprites);
+    }
+    @Test void entryFadeReservesTheCompletionIterationBeforeTitleWork() throws Exception {
+        var context = spy(SessionManager.getCurrentGameplayMode());
+        doReturn(true).when(context).isGameplayRuntimeReady();
+        write(loop, "gameplayMode", context);
+        entryFade();
+        enter(loop, BonusStageType.GUMBALL);
+        var frame = context.plcFrameLifecycle().latchBeforeFadeUpdate();
+        try {
+            assertTrue(frame.isOwnedBy(
+                    com.openggf.game.resources.PlcLifecyclePhase.PALETTE_FADE),
+                    "Level's blocking entry fade must retain its completion token");
+        } finally {
+            frame.finish();
+        }
     }
     @Test void entryCaptureAndMusicPrecedePendingAndFade() throws Exception {
         var callback = entryFade();
@@ -188,6 +217,18 @@ class TestGameLoopBonusStageSession {
         assertSame(failure, assertThrows(IllegalStateException.class, () -> completeDeferred(loop)));
         completeDeferred(loop); verify(provider, times(1)).onDeferredSetupComplete(); verifyNoInteractions(replacement);
     }
+    @Test void returnRestoresSavedApparentActOnTheLiveDestinationBeforeTitleInitialization() throws Exception {
+        var rebound = mock(LevelManager.class);
+        doAnswer(call -> { write(loop, "levelManager", rebound); return null; })
+                .when(levels).loadZoneAndAct(1, 2);
+        exited(loop, provider, state(11));
+        var order = inOrder(levels, rebound, title);
+        order.verify(levels).loadZoneAndAct(1, 2);
+        order.verify(rebound).setApparentAct(4);
+        order.verify(rebound).consumeTitleCardRequest();
+        order.verify(title).initialize(3, 4);
+    }
+
     @Test void exitCapturesSavedStateBeforeFadeButLiveRingsAndRewardsAtCompletion() throws Exception {
         var callback = entryFade(); mode(GameMode.BONUS_STAGE); provider(loop, provider);
         var saved = state(11); var live = mock(LevelState.class);
@@ -200,6 +241,39 @@ class TestGameLoopBonusStageSession {
         var order = inOrder(live, provider); order.verify(live).getRings(); order.verify(provider).getRewards(); order.verify(provider).onExit();
         verify(live).setRings(69); verify(live, never()).setRings(211); verify(levels).loadZoneAndAct(1, 2);
         verify(title).initialize(3, 4); verify(provider, times(1)).getSavedState();
+    }
+    @Test void heldReturnRestoresTheAssembledDestinationAndRetainsExitInputsUntilThen() throws Exception {
+        var assembly = new AtomicReference<Runnable>();
+        var cleanup = new AtomicReference<Runnable>();
+        var sourceHud = mock(LevelState.class); var destinationHud = mock(LevelState.class);
+        var destinationPlayer = mock(AbstractPlayableSprite.class);
+        var gameState = mock(GameStateManager.class); write(loop, "gameState", gameState);
+        when(levels.getLevelGamestate()).thenReturn(sourceHud); when(sourceHud.getRings()).thenReturn(69);
+        when(provider.getRewards()).thenReturn(new BonusStageProvider.BonusStageRewards(0, 2, false, false, false, false));
+        mode(GameMode.BONUS_STAGE); provider(loop, provider);
+        try (var loads = mockStatic(com.openggf.level.NativeLevelLoadAccess.class, CALLS_REAL_METHODS)) {
+            loads.when(() -> com.openggf.level.NativeLevelLoadAccess.afterPlayerAssembly(eq(levels), any(Runnable.class)))
+                    .thenAnswer(call -> { assembly.set(call.getArgument(1)); return null; });
+            loads.when(() -> com.openggf.level.NativeLevelLoadAccess.afterAttempt(eq(levels), any(Runnable.class)))
+                    .thenAnswer(call -> { cleanup.set(call.getArgument(1)); return null; });
+            exited(loop, provider, state(11));
+            assertNotNull(assembly.get()); assertNotNull(cleanup.get());
+            verify(levels, never()).clearBonusStageReturn();
+            verify(sourceHud, never()).setTimerFrames(anyLong());
+            verify(gameState, never()).addLife();
+            clearInvocations(player);
+            when(sprites.getSprite(anyString())).thenReturn(destinationPlayer);
+            when(levels.getLevelGamestate()).thenReturn(destinationHud);
+            when(provider.getRewards()).thenReturn(BonusStageProvider.BonusStageRewards.none());
+            assembly.get().run();
+            verify(destinationPlayer).setTopSolidBit((byte) 0);
+            verify(destinationHud).setRings(69);
+            verify(destinationHud).setTimerFrames(123L);
+            verify(gameState, times(2)).addLife();
+            verify(player, never()).setTopSolidBit(anyByte());
+            cleanup.get().run();
+            verify(levels).clearBonusStageReturn();
+        }
     }
     @Test void exitLooksUpPublishedContextAfterOnExitAndRetainsPartialStateIfItThrows() throws Exception {
         var first = mock(GameplayModeContext.class); var later = mock(GameplayModeContext.class); var current = new AtomicReference<>(first);
@@ -263,17 +337,32 @@ class TestGameLoopBonusStageSession {
         when(playback.shouldSkipCurrentGameplayTick()).thenReturn(true);
         when(playback.currentSkippedTickVblankAdvanceCount()).thenReturn(3);
         var rewind = mock(com.openggf.game.rewind.LiveRewindManager.class);
-        var frame = mock(com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame.class);
-        var context = mock(LevelFrameContext.class);
+        var lifecycle = new com.openggf.game.resources.PlcFrameLifecycleCoordinator(
+                (com.openggf.game.resources.PlcLifecycleService) null);
+        var frame = lifecycle.latchBeforeFadeUpdate();
+        frame.claim(frozen ? com.openggf.game.resources.PlcLifecyclePhase.PALETTE_FADE
+                : com.openggf.game.resources.PlcLifecyclePhase.LAG);
+        var timing = spy(new com.openggf.game.timing.HardwareTimingService());
+        var reboundLevel = mock(LevelManager.class);
+        var reboundObjects = mock(com.openggf.level.objects.ObjectManager.class);
+        when(reboundLevel.getObjectManager()).thenReturn(reboundObjects);
+        var context = new LevelFrameContext(module, module.getRules(), null, null,
+                null, null, null, null, null, timing,
+                boundary -> write(loop, "levelManager", reboundLevel), RuntimeArtCoordinator.NONE);
         write(loop, "playbackDebugManager", playback); write(loop, "liveRewindManager", rewind); write(loop, "activePlcLifecycleFrame", frame);
         mode(GameMode.BONUS_STAGE); provider(loop, provider); pending(loop, frozen);
-        try (var contexts = mockStatic(LevelFrameContext.class); var steps = mockStatic(LevelFrameStep.class)) {
+        try (var contexts = mockStatic(LevelFrameContext.class)) {
             contexts.when(() -> LevelFrameContext.from(any())).thenReturn(context);
             call(loop, "updateBonusStageMode", new Class<?>[]{boolean.class}, false);
-            steps.verify(() -> LevelFrameStep.serviceHardwareVBlankOnly(context, frame), times(frozen ? 1 : 3));
-            verify(objects, times(frozen ? 1 : 3)).advanceVblaCounter(); verify(playback).onLevelFrameAdvanced();
+            verify(timing, times(frozen ? 1 : 3)).service(
+                    com.openggf.game.timing.HardwareServiceBoundary.VINT_SERVICE);
+            verify(objects, never()).advanceVblaCounter();
+            verify(reboundObjects, times(frozen ? 1 : 3)).advanceVblaCounter();
+            verify(playback).onLevelFrameAdvanced();
             verify(provider, never()).onFrameUpdate(); verify(provider, never()).isStageComplete(); verifyNoInteractions(rewind);
             verify(sprites, never()).update(any());
+        } finally {
+            frame.finish();
         }
     }
     @Test void registrationAndZoneSelectionThrowsRetainPublishedProviderWithoutRollback() throws Exception {

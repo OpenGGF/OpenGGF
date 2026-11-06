@@ -78,7 +78,7 @@ public final class LrzLavaFallObjectInstance extends AbstractObjectInstance
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         // move.w (Level_frame_counter).w,d0 / andi.w #$FF,d0 / cmp.w $30(a0),d0 / blo
         // (sonic3k.asm:88823-88826): an unsigned compare against the clock's low byte.
-        int clock = levelFrameCounterOrFallback(vIntRunCount) & 0xFF;
+        int clock = services().levelManager().getFrameCounter() & 0xFF;
         if (clock < clockThreshold) {
             return;
         }
@@ -91,7 +91,7 @@ public final class LrzLavaFallObjectInstance extends AbstractObjectInstance
         emitDrop();
     }
 
-    /** {@code loc_436C8} through {@code loc_43746} (sonic3k.asm:88831-88852). */
+    /** {@code loc_436C8} through {@code loc_43746} (sonic3k.asm:88836-88857). */
     private void emitDrop() {
         // addq.b #1,$25(a0) / cmpi.b #2,$25(a0) / blo: the second of every two drops is the one
         // given the routine that plays the sound.
@@ -109,15 +109,6 @@ public final class LrzLavaFallObjectInstance extends AbstractObjectInstance
         spawnChild(() -> new LrzLavaFallDropInstance(x, y, sound, longer));
     }
 
-    private int levelFrameCounterOrFallback(int fallback) {
-        try {
-            return services().levelManager() != null
-                    ? services().levelManager().getFrameCounter()
-                    : fallback;
-        } catch (Exception e) {
-            return fallback;
-        }
-    }
 
     /** ROM x_pos/y_pos are object centres. */
     public int getCentreX() {

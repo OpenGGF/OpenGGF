@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.game.AbstractLevelInitProfile;
 import com.openggf.game.InitStep;
 import com.openggf.game.LevelLoadContext;
@@ -22,7 +24,7 @@ import java.util.logging.Logger;
 /**
  * Sonic 2 level initialization profile.
  * <p>
- * Aligned to the S2 {@code Level:} routine at {@code s2.asm:4753} (57 steps
+ * Aligned to the S2 {@code Level:} routine at {@code s2.asm:4757} (57 steps
  * across phases A-J). The teardown steps undo the state set up by that routine.
  * <p>
  * S2-specific characteristics:
@@ -37,7 +39,7 @@ import java.util.logging.Logger;
  * @see <a href="docs/plans/2026-02-27-rom-driven-init-profiles-design.md">
  *      Design doc: Sonic 2 Level Init Profile (57 steps)</a>
  */
-public class Sonic2LevelInitProfile extends AbstractLevelInitProfile {
+public class Sonic2LevelInitProfile extends AbstractLevelInitProfile implements com.openggf.game.internal.LevelMotionPresentation {
     private static final Logger LOGGER = Logger.getLogger(
             Sonic2LevelInitProfile.class.getName());
     private static final int LEVEL_ENTRY_FADE_OUT_REQUEST = 0xF9;
@@ -194,7 +196,7 @@ public class Sonic2LevelInitProfile extends AbstractLevelInitProfile {
             // from the ROM's own LevelOrder table (s2disasm/s2.asm:28041,
             // read at s2.asm:27986) the way Sonic2.getZoneAct does.
             Rom rom = GameServices.rom().getRom();
-            int levelOrderEntry = Sonic2Constants.LEVEL_SELECT_ADDR
+            int levelOrderEntry = address(rom, Sonic2Constants.LEVEL_SELECT_ADDR)
                     + ctx.getLevelIndex() * 2;
             int romZoneId = Byte.toUnsignedInt(rom.readByte(levelOrderEntry));
             int romActId = Byte.toUnsignedInt(rom.readByte(levelOrderEntry + 1));
@@ -249,9 +251,10 @@ public class Sonic2LevelInitProfile extends AbstractLevelInitProfile {
             return;
         }
         try {
+            Rom rom = GameServices.rom().getRom();
             int zone = ctx.getLevel().getZoneIndex();
-            int offset = Sonic2Constants.LEVEL_DATA_DIR + zone * Sonic2Constants.LEVEL_DATA_DIR_ENTRY_SIZE;
-            int primary = GameServices.rom().getRom().readByte(offset) & 0xFF;
+            int offset = address(rom, Sonic2Constants.LEVEL_DATA_DIR) + zone * Sonic2Constants.LEVEL_DATA_DIR_ENTRY_SIZE;
+            int primary = rom.readByte(offset) & 0xFF;
             // Retail 1P bypasses this load unless Player_mode == 2. OpenGGF
             // currently has no separate two-player graphics flag owner, so the
             // represented Tails-alone path selects the native Tails life cue.
@@ -315,7 +318,7 @@ public class Sonic2LevelInitProfile extends AbstractLevelInitProfile {
         // still inside the title-card sequence. The title-card leave loop
         // (s2.asm:5060-5066) then runs VintID_TitleCard + RunPLC_RAM every frame
         // until TitleCard_Background unloads, before Level_StartGame /
-        // Level_MainLoop (s2.asm:5082-5087). That loop is exactly 25 frames long,
+        // Level_MainLoop (s2.asm:5086-5091). That loop is exactly 25 frames long,
         // fixed by the Obj34 leave routines and their RAM slot order
         // (s2.asm:27368-27374): TitleCard_Left runs Obj34_LeftPartOut for 5 frames
         // from titlecard_location $A (s2.asm:5058, 27518-27540: $A -> 6 -> 2 -> 0

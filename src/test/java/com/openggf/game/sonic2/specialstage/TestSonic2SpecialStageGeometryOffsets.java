@@ -2,6 +2,7 @@ package com.openggf.game.sonic2.specialstage;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.data.Rom;
+import com.openggf.data.RomByteReader;
 import com.openggf.game.GameServices;
 import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.rewind.RewindSnapshotDiff;
@@ -117,19 +118,19 @@ class TestSonic2SpecialStageGeometryOffsets {
 
     @Test
     void suppliedRomBytesOwnTheTableAndByteNegationWrapsBeforeSignExtension() throws Exception {
-        Rom patched = mock(Rom.class);
+        Rom patched = spy(Rom.fromReader(RomByteReader.fromBytes(new byte[0]), "geometry fixture"));
         byte[] bytes = new byte[112];
         bytes[8] = (byte) 0x80;
         bytes[9] = (byte) 0xD6;
-        when(patched.readBytes(0x768AL, 112)).thenReturn(bytes);
+        doReturn(bytes).when(patched).readBytes(0x768AL, 112);
         set(manager, "dataLoader", new Sonic2SpecialStageDataLoader(patched));
         display(4, true);
         set(manager, "drawingIndex", 4);
         manager.updateGeometryOffsetsAfterTrackDraw();
         assertOffsets(0, 12); // NEG.B $80 stays $80, EXT.W gives -128.
         verify(patched).readBytes(0x768AL, 112);
-        Rom unreadable = mock(Rom.class);
-        when(unreadable.readBytes(0x768AL, 112)).thenThrow(new IOException("unavailable ROM bytes"));
+        Rom unreadable = spy(Rom.fromReader(RomByteReader.fromBytes(new byte[0]), "unreadable geometry fixture"));
+        doThrow(new IOException("unavailable ROM bytes")).when(unreadable).readBytes(0x768AL, 112);
         set(manager, "dataLoader", new Sonic2SpecialStageDataLoader(unreadable));
         assertThrows(UncheckedIOException.class, manager::updateGeometryOffsetsAfterTrackDraw);
     }

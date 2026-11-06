@@ -6,6 +6,8 @@ import com.openggf.physics.Direction;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
+import com.openggf.level.objects.TestObjectServices;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -206,7 +208,33 @@ class TestLrzCorkscrewObjectInstance {
         assertEquals(rider.getGSpeed(), rider.getXSpeed(), "x_vel takes the negated ground_vel");
         assertEquals(0, rider.getYSpeed(), "move.w #0,y_vel");
         assertFalse(rider.isObjectControlled(), "object_control is cleared");
+        assertFalse(rider.isObjectMappingFrameControl(), "the direct pose gate is released");
         assertEquals(Direction.LEFT, rider.getDirection(), "bset #Status_Facing faces left");
+    }
+
+    @Test
+    void newLeaderRideFramePausesCleanP2StandingBitButTheNextPassResumes() {
+        LrzCorkscrewObjectInstance corkscrew = corkscrew();
+        TestablePlayableSprite leader = riderAt(BASE_X, BASE_Y);
+        leader.setGSpeed((short) 0x1000);
+        TestablePlayableSprite tails = riderAt(BASE_X - 0x30, BASE_Y);
+        corkscrew.setServices(new TestObjectServices().withSidekicks(List.of(tails)));
+        corkscrew.update(1, leader);
+        corkscrew.update(2, leader); // first direct P1 frame EF; P2 outside the box
+        tails.setCentreX((short) BASE_X);
+        corkscrew.update(3, leader); // unchanged EF: P2 captures under clean bit4
+        assertTrue(corkscrew.isRidingFor(false));
+        assertEquals(0, corkscrew.accumulatorFor(false));
+        assertTrue(tails.isObjectMappingFrameControl());
+        int tailsX = tails.getCentreX();
+        corkscrew.update(4, leader); // P1 param48 -> FA: dirty bit1 misses bit4
+        assertEquals(0xFA, leader.getMappingFrame());
+        assertEquals(0, corkscrew.accumulatorFor(false));
+        assertEquals(tailsX, tails.getCentreX());
+        assertEquals(0x600, tails.getGSpeed());
+        corkscrew.update(5, leader); // same FA: clean bit4 resumes
+        assertEquals(0x60000, corkscrew.accumulatorFor(false));
+        assertEquals(0x610, tails.getGSpeed());
     }
 
     // ----- helpers -----------------------------------------------------------------------------

@@ -21,6 +21,11 @@ promoting versions.
 - Full ordinary validation is public-release-only: use explicit `-Pfull-suite`
   for release preparation. Plain Maven, category runs, PRs and routine manual CI
   use smoke. The Release workflow explicitly opts into the full suite.
+- Before final public-release qualification, rebuild the project atlas with
+  `python3 tools/project_atlas/generate.py --ref <reviewed-source-SHA>`, review
+  it and commit the refreshed HTML. Follow the publishing guide's atlas refresh
+  procedure: its embedded input SHA is provenance; qualify the resulting final
+  candidate SHA, and leave tag creation to the authorized master-push workflow.
 - Local release preparation also runs the existing AIZ1/HCZ1 obligation pilot
   with `--run --expected-candidate <reviewed-full-SHA>` and an absolute existing
   original S3&K ROM path. Strict mode binds the committed inventory and clean

@@ -291,6 +291,7 @@ public final class ContentImportService {
         private final Kind kind;
         private final Path source;
         private final String displayName;
+        private final String facts;
         private final String detail;
         private final GameId suggestedGame;
         private final EditorProjectDocument project;
@@ -300,34 +301,39 @@ public final class ContentImportService {
         private PackedModAssetRoot enclosingAssets;
         private boolean closed;
 
-        private PreparedImport(Kind kind, Path source, String displayName, String detail, GameId game,
+        private PreparedImport(Kind kind, Path source, String displayName, String facts, String detail, GameId game,
                                EditorProjectDocument project, ModLevelDefinition level, ModDescriptor descriptor,
                                PackedModAssetRoot assets) {
-            this.kind = kind; this.source = source; this.displayName = displayName; this.detail = detail;
+            this.kind = kind; this.source = source; this.displayName = displayName; this.facts = facts; this.detail = detail;
             this.suggestedGame = game; this.project = project; this.level = level; this.descriptor = descriptor; this.assets = assets;
         }
 
         static PreparedImport project(Path source, EditorProjectDocument project) {
-            return new PreparedImport(Kind.PROJECT, source, project.metadata().name(), "Open this complete editable project",
+            return new PreparedImport(Kind.PROJECT, source, project.metadata().name(), "",
+                    "A complete project, editable as saved",
                     project.metadata().gameId(), project, null, null, null);
         }
 
         static PreparedImport level(Path source, ModLevelDefinition level) {
             GameId game = level.formatVersion() == 2 ? GameId.S3K : level.blockGridSide() == 16 ? GameId.S1 : GameId.S2;
             return new PreparedImport(Kind.LEVEL, source, level.zoneName(),
-                    level.width() + " x " + level.height() + " blocks; import as a new editable project",
+                    level.width() + " x " + level.height() + " blocks", "Becomes a new editable project in the editor",
                     game, null, level, null, null);
         }
 
         static PreparedImport mod(Path source, ModDescriptor descriptor, PackedModAssetRoot assets) {
-            String detail = descriptor.manifest().id() + " " + descriptor.manifest().version()
-                    + "; install disabled, then enable" + (descriptor.containsCode() ? " and trust its code" : "") + " in Mods";
-            return new PreparedImport(Kind.MOD, source, descriptor.manifest().name(), detail, null, null, null, descriptor, assets);
+            // The button already says it installs disabled; this line says what comes next.
+            String detail = "Afterwards, turn it on" + (descriptor.containsCode() ? " and trust its code" : "") + " in Mods";
+            return new PreparedImport(Kind.MOD, source, descriptor.manifest().name(),
+                    descriptor.manifest().id() + " " + descriptor.manifest().version(), detail, null, null, null, descriptor, assets);
         }
 
         public Kind kind() { return kind; }
         public Path source() { return source; }
         public String displayName() { return displayName; }
+        /** Identifying facts (mod id and version, level size); empty when the name says enough. */
+        public String facts() { return facts; }
+        /** What confirming does, in one sentence. */
         public String detail() { return detail; }
         public Optional<GameId> suggestedGame() { return Optional.ofNullable(suggestedGame); }
         public EditorProjectDocument project() { requireKind(Kind.PROJECT); return project; }

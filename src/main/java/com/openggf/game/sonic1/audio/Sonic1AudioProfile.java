@@ -82,6 +82,12 @@ public class Sonic1AudioProfile extends AbstractAudioProfile {
         MUSIC_MAP = Collections.unmodifiableMap(music);
     }
 
+    private com.openggf.data.RetailRomRevision retailRevision = com.openggf.data.RetailRomRevision.UNKNOWN;
+
+    public void bindRetailRom(com.openggf.data.RetailRomRevision revision) {
+        retailRevision = java.util.Objects.requireNonNull(revision);
+    }
+
     public Sonic1AudioProfile() {
         super(SOUND_MAP, MUSIC_MAP);
     }
@@ -192,6 +198,8 @@ public class Sonic1AudioProfile extends AbstractAudioProfile {
     @Override
     public int resolveAirResetMusic(int levelMusicId, boolean invincible,
             boolean superForm, boolean bossActive) {
+        // ResumeMusic's invincibility/boss arbitration was added in REV01.
+        if (retailRevision == com.openggf.data.RetailRomRevision.S1_REV00) return levelMusicId;
         if (bossActive) {
             return Sonic1Music.BOSS.id;
         }

@@ -566,10 +566,17 @@ public class Sonic1LargeGrassyPlatformObjectInstance extends AbstractObjectInsta
             walkerFire.destroyWithChildren();
             walkerFire = null;
         }
-        // Also destroy any remaining tracked children directly
+        // LGrass_DelFlames calls DeleteChild for every listed slot immediately
+        // (2F, 35 MZ Large Grassy Platforms and Burning Grass.asm:285-306).
+        // Setting only the destroyed flag leaves later-slot walkers in the
+        // current execution order, where they can spawn a new orphan flame.
+        var objectManager = services().objectManager();
         for (Sonic1GrassFireObjectInstance child : fireChildren) {
             if (!child.isDestroyed()) {
                 child.setDestroyed(true);
+            }
+            if (objectManager != null) {
+                objectManager.removeDynamicObject(child);
             }
         }
         fireChildren.clear();

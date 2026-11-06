@@ -19,7 +19,7 @@ import java.util.List;
 
 /** SKL $98, Obj_SOZEndBoss ($7764A). Shell, pilot and arena remain separate native owners. */
 public final class SozEndBossInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable, TouchResponseProvider, TouchResponseAttackable, ObjectVisualFacing.Source {
+        implements SpawnRewindRecreatable, TouchResponseProvider, TouchResponseAttackable, ObjectVisualFacing.Source, com.openggf.level.objects.boss.InstagibBossTarget {
     @Override public ObjectVisualFacing.Basis nativeFacing() {
         // The frontal walking machine has no horizontal direction. The dismantled pilot escape owns flipped, set for rightward flight.
         return escapePhase == 0 ? ObjectVisualFacing.Basis.NON_DIRECTIONAL : (flipped ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT);
@@ -199,7 +199,7 @@ public final class SozEndBossInstance extends AbstractObjectInstance
             default -> throw new IllegalStateException("SOZ end-boss escape "+escapePhase);
         }
     }
-    private void restoreControl(){int music=services().getCurrentLevelMusicId();if(music>=0)services().playMusic(music);for(var entity:services().playerQuery().playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS))
+    private void restoreControl(){int music=services().getCurrentLevelMusicId();if(music>=0)services().playMusic(com.openggf.game.sonic3k.audio.S3kLevelMusicRestore.resolve(services(), music));for(var entity:services().playerQuery().playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS))
         if(entity instanceof AbstractPlayableSprite p){ObjectControlState.none().applyTo(visualControlOwners.relinquish(p));p.setControlLocked(false);p.clearAirForNativeControlRestore();p.setAnimationId(5);p.setForcedAnimationId(-1);}
         if(services().playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite p){p.clearLogicalInputState();p.setForcedInputMask(0);visualControlOwners.acquire(p).setControlLocked(true);}}
     private void forcedWalk(PlayableEntity entity){if((services().camera().getMaxYTarget()&65535)>=0x700)services().camera().setMaxY((short)0x800);if(!(entity instanceof AbstractPlayableSprite p))return;
@@ -251,4 +251,6 @@ public final class SozEndBossInstance extends AbstractObjectInstance
     @Override public boolean isPersistent(){return true;} @Override public int getPriorityBucket(){return 6;}
     @Override public void appendRenderCommands(List<GLCommand> commands){if(hidden)return;var r=getRenderer(Sonic3kObjectArtKeys.ROBOTNIK_SHIP);
         if(r!=null&&r.isReady())r.drawFrameIndex(10,getX(),getY(),flipped,false);}
+    /** Instagib: the next native hit becomes the defeating one; phases and defeat stay native. */
+    @Override public void collapseToFinalHit() { if (hits > 1) hits = 1; }
 }

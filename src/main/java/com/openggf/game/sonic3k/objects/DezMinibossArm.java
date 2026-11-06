@@ -1,11 +1,12 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.sonic3k.S3kTopSolidProvider;
 import com.openggf.game.PlayableEntity;
 import com.openggf.level.objects.*;
 import com.openggf.physics.TrigLookupTable;
 
 /** loc_7E4CE..7E748: two top-solid arms, initially chained, then cross-linked. */
-final class DezMinibossArm extends DezMinibossSprite implements RewindRecreatable, SolidObjectProvider {
+final class DezMinibossArm extends DezMinibossSprite implements S3kTopSolidProvider, RewindRecreatable, SolidObjectProvider {
     private DezMinibossSprite parent;
     /** Native $44: root initially; first arm is rewritten to point at the second. */
     private DezMinibossSprite crossLink;
@@ -136,7 +137,8 @@ final class DezMinibossArm extends DezMinibossSprite implements RewindRecreatabl
             status|=0x80; debris=true;
             xVelocity=(short)romWord(0x852F4+spawn.subtype()*2);
             yVelocity=(short)romWord(0x852F6+spawn.subtype()*2);
-        } else services().solidExecution().resolveSolidNowAll();
+        } else if (carryX) services().solidExecution().resolveSolidNowAll();
+        else services().solidExecution().solidWithD4(getX());
         visible=true;
     }
     private void normalState() { state=spawn.subtype()==0?0x7E566:0x7E54C; }
@@ -172,10 +174,9 @@ final class DezMinibossArm extends DezMinibossSprite implements RewindRecreatabl
     }
     @Override public SolidExecutionMode solidExecutionMode() { return SolidExecutionMode.MANUAL_CHECKPOINT; }
     @Override public SolidObjectParams getSolidParams() { return SolidObjectParams.of(0x23,8,0x15); }
-    @Override public SolidRoutineProfile getSolidRoutineProfile() { return SolidRoutineProfile.topSolid(false); }
+    @Override public SolidRoutineProfile getSolidRoutineProfile() { return SolidRoutineProfile.fromProvider(this); }
     @Override public boolean isTopSolidOnly() { return true; }
     @Override public boolean isSolidFor(PlayableEntity player) { return !debris && !pendingDelete; }
-    @Override public boolean carriesRiderOnHorizontalMove(PlayableEntity player) { return carryX; }
     DezMinibossSprite parentForTest() { return parent; }
     DezMinibossSprite crossLinkForTest() { return crossLink; }
     int stateForTest() { return state; }

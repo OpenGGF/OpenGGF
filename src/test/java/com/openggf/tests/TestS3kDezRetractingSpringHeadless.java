@@ -184,8 +184,8 @@ class TestS3kDezRetractingSpringHeadless {
     }
 
     /**
-     * {@code tst.w $34(a0) / bne.s loc_480FC} (:94167-94168) and
-     * {@code cmp.w $34(a0),d1 / bne.s loc_48120} (:94183-94184): {@code sfx_SpringLatch}
+     * {@code tst.w $34(a0) / bne.s loc_480FC} (:94172-94173) and
+     * {@code cmp.w $34(a0),d1 / bne.s loc_48120} (:94188-94189): {@code sfx_SpringLatch}
      * ({@code $9A}) plays only on the update that leaves rest and the update that leaves full
      * extension, not on the three in between.
      */
@@ -351,7 +351,7 @@ class TestS3kDezRetractingSpringHeadless {
     }
 
     /**
-     * {@code move.b subtype(a0),d0 / bpl.s loc_22FE0 / move.w #0,x_vel(a1)} (:47773-47775). No
+     * {@code move.b subtype(a0),d0 / bpl.s loc_22FE0 / move.w #0,x_vel(a1)} (:47778-47780). No
      * {@code $5D} placement sets bit 7, so this is the subroutine's contract, not a placement's.
      */
     @Test

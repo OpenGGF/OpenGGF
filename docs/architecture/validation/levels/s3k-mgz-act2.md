@@ -1,5 +1,12 @@
 # S3K Marble Garden Act 2 coverage matrix
 
+Selection update (2026-10-27): routine canonical entry/reload checks cover supported
+axis pairs; bonus transitions retain their existing pilots. Full Cartesian
+products are explicitly manual `exhaustive-audit` coverage, excluded from routine
+and release gates. Historical exhaustive qualifications below are unchanged and
+are not renewed by a routine pass. See the [selection record](../../research/2026-10-27-local-validation-cost.md).
+
+
 Canonical binding: `S3K_MARBLE_GARDEN_2`, engine zone 2/act 1, ROM `$0201`, S3KL object set.
 Edges: MGZ1 incoming structural act handoff; CNZ1 outgoing full entry.
 Character routes: Sonic/Tails use collapse/rescue/flying-boss progression; Knuckles uses the separate top-band end boss and capsule route.
@@ -122,3 +129,79 @@ Corrected qualification, all on `0197c5a5a` plus this commit's test-only deltas 
 - Revised input test with the fix: 02:05:15–02:05:44 UTC, 1 test / 0 failures / 0 errors / 0 skips.
 
 Death/reload products, combined smoke and integration were not rerun here. This requalifies the held-Right entry floor only; it is not act certification.
+
+
+## Update-owned blink candidate — 2026-10-30
+
+The live independent-render scheduler moves `MgzDrillingRobotnikInstance`'s
+existing `renderTick` progression from rendering to the admitted boss update.
+`TestMgzDrillingRobotnikInstance#repeatedBossPicturesDoNotSpendTheBlinkClockAndOmittedPicturesDoNotFreezeIt`
+checks omitted/repeated pictures and the existing object capture/restore path.
+`TestMgzEndBossKnuxAdmission#activeKnucklesBossBlinkAdvancesOnUpdatesRatherThanPictures`
+also covers the Knuckles override and destructive graph restore; 141 focused
+boss/anchor checks passed without skips on the composed integration candidate.
+This is an ownership correction for the existing five-tick blink, not a new
+ROM timing oracle or a complete MGZ route qualification. The scheduler's bounded
+native route evidence uses AIZ/EHZ; MGZ scene pixels, encounter breadth and the
+inherited route obligations above remain separate. Focused results belong in
+[the scheduling record](../../designs/2026-09-14-independent-render-frame-rate-design.md#live-region-scheduling-candidate--2026-10-30).
+
+## Draw ownership follow-up (2026-10-31)
+
+`TestStageplayNativeCapturePurity#mgzDefeatFlickerIsUpdateOwnedAndRewindRestoresTheNextPhase`
+binds the Knuckles defeat-fragment redraw obligation. It checks the first hidden
+ROM phase, a V-int gap without extra object executions, repeated ordinary draws,
+and captured/restored flicker followed by the next update. Capsule animal mapping
+selection is now draw-local. These are constructed object checks, not cold boss
+completion or a new viewport/donor/team route qualification. The existing route
+and native-pixel gaps remain open.
+
+## MGZ2 to CNZ1 carry handoff regression (2026-11-01)
+
+`TestS3kMgzCnzCarryHandoffHeadless` engages the real MGZ rescue controller,
+then submits the normal CNZ1 zone request with solo Sonic and configured Tails.
+The production recording driver owns fade, load and title-card completion.
+It checks destination pickup, the native `$100` horizontal flight velocity,
+eight-frame complete-world restore/replay, landing, and control release.
+On base `745eb44df` with the corrected regression `211cc9d95`, the solo
+case passed and the configured-Tails case failed at destination attachment.
+The run had two tests, one failure, zero errors and zero skips. MGZ replaces
+the controller's carry trigger, and fresh assembly retains it.
+The repair restores the module's normal trigger during sidekick assembly.
+
+The disassembly's `loc_13A32` selects the CNZ pickup and `loc_13FC2` starts
+carrying. `loc_14016` detects Sonic's landing. This is a positioned local rescue
+and destination-load witness, not automatic boss/results/fade route completion.
+It does not add donor or viewport breadth, cross-load rewind, or native pixel
+qualification. Those inherited matrix obligations remain open.
+
+The repair on `211cc9d95` plus the one-line runtime change passed both handoff
+cases and the combined 171-test consumer selection with zero failures, errors
+or skips. The selection covered CNZ pair/solo carry, scripted carrier admission,
+MGZ rescue/events, sidekick spawn/start policy, and the four required S3K
+bootstrap/load/decode/AIZ checks. The runner's shared-file plan selected 4386
+smoke classes; focused checks replace that disproportionate selection because
+only the destination carry-policy binding changes. This is bounded validation,
+not a full-suite or exhaustive trace qualification.
+
+## Powered rescue art refresh — 2026-11-01
+
+MGZ2's solo-Sonic rescue adds Tails and refreshes playable art. That refresh
+must retain Sonic's powered-form owner, palette cursor/timer and ring-drain
+counter. It must rebind the normal renderer used by eventual reversion.
+The native boss defeat still clears the HUD timer; the existing powered-form
+routine owns detransformation on its next player update.
+
+`TestMgzEndBossHandoffHeadless` retains the real floor-impact/rescue admission
+checks and separately covers Super and Hyper palette clock continuation and timer-stop reversion through a runtime art refresh.
+This is a bounded solo-Sonic regression, not certification of all donor,
+viewport/team or full boss-route combinations. Existing matrix gaps remain;
+the existing powered-state rewind tests cover snapshot restoration separately.
+
+## Music ownership follow-up (2026-11-02)
+
+The [cross-game music audit](../../audits/2026-11-02-music-transitions.md)
+records corrected native request IDs and/or level-restore selection affecting
+this route. Restoration selects the apparent playlist and P1 invincibility at
+the native boundary. These local checks do not requalify this matrix’s inherited
+route, viewport/donor/team, lifecycle or audible-comparison gaps.

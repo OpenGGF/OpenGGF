@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.GameServices;
@@ -106,7 +108,7 @@ class Sonic2PatternAnimator implements AnimatedPatternManager, RewindSnapshottab
             try {
                 // Read the DATA pointer (second word, offset 2) not the routine pointer
                 int offset = (short) reader.readU16BE(addr + 2);
-                if (addr + offset == ANIMATED_EHZ_ADDR) {
+                if (addr + offset == address(reader, ANIMATED_EHZ_ADDR)) {
                     // Candidate validation: check MTZ data pointer (zone 4) points to known area
                     // MTZ data is at offset 4 * 4 + 2 = 18 bytes from table start
                     int offsetMtz = (short) reader.readU16BE(addr + 4 * 4 + 2);

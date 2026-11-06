@@ -149,7 +149,7 @@ class TestRaceHostServer {
             assertNull(missing.sessionToken());
             missing.sendText(ControlCodec.encode(null,
                     new ControlMessage.RoomAccessSubmit(missingChallenge.challengeId(), null)));
-            assertInstanceOf(ControlMessage.JoinRejected.class, missing.nextControl());
+            assertThrows(java.io.EOFException.class, missing::nextControl);
             assertEquals(0, playerCount());
         }
         Probe probe = new Probe();

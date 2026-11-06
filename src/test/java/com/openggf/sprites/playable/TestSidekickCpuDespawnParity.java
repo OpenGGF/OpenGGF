@@ -591,7 +591,7 @@ class TestSidekickCpuDespawnParity {
         // (sonic3k.asm:28483), and Kill_Character's `rts` (sonic3k.asm:21195)
         // unwinds to the caller of Tails_Check_Screen_Boundaries
         // (e.g. Tails_Stand_Path at sonic3k.asm:27566), which then runs
-        // MoveSprite_TestGravity2 (->MoveSprite2 at sonic3k.asm:36128,36093)
+        // MoveSprite_TestGravity2 (->MoveSprite2 at sonic3k.asm:36128,36130)
         // applying the negative y-velocity to y_pos in the same frame.
         // Trace AIZ F7171 records the post-shift state with y_vel=-$700
         // retained.
@@ -1081,29 +1081,6 @@ class TestSidekickCpuDespawnParity {
     }
 
     @Test
-    void s3kEstablishedFollowerHandoffPreservesDiagnosticInteractWord() {
-        TestableSprite sonic = new TestableSprite("sonic");
-        TestableSprite tails = new TestableSprite("tails_p2");
-        tails.useGameRules(GameRules.SONIC_3K);
-
-        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        controller.hydrateFromRomCpuState(6, 0, 0, 0x0004, false, 0x2FC5, 0x037A);
-        controller.forceStateForTest(SidekickCpuController.State.INIT, 0);
-        controller.captureLevelStartLeaderAnchor(0x00D1, 0x02FD);
-        controller.setEnteredFromSeedCompareFrame0(true);
-        tails.setCentreX((short) 0x00B1);
-        tails.setCentreY((short) 0x0301);
-        tails.setOnObject(false);
-
-        controller.update(0);
-
-        assertEquals(0x0004, controller.getDiagnosticInteractId(),
-                "A mid-run established-follower handoff does not run SpawnLevelMainSprites; "
-                        + "S3K Tails_CPU_interact survives the AIZ1->AIZ2 reload even after "
-                        + "Tails leaves the transition floor (sonic3k.asm:8359-8369,26816-26843)");
-    }
-
-    @Test
     void s3kDiagnosticInteractPreservesWordWhenStaleRideHasNoRomPointer() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
@@ -1537,12 +1514,10 @@ class TestSidekickCpuDespawnParity {
                 objectRules.bossHitNegatesGroundSpeed(),
                 objectRules.bossHitHalvesBounceVelocity(),
                 false,
-                objectRules.sidekickNormalDespawnDelaysFreshRenderEntry(),
                 objectRules.sidekickDespawnUsesRidingInstanceLoss(),
                 objectRules.sidekickDespawnUsesInteractCodeWordChange(),
                 objectRules.sidekickNormalCpuSkipsHurtRoutine(),
                 objectRules.permanentRespawnTableLatch(),
-                objectRules.objectsExecuteAfterPlayerPhysics(),
                 objectRules.touchResponseUsesRenderFlagYGate(),
                 objectRules.touchResponseUsesPreviousCollisionResponseList(),
                 objectRules.animalObjectPreservesObjectMoveXSubpixel(),
@@ -1604,7 +1579,7 @@ class TestSidekickCpuDespawnParity {
     }
 
     @Test
-    void s2NormalDespawnConsumesFreshRenderEntryForAirRollingDelayedLeaderSample() {
+    void s2NormalDespawnReadsRenderFlagWithoutDelayingFreshEntry() {
         TestableSprite sonic = new TestableSprite("sonic");
         seedDelayedLeaderStatus(sonic,
                 (byte) (AbstractPlayableSprite.STATUS_IN_AIR | AbstractPlayableSprite.STATUS_ROLLING),
@@ -1617,11 +1592,10 @@ class TestSidekickCpuDespawnParity {
         controller.update(3671);
         assertEquals(0x0078, controller.getDiagnosticRespawnCounter());
 
-        tails.setRenderFlagOnScreen(true);
+        tails.setRenderFlagOnScreen(false);
         controller.update(3672);
         assertEquals(0x0079, controller.getDiagnosticRespawnCounter(),
-                "OOZ2 f3672 reads the delayed Stat_table status as air+rolling (0x06); "
-                        + "S2 TailsCPU_CheckDespawn must consume this fresh render-entry one CPU tick late");
+                "An off-screen render flag keeps the native respawn counter advancing");
 
         tails.setRenderFlagOnScreen(true);
         controller.update(3673);
@@ -1676,8 +1650,7 @@ class TestSidekickCpuDespawnParity {
         controller.update(3672);
 
         assertEquals(0, controller.getDiagnosticRespawnCounter(),
-                "A horizontal entry near the vertical centre resets immediately; the delayed "
-                        + "render-entry shape requires proximity to the native lower boundary");
+                "A visible render flag resets immediately regardless of position");
     }
 
     private static TestableSprite createS2Ooz2FreshRenderEntrySidekick() {

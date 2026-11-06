@@ -234,7 +234,7 @@ class TestSonic2PlcProducerCoverage {
 
         // loadZoneBlockMaps appends the header secondary (docs/s2disasm/s2.asm:20103-20110)
         // while still inside the title-card sequence, and the 25-frame leave loop
-        // (s2.asm:5060-5066) services it before Level_MainLoop (s2.asm:5082-5087).
+        // (s2.asm:5060-5066) services it before Level_MainLoop (s2.asm:5086-5091).
         assertEquals(List.of(), queue.capture().queuedEntries(),
                 "the header secondary must be appended AND serviced by the title-card leave loop");
     }

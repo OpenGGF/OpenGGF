@@ -1,6 +1,5 @@
 package com.openggf.game;
 
-import com.openggf.audio.GameAudioProfile;
 
 /**
  * Manages transient state for a single level execution, such as Rings and Time.
@@ -59,6 +58,17 @@ public class LevelGamestate implements LevelState {
 
     public void addRings(int amount) {
         if (amount != 0) {
+            var world = com.openggf.game.session.SessionManager.getCurrentWorldSession();
+            var policy = world == null ? null : world.getGameModule().getGameService(
+                    com.openggf.game.internal.RingCollectionPolicy.class);
+            if (policy != null) {
+                var result = policy.collect(rings, ringExtraLifeFlags, amount);
+                rings = result.rings();
+                ringExtraLifeFlags = result.extraLifeFlags();
+                if (result.refreshHud()) ringDisplayDirty = true;
+                if (result.extraLife()) awardRingExtraLife();
+                return;
+            }
             int previousRings = rings;
             int next = rings + amount;
             this.rings = Math.max(0, next);
@@ -74,14 +84,15 @@ public class LevelGamestate implements LevelState {
                 }
                 if (thresholdFlag != 0) {
                     ringExtraLifeFlags |= thresholdFlag;
-                    GameServices.gameState().addLife();
-                    GameAudioProfile profile = GameServices.audio().getAudioProfile();
-                    if (profile != null) {
-                        GameServices.audio().playMusic(profile.getExtraLifeMusicId());
-                    }
+                    awardRingExtraLife();
                 }
             }
         }
+    }
+
+    private void awardRingExtraLife() {
+        GameServices.gameState().addLife();
+        com.openggf.audio.AudioManagerInternalAccess.playRingExtraLife(GameServices.audio());
     }
 
     // A native HUD redraw flag is distinct from Ring_count. Ordinary mutators

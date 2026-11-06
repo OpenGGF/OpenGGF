@@ -86,6 +86,7 @@ class TestS3kGumballPachinkoRewardMechanics {
 
     @ParameterizedTest(name = "finite actual bonus mechanism {0}/{1}")
     @MethodSource("finiteProducts")
+    @org.junit.jupiter.api.Tag("exhaustive-audit")
     void actualFiniteSupportedProductsReplayEveryMechanism(CanonicalEntryMatrixSupport.Row row,
             Mechanism mechanism) throws Exception {
         check(row, mechanism);

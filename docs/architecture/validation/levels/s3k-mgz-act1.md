@@ -1,5 +1,12 @@
 # S3K Marble Garden Act 1 coverage matrix
 
+Selection update (2026-10-27): routine canonical entry/reload checks cover supported
+axis pairs; bonus transitions retain their existing pilots. Full Cartesian
+products are explicitly manual `exhaustive-audit` coverage, excluded from routine
+and release gates. Historical exhaustive qualifications below are unchanged and
+are not renewed by a routine pass. See the [selection record](../../research/2026-10-27-local-validation-cost.md).
+
+
 Canonical binding: `S3K_MARBLE_GARDEN_1`, engine zone 2/act 0, ROM `$0200`, S3KL object set.
 Edges: HCZ2 incoming full entry; MGZ2 outgoing structural act handoff.
 Character routes: MGZ1 falling entry applies to all three native mains; later traversal/character composition is not certified by that shared entry.
@@ -150,3 +157,589 @@ dead-P1 flight/sparkle and converted-bouncer per-SST animation copies.
 This is a bounded ring contract. Other mains, donors, widths, participant teams,
 complete traversal/physics/art and full-campaign incoming arrival remain inherited
 obligations; the act remains uncertified.
+
+## Music ownership follow-up (2026-11-02)
+
+The [cross-game music audit](../../audits/2026-11-02-music-transitions.md)
+records corrected native request IDs and/or level-restore selection affecting
+this route. Restoration selects the apparent playlist and P1 invincibility at
+the native boundary. These local checks do not requalify this matrix’s inherited
+route, viewport/donor/team, lifecycle or audible-comparison gaps.
+
+## Seamless horizontal lock — 2026-11-02
+
+`MGZ1BGE_Transition` shifts the live horizontal bound during the Act 2 reload.
+The transition request now holds the engine's minimum-X, maximum-X and
+minimum-Y easing destinations at the shifted live bounds until native release. `TestS3kMgzTraceReplay`
+exercises the production handoff; this local correction does not certify all
+viewport/donor/team routes or close the matrix's inherited rewind and route gaps.
+
+At baseline `4311f21c4`, the short replay has 8,469 errors starting at row
+13,939 (`camera_x`, 0 vs 2). With the bound targets retained, its physics
+comparison passes; four strict animation errors remain at rows 14,384–14,385.
+The ROM aux records EndSignControl in slot 7 before results/title in slot 8,
+restoring native control on the following pass. A local native-control bridge
+probe did not change these errors and was removed. No slot-order/title timing
+change or whole-route certification is included here.
+
+The requested Tails full-chain MGZ3 comparison worsens from 3,020 to 3,161
+errors with the same row-zero `y_speed` first error. Its first remaining camera error
+is row 2,035 (ROM X=1, engine X=0). This blocks integration of the candidate;
+the later release disagreement and the four short-trace animation errors
+remain unresolved. CNZ's analogous bound-target candidate
+was rejected (3,112 → 3,941 replay errors), and CNZ code is unchanged.
+
+A source-predicate bisect over `2f5265e3f..4311f21c4` isolates
+`15accb4f426dc61d81e2213faec6f114d09adc97`: transition overrides changed
+from setters synchronizing current/target bounds to current-only setters.
+This was not a historical full-replay bisect. A temporary executed transition
+probe observed max X `0000/6000`, min X `0001/0000` (current/target), followed
+by max/camera X `0,2,4,6,8,10`. Reverting the candidate reproduces the original
+8,469 errors and row-13,939 camera mismatch exactly. The probe and attempted
+control-owner change were removed; trace comparison rules are unchanged.
+
+## Follow-up attribution — 2026-11-02
+
+Matched, observationally instrumented runs of the original transition request
+and `9d3fe74c9` reproduce 3,020 and 3,161 MGZ3 error groups. These totals count
+contiguous divergence groups, not mismatching frames. No comparison is suppressed,
+demoted or re-baselined.
+
+The first difference is a **removed** `camera_x` error at row 1,279: ROM X=0,
+original engine X=2, corrected engine X=0. P1 X/Y are `0105/08C0` in ROM and
+both engines. Post-step bounds and targets, in minimum-X, maximum-X, minimum-Y,
+maximum-Y order, are:
+
+| Build | Bounds | Targets |
+| --- | --- | --- |
+| Original | `0000,0004,080C,0810` | `0000,6000,0000,0810` |
+| Corrected | `0001,0000,0810,0810` | `0001,0000,0810,0810` |
+
+`MGZ1BGE_Transition (sonic3k.asm:106358-106390)` offsets the live lock; it
+does not expand it toward the loaded level sizes. The corrected request models
+that behavior. The original engine has already started its unrelated generic
+2-pixel easing by this post-step sample.
+
+The first newly added row/field error is `camera_x` at row 2,061: ROM X=`0065`,
+original engine X=`0065`, corrected engine X=0. This is already a divergent
+release state in **both** builds. From row 1,889, ROM has restored P1 control
+(`object_control=00`, WAIT animation), while both engines retain object control,
+victory animation and active results. At row 2,033, both engines already have
+camera Y=`0810` versus ROM `0813`; at row 2,061 both have Y=`0810` versus ROM
+`0860`. Both still report `End_of_level_flag=false`, results active and control
+locked. Original bounds/targets then are `0000,0620,01F0,0810` /
+`0000,6000,0000,0810`; corrected bounds/targets remain
+`0001,0000,0810,0810` / `0001,0000,0810,0810`.
+
+`Obj_EndSignControlDoStart (sonic3k.asm:180511-180515)` waits for the completion
+flag before `Change_Act2Sizes (sonic3k.asm:180671-180706)` creates the gradual
+boundary workers. Holding the corrected bound while that engine flag remains
+false is correct. The original stale target accidentally permits camera following
+without that owner. Its later agreement in X masks the existing results/title
+release desync, rather than establishing a correct release path. Entry-state debt
+is also explicit: row-zero y speed is `0038` versus ROM 0, camera Y is `0E16`
+versus `0E12`, and rings are 0 versus ROM 161. The exact cause of the delayed
+release is not assigned to any one entry-state field here.
+
+The MGZ3 group-count increase is therefore **not an attributable regression in
+the transition correction**. The initial integration block based on that count
+alone is superseded by this matched row/state attribution. The short MGZ trace's
+four strict animation errors remain a separate frontier pending owner diagnosis.
+
+### Remaining short-trace animation owner
+
+A temporary VICTORY-to-WAIT setter stack probe and post-comparison slot snapshots
+reproduce all four errors. On rows 14,382–14,383 the engine flow is
+`AWAIT_RESULTS` in slot 21, while results occupy slot 7. The last results child
+retires at 14,383; results clear the active latch at 14,384. In that same object
+pass, the later slot-21 `S3kBossDefeatSignpostFlow.updateAwaitResults()` calls
+`restoreNativePlayerControl()` for P1/P2 and writes WAIT. No inference from the
+numbers is needed: both setter call stacks reach that owner. Row 14,384 is
+expected animation `13`, actual `05`; row 14,385 has the two resulting mapping
+mismatches (`B2/BA` for P1 and `A6/AD` for P2).
+
+ROM aux has `Obj_EndSignControlAwaitStart` in slot 7 before results/title in
+slot 8. `loc_2DD06 (sonic3k.asm:62753-62764)` clears `_unkFAA8`; the lower
+slot observes that on the following pass. Then
+`Obj_EndSignControlAwaitStart (sonic3k.asm:180502-180508)` calls
+`Restore_PlayerControl2 (sonic3k.asm:180455-180461)`, which writes WAIT to
+animation and previous-animation and clears the animation counters. Native
+control therefore restores at 14,385, not 14,384.
+
+This cause predates the camera fix: the reverted-target control also reports its
+first animation error at 14,384 (`13` versus `05`), and neither the miniboss nor
+the defeat-flow implementation changed in `9d3fe74c9`. The engine
+`MgzMinibossInstance.queuePostDefeatFlow()` allocates an auxiliary flow instead
+of the native in-place `loc_887CA (sonic3k.asm:185107-185110)` handoff. A proper
+slot correction must also separate the boss's still-running embedded explosion
+controller lifetime; deleting/transferring the boss immediately would truncate
+that work. This is not treated as a safe isolated timing adjustment. The four
+strict animation errors remain the new frontier; no delay, comparison exception
+or slot/lifetime rewrite is included in this camera-bound correction.
+
+### Original current-only setter intent
+
+`15accb4f4` ports FBZ's synchronous reload, native SST survival and independent
+camera-copy/target words. It deliberately changes shared transition overrides
+from synchronized setters to current-only setters and adds explicit target
+fields. FBZ rebases its live X bounds and its independently stored X targets,
+while retaining the independent Y targets. Its transition test asserts current
+max-X `00A0` versus target `01B0`, and current min-X `0020` versus target
+`FF10`; synchronizing the shared setters again would destroy that contract.
+
+The MGZ correction leaves those shared setters and FBZ's request unchanged.
+Only MGZ supplies targets matching its shifted held bounds. The original
+`TestFbzActTransitionHeadless#screenEventReloadPreservesLiveTeamStateAndUsesShiftedWindows`,
+`TestFbzTransitionRewind` and `TestS3kScreenEventCameraCopies` are the focused
+intent checks for this follow-up.
+
+### Follow-up validation and merge assessment
+
+The fresh matched MGZ3 runs compare 22,934 rows each with no skips and reproduce
+3,020 / 3,161 groups. The short MGZ owner probe compares 35,861 rows and
+reproduces exactly four animation errors, no physics errors and no skips.
+After removing every probe, the original FBZ intent checks above plus the required
+S3K keep-green set and camera snapshot checks pass **69 tests, zero failures,
+errors or skips** in the ordinary smoke profile. All added ROM citations resolve;
+the one pre-existing unverifiable citation is unchanged, and whitespace checks pass.
+
+This follow-up changes documentation only. Java, test sources, POM and resources
+remain identical to `9d3fe74c9`; the other requested r6, segment and r7 results
+from that runtime state remain applicable. Their strict error totals and first
+errors are unchanged, not re-baselined. No broad smoke or release full suite is
+claimed.
+
+The branch is safe to merge as the bounded camera-regression fix that advances
+the short MGZ frontier from row 13,939 `camera_x` to row 14,384
+`player_animation_id`. It is **not** a green strict MGZ replay or whole-route
+certification. The larger MGZ3 group count is attributed to its already-divergent
+results/control release, and the remaining four short-trace animation errors
+have the independent pre-existing slot-order owner described above.
+
+
+## EndSignControl allocation (2026-11-02)
+
+The final matched baseline and candidate use pinned develop `982b279d5`,
+containing the accepted camera correction `57a5d5996`. Earlier prototype runs
+on `6cdd598c7` established the native owner sequence; the full selected baseline
+was retaken after rebasing. The short MGZ fixture now compares 35,861 rows with
+zero errors or warnings, including both native players' ending animation fields.
+Its matched baseline has four animation errors beginning at row 14,384 and no
+physics errors. This closes the animation frontier exposed by the camera fix;
+it does not certify every MGZ character, viewport or donor route.
+
+### Allocation and lifetime owners
+
+The ordering follows native allocation and object lifetime. No slot number,
+extra delay or trace identity selects production behavior.
+
+| Native phase | ROM owner and allocator | Corrected engine owner |
+| --- | --- | --- |
+| Killing touch, then boss dispatch | `TunnelbotMiniboss_CheckHitOrDefeat (sonic3k.asm:185352-185360)` consumes the hit in the boss's SST. | Touch records defeat; the first defeated boss dispatch creates helpers and leaves the fresh wait untouched. |
+| Camera helper | `TunnelbotMiniboss_StartDefeat (sonic3k.asm:185383-185389)` calls global `AllocateObject`. | Global allocation from the boss dispatch replaces forward allocation from player touch. A lower hole therefore waits until the next object pass. |
+| Explosion controller | `TunnelbotMiniboss_CreateExplosion (sonic3k.asm:185391-185394)` calls `CreateChild1_Normal`. | An independent SST after the boss replaces the embedded Java controller. It continues while the boss SST changes owner. |
+| Arm retirement | `TunnelbotMiniboss_HitboxChild_Main (sonic3k.asm:185129-185140)` deletes each hitbox on its own turn. | Existing arm dispatches retire themselves; the player callback no longer clears their slots before the boss allocates helpers. |
+| Music and control handoff | `Wait_FadeToLevelMusic (sonic3k.asm:179747-179764)` globally allocates music, then tail-calls `loc_887CA (sonic3k.asm:185107-185110)`. | Keep the existing global music allocation; replace the boss with EndSignControl in its transferred SST. |
+| Five debris pieces | `loc_887CA (sonic3k.asm:185107-185110)` creates them after installing control; `CreateChild1_Normal (sonic3k.asm:177015-177044)` scans after the parent. | Create debris from the retained control at handoff, rather than on the killing touch. |
+| Signpost | `Obj_EndSignControlDoSign (sonic3k.asm:180488-180497)` calls `CreateChild6_Simple (sonic3k.asm:177210-177230)`. | The shared flow already allocates after its native control slot; that slot now belongs to the original boss. |
+| Results | `Obj_EndSignResults (sonic3k.asm:176326-176337)` calls global `AllocateObject`. | Always allocate globally, including after waiting for landing. Remove the split-owner allocation heuristic; retaining control changes which slot is free. |
+
+`MgzMinibossExplosionController` uses the existing real-SST subtype-zero controller.
+`Obj_CreateBossExplosion (sonic3k.asm:176750-176764)` installs the zeroed wait;
+`CreateBossExp00 (sonic3k.asm:176801)` supplies the `$20` count and `$20` ranges.
+The shared controller handles immediate first dispatch, three-update cadence,
+31 allocation attempts, and allocation-before-RNG; available space yields 31 explosions.
+Its own recreate path and scalar rewind state preserve the remaining phase.
+The boss no longer stays alive merely to tick explosions.
+
+The shared results allocator had another split-owner compensation: it selected
+forward allocation after waiting for Sonic to land, and used a remembered
+control-slot boundary for other timing modes. `52f36670c` introduced that
+boundary to retain native dispatch order across detached Java owners. The ROM
+has no corresponding allocator branch: `Obj_EndSignResults (sonic3k.asm:176326-176337)`
+returns while P1 is airborne, then always calls `AllocateObject`. The corrected shared path therefore uses the global allocator
+for both cases. A real-pool signpost test creates a lower SST hole and checks
+both immediate grounded allocation and allocation after an airborne wait;
+it replaces the old test of the compensation's boolean decisions. The removed
+FBZ call only supplied metadata to that deleted heuristic; FBZ's signpost
+creation still uses forward `CreateChild6_Simple` allocation.
+
+The MGZ transition fallback also previously wrote WAIT at results publication.
+A live EndSignControl now owns native P1/P2 restoration; the fallback retains
+responsibility for scenes without that owner and additional engine followers.
+`Obj_EndSignControlAwaitStart (sonic3k.asm:180502-180508)` calls
+`Restore_PlayerControl2 (sonic3k.asm:180455-180461)` from its own dispatch after
+observing the cleared active latch. The fallback neither orders objects nor adds
+a delay. CNZ object and solid owners are unchanged.
+
+### Executed owner sequence
+
+The short replay's post-step observations confirm the retained control and
+results ordering. Rows are trace indices, not CSV frame-counter values.
+
+| Row | Observed engine owners | P1 animation / mapping | Active latch / object control |
+| --- | --- | --- | --- |
+| 13,424 | Boss 7; independent explosion controller 11 | `02 / 98` | false / false |
+| 13,488 | EndSignControl 7; controller 11; five new debris pieces | `00 / 03` | true / false |
+| 13,608 | EndSignControl 7; signpost 9 | `00 / 06` | true / false |
+| 14,383 | EndSignControl 7; results 8; signpost 9 | `13 / B1` | true / true |
+| 14,384 | EndSignControl 7; results 8 | `13 / B1` | false / true |
+| 14,385 | EndSignControl 7 | `05 / B2` | false / false |
+| 14,386 | EndSignControl 7 | `05 / BA` | false / false |
+
+At 14,384 the lower control has already run when results clears the latch.
+It restores WAIT on 14,385 after the player has animated, retaining mapping
+`B2` for that row. Both native players' strict animation comparisons pass.
+The observer lists selected owner classes; a transformed title-card class is
+outside that filter.
+
+Whole-pool parity remains an inherited gap. ROM's overlapping controller is
+slot 12 running `Obj_Wait (sonic3k.asm:178040-178049)`; slot 13 is its first
+`Obj_BossExplosionAnim (sonic3k.asm:176920-176938)` child, not the controller.
+The engine controller is slot 11. Native slot 8 still contains a
+`MoveDraw_SpriteTimed2 (sonic3k.asm:178901-178905)` owner at the killing hit.
+The exact origin of the one-slot pool difference is unattributed here; this
+fix certifies the retained control/results order and independent lifetime,
+not identical occupancy for every pre-existing debris or effect object.
+
+### Focused regression and validation
+
+The unfixed-production allocation control on `6cdd598c7` runs 16 tests with one expected
+failure: global camera-helper allocation should select slot 5, but the old path
+selects slot 15. The corrected unit scene passes all 16 tests, including helper
+creation at the boss dispatch, occupied arm slots during allocation, retained
+control SST, overlapping explosions, independent expiry, and controller phase
+capture/recreation. These are bounded object checks, not a full MGZ boss world
+rewind certification.
+
+The fresh r6 measurement on pinned `982b279d5` compares the same 51 consumer
+methods: baseline 44 passes, six assertion failures and one campaign admission
+error; candidate 45 passes, five assertion failures and the same admission error.
+Both have zero skips. MGZ is the single changed consumer error list, from four
+animation errors to zero; every other error list, warning count, bootstrap-error
+count and compared frame count matches exactly. The candidate also passes all
+16 MGZ unit tests. The eight observation-only samples above were removed from
+the harness after that measurement. The complete consumer comparison and final ordinary checks follow below.
+
+The matched r7 selection has 18 methods: four passes, 11 assertion failures,
+three campaign admission errors and zero skips in both builds. Every status,
+failure message, complete error list, warning count, bootstrap-error count and
+frame count matches exactly. In particular, Tails MGZ3 remains at 3,161 errors
+beginning with its inherited row-zero y-speed mismatch.
+
+### Matched 38-class boss/results selection
+
+The source base is `982b279d5` for both measurements. The selected consumer
+methods total 86: baseline 50 passes, 32 assertion failures and four errors;
+candidate 51 passes, 31 assertion failures and the same four errors. There
+are no skips. No previously passing class becomes red and no first error moves
+earlier. Warnings, bootstrap-error counts and frame counts match for every
+owned report. Only the three MGZ error lists below change.
+
+Counts are strict grouped errors, not individual mismatching frame/field pairs.
+The final column is unchanged unless it explicitly shows an arrow.
+
+| Profile | Class | Before → after errors | First error: row / field |
+| --- | --- | ---: | --- |
+| r6 | `TestS3kReplayReferenceClosureIntegration` | 0 → 0 | — |
+| r6 | `TestS3kAizTraceReplay` | 0 → 0 | — |
+| r6 | `TestS3kCnzTraceReplay` | 3112 → 3112 | 17322 / `camera_x` |
+| r6 | `TestS3kKnucklesLbz2BigArmTraceReplay` | 232 → 232 | 0 / `rings` |
+| r6 | `TestS3kMgzTraceReplay` | 4 → 0 | 14384 / `player_animation_id` → — |
+| r7 | `TestS3kFbzCompleteRunTraceReplay` | 1 → 1 | 19158 / `tails_cpu_respawn_counter` |
+| r7 | `TestS3kSozCompleteRunTraceReplay` | 3155 → 3155 | 32951 / `tails_y` |
+| r7 | `TestS3kTailsFullChainAiz5SegmentTraceReplay` | 345 → 345 | 0 / `camera_y` |
+| r7 | `TestS3kTailsFullChainCnzSegmentTraceReplay` | 3089 → 3089 | 0 / `y_sub` |
+| r7 | `TestS3kTailsFullChainFbz3SegmentTraceReplay` | 291 → 291 | 0 / `camera_y` |
+| r7 | `TestS3kTailsFullChainHcz6SegmentTraceReplay` | 229 → 229 | 0 / `camera_y` |
+| r7 | `TestS3kTailsFullChainIczSegmentTraceReplay` | 1157 → 1157 | 0 / `y_speed` |
+| r7 | `TestS3kTailsFullChainLbzSegmentTraceReplay` | 3281 → 3281 | 0 / `y` |
+| r7 | `TestS3kTailsFullChainMgz3SegmentTraceReplay` | 3161 → 3161 | 0 / `y_speed` |
+| r7 | `TestS3kTailsFullChainMhz5SegmentTraceReplay` | 185 → 185 | 0 / `camera_y` |
+| r7 | `TestS3kTailsFullChainSoz2SegmentTraceReplay` | 643 → 643 | 0 / `camera_y` |
+| seg | `TestS3kAizZoneSliceTraceReplay` | 0 → 0 | — |
+| seg | `TestS3kCnzZoneSliceTraceReplay` | 4255 → 4255 | 14616 / `camera_x` |
+| seg | `TestS3kHczZoneSliceTraceReplay` | 609 → 609 | 12236 / `tails_cpu_respawn_counter` |
+| seg | `TestS3kIczZoneSliceTraceReplay` | 2430 → 2430 | 11989 / `x` |
+| seg | `TestS3kLbzZoneSliceTraceReplay` | 1663 → 1663 | 30582 / `tails_y` |
+| seg | `TestS3kMgzZoneSliceTraceReplay` | 7921 → 7939 | 5255 / `tails_g_speed` |
+| seg | `TestS3kMhzZoneSliceTraceReplay` | 3191 → 3191 | 6958 / `rings` |
+| seg | `TestS3kSonicTailsAiz5SegmentTraceReplay` | 2522 → 2522 | 0 / `x_speed` |
+| seg | `TestS3kSonicTailsCnzSegmentTraceReplay` | 9069 → 9069 | 2695 / `tails_y_speed` |
+| seg | `TestS3kSonicTailsFbzSegmentTraceReplay` | 4152 → 4152 | 7619 / `x_speed` |
+| seg | `TestS3kSonicTailsHcz4SegmentTraceReplay` | 464 → 464 | 0 / `rings` |
+| seg | `TestS3kSonicTailsIcz2SegmentTraceReplay` | 965 → 965 | 0 / `rings` |
+| seg | `TestS3kSonicTailsLbzSegmentTraceReplay` | 7187 → 7187 | 959 / `player_animation_id` |
+| seg | `TestS3kSonicTailsMgzSegmentTraceReplay` | 4100 → 4100 | 10709 / `x` |
+| seg | `TestS3kSonicTailsMhz9SegmentTraceReplay` | 1125 → 1125 | 0 / `camera_y` |
+| seg | `TestS3kSonicTailsSoz2SegmentTraceReplay` | 7834 → 7834 | 0 / `tails_y_speed` |
+
+The remaining six selected campaign/integration classes have unchanged per-method
+status and failure identity:
+
+| Profile | Class | Before and after |
+| --- | --- | --- |
+| r6 | `TestS3kSonicTailsCompleteEmeraldRunChain` | 1 error |
+| r6 | `TestS3kSonicTailsCompleteEmeraldRunPrefix` | 3 pass |
+| r7 | `TestS3kKnucklesSuperEmeraldRunChain` | 1 pass, 1 error |
+| r7 | `TestS3kMegaRunChain` | 1 error |
+| r7 | `TestS3kTailsFullChainRunChain` | 1 error |
+| r7 | `TestS3kTailsFullChainRunPrefix` | 3 pass |
+
+The complete Emerald/Tails-chain admission errors still reject missing
+`expected_movie_end_mode`; `TestS3kMegaRunChain` still fails while queuing AIZ2
+KosM transition art. Passing prefix methods and completed segment reports do
+not certify those unexecuted campaign tails.
+
+### MGZ segment count attribution
+
+The zone slice's grouped total rises **7,921 → 7,939**, with the first error
+unchanged at row 5,255 `tails_g_speed`. Expanding the reported spans into
+mismatching row/field pairs gives **334,950 → 334,836**: 115 removed pairs and
+one added pair. The first list difference removes early P1/P2 animation errors
+at row 16,510. The subsequent queue-busy entry in the list already exists in
+both builds; it is not a new mismatch.
+
+At 16,510 the baseline has already restored WAIT (`05`) and released control;
+the candidate retains native victory (`13`) and control, matching the ROM's
+animation. Native control 7 precedes results 11 in the candidate pool, replacing
+the baseline's detached control 21 / signpost 22 / results 24. This reproduces
+`Obj_EndSignControlAwaitStart (sonic3k.asm:180502-180508)` observing the cleared
+active latch on its own next pass. This divergent slice still releases one
+pass early: at 16,511 candidate animation is `05` versus ROM `13`, while the
+baseline is already walking (`00`). The remaining release discrepancy is an
+inherited frontier, not a fitted timer adjustment in this fix.
+
+The first added pair is `tails_x_sub` at **16,579**. The paired observations
+show that both engines were already outside the ROM state:
+
+| Row / value | Baseline engine | Candidate engine | ROM |
+| --- | --- | --- | --- |
+| 16,011 P1 X/Y | `0091,08BC` | `0091,08BC` | `0091,08BC` |
+| 16,011 rings | 58 | 58 | 59 |
+| 16,011 Tails Y fraction | `6F00` | `6F00` | `8A00` |
+| 16,011 camera X/Y | `0001,0810` | `0001,0810` | `0001,0810` |
+| 16,579 P1 X/Y | `0105,08BC` | `0102,08BC` | `00FF,08BC` |
+| 16,579 Tails X/Y | 200,2243 | 197,2244 | 194,2244 |
+| 16,579 Tails X fraction | `6700` | `6300` | `6700` |
+| 16,579 Tails Y fraction | `6200` | `AF00` | `1600` |
+| 16,579 Tails X speed | 772 | 764 | 757 |
+| 16,579 Tails Y speed | -77 | -76 | 74 |
+| 16,579 camera X/Y | `0000,0810` | `0000,0810` | `0000,0810` |
+
+The baseline's isolated X-fraction agreement at 16,579 is coincidental within
+an already incorrect Tails position and motion state. The addition is downstream
+of the shared Tails fraction/rings debt at 16,011 and the inherited release
+mismatch. **The higher group count is not an attributable regression in the
+native allocation correction.** No comparison was suppressed or re-baselined.
+
+`TestS3kSonicTailsMgzSegmentTraceReplay` retains 4,100 groups and its row-10,709
+`x` frontier. It removes seven mismatching row/field pairs at 13,702–13,703,
+with no added pairs (374,242 → 374,235). Every other selected consumer's complete
+error list matches baseline exactly.
+
+### Reproduction commands
+
+Both 38-class measurements used JDK 25, Lua 5.4, original absolute ROM paths,
+surfaceless EGL, one reused Surefire fork and alphabetical order. Before each
+profile invocation, the task driver removed that worktree's generated
+`target/surefire-reports` and `target/trace-reports`; it read the owned replay
+JSONs, not only Maven totals. These selectors and function expand to the exact
+queued invocations. The reference-checkout directory is represented by an
+environment variable to keep machine-local home paths out of committed docs:
+
+```bash
+unset DISPLAY WAYLAND_DISPLAY JDK_JAVA_OPTIONS MAVEN_ARGS LD_LIBRARY_PATH
+export JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4
+export JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl
+export PATH="$HOME/.local/bin:$PATH"
+export OPENGGF_REFERENCE_ROOT=/absolute/path/to/reference-checkout
+run_selected() {
+  python3 tools/testing/maven_queue.py -Dmse=off -B "-P$1" \
+    -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical "-Dtest=$2" \
+    "-Dsonic1.rom.path=${OPENGGF_REFERENCE_ROOT}/s1.gen" \
+    "-Dsonic2.rom.path=${OPENGGF_REFERENCE_ROOT}/s2.gen" \
+    "-Ds3k.rom.path=${OPENGGF_REFERENCE_ROOT}/s3k.gen" \
+    "-Dkis2.rom.path=${OPENGGF_REFERENCE_ROOT}/kis2.gen" \
+    "-Dsonic1.rev00.rom.path=${OPENGGF_REFERENCE_ROOT}/s1-r0.gen" \
+    "-Dsonic2.rev00.rom.path=${OPENGGF_REFERENCE_ROOT}/s2-r0.gen" test
+}
+r6='TestS3kAizTraceReplay,TestS3kCnzTraceReplay,TestS3kKnucklesLbz2BigArmTraceReplay,TestS3kMgzTraceReplay,TestS3kReplayReferenceClosureIntegration,TestS3kSonicTailsCompleteEmeraldRunChain,TestS3kSonicTailsCompleteEmeraldRunPrefix'
+r7='TestS3kFbzCompleteRunTraceReplay,TestS3kKnucklesSuperEmeraldRunChain,TestS3kMegaRunChain,TestS3kSozCompleteRunTraceReplay,TestS3kTailsFullChainAiz5SegmentTraceReplay,TestS3kTailsFullChainCnzSegmentTraceReplay,TestS3kTailsFullChainFbz3SegmentTraceReplay,TestS3kTailsFullChainHcz6SegmentTraceReplay,TestS3kTailsFullChainIczSegmentTraceReplay,TestS3kTailsFullChainLbzSegmentTraceReplay,TestS3kTailsFullChainMgz3SegmentTraceReplay,TestS3kTailsFullChainMhz5SegmentTraceReplay,TestS3kTailsFullChainRunChain,TestS3kTailsFullChainRunPrefix,TestS3kTailsFullChainSoz2SegmentTraceReplay'
+seg='TestS3kAizZoneSliceTraceReplay,TestS3kCnzZoneSliceTraceReplay,TestS3kHczZoneSliceTraceReplay,TestS3kIczZoneSliceTraceReplay,TestS3kLbzZoneSliceTraceReplay,TestS3kMgzZoneSliceTraceReplay,TestS3kMhzZoneSliceTraceReplay,TestS3kSonicTailsAiz5SegmentTraceReplay,TestS3kSonicTailsCnzSegmentTraceReplay,TestS3kSonicTailsFbzSegmentTraceReplay,TestS3kSonicTailsHcz4SegmentTraceReplay,TestS3kSonicTailsIcz2SegmentTraceReplay,TestS3kSonicTailsLbzSegmentTraceReplay,TestS3kSonicTailsMgzSegmentTraceReplay,TestS3kSonicTailsMhz9SegmentTraceReplay,TestS3kSonicTailsSoz2SegmentTraceReplay'
+run_selected trace-replay "$r6"
+run_selected trace-replay-r7 "$r7"
+run_selected trace-segments "$seg"
+```
+
+The candidate r6 command additionally appended
+`,TestMgzMinibossInstance,TestS3kSignpostInstance` to `$r6`. The 16 MGZ units
+passed; the first version of the new signpost scene failed its setup assertion
+because slot 9 lies below the generic test pool's dynamic base. The scene now
+places the signpost four slots above the pool's actual first free slot; its
+allocator assertions are unchanged. The final ordinary run below rechecks it.
+All observation probes were removed before that run. Production source is
+unchanged from the completed 38-class measurement.
+
+The final ordinary command uses the same environment and ROM arguments:
+
+```bash
+run_selected smoke 'TestS3kBossDefeatSignpostFlow,TestS3kSignpostInstance,TestS3kSignpostNativeControlSst,TestS3kResultsScreenObjectInstance,TestS3kResultsKosQueueAndChildren,TestS3kResultsKosQueueRewind,TestFbzMinibossDefeatChildren,TestS3kSignpostStubGraphRewind,TestSonic3kLevelEventRewindSnapshot,TestS3kNestedHurtboxGraphRewind,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils'
+```
+
+It passes **183 tests with zero failures, errors or skips**, including all 20
+signpost tests. The `TestSonic3kLevelLoading` selector intentionally resolves
+both existing packages. Combined with the 16 passing MGZ units in r6, the
+focused owner, results, rewind and keep-green checks pass. The production patch
+fingerprint is identical across all three completed candidate profiles and the
+final ordinary run. The temporary observer code is absent from the final tree.
+
+This is bounded focused validation, not a full smoke suite or a complete-route
+certification. The inherited campaign admission errors, divergent segment
+frontiers and whole-pool/whole-boss rewind gaps described above remain open.
+The short strict MGZ replay is green; no new red consumer or earlier frontier
+was introduced, and the only grouped-count increase is attributed above.
+
+## Bubbles offscreen continuation — 2026-11-03
+
+`Obj_WaitOffscreen` (sonic3k.asm:180362-180394) consumes the preceding
+`Render_Sprites` visibility. Its `loc_85B02` restores the object's continuation
+and returns; initialization belongs to the next object pass. Bubbles now retains
+that visibility through post-camera publication, returns from the waiting pass,
+and exposes zero collision flags until its init routine runs.
+
+`TestBubblesBadnikInstance.offscreenContinuationReturnsBeforeInitializationAndReplaysAfterRestore`
+checks the continuation-only pass, init-only pass and first movement, including
+capture/restore at the pending-init seam. The focused touch/badnik group passes
+88 tests without skips. `TestTouchResponseManager.killedEnemyStillHurtsLaterVulnerableSidekick`
+pins the existing later-player hurt path under S1, S2 and S3K rules.
+
+The MGZ zone-slice replay's row-5255 probe showed that the killed badnik remained
+in Tails' touch list with flags `$12`; its engine X was `$13F8`, one pixel left
+of ROM `$13F9`. Correcting activation restores that position and the same-frame
+hurt response. The focused slice moves from 7921 errors at row 5255 to 5367 at
+row 16511. The Sonic+Tails segment moves from 4100 to 3447 errors, retaining its
+first row-10709 X mismatch; the row-11618 cluster is removed. These remain strict-red
+fixtures, not act certification. These figures describe the focused runs;
+full-profile comparison is a separate delivery gate. Wider character, donor, viewport, team, native presentation and complete
+route/lifecycle obligations remain open. The separately identified raw-animation
+callback continuation discrepancy is unchanged by this correction.
+
+## Collected shield rewind ownership — 2026-11-03
+
+A focused `git bisect run` from `a8f3f8647` to `e4b8857a8` identifies
+`27410c3bb` as the first failure of both attracted-ring movie methods.
+`ca7fe51a3` passes; the culprit correctly protects collected-shield ownership
+on seamless reload, but its live-registration guard also skipped a captured
+dormant Insta-Shield during rewind reconstruction. A temporary probe in both
+movies observed the deferred slot100/dynamicId0 entry, then the guard executing
+with `registered=true`, `registerNow=true`, LIGHTNING, and only the elemental
+shield active. These movie windows are cold MGZ1 entry and collection, not an
+act-reload route.
+
+`Monitor_Give_LightningShield (sonic3k.asm:40904-40921)` writes the owning
+player's fixed Shield SST; `Obj_LightningShield_Destroy
+(sonic3k.asm:34824-34827)` writes Obj_InstaShield back to that same slot.
+The engine represents this with a retained dormant alias plus an elemental
+owner, and its snapshot contract compares both identities. S3K Insta-Shield
+reconstruction now returns and rebinds the captured object directly; existing
+manager restore ordering preserves the elemental executing occupant. Live
+reload registration remains deferred. No comparison, movie, gameplay state,
+shared rewind algorithm or object manager is changed.
+
+`TestS3kActTransitionShieldContinuity` adds FIRE/LIGHTNING/BUBBLE checks for exact
+object-manager/player round-trips and subsequent elemental dispatch. The two
+independent attracted-ring movies remain the production registry/forward-replay
+witnesses. This bounded fix leaves this matrix's inherited route, donor,
+viewport and team gaps open.
+
+Validation on `e4b8857a8` plus the focused reconstruction change: both movie
+methods pass (2 tests, zero failures/errors/skips); reverting only the source
+change reproduces both original missing-entry failures. The focused shield,
+rewind, reload and S3K keep-green selection passes 1,570 tests with zero failures
+or errors and one visual capture skip (`TestInstaShieldVisual`: GPU init failed in the
+display-free environment).
+`TestEveryObjectRewindRoundTrip` contributes 1,342 passing cases; all 25 shield
+continuity cases pass, including the three new restore/dispatch cases. No
+shared rewind or object-manager source changed, so the shared-runtime three-profile
+gate is not invoked. These are focused results, not full-suite qualification.
+
+
+### Cold-capture consumer correction — 2026-11-03
+
+Integration found that `ed3771e8b` reconstructed unshielded native handles too,
+beyond the collected-shield ownership case. On that branch,
+`TestS3kTailsFullChainRunPrefix.openingPrefixReleasesInputBeforeColdCaptureRewind`
+failed with slot100/dynamicId8 playback differences: previous animation -1→0,
+frame index 0→1, delay 0→19, mapping 0→6. The method completes a Tails prefix,
+then boots **Sonic** into SOZ2 for the cold capture; this slot is the Sonic
+Insta-Shield, not Tails' tails object. The original focused selection missed
+this production cold-capture consumer.
+
+Direct reconstruction is now confined to a collected shield owning the shared
+SST, plus the previously supported directed overlays. Unshielded native entries
+retain their prior deferred restore and existing player-owned handle, avoiding
+constructor-time binding of an animation set absent in the captured cold world.
+No cursor is reset or advanced by reconstruction, and all snapshot comparisons
+remain unchanged. Matched before/after selections include all eleven concrete
+`*RunPrefix`/`*RunChain` classes across the r6/r7 profiles, as well as the two
+attracted-ring movies and object rewind round-trips. Existing terminal-evidence,
+run-boundary and art-queue failures remain separately attributed; this local
+correction does not claim to repair those campaigns or the act's inherited gaps.
+
+A temporary reconstruction probe confirmed `owner=sonic`, `shield=null`,
+`old=InstaShieldObjectInstance`, `oldBound=false`, `probeBound=true` twice in
+the failing method. The narrowed path passed that method (one test, zero
+failures/errors/skips); the probe was removed before the final consumer runs.
+
+Final matched consumer results: r6 has 11 tests / 3 failures / 1 error / zero
+skips before and after; r7 improves from 7 tests / 1 failure / 3 errors / zero
+skips to 7 / 0 / 3 / 0. Only the Tails prefix assertion changes, from the cold
+restore failure to passing. All other test identities and assertion messages
+match exactly. All 86 r6 and 8 r7 parsed JSON summaries (error counts,
+verification groups and retained mismatch lists) are identical; no added or
+earlier reported mismatch appears. The two attracted-ring movie methods pass
+with zero failures/errors/skips. Complete campaigns remain red for the
+pre-existing assertions described above; these are bounded consumer checks,
+not a full-profile or full-suite pass.
+
+The final focused object/shield/keep-green selection passes 1,465 tests with
+zero failures, errors or skips, including all 1,342 object round-trip cases and
+all 25 elemental continuity cases. All runs use forkCount1, the original absolute
+ROM paths, Java25 and surfaceless EGL; no animator or comparison code changed.
+
+
+## Swinging-platform fractional input — 2026-11-03
+
+The local correction replaces `hasLaterSlotRiderCosineResidue` with the native
+per-link computation in `sub_34074 (sonic3k.asm:70569-70602)`. An unsigned
+incoming fraction contributes to every cosine step before integer extraction.
+Execution-order publications come from projected player position, terrain lookup,
+animation-index reads and solid/touch-width reads; object-manager snapshots retain
+the input across restore. Spring animation uses the native cleared timer and
+reports only executed frame-index reads. Each spring's solid reaction precedes
+animation, so a launch restarts its script on the same native pass. Attracted-ring
+touch misses clear the width input too; retained entries remain readable by P2
+until their actual ring slot clears collision.
+
+Temporary engine probes at rows 10705–10710 proved the fitted table took angle `$62`
+in slot 6 and reduced Sonic's leftward carry from 2 px to 1 px. Native read-only GPGX
+probes of both original movies observed incoming `$0000` there and `$FD00` on the
+short movie's angle `$6D` pass. `Player_LevelBound
+(sonic3k.asm:23207-23213)` owns the latter projected fraction; subsequent native
+owners determine whether it survives. The independent zone-slice movie also
+requires `$6900` at angle `$6F`; the executed spring timer preserves it there.
+Reintroducing the original table reproduces
+3440 errors from row 10709 with matching speeds and subpixels.
+
+`TestMGZSwingingPlatformObjectInstance` binds arithmetic and live input consumption;
+`TestObjectAnimationState` binds the immediate read, 16-pass timer cycle, switch
+marker and restore phase. `TestObjectManagerRewindSnapshot` binds fraction capture
+and restoration. `TestSonic3kSpringObjectInstance` binds same-pass vertical launch
+animation; `TestRingNativeSlotDispatch` binds admitted/missed ring touch reads.
+`TestTraceGhostGameplayIsolation` rejects publications from
+unregistered ghost playables, preserving the comparison-only boundary. The short MGZ trace, MGZ zone slice, Sonic+Tails segment and all
+Tails MGZ segments remain strict regression gates. The independent row 17383
+carried-emerald inventory issue remains policy A; no bootstrap input is added.
+These bounded contracts leave the matrix's wider route/configuration and native
+presentation obligations open.

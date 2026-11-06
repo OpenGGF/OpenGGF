@@ -1,5 +1,22 @@
 # FBZ Act 2 coverage matrix
 
+Capsule ownership maintenance (2026-11-02): the fixed capsule shares native
+opening writes, body drawing and body sprite/plane priority. Its separate button,
+five fragments, nine animals and explosion controller retain their native SST
+graph. Opening CPU-lock ownership is also captured and can be released before
+any ending pose without changing native phase or player pose. `TestS3kSharedRoutineOwnership` pins body/button high art priority and the
+five FBZ2 fragment frames; FBZ1’s separate low-art fragment exception remains
+outside this final-capsule graph. `TestFbzFinalEggCapsule` and graph checks cover
+recreation/lifetime behavior. This does not renew whole-route or pixel/audio and
+wider configuration qualifications below.
+
+Routine selection update (2026-10-27): the reviewed full configuration products
+and long cold-campaign qualifications in the [local budget record](../../research/2026-10-27-local-validation-cost.md#thirty-minute-local-command-target)
+now require explicit `exhaustive-audit`. Short real contact, lifecycle and
+restore/forward witnesses remain routine. Historical qualification rows retain
+their original source/input scope; a current smoke pass does not renew deferred
+cold reachability, accumulated route state or every replay window.
+
 Moving-camera presentation follow-up (2026-09-15): the
 [MHZ regression audit](../../audits/2026-09-15-s3k-presentation-camera.md)
 tracks the shared retained-SAT/scroll correction. Earlier stationary FBZ
@@ -391,3 +408,68 @@ The [query/allocation audit](../../audits/performance/2026-10-22-native-object-q
 and its companion implementation records own exact tested states, commands and
 remaining delivery checks. These local checks do not close inherited viewport,
 donor/team, full-route, load/respawn, audiovisual or whole-world rewind products.
+
+## Draw ownership follow-up (2026-10-31)
+
+`TestFbzBossCloudIdentity#renderRefreshesOnlyDrawCoordinatesAfterParallaxRunsLaterThanObjectUpdate`
+binds the late-parallax redraw case. One and three further draws use the current
+screen projection while preserving native coordinates and the dynamic spawn.
+The update and S3K publication phases are unchanged. This constructed renderer
+check does not close the existing cold-route, viewport, donor, team or native-pixel gaps.
+
+## Music ownership follow-up (2026-11-02)
+
+The [cross-game music audit](../../audits/2026-11-02-music-transitions.md)
+records corrected native request IDs and/or level-restore selection affecting
+this route. Restoration selects the apparent playlist and P1 invincibility at
+the native boundary. These local checks do not requalify this matrix’s inherited
+route, viewport/donor/team, lifecycle or audible-comparison gaps.
+
+
+FBZ2 boss display follow-up (2026-11-02): focused regressions cover the shipped
+neutral rotation head, palette-zero pilot flame, and root/arm debug geometry.
+The S3K revert timer now retains invincibility until the next native eight-frame
+boundary. Arms remain harmful until native dismantling; this does not guarantee
+protection throughout the defeat sequence. Full-route, pixel and configuration
+coverage gaps above remain open.
+### Encounter presentation follow-up — 2026-11-02
+
+The subboss roof emitters now preserve `loc_70302`'s vertical render flip
+(native subtypes 0/2); floor emitters 4/6 remain unflipped. The subsequent
+rising-floor entrance pillar preserves `Obj_FBZBossPillar`'s art priority bit
+independently of SAT bucket 6, so terrain cannot hide the blocking pillar.
+`TestFbzAct2Subboss` checks all four emitter draw calls;
+`TestFbzBossPillarInstance` checks priority and the existing eight-step closure,
+including a single `SpikeBalls` impact sound when displacement reaches zero.
+These bounded checks retain the existing route, viewport/donor and native pixel
+coverage limits above; they do not certify additional routes.
+
+
+## Native checkpoint initial camera — 2026-11-05
+
+The retained starpost5 route still proves actual lower magnetic platform/chain
+materialization and execution. Its synthetic checkpoint bank derives from the
+original ROM placement `$28E8/$B6C` (record401 of the full ROM-backed FBZ2 object
+asset). Native `loc_1BE46` resumes common `Get_LevelSizeStart`: camera `$B0C`
+clamps to `$B00`, then unconditional `Level/loc_6310` initial movement reaches
+`$B06` while maxY remains `$B00` (sonic3k.asm:38187-38193,38285-38312,7788-7796).
+`loc_1C186`/`loc_1C202` supply the six-pixel cap and pre-LevelSetup `$FFFF` wrap
+semantics (sonic3k.asm:38523-38540,38601-38622). The old final `$B00` assertion
+confused this intermediate clamp with the completed load. Only that final
+assertion changes, with maxY separately retained; all saved-bank, player/X and
+actual traversal assertions remain. No FBZ runtime object/event changes.
+
+The composed camera/resource/guard/keep-green focus passes191 existing cases,
+including this corrected route and all14 formerly failing actorless resource
+loads. Its new camera-unit fixture initially used the nonnull focus setter
+incorrectly, then all6 isolated native camera tests pass using the nullable
+presentation restore. The final composed check after the caller's focus gate
+is recorded by the lead. This adds no emulator capture or full-route/native
+pixel certificate; inherited roster/donor/viewport/rewind breadth remains open.
+
+
+The final explicit composed source `64df7449b` re-executes this real checkpoint
+route with the final actorless-load admission, native camera units and resource
+worlds: all199 ordinary/guard cases pass; only two separately selected existing
+ICZ trace assertions remain red. No FBZ assertion is relaxed beyond replacing
+the stale intermediate camera pin with the native completed-load value.

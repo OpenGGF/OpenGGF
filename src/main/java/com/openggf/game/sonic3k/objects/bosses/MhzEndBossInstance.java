@@ -15,7 +15,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
-import com.openggf.game.sonic3k.objects.S3kBossExplosionChild;
+import com.openggf.game.sonic3k.objects.S3kIncLevelEndXGradualInstance;
 import com.openggf.game.sonic3k.objects.SongFadeTransitionInstance;
 import com.openggf.game.sonic3k.runtime.MhzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kZoneRuntimeState;
@@ -68,10 +68,10 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
     private static final int HIT_COUNT = 9;
     private static final int COLLISION_SIZE = 0x0F;
     private static final int INITIAL_X_OFFSET = 0xC0;
-    private static final int ACTIVE_CORE_MAPPING_FRAME = 1;
-    private static final int PRIORITY_BUCKET = 5; // ObjDat3_76934 priority $280
-    private static final int ACTIVE_CORE_RENDER_HALF_WIDTH = 0x80;
-    private static final int ACTIVE_CORE_RENDER_HALF_HEIGHT = 0x80;
+    private static final int SHIP_MAPPING_FRAME = 0x0A; // ObjDat_MHZEndBoss
+    private static final int PRIORITY_BUCKET = 5; // ObjDat_MHZEndBoss priority $280
+    private static final int SHIP_RENDER_HALF_WIDTH = 0x20;
+    private static final int SHIP_RENDER_HALF_HEIGHT = 0x20;
     private static final int CAMERA_RANGE_MIN_Y = 0x0000; // word_769F4
     private static final int CAMERA_RANGE_MAX_Y = 0x0300;
     private static final int CAMERA_RANGE_MIN_X = 0x3AA0;
@@ -117,10 +117,6 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
     private static final int ROBOTNIK_SHIP_WAIT_FRAMES = 0x1BF;
     private static final int FINAL_TRANSITION_ZONE = Sonic3kZoneIds.ZONE_FBZ;
     private static final int FINAL_TRANSITION_ACT = 0;
-    private static final int FINAL_HIT_EXPLOSION_TIMER = 0x80; // CreateBossExp20
-    private static final int FINAL_HIT_EXPLOSION_RANGE_X = 0x20;
-    private static final int FINAL_HIT_EXPLOSION_RANGE_Y = 0x20;
-    private static final int FINAL_HIT_EXPLOSION_INTERVAL = 3;
     private static final int[] HIT_FLASH_COLOR_INDICES = {4, 10, 11, 13, 14};
     private static final int[][] HIT_FLASH_WORDS = {
             {0x0E42, 0x0228, 0x0000, 0x0C40, 0x0820},
@@ -134,8 +130,10 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
     private boolean paletteLoaded;
     private boolean arenaSetupApplied;
     private boolean touchChildrenRetired;
-    private int finalHitExplosionTimer;
-    private int finalHitExplosionIntervalCounter;
+    // Native collision_flags is independent of the $20 flash countdown.
+    private boolean collisionEnabled = true;
+    private MhzEndBossHitProxyChild hitProxy;
+    private PlayableEntity lastHitPlayer;
 
     public MhzEndBossInstance(ObjectSpawn spawn) {
         super(spawn, "MHZEndBoss");
@@ -156,8 +154,6 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
         paletteLoaded = false;
         arenaSetupApplied = false;
         touchChildrenRetired = false;
-        finalHitExplosionTimer = -1;
-        finalHitExplosionIntervalCounter = FINAL_HIT_EXPLOSION_INTERVAL - 1;
     }
 
     @Override
@@ -176,7 +172,6 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
         applyInitialArenaSetup();
         updateMhzSpikeArtQueue();
         if (state.defeated) {
-            tickFinalHitExplosionController();
             updateFinalDefeatDash(player);
             return;
         }
@@ -219,7 +214,18 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
 
     @Override
     public int getCollisionFlags() {
-        return cameraRangePassed ? super.getCollisionFlags() : 0;
+        return cameraRangePassed && collisionEnabled && !state.defeated ? 0xC0 | COLLISION_SIZE : 0;
+    }
+
+    void bindHitProxy(MhzEndBossHitProxyChild child) {
+        // loc_764A0 publishes the child's exact slot into parent $44.
+        hitProxy = child;
+    }
+
+    void retireHitProxy(MhzEndBossHitProxyChild child) {
+        if (hitProxy == child) {
+            hitProxy = null;
+        }
     }
 
     @Override
@@ -252,6 +258,7 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
             return;
         }
         arenaSetupApplied = true;
+        ensureBossExplosionArtLoaded();
         var services = tryServices();
         if (services == null) {
             return;
@@ -270,6 +277,10 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
     }
 
     private void updateWaitForChildSignal() {
+        // Shipped loc_76004 (sonic3k.asm:157019-157024) repeats these writes
+        // on EVERY routine-0 pass. It does not reset the proxy or flash timer.
+        collisionEnabled = true;
+        state.hitCount = HIT_COUNT;
         if ((getCustomFlag(STATE_FLAGS_OFFSET) & FLAG_CHILD_SIGNAL) == 0) {
             return;
         }
@@ -362,6 +373,7 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
         var services = tryServices();
         if (services != null && services.camera() != null) {
             services.camera().setMaxXTarget((short) 0x45A0);
+            spawnChild(() -> new S3kIncLevelEndXGradualInstance(state.x, state.y));
         }
     }
 
@@ -464,37 +476,8 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
         state.xVel = currentPlayerCharacter() == PlayerCharacter.KNUCKLES ? 0x500 : 0x400;
         finalDefeatPhase = FINAL_PHASE_DASH_TO_THRESHOLD;
         setFinalHitHandoff(true);
-        finalHitExplosionTimer = FINAL_HIT_EXPLOSION_TIMER;
-        finalHitExplosionIntervalCounter = FINAL_HIT_EXPLOSION_INTERVAL - 1;
         spawnFreeChild(() -> new MhzEndBossWalkoffPrepChild(this));
-    }
-
-    private void tickFinalHitExplosionController() {
-        if (finalHitExplosionTimer <= 0) {
-            return;
-        }
-        if ((getCustomFlag(STATE_FLAGS_OFFSET) & 0x20) != 0) {
-            finalHitExplosionTimer = -1;
-            return;
-        }
-        finalHitExplosionIntervalCounter--;
-        if (finalHitExplosionIntervalCounter >= 0) {
-            return;
-        }
-
-        finalHitExplosionTimer--;
-        if (finalHitExplosionTimer <= 0) {
-            return;
-        }
-        var services = tryServices();
-        if (services != null) {
-            int random = services.rng().nextRaw();
-            int xOffset = (random & ((FINAL_HIT_EXPLOSION_RANGE_X * 2) - 1)) - FINAL_HIT_EXPLOSION_RANGE_X;
-            int yOffset = ((random >> 8) & ((FINAL_HIT_EXPLOSION_RANGE_Y * 2) - 1)) - FINAL_HIT_EXPLOSION_RANGE_Y;
-            services.playSfx(Sonic3kSfx.EXPLODE.id);
-            spawnChild(() -> new S3kBossExplosionChild(state.x + xOffset, state.y + yOffset));
-        }
-        finalHitExplosionIntervalCounter = FINAL_HIT_EXPLOSION_INTERVAL - 1;
+        spawnChild(() -> MhzEndBossExplosionController.following(this));
     }
 
     private void updateFinalDefeatDash(PlayableEntity player) {
@@ -538,6 +521,7 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
         // loc_76164 sets status bit7 at $44D0. Child_AddToTouchList consumes
         // that retirement signal while the parent continues its native escape.
         touchChildrenRetired = true;
+        spawnChild(() -> MhzEndBossExplosionController.stationary(state.x, state.y));
         var services = tryServices();
         var gameState = services == null ? null : services.gameState();
         if (gameState != null) {
@@ -567,7 +551,7 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
             return;
         }
         setCustomFlag(TIMER_OFFSET, FADE_TO_LEVEL_MUSIC_FRAMES - 1);
-        spawnFreeChild(() -> new SongFadeTransitionInstance(FADE_TO_LEVEL_MUSIC_FRAMES, resolveLevelMusicId()));
+        spawnFreeChild(() -> SongFadeTransitionInstance.toLevelMusic(resolveLevelMusicId()));
         startFinalDefeatClimbAway();
     }
 
@@ -595,7 +579,8 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
     }
 
     private void updateFinalDefeatClimbAway() {
-        moveSprite2();
+        // loc_761E8 calls MoveSprite, including its $38 gravity word.
+        moveSpriteCustomGravity(0x38);
         var services = tryServices();
         if (services == null || services.camera() == null) {
             return;
@@ -684,10 +669,11 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
             state.xFixed = state.x << 16;
             state.yFixed = state.y << 16;
             services.camera().setMaxXTarget((short) POST_CAPSULE_ESCAPE_CAMERA_TARGET_X);
+            spawnChild(() -> new S3kIncLevelEndXGradualInstance(state.x, state.y));
         }
         int levelMusic = resolveLevelMusicId();
         if (levelMusic >= 0 && services != null) {
-            services.playMusic(levelMusic);
+            services.playMusic(com.openggf.game.sonic3k.audio.S3kLevelMusicRestore.resolve(services, levelMusic));
         }
         lockPostCapsuleNativePlayersUp();
         setCustomFlag(TIMER_OFFSET, ROBOTNIK_SHIP_WAIT_FRAMES);
@@ -952,18 +938,28 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
 
     @Override
     public void onPlayerAttack(PlayableEntity player, com.openggf.level.objects.TouchResponseResult result) {
-        if (state.invulnerable || state.defeated) {
+        if (!collisionEnabled || state.defeated) {
             return;
         }
-        // Accepted touch publishes the decremented count before the object pass.
-        // loc_767A0's pre-arena floor is checked after that pass's movement,
-        // which may itself set $38 bit7 through loc_760C4.
-        state.hitCount--;
+        // Touch_Enemy.checkhurtenemy (sonic3k.asm:20945-20958) changes only
+        // the struck slot. The routine dispatch can overwrite this body hit
+        // before sub_76782 decides whether to start a flash or clear the proxy.
+        state.hitCount = (state.hitCount - 1) & 0xFF;
+        collisionEnabled = false;
+        lastHitPlayer = player;
+    }
+
+    private void startMhzHitFlash() {
         state.invulnerabilityTimer = 0x20;
         state.invulnerable = true;
+        collisionEnabled = false;
+        if (hitProxy != null) {
+            hitProxy.disableCollision();
+        }
         services().playSfx(getBossHitSfxId());
-        if (player != null) {
-            player.setXSpeed((short) 0);
+        // loc_767E4 belongs to the post-dispatch damage tail, not contact.
+        if (lastHitPlayer != null) {
+            lastHitPlayer.setXSpeed((short) 0);
         }
     }
 
@@ -983,12 +979,24 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
     }
 
     private void updateMhzHitFlash() {
-        if (!state.invulnerable) {
-            return;
+        // sub_76782 (sonic3k.asm:157639-157650) consumes a cleared proxy
+        // even while $20 is nonzero, provided the parent's byte is active.
+        // Routine 0 can restore that byte without restoring the proxy's byte.
+        if (collisionEnabled) {
+            if (hitProxy == null || hitProxy.getCollisionFlags() != 0) {
+                return;
+            }
+            state.hitCount = (state.hitCount - 1) & 0xFF;
+            lastHitPlayer = hitProxy.getLastHitPlayer();
         }
         // loc_767A0 observes the post-dispatch arena bit, not its value at touch.
-        if ((getCustomFlag(STATE_FLAGS_OFFSET) & FLAG_ARENA_PASS) == 0 && state.hitCount <= 1) {
+        if ((getCustomFlag(STATE_FLAGS_OFFSET) & FLAG_ARENA_PASS) == 0 && (byte) state.hitCount <= 1) {
             state.hitCount = 2;
+        }
+        // loc_767B0 clears collision only when beginning a new flash. An
+        // already-flashing, reinitialized parent keeps its active byte.
+        if (state.invulnerabilityTimer == 0) {
+            startMhzHitFlash();
         }
         // ROM loc_767E8: btst #0,$20(a0) reads the countdown BEFORE it is decremented below.
         // Bit0 clear (even) selects the white/flash row; bit0 set (odd) selects the real-color
@@ -1011,6 +1019,11 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
                 // the native counter stays1, rather than consuming a ninth hit.
                 state.defeated = true;
                 onDefeatStarted();
+            } else {
+                collisionEnabled = true;
+                if (hitProxy != null) {
+                    hitProxy.restoreCollision();
+                }
             }
         }
     }
@@ -1028,11 +1041,12 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         if (!cameraRangePassed) return;
-        PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.MHZ_END_BOSS);
+        PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.ROBOTNIK_SHIP);
         if (renderer == null) {
             return;
         }
-        renderer.drawFrameIndex(ACTIVE_CORE_MAPPING_FRAME, state.x, state.y, false, false);
+        renderer.drawFrameIndex(SHIP_MAPPING_FRAME, state.x, state.y,
+                (state.renderFlags & 1) != 0, false);
     }
 
     @Override
@@ -1042,12 +1056,12 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
 
     @Override
     public int getOnScreenHalfWidth() {
-        return ACTIVE_CORE_RENDER_HALF_WIDTH;
+        return SHIP_RENDER_HALF_WIDTH;
     }
 
     @Override
     public int getOnScreenHalfHeight() {
-        return ACTIVE_CORE_RENDER_HALF_HEIGHT;
+        return SHIP_RENDER_HALF_HEIGHT;
     }
 
     @Override

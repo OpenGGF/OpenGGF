@@ -18,7 +18,8 @@ class TestVoteMessages {
                 new ControlMessage.TrackVoteTally(List.of(
                         new ControlMessage.VoteCount("s3k:0:0", 2),
                         new ControlMessage.VoteCount("s3k:0:1", 0))),
-                new ControlMessage.TrackVoteResult("s3k:0:1"),
+                new ControlMessage.TrackVoteResult("s3k:0:1",
+                        new ControlMessage.RoundConfig("s3k", 0, 1, 60, "OPEN", null), 1),
                 new ControlMessage.RoomTrackUpdate("r-1", 0, 1)
         };
         for (ControlMessage message : messages) {

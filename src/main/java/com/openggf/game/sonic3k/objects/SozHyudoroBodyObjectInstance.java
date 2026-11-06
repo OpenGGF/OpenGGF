@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.ArrayList;
 
 /** Hyudoro_body, its nine routines and away animation ($8F11E..$8F37A). */
+@com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.SCREEN_POSITION)
 public final class SozHyudoroBodyObjectInstance extends AbstractObjectInstance
         implements SpawnRewindRecreatable,TouchResponseProvider,TouchResponseListener, ObjectVisualFacing.Source {
 

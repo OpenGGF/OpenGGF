@@ -11,6 +11,7 @@ import com.openggf.sprites.playable.Knuckles;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
@@ -22,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Controller-only cold Knuckles LRZ traversal, miniboss, handoff and direct Hidden Palace arrival. */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestLrzKnucklesColdRouteCapture {
+    @Tag("exhaustive-audit")
     @Test
     void coldKnucklesReachesMinibossAndRestoresTraversalAndCloudEscape() throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
@@ -119,6 +121,7 @@ class TestLrzKnucklesColdRouteCapture {
         }
     }
 
+    @Tag("exhaustive-audit")
     @Test
     void coldKnucklesClearsMinibossAndRestoresFightAndActTwoHandoff() throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
@@ -310,6 +313,7 @@ class TestLrzKnucklesColdRouteCapture {
 
 
 
+    @Tag("exhaustive-audit")
     @Test
     void coldKnucklesReplaysIncomingRouteAndFirstActTwoDoor() throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
@@ -505,6 +509,7 @@ class TestLrzKnucklesColdRouteCapture {
     }
 
 
+    @Tag("exhaustive-audit")
     @Test
     void coldKnucklesRestoresActTwoTraversalToTheMiddleCorridor() throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
@@ -566,6 +571,7 @@ class TestLrzKnucklesColdRouteCapture {
         }
     }
 
+    @Tag("exhaustive-audit")
     @Test
     void coldKnucklesRestoresActTwoUpperClimbsAndDoorRelease() throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
@@ -627,6 +633,7 @@ class TestLrzKnucklesColdRouteCapture {
         }
     }
 
+    @Tag("exhaustive-audit")
     @Test
     void coldKnucklesCompletesActTwoAndReachesPlayableHiddenPalace() throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(

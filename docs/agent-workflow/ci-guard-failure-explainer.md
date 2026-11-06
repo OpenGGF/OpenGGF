@@ -83,7 +83,7 @@ mvn "-Dtest=com.openggf.game.sonic3k.TestSonic3kPlcArtRegistry" "-Ds3k.rom.path=
 - **Failure symptom:** "Direct getMap().setValue() calls found in gameplay paths. All level
   mutations must route through ZoneLayoutMutationPipeline."
 - **Correct fix:** Replace the direct call with a pipeline mutation, e.g.
-  `services().zoneLayoutMutationPipeline()...` / a `LevelMutationSurface`. See `CLAUDE.md`
+  `services().zoneLayoutMutationPipeline()...` / a `LevelMutationSurface`. See `AGENTS.md`
   "Level-mutation routing rule" and the `ZoneLayoutMutationPipeline` framework.
 - **Exempt by design (do not extend lightly):** editor commands (`PlaceBlockCommand`,
   `DeriveChunkFromPatternsCommand`, `DeriveBlockFromChunksCommand`) and initial-layout
@@ -105,7 +105,7 @@ mvn "-Dtest=com.openggf.game.sonic3k.TestSonic3kPlcArtRegistry" "-Ds3k.rom.path=
   through ObjectServices. Move the dependency behind services(), tryServices(),
   ObjectServices, or an approved bridge."
 - **Correct fix:** Replace the `getInstance()` / `GameServices.` call inside object methods
-  with `services().<accessor>()`. Per `CLAUDE.md`: **never call `getInstance()` from object
+  with `services().<accessor>()`. Per `AGENTS.md`: **never call `getInstance()` from object
   code.** Only add to the approved-bridge allowlist if the class is a genuine framework
   bridge, with a documented line-level reason — not to silence a normal object.
 
@@ -242,7 +242,7 @@ mvn "-Dtest=com.openggf.game.sonic3k.TestSonic3kPlcArtRegistry" "-Ds3k.rom.path=
 - **Enforces:** No JUnit 4 reintroduction. No `@Rule`, `@ClassRule`, `@RunWith`; no
   `org.junit.*` (JUnit 4) imports (`Test, Before, After, BeforeClass, AfterClass, Rule,
   ClassRule, Ignore, Assert, Assume`); no `org.junit.runner.*`; no legacy `RequiresRomRule`.
-  Tests are JUnit 5 / Jupiter only (`CLAUDE.md`).
+  Tests are JUnit 5 / Jupiter only (`AGENTS.md`).
 - **Failure symptom:** "Legacy rule usage in [file]" or "JUnit 4 import or runner usage in
   [file]".
 - **Correct fix (1:1 migrations):**
@@ -288,11 +288,11 @@ mvn "-Dtest=com.openggf.game.sonic3k.TestSonic3kPlcArtRegistry" "-Ds3k.rom.path=
 - **Correct fix:**
   - Replace game-name branching with the smallest accurate owner from
     `docs/architecture/per-game-rule-placement.md` — never `if (gameId == S1)`-style
-    logic (`CLAUDE.md` physics rules).
+    logic (`AGENTS.md` physics rules).
   - Remove `docs/...disasm` path literals from source; disassembly is research-only.
   - Rename zone-specific art fields to be game-neutral.
   - Use `getCentreX()`/`getCentreY()` (or `NativePositionOps`) for ROM-position/collision
-    code; top-left `getX/getY` is rendering-only (`CLAUDE.md` coordinate rules).
+    code; top-left `getX/getY` is rendering-only (`AGENTS.md` coordinate rules).
 
 ---
 

@@ -9,6 +9,7 @@ import com.tngtech.archunit.lang.ArchRule;
 import java.nio.file.Path;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 
 /** Shared networking can be used by any mod without importing engine gameplay owners. */
 @AnalyzeClasses(packages = "com.openggf.net",
@@ -43,5 +44,11 @@ public class TestNetIsolationRules {
             .should().dependOnClassesThat().resideInAnyPackage(
                     "io.netty..", "org.sqlite..", "org.bouncycastle..", "org.lwjgl..")
             .because("the shared backend must run without dedicated-server or graphics dependencies");
+
+    @ArchTest
+    static final ArchRule ADMISSION_BRIDGE_HAS_ONLY_ENGINE_MODULE_OWNERS = classes()
+            .that().haveFullyQualifiedName("com.openggf.net.hub.RoomAdmissionBridge")
+            .should().onlyHaveDependentClassesThat()
+            .haveNameMatching("com\\.openggf\\.net\\.(client\\.DirectRoomRegistration|host\\.HostMasterLink)");
 
 }

@@ -33,8 +33,13 @@ public final class DefaultSolidExecutionRegistry
             new IdentityHashMap<>();
     private ObjectSolidExecutionContext currentContext = ObjectSolidExecutionContext.inert();
 
+    private Object frameIdentity = new Object();
+
+    Object frameIdentity() { return frameIdentity; }
+
     @Override
     public void beginFrame(int frameCounter, List<? extends PlayableEntity> players) {
+        frameIdentity = new Object();
         current.clear();
         currentContext = ObjectSolidExecutionContext.inert();
     }
@@ -92,6 +97,7 @@ public final class DefaultSolidExecutionRegistry
 
     @Override
     public void clearTransientState() {
+        frameIdentity = new Object();
         current.clear();
         currentContext = ObjectSolidExecutionContext.inert();
     }
@@ -143,6 +149,7 @@ public final class DefaultSolidExecutionRegistry
 
     @Override
     public void restore(SolidExecutionSnapshot s) {
+        frameIdentity = new Object();
         previous.clear();
         current.clear();
         currentContext = ObjectSolidExecutionContext.inert();

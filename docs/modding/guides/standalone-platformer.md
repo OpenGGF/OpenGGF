@@ -132,7 +132,7 @@ a 128×16 tile map with an embedded `tileset.png`, exactly two named tile layers
 tile-layer names: `FG` (required — the visible foreground), `BG` (optional visible
 background), `COLLISION` (optional primary solidity), and `COLLISION_ALT` (optional
 secondary solidity, mirrors S2/S3K's dual collision-path model — see
-`CLAUDE.md`'s "Collision Model" section). This level uses only `FG` and `COLLISION`;
+`AGENTS.md`'s "Collision Model" section). This level uses only `FG` and `COLLISION`;
 without `COLLISION_ALT` the importer copies the primary collision layer onto the
 secondary path automatically.
 

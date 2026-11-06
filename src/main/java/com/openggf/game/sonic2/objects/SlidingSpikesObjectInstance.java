@@ -214,7 +214,7 @@ public class SlidingSpikesObjectInstance extends AbstractObjectInstance
     /**
      * Check if any player is within detection range and trigger sliding.
      * <p>
-     * From Obj76_CheckPlayers (s2.asm lines 55290-55294):
+     * From Obj76_CheckPlayers (s2.asm lines 55909-55913):
      * The disassembly checks both MainCharacter and Sidekick:
      *   lea (MainCharacter).w,a1
      *   bsr.s Obj76_CheckPlayer
@@ -235,7 +235,7 @@ public class SlidingSpikesObjectInstance extends AbstractObjectInstance
     /**
      * Check if a single player is within detection range and trigger sliding.
      * <p>
-     * From Obj76_CheckPlayer (s2.asm lines 55295-55314):
+     * From Obj76_CheckPlayer (s2.asm lines 55907-55926):
      * - Player must be on ground (status.player.in_air = 0)
      * - X distance check: (player_x - object_x + 0xC0) must be < 0x80
      *   (subtract 0x100 if object is x_flipped)
@@ -289,7 +289,7 @@ public class SlidingSpikesObjectInstance extends AbstractObjectInstance
     /**
      * Slide the spike block out of the wall.
      * <p>
-     * From Obj76_SlideOut (s2.asm lines 55317-55326):
+     * From Obj76_SlideOut (s2.asm lines 55929-55938):
      * - If remaining_movement > 0: decrement by 1, move x_pos by -1 (or +1 if x_flipped)
      */
     private void slideOut() {

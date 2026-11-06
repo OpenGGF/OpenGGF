@@ -152,6 +152,21 @@ class TestSpikebonkerBadnikInstance {
     }
 
     /**
+     * loc_91AD2 (sonic3k.asm:199086-199092) initializes the pivot and creates
+     * the head; loc_91BC0 (sonic3k.asm:199173-199179) initializes that head.
+     * Neither executes loc_91AEC's orbit step on its creation pass.
+     */
+    @Test
+    void theMaceCreationPassPreservesItsInitialOrbitAngle() {
+        var body = activated(0x20, 0);
+        var mace = body.maceForTest();
+        mace.update(2, null);
+        assertEquals(0, mace.angleForTest(), "native child initialization returns before orbit");
+        mace.update(3, null);
+        assertEquals(0xF8, mace.angleForTest(), "the next pivot pass owns the first angle decrement");
+    }
+
+    /**
      * {@code subq.b #8,d0 / move.b d0,$3C(a1)} (:199117-199118): the mace's angle walks down by
      * eight an update and wraps through zero, which is why it orbits continuously rather than
      * waiting for a slam.
@@ -162,9 +177,10 @@ class TestSpikebonkerBadnikInstance {
         SpikebonkerBadnikInstance.SpikebonkerMace mace = body.maceForTest();
 
         assertEquals(0, mace.angleForTest());
-        mace.update(0, null);
+        mace.update(2, null); // Native child initialization, before orbit dispatch.
+        mace.update(3, null);
         assertEquals(0xF8, mace.angleForTest(), "0 - 8 wraps to $F8");
-        mace.update(1, null);
+        mace.update(4, null);
         assertEquals(0xF0, mace.angleForTest());
     }
 
@@ -214,6 +230,7 @@ class TestSpikebonkerBadnikInstance {
         SpikebonkerBadnikInstance body = activated(0x20, 0, servicesWithObjectManager());
         SpikebonkerBadnikInstance.SpikebonkerMace mace = body.maceForTest();
         PlayableEntity player = playerAt(OBJECT_X - 0x10, OBJECT_Y);
+        mace.update(2, null); // Native child initialization, before the slam request.
         body.update(10, player);
         assertTrue(body.isBonkInProgress(), "precondition: the slam was requested");
 

@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.events;
 
+import com.openggf.game.sonic3k.audio.S3kLevelMusicRestore;
+
 import com.openggf.camera.Camera;
 import com.openggf.game.GameModule;
 import com.openggf.game.PlayerCharacter;
@@ -84,7 +86,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
     /**
      * Camera X threshold that arms the miniboss arena gate.
      *
-     * <p>ROM: {@code Obj_CNZMiniboss} (sonic3k.asm:144889) reads
+     * <p>ROM: {@code Obj_CNZMiniboss} (sonic3k.asm:144894) reads
      * {@code move.w #$31E0,d0} then {@code cmp.w (Camera_X_pos).w,d0} and
      * branches to {@code loc_6D9A8} when the camera reaches the threshold.
      * The ROM value is exposed through {@link Sonic3kConstants#CNZ_MINIBOSS_ARENA_MIN_X}
@@ -130,7 +132,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
     /**
      * Saved {@code Camera_max_X_pos} captured when the arena lock fires.
      *
-     * <p>ROM: {@code loc_6D9A8} (sonic3k.asm:144896) writes
+     * <p>ROM: {@code loc_6D9A8} (sonic3k.asm:144901) writes
      * {@code Camera_max_X_pos} into {@code Camera_stored_max_X_pos}; we mirror
      * that here so the falling-edge release can restore the natural camera
      * extent when {@link CnzMinibossInstance#onEndGo} clears
@@ -399,7 +401,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
      * Handles the normal Act 1 entry path and the miniboss threshold gate.
      *
      * <p>Parity note: in the ROM the arena setup runs from inside
-     * {@code Obj_CNZMiniboss} (sonic3k.asm:144888), so it only fires if that
+     * {@code Obj_CNZMiniboss} (sonic3k.asm:144893), so it only fires if that
      * object is live in the active window. Tests and debug teleports that
      * drop the camera strictly past the arena's far wall
      * ({@link Sonic3kConstants#CNZ_MINIBOSS_ARENA_MAX_X}) would normally not
@@ -461,7 +463,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
     }
 
     /**
-     * ROM: {@code loc_6D9A8} (sonic3k.asm:144895) — arena setup invoked
+     * ROM: {@code loc_6D9A8} (sonic3k.asm:144900) — arena setup invoked
      * when {@code Obj_CNZMiniboss}'s outer gate succeeds.
      *
      * <p>Mirrors the ROM sequence: stash {@code Camera_max_X_pos}, clamp the
@@ -538,7 +540,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
 
         minibossStartReleased = true;
         if (audio() != null) {
-            audio().playMusic(Sonic3kMusic.MINIBOSS.id);
+            audio().playMusic(Sonic3kMusic.MINIBOSS_S3.id);
         }
         spawnMinibossScrollControlOnce();
     }
@@ -895,10 +897,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
 
         // Restore_LevelMusic ($85B60) derives Current_music from the apparent
         // zone/act and selects invincibility playback from P1's secondary status.
-        int music = levelManager().getApparentLevelMusicId();
-        if (player.getInvincibleFrames() > 0 || player.isSuperSonic()) {
-            music = Sonic3kMusic.INVINCIBILITY.id;
-        }
+        int music = S3kLevelMusicRestore.resolve(levelManager().getApparentLevelMusicId(), player);
         if (music >= 0) {
             audio().playMusic(music);
         }

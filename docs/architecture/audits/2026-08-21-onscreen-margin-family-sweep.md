@@ -300,7 +300,7 @@ reaching the row through the object that actually loads it — here, `ObjB8`'s o
 through the first grep hit that matches the shape.
 
 **A second row for the same object confirms the warning not to generalise 32's companions.**
-`ObjB8`'s own body row (`s2.asm:80297`) is `1<<render_flags.level_fg, 4, $10, 0` —
+`ObjB8`'s own body row (`s2.asm:80317`) is `1<<render_flags.level_fg, 4, $10, 0` —
 `explicit_height` also clear, so also `ApproxYCheck`'s 32, but `width_pixels` **$10** rather
 than 4. Same Y margin, different X margin, same object family. The `yMargin` generalises within
 the `ApproxYCheck` class; the `xMargin` never does.
@@ -387,7 +387,7 @@ per-site adjudication.
 | primitive | ROM routine | quantisation | signedness | axis | bound |
 |---|---|---|---|---|---|
 | `ObjectRangeOps` (1) | `out_of_range` / `MarkObjGone` | $80 both operands | unsigned `bhi` | X | 640 |
-| `ObjectBehindScreenOps` (3) | `Obj_DeleteBehindScreen` (`s2.asm:72983-72992`) | $80 both operands | **signed `bmi`** | X | **none** |
+| `ObjectBehindScreenOps` (3) | `Obj_DeleteBehindScreen` (`s2.asm:73098-73107`) | $80 both operands | **signed `bmi`** | X | **none** |
 | `ObjectPlayerRangeOps` (4) | `Obj28_ChkDel` (`s2.asm:24720-24730`) | **none — pixel-accurate** | **both: unsigned near, signed far** | X | $180 far edge only |
 
 ### Predicate 4's shape was described backwards, and the description was the dangerous part

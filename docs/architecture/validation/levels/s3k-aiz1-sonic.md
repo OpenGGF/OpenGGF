@@ -1,5 +1,92 @@
 # S3K AIZ act 1 — Sonic route matrix
 
+## Scatter collector retirement (2026-11-04)
+
+The intro emeralds retain the exact managed Knuckles collector while it is
+live. When that identity leaves the object manager, only its references are
+detached; surviving emerald slots remain alive. The ROM's
+`AIZPlaneIntro_EmeraldChildWaitForPlane` (sonic3k.asm:135936-135960) tests
+collector proximity and velocity, while `loc_61F44` (sonic3k.asm:128809-128814)
+deletes Knuckles independently. The engine's existing no-pickup behavior for a
+destroyed collector is retained without keeping an unregistered rewind edge.
+
+`TestS3kAizIntroGraphRewind` exercises the production retirement dispatch,
+independent survivors, another collector's untouched reference, capture before
+and after retirement, and restore/forward replay with both in-place and fresh
+reconstruction. Existing exact-collector/nearby-decoy coverage and an unmanaged
+collector negative control keep live identities strict. This bounded lifetime
+check does not certify the positioned AIZ2 replay's newly reached suffix, intro
+pickup accuracy, full routes, native pixels, donor/team or viewport products.
+Those remain inherited obligations.
+
+The bounded follow-up passes all 11 intro graph cases and 215 related object,
+rewind, architectural/timing/trace guard and S3K keep-green cases, without skips.
+The positioned AIZ2 trace crosses the former row-996 closure abort and compares
+4,015 rows, retaining 1,072 strict divergence groups (first at row 84, X speed).
+All 45,816 field observations on the common rows 0–995 equal the archived
+current-base control, including all 21,803 ERROR tuples. The 3,019 newly reached
+compared rows have no baseline; eight suffix rows have no serialized comparison.
+This certifies the reference lifetime and unchanged observed prefix, not suffix
+parity or a whole route.
+
+## Native sprite producer maintenance (2026-11-01)
+
+The follow-up investigates disappearing parts with sprite limits disabled.
+`TestGraphicsManagerSpriteSatReplay` reproduces an ordinary offscreen mapping
+piece becoming an unintended zero-X mask. It covers both zero-X equivalents on
+native H40 and both limit settings; `TestSpriteSatPixels` checks the later sprite's
+pixels in direct and instanced replay. Explicit mask controls remain supported.
+
+The normal end-of-act tally had two missing admission stages: whole-element
+bounds and individual mapping-piece padded-raster bounds. The results child unit
+test covers initial offscreen rejection, partial visibility and a widened right
+edge. `TestHczResultsTerrainPixels` exercises actual ROM-loaded tally mappings,
+including a surviving whole-element boundary whose digits must still be rejected,
+and retains its art/terrain pixel checks. AIZ plant culling keeps its existing
+focused checks. This repairs producer semantics rather than relaxing native
+limits. No new simulation state is introduced; recreation/rewind fields are
+unchanged. Exact reported AIZ footage, native-emulator pixel comparison,
+full routes, donor/team products and fresh whole-world rewind qualification
+remain inherited gaps. Focused and combined validation outcomes are reported
+with delivery; this matrix does not certify a whole level.
+
+The follow-up positioned gameplay capture boots Sonic+Tails at centre
+(6176, 1116), camera (6023, 944), steps 120 neutral inputs through the initial fade,
+and shows the complete Sonic body with native limits enabled. This is a positioned
+scene observation, not a replay or a whole-route certificate. A separate trace
+capture produced terrain-only pictures and was rejected as sprite evidence.
+
+## Foreground plant visibility (2026-10-29)
+
+The [sprite-culling record](../../plans/2026-10-29-sprite-scanline-rendering.md)
+tracks the reported idle-pose dropout near (6176, 1116). The baseline positioned
+Sonic+Tails capture reproduces it. `TestAizForegroundPlantRendering` covers
+whole-object rejection after parallax, partially visible plants, native320 and
+wide528 viewports, both variant heights and the exclusive bottom edge. The
+pre-fix source fails the two rejection cases while partial visibility passes.
+All three cases pass after correction. The before/after positioned captures
+retain a byte-identical state CSV and restore the missing body/shoe pixels.
+The linked record gives commands, scope and remaining validation.
+
+The shared display preference is checked by `TestSpriteSatLimits` (H32, H40,
+wide presentation, count/pixel budgets, overflow carry and retained masks/table
+capacity), `TestGraphicsManagerSpriteSatReplay` (live preference consumption)
+and `TestEngineSettingsScreen` (saved menu choice and 320/400 layout). The live
+preference also follows replacement/restoration of the engine context. Final
+focused and guard runs retain only the matched pre-existing HCZ fan reference
+coverage failure documented in the linked record. This is
+bounded presentation maintenance. It adds no simulation or captured state;
+existing plant recreation retains its spawn-derived projection. Full-route,
+native-emulator pixel comparison, donor/team products and fresh whole-world
+rewind qualification remain inherited obligations.
+
+Routine selection update (2026-10-27): the reviewed full configuration products
+and long cold-campaign qualifications in the [local budget record](../../research/2026-10-27-local-validation-cost.md#thirty-minute-local-command-target)
+now require explicit `exhaustive-audit`. Short real contact, lifecycle and
+restore/forward witnesses remain routine. Historical qualification rows retain
+their original source/input scope; a current smoke pass does not renew deferred
+cold reachability, accumulated route state or every replay window.
+
 Original fullrun follow-up (2026-10-17): the unchanged intro/bootstrap and original
 controller route now qualify the later normal bridge's exact standing SST at
 rows9510–9513. That bridge is in the reloaded Act2 world; its bounded certificate,
@@ -1079,3 +1166,20 @@ The title's private timing owner was not observed through a fabricated API.
 There is no native pixel/audio-output, long-route, rewind, alternate viewport,
 donor/team or whole-boot parity certificate. The unrelated hub START-layout and
 capture-chord negatives remain unchanged. Root owns integration and broader checks.
+
+## Custom damage flash phase — 2026-11-02
+
+The custom palette owner now reads the 32-update hit counter before decrement,
+matching the ROM palette-copy tail. It writes the final normal row before
+collision re-admission. `TestMhzMinibossPaletteFlash` checks every palette row
+and countdown value for AIZ1 and both HCZ bosses through the public update.
+Existing route, donor/team/viewport and native pixel qualification gaps remain;
+this local correction does not renew whole-act certification.
+
+## Music ownership follow-up (2026-11-02)
+
+The [cross-game music audit](../../audits/2026-11-02-music-transitions.md)
+records corrected native request IDs and/or level-restore selection affecting
+this route. Restoration selects the apparent playlist and P1 invincibility at
+the native boundary. These local checks do not requalify this matrix’s inherited
+route, viewport/donor/team, lifecycle or audible-comparison gaps.

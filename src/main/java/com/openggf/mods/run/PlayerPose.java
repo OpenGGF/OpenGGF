@@ -1,6 +1,7 @@
 package com.openggf.mods.run;
 
 import com.openggf.game.ModApi;
+import com.openggf.net.ghost.GhostFrame;
 
 /**
  * The resolved render state of a playable character for one frame: ROM centre position,
@@ -11,6 +12,11 @@ import com.openggf.game.ModApi;
 @ModApi
 public record PlayerPose(int centreX, int centreY, int mappingFrame, boolean hFlip, boolean vFlip,
                          int priorityBucket, boolean highPriority, boolean hurt) {
+    public GhostFrame toGhostFrame(boolean finished) {
+        return new GhostFrame(centreX, centreY, mappingFrame, hFlip, vFlip, finished,
+                priorityBucket, highPriority, hurt);
+    }
+
     /** The pose of a character that is not hurt. */
     public PlayerPose(int centreX, int centreY, int mappingFrame, boolean hFlip, boolean vFlip,
                       int priorityBucket, boolean highPriority) {

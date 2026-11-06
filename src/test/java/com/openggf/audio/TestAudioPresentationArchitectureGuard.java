@@ -2351,7 +2351,9 @@ class TestAudioPresentationArchitectureGuard {
         assertTrue(source.contains("AL_FORMAT_STEREO16"));
         assertFalse(source.contains("AL_FORMAT_MONO"));
         assertFalse(source.contains("AL_LOOPING"));
-        assertFalse(source.contains("AL_PITCH"));
+        assertTrue(source.contains(
+                "AL10.alSourcef(presentationSource, AL10.AL_PITCH, (float) ratio);"),
+                "Only the final presentation source receives speaker clock correction");
     }
 
     @Test

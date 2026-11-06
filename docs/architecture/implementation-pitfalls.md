@@ -12,6 +12,51 @@ then restore them on failure; retire only the exact owned atlas entries. The
 [Past World checks](validation/levels/scd-palmtree-panic-act1-present.md) exercise
 actual service timing, queued callback adversaries and full/course replay.
 
+**Do not catch engine-service failures to continue with substitute gameplay.**
+Supply camera, level-clock and audio owners in isolated fixtures; headless boot
+installs its no-device audio backend even with synthesis disabled. V-int is not a
+fallback for `Level_frame_counter`. Retry only an explicit recoverable rejection
+(such as S2 PLC queue capacity), and let ROM reads, renderer failures and programming
+errors escape to their owner. `TestBroadCatchSwallowingGuard` scans all main Java
+sources with the JDK parser and pins non-propagating broad catches in
+[`broad-catch-legacy.tsv`](../../src/test/resources/architecture/broad-catch-legacy.tsv).
+It runs in `-Pguards` by the `Test*Guard*` naming convention. The conservative
+inventory includes reported recovery boundaries as well as unresolved fallback;
+review each owner rather than deleting catches indiscriminately. Remove retired
+rows; do not add new engine catch-and-fallback allowances.
+
+**A resumable load outlives its caller's stack frame.** A load returning at a
+prepared HOLD has not completed or failed. Keep saved respawn/ring banks,
+caller-owned presentation flags and continuation-carry state until that exact
+attempt finishes. Clearing the outer zone wrapper's bank in its immediate
+`finally` revived a spent monitor and stopped the returned player even though
+all clock values matched. Register terminal cleanup with the existing load
+owner, report success only after real completion, and preserve primary/suppressed
+failure identity. Verify a real return route as well as once-only cleanup; see
+[load ownership evidence](designs/2026-11-03-synchronous-load-vint-accounting.md#enclosing-ownership-corrections).
+
+**A counter's name does not establish its native clock.** In S2 continuous
+loads, title object passes and gameplay have distinct clock ownership. Obj2C
+needs the native level word (held at zero during the locked title), not execution
+or VInt count; both level-word mirrors reset at release. That word also drives
+ARZ's camera shake: a one-pixel render-boundary change alters the pillar's cached
+render flag and therefore its next solid contact. See the
+[title-release clock attribution](audits/2026-11-04-s2-title-release-level-clock.md).
+Instrument the owning read before choosing a counter. A shared clock-hold
+experiment produced earlier physics failures even though it reduced the axis
+total; the producer-local correction restores the native RNG inventory. See the
+[executed clock evidence](research/2026-10-22-s2-chain-pacing.md#obj2c-clock-selection-and-arz2-rng-2026-11-03).
+
+
+**Position updates execute object code.** `LevelManager.updateObjectPositions()`
+is not a read-only placement refresh. In a positioned rendering fixture, calling it
+between production steps can admit a boss and consume its one-time palette load;
+the following frame-top `PaletteOwnershipRegistry.beginFrame()` then clears the
+pending write. Move the declared camera/player state and let the ordinary frame
+step execute admission. The MHZ2 rendering witness checks the admitted palette
+against the ROM and stages its camera without an extra object pass.
+
+
 **A handler capture is not proof of a stored world checkpoint.** Cold headless
 loading can leave parallax's active selection uninitialized even when a zone
 handler is available directly. Initialize through the ordinary production entry
@@ -48,6 +93,24 @@ Read the relevant section when working on coordinates, objects, rendering, rewin
 headless tests, or audio. S3K-specific routing is in [AGENTS_S3K.md](../../AGENTS_S3K.md).
 
 The things that cost the most time when missed.
+
+**Transition effects belong to the hosting frame.** Frame-top reloads return to a
+driver-owned transition-only row; they must not publish the in-frame markers that
+`LevelFrameStep` and `GameLoop` consume. Otherwise the next row can skip its loop
+tail or publish a second rewind boundary. `LevelActTransitionExecutor` returns
+completion effects; only the manager's in-frame entry publishes them. Synchronous
+screen events retain the in-frame path. See the
+[ownership rationale](designs/2026-11-03-seamless-request-retargeting.md).
+
+**Reload retargeting changes identity, not policy.** Use
+`SeamlessLevelTransitionRequest.retargetedForReload`; do not reconstruct a request
+with a builder at dispatch. Builder defaults and combined end-state setters once
+dropped runtime-art admission, camera-release timing and independent end flags,
+while an unused normalizer's tests stayed green. The request's private copy
+constructor and non-default field regression own preservation; executor and
+ROM-backed carry checks exercise the live path. See the
+[design rationale](designs/2026-11-03-seamless-request-retargeting.md).
+
 
 Offscreen desktop form pictures reuse an existing `ImGuiEditorChrome` when one is
 already alive in the capture. A nested host caused a missing-current-context
@@ -202,6 +265,21 @@ can use the established `beginMegaBatch` / `endMegaBatch` path, whose growth
 preserves vertices; the path picker now does so with `finally` cleanup. A warm
 font or short labels can hide the problem. The shared immediate renderer was
 outside this menu-only fix (2026-10-15 master-title usability review).
+
+**Capture tools must clear the guard suite in the scope they live in.** A production
+`com.openggf.tools` class that composes the editor, `testmode` or Stageplay runtime adds
+`tools -> editor`/`testmode` edges (closing the `editor -> tools` cycle) and trips
+`TestArchUnitRules`' core-runtime ratchet and Stageplay ownership rule; reading
+`GameServices.audio().getBackend()` trips `TestAudioBackendBypassGuard` even for an identity
+check (use `GameplayCaptureSession.usesNullAudioBackend()`; `AudioManager` is `@ModApi`, so a
+new public method there is a Mod API surface change); a `graphics` class calling `MenuChrome` breaks
+`TestAudioPresentationArchitectureGuard`'s layer inventory (keep menu renderers in
+`com.openggf`, like `ContentImportScreenRenderer`); runtime-owned framework code receives
+`GraphicsManager` from its caller instead of `GameServices.graphics()`. Moving a tool to test
+scope instead subjects it to `TestRawGlfwTestSetupGuard` and `TestNoLeakedTemporaryFiles`:
+there, boot through `GameplayCaptureSession`/`PresentationOffscreenTestContext` and delete
+every temporary root. Run `-Pguards` before integrating new tools (2026-10-27 menu design
+review, round 4).
 
 **Authoring art and terrain share one origin.** Retain detached ROM sheets from the
 normal asset load; requesting a new module provider during drawing can return an
@@ -363,6 +441,14 @@ Capture the player timers on menu entry, hold positive clocks above expiry durin
 and restore the exact saved durations on release. The Survivors regression
 `feverProtectionDoesNotExpireBehindLevelUpCards` checks the player clock as well as the HUD;
 menu-owned saved fields must participate in rewind too.
+
+**Measure host text with the shaping owner, not characters.** `String.length()`,
+`substring` and fixed `COMPACT_ADVANCE` widths are correct only for printable ASCII; accents may
+be several codepoints, CJK and shaped scripts have other advances, and Arabic joins change glyph
+widths. Use `MenuChrome.compactWidth`/`labelWidth`, `HostText.fit`/`wrap` and
+`MenuPixelFont.lineHeight` so measurement, drawing and hitboxes share one `ShapedLine`. LWJGL's
+standalone HarfBuzz library lacks the FreeType integration; bind HarfBuzz to the FreeType natives
+(`Configuration.HARFBUZZ_LIBRARY_NAME=freetype`) as `OpenTypeFace` does (2026-10-29 host text).
 
 **Menu fills do not blend on their own.** `MenuPixelFont.fillRect` and
 `TexturedQuadRenderer` submit tinted quads without touching GL blend state. With
@@ -618,6 +704,13 @@ the object.
 change (`loc_871C2`, `loc_87218`) therefore publishes the next mapping on the
 very next dispatch. Seeding the timer with the script's delay shifts every phase.
 
+**A repeated timer reload cannot stand in for a one-time initialization return.**
+HCZ's fan used 121 instead of the ROM's 120 idle reload to compensate for
+executing Main during initialization. That preserved its first activation but
+delayed each later pulse. Preserve the initialization return and native reload
+separately, then test multiple cycles and restoration on both sides of the
+initialization boundary. See the [fan phase evidence](audits/2026-10-29-s3k-campaign-terminal-certification.md#fan-phase-attribution-and-independent-controls).
+
 **Object-control early returns can still write character state.** S3K
 `Knuckles_Control/loc_165AE` clears `double_jump_flag` when object-control bit0
 suppresses movement, before reaching `Animate_Knuckles`. Skipping movement
@@ -800,16 +893,16 @@ base for a new category. Range table in
 **S1 silently ignores solid-bit setters.** `setTopSolidBit()` / `setLrbSolidBit()` no-op
 under `CollisionModel.UNIFIED`, so springs and plane switchers are automatic no-ops for S1.
 
-**Non-solid ownership must survive inline cleanup.** Setting `Status_OnObj`
-without `SolidObject` needs an ownership signal recognized by inline cleanup.
-For controllers without an existing live latch, use
-`ObjectManager.markObjectSupportThisFrame` on acquisition and held passes.
-Do not report support after native release or during a recapture cooldown.
-SOZ quicksand (`sub_3FD4E` and its variant owners; initial implementation
-`86d800e53`) passed direct object tests while the ordinary route lost the flag at
-frame end. Use the existing support contract rather than inventing a solid ride
-or setting object-control bits the ROM never wrote. Test the production frame
-boundary and restore/forward replay, not only calls to `update`.
+**Only ROM writers write contact state.** No pass runs after the objects and
+player code never derives `Status_OnObj` / `Status_InAir` from object support
+(the post-object finaliser, the player-slot grounding recovery and the AnglePos
+stale-support clear were deleted on 2026-10-31). A non-solid controller that sets
+`Status_OnObj` without `SolidObject` (S2 Obj06 spiral, SOZ quicksand `sub_3FD4E`)
+owns that bit until its own routine clears it; it needs no support marker. A
+stood-on object that deletes itself without clearing the bit leaves it set, as
+the ROM does (FixBugs=0). Only the ridden object's own helper releases an
+airborne rider. Test the production frame boundary and restore/forward replay,
+not only calls to `update`.
 
 **Rewind coverage is guarded.** A new spawnable object without a recreate path, an
 uncaptured `final` scalar, or an object reference not captured as a rewind id fails
@@ -991,6 +1084,46 @@ reverse. Merely creating a mask object is insufficient: the zone must enable
 the SAT collection/post-pass. The SOZ priority audit on 2026-09-16 exposed both
 failures with a door drawn through the sand and a same-bucket mask hiding the
 wrong object.
+
+**Cull whole objects before charging sprite-piece budgets.** `Render_Sprites` /
+`loc_1AD54` (sonic3k.asm:36376-36407) rejects an object's declared bounds before
+mapping expansion. For parallax decorations, use the projected position, not
+the layout spawn. Submitted offscreen pieces still consume native line width;
+discarding them in the shared evaluator would break partially visible objects.
+AIZ's unculled plants exhausted line width and erased Sonic's lower body even
+though the ROM culled those plants. Keep any user option to relax line limits
+separate from producer correctness. Disabling limits removes table capacity as well
+as line budgets; explicit masks remain active.
+Normal play defaults `display.spriteScanlineLimit` to false. TraceCaptureTool scopes
+it to true for native image comparisons and restores it even on failure. Other
+ROM image probes must enable it explicitly and restore their caller preference;
+physics/aux trace comparisons do not depend on this presentation setting.
+
+**Reserve zero-X masking for explicit controls.** Normal mapping expansion uses
+`loc_1AF76` (sonic3k.asm:36604-36618) to replace a zero SAT X with one.
+`GraphicsManager.submitSpriteSatPiece` applies this protection; explicit control
+entries retain zero. Disabling count/pixel/table limits does not disable masks,
+so omitting the producer step can still erase later sprites. Low-level evaluator
+tests may use raw zero-X entries, while production pixel probes that intentionally
+exercise masking must submit control entries.
+
+**Multi-draw has two admission stages.** Every end-of-act tally element has
+render flag `$40`. `loc_1AE58` (sonic3k.asm:36481-36518) rejects whole offscreen
+elements; `loc_1B07A` (sonic3k.asm:36743-36766) also rejects mapping-piece origins
+at or beyond the padded raster boundaries (-32 exclusive through screen width /
+224 exclusive). Results retirement bounds alone do not implement drawing
+admission. Retain native piece dimensions and count accepted mapping pieces once.
+The same omission affected loaded world objects in ICZ2: being in the active
+placement window does not imply being inside Render_Sprites bounds. Ring loss,
+columns/decorations and collapsing bridges retain their own native extents.
+Tension bridge child groups use $40/$08, then cull their one-piece segment origins.
+Observe raw submissions before evaluator clipping; a plausible final table capped
+at 80 can hide a much larger producer excess. The ICZ2 route budget test does this
+without supplying any gameplay or admission values.
+Native picture/admission tests explicitly opt into budgets with the test-only
+`NativeSpriteLimits` scope and restore their caller's preference. Normal play's
+relaxed default is not a valid implicit setup for a ROM budget comparison.
+
 **Follower priority inheritance must be field-specific.** Hyper stars illustrate
 this: `Obj_HyperSonic_Stars_Init` fixes the display-list word at `$80`, while
 `loc_19458` inherits only Sonic's art-word high bit. Copying both properties
@@ -1503,6 +1636,13 @@ A full level frame may retire results art, run Obj_LevelResultsCreate, publish t
 
 ### Physical retained planes and source-cache dimensions
 
+Recreating an S3K layout map with identical contents can still change its COW byte
+array identity. The next shared level restore then invalidates both tilemaps.
+Preserve the captured map-byte reference when restoring layout metadata, and only
+rebind derived geometry when its actual inputs changed. An unchanged full-layout
+background is camera-independent; camera windows and retained planes need their
+own restore rules. Origin: LRZ1/SOZ2 held-rewind investigation, 2026-11-02.
+
 An event-owned VDP Plane B is64x32 cells even when its source-world cache is
 taller. Native row writes into the first32 cache rows do not update the later
 world rows; rendering with that taller height can sample untouched art while
@@ -1955,8 +2095,9 @@ therefore publishes facing and gravity itself (`loc_14492` / `sub_1459E`).
 
 ### Proximity is not an established platform ride
 
-DEZ final floor (2026-09-25): `providesPreMovementGroundAttachmentSupport`
-feeds the pre-physics grounding recovery, not just terrain attachment. Opting a
+DEZ final floor (2026-09-25; the hook and the pre-physics grounding recovery it
+fed were deleted on 2026-10-31): `providesPreMovementGroundAttachmentSupport`
+fed the pre-physics grounding recovery, not just terrain attachment. Opting a
 persistent top-solid into it accepted Sonic at Y186 above the real Y205 standing
 height. Recovery cleared air without establishing a rider; the inline checkpoint
 then rejected contact, producing alternating air/ground and mapping7/8 every frame.
@@ -2771,3 +2912,16 @@ bits. Deriving priority from cast membership or the sheet name changes terrain
 occlusion. Likewise, Lava Reef's Robotnik head uses palette 0 while its machine
 sheet defaults to palette 1. Validate the actual owner and part, not only whether
 its mapping frame contains nonzero pixels. Origin: Typing section art, 2026-10-25.
+
+## Song-helper timing belongs to its own object
+
+S3K `sub_65DD6`, `Obj_Song_Fade_Transition` and
+`Obj_Song_Fade_ToLevelMusic` allocate in the lowest free slot. Use the
+lowest-free object path, not an after-current child allocator. The manager
+already decides whether that slot can execute in the current object pass.
+The helper initializer falls through into its first signed decrement: native
+wait words 90 and 120 complete on own entries 91 and 121, including initialization.
+An extra initialization return or unconditional next-frame deferral adds delay;
+do not offset that by fitting the caller's constant. Start the helper at its
+owning ROM trigger (MHZ1 uses the controller's player clamp, not its later generic
+actor). See the [music audit](audits/2026-11-02-music-transitions.md).

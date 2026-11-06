@@ -3,9 +3,10 @@
 
 Usage: python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestExample test
 Build without shared admission: python3 tools/testing/maven_queue.py -DskipTests package
-Qualified focused checks compile with normal memory, then use 1 GiB test JVM heaps.
-Use --normal to opt out.
-Explicit low-memory lane: add --lean before the Maven arguments.
+Qualified focused checks compile with normal Maven memory, then run with 1 GiB JVM
+heaps automatically. Use --normal to opt out. Explicit low-memory lane: add --lean.
+Test lifecycles add verified original ROM properties the caller did not set
+(see rom_inputs.py); build, custom-goal and alternate-POM commands run as written.
 The OS owns execution and waiting leases. Short estimated runs are preferred;
 five-minute aging protects larger waiters. Origin: 2026-09-14 testing queue cleanup.
 `maven_queue.py --stats` summarises recorded wait/hold/memory telemetry.
@@ -476,12 +477,49 @@ def build_only(args):
     return bool(goals) and (skip or all(goal in before_tests for goal in goals))
 
 
+# Lifecycle phases whose default bindings run Surefire. Plugin goals, alternate
+# POMs, custom launch arguments and option values that look like goals keep the
+# caller's exact command; discovered ROM properties are never added to them.
+SUREFIRE_PHASES = frozenset({'test', 'package', 'verify'})
+_FAIL_SWITCHES = {'-fae', '-ff', '-fn', '--fail-at-end', '--fail-fast', '--fail-never'}
+
+
+def runs_surefire_lifecycle(args):
+    if os.environ.get('MAVEN_ARGS'):
+        return False
+    # Match the tracked launch defaults rather than interpreting arbitrary Maven
+    # configuration: it may select another POM, reactor or even extra goals.
+    config = Path.cwd() / '.mvn/maven.config'
+    try:
+        if config.exists() and set(shlex.split(config.read_text(), comments=True)) - {'-Dmse=relaxed', '-Dmse=off'}:
+            return False
+    except (OSError, ValueError):
+        return False
+    switches = _FAIL_SWITCHES | {'-B', '--batch-mode', '-q', '--quiet', '-e', '--errors',
+                                '-X', '--debug', '-o', '--offline', '-U', '--update-snapshots',
+                                '-ntp', '--no-transfer-progress', '-V', '--show-version'}
+    goals = []
+    tokens = iter(args)
+    for token in tokens:
+        if token in ('-D', '--define', '-P', '--activate-profiles', '-T', '--threads'):
+            if next(tokens, None) is None:
+                return False
+        elif token.startswith(('-D', '-P', '-T', '--define=', '--activate-profiles=', '--threads=')):
+            continue
+        elif token.startswith('-'):
+            if token not in switches:
+                return False
+        else:
+            goals.append(token)
+    return bool(SUREFIRE_PHASES & set(goals)) and set(goals) <= SUREFIRE_PHASES | {'clean'}
+
+
 def _jvm_environment_requires_exclusive():
     # This exact runtime flag selects the supported isolated graphics backend;
     # it changes neither JVM heaps nor fork/thread counts. Keep all unmeasured
     # options conservative, including a safe flag mixed with an unsafe one.
     allowed = {'-Dopenggf.headless.gl=surfaceless-egl'}
-    for key in ('JAVA_TOOL_OPTIONS', 'JDK_JAVA_OPTIONS', 'MAVEN_OPTS'):
+    for key in ('JAVA_TOOL_OPTIONS', 'JDK_JAVA_OPTIONS', '_JAVA_OPTIONS', 'MAVEN_OPTS'):
         try:
             if set(shlex.split(os.environ.get(key, ''))) - allowed:
                 return True
@@ -504,13 +542,12 @@ def needs_exclusive(args):
             or _jvm_environment_requires_exclusive())
 
 
-def lean_command(args):
-    """Bound execution JVM heaps for focused tests, preserving test agents.
+def lean_command(args, *, root=None):
+    """Bound test JVM heaps after separate normal-memory compilation.
 
-    Compilation is prepared separately with normal Maven memory. Automatic
-    callers qualify classes separately; memory-heavy tests use the normal lane.
-    Never silently retry an OOM as passing lean. Goals are exactly [clean] test
-    so the existing preparation-contract check can preserve the split lifecycle.
+    Automatic callers qualify classes separately; memory-heavy tests use the
+    normal lane. Never silently retry an OOM as passing lean. Goals are exactly
+    ``[clean] test`` so prepared_lean can preserve the split lifecycle.
     """
     from maven_schedule import profiles_of, maven_estimate, FULL_SECONDS
     if (needs_exclusive(args) or profiles_of(args)[0] or maven_estimate(args) == FULL_SECONDS
@@ -522,7 +559,7 @@ def lean_command(args):
             or os.environ.get('MAVEN_ARGS')):
         raise ValueError('--lean requires exact -Dtest selectors and the test goal, without profiles or JVM/build overrides')
     for name in ('jvm.config', 'maven.config'):
-        path = Path.cwd() / '.mvn' / name
+        path = (Path.cwd() if root is None else Path(root)) / '.mvn' / name
         # The tracked defaults only isolate Maven's temporary files and set
         # log verbosity. Any custom launch configuration needs its own budget.
         allowed = {'-Djava.io.tmpdir=target/maven-tmp'} if name == 'jvm.config' else {'-Dmse=relaxed'}
@@ -648,11 +685,12 @@ def main(argv=None, *, before_run=None, before_prepared_run=None, after_run=None
         import xml.etree.ElementTree as ET
         from run_categories import tree_state, validate_preparation_contract
         bounded = lean_command(args) if lean else automatic
-        # Fingerprint before checking the POM; later changes invalidate prepared classes.
+        # Fingerprint first: a POM edited after this check invalidates the run.
         initial = tree_state(Path.cwd())
         try:
             validate_preparation_contract(Path.cwd())
         except (OSError, ValueError, ET.ParseError) as error:
+            # Never omit bound executions by splitting an unknown lifecycle.
             if lean:
                 raise ValueError(f'--lean compiles before its bounded tests; {error}') from None
             print(f'Normal lane: {error}', flush=True)
@@ -664,9 +702,21 @@ def main(argv=None, *, before_run=None, before_prepared_run=None, after_run=None
         kind = 'focused-lean' if lean else 'focused-auto-lean'
         if automatic is not None:
             print('Qualified small job: normal-memory compilation, then 1 GiB test JVM heaps; '
-                  '4 GiB/4-core reservation. '
-                  'Use --normal if this check needs the larger heap.', flush=True)
+                  '4 GiB/4-core reservation. Use --normal if this check needs the larger heap.', flush=True)
     building = not lean and build_only(args)
+    if not building and runs_surefire_lifecycle(requested):
+        # Admission, lean qualification and estimates above use the caller's
+        # command; ROM paths can neither widen nor narrow them.
+        from rom_inputs import (ROM_PROPERTIES, caller_rom_properties, describe, rom_args,
+                                rom_properties, without_caller)
+        caller = caller_rom_properties(requested, Path.cwd())
+        # A command naming any ROM property chose its ROM set (the route gate's
+        # strict inputs, an empty value proving a skip); keep it hermetic.
+        named = any(key in token for key in ROM_PROPERTIES.values() for token in requested)
+        roms = [] if named else without_caller(rom_args(Path.cwd()), caller)
+        print(describe(rom_properties(roms, caller)) + '; tests for missing ROMs skip.', flush=True)
+        args = [*args, *roms]
+
     def admission(tree_fd=None):
         return maven_slot(Path.cwd(), exclusive=exclusive, estimate=estimate,
                           kind=kind, reservation=reservation,

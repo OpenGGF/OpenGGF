@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.titlescreen;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.data.Rom;
 import com.openggf.game.preview.GeneratedTitlePreviewSequence;
 import com.openggf.game.preview.TitlePreviewProvider;
@@ -106,7 +108,7 @@ public final class Sonic2TitlePreviewProvider implements TitlePreviewProvider {
         patterns = appendPatternsAt(patterns, fontPatterns, Sonic2Constants.ART_TILE_FONT_STUFF_TITLE_SCREEN);
         int[] map = loadEnigmaMap(rom, Sonic2Constants.MAP_ENI_TITLE_LOGO_ADDR, 0xE000, 1024);
         map = withSonic2CopyrightText(map, readWords(rom,
-                Sonic2Constants.TITLE_COPYRIGHT_TEXT_ADDR, Sonic2Constants.TITLE_COPYRIGHT_TEXT_WORDS));
+                address(rom, Sonic2Constants.TITLE_COPYRIGHT_TEXT_ADDR), Sonic2Constants.TITLE_COPYRIGHT_TEXT_WORDS));
         Palette[] palettes = loadSonic2TitlePalettes(rom);
         Image image = composeTilemapImage(patterns, palettes, map, S2_TITLE_WIDTH_TILES, S2_TITLE_HEIGHT_TILES);
         Image logo = composeTilemapImage(patterns, palettes, map, S2_TITLE_WIDTH_TILES, S2_TITLE_HEIGHT_TILES);
@@ -230,7 +232,7 @@ public final class Sonic2TitlePreviewProvider implements TitlePreviewProvider {
                 Sonic2Constants.PAL_TITLE_SONIC_ADDR,
                 Sonic2Constants.PAL_TITLE_SONIC_SIZE));
         palettes[1] = loadPalette(rom.readBytes(
-                Sonic2Constants.PAL_TITLE_ADDR,
+                address(rom, Sonic2Constants.PAL_TITLE_ADDR),
                 Sonic2Constants.PAL_TITLE_SIZE));
         palettes[2] = loadPalette(rom.readBytes(
                 Sonic2Constants.PAL_TITLE_BACKGROUND_ADDR,

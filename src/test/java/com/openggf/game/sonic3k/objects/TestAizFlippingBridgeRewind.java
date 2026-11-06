@@ -54,6 +54,16 @@ class TestAizFlippingBridgeRewind {
     }
 
     @Test
+    void placementDirectionDoesNotMirrorTheRawCollisionSurface() {
+        AizFlippingBridgeObjectInstance bridge = new AizFlippingBridgeObjectInstance(FLIPPED_SHALLOW_SPAWN);
+        // Obj_AIZFlippingBridge (sonic3k.asm:58917-58942) resets render_flags
+        // independently of status bit 0, which reverses animation direction.
+        assertFalse(bridge.isSlopeFlipped());
+        assertEquals(-12, bridge.getSlopeData()[0]);
+        assertEquals(16, bridge.getSlopeData()[127]);
+    }
+
+    @Test
     void flippingBridgeRestoresFreshWithoutDropsAndPreservesSpawnDerivedState() {
         Harness harness = Harness.create();
         ObjectManager objectManager = harness.objectManager();
@@ -90,7 +100,7 @@ class TestAizFlippingBridgeRewind {
         assertEquals(0x0200, readIntField(restored, "y"),
                 "y must be rebuilt from the captured spawn");
         assertTrue(readBooleanField(restored, "hFlip"),
-                "horizontal flip must be rebuilt from the captured spawn render flags");
+                "animation direction must be rebuilt from the captured placement status");
         assertEquals(3, readIntField(restored, "animPeriod"),
                 "animation period must be rebuilt from the captured spawn subtype");
         assertEquals(21, readIntField(restored, "maxFrame"),

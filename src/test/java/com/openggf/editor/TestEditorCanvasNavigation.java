@@ -32,12 +32,23 @@ class TestEditorCanvasNavigation {
     }
 
     @Test
-    void nativeZoomIsLowerBoundAndResetPreservesVisibleCenter() {
+    void quarterZoomIsLowerBoundAndResetPreservesVisibleCenter() {
         var view = new EditorCanvasNavigation();
         view.setViewportSize(640, 224);
         view.zoomOut();
-        assertEquals(1, view.zoom());
+        assertEquals(.5, view.zoom());
+        assertEquals("0.5", view.zoomLabel());
+        assertEquals(new EditorCanvasNavigation.Pan(-320, -112), view.consumePan());
+        view.zoomOut();
+        assertEquals(.25, view.zoom());
+        assertEquals("0.25", view.zoomLabel());
+        assertEquals(new EditorCanvasNavigation.Pan(-640, -224), view.consumePan());
+        view.zoomOut();
         assertFalse(view.consumePan().moved());
+        view.resetZoom();
+        assertEquals(1, view.zoom());
+        assertEquals("1", view.zoomLabel());
+        assertEquals(new EditorCanvasNavigation.Pan(960, 336), view.consumePan());
         view.zoomIn();
         assertEquals(new EditorCanvasNavigation.Pan(160, 56), view.consumePan());
         view.zoomAt(Integer.MAX_VALUE, 0, 0);
@@ -46,10 +57,23 @@ class TestEditorCanvasNavigation {
         assertEquals(1, view.zoom());
         assertEquals(new EditorCanvasNavigation.Pan(-280, -98), view.consumePan());
         view.zoomAt(Integer.MIN_VALUE, 0, 0);
-        assertEquals(1, view.zoom());
+        assertEquals(.25, view.zoom());
         view.panBy(20, 10);
         view.reset();
+        assertEquals(1, view.zoom());
         assertFalse(view.consumePan().moved());
+    }
+
+    @Test
+    void zoomingOutKeepsPointerWorldPointAndScalesPan() {
+        var view = new EditorCanvasNavigation();
+        view.zoomAt(-2, 120, 80);
+        var pan = view.consumePan();
+        assertEquals(.25, view.zoom());
+        assertEquals(120, pan.dx() + view.worldOffset(120));
+        assertEquals(80, pan.dy() + view.worldOffset(80));
+        view.panBy(32, -24);
+        assertEquals(new EditorCanvasNavigation.Pan(128, -96), view.consumePan());
     }
 
     @Test
@@ -106,11 +130,15 @@ class TestEditorCanvasNavigation {
         assertTrue(handler.handleCanvasNavigation(input));
         assertEquals(2, controller.canvasView().zoom());
         assertEquals(new EditorCanvasNavigation.Pan(50, 40), controller.canvasView().consumePan());
+        input.update();
         input.handleMouseButton(GLFW_MOUSE_BUTTON_MIDDLE, GLFW_PRESS);
         assertTrue(handler.handleCanvasNavigation(input));
+        input.update();
         input.handleMouseMove(80, 60);
         assertTrue(handler.handleCanvasNavigation(input));
+        assertEquals(2, controller.canvasView().zoom(), "the notch zoomed once, in its own frame");
         assertEquals(new EditorCanvasNavigation.Pan(10, 10), controller.canvasView().consumePan());
+        input.update();
         assertFalse(controller.hasUndoHistory());
         assertEquals(0, controller.worldCursor().x());
         input.handleMouseButton(GLFW_MOUSE_BUTTON_MIDDLE, GLFW_RELEASE);

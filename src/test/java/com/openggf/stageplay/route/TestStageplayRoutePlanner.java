@@ -10,6 +10,12 @@ import com.openggf.game.rewind.RewindSnapshotDiff;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.level.*;
+import com.openggf.route.InputTape;
+import com.openggf.route.PadRow;
+import com.openggf.route.PhysicalButton;
+import com.openggf.route.PlanResult;
+import com.openggf.route.PlayerSlot;
+import com.openggf.route.StopReason;
 import com.openggf.sprites.art.SpriteArtSet;
 import com.openggf.sprites.playable.PlayablePuppet;
 import com.openggf.stageplay.StageplayDocument;
@@ -21,7 +27,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/** Native collision search and emitted-intent replay; no fake positional propagation. */
+/** Native collision search through the shared planner's probe tier; its frozen rows replay on the probe. */
 class TestStageplayRoutePlanner {
     private Sonic2GameModule module;
 
@@ -45,12 +51,11 @@ class TestStageplayRoutePlanner {
         var request = request(448, 237);
         try (var probe = probe(terrain.level)) {
             var start = probe.capture();
-            var result = search(probe, request);
-            assertTrue(result.found(), result.message());
-            assertTrue(result.commands().stream().anyMatch(c -> c.kind() == PuppetCommandKind.MOVE_TO));
-            assertEquals(PuppetCommandKind.STOP, result.commands().getLast().kind());
+            var rows = rows(search(probe, request));
+            assertEquals(request.maxFrames(), rows.size(), "the frozen rows cover the whole window");
+            assertTrue(rows.rows().stream().anyMatch(r -> r.held(PlayerSlot.P1, PhysicalButton.RIGHT)));
             probe.restore(start);
-            var samples = replay(probe, request, result.commands());
+            var samples = replayRows(probe, request, rows);
             assertNear(samples.getLast(), request);
             assertEquals(
                     0,
@@ -140,13 +145,10 @@ class TestStageplayRoutePlanner {
                                                     && Math.abs(p.y() - request.targetY()) <= 12),
                     "A no-JUMP native input pilot must not reach the raised destination");
             probe.restore(start);
-            var result = search(probe, request);
-            assertTrue(result.found(), result.message());
-            assertTrue(
-                    result.commands().stream().anyMatch(c -> c.kind() == PuppetCommandKind.JUMP),
-                    "The raised destination across the gap requires an actual native jump");
+            var rows = rows(search(probe, request));
+            assertTrue(jumps(rows), "The raised destination across the gap requires an actual native jump");
             probe.restore(start);
-            var samples = replay(probe, request, result.commands());
+            var samples = replayRows(probe, request, rows);
             assertTrue(samples.stream().anyMatch(p -> p.airborne() && p.x() >= 320 && p.x() <= 448));
             assertNear(samples.getLast(), request);
         }
@@ -173,10 +175,9 @@ class TestStageplayRoutePlanner {
         var request = request(448, 221);
         try (var probe = probe(terrain.level)) {
             var start = probe.capture();
-            var result = search(probe, request);
-            assertTrue(result.found(), result.message());
+            var rows = rows(search(probe, request));
             probe.restore(start);
-            assertNear(replay(probe, request, result.commands()).getLast(), request);
+            assertNear(replayRows(probe, request, rows).getLast(), request);
         }
         // The exact same art/layout now exposes no collision on path1.
         when(terrain.level.getChunk(1)).thenReturn(chunk(1, 0));
@@ -192,10 +193,12 @@ class TestStageplayRoutePlanner {
         for(int column=28;column<64;column++) {terrain.put(column,14,0xF001);terrain.put(column,15,0xF001);}
         var walk=new StageplayRouteRequest("hero",0,512,205,300,1024,120000,60000,1,null,1,RouteMotion.DEFAULT);
         try(var probe=probe(terrain.level)) {
-            var initial=probe.capture();var slow=search(probe,walk);assertFalse(slow.found());
-            assertTrue(slow.message().matches("(?s).*terrain near x=[0-9]+: needs Run(?: and more Attempt frames)? \\(matched native-terrain probe reaches and settles\\).*"),slow.message());
-            assertFalse(slow.message().contains("Spindash"));
-            probe.restore(initial);var fast=search(probe,request(512,205));assertTrue(fast.found(),fast.message());
+            // A diagnostic second search used to advise Run; the one search now just reports the stop.
+            var initial=probe.capture();var slow=search(probe,walk);
+            var stopped=assertInstanceOf(PlanResult.Stopped.class,slow);
+            assertFalse(stopped.detail().contains("Spindash"),stopped.detail());
+            probe.restore(initial);var fast=rows(search(probe,request(512,205)));
+            probe.restore(initial);assertNear(replayRows(probe,request(512,205),fast).getLast(),request(512,205));
         }
     }
 
@@ -214,9 +217,9 @@ class TestStageplayRoutePlanner {
         var request=new StageplayRouteRequest("hero",0,224,237,400);
         try(var probe=PlayablePuppet.createNativeWorldProbe(terrain.level,module,0,0,module,
                 "sonic",SpriteArtSet.EMPTY,448,221,0,true,true)) {
-            var initial=probe.capture();var result=search(probe,request);assertTrue(result.found(),result.message());
-            assertTrue(result.commands().stream().noneMatch(c->c.kind()==PuppetCommandKind.JUMP));
-            probe.restore(initial);var samples=replay(probe,request,result.commands());assertNear(samples.getLast(),request);
+            var initial=probe.capture();var rows=rows(search(probe,request));
+            assertFalse(jumps(rows));
+            probe.restore(initial);var samples=replayRows(probe,request,rows);assertNear(samples.getLast(),request);
             assertTrue(samples.stream().allMatch(o->Math.abs(o.groundSpeed())<=StageplayRouteSteering.STROLL_CAP),
                     "Native downhill acceleration must be held by real braking inputs");
             assertTrue(samples.stream().noneMatch(PlayablePuppet.Observation::skidding));
@@ -231,12 +234,10 @@ class TestStageplayRoutePlanner {
         var request =
                 new StageplayRouteRequest("hero", 0, 448, 237, 120, 128, 16000, 10000, 1, null, 1);
         try (var probe = probe(terrain.level)) {
-            var result = search(probe, request);
-            assertFalse(result.found());
-            assertTrue(result.commands().isEmpty());
-            assertTrue(result.message().contains("budget") || result.message().contains("bounded"));
-            assertFalse(result.message().contains("needs Run"),result.message());
-            assertFalse(result.message().contains("Spindash"),result.message());
+            var result = assertInstanceOf(PlanResult.Stopped.class, search(probe, request));
+            assertTrue(result.reason() == StopReason.BUDGET_EXHAUSTED || result.reason() == StopReason.NO_PROGRESS,
+                    result.toString());
+            assertFalse(result.detail().contains("Spindash"),result.detail());
             assertNotEquals(448, probe.sample().x());
         }
     }
@@ -246,18 +247,17 @@ class TestStageplayRoutePlanner {
         var request = request(448, 237);
         try (var probe = probe(terrain().level)) {
             var start = probe.capture();
-            var cancelled =
-                    StageplayRoutePlanner.search(document(), request, probe, () -> true, Long.MAX_VALUE);
-            assertEquals(StageplayRouteResult.Status.CANCELLED, cancelled.status());
+            var cancelled = StageplayRoutePlanner.draft(document(), request, probe, () -> true);
+            assertEquals(StopReason.CANCELLED, assertInstanceOf(PlanResult.Stopped.class, cancelled).reason());
             var tiny = new StageplayRouteRequest("hero", 0, 448, 237, 240, 1, 1, 10000, 1, null, 1);
-            assertEquals(StageplayRouteResult.Status.BUDGET_EXCEEDED, search(probe, tiny).status());
+            assertEquals(StopReason.BUDGET_EXHAUSTED,
+                    assertInstanceOf(PlanResult.Stopped.class, search(probe, tiny)).reason());
             probe.restore(start);
-            var first = search(probe, request);
+            var first = assertInstanceOf(PlanResult.Solved.class, search(probe, request));
             probe.restore(start);
-            var second = search(probe, request);
-            assertTrue(first.found(), first.message());
-            assertEquals(first.commands(), second.commands());
-            assertEquals(first.path(), second.path());
+            var second = assertInstanceOf(PlanResult.Solved.class, search(probe, request));
+            assertEquals(first.route().tape(), second.route().tape());
+            assertEquals(first.work(), second.work());
             assertEquals(0, probe.audioLogicalSnapshot().commandEntryCount());
         }
     }
@@ -294,23 +294,20 @@ class TestStageplayRoutePlanner {
     @Test void anAlreadyReachedWalkGoalEmitsOnlyOneValidStop() {
         var request=new StageplayRouteRequest("hero",0,224,237,60);
         try(var probe=probe(terrain().level)) {
-            var plan=search(probe,request);assertTrue(plan.found(),plan.message());
-            assertEquals(List.of(PuppetCommandKind.MOVE_TO,PuppetCommandKind.STOP),plan.commands().stream().map(PuppetCommand::kind).toList());
-            assertTrue(plan.commands().getFirst().frame()<plan.commands().getLast().frame());
-            assertEquals(request.motion(),plan.commands().getFirst().motion());
-            assertDoesNotThrow(()->new PuppetTrack("hero",true,0,plan.commands()));
+            var start=probe.capture();var rows=rows(search(probe,request));
+            assertEquals(request.maxFrames(),rows.size());
+            assertFalse(jumps(rows));
+            probe.restore(start);assertNear(replayRows(probe,request,rows).getLast(),request);
         }
     }
 
     @Test void defaultWalkUsesOneDestinationWithoutJumpingAndKeepsItsStrollCap() {
         var request=new StageplayRouteRequest("hero",0,448,237,300);
         try(var probe=probe(terrain().level)) {
-            var start=probe.capture();var plan=search(probe,request);
-            assertTrue(plan.found(),plan.message());
-            assertEquals(1,plan.commands().stream().filter(c->c.kind()==PuppetCommandKind.MOVE_TO).count());
-            assertTrue(plan.commands().stream().noneMatch(c->c.kind()==PuppetCommandKind.JUMP));
-            assertTrue(plan.commands().stream().filter(c->c.kind()==PuppetCommandKind.MOVE_TO).allMatch(c->c.x()==448));
-            probe.restore(start);var samples=replay(probe,request,plan.commands());
+            var start=probe.capture();var rows=rows(search(probe,request));
+            assertFalse(jumps(rows));
+            probe.restore(start);var samples=replayRows(probe,request,rows);
+            assertTrue(samples.stream().allMatch(o->o.x()>=223),"no run-up detour backwards");
             assertNear(samples.getLast(),request);
             assertTrue(samples.stream().noneMatch(PlayablePuppet.Observation::skidding));
             assertTrue(samples.stream().allMatch(o->Math.abs(o.groundSpeed())<=StageplayRouteSteering.STROLL_CAP));
@@ -321,9 +318,10 @@ class TestStageplayRoutePlanner {
         var motion=new RouteMotion(StartAction.JUMP,TravelSpeed.RUN,EndingAction.HARD_STOP,EndingFacing.INHERIT);
         var request=new StageplayRouteRequest("hero",0,600,237,600,1024,120000,60000,1,null,1,motion);
         try(var probe=probe(terrain().level)) {
-            var start=probe.capture();var plan=search(probe,request);assertTrue(plan.found(),plan.message());
-            assertTrue(plan.commands().getFirst().frame()>0,"Falling entry lands before starting action");
-            probe.restore(start);var samples=replay(probe,request,plan.commands());
+            var start=probe.capture();var rows=rows(search(probe,request));
+            assertTrue(rows.row(0).isNeutral(),"Falling entry lands before starting action");
+            assertTrue(jumps(rows));
+            probe.restore(start);var samples=replayRows(probe,request,rows);
             assertTrue(samples.stream().anyMatch(o->o.ySpeed()<0));assertNear(samples.getLast(),request);
         }
         // Native spindash requires the ROM animation profile's Duck state. The EMPTY
@@ -336,8 +334,9 @@ class TestStageplayRoutePlanner {
             var motion=new RouteMotion(StartAction.WALK,TravelSpeed.RUN,ending,facing);
             var request=new StageplayRouteRequest("hero",0,600,237,600,1024,120000,60000,1,null,1,motion);
             try(var probe=probe(terrain().level)) {
-                var start=probe.capture();var plan=search(probe,request);assertTrue(plan.found(),ending+": "+plan.message());
-                probe.restore(start);var samples=replay(probe,request,plan.commands());
+                var start=probe.capture();var plan=search(probe,request);
+                var rows=assertInstanceOf(PlanResult.Solved.class,plan,ending+": "+plan).route().tape();
+                probe.restore(start);var samples=replayRows(probe,request,rows);
                 assertNear(samples.getLast(),request);
                 assertEquals(facing==EndingFacing.LEFT,samples.getLast().flipX());
                 if(ending==EndingAction.GENTLE_STOP) assertTrue(samples.stream().noneMatch(PlayablePuppet.Observation::skidding));
@@ -352,14 +351,13 @@ class TestStageplayRoutePlanner {
         var request=new StageplayRouteRequest("hero",0,512,237,500,2048,240000,60000,1,null,1,RouteMotion.NATIVE);
         try(var probe=probe(terrain.level)) {
             var start=probe.capture();
-            var direct=StageplayRoutePlanner.searchPass(document(),request,probe,()->false,Long.MAX_VALUE,false);
-            assertFalse(direct.found(),"Fixture must require a back-up run-up");
-            probe.restore(start);var result=search(probe,request);
-            assertTrue(result.found(),result.message());
-            assertTrue(result.commands().stream().anyMatch(c->c.kind()==PuppetCommandKind.MOVE_TO && c.x()<224),
-                    "Fallback must actually command the run-up");
-            assertEquals(512,result.commands().stream().filter(c->c.kind()==PuppetCommandKind.MOVE_TO).toList().getLast().x());
-            probe.restore(start);assertNear(replay(probe,request,result.commands()).getLast(),request);
+            var direct=replay(probe,request,List.of(new PuppetCommand("direct",0,PuppetCommandKind.MOVE_TO,512,237,1,0)));
+            assertFalse(Math.abs(direct.getLast().x()-512)<=6 && direct.getLast().onGround(),
+                    "Fixture must require a back-up run-up");
+            probe.restore(start);var rows=rows(search(probe,request));
+            probe.restore(start);var samples=replayRows(probe,request,rows);
+            assertTrue(samples.stream().anyMatch(o->o.x()<224-32),"The rows must actually perform the run-up");
+            assertNear(samples.getLast(),request);
         }
     }
 
@@ -367,10 +365,8 @@ class TestStageplayRoutePlanner {
         var motion=new RouteMotion(StartAction.SPINDASH,TravelSpeed.RUN,EndingAction.HARD_STOP,EndingFacing.INHERIT);
         var request=new StageplayRouteRequest("hero",0,512,237,500,1024,120000,60000,1,null,1,motion);
         try(var probe=probe(terrain().level)) {
-            var result=search(probe,request);
-            assertFalse(result.found());
-            assertTrue(result.commands().isEmpty());
-            assertTrue(result.message().contains("Native spindash charge and release did not occur"),result.message());
+            var result=assertInstanceOf(PlanResult.Stopped.class,search(probe,request));
+            assertTrue(result.detail().contains("Native spindash charge and release did not occur"),result.detail());
         }
     }
 
@@ -383,9 +379,10 @@ class TestStageplayRoutePlanner {
             var motion=new RouteMotion(StartAction.WALK,TravelSpeed.WALK,ending,EndingFacing.INHERIT);
             var request=new StageplayRouteRequest("hero",0,480,221,600,1024,120000,60000,1,null,1,motion);
             try(var probe=probe(terrain.level)) {
-                var start=probe.capture();var plan=search(probe,request);assertTrue(plan.found(),ending+": "+plan.message());
-                assertTrue(plan.commands().stream().anyMatch(c->c.kind()==PuppetCommandKind.JUMP));
-                probe.restore(start);var samples=replay(probe,request,plan.commands());
+                var start=probe.capture();var plan=search(probe,request);
+                var rows=assertInstanceOf(PlanResult.Solved.class,plan,ending+": "+plan).route().tape();
+                assertTrue(jumps(rows));
+                probe.restore(start);var samples=replayRows(probe,request,rows);
                 assertNear(samples.getLast(),request);
                 assertTrue(samples.stream().allMatch(o->Math.max(Math.abs(o.groundSpeed()),Math.abs(o.xSpeed()))
                         <=StageplayRouteSteering.STROLL_CAP),ending.toString());
@@ -402,13 +399,31 @@ class TestStageplayRoutePlanner {
         }
     }
 
-    private StageplayRouteProposal search(PlayablePuppet probe, StageplayRouteRequest request) {
-        return StageplayRoutePlanner.search(
-                document(),
-                request,
-                probe,
-                () -> false,
-                System.nanoTime() + request.maxMillis() * 1_000_000L);
+    /** The draft tier: the shared planner searching and replaying on the probe. */
+    private PlanResult search(PlayablePuppet probe, StageplayRouteRequest request) {
+        return StageplayRoutePlanner.draft(document(), request, probe, () -> false);
+    }
+
+    private static InputTape rows(PlanResult result) {
+        return assertInstanceOf(PlanResult.Solved.class, result, result.toString()).route().tape();
+    }
+
+    private static boolean jumps(InputTape rows) {
+        return rows.rows().stream().anyMatch(r -> r.held(PlayerSlot.P1, PhysicalButton.C));
+    }
+
+    /** Replays frozen rows on the probe from its current state, one native tick per row. */
+    static List<PlayablePuppet.Observation> replayRows(PlayablePuppet probe, StageplayRouteRequest request, InputTape rows) {
+        List<PlayablePuppet.Observation> result = new ArrayList<>();
+        for (int i = 0; i < rows.size(); i++) {
+            PadRow row = rows.row(i);
+            boolean jump = row.held(PlayerSlot.P1, PhysicalButton.A) || row.held(PlayerSlot.P1, PhysicalButton.B)
+                    || row.held(PlayerSlot.P1, PhysicalButton.C);
+            probe.tick(row.held(PlayerSlot.P1, PhysicalButton.LEFT), row.held(PlayerSlot.P1, PhysicalButton.RIGHT),
+                    row.held(PlayerSlot.P1, PhysicalButton.DOWN), jump, request.startFrame() + i);
+            result.add(probe.sample());
+        }
+        return result;
     }
 
     private static StageplayRouteRequest request(double x, double y) {

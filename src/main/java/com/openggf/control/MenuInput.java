@@ -10,10 +10,13 @@ public final class MenuInput {
     private MenuInput() {
     }
 
-    /** Logical-screen pointer and button edges for module menus. No window means no pointer. */
+    /**
+     * Logical-screen pointer, button edges and this pass's wheel notches (positive = away from
+     * the user) for module menus. No window means no pointer.
+     */
     @com.openggf.game.ModApi
-    public record Pointer(int x, int y, boolean inside, boolean leftPressed, boolean rightPressed) {
-        public static Pointer none() { return new Pointer(-1, -1, false, false, false); }
+    public record Pointer(int x, int y, boolean inside, boolean leftPressed, boolean rightPressed, int wheel) {
+        public static Pointer none() { return new Pointer(-1, -1, false, false, false, 0); }
         public boolean over(int left, int top, int width, int height) {
             return inside && width > 0 && height > 0 && x >= left && y >= top
                     && (long) x < (long) left + width && (long) y < (long) top + height;
@@ -23,7 +26,7 @@ public final class MenuInput {
     /**
      * Maps physical mouse input through the same letterboxed viewport as mod scenes.
      * Logical movie/trace overrides suppress the pointer, preserving replay authority.
-     * Hover and click policy remain with the menu; calling this does not consume input.
+     * Hover, click and wheel policy remain with the menu; calling this does not consume input.
      */
     public static Pointer pointer(InputHandler input, int width, int height) {
         return com.openggf.MenuPointerRuntime.pointer(input, width, height);
@@ -37,7 +40,7 @@ public final class MenuInput {
     public static String consumeText(InputHandler input) { return input.consumeMenuText(); }
     public static boolean textKeyRepeated(InputHandler input, int key) {
         return key >= 0 && key < input.keys.length
-                && input.menuRepeat.pulse(key + 1024, input.menuFrame, input.keys[key], input.isRawKeyPressed(key));
+                && input.menuRepeat.pulse(key + 1024, input.menuFrame, input.keys[key] && !input.textInput.hidesKey(key), input.isRawKeyPressed(key));
     }
     public static boolean details(InputHandler input) {
         return input.isRawKeyPressed(GLFW_KEY_F1) || input.menuDetailsPressed();
@@ -88,13 +91,13 @@ public final class MenuInput {
 
     /** Back takes precedence if the same frame also contains a confirm edge. */
     public static boolean accept(InputHandler input) {
-        return !back(input) && (input.isRawKeyPressed(GLFW_KEY_ENTER)
-                || input.isRawKeyPressed(GLFW_KEY_KP_ENTER)
+        return !back(input) && (input.menuKeyPressed(GLFW_KEY_ENTER)
+                || input.menuKeyPressed(GLFW_KEY_KP_ENTER)
                 || mappedAccept(input));
     }
 
     public static boolean back(InputHandler input) {
-        return input.isRawKeyPressed(GLFW_KEY_ESCAPE) || mapped(input).menuBack();
+        return input.menuKeyPressed(GLFW_KEY_ESCAPE) || mapped(input).menuBack();
     }
 
     public static boolean up(InputHandler input) {
@@ -118,9 +121,11 @@ public final class MenuInput {
     }
 
     private static boolean direction(InputHandler input, int key, int mask, LogicalInputSnapshot snapshot, boolean text) {
+        boolean held = text ? input.keys[key] && !input.textInput.hidesKey(key) : input.menuKeyDown(key);
+        boolean pressed = text ? input.isRawKeyPressed(key) : input.menuKeyPressed(key);
         return input.menuRepeat.pulse(text ? key + 1024 : key, input.menuFrame,
-                input.keys[key] || (snapshot.player1().heldMask() & mask) != 0,
-                input.isRawKeyPressed(key) || (snapshot.player1().pressedMask() & mask) != 0);
+                held || (snapshot.player1().heldMask() & mask) != 0,
+                pressed || (snapshot.player1().pressedMask() & mask) != 0);
     }
 
     private static boolean mappedAccept(InputHandler input) {
@@ -129,7 +134,7 @@ public final class MenuInput {
                 || player.startPressed();
     }
 
-    private static boolean rawHeld(InputHandler input, int key) { return input.keys[key]; }
+    private static boolean rawHeld(InputHandler input, int key) { return input.menuKeyDown(key); }
 
     private static LogicalInputSnapshot mapped(InputHandler input) {
         // Fixed menu keys own this frame's keyboard intent. Their gameplay bindings

@@ -25,6 +25,84 @@ class TestEngineSettingsScreen {
     private static final int DISPLAY = 0, SOUND = 1, CONTROLS = 2, GAMEPLAY = 3, FILES = 4, CAPTURE = 5;
 
     @Test
+    void interpolationShortcutIsRebindableBesideTheColourProfileShortcut() {
+        Fixture f = new Fixture();
+        var keys = EngineSettingsDraft.pageKeys(EngineSettingsDraft.Category.INPUT);
+        assertEquals(keys.indexOf(DISPLAY_COLOR_PROFILE_TOGGLE_KEY) + 1,
+                keys.indexOf(DISPLAY_INTERPOLATION_TOGGLE_KEY));
+        f.tab(CONTROLS);
+        f.press(GLFW_KEY_UP);
+        f.press(GLFW_KEY_RIGHT, 3);
+        f.press(GLFW_KEY_DOWN);
+        f.focus(DISPLAY_INTERPOLATION_TOGGLE_KEY);
+        assertTrue(f.texts().contains("Interpolation shortcut"));
+        f.assertTextBounds(320);
+        f.assertTextBounds(400);
+        f.press(GLFW_KEY_ENTER);
+        f.press(GLFW_KEY_ENTER);
+        f.press(GLFW_KEY_F8);
+        assertEquals(GLFW_KEY_N, f.config.getInt(DISPLAY_INTERPOLATION_TOGGLE_KEY));
+        f.press(GLFW_KEY_ESCAPE);
+        f.press(GLFW_KEY_ENTER);
+        assertEquals(GLFW_KEY_F8, f.config.getInt(DISPLAY_INTERPOLATION_TOGGLE_KEY));
+    }
+
+    @Test
+    void renderingLimitOffersAutoBesideInterpolationAndRetainsCustomNumbers() {
+        Fixture f = new Fixture();
+        var keys = EngineSettingsDraft.pageKeys(EngineSettingsDraft.Category.DISPLAY);
+        assertEquals(keys.indexOf(FPS) + 1, keys.indexOf(DISPLAY_INTERPOLATION));
+        assertFalse(EngineSettingsDraft.pageKeys(EngineSettingsDraft.Category.ADVANCED).contains(FPS));
+        assertEquals("PICTURE", EngineSettingLabels.group(FPS));
+        f.focus(FPS);
+        assertTrue(f.texts().contains("Auto (display refresh)"));
+        f.press(GLFW_KEY_ENTER);
+        assertTrue(f.texts().contains("Auto (display refresh)"));
+        assertTrue(f.texts().contains("30"));
+        f.assertTextBounds(320);
+        f.assertTextBounds(400);
+        f.press(GLFW_KEY_DOWN);
+        f.press(GLFW_KEY_ENTER);
+        f.press(GLFW_KEY_ESCAPE);
+        f.press(GLFW_KEY_ENTER);
+        assertEquals(30, f.config.getInt(FPS));
+        f.config.setConfigValue(FPS, 137);
+        f.config.saveConfig();
+        f = new Fixture();
+        f.focus(FPS);
+        f.press(GLFW_KEY_ENTER);
+        assertTrue(f.texts().contains("137"));
+        f.press(GLFW_KEY_ENTER);
+        f.press(GLFW_KEY_ESCAPE);
+        assertEquals(137, f.config.getInt(FPS));
+    }
+
+    @Test
+    void spriteScanlineLimitIsEditableAndPersistsOnTheDisplayPage() {
+        var key = ConfigCatalog.byPath("display.spriteScanlineLimit");
+        assertNotNull(key, "sprite scanline limit must be a persisted setting");
+        Fixture f = new Fixture();
+        assertFalse(f.config.getBoolean(key), "normal play defaults to unrestricted scanlines");
+        f.tab(DISPLAY);
+        int row = new EngineSettingsDraft(f.config).keys(EngineSettingsDraft.Category.DISPLAY).indexOf(key);
+        assertTrue(row >= 0);
+        f.focus(key);
+        assertTrue(f.texts().contains("Sprite scanline limit"));
+        assertEquals("PICTURE", EngineSettingLabels.group(key));
+        f.press(GLFW_KEY_RIGHT);
+        assertFalse(f.config.getBoolean(key), "the draft must not change the live preference");
+        f.assertTextBounds(320);
+        f.assertTextBounds(400);
+        f.press(GLFW_KEY_ESCAPE);
+        f.press(GLFW_KEY_ENTER);
+        assertTrue(f.screen.consumeApplied());
+        assertTrue(f.config.getBoolean(key));
+        assertTrue(SonicConfigurationService.createStandalone(directory).getBoolean(key));
+        assertEquals(com.openggf.configuration.SettingTiming.NOW,
+                com.openggf.configuration.SettingTiming.of(key));
+    }
+
+    @Test
     void personalMultiplayerChatChoicesAreVisibleOnGameplayAndApplyWhenSaved() {
         Fixture f = new Fixture();
         f.tab(GAMEPLAY);
@@ -33,11 +111,11 @@ class TestEngineSettingsScreen {
         int disableRow = keys.indexOf(MULTIPLAYER_CHAT_DISABLED);
         assertTrue(censorRow >= 0 && disableRow > censorRow);
         f.press(GLFW_KEY_DOWN, censorRow);
-        assertTrue(f.texts().contains("Censor Profanity"));
+        assertTrue(f.texts().contains("Censor profanity"));
         f.press(GLFW_KEY_RIGHT);
         assertTrue(f.config.getBoolean(MULTIPLAYER_CENSOR_PROFANITY), "edits stay in the draft");
         f.press(GLFW_KEY_DOWN, disableRow - censorRow);
-        assertTrue(f.texts().contains("Disable Multiplayer Chat"));
+        assertTrue(f.texts().contains("Disable multiplayer chat"));
         f.press(GLFW_KEY_RIGHT);
         assertFalse(f.config.getBoolean(MULTIPLAYER_CHAT_DISABLED), "edits stay in the draft");
         assertFalse(f.texts().contains("RESTART"));
@@ -54,8 +132,8 @@ class TestEngineSettingsScreen {
 
     @Test
     void widescreenHudAnchorHasReadableChoiceLabels() {
-        assertEquals("Widescreen HUD position", EngineSettingLabels.label(DISPLAY_HUD_ANCHOR));
-        assertEquals("Centered native position", EngineSettingLabels.value(DISPLAY_HUD_ANCHOR, "DEFAULT"));
+        assertEquals("HUD position", EngineSettingLabels.label(DISPLAY_HUD_ANCHOR));
+        assertEquals("Native (centred)", EngineSettingLabels.value(DISPLAY_HUD_ANCHOR, "DEFAULT"));
         assertEquals("Screen left edge", EngineSettingLabels.value(DISPLAY_HUD_ANCHOR, "LEFT_EDGE"));
     }
 
@@ -114,10 +192,7 @@ class TestEngineSettingsScreen {
         Fixture f = new Fixture();
         String profile = f.config.getString(DISPLAY_COLOR_PROFILE);
         assertEquals(EngineSettingsDraft.Category.DISPLAY, EngineSettingsDraft.category(DISPLAY_COLOR_EXPANSION));
-        int row = new EngineSettingsDraft(f.config).keys(EngineSettingsDraft.Category.DISPLAY)
-                .indexOf(DISPLAY_COLOR_EXPANSION);
-        assertTrue(row >= 0);
-        f.press(GLFW_KEY_DOWN, row);
+        f.focus(DISPLAY_COLOR_EXPANSION);
         assertTrue(f.texts().contains("Colour expansion"));
         assertTrue(f.texts().contains("Full"));
         f.press(GLFW_KEY_RIGHT); // Full -> Limited in the draft only
@@ -210,8 +285,8 @@ class TestEngineSettingsScreen {
         f.tab(SOUND);
         boolean original = f.config.getBoolean(AUDIO_ENABLED);
         f.press(GLFW_KEY_RIGHT);
-        f.screen.updatePointer(new MenuInput.Pointer(310, 160, true, false, false));
-        f.screen.updatePointer(new MenuInput.Pointer(250, 12, true, false, false));
+        f.screen.updatePointer(new MenuInput.Pointer(310, 160, true, false, false, 0));
+        f.screen.updatePointer(new MenuInput.Pointer(250, 12, true, false, false, 0));
         f.press(GLFW_KEY_ENTER);
         assertTrue(f.screen.consumeApplied());
         assertTrue(f.screen.consumeCloseRequested());
@@ -318,7 +393,7 @@ class TestEngineSettingsScreen {
         Fixture f = new Fixture();
         f.texts();
         assertEquals(1f, f.line("SETTINGS").scale, "the title keeps full-size lettering");
-        assertEquals(MenuStyle.COMPACT, f.line("DISPLAY").scale, "tabs use compact capitals");
+        assertEquals(MenuStyle.COMPACT, f.line("Display").scale, "tabs use compact, catalog-authored lettering");
         assertEquals(MenuStyle.COMPACT, f.line("ALL GAMES").scale);
         for (int tab = 0; tab < 6; tab++) {
             if (tab > 0) { f.press(GLFW_KEY_UP); f.press(GLFW_KEY_RIGHT); f.press(GLFW_KEY_DOWN); }
@@ -335,7 +410,7 @@ class TestEngineSettingsScreen {
         Fixture f = new Fixture(); // Display / aspect ratio
         for (int width : new int[] {320, 426}) {
             f.assertTextBounds(width);
-            List<Line> help = f.font.lines.stream().filter(line -> line.y == 173 || line.y == 181).toList();
+            List<Line> help = f.font.lines.stream().filter(line -> line.y == 173 || line.y == 173 + MenuChrome.DESCRIPTION_PITCH).toList();
             assertTrue(help.size() >= 1 && help.size() <= 2, "Help appears immediately");
             assertEquals(EngineSettingLabels.description(DISPLAY_ASPECT),
                     String.join(" ", help.stream().map(Line::text).toList()));
@@ -347,8 +422,7 @@ class TestEngineSettingsScreen {
     void longDescriptionsStayStillAndDetailsExplainWhenChangesApply() {
         Fixture f = new Fixture();
         f.tab(CAPTURE);
-        int codecRow = new EngineSettingsDraft(f.config).keys(EngineSettingsDraft.Category.RECORDING).indexOf(CAPTURE_CODEC);
-        f.press(GLFW_KEY_DOWN, codecRow);
+        f.focus(CAPTURE_CODEC);
         List<String> first = f.descriptionLines();
         for (int i = 0; i < 1200; i++) f.frame();
         assertEquals(first, f.descriptionLines(), "Help never moves while being read");
@@ -359,30 +433,27 @@ class TestEngineSettingsScreen {
         f.press(GLFW_KEY_ESCAPE);
         assertEquals(first, f.descriptionLines());
         assertTrue(EngineSettingsScreen.effect(CONTROLLER_DEADZONE).contains("immediately"));
-        assertTrue(EngineSettingsScreen.effect(SCREEN_WIDTH).contains("Restart"));
-        assertTrue(EngineSettingsScreen.effect(LIVE_REWIND_ENABLED).contains("Use global"),
+        assertTrue(EngineSettingsScreen.effect(SCREEN_WIDTH).contains("close and reopen OpenGGF"));
+        assertTrue(EngineSettingsScreen.effect(LIVE_REWIND_ENABLED).contains("Game Setup uses the global value"),
                 "all-games switches explain that Game Setup can override them");
     }
 
     @Test
-    void onlyChangedRestartSettingsSayItOnTheRowAndInTheHelp() {
+    void windowRenderLimitAppliesImmediatelyAndGameStartSettingsKeepTheirHelp() {
         Fixture f = new Fixture(); // Display: aspect ratio first, frame rate further down
         List<String> aspect = f.descriptionLines();
         assertTrue(aspect.stream().noneMatch(line -> line.startsWith("Needs a restart")),
                 "a game-start setting keeps both description lines");
         assertFalse(f.texts().contains("RESTART"), "unchanged settings need no restart badge");
 
-        f = new Fixture(EngineSettingsScreen.Scope.ADVANCED);
-        int fpsRow = new EngineSettingsDraft(f.config).keys(EngineSettingsDraft.Category.ADVANCED).indexOf(FPS);
-        f.press(GLFW_KEY_DOWN, fpsRow);
+        f = new Fixture();
+        f.focus(FPS);
         assertFalse(f.descriptionLines().contains("Needs a restart: close and reopen OpenGGF."));
         f.press(GLFW_KEY_RIGHT);
-        assertTrue(f.texts().contains("RESTART"));
-        assertTrue(f.descriptionLines().contains("Needs a restart: close and reopen OpenGGF."));
-        f.press(GLFW_KEY_LEFT);
-        assertFalse(f.texts().contains("RESTART"), "returning to the running value clears the badge");
-        assertTrue(EngineSettingsScreen.effect(FPS).contains("Restart"));
-        assertEquals(com.openggf.configuration.SettingTiming.RESTART, com.openggf.configuration.SettingTiming.of(FPS));
+        assertFalse(f.texts().contains("RESTART"), "the live window cap does not need a restart");
+        assertFalse(f.descriptionLines().contains("Needs a restart: close and reopen OpenGGF."));
+        assertTrue(EngineSettingsScreen.effect(FPS).contains("as soon as you save"));
+        assertEquals(com.openggf.configuration.SettingTiming.NOW, com.openggf.configuration.SettingTiming.of(FPS));
     }
 
     @Test
@@ -403,7 +474,123 @@ class TestEngineSettingsScreen {
         List<String> texts = f.texts();
         assertTrue(texts.contains("ADVANCED SETTINGS"));
         assertFalse(texts.contains("DISPLAY"), "no tab strip for a single page");
-        assertTrue(texts.stream().anyMatch(text -> text.startsWith("Game speed")), "technical display controls live here");
+        assertFalse(texts.stream().anyMatch(text -> text.startsWith("Rendering limit")), "the rendering limit lives beside Interpolation on Display");
+    }
+
+    @Test
+    void sidekicksAreEditedAsAnOrderedTeamRatherThanCommaText() {
+        Fixture f = new Fixture(EngineSettingsScreen.Scope.ADVANCED, config -> {
+            config.setConfigValue(MAIN_CHARACTER_CODE, "sonic");
+            config.setConfigValue(SIDEKICK_CHARACTER_CODE, "tails");
+        });
+        f.focus(SIDEKICK_CHARACTER_CODE);
+        f.press(GLFW_KEY_ENTER);
+        List<String> page = f.texts();
+        assertTrue(page.contains("Direct-launch sidekicks"), page.toString());
+        assertTrue(page.contains("Player: Sonic"));
+        assertTrue(page.contains("Tails") && page.contains("Follows Sonic"));
+        assertFalse(page.contains("tails"), "the page never shows the stored comma value");
+        f.press(GLFW_KEY_DOWN);
+        f.press(GLFW_KEY_ENTER); // Add sidekick: copies the last one and focuses it.
+        f.press(GLFW_KEY_RIGHT); // Tails -> Knuckles
+        page = f.texts();
+        assertTrue(page.contains("Knuckles") && page.contains("Follows Tails"), page.toString());
+        f.press(GLFW_KEY_ENTER); // Actions for sidekick 2.
+        assertTrue(f.texts().contains("Move earlier"));
+        assertFalse(f.texts().contains("Move later"), "the last sidekick cannot move later");
+        f.press(GLFW_KEY_ENTER); // Move earlier.
+        assertTrue(f.texts().contains("Follows Knuckles"), "Tails now follows Knuckles");
+        f.assertTextBounds(320);
+        f.assertTextBounds(400);
+        f.press(GLFW_KEY_DOWN, 4); // Focus is on Knuckles: Tails, Add sidekick, Restore default, Done.
+        f.press(GLFW_KEY_ENTER);
+        assertEquals("tails", f.config.getString(SIDEKICK_CHARACTER_CODE), "Done fills the draft only");
+        assertTrue(f.texts().contains("Knuckles, Tails"), "the row reads as names");
+        f.press(GLFW_KEY_ESCAPE);
+        f.press(GLFW_KEY_ENTER); // Save.
+        assertEquals("knuckles,tails", f.config.getString(SIDEKICK_CHARACTER_CODE));
+    }
+
+    @Test
+    void extraSaveScreenTeamsAreAddedEditedAndOrderedAsTeams() {
+        Fixture f = new Fixture(EngineSettingsScreen.Scope.ADVANCED,
+                config -> config.setConfigValue(DATA_SELECT_EXTRA_PLAYER_COMBOS, "sonic,knuckles"));
+        f.focus(DATA_SELECT_EXTRA_PLAYER_COMBOS);
+        assertTrue(f.texts().contains("Sonic + Knuckles"), () -> "the Settings row reads as names: " + f.texts());
+        f.press(GLFW_KEY_ENTER);
+        List<String> page = f.texts();
+        assertTrue(page.contains("Extra character teams") && page.contains("Sonic + Knuckles"), page.toString());
+        f.press(GLFW_KEY_DOWN);
+        f.press(GLFW_KEY_ENTER); // Add team.
+        page = f.texts();
+        assertTrue(page.contains("New team") && page.contains("Player") && page.contains("Follows Sonic"), page.toString());
+        f.assertTextBounds(320);
+        f.assertTextBounds(400);
+        f.press(GLFW_KEY_RIGHT); // Player: Sonic -> Tails.
+        f.press(GLFW_KEY_DOWN);
+        f.press(GLFW_KEY_RIGHT); // Sidekick: Tails -> Knuckles.
+        assertTrue(f.texts().contains("Follows Tails"));
+        f.press(GLFW_KEY_DOWN, 2); // Add sidekick, Done.
+        f.press(GLFW_KEY_ENTER);
+        assertTrue(f.texts().contains("Tails + Knuckles"), "Done returns to the list with the new team");
+        f.press(GLFW_KEY_ENTER); // Actions for team 2.
+        assertEquals(List.of("Edit team", "Move earlier", "Remove"),
+                f.texts().stream().filter(List.of("Edit team", "Move earlier", "Move later", "Remove")::contains).toList());
+        f.press(GLFW_KEY_DOWN);
+        f.press(GLFW_KEY_ENTER); // Move earlier.
+        f.assertTextBounds(320);
+        f.press(GLFW_KEY_DOWN, 4); // Team 2, Add team, Restore default, Done.
+        f.press(GLFW_KEY_ENTER);
+        assertEquals("sonic,knuckles", f.config.getString(DATA_SELECT_EXTRA_PLAYER_COMBOS), "Done fills the draft only");
+        f.press(GLFW_KEY_ESCAPE);
+        f.press(GLFW_KEY_ENTER); // Save.
+        assertEquals("tails,knuckles;sonic,knuckles", f.config.getString(DATA_SELECT_EXTRA_PLAYER_COMBOS));
+    }
+
+    @Test
+    void teamEditorsStayOnScreenInEveryLanguage() {
+        try {
+            for (var language : com.openggf.i18n.UiMessages.languages()) {
+                com.openggf.i18n.UiMessages.selectLanguage(language.tag());
+                Fixture f = new Fixture(EngineSettingsScreen.Scope.ADVANCED, config -> {
+                    config.setConfigValue(SIDEKICK_CHARACTER_CODE, "tails,knuckles");
+                    config.setConfigValue(DATA_SELECT_EXTRA_PLAYER_COMBOS, "sonic,knuckles;knuckles,tails,tails");
+                });
+                f.focus(SIDEKICK_CHARACTER_CODE);
+                f.press(GLFW_KEY_ENTER);
+                f.assertTextBounds(320);
+                f.press(GLFW_KEY_ENTER); // Sidekick actions.
+                f.assertTextBounds(320);
+                f.press(GLFW_KEY_ESCAPE, 2);
+                f.focus(DATA_SELECT_EXTRA_PLAYER_COMBOS);
+                f.press(GLFW_KEY_ENTER);
+                String addTeam = com.openggf.i18n.UiMessages.text("settings.teams.add");
+                assertTrue(f.texts().contains(addTeam), language.tag() + " draws " + addTeam);
+                if (!language.tag().startsWith("en")) assertNotEquals("Add team", addTeam, language.tag());
+                f.assertTextBounds(320);
+                f.press(GLFW_KEY_ENTER); // Team actions.
+                f.assertTextBounds(320);
+                f.press(GLFW_KEY_ENTER); // Edit team.
+                f.assertTextBounds(320);
+                assertEquals(DATA_SELECT_EXTRA_PLAYER_COMBOS, f.screen.selectedForTest(), language.tag());
+            }
+        } finally {
+            com.openggf.i18n.UiMessages.selectLanguage("en");
+        }
+    }
+
+    @Test
+    void backingOutOfTheSidekickPageKeepsTheDraft() {
+        Fixture f = new Fixture(EngineSettingsScreen.Scope.ADVANCED,
+                config -> config.setConfigValue(SIDEKICK_CHARACTER_CODE, "tails"));
+        f.focus(SIDEKICK_CHARACTER_CODE);
+        f.press(GLFW_KEY_ENTER);
+        f.press(GLFW_KEY_ENTER); // Actions for sidekick 1.
+        f.press(GLFW_KEY_ENTER); // Remove (its only action).
+        assertTrue(f.texts().contains("No sidekicks: the player plays alone"));
+        f.press(GLFW_KEY_ESCAPE);
+        assertEquals(SIDEKICK_CHARACTER_CODE, f.screen.selectedForTest());
+        assertFalse(f.texts().contains("SAVE CHANGES"), "Back discards the page's edits");
     }
 
     @Test
@@ -414,7 +601,7 @@ class TestEngineSettingsScreen {
                 "every non-debug hotkey lives under Controls");
         assertEquals(EngineSettingsDraft.Category.INPUT, EngineSettingsDraft.category(LIVE_REWIND_KEY));
         assertEquals(EngineSettingsDraft.Category.ADVANCED, EngineSettingsDraft.category(MAIN_CHARACTER_CODE));
-        for (var key : List.of(FPS, SCALE, DISPLAY_SHADER_LIBRARY_ROOT, DISPLAY_SHADER_DEFAULT_PHASE)) {
+        for (var key : List.of(SCALE, DISPLAY_SHADER_LIBRARY_ROOT, DISPLAY_SHADER_DEFAULT_PHASE)) {
             assertEquals(EngineSettingsDraft.Category.ADVANCED, EngineSettingsDraft.category(key));
         }
         assertEquals(EngineSettingsDraft.Category.ADVANCED, EngineSettingsDraft.category(CROSS_GAME_SOURCE));
@@ -431,15 +618,23 @@ class TestEngineSettingsScreen {
         assertTrue(text.contains("PLAYER 1"));
         assertTrue(text.contains("RESET BINDINGS"));
         assertTrue(text.contains("PLAYER 2"));
-        var rows = f.font.lines.stream().filter(line -> line.x == 18 && line.y >= 69 && line.y < 150).toList();
+        var rows = f.font.lines.stream().filter(line -> line.x == 18 && line.y >= 66 && line.y < 155).toList();
         assertEquals(8, rows.size(), rows.toString());
+        // An 11 px pitch leaves two pixels between 9 px key labels; the last focus band (one pixel
+        // above the text row, a pitch tall) ends before the reset button at y 155.
+        for (int i = 1; i < rows.size(); i++) assertEquals(11, rows.get(i).y - rows.get(i - 1).y);
+        assertTrue(rows.getFirst().y - 2 >= 65, "first focus band clears the group tabs");
+        assertTrue(rows.getLast().y - 2 + 11 <= 155, "last focus band clears the reset button");
         assertTrue(rows.stream().allMatch(line -> line.scale == MenuStyle.COMPACT));
-        assertTrue(rows.stream().allMatch(line -> line.text.startsWith("Player 1")));
+        // The PLAYER 1 group already names the player, so rows name only the button.
+        assertEquals(List.of("Up", "Down", "Left", "Right", "A", "B", "C", "Start"),
+                rows.stream().map(Line::text).toList());
+        List<String> playerOne = f.texts();
         f.press(GLFW_KEY_UP); // subgroup strip
         f.press(GLFW_KEY_RIGHT);
         f.press(GLFW_KEY_DOWN);
-        assertTrue(f.texts().contains("Player 2 Up"));
-        assertFalse(f.texts().contains("Player 1 Up"));
+        assertFalse(f.texts().contains("Player 2 Up"), "Player 2 rows also drop the repeated prefix");
+        assertNotEquals(playerOne, f.texts(), "Player 2 shows its own bindings");
         f.assertTextBounds(320);
     }
 
@@ -451,7 +646,7 @@ class TestEngineSettingsScreen {
         int count = new EngineSettingsDraft(f.config).keys(EngineSettingsDraft.Category.AUDIO).size();
         f.press(GLFW_KEY_DOWN, count); // reset button after final row
         f.press(GLFW_KEY_ENTER);
-        assertTrue(f.texts().contains("RESET SOUND DEFAULTS?"));
+        assertTrue(f.texts().contains("Reset Sound defaults?"));
         f.press(GLFW_KEY_ENTER); // Cancel is the safe initial choice.
         assertTrue(f.texts().contains("1 UNSAVED"));
         f.press(GLFW_KEY_ENTER);
@@ -462,16 +657,182 @@ class TestEngineSettingsScreen {
     }
 
     @Test
-    void promptListsConcreteChangesAndGameplayHasOneRewindRow() {
+    void promptListsConcreteChangesAndGameplayGroupsBudgetControls() {
         Fixture f = new Fixture();
         f.tab(SOUND);
         f.press(GLFW_KEY_RIGHT);
         f.press(GLFW_KEY_ESCAPE);
-        assertTrue(f.texts().contains("On -> Off"));
+        // Each change draws its old value, an arrow glyph, then the new value.
+        assertTrue(java.util.Collections.indexOfSubList(f.texts(), List.of("On", "Off")) >= 0, f.texts().toString());
         EngineSettingsDraft catalog = new EngineSettingsDraft(f.config);
-        assertEquals(List.of(LIVE_REWIND_ENABLED), catalog.keys(EngineSettingsDraft.Category.GAMEPLAY).stream()
+        assertEquals(List.of(REWIND_BUDGET_SCOPE, REWIND_BUDGET_SECONDS, REWIND_REFILL_ON_LIFE_LOSS,
+                REWIND_BONUS_STAGES, REWIND_SPECIAL_STAGES), catalog.keys(EngineSettingsDraft.Category.GAMEPLAY).stream()
                 .filter(key -> ConfigCatalog.meta(key).section().equals("rewind")).toList());
         assertEquals(EngineSettingsDraft.Category.ADVANCED, EngineSettingsDraft.category(LOAD_TIME_SIMULATION));
+    }
+
+    /**
+     * Display and Advanced group their rows under captions. Down walks every setting in caption
+     * order without ever landing on a caption, each focused row is on screen with its caption
+     * reachable above it, and a click on a drawn row focuses exactly that setting; captions ignore
+     * clicks. Every tab setting stays reachable.
+     */
+    @Test
+    void captionedTabsReachEverySettingByArrowsAndPointerAndSkipCaptions() {
+        record Case(EngineSettingsScreen.Scope scope, EngineSettingsDraft.Category tab, List<String> groups) { }
+        for (var c : List.of(
+                new Case(EngineSettingsScreen.Scope.MAIN, EngineSettingsDraft.Category.DISPLAY,
+                        List.of("WINDOW", "PICTURE", "WIDESCREEN", "HUD")),
+                new Case(EngineSettingsScreen.Scope.ADVANCED, EngineSettingsDraft.Category.ADVANCED,
+                        List.of("SHADERS", "RENDERING AND LOADING", "DIRECT LAUNCH", "REWIND", "MODS", "DISCORD",
+                                "PLAYBACK AND RECORDING", "TRACE REPLAY", "DEBUG", "SETTINGS FILE")))) {
+            for (int width : new int[] {320, 400}) {
+                Fixture f = new Fixture(c.scope());
+                if (c.scope() == EngineSettingsScreen.Scope.MAIN) f.tab(DISPLAY);
+                var expected = new EngineSettingsDraft(f.config).keys(c.tab());
+                var lines = f.screen.lines();
+                assertEquals(c.groups(), lines.stream().filter(l -> l.caption() != null).map(EngineSettingsScreen.Line::caption).toList());
+                assertEquals(new java.util.HashSet<>(expected), lines.stream().filter(l -> l.key() != null)
+                        .map(EngineSettingsScreen.Line::key).collect(java.util.stream.Collectors.toSet()), "every setting is a row");
+                assertEquals(expected.size(), lines.stream().filter(l -> l.key() != null).count(), "each setting once");
+                assertNotNull(lines.getFirst().caption(), "the list opens with its first caption");
+                var visited = new ArrayList<com.openggf.configuration.SonicConfiguration>();
+                java.util.Set<String> captionsSeen = new java.util.LinkedHashSet<>();
+                for (int i = 0; i < expected.size(); i++) {
+                    var key = f.screen.selectedForTest();
+                    visited.add(key);
+                    f.font.lines.clear();
+                    f.screen.render(width);
+                    int y = f.screen.rowYForTest(key);
+                    assertTrue(y >= 54 && y + 12 <= 155, key + " is on screen at " + width + ": " + y);
+                    for (var line : f.font.lines) if (c.groups().contains(line.text)) captionsSeen.add(line.text);
+                    f.assertTextBounds(width);
+                    // The pointer reaches the same row where it is drawn.
+                    f.screen.updatePointer(new MenuInput.Pointer(60, y + 5, true, false, false, 0));
+                    assertEquals(key, f.screen.selectedForTest(), "hover over the drawn row keeps " + key);
+                    f.press(GLFW_KEY_DOWN);
+                }
+                assertEquals(lines.stream().filter(l -> l.key() != null).map(EngineSettingsScreen.Line::key).toList(), visited,
+                        "Down visits every setting in drawn order, never a caption");
+                assertEquals(c.groups(), List.copyOf(captionsSeen), "every caption scrolls into view above its rows");
+                // Back at the top: a hover over a caption focuses nothing new; a row hover does.
+                Fixture g = new Fixture(c.scope());
+                if (c.scope() == EngineSettingsScreen.Scope.MAIN) g.tab(DISPLAY);
+                var first = g.screen.selectedForTest();
+                g.font.lines.clear(); g.screen.render(width);
+                int firstY = g.screen.rowYForTest(first);
+                g.screen.updatePointer(new MenuInput.Pointer(60, firstY - 12 + 5, true, true, false, 0));
+                assertEquals(first, g.screen.selectedForTest(), "the caption above the first row is not a row");
+                var second = g.screen.lines().get(2).key();
+                if (second != null) {
+                    g.screen.updatePointer(new MenuInput.Pointer(60, g.screen.rowYForTest(second) + 5, true, false, false, 0));
+                    assertEquals(second, g.screen.selectedForTest());
+                }
+            }
+        }
+    }
+
+    @Test
+    void rewindBudgetControlsFollowScopeAndRemainEditableWhileOff() {
+        Fixture f = new Fixture();
+        f.tab(GAMEPLAY);
+        f.focus(REWIND_BUDGET_SCOPE);
+        f.press(GLFW_KEY_LEFT); // Per act -> Per checkpoint
+        f.press(GLFW_KEY_LEFT); // Per checkpoint -> Off
+        f.press(GLFW_KEY_DOWN);
+        assertEquals(REWIND_BUDGET_SECONDS, f.screen.selectedForTest());
+        assertTrue(f.descriptionLines().contains("Used while Rewind is not Off."), f.descriptionLines().toString());
+        f.press(GLFW_KEY_RIGHT); // allowance can be prepared while disabled
+        f.press(GLFW_KEY_UP);
+        f.press(GLFW_KEY_RIGHT); // enable per checkpoint
+        f.press(GLFW_KEY_DOWN);
+        assertFalse(f.descriptionLines().contains("Used while Rewind is not Off."));
+        assertTrue(f.texts().contains("15 s"), f.texts().toString());
+        assertEquals("Per zone", EngineSettingLabels.value(REWIND_BUDGET_SCOPE, "zone"));
+        assertEquals("Unlimited", EngineSettingLabels.value(REWIND_BUDGET_SECONDS, "unlimited"));
+    }
+
+    @Test
+    void tapeCoastSettingsIndentUnderTheCoastAndDimWhileItIsOffButStayEditable() {
+        Fixture f = new Fixture(EngineSettingsScreen.Scope.ADVANCED);
+        assertFalse(f.config.getBoolean(LIVE_REWIND_TAPE_COAST_ENABLED), "the coast is off by default");
+        f.focus(LIVE_REWIND_VHS_EFFECT); // the row after the coast's settings, so they all draw unfocused
+        f.font.lines.clear();
+        f.screen.render(320);
+        var parent = f.line("Tape coast");
+        for (String child : List.of("Tape coast acceleration", "Tape coast deceleration", "Tape coast top speed", "Tape coast lowest speed")) {
+            var row = f.line(child);
+            assertEquals(parent.x + 8, row.x, child + " sits 8 px under Tape coast");
+        }
+        // Still editable while off; the help says why it has no effect.
+        while (f.screen.selectedForTest() != LIVE_REWIND_TAPE_COAST_ACCELERATION) f.press(GLFW_KEY_UP);
+        assertTrue(f.descriptionLines().contains("Used only while Tape coast is on."), f.descriptionLines().toString());
+        String before = new EngineSettingsDraft(f.config).text(LIVE_REWIND_TAPE_COAST_ACCELERATION);
+        f.press(GLFW_KEY_ENTER);
+        assertTrue(f.texts().stream().anyMatch(t -> t.equals("TAPE COAST ACCELERATION")), "the editor opens: " + f.texts());
+        f.press(GLFW_KEY_ESCAPE);
+        assertEquals(before, new EngineSettingsDraft(f.config).text(LIVE_REWIND_TAPE_COAST_ACCELERATION));
+        // Switching the coast on removes the note.
+        while (f.screen.selectedForTest() != LIVE_REWIND_TAPE_COAST_ENABLED) f.press(GLFW_KEY_UP);
+        f.press(GLFW_KEY_RIGHT);
+        f.press(GLFW_KEY_DOWN);
+        assertFalse(f.descriptionLines().contains("Used only while Tape coast is on."));
+    }
+
+    /**
+     * Player-facing labels keep acronyms in capitals and help never shows the catalog's raw
+     * identifiers: no setting's camelCase leaf, no section.leaf path, no enum constant and no
+     * assignment. Details keeps the technical text.
+     */
+    @Test
+    void labelsKeepAcronymsAndHelpNeverLeaksRawConfigurationKeys() {
+        var raw = new java.util.HashSet<String>();
+        for (var key : com.openggf.configuration.SonicConfiguration.values()) {
+            var meta = ConfigCatalog.meta(key);
+            if (meta == null || !meta.persisted()) continue;
+            if (!meta.leaf().equals(meta.leaf().toLowerCase(java.util.Locale.ROOT))) raw.add(meta.leaf());
+            raw.add(meta.section() + "." + meta.leaf());
+            raw.add(key.name());
+            for (String value : meta.allowedValues()) if (value.contains("_")) raw.add(value);
+        }
+        var shown = new ArrayList<com.openggf.configuration.SonicConfiguration>();
+        var draft = new EngineSettingsDraft(SonicConfigurationService.createStandalone(directory));
+        for (var tabs : List.of(EngineSettingsScreen.Scope.MAIN.tabs, EngineSettingsScreen.Scope.ADVANCED.tabs))
+            for (var tab : tabs) shown.addAll(draft.keys(tab));
+        var acronym = java.util.regex.Pattern.compile("\\b(Vhs|Pcm|Mb|Fps|Tls|Rom|Hud|Dac|S3k|Bk2|Rgb|Ntsc)\\b");
+        for (var key : shown) {
+            for (String label : List.of(EngineSettingLabels.label(key), EngineSettingLabels.rowLabel(key))) {
+                assertFalse(acronym.matcher(label).find(), key + " label keeps acronym capitals: " + label);
+                assertFalse(label.isBlank(), key + " has a label");
+            }
+            String help = EngineSettingLabels.rowDescription(key);
+            assertFalse(help.contains("="), key + " help shows no assignment: " + help);
+            for (String token : raw) assertFalse(help.contains(token), key + " help leaks " + token + ": " + help);
+            // Details' Applies row: one sentence for the timing class, no hedged parenthetical.
+            String applies = EngineSettingsScreen.effect(key);
+            assertFalse(applies.contains("("), key + " Applies: " + applies);
+            assertTrue(applies.endsWith(".") && applies.indexOf(". ") < 0, key + " Applies is one sentence: " + applies);
+            if (com.openggf.game.launch.LiveSettings.appliesOnResume(key, false)
+                    && com.openggf.configuration.SettingTiming.of(key) == com.openggf.configuration.SettingTiming.NEXT_GAME)
+                assertTrue(applies.contains("resume"), key + " also reaches a paused game: " + applies);
+        }
+    }
+
+    @Test
+    void wheelMovesTheFocusedRowAndStopsAtTheFirst() {
+        Fixture keys = new Fixture();
+        var first = keys.screen.selectedForTest();
+        keys.press(GLFW_KEY_DOWN, 2);
+        var third = keys.screen.selectedForTest();
+        assertNotEquals(first, third);
+
+        Fixture f = new Fixture();
+        assertTrue(f.screen.updatePointer(new MenuInput.Pointer(60, 100, true, false, false, -2)));
+        assertEquals(third, f.screen.selectedForTest(), "two notches towards the user move down two rows");
+        f.screen.updatePointer(new MenuInput.Pointer(60, 100, true, false, false, 5));
+        assertEquals(first, f.screen.selectedForTest(), "the wheel stops at the first row");
+        f.press(GLFW_KEY_DOWN, 2);
+        assertEquals(third, f.screen.selectedForTest(), "the wheel left keyboard focus in the list");
     }
 
     private final class Fixture {
@@ -484,7 +845,11 @@ class TestEngineSettingsScreen {
 
         Fixture() { this(EngineSettingsScreen.Scope.MAIN); }
 
-        Fixture(EngineSettingsScreen.Scope scope) {
+        Fixture(EngineSettingsScreen.Scope scope) { this(scope, config -> { }); }
+
+        /** {@code setup} writes saved preferences before the screen takes its draft. */
+        Fixture(EngineSettingsScreen.Scope scope, java.util.function.Consumer<SonicConfigurationService> setup) {
+            setup.accept(config);
             screen = new EngineSettingsScreen(config, font, scope);
             config.setConfigValue(CONTROLLER_ENABLED, true);
             config.setConfigValue(CONTROLLER_PLAYER1, "auto");
@@ -493,6 +858,11 @@ class TestEngineSettingsScreen {
             frame();
         }
         void press(int key) { press(key, 1); }
+        /** Down through the drawn rows until {@code key} has the focus. */
+        void focus(com.openggf.configuration.SonicConfiguration key) {
+            for (int i = 0; i < 100 && screen.selectedForTest() != key; i++) press(GLFW_KEY_DOWN);
+            assertEquals(key, screen.selectedForTest());
+        }
         /** Up to the tab strip, across to {@code index}, and back down to its first row. */
         void tab(int index) {
             press(GLFW_KEY_UP);
@@ -520,7 +890,7 @@ class TestEngineSettingsScreen {
         void frame() { input.refreshLogicalSnapshot(); screen.update(input); input.update(); }
         List<String> descriptionLines() {
             texts();
-            return font.lines.stream().filter(line -> line.y == 173 || line.y == 181).map(Line::text).toList();
+            return font.lines.stream().filter(line -> line.y == 173 || line.y == 173 + MenuChrome.DESCRIPTION_PITCH).map(Line::text).toList();
         }
         List<String> texts() {
             font.lines.clear();
@@ -543,6 +913,10 @@ class TestEngineSettingsScreen {
     private record Line(String text, int x, int y, float scale) { }
     private static final class RecordingFont extends PixelFont {
         final List<Line> lines = new ArrayList<>();
+        // Measure with the production menu face, as MenuChrome does.
+        @Override public int measureWidth(String text, float scale) {
+            return com.openggf.graphics.MenuPixelFont.textWidth(text, scale);
+        }
         @Override public void drawText(String text, int x, int y, float scale, float r, float g, float b, float a) {
             lines.add(new Line(text, x, y, scale));
         }

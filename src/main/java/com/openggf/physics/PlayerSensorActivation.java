@@ -54,7 +54,7 @@ public final class PlayerSensorActivation {
 
         if (sprite.getAir()) {
             // ROM-accurate angle calculation via TrigLookupTable.calcAngle.
-            // ROM: Sonic_DoLevelCollision (s2.asm:37547-37557)
+            // ROM: Sonic_DoLevelCollision (s2.asm:37881-37891)
             int motionAngle = TrigLookupTable.calcAngle(sprite.getXSpeed(), sprite.getYSpeed());
 
             // ROM quadrant calculation: subi.b #$20,d0 / andi.b #$C0,d0

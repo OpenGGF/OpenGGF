@@ -72,7 +72,7 @@ class TestVerifiedRoomEndToEnd {
 
             PlayerIdentity host = PlayerIdentity.loadOrCreate(dir.resolve("host"));
             hostMaster = MasterClient.connect(
-                    URI.create("ws://127.0.0.1:" + server.port() + "/master"),
+                    "ws://127.0.0.1:" + server.port() + "/master",
                     host, "HOST", FINGERPRINT, null).get(10, TimeUnit.SECONDS);
             onBroker(server, () -> server.trustForTest(host.fingerprint()));
             ControlMessage.RoomDescriptor descriptor = new ControlMessage.RoomDescriptor(
@@ -86,7 +86,7 @@ class TestVerifiedRoomEndToEnd {
 
             PlayerIdentity newIdentity = PlayerIdentity.loadOrCreate(dir.resolve("new"));
             newcomer = MasterClient.connect(
-                    URI.create("ws://127.0.0.1:" + server.port() + "/master"),
+                    "ws://127.0.0.1:" + server.port() + "/master",
                     newIdentity, "NEW", FINGERPRINT, null).get(10, TimeUnit.SECONDS);
             MasterClient finalNewcomer = newcomer;
             assertThrows(Exception.class, () -> finalNewcomer.requestJoin(roomId)

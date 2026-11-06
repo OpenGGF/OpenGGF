@@ -104,6 +104,44 @@ class TestSidekickCpuSpawnStatePolicy {
         assertTrue(tails.isObjectControlAllowsCpu());
     }
 
+    @Test void checkpointBindRetiresOnlyTheSetupDormantPresentation() {
+        HeadlessTestFixture.builder().withZoneAndAct(10, 0)
+                .withFreshLevelStartLifecycle().build();
+        var tails = GameServices.sprites().getSidekicks().getFirst();
+        var cpu = tails.getCpuController();
+        assertEquals(SidekickCpuController.State.INIT, cpu.getState());
+        assertTrue(tails.isHidden(), "Fresh SSZ setup tentatively suppresses the arrival sidekick");
+        ((CheckpointState) GameServices.level().getCheckpointState())
+                .saveCheckpoint(4, 0x1880, 0x968, false);
+
+        cpu.update(1);
+
+        assertEquals(SidekickCpuController.State.NORMAL, cpu.getState(),
+                "loc_13A10's starpost branch bypasses the arrival intro");
+        assertFalse(tails.isHidden(), "The rejected setup-only hide must not outlive routine zero");
+        assertTrue(tails.shouldRefreshRenderFlagThisFrame(),
+                "The normal Draw_Sprite pass must now publish the cached native bit");
+    }
+
+    @Test void checkpointBindPreservesAnIndependentlyHiddenCaller() {
+        var fixture = HeadlessTestFixture.builder().withZoneAndAct(10, 0)
+                .withFreshLevelStartLifecycle().build();
+        var tails = GameServices.sprites().getSidekicks().getFirst();
+        // A caller may independently hide the sprite before a new controller
+        // tentatively owns the arrival presentation.
+        tails.setHidden(true);
+        var cpu = new SidekickCpuController(tails, fixture.sprite());
+        tails.setCpuController(cpu);
+        cpu.suppressInitialLevelEventPresentationIfNeeded();
+        ((CheckpointState) GameServices.level().getCheckpointState())
+                .saveCheckpoint(4, 0x1880, 0x968, false);
+
+        cpu.update(1);
+
+        assertEquals(SidekickCpuController.State.NORMAL, cpu.getState());
+        assertTrue(tails.isHidden(), "Retiring setup suppression must retain the captured caller hide");
+    }
+
     @Test void checkpointEntryStillTakesOrdinaryCpuReset() {
         boot();
         var tails = GameServices.sprites().getSidekicks().getFirst();

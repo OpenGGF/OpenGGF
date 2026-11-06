@@ -1,5 +1,12 @@
 # S3K Carnival Night Act 1 coverage matrix
 
+Selection update (2026-10-27): routine canonical entry/reload checks cover supported
+axis pairs; bonus transitions retain their existing pilots. Full Cartesian
+products are explicitly manual `exhaustive-audit` coverage, excluded from routine
+and release gates. Historical exhaustive qualifications below are unchanged and
+are not renewed by a routine pass. See the [selection record](../../research/2026-10-27-local-validation-cost.md).
+
+
 Canonical binding: `S3K_CARNIVAL_NIGHT_1`, engine zone 3/act 0, ROM `$0300`, S3KL object set.
 Edges: MGZ2 incoming full entry; CNZ2 outgoing structural/results handoff.
 Character routes: Solo Sonic has a native temporary Tails carry-in; an incapable first configured follower retains its ordinary role alongside that intrinsic carrier. Configured teams retain all of their followers. Literal carried-P1 mappings borrow host-ROM presentation resources while the script owns them, then return to configured donor resources. Tails and Knuckles have distinct entry and progression contexts.
@@ -8,6 +15,15 @@ Status: in progress. The bounded normal-entry and graph floor below is qualified
 Supported production presets are 320/352/400/528/800 via `WidescreenAspect` and `resolveDisplayAspect`. Configured main/donor support is off×{Sonic,Tails,Knuckles}, S1×Sonic and S2×{Sonic,Tails}. `LaunchProfile.sanitizedFor` owns configured fallback; script-created NPCs have their own native registration/art authority. Configured comma rosters are uncapped by `ActiveGameplayTeamResolver.parseConfiguredSidekicks`; pair, mixed, duplicate and declared large-roster examples do not establish a maximum.
 
 This act additionally qualifies solo Sonic at every preset with off/S1/S2 donation, plus the supported configured pair at each preset/donor (S1 Sonic follower, otherwise Tails). Natural NPC flyoff, recreation and reverse absence are separate checks; native 320/S1 also checks scene retirement and subsequent art refresh. The native scripted carrier is not a configured donor participant. The initial native/default binding covers all three solo mains at 320; the finite product follow-up extends that floor. The 140 finite normal-entry products below now qualify all five production presets, supported main/donor pairs and solo/pair/mixed/duplicate/seven-follower examples. Independent actual death/reload now qualifies the same 140 supported products. Other entry mechanisms, physical posts, mechanic-specific authority and route composition remain separate obligations. Raw 512/640 injection, when used by older local tests, is custom geometry evidence rather than production-preset coverage.
+
+## Cylinder rider ownership — 2026-10-29
+
+An inactive cylinder unloading no longer releases a player held by a different
+cylinder. The ROM-backed CNZ replay's first divergence advances from frame
+10691 to frame 17322; four miniboss checks also pass where the earlier sweep
+failed. Four replay-class cases remain failing, including the primary replay.
+The cylinder unit tests and CNZ mechanism/player-reference rewind checks pass;
+this does not qualify complete routes or the remaining configuration products.
 
 ## Obligations
 
@@ -229,3 +245,51 @@ The [query/allocation audit](../../audits/performance/2026-10-22-native-object-q
 and its companion implementation records own exact tested states, commands and
 remaining delivery checks. These local checks do not close inherited viewport,
 donor/team, full-route, load/respawn, audiovisual or whole-world rewind products.
+
+## MGZ2 to CNZ1 carry handoff regression (2026-11-01)
+
+`TestS3kMgzCnzCarryHandoffHeadless` engages the real MGZ rescue controller,
+then submits the normal CNZ1 zone request with solo Sonic and configured Tails.
+The production recording driver owns fade, load and title-card completion.
+It checks destination pickup, the native `$100` horizontal flight velocity,
+eight-frame complete-world restore/replay, landing, and control release.
+On base `745eb44df` with the corrected regression `211cc9d95`, the solo
+case passed and the configured-Tails case failed at destination attachment.
+The run had two tests, one failure, zero errors and zero skips. MGZ replaces
+the controller's carry trigger, and fresh assembly retains it.
+The repair restores the module's normal trigger during sidekick assembly.
+
+The disassembly's `loc_13A32` selects the CNZ pickup and `loc_13FC2` starts
+carrying. `loc_14016` detects Sonic's landing. This is a positioned local rescue
+and destination-load witness, not automatic boss/results/fade route completion.
+It does not add donor or viewport breadth, cross-load rewind, or native pixel
+qualification. Those inherited matrix obligations remain open.
+
+The repair on `211cc9d95` plus the one-line runtime change passed both handoff
+cases and the combined 171-test consumer selection with zero failures, errors
+or skips. The selection covered CNZ pair/solo carry, scripted carrier admission,
+MGZ rescue/events, sidekick spawn/start policy, and the four required S3K
+bootstrap/load/decode/AIZ checks. The runner's shared-file plan selected 4386
+smoke classes; focused checks replace that disproportionate selection because
+only the destination carry-policy binding changes. This is bounded validation,
+not a full-suite or exhaustive trace qualification.
+
+## Music ownership follow-up (2026-11-02)
+
+The [cross-game music audit](../../audits/2026-11-02-music-transitions.md)
+records corrected native request IDs and/or level-restore selection affecting
+this route. Restoration selects the apparent playlist and P1 invincibility at
+the native boundary. These local checks do not requalify this matrix’s inherited
+route, viewport/donor/team, lifecycle or audible-comparison gaps.
+
+## Shared reload frame ownership (2026-11-03)
+
+`TestS3kActTransitionFrameOwnership` adds a positioned Act 1 → Act 2 reload,
+then steps the next production gameplay row and repeats it after two restores.
+It checks oscillator advancement and the captured object, sprite and level owners;
+the frame-boundary reload must not publish a second in-frame rewind marker.
+CNZ/LBZ also retain direct in-frame transition-owned oscillator marker controls.
+The seven shared cases passed in the focused run; this does not qualify cold
+reachability, live rewind-floor recording, other configurations or complete routes.
+Those inherited obligations remain open. See the
+[shared ownership design](../../designs/2026-11-03-seamless-request-retargeting.md).

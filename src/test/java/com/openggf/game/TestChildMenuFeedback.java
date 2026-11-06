@@ -8,7 +8,9 @@ import com.openggf.game.recording.*;
 import com.openggf.game.recording.menu.UserRecordingMenu;
 import com.openggf.mods.*;
 import com.openggf.mods.ui.ModManagerScreen;
-import com.openggf.testmode.TestModeTracePicker;
+import com.openggf.game.playback.PlaybackBrowser;
+import com.openggf.game.playback.PlaybackLibrary;
+import com.openggf.game.playback.PlaybackLauncher;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterEach;
@@ -115,25 +117,25 @@ class TestChildMenuFeedback {
         UserRecordingEntry entry = new UserRecordingEntry(Path.of("movie.bk2"), "Movie", null,
                 10, Instant.EPOCH, RecordingVersionWarning.NONE, null);
         for (boolean fail : List.of(false, true)) {
-            UserRecordingMenu screen = new UserRecordingMenu("s1", List.of(entry), null, (recording, options) -> {
+            UserRecordingMenu screen = new UserRecordingMenu("s1", entry, null, (recording, options) -> {
                 if (fail) throw new IllegalStateException("Unavailable movie");
             });
             Driver d = new Driver(screen::update);
-            d.press(GLFW_KEY_ENTER); // options, default Play
             d.press(GLFW_KEY_ENTER);
-            assertEquals(List.of(CONFIRM, fail ? ERROR : CONFIRM), d.cues);
+            assertEquals(List.of(fail ? ERROR : CONFIRM), d.cues);
         }
     }
 
     @Test
-    void emptyTracePickerDoesNotNavigateButRejectsLaunchAndAllowsBack() {
-        TestModeTracePicker picker = new TestModeTracePicker(List.of(), null);
+    void emptyPlaybackBrowserDoesNotNavigateButRejectsLaunchAndAllowsBack() {
+        var picker = new PlaybackBrowser(new PlaybackLibrary(List.of(), List.of()), "", PlaybackBrowser.Filter.ALL,
+                false, null, new PlaybackLauncher((entry, options) -> { }, entry -> true, () -> false, () -> false));
         Driver d = new Driver(picker::update);
         d.press(GLFW_KEY_DOWN);
         d.press(GLFW_KEY_ENTER);
         d.press(GLFW_KEY_ESCAPE);
         assertEquals(List.of(ERROR, CANCEL), d.cues);
-        assertEquals(TestModeTracePicker.Result.BACK, picker.consumeResult());
+        assertEquals(PlaybackBrowser.Result.BACK, picker.consumeResult());
     }
 
     @Test

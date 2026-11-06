@@ -2,6 +2,7 @@ package openggf.racing.e2e;
 
 import com.openggf.net.client.ClientHandshake;
 import com.openggf.net.host.HostMasterLink;
+import com.openggf.net.host.RaceRoomHost;
 import com.openggf.net.hub.HubConnection;
 import com.openggf.net.hub.RoomHost;
 import com.openggf.net.hub.RoomHostConfig;
@@ -48,23 +49,34 @@ class TestRelayFallbackTunnel {
                 "OPEN", null, 8, "0.6:cafe"), hostIdentity,
                 System::currentTimeMillis, TrackValidationProfileSource.none());
         QueueSink hostOut = new QueueSink();
-        HostMasterLink link = new HostMasterLink(room::onConnected, room::onText,
-                room::onBinary, room::onDisconnected, hostOut);
+        RaceRoomHost host = new RaceRoomHost() {
+            @Override public int port() { return 0; }
+            @Override public String tlsCertificateSha256() { return null; }
+            @Override public void execute(Runnable task) { task.run(); }
+            @Override public RoomHost room() { return room; }
+            @Override public void close() { room.close("test closed"); }
+        };
+        HostMasterLink link = HostMasterLink.forServer(host, hostOut);
         com.openggf.net.host.HostLinkAuthentication.bind(link,
                 () -> com.openggf.net.protocol.AuthenticationTranscript.LOCAL_PLAINTEXT);
 
         FakeGuestConnection guest = new FakeGuestConnection();
+        PlayerIdentity guestIdentity = PlayerIdentity.loadOrCreate(dir.resolve("guest"));
         QueueSink masterToHost = new QueueSink();
         GuestTunnelRouter router = new GuestTunnelRouter();
-        router.registerHost("room-1", new HubConnection() {
+        HubConnection masterHostConnection = new HubConnection() {
             @Override public void sendText(String value) {
                 masterToHost.control.add(ControlCodec.decode(value).message());
             }
             @Override public void sendBinary(byte[] data) { masterToHost.binary.add(data); }
             @Override public void close(String reason) { }
             @Override public String remoteHost() { return "host"; }
-        });
-        int guestId = router.openGuest("room-1", guest).orElseThrow();
+        };
+        var registration = new openggf.racing.server.master.SessionRegistry
+                .RegistrationLease(masterHostConnection, 1);
+        router.registerHost("room-1", registration);
+        int guestId = router.openGuest("room-1", guest, room.instanceId(),
+                guestIdentity.fingerprint(), "grant", 1, registration).orElseThrow();
 
         Runnable pump = () -> {
             while (!masterToHost.control.isEmpty()) {
@@ -82,8 +94,7 @@ class TestRelayFallbackTunnel {
         };
         pump.run();
 
-        PlayerIdentity guestIdentity = PlayerIdentity.loadOrCreate(dir.resolve("guest"));
-        ClientHandshake handshake = new ClientHandshake(guestIdentity, "GUEST", "0.6:cafe", null,
+        ClientHandshake handshake = new ClientHandshake(guestIdentity, "GUEST", "", "0.6:cafe", null,
                 com.openggf.net.protocol.AuthenticationTranscript.Role.ROOM_RELAY,
                 () -> com.openggf.net.protocol.AuthenticationTranscript.LOCAL_PLAINTEXT);
         router.guestText(guestId, ControlCodec.encode(null, handshake.hello()));

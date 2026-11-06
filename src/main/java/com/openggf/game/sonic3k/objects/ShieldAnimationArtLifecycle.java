@@ -11,11 +11,9 @@ import java.util.function.Supplier;
 /**
  * Shared S3K shield playback and DPLC renderer lifecycle.
  *
- * <p>The playback order intentionally differs from {@code ObjectAnimationState}:
- * each update advances the frame before publishing it, and a {@code SWITCH} end
- * action immediately initializes and publishes its target animation. This is the
- * Obj_FireShield / Obj_BubbleShield / Obj_LightningShield / Obj_InstaShield
- * convention, not the generic AnimateSprite convention.
+ * <p>Animate_Sprite publishes the current cursor before incrementing it. Animation
+ * changes reset playback on dispatch; FD only writes anim and returns, leaving
+ * initialization of the target to the next dispatch (sonic3k.asm:36157-36216).
  */
 final class ShieldAnimationArtLifecycle
         implements RewindStateful<ShieldAnimationArtLifecycle.RewindState> {
@@ -23,16 +21,15 @@ final class ShieldAnimationArtLifecycle
     record Art(PlayerSpriteRenderer renderer, SpriteAnimationSet animationSet) {
     }
 
-    record RewindState(int animationId, int frameIndex, int delayCounter, int mappingFrame) {
+    record RewindState(int animationId, int previousAnimationId, int frameIndex, int delayCounter, int mappingFrame) {
     }
 
     private PlayerSpriteRenderer dplcRenderer;
     private SpriteAnimationSet animationSet;
     private PlayerSpriteRenderer boundRenderer;
     private boolean artRefreshPending;
-    /** Rewind can restore the cursor before this reconstructed shield has bound ROM art. */
-    private boolean restoredPlaybackAwaitingArt;
     private int animationId;
+    private int previousAnimationId = -1;
     private int frameIndex;
     private int delayCounter;
     private int mappingFrame;
@@ -79,10 +76,6 @@ final class ShieldAnimationArtLifecycle
         }
         if (animationSet == null && art.animationSet() != null) {
             animationSet = art.animationSet();
-            if (!restoredPlaybackAwaitingArt) {
-                initializeAnimation(animationId);
-            }
-            restoredPlaybackAwaitingArt = false;
         }
     }
 
@@ -99,20 +92,27 @@ final class ShieldAnimationArtLifecycle
     }
 
     void setAnimation(int nextAnimationId) {
-        if (nextAnimationId != animationId) {
-            restoredPlaybackAwaitingArt = false;
-            initializeAnimation(nextAnimationId);
-        }
+        animationId = nextAnimationId;
     }
 
     void restartAnimation(int nextAnimationId) {
-        restoredPlaybackAwaitingArt = false;
-        initializeAnimation(nextAnimationId);
+        animationId = nextAnimationId;
+        previousAnimationId = -1;
+    }
+
+    /** The early returns in the three elemental shield Main routines precede animation. */
+    static boolean elementalAnimationFrozen(com.openggf.sprites.playable.AbstractPlayableSprite player) {
+        return player.getInvincibleFrames() > 0 || player.getAnimationId() == 0x1C;
     }
 
     void stepAnimation() {
         if (animationSet == null) {
             return;
+        }
+        if (animationId != previousAnimationId) {
+            previousAnimationId = animationId;
+            frameIndex = 0;
+            delayCounter = 0;
         }
         SpriteAnimationScript script = animationSet.getScript(animationId);
         if (script == null || script.frames().isEmpty()) {
@@ -123,20 +123,18 @@ final class ShieldAnimationArtLifecycle
             return;
         }
         delayCounter = script.delay();
-
-        frameIndex++;
         if (frameIndex >= script.frames().size()) {
             switch (script.endAction()) {
                 case LOOP -> frameIndex = 0;
-                case LOOP_BACK -> frameIndex = Math.max(0, script.frames().size() - script.endParam());
+                case LOOP_BACK -> frameIndex = Math.max(0, frameIndex - script.endParam());
                 case SWITCH -> {
-                    initializeAnimation(script.endParam());
+                    animationId = script.endParam();
                     return;
                 }
                 case HOLD -> frameIndex = script.frames().size() - 1;
             }
         }
-        mappingFrame = script.frames().get(frameIndex);
+        mappingFrame = script.frames().get(frameIndex++);
     }
 
     PlayerSpriteRenderer renderer() {
@@ -161,31 +159,16 @@ final class ShieldAnimationArtLifecycle
 
     @Override
     public RewindState captureRewindStateValue() {
-        return new RewindState(animationId, frameIndex, delayCounter, mappingFrame);
+        return new RewindState(animationId, previousAnimationId, frameIndex, delayCounter, mappingFrame);
     }
 
     @Override
     public void restoreRewindStateValue(RewindState state) {
         animationId = state.animationId();
+        previousAnimationId = state.previousAnimationId();
         frameIndex = state.frameIndex();
         delayCounter = state.delayCounter();
         mappingFrame = state.mappingFrame();
-        restoredPlaybackAwaitingArt = true;
     }
 
-    private void initializeAnimation(int nextAnimationId) {
-        animationId = nextAnimationId;
-        frameIndex = 0;
-        if (animationSet == null) {
-            return;
-        }
-        SpriteAnimationScript script = animationSet.getScript(nextAnimationId);
-        if (script == null) {
-            return;
-        }
-        delayCounter = script.delay();
-        if (!script.frames().isEmpty()) {
-            mappingFrame = script.frames().getFirst();
-        }
-    }
 }

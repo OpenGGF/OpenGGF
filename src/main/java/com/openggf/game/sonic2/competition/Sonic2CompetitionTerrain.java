@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.competition;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.sonic2.Sonic2RingArt;
@@ -27,7 +29,7 @@ public final class Sonic2CompetitionTerrain extends AbstractLevel {
 
         palettes = new Palette[4];
         palettes[0] = new Palette();
-        palettes[0].fromSegaFormat(rom.readBytes(Sonic2Constants.SONIC_TAILS_PALETTE_ADDR, 32));
+        palettes[0].fromSegaFormat(rom.readBytes(address(rom, Sonic2Constants.SONIC_TAILS_PALETTE_ADDR), 32));
         byte[] zonePalette = rom.readBytes(profile.paletteAddress(), profile.paletteSize());
         if (zonePalette.length != 96) throw new IOException("Invalid competition zone palette size");
         for (int line = 1; line < 4; line++) {

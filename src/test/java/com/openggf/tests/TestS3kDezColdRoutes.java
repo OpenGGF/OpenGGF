@@ -7,6 +7,7 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import com.openggf.trace.TraceCharacterState;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -15,9 +16,11 @@ import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.zip.GZIPInputStream;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -267,6 +270,181 @@ class TestS3kDezColdRoutes {
         assertTrue(survived >= SEEDED_ROUTE_FRONTIER,
                 "the act 2 frontier must not move backwards from " + SEEDED_ROUTE_FRONTIER
                         + " frames:\n" + firstMismatch);
+    }
+
+    /** Original cold movie input through the first mace contact and hurt fall. */
+    @Test
+    void coldActOneOpeningPreservesNativeCompanionMaceContact() throws Exception {
+        var config = SonicConfigurationService.getInstance();
+        config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
+        config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
+        var fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_DEZ, 0)
+                .withFreshLevelStartLifecycle()
+                .withRecording(BK2.toAbsolutePath())
+                .withRecordingStartFrame(SEGMENT_MOVIE_OFFSET)
+                .build();
+        assertEquals(320, GameServices.camera().getWidth(), "original movie viewport");
+        var rows = readRows();
+        // A bounded contact regression, independent of the longer campaign frontier.
+        // Expected rows are comparison-only; all gameplay starts from the fresh ROM inlet.
+        boolean observedHurt = false;
+        for (int rowIndex = 0; rowIndex < 200; rowIndex++) {
+            fixture.stepFrameFromRecording();
+            var companion = GameServices.sprites().getRegisteredSidekicks().getFirst();
+            observedHurt |= companion.isHurt();
+            var row = rows.get(rowIndex);
+            int[] actual = {companion.getCentreX() & 0xFFFF, companion.getCentreY() & 0xFFFF,
+                    companion.getXSpeed() & 0xFFFF, companion.getYSpeed() & 0xFFFF,
+                    companion.getGSpeed() & 0xFFFF, companion.getXSubpixelRaw(),
+                    companion.getYSubpixelRaw(), companion.getAir() ? 1 : 0,
+                    companion.getRolling() ? 1 : 0, TraceCharacterState.routineFromSprite(companion)};
+            int[] columns = {26, 27, 28, 29, 30, 35, 36, 32, 33, 37};
+            int[] expected = Arrays.stream(columns)
+                    .map(column -> Integer.parseInt(row[column], 16)).toArray();
+            assertArrayEquals(expected, actual,
+                    "native companion movement/contact at original movie row " + rowIndex);
+        }
+        assertTrue(observedHurt, "the recorded opening must exercise the mace's hurt contact");
+    }
+
+    /** Original cold input through the first lift's exact-boundary rejection and later landing. */
+    @Test
+    void coldActOneLiftLandingPreservesNativeBoundary() throws Exception {
+        assertColdActOnePrefixMatchesNative(2720);
+    }
+
+    @Test
+    void coldActOneConveyorJumpPreservesNativeBoundary() throws Exception {
+        assertColdActOnePrefixMatchesNative(3280);
+    }
+
+    @Test
+    void coldActOneFloorLauncherLandingPreservesNativeBoundary() throws Exception {
+        assertColdActOnePrefixMatchesNative(5520);
+    }
+
+    @Test
+    void coldActOneStaircaseJumpPreservesNativeBoundary() throws Exception {
+        assertColdActOnePrefixMatchesNative(6810);
+    }
+
+    @Test
+    void coldActOneConveyorWalkOffPreservesNativeBoundary() throws Exception {
+        assertColdActOnePrefixMatchesNative(8770);
+    }
+
+    @Test
+    void coldActOneTurbineCeilingPreservesNativeBoundary() throws Exception {
+        assertColdActOnePrefixMatchesNative(12630);
+    }
+
+    @Test
+    void coldActOneGravityPuzzleLandingPreservesNativeBoundary() throws Exception {
+        assertColdActOnePrefixMatchesNative(13260);
+    }
+
+    /** Original cold input through the turbine's direct floor landing (loc_12158). */
+    @Test
+    void coldActOneTurbineFloorLandingPreservesNativeBoundary() throws Exception {
+        // Floor landing at row13727, then the lower bumper at row13731 and its
+        // following row: the puzzle's display-child SST keeps the bumper after
+        // turbine slot 12. Expected rows remain comparison-only.
+        assertColdActOnePrefixMatchesNative(13733);
+    }
+
+    /** Original cold input through the tube and subsequent launcher boundary. */
+    @Test
+    void coldActOnePostTurbineApproachPreservesNativePrefix() throws Exception {
+        // The tube's native animation word prevents the former row14316 launcher
+        // disagreement. The observed main-player comparison matches through14520.
+        assertColdActOnePrefixMatchesNative(14521);
+    }
+
+    /** P2 matches through the original suppression and tube-animation boundary. */
+    @Test
+    void coldActOneTailsSuppressionReleaseMatchesNative() throws Exception {
+        assertColdActOnePrefixMatchesNative(14502, true);
+    }
+
+    /** Original input through the offscreen launcher-to-tube code-word handoff. */
+    @Test
+    void coldActOneOffscreenTubeDespawnMatchesNative() throws Exception {
+        // Fresh callbacks execute sub_13EFC's word3-to-word4 mismatch at14502.
+        // This bounded 13+10-field comparison makes no whole-act parity claim.
+        assertColdActOnePrefixMatchesNative(14521, true);
+    }
+
+    /** Original input through the second staircase, before the shared ring frontier. */
+    @Test
+    void coldActOneSecondStaircaseApproachMatchesNative() throws Exception {
+        // Preserve the earlier bound independently of the ring continuation below.
+        assertColdActOnePrefixMatchesNative(16216, true);
+    }
+
+    /** Original-input continuation through the formerly delayed attracted-ring awards. */
+    @Test
+    void coldActOneSecondStaircaseRingContinuationMatchesNative() throws Exception {
+        // Native object_control suppresses TouchResponse during the earlier tube ride.
+        // Compare both players through row16236; this does not qualify Act 2.
+        assertColdActOnePrefixMatchesNative(16237, true);
+    }
+
+    /** Original input up to the first camera/physical-frame sampling disagreement. */
+    @Test
+    void coldActOnePreLagCameraFrontierMatchesNative() throws Exception {
+        // Both players match through row16447. Row16448 first differs in camera X;
+        // row16449 holds native gameplay while V-int continues. Shared timing and
+        // partial-pass observation are outside this DEZ-local continuation.
+        assertColdActOnePrefixMatchesNative(16448, true);
+    }
+
+    private void assertColdActOnePrefixMatchesNative(int comparedRows) throws Exception {
+        assertColdActOnePrefixMatchesNative(comparedRows, false);
+    }
+
+    private void assertColdActOnePrefixMatchesNative(int comparedRows, boolean compareSidekick) throws Exception {
+        var config = SonicConfigurationService.getInstance();
+        config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
+        config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
+        var fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_DEZ, 0)
+                .withFreshLevelStartLifecycle()
+                .withRecording(BK2.toAbsolutePath())
+                .withRecordingStartFrame(SEGMENT_MOVIE_OFFSET)
+                .build();
+        assertEquals(320, GameServices.camera().getWidth(), "original movie viewport");
+        var rows = readRows();
+        var player = fixture.sprite();
+        // Comparison-only native rows: no position, clocks or object state are seeded.
+        for (int index = 0; index < comparedRows; index++) {
+            int input = fixture.stepFrameFromRecording();
+            var row = rows.get(index);
+            assertEquals(Integer.parseInt(row[1], 16), input, "original input " + index);
+            int[] actual = {player.getCentreX() & 0xFFFF, player.getCentreY() & 0xFFFF,
+                    player.getXSpeed() & 0xFFFF, player.getYSpeed() & 0xFFFF,
+                    player.getGSpeed() & 0xFFFF, player.getXSubpixelRaw(), player.getYSubpixelRaw(),
+                    player.getRingCount(), GameServices.camera().getX() & 0xFFFF,
+                    GameServices.camera().getY() & 0xFFFF, GameServices.level().getFrameCounter() & 0xFFFF,
+                    player.getAir() ? 1 : 0, player.getRolling() ? 1 : 0};
+            int[] columns = {9, 10, 11, 12, 13, 18, 19, 4, 2, 3, 5, 15, 16};
+            int[] expected = Arrays.stream(columns)
+                    .map(column -> Integer.parseInt(row[column], 16)).toArray();
+            assertArrayEquals(expected, actual, "native main movement/contact at original movie row " + index);
+            if (compareSidekick) {
+                var sidekick = GameServices.sprites().getRegisteredSidekicks().getFirst();
+                int[] p2Actual = {sidekick.getCentreX() & 0xFFFF, sidekick.getCentreY() & 0xFFFF,
+                        sidekick.getXSpeed() & 0xFFFF, sidekick.getYSpeed() & 0xFFFF,
+                        sidekick.getGSpeed() & 0xFFFF, sidekick.getXSubpixelRaw(), sidekick.getYSubpixelRaw(),
+                        sidekick.getAir() ? 1 : 0, sidekick.getRolling() ? 1 : 0,
+                        TraceCharacterState.routineFromSprite(sidekick)};
+                int[] p2Columns = {26, 27, 28, 29, 30, 35, 36, 32, 33, 37};
+                int[] p2Expected = Arrays.stream(p2Columns)
+                        .map(column -> Integer.parseInt(row[column], 16)).toArray();
+                assertArrayEquals(p2Expected, p2Actual,
+                        "native companion dispatch at original movie row " + index);
+            }
+        }
     }
 
     private static List<String[]> readRows() throws Exception {

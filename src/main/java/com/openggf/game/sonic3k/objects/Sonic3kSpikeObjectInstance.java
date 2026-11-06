@@ -115,17 +115,6 @@ public class Sonic3kSpikeObjectInstance extends AbstractSpikeObjectInstance
     }
 
     @Override
-    public boolean isWithinSolidContactBounds() {
-        // loc_24090/loc_2413E move the spike before calling SolidObjectFull,
-        // but loc_1DF88 observes render_flags bit 7 from the preceding
-        // Render_Sprites pass (sonic3k.asm:49051-49077,49142-49171,
-        // 41390-41392). Test the frame-start position, not the freshly moved
-        // one, so a spike entering the viewport cannot become solid early.
-        return isPreUpdateWithinRenderSpriteBounds(
-                getOnScreenHalfWidth(), getOnScreenHalfHeight());
-    }
-
-    @Override
     protected void moveSpikes(PlayableEntity playerEntity) {
         if (!mainRoutineReached) {
             // Obj_Spikes initialization stores loc_2413E/loc_24090/etc. in (a0)

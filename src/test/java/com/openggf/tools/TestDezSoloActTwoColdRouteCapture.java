@@ -11,6 +11,7 @@ import com.openggf.sprites.playable.Sonic;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
@@ -23,6 +24,7 @@ import static com.openggf.GameLoopRewindTestAccess.owner;
 /** Solo Act2 production traversal and boss, preserving the complete cold DEZ1 prefix. */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestDezSoloActTwoColdRouteCapture {
+    @Tag("exhaustive-audit")
     @Test
     void coldSonicAloneClearsActTwoAndLoadsFinalStage() throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
@@ -131,6 +133,7 @@ class TestDezSoloActTwoColdRouteCapture {
         }
     }
 
+    @Tag("exhaustive-audit")
     @Test
     void coldWideSonicAloneClearsActTwoAndLoadsFinalStage() throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
@@ -242,6 +245,7 @@ class TestDezSoloActTwoColdRouteCapture {
         }
     }
 
+    @Tag("exhaustive-audit")
     @Test
     void coldTailsAloneClearsActTwoAndLoadsFinalStage() throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
@@ -343,6 +347,7 @@ class TestDezSoloActTwoColdRouteCapture {
         }
     }
 
+    @Tag("exhaustive-audit")
     @Test
     void coldTailsLowerGravityPadPreservesPendingContactAcrossRewind() throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(

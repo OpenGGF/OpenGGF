@@ -385,7 +385,9 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance
         wobbleAngle = (wobbleAngle + 1) & 0xFF;
 
         // lea (Drown_WobbleData).l,a1 / move.b (a1,d0.w),d0
-        int wobbleOffset = WOBBLE_DATA[wobbleIndex];
+        // Drown_WobbleData changes only this positive peak between the retail revisions.
+        int wobbleOffset = wobbleIndex == 0x20 && com.openggf.game.sonic1.Sonic1RomProfile.isRev00(services())
+                ? 4 : WOBBLE_DATA[wobbleIndex];
 
         // ext.w d0 / add.w bub_origX(a0),d0 / move.w d0,obX(a0)
         displayX = origX + wobbleOffset;

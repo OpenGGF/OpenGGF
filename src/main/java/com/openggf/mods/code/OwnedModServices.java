@@ -66,14 +66,37 @@ final class OwnedModServices {
             if (observer != null) observerRegistry = observerRegistry.append(plan.ownerModId(),
                     (com.openggf.game.GameplayObserver) services.get(com.openggf.game.GameplayObserver.class).get());
             final var accumulatedObservers = observerRegistry;
+            final boolean publishesObserver = observer != null;
             List<RewindSnapshottable<?>> ownedAdapters = adapters.values().stream().map(callbacks::adapter).toList();
             List<com.openggf.level.LevelPatch> patches = plan.decodedLevelPatches().values().stream()
                     .map(patch -> com.openggf.level.LevelPatchOwnership.bind(plan.ownerModId(), patch, plan.objectFactories().keySet())).toList();
             return new DelegatingGameModule(base, plan.ownerModId() + ":services") {
+                private com.openggf.game.session.WorldSessionPolicyProvider worldPolicies;
+
                 @Override public <T> T getGameService(Class<T> type) {
                     if (type == GameplayObserverRegistry.class
                             || type == com.openggf.game.session.GameplayObserverSnapshots.class)
                         return type.cast(accumulatedObservers);
+                    if (type == com.openggf.game.session.WorldSessionPolicyProvider.class
+                            && publishesObserver) {
+                        if (worldPolicies == null) {
+                            var inherited = super.getGameService(
+                                    com.openggf.game.session.WorldSessionPolicyProvider.class);
+                            if (inherited instanceof com.openggf.mods.mutators.MutatorWorldProvider) {
+                                worldPolicies = inherited;
+                            } else {
+                                var catalog = super.getGameService(
+                                        com.openggf.mods.mutators.MutatorCatalog.class);
+                                if (catalog == null) {
+                                    catalog = new com.openggf.mods.mutators.MutatorCatalog(
+                                            List.of(), boundary);
+                                }
+                                worldPolicies = new com.openggf.mods.mutators.MutatorWorldProvider(
+                                        catalog, inherited);
+                            }
+                        }
+                        return type.cast(worldPolicies);
+                    }
                     Supplier<?> service = services.get(type);
                     // Enum choices and opt-in attack policies withdraw at fresh native decision boundaries.
                     // Consult quarantine before dynamic providers; captured values/callbacks retain their semantics.

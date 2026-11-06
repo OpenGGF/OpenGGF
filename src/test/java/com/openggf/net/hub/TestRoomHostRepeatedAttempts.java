@@ -52,7 +52,7 @@ class TestRoomHostRepeatedAttempts {
         now += HostRoundEngine.COUNTDOWN_MILLIS;
         room.tick();
         finishAttempt(room, sender, token, 2);
-        assertEquals(1, room.round().standings().size(), "the next start is accepted");
+        assertEquals(1, room.round().results().size(), "the next start is accepted");
 
         // Starting after the deadline is refused while finishes keep their grace.
         now += 1001;
@@ -63,8 +63,8 @@ class TestRoomHostRepeatedAttempts {
         control(room, sender, token, new ControlMessage.AttemptReset(3));
         control(room, sender, token, new ControlMessage.AttemptFinish(3, 1, 0, 1,
                 "cd".repeat(32), "00".repeat(32), null));
-        assertEquals(1, room.round().standings().size());
-        assertEquals(1, room.round().standings().getFirst().bestTimeFrames());
+        assertEquals(1, room.round().results().size());
+        assertEquals(1, room.round().results().getFirst().timeFrames());
 
         now += HostRoundEngine.FINISH_GRACE_MILLIS;
         room.tick();
@@ -108,7 +108,7 @@ class TestRoomHostRepeatedAttempts {
 
     @Test
     void playerPushedFromTenthToEleventhReceivesPrivateRank() throws Exception {
-        RoomHost room = room(false);
+        RoomHost room = room(true);
         FakeHubConnection pushed = new FakeHubConnection();
         FakeHubConnection other = new FakeHubConnection();
         admit(room, pushed, "A", "a");

@@ -9,6 +9,35 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestLevelTransitionCoordinator {
 
     @Test
+    void bonusEntryEndsTheSourceLevelBodyUntilTheRequestIsConsumed() {
+        LevelTransitionCoordinator transitions = new LevelTransitionCoordinator();
+        assertFalse(transitions.isLevelInactiveForTransition());
+        transitions.requestBonusStageEntry(com.openggf.game.BonusStageType.SLOT_MACHINE);
+        assertTrue(transitions.isLevelInactiveForTransition(),
+                "accepted bonus entry sets the native restart edge before camera work");
+        assertEquals(com.openggf.game.BonusStageType.SLOT_MACHINE, transitions.consumeBonusStageRequest());
+        assertFalse(transitions.isLevelInactiveForTransition());
+        transitions.setLevelInactiveForTransition(true);
+        transitions.requestBonusStageEntry(com.openggf.game.BonusStageType.GUMBALL);
+        transitions.consumeBonusStageRequest();
+        assertTrue(transitions.isLevelInactiveForTransition(),
+                "consuming bonus entry must preserve an independently pending level exit");
+    }
+
+
+    @Test
+    void pendingBonusRequestDoesNotFreezeTheHostIterationThatConsumesIt() {
+        LevelTransitionCoordinator transitions = new LevelTransitionCoordinator();
+        transitions.requestBonusStageEntry(com.openggf.game.BonusStageType.GLOWING_SPHERE);
+        assertTrue(transitions.isLevelInactiveForTransition());
+        assertFalse(transitions.isLevelInactiveBeforeObjectPass(),
+                "the object pass that consumes the request must still run");
+        transitions.setLevelInactiveForTransition(true);
+        assertTrue(transitions.isLevelInactiveBeforeObjectPass(),
+                "an independent level exit still freezes the host iteration");
+    }
+
+    @Test
     void inLevelTitleCardCarriesDisplayResetIntentAndDispatchOffset() {
         LevelTransitionCoordinator transitions = new LevelTransitionCoordinator();
 

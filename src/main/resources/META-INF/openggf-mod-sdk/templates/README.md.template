@@ -8,6 +8,12 @@ level export, and a Phase 3 character stub. The stub demonstrates character iden
 and is deliberately not registered: add playable art and terrain sensors
 before registering it in gameplay.
 
+For the portable workflow, run `python3 /absolute/kit/tools/build_project.py . --doctor`
+then omit `--doctor` to build. Add `--test --testkit /absolute/kit/mod-testkit.jar`
+for tests or `--run --s2 /absolute/own-sonic2.gen` to play. Optional
+`ggfmod.local.json` stores local paths; it is ignored by Git. See the handbook
+for its schema and the portable output name. The Maven workflow below remains available.
+
 1. Edit `SampleBadnik`, `src/main/mod/sample.png`, or the level source under
    `src/main/mod/level-source` in this generated object/zone project.
 2. Run the Maven package command below; it converts art/levels, compiles Java, and

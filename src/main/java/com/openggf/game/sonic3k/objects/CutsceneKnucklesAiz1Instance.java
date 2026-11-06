@@ -389,6 +389,10 @@ public class CutsceneKnucklesAiz1Instance extends AbstractObjectInstance impleme
         currentY = INIT_Y;
         mappingFrame = INIT_MAPPING_FRAME;
 
+        // sub_65DD6 allocates the independent theme fade before the rock child:
+        // a 90-word wait completes on the helper's 91st own entry.
+        spawnFreeChild(() -> SongFadeTransitionInstance.transitionTo(Sonic3kMusic.KNUCKLES.id));
+
         // Spawn rock child object (ChildObjDat_6659A via CreateChild1_Normal)
         ObjectSpawn rockSpawn = new ObjectSpawn(
                 INIT_X, INIT_Y + 0x20, 0, 0, 0, false, 0);
@@ -397,10 +401,6 @@ public class CutsceneKnucklesAiz1Instance extends AbstractObjectInstance impleme
 
         // Palettes are NOT overwritten here — the intro level's LevelLoadBlock
         // already loads the correct palette lines during level init.
-
-        // ROM: sub_65DD6 (line 134086) — fade out current music, play Knuckles' theme
-        // after 90 frames. Spawned as independent object so it outlives Knuckles if needed.
-        spawnDynamicObject(new SongFadeTransitionInstance(90, Sonic3kMusic.KNUCKLES.id));
 
         routine = 2;
     }
@@ -586,7 +586,7 @@ public class CutsceneKnucklesAiz1Instance extends AbstractObjectInstance impleme
 
             // ROM: Obj_Song_Fade_ToLevelMusic (line 180305) — fade out Knuckles' theme,
             // play AIZ1 music after 120 frames. Independent object survives Knuckles' destruction.
-            spawnDynamicObject(new SongFadeTransitionInstance(120, Sonic3kMusic.AIZ1.id));
+            spawnFreeChild(() -> SongFadeTransitionInstance.toLevelMusic(Sonic3kMusic.AIZ1.id));
 
             exitRenderFlagOnScreen = isVisibleForExitRenderFlag();
             routine = 12;
@@ -632,6 +632,20 @@ public class CutsceneKnucklesAiz1Instance extends AbstractObjectInstance impleme
     // -----------------------------------------------------------------------
     // Intro→gameplay transition helpers
     // -----------------------------------------------------------------------
+
+    @Override
+    protected void onRemovedFromObjectManager() {
+        // loc_61F44 deletes Knuckles independently of the emerald slots
+        // (sonic3k.asm:128809-128814). AIZPlaneIntro_EmeraldChildWaitForPlane
+        // (sonic3k.asm:135936-135960) only reads the collector for pickup; it
+        // does not give the emerald the collector's lifetime. End the Java
+        // identity edge here, including when the emerald ran earlier in the
+        // object pass. Keep the existing no-pickup behavior after retirement,
+        // without retaining a dead actor or adopting a reused native slot.
+        for (var emerald : services().objectQuery().activeObjectsOfType(AizEmeraldScatterInstance.class)) {
+            emerald.detachCollector(this);
+        }
+    }
 
     @Override
     public void onUnload() {

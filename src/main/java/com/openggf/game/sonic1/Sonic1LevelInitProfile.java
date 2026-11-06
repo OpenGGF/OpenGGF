@@ -1,5 +1,7 @@
 package com.openggf.game.sonic1;
 
+import static com.openggf.game.sonic1.Sonic1RomProfile.resolve;
+
 import com.openggf.game.AbstractLevelInitProfile;
 import com.openggf.game.InitStep;
 import com.openggf.game.LevelLoadContext;
@@ -35,7 +37,7 @@ import java.io.IOException;
  *      Design doc: Sonic 1 Level Init Profile (44 steps)</a>
  */
 public class Sonic1LevelInitProfile extends AbstractLevelInitProfile
-        implements com.openggf.game.internal.BlockingLevelEntryFade {
+        implements com.openggf.game.internal.LevelMotionPresentation, com.openggf.game.internal.BlockingLevelEntryFade {
     private final Sonic1LevelEventManager levelEventManager;
     private final Sonic1SwitchManager switchManager;
     private final Sonic1ConveyorState conveyorState;
@@ -133,7 +135,7 @@ public class Sonic1LevelInitProfile extends AbstractLevelInitProfile
             return;
         }
         try {
-            int header = Sonic1Constants.LEVEL_HEADERS_ADDR + ctx.getLevel().getZoneIndex() * 16;
+            int header = resolve(GameServices.rom().getRom(), Sonic1Constants.LEVEL_HEADERS_ADDR) + ctx.getLevel().getZoneIndex() * 16;
             int primary = (GameServices.rom().getRom().read32BitAddr(header) >>> 24) & 0xFF;
             plcService.transact(primary == 0
                     ? new Sonic1PlcService.Operation[] {Sonic1PlcService.clear(), Sonic1PlcService.appendOperation(1)}
@@ -181,7 +183,7 @@ public class Sonic1LevelInitProfile extends AbstractLevelInitProfile
                 plcService, PlcLifecyclePhase.LEVEL_TITLE_CARD,
                 plcService::isBusy);
         try {
-            int header = Sonic1Constants.LEVEL_HEADERS_ADDR + zoneIndex * 16;
+            int header = resolve(rom, Sonic1Constants.LEVEL_HEADERS_ADDR) + zoneIndex * 16;
             int secondary = (rom.read32BitAddr(header + 4) >>> 24) & 0xFF;
             if (secondary != 0) {
                 plcService.append(secondary);

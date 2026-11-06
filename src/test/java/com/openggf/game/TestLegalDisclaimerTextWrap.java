@@ -91,4 +91,23 @@ class TestLegalDisclaimerTextWrap {
                 "Body wraps to Y=" + y + " which overlaps the dismiss prompt at Y="
                         + LegalDisclaimerScreen.PROMPT_Y);
     }
+    @Test
+    void tallerScriptPagesKeepEveryBodyLineReachable() {
+        var input = java.util.stream.IntStream.range(0, 45).mapToObj(i -> "line " + i).toList();
+        var pages = LegalDisclaimerScreen.paginateBody(input, 17);
+        assertTrue(pages.size() > 1);
+        assertEquals(input, pages.stream().flatMap(List::stream).toList());
+        for (var page : pages) {
+            assertTrue(page.size() * 17 <= LegalDisclaimerScreen.PROMPT_Y
+                    - LegalDisclaimerScreen.BODY_START_Y - 17);
+        }
+    }
+
+    @Test
+    void paragraphBreaksSurviveMeasuredPagination() {
+        var input = List.of("first", "", "second", "", "third");
+        assertEquals(input, LegalDisclaimerScreen.paginateBody(input, 17).stream()
+                .flatMap(List::stream).toList());
+    }
+
 }

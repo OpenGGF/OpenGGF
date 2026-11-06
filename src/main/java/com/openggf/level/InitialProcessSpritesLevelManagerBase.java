@@ -12,7 +12,12 @@ public abstract class InitialProcessSpritesLevelManagerBase {
     }
 
     public final boolean consumePendingInitialProcessSpritesPass() {
-        return lifecycle.consume(this::executeInitialProcessSprites);
+        return consumePendingInitialProcessSpritesPass(this::executeInitialProcessSprites);
+    }
+
+    /** Internal native continuation seam; retains the same one-shot authority owner. */
+    final boolean consumePendingInitialProcessSpritesPass(Runnable dispatch) {
+        return lifecycle.consume(dispatch);
     }
 
     public final void discardPendingInitialProcessSpritesForStateRestoration() {

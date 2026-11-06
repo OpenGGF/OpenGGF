@@ -92,6 +92,7 @@ class TestS3kSanctuaryOriginReturnLifecycle {
 
     @ParameterizedTest(name = "actual Saved2 supported product {0}")
     @MethodSource("configurations")
+    @org.junit.jupiter.api.Tag("exhaustive-audit")
     void everySupportedProductUsesRealInletExitAndBothIncomingWorlds(
             CanonicalEntryMatrixSupport.Row row) throws Exception {
         assertOriginReturn(row);
@@ -131,6 +132,7 @@ class TestS3kSanctuaryOriginReturnLifecycle {
 
     @ParameterizedTest(name = "actual supported results/Saved2 {0}/{1}")
     @MethodSource("supportedOutcomes")
+    @org.junit.jupiter.api.Tag("exhaustive-audit")
     void everySupportedOutcomeUsesTheRealPedestalResultsAndOriginOwners(
             CanonicalEntryMatrixSupport.Row row, SanctuaryResultsLifecycleProbe.Outcome outcome) throws Exception {
         assertOriginReturn(row, outcome);

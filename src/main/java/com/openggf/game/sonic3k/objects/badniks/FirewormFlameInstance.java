@@ -31,7 +31,7 @@ import java.util.List;
  *
  * <p>{@code loc_8F95C} runs {@code Refresh_ChildPositionAdjusted} first, so the flame is pinned to
  * its segment every frame, flips included, and never moves on its own. Its init
- * ({@code loc_8F97C}, :196497-196504) takes {@code word_8FA08} -- {@code priority $180}, an
+ * ({@code loc_8F97C}, :196502-196509) takes {@code word_8FA08} -- {@code priority $180}, an
  * {@code 8 x 8} box, {@code mapping_frame} 3, {@code collision_flags $98} -- through
  * {@code SetUp_ObjAttributes3}, which does <b>not</b> write mappings or {@code art_tile}: the flame
  * keeps the {@code Map_FirewormSegments} sheet {@code CreateChild1_Normal} copied from the segment.
@@ -40,7 +40,7 @@ import java.util.List;
  * <p>The flicker is two states. Routine 2 animates {@code byte_8FA56} through {@code Animate_Raw};
  * the script's {@code $F4} runs {@code loc_8F9A4} (:196511-196519), which parks
  * {@code mapping_frame} on 7 and waits a {@code Random_Number & $3F} number of frames in
- * {@code $2E(a0)}. {@code loc_8F9CE} (:196525-196528) then puts routine 2 back. The wait is the
+ * {@code $2E(a0)}. {@code loc_8F9CE} (:196530-196533) then puts routine 2 back. The wait is the
  * only randomness in the object, which is why every flame in a chain flickers out of step.
  */
 public final class FirewormFlameInstance extends AbstractObjectInstance

@@ -10,7 +10,7 @@ import com.openggf.game.sonic3k.runtime.LrzZoneRuntimeState;
  * <p>Stage 0 is reached only by the seamless act change. {@code loc_56CAA} ends with
  * {@code clr.w (Events_routine_bg)} (:115420) and the act word is already {@code $901}, so the
  * next background dispatch is this index's first entry; a direct {@code $901} load never sees it,
- * because {@code LRZ2_BackgroundInit} writes {@code #8} into the routine word (:115707) after its
+ * because {@code LRZ2_BackgroundInit} writes {@code #8} into the routine word (:115712) after its
  * own {@code Refresh_PlaneFull}.
  *
  * <p>What stage 0 does is arm a plane-B refill and start it on the same frame:

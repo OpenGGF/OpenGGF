@@ -13,6 +13,36 @@ class TestConfigServiceYamlRoundTrip {
     @TempDir
     Path tempDir;
 
+    @Test void interpolationDefaultsOffAndRoundTrips() throws Exception {
+        var service = SonicConfigurationService.createStandalone(tempDir);
+        assertFalse(service.getBoolean(SonicConfiguration.DISPLAY_INTERPOLATION));
+        service.setConfigValue(SonicConfiguration.DISPLAY_INTERPOLATION, true);
+        service.saveConfig();
+        assertTrue(SonicConfigurationService.createStandalone(tempDir)
+                .getBoolean(SonicConfiguration.DISPLAY_INTERPOLATION));
+        assertTrue(Files.readString(tempDir.resolve("config.yaml")).contains("interpolation: true"));
+        assertEquals(SettingTiming.NOW, SettingTiming.of(SonicConfiguration.DISPLAY_INTERPOLATION));
+    }
+
+    @Test void interpolationShortcutRoundTripsAndHasNoDefaultBindingConflict() throws Exception {
+        var service = SonicConfigurationService.createStandalone(tempDir);
+        var key = SonicConfiguration.DISPLAY_INTERPOLATION_TOGGLE_KEY;
+        assertEquals("N", service.getDefaultValue(key));
+        var draft = new EngineSettingsDraft(service);
+        assertTrue(draft.bindingConflicts(key).isEmpty());
+        for (var toggle : com.openggf.debug.DebugOverlayToggle.values()) {
+            assertNotEquals(toggle.keyCode(), service.getInt(key), toggle.name());
+        }
+        assertEquals(EngineSettingsDraft.category(SonicConfiguration.DISPLAY_COLOR_PROFILE_TOGGLE_KEY),
+                EngineSettingsDraft.category(key));
+        assertEquals(SettingTiming.RESTART, SettingTiming.of(key));
+        service.setConfigValue(key, "F8");
+        service.saveConfig();
+        assertEquals(org.lwjgl.glfw.GLFW.GLFW_KEY_F8,
+                SonicConfigurationService.createStandalone(tempDir).getInt(key));
+        assertTrue(Files.readString(tempDir.resolve("config.yaml")).contains("interpolationToggleKey: F8"));
+    }
+
     @Test
     void saveWritesGroupedYaml() throws Exception {
         Path yaml = tempDir.resolve("config.yaml");

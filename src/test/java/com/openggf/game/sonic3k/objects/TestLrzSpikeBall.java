@@ -47,7 +47,7 @@ class TestLrzSpikeBall {
     }
 
     /**
-     * {@code loc_4397E} (:89025-89029) with {@code subq.b #2,angle(a0)} (:89062): the boulder is
+     * {@code loc_4397E} (:89030-89034) with {@code subq.b #2,angle(a0)} (:89062): the boulder is
      * not static -- it grinds a full 128-pixel sweep on a 128-frame cycle.
      */
     @Test
@@ -182,8 +182,13 @@ class TestLrzSpikeBall {
         ball.update(1, null);
         assertEquals(BASE_X + 0x40, ball.getCentreX(), "precondition: swung 64 pixels right");
         assertEquals(BASE_X, ball.getOutOfRangeReferenceX());
-        assertFalse(ball.isCustomOutOfRange((BASE_X & 0xFF80) - 0x280), "$280 is inclusive: bhi");
-        assertTrue(ball.isCustomOutOfRange((BASE_X & 0xFF80) - 0x281));
+        int alignedBase = BASE_X & 0xFF80;
+        assertFalse(ball.isCustomOutOfRange(alignedBase - 0x200), "$280 is inclusive: bhi");
+        assertTrue(ball.isCustomOutOfRange(alignedBase - 0x201));
+        assertFalse(ball.isCustomOutOfRange(alignedBase + 4),
+                "raw camera crossing the placed-X block must not delete a visible boulder");
+        assertFalse(ball.isCustomOutOfRange(alignedBase + 0x80));
+        assertTrue(ball.isCustomOutOfRange(alignedBase + 0x100), "unsigned negative distance");
     }
 
     /**

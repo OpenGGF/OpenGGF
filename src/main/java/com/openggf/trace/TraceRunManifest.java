@@ -97,6 +97,21 @@ public record TraceRunManifest(
         }
     }
 
+    /**
+     * Requires the recorder's movie-end observation for complete-campaign
+     * certification. Loading and replaying partial runs deliberately keep the
+     * optional endpoint contract; neither a run name nor a complete_run segment
+     * profile establishes that the movie's ending was observed.
+     */
+    public ExpectedMovieEndMode requireRecordedMovieEndMode() {
+        if (expectedMovieEndMode == ExpectedMovieEndMode.UNSPECIFIED) {
+            throw new IllegalStateException("Run '" + runId + "' (" + sourceBk2
+                    + ") cannot certify a complete campaign without a recorder-observed"
+                    + " expected_movie_end_mode; partial replay remains supported");
+        }
+        return expectedMovieEndMode;
+    }
+
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record Segment(
         @JsonProperty("dir") String dir,

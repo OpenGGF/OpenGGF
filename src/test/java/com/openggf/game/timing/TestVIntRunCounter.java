@@ -2,10 +2,15 @@ package com.openggf.game.timing;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.LongSupplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -122,5 +127,133 @@ class TestVIntRunCounter {
         VIntRunCounter counter = new VIntRunCounter(4321);
         counter.resetForMissingSnapshot();
         assertEquals(4321L, counter.value());
+    }
+
+    @Test
+    void callbackRebindDuringUnbindKeepsTheNewInstallation() {
+        VIntRunCounter counter = new VIntRunCounter(7);
+        AtomicBoolean armed = new AtomicBoolean();
+        LongSupplier successor = () -> 900;
+        counter.bindObjectClock(() -> {
+            if (armed.getAndSet(false)) {
+                counter.bindObjectClock(successor);
+            }
+            return 100;
+        });
+
+        armed.set(true);
+        counter.unbindObjectClock();
+
+        assertTrue(counter.isObjectClockBound());
+        assertEquals(900L, counter.value());
+    }
+
+    @Test
+    void callbackRebindDuringBindCannotBeOverwrittenBySuspendedBind() {
+        VIntRunCounter counter = new VIntRunCounter(7);
+        AtomicBoolean armed = new AtomicBoolean();
+        counter.bindObjectClock(() -> {
+            if (armed.getAndSet(false)) {
+                counter.bindObjectClock(() -> 900);
+            }
+            return 100;
+        });
+
+        armed.set(true);
+        counter.bindObjectClock(() -> 300);
+
+        assertTrue(counter.isObjectClockBound());
+        assertEquals(900L, counter.value());
+    }
+
+    @Test
+    void exactSameSupplierReferenceReinstallationIsStillANewInstallation() {
+        VIntRunCounter counter = new VIntRunCounter(7);
+        AtomicBoolean armed = new AtomicBoolean();
+        LongSupplier[] same = new LongSupplier[1];
+        same[0] = () -> {
+            if (armed.getAndSet(false)) {
+                counter.bindObjectClock(same[0]);
+            }
+            return 100;
+        };
+        counter.bindObjectClock(same[0]);
+
+        armed.set(true);
+        counter.unbindObjectClock();
+
+        assertTrue(counter.isObjectClockBound());
+        assertEquals(100L, counter.value());
+    }
+
+    @Test
+    void throwingOldReadPreservesCallbackInstalledSuccessorAndThePrimaryException() {
+        VIntRunCounter counter = new VIntRunCounter(7);
+        AtomicBoolean armed = new AtomicBoolean();
+        IllegalStateException failure = new IllegalStateException("old clock read");
+        counter.bindObjectClock(() -> {
+            if (armed.getAndSet(false)) {
+                counter.bindObjectClock(() -> 900);
+                throw failure;
+            }
+            return 100;
+        });
+
+        armed.set(true);
+        assertSame(failure, assertThrows(IllegalStateException.class, counter::unbindObjectClock));
+
+        assertTrue(counter.isObjectClockBound());
+        assertEquals(900L, counter.value());
+    }
+
+    @Test
+    void nullBindDoesNotReadOrReplaceTheInstalledSupplier() {
+        VIntRunCounter counter = new VIntRunCounter(7);
+        AtomicInteger reads = new AtomicInteger();
+        counter.bindObjectClock(() -> {
+            reads.incrementAndGet();
+            return 123;
+        });
+
+        assertThrows(NullPointerException.class, () -> counter.bindObjectClock(null));
+
+        assertEquals(0, reads.get());
+        assertEquals(123L, counter.value());
+    }
+
+    @Test
+    void failedReadBeforeAnyRebindPreservesTheExistingGenericBinding() {
+        VIntRunCounter counter = new VIntRunCounter(17);
+        IllegalStateException failure = new IllegalStateException("read failure");
+        counter.bindObjectClock(() -> {
+            throw failure;
+        });
+
+        assertSame(failure, assertThrows(IllegalStateException.class, counter::unbindObjectClock));
+
+        assertTrue(counter.isObjectClockBound());
+    }
+
+    @Test
+    void callbackCompletedSuccessorUnbindKeepsItsCarriedValue() {
+        VIntRunCounter counter = new VIntRunCounter(7);
+        AtomicBoolean armed = new AtomicBoolean();
+        counter.bindObjectClock(() -> {
+            if (armed.getAndSet(false)) {
+                counter.bindObjectClock(() -> 900);
+                counter.unbindObjectClock();
+                assertFalse(counter.isObjectClockBound());
+                assertEquals(900L, counter.value());
+            }
+            return 100;
+        });
+
+        armed.set(true);
+        counter.unbindObjectClock();
+
+        assertFalse(counter.isObjectClockBound());
+        assertEquals(900L, counter.value());
+        counter.serviceRepresentedVBlank();
+        assertEquals(901L, counter.value());
     }
 }

@@ -1,5 +1,22 @@
 # Unfinished-Code Remediation Roadmap
 
+**Status: historical August queue; superseded for work selection (2026-10-29).**
+The waves below preserve the findings, rejected candidates and evidence at their
+stated August commits; “open”, “placeholder”, branch and toolchain statements
+are not a current source inventory. Use the [0.7 roadmap](../../project/v0.7-roadmap.md),
+[current discrepancies](../../status/known-discrepancies.md) and
+[trace frontier log](../../status/trace-frontier-log.md) to select work.
+The [August closeout](../validation/2026-08-09-unfinished-remediation-closeout.md)
+records subsequent delivery. Current source contains Big Arm's ROM-backed
+`LbzFinalBoss2Instance`/`LbzFinalBoss2RomData`, napalm/explosion children and native
+competition owners; do not schedule replacement placeholder ports from this
+queue. Their existence does not prove every character route or parity gate.
+
+Reuse the completion principles, not the old execution recipe. Current work
+uses JDK 25, queued focused Maven checks and change-based smoke under root
+`AGENTS.md`; full-suite is public-release preparation only. Preserve rejected
+attempts as evidence, never as code to reapply without current ROM diagnosis.
+
 ## Purpose
 
 Turn the findings in the 2026-08-08 dead/unfinished-code audit into verified,
@@ -50,10 +67,10 @@ attempts were rejected/unintegrated; the inert placeholder remains P0.
 Commands, test outcomes, unresolved work, and the rejected-branch rationale
 are recorded in
 `docs/architecture/validation/2026-08-08-unfinished-code-remediation.md`.
-This roadmap remains the path for the unresolved waves rather than implying
-that every audited feature is now complete.
+At that date, this roadmap remained the path for unresolved waves; the
+superseding current-status sources above now own work selection.
 
-## Priority waves
+## Historical priority waves (August state)
 
 ### Wave 1 — route-critical S3K behavior
 
@@ -141,7 +158,7 @@ that every audited feature is now complete.
 - A final independent review checks the combined diff against this roadmap and
   the audit before any integration into `develop`.
 
-## Wave acceptance gates
+## Historical wave acceptance gates (not current execution instructions)
 
 For each delivered item:
 

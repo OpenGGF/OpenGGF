@@ -23,6 +23,7 @@ import java.util.logging.Logger;
  * the SST-slot implementation; these objects use Map_AIZIntroPlane and
  * ArtTile_AIZIntroPlane, not the separately loaded Chaos Emerald art.
  */
+@com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.SCREEN_POSITION)
 public class AizIntroEmeraldGlowChild extends AbstractObjectInstance implements RewindRecreatable {
 
     private static final Logger LOG = Logger.getLogger(AizIntroEmeraldGlowChild.class.getName());

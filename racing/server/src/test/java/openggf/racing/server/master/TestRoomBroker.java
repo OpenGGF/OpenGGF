@@ -40,8 +40,9 @@ class TestRoomBroker {
         assertEquals("QUICK_CHAT", registry.find(relayId).orElseThrow().descriptor().chatMode());
 
         broker.onText(host, ControlCodec.encode(token, new ControlMessage.RoomCreate(
-                descriptor, "DIRECT", 27888, "0.6:cafe", List.of(), DIRECT_CERT_PIN)));
+                descriptor, "DIRECT", 27888, "0.6:cafe", List.of(), DIRECT_CERT_PIN, "fixture-instance", 0, null)));
         String directId = ((ControlMessage.RoomCreated) lastMessage(host)).roomId();
+        activateDirect(host, token, directId);
         FakeConnection guest = new FakeConnection();
         String guestToken = admit(guest, guestDir, "GUEST");
         broker.onText(guest, ControlCodec.encode(guestToken,
@@ -58,6 +59,132 @@ class TestRoomBroker {
     }
 
     private static final String DIRECT_CERT_PIN = "ab".repeat(32);
+
+    @Test
+    void directRoomIsNotJoinableDuringHostBridgeInstallation(
+            @TempDir Path hostDir, @TempDir Path guestDir) throws Exception {
+        FakeConnection host = new FakeConnection();
+        String hostToken = admit(host, hostDir, "HOST");
+        establish(PlayerIdentity.loadOrCreate(hostDir).fingerprint());
+        broker.onText(host, ControlCodec.encode(hostToken, new ControlMessage.RoomCreate(
+                new ControlMessage.RoomDescriptor("Pending", "s3k", 0, 0,
+                        "OPEN", null, 8, false), "DIRECT", 27888, "0.6:cafe",
+                List.of(), DIRECT_CERT_PIN, "pending-instance", 0, null)));
+        String roomId = assertInstanceOf(ControlMessage.RoomCreated.class, lastMessage(host)).roomId();
+        FakeConnection guest = new FakeConnection();
+        String guestToken = admit(guest, guestDir, "GUEST");
+        assertTrue(registry.listed(null).isEmpty(), "pending direct room was listed");
+        broker.onText(guest, ControlCodec.encode(guestToken,
+                new ControlMessage.RoomListRequest(null, 0)));
+        assertTrue(assertInstanceOf(ControlMessage.RoomListResult.class,
+                lastMessage(guest)).rooms().isEmpty());
+        broker.onText(guest, ControlCodec.encode(guestToken,
+                new ControlMessage.RoomJoinRequest(roomId)));
+        assertInstanceOf(ControlMessage.RoomJoinRejected.class, lastMessage(guest));
+        assertTrue(tunnels.registered.isEmpty());
+        broker.onText(guest, ControlCodec.encode(guestToken,
+                new ControlMessage.RoomActivate(roomId, "pending-instance"), 11));
+        assertTrue(!assertInstanceOf(ControlMessage.RoomActivated.class, lastMessage(guest)).active());
+        broker.onText(host, ControlCodec.encode(hostToken,
+                new ControlMessage.RoomActivate(roomId, "pending-instance"), 12));
+        assertTrue(assertInstanceOf(ControlMessage.RoomActivated.class, lastMessage(host)).active());
+        assertEquals(1, registry.listed(null).size());
+        assertEquals(List.of(roomId), tunnels.registered);
+        now += 10_000;
+        broker.onText(guest, ControlCodec.encode(guestToken,
+                new ControlMessage.RoomListRequest(null, 0)));
+        assertEquals(roomId, assertInstanceOf(ControlMessage.RoomListResult.class,
+                lastMessage(guest)).rooms().getFirst().roomId());
+        broker.onText(guest, ControlCodec.encode(guestToken,
+                new ControlMessage.RoomJoinRequest(roomId)));
+        assertInstanceOf(ControlMessage.RoomJoinResult.class, lastMessage(guest));
+    }
+
+    @Test
+    void directRoomOwnerCannotTunnelThroughItsOwnMasterConnection(@TempDir Path hostDir)
+            throws Exception {
+        FakeConnection host = new FakeConnection();
+        String token = admit(host, hostDir, "HOST");
+        establish(PlayerIdentity.loadOrCreate(hostDir).fingerprint());
+        broker.onText(host, ControlCodec.encode(token, new ControlMessage.RoomCreate(
+                new ControlMessage.RoomDescriptor("Listed", "s3k", 0, 0,
+                        "OPEN", null, 8, false), "DIRECT", 27888, "0.6:cafe",
+                List.of(), DIRECT_CERT_PIN, "owner-instance", 0, null)));
+        String roomId = ((ControlMessage.RoomCreated) lastMessage(host)).roomId();
+        activateDirect(host, token, roomId);
+        broker.onText(host, ControlCodec.encode(token, new ControlMessage.RoomJoinRequest(roomId)));
+        ControlMessage.RoomJoinResult prepared = assertInstanceOf(
+                ControlMessage.RoomJoinResult.class, lastMessage(host));
+
+        broker.onText(host, ControlCodec.encode(token, new ControlMessage.RelayAttach(roomId,
+                prepared.grantReference(), prepared.routeGeneration())));
+        assertTrue(tunnels.opened.isEmpty(), "the host link cannot also be its own tunnel guest");
+        assertTrue(broker.takeAttachResult(host).isEmpty());
+        assertInstanceOf(ControlMessage.RoomJoinRejected.class, lastMessage(host));
+        broker.onText(host, ControlCodec.encode(token, new ControlMessage.RoomListRequest(null, 0)));
+        assertInstanceOf(ControlMessage.RoomListResult.class, lastMessage(host));
+    }
+
+    @Test
+    void directGrantIsRedeemedOnlyByCurrentHostForProvedGuest(
+            @TempDir Path hostDir, @TempDir Path guestDir) throws Exception {
+        FakeConnection host = new FakeConnection();
+        String hostToken = admit(host, hostDir, "HOST");
+        establish(PlayerIdentity.loadOrCreate(hostDir).fingerprint());
+        broker.onText(host, ControlCodec.encode(hostToken, new ControlMessage.RoomCreate(
+                new ControlMessage.RoomDescriptor("Listed", "s3k", 0, 0,
+                        "OPEN", null, 8, false), "DIRECT", 27888, "0.6:cafe",
+                List.of(), DIRECT_CERT_PIN, "instance-1", 0, null)));
+        String roomId = ((ControlMessage.RoomCreated) lastMessage(host)).roomId();
+        activateDirect(host, hostToken, roomId);
+        FakeConnection guest = new FakeConnection();
+        String guestToken = admit(guest, guestDir, "GUEST");
+        String guestFingerprint = PlayerIdentity.loadOrCreate(guestDir).fingerprint();
+        broker.onText(guest, ControlCodec.encode(guestToken,
+                new ControlMessage.RoomJoinRequest(roomId)));
+        ControlMessage.RoomJoinResult prepared = assertInstanceOf(
+                ControlMessage.RoomJoinResult.class, lastMessage(guest));
+        assertNotNull(prepared.grantReference());
+        assertTrue(prepared.routeGeneration() > 0);
+
+        ControlMessage.RoomGrantRedeem redeem = new ControlMessage.RoomGrantRedeem(roomId,
+                prepared.instanceId(),
+                prepared.grantReference(), prepared.routeGeneration(), guestFingerprint);
+        broker.onText(guest, ControlCodec.encode(guestToken, redeem, 10));
+        assertTrue(!assertInstanceOf(ControlMessage.RoomGrantDecision.class,
+                lastMessage(guest)).allowed());
+        broker.onText(host, ControlCodec.encode(hostToken,
+                new ControlMessage.RoomGrantRedeem(roomId, prepared.instanceId(),
+                        prepared.grantReference(),
+                        prepared.routeGeneration(), "other"), 11));
+        assertTrue(!assertInstanceOf(ControlMessage.RoomGrantDecision.class,
+                lastMessage(host)).allowed());
+        broker.onText(host, ControlCodec.encode(hostToken, redeem, 12));
+        assertTrue(assertInstanceOf(ControlMessage.RoomGrantDecision.class,
+                lastMessage(host)).allowed());
+        broker.onText(host, ControlCodec.encode(hostToken, redeem, 13));
+        assertTrue(!assertInstanceOf(ControlMessage.RoomGrantDecision.class,
+                lastMessage(host)).allowed());
+
+        int guestMessagesBeforeRetire = guest.text.size();
+        broker.onText(guest, ControlCodec.encode(guestToken,
+                new ControlMessage.RoomRouteRetire(roomId, prepared.instanceId(),
+                        prepared.grantReference(), prepared.routeGeneration()), 20));
+        ControlMessage.RoomRouteRetireNotice notice = assertInstanceOf(
+                ControlMessage.RoomRouteRetireNotice.class, lastMessage(host));
+        assertEquals(guestMessagesBeforeRetire, guest.text.size(),
+                "guest must wait for the room owner's retirement receipt");
+        ControlMessage.RoomRouteRetireAck ack = new ControlMessage.RoomRouteRetireAck(
+                roomId, prepared.instanceId(), prepared.grantReference(),
+                prepared.routeGeneration(), notice.retirementId());
+        broker.onText(guest, ControlCodec.encode(guestToken, ack));
+        assertEquals(guestMessagesBeforeRetire, guest.text.size());
+        broker.onText(host, ControlCodec.encode(hostToken, ack));
+        ControlMessage.RoomRouteRenewed renewed = assertInstanceOf(
+                ControlMessage.RoomRouteRenewed.class, lastMessage(guest));
+        assertTrue(renewed.join().routeGeneration() > prepared.routeGeneration());
+        assertTrue(!renewed.join().grantReference().equals(prepared.grantReference()));
+    }
     static final class FakeConnection implements HubConnection, com.openggf.net.hub.HandshakeTransport {
         @Override public String authenticationBinding() { return com.openggf.net.protocol.AuthenticationTranscript.LOCAL_PLAINTEXT; }
         final List<String> text = new ArrayList<>();
@@ -80,7 +207,8 @@ class TestRoomBroker {
         }
         @Override public void noteGuestTier(String fingerprint, boolean isNew) { }
         @Override public boolean attach(HubConnection connection, String roomId,
-                                        String fingerprint, String displayName) {
+                                        String fingerprint, String displayName,
+                                        String instanceId, String grantReference, long routeGeneration) {
             attached.add(roomId + ":" + fingerprint);
             return true;
         }
@@ -91,14 +219,20 @@ class TestRoomBroker {
         final List<String> registered = new ArrayList<>();
         final List<String> opened = new ArrayList<>();
 
-        @Override public void registerHost(String roomId, HubConnection hostConnection) {
+        @Override public void registerHost(String roomId,
+                                           SessionRegistry.RegistrationLease registration) {
             registered.add(roomId);
         }
-        @Override public OptionalInt openGuest(String roomId, HubConnection guestConnection) {
+        @Override public OptionalInt openGuest(String roomId, HubConnection guestConnection,
+                String instanceId, String fingerprint, String grantReference,
+                long routeGeneration, SessionRegistry.RegistrationLease registration) {
             opened.add(roomId);
             return OptionalInt.of(7);
         }
-        @Override public void unregisterHost(String roomId) { registered.remove(roomId); }
+        @Override public void unregisterHost(String roomId,
+                                             SessionRegistry.RegistrationLease registration) {
+            registered.remove(roomId);
+        }
     }
 
     @TempDir Path dir;
@@ -134,6 +268,14 @@ class TestRoomBroker {
 
     private static ControlMessage lastMessage(FakeConnection connection) {
         return ControlCodec.decode(connection.text.getLast()).message();
+    }
+
+    private void activateDirect(FakeConnection owner, String token, String roomId) {
+        String instanceId = registry.find(roomId).orElseThrow().instanceId();
+        broker.onText(owner, ControlCodec.encode(token,
+                new ControlMessage.RoomActivate(roomId, instanceId)));
+        assertTrue(assertInstanceOf(ControlMessage.RoomActivated.class,
+                lastMessage(owner)).active());
     }
 
     private String admit(FakeConnection connection, Path identityDir, String name)
@@ -196,14 +338,16 @@ class TestRoomBroker {
                 "Room", "s3k", 0, 0, "OPEN", null, 8, false);
         broker.onText(connection, ControlCodec.encode(token,
                 new ControlMessage.RoomCreate(descriptor, "DIRECT", 27888, "0.6:cafe",
-                        List.of(), DIRECT_CERT_PIN)));
+                        List.of(), DIRECT_CERT_PIN, "fixture-instance", 0, null)));
         assertInstanceOf(ControlMessage.RoomCreateRejected.class, lastMessage(connection));
 
         establish(PlayerIdentity.loadOrCreate(idDir).fingerprint());
         broker.onText(connection, ControlCodec.encode(token,
                 new ControlMessage.RoomCreate(descriptor, "DIRECT", 27888, "0.6:cafe",
-                        List.of(), DIRECT_CERT_PIN)));
+                        List.of(), DIRECT_CERT_PIN, "fixture-instance", 0, null)));
         assertInstanceOf(ControlMessage.RoomCreated.class, lastMessage(connection));
+        activateDirect(connection, token,
+                ((ControlMessage.RoomCreated) lastMessage(connection)).roomId());
         assertEquals(1, tunnels.registered.size());
     }
 
@@ -224,9 +368,12 @@ class TestRoomBroker {
         String guestToken = admit(guest, guestDir, "GUEST");
         broker.onText(guest, ControlCodec.encode(guestToken,
                 new ControlMessage.RoomJoinRequest(roomId)));
-        assertEquals("RELAY", ((ControlMessage.RoomJoinResult) lastMessage(guest)).routing());
+        ControlMessage.RoomJoinResult prepared =
+                (ControlMessage.RoomJoinResult) lastMessage(guest);
+        assertEquals("RELAY", prepared.routing());
         broker.onText(guest, ControlCodec.encode(guestToken,
-                new ControlMessage.RelayAttach(roomId)));
+                new ControlMessage.RelayAttach(roomId,
+                        prepared.grantReference(), prepared.routeGeneration())));
         assertEquals(1, relays.attached.size());
     }
 
@@ -238,8 +385,9 @@ class TestRoomBroker {
         establish(PlayerIdentity.loadOrCreate(hostDir).fingerprint());
         broker.onText(host, ControlCodec.encode(hostToken, new ControlMessage.RoomCreate(
                 new ControlMessage.RoomDescriptor("R", "s3k", 0, 0, "OPEN", null, 8, false),
-                "DIRECT", 27888, "0.6:AAAA", List.of(), DIRECT_CERT_PIN)));
+                "DIRECT", 27888, "0.6:AAAA", List.of(), DIRECT_CERT_PIN, "fixture-instance", 0, null)));
         String roomId = ((ControlMessage.RoomCreated) lastMessage(host)).roomId();
+        activateDirect(host, hostToken, roomId);
 
         FakeConnection guest = new FakeConnection();
         String guestToken = admit(guest, guestDir, "GUEST");
@@ -256,14 +404,18 @@ class TestRoomBroker {
         establish(PlayerIdentity.loadOrCreate(hostDir).fingerprint());
         ControlMessage.RoomDescriptor descriptor = new ControlMessage.RoomDescriptor(
                 "R", "s3k", 0, 0, "OPEN", null, 8, false);
-        broker.onText(host, ControlCodec.encode(hostToken,
-                new ControlMessage.RoomCreate(descriptor, "DIRECT", 27888, "0.6:cafe")));
-        assertInstanceOf(ControlMessage.RoomCreateRejected.class, lastMessage(host));
+        assertThrows(com.openggf.net.protocol.ProtocolViolationException.class,
+                () -> new com.openggf.net.protocol.ControlJsonCodec().decodeMasterClient(
+                        ControlCodec.encode(hostToken,
+                                new ControlMessage.RoomCreate(descriptor, "DIRECT", 27888,
+                                        "0.6:cafe")),
+                        com.openggf.net.protocol.Protocol.MAX_MASTER_FRAME_BYTES));
 
         broker.onText(host, ControlCodec.encode(hostToken,
                 new ControlMessage.RoomCreate(descriptor, "DIRECT", 27888, "0.6:cafe",
-                        List.of(), DIRECT_CERT_PIN)));
+                        List.of(), DIRECT_CERT_PIN, "fixture-instance", 0, null)));
         String roomId = ((ControlMessage.RoomCreated) lastMessage(host)).roomId();
+        activateDirect(host, hostToken, roomId);
         FakeConnection guest = new FakeConnection();
         String guestToken = admit(guest, guestDir, "GUEST");
         broker.onText(guest, ControlCodec.encode(guestToken,
@@ -296,7 +448,7 @@ class TestRoomBroker {
         establish(fingerprint);
         broker.onText(host, ControlCodec.encode(token, new ControlMessage.RoomCreate(
                 new ControlMessage.RoomDescriptor("R", "s3k", 0, 0, "OPEN", null, 8, false),
-                "DIRECT", 27888, "0.6:cafe", List.of(), DIRECT_CERT_PIN)));
+                "DIRECT", 27888, "0.6:cafe", List.of(), DIRECT_CERT_PIN, "fixture-instance", 0, null)));
         String roomId = ((ControlMessage.RoomCreated) lastMessage(host)).roomId();
         ladder.sanction(new IdentityStore.SanctionRecord(fingerprint, "BAN", "cheat",
                 "operator", now, Long.MAX_VALUE));
@@ -322,8 +474,11 @@ class TestRoomBroker {
         String guestToken = admit(guest, guestDir, "GUEST");
         broker.onText(guest, ControlCodec.encode(guestToken,
                 new ControlMessage.RoomJoinRequest(roomId)));
+        ControlMessage.RoomJoinResult prepared =
+                (ControlMessage.RoomJoinResult) lastMessage(guest);
         broker.onText(guest, ControlCodec.encode(guestToken,
-                new ControlMessage.RelayAttach(roomId)));
+                new ControlMessage.RelayAttach(roomId,
+                        prepared.grantReference(), prepared.routeGeneration())));
 
         String guestFingerprint = PlayerIdentity.loadOrCreate(guestDir).fingerprint();
         ladder.sanction(new IdentityStore.SanctionRecord(guestFingerprint, "TIMEOUT",
@@ -342,7 +497,7 @@ class TestRoomBroker {
         establish(PlayerIdentity.loadOrCreate(hostDir).fingerprint());
         broker.onText(host, ControlCodec.encode(token, new ControlMessage.RoomCreate(
                 new ControlMessage.RoomDescriptor("R", "s3k", 0, 0, "OPEN", null, 8, false),
-                "DIRECT", 27888, "0.6:cafe", List.of(), DIRECT_CERT_PIN)));
+                "DIRECT", 27888, "0.6:cafe", List.of(), DIRECT_CERT_PIN, "fixture-instance", 0, null)));
         broker.onDisconnected(host);
         assertTrue(tunnels.registered.isEmpty());
 
@@ -361,8 +516,9 @@ class TestRoomBroker {
         establish(PlayerIdentity.loadOrCreate(hostDir).fingerprint());
         broker.onText(owner, ControlCodec.encode(ownerToken, new ControlMessage.RoomCreate(
                 new ControlMessage.RoomDescriptor("R", "s3k", 0, 0, "OPEN", null, 8, false),
-                "DIRECT", 27888, "0.6:cafe", List.of(), DIRECT_CERT_PIN)));
+                "DIRECT", 27888, "0.6:cafe", List.of(), DIRECT_CERT_PIN, "fixture-instance", 0, null)));
         String roomId = ((ControlMessage.RoomCreated) lastMessage(owner)).roomId();
+        activateDirect(owner, ownerToken, roomId);
         FakeConnection unrelated = new FakeConnection();
         String unrelatedToken = admit(unrelated, hostDir, "HOST");
 
@@ -383,7 +539,7 @@ class TestRoomBroker {
         establish(PlayerIdentity.loadOrCreate(hostDir).fingerprint());
         broker.onText(owner, ControlCodec.encode(ownerToken, new ControlMessage.RoomCreate(
                 new ControlMessage.RoomDescriptor("R", "s3k", 0, 0, "OPEN", null, 8, false),
-                "DIRECT", 27888, "0.6:cafe", List.of(), DIRECT_CERT_PIN)));
+                "DIRECT", 27888, "0.6:cafe", List.of(), DIRECT_CERT_PIN, "fixture-instance", 0, null)));
         String roomId = ((ControlMessage.RoomCreated) lastMessage(owner)).roomId();
         SessionRegistry.RoomEntry original = registry.find(roomId).orElseThrow();
         FakeConnection unrelated = new FakeConnection();
@@ -416,18 +572,19 @@ class TestRoomBroker {
     }
 
     @Test
-    void invalidRoomCreateStillReceivesRejection(@TempDir Path identityDir)
+    void invalidRoomCreateIsRejectedAtDecode(@TempDir Path identityDir)
             throws Exception {
         FakeConnection host = new FakeConnection();
         String token = admit(host, identityDir, "HOST");
         int before = host.text.size();
 
-        broker.onText(host, ControlCodec.encode(token, new ControlMessage.RoomCreate(
-                new ControlMessage.RoomDescriptor("R", "s3k", 0, 0,
-                        "OPEN", null, 8, false), "INVALID", 0, "0.6:cafe")));
-
-        assertEquals(before + 1, host.text.size());
-        assertInstanceOf(ControlMessage.RoomCreateRejected.class, lastMessage(host));
+        assertThrows(com.openggf.net.protocol.ProtocolViolationException.class,
+                () -> new com.openggf.net.protocol.ControlJsonCodec().decodeMasterClient(
+                        ControlCodec.encode(token, new ControlMessage.RoomCreate(
+                                new ControlMessage.RoomDescriptor("R", "s3k", 0, 0,
+                                        "OPEN", null, 8, false), "INVALID", 0, "0.6:cafe")),
+                        com.openggf.net.protocol.Protocol.MAX_MASTER_FRAME_BYTES));
+        assertEquals(before, host.text.size());
     }
 
     @Test
@@ -470,9 +627,12 @@ class TestRoomBroker {
         establish(PlayerIdentity.loadOrCreate(idDir).fingerprint());
         ControlMessage.RoomDescriptor descriptor = new ControlMessage.RoomDescriptor(
                 "Huge", "s3k", 0, 0, "OPEN", null, 64, false);
-        broker.onText(connection, ControlCodec.encode(token,
-                new ControlMessage.RoomCreate(descriptor, "DIRECT", 27888, "0.6:cafe")));
-        assertInstanceOf(ControlMessage.RoomCreateRejected.class, lastMessage(connection));
+        assertThrows(com.openggf.net.protocol.ProtocolViolationException.class,
+                () -> new com.openggf.net.protocol.ControlJsonCodec().decodeMasterClient(
+                        ControlCodec.encode(token, new ControlMessage.RoomCreate(descriptor,
+                                "DIRECT", 27888, "0.6:cafe", List.of(), DIRECT_CERT_PIN,
+                                "fixture-instance", 0, null)),
+                        com.openggf.net.protocol.Protocol.MAX_MASTER_FRAME_BYTES));
         broker.onText(connection, ControlCodec.encode(token,
                 new ControlMessage.RoomCreate(descriptor, "RELAY", 0, "0.6:cafe")));
         assertInstanceOf(ControlMessage.RoomCreated.class, lastMessage(connection));
@@ -492,7 +652,7 @@ class TestRoomBroker {
         FakeConnection guest = new FakeConnection();
         String guestToken = admit(guest, guestDir, "GUEST");
         broker.onText(guest, ControlCodec.encode(guestToken,
-                new ControlMessage.RelayAttach(roomId)));
+                new ControlMessage.RelayAttach(roomId, "ungranted", 1)));
         assertInstanceOf(ControlMessage.RoomJoinRejected.class, lastMessage(guest));
         assertTrue(relays.attached.isEmpty());
     }
@@ -508,22 +668,24 @@ class TestRoomBroker {
                 "R", "s3k", 0, 0, "OPEN", null, 8, false);
         broker.onText(host, ControlCodec.encode(token, new ControlMessage.RoomCreate(
                 descriptor, "DIRECT", 27888, "0.6:cafe", List.of("s2:0:0"),
-                DIRECT_CERT_PIN)));
+                DIRECT_CERT_PIN, "fixture-instance", 0, null)));
         assertEquals("invalid vote track pool: s2:0:0 is not a s3k act",
                 ((ControlMessage.RoomCreateRejected) lastMessage(host)).reason());
         broker.onText(host, ControlCodec.encode(token, new ControlMessage.RoomCreate(
                 descriptor, "DIRECT", 27888, "0.6:cafe", List.of("s3k:0:1", "s3k:12:0"),
-                DIRECT_CERT_PIN)));
+                DIRECT_CERT_PIN, "fixture-instance", 0, null)));
         assertEquals("invalid vote track pool: s3k:12:0 is not an eligible Time Attack act",
                 ((ControlMessage.RoomCreateRejected) lastMessage(host)).reason());
-        broker.onText(host, ControlCodec.encode(token, new ControlMessage.RoomCreate(
-                descriptor, "DIRECT", 27888, "0.6:cafe", List.of("s3k:0:1", "s3k:0:1"),
-                DIRECT_CERT_PIN)));
-        assertEquals("invalid vote track pool: duplicate track key",
-                ((ControlMessage.RoomCreateRejected) lastMessage(host)).reason());
+        assertThrows(com.openggf.net.protocol.ProtocolViolationException.class,
+                () -> new com.openggf.net.protocol.ControlJsonCodec().decodeMasterClient(
+                        ControlCodec.encode(token, new ControlMessage.RoomCreate(
+                                descriptor, "DIRECT", 27888, "0.6:cafe",
+                                List.of("s3k:0:1", "s3k:0:1"), DIRECT_CERT_PIN,
+                                "fixture-instance", 0, null)),
+                        com.openggf.net.protocol.Protocol.MAX_MASTER_FRAME_BYTES));
         broker.onText(host, ControlCodec.encode(token, new ControlMessage.RoomCreate(
                 descriptor, "DIRECT", 27888, "0.6:cafe", List.of("s3k:0:1"),
-                DIRECT_CERT_PIN)));
+                DIRECT_CERT_PIN, "fixture-instance", 0, null)));
         String roomId = ((ControlMessage.RoomCreated) lastMessage(host)).roomId();
         assertEquals(List.of("s3k:0:1"), registry.find(roomId).orElseThrow().voteTrackKeys());
 
@@ -546,7 +708,8 @@ class TestRoomBroker {
 
         establish(hostFingerprint);
         broker.onText(host, ControlCodec.encode(hostToken, new ControlMessage.RoomCreate(
-                verified, "DIRECT", 27888, "0.6:cafe")));
+                verified, "DIRECT", 27888, "0.6:cafe", List.of(), DIRECT_CERT_PIN,
+                "fixture-instance", 0, null)));
         assertEquals("verified rooms are relay-only",
                 ((ControlMessage.RoomCreateRejected) lastMessage(host)).reason());
         broker.onText(host, ControlCodec.encode(hostToken, new ControlMessage.RoomCreate(

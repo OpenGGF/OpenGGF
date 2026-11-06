@@ -143,6 +143,21 @@ public final class S3kDezConveyorPadObjectInstance extends AbstractObjectInstanc
     @Override public SolidExecutionMode solidExecutionMode(){return SolidExecutionMode.MANUAL_CHECKPOINT;}
     @Override public SolidObjectParams getSolidParams(){return SolidObjectParams.of((wide()?0x80:0x40)+0xB,0x10,0x11);}
     @Override public SolidRoutineProfile getSolidRoutineProfile(){return SolidRoutineProfile.fullSolid(false);}
+    @Override public boolean usesInstanceSolidStateLatchKey() {
+        // loc_47A14 (sonic3k.asm:93712-93733) moves y_pos without clearing
+        // this SST occupant's status. Dynamic presentation metadata is not
+        // the owner of its per-player standing/pushing bits.
+        return true;
+    }
+    @Override public boolean clearsStandingBitOnContinuedRideExit(PlayableEntity player) {
+        // SolidObjectFull_1P (sonic3k.asm:41061-41081) clears this player's
+        // status bit on air/range exit, before sub_47A96's next conveyor carry.
+        // An in-bounds object-controlled seat returns without clearing it at
+        // loc_1E1CA / loc_1E1F4 (sonic3k.asm:41707-41742).
+        int halfWidth=getSolidParams().halfWidth();
+        int relativeX=(player.getCentreX()-currentX+halfWidth)&0xFFFF;
+        return player.getAir()||relativeX>=halfWidth*2;
+    }
     @Override public boolean allowsObjectControlledSolidContacts(){return true;}
     @Override public boolean checksOutOfRangeAfterRoutine(){return true;}
     @Override public boolean usesCustomOutOfRangeCheck(){return true;}

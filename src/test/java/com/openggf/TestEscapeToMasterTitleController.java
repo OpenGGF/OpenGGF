@@ -24,7 +24,7 @@ class TestEscapeToMasterTitleController {
         press(input, GLFW_KEY_ESCAPE);
         controller.update(GameMode.LEVEL, input);
         assertTrue(controller.visible());
-        assertEquals("HOLD TO RETURN TO GAMES", controller.message());
+        assertEquals("Hold to return to games", controller.message());
 
         release(input, GLFW_KEY_ESCAPE);
         for (int frame = 0; frame < EscapeToMasterTitleController.PROMPT_MINIMUM_FRAMES - 1; frame++) {

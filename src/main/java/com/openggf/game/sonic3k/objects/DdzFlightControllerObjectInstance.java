@@ -4,6 +4,7 @@ import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kSuperStateController;
+import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.runtime.DdzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
@@ -155,7 +156,8 @@ public final class DdzFlightControllerObjectInstance extends AbstractDdzObjectIn
         flags |= 1 << 3;
         Camera camera = services().camera();
         int cameraX = camera.getX() & 0xFFFF;
-        ddz.setLockedCameraX((cameraX << 16) | ddz.cameraXFraction());
+        // loc_814B8: move.l (Camera_X_pos).w,(_unkFA86).w, the shared low word included.
+        ddz.setLockedCameraX(com.openggf.camera.CameraSubpixelAccess.xFixed(camera));
         ddz.setCameraStoredMinX(cameraX);
         camera.setMinX((short) cameraX);
         camera.setMaxX((short) cameraX);
@@ -193,6 +195,10 @@ public final class DdzFlightControllerObjectInstance extends AbstractDdzObjectIn
         com.openggf.sprites.managers.SpriteManagerInternalAccess
                 .retireAllSidekicksForRewind(services().spriteManager());
         spawnFreeChild(DdzMusicTempoObjectInstance::new);
+        // loc_815F2 (sonic3k.asm:173370-173373): Queue_Kos_Module ArtKosM_DDZMisc at
+        // ArtTile_DDZMisc. The module FIFO owns the job after this sprite's init.
+        DdzObjectSupport.queueGlobalModule(services(),
+                Sonic3kConstants.ART_KOSM_DDZ_MISC_ADDR, Sonic3kConstants.ARTTILE_DDZ_MISC, "DDZ misc");
     }
 
     /** {@code loc_8160A}. */
@@ -221,6 +227,9 @@ public final class DdzFlightControllerObjectInstance extends AbstractDdzObjectIn
             formlessReleaseTimer = FORMLESS_RELEASE_FRAMES;
         } else {
             flags |= 1 << 7;
+            // loc_8160A (sonic3k.asm:173393) writes the anim byte directly, after
+            // Player_1's own pass; Animate_Sonic sees it change on the next pass.
+            player.setAnimationId(0x1F);
         }
         player.setInvincibleFrames(0);
     }
@@ -437,11 +446,11 @@ public final class DdzFlightControllerObjectInstance extends AbstractDdzObjectIn
             ddz.setScrollSpeed(speed);
         }
         Camera camera = services().camera();
-        int oldCamera = ((camera.getX() & 0xFFFF) << 16) | ddz.cameraXFraction();
+        int oldCamera = com.openggf.camera.CameraSubpixelAccess.xFixed(camera);
         int newCamera = (oldCamera + speed) & 0x7FFFFFFF;
         int newX = (newCamera >>> 16) & 0xFFFF;
         camera.setX((short) newX);
-        ddz.setCameraXFraction(newCamera & 0xFFFF);
+        com.openggf.camera.CameraSubpixelAccess.setXFraction(camera, newCamera);
         ddz.addBackgroundScroll((short) (speed >> 16));
         camera.setMinX((short) newX);
         camera.setMaxX((short) (newX + maxXOffset));

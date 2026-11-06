@@ -45,9 +45,9 @@ import java.util.logging.Logger;
  * <p>
  * <b>Movement Tables (each entry is 3 words = 6 bytes: x_vel, y_vel, duration):</b>
  * <ul>
- *   <li>byte_27CDC: MTZ - 4 phases (s2.asm:53853)</li>
- *   <li>byte_27CF4: MCZ counter-clockwise (no x_flip) - 5 declared, 4 active (s2.asm:53859)</li>
- *   <li>byte_27D12: MCZ clockwise (x_flip set) - 5 declared, 4 active (s2.asm:53866)</li>
+ *   <li>byte_27CDC: MTZ - 4 phases (s2.asm:54332)</li>
+ *   <li>byte_27CF4: MCZ counter-clockwise (no x_flip) - 5 declared, 4 active (s2.asm:54338)</li>
+ *   <li>byte_27D12: MCZ clockwise (x_flip set) - 5 declared, 4 active (s2.asm:54345)</li>
  * </ul>
  * Phase advance wraps at {@code cmpi.b #6*4,objoff_38} (s2.asm:53846), so only
  * the first 4 entries of each table are reachable through normal cycling.
@@ -223,7 +223,7 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
         //   MCZ (routine 4, loc_27C66): move unconditionally from the start.
         this.activated = !isMtz;
 
-        // Init's tail call to loc_27CA2 (s2.asm:53751) preloads the first
+        // Init's tail call to loc_27CA2 (s2.asm:54315) preloads the first
         // phase's velocity/duration and advances objoff_38 by 6.
         loadPhaseParameters();
         initialized = true;
@@ -289,19 +289,6 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public boolean preservesSidekickCpuPushGraceWhileRiding(PlayableEntity player) {
-        // TailsCPU_Normal reads Status_Push before the later Obj6A
-        // SolidObject pass can clear or refresh the object's live status byte
-        // (s2.asm:39297-39300, Obj6A solid call at s2.asm:54301).
-        return player != null && player.isCpuControlled();
-    }
-
-    @Override
-    public int sidekickCpuPushGraceMinimumFramesWhileRiding(PlayableEntity player) {
-        return preservesSidekickCpuPushGraceWhileRiding(player) ? 8 : Integer.MAX_VALUE;
-    }
-
-    @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         ensureInitialized();
         // ROM parity: the MCZ subtype-0x18 #$18 check
@@ -353,12 +340,12 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * MTZ routine 2 (loc_27BDE @ s2.asm:53754): wait for the player to walk off,
+     * MTZ routine 2 (loc_27BDE @ s2.asm:54233): wait for the player to walk off,
      * then cycle through the movement table from the next frame onward.
      */
     private void updateMtz(boolean playerStanding) {
         if (activated) {
-            // loc_27C2E (s2.asm:53786): move, decrement, advance phase on hit.
+            // loc_27C2E (s2.asm:54265): move, decrement, advance phase on hit.
             applyMovement();
         } else {
             // Standing-state edge detection (lines 53756-53783): activation
@@ -378,7 +365,7 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * MCZ routine 4 (loc_27C66 @ s2.asm:53810): move unconditionally every frame.
+     * MCZ routine 4 (loc_27C66 @ s2.asm:54289): move unconditionally every frame.
      */
     private void updateMcz() {
         applyMovement();
@@ -403,7 +390,7 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * Implements loc_27CA2 (s2.asm:53835): read the current 6-byte entry from
+     * Implements loc_27CA2 (s2.asm:54314): read the current 6-byte entry from
      * the velocity table at byte offset {@code phaseIndex}, advance the cursor
      * by 6, wrap at {@code 6*4 = 24}, AND clear the activation flag
      * ({@code move.b #0,objoff_36(a0)} at s2.asm:53844). The activation reset
@@ -562,7 +549,7 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
             // mapping_frame=1) against level art (base tile 0) on VDP palette line 3.
             List<SpriteMappingFrame> mappings = MAPPINGS.get(
                     Sonic2Constants.MAP_UNC_MTZ_PLATFORM_LEVELART_ADDR,
-                    S2SpriteDataLoader::loadMappingFrames, "Obj65a");
+                    S2SpriteDataLoader::loadStockMappingFrames, "Obj65a");
             int frame = 1;
             if (mappings.isEmpty() || frame >= mappings.size()) {
                 return;

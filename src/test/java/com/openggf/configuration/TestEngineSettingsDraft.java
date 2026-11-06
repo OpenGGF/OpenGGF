@@ -16,6 +16,40 @@ class TestEngineSettingsDraft {
     @TempDir Path directory;
 
     @Test
+    void rewindSelectorPersistsOffAndOrderedScopesWithoutASecondSwitch() throws IOException {
+        var config = service();
+        var draft = new EngineSettingsDraft(config);
+        assertEquals("act", draft.text(REWIND_BUDGET_SCOPE));
+        assertFalse(draft.keys(EngineSettingsDraft.Category.GAMEPLAY).contains(LIVE_REWIND_ENABLED));
+        assertTrue(draft.keys(EngineSettingsDraft.Category.GAMEPLAY).contains(REWIND_SPECIAL_STAGES));
+        draft.set(REWIND_BUDGET_SCOPE, "off");
+        draft.apply();
+        assertFalse(config.getBoolean(LIVE_REWIND_ENABLED));
+        assertEquals("off", new EngineSettingsDraft(service()).text(REWIND_BUDGET_SCOPE));
+        draft.step(REWIND_BUDGET_SCOPE, 1);
+        assertEquals("checkpoint", draft.text(REWIND_BUDGET_SCOPE));
+        draft.apply();
+        assertTrue(config.getBoolean(LIVE_REWIND_ENABLED));
+        draft.set(REWIND_BUDGET_SECONDS, "unlimited");
+        draft.apply();
+        assertEquals("unlimited", service().getString(REWIND_BUDGET_SECONDS));
+        assertThrows(IllegalArgumentException.class, () -> draft.set(REWIND_BUDGET_SECONDS, "0"));
+    }
+
+    @Test
+    void legacyDisabledRewindRemainsOffUntilSelectorChanges() throws IOException {
+        var config = service();
+        config.setConfigValue(LIVE_REWIND_ENABLED, false);
+        var draft = new EngineSettingsDraft(config);
+        assertEquals("off", draft.text(REWIND_BUDGET_SCOPE));
+        assertFalse(draft.dirty());
+        draft.set(REWIND_BUDGET_SCOPE, "zone");
+        draft.apply();
+        assertTrue(config.getBoolean(LIVE_REWIND_ENABLED));
+        assertEquals("zone", config.getString(REWIND_BUDGET_SCOPE));
+    }
+
+    @Test
     void colourExpansionHasItsOwnSavedDisplayAxisAndCancelsWithoutChangingProfile() throws IOException {
         SonicConfigurationService config = service();
         assertEquals("FULL", config.getDefaultValue(DISPLAY_COLOR_EXPANSION));
@@ -59,7 +93,7 @@ class TestEngineSettingsDraft {
             assertFalse(draft.keys(category).isEmpty(), category.name());
             for (SonicConfiguration key : draft.keys(category)) assertTrue(reachable.add(key), key.name());
         }
-        assertEquals(new HashSet<>(ConfigCatalog.emitOrder().stream().filter(key -> !ConfigCatalog.meta(key).section().equals("hub")).toList()), reachable);
+        assertEquals(new HashSet<>(ConfigCatalog.emitOrder().stream().filter(key -> key != LIVE_REWIND_ENABLED && !ConfigCatalog.meta(key).section().equals("hub")).toList()), reachable);
         assertFalse(reachable.contains(SCREEN_WIDTH_PIXELS));
         assertFalse(reachable.contains(SCREEN_HEIGHT_PIXELS));
     }
@@ -134,6 +168,7 @@ class TestEngineSettingsDraft {
         SonicConfigurationService config = service();
         EngineSettingsDraft draft = new EngineSettingsDraft(config);
         assertThrows(IllegalArgumentException.class, () -> draft.set(FPS, "0"));
+        assertThrows(IllegalArgumentException.class, () -> draft.set(FPS, "1000000001"));
         assertThrows(IllegalArgumentException.class, () -> draft.set(FPS, "2.5"));
         assertThrows(IllegalArgumentException.class, () -> draft.set(CONTROLLER_DEADZONE, "NaN"));
         assertThrows(IllegalArgumentException.class, () -> draft.set(CONTROLLER_DEADZONE, "1"));

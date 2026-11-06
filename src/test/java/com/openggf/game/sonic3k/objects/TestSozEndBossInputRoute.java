@@ -8,6 +8,7 @@ import com.openggf.game.rewind.RewindSnapshotDiff;
 import com.openggf.tests.*;
 import com.openggf.tests.rules.*;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.Arguments;
@@ -29,7 +30,17 @@ class TestSozEndBossInputRoute {
         return rows.stream();
     }
     @ParameterizedTest @MethodSource("configurations")
+    @Tag("exhaustive-audit")
     void controllerOnlyBattleAndCapsuleReachLrzWithGraphRewind(String character,int width,String donor){
+        verifyControllerOnlyBattleAndCapsuleReachLrzWithGraphRewind(character,width,donor);
+    }
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"sonic,320,off", "tails,400,off", "knuckles,800,off",
+            "sonic,512,s1", "sonic,640,s2", "tails,800,s2"})
+    void representativeSupportedTeamsReachLrzThroughBattleCapsuleAndGraphRewind(String character,int width,String donor){
+        verifyControllerOnlyBattleAndCapsuleReachLrzWithGraphRewind(character,width,donor);
+    }
+    private void verifyControllerOnlyBattleAndCapsuleReachLrzWithGraphRewind(String character,int width,String donor){
         var config=SonicConfigurationService.getInstance();config.clearSessionOverrides();
         config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE,character);
         config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE,"");

@@ -384,8 +384,13 @@ public class IczCrushingColumnObjectInstance extends AbstractObjectInstance
         if (renderer == null) {
             return;
         }
-        renderer.drawFrameIndex(mappingFrame, x, y, xFlip, yFlip, 2);
-        if (hasBottomDecoration && renderDecorationInParent) {
+        // ObjDat_ICZCrushingColumn (sonic3k.asm:188237-188241) supplies $20/$70.
+        if (isWithinRenderSpriteBounds(ON_SCREEN_HALF_WIDTH, ON_SCREEN_HALF_HEIGHT)) {
+            renderer.drawFrameIndex(mappingFrame, x, y, xFlip, yFlip, 2);
+        }
+        // word_8A632 (sonic3k.asm:188242-188244): the decoration is a separate SST.
+        if (hasBottomDecoration && renderDecorationInParent
+                && isWithinBuildSpritesBounds(x, y + BOTTOM_DECORATION_Y_OFFSET, 0x20, 0x40)) {
             renderer.drawFrameIndex(BOTTOM_DECORATION_FRAME, x, y + BOTTOM_DECORATION_Y_OFFSET,
                     xFlip, yFlip, 2);
         }
@@ -479,7 +484,7 @@ public class IczCrushingColumnObjectInstance extends AbstractObjectInstance
 
         @Override
         public void appendRenderCommands(List<GLCommand> commands) {
-            if (isDestroyed()) {
+            if (isDestroyed() || !isWithinRenderSpriteBounds(0x20, 0x40)) {
                 return;
             }
             PatternSpriteRenderer renderer = getRenderer(ART_KEY);

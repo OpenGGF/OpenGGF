@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.options;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.data.Rom;
 import com.openggf.data.compression.EnigmaReader;
 import com.openggf.level.Palette;
@@ -55,14 +57,14 @@ final class Sonic2OptionsData {
         palettes = new Palette[4];
         for (int line = 0; line < palettes.length; line++) {
             palettes[line] = new Palette();
-            palettes[line].fromSegaFormat(rom.readBytes(0x30E2 + line * 32, 32));
+            palettes[line].fromSegaFormat(rom.readBytes(address(rom, 0x30E2) + line * 32, 32));
         }
         headers = textTable(rom, HEADERS);
         teamChoices = textTable(rom, overseas ? TAILS_CHOICES : MILES_CHOICES);
         itemChoices = textTable(rom, ITEMS_CHOICES);
         soundTemplate = text(rom, 0x9870);
         // Anim_SonicMilesBG (s2.asm:11667-11677). Duration bytes are DBF-like N+1 calls.
-        byte[] animation = rom.readBytes(0x87D0, 12);
+        byte[] animation = rom.readBytes(address(rom, 0x87D0), 12);
         backgroundSources = new int[6];
         backgroundDurations = new int[6];
         for (int i = 0; i < 6; i++) {
@@ -130,6 +132,7 @@ final class Sonic2OptionsData {
     }
 
     private static int[] text(Rom rom, int address) throws IOException {
+        address = address(rom, address);
         int length = Byte.toUnsignedInt(rom.readByte(address)) + 1;
         if (length < 1 || length > 22) {
             throw new IOException("Invalid options text length at " + Integer.toHexString(address));
@@ -143,6 +146,7 @@ final class Sonic2OptionsData {
     }
 
     private static int[] enigma(Rom rom, int address, int length, int base) throws IOException {
+        address = address(rom, address);
         try (var channel = Channels.newChannel(new ByteArrayInputStream(rom.readBytes(address, length)))) {
             byte[] bytes = EnigmaReader.decompress(channel, base);
             ByteBuffer buffer = ByteBuffer.wrap(bytes);

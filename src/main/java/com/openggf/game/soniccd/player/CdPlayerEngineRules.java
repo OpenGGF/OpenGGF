@@ -29,7 +29,7 @@ public final class CdPlayerEngineRules implements PhysicsProvider {
     private static final GameRules RULES = PresentationOnlyRules.create(
             new CameraRules((short) 0, false, 0, false, false, false),
             new ObjectInteractionRules(false, false, false, false, false, false,
-                    false, false, true, false, false, false, false, false, false, false,
+                    false, false, false, false, false, false, false, false,
                     ObjectInteractionRules.NO_DUCK_TOUCH_BOX,
                     ObjectInteractionRules.NO_DUCK_TOUCH_BOX, false),
             DynamicArtDmaServiceModel.EVERY_CLAIM_WITHOUT_PLAYER_ART_AUDIT,

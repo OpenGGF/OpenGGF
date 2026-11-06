@@ -38,13 +38,13 @@ import java.util.List;
 /**
  * Object 0xB1 - ICZ breakable wall.
  *
- * <p>ROM reference: {@code Obj_ICZBreakableWall} at sonic3k.asm:187786.
+ * <p>ROM reference: {@code Obj_ICZBreakableWall} at sonic3k.asm:187791.
  * The wall uses {@code Map_ICZWallAndColumn} frame 6 and breaks when Knuckles
  * side-contacts it or when {@code Obj_ICZPathFollowPlatform_2} enters the
  * trigger box from {@code word_8A2FC}.
  */
 public class IczBreakableWallObjectInstance extends AbstractObjectInstance
-        implements RewindRecreatable, SolidObjectProvider, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
+        implements RewindRecreatable, SolidObjectProvider, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional, com.openggf.level.objects.homing.HomingTargetSource {
 
     /**
      * Word 0 of this object's S3K SST holds its live ROM code pointer.
@@ -227,7 +227,8 @@ public class IczBreakableWallObjectInstance extends AbstractObjectInstance
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        if (broken || isDestroyed()) {
+        // ObjDat_ICZBreakableWall (sonic3k.asm:187990-187994): $20/$40 bounds.
+        if (broken || isDestroyed() || !isWithinRenderSpriteBounds(0x20, 0x40)) {
             return;
         }
         PatternSpriteRenderer renderer = getRenderer(ART_KEY);
@@ -367,4 +368,9 @@ public class IczBreakableWallObjectInstance extends AbstractObjectInstance
             {      0, -0x200},
             {-0x400, -0x300}
     };
+    /** Homing: Knuckles-only (Obj_ICZBreakableWall side contact), so only Knuckles targets it. */
+    @Override public com.openggf.level.objects.homing.HomingTarget homingTarget(com.openggf.game.PlayableEntity player) {
+        return broken || !com.openggf.level.objects.HomingTargets.knuckles(player) ? null
+                : com.openggf.level.objects.HomingTargets.at(this, com.openggf.level.objects.homing.HomingTargetKind.BREAKABLE_WALL);
+    }
 }

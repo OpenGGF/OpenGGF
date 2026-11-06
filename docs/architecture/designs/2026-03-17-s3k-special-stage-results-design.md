@@ -48,8 +48,15 @@ S3kSpecialStageResultsScreen(int ringsCollected, boolean gotEmerald,
 | PRE_TALLY | 2 | 360f wait → variable tally | Play mus_GotThroughAct at frame 71 (counter==289). Then decrement ring/time bonus by 10/frame. sfx_Switch every 4 frames (Level_frame_counter & 3). sfx_Register when done. |
 | POST_TALLY | 4 | 120f wait → optional 270f | If ≥50 rings: spawn continue icon (blinking), play sfx_Continue, wait 270f. Otherwise advance immediately. |
 | EMERALD_CHECK | 6 | variable | If `!gotEmerald` OR `totalEmeraldCount < 7`: exit (isComplete=true). If earned: create 5 cleanup slide-out objects, set childCounter=5, advance when all done. |
-| EMERALD_REVEAL | 8 | 240f (4*60) | Create 6 new text elements from ObjDat2_2E918, wait 240 frames. |
-| EXIT | A | wait → complete | Count down timer, then set `isComplete=true`. |
+| EMERALD_REVEAL creation | 8 | one pass after cleanup | Create the six ObjDat2_2E918 elements, arm `$2E = 240`, and advance to routine `$A`. |
+| EMERALD_REVEAL wait | A | 240 decrement passes, then zero-test expiry | Hold the message while its children slide in concurrently; the next zero-timer pass sets `isComplete=true`. There is one countdown, with no second exit wait. |
+
+**Final reveal timing correction (2026-10-29):** the locked-on `loc_2E5C0`
+(Super form message) and `loc_2E5F4` (Hidden Palace message) each arm the
+same single 240-tick timer. `loc_2E5E0` tests zero before decrementing, so
+release occurs on the 241st subsequent object pass. The
+[SS7 native/body attribution](../audits/2026-10-29-s3k-campaign-terminal-certification.md#ss7-results-countdown-attribution--2026-10-29)
+records the executed original-movie evidence and the strict replay limit.
 
 **Key timing detail**: The 360-frame pre-tally timer counts DOWN from 360. Music plays when counter == 289 (i.e., 71 frames into the wait: 360 - 289 = 71). This matches the level results screen timing.
 

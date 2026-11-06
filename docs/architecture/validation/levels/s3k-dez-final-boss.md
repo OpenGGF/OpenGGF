@@ -1,5 +1,12 @@
 # S3K Death Egg final boss arena coverage matrix
 
+Routine selection update (2026-10-27): the reviewed full configuration products
+and long cold-campaign qualifications in the [local budget record](../../research/2026-10-27-local-validation-cost.md#thirty-minute-local-command-target)
+now require explicit `exhaustive-audit`. Short real contact, lifecycle and
+restore/forward witnesses remain routine. Historical qualification rows retain
+their original source/input scope; a current smoke pass does not renew deferred
+cold reachability, accumulated route state or every replay window.
+
 **Current selected ending composition (2026-10-13):** the unchanged cold
 ordinary320 team/Sonic/Tails and800 Sonic routes pass from their actual bosses
 through native D01 rescue, credits and terminal Start/title; the three incoming

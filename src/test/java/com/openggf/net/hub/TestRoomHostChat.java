@@ -9,6 +9,8 @@ import com.openggf.net.protocol.Protocol;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -48,7 +50,6 @@ class TestRoomHostChat {
         assertEquals("FULL_CHAT", a.join().room().chatMode());
         assertEquals(List.of(new ControlMessage.ChatModeState("FULL_CHAT")), all(b, ControlMessage.ChatModeState.class));
         send(b, new ControlMessage.SetChatMode("OFF"));
-        send(a, new ControlMessage.SetChatMode("unknown"));
         assertEquals("FULL_CHAT", host.descriptor().chatMode());
         send(a, new ControlMessage.SetChatMode("QUICK_CHAT"));
         assertEquals(new ControlMessage.ChatModeState("QUICK_CHAT"), all(b, ControlMessage.ChatModeState.class).getLast());
@@ -114,7 +115,6 @@ class TestRoomHostChat {
         assertTrue(all(b, ControlMessage.ChatBroadcast.class).isEmpty());
         assertTrue(all(b, ControlMessage.QuickChatBroadcast.class).isEmpty());
         trusted = true;
-        send(a, new ControlMessage.QuickChat("not a phrase"));
         send(a, new ControlMessage.Chat("hello"));
         send(a, new ControlMessage.QuickChat("BRUTAL"));
         assertEquals(List.of(new ControlMessage.ChatBroadcast(a.join().playerSlot(), "Owner", "hello")),
@@ -173,7 +173,6 @@ class TestRoomHostChat {
         Member a = join("Owner", "owner");
         send(a, new ControlMessage.SetChatMode("QUICK_CHAT"));
         send(a, new ControlMessage.Chat("blocked"));
-        send(a, new ControlMessage.QuickChat("UNKNOWN"));
         send(a, new ControlMessage.QuickChat("GOOD_LUCK"));
         assertTrue(all(a, ControlMessage.ChatBroadcast.class).isEmpty());
         assertEquals(1, all(a, ControlMessage.QuickChatBroadcast.class).size());
@@ -201,6 +200,19 @@ class TestRoomHostChat {
         host.onText(a.connection(), forged);
         assertNotNull(a.connection().closedReason);
         assertTrue(all(b, ControlMessage.QuickChatBroadcast.class).isEmpty());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"mode", "phrase"})
+    void malformedChatControlsRetireTheSenderBeforeBroadcast(String field) throws Exception {
+        Member sender = join("Owner", "owner");
+        Member witness = join("Witness", "witness");
+        send(sender, field.equals("mode") ? new ControlMessage.SetChatMode("unknown")
+                : new ControlMessage.QuickChat("UNKNOWN"));
+        assertNotNull(sender.connection().closedReason);
+        assertEquals("FULL_CHAT", host.descriptor().chatMode());
+        assertTrue(all(witness, ControlMessage.ChatBroadcast.class).isEmpty());
+        assertTrue(all(witness, ControlMessage.QuickChatBroadcast.class).isEmpty());
     }
 
     @Test

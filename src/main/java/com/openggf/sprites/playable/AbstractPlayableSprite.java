@@ -270,8 +270,6 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         protected boolean prePhysicsAir = false;
         protected byte prePhysicsAngle = 0;
         protected short prePhysicsGSpeed = 0;
-        /** Ground velocity after player physics but before late zone-feature updates. */
-        protected short preZoneFeatureGSpeed = 0;
         protected short prePhysicsXSpeed = 0;
         protected short prePhysicsYSpeed = 0;
         protected short prePhysicsCentreX = 0;
@@ -320,25 +318,6 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          */
         protected boolean onObject = false;
 
-        /**
-         * Snapshot of {@link #onObject} captured at the START of the current
-         * playable frame (before any player tick has run). Refreshed by
-         * {@link #captureOnObjectAtFrameStart()} from {@code SpriteManager.beginPlayableFrame}.
-         *
-         * <p>ROM analog: in {@code Tails_CPU_Control} (sonic3k.asm:26728-26740,
-         * S2 s2.asm:38933+), the follow-steering logic reads the leader's
-         * {@code Status_OnObj} bit MID-FRAME, before solid-object processing
-         * (sub_1FF1E sonic3k.asm:44346-44359, loc_1FFC4 sonic3k.asm:44409-44421)
-         * has cleared it for jumpers. {@code Sonic_Jump} (sonic3k.asm:23323-23389)
-         * sets {@code Status_InAir} but does NOT touch {@code Status_OnObj}; the
-         * bit only clears later when objects run. The engine's
-         * {@code PlayableSpriteMovement.doJump} and air-unseat paths clear
-         * {@code onObject} EARLIER in the player tick, so by the time the
-         * Tails CPU runs (next playable in {@code SpriteManager.update}), the
-         * live {@code isOnObject()} value already reflects the leader's
-         * post-tick state. Reading {@link #getOnObjectAtFrameStart()} preserves
-         * the pre-tick (mid-frame, ROM-equivalent) view.
-         */
         /**
          * ROM-style latched solid interaction object id.
          * Mirrors the object id resolved from the player's SST {@code interact} slot,
@@ -965,6 +944,49 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         // Rewind state capture / restore
         // -----------------------------------------------------------------------
 
+        // These engine-only bridges serve unregistered trace ghosts. Direct scalar
+        // copies deliberately bypass player setters, controller restore, timers,
+        // game-state callbacks and subclass hooks. Do not reuse full player rewind
+        // here: an unregistered sprite still resolves live services by default.
+        final PlayableSpriteInternalAccess.GhostPresentationState captureGhostPresentation() {
+                return new PlayableSpriteInternalAccess.GhostPresentationState(
+                        xPixel, yPixel, xSubpixel, ySubpixel, direction, runningMode,
+                        xSpeed, ySpeed, gSpeed, angle, air, rolling, movementInputActive,
+                        nativeSlotPresent, pushing, skidding, mappingFrame, animationId,
+                        animationFrameIndex, animationTick, renderHFlip, renderVFlip,
+                        com.openggf.sprites.managers.PlayableAnimationInternalAccess.captureGhostPresentation(controller.getAnimation()));
+        }
+
+        final void restoreGhostPresentation(PlayableSpriteInternalAccess.GhostPresentationState s) {
+                xPixel = s.xPixel(); yPixel = s.yPixel();
+                xSubpixel = s.xSubpixel(); ySubpixel = s.ySubpixel();
+                direction = s.direction(); runningMode = s.groundMode();
+                xSpeed = s.xSpeed(); ySpeed = s.ySpeed(); gSpeed = s.gSpeed(); angle = s.angle();
+                air = s.air(); rolling = s.rolling(); movementInputActive = s.movementInputActive();
+                nativeSlotPresent = s.nativeSlotPresent(); pushing = s.pushing(); skidding = s.skidding();
+                mappingFrame = s.mappingFrame(); animationId = s.animationId();
+                animationFrameIndex = s.animationFrameIndex(); animationTick = s.animationTick();
+                renderHFlip = s.renderHFlip(); renderVFlip = s.renderVFlip();
+                com.openggf.sprites.managers.PlayableAnimationInternalAccess.restoreGhostPresentation(controller.getAnimation(), s.animation());
+        }
+
+        final void applyGhostPresentationInput(PlayableSpriteInternalAccess.GhostPresentationInput s) {
+                // Geometry/physics never run on these copies. Animate needs only
+                // the local status/velocity inputs; no landing or shape transition.
+                direction = s.direction(); runningMode = s.groundMode();
+                xPixel = (short) (s.x() - width / 2); yPixel = (short) (s.y() - height / 2);
+                xSubpixel = (short) s.xSub(); ySubpixel = (short) s.ySub();
+                xSpeed = s.xSpeed(); ySpeed = s.ySpeed(); gSpeed = s.gSpeed(); angle = s.angle();
+                air = s.air(); rolling = s.rolling(); movementInputActive = s.movementInputActive();
+                objectMappingFrameControl = false; abilityMappingFrameControl = false;
+                // Preserve the existing row-owned Roll write before Animate's
+                // historical prev_anim/tunnel gate. No collision radii are changed.
+                if (rolling && animationProfile instanceof ScriptedVelocityAnimationProfile profile) {
+                        animationId = profile.getRollAnimId();
+                        skidding = false;
+                }
+        }
+
         /** Captures the mutable playable-sprite surface for rewind restore. */
         public PerObjectRewindSnapshot captureRewindState() {
                 return captureRewindState(true);
@@ -987,13 +1009,12 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         topSolidBit, lrbSolidBit,
                         prePhysicsAir, prePhysicsAngle,
                         prePhysicsGSpeed, prePhysicsXSpeed, prePhysicsYSpeed,
-                        preZoneFeatureGSpeed,
                         prePhysicsCentreX, prePhysicsCentreY,
                         air, rolling, jumping, rollingJump,
                         pinballMode, pinballSpeedLock, preserveRollingOnNextLanding,
                         preserveRollingOnNextRollStop, objectPreservedRollBoostFollowup,
                         objectPreservedRollWallProbe, objectPreservedRollVelocityCarry, tunnelMode,
-                        onObject, controller.isOnObjectAtFrameStart(), controller.isOnObjectAtPreviousFrameStart(),
+                        onObject,
                         controller.isPushingAtFrameStart(), controller.isHurtAtFrameStart(),
                         controller.isHurtRecoveryCompletedThisFrame(),
                         latchedSolidObjectId, interactSlotIndex, isLatchedSolidObjectReleased(), latchedSolidObjectBound,
@@ -1125,7 +1146,6 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.prePhysicsGSpeed = extra.prePhysicsGSpeed();
                 this.prePhysicsXSpeed = extra.prePhysicsXSpeed();
                 this.prePhysicsYSpeed = extra.prePhysicsYSpeed();
-                this.preZoneFeatureGSpeed = extra.preZoneFeatureGSpeed();
                 this.prePhysicsCentreX = extra.prePhysicsCentreX();
                 this.prePhysicsCentreY = extra.prePhysicsCentreY();
                 this.air = extra.air();
@@ -1141,8 +1161,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.objectPreservedRollVelocityCarry = extra.objectPreservedRollVelocityCarry();
                 this.tunnelMode = extra.tunnelMode();
                 this.onObject = extra.onObject();
-                controller.restoreFrameStartState(extra.onObjectAtFrameStart(),
-                                extra.onObjectAtPreviousFrameStart(), extra.pushingAtFrameStart(),
+                controller.restoreFrameStartState(extra.pushingAtFrameStart(),
                                 extra.hurtAtFrameStart(), extra.hurtRecoveryCompletedThisFrame());
                 this.latchedSolidObjectId = extra.latchedSolidObjectId();
                 this.latchedSolidObjectReleased = extra.latchedSolidObjectReleased();
@@ -1360,7 +1379,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         PowerUpObject liveShield = resolveLiveShieldObjectAfterRewindRestore();
                         if (liveShield != null) {
                                 shieldObject = liveShield;
-                                if (invincibleFrames > 0) {
+                                if (invincibleFrames > 0 || superSonic) {
                                         shieldObject.setVisible(false);
                                 }
                                 shieldObject.refreshArtAfterRewindRestore();
@@ -1371,7 +1390,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                                 shieldObject = null;
                                 if (powerUpSpawner != null) {
                                         shieldObject = powerUpSpawner.spawnShield(this, shieldType);
-                                        if (shieldObject != null && invincibleFrames > 0) {
+                                        if (shieldObject != null && (invincibleFrames > 0 || superSonic)) {
                                                 shieldObject.setVisible(false);
                                         }
                                         if (shieldObject != null) {
@@ -1383,6 +1402,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
                 refreshPersistentInstaShieldRegistration(instaShieldRegistered);
                 refreshInvincibilityStarsAfterRewindRestore();
+                if (superSonic) {
+                        setShieldVisible(false);
+                }
         }
 
         private void refreshInvincibilityStarsAfterRewindRestore() {
@@ -1427,6 +1449,14 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         return;
                 }
 
+                // Like tickStatus, defer the dormant Insta-Shield while a
+                // collected shield owns their shared fixed SST. Native
+                // SpawnLevelMainSprites_SpawnPowerup replaces that slot with the
+                // elemental shield (loc_6A02); Load_Level must not reclaim it.
+                if (hasShield()) {
+                        instaShieldRegistered = false;
+                        return;
+                }
                 powerUpSpawner.registerObject(instaShieldObject);
                 instaShieldRegistered = true;
                 instaShieldObject.invalidateDplcCache();
@@ -1481,10 +1511,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         public void giveShield(ShieldType type) {
-                // S2: Super Sonic cannot pick up shields
-                if (superSonic) {
-                        return;
-                }
+                // Monitor shield rewards set shield status even while transformed (S2 and S3K).
                 // Remove existing shield before granting new one
                 if (hasShield()) {
                         if (shieldObject != null) {
@@ -1504,8 +1531,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                                 ? powerUpSpawner.spawnShield(this, type)
                                 : null;
                         LOGGER.fine("DEBUG: ShieldObjectInstance created successfully: " + shieldObject);
-                        // If picked up while invincible, hide shield until invincibility ends
-                        if (shieldObject != null && invincibleFrames > 0) {
+                        // Retain the shield while powered up, but suppress its visual.
+                        if (shieldObject != null && (invincibleFrames > 0 || superSonic)) {
                                 shieldObject.setVisible(false);
                         }
                 } catch (Exception e) {
@@ -1787,7 +1814,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 if (isHidden()) {
                         return false;
                 }
-                return PlayableSpriteArtPresentation.nativeBodyVisible(
+                // S3K loc_123AA (sonic3k.asm:24568-24573) draws routine 6 directly;
+                // the preserved hurt timer belongs only to the control display path.
+                return dead || PlayableSpriteArtPresentation.nativeBodyVisible(
                         invulnerableFrames, invulnerabilityDisplayTimerDecrementedThisFrame,
                         isHurt(), hurtRoutineOwnedDisplayThisFrame);
         }
@@ -2148,37 +2177,13 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         /**
-         * Captures the current {@link #onObject} value into the frame-start
-         * snapshot. Called by {@code SpriteManager.beginPlayableFrame} before
-         * any playable's per-frame tick runs, so consumers reading
-         * {@link #getOnObjectAtFrameStart()} see the value as it was at the
-         * top of the frame, matching the ROM's mid-frame view when one
-         * playable's logic reads another playable's status.
+         * Captures the frame-start push/air/hurt snapshot. Called by
+         * {@code SpriteManager.beginPlayableFrame} before any playable's
+         * per-frame tick runs.
          */
         public void captureOnObjectAtFrameStart() {
                 controller.captureFrameStartState();
                 this.invulnerabilityDisplayTimerDecrementedThisFrame = false;
-        }
-
-        /**
-         * Returns the {@link #onObject} value as it was at the START of the
-         * current playable frame (before any player tick ran). Use this in
-         * cross-playable reads where the ROM accesses another sprite's
-         * {@code Status_OnObj} bit BEFORE solid-object processing has run for
-         * the frame (e.g. {@code Tails_CPU_Control} follow-steering at
-         * sonic3k.asm:26728-26740 / s2.asm:38933+).
-         */
-        public boolean getOnObjectAtFrameStart() {
-                return controller.isOnObjectAtFrameStart();
-        }
-
-        /**
-         * Returns the {@code Status_OnObj} snapshot from the preceding playable
-         * frame. This distinguishes a just-released solid ride from a terrain
-         * AnglePos detach after grounded movement has already selected animation.
-         */
-        public boolean getOnObjectAtPreviousFrameStart() {
-                return controller.isOnObjectAtPreviousFrameStart();
         }
 
         public boolean getPushingAtFrameStart() {
@@ -2332,16 +2337,6 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 return prePhysicsGSpeed;
         }
 
-        /** Captures the phase immediately before late zone-feature velocity writes. */
-        public void capturePreZoneFeatureSnapshot() {
-                this.preZoneFeatureGSpeed = this.gSpeed;
-        }
-
-        /** Ground velocity after player physics and before late zone-feature updates. */
-        public short getPreZoneFeatureGSpeed() {
-                return preZoneFeatureGSpeed;
-        }
-
         /** Pre-physics X velocity from {@link #capturePrePhysicsSnapshot()}. */
         public short getPrePhysicsXSpeed() {
                 return prePhysicsXSpeed;
@@ -2361,12 +2356,6 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         public short getPrePhysicsCentreY() {
                 return prePhysicsCentreY;
         }
-
-        /** Captures CPU-sidekick state before {@code SidekickCpuController.update}. */
-        public void capturePreCpuControlSnapshot() { groundWallResponse.capturePreControlGSpeed(this.gSpeed); }
-
-        /** Ground speed captured before the CPU controller ran this frame. */
-        public short getPreCpuControlGSpeed() { return groundWallResponse.preControlGSpeed(); }
 
         public void deferGroundWallVelocityResponse(int mode, int distance) { groundWallResponse.defer(mode, distance); }
 
@@ -2404,7 +2393,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 if (currentAngle == 0) {
                         return; // Already at 0
                 }
-                // ROM: Sonic_JumpAngle (s2.asm:37465-37486)
+                // ROM: Sonic_JumpAngle (s2.asm:37793-37814)
                 // ROM uses bpl (branch if positive, i.e., bit 7 clear) to determine direction
                 // Angles 0x01-0x7F (1-127): bit 7 clear = positive, subtract 2
                 // Angles 0x80-0xFF (128-255): bit 7 set = negative, add 2
@@ -2593,16 +2582,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         public void setPushing(boolean pushing) {
                 this.pushing = pushing;
-                if (!pushing) {
-                        groundWallResponse.clearPushState();
-                }
         }
-
-        /** Marks the live push bit as set this cycle by a terrain ground-wall collision. */
-        public void markPushFromGroundWallCollision() { groundWallResponse.markPushFromGroundWallCollision(); }
-
-        /** @return true when the live push bit came from a terrain ground-wall collision. */
-        public boolean isPushFromGroundWallCollision() { return groundWallResponse.isPushFromGroundWallCollision(); }
 
         public boolean getSkidding() {
                 return skidding;
@@ -2636,8 +2616,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         public boolean getInvulnerable() {
-                // Debug mode and Super Sonic make player completely invulnerable
-                return debugMode || superSonic || invulnerableFrames > 0 || invincibleFrames > 0 || hurt;
+                // Dead players cannot enter object-owned hurt/ring-loss paths.
+                // Debug mode and Super Sonic also make the player invulnerable
+                return dead || debugMode || superSonic || invulnerableFrames > 0 || invincibleFrames > 0 || hurt || com.openggf.game.mutators.HomingAttackRuntime.invulnerable(mutatorPolicySource, this);
         }
 
         public int getInvulnerableFrames() {
@@ -2798,8 +2779,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 invulnerabilityDisplayTimerTickedThisFrame = true;
                 // ROM: invulnerable_time only decrements in Sonic_Display (routine 2).
                 // During hurt routine (routine 4), DisplaySprite is called directly,
-                // so the timer stays frozen until Sonic lands.
-                if (invulnerableFrames > 0 && !hurt) {
+                // so the timer stays frozen until Sonic lands. Routine 6 also draws
+                // directly and leaves this timer frozen throughout death.
+                if (invulnerableFrames > 0 && !hurt && !dead) {
                         if (suppressNextInvulnerabilityDecrement) {
                                 suppressNextInvulnerabilityDecrement = false;
                         } else {
@@ -2819,7 +2801,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                                         invincibilityObject = null;
                                 }
                                 if (shieldObject != null) {
-                                        shieldObject.setVisible(true);
+                                        shieldObject.setVisible(!superSonic);
                                 }
                                 restoreLevelMusicAfterInvincibility();
                         }
@@ -2850,7 +2832,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 }
                 // Lazy-register insta-shield with ObjectManager if not yet done (e.g. created before level load).
                 // When registered, ObjectManager drives update(); explicit call only needed for headless tests.
-                if (instaShieldObject != null && !instaShieldRegistered) {
+                // SpawnLevelMainSprites_SpawnPowerup replaces the initial Insta-Shield
+                // with the saved elemental shield (loc_6A02, sonic3k.asm:8326-8356).
+                // A deferred registration after return must not reclaim that shared
+                // fixed slot; wait until the elemental shield has been removed.
+                if (instaShieldObject != null && !instaShieldRegistered && !hasShield()) {
                         if (powerUpSpawner != null) {
                                 powerUpSpawner.registerObject(instaShieldObject);
                                 instaShieldRegistered = true;
@@ -3051,7 +3037,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         private boolean isDamageBlocked(boolean ignoreIFrames) {
-                if (debugMode || invincibleFrames > 0 || isSuperSonic()) {
+                if (dead || debugMode || invincibleFrames > 0 || isSuperSonic()) {
                         return true;
                 }
                 // ROM Touch_Hurt (sonic3k.asm:21080-21083, s2.asm Touch_Hurt) gates
@@ -3159,7 +3145,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 PlayableHurtRadiusTransition.applyDeath(this);
                 setCrouching(false);
                 setPushing(false);
-                setAir(true); setOnObject(onObject || controller.isOnObjectAtFrameStart());
+                // Kill_Character sets Status_InAir and leaves Status_OnObj alone
+                // (sonic3k.asm:21172-21193; Player_TouchFloor clears no OnObj either).
+                setAir(true);
                 setGSpeed((short) 0);
                 setXSpeed((short) 0);
                 setYSpeed((short) -0x700);

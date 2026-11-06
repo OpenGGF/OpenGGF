@@ -11,7 +11,6 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestHostRoundEngineVote {
@@ -95,15 +94,17 @@ class TestHostRoundEngineVote {
     }
 
     @Test
-    void zeroVotesBroadcastsRetainedTrackAndKeepsConfigNull() {
+    void zeroVotesBroadcastsCommittedRetainedTrack() {
         reachVote();
         now += HostRoundEngine.VOTE_WINDOW_MILLIS;
         engine.onTick();
-        assertNull(engine.votedNextConfig());
+        assertEquals(config, engine.votedNextConfig());
         ControlMessage.TrackVoteResult result = sent.stream()
                 .filter(ControlMessage.TrackVoteResult.class::isInstance)
                 .map(ControlMessage.TrackVoteResult.class::cast).reduce((a, b) -> b).orElseThrow();
         assertEquals("s3k:0:0", result.trackKey());
+        assertEquals(config, result.nextConfig());
+        assertEquals(engine.planRevision(), result.planRevision());
     }
 
     @Test

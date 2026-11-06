@@ -1,5 +1,6 @@
 package com.openggf.level.rings;
 
+import com.openggf.level.objects.ObjectManagerInternalAccess;
 import com.openggf.game.ModApi;
 import com.openggf.game.competition.NativeCompetitionRoster;
 import com.openggf.audio.AudioManager;
@@ -272,7 +273,13 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             attractedRingTargetCaptured = true;
         }
         var fieldMode = ringFieldMode();
-        if (player == null || player.getDead() || fieldMode == null && (!lightningShieldEnabled(player)
+        // loc_10C7E (sonic3k.asm:22054-22061) and
+        // loc_138E4 (sonic3k.asm:26302-26309) skip Test_Ring_Collisions
+        // entirely while touch is suppressed. Gate
+        // before consuming a source or entering the allocation-failure give path;
+        // existing attracted rings still execute their independent object slots.
+        if (player == null || player.getDead() || player.isTouchResponseSuppressedByObjectControl()
+                || fieldMode == null && (!lightningShieldEnabled(player)
                 || player.getShieldType() != ShieldType.LIGHTNING)) {
             return;
         }
@@ -332,13 +339,18 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             return;
         }
         for (AttractedRing ring : activeAttractedRingsInSlotOrder()) {
-            if (!ring.listedForTouchThisFrame || ring.collected
-                    || !attractedRingOverlapsPlayerTouchBox(ring, player)) {
+            if (!ring.listedForTouchThisFrame) {
                 continue;
             }
+            // Touch_Width (sonic3k.asm:20710-20715) clears the width
+            // accumulator even when this retained attracted-ring entry misses.
+            var objects = nativeSlotObjectManager();
+            if (objects != null) ObjectManagerInternalAccess.publishSineCosineInputFraction(objects, player, 0);
+            if (ring.collected || !attractedRingOverlapsPlayerTouchBox(ring, player)) continue;
             // Touch_ChkValue writes routine=4; the next actual ring SST pass owns GiveRing.
             ring.collected = true;
-            ring.listedForTouchThisFrame = false;
+            // The native collision flag survives until the actual ring slot;
+            // P2 can still read its width without accepting a second pickup.
             // Acceptance attribution stays with the actual collector, including P2.
             notifyNativeRingPickup(player);
             return;
@@ -527,7 +539,12 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         if (roster != null) {
             int slot = roster.slotOf(player);
             if (slot < 0) throw new IllegalArgumentException("Ring collector is not a native slot");
-            roster.levelState(slot).addRings(1);
+            var state = roster.levelState(slot);
+            int previousLifeFlags = state.getRingExtraLifeFlags();
+            state.addRings(1);
+            if ((state.getRingExtraLifeFlags() & ~previousLifeFlags) != 0) {
+                com.openggf.audio.AudioManagerInternalAccess.playRingExtraLife(audioManager);
+            }
         } else player.addRings(1);
         notifyNativeRingPickup(player);
     }
@@ -1151,15 +1168,10 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                 ObjectManager objectManager = levelManager != null ? levelManager.getObjectManager() : null;
                 // Test_Ring_Collisions_AttractRing runs from the player's SST inside
                 // Process_Sprites, after Load_Sprites has filled first-free slots
-                // (sonic3k.asm:7916-7926). When the engine runs the player before the
-                // object load, reserve the SST after that load instead.
-                boolean deferSlot = objectManager != null
-                        && levelManager.objectsExecuteAfterPlayerPhysics();
-                int objectSlotIndex = objectManager != null && !deferSlot
-                        ? objectManager.allocateDynamicSlot() : -1;
-                if (objectManager != null && !deferSlot && objectSlotIndex < 0) {
-                    return false;
-                }
+                // (sonic3k.asm:7916-7926). The engine runs the player before the
+                // object load, so reserve the SST after that load instead.
+                boolean deferSlot = objectManager != null;
+                int objectSlotIndex = -1;
                 if (deferSlot && !objectManager.hasFreeDynamicSlotForDeferredAllocation(
                         pendingAttractedRingSlotCount())) {
                     return false;

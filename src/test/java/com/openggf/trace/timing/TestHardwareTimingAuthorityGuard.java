@@ -631,6 +631,32 @@ class TestHardwareTimingAuthorityGuard {
                 scanReplayPortDependencies(port.content()));
     }
 
+    @Test
+    void initializationPortCanOnlyReturnSchedulingDecisions() throws IOException {
+        String source = productionSource("com/openggf/trace/timing/InitializationTimingReplayPort.java").content();
+        assertEquals(List.of(), initializationDependencies(source));
+        assertFalse(initializationDependencies("import com.openggf.level.LevelManager;").isEmpty());
+        assertFalse(initializationDependencies("class P { void x() { GameServices.level(); } }").isEmpty());
+        assertFalse(initializationDependencies("class P { void x() { clock.serviceRepresentedVBlank(); } }").isEmpty());
+        assertEquals(List.of(), initializationDependencies(
+                "import com.openggf.game.internal.NativeLevelLoadPhaseAdmission;"));
+    }
+
+    private static List<String> initializationDependencies(String source) {
+        String bounded = stripCommentsAndStrings(source).replace(
+                "com.openggf.game.internal.NativeLevelLoadPhaseAdmission", "NativeLevelLoadPhaseAdmission");
+        for (String prefix : GAMEPLAY_OWNER_PACKAGE_PREFIXES) {
+            if (bounded.contains(prefix + ".")) return List.of("initialization input reaches " + prefix);
+        }
+        if (ROOT_GAMEPLAY_MUTATION.matcher(bounded).find()
+                || REFLECTIVE_GAMEPLAY_ACCESS.matcher(bounded).find()
+                || Pattern.compile("\\b(?:advanceVblaCounter|advanceTitleCardVblankOnly|serviceRepresentedVBlank)\\s*\\(")
+                        .matcher(bounded).find()) {
+            return List.of("initialization input mutates production or clock state");
+        }
+        return List.of();
+    }
+
     private static List<SourceFile> productionSources() throws IOException {
         return SOURCE_CATALOGUES.load(SRC_MAIN);
     }

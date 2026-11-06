@@ -1,5 +1,12 @@
 # S3K Carnival Night Act 2 coverage matrix
 
+Selection update (2026-10-27): routine canonical entry/reload checks cover supported
+axis pairs; bonus transitions retain their existing pilots. Full Cartesian
+products are explicitly manual `exhaustive-audit` coverage, excluded from routine
+and release gates. Historical exhaustive qualifications below are unchanged and
+are not renewed by a routine pass. See the [selection record](../../research/2026-10-27-local-validation-cost.md).
+
+
 Canonical binding: `S3K_CARNIVAL_NIGHT_2`, engine zone 3/act 1, ROM `$0301`, S3KL object set.
 Edges: CNZ1 incoming structural/results handoff; ICZ1 outgoing full entry.
 Character routes: Sonic/Tails reach the end boss; Knuckles uses native cutscene/teleporter progression. Do not infer one route from another character code.
@@ -25,7 +32,7 @@ The initial native/default binding covers all three solo mains at 320; the finit
 
 ## Native P1 vertical-bound operand — 2026-10-21
 
-Native `CNZ2_ScreenEvent` (`sonic3k.asm:107927..107943`, reference commit
+Native `CNZ2_ScreenEvent` (`sonic3k.asm:107932..107943`, reference commit
 `044fa46725c71187399e13f5ddb70e11d32dc024`, blob
 `0f10a373ff0e3d5c0033ed7d13c678bcb927c7b0`) reads unsigned
 `Player_1+x_pos`. Below `$0940` it writes minY `$0580`; `$0940..$45FF`
@@ -381,3 +388,23 @@ and22 owning live-rewind controls (24T/0F/0E/0S). All63 current registry keys,
 above remains its historical source epoch. See the
 [exact command, source fingerprint and limits](../../plans/2026-10-22-native-gap-swarm.md#cnz2-cold-handoff-observes-the-admitted-live-history-floor--2026-10-23).
 This does not qualify the other CNZ/ICZ routes, native timing, breadth or full acts.
+
+## Music ownership follow-up (2026-11-02)
+
+The [cross-game music audit](../../audits/2026-11-02-music-transitions.md)
+records corrected native request IDs and/or level-restore selection affecting
+this route. Restoration selects the apparent playlist and P1 invincibility at
+the native boundary. These local checks do not requalify this matrix’s inherited
+route, viewport/donor/team, lifecycle or audible-comparison gaps.
+
+## Shared reload frame ownership (2026-11-03)
+
+`TestS3kActTransitionFrameOwnership` adds a positioned Act 1 → Act 2 reload,
+then steps the next production gameplay row and repeats it after two restores.
+It checks oscillator advancement and the captured object, sprite and level owners;
+the frame-boundary reload must not publish a second in-frame rewind marker.
+CNZ/LBZ also retain direct in-frame transition-owned oscillator marker controls.
+The seven shared cases passed in the focused run; this does not qualify cold
+reachability, live rewind-floor recording, other configurations or complete routes.
+Those inherited obligations remain open. See the
+[shared ownership design](../../designs/2026-11-03-seamless-request-retargeting.md).

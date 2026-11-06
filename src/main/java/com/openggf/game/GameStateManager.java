@@ -317,7 +317,11 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
 
     public void addScore(int amount) {
         if (amount > 0) {
-            this.score += amount;
+            var world = com.openggf.game.session.SessionManager.getCurrentWorldSession();
+            var policy = world == null ? null : world.getGameModule().getGameService(
+                    com.openggf.game.internal.ScoreAdditionPolicy.class);
+            this.score = policy == null ? score + amount
+                    : (int) Math.min(policy.maximumScore(), (long) score + amount);
         }
     }
 
@@ -636,6 +640,19 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
      */
     public void markSpecialRingCollected(int bitIndex) {
         collectedSpecialRings |= (1 << (bitIndex & 0x1F));
+    }
+
+    int specialRingCollection() {
+        return collectedSpecialRings;
+    }
+
+    void restoreLives(int lives) {
+        this.lives = Math.max(0, lives);
+    }
+
+    void restoreSpecialStageSaveProgress(int rings, int stageIndex) {
+        collectedSpecialRings = rings & 0xFFFF;
+        currentSpecialStageIndex = stageIndex;
     }
 
     // Engine-only write; full S3K SaveGame clears this at loc_C4CC, not level load.

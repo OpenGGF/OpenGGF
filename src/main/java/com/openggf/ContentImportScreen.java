@@ -1,5 +1,6 @@
 package com.openggf;
 
+import com.openggf.i18n.UiMessages;
 import com.openggf.ContentImportService.PreparedImport;
 import com.openggf.control.InputHandler;
 import com.openggf.control.MenuInput;
@@ -8,6 +9,7 @@ import com.openggf.editor.project.EditorProjectMenu;
 import com.openggf.game.GameId;
 import com.openggf.game.MenuDetailsScreen;
 import com.openggf.game.MenuFeedback;
+import com.openggf.game.MenuChrome;
 import com.openggf.game.MenuStyle;
 import com.openggf.game.MenuTextEditor;
 import com.openggf.graphics.PixelFont;
@@ -29,6 +31,11 @@ public final class ContentImportScreen implements AutoCloseable {
     private static final Logger LOGGER = Logger.getLogger(ContentImportScreen.class.getName());
     private static final int ACTION_TOP = 138;
     private static final int ROW_HEIGHT = 18;
+    private static int rowHeight() { return Math.max(ROW_HEIGHT, MenuChrome.compactLineHeight() + 8); }
+    private static final int BROWSE_TOP = 165;
+    private static int statusY() { return Math.min(193, MenuStyle.footerTop() - MenuChrome.compactLineHeight() - 3); }
+    private static int actionTop() { return Math.min(ACTION_TOP, statusY() - 4 - 3 * rowHeight()); }
+    private static int browseTop() { return Math.min(BROWSE_TOP, statusY() - rowHeight() - 4); }
 
     /** The host retains its normal unsaved-project and mod activation boundaries. */
     public interface Host {
@@ -58,7 +65,8 @@ public final class ContentImportScreen implements AutoCloseable {
     private int width = 320;
     private int ticks;
     private boolean open;
-    private String directions = "Arrows", accept = "Enter", back = "Esc", detailsHint = "F1";
+    private String directions = UiMessages.text("menu.contentimportscreen.arrows"), accept = UiMessages.text("menu.contentimportscreen.enter"), back = UiMessages.text("menu.contentimportscreen.esc"), detailsHint = "F1";
+    private boolean controller;
 
     public ContentImportScreen(ContentImportService service, Host host) {
         this(Objects.requireNonNull(service, "service")::inspect, service::installMod, host,
@@ -87,12 +95,12 @@ public final class ContentImportScreen implements AutoCloseable {
     /** Update-thread entry point, including replacement drops while a candidate is open. */
     public void drop(List<Path> paths) {
         if (installing != null) {
-            report(new IllegalStateException("An installation is in progress; wait before dropping another file"));
+            report(new IllegalStateException(UiMessages.text("import.ui.an_installation_is_in_progress_wait_before_dropping_another_file")));
             return;
         }
         open();
         if (paths == null || paths.size() != 1 || paths.getFirst() == null) {
-            report(new IllegalArgumentException("Drop one file or level folder at a time"));
+            report(new IllegalArgumentException(UiMessages.text("import.ui.drop_one_file_or_level_folder_at_a_time")));
             return;
         }
         Path source = paths.getFirst();
@@ -112,6 +120,7 @@ public final class ContentImportScreen implements AutoCloseable {
         ticks++;
         directions = MenuInput.directionLabel(input); accept = MenuInput.confirmLabel(input);
         back = MenuInput.backLabel(input); detailsHint = MenuInput.detailsLabel(input);
+        controller = MenuInput.controller(input);
         // A drop or Browse confirmation cannot also activate a just-prepared payload.
         if (publishInspection() || publishInstallation()) { MenuInput.consumeText(input); return true; }
         if (menu.isOpen()) { menu.update(input); return true; }
@@ -121,7 +130,7 @@ public final class ContentImportScreen implements AutoCloseable {
         }
         MenuInput.consumeText(input);
         if (installing != null) {
-            if (MenuInput.details(input)) details = new MenuDetailsScreen("Import details", fullDetails());
+            if (MenuInput.details(input)) details = new MenuDetailsScreen(UiMessages.text("import.ui.import_details"), fullDetails());
             return true;
         }
         if (MenuInput.back(input)) {
@@ -132,7 +141,7 @@ public final class ContentImportScreen implements AutoCloseable {
             return true;
         }
         if (MenuInput.details(input)) {
-            details = new MenuDetailsScreen("Import details", fullDetails());
+            details = new MenuDetailsScreen(UiMessages.text("import.ui.import_details"), fullDetails());
             MenuFeedback.emit(MenuFeedback.Cue.CONFIRM);
             return true;
         }
@@ -142,10 +151,11 @@ public final class ContentImportScreen implements AutoCloseable {
         if (MenuInput.up(input)) selected = Math.floorMod(selected - 1, count);
         if (MenuInput.down(input)) selected = (selected + 1) % count;
         var pointer = MenuInput.pointer(input, width, 224);
+        if (pointer.inside()) selected = Math.clamp(selected - pointer.wheel(), 0, count - 1);
         boolean clicked = false;
         for (int i = 0; i < count; i++) {
-            int top = candidate == null ? 171 : ACTION_TOP + i * ROW_HEIGHT;
-            if (pointer.over(12, top, width - 24, 17) && pointer.leftPressed()) {
+            int top = candidate == null ? browseTop() : actionTop() + i * rowHeight();
+            if (pointer.over(12, top, width - 24, candidate == null ? rowHeight() - 1 : rowHeight() - 3) && pointer.leftPressed()) {
                 selected = i; clicked = true;
             }
         }
@@ -183,32 +193,31 @@ public final class ContentImportScreen implements AutoCloseable {
         try { host.modInstalled(result.path()); host.closed(); MenuFeedback.emit(MenuFeedback.Cue.CONFIRM); }
         catch (RuntimeException failure) {
             open = true;
-            report(new IllegalStateException("Installed " + result.path().getFileName()
-                    + " disabled, but " + failure.getMessage(), failure));
+            report(new IllegalStateException(UiMessages.text("import.installed_followup_error", java.util.Map.of("file", result.path().getFileName().toString(), "error", String.valueOf(failure.getMessage()))), failure));
         }
         return true;
     }
 
     private void browse() {
-        menu.showForm("Browse import content", List.of(new EditorProjectMenu.Field("path", "File or folder",
-                lastPath, MenuTextEditor.Mode.PATH)), "Inspect content", values -> {
+        menu.showForm(UiMessages.text("import.ui.browse_import_content"), List.of(new EditorProjectMenu.Field("path", UiMessages.text("import.ui.file_or_folder"),
+                lastPath, MenuTextEditor.Mode.PATH)), UiMessages.text("import.ui.inspect_content"), values -> {
             String path = values.get("path");
-            if (path.isBlank()) throw new IllegalArgumentException("Choose a file or level folder");
+            if (path.isBlank()) throw new IllegalArgumentException(UiMessages.text("import.ui.choose_a_file_or_level_folder"));
             drop(List.of(Path.of(path)));
         });
-        menu.setSubtitle("Projects, level.json, level ZIPs, mod JARs");
+        menu.setSubtitle(UiMessages.text("import.ui.projects_level_json_level_zips_mod_jars"));
         MenuFeedback.emit(MenuFeedback.Cue.CONFIRM);
     }
 
     private void confirm() {
         if (candidate.kind() == ContentImportService.Kind.MOD && !host.allowedToInstallMods()) {
-            report(new IllegalStateException("Install mods and mutators from the title screen; this editor session stays open"));
+            report(new IllegalStateException(UiMessages.text("import.ui.install_mods_and_mutators_from_the_title_screen_this_editor_session_stays_open")));
             return;
         }
         if (candidate.kind() == ContentImportService.Kind.LEVEL && selectedGame == null) {
-            menu.showActions("Choose level game", List.of(gameAction("Sonic 1", GameId.S1),
-                    gameAction("Sonic 2", GameId.S2), gameAction("Sonic 3 & Knuckles", GameId.S3K)));
-            menu.setSubtitle("Choose the ROM host for this level");
+            menu.showActions(UiMessages.text("import.ui.choose_level_game"), List.of(gameAction(UiMessages.text("editor.editor_project_workspace.sonic_1_1t0f5st"), GameId.S1),
+                    gameAction(UiMessages.text("editor.editor_project_workspace.sonic_2_1t0f5su"), GameId.S2), gameAction(UiMessages.text("editor.editor_project_workspace.sonic_3_knuckles_138eayj"), GameId.S3K)));
+            menu.setSubtitle(UiMessages.text("import.ui.choose_the_rom_host_for_this_level"));
             return;
         }
         PreparedImport accepted = candidate;
@@ -228,7 +237,7 @@ public final class ContentImportScreen implements AutoCloseable {
             switch (accepted.kind()) {
                 case PROJECT -> host.openProject(accepted.project());
                 case LEVEL -> host.importLevel(accepted.level(), selectedGame);
-                case MOD -> throw new IllegalStateException("Mod installation was not scheduled");
+                case MOD -> throw new IllegalStateException(UiMessages.text("menu.contentimportscreen.mod_installation_was_not_scheduled"));
             }
             host.closed();
             MenuFeedback.emit(MenuFeedback.Cue.CONFIRM);
@@ -263,7 +272,7 @@ public final class ContentImportScreen implements AutoCloseable {
     private static void closeLease(PreparedImport prepared) {
         try { prepared.close(); }
         catch (IOException | RuntimeException failure) {
-            LOGGER.log(Level.WARNING, "Unable to remove prepared import resources", failure);
+            LOGGER.log(Level.WARNING, UiMessages.text("menu.contentimportscreen.unable_to_remove_prepared_import_resources"), failure);
         }
     }
 
@@ -272,110 +281,134 @@ public final class ContentImportScreen implements AutoCloseable {
         this.width = Math.max(320, width);
         if (menu.isOpen()) { menu.render(font, this.width); return; }
         if (details != null) { details.render(font, this.width); return; }
-        MenuStyle.page(font, this.width, "Import content", "Levels, projects, mods and mutators");
+        MenuChrome.page(font, this.width, UiMessages.text("menu.contentimportscreen.import_content"), null,
+                candidate != null && error == null && installing == null ? UiMessages.text("import.ui.review_this_content_before_applying")
+                        : UiMessages.text("import.ui.levels_projects_mods_and_mutators"));
         if (candidate != null) renderCandidate(font);
         else renderLanding(font);
-        String status = error != null ? detailsHint + " Full error: " + singleLine(error)
-                : installing != null ? "Installing disabled; please wait"
-                : pending != null ? "Inspecting content; " + back + " cancels"
-                : candidate != null ? "Review this content before applying" : "Drop one file or level folder onto the window";
-        String controls = installing != null ? detailsHint + " Details"
-                : pending != null ? back + " Cancel  " + detailsHint + " Details"
-                : candidate != null ? accept + " Apply  " + directions + " Select  " + back + " Back"
-                : accept + " Browse  " + back + " Close  " + detailsHint + " Help";
-        MenuStyle.footer(font, this.width, status, controls);
+        String status = error != null ? UiMessages.text("menu.contentimportscreen.error") + singleLine(error)
+                : installing != null ? UiMessages.text("import.ui.installing_disabled_please_wait")
+                : pending != null ? UiMessages.text("menu.contentimportscreen.inspecting_content")
+                : candidate != null ? UiMessages.text("menu.contentimportscreen.from") + singleLine(candidate.source().getFileName() == null
+                        ? candidate.source().toString() : candidate.source().getFileName().toString())
+                : UiMessages.text("import.ui.drop_one_file_or_level_folder_onto_the_window");
+        if (error != null) MenuChrome.icon(font, MenuChrome.Icon.WARNING, 9, statusY(), MenuChrome.RED);
+        MenuChrome.compact(font, MenuStyle.pageText(status, this.width - 30, MenuStyle.COMPACT, ticks), error != null ? 20 : 9, statusY(),
+                error != null ? MenuChrome.RED : MenuChrome.MUTED);
+        String vertical = controller ? directions : MenuChrome.ARROWS_UD;
+        List<MenuChrome.Hint> hints = installing != null ? List.of(MenuChrome.hint(detailsHint, UiMessages.text("menu.path.details_caps")))
+                : pending != null ? List.of(MenuChrome.hint(detailsHint, UiMessages.text("menu.path.details_caps")), MenuChrome.hint(back, UiMessages.text("menu.onboarding.cancel_caps")))
+                : candidate != null ? List.of(MenuChrome.hint(detailsHint, UiMessages.text("menu.path.details_caps")), MenuChrome.hint(vertical, UiMessages.text("hub.ui.select_caps")), MenuChrome.hint(accept, UiMessages.text("editor.menu.editor_project_menu.apply")),
+                        MenuChrome.hint(back, UiMessages.text("language.picker.back")))
+                : List.of(MenuChrome.hint(detailsHint, UiMessages.text("hub.ui.help_caps")), MenuChrome.hint(accept, UiMessages.text("menu.contentimportscreen.browse")), MenuChrome.hint(back, UiMessages.text("editor.menu.editor_project_menu.close")));
+        MenuChrome.footer(font, this.width, null, hints, controller, ticks);
     }
 
     private void renderLanding(PixelFont font) {
-        MenuStyle.panel(font, 12, 52, width - 24, 96);
-        MenuStyle.fill(font, 12, 52, width - 24, 1, .22f, .47f, .67f, 1);
-        MenuStyle.fill(font, 12, 147, width - 24, 1, .22f, .47f, .67f, 1);
-        if (!busy()) {
-            centered(font, "Drop a level, project,", 65, 1, 1, 1);
-            centered(font, "mod or mutator", 79, 1, 1, 1);
-            int center = width / 2;
-            MenuStyle.fill(font, center - 2, 101, 4, 15, .4f, .88f, 1, 1);
-            MenuStyle.fill(font, center - 5, 111, 10, 3, .4f, .88f, 1, 1);
-            MenuStyle.fill(font, center - 8, 108, 16, 3, .4f, .88f, 1, 1);
-            MenuStyle.fill(font, center - 13, 122, 26, 2, .4f, .88f, 1, 1);
-            MenuStyle.fill(font, center - 13, 116, 2, 8, .4f, .88f, 1, 1);
-            MenuStyle.fill(font, center + 11, 116, 2, 8, .4f, .88f, 1, 1);
-            centered(font, "or choose a file below", 134, .7f, .8f, .95f);
-            MenuStyle.focus(font, 12, 171, width - 24, 17);
-            MenuStyle.label(font, "Browse files", 20, 175, width - 40, 1, 1, 1);
-        } else {
-            centered(font, (installing == null ? "Inspecting" : "Installing")
-                    + ".".repeat(1 + ticks / 20 % 3), 79, .4f, .88f, 1);
-            centered(font, singleLine(lastPath), 107, .7f, .8f, .95f);
-            centered(font, installing == null ? "Checking the package before import"
-                    : "Keep this screen open while it finishes", 133, .7f, .8f, .95f);
+        MenuChrome.fill(font, 12, 50, width - 24, 98, MenuChrome.NAVY, .96f);
+        // A dashed drop zone, so the page reads as a target before any text.
+        for (int x = 12; x < width - 12; x += 8) {
+            MenuChrome.fill(font, x, 50, Math.min(5, width - 12 - x), 1, MenuChrome.EDGE);
+            MenuChrome.fill(font, x, 147, Math.min(5, width - 12 - x), 1, MenuChrome.EDGE);
         }
-        centered(font, ".ogfproject  level.json / ZIP  mod JAR", 155, .65f, .75f, .9f);
+        for (int y = 50; y < 148; y += 8) {
+            MenuChrome.fill(font, 12, y, 1, Math.min(5, 148 - y), MenuChrome.EDGE);
+            MenuChrome.fill(font, width - 13, y, 1, Math.min(5, 148 - y), MenuChrome.EDGE);
+        }
+        if (!busy()) {
+            centered(font, UiMessages.text("import.ui.drop_a_level_project"), 63, MenuChrome.WHITE);
+            centered(font, "mod or mutator here", 75, MenuChrome.WHITE);
+            int center = width / 2;
+            MenuChrome.fill(font, center - 2, 95, 4, 15, MenuChrome.CYAN);
+            MenuChrome.fill(font, center - 5, 105, 10, 3, MenuChrome.CYAN);
+            MenuChrome.fill(font, center - 8, 102, 16, 3, MenuChrome.CYAN);
+            MenuChrome.fill(font, center - 13, 116, 26, 2, MenuChrome.CYAN);
+            MenuChrome.fill(font, center - 13, 110, 2, 8, MenuChrome.CYAN);
+            MenuChrome.fill(font, center + 11, 110, 2, 8, MenuChrome.CYAN);
+            String[] kinds = {".OGFPROJECT", UiMessages.text("menu.contentimportscreen.level_json_zip"), UiMessages.text("menu.contentimportscreen.mod_jar")};
+            int total = -6;
+            for (String kind : kinds) total += MenuChrome.tagWidth(kind) + 6;
+            int x = (width - total) / 2;
+            for (String kind : kinds) x += MenuChrome.tag(font, x, 130, kind, MenuChrome.MUTED) + 6;
+            MenuChrome.button(font, 12, browseTop(), width - 24, rowHeight() - 1, MenuStyle.pageText(UiMessages.text("import.ui.browse_files"), width - 40, MenuStyle.COMPACT, ticks), true, true, ticks);
+        } else {
+            centered(font, (installing == null ? UiMessages.text("menu.contentimportscreen.inspecting") : UiMessages.text("menu.contentimportscreen.installing"))
+                    + ".".repeat(1 + ticks / 20 % 3), 79, MenuChrome.CYAN);
+            centered(font, singleLine(lastPath), 103, MenuChrome.TEXT);
+            centered(font, installing == null ? UiMessages.text("import.ui.checking_the_package_before_import")
+                    : UiMessages.text("import.ui.keep_this_screen_open_while_it_finishes"), 121, MenuChrome.MUTED);
+        }
     }
 
     private void renderCandidate(PixelFont font) {
-        MenuStyle.panel(font, 12, 49, width - 24, 81);
-        MenuStyle.label(font, singleLine(candidate.displayName()), 20, 56, width - 40, 1, 1, 1);
+        int bottom = actionTop() - 6;
+        MenuChrome.descriptionBox(font, 12, 49, width - 24, Math.max(1, bottom - 49), List.of(), List.of());
+        int y = 55;
+        if (y + MenuChrome.labelLineHeight() <= bottom) {
+            MenuChrome.label(font, MenuStyle.pageText(singleLine(candidate.displayName()), width - 40, 1f, ticks), 20, y, MenuChrome.WHITE);
+            y += MenuChrome.labelLineHeight() + 4;
+        }
         String kind = switch (candidate.kind()) {
-            case PROJECT -> "EDITOR PROJECT";
-            case LEVEL -> "LEVEL EXPORT";
-            case MOD -> "MOD / MUTATOR PACKAGE";
+            case PROJECT -> UiMessages.text("import.ui.editor_project_caps");
+            case LEVEL -> UiMessages.text("import.ui.level_export_caps");
+            case MOD -> UiMessages.text("menu.contentimportscreen.mod_mutator");
         };
-        if (selectedGame != null) kind += "  " + gameLabel(selectedGame);
-        MenuStyle.text(font, kind, 20, 73, width - 40, .4f, .88f, 1);
-        MenuStyle.text(font, "Action: " + actionLabel(), 20, 89, width - 40, 1, .8f, .3f);
-        String detail = singleLine(candidate.detail());
-        int columns = Math.max(1, (width - 40) / 6);
-        int end = Math.min(columns, detail.length());
-        if (detail.length() > columns && detail.lastIndexOf(' ', columns) > 0) end = detail.lastIndexOf(' ', columns);
-        MenuStyle.text(font, detail.substring(0, end), 20, 105, width - 40, .7f, .8f, .95f);
-        if (end < detail.length()) MenuStyle.text(font, detail.substring(end).stripLeading(), 20, 117,
-                width - 40, .7f, .8f, .95f);
-        String[] actions = {actionLabel(), "Browse another file", "Cancel"};
+        if (y + MenuChrome.compactLineHeight() + 4 <= bottom) {
+            int x = 20 + MenuChrome.tag(font, 20, y, kind, MenuChrome.CYAN) + 4;
+            if (selectedGame != null) MenuChrome.tag(font, x, y, gameLabel(selectedGame).toUpperCase(java.util.Locale.ROOT), MenuChrome.MUTED);
+            y += MenuChrome.compactLineHeight() + 8;
+        }
+        if (!candidate.facts().isEmpty() && y + MenuChrome.compactLineHeight() <= bottom) {
+            MenuChrome.compact(font, MenuStyle.pageText(singleLine(candidate.facts()), width - 40, MenuStyle.COMPACT, ticks), 20, y, MenuChrome.MUTED);
+            y += MenuChrome.compactLineHeight() + 8;
+        }
+        for (String line : MenuStyle.wrap(singleLine(candidate.detail()), width - 40, MenuStyle.COMPACT)) {
+            if (y + MenuChrome.compactLineHeight() > bottom) break;
+            MenuChrome.compact(font, line, 20, y, MenuChrome.TEXT);
+            y += Math.max(MenuChrome.DESCRIPTION_PITCH, MenuChrome.compactLineHeight());
+        }
+        String[] actions = {actionLabel(), UiMessages.text("import.ui.browse_another_file"), UiMessages.text("import.ui.cancel")};
         for (int i = 0; i < actions.length; i++) {
-            int y = ACTION_TOP + i * ROW_HEIGHT;
-            if (i == selected) MenuStyle.focus(font, 12, y, width - 24, 17);
-            MenuStyle.label(font, actions[i], 20, y + 4, width - 40, 1, 1, 1);
+            MenuChrome.button(font, 12, actionTop() + i * rowHeight(), width - 24, rowHeight() - 3,
+                    MenuStyle.pageText(actions[i], width - 48, MenuStyle.COMPACT, ticks), i == selected, i == 0, ticks);
         }
     }
 
     private String actionLabel() {
-        return candidate.kind() == ContentImportService.Kind.MOD ? "Install disabled"
-                : candidate.kind() == ContentImportService.Kind.PROJECT ? "Open project in editor" : "Import level into editor";
+        return candidate.kind() == ContentImportService.Kind.MOD ? UiMessages.text("import.ui.install_disabled")
+                : candidate.kind() == ContentImportService.Kind.PROJECT ? UiMessages.text("import.ui.open_project_in_editor") : UiMessages.text("import.ui.import_level_into_editor");
     }
 
-    private String fullDetails() {
+    String fullDetails() {
         if (error != null) return error;
-        if (installing != null) return "Installing the confirmed mod package disabled. "
-                + "Wait for installation to finish before choosing another file. "
-                + "The Mods screen will open afterward so you can review enablement and code trust.\n\nSource: " + lastPath;
-        if (candidate != null) return candidate.displayName() + "\nType: " + candidate.kind()
-                + "\nSource: " + candidate.source() + "\nAction: " + actionLabel()
-                + (selectedGame == null ? "" : "\nGame: " + gameLabel(selectedGame))
+        if (pending != null) return UiMessages.text("import.details.checking_source", java.util.Map.of("path", lastPath));
+        if (installing != null) return UiMessages.text("import.details.installing_source", java.util.Map.of("path", lastPath));
+        if (candidate != null) return UiMessages.text("import.details.candidate", java.util.Map.of(
+                "name", candidate.displayName(), "type", switch (candidate.kind()) {
+                    case PROJECT -> UiMessages.text("import.ui.editor_project_caps");
+                    case LEVEL -> UiMessages.text("import.ui.level_export_caps");
+                    case MOD -> UiMessages.text("import.ui.mod_mutator_package_caps");
+                }, "source", candidate.source().toString(), "action", actionLabel()))
+                + (candidate.facts().isEmpty() ? "" : "\n" + UiMessages.text("import.details.identity", java.util.Map.of("identity", candidate.facts())))
+                + (selectedGame == null ? "" : "\n" + UiMessages.text("import.details.game", java.util.Map.of("game", gameLabel(selectedGame))))
                 + "\n\n" + candidate.detail() + "\n" + candidate.findings().stream()
                 .map(finding -> finding.message()).reduce("", (a, b) -> a + "\n" + b);
-        return "Drop one file or folder anywhere on the import screen, or choose Browse files. "
-                + "The path field supports normal typing, a controller keyboard, and Up to browse paths.\n\n"
-                + "Editable projects: .ogfproject\nLevels: a level folder, level.json, or a ZIP containing one level\n"
-                + "Mods and mutators: mod JARs, or a ZIP containing one JAR\n\n"
-                + "Review the name, type and action before confirming. Projects and levels open in the editor. "
-                + "Mods install disabled; use Mods at the title screen to review, enable, trust code if required, and apply. "
-                + "Inspection does not run creator code. Canceling keeps the current project and mod choices.";
+        return UiMessages.text("import.details.guide");
     }
 
-    private void centered(PixelFont font, String text, int y, float r, float g, float b) {
-        String fitted = MenuStyle.fit(text, width - 40);
-        MenuStyle.text(font, fitted, (width - fitted.length() * 6) / 2, y, width - 40, r, g, b);
+    private void centered(PixelFont font, String text, int y, float[] color) {
+        String fitted = MenuStyle.pageText(text, width - 40, MenuStyle.COMPACT, ticks);
+        MenuChrome.compact(font, fitted, (width - MenuChrome.compactWidth(fitted)) / 2, y, color);
     }
 
     private static String singleLine(String text) { return MenuDetailsScreen.readable(text).replaceAll("\\s+", " ").trim(); }
     private static String gameLabel(GameId game) {
         return switch (game) {
-            case S1 -> "Sonic 1";
-            case S2 -> "Sonic 2";
-            case S3K -> "Sonic 3&K";
+            case S1 -> UiMessages.text("editor.editor_project_workspace.sonic_1_1t0f5st");
+            case S2 -> UiMessages.text("editor.editor_project_workspace.sonic_2_1t0f5su");
+            case S3K -> UiMessages.text("launch.value.sonic_3_k");
             case SCD -> "Sonic CD";
-            case STANDALONE -> "Standalone";
+            case STANDALONE -> UiMessages.text("import.ui.standalone");
         };
     }
 
@@ -415,8 +448,8 @@ public final class ContentImportScreen implements AutoCloseable {
         }
 
         private static void logDetached(Installed completed) {
-            if (completed.failure() != null) LOGGER.log(Level.WARNING, "Content installation failed after screen cleanup", completed.failure());
-            else LOGGER.info("Content installation completed disabled after screen cleanup: " + completed.path());
+            if (completed.failure() != null) LOGGER.log(Level.WARNING, UiMessages.text("menu.contentimportscreen.content_installation_failed_after_screen_cleanup"), completed.failure());
+            else LOGGER.info(UiMessages.text("menu.contentimportscreen.content_installation_completed_disabled_after_screen_cl") + completed.path());
         }
     }
 
@@ -435,7 +468,7 @@ public final class ContentImportScreen implements AutoCloseable {
             synchronized (this) { if (canceled) return; }
             PreparedImport prepared = null;
             Exception failed = null;
-            try { prepared = Objects.requireNonNull(inspection.inspect(source), "Prepared import"); }
+            try { prepared = Objects.requireNonNull(inspection.inspect(source), UiMessages.text("menu.contentimportscreen.prepared_import")); }
             catch (Exception error) { failed = error; }
             synchronized (this) {
                 if (!canceled) {

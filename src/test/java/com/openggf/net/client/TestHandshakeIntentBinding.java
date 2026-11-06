@@ -17,7 +17,8 @@ class TestHandshakeIntentBinding {
             var client = new ClientHandshake(identity, "?", "build");
             var hello = client.hello();
             var altered = new ControlMessage.Hello(hello.protocolVersion(), hello.pubKeyBase64(), name,
-                    hello.determinismFingerprint(), hello.appearance());
+                    hello.determinismFingerprint(), hello.appearance(),
+                    hello.grantReference(), hello.routeGeneration());
             var host = new HostHandshake("authority", null);
             assertInstanceOf(HostHandshake.Reject.class, host.onHello(altered),
                     "UTF-8 replacement must not collapse different Hello intent into the same transcript");
@@ -106,7 +107,7 @@ class TestHandshakeIntentBinding {
                     () -> RaceClient.connect(java.net.URI.create(uri), identity, "A", "build").get());
             assertInstanceOf(IllegalArgumentException.class, room.getCause(), uri);
             var master = assertThrows(java.util.concurrent.ExecutionException.class,
-                    () -> MasterClient.connect(java.net.URI.create(uri), identity, "A", "build", null).get());
+                    () -> MasterClient.connect(uri, identity, "A", "build", null).get());
             assertInstanceOf(IllegalArgumentException.class, master.getCause(), uri);
         }
     }
@@ -122,7 +123,8 @@ class TestHandshakeIntentBinding {
             var substituted = new ControlMessage.Hello(hello.protocolVersion(), hello.pubKeyBase64(),
                     replaced == 0 ? "Mallory" : hello.displayName(),
                     replaced == 1 ? "build-b" : hello.determinismFingerprint(),
-                    replaced == 2 ? "" : hello.appearance());
+                    replaced == 2 ? "" : hello.appearance(),
+                    hello.grantReference(), hello.routeGeneration());
             var host = new HostHandshake("authority", null);
             var welcome = assertInstanceOf(HostHandshake.SendWelcome.class, host.onHello(substituted));
             assertInstanceOf(HostHandshake.Reject.class, host.onAuthProof(client.onWelcome(welcome.welcome())),

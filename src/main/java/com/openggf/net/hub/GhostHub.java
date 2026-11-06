@@ -222,9 +222,7 @@ public final class GhostHub {
             }
             packet = null;
         }
-        // HostMasterLink adds a three-byte RelayGuestBinary envelope. Preserve
-        // the ordinary one-encode path while leaving room for that transport.
-        if (packet == null || packet.length > Protocol.MAX_BINARY_BYTES - 3) {
+        if (packet == null || packet.length > Protocol.MAX_BINARY_BYTES) {
             if (entries.size() < 2) {
                 throw new ProtocolViolationException("aggregate exceeds relay payload cap");
             }
@@ -271,6 +269,10 @@ public final class GhostHub {
         Player player = players.get(slot);
         if (player != null) {
             markSilent(slot, player, GhostPackets.ROSTER_STATUS_FINISHED);
+            // Small rooms do not use periodic relevance rosters. Publish this
+            // authoritative coarse lifecycle transition immediately so clients
+            // can observe completion without relying on unverified standings.
+            sendRoster();
         }
     }
 

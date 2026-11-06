@@ -495,8 +495,8 @@ negative values drop below.
 **What to check.** When porting any S3K SlopedSolidProvider:
 
 1. Find the ROM routine that samples the slope and computes the
-   surface.  S3K uses `SolidObjCheckSloped` (sonic3k.asm:42022-42055),
-   `SolidObjCheckSloped2` (sonic3k.asm:41927-41954), or the
+   surface.  S3K uses `SolidObjCheckSloped` (sonic3k.asm:42108-42141),
+   `SolidObjCheckSloped2` (sonic3k.asm:42101-42128), or the
    per-object loc_19EB6-style direct subtraction.
 2. Look at the slope data values relative to ROM `y_pos(a0) - d3`:
    - If slope[mid] ~= 0 and the surface visually sits at object_y,
@@ -1132,6 +1132,15 @@ native behavior.
 not only inside the helper. Port native player order and thread every mutated
 value through eligibility early returns as well as the active branch.
 
+An identity-keyed contact batch is a lookup, not that dispatch order. ICZ's
+`sub_8BA1C` invokes P1 then P2, while `sub_8BA7E` changes the platform's shared
+Y velocity between riders (`sonic3k.asm:190449-190485`). Iterating the batch's
+`IdentityHashMap` can swap their impulses across allocations or diagnostic
+builds. Consume the semantic player roster in native order, validate that it
+matches the fresh checkpoint, and process engine extensions afterward. A
+regression fixture can assign P1 last in the actual map traversal while keeping
+the declared P1/P2 roster fixed; it must not depend on random identity hashes.
+
 **ROM citation.** HCZ `sub_6B9AC` initializes `d2=+$20000` once, then calls
 `sub_6B9C8` for P1 and P2. A player right of the column negates `d2`, so the
 second player's direction depends on the first call. Its sibling `sub_6B9E2`
@@ -1506,6 +1515,15 @@ member's native P2-pushing bit clears in its unchanged slot status byte
 engine latch instead remained under the member's prior dynamic spawn after it
 moved from Y `$0186` to `$0184`. Instance-scoped ownership lets the same live
 member clear its old push bit without conflating sibling members.
+
+DEZ's vertical conveyor independently reproduces this at original cold row
+3268: `loc_47A14 (sonic3k.asm:93712-93733)` moves Y before
+`loc_47A58 (sonic3k.asm:93735-93749)` calls the full-solid helper. Preserve
+its live instance key and keep the riding record until its own checkpoint
+(only the ridden object's own helper releases an airborne rider); an earlier
+solid's call must not consume this owner's return. Native `loc_1DC98 (sonic3k.asm:41075-41081)` clears support without changing the correct jump Y.
+Check both participants, moving metadata, replacement-slot allocation and real
+recreation/forward replay, as in `TestS3kDezConveyorPadSolidOwnership`.
 
 **Originating commits.** `<pending: FBZ complete-run traces f3199 and f15331>`.
 
@@ -1988,7 +2006,7 @@ callback that legitimately reloads them.
 
 **ROM citation.** FBZ Blaster `loc_8956A` writes routine 2 and restores the
 turn callback, but does not copy recurring `$3A` into patrol countdown `$2E`;
-that reload occurs only in `loc_8955A` (`docs/skdisasm/sonic3k.asm:186568-186579`).
+that reload occurs only in `loc_8955A` (`docs/skdisasm/sonic3k.asm:186583-186594`).
 At complete-run f9965, resetting `$2E` from 64 to 128 after the attack let the
 engine Blaster walk to `$1406` instead of turning near the ROM's `$13E0`, where
 it incorrectly hurt Tails.
@@ -2664,6 +2682,16 @@ the mismatch target.
 `$00022xxx-$00023xxx` at lines 47500-47540.
 
 **Originating commit.** `<pending: CNZ persistent interact-word milestone>`.
+
+**Non-solid ride owners also participate.** DEZ's invisible gravity tube uses
+`RideObject_SetRide` without `SolidObjectProvider`; it still needs the same live
+code-word provider. `Obj_DEZGravityTube (sonic3k.asm:95215-95238)` installs
+`loc_48EEC` or `loc_4906A`, both word4. Fresh original-input callbacks at row14502
+execute `sub_13EFC`'s previous-launcher-word3/current-tube-word4 mismatch while
+the tube is live and offscreen, timer120. Missing provider data is unknown in the
+shared compare, so it cannot trigger that native branch. Keep the correction on
+the object, not in shared CPU or visibility logic; see the 2026-10-30 DEZ live
+interact-word entry in `docs/status/trace-frontier-log.md`.
 
 ---
 
@@ -3596,7 +3624,7 @@ width byte, and the same default lives in the shared
 **Full2 exception (HCZ R11, 2026-10-17).** Identify the actual helper before
 changing bounds. `Obj_HCZBlock` / `loc_1F3CA` (:43287–43297) calls
 `SolidObjectFull2`: its Player2 dispatch (:41091–41102) omits the player
-render_flags gate, and `SolidObjectFull2_1P` (:41105–41107) enters
+render_flags gate, and `SolidObjectFull2_1P` (:41110–41112) enters
 `SolidObject_cont` directly, bypassing the object's `loc_1DF88` gate
 (:41430–41434). Both require the existing object-local
 `bypassesOffscreenSolidGate()` capability, rather than wider geometry or a shared
@@ -3610,12 +3638,12 @@ recreation/replay verifies the static capability survives normal reconstruction.
 
 **Shape.** A ROM routine calls `GetSineCosine`, then does `swap dN` and a long
 shift or add on the result. `GetSineCosine` writes only `d0.w` and `d1.w`
-(`move.w SineTable(pc,d0.w),d1`, `sonic3k.asm:3057`), so after `swap` the *low*
+(`move.w SineTable(pc,d0.w),d1`, `sonic3k.asm:3067`), so after `swap` the *low*
 word of the register is whatever the caller -- or, for `d1`, whatever the
 **previously executed object slot** -- happened to leave in the high word. A
 straight `sin << 12` port silently models that residue as zero.
 
-**Why it bites.** `Obj_MGZSwingingPlatform`'s `sub_34074` (`sonic3k.asm:70527`)
+**Why it bites.** `Obj_MGZSwingingPlatform`'s `sub_34074` (`sonic3k.asm:70572`)
 does `swap d0 / swap d1 / asr.l #4` and then accumulates five steps, so the
 residue reaches the integer part:
 
@@ -3820,7 +3848,7 @@ Three things trip engine ports here:
 
 The high word is stable across an object's own code-pointer rewrites as long as
 they stay in one bank: `Obj_FBZDEZPlayerLauncher` cycles `loc_3B97A` ->
-`loc_3BA4A` (`sonic3k.asm:79449,79457`), both `$0003xxxx`, so its published word
+`loc_3BA4A` (`sonic3k.asm:79527,79457`), both `$0003xxxx`, so its published word
 is `$0003`.
 
 **Originating investigation.** FBZ1 Sonic+Tails segment, frame 116 (frontier
@@ -4024,7 +4052,7 @@ writes. `sub_4A428`'s Pachinko magnet-orb capture (`:97086-97097`) writes only
 follow replay. The tell is a leader history entry whose value matches **no** BK2
 row in the window -- a latch, not a lag.
 
-**Cross-game.** S2 `Obj01_Control` has the same ordering (`s2.asm:35933-35935`),
+**Cross-game.** S2 `Obj01_Control` has the same ordering (`s2.asm:36222-36224`),
 and the S2 sidekick reads the same delayed `Stat_table`, so any S2 object capture
 modelled with a control lock has the identical defect.
 
@@ -4054,7 +4082,7 @@ field is correct, and the object's engine class takes a single `PlayableEntity`.
 **Mechanism.** The S3K idiom is a main routine that does
 `bsr sub_X / lea (Player_2).w,a1 / bsr sub_X`, with the subroutine branching on
 `cmpa.w #Player_1,a1` only for the *global* consequences. `Obj_PachinkoEnergyTrap`
-`loc_49FD6` (`docs/skdisasm/sonic3k.asm:96680-96683`) is the clean example: both
+`loc_49FD6` (`docs/skdisasm/sonic3k.asm:96685-96688`) is the clean example: both
 players are snapped to the beam and given `object_control = $81`, and only the rise
 latch, the exit countdown and the level restart are gated on Player 1
 (`:96665-96677`). `Obj_PachinkoMagnetOrb` `loc_4A408` (`:96943-96949`) has the same
@@ -4085,7 +4113,7 @@ becomes observable when a scoring branch runs.
 `SpawnLevelMainSprites_SpawnPowerup` (`docs/skdisasm/sonic3k.asm:8296-8322`), which
 runs on EVERY level spawn. The bonus zones are not exceptions to it -- they have
 their own explicit arms into the restore (`cmpi.b #$13,(Current_zone).w / beq
-loc_69E0`, and the same for `#$14`, :8302-8305), so the shield is live for the
+loc_69E0`, and the same for `#$14`, :8312-8315), so the shield is live for the
 DURATION of the bonus stage. The engine had captured the value at entry and consumed
 it only when returning to the level, which reads as a plausible "save and restore"
 pair and is half the ROM's behaviour.
@@ -4758,6 +4786,16 @@ value. FBZ floating-platform mode 3 reads that byte after the engine has already
 advanced the level clock. Test equal low bytes with different high bytes to
 catch an incorrectly widened or incremented port. The horizontal chain's timed
 hand-step writes are separate byte writes and must not inherit cage semantics.
+
+DEZ gravity tubes use the same word at horizontal mount, zero-inertia ride and
+vertical mount: `sub_48F12 / loc_49022 / loc_49120`
+(sonic3k.asm:95292-95296,95359-95365,95448-95454). Preserve `anim=0` **and**
+`prev_anim=1` through the existing animation owner. `Animate_Tails_Part2`
+(sonic3k.asm:29396-29404) consumes the difference on its next dispatch and clears
+Status_Push; treating the word as animation ID1 can retain push, suppress the next
+CPU follow nudge and change a later wall/launcher contact. The object must not
+clear push eagerly, and a nonzero-inertia ride must not publish the word. Test
+both native Tails slots and restoration of the pending animation comparison.
 
 ## Preserve unsigned angle clamps and the exact parent-bit owner
 
@@ -6691,3 +6729,208 @@ its shell. `Obj_TurboSpiker` (sonic3k.asm:183959-183965) waits before dispatch;
 Do not advertise inherited body collision while the waiting placeholder is
 uninitialized. Preserve the initialized body's inherited flags and existing
 shell lifecycle; the captured initialized state already provides rewind authority.
+
+
+## Preserve an admitted birth when the next-slot search exhausts
+
+S3K's backward `Load_Sprites` pass at `loc_1B892`
+(sonic3k.asm:37649-37671) can create an actor in the final free SST before the
+following `CreateNewSprite4` search reports failure (sonic3k.asm:37934-37944).
+The return flag describes the next available slot; it does not undo that birth.
+`loc_1B8A4` then adjusts the backward layout/ORT cursors independently. Collapsing
+them into a source-index map, or rolling back the live actor on that return,
+removes the shipped duplicate-placement behavior. The forward tail has different
+cursor ordering at `loc_1B8D2` (sonic3k.asm:37685-37718).
+
+Keep source placement, actual ORT byte and live occurrence identity distinct.
+Within a pass search only later slots, and restart the slot scan on the next
+pass. Prove zero/one/two-free-slot controls, ordinary unload, independent
+standing/pushing lifetime, and strict restore before and after the exhausted
+birth. Equal immutable placement values must not alias live graph/contact keys.
+This is a placement algorithm contract, not permission to emulate adjacent RAM
+overwrites or relax the separate S2 Sideways safe-admission exception.
+
+
+Native lifetime transfer must also copy the occurrence's captured respawn
+address to the replacement. `loc_41D12` (sonic3k.asm:87117-87123) and
+`loc_41D82` (sonic3k.asm:87161-87166) copy `respawn_addr` to the final sand
+column; the original retains its address for its later lower-bit write.
+Moving only source maps can appear correct until strict restore rebuilds
+associations from per-instance addresses. Then unloading the replacement
+leaves the ORT high bit set and a later real reload disappears. Exercise a
+canonical and duplicated occurrence transferred to separately allocated
+children, strict cyclic graph replay and one-owner unload; preserve SST slots,
+object IDs and the other occurrence's latch.
+
+## HCZ fan/platform initialization changes the original slot's role
+
+`Obj_HCZCGZFan` (sonic3k.asm:65354-65400) allocates after a0, changes a0 into
+`HCZCGZFan_Platform`, installs fan Main in a1, and returns. Do not reverse these
+roles or allocate from a placement constructor: all streamed originals must be
+present before their initializers allocate later fans. A failed allocation
+leaves the original initializer installed for retry. The allocated fan can run
+Main later in the same pass, while the original platform does no latch/solid
+work until its next dispatch. Keep those separate object-manager dispatches:
+`HCZCGZFan_Platform_PlayerAbove` (sonic3k.asm:65590-65604) preserves its latch
+at exactly `-$30`, so an intervening fan's lift changes which later platforms
+unlatch. The HCZ row-2500 witness distinguishes earlier left platforms from
+later right platforms without a global delay. See the
+[causal audit](../../../docs/architecture/audits/2026-10-29-s3k-campaign-terminal-certification.md#live-baseline-discrimination-and-object-repair)
+and `TestHczFanNativeDispatch` for generic-coordinate allocation, threshold and
+fresh-recreation controls. Preserve the historical `FanPlatformChild` class
+name used by the rewind inventory while recognizing that it now occupies a0;
+creator-callback restore checks must follow the actual dynamic fan identity.
+
+For `HCZSpinningColumn_Main` (sonic3k.asm:68176-68198), declare the native
+SolidObjectFull zero-X left-side stop through the existing solid-provider
+contract. `loc_1E042` / `loc_1E056` (sonic3k.asm:41513-41528) accept zero X
+velocity on a nonzero left overlap, clear ground/X velocity, and still separate
+the player. Negative left velocity, zero right velocity and exact zero overlap
+bypass that clear. An airborne P2 can therefore have matching X/Y and X velocity
+while retaining an incorrect nonzero ground velocity if the owner omits this
+opt-in. Test the real full-solid contact and fresh world restoration at generic
+coordinates, including those sign/edge controls; do not clear inertia from an
+object-specific trace row or alter the shared default for unrelated callers.
+
+
+## Starpost bonus invitation eligibility is independent of Chaos Emerald completion
+
+`sub_2D028` (sonic3k.asm:61648-61692) checks contact and checkpoint order,
+allocates the ordinary orbiting child, then tests 20 rings before calling
+`sub_2D3C8`. It does not test the Chaos Emerald count. Do not borrow a giant-ring
+or special-stage completion gate for this bonus-stage invitation: the original
+continuous Sonic+Tails movie activates it with seven emeralds and 180 rings.
+`loc_2D436` / `loc_2D474` (sonic3k.asm:61901-61926) select and submit art even
+when a bonus-child allocation fails. Keep native allocation and art owners;
+removing an erroneous eligibility predicate must not invent timing jobs from
+recorded completions. See the original-input and matched-route evidence in
+`docs/architecture/audits/2026-10-29-s3k-campaign-terminal-certification.md`.
+
+
+## Object-owned terrain calls need current motion-dependent probes
+
+`object_control` can bypass ordinary player movement while an object changes
+velocity and calls airborne terrain collision itself. The engine's sensor
+activation then belongs to the object's call preparation; a grounded or previous
+quadrant's inactive ceiling pair must not suppress the ROM's explicit helper.
+Refresh through the existing player sensor activation owner after movement and
+angle preparation, immediately before the terrain call. Do not change shared
+collision math, add a fitted offset or enable probes based on a trace row.
+
+`loc_49730` (sonic3k.asm:95984-95998) moves each turbine-room participant and
+calls `SonicKnux_DoLevelCollision`. Its right-moving `loc_1211A` (sonic3k.asm:24320-24326) and
+`loc_1212A` (sonic3k.asm:24328-24335) check the ceiling even with positive Y
+velocity and applies the signed separation without clearing that velocity.
+The original-input DEZ12622 observation found the engine's ceiling pair still
+inactive from earlier player state. Test both native slots, already-active and
+clear-space controls, and restoration/recreation before the contact. Native
+reference data remains comparison-only.
+
+
+The terrain query and its landing callback have separate responsibilities.
+In the turbine's horizontal-motion dispatch, geometry correctly separated a
+floor overlap while an empty callback retained vertical velocity and stale
+inertia. Native `loc_12158` (sonic3k.asm:24352-24357) zeros Y velocity, copies X
+to ground velocity and calls `Player_TouchFloor_Check_Spindash` (sonic3k.asm:24364-24430)
+before the room reasserts InAir. Observe numeric paired distances, dispatch
+quadrant and values before/after the actual callback; correct final position
+alone does not qualify its velocity or tumble reset. Keep a reached local tail
+separate from unqualified downward-motion and grounded-seat activation paths.
+
+
+## Suppressed normal dispatch can retire a CPU-published ability after takeover
+
+Tails_Control `loc_1384A (sonic3k.asm:26250-26269)` tests object_control bit0
+AFTER CPU control, clearing only double_jump_flag. Clearing flight only in the
+object-control setter misses a flag the CPU publishes later in the same player
+pass. After release, `Tails_Stand_Freespace (sonic3k.asm:27593-27604)` chooses
+ordinary `+$38` gravity from that byte; retaining it selects flight `+$08`.
+This applies to both native player slots. Do not move the clear into the grabbing
+object, erase fuel/radii or strip the independent CPU/object animation owner;
+bit1 still owns animation and bit7 separately gates CPU behavior. Hurt/death
+routines bypass this normal-control tail.
+
+Cross-game application follows the existing FLY dispatch-byte owner. Manual
+flight availability is a donated capability, while CPU recovery stays host-owned;
+capability availability is not a gate for retiring this byte. Stock S2 has no
+manual-flight byte branch (`Obj02_Control_Part2 (s2.asm:38972-39003)`), so do not
+claim its synthetic engine byte is a newly discovered S2 ROM write. KiS2's dormant
+Tails routines retain the S2 branch; native KiS2 removes the Tails roster. See
+`docs/status/trace-frontier-log.md`'s 2026-10-30 Tails suppressed-control entry for
+native bytes, configuration controls, old-red and destructive replay evidence.
+
+
+## Suppressed touch must gate attraction before allocation, not just pickup
+
+S3K `loc_10C7E (sonic3k.asm:22054-22061)` and
+`loc_138E4 (sonic3k.asm:26302-26309)` skip the entire TouchResponse call when
+object_control masks with $A0. Its first Test_Ring_Collisions call owns both
+lightning attraction and allocation-failure direct awards. Guarding only the
+later collected-ring collision permits phantom objects to follow the player
+and award rings hundreds of rows after control is released. Gate the shared
+attraction owner before it consumes a placement or attempts allocation. Use the
+semantic touch-suppression predicate; positive control values that suppress
+movement can still admit touch, including for CPU P2. Previously attracted
+rings continue moving, converting or deleting in their own SST passes.
+
+The 2026-10-30 DEZ attracted-ring entry in `docs/status/trace-frontier-log.md`
+separates the row15625 phantom birth from row16216 acceptance/award and from
+inherited slot drift. Source identities include the native ring-list sentinel;
+engine source indices exclude it. Do not infer allocation or motion parity
+from matching player fields alone.
+
+
+## Synchronous loading can split an object's initial pass (2026-11-03)
+
+`Obj_GumballMachine (sonic3k.asm:127458-127482)` copies the longword
+`V_int_run_count` into `RNG_seed` before `CreateChild1_Normal`. A native
+zero-routine interrupt can occur between those operations. Completing loading
+in one host call and seeding at the destination's first gameplay row therefore
+uses the wrong clock, even if terrain and art queues match. Preserve the actual
+seed owner and the ordering of the real work around the interrupt; copying the
+recorded seed would conceal the missing work.
+
+Loading rows and serviced interrupts are different measurements: masked rows
+advance neither clock, while a serviced zero-routine interrupt advances the ROM
+clock without executing the normal level loop. PLC completion receipts describe
+work readiness; they do not price unrelated synchronous decoding or object
+initialization into interrupt counts. A callback in the SST scan is not proof
+that all object work has finished: inspect remaining live routine heads and
+their clock/RNG dependencies before moving an interrupt across the pass. See
+`docs/architecture/designs/2026-11-03-synchronous-load-vint-accounting.md` for the
+native observations and the bounded timing-input contract.
+
+
+A fresh bonus title must also revoke an earlier in-level title's external child
+dispatch ownership. `loc_60DE (sonic3k.asm:7649-7652)` clears the old SST before
+`loc_62B6 (sonic3k.asm:7762-7767)` installs its new title owner. Retaining that
+presentation-only delegation across `initializeBonus()` leaves the new card in
+SLIDE_IN even with empty resource queues; it is an ownership bug, not evidence
+for another loading delay. A regression should enter from a real externally
+owned in-level card and verify the new bonus card progresses.
+
+
+## Saved water height does not replace movement state (2026-11-04)
+
+Both `Load_Starpost_Settings` saved-block paths (sonic3k.asm:61800-61856)
+restore `Mean_water_level` and the full-screen flag without writing the target
+or movement speed. Restore apparent identity before destination loading so
+water initialization sees the saved level context, then restore the saved mean
+without replacing the initialized target. This applies both to production bonus
+returns and the sanctioned standalone entry import. The recorded HCZ Saved2
+mean 1664 versus initialized target 1280 discriminates an invented target write;
+a return with equal heights cannot. Never import comparison rows after entry.
+
+Native camera word writes likewise do not clear the low word of the persistent
+camera long. Keep the fraction through ordinary loads and word writes, reset it
+only for the native full clear, and capture it for rewind. Recorded PreLevel
+camera longs supply standalone entry state; hand-injecting a fraction proves a
+hypothesis, not a recorded-data replay result.
+
+
+Restoration tests must also name their observation boundary. Bonus entry
+completes assembly at title release; LEVEL retains it for the first LevelLoop
+iteration. Observe saved water after title release and before that gameplay
+water update. Draining the LEVEL boundary first can legitimately move the mean
+or select a new dynamic height, concealing the restore that the test intended
+to inspect. Check both destination mode and the correct pending-boundary owner.

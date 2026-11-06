@@ -408,6 +408,45 @@ public class TestScriptedVelocityAnimationProfile {
     }
 
     @Test
+    void groundedCrouchSelectionSurvivesAnglePosDetachBeforeAnimationPublication() {
+        ScriptedVelocityAnimationProfile profile = createProfile();
+        TestSprite sprite = new TestSprite();
+        sprite.setAnimationId(profile.getWalkAnimId());
+        sprite.getAnimationManager().captureGroundMovementAnimSpeed((short) 0);
+        sprite.setCrouching(true);
+        sprite.setAir(true);
+
+        assertEquals(profile.getDuckAnimId(), profile.resolveAnimationId(sprite, 0, 32),
+                "the grounded Duck selection precedes AnglePos detachment and must replace Wait");
+    }
+
+    @Test
+    void groundedLookUpSelectionSurvivesAnglePosDetachBeforeAnimationPublication() {
+        ScriptedVelocityAnimationProfile profile = createProfile();
+        TestSprite sprite = new TestSprite();
+        sprite.setAnimationId(profile.getWalkAnimId());
+        sprite.getAnimationManager().captureGroundMovementAnimSpeed((short) 0);
+        sprite.setLookingUp(true);
+        sprite.setAir(true);
+        assertEquals(profile.getLookUpAnimId(), profile.resolveAnimationId(sprite, 0, 32));
+        sprite.getAnimationManager().clearGroundMovementAnimSpeed();
+        assertNull(profile.resolveAnimationId(sprite, 1, 32),
+                "stale pose flags without a ground dispatch cannot write an airborne animation");
+    }
+
+    @Test
+    void airborneCrouchWithoutGroundDispatchCannotPublishDuck() {
+        ScriptedVelocityAnimationProfile profile = createProfile();
+        TestSprite sprite = new TestSprite();
+        sprite.setAnimationId(profile.getWalkAnimId());
+        sprite.setCrouching(true);
+        sprite.setAir(true);
+
+        assertNull(profile.resolveAnimationId(sprite, 0, 32),
+                "an airborne routine without a grounded dispatch keeps the incoming animation byte");
+    }
+
+    @Test
     void lateGroundedDuckWriteSurvivesAnglePosDetachFrame() {
         ScriptedVelocityAnimationProfile profile = createProfile();
         TestSprite sprite = new TestSprite();

@@ -10,13 +10,22 @@ import com.openggf.level.objects.FixedSstSlotSink;
 /** Load-scoped fixed-SST installation for Level/loc_62B6, before Load_Sprites. */
 public final class Sonic3kFreshTitleCardSst {
     private boolean installing;
+    private boolean prefixOnly;
+
+    record Selection(boolean installing) { }
 
     void prepare(LevelLoadContext context) {
+        prepare(select(context));
+    }
+
+    void prepare(Selection selection) { installing=selection.installing(); }
+
+    Selection select(LevelLoadContext context) {
         // A host-placed/bootstrap load owns no native entry archives. Saved-origin
         // bonus returns still reach loc_62B6 and carry its owner to loc_64DC
         // (docs/skdisasm/sonic3k.asm:7575-7577,7762-7767,7906-7910).
         int zone=GameServices.level().getCurrentZone(), act=GameServices.level().getCurrentAct();
-        installing=(context.isQueueFreshLevelRuntimeArt()
+        boolean installing=(context.isQueueFreshLevelRuntimeArt()
                 || GameServices.level().isBonusStageReturn())
                 && context.isIncludePostLoadAssembly()
                 && context.getLoadMode()==LevelLoadMode.FULL
@@ -34,9 +43,14 @@ public final class Sonic3kFreshTitleCardSst {
                 && !GameServices.level().isBonusStageReturn()
                 && GameServices.module().getZoneFeatureProvider()
                         .shouldSuppressInitialTitleCard(zone,act)) installing=false;
+        return new Selection(installing);
     }
 
-    void finishInstallation() { installing=false; }
+    void finishInstallation() { installing=false; prefixOnly=false; }
+    boolean isInstalling() { return installing; }
+    void beginPrefixOnly() { prefixOnly=true; }
+    public boolean isPrefixOnly() { return prefixOnly; }
+    public void completePrefixOnly() { prefixOnly=false; }
 
     public void install(int zone, int act, FixedSstSlotSink slots) {
         if (!installing) return;

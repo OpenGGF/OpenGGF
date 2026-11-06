@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.specialstage;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.game.ResultsScreen;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
@@ -310,7 +312,7 @@ public class Sonic2SpecialStageResultsScreen implements ResultsScreen {
 
             // Load ArtUnc_HUDNumbers - HUD digit numbers (0-9)
             Pattern[] numbersPatterns = loadUncompressedPatterns(rom,
-                    Sonic2Constants.ART_UNC_HUD_NUMBERS_ADDR,
+                    address(rom, Sonic2Constants.ART_UNC_HUD_NUMBERS_ADDR),
                     Sonic2Constants.ART_UNC_HUD_NUMBERS_SIZE, "HUDNumbers");
             LOGGER.fine("Loaded " + (numbersPatterns != null ? numbersPatterns.length : 0) + " number patterns");
 
@@ -443,7 +445,7 @@ public class Sonic2SpecialStageResultsScreen implements ResultsScreen {
     private void loadPalette(Rom rom) {
         try {
             byte[] paletteData = rom.readBytes(
-                    Sonic2SpecialStageConstants.RESULTS_PALETTE_OFFSET,
+                    address(rom, Sonic2SpecialStageConstants.RESULTS_PALETTE_OFFSET),
                     Sonic2SpecialStageConstants.RESULTS_PALETTE_SIZE);
 
             resultsPalettes = new Palette[4];
@@ -830,11 +832,12 @@ public class Sonic2SpecialStageResultsScreen implements ResultsScreen {
     private void updateWait() {
         if (stateTimer >= Sonic2SpecialStageConstants.RESULTS_WAIT_DURATION) {
             state = STATE_EXIT;
-            if (messagePresentation == null) {
-                complete = true;
-            }
             // The ROM advances TimedDisplay to DisplayOnly; the next object pass
-            // sets Level_Inactive_flag. Keep the inherited stock timing unchanged.
+            // sets Level_Inactive_flag. Every Obj6F exit -- stock, seventh
+            // emerald and KiS2's split-name messages -- publishes completion on
+            // this expiry pass of the shared tail, so all of them reach the
+            // returning level's Level: on the same frame.
+            complete = true;
         }
     }
 
@@ -917,7 +920,14 @@ public class Sonic2SpecialStageResultsScreen implements ResultsScreen {
             }
             case SUPER_HOLD -> {
                 // Obj6F_TimedDisplay ($14572) predecrements; $22 runs next pass.
-                if (--superMsgTimer == 0) stockSuperPhase = SUPER_DISPLAY_ONLY;
+                // Obj6F_MoveAndDisplay hands the message to the same routine
+                // $20 TimedDisplay -> $22 DisplayOnly tail as the ordinary
+                // $78 wait (s2.asm:28367-28373, 28427-28429, 28522-28528), so
+                // completion is published on the same pass as updateWait's.
+                if (--superMsgTimer == 0) {
+                    stockSuperPhase = SUPER_DISPLAY_ONLY;
+                    complete = true;
+                }
             }
             case SUPER_DISPLAY_ONLY -> {
                 state = STATE_SUPER_DONE;

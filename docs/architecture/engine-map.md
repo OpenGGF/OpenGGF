@@ -1,6 +1,6 @@
 # Engine map
 
-On-demand reference for how the runtime is organised. `CLAUDE.md` / `AGENTS.md` keep
+On-demand reference for how the runtime is organised. `AGENTS.md` keeps
 only the load-bearing rules and gotchas; this file holds the structural detail you
 need when you are actually working inside one of these subsystems.
 
@@ -13,6 +13,7 @@ Companion references:
 
 ## Contents
 
+- [Reimplementation boundary](#reimplementation-boundary)
 - [Entry point and packages](#entry-point-and-packages)
 - [Two-tier service architecture](#two-tier-service-architecture)
 - [Session ownership](#session-ownership)
@@ -33,6 +34,44 @@ Companion references:
 - [Audio engine](#audio-engine)
 - [Configuration and startup](#configuration-and-startup)
 - [Tooling](#tooling)
+
+## Reimplementation boundary
+
+OpenGGF reproduces shipped game behaviour through its own engine. Accuracy work
+implements the game's algorithms, state transitions, update order and observable
+output directly from ROM and disassembly evidence. It must not grow a console
+hardware emulator to obtain that behaviour.
+
+Do not introduce CPU instruction execution, instruction/cycle timing models,
+virtual VDP beam/status polling, or hardware register/bus protocols as an accuracy
+strategy. Hardware-facing game routines need explicit engine operations for their
+game effects. For example, a startup video-standard check should use the engine's
+resolved video-standard semantics where relevant; reproducing a 68000 polling
+loop or manufacturing its measured counter is outside scope. An unsupported
+effect must remain explicit instead of acquiring a fabricated completion receipt.
+
+ROM-shaped data and game state remain useful: raw palette words, tile and sprite
+formats, game-visible frame counters, fade arithmetic, decompression queues and
+rewind state can belong to the reimplementation. Engine rendering and asset
+scheduling can consume them directly. Their presence does not require emulated
+VDP execution, a virtual bus transaction or a physical-peripheral return chain
+before ordinary loading or gameplay may proceed. Preserve actual game-level
+ordering and resource ownership without inventing hardware prerequisites.
+
+Specific sound-hardware synthesis is the narrow exception. The existing YM2612
+and PSG chip implementations are permitted because they produce the required
+sound. This exception does not authorize general CPU/Z80 execution, system-bus
+emulation or video-device simulation around audio. Ordinary synchronization of
+the engine's audio producer remains a software ownership concern.
+
+External emulators are research and verification tools. Native reference
+captures, disassembly analysis and trace comparisons remain allowed. They do not
+provide runtime gameplay state. The bounded timing-input exception retains its
+own [contract](designs/2026-07-27-cross-game-hardware-timing-trace-contract.md):
+matching queued readiness, existing lag-loop selection, and the approved
+hold/resume/zero-routine scheduling of real prepared initialization phases.
+It supplies no clock values or decoded gameplay state and permits no emulator.
+Exact synchronous live-play timing is not established by replay scheduling.
 
 ## Entry point and packages
 
@@ -89,6 +128,13 @@ non-obvious placements:
 | `tools` | Compression utilities (Kosinski, Nemesis, Saxman), `ObjectDiscoveryTool`, disassembly tools incl. `RomOffsetFinder` |
 | `LevelFrameStep` | Lives at the `com.openggf` package **root**, not under `level` |
 
+Held fade and bonus VBlank service uses the package-private
+`LevelFrameStep.serviceHeldVBlank(context, frame, advanceClock)`: resource service
+precedes the supplied clock; playback consumption remains caller-owned. Game
+VBlank publication is once per token, while bonus lag may request several
+service/clock steps under one token. Pause retains its separate first-claim
+policy. See the [ownership design](designs/2026-11-03-held-vblank-ownership.md).
+
 `RewindRecreateConstructors` owns the permitted default-argument types and
 placeholder values used by the four default-argument marker interfaces. The
 markers retain their own constructor prefixes and diagnostic identities.
@@ -123,6 +169,8 @@ Gameplay state is split by lifetime across three layers in `com.openggf.game.ses
 - **`WorldSession`** — durable across editor mode swaps. Owns the active `GameModule`, its
   `GameDataSource` (ROM or bounded standalone assets), both the root and the mod-resolved
   module, the loaded `Level` (incl. `MutableLevel`), and zone/act metadata.
+  Metadata setters admit engine lifecycle callers only; creators request level
+  changes through services so the live manager and durable world stay aligned.
 - **`GameplayModeContext`** — disposable, rebuilt on each gameplay session entry. Owns all
   gameplay-scoped managers (camera, timers, game state, fade, RNG, water, parallax,
   collision, sprites, level, …) plus the runtime-shared registries below. Provides
@@ -213,7 +261,7 @@ when moving behavior; put new bounded work in the collaborator that owns it:
 | `LevelWaterCoordinator` | Water provider loading, dynamic water advancement, playable underwater state |
 | `LevelCheckpointCoordinator` | Checkpoint/respawn state, checkpoint restore, rewind checkpoint capture |
 | `LevelActTransitionExecutor` | ROM-aligned in-place act-transition reload execution and resource handoff; manager retains dispatch, synchronous context and surrounding frame/rewind boundary composition |
-| `LevelLoadPreparer` | One level build running ahead of a seamless transition on a daemon thread; the install always joins it, so it changes timing only. Games opt in through `PreparableLevelLoader` (S3K: `Sonic3k.prepareLevelBuild`/`installPreparedLevel`) |
+| `LevelLoadPreparer` | One level build running ahead of a seamless transition on a daemon thread; install and retirement join its work before the owner releases ROM resources. Games opt in through `PreparableLevelLoader` (S3K: `Sonic3k.prepareLevelBuild`/`installPreparedLevel`) |
 | `LevelTilemapPrebuilder` | Builds FG/BG tilemaps for a not-yet-installed level over its own `LevelGeometry.forLevel` and `LevelLayoutLookup.blockAt`; the live manager adopts them via `adoptPrebuiltTilemaps` and `swapToPrebuiltTilemaps` |
 | `LevelLostRingSpawnCoordinator` | Lost-ring scattering, deferred spawn timing and dynamic-slot reservations; resets release reservations, and its level-scoped rewind adapter restores queued owners by sprite code and reclaims external reservations after subsystem restore |
 | `LevelTransitionCoordinator` | Transition request/consume and return state for acts, stages, title cards, respawns and host return, plus exact synchronous reload context; it does not execute the load |
@@ -382,6 +430,18 @@ with a global running offset; tail appendages (Obj05) for duplicate Tails use `0
 - Only sidekick[0] receives Player 2 controller input.
 - Respawn uses `getEffectiveLeader()` for both condition checks and approach targeting,
   enabling parallel respawn when all sidekicks despawn simultaneously.
+
+## Recording and playback library
+
+`game.playback` owns one bounded artifact library, browser, and typed launch
+boundary for native BK2 recordings and ROM trace segments/runs. Both live modes
+already use `PlaybackDebugManager`; the browser adds no cursor or frame executor.
+`UserRecordingMenu` now owns one recording's options, and `TracePlaybackFeedback`
+owns loading and held diagnostics. Bare movies without bootstrap metadata remain
+inspectable and cannot launch. Strict trace capture, competitive verification,
+live rewind, cinematic presentation, and media output retain their semantic
+owners. See the [unification design](designs/2026-10-28-unified-playback-library.md)
+for the inventory, rejected alternatives, coordinate units, and trust boundaries.
 
 ## Rewind framework
 

@@ -77,6 +77,33 @@ public class TestTouchResponseManager {
         when(player.getSecondaryAbility()).thenReturn(SecondaryAbility.INSTA_SHIELD);
     }
 
+    static java.util.stream.Stream<GameRules> killedEnemyTouchRules() {
+        return java.util.stream.Stream.of(GameRules.SONIC_1, GameRules.SONIC_2, GameRules.SONIC_3K);
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.MethodSource("killedEnemyTouchRules")
+    void killedEnemyStillHurtsLaterVulnerableSidekick(GameRules rules) {
+        when(player.getGameRules()).thenReturn(rules);
+        when(player.getAnimationId()).thenReturn(2);
+        when(player.getRolling()).thenReturn(true);
+        setupTableSize(2, 12, 12);
+        var enemy = new MockDestroyableSnapshotAttackableEnemy(160, 112, 2);
+        objectManager.addDynamicObject(enemy);
+        objectManager.update(0, player, List.of(), 1, false);
+        var controller = new ObjectTouchResponseController(objectManager, table);
+        controller.update(player, 2, false);
+        assertTrue(enemy.isDestroyed());
+
+        AbstractPlayableSprite tails = mock(AbstractPlayableSprite.class);
+        when(tails.getCentreX()).thenReturn((short) 160);
+        when(tails.getCentreY()).thenReturn((short) 112);
+        when(tails.getYRadius()).thenReturn((short) 20);
+        when(tails.getGameRules()).thenReturn(rules);
+        controller.updateSidekick(tails, 2, false);
+        verify(tails).applyHurt(160);
+    }
+
     @AfterEach
     public void tearDown() {
         SessionManager.clear();
@@ -132,6 +159,37 @@ public class TestTouchResponseManager {
         objectManager.update(0, player, List.of(), 1);
         assertFalse(ordinary.wasTouched);
         assertTrue(multi.wasTouched);
+    }
+
+    @Test
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    void offscreenSonic2CrawlHurtPhaseStillTouchesSidekick() throws Exception {
+        setupTableSize(0x17, 8, 8);
+        when(objectManager.getObjectServices().camera().getX()).thenReturn((short) 0x1000);
+        when(player.getCentreX()).thenReturn((short) 0x10A0);
+        var tails = mock(AbstractPlayableSprite.class);
+        when(tails.getCentreX()).thenReturn((short) 0x0F98);
+        when(tails.getCentreY()).thenReturn((short) 112);
+        when(tails.getYRadius()).thenReturn((short) 15);
+        when(tails.getGameRules()).thenReturn(GameRules.SONIC_2);
+        var crawl = new com.openggf.game.sonic2.objects.badniks.CrawlBadnikInstance(
+                new ObjectSpawn(0x0FA0, 112, 0xC8, 0, 0, false, 0));
+        objectManager.addDynamicObject(crawl);
+        objectManager.update(0x1000, player, List.of(tails), 1);
+        assertTrue(objectManager.getTouchResponseObjects().contains(crawl));
+        assertFalse(crawl.isDestroyed());
+        var state = crawl.getClass().getDeclaredField("state");
+        state.setAccessible(true);
+        state.set(crawl, Enum.valueOf((Class<Enum>) state.getType(), "ATTACKING"));
+        var flags = crawl.getClass().getDeclaredField("attackingCollisionFlags");
+        flags.setAccessible(true);
+        flags.setInt(crawl, 0x97);
+        assertFalse(crawl.isOnScreenForTouch(), "the object remains outside the camera");
+        clearInvocations(tails);
+
+        new ObjectTouchResponseController(objectManager, table).updateSidekick(tails, 2, false);
+
+        verify(tails).applyHurt(crawl.getCollisionX());
     }
 
     // ==================== Overlap Detection Tests ====================
@@ -341,7 +399,7 @@ public class TestTouchResponseManager {
 
     @Test
     public void testSidekickTouchResponseSkippedWhenObjectControlSuppresses() {
-        // ROM Tails_Display (sonic3k.asm:26303-26306) skips TouchResponse for
+        // ROM Tails_Display (sonic3k.asm:26318-26321) skips TouchResponse for
         // Tails when object_control bit 7 is set. This is the path
         // Tails_Catch_Up_Flying (sonic3k.asm:26551) and Tails_FlySwim_Unknown
         // (sonic3k.asm:26582) take when entering CATCH_UP_FLIGHT and

@@ -1,5 +1,12 @@
 # S3K Hidden Palace coverage matrix
 
+Routine selection update (2026-10-27): the reviewed full configuration products
+and long cold-campaign qualifications in the [local budget record](../../research/2026-10-27-local-validation-cost.md#thirty-minute-local-command-target)
+now require explicit `exhaustive-audit`. Short real contact, lifecycle and
+restore/forward witnesses remain routine. Historical qualification rows retain
+their original source/input scope; a current smoke pass does not renew deferred
+cold reachability, accumulated route state or every replay window.
+
 Game / canonical zone / act: S3K `S3K_HIDDEN_PALACE`, engine zone `$16` act index 1,
 ROM `Current_zone_and_act = $1601`, SKL object set.
 Character routes: Sonic/Tails (lower floor → `$B40` teleporter → upper corridor →
@@ -586,3 +593,11 @@ Sonic+Tails roundtrip passed 1/0/0/0 at 06:47:35 UTC after that assertion
 was strengthened; the fresh architectural source guard passed 72/0/0/0
 at 06:47:59 UTC. These focused checks retain the inlet and coverage limits
 above.
+
+## Music ownership follow-up (2026-11-02)
+
+The [cross-game music audit](../../audits/2026-11-02-music-transitions.md)
+records corrected native request IDs and/or level-restore selection affecting
+this route. Restoration selects the apparent playlist and P1 invincibility at
+the native boundary. These local checks do not requalify this matrix’s inherited
+route, viewport/donor/team, lifecycle or audible-comparison gaps.

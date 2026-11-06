@@ -49,7 +49,7 @@ import java.util.regex.Pattern;
 public final class BundledModSource implements AutoCloseable {
     /** Optional absolute override for the application install directory. */
     public static final String INSTALL_DIR_PROPERTY = "openggf.installDir";
-    /** Directory beside the engine jar that carries bundled jars in JVM distributions. */
+    /** Directory beside the engine jar or native executable that carries bundled jars. */
     public static final String BUNDLED_DIRECTORY = "bundled";
     /** Cache directory, under the save root, for jars extracted from the universal jar. */
     public static final String CACHE_DIRECTORY = "bundled-mod-cache";
@@ -87,7 +87,7 @@ public final class BundledModSource implements AutoCloseable {
 
         /**
          * The engine's own classpath manifest, embedded jars, install directory and save-root
-         * cache. An engine without a manifest (native images, IDE class directories) returns
+         * cache. An engine without a manifest (for example, unbuilt IDE class directories) returns
          * {@link #EMPTY} before locating anything.
          */
         static Locator production() {

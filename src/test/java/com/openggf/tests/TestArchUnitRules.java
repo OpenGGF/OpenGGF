@@ -5,6 +5,7 @@ import com.openggf.camera.Camera;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.CheckpointState;
 import com.openggf.game.GameServices;
+import com.openggf.game.EngineOnly;
 import com.openggf.game.ModApi;
 import com.openggf.game.animation.AnimatedTileChannelGraph;
 import com.openggf.game.dataselect.CrossGameDataSelectPresentations;
@@ -140,6 +141,11 @@ class TestArchUnitRules {
             "trace",
             "util");
     private static final Set<String> CORE_RUNTIME_TOP_LEVEL_DEPENDENCY_EDGES = Set.of(
+            // Host wording is shared by menus, editor and trace UI. The locale owner
+            // activates only the graphics text context; it owns no gameplay service.
+            "editor -> i18n",
+            "game -> i18n",
+            "i18n -> graphics",
             "audio -> configuration",
             "audio -> data",
             "audio -> debug",
@@ -160,6 +166,7 @@ class TestArchUnitRules {
             // Live button labels share the stateless GLFW key-name codec. Control
             // consumes no configuration service; this leaf has no runtime dependencies.
             "control -> configuration",
+            "control -> util",
             "capture -> audio",
             "data -> configuration",
             "data -> game",
@@ -191,6 +198,19 @@ class TestArchUnitRules {
             // any runtime dependency back on editor or the offline capture tool.
             "editor -> stageplay",
             "tools -> stageplay",
+            // Route tapes (shared route planner, 2026-11-02): the core owns the lossless row
+            // codec and script grammar at the controller boundary, so it reads the recorded
+            // input records. tools composes the engine host and the authoring front-ends; the
+            // core never reaches the gameplay runtime.
+            "route -> debug",
+            "route -> game",
+            // Point goals steer through the one numeric owner, NativeRouteSteering.
+            "route -> sprites",
+            "tools -> route",
+            // The trusted engine route host reads native facing (physics.Direction) into samples.
+            "tools -> physics",
+            // Both editors present route tapes through the planner facade and value types only.
+            "editor -> route",
             "stageplay -> audio",
             "stageplay -> camera",
             "stageplay -> physics",
@@ -200,6 +220,8 @@ class TestArchUnitRules {
             "stageplay -> graphics",
             "stageplay -> level",
             "stageplay -> sprites",
+            // Frozen input tracks reach the live world through the lossless recorded-input conversion.
+            "stageplay -> debug",
             // Only the bounded world presenter consumes the shared FBO binding helper.
             "stageplay -> util",
             "game -> architecture",
@@ -336,6 +358,10 @@ class TestArchUnitRules {
             "tools -> io",
             "tools -> level",
             "tools -> mods",
+            // The bundled-mod packager checks each build's default master address with the
+            // engine's own parser (MasterDiscoveryCheck), so build and runtime cannot disagree;
+            // net has no back-edge to tools and does not join the cycle cluster.
+            "tools -> net",
             "tools -> sprites",
             "tools -> trace",
             // Offline capture provenance consumes the leaf build-identity package;
@@ -409,12 +435,17 @@ class TestArchUnitRules {
     }
 
     private static DescribedPredicate<JavaClass> modApiMarkerType() {
-        return new DescribedPredicate<>("the @ModApi compatibility marker") {
+        return new DescribedPredicate<>("the @ModApi and @EngineOnly compatibility markers") {
             @Override
             public boolean test(JavaClass input) {
-                return input.getName().equals(ModApi.class.getName());
+                return isCompatibilityMarker(input);
             }
         };
+    }
+
+    private static boolean isCompatibilityMarker(JavaClass input) {
+        return input.getName().equals(ModApi.class.getName())
+                || input.getName().equals(EngineOnly.class.getName());
     }
 
     private static boolean approvedGameplayModContractTarget(String originSlice, JavaClass target) {
@@ -666,7 +697,7 @@ class TestArchUnitRules {
                             // only the authored scene adapter can enter Playback/Control. The
                             // Stageplay owner guard rejects its runtime implementation dependencies.
                             .ignoreDependency(authoredStageplayServiceOwner(), authoredStageplayPublicTargets())
-                            // @ModApi is compatibility metadata, not runtime collaboration.
+                            // @ModApi and @EngineOnly are compatibility metadata, not runtime collaboration.
                             .ignoreDependency(DescribedPredicate.alwaysTrue(), modApiMarkerType())
                             // Release tooling reads the inventory but is not runtime orchestration.
                             .ignoreDependency(modApiDocumentationTool(), modApiInventoryType())
@@ -739,6 +770,9 @@ class TestArchUnitRules {
             case "com.openggf.editor.stageplay.StageplayWorkspace" -> Set.of(
                     "com.openggf.tools.StageplayScriptCompiler",
                     "com.openggf.tools.StageplayScriptDecompiler").contains(target);
+            // Route tape jobs speak the isolated worker's line protocol; the worker owns the host.
+            case "com.openggf.editor.route.RouteTapeJob" -> target.equals("com.openggf.tools.RouteEditorProtocol")
+                    || target.startsWith("com.openggf.tools.RouteEditorProtocol$");
             case "com.openggf.editor.project.EditorProjectRuntimeModule" -> Set.of(
                     "com.openggf.mods.code.ModLevelExportStagingValidator",
                     "com.openggf.mods.code.AuthoredStageplayServices",
@@ -758,10 +792,19 @@ class TestArchUnitRules {
                 .stream().anyMatch(owner -> typeOrNested(name, "com.openggf.stageplay." + owner));
     }
 
-    // Each adapter owns a bounded service boundary. Values remain independent and no runtime
-    // owner is admitted to editor/tools; new adapters must be named here rather than frozen away.
+    // Each adapter owns a bounded service boundary. Values remain independent; runtime
+    // consumers must name their exact service here rather than receiving a package exemption.
     private static final java.util.Map<String, Set<String>> STAGEPLAY_CONSUMERS = java.util.Map.ofEntries(
-            java.util.Map.entry("com.openggf.editor.stageplay.StageplayWorkspace", Set.of("com.openggf.stageplay.StageplayGround", "com.openggf.stageplay.StageplayDocument", "com.openggf.stageplay.StageplayTimeline", "com.openggf.stageplay.StageplayController", "com.openggf.stageplay.StageplayStore", "com.openggf.stageplay.StageplayDialogue", "com.openggf.stageplay.runtime.StageplayObjectInspection", "com.openggf.stageplay.editor.StageplayRouteJob", "com.openggf.stageplay.editor.StageplayRouteOverlay", "com.openggf.stageplay.route.StageplayRouteContract", "com.openggf.stageplay.route.StageplayRouteFootprint", "com.openggf.stageplay.route.StageplayRouteProtocol", "com.openggf.stageplay.route.StageplayRouteRequest", "com.openggf.stageplay.route.StageplayRouteResult", "com.openggf.stageplay.StageplaySpeech")),
+            // The editor reuses only completed-world tiling; gameplay and playback remain outside this owner.
+            java.util.Map.entry("com.openggf.editor.render.EditorCanvasRenderPass",
+                    Set.of("com.openggf.stageplay.runtime.StageplayWorldPresentation")),
+            // Presentation maps the canonical action enum to typed form intent; no
+            // runtime player, mutable document or playback service is admitted here.
+            java.util.Map.entry("com.openggf.editor.stageplay.StageplayMenuPresentation",
+                    Set.of("com.openggf.stageplay.StageplayDocument$PuppetCommandKind")),
+            java.util.Map.entry("com.openggf.editor.stageplay.StageplayWorkspace", Set.of("com.openggf.stageplay.StageplayGround", "com.openggf.stageplay.StageplayDocument", "com.openggf.stageplay.StageplayTimeline", "com.openggf.stageplay.StageplayController", "com.openggf.stageplay.StageplayStore", "com.openggf.stageplay.StageplayDialogue", "com.openggf.stageplay.runtime.StageplayObjectInspection", "com.openggf.stageplay.editor.StageplayRouteJob", "com.openggf.stageplay.editor.StageplayRouteOverlay", "com.openggf.stageplay.route.StageplayRouteContract", "com.openggf.stageplay.route.StageplayRouteFootprint", "com.openggf.stageplay.route.StageplayRouteProtocol", "com.openggf.stageplay.route.StageplayRouteRequest", "com.openggf.stageplay.route.StageplayRouteResult", "com.openggf.stageplay.StageplaySpeech",
+                    // Frozen input rows open in the route tape editor through Stageplay's own translation.
+                    "com.openggf.stageplay.route.StageplayRoutes")),
             java.util.Map.entry("com.openggf.editor.stageplay.StageplayObjectAuthoring", Set.of("com.openggf.stageplay.StageplayDocument", "com.openggf.stageplay.StageplayController", "com.openggf.stageplay.StageplayTimeline", "com.openggf.stageplay.StageplayObjectCatalog", "com.openggf.stageplay.runtime.StageplayObjectInspection")),
             java.util.Map.entry("com.openggf.editor.hud.StageplayHud", Set.of("com.openggf.stageplay.editor.StageplayRouteOverlay", "com.openggf.stageplay.StageplayDocument", "com.openggf.stageplay.StageplayController", "com.openggf.stageplay.StageplayDialogue", "com.openggf.stageplay.StageplayTimeline$CameraPose")),
             java.util.Map.entry("com.openggf.tools.StageplayTool", Set.of("com.openggf.stageplay.StageplayGround", "com.openggf.stageplay.StageplayDocument", "com.openggf.stageplay.StageplayStore", "com.openggf.stageplay.StageplayTimeline", "com.openggf.stageplay.runtime.StageplayResources", "com.openggf.stageplay.runtime.StageplayLiveWorld", "com.openggf.stageplay.StageplaySpeech")),
@@ -778,7 +821,8 @@ class TestArchUnitRules {
             java.util.Map.entry("com.openggf.stageplay.runtime.StageplaySpeechSynth", Set.of("audio")),
             java.util.Map.entry("com.openggf.stageplay.StageplayPlayback", Set.of("audio", "control", "data", "game", "graphics", "io", "level", "mods")),
             java.util.Map.entry("com.openggf.stageplay.StageplayObjectCatalog", Set.of("game", "level")),
-            java.util.Map.entry("com.openggf.stageplay.runtime.StageplayLiveWorld", Set.of("audio", "camera", "configuration", "control", "data", "game", "graphics", "level", "mods", "physics", "sprites")),
+            // Frozen input tracks: route rows through the recorded-input conversion (route, debug).
+            java.util.Map.entry("com.openggf.stageplay.runtime.StageplayLiveWorld", Set.of("audio", "camera", "configuration", "control", "data", "debug", "game", "graphics", "level", "mods", "physics", "route", "sprites")),
             java.util.Map.entry("com.openggf.stageplay.runtime.StageplayOfflinePreview", Set.of("audio", "data", "game", "mods")),
             java.util.Map.entry("com.openggf.stageplay.runtime.StageplayAudio", Set.of("audio", "data", "game", "io", "mods")),
             java.util.Map.entry("com.openggf.stageplay.runtime.StageplayGroundSurvey", Set.of("physics", "sprites")),
@@ -803,7 +847,15 @@ class TestArchUnitRules {
             java.util.Map.entry("com.openggf.stageplay.route.StageplayObjectRoutePlanner", Set.of("level", "physics")),
             java.util.Map.entry("com.openggf.stageplay.route.StageplayRouteAssets", Set.of("io")),
             java.util.Map.entry("com.openggf.stageplay.route.StageplayRouteInputs", Set.of("data")),
-            java.util.Map.entry("com.openggf.stageplay.route.StageplayRoutePlanner", Set.of("game", "level", "mods", "sprites")));
+            java.util.Map.entry("com.openggf.stageplay.route.StageplayRoutePlanner", Set.of("game", "level", "mods", "route", "sprites")),
+            // Stageplay's route front-end (shared route planner, 2026-11-02): probe and scene hosts,
+            // track/tape translation and the shot checks on the qualification replay.
+            java.util.Map.entry("com.openggf.stageplay.route.StageplayRouteHosts", Set.of("game", "level", "mods", "physics", "route", "sprites")),
+            java.util.Map.entry("com.openggf.stageplay.route.StageplayRoutes", Set.of("route")),
+            java.util.Map.entry("com.openggf.stageplay.route.StageplayShotChecks", Set.of("game", "level", "route", "sprites")),
+            // One numeric steering owner: the live command kernel delegates to NativeRouteSteering.
+            java.util.Map.entry("com.openggf.stageplay.route.StageplayRouteSteering", Set.of("sprites")),
+            java.util.Map.entry("com.openggf.stageplay.route.StageplayMovementIntent", Set.of("sprites")));
 
     private static boolean approvedStageplayConsumer(String origin, String target) {
         if (typeOrNested(origin, "com.openggf.mods.code.AuthoredStageplayServices"))
@@ -827,6 +879,12 @@ class TestArchUnitRules {
         assertTrue(authoredStageplayServiceOwner().test(classes.get("com.openggf.mods.code.AuthoredStageplayServices")));
         assertTrue(!authoredStageplayServiceOwner().test(classes.get("com.openggf.mods.code.ModRuntime")));
         assertTrue(!authoredStageplayPublicTarget("com.openggf.stageplay.StageplayPlayback$State"));
+        assertTrue(approvedStageplayConsumer("com.openggf.editor.stageplay.StageplayMenuPresentation$1",
+                "com.openggf.stageplay.StageplayDocument$PuppetCommandKind"));
+        assertTrue(!approvedStageplayConsumer("com.openggf.editor.stageplay.StageplayMenuPresentation",
+                "com.openggf.stageplay.StageplayPlayback"));
+        assertTrue(!approvedStageplayConsumer("com.openggf.editor.stageplay.StageplayMenuPresentation",
+                "com.openggf.stageplay.StageplayController"));
         assertTrue(!approvedStageplayConsumer("com.openggf.editor.LevelEditorController",
                 "com.openggf.stageplay.StageplayPlayback"));
         assertTrue(!approvedStageplayConsumer("com.openggf.editor.stageplay.StageplayWorkspace",
@@ -839,6 +897,12 @@ class TestArchUnitRules {
                 "com.openggf.stageplay.runtime.StageplayAssets"));
         assertTrue(!approvedStageplayConsumer("com.openggf.mods.code.ModRuntime",
                 "com.openggf.stageplay.StageplayPlayback"));
+        assertTrue(approvedStageplayConsumer("com.openggf.editor.render.EditorCanvasRenderPass",
+                "com.openggf.stageplay.runtime.StageplayWorldPresentation"));
+        assertTrue(!approvedStageplayConsumer("com.openggf.editor.render.EditorCanvasRenderPass",
+                "com.openggf.stageplay.StageplayPlayback"));
+        assertTrue(!approvedStageplayConsumer("com.openggf.editor.LevelEditorController",
+                "com.openggf.stageplay.runtime.StageplayWorldPresentation"));
         assertTrue(!approvedStageplayConsumer("com.openggf.editor.project.EditorCampaignResources",
                 "com.openggf.stageplay.StageplayPlayback"));
         assertTrue(!approvedStageplayConsumer("com.openggf.editor.project.EditorCampaignExportService",
@@ -863,7 +927,7 @@ class TestArchUnitRules {
                 // to their element type, just as for ordinary value-type references.
                 if (target.isArray()) target = target.getBaseComponentType();
                 String targetSlice = topLevelSlice(target);
-                if (targetSlice == null || target.getName().equals(ModApi.class.getName())) continue;
+                if (targetSlice == null || isCompatibilityMarker(target)) continue;
                 // This transient authoring model must never enter runtime playback or export.
                 if (typeOrNested(target.getName(), "com.openggf.stageplay.editor.StageplayRouteOverlay")
                         && !typeOrNested(origin.getName(), "com.openggf.stageplay.editor.StageplayRouteOverlay")
@@ -985,7 +1049,7 @@ class TestArchUnitRules {
                             .whereLayer("Audio").mayNotAccessAnyLayer()
                             .whereLayer("Graphics").mayNotAccessAnyLayer()
                             .whereLayer("Data").mayNotAccessAnyLayer()
-                            // @ModApi marks a supported type without coupling its runtime layer.
+                            // @ModApi and @EngineOnly mark the supported surface without coupling a runtime layer.
                             .ignoreDependency(DescribedPredicate.alwaysTrue(), modApiMarkerType())
                             .as("audio, graphics, and data layers should not depend on runtime gameplay layers"))
                     .because("lower-level services should stay reusable and should not know about level/sprite/game orchestration; frozen baseline: 209 violations (2026-07-02: +2 ROM-backed SEGA-boot PCM edges in AudioManager, solved edges pruned)");
@@ -1264,7 +1328,7 @@ class TestArchUnitRules {
                 continue;
             }
             for (Dependency dependency : origin.getDirectDependenciesFromSelf()) {
-                if (dependency.getTargetClass().getName().equals(ModApi.class.getName())) {
+                if (isCompatibilityMarker(dependency.getTargetClass())) {
                     continue;
                 }
                 if (Set.of(

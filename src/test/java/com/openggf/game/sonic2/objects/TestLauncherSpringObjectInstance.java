@@ -105,22 +105,32 @@ class TestLauncherSpringObjectInstance {
     }
 
     @Test
-    void verticalTailsRecaptureKeepsRomStandingRadiusSeatBeforeObj85RollRadiusWrite() {
+    void verticalCaptureSeatsTheRiderFromItsStateAtTheSolidCall() {
+        // SolidObject_Landed leaves y = y_pos(a0) - $20 - y_radius - 1; an in-air
+        // rider then takes RideObject_SetRide's ResetOnFloor_Part2 (rolling:
+        // standing radius, subq.w #1 for Tails); Obj85 writes y_radius=$E last
+        // without moving y (s2.asm:35588-35626, 35986-36030, 41024-41031).
+        assertEquals(0x06C0, captureTailsSeat(true, true),
+                "airborne rolling Tails: roll-radius seat, then Part2's one-pixel lift");
+        assertEquals(0x06C1, captureTailsSeat(false, true),
+                "grounded rolling Tails seats on her roll radius and gets no Part2");
+        assertEquals(0x06C0, captureTailsSeat(true, false),
+                "standing-radius Tails seats on $F before Obj85's $E write");
+    }
+
+    private static int captureTailsSeat(boolean air, boolean rolling) {
         LauncherSpringObjectInstance spring = new LauncherSpringObjectInstance(
                 new ObjectSpawn(0x1070, 0x06F0, Sonic2ObjectIds.LAUNCHER_SPRING, 0, 0, false, 0),
                 "LauncherSpring");
+        spring.setServices(new TestObjectServices().withIsolatedObjectManager());
         Tails tails = new Tails("tails", (short) 0x1070, (short) 0x0600);
-        tails.setRolling(true);
-        tails.setAir(true);
-        tails.capturePrePhysicsSnapshot();
-        tails.setAir(false);
-        tails.setCentreY((short) 0x06C1);
+        tails.setRolling(rolling);
+        tails.setAir(air);
+        tails.setCentreY((short) 0x06C3);
         tails.setYSpeed((short) 0);
 
         spring.onSolidContact(tails, new SolidContact(true, false, false, true, false), 0);
-
-        assertEquals(0x06C0, tails.getCentreY() & 0xFFFF,
-                "S2 Obj85 runs SolidObject_Landed before writing Tails y_radius=$0E");
+        return tails.getCentreY() & 0xFFFF;
     }
 
     @Test
@@ -128,6 +138,7 @@ class TestLauncherSpringObjectInstance {
         LauncherSpringObjectInstance spring = new LauncherSpringObjectInstance(
                 new ObjectSpawn(0x21A1, 0x0448, Sonic2ObjectIds.LAUNCHER_SPRING, 0x81, 0, false, 0),
                 "LauncherSpring");
+        spring.setServices(new TestObjectServices().withIsolatedObjectManager());
         Tails tails = new Tails("tails", (short) 0x21B4, (short) 0x0430);
         tails.setHeight(28);
         tails.setYSpeed((short) 0);

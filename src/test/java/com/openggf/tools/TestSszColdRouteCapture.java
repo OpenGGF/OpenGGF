@@ -9,6 +9,7 @@ import com.openggf.game.sonic3k.objects.bosses.SszGhzBossObjectInstance;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.*;
@@ -16,10 +17,12 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Cold native-width SSZ traversal, bosses and DEZ handover using the production loop. */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestSszColdRouteCapture {
+    @Tag("exhaustive-audit")
     @Test void coldRouteDefeatsBothReplicasAndReplaysTraversalAndTransport() throws Exception {
         runColdRoute(false);
     }
 
+    @Tag("exhaustive-audit")
     @Test void coldCompleteRouteDefeatsMechaAndLoadsDeathEggWithRewindAtLateEvents() throws Exception {
         runColdRoute(true);
     }
@@ -27,9 +30,7 @@ class TestSszColdRouteCapture {
     private void runColdRoute(boolean complete) throws Exception {
         var settings = new GameplayCaptureSession.Settings(320, "sonic", "tails", "off", null,
                 null, null, null, false, false, null, null, false, null, false);
-        var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
-                "src/test/resources/routes/s3k/ssz1-sonic-tails-cold-"
-                        + (complete ? "complete" : "upper") + "-320.bk2"));
+        var movie = RouteFixtures.movie("ssz1-sonic-tails-cold-" + (complete ? "complete" : "upper") + "-320", settings);
         // Keep the qualified SSZ branch/history inlet; the independent neutral
         // tail allows a full one-owner fade and native DEZ entrance release.
         int routePrefixFrames = movie.getFrameCount() - (complete ? 180 : 0);

@@ -74,6 +74,7 @@ final class LevelLoadPreparer {
             installedFromPreparedCount++;
             return prepared;
         } catch (InterruptedException e) {
+            awaitCompletion(taken);
             Thread.currentThread().interrupt();
             LOGGER.warning("Prepared level build interrupted; loading synchronously");
             return null;
@@ -83,11 +84,30 @@ final class LevelLoadPreparer {
         }
     }
 
-    /** Drops any pending build. Safe to call when nothing is pending. */
+    /** Retires pending work before its owner can release the ROM it reads. */
     synchronized void discard() {
         if (pending != null) {
-            pending.future().cancel(false);
+            Pending discarded = pending;
             pending = null;
+            awaitCompletion(discarded);
+        }
+    }
+
+    private static void awaitCompletion(Pending build) {
+        boolean interrupted = false;
+        try {
+            while (true) {
+                try {
+                    build.future().get();
+                    return;
+                } catch (InterruptedException ignored) {
+                    interrupted = true;
+                } catch (ExecutionException ignored) {
+                    return;
+                }
+            }
+        } finally {
+            if (interrupted) Thread.currentThread().interrupt();
         }
     }
 

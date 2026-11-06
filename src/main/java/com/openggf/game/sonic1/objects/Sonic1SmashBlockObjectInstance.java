@@ -58,7 +58,7 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/51 Smashable Green Block.asm
  */
 public class Sonic1SmashBlockObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional, com.openggf.level.objects.homing.HomingTargetSource {
 
 // Smashable block, fragment pieces and points children have no horizontal-facing body.
 
@@ -249,7 +249,9 @@ public class Sonic1SmashBlockObjectInstance extends AbstractObjectInstance
         //   bset #1,obStatus(a1)  ; set in-air flag
         //   bclr #3,obStatus(a1)  ; clear standing-on-object flag
         //   move.b #2,obRoutine(a1) ; set player to normal routine
+        // (Smab_Solid .smash, _incObj/51 MZ Smashable Green Block.asm:52-67)
         player.setAir(true);
+        player.setOnObject(false);
 
         // From disassembly:
         //   bclr #3,obStatus(a0)  ; clear player-standing flag on block
@@ -569,5 +571,10 @@ public class Sonic1SmashBlockObjectInstance extends AbstractObjectInstance
             }
             return frame.pieces().get(fragmentIndex);
         }
+    }
+    /** Homing: an MZ block broken by landing on it in a roll, so the attack aims at its top. */
+    @Override public com.openggf.level.objects.homing.HomingTarget homingTarget(com.openggf.game.PlayableEntity player) {
+        return broken ? null : com.openggf.level.objects.HomingTargets.onTop(this,
+                com.openggf.level.objects.homing.HomingTargetKind.BREAKABLE, player);
     }
 }

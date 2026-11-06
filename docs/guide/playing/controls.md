@@ -15,10 +15,12 @@ one.
 | Space | Player 1 action A / jump |
 | I / K / J / L | Player 2 up / down / left / right (`input.player2.up/down/left/right`) |
 | Right Shift | Player 2 action A / jump |
-| Enter | Pause / unpause |
-| Backspace | Player 1 start / in-game pause (engine default; add `input.player1.start` to `config.yaml` to override) |
-| Right Control | Player 2 start |
+| Enter | Player 1 Start / pause / unpause (`input.player1.start`) |
+| Backspace | Player 2 start |
 | Q | Advance one frame (while paused) |
+
+Live Player 1 Start and `input.pause` toggle one visible pause, including audio.
+Recorded playback retains ROM-native Start behavior for accurate replays.
 
 Keyboard B and C action bindings are intentionally unbound by default. All
 three Mega Drive actions act as jump buttons during platforming gameplay when
@@ -32,7 +34,7 @@ available.
 ## Continue screens
 
 After Game Over, a remaining continue opens the game's countdown screen. Press
-Player 1 Start (Backspace by default, or the gamepad Start button) to use it;
+Player 1 Start (Enter by default, or the gamepad Start button) to use it;
 S3K also accepts Player 2 Start. Jump/action buttons do not accept a continue.
 In Sonic 1, Start becomes available after Sonic lands on the floor. Acceptance
 plays the departure animation, spends one continue and restores three lives.
@@ -75,7 +77,7 @@ connected pad:
 | Left bumper | LB | L1 | Hold to rewind live gameplay (`rewind.liveKey`) |
 | Right bumper | RB | R1 | Advance one frame while paused (`debug.keys.frameStep`) |
 | Back button | View | Select | Open/close the per-game options panel on the main menu (stands in for `Tab` in that flow only) |
-| Start | Start | Options | Pause / unpause (`input.pause`, same as Enter -- shows the "PAUSED" overlay and halts audio). Not wired to the separate silent ROM in-game pause (`input.player1.start` / Backspace). |
+| Start | Start | Options | Pause / unpause (`input.pause`, same as Enter -- shows the top-right `PAUSE` plate and halts audio). Keyboard Player 1 Start uses this same pause. |
 
 ## Rewind
 
@@ -103,9 +105,39 @@ move through the game during development or exploration.
 | Page Up | Cycle to the next act within the current zone (`debug.keys.nextAct`) |
 | F9 | Open the level select screen (`debug.keys.levelSelect`) |
 
-`Shift+F9` starts a gameplay input recording or opens Recordings at the hub.
+`Shift+F9` starts a gameplay input recording or opens the Playback browser at the hub.
 Plain `F9` stops an active recording; otherwise it opens level select when debug
 tools are enabled. The ring-bounds overlay uses `K`.
+
+
+### Playback browser
+
+Choose **Playback** under a game card to browse its engine recordings and ROM
+trace replays. **Advanced > Playback browser** opens all games. Move Up from the
+first list row to **Show**, and Up again to **Game**. Left/Right changes a filter;
+Down returns to the list. Enter opens recording options or loads the selected
+trace. The footer shows the equivalent controller buttons. Each row shows its
+kind, game, and approximate length. **ERROR** and **SETUP** mark entries that
+cannot launch. F1 shows the selected entry's details.
+
+Point at a row to highlight it and click to open it. The mouse wheel scrolls the
+list; over **Game** or **Show**, it changes that filter. The footer actions are
+clickable, and right-click goes back one page. Recording options, their target-frame
+keypad and the trace loading/error pages also accept the mouse. Use the wheel to
+read long details or change error pages.
+
+Recording options retain the target frame, pause-on-desync, fast-forward, build
+warnings, and details. Bare BK2 files in recording folders or at the configured
+playback movie path appear with **Needs setup**. They cannot launch without a
+declared starting state. Invalid recordings and unreadable sources show details
+without hiding healthy entries. Automatic trace test mode locks this browser to
+traces; Back exits the mode.
+
+This browser covers engine input recordings, BK2 movie information, and trace
+segments/runs. Time Attack ghosts, exported videos, live rewind history, and
+Stageplay remain in their existing tools. See the
+[recording and playback architecture](../../architecture/designs/2026-10-28-unified-playback-library.md)
+for their different contracts.
 
 ## Debug Overlays
 

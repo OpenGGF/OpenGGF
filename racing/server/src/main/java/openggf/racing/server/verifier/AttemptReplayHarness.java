@@ -132,10 +132,8 @@ public final class AttemptReplayHarness {
                 int checkpointIndex = checkpoint == null ? -1
                         : checkpoint.getLastCheckpointIndex();
                 attempt.onFrame(mask, endOfLevel, checkpointIndex);
-                GhostFrame ghostFrame = new GhostFrame(player.getCentreX(),
-                        player.getCentreY(), player.getMappingFrame(), player.getRenderHFlip(),
-                        player.getRenderVFlip(), false, player.getPriorityBucket(),
-                        player.isHighPriority());
+                GhostFrame ghostFrame = com.openggf.mods.run.NativePlayerPose.capture(player)
+                        .toGhostFrame(false);
                 GhostFrameCodec.encode(ghostFrame, encodedFrame, 0);
                 ghostHash.update(encodedFrame);
                 frames.accept(ghostFrame);

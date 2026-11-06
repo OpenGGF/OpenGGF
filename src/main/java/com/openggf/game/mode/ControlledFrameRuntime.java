@@ -38,11 +38,14 @@ public final class ControlledFrameRuntime {
         try {
             var controller = java.util.Objects.requireNonNull(controller(context));
             if (prepareSetup(context)) return LevelFrameResult.SETUP_ONLY;
-            // Preserve legacy callback/audio ordering. An opt-in owner validates its
-            // held phase before this runtime publishes even the audio frame.
+            // Preserve callback/audio ordering. Opt-in held owners validate
+            // their phase before this runtime publishes an audio frame.
             boolean heldServiceOwner = controller instanceof ControlledVBlankOnlyOwner;
             if (!audioFrameOwned && !heldServiceOwner) beginAudioFrame();
-            if (input != null && controller.capturesKeyboardText()) input.captureKeyboardText();
+            if (input != null && controller.capturesKeyboardText())
+                com.openggf.control.InputHandlerInternalAccess.captureKeyboardText(input, controller);
+            else if (input != null)
+                com.openggf.control.InputHandlerInternalAccess.releaseKeyboardText(input, controller);
             var disposition = java.util.Objects.requireNonNull(controller.beforeFrame(course, snapshot), "gameplay frame disposition");
             PlcLifecyclePhase heldPhase = heldVBlankPhase(controller, disposition);
             if (!audioFrameOwned && heldServiceOwner) beginAudioFrame();
@@ -69,19 +72,13 @@ public final class ControlledFrameRuntime {
                             var currentAdmission = admittedCycle.revalidate(frameContext.gameModule(),
                                     context.getLevelManager(), PlcLifecyclePhase.ORDINARY_LEVEL);
                             LevelFrameStep.updateTimers(frameContext);
-                            boolean overrideOwned = input.hasLogicalOverride();
-                            var previousOverride = input.logical();
-                            input.setLogicalOverride(nativeInput);
-                            try {
+                            return com.openggf.control.InputHandlerInternalAccess.withNativeInput(input, nativeInput, () -> {
                                 context.getSpriteManager().publishHeldInputForLevelEvents(input);
                                 return LevelFrameStep.execute(frameContext, frame, PlcLifecyclePhase.ORDINARY_LEVEL,
                                         context.getLevelManager(), context.getCamera(),
                                         () -> context.getSpriteManager().update(input), LevelFrameStep.DIRECT_WRAPPER,
                                         currentAdmission);
-                            } finally {
-                                input.setLogicalOverride(previousOverride);
-                                if (!overrideOwned) input.clearLogicalOverride();
-                            }
+                            });
                         });
             }
             if (!advance && !transition) {
@@ -121,16 +118,22 @@ public final class ControlledFrameRuntime {
     private static void serviceHeldVBlank(GameplayModeContext context, PlcLifecyclePhase phase) {
         EngineTiming.vIntRunCounter(EngineServices.current()).serviceRepresentedVBlank();
         context.plcFrameLifecycle().runLogicalIteration(frame -> {
-            // Dispatch the fade owner's game VBlank before completion callbacks;
-            // serviceVBlankOnly uses the same token's once guard afterwards.
+            // Dispatch a fade's game VBlank before completion callbacks.
             if (frame.isOwnedBy(PlcLifecyclePhase.PALETTE_FADE))
                 LevelFrameStep.dispatchGameVBlank(LevelFrameContext.from(context), frame);
         }, context.getFadeManager()::update, frame -> {
+            // The shared pause helper owns its first successful pause tick.
+            // Controlled lag/fade rows instead retain this loop's clock tail.
+            boolean ownsHeldClock = phase == PlcLifecyclePhase.LAG
+                    || frame.isOwnedBy(PlcLifecyclePhase.PALETTE_FADE);
+            // A frozen fade's pre-callback and held-body service share one
+            // service/clock claim, including its completion row.
+            if (ownsHeldClock && !frame.claimHeldVBlankService()) return null;
             LevelFrameStep.serviceVBlankOnly(LevelFrameContext.from(context), frame, phase);
-            // EngineTiming delegates to this clock while ObjectManager is bound.
-            // Advance its VBlank only: no object pass or level-frame work runs.
-            var objects = context.getLevelManager().getObjectManager();
-            if (objects != null) objects.advanceVblaCounter();
+            if (ownsHeldClock) {
+                var objects = context.getLevelManager().getObjectManager();
+                if (objects != null) objects.advanceVblaCounter();
+            }
             return null;
         });
     }

@@ -16,7 +16,7 @@ import java.util.logging.Logger;
 
 /**
  * Breakable rock child spawned by CutsceneKnucklesAiz1Instance.
- * ROM: loc_61F60 (sonic3k.asm:128812)
+ * ROM: loc_61F60 (sonic3k.asm:128817)
  *
  * Phase 1 (Init/Wait): Spawned by Knuckles init routine. Draws itself each
  * frame and polls the parent's status bit 7 (triggered flag).

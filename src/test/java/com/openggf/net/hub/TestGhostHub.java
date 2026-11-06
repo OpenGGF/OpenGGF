@@ -128,17 +128,21 @@ class TestGhostHub {
         hub.onBinary(0, GhostPackets.encodeFrames(1, 0, frames(100, 3)));
         hub.onAttemptReset(0, 1);
         hub.onAttemptFinished(0, 1);
+        assertEquals(GhostPackets.ROSTER_STATUS_FINISHED,
+                GhostPackets.decodeRoster(a.binary.getFirst()).stream()
+                        .filter(entry -> entry.playerSlot() == 0)
+                        .findFirst().orElseThrow().status());
         hub.onBinary(1, GhostPackets.encodeFrames(1, 0, frames(500, 3)));
         hub.tick();
-        assertEquals(List.of(0, 1), GhostPackets.decodeAggregate(c.binary.get(0)).entries()
+        assertEquals(List.of(0, 1), GhostPackets.decodeAggregate(c.binary.getLast()).entries()
                 .stream().map(GhostPackets.AggregateEntry::playerSlot).toList());
 
         now += 50;
         hub.onBinary(1, GhostPackets.encodeFrames(1, 3, frames(506, 3)));
         hub.tick();
-        assertEquals(List.of(1), GhostPackets.decodeAggregate(c.binary.get(1)).entries()
+        assertEquals(List.of(1), GhostPackets.decodeAggregate(c.binary.getLast()).entries()
                 .stream().map(GhostPackets.AggregateEntry::playerSlot).toList());
-        assertEquals(1, b.binary.size(), "the silent sender has nothing more to relay");
+        assertEquals(2, b.binary.size(), "the silent sender has nothing more to relay after its roster");
     }
 
     @Test

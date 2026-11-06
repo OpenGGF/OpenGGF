@@ -23,6 +23,8 @@ class QueueObserverTests(unittest.TestCase):
         self.building = False
         self.stack = ExitStack()
         self.addCleanup(self.stack.close)
+        # Synthetic command custody must not depend on host-installed original ROMs.
+        self.stack.enter_context(patch("rom_inputs.rom_args", return_value=[]))
         self.stack.enter_context(patch.object(queue, "needs_exclusive", return_value=False))
         self.stack.enter_context(patch.object(queue, "build_only", side_effect=lambda _: self.building))
         self.stack.enter_context(patch.object(maven_schedule, "maven_kind", return_value="synthetic"))

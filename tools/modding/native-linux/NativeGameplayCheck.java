@@ -113,7 +113,7 @@ public final class NativeGameplayCheck {
                     // arbitrary first owned zone may require a retained scene
                     // session (for example a festival). Bootstrap the backing
                     // game's initial zone before opening that scene instead.
-                    int zone=module.getGameService(OwnedSceneFactory.class)!=null?0:ownedZone(module,manifest.id());
+                    int zone=hasScene(kit,module,manifest.id())?0:ownedZone(module,manifest.id());
                     var launch=com.openggf.game.save.SaveSessionContext.noSave(game,
                             new com.openggf.game.save.SelectedTeam(character,List.of()),zone,0);
                     var requiredTeam=module.getGameplayPolicyProvider()
@@ -137,10 +137,10 @@ public final class NativeGameplayCheck {
                     GameServices.camera().setFocusedSprite(team.mainSprite());
                     GameServices.camera().updatePosition(true);
                     verifyArtOverrides(kit,module,manifest);
-                    if (module.getGameService(OwnedSceneFactory.class) != null) {
+                    if (hasScene(kit,module,manifest.id())) {
                         startCapture();
                         SceneServices services=sceneServices(module,output);
-                        kit.openScene(module, WIDTH, HEIGHT, services);
+                        openScene(kit,module,manifest.id(),loop,services);
                         sceneFrame(kit, output.resolve("00-title.png"));
                         if (args.length == 5) press(kit, org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
                         for (int i = 5; i < args.length; i++) {
@@ -160,7 +160,7 @@ public final class NativeGameplayCheck {
                         kit.sceneHost().close();
                         healthy(kit);
                         // Reopen through the same production owner boundary, with fresh ROM leases.
-                        kit.openScene(module, WIDTH, HEIGHT, sceneServices(module,output));
+                        openScene(kit,module,manifest.id(),loop,sceneServices(module,output));
                         kit.tick();
                         sceneFrame(kit, output.resolve("reopen.png"));
                         if (slug.equals("sitar-hero") && audioPeak==0) throw new AssertionError("Sitar performance produced no PCM");
@@ -200,6 +200,23 @@ public final class NativeGameplayCheck {
               }
             }
         } finally {if (ownedRom!=null) ownedRom.close();}
+    }
+
+    /** Title-entry scenes (such as bundled Time Attack) have no startup-scene service. */
+    private static boolean hasScene(ModTestKit kit,GameModule module,String owner) {
+        if(module.getGameService(OwnedSceneFactory.class)!=null) return true;
+        try {kit.titleEntry(owner);return true;}
+        catch(IllegalArgumentException absent) {return false;}
+    }
+    private static void openScene(ModTestKit kit,GameModule module,String owner,GameLoop loop,SceneServices services) {
+        if(module.getGameService(OwnedSceneFactory.class)!=null) {
+            kit.openScene(module,WIDTH,HEIGHT,services);
+        } else {
+            var entry=kit.titleEntry(owner);
+            var gameplay=com.openggf.ExperimentalEngineBootCheck.menuGameplay(loop,entry,module.getGameCode());
+            kit.sceneHost().open(entry.scene(),new SceneServices(services.audio(),services.romArt(),services.storageRoot(),
+                    services.mouse(),services.toGameTitle(),services.toMasterTitle(),services.romLibrary(),gameplay),WIDTH,HEIGHT);
+        }
     }
 
     private static int ownedZone(GameModule module,String owner) {

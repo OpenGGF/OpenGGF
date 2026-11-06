@@ -68,7 +68,7 @@ debug movement from being captured without pretending that native ring/item
 placement exists. `DebugModeProvider.hasLevelDebug()` remains false for S2.
 
 Native human-P2 monitor behavior is not an object-local omission. S2's
-`Touch_Monitor` branch (`s2.asm:85337-85340`) depends on the ROM-global
+`Touch_Monitor` branch (`s2.asm:85442-85445`) depends on the ROM-global
 `Two_player_mode`, but the engine has no S2 competition-mode owner or human-P2
 slot. Player 2 bindings remain sidekick/manual-input paths.
 `MonitorObjectInstance` was therefore left unchanged beyond its existing

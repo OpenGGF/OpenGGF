@@ -133,7 +133,7 @@ public class Sonic2HTZBossInstance extends AbstractBossInstance implements Rewin
 
     @Override
     protected void initializeBossState() {
-        // ROM: Obj52_Init (s2.asm:63637-63667)
+        // ROM: Obj52_Init (s2.asm:64241-64271)
         // Boss starts on right side
         state.x = RIGHT_X;
         state.y = INITIAL_Y;
@@ -196,7 +196,7 @@ public class Sonic2HTZBossInstance extends AbstractBossInstance implements Rewin
 
     /**
      * SUB0: Boss rising from lava.
-     * ROM: Obj52_Mobile_Raise (s2.asm:63695-63718)
+     * ROM: Obj52_Mobile_Raise (s2.asm:64303-64326)
      */
     private void updateRising() {
         // Disable collision while rising
@@ -227,7 +227,7 @@ public class Sonic2HTZBossInstance extends AbstractBossInstance implements Rewin
 
     /**
      * SUB2: Hovering and firing flamethrower.
-     * ROM: Obj52_Mobile_Flamethrower (s2.asm:63722-63755)
+     * ROM: Obj52_Mobile_Flamethrower (s2.asm:64319-64352)
      */
     private void updateFlamethrower(AbstractPlayableSprite player) {
         // Decrement timer
@@ -268,7 +268,7 @@ public class Sonic2HTZBossInstance extends AbstractBossInstance implements Rewin
 
     /**
      * SUB4: Begin lowering phase (pause before descent).
-     * ROM: Obj52_Mobile_BeginLower (s2.asm:63759-63769)
+     * ROM: Obj52_Mobile_BeginLower (s2.asm:64397-64407)
      */
     private void updateBeginLower() {
         // ROM: move.b #0,(Boss_CollisionRoutine).w - disable collision
@@ -300,7 +300,7 @@ public class Sonic2HTZBossInstance extends AbstractBossInstance implements Rewin
 
     /**
      * SUB6: Lowering and spawning lava balls.
-     * ROM: Obj52_Mobile_Lower (s2.asm:63773-63846)
+     * ROM: Obj52_Mobile_Lower (s2.asm:64346-64419)
      */
     private void updateLowering(AbstractPlayableSprite player) {
         // Apply velocity
@@ -342,7 +342,7 @@ public class Sonic2HTZBossInstance extends AbstractBossInstance implements Rewin
 
     /**
      * SUB8: Defeated sequence.
-     * ROM: Obj52_Mobile_Defeated (s2.asm:64047-64112)
+     * ROM: Obj52_Mobile_Defeated (s2.asm:64620-64685)
      */
     private void updateDefeated() {
         defeatTimer--;
@@ -370,9 +370,9 @@ public class Sonic2HTZBossInstance extends AbstractBossInstance implements Rewin
         // Check if time to flee
         // ROM: cmpi.w #-$3C,(Boss_Countdown).w
         if (defeatTimer <= DEFEAT_FLEE_TIME) {
-            // ROM: Obj52_Mobile_Flee (docs/s2disasm/s2.asm:64598-64606) plays the level
+            // ROM: Obj52_Mobile_Flee (docs/s2disasm/s2.asm:64713-64721) plays the level
             // music, queues the animal/explosion PLC and sets Boss_defeated_flag, then
-            // falls straight through to loc_30170 (s2.asm:64608-64612) in the SAME frame.
+            // falls straight through to loc_30170 (s2.asm:64723-64727) in the SAME frame.
             // No staging here: the previously observed one-frame handoff skew came from
             // the missing routine-read-once defeat deferral, now modelled by
             // defeatDeferralAppliesToThisBoss().
@@ -582,7 +582,7 @@ public class Sonic2HTZBossInstance extends AbstractBossInstance implements Rewin
     @Override
     protected boolean defeatDeferralAppliesToThisBoss() {
         // Obj52_Mobile reads boss_routine(a0) ONCE at the top of the object's update and
-        // jumps through off_2FD0E (docs/s2disasm/s2.asm:64194-64206). The hit handler
+        // jumps through off_2FD0E (docs/s2disasm/s2.asm:64309-64321). The hit handler
         // loc_300A4 runs from inside the already-selected routine
         // (docs/s2disasm/s2.asm:64528-64533), and Obj52_Defeat sets Boss_Countdown=$B3 /
         // boss_routine=8 and returns (docs/s2disasm/s2.asm:64559-64566) — so

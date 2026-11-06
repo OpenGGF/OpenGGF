@@ -12,7 +12,7 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * Explicit catalogue setup for the PR223 post-smoke fixtures (2026-10-24).
+ * Explicit catalogue setup for headless fixtures and trace replays.
  * Only declared in-memory base keys change; no ROM is opened, copied or closed.
  * Restoration preserves resolved Object values, not private map key-presence metadata.
  */
@@ -20,14 +20,16 @@ public final class RomCatalogueFixture implements AutoCloseable {
     private final SonicConfigurationService configuration;
     private final RomManager manager;
     private final EnumMap<RomGame, Path> images = new EnumMap<>(RomGame.class);
+    private final Path directory;
     private final EnumMap<SonicConfiguration, Object> originalValues =
             new EnumMap<>(SonicConfiguration.class);
     private boolean closed;
 
     private RomCatalogueFixture(SonicConfigurationService configuration, RomManager manager,
-            Map<RomGame, Path> declaredImages) {
+            Map<RomGame, Path> declaredImages, Path directory) {
         this.configuration = Objects.requireNonNull(configuration, "configuration");
         this.manager = Objects.requireNonNull(manager, "manager");
+        this.directory = directory == null ? null : directory.toAbsolutePath().normalize();
         Objects.requireNonNull(declaredImages, "declaredImages");
         for (var entry : declaredImages.entrySet()) {
             RomGame game = Objects.requireNonNull(entry.getKey(), "declared game");
@@ -40,12 +42,22 @@ public final class RomCatalogueFixture implements AutoCloseable {
             originalValues.put(game.configurationKey(),
                     configuration.getConfigValue(game.configurationKey()));
         }
+        if (this.directory != null) {
+            originalValues.put(SonicConfiguration.ROMS_DIRECTORY,
+                    configuration.getConfigValue(SonicConfiguration.ROMS_DIRECTORY));
+        }
         installBindings();
     }
 
     public static RomCatalogueFixture bind(SonicConfigurationService configuration,
             RomManager manager, Map<RomGame, Path> declaredImages) {
-        return new RomCatalogueFixture(configuration, manager, declaredImages);
+        return bind(configuration, manager, declaredImages, null);
+    }
+
+    /** Also expose an explicitly declared directory of optional lock-on images. */
+    public static RomCatalogueFixture bind(SonicConfigurationService configuration,
+            RomManager manager, Map<RomGame, Path> declaredImages, Path directory) {
+        return new RomCatalogueFixture(configuration, manager, declaredImages, directory);
     }
 
     /** Reapply only at an explicit fixture reset; keep the first restoration snapshot. */
@@ -56,6 +68,14 @@ public final class RomCatalogueFixture implements AutoCloseable {
     }
 
     private void validateBindings() {
+        if (directory != null) {
+            if (!Files.isDirectory(directory) || !Files.isReadable(directory)) {
+                throw new IllegalArgumentException("Fixture ROM directory must be readable: " + directory);
+            }
+            if (configuration.hasSessionOverride(SonicConfiguration.ROMS_DIRECTORY)) {
+                throw new IllegalStateException("Fixture cannot replace a session-owned ROM directory");
+            }
+        }
         for (var entry : images.entrySet()) {
             if (!Files.isRegularFile(entry.getValue()) || !Files.isReadable(entry.getValue())) {
                 throw new IllegalArgumentException("Fixture ROM must be a readable regular file: "
@@ -71,6 +91,9 @@ public final class RomCatalogueFixture implements AutoCloseable {
     private void installBindings() {
         for (var entry : images.entrySet()) {
             configuration.setConfigValue(entry.getKey().configurationKey(), entry.getValue().toString());
+        }
+        if (directory != null) {
+            configuration.setConfigValue(SonicConfiguration.ROMS_DIRECTORY, directory.toString());
         }
         manager.reloadCatalogue();
     }

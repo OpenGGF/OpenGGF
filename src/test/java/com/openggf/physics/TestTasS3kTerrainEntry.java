@@ -206,7 +206,7 @@ class TestTasS3kTerrainEntry {
             }
     }
 
-    @Test void currentLimitationLeftUnderflowClampsLeftInsteadOfUnsignedRightBoundary() throws Exception {
+    @Test void leftUnderflowUsesUnsignedRightBoundary() throws Exception {
         world(0);
         var p=new Sonic("sonic",(short)0,(short)0);
         var camera=GameServices.camera();camera.setMinX((short)0);camera.setMaxX((short)0x1000);camera.setMaxY((short)0x1000);
@@ -215,8 +215,8 @@ class TestTasS3kTerrainEntry {
         method.invoke(p.getMovementManager());
         // Player_LevelBound's predicted word is $FFF0: BHI against $10 is false,
         // BLO against $1128 is true. Native writes RIGHT bound $1128, not $10.
-        assertEquals(16,p.getCentreX(),"confirmed signed underflow incompatibility");
-        assertNotEquals(0x1128,p.getCentreX()&0xFFFF);assertEquals(0,p.getXSpeed());
+        assertEquals(0x1128,p.getCentreX()&0xFFFF,"native unsigned underflow target");
+        assertEquals(0,p.getXSpeed());
         p.setCentreX((short)32);p.setXSpeed((short)-0x100);
         method.invoke(p.getMovementManager());
         assertEquals(32,p.getCentreX());assertEquals(-0x100,p.getXSpeed(),"in-bounds control preserves motion");

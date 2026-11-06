@@ -38,6 +38,7 @@ import java.util.logging.Logger;
  * <p>
  * Reference: docs/s1disasm/_incObj/8B Try Again & End Eggman.asm
  */
+@com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.SCREEN_POSITION)
 public class Sonic1TryAgainEggmanObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(Sonic1TryAgainEggmanObjectInstance.class.getName());
 

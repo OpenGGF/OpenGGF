@@ -6,8 +6,10 @@ for that release.
 
 ## What You Need
 
-- **For native release packages:** no separate Java install is required. The universal
-  JAR and source-built JAR require Java 25 or later.
+- **For native release packages:** no separate Java install is required. Native
+  packages load code and data mods and include Time Attack, with the same trust
+  prompts as the JVM. Keep the bundled folders and native libraries together.
+  The universal JAR and source-built JAR require Java 25 or later.
 - **For source builds:** JDK 25. The executable JAR requires Java 25 or later. Download from [Adoptium](https://adoptium.net/) or
   your preferred distribution. Run `java -version` to check.
 - **A graphics driver that supports an OpenGL 4.1 core context.** Support depends
@@ -17,13 +19,15 @@ for that release.
 
 ### Expected ROM Files
 
-The engine is verified against these specific ROM revisions. Other revisions may produce
-incorrect results.
+The development engine recognizes these original ROM revisions. Supported revision
+differences use the supplied image's own data; other editions remain unverified.
 
 | Game | Expected revision and hash |
 |------|----------------------------|
-| Sonic 1 | World, Revision 01; CRC32 `AFE05EEE`; SHA-1 `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B` |
-| Sonic 2 | World, Revision 01; CRC32 `7B905383`; SHA-1 `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9` |
+| Sonic 1 REV00 | World; CRC32 `F9394E97`; SHA-1 `6DDB7DE1E17E7F6CDB88927BD906352030DAA194` |
+| Sonic 1 REV01 | World; CRC32 `AFE05EEE`; SHA-1 `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B` |
+| Sonic 2 REV00 | World; CRC32 `24AB4C3A`; SHA-1 `14DD06FC3AA19A59A818EA1F6DE150C9061B14D4` |
+| Sonic 2 REV01 | World; CRC32 `7B905383`; SHA-1 `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9` |
 | Sonic 3&K | World lock-on combined ROM; CRC32 `63522553`; SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6` |
 
 Filenames do not matter. Put your images next to `config.yaml` (or in the folder named by
@@ -40,6 +44,11 @@ overrides through master-title **Settings** or `config.yaml`: leave them at thei
 defaults or blank to let the engine find your images, or set one to a file that must
 exist. See the [image identity table](../../../CONFIGURATION.md#image-identity)
 for all recognised layouts.
+
+REV00/REV01 selection is automatic from the original bytes. If both are available,
+set the per-game file to the revision you want to play. A revision name in a
+filename or header alone does not verify a modified image. Console-region
+differences and later rerelease patches are separate from this revision choice.
 
 ## Install and Run
 
@@ -100,7 +109,9 @@ The legal disclaimer appears first by default. After accepting it:
    animated title logo. Left/right changes game and Enter (A) starts it. Under the card,
    **setup chips** show what Start will launch, such as `SONIC & TAILS`, `4:3` or
    `REWIND ON`; amber chips are set for that game only. The chips are status only;
-   change them in **Game Setup**. Down goes to **Start**, **Game Setup** and
+   change them in **Game Setup**. If they do not all fit, a `+N MORE` chip counts the
+   rest and the line under the buttons names them ("Also debug on, 12 mods") on the card
+   and on Start, with set-for-this-game values in amber. Down goes to **Start**, **Game Setup** and
    **Recordings**. Up reaches the engine-wide tabs: **Mods**, **Settings**,
    **Extras** (mod-added modes such as the bundled **Time Attack** mod), **Advanced**
    and **Quit**. The footer shows only the keys that work on the focused row, as key
@@ -135,8 +146,8 @@ until you choose a value for that game.
 **Settings** applies to every game. Categories are tabs across the top (Display,
 Sound, Controls, Gameplay, Files, Capture); press Up from the first row to switch
 tabs. Controls groups player bindings and warns about duplicate keys. Expert ROM
-loading and rewind tuning live in Advanced settings; Gameplay keeps the Rewind
-switch. Values that differ from the default have an amber dot. Each tab offers a
+loading and rewind tuning live in Advanced settings; Gameplay keeps the Rewind scope,
+budget and stage/life-loss options together. Values that differ from the default have an amber dot. Each tab offers a
 confirmed reset, which remains a draft until saved. In text editors, Down enters
 the keypad and Up from its top row returns to the text field. Enter/A chooses a key
 or accepts the focused field; you can also type normally. Number fields use a
@@ -162,7 +173,7 @@ defaults. A few settings you might want to change immediately:
 | `startup.masterTitleScreen` | Show game picker on launch | `true` |
 | `display.windowAutosize` | Derive the window size from the aspect preset | `true` |
 | `audio.enabled` | Enable or disable sound | `true` |
-| `characters.sidekick` | CPU sidekick for direct launches; hub launches use each game’s Game Setup | `"tails"` |
+| `characters.sidekick` | CPU sidekicks for direct launches, comma-separated in follow order (edit as a list in Settings > Advanced); hub launches use each game’s Game Setup | `"tails"` |
 | `debug.flags.editor` | Allow `Shift+Tab` to open the experimental editor overlay | `false` |
 
 Key bindings can be written as names like `"SPACE"` and `"F9"` instead of raw numeric key codes.

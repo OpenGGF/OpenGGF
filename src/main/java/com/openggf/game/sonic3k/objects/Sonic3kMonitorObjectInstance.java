@@ -61,7 +61,7 @@ import java.util.logging.Logger;
 public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         implements TouchResponseProvider, TouchResponseListener,
         SolidObjectProvider, SolidObjectListener, RomObjectCodePointerProvider, RewindRecreatable,
-        RomWorldPositionedObject, ObjectVisualFacing.NonDirectional {
+        RomWorldPositionedObject, ObjectVisualFacing.NonDirectional, com.openggf.level.objects.homing.HomingTargetSource {
 
     // Obj_Monitor draws box/icon frames and explosion effects without a native horizontal-facing owner.
     private static final Logger LOGGER = Logger.getLogger(Sonic3kMonitorObjectInstance.class.getName());
@@ -463,10 +463,20 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
                 services.playSfx(GameSound.BUBBLE_SHIELD);
             }
             case INVINCIBILITY -> {
-                // Skip invincibility if player is already Super Sonic
-                if (!player.isSuperSonic()) {
+                // Native Super_Sonic_Knux_flag / Super_Tails_flag belong to the active
+                // primary character, even when the monitor recipient is a sidekick.
+                var primary = services.playerQuery().mainPlayerOrNull();
+                boolean primaryPowered = primary instanceof AbstractPlayableSprite sprite
+                        ? sprite.isSuperSonic() : player.isSuperSonic();
+                if (!primaryPowered) {
                     player.giveInvincibility();
-                    services.playMusic(GameMusic.INVINCIBILITY);
+                    // Monitor_Give_Invincibility preserves boss/countdown music (air_left <= 12).
+                    var gameState = services.gameState();
+                    var drowning = player.getDrowningController();
+                    if ((gameState == null || gameState.getCurrentBossId() == 0)
+                            && (drowning == null || drowning.getRemainingAir() > 12)) {
+                        services.playMusic(GameMusic.INVINCIBILITY);
+                    }
                 }
             }
             case SUPER -> {
@@ -1001,5 +1011,9 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
             }
             return EGGMAN;
         }
+    }
+    /** Homing: an intact monitor; the native roll contact breaks it. */
+    @Override public com.openggf.level.objects.homing.HomingTarget homingTarget(com.openggf.game.PlayableEntity player) {
+        return broken ? null : com.openggf.level.objects.HomingTargets.at(this, com.openggf.level.objects.homing.HomingTargetKind.BREAKABLE);
     }
 }

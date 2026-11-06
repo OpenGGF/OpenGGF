@@ -11,6 +11,7 @@ import com.openggf.sprites.playable.Sonic;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
@@ -22,10 +23,11 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Solo traversal cannot inherit a team's boss damage or carrier-release timing. */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestSszSoloColdRouteCapture {
+    @Tag("exhaustive-audit")
     @Test
     void coldSoloSonicDefeatsBothReplicasAndReplaysTheirApproaches() throws Exception {
-        var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
-                "src/test/resources/routes/s3k/ssz1-sonic-solo-cold-replicas-320.bk2"));
+        var movie = RouteFixtures.movie("ssz1-sonic-solo-cold-replicas-320",
+                new GameplayCaptureSession.Settings(320, "sonic", "", "off", null, null, null));
         assertEquals(8300, movie.getFrameCount());
         var settings = new GameplayCaptureSession.Settings(320, "sonic", "", "off", null, null, null);
         // 45 replica identities mapped in the SSZ matrix; two fresh cold JVMs precede this data update.
@@ -99,10 +101,11 @@ class TestSszSoloColdRouteCapture {
         }
     }
 
+    @Tag("exhaustive-audit")
     @Test
     void coldSoloSonicDefeatsMechaAndLoadsDezWithIsolatedHistory() throws Exception {
-        var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
-                "src/test/resources/routes/s3k/ssz1-sonic-solo-cold-complete-320.bk2"));
+        var movie = RouteFixtures.movie("ssz1-sonic-solo-cold-complete-320",
+                new GameplayCaptureSession.Settings(320, "sonic", "", "off", null, null, null));
         assertEquals(14544, movie.getFrameCount());
         int historyStart = movie.getFrameCount() - 120;
         var settings = new GameplayCaptureSession.Settings(320, "sonic", "", "off", null, null, null);
@@ -185,10 +188,9 @@ class TestSszSoloColdRouteCapture {
 
     @Test
     void coldTailsFliesPastTheOpeningSpikesWithNegativeCameraMinimum() throws Exception {
-        var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
-                "src/test/resources/routes/s3k/ssz1-tails-solo-cold-flight-320.bk2"));
-        assertEquals(2556, movie.getFrameCount());
         var settings = new GameplayCaptureSession.Settings(320, "tails", "", "off", null, null, null);
+        var movie = RouteFixtures.movie("ssz1-tails-solo-cold-flight-320", settings);
+        assertEquals(2556, movie.getFrameCount());
         var spots = Set.of(2215, 2255, 2300, 2345, 2465);
         var checked = new HashSet<Integer>();
         var drawing = new RouteFrameDrawing();

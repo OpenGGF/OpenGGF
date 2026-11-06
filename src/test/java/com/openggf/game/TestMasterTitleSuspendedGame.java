@@ -4,11 +4,13 @@ import com.openggf.game.preview.TitlePreviewProvider.Image;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.game.launch.GameSupportNotices;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.openggf.game.TestMasterTitleHub.press;
@@ -28,6 +30,8 @@ class TestMasterTitleSuspendedGame {
         var config = SonicConfigurationService.createStandalone(directory);
         config.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
         var screen = new MasterTitleScreen(config);
+        // Support notices have their own coverage; here every stock game starts directly.
+        screen.setSupportNoticesForTest(new GameSupportNotices(config, Map.of()));
         screen.setStateForTest(MasterTitleScreen.State.ACTIVE);
         for (MasterTitleScreen.GameEntry game : MasterTitleScreen.GameEntry.values()) {
             screen.setRomAvailableForTest(game, true);
@@ -215,6 +219,29 @@ class TestMasterTitleSuspendedGame {
 
         assertEquals(SONIC_2_EHZ, screen.entriesForTest().getFirst());
         assertEquals(SONIC_2_EHZ, screen.entriesForTest().get(indexOfSelected(screen)));
+    }
+
+    /**
+     * The paused card keeps one status line under its buttons: on the card and on Resume it says
+     * what resuming applies (Resume already names the action), on End what ending costs; the
+     * resume legend is shown only beside Settings, which says some changes reach the paused game.
+     */
+    @Test void pausedCardShowsOneStatusLineUnderItsButtons() {
+        var screen = screenWithSuspendedGame();
+        String timing = "Aspect, rewind, debug and controls apply on resume";
+        // Card, then Resume: the line says what resuming applies, and no legend repeats it.
+        assertEquals(java.util.Arrays.asList(timing, null), screen.hubSummaryLinesForTest());
+        press(screen, GLFW_KEY_DOWN);
+        assertEquals(java.util.Arrays.asList(timing, null), screen.hubSummaryLinesForTest());
+        press(screen, GLFW_KEY_RIGHT);
+        press(screen, GLFW_KEY_RIGHT); // End game
+        assertEquals(java.util.Arrays.asList("Ending it loses its progress", null), screen.hubSummaryLinesForTest());
+        press(screen, GLFW_KEY_ESCAPE); // back to the card
+        press(screen, GLFW_KEY_UP);
+        press(screen, GLFW_KEY_RIGHT); // Mods, then the Settings tab
+        assertEquals(List.of("For all games; some reach your paused game", timing), screen.hubSummaryLinesForTest(),
+                "beside Settings the legend names which changes reach the paused game");
+        assertTrue(screen.hubSummaryLinesForTest().stream().filter(java.util.Objects::nonNull).noneMatch(line -> line.startsWith("Carry on")));
     }
 
     @Test void thumbnailIsAveragedDownToTheCard() {

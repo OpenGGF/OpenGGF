@@ -5,6 +5,7 @@ import com.openggf.net.client.ClientHandshake;
 import com.openggf.net.client.GhostStreamPublisher;
 import com.openggf.net.hub.HubConnection;
 import com.openggf.net.hub.TrackValidationProfileSource;
+import com.openggf.net.flow.WorkBudget;
 import com.openggf.net.identity.PlayerIdentity;
 import openggf.racing.protocol.ControlCodec;
 import com.openggf.net.protocol.ControlMessage;
@@ -16,6 +17,8 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.ArrayDeque;
+import java.util.concurrent.Executor;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -24,6 +27,210 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestRelayRoomManager {
+    private final List<RelayRoomManager> ownedManagers = new ArrayList<>();
+
+    private RelayRoomManager own(RelayRoomManager manager) {
+        ownedManagers.add(manager);
+        return manager;
+    }
+
+    @org.junit.jupiter.api.AfterEach
+    void closeManagers() { ownedManagers.forEach(RelayRoomManager::close); }
+
+    @Test
+    void heldRoomCoalescesTicksAndBoundsAdmission(@TempDir Path dir) throws Exception {
+        try (var fixture = new HeldRoom(dir)) {
+            for (int i = 0; i < 600; i++) fixture.manager.tickAll();
+            int ticks = fixture.owner.size();
+            int admitted = 0;
+            for (int i = 0; i < 600; i++) {
+                if (attach(fixture.manager, new FakeConnection(), fixture.entry.roomId(),
+                        "a".repeat(64), "Guest")) admitted++;
+            }
+            int accepted = admitted;
+            org.junit.jupiter.api.Assertions.assertAll(
+                    () -> assertTrue(ticks <= 1, "a held owner retains one scheduled tick"),
+                    () -> assertTrue(accepted <= 512, "room admission callbacks have a finite mailbox"),
+                    () -> assertTrue(WorkBudget.PROCESS.retainedBytes() > 0,
+                            "retained admission identity must remain charged"));
+        }
+    }
+
+    @Test
+    void heldBrokerBoundsRoomStatusCallbacks(@TempDir Path dir) throws Exception {
+        try (var fixture = new HeldRoom(dir, false, true)) {
+            for (int i = 0; i < 600 * RelayRoomManager.PLAYER_COUNT_INTERVAL_TICKS; i++)
+                fixture.manager.tickAll();
+            assertTrue(fixture.broker.size() <= 512,
+                    "room-to-broker updates cannot retain an unbounded queue");
+            assertTrue(fixture.manager.find(fixture.entry.roomId()).isPresent(),
+                    "delayed discovery status must not retire the live room");
+            fixture.drain();
+            for (int i = 0; i < RelayRoomManager.PLAYER_COUNT_INTERVAL_TICKS; i++)
+                fixture.manager.tickAll();
+            fixture.drain();
+            assertTrue(!fixture.publishedCounts.isEmpty(),
+                    "status publication resumes after broker capacity returns");
+        }
+    }
+
+    @Test
+    void fullBrokerHandoffRetainsTheThirdRoomsVerificationUntilDrain(@TempDir Path dir)
+            throws Exception {
+        try (var fixture = new HeldRoom(dir, false, true)) {
+            var second = fixture.registry.create(new ControlMessage.RoomDescriptor(
+                    "Second", "s3k", 0, 0, "OPEN", null, 64, false),
+                    "RELAY", "second-host", "1.1.1.2", 0, "0.6:cafe");
+            var innocent = fixture.registry.create(new ControlMessage.RoomDescriptor(
+                    "Innocent", "s3k", 0, 0, "OPEN", null, 64, false),
+                    "RELAY", "third-host", "1.1.1.3", 0, "0.6:cafe");
+            fixture.manager.createRelayRoom(second);
+            fixture.manager.createRelayRoom(innocent);
+            try {
+                ControlMessage.AttemptFinish finish = new ControlMessage.AttemptFinish(
+                        1, 100, 1, 101, "aa".repeat(32), "bb".repeat(32), null);
+                for (int i = 0; i < 256; i++) {
+                    fixture.manager.requestVerification(fixture.entry.roomId(), 1, "first",
+                            finish, "s3k:0:0", "sonic", "0.6:cafe", true);
+                    fixture.manager.requestVerification(second.roomId(), 1, "second",
+                            finish, "s3k:0:0", "sonic", "0.6:cafe", true);
+                }
+                assertEquals(512, fixture.broker.size());
+                fixture.manager.requestVerification(innocent.roomId(), 1, "third",
+                        finish, "s3k:0:0", "sonic", "0.6:cafe", true);
+                assertTrue(fixture.manager.find(innocent.roomId()).isPresent(),
+                        "a third room must survive saturation caused by two other rooms");
+                fixture.drain();
+                fixture.manager.tickAll();
+                assertEquals(1, fixture.broker.size(),
+                        "the third room's charged verification handoff must retry after drain");
+            } finally {
+                fixture.manager.hostLeft(second.roomId());
+                fixture.manager.hostLeft(innocent.roomId());
+                fixture.drain();
+            }
+        }
+    }
+
+    @Test
+    void coalescedTickRetainsDuePlayerCountPublication(@TempDir Path dir) throws Exception {
+        try (var fixture = new HeldRoom(dir)) {
+            for (int i = 0; i < RelayRoomManager.PLAYER_COUNT_INTERVAL_TICKS; i++) {
+                fixture.manager.tickAll();
+            }
+            assertEquals(1, fixture.owner.size());
+            fixture.drain();
+            assertEquals(List.of(0), fixture.publishedCounts);
+        }
+    }
+
+    @Test
+    void heldRoomRetainsItsCloseCellWhenTheProcessLedgerIsFull(@TempDir Path dir) throws Exception {
+        try (var fixture = new HeldRoom(dir)) {
+            assertEquals(fixture.before + 1, WorkBudget.PROCESS.retainedItems(),
+                    "room publication must already own its retirement cell");
+            List<WorkBudget.Reservation> filler = new ArrayList<>();
+            try {
+                var source = WorkBudget.PROCESS.account(8192, 1);
+                for (;;) {
+                    var reservation = WorkBudget.PROCESS.tryReserve(source, source,
+                            new WorkBudget.Cost(1, 0));
+                    if (reservation.isEmpty()) break;
+                    filler.add(reservation.get());
+                }
+                fixture.manager.hostLeft(fixture.entry.roomId());
+            } finally { filler.forEach(WorkBudget.Reservation::close); }
+            assertEquals(fixture.before + 1, WorkBudget.PROCESS.retainedItems());
+            fixture.drain();
+            assertEquals(fixture.before, WorkBudget.PROCESS.retainedItems());
+        }
+    }
+
+    @Test
+    void stalePreparedCloseCannotRemoveItsReplacement(@TempDir Path dir) throws Exception {
+        try (var fixture = new HeldRoom(dir)) {
+            fixture.manager.hostLeft(fixture.entry.roomId());
+            fixture.drain();
+            var old = fixture.manager.prepareRelayRoom(fixture.entry, null).join();
+            old.publish(null);
+            old.close();
+            var replacement = fixture.manager.prepareRelayRoom(fixture.entry, null).join();
+            replacement.publish(null);
+            var current = fixture.manager.find(fixture.entry.roomId()).orElseThrow();
+            old.close();
+            fixture.drain();
+            org.junit.jupiter.api.Assertions.assertSame(current,
+                    fixture.manager.find(fixture.entry.roomId()).orElseThrow());
+            assertEquals(fixture.before + 1, WorkBudget.PROCESS.retainedItems());
+        }
+    }
+
+    @Test
+    void managerCloseFencesPreparedPublicationAndIsIdempotent(@TempDir Path dir) throws Exception {
+        try (var fixture = new HeldRoom(dir)) {
+            fixture.manager.hostLeft(fixture.entry.roomId());
+            fixture.drain();
+            var pending = fixture.manager.prepareRelayRoom(fixture.entry, null).join();
+            fixture.manager.close();
+            fixture.manager.close();
+            org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
+                    () -> pending.publish(null));
+            org.junit.jupiter.api.Assertions.assertThrows(java.util.concurrent.CompletionException.class,
+                    () -> fixture.manager.prepareRelayRoom(fixture.entry, null).join());
+            fixture.drain();
+            assertEquals(0, fixture.manager.roomCount());
+            assertEquals(fixture.before, WorkBudget.PROCESS.retainedItems());
+        }
+    }
+
+    private static final class HeldRoom implements AutoCloseable {
+        final int before = WorkBudget.PROCESS.retainedItems();
+        final ArrayDeque<Runnable> owner = new ArrayDeque<>();
+        final ArrayDeque<Runnable> broker = new ArrayDeque<>();
+        final List<Integer> publishedCounts = new ArrayList<>();
+        final SqliteIdentityStore store;
+        final RelayRoomManager manager;
+        final SessionRegistry registry;
+        final SessionRegistry.RoomEntry entry;
+
+        HeldRoom(Path dir) throws Exception {
+            this(dir, true, false);
+        }
+
+        HeldRoom(Path dir, boolean holdOwner, boolean holdBroker) throws Exception {
+            store = new SqliteIdentityStore(dir.resolve("held.db"));
+            long[] now = {1_000_000};
+            var ladder = new TrustLadder(store,
+                    new NewIdentityCache(100, 3_600_000, () -> now[0]),
+                    TrustLadder.Thresholds.defaults(), () -> now[0]);
+            manager = new RelayRoomManager(PlayerIdentity.loadOrCreate(dir.resolve("held-master")),
+                    ladder, TrackValidationProfileSource.none(),
+                    List.<Executor>of(holdOwner ? owner::addLast : Runnable::run),
+                    holdBroker ? broker::addLast : Runnable::run,
+                    () -> now[0], (room, count) -> publishedCounts.add(count));
+            registry = new SessionRegistry(() -> now[0], MasterConfig.defaults());
+            entry = registry.create(
+                    new ControlMessage.RoomDescriptor("Held", "s3k", 0, 0, "OPEN", null, 64, false),
+                    "RELAY", "host-fp", "1.1.1.1", 0, "0.6:cafe");
+            manager.createRelayRoom(entry);
+        }
+
+        void drain() {
+            while (!owner.isEmpty() || !broker.isEmpty()) {
+                if (!owner.isEmpty()) owner.removeFirst().run();
+                if (!broker.isEmpty()) broker.removeFirst().run();
+            }
+        }
+
+        @Override public void close() {
+            try {
+                manager.hostLeft(entry.roomId());
+                drain();
+                assertEquals(before, WorkBudget.PROCESS.retainedItems());
+            } finally { store.close(); }
+        }
+    }
+
     @Test
     void publicRelayCapsOwnerChangesAndPublishesAuthoritativeMode(@TempDir Path dir)
             throws Exception {
@@ -33,11 +240,11 @@ class TestRelayRoomManager {
         try (var store = new SqliteIdentityStore(dir.resolve("chat-ids.db"))) {
             var ladder = new TrustLadder(store, new NewIdentityCache(100, 3_600_000, () -> now[0]),
                     config.thresholds(), () -> now[0]);
-            var manager = new RelayRoomManager(PlayerIdentity.loadOrCreate(dir.resolve("master")),
+            var manager = own(new RelayRoomManager(PlayerIdentity.loadOrCreate(dir.resolve("master")),
                     ladder, TrackValidationProfileSource.none(), List.of(Runnable::run), Runnable::run,
                     () -> now[0], registry::heartbeat,
                     (roomId, owner, zone, act) -> registry.updateTrack(roomId, owner, zone, act),
-                    config, null, null, null, registry::updateChatMode);
+                    config, null, null, null, registry::updateChatMode));
             PlayerIdentity owner = PlayerIdentity.loadOrCreate(dir.resolve("chat-owner"));
             var entry = registry.create(new ControlMessage.RoomDescriptor("Chat", "s3k", 0, 0,
                     "OPEN", null, 8, false, "FULL_CHAT"), "RELAY", owner.fingerprint(), "local", 0,
@@ -63,6 +270,9 @@ class TestRelayRoomManager {
 
     static final class FakeConnection implements HubConnection, com.openggf.net.hub.HandshakeTransport {
         @Override public String authenticationBinding() { return com.openggf.net.protocol.AuthenticationTranscript.LOCAL_PLAINTEXT; }
+        @Override public com.openggf.net.protocol.AuthenticationTranscript.Role authenticationRole() {
+            return com.openggf.net.protocol.AuthenticationTranscript.Role.ROOM_RELAY;
+        }
         final List<String> text = new ArrayList<>();
         final List<byte[]> binary = new ArrayList<>();
         String closedReason;
@@ -88,19 +298,29 @@ class TestRelayRoomManager {
         throw new AssertionError("missing message " + type.getSimpleName());
     }
 
-    private static RelayRoomManager manager(PlayerIdentity master, TrustLadder ladder,
+    private RelayRoomManager manager(PlayerIdentity master, TrustLadder ladder,
                                              long[] now) {
-        return new RelayRoomManager(master, ladder, TrackValidationProfileSource.none(),
+        return own(new RelayRoomManager(master, ladder, TrackValidationProfileSource.none(),
                 List.of(Runnable::run), Runnable::run, () -> now[0],
-                (roomId, count) -> { });
+                (roomId, count) -> { }));
+    }
+
+    private static boolean attach(RelayRoomManager manager, HubConnection connection,
+                                  String roomId, String fingerprint, String name) {
+        String instanceId = manager.find(roomId)
+                .map(access -> access.room().instanceId()).orElse("missing-instance");
+        return manager.attach(connection, roomId, fingerprint, name,
+                instanceId, "test-route", 1);
     }
 
     private static String admit(RelayRoomManager manager,
                                 RelayRoomManager.RoomAccess access, String roomId,
                                 FakeConnection connection, PlayerIdentity identity,
                                 String name) throws Exception {
-        assertTrue(manager.attach(connection, roomId, identity.fingerprint(), name));
-        ClientHandshake handshake = new ClientHandshake(identity, name, "0.6:cafe");
+        assertTrue(attach(manager, connection, roomId, identity.fingerprint(), name));
+        ClientHandshake handshake = new ClientHandshake(identity, name, "", "0.6:cafe", null, com.openggf.net.protocol.AuthenticationTranscript.Role.ROOM_RELAY,
+                    () -> com.openggf.net.protocol.AuthenticationTranscript.LOCAL_PLAINTEXT,
+                    "test-route", 1);
         access.room().onText(connection, ControlCodec.encode(null, handshake.hello()));
         access.room().onText(connection, ControlCodec.encode(null,
                 handshake.onWelcome((ControlMessage.Welcome) lastMessage(connection))));
@@ -137,7 +357,7 @@ class TestRelayRoomManager {
                                     RelayRoomManager.RoomAccess access, MasterConfig config,
                                     String fingerprint) { }
 
-    private static SupersededClaims supersededClaims(Path dir, long[] now,
+    private SupersededClaims supersededClaims(Path dir, long[] now,
                                                      SqliteIdentityStore store)
             throws Exception {
         var ladder = new TrustLadder(store,
@@ -145,12 +365,12 @@ class TestRelayRoomManager {
                 TrustLadder.Thresholds.defaults(), () -> now[0]);
         MasterConfig config = MasterConfig.defaults();
         VerificationJobQueue jobs = new VerificationJobQueue(() -> now[0], 1000);
-        RelayRoomManager manager = new RelayRoomManager(
+        RelayRoomManager manager = own(new RelayRoomManager(
                 PlayerIdentity.loadOrCreate(dir.resolve("m")), ladder,
                 TrackValidationProfileSource.none(), List.of(Runnable::run),
                 Runnable::run, () -> now[0], (roomId, count) -> { },
                 (roomId, owner, zone, act) -> { }, config, jobs,
-                new VerdictConsequences(store, ladder, () -> now[0], 0));
+                new VerdictConsequences(store, ladder, () -> now[0], 0)));
         PlayerIdentity player = PlayerIdentity.loadOrCreate(dir.resolve("player"));
         SessionRegistry.RoomEntry entry = new SessionRegistry(() -> now[0], config)
                 .create(new ControlMessage.RoomDescriptor(
@@ -200,6 +420,38 @@ class TestRelayRoomManager {
                     claims.access().room().round().standings().getFirst();
             assertEquals(100, shown.bestTimeFrames());
             assertEquals("VERIFIED", shown.verifyState());
+        }
+    }
+
+    @Test
+    void verifiedVerdictWaitsForAnUnrelatedFullRoomMailbox(@TempDir Path dir)
+            throws Exception {
+        long[] now = {1_000_000};
+        try (var store = new SqliteIdentityStore(dir.resolve("ids.db"))) {
+            SupersededClaims claims = supersededClaims(dir, now, store);
+            assertTrue(claims.jobs().onRecordingUploaded("bb".repeat(32), claims.fingerprint()));
+            VerificationJobQueue.Job newer = claims.jobs().lease("worker",
+                    java.util.Set.of("0.6:cafe")).orElseThrow();
+            claims.jobs().complete(newer.jobId(), "worker").orElseThrow();
+            var roomHolder = WorkBudget.PROCESS.account(512, 1);
+            WorkBudget.Reservation fullRoom = WorkBudget.PROCESS.tryReserve(roomHolder,
+                    claims.access().inboundWork(), new WorkBudget.Cost(
+                            512 - claims.access().inboundWork().retainedItems(), 0)).orElseThrow();
+            var processHolder = WorkBudget.PROCESS.account(8192, 1);
+            WorkBudget.Reservation fullProcess = WorkBudget.PROCESS.tryReserve(processHolder,
+                    processHolder, new WorkBudget.Cost(
+                            8192 - WorkBudget.PROCESS.retainedItems(), 0)).orElseThrow();
+            try {
+                claims.manager().onVerdict(newer, true);
+                assertEquals("PENDING", claims.access().room().round().standings()
+                        .getFirst().verifyState());
+            } finally {
+                fullProcess.close();
+                fullRoom.close();
+            }
+            claims.manager().tickAll();
+            assertEquals("VERIFIED", claims.access().room().round().standings()
+                    .getFirst().verifyState(), "the charged verdict must retry after room drain");
         }
     }
 
@@ -276,12 +528,12 @@ class TestRelayRoomManager {
                     TrustLadder.Thresholds.defaults(), () -> now[0]);
             MasterConfig config = MasterConfig.defaults();
             VerificationJobQueue jobs = new VerificationJobQueue(() -> now[0], 1000);
-            RelayRoomManager manager = new RelayRoomManager(
+            RelayRoomManager manager = own(new RelayRoomManager(
                     PlayerIdentity.loadOrCreate(dir.resolve("master")), ladder,
                     TrackValidationProfileSource.none(), List.of(Runnable::run),
                     Runnable::run, () -> now[0], (roomId, count) -> { },
                     (roomId, owner, zone, act) -> { }, config, jobs,
-                    new VerdictConsequences(store, ladder, () -> now[0], 0));
+                    new VerdictConsequences(store, ladder, () -> now[0], 0)));
             PlayerIdentity player = PlayerIdentity.loadOrCreate(dir.resolve("player"));
             SessionRegistry.RoomEntry entry = new SessionRegistry(() -> now[0], config)
                     .create(new ControlMessage.RoomDescriptor(
@@ -357,8 +609,10 @@ class TestRelayRoomManager {
 
             FakeConnection guest = new FakeConnection();
             PlayerIdentity identity = PlayerIdentity.loadOrCreate(dir.resolve("guest"));
-            assertTrue(manager.attach(guest, entry.roomId(), identity.fingerprint(), "GUEST"));
-            ClientHandshake handshake = new ClientHandshake(identity, "GUEST", "0.6:cafe");
+            assertTrue(attach(manager, guest, entry.roomId(), identity.fingerprint(), "GUEST"));
+            ClientHandshake handshake = new ClientHandshake(identity, "GUEST", "", "0.6:cafe", null, com.openggf.net.protocol.AuthenticationTranscript.Role.ROOM_RELAY,
+                    () -> com.openggf.net.protocol.AuthenticationTranscript.LOCAL_PLAINTEXT,
+                    "test-route", 1);
             var access = manager.find(entry.roomId()).orElseThrow();
             access.room().onText(guest, ControlCodec.encode(null, handshake.hello()));
             access.room().onText(guest, ControlCodec.encode(null,
@@ -367,7 +621,7 @@ class TestRelayRoomManager {
 
             manager.hostLeft(entry.roomId());
             assertEquals(0, manager.roomCount());
-            assertFalse(manager.attach(new FakeConnection(), entry.roomId(), "x", "X"));
+            assertFalse(attach(manager, new FakeConnection(), entry.roomId(), "x", "X"));
         }
     }
 
@@ -387,9 +641,11 @@ class TestRelayRoomManager {
             manager.createRelayRoom(entry);
 
             FakeConnection guest = new FakeConnection();
-            manager.attach(guest, entry.roomId(), "guest-fp", "GUEST");
+            attach(manager, guest, entry.roomId(), "guest-fp", "GUEST");
             ClientHandshake handshake = new ClientHandshake(
-                    PlayerIdentity.loadOrCreate(dir.resolve("guest")), "GUEST", "0.6:cafe");
+                    PlayerIdentity.loadOrCreate(dir.resolve("guest")), "GUEST", "", "0.6:cafe", null, com.openggf.net.protocol.AuthenticationTranscript.Role.ROOM_RELAY,
+                    () -> com.openggf.net.protocol.AuthenticationTranscript.LOCAL_PLAINTEXT,
+                    "test-route", 1);
             var access = manager.find(entry.roomId()).orElseThrow();
             access.room().onText(guest, ControlCodec.encode(null, handshake.hello()));
             access.room().onText(guest, ControlCodec.encode(null,
@@ -416,9 +672,11 @@ class TestRelayRoomManager {
             var access = manager.find(entry.roomId()).orElseThrow();
 
             FakeConnection creator = new FakeConnection();
-            manager.attach(creator, entry.roomId(), creatorIdentity.fingerprint(), "HOST");
+            attach(manager, creator, entry.roomId(), creatorIdentity.fingerprint(), "HOST");
             ClientHandshake handshake = new ClientHandshake(
-                    creatorIdentity, "HOST", "0.6:cafe");
+                    creatorIdentity, "HOST", "", "0.6:cafe", null, com.openggf.net.protocol.AuthenticationTranscript.Role.ROOM_RELAY,
+                    () -> com.openggf.net.protocol.AuthenticationTranscript.LOCAL_PLAINTEXT,
+                    "test-route", 1);
             access.room().onText(creator, ControlCodec.encode(null, handshake.hello()));
             access.room().onText(creator, ControlCodec.encode(null,
                     handshake.onWelcome((ControlMessage.Welcome) lastMessage(creator))));
@@ -432,9 +690,11 @@ class TestRelayRoomManager {
                     .anyMatch(ControlMessage.RoundStart.class::isInstance));
 
             FakeConnection impostor = new FakeConnection();
-            manager.attach(impostor, entry.roomId(), creatorIdentity.fingerprint(), "BAD");
+            attach(manager, impostor, entry.roomId(), creatorIdentity.fingerprint(), "BAD");
             ClientHandshake wrong = new ClientHandshake(
-                    PlayerIdentity.loadOrCreate(dir.resolve("wrong")), "BAD", "0.6:cafe");
+                    PlayerIdentity.loadOrCreate(dir.resolve("wrong")), "BAD", "", "0.6:cafe", null, com.openggf.net.protocol.AuthenticationTranscript.Role.ROOM_RELAY,
+                    () -> com.openggf.net.protocol.AuthenticationTranscript.LOCAL_PLAINTEXT,
+                    "test-route", 1);
             access.room().onText(impostor, ControlCodec.encode(null, wrong.hello()));
             access.room().onText(impostor, ControlCodec.encode(null,
                     wrong.onWelcome((ControlMessage.Welcome) lastMessage(impostor))));
@@ -454,11 +714,11 @@ class TestRelayRoomManager {
             VerificationJobQueue jobs = new VerificationJobQueue(() -> now[0], 1000);
             VerdictConsequences consequences = new VerdictConsequences(
                     store, ladder, () -> now[0], 0);
-            RelayRoomManager manager = new RelayRoomManager(
+            RelayRoomManager manager = own(new RelayRoomManager(
                     PlayerIdentity.loadOrCreate(dir.resolve("m")), ladder,
                     TrackValidationProfileSource.none(), List.of(Runnable::run),
                     Runnable::run, () -> now[0], (roomId, count) -> { },
-                    (roomId, owner, zone, act) -> { }, config, jobs, consequences);
+                    (roomId, owner, zone, act) -> { }, config, jobs, consequences));
             PlayerIdentity player = PlayerIdentity.loadOrCreate(dir.resolve("player"));
             SessionRegistry.RoomEntry entry = new SessionRegistry(() -> now[0], config)
                     .create(new ControlMessage.RoomDescriptor(
@@ -467,8 +727,10 @@ class TestRelayRoomManager {
             manager.createRelayRoom(entry);
             var access = manager.find(entry.roomId()).orElseThrow();
             FakeConnection connection = new FakeConnection();
-            manager.attach(connection, entry.roomId(), player.fingerprint(), "P");
-            ClientHandshake handshake = new ClientHandshake(player, "P", "0.6:cafe");
+            attach(manager, connection, entry.roomId(), player.fingerprint(), "P");
+            ClientHandshake handshake = new ClientHandshake(player, "P", "", "0.6:cafe", null, com.openggf.net.protocol.AuthenticationTranscript.Role.ROOM_RELAY,
+                    () -> com.openggf.net.protocol.AuthenticationTranscript.LOCAL_PLAINTEXT,
+                    "test-route", 1);
             access.room().onText(connection, ControlCodec.encode(null, handshake.hello()));
             access.room().onText(connection, ControlCodec.encode(null,
                     handshake.onWelcome((ControlMessage.Welcome) lastMessage(connection))));
@@ -524,12 +786,12 @@ class TestRelayRoomManager {
             VerificationJobQueue jobs = new VerificationJobQueue(() -> now[0], 1_000);
             VerdictConsequences consequences = new VerdictConsequences(
                     store, ladder, () -> now[0], 0);
-            RelayRoomManager manager = new RelayRoomManager(
+            RelayRoomManager manager = own(new RelayRoomManager(
                     PlayerIdentity.loadOrCreate(dir.resolve("master")), ladder,
                     TrackValidationProfileSource.none(), List.of(Runnable::run),
                     Runnable::run, () -> now[0], (roomId, count) -> { },
                     (roomId, owner, zone, act) -> { }, MasterConfig.defaults(),
-                    jobs, consequences);
+                    jobs, consequences));
             manager.requestVerification("r-1", 1, "player",
                     new ControlMessage.AttemptFinish(1, 100, 1, 101,
                             "aa".repeat(32), "bb".repeat(32), null),

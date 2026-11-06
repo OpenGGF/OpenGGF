@@ -35,7 +35,7 @@ baseline-update commit and pick the next target rather than weakening the rule.
 |------|------------------------------|---------------------|---------|
 | `low_level_layers_do_not_depend_on_runtime_layers` | 123 records | Hold at 123 at qualified contract boundaries | GPU commands/backends consume scalars; decoded art providers own their complete contracts; retain typed GM ingress and the four SAT callback-adapter records |
 | `shared_layers_do_not_depend_on_game_specific_packages` | 0 records | Hold at 0 records | Master-title ROM preview decoding/composition now belongs to game-owned providers (`DefaultPowerUpSpawner` visual object creation moved behind `GameModule` factories, 2026-08-28) |
-| `per_game_packages_do_not_cross_depend` | 10 member dependencies in 2 grouped slice records | Hold at 10 explicit host-donation members | Menu animation now has a shared owner; remove donation members only through a separate host/donor contract migration |
+| `per_game_packages_do_not_cross_depend` | 11 member dependencies in 2 grouped slice records | Hold at 11 explicit host-donation members | Menu animation now has a shared owner; remove donation members only through a separate host/donor contract migration |
 
 2026-09-03: the two `AudioManager -> Rom.readBytes` SEGA-boot PCM edges were
 solved and the frozen entry pruned. `GameAudioProfile.loadSegaPcm(Object)` now
@@ -376,7 +376,7 @@ are unchanged.
 `package_slices_are_free_of_cycles`: 0 committed cycle records after the
 explicit dependency-pair ignores below. This does not prove the full dependency
 graph is acyclic; the rule description still names one historical core-runtime cluster.
-`core_runtime_cycle_cluster_does_not_gain_top_level_edges`: 151 allowed
+`core_runtime_cycle_cluster_does_not_gain_top_level_edges`: 163 allowed
 source/target top-level package pairs inside or adjacent to that cluster.
 `TestArchitecturalReviewGuard` checks this permission count against the executable
 set. The live dependency census on 2026-10-23 found seven unused permissions:
@@ -387,7 +387,24 @@ These were pruned from 159 to 152; editor art import adds the narrowly owned
 `editor_host_data_dependencies_use_only_explicit_owners`), and Stageplay world presentation
 adds `stageplay -> util`, giving that historical merged tree154 permissions. Art-provider relocation removes
 `data -> sprites`; Game relocation removes `data -> audio`; the composed Game and
-PaletteLoader moves remove `data -> level`. The current set has151 permissions. The three matching obsolete
+PaletteLoader moves remove `data -> level`. That tree has 151 permissions. Host
+internationalisation retains three presentation pairs: `editor -> i18n`,
+`game -> i18n` and `i18n -> graphics`. Shared Unicode segmentation adds
+`control -> util`. The merged editor renderer no longer needs `editor -> util`,
+and retiring the separate trace picker removes `testmode -> i18n`; both stale
+permissions were pruned. IME composition and editor HUD fitting keep the same
+segmentation boundaries through their presentation owners. That set had 155 permissions. Route tapes
+(the shared route planner, 2026-11-02) add `route -> debug` and `route -> game` for the core's lossless
+row codec and script grammar, and `tools -> route` for the trusted engine host and authoring front-ends,
+giving 158. Stageplay player routes on frozen rows add `route -> sprites` (point goals steer through
+`NativeRouteSteering`, the one numeric owner) and `stageplay -> debug` (frozen tracks reach the live
+world through the recorded-input conversion), giving 160, and `tools -> physics` (the trusted
+engine route host reads native facing into samples), giving 161. The route tape editors add
+`editor -> route` for the planner facade and value types, giving 162; their worker job's protocol is
+an explicitly owned `editor -> tools` dependency. The bundled-mod
+packager's network-defaults overlay reuses the master address parser, restoring
+`tools -> net`, giving 163. The three
+matching obsolete
 cycle ignores (`debug -> data`, `timer -> camera`, `util -> tools`) were removed too. The runtime-edge guard now rejects both
 unapproved edges and stale permissions; the documentation check verifies the
 published allowance count.
@@ -514,11 +531,18 @@ Target direction:
 
 Rule: `per-game packages should not cross-depend`
 
-The 2 committed grouped records contain 10 member dependencies for explicit
+The 2 committed grouped records contain 11 member dependencies for explicit
 host donation:
 
 - S3K host-preview presentation uses the S1/S2 cached preview managers and S1
   special-stage palette extraction for explicit host ROM donation.
+- The existing S2 emerald-palette donation resolves its canonical table base
+  through `Sonic2RomAddresses.address(Rom, long)` for the supplied original image.
+  This adds one bytecode-visible member on 2026-10-28: the older path already
+  depended on inlined S2 palette constants, but those constants alone select the
+  wrong bytes in REV00. The allowance covers this asset-address call only; it
+  adds no cross-game gameplay or session-state access. Paired original-image
+  palette tests verify the consumer. See the [revision plan](plans/2026-10-28-retail-rom-revisions.md).
 
 The selected-slot converter, `LoadedPreview` result, and common payload validator
 now belong to `com.openggf.game.dataselect`. Both host paths consume that converter

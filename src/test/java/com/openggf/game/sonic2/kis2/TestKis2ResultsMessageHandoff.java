@@ -44,7 +44,7 @@ class TestKis2ResultsMessageHandoff {
         while (screen.getEmeraldBonus() > 0 && frame < 1000) screen.update(++frame,null);
         assertEquals(0, screen.getEmeraldBonus());
         screen.update(++frame,null); // zero tally pass sets routine $30 immediately
-        for (int pass = 1; pass < 210; pass++) {
+        for (int pass = 1; pass < 209; pass++) {
             if (loadLateArt && pass == 25) {
                 // Exercise lazy CPU art loading after message movement has started;
                 // this must not recreate its clock or require a graphics context.
@@ -56,17 +56,20 @@ class TestKis2ResultsMessageHandoff {
             assertFalse(screen.isComplete(), "premature completion at message pass " + pass);
         }
         screen.update(++frame,null);
-        assertTrue(screen.isComplete(), "9 out + init +18 in + latch +180hold + DisplayOnly");
+        assertTrue(screen.isComplete(),
+                "9 out + init + 18 in + latch + 180 hold; published on the TimedDisplay expiry pass");
     }
 
-    @Test void nonSuperWaitAdvancesToDisplayOnlyBeforeEndingOnTheNextPass() {
+    @Test void nonSuperWaitPublishesCompletionOnTheTimedDisplayExpiryPass() {
         var screen = screen(false, 0);
         int frame = 0;
         while (screen.getDisplayedRingCount() > 0 && frame < 1000) screen.update(++frame,null);
         assertEquals(0, screen.getDisplayedRingCount());
         screen.update(++frame,null); // exhausted tally pass: timer=$78
-        for (int pass = 0; pass < 120; pass++) screen.update(++frame,null);
-        assertFalse(screen.isComplete(), "TimedDisplay advances routine but does not set inactive");
+        for (int pass = 0; pass < 119; pass++) screen.update(++frame,null);
+        assertFalse(screen.isComplete(), "TimedDisplay is still counting down");
+        // The expiry pass hands the routine to DisplayOnly; like the stock wait,
+        // completion is published here rather than on DisplayOnly's own pass.
         screen.update(++frame,null);
         assertTrue(screen.isComplete());
     }

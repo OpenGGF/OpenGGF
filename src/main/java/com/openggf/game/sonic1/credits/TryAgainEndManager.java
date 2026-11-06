@@ -1,5 +1,7 @@
 package com.openggf.game.sonic1.credits;
 
+import static com.openggf.game.sonic1.Sonic1RomProfile.resolve;
+
 import com.openggf.control.InputHandler;
 import com.openggf.camera.Camera;
 import com.openggf.game.GameServices;
@@ -205,7 +207,7 @@ public class TryAgainEndManager {
             loadEndingPalette(rom, gm);
 
             // Eggman art (Nem_TryAgain)
-            Pattern[] eggPatterns = art.loadNemesisPatterns(Sonic1Constants.ART_NEM_TRY_AGAIN_ADDR);
+            Pattern[] eggPatterns = art.loadNemesisPatterns(resolve(rom, Sonic1Constants.ART_NEM_TRY_AGAIN_ADDR));
             if (eggPatterns.length > 0) {
                 ObjectSpriteSheet sheet = new ObjectSpriteSheet(
                         eggPatterns, createTryAgainEggmanMappings(), 0, 1);
@@ -217,7 +219,7 @@ public class TryAgainEndManager {
             }
 
             // Emerald art (Nem_EndEm - same as Object 88)
-            Pattern[] emPatterns = art.loadNemesisPatterns(Sonic1Constants.ART_NEM_END_EMERALDS_ADDR);
+            Pattern[] emPatterns = art.loadNemesisPatterns(resolve(rom, Sonic1Constants.ART_NEM_END_EMERALDS_ADDR));
             if (emPatterns.length > 0) {
                 ObjectSpriteSheet sheet = new ObjectSpriteSheet(
                         emPatterns, createEndingEmeraldsMappings(), 0, 1);
@@ -243,7 +245,7 @@ public class TryAgainEndManager {
      */
     private void loadEndingPalette(Rom rom, GraphicsManager gm) throws IOException {
         // Read the ending zone level header to get palette ID (byte 15)
-        int headerAddr = Sonic1Constants.LEVEL_HEADERS_ADDR + Sonic1Constants.ZONE_ENDZ * 16;
+        int headerAddr = resolve(rom, Sonic1Constants.LEVEL_HEADERS_ADDR) + Sonic1Constants.ZONE_ENDZ * 16;
         int headerPaletteId = rom.readByte(headerAddr + 15) & 0xFF;
 
         // Apply ROM revision adjustment (same as Sonic1.java):
@@ -255,7 +257,7 @@ public class TryAgainEndManager {
         LOGGER.info("TryAgainEnd: header palette ID=" + headerPaletteId
                 + " sonicId=" + sonicPaletteId + " adjusted=" + paletteId);
 
-        int tableAddr = Sonic1Constants.PALETTE_TABLE_ADDR;
+        int tableAddr = resolve(rom, Sonic1Constants.PALETTE_TABLE_ADDR);
         int entryAddr = tableAddr + paletteId * 8;
         if (entryAddr + 8 > rom.getSize()) {
             LOGGER.warning("TryAgainEnd: palette entry " + paletteId + " out of ROM bounds");
@@ -308,7 +310,7 @@ public class TryAgainEndManager {
      * This handles REV01 where the Level Select entry was removed, shifting IDs by -1.
      */
     private int findSonicPaletteId(Rom rom) throws IOException {
-        int tableAddr = Sonic1Constants.PALETTE_TABLE_ADDR;
+        int tableAddr = resolve(rom, Sonic1Constants.PALETTE_TABLE_ADDR);
         for (int id = 2; id < 10; id++) {
             int entryAddr = tableAddr + id * 8;
             if (entryAddr + 8 > rom.getSize()) break;

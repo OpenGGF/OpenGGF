@@ -188,6 +188,16 @@ public class Sonic3kObjectArt {
                 Sonic3kConstants.MAP_SOZ_FLOATING_PILLAR_ADDR, artTileBase | (2 << 13));
     }
 
+    /**
+     * Obj_SOZRapelWire / Map_SOZRapelWire: the pulley word $FFC4 must add
+     * the full $4411 art word, wrapping to $43D5 (tile $3D5, palette 2).
+     * Resolving the fields separately loses the pulley and retains bogus flips.
+     */
+    public ObjectSpriteSheet buildSozRapelWireSheet(int artTileBase) {
+        return buildLevelArtSheetWithResolvedTileWords(
+                Sonic3kConstants.MAP_SOZ_RAPEL_WIRE_ADDR, artTileBase | (2 << 13));
+    }
+
     private ObjectSpriteSheet buildLevelArtSheetWithResolvedTileWords(int mappingAddress, int artTileWord) {
         if (reader == null) return null;
         List<SpriteMappingFrame> rawFrames = S3kSpriteDataLoader.loadMappingFrames(reader, mappingAddress);
@@ -255,7 +265,7 @@ public class Sonic3kObjectArt {
      * Builds the Animated Still Sprites sheet used by AIZ (firefly + leaf animations).
      *
      * <p>Disassembly reference:
-     * Map_AnimatedStillSprites / Ani_AnimatedStillSprites (sonic3k.asm:60464+).
+     * Map_AnimatedStillSprites / Ani_AnimatedStillSprites (sonic3k.asm:60469+).
      * art_tile = make_art_tile(ArtTile_AIZMisc2,3,0). Frames 0-8.
      */
     public ObjectSpriteSheet buildAnimatedStillSpritesSheet(int artTileBase) {

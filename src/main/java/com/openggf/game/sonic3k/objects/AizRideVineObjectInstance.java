@@ -12,7 +12,6 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.PostPlayerUpdateHook;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
@@ -27,7 +26,7 @@ import java.util.List;
  * Obj_AIZRideVine / Obj_AIZRideVineHandle (sonic3k.asm:46138-46788).
  */
 public class AizRideVineObjectInstance extends AbstractObjectInstance
-        implements PostPlayerUpdateHook, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional, com.openggf.level.objects.homing.HomingTargetSource {
     private static final int ROOT_FRAME = 0x21;
     private static final int HANDLE_FRAME = 0x20;
     private static final int PRIORITY_BUCKET = 4; // priority $200
@@ -189,13 +188,6 @@ public class AizRideVineObjectInstance extends AbstractObjectInstance
         }
     }
 
-    @Override
-    public void updatePostPlayer(int frameCounter, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        AbstractPlayableSprite sidekick = firstTrackedSidekick();
-        AizVineHandleLogic.updatePostPlayer(handle, player, sidekick);
-    }
-
     private void updateRootState() {
         switch (state) {
             case WAIT_FOR_GRAB -> {
@@ -351,9 +343,7 @@ public class AizRideVineObjectInstance extends AbstractObjectInstance
         AizVineHandleLogic.positionFromParent(handle, lastSegment.x, lastSegment.y, lastSegment.angle);
         AbstractPlayableSprite sidekick = firstTrackedSidekick();
         AizVineHandleLogic.updatePlayers(handle, services(), player, sidekick, lastSegment.angle);
-        if (services().levelManager() != null && services().levelManager().objectsExecuteAfterPlayerPhysics()) {
-            AizVineHandleLogic.updatePostPlayer(handle, player, sidekick);
-        }
+        AizVineHandleLogic.updatePostPlayer(handle, player, sidekick);
     }
 
     private void updateStillSprite() {
@@ -472,5 +462,9 @@ public class AizRideVineObjectInstance extends AbstractObjectInstance
         int sin = TrigLookupTable.sinHex(byteAngle);
         int cos = TrigLookupTable.cosHex(byteAngle);
         return new int[]{(-sin + 8) >> 4, (cos + 8) >> 4};
+    }
+    /** Homing: the free vine handle, aimed where the native grab holds the player (sub_220C2). */
+    @Override public com.openggf.level.objects.homing.HomingTarget homingTarget(com.openggf.game.PlayableEntity player) {
+        return AizVineHandleLogic.anyGrabbed(handle) ? null : AizVineHandleLogic.homingTarget(handle);
     }
 }

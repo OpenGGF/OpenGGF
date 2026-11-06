@@ -45,6 +45,12 @@ public final class S3kKosModuleQueue {
         moduleTransferObserver = Objects.requireNonNull(observer, "observer");
     }
 
+    // Host diagnostic history only: never consulted by queue service/admission and
+    // deliberately not rewind state. Restored jobs may have no local receipt.
+    private final Map<HardwareWorkHandle, String> submissionDiagnostics = new HashMap<>();
+    private static final java.util.logging.Logger LOG =
+            java.util.logging.Logger.getLogger(S3kKosModuleQueue.class.getName());
+
     private final HardwareTimingService timing;
     private final S3kKosDecompressionQueue directQueue;
     private final Map<HardwareWorkHandle, S3kKosModuleDescriptor> descriptors =
@@ -97,7 +103,7 @@ public final class S3kKosModuleQueue {
         if (!hasCapacityFor(stableSources.size())) {
             throw new IllegalStateException(
                     "S3K KosM module FIFO cannot fit batch of "
-                            + stableSources.size());
+                            + stableSources.size() + "; " + pendingModuleDiagnostics());
         }
         List<PreparedSubmission> prepared = new java.util.ArrayList<>();
         int destination = destinationPatternAddress;
@@ -202,10 +208,27 @@ public final class S3kKosModuleQueue {
             boolean exportableAcrossSegment) throws IOException {
         Objects.requireNonNull(rom, "rom");
         if (physicalQueueSize() >= MAX_QUEUE_DEPTH) {
-            throw new IllegalStateException("S3K KosM module FIFO is full");
+            throw new IllegalStateException("S3K KosM module FIFO is full; "
+                    + pendingModuleDiagnostics());
         }
         return submitPrepared(prepareSubmission(
                 rom, source, destinationPatternAddress, exportableAcrossSegment));
+    }
+
+    /** Pure observation of actual pending work, including its direct child. */
+    public String pendingModuleDiagnostics() {
+        return timing.pendingHandles().stream()
+                .filter(handle -> handle.kind() == HardwareWorkKind.KOS_MODULE_QUEUE)
+                .map(handle -> {
+                    var preparation = (S3kKosModulePreparation) timing.coordinatorPreparation(handle);
+                    return handle + " " + preparation.descriptor
+                            + " ready=" + timing.isReady(handle)
+                            + " prepared=" + preparation.prepared
+                            + " completedModules=" + preparation.completedModules
+                            + " child=" + preparation.activeChild
+                            + " " + submissionDiagnostics.getOrDefault(handle,
+                                    "submission receipt unavailable (restored/external facade)");
+                }).collect(java.util.stream.Collectors.joining("; ", "pending=[", "]"));
     }
 
     PreparedSubmission prepareSubmission(
@@ -244,6 +267,20 @@ public final class S3kKosModuleQueue {
                 prepared.exportableAcrossSegment(),
                 prepared.preparation()));
         descriptors.put(handle, descriptor);
+        submissionDiagnostics.keySet().retainAll(timing.pendingHandles());
+        // Caller receipts cost a stack walk per submission, so they are only
+        // collected under openggf.debug.kosm; overflow messages still list
+        // every pending job's descriptor and preparation state without them.
+        if (Boolean.getBoolean("openggf.debug.kosm")) {
+            String receipt = "submittedAt=" + java.time.Instant.now()
+                    + " represented=" + timing.recordedAuthorityRepresentsRow()
+                    + " caller=" + java.lang.StackWalker.getInstance().walk(frames -> frames
+                            .filter(frame -> !frame.getClassName().equals(S3kKosModuleQueue.class.getName()))
+                            .limit(6).map(Object::toString)
+                            .collect(java.util.stream.Collectors.joining(" <- ")));
+            submissionDiagnostics.put(handle, receipt);
+            LOG.info("KosM submit " + handle + " " + descriptor + " " + receipt);
+        }
         return handle;
     }
 
@@ -522,6 +559,7 @@ public final class S3kKosModuleQueue {
     public byte[] claim(HardwareWorkHandle handle) {
         byte[] payload = timing.claim(handle);
         descriptors.remove(handle);
+        submissionDiagnostics.remove(handle);
         freshLevelHandoffHandles.remove(handle);
         return payload;
     }
@@ -589,6 +627,7 @@ public final class S3kKosModuleQueue {
 
     void resetForMissingSnapshot() {
         descriptors.clear();
+        submissionDiagnostics.clear();
         freshLevelHandoffHandles.clear();
     }
 

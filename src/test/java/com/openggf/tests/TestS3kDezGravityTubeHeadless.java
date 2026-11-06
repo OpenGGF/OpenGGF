@@ -67,7 +67,7 @@ class TestS3kDezGravityTubeHeadless {
     }
 
     /**
-     * {@code byte_48F90} (:95299) and {@code byte_48F98} (:95301), indexed by the biased dy
+     * {@code byte_48F90} (:95304) and {@code byte_48F98} (:95306), indexed by the biased dy
      * shifted right by 3 — and by 4 for the bit 6 tube. The mount angle is what the whole
      * cosine lift is phased from, so a wrong table is a wrong ride from the first frame.
      */
@@ -314,7 +314,9 @@ class TestS3kDezGravityTubeHeadless {
                 "Sonic's y_radius $0E -> $13 applies the gravity-signed native centre delta");
         assertEquals(0x2345, sprite.getXSubpixelRaw());
         assertEquals(0x6789, sprite.getYSubpixelRaw(), "the ROM writes only the position word");
-        assertEquals(1, sprite.getAnimationId(), "the tube applies its pose after TouchFloor");
+        assertEquals(0, sprite.getAnimationId(), "move.w #1 writes anim=0 after TouchFloor");
+        assertEquals(1, sprite.getAnimationManager().captureRewindState().lastAnimationId(),
+                "the adjacent byte is prev_anim=1");
         assertEquals(0x80, sprite.getFlipType());
     }
 
@@ -352,7 +354,7 @@ class TestS3kDezGravityTubeHeadless {
                 "$20 reflects to $60");
     }
 
-    /** {@code tst.b (Reverse_gravity_flag).w / beq.s locret_48FF4} (:95324-95325). */
+    /** {@code tst.b (Reverse_gravity_flag).w / beq.s locret_48FF4} (:95331-95332). */
     @Test
     void leavingTheTubeUprightLeavesTheFlipAngleAlone() {
         assertEquals(0x20, flipAngleAfterExit(false, 0x20),

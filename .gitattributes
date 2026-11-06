@@ -14,3 +14,6 @@ tools/bizhawk-headless/native/gpgx-audio-observer/*.patch -whitespace
 tools/bizhawk-headless/native/gpgx-audio-lab/*.patch -whitespace
 tools/soniccd/native_owner_core.patch -whitespace
 tools/soniccd/pcm_native_core.patch -whitespace
+
+# Example mods parse their text resources line by line; keep LF on Windows checkouts.
+examples/**/src/main/resources/** text=auto eol=lf

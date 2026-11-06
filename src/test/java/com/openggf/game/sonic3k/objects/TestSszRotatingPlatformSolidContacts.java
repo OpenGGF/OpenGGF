@@ -84,7 +84,8 @@ class TestSszRotatingPlatformSolidContacts {
         int releaseX = h.player.getCentreX();
         h.player.setLogicalInputState(false, false, false, false, true, true);
         h.step();
-        assertNull(h.manager.getRidingObject(h.player));
+        assertSame(h.owner, h.manager.getRidingObject(h.player),
+                "loc_45E90/loc_45FE4 leave the object's standing bit for the next SolidObjectTop");
         assertTrue(h.player.isOnObject(),
                 "loc_45E90/loc_45FE4 set InAir without clearing the player OnObj bit");
         assertTrue(h.player.getAir());
@@ -98,6 +99,9 @@ class TestSszRotatingPlatformSolidContacts {
         h.player.clearLogicalInputState();
         h.step();
         assertNull(h.manager.getRidingObject(h.player), "upward release must not reacquire the surface");
+        // SolidObjectTop's airborne release (loc_1E2E0) clears OnObj on the frame after the jump, as
+        // native SSZ1 does (hpz_completerun frames 3243/3314); a stale OnObj skips Player_AnglePos.
+        assertFalse(h.player.isOnObject(), "the next SolidObjectTop's airborne release clears OnObj");
         assertTrue(h.player.getAir());
         assertFalse(h.player.isObjectControlled());
     }

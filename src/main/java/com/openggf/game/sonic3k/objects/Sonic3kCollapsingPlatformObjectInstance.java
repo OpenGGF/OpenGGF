@@ -46,7 +46,7 @@ import java.util.logging.Logger;
  * <p>
  * ROM references: Obj_CollapsingPlatform (sonic3k.asm), loc_20594, loc_205CE.
  */
-public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInstance
+public final class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInstance
         implements SlopedSolidProvider, SolidObjectListener, RomObjectCodePointerProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     // Native slopes and falling mapping-piece children are terrain geometry; their flips are not logical facing.
@@ -245,6 +245,16 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
     @Override
     public boolean isTopSolidOnly() {
         return true;
+    }
+
+    @Override
+    public Integer getDirectTopLandingOverlapLimit() {
+        // sub_205B6 calls SolidObjectTopSloped2; a fresh contact reaches
+        // SolidObjCheckSloped2 -> loc_1E45A (sonic3k.asm:42116-42139,
+        // 42046-42062). Its signed feet-relative overlap is 1..16, independent
+        // of the current player radius. It has no full-solid bottom branch:
+        // Knuckles can land mid-ledge-climb while still using his 10px radius.
+        return 0x11;
     }
 
     @Override
@@ -473,7 +483,7 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
                 // $38, so the normal solid pass must still see this object as solid.
                 if (releasePending) {
                     if (releaseSolidPassExposed) {
-                        // ROM loc_205DE (sonic3k.asm:44890-44894) performs
+                        // ROM loc_205DE (sonic3k.asm:44895-44899) performs
                         // sub_205B6 before rewriting the action pointer and
                         // clearing any rider in sub_205FC. Expose one engine
                         // post-update solid pass first; if no contact consumed
@@ -655,6 +665,7 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
+        if (!isWithinRenderSpriteBounds(config.halfWidth, config.halfHeight)) return;
         ObjectRenderManager renderManager = getRenderManager();
         if (renderManager == null) {
             return;
@@ -776,6 +787,7 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
 
         @Override
         public void appendRenderCommands(List<GLCommand> commands) {
+            if (!isWithinRenderSpriteBounds(renderHalfWidth, renderHalfHeight)) return;
             PatternSpriteRenderer renderer = getRenderer(artKey);
             if (renderer == null) {
                 return;

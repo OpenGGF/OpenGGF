@@ -23,7 +23,8 @@ import java.util.Map;
  * Supports multi-component bosses with parent-child relationships.
  */
 public abstract class AbstractBossInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseAttackable {
+        implements com.openggf.level.objects.observe.HitPointSource, TouchResponseProvider, TouchResponseAttackable,
+                InstagibBossTarget {
     @Override public com.openggf.game.mutators.ObjectHeadRole headPresentationRole() {
         return com.openggf.game.mutators.ObjectHeadRole.BOSS;
     }
@@ -208,6 +209,11 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
         hitHandler.processHit(player);
     }
 
+    /** Instagib: the next native hit becomes the defeating one; phases and defeat stay native. */
+    @Override public void collapseToFinalHit() {
+        if (state.hitCount > 1) state.hitCount = 1;
+    }
+
     /**
      * Check if boss is defeated.
      */
@@ -358,28 +364,28 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
      *       docs/s2disasm/s2.asm:63420-63424</li>
      *   <li>ObjC5 / WFZ, on {@code routine_secondary}: {@code ObjC5_LaserCase},
      *       docs/s2disasm/s2.asm:81246-81251</li>
-     *   <li>ObjAF / DEZ Mecha Sonic, on {@code routine}: docs/s2disasm/s2.asm:77502-77506</li>
-     *   <li>Obj5D / CPZ, on {@code routine}: docs/s2disasm/s2.asm:61470-61474</li>
+     *   <li>ObjAF / DEZ Mecha Sonic, on {@code routine}: docs/s2disasm/s2.asm:77617-77621</li>
+     *   <li>Obj5D / CPZ, on {@code routine}: docs/s2disasm/s2.asm:61585-61589</li>
      * </ul>
      *
      * <p>The deferral is correct whenever the defeat write lands <em>downstream</em> of
      * that head read, so the newly selected handler cannot run until the next frame.
      * Because the engine runs touch responses before this object's own {@code update()},
      * the deferral restores exactly that one-frame offset. Worked cases: ObjAF's
-     * {@code loc_39CF0} sets {@code routine=$C} (docs/s2disasm/s2.asm:78091-78095);
+     * {@code loc_39CF0} sets {@code routine=$C} (docs/s2disasm/s2.asm:78206-78210);
      * Obj5D observes the defeated status at its own tail (docs/s2disasm/s2.asm:61723-61772);
      * Obj56's {@code loc_2F4EE} sets {@code routine_secondary=6}
-     * (docs/s2disasm/s2.asm:63665) from {@code loc_2F4A6} (:63632-63636), called by
-     * {@code loc_2F304} / Sub4 at :63486.
+     * (docs/s2disasm/s2.asm:63665) from {@code loc_2F4A6} (:63747-63751), called by
+     * {@code loc_2F304} / Sub4 at :63601.
      *
      * <p><strong>Wing Fortress (ObjC5) - settled, was an open question.</strong> An earlier
      * wording of this javadoc justified WFZ's {@code false} by claiming
      * {@code ObjC5_LaserCase} re-reads {@code routine_secondary} per dispatch, citing two
      * addresses that had both drifted onto unrelated code. Re-read against the criterion
      * above, ObjC5 satisfies it: the selector is read <em>once</em> at
-     * {@code ObjC5_LaserCase} (docs/s2disasm/s2.asm:81246-81251) and the defeat write
+     * {@code ObjC5_LaserCase} (docs/s2disasm/s2.asm:81372-81377) and the defeat write
      * {@code move.b #$1E,routine_secondary(a0)} sits downstream of that head read, in
-     * {@code ObjC5_NoHitPointsLeft} (docs/s2disasm/s2.asm:82045-82053), reached via
+     * {@code ObjC5_NoHitPointsLeft} (docs/s2disasm/s2.asm:82171-82179), reached via
      * {@code bra.w ObjC5_HandleHits}. WFZ's {@code false} was a latent defect.
      *
      * <p>It is not fixed by flipping this flag, though, and WFZ deliberately does not use
@@ -818,5 +824,17 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
                 spawn.renderFlags(),
                 spawn.respawnTracked(),
                 spawn.rawYWord());
+    }
+
+    /** Route observation: the boss's own hit counter ({@code collision_property} by default). */
+    @Override
+    public int hitsRemaining() {
+        return getCollisionProperty();
+    }
+
+    /** Route observation: the boss's own defeat flag; object absence is never defeat. */
+    @Override
+    public boolean defeated() {
+        return state.defeated;
     }
 }

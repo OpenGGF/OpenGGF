@@ -37,6 +37,11 @@ public class PixelFontTextRenderer {
         return new PixelFontTextRenderer(new MenuPixelFont(), PixelFontVariant.PIXEL_FONT);
     }
 
+    /** Authored 6x8 menu glyphs at native scale, with the same one-pixel shadow as menu text. */
+    public static PixelFontTextRenderer compactMenu() {
+        return new PixelFontTextRenderer(MenuPixelFont.compact(), PixelFontVariant.PIXEL_FONT);
+    }
+
     /** The initialized font, for callers that draw through the menu chrome helpers. */
     public PixelFont font() {
         ensureInitialized();
@@ -48,7 +53,8 @@ public class PixelFontTextRenderer {
     }
 
     public int lineHeight(float scale) {
-        return PixelFont.scaledGlyphHeight(scale) + extraLinePadding(scale);
+        int height = font instanceof MenuPixelFont menu ? menu.nativeLineHeight(scale) : PixelFont.scaledGlyphHeight(scale);
+        return height + extraLinePadding(scale);
     }
 
     public int measureWidth(String text) {

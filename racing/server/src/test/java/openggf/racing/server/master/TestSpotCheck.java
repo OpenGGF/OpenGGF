@@ -24,8 +24,21 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
 class TestSpotCheck {
+    private final List<RelayRoomManager> ownedManagers = new ArrayList<>();
+
+    private RelayRoomManager own(RelayRoomManager manager) {
+        ownedManagers.add(manager);
+        return manager;
+    }
+
+    @org.junit.jupiter.api.AfterEach
+    void closeManagers() { ownedManagers.forEach(RelayRoomManager::close); }
+
     private static final class Connection implements HubConnection, com.openggf.net.hub.HandshakeTransport {
         @Override public String authenticationBinding() { return com.openggf.net.protocol.AuthenticationTranscript.LOCAL_PLAINTEXT; }
+        @Override public com.openggf.net.protocol.AuthenticationTranscript.Role authenticationRole() {
+            return com.openggf.net.protocol.AuthenticationTranscript.Role.ROOM_RELAY;
+        }
         final List<String> text = new ArrayList<>();
         @Override public void sendText(String value) { text.add(value); }
         @Override public void sendBinary(byte[] data) { }
@@ -47,12 +60,12 @@ class TestSpotCheck {
             VerifierRegistry verifiers = new VerifierRegistry(() -> now[0], 60_000);
             PlayerIdentity worker = PlayerIdentity.loadOrCreate(dir.resolve("worker"));
             verifiers.register(worker.publicKeyEncoded(), Set.of("0.6:cafe"));
-            RelayRoomManager manager = new RelayRoomManager(
+            RelayRoomManager manager = own(new RelayRoomManager(
                     PlayerIdentity.loadOrCreate(dir.resolve("master")), ladder,
                     TrackValidationProfileSource.none(), List.of(Runnable::run),
                     Runnable::run, () -> now[0], (roomId, count) -> { },
                     (roomId, owner, zone, act) -> { }, config, jobs,
-                    new VerdictConsequences(store, ladder, () -> now[0], 0), verifiers);
+                    new VerdictConsequences(store, ladder, () -> now[0], 0), verifiers));
             PlayerIdentity original = PlayerIdentity.loadOrCreate(dir.resolve("original"));
             PlayerIdentity replacement = PlayerIdentity.loadOrCreate(dir.resolve("replacement"));
             SessionRegistry.RoomEntry entry = new SessionRegistry(() -> now[0], config)
@@ -106,12 +119,12 @@ class TestSpotCheck {
             VerifierRegistry verifiers = new VerifierRegistry(() -> now[0], 60_000);
             PlayerIdentity worker = PlayerIdentity.loadOrCreate(dir.resolve("worker"));
             verifiers.register(worker.publicKeyEncoded(), Set.of("0.6:cafe"));
-            RelayRoomManager manager = new RelayRoomManager(
+            RelayRoomManager manager = own(new RelayRoomManager(
                     PlayerIdentity.loadOrCreate(dir.resolve("master")), ladder,
                     TrackValidationProfileSource.none(), List.of(Runnable::run),
                     Runnable::run, () -> now[0], (roomId, count) -> { },
                     (roomId, owner, zone, act) -> { }, config, jobs,
-                    consequences, verifiers);
+                    consequences, verifiers));
             PlayerIdentity first = PlayerIdentity.loadOrCreate(dir.resolve("first"));
             PlayerIdentity second = PlayerIdentity.loadOrCreate(dir.resolve("second"));
             SessionRegistry.RoomEntry entry = new SessionRegistry(() -> now[0], config)
@@ -212,8 +225,11 @@ class TestSpotCheck {
                                     String roomId, PlayerIdentity identity, String name)
             throws Exception {
         Connection connection = new Connection();
-        manager.attach(connection, roomId, identity.fingerprint(), name);
-        ClientHandshake handshake = new ClientHandshake(identity, name, "0.6:cafe");
+        manager.attach(connection, roomId, identity.fingerprint(), name,
+                access.room().instanceId(), "test-route", 1);
+        ClientHandshake handshake = new ClientHandshake(identity, name, "", "0.6:cafe", null, com.openggf.net.protocol.AuthenticationTranscript.Role.ROOM_RELAY,
+                    () -> com.openggf.net.protocol.AuthenticationTranscript.LOCAL_PLAINTEXT,
+                    "test-route", 1);
         access.room().onText(connection, ControlCodec.encode(null, handshake.hello()));
         access.room().onText(connection, ControlCodec.encode(null,
                 handshake.onWelcome(last(connection, ControlMessage.Welcome.class))));

@@ -4,6 +4,8 @@ import com.openggf.audio.GameAudioProfile;
 import com.openggf.audio.GameMusic;
 import com.openggf.audio.GameSound;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.AbstractLevelEventManager;
+import com.openggf.data.RetailRomRevision;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.game.sonic1.constants.Sonic1AnimationIds;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
@@ -45,7 +47,7 @@ import java.util.logging.Logger;
  */
 public class Sonic1MonitorObjectInstance extends AbstractMonitorObjectInstance
         implements SpawnRewindRecreatable, TouchResponseProvider, TouchResponseListener,
-        SolidObjectProvider, ObjectVisualFacing.NonDirectional {
+        SolidObjectProvider, ObjectVisualFacing.NonDirectional, com.openggf.level.objects.homing.HomingTargetSource {
 
 // Monitor frames and the rising icon/explosion children have no native horizontal-facing owner.
     private static final Logger LOGGER = Logger.getLogger(Sonic1MonitorObjectInstance.class.getName());
@@ -291,7 +293,18 @@ public class Sonic1MonitorObjectInstance extends AbstractMonitorObjectInstance
             // Pow_ChkInvinc: invincibility on, play bgm_Invincible
             case 5 -> {
                 player.giveInvincibility();
-                services.playMusic(GameMusic.INVINCIBILITY);
+                // Pow_ChkInvinc: boss music wins in all revisions. REV01 also
+                // retains the drowning track at air <= 12; REV00 lacks that gate.
+                boolean bossActive = services.levelEventProvider() instanceof AbstractLevelEventManager events
+                        && events.isBossActive();
+                RetailRomRevision revision = services.gameModule() != null
+                        ? services.gameModule().getGameService(RetailRomRevision.class) : RetailRomRevision.UNKNOWN;
+                var drowning = player.getDrowningController();
+                boolean lowAir = revision != RetailRomRevision.S1_REV00
+                        && drowning != null && drowning.getRemainingAir() <= 12;
+                if (!bossActive && !lowAir) {
+                    services.playMusic(GameMusic.INVINCIBILITY);
+                }
             }
             // Pow_ChkSonic: v_lives++, play bgm_ExtraLife
             case 2 -> {
@@ -501,5 +514,9 @@ public class Sonic1MonitorObjectInstance extends AbstractMonitorObjectInstance
             }
             return STATIC;
         }
+    }
+    /** Homing: an intact monitor; the native roll contact breaks it. */
+    @Override public com.openggf.level.objects.homing.HomingTarget homingTarget(com.openggf.game.PlayableEntity player) {
+        return broken ? null : com.openggf.level.objects.HomingTargets.at(this, com.openggf.level.objects.homing.HomingTargetKind.BREAKABLE);
     }
 }

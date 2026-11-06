@@ -65,6 +65,7 @@ public final class LiveTraceComparator implements PlaybackFrameObserver, TraceHu
     private boolean lastStartPressed;
     private boolean complete;
     private TraceFrame currentVisualFrame;
+
     private TraceFrame deferredTerminalDynamicArtFrame;
     private TraceFrame pendingDynamicArtFrame;
     private FrameComparison pendingDynamicArtBaseComparison;
@@ -118,6 +119,27 @@ public final class LiveTraceComparator implements PlaybackFrameObserver, TraceHu
         this.firstErrorCallback = firstErrorCallback;
         this.perFrameObserver = perFrameObserver;
         this.dynamicArtSnapshots = dynamicArtSnapshots;
+    }
+
+    /** Diagnostic-only observer of committed visual rows, including discontinuous seeks. */
+    @FunctionalInterface
+    public interface VisualRowObserver {
+        void accept(TraceData trace, int consumedRows, boolean discontinuity);
+    }
+
+    private VisualRowObserver visualRowObserver;
+
+    public void setVisualRowObserver(VisualRowObserver observer) {
+        visualRowObserver = observer;
+        if (observer != null) {
+            observer.accept(trace, cursor, true);
+        }
+    }
+
+    private void publishVisualRows(int consumedRows, boolean discontinuity) {
+        if (visualRowObserver != null) {
+            visualRowObserver.accept(trace, consumedRows, discontinuity);
+        }
     }
 
     @Override
@@ -315,6 +337,7 @@ public final class LiveTraceComparator implements PlaybackFrameObserver, TraceHu
 
     private void advanceComparisonCursor() {
         cursor++;
+        publishVisualRows(cursor, false);
         preparedRowPolicy = null;
         preparedRowActivated = false;
         preparedProductionMarkerActivated = false;
@@ -723,6 +746,7 @@ public final class LiveTraceComparator implements PlaybackFrameObserver, TraceHu
         if (trace.frameCount() == 0) {
             cursor = 0;
             currentVisualFrame = null;
+            publishVisualRows(0, true);
             complete = true;
             return;
         }
@@ -733,6 +757,7 @@ public final class LiveTraceComparator implements PlaybackFrameObserver, TraceHu
                 ? 0
                 : Math.min(targetCursor - 1, trace.frameCount() - 1);
         currentVisualFrame = trace.getFrame(visualCursor);
+        publishVisualRows(visualCursor + 1, true);
         complete = false;
     }
 

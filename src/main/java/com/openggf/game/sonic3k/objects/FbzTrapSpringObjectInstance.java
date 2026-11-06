@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.sonic3k.S3kTopSolidProvider;
 import com.openggf.level.objects.ObjectVisualFacing;
 
 import com.openggf.game.PlayableEntity;
@@ -13,7 +14,6 @@ import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
-import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -24,7 +24,7 @@ import java.util.List;
 
 /** Locked-on {@code Obj_FBZTrapSpring} ($E3), $3CB34-$3CC56. */
 public final class FbzTrapSpringObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+        implements S3kTopSolidProvider, SolidObjectListener, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
     private final FbzParticipantStateTable participants = new FbzParticipantStateTable(1);
     private int animation;
     private int previousAnimation = -1;
@@ -93,7 +93,7 @@ public final class FbzTrapSpringObjectInstance extends AbstractObjectInstance
     @Override public int getPriorityBucket() { return 1; }
     @Override public SolidObjectParams getSolidParams() { return SolidObjectParams.of(0x1B, 8, 9); }
     @Override public boolean isTopSolidOnly() { return true; }
-    @Override public SolidRoutineProfile getSolidRoutineProfile() { return SolidRoutineProfile.topSolid(false); }
+    @Override public SolidRoutineProfile getSolidRoutineProfile() { return SolidRoutineProfile.fromProvider(this); }
 
     @Override
     public void onSolidContact(PlayableEntity player, SolidContact contact, int frameCounter) {

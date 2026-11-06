@@ -11,6 +11,7 @@ import com.openggf.sprites.playable.Tails;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
@@ -22,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Ordinary solo inputs from cold DEZ1 entry through both boss phases and the seamless handoff. */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestDezSoloColdRouteCapture {
+    @Tag("exhaustive-audit")
     @Test
     void coldSonicAloneClearsMinibossAndReachesPlayableActTwo() throws Exception {
         // Lifts, bridges, conveyor departure, turbine panels/door, launcher chains,
@@ -37,6 +39,7 @@ class TestDezSoloColdRouteCapture {
         runColdRoute("sonic", Sonic.class, 23533, 22332, spots);
     }
 
+    @Tag("exhaustive-audit")
     @Test
     void coldTailsAloneClearsMinibossAndReachesPlayableActTwo() throws Exception {
         // Lower opening return, flight, conveyor, upper pads, lower corridor,
@@ -53,6 +56,7 @@ class TestDezSoloColdRouteCapture {
         runColdRoute("tails", Tails.class, 29521, 28320, spots);
     }
 
+    @Tag("exhaustive-audit")
     @Test
     void coldWideSonicClearsBothBossPhasesAndReachesPlayableActTwo() throws Exception {
         // Independently reproduced 800px buttons: opening lifts, loop/conveyor,

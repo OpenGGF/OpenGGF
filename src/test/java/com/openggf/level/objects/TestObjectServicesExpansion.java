@@ -2,17 +2,26 @@ package com.openggf.level.objects;
 
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.RomManager;
+import com.openggf.data.Rom;
+import com.openggf.data.RomByteReader;
 import com.openggf.debug.DebugOverlayManager;
 import com.openggf.game.BonusStageProvider;
 import com.openggf.game.BonusStageType;
 import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.GameServices;
+import com.openggf.game.GameDataSource;
+import com.openggf.game.RomDataSource;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.GameplayModeContext;
+import com.openggf.game.session.GameplaySessionFactory;
+import com.openggf.game.session.SessionManager;
 import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -84,6 +93,60 @@ class TestObjectServicesExpansion {
     void defaultObjectServices_requiresGameplayMode() {
         assertThrows(NullPointerException.class,
                 () -> new DefaultObjectServices(null, EngineServices.current()));
+    }
+
+    @Test
+    void defaultObjectServices_romReadsOwningWorldSourceAfterProcessRomChanges() throws IOException {
+        try (Rom worldRom = Rom.fromReader(new RomByteReader(new byte[] {0x11}), "world A");
+             Rom processRom = Rom.fromReader(new RomByteReader(new byte[] {0x22}), "process B")) {
+            DefaultObjectServices services = servicesForSource(new RomDataSource(worldRom, "world-a"));
+            services.romManager().setRom(processRom);
+            try {
+                assertEquals(0x11, services.rom().readByte(0),
+                        "object ROM reads must retain the owning world's pinned bytes");
+            } finally {
+                services.romManager().setRom(null);
+            }
+        }
+    }
+
+    @Test
+    void defaultObjectServices_romReaderReadsOwningWorldSourceAfterProcessRomChanges() throws IOException {
+        try (Rom worldRom = Rom.fromReader(new RomByteReader(new byte[] {0x11}), "world A");
+             Rom processRom = Rom.fromReader(new RomByteReader(new byte[] {0x22}), "process B")) {
+            DefaultObjectServices services = servicesForSource(new RomDataSource(worldRom, "world-a"));
+            services.romManager().setRom(processRom);
+            try {
+                assertEquals(0x11, services.romReader().readU8(0),
+                        "object ROM readers must retain the owning world's pinned bytes");
+            } finally {
+                services.romManager().setRom(null);
+            }
+        }
+    }
+
+    @Test
+    void defaultObjectServices_noRomWorldCannotBorrowTheProcessRom() throws IOException {
+        GameDataSource source = new GameDataSource() {
+            @Override public Optional<Rom> rom() { return Optional.empty(); }
+            @Override public InputStream openAsset(String path) throws IOException {
+                throw new IOException("No fixture assets");
+            }
+            @Override public String identity() { return "standalone-fixture"; }
+        };
+        try (Rom processRom = Rom.fromReader(new RomByteReader(new byte[] {0x22}), "process B")) {
+            DefaultObjectServices services = servicesForSource(source);
+            services.romManager().setRom(processRom);
+            try {
+                assertAll(
+                        () -> assertThrows(IOException.class, services::rom,
+                                "a world without a ROM capability must reject object ROM access"),
+                        () -> assertThrows(IOException.class, services::romReader,
+                                "a world without a ROM capability must reject object ROM readers"));
+            } finally {
+                services.romManager().setRom(null);
+            }
+        }
     }
 
     @Test
@@ -230,6 +293,13 @@ class TestObjectServicesExpansion {
 
     private DefaultObjectServices sessionServices() {
         return sessionServices(TestEnvironment.activeGameplayMode());
+    }
+
+    private DefaultObjectServices servicesForSource(GameDataSource source) {
+        var module = GameServices.module();
+        GameplayModeContext gameplay = SessionManager.openGameplaySession(module, module, source, null);
+        GameplaySessionFactory.attachManagers(gameplay, EngineServices.current());
+        return sessionServices(gameplay);
     }
 
     private DefaultObjectServices sessionServices(GameplayModeContext gameplayMode) {

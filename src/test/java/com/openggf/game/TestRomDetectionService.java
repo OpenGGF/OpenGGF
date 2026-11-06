@@ -17,6 +17,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestRomDetectionService {
 
     @Test
+    void bindsTheRecognizedRomBeforeReturningARevisionAwareModule() throws Exception {
+        GameModule module = org.mockito.Mockito.mock(GameModule.class,
+                org.mockito.Mockito.withSettings().extraInterfaces(
+                        com.openggf.game.internal.RetailRomAware.class));
+        RomDetectionService service = new RomDetectionService(List.of(detector(10, true, module)));
+        try (Rom rom = openRom()) {
+            assertSame(module, service.detectAndCreateModule(rom).orElseThrow());
+            org.mockito.Mockito.verify((com.openggf.game.internal.RetailRomAware) module).bindRetailRom(rom);
+        }
+    }
+
+    @Test
     void lowerPriorityDetectorWinsWhenMultipleDetectorsMatch() throws Exception {
         GameModule lowerPriorityModule = module("lower-priority");
         GameModule higherPriorityModule = module("higher-priority");

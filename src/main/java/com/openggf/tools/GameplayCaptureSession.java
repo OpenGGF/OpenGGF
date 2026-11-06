@@ -213,12 +213,9 @@ public final class GameplayCaptureSession implements AutoCloseable {
             GameServices.gameState().setReverseGravityActive(true);
         }
         if (settings.cameraXSub() != null) {
-            // Declared capture setup: the inherited Camera_X_pos low word. Only zones that keep
-            // a camera fraction honour it (S3K Doomsday autoscroll, sub_82920).
-            com.openggf.game.sonic3k.runtime.S3kRuntimeStates.currentDdz(GameServices.zoneRuntimeRegistry())
-                    .orElseThrow(() -> new IllegalArgumentException(
-                            "--camera-x-sub needs a zone that keeps a camera fraction"))
-                    .setCameraXFraction(settings.cameraXSub());
+            // Declared capture setup: the inherited Camera_X_pos low word, which only the
+            // 16.16 camera producers (for example Doomsday's sub_82920) observe.
+            com.openggf.camera.CameraSubpixelAccess.setXFraction(GameServices.camera(), settings.cameraXSub());
         }
         if (settings.starPost()) {
             // Declared capture setup: a star post already hit, with Saved_X/Y at the requested
@@ -325,6 +322,54 @@ public final class GameplayCaptureSession implements AutoCloseable {
     void restoreInputHistory(Bk2FrameInput input) {
         requireBooted();
         previousInput = input;
+    }
+
+    /**
+     * Every future-affecting write this host owns outside the rewind registry: the driver's
+     * previous row and the positioned-entry sidekick seed window. A route checkpoint carries it
+     * with the engine snapshot so a restored branch ticks the same host writes. Originating
+     * task: shared route planner, 2026-11-02.
+     */
+    public HostState captureHostState() {
+        requireBooted();
+        return new HostState(this, previousInput, sidekickSeedX, sidekickSeedY, sidekickSeedFramesLeft);
+    }
+
+    /** Restores {@link #captureHostState()} after the engine snapshot it was taken with. */
+    public void restoreHostState(HostState state) {
+        requireBooted();
+        if (state.owner != this) throw new IllegalArgumentException("host state belongs to another capture session");
+        previousInput = state.previousInput;
+        sidekickSeedX = state.sidekickSeedX;
+        sidekickSeedY = state.sidekickSeedY;
+        sidekickSeedFramesLeft = state.sidekickSeedFramesLeft;
+        var sprites = GameServices.spritesOrNull();
+        var main = sprites == null ? null : sprites.getMainPlayable();
+        if (main != null) player = main;
+    }
+
+    /** Applies {@code decorator} to the launched game module; used to admit or reject creator controllers. */
+    public void decorateModule(java.util.function.UnaryOperator<com.openggf.game.GameModule> decorator) {
+        if (loop != null) throw new IllegalStateException("capture session is already booted");
+        boot.setModuleDecorator(decorator);
+    }
+
+    /** Opaque host-owned replay state; see {@link #captureHostState()}. */
+    public static final class HostState {
+        private final GameplayCaptureSession owner;
+        private final Bk2FrameInput previousInput;
+        private final int sidekickSeedX;
+        private final int sidekickSeedY;
+        private final int sidekickSeedFramesLeft;
+
+        private HostState(GameplayCaptureSession owner, Bk2FrameInput previousInput, int sidekickSeedX,
+                          int sidekickSeedY, int sidekickSeedFramesLeft) {
+            this.owner = owner;
+            this.previousInput = previousInput;
+            this.sidekickSeedX = sidekickSeedX;
+            this.sidekickSeedY = sidekickSeedY;
+            this.sidekickSeedFramesLeft = sidekickSeedFramesLeft;
+        }
     }
 
     /** Steps one gameplay frame with the given held input ({@code null} = neutral). */
@@ -673,6 +718,11 @@ public final class GameplayCaptureSession implements AutoCloseable {
         if (loop == null || closed) {
             throw new IllegalStateException("capture session is not active");
         }
+    }
+
+    /** True while the boot's no-device audio backend is installed; captures assert it before drawing. */
+    public boolean usesNullAudioBackend() {
+        return boot.hasInstalledNullAudioBackend();
     }
 
     @Override

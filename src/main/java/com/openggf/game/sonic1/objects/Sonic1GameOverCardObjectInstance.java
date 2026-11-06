@@ -16,6 +16,7 @@ import com.openggf.level.objects.AbstractGameOverCardObjectInstance;
  *       OVER-object test, so both halves answer a press (:57-66).</li>
  * </ul>
  */
+@com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.SCREEN_POSITION)
 public final class Sonic1GameOverCardObjectInstance extends AbstractGameOverCardObjectInstance {
 
     /** {@code move.w #12*60,obTimeFrame(a0)}. */
@@ -28,6 +29,12 @@ public final class Sonic1GameOverCardObjectInstance extends AbstractGameOverCard
     /** Headless probe constructor: the GAME word. */
     public Sonic1GameOverCardObjectInstance() {
         this(FRAME_GAME);
+    }
+
+    @Override
+    protected boolean clearSavedTimerOnTimeOver() {
+        // GameOver .restartLevel adds clr.l v_lamp_time only for REV01.
+        return !com.openggf.game.sonic1.Sonic1RomProfile.isRev00(services());
     }
 
     @Override

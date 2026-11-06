@@ -189,7 +189,7 @@ the ROM `SolidObject` call site's d2 value.
 
 1. *Per-object unseeded counter:* Any per-object `animCounter` initialized to 0 at construction diverges from the shared `v_ani0_frame` whenever the object streams in mid-level (the real `v_ani0_frame` has been ticking since level start). Always derive `v_ani0_frame` from `levelManager.getFrameCounter() + 1` (= current gfc), not from a per-object accumulator. See also SBZ Electrocuter pattern (`v_framecount` source).
 
-2. *Off-by-one: ExecuteObjects runs before SynchroAnimate:* ROM `Level_MainLoop` (sonic.asm:2980) order is:
+2. *Off-by-one: ExecuteObjects runs before SynchroAnimate:* ROM `Level_MainLoop` (sonic.asm:2998) order is:
    ```
    addq.w #1,(v_framecount).w   ; gfc++ at top of loop (line 2984)
    jsr ExecuteObjects            ; objects READ v_ani0_frame (line 2988)
@@ -307,7 +307,7 @@ The engine models `locktime`/`move_lock` as `moveLockTimer`, decremented only in
 
 **ROM citation.** `docs/s1disasm/_incObj/26, 2E Monitors and Power-Ups.asm:183` (`move.b #col_none,obColType(a0)` — broken monitor stops further collision). Gate: `docs/s1disasm/_incObj/Sonic ReactToItem.asm:52-53`.
 
-**Cross-game note.** S2 `Touch_Loop` reads `collision_flags(a1)` and `bne` to the check (zero = skipped, `docs/s2disasm/s2.asm:85048-85049`); S3K only touch-checks objects added to `Collision_response_list`. A consumed object must clear its flags / not re-add itself in all three.
+**Cross-game note.** S2 `Touch_Loop` reads `collision_flags(a1)` and `bne` to the check (zero = skipped, `docs/s2disasm/s2.asm:85210-85211`); S3K only touch-checks objects added to `Collision_response_list`. A consumed object must clear its flags / not re-add itself in all three.
 
 **Originating commit.** `466f408a8` (S1 broken monitor clears col type so it stops preempting ReactToItem).
 
@@ -451,7 +451,7 @@ Symptom: a `col_*|col_hurt` (or enemy/boss) object whose CENTRE matches ROM with
 
 Some objects are "broken/triggered" by the player's touch pass (ROM `ReactToItem` / `Touch_Response`, which runs inside Sonic's slot-0 collision processing) but actually allocate their effect children (explosion, power-up, debris) in the object's OWN routine, which executes later in the same frame at the object's (usually high) SST slot during `ExecuteObjects`. The S1 monitor is the canonical case: `ReactToItem` only bounces the player and sets the monitor's `obRoutine = 4`; the monitor's own `Mon_BreakOpen` (run when `ExecuteObjects` reaches its slot) does the two `FindFreeObj` spawns of the power-up (Obj0x2E) + explosion (Obj0x27) (`docs/s1disasm/_incObj/26, 2E Monitors and Power-Ups.asm:181-198`). Because `FindFreeObj` returns the LOWEST free slot, those children almost always land in a slot BELOW the spawning object's slot. `ExecuteObjects` runs low→high and has already PASSED those lower slots, so the children get their first routine execution NEXT frame, not the spawn frame (`docs/s1disasm/_incObj/27, 3F Explosions.asm:30-53`: `ExItem_Main` first runs a frame after spawn).
 
-The engine runs S1 touch responses BEFORE the object exec loop (`objectsExecuteAfterPlayerPhysics=true`: `LevelManager.applyTouchResponses` during `tickPlayablePhysics`, then `updateObjectPositionsPostPhysicsWithoutTouches`). So if you `spawnFreeChild(...)` directly inside `onTouchResponse`, the child lands in `dynamicObjects` BEFORE the exec loop rebuilds `execOrder` — it gets swept into the SAME frame's `execOrder` and runs immediately, one frame early. For a fixed-lifetime animation child (the explosion counts mapping frames 0→5 then `DeleteObject`), running a frame early means it EXPIRES a frame early and frees its SST slot a frame early → the next `FindFreeObj` allocation takes that freed slot instead of ROM's higher slot → a global ±1 SST-slot offset cascade (trace `obj_sNN_slot` / `obj_extra_sNN_*` fields drift across many downstream objects, surfacing hundreds of frames later).
+The engine runs S1 touch responses BEFORE the object exec loop (player slots run first: `LevelManager.applyTouchResponses` during `tickPlayablePhysics`, then `updateObjectPositionsPostPhysicsWithoutTouches`). So if you `spawnFreeChild(...)` directly inside `onTouchResponse`, the child lands in `dynamicObjects` BEFORE the exec loop rebuilds `execOrder` — it gets swept into the SAME frame's `execOrder` and runs immediately, one frame early. For a fixed-lifetime animation child (the explosion counts mapping frames 0→5 then `DeleteObject`), running a frame early means it EXPIRES a frame early and frees its SST slot a frame early → the next `FindFreeObj` allocation takes that freed slot instead of ROM's higher slot → a global ±1 SST-slot offset cascade (trace `obj_sNN_slot` / `obj_extra_sNN_*` fields drift across many downstream objects, surfacing hundreds of frames later).
 
 Fix: split the break/trigger. In `onTouchResponse` do only the ROM `ReactToItem` part (bounce the player, mark broken, set a `pendingBreakSpawn` flag) and DEFER the `FindFreeObj` `spawnFreeChild(...)` calls to the object's own `update()` (ROM's own-routine spawn). `ObjectManager`'s slot-relative deferral (it wires a freshly-spawned child into `execOrder` only when its exec index is GREATER than `currentExecSlot`) then correctly runs a lower-slot child next frame and a higher-slot child same frame — matching ROM — but only because `update()` runs with `updating=true` and `currentExecSlot` set to the spawning object's slot. The same deferral does NOT engage from the touch callback (`updating=false`, `currentExecSlot=-1`). Symptom: occupancy/positions match ROM for thousands of frames, then a `obj_sNN_slot exp 0xNN act 0x(NN-1)` first error appears far downstream; trace it back via a per-frame engine-slot-vs-`slot_dump` diff to a transient effect child (explosion) that the engine deletes one frame before ROM.
 
@@ -554,7 +554,7 @@ which is what makes it confusing -- the recorded `player_x` and
 a position bug. If `player_x` and `player_stand_on_obj` both match the
 recording, the width is the only remaining input.
 
-**What `obActWid` actually is.** `_Constants.asm:230` names it *action width*,
+**What `obActWid` actually is.** `_Constants.asm:251` names it *action width*,
 and the per-object comments call it *sprite display width*, but neither is the
 whole story: it is one byte with several consumers and it is never the rendered
 sprite extent (the mappings own that). It is read by `BuildSprites`' horizontal
@@ -900,3 +900,19 @@ callback already only arms `Got_SBZ2_MoveOut` (`:227-236`); its movement starts
 the next pass, so another delay would be incorrect. Capture/restore the existing
 state/timer before the exit callback, and test ordinary art service plus the
 special-stage and SBZ2 branches independently. See the S1 chain gap-closure audit.
+
+
+## Retail table bases and native pointers have different ownership (2026-10-28)
+
+Cross-game S1/S2: resolve an engine-declared REV01 table base through
+`Sonic1RomProfile` or `Sonic2RomAddresses` for the selected immutable ROM view.
+An absolute pointer read from that ROM is already native: resolving it again can
+turn a correct PLC, mapping, animation or palette pointer into unrelated bytes.
+Do not infer verification from a matching header, rewrite ROM bytes, or mutate
+static offsets when another ROM opens. Unknown images keep the compatible path;
+KiS2 retains its own rules even when its source cartridge is recognized.
+
+Check both original revisions, include a pointer-derived negative control, and
+exercise the actual consumer rather than only comparing resolver output. The
+[retail revision plan](../../../docs/architecture/plans/2026-10-28-retail-rom-revisions.md)
+records original hashes, inspected disassembly versions and validation scope.

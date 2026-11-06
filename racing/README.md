@@ -14,6 +14,8 @@ racing/server/                  master server, Netty dedicated host, attempt ver
 The networking contracts marked `@ModApi` are available to any mod without installing
 Time Attack. Internal handshake and WebSocket parsers remain implementation details.
 The core dependency fence prevents networking from calling gameplay owners or mod code.
+For component, lifecycle and integration diagrams, see the
+[multiplayer Time Attack architecture reference](../docs/architecture/research/multiplayer-time-attack.md).
 For custom messages and rules, scene mods can use the existing owner-scoped `SceneNetwork`
 API (used by Sitar Hero). Putt Putt Paradise's existing direct TCP implementation is
 unchanged; it can adopt shared transport separately from Time Attack's racing protocol.
@@ -112,9 +114,9 @@ Keyboard Q/P activation keeps the numbered list. The left stick, D-pad, face
 buttons and Start keep their gameplay duties; the race continues with the chooser
 open. The first connected pad owns the race chooser. Connecting with controls
 held does not act, and disconnecting that pad closes its chooser. Disabling
-controllers in Engine Settings also disables these race controls.
+controllers in the hub's Settings also disables these race controls.
 
-Personal settings are in **Engine Settings > Gameplay**: **Censor Profanity**
+Personal settings are in the hub's **Settings > Gameplay**: **Censor Profanity**
 defaults on, and **Disable Multiplayer Chat** defaults off. Censorship runs only
 on the receiving client and masks matching words in message bodies and sender
 labels. Disabling chat clears local history and discards subsequent typed and
@@ -132,7 +134,7 @@ frame. Quick Chat wording is English for this MVP. Messages carry stable phrase
 IDs and host-supplied track context so a future community translation can render
 the recipient's language without changing the wire meaning.
 
-The racing wire protocol is version **6**. Upgrade clients, room hosts and the
+The racing wire protocol is version **8**. Upgrade clients, room hosts and the
 master together; older or incomplete message schemas are rejected.
 
 `settings.txt` keys for the look: `lookBase` is the base colour (three hex digits `BGR`, the
@@ -175,19 +177,22 @@ room's lobby that cannot load or faults falls back to the menu on its own for th
 
 The menu owns the controller while it is shown (`RunHandle.holdControls`). It is a set of cards
 in the multiplayer HUD's panel style (`RaceLobbyScreen`): a header with the room, the next track
-and whether times are verified; the players with a ready box, HOST/NEW badge and character; the
-chat (or, between rounds, the track vote or the last round's podium); and the menu, headed by the
-ready rule with who the room is still waiting for. Cards size to their content, so the level
+and whether shared times are available; the players with a ready box, HOST/NEW badge and character;
+the chat (or, in verified rooms between rounds, the track vote or last round's podium); and the menu, headed by the
+ready rule, with one sentence for who the round still waits on ("Waiting for Sid", "Waiting for 3
+players", "Everyone is ready", or "Ready is optional"; the ready boxes say which players) and any
+notice in the row face. Cards size to their content, so the level
 stays in view around them, and the menu covers the level (`RunHandle.setLevelCovered`): the stock
 HUD and ghost nameplates are not drawn under it (presentation only; the timer runs). Each
 player's identity tag, which tells two players with one name apart, is on the chat and invite
-page. **READY UP** marks the player ready (`SetReady`; their ready box fills). Once ready, Start or Enter
+page. **Ready up** marks the player ready (`SetReady`; their ready box fills). Once ready, Start or Enter
 on the lobby's own page hides the menu and hands the controller to the character; pressing it
 again brings the menu back, like a pause menu. While ready, A (Space) confirms menu actions,
-because Start/Enter is the toggle; text editors keep Enter. The run plays behind the still-active
+because Start/Enter is the toggle; text editors keep Enter. On the focused chat card,
+Tab opens Room details on a keyboard, before and after readying; its cap names Tab. The run plays behind the still-active
 Time Attack scene (`SceneGameplay.launchBehind`), so Start and the pause key never pause it.
 
-The room owner's **READY RULE** is `REQUIRED` (the owner's START ROUND is refused until every
+The room owner's **Ready rule** is `REQUIRED` (the owner's Start round is refused until every
 present player is ready), `AUTO` (everyone counts as ready on joining) or the default
 `DEFAULT_BY_SIZE` (required with five or fewer players present, `AUTO` with six or more,
 re-evaluated as players join and leave; an auto-readied player keeps it unless they unready).
@@ -233,7 +238,22 @@ python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=com/openggf/net/**/Test*,
 
 `python3 tools/testing/maven_queue.py -Dmse=off package` packages `racing/time-attack` as the bundled mod (`openggf.bundled.mods` in
 `pom.xml`) through `ggfmod package` with warnings as errors; `TestTimeAttackModPackage` checks the
-same thing in the suite. Native builds do not load code mods, so Time Attack is JVM-only.
+same thing in the suite. Native and JVM distributions carry the same build-pinned
+Time Attack jar. Native archives keep it in `bundled/` beside the executable;
+universal jars embed it under `openggf-bundled/`. The
+[native recipe](../tools/native-image/README.md) uses pinned GraalVM Community
+25.4.4.1.1+1.1 experimental runtime class loading with generated API/service
+retention and the normal trust/validation/fault boundaries. This supersedes the
+extraction's original JVM-only decision.
+
+Native distribution targets are Linux x64, Windows x64 and Apple Silicon.
+The [final-recipe qualification record](../docs/architecture/research/2026-10-08-graalvm-native-mod-feasibility.md#final-platform-recipe-and-updated-branch-qualification-2026-10-27)
+contains bounded local Linux evidence; final-recipe Windows/macOS runtime,
+gameplay and memory qualification remain unverified there. Earlier Windows
+PE/Wine checks are source/recipe-specific. A build or normal-boot Time Attack
+check does not establish hosted races, arbitrary code-mod compatibility or
+platform-wide gameplay support. Qualify the actual package and services before
+advertising those outcomes. The Mod API remains an unpublished candidate.
 
 ## Running the server tools
 

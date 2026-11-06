@@ -17,6 +17,7 @@ import com.openggf.game.save.SaveReason;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.graphics.FadeManager;
 import com.openggf.level.LevelManager;
+import com.openggf.level.LevelEndingUpdateAccess;
 import com.openggf.level.WaterSystem;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -59,6 +60,10 @@ final class GameLoopEndingSession {
     EndingProvider provider() { return endingProvider; }
     boolean isTransitionPending() { return endingTransitionPending; }
     void setTransitionPending(boolean pending) { endingTransitionPending = pending; }
+    void retireForSessionReset() {
+        endingProvider = null;
+        endingTransitionPending = false;
+    }
 
     void runFrame(PlcLifecycleFrame frame) {
         GameLoopPlcLifecycle.runPhase(frame, GameLoopPlcLifecycle.endingPhase(endingProvider), this::updateEnding);
@@ -118,6 +123,7 @@ final class GameLoopEndingSession {
             GameLoopPlcLifecycle.startFromWhite(host.resolvedGameplayContext(), localFade, null);
         }
 
+        advanceBackgroundForCurrentScene();
         LOGGER.info("Entered ending sequence, phase=" + endingProvider.getCurrentPhase());
     }
 
@@ -147,6 +153,15 @@ final class GameLoopEndingSession {
             if (targetMode != host.currentMode()) {
                 host.setGameMode(targetMode);
             }
+        }
+        advanceBackgroundForCurrentScene();
+    }
+
+    /** Publish logical scroll once, after the provider's final scene decision, even without a draw. */
+    private void advanceBackgroundForCurrentScene() {
+        if (endingProvider != null && host.currentMode() == GameMode.ENDING_CUTSCENE
+                && endingProvider.needsLevelBackground()) {
+            LevelEndingUpdateAccess.advanceBackground(host.level(), endingProvider.getBackgroundVscroll());
         }
     }
 
@@ -208,6 +223,11 @@ final class GameLoopEndingSession {
             return;
         }
 
+        com.openggf.sprites.managers.SpriteManagerInternalAccess.runCreditsDemoGameplay(
+                host.sprites(), host.module(), sprite, this::runEndingCreditsGameplay);
+    }
+
+    private void runEndingCreditsGameplay() {
         // Run level physics — follows LevelFrameStep canonical order (steps 1-4),
         // but steps 5-6 are conditional on scroll-freeze state during ending fadeout.
         host.sprites().publishHeldInputForLevelEvents(host.input());
@@ -218,13 +238,8 @@ final class GameLoopEndingSession {
         if (host.level().advanceWaterLevelBeforePlayerPhysics()) {
             host.level().advanceDynamicWaterLevel();
         }
-        if (host.level().objectsExecuteAfterPlayerPhysics()) {
-            host.sprites().update(host.input());
-            host.level().updateObjectPositionsPostPhysicsWithoutTouches();
-        } else {
-            host.level().updateObjectPositions();
-            host.sprites().update(host.input());
-        }
+        host.sprites().update(host.input());
+        host.level().updateObjectPositionsPostPhysicsWithoutTouches();
         // Camera/scroll in ROM order (DeformLayers (REV01).asm:16-18): the camera
         // move/clamp (ScrollVertical) runs BEFORE the zone event handler, and the
         // boundary easing (DynamicLevelEvents tail) runs AFTER it. Mirrors
@@ -431,30 +446,10 @@ final class GameLoopEndingSession {
         };
     }
 
-    /**
-     * Captures all arguments before cleanup can rebind the host's slots, matching the
-     * original call boundary. The shared black-screen/title handoff reads live slots later.
-     */
+    /** Retains the captured-argument boundary used by the ending return owner. */
     private static void startEndingReturn(SpriteManager spriteManager, LevelManager levelManager, String mainCode,
             AudioManager audioManager, FadeManager fadeManager, GameplayModeContext context, Runnable onBlack) {
-        // The native caller departs once (S1 TryAg_Exit, docs/s1disasm/sonic.asm:4034-4036).
-        // Keep an already-requested departure's callback in charge until its
-        // wrapper closes the outgoing fade lease before entering the title.
-        if (fadeManager.hasPendingCompletion()) {
-            return;
-        }
-        spriteManager.setInputSuppressed(false);
-        levelManager.setForceHudSuppressed(false);
-        if (spriteManager.getSprite(mainCode) instanceof AbstractPlayableSprite player) {
-            player.setControlLocked(false);
-            player.clearForcedInputMask();
-        }
-        audioManager.fadeOutMusic();
-        if (!fadeManager.isActive()) {
-            GameLoopPlcLifecycle.startToBlack(context, fadeManager, onBlack);
-        } else {
-            onBlack.run();
-        }
+        EndingReturnTransition.start(spriteManager, levelManager, mainCode, audioManager, fadeManager, context, onBlack);
     }
 
 }

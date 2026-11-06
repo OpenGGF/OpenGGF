@@ -164,6 +164,29 @@ public class TestMasterServer {
     }
 
     @Test
+    void failedAdminAuditDoesNotCommitSanction(@TempDir Path dir) throws Exception {
+        server = MasterServer.start(testConfig(), dir);
+        Files.createDirectory(dir.resolve("admin-audit.jsonl"));
+        PlayerIdentity player = PlayerIdentity.loadOrCreate(dir.resolve("player"));
+
+        HttpResponse<String> result = HttpClient.newHttpClient().send(
+                HttpRequest.newBuilder()
+                        .uri(URI.create("http://127.0.0.1:" + server.adminPort()
+                                + "/admin/sanction"))
+                        .header("Authorization", "Bearer secret-admin-token")
+                        .POST(HttpRequest.BodyPublishers.ofString("{\"fingerprint\":\""
+                                + player.fingerprint() + "\",\"type\":\"BAN\","
+                                + "\"reason\":\"audit-failure\",\"durationHours\":0}"))
+                        .build(), HttpResponse.BodyHandlers.ofString());
+
+        assertEquals(500, result.statusCode());
+        try (SqliteIdentityStore store = new SqliteIdentityStore(dir.resolve("ids.db"))) {
+            assertTrue(store.activeSanctions(player.fingerprint(), System.currentTimeMillis())
+                    .isEmpty(), "an unaudited admin request must not sanction the player");
+        }
+    }
+
+    @Test
     void adminTimeoutImmediatelyRevokesAnActiveSession(@TempDir Path dir) throws Exception {
         server = MasterServer.start(testConfig(), dir);
         PlayerIdentity identity = PlayerIdentity.loadOrCreate(dir.resolve("id"));

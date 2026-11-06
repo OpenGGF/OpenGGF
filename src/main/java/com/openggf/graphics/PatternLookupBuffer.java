@@ -11,7 +11,7 @@ import static org.lwjgl.opengl.GL12.GL_CLAMP_TO_EDGE;
  * 1D texture that maps pattern index to atlas tile coordinates.
  * Stores RGBA8 where R=tileX, G=tileY.
  */
-public class PatternLookupBuffer {
+public final class PatternLookupBuffer {
     private int textureId = 0;
     private int size = 0;
 

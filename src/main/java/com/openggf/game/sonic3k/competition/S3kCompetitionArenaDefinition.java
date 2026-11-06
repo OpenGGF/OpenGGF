@@ -16,11 +16,15 @@ public record S3kCompetitionArenaDefinition(S3kCompetitionSession.Arena arena,
     public S3kCompetitionArenaDefinition { placements = List.copyOf(placements); }
 
     public static S3kCompetitionArenaDefinition load(Rom rom, S3kCompetitionSession.Arena arena) throws IOException {
+        return load(rom, arena, S3kCompetitionResources.LOCKED_ON);
+    }
+
+    public static S3kCompetitionArenaDefinition load(Rom rom, S3kCompetitionSession.Arena arena, S3kCompetitionResources resources) throws IOException {
         var reader = RomByteReader.fromRom(rom);
         int zone = arena.zoneId();
-        int start = Sonic3kConstants.SONIC_START_LOCATIONS_ADDR + zone * 8;
-        int sizes = Sonic3kConstants.LEVEL_SIZES_ADDR + zone * 16;
-        int pointer = reader.readU32BE(Sonic3kConstants.SPRITE_LOC_PTRS_ADDR + zone * 8);
+        int start = resources.starts() + zone * 8;
+        int sizes = resources.sizes() + zone * 16;
+        int pointer = reader.readU32BE(resources.objects() + zone * 8);
         List<ObjectSpawn> placements = new ArrayList<>();
         // loc_1B720 loads all placements below $800 before the first object pass.
         // No camera cursor or second copy of these shared records exists.
@@ -40,12 +44,16 @@ public record S3kCompetitionArenaDefinition(S3kCompetitionSession.Arena arena,
 
     /** SpawnLevelMainSprites copies P1's initial centre to P2 before miniature initialization. */
     public List<S3kCompetitionPlayer> createPlayers(Rom rom, List<S3kCompetitionPlayer.Character> characters) throws IOException {
+        return createPlayers(rom, characters, S3kCompetitionResources.LOCKED_ON);
+    }
+
+    public List<S3kCompetitionPlayer> createPlayers(Rom rom, List<S3kCompetitionPlayer.Character> characters, S3kCompetitionResources resources) throws IOException {
         if (characters.isEmpty() || characters.size() > 2) throw new IllegalArgumentException("One or two native human slots required");
         List<S3kCompetitionPlayer> players = new ArrayList<>();
         for (int slot = 0; slot < characters.size(); slot++) {
             var character = characters.get(slot);
             var player = new S3kCompetitionPlayer(slot, character, startX, startY,
-                    S3kCompetitionPlayer.readSpeeds(rom, character));
+                    S3kCompetitionPlayer.readSpeeds(rom, character, resources));
             player.setHighPriority(arena == S3kCompetitionSession.Arena.ENDLESS_MINE);
             players.add(player);
         }

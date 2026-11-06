@@ -17,7 +17,7 @@ import static org.lwjgl.opengl.GL30.GL_R32F;
  * Stores signed pixel offsets as normalized float values in a 1D texture
  * sampled by the parallax background shader.
  */
-public class VScrollBuffer {
+public final class VScrollBuffer {
 
     public static final int VISIBLE_LINES = 224;
 

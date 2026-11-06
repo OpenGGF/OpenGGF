@@ -8844,3 +8844,509 @@ useful source/classes remain isolated. No engine check, broad smoke, native
 emulator, timing override, fitted expectation or pass-cache archive was added
 by the documentation delivery. #208 remains open pending a supported runtime
 cause/qualified correction and fresh same-movie route qualification.
+
+
+## Scoped Native salvage — 2026-10-28
+
+The complete unmerged Native work is preserved locally on
+`feature/ai-native-scope-snapshot-20261028`, full source checkpoint
+`471b466d228ec1d01239d273fbbcead391afa581`, assessment tip
+`16609491f1eda4b4cb367775bce1c94f112571d7`. It is an archive, not a merge
+candidate or runtime qualification. The original branch at `96ae2aa0f` remains
+unchanged. The user's corrected boundary excludes CPU/cycle simulation, virtual
+VDP/beam timing and hardware bus/register protocols. Sound-chip synthesis remains
+the specific exception; external emulators remain research tools.
+
+This delivery starts from develop `2f9ca84b18c8bae45a298348676e28d0a91a0798`
+in isolated `bugfix/ai-native-scoped-salvage-20261028`. It extracts only:
+
+- `GenericFieldCapturer.CodecFieldSnapshot` content equality/hashCode and three
+  focused tests. Constructor defensive copying and restore behavior are unchanged.
+- Exact current gameplay manager/world checks before zone-scoped registry lookup.
+  Two real session replacement regressions distinguish a new world from a
+  same-world reopen; a current-manager control verifies ordinary clearing of
+  targets, pending writes, rotation and effects/modes.
+- `Get_LevelSizeStart`'s fresh intro focus addition. `loc_1BF48 / loc_1BF68 /
+  loc_1BF70` (`sonic3k.asm:38267–38286`, disassembly pin `8b2cf3c4…`) selects
+  Current `$1601/$0B00`, or Knuckles `$0900/$0300`, then adds `$B0` to the
+  focus WORD before subtracting the horizontal deadzone. Four tests supplement
+  the six existing helper checks, covering exact predicates, checkpoint bypass,
+  word wrap and maximum saturation. No physical execution model is imported.
+
+Original production plus the new tests ran17 cases:9 passed,8 failed,0 errors,
+0 skips. Failures were exactly the three codec equality checks, two stale-manager
+checks and three focus checks. The excluded-entry focus control and ordinary
+current-manager reset passed. Command: queued Maven `--lean -Dmse=off
+-Dtest=TestCodecFieldSnapshotEquality,TestSonic3kLevelStartCamera,TestLevelManagerZoneScopedRegistryReset test`.
+The clean build/test run took107 seconds; queue delay was not measured separately.
+Java25 and explicit Lua5.4 preflight passed. The first preflight used the system
+Lua default and rejected its version before tests; selecting `/usr/bin/lua5.4`
+resolved that prerequisite without source changes.
+
+The corrected focused run passed173 cases across15 actual classes,0 failures,
+errors or skips (92 seconds including recompilation). It covered the original
+three classes plus `TestGenericFieldCapturer`, `TestRewindCollectionCodecs`,
+`TestPaletteOwnershipRegistry`, `TestSessionManager`,
+`TestNativeArenaCameraFraming`, both `TestSonic3kLevelLoading` classes,
+`TestSonic3kLevelInitProfile`, `TestSonic3kBootstrapResolver`,
+`TestSonic3kDecodingUtils`, `TestS3kAiz1SkipHeadless`, and
+`TestFreshLevelBoundaryRewindHeadless`. Command: queued Maven `-Dmse=off
+-Dopenggf.headless.gl=surfaceless-egl -Dtest=<the above exact class selectors> test`,
+with DISPLAY/WAYLAND_DISPLAY unset, Java25 and Lua5.4. Stock S1/S2/S3K and
+KiS2 ROM identities were independently verified at the existing root; focused
+fixtures used their normal ROM discovery. Compiler deprecations,143 FAST-to-NONE
+warnings and the malformed-collision-index negative control were read; no
+unexpected caught faults occurred. Every XML identity and stream was consumed,
+then the owned raw XML/text/consoles were removed.
+
+The change-based plan selects4239 smoke candidate classes and fresh guards;
+its documented two-worker run uses explicit verified original ROM paths via
+`--rom-directory`, display-free EGL, a40-minute invocation timeout and the
+normal ten-minute silence limit. The first run terminated with exit143 while waiting for batch63 admission,
+without a final runner status. Its cause is unknown; no owned runner/JVM remained.
+It completed62/85 ordinary batches:25860 reported cases,1 failure,1 error,40
+skips,767.57 seconds of batch execution plus30.62 seconds of preparation. Slot
+messages recorded approximately1040 seconds of completed admission waits, plus
+an unfinished271-second wait. Broad coverage and guards were incomplete, not a
+pass. Skip reasons were explicit capture/measurement/soak/plugin prerequisites;
+no omitted failure or skip records were reported. The consumed run was acknowledged
+and its raw diagnostics deleted.
+
+A separately compiled unchanged-base checkout at `2f9ca84b` reproduced both
+failure identities/kinds/types/messages exactly in13 tests (1F/1E/0S):
+`TestOOZPoppingPlatformMultiSidekick#capturedRiseRestoresAndReplaysEveryUpdateThroughExactApex`
+requires an active timer owner during player restore, and
+`TestCnzMinibossRegistered#numericSlotIsImplementedInBothPointerTables` still
+asserts membership in the shared numeric set. Both test source files are
+byte-identical to the base. The queued comparison used explicit S1/S2/S3K/KiS2
+original ROM paths, EGL and the exact two class selectors; Maven48.378 seconds,
+admission approximately700 seconds. No unrelated fixture, registry policy or
+production behavior was changed. Its raw reports/logs were consumed and deleted.
+
+The first replacement was canceled normally before test admission (0 cases)
+to forward live output as well as its target log. The live-output replacement
+also exited143 while queued (0 cases, no final status). No owned runner remained;
+its diagnostics were consumed and acknowledged. Source inspection found no normal
+queue-wait path that explains143 plus missing final status: the installed SIGTERM
+handler normally reports interruption and exits130. The launcher/signal sender
+and cause remain unknown. Output forwarding did not resolve it. No test-wrapper,
+queue, resource, or timeout policy was changed.
+
+A separate fresh `-Pguards` run completed808 unique cases:805 passed,3 failed,
+0 errors/skips. Python-launcher-only signal observation recorded normal exit1,
+with the JVM untraced and no termination signal. Maven190 seconds, admission
+approximately91 seconds. The three failing methods were then run on the unchanged
+base with `-Pguards -Dtest=TestRewindCoverageGuard#noNewCoverageGapsBeyondBaseline,TestBuildToolingGuard#s3kStaticSessionStateDebtShouldNotGrow,TestNoAssertionFreeDiagnostics#noAssertionFreeTestMethodsUnderTestsTree test -B`.
+All three failure identities/kinds/types/messages matched exactly (3F/0E/0S,
+Maven30.597 seconds, admission approximately406 seconds):
+
+- Existing `MhzEndBossInstance#objectRef#hitProxy` coverage gap.
+- Existing static debt in `HCZWaterSkimHandler.slotRetired` and
+  `Aiz2BossEndSequenceState.cutsceneKnucklesSlot`.
+- Existing assertion-free `TestTestReelExtension#bodyPasses` fixture.
+
+No source fix, baseline/allowance update or assertion change was made for these
+inherited failures. All guard and baseline raw XML/text/consoles and the empty
+signal observation were consumed and removed; no dumps were present.
+
+**Proportionate delivery decision:** the category table expands each of these
+four production paths to all smoke categories. Reviewing the actual delta, the
+changed contracts are private codec value equality/hashCode, a current attached
+manager/world identity check, and the existing camera helper's focus arithmetic.
+The173-case focused cohort covers the relevant codec/rewind, real session/registry,
+viewport, loading/profile/bootstrap and AIZ/title consumers. The complete fresh
+owning guards also ran, with every observed failure independently matched to the
+base. This is the current AGENTS.md proportionate-validation option for a bounded,
+understood change; the all-category expansion is disproportionate to these
+contracts. No further all-category retry is part of this extraction. The62-batch
+smoke evidence is additional partial coverage, **not a completed category pass**.
+No new/worsened failure was observed in completed checks. Whole-tree/global green,
+release validation, trace/native campaigns and the unfinished23 batches remain
+unclaimed. Historical Native passes are not reused.
+
+Independent source review found no material finding in the four-file extraction.
+Strict citation checks passed both camera source/test files against the pinned
+assembly. Local documentation link targets and AGENTS/CLAUDE mirrors passed.
+The normal branch/resource policy audit checked15780 entries at `63dd80242`.
+Final integration preserves exactly that executable change; subsequent edits
+only record this evidence in the existing plan.
+
+Limits: the focus helper runs before ScreenInit. The current fresh-title
+boundary still force-snaps after initialization, and some loading fixtures also
+snap explicitly. This increment does not certify intro focus through every title
+entry or fix the independent same-movie cold DEZ route in issue #229. Initial
+callback fencing, reentrant graphics binding, constructor cleanup, counter
+binding and pure ROM palette-reader extraction remain separate candidates.
+The rejected hardware layers remain only in the archive. No API surface/pin,
+architecture allowance, line-budget, timing-input or fixture-oracle waiver is
+part of this delivery.
+
+
+## Scoped gameplay lifecycle fixes, 2026-10-30
+
+The user requested a PR for the remaining bounded camera, constructor cleanup
+and clock-binding fixes. Callback lifetime safety is a separate follow-up.
+The integration base is `06d22cbd8c7ba29e7f7591260ee34e6ea878318a`.
+The archive remains local and is not a merge candidate. Graphics-binding
+machinery and a parallel palette parser are excluded after the current-source
+review did not establish a missing production consumer or callback trigger.
+
+The camera change retains the completed position when the zone feature owns
+`LevelStartCameraPosition`. The existing boundary still borrows the outgoing
+camera, player and ring presentation during the title. Generic providers keep
+their existing forced centering. A new completed-load result channel was
+considered and rejected because the semantic owner already exists.
+
+Constructor failure cleanup uses references acquired by that constructor.
+It keeps the current player-art source-address profile and the original primary
+exception. A separate rollback factory would move acquisition knowledge to
+another owner without reducing the work.
+
+Clock bindings use distinct private installation identities. This distinguishes
+reinstallation of the same supplier without a numeric generation or overflow
+policy. The callback result cannot replace a completed successor binding or
+its final carried value. External clock installations remain outside logical
+rewind state, as before.
+
+The original-production regression run executed the whole counter class, the
+new constructor class, and the real-profile fresh-camera class. It reported:
+
+```text
+Tests run: 23, Failures: 10, Errors: 0, Skipped: 0
+```
+
+The failures were four callback clock cases, five acquired-owner cleanup cases,
+and the DEZ1 title publication case. The real DEZ profile prepared X64, while
+the fresh-title path published X0 in both live and render-copy coordinates.
+The S2 generic-camera fallback and successful construction controls passed.
+Both S2 REV01 and S3K input ROM hashes matched the documented identities.
+The exact queued selectors are `TestVIntRunCounter`,
+`TestGameplayModeContextConstructionCleanup` and
+`TestFreshLevelBoundaryCameraHeadless`, with explicit absolute ROM properties.
+Java25 and Lua5.4 preflight passed. No original assertions were removed.
+
+The corrected focused run passed 224 cases across 16 actual classes, with no
+failures, errors or skips. It included the three regression classes plus
+`TestGameLoopVIntRunCounter`, `TestCamera`, `TestDynamicArtLifecycleService`,
+`TestSessionManager`, `TestGameplayModeContextRewindRegistry`,
+`TestFreshLevelBoundaryRewindHeadless`, `TestSonic3kLevelStartCamera`, both
+`TestSonic3kLevelLoading` classes, `TestSonic3kBootstrapResolver`,
+`TestSonic3kDecodingUtils`, `TestSonic3kLevelInitProfile` and
+`TestS3kAiz1SkipHeadless`. The queued Maven run used `-Dmse=off`, explicit
+verified S2 and S3K ROM paths, and the isolated EGL property with desktop display
+variables unset. The reproduced regressions now pass on the real profile,
+constructor and public supplier paths. Compiler deprecations and the existing
+FAST-to-NONE warnings were read. No JVM dumps were present.
+
+A fresh independent source review found no material issue in the four production
+files or their regression tests. It checked exception preservation, captured
+cleanup owners, current source-address wiring, same-supplier reinstallation,
+completed successor unbind, camera fallback and title rewind. Public signatures,
+API pins, descriptors and architecture allowances are unchanged.
+
+The change-based mapping selects all 4,357 smoke candidates. Hosted CI owns broad
+smoke and the complete guard selection for this PR. Local verification covers
+the directly affected behavior and fresh owning structural guards. The fresh
+`-Pguards` run passed all 134 cases across `TestArchUnitRules`,
+`TestArchitecturalSourceGuard`, `TestRewindCoverageGuard` and
+`TestModApiSignatureSurface`, with no failures, errors or skips. API pins and
+architecture allowances remain unchanged. No full-suite, trace-route, emulator,
+GPU or global-green claim follows from these local checks.
+
+
+## Callback lifetime follow-up preparation, 2026-10-30
+
+The user requested preparation while PR #240 runs hosted CI. This local branch
+starts at that PR's head, `aef90c1eb3a05ff7563435141f627eaee833e300`.
+It is a preparation artifact, not a second implementation or a runtime result.
+No callback-lifetime change is included in PR #240.
+
+The first increment is initial object dispatch. It must stop suspended engine
+work after a supported nested load or restore supersedes its owners. It must
+preserve valid operations on the successor while the old callback remains on
+the stack. It must not simulate hardware, use a gameplay clock as an ownership
+version, or import the archived Source and physical-return framework.
+
+### Current source evidence
+
+`InitialObjectDispatchController.Scope.close` at lines 185-202 aborts the
+collision build and calls the captured shared solid registry's `finishFrame`.
+It then clears fixed objects and the active scope. These are writes that must
+belong to that exact dispatch, not merely to its ObjectManager reference.
+
+`DefaultSolidExecutionRegistry.finishFrame` at lines 77-89 clears previous
+standing and rebuilds it from the current frame. Its restore method at lines
+145-160 restores previous standing while clearing the current frame. An old
+scope finishing afterward can therefore erase the restored standing state.
+
+`ObjectExecutionController` at lines 76-90 continues after an object's update
+into policy and solid tails, then calls `endObject`. Initial fixed dispatch
+similarly continues into collision publication. The existing callback router
+tracks creator ownership, not load or restore freshness. Its outer wrapper can
+also enclose the whole execution controller.
+
+ObjectManager reset begins at line 498. Its rewind adapter restore begins at
+line 4224. Both can enter callbacks after mutation starts. A successful-load
+counter, `completedProductionLoadGeneration`, is consequently too late.
+`RewindRegistry.courseLayoutVersion` changes
+adapter layout, not every restore, and cannot stand in for a restore identity.
+
+### Bounded design decision
+
+Two shapes were considered. A single ambient load generation is smaller in
+appearance, but misses same-manager restore and independent solid-frame
+replacement. An ambient lexical guard can also reject valid successor calls
+because the old callback is still on the stack. Do not use this shape.
+
+Prefer ownership local to the existing initial-dispatch controller and solid
+registry. A dispatch carries its own identity and a captured solid-frame
+identity. Reset, restore and frame replacement retire the old identities before
+any callback can adopt replacement state. These identities are runtime lifetime
+state and must not be restored from gameplay snapshots.
+
+Capture the original manager, its state incarnation and its LevelManager
+attachment before InitialProcessSpritesExecutor invokes profile preparation or
+fixed-dispatch factories. Capturing only when beginInitialProcessSprites starts
+would adopt a callback-created replacement. Binding the later solid frame must
+also reject an intervening replacement rather than adopting its current stamp.
+The exact handoff remains to be proved by an early-preparation replacement test.
+
+Capture the relevant lease for each operation. Validate between separate
+external callbacks, including getter, policy and listener calls. A compound
+lambda containing several external calls is not one safe callback boundary.
+A stale close must skip both collision/solid writes and clearing successor
+controller fields. Ordinary owned success and exception cleanup remain intact.
+The exact shared solid-scope API remains to be chosen after the first regressions.
+Keep the implementation in existing controllers rather than growing ObjectManager
+or introducing a general capability framework.
+
+### Test-first sequence
+
+Use a new `TestInitialObjectDispatchSuccessorOwnership` beside
+`TestObjectManagerInitialS3kSetupPass`. Keep the existing success and failure
+controls. Borrow the real session, object-before-solid registration ordering and
+captured standing setup from `TestNativeCompetitionCameraRestore` at lines
+88-144. Use a genuine S3K-layout registry for S3K initial dispatch, rather than
+calling those APIs on the S2 layout. Use the real DefaultSolidExecutionRegistry
+and actual captured snapshots, not a recording registry or fabricated state.
+A ROM-free fixture is a candidate, not an observed qualification.
+
+1. Complete successor state B before A begins. Establish nonempty standing
+   through the real solid checkpoint owner and capture the actual registry.
+2. In A's actual object update, restore B, re-resolve its objects and verify
+   unchanged world/context, fresh identities, capture success and standing.
+   The existing `setRewindInPlaceRestoreEnabledForTest(false)` seam can prove
+   reconstruction rather than accidental reuse.
+3. Throw a sentinel after those prerequisites. Require exact primary identity
+   and unchanged B standing after A unwinds. This first cleanup discriminator
+   does not require inventing an abort type. It is currently UNRUN.
+4. Add an independent normal-return variant. Require engine supersession
+   rejection, no subsequent old-object callbacks or publisher tails, and
+   unchanged B state. The fence acts after the user callback returns. It must
+   not prohibit legitimate successor operations inside that callback.
+5. Add a real ROM-backed nested fresh-load variant. Load-method return is not
+   sufficient. Require the destination, a different ObjectManager, completed
+   initial processing, successful capture and a meaningful standing/control
+   state. The exact pending-pass completion sequence is still an open fixture
+   prerequisite. Earlier boot or recipe failures do not count as RED.
+6. Inside the replacement callback, independently exercise a two-object typed
+   query, supported null-spawn admission and an ordinary successor update where
+   its lifecycle allows it. Compare B after those operations and after A's
+   cleanup. These controls prevent ambient stale-A guards from disabling B.
+
+### Creator fault boundary and exclusions
+
+Add authentic creator registration using the existing
+`TestCourseRestoreCreatorOwnerScope` setup at lines 192-239. A legitimate nested
+restore must not quarantine its owner, while an ordinary creator failure still
+must. ModFaultBoundary currently exempts only its own CallbackAborted. Throwing
+a different engine abort inside that boundary can quarantine valid code.
+Do not exempt every public ObjectCallbackAbortException; creator code can
+subclass that signal. Either place the freshness check outside the entire
+creator fault boundary or use a specifically engine-created cancellation signal.
+This choice needs its own behavioral control before implementation.
+
+The first follow-up excludes a whole ordinary-frame callback audit, new world
+admission policy, scene-format changes, raw palette or video state, and hardware
+timing models. Shared helpers may need an explicit initial-dispatch lease, but
+ordinary dispatch behavior stays unchanged in this increment. Source preparation
+is complete enough to start the first regression. No test, compilation, runtime
+RED, execution cost or all-callers closure is claimed for this follow-up.
+
+
+## Initial callback lifetime implementation, 2026-10-30
+
+The implementation starts from merged PR #240 at develop
+`062e8a9f2610ef149cff53b26b28f3378ab8fe79`. It implements the bounded
+initial-dispatch follow-up above. The archived Native experiment is excluded.
+
+The first original-production run used
+`maven_queue.py -Dmse=off -Dtest=TestInitialObjectDispatchSuccessorOwnership test`.
+Two controls passed. The third case restored real nonempty standing inside an
+object update and threw an exact sentinel. The sentinel survived, but old scope
+cleanup erased the restored standing. This was an observed failure at the final
+standing assertion, with no errors or skips.
+
+An expanded original-production run selected
+`TestInitialObjectDispatchSuccessorOwnership,TestInitialDispatchCreatorCancellation,TestInitialProcessSpritesEntryLifetime`.
+It reported 18 cases, ten passes and eight failures, with no errors or skips.
+The failures covered direct and full-registry standing cleanup, two successor
+operations, creator restoration, and three pre-scope callbacks. The pre-scope
+cases completed B inside the callback before A incorrectly began its own frame
+and reached the existing sprite-epoch rejection. The required earlier engine
+cancellation was absent. Ordinary creator errors and a forged public abort still
+quarantined their owner in the controls.
+
+A separate original-production run of `TestInitialSolidCallbackLifetime`
+reported six cases, three passes and three failures. Execution-mode,
+solid-parameter and participant-admission callbacks each completed a genuine
+manager restore, then returned into the old engine tail without cancellation.
+
+The existing initial-dispatch controller now owns a runtime incarnation and
+captures its real LevelManager attachment. Reset, rewind restore and manager
+replacement retire that incarnation before callbacks. The solid registry owns
+an independent runtime frame identity. Its begin, restore and transient clear
+retire old frames. The internal solid bridge captures both frame and object
+context for cleanup. These identities are absent from gameplay snapshots.
+The public SolidExecutionRegistry interface and API pins are unchanged.
+
+Each routed callback captures its initial reservation before invoking creator
+code. Solid helper methods capture before their provider, listener and object
+reads, then check immediately after each extension call. A callback may complete
+B's restore and perform valid B queries or null-spawn allocation before returning.
+The old reservation rejects A afterward. There is no thread-local old-A fence.
+A private final engine cancellation subtype is exempt from creator quarantine;
+the public abort base and creator-defined subclasses are not.
+
+InitialProcessSpritesExecutor captures before profile lookup, scroll preparation
+and the fixed-dispatch factory. That same reservation acquires the later scope.
+Coordinator stage checks stop publication after replacement. Scope close and
+object/loop cleanup mutate only their original owners and preserve primary
+exceptions.
+
+The final validation results and review disposition are recorded below after
+execution. The change-based selection maps shared owners to all smoke categories.
+Hosted PR CI will own that broad selection. Local coverage targets actual initial
+flows, solid contacts, creator fault boundaries, restore and fresh structural
+guards. Routine validation does not select the release-only full suite.
+
+Independent custom SolidExecutionRegistry implementations retain their existing
+methods and normal cleanup behavior. The engine detects their manager replacement
+or restore, but cannot detect an independent out-of-band custom-registry restore
+through the unchanged public interface. No whole ordinary-frame callback audit,
+console emulation, or physical-device accuracy claim is included.
+
+
+The independent source review identified three remaining callback boundaries in
+the first implementation: collision-list eligibility and slot reads were not
+routed during initial publication; slope adapters contained virtual calls; and
+the piece-specific landing-width cast bypassed the direct-provider checks.
+The targeted candidate run reported 15 cases, nine passes, three failures and
+three errors, with no skips. Slope/piece cases reached the restored owner and
+then observed retired calls. Collision cases qualified the completed snapshot
+inside the callback, then old publication added an unmanaged object to B's
+collision list, making its later capture fail with a missing rewind identity.
+That failure occurred after the completed-restore prerequisite. The test now
+asserts that post-unwind capture must succeed before comparing the full state.
+
+The same run passed both actual-ROM AIZ2-to-HCZ1 load controls and the restored
+ordinary-update control. The nested load completed HCZ1 initial processing,
+installed a different ObjectManager, published nonempty standing through the
+real solid owner and captured the whole registry before A returned. The update
+control completed B's ordinary update before A's cancellation. Their historical
+run used the first candidate; final qualification follows the corrections.
+
+The correction supplies the existing callback router explicitly at initial
+collision publication, checks between adapter calls and after the cast-based
+piece-width hook, and keeps the old checkpoint cleanup from overwriting a
+restored manager. No new API allowance or device behavior was introduced.
+
+
+### Final local qualification
+
+The final implementation working tree atop test commit `bb147d130` passed
+145 affected cases across 21 classes, with zero failures, errors or skips.
+All 39 new cases executed, including both actual-ROM nested-load controls.
+The command used the queued wrapper with `-Dmse=off`, explicit absolute S2 REV01
+and locked-on S3K ROM paths, and these exact selectors:
+
+```text
+TestInitialObjectDispatchSuccessorOwnership,TestInitialDispatchCreatorCancellation,TestInitialProcessSpritesEntryLifetime,TestInitialSolidCallbackLifetime,TestInitialCollisionCallbackLifetime,TestInitialSolidAdapterLifetime,TestInitialDispatchNestedFreshLoad,TestObjectManagerInitialS3kSetupPass,TestInitialProcessSpritesCoordinator,TestInitialProcessSpritesArmingEpoch,TestInitialProcessSpritesPartialRewind,TestSolidExecutionRegistry,TestSolidExecutionRewindSnapshot,TestObjectSolidContactController,TestCourseRestoreCreatorOwnerScope,TestNativeCompetitionCameraRestore,TestS3kAiz1SkipHeadless,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.tests.TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils
+```
+
+The first combined run had four errors in the existing isolated solid-controller
+fixtures. Their mock ObjectManager has no dispatch controller. The initial-only
+lookup now treats that unscoped state as absent, while real manager captures
+retain their original ownership checks. Existing test assertions were not
+changed. The final 145-case run includes all four repaired fixtures.
+Expected diagnostic faults came from the existing rejected-load, creator-failure
+and forged-abort controls. The final run introduced no skipped prerequisites.
+
+A separate fresh JVM then ran:
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off -Pguards \
+  '-Dtest=TestArchUnitRules,TestArchitecturalSourceGuard,TestRewindCoverageGuard,TestModApiSignatureSurface' test
+```
+
+All 134 guard cases passed with no failures, errors or skips. The API declarations,
+pins, architecture allowances and facade limits remain unchanged. Both runs used
+Java 25. The S3K ROM identity was SHA-1
+`cfbf98c36c776677290a872547ac47c53d2761d6`, CRC32 `63522553`; S2 REV01 was
+`8bca5dcef1af3e00098666fd892dc1c2a76333f9`, CRC32 `7B905383`.
+
+`run_categories.py --base 062e8a9f2610ef149cff53b26b28f3378ab8fe79 --json`
+selects 4,365 smoke candidates and separate guards. Hosted PR CI owns that broad
+selection. The local results above are affected-domain and guard qualification,
+not a full-suite or campaign parity claim. Main's existing dirty submodules and
+untracked files were preserved. The fully merged PR #240 worktree and local task
+branch were removed; this follow-up worktree remains while its PR is open.
+
+
+### PR #242 hosted-smoke compatibility correction, 2026-10-30
+
+Hosted `test` job `124327525442` in run `41132728981`, at PR head
+`613d2f12dcbda0f1993398c8ab59184470246ac7`, reported 32,924 cases,
+zero assertion failures, three errors and 6,580 skips. Hosted policy and guards
+passed. The three errors reproduced exactly in a queued 47-case local run of
+`TestCinematicScrollPublication,TestLevelSeamlessTransitionExecutor,TestNativeCompetitionFixedSstAccess`.
+No baseline waiver or job retry was used.
+
+Two errors came from cleanup retiring a mocked ObjectManager whose dispatch
+controller is absent. The retirement bridge now checks for that optional state,
+as the existing unscoped solid helper already does. Real managers still retire
+their original incarnation before teardown callbacks.
+
+The third error came from the ordinary canonical collision-builder reset after
+a completed initial scope. The existing test fills both physical address lists,
+deletes their occupants, and then reclaims only current-builder capacity while
+preserving all 63 previous addresses. Absence of an initial scope was a valid
+operation before this PR. Freeze, reset and mark now validate the original scope
+when present. Freeze retains its locally captured reservation across snapshot
+callbacks; it does not adopt a replacement scope after the callback returns.
+Capture completion still requires an active scope.
+
+Six new cases distinguish unscoped builder operations from an open scope that a
+real solid-only restore supersedes. Before the correction, all three unscoped
+operations failed and all three stale-scope rejection controls passed. The checks
+retain the stale scope directly rather than using `currentReservation()`, which
+intentionally filters stale scopes to null for valid successor operations.
+
+After the correction, the 13-class CI and callback selection passed 105 cases,
+with no failures, errors or skips. Its command was the queued wrapper with
+`-Dmse=off` and this selector:
+
+```text
+TestCinematicScrollPublication,TestLevelSeamlessTransitionExecutor,TestNativeCompetitionFixedSstAccess,TestInitialObjectDispatchSuccessorOwnership,TestInitialProcessSpritesEntryLifetime,TestInitialDispatchCreatorCancellation,TestInitialSolidCallbackLifetime,TestInitialSolidAdapterLifetime,TestInitialCollisionCallbackLifetime,TestObjectManagerInitialS3kSetupPass,TestInitialProcessSpritesCoordinator,TestInitialProcessSpritesArmingEpoch,TestInitialProcessSpritesPartialRewind
+```
+
+A disjoint six-class selection passed 62 cases with explicit verified S2 and S3K
+ROM paths. It selected `TestInitialDispatchNestedFreshLoad,TestS3kAiz1SkipHeadless,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.tests.TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`.
+There were no failures, errors or skips. Both selections ran on the corrected
+working tree atop `613d2f12d`. All 45 new cases executed across these runs.
+
+
+A fresh JVM repeated the four owning guards using the same `-Pguards` command
+recorded above. All 134 cases passed with no failures, errors or skips. API pins,
+architecture allowances and facade limits remain unchanged. These are bounded
+local results; a fresh hosted smoke result is required after publishing the fix.

@@ -119,7 +119,7 @@ final class NativeSpriteOwnership implements AutoCloseable {
     private final int vertexArray = glGetInteger(GL_VERTEX_ARRAY_BINDING);
     private final int arrayBuffer = glGetInteger(GL_ARRAY_BUFFER_BINDING);
     private final int activeTexture = glGetInteger(GL_ACTIVE_TEXTURE);
-    private final int shadowSampler = glGetIntegeri(GL_SAMPLER_BINDING, 6);
+    private final int shadowSampler;
     private final int[] textures = new int[7];
     private final int[] viewport = integers(GL_VIEWPORT, 4);
     private final int[] scissor = integers(GL_SCISSOR_BOX, 4);
@@ -156,6 +156,9 @@ final class NativeSpriteOwnership implements AutoCloseable {
             glActiveTexture(GL_TEXTURE0 + unit);
             textures[unit] = glGetInteger(GL_TEXTURE_BINDING_2D);
         }
+        // Unit 6 is active here. OpenGL 4.1 exposes SAMPLER_BINDING through
+        // the active texture unit, not the indexed query supported by newer GL.
+        shadowSampler = glGetInteger(GL_SAMPLER_BINDING);
         glActiveTexture(activeTexture);
     }
 
@@ -328,18 +331,12 @@ final class NativeSpriteOwnership implements AutoCloseable {
         enable(GL_SCISSOR_TEST, scissorEnabled);
     }
 
-    /** Stencil blits require matching formats, including a packed depth/stencil image. */
+    /** Named images retain their format; window-system stencil needs no depth backup. */
     private int stencilFormat(int samples) {
         if (drawFramebuffer == 0) {
-            int depthKind = glGetFramebufferAttachmentParameteri(GL_DRAW_FRAMEBUFFER, GL_DEPTH,
-                    GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE);
-            int depthBits = depthKind == GL_NONE ? 0 : glGetFramebufferAttachmentParameteri(GL_DRAW_FRAMEBUFFER,
-                    GL_DEPTH, GL_FRAMEBUFFER_ATTACHMENT_DEPTH_SIZE);
-            if (depthBits == 0) return GL_STENCIL_INDEX8;
-            if (depthBits == 24) return GL_DEPTH24_STENCIL8;
-            if (depthBits == 32 && glGetFramebufferAttachmentParameteri(GL_DRAW_FRAMEBUFFER,
-                    GL_DEPTH, GL_FRAMEBUFFER_ATTACHMENT_COMPONENT_TYPE) == GL_FLOAT) return GL_DEPTH32F_STENCIL8;
-            throw new IllegalStateException("Unsupported default depth/stencil format: " + depthBits + "/8");
+            // Only stencil is blitted. Its eight bits do not depend on the default
+            // depth representation, which need not have an equivalent packed GL format.
+            return GL_STENCIL_INDEX8;
         }
         int kind = glGetFramebufferAttachmentParameteri(GL_DRAW_FRAMEBUFFER, GL_STENCIL_ATTACHMENT,
                 GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE);

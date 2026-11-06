@@ -114,7 +114,7 @@ public class MTZSpinTubeObjectInstance extends AbstractObjectInstance implements
             {0x2328, 0x5B0, 0x22D0, 0x5B0, 0x22C0, 0x5A0, 0x22C0, 0x4C0, 0x22D0, 0x4B0, 0x2328, 0x4B0}
     };
 
-    // Animation scripts from Ani_obj67 (s2.asm lines 53203-53211)
+    // Animation scripts from Ani_obj67 (s2.asm lines 53681-53689)
     private static final SpriteAnimationSet ANIMATIONS;
 
     static {
@@ -132,7 +132,7 @@ public class MTZSpinTubeObjectInstance extends AbstractObjectInstance implements
                 SpriteAnimationEndAction.SWITCH, 0));
     }
 
-    // Per-character state holder. ROM Obj67_Main (s2.asm:52978-52994) runs the
+    // Per-character state holder. ROM Obj67_Main (s2.asm:53443-53459) runs the
     // per-character routine TWICE — once for MainCharacter using state byte
     // objoff_2C, once for Sidekick using state byte objoff_36 — each with the
     // character pointer (a1) of its own player. Each holder mirrors that
@@ -207,7 +207,7 @@ public class MTZSpinTubeObjectInstance extends AbstractObjectInstance implements
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
-        // ROM Obj67_Main (s2.asm:52978-52994): run the per-character routine once
+        // ROM Obj67_Main (s2.asm:53443-53459): run the per-character routine once
         // for MainCharacter (a1 = MainCharacter, a4 = objoff_2C) and once for the
         // Sidekick (a1 = Sidekick, a4 = objoff_36). Resolve both engine players via
         // the player-query API; the participation policy NATIVE_P1_P2 yields the

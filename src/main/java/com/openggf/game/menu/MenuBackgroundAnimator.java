@@ -25,6 +25,7 @@ public class MenuBackgroundAnimator {
     private final int patternBase;
     private int timer;
     private int frameIndex;
+    private int displayedTileId;
 
     public MenuBackgroundAnimator(Pattern[] patterns, GraphicsManager graphicsManager, int patternBase) {
         this.patterns = patterns;
@@ -38,7 +39,8 @@ public class MenuBackgroundAnimator {
         if (patterns == null || patterns.length == 0) {
             return;
         }
-        applyFrame(FRAME_TILE_IDS[0]);
+        displayedTileId = FRAME_TILE_IDS[0];
+        publishCurrentFrame();
     }
 
     public void update() {
@@ -54,7 +56,13 @@ public class MenuBackgroundAnimator {
         frameIndex = (frameIndex + 1) % FRAME_TILE_IDS.length;
         timer = FRAME_DURATIONS[currentFrame] & 0xFF;
 
-        applyFrame(FRAME_TILE_IDS[currentFrame]);
+        displayedTileId = FRAME_TILE_IDS[currentFrame];
+        publishCurrentFrame();
+    }
+
+    /** Resource publication is repeatable; it never advances the animation clock. */
+    public void publishCurrentFrame() {
+        applyFrame(displayedTileId);
     }
 
     private void applyFrame(int tileId) {

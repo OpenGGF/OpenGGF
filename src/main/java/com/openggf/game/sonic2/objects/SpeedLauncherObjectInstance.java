@@ -8,7 +8,6 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
-import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
@@ -141,7 +140,7 @@ public class SpeedLauncherObjectInstance extends AbstractObjectInstance
         this.state = STATE_IDLE;
         this.xVel = 0;
 
-        // ROM: ObjC0_Init (s2.asm lines 80227-80240)
+        // ROM: ObjC0_Init (s2.asm lines 80863-80876)
         // distance = subtype * 16 (lsl.w #4,d0)
         int distance = (spawn.subtype() & 0xFF) << 4;
 
@@ -187,7 +186,7 @@ public class SpeedLauncherObjectInstance extends AbstractObjectInstance
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        // ROM: ObjC0_Main (s2.asm lines 80242-80251)
+        // ROM: ObjC0_Main (s2.asm lines 80885-80894)
         // Process state machine, then PlatformObject + MarkObjGone
         switch (state) {
             case STATE_IDLE -> updateIdle(player);
@@ -198,7 +197,7 @@ public class SpeedLauncherObjectInstance extends AbstractObjectInstance
 
     /**
      * State 0: Idle - wait for player to stand on platform.
-     * ROM: loc_3BF66 (s2.asm lines 80259-80284)
+     * ROM: loc_3BF66 (s2.asm lines 80889-80914)
      * <p>
      * The actual standing detection is handled by the SolidObjectProvider/SolidObjectListener
      * system. This state just checks if the platform is being stood on via onSolidContact.
@@ -239,7 +238,7 @@ public class SpeedLauncherObjectInstance extends AbstractObjectInstance
 
     /**
      * State 2: Accelerating - platform accelerates toward destination.
-     * ROM: loc_3BFD8 (s2.asm lines 80299-80327)
+     * ROM: loc_3BFD8 (s2.asm lines 80929-80957)
      */
     private void updateAccelerating(AbstractPlayableSprite player) {
         // ROM: move.w objoff_30(a0),d0 / add.w d0,x_vel(a0)
@@ -272,7 +271,7 @@ public class SpeedLauncherObjectInstance extends AbstractObjectInstance
 
     /**
      * Transition to state 4 (returning), snap to destination, and launch standing players.
-     * ROM: loc_3C034 (s2.asm lines 80336-80353)
+     * ROM: loc_3C034 (s2.asm lines 80966-80983)
      */
     private void launchAtDestination(AbstractPlayableSprite player) {
         // ROM: addq.b #2,routine_secondary(a0)
@@ -290,7 +289,7 @@ public class SpeedLauncherObjectInstance extends AbstractObjectInstance
 
     /**
      * Launch a player if they are standing on this platform.
-     * ROM: loc_3C020 (s2.asm lines 80329-80333)
+     * ROM: loc_3C020 (s2.asm lines 80972-80976)
      */
     private void launchPlayerIfStanding(AbstractPlayableSprite player) {
         if (!wasStandingAtStateEntry(player) && !accelerationRiders.contains(player)) {
@@ -307,7 +306,7 @@ public class SpeedLauncherObjectInstance extends AbstractObjectInstance
 
     /**
      * Sync standing players' positions during acceleration phase.
-     * ROM: loc_3BFB4 (s2.asm lines 80287-80296)
+     * ROM: loc_3BFB4 (s2.asm lines 80930-80939)
      * <p>
      * Clears player inertia and X velocity, moves player to platform X,
      * and sets player facing direction opposite to platform movement.
@@ -320,7 +319,7 @@ public class SpeedLauncherObjectInstance extends AbstractObjectInstance
 
     /**
      * State 4: Returning - platform moves back to home position at 4px/frame.
-     * ROM: loc_3C062 (s2.asm lines 80354-80373)
+     * ROM: loc_3C062 (s2.asm lines 80984-81003)
      */
     private void updateReturning() {
         // ROM: move.w x_pos(a0),d0
@@ -392,6 +391,14 @@ public class SpeedLauncherObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int tailCallD4(int routineEntryX) {
+        // ObjC0_Main loads d4 = x_pos(a0) after the routine moved the launcher
+        // (s2.asm:80889-80896), so PlatformObject never carries the rider; the
+        // routine's loc_3BFB4 writes the rider's x_pos itself.
+        return currentX;
+    }
+
+    @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (!contact.standing()) {
@@ -413,7 +420,7 @@ public class SpeedLauncherObjectInstance extends AbstractObjectInstance
 
     /**
      * Player just started standing on the platform while idle.
-     * ROM: loc_3BF66 (s2.asm lines 80259-80284)
+     * ROM: loc_3BF66 (s2.asm lines 80889-80914)
      * <p>
      * Triggers the catapult: sets initial velocity, acceleration, and syncs player.
      */
@@ -446,7 +453,7 @@ public class SpeedLauncherObjectInstance extends AbstractObjectInstance
 
     /**
      * Sync player to platform position during movement.
-     * ROM: loc_3BFB4 (s2.asm lines 80287-80296)
+     * ROM: loc_3BFB4 (s2.asm lines 80930-80939)
      */
     private void syncPlayer(AbstractPlayableSprite player) {
         // ROM: clr.w inertia(a1) / clr.w x_vel(a1)
@@ -456,10 +463,6 @@ public class SpeedLauncherObjectInstance extends AbstractObjectInstance
         // ROM: move.w x_pos(a0),x_pos(a1)
         player.setCentreXPreserveSubpixel((short) currentX);
         accelerationRiders.add(player);
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager != null) {
-            objectManager.refreshRidingTrackingPosition(this);
-        }
 
         // ROM: Set player facing direction
         // bclr #status.player.x_flip,status(a1) - clear flip

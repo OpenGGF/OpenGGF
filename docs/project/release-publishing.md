@@ -21,8 +21,8 @@ publish job from running. A manual dispatch is not a way to publish.
 
 ## Toolchain and platform requirements
 
-Source and universal-JAR builds use JDK 25. Native packaging uses GraalVM 25
-for Windows x64, Linux x64, and macOS Apple Silicon; Intel macOS uses the JVM
+Source and universal-JAR builds use JDK 25. Native packaging uses checksum-pinned GraalVM Community
+25.4.4.1.1+1.1 for Windows x64, Linux x64, and macOS Apple Silicon; Intel macOS uses the JVM
 distribution. The Java 25 migration does not enable preview APIs or optional VM
 tuning. A manual dispatch on a candidate branch with `validate_roms=false`
 checks hosted-platform packaging without publishing; it does not replace required
@@ -35,13 +35,17 @@ preparing the release. See [release rollover](release-rollover.md).
 
 ## Prepare and publish
 
-1. Run the full ordinary suite explicitly with
+1. Prepare the versioned release in a separate `master` worktree, following
+   [release rollover](release-rollover.md). Read the version from that commit's
+   `pom.xml`. [Rebuild, review and commit the project atlas](#refresh-the-project-atlas-for-a-release)
+   before fixing the final candidate SHA and running its release qualification.
+   Run the full ordinary suite explicitly with
    `python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B`,
    separate guards and required ROM/trace checks. Full suites are reserved for
    preparing a new public release; routine development and CI use smoke.
-   Complete the release gates and prepare the reviewed release in a separate
-   `master` worktree. Follow [release rollover](release-rollover.md) when
-   promoting versions. Read the version from that commit's `pom.xml`.
+   `exhaustive-audit` remains separately manual even during release preparation;
+   its configuration products and wording/terminology scans are not release gates.
+   Complete the release gates on the reviewed final release candidate.
    Run the exact-candidate local route pilot below on the final committed
    candidate too. Qualification of a development ancestor does not qualify a
    later version bump, merge resolution or promotion commit.
@@ -78,6 +82,41 @@ preparing the release. See [release rollover](release-rollover.md).
    are intermediate results. Report publication after checking the release
    itself. For a failed or cancelled run, inspect its tag and any partial
    release before retrying.
+
+## Refresh the project atlas for a release
+
+Rebuilding the [project atlas](../architecture/audits/project-source-atlas.html)
+is required during each public release preparation, after the version and source
+candidate are prepared and before final candidate qualification or the publishing
+push. The [generator guide](../../tools/project_atlas/README.md) describes the
+source inventory, historical slider and Git activity/milestone views and their
+limits. Generation itself needs Python and local Git history, not ROMs or Maven.
+
+In the isolated release worktree, set `ATLAS_SOURCE` to the reviewed, committed
+40-character source SHA with the intended POM version, then run:
+
+```bash
+python3 tools/project_atlas/generate.py --ref "$ATLAS_SOURCE"
+```
+
+Review the resulting `docs/architecture/audits/project-source-atlas.html` in a
+browser. Check its source SHA and version, rightmost time-slider state, historical
+presence styles, import/repository views and Git activity/milestone evidence.
+Commit the refreshed HTML through the normal trailer/policy flow before final
+release checks. If the source or version changes afterwards, refresh from the
+new prepared source commit, commit the result and qualify the new final candidate.
+
+The atlas deliberately records its **input** commit. Committing that generated
+artifact creates a different SHA; trying to make the embedded SHA equal its own
+containing commit would never converge. Record the resulting final committed SHA
+as `RELEASE_CANDIDATE` and use it for candidate-bound qualification below. A later
+promotion or merge commit likewise needs qualification of its actual pushed SHA.
+The atlas's source pin is documentation provenance, not release validation.
+
+Finish this refresh before the authorized `master` publishing push. Do not make
+or move a version tag for it: the Release workflow creates the tag at the
+validated pushed commit. This runbook step adds no publication trigger or hosted
+validation job.
 
 ## Local exact-candidate ROM qualification
 
@@ -139,19 +178,23 @@ remain procedural: this local tool is not a GitHub status or publication gate.
 
 ## Bundled first-party mods
 
-JVM distributions carry the first-party mods listed in the `openggf.bundled.mods`
+JVM and native distributions carry the first-party mods listed in the `openggf.bundled.mods`
 property of `pom.xml` (comma-separated project directories in the `examples/` layout;
-empty by default). During `package`, `BundledModPackager` compiles each project against
+currently `racing/time-attack`). During `package`, `BundledModPackager` compiles each project against
 the engine build, packages it with `ggfmod package` treating validator warnings as
 errors, writes the jars to `target/bundled/`, and pins their id, version, file, size and
 SHA-256 in `META-INF/openggf/bundled-mods.json` inside the engine classes. The
-`universal-jar` profile embeds the jars as `openggf-bundled/<file>`; the `native`
-profile skips the step, and native images include neither the manifest nor the jars.
+`universal-jar` profile embeds the jars as `openggf-bundled/<file>`. The `native`
+profile embeds the manifest and packages the same jars in `bundled/` beside the
+executable (inside `Contents/MacOS` on macOS). The
+[shared native recipe](../../tools/native-image/README.md) owns API/service retention,
+runtime-loading checks and the native-only LWJGL JNI/Unsafe core selection.
 
 The `universal-jar` job fails unless the jar contains the manifest and every listed jar
 with its pinned size and hash, and nothing unlisted. The native packaging smoke check
-fails if a Windows, macOS or Linux archive contains a `bundled/` folder, embedded
-bundled jars or the manifest. To check the pipeline locally with a test payload:
+requires every manifest-listed jar and Community runtime notices on Windows,
+macOS and Linux. Each image also audits retained members and loads bundled Time
+Attack through normal Engine boot before packaging. To check the pipeline locally with a test payload:
 
 ```bash
 python3 tools/testing/maven_queue.py -Dmse=off -DskipTests -Puniversal-jar \

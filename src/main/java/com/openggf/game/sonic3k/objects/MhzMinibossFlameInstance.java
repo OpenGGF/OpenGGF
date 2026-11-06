@@ -153,7 +153,8 @@ final class MhzMinibossFlameInstance extends AbstractObjectInstance
         if (renderer == null) {
             return;
         }
-        renderer.drawFrameIndex(mappingFrame, x, y, false, false);
+        // word_75E5E gives the flame palette base 0; the shared body sheet uses 1.
+        renderer.drawFrameIndex(mappingFrame, x, y, false, false, 0);
     }
 
     @Override

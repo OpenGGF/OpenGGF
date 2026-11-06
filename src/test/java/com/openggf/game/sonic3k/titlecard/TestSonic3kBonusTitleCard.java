@@ -46,6 +46,18 @@ public class TestSonic3kBonusTitleCard {
     }
 
     @Test
+    void bonusEntryReplacesThePreviousExternalInLevelChildOwner() {
+        manager.initializeInLevel(0, 1);
+        manager.useNativeInLevelSstChildren();
+        assertTrue(manager.capture().inLevelGameplayOwnedExternally());
+        manager.initializeBonus();
+        assertFalse(manager.capture().inLevelGameplayOwnedExternally(),
+                "the fresh bonus owner must receive its own child updates");
+        for (int i = 0; i < 150; i++) dispatch();
+        assertTrue(manager.isComplete(), "a bonus card after an in-level title must progress through its animation");
+    }
+
+    @Test
     public void bonusModeReleasesControlOnExit() {
         manager.initializeBonus();
 
@@ -103,6 +115,26 @@ public class TestSonic3kBonusTitleCard {
         assertEquals(13, manager.getExitPhaseCounter(),
                 "native render bounds remove the last title child on phase 12 and the parent observes it on 13");
         assertFalse(manager.isComplete(), "the parent completion dispatch remains one manager tick later");
+    }
+
+    @Test
+    void newLevelAndBonusCardsDiscardThePreviousPublishedGeneration() {
+        for (boolean bonus : new boolean[]{false, true}) {
+            manager.initializeInLevel(0, 1);
+            manager.prepareTitleCardPresentation();
+            manager.publishTitleCardPresentation();
+            assertFalse(manager.capture().publishedCard().opaqueBackdrop());
+            if (bonus) manager.initializeBonus();
+            else manager.initialize(0, 0);
+            assertTrue(manager.drawsOpaqueLevelBackdrop());
+            assertNull(manager.capture().publishedCard(), "old level-visible picture must not survive entry");
+            manager.publishTitleCardPresentation();
+            assertNull(manager.capture().publishedCard(), "old preparation must not be republished");
+            manager.prepareTitleCardPresentation();
+            manager.publishTitleCardPresentation();
+            assertTrue(manager.capture().publishedCard().opaqueBackdrop());
+            assertEquals(bonus, manager.capture().publishedCard().bonusMode());
+        }
     }
 
     /**

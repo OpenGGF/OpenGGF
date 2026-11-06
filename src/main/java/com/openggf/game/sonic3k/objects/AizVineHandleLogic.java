@@ -136,6 +136,12 @@ final class AizVineHandleLogic {
         }
     }
 
+    /** The capture point: canGrab accepts a centre up to GRAB_HEIGHT below the handle. */
+    static com.openggf.level.objects.homing.HomingTarget homingTarget(State state) {
+        return new com.openggf.level.objects.homing.HomingTarget(
+                com.openggf.level.objects.homing.HomingTargetKind.ATTACHABLE, 0, state.x, state.y + PLAYER_HANG_Y_OFFSET);
+    }
+
     static boolean anyGrabbed(State state) {
         return state.p1.grabFlag != 0 || state.p2.grabFlag != 0
                 || state.extensionStates.values().stream().anyMatch(player -> player.grabFlag != 0);

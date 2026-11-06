@@ -66,6 +66,31 @@ public class GamepadInputManager {
         this.stateSource = Objects.requireNonNull(stateSource, "stateSource");
     }
 
+    // Only the host's scoped input pass may roll back an unacknowledged mapping.
+    // Physical observation and prompt-family history are deliberately independent.
+    record LogicalHistory(PlayerInputState p1, PlayerInputState p2,
+                          boolean debugHeld, boolean debugPressed, boolean rewind,
+                          boolean backHeld, boolean backPressed, boolean stepHeld, boolean stepPressed) {
+        LogicalHistory withPlayerStatesFrom(LogicalHistory observed) {
+            return new LogicalHistory(observed.p1, observed.p2, debugHeld, debugPressed, rewind,
+                    backHeld, backPressed, stepHeld, stepPressed);
+        }
+    }
+
+    LogicalHistory logicalHistory() {
+        return new LogicalHistory(previousP1, previousP2,
+                previousDebugModeButtonHeld, debugModeTogglePressed, rewindHeld,
+                previousBackButtonHeld, backButtonPressed, previousFrameStepButtonHeld, frameStepTogglePressed);
+    }
+
+    void restoreLogicalHistory(LogicalHistory history) {
+        previousP1 = history.p1(); previousP2 = history.p2();
+        previousDebugModeButtonHeld = history.debugHeld(); debugModeTogglePressed = history.debugPressed();
+        rewindHeld = history.rewind();
+        previousBackButtonHeld = history.backHeld(); backButtonPressed = history.backPressed();
+        previousFrameStepButtonHeld = history.stepHeld(); frameStepTogglePressed = history.stepPressed();
+    }
+
     public LogicalInputSnapshot poll(InputBindings bindings) {
         List<GamepadStateSource.DeviceState> connected = physicalSampleSinceLogicalPoll
                 ? physicalDevices : pollPhysicalDevices();
@@ -207,6 +232,25 @@ public class GamepadInputManager {
         physicalDevices = List.copyOf(connected);
         physicalSampleSinceLogicalPoll = true;
         return physicalDevices;
+    }
+
+    /** Semantic held observations for the host journal; never advances logical or shortcut history. */
+    record GameplayObservation(LogicalInputSnapshot players, List<Integer> owners) { }
+
+    GameplayObservation observedPlayers(InputBindings bindings) {
+        if (!bindings.controllerEnabled()) return new GameplayObservation(LogicalInputSnapshot.neutral(), List.of(-1, -1));
+        int next = 0;
+        int owner1 = -1, owner2 = -1;
+        PlayerInputState p1 = PlayerInputState.neutral(), p2 = PlayerInputState.neutral();
+        if (isAuto(bindings.controllerPlayer1()) && next < physicalDevices.size()) {
+            owner1 = physicalDevices.get(next).joystickId();
+            p1 = mapDevice(physicalDevices.get(next++), bindings.controllerDeadzone(), PlayerInputState.neutral());
+        }
+        if (isAuto(bindings.controllerPlayer2()) && next < physicalDevices.size()) {
+            owner2 = physicalDevices.get(next).joystickId();
+            p2 = mapDevice(physicalDevices.get(next), bindings.controllerDeadzone(), PlayerInputState.neutral());
+        }
+        return new GameplayObservation(LogicalInputSnapshot.ofPlayers(p1, p2), List.of(owner1, owner2));
     }
 
     /** Most recently sampled physical state, including controls unused by Genesis. */

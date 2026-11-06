@@ -50,9 +50,9 @@ public final class Sonic1FixedTitleCardManager {
     private static final int WAIT_FRAMES = 1 * 60;
     /** {@code moveq #2*$10,d1} (34 Title Cards.asm:126). */
     private static final int MOVE_OUT_SPEED = 2 * 0x10;
-    /** {@code plcid_Explode} (_inc/Pattern Load Cues.asm:30). */
+    /** {@code plcid_Explode} (_inc/Pattern Load Cues.asm:31). */
     private static final int PLC_EXPLODE = 2;
-    /** {@code plcid_GHZAnimals}; per-zone entries follow in order (Pattern Load Cues.asm:55). */
+    /** {@code plcid_GHZAnimals}; per-zone entries follow in order (Pattern Load Cues.asm:56). */
     private static final int PLC_GHZ_ANIMALS = 21;
 
     private int routine;
@@ -63,7 +63,7 @@ public final class Sonic1FixedTitleCardManager {
 
     /**
      * Models {@code addq.b #2,(v_ttlcardname+obRoutine).w} at
-     * {@code Level_StartGame} (docs/s1disasm/sonic.asm:2969): the level-name
+     * {@code Level_StartGame} (docs/s1disasm/sonic.asm:2990): the level-name
      * element enters {@code Card_Wait} as the first ordinary level frame begins.
      *
      * <p>Every S1 level load reaches this boundary exactly once — a presented

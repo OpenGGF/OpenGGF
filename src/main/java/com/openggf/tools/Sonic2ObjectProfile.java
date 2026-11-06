@@ -220,8 +220,9 @@ public class Sonic2ObjectProfile implements GameObjectProfile {
     @Override
     public List<ObjectSpawn> loadObjects(RomByteReader rom, ObjectDiscoveryTool.LevelConfig level) {
         int levelIdx = level.levelData().getLevelIndex();
-        int zoneIdx = rom.readU8(LEVEL_SELECT_ADDR + levelIdx * 2);
-        int actIdx = rom.readU8(LEVEL_SELECT_ADDR + levelIdx * 2 + 1);
+        int levelSelect = com.openggf.game.sonic2.Sonic2RomAddresses.address(rom, LEVEL_SELECT_ADDR);
+        int zoneIdx = rom.readU8(levelSelect + levelIdx * 2);
+        int actIdx = rom.readU8(levelSelect + levelIdx * 2 + 1);
         ZoneAct zoneAct = new ZoneAct(zoneIdx, actIdx);
         return new Sonic2ObjectPlacement(rom).load(zoneAct);
     }
@@ -229,10 +230,12 @@ public class Sonic2ObjectProfile implements GameObjectProfile {
     @Override
     public List<PlcObjectMapping> getPlcObjectMappings(RomByteReader rom, ObjectDiscoveryTool.LevelConfig level) {
         int levelIdx = level.levelData().getLevelIndex();
-        int zoneIdx = rom.readU8(LEVEL_SELECT_ADDR + levelIdx * 2);
+        int zoneIdx = rom.readU8(com.openggf.game.sonic2.Sonic2RomAddresses.address(rom,
+                LEVEL_SELECT_ADDR) + levelIdx * 2);
 
         // Extract PLC IDs from LEVEL_DATA_DIR (byte[0] = plc1, byte[4] = plc2)
-        int base = Sonic2Constants.LEVEL_DATA_DIR + zoneIdx * Sonic2Constants.LEVEL_DATA_DIR_ENTRY_SIZE;
+        int base = com.openggf.game.sonic2.Sonic2RomAddresses.address(rom,
+                Sonic2Constants.LEVEL_DATA_DIR) + zoneIdx * Sonic2Constants.LEVEL_DATA_DIR_ENTRY_SIZE;
         int plc1Id = rom.readU8(base);
         int plc2Id = rom.readU8(base + 4);
 
@@ -245,7 +248,8 @@ public class Sonic2ObjectProfile implements GameObjectProfile {
 
         List<PlcObjectMapping> mappings = new ArrayList<>();
         for (int plcId : plcIds) {
-            PlcParser.PlcDefinition def = PlcParser.parse(rom, Sonic2Constants.ART_LOAD_CUES_ADDR, plcId);
+            PlcParser.PlcDefinition def = PlcParser.parse(rom,
+                    com.openggf.game.sonic2.Sonic2RomAddresses.address(rom, Sonic2Constants.ART_LOAD_CUES_ADDR), plcId);
             for (PlcParser.PlcEntry entry : def.entries()) {
                 Sonic2PlcArtRegistry.ArtRegistration reg = Sonic2PlcArtRegistry.lookup(entry.romAddr());
                 if (reg != null) {

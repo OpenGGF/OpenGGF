@@ -16,6 +16,11 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class TestPlcFrameLifecycleCoordinator {
+    private static final PlayerArtTransferPlan PLAYER_ART_1 =
+            new com.openggf.game.sonic1.Sonic1GameModule().getGameService(PlayerArtTransferPlan.class);
+    private static final PlayerArtTransferPlan PLAYER_ART_2 =
+            new com.openggf.game.sonic2.Sonic2GameModule().getGameService(PlayerArtTransferPlan.class);
+
 
     @Test
     void moduleWithoutTypedRulesUsesNeutralDynamicArtServicePolicy() {
@@ -23,7 +28,7 @@ class TestPlcFrameLifecycleCoordinator {
         when(module.getGameService(PlcLifecycleService.class))
                 .thenReturn(recording(new ArrayList<>()));
         DynamicArtLifecycleService dynamicArt =
-                new DynamicArtLifecycleService();
+                new DynamicArtLifecycleService(null);
         dynamicArt.beginRun();
         dynamicArt.openComparisonSegment();
         PlcFrameLifecycleCoordinator coordinator =
@@ -40,10 +45,10 @@ class TestPlcFrameLifecycleCoordinator {
     @Test
     void sonic2CrossArmFifoWaitsForSpecialStageServiceClaim() {
         DynamicArtLifecycleService dynamicArt =
-                new DynamicArtLifecycleService();
+                new DynamicArtLifecycleService(PLAYER_ART_2);
         dynamicArt.beginRun();
         dynamicArt.observePlayerDplc(
-                com.openggf.game.GameId.S2, "tails-tails", 13,
+                "tails-tails", 13,
                 new com.openggf.level.render.SpriteDplcFrame(List.of(
                         new com.openggf.level.render.TileLoadRequest(110, 12))));
         dynamicArt.openComparisonSegment();
@@ -74,7 +79,7 @@ class TestPlcFrameLifecycleCoordinator {
     @Test
     void claimRetiresPreviousS2FifoAndFinishPublishesProductionRow() {
         DynamicArtLifecycleService dynamicArt =
-                new DynamicArtLifecycleService();
+                new DynamicArtLifecycleService(PLAYER_ART_2);
         dynamicArt.beginRun();
         dynamicArt.openComparisonSegment();
         PlcFrameLifecycleCoordinator coordinator =
@@ -84,7 +89,7 @@ class TestPlcFrameLifecycleCoordinator {
         coordinator.runLogicalIteration(() -> { }, frame -> {
             frame.claim(PlcLifecyclePhase.ENDING);
             dynamicArt.observePlayerDplc(
-                    com.openggf.game.GameId.S2, "sonic", 1,
+                    "sonic", 1,
                     new com.openggf.level.render.SpriteDplcFrame(List.of(
                             new com.openggf.level.render.TileLoadRequest(0, 1))));
             return null;
@@ -104,7 +109,7 @@ class TestPlcFrameLifecycleCoordinator {
     @Test
     void immutableSnapshotCanOnlyBePulledAfterFinishPublishesIt() {
         DynamicArtLifecycleService dynamicArt =
-                new DynamicArtLifecycleService();
+                new DynamicArtLifecycleService(null);
         dynamicArt.beginRun();
         dynamicArt.openComparisonSegment();
         PlcFrameLifecycleCoordinator coordinator =
@@ -137,7 +142,7 @@ class TestPlcFrameLifecycleCoordinator {
     @Test
     void externalOwnershipRejectsAnUnpublishedAutomaticWindowWithoutChangingIt() {
         DynamicArtLifecycleService dynamicArt =
-                new DynamicArtLifecycleService();
+                new DynamicArtLifecycleService(null);
         dynamicArt.beginRun();
         PlcFrameLifecycleCoordinator coordinator =
                 new PlcFrameLifecycleCoordinator(
@@ -163,7 +168,7 @@ class TestPlcFrameLifecycleCoordinator {
     @Test
     void deferredExternalOwnershipServicesBootstrapArtBeforePublishingRowZero() {
         DynamicArtLifecycleService dynamicArt =
-                new DynamicArtLifecycleService();
+                new DynamicArtLifecycleService(PLAYER_ART_1);
         dynamicArt.beginRun();
         PlcFrameLifecycleCoordinator coordinator =
                 new PlcFrameLifecycleCoordinator(
@@ -178,7 +183,7 @@ class TestPlcFrameLifecycleCoordinator {
         assertTrue(dynamicArt.isComparisonSegmentReserved());
         assertFalse(dynamicArt.latestSnapshot().published());
         dynamicArt.observePlayerDplc(
-                com.openggf.game.GameId.S1, "sonic", 8,
+                "sonic", 8,
                 new com.openggf.level.render.SpriteDplcFrame(List.of(
                         new com.openggf.level.render.TileLoadRequest(0, 12))));
 
@@ -208,7 +213,7 @@ class TestPlcFrameLifecycleCoordinator {
     @Test
     void closingDeferredExternalOwnershipBeforeClaimCreatesNoWindow() {
         DynamicArtLifecycleService dynamicArt =
-                new DynamicArtLifecycleService();
+                new DynamicArtLifecycleService(null);
         dynamicArt.beginRun();
         PlcFrameLifecycleCoordinator coordinator =
                 new PlcFrameLifecycleCoordinator(
@@ -236,7 +241,7 @@ class TestPlcFrameLifecycleCoordinator {
 
     @Test
     void resetCancelsDeferredExternalComparisonReservation() {
-        DynamicArtLifecycleService dynamicArt = new DynamicArtLifecycleService();
+        DynamicArtLifecycleService dynamicArt = new DynamicArtLifecycleService(null);
         dynamicArt.beginRun();
         PlcFrameLifecycleCoordinator coordinator = new PlcFrameLifecycleCoordinator(
                 recording(new ArrayList<>()), dynamicArt);
@@ -251,7 +256,7 @@ class TestPlcFrameLifecycleCoordinator {
     @Test
     void rewindRestoreDoesNotPublishSnapshot() {
         DynamicArtLifecycleService dynamicArt =
-                new DynamicArtLifecycleService();
+                new DynamicArtLifecycleService(null);
         dynamicArt.beginRun();
         dynamicArt.openComparisonSegment();
         PlcFrameLifecycleCoordinator coordinator =
@@ -487,10 +492,10 @@ class TestPlcFrameLifecycleCoordinator {
     @Test
     void sonic1LagClaimDefersTheStagedSonicGfxTransfer() {
         DynamicArtLifecycleService dynamicArt =
-                new DynamicArtLifecycleService();
+                new DynamicArtLifecycleService(PLAYER_ART_1);
         dynamicArt.beginRun();
         dynamicArt.observePlayerDplc(
-                com.openggf.game.GameId.S1, "sonic", 0x32,
+                "sonic", 0x32,
                 new com.openggf.level.render.SpriteDplcFrame(List.of(
                         new com.openggf.level.render.TileLoadRequest(0, 12))));
         dynamicArt.openComparisonSegment();
@@ -535,7 +540,7 @@ class TestPlcFrameLifecycleCoordinator {
     @Test
     void aRepresentedIterationWithoutAVblankDefersTheNextRowsPublication() {
         DynamicArtLifecycleService dynamicArt =
-                new DynamicArtLifecycleService();
+                new DynamicArtLifecycleService(PLAYER_ART_2);
         dynamicArt.beginRun();
         dynamicArt.openComparisonSegment();
         PlcFrameLifecycleCoordinator coordinator =
@@ -557,7 +562,7 @@ class TestPlcFrameLifecycleCoordinator {
             frame.claim(PlcLifecyclePhase.ORDINARY_LEVEL);
             frame.prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL);
             dynamicArt.observePlayerDplc(
-                    com.openggf.game.GameId.S2, "sonic", 0x0F,
+                    "sonic", 0x0F,
                     new com.openggf.level.render.SpriteDplcFrame(List.of(
                             new com.openggf.level.render.TileLoadRequest(0, 12))));
             return null;
@@ -593,7 +598,7 @@ class TestPlcFrameLifecycleCoordinator {
     @Test
     void aVblankStarvedRowPublishesItsOwnRowAndOnlyItsSuccessorIsCarried() {
         DynamicArtLifecycleService dynamicArt =
-                new DynamicArtLifecycleService();
+                new DynamicArtLifecycleService(PLAYER_ART_2);
         dynamicArt.beginRun();
         dynamicArt.openComparisonSegment();
         PlcFrameLifecycleCoordinator coordinator =
@@ -628,7 +633,7 @@ class TestPlcFrameLifecycleCoordinator {
     @Test
     void consecutiveVblankStarvedRowsEachPublishTheirOwnRow() {
         DynamicArtLifecycleService dynamicArt =
-                new DynamicArtLifecycleService();
+                new DynamicArtLifecycleService(PLAYER_ART_2);
         dynamicArt.beginRun();
         dynamicArt.openComparisonSegment();
         PlcFrameLifecycleCoordinator coordinator =
@@ -765,7 +770,7 @@ class TestPlcFrameLifecycleCoordinator {
     @Test
     void consumedIterationCompletionRunsOnceAfterPublicationAndCanReplay() {
         List<String> events = new ArrayList<>();
-        DynamicArtLifecycleService dynamicArt = new DynamicArtLifecycleService();
+        DynamicArtLifecycleService dynamicArt = new DynamicArtLifecycleService(null);
         dynamicArt.beginRun();
         dynamicArt.openComparisonSegment();
         var coordinator = new PlcFrameLifecycleCoordinator(recording(events), dynamicArt);
@@ -909,7 +914,7 @@ class TestPlcFrameLifecycleCoordinator {
     private static void observeSonicDplc(
             DynamicArtLifecycleService dynamicArt, int mappingFrame) {
         dynamicArt.observePlayerDplc(
-                com.openggf.game.GameId.S2, "sonic", mappingFrame,
+                "sonic", mappingFrame,
                 new com.openggf.level.render.SpriteDplcFrame(List.of(
                         new com.openggf.level.render.TileLoadRequest(0, 12))));
     }

@@ -1,7 +1,11 @@
 # OpenGGF 0.7.prerelease — Development changelog
 
+- Add a default 10-second consumable rewind budget with Off / Per checkpoint / Per act / Per zone, Unlimited, optional life-loss refill, and independent bonus/special-stage visit allowances. The compact rewind HUD shows seconds and a draining bar; an empty press shows the drained treatment for one second.
+
 Unreleased. The earlier development themes remain in
 [CHANGELOG.0.7.md](CHANGELOG.0.7.md).
+
+- Add an opt-in `external-master` test profile for live master discovery, TLS, player admission and room browsing; normal test runs remain offline.
 
 ## Gameplay and presentation
 
@@ -326,6 +330,453 @@ Unreleased. The earlier development themes remain in
   acts, native audio and all-region gameplay are still in development. Game
   modules consume session data sources without requiring a cartridge ROM.
 
+- **Collapsing platforms (Oil Ocean, Mystic Cave, Aquatic Ruin):** When a
+  platform's last stood-on piece gives way, Sonic and Tails each lose their
+  "standing on an object" status if it is set, whatever they are standing on,
+  as the shipped game does. A Tails who died on the oil and is still falling
+  therefore drops the stale status at that moment instead of keeping it.
+
+- Seamless reloads preserve runtime-art admission, title camera-release timing
+  and independent end-state flags. Frame-boundary reloads no longer leave a
+  second rewind-boundary marker or suppress the following gameplay oscillator tick.
+
+- **Sonic 2 elevators and monitors:** Casino Night elevators keep their
+  fractional position between trips and accelerate the shipped way when they
+  pass exactly through their centre, so a second ride starts moving on the
+  original frame. Rolling through a monitor while another platform carries the
+  player no longer knocks the player off that platform. After a plunger launch,
+  Tails' next landing ends the plunger's hold on her roll, so a later stop at
+  zero speed uncurls her as the shipped game does. A plunger seats a rider at the
+  height the shipped game's landing gives, and a bumper block on its third hit
+  stays touchable while its hit animation plays, as in the shipped game.
+
+- **Sonic 2 level start:** The title card spends the extra frame the shipped
+  game waits after the zone name lands, and its exit runs the camera and zone
+  events only on the frame the blue background starts to leave. Casino Night's
+  slot machine therefore draws its first reels on the native frame, a finished
+  spin pays out on the frame the cage sees it, and the seventh-emerald and
+  Knuckles in Sonic 2 results return to the level on the same frame as ordinary
+  results. Hill Top and Mystic Cave events read the level frame counter the
+  shipped game reads. Sonic 2 and Knuckles in Sonic 2 reset that counter when
+  control returns, so Crawl shield bounces use the original angles and Aquatic
+  Ruin’s rising boss pillars begin colliding on the original frame. Crawl also
+  keeps native touch active beyond the camera, so an off-screen CPU follower
+  receives the shipped game's hurt response.
+
+- S3K bonus-stage entries and returns hold the destination players behind
+  the title loop like any fresh level load: the slot is cleared first, the
+  start position appears when the title loop exits, and the players are
+  created just before the stage begins. The title-card control lock survives
+  player placement and releases as gameplay resumes. Returns restore the saved
+  apparent act before water selection, preserving seamless-act water on return.
+  The saved water mean no longer overwrites the new level’s target. Slots keeps
+  its final bonus camera position until the destination load replaces it.
+
+- **Metropolis Zone boss draw layer:** The boss now takes its display layer from
+  its height as the shipped game does, so it moves from layer 3 to layer 4 once it
+  descends to its pacing height. It previously stayed on layer 3, which is the
+  disassembly's `fixBugs` behaviour.
+
+- **Sky Sanctuary cutscene bridge:** Walking off either end clears that
+  player's standing bit on the same frame, as the shipped game does. The bit
+  previously lingered for one more frame after the player had left.
+
+- **Sky Sanctuary rotating platforms:** Jumping off a spinning post or its
+  carrier bar clears the player's "standing on an object" status on the next
+  frame, as the shipped game does. The status previously stayed set until
+  another object cleared it, so the player could run flat through the next
+  slopes instead of following them.
+
+- S3K invisible solid and hurt blocks suppress edge balancing as their native status bit requires.
+
+- The Super Emerald shrine keeps both players' existing standing state while a
+  selected pedestal counts down to special-stage entry, as the shipped game
+  does, instead of running another collision check and detaching the player.
+
+- LRZ corkscrews retain the shipped two-player DPLC standing-bit quirk and hold the rider pose on skipped passes.
+
+- LRZ grinding boulders retain the native coarse-camera lifetime, preserving their contact with both players.
+
+- MGZ swinging platforms use native fractional chain arithmetic and execution-order inputs instead of fitted slot/angle carry tables; spring animation starts from the native cleared timer.
+
+- Trace segments read the recorder's `level_entry_placement_source`, so a
+  standalone boot takes the ROM's own fresh or return entry branch: S3K
+  start-table segments use the post-spawn camera derivation (including the
+  Tails-alone +4), saved-placement returns skip zone intros, and KiS2 EHZ1 keeps
+  its native start history. The three S3K campaign chains also record their
+  movie endpoint. Standalone LRZ/DEZ continuation segments retain their separately
+  recorded Act3 counter bank until the destination screen event consumes it;
+  fresh, Saved and Saved2 entries remain distinct. Fixtures without the entry
+  observation keep their previous setup.
+
+- The Lava Reef boss act (`$1600`) starts with the native falling intro on a
+  fresh entry, for every character.
+
+- Fresh S3K trace segments derive the entry camera from the ROM start-location
+  entry, as `Get_LevelSizeStart` does, rather than from a body that load-time
+  objects (the DDZ fly-in, the shrine) have already moved. Fresh Level assembly
+  then runs its native initial camera movement before zone setup; the sanctuary
+  starts at `$326`, while its special-stage results backdrop retains `$240`.
+  Actorless resource loads retain their camera state; checkpoint loads retain
+  the same native initial movement before normal gameplay bounds take effect.
+
+- Tails alone enters CNZ1, and MHZ1 with Sonic 3 locked on, with the native
+  fly-in: CPU-held flight to the right until landing.
+
+- Doomsday queues its misc and boss Master Emerald art through the native
+  module queue, and the S3K ending load queues its terrain art and waits for the
+  queue to drain before the ending scene starts, as the shipped game does. The
+  ending previously started at once with its terrain art unqueued.
+
+- The Doomsday Super transformation shows its sparkle animation and releases
+  Sonic on the shipped frames: the animation starts when the flight controller
+  triggers it, and Sonic moves again on the frame his palette fade finishes.
+
+- S3K keeps one sub-pixel camera X position across level loads, as the shipped
+  game does, so Doomsday's autoscroll, the Death Egg escape, the Lava Reef boss
+  scroll and the Hidden Palace emerald theft share it instead of each starting
+  from zero. The ending keeps its start camera until its art has loaded, and
+  trace segments take the recorded sub-pixel position from their level-entry RAM.
+  Entry metadata preserves unsigned 32-bit camera longs as their native bits.
+
+- S3K fresh level loads count the terrain wait's final VBlank in the live game
+  loop, as the recording driver already did. The remaining load-time lag
+  frames are documented, not estimated.
+
+- Held transition fades continue servicing VBlank work and the native clock
+  after trace comparison closes, while preserving movie-row ownership. Bonus entry
+  also reserves its fade-completion iteration, preventing premature title-loop
+  resource preparation.
+
+- Sky Sanctuary Act 2 rewind reuses unchanged terrain; the ending resource adapter
+  restores art while the existing layout owner handles scene geometry. A rendered
+  cache audit covers 68 stock act/scene entries across all three games.
+
+- Sky Sanctuary diagonal bridges retain a rolling player's pose while transferring
+  between sections, and Tails resumes roll animation during the arrival swing.
+
+- S2 ARZ leaves read the native gameplay clock after title-card release, preserving
+  bubble and boss-arrow random sequences in continuous runs.
+
+- HCZ2 capsule results publish native ending poses and submit results art on their owning dispatches; the HCZ slice replay is green.
+
+- HCZ2 boss blades start their floor-hit raw animation from the cleared timer, restoring native water-chute launch timing.
+
+- HCZ2 end-boss attack setup runs on the native wait-underflow pass; spray release performs its final interaction once.
+
+- HCZ2 end-boss swing resumes from the live rise velocity and retains the native fractional Y position.
+
+- HCZ2 end-boss spray preserves the native shared player-range cursor, preventing an extra Tails grab after Sonic is carried.
+
+- HCZ2 end-boss suction retains the native displacement across both players, including equal-X contacts.
+
+- HCZ2 end-boss camera release preserves the separate main-initialization dispatch,
+  and its water platform starts raw animation from the fresh slot's cleared timer.
+
+- S3K HCZ2 renders the preceding screen-shake setup result, and LRZ big doors
+  finish opening off screen before unloading. Both corrections preserve Tails CPU
+  respawn timing at the native visibility boundary. S3K catch-up teleports also
+  clear the inherited hurt blink before sprite submission, keeping the cached
+  on-screen flag and recovery-flight timer native. Checkpoint entry retires
+  setup-only sidekick hiding when the native CPU skips its arrival intro.
+
+- MGZ Bubbles waits until the next object pass after its offscreen continuation
+  resumes, preserving native movement and collision timing. This restores Tails'
+  same-frame hurt response after Sonic destroys the badnik.
+
+- Iwamodoki self-destruction releases standing players as in the ROM, preventing shield-protected Sonic from retaining an air-running ride.
+
+- FBZ2’s spiked-arm boss uses the shipped rotation expression and correct pilot-light
+  palette, with debug geometry for its body and children. S3K Super/Hyper reversion
+  retains invincibility until the next native eight-frame boundary.
+
+- **Shared S3K object behavior:** HCZ reuses common capsule opening, effects,
+  geometry, drawing and rewind-safe opening control ownership while retaining
+  its native button/results handoff. FBZ
+  shares common opening writes and native sprite/plane priority without losing
+  its child-slot graph; its button and final-capsule fragments retain high art priority. Cutscene
+  buttons share proximity and presentation, including native sprite priority.
+  Explosion placement now uses the ROM’s high random word for Y, and failed
+  ICZ explosion allocation consumes no RNG or sound. Teleporter swing arithmetic
+  also uses its common transition without changing rewind storage. ICZ tension
+  platforms apply rider impulses in native player order, keeping their shared
+  spring velocity independent of object identity-map traversal.
+
+- HCZ Act 1 miniboss retains both tracked native players through vortex cooldown and sets them airborne when the water effect is deleted.
+
+- S3K Special Stage automatic starts test the banner exit offset before advancing and publish the start flag after player movement.
+
+- **MGZ seamless transition:** Keep the shifted camera bounds until the native
+  Act 2 release instead of easing toward the newly loaded level bounds.
+  The miniboss also retains its native EndSignControl slot while explosions
+  continue independently, so results restore player animations on the ROM's pass.
+  Results also use the native global allocator after waiting for the player to land.
+
+- S3K top-solid platforms, bonus flippers and curled vines now select the ROM’s
+  1–16 pixel landing window on the native helper surface. Flat helpers use their
+  landing radius, and AIZ flipping bridges use their raw signed slope heights. Collapsing
+  slopes also retain that full window while Knuckles uses his smaller climbing
+  radius, so he can land during the ledge-climb animation.
+
+- S3K Lava Reef collapsing bridges and Sky Sanctuary floating platforms now reject
+  exact-boundary new landings, matching the ROM’s one-to-sixteen-pixel overlap
+  check and preserving falling speed until the actual landing frame.
+
+- **Upright S3K Act 2 capsules:** Use the normal seven-explosion sequence and
+  child-owned break sound, including Hydrocity’s separate capsule owner.
+
+- S3K saves retain collected giant rings and Chaos Special Stage rotation after
+  reload, and resume stock zones at their native starting act.
+
+- **S3K shield rewind:** Restore the captured dormant Insta-Shield identity
+  alongside collected elemental shields, keeping their native dispatch ownership
+  and animation continuity across rewind and seamless reloads. Unshielded cold
+  captures retain their existing animation binding through restore.
+
+- **S3K shield returns:** Elemental shields keep animating after Bonus/Special stages; deferred Insta-Shield registration no longer takes their shared object slot.
+  Their native playback publishes the first frame on dispatch, defers animation
+  switches, and pauses elemental shields while the player is invincible or blank.
+  AIZ2 cutscene Knuckles uses the ROM standing pose and raw run/jump/laugh scripts.
+
+- AIZ2 and ICZ2 restore level music after results for their outgoing cutscene
+  and snow corridor, including ICZ2’s run toward LBZ1.
+
+- **Mushroom Hill Act 2:** Restore the fade to Knuckles’ theme when his
+  leaf-blower cutscene begins. Restore the end-boss ship, pilot and capsule art,
+  the dash flames' palette, and the chase's canopy, pillar and spike-ball layers.
+  Correct the pillar archive address so its upload cannot corrupt ring art.
+  Restore the weather-machine and defeat explosion bursts, accelerating chase
+  entry, lost-ring world rebasing, and Robotnik's gravity-driven stump handoff.
+  Explosion controllers restore their exact owner across fresh rewind recreation
+  and retire through the shared lifetime operations.
+
+- **Music ownership:** Invincibility monitors preserve boss/countdown music; P2
+  drowning cannot replace shared music. S2 boss fades and sound test use native
+  mailboxes. S3K restores the apparent act or invincibility at the native restore
+  boundary, corrects Knuckles cutscene fade triggers/timing and lowest-free song
+  allocation, and uses native miniboss IDs. S2 ring-threshold jingles retain the
+  native secondary mailbox in solo and competition play.
+
+- **Native sprite producers:** Ordinary mapping pieces cannot accidentally emit
+  an X=0 mask and hide later sprites, with limits either enabled or disabled.
+  The end-of-act tally now culls whole offscreen elements and individual mapping
+  pieces using the ROM multi-draw bounds before charging sprite budgets.
+  Loaded offscreen rings, collapsing bridges/platforms, ICZ columns, walls,
+  freezers and tension-bridge child groups also stop consuming sprite capacity.
+  The committed ICZ2 cube/button/bridge route now guards raw table submissions
+  with native limits enabled.
+
+- **Powered shields:** Super/Hyper players can collect shields in S3K and S2.
+  Shields remain hidden while transformed and reappear after reverting.
+
+- **IceCap Act 1 miniboss:** Restore the accelerating ice-charge flashes,
+  native ice-piece spread timing, falling/flickering destruction debris and
+  independent palette/signpost handoff while explosions finish.
+
+- **ICZ2 to LBZ1:** Arm the ground-launch intro during fresh zone assembly so
+  Sonic springs out of the snow and regains control.
+
+- S3K Act 1 results defer Act 2 music to the in-level title-card wait gate,
+  preventing a duplicate start during AIZ, HCZ, MGZ and other act transitions.
+
+- **Upside-down S3K capsules:** Use seven normal explosion effects and their
+  break sound instead of the long boss-explosion sequence.
+
+- **MGZ2 to CNZ1:** Tails carries Sonic into Carnival Night after the Marble
+  Garden rescue instead of leaving Sonic to fall alone. Fresh level assembly
+  restores the normal carry policy on configured sidekicks.
+
+- **MGZ2 powered rescue:** Rebuilding art for rescue Tails retains Sonic's
+  Super/Hyper controller, keeping palette cycling and boss-defeat
+  detransformation active.
+
+
+- **Sprite limits disabled:** Also remove the total 80/64-entry sprite-table cap,
+  so later sprites survive crowded scenes and results screens. Explicit level
+  masks remain active; enabling limits retains native table and line budgets.
+
+- **Repeated picture draws:** MGZ Knuckles boss fragments advance their defeat
+  flicker only when the object executes, preserving the ROM's first hidden phase.
+  Redrawing ICZ snow overlays and Pachinko traps no longer changes rewind state
+  through diagnostic counters. FBZ cloud draws and MGZ capsule animal art selection
+  also keep their temporary presentation values out of native object state.
+
+- **Homing Attack mutator:** Mutator Lab adds Homing Attack for Sonic 1, Sonic 2
+  and Sonic 3 & Knuckles. Jumping again in the air homes the leader in on the best
+  target in range: a boss part with a hidden priority first, then targets ahead,
+  then bosses, badniks, breakable walls, grab points and breakables. The leader
+  stays in the native roll, so hits, breakage and grabs follow the original rules.
+  With no target, the native double-jump move runs; failing that, Sonic dashes
+  forward. A reticle marks the target, launches lag the camera like the fire-shield
+  dash, a faint blue glow trails each strike, strikes chain and bosses bounce the
+  player off. Sonic, Tails and Knuckles
+  can each be enabled. Instagib mode builds friction heat in front of the player,
+  makes the strike invulnerable, ends bosses in one hit and bursts defeated enemies
+  into shards that defeat other badniks they hit; bosses are immune to shards.
+
+- **Death Egg gravity puzzle:** New top landings use the native shaft width,
+  allowing edge contacts to establish support before the turbine moves the player.
+  Bobbing retains each occupant's rider state until its own solid call consumes an
+  airborne seat, preventing a second landing in that same call. Grounded
+  walk-off clears the departing player's latch before a later re-entry.
+  The puzzle also retains its native display-child slot, preserving later bumper
+  execution after the turbine moves the player.
+
+- **Death Egg staircases:** Moving sections preserve their own standing bits.
+  A jumping rider releases at the ridden section's collision checkpoint,
+  preserving the native jump height.
+
+- **Death Egg moving pads:** Exact surface contact leaves an airborne player in
+  flight until the native overlap window is reached, preserving the original
+  cold route's landing timing. Walking or jumping off clears that player's
+  standing latch, allowing the lift's return pause to resume after P1 leaves.
+  Conveyor pads retain each rider's standing bit as they move, preserving the
+  native jump height and clearing support at the pad's own contact checkpoint.
+  Walking off a conveyor pad also retires that player's carry bit, preventing
+  another conveyor push after support has ended.
+
+- **Flying Battery and Death Egg floor launchers:** Exact surface contact keeps
+  a falling player airborne until the native landing window is reached.
+
+- **Input-pass ownership prerequisite:** Existing GameLoop passes keep controller
+  edges stable across logical rereads and acknowledge keyboard/text lifetime once.
+  Engine display controls sample current controller input and hand it to the first
+  GameLoop consumer without nesting scopes or coalescing later fast-forward passes.
+  Modal display frames acknowledge their own controller edges, and pad frame-step
+  capture decisions use the same fresh sample as GameLoop. Deferred passes restore
+  their unacknowledged controller baseline; text claims, recorded native Start and
+  the existing slow-motion carry retain their owners.
+  Ordered gameplay admission now preserves observed keyboard/controller taps released
+  before the consuming tick, including repeated taps and simultaneous controls.
+  Zero-step service previews the same pending prefix; modal/text claims, fixed menu
+  keys and recorded overrides retain their input authority. Native menu bindings
+  consume each admitted edge once; controlled native rows preserve later queued taps,
+  keyboard resume remaps retired paused taps before both ordinary and controlled
+  gameplay, and fixed menu/text controls keep physical authority during replay.
+  Live simulation and audio now use 60 Hz NTSC / 50 Hz PAL independently of the
+  window FPS limit. Catch-up is bounded; pause, frame-step, focus, restore and
+  session changes retain their semantic owners. Repeated pictures acknowledge no
+  input and produce no audio. Window pictures follow completed services: a service
+  is shown in the iteration that ran it, a limit below the region rate only thins
+  those pictures, and unchanged state is not redrawn; a recording's picture doubles
+  as the window picture.
+  With `display.pacing: AUTO` (default), a display refreshing at a whole multiple of
+  the region rate is probed for two seconds and then paces one service per swap,
+  removing the periodic repeated or doubled picture on 59.94/60.02 Hz panels. Locked
+  play runs at the measured display speed and returns to host time on repeated missed
+  vblanks, non-blocking swaps or an out-of-band rate; `EXACT` keeps nominal speed.
+  The lock needs a rate-regulated or silent speaker; an unregulated backend keeps host time.
+  Native menu/background and MGZ blink clocks advance
+  with updates. Trace ghosts advance their private animation on admitted replay
+  rows, including pictures omitted during fast-forward; repeated pictures and
+  layer/visibility filtering preserve the pose. Seeks restore observed private
+  presentation checkpoints in constant time, preserving historical tunnel context
+  and isolating live player timers and landing callbacks; unobserved history stays
+  hidden until replay establishes it.
+  Speaker playback gently trims its output rate to hold a bounded source backlog,
+  absorbing host/device clock drift without changing producer, history or recording
+  PCM. Pause, reverse and output replacement reset the trim.
+  Opt-in `display.interpolation` (default off) blends camera and scroll, players and
+  ordinary objects between the two latest displayed level pictures at every refresh
+  above the region rate, so 75/144/165 Hz panels and 120/240 Hz panels move once per
+  refresh. Blending is render-only and whole-pixel: art, animation, palette,
+  visibility and priority come from the newest picture, S3K's native one-tick display
+  lag and lag frames are kept, and the view trails the newest tick by up to one tick.
+  Recordings, screenshots, traces and offline tools stay exact. Rewind, loads, act
+  reloads, Tails respawns, the CNZ teleporter and camera jumps beyond the native scroll
+  cap snap;
+  special stages, competition, bonus stages, Stageplay and the editor stay exact. It
+  uses the default Auto rendering limit, which follows the display refresh. The limit
+  sits beside Interpolation in Display → Picture; the rebindable `N` shortcut toggles and
+  saves interpolation during play with brief On/Off feedback. VRR qualification remains future work.
+
+- **Recording audio buffering:** Capture retains a bounded stream of final PCM
+  across producer packets and video drains, preserving sample order and unused
+  packet tails. A stalled capture that exceeds its bound falls back to correctly
+  clocked silence while speaker playback continues. Live recording emits a current
+  final-viewport picture with matching region-duration PCM for each admitted
+  service, independently of window swaps. Recording requires these extra draws;
+  overload slows recorded time with simulation time rather than inventing pictures.
+
+- **Carnival Night cylinders:** Unloading an inactive cylinder no longer releases
+  a player held by another cylinder.
+
+- **Movie and trace controls:** Playback and recording suppress live debug actions
+  that could change gameplay, so opening trace details no longer enters a special
+  stage.
+
+- **S3K fresh-level handoff:** The outgoing ring count remains visible through
+  initial title publication and the destination count takes effect at release.
+
+- **Sonic 2 sidekick visibility:** Tails resets his off-screen respawn counter
+  directly from the native on-screen flag, removing an extra entry delay.
+
+- **Sidekick CPU follow routine:** The CPU sidekick's ground-follow routine is
+  now a direct translation of S2 `TailsCPU_Normal` and S3K Tails CPU routine 6.
+  Push-grace windows, object-order and interact-slot push bridges, fast-leader,
+  sliding-leader and underwater push heuristics, deferred follow nudges,
+  frame-counter projections and trace-bootstrap entry branches that had been
+  tuned to individual trace fixtures are removed, with the object, level-event,
+  title-card and rule hooks that fed them. Affected trace frontiers are recorded
+  in the [audit](docs/architecture/audits/2026-10-31-sidekick-cpu-fitted-logic-removal.md).
+
+- **Sonic 2 object-slot timing:** Defeated objects with folded children release
+  those children as the object walk reaches their slots. This preserves native
+  allocation and lost-ring bounce timing in Chemical Plant.
+
+- **Trace playback handoffs:** Visual run replay keeps its boundary observer
+  active between segments after closing the previous comparison payload, so
+  special-stage requests are not missed at a giant-ring transition. Recorded S3K
+  fresh loads retain the source's recorded terrain-readiness ownership and use real
+  resumable decoding, placement, object and presentation phases. A dedicated,
+  matched timing stream can pace those phases without importing gameplay state;
+  incomplete or mismatched observations fail the replay.
+  Fresh bonus cards also reclaim child updates from a preceding in-level title.
+
+- **Angel Island intro rewind:** Surviving scattered emeralds release their
+  collector reference when cutscene Knuckles retires, so they no longer keep an
+  invalid object reference in rewind snapshots.
+
+- **Marble Zone burning platforms:** Flames are retired from their native object
+  slots immediately when their platform cleans them up, preventing an orphan
+  flame from spawning after its parent disappears and preserving rewind closure.
+
+- **Interface languages:** OpenGGF menus, settings and the built-in editor use
+  contributor-editable ARB catalogs, with 20 initial locale choices and explicit
+  machine-draft status. A ROM-free language picker and saved preference update
+  wording and measured layout together. ICU handles whole-message grammar and
+  script-safe fallback; the translation tools support partial contributions,
+  source-change detection and exact-text review without a translation service.
+  Independent Opus 5.5 and GPT-6.1 Sol reviews informed corrections to 2,324
+  messages. Draft status and canonical-English legal fallback remain explicit.
+  FFmpeg help now displays literal template tokens without requesting runtime
+  arguments, and ambiguous source labels have clearer translator notes.
+  Ellipsis fitting warns with the language, text and measured space, including
+  English, while suppressing repeated warnings across frames and resizing.
+  Settings uses the extra room up to 16:9 and stays centered beyond it; measured
+  rows wrap and focused overflow pages without ellipses. Built-in menus, editor
+  sheets and bundled Time Attack pages expose complete long text through paging
+  or an advertised read-only reader, including paths, errors and retained chat.
+  Added and changed menu-overhaul wording now has current drafts in every full
+  catalogue. Playback facts and import guidance use complete ICU messages;
+  special-stage playback labels come from metadata rather than translated text.
+
+- **Team editors in Settings:** Settings > Advanced edits the direct-launch
+  sidekick line and the save screen's extra character teams as ordered teams
+  instead of comma- and semicolon-separated text. Each sidekick row shows the
+  character it follows; Left/Right changes the character, and its actions move or
+  remove it. Sidekicks can be added up to 16 per team. Extra teams can be added,
+  edited (player and sidekicks), reordered or removed, and read as names on the
+  Settings row. Empty lists explain what remains; unlisted stored codes are kept
+  until changed. Every full catalogue has current machine drafts of the new
+  wording, revised after independent Opus 5.5 and GPT-6.1 Sol reviews.
+
+- **Original ROM revisions:** Sonic 1 and Sonic 2 recognize their original
+  REV00 and REV01 images and select matching ROM data locations and shipped
+  behavior. Revision choices belong to the loaded image, including logical
+  cartridge views, while shared gameplay code and game-specific providers are
+  retained. Unknown images keep the existing unverified compatibility path.
+
 - **Enemy-chain bonuses:** Ordinary enemy kills award 10,000 points from the
   sixteenth consecutive defeat, matching the native games. Normal and powered
   kills share the calculation, including native counter wrap and rewind. Sonic 2
@@ -366,7 +817,9 @@ Unreleased. The earlier development themes remain in
   render path. Rewind also retains empty or rejected native passes, and converted
   sources can exclude inferred drawing independently of accepted admissions. Attracted
   rings submit at their actual object slots and retain native conversion art,
-  priority and independent visibility through rewind. Existing rings continue
+  priority and independent visibility through rewind. Suppressed player touch
+  cannot attract new rings or enter the allocation-failure award path; existing
+  attracted-ring motion remains owned by its object slot. Existing rings continue
   during player death; converted bouncers retain the animation frame copied at
   their own dispatch through late global animation and rewind. Native object-word
   snapshots synchronize only proven words, leaving unrelated fixed-slot shield
@@ -424,6 +877,21 @@ Unreleased. The earlier development themes remain in
   presentation, honoring both automatic-playlist suppression owners. Their common
   object art loads without a native zone header; native stages retain their title
   timing and zone-owned spring art.
+
+- **Route tapes in both editors:** the in-engine editor's Routes workspace and
+  OpenGGF Editor open `<stem>.route.json` routes and edit both pads' physical
+  button rows on a two-lane timeline with undo. Replay and qualified saves run in
+  a separate worker; the editors show qualified or the first row a replay cannot
+  complete, draw the replayed path over the route's level, list the manifest's
+  launch and native observations (display only), and export a BizHawk movie on
+  demand. Saving changes the files only after a passing replay; unfinished work
+  saves as a draft that tests and native checks refuse. Repair keeps a route's
+  rows where play still tracks a reference and reports the share it kept.
+  Stageplay's applied routes are now input rows; **Edit input rows** opens them in
+  the same timeline and applies edits back to the scene as one undo step.
+  Routes carry goal legs (reach, board, ride, attach, hold, await a phase, defeat,
+  cross) on placed or runtime-spawned objects, picked from a scan of live objects;
+  Plan searches rows that complete them after a kept prefix.
 
 - **OpenGGF Stageplay:** shared directing documents power the in-engine HUD and
   OpenGGF Editor's Stageplay workspace. Both editors share compact grouped forms,
@@ -521,6 +989,18 @@ Unreleased. The earlier development themes remain in
   Restarting a recording releases the retired audio reader before replacing the
   ROM, while a live audio capture continues on the reopened source.
 
+- **Time Attack master servers by host name:** Settings > Master server starts on
+  **Build default**, which follows the running build's own master
+  (`multi-dev.openggf.com` for develop, `multi-next.openggf.com` for next,
+  `multi.openggf.com` for releases) and is never saved into the profile. **Custom**
+  accepts a bare host name or a full `wss://` URL (now including bracketed IPv6), and
+  **Off** keeps LAN play only. A host name's port comes from its `_openggf._tcp` DNS
+  SRV record; the record must name the same host, so certificate checks are unchanged
+  and there is no guessed fallback port. A missing record, a failed lookup and a
+  record naming another host each give their own message. Recording uploads use the
+  port the master connection was admitted on. Native packages include the JDK DNS
+  provider this needs.
+
 - **Time Attack multiplayer security:** identity proofs bind the complete join
   intent to the master, direct-room or relay-room role and observed TLS
   certificate. Remote browser, join and recording endpoints require TLS;
@@ -528,6 +1008,22 @@ Unreleased. The earlier development themes remain in
   including recording uploads. Master challenge solving is serial, cancellable and
   limited to 24 bits and 30 seconds, with one coalesced pending proof write under
   transport backpressure.
+  Protocol 8 binds listed direct and relayed admission to one-use broker grants,
+  retires direct routes before fallback or rejoin, owns direct registration through
+  activation and cleanup, and freezes each participant's
+  character and the voted round configuration in the host's launch. Bounded
+  connection writers and owner mailboxes release accepted work on retirement;
+  verifier infrastructure faults void results without sanctions. Completed
+  attempts publish replay-identical ghost bytes, direct hosts use their local
+  listener for broker-granted self-join, and congested status, heartbeat and
+  cosmetic lobby traffic no longer ends a healthy room or connection. Shared
+  transport saturation backpressures an unrelated peer through a globally
+  charged 8 MiB deferred reserve inside the 64 MiB explicitly reserved work
+  limit; physical writes expire after two seconds without completion. Loaded-track
+  bounds use a reserved host control slot; master-link controls, broker/room
+  mailbox-full verification handoffs and verified verdicts retry after mailboxes
+  drain instead of losing the guest or verified result. Broker loss hides
+  unusable manual invites.
   Private rooms are unlisted and password-protected across direct and relayed
   joins. Six-character invite codes work for master and player-hosted rooms,
   expire after ten minutes and limit lookups to five per minute per identity
@@ -587,7 +1083,7 @@ Unreleased. The earlier development themes remain in
   hides the menu and hands the controller to the character, and pressing it again
   brings the menu back. The menu is a set of cards in the race HUD's style (the room
   and next track, the players with ready boxes and characters, the chat, vote or
-  podium, and the menu with who the room is waiting for), with the level moving
+  podium, and the menu with how many players the round still waits for), with the level moving
   around them; the stock HUD and ghost nameplates are hidden under it. The vote shows
   all three tracks. Other players walk the lobby as named ghosts in their looks
   (presence is streamed between rounds only, and relay rooms send each player its
@@ -728,8 +1224,18 @@ Unreleased. The earlier development themes remain in
   follows each texture's own row capacity when sidekick banks are reclaimed or
   independent graphics hosts retain different texture sizes.
 
-- **Main menu:** Compact and bold lettering now share one pixel-font family,
-  with clear navy lettering on gold launch buttons. Holding Escape freezes a
+- **Support notices:** Starting Sonic 3 & Knuckles from the hub first shows a
+  translated Please note dialog saying its support is in alpha and asking for bug
+  reports on Discord or GitHub, with both links selectable to open in the browser.
+  Back returns to the shelf; Continue starts the game, and Don't show again hides
+  that game's notice until its stage changes. Any stock game can be gated or
+  released by editing one table.
+
+- **Main menu:** Compact and bold lettering now share one proportional
+  pixel-font family, with narrower lowercase, steady digits for counters and
+  clear navy lettering on gold launch buttons; long names, paths and text fields
+  fit and scroll by measured width. Gameplay transport and trace overlays keep
+  their fixed-width lettering. Holding Escape freezes a
   stock game and smoothly shrinks its picture into the paused-game card; Resume
   expands it back to full size before
   gameplay continues. Saved Game Setup preferences remain current on resume,
@@ -748,8 +1254,135 @@ Unreleased. The earlier development themes remain in
   clearer inherited values, calmer backgrounds and more readable text,
   player binding groups, conflict warnings, confirmed tab resets and save summaries
   make setup easier to review. Expert loading and rewind tuning live in Advanced;
-  first-run discovery can locate one ROM or scan a folder for all three games,
-  retaining partial discoveries at scan limits and explaining file-access errors.
+  Display and Advanced group their rows under captions (Window, Picture, Widescreen
+  and HUD; Shaders, Rewind, Debug and the rest), Advanced settings carry authored
+  names such as VHS rewind effect, help never shows a configuration key (Details keeps
+  the exact text), and the tape coast's tuning sits indented under Tape coast, dimmed
+  but editable while it is off. Details says when each change applies in one sentence.
+  Game Setup and Playback on a card whose ROM is missing open the same ROM locator as
+  Start, and a failed ROM load offers Locate ROM first and points to Settings > Files.
+  First-run discovery can locate one ROM or scan a folder for all three games,
+  retaining partial discoveries at scan limits and explaining file-access errors; it
+  says nothing about the limit once every game is found.
+  Mods, the Playback browser, details pages, the text keypad, Import content
+  and the startup notices now share the hub's header, key-cap hints, focus frame and
+  buttons: mods show on/off switches, game badges and status tags. One Playback
+  browser now lists engine recordings, BK2 movies and ROM trace segments/runs,
+  with game/type filters, explicit row/frame counts, retained recording options,
+  aligned kind/game badges, entry lengths, and clear readiness or setup warnings.
+  Recording options share the library's factual summary card; details and held trace
+  failures wrap complete values beside labels, with paged diagnostics, moving an
+  identifier such as `VDP_DMA` whole to the next line rather than splitting it.
+  Bare BK2 files show that launch setup is required;
+  invalid metadata stays visible without weakening import limits. Settings and
+  Game Setup show readable values in sentence case, key bindings as keys and
+  button names without a repeated player prefix; save prompts fit their changes
+  and show each one as old value to new value. The quit prompt offers Stay in
+  OpenGGF or Quit to desktop. Locating a ROM shows a readable folder breadcrumb,
+  file and folder icons and an empty-folder state; its ROM? tag, like the shader
+  picker's format tag, shows on the focused row unless the visible files differ. Mod
+  trust and dependency confirmations, and their results, name the affected mods and
+  what changes, and the Mod manager counts
+  art slots instead of pattern windows. Trace playback diagnostics sit on backing
+  panels, and long overlay text no longer loses its first characters when first shown. The
+  display shader picker is a framed panel with folder navigation, a filter and the active
+  preset marked. Rewind and input recording show compact one-row plates (`REW`, `REC`, `PLAY`) that stay clear of
+  the game's own HUD, with translucent backgrounds, consistent word spacing and outlined
+  status icons. Native 6x8 text keeps complete transport counters and configured recording
+  shortcuts visible (`REC: HOLD SHIFT+F9`, or the remapped key), with frame labels such as
+  `F:44`. Both replay types use `Tab: Details` to open a readable, paged mismatch report;
+  verification failures do not open it automatically or change playback policy. Mutator Lab uses the same switches, sliders and key hints as Settings,
+  and Settings rows lead the eye from each setting to its value. Every Settings tab now
+  uses the same light row lettering, description text has open leading, capture
+  settings read as Video codec FFV1, 192 MB or Automatic, and Settings and Mod details
+  line values up in a label column. The Advanced page and Add your games list each
+  choice with an icon and note, the launch button and missing-ROM card carry glyphs,
+  Mod order shows the numbered load order, empty Playback scopes explain the next step
+  and trace loading names the trace and its launch steps. Pause and window video
+  capture show as compact top-right plates (`PAUSE`, `VIDEO`) that no longer overlap
+  the playback plate, and the hold-Escape toast no longer covers the score; while a
+  pause or video plate holds the top-right corner it rests just below it and slides in
+  from the right beneath it, never across it, eases back up when the plate goes, and
+  shows its progress as a thin meter along its bottom edge. Controls and help reads as
+  Move, Select and Shortcuts groups, and a controller sees one Up/Down row that says where
+  Mods and Game Setup sit and its own Help button. When the hub's setup chips end in
+  "+N more", the line below names every hidden one on the card and on Start, in amber
+  where it is set for that game only; the Sonic 3&K donor shows one chip and says its save
+  screen picks the team, and Game Setup lists Borrow from above the characters it decides.
+  The paused card keeps one status line under its buttons: what resuming applies, or
+  what ending costs. The hub keeps one spacing rhythm from the game card to the footer, its
+  page dots stay visible over the clouds, and the paused card's badge uses the pause icon
+  that pairs with Resume's play icon. Quit and end prompts mark each choice with a check
+  where nothing is lost and a warning where something is; the ROM-not-found card fits its
+  content and breaks a long path between folders; Advanced rows keep each name clear of its
+  note; and every Add your games step sits centred, with found games in one aligned column
+  and a scan that stops early saying so. Controls bindings
+  have room between rows, Mod details labels drop the colon beside their aligned values,
+  a failed trace says Back to list (keeping the same row selected) and leads with one plain
+  headline above its exact, searchable error, and the editor project menu ends its keys
+  with Close like every other page, says what each command does and shows scroll position
+  when its actions fill more than one screen. Importing content
+  states each fact once, the keypad's accept key reads Set, a mod with code says to switch
+  it on and confirm Trust and enable. Current native packages load code-bearing mods,
+  so the obsolete native-capability warning has been removed. Reset and
+  window-preview prompts match the other prompts, with a draining countdown meter on
+  the preview. Add your games shows what it is reading and a working meter, and lines
+  found games up as one list; the number keypad offers only real keys (Delete, Clear,
+  Default and paired cursor keys) and its help says what each one does. The
+  level editor's menu, property and settings sheets read in sentence case with whole
+  labels, aligned shortcut keys and a scroll bar; its palette shows each colour's
+  hardware channel steps, and button prompts fit the smallest editor window. Its menu opens
+  on a short front page (Resume, Save, both playtests, the level pages, projects and
+  **Exit to title**, which first offers Save and exit, Exit without saving or Keep editing);
+  **All commands and shortcuts** opens a grouped command sheet (Editor, Edit, Region,
+  Pattern and tile, Objects, View, Playtest, Project) listing each command once with the shortcut it really has, such as Del for
+  Delete region: Undo and Redo lead Edit, Stageplay sits with the editor's own pages, and
+  the two playtests say where the player starts (Shift+Tab from the cursor, F5 from the
+  level start). Ctrl+0 resets the zoom without also picking hotbar slot 10.
+  Time Attack's chat card names Tab for keyboard Details, including while ready.
+  The bundled Time Attack mode's pages (menu, settings, profile, vote pools, text
+  entry, room access, invites, room browser and room details) share a header band,
+  light rows in a measured label column, key-cap footers that follow the last device
+  and wrapped messages instead of cut-off lines; a revealed LAN invite wraps whole
+  beside its Hide button, and lobby notices read whole in the row face inside their card.
+  Lobby actions read as sentence-case rows (Ready up, Ready rule, Room chat, Leave room, matching Settings),
+  your own row's character stays readable, and room chat reads Full chat in every view.
+  The newest chat message wraps onto a second line instead of being cut, with senders
+  kept to a third of the row; Room details scrolls through every player and message,
+  each whole, opening at the newest message. Every Time Attack page's Details key (F1, or
+  R3 on a controller) opens a read-only page under that page's own title, with its facts in
+  the same label column and the values worded as the page shows them; sentences wrap at
+  spaces and addresses after a separator, so no word is split. In a room it opens Room
+  details, which now begins with the room's name, next track, phase, rules and any notice.
+  Playback Browser and its recording options, target-frame keypad and trace feedback
+  pages now support mouse selection, actions and wheel scrolling; right-click goes back
+  one level, and the side gutters of a centred native page activate nothing.
+  Text fields in mod scenes reserve typing keys before global shortcuts and keyboard
+  mappings run, so entering a name cannot open playback or toggle debug panels; the
+  field still receives its text and editing keys, and shortcuts resume after it closes.
+  Narrow footers leave out arrow hints and shortcuts that repeat a row before an action,
+  Details or Back, and secondary buttons such as Back use the row face. Controller key caps
+  name the button that actually does the job on that pad (X and A on Xbox, Square and Cross
+  on PlayStation, West and South otherwise, for confirm and back) instead of the Genesis
+  letters, which on an Xbox pad named the back button as confirm; once ready over the
+  lobby level a keyboard names its bound select key, a pad is no longer offered the
+  keyboard's vote digits, and a key bound to the opposite button (Enter to B, say) does that
+  one thing. Sonic 1 profiles say when the ROM colours cannot be read on the page instead
+  of showing unexplained grey swatches. Creator scenes can name player 1's bound key or pad
+  button the same way with `SceneContext.buttonLabel`. The Stageplay
+  editor names its mode or take in a top-bar chip at every window size, beside at most
+  five key caps (or pad buttons) for the focused pane that repeat no button's key, and shows shortcuts as
+  caps on its buttons and Commands rows. Long scene names keep the unsaved-change
+  marker visible. Mutator Lab's list and options pages name their shared timing once in
+  the band (rows keep only exceptions such as pending edits or a Restart-or-death mutator),
+  the switch row reads Enabled, and while play is held the list shows no opaque Hold key
+  (Resume is the way back). The Act Practice example's menu now follows the same design
+  language: a navy page with the game on a focused card showing its best time and page
+  dots, key caps that name the keyboard or the controller's own buttons, whichever was
+  pressed last (Genesis A, C and Start confirm, as in every scene), results whose icon and colour say whether the
+  act was completed (and set a new best), failed to load or left the best unsaved, and a
+  no-games page that says what to do next. Its in-run timer reads m:ss.cc, as Time Attack
+  does, instead of drawing a question mark for the double quote the compact face lacks.
 
 - **Second Strike hard-mode prototype:** Native brittle supports, earned zero-ring
   bonus invitations, finite badnik/boss patterns and original-ring retention keep
@@ -791,7 +1424,9 @@ Unreleased. The earlier development themes remain in
   retains ROM collision semantics, with explicit compatible-layout cloning and
   save/cancel/discard protection before replacing unsaved work. A tools wheel,
   block and chunk workbenches and button
-  prompts for the pad in use. It is the sole built-in editor UI, with world-space
+  prompts for the pad in use. Canvas zoom spans 0.25×–8×, revealing more terrain
+  below 1×; arrow keys and the D-pad step whole blocks for terrain or eight pixels
+  for objects and rings. It is the sole built-in editor UI, with world-space
   editing guides underneath; a separate OpenGGF-Editor provider can replace it
   through the window-chrome extension. Stock Emerald Hill can be adopted, playtested
   and exported. A full clone keeps unplaced library chunks whose art lies outside the
@@ -857,7 +1492,9 @@ Unreleased. The earlier development themes remain in
   and tile sizes. Overlapping spheres use the original sprite-table order and
   compare the winning pixel's priority against the floor and HUD planes.
   The results card sits on the locked-on game's grey backdrop
-  instead of white, matching native frames of won and failed stages.
+  instead of white, matching native frames of won and failed stages. The final
+  Chaos Emerald reveal uses the original single countdown before returning to
+  the level, including its zero-timer expiry pass.
   A Super Emerald pedestal loads the S&K sphere layout for its selected stage and
   selects that stage on the frame the player lands on it,
   as the original does, instead of one frame later. White stage transitions follow
@@ -890,6 +1527,9 @@ Unreleased. The earlier development themes remain in
   data select, restarts, special and bonus stage returns, and loads without a card.
   The level submits its queued art during the load and prepares the first item
   in the first title-loop step, keeping destination setup on the original frame.
+  Destination setup stays black until the new card takes over presentation, and
+  new zone and bonus cards discard the previous card's published picture so level
+  art cannot flash through before their black backdrop appears.
   Bonus title cards load the complete native art batch, including the unused act
   number, then submit the stage's terrain art once the title is ready and Nemesis
   work clears, while retaining the bonus card's own layout.
@@ -910,14 +1550,21 @@ Unreleased. The earlier development themes remain in
   games, restarts and bonus stage entries and returns now hand control over with
   the card still holding for its last 22 frames, as zone changes already did, instead
   of keeping the player frozen for 90 frames. Restarts and bonus returns no longer
-  fade the card in from black.
+  fade the card in from black. Bonus entry holds the source camera at the
+  native restart boundary.
 
 - **S3K objects and bosses:** The Angel Island end boss starts its defeat at the
   native hit check of whichever phase it is in. Angel Island's flipping bridges
   time their landing sound from the level clock. When the object table is full,
   pending placements wait for the next camera block crossing, which restores the
-  Hydrocity fan timing. Hydrocity's hand launcher checks its top surface on every
-  pass, as in the original, so a rising hand catches a player rolling over it.
+  Hydrocity fan timing. Timer-controlled fans retain their initialization pass
+  and the original idle intervals across repeated pulses. Sliding fan platforms
+  occupy their original object slots and allocate fans during initialization,
+  preserving latch reads between other fans and retrying when slots become free.
+  Their allocated fan links are explicitly covered by stable-identity rewind capture.
+  Spinning columns stop inertia at native zero-velocity left-side contacts. Hydrocity's hand
+  launcher checks its top surface on every pass, as in the original, so a rising
+  hand catches a player rolling over it.
   Its removal preserves Sonic and Tails' held state, as in the original, while
   ordinary launches still release them. Transfers to another support clear
   the hand's retained standing latch before its next grab.
@@ -929,6 +1576,8 @@ Unreleased. The earlier development themes remain in
   Slides apply collision corrections before their separate floor scan, keep the
   original signed zero-speed boundary, and preserve the turn byte through get-up
   and landing callbacks. KiS2 keeps its temporary radii across both scans.
+  Ordinary object landings reset Knuckles' raw glide animation to walking
+  while retaining that frame's already-produced sprite mapping.
   All glide states apply their native camera and level-boundary prelude before
   moving; sliding, climbing and ledge returns retain the original velocity order.
   Sonic 3 & Knuckles ground slides also queue their ROM sound on the level clock
@@ -936,7 +1585,10 @@ Unreleased. The earlier development themes remain in
   Wall climbs
   include the signed native radius in vertical probes, powered speed and upper bound;
   floor landings preserve the native angle, animation and turn byte before landing
-  callbacks, including values written by those callbacks. The native
+  callbacks, including values written by those callbacks. Grounded pose selection
+  and host-owned native Up/Down precedence survive terrain detachment, including Knuckles'
+  special-stage return; a steep-wall slip retains the incoming animation when
+  the ground routine makes no pose write. The native
   second player keeps its ringless hurt response under human control.
   Hydrocity solid blocks retain underside and side contacts while offscreen.
   Snake blocks use their saved origin for camera culling and can reload when the
@@ -963,6 +1615,8 @@ Unreleased. The earlier development themes remain in
   still releases a held Hydrocity bar while logical controls remain latched.
   Sonic 3&K's fixed air countdown also selects and maintains the drowning
   animation when object control bypasses ordinary movement animation.
+  Tails' movement-suppressed player dispatch clears active flight while preserving
+  the controlling object's animation, so release resumes ordinary airborne physics.
   Offscreen Tails flight recovery in Sonic 2 and Sonic 3&K resets the native
   player status while retaining body size, water physics and fractional position.
   A broken monitor's contents still rise and pay out after the player leaves the
@@ -977,7 +1631,17 @@ Unreleased. The earlier development themes remain in
   rewind. Knuckles gets the EggRobo head art, and defeat explosions follow the
   ship. Death Egg Act 1's player launchers receive their missing ROM-backed art.
   Death Egg's gravity tubes retain native rider transfers, mount velocities and
-  body-size adjustment; Chainspike's floor probe uses its native collision radius.
+  body-size adjustment. Their animation word preserves the pending push clear,
+  keeping Tails' wall approach and later floor-launcher contact aligned with the ROM.
+  Their live routine word also preserves the original offscreen launcher-to-tube
+  despawn decision.
+  The turbine room prepares terrain probes from each
+  controlled player's current motion, preserving native ceiling separation.
+  Direct floor contacts also reset vertical speed, inertia and tumble state before
+  the room resumes airborne control without prematurely ending hurt recovery.
+  Chainspike's floor probe uses its native collision radius.
+  Spikebonker's mace initializes before its first orbit step, preserving the native
+  companion contact timing in Death Egg's opening.
   Carnival Night's miniboss stays dormant until the arena camera gate and native
   wait release it, including at wide viewports. Its defeated top releases standing
   riders before deletion, preserving their status and the rewindable encounter.
@@ -1052,11 +1716,19 @@ Unreleased. The earlier development themes remain in
   restores the destination ring count after the title boundary temporarily
   retains the source count, including rewind across that boundary. Ordinary
   checkpoint reloads restore post activation before the first object pass.
+  Fresh title publication retains the completed game-owned camera position.
+  The initial camera-focus calculation includes the original fresh-entry offset
+  for Death Egg 1, Hidden Palace's second act, and Knuckles' Carnival Night 1
+  and Lava Reef 1; checkpoint entries keep their saved focus.
   Collision layout reads preserve the ROM's encoded word addressing and supported
   aliases. Hydrocity's act handoff retains unwritten 128×128 definitions through
   rewind.
   Opted-in checkpoint invitations defer shared art until native queue admission
-  and reuse that work for their marker and bonus stars. Development
+  and reuse that work for their marker and bonus stars. Ordinary starposts retain
+  their ring-based bonus invitation after all seven Chaos Emeralds are collected.
+  Failed ordinary orbit allocation still saves the checkpoint without submitting
+  bonus art; an admitted invitation survives ring loss and retains its selected
+  bonus family through entry and rewind. Development
   mod captures retain the accepted loader when restoring creator-owned child graphs.
   AIZ rewind preserves completed miniboss spawn history after the native results
   owner retires.
@@ -1094,9 +1766,14 @@ Unreleased. The earlier development themes remain in
   overlap band, retaining the relative landing write before floor reset; a
   companion standing on the moving cutscene bridge waits without the edge-balance
   pose, because the bridge sets its own native status bit 7. Gameplay sprite tables
-  enforce native scanline piece and pixel budgets, including partial sprites,
+  can enforce native scanline piece and pixel budgets, including partial sprites,
   offscreen consumption and overflow-armed masking. ROM HUD pieces share those
   budgets before expanded art is replayed; wider views retain native capacities.
+  Angel Island foreground plants are culled after parallax, so offscreen plants
+  no longer consume that capacity and hide parts of Sonic. Display settings offer
+  a saved Sprite scanline limit toggle, disabled by default for normal play.
+  Trace captures temporarily enable native limits for image comparison and restore
+  the caller preference afterward, including failed captures.
   In zones that use
   sprite-table masking (Gumball, Sandopolis, Lava Reef, Hidden Palace and Sky
   Sanctuary), Tails' body again covers his tails as in the native sprite table.
@@ -1107,7 +1784,8 @@ Unreleased. The earlier development themes remain in
   bit-7 contact rejection preserved.
   Title retirement and departing EggRobo fly-bys submit the native enemy-art
   restoration requests, with physical publication and rewind ownership retained
-  after the producer disappears. Incidental art producers preserve blocked
+  after the producer disappears. Death Egg's title owner likewise submits the
+  native Spikebonker and Chainspike art batch in both acts. Incidental art producers preserve blocked
   title work and respect both FIFO limits. Scaled fly-by pixels remain incomplete.
   Teleporter beams retain the selected ROM art bank through recreation,
   including SSZ transport priority and whole-sky rewind publication.
@@ -1157,7 +1835,9 @@ Unreleased. The earlier development themes remain in
 - **S3K objects:** Death Egg bosses are admitted only by their stock runtime
   context, while Carnival Night and stateless custom-zone aliases retain their
   own factories. Boss initialization waits for its typed zone state before
-  publishing encounter side effects. GAME OVER and TIME OVER wait for the event-owned ROM PLC3
+  publishing encounter side effects. Death Egg's miniboss eye finishes its last
+  tracking pass before becoming independent debris, preserving movement and
+  rewind after the boss retires. GAME OVER and TIME OVER wait for the event-owned ROM PLC3
   job before the cards initialize or GAME saves lives/continues; ordinary level
   service and partial-work rewind retain the native queue ordering. Hydrocity 2
   cutscene Knuckles probes actual terrain, retaining penetration and facing on
@@ -1271,6 +1951,8 @@ Unreleased. The earlier development themes remain in
   the original's fixed clock whoever plays, and the route takes the placed
   fire shield that keeps the lava from hurting Sonic during the fight.
   Wider views restore the entry objects when the camera returns from beyond the level's left edge.
+  Lava Reef crusher timers now decrement during their first dispatch, preserving the
+  original world-change and generated-bridge creation edge.
 
 - **Capture and controller tools:** Direct-level captures can explicitly seed
   the inherited end-of-level flag once after declared setup; title-first captures
@@ -1279,7 +1961,9 @@ Unreleased. The earlier development themes remain in
   An individual trace segment resolves its validated containing run's declared
   movie, preserving shared-movie priority and rejecting unsafe source aliases.
   Continuous runs keep executing an active native level after their final
-  comparison segment closes. Playback cleanup releases only its own input
+  comparison segment closes. Full S3K campaign certification requires a
+  recorder-observed movie endpoint and checks its remaining movie tail;
+  partial runs retain optional endpoints. Playback cleanup releases only its own input
   publication, preserving the next driver's held input and first press edge.
   Closing or rebooting a headless capture releases its owned audio ROM reference,
   so a subsequent title and saved-slot launch can read a fresh ROM in the same process.
@@ -1309,7 +1993,11 @@ Unreleased. The earlier development themes remain in
   readiness, parking, saved state, resume and retirement under one authority;
   the title keeps its card, textures and zoom presentation. Live rewind retains
   its gameplay owner and outgoing
-  input, audio and fade cleanup through suspension and replacement. Native lock-on
+  input, audio and fade cleanup through suspension and replacement. Gameplay
+  construction releases acquired owners when a later provider fails. Reentrant
+  clock binding retains the newest installation and its carried count. Retired
+  level managers cannot clear a replacement session's palette, effect or render-mode
+  registries, including when the same world is reopened with fresh managers. Native lock-on
   rewind publications keep their selected module owner across fresh service
   incarnations, while both exposed and suppressed native services remain protected
   from creator capture. Destination
@@ -1358,7 +2046,11 @@ Unreleased. The earlier development themes remain in
   provider publication, deferred assembly and return restoration in one loop-owned
   session, preserving the shared frame and title-card boundaries. Each graphics
   host owns its complete palette texture, publication, fade and residency lifetime, preserving CPU bank
-  allocation and immediate rewind redraws. SAT replay uses a
+  allocation and immediate rewind redraws. SAT replay preserves default-framebuffer
+  stencil contents independently of the host depth format, including 32-bit depth.
+  Sampler-state capture uses an OpenGL 4.1-compatible query so macOS level entry
+  does not fail with an invalid-enum error during SAT replay.
+  SAT replay uses a
   graphics-owned geometry value and one tile-expansion implementation while
   preserving the existing candidate Mod API submission signature. Captured sprites
   keep their palette masks, coloured ghost style and constrained shadow effect
@@ -1368,7 +2060,17 @@ Unreleased. The earlier development themes remain in
   Title-card mapping and drawing now share one domain owner. Event and object-service
   bridge allowances pin callers and call counts, and special-stage rewind coverage
   follows the registered provider through replacement and retirement. Standalone
-  audio callers supply their selected profile to the reusable presentation host;
+  provider failures, including object-art and bonus callbacks, stop the failed frame
+  through the creator recovery boundary. Current-level music lookup preserves creator
+  aborts while retaining ordinary lookup fallbacks. Object ROM reads follow their
+  owning world's source, and world metadata writes remain with the engine lifecycle.
+  Preparation retirement waits for its decoder before releasing ROM resources.
+  Initial object dispatch stops when a callback replaces or restores its owners.
+  Its cleanup preserves restored standing state, and valid successor operations
+  remain usable without quarantining creator code for engine cancellation.
+  Rewind seeks, backward steps and optional
+  audits refuse fade snapshots whose completion callbacks cannot be restored.
+  Standalone audio callers supply their selected profile to the reusable presentation host;
   desktop sound-test composition lives with the developer tools. SMPS backends
   keep their explicitly supplied restore-request destination for their usable
   lifetime, including later source construction after engine-root reconfiguration.
@@ -1467,6 +2169,10 @@ Rewind verification compares private records and complete captured opaque arrays
 by content, with explicit failures when snapshot inspection cannot complete. It also
 checks all captured ObjectManager gameplay cursors and contact buffers. Palette
 copies retain complete raw RGB comparison.
+Codec-backed field snapshots also compare and hash their scalar and opaque array
+contents, so separate captures of unchanged state remain equal.
+S3K held rewind retains unchanged foreground and full-layout background tilemaps;
+actual geometry and encoded row-pointer changes still rebuild their derived images.
 Boss rewind also retains child construction history after those children retire,
 so future effects keep the same identities when replayed.
 Typed level and object-manager snapshot comparisons also accept equal untyped
@@ -1513,9 +2219,24 @@ its original drawing priority.
   Checkpoints preserve pause, slow motion and retries, and menus offer each stage's
   supported modes.
   The example uses the shared Java 25 builder and accepts explicit ROM/artifact paths.
+- **Native code mods:** Default Linux x64, Windows x64 and Apple Silicon native
+  packages use pinned GraalVM Community runtime class loading with generated API
+  and service retention. Code mods use the JVM's trust, validation and fault
+  boundaries; native packages include first-party bundled mods such as Time Attack.
+  Friends packages add the maintained examples and launch shortcuts using the same
+  native build recipe. macOS keeps size optimization and a 5 GiB compiler heap
+  on the standard runner; Linux and Windows use default optimization and 8 GiB.
+  Maven preparation and image compilation run separately in CI to reduce build memory. Runtime loading remains an
+  experimental VM facility.
 - **Multi-game controlled mods:** one code mod can provide per-game patches with shared
   objects and services, alongside an optional mutator catalogue. Patches need no scene,
   including in development captures; catalogue-only packages retain their bounded role.
+  Gameplay observers receive world-owned callbacks, rewind and cleanup even without
+  mutator definitions, without creating mutator preference files. World retirement
+  unpublishes the session and resets admission even when creator cleanup fails.
+  Scene audio belongs to the current visit, including its retained native act;
+  ended and replaced visits cannot issue commands. Finite scene playback and
+  title-exit commands wait while an owned native act runs.
   Startup scenes can launch stock acts and switch supplied games
   or teams; frame controllers supply reproducible pad input and capture layout-aware
   typed text. Course restores preserve engine ownership, and supplied testkit scene
@@ -1523,6 +2244,30 @@ its original drawing priority.
   rendering. These additions retain the unpublished Mod API 0.7 candidate.
 - **Metropolis boss art:** the Sonic 2 act-3 arena registers its ROM boss sheet both
   at level load and through the boss PLC.
+
+- **Host text in every interface script:** menus, help and editor text measure, fit,
+  wrap and draw through one shaping owner. Latin accents and Cyrillic use the native menu
+  lettering, including bold labels; Chinese, Japanese and Korean use bundled pixel fonts with
+  language-correct Han forms; Arabic, Urdu, Hindi, Bengali and Thai are shaped by HarfBuzz
+  with bundled Noto fonts at a legible size and a taller line pitch. Fitting, wrapping and
+  text-field editing respect grapheme clusters and language line breaks. Field carets follow
+  visual bidi order, and scrolling preserves the full shaped line and Arabic joining. Text no
+  bundled font can draw shows a visible box instead of a substitute. Text fields now
+  display OS IME composition, focused clauses and a shaped caret before commit.
+  Creator scene and course text capture receive a host composition strip. Native
+  composition has been checked with an isolated Linux X11/IBus session; other OS
+  IMEs still need platform verification. Empty native composition updates, which
+  Wayland sends with ordinary keys even without an IME, no longer hide Backspace,
+  Enter or Escape once typing starts.
+
+- **Mouse wheel in menus:** the wheel now moves through Engine Settings (including its
+  value and key-binding choices, language picker and team editors), Game Setup and its
+  change summary, the display shader picker, mutator configuration, content import, the
+  editor project menu and the editor's library, menu, settings, properties and Details
+  sheets; Details pages scroll with it wherever they open. Every menu reading the mouse
+  in a frame sees the same notches, and notches scrolled during gameplay are dropped
+  instead of jumping the next menu or zooming the editor canvas. Creator menus read the
+  notches from `MenuInput.Pointer.wheel()`.
 
 ## Maintenance and release preparation
 
@@ -1539,6 +2284,143 @@ its original drawing priority.
   These tools report evidence and limits rather than certifying
   native parity or whole-game completion.
 
+- `AGENTS.md` is now the only project instruction file. Claude Code loads it
+  because the repository has no `CLAUDE.md`, and the commit hook rejects one.
+  Skills are edited only under `.agents/skills/`; `tools/git/sync_skills.py`
+  regenerates the `.claude/skills/` copy, and the hook rejects a staged copy that
+  differs from the source tree.
+
+- **Shared route planner:** Reference-path authoring, Stageplay player routes
+  and the SSZ and DEZ boss input authors now share one planner. A route is a
+  frozen list of controller rows with a manifest (`.route.json` and `.script`);
+  it counts as qualified only after a cold replay of those rows, and BK2 movies
+  are exported from it. Stageplay saves planned player routes as frozen input
+  tracks (document version 9). Bridges, platforms, updrafts, vines and bosses
+  report their phase, attachment or hit points, so route goals can target them.
+  Repair keeps a route's original rows and searches only where play drifts from
+  a track recorded on the engine the rows were written for; an exact repair
+  edits single rows until both runs agree field for field again. Twelve Sky
+  Sanctuary Act 1 cold routes are repaired this way (one or two edited rows
+  each) and replay their original runs. Native checks compose the route after a
+  recorded entry movie with one filler row per observed lag frame.
+
+- **Object service failures:** AIZ intro camera calls, Lava Reef lava-fall clocks
+  and launch/drop sound calls propagate service failures instead of silently
+  continuing. S2 object PLC submissions retry only queue-capacity rejection;
+  ROM, art and renderer failures remain visible. A ROM-free source guard ratchets
+  existing broad catch handlers across main Java sources, with explicit legacy
+  inventory and adversarial scanner controls.
+
+- Standalone S3K run segments enter with the run state the ROM carried in:
+  rings, Chaos and Super Emerald progress, used giant rings, star-post progress,
+  Player 1's shield and path bits, and, from the recorded saved blocks, the
+  star-post checkpoint, camera bounds, water level, timer and lives. One segment-entry import reads them from the run manifest and
+  the segment's recorded entry row; nothing is written after entry. Standalone
+  special stages select their stage and Chaos or Super layout set through the
+  ROM's own search instead of defaulting to the Chaos set. The S3K emerald
+  ledger lives with the game's special-stage trace support, keeping shared
+  replay packages free of game-specific classes.
+  MHZ switch doors detach from their retired buttons before pending child
+  cleanup, keeping rewind references valid on carried checkpoint entries.
+  Special-stage returns use their own saved camera bound for the first snap
+  while retaining the distinct star-post bound for a later death.
+  Recorded standalone water entries restore the saved height while retaining
+  the freshly initialized movement target, as the ROM's saved-block load does.
+
+- S3K bonus-return chain replay retains the first destination gameplay row,
+  preventing a late enemy-art batch from stranding the KosM queue. FIFO overflow
+  diagnostics now identify pending archive jobs, direct children and submitters.
+
+- Trace entry placement distinguishes native level boots from intentional
+  positioned entries. Explicit native loads retain their ROM start history;
+  positioned S3K camera focus follows declared SpawnPlayers ordering. Unknown
+  entry kinds retain their existing placement, history and camera behavior.
+  Intentional re-anchoring moves the whole team without refilling native history,
+  and initial Tails assembly preserves
+  placement already assigned by native objects.
+
+- Supported mod builds now check attributed Java source and compiled payloads against
+  the reachable Mod API member contract. Engine-only singleton accessors are excluded
+  from the candidate promise; the portable builder offers an explicit expert legacy lane.
+
+- **Mod licensing:** Mods can use any licence. The OpenGGF Mod Exception, a
+  GPL-3 section 7 permission, covers mods that call, implement or extend engine
+  types, including those outside the `@ModApi` set, without copying engine code.
+  The Nuked OPN2 and blip_buf ports are conveyed under their LGPL rather than
+  converted to the GPL, so mods under other licences can ship with them. `ggfmod init` adds no licence and its output is MIT-0. The example
+  mods, the bundled Time Attack mod and the creator kit's sample campaign are
+  MIT; each carries a `LICENSE` file that the creator kit exports with it. The
+  engine itself remains GPL-3.0-only.
+
+- **Mod authoring entry points:** Six task recipes and mirrored agent guidance
+  route creator work to supported helpers while retaining expert overrides. The
+  portable project launcher supports local artifact/ROM paths, CLI overrides and
+  read-only text/JSON preflight, alongside build/test/run and the advanced Maven
+  workflow. Portable builds convert object sheets, playable art and level inputs
+  from the seven maintained starter conventions. Starter and kit projects ignore personal local path configuration.
+  SDK validate/package reports retain their v1 fields and add next actions and
+  documentation references; requested JSON also covers input/operational errors.
+  Ownership, trust, warning policy, runtime APIs and publication rules are unchanged.
+
+- **Live frame timing preparation:** Engine now separates its live advance phase
+  from scene presentation, retaining fade-before-update ordering, modal input
+  acknowledgment and one outer audio packet. Frame-step and modal decisions
+  survive input acknowledgment through capture. Ending background scroll and its
+  level clock advance with admitted ending updates rather than scene drawing,
+  including updates without pictures and repeated pictures of a held state.
+  This extraction preserves the
+  current FPS behavior; fixed PAL50/NTSC60 live scheduling remains unimplemented.
+
+- **Stock parity measurement foundation:** A versioned, explicitly partial
+  S1/S2/S3K obligation catalogue and on-demand report distinguish declared
+  coverage, observed disagreement and unresolved scope. Source/contract/ROM
+  identity, required observation extents and producer authority protect the
+  arithmetic. A ROM-backed inventory preserves 801 original dispatch entries as
+  unresolved semantic gaps. The first producer measures the existing S1 GHZ1,
+  S2 EHZ1 and S3K AIZ-to-HCZ-entry trace gates with pinned movies and completed
+  invocation ownership. These gates do not certify whole games, visuals or every
+  entity. The
+  [measurement design](docs/architecture/designs/2026-10-29-quantitative-stock-parity.md)
+  defines native trace, visual, entity and audio producer integration work.
+
+- **Local validation cost:** Canonical entry/reload smoke checks cover supported
+  configuration pairs using the same real lifecycle and rewind assertions.
+  Complete configuration products, whole-tree wording/terminology audits and
+  nested release-tool sweeps move to a deliberately manual `exhaustive-audit` profile, separate from normal
+  integration and release gates. Routine bonus, sanctuary and checkpoint checks
+  keep real contact/reload/replay witnesses; full configuration products, song
+  catalogues and long cold campaigns use the same manual audit lane. Mod routes
+  and ending lifecycles retain representative branch/width/character witnesses.
+  Immutable example packages compile once per test class while each scene gets
+  a fresh validated runtime. Source guards batch parsing without sharing scanner
+  state. Native-holder and active-payload audits use two owned parser workers,
+  retaining source-order diagnostics and completing workers before teardown.
+  Independent trace aux streams also use two owned workers. Compact source line
+  indexes preserve diagnostics without a boxed allocation per character.
+  Category batches group reviewed low-heap tests separately, preserving coverage
+  while capping Maven and each qualified fork at one GiB; qualified two-fork batches
+  share admission at five GiB / eight cores, with heavy batches remaining exclusive.
+  Ending priority-pixel checks omit unobserved prefix drawing, retaining every
+  original ROM-derived pixel oracle and a full continuous-drawing comparison;
+  a contrast control rejects logical-facing substitution for the native render flip.
+  Two terrain-only Infinite Sonic checks omit unasserted looping music. Survivors
+  smoke checks actual wave admission, formation replacement and expiry cleanup
+  at a seeded boundary; the unchanged 20,000-frame soak moves to manual audit.
+  Terrain goldens retain their full probe corpus with direct delegation.
+  Relay expiry advances the real test server's injected clock instead of waiting
+  thirty-one seconds, retaining the actual socket admission check.
+  Category diagnostics identify expensive classes and individual cases before
+  deleting raw reports. The complete local command targets thirty minutes.
+
+- **Interactive project atlas:** A persisted documentation view maps components,
+  packages, Java types and explicit imports alongside Git activity and milestone
+  evidence. A time slider distinguishes present, absent and subsequently removed
+  source items and follows verified namespace moves across the package refactor,
+  retaining original-path provenance. The [on-demand generator](tools/project_atlas/README.md) rebuilds
+  the views from a chosen Git ref without ROMs or an engine build.
+  Public-release preparation rebuilds and commits the atlas before final
+  candidate qualification and the publishing push.
+
 - **TAS trick regressions:** Focused tests exercise native movement, object-contact
   and special-stage behaviors described in published Sonic TAS notes. The
   [representative verdict record](docs/architecture/validation/2026-10-26-tas-trick-verdicts.md)
@@ -1550,9 +2432,27 @@ its original drawing priority.
   non-drawable cases and strict execution/source checks for complete compilations.
   Normal tests remain recording-free. The separate
   [repair assessment](docs/architecture/validation/2026-10-26-tas-supportability.md)
-  groups unsupported mechanisms by feasible repair scope and complexity.
+  groups unsupported mechanisms by feasible repair scope and complexity. Its
+  bounded low/medium repairs restore unsigned level bounds, SOZ slope response,
+  S1 offscreen solid omission, S2 launcher and ARZ ordering, Blue Sphere boot
+  input, and S3K boss/slot lifetime behavior, with restore-forward controls.
+  Further [engine support](docs/architecture/validation/2026-10-28-tas-engine-support.md)
+  keeps off-screen sidekicks on the correct collision path when horizontal
+  placement entries retire, restoring Sandopolis ceiling attachment. It also
+  restores paused clock/rewind phase, typed Reset/Power lifecycle, native ORT
+  recovery, ordered S2 art-slot reuse and the P2 intro input/palette consequence.
+  Verified original-cartridge resources now serve standalone SK title/MHZ startup
+  and the native S3 Competition host, with both-human arena replay and bounded
+  results/restart consumers. These are named mechanism proofs, not complete TAS
+  movie or campaign synchronization. KosM adjacent-memory corruption and exact
+  halfpipe hardware lag remain explicitly outside the engine support boundary.
+  Historical reel footage and limitation evidence retain their original source
+  identities; the [accuracy repair record](docs/architecture/validation/2026-10-26-tas-accuracy-repairs.md)
+  preserves the earlier low/medium stage.
 
 - **Local ROM qualification:** Release preparation can bind the existing bounded
   AIZ1/HCZ1 route pilot to a reviewed candidate commit, reject changed inputs and
   require every named case to execute without skips. Original ROMs remain local
   or private; hosted builds and automatic publication retain their existing flow.
+
+- LBZ phase-one explosion showers retain their own controller through boss deletion and rewind, allowing Knuckles' Big Arm replay to finish its comparisons.

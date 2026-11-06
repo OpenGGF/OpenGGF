@@ -182,6 +182,8 @@ public final class ModSceneHost {
             return;
         }
         try {
+            prepareTextInput(input);
+            if (context == null) return; // A failing input declaration closes its scene.
             context.beginTick(input);
             context.updating = true;
             try { scene.update(context); }
@@ -191,6 +193,21 @@ public final class ModSceneHost {
             close();
             throw failure;
         }
+    }
+
+    /**
+     * Claims a scene's declared text field before host shortcuts and logical-key mapping run.
+     * Use the same owner as the scene context so preparing its tick cannot discard its text.
+     * The scene still reads raw editing keys; inactive/suspended scenes claim nothing.
+     */
+    public boolean prepareTextInput(InputHandler input) {
+        if (scene == null || context == null || exiting || suspended || pendingAct != null
+                || !capturesTextInput()) return false;
+        if (input != null) {
+            com.openggf.control.InputHandlerInternalAccess.prepareKeyboardTextConsumer(input, context);
+            context.textInputLease = com.openggf.control.InputHandlerInternalAccess.captureKeyboardText(input, context);
+        }
+        return true;
     }
 
     /**
@@ -375,6 +392,7 @@ public final class ModSceneHost {
         private final SceneStorage storage;
         private final com.openggf.mods.scene.SceneGameplay gameplay;
         private final Thread sceneThread = Thread.currentThread();
+        private com.openggf.control.TextInputSession.Lease textInputLease;
         private boolean capabilitiesRetired;
         private boolean updating;
         private boolean mouseGestureArmed = true;
@@ -392,6 +410,8 @@ public final class ModSceneHost {
         private MenuRepeat repeat = new MenuRepeat();
         private int heldButtons;
         private int pressedButtons;
+        // Set once the scene reads player 1's Start key itself (keyDown/keyPressed).
+        private boolean startKeyOwned;
         private int repeatedButtons;
         private boolean musicTempoOwned;
         private boolean previousLeft;
@@ -461,7 +481,7 @@ public final class ModSceneHost {
             this.audio = new SceneAudio() {
                 @Override
                 public void playMusic(int musicId) {
-                    if (services != null && services.audio() != null) {
+                    if (currentVisit() && services != null && services.audio() != null) {
                         if (donorMusic != null) donorMusic.driverMusicRequested(musicId);
                         services.audio().playMusic(musicId);
                     }
@@ -470,7 +490,7 @@ public final class ModSceneHost {
                 @Override
                 public boolean playMusic(String gameId, int musicId) {
                     SceneDonorMusic.validate(gameId, musicId);
-                    if (context != Context.this || services == null || services.audio() == null
+                    if (!currentVisit() || services == null || services.audio() == null
                             || services.romLibrary() == null) {
                         return false;
                     }
@@ -481,7 +501,7 @@ public final class ModSceneHost {
                 @Override
                 public void setMusicTempoPercent(int percent) {
                     com.openggf.audio.MusicTempoPercent.requireValid(percent);
-                    if (context == Context.this && services != null && services.audio() != null) {
+                    if (currentVisit() && services != null && services.audio() != null) {
                         services.audio().setMusicTempoPercent(percent);
                         musicTempoOwned = true;
                     }
@@ -489,7 +509,7 @@ public final class ModSceneHost {
 
                 @Override
                 public void playSfx(int sfxId) {
-                    if (services != null && services.audio() != null) {
+                    if (currentVisit() && services != null && services.audio() != null) {
                         services.audio().playSfx(sfxId);
                     }
                 }
@@ -498,20 +518,20 @@ public final class ModSceneHost {
                 public boolean playSfx(String localName) {
                     com.openggf.game.ModKeySyntax.requireOwnedKey(owner, localName);
                     var ref = new StreamedMusicPort.SfxRef(owner, localName);
-                    return context == Context.this && services != null && services.audio() != null
+                    return currentVisit() && services != null && services.audio() != null
                             && services.audio().playNamespacedSfx(ref);
                 }
 
                 @Override
                 public void fadeOutMusic() {
-                    if (services != null && services.audio() != null) {
+                    if (currentVisit() && services != null && services.audio() != null) {
                         services.audio().fadeOutMusic();
                     }
                 }
 
                 @Override
                 public void stopMusic() {
-                    if (services != null && services.audio() != null) {
+                    if (currentVisit() && services != null && services.audio() != null) {
                         if (donorMusic != null) donorMusic.driverMusicStopped();
                         services.audio().stopMusic();
                     }
@@ -531,6 +551,14 @@ public final class ModSceneHost {
             }
         }
 
+        private boolean currentVisit() {
+            return context == this && !capabilitiesRetired && !exiting;
+        }
+
+        private boolean currentActiveVisit() {
+            return currentVisit() && !suspended;
+        }
+
         private boolean navigationAvailable() {
             requireCurrentVisit();
             // Repeated requests during the current visit's exit still decline normally.
@@ -539,9 +567,11 @@ public final class ModSceneHost {
         }
 
         void resetInput() {
+            if (textInputLease != null) { textInputLease.close(); textInputLease = null; }
             input = null; logical = LogicalInputSnapshot.neutral(); physical = PhysicalInput.neutral();
             typed = "";
             heldButtons = pressedButtons = repeatedButtons = 0;
+            startKeyOwned = false;
             repeat = new MenuRepeat(); mouse = SceneMouse.none();
         }
 
@@ -555,12 +585,20 @@ public final class ModSceneHost {
         }
 
         void beginTick(InputHandler handler) {
+            com.openggf.control.InputHandlerInternalAccess.prepareKeyboardTextConsumer(handler, this);
             input = handler;
             physical = handler == null ? PhysicalInput.neutral() : handler.capturePhysicalInput();
             typed = handler == null ? "" : handler.consumeTypedText();
             LogicalInputSnapshot raw = handler == null ? LogicalInputSnapshot.neutral() : handler.logical();
             heldButtons = buttons(raw.player1(), true);
             pressedButtons = buttons(raw.player1(), false);
+            if (startKeyOwned && handler != null) {
+                // The scene reads the keyboard Start key itself, so that key is only a key: Start
+                // comes from pads (or recorded input) alone, and one press never means two things.
+                PlayerInputState pads = com.openggf.control.InputHandlerInternalAccess.player1WithoutKeyboard(handler);
+                heldButtons = (heldButtons & ~SceneButtons.START) | (pads.startHeld() ? SceneButtons.START : 0);
+                pressedButtons = (pressedButtons & ~SceneButtons.START) | (pads.startPressed() ? SceneButtons.START : 0);
+            }
             repeatedButtons = 0;
             for (int bit = 1; bit <= SceneButtons.START; bit <<= 1) {
                 if (repeat.pulse(bit, ticks, (heldButtons & bit) != 0, (pressedButtons & bit) != 0)) {
@@ -585,6 +623,7 @@ public final class ModSceneHost {
         }
 
         void retireCapabilities() {
+            if (textInputLease != null) { textInputLease.close(); textInputLease = null; }
             capabilitiesRetired = true;
             clipboard.retire();
             network.close();
@@ -614,7 +653,17 @@ public final class ModSceneHost {
 
         @Override public PhysicalInput physicalInput() { return physical; }
 
-        @Override public void captureKeyboardText() { if (input != null) input.captureKeyboardText(); }
+        /** Player 1's live binding labels; this tick's handler, empty before the first tick. */
+        @Override public java.util.Optional<String> buttonLabel(com.openggf.control.ButtonPrompts.Button button,
+                                                                boolean controller) {
+            java.util.Objects.requireNonNull(button, "button");
+            return com.openggf.control.InputHandlerInternalAccess.buttonLabel(input, 0, button, controller);
+        }
+
+        @Override public void captureKeyboardText() {
+            if (input != null && !capabilitiesRetired)
+                textInputLease = com.openggf.control.InputHandlerInternalAccess.captureKeyboardText(input, this);
+        }
 
         @Override public boolean censorMultiplayerProfanity() {
             return configuration.get().getBoolean(SonicConfiguration.MULTIPLAYER_CENSOR_PROFANITY);
@@ -630,7 +679,8 @@ public final class ModSceneHost {
             if (music == null) {
                 if (services == null || services.audio() == null || services.romLibrary() == null)
                     throw new UnsupportedOperationException("Finite scene music unavailable");
-                music = SceneMusicFactory.create(services.audio(), services.romLibrary()::sourceRom);
+                music = SceneMusicFactory.create(services.audio(), services.romLibrary()::sourceRom,
+                        this::currentActiveVisit);
             }
             return music;
         }
@@ -651,7 +701,7 @@ public final class ModSceneHost {
             if (handler == null || services == null || services.mouse() == null) {
                 return SceneMouse.none();
             }
-            int wheel = MouseWheel.of(handler).takeNotches();
+            int wheel = MouseWheel.of(handler).notches();
             boolean left = handler.isMouseButtonDown(GLFW.GLFW_MOUSE_BUTTON_LEFT);
             boolean right = handler.isMouseButtonDown(GLFW.GLFW_MOUSE_BUTTON_RIGHT);
             int[] p = handler.hasMouseInputSeen()
@@ -724,6 +774,7 @@ public final class ModSceneHost {
         @Override
         public boolean keyDown(int key) {
             if (input == null) return false;
+            noteKeyRead(key);
             // The scene owns any claim it made, so its own reads see claimed keys.
             return input.isKeyboardTextCaptured() ? input.isCapturedKeyDown(key) : input.isKeyDown(key);
         }
@@ -731,7 +782,14 @@ public final class ModSceneHost {
         @Override
         public boolean keyPressed(int key) {
             if (input == null) return false;
+            noteKeyRead(key);
             return input.isKeyboardTextCaptured() ? input.isCapturedKeyPressed(key) : input.isKeyPressed(key);
+        }
+
+        private void noteKeyRead(int key) {
+            if (!startKeyOwned && key >= 0 && key == com.openggf.control.InputHandlerInternalAccess.player1StartKey(input)) {
+                startKeyOwned = true;
+            }
         }
 
         @Override
@@ -769,11 +827,13 @@ public final class ModSceneHost {
 
         @Override
         public void exitToGameTitle() {
+            if (!currentActiveVisit()) return;
             requestExit(services == null ? null : services.toGameTitle());
         }
 
         @Override
         public void exitToMasterTitle() {
+            if (!currentActiveVisit()) return;
             requestExit(services == null ? null : services.toMasterTitle());
         }
 

@@ -7,7 +7,6 @@ import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.Bk2MovieLoader;
 import com.openggf.control.InputHandler;
 import com.openggf.game.CheckpointState;
-import com.openggf.game.GameId;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
 import com.openggf.game.LevelGamestate;
@@ -479,8 +478,11 @@ class TestTraceSessionLauncherRunBranch {
         applyCoordinatorActions(session,
                 coordinator.beforeAdmission(destinationPending));
 
-        assertNull(getField(GameServices.playbackDebug(), "frameObserver"));
+        assertSame(sourceBoundaryProbe, getField(GameServices.playbackDebug(), "frameObserver"),
+                "the payload-free gap still observes transient boundary signals");
         assertNull(getField(sourceBoundaryProbe, "delegate"));
+        assertNull(getField(sourceBoundaryProbe, "preparedDelegate"));
+        assertNull(getField(sourceBoundaryProbe, "preparedFrame"));
         assertNull(getField(session, "comparator"));
         assertTrue(fixture.handoffs.isEmpty());
         assertFalse(context.dynamicArtLifecycle().isComparisonSegmentOpen());
@@ -826,7 +828,7 @@ class TestTraceSessionLauncherRunBranch {
         session.runAdvanceTickIfActive(GameMode.TITLE_CARD, 501);
         assertFalse(context.dynamicArtLifecycle().isComparisonSegmentOpen());
         context.dynamicArtLifecycle().observePlayerDplc(
-                GameId.S2, "tails-tails", 13,
+                "tails-tails", 13,
                 new com.openggf.level.render.SpriteDplcFrame(List.of(
                         new TileLoadRequest(110, 12))));
 
@@ -903,7 +905,7 @@ class TestTraceSessionLauncherRunBranch {
             row.claim(PlcLifecyclePhase.ORDINARY_LEVEL);
             row.prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL);
             transferId[0] = context.dynamicArtLifecycle().observeRamDplc(
-                    GameId.S2, "sonic", 1,
+                    "sonic", 1,
                     List.of(new TileLoadRequest(0, 1)),
                     0x1000, 0xF000).transferId();
             return null;
@@ -1038,7 +1040,7 @@ class TestTraceSessionLauncherRunBranch {
         assertTrue(context.dynamicArtLifecycle().isComparisonSegmentReserved());
         assertFalse(context.dynamicArtLifecycle().isComparisonSegmentOpen());
         context.dynamicArtLifecycle().observePlayerDplc(
-                GameId.S1, "sonic", 8,
+                "sonic", 8,
                 new com.openggf.level.render.SpriteDplcFrame(List.of(
                         new TileLoadRequest(0, 12))));
 
@@ -1104,7 +1106,7 @@ class TestTraceSessionLauncherRunBranch {
                 TestRunPayloads.session(null, null, segments, null);
         session.installDynamicArtSegments(context);
         context.dynamicArtLifecycle().observeRamDplc(
-                GameId.S2, "sonic", 1, List.of(new TileLoadRequest(0, 1)),
+                "sonic", 1, List.of(new TileLoadRequest(0, 1)),
                 0x1000, 0xF000);
 
         Method abort = TraceSessionLauncher.class.getDeclaredMethod(

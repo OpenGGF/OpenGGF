@@ -67,8 +67,8 @@ class TestTimeAttackSettingsPersistence {
         changed(scene);
         RecordingSceneCanvas canvas = new RecordingSceneCanvas(320);
         scene.draw(context, canvas);
-        assertFalse(canvas.joined().contains("Saved"), "refused publication cannot be displayed as saved");
-        assertTrue(canvas.joined().contains("save"), "the settings page must display the pending outcome");
+        assertFalse(canvas.shows("Saved"), "refused publication cannot be displayed as saved");
+        assertTrue(canvas.shows("save"), "the settings page must display the pending outcome");
         scene.exit(context);
         assertEquals("Exit value", TimeAttackSettings.load(storage).displayName());
     }
@@ -117,6 +117,8 @@ class TestTimeAttackSettingsPersistence {
                     case "ticks" -> 0L;
                     case "keyPressed" -> pressed != 0 && (int) args[0] == pressed;
                     case "typedText" -> "";
+                    case "physicalInput" -> com.openggf.control.PhysicalInput.neutral();
+                    case "buttonLabel" -> Optional.empty(); // no live input: callers name the Genesis button
                     case "art" -> Proxy.newProxyInstance(SceneContext.class.getClassLoader(),
                             new Class<?>[]{com.openggf.mods.scene.SceneArt.class}, (art, call, values) -> null);
                     case "buttonRepeated" -> down && ((int) args[0] & SceneButtons.DOWN) != 0;

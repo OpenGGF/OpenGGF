@@ -21,6 +21,25 @@ final class UserRecordingImport {
 
     private UserRecordingImport() { }
 
+    static boolean hasManifest(Path path) throws IOException {
+        try (ZipFile zip = new ZipFile(path.toFile())) {
+            return zip.stream().anyMatch(entry -> entry.getName().equalsIgnoreCase(MANIFEST_ENTRY));
+        }
+    }
+
+    static Bk2Movie loadBareMovie(Bk2MovieLoader loader, Path path) throws IOException {
+        try (ZipFile zip = new ZipFile(path.toFile())) {
+            Bk2Archive.findUniqueEntry(zip, "Header.txt");
+            Bk2Archive.findUniqueEntry(zip, "Input Log.txt");
+            Bk2Archive.findUniqueEntry(zip, SIDECAR_ENTRY);
+            if (Bk2Archive.findUniqueEntry(zip, MANIFEST_ENTRY) != null) {
+                throw new IOException("BK2 contains a recording manifest");
+            }
+        }
+        return loader.load(path, new Bk2MovieLoader.ReadLimits(
+                MAX_METADATA_BYTES, MAX_INPUT_BYTES, MAX_LINE_BYTES, MAX_FRAMES));
+    }
+
     static UserRecordingManifest readManifest(Path path) throws IOException {
         try (ZipFile zip = new ZipFile(path.toFile())) {
             // Check all recognized entries even if a future sidecar schema will not be read.

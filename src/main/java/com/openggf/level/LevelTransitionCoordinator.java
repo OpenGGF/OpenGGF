@@ -18,6 +18,12 @@ import java.util.OptionalInt;
  */
 @com.openggf.game.ModApi
 public class LevelTransitionCoordinator {
+    // Recorded entry kind for a standalone positioned boot (trace replay/capture).
+    // Pending until the next load is admitted; that load then owns it. Production
+    // loads declare nothing and keep their runtime return state as the authority.
+    private com.openggf.game.session.LevelEntryProvenance pendingDeclaredEntry;
+    private com.openggf.game.session.LevelEntryProvenance loadedDeclaredEntry;
+
 
     private final LevelStageEntryAdmission stageAdmission;
     public LevelTransitionCoordinator() { this(null); }
@@ -465,6 +471,21 @@ public class LevelTransitionCoordinator {
     }
 
     /** Returns true if this level load is a bonus stage return. */
+    void declareNextLoadEntry(com.openggf.game.session.LevelEntryProvenance provenance) {
+        pendingDeclaredEntry = provenance;
+    }
+
+    /** Hands a pending declaration to the load being admitted; undeclared loads clear it. */
+    void admitDeclaredEntryForLoad() {
+        loadedDeclaredEntry = pendingDeclaredEntry;
+        pendingDeclaredEntry = null;
+    }
+
+    /** Whether the loaded level was declared a star-post, bonus or special-stage return. */
+    boolean isDeclaredReturnEntry() {
+        return loadedDeclaredEntry != null && loadedDeclaredEntry.isReturn();
+    }
+
     public boolean isBonusStageReturn() {
         return bonusStageReturnCheckpointIndex >= 0;
     }
@@ -977,9 +998,17 @@ public class LevelTransitionCoordinator {
 
     /**
      * Returns true while the current level should be treated as inactive for a
-     * pending zone/act transition.
+     * pending level restart, including an accepted bonus-stage entry.
      */
     public boolean isLevelInactiveForTransition() {
+        // loc_2D4CA (sonic3k.asm:61959-61973) requests a bonus via
+        // Restart_level_flag. LevelLoop (sonic3k.asm:7927-7929) branches
+        // before DeformBgLayer/ScreenEvents on that same object pass.
+        return levelInactiveForTransition || bonusStageRequested != null;
+    }
+
+    /** The inactive flag alone; see {@link LevelTransitionHostAccess#freezesHostIteration}. */
+    boolean isLevelInactiveBeforeObjectPass() {
         return levelInactiveForTransition;
     }
 

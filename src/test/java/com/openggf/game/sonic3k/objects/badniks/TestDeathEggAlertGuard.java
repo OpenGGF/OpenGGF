@@ -131,6 +131,27 @@ class TestDeathEggAlertGuard {
         assertTrue(mace == null || mace.isDestroyed(), "unload also tolerates the native child allocation failure");
     }
 
+    @Test
+    void maceInitializationSurvivesActualRecreation() throws Exception {
+        World world = new World(DeathEggGuardRecipe.STOCK, 0);
+        world.activate();
+        var before = world.rewind.capture();
+        var original = world.body.maceForTest();
+        original.update(3, world.player);
+        assertEquals(0, original.angleForTest(), "creation pass must not advance the orbit");
+        var expected = world.rewind.capture();
+        world.restore(before);
+        var restored = world.body.maceForTest();
+        assertNotSame(original, restored);
+        restored.update(3, world.player);
+        var replay = world.rewind.capture();
+        for (var key : expected.entries().keySet()) {
+            assertTrue(RewindSnapshotDiff.diffKey(key, expected.get(key), replay.get(key)).isEmpty(), key);
+        }
+        restored.update(4, world.player);
+        assertEquals(0xF8, restored.angleForTest(), "restored next pass owns the first orbit step");
+    }
+
     @Test void capturedPresetAndCommittedMaceRelinkAndReplayAfterActualRecreation() throws Exception {
         World world = new World(DeathEggGuardRecipe.ALERT, 0);
         world.activate();

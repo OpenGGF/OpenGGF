@@ -10,6 +10,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.function.LongSupplier;
 
 /** Broker-loop-confined directory of live authenticated rooms. */
@@ -52,6 +54,7 @@ public final class SessionRegistry {
     private final int capacity;
     private final Map<String, RoomEntry> rooms = new LinkedHashMap<>();
     private final Map<String, RoomEntry> pending = new LinkedHashMap<>();
+    private final Set<String> activeDirect = new HashSet<>();
     private long counter;
 
     public SessionRegistry(LongSupplier clock, MasterConfig config) {
@@ -96,7 +99,12 @@ public final class SessionRegistry {
         RoomEntry entry = reserve(descriptor, routing, hostFingerprint, hostAddress,
                 directPort, determinismFingerprint, voteTrackKeys, certificateSha256,
                 lease, java.util.UUID.randomUUID().toString(), 0);
-        publish(entry);
+        if ("DIRECT".equals(routing)) {
+            publishPendingDirect(entry);
+            activateDirect(entry);
+        } else {
+            publish(entry);
+        }
         return entry;
     }
 
@@ -135,9 +143,30 @@ public final class SessionRegistry {
     }
 
     public boolean publish(RoomEntry entry) {
+        if (!"RELAY".equals(entry.routing())) return false;
         if (!pending.remove(entry.roomId(), entry)) return false;
         rooms.put(entry.roomId(), entry);
         return true;
+    }
+
+    public boolean publishPendingDirect(RoomEntry entry) {
+        if (!"DIRECT".equals(entry.routing()) || !pending.remove(entry.roomId(), entry)) return false;
+        rooms.put(entry.roomId(), entry);
+        return true;
+    }
+
+    public boolean activateDirect(RoomEntry entry) {
+        RoomEntry current = rooms.get(entry.roomId());
+        if (current == null || !"DIRECT".equals(current.routing())
+                || !java.util.Objects.equals(current.lease(), entry.lease())
+                || !current.instanceId().equals(entry.instanceId())) return false;
+        activeDirect.add(entry.roomId());
+        return true;
+    }
+
+    public boolean isJoinable(RoomEntry entry) {
+        return entry != null && ("RELAY".equals(entry.routing())
+                || activeDirect.contains(entry.roomId()));
     }
 
     public void heartbeat(String roomId, int playerCount) {
@@ -214,12 +243,14 @@ public final class SessionRegistry {
         int before = rooms.size();
         rooms.values().removeIf(room -> "DIRECT".equals(room.routing())
                 && room.lastHeartbeatMillis() < cutoff);
+        activeDirect.removeIf(roomId -> !rooms.containsKey(roomId));
         return before - rooms.size();
     }
 
     public void remove(String roomId) {
         rooms.remove(roomId);
         pending.remove(roomId);
+        activeDirect.remove(roomId);
     }
 
     public List<RoomEntry> removeByHostFingerprint(String hostFingerprint) {
@@ -231,6 +262,7 @@ public final class SessionRegistry {
             }
             return false;
         });
+        activeDirect.removeIf(roomId -> !rooms.containsKey(roomId));
         return List.copyOf(removed);
     }
 
@@ -244,6 +276,7 @@ public final class SessionRegistry {
             }
             return false;
         });
+        activeDirect.removeIf(roomId -> !rooms.containsKey(roomId));
         return List.copyOf(removed);
     }
 
@@ -265,7 +298,8 @@ public final class SessionRegistry {
 
     public List<RoomEntry> listed(String gameFilterOrNull) {
         return list(gameFilterOrNull).stream()
-                .filter(room -> !room.descriptor().accessPolicy().passwordRequired()).toList();
+                .filter(room -> isJoinable(room)
+                        && !room.descriptor().accessPolicy().passwordRequired()).toList();
     }
 
     public int totalPages(String gameFilterOrNull) {

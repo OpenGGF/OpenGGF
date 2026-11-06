@@ -40,7 +40,6 @@ public class Mgz2CapsuleAnimalInstance extends AbstractObjectInstance
     private int yVelocity;
     private int waitDelay;
     private int frameCounter;
-    private int mappingSetIndex;
     private boolean released;
 
     public Mgz2CapsuleAnimalInstance(ObjectSpawn spawn, int delay, int artVariant, int index) {
@@ -50,7 +49,6 @@ public class Mgz2CapsuleAnimalInstance extends AbstractObjectInstance
         this.waitDelay = Math.max(0, delay);
         this.artVariant = artVariant & (ART_VARIANT_COUNT - 1);
         this.index = index;
-        this.mappingSetIndex = AnimalType.RABBIT.mappingSet().ordinal();
     }
 
     private Mgz2CapsuleAnimalInstance() {
@@ -118,9 +116,8 @@ public class Mgz2CapsuleAnimalInstance extends AbstractObjectInstance
         if (renderer == null || !renderer.isReady()) {
             return;
         }
-        updateMappingSet(renderManager);
         boolean hFlip = released;
-        renderer.drawFrameIndex(getFrameIndex(), currentX, currentY, hFlip, false);
+        renderer.drawFrameIndex(getFrameIndex(renderManager), currentX, currentY, hFlip, false);
     }
 
     @Override
@@ -182,16 +179,16 @@ public class Mgz2CapsuleAnimalInstance extends AbstractObjectInstance
         ySubpixel = fixedY & 0xFF;
     }
 
-    private void updateMappingSet(ObjectRenderManager renderManager) {
+    private int mappingSetIndex(ObjectRenderManager renderManager) {
         int typeA = renderManager.getAnimalTypeA();
         int typeB = renderManager.getAnimalTypeB();
         int animalIndex = artVariant == 0 ? typeA : typeB;
-        mappingSetIndex = AnimalType.fromIndex(animalIndex).mappingSet().ordinal();
+        return AnimalType.fromIndex(animalIndex).mappingSet().ordinal();
     }
 
-    private int getFrameIndex() {
+    private int getFrameIndex(ObjectRenderManager renderManager) {
         int animFrame = 1 + ((frameCounter >> 2) & 1);
-        int base = ((mappingSetIndex * ART_VARIANT_COUNT) + artVariant) * FRAMES_PER_MAPPING;
+        int base = ((mappingSetIndex(renderManager) * ART_VARIANT_COUNT) + artVariant) * FRAMES_PER_MAPPING;
         return base + animFrame;
     }
 

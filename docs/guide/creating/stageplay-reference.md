@@ -497,6 +497,12 @@ three pages: **Cast**, **Keys / cues** and **Commands**.
 
 The **Stop** button stops playback and returns to frame 0.
 
+The prompt bar along the bottom names the current mode in a chip (**CAMERA**,
+**REC CAMERA TAKE**, **REC POSER TAKE**, **REC PUPPET TAKE**, **FRACTIONAL ZOOM**,
+**COMMANDS**; plain directing leaves the bar to its keys at the smallest window) and
+shows the keys that act in that mode, or the pad buttons after a controller press.
+Panel buttons and **Commands** rows show their keyboard shortcut as a key cap.
+
 Camera mode: WASD or arrow keys pan (Shift pans faster), Q and E step the zoom
 through whole numbers from 1 to 64, K captures a key and R records a camera
 take. To zoom below 1, type the zoom in the **Camera key** form.
@@ -535,7 +541,7 @@ apply the form.
 
 ### Commands
 
-![The Commands page listing New scene, Open scene, Import screenplay, Export screenplay and Save, with "1 / 37 Up / Down to browse" below.](images/stageplay/hud-commands.png)
+![The Commands page listing New scene, Open scene, Import screenplay, Export screenplay and Save with its Ctrl S key cap, "1 / 37" below, and a COMMANDS chip with Up / Down, Enter and Esc key caps in the prompt bar.](images/stageplay/hud-commands.png)
 
 | Command | What it does |
 | --- | --- |
@@ -550,12 +556,12 @@ apply the form.
 | Plan route | Find a route under the game's physics ([route motion](#route-motion)). |
 | Place on floor | Find floors in a column for the selected actor or object. |
 | ROM object cast / clear | The **Object cast** menu: add, take over or direct objects; Clear badniks; Clear objects; world commands. |
-| Direct camera (C), Capture camera key (K), Camera keys, Record camera take (R) | Camera direction. **Camera keys** also captures 1×–4× pixel framing. |
+| Direct camera (`C`), Capture camera key (`K`), Camera keys, Record camera take (`R`) | Camera direction. **Camera keys** also captures 1×–4× pixel framing. |
 | Camera shake / quake | Shake intervals. |
 | Scene changes / transitions | Shot changes with their transition and set. |
 | Captions, Dialogue lines, Dialogue typers, Dialogue decorations, Speaker voice | Text, speech and voices. |
 | Audio cues | Music, sound effects, recordings and music stops. |
-| Record actor take (R) | Record a take from the keyboard. |
+| Record actor take (`R`) | Record a take from the keyboard. |
 | Play / pause, Stop, Undo, Redo | Playback and history. |
 | Export film | Save, then render a lossless MKV in a separate process. |
 | Direction details | Full status, preview problems and route diagnostics. |

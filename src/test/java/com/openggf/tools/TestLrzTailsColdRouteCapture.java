@@ -14,6 +14,7 @@ import com.openggf.sprites.playable.Tails;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
@@ -25,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Cold solo Tails through both main acts, both bosses and playable Hidden Palace. */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestLrzTailsColdRouteCapture {
+    @Tag("exhaustive-audit")
     @Test
     void coldTailsClearsActOneAndRestoresTraversalFightAndHandoff() throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
@@ -114,6 +116,7 @@ class TestLrzTailsColdRouteCapture {
         }
     }
 
+    @Tag("exhaustive-audit")
     @Test
     void coldTailsRestoresActTwoTraversalToTheMiddleCorridor() throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
@@ -170,6 +173,7 @@ class TestLrzTailsColdRouteCapture {
         }
     }
 
+    @Tag("exhaustive-audit")
     @Test
     void coldTailsCompletesActTwoAndRestoresTheBoulderHandoff() throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
@@ -257,6 +261,7 @@ class TestLrzTailsColdRouteCapture {
         }
     }
 
+    @Tag("exhaustive-audit")
     @Test
     void coldTailsCompletesBossActAndReachesPlayableHiddenPalace() throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(

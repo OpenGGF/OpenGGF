@@ -120,7 +120,6 @@ class TestControlledNativeDynamicAdmission {
 
     private LevelManager replacementLevel() {
         var replacement = spy(originalLevel);
-        doReturn(true).when(replacement).objectsExecuteAfterPlayerPhysics();
         doAnswer(call -> { events.add("camera"); return call.callRealMethod(); })
                 .when(replacement).advanceCameraDrivenScrollForFrame();
         return replacement;
@@ -152,9 +151,9 @@ class TestControlledNativeDynamicAdmission {
                 () -> assertEquals(1, resolutions));
     }
 
-    @Test void legacyOrderRejectsBeforeRepresentedVIntAndGameplayEffects() {
+    @Test void competingManagerWithBlockingFadeRejectsBeforeRepresentedVIntAndGameplayEffects() {
         load();
-        doReturn(false).when(level).objectsExecuteAfterPlayerPhysics();
+        doReturn(mock(RingManager.class)).when(level).getRingManager();
         // Latching this real lifecycle would service PLC even before execute's claim.
         try (var blocking = context.plcFrameLifecycle().beginNativeBlockingFade()) {
             assertInitialRejection();
@@ -207,7 +206,7 @@ class TestControlledNativeDynamicAdmission {
 
     @Test void controllerChangesAreAdmittedBeforeTheOrdinaryClock() {
         load();
-        onDecision = () -> doReturn(false).when(level).objectsExecuteAfterPlayerPhysics();
+        onDecision = () -> doReturn(mock(RingManager.class)).when(level).getRingManager();
         assertInitialRejection();
     }
 
@@ -252,7 +251,7 @@ class TestControlledNativeDynamicAdmission {
 
     @Test void holdPauseAndLagDoNotResolveOrValidateAnOrdinaryOwner() {
         load();
-        doReturn(false).when(level).objectsExecuteAfterPlayerPhysics();
+        doReturn(mock(RingManager.class)).when(level).getRingManager();
         disposition = GameplayFrameDisposition.HOLD;
         assertEquals(LevelFrameResult.HELD, step());
         assertEquals(99, EngineTiming.vIntRunCounter().value());
@@ -309,11 +308,12 @@ class TestControlledNativeDynamicAdmission {
         var module = SonicCdGameModule.terrainOnlyDevelopmentPlayer();
         var mode = SessionManager.openGameplaySession(module, module, source, null);
         GameplaySessionFactory.attachManagers(mode, EngineServices.current());
+        // Live rewind binds a completed source: admit the real level/roster before loop installation.
+        mode.getLevelManager().loadLevel(0, LevelLoadMode.FULL, SonicCdPlayerInitProfile.terrainPlayerContext());
         var loop = new GameLoop(EngineServices.current());
         loop.setGameplayMode(mode);
         loop.setInputHandler(new InputHandler());
         loop.setGameMode(GameMode.LEVEL);
-        mode.getLevelManager().loadLevel(0, LevelLoadMode.FULL, SonicCdPlayerInitProfile.terrainPlayerContext());
         assertNull(module.getGameService(NativeDynamicObjectPass.class));
         assertFalse(mode.getLevelManager().hasPendingInitialProcessSpritesPass());
         assertFalse(ControlledFrameRuntime.prepareSetup(mode));

@@ -15,7 +15,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import static org.junit.jupiter.api.Assertions.*;
 
-/** SOZ2 fire-dash comparisons: the normal-floor reverse-zip limitation and a
+/** SOZ2 fire-dash comparisons: the normal-floor reverse zip and a
  * separate ordinary special-slide control. Declared inlets precede the action;
  * native gameplay rows are comparison-only, never state hydration. */
 @RequiresRom(SonicGame.SONIC_3K)
@@ -23,7 +23,7 @@ class TestTasS3kFlameSlope {
     @AfterEach void reset(){SonicConfigurationService.getInstance().clearSessionOverrides();SessionManager.clear();}
 
     @ParameterizedTest @ValueSource(booleans={false,true})
-    void currentLimitationFireDashSlopeEntryUsesVerticalCorrectionAndMissesNativeReverseZip(boolean dash) {
+    void fireDashSlopeEntryUsesNativeHorizontalCorrectionAndReverseZip(boolean dash) {
         var config=SonicConfigurationService.getInstance();config.clearSessionOverrides();
         config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE,"sonic");
         config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE,"");
@@ -49,6 +49,9 @@ class TestTasS3kFlameSlope {
         var camera=f.camera();camera.setFrozen(false);camera.setMinX((short)0);
         camera.setMaxX((short)0x3F00);camera.setMaxY((short)0x7FF);camera.updatePosition(true);
         int exitVx=0, reverseCorrections=0, firstLock=-1;
+        var registry=TestEnvironment.activeGameplayMode().getRewindRegistry();
+        com.openggf.game.rewind.CompositeSnapshot beforeResponse=null;
+        var tail=new java.util.ArrayList<String>();
         for(int tick=0;tick<45;tick++){
             boolean left=tick<=11;
             boolean right=tick>=12&&tick<=35;
@@ -85,35 +88,52 @@ class TestTasS3kFlameSlope {
             if(dash&&tick==35){
                 // Native loc_1137E decrements negative probe angle for SOZ:
                 // $20+$C0=$E0 -> $DF; +$20 rounds to horizontal $C0.
-                // The engine omits that adjustment and applies the same -2px
-                // distance to Y (545-512=33), instead of native X=33/Y=545.
-                assertEquals(545,p.getXSpeed());assertEquals(33,p.getYSpeed());assertEquals(771,p.getGSpeed());
+                // The native -2px response changes X while preserving Y.
+                assertEquals(33,p.getXSpeed());assertEquals(545,p.getYSpeed());assertEquals(0,p.getGSpeed());
             }
             if(tick>=12&&p.getXSpeed()<0)reverseCorrections++;
             if(tick==39){
                 exitVx=p.getXSpeed();
                 if(dash){
-                    assertEquals(0x863,p.getCentreX());assertEquals(0,p.getXSubpixelRaw());
-                    assertEquals(0x402,p.getCentreY());assertEquals(0x1C00,p.getYSubpixelRaw());
-                    assertFalse(p.getAir(),"native has exited airborne at $834.AE00/$40C.2A00");
+                    assertEquals(0x834,p.getCentreX());assertEquals(0xAE00,p.getXSubpixelRaw());
+                    assertEquals(0x40C,p.getCentreY());assertEquals(0x2A00,p.getYSubpixelRaw());
+                    assertTrue(p.getAir(),"native reverse corrections exit the embedded slope");
                 }
             }
             assertFalse(p.isSliding(),"normal terrain must not invoke the separate SOZ special-slide state");
+            if(tick==34)beforeResponse=registry.capture();
+            if(tick>34)tail.add(rewindObservation(f));
         }
-        assertEquals(0,reverseCorrections,"native dash has four increasingly negative reverse corrections after turning right");
+        assertEquals(dash?6:0,reverseCorrections,"native negative X velocity spans ticks36–41 before the wall stop");
         assertEquals(dash?15:32,firstLock,"real Player_SlopeRepel lock phase ran");
         if(dash){
-            // Native parity was executed red: expected -4345, observed +707.
-            // This passing assertion records that specific current limitation.
-            assertEquals(707,exitVx);
-            assertEquals(0x871,p.getCentreX());assertEquals(0x3400,p.getXSubpixelRaw());
-            assertEquals(0x408,p.getCentreY());assertEquals(0x8000,p.getYSubpixelRaw());
-            assertFalse(p.getAir());
+            assertEquals(-4345,exitVx);
+            assertEquals(0x80A,p.getCentreX());assertEquals(0xC300,p.getXSubpixelRaw());
+            assertEquals(0x415,p.getCentreY());assertEquals(0x7D00,p.getYSubpixelRaw());
+            assertTrue(p.getAir());
         }else{
             assertEquals(0x855,p.getCentreX());assertEquals(0xCC00,p.getXSubpixelRaw());
             assertEquals(0x3F8,p.getCentreY());assertEquals(0x1C00,p.getYSubpixelRaw());
             assertEquals(569,p.getXSpeed());assertEquals(569,p.getYSpeed());assertFalse(p.getAir());
         }
+        assertNotNull(beforeResponse);
+        for(int replay=0;replay<2;replay++){
+            registry.restore(beforeResponse);
+            var actual=new java.util.ArrayList<String>();
+            for(int tick=35;tick<45;tick++){
+                step(f,false,false,false,tick==35,false);
+                actual.add(rewindObservation(f));
+            }
+            assertEquals(tail,actual,"complete registered-world restore replays the correction/exit trajectory");
+        }
+    }
+
+    private static String rewindObservation(HeadlessTestFixture f){
+        var p=f.sprite();var c=f.camera();
+        return java.util.List.of((int)p.getCentreX(),p.getXSubpixelRaw(),(int)p.getCentreY(),p.getYSubpixelRaw(),
+            (int)p.getXSpeed(),(int)p.getYSpeed(),(int)p.getGSpeed(),(int)p.getAngle(),p.getAir(),p.isOnObject(),
+            p.getPushing(),p.getMoveLockTimer(),(int)p.getXRadius(),(int)p.getYRadius(),p.getDoubleJumpFlag(),
+            (int)c.getX(),(int)c.getY(),c.getHorizScrollDelay()).toString();
     }
 
     @ParameterizedTest @ValueSource(booleans={false,true})

@@ -225,7 +225,7 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
         if (inFragmentPhase) {
             if (fragmentPhaseDelay > 0) {
                 fragmentPhaseDelay--;
-                // ROM: sub_10B36 (s2.asm:23730-23737) clears only
+                // ROM: sub_10B36 (s2.asm:23848-23855) clears only
                 // Status_OnObj and Status_Push when the parent-fragment
                 // delay expires. Status_InAir is left for normal player
                 // movement to set on the next unsupported frame.
@@ -401,17 +401,30 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
 
     private void detachFragmentRiders(SolidCheckpointBatch batch) {
         ObjectManager objectManager = services().objectManager();
-        if (batch == null || objectManager == null) {
-            return;
-        }
-        for (PlayableEntity rider : batch.perPlayer().keySet()) {
-            if (rider != null && objectManager.isRidingObject(rider, this)) {
-                objectManager.clearRidingObject(rider);
-                rider.setOnObject(false);
-                rider.setPushing(false);
-                rider.forceAnimationRestart();
+        if (batch != null && objectManager != null) {
+            for (PlayableEntity rider : batch.perPlayer().keySet()) {
+                if (rider != null && objectManager.isRidingObject(rider, this)) {
+                    objectManager.clearRidingObject(rider);
+                }
             }
         }
+        // ROM Obj1F_Fragment calls sub_10B36 for MainCharacter and then
+        // Sidekick (docs/s2disasm/s2.asm:23832-23855). It tests each
+        // character's own Status_OnObj, not this platform's standing bits, so
+        // a character standing on any object -- or a dead CPU Tails still
+        // holding the bit from the oil it suffocated on -- is released too.
+        ObjectPlayerQuery players = services().playerQuery();
+        releaseOnObject(players.mainPlayerOrNull());
+        releaseOnObject(players.nativeP2OrNull());
+    }
+
+    private static void releaseOnObject(PlayableEntity character) {
+        if (character == null || !character.isOnObject()) {
+            return;
+        }
+        character.setOnObject(false);
+        character.setPushing(false);
+        character.forceAnimationRestart();
     }
 
     private void spawnFragments() {

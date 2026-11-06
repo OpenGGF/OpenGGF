@@ -146,6 +146,7 @@ public final class HeadlessGameBoot implements AutoCloseable {
 
     private Rom rom;
     private HeadlessSmpsAudioBackend installedHeadlessAudioBackend;
+    private NullAudioBackend installedNullAudioBackend;
     private boolean closed;
     private java.util.function.BiFunction<GameModule, GameplayLaunchRequest, GameModule> moduleDecorator =
             (module, request) -> module;
@@ -159,6 +160,13 @@ public final class HeadlessGameBoot implements AutoCloseable {
 
     /** Capture the real title/launch flow before the first level assembly (Mutator Lab, 2026-10-07). */
     public void setBootToTitle(boolean enabled) { bootToTitle = enabled; }
+
+    private com.openggf.game.session.LevelEntryProvenance entryProvenance;
+
+    /** Declares the recorded entry kind for this boot's level load, as trace replay does. */
+    public void setEntryProvenance(com.openggf.game.session.LevelEntryProvenance provenance) {
+        entryProvenance = java.util.Objects.requireNonNull(provenance, "provenance");
+    }
 
     public void setModuleDecorator(java.util.function.UnaryOperator<GameModule> decorator) {
         java.util.Objects.requireNonNull(decorator, "decorator");
@@ -182,6 +190,7 @@ public final class HeadlessGameBoot implements AutoCloseable {
         // which is what made captured audio silent.
         SonicConfigurationService audioConfig = engineServices.configuration();
         installedHeadlessAudioBackend = null;
+        installedNullAudioBackend = null;
         if (audioConfig.getBoolean(SonicConfiguration.AUDIO_ENABLED)) {
             // Headless backend: it builds the normal presentation producer
             // over a NoDeviceAudioSink (AudioBackend.createPresentationSink),
@@ -196,8 +205,15 @@ public final class HeadlessGameBoot implements AutoCloseable {
         } else {
             // AUDIO_ENABLED gates synthesis, not an inherited device's lifetime.
             // Every boot owns the no-device selection, including reused JVMs.
-            engineServices.audio().setBackend(new NullAudioBackend());
+            installedNullAudioBackend = new NullAudioBackend();
+            engineServices.audio().setBackend(installedNullAudioBackend);
         }
+    }
+
+    /** True while this boot's no-device backend is still installed; observes identity only. */
+    boolean hasInstalledNullAudioBackend() {
+        return !closed && installedNullAudioBackend != null
+                && engineServices.audio().hasInstalledBackend(installedNullAudioBackend);
     }
 
     /** Observes this boot's exact audio owner without exposing backend commands. */
@@ -574,6 +590,10 @@ public final class HeadlessGameBoot implements AutoCloseable {
             loop.initializeTitleScreenMode();
             return loop;
         }
+        if (entryProvenance != null) {
+            com.openggf.level.LevelEntryInitialization.declareNextLoad(
+                    GameServices.level(), entryProvenance);
+        }
         GameServices.level().loadZoneAndAct(zone, act);
 
         // ScreenInit may already own Scroll_lock and both camera words.
@@ -949,6 +969,7 @@ public final class HeadlessGameBoot implements AutoCloseable {
         }
         closed = true;
         installedHeadlessAudioBackend = null;
+        installedNullAudioBackend = null;
     }
 
     private void closeNativeGl() {

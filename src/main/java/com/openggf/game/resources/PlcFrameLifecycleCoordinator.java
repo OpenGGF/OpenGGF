@@ -460,6 +460,7 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
         private boolean consumedHeldLoopTailPreparation;
         private PlcLifecyclePhase heldPatternPreparation;
         private boolean gameVblankDispatched;
+        private boolean heldFadeVblankServiced;
         private boolean explicitDmaQueueService;
 
         private PlcLifecycleFrame(PlcLifecycleService service) {
@@ -590,6 +591,15 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
 
         /** Claimed production loop; null means no semantic owner was established. */
         public PlcLifecyclePhase ownerPhase() { return owner; }
+
+        /** A frozen fade owns one physical service, including its completion row. */
+        public boolean claimHeldVBlankService() {
+            requireOpen();
+            if (owner != PlcLifecyclePhase.PALETTE_FADE) return true;
+            if (heldFadeVblankServiced) return false;
+            heldFadeVblankServiced = true;
+            return true;
+        }
 
         /** Existing hardware-loop declarations, latched by claim, not reference state. */
         public boolean hasExplicitDmaQueueService() { return explicitDmaQueueService; }

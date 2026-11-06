@@ -82,8 +82,15 @@ public final class VerifierWorker {
         try {
             VerificationJobQueue.Job job = JSON.readValue(
                     body.orElseThrow(), VerificationJobQueue.Job.class);
-            byte[] encoded = api.fetchRecording(job.inputRecordingHashHex());
-            String result = decide(job, encoded);
+            String result;
+            try {
+                result = decide(job, api.fetchRecording(job.inputRecordingHashHex()));
+            } catch (RuntimeException unavailable) {
+                // Fetch failure is a completed, non-sanctioning VOID decision; only a
+                // worker failure before a decision lets the fixed lease lapse.
+                LOG.log(System.Logger.Level.WARNING, "verification inputs unavailable", unavailable);
+                result = VerdictCodec.RESULT_VOID_VERIFIER_UNAVAILABLE;
+            }
             byte[] signature = identity.sign(VerdictCodec.canonicalBytes(
                     job.jobId(), job.attemptRef(), job.inputRecordingHashHex(), result));
             if (!api.postVerdict(job.jobId(), result, signature)) {
@@ -126,7 +133,10 @@ public final class VerifierWorker {
         }
         AttemptReplayHarness.Result replay = replayer.replay(
                 recording, job.determinismFingerprint());
-        if (replay.failureReason() != null || !replay.finished()) {
+        if (replay.failureReason() != null) {
+            return VerdictCodec.RESULT_VOID_VERIFIER_UNAVAILABLE;
+        }
+        if (!replay.finished()) {
             return VerdictCodec.RESULT_FAIL_DIVERGENT;
         }
         if (replay.finalTimeFrames() != job.claimedTimeFrames()

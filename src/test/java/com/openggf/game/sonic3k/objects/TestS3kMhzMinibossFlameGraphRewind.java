@@ -2,6 +2,10 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.PlayerCharacter;
+import com.openggf.game.palette.PaletteOwnershipRegistry;
+import com.openggf.game.palette.PaletteWriteSupport;
+import com.openggf.level.Level;
+import com.openggf.level.Palette;
 import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.rewind.identity.ObjectRefId;
@@ -47,6 +51,49 @@ class TestS3kMhzMinibossFlameGraphRewind {
     void tearDown() {
         AbstractObjectInstance.resetCameraBoundsForTests();
         GraphicsManager.getInstance().resetState();
+    }
+
+    @Test
+    void damageFlashReplaysAfterFreshParentRecreation() throws Exception {
+        Palette[] palettes = {new Palette(), new Palette(), new Palette(), new Palette()};
+        Level level = org.mockito.Mockito.mock(Level.class);
+        org.mockito.Mockito.when(level.getPaletteCount()).thenReturn(4);
+        for (int i = 0; i < 4; i++) org.mockito.Mockito.when(level.getPalette(i)).thenReturn(palettes[i]);
+        PaletteOwnershipRegistry paletteRegistry = new PaletteOwnershipRegistry();
+        Harness harness = Harness.create(List.of(), level, paletteRegistry);
+        ObjectManager manager = harness.objectManager();
+        manager.setRewindInPlaceRestoreEnabledForTest(false);
+        MhzMinibossInstance boss = manager.createDynamicObject(() -> new MhzMinibossInstance(
+                new ObjectSpawn(0x340, 0x500, Sonic3kObjectIds.MHZ_MINIBOSS, 0, 0, false, 0)));
+        findField(boss.getClass(), "cameraInitPending").setBoolean(boss, false);
+        boss.getState().routine = 0x7E;
+        boss.onPlayerAttack(null, null);
+        for (int i = 0; i < 5; i++) flashTick(boss, paletteRegistry, palettes, i);
+        ObjectRefId id = objectId(manager, boss);
+        RewindRegistry rewind = registryFor(manager);
+        CompositeSnapshot snapshot = rewind.capture();
+        int[][] expected = new int[27][];
+        for (int i = 0; i < 27; i++) expected[i] = flashTick(boss, paletteRegistry, palettes, i + 5);
+        rewind.restore(snapshot);
+        MhzMinibossInstance restored = objectById(manager, MhzMinibossInstance.class, id);
+        assertNotSame(boss, restored);
+        assertEquals(27, restored.getState().invulnerabilityTimer);
+        for (int i = 0; i < 27; i++) {
+            org.junit.jupiter.api.Assertions.assertArrayEquals(expected[i],
+                    flashTick(restored, paletteRegistry, palettes, i + 5));
+        }
+        assertEquals(false, restored.getState().invulnerable);
+        assertEquals(0, restored.getState().invulnerabilityTimer);
+    }
+
+    private static int[] flashTick(MhzMinibossInstance boss, PaletteOwnershipRegistry registry,
+                                   Palette[] palettes, int frame) {
+        registry.beginFrame();
+        boss.update(frame, null);
+        registry.resolveInto(palettes, null, null, null);
+        int[] words = new int[16];
+        for (int i = 0; i < 16; i++) words[i] = PaletteWriteSupport.segaWordFromColor(palettes[1].getColor(i));
+        return words;
     }
 
     @Test
@@ -148,11 +195,17 @@ class TestS3kMhzMinibossFlameGraphRewind {
 
     private record Harness(ObjectManager objectManager, StubObjectServices services) {
         static Harness create(List<ObjectSpawn> spawns) {
+            return create(spawns, null, null);
+        }
+
+        static Harness create(List<ObjectSpawn> spawns, Level level, PaletteOwnershipRegistry paletteRegistry) {
             ObjectManager[] holder = new ObjectManager[1];
             int cameraX = initialCameraX(spawns);
             Camera camera = mockCamera(cameraX);
             StubObjectServices services = new StubObjectServices() {
                 @Override public ObjectManager objectManager() { return holder[0]; }
+                @Override public Level currentLevel() { return level; }
+                @Override public PaletteOwnershipRegistry paletteOwnershipRegistryOrNull() { return paletteRegistry; }
                 @Override public Camera camera() { return camera; }
                 @Override public GraphicsManager graphicsManager() { return GraphicsManager.getInstance(); }
                 @Override public int romZoneId() { return Sonic3kZoneIds.ZONE_MHZ; }

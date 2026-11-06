@@ -19,6 +19,7 @@ import com.openggf.tests.route.RouteSteering;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -49,13 +50,28 @@ class TestFbzSqueezeOrdinaryRoll {
 
     @ParameterizedTest(name = "S1 ordinary underpass: arrival delay {0}")
     @MethodSource("arrivalDelays")
+    @Tag("exhaustive-audit")
     void everyElevatorArrivalPhaseClearsWithS1OrdinaryRoll(int delay) throws Exception {
+        run("s1", 320, delay, null);
+    }
+
+    @ParameterizedTest(name = "S1 ordinary underpass: representative arrival delay {0}")
+    @org.junit.jupiter.params.provider.ValueSource(ints = {0, 1, 47, 48, 94, 95})
+    void representativeElevatorArrivalPhasesClearWithS1OrdinaryRoll(int delay) throws Exception {
         run("s1", 320, delay, null);
     }
 
     @ParameterizedTest(name = "ordinary underpass: {0}px donor={1}")
     @MethodSource("widthDonorCases")
+    @Tag("exhaustive-audit")
     void requiredWidthsAndDonorsUseActualCarContactWithoutAssist(int width, String donor)
+            throws Exception {
+        run(donor, width, 0, null);
+    }
+
+    @ParameterizedTest(name = "representative ordinary underpass: {0}px donor={1}")
+    @org.junit.jupiter.params.provider.CsvSource({"320,s1", "400,off", "512,s2", "640,s1", "800,s2"})
+    void representativeWidthsAndDonorsUseActualCarContactWithoutAssist(int width, String donor)
             throws Exception {
         run(donor, width, 0, null);
     }

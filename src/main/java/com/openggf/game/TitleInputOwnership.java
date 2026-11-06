@@ -61,6 +61,11 @@ public final class TitleInputOwnership {
 
     /** Playback shortcuts are gameplay tooling, not commands within the title GUI. */
     public static void routePlayback(GameMode mode, Runnable updatePlayback) {
-        if (mode != GameMode.MASTER_TITLE_SCREEN) updatePlayback.run();
+        routePlayback(mode, false, updatePlayback);
+    }
+
+    /** A text field owns playback shortcuts too, even when a shortcut is a function key. */
+    public static void routePlayback(GameMode mode, boolean capturesText, Runnable updatePlayback) {
+        if (mode != GameMode.MASTER_TITLE_SCREEN && !capturesText) updatePlayback.run();
     }
 }

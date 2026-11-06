@@ -5,6 +5,25 @@ carried by `develop` and `next` after the 0.6 release rollover. No Mod API basel
 has been published yet. The runtime-visible, type-only `com.openggf.game.ModApi`
 annotation marks its roots.
 
+The five saved rewind allowance preferences (`REWIND_BUDGET_SCOPE`,
+`REWIND_BUDGET_SECONDS`, `REWIND_REFILL_ON_LIFE_LOSS`, `REWIND_BONUS_STAGES`,
+`REWIND_SPECIAL_STAGES`) are appended to `SonicConfiguration`, preserving existing
+ordinals. The mutable `0.7` signature pin and candidate description include them;
+the release descriptor remains candidate `0.7.0`, with no publication or topology change.
+
+`SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT` adds the saved presentation
+preference `display.spriteScanlineLimit`, enabled by default. It is appended
+to preserve existing enum ordinals. The mutable `0.7` signature pin and
+`ModApiVersion` candidate description include the addition; the reviewed
+release descriptor remains unpublished candidate `0.7.0` with no published
+baselines or branch-policy changes.
+
+The saved `SonicConfiguration.UI_LANGUAGE` preference adds an open-ended BCP 47
+host-interface language tag, with `auto` following the system language. Language catalogs,
+selection, layout and activation remain internal host owners. Existing enum ordinals are
+preserved. The mutable `0.7` signature pin includes the new constant; descriptor candidate
+`0.7.0` and the empty published-baseline set are unchanged.
+
 Stageplay uses the engine's unpublished 0.7.0 candidate. Canonical documents
 (version seven) and screenplays (version six) accept only their current shape;
 there is no published Stageplay format to migrate. Every set uses the same native
@@ -378,6 +397,16 @@ the claim-owner reads, `GameplayFrameController.capturesKeyboardText`,
 `CourseControl.typedText/keyDown/keyPressed` and `SceneContext.typedText/
 captureKeyboardText`. All are additive defaults; the descriptor/runtime version
 remains unpublished 0.7.0 and the normalized signature pin is regenerated in place.
+
+Hostname-only multiplayer endpoints (2026-11-01, user-authorized) replace
+`MasterClient.connect(URI, ...)` with `connect(String address, ...)`: the address is a
+bare DNS host name, whose port comes from `_openggf._tcp` SRV records naming that same
+host, or an explicit `ws(s)` URL. `MasterClient.endpoint()` returns the admitted URI,
+`CONNECT_DEADLINE_MILLIS` bounds the whole operation, and `MasterDiscoveryException`
+(with its `Reason`) reports fail-closed discovery. Every caller was migrated; no URI
+overload is retained. DNS types stay package-private. This changes the unpublished 0.7
+candidate; the normalized pin is regenerated in place and the descriptor/runtime
+version remains 0.7.0.
 
 Before changing the candidate surface:
 
@@ -766,6 +795,15 @@ pad's bumper. Labels are presentation values derived from live bindings and neve
 alter input, replay rows or gameplay. The regenerated 0.7 candidate pin adds 17
 signature lines; `ModApiVersion` documents the capability; the release descriptor,
 API version/status and published baselines are unchanged.
+
+The scene-prompt follow-up adds one default method, `SceneContext.buttonLabel(button,
+controller)`, so scenes (which track their own last device from physical input) name
+player 1's bound key or assigned pad's physical button for the device they show. It reads
+the same live bindings and pad families as `ButtonPrompts`; contexts without live input
+(before the first tick, headless and test contexts) return empty and callers name the
+Genesis button. The 0.7 candidate pin adds that one signature line and `ModApiVersion`
+documents it; the release descriptor (`currentApi=0.7.0`, candidate), API version/status and
+published baselines (none) are unchanged.
 
 
 Shot-audio follow-up promotes bounded reverse presentation into the mutable 0.7
@@ -1219,3 +1257,48 @@ observations. Object cast IDs now resolve as dialogue speakers. Generated, bound
 transient PCM uses the existing scene sample lifetime. These unpublished shapes
 change directly; the candidate remains 0.7.0 and its normalized `0.7` pin is replaced
 in place. Rebuild compiled mods that construct or consume these records.
+
+### Multiplayer authority and lifecycle protocol 8 (2026-10-26)
+
+The unpublished 0.7 candidate exposes protocol 8 room and broker messages for
+one-use grant redemption, direct-room activation after host bridge installation,
+route retirement and renewal, committed vote plans and
+participant-frozen launches. JDK room hosting exposes a retirement receipt so a
+blocked owner callback cannot appear fully closed. `DirectRoomRegistration.register`
+owns direct-room creation, exact host-link installation, listener activation and
+broker acknowledgement. Its close retires that registration; callers retain
+ownership of the listener and master socket. Client activation and redemption
+are package-private. The public, pinned
+`HostMasterLink` and `RoomHost` callbacks mutate only the mod's own room and
+require their owning host context. Direct-route failure classification
+remains internal to the common client. A successful direct leave also retires
+its exact broker route before another join on that master session.
+`DirectRoomRegistration.joinOwner` uses the registered host's loopback listener
+with the broker's prepared grant for the owner's self-join. It does not use the
+advertised public address or turn a failed local join into a self-tunnel.
+Release-only retirement acknowledges the old route even after access or invite
+policy changes. Fallback renewal separately rechecks the current policy before
+issuing another route generation.
+Failed route-retirement fences have a bounded session lifetime: reaching the
+pending-operation limit retires the master connection and requires reconnecting.
+Tunnel ingress retains byte/item reservations through owner execution or discard;
+each guest incarnation reserves its cleanup cell before admission.
+`PlayerPose.toGhostFrame` projects the shared live or replay pose without a
+network-to-gameplay dependency or exposing native sprite capture to creator mods.
+The mutable `0.7`
+signature pin is regenerated in place; the descriptor and runtime API version
+remain candidate `0.7.0`. Compiled multiplayer mods must rebuild and use the
+protocol 8 admission and launch shapes. Published pins remain unchanged.
+
+### Supported member consumption
+
+`@EngineOnly` marks methods, fields and constructors used by the engine itself.
+These members are excluded from recursive signature traversal, annotation traversal
+and normalized compatibility pins, even on an `@ModApi` type. Candidate 0.7
+consumption additionally requires a reachable engine-owned marked declaring type
+and a signature without engine-internal terminals (including generic bounds and
+throws). Inherited references resolve to the declaring owner. Merely inheriting a
+terminal-bearing default bridge is allowed; calling, referencing or overriding it
+is unsupported. Creator annotations and the legacy validator allowlist grant no
+supported access. The SDK's `OpenGGFSupported` javac plugin checks attributed source
+before constant folding; `ModValidator.SUPPORTED_ONLY` checks compiled payloads.

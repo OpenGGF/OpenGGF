@@ -75,12 +75,9 @@ existing destination. The generated project does that cleanup in its Maven lifec
 Copy the validated `*-mod.jar` into `mods/`, start the engine, enable it in the Mod
 Manager, confirm the code-trust warning, and choose Apply.
 
-Code-bearing mods require the JVM jar because GraalVM native-image builds cannot
-load new classes under closed-world AOT. On native builds they remain disabled for
-the current process and appear as `UNSUPPORTED` in the Mod Manager; data-only music
-packs and reskins continue to work. Run `OpenGGF-<ver>-jar-with-dependencies.jar`
-(or the universal jar) to use code-bearing mods.
-
+Code-bearing mods and data-only music packs and reskins run in both the JVM jar
+and default native packages. Code mods use the same trust confirmation, structural
+validation and fault handling. Native packages need no Java installation.
 For an explicit local development launch, use `ggfmod run target/classes`. This is
 the only exploded-directory entry point. The engine snapshots that directory once;
 later source-tree changes are not observed by the running session. Deterministic
@@ -613,8 +610,10 @@ transport is separate from time-attack ghost races.
 
 
 Module title screens can read `MenuInput.pointer(input, width, height)`, an
-immutable logical-coordinate `Pointer` with `inside`, left/right press edges and
-`over(left, top, width, height)`. The engine shares its letterbox/framebuffer
+immutable logical-coordinate `Pointer` with `inside`, left/right press edges,
+`wheel` (whole notches this frame, positive away from the user) and
+`over(left, top, width, height)`. Every menu reading the pointer in one frame sees
+the same notches; unread notches are dropped at the end of the frame. The engine shares its letterbox/framebuffer
 mapper with mod scenes; menus own their hit regions and hover policy. A missing
 window, unseen pointer, headless graphics or logical movie override produces
 `Pointer.none()`. Mouse state is physical presentation input and never replaces
@@ -626,8 +625,11 @@ Gameplay prompts should name the player's actual control rather than a fixed key
 controlled level) returns the incoming player's own binding: P1's A defaults to
 "Space" and P2's to "Right Shift", remaps are followed, and a player whose last
 intentional input came from their pad sees that pad family's physical button. An
-empty result means neither device can produce the button. `MenuInput.confirmLabel`
-remains the fixed menu-confirm prompt and is not a substitute for a player binding.
+empty result means neither device can produce the button. Scenes use
+`SceneContext.buttonLabel(button, controller)`, which names player 1's key or pad button
+for whichever device the scene's prompt shows (see [mod scenes](guides/mod-scenes.md)).
+`MenuInput.confirmLabel` remains the fixed menu-confirm prompt and is not a substitute
+for a player binding.
 
 Session rewind registration and removal belong to the engine. Contribute adapters
 through your module or owner transaction; a creator may still construct and use

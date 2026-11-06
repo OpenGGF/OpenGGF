@@ -62,7 +62,7 @@ public interface RuntimeArtCoordinator extends QueueDiagnosticsProvider {
      * Runs the loop tail of an iteration that absorbed a lag V-blank, on the
      * closure that consumed it.
      *
-     * <p>{@code VBlank_Lag} (docs/s1disasm/sonic.asm:709) fires inside an
+     * <p>{@code VBlank_Lag} (docs/s1disasm/sonic.asm:712) fires inside an
      * iteration that has not yet reached the loop top's re-arm (:3000), so that
      * iteration's {@code RunPLC} (:3032) still runs before the row is sampled --
      * a V-blank-only closure has no loop tail of its own but does carry the

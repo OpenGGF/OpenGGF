@@ -47,6 +47,32 @@ class TestLevelContinuationCarry {
         assertNull(transitions.continuationCarry);
     }
 
+    @Test void loadedEntryBankWaitsForScreenEventsAndRewindsWithoutRequestingAnotherLoad() {
+        when(manager.getTransitions()).thenReturn(transitions);
+        when(manager.getCurrentZone()).thenReturn(22);
+        when(manager.getCurrentAct()).thenReturn(0);
+        when(manager.getLevelGamestate()).thenReturn(level);
+        LevelContinuationCarry.installLoadedCounterBank(manager, 233, 13537);
+        assertFalse(transitions.consumeZoneActRequest());
+        assertFalse(LevelContinuationCarry.bypassesInitialPresentation(manager));
+        verifyNoInteractions(level);
+        assertThrows(IllegalStateException.class,
+                () -> LevelContinuationCarry.installLoadedCounterBank(manager, 127, 42));
+        var adapter = new LevelTransitionRewindAdapter(transitions, new FreshLevelTransitionBoundaryController());
+        var beforeEvent = adapter.capture();
+        LevelContinuationCarry.restoreCounters(manager);
+        var afterEvent = adapter.capture();
+        LevelContinuationCarry.restoreCounters(manager);
+        verify(level).setRings(233);
+        verify(level).setTimerFrames(13537);
+        adapter.restore(beforeEvent);
+        LevelContinuationCarry.restoreCounters(manager);
+        verify(level, times(2)).setRings(233);
+        adapter.restore(afterEvent);
+        LevelContinuationCarry.restoreCounters(manager);
+        verify(level, times(2)).setRings(233);
+    }
+
     @Test void screenEventDuringLoadDoesNotReenableTitleCard() {
         request(0, 0);
         LevelContinuationCarry.beginLoad(transitions, 22, 0);

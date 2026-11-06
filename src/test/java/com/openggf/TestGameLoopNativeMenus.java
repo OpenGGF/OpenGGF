@@ -89,6 +89,37 @@ class TestGameLoopNativeMenus {
     }
 
     @Test
+    void competitionVisitReceivesExplicitRootInputAndPublicationCapabilities() throws Exception {
+        var competition = mock(NativeMenuScreen.class);
+        when(competition.mode()).thenReturn(GameMode.COMPETITION_MENU);
+        var provider = mock(NativeTitleModeProvider.class);
+        var supplied = new java.util.concurrent.atomic.AtomicReference<NativeMenuHostContext>();
+        when(provider.competitionScreen(any(NativeMenuHostContext.class))).thenAnswer(call -> {
+            supplied.set(call.getArgument(0));
+            return competition;
+        });
+        var fixture = fixture(TitleScreenProvider.TitleScreenAction.TWO_PLAYER, provider);
+        var expectedEngine = EngineServices.current();
+        var expectedRoot = SessionManager.getCurrentWorldSession().rootGameModule();
+        var oldContext = fixture.loop.resolveGameplayModeContext();
+        var oldLevel = oldContext.getLevelManager();
+
+        invoke(fixture.loop, "doExitTitleScreen");
+
+        var context = supplied.get();
+        assertNotNull(context);
+        assertSame(expectedEngine, context.engine());
+        assertSame(expectedRoot, context.rootModule());
+        assertSame(fixture.input, context.input());
+        verify(competition).initialize();
+        var replacement = SessionManager.openGameplaySession(new Sonic2GameModule());
+        GameplaySessionFactory.attachManagers(replacement, expectedEngine);
+        context.publishMode().accept(replacement);
+        assertSame(replacement, fixture.loop.resolveGameplayModeContext());
+        assertNotSame(oldLevel, replacement.getLevelManager());
+    }
+
+    @Test
     void competitionTokenRequiresConnectedProviderAndCannotStartOrdinaryCoop() throws Exception {
         var fixture = fixture(TitleScreenProvider.TitleScreenAction.TWO_PLAYER,
                 mock(NativeTitleModeProvider.class));
@@ -108,7 +139,7 @@ class TestGameLoopNativeMenus {
         when(competition.mode()).thenAnswer(ignored -> mode.get());
         when(competition.consumeExit()).thenReturn(NativeMenuScreen.Exit.NONE);
         var provider = mock(NativeTitleModeProvider.class);
-        when(provider.competitionScreen()).thenReturn(competition);
+        when(provider.competitionScreen(any(NativeMenuHostContext.class))).thenReturn(competition);
         var fixture = fixture(TitleScreenProvider.TitleScreenAction.TWO_PLAYER, provider);
         invoke(fixture.loop, "doExitTitleScreen");
         var lifecycle = fixture.loop.resolveGameplayModeContext().plcFrameLifecycle();
@@ -137,7 +168,7 @@ class TestGameLoopNativeMenus {
         when(competition.mode()).thenReturn(GameMode.COMPETITION_MENU);
         when(competition.consumeExit()).thenReturn(NativeMenuScreen.Exit.NONE);
         var provider = mock(NativeTitleModeProvider.class);
-        when(provider.competitionScreen()).thenReturn(competition);
+        when(provider.competitionScreen(any(NativeMenuHostContext.class))).thenReturn(competition);
         var fixture = fixture(TitleScreenProvider.TitleScreenAction.TWO_PLAYER, provider);
         invoke(fixture.loop, "doExitTitleScreen");
         when(competition.mode()).thenReturn(GameMode.COMPETITION);
@@ -154,8 +185,74 @@ class TestGameLoopNativeMenus {
         verify(competition, times(2)).update(fixture.input);
     }
 
+    @Test
+    void actualMenuPassKeepsPadEdgesAcrossRereadsThenConsumesThemForTheNextTick() throws Exception {
+        var config = com.openggf.configuration.SonicConfigurationService.createStandalone();
+        config.setConfigValue(com.openggf.configuration.SonicConfiguration.CONTROLLER_ENABLED, true);
+        config.setConfigValue(com.openggf.configuration.SonicConfiguration.CONTROLLER_PLAYER1, "auto");
+        config.setConfigValue(com.openggf.configuration.SonicConfiguration.CONTROLLER_PLAYER2, "none");
+        var held = new java.util.concurrent.atomic.AtomicBoolean(true);
+        var input = new InputHandler(InputBindingFactory.supplier(config), () -> {
+            var buttons = new boolean[org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_LAST + 1];
+            buttons[org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_A] = held.get();
+            return java.util.List.of(com.openggf.control.GamepadStateSource.DeviceState.connected(0, "pad", buttons, 0, 0));
+        });
+        var options = mock(NativeMenuScreen.class);
+        when(options.mode()).thenReturn(GameMode.OPTIONS);
+        when(options.consumeExit()).thenReturn(NativeMenuScreen.Exit.NONE);
+        var provider = mock(NativeTitleModeProvider.class);
+        when(provider.optionsScreen()).thenReturn(options);
+        var fixture = fixture(TitleScreenProvider.TitleScreenAction.OPTIONS, provider, input);
+        invoke(fixture.loop, "doExitTitleScreen");
+        var samples = new java.util.ArrayList<LogicalInputSnapshot>();
+        doAnswer(call -> {
+            var before = input.logical();
+            input.refreshLogicalSnapshot();
+            assertEquals(before, input.logical(), "the menu must not consume its own pad edge by rereading");
+            samples.add(input.logical());
+            return null;
+        }).when(options).update(input);
+
+        fixture.loop.step();
+        fixture.loop.step();
+
+        assertEquals(2, samples.size());
+        assertEquals(com.openggf.control.InputActionMasks.ACTION_B, samples.getFirst().player1().actionPressedMask());
+        assertEquals(0, samples.getLast().player1().actionPressedMask());
+        assertEquals(com.openggf.control.InputActionMasks.ACTION_B, samples.getLast().player1().actionHeldMask());
+        assertFalse(input.isAnyKeyJustPressed());
+    }
+
+    @Test
+    void failingMenuPassReleasesItsScopeAndPreservesTheControllersFinallyAcknowledgment() throws Exception {
+        var options = mock(NativeMenuScreen.class);
+        when(options.mode()).thenReturn(GameMode.OPTIONS);
+        when(options.consumeExit()).thenReturn(NativeMenuScreen.Exit.NONE);
+        var provider = mock(NativeTitleModeProvider.class);
+        when(provider.optionsScreen()).thenReturn(options);
+        var input = new InputHandler();
+        var fixture = fixture(TitleScreenProvider.TitleScreenAction.OPTIONS, provider, input);
+        invoke(fixture.loop, "doExitTitleScreen");
+        input.handleKeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_SPACE, org.lwjgl.glfw.GLFW.GLFW_PRESS);
+        var failure = new IllegalStateException("menu abort");
+        doThrow(failure).when(options).update(input);
+        assertSame(failure, assertThrows(IllegalStateException.class, fixture.loop::step));
+        assertFalse(input.isPhysicalKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_SPACE),
+                "the native menu controller already acknowledged its failed pass in finally");
+        doNothing().when(options).update(input);
+        fixture.loop.step();
+        assertFalse(input.isPhysicalKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_SPACE));
+    }
+
     private static Fixture fixture(TitleScreenProvider.TitleScreenAction action,
                                     NativeTitleModeProvider provider) {
+        var input = mock(InputHandler.class);
+        when(input.logical()).thenReturn(LogicalInputSnapshot.neutral());
+        return fixture(action, provider, input);
+    }
+
+    private static Fixture fixture(TitleScreenProvider.TitleScreenAction action,
+                                    NativeTitleModeProvider provider, InputHandler input) {
         var title = mock(TitleScreenProvider.class);
         when(title.consumeExitAction()).thenReturn(action, TitleScreenProvider.TitleScreenAction.OTHER);
         var module = new DelegatingGameModule(new Sonic2GameModule(), "test:native-menu") {
@@ -166,8 +263,6 @@ class TestGameLoopNativeMenus {
         };
         SessionManager.openGameplaySession(module);
         var gameplay = TestEnvironment.activeGameplayMode();
-        var input = mock(InputHandler.class);
-        when(input.logical()).thenReturn(LogicalInputSnapshot.neutral());
         var loop = new GameLoop(input);
         loop.setGameplayMode(gameplay);
         loop.setGameMode(GameMode.TITLE_SCREEN);

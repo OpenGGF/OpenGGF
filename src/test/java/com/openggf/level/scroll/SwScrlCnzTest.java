@@ -1,5 +1,7 @@
 package com.openggf.level.scroll;
 
+import com.openggf.tests.RomTestUtils;
+
 import org.junit.jupiter.api.BeforeEach;
 import com.openggf.game.sonic2.scroll.ParallaxTables;
 import com.openggf.game.sonic2.scroll.SwScrlCnz;
@@ -63,7 +65,7 @@ public class SwScrlCnzTest {
     @BeforeEach
     public void setUp() throws IOException {
         mockRom = new MockCnzRom();
-        ParallaxTables tables = new ParallaxTables(mockRom);
+        ParallaxTables tables = new ParallaxTables(RomTestUtils.openSparseReadFixture(mockRom));
         handler = new SwScrlCnz(tables);
     }
 

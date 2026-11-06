@@ -316,7 +316,18 @@ public class Sonic1CaterkillerBadnikInstance extends AbstractBadnikInstance
         // slot assignment for subsequent objects.
         int prevSlot = getSlotIndex();
 
+        boolean verifiedRetail = com.openggf.game.sonic1.Sonic1RomProfile.isKnownRetail(svc);
         for (int i = 0; i < BODY_SEGMENT_COUNT; i++) {
+            int bodySlot = verifiedRetail ? ObjectLifetimeOps.reserveFindNextFreeChildSlot(objectManager, prevSlot) : -1;
+            if (verifiedRetail && bodySlot < 0) {
+                // Cat_Main .loopCreateBodySegments: REV00 skips failed children;
+                // REV01 despawns the head and any partial body chain.
+                if (!com.openggf.game.sonic1.Sonic1RomProfile.isRev00(services())) {
+                    markBodySegmentsForDeletion();
+                    setDestroyedByOffscreen();
+                }
+                break;
+            }
             segX += spacing;
 
             final int segXFinal = segX;
@@ -324,6 +335,7 @@ public class Sonic1CaterkillerBadnikInstance extends AbstractBadnikInstance
             final int segmentIndex = i;
             final int ringBufIdxFinal = ringBufIdx;
             final CaterkillerParentState parentStateFinal = parentState;
+            final int bodySlotFinal = bodySlot;
             final int prevSlotFinal = prevSlot;
 
             Sonic1CaterkillerBodyInstance body = spawnFreeChild(() -> {
@@ -331,7 +343,8 @@ public class Sonic1CaterkillerBadnikInstance extends AbstractBadnikInstance
                         this, parentStateFinal, segXFinal, currentY, facingLeft,
                         animated, segmentIndex, ringBufIdxFinal);
                 // Allocate slot after previous segment (FindNextFreeObj parity)
-                ObjectLifetimeOps.assignFindNextFreeChildSlot(objectManager, segment, prevSlotFinal);
+                if (verifiedRetail) segment.setSlotIndex(bodySlotFinal);
+                else ObjectLifetimeOps.assignFindNextFreeChildSlot(objectManager, segment, prevSlotFinal);
                 return segment;
             });
             bodySegments.add(body);
@@ -396,14 +409,13 @@ public class Sonic1CaterkillerBadnikInstance extends AbstractBadnikInstance
             secondaryState = STATE_WAIT;
             waitTimer = INTER_MOVE_WAIT;
             xVelocity = 0;
-            inertia = 0;
+            if (!com.openggf.game.sonic1.Sonic1RomProfile.isRev00(services())) inertia = 0;
             return;
         }
 
         // If not moving (xVelocity == 0), skip position update
-        if (xVelocity == 0) {
-            return;
-        }
+        boolean revision00 = com.openggf.game.sonic1.Sonic1RomProfile.isRev00(services());
+        if (xVelocity == 0 && !revision00) return;
 
         // SpeedToPos: apply velocity with subpixel precision
         int effectiveVel = xVelocity;
@@ -414,15 +426,14 @@ public class Sonic1CaterkillerBadnikInstance extends AbstractBadnikInstance
         }
 
         int oldXWhole = currentX;
+        int oldXSub = motion.xSub;
         motion.x = currentX;
         motion.xVel = effectiveVel;
         SubpixelMotion.moveX(motion);
         currentX = motion.x;
 
         // swap d3 / cmp.w obX(a0),d3 / beq.s .notmoving
-        if (currentX == oldXWhole) {
-            return; // No whole-pixel movement
-        }
+        if (currentX == oldXWhole && !revision00) return;
 
         // ObjFloorDist: check floor
         TerrainCheckResult floorResult = ObjectTerrainUtils.checkFloorDist(currentX, currentY, Y_RADIUS);
@@ -431,12 +442,24 @@ public class Sonic1CaterkillerBadnikInstance extends AbstractBadnikInstance
         // cmpi.w #-8,d1 / blt.s .loc_16B70 / cmpi.w #$C,d1 / bge.s .loc_16B70
         if (floorDist < FLOOR_MIN_DIST || floorDist >= FLOOR_MAX_DIST) {
             // Edge detected: reverse direction
-            handleEdgeDetected(floorDist);
+            if (revision00) {
+                // REV00 restores the complete pre-move position at an edge.
+                currentX = oldXWhole;
+                motion.x = oldXWhole;
+                motion.xSub = oldXSub;
+                ringBuffer[ringBufferWriteIndex] = (byte) 0x80;
+                ringBufferWriteIndex = (ringBufferWriteIndex + 1) & 0x0F;
+                facingLeft = !facingLeft;
+            } else {
+                handleEdgeDetected(floorDist);
+            }
             return;
         }
 
         // Snap to floor: add.w d1,obY(a0)
         currentY += floorDist;
+        // REV00 performs floor following even without a whole-pixel X move.
+        if (currentX == oldXWhole) return;
 
         // Record Y-delta in ring buffer
         ringBuffer[ringBufferWriteIndex] = (byte) floorDist;

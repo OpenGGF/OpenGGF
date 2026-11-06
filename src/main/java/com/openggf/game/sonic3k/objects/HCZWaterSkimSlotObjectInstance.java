@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.level.objects.ObjectVisualFacing;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic3k.features.HCZWaterSkimHandler;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
@@ -12,7 +13,7 @@ import com.openggf.level.objects.RewindRecreatable;
 import java.util.List;
 
 /**
- * Persistent owner for HCZ's interactive water-skim SST record.
+ * Slot/lifetime owner for HCZ's interactive water-skim SST record.
  *
  * <p>The ROM installs {@code Obj_HCZWaterSplash} subtype 1 at
  * {@code Dynamic_object_RAM+2}, absolute SST slot 5, during HCZ level init
@@ -42,7 +43,14 @@ public final class HCZWaterSkimSlotObjectInstance extends AbstractObjectInstance
 
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
-        // HCZWaterSkimHandler owns the player-participant pass and its timing.
+        if (isDestroyed() || player == null) return;
+        // HCZWaterSplash_SkimMain copies P1's X, processes BOTH participants,
+        // then HCZWaterSplash_DisplaySkim calls Sprite_OnScreen_Test
+        // (sonic3k.asm:75360-75404). The handler has already run at each
+        // player's post-physics boundary; being active does not exempt the
+        // native owner from this tail. P2's position is not the range anchor.
+        coarseXCullViewport(player.getCentreX());
+        if (isDestroyed()) HCZWaterSkimHandler.retireSlot();
     }
 
     @Override
@@ -53,6 +61,8 @@ public final class HCZWaterSkimSlotObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean isPersistent() {
+        // Own the post-participant range tail instead of manager pre-culling
+        // the dummy spawn position. This does not mean an immortal SST slot.
         return true;
     }
 }

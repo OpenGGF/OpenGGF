@@ -148,23 +148,66 @@ class TestBundledModPackager {
                 System.getProperty("java.class.path"), System.out));
     }
 
-    @Test void buildWiringEmbedsOnlyInTheUniversalJarAndNativeImagesCarryNoBundledResources() throws Exception {
+    @Test void generatedOverlayIsPackedIntoEveryModBeforeHashingAndReadableAsAnAsset() throws Exception {
+        Path overlay = Files.createDirectories(temp.resolve("overlay"));
+        BundledNetworkDefaults.write(overlay, "next", "multi-next.openggf.com");
+        BundledModManifest manifest = BundledModPackager.packageProjects(BASEDIR, temp.resolve("next"),
+                temp.resolve("next.json"), List.of("examples/hello-scene"), overlay,
+                System.getProperty("java.class.path"), System.out);
+        BundledModManifest.Entry entry = manifest.mods().getFirst();
+        Path jar = temp.resolve("next").resolve(entry.file());
+        try (var assets = com.openggf.io.ModAssetRoot.jar(temp.resolve("next"), jar)) {
+            String text = new String(assets.readBounded(BundledNetworkDefaults.RESOURCE, 1024), StandardCharsets.UTF_8);
+            assertTrue(text.contains("multiplayer.defaultMaster=multi-next.openggf.com\n"), text);
+        }
+        // The overlay is part of the hashed jar: another channel's build pins a different hash.
+        BundledNetworkDefaults.write(overlay, "master", "multi.openggf.com");
+        BundledModManifest master = BundledModPackager.packageProjects(BASEDIR, temp.resolve("master"),
+                temp.resolve("master.json"), List.of("examples/hello-scene"), overlay,
+                System.getProperty("java.class.path"), System.out);
+        assertNotEquals(entry.sha256(), master.mods().getFirst().sha256());
+        // Broken case: a generated entry may never replace a committed project resource.
+        Files.createDirectories(overlay.resolve("META-INF"));
+        Files.writeString(overlay.resolve("META-INF/openggf-mod.yaml"), "shadow");
+        IllegalArgumentException collision = assertThrows(IllegalArgumentException.class,
+                () -> BundledModPackager.packageProjects(BASEDIR, temp.resolve("shadow"), temp.resolve("shadow.json"),
+                        List.of("examples/hello-scene"), overlay, System.getProperty("java.class.path"), System.out));
+        assertTrue(collision.getMessage().contains("collides"), collision.getMessage());
+        assertThrows(IllegalArgumentException.class, () -> BundledModPackager.packageProjects(BASEDIR,
+                temp.resolve("missing"), temp.resolve("missing.json"), List.of("examples/hello-scene"),
+                temp.resolve("no-overlay"), System.getProperty("java.class.path"), System.out));
+    }
+
+    @Test void buildWiringGeneratesNetworkDefaultsBeforePackagingWithTheOverlay() throws Exception {
+        String pom = Files.readString(BASEDIR.resolve("pom.xml"));
+        int generate = pom.indexOf("<id>generate-bundled-mod-resources</id>");
+        int packageMods = pom.indexOf("<id>prepare-bundled-mods</id>");
+        assertTrue(generate > 0 && generate < packageMods, "the overlay is generated before packaging");
+        assertTrue(pom.contains("<argument>--catalogue=${project.basedir}/racing/deploy/master-channels.properties</argument>"));
+        assertTrue(pom.contains("<argument>--channel=${openggf.multiplayer.channel}</argument>"));
+        assertTrue(pom.contains("<argument>--overlay=${project.build.directory}/bundled-mod-overlay</argument>"));
+        assertTrue(pom.contains("<openggf.multiplayer.channel>develop</openggf.multiplayer.channel>"),
+                "local builds default to develop's master");
+    }
+
+    @Test void buildWiringEmbedsUniversalJarsAndPackagesNativeBundledMods() throws Exception {
         String pom = Files.readString(BASEDIR.resolve("pom.xml"));
         assertTrue(pom.contains("<id>prepare-bundled-mods</id>"));
         assertTrue(pom.contains("com.openggf.tools.modsdk.BundledModPackager"));
         assertTrue(pom.contains("<argument>${project.build.outputDirectory}/META-INF/openggf/bundled-mods.json</argument>"));
         assertTrue(pom.contains("<openggf.bundled.embed.directory>${project.build.directory}/bundled</openggf.bundled.embed.directory>"),
                 "the universal-jar profile embeds target/bundled");
-        assertTrue(pom.contains("<openggf.bundled.skip>true</openggf.bundled.skip>"), "native builds skip bundling");
+        assertFalse(pom.contains("<openggf.bundled.skip>true</openggf.bundled.skip>"), "native builds package the same mods");
         String assembly = Files.readString(BASEDIR.resolve("src/assembly/openggf-jar-with-dependencies.xml"));
         assertTrue(assembly.contains("<directory>${openggf.bundled.embed.directory}</directory>"));
         assertTrue(assembly.contains("<outputDirectory>openggf-bundled</outputDirectory>"));
         String nativeResources = Files.readString(BASEDIR.resolve(
                 "src/main/resources/META-INF/native-image/com.openggf/OpenGGF/resource-config.json"));
-        assertFalse(nativeResources.contains("bundled"), "native images must not include bundled mods or their manifest");
+        String recipe = Files.readString(BASEDIR.resolve("tools/native-image/build.py"));
+        assertTrue(recipe.contains("META-INF/openggf/bundled-mods.json"), "native image retains the pinned manifest");
         assertFalse(nativeResources.contains("META-INF/openggf/"), "no broad META-INF/openggf pattern either");
         String release = Files.readString(BASEDIR.resolve(".github/workflows/release.yml"));
-        assertTrue(release.contains("reject_bundled(archive_path, names)"), "native archives are checked");
+        assertTrue(release.contains("require_bundled(archive_path, names)"), "native archives are checked");
         assertTrue(release.contains("META-INF/openggf/bundled-mods.json"), "the universal jar manifest is checked");
     }
 
@@ -187,7 +230,7 @@ class TestBundledModPackager {
             assertFalse(effective.hasErrors(), () -> effective.findings().toString());
             assertEquals(java.util.Set.of(entry.id()), subsystem.trustedCodeOwners());
             try (ModRuntime runtime = new ModClassLoaderFactory(getClass().getClassLoader())
-                    .create(subsystem.processCatalog().effective(), subsystem.trustedCodeOwners(), true)) {
+                    .create(subsystem.processCatalog().effective(), subsystem.trustedCodeOwners())) {
                 assertEquals(java.util.Map.of(), runtime.rejectedOwners(), "the engine validator accepts the jar");
                 assertTrue(runtime.owners().contains(entry.id()));
                 assertNotNull(runtime.loadOwned(entry.id(), "hello.HelloSceneMod"));

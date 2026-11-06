@@ -38,6 +38,9 @@ class TestRoomBrokerAdversarial {
         final List<byte[]> binary = new ArrayList<>();
         String closed;
         @Override public String authenticationBinding() { return AuthenticationTranscript.LOCAL_PLAINTEXT; }
+        @Override public AuthenticationTranscript.Role authenticationRole() {
+            return AuthenticationTranscript.Role.ROOM_RELAY;
+        }
         @Override public String remoteHost() { return "127.0.0.1"; }
         @Override public void sendText(String text) {
             assertTrue(received.size() < 128, "test response budget exceeded");
@@ -83,9 +86,12 @@ class TestRoomBrokerAdversarial {
                     relays.noteGuestTier(fingerprint, isNew);
                 }
                 @Override public boolean attach(HubConnection connection, String roomId,
-                                                String fingerprint, String displayName) {
+                                                String fingerprint, String displayName,
+                                                String instanceId, String grantReference,
+                                                long routeGeneration) {
                     relayAttachments.add(connection);
-                    return relays.attach(connection, roomId, fingerprint, displayName);
+                    return relays.attach(connection, roomId, fingerprint, displayName,
+                            instanceId, grantReference, routeGeneration);
                 }
                 @Override public void hostLeft(String roomId) { relays.hostLeft(roomId); }
             };
@@ -134,15 +140,39 @@ class TestRoomBrokerAdversarial {
         String create(Connection connection, String token, String routing) {
             send(connection, token, new ControlMessage.RoomCreate(
                     new ControlMessage.RoomDescriptor("Witness", "s3k", 0, 0,
-                            "OPEN", null, 8, false), routing, 27888, FP,
-                    List.of(), "ab".repeat(32)));
-            return assertInstanceOf(ControlMessage.RoomCreated.class, connection.last()).roomId();
+                            "OPEN", null, 8, false), routing,
+                    "DIRECT".equals(routing) ? 27888 : 0, FP,
+                    List.of(), "ab".repeat(32),
+                    "DIRECT".equals(routing) ? "witness-instance" : null, 0, null));
+            ControlMessage.RoomCreated created = assertInstanceOf(
+                    ControlMessage.RoomCreated.class, connection.last());
+            if ("DIRECT".equals(routing)) {
+                send(connection, token, new ControlMessage.RoomActivate(
+                        created.roomId(), created.instanceId()));
+                assertTrue(assertInstanceOf(ControlMessage.RoomActivated.class,
+                        connection.last()).active());
+            }
+            return created.roomId();
         }
 
         void send(Connection connection, String token, ControlMessage message) {
             broker.onText(connection, ControlCodec.encode(token, message));
         }
-        @Override public void close() { store.close(); }
+
+        void attach(Connection connection, String token, String roomId) {
+            ControlMessage.RoomJoinResult route = connection.received.stream()
+                    .filter(ControlMessage.RoomJoinResult.class::isInstance)
+                    .map(ControlMessage.RoomJoinResult.class::cast)
+                    .filter(join -> join.roomId().equals(roomId))
+                    .reduce((earlier, later) -> later).orElse(null);
+            send(connection, token, route == null
+                    ? new ControlMessage.RelayAttach(roomId, "ungranted", 1)
+                    : new ControlMessage.RelayAttach(roomId, route.grantReference(),
+                            route.routeGeneration()));
+        }
+        @Override public void close() {
+            try { relays.close(); } finally { store.close(); }
+        }
     }
 
     private static MasterConfig smallStampCacheConfig() {
@@ -213,14 +243,14 @@ class TestRoomBrokerAdversarial {
                 f.send(guest, token, new ControlMessage.RoomJoinRequest(room));
                 assertInstanceOf(ControlMessage.RoomJoinResult.class, guest.last());
                 f.now[0] += 30_000;
-                f.send(guest, token, new ControlMessage.RelayAttach(room));
+                f.attach(guest, token, room);
                 assertEquals("join not granted", assertInstanceOf(
                         ControlMessage.RoomJoinRejected.class, guest.last()).reason());
                 assertTrue(f.broker.takeAttachResult(guest).isEmpty());
                 assertTrue(f.relayAttachments.isEmpty());
                 assertEquals(0, f.tunnels.activeTunnels());
                 f.send(guest, token, new ControlMessage.RoomJoinRequest(room));
-                f.send(guest, token, new ControlMessage.RelayAttach(room));
+                f.attach(guest, token, room);
                 RoomBroker.AttachResult result = f.broker.takeAttachResult(guest).orElseThrow();
                 assertEquals(room, result.roomId());
                 assertEquals("RELAY".equals(routing) ? RoomBroker.AttachMode.ROOM
@@ -237,10 +267,13 @@ class TestRoomBrokerAdversarial {
             List<String> rooms = new ArrayList<>();
             for (int i = 0; i < 20; i++) {
                 // Independent live rooms let the guest accumulate grants without host caps.
+                SessionRegistry.RegistrationLease registration =
+                        new SessionRegistry.RegistrationLease(new Connection(), i + 1);
                 SessionRegistry.RoomEntry room = f.registry.create(new ControlMessage.RoomDescriptor(
                         "Room", "s3k", 0, 0, "OPEN", null, 8, false), "DIRECT",
-                        "host-" + i, "address-" + i, 27888, FP);
-                f.tunnels.registerHost(room.roomId(), new Connection());
+                        "host-" + i, "address-" + i, 27888, FP,
+                        List.of(), "ab".repeat(32), registration);
+                f.tunnels.registerHost(room.roomId(), registration);
                 rooms.add(room.roomId());
                 f.send(guest, token, new ControlMessage.RoomJoinRequest(room.roomId()));
                 assertInstanceOf(ControlMessage.RoomJoinResult.class, guest.last());
@@ -248,11 +281,11 @@ class TestRoomBrokerAdversarial {
             }
             // The oldest grant from the final ten-second window is still unexpired,
             // but must have been evicted to keep only five pending rooms.
-            f.send(guest, token, new ControlMessage.RelayAttach(rooms.get(10)));
+            f.attach(guest, token, rooms.get(10));
             assertEquals("join not granted", assertInstanceOf(
                     ControlMessage.RoomJoinRejected.class, guest.last()).reason());
             assertEquals(0, f.tunnels.activeTunnels());
-            f.send(guest, token, new ControlMessage.RelayAttach(rooms.getLast()));
+            f.attach(guest, token, rooms.getLast());
             assertEquals(rooms.getLast(), f.broker.takeAttachResult(guest).orElseThrow().roomId());
         }
     }
@@ -265,12 +298,13 @@ class TestRoomBrokerAdversarial {
             Connection host = new Connection();
             String token = f.admit(host, owner);
             String room = f.create(host, token, "RELAY");
+            f.send(host, token, new ControlMessage.RoomJoinRequest(room));
             f.now[0] += 30_000;
-            f.send(host, token, new ControlMessage.RelayAttach(room));
+            f.attach(host, token, room);
             assertInstanceOf(ControlMessage.RoomJoinRejected.class, host.last());
             assertTrue(f.relayAttachments.isEmpty());
             f.send(host, token, new ControlMessage.RoomJoinRequest(room));
-            f.send(host, token, new ControlMessage.RelayAttach(room));
+            f.attach(host, token, room);
             assertEquals(RoomBroker.AttachMode.ROOM,
                     f.broker.takeAttachResult(host).orElseThrow().mode());
         }
@@ -290,7 +324,8 @@ class TestRoomBrokerAdversarial {
                     new ControlMessage.RoomDescriptor("Capacity", "s3k", 0, 0,
                             "OPEN", null, 2, false), "RELAY", 0, FP));
             String roomId = assertInstanceOf(ControlMessage.RoomCreated.class, host.last()).roomId();
-            f.send(host, hostToken, new ControlMessage.RelayAttach(roomId));
+            f.send(host, hostToken, new ControlMessage.RoomJoinRequest(roomId));
+            f.attach(host, hostToken, roomId);
             assertEquals(RoomBroker.AttachMode.ROOM, f.broker.takeAttachResult(host).orElseThrow().mode());
             RoomHost room = f.relays.find(roomId).orElseThrow().room();
             proveRelayIdentity(room, host, owner);
@@ -300,7 +335,7 @@ class TestRoomBrokerAdversarial {
             String firstToken = f.admit(first, guest);
             f.send(first, firstToken, new ControlMessage.RoomJoinRequest(roomId));
             assertInstanceOf(ControlMessage.RoomJoinResult.class, first.last());
-            f.send(first, firstToken, new ControlMessage.RelayAttach(roomId));
+            f.attach(first, firstToken, roomId);
             assertTrue(f.broker.takeAttachResult(first).isPresent());
             proveRelayIdentity(room, first, guest);
             assertEquals(2, room.playerCount());
@@ -324,7 +359,7 @@ class TestRoomBrokerAdversarial {
             f.send(replacement, replacementToken, new ControlMessage.RoomJoinRequest(roomId));
             assertInstanceOf(ControlMessage.RoomJoinResult.class, replacement.last(),
                     "periodic discovery counts must not deny a released authoritative slot");
-            f.send(replacement, replacementToken, new ControlMessage.RelayAttach(roomId));
+            f.attach(replacement, replacementToken, roomId);
             assertTrue(f.broker.takeAttachResult(replacement).isPresent());
             proveRelayIdentity(room, replacement, guest);
             ControlMessage.JoinAccepted recovered = replacement.received.stream()
@@ -343,7 +378,7 @@ class TestRoomBrokerAdversarial {
             String overflowToken = f.admit(overflow, extra);
             f.send(overflow, overflowToken, new ControlMessage.RoomJoinRequest(roomId));
             assertInstanceOf(ControlMessage.RoomJoinResult.class, overflow.last());
-            f.send(overflow, overflowToken, new ControlMessage.RelayAttach(roomId));
+            f.attach(overflow, overflowToken, roomId);
             assertTrue(f.broker.takeAttachResult(overflow).isPresent());
             proveRelayIdentity(room, overflow, extra);
             assertEquals("room full", assertInstanceOf(ControlMessage.JoinRejected.class,
@@ -356,9 +391,15 @@ class TestRoomBrokerAdversarial {
 
     private static void proveRelayIdentity(RoomHost room, Connection connection, PlayerIdentity identity)
             throws Exception {
-        ClientHandshake handshake = new ClientHandshake(identity, "Peer", FP, null,
+        ControlMessage.RoomJoinResult route = connection.received.stream()
+                .filter(ControlMessage.RoomJoinResult.class::isInstance)
+                .map(ControlMessage.RoomJoinResult.class::cast)
+                .reduce((earlier, later) -> later).orElse(null);
+        ClientHandshake handshake = new ClientHandshake(identity, "Peer", "", FP, null,
                 HandshakeTransport.role(connection),
-                () -> AuthenticationTranscript.LOCAL_PLAINTEXT);
+                () -> AuthenticationTranscript.LOCAL_PLAINTEXT,
+                route == null ? null : route.grantReference(),
+                route == null ? 0 : route.routeGeneration());
         room.onText(connection, ControlCodec.encode(null, handshake.hello()));
         room.onText(connection, ControlCodec.encode(null, handshake.onWelcome(
                 assertInstanceOf(ControlMessage.Welcome.class, connection.last()))));
@@ -374,19 +415,21 @@ class TestRoomBrokerAdversarial {
             Connection guest = new Connection();
             String token = f.admit(guest, PlayerIdentity.loadOrCreate(dir.resolve("guest")));
             f.send(guest, token, new ControlMessage.RoomJoinRequest(room));
-            f.tunnels.unregisterHost(room);
-            f.send(guest, token, new ControlMessage.RelayAttach(room));
+            SessionRegistry.RegistrationLease registration =
+                    f.registry.find(room).orElseThrow().lease();
+            f.tunnels.unregisterHost(room, registration);
+            f.attach(guest, token, room);
             assertEquals("relay unavailable", assertInstanceOf(
                     ControlMessage.RoomJoinRejected.class, guest.last()).reason());
-            f.tunnels.registerHost(room, host);
-            f.send(guest, token, new ControlMessage.RelayAttach(room));
+            f.tunnels.registerHost(room, registration);
+            f.attach(guest, token, room);
             assertEquals("join not granted", assertInstanceOf(
                     ControlMessage.RoomJoinRejected.class, guest.last()).reason());
             assertEquals(0, f.tunnels.activeTunnels());
             f.send(guest, token, new ControlMessage.RoomJoinRequest(room));
-            f.send(guest, token, new ControlMessage.RelayAttach(room));
+            f.attach(guest, token, room);
             assertEquals(room, f.broker.takeAttachResult(guest).orElseThrow().roomId());
-            f.send(guest, token, new ControlMessage.RelayAttach(room));
+            f.attach(guest, token, room);
             assertTrue(f.broker.takeAttachResult(guest).isEmpty());
             assertEquals(1, f.tunnels.activeTunnels());
         }
@@ -431,14 +474,14 @@ class TestRoomBrokerAdversarial {
                     List<ControlMessage> corpus = List.of(
                             new ControlMessage.AuthProof("%%%"),
                             new ControlMessage.PowSolution("JOIN", random.nextLong()),
-                            new ControlMessage.RelayAttach(room),
+                            new ControlMessage.RelayAttach(room, "forged", 1),
                             new ControlMessage.RoomLeave(room),
                             new ControlMessage.RoomTrackUpdate(room, 0, 1),
                             new ControlMessage.Heartbeat(room, Integer.MAX_VALUE),
                             new ControlMessage.AttemptStart(random.nextInt()),
                             new ControlMessage.RoomCreate(new ControlMessage.RoomDescriptor(
                                     "Attack", "s3k", 0, 0, "OPEN", null, 8, false), "UNKNOWN", -1, FP),
-                            new ControlMessage.Hello(Integer.MAX_VALUE, "%%%", "Peer", FP, ""),
+                            new ControlMessage.Hello(Integer.MAX_VALUE, "%%%", "Peer", FP, "", null, 0),
                             new ControlMessage.AuthProof(Base64.getEncoder().encodeToString(new byte[64])),
                             new ControlMessage.PowSolution(null, random.nextLong()));
                     ControlMessage payload = corpus.get(op);
@@ -481,21 +524,20 @@ class TestRoomBrokerAdversarial {
             record Case(String name, ControlMessage message, boolean closes,
                         Class<? extends ControlMessage> reply) { }
             List<Case> cases = List.of(
-                    new Case("attach-without-grant", new ControlMessage.RelayAttach(roomId),
+                    new Case("attach-without-grant", new ControlMessage.RelayAttach(roomId,
+                            "forged", 1),
                             false, ControlMessage.RoomJoinRejected.class),
                     new Case("leave-other-room", new ControlMessage.RoomLeave(roomId), false, null),
                     new Case("heartbeat-other-room", new ControlMessage.Heartbeat(roomId,
-                            random.nextBoolean() ? Integer.MAX_VALUE : Integer.MIN_VALUE), false, null),
+                            random.nextBoolean() ? 8 : 0), false, null),
                     new Case("track-other-room", new ControlMessage.RoomTrackUpdate(roomId, 0, 1),
                             true, null),
                     new Case("create-invalid-routing", new ControlMessage.RoomCreate(
-                            validRoom, "UNKNOWN", 27888, FP), true,
-                            ControlMessage.RoomCreateRejected.class),
+                            validRoom, "UNKNOWN", 27888, FP), true, null),
                     new Case("create-excessive-capacity", new ControlMessage.RoomCreate(
                             new ControlMessage.RoomDescriptor("Attack", "s3k", 0, 0,
                                     "OPEN", null, Protocol.MAX_PLAYERS_RELAY + 1 + random.nextInt(32),
-                                    false), "RELAY", 0, FP), false,
-                            ControlMessage.RoomCreateRejected.class),
+                                    false), "RELAY", 0, FP), true, null),
                     new Case("create-invalid-label", new ControlMessage.RoomCreate(
                             new ControlMessage.RoomDescriptor("bad\"" + random.nextInt(),
                                     "s3k", 0, 0, "OPEN", null, 8, false), "RELAY", 0, FP),
@@ -505,11 +547,9 @@ class TestRoomBrokerAdversarial {
                             ControlMessage.RoomCreateRejected.class),
                     new Case("create-invalid-direct-port", new ControlMessage.RoomCreate(
                             validRoom, "DIRECT", random.nextBoolean() ? 0 : 65_536,
-                            FP, List.of(), "ab".repeat(32)), false,
-                            ControlMessage.RoomCreateRejected.class),
+                            FP, List.of(), "ab".repeat(32)), true, null),
                     new Case("create-missing-direct-pin", new ControlMessage.RoomCreate(
-                            validRoom, "DIRECT", 27888, FP), false,
-                            ControlMessage.RoomCreateRejected.class),
+                            validRoom, "DIRECT", 27888, FP), true, null),
                     new Case("room-control-at-broker", new ControlMessage.AttemptStart(random.nextInt()),
                             true, null));
             for (int op = 0; op < cases.size(); op++) {
@@ -599,7 +639,7 @@ class TestRoomBrokerAdversarial {
             String current = f.admit(replacement, identity);
             assertNotEquals(stale, current);
             for (int i = 0; i < 3; i++) {
-                f.send(replacement, stale, new ControlMessage.RelayAttach("forged-room"));
+                f.attach(replacement, stale, "forged-room");
             }
             assertNotNull(replacement.closed);
             assertFalse(f.broker.isSessionTokenValid(stale));
@@ -616,9 +656,14 @@ class TestRoomBrokerAdversarial {
         Connection owner = new Connection();
         Connection attacker = new Connection();
         Connection guest = new Connection();
-        router.registerHost("witness-room", owner);
-        router.registerHost("attack-room", attacker);
-        int guestId = router.openGuest("witness-room", guest).orElseThrow();
+        SessionRegistry.RegistrationLease ownerRegistration =
+                new SessionRegistry.RegistrationLease(owner, 1);
+        SessionRegistry.RegistrationLease attackerRegistration =
+                new SessionRegistry.RegistrationLease(attacker, 2);
+        router.registerHost("witness-room", ownerRegistration);
+        router.registerHost("attack-room", attackerRegistration);
+        int guestId = router.openGuest("witness-room", guest, "witness-instance",
+                "guest-fingerprint", "grant", 1, ownerRegistration).orElseThrow();
         String healthyText = ControlCodec.encode(null, new ControlMessage.Ping(1));
         byte[] healthyBinary = GhostPackets.encodeFrames(1, 0, new byte[GhostFrameCodec.BYTES]);
         for (int op = 0; op < 32; op++) {
@@ -638,10 +683,10 @@ class TestRoomBrokerAdversarial {
         router.onHostBinary(owner, GhostPackets.encodeRelayGuestBinary(guestId, healthyBinary));
         assertInstanceOf(ControlMessage.Ping.class, guest.last());
         assertArrayEquals(healthyBinary, guest.binary.getFirst());
-        router.unregisterHost("attack-room");
+        router.unregisterHost("attack-room", attackerRegistration);
         assertEquals(1, router.activeTunnels());
         assertNull(guest.closed);
-        router.unregisterHost("witness-room");
+        router.unregisterHost("witness-room", ownerRegistration);
         assertEquals(0, router.activeTunnels());
         assertNotNull(guest.closed);
     }

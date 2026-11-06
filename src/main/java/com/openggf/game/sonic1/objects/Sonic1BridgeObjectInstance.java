@@ -1,5 +1,7 @@
 package com.openggf.game.sonic1.objects;
 
+import static com.openggf.game.sonic1.Sonic1RomProfile.resolve;
+
 import com.openggf.data.RomByteReader;
 import com.openggf.game.solid.PlayerSolidContactResult;
 import com.openggf.game.solid.SolidCheckpointBatch;
@@ -133,8 +135,8 @@ public class Sonic1BridgeObjectInstance extends AbstractObjectInstance
 
     static BridgeBendData loadBendData(RomByteReader reader) {
         return new BridgeBendData(
-                reader.slice(Sonic1Constants.BRIDGE_BEND_Y_MAX_ADDR, BEND_Y_MAX_ROWS * BEND_COLUMNS),
-                reader.slice(Sonic1Constants.BRIDGE_BEND_ALIGN_ADDR, BEND_ALIGN_ROWS * BEND_COLUMNS));
+                reader.slice(resolve(reader, Sonic1Constants.BRIDGE_BEND_Y_MAX_ADDR), BEND_Y_MAX_ROWS * BEND_COLUMNS),
+                reader.slice(resolve(reader, Sonic1Constants.BRIDGE_BEND_ALIGN_ADDR), BEND_ALIGN_ROWS * BEND_COLUMNS));
     }
 
     private BridgeBendData bendData() {

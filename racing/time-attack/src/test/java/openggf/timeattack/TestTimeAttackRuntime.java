@@ -313,6 +313,44 @@ class TestTimeAttackRuntime {
     }
 
     @Test
+    void completedAttemptPublishesTheReplayFrameHashAndKeepsTheLocalFinishMarker(
+            @TempDir Path root) throws Exception {
+        GhostStore store = new GhostStore(root);
+        TimeAttackRuntime runtime = new TimeAttackRuntime(store, root.resolve("identity"), () -> false);
+        runtime.armForLaunch(new TimeAttackLaunchRequest("s3k", 0, 0, "sonic", java.util.List.of()));
+        var streamed = new java.util.ArrayList<GhostFrame>();
+        var publisher = new com.openggf.net.client.GhostStreamPublisher(ignored -> { });
+        publisher.beginAttempt(1);
+        runtime.setAttemptListener(new TimeAttackRuntime.AttemptListener() {
+            @Override public void onAttemptBegan(int ordinal) { }
+            @Override public void onFrameSampled(int ordinal, GhostFrame sample) {
+                streamed.add(sample);
+                publisher.onFrame(sample);
+            }
+            @Override public void onAttemptFinished(int ordinal, int timeFrames,
+                    int firstInputFrame, int finishFrame, byte[] inputRecordingSha256,
+                    AttemptInputRecording inputRecording) {
+                publisher.finishAttempt();
+            }
+            @Override public void onAttemptVoided(int ordinal) { }
+        });
+        runtime.beginAttemptForTest("fp");
+        runtime.tickForTest(0x08, false, false, -1, frame(10));
+        runtime.tickForTest(0x08, false, true, -1, frame(12));
+
+        var replayHash = java.security.MessageDigest.getInstance("SHA-256");
+        byte[] encoded = new byte[com.openggf.net.ghost.GhostFrameCodec.BYTES];
+        for (GhostFrame replayFrame : java.util.List.of(frame(10), frame(12))) {
+            com.openggf.net.ghost.GhostFrameCodec.encode(replayFrame, encoded, 0);
+            replayHash.update(encoded);
+        }
+        assertArrayEquals(replayHash.digest(), publisher.streamHashSha256());
+        assertEquals(2, publisher.framesPublished());
+        assertFalse(streamed.getLast().finished());
+        assertTrue(store.loadBest("s3k", 0, 0, "sonic").orElseThrow().frameAt(1).finished());
+    }
+
+    @Test
     void armTickFinishSavesBestGhostAndInputs(@TempDir Path root) throws Exception {
         GhostStore store = new GhostStore(root);
         Path identityDir = root.resolve("identity");
@@ -336,6 +374,23 @@ class TestTimeAttackRuntime {
         assertEquals(8, best.header().displayName().length()); // fingerprint prefix from PlayerIdentity
         assertEquals(com.openggf.net.identity.PlayerIdentity.loadOrCreate(identityDir)
                 .fingerprint().substring(0, 8), best.header().displayName());
+    }
+
+    @Test
+    void savedGhostKeepsDamageAndRecoveryFrames(@TempDir Path root) throws Exception {
+        GhostStore store = new GhostStore(root);
+        TimeAttackRuntime runtime = new TimeAttackRuntime(store, root.resolve("identity"), () -> false);
+        runtime.armForLaunch(new TimeAttackLaunchRequest("s3k", 0, 0, "sonic", java.util.List.of()));
+        runtime.beginAttemptForTest("fp");
+        runtime.tickForTest(0x08, false, false, -1,
+                new GhostFrame(10, 20, 1, false, false, false, 2, false, true));
+        runtime.tickForTest(0x08, false, true, -1,
+                new GhostFrame(12, 20, 2, false, false, false, 2, false, false));
+
+        byte[] frames = store.loadBest("s3k", 0, 0, "sonic").orElseThrow().frameData();
+        assertTrue(com.openggf.net.ghost.GhostFrameCodec.decode(frames, 0).hurt());
+        assertFalse(com.openggf.net.ghost.GhostFrameCodec.decode(frames,
+                com.openggf.net.ghost.GhostFrameCodec.BYTES).hurt());
     }
 
     @Test

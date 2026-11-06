@@ -156,6 +156,89 @@ class TestLbzFinalBoss1GraphRewind {
         h.assertReplay(later, 5);
     }
 
+    /**
+     * loc_7321A's muzzle names its head through parent3. A detached top segment turns
+     * that head into Obj_FlickerMove (Child_Draw_Sprite_FlickerMove), which the engine
+     * retires; the muzzle must not keep a rewind reference to the retired head in any
+     * of its stages.
+     */
+    @ParameterizedTest
+    @ValueSource(strings = {"countdown", "blink", "fired"})
+    @RequiresRom(SonicGame.SONIC_3K)
+    void muzzleKeepsNoReferenceToARetiredHead(String stage) throws Exception {
+        Harness h = new Harness();
+        var boss = h.allocateBoss();
+        boss.setRenderXFlipForTest(false);
+        h.advance(1, 1);
+        var top = h.manager.activeObjectsOfType(LbzFinalBoss1Instance.TurretSegmentChild.class).stream()
+                .min(Comparator.comparingInt(LbzFinalBoss1Instance.TurretSegmentChild::getDyForTest))
+                .orElseThrow();
+        LbzFinalBoss1Instance.LaserHeadChild head = null;
+        for (var candidate : h.manager.activeObjectsOfType(LbzFinalBoss1Instance.LaserHeadChild.class)) {
+            if (field(candidate, "segment") == top) head = candidate;
+        }
+        assertNotNull(head);
+        // Step 8 -> 9 is mapping frame $04 with the table flip clear, matching the
+        // unflipped boss: sub_733FC / loc_73450 creates the muzzle.
+        head.forceArcStepForTest(8);
+        head.forceStepTimerExpiredForTest();
+        h.advance(2, 1);
+        LbzFinalBoss1Instance.MuzzleLaserChild muzzle = null;
+        for (var candidate : h.manager.activeObjectsOfType(LbzFinalBoss1Instance.MuzzleLaserChild.class)) {
+            if (field(candidate, "head") == head) muzzle = candidate;
+        }
+        assertNotNull(muzzle, "the top head's muzzle");
+        int frame = 3;
+        while (!switch (stage) {
+            case "countdown" -> true;
+            case "blink" -> Boolean.TRUE.equals(field(muzzle, "blinking"));
+            default -> muzzle.isFiredForTest();
+        }) {
+            h.advance(frame++, 1);
+            assertFalse(muzzle.isDestroyed());
+        }
+        h.hitTop(boss);
+        for (int index = 0; index < 40; index++) {
+            h.advance(frame++, 1);
+            assertDoesNotThrow(h.manager::validateRewindReferenceClosure, stage + " frame " + frame);
+        }
+        assertTrue(head.isDestroyed(), "the detached segment's head retires");
+        if (stage.equals("countdown")) {
+            assertFalse(h.manager.getActiveObjects().contains(muzzle),
+                    "loc_73232 deletes a counting-down muzzle once its head has bit 7 set");
+        } else {
+            assertTrue(muzzle.isFiredForTest(), "a blinking or charging muzzle still fires");
+        }
+    }
+
+    @Test
+    @RequiresRom(SonicGame.SONIC_3K)
+    void explosionShowerOutlivesBossAndRestoresWithoutRetiredOwner() throws Exception {
+        Harness h = new Harness();
+        var boss = h.allocateBoss();
+        h.advance(1, 1);
+        boss.forceHitCountForTest(1);
+        boss.onPlayerAttack(null, null);
+        h.advance(2, 1);
+        assertFalse(h.manager.activeObjectsOfType(LbzFinalBoss1Instance.ExplosionShowerChild.class).isEmpty());
+        // Isolate the independent shower from combat children whose own lifetimes
+        // are covered separately; the native handoff has already retired that graph.
+        for (var child : List.copyOf(h.manager.activeObjectsOfType(LbzFinalBoss1Instance.BossChild.class))) {
+            if (!LbzFinalBoss1Instance.ExplosionShowerChild.class.isInstance(child)) {
+                h.manager.removeDynamicObject(child);
+            }
+        }
+        com.openggf.level.objects.ObjectLifetimeOps.deleteNoRespawn(boss);
+        var boundary = assertDoesNotThrow(() -> h.advance(3, 1)).getFirst();
+        assertFalse(h.manager.activeObjectsOfType(LbzFinalBoss1Instance.ExplosionShowerChild.class).isEmpty(),
+                "the native explosion controller survives boss deletion");
+        assertDoesNotThrow(h.manager::validateRewindReferenceClosure);
+        var later = h.advance(4, 12);
+        h.destructiveRestore(boundary, boss);
+        assertDoesNotThrow(h.manager::validateRewindReferenceClosure);
+        h.assertReplay(later, 4);
+    }
+
     private record Link(String type, ObjectRefId id, int slot, ObjectRefId boss, ObjectRefId segment) { }
 
     private static Object field(Object object, String name) throws Exception {
@@ -176,6 +259,9 @@ class TestLbzFinalBoss1GraphRewind {
         final StubObjectServices services = new StubObjectServices() {
             @Override public ObjectManager objectManager() { return manager; }
             @Override public Camera camera() { return camera; }
+            @Override public com.openggf.level.objects.ObjectPlayerQuery playerQuery() {
+                return new com.openggf.level.objects.ObjectPlayerQuery(() -> null, List::of);
+            }
             @Override public AudioManager audioManager() { return audio; }
             @Override public GraphicsManager graphicsManager() { return GraphicsManager.getInstance(); }
         };

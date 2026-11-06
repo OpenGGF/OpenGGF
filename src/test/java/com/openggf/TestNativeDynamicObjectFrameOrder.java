@@ -54,16 +54,6 @@ class TestNativeDynamicObjectFrameOrder {
         verify(h.level, never()).advanceLevelFrameCounter();
     }
 
-    @Test void unboundLegacyPathStillRunsGenericObjectsBeforeThePlayer() {
-        var h = new Harness();
-        when(h.module.getGameService(NativeDynamicObjectPass.class)).thenReturn(null);
-        when(h.level.objectsExecuteAfterPlayerPhysics()).thenReturn(false);
-        doAnswer(i -> { h.log.add("generic"); return null; })
-                .when(h.level).updateObjectPositionsWithoutTouches(false);
-        h.run();
-        assertEquals(List.of("vblank", "counter", "reserved", "generic", "player",
-                "camera", "build", "named-pre-camera-hook"), h.log);
-    }
 
     @Test void titleCardCycleCannotAcquireTheOrdinaryDynamicOwner() {
         var h = new Harness();
@@ -82,11 +72,13 @@ class TestNativeDynamicObjectFrameOrder {
         assertTrue(h.log.isEmpty());
     }
 
-    @Test void incompatibleLegacyOrderingRejectsBeforeService() {
-        var h = new Harness();
-        when(h.level.objectsExecuteAfterPlayerPhysics()).thenReturn(false);
-        assertThrows(IllegalStateException.class, h::run);
-        assertTrue(h.log.isEmpty());
+    @Test void everyNonOrdinaryPhaseRejectsBeforeService() {
+        for(var phase:PlcLifecyclePhase.values()) {
+            if(phase==PlcLifecyclePhase.ORDINARY_LEVEL)continue;
+            var h=new Harness();
+            assertThrows(IllegalStateException.class,()->NativeDynamicObjectPass.admit(h.module,h.level,phase));
+            assertTrue(h.log.isEmpty());verify(h.level,never()).advanceLevelFrameCounter();
+        }
     }
 
     @Test void playerFailureCannotAdvanceDynamicPassOrCamera() {
@@ -169,7 +161,6 @@ class TestNativeDynamicObjectFrameOrder {
         final PlcLifecycleService plc = mock(PlcLifecycleService.class);
 
         Harness() {
-            when(level.objectsExecuteAfterPlayerPhysics()).thenReturn(true);
             when(module.getGameService(NativeDynamicObjectPass.class)).thenReturn(new Owner(log));
             when(module.getGameService(NativeFixedLevelObjectPass.class)).thenReturn(() -> log.add("reserved"));
             when(module.getGameService(PlcLifecycleService.class)).thenReturn(plc);

@@ -684,10 +684,12 @@ public class HczEndBossBlade extends AbstractBossChild implements TouchResponseP
         spinDownDelayCounter = 0;
         spinDownLoopCounter = 0;
         spinDownFrameIndex = 0;
-        // The floor-hit callback changes the operation pointer after the
-        // current Child_DrawTouch dispatch; retain that dispatch's single
-        // animation-timer tick before the new script's first expiry.
-        spinDownFrameTimer = 1;
+        // HCZEndBossBomb_StartExplosion only installs the script/callback
+        // (sonic3k.asm:141562-141566). Child_DrawTouch_Sprite only draws and
+        // publishes collision (sonic3k.asm:178144-178150); it does not tick
+        // animation. Animate_RawGetFaster therefore starts with the cleared
+        // timer and advances on its first dispatch.
+        spinDownFrameTimer = 0;
         spinDownInitialized = false;
         mappingFrame = SPIN_DOWN_FRAMES[0];  // frame 6
         LOG.fine(() -> "HCZ End Boss Blade: hit floor at y=" + currentY + ", transitioning to SPIN_DOWN");

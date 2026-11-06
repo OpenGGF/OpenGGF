@@ -124,20 +124,24 @@ class CleanupTests(unittest.TestCase):
             process.assert_not_called()
             self.assertFalse(run.exists())
 
-    def test_completed_result_is_consumable_then_deleted_without_blocking_rerun(self):
+    def test_incomplete_result_is_consumable_then_deleted_without_blocking_rerun(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             old = self.make_run(root)
             plan = dict(full=True, tests=['Example.java'], guards=False,
                         categories=['common'], inventory_count=1)
+            # A skip count without report identities cannot be explained by policy.
             summary = dict(reports=1, tests=2, failures=0, errors=0, skipped=1,
                            skipped_cases=[dict(reason='optional')])
-            with patch.object(runner, 'tree_state', return_value='state'), patch.object(runner, 'rom_args', return_value=[]), patch.object(runner, 'summarize', return_value=summary), patch.object(runner, 'run_logged', return_value=0):
-                self.assertEqual(0, runner.run_plan(root, plan))
+            with patch.object(runner, 'tree_state', return_value='state'), patch.object(runner, 'rom_args', return_value=[]), patch.object(runner, 'summarize', return_value=summary), patch.object(runner, 'run_logged', return_value=0), patch('sys.stdout', new_callable=io.StringIO):
+                self.assertEqual(1, runner.run_plan(root, plan, clean_passed=True))
             self.assertFalse(old.exists())
             run = next((root / 'target/category-tests').iterdir())
             result = json.loads((run / 'results.json').read_text())
             self.assertEqual('optional', result[0]['skipped_cases'][0]['reason'])
+            self.assertEqual(1, result[0]['skip_classification']['unidentified'])
+            self.assertEqual('incomplete', json.loads((run / 'status.json').read_text())['status'])
+            summary = dict(summary, tests=1, skipped=0, skipped_cases=[])
             artifacts.acknowledge_run(root, run.name)
             self.assertFalse(run.exists())
             self.assertFalse((root / 'target/category-tests-last-broad.json').exists())

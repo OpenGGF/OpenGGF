@@ -1,0 +1,568 @@
+{
+  "@@locale": "es-419",
+  "@@name": "Español (Latinoamérica)",
+  "@@quality": "machine",
+  "@@parents": [
+    "es"
+  ],
+  "editor.stageplay_hud.add_an_actor_to_start_directing_1n3pb6h": "Agrega un actor para empezar a dirigir.",
+  "@editor.stageplay_hud.add_an_actor_to_start_directing_1n3pb6h": {
+    "x-openggf": {
+      "sourceHash": "8bedc3428deb3cae8c710386bc67850122fbb00f5974ad5cd6bbfe69b7c4881a",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay_hud.add_actor_8pm4k6": "Agregar actor",
+  "@editor.stageplay_hud.add_actor_8pm4k6": {
+    "x-openggf": {
+      "sourceHash": "2ba6b25a4ac5af16a5f075c006a30eec507a07ee63e5620de020a5595930f9d3",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.editor_project_workspace.add_level_to_sequence_1wfny2z": "Agregar nivel a la secuencia",
+  "@editor.editor_project_workspace.add_level_to_sequence_1wfny2z": {
+    "x-openggf": {
+      "sourceHash": "5c00481be99dc143bb2e7bb2f3f513438be00951b8888008c9f3d756c471b248",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.editor_project_workspace.add_campaign_level_2sku7n": "Agregar nivel de campaña",
+  "@editor.editor_project_workspace.add_campaign_level_2sku7n": {
+    "x-openggf": {
+      "sourceHash": "a33f389ab2538ca71fd02acfdaf064745587084d6e175f77e0794210162fa2e6",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay_workspace.add_actor_8pm4k6": "Agregar actor",
+  "@editor.stageplay_workspace.add_actor_8pm4k6": {
+    "x-openggf": {
+      "sourceHash": "8d16a2db75b2bd94bd83d570cd3e148cd9a2608f044b2335db12d7a1a27aaaed",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay_workspace.new_scene_add_a_cast_member_then_set_keys_at_timeline_f_1fk06rc": "Escena nueva. Agrega un integrante del elenco y luego fija fotogramas clave en los fotogramas de la línea de tiempo.",
+  "@editor.stageplay_workspace.new_scene_add_a_cast_member_then_set_keys_at_timeline_f_1fk06rc": {
+    "x-openggf": {
+      "sourceHash": "3949d9b6a6141f493eb837ef9c87af04a544e3c74bbb9c00f0273a5f0990e2b4",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay_workspace.add_shake_quake_anbrxp": "Agregar sacudida / temblor",
+  "@editor.stageplay_workspace.add_shake_quake_anbrxp": {
+    "x-openggf": {
+      "sourceHash": "1a7086c8a3f3c3de60510f8ff420cd4bfce155d85f0ecb4d29ef0511dd48de51",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay_workspace.add_scene_change_1m81m9v": "Agregar cambio de escena",
+  "@editor.stageplay_workspace.add_scene_change_1m81m9v": {
+    "x-openggf": {
+      "sourceHash": "2653a94941ddad7d80b5b249e3dedd7aa4a261cbfd577383d623dab9757c2539",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay_workspace.add_dialogue_line_1bgcafx": "Agregar línea de diálogo",
+  "@editor.stageplay_workspace.add_dialogue_line_1bgcafx": {
+    "x-openggf": {
+      "sourceHash": "4602cc74420ac10205cb7f01d609bf3ef01ac5903fef63802727d0dd874b2617",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay_workspace.add_typer_90g6c9": "Agregar efecto de escritura",
+  "@editor.stageplay_workspace.add_typer_90g6c9": {
+    "x-openggf": {
+      "sourceHash": "ad74a9d6ec2b90cede60a49b89df91da0cee743cc886c7642831406132a4d4e9",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay_workspace.add_dialogue_typer_1el0ib3": "Agregar efecto de escritura de diálogo",
+  "@editor.stageplay_workspace.add_dialogue_typer_1el0ib3": {
+    "x-openggf": {
+      "sourceHash": "270d596621826ae7ec129ad627cb97a39fd9ec163c90c424e641ae0c0fcb3960",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay_workspace.add_decoration_1v6t2un": "Agregar decoración",
+  "@editor.stageplay_workspace.add_decoration_1v6t2un": {
+    "x-openggf": {
+      "sourceHash": "fdd92af0729b6d1ea02614269ca6a6a2a626700f44a16ade92fac993b3f990d1",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay_workspace.add_dialogue_decoration_hyd595": "Agregar decoración de diálogo",
+  "@editor.stageplay_workspace.add_dialogue_decoration_hyd595": {
+    "x-openggf": {
+      "sourceHash": "bf4eb050659c5735bd896c6c02febd5e8b161076f48b9a74d7eb042e3de6779b",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay_workspace.add_caption_igyhjb": "Agregar subtítulo",
+  "@editor.stageplay_workspace.add_caption_igyhjb": {
+    "x-openggf": {
+      "sourceHash": "7b10a715ab627fb3ca0cea573528dab8f29956990d47b384ea8eaf777a68002c",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay_workspace.add_audio_cue_lq4iru": "Agregar señal de audio",
+  "@editor.stageplay_workspace.add_audio_cue_lq4iru": {
+    "x-openggf": {
+      "sourceHash": "cbca2333515fa7f51de59ed331f19641455eb3aeb76e497f4b54e9bb35031fc3",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay_workspace.settings_osmo8z": "Configuración",
+  "@editor.stageplay_workspace.settings_osmo8z": {
+    "x-openggf": {
+      "sourceHash": "fc2568b0c23765877668e01aa185ea1f98bc5008b1fcaac3bd46b1227edf1180",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay_object_authoring.add_part_override_1o1z5kq": "Agregar sustitución de parte",
+  "@editor.stageplay_object_authoring.add_part_override_1o1z5kq": {
+    "x-openggf": {
+      "sourceHash": "e253eff71f24c1c027f366259926b00b2641cb7500b622f7ea2b25d9b3586715",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay_object_authoring.add_object_part_override_14md4zb": "Agregar sustitución de parte de objeto",
+  "@editor.stageplay_object_authoring.add_object_part_override_14md4zb": {
+    "x-openggf": {
+      "sourceHash": "bfdf9887965dc3d824a377986799cc91ee83ac5781a8b7afc2760193e53093ad",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay_object_authoring.add_move_stop_at_playhead_1j2cd2c": "Agregar mover / parar en el cabezal",
+  "@editor.stageplay_object_authoring.add_move_stop_at_playhead_1j2cd2c": {
+    "x-openggf": {
+      "sourceHash": "063eb6188df45f22eaf6fc926f8cfa43bf263146ff55fe3308318925b5a9b7cc",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay_object_authoring.add_world_command_placed_removal_1ij200s": "Agregar comando del mundo / eliminación de objeto colocado",
+  "@editor.stageplay_object_authoring.add_world_command_placed_removal_1ij200s": {
+    "x-openggf": {
+      "sourceHash": "46d1e01f29a32af0a2389a6f44b28c209fbfac6e976914a4e5706d91f162a13d",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.editor_project_workspace.append_level_75vry": "Agregar nivel",
+  "@editor.editor_project_workspace.append_level_75vry": {
+    "x-openggf": {
+      "sourceHash": "8ffa51ddbd960c309b3a05f4f7ff9e38139c6bc82d2889f953402505e5b7870f",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.editor_project_menu.custom_settings_1lw21g2": "Configuración personalizada",
+  "@editor.editor_project_menu.custom_settings_1lw21g2": {
+    "x-openggf": {
+      "sourceHash": "2d5ecf6a62e631f254cc91fc9abe3f475f001d5d1a3a251d089ff2fc4064d9f7",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "hub.ui.no_games_are_available_check_mods_and_settings": "No hay juegos disponibles. Revisa Mods y Configuración.",
+  "@hub.ui.no_games_are_available_check_mods_and_settings": {
+    "x-openggf": {
+      "sourceHash": "31ab4d4866221f790a2ef061d8a93171295758fab98fa81272da0605f4ff697a",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "hub.ui.advanced_settings": "Configuración avanzada",
+  "@hub.ui.advanced_settings": {
+    "x-openggf": {
+      "sourceHash": "f9700cf332666b22a863db9512cadd0054c6dceb3e0e2faaedd27cd44108646d",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "hub.ui.check_files_in_engine_settings": "Revisa los archivos en Configuración del motor",
+  "@hub.ui.check_files_in_engine_settings": {
+    "x-openggf": {
+      "sourceHash": "d5a1ca94e2f1e6ebc48a9d95e513bb14249d306c3e50e3d285338f9585655bab",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "hub.ui.add_a_game_in_settings_files_or_mods": "Agrega un juego en Configuración > Archivos o Mods",
+  "@hub.ui.add_a_game_in_settings_files_or_mods": {
+    "x-openggf": {
+      "sourceHash": "b2a50abfb9c2da28514c13f0526c55d133fb0425d1e937a3d1903182b7c07f59",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "hub.tab.settings": "CONFIGURACIÓN",
+  "@hub.tab.settings": {
+    "x-openggf": {
+      "sourceHash": "3194051de4b9dc2957dcf82b7bf51e337900e614e1e976fdbc0f884fdc065084",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "launch.global_aspect_help": "Global sigue a Configuración > Pantalla ({aspect}).",
+  "@launch.global_aspect_help": {
+    "x-openggf": {
+      "sourceHash": "6c3efa48bf3fd9d19286fcf28e622282f61d99405630bc0e46e28400e16386f5",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "menu.mods.trust_question": "Este mod contiene código y se ejecuta con permisos completos. Presiona aceptar otra vez para confiar y activar: {mods}",
+  "@menu.mods.trust_question": {
+    "x-openggf": {
+      "sourceHash": "a2e7270f70fe651cb570307befa77cc63435eca2a54043d8c48b8da515835091",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "menu.mods.cascade_question": "Presiona aceptar otra vez para {enabled, select, yes {desactivar} other {activar}} {mods}",
+  "@menu.mods.cascade_question": {
+    "x-openggf": {
+      "sourceHash": "6e2e593693c777b4d69b1c5d2204513e3e0dc0c1dc0ce279c73612ccb6f91130",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "settings.screen.keep_display_settings_caps": "¿CONSERVAR CONFIGURACIÓN DE PANTALLA?",
+  "@settings.screen.keep_display_settings_caps": {
+    "x-openggf": {
+      "sourceHash": "417b0b9bb0707002ea3fb9d7477952745d9efd931076967a7affe6f382856500",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "settings.screen.advanced_settings_caps": "CONFIGURACIÓN AVANZADA",
+  "@settings.screen.advanced_settings_caps": {
+    "x-openggf": {
+      "sourceHash": "9e75b0f1280909b09b825538babd4288ae39ed906311c620069b20c5d6eb6a68",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "settings.screen.settings_caps": "CONFIGURACIÓN",
+  "@settings.screen.settings_caps": {
+    "x-openggf": {
+      "sourceHash": "4614041f206b43cbb1e75aa85124929fa84b8a481ea5a4adf49e485020173b55",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "settings.screen.save_settings_caps": "¿GUARDAR CONFIGURACIÓN?",
+  "@settings.screen.save_settings_caps": {
+    "x-openggf": {
+      "sourceHash": "2347382b5021df693c5f02f653c0b070e81beb77abec4952604926b625796ff0",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "settings.screen.press_a_key_or_chord": "Presiona una tecla o combinación",
+  "@settings.screen.press_a_key_or_chord": {
+    "x-openggf": {
+      "sourceHash": "009f3ba2560e2e1d082d2a9521a896dd66696c4515fd6fb9bae9ed528bb17d86",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "menu.recordings.ui.enter_a_whole_frame_number": "Ingresa un número de fotograma entero",
+  "@menu.recordings.ui.enter_a_whole_frame_number": {
+    "x-openggf": {
+      "sourceHash": "196c6179af4712558d718d2a025566df4d96dad698c0fece36abbe286db97733",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "menu.recordings.ui.record_a_run_while_playing_to_add_it_here": "Graba una partida mientras juegas para agregarla aquí.",
+  "@menu.recordings.ui.record_a_run_while_playing_to_add_it_here": {
+    "x-openggf": {
+      "sourceHash": "5f3de794330e4b457dabdae65525fdc925589c368d642c86805c515b49c3c451",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "menu.recordings.ui.recording_preferences_are_in_settings": "Las preferencias de grabación están en Configuración.",
+  "@menu.recordings.ui.recording_preferences_are_in_settings": {
+    "x-openggf": {
+      "sourceHash": "e7f4963a38ef72663193215356282f899c26aba77e72aa2fd06da186f4dbf70d",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "menu.traces.ui.set_the_trace_folder_in_engine_settings": "Define la carpeta de trazas en Configuración del motor",
+  "@menu.traces.ui.set_the_trace_folder_in_engine_settings": {
+    "x-openggf": {
+      "sourceHash": "b1878e9f90f3a4ada00525dcfd4658fa3548912202d3cb9d674b7cc031677c15",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "menu.traces.ui.return_to_the_hub_to_open_settings": "Vuelve al centro para abrir Configuración",
+  "@menu.traces.ui.return_to_the_hub_to_open_settings": {
+    "x-openggf": {
+      "sourceHash": "bb08e481b28d88b22bf38bb64d7b8c08d78ff5236a1807f2cd18a5cccee65479",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.action_add_object": "Agregar objeto",
+  "@editor.stageplay.presentation.action_add_object": {
+    "x-openggf": {
+      "sourceHash": "846a807c67992158cf57691e7f5553eaeb867f83f1eeeef62715eef04288e0cf",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.action_add_command": "Agregar comando",
+  "@editor.stageplay.presentation.action_add_command": {
+    "x-openggf": {
+      "sourceHash": "97b79ba440b09e65aed4e31fd650c3bc47869bf1cc6847cf2b359abaa675c138",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.action_offscreen_speaker": "Hablante fuera de cuadro",
+  "@editor.stageplay.presentation.action_offscreen_speaker": {
+    "x-openggf": {
+      "sourceHash": "64c9c70a5da5c06c7341c79e298d99dee5f9164502dfb16bf79181c8989fd131",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.hint_floor_placements": "Elige un suelo y revísalo luego en la reproducción.",
+  "@editor.stageplay.presentation.hint_floor_placements": {
+    "x-openggf": {
+      "sourceHash": "7568a99f29545125ebec1aa5c2da42a1aa5f5ed1733a78358cf8bf7c5b5db739",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.menu.editor_project_workspace.add_tiles_from_a_png_and_sheet_yaml": "Agregar mosaicos desde un PNG y un YAML de hoja",
+  "@editor.menu.editor_project_workspace.add_tiles_from_a_png_and_sheet_yaml": {
+    "x-openggf": {
+      "sourceHash": "5c76ad9afc0ad10fcfc30bab1caa62258bdb99d5d7fe3a387e7111d34408db9c",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "hub.ui.mod_manager": "Administrador de mods",
+  "@hub.ui.mod_manager": {
+    "x-openggf": {
+      "sourceHash": "850b020c338ea446e5a0d2272612066f4d435a7cfe3c51b0fab78c1dd858494a",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "hub.ui.or_set_its_path_in_settings_files": "O define su ruta en Configuración > Archivos",
+  "@hub.ui.or_set_its_path_in_settings_files": {
+    "x-openggf": {
+      "sourceHash": "7b4ec3ceae720d2ff44626c41379f10901b9cdaeda24e57b1cd0870d0258a2a3",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "hub.ui.playback_browser_advanced_settings_and_tools": "Explorador de reproducción, configuración avanzada y herramientas",
+  "@hub.ui.playback_browser_advanced_settings_and_tools": {
+    "x-openggf": {
+      "sourceHash": "fdab170e130ac267d2901c2639fb49bcad1ce904579ab25ee36b3a742fbab014",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "menu.contentimportscreen.enter": "Enter",
+  "@menu.contentimportscreen.enter": {
+    "x-openggf": {
+      "sourceHash": "769623e491d62af338a1652820e91522f402f3a9fe33852098c4bf8b02ebc316",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "menu.playbackbrowser.choose_the_trace_replay_folder_in_advanced_settings": "Elige la carpeta de repeticiones de trazas en la configuración avanzada.",
+  "@menu.playbackbrowser.choose_the_trace_replay_folder_in_advanced_settings": {
+    "x-openggf": {
+      "sourceHash": "bde7c2fbf4f5d3897dd9580d41f45ba5a647b18cd02105da43ef8c1d2940bdb7",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "menu.playbackbrowser.put_bk2_files_in_the_recordings_folder_or_choose_one_in": "Pon archivos .bk2 en la carpeta de grabaciones o elige uno en la configuración avanzada.",
+  "@menu.playbackbrowser.put_bk2_files_in_the_recordings_folder_or_choose_one_in": {
+    "x-openggf": {
+      "sourceHash": "449e9d30a9b79afd24160cb39e836ae791858104b5100868005662cea6af34b4",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "menu.playbackbrowser.record_while_playing_or_choose_a_trace_replay_folder_in": "Graba mientras juegas o elige una carpeta de repeticiones de trazas en la configuración avanzada.",
+  "@menu.playbackbrowser.record_while_playing_or_choose_a_trace_replay_folder_in": {
+    "x-openggf": {
+      "sourceHash": "cff5fb02e97f5ea1e4e7e48976a96623cd0bbc8691169a99280c081bdb27b5e6",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "menu.playbackbrowser.record_while_playing_to_add_one_here_set_the_record_key": "Graba mientras juegas para agregar una aquí. Define la tecla de grabación en la configuración avanzada.",
+  "@menu.playbackbrowser.record_while_playing_to_add_one_here_set_the_record_key": {
+    "x-openggf": {
+      "sourceHash": "f2e209fdaae297d3eae66a75884b121dc5fe4198f32a9eb434e0382b6cb26296",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "menu.text.press_key_caps": "PRESIONA UNA TECLA",
+  "@menu.text.press_key_caps": {
+    "x-openggf": {
+      "sourceHash": "9a094c26518ce50fefb149d089ef3437639b14eae6d018723282b92de9e31e5d",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "settings.group.settings_file": "ARCHIVO DE CONFIGURACIÓN",
+  "@settings.group.settings_file": {
+    "x-openggf": {
+      "sourceHash": "27191df376a59eacbebd238e658a4221eb06977b88870fbab687163e7cccedba",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "settings.key.capture_codec.label": "Códec de video",
+  "@settings.key.capture_codec.label": {
+    "x-openggf": {
+      "sourceHash": "404e373761e6b8b08e92401f13ca68fee8d98f4f696fed5069ae6e8e2e6aa8ea",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "settings.key.capture_fps.help": "Tasa de fotogramas de los videos grabados.",
+  "@settings.key.capture_fps.help": {
+    "x-openggf": {
+      "sourceHash": "358799a6c286483c4b220b99068b3f8314b78330ec3ac1e87fbf809afa44519b",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "settings.key.capture_fps.label": "Tasa de fotogramas de video",
+  "@settings.key.capture_fps.label": {
+    "x-openggf": {
+      "sourceHash": "be99d6e218051540eea6bd29acfa28bf32da7d4392bc1f0a879413dc58f7f2f6",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "settings.key.capture_output_dir.help": "Carpeta de los videos grabados.",
+  "@settings.key.capture_output_dir.help": {
+    "x-openggf": {
+      "sourceHash": "c89365927afa8a75230146f01e39c7a9a61f656debb1a93c2b2cebb695892626",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "settings.key.capture_scale.help": "Escalado de píxeles enteros aplicado a los videos grabados.",
+  "@settings.key.capture_scale.help": {
+    "x-openggf": {
+      "sourceHash": "4da56dbb61b383a09de7dfcdf3c5bbe18a7934485f1abb2021dcd330b273fc5b",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "settings.key.capture_scale.label": "Escala de video",
+  "@settings.key.capture_scale.label": {
+    "x-openggf": {
+      "sourceHash": "91c2efbc44663babb6671bf3c2b007f1c75db418e2efb4fcccc2df2e5c773a22",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "settings.key.capture_toggle_key.help": "Inicia o detiene la grabación en video de la partida.",
+  "@settings.key.capture_toggle_key.help": {
+    "x-openggf": {
+      "sourceHash": "2b06d233c929c08a6daee983ae033cf1ed46fc2b0b5870a3ada3ef6751a270d2",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "settings.key.capture_toggle_key.label": "Atajo de grabación de video",
+  "@settings.key.capture_toggle_key.label": {
+    "x-openggf": {
+      "sourceHash": "005baad05b4910982aebce33929f7a3882ab958d30ae1282291b59ac8ef14c66",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "settings.key.config_preserve_explicit_defaults.help": "Al convertir un archivo de configuración antiguo, conservar los ajustes escritos con su valor predeterminado.",
+  "@settings.key.config_preserve_explicit_defaults.help": {
+    "x-openggf": {
+      "sourceHash": "6eb45428be6e961471b00e44a74aed9e32f939f5b26678f4720747fe24e3613e",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "settings.key.live_rewind_determinism_audit.help": "Vuelve a simular cada segmento de rebobinado y registra la primera diferencia. Duplica el costo por fotograma.",
+  "@settings.key.live_rewind_determinism_audit.help": {
+    "x-openggf": {
+      "sourceHash": "207b3e8e6aa4f3b9ead51b05959214ec615fa9b4fcae2cebe1d2805cf94c9a8e",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "settings.key.live_rewind_key.help": "Mantener para rebobinar durante la partida; el botón de hombro izquierdo del control también rebobina.",
+  "@settings.key.live_rewind_key.help": {
+    "x-openggf": {
+      "sourceHash": "f2ba99a088cdeacdfcb3010ae3cc36943617d27040a8029fa183297ccfdd6b54",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "settings.key.live_rewind_vhs_tear_bands.help": "Agrega las bandas de desgarro móviles al efecto VHS.",
+  "@settings.key.live_rewind_vhs_tear_bands.help": {
+    "x-openggf": {
+      "sourceHash": "1e9f6095fde253f79ad0200899d2c9783d8346324f6935c4fd6ab8c758b39c7d",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "settings.key.sidekick_character_code.help": "Los compañeros controlados por la computadora en un inicio directo, en orden de seguimiento; si no hay ninguno, el personaje juega solo.",
+  "@settings.key.sidekick_character_code.help": {
+    "x-openggf": {
+      "sourceHash": "45832f67924de62d93339b895d8a1f6c658da5df5723d1a4df0e3f053b8f91ba",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "settings.key.start.help": "Start del jugador 1, la pausa del propio juego. Start del control usa la pausa del motor.",
+  "@settings.key.start.help": {
+    "x-openggf": {
+      "sourceHash": "0791504d4195441770b12bdf5cd51f63fdba6ac744eb2883beb9c371057db140",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "settings.screen.audio_mux_arguments_summary": "Los argumentos del multiplexor de sonido; déjalos vacíos para guardar el video sin sonido.",
+  "@settings.screen.audio_mux_arguments_summary": {
+    "x-openggf": {
+      "sourceHash": "c64b38ad7da558df3bb0fcb6a02d39ac264b3f1186f00842cfa52ce7b7e36364",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  }
+}

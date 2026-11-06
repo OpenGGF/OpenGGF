@@ -34,6 +34,73 @@ public class TestGraphicsManagerSpriteSatReplay {
     }
 
     @Test
+    void savedScanlinePreferenceControlsTheProductionSpriteTable() {
+        var key = com.openggf.configuration.ConfigCatalog.byPath("display.spriteScanlineLimit");
+        assertNotNull(key);
+        var config = com.openggf.game.GameServices.configuration();
+        graphicsManager.cachePatternTexture(createSolidPattern((byte) 1), 0);
+        boolean original = config.getBoolean(key);
+        assertFalse(original, "normal gameplay starts without scanline limits");
+        assertEquals(21, overfullRowSize());
+        try {
+            for (boolean enabled : new boolean[]{true, false, true}) {
+                config.setConfigValue(key, enabled);
+                assertEquals(enabled ? 20 : 21, overfullRowSize());
+            }
+        } finally {
+            config.setConfigValue(key, original);
+        }
+    }
+
+    @Test
+    void configuringAnotherEngineRebindsTheLivePreference(@org.junit.jupiter.api.io.TempDir java.nio.file.Path directory) {
+        EngineContext original = EngineServices.current();
+        var alternate = com.openggf.configuration.SonicConfigurationService.createStandalone(directory);
+        alternate.setConfigValue(com.openggf.configuration.SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT, true);
+        var replacement = new EngineContext(alternate, graphicsManager, original.audio(), original.roms(),
+                original.profiler(), original.debugOverlay(), original.playbackDebug(), original.romDetection(),
+                original.crossGameFeatures(), original.moduleResolutionService());
+        graphicsManager.cachePatternTexture(createSolidPattern((byte) 1), 0);
+        try {
+            EngineServices.configure(replacement);
+            assertEquals(20, overfullRowSize());
+            EngineServices.configure(original);
+            assertEquals(21, overfullRowSize(), "restoring the original engine restores the default-off preference");
+        } finally {
+            EngineServices.configure(original);
+        }
+    }
+
+    @Test
+    void ordinaryOffscreenPiecesCannotBecomeZeroXMasks() {
+        graphicsManager.cachePatternTexture(createSolidPattern((byte) 1), 0);
+        for (boolean limits : new boolean[]{false, true}) {
+            for (int zeroX : new int[]{-128, 384}) {
+                graphicsManager.commands.clear();
+                SpriteSatInternalAccess.bindLineLimitSource(graphicsManager, () -> limits);
+                SpriteSatInternalAccess.beginCollection(graphicsManager, SpriteSatMaskPostProcessor.Raster.h40(0, 0, 224));
+                for (int x : new int[]{8, zeroX, 80}) {
+                    graphicsManager.submitSpriteSatPiece(new SpritePieceRenderer.PreparedPiece(
+                            x, 20, 1, 1, 0, 0, 0, false, false, false, false, 0, 1));
+                }
+                graphicsManager.endSpriteSatCollectionAndReplay();
+                assertEquals(2, graphicsManager.commands.size(), "ordinary X=" + zeroX + ", limits=" + limits);
+            }
+        }
+    }
+
+    private int overfullRowSize() {
+        graphicsManager.commands.clear();
+        graphicsManager.beginSpriteSatCollection();
+        for (int i = 0; i < 21; i++) {
+            graphicsManager.submitSpriteSatPiece(new SpritePieceRenderer.PreparedPiece(
+                    10, 20, 1, 1, 0, 0, 0, false, false, false, false, 0, 1));
+        }
+        graphicsManager.endSpriteSatCollectionAndReplay();
+        return graphicsManager.commands.size();
+    }
+
+    @Test
     public void spriteSatReplay_replaysNativeBucketsFrontToBackWithFirstSatEntryFirst() throws Exception {
         graphicsManager.cachePatternTexture(createSolidPattern((byte) 1), 0);
         graphicsManager.cachePatternTexture(createSolidPattern((byte) 2), 1);
@@ -131,6 +198,8 @@ public class TestGraphicsManagerSpriteSatReplay {
 
     @Test
     public void nativeBudgetAppliesWithoutRequestingSpriteMask() {
+        com.openggf.game.GameServices.configuration().setConfigValue(
+                com.openggf.configuration.SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT, true);
         graphicsManager.cachePatternTexture(createSolidPattern((byte) 1), 0);
         graphicsManager.beginSpriteSatCollection();
         for (int index = 0; index < 21; index++) {
@@ -279,6 +348,8 @@ public class TestGraphicsManagerSpriteSatReplay {
 
     @Test
     void engineAlignedH32EntryKeepsInnerCapacityInside350Presentation() throws Exception {
+        com.openggf.game.GameServices.configuration().setConfigValue(
+                com.openggf.configuration.SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT, true);
         graphicsManager.cachePatternTexture(createSolidPattern((byte) 1), 0);
         graphicsManager.setProjectionWidth(350);
         SpriteSatInternalAccess.beginCollection(graphicsManager, SpriteSatMaskPostProcessor.Raster.h32(47, 7, 100));

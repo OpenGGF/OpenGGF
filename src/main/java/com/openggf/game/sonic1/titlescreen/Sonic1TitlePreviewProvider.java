@@ -1,5 +1,7 @@
 package com.openggf.game.sonic1.titlescreen;
 
+import static com.openggf.game.sonic1.Sonic1RomProfile.resolve;
+
 import com.openggf.data.Rom;
 import com.openggf.game.preview.GeneratedTitlePreviewSequence;
 import com.openggf.game.preview.TitlePreviewProvider;
@@ -61,13 +63,13 @@ public final class Sonic1TitlePreviewProvider implements TitlePreviewProvider {
 
     private static Sequence loadSonic1Sequence(Rom rom) throws IOException {
         Pattern[] patterns = PatternDecompressor.nemesis(
-                rom, Sonic1Constants.ART_NEM_TITLE_FG_ADDR, 8192, "MasterPreviewS1TitleFg");
+                rom, resolve(rom, Sonic1Constants.ART_NEM_TITLE_FG_ADDR), 8192, "MasterPreviewS1TitleFg");
         Pattern[] sonicPatterns = PatternDecompressor.nemesis(
-                rom, Sonic1Constants.ART_NEM_TITLE_SONIC_ADDR, 65536, "MasterPreviewS1TitleSonic");
+                rom, resolve(rom, Sonic1Constants.ART_NEM_TITLE_SONIC_ADDR), 65536, "MasterPreviewS1TitleSonic");
         Pattern[] tmPatterns = PatternDecompressor.nemesis(
-                rom, Sonic1Constants.ART_NEM_TITLE_TM_ADDR, 1024, "MasterPreviewS1TitleTM");
-        int[] map = loadEnigmaMap(rom, Sonic1Constants.MAP_ENI_TITLE_ADDR, 0, 1024);
-        Palette[] palettes = loadPaletteLines(rom.readBytes(Sonic1Constants.PAL_TITLE_ADDR, 128));
+                rom, resolve(rom, Sonic1Constants.ART_NEM_TITLE_TM_ADDR), 1024, "MasterPreviewS1TitleTM");
+        int[] map = loadEnigmaMap(rom, resolve(rom, Sonic1Constants.MAP_ENI_TITLE_ADDR), 0, 1024);
+        Palette[] palettes = loadPaletteLines(rom.readBytes(resolve(rom, Sonic1Constants.PAL_TITLE_ADDR), 128));
 
         int stillTick = 128;
         return new GeneratedTitlePreviewSequence(sonic1PreviewWidth(), sonic1PreviewHeight(), stillTick,

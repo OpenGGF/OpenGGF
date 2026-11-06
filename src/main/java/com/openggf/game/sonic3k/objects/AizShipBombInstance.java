@@ -21,7 +21,7 @@ import java.util.List;
 /**
  * Individual bomb dropped from the AIZ2 Flying Battery battleship.
  *
- * <p>ROM: Obj_AIZShipBomb (sonic3k.asm:105408).
+ * <p>ROM: Obj_AIZShipBomb (sonic3k.asm:105413).
  * Three states matching the ROM:
  * <ol>
  *   <li><b>READY_DROP</b>: Bomb descends slowly (2px/frame) in the ship's bomb port
@@ -36,6 +36,7 @@ import java.util.List;
  * it is actually released, matching the ROM's {@code Translate_Camera2ObjPosition}
  * and {@code Translate_Camera2ObjX} calls.
  */
+@com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.SCREEN_POSITION)
 public class AizShipBombInstance extends AbstractObjectInstance implements TouchResponseProvider, RewindRecreatable {
     private static final int GRAVITY = 0x20;       // 8:8 fixed-point
     private static final int Y_RADIUS = 0x10;

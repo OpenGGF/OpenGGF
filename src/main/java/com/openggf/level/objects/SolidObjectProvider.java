@@ -14,6 +14,25 @@ public interface SolidObjectProvider {
         return SolidExecutionMode.AUTO_AFTER_UPDATE;
     }
 
+    /**
+     * {@code d4} of this routine's tail solid call under
+     * {@link SolidExecutionMode#AUTO_AFTER_UPDATE}: the x the standing branch
+     * carries the rider from ({@code x_pos(a1) -= d4 - x_pos(a0)}, see
+     * {@link com.openggf.game.solid.SolidCall}).
+     *
+     * <p>The default is the routine's entry x, the {@code move.w x_pos(a0),-(sp)}
+     * / {@code move.w (sp)+,d4} pair a routine uses around its own move. A
+     * routine that loads d4 another way returns that value: its post-move
+     * {@code x_pos} ({@code move.w x_pos(a0),d4}, no carry), or an x it saved
+     * itself, for example when an engine parent runs this routine before the
+     * object's own slot.
+     *
+     * @param routineEntryX the object's x when its slot's routine was entered
+     */
+    default int tailCallD4(int routineEntryX) {
+        return routineEntryX;
+    }
+
     default boolean isSolidFor(PlayableEntity player) {
         return true;
     }
@@ -23,40 +42,15 @@ public interface SolidObjectProvider {
     }
 
     /**
-     * Number of position-history frames to use for this object's new
-     * {@code SolidObjectTop} geometry check.
-     * <p>
-     * Most objects use the player's current engine position. Object-specific
-     * providers may opt into a different sampled phase when porting an inline
-     * ROM top-solid helper. The call site must cite the concrete disassembly
-     * routine; for S3K {@code SolidObjectTop}'s new-landing geometry reads
-     * {@code x_pos/y_pos/y_radius} at sonic3k.asm:42022-42055.
-     */
-    default int getTopSolidPlayerPositionHistoryFrames(PlayableEntity player) {
-        return 0;
-    }
-
-    /**
-     * Number of position-history frames to use for this object's new
-     * {@code SolidObjectFull} geometry check.
-     * <p>
-     * This is the full-solid counterpart to
-     * {@link #getTopSolidPlayerPositionHistoryFrames(PlayableEntity)}. It is
-     * intended for ROM object slots that observe a particular player before
-     * that player's movement slot has executed, while the engine's shared
-     * player pass has already advanced the live position.
-     */
-    default int getFullSolidPlayerPositionHistoryFrames(PlayableEntity player) {
-        return 0;
-    }
-
-    /**
      * Whether this top-solid object rejects the exact surface boundary before landing.
      * <p>
-     * Most shared top-solid callers keep the established engine/profile behavior.
-     * Some helper variants reject {@code d0 == 0}; S3K's shared
-     * {@code SolidObjectTop_1P} accepts it and only rejects positive separation
-     * or overlap below {@code -$10}.
+     * This shared interface also serves full-solid and cross-game helpers, so
+     * its compatibility default does not select a native top-helper window.
+     * S3K's {@link com.openggf.game.sonic3k.S3kTopSolidProvider} selects the
+     * native {@code SolidObjectTop_1P} window: {@code [-$10,-1]} at
+     * loc_1E45A (sonic3k.asm:42044-42055), excluding the exact boundary.
+     * Selection belongs to the object's ROM helper, independently of the
+     * playable character's game/donor rules.
      */
     default boolean rejectsZeroDistanceTopSolidLanding() {
         return false;
@@ -70,14 +64,15 @@ public interface SolidObjectProvider {
      * Whether this object accepts a new top-solid landing at the exact surface
      * boundary even when the game's shared top-solid profile normally rejects it.
      * <p>
-     * The shared {@code topSolidLandingAllowsZeroDist} game flag models
-     * {@code PlatformObject_ChkYRange}, whose new-landing fall-through window is
-     * gated per game (S2 rejects the exact boundary; S1/S3K accept it).  However,
+     * The shared {@code topSolidLandingAllowsZeroDist} game flag retains the
+     * legacy PlatformObject-oriented profile (S2 rejects the exact boundary;
+     * S1/S3K profiles allow it). Native helper providers may select a stricter
+     * direct window independently of that compatibility flag. However,
      * top-solid objects that land players through {@code SolidObject_Landed}
      * (reached via {@code SolidObject_TopBottom}) rather than
      * {@code PlatformObject_ChkYRange} accept the exact surface boundary on every
      * game: {@code SolidObject_TopBottom} does {@code cmpi.w #$10,d3 / blo
-     * SolidObject_Landed} (docs/s2disasm/s2.asm:35488-35494), and {@code blo}
+     * SolidObject_Landed} (docs/s2disasm/s2.asm:35590-35596), and {@code blo}
      * (unsigned lower-than $10) covers {@code d3 == 0}.  The engine identifies the
      * {@code SolidObject_Landed} routine by {@code !usesPlatformObjectLandingSnap()}
      * (the same predicate that selects the {@code playerY - distY + 3} snap), so a
@@ -88,7 +83,7 @@ public interface SolidObjectProvider {
      * top with exactly {@code d3 == 0} and must still land that frame.
      */
     default boolean allowsZeroDistanceTopSolidLanding(PlayableEntity player) {
-        // SolidObject_Landed (s2.asm:35488-35494 blo covers d3==0) accepts the
+        // SolidObject_Landed (s2.asm:35590-35596 blo covers d3==0) accepts the
         // exact boundary; PlatformObject_ChkYRange (game flag) governs the rest.
         return isTopSolidOnly() && !usesPlatformObjectLandingSnap();
     }
@@ -112,20 +107,6 @@ public interface SolidObjectProvider {
      */
     default void onRejectedZeroDistanceTopSolidLanding(PlayableEntity player) {
         // Default no-op
-    }
-
-    /**
-     * Whether this solid can keep a grounded player attached during the
-     * pre-movement terrain attachment check used by S2/S3K inline solid
-     * resolution.
-     * <p>
-     * Normal solids rely on the previous frame's standing snapshot. ROM helper
-     * objects spawned immediately before their first {@code SolidObjectTop}
-     * call do not have a previous snapshot yet, but can still support the
-     * player in the same frame.
-     */
-    default boolean providesPreMovementGroundAttachmentSupport() {
-        return false;
     }
 
     /**
@@ -217,33 +198,6 @@ public interface SolidObjectProvider {
      * as CNZ cylinders, are not forced through plain full-solid semantics.
      */
     default boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity player) {
-        return false;
-    }
-
-    /**
-     * Whether an airborne rider must retain this object's riding record until
-     * this same object's inline solid checkpoint consumes its standing bit.
-     *
-     * <p>Use this for native routines whose post-{@code SolidObjectFull}
-     * behavior depends on the per-object {@code a0.d6} result. An earlier
-     * object's solid checkpoint must not consume that state on its behalf.
-     */
-    default boolean airborneRiderUnseatRequiresOwnCheckpoint(PlayableEntity player) {
-        return false;
-    }
-
-    /**
-     * Whether a stale riding record that would be consumed by this object's
-     * airborne standing-bit branch is also ineligible for pre-movement
-     * ground-recovery support.
-     * <p>
-     * Most objects that opt into {@link #airborneStaleStandingBitReturnsNoContact}
-     * still use the engine riding record as the best available live-support
-     * signal before their own solid pass runs. Obj69-style callers can opt in
-     * when the ROM object tail reaches standard {@code SolidObject} late enough
-     * that the stale airborne branch must be visible to player movement first.
-     */
-    default boolean suppressesGroundingRecoveryFromAirborneStaleRide(PlayableEntity player) {
         return false;
     }
 
@@ -412,19 +366,6 @@ public interface SolidObjectProvider {
     }
 
     /**
-     * Whether a moving side contact should preserve the player's horizontal
-     * velocity while still applying the side position correction and push bits.
-     * <p>
-     * Most shared {@code SolidObject} callers keep the ROM stop-on-side-contact
-     * behavior. Object-local ordering exceptions can opt in when the engine's
-     * inline post-physics checkpoint observes a side contact after the ROM frame
-     * would have already let the player slot overwrite the stopped velocity.
-     */
-    default boolean preservesMovingSideContactVelocity(PlayableEntity player) {
-        return false;
-    }
-
-    /**
      * Whether a zero horizontal velocity on the object's left side still routes
      * through {@code SolidObject_StopCharacter}.
      * <p>
@@ -495,144 +436,6 @@ public interface SolidObjectProvider {
     }
 
     /**
-     * Whether CPU sidekick follow steering should treat this still-ridden object
-     * as preserving the previous frame's push bit until the ROM CPU slot reads
-     * it.
-     * <p>
-     * This is intentionally object-local. Most objects should not bridge a
-     * cleared {@code Status_Push}: their current helper phase already matches
-     * what the CPU sees. Plain SolidObject/SolidObjectFull callers that keep
-     * standing/pushing bits in the live object status byte can opt in when trace
-     * evidence shows the engine has reconciled support before TailsCPU_Normal
-     * reads {@code Status_Push} (S2 loc_24836, docs/s2disasm/s2.asm:39291-39294).
-     */
-    default boolean preservesSidekickCpuPushGraceWhileRiding(PlayableEntity player) {
-        return false;
-    }
-
-    /**
-     * Whether CPU sidekick follow steering should treat this latched object as
-     * preserving a previous push bit after the live ride record has cleared.
-     * <p>
-     * This is narrower than {@link #preservesSidekickCpuPushGraceWhileRiding(PlayableEntity)}:
-     * it only applies when the player is no longer marked on-object locally, but
-     * ROM-visible object state can still feed the {@code Status_Push} branch at
-     * the sidekick CPU slot. Keep it object-local and do not use it to infer
-     * push from route/frame-specific trace data.
-     */
-    default boolean preservesSidekickCpuPushGraceAfterRideClears(PlayableEntity player) {
-        return false;
-    }
-
-    /**
-     * Whether a current {@code Status_Push} bypass while the CPU sidekick is
-     * still riding this object should consume the object-order input history
-     * slot rather than the ordinary already-loaded follow slot.
-     * <p>
-     * Most objects must return false: ROM {@code TailsCPU_Normal} loads the
-     * delayed input and delayed status from the same history entry before
-     * testing {@code Status_Push}. Objects whose own solid/drop-floor routine
-     * runs after the sidekick CPU slot can opt in when trace evidence shows the
-     * ROM-visible push bit belongs to that later object-order window.
-     */
-    default boolean usesSidekickCpuCurrentPushObjectOrderInputDelay(PlayableEntity player) {
-        return false;
-    }
-
-    /**
-     * Whether {@code TailsCPU_Normal}'s delayed leader {@code Status_Push} test
-     * should use the object-order status sample while this CPU sidekick rides
-     * the object.
-     * <p>
-     * This is narrower than {@link #usesSidekickCpuCurrentPushObjectOrderInputDelay(PlayableEntity)}:
-     * it affects the d4-style push-bypass decision, not the delayed Ctrl_1 word
-     * consumed after the branch has already been chosen.
-     */
-    default boolean usesSidekickCpuPushBypassObjectOrderStatusDelay(PlayableEntity player) {
-        return false;
-    }
-
-    /**
-     * Whether a CPU sidekick riding this object should treat the delayed leader
-     * status sample as still carrying {@code Status_Push} when deciding the
-     * {@code TailsCPU_Normal} push-bypass branch.
-     * <p>
-     * This is for folded engine objects that represent multiple ROM SST solid
-     * slots. ROM stores each slot's standing/pushing bits independently, and the
-     * delayed {@code Sonic_Stat_Record_Buf} sample can still include a child-slot
-     * push bit even when the folded engine history only retained the parent slot.
-     */
-    default boolean preservesSidekickDelayedLeaderPushWhileRiding(PlayableEntity sidekick) {
-        return false;
-    }
-
-    /**
-     * Whether a CPU sidekick's persistent {@code interact(a0)} slot should
-     * preserve a just-cleared {@code Status_Push} bit for the ROM CPU read even
-     * after the engine has already released the live ride state.
-     * <p>
-     * This is narrower than {@link #preservesSidekickCpuPushGraceWhileRiding}:
-     * it applies only when the player is no longer riding the object but the ROM
-     * interact slot still dereferences this object's SST status byte before the
-     * object's later solid/drop-floor routine refreshes it.
-     */
-    default boolean preservesSidekickCpuPushGraceFromInteractSlot(PlayableEntity player) {
-        return false;
-    }
-
-    /**
-     * Whether an interact-slot object keeps current {@code Status_Push} visible
-     * to {@code TailsCPU_Normal} even after the local push-grace counter has
-     * decayed and the sidekick is not stationary relative to the leader.
-     * <p>
-     * This is narrower than {@link #preservesSidekickCpuPushGraceFromInteractSlot(PlayableEntity)}.
-     * Use only for object-local ROM evidence where the sidekick's persistent
-     * {@code interact(a0)} slot still dereferences this object's live
-     * {@code SolidObject} status byte at the CPU read.
-     */
-    default boolean preservesMovingSidekickCpuPushAtZeroGraceFromInteractSlot(PlayableEntity player) {
-        return false;
-    }
-
-    /**
-     * Whether an approved interact-slot push bridge must also publish
-     * {@code Status_Push} to the sidekick's later movement/animation pass.
-     * <p>
-     * Most interact-slot bridges only reproduce the earlier CPU-control read.
-     * Use this narrower hook when ROM object ordering leaves the same live SST
-     * push bit visible after {@code TailsCPU_Normal} as well.
-     */
-    default boolean publishesSidekickCpuPushFromInteractSlot(PlayableEntity player) {
-        return false;
-    }
-
-    /**
-     * Whether a CPU sidekick's persistent {@code interact(a0)} slot should keep
-     * the delayed leader status sample in the push-visible branch after the live
-     * push-grace window has expired.
-     * <p>
-     * This affects {@code TailsCPU_Normal}'s delayed d4 {@code Status_Push}
-     * fall-through decision, not the current sidekick push-bypass branch.
-     */
-    default boolean preservesSidekickDelayedLeaderPushFromInteractSlot(PlayableEntity player) {
-        return false;
-    }
-
-    /**
-     * Minimum remaining push-grace frames for the released-interact CPU bridge.
-     */
-    default int sidekickCpuPushGraceMinimumFramesFromInteractSlot(PlayableEntity player) {
-        return Integer.MAX_VALUE;
-    }
-
-    /**
-     * Maximum remaining push-grace frames for the released-interact CPU bridge.
-     */
-    default int sidekickCpuPushGraceMaximumFramesFromInteractSlot(PlayableEntity player) {
-        return Integer.MIN_VALUE;
-    }
-
-    /**
      * Whether this object's continued-riding path should keep the player's
      * {@code Status_Push} bit set even when the current frame does not produce
      * a fresh side-contact classification.
@@ -643,38 +446,6 @@ public interface SolidObjectProvider {
      * pressed into a neighbouring step face during the continued ride path.
      */
     default boolean preservesRidingPushStatus(PlayableEntity player) {
-        return false;
-    }
-
-    /**
-     * Minimum remaining push-grace frames for the CPU sidekick riding bridge.
-     * <p>
-     * The default keeps the conservative shared threshold. Objects with ROM
-     * evidence that their {@code SolidObject} status byte stays visible longer
-     * to Tails' CPU slot may lower this value locally.
-     */
-    default int sidekickCpuPushGraceMinimumFramesWhileRiding(PlayableEntity player) {
-        return Integer.MAX_VALUE;
-    }
-
-    /**
-     * Maximum remaining push-grace frames for the CPU sidekick riding bridge.
-     * <p>
-     * Some object-local ROM visibility windows are late-tail handoffs rather
-     * than the whole grace span. The default leaves existing providers
-     * unconstrained.
-     */
-    default int sidekickCpuPushGraceMaximumFramesWhileRiding(PlayableEntity player) {
-        return Integer.MAX_VALUE;
-    }
-
-    /**
-     * Whether an engine-stale push-grace window must leave ordinary sidekick
-     * follow steering active while this object remains the live support.
-     * Native CPU code sees the current cleared {@code Status_Push} bit in this
-     * case and still executes its +/-1 follow-position nudge.
-     */
-    default boolean sidekickCpuStalePushGraceKeepsFollowSteeringWhileRiding(PlayableEntity player) {
         return false;
     }
 
@@ -779,18 +550,6 @@ public interface SolidObjectProvider {
     }
 
     /**
-     * Whether a newly established ride should remember this frame's pre-update
-     * object X as the baseline for the next continued-riding carry.
-     * <p>
-     * S2 {@code PlatformObject} callers pass the object's saved pre-move
-     * {@code x_pos} in {@code d4} to the solid helper, so the first continued
-     * riding frame carries by {@code current_x - d4}.
-     */
-    default boolean seedsNewRideCarryFromPreUpdateX() {
-        return false;
-    }
-
-    /**
      * Whether new solid-contact geometry should use the object's pre-update
      * position instead of its current post-update position.
      * <p>
@@ -816,20 +575,6 @@ public interface SolidObjectProvider {
     }
 
     /**
-     * Whether this object should sample one pending airborne Y step for a
-     * pre-movement {@code SolidObject_cont} top-landing check.
-     * <p>
-     * Use only for object routines that the ROM executes after the player slot
-     * has already applied airborne movement, while the engine's object pass still
-     * sees the pre-move centre. The resolver limits this hook to falling,
-     * airborne players that cross into the normal {@code SolidObject_Landed}
-     * top band; side and bottom contacts are unchanged.
-     */
-    default boolean projectsPreMovementAirYForSolidContact(PlayableEntity player) {
-        return false;
-    }
-
-    /**
      * Whether continued-riding flat-top re-seat should use the object's
      * pre-update Y for this frame.
      * <p>
@@ -839,46 +584,6 @@ public interface SolidObjectProvider {
      * object's actual current position or side-contact cleanup.
      */
     default boolean usesPreUpdateYForContinuedRide(PlayableEntity player) {
-        return false;
-    }
-
-    /**
-     * Whether continued horizontal rider carry should use the object's
-     * pre-update X as this frame's platform position.
-     */
-    default boolean usesPreUpdateXForContinuedRide(PlayableEntity player) {
-        return false;
-    }
-
-    /**
-     * Number of newly-pressed horizontal-input frames to ignore while this
-     * object is the player's current riding solid.
-     * <p>
-     * Default is zero. Object-specific overrides are for ROM helper timing
-     * quirks where the BK2 input row is aligned to V-int, but the player
-     * movement routine does not consume the new logical horizontal value until
-     * a later gameplay step. Keep this object-local; do not broaden stale input
-     * suppression into shared movement unless all callers of the helper have
-     * been checked.
-     */
-    default int staleHorizontalLogicalInputFramesWhileRiding(PlayableEntity player, int rideFrames) {
-        return 0;
-    }
-
-    default int staleHorizontalLogicalInputFramesWhileRiding(
-            PlayableEntity player, int rideFrames, boolean left, boolean right) {
-        return right && !left ? staleHorizontalLogicalInputFramesWhileRiding(player, rideFrames) : 0;
-    }
-
-    /**
-     * Whether the stale-horizontal-input edge tracker should remain attached to
-     * this riding object while the player has nonzero ground speed.
-     * <p>
-     * Most providers keep the historic reset-while-moving behavior. Concrete
-     * ROM routines may opt in when a mid-ride inertia reset should not make a
-     * still-held horizontal input look newly pressed.
-     */
-    default boolean preservesStaleHorizontalInputEdgeWhileMoving(PlayableEntity player) {
         return false;
     }
 
@@ -945,7 +650,7 @@ public interface SolidObjectProvider {
      * the player each frame. When enabled, if terrain is detected at or above the
      * player's feet, the player detaches from this object and enters the air state.
      * <p>
-     * ROM: DropOnFloor (s2.asm:35810) — called by objects that can push the player
+     * ROM: DropOnFloor (s2.asm:36114) — called by objects that can push the player
      * into solid terrain (e.g., vertically-moving platforms like HTZ rising lava).
      */
     default boolean dropOnFloor() {
@@ -987,7 +692,7 @@ public interface SolidObjectProvider {
      * <p>
      * Default: {@code false} (slope sample writes y_pos every frame, matching
      * ROM {@code SolidObjSloped2} sonic3k.asm:41767-41792 / {@code MvSonicOnSlope}
-     * s2disasm:35429 invoked by {@code sub_205B6} sonic3k.asm:44870).
+     * s2disasm:35429 invoked by {@code sub_205B6} sonic3k.asm:44875).
      * <p>
      * ROM divergence covered by this hook: S3K {@code Obj_CollapsingPlatform}
      * state-1 routine {@code loc_20594} (sonic3k.asm:44854-44864) decrements its
@@ -995,7 +700,7 @@ public interface SolidObjectProvider {
      * start, branches to {@code ObjPlatformCollapse_CreateFragments}
      * (sonic3k.asm:45434-45482). That branch rewrites {@code (a0)} to
      * {@code loc_205DE} and {@code jmp}s to {@code Play_SFX} <em>without</em>
-     * falling through to {@code sub_205B6} (sonic3k.asm:44870) -- so the slope
+     * falling through to {@code sub_205B6} (sonic3k.asm:44875) -- so the slope
      * sample / y_pos write is skipped on the state-1 to state-2 transition
      * frame. Sonic remains attached because {@code Status_OnObj} and
      * {@code p1_standing_bit} are not cleared, but his y_pos is held at the
@@ -1063,7 +768,7 @@ public interface SolidObjectProvider {
      * ROM divergence: the on-screen gate at {@code loc_1DF88}
      * (sonic3k.asm:41430) lives <em>only</em> in the {@code SolidObjectFull_1P}
      * helper (sonic3k.asm:41056-41058). Objects that route through the
-     * sibling helper {@code SolidObjectFull2_1P} (sonic3k.asm:41105-41107)
+     * sibling helper {@code SolidObjectFull2_1P} (sonic3k.asm:41110-41112)
      * fall through directly to {@code SolidObject_cont} and never test
      * {@code render_flags} bit 7. Notably <strong>all spring variants</strong>
      * call {@code SolidObjectFull2_1P} (sonic3k.asm:47704/47673/47692/47701/

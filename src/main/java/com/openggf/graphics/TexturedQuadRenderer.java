@@ -91,6 +91,17 @@ public class TexturedQuadRenderer {
         }
     }
 
+    /** Runs a local-coordinate page inside the current projection and restores it on failure. */
+    public void withHorizontalOffset(int offset, Runnable draw) {
+        if (offset == 0) { draw.run(); return; }
+        if (cachedProjectionMatrix == null) throw new IllegalStateException("A menu projection is required");
+        float[] previous = cachedProjectionMatrix;
+        float[] shifted = new org.joml.Matrix4f().set(previous).translate(offset, 0, 0).get(new float[16]);
+        setProjectionMatrix(shifted);
+        try { draw.run(); }
+        finally { setProjectionMatrix(previous); }
+    }
+
     /**
      * Draws a textured quad with white tint (no color modification).
      */

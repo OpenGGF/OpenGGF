@@ -261,6 +261,54 @@ class TestS3kAttractedRingAwardPhase {
                 fixture.gameplayMode().getRewindRegistry());
     }
 
+    @Test
+    void destructiveRestoreRetainsSuppressedAttractionThenReplaysOneSourceAndAward() {
+        var component = component();
+        GameServices.parallax().initZone(GameServices.level().getCurrentZone(),
+                GameServices.level().getCurrentAct(), GameServices.camera().getX(), GameServices.camera().getY());
+        var player = component.player();
+        var rings = component.rings();
+        var objects = GameServices.level().getObjectManager();
+        player.setObjectControlAllowsCpu(false);
+        assertTrue(player.isTouchResponseSuppressedByObjectControl());
+        int before = player.getRingCount();
+        var suppressed = component.registry().capture();
+        rings.attractStageRings(player);
+        rings.assignPendingAttractedRingSlots();
+        assertEquals(0, rings.capture().attractedRings().length);
+        assertFalse(rings.isCollected(component.placement()));
+
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
+        var first = allocateThroughAttraction(component);
+        rings.prepareAttractedRingTouchSnapshot();
+        rings.collectAttractedRing(player, 1);
+        rings.update(component.cameraX(), player, 1, false);
+        assertEquals(before + 1, player.getRingCount());
+        var awarded = component.registry().capture();
+
+        objects.setRewindInPlaceRestoreEnabledForTest(false);
+        for (int replay = 0; replay < 2; replay++) {
+            component.registry().restore(suppressed);
+            assertWorld(suppressed, component.registry().capture());
+            assertTrue(player.isTouchResponseSuppressedByObjectControl());
+            rings.attractStageRings(player);
+            rings.assignPendingAttractedRingSlots();
+            assertEquals(0, rings.capture().attractedRings().length);
+            assertFalse(rings.isCollected(component.placement()));
+            assertEquals(before, player.getRingCount());
+
+            ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
+            var again = allocateThroughAttraction(component);
+            assertEquals(first.sourceIndex(), again.sourceIndex());
+            assertEquals(first.objectSlotIndex(), again.objectSlotIndex());
+            rings.prepareAttractedRingTouchSnapshot();
+            rings.collectAttractedRing(player, 1);
+            rings.update(component.cameraX(), player, 1, false);
+            assertEquals(before + 1, player.getRingCount());
+            assertWorld(awarded, component.registry().capture());
+        }
+    }
+
     private static com.openggf.game.rewind.snapshot.RingSnapshot.AttractedRingEntry
             allocateThroughAttraction(Component component) {
         int allocatedBefore = GameServices.level().getObjectManager().getAllocatedSlotCount();

@@ -61,7 +61,14 @@ public final class Lbz1GroundLaunchIntroInstance extends AbstractObjectInstance
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (!armed) {
-            return;
+            if (!services().levelManager().hasPendingFreshLevelTransitionBoundary()) {
+                return;
+            }
+            // Fresh zone loads assemble players in loc_6468's initial
+            // Process_Sprites pass, without the ordinary title-card callback.
+            // Obj_LevelIntro_PlayerLaunchFromGround initializes control and its
+            // 30-frame timer here; loc_39A80 starts on the next dispatch.
+            applyInitialHoldForNativeSetupPass();
         }
         if (!initialized) {
             initialized = true;

@@ -59,17 +59,19 @@ class TestMasterPowLifecycle {
             assertEquals(1, socket.messages.size());
             receive(client, socket, new ControlMessage.PowChallenge("JOIN", "AA==", 0), admitted);
             ((Future<?>) field(client, "powTask")).get(1, TimeUnit.SECONDS);
-            Object pendingTail = field(client, "sendChain");
+            OutboundWriter writer = (OutboundWriter) field(client, "writer");
+            int retained = writer.retainedItems();
+            assertEquals(2, retained);
             for (int index = 0; index < 500; index++) {
                 receive(client, socket, new ControlMessage.PowChallenge(
                         index == 499 ? "IDENTITY" : "JOIN", "AA==", 0), admitted);
                 ((Future<?>) field(client, "powTask")).get(1, TimeUnit.SECONDS);
-                assertSame(pendingTail, field(client, "sendChain"),
-                        "solved stale proofs must replace one pending write, not append retained continuations");
+                assertEquals(retained, writer.retainedItems(),
+                        "solved stale proofs must replace one pending write");
             }
             assertEquals(1, socket.messages.size());
             firstSend.complete(socket);
-            ((CompletableFuture<?>) pendingTail).get(1, TimeUnit.SECONDS);
+            awaitMessages(socket, 2);
             assertEquals(2, socket.messages.size());
             var last = assertInstanceOf(ControlMessage.PowSolution.class,
                     new com.openggf.net.protocol.ControlJsonCodec().decode(socket.messages.getLast()).message());
@@ -136,29 +138,42 @@ class TestMasterPowLifecycle {
     @Test
     void supersededProofWaitingBehindTransportBackpressureIsDiscarded(@TempDir Path dir) throws Exception {
         var client = client(dir);
-        var socket = new Socket();
+        var heldSend = new CompletableFuture<WebSocket>();
+        var socket = new Socket() {
+            @Override public CompletableFuture<WebSocket> sendText(CharSequence text, boolean last) {
+                super.sendText(text, last);
+                return messages.size() == 1 ? heldSend : CompletableFuture.completedFuture(this);
+            }
+        };
         set(client, "webSocket", socket);
-        var heldSend = new CompletableFuture<Void>();
-        set(client, "sendChain", heldSend);
+        var initial = MasterClient.class.getDeclaredMethod("sendRawControl",
+                String.class, ControlMessage.class);
+        initial.setAccessible(true);
+        initial.invoke(client, null, new ControlMessage.Ping(1));
         var admitted = new CompletableFuture<MasterClient>();
         try {
             receive(client, socket, new ControlMessage.PowChallenge("JOIN", "AA==", 0), admitted);
             ((Future<?>) field(client, "powTask")).get(1, TimeUnit.SECONDS);
             receive(client, socket, new ControlMessage.PowChallenge("IDENTITY", "AA==", 0), admitted);
             ((Future<?>) field(client, "powTask")).get(1, TimeUnit.SECONDS);
-            heldSend.complete(null);
-            assertTrue(socket.sent.await(1, TimeUnit.SECONDS));
-            assertEquals(1, socket.messages.size());
+            heldSend.complete(socket);
+            awaitMessages(socket, 2);
+            assertEquals(2, socket.messages.size());
             var solution = assertInstanceOf(ControlMessage.PowSolution.class,
-                    new com.openggf.net.protocol.ControlJsonCodec().decode(socket.messages.getFirst()).message());
+                    new com.openggf.net.protocol.ControlJsonCodec().decode(socket.messages.getLast()).message());
             assertEquals("IDENTITY", solution.kind());
-        } finally { heldSend.complete(null); client.close(); }
+        } finally { heldSend.complete(socket); client.close(); }
+    }
+
+    private static void awaitMessages(Socket socket, int count) throws InterruptedException {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(1);
+        while (socket.messages.size() < count && System.nanoTime() < deadline) Thread.sleep(5);
     }
 
     private static MasterClient client(Path dir) throws Exception {
-        var constructor = MasterClient.class.getDeclaredConstructor(PlayerIdentity.class, String.class, String.class);
+        var constructor = MasterClient.class.getDeclaredConstructor(java.net.URI.class, PlayerIdentity.class, String.class, String.class);
         constructor.setAccessible(true);
-        return constructor.newInstance(PlayerIdentity.loadOrCreate(dir), "Alice", "build");
+        return constructor.newInstance(java.net.URI.create("wss://master.test/master"), PlayerIdentity.loadOrCreate(dir), "Alice", "build");
     }
     private static Object field(MasterClient client, String name) throws Exception {
         var field = MasterClient.class.getDeclaredField(name); field.setAccessible(true); return field.get(client);
@@ -174,9 +189,9 @@ class TestMasterPowLifecycle {
     }
     @Test
     void excessiveChallengeFailsAdmissionWithoutStartingUnboundedWork(@TempDir Path dir) throws Exception {
-        var constructor = MasterClient.class.getDeclaredConstructor(PlayerIdentity.class, String.class, String.class);
+        var constructor = MasterClient.class.getDeclaredConstructor(java.net.URI.class, PlayerIdentity.class, String.class, String.class);
         constructor.setAccessible(true);
-        var client = constructor.newInstance(PlayerIdentity.loadOrCreate(dir), "Alice", "build");
+        var client = constructor.newInstance(java.net.URI.create("wss://master.test/master"), PlayerIdentity.loadOrCreate(dir), "Alice", "build");
         var admitted = new CompletableFuture<MasterClient>();
         var receive = MasterClient.class.getDeclaredMethod("receiveAdmission", WebSocket.class,
                 ControlMessage.class, CompletableFuture.class);

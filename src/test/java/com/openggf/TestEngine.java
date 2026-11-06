@@ -451,7 +451,7 @@ class TestEngine {
         var input = new com.openggf.control.InputHandler();
         for (int key : new int[] {org.lwjgl.glfw.GLFW.GLFW_KEY_TAB,
                 org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN, org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN,
-                org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT, org.lwjgl.glfw.GLFW.GLFW_KEY_TAB,
+                org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN, org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT, org.lwjgl.glfw.GLFW.GLFW_KEY_TAB,
                 org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER}) {
             input.handleKeyEvent(key, org.lwjgl.glfw.GLFW.GLFW_PRESS);
             screen.update(input);
@@ -899,6 +899,8 @@ class TestEngine {
             TrackingS1ImageCacheManager suppliedCacheManager) throws Exception {
         SonicConfigurationService config = SonicConfigurationService.getInstance();
         config.resetToDefaults();
+        // Bootstrap mocks do not provide gameplay rewind snapshots.
+        config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, false);
         config.setConfigValue(SonicConfiguration.AUDIO_ENABLED, false);
         config.setConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
         config.setConfigValue(SonicConfiguration.CROSS_GAME_SOURCE, donorActive ? "s3k" : "s2");

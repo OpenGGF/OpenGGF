@@ -1,6 +1,10 @@
 package com.openggf.editor.hud;
 
+import com.openggf.game.MenuStyle;
 import com.openggf.graphics.MenuPixelFont;
+import com.openggf.util.Graphemes;
+import com.openggf.graphics.text.HostText;
+import com.openggf.graphics.text.HostTextContext;
 import com.openggf.graphics.PatternRenderCommand;
 import com.openggf.graphics.PixelFontVariant;
 import com.openggf.graphics.PngTextureLoader;
@@ -185,14 +189,14 @@ final class EditorHudCanvas implements AutoCloseable {
     }
 
     /**
-     * Draws text. BODY and LARGE retain capitalized HUD labels; compact labels keep mixed case.
-     * Both native menu-font weights support lowercase descenders.
+     * Draws text exactly as given, so the measured and drawn strings are always the same. Callers
+     * choose the case by role: capitals for tags, chips, captions and footer labels; sentence case
+     * for rows, values and descriptions. Both native menu-font weights support lowercase.
      */
     void text(String text, float x, float y, Size size, int rgb, float alpha) {
         if (text == null || text.isEmpty() || alpha <= 0) return;
-        if (size != Size.SMALL) text = text.toUpperCase(java.util.Locale.ROOT);
         flush();
-        font.drawText(text, x, y, size.scale, ((rgb >> 16) & 255) / 255f, ((rgb >> 8) & 255) / 255f,
+        font.drawText(text, x, y + font.lineMetrics(size.scale).above(), size.scale, ((rgb >> 16) & 255) / 255f, ((rgb >> 8) & 255) / 255f,
                 (rgb & 255) / 255f, alpha);
     }
 
@@ -201,20 +205,24 @@ final class EditorHudCanvas implements AutoCloseable {
         text(fit(text, maxWidth, size), x, y, size, rgb, alpha);
     }
 
+    /** Headings retain authored case; measurement and drawing agree. */
+    static String display(String text, Size size) {
+        return text;
+    }
+
     static String fit(String text, float maxWidth, Size size) {
-        if (text == null) return "";
-        int advance = MenuPixelFont.glyphAdvance(size.scale);
-        int max = Math.max(0, (int) (maxWidth / advance));
-        if (text.length() <= max) return text;
-        return max <= 3 ? text.substring(0, max) : text.substring(0, max - 3) + "...";
+        if (text == null || textWidth(text, size) <= Math.floor(maxWidth)) return text;
+        return MenuStyle.fit(text, (int) Math.floor(maxWidth), size.scale);
     }
 
     static int textWidth(String text, Size size) {
-        return text == null ? 0 : text.length() * MenuPixelFont.glyphAdvance(size.scale);
+        return MenuPixelFont.textWidth(text, size.scale);
     }
 
+    /** Line pitch in the active language; never smaller than the native cell. */
     static int lineHeight(Size size) {
-        return MenuPixelFont.glyphLineHeight(size.scale);
+        return HostText.shared().lineMetrics(MenuPixelFont.face(size.scale), HostTextContext.current())
+                .lineHeight() * MenuPixelFont.pixelScale(size.scale);
     }
 
     /** Restricts drawing to a rectangle until {@link #unclip()}. */

@@ -47,7 +47,10 @@ public final class FbzDezPlayerLauncherObjectInstance extends AbstractObjectInst
                 launcher.applyStandingRider(player,vIntRunCount);
             }
         });
-        checkpointAll();
+        // loc_3B9AC loads d4 from the moved x_pos (sonic3k.asm:79467-79477); loc_3BA4A
+        // pops the x_pos it pushed before stepping (79525-79547), so only it carries.
+        if (returning) checkpointAll();
+        else checkpointAll(x);
         // Sprite_OnScreen_Test2 reads the saved anchor at $44, never the moving
         // x_pos. The native-width limit remains exactly $280; widescreen extends
         // only the visible-screen term of $80 + screen width + $C0.
@@ -98,8 +101,14 @@ public final class FbzDezPlayerLauncherObjectInstance extends AbstractObjectInst
     ObjectPlayerParticipationPolicy participationPolicy(){return ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED;}
     @Override public SolidExecutionMode solidExecutionMode(){return SolidExecutionMode.MANUAL_CHECKPOINT;}
     @Override public boolean usesPreUpdatePositionForSolidContact(PlayableEntity player){return returning;}
-    @Override public boolean carriesRiderOnHorizontalMove(PlayableEntity player){return returning;}
     @Override public int getX(){return x;}@Override public SolidObjectParams getSolidParams(){return SolidObjectParams.of(0x10,3,3);}@Override public boolean isTopSolidOnly(){return true;}@Override public SolidRoutineProfile getSolidRoutineProfile(){return SolidRoutineProfile.topSolid(false);}
+    @Override public boolean rejectsZeroDistanceTopSolidLanding(){
+        // loc_3B9AC (sonic3k.asm:79467-79477) and
+        // loc_3BA70 (sonic3k.asm:79543-79547) both call SolidObjectTop.
+        // loc_1E45A (sonic3k.asm:42044-42053) accepts d0 in [-$10,-1]
+        // through unsigned word tests; zero returns without landing.
+        return true;
+    }
     @Override public int getPriorityBucket(){return 5;}
     @Override public void appendRenderCommands(List<GLCommand> commands){PatternSpriteRenderer r=getRenderer(Sonic3kObjectArtKeys.FBZ_DEZ_PLAYER_LAUNCHER);if(r!=null&&r.isReady())r.drawFrameIndex(0,x,spawn.y(),(spawn.renderFlags()&1)!=0,false);}
 }

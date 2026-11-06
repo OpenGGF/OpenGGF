@@ -25,6 +25,8 @@ import static org.junit.jupiter.api.Assertions.*;
  * Hidden Palace ($1601) breadth: every width × supported character/donor combination
  * and the team shapes, through cold entry and the lower teleporter transport with
  * rewind restore plus forward replay at the charge and rise boundaries.
+ * Smoke distributes presets across every supported solo pair and distinct team;
+ * complete width products remain available in the exhaustive audit.
  */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestS3kHpzCompatibilityMatrix {
@@ -72,6 +74,34 @@ class TestS3kHpzCompatibilityMatrix {
         return scenarios().filter(row -> !row.followers().isEmpty());
     }
 
+    /** Every supported solo pair and distinct donor/team shape, with preset coverage distributed across them. */
+    static Stream<Scenario> representativeScenarios() {
+        var rows = new ArrayList<>(List.of(
+                new Scenario("sonic", WidescreenAspect.NATIVE_4_3, "off", ""),
+                new Scenario("tails", WidescreenAspect.WIDE_16_10, "off", ""),
+                new Scenario("knuckles", WidescreenAspect.SUPER_32_9, "off", ""),
+                new Scenario("sonic", WidescreenAspect.WIDE_16_9, "s1", ""),
+                new Scenario("sonic", WidescreenAspect.ULTRA_21_9, "s2", ""),
+                new Scenario("tails", WidescreenAspect.SUPER_32_9, "s2", "")));
+        var aspects = WidescreenAspect.values();
+        int nextAspect = 0;
+        for (String donor : List.of("off", "s1", "s2")) {
+            Set<String> teams = new LinkedHashSet<>();
+            for (String requested : List.of("tails", "tails,knuckles", "tails,tails",
+                    "tails,tails,knuckles,sonic,knuckles,sonic,tails")) {
+                teams.add(SozAcceptanceConfigurations.supportedFollowers(donor, requested));
+            }
+            for (String followers : teams) {
+                rows.add(new Scenario("sonic", aspects[nextAspect++ % aspects.length], donor, followers));
+            }
+        }
+        return rows.stream();
+    }
+
+    static Stream<Scenario> representativeFollowerScenarios() {
+        return representativeScenarios().filter(row -> !row.followers().isEmpty());
+    }
+
     /** Retain the old custom-width geometry checks without claiming menu-preset coverage. */
     static Stream<Scenario> legacyGeometryScenarios() {
         return Stream.of("off", "s1", "s2").flatMap(donor ->
@@ -79,6 +109,11 @@ class TestS3kHpzCompatibilityMatrix {
                         .filter(main -> SozAcceptanceConfigurations.supportsCharacter(donor, main))
                         .flatMap(main -> Stream.of(512, 640)
                                 .map(width -> new Scenario(main, null, donor, "", width))));
+    }
+
+    static Stream<Scenario> representativeLegacyGeometryScenarios() {
+        return Stream.of(new Scenario("sonic", null, "s1", "", 512),
+                new Scenario("knuckles", null, "off", "", 640));
     }
 
     private record ProfileRequest(String donor, String requestedMain, String requestedFollower,
@@ -99,9 +134,27 @@ class TestS3kHpzCompatibilityMatrix {
                         .map(aspect -> new ProfileScenario(request, aspect)));
     }
 
+    static Stream<ProfileScenario> representativeNormalizedProfiles() {
+        var requests = normalizedProfiles().map(ProfileScenario::request).distinct().toList();
+        var aspects = WidescreenAspect.values();
+        return java.util.stream.IntStream.range(0, requests.size())
+                .mapToObj(index -> new ProfileScenario(requests.get(index), aspects[index % aspects.length]));
+    }
+
     @ParameterizedTest(name = "actual normalized launch-profile entry {0}")
     @MethodSource("normalizedProfiles")
+    @Tag("exhaustive-audit")
     void launchProfileSanitizationFeedsTheActualHpzEntry(ProfileScenario scenario) {
+        checkNormalizedProfileEntry(scenario);
+    }
+
+    @ParameterizedTest(name = "representative normalized launch-profile entry {0}")
+    @MethodSource("representativeNormalizedProfiles")
+    void representativeLaunchPoliciesFeedTheActualHpzEntry(ProfileScenario scenario) {
+        checkNormalizedProfileEntry(scenario);
+    }
+
+    private void checkNormalizedProfileEntry(ProfileScenario scenario) {
         var request = scenario.request();
         config.clearSessionOverrides();
         new com.openggf.game.launch.LaunchProfileApplier(config).apply(
@@ -242,13 +295,27 @@ class TestS3kHpzCompatibilityMatrix {
 
     @ParameterizedTest
     @MethodSource("scenarios")
+    @Tag("exhaustive-audit")
     void coldEntryAppliesCharacterStartLimitsAndPaletteControl(Scenario row) {
         checkColdEntry(row);
     }
 
     @ParameterizedTest(name = "legacy custom-width entry {0}")
     @MethodSource("legacyGeometryScenarios")
+    @Tag("exhaustive-audit")
     void legacyCustomWidthEntryRetainsItsGeometryContract(Scenario row) {
+        checkColdEntry(row);
+    }
+
+    @ParameterizedTest(name = "representative cold entry {0}")
+    @MethodSource("representativeScenarios")
+    void representativeTeamsRetainCharacterStartLimitsAndPaletteControl(Scenario row) {
+        checkColdEntry(row);
+    }
+
+    @ParameterizedTest(name = "representative legacy custom-width entry {0}")
+    @MethodSource("representativeLegacyGeometryScenarios")
+    void representativeLegacyWidthsRetainColdEntryGeometry(Scenario row) {
         checkColdEntry(row);
     }
 
@@ -279,13 +346,27 @@ class TestS3kHpzCompatibilityMatrix {
 
     @ParameterizedTest
     @MethodSource("scenarios")
+    @Tag("exhaustive-audit")
     void lowerTeleporterTransportReplaysAtChargeAndRise(Scenario row) {
         checkTransport(row);
     }
 
     @ParameterizedTest(name = "legacy custom-width transport {0}")
     @MethodSource("legacyGeometryScenarios")
+    @Tag("exhaustive-audit")
     void legacyCustomWidthTransportRetainsItsGeometryContract(Scenario row) {
+        checkTransport(row);
+    }
+
+    @ParameterizedTest(name = "representative teleporter transport {0}")
+    @MethodSource("representativeScenarios")
+    void representativeTeamsReplayChargeRiseReleaseAndBeamDeletion(Scenario row) {
+        checkTransport(row);
+    }
+
+    @ParameterizedTest(name = "representative legacy custom-width transport {0}")
+    @MethodSource("representativeLegacyGeometryScenarios")
+    void representativeLegacyWidthsRetainTransportGeometry(Scenario row) {
         checkTransport(row);
     }
 
@@ -333,13 +414,27 @@ class TestS3kHpzCompatibilityMatrix {
 
     @ParameterizedTest
     @MethodSource("scenarios")
+    @Tag("exhaustive-audit")
     void upperCorridorEntrySelectsPalHpzAndCharacterCameraLimit(Scenario row) {
         checkUpperCorridor(row);
     }
 
     @ParameterizedTest(name = "legacy custom-width corridor {0}")
     @MethodSource("legacyGeometryScenarios")
+    @Tag("exhaustive-audit")
     void legacyCustomWidthCorridorRetainsItsGeometryContract(Scenario row) {
+        checkUpperCorridor(row);
+    }
+
+    @ParameterizedTest(name = "representative upper corridor {0}")
+    @MethodSource("representativeScenarios")
+    void representativeTeamsRetainUpperCorridorPaletteAndCharacterCameraLimits(Scenario row) {
+        checkUpperCorridor(row);
+    }
+
+    @ParameterizedTest(name = "representative legacy custom-width corridor {0}")
+    @MethodSource("representativeLegacyGeometryScenarios")
+    void representativeLegacyWidthsRetainUpperCorridorGeometry(Scenario row) {
         checkUpperCorridor(row);
     }
 
@@ -366,7 +461,18 @@ class TestS3kHpzCompatibilityMatrix {
 
     @ParameterizedTest(name = "P1-only pad authority {0}")
     @MethodSource("followerScenarios")
+    @Tag("exhaustive-audit")
     void standingFollowersCannotClaimTheLeadersTeleporter(Scenario row) {
+        checkFollowerPadAuthority(row);
+    }
+
+    @ParameterizedTest(name = "representative P1-only pad authority {0}")
+    @MethodSource("representativeFollowerScenarios")
+    void representativeStandingTeamsCannotClaimTheLeadersTeleporter(Scenario row) {
+        checkFollowerPadAuthority(row);
+    }
+
+    private void checkFollowerPadAuthority(Scenario row) {
         // loc_45660 tests p1_standing_bit after SolidObjectTopSloped2 has resolved both
         // native players. Extra standing latches must preserve the same P1-only authority.
         var fixture = boot(row, 0xA20, 0x8B0);

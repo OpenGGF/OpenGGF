@@ -3,6 +3,9 @@ package com.openggf.sprites.managers;
 import com.openggf.game.rules.CrossGameRuleComposer;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.sonic2.Sonic2GameModule;
+import com.openggf.game.sonic1.Sonic1GameModule;
+import com.openggf.game.sonic2.kis2.Kis2Rules;
+import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.Sonic;
@@ -13,6 +16,11 @@ import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.ValueSource;
+import java.util.stream.Stream;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -52,6 +60,13 @@ class TestPlayableSpriteMovementTailsFlight {
 
         repressJump(movement);
 
+        assertFalse(tails.getTailsFlightController().isActive());
+    }
+
+    @Test
+    void kis2RulesRetainS2ManualFlightAvailability() throws Exception {
+        tails.useRules(Kis2Rules.RULES);
+        repressJump(movement);
         assertFalse(tails.getTailsFlightController().isActive());
     }
 
@@ -207,6 +222,120 @@ class TestPlayableSpriteMovementTailsFlight {
         tails.setObjectControlled(true);
 
         assertFalse(tails.getTailsFlightController().isActive(), "object-control takeover clears flight");
+    }
+
+    static Stream<Arguments> suppressedFlightProfiles() {
+        var s3 = new Sonic3kGameModule().getDonorCapabilities();
+        var s2 = new Sonic2GameModule().getDonorCapabilities();
+        var s1 = new Sonic1GameModule().getDonorCapabilities();
+        return Stream.of(
+                Arguments.of("native S3K P1 bit0", GameRules.SONIC_3K, false,
+                        ObjectControlState.movementSuppressedOnly(), false),
+                Arguments.of("native S3K CPU bits0/7", GameRules.SONIC_3K, true,
+                        ObjectControlState.nativeBit7FullControl(), true),
+                Arguments.of("native S3K CPU bits0/1", GameRules.SONIC_3K, true,
+                        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed(), true),
+                Arguments.of("S3K donor S1 host P1", CrossGameRuleComposer.compose(
+                        GameRules.SONIC_1, GameRules.SONIC_3K, s3), false,
+                        ObjectControlState.movementSuppressedOnly(), false),
+                Arguments.of("S3K donor S2 host CPU", CrossGameRuleComposer.compose(
+                        GameRules.SONIC_2, GameRules.SONIC_3K, s3), true,
+                        ObjectControlState.nativeBit7FullControl(), true),
+                // These profiles cannot activate manual flight. Their synthetic CPU
+                // ability byte must not leak into shared +$08 gravity on release.
+                Arguments.of("S2 donor S3K host CPU", CrossGameRuleComposer.compose(
+                        GameRules.SONIC_3K, GameRules.SONIC_2, s2), true,
+                        ObjectControlState.nativeBit7FullControl(), true),
+                Arguments.of("S1 donor S3K host P1", CrossGameRuleComposer.compose(
+                        GameRules.SONIC_3K, GameRules.SONIC_1, s1), false,
+                        ObjectControlState.movementSuppressedOnly(), false),
+                Arguments.of("native S2 CPU synthetic byte", GameRules.SONIC_2, true,
+                        ObjectControlState.nativeBit7FullControl(), true),
+                Arguments.of("KiS2 CPU synthetic byte", Kis2Rules.RULES, true,
+                        ObjectControlState.nativeBit7FullControl(), true),
+                Arguments.of("native S1 CPU synthetic byte", GameRules.SONIC_1, true,
+                        ObjectControlState.nativeBit7FullControl(), true));
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("suppressedFlightProfiles")
+    void suppressedFlightClearsOnlyDispatchFlagAndReleaseUsesNormalGravity(
+            String label, GameRules rules, boolean cpu, ObjectControlState control, boolean rawMapping) {
+        tails.useRules(rules);
+        tails.setCpuControlled(cpu);
+        tails.setRolling(false);
+        tails.setJumping(false);
+        control.applyTo(tails);
+        // CPU control runs BEFORE Tails_Control and can publish this after takeover.
+        tails.setDoubleJumpFlag(1);
+        tails.setDoubleJumpProperty((byte) 0xA7);
+        tails.setYSpeed((short) 0);
+        tails.setForcedAnimationId(0x20);
+        tails.setAnimationId(0x20);
+        tails.setObjectMappingFrameControl(rawMapping);
+        tails.setMappingFrame(0x55);
+        tails.setForcedJumpPress(true);
+        int radius = tails.getYRadius();
+        movement.handleMovement(false, false, false, false, false, false, false, false);
+        assertEquals(0, tails.getDoubleJumpFlag(), "suppressed normal dispatch clears flight");
+        assertEquals(0xA7, tails.getDoubleJumpProperty() & 0xFF, "no fuel write");
+        assertEquals(0, tails.getYSpeed(), "suppression runs neither gravity branch");
+        assertEquals(radius, tails.getYRadius());
+        assertEquals(0x20, tails.getForcedAnimationId(), "CPU/object animation owner survives");
+        assertEquals(0x20, tails.getAnimationId());
+        assertEquals(rawMapping, tails.isObjectMappingFrameControl());
+        assertEquals(0x55, tails.getMappingFrame());
+        assertEquals(!cpu, tails.isForcedJumpPress(), "only CPU one-shot input is consumed");
+        ObjectControlState.none().applyTo(tails);
+        tails.setForcedJumpPress(false);
+        movement.handleMovement(false, false, false, false, false, false, false, false);
+        assertEquals(0x38, tails.getYSpeed(), "next air dispatch uses normal gravity");
+        assertEquals(0, tails.getDoubleJumpFlag());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void animationAndTouchControlWithoutBitZeroDoNotCancelFlight(boolean cpu) {
+        tails.setCpuControlled(cpu);
+        tails.setRolling(false);
+        tails.setJumping(false);
+        ObjectControlState.engineScriptedTouchSuppressedMovementActive().applyTo(tails);
+        tails.setObjectMappingFrameControl(true); // native bit1 animation ownership
+        tails.setDoubleJumpFlag(1);
+        tails.setYSpeed((short) 0);
+        movement.handleMovement(false, false, false, false, false, false, false, false);
+        assertEquals(1, tails.getDoubleJumpFlag(), "bit0 alone selects the clear");
+        assertEquals(8, tails.getYSpeed(), "unsuppressed flight retains +$08 gravity");
+        assertTrue(tails.isObjectMappingFrameControl());
+    }
+
+    @Test
+    void recreatedPlayerRestoresSuppressedFlightAndRepeatsReleaseContinuation() {
+        tails.setRolling(false);
+        tails.setJumping(false);
+        tails.setObjectControlSuppressesMovement(true);
+        tails.setDoubleJumpFlag(1);
+        tails.setDoubleJumpProperty((byte) 0xA7);
+        tails.setYSpeed((short) 0);
+        var before = tails.captureRewindState();
+        tails.getMovementManager().handleMovement(false, false, false, false, false, false, false, false);
+        assertEquals(0, tails.getDoubleJumpFlag());
+        tails.setObjectControlSuppressesMovement(false);
+        tails.getMovementManager().handleMovement(false, false, false, false, false, false, false, false);
+        var continued = tails.captureRewindState();
+        var recreated = new TestTails("tails", (short) 0, (short) 0);
+        recreated.useRules(GameRules.SONIC_3K);
+        recreated.restoreRewindState(before);
+        assertEquals(1, recreated.getDoubleJumpFlag(), "restore must recover the pre-clear byte");
+        assertTrue(recreated.isObjectControlSuppressesMovement());
+        recreated.getMovementManager().handleMovement(false, false, false, false, false, false, false, false);
+        assertEquals(0, recreated.getDoubleJumpFlag());
+        recreated.setObjectControlSuppressesMovement(false);
+        recreated.getMovementManager().handleMovement(false, false, false, false, false, false, false, false);
+        assertEquals(0x38, recreated.getYSpeed());
+        assertTrue(com.openggf.game.rewind.RewindSnapshotDiff.diffKey(
+                "player", continued, recreated.captureRewindState()).isEmpty(),
+                "a new player/controller repeats the complete restored continuation");
     }
 
     private static void prepareReleasedAirJump(AbstractPlayableSprite sprite) {

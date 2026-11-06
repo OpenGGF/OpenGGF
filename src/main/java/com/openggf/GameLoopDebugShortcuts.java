@@ -49,13 +49,13 @@ final class GameLoopDebugShortcuts {
     /** Report assist keys before overlay toggles and debug-only art-viewer navigation. */
     static void updateInput(HostedRunController hostedRuns, DebugOverlayManager overlay,
                             Supplier<InputHandler> input, boolean debugShortcutsEnabled,
-                            SonicConfigurationService config) {
+                            boolean allowArtViewerInput, SonicConfigurationService config) {
         if (hostedRuns.isActive() && debugShortcutsEnabled
                 && DebugAssistInput.pressed(input.get(), config)) {
             hostedRuns.noteDebugAssist();
         }
         overlay.updateInput(input.get(), debugShortcutsEnabled, config);
-        if (debugShortcutsEnabled) {
+        if (debugShortcutsEnabled && allowArtViewerInput) {
             overlay.getObjectArtViewer().updateInput(input.get());
         }
     }

@@ -7,8 +7,12 @@ import java.util.Objects;
 
 public final class ModApiVersion {
     /**
-     * Current unpublished compiled-mod API candidate, including detached CPU-only title-preview
-     * providers and their RGBA image/animation sequence contract, run-scoped native HUD profiles,
+     * Current unpublished compiled-mod API candidate, including the grouped landing animation rule,
+     * saved rewind budget scope,
+     * allowance and stage/life-loss controls, plus the saved sprite scanline-limit
+     * presentation preference and BCP 47 host-interface
+     * UI_LANGUAGE preference, detached CPU-only title-preview providers and their RGBA
+     * image/animation sequence contract, run-scoped native HUD profiles,
      * overlay HUD-origin measurement, and native decoded
      * factory binding and original-ring retention on class-preserving levels,
      * bounded S3K boss/special/bonus-stage difficulty policies, and native-owned
@@ -16,6 +20,10 @@ public final class ModApiVersion {
      * plus native MHZ wind, LRZ echo-jet, FBZ extra-beat and SOZ light/ghost recipes.
      * Native HPZ feints, an SSZ Metropolis extra pair, DEZ alert guards and a
      * Doomsday delayed tail missile are finite unactivated campaign ingredients.
+     * The opt-in DISPLAY_INTERPOLATION preference and DISPLAY_INTERPOLATION_TOGGLE_KEY
+     * shortcut extend this unpublished candidate.
+     * EngineOnly members, initially ambient singleton accessors, are excluded from the
+     * supported surface; attributed source and bytecode consumption use the same contract.
      * The 0.7 candidate also includes
      * live window mode and display scaling preferences, configurable widescreen HUD anchoring,
      * widescreen presentation, KiS2 movement/touch/checkpoint/menu handoff contracts,
@@ -23,7 +31,8 @@ public final class ModApiVersion {
      * opt-in whole-game presentation pacing, modal level input ownership, controlled level admission and opaque
      * course checkpoints, semantic native impulses, logical menu pointers, and read-only
      * ROM-backed value scenes, held idle poses, controller-owned rewind presentation values
-     * and per-player button prompt labels derived from live bindings. Controlled
+     * and per-player button prompt labels derived from live bindings, which scenes read for
+     * player 1's keyboard or pad (SceneContext.buttonLabel). Controlled
      * entry fade admission reports whether it advanced; checkpoint readiness includes
      * the native released title overlay's completion. Bounded scene replay and
      * session-owned actual-PCM recording support creator rewind without giving
@@ -47,6 +56,8 @@ public final class ModApiVersion {
      * progress, a ten-minute duration cap and a 256 MiB stereo PCM budget.
      * Scene audio also starts supplied-ROM music live, preserving native intros/loops
      * with bounded packet buffering and scene-owned stop/fade/close lifetime.
+     * Stageplay documents (version 9) carry frozen physical controller input tracks bound to
+     * Puppet actors' lanes; a covered interval reads only those rows, never commands.
      * Scene-owned direct peer text messaging is asynchronous and bounded, with
      * socket/thread ownership and lifetime kept in the engine.
      * Scene clipboard writes consume bounded foreground user activation, and owner-bounded
@@ -73,12 +84,20 @@ public final class ModApiVersion {
      * act controllers can reset native positions and provide rewindable top-solid decks.
      * Camera framing can cap the visible right edge independently of native player walls.
      * Hub preferences include optional title music, its volume, last focused game,
-     * and per-game last-act/leader history for zone-start Continue.
+     * dismissed game support notices, and per-game last-act/leader history for
+     * zone-start Continue.
      * Shared network contracts include direct/relay room clients, JDK room hosting,
      * identity, bounded ghost transport and protocol messages/codecs. Protocol 6 adds
      * Full/Quick/Off communication with semantic quick content, a local English
      * catalogue and read-only global personal chat display preferences. Protocol 7 combines
      * these controls with private admission, invite authority and correlated master requests.
+     * Protocol 8 adds broker-bound listed joins, explicit listener admission states,
+     * complete direct registration ownership, acknowledged route retirement,
+     * local broker-granted owner self-join, committed round revisions and
+     * participant-frozen launches. PlayerPose projects
+     * native presentation into GhostFrame without a network-to-gameplay dependency;
+     * JDK hosts report incomplete retirement through a public receipt and
+     * apply loaded-track validation bounds through a reserved control slot.
      * Protocol v3 uses
      * explicit player upsert/leave deltas after the joining client's initial room snapshot;
      * remote ghost registries expose the same incremental membership operations. Operator

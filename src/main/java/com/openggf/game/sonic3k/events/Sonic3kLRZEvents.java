@@ -211,7 +211,9 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
             camera().setX((short) 0x920); camera().setMinX((short) 0x920); camera().setMaxX((short) 0x920);
             camera().setY((short) 0x2F0); camera().setMinY((short) 0x2F0); camera().setMaxY((short) 0x2F0);
             camera().setMaxYTarget((short) 0x2F0);
-            boss.setCameraFractions(0, 0);
+            // clr.w (Camera_X_pos+2).w / clr.w (Camera_Y_pos+2).w
+            com.openggf.camera.CameraSubpixelAccess.setXFraction(camera(), 0);
+            boss.setCameraFractionY(0);
             boss.setAutoscrollRoutine(0x10);
             boss.setAutoscrollDelay(0x2D);
             boss.setForegroundRoutine(0xC);
@@ -237,7 +239,9 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
             }
             if (camera().getY() == camera().getMaxY()) camera().setMinY(camera().getY());
         } else if (boss.foregroundRoutine() == 8 && boss.consumeForegroundRequest()) {
-            boss.setCameraFractions(0, 0);
+            // clr.w (Camera_X_pos+2).w / clr.w (Camera_Y_pos+2).w
+            com.openggf.camera.CameraSubpixelAccess.setXFraction(camera(), 0);
+            boss.setCameraFractionY(0);
             boss.setAutoscrollRoutine(0);
             boss.setForegroundRoutine(0xC);
         }

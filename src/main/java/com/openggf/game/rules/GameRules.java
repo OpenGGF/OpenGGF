@@ -79,7 +79,8 @@ public record GameRules(
                     // waterVelocityChangeGatedByObjectControl: S1 Sonic_Water has no object_control test
                     false
             ,
-                    false
+                    false,
+                    (short) 0
             ),
             new PlayerCapabilityRules(
                     false,
@@ -100,9 +101,6 @@ public record GameRules(
                     true,
                     new AirCollisionRules(false, false, false, false, false),
                     true,
-                    false,
-                    false,
-                    false,
                     false,
                     false,
                     false,
@@ -150,11 +148,9 @@ public record GameRules(
                     true,
                     true,
                     false,
-                    false,
                     false, // sidekickDespawnUsesInteractCodeWordChange (S3K-only)
                     false,
                     false,
-                    true,
                     true,
                     false,
                     false,
@@ -170,7 +166,6 @@ public record GameRules(
                     16,
                     16384,
                     0,
-                    false,
                     false,
                     false,
                     true,
@@ -234,7 +229,8 @@ public record GameRules(
                     // waterVelocityChangeGatedByObjectControl: S2 Obj01_InWater has no object_control test
                     false
             ,
-                    true
+                    true,
+                    (short) 0
             ),
             new PlayerCapabilityRules(
                     true,
@@ -257,9 +253,6 @@ public record GameRules(
                     true,
                     true,
                     true,
-                    false,
-                    false,
-                    false,
                     false,
                     false,
                     true,
@@ -311,12 +304,10 @@ public record GameRules(
                     false,
                     false,
                     true,
-                    true,
                     false,
                     false, // sidekickDespawnUsesInteractCodeWordChange (S3K-only)
                     true,
                     false,
-                    true,
                     false,
                     false,
                     true,
@@ -332,7 +323,6 @@ public record GameRules(
                     16,
                     16384,
                     0,
-                    false,
                     false,
                     true,
                     true,
@@ -396,7 +386,8 @@ public record GameRules(
                     // waterVelocityChangeGatedByObjectControl: sonic3k.asm:22271, :27488
                     true
             ,
-                    true
+                    true,
+                    (short) 6
             ),
             new PlayerCapabilityRules(
                     true,
@@ -417,9 +408,6 @@ public record GameRules(
                     true,
                     new AirCollisionRules(true, true, true, true, true),
                     false,
-                    true,
-                    true,
-                    true,
                     true,
                     true,
                     true,
@@ -467,10 +455,8 @@ public record GameRules(
                     true,
                     false,
                     false,
-                    false,
                     true,
                     true, // sidekickDespawnUsesInteractCodeWordChange (S3K sub_13EFC word compare)
-                    true,
                     true,
                     true,
                     false,
@@ -489,7 +475,6 @@ public record GameRules(
                     32512,
                     32,
                     true,
-                    false,
                     true,
                     false,
                     128,

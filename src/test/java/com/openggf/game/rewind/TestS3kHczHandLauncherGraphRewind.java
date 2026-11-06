@@ -230,7 +230,7 @@ class TestS3kHczHandLauncherGraphRewind {
                     HCZHandLauncherObjectInstance launcher = holder[0].getActiveObjects().stream()
                             .filter(HCZHandLauncherObjectInstance.class::isInstance)
                             .map(HCZHandLauncherObjectInstance.class::cast).findFirst().orElseThrow();
-                    return new ObjectSolidExecutionContext(SolidExecutionRegistry.inert(), launcher, () -> {
+                    return new ObjectSolidExecutionContext(SolidExecutionRegistry.inert(), launcher, call -> {
                         if (player != null) {
                             if (standing[0]) holder[0].forceRidingObjectForBootstrap(player, launcher);
                             else holder[0].releaseRidingObject(player, launcher);

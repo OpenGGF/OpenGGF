@@ -19,6 +19,7 @@ import com.openggf.net.protocol.ControlMessage;
 import com.openggf.net.protocol.RoomAccessPolicy;
 import com.openggf.net.protocol.RoomPassword;
 import openggf.racing.server.master.MasterServer;
+import openggf.racing.server.master.ControlledMasterServer;
 import openggf.racing.server.master.TestMasterServer;
 import openggf.timeattack.GhostStore;
 import openggf.timeattack.MemoryModStorage;
@@ -55,6 +56,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -68,13 +70,39 @@ class TestRaceSession {
     @ValueSource(strings = {"ws://example.com/master", "ws://localhost/master", "wss://user@example.com/master"})
     void browserRejectsUnsafeEndpointBeforeLaunchingAConnectWorker(String url) {
         var settings = settings(27900);
-        settings.setMasterUrl(url);
+        settings.setMasterSelection(new openggf.timeattack.MasterSelection.Custom(url));
         var session = session("unsafe", settings, new MemoryModStorage(), new Launches());
         session.browse(SETUP, FP);
         assertEquals(RaceSession.State.IDLE, session.state());
         assertEquals(0, session.connectWorkersRunning());
-        assertTrue(session.consumeNotice().startsWith("Invalid master server URL"));
+        assertTrue(session.consumeNotice().startsWith("Invalid master server address"));
     }
+    @Test
+    void anOffMasterNeverStartsAConnectWorker() {
+        var settings = settings(27900);
+        settings.setBuildDefaultMaster("multi-dev.openggf.com");
+        settings.setMasterSelection(new openggf.timeattack.MasterSelection.Off());
+        var session = session("off", settings, new MemoryModStorage(), new Launches());
+        session.browse(SETUP, FP);
+        assertEquals(RaceSession.State.IDLE, session.state());
+        assertEquals(0, session.connectWorkersRunning(), "Off performs no DNS and opens no socket");
+        assertEquals("The master server is off in Settings (LAN only)", session.consumeNotice());
+    }
+
+    @Test
+    void trustAllTlsIsDecidedFromALiteralLoopbackUrlNeverFromDns() {
+        RaceSession.checkMasterAddress("ws://127.0.0.1:9000/master", true);
+        RaceSession.checkMasterAddress("wss://[::1]:9000/master", true);
+        RaceSession.checkMasterAddress("multi-dev.openggf.com", false);
+        // Broken cases: a host name (whatever it resolves to) and localhost never earn trust-all.
+        assertThrows(IllegalArgumentException.class,
+                () -> RaceSession.checkMasterAddress("multi-dev.openggf.com", true));
+        assertThrows(IllegalArgumentException.class,
+                () -> RaceSession.checkMasterAddress("wss://localhost:9000/master", true));
+        assertThrows(IllegalArgumentException.class,
+                () -> RaceSession.checkMasterAddress("ws://example.com/master", false));
+    }
+
     private static final String FP = "0.8:cafe1234";
     private static final RaceSession.RoundSetup SETUP =
             new RaceSession.RoundSetup("s2", 0, 0, "sonic", "OPEN", null, 60);
@@ -167,7 +195,11 @@ class TestRaceSession {
             }
             Thread.sleep(10);
         }
-        fail("timed out waiting for " + what);
+        fail("timed out waiting for " + what + "; process retained items="
+                + com.openggf.net.flow.WorkBudget.PROCESS.retainedItems()
+                + " bytes=" + com.openggf.net.flow.WorkBudget.PROCESS.retainedBytes() + "; sessions="
+                + java.util.Arrays.stream(polled).map(session -> session.state()
+                + " status=" + session.status() + " notice=" + session.consumeNotice()).toList());
     }
 
     private static boolean roomThreadAlive(int port) {
@@ -364,7 +396,7 @@ class TestRaceSession {
         assertTrue(session.consumeNotice().startsWith("Invalid LAN invite"));
         session.browse(SETUP, FP);
         assertEquals(RaceSession.State.IDLE, session.state());
-        assertTrue(session.consumeNotice().contains("master server URL"));
+        assertTrue(session.consumeNotice().contains("master server"));
     }
 
     @Test
@@ -379,18 +411,22 @@ class TestRaceSession {
     }
 
     @Test
-    void aVotedActTheCharacterCannotRaceUsesItsFirstPermittedCharacter() {
+    void hostIssuedCharacterStartsTheVotedActWithoutLocalSubstitution() {
         AtomicLong clock = new AtomicLong();
         Launches launches = new Launches();
         RaceSession session = session("guest", settings(27888), new MemoryModStorage(), launches, clock::get);
         FakeConnection connection = new FakeConnection();
         ControlMessage.RoundConfig skySanctuary = new ControlMessage.RoundConfig("s3k", 10, 0, 60, "OPEN", null);
         session.enterLobbyForTest(connection, false, skySanctuary, "knuckles");
-        connection.control(new ControlMessage.RoundStart(skySanctuary, 1_000, 100_000));
+        connection.control(new ControlMessage.RoomState(List.of(
+                new ControlMessage.PlayerInfo(1, "fingerprint", "Guest", "sonic"))));
+        ControlMessage.RaceLaunch launch = new ControlMessage.RaceLaunch(1, 2,
+                skySanctuary, "participant", 1, "fingerprint", "sonic", 1_000, 100_000);
+        connection.control(new ControlMessage.RoundStart(skySanctuary, 1_000, 100_000, launch));
         session.poll();
         assertEquals(List.of("sonic"), launches.specs.stream().map(RunSpec::character).toList(),
-                "Knuckles' route never reaches Sky Sanctuary act 1");
-        assertEquals("KNUCKLES cannot race this act; racing as SONIC", session.consumeNotice());
+                "the host's frozen character is the only launch authority");
+        assertNull(session.consumeNotice());
     }
 
     @Test
@@ -419,7 +455,7 @@ class TestRaceSession {
         assertTrue(established.await(5, TimeUnit.SECONDS));
 
         TimeAttackSettings hostSettings = settings(freePort());
-        hostSettings.setMasterUrl(url);
+        hostSettings.setMasterSelection(new openggf.timeattack.MasterSelection.Custom(url));
         hostSettings.setChatMode(com.openggf.net.protocol.ChatMode.QUICK_CHAT);
         RaceSession host = session("host", hostSettings, new MemoryModStorage(), new Launches());
         host.browse(SETUP, FP);
@@ -434,7 +470,7 @@ class TestRaceSession {
         assertTrue(host.masterLinkRunning());
 
         TimeAttackSettings guestSettings = settings(freePort());
-        guestSettings.setMasterUrl(url);
+        guestSettings.setMasterSelection(new openggf.timeattack.MasterSelection.Custom(url));
         RaceSession guest = session("guest", guestSettings, new MemoryModStorage(), new Launches());
         guest.browse(SETUP, FP);
         pollUntil("the guest browser", () -> guest.state() == RaceSession.State.BROWSING, guest);
@@ -476,7 +512,7 @@ class TestRaceSession {
         assertNull(host.masterClient());
         assertNull(host.hostServer());
         assertFalse(host.masterLinkRunning());
-        MasterClient observer = MasterClient.connect(URI.create(url),
+        MasterClient observer = MasterClient.connect(url,
                 PlayerIdentity.loadOrCreate(dir.resolve("observer")), "OBS", FP, null).get(15, TimeUnit.SECONDS);
         try {
             long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(20);
@@ -490,10 +526,45 @@ class TestRaceSession {
     }
 
     @Test
+    void aFullRoomDataMailboxDoesNotStopTheMasterHeartbeatKeeper() throws Exception {
+        String url = startPrivateMaster("heartbeat-owner");
+        TimeAttackSettings settings = settings(freePort());
+        settings.setMasterSelection(new openggf.timeattack.MasterSelection.Custom(url));
+        RaceSession owner = session("heartbeat-owner", settings, new MemoryModStorage(), new Launches());
+        owner.hostLan(SETUP, FP);
+        pollUntil("registered owner lobby", () -> owner.state() == RaceSession.State.LOBBY, owner);
+        assertTrue(owner.masterLinkRunning());
+        JdkRaceHostServer server = owner.hostServer();
+        CountDownLatch entered = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        server.execute(() -> {
+            entered.countDown();
+            try { release.await(); }
+            catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); }
+        });
+        try {
+            assertTrue(entered.await(5, TimeUnit.SECONDS));
+            boolean full = false;
+            for (int i = 0; i < 520; i++) {
+                try { server.execute(() -> { }); }
+                catch (IllegalStateException unavailable) { full = true; break; }
+            }
+            assertTrue(full, "the room data mailbox must be full for this regression");
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(7);
+            while (owner.masterLinkRunning() && System.nanoTime() < deadline) {
+                TimeUnit.MILLISECONDS.sleep(20);
+            }
+            assertTrue(owner.masterLinkRunning(), "data congestion must not end the master link");
+        } finally {
+            release.countDown();
+        }
+    }
+
+    @Test
     void failedBrowserJoinReturnsToTheBrowserWithTheReason() throws Exception {
         masterServer = MasterServer.start(TestMasterServer.testConfig(), dir.resolve("master"));
         TimeAttackSettings settings = settings(freePort());
-        settings.setMasterUrl("ws://127.0.0.1:" + masterServer.port() + "/master");
+        settings.setMasterSelection(new openggf.timeattack.MasterSelection.Custom("ws://127.0.0.1:" + masterServer.port() + "/master"));
         RaceSession guest = session("guest", settings, new MemoryModStorage(), new Launches());
         guest.browse(SETUP, FP);
         pollUntil("the browser", () -> guest.state() == RaceSession.State.BROWSING, guest);
@@ -538,6 +609,14 @@ class TestRaceSession {
     private static final ControlMessage.RoundConfig ROUND =
             new ControlMessage.RoundConfig("s2", 0, 0, 60, "OPEN", null);
 
+    private static ControlMessage.RoundStart start(ControlMessage.RoundConfig config,
+                                                   long roundId, String chosen,
+                                                   long countdown, long deadline) {
+        return new ControlMessage.RoundStart(config, countdown, deadline,
+                new ControlMessage.RaceLaunch(roundId, roundId, config,
+                        "participant", 1, "fingerprint", chosen, countdown, deadline));
+    }
+
     @Test
     void roundsLaunchOncePerRoundStartAndUseTheLockedCharacter() {
         AtomicLong clock = new AtomicLong();
@@ -549,7 +628,7 @@ class TestRaceSession {
         session.poll();
         assertTrue(launches.specs.isEmpty());
 
-        connection.control(new ControlMessage.RoundStart(ROUND, 1_000, 100_000));
+        connection.control(start(ROUND, 1, "tails", 1_000, 100_000));
         session.poll();
         assertEquals(RaceSession.State.RACING, session.state());
         assertEquals(List.of("tails"), launches.specs.stream().map(RunSpec::character).toList());
@@ -562,8 +641,8 @@ class TestRaceSession {
 
         connection.control(new ControlMessage.RoundEnd(List.of()));
         session.poll();
-        connection.control(new ControlMessage.RoundStart(
-                new ControlMessage.RoundConfig("s2", 1, 0, 60, "LOCKED", "sonic"), 3_000, 100_000));
+        connection.control(start(new ControlMessage.RoundConfig("s2", 1, 0, 60,
+                "LOCKED", "sonic"), 2, "sonic", 3_000, 100_000));
         session.poll();
         assertEquals(2, launches.specs.size());
         assertEquals(new RunSpec("s2", 1, 0, "sonic", GameplayRunPolicy.isolatedAct().withFastRestarts().withoutZoneIntros()), launches.specs.get(1));
@@ -577,7 +656,8 @@ class TestRaceSession {
             @Override public ControlMessage.JoinAccepted joinAccepted() {
                 return new ControlMessage.JoinAccepted("token", 1, new ControlMessage.RoomDescriptor("Room", "s2",
                         0, 0, "OPEN", null, 8, false),
-                        new ControlMessage.RoundSnapshot("RUNNING", ROUND, 1_000, 100_000, List.of()));
+                        new ControlMessage.RoundSnapshot("RUNNING", ROUND, 1_000, 100_000,
+                                List.of(), start(ROUND, 1, "sonic", 1_000, 100_000).launch()));
             }
         };
         session.enterLobbyForTest(connection, false, ROUND, "sonic");
@@ -588,13 +668,39 @@ class TestRaceSession {
     }
 
     @Test
+    void malformedLaunchInsideJoinIsRetiredWhenTheEngineAdoptsTheConnection()
+            throws Exception {
+        RaceSession session = session("bad-join", settings(27888),
+                new MemoryModStorage(), new Launches());
+        FakeConnection connection = new FakeConnection() {
+            @Override public ControlMessage.JoinAccepted joinAccepted() {
+                ControlMessage.RaceLaunch wrongSlot = new ControlMessage.RaceLaunch(
+                        1, 1, ROUND, "participant", 2, "fingerprint", "sonic", 1000, 100_000);
+                return new ControlMessage.JoinAccepted("token", 1, super.joinAccepted().room(),
+                        new ControlMessage.RoundSnapshot("RUNNING", ROUND, 1000, 100_000,
+                                List.of(), wrongSlot));
+            }
+        };
+        Field completions = RaceSession.class.getDeclaredField("completions");
+        completions.setAccessible(true);
+        ConcurrentLinkedQueue.class.getMethod("add", Object.class).invoke(completions.get(session),
+                (Runnable) () -> session.enterLobbyForTest(connection, false, ROUND, "sonic"));
+
+        assertDoesNotThrow(session::poll);
+        assertFalse(connection.isOpen());
+        assertNull(session.coordinator());
+        assertEquals(RaceSession.State.IDLE, session.state());
+        assertEquals("Invalid room launch", session.consumeNotice());
+    }
+
+    @Test
     void aFailedLaunchStaysInTheLobbyWithTheReason() {
         Launches launches = new Launches();
         launches.failure = new IllegalStateException("a run is already active");
         RaceSession session = session("guest", settings(27888), new MemoryModStorage(), launches, () -> 0);
         FakeConnection connection = new FakeConnection();
         session.enterLobbyForTest(connection, false, ROUND, "sonic");
-        connection.control(new ControlMessage.RoundStart(ROUND, 1_000, 100_000));
+        connection.control(start(ROUND, 1, "sonic", 1_000, 100_000));
         session.poll();
         assertEquals(RaceSession.State.LOBBY, session.state());
         assertFalse(session.coordinator().isRuntimeAttached());
@@ -627,7 +733,7 @@ class TestRaceSession {
         RaceSession session = session("guest", settings(27888), new MemoryModStorage(), launches, () -> 0);
         FakeConnection connection = new FakeConnection();
         session.enterLobbyForTest(connection, false, ROUND, "sonic");
-        connection.control(new ControlMessage.RoundStart(ROUND, 1_000, 100_000));
+        connection.control(start(ROUND, 1, "sonic", 1_000, 100_000));
         session.poll();
         assertEquals(RaceSession.State.RACING, session.state());
         session.close();
@@ -645,7 +751,7 @@ class TestRaceSession {
         RaceSession session = session("guest", settings(27888), new MemoryModStorage(), launches, clock::get);
         FakeConnection connection = new FakeConnection();
         session.enterLobbyForTest(connection, false, ROUND, "sonic");
-        connection.control(new ControlMessage.RoundStart(ROUND, 1_000, 100_000));
+        connection.control(start(ROUND, 1, "sonic", 1_000, 100_000));
         session.poll();
         assertEquals(RaceSession.State.RACING, session.state());
         TimeAttackRuntime run = assertInstanceOf(TimeAttackRuntime.class, launches.hosts.get(0));
@@ -773,17 +879,41 @@ class TestRaceSession {
     @Test
     void rejectedLanRegistrationKeepsPrivateAdmissionAndOffersOnlyExplicitManualSharing() throws Exception {
         TimeAttackSettings settings = settings(freePort());
-        settings.setMasterUrl("ws://example.com/master");
+        settings.setMasterSelection(new openggf.timeattack.MasterSelection.Custom("ws://127.0.0.1:" + freePort() + "/master"));
         RaceSession owner = session("fallback-owner", settings, new MemoryModStorage(), new Launches());
         hostPrivate(owner);
         assertTrue(owner.coordinator().session().accessPolicy().passwordRequired());
         assertNotNull(owner.manualInviteFallback());
         assertNull(owner.masterClient());
-        assertTrue(owner.consumeNotice().contains("Short code unavailable"));
+        assertTrue(owner.consumeNotice().contains("No short code"));
+    }
+
+    @Test
+    void registeredLanHostDoesNotOfferAnUnusableManualInviteAfterMasterLoss()
+            throws Exception {
+        String url = startPrivateMaster("registered-owner");
+        TimeAttackSettings configured = settings(freePort());
+        configured.setMasterSelection(new openggf.timeattack.MasterSelection.Custom(url));
+        RaceSession owner = session("registered-owner", configured,
+                new MemoryModStorage(), new Launches());
+        hostPrivate(owner);
+        assertNotNull(owner.lanInvite());
+        assertNull(owner.manualInviteFallback());
+
+        owner.masterClient().close();
+        assertFalse(owner.masterClient().isOpen());
+        assertNull(owner.manualInviteFallback(),
+                "a broker-registered listener cannot accept manual guests after broker loss");
     }
 
     private String startPrivateMaster(String identityName) throws Exception {
-        masterServer = MasterServer.start(TestMasterServer.testConfig(), dir.resolve("private-master"));
+        return startPrivateMaster(identityName, null);
+    }
+
+    private String startPrivateMaster(String identityName, ControlledMasterServer controlled) throws Exception {
+        masterServer = controlled == null
+                ? MasterServer.start(TestMasterServer.testConfig(), dir.resolve("private-master"))
+                : controlled.start(TestMasterServer.testConfig(), dir.resolve("private-master"));
         String fingerprint = PlayerIdentity.loadOrCreate(dir.resolve(identityName + "-identity")).fingerprint();
         CountDownLatch established = new CountDownLatch(1);
         masterServer.execute(() -> { masterServer.establishForTest(fingerprint); established.countDown(); });
@@ -794,9 +924,10 @@ class TestRaceSession {
     @ParameterizedTest
     @ValueSource(strings = {"DIRECT", "RELAY", "LAN"})
     void privateCodeJoinsUseTheSelectedMasterAndNeverAppearInBrowserListings(String routing) throws Exception {
-        String url = startPrivateMaster("code-owner");
+        ControlledMasterServer controlled = routing.equals("RELAY") ? new ControlledMasterServer() : null;
+        String url = startPrivateMaster("code-owner", controlled);
         TimeAttackSettings ownerSettings = settings(freePort());
-        ownerSettings.setMasterUrl(url);
+        ownerSettings.setMasterSelection(new openggf.timeattack.MasterSelection.Custom(url));
         ownerSettings.setChatMode(com.openggf.net.protocol.ChatMode.QUICK_CHAT);
         RaceSession owner = session("code-owner", ownerSettings, new MemoryModStorage(), new Launches());
         if (routing.equals("LAN")) hostPrivate(owner);
@@ -814,7 +945,7 @@ class TestRaceSession {
         pollUntil("owner invite disclosure", () -> owner.coordinator().session().invite() != null, owner);
         String code = owner.coordinator().session().invite().code();
         TimeAttackSettings guestSettings = settings(freePort());
-        guestSettings.setMasterUrl(url);
+        guestSettings.setMasterSelection(new openggf.timeattack.MasterSelection.Custom(url));
         RaceSession guest = session("code-guest", guestSettings, new MemoryModStorage(), new Launches());
         guest.browse(SETUP, FP);
         pollUntil("guest browser", () -> guest.state() == RaceSession.State.BROWSING, owner, guest);
@@ -829,7 +960,15 @@ class TestRaceSession {
         assertNull(guest.passwordPrompt());
         guest.joinCode(code);
         pollUntil("fresh code prompt after cancellation", () -> guest.state() == RaceSession.State.PASSWORD_REQUIRED, owner, guest);
-        if (routing.equals("RELAY")) Thread.sleep(31_000); // The original attach grant expires while the user types.
+        if (routing.equals("RELAY")) {
+            Field roomIdField = RaceSession.class.getDeclaredField("masterRoomId");
+            roomIdField.setAccessible(true);
+            String roomId = (String) roomIdField.get(owner);
+            assertNotNull(roomId, "the admitted owner retains the real master room identity");
+            // Expire the original grant through the master's actual injected clock;
+            // fresh code resolution and relay admission still use the real socket path.
+            controlled.advanceRaceTime(roomId, 31_000);
+        }
         try (RoomPassword password = RoomPassword.of(PRIVATE_PASSWORD)) { guest.submitPassword(password); }
         pollUntil("code admission", () -> guest.state() == RaceSession.State.LOBBY
                 && owner.coordinator().session().players().size() == 2, owner, guest);
@@ -852,7 +991,7 @@ class TestRaceSession {
     void wrongPasswordOrRotatedCodeReturnsToTheBrowserWithoutAdmitting(boolean rotate) throws Exception {
         String url = startPrivateMaster("code-owner");
         TimeAttackSettings ownerSettings = settings(freePort());
-        ownerSettings.setMasterUrl(url);
+        ownerSettings.setMasterSelection(new openggf.timeattack.MasterSelection.Custom(url));
         RaceSession owner = session("code-owner", ownerSettings, new MemoryModStorage(), new Launches());
         owner.browse(SETUP, FP);
         pollUntil("owner browser", () -> owner.state() == RaceSession.State.BROWSING, owner);
@@ -864,7 +1003,7 @@ class TestRaceSession {
         pollUntil("owner code", () -> owner.coordinator().session().invite() != null, owner);
         String code = owner.coordinator().session().invite().code();
         TimeAttackSettings guestSettings = settings(freePort());
-        guestSettings.setMasterUrl(url);
+        guestSettings.setMasterSelection(new openggf.timeattack.MasterSelection.Custom(url));
         RaceSession guest = session("code-guest", guestSettings, new MemoryModStorage(), new Launches());
         guest.browse(SETUP, FP);
         pollUntil("guest browser", () -> guest.state() == RaceSession.State.BROWSING, owner, guest);
@@ -902,7 +1041,7 @@ class TestRaceSession {
         connection.control(new ControlMessage.QuickChatBroadcast(0, "Player", "THIS_IS_ZONE", "s2", 0, 0));
         session.poll();
         assertTrue(session.coordinator().session().chatLines().getFirst().contains("Emerald Hill"));
-        connection.control(new ControlMessage.RoundStart(ROUND, 1000, 100_000));
+        connection.control(start(ROUND, 1, "sonic", 1000, 100_000));
         session.poll();
         assertEquals(RaceSession.State.RACING, session.state());
         disabled.set(true);

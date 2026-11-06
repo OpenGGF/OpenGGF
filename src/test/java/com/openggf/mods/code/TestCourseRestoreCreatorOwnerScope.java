@@ -13,6 +13,7 @@ import com.openggf.game.mode.GameplayFrameController;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
+import com.openggf.game.sonic3k.objects.HCZCGZFanObjectInstance;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.io.ModAssetRoot;
 import com.openggf.level.objects.ObjectInstance;
@@ -33,16 +34,14 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * A course checkpoint restored from inside a creator callback (a frame controller's
  * {@code beforeTick}, where the Typing of the Hedgehog course restores its stands) rebuilds
- * engine objects as engine objects. The Hydrocity fan's sliding platform is a spawnless dynamic
- * child its parent re-spawns during reconstruction; when the creator owner leaked into that
- * rebuild the child came back owned by the mod, adoption rejected it, and the restore dropped it
- * (later failing to resolve its captured identity). Regression for the rails lane's HCZ1 stand
- * restore, 2026-10-10.
+ * engine objects as engine objects. Hydrocity's original-slot sliding platform allocates a
+ * spawnless dynamic fan. Before native slot roles were corrected the platform was the child;
+ * a leaked creator owner caused that child to be dropped during restoration. Keep exercising
+ * the actual dynamic fan identity through the same callback boundary after the role repair.
  */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestCourseRestoreCreatorOwnerScope {
     static final String OWNER = "restore-owner";
-    static final String PLATFORM = "HCZCGZFanObjectInstance$FanPlatformChild";
     private SharedLevel bootstrap;
 
     @AfterEach void dispose() {
@@ -81,11 +80,11 @@ class TestCourseRestoreCreatorOwnerScope {
         return builder.build();
     }
 
-    private static List<ObjectInstance> platforms() {
+    private static List<ObjectInstance> fans() {
         var query = GameServices.level().getObjectManager().objectQuery();
         List<ObjectInstance> out = new ArrayList<>();
         for (ObjectInstance o : query.activeObjectsOfType(ObjectInstance.class)) {
-            if (o.getClass().getName().endsWith(PLATFORM)) out.add(o);
+            if (o instanceof HCZCGZFanObjectInstance && (o.getSpawn().subtype() & 0x80) != 0) out.add(o);
         }
         return out;
     }
@@ -111,12 +110,12 @@ class TestCourseRestoreCreatorOwnerScope {
                 .findFirst().orElseThrow(() -> new AssertionError("HCZ1 has a platform fan"));
         dispose();
         var fixture = launch(fan.x() - 0x40, fan.y() - 0x20);
-        for (int i = 0; i < 120 && platforms().isEmpty(); i++) fixture.stepFrame(false, false, false, false, false);
-        List<ObjectInstance> before = platforms();
-        assertFalse(before.isEmpty(), "the fan's platform child is live beside its fan");
+        for (int i = 0; i < 120 && fans().isEmpty(); i++) fixture.stepFrame(false, false, false, false, false);
+        List<ObjectInstance> before = fans();
+        assertFalse(before.isEmpty(), "the platform's fan child is live beside its platform");
         ObjectRefId captured = identity(before.getFirst());
-        assertNotNull(captured, "the platform has a rewind identity at capture");
-        assertEquals(-1, captured.spawnId(), "the platform is a spawnless dynamic child");
+        assertNotNull(captured, "the dynamic fan has a rewind identity at capture");
+        assertEquals(-1, captured.spawnId(), "the fan is a spawnless dynamic child");
 
         CourseControl course = CourseControlProbeAccess.open(SessionManager.getCurrentGameplayMode());
         var checkpoint = course.capture();
@@ -134,10 +133,10 @@ class TestCourseRestoreCreatorOwnerScope {
             course.restore(checkpoint);
         }
 
-        List<ObjectInstance> after = platforms();
+        List<ObjectInstance> after = fans();
         assertTrue(after.stream().anyMatch(p -> captured.equals(identity(p))),
-                "the restore rebuilds the platform under its captured identity " + captured
-                        + "; live platforms " + after.stream().map(TestCourseRestoreCreatorOwnerScope::identity).toList());
+                "the restore rebuilds the fan under its captured identity " + captured
+                        + "; live fans " + after.stream().map(TestCourseRestoreCreatorOwnerScope::identity).toList());
         for (ObjectInstance p : after) {
             assertNull(callbackOwner(p), "an engine object rebuilt by a restore has no creator owner");
         }

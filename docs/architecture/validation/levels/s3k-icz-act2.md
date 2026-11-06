@@ -1,5 +1,61 @@
 # S3K IceCap Act 2 coverage matrix
 
+## Native rider impulse order — 2026-11-05
+
+The [rider-order audit](../../audits/2026-11-05-icz-rider-order.md) qualifies
+simultaneous tension-platform departures independently of identity-map order,
+including the existing extra-sidekick policy and fail-closed checkpoint identity.
+Three discriminators fail on unchanged production then pass; all seven object
+cases and the selected guards/keep-green controls pass. The complete canonical
+ICZ2 report remains red at row483 Y with1,724 grouped errors. Historical1,035
+uses swapped launch impulses and is not a lower-error native reference. Source
+epochs and actual raw comparisons are explicitly qualified in the audit.
+No new persistent state is added. Full routes, native pictures, donor/viewport
+breadth and broader interaction/rewind products remain inherited gaps.
+
+## Native sprite submission maintenance (2026-11-02)
+
+The committed 2,292-row solo-Sonic native320 cube/button/bridge movie was replayed
+with native sprite limits enabled. A read-only observer at SAT collection teardown
+sampled raw submitted mapping pieces every 60 tables, before count/pixel/table
+admission. The 39 matched samples show peaks falling from 114 to 62 entries,
+26 to 18 entries on a row, and 504 to 304 declared pixels on a row. These are sampled
+peaks, not the all-frame maxima or a native emulator measurement. Player centres,
+camera positions, level clocks and live-object counts match in every sampled row.
+
+At the original 114-entry sample, a wholly offscreen collapsing bridge contributed 22
+pieces, an offscreen crushing column and its separate decoration contributed 14+8,
+and 14 lost rings were outside their native bounds. A later row additionally exposed
+12 offscreen tension-bridge segments. Drawing now applies the existing native
+whole-object extents for those producers and the normal collapsing-platform/wall/
+freezer paths. Tension bridge groups retain their own $40/$08 bounds and their
+one-piece segment mappings use the native multi-draw origin checks. Simulation,
+retirement flags, native piece geometry and captured fields are unchanged.
+
+`TestIcz2NativeSpriteBudget` follows every production table along this actual
+controller route with native limits enabled and asserts that raw submissions fit
+the 80-entry table, before evaluator clipping can conceal an excess. It also checks
+that the route reaches the cube/button/bridge area and observes over 2,000 tables.
+The existing route test retains its rewind/forward witnesses; component tests
+cover ring half-width boundaries across all three games, independent column/
+decoration bounds, and partial tension-bridge admission. The native table limit
+does not imply that every legitimate ring-loss cloud must fit a per-row budget.
+
+The longer canonical ICZ replay was diagnostic only: it stayed in act1 and reported
+2,430 strict errors, first at raw frame 11989. Untouched-base and final-runtime
+reruns produce identical complete divergence-report payloads. It supplies no ICZ2 or full-route
+qualification; the cold act2 movie above supplies the bounded ICZ2 witness. Later
+act2 routes, other teams/donors/viewports, native pixel comparison and a whole-act
+certificate remain inherited gaps. Final combined test outcomes are delivery
+observations, not an expansion of this route matrix.
+
+Selection update (2026-10-27): routine canonical entry/reload checks cover supported
+axis pairs; bonus transitions retain their existing pilots. Full Cartesian
+products are explicitly manual `exhaustive-audit` coverage, excluded from routine
+and release gates. Historical exhaustive qualifications below are unchanged and
+are not renewed by a routine pass. See the [selection record](../../research/2026-10-27-local-validation-cost.md).
+
+
 Canonical binding: `S3K_ICECAP_2`, engine zone 5/act 1, ROM `$0501`, S3KL object set.
 Edges: ICZ1 incoming structural act handoff; LBZ1 outgoing full entry.
 Character routes: Native starts and end-route contexts vary by main character; all three short native starts are checked separately.
@@ -340,3 +396,13 @@ removing repeated query/order work. See the [performance evidence](../../audits/
 for exact focused commands, results and structural counts. This local component
 change adds no cold-route, donor/roster, viewport, native-picture or lifecycle
 product beyond the obligations already recorded above.
+
+
+## Post-results transition music (2026-11-02)
+
+The retained post-results owner restores the apparent act's level music once
+before the outgoing corridor/cutscene. `TestS3kPostResultsMusic` checks the
+results gate, the single music request and subsequent dispatches; existing boss,
+cutscene and rewind checks cover surrounding lifecycle behavior. This bounded
+request check does not certify audible synthesis, whole-route timing, or broader
+donor/team/viewport and rewind matrices; inherited obligations remain open.

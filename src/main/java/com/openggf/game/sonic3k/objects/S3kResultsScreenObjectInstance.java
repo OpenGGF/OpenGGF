@@ -926,12 +926,11 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
             }
             // The level data continues seamlessly (S3K acts share the same level).
 
-            // Play act 2 music
-            var zoneRegistry = services().gameModule().getZoneRegistry();
-            int act2MusicId = zoneRegistry.getMusicId(zone, 1);
-            if (act2MusicId >= 0 && !fbzCarriedTitleOwner) {
-                try { services().playMusic(act2MusicId); } catch (Exception e) { /* ignore */ }
-            }
+            // loc_2DD06 only hands this owner to Obj_TitleCard; it does not
+            // request music (sonic3k.asm:62713-62729). Obj_TitleCardWait
+            // restores level music at its display/reset gate (loc_2D810,
+            // sonic3k.asm:62227-62241), through the carried owner or title
+            // manager. Starting it here would restart it again at that gate.
 
             // Show act 2 title card (except SOZ zone $8, DEZ zone $B, and zones
             // with seamless transitions like HCZ — the seamless transition will
@@ -1657,7 +1656,20 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
      */
     private void renderMappingFrame(int frameIndex, int worldX, int worldY) {
         if (frameIndex < 0 || frameIndex >= spriteSheet.getFrameCount()) return;
-        renderer.drawFrameIndex(frameIndex, worldX, worldY, false, false);
+        // Results use render_flags=$40, including the main mapping. The multi-draw
+        // expander rejects piece origins outside the padded raster before SAT admission:
+        // loc_1B07A (sonic3k.asm:36743-36766). Normal mapping expansion does not.
+        var camera = services().camera();
+        int width = Math.max(320, services().graphicsManager().getProjectionWidth());
+        var pieces = spriteSheet.getFrame(frameIndex).pieces();
+        for (int i = 0; i < pieces.size(); i++) {
+            var piece = pieces.get(i);
+            int screenX = worldX - camera.getX() + piece.xOffset();
+            int screenY = worldY - camera.getY() + piece.yOffset();
+            if (screenX > -32 && screenX < width && screenY > -32 && screenY < 224) {
+                renderer.drawFramePieceByIndex(frameIndex, i, worldX, worldY, false, false);
+            }
+        }
     }
 
     /**

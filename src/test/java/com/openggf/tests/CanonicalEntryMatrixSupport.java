@@ -17,10 +17,12 @@ import com.openggf.sprites.playable.Sonic;
 import com.openggf.sprites.playable.Tails;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Collections;
+import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashSet;
@@ -59,6 +61,37 @@ abstract class CanonicalEntryMatrixSupport {
         return rows.stream();
     }
 
+    /** Cover every supported pair of axes without booting the full Cartesian product. */
+    static Stream<Row> smokeConfigurations() {
+        var remaining = new ArrayList<>(configurations().toList());
+        Set<List<String>> uncovered = new LinkedHashSet<>();
+        remaining.forEach(row -> uncovered.addAll(configurationPairs(row)));
+        List<Row> selected = new ArrayList<>();
+        while (!uncovered.isEmpty()) {
+            Row best = remaining.stream().max(java.util.Comparator.comparingLong(row ->
+                    configurationPairs(row).stream().filter(uncovered::contains).count())).orElseThrow();
+            selected.add(best);
+            remaining.remove(best);
+            uncovered.removeAll(configurationPairs(best));
+        }
+        return selected.stream();
+    }
+
+    private static Set<List<String>> configurationPairs(Row row) {
+        String[] followers = row.followers().isEmpty() ? new String[0] : row.followers().split(",");
+        String shape = followers.length == 0 ? "solo" : followers.length == 1 ? "single"
+                : followers.length > 2 ? "large" : followers[0].equals(followers[1]) ? "duplicate" : "mixed";
+        List<String> axes = List.of(row.donor(), row.main(), row.aspect().name(), shape);
+        Set<List<String>> pairs = new LinkedHashSet<>();
+        for (int first = 0; first < axes.size(); first++) {
+            for (int second = first + 1; second < axes.size(); second++) {
+                pairs.add(List.of(Integer.toString(first), axes.get(first),
+                        Integer.toString(second), axes.get(second)));
+            }
+        }
+        return pairs;
+    }
+
     private final EnumMap<SonicConfiguration, Object> saved = new EnumMap<>(SonicConfiguration.class);
     SonicConfigurationService config;
 
@@ -82,8 +115,19 @@ abstract class CanonicalEntryMatrixSupport {
 
     @ParameterizedTest(name = "normal entry / two world cycles {0}")
     @MethodSource("configurations")
+    @Tag("exhaustive-audit")
     void normalEntryAppliesTheProductionPresetAndEveryDeclaredParticipantThenReplaysTwice(Row row)
             throws Exception {
+        verifyEntry(row);
+    }
+
+    @ParameterizedTest(name = "pairwise normal entry / two world cycles {0}")
+    @MethodSource("smokeConfigurations")
+    void representativeEntryRetainsSupportedPairsAndReplaysTwice(Row row) throws Exception {
+        verifyEntry(row);
+    }
+
+    private void verifyEntry(Row row) throws Exception {
         var fixture = boot(row);
         var act = binding();
         TestS3kCanonicalEntryLifecycle.assertRomStart(new TestS3kCanonicalEntryLifecycle.Entry(

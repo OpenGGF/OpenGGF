@@ -43,7 +43,7 @@ class TestFbzBossCloudIdentity {
     }
 
     @Test
-    void renderRefreshesCloudPositionAfterParallaxRunsLaterThanObjectUpdate() {
+    void renderRefreshesOnlyDrawCoordinatesAfterParallaxRunsLaterThanObjectUpdate() {
         SwScrlFbz handler = mock(SwScrlFbz.class);
         ParallaxManager parallax = mock(ParallaxManager.class);
         Camera camera = mock(Camera.class);
@@ -69,11 +69,16 @@ class TestFbzBossCloudIdentity {
         assertEquals(0x1010, cloud.getX());
         current.set(new SwScrlFbz.CloudPosition(0xC4, 0xD5, 1, 9, 0));
 
+        ObjectSpawn nativeSpawn = cloud.getSpawn();
         cloud.appendRenderCommands(new ArrayList<>());
-
-        assertEquals(0x1044, cloud.getX());
-        assertEquals(0x255, cloud.getY());
-        verify(handler, times(2)).cloudPositionAtAddressSlot(0);
-        verify(renderer).drawFrameIndex(0, 0x1044, 0x255, false, false);
+        assertEquals(0x1010, cloud.getX());
+        assertEquals(0x220, cloud.getY());
+        assertSame(nativeSpawn, cloud.getSpawn(), "Draw must not publish screen coordinates into native spawn state");
+        for (int draw = 0; draw < 3; draw++) cloud.appendRenderCommands(new ArrayList<>());
+        assertEquals(0x1010, cloud.getX());
+        assertEquals(0x220, cloud.getY());
+        assertSame(nativeSpawn, cloud.getSpawn());
+        verify(handler, times(5)).cloudPositionAtAddressSlot(0);
+        verify(renderer, times(4)).drawFrameIndex(0, 0x1044, 0x255, false, false);
     }
 }

@@ -205,7 +205,7 @@ public class AsteronBadnikInstance extends AbstractBadnikInstance implements Rew
      * When timer reaches 0: convert to explosion + spawn 5 projectiles.
      */
     private void updateMoving() {
-        // ROM loc_38A2C (s2.asm:75838-75844): subq.b #1,objoff_2A(a0) / bmi.s →
+        // ROM loc_38A2C (s2.asm:76481-76487): subq.b #1,objoff_2A(a0) / bmi.s →
         // explode. The counter is decremented first; only when it BECOMES negative
         // (i.e. underflows past 0) does the Asteron explode. The frame where the
         // counter reaches 0 still runs ObjectMove + AnimateSprite.

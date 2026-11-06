@@ -10,4 +10,8 @@ public final class SceneMusicFactory {
     public static ManagedSceneMusic create(AudioManager audio, Function<String, Rom> roms) {
         return new ManagedSceneMusic(audio, roms);
     }
+    public static ManagedSceneMusic create(AudioManager audio, Function<String, Rom> roms,
+                                           java.util.function.BooleanSupplier commandsAdmitted) {
+        return new ManagedSceneMusic(audio, roms, commandsAdmitted);
+    }
 }

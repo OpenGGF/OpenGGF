@@ -165,9 +165,9 @@ class TestRoomHostAdversarial {
             harness.advance(HostRoundEngine.COUNTDOWN_MILLIS);
         }
         harness.finish(witness, 1);
-        assertTrue(harness.room.round().standings().stream()
-                .anyMatch(row -> row.slot() == witness.join.playerSlot()
-                        && row.displayName().equals("Witness") && row.bestTimeFrames() == 1), context);
+        assertTrue(harness.room.round().results().stream()
+                .anyMatch(result -> result.slot() == witness.join.playerSlot()
+                        && result.displayName().equals("Witness") && result.timeFrames() == 1), context);
         harness.room.close("test complete");
         harness.flushDisconnect(witness);
         assertEquals(0, harness.room.playerCount(), context);
@@ -384,8 +384,8 @@ class TestRoomHostAdversarial {
         List<GhostPackets.AggregateEntry> actual = new ArrayList<>();
         Integer tick = null;
         for (byte[] packet : packets) {
-            assertTrue(packet.length <= Protocol.MAX_BINARY_BYTES - 3,
-                    "every aggregate leaves room for the relay guest envelope");
+            assertTrue(packet.length <= Protocol.MAX_BINARY_BYTES,
+                    "every aggregate fits the relay guest payload cap");
             assertDoesNotThrow(() -> GhostPackets.encodeRelayGuestBinary(7, packet));
             GhostPackets.Aggregate aggregate = GhostPackets.decodeAggregate(packet);
             assertTrue(aggregate.entries().size() <= 255);

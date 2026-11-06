@@ -150,7 +150,7 @@ class TestUserRecordingSession {
         assertEquals("Hold Shift+Record for 1 Sec to Begin Recording", UserRecordingHud.HOLD_PROMPT_TEXT);
         UserRecordingHudState state = UserRecordingHud.holdPromptState(30, 60);
         assertTrue(state.visible());
-        assertEquals(UserRecordingHud.HOLD_PROMPT_TEXT, state.primaryText());
+        assertEquals("REC: HOLD SHIFT+F9", state.primaryText());
         assertTrue(state.redWarning());
         assertFalse(state.amberWarning());
     }

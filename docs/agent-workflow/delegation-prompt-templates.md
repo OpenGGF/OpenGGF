@@ -8,7 +8,7 @@ relevant to that task and defines an **OUTPUT FORMAT** whose result merges direc
 
 This is Option 10 of `docs/agent-workflow/support-options.md`. See also:
 - `docs/agent-workflow/support-options.md` — tracking board (update only your assigned row).
-- Skills under `.agents/skills/` and `.claude/skills/` (mirrored): `s3k-disasm-guide`,
+- Skills under `.agents/skills/`: `s3k-disasm-guide`,
   `s3k-implement-object`, `s3k-implement-boss`, `s3k-zone-analysis`,
   `trace-replay-bug-fixing`, `plc-system`, `s3k-plc-system`.
 - Pitfall catalogues: `.agents/skills/s3k-implement-object/rom-pitfalls.md`,
@@ -19,7 +19,7 @@ This is Option 10 of `docs/agent-workflow/support-options.md`. See also:
 ## Shared Non-Negotiable Rules (RULE BLOCK)
 
 Every template below references this block. When pasting a template, paste this block with
-it. These come from `CLAUDE.md` / `AGENTS.md` / `AGENTS_S3K.md` and are enforced by guard
+it. These come from `AGENTS.md` / `AGENTS_S3K.md` and are enforced by guard
 tests.
 
 ```
@@ -49,9 +49,9 @@ NON-NEGOTIABLE PROJECT RULES
 8. Level mutations route through ZoneLayoutMutationPipeline / a LevelMutationSurface in
    gameplay paths — never a direct getMap().setValue(...).
 9. Tests are JUnit 5 / Jupiter ONLY. No org.junit.* (JUnit 4) imports, rules, or runners.
-10. If you create or modify ANY skill file, mirror the identical change in BOTH
-    .claude/skills/<name>/ AND .agents/skills/<name>/. Prefer standalone docs under
-    docs/agent-workflow/ over mutating skills.
+10. Edit skill files only under .agents/skills/<name>/, then run
+    python3 tools/git/sync_skills.py to regenerate .claude/skills/. Prefer standalone docs
+    under docs/agent-workflow/ over mutating skills.
 11. Do NOT run `git add -A` / git commit. The working tree is shared; edit only your
     assigned files. Source files end with a trailing newline. Java 25.
 ```
@@ -125,7 +125,7 @@ code. If no brief is supplied, STOP and request it. Do not guess behavior from t
 
 TASK: Implement <OBJECT — id, name, zone-set> as an ObjectInstance. Match the ROM exactly.
 
-REQUIRED READING (skill, mirrored under .agents/skills/ and .claude/skills/):
+REQUIRED READING (skill under .agents/skills/):
 - s3k-implement-object (or s2-/s1-implement-object). Read its rom-pitfalls.md cover to cover:
   .agents/skills/s3k-implement-object/rom-pitfalls.md (18 patterns P1-P18) or
   .agents/skills/s2-implement-object/rom-pitfalls.md (21 patterns).
@@ -158,10 +158,10 @@ RULES (see RULE BLOCK): 1, 2, 4, 6, 7, 8, 9, 11. Specifically:
 
 TESTS: Add a focused JUnit 5 test (HeadlessTestRunner where physics is involved; StubObjectServices
 for service doubles). Keep these green: TestSonic3kPlcArtRegistry, TestS3kAiz1SkipHeadless,
-TestSonic3kLevelLoading. Select the changed object's regressions and those required checks;
-discover the existing ROM and supply its absolute path. Queue the focused run (PowerShell,
-quote -D props):
-  python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=<OBJECT-REGRESSION>,TestSonic3kPlcArtRegistry,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading" "-Ds3k.rom.path=<absolute-S3K-ROM>" test
+TestSonic3kLevelLoading. Select the changed object's regressions and those required checks.
+Queue the focused run; the wrapper discovers the verified ROM and must report s3k.rom.path
+found (PowerShell, quote -D props):
+  python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=<OBJECT-REGRESSION>,TestSonic3kPlcArtRegistry,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading" test
 The lead owns combined delivery validation under current root AGENTS.md. Check the task's
 existing jobs before submitting an equivalent run; retain one command session/observer.
 Do not launch a broad package/test run for each worker. Required ROM/trace checks still apply.
@@ -192,7 +192,7 @@ No chat context. You DIAGNOSE ONLY — you do not fix code and you do not modify
 TASK: Identify the FIRST semantic divergence in <TRACE/TEST — e.g. "MZ1 TraceReplay"> and name
 the likely owning subsystem, with suggested next files/search terms.
 
-REQUIRED READING: trace-replay-bug-fixing skill (mirrored .agents/skills/ + .claude/skills/).
+REQUIRED READING: trace-replay-bug-fixing skill (.agents/skills/).
 Pipeline: recorder -> parser -> comparator; replay tests extend AbstractTraceReplayTest.
 
 RULES (see RULE BLOCK): 3 (no carve-outs — the eventual fix must model ROM state, so frame your
@@ -285,10 +285,10 @@ CHECK AGAINST RULE BLOCK (cite the specific rule + guard test for each finding):
 8  Tile edits route through ZoneLayoutMutationPipeline. Guard: TestNoDirectMapMutationsInGameplay.
 9  JUnit 5 only. Guards: TestJunit5MigrationGuard, TestArchitecturalReviewGuard.
 DOCS (Branch Documentation Policy): commit-message trailers each set to `updated` or `n/a`:
-  Changelog (CHANGELOG.md), Guide + Agent-Docs (AGENTS.md + CLAUDE.md),
+  Changelog (CHANGELOG.md), Guide + Agent-Docs (AGENTS.md),
   Known-Discrepancies (docs/status/known-discrepancies.md),
   S3K-Known-Discrepancies (docs/S3K_KNOWN_DISCREPANCIES.md),
-  Configuration-Docs (CONFIGURATION.md), Skills (.agents/skills/* + .claude/skills/* — must be mirrored).
+  Configuration-Docs (CONFIGURATION.md), Skills (.agents/skills/*; regenerate .claude/skills/ with tools/git/sync_skills.py).
   Trace frontier work must update docs/status/trace-frontier-log.md. A feat/fix/perf commit touching
   src/main/ must set Changelog: updated or justify with `Changelog: n/a: <reason>`.
 

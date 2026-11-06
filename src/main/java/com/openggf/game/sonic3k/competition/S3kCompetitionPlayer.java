@@ -82,7 +82,10 @@ public final class S3kCompetitionPlayer {
         setCentre(centreX,centreY);
     }
     public static Speeds readSpeeds(Rom rom, Character character) throws IOException {
-        byte[] bytes=rom.readBytes(0x1E3C00+character.ordinal()*8,6);
+        return readSpeeds(rom,character,S3kCompetitionResources.LOCKED_ON);
+    }
+    public static Speeds readSpeeds(Rom rom, Character character, S3kCompetitionResources resources) throws IOException {
+        byte[] bytes=rom.readBytes(resources.at(0x1E3C00)+character.ordinal()*8,6);
         return new Speeds(word(bytes,0),word(bytes,2),word(bytes,4));
     }
     private static int word(byte[] b,int i) { return (b[i]&255)<<8 | b[i+1]&255; }

@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.levelselect;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.data.Rom;
 import com.openggf.data.RomManager;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
@@ -192,7 +194,7 @@ public class LevelSelectDataLoader {
     private void loadScreenLayout(Rom rom) {
         try {
             // Read Enigma data
-            byte[] compressed = rom.readBytes(Sonic2Constants.MAP_ENI_LEVEL_SELECT_ADDR, 1024);
+            byte[] compressed = rom.readBytes(address(rom, Sonic2Constants.MAP_ENI_LEVEL_SELECT_ADDR), 1024);
             try (ByteArrayInputStream bais = new ByteArrayInputStream(compressed);
                  ReadableByteChannel channel = Channels.newChannel(bais)) {
                 byte[] decompressed = EnigmaReader.decompress(channel, 0);
@@ -238,7 +240,7 @@ public class LevelSelectDataLoader {
      */
     private void loadIconMappings(Rom rom) {
         try {
-            byte[] compressed = rom.readBytes(Sonic2Constants.MAP_ENI_LEVEL_SELECT_ICON_ADDR, 256);
+            byte[] compressed = rom.readBytes(address(rom, Sonic2Constants.MAP_ENI_LEVEL_SELECT_ICON_ADDR), 256);
             try (ByteArrayInputStream bais = new ByteArrayInputStream(compressed);
                  ReadableByteChannel channel = Channels.newChannel(bais)) {
                 byte[] decompressed = EnigmaReader.decompress(channel, LEVEL_SELECT_PICS_OFFSET);
@@ -269,7 +271,7 @@ public class LevelSelectDataLoader {
      */
     private void loadMenuPalettes(Rom rom) {
         try {
-            byte[] paletteData = rom.readBytes(Sonic2Constants.PAL_MENU_ADDR, Sonic2Constants.PAL_MENU_SIZE);
+            byte[] paletteData = rom.readBytes(address(rom, Sonic2Constants.PAL_MENU_ADDR), Sonic2Constants.PAL_MENU_SIZE);
             menuPalettes = new Palette[4];
 
             for (int line = 0; line < 4; line++) {
@@ -283,7 +285,7 @@ public class LevelSelectDataLoader {
             }
 
             LOGGER.info("Loaded 4 menu palette lines from ROM at 0x" +
-                    Integer.toHexString(Sonic2Constants.PAL_MENU_ADDR));
+                    Integer.toHexString(address(rom, Sonic2Constants.PAL_MENU_ADDR)));
         } catch (IOException | RuntimeException e) {
             LOGGER.warning("Failed to load menu palettes from ROM: " + e.getMessage());
             menuPalettes = new Palette[0];
@@ -295,7 +297,7 @@ public class LevelSelectDataLoader {
      */
     private void loadIconPalettes(Rom rom) {
         try {
-            byte[] paletteData = rom.readBytes(Sonic2Constants.PAL_LEVEL_ICONS_ADDR, Sonic2Constants.PAL_LEVEL_ICONS_SIZE);
+            byte[] paletteData = rom.readBytes(address(rom, Sonic2Constants.PAL_LEVEL_ICONS_ADDR), Sonic2Constants.PAL_LEVEL_ICONS_SIZE);
             iconPalettes = new Palette[15];
 
             for (int i = 0; i < 15; i++) {

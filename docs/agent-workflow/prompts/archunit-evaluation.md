@@ -14,9 +14,9 @@ architectural guard tests in the OpenGGF Java game engine codebase.
 # Repo at a glance
 
 - Java 25 / Maven build (see `pom.xml` at repo root)
-- JUnit 5 / Jupiter is the only allowed test framework (CLAUDE.md enforces this)
+- JUnit 5 / Jupiter is the only allowed test framework (AGENTS.md enforces this)
 - Surefire 3.2.5, ~4870 tests, runs in 4 parallel forks
-- Architecture is documented in `CLAUDE.md` (read this first — the relevant
+- Architecture is documented in `AGENTS.md` (read this first — the relevant
   sections are "Two-Tier Service Architecture", "Session Ownership",
   "Multi-Game Support Architecture", and "Runtime-Shared Framework Stack")
 
@@ -56,7 +56,7 @@ substring check misses) versus rules where the translation is roughly
 equivalent.
 
 ## 3. Gap analysis — what could ArchUnit enforce that we currently can't?
-Survey `CLAUDE.md` and the codebase package structure for invariants that are
+Survey `AGENTS.md` and the codebase package structure for invariants that are
 *documented* but *not enforced*. Strong candidates (validate against the
 codebase before proposing):
 

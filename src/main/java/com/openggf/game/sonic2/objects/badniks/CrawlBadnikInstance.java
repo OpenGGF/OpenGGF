@@ -102,10 +102,13 @@ public class CrawlBadnikInstance extends AbstractBadnikInstance implements Touch
     /** Half-height from Touch_Sizes[0x17] — used for ROM-accurate Touch_Special Y threshold. */
     private static final int TOUCH_HEIGHT_RADIUS = 8;
 
+    // Shipped S2 Touch_Loop (s2.asm:85209-85224) tests collision_flags,
+    // without a render_flags visibility gate. Offscreen CPU Tails can still
+    // touch Crawl's native $97 hurt phase after its special-contact dispatch.
     private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = new TouchResponseProfile(
             TouchCategoryDecodeMode.SONIC2_SPECIAL_PROPERTY,
             false,
-            true,
+            false,
             false,
             TouchShieldDeflectCapability.NONE,
             0,
@@ -197,7 +200,7 @@ public class CrawlBadnikInstance extends AbstractBadnikInstance implements Touch
     }
 
     /**
-     * Walking state (Routine 2) — mirrors loc_3D27C (s2.asm:81826).
+     * Walking state (Routine 2) — mirrors loc_3D27C (s2.asm:82490).
      * ROM: decrement timer → if zero transition to pause; else move + check proximity.
      * Proximity check (loc_3D416) runs AFTER movement, not before.
      */
@@ -223,7 +226,7 @@ public class CrawlBadnikInstance extends AbstractBadnikInstance implements Touch
         currentX += (xVelocity >> 8) + (xTotal >> 8);
         xSubpixel = xTotal & 0xFF;
 
-        // loc_3D416 (s2.asm:82411): enter attack mode if the CLOSEST character is
+        // loc_3D416 (s2.asm:82629): enter attack mode if the CLOSEST character is
         // within the orientation box. ROM calls Obj_GetOrientationToPlayer
         // (s2.asm:72755), which selects whichever of Main/Sidekick has the smaller
         // absolute horizontal distance, then tests d2/d3 (Crawl_pos - char_pos).
@@ -238,7 +241,7 @@ public class CrawlBadnikInstance extends AbstractBadnikInstance implements Touch
     }
 
     /**
-     * Mirrors Obj_GetOrientationToPlayer's character selection (s2.asm:72755-72781):
+     * Mirrors Obj_GetOrientationToPlayer's character selection (s2.asm:72953-72979):
      * picks whichever of MainCharacter / Sidekick has the smaller absolute horizontal
      * distance to the Crawl, with the MainCharacter winning ties (bls.s branch).
      */
@@ -261,7 +264,7 @@ public class CrawlBadnikInstance extends AbstractBadnikInstance implements Touch
     }
 
     /**
-     * ROM orientation box (loc_3D416 / loc_3D2D4, s2.asm:82306-82311):
+     * ROM orientation box (loc_3D416 / loc_3D2D4, s2.asm:82629-82634):
      * d2 = x_pos(Crawl) - x_pos(char); addi.w #$40,d2; cmpi.w #$80,d2; bhs -> outside.
      * The original 64x64 half-extent box; the engine keeps the long-standing
      * {@code |delta| < 64} expression, which already matched ROM at every prior
@@ -275,7 +278,7 @@ public class CrawlBadnikInstance extends AbstractBadnikInstance implements Touch
     }
 
     /**
-     * Pausing state (Routine 4) — mirrors loc_3D2A6 (s2.asm:81841).
+     * Pausing state (Routine 4) — mirrors loc_3D2A6 (s2.asm:82505).
      */
     private void updatePausing() {
         pauseTimer--;
@@ -288,7 +291,7 @@ public class CrawlBadnikInstance extends AbstractBadnikInstance implements Touch
     }
 
     /**
-     * Attacking state (Routine 6) — mirrors loc_3D2D4 (s2.asm:81856).
+     * Attacking state (Routine 6) — mirrors loc_3D2D4 (s2.asm:82520).
      * ROM: sets collision_flags=$D7, then exits to previous routine if
      * |dx| >= 64 OR |dy| >= 64 (loc_3D39A).
      * Touch_Special defers contact to the next frame via collision_property.
@@ -504,6 +507,11 @@ public class CrawlBadnikInstance extends AbstractBadnikInstance implements Touch
     @Override
     public boolean usesSonic2TouchSpecialPropertyResponse() {
         return true;
+    }
+
+    @Override
+    public boolean requiresRenderFlagForTouch() {
+        return TOUCH_RESPONSE_PROFILE.requiresRenderFlagForTouch();
     }
 
     @Override

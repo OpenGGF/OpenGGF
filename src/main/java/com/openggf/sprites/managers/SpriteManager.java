@@ -1,5 +1,7 @@
 package com.openggf.sprites.managers;
 
+import com.openggf.level.LevelMotionOwners;
+
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_CONTROL;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SHIFT;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_CONTROL;
@@ -14,7 +16,6 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
 import com.openggf.control.PlayerInputState;
-import com.openggf.game.CollisionModel;
 import com.openggf.game.internal.NativePlayableSlot;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
@@ -26,6 +27,8 @@ import com.openggf.game.rules.GameRules;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.camera.Camera;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.graphics.MotionPacket;
+import com.openggf.graphics.SpriteMotionInternalAccess;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.SpritePriorityLayerHook;
 import com.openggf.level.LevelManager;
@@ -33,9 +36,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.physics.CollisionSystem;
 import com.openggf.physics.Direction;
-import com.openggf.physics.FrameCollisionPlan;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.CustomPlayablePhysics;
 import com.openggf.sprites.playable.SidekickCpuController;
@@ -139,6 +140,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 	 */
 	private JoypadPressSnapshot joypadPressSnapshot = JoypadPressSnapshot.NONE;
 	private boolean playbackInputSuppressed;
+	private boolean liveDebugInputSuppressed;
 	// publishHeldInputForLevelEvents() and update() are two phases of one frame. Retain the
 	// already-filtered immutable P1 snapshot so level events and movement cannot observe two
 	// callback results for the same raw live/replay input row.
@@ -428,6 +430,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 		inputSuppressed = false;
 		joypadPressSnapshot = JoypadPressSnapshot.NONE;
 		playbackInputSuppressed = false;
+		liveDebugInputSuppressed = false;
 		lastSidekickSuppressed = false;
 		playableUpdateOrder.clear();
 		deferredPostTickMutations.clear();
@@ -660,6 +663,19 @@ public class SpriteManager implements PlayableSstDispatcher {
 	}
 
     private java.util.Map<String, PlayerInputState> scriptedActorInputs;
+    private record CreditsDemoPress(AbstractPlayableSprite player, boolean jumpPress) { }
+    // Valid only inside the ending owner's one canonical gameplay pass. Previous
+    // held input already belongs to the player's captured logical controller bank.
+    private CreditsDemoPress creditsDemoPress;
+
+    void withCreditsDemoInputPresses(AbstractPlayableSprite player, boolean repeatHeldPresses, Runnable frame) {
+        if (creditsDemoPress != null) throw new IllegalStateException("Nested credits input frame");
+        boolean held = player.isForcedInputActive(AbstractPlayableSprite.INPUT_JUMP);
+        boolean previous = (player.getLogicalInputState() & AbstractPlayableSprite.INPUT_JUMP) != 0;
+        creditsDemoPress = new CreditsDemoPress(player, held && (repeatHeldPresses || !previous));
+        try { frame.run(); }
+        finally { creditsDemoPress = null; }
+    }
 
     boolean ownsScriptedInput(AbstractPlayableSprite sprite) {
         return scriptedActorInputs != null && getSprite(sprite.getCode()) == sprite
@@ -734,17 +750,22 @@ public class SpriteManager implements PlayableSstDispatcher {
 				p2Logical |= 0x20;
 			}
 		}
-		boolean testButton = !suppressInput && handler.isKeyDown(testKey);
-		boolean speedUp = isDebugSpeedUpModifierDown(handler);
-		boolean slowDown = isDebugSlowDownModifierDown(handler);
+		boolean recordedDebugInput = liveDebugInputSuppressed && handler.hasLogicalOverride();
+		boolean allowLiveDebugInput = !liveDebugInputSuppressed;
+		boolean testButton = allowLiveDebugInput && !suppressInput && handler.isKeyDown(testKey);
+		boolean speedUp = recordedDebugInput ? handler.isShiftDown()
+				: allowLiveDebugInput && isDebugSpeedUpModifierDown(handler);
+		boolean slowDown = recordedDebugInput ? handler.isControlDown()
+				: allowLiveDebugInput && isDebugSlowDownModifierDown(handler);
 		boolean debugShortcutsEnabled = configService.getBoolean(SonicConfiguration.DEBUG_VIEW_ENABLED);
-		boolean debugModePressed = debugShortcutsEnabled && handler.isKeyPressed(debugModeKey);
-		boolean superSonicDebugPressed = debugShortcutsEnabled
+		boolean debugModePressed = debugShortcutsEnabled && (allowLiveDebugInput || recordedDebugInput)
+				&& handler.isKeyPressed(debugModeKey);
+		boolean superSonicDebugPressed = debugShortcutsEnabled && allowLiveDebugInput
 				&& (isChordPressed(handler, superSonicDebugKey)
 				|| isChordPressed(handler, hyperFormDebugKey));
-		boolean giveEmeraldsPressed = debugShortcutsEnabled
+		boolean giveEmeraldsPressed = debugShortcutsEnabled && allowLiveDebugInput
 				&& isChordPressed(handler, giveEmeraldsKey);
-		boolean giveSuperEmeraldsPressed = debugShortcutsEnabled
+		boolean giveSuperEmeraldsPressed = debugShortcutsEnabled && allowLiveDebugInput
 				&& isChordPressed(handler, giveSuperEmeraldsKey);
 
 		// Give all chaos emeralds (debug)
@@ -937,7 +958,6 @@ public class SpriteManager implements PlayableSstDispatcher {
                     }
 
 					boolean effectiveUp, effectiveDown, effectiveLeft, effectiveRight, effectiveJump, effectiveTest;
-					boolean skipCpuPhysicsThisFrame = false;
 					SidekickCpuController cpuControllerForDiagnostics = null;
 
 					if (scriptedActorInputs == null && context.runCpuControllers()
@@ -946,9 +966,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 						// CPU-controlled sprite: run AI to generate virtual input
 						var cpuController = playable.getCpuController();
 						cpuControllerForDiagnostics = cpuController;
-						playable.capturePreCpuControlSnapshot();
 						cpuController.update(cadence);
-						skipCpuPhysicsThisFrame = cpuController.consumeSkipPhysicsThisFrame();
 
 						boolean aiUp = cpuController.getInputUp();
 						boolean aiDown = cpuController.getInputDown();
@@ -978,14 +996,6 @@ public class SpriteManager implements PlayableSstDispatcher {
 						// If approaching (respawn in progress) and the strategy handles movement
 						// directly (Tails fly-in, Knuckles glide), skip normal physics.
 						// Strategies that need physics (Sonic walk/spindash) fall through.
-						if (skipCpuPhysicsThisFrame) {
-							applyScreenYWrapValueAfterControl(playable);
-							playable.getAnimationManager().update(cadence);
-							tickDisplayPhaseTimers(playable);
-							playable.tickStatus();
-							playable.endOfTick();
-							continue;
-						}
 						if (cpuController.isApproaching()
 								&& !cpuController.getRespawnStrategy().requiresPhysics()) {
 							applyScreenYWrapValueAfterControl(playable);
@@ -1132,8 +1142,9 @@ public class SpriteManager implements PlayableSstDispatcher {
 		}
 
 		// Player_2 is the first CPU slot after Player_1. Tails_Init resets the
-		// CPU globals and installs the spawn-offset state but returns before the
-		// normal delayed-follow CPU routine (sonic3k.asm:26141-26196).
+		// CPU globals and returns before the normal delayed-follow CPU routine.
+		// SpawnLevelMainSprites has already placed the assembled team
+		// before this slot executes (sonic3k.asm:26141-26196).
 		if (sidekicks.isEmpty() || sidekicks.getFirst() != playable) {
 			return;
 		}
@@ -1151,12 +1162,10 @@ public class SpriteManager implements PlayableSstDispatcher {
 		playable.setObjectControlAllowsCpu(objectControlAllowsCpu);
 		playable.setObjectControlSuppressesMovement(objectControlSuppressesMovement);
 		playable.setControlLocked(controlLocked);
-		playable.setCentreXPreserveSubpixel((short) (leader.getCentreX() - 0x20));
-		playable.setCentreYPreserveSubpixel((short) (leader.getCentreY() + 4));
-		playable.setXSpeed((short) 0);
-		playable.setYSpeed((short) 0);
-		playable.setGSpeed((short) 0);
-		playable.setAir(leader.getAir());
+		// SpawnLevelMainSprites owns Player_2 placement before Process_Sprites.
+		// Tails_Init (sonic3k.asm:26141-26200) writes no position or velocity.
+		// Repeating the spawn offset here overwrites a later object owner such
+		// as sub_90A4C (sonic3k.asm:197928-197936), which locks both shrine players.
 		playable.setObjectRoutineOverride(null);
 		playable.getDrowningController().reset();
 		playable.setFlipSpeed(4);
@@ -1501,7 +1510,6 @@ public class SpriteManager implements PlayableSstDispatcher {
                             }
                             var cpuController = playable.getCpuController();
 							cpuController.update(frameCounter);
-							boolean skipCpuPhysicsThisFrame = cpuController.consumeSkipPhysicsThisFrame();
 
 							boolean aiUp = cpuController.getInputUp();
 							boolean aiDown = cpuController.getInputDown();
@@ -1525,13 +1533,6 @@ public class SpriteManager implements PlayableSstDispatcher {
 									aiUp, aiDown, aiLeft, aiRight, aiJump, aiJumpPress,
 									effectiveUp, effectiveDown, effectiveLeft, effectiveRight, effectiveJump,
 									true, aiJumpPress);
-							if (skipCpuPhysicsThisFrame) {
-								playable.getAnimationManager().update(frameCounter);
-								tickDisplayPhaseTimers(playable);
-								playable.tickStatus();
-								playable.endOfTick();
-								continue;
-							}
 							if (cpuController.isApproaching()
 									&& !cpuController.getRespawnStrategy().requiresPhysics()) {
 								playable.getAnimationManager().update(frameCounter);
@@ -1678,7 +1679,7 @@ public class SpriteManager implements PlayableSstDispatcher {
         }
     }
 
-	private static void publishInputState(AbstractPlayableSprite playable,
+	private void publishInputState(AbstractPlayableSprite playable,
 			boolean rawUp, boolean rawDown, boolean rawLeft, boolean rawRight,
 			boolean rawJump, boolean rawJumpPress,
 			boolean logicalUp, boolean logicalDown, boolean logicalLeft, boolean logicalRight, boolean logicalJump,
@@ -1691,10 +1692,12 @@ public class SpriteManager implements PlayableSstDispatcher {
 		logicalLeft |= playable.isForcedInputActive(AbstractPlayableSprite.INPUT_LEFT);
 		logicalRight |= playable.isForcedInputActive(AbstractPlayableSprite.INPUT_RIGHT);
 		logicalJump |= playable.isForcedInputActive(AbstractPlayableSprite.INPUT_JUMP);
-		logicalJumpPress |= playable.isForcedInputActive(AbstractPlayableSprite.INPUT_JUMP);
+		boolean forcedJumpPress = creditsDemoPress != null && creditsDemoPress.player() == playable
+                ? creditsDemoPress.jumpPress() : playable.isForcedInputActive(AbstractPlayableSprite.INPUT_JUMP);
+		logicalJumpPress |= forcedJumpPress;
 		playable.setJumpInputPressed(
 				rawJump || playable.isForcedInputActive(AbstractPlayableSprite.INPUT_JUMP),
-				rawJumpPress || playable.isForcedInputActive(AbstractPlayableSprite.INPUT_JUMP));
+				rawJumpPress || forcedJumpPress);
 		playable.setDirectionalInputPressed(rawUp, rawDown, rawLeft, rawRight);
 		if (explicitLogicalJumpPress) {
 			playable.setLogicalInputState(logicalUp, logicalDown, logicalLeft, logicalRight, logicalJump,
@@ -1914,7 +1917,11 @@ public class SpriteManager implements PlayableSstDispatcher {
 					gfx.setCurrentSpriteHighPriority(high);
 					gfx.beginPatternBatch();
 				}
-				sprite.draw();
+				if (SpriteMotionInternalAccess.collecting(gfx)
+                        && sprite.getClass().getClassLoader() == SpriteManager.class.getClassLoader()) {
+                    SpriteMotionInternalAccess.withOwner(gfx,
+                            LevelMotionOwners.playerOwner(this, sprite), sprite::draw);
+                } else sprite.draw();
 				// SAT order is front to back (earlier entries win), so the same layering puts the
 				// hook's entries straight after that layer's last player sprite.
 				if (collectingSat && hook != null && !(high ? highHookDrawn : lowHookDrawn)
@@ -2091,6 +2098,11 @@ public class SpriteManager implements PlayableSstDispatcher {
 	}
 
     boolean inputSuppressed() { return inputSuppressed; }
+
+    /** Suppresses live-only debug actions while recording or playing a movie. */
+    void setLiveDebugInputSuppressed(boolean suppressed) {
+        this.liveDebugInputSuppressed = suppressed;
+    }
 
 	/**
 	 * Suppresses keyboard-driven gameplay input specifically for playback mode.
@@ -2290,8 +2302,6 @@ public class SpriteManager implements PlayableSstDispatcher {
             playable.endOfTick();
             return;
         }
-		boolean isUnified = requiresPostMovementSolidPass(playable);
-		boolean usesInlineSolidResolution = levelManager != null && levelManager.objectsExecuteAfterPlayerPhysics();
 		// Capture the hurt-routine membership BEFORE movement runs, because the
 		// landing-from-hurt step clears the hurt flag mid-tick (calculateLanding ->
 		// resetOnFloor). The ROM hurt routine owns the whole frame and never calls
@@ -2303,7 +2313,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 		// acknowledged during a hurt state", docs/s1disasm/_incObj/01 Sonic.asm:1814-1817),
 		// and S3K Tails hurt loc_156D6 likewise omits it (docs/skdisasm/sonic3k.asm:29234-29250).
 		// Only the next, first normal-control frame's Obj02_Control reaches Tails_Water,
-		// and it runs AFTER Tails_Move (docs/s2disasm/s2.asm:38973 move, :38981 water),
+		// and it runs AFTER Tails_Move (docs/s2disasm/s2.asm:39673 move, :39676 water),
 		// so the underwater acceleration switch (Tails_acceleration $C->$6,
 		// docs/s2disasm/s2.asm:39550 vs dry $C at :38902/:39045) is first observed by the
 		// frame after that move. Skipping the water update on the hurt-landing frame keeps
@@ -2318,15 +2328,6 @@ public class SpriteManager implements PlayableSstDispatcher {
 		boolean deadAtTickStart = playable.getDead();
 		var nativeDeath = com.openggf.game.competition.NativePlayerDeathPass.from(playable);
 		boolean nativeDeathDispatch = nativeDeath != null && nativeDeath.ownsDispatch(playable);
-		// For S1 UNIFIED: skip pre-movement solid pass. ROM processes all solid
-		// objects AFTER Sonic's movement (his slot runs first in ExecuteObjects),
-		// so only the post-movement pass is ROM-accurate. Running both creates
-		// double-correction artifacts.
-		// For S2/S3K: solid contacts now resolve inline during the object exec loop
-		// after movement, so the old pre-movement batched pass must be skipped.
-		if (!nativeDeathDispatch && !isUnified && !usesInlineSolidResolution) {
-			applySolidContacts(levelManager, playable, false, false);
-		}
 		// ROM Obj01_Modes dispatches the movement mode BEFORE the move itself
 		// runs, and the Super transformation gate is the first thing inside the
 		// jump mode: Obj01_MdJump calls Sonic_JumpHeight, which ends
@@ -2387,7 +2388,7 @@ public class SpriteManager implements PlayableSstDispatcher {
                     playable.getSuperStateController()).updateNativeControlBeforeAnimation();
 		}
 		playable.recordFollowerHistoryForTick();
-		if (usesInlineSolidResolution && !hurtAtTickStart && !deadAtTickStart) {
+		if (levelManager != null && !hurtAtTickStart && !deadAtTickStart) {
 			// S2/S3K run Sonic_Water/Tails_Water after movement and the
 			// position-history write, but before animation and TouchResponse
 			// (sonic3k.asm:22031-22058). Object launchers touched on a water-entry
@@ -2420,15 +2421,6 @@ public class SpriteManager implements PlayableSstDispatcher {
 		if (!hurtAtTickStart && !playable.getDead()) {
 			levelManager.applyTouchResponses(playable);
 		}
-		// S1 (UNIFIED): Post-movement solid pass matches ROM timing — solid objects
-		// check Sonic's position after he has moved in the ROM's ExecuteObjects loop.
-		// postMovement=true disables velocity classification adjustment.
-		// Skip this legacy batched pass when the active module resolves solids inline
-		// during the object execution loop (currently S1 trace-parity mode), otherwise
-		// S1 gets double-resolution (inline + post-movement) and the slot layout drifts.
-		if (isUnified && !usesInlineSolidResolution) {
-			applySolidContacts(levelManager, playable, true, false);
-		}
 		levelManager.applyPlaneSwitchers(playable);
 		playable.tickStatus();
 		playable.endOfTick();
@@ -2455,34 +2447,18 @@ public class SpriteManager implements PlayableSstDispatcher {
 		}
 	}
 
-	private static void applySolidContacts(LevelManager levelManager, AbstractPlayableSprite playable,
-										   boolean postMovement, boolean deferSideToPostMovement) {
-		ObjectManager objectManager = levelManager.getObjectManager();
-		if (objectManager == null) {
-			return;
-		}
-		CollisionSystem collisionSystem = playable.currentCollisionSystemOrNull();
-		if (collisionSystem != null) {
-			collisionSystem.setObjectManager(objectManager);
-			collisionSystem.runSolidObjectResolution(
-					FrameCollisionPlan.objectResolutionOnly(), playable, postMovement, deferSideToPostMovement);
-			return;
-		}
-		objectManager.updateSolidContacts(playable, postMovement, deferSideToPostMovement);
-	}
-
 	private static void applyScreenYWrapValueAfterControl(AbstractPlayableSprite playable) {
 		if (playable.getDead() && !playable.isCpuControlled()) {
 			// Main routine-6 owners use raw gravity primitives, not the control
 			// mask; preserve the same native dispatch as PlayableSpriteMovement.
 			return;
 		}
-		// ROM Obj02_Dead (docs/s2disasm/s2.asm:40736-40742) runs the dead CPU
+		// ROM Obj02_Dead (docs/s2disasm/s2.asm:41131-41137) runs the dead CPU
 		// sidekick's fall through jsr (ObjectMoveAndFall).l directly and never
 		// applies the Screen_Y_wrap mask that the live control/hurt paths use, so
 		// the falling body's y_pos keeps climbing past the wrap boundary until
-		// Obj02_CheckGameOver (s2.asm:40747-40759) crosses Tails_Max_Y_pos+$100 and
-		// branches to TailsCPU_Despawn (s2.asm:39043-39052). Mirror that by skipping
+		// Obj02_CheckGameOver (s2.asm:41135-41147) crosses Tails_Max_Y_pos+$100 and
+		// branches to TailsCPU_Despawn (s2.asm:39390-39399). Mirror that by skipping
 		// the wrap for a dead CPU sidekick on the dead-fall path — matching the
 		// existing bypass in PlayableSpriteMovement.applyScreenYWrapValueAfterControl().
 		// Without this, the engine masked the dead Tails' y_pos at 0x800
@@ -2501,15 +2477,6 @@ public class SpriteManager implements PlayableSstDispatcher {
 		}
 	}
 
-
-	static boolean requiresPostMovementSolidPass(AbstractPlayableSprite playable) {
-		if (playable == null) {
-			return false;
-		}
-		GameRules rules = playable.getGameRules();
-		return rules != null && rules.collision() != null
-				&& rules.collision().collisionModel() == CollisionModel.UNIFIED;
-	}
 
 	static List<AbstractPlayableSprite> buildPlayableUpdateOrder(Collection<Sprite> sprites,
 			List<AbstractPlayableSprite> sidekicks,

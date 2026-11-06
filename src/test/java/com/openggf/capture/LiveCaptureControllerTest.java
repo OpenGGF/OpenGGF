@@ -4,6 +4,10 @@ import com.openggf.tests.TestTempFiles;
 import com.openggf.audio.LiveCaptureAudioHandle;
 import com.openggf.audio.DebugFailAfterFramesAudioHandle;
 import com.openggf.audio.runtime.AudioFrameClock;
+import com.openggf.audio.output.NoDeviceAudioSink;
+import com.openggf.audio.presentation.*;
+import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
+import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -23,12 +27,46 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
 
 class LiveCaptureControllerTest {
     private final List<ExecutorService> executors = new ArrayList<>();
 
     @AfterEach void shutdown() {
         executors.forEach(ExecutorService::shutdownNow);
+    }
+
+    @Test void realProducerBacklogFailureContinuesRecordingWithPhaseCorrectSilence() {
+        AudioVoiceRegistry registry = new AudioVoiceRegistry(mock(SmpsSfxInstantiation.class),
+                mock(AudioPresentationDependencyResolver.class),
+                new SmpsCoordFlagHandlerOwner(new SmpsCoordFlagRuntimeState()), ignored -> { });
+        var producer = new AudioPresentationProducer(5, 2, 5, 0, registry,
+                new AudioPresentationCommandQueue(registry::isRendering),
+                new AudioPresentationMixer(3, registry::onVoiceFailure), new NoDeviceAudioSink(5));
+        Harness h = new Harness();
+        h.sampleRate = 5;
+        h.suppliedAudio = producer.attachCapture(2);
+        LiveCaptureController controller = h.controller();
+        try {
+            controller.start(h.viewport, 2);
+            for (int tick = 0; tick < 5; tick++) producer.present(tick, PresentationMode.FORWARD);
+            var before = producer.transactionFingerprint();
+            controller.capturePresentedFrame(h.viewport);
+            controller.capturePresentedFrame(h.viewport);
+            assertEquals(LiveCaptureController.State.ACTIVE, controller.state());
+            assertEquals(List.of(0L, 1L), h.recorder.indexes);
+            assertEquals(2, h.recorder.frames.get(0).sampleCount());
+            assertEquals(3, h.recorder.frames.get(1).sampleCount());
+            h.recorder.frames.forEach(LiveCaptureControllerTest::assertSilent);
+            assertEquals(before.clock(), producer.transactionFingerprint().clock());
+            assertEquals(0, producer.transactionFingerprint().captureCount());
+            assertThrows(IllegalStateException.class,
+                    () -> h.suppliedAudio.drainPresentationFrame(new short[6]));
+            producer.present(5, PresentationMode.FORWARD); // Producer remains usable.
+        } finally {
+            controller.close();
+            producer.close();
+        }
     }
 
     @Test void startCaptureAndAsyncStopReverseResourceOrder() throws Exception {
@@ -518,6 +556,7 @@ class LiveCaptureControllerTest {
                 failDrain, advanceThenFailDrain,
                 failGrab, failAudioClose, audioClosed;
         int sampleRate = 48_000;
+        LiveCaptureAudioHandle suppliedAudio;
         int debugFailAfterFrames = -1;
         int audioCloseCalls;
         int grabs;
@@ -530,6 +569,7 @@ class LiveCaptureControllerTest {
             return new LiveCaptureController(new LiveCaptureController.Dependencies(
                     rate -> {
                         if (failAudio) throw new IllegalStateException("audio");
+                        if (suppliedAudio != null) return suppliedAudio;
                         LiveCaptureAudioHandle raw = new LiveCaptureAudioHandle() {
                             private final AudioFrameClock clock =
                                     new AudioFrameClock(sampleRate, rate);

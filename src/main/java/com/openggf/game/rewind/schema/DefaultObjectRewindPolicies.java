@@ -123,12 +123,16 @@ final class DefaultObjectRewindPolicies {
     );
 
     private static final Map<FieldKey, RewindFieldPolicy> EXACT_FIELD_POLICIES = Map.ofEntries(
+            // Original-slot fan platform retains its allocated fan by stable object identity.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.HCZCGZFanObjectInstance$FanPlatformChild", "fanChild"), RewindFieldPolicy.CAPTURED),
             // HCZ independently lived ship family: exact parent3/$44, including after boss removal.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.HczEndBossRobotnikShip", "boss"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.HczEndBossRobotnikHead", "ship"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.HczEndBossRobotnikHead", "boss"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.HczEndBossRobotnikFlame", "ship"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.HczEndBossShipExplosionController", "ship"), RewindFieldPolicy.CAPTURED),
+            // MHZ following bursts retain the exact boss even when another graph is nearer.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.MhzEndBossExplosionController", "parent"), RewindFieldPolicy.CAPTURED),
             // Immutable ROM scripts are reloaded through the live slot controller on recreation.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.S3kSlotRingRewardObjectInstance", "spinScript"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.S3kSlotRingRewardObjectInstance", "sparkleScript"), RewindFieldPolicy.TRANSIENT),
@@ -412,7 +416,6 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.FlipperObjectInstance", "playerFlipperState"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.LauncherBallObjectInstance", "playerCooldowns"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.LauncherBallObjectInstance", "playerStates"), RewindFieldPolicy.CAPTURED),
-            Map.entry(new FieldKey("com.openggf.game.sonic2.objects.LauncherBallObjectInstance", "playerVelocities"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.LauncherSpringObjectInstance", "playerStates"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.MCZRotPformsObjectInstance", "children"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.MCZRotPformsObjectInstance", "initialized"), RewindFieldPolicy.TRANSIENT),
@@ -447,7 +450,6 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.OOZPoppingPlatformObjectInstance", "sidekickLockOwner"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.OOZPoppingPlatformObjectInstance", "extensionLockedPlayers"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.OOZSpringObjectInstance", "extensionPendingHorizontalLaunch"), RewindFieldPolicy.CAPTURED),
-            Map.entry(new FieldKey("com.openggf.game.sonic2.objects.OOZSpringObjectInstance", "extensionFreshOrderedCarry"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.OOZSpringObjectInstance", "extensionHorizontalPushingThisFrame"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.OOZSpringObjectInstance", "mainHorizontalStateOwner"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.OOZSpringObjectInstance", "sidekickHorizontalStateOwner"), RewindFieldPolicy.CAPTURED),
@@ -576,6 +578,8 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CutsceneKnuxCnz2WallInstance", "owner"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesLiftChild", "player"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesRouteSwitchChild", "parent"), RewindFieldPolicy.CAPTURED),
+            // Capture both sides of the live boss/proxy identity link.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance", "hitProxy"), RewindFieldPolicy.CAPTURED),
             // loc_764C4 follows the exact native parent3; proximity is never reconstruction authority.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.MhzEndBossHitProxyChild", "parent"), RewindFieldPolicy.CAPTURED),
             // loc_76674 retires spikes through that same exact parent status owner.
@@ -614,7 +618,6 @@ final class DefaultObjectRewindPolicies {
             // ChildObjDat_6EDE4 encodes the signed field offset in the captured spawn subtype;
             // CnzEndBossFieldChild.recreateForRewind() deterministically reconstructs it.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.CnzEndBossFieldChild", "xOffset"), RewindFieldPolicy.TRANSIENT),
-            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.HczEndBossEggCapsuleInstance", "explosionController"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.HczEndBossInstance", "cameraGate"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance", "arenaCameraGate"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance", "effectChildren"), RewindFieldPolicy.CAPTURED),
@@ -771,7 +774,6 @@ final class DefaultObjectRewindPolicies {
             // renderer. Pattern[] and renderer fields already use declared-type transient policy.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MgzDrillingRobotnikInstance", "airZoomCueSourceRaster"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MgzDrillingRobotnikInstance", "endBossDefeatExplosionController"), RewindFieldPolicy.DEFERRED),
-            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MgzMinibossInstance", "defeatExplosionController"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MgzMinibossInstance$DrillArmChild", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MgzMinibossInstance$KnucklesSpikePlatformChild", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MGZTopLauncherObjectInstance", "child"), RewindFieldPolicy.CAPTURED),

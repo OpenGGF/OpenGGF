@@ -3,8 +3,12 @@ package com.openggf.tests;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.AbstractList;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
+import java.util.RandomAccess;
 import java.util.stream.Stream;
 
 public final class ObjectGuardSourceScanner {
@@ -72,7 +76,7 @@ public final class ObjectGuardSourceScanner {
 
     public static SourceText sourceWithoutCommentOnlyLines(List<String> lines) {
         StringBuilder source = new StringBuilder();
-        List<Integer> lineByOffset = new ArrayList<>();
+        int[] lineStarts = new int[lines.size()];
         List<String> sourceLines = new ArrayList<>();
         for (int i = 0; i < lines.size(); i++) {
             String line = lines.get(i);
@@ -80,15 +84,72 @@ public final class ObjectGuardSourceScanner {
             String scannedLine = (trimmed.startsWith("//") || trimmed.startsWith("*") || trimmed.startsWith("/*"))
                     ? ""
                     : line;
+            lineStarts[i] = source.length();
             sourceLines.add(scannedLine);
             source.append(scannedLine);
-            for (int j = 0; j < scannedLine.length(); j++) {
-                lineByOffset.add(i + 1);
-            }
             source.append('\n');
-            lineByOffset.add(i + 1);
         }
-        return new SourceText(source.toString(), lineByOffset, sourceLines);
+        return new SourceText(source.toString(), new LineByOffset(lineStarts, source.length()), sourceLines);
+    }
+
+    /**
+     * Ordinary scans need one offset per input line, not a boxed entry per UTF-16
+     * character. Keep the factory's mutable List contract by materializing the
+     * expanded form only when a caller changes it.
+     */
+    private static final class LineByOffset extends AbstractList<Integer> implements RandomAccess {
+        private final int[] lineStarts;
+        private final int originalSize;
+        private List<Integer> expanded;
+
+        private LineByOffset(int[] lineStarts, int originalSize) {
+            this.lineStarts = lineStarts;
+            this.originalSize = originalSize;
+        }
+
+        @Override
+        public Integer get(int index) {
+            if (expanded != null) {
+                return expanded.get(index);
+            }
+            Objects.checkIndex(index, originalSize);
+            int found = Arrays.binarySearch(lineStarts, index);
+            return found >= 0 ? found + 1 : -found - 1;
+        }
+
+        @Override
+        public int size() {
+            return expanded == null ? originalSize : expanded.size();
+        }
+
+        @Override
+        public Integer set(int index, Integer element) {
+            return expanded().set(index, element);
+        }
+
+        @Override
+        public void add(int index, Integer element) {
+            expanded().add(index, element);
+            modCount++;
+        }
+
+        @Override
+        public Integer remove(int index) {
+            Integer previous = expanded().remove(index);
+            modCount++;
+            return previous;
+        }
+
+        private List<Integer> expanded() {
+            if (expanded == null) {
+                List<Integer> values = new ArrayList<>(originalSize);
+                for (int i = 0; i < originalSize; i++) {
+                    values.add(get(i));
+                }
+                expanded = values;
+            }
+            return expanded;
+        }
     }
 
     public record SourceText(String text, List<Integer> lineByOffset, List<String> lines) {

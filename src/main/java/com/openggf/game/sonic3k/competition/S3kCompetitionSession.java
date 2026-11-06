@@ -63,6 +63,8 @@ public final class S3kCompetitionSession implements WorldSessionPolicyState,
     public static final List<Arena> GRAND_PRIX_ORDER = List.of(Arena.AZURE_LAKE,
             Arena.BALLOON_PARK, Arena.CHROME_GADGET, Arena.DESERT_PALACE, Arena.ENDLESS_MINE);
 
+    public S3kCompetitionResources resources() { return resources; }
+
     public record Config(Mode mode, Arena arena, boolean itemsEnabled, int participantCount) {
         public Config(Mode mode, Arena arena, boolean itemsEnabled) {
             this(mode, arena, itemsEnabled, mode == Mode.TIME_ATTACK ? 1 : 2);
@@ -173,6 +175,7 @@ public final class S3kCompetitionSession implements WorldSessionPolicyState,
     }
 
     private final Config config;
+    private S3kCompetitionResources resources = S3kCompetitionResources.LOCKED_ON;
     private final Host host;
     private final byte[] itemSequence;
     private final byte[] itemAnimation;
@@ -204,8 +207,12 @@ public final class S3kCompetitionSession implements WorldSessionPolicyState,
     private int goalTimerMask = -1;
 
     public S3kCompetitionSession(Rom rom, Config config, Host host) throws IOException {
-        this(config, host, rom.readBytes(ITEM_SEQUENCE_ADDRESS, 24),
-                rom.readBytes(0x36A58, 80), rom.readBytes(0x36FF2, 8));
+        this(rom,config,host,S3kCompetitionResources.LOCKED_ON);
+    }
+    public S3kCompetitionSession(Rom rom, Config config, Host host,S3kCompetitionResources resources) throws IOException {
+        this(config,host,resources.bytes(rom,ITEM_SEQUENCE_ADDRESS,24),
+                resources.bytes(rom,0x36A58,80),resources.bytes(rom,0x36FF2,8));
+        this.resources = Objects.requireNonNull(resources);
     }
 
     /** Parsed ROM bytes are injectable for a bounded independent native oracle. */

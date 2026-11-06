@@ -14,6 +14,7 @@ import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.ArrayList;
@@ -56,8 +57,8 @@ class TestMhzEndBossNativeDamage {
         boss.onPlayerAttack(null, null);
         assertEquals(1, boss.getState().hitCount);
         assertFalse(boss.isDefeated(), "loc_767B0 starts the flash, not the escape");
-        assertEquals(32, boss.getState().invulnerabilityTimer);
-        assertEquals(0, harness.proxy.getCollisionFlags());
+        assertEquals(0, boss.getState().invulnerabilityTimer, "contact precedes the damage tail");
+        assertEquals(0x25, harness.proxy.getCollisionFlags(), "body contact changes only the struck slot");
         harness.advance(31);
         assertFalse(boss.isDefeated());
         assertEquals(1, boss.getState().invulnerabilityTimer);
@@ -92,11 +93,64 @@ class TestMhzEndBossNativeDamage {
     void anotherAttackDuringTheFlashCannotConsumeTheTerminalCount() {
         var harness = new Harness(PlayerCharacter.KNUCKLES);
         harness.boss.onPlayerAttack(null, null);
+        harness.advance(1); // sub_767B0 begins the actual flash after dispatch
         harness.boss.onPlayerAttack(null, null);
         harness.proxy.onPlayerAttack(null, null);
         assertEquals(1, harness.boss.getState().hitCount);
-        assertEquals(32, harness.boss.getState().invulnerabilityTimer);
+        assertEquals(31, harness.boss.getState().invulnerabilityTimer);
         assertEquals(1, harness.sounds.size());
+    }
+
+    @ParameterizedTest
+    @CsvSource({"false,0", "false,1", "true,0", "true,1"})
+    void pendingContactRestoresTheStruckSlotAndStopsOnlyTheResolvedAttacker(boolean proxyHit, int attackerSlot) {
+        var h = new Harness(PlayerCharacter.KNUCKLES);
+        h.advance(1); // admit the ordinary active phase before contact
+        h.roster[0].setXSpeed((short) 0x600);
+        h.roster[1].setXSpeed((short) 0x700);
+        var attacker = h.roster[attackerSlot];
+        if (proxyHit) h.proxy.onPlayerAttack(attacker, null);
+        else h.boss.onPlayerAttack(attacker, null);
+        assertEquals(proxyHit ? 2 : 1, h.boss.getState().hitCount);
+        assertEquals(proxyHit ? 0xCF : 0, h.boss.getCollisionFlags());
+        assertEquals(proxyHit ? 0 : 0x25, h.proxy.getCollisionFlags());
+        assertEquals(proxyHit ? -2 : -1, h.proxy.getCollisionProperty());
+        assertEquals(0, h.boss.getState().invulnerabilityTimer);
+        assertFalse(h.boss.getState().invulnerable);
+        assertTrue(h.sounds.isEmpty());
+        assertEquals(0x600, h.roster[0].getXSpeed());
+        assertEquals(0x700, h.roster[1].getXSpeed());
+        assertNotNull(h.manager.captureIdentityContext().requireIdentityTable().encodePlayer(attacker));
+        var registry = new RewindRegistry();
+        registry.register(h.manager.rewindSnapshottable());
+        var pending = registry.capture();
+        h.advance(1);
+        assertEquals(1, h.boss.getState().hitCount);
+        assertEquals(31, h.boss.getState().invulnerabilityTimer);
+        assertEquals(0, h.roster[attackerSlot].getXSpeed());
+        assertEquals(attackerSlot == 0 ? 0x700 : 0x600, h.roster[1 - attackerSlot].getXSpeed());
+        var consumed = registry.capture();
+
+        // Recreate the roster too: restored fields must resolve participant IDs,
+        // not retain an old Java player or use the parent's update(null) argument.
+        var originalMain = h.roster[0];
+        var originalSidekick = h.roster[1];
+        originalMain.setXSpeed((short) 0x600);
+        originalSidekick.setXSpeed((short) 0x700);
+        h.roster[0] = new TestablePlayableSprite("main-restored", (short) 0, (short) 0);
+        h.roster[1] = new TestablePlayableSprite("sidekick-restored", (short) 0, (short) 0);
+        h.roster[0].setXSpeed((short) 0x600);
+        h.roster[1].setXSpeed((short) 0x700);
+        registry.restore(pending);
+        h.refreshObjects();
+        h.clock = 1;
+        sameObjects(pending, registry.capture(), "pending contact with replacement participant identities");
+        h.advance(1);
+        sameObjects(consumed, registry.capture(), "restored struck-slot damage tail");
+        assertEquals(0, h.roster[attackerSlot].getXSpeed());
+        assertEquals(attackerSlot == 0 ? 0x700 : 0x600, h.roster[1 - attackerSlot].getXSpeed());
+        assertEquals(0x600, originalMain.getXSpeed(), "the retired main incarnation must not be stopped");
+        assertEquals(0x700, originalSidekick.getXSpeed(), "the retired sidekick incarnation must not be stopped");
     }
 
     @Test
@@ -363,6 +417,10 @@ class TestMhzEndBossNativeDamage {
     private static final class Harness {
         final List<Integer> sounds = new ArrayList<>();
         final ObjectManager manager;
+        final TestablePlayableSprite[] roster = {
+                new TestablePlayableSprite("main", (short) 0, (short) 0),
+                new TestablePlayableSprite("sidekick", (short) 0, (short) 0)
+        };
         final com.openggf.game.GameRng rng;
         MhzEndBossInstance boss;
         MhzEndBossHitProxyChild proxy;
@@ -378,8 +436,13 @@ class TestMhzEndBossNativeDamage {
             ObjectManager[] holder = new ObjectManager[1];
             var runtime = events == null ? new MhzZoneRuntimeState(1, character)
                     : new MhzZoneRuntimeState(1, character, events);
+            var sprites = new com.openggf.sprites.managers.SpriteManager() {
+                @Override public TestablePlayableSprite getMainPlayable() { return roster[0]; }
+            };
             var services = new StubObjectServices() {
                 @Override public ObjectManager objectManager() { return holder[0]; }
+                @Override public com.openggf.sprites.managers.SpriteManager spriteManager() { return sprites; }
+                @Override public List<com.openggf.game.PlayableEntity> sidekicks() { return List.of(roster[1]); }
                 @Override public MhzZoneRuntimeState zoneRuntimeState() { return runtime; }
                 @Override public void playSfx(int id) { sounds.add(id); }
             };

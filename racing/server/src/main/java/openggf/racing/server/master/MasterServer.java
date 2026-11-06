@@ -18,6 +18,7 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.websocketx.WebSocketFrameAggregator;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
+import io.netty.handler.flow.FlowControlHandler;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.timeout.IdleStateHandler;
@@ -178,6 +179,7 @@ public final class MasterServer implements AutoCloseable {
                             pipeline.addLast(new WebSocketFrameAggregator(
                                     Protocol.MAX_MASTER_FRAME_BYTES));
                             pipeline.addLast(new IdleStateHandler(60, 0, 0));
+                            pipeline.addLast(new FlowControlHandler());
                             pipeline.addLast(new MasterChannelHandler(broker, relays,
                                     tunnels, brokerLoop, counter));
                         }
@@ -284,6 +286,7 @@ public final class MasterServer implements AutoCloseable {
         serverChannel.close().syncUninterruptibly();
         clientChannels.close().syncUninterruptibly();
         drain(brokerGroup);
+        relays.close();
         drain(relayGroup);
         drain(brokerGroup);
         relayGroup.shutdownGracefully(0, 5, TimeUnit.SECONDS).syncUninterruptibly();

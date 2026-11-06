@@ -59,6 +59,7 @@ public final class S3kCompetitionLevelInitProfile extends AbstractLevelInitProfi
     }
 
     private final Rom rom;
+    private final S3kCompetitionResources resources;
     private final Supplier<Arena> arenaSource;
     private final Supplier<List<S3kCompetitionPlayer>> playerSource;
     private final Host host;
@@ -71,11 +72,18 @@ public final class S3kCompetitionLevelInitProfile extends AbstractLevelInitProfi
 
     public S3kCompetitionLevelInitProfile(Rom rom, Supplier<Arena> arenaSource,
             Supplier<List<S3kCompetitionPlayer>> playerSource, Host host) {
+        this(rom,arenaSource,playerSource,host,S3kCompetitionResources.LOCKED_ON);
+    }
+    public S3kCompetitionLevelInitProfile(Rom rom,Supplier<Arena> arenaSource,
+            Supplier<List<S3kCompetitionPlayer>> playerSource,Host host,S3kCompetitionResources resources) {
+        this.resources=Objects.requireNonNull(resources);
         this.rom = Objects.requireNonNull(rom, "rom");
         this.arenaSource = Objects.requireNonNull(arenaSource, "arenaSource");
         this.playerSource = Objects.requireNonNull(playerSource, "playerSource");
         this.host = Objects.requireNonNull(host, "host");
     }
+
+    public S3kCompetitionResources resources() { return resources; }
 
     private static List<S3kCompetitionPlayer> currentPlayers(List<S3kCompetitionPlayer> supplied) {
         var players = List.copyOf(supplied);
@@ -98,7 +106,7 @@ public final class S3kCompetitionLevelInitProfile extends AbstractLevelInitProfi
             // per attempt: a later GP load may now own different miniature model identities.
             attempt.players = currentPlayers(playerSource.get());
             attempt.arena = S3kCompetitionArenaDefinition.load(rom,
-                    Objects.requireNonNull(arenaSource.get(), "selected competition arena"));
+                    Objects.requireNonNull(arenaSource.get(), "selected competition arena"),resources);
             context.setRom(rom);
             context.setZone(attempt.arena.arena().zoneId()); context.setAct(0);
             // The native title object deletes before title PLCs. There is no campaign title

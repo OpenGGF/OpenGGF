@@ -89,7 +89,7 @@ class TestMultipleAttemptsEndToEnd {
             throws Exception {
         clock = new ControlledRaceHost(impl);
         server = clock.start(0, new RoomHostConfig("Retries", "s3k", 0, 0,
-                        "OPEN", null, 8, FP),
+                        "OPEN", null, 8, FP, List.of(), true),
                 PlayerIdentity.loadOrCreate(dir.resolve("host")),
                 TrackValidationProfileSource.none());
         PlayerIdentity racerIdentity = PlayerIdentity.loadOrCreate(dir.resolve("racer"));

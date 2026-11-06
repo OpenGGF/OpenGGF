@@ -1,5 +1,7 @@
 package com.openggf.game.sonic1;
 
+import static com.openggf.game.sonic1.Sonic1RomProfile.resolve;
+
 import com.openggf.data.RomByteReader;
 import com.openggf.game.internal.HudSatLayout;
 import com.openggf.level.Palette;
@@ -21,7 +23,7 @@ public final class Sonic1HudStaticArtFactory {
     }
 
     static HudSatLayout loadSatLayout(RomByteReader reader) {
-        return new HudSatLayout(S1SpriteDataLoader.loadMappingFrames(reader, HUD_SAT_MAPPING_ADDR, 4));
+        return new HudSatLayout(S1SpriteDataLoader.loadMappingFrames(reader, resolve(reader, HUD_SAT_MAPPING_ADDR), 4));
     }
 
     static Palette createKnucklesLivesPalette(Palette basePalette) {

@@ -30,7 +30,10 @@ class TestPrivateRoomAdmission {
     }
 
     Peer prove(RoomHost room, PlayerIdentity identity) throws Exception {
-        FakeHubConnection connection = new FakeHubConnection();
+        return prove(room, identity, new FakeHubConnection());
+    }
+
+    Peer prove(RoomHost room, PlayerIdentity identity, FakeHubConnection connection) throws Exception {
         ClientHandshake handshake = new ClientHandshake(identity, "Player", "build");
         room.onConnected(connection);
         room.onText(connection, codec.encode(null, handshake.hello()));
@@ -159,5 +162,35 @@ class TestPrivateRoomAdmission {
         assertFalse(limiter.allow("rotated", "same-source", "another", now));
         assertTrue(limiter.allow("new-tunnel", null, "tunnel-room", now));
         assertTrue(limiter.allow("same", "source", "room", now + RoomAdmissionLimiter.WINDOW_MILLIS));
+    }
+
+    @Test
+    void signedCreatorStillVerifiesPasswordAfterOtherRoomsFillSourceQuota() throws Exception {
+        String source = "198.51.100.27";
+        long wallClock = System.currentTimeMillis();
+        for (int attempt = 0; attempt < RoomAdmissionLimiter.SOURCE_ATTEMPTS; attempt++) {
+            assertTrue(RoomAdmissionLimiter.SHARED.allow("other-identity-" + attempt,
+                    source, "other-room-" + attempt, wallClock));
+        }
+        PlayerIdentity owner = PlayerIdentity.loadOrCreate(dir.resolve("owner"));
+        RoomHost room = room(owner);
+        try {
+            FakeHubConnection connection = new FakeHubConnection() {
+                @Override public String remoteHost() { return source; }
+            };
+            Peer creator = prove(room, owner, connection);
+            submit(room, creator, SECRET);
+            settled(room, creator);
+            assertNotNull(last(connection, ControlMessage.JoinAccepted.class));
+            assertEquals(1, room.playerCount());
+            Peer wrongPassword = prove(room, owner, new FakeHubConnection() {
+                @Override public String remoteHost() { return source; }
+            });
+            submit(room, wrongPassword, "a different room password");
+            settled(room, wrongPassword);
+            assertEquals("room access denied", last(wrongPassword.connection,
+                    ControlMessage.JoinRejected.class).reason());
+            assertEquals(1, room.playerCount());
+        } finally { room.close("done"); }
     }
 }

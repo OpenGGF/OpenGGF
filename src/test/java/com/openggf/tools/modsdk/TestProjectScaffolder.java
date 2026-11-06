@@ -43,7 +43,7 @@ class TestProjectScaffolder {
             files = paths.filter(Files::isRegularFile).map(project::relativize)
                     .map(Path::toString).map(s -> s.replace('\\', '/')).collect(Collectors.toSet());
         }
-        assertEquals(Set.of("pom.xml", "README.md",
+        assertEquals(Set.of("pom.xml", "README.md", ".gitignore",
                 "src/test/java/example/mods/sample/StarterIntegrationTest.java",
                 "src/main/java/example/mods/sample/MySampleMod.java",
                 "src/main/java/example/mods/sample/SampleBadnik.java",

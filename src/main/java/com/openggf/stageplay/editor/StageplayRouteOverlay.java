@@ -70,6 +70,8 @@ public final class StageplayRouteOverlay {
     }
     /** Performance duration follows its authored commands, not the full search work count. */
     public int performanceFrames() {
+        // A player route's frozen rows cover its whole window.
+        if (result.track() != null) return result.track().frameCount();
         int end=java.util.stream.Stream.concat(result.commands().stream().map(com.openggf.stageplay.StageplayDocument.PuppetCommand::frame),
                 result.objectCommands().stream().map(com.openggf.stageplay.StageplayDocument.ObjectCommand::frame))
                 .max(Integer::compareTo).orElse(path().isEmpty()?result.request().startFrame():path().getLast().frame());

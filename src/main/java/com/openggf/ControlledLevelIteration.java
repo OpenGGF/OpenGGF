@@ -22,6 +22,9 @@ final class ControlledLevelIteration {
         boolean frameStep(InputHandler input, boolean overlayOwnsPause) {
             if (!consumePlaybackPause.getAsBoolean() && !overlayOwnsPause && input.isKeyPressed(pauseKey)) {
                 toggleUserPause.run();
+                // The callback retires the paused physical interval. Remap its
+                // cached prefix before the resumed controller/native row reads it.
+                input.refreshLogicalSnapshot();
             }
             return paused.getAsBoolean() && input.isKeyPressed(frameStepKey);
         }

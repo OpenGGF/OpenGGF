@@ -310,25 +310,44 @@ class TestS3kCompetitionNativeHost {
 
     @Test void nativePauseUsesPriorP1SampleKeepsEveryWorldOwnerFrozenAndResumesAtASeparateWait() {
         open(Mode.MATCH_RACE,Arena.AZURE_LAKE,S3kCompetitionPlayer.Character.SONIC,S3kCompetitionPlayer.Character.TAILS);
+        int clockBefore = objects().getVblaCounter();
+        var nativeClock = com.openggf.game.session.EngineTiming.vIntRunCounter();
         var start=PlayerInputState.of(0,0,0,0,true,true);
         step(LogicalInputSnapshot.ofPlayers(start,PlayerInputState.neutral()));
         assertEquals(1,level().getFrameCounter(),"current Start is latched by the ordinary wait");
+        assertEquals(clockBefore+1,objects().getVblaCounter());
         step(LogicalInputSnapshot.neutral());
+        assertEquals(clockBefore+2,objects().getVblaCounter(),"the first native pause wait spends one clock tick");
         assertTrue(host.pause().gamePaused());assertTrue(host.gameState(0).isGamePaused());
         int prepared=views.prepared;var frozen=host.session().capture();var pages=host.spritePages().capture();
         var palette=host.palettes().capture();var scroll=host.scroll().capture();
         var checkpoint=host.world().context().getRewindRegistry().capture();
-        for(int tick=0;tick<17;tick++)step(LogicalInputSnapshot.neutral());
+        for(int tick=0;tick<17;tick++) {
+            step(LogicalInputSnapshot.neutral());
+            assertEquals(clockBefore+3+tick,objects().getVblaCounter());
+            assertEquals(Integer.toUnsignedLong(objects().getVblaCounter()),nativeClock.value());
+        }
+        var expectedPaused = host.world().context().getRewindRegistry().capture();
         assertEquals(1,level().getFrameCounter());assertEquals(prepared,views.prepared);
         assertEquals(frozen,host.session().capture());assertEquals(palette,host.palettes().capture());
         assertEquals(scroll,host.scroll().capture());assertEquals(pages,host.spritePages().capture());
         host.world().context().getRewindRegistry().restore(checkpoint);
+        assertEquals(clockBefore+2,objects().getVblaCounter(),"rewind restores the actual pause clock");
+        assertEquals(Integer.toUnsignedLong(clockBefore+2),nativeClock.value());
         assertTrue(host.gameState(0).isGamePaused(),"native pause adapter restores the global flag");
         for(int tick=0;tick<17;tick++)step(LogicalInputSnapshot.neutral());
         assertEquals(frozen,host.session().capture());assertEquals(palette,host.palettes().capture());
+        var actualPaused = host.world().context().getRewindRegistry().capture();
+        assertEquals(expectedPaused.entries().keySet(),actualPaused.entries().keySet());
+        for(String key:expectedPaused.entries().keySet()) {
+            var diff=com.openggf.game.rewind.RewindSnapshotDiff.diffKey(key,expectedPaused.get(key),actualPaused.get(key));
+            assertTrue(diff.isEmpty(),()->key+": "+diff);
+        }
         step(LogicalInputSnapshot.ofPlayers(start,PlayerInputState.neutral()));
+        assertEquals(clockBefore+20,objects().getVblaCounter(),"resume is its own pause wait");
         assertFalse(host.pause().gamePaused());assertEquals(1,level().getFrameCounter(),"resume still owns a pause-only VBlank");
         step(LogicalInputSnapshot.neutral());
+        assertEquals(clockBefore+21,objects().getVblaCounter(),"the following ordinary body retains its tick");
         assertEquals(2,level().getFrameCounter());assertEquals(prepared+1,views.prepared);
         step(LogicalInputSnapshot.ofPlayers(PlayerInputState.neutral(),start));
         step(LogicalInputSnapshot.neutral());

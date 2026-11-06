@@ -52,6 +52,14 @@ class TestGameLoopEndingSession {
         SessionManager.openGameplaySession(module);
         TestEnvironment.activeGameplayMode();
         audio = mock(AudioManager.class);
+        // Rebinding a gameplay context installs its real rewind owner. Playback
+        // stays mocked, but that owner still needs the audio clock and snapshot.
+        var timeline = new com.openggf.audio.rewind.AudioCommandTimeline();
+        when(audio.commandTimeline()).thenReturn(timeline);
+        when(audio.captureLogicalSnapshot()).thenAnswer(ignored ->
+                new com.openggf.audio.rewind.AudioLogicalSnapshot(true,
+                        timeline.currentFrame(), timeline.nextOrder(), timeline.entryCount(),
+                        com.openggf.audio.presentation.AudioPresentationSnapshot.empty(), Set.of(), Set.of()));
         var old = EngineServices.current();
         var injected = new EngineContext(old.configuration(), old.graphics(), audio, old.roms(), old.profiler(),
                 old.debugOverlay(), old.playbackDebug(), old.romDetection(), old.crossGameFeatures(),
@@ -191,8 +199,8 @@ class TestGameLoopEndingSession {
         verifyNoInteractions(camera);
     }
 
-    @ParameterizedTest @CsvSource({"true,false", "false,false", "true,true", "false,true"})
-    void demoPhysicsPreservesWaterObjectsCameraEventsAndCounterOrder(boolean afterPlayer, boolean frozen) throws Exception {
+    @ParameterizedTest @ValueSource(booleans = {false, true})
+    void demoPhysicsPreservesWaterObjectsCameraEventsAndCounterOrder(boolean frozen) throws Exception {
         installProvider();
         var events = mock(LevelEventProvider.class);
         when(module.getLevelEventProvider()).thenReturn(events);
@@ -200,7 +208,6 @@ class TestGameLoopEndingSession {
         when(provider.getDemoInputMask()).thenReturn(8);
         when(provider.isScrollFrozen()).thenReturn(frozen);
         when(levels.advanceWaterLevelBeforePlayerPhysics()).thenReturn(true);
-        when(levels.objectsExecuteAfterPlayerPhysics()).thenReturn(afterPlayer);
         endingCall("updateEndingCreditsDemo");
         var order = inOrder(provider, player, sprites, levels, camera, events);
         order.verify(player).setForcedInputMask(8);
@@ -208,14 +215,8 @@ class TestGameLoopEndingSession {
         order.verify(levels).updateZoneFeaturesPrePhysics();
         order.verify(levels).advanceWaterLevelBeforePlayerPhysics();
         order.verify(levels).advanceDynamicWaterLevel();
-        order.verify(levels).objectsExecuteAfterPlayerPhysics();
-        if (afterPlayer) {
-            order.verify(sprites).update(input);
-            order.verify(levels).updateObjectPositionsPostPhysicsWithoutTouches();
-        } else {
-            order.verify(levels).updateObjectPositions();
-            order.verify(sprites).update(input);
-        }
+        order.verify(sprites).update(input);
+        order.verify(levels).updateObjectPositionsPostPhysicsWithoutTouches();
         order.verify(provider).isScrollFrozen();
         if (!frozen) {
             order.verify(camera).updatePosition();

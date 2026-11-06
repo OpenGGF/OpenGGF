@@ -266,7 +266,7 @@ public class Sonic1MzBrickObjectInstance extends AbstractObjectInstance
         // Check floor tile to determine final post-landing behavior
         // move.w (a1),d0 / andi.w #$3FF,d0 / cmpi.w #$16A,d0 / bcc.s locret_E8EE
         int tileIndex = result.tileIndex() & 0x3FF;
-        if (tileIndex < LAVA_TILE_THRESHOLD) {
+        if (tileIndex < (com.openggf.game.sonic1.Sonic1RomProfile.isRev00(services()) ? 0x2E8 : LAVA_TILE_THRESHOLD)) {
             // move.b #0,obSubtype(a0) - landed on solid ground: become static
             subtype = 0;
             behaviorType = 0;

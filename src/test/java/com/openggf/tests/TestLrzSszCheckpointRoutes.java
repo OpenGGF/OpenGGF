@@ -65,22 +65,19 @@ class TestLrzSszCheckpointRoutes {
     }
     @org.junit.jupiter.api.Order(10)
     @Test void ordinarySszOpeningPhysicallySavesTheFirstAuthoredPost() throws java.io.IOException {
-        var settings=new com.openggf.tools.GameplayCaptureSession.Settings(320,"sonic","tails","off",null,
-                null,null,null,false,false,null,null,false,null,false);
-        var movie=new com.openggf.debug.playback.Bk2MovieLoader().loadMovieOrInputLog(java.nio.file.Path.of(
-                "src/test/resources/routes/s3k/ssz1-sonic-tails-cold-complete-320.bk2"));
-        try(var session=new com.openggf.tools.GameplayCaptureSession(settings)) {
-            session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(),10,0,settings);
+        // The qualified route's own launch boots SSZ1 cold; the frozen rows replay with no correction.
+        var route=com.openggf.route.RouteFiles.read(java.nio.file.Path.of(
+                "src/test/resources/routes/s3k/ssz1-sonic-tails-cold-complete-320.route.json"));
+        var hosts=com.openggf.tools.EngineRouteHosts.withRoms(java.util.Map.of("s3k",RomTestUtils.ensureSonic3kRomAvailable().toPath()));
+        try(var playback=new com.openggf.route.RouteReplay(hosts).open(route)) {
             var checkpoint=GameServices.level().getCheckpointState();
             assertFalse(checkpoint.isActive());
-            int inputs=0;
-            while(inputs<7912&&checkpoint.getLastCheckpointIndex()<2) {
-                session.step(movie.getFrame(inputs++));
-                GameServices.graphics().runPendingRenderThreadTasks();
-                assertFalse(session.player().getDead(),"ordinary opening remains alive at input "+inputs);
+            while(playback.row()<7912&&checkpoint.getLastCheckpointIndex()<2) {
+                var sample=playback.step();
+                assertFalse(sample.p1().dead(),"ordinary opening remains alive at input "+playback.row());
             }
-            assertTrue(inputs<7912,"ordinary route reaches the physical post before its established upper walkway; "
-                    +"index="+checkpoint.getLastCheckpointIndex()+" P1="+session.player().getCentreX()+","+session.player().getCentreY());
+            assertTrue(playback.row()<7912,"ordinary route reaches the physical post before its established upper walkway; "
+                    +"index="+checkpoint.getLastCheckpointIndex()+" P1="+playback.sample().p1().centreX()+","+playback.sample().p1().centreY());
             assertEquals(2,checkpoint.getLastCheckpointIndex());
             assertEquals(0x640,checkpoint.getSavedX()&65535);
             assertEquals(0x5E8,checkpoint.getSavedY()&65535);
@@ -118,7 +115,17 @@ class TestLrzSszCheckpointRoutes {
     }
     @org.junit.jupiter.api.Order(20)
     @ParameterizedTest @MethodSource("allProducts")
+    @org.junit.jupiter.api.Tag("exhaustive-audit")
     void everyPostPreservesConfiguredOwnersAcrossTwoDeaths(Post post,Team team,WidescreenAspect aspect) throws java.io.IOException{run(post,team,aspect);}
+
+    static Stream<Arguments> nativePosts() {
+        return POSTS.stream().map(post -> Arguments.of(post, NATIVE_SONIC, WidescreenAspect.NATIVE_4_3));
+    }
+    @ParameterizedTest @MethodSource("nativePosts")
+    void eachAuthoredPostRetainsPhysicalContactAndBothDeathBoundaries(
+            Post post, Team team, WidescreenAspect aspect) throws java.io.IOException {
+        run(post, team, aspect);
+    }
 
     private void run(Post post,Team team,WidescreenAspect aspect) throws java.io.IOException {
         var config=SonicConfigurationService.getInstance();config.clearSessionOverrides();

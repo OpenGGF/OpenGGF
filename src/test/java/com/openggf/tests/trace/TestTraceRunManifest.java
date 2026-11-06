@@ -79,6 +79,13 @@ class TestTraceRunManifest {
 
         assertEquals(TraceRunManifest.ExpectedMovieEndMode.UNSPECIFIED,
                 run.expectedMovieEndMode());
+        // Optional for partial replay, but never sufficient for certification.
+        run.validate(dir);
+        IllegalStateException failure = assertThrows(IllegalStateException.class,
+                run::requireRecordedMovieEndMode);
+        assertTrue(failure.getMessage().contains("expected_movie_end_mode"));
+        assertTrue(failure.getMessage().contains(run.runId()));
+        assertTrue(failure.getMessage().contains(run.sourceBk2()));
     }
 
     @Test
@@ -91,11 +98,11 @@ class TestTraceRunManifest {
         assertEquals(TraceRunManifest.ExpectedMovieEndMode.LEVEL,
                 TraceRunManifest.load(writeRun(
                         dir.resolve("level"), level,
-                        "seg00_aiz", "seg01_gumball", "seg02_aiz")).expectedMovieEndMode());
+                        "seg00_aiz", "seg01_gumball", "seg02_aiz")).requireRecordedMovieEndMode());
         assertEquals(TraceRunManifest.ExpectedMovieEndMode.TITLE_SCREEN,
                 TraceRunManifest.load(writeRun(
                         dir.resolve("title-screen"), titleScreen,
-                        "seg00_aiz", "seg01_gumball", "seg02_aiz")).expectedMovieEndMode());
+                        "seg00_aiz", "seg01_gumball", "seg02_aiz")).requireRecordedMovieEndMode());
     }
 
     @Test

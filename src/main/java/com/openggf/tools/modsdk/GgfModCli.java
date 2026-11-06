@@ -6,6 +6,7 @@ import java.nio.file.InvalidPathException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -44,10 +45,12 @@ public final class GgfModCli {
                 default -> usage(output);
             };
         } catch (InvalidPathException error) {
+            if (jsonRequested(args)) return jsonFailure(args, output, "CLI_INPUT_INVALID", "Invalid path");
             output.println("ERROR CLI_INPUT_INVALID Invalid path");
             return 1;
         } catch (Exception error) {
             String message = error.getMessage();
+            if (jsonRequested(args)) return jsonFailure(args, output, "COMMAND_FAILED", safeMessage(error));
             output.println("ERROR COMMAND_FAILED "
                     + (message == null || message.isBlank() ? error.getClass().getSimpleName() : message));
             return 1;
@@ -65,10 +68,12 @@ public final class GgfModCli {
         try {
             report = Objects.requireNonNull(validator.apply(Path.of(args[1])), "validator report");
         } catch (InvalidPathException error) {
+            if (format.equals("json")) return jsonFailure(args, output, "CLI_INPUT_INVALID", "Invalid mod jar path");
             output.println("1. ERROR CLI_INPUT_INVALID Invalid mod jar path");
             return 1;
         } catch (RuntimeException error) {
             String message = error.getMessage();
+            if (format.equals("json")) return jsonFailure(args, output, "VALIDATION_FAILED", safeMessage(error));
             output.println("1. ERROR VALIDATION_FAILED "
                     + (message == null || message.isBlank() ? error.getClass().getSimpleName() : message));
             return 1;
@@ -208,15 +213,59 @@ public final class GgfModCli {
                 .filter(f -> f.severity() == ModJarValidator.Severity.WARNING).count();
         if (format.equals("json")) {
             try {
-                output.println(new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(Map.of(
-                        "formatVersion", 1, "valid", report.valid(), "warnings", warnings,
-                        "warningPolicy", strict ? "error" : "allow", "findings", report.findings())));
+                Map<String, Object> envelope = new LinkedHashMap<>();
+                envelope.put("formatVersion", 1);
+                envelope.put("valid", report.valid());
+                envelope.put("warnings", warnings);
+                envelope.put("warningPolicy", strict ? "error" : "allow");
+                envelope.put("findings", report.findings().stream().map(finding -> {
+                    Map<String, Object> fields = new LinkedHashMap<>();
+                    fields.put("severity", finding.severity());
+                    fields.put("code", finding.code());
+                    fields.put("location", finding.location());
+                    fields.put("member", finding.member());
+                    fields.put("message", finding.message());
+                    fields.put("guidance", DiagnosticGuidance.forCode(finding.code()));
+                    return fields;
+                }).toList());
+                output.println(new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(envelope));
             } catch (IOException failure) { throw new IllegalStateException(failure); }
         } else {
-            report.numberedLines().forEach(output::println);
+            List<String> lines = report.numberedLines();
+            for (int i = 0; i < lines.size(); i++) {
+                output.println(lines.get(i));
+                var guidance = DiagnosticGuidance.forCode(report.findings().get(i).code());
+                output.println("   Next: " + guidance.nextAction() + " See " + guidance.documentation());
+            }
             output.println("Validation " + (report.valid() ? "passed" : "failed") + ": "
                     + report.findings().size() + " findings" + (warnings == 0 ? "" : " (" + warnings + " warnings)"));
         }
+    }
+
+    // Detect the requested output even when flag parsing itself fails. Only report commands
+    // own this contract; other commands retain their existing text output.
+    private static boolean jsonRequested(String[] args) {
+        return args.length > 0 && Set.of("validate", "package").contains(args[0])
+                && hasPair(args, "--format", "json");
+    }
+
+    private static boolean hasPair(String[] args, String flag, String value) {
+        for (int i = 1; i + 1 < args.length; i++) {
+            if (args[i].equals(flag) && args[i + 1].equals(value)) return true;
+        }
+        return false;
+    }
+
+    private static String safeMessage(Exception error) {
+        String message = error.getMessage();
+        return message == null || message.isBlank() ? error.getClass().getSimpleName() : message;
+    }
+
+    private static int jsonFailure(String[] args, PrintStream output, String code, String message) {
+        printReport(new ModJarValidator.Report(List.of(new ModJarValidator.Finding(
+                ModJarValidator.Severity.ERROR, code, "", "", message))), "json",
+                hasPair(args, "--warnings", "error"), output);
+        return 1;
     }
 
     private static int artKeys(String[] args, PrintStream output) {

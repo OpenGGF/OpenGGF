@@ -8,7 +8,19 @@ engineering artifacts.
 The Markdown files directly in this directory describe the current engine and
 its architectural policies.
 
+The [interactive project source atlas](audits/project-source-atlas.html) explores
+components and classes, historical file presence, import connections and Git
+milestones. Its [dated audit](audits/2026-10-27-project-source-atlas.md) records
+the snapshot and limits; the [generator](../../tools/project_atlas/README.md)
+updates it on demand.
+
 ## Dated artifacts
+
+- [Quantitative stock-game parity](designs/2026-10-29-quantitative-stock-parity.md)
+  defines original-behavior obligations, evidence authority and measured-scope
+  reporting. Its partial catalogue now includes original dispatch-entry gaps
+  and a producer for three existing native trace gates. Broader native visual,
+  audio and semantic coverage remain explicit follow-up work.
 
 - [Designs](designs/) contain approved designs, specifications, and
   architectural decisions.

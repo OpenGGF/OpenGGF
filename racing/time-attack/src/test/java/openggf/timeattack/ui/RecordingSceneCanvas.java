@@ -83,6 +83,53 @@ public final class RecordingSceneCanvas implements SceneCanvas {
         }
     }
 
+    /**
+     * True when {@code text} is visible in any face: drawn with {@link #text}, or laid out as the
+     * exact pixel runs of {@code NameFont} or {@code CompactFont} (capitals) in any colour at any
+     * position. Secrets must be absent in every face, so masking checks use this too.
+     */
+    public boolean shows(String text) {
+        if (joined().contains(text)) return true;
+        return drawsRuns(text, (t, sink) -> com.openggf.mods.ui.NameFont.glyphs(t, 0, 0, sink)) != null
+                || drawsRuns(text.toUpperCase(java.util.Locale.ROOT),
+                        (t, sink) -> com.openggf.mods.ui.CompactFont.glyphs(t, 0, 0, 1, sink)) != null;
+    }
+
+    /** The line-box top of the first place {@code text} is drawn with {@code NameFont}, or {@code Integer.MIN_VALUE}. */
+    public int nameTopAnywhere(String text) {
+        int[] at = drawsRuns(text, (t, sink) -> com.openggf.mods.ui.NameFont.glyphs(t, 0, 0, sink));
+        return at == null ? Integer.MIN_VALUE : at[1];
+    }
+
+    private interface Layout { void runs(String text, com.openggf.mods.ui.CompactFont.RunSink sink); }
+
+    /** The {dx, dy} offset of the first exact drawing of {@code text}, or null. */
+    private int[] drawsRuns(String text, Layout layout) {
+        List<int[]> runs = new ArrayList<>();
+        layout.runs(text, (x, y, w, h) -> runs.add(new int[] {x, y, w, h}));
+        if (runs.isEmpty()) return null;
+        java.util.Map<Integer, java.util.Set<String>> byColour = new java.util.HashMap<>();
+        for (int[] fill : fills) {
+            byColour.computeIfAbsent(fill[4], ignored -> new java.util.HashSet<>())
+                    .add(fill[0] + "," + fill[1] + "," + fill[2] + "," + fill[3]);
+        }
+        int[] first = runs.getFirst();
+        for (int[] fill : fills) {
+            if (fill[2] != first[2] || fill[3] != first[3]) continue;
+            int dx = fill[0] - first[0], dy = fill[1] - first[1];
+            java.util.Set<String> drawn = byColour.get(fill[4]);
+            boolean all = true;
+            for (int[] run : runs) {
+                if (!drawn.contains((run[0] + dx) + "," + (run[1] + dy) + "," + run[2] + "," + run[3])) {
+                    all = false;
+                    break;
+                }
+            }
+            if (all) return new int[] {dx, dy};
+        }
+        return null;
+    }
+
     /** Every recorded line joined, for containment checks. */
     public String joined() {
         return String.join("\n", lines);

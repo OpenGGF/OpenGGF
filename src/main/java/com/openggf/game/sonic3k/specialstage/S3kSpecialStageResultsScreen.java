@@ -65,7 +65,6 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
     private static final int STATE_POST_TALLY = 2;
     private static final int STATE_EMERALD_CHECK = 3;
     private static final int STATE_EMERALD_REVEAL = 4;
-    private static final int STATE_EXIT = 5;
     /** Routine 4 with a Super Emerald stage cleared on 50 rings: the continue-icon wait. */
     private static final int STATE_SANCTUARY_CONTINUE_WAIT = 6;
     /** Routine $E ({@code loc_2E616}): wait, then pan {@code Camera_Y_pos} to $320. */
@@ -82,8 +81,8 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
     private static final int MUSIC_TRIGGER_COUNTER = 289; // Play music when countdown == 289 (ROM line 63359)
     private static final int POST_TALLY_WAIT = 120;       // 2*60 frames (ROM line 63396)
     private static final int CONTINUE_WAIT = 270;         // 270 frames if >= 50 rings (ROM line 54005/63414)
-    private static final int EMERALD_REVEAL_WAIT = 240;   // 4*60 frames (ROM line 63494/54064)
-    private static final int EXIT_WAIT = 240;             // 4*60 frames (same as reveal)
+    /** loc_2E5C0 / loc_2E5F4: one 4*60 countdown, consumed by loc_2E5E0. */
+    private static final int EMERALD_REVEAL_WAIT = 240;
     /** loc_2E512: {@code move.w #60,$2E(a0)} before routine $E. */
     private static final int SANCTUARY_PAN_DELAY = 60;
     /** loc_2E622: {@code cmpi.w #$320,d0}. */
@@ -297,7 +296,6 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
             case STATE_POST_TALLY -> updatePostTally();
             case STATE_EMERALD_CHECK -> updateEmeraldCheck();
             case STATE_EMERALD_REVEAL -> updateEmeraldReveal();
-            case STATE_EXIT -> updateExit();
             case STATE_SANCTUARY_CONTINUE_WAIT -> updateSanctuaryContinueWait();
             case STATE_SANCTUARY_PAN -> updateSanctuaryPan();
             case STATE_SANCTUARY_CONVERGE -> updateSanctuaryConverge();
@@ -466,6 +464,7 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
         }
         state = STATE_EMERALD_REVEAL;
         stateTimer = 0;
+        romTimer = EMERALD_REVEAL_WAIT;
         createPhase2Elements();
         // sub_2E802 fills slots 44-49, after this object: they move this frame.
         for (ResultsElement element : phase2Elements) {
@@ -741,22 +740,15 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
     }
 
     /**
-     * ROM routine 8 (loc_2E5C0/loc_2D590): display emerald reveal text.
+     * ROM routine $A, loc_2E5E0 (sonic3k.asm:63546-63555). The reveal
+     * creation pass arms the timer once; its children slide in concurrently.
      */
     private void updateEmeraldReveal() {
-        if (stateTimer >= EMERALD_REVEAL_WAIT) {
-            state = STATE_EXIT;
-            stateTimer = 0;
+        if (romTimer != 0) {
+            romTimer--;
+            return;
         }
-    }
-
-    /**
-     * ROM routine A (loc_2E5E0/loc_2D5DC): final wait then exit.
-     */
-    private void updateExit() {
-        if (stateTimer >= EXIT_WAIT) {
-            complete = true;
-        }
+        complete = true;
     }
 
     @Override

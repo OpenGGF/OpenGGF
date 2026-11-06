@@ -171,7 +171,6 @@
       "prefixes": [
         "docs/",
         "AGENTS.md",
-        "CLAUDE.md",
         "AGENTS_S3K.md",
         "CHANGELOG",
         "README.md",

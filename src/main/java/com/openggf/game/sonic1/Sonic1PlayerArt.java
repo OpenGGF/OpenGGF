@@ -1,5 +1,7 @@
 package com.openggf.game.sonic1;
 
+import static com.openggf.game.sonic1.Sonic1RomProfile.resolve;
+
 import com.openggf.data.RomByteReader;
 import com.openggf.game.sonic1.constants.Sonic1AnimationIds;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
@@ -57,15 +59,15 @@ public class Sonic1PlayerArt {
         }
 
         Pattern[] artTiles = loadArtTiles(
-                Sonic1Constants.ART_UNC_SONIC_ADDR,
+                resolve(reader, Sonic1Constants.ART_UNC_SONIC_ADDR),
                 Sonic1Constants.ART_UNC_SONIC_SIZE);
 
         List<SpriteMappingFrame> mappingFrames = loadS1MappingFrames(
-                Sonic1Constants.MAP_SONIC_ADDR,
+                resolve(reader, Sonic1Constants.MAP_SONIC_ADDR),
                 Sonic1Constants.SONIC_MAPPING_FRAME_COUNT);
 
         List<SpriteDplcFrame> dplcFrames = loadS1DplcFrames(
-                Sonic1Constants.DPLC_SONIC_ADDR,
+                resolve(reader, Sonic1Constants.DPLC_SONIC_ADDR),
                 Sonic1Constants.SONIC_MAPPING_FRAME_COUNT);
 
         int bankSize = resolveBankSize(dplcFrames, mappingFrames);
@@ -140,7 +142,7 @@ public class Sonic1PlayerArt {
      */
     private SpriteAnimationSet loadSonicAnimations() {
         return S1SpriteDataLoader.loadAnimationSet(reader,
-                Sonic1Constants.SONIC_ANIM_DATA_ADDR,
+                resolve(reader, Sonic1Constants.SONIC_ANIM_DATA_ADDR),
                 Sonic1Constants.SONIC_ANIM_SCRIPT_COUNT);
     }
 

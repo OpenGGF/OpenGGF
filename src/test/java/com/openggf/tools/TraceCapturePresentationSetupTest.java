@@ -19,6 +19,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.lang.reflect.Field;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @ExtendWith(SingletonResetExtension.class)
@@ -38,6 +39,44 @@ class TraceCapturePresentationSetupTest {
     @AfterEach
     void tearDown() {
         configuration.resetToDefaults();
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"NTSC,30,30", "NTSC,144,144", "PAL,30,50", "PAL,144,50"})
+    void offlineAudioRetimingIsExplicitScopedAndCannotChangeTheLiveWindowLimit(String region, int requested, int expected)
+            throws Exception {
+        var audio = com.openggf.audio.AudioManager.getInstance();
+        audio.setBackend(new com.openggf.audio.NullAudioBackend());
+        configuration.setConfigValue(SonicConfiguration.REGION, region);
+        configuration.setConfigValue(SonicConfiguration.FPS, 120);
+        try (var setup = TraceCapturePresentationSetup.open(configuration, TraceCaptureDimensions.resolve(320, 1),
+                TraceCapturePresentationSetup.snapshot(configuration), audio, requested)) {
+            assertEquals(expected, audio.presentationFrameRate());
+            assertEquals(120, configuration.getInt(SonicConfiguration.FPS));
+            try (var tap = audio.beginLiveCaptureAudio(expected)) {
+                audio.presentFrame(com.openggf.audio.presentation.PresentationMode.FORWARD);
+                assertEquals(48_000 / expected, tap.drainPresentationFrame(new short[tap.maxStereoFramesPerPacket() * 2]));
+            }
+        }
+        assertEquals(region.equals("PAL") ? 50 : 60, audio.presentationFrameRate());
+        assertEquals(120, configuration.getInt(SonicConfiguration.FPS));
+        audio.resetState();
+    }
+
+    @org.junit.jupiter.api.Test
+    void activeCaptureRejectsOfflineCadenceWithoutLeakingPresentationSettings() {
+        var audio = com.openggf.audio.AudioManager.getInstance();
+        audio.setBackend(new com.openggf.audio.NullAudioBackend());
+        try (var capture = audio.beginLiveCaptureAudio(60)) {
+            org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class, () ->
+                    TraceCapturePresentationSetup.open(configuration, TraceCaptureDimensions.resolve(400, 1),
+                            TraceCapturePresentationSetup.snapshot(configuration), audio, 30));
+            assertEquals(320, configuration.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS));
+            assertFalse(configuration.getBoolean(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT),
+                    "a failed capture must restore the normal-play preference");
+            assertEquals(60, audio.presentationFrameRate());
+        }
+        audio.resetState();
     }
 
     @ParameterizedTest
@@ -100,6 +139,19 @@ class TraceCapturePresentationSetupTest {
         assertEquals("ULTRA_21_9",
                 configuration.getString(SonicConfiguration.DISPLAY_ASPECT));
         assertTrue(configuration.getBoolean(SonicConfiguration.TEST_MODE_ENABLED));
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void nativeScanlineLimitsAreScopedToTraceCapture(boolean callerEnabled) {
+        configuration.setConfigValue(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT, callerEnabled);
+        var caller = TraceCapturePresentationSetup.snapshot(configuration);
+        try (var ignored = TraceCapturePresentationSetup.open(configuration,
+                TraceCaptureDimensions.resolve(320, 1), caller)) {
+            assertTrue(configuration.getBoolean(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT));
+        }
+        assertEquals(callerEnabled,
+                configuration.getBoolean(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT));
     }
 
     private static int privateInt(Object target, String fieldName) throws Exception {

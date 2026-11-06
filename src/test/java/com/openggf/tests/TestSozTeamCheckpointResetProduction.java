@@ -45,6 +45,7 @@ class TestSozTeamCheckpointResetProduction {
     }
     @org.junit.jupiter.api.Order(20)
     @ParameterizedTest @MethodSource("configurations")
+    @org.junit.jupiter.api.Tag("exhaustive-audit")
     void mixedAndDuplicateTeamsSurviveTwoConsecutiveCheckpointReloads(int act,String followers,WidescreenAspect aspect,String donor) {
         var config=SonicConfigurationService.getInstance();config.clearSessionOverrides();
         config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE,"sonic");

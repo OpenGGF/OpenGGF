@@ -1,5 +1,7 @@
 package com.openggf.game.sonic1;
 
+import static com.openggf.game.sonic1.Sonic1RomProfile.resolve;
+
 import com.openggf.data.RomByteReader;
 import com.openggf.game.GameServices;
 import com.openggf.game.PlayerCharacter;
@@ -58,6 +60,41 @@ class Sonic1PaletteCycler implements AnimatedPaletteManager {
         for (PaletteCycle cycle : cycles) {
             cycle.tick(level, graphicsManager);
         }
+    }
+
+    /** Owner-local payload carried by S1's existing pattern-animation snapshot. */
+    byte[] captureCyclerState() {
+        int size = 8;
+        List<byte[]> states = new ArrayList<>(cycles.size());
+        for (PaletteCycle cycle : cycles) {
+            byte[] state = com.openggf.game.rewind.schema.PaletteCycleStateCodec.capture(cycle);
+            states.add(state);
+            size += 4 + state.length;
+        }
+        var buffer = java.nio.ByteBuffer.allocate(size);
+        buffer.putInt(0x53315031); // S1P1: private payload version, never ROM data.
+        buffer.putInt(states.size());
+        for (byte[] state : states) buffer.putInt(state.length).put(state);
+        return buffer.array();
+    }
+
+    /** Missing legacy state leaves the live palette clock alone, like S2. */
+    void restoreCyclerState(byte[] state) {
+        if (state == null || state.length < 8) return;
+        var buffer = java.nio.ByteBuffer.wrap(state);
+        if (buffer.getInt() != 0x53315031 || buffer.getInt() != cycles.size()) return;
+        List<byte[]> states = new ArrayList<>(cycles.size());
+        for (PaletteCycle cycle : cycles) {
+            int expected = com.openggf.game.rewind.schema.PaletteCycleStateCodec.sizeOf(cycle);
+            if (buffer.remaining() < 4 || buffer.getInt() != expected || buffer.remaining() < expected) return;
+            byte[] bytes = new byte[expected];
+            buffer.get(bytes);
+            states.add(bytes);
+        }
+        if (buffer.hasRemaining()) return;
+        // Validate the complete shape before changing any cycle.
+        for (int i = 0; i < cycles.size(); i++)
+            com.openggf.game.rewind.schema.PaletteCycleStateCodec.restore(cycles.get(i), states.get(i));
     }
 
     private List<PaletteCycle> createCycles(int zoneIndex) {
@@ -175,24 +212,24 @@ class Sonic1PaletteCycler implements AnimatedPaletteManager {
 
     static CycleData loadCycleData(RomByteReader reader) {
         return new CycleData(
-                reader.slice(Sonic1Constants.PAL_GHZ_CYCLE_ADDR, 32),
-                reader.slice(Sonic1Constants.PAL_LZ_CYCLE1_ADDR, 32),
-                reader.slice(Sonic1Constants.PAL_LZ_CYCLE2_ADDR, 18),
-                reader.slice(Sonic1Constants.PAL_LZ_CYCLE3_ADDR, 18),
-                reader.slice(Sonic1Constants.PAL_SBZ3_CYCLE_ADDR, 32),
-                reader.slice(Sonic1Constants.PAL_SLZ_CYCLE_ADDR, 36),
-                reader.slice(Sonic1Constants.PAL_SYZ_CYCLE1_ADDR, 32),
-                reader.slice(Sonic1Constants.PAL_SYZ_CYCLE2_ADDR, 16),
-                reader.slice(Sonic1Constants.PAL_SBZ_CYCLE1_ADDR, 16),
-                reader.slice(Sonic1Constants.PAL_SBZ_CYCLE2_ADDR, 16),
-                reader.slice(Sonic1Constants.PAL_SBZ_CYCLE3_ADDR, 16),
-                reader.slice(Sonic1Constants.PAL_SBZ_CYCLE4_ADDR, 12),
-                reader.slice(Sonic1Constants.PAL_SBZ_CYCLE5_ADDR, 16),
-                reader.slice(Sonic1Constants.PAL_SBZ_CYCLE6_ADDR, 16),
-                reader.slice(Sonic1Constants.PAL_SBZ_CYCLE7_ADDR, 32),
-                reader.slice(Sonic1Constants.PAL_SBZ_CYCLE8_ADDR, 10),
-                reader.slice(Sonic1Constants.PAL_SBZ_CYCLE9_ADDR, 16),
-                reader.slice(Sonic1Constants.PAL_SBZ_CYCLE10_ADDR, 12));
+                reader.slice(resolve(reader, Sonic1Constants.PAL_GHZ_CYCLE_ADDR), 32),
+                reader.slice(resolve(reader, Sonic1Constants.PAL_LZ_CYCLE1_ADDR), 32),
+                reader.slice(resolve(reader, Sonic1Constants.PAL_LZ_CYCLE2_ADDR), 18),
+                reader.slice(resolve(reader, Sonic1Constants.PAL_LZ_CYCLE3_ADDR), 18),
+                reader.slice(resolve(reader, Sonic1Constants.PAL_SBZ3_CYCLE_ADDR), 32),
+                reader.slice(resolve(reader, Sonic1Constants.PAL_SLZ_CYCLE_ADDR), 36),
+                reader.slice(resolve(reader, Sonic1Constants.PAL_SYZ_CYCLE1_ADDR), 32),
+                reader.slice(resolve(reader, Sonic1Constants.PAL_SYZ_CYCLE2_ADDR), 16),
+                reader.slice(resolve(reader, Sonic1Constants.PAL_SBZ_CYCLE1_ADDR), 16),
+                reader.slice(resolve(reader, Sonic1Constants.PAL_SBZ_CYCLE2_ADDR), 16),
+                reader.slice(resolve(reader, Sonic1Constants.PAL_SBZ_CYCLE3_ADDR), 16),
+                reader.slice(resolve(reader, Sonic1Constants.PAL_SBZ_CYCLE4_ADDR), 12),
+                reader.slice(resolve(reader, Sonic1Constants.PAL_SBZ_CYCLE5_ADDR), 16),
+                reader.slice(resolve(reader, Sonic1Constants.PAL_SBZ_CYCLE6_ADDR), 16),
+                reader.slice(resolve(reader, Sonic1Constants.PAL_SBZ_CYCLE7_ADDR), 32),
+                reader.slice(resolve(reader, Sonic1Constants.PAL_SBZ_CYCLE8_ADDR), 10),
+                reader.slice(resolve(reader, Sonic1Constants.PAL_SBZ_CYCLE9_ADDR), 16),
+                reader.slice(resolve(reader, Sonic1Constants.PAL_SBZ_CYCLE10_ADDR), 12));
     }
 
     private static CycleData loadCycleDataFromRuntimeRom() {

@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.level.PaletteLoader;
 import com.openggf.data.Rom;
 import com.openggf.game.DynamicWaterHandler;
@@ -99,6 +101,7 @@ public class Sonic2WaterDataProvider implements WaterDataProvider {
         }
 
         try {
+            paletteAddr = address(rom, paletteAddr);
             return PaletteLoader.loadFullPalette(rom, paletteAddr);
         } catch (Exception e) {
             LOGGER.warning(String.format(

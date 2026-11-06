@@ -109,6 +109,11 @@ class TestActPracticeExample {
             host.resume(RunEndReason.ACT_COMPLETED);
             host.draw(null, null);
             assertEquals(List.of(), exits, "the scene stays open after the run");
+            Object scene = openScene();
+            assertEquals("GOOD: Act complete in 0:00.11, a new best", call(scene, "resultForTest"),
+                    "the result names the time in the compact face's m:ss.cc and says it set the best");
+            host.resume(RunEndReason.LOAD_FAILED);
+            assertEquals("ERROR: That act could not be loaded", call(scene, "resultForTest"));
         }
     }
 
@@ -133,6 +138,117 @@ class TestActPracticeExample {
             press(input, org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
             assertEquals(List.of("master"), exits, "Enter offers the way back when no game is available");
         }
+    }
+
+    @Test
+    void keyCapsNameTheDevicePressedLastAndControllerAConfirmsAsInEveryScene() throws Exception {
+        try (ExampleModHarness harness = ExampleModHarness.build(PROJECT, work.resolve("build"))) {
+            List<RunSpec> launched = new ArrayList<>();
+            SceneGameplay gameplay = new SceneGameplay() {
+                @Override public List<String> availableGames() { return List.of("s1", "s2"); }
+                @Override public RunHandle launch(RunSpec spec, RunHost runHost) {
+                    launched.add(spec);
+                    return new RunHandle() {
+                        @Override public void retry() { }
+                        @Override public void leave() { }
+                        @Override public void spectate(boolean active, int dx, int dy) { }
+                        @Override public boolean isActive() { return true; }
+                    };
+                }
+            };
+            List<String> exits = new ArrayList<>();
+            host.open(harness.titleEntry().scene(), new SceneServices(null, null, work.resolve("saves"), null,
+                    () -> exits.add("game"), () -> exits.add("master"), null, gameplay), 320, 224);
+            boolean[] buttons = new boolean[15];
+            InputHandler input = new InputHandler(com.openggf.InputBindingFactory.standaloneSupplier(),
+                    () -> List.of(com.openggf.control.GamepadStateSource.DeviceState.connected(0, "Xbox Controller",
+                            buttons.clone(), 0f, 0f)));
+            Object scene = openScene();
+            input.refreshLogicalSnapshot(); // the pad connects with nothing held: its baseline
+            keyPress(input, org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT);
+            assertEquals(List.of("LEFT/RIGHT Game", "ENTER Practise", "ESC Back"), call(scene, "hintsForTest"));
+            // Any button press names the pad's buttons; the left stick press has no Genesis action.
+            padPress(input, buttons, org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_LEFT_THUMB);
+            assertEquals(List.of("LEFT/RIGHT Game", "X Practise", "A Back"), call(scene, "hintsForTest"),
+                    "a controller press names the Xbox buttons that produce Genesis A and B");
+            assertTrue(launched.isEmpty());
+            // Genesis A is the pad's west button; it confirms, as the scene convention says.
+            padPress(input, buttons, org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_X);
+            assertEquals(1, launched.size(), "A confirms the choice");
+            assertEquals("s2", launched.getFirst().gameId(), "the game Right chose is the one A launches");
+            keyPress(input, org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT);
+            assertEquals(List.of("LEFT/RIGHT Game", "ENTER Practise", "ESC Back"), call(scene, "hintsForTest"),
+                    "a key press names keyboard keys again");
+            assertEquals(List.of(), exits);
+        }
+    }
+
+    @Test
+    void enterBoundToBGoesBackOnceAndTheCapsNameTheBoundConfirm() throws Exception {
+        try (ExampleModHarness harness = ExampleModHarness.build(PROJECT, work.resolve("build"))) {
+            List<RunSpec> launched = new ArrayList<>();
+            SceneGameplay gameplay = new SceneGameplay() {
+                @Override public List<String> availableGames() { return List.of("s1", "s2"); }
+                @Override public RunHandle launch(RunSpec spec, RunHost runHost) {
+                    launched.add(spec);
+                    return null;
+                }
+            };
+            List<String> exits = new ArrayList<>();
+            host.open(harness.titleEntry().scene(), new SceneServices(null, null, work.resolve("saves"), null,
+                    () -> exits.add("game"), () -> exits.add("master"), null, gameplay), 320, 224);
+            var base = com.openggf.InputBindingFactory.standaloneSupplier().get();
+            com.openggf.control.InputBindings enterIsB = new com.openggf.control.InputBindings(base.p1Up(), base.p1Down(),
+                    base.p1Left(), base.p1Right(), org.lwjgl.glfw.GLFW.GLFW_KEY_SPACE, org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER,
+                    base.p1C(), base.p1Start(), base.p2Up(), base.p2Down(), base.p2Left(), base.p2Right(), base.p2A(),
+                    base.p2B(), base.p2C(), base.p2Start(), base.controllerEnabled(), base.controllerDeadzone(),
+                    base.controllerPlayer1(), base.controllerPlayer2(), base.debugModeKey(), base.rewindKey(),
+                    base.frameStepKey());
+            InputHandler input = new InputHandler(() -> enterIsB, List::of);
+            Object scene = openScene();
+            keyPress(input, org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT);
+            assertEquals(List.of("LEFT/RIGHT Game", "Space Practise", "ESC Back"), call(scene, "hintsForTest"),
+                    "Enter belongs to B, so the bound A is the confirm named");
+            keyPress(input, org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+            assertEquals(List.of("master"), exits, "Enter went back");
+            assertTrue(launched.isEmpty(), "and did not also launch the chosen act");
+        }
+    }
+
+    private Object openScene() throws Exception {
+        java.lang.reflect.Field field = ModSceneHost.class.getDeclaredField("scene");
+        field.setAccessible(true);
+        return OwnedSceneFactory.unwrap((com.openggf.mods.scene.ModScene) field.get(host));
+    }
+
+    private static Object call(Object target, String name) throws Exception {
+        java.lang.reflect.Method method = target.getClass().getDeclaredMethod(name);
+        method.setAccessible(true);
+        return method.invoke(target);
+    }
+
+    /** One key press with the logical snapshot refreshed each tick, as the engine's frame does. */
+    private void keyPress(InputHandler input, int glfwKey) {
+        input.handleKeyEvent(glfwKey, org.lwjgl.glfw.GLFW.GLFW_PRESS);
+        input.refreshLogicalSnapshot();
+        host.update(input);
+        input.update();
+        input.handleKeyEvent(glfwKey, org.lwjgl.glfw.GLFW.GLFW_RELEASE);
+        input.refreshLogicalSnapshot();
+        host.update(input);
+        input.update();
+    }
+
+    /** One press of a pad button through the real physical and logical (Genesis) mapping. */
+    private void padPress(InputHandler input, boolean[] buttons, int button) {
+        buttons[button] = true;
+        input.refreshLogicalSnapshot();
+        host.update(input);
+        input.update();
+        buttons[button] = false;
+        input.refreshLogicalSnapshot();
+        host.update(input);
+        input.update();
     }
 
     private void press(InputHandler input, int glfwKey) {

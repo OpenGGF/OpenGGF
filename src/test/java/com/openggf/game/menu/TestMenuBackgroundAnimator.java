@@ -15,6 +15,24 @@ class TestMenuBackgroundAnimator {
     private static final int PATTERN_BASE = 0x500;
 
     @Test
+    void repeatedResourcePublicationDoesNotAdvanceOrResetTheAnimationClock() {
+        Pattern[] patterns = patterns(40);
+        RecordingGraphics graphics = new RecordingGraphics();
+        MenuBackgroundAnimator animator = new MenuBackgroundAnimator(patterns, graphics, PATTERN_BASE);
+        for (int tick = 0; tick < 201; tick++) animator.update();
+        graphics.uploads.clear();
+        for (int picture = 0; picture < 10; picture++) {
+            animator.publishCurrentFrame();
+            assertFrame(graphics, patterns, 10, 10);
+            graphics.uploads.clear();
+        }
+        for (int tick = 0; tick < 5; tick++) animator.update();
+        assertTrue(graphics.uploads.isEmpty(), "pictures cannot spend the short hold");
+        animator.update();
+        assertFrame(graphics, patterns, 20, 10);
+    }
+
+    @Test
     void primePublishesFirstFrameWithoutAdvancingPlayback() {
         Pattern[] patterns = patterns(40);
         RecordingGraphics graphics = new RecordingGraphics();

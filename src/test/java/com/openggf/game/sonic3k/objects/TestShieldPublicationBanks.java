@@ -61,8 +61,9 @@ class TestShieldPublicationBanks {
         first.triggerAttack();
         // Ani_InstaShield frames 0..2 use art tiles 0..22; frames 3..5 use 23..51.
         // Map frames 3 and 0 both display bank slots 0..5, with incompatible pixels.
-        for (int i = 0; i < 3; i++) first.update(i, firstPlayer);
+        for (int i = 0; i < 4; i++) first.update(i, firstPlayer);
         second.triggerAttack();
+        second.update(0, secondPlayer);
         var firstState = lifecycle(first).captureRewindStateValue();
         var secondState = lifecycle(second).captureRewindStateValue();
         assertNotEquals(firstState.mappingFrame(), secondState.mappingFrame());

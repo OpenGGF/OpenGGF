@@ -165,12 +165,6 @@ public record SolidRoutineProfile(
         return built;
     }
 
-    public static SolidRoutineAdapter adapt(SolidObjectProvider provider) {
-        return new SolidRoutineAdapter(
-                Objects.requireNonNull(provider, "provider"),
-                fromProvider(provider));
-    }
-
     private static SolidRoutineKind kindFor(boolean topSolidOnly, boolean monitorSolidity) {
         if (monitorSolidity) {
             return SolidRoutineKind.MONITOR_SOLID;

@@ -741,8 +741,8 @@ boolean shouldTrigger = category == BOSS
 ```
 The intent was an optimisation: once a player overlaps an enemy and
 the response runs, don't re-run while the overlap persists. ROM has
-no such gate. ROM `Touch_Loop` (s2.asm:84502-84548) iterates every
-frame and `Touch_Enemy` (s2.asm:84807-84890) re-reads
+no such gate. ROM `Touch_Loop` (s2.asm:85167-85213) iterates every
+frame and `Touch_Enemy` (s2.asm:85420-85503) re-reads
 `status_secondary(a0)` and `anim(a0)` each call. The decision between
 Touch_KillEnemy and Touch_ChkHurt is therefore made per-frame, not
 once on entry, so any later state transition into Spindash / Roll /
@@ -919,7 +919,7 @@ ROM `air=1`, engine `air=0` after Sonic rolls into a monitor he pushed two
 frames earlier.
 
 **Root cause.** ROM `SolidObject_cont` -> `SolidObject_LeftRight` ->
-`SolidObject_AtEdge` (`docs/s2disasm/s2.asm:35241-35248`) sets the OBJECT's
+`SolidObject_AtEdge` (`docs/s2disasm/s2.asm:35438-35445`) sets the OBJECT's
 push bit and the player's pushing bit for ANY side contact when the player
 is not airborne:
 
@@ -943,7 +943,7 @@ Position correction and speed zeroing should be gated on movingInto (ROM
 `SolidObject_StopCharacter` runs only when moving toward the object), but the
 push BIT is set even at rest on an edge.
 
-`Obj26_Break` (s2.asm:25502-25515) keys its airborne transition off the
+`Obj26_Break` (s2.asm:25675-25688) keys its airborne transition off the
 monitor's accumulated push/standing bits, so missing the push set when the
 player was at rest on the monitor's edge cascades into "broken monitor
 should fling Sonic upward but engine keeps him grounded" two frames later
@@ -1013,7 +1013,7 @@ non-null and `child.destroyed=false`, but the child is no longer in
 
 **Root cause.** The ROM dispatcher routes Obj14 (and similar parent+child
 objects) through a single `Obj_Index` table that calls `MarkObjGone2` with
-`d0 = objoff_30(a0)`. Crucially, `Obj14_Ball_Init` (`docs/s2disasm/s2.asm:47151`)
+`d0 = objoff_30(a0)`. Crucially, `Obj14_Ball_Init` (`docs/s2disasm/s2.asm:47596`)
 stores the parent seesaw's `x_pos` into `objoff_30(a0)` BEFORE applying the
 ball's `addi.w #$28, x_pos(a0)` offset. So the ball's out-of-range check uses
 the PARENT'S x position, not its own offset position. Both parent and ball
@@ -1046,7 +1046,7 @@ move.l a0,objoff_3C(a1)          ; store parent pointer for the child
 
 then the child needs `getOutOfRangeReferenceX()` to return the parent's x_pos
 (or, equivalently, the value saved in `objoff_30`). This applies to:
-- Seesaw ball (`Obj14_Ball_Init` at s2.asm:47142)
+- Seesaw ball (`Obj14_Ball_Init` at s2.asm:47594)
 - Any moving-solid child that's offset from its parent
 - Body segments on Caterkiller / Crawl / multi-piece badniks
 - Attached projectiles fired at a fixed offset from a parent gun mount
@@ -1164,7 +1164,7 @@ means the slot-machine tick belongs in the S2 CNZ pre-physics/level-event
 phase, while CNZ bumpers remain in the normal zone-feature update phase.
 
 **ROM citation.** `docs/s2disasm/s2.asm:21494-21500`
-(`LevEvents_CNZ` calls `SlotMachine`) and `docs/s2disasm/s2.asm:58827-58840`
+(`LevEvents_CNZ` calls `SlotMachine`) and `docs/s2disasm/s2.asm:59408-59421`
 (`SlotMachine` routine dispatch).
 
 **Originating commit.** `<pending>` (trace frontier advancement loop iter 12:
@@ -1385,7 +1385,7 @@ riding object/helper, not to all S2 movement.
    game id or object id directly.
 
 **ROM citation.** `docs/s2disasm/s2.asm:58435-58443` (ObjD5 calls
-`PlatformObjectD5` after its state routine), `docs/s2disasm/s2.asm:35617-35657`
+`PlatformObjectD5` after its state routine), `docs/s2disasm/s2.asm:35837-35877`
 (`PlatformObjectD5` continued-riding/skip-existing-platform helper), and
 `docs/s2disasm/s2.asm:35402-35420` (`MvSonicOnPtfm` writes rider position).
 For MTZ Obj65, see `docs/s2disasm/s2.asm:53159-53220` (subtype 5 conveyor and
@@ -1694,7 +1694,7 @@ via a held jump.
 variants. This applies equally to grab-initiation, grab-release, and any
 other button-gated state transition in object code.
 
-**ROM citation.** `Obj7F_Action` (`s2.asm:56083-56106`):
+**ROM citation.** `Obj7F_Action` (`s2.asm:56664-56687`):
 `move.w (Ctrl_1).w,d0 / andi.b #button_B_mask|button_C_mask|button_A_mask,d0`.
 
 **Originating commit.** `d14450c48 Fix S2 MCZ VineSwitch (0x7F) release input
@@ -1721,7 +1721,7 @@ the same sub-routine. Implement the sidekick pass using
 `services().sidekicks()` before committing. Do not leave "Player 2 deferred"
 stubs in production code; they silently break two-player trace parity.
 
-**ROM citation.** `Obj7F_Action` (`s2.asm:56071-56080`):
+**ROM citation.** `Obj7F_Action` (`s2.asm:56669-56678`):
 `lea (MainCharacter).w,a1 / move.w (Ctrl_1).w,d0 / bsr.s Obj7F_Action` then
 `lea (Sidekick).w,a1 / move.w (Ctrl_2).w,d0 / bsr.s Obj7F_Action`.
 
@@ -1746,7 +1746,7 @@ The Hurt routine (`Obj01_Hurt loc_1B12C`) runs its own physics tick with
 the player into normal play write `move.b #2,routine(a1)` directly,
 unconditionally clearing the Hurt routine. The next player tick then dispatches
 to `Obj01_Control` -> `Obj01_MdAir`, which uses +$38 gravity and the
-`Sonic_UpVelCap` cap (`s2.asm:37113`).
+`Sonic_UpVelCap` cap (`s2.asm:37437`).
 
 The engine encodes Hurt as a boolean `hurt` field on the sprite, and the
 trace test maps `isHurt() -> rtn=04` for comparison.
@@ -1760,7 +1760,7 @@ regime.
 **What to check.** For every object that writes `move.b #2,routine(a1)` in
 ROM:
 - The Vertical/Diagonal Spring branches (`Obj41_Up`, `Obj41_Down`,
-  `Obj41_DiagonallyUp`, `Obj41_DiagonallyDown` — `s2.asm:33735, 34023,
+  `Obj41_DiagonallyUp`, `Obj41_DiagonallyDown` — `s2.asm:33735, 34326,
   34090, 34173`) all clear the routine. Note that `Obj41_Horizontal`
   does NOT, because horizontal springs keep the player grounded.
 - `Touch_ChkValue` post-hurt recovery branches.
@@ -1774,7 +1774,7 @@ Do NOT also reset `invulnerable_time` — ROM keeps the existing value, and
 `AbstractPlayableSprite` already exposes invulnerability via a separate
 counter that the spring does not touch.
 
-**ROM citation.** Spring up `Obj41_Up loc_189CA` (`s2.asm:33728-33735`):
+**ROM citation.** Spring up `Obj41_Up loc_189CA` (`s2.asm:33925-33932`):
 ```
 loc_189CA:
     move.w  #(1<<8)|(0<<0),anim(a0)
@@ -1913,7 +1913,7 @@ sure each branch has an engine mode. For sine/cosine helpers, also preserve the
 ROM return register: `CalcSine` returns sine in `d0` and cosine in `d1`; a path
 that multiplies `d1` must use cosine, not sine.
 
-**ROM citation.** S2 Obj06 init/cylinder path (`docs/s2disasm/s2.asm:46720-46811`,
+**ROM citation.** S2 Obj06 init/cylinder path (`docs/s2disasm/s2.asm:47010-47101`,
 `s2.asm:46853-46931`): negative subtype branches to `Obj06_Cylinder`; the
 active rider path calls `CalcSine` and multiplies `d1` by `$2800` for the
 vertical offset.
@@ -2023,7 +2023,7 @@ accessor resolved at the object's first update) rather than a `gameId` branch;
 fall-through (the spawn frame), so deletion lands `lifespan` game frames after
 that first update. See also P30 (`bmi`/`bpl` countdowns fire at -1).
 
-**ROM citation.** S2 `Obj27_Init`/`Obj27_Main` `docs/s2disasm/s2.asm:46672-46684`
+**ROM citation.** S2 `Obj27_Init`/`Obj27_Main` `docs/s2disasm/s2.asm:46725-46737`
 (init `#3`, reload `#7`, delete at mapping_frame 5); S3K `loc_1E626`/`loc_1E66E`
 `docs/skdisasm/sonic3k.asm:42235-42245` (init `#3`); S1 `ExItem_Main`/
 `ExItem_Animate` `docs/s1disasm/_incObj/27, 3F Explosions.asm` (init `#7`).
@@ -2043,7 +2043,7 @@ elevator) collides via the ROM `SolidObject` / `SolidObjectFull` helper. Those
 helpers test the player's standing bit on the object FIRST (`btst d6,status(a0)`,
 `docs/s2disasm/s2.asm:35021-35022`). When the bit is set and the player is now
 airborne (jumped off, got hurt, sprang away), the helper takes the standing-branch
-air-unseat (`loc_1975A`, s2.asm:35035-35040): it clears `Status_OnObj`/`d6`, sets
+air-unseat (`loc_1975A`, s2.asm:35041-35046): it clears `Status_OnObj`/`d6`, sets
 `Status_InAir`, and returns `d4=0` WITHOUT falling into `SolidObject_cont`. So on
 the release frame the platform carry (`MvSonicOnPtfm`, s2.asm:35635-35659) and the
 side push (`SolidObject_AtEdge`, s2.asm:35432-35444) are BOTH skipped — the rider
@@ -2200,7 +2200,7 @@ the wrong SST slot before the wall pieces in ARZ2. Keep Grounder children on
 `spawnFreeChild`.
 
 **Additional ROM citation.** `docs/s2disasm/s2.asm:73497-73516`
-(`loc_36C2C` Obj90 rocks) and `docs/s2disasm/s2.asm:73520-73533`
+(`loc_36C2C` Obj90 rocks) and `docs/s2disasm/s2.asm:73588-73601`
 (`loc_36C64` Obj8F walls).
 
 ---
@@ -2363,7 +2363,7 @@ broken/consumed terminal state: trace where the ROM first writes / clears
 engine's `getCollisionFlags()` to return `0` outside the active window. Derive
 the gate from the (monotonic) activation routine — no new rewind field.
 
-**ROM citation.** S2 `Touch_Loop` zero-gate `docs/s2disasm/s2.asm:85048-85049`;
+**ROM citation.** S2 `Touch_Loop` zero-gate `docs/s2disasm/s2.asm:85210-85211`;
 S3K `Collision_response_list` opt-in (`docs/skdisasm/sonic3k.asm`, response-list
 build during ExecuteObjects). S1 origin: `Sonic ReactToItem.asm:52-53`
 (`tst.b obColType / bne`).
@@ -3266,7 +3266,7 @@ child (`docs/s2disasm/s2.asm:64306-64323`). The child initializer at
 `loc_2FF78` reuses the current slot for ball 0, writes `collision_flags=$8B`,
 velocity, radius, and animation fields, then calls `AllocateObject` for ball 1
 before returning (`docs/s2disasm/s2.asm:64429-64469`). Movement is separate in
-`Obj52_LavaBall_Move` (`docs/s2disasm/s2.asm:64504-64524`).
+`Obj52_LavaBall_Move` (`docs/s2disasm/s2.asm:64619-64639`).
 
 **Originating commit.** `a751be064` S2 HTZ2 Obj52 lava-ball pair init cadence:
 `TestS2Htz2LevelSelectTraceReplay` advances f8530 -> f9150.
@@ -3548,7 +3548,7 @@ engine holds the landing value for several frames before catching up. The drift
 is small at first and compounds for the rest of the act.
 
 **Root cause.** `move_lock` is the ROM's only grounded-input lock, and in the
-spring family only the horizontal spring `loc_18AEE` (`loc_18B1C`, `move.w #$F,move_lock(a1)`) writes it. The up (`loc_189ca`, s2.asm:33924-33966), down (`loc_18cc6`, :34177-34196) and diagonal launches, the springboard `obj40` (:52262) and the cpz pipe-exit spring `obj7b` (:56341) write no lock
+spring family only the horizontal spring `loc_18AEE` (`loc_18B1C`, `move.w #$F,move_lock(a1)`) writes it. The up (`loc_189ca`, s2.asm:34030-34072), down (`loc_18cc6`, :34177-34196) and diagonal launches, the springboard `obj40` (:52262) and the cpz pipe-exit spring `obj7b` (:56341) write no lock
 of any kind. An engine "springing"/"recently launched" marker used by objects
 for their own re-contact and carry tests must not also gate horizontal input --
 doing so invents a control lock the ROM has nowhere. It is easy to miss because
@@ -3829,3 +3829,30 @@ modulo `$8000`; counter ownership and landing/reset semantics need separate proo
 Source: `Touch_KillEnemy` (s2.asm:85514-85529). Cross-game source, boundary,
 reset and repeated-rewind evidence:
 `docs/architecture/validation/2026-10-26-tas-tricks-s2.md#scoring-owner-follow-up--2026-10-26`.
+
+
+## Retail table bases and native pointers have different ownership (2026-10-28)
+
+Cross-game S1/S2: resolve an engine-declared REV01 table base through
+`Sonic1RomProfile` or `Sonic2RomAddresses` for the selected immutable ROM view.
+An absolute pointer read from that ROM is already native: resolving it again can
+turn a correct PLC, mapping, animation or palette pointer into unrelated bytes.
+Do not infer verification from a matching header, rewrite ROM bytes, or mutate
+static offsets when another ROM opens. Unknown images keep the compatible path;
+KiS2 retains its own rules even when its source cartridge is recognized.
+
+Check both original revisions, include a pointer-derived negative control, and
+exercise the actual consumer rather than only comparing resolver output. The
+[retail revision plan](../../../docs/architecture/plans/2026-10-28-retail-rom-revisions.md)
+records original hashes, inspected disassembly versions and validation scope.
+
+
+## Release-time clock repair has a bounded scope (2026-11-04)
+
+`Level` clears the level word before title execution (s2.asm:4772-4773).
+`Level_MainLoop` (s2.asm:5088-5095) increments it after the V-int wait. Clearing both engine counter
+mirrors at title release repairs post-release consumers, including shake and
+cached object visibility. It does not undo an object's earlier clock reads in
+locked passes. The inherited Cog `$F` gate can still see the advancing
+LevelManager counter there; retain this limitation instead of claiming complete
+title-clock parity. Test release separately from actual locked object scans.

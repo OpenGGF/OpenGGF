@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.competition.specialstage;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.GameSound;
 import com.openggf.game.sonic2.competition.Sonic2CompetitiveSpecialStageAdapter.Events;
@@ -108,7 +110,7 @@ public final class CompetitiveHalfpipeObjectMachine {
     public void initializeHiddenMessages() {
         Node numeric = new Node(Kind.HIDDEN); numeric.nativeArt = 0x41FA; numeric.routine = 0x0E; numeric.y = 0x38;
         if (ram.allocate(numeric) < 0) return;
-        int cursor = 0x35604;
+        int cursor = address(data.rom(), 0x35604);
         for (int section = 0; section < 3; section++) {
             int index = 0;
             while (true) {
@@ -117,7 +119,7 @@ public final class CompetitiveHalfpipeObjectMachine {
                 Node node = new Node(Kind.HIDDEN); node.mapping = frame; node.y = 0x38;
                 node.routine = 0x10 + section * 2;
                 node.x = section == 0 ? 0x68 + index * 8
-                        : data.rom().readU16BE(0x35612 + (section == 2 ? 5 : index) * 2);
+                        : data.rom().readU16BE(address(data.rom(), 0x35612) + (section == 2 ? 5 : index) * 2);
                 node.base = node.x;
                 if (ram.allocate(node) < 0) return;
                 index++;
@@ -193,7 +195,7 @@ public final class CompetitiveHalfpipeObjectMachine {
                     int frame = player.getTailsTailsMappingFrame();
                     if (node.frame != frame) {
                         node.frame = frame;
-                        addressRegister2 = 0x345FA + data.rom().readU16BE(0x345FA + (0x24 + frame) * 2) + 2;
+                        addressRegister2 = address(data.rom(), 0x345FA) + data.rom().readU16BE(address(data.rom(), 0x345FA) + (0x24 + frame) * 2) + 2;
                     }
                     show(slot, player.getPriority() - 1);
                 }
@@ -231,7 +233,7 @@ public final class CompetitiveHalfpipeObjectMachine {
             show(slot, 1);
         } else if (node.routine == 4) {
             if (--node.timer != 0) { show(slot, 1); return; }
-            int mapping = 0x7240 + data.rom().readU16BE(0x7244);
+            int mapping = address(data.rom(), 0x7240) + data.rom().readU16BE(address(data.rom(), 0x7244));
             addressRegister2 = mapping;
             for (int i = 0; i < 7; i++) {
                 Node part = new Node(Kind.BANNER_PART); part.mapping = i + 2; part.x = node.x; part.y = node.y;
@@ -247,7 +249,7 @@ public final class CompetitiveHalfpipeObjectMachine {
     private void phrase(int current, int id) {
         // PrintWord failure returns to PrintPhrase, which still consumes the
         // remaining phrase IDs. The final a2 value is always the ROM terminator end.
-        int pointer = 0x35DDE + data.rom().readU16BE(0x35DDE + id);
+        int pointer = address(data.rom(), 0x35DDE) + data.rom().readU16BE(address(data.rom(), 0x35DDE) + id);
         while (data.rom().readU8(pointer++) < 0x80) { }
         addressRegister2 = pointer;
         for (var letter : CompetitiveHalfpipeRenderer.decodePhrase(data, id)) {
@@ -353,12 +355,12 @@ public final class CompetitiveHalfpipeObjectMachine {
     }
     private void rainbow(int slot, Node node) {
         if (track.drawingIndex() == 4) {
-            node.mapping = (byte) data.rom().readU8(0x357F4 + node.frame++);
+            node.mapping = (byte) data.rom().readU8(address(data.rom(), 0x357F4) + node.frame++);
             if (node.mapping < 0) {
                 if (node.x == 0xE8) compare(slot, node); else clearSlot(slot);
                 return;
             }
-            int position = 0x35846 + node.base * 2 + node.timer;
+            int position = address(data.rom(), 0x35846) + node.base * 2 + node.timer;
             node.x = data.rom().readU8(position); node.y = data.rom().readU8(position + 1); node.timer += 14;
         }
         if (node.mapping >= 0) show(slot, 5);
@@ -430,7 +432,7 @@ public final class CompetitiveHalfpipeObjectMachine {
         events.hitBomb(owner.owner);
         var player = players.player(owner.owner);
         int successful = 0;
-        int angleTable = (lost & 1) == 0 ? 0x353EA : 0x353F4;
+        int angleTable = (lost & 1) == 0 ? address(data.rom(), 0x353EA) : address(data.rom(), 0x353F4);
         for (int attempt = 0; attempt < lost; attempt++) {
             int target = attempt == 0 ? slot : ram.findFree();
             if (target < 0) continue;
@@ -465,11 +467,11 @@ public final class CompetitiveHalfpipeObjectMachine {
             int z = player.getSSZPos() & 0xFFFF;
             if (z == 0) return addressRegister2;
             int index = (short) ((Math.abs((short) player.getSSXPos()) << 7) / z);
-            angle = data.rom().readU8(0x33D32 + index);
+            angle = data.rom().readU8(address(data.rom(), 0x33D32) + index);
             if (player.getSSXPos() >= 0) angle = -(angle - 0x80) & 255;
             if (player.getSSYPos() < 0) angle = -angle & 255;
         }
-        return 0x3417A + (((angle - 0x10) & 255) >>> 5) * 8 + 8;
+        return address(data.rom(), 0x3417A) + (((angle - 0x10) & 255) >>> 5) * 8 + 8;
     }
 
     private void clearSlot(int slot) {

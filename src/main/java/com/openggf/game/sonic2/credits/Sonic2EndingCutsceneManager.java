@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.credits;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.Rom;
@@ -409,7 +411,7 @@ public class Sonic2EndingCutsceneManager {
         // ROM: ObjCA_Init spawns ObjC9 subtype 4 which copies Pal_AD1E into
         // Target_palette offset 0 (line 0), length $F. Photos use palette line 0.
         try {
-            byte[] photosPalData = rom.readBytes(Sonic2Constants.PAL_ENDING_PHOTOS_ADDR, 32);
+            byte[] photosPalData = rom.readBytes(address(rom, Sonic2Constants.PAL_ENDING_PHOTOS_ADDR), 32);
             photosPalette = new Palette();
             photosPalette.fromSegaFormat(photosPalData);
         } catch (Exception e) {
@@ -434,10 +436,10 @@ public class Sonic2EndingCutsceneManager {
         // Parse ROM sprite mappings for accurate cutscene rendering
         try {
             RomByteReader reader = RomByteReader.fromRom(rom);
-            objCfFrames = presentation == null ? S2SpriteDataLoader.loadMappingFrames(reader, Sonic2Constants.MAP_UNC_OBJCF_ADDR) : presentation.objectFrames();
-            animalFrames = S2SpriteDataLoader.loadMappingFrames(reader, Sonic2Constants.MAP_UNC_OBJ28_A_ADDR);
-            tornadoFrames = S2SpriteDataLoader.loadMappingFrames(reader, Sonic2Constants.MAP_UNC_OBJB2_A_ADDR);
-            cloudFrames = S2SpriteDataLoader.loadMappingFrames(reader, Sonic2Constants.MAP_UNC_CLOUD_ADDR);
+            objCfFrames = presentation == null ? S2SpriteDataLoader.loadMappingFrames(reader, address(rom, Sonic2Constants.MAP_UNC_OBJCF_ADDR)) : presentation.objectFrames();
+            animalFrames = S2SpriteDataLoader.loadMappingFrames(reader, address(rom, Sonic2Constants.MAP_UNC_OBJ28_A_ADDR));
+            tornadoFrames = S2SpriteDataLoader.loadMappingFrames(reader, address(rom, Sonic2Constants.MAP_UNC_OBJB2_A_ADDR));
+            cloudFrames = S2SpriteDataLoader.loadMappingFrames(reader, address(rom, Sonic2Constants.MAP_UNC_CLOUD_ADDR));
 
             // Load player mappings for CHARACTER_APPEAR rendering.
             // ROM: ObjCA routine $A spawns real Sonic/Tails object using standard Map_Sonic/Map_Tails.
@@ -2067,19 +2069,19 @@ public class Sonic2EndingCutsceneManager {
                 paletteFadeEndLine = 1;
             } else switch (routine) {
                 case SONIC -> {
-                    loadPaletteLinesToTarget(rom, Sonic2Constants.PAL_ENDING_SONIC_ADDR, 64,
+                    loadPaletteLinesToTarget(rom, address(rom, Sonic2Constants.PAL_ENDING_SONIC_ADDR), 64,
                             targetPalettes, 0);
                     paletteFadeStartLine = 0;
                     paletteFadeEndLine = 1;
                 }
                 case SUPER_SONIC -> {
-                    loadPaletteLinesToTarget(rom, Sonic2Constants.PAL_ENDING_SUPER_SONIC_ADDR, 32,
+                    loadPaletteLinesToTarget(rom, address(rom, Sonic2Constants.PAL_ENDING_SUPER_SONIC_ADDR), 32,
                             targetPalettes, 0);
                     paletteFadeStartLine = 0;
                     paletteFadeEndLine = 0;
                 }
                 case TAILS -> {
-                    loadPaletteLinesToTarget(rom, Sonic2Constants.PAL_ENDING_TAILS_ADDR, 64,
+                    loadPaletteLinesToTarget(rom, address(rom, Sonic2Constants.PAL_ENDING_TAILS_ADDR), 64,
                             targetPalettes, 0);
                     paletteFadeStartLine = 0;
                     paletteFadeEndLine = 1;
@@ -2129,7 +2131,7 @@ public class Sonic2EndingCutsceneManager {
         try {
             com.openggf.data.Rom rom = com.openggf.game.GameServices.rom().getRom();
             // Pal_ACDE: 64 bytes → Target lines 2-3
-            loadPaletteLinesToTarget(rom, Sonic2Constants.PAL_ENDING_BACKGROUND_ADDR, 64,
+            loadPaletteLinesToTarget(rom, address(rom, Sonic2Constants.PAL_ENDING_BACKGROUND_ADDR), 64,
                     targetPalettes, 2);
             LOGGER.fine("Target palette lines 2-3 updated with Background data (ObjC9 subtype $A)");
         } catch (Exception e) {

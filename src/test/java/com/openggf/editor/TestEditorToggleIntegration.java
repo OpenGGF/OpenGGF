@@ -162,6 +162,42 @@ class TestEditorToggleIntegration {
     }
 
     @Test
+    void exitToTitleAsksAboutUnsavedNativeEditsAndLeavesOnlyWhenChosen() throws Exception {
+        requireS2Rom();
+        enableEditor();
+        var engine = new Engine();
+        createGameplayMode(engine);
+        enter(engine, 100, 200);
+        var authored = engine.getLevelEditorController().currentLevel();
+        engine.getLevelEditorController().placeBlock(0, 2, 2, 1);
+        var exit = com.openggf.editor.EditorCommandPalette.forController(engine.getLevelEditorController()).exitAction();
+        assertNotNull(exit, "the editor menu offers a way out");
+        var workspace = engine.getEditorProjectWorkspace();
+
+        exit.run();
+        assertTrue(workspace.menu().isOpen(), "unsaved native edits are asked about before leaving");
+        assertEquals(List.of("Keep editing", "Save and exit to title", "Exit without saving"),
+                workspace.menu().actionEntries().stream().map(com.openggf.editor.project.EditorProjectMenu.Action::label).toList());
+        press(engine, inputFor(engine), GLFW_KEY_ESCAPE);
+        assertFalse(workspace.menu().isOpen());
+        assertEquals(GameMode.EDITOR, engine.getCurrentGameMode());
+        assertSame(authored, engine.getLevelEditorController().currentLevel());
+        assertEquals(1, authored.getMap().getValue(0, 2, 2) & 0xFF, "Keep editing changes nothing");
+
+        // Leaving rebuilds the master title, which uploads its art: it needs a real GL context.
+        try (var gl = com.openggf.tools.PresentationOffscreenTestContext.openConfigured(
+                320, 224, com.openggf.tools.PresentationOffscreenTestContext.LegacyProfile.CORE_41)) {
+            exit.run();
+            workspace.menu().runAction(2);
+            assertEquals(GameMode.MASTER_TITLE_SCREEN, engine.getCurrentGameMode());
+            assertNull(SessionManager.getCurrentEditorMode());
+            assertNull(engine.getEditorProjectWorkspace().document());
+            // Release the title's GL resources before the context closes.
+            ((com.openggf.game.MasterTitleScreen) field(engine, "masterTitleScreen")).cleanup();
+        }
+    }
+
+    @Test
     void resumePlaytestUsesIndependentAuthoredSnapshotAndFreshCounters() throws Exception {
         requireS2Rom();
         enableEditor();
@@ -310,8 +346,8 @@ class TestEditorToggleIntegration {
         var input = inputFor(engine);
         enter(engine, 100, 200);
         press(engine, input, GLFW_KEY_RIGHT);
-        assertEquals(new EditorCursorState(103, 200), engine.getLevelEditorController().worldCursor());
-        assertEquals(new EditorCursorState(103, 200), SessionManager.getCurrentEditorMode().getCursor());
+        assertEquals(new EditorCursorState(192, 192), engine.getLevelEditorController().worldCursor());
+        assertEquals(new EditorCursorState(192, 192), SessionManager.getCurrentEditorMode().getCursor());
     }
 
     @Test
@@ -403,6 +439,27 @@ class TestEditorToggleIntegration {
         engine.syncEditorState();
         assertEquals(0, engineCamera(engine).getX());
         assertEquals(0, engineCamera(engine).getY());
+    }
+
+    @Test
+    void fractionalZoomNavigationUsesExpandedViewAndMapBounds() {
+        enableEditor();
+        var engine = new Engine();
+        createGameplayMode(engine);
+        enter(engine, 100, 200);
+        var controller = engine.getLevelEditorController();
+        var camera = engineCamera(engine);
+        controller.canvasView().zoomAt(-1, 0, 0);
+        controller.setWorldCursor(new EditorCursorState(512, 384));
+        engine.syncEditorState();
+        assertEquals(512, camera.getX() + camera.getWidth());
+        assertEquals(384, camera.getY() + camera.getHeight());
+        controller.canvasView().zoomAt(-1, 0, 0);
+        controller.setWorldCursor(new EditorCursorState(900, 900));
+        engine.syncEditorState();
+        assertEquals(0, camera.getX(), "the expanded view is wider than this map");
+        assertEquals(1024 - camera.getHeight() * 4, camera.getY());
+        assertFalse(controller.hasUndoHistory());
     }
 
     @Test
@@ -498,7 +555,7 @@ class TestEditorToggleIntegration {
         var authored = engine.getLevelEditorController().currentLevel();
         assertEquals(new EditorCursorState(125, 125), engine.getLevelEditorController().worldCursor());
         press(engine, input, GLFW_KEY_RIGHT, GLFW_KEY_DOWN);
-        assertEquals(new EditorCursorState(128, 128), engine.getLevelEditorController().worldCursor());
+        assertEquals(new EditorCursorState(192, 192), engine.getLevelEditorController().worldCursor());
         press(engine, input, GLFW_KEY_E);
         assertEquals(1, engine.getLevelEditorController().selection().selectedBlock());
         engine.getLevelEditorController().setWorldCursor(new EditorCursorState(253, 253));
@@ -508,8 +565,8 @@ class TestEditorToggleIntegration {
         assertEquals(0, source.getMap().getValue(0, 2, 2) & 0xFF);
         press(engine, input, GLFW_KEY_LEFT_SHIFT, GLFW_KEY_TAB);
         assertEquals(GameMode.LEVEL, engine.getCurrentGameMode());
-        assertEquals(256, player(SessionManager.getCurrentGameplayMode()).getCentreX());
-        assertEquals(256, player(SessionManager.getCurrentGameplayMode()).getCentreY());
+        assertEquals(320, player(SessionManager.getCurrentGameplayMode()).getCentreX());
+        assertEquals(320, player(SessionManager.getCurrentGameplayMode()).getCentreY());
         press(engine, input, GLFW_KEY_LEFT_SHIFT, GLFW_KEY_TAB);
         assertEquals(GameMode.EDITOR, engine.getCurrentGameMode());
         press(engine, input, GLFW_KEY_F5);

@@ -65,6 +65,7 @@ public class PerformanceProfiler implements SectionProfiler {
     private PerformanceProfiler() {
     }
 
+    @com.openggf.game.EngineOnly
     public static synchronized PerformanceProfiler getInstance() {
         if (instance == null) {
             instance = new PerformanceProfiler();

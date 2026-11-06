@@ -5,8 +5,10 @@ import com.openggf.net.protocol.ControlJsonCodec;
 import com.openggf.net.protocol.ControlMessage;
 import com.openggf.net.protocol.GhostPackets;
 import com.openggf.net.protocol.ProtocolViolationException;
+import com.openggf.net.protocol.Protocol;
 import com.openggf.net.protocol.AuthenticationTranscript;
 import com.openggf.net.protocol.NetworkEndpointPolicy;
+import com.openggf.net.flow.WorkBudget;
 
 import java.net.URI;
 import java.net.Socket;
@@ -42,6 +44,12 @@ public final class RaceClient implements RaceConnection {
         public JoinRejectedException(String reason) {
             super(reason);
         }
+    }
+
+    /** The direct socket ended without an authenticated admission verdict. */
+    static final class DirectRouteLostException extends java.io.IOException {
+        DirectRouteLostException(String reason) { super(reason); }
+        DirectRouteLostException(String reason, Throwable cause) { super(reason, cause); }
     }
 
     @com.openggf.game.ModApi
@@ -83,14 +91,18 @@ public final class RaceClient implements RaceConnection {
 
     private final BoundedInboundQueue<InboundEvent> inbound = new BoundedInboundQueue<>();
     private final ControlJsonCodec codec = new ControlJsonCodec();
-    private final Object sendLock = new Object();
+    private final CompletableFuture<Void> closing = new CompletableFuture<>();
+    private final OutboundWriter writer;
     private volatile WebSocket webSocket;
     private volatile ControlMessage.JoinAccepted joinAccepted;
     private volatile boolean open;
     private volatile String serverId;
-    private CompletableFuture<?> sendChain = CompletableFuture.completedFuture(null);
-
     private RaceClient() {
+        writer = new OutboundWriter(WorkBudget.PROCESS, 512, 1024 * 1024,
+                () -> webSocket, () -> {
+                    open = false;
+                    signalDisconnected("outbound limit exceeded");
+                });
     }
 
     public static CompletableFuture<RaceClient> connect(
@@ -146,7 +158,8 @@ public final class RaceClient implements RaceConnection {
         ClientHandshake handshake = new ClientHandshake(
                 identity, displayName, appearance, determinismFingerprint, expectedServerId,
                 AuthenticationTranscript.Role.ROOM_DIRECT,
-                tls == null ? () -> AuthenticationTranscript.LOCAL_PLAINTEXT : tls::binding);
+                tls == null ? () -> AuthenticationTranscript.LOCAL_PLAINTEXT : tls::binding,
+                options.grantReference(), options.routeGeneration());
         CompletableFuture<RaceClient> joined = new CompletableFuture<>();
         ClientAccessGate gate = new ClientAccessGate(options);
         joined.whenComplete((value, error) -> gate.close());
@@ -212,27 +225,29 @@ public final class RaceClient implements RaceConnection {
             public CompletionStage<?> onClose(
                     WebSocket ws, int statusCode, String reason) {
                 client.open = false;
+                client.writer.abort();
                 String detail = reason == null || reason.isBlank()
                         ? "connection closed" : reason;
                 client.signalDisconnected(detail);
                 joined.completeExceptionally(
-                        new JoinRejectedException("connection closed during join: " + detail));
+                        new DirectRouteLostException("connection closed during join: " + detail));
                 return null;
             }
 
             @Override
             public void onError(WebSocket ws, Throwable error) {
                 client.open = false;
+                client.writer.abort();
                 client.signalDisconnected(
                         error.getMessage() == null ? error.getClass().getSimpleName()
                                 : error.getMessage());
-                joined.completeExceptionally(error);
+                joined.completeExceptionally(admissionTransportFailure(error));
             }
 
             private void handleText(WebSocket ws, String text) {
                 final ControlMessage message;
                 try {
-                    message = client.codec.decodeRoom(text).message();
+                    message = client.codec.decodeRoomServer(text).message();
                 } catch (ProtocolViolationException e) {
                     fail(ws, e);
                     return;
@@ -245,8 +260,7 @@ public final class RaceClient implements RaceConnection {
                     switch (message) {
                         case ControlMessage.Welcome welcome -> {
                             client.serverId = welcome.serverId();
-                            client.enqueueSendText(client.codec.encode(
-                                    null, handshake.onWelcome(welcome)));
+                            client.enqueueSendControl(null, handshake.onWelcome(welcome));
                             identityProofSent = true;
                         }
                         case ControlMessage.RoomAccessChallenge challenge -> {
@@ -254,7 +268,7 @@ public final class RaceClient implements RaceConnection {
                             ControlMessage.RoomAccessSubmit submission = gate.onChallenge(challenge);
                             if (submission != null) {
                                 try (var password = submission.password()) {
-                                    client.enqueueSendText(client.codec.encode(null, submission));
+                                    client.enqueueSendControl(null, submission);
                                 }
                             }
                         }
@@ -280,6 +294,7 @@ public final class RaceClient implements RaceConnection {
 
             private void fail(WebSocket ws, ProtocolViolationException cause) {
                 client.open = false;
+                client.writer.abort();
                 client.signalDisconnected("protocol violation");
                 joined.completeExceptionally(cause);
                 ws.abort();
@@ -295,7 +310,7 @@ public final class RaceClient implements RaceConnection {
                 .buildAsync(wsUri, listener)
                 .whenComplete((ws, error) -> {
                     if (error != null) {
-                        joined.completeExceptionally(error);
+                        joined.completeExceptionally(admissionTransportFailure(error));
                         return;
                     }
                     client.webSocket = ws;
@@ -303,13 +318,16 @@ public final class RaceClient implements RaceConnection {
                         ws.abort();
                         return;
                     }
-                    client.enqueueSendText(client.codec.encode(null, handshake.hello()));
+                    client.enqueueSendControl(null, handshake.hello());
                 });
 
-        joined.orTimeout(JOIN_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
-                .whenComplete((ignored, error) -> {
+        CompletableFuture.delayedExecutor(JOIN_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
+                .execute(() -> joined.completeExceptionally(
+                        new DirectRouteLostException("direct room admission timed out")));
+        joined.whenComplete((ignored, error) -> {
                     if (error != null) {
                         client.open = false;
+                        client.writer.abort();
                         WebSocket ws = client.webSocket;
                         if (ws != null) {
                             ws.abort();
@@ -317,6 +335,16 @@ public final class RaceClient implements RaceConnection {
                     }
                 });
         return joined;
+    }
+
+    private static Throwable admissionTransportFailure(Throwable error) {
+        Throwable cause = error;
+        while (cause instanceof java.util.concurrent.CompletionException
+                && cause.getCause() != null) cause = cause.getCause();
+        return cause instanceof java.io.IOException
+                && !(cause instanceof javax.net.ssl.SSLException)
+                ? new DirectRouteLostException("direct connection lost before admission", error)
+                : error;
     }
 
     private static SSLContext pinnedSslContext(String certificateSha256)
@@ -402,6 +430,7 @@ public final class RaceClient implements RaceConnection {
     }
 
     private void signalDisconnected(String reason) {
+        closing.complete(null);
         if (!inbound.offer(new Disconnected(reason))) {
             inbound.clear();
             inbound.offer(new Disconnected(reason));
@@ -412,20 +441,11 @@ public final class RaceClient implements RaceConnection {
         if (!open) {
             return;
         }
-        enqueueSendText(codec.encode(sessionToken(), message));
+        enqueueSendControl(sessionToken(), message);
     }
 
     public void sendBinary(byte[] data) {
-        WebSocket ws = webSocket;
-        if (ws == null || !open) {
-            return;
-        }
-        byte[] packet = data.clone();
-        synchronized (sendLock) {
-            sendChain = sendChain.thenCompose(
-                            ignored -> ws.sendBinary(ByteBuffer.wrap(packet), true))
-                    .exceptionally(error -> null);
-        }
+        if (webSocket != null && open) writer.offerBinary(data);
     }
 
     public int playerSlot() {
@@ -450,24 +470,16 @@ public final class RaceClient implements RaceConnection {
 
     public void close() {
         open = false;
-        WebSocket ws = webSocket;
-        if (ws != null) {
-            synchronized (sendLock) {
-                sendChain = sendChain.thenCompose(
-                                ignored -> ws.sendClose(WebSocket.NORMAL_CLOSURE, "bye"))
-                        .exceptionally(error -> null);
-            }
-        }
+        closing.complete(null);
+        writer.stop(Duration.ofSeconds(2));
     }
 
-    private void enqueueSendText(String text) {
-        WebSocket ws = webSocket;
-        if (ws == null) {
-            return;
-        }
-        synchronized (sendLock) {
-            sendChain = sendChain.thenCompose(ignored -> ws.sendText(text, true))
-                    .exceptionally(error -> null);
-        }
+    CompletionStage<Void> closing() {
+        return closing.minimalCompletionStage();
+    }
+
+    private void enqueueSendControl(String token, ControlMessage message) {
+        if (webSocket != null) writer.offerEncoded(
+                () -> codec.encode(token, message), Protocol.MAX_CONTROL_BYTES);
     }
 }

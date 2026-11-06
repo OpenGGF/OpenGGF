@@ -32,6 +32,7 @@ import java.util.logging.Logger;
  * <p>
  * Reference: docs/s1disasm/_incObj/89 Ending Sequence STH.asm
  */
+@com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.SCREEN_POSITION)
 public class Sonic1EndingSTHObjectInstance extends AbstractObjectInstance
         implements ZeroArgRewindRecreatable, ObjectVisualFacing.NonDirectional {
 
@@ -109,7 +110,8 @@ public class Sonic1EndingSTHObjectInstance extends AbstractObjectInstance
         if (screenX >= TARGET_SCREEN_X) {
             // ROM: ESth_Delay
             routine = 4;
-            timer = CREDITS_DELAY;
+            // ESth_Delay uses two seconds in REV00, five in REV01.
+            timer = com.openggf.game.sonic1.Sonic1RomProfile.isRev00(services()) ? 120 : CREDITS_DELAY;
             return;
         }
         screenX += SLIDE_SPEED;

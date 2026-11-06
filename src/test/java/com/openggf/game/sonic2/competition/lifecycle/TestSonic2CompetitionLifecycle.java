@@ -135,16 +135,81 @@ class TestSonic2CompetitionLifecycle {
 
     @Test void rev01BothTimeoutFlagsKeepP1CardWhileP2EntersGoneWithoutAnotherRequest() throws Exception {
         var f = new LifecycleFixture(); f.timeout(0); f.timeout(1);
+        f.actor(1).setDeathCountdown(17);
         f.die(0); var word = f.card(2); f.die(1);
         assertEquals(List.of("0:true"), f.cardRequests); assertSame(word, f.card(2));
         assertEquals(GONE, f.lifecycle.routine(0)); assertEquals(GONE, f.lifecycle.routine(1));
+        assertEquals(0, f.actor(1).getDeathCountdown());
         assertTrue(f.session.levelState(0).isTimeOver()); assertTrue(f.session.levelState(1).isTimeOver());
+    }
+
+    @Test void rev00BothTimeoutFlagsRespawnTailsAndRetainItsCountdownInsteadOfEnteringGone() throws Exception {
+        String source = System.getProperty("sonic2.rev00.rom.path");
+        org.junit.jupiter.api.Assumptions.assumeTrue(source != null && !source.isBlank(),
+                "Requires an original REV00 ROM via sonic2.rev00.rom.path");
+        try (var rom = new com.openggf.data.Rom()) {
+            assertTrue(rom.open(source));
+            assertEquals(com.openggf.data.RetailRomRevision.S2_REV00,
+                    com.openggf.data.RetailRomRevision.detect(rom));
+            var f = new LifecycleFixture(rom);
+            f.timeout(0); f.timeout(1);
+            f.actor(1).setDeathCountdown(17);
+            f.die(0); var word = f.card(2); f.die(1);
+            assertEquals(List.of("0:true"), f.cardRequests);
+            assertSame(word, f.card(2));
+            assertEquals(GONE, f.lifecycle.routine(0));
+            assertEquals(RESPAWNING, f.lifecycle.routine(1));
+            assertEquals(17, f.actor(1).getDeathCountdown());
+            assertFalse(f.actor(1).getDead());
+            assertTrue(f.session.levelState(1).isTimeOver());
+            assertTrue(f.session.levelState(0).isTimerPaused());
+            assertTrue(f.session.levelState(1).isTimerPaused());
+        }
     }
 
     @Test void p1TimeoutAloneDoesNotTurnP2OrdinaryDeathIntoAnotherTimeCard() throws Exception {
         var f = new LifecycleFixture(); f.timeout(0); f.die(0); f.die(1);
         assertEquals(List.of("0:true"), f.cardRequests); assertEquals(RESPAWNING, f.lifecycle.routine(1));
         assertTrue(f.session.levelState(1).isTimerPaused(), "Independent respawn does not re-enable a paused bank");
+    }
+
+    @Test void revisionZeroRetainedLauncherRoutineWriteResumesOnlyTheNativeDispatcherBank() throws Exception {
+        String source = System.getProperty("sonic2.rev00.rom.path");
+        org.junit.jupiter.api.Assumptions.assumeTrue(source != null && !source.isBlank(),
+                "Requires an original REV00 ROM via sonic2.rev00.rom.path");
+        try (var rom = new com.openggf.data.Rom()) {
+            assertTrue(rom.open(source));
+            assertEquals(com.openggf.data.RetailRomRevision.S2_REV00,
+                    com.openggf.data.RetailRomRevision.detect(rom));
+            var f = new LifecycleFixture(rom);
+            var actor = f.actor(0);
+            actor.setDead(true);
+            f.lifecycle.runDeathPass(actor);
+            assertEquals(DEAD, f.lifecycle.routine(0));
+            var progress = f.session.playerState(0).capture();
+            var dead = f.lifecycle.capture();
+            // Obj85 owns these actor writes alongside its primary-routine write.
+            actor.setDead(false); actor.setHurt(false); actor.setObjectRoutineOverride(null);
+            f.lifecycle.resumeControlFromLauncher(actor);
+            assertEquals(CONTROL, f.lifecycle.routine(0));
+            assertFalse(f.lifecycle.runDeathPass(actor));
+            var resumed = f.session.playerState(0).capture();
+            assertEquals(progress.rings(), resumed.rings());
+            assertEquals(progress.totalRings(), resumed.totalRings());
+            assertEquals(progress.monitors(), resumed.monitors());
+            assertEquals(progress.frames(), resumed.frames());
+            assertEquals(progress.game().lives(), resumed.game().lives());
+            assertEquals(progress.game().score(), resumed.game().score());
+            assertTrue(f.cardRequests.isEmpty());
+            f.lifecycle.restore(dead);
+            assertEquals(DEAD, f.lifecycle.routine(0));
+            f.lifecycle.resumeControlFromLauncher(actor);
+            assertFalse(f.lifecycle.runDeathPass(actor));
+            assertEquals(CONTROL, f.lifecycle.routine(0));
+        }
+        var later = new LifecycleFixture();
+        assertThrows(IllegalStateException.class,
+                () -> later.lifecycle.resumeControlFromLauncher(later.actor(0)));
     }
 
     @Test void healthyCpuForeignAndRetiredActorsCannotAcquireNativeDeathAuthority() throws Exception {

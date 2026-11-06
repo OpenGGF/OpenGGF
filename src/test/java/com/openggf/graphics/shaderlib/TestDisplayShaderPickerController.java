@@ -198,6 +198,20 @@ class TestDisplayShaderPickerController {
                 DisplayShaderPickerController.downloadHintText());
     }
 
+    @Test
+    void backspaceRemovesAWholeCombiningOrAstralGrapheme() throws Exception {
+        for (String cluster : List.of("e\u0301", "😀", "👩‍👩‍👧‍👦")) {
+            var picker = pickerWith(preset("crt/a.glslp"));
+            press(picker, PICKER_KEY, DisplayShaderPresetRef.OFF);
+            // Query typing is legacy key based; inject otherwise unreachable Unicode state.
+            var query = DisplayShaderPickerController.class.getDeclaredField("query");
+            query.setAccessible(true);
+            query.set(picker, "prefix" + cluster);
+            press(picker, GLFW_KEY_BACKSPACE, DisplayShaderPresetRef.OFF);
+            assertEquals("prefix", picker.query(), "Backspace split a grapheme: " + cluster);
+        }
+    }
+
     private static DisplayShaderPickerController pickerWith(DisplayShaderPresetRef... refs) {
         List<DisplayShaderPresetRef> entries = new java.util.ArrayList<>();
         entries.add(DisplayShaderPresetRef.OFF);

@@ -101,5 +101,5 @@ For each constant: cite the `sonic3k.asm` (or `s2disasm`/`s1disasm`) label, the 
 
 - `CHANGELOG.md` + `Changelog: updated`.
 - `docs/S3K_KNOWN_DISCREPANCIES.md` (S3K) or `docs/status/known-discrepancies.md` (S1/S2) + the matching trailer if a parity gap changes (e.g. virtual pattern ID range notes).
-- Skill edits mirrored across `.agents/skills/` and `.claude/skills/`, `Skills: updated`.
+- Skill edits made in `.agents/skills/` and synced with `python3 tools/git/sync_skills.py`, `Skills: updated`.
 - Fill all trailers; never `--no-verify`.

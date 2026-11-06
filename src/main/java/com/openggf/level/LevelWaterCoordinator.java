@@ -32,7 +32,9 @@ final class LevelWaterCoordinator {
     }
 
     void initialize() throws IOException {
-        initialize(false);
+        // CheckLevelForWater (sonic3k.asm:9790-9795) uses the apparent act
+        // restored by loc_6034, including returns into a seamless act.
+        initialize(levelManager.getCurrentAct() != levelManager.getApparentAct());
     }
 
     /**
@@ -90,7 +92,17 @@ final class LevelWaterCoordinator {
                 && levelManager.waterSystem.hasWater(featureZone, featureAct)) {
             levelManager.waterSystem.updateDynamic(
                     featureZone, featureAct, levelManager.camera.getX(), levelManager.camera.getY());
-            levelManager.waterSystem.update();
+            var provider = levelManager.zoneFeatureProvider;
+            boolean advance = true;
+            if (provider instanceof com.openggf.game.internal.DynamicWaterMotionPolicy motion) {
+                var sprites = levelManager.spriteManager;
+                var sprite = sprites == null ? null : sprites.getSprite(levelManager.resolveMainCharacterCode());
+                advance = motion.shouldAdvanceDynamicWater(
+                        sprite instanceof AbstractPlayableSprite playable ? playable : null);
+            }
+            if (advance) {
+                levelManager.waterSystem.update();
+            }
         }
         // BEGIN HCZ1_DIRECT_FF_SELECTED_ORDINARY_END: carry the unconditional original locals, even without P1.
         if (nemesisPublication != null)
@@ -196,7 +208,7 @@ final class LevelWaterCoordinator {
     /**
      * True while a routine that never calls the water check owns this player,
      * so Status_Underwater keeps its value. Every game's death routine skips it:
-     * S3K loc_12390/loc_1578E (sonic3k.asm:24518-24533, 29263-29289), S2
+     * S3K loc_12390/loc_1578E (sonic3k.asm:24518-24533, 29303-29329), S2
      * Obj01_Dead (s2.asm:38255-38270) and S1 Sonic_Death ("01 Sonic.asm":1967-1985).
      * S3K's drown routine $C also skips it, because loc_125AC/loc_15810 never
      * reach Sonic_Water/Tails_Water.

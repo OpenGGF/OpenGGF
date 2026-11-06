@@ -1,5 +1,7 @@
 package com.openggf.game.sonic1;
 
+import static com.openggf.game.sonic1.Sonic1RomProfile.resolve;
+
 import com.openggf.camera.Camera;
 import com.openggf.data.Rom;
 import com.openggf.game.GameServices;
@@ -86,7 +88,7 @@ public class Sonic1WaterSurfaceManager {
      * 292 bytes compressed at 0x302E6, decompresses to 16 tiles (512 bytes).
      */
     private Pattern[] loadWaterSurfacePatterns(Rom rom) throws IOException {
-        byte[] compressed = rom.readBytes(Sonic1Constants.ART_NEM_LZ_WATER_SURFACE_ADDR, 8192);
+        byte[] compressed = rom.readBytes(resolve(rom, Sonic1Constants.ART_NEM_LZ_WATER_SURFACE_ADDR), 8192);
         try (ByteArrayInputStream bais = new ByteArrayInputStream(compressed);
              ReadableByteChannel channel = Channels.newChannel(bais)) {
             byte[] decompressed = NemesisReader.decompress(channel);

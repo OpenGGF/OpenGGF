@@ -222,10 +222,9 @@ class AudioManagerCaptureModeTest {
                 () -> audio.drainCaptureFrame(new short[4096]),
                 "no lease is live after a rejected rate");
 
-        // Why the guard exists: the producer presents one packet per outer
-        // frame at ITS rate, so a mismatched capture clock silently corrupts
-        // every packet. Attach the mismatched lease directly on the producer
-        // to pin that corruption.
+        // Repacketization cannot supply unproduced audio time. These offline
+        // callers still pair one production call with one picture. A slower
+        // capture clock therefore underruns if only one source packet is due.
         LiveCaptureAudioHandle mismatched =
                 AudioManagerTestDiagnostics.attachPresentationCapture(audio, 30);
         audio.presentFrame(PresentationMode.FORWARD);
@@ -414,6 +413,9 @@ class AudioManagerCaptureModeTest {
         //    render would sweep the voice as complete before it can be primed.
         audio.playMusic(0x81);
         audio.presentFrame(PresentationMode.SILENT);
+        short[] admissionSilence = new short[800 * 2];
+        assertEquals(800, audio.drainCaptureFrame(admissionSilence));
+        assertTrue(allZero(admissionSilence), "capture retains the explicit silent admission packet");
         assertNotNull(AudioManagerTestDiagnostics.primeAdmittedSmpsMusic(audio),
                 "the offline presentation must admit the SMPS music voice");
         audio.presentFrame(PresentationMode.FORWARD);
@@ -429,6 +431,8 @@ class AudioManagerCaptureModeTest {
         audio.playSfx("JUMP");
         audio.playSegaPcm();
         audio.presentFrame(PresentationMode.SILENT);
+        assertEquals(800, audio.drainCaptureFrame(admissionSilence));
+        assertTrue(allZero(admissionSilence));
         assertNotNull(AudioManagerTestDiagnostics.primeAdmittedSmpsMusic(audio),
                 "the offline presentation must admit the SMPS music voice");
 

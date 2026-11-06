@@ -46,6 +46,6 @@ class TestS3kSonicTailsCompleteEmeraldRunChain extends AbstractRunChainTest {
      */
     @Test
     void aiz1ToDoomsdayCollectingEverySevenEmeralds() throws Exception {
-        assertChainReplay(RUN_DIR);
+        assertCompleteCampaignReplay(RUN_DIR);
     }
 }

@@ -17,33 +17,46 @@ import static org.mockito.Mockito.verify;
 class TestShieldAnimationArtLifecycle {
 
     @Test
-    void advancesBeforePublishingAndSwitchesTargetAnimationImmediately() {
+    void publishesCurrentCursorAndDefersFdTargetUntilNextDispatch() {
         ShieldAnimationArtLifecycle lifecycle = new ShieldAnimationArtLifecycle(0);
         lifecycle.ensureArtLoaded(() -> new ShieldAnimationArtLifecycle.Art(null, animations()));
-
-        assertEquals(10, lifecycle.mappingFrame(), "initialization publishes the first frame");
+        assertEquals(0, lifecycle.mappingFrame(), "binding art does not execute Animate_Sprite");
         lifecycle.stepAnimation();
-        assertEquals(11, lifecycle.mappingFrame(), "zero delay advances before publishing");
+        assertEquals(10, lifecycle.mappingFrame());
+        assertEquals(1, lifecycle.frameIndex(), "native cursor points to the next script byte");
         lifecycle.stepAnimation();
-        assertEquals(10, lifecycle.mappingFrame(), "loop publishes the restarted frame in the same update");
+        assertEquals(11, lifecycle.mappingFrame());
+        lifecycle.stepAnimation();
+        assertEquals(10, lifecycle.mappingFrame(), "FF publishes frame zero on the command dispatch");
 
         lifecycle.setAnimation(1);
+        assertEquals(10, lifecycle.mappingFrame(), "writing anim does not execute it");
         lifecycle.stepAnimation();
-        assertEquals(21, lifecycle.mappingFrame(), "attack advances before publishing");
+        assertEquals(20, lifecycle.mappingFrame());
         lifecycle.stepAnimation();
-        assertEquals(10, lifecycle.mappingFrame(), "SWITCH initializes its target without a deferred update");
+        assertEquals(21, lifecycle.mappingFrame());
+        lifecycle.stepAnimation();
+        assertEquals(0, lifecycle.animationId(), "FD only writes the target anim");
+        assertEquals(21, lifecycle.mappingFrame(), "FD retains the last source mapping");
+        lifecycle.stepAnimation();
+        assertEquals(10, lifecycle.mappingFrame());
 
         lifecycle.setAnimation(2);
-        lifecycle.stepAnimation();
-        lifecycle.stepAnimation();
-        lifecycle.stepAnimation();
-        assertEquals(31, lifecycle.mappingFrame(), "LOOP_BACK publishes its resolved target in the same update");
+        for (int i = 0; i < 4; i++) lifecycle.stepAnimation();
+        assertEquals(31, lifecycle.mappingFrame(), "FE publishes the backtracked cursor");
+    }
 
-        lifecycle.setAnimation(3);
-        lifecycle.stepAnimation();
-        lifecycle.stepAnimation();
-        lifecycle.stepAnimation();
-        assertEquals(41, lifecycle.mappingFrame(), "HOLD keeps publishing the final frame");
+    @Test
+    void delayByteHoldsEachPublishedFrameForDelayPlusOneDispatches() {
+        SpriteAnimationSet set = new SpriteAnimationSet();
+        set.addScript(0, new SpriteAnimationScript(2, List.of(10, 11), SpriteAnimationEndAction.LOOP, 0));
+        ShieldAnimationArtLifecycle lifecycle = new ShieldAnimationArtLifecycle(0);
+        lifecycle.ensureArtLoaded(() -> new ShieldAnimationArtLifecycle.Art(null, set));
+        int[] expected = {10, 10, 10, 11, 11, 11, 10};
+        for (int frame : expected) {
+            lifecycle.stepAnimation();
+            assertEquals(frame, lifecycle.mappingFrame());
+        }
     }
 
     @Test
@@ -84,9 +97,53 @@ class TestShieldAnimationArtLifecycle {
         superseded.setAnimation(0);
         superseded.ensureArtLoaded(() -> new ShieldAnimationArtLifecycle.Art(null, animations()));
         assertEquals(0, superseded.animationId());
-        assertEquals(0, superseded.frameIndex());
-        assertEquals(10, superseded.mappingFrame(),
+        assertEquals(saved.frameIndex(), superseded.frameIndex(), "writing anim retains the cursor until dispatch");
+        assertEquals(saved.mappingFrame(), superseded.mappingFrame(),
                 "new animation intent before art binding must win over restored playback");
+    }
+
+    @Test
+    void recreationAtFdBoundaryPreservesPendingAnimationChangeAndForwardPlayback() {
+        ShieldAnimationArtLifecycle original = new ShieldAnimationArtLifecycle(1);
+        original.ensureArtLoaded(() -> new ShieldAnimationArtLifecycle.Art(null, animations()));
+        for (int i = 0; i < 3; i++) original.stepAnimation();
+        assertEquals(0, original.animationId());
+        assertEquals(21, original.mappingFrame());
+        ShieldAnimationArtLifecycle recreated = new ShieldAnimationArtLifecycle(0);
+        recreated.restoreRewindStateValue(original.captureRewindStateValue());
+        recreated.ensureArtLoaded(() -> new ShieldAnimationArtLifecycle.Art(null, animations()));
+        for (int i = 0; i < 12; i++) {
+            original.stepAnimation();
+            recreated.stepAnimation();
+            assertEquals(original.captureRewindStateValue(), recreated.captureRewindStateValue());
+        }
+    }
+
+    @Test
+    void elementalOwnersFreezeForInvincibilityAndBlankButResumeSameCursor() throws Exception {
+        var player = new com.openggf.tests.TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        var services = new com.openggf.level.objects.StubObjectServices();
+        for (var shield : List.of(new FireShieldObjectInstance(player),
+                new BubbleShieldObjectInstance(player), new LightningShieldObjectInstance(player))) {
+            shield.setServices(services);
+            var field = shield.getClass().getDeclaredField("animationLifecycle");
+            field.setAccessible(true);
+            var lifecycle = (ShieldAnimationArtLifecycle) field.get(shield);
+            lifecycle.ensureArtLoaded(() -> new ShieldAnimationArtLifecycle.Art(null, animations()));
+            shield.update(0, player);
+            assertEquals(10, lifecycle.mappingFrame());
+            var before = lifecycle.captureRewindStateValue();
+            player.setInvincibleFrames(2);
+            shield.update(1, player);
+            assertEquals(before, lifecycle.captureRewindStateValue());
+            player.setInvincibleFrames(0);
+            player.setAnimationId(0x1C);
+            shield.update(2, player);
+            assertEquals(before, lifecycle.captureRewindStateValue());
+            player.setAnimationId(0);
+            shield.update(3, player);
+            assertEquals(11, lifecycle.mappingFrame());
+        }
     }
 
     private static SpriteAnimationSet animations() {

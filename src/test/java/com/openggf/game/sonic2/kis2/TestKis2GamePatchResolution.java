@@ -128,9 +128,10 @@ class TestKis2GamePatchResolution {
         Kis2GameModule patched = (Kis2GameModule) patch.apply(base, context);
 
         assertEquals(Kis2GameModule.Fidelity.TIER_TWO, patched.fidelity());
-        assertEquals(new com.openggf.game.resources.PlayerArtTransferProfile.ConvertedBank(0xFFF100, 0xF000),
-                patched.convertedPlayerArtBank("knuckles"));
-        assertNull(patched.convertedPlayerArtBank("sonic"));
+        assertEquals(new com.openggf.game.resources.PlayerArtBank(-1, 0xF000, -1, 0, 0xFFF100),
+                patched.getGameService(com.openggf.game.resources.PlayerArtTransferPlan.class).bank("knuckles"));
+        assertEquals(base.getGameService(com.openggf.game.resources.PlayerArtTransferPlan.class).bank("sonic"),
+                patched.getGameService(com.openggf.game.resources.PlayerArtTransferPlan.class).bank("sonic"));
         assertSame(patched.getZoneFeatureProvider(), patched.getZoneFeatureProvider());
         Palette[] cpz = patched.getWaterDataProvider().getUnderwaterPalette(null,
                 Sonic2ZoneConstants.ROM_ZONE_CPZ, 1, PlayerCharacter.SONIC_ALONE);

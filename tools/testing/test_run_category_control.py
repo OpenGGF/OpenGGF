@@ -153,7 +153,7 @@ class QueueCliTests(unittest.TestCase):
         prerequisites.assert_called_once()
 
     def test_two_worker_cli_requests_exclusive_only_for_ordinary(self):
-        plan = dict(full=False, tests=['test'], guards=True)
+        plan = dict(full=False, tests=['test'], guards=True, workers=2)
 
         def execute(root, current, *args, admission, **kwargs):
             for lane in ('ordinary', 'guards'):

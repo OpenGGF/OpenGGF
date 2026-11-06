@@ -15,7 +15,8 @@ import java.util.function.LongSupplier;
  *
  * <p>The engine already models the in-level cadence exactly: {@code
  * ObjectManager.vblaCounter} advances once per serviced V-blank while a level is
- * attached, and {@code ObjectServices#resolveVIntRunCount} documents that the
+ * attached (including the admitted pause service in {@code LevelFrameStep}),
+ * and {@code ObjectServices#resolveVIntRunCount} documents that the
  * value handed to {@code update(...)} is ROM {@code V_int_run_count}. What was
  * missing is the power-on carry: each gameplay session's first object clock
  * started from zero, and frames outside gameplay (title screen, data select,
@@ -48,7 +49,15 @@ public final class VIntRunCounter implements RewindSnapshottable<VIntRunCounterS
     private static final long MASK32 = 0xFFFFFFFFL;
 
     private long value;
-    private LongSupplier objectClock;
+    private transient ObjectClockBinding objectClock;
+
+    private static final class ObjectClockBinding {
+        private final LongSupplier supplier;
+
+        private ObjectClockBinding(LongSupplier supplier) {
+            this.supplier = supplier;
+        }
+    }
 
     public VIntRunCounter() {
         this(0L);
@@ -103,35 +112,44 @@ public final class VIntRunCounter implements RewindSnapshottable<VIntRunCounterS
      * the {@code ObjectManager} V-blank counter, or {@link #NO_OBJECT_CLOCK} while
      * the session has not built one yet. Any previously bound clock's final value
      * is adopted first so a re-bind never loses V-ints.
+     * A newer binding installed by that read callback takes precedence.
      */
     public void bindObjectClock(LongSupplier clock) {
         Objects.requireNonNull(clock, "clock");
-        adoptBoundClock();
-        objectClock = clock;
+        if (adoptBoundClock()) {
+            objectClock = new ObjectClockBinding(clock);
+        }
     }
 
-    /** Releases the object clock, carrying its final value forward. */
+    /** Releases the object clock unless its read callback installs a newer binding. */
     public void unbindObjectClock() {
-        adoptBoundClock();
-        objectClock = null;
+        if (adoptBoundClock()) {
+            objectClock = null;
+        }
     }
 
     public boolean isObjectClockBound() {
         return objectClock != null;
     }
 
-    private void adoptBoundClock() {
+    private boolean adoptBoundClock() {
+        ObjectClockBinding previous = objectClock;
         long live = liveObjectClock();
+        if (objectClock != previous) {
+            return false;
+        }
         if (live != NO_OBJECT_CLOCK) {
             value = live;
         }
+        return true;
     }
 
     private long liveObjectClock() {
-        if (objectClock == null) {
+        ObjectClockBinding binding = objectClock;
+        if (binding == null) {
             return NO_OBJECT_CLOCK;
         }
-        long live = objectClock.getAsLong();
+        long live = binding.supplier.getAsLong();
         return live == NO_OBJECT_CLOCK ? NO_OBJECT_CLOCK : (live & MASK32);
     }
 

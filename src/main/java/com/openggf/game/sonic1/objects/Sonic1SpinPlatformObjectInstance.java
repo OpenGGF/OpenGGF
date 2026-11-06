@@ -342,10 +342,11 @@ public class Sonic1SpinPlatformObjectInstance extends AbstractObjectInstance
             // ROM's player only becomes airborne on the NEXT frame, when his own
             // grounded floor check (which ran before the platform this frame, since
             // Obj01 precedes the platform in ExecuteObjects) finds no floor. So
-            // release support (clearRidingObject + drop the SolidObject latch on THIS
-            // instance so finalizeInlinePlayer clears Status_OnObj) but let the
-            // player's next-frame grounded collision set air, rather than forcing it
-            // the same frame (which goes airborne one frame early — SBZ1 f5531).
+            // release support (clearRidingObject, drop the SolidObject latch on THIS
+            // instance and clear Status_OnObj) but let the player's next-frame
+            // grounded collision set air, rather than forcing it the same frame
+            // (which goes airborne one frame early — SBZ1 f5531).
+            player.setOnObject(false);
             if (player.getLatchedSolidObjectInstance() == this) {
                 player.setLatchedSolidObjectId(0);
             }

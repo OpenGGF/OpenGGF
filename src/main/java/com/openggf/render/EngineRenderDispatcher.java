@@ -38,7 +38,7 @@ public final class EngineRenderDispatcher {
             case LEVEL_SELECT -> actions.levelSelect();
             case DATA_SELECT -> actions.dataSelect();
             case CREDITS_TEXT, ENDING_CUTSCENE -> actions.ending();
-            case CONTINUE_SCREEN, TRY_AGAIN_END, MASTER_TITLE_SCREEN, LEGAL_DISCLAIMER, NATIVE_MOD_NOTICE,
+            case CONTINUE_SCREEN, TRY_AGAIN_END, MASTER_TITLE_SCREEN, LEGAL_DISCLAIMER,
                     EDITOR, MOD_SCENE -> actions.black();
             case TITLE_CARD -> actions.level();
             default -> actions.level();
@@ -68,7 +68,6 @@ public final class EngineRenderDispatcher {
         }
         switch (mode) {
             case LEGAL_DISCLAIMER -> actions.legalDisclaimer();
-            case NATIVE_MOD_NOTICE -> actions.nativeModNotice();
             case MASTER_TITLE_SCREEN -> actions.masterTitle();
             case EDITOR -> actions.editor();
             case SPECIAL_STAGE -> actions.specialStage();
@@ -115,7 +114,6 @@ public final class EngineRenderDispatcher {
     public interface DrawActions {
         void continueScreen();
         void legalDisclaimer();
-        void nativeModNotice();
         void masterTitle();
         void editor();
         void specialStage();

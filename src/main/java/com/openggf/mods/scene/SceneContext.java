@@ -27,7 +27,9 @@ public interface SceneContext {
 
     /**
      * True while any of {@code buttons} ({@link SceneButtons} bits, combined with {@code |}) is
-     * held on player 1's pad or the keyboard keys mapped to it.
+     * held on player 1's pad or the keyboard keys mapped to it. Once the scene reads player 1's
+     * Start key itself through {@link #keyDown} or {@link #keyPressed}, that key reports only as a
+     * key and {@link SceneButtons#START} comes from pads alone, so one press never means two things.
      */
     boolean buttonDown(int buttons);
 
@@ -51,6 +53,21 @@ public interface SceneContext {
 
     /** Physical keyboard/pad events, timestamped in the host's monotonic clock domain. */
     default PhysicalInput physicalInput() { return PhysicalInput.neutral(); }
+
+    /**
+     * What to call one of player 1's logical buttons on the device a scene's prompt names, from the
+     * live bindings ({@link com.openggf.control.ButtonPrompts}): with {@code controller} false, the
+     * keyboard key bound to it ("Space" for A by default, remaps followed); with {@code controller}
+     * true, the physical button that produces it on player 1's assigned pad, named in that pad's
+     * family ("X" on Xbox, "Square" on PlayStation, "West" otherwise, for A). The scene decides which
+     * device to name (for instance from {@link #physicalInput()}); the label never changes input.
+     * Empty when the button is unbound on that device, no pad is assigned, or the context has no
+     * live input (headless and test contexts): name the Genesis button ("A") instead.
+     */
+    default java.util.Optional<String> buttonLabel(com.openggf.control.ButtonPrompts.Button button,
+                                                   boolean controller) {
+        return java.util.Optional.empty();
+    }
 
     /**
      * Claims the keyboard's text and editing keys through the next tick, so host shortcuts bound

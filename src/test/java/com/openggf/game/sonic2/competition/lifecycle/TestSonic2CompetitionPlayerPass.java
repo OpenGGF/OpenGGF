@@ -46,7 +46,6 @@ class TestSonic2CompetitionPlayerPass {
     @ParameterizedTest @ValueSource(ints = {0, 1})
     void deathAndCameraWaitSkipControlTailButKeepRomAnimationAndNextControlHistory(int slot) throws Exception {
         var f = new LifecycleFixture();
-        when(f.actors.level.objectsExecuteAfterPlayerPhysics()).thenReturn(true);
         var actor = f.actor(slot); var artObserver = installRomAnimation(f, slot);
         actor.setInWater(true);
         int wetAcceleration = actor.getRunAccel();
@@ -94,7 +93,6 @@ class TestSonic2CompetitionPlayerPass {
     @ParameterizedTest @ValueSource(ints = {0, 1})
     void finalDeathAnimatesOnceThenGoneHasNoHistoryAnimationOrControlTail(int slot) throws Exception {
         var f = new LifecycleFixture(); var observer = installRomAnimation(f, slot);
-        when(f.actors.level.objectsExecuteAfterPlayerPhysics()).thenReturn(true);
         f.lives(slot, 1); f.putBelowOwnDeathRow(slot);
         tick(f, slot, 1); assertEquals(GONE, f.lifecycle.routine(slot));
         int history = f.actor(slot).historyPos();
@@ -112,7 +110,6 @@ class TestSonic2CompetitionPlayerPass {
 
     @Test void healthyHumanStillRunsOrdinaryControlTailAndRecordsOnce() throws Exception {
         var f = new LifecycleFixture();
-        when(f.actors.level.objectsExecuteAfterPlayerPhysics()).thenReturn(true);
         var actor = f.actor(0); var observer = installRomAnimation(f, 0);
         actor.setAir(true);
         actor.setObjectControlled(true); actor.setObjectControlSuppressesMovement(true);

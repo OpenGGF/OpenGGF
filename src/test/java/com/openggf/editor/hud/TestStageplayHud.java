@@ -38,6 +38,35 @@ class TestStageplayHud {
         tick();
     }
 
+    @Test
+    void commandReaderConsumesConfirmAndReturnsToTheSameCommandInventory() {
+        input.handleKeyEvent(GLFW_KEY_F1, GLFW_PRESS); tick();
+        input.handleKeyEvent(GLFW_KEY_F1, GLFW_RELEASE); tick();
+        List<String> before = hud.rows().stream().map(StageplayHud.Row::label).toList();
+        input.handleKeyEvent(GLFW_KEY_F2, GLFW_PRESS); tick();
+        input.handleKeyEvent(GLFW_KEY_F2, GLFW_RELEASE); tick();
+        assertTrue(hud.reader.isOpen());
+        assertTrue(hud.detailsText().contains(before.getLast()));
+        press(BUTTON_A);
+        assertFalse(workspace.menu().isOpen(), "Confirm while reading cannot execute the selected command");
+        press(BUTTON_B);
+        assertEquals(before, hud.rows().stream().map(StageplayHud.Row::label).toList());
+        assertTrue(workspace.active());
+    }
+
+    @Test
+    void readOnlyHudCanScrollToAnUnbrokenTailWithoutEllipsis() {
+        var reader = new EditorHudReader();
+        reader.open("UnbrokenContent".repeat(500) + "END_MARKER_99");
+        assertFalse(String.join("", reader.visibleLines(320, 224)).contains("END_MARKER_99"));
+        input.handleKeyEvent(GLFW_KEY_END, GLFW_PRESS);
+        reader.update(input, new EditorHudPad());
+        var tail = reader.visibleLines(320, 224);
+        assertTrue(String.join("", tail).endsWith("END_MARKER_99"));
+        assertTrue(tail.stream().allMatch(line -> EditorHudCanvas.textWidth(line, EditorHudCanvas.Size.SMALL) <= 272));
+        assertFalse(tail.stream().anyMatch(line -> line.contains("...")));
+    }
+
     @Test void pickerUsesTheFormerPanelAndDockSpaceAndFitsLargeFrames() {
         var ordinary=StageplayHud.layout(1280,720,480,270);
         var picker=EditorHudLayout.positionPicker(1280,720,480,270);
@@ -171,7 +200,7 @@ class TestStageplayHud {
                 new StageplayDocument.PuppetCommand("jump",20,StageplayDocument.PuppetCommandKind.JUMP,0,0,0,12))))));
         input.handleKeyEvent(GLFW_KEY_TAB,GLFW_PRESS); tick();
         assertEquals(List.of(0,0,10,20),hud.rows().stream().map(StageplayHud.Row::frame).toList());
-        var move=hud.rows().stream().filter(r -> r.label().endsWith("MOVE_TO")).findFirst().orElseThrow();
+        var move=hud.rows().stream().filter(r -> r.frame() == 10).findFirst().orElseThrow();
         assertTrue(move.detail().contains("50%")); move.action().run();
         assertEquals(10,workspace.controller().frame()); assertEquals(actor,workspace.controller().selectedActorId());
     }
@@ -228,6 +257,127 @@ class TestStageplayHud {
         input.handleKeyEvent(GLFW_KEY_F1,GLFW_PRESS); tick();
         assertTrue(hud.rows().stream().anyMatch(row -> row.label().equals("Camera shake / quake")));
         assertTrue(hud.rows().stream().anyMatch(row -> row.label().equals("Scene changes / transitions")));
+    }
+
+    /**
+     * The authoring prompt bar speaks for the focused pane: at most five prompts with Commands last,
+     * Tab naming the pane it opens (as its tab button does), and no key repeated from a visible
+     * button. Every key shown still works: it is pressed through the HUD and does what it says.
+     */
+    @Test
+    void authoringPromptsFollowTheFocusedPaneAndNeverRepeatAButtonKey() {
+        workspace.controller().replace(workspace.controller().document().withActors(List.of(new StageplayDocument.Actor(
+                "hero", "Sonic", "s2", "sonic", List.of(new StageplayDocument.ActorKey(0, 100, 100, 5, -1, Facing.RIGHT,
+                        true, 1, StageplayDocument.Interpolation.HOLD))))));
+        workspace.selectActor("hero");
+        tick();
+        var cast = hud.prompts(false).stream().map(prompt -> prompt.key() + " " + prompt.label()).toList();
+        assertEquals(List.of("Up / Down Actor", "Enter Choose", "K Set key", "Tab Keys / cues", "F1 Commands"), cast);
+        input.handleKeyEvent(GLFW_KEY_TAB, GLFW_PRESS); tick(); input.handleKeyEvent(GLFW_KEY_TAB, GLFW_RELEASE); tick();
+        var timeline = hud.prompts(false).stream().map(prompt -> prompt.key() + " " + prompt.label()).toList();
+        assertEquals(List.of("Left / Right Seek", "Space Play", "R Record", "Tab Cast", "F1 Commands"), timeline);
+        for (var prompts : List.of(cast, timeline)) {
+            assertTrue(prompts.size() <= 5);
+            assertTrue(prompts.stream().noneMatch(prompt -> prompt.startsWith("C ")), "Direct camera already shows C");
+        }
+        // The keys still reach their commands from either pane.
+        int before = workspace.controller().frame();
+        input.handleKeyEvent(GLFW_KEY_RIGHT, GLFW_PRESS); tick(); input.handleKeyEvent(GLFW_KEY_RIGHT, GLFW_RELEASE); tick();
+        assertEquals(before + 1, workspace.controller().frame(), "Right seeks");
+        input.handleKeyEvent(GLFW_KEY_C, GLFW_PRESS); tick(); input.handleKeyEvent(GLFW_KEY_C, GLFW_RELEASE); tick();
+        assertTrue(workspace.cameraMode(), "C still directs the camera from the keys pane");
+        input.handleKeyEvent(GLFW_KEY_C, GLFW_PRESS); tick(); input.handleKeyEvent(GLFW_KEY_C, GLFW_RELEASE); tick();
+        assertFalse(workspace.cameraMode());
+        press(BUTTON_DPAD_UP); // the pad's prompts
+        var pad = hud.prompts(false);
+        assertTrue(pad.size() <= 5 && pad.stream().allMatch(prompt -> prompt.glyph() != null));
+        assertTrue(pad.stream().noneMatch(prompt -> prompt.glyph() == EditorHud.Glyph.NORTH), "Add actor shows its button already");
+        assertEquals(EditorHud.Glyph.MENU, pad.getLast().glyph());
+    }
+
+    @Test
+    void everyModesPromptsFitTheWholeBarAndTheTopBarNamesTheMode() {
+        workspace.controller().replace(workspace.controller().document().withActors(List.of(new StageplayDocument.Actor(
+                "hero", "Sonic", "s2", "sonic", List.of(new StageplayDocument.ActorKey(0, 100, 100, 5, -1, Facing.RIGHT,
+                        true, 1, StageplayDocument.Interpolation.HOLD))))));
+        workspace.selectActor("hero");
+        assertPromptsFit("directing");
+        assertEquals("DIRECTING", hud.modeChip().mode());
+        input.handleKeyEvent(GLFW_KEY_TAB, GLFW_PRESS); tick(); input.handleKeyEvent(GLFW_KEY_TAB, GLFW_RELEASE); tick();
+        assertPromptsFit("timeline");
+        input.handleKeyEvent(GLFW_KEY_F1, GLFW_PRESS); tick(); input.handleKeyEvent(GLFW_KEY_F1, GLFW_RELEASE); tick();
+        assertPromptsFit("commands");
+        input.handleKeyEvent(GLFW_KEY_ESCAPE, GLFW_PRESS); tick(); input.handleKeyEvent(GLFW_KEY_ESCAPE, GLFW_RELEASE); tick();
+        workspace.invoke(StageplayWorkspace.Action.CAMERA_MODE);
+        assertPromptsFit("camera");
+        workspace.invoke(StageplayWorkspace.Action.RECORD_CAMERA);
+        assertPromptsFit("camera take");
+        workspace.stop();
+        workspace.invoke(StageplayWorkspace.Action.CAMERA_MODE);
+        workspace.invoke(StageplayWorkspace.Action.RECORD);
+        assertTrue(workspace.recording());
+        assertPromptsFit("poser take");
+        workspace.stop();
+        press(BUTTON_DPAD_UP); // a pad press switches the prompts to pad glyphs
+        List<EditorHud.Prompt> pad = hud.prompts(false);
+        assertTrue(pad.stream().allMatch(prompt -> prompt.glyph() != null), "pad prompts name pad buttons");
+        assertPromptsFit("pad directing");
+    }
+
+    private void assertPromptsFit(String mode) {
+        for (boolean fractional : new boolean[] {false, true}) {
+            List<EditorHud.Prompt> prompts = hud.prompts(fractional);
+            boolean pad = prompts.stream().allMatch(prompt -> prompt.glyph() != null) && prompts.stream()
+                    .anyMatch(prompt -> prompt.key().isEmpty());
+            for (float width : new float[] {640, 800}) {
+                // Every prompt fits the whole bar; the mode chip lives in the top bar beside the exit
+                // button, so every mode is named at every width and still leaves the scene title room.
+                assertTrue(EditorHudPainter.promptFit(prompts, pad, width).total() <= width - 12,
+                        mode + " prompts fit at " + width);
+                float exit = EditorHudCanvas.textWidth("Level editor", EditorHudCanvas.Size.SMALL) + 16
+                        + EditorHudPainter.keycapWidth("F4");
+                float title = 16 + EditorHudCanvas.textWidth("STAGEPLAY", EditorHudCanvas.Size.BODY);
+                float widestChip = EditorHudCanvas.textWidth("REC CAMERA TAKE", EditorHudCanvas.Size.SMALL) + 20;
+                assertTrue(hud.modeChip().width() <= widestChip);
+                assertTrue(width - 6 - exit - 6 - widestChip - title - 10 >= 200,
+                        mode + " leaves the scene name 200 units beside the widest chip at " + width);
+            }
+        }
+    }
+
+    @Test
+    void longSceneNamesKeepTheUnsavedMarkerInsideTheSmallestTopBar() {
+        String name = "Emerald Hill rivalry, extended director's cut with alternate ending ".repeat(3);
+        float exit = EditorHudCanvas.textWidth("Level editor", EditorHudCanvas.Size.SMALL) + 16
+                + EditorHudPainter.keycapWidth("F4");
+        float titleX = 16 + EditorHudCanvas.textWidth("STAGEPLAY", EditorHudCanvas.Size.BODY);
+        float chip = EditorHudCanvas.textWidth("REC CAMERA TAKE", EditorHudCanvas.Size.SMALL) + 20;
+        for (float width : new float[] {640, 800}) {
+            float room = width - 6 - exit - 6 - chip - titleX - 10;
+            String dirty = StageplayHud.documentTitle(name, true, room);
+            assertTrue(dirty.contains("..."), "fixture exercises elision at " + width);
+            assertTrue(dirty.endsWith(" *"), "elision must not hide unsaved changes");
+            assertTrue(EditorHudCanvas.textWidth(dirty, EditorHudCanvas.Size.SMALL) <= room);
+            assertFalse(StageplayHud.documentTitle(name, false, room).contains("*"));
+            assertEquals("Short scene *", StageplayHud.documentTitle("Short scene", true, room));
+        }
+    }
+
+    @Test
+    void commandRowsShowTheirRealKeyboardShortcutsAndLabelsCarryNone() {
+        input.handleKeyEvent(GLFW_KEY_F1, GLFW_PRESS); tick();
+        java.util.Map<String, String> keys = new java.util.HashMap<>();
+        for (StageplayHud.Row row : hud.rows()) {
+            assertFalse(row.label().matches(".*\\([A-Z]\\)$"), "no shortcut inside the label: " + row.label());
+            keys.put(row.label(), row.key());
+        }
+        assertEquals("C", keys.get("Direct camera"));
+        assertEquals("K", keys.get("Capture camera key"));
+        assertEquals("K", keys.get("Direct actor / set key"));
+        assertEquals("R", keys.get("Record camera take"));
+        assertEquals("R", keys.get("Record actor take"));
+        assertEquals("Ctrl S", keys.get("Save"));
+        assertEquals("", keys.get("Audio cues"));
     }
 
     private void tick() {

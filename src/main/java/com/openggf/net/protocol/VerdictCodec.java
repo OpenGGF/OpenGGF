@@ -37,6 +37,7 @@ public final class VerdictCodec {
     }
 
     public static boolean isWorkerResult(String result) {
-        return isPass(result) || isFail(result);
+        return isPass(result) || isFail(result)
+                || RESULT_VOID_VERIFIER_UNAVAILABLE.equals(result);
     }
 }

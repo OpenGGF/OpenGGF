@@ -3,12 +3,15 @@ package openggf.timeattack.mp;
 import com.openggf.mods.scene.SceneCanvas;
 import com.openggf.mods.scene.SceneKeys;
 import com.openggf.mods.ui.NameFont;
-import com.openggf.mods.ui.TextLayout;
+import com.openggf.mods.ui.CompactFont;
 import com.openggf.net.protocol.ControlMessage;
 import com.openggf.net.protocol.ChatMode;
 import openggf.timeattack.ui.MenuCue;
+import openggf.timeattack.ui.MenuPage;
+import openggf.timeattack.ui.FullTextReader;
 import openggf.timeattack.ui.ViewInput;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
@@ -24,14 +27,6 @@ import java.util.function.LongSupplier;
 public final class ServerBrowserView {
     private static final int VISIBLE_ROOMS = 4;
     private static final long REFRESH_INTERVAL_MILLIS = 2000;
-    private static final int BACKGROUND = 0x101830;
-    private static final int TITLE = 0xFFFFE070;
-    private static final int LABEL = 0xFFB0C8E8;
-    private static final int VALUE = 0xFFFFFFFF;
-    private static final int VERIFIED = 0xFF99CCFF;
-    private static final int UNVERIFIED = 0xFFFFCC4C;
-    private static final int FOCUS = 0x803060C0;
-    private static final int HINT = 0xFF8090B0;
 
     private enum Focus { ROOMS, CREATE, CODE, REFRESH, PAGE }
 
@@ -57,6 +52,7 @@ public final class ServerBrowserView {
     private final LongSupplier clockMillis;
     private final AtomicReference<RefreshResult> pendingRefresh = new AtomicReference<>();
     private volatile boolean active = true;
+    private final FullTextReader reader = new FullTextReader();
     private Focus focus = Focus.ROOMS;
     private List<ControlMessage.RoomSummary> rooms = List.of();
     private String status = "Loading rooms...";
@@ -67,6 +63,7 @@ public final class ServerBrowserView {
     private int totalPages;
     private String createRouting = "RELAY";
     private long lastRefreshAt = Long.MIN_VALUE;
+    private MenuPage.Keys keys = MenuPage.Keys.keyboard();
 
     public ServerBrowserView(RoomDirectory directory, String gameId, Actions actions,
                              Consumer<MenuCue> cues, LongSupplier clockMillis) {
@@ -85,6 +82,7 @@ public final class ServerBrowserView {
     }
 
     public void update(ViewInput input) {
+        keys = MenuPage.Keys.of(input, keys);
         if (!active) {
             return;
         }
@@ -95,6 +93,7 @@ public final class ServerBrowserView {
         } else if (lastRefreshAt == Long.MIN_VALUE || now - lastRefreshAt >= REFRESH_INTERVAL_MILLIS) {
             refresh(now);
         }
+        if (reader.handle(input, this::detailsText)) return;
         if (input.back()) {
             deactivate();
             cues.accept(MenuCue.CANCEL);
@@ -205,48 +204,134 @@ public final class ServerBrowserView {
     }
 
     public void draw(SceneCanvas canvas) {
-        canvas.clear(BACKGROUND);
-        canvas.text("TIME ATTACK ROOMS", 10, 10, TITLE);
-        canvas.text(gameId.toUpperCase(), 10, 24, HINT);
+        if (reader.draw(canvas)) return;
         int width = canvas.width();
+        MenuPage.page(canvas, "ROOMS", MenuPage.gameName(gameId), "Rooms listed on your master server");
         List<ControlMessage.RoomSummary> snapshot = rooms;
         int first = selected / VISIBLE_ROOMS * VISIBLE_ROOMS;
+        int top = MenuPage.BODY_TOP - 2;
         if (snapshot.isEmpty()) {
-            canvas.text("No rooms. Create one below.", 12, 44, LABEL);
+            boolean loading = status.startsWith("Loading");
+            MenuPage.icon(canvas, MenuPage.Tone.INFO, MenuPage.MARGIN + 6, top + 6);
+            NameFont.draw(canvas, loading ? "Loading rooms" : "No rooms yet", MenuPage.MARGIN + 16, top + 3,
+                    MenuPage.TEXT);
+            if (!loading) MenuPage.paragraph(canvas, "Create one below, or refresh in a moment.",
+                    MenuPage.MARGIN + 16, top + 3 + NameFont.LINE_HEIGHT, width - 40, 2, MenuPage.DIM);
         }
         for (int i = first; i < Math.min(snapshot.size(), first + VISIBLE_ROOMS); i++) {
-            int y = 42 + (i - first) * 24;
+            int y = top + (i - first) * CARD_PITCH;
             ControlMessage.RoomSummary room = snapshot.get(i);
-            if (focus == Focus.ROOMS && i == selected) canvas.fill(8, y - 2, width - 16, 23, FOCUS);
+            boolean focused = focus == Focus.ROOMS && i == selected;
+            int cardWidth = width - 2 * MenuPage.MARGIN;
+            if (focused) MenuPage.focus(canvas, MenuPage.MARGIN, y, cardWidth, CARD_PITCH - 2);
+            else canvas.fill(MenuPage.MARGIN, y, cardWidth, CARD_PITCH - 2, 0xC0091A4A);
             String count = room.playerCount() + "/" + room.maxPlayers();
-            int countX = width - 12 - canvas.textWidth(count);
+            int countX = width - MenuPage.MARGIN - 6 - CompactFont.width(count, 1);
             // Room names carry the host's display name, in any script.
-            NameFont.draw(canvas, NameFont.fit(room.name(), countX - 8 - 12), 12, y - 2, VALUE);
-            canvas.text(count, countX, y, VALUE);
-            canvas.text(fit(canvas, room.routing() + " / " + chatLabel(room.chatMode()) + " / "
-                    + (room.verified() ? "VERIFIED" : "UNVERIFIED TIMES"),
-                    width - 24), 12, y + 11, room.verified() ? VERIFIED : UNVERIFIED);
+            NameFont.draw(canvas, NameFont.fit(room.name(), countX - 8 - MenuPage.MARGIN - 6), MenuPage.MARGIN + 6,
+                    y, focused ? MenuPage.TEXT : MenuPage.MUTED);
+            CompactFont.draw(canvas, count, countX, y + 4, 1, MenuPage.TEXT);
+            int x = MenuPage.MARGIN + 6;
+            x = fact(canvas, x, y + 13, room.routing(), MenuPage.CYAN);
+            x = fact(canvas, x, y + 13, chatLabel(room.chatMode()).toUpperCase(java.util.Locale.ROOT), MenuPage.DIM);
+            fact(canvas, x, y + 13, room.verified() ? "VERIFIED TIMES" : "NO SHARED TIMES",
+                    room.verified() ? MenuPage.GREEN : MenuPage.AMBER);
         }
-        action(canvas, Focus.CREATE, "CREATE < " + createRouting + " > " + requestedChatMode.label(), 138);
-        action(canvas, Focus.CODE, "JOIN BY CODE", 152);
-        action(canvas, Focus.REFRESH, "REFRESH ROOMS", 166);
-        action(canvas, Focus.PAGE, "PAGE  < " + (page + 1) + " / " + Math.max(1, totalPages) + " >", 180);
-        canvas.text(fit(canvas, status, width - 20), 10, 194, LABEL);
-        canvas.text(fit(canvas, "J join code  R refresh  B back", width - 20), 10, 208, HINT);
+        int pages = Math.max(1, totalPages);
+        if (pages > 1 || snapshot.size() > VISIBLE_ROOMS) {
+            MenuPage.scrollbar(canvas, width - MenuPage.MARGIN + 3, top, VISIBLE_ROOMS * CARD_PITCH - 2, first,
+                    VISIBLE_ROOMS, Math.max(snapshot.size(), VISIBLE_ROOMS));
+        }
+        int statusY = top + VISIBLE_ROOMS * CARD_PITCH;
+        // The Page row already says which page shows; only other reports take this line.
+        if (!status.isEmpty() && !snapshot.isEmpty() && !status.equals(roomStatus()) || isProblem(status)) {
+            MenuPage.Tone tone = isProblem(status) ? MenuPage.Tone.WARNING : MenuPage.Tone.INFO;
+            MenuPage.icon(canvas, tone, MenuPage.MARGIN + 6, statusY + 3);
+            NameFont.draw(canvas, NameFont.fit(status, width - 2 * MenuPage.MARGIN - 18), MenuPage.MARGIN + 16, statusY,
+                    tone == MenuPage.Tone.INFO ? MenuPage.DIM : MenuPage.AMBER);
+        }
+        int y = statusY + NameFont.LINE_HEIGHT + 1;
+        int valueX = MenuPage.MARGIN + 6 + MenuPage.labelColumn(List.of("Create room", "Page"));
+        rowField(canvas, y, valueX, Focus.CREATE, "Create room", MenuPage.words(createRouting) + ", "
+                + requestedChatMode.label().toLowerCase(java.util.Locale.ROOT));
+        y += ACTION_PITCH;
+        rowAction(canvas, y, Focus.CODE, "Join by code");
+        y += ACTION_PITCH;
+        rowAction(canvas, y, Focus.REFRESH, "Refresh rooms");
+        y += ACTION_PITCH;
+        rowField(canvas, y, valueX, Focus.PAGE, "Page", (page + 1) + " of " + pages);
+        List<MenuPage.Hint> hints = new ArrayList<>();
+        hints.add(MenuPage.hint(MenuPage.ARROWS_UD, "Choose"));
+        switch (focus) {
+            case ROOMS -> { if (!snapshot.isEmpty()) hints.add(MenuPage.hint(keys.confirm(), "Join")); }
+            case CREATE -> hints.add(MenuPage.hint(keys.confirm(), "Create"));
+            case CODE -> hints.add(MenuPage.hint(keys.confirm(), "Enter code"));
+            case REFRESH -> hints.add(MenuPage.hint(keys.confirm(), "Refresh"));
+            case PAGE -> hints.add(MenuPage.hint(MenuPage.ARROWS_LR, "Page"));
+        }
+        if (!keys.pad()) {
+            hints.add(MenuPage.shortcut("J", "Code"));
+            hints.add(MenuPage.shortcut("R", "Refresh"));
+        }
+        hints.add(MenuPage.hint(keys.back(), "Back"));
+        MenuPage.footerWithDetails(canvas, keys, "", MenuPage.TEXT, hints);
     }
+
+    private static final int CARD_PITCH = 23;
+    private static final int ACTION_PITCH = 12;
+
+    private static boolean isProblem(String status) {
+        return status.contains("unavailable") || status.contains("lost") || status.contains("closed")
+                || status.contains("Cannot") || status.contains("could not") || status.contains("rejected");
+    }
+
+    /** A compact capital fact with a dot after it; returns where the next one starts. */
+    private static int fact(SceneCanvas canvas, int x, int y, String text, int argb) {
+        if (x > MenuPage.MARGIN + 6) {
+            canvas.fill(x, y + 3, 2, 2, MenuPage.FAINT);
+            x += 6;
+        }
+        CompactFont.draw(canvas, text, x, y, 1, argb);
+        return x + CompactFont.width(text, 1) + 5;
+    }
+
+    private void rowAction(SceneCanvas canvas, int y, Focus item, String label) {
+        MenuPage.action(canvas, y, label, focus == item, true);
+    }
+
+    private void rowField(SceneCanvas canvas, int y, int valueX, Focus item, String label, String value) {
+        MenuPage.field(canvas, y, valueX, label, value, MenuPage.TEXT, focus == item, true);
+    }
+
+    /** The page's complete text: the selected room's facts and every action's value, whole. */
+    private FullTextReader.Text detailsText() {
+        FullTextReader.Text text = FullTextReader.Text.of("ROOMS", "Rooms listed on your master server")
+                .field("Game", MenuPage.gameName(gameId))
+                .field("Status", status);
+        if (rooms.isEmpty()) text.line(status.startsWith("Loading") ? "Loading rooms."
+                : "No rooms yet. Create one below, or refresh in a moment.");
+        if (selected < rooms.size()) {
+            ControlMessage.RoomSummary room = rooms.get(selected);
+            text.section("Selected room")
+                    .field("Name", room.name())
+                    .field("Players", room.playerCount() + " of " + room.maxPlayers())
+                    .field("Routing", MenuPage.words(room.routing()))
+                    .field("Chat", chatLabel(room.chatMode()))
+                    .field("Times", room.verified() ? "Verified" : "No shared times");
+        }
+        return text.section("Actions")
+                .field("Create room", MenuPage.words(createRouting) + ", "
+                        + requestedChatMode.label().toLowerCase(java.util.Locale.ROOT))
+                .field("Page", (page + 1) + " of " + Math.max(1, totalPages));
+    }
+
+    List<String> detailsVisibleLines() { return reader.visibleLines(); }
+
+    int detailsFirstLine() { return reader.firstVisibleLine(); }
 
     private static String chatLabel(String value) {
         ChatMode mode = ChatMode.parse(value);
         return mode == null ? "?" : mode.label();
-    }
-
-    private void action(SceneCanvas canvas, Focus item, String label, int y) {
-        if (focus == item) canvas.fill(8, y - 3, canvas.width() - 16, 16, FOCUS);
-        canvas.text(fit(canvas, label, canvas.width() - 24), 12, y, VALUE);
-    }
-
-    private static String fit(SceneCanvas canvas, String text, int maxWidth) {
-        return TextLayout.ellipsis(text, Math.max(0, maxWidth), canvas::textWidth);
     }
 
     private void refresh(long now) {

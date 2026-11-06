@@ -48,7 +48,8 @@ public final class SozPushSwitchObjectInstance extends AbstractObjectInstance
             participants.slot(p);
             wasPushing.put(p,p instanceof AbstractPlayableSprite sprite && sprite.getPushing());
         }
-        checkpointAll();
+        // loc_418E4 loads the current x_pos into d4 for its full-solid call (sonic3k.asm:86734-86748).
+        checkpointAll(getX());
         boolean pushed=false;
         for(var p:players) {
             if(!participants.flag(participants.slot(p),0) || !Boolean.TRUE.equals(wasPushing.get(p))) continue;
@@ -125,11 +126,7 @@ public final class SozPushSwitchObjectInstance extends AbstractObjectInstance
     @Override public SolidObjectParams getSolidParams() { return SolidObjectParams.of(23,16,17); }
     // loc_1E154 re-reads width_pixels=$30 (Obj_SOZPushSwitch), not the caller's d1=$17-$B.
     @Override public int getTopLandingHalfWidth(PlayableEntity player,int collisionHalfWidth) { return 0x30; }
-    // The switch's SolidObjectFull consumes its own a0.d6 standing bit for an airborne rider;
-    // a later object's solid call must not clear that rider on its behalf (sonic3k.asm:41110-41124).
-    @Override public boolean airborneRiderUnseatRequiresOwnCheckpoint(PlayableEntity player) { return true; }
     @Override public boolean isSolidFor(PlayableEntity player) { return !retained; }
-    @Override public boolean carriesRiderOnHorizontalMove(PlayableEntity player) { return false; }
     @Override public SolidExecutionMode solidExecutionMode() { return SolidExecutionMode.MANUAL_CHECKPOINT; }
     @Override public boolean usesInstanceSolidStateLatchKey() { return true; }
     @Override public int romObjectCodePointerHighWord() { return 4; }
@@ -142,7 +139,16 @@ public final class SozPushSwitchObjectInstance extends AbstractObjectInstance
         if(retained) return;
         var r=getRenderer(Sonic3kObjectArtKeys.SOZ_PUSH_SWITCH);
         if(r!=null && r.isReady()) {
-            // Native main sprite precedes its child in SAT priority; paint the track first.
+            // Obj_SOZPushSwitch selects main frame 1 and child frame 0
+            // (sonic3k.asm:86669-86690). loc_1B46A emits the child after
+            // the main mapping (sonic3k.asm:37135-37177): first opaque SAT
+            // pixels win, whereas the painter path needs the reverse order.
+            var graphics = services().graphicsManager();
+            if (graphics != null && graphics.isSpriteSatCollectionActive()) {
+                r.drawFrameIndex(1,x,spawn.y(),flipped(),(spawn.renderFlags()&2)!=0);
+                r.drawFrameIndex(0,spawn.x()+(flipped()?-16:16),spawn.y(),false,false);
+                return;
+            }
             r.drawFrameIndex(0,spawn.x()+(flipped()?-16:16),spawn.y(),false,false);
             r.drawFrameIndex(1,x,spawn.y(),flipped(),(spawn.renderFlags()&2)!=0);
         }

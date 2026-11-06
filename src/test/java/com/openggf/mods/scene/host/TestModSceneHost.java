@@ -469,6 +469,68 @@ class TestModSceneHost {
     }
 
     @Test
+    void aSceneThatReadsTheStartKeyItselfOwnsItAndPadsStillSendStart() {
+        // Enter is Player 1 Start by default; a scene that reads Enter as "confirm" must not
+        // also see Start on the same press (Starfall Frontier closed its panels on Enter).
+        InputHandler input = new InputHandler();
+        int startKey = com.openggf.control.InputHandlerInternalAccess.player1StartKey(input);
+        assertTrue(startKey >= 0, "Player 1 Start has a keyboard binding");
+        List<String> owner = new ArrayList<>();
+        List<String> other = new ArrayList<>();
+        ModSceneHost readsKey = new ModSceneHost();
+        readsKey.open(owned(() -> new ModScene() {
+            @Override public void enter(SceneContext ctx) { }
+            @Override public void update(SceneContext ctx) {
+                owner.add((ctx.keyPressed(startKey) ? "key " : "") + (ctx.buttonPressed(SceneButtons.START) ? "start" : ""));
+            }
+            @Override public void draw(SceneContext ctx, SceneCanvas canvas) { }
+        }), services(new ArrayList<>()), 320, 224);
+        ModSceneHost buttonsOnly = new ModSceneHost();
+        buttonsOnly.open(owned(() -> new ModScene() {
+            @Override public void enter(SceneContext ctx) { }
+            @Override public void update(SceneContext ctx) {
+                other.add(ctx.buttonPressed(SceneButtons.START) ? "start" : "");
+            }
+            @Override public void draw(SceneContext ctx, SceneCanvas canvas) { }
+        }), services(new ArrayList<>()), 320, 224);
+        Runnable tick = () -> {
+            input.refreshLogicalSnapshot();
+            readsKey.update(input);
+            buttonsOnly.update(input);
+            input.update();
+        };
+        tick.run();
+        input.handleKeyEvent(startKey, org.lwjgl.glfw.GLFW.GLFW_PRESS);
+        tick.run();
+        input.handleKeyEvent(startKey, org.lwjgl.glfw.GLFW.GLFW_RELEASE);
+        tick.run();
+        assertEquals("key", owner.get(1).trim(), "the key the scene reads is only a key");
+        assertEquals("start", other.get(1), "a scene that never reads the key still gets Start from it");
+        readsKey.close();
+        buttonsOnly.close();
+
+        // A pad's Start still reaches the owning scene.
+        List<String> padSeen = new ArrayList<>();
+        ModSceneHost padHost = new ModSceneHost();
+        padHost.open(owned(() -> new ModScene() {
+            @Override public void enter(SceneContext ctx) { }
+            @Override public void update(SceneContext ctx) {
+                ctx.keyPressed(startKey);
+                padSeen.add(ctx.buttonPressed(SceneButtons.START) ? "start" : "");
+            }
+            @Override public void draw(SceneContext ctx, SceneCanvas canvas) { }
+        }), services(new ArrayList<>()), 320, 224);
+        InputHandler pad = mock(InputHandler.class);
+        when(pad.capturePhysicalInput()).thenReturn(com.openggf.control.PhysicalInput.neutral());
+        PlayerInputState start = PlayerInputState.of(0, 0, 0, 0, true, true);
+        when(pad.logical()).thenReturn(LogicalInputSnapshot.ofPlayers(start, PlayerInputState.neutral()));
+        padHost.update(pad);
+        padHost.update(pad);
+        assertEquals("start", padSeen.get(1), "without a keyboard binding in play, Start still arrives");
+        padHost.close();
+    }
+
+    @Test
     void buttonsRepeatLikeTheEngineMenusAndBGoesBack() {
         List<String> seen = new ArrayList<>();
         ModSceneHost host = new ModSceneHost();
@@ -749,6 +811,32 @@ class TestModSceneHost {
         assertFalse(retained[0].startStockAct(0, 0));
         assertNull(retained[0].currentLaunch());
         host.close();
+    }
+
+    @Test
+    void aNewSceneCannotConsumeThePreviousCoursesPendingCommit() {
+        var input = new InputHandler();
+        var session = com.openggf.control.InputHandlerInternalAccess.textInput(input);
+        Object previousCourse = new Object();
+        com.openggf.control.InputHandlerInternalAccess.captureKeyboardText(input, previousCourse);
+        session.preedit(com.openggf.control.Composition.fromCodepoints("古".codePoints().toArray(), new int[] {1}, 0, 1));
+        session.preedit(com.openggf.control.Composition.EMPTY);
+        com.openggf.control.MenuInput.handleCharEvent(input, '古');
+        var typed = new ArrayList<String>();
+        var host = new ModSceneHost();
+        host.open(owned(() -> new ModScene() {
+            public void enter(SceneContext context) { }
+            public void update(SceneContext context) { context.captureKeyboardText(); typed.add(context.typedText()); }
+            public void draw(SceneContext context, SceneCanvas canvas) { }
+        }), services(new ArrayList<>()), 320, 224);
+        try {
+            host.update(input);
+            assertEquals(List.of(""), typed);
+            input.update();
+            com.openggf.control.MenuInput.handleCharEvent(input, '新');
+            host.update(input);
+            assertEquals(List.of("", "新"), typed);
+        } finally { host.close(); }
     }
 
     @Test

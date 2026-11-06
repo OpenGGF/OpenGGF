@@ -29,6 +29,37 @@ public final class FakeViewInput implements ViewInput {
     @Override public boolean keyDown(int key) { return held.contains(key) || pressed.contains(key); }
     @Override public String typedText() { return typed; }
     @Override public com.openggf.control.PhysicalInput physicalInput() { return physical; }
+    /** Host prompt labels by {@code BUTTON:key} or {@code BUTTON:pad}, as a live scene context reports them. */
+    public final java.util.Map<String, String> labels = new java.util.HashMap<>();
+    @Override public java.util.Optional<String> buttonLabel(com.openggf.control.ButtonPrompts.Button button,
+                                                           boolean controller) {
+        return java.util.Optional.ofNullable(labels.get(button.name() + (controller ? ":pad" : ":key")));
+    }
+    /** Labels an Xbox pad and the default keyboard produce (Genesis A is the west X, B the south A). */
+    public FakeViewInput xboxAndDefaultKeyboard() {
+        labels.put("A:pad", "X"); labels.put("B:pad", "A"); labels.put("C:pad", "B"); labels.put("START:pad", "Start");
+        labels.put("A:key", "Space"); labels.put("START:key", "Backspace");
+        return this;
+    }
+    /** One unbound key press (a physical key event and nothing else), so pages name the keyboard. */
+    public void keyboardPress(java.util.function.Consumer<ViewInput> view) {
+        clear();
+        physical = new com.openggf.control.PhysicalInput(1, java.util.List.of(), java.util.List.of(), java.util.List.of(
+                new com.openggf.control.PhysicalInputEvent(1, 1, com.openggf.control.PhysicalInputEvent.Kind.KEY,
+                        com.openggf.control.PhysicalInputEvent.KEYBOARD_DEVICE, com.openggf.mods.scene.SceneKeys.LEFT_BRACKET, 1)), 0);
+        view.accept(this);
+        physical = com.openggf.control.PhysicalInput.neutral();
+    }
+
+    /** One controller button press, so pages name the pad. */
+    public void padPress(java.util.function.Consumer<ViewInput> view) {
+        clear();
+        physical = new com.openggf.control.PhysicalInput(1, java.util.List.of(), java.util.List.of(), java.util.List.of(
+                new com.openggf.control.PhysicalInputEvent(1, 1, com.openggf.control.PhysicalInputEvent.Kind.BUTTON, 0,
+                        com.openggf.control.PhysicalGamepad.BUTTON_DPAD_DOWN, 1)), 0);
+        view.accept(this);
+        physical = com.openggf.control.PhysicalInput.neutral();
+    }
 
     public void clear() {
         up = down = left = right = accept = back = false;

@@ -1,4 +1,6 @@
 package com.openggf.game.sonic2;
+
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 
 import com.openggf.data.RomByteReader;
@@ -60,10 +62,10 @@ public class Sonic2DustArt {
                 Sonic2Constants.ART_UNC_SPLASH_DUST_SIZE
         );
         List<SpriteMappingFrame> mappingFrames = S2SpriteDataLoader.loadMappingFrames(reader,
-                Sonic2Constants.MAP_UNC_OBJ08_ADDR
+                address(reader, Sonic2Constants.MAP_UNC_OBJ08_ADDR)
         );
         List<SpriteDplcFrame> dplcFrames = S2SpriteDataLoader.loadDplcFrames(reader,
-                Sonic2Constants.MAP_R_UNC_OBJ08_ADDR
+                address(reader, Sonic2Constants.MAP_R_UNC_OBJ08_ADDR)
         );
 
         int bankSize = resolveBankSize(dplcFrames, mappingFrames);

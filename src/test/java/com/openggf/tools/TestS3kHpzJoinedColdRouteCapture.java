@@ -24,6 +24,7 @@ import com.openggf.sprites.playable.Tails;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import java.nio.file.Path;
 import java.util.HashSet;
@@ -39,6 +40,7 @@ class TestS3kHpzJoinedColdRouteCapture {
                          int sszHistoryStart, int endpointX, int endpointY, int endpointRings,
                          Set<Integer> spots) { }
 
+    @Tag("exhaustive-audit")
     @Test
     void coldPairDefeatsKnucklesAndReplaysTheJoinedTheftCollapseAndSszArrival() throws Exception {
         verify(new Chain(false, "lrz-sonic-tails-cold-hpz-ssz1-320.bk2",
@@ -52,6 +54,7 @@ class TestS3kHpzJoinedColdRouteCapture {
                         67253, 67353, 67433)));
     }
 
+    @Tag("exhaustive-audit")
     @Test
     void coldKnucklesReplaysUpperPadAndTheJoinedSszCraneControlRelease() throws Exception {
         verify(new Chain(true, "lrz-knuckles-cold-hpz-ssz2-320.bk2",

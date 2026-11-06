@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.data.RomByteReader;
 import com.openggf.game.common.CommonPlacementParser;
 import com.openggf.level.objects.ObjectSpawn;
@@ -33,7 +35,7 @@ public class Sonic2ObjectPlacement {
         // (s2.asm:32943-32952); other native competition acts retain Off_Objects.
         if (nativeCompetition && zoneAct.zone() == com.openggf.game.sonic2.constants.Sonic2Constants.ZONE_CNZ) {
             return CommonPlacementParser.parseObjectRecords(rom,
-                    zoneAct.act() == 0 ? CNZ1_2P_REV01 : CNZ2_2P_REV01);
+                    zoneAct.act() == 0 ? address(rom, CNZ1_2P_REV01) : address(rom, CNZ2_2P_REV01));
         }
         int pointerIndex = zoneAct.pointerIndex(ACTS_PER_ZONE);
         if (isSingleActZone(zoneAct.zone())) {

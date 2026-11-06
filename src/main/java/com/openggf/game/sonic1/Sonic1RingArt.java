@@ -1,5 +1,7 @@
 package com.openggf.game.sonic1;
 
+import static com.openggf.game.sonic1.Sonic1RomProfile.resolve;
+
 import com.openggf.data.Rom;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.level.Pattern;
@@ -53,7 +55,7 @@ public class Sonic1RingArt {
         Pattern[] patterns = loadRingPatterns();
         List<RingFrame> frames = RingMappingFrames.fromMappings(
                 S1SpriteDataLoader.loadMappingFrames(RomByteReader.fromRom(rom),
-                        Sonic1Constants.MAP_RING_ADDR));
+                        resolve(rom, Sonic1Constants.MAP_RING_ADDR)));
 
         cached = new RingSpriteSheet(patterns, frames, RING_PALETTE_INDEX, RING_FRAME_DELAY,
                 SPARKLE_FRAME_DELAY, SPIN_FRAME_COUNT, SPARKLE_FRAME_COUNT);
@@ -61,7 +63,7 @@ public class Sonic1RingArt {
     }
 
     private Pattern[] loadRingPatterns() throws IOException {
-        return PatternDecompressor.nemesis(rom, Sonic1Constants.ART_NEM_RING_ADDR);
+        return PatternDecompressor.nemesis(rom, resolve(rom, Sonic1Constants.ART_NEM_RING_ADDR));
     }
 
 }

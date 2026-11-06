@@ -89,7 +89,7 @@ class TestEffectiveCatalogBuilder {
                 result.eligibility().get("standalone").status());
         assertEquals(ModEligibility.Status.EFFECTIVE, result.eligibility().get("code-entry").status());
         assertReason(result, "code-file", "CODE_TRUST_REQUIRED");
-        assertEquals("contains code — trust required (press accept twice)",
+        assertEquals("Contains code: switch it on, then confirm Trust and enable",
                 reason(result, "code-file", "CODE_TRUST_REQUIRED").message());
         assertEquals(List.of("standalone", "code-entry", "trusted-code", "art", "insert", "windows"),
                 effectiveIds(result));

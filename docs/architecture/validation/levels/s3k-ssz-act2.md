@@ -1,5 +1,12 @@
 # S3K Sky Sanctuary Zone act 2 coverage matrix
 
+Routine selection update (2026-10-27): the reviewed full configuration products
+and long cold-campaign qualifications in the [local budget record](../../research/2026-10-27-local-validation-cost.md#thirty-minute-local-command-target)
+now require explicit `exhaustive-audit`. Short real contact, lifecycle and
+restore/forward witnesses remain routine. Historical qualification rows retain
+their original source/input scope; a current smoke pass does not renew deferred
+cold reachability, accumulated route state or every replay window.
+
 Game / canonical zone / act: S3K `S3K_SKY_SANCTUARY_2`, engine zone `$0A` act index 1,
 ROM `Current_zone_and_act = $A01`, SKL object set.
 Character route: Knuckles only (`LevelSelect_CheckSonicTails` denies Sonic and Tails except with

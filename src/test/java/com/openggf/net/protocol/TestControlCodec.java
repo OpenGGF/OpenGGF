@@ -10,9 +10,55 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class TestControlCodec {
     @Test
+    void directionalBoundariesRejectValidMessagesFromTheWrongPeer() {
+        ControlJsonCodec codec = new ControlJsonCodec();
+        assertThrows(ProtocolViolationException.class, () -> codec.decodeRoomClient(
+                codec.encode(null, new ControlMessage.PlayerReady(0, true))));
+        assertThrows(ProtocolViolationException.class, () -> codec.decodeRoomServer(
+                codec.encode(null, new ControlMessage.SetReady(true))));
+        assertThrows(ProtocolViolationException.class, () -> codec.decodeMasterClient(
+                codec.encode(null, new ControlMessage.RoomRouteRetireNotice(
+                        "room", "instance", "grant", 1, 1)), Protocol.MAX_MASTER_FRAME_BYTES));
+        assertThrows(ProtocolViolationException.class, () -> codec.decodeMasterServer(
+                codec.encode(null, new ControlMessage.RoomRouteRetire(
+                        "room", "instance", "grant", 1)), Protocol.MAX_MASTER_FRAME_BYTES));
+        assertThrows(ProtocolViolationException.class, () -> codec.decodeMasterServer(
+                codec.encode(null, new ControlMessage.RoomActivate("room", "instance")),
+                Protocol.MAX_MASTER_FRAME_BYTES));
+        assertThrows(ProtocolViolationException.class, () -> codec.decodeMasterClient(
+                codec.encode(null, new ControlMessage.RoomActivated("room", "instance", true)),
+                Protocol.MAX_MASTER_FRAME_BYTES));
+        assertInstanceOf(ControlMessage.RoomRouteRetire.class, codec.decodeMasterClient(
+                codec.encode(null, new ControlMessage.RoomRouteRetire(
+                        "room", "instance", "grant", 1)), Protocol.MAX_MASTER_FRAME_BYTES).message());
+        assertInstanceOf(ControlMessage.RoomActivate.class, codec.decodeMasterClient(
+                codec.encode(null, new ControlMessage.RoomActivate("room", "instance")),
+                Protocol.MAX_MASTER_FRAME_BYTES).message());
+    }
+
+    @Test
+    void protocolEightRejectsLegacyAuthorityAndLaunchShapes() {
+        assertEquals(8, Protocol.VERSION);
+        ControlJsonCodec codec = new ControlJsonCodec();
+        String join = codec.encode(null, new ControlMessage.RoomJoinResult("room", "DIRECT",
+                "127.0.0.1", 1234, "host", "build", null, "instance",
+                RoomAccessPolicy.PUBLIC, 0, 0, 0, "grant", 1));
+        assertThrows(ProtocolViolationException.class, () -> codec.decodeMasterServer(
+                join.replace("\"grantReference\":\"grant\",", ""), Protocol.MAX_MASTER_FRAME_BYTES));
+        String open = codec.encode(null, new ControlMessage.RelayGuestOpen(1, "room", "instance",
+                "guest", "grant", 1, 1));
+        assertThrows(ProtocolViolationException.class, () -> codec.decodeMasterServer(
+                open.replace("\"registrationGeneration\":1,", ""),
+                Protocol.MAX_MASTER_FRAME_BYTES));
+        assertThrows(ProtocolViolationException.class, () -> codec.decodeRoomServer(
+                codec.encode(null, new ControlMessage.RoundStart(
+                        new ControlMessage.RoundConfig("s3k", 0, 0, 60, "OPEN", null),
+                        1, 60_001))));
+    }
+    @Test
     void roundTripsHelloWithToken() {
         ControlMessage.Hello hello = new ControlMessage.Hello(
-                Protocol.VERSION, "cHVia2V5", "Farrell", "0.6:cafe1234", "0E6.20E6");
+                Protocol.VERSION, "cHVia2V5", "Farrell", "0.6:cafe1234", "0E6.20E6", null, 0);
         String wire = ControlCodec.encode("tok123", hello);
         ControlCodec.DecodedControl back = ControlCodec.decode(wire);
         assertEquals("tok123", back.token());
@@ -38,7 +84,7 @@ class TestControlCodec {
         List<ControlMessage.StandingsRow> rows =
                 List.of(new ControlMessage.StandingsRow(0, "A", "sonic", 3600, 1, "NONE"));
         List<ControlMessage> all = List.of(
-                new ControlMessage.Hello(Protocol.VERSION, "a", "b", "c", ""),
+                new ControlMessage.Hello(Protocol.VERSION, "a", "b", "c", "", null, 0),
                 new ControlMessage.Welcome(Protocol.VERSION, "bm9uY2U=", "serverfp"),
                 new ControlMessage.AuthProof("c2ln"),
                 new ControlMessage.JoinRejected("room full"),
@@ -198,5 +244,49 @@ class TestControlCodec {
                                 "OPEN", null, 8, false), null));
         assertThrows(ProtocolViolationException.class,
                 () -> ControlCodec.decode(missingSnapshot));
+    }
+
+    @Test
+    void rejectsInvalidSemanticsAcrossRoomAndBrokerFamilies() {
+        for (ControlMessage message : List.of(
+                new ControlMessage.PlayerLook(Protocol.MAX_PLAYERS_RELAY, "00E.200E"),
+                new ControlMessage.PlayerLook(0, null),
+                new ControlMessage.PlayerReady(-1, true),
+                new ControlMessage.ChatBroadcast(-1, "A", "hi"),
+                new ControlMessage.RoundConfigure(null),
+                new ControlMessage.RoundStart(
+                        new ControlMessage.RoundConfig("s3k", 1000, 0, 30, "OPEN", null),
+                        100, 30_100),
+                new ControlMessage.RoomListResult(List.of(), -2, 0),
+                new ControlMessage.Heartbeat("room", Protocol.MAX_PLAYERS_RELAY + 1))) {
+            assertThrows(ProtocolViolationException.class,
+                    () -> ControlCodec.decode(ControlCodec.encode(null, message)),
+                    message.getClass().getSimpleName());
+        }
+    }
+
+    @Test
+    void rejectsIncompleteListedRoomAndBoundedRoundAuthorityAtDecode() {
+        ControlJsonCodec codec = new ControlJsonCodec();
+        ControlMessage.RoomDescriptor valid = new ControlMessage.RoomDescriptor(
+                "Listed", "s3k", 0, 0, "OPEN", null, 8, false);
+        for (ControlMessage.RoomCreate create : List.of(
+                new ControlMessage.RoomCreate(new ControlMessage.RoomDescriptor(
+                        "Listed", "s3k", -1, 0, "OPEN", null, 8, false),
+                        "RELAY", 0, "build"),
+                new ControlMessage.RoomCreate(valid, "DIRECT", 1234, "build",
+                        List.of(), "ab".repeat(32)))) {
+            assertThrows(ProtocolViolationException.class, () -> codec.decodeMasterClient(
+                    codec.encode(null, create), Protocol.MAX_MASTER_FRAME_BYTES));
+        }
+        ControlMessage.RoomJoinResult missingDirectHost = new ControlMessage.RoomJoinResult(
+                "room", "DIRECT", null, 1234, "host", "build", "ab".repeat(32),
+                "instance", RoomAccessPolicy.PUBLIC, 0, 0, 0, "grant", 1);
+        assertThrows(ProtocolViolationException.class, () -> codec.decodeMasterServer(
+                codec.encode(null, missingDirectHost), Protocol.MAX_MASTER_FRAME_BYTES));
+        ControlMessage.RoundConfigure unbounded = new ControlMessage.RoundConfigure(
+                new ControlMessage.RoundConfig("s3k", 0, 0, Integer.MAX_VALUE, "OPEN", null));
+        assertThrows(ProtocolViolationException.class, () -> codec.decodeRoomClient(
+                codec.encode(null, unbounded)));
     }
 }

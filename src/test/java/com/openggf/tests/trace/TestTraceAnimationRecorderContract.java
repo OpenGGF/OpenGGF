@@ -20,7 +20,7 @@ import org.junit.jupiter.api.Test;
 class TestTraceAnimationRecorderContract {
     @Test
     void allCommittedGameplayFixturesCarryV5AnimationCsv() throws IOException {
-        Map<String, Integer> expectedCounts = Map.of("s1", 21, "s2", 19, "s3k", 21);
+        Map<String, Integer> expectedCounts = Map.of("s1", 21, "s2", 19, "s3k", 22);
         for (Map.Entry<String, Integer> entry : expectedCounts.entrySet()) {
             Path gameRoot = Path.of("src/test/resources/traces", entry.getKey());
             List<Path> fixtures;

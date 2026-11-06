@@ -11,10 +11,10 @@ public final class GhostCaptureBuffer {
     private final byte[] scratch = new byte[GhostFrameCodec.BYTES];
     private int frameCount;
 
-    public void capture(int centreX, int centreY, int mappingFrame, boolean hFlip, boolean vFlip,
-                        int priorityBucket, boolean highPriority, boolean finished) {
-        GhostFrameCodec.encode(new GhostFrame(centreX & 0xFFFF, centreY & 0xFFFF, mappingFrame,
-                hFlip, vFlip, finished, priorityBucket, highPriority), scratch, 0);
+    public void capture(GhostFrame frame) {
+        GhostFrameCodec.encode(new GhostFrame(frame.x() & 0xFFFF, frame.y() & 0xFFFF,
+                frame.mappingFrame(), frame.hFlip(), frame.vFlip(), frame.finished(),
+                frame.priorityBucket(), frame.highPriority(), frame.hurt()), scratch, 0);
         frames.write(scratch, 0, scratch.length);
         frameCount++;
     }

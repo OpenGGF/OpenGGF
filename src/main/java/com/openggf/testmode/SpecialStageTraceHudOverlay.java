@@ -47,6 +47,10 @@ public final class SpecialStageTraceHudOverlay implements TraceSessionOverlay {
         common.render(text);
     }
 
+    @Override public void handleInput(com.openggf.control.InputHandler input) { common.handleInput(input); }
+
+    @Override public boolean detailsVisible() { return common.detailsVisible(); }
+
     private record CompatibilityModel(
             IntSupplier cursor,
             IntSupplier rowCount,

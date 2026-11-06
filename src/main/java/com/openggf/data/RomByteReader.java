@@ -30,6 +30,9 @@ public class RomByteReader {
     /** Start address of each part inside this reader, parallel to {@link #parts}. */
     private final int[] partStarts;
 
+    // Cached recognition belongs to this immutable logical view, never a process-wide active ROM.
+    RetailRomRevision retailRevision;
+
     public RomByteReader(byte[] data) {
         this(Arrays.copyOf(data, data.length), 0, data.length);
     }

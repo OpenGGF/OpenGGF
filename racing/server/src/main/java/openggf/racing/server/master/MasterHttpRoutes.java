@@ -394,10 +394,21 @@ public final class MasterHttpRoutes extends SimpleChannelInboundHandler<FullHttp
         if (request.method().equals(HttpMethod.GET)
                 && request.path().startsWith("/recordings/")) {
             String hash = recordingHash(request.path());
-            return blobs.get(hash)
-                    .map(bytes -> new ResponseData(HttpResponseStatus.OK,
-                            "application/octet-stream", bytes))
-                    .orElseGet(() -> response(HttpResponseStatus.NOT_FOUND));
+            Optional<byte[]> recording = blobs.get(hash);
+            if (recording.isEmpty()) {
+                return response(HttpResponseStatus.NOT_FOUND);
+            }
+            String actual = HexFormat.of().formatHex(sha256(recording.orElseThrow()));
+            if (!actual.equals(hash)) {
+                // These bytes came back from master-owned storage, after the upload
+                // boundary had already validated the player's body. Never turn a
+                // storage-integrity failure into verifier evidence against the player.
+                LOG.log(System.Logger.Level.ERROR,
+                        "recording storage integrity failure for hash " + hash);
+                return response(HttpResponseStatus.SERVICE_UNAVAILABLE);
+            }
+            return new ResponseData(HttpResponseStatus.OK,
+                    "application/octet-stream", recording.orElseThrow());
         }
         if (request.method().equals(HttpMethod.POST)
                 && request.path().equals("/verifier/verdicts")) {

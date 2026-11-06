@@ -7,9 +7,11 @@ Knuckles that appears in it is the NPC cutscene, not a playable Knuckles.
 
 | Obligation | Evidence | Remaining scope |
 |---|---|---|
+| ICZ2 → LBZ1 fresh entry | `TestS3kLbz1GroundLaunchIntroHeadless#icz2FreshTransitionLaunchesSonicOutOfSnow`: real fade/load/title handoff, emergence above `$05C0`, input/object-control release and controller retirement. Existing direct-entry tests retain 30-frame timing. | Sonic alone, native viewport, donor off; broader rosters/viewports, checkpoint and transition rewind remain open. |
 | Cup side contact (P1 and CPU) | `TestLbzCupElevatorSolidDispatch`: real dispatch stops an airborne rolling player at the cup edge, then repeats after restore. | Other character geometry and donors |
 | Cup capture/hold control and animation bit | `TestLbzCupElevatorInstance` (native P1/P2, extension, rewind) and `TestS3kLbz1KnucklesSequenceHeadless` | Full-route rewind and load/death boundaries |
 | Rolling drum deletion | `TestLbzRollingDrumDeletion`: real capture and range unload, dead/extension cleanup, rewind | — |
+| Miniboss box creation/recreation | `TestLbz1BoxRigRewind`: fresh owner restore, pre-creation restore, and 180 piece updates for carried and standalone boxes | Full encounter route/render checks remain separate |
 | Miniboss fatal hit | `TestS3kLbz1MinibossAndTransitionHeadless`: real P1/P2 sixth hit, explosion cadence, restore/replay | — |
 | Carried results → title | `TestS3kMgzLbzCarriedResultsTitleOwnership`: twelve real children through carry, rewind, publication, control release and title init; 58/59-ring tally oracle | MGZ ring difference that starts at row 9260 |
 | Retained title counter reset | `TestSonic3kTitleCardKosQueue#retainedResetWaitsForArtAndLastChildMovementAndRestoresThatGate` | Full native `Obj_TitleCardWait2` presentation timing |
@@ -101,3 +103,23 @@ test without errors/skips; the remaining trace is not green. Sixty-eight focused
 object/child-graph and mandatory S3K loading/bootstrap/decoding checks pass,
 without skips. See the [lane audit](../../audits/2026-10-07-s3k-parity-gap-verification.md)
 for exact commands, native creation evidence and unexecuted breadth.
+
+## Music ownership follow-up (2026-11-02)
+
+The [cross-game music audit](../../audits/2026-11-02-music-transitions.md)
+records corrected native request IDs and/or level-restore selection affecting
+this route. Restoration selects the apparent playlist and P1 invincibility at
+the native boundary. These local checks do not requalify this matrix’s inherited
+route, viewport/donor/team, lifecycle or audible-comparison gaps.
+
+## Shared reload frame ownership (2026-11-03)
+
+`TestS3kActTransitionFrameOwnership` adds a positioned Act 1 → Act 2 reload,
+then steps the next production gameplay row and repeats it after two restores.
+It checks oscillator advancement and the captured object, sprite and level owners;
+the frame-boundary reload must not publish a second in-frame rewind marker.
+CNZ/LBZ also retain direct in-frame transition-owned oscillator marker controls.
+The seven shared cases passed in the focused run; this does not qualify cold
+reachability, live rewind-floor recording, other configurations or complete routes.
+Those inherited obligations remain open. See the
+[shared ownership design](../../designs/2026-11-03-seamless-request-retargeting.md).

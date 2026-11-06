@@ -26,6 +26,7 @@ import java.util.List;
  * Art key and countdown frame mapping are data-driven, allowing this class to work
  * with both Sonic 1 (LZ_BUBBLES) and Sonic 2 (BUBBLES) bubble art sheets.
  */
+@com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.SCREEN_POSITION)
 public class BreathingBubbleInstance extends AbstractObjectInstance implements RewindRecreatable {
     /**
      * ROM Obj0A/AirCountdown wobble table. S1/S2 use this as
@@ -384,7 +385,9 @@ public class BreathingBubbleInstance extends AbstractObjectInstance implements R
             }
             int wobbleIndex = wobbleAngle & 0x7F;
             wobbleAngle = (wobbleAngle + 1) & 0xFF;
-            currentX = baseX + WOBBLE_DATA[wobbleIndex];
+            var profile = services().gameService(com.openggf.game.internal.BubbleWobbleProfile.class);
+            int wobble = WOBBLE_DATA[wobbleIndex];
+            currentX = baseX + (profile == null ? wobble : profile.offset(wobbleIndex, wobble));
 
             yPos16 += riseVelocity << 8;
             currentY = yPos16 >> 16;

@@ -92,7 +92,10 @@ class CThird { byte[] fixture = new byte[20 * 1024 * 1024];
             service.write_text('com.openggf.tools.SuiteMemoryListener\n')
             events = root / 'events.jsonl'
             # Compilation releases activity before the probe waits for execution.
-            with maven_slot(REPOSITORY, estimate=30, kind='python-jdk-control') as fd:
+            # The only queued process is the fixed 128 MiB synthetic JUnit
+            # control; compilation has already released its activity lease.
+            with maven_slot(REPOSITORY, estimate=30, kind='python-jdk-control',
+                            reservation=(4 * 1024 ** 3, 4), small_job=True) as fd:
                 run = subprocess.run(['java','-Xmx128m','-Dopenggf.memory.events='+str(events),'-cp',str(root)+os.pathsep+str(jar),
                                       'org.junit.platform.console.ConsoleLauncher','execute','--disable-banner',
                                       '--select-class=AFirst','--select-class=BSecond','--select-class=CThird'],

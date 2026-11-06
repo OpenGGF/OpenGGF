@@ -21,6 +21,18 @@ final class GameLoopZeroStepPresentation {
                     Predicate<LevelInputOverlay> configurationCommand, BooleanSupplier takeover,
                     Consumer<Boolean> publishPause, Runnable recordingInput,
                     BooleanSupplier eligible, GameplayMutatorPacing pacing) {
+        try (var pass = com.openggf.control.InputHandlerInternalAccess.openObservationInputPass(
+                Objects.requireNonNull(input, "InputHandler must be set before presentation"))) {
+            runOwnedPass(mode, input, config, playback, paused, escape, configurationCommand,
+                    takeover, publishPause, recordingInput, eligible, pacing);
+        }
+    }
+
+    private static void runOwnedPass(GameMode mode, InputHandler input, SonicConfigurationService config,
+                    PlaybackDebugManager playback, boolean paused, EscapeToMasterTitleController escape,
+                    Predicate<LevelInputOverlay> configurationCommand, BooleanSupplier takeover,
+                    Consumer<Boolean> publishPause, Runnable recordingInput,
+                    BooleanSupplier eligible, GameplayMutatorPacing pacing) {
         Objects.requireNonNull(input, "InputHandler must be set before presentation").refreshLogicalSnapshot();
         try {
             boolean overlayOwnsPause = GameLoopPauseInput.handleOverlay(mode, input);
@@ -28,6 +40,7 @@ final class GameLoopZeroStepPresentation {
             if (overlayOwnsPause) escape.reset();
             if (overlay != null && configurationCommand.test(overlay)) {
                 pacing.clearPendingInput();
+                com.openggf.control.InputHandlerInternalAccess.discardOrderedGameplayInput(input);
                 return;
             }
             if (!overlayOwnsPause) {
@@ -36,9 +49,15 @@ final class GameLoopZeroStepPresentation {
             }
             boolean nextPaused = GameLoopPauseInput.nextUserPaused(mode, input, config, paused,
                     overlayOwnsPause, false, playback, takeover);
-            if (nextPaused != paused) publishPause.accept(nextPaused);
-            if (!overlayOwnsPause && eligible.getAsBoolean()) pacing.retain(input.logical());
-            else pacing.clearPendingInput();
+            if (nextPaused != paused) {
+                com.openggf.control.InputHandlerInternalAccess.discardOrderedGameplayInput(input);
+                publishPause.accept(nextPaused);
+            }
+            if (!overlayOwnsPause && !nextPaused && eligible.getAsBoolean()) pacing.retain(com.openggf.control.InputHandlerInternalAccess.previewGameplayInput(input));
+            else {
+                pacing.clearPendingInput();
+                com.openggf.control.InputHandlerInternalAccess.discardOrderedGameplayInput(input);
+            }
         } finally {
             input.update();
         }

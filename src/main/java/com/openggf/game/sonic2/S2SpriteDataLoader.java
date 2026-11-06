@@ -37,6 +37,11 @@ public final class S2SpriteDataLoader {
      * @param mappingAddr ROM address of mapping table
      * @return list of mapping frames
      */
+    /** Resolves an engine fixed operand; raw ROM pointers use loadMappingFrames. */
+    public static List<SpriteMappingFrame> loadStockMappingFrames(RomByteReader reader, int mappingAddr) {
+        return loadMappingFrames(reader, Sonic2RomAddresses.address(reader, mappingAddr));
+    }
+
     public static List<SpriteMappingFrame> loadMappingFrames(RomByteReader reader, int mappingAddr) {
         return loadMappingFramesWithTileOffset(reader, mappingAddr, 0);
     }
