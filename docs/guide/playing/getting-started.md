@@ -56,13 +56,13 @@ differences and later rerelease patches are separate from this revision choice.
 
 1. Download a package for your platform from [GitHub Releases](https://github.com/OpenGGF/OpenGGF/releases):
    - Windows: `OpenGGF-windows.zip`
-   - macOS: `OpenGGF-macos.zip`
+   - macOS: `OpenGGF-macos.zip`. For 0.7 it follows later; use `OpenGGF-universal.jar`, which needs Java 25.
    - Linux: `OpenGGF-linux.tar.gz`
 2. Extract it to a folder.
 3. Place your ROM files next to the editable `config.yaml` included in the package.
 4. Start OpenGGF:
    - Windows: double-click `OpenGGF.exe`, or run it from a terminal.
-   - macOS: open `OpenGGF.app`.
+   - macOS: open `OpenGGF.app`, or run `java -XstartOnFirstThread -jar OpenGGF-universal.jar`.
    - Linux: run `./OpenGGF` from the extracted `OpenGGF` directory.
 5. Configure any missing ROM paths in the package’s Settings or `config.yaml`.
    In development builds, **Locate ROM** and **Add your games** also locate images
