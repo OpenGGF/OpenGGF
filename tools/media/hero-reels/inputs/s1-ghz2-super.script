@@ -1,0 +1,12 @@
+# Source for s1-ghz2-super.txt (InputLogAuthorTool --script). Green Hill Act 2 from its level
+# start with Sonic 2 donated, six emeralds and 60 rings declared. Jump the rock, press jump
+# again in the air to turn Super, sprint right, jump the wall at x 1077 onto the Crabmeat ledge
+# and keep running through the enemies beyond it.
+40 R
+1 R+A
+20 R+A
+6 R
+1 R+A
+124 R
+20 R+A
+400 R
