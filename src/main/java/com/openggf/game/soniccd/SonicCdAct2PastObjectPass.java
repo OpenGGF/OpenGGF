@@ -72,7 +72,7 @@ final class SonicCdAct2PastObjectPass {
         }
     }
     private enum Phase { READY,WALKING,WALKED,DRAINING,DONE,FAILED,DISCARDED }
-    private enum Kind { PRIMARY,RESERVED,RING,SPRING,MONITOR,TIME_POST,COLLAPSE,PLATFORM,TAM,ANIMAL,SWING,ROBOT,ANTON,NULL }
+    private enum Kind { PRIMARY,RESERVED,RING,SPRING,MONITOR,TIME_POST,COLLAPSE,PLATFORM,TAM,ANIMAL,SWING,ROBOT,ANTON,BOULDER,NULL }
     private final Ports ports;private final CdR12bTerrainAssets terrain;private final CdR12bPlayerAssets player;
     private final CdPlayerFrameRuntime frame;private final CdObjectPlacementRuntime placement;
     private final CdAssetBytes objectIndex;private final CdObjectMappings mappings;
@@ -80,7 +80,7 @@ final class SonicCdAct2PastObjectPass {
     private final CdPlayerObjectTouch primaryScanner;private final CdPlayerTouchResponse primaryResponse;
     private CdRing ring;private CdSpring spring;private CdReservedHud hud;
     private CdMonitor monitor;private CdTimePost post;private CdCollapsePlatform collapse;
-    private CdPlatform platform;private CdTamabboh tam;private CdAnimal animal;
+    private CdPlatform platform;private CdTamabboh tam;private CdAnimal animal;private CdBoulder boulder;
     private CdSwing swing;private CdRobotGenerator robot;private CdAnton anton;
     private Phase phase=Phase.READY;private CdObjectDrawQueue queue;private Dispatch dispatch;
     private boolean port,queuePort;private Adoption pending;
@@ -117,6 +117,10 @@ final class SonicCdAct2PastObjectPass {
                 if(!same(expected,reserved(cut,whole)))throw new IllegalArgumentException("Stale reserved full64");
                 var after=withReserved(cut,replace(cut.reservedSlots(),whole,next));publish(cut,after,null,()->{},()->{});}
         },whole->{requireWhole(Kind.RESERVED,whole);drawReserved(whole);});
+        boulder=CdBoulder.fromAct2PastAssets(placement,terrain,solid,c->{requireKind(Kind.BOULDER);
+            claim(c,()->boulder.isCurrentPrefixSolidCall(c));poolCut(c.callCut());
+            commitSolid(c.callCut(),c.expectedPlayer(),c.expectedGlobals(),c.outcome());},
+                (p,id)->drawDynamic(Kind.BOULDER,p,id,()->true));
         monitor=CdMonitor.fromAct2PastAssets(placement,terrain,solid,probes,new CdMonitor.PrefixSolidOwner(){
             public CdMonitor.LiveSolid preflight(CdMonitor.PrefixSolidCut c){requireKind(Kind.MONITOR);requireIdentity(c.objectIdentity());poolCut(c.callCut());
                 if(!c.expectedPlayer().equals(primary())||!c.expectedGates().equals(gates())||!c.expectedGlobals().equals(solidGlobals()))throw new IllegalArgumentException("Stale Monitor readback");
@@ -231,6 +235,8 @@ final class SonicCdAct2PastObjectPass {
                         public void subCpuCommand(CdRing.SubCpuCommand s){requireKind(Kind.RING);sound(new SonicCdGameModule.PastRingSubCpu(s));}
                         public void drawObject(CdObjectPool p,int w){requireWhole(Kind.RING,w);drawDynamic(Kind.RING,p,p.state(w).identity(),()->true);}});
             case SPRING->spring.run(whole,new CdSpring.Globals(cut.cameraXWord()),new CdSpring.SolidInputs(primary(),gates(),solidGlobals()));
+            case BOULDER->boulder.run(whole,new CdBoulder.Globals(g.timeZone(),g.timeWarpDirection(),cut.cameraXWord()),
+                    new CdBoulder.SolidInputs(primary(),gates(),solidGlobals()));
             case MONITOR->monitor.runPast(whole,monitorGlobals(),new CdMonitor.SolidInputs(primary(),gates(),solidGlobals()));
             case TIME_POST->post.runPast(whole,postGlobals());
             case COLLAPSE->collapse.run(whole,new CdCollapsePlatform.DespawnGlobals(g.timeZone(),g.timeWarpDirection(),cut.cameraXWord()),new CdCollapsePlatform.Inputs(primary(),gates(),solidGlobals()));
@@ -282,7 +288,7 @@ final class SonicCdAct2PastObjectPass {
         if(whole==0){if(id==1||id==2)return Kind.PRIMARY;throw stop(Boundary.PLAYER_SLOT,whole,id);}
         if(whole<32){if((whole==2||whole==3||whole==5)&&id==0x1C||whole==31&&id==0x19)return Kind.RESERVED;
             throw stop(Boundary.PLAYER_SLOT,whole,id);}
-        return switch(id){case 0x0A->Kind.SPRING;case 0x10->Kind.RING;case 0x19->placement.pool().state(whole).subtype()<8?Kind.MONITOR:Kind.TIME_POST;
+        return switch(id){case 0x0A->Kind.SPRING;case 0x10->Kind.RING;case 0x1B->Kind.BOULDER;case 0x19->placement.pool().state(whole).subtype()<8?Kind.MONITOR:Kind.TIME_POST;
             case 0x20->Kind.COLLAPSE;case 0x21->Kind.PLATFORM;case 0x22->Kind.TAM;case 0x24->Kind.ANIMAL;case 0x29->Kind.SWING;case 0x2D->Kind.ROBOT;case 0x3F->Kind.ANTON;
             default->throw stop(Boundary.OBJECT_KIND,whole,id);};
     }

@@ -2469,3 +2469,16 @@ repeat/omission and full/course pixel/state checks pass. Fresh45cases pass witho
 failures, errors or skips. The exported ENGINE image belongs to that constructed
 fixture, not a natural13947 capture. Later traversal, lifecycle, native/audio/
 regional breadth and inherited broad-smoke obligations remain open.
+
+### 6 November — R12B Boulder and the next wall
+
+The [Act2 Past matrix](../architecture/validation/levels/scd-palmtree-panic-act2-past.md)
+now qualifies unchanged controller13950 with fifteen ordinary target services and
+full/course replay. The next13951 completes the actual Boulder65 Init before the
+exact unowned ID36/whole69 stop; failed-call prefixes are not closed checkpoints.
+Boulder metadata/raw72 binding,21-root catalogue and same-Frame Solid publication
+have84 focused positive cases plus the separately qualified permanent route.
+Initial85 had one frontier failure; the route-only compile capture error ran no
+cases, then its corrected one-case run passed without failures/errors/skips.
+No natural Boulder pixels/contact, native/regional/audio/full-act or broad-smoke
+claim is added. Breakable Wall source binding is the next concrete owner.

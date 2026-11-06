@@ -138,6 +138,27 @@ class TestSonicCdAct2PastObjectPass {
         assertThrows(IllegalStateException.class,()->pass.runWalk(1));assertSame(before,f.frame.state());assertSame(env,f.frame.environment());
         assertTrue(f.placement.pool().capture().slots().stream().allMatch(s->s.id()==0));assertTrue(f.ports.receipts.isEmpty());assertFalse(f.frame.closed());
     }
+    @Test void actualBoulderInitUsesTheOriginalBRootAndItsTwoLivePiecesWithoutOtherSlotWrites(){
+        actual();var f=fixture(false);var pool=f.placement.pool();
+        pool.write(pool.state(65).moveByte(ID,0x1B).moveWord(X,0x700).moveWord(Y,0x420).moveWord(X_FRACTION,0xBEEF));
+        var before=pool.capture();var pass=f.pass();pass.runWalk(1);var b=pool.state(65);
+        assertEquals(2,b.routine());assertEquals(0x20940A,b.longBits(CdObjectState.LongField.MAPPINGS));assertEquals(0x035E,b.word(TILE));
+        assertEquals(0xBEEF,b.word(X_FRACTION));assertEquals(0,f.frame.state().objectLinks().standObject());
+        for(int whole=32;whole<128;whole++)if(whole!=65)assertEquals(before.slots().get(whole-32),pool.state(whole));
+        var cpu=pass.finishDraw(cameras());assertEquals(2,cpu.provenance().stream().filter(piece->piece.slotRef().wholeIndex()==65).count());
+        assertEquals(List.of(0,1),cpu.provenance().stream().filter(piece->piece.slotRef().wholeIndex()==65).map(CdObjectDrawQueue.Provenance::mappingPieceOrdinal).toList());
+        assertTrue((pool.state(65).spriteFlags()&128)!=0);assertTrue(f.ports.cut.sounds().isEmpty());assertFalse(f.frame.closed());
+    }
+    @Test void actualBoulderPlainSolidPublishesTopLandingToTheSameFrameBeforeItsDeferredDraw(){
+        actual();var f=fixture(false,0x03FD5678);var pool=f.placement.pool();
+        pool.write(pool.state(65).moveByte(ID,0x1B).moveByte(SPRITE_FLAGS,0x84).moveWord(X,0x700).moveWord(Y,0x420));
+        var pass=f.pass();pass.runWalk(1);
+        assertEquals(65,f.frame.state().objectLinks().standObject(),"Genuine plain Solid must adopt its standing-slot write into Frame");
+        assertEquals(8,f.frame.state().motion().flags()&10);assertEquals(0,f.frame.state().motion().yVelocity());
+        assertEquals(1,f.frame.environment().globals().levelFrames());assertEquals(0,f.frame.state().history().index(),"Init has no fabricated Main/history work");
+        var cpu=pass.finishDraw(cameras());assertEquals(2,cpu.provenance().stream().filter(piece->piece.slotRef().wholeIndex()==65).count());
+        assertFalse(f.frame.closed());
+    }
     private static final class TestPorts implements Ports {
         Cut cut;boolean valid=true,omit,reentry;int rejections;SonicCdAct2PastObjectPass pass;
         Runnable beforeApply;final List<SonicCdAct2PastObjectPass.Adoption> receipts=new ArrayList<>();
@@ -154,8 +175,9 @@ class TestSonicCdAct2PastObjectPass {
         SonicCdAct2PastObjectPass pass(){return new SonicCdAct2PastObjectPass(ports,terrain,player,frame,placement);}
         CdAssetBytes slot(int whole){return ports.cut.reservedSlots().slice((whole-1)*64,64);}
     }
-    private static Fixture fixture(boolean reserved){
-        var m=new CdPlayerMotionState(0x07001234,0x04205678,-0x123,0x234,-0x345,0,0,0x42,0,0,0,0,0,0,0,0,0,0,0,0);
+    private static Fixture fixture(boolean reserved){return fixture(reserved,0x04205678);}
+    private static Fixture fixture(boolean reserved,int centreY16_16){
+        var m=new CdPlayerMotionState(0x07001234,centreY16_16,-0x123,0x234,-0x345,0,0,0x42,0,0,0,0,0,0,0,0,0,0,0,0);
         var state=new CdPlayerBody.State(m,new CdPlayerBody.AnimationCursor(0,0,0),new CdPlayerBody.Header(1,0,0,0,0),new CdPlayerBody.Timers(0x78,0,0,0),new CdPlayerBody.History(bytes(256,0),0),0,new CdPlayerBody.ObjectLinks(0,0),0);
         var env=new CdPlayerBody.Environment(new CdPlayerMovement.Environment(new CdPlayerMovement.Physics(0,0,0),new CdPlayerMovement.Bounds(0x10,0x2000,0x700,0),new CdPlayerMovement.Gates(1,0,0,0,0,0,0),new CdPlayerMovement.Globals(0,0x60,0,0,0,0,0x12,0x34,0x56,0x78)),new CdPlayerBody.Controls(0,0,0,0,1),new CdPlayerBody.Globals(0,160,0,0,0,0,0,0),CdPlayerBody.DynamicSlots.UNIMPLEMENTED);
         var frame=CdPlayerFrameRuntime.fromAct2PastEntry(terrain,player,state,env,new CdPlayerArtRuntime.State(new byte[768],new byte[768],0,false),new CdPlayerFrameRuntime.VIntClock(OptionalLong.of(100),0));

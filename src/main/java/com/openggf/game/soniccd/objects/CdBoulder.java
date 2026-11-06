@@ -10,6 +10,8 @@ import com.openggf.game.soniccd.level.CdR11aObjectAssets;
 import com.openggf.game.soniccd.level.CdR11bAssets;
 import com.openggf.game.soniccd.level.CdR12aObjectAssets;
 import com.openggf.game.soniccd.level.CdR12aProfile;
+import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
+import com.openggf.game.soniccd.level.CdR12bObjectAssets;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -267,6 +269,27 @@ public final class CdBoulder {
         if (!placement.sameAct2Source(owner))
             throw new IllegalArgumentException("Boulder requires the same retained R12A placement/source");
         return new CdBoulder(placement, presentAssets(Assets.fromAct2Assets(owner)), sharedSolid, commit, drawObject);
+    }
+    /** Actual retained R12B source, raw72 operand and the existing genuine plain-Solid prefix path. */
+    public static CdBoulder fromAct2PastAssets(CdObjectPlacementRuntime placement, CdR12bTerrainAssets owner,
+                                               CdSolidObject sharedSolid, PrefixSolidCommit commit, DrawObjectCall drawObject) {
+        Objects.requireNonNull(placement, "actual R12B placement"); Objects.requireNonNull(owner, "actual R12B terrain");
+        if (!placement.sameAct2PastSource(owner))
+            throw new IllegalArgumentException("Boulder requires the same retained R12B placement/source");
+        return new CdBoulder(placement, act2PastAssets(owner.objects()), sharedSolid, commit, drawObject);
+    }
+    private static NativeAssets act2PastAssets(CdR12bObjectAssets owner) {
+        Objects.requireNonNull(owner, "actual R12B object assets"); var identity=Objects.requireNonNull(owner.identity(), "R12B identity");
+        if (identity.variant()!=CdReleaseVariant.USA || identity.file()!=CdNativeFile.R12B
+                || identity.domain()!=CdMmdImage.Domain.ORIGINAL_WORD_RAM || !identity.stage().equals(CdStagePayload.R12B.stage()))
+            throw new IllegalArgumentException("Boulder requires actual original USA R12B metadata");
+        var tiles=owner.view(CdR12bObjectAssets.View.OBJECT_TILE_IDS);var visual=owner.boulder();
+        if (tiles.length()!=72)throw new IllegalArgumentException("R12B Boulder requires the actual72-byte tile directory");
+        if (visual.mappingFrames().size()!=1 || !visual.animations().isEmpty())
+            throw new IllegalArgumentException("R12B Boulder has one counted frame and no scripts");
+        for (var piece:visual.mappingFrames().getFirst().pieces())
+            if (piece.tileOffset()>19-piece.tileCount())throw new IllegalArgumentException("Boulder mapping exceeds its19-tile source");
+        return new NativeAssets(secondary->readPastTileWord(tiles,secondary),CdR12bObjectAssets.View.MAP_SPR_BOULDER.range().nativeAddress());
     }
     private static NativeAssets pastAssets(CdR11bAssets owner) {
         Objects.requireNonNull(owner, "owner");

@@ -12,8 +12,8 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * Detached original-USA R12B metadata for twelve kinds: Ring, Spring, HUD, TimeIcon,
- * Monitor/TimePost, CollapsePlatform, Tamabboh, Animal, Swing, RobotGenerator, Anton, Platform.
+ * Detached original-USA R12B metadata for thirteen kinds: Ring, Spring, HUD, TimeIcon,
+ * Monitor/TimePost, CollapsePlatform, Tamabboh, Animal, Swing, RobotGenerator, Anton, Platform, Boulder.
  * N1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff: actual Act2Past includes and Init/Animate
  * operands are pinned in the companion report/tests. Authored by OpenAI Codex GPT-6.1 Sol.
  * Every byte is read from the authenticated terrain owner's retained original image.
@@ -21,7 +21,7 @@ import java.util.Objects;
  * No body, programme, Frame, clock, queue, decoder service, art/current bank or drawing is owned.
  */
 public final class CdR12bObjectAssets {
-    /** Ordered fixed original spans. Spring's 199-byte include retains its actual parent EVEN byte at 200. */
+    /** Fixed original spans. Spring199/200 and Boulder13/14 retain their actual parent EVEN bytes. */
     public enum View {
         OBJECT_INDEX(0x3C4A,256,256,"e487f3d9aa462c50b3cb6f5cf029b2477a64bde6fd32a5c303262aa31dc75595","e487f3d9aa462c50b3cb6f5cf029b2477a64bde6fd32a5c303262aa31dc75595"),
         OBJECT_TILE_IDS(0xCC00,72,72,"7b25e293d8155f08891b43228817e782581ed26aaa06a14712adff8c4e3f5762","7b25e293d8155f08891b43228817e782581ed26aaa06a14712adff8c4e3f5762"),
@@ -61,7 +61,8 @@ public final class CdR12bObjectAssets {
         MAP_SPR_ANTON(0xB160,112,112,"898f3a56606b9c82c0c0a4c2197b0860353cbce320baf1026bd7f717b300e808","898f3a56606b9c82c0c0a4c2197b0860353cbce320baf1026bd7f717b300e808"),
         MAP_SPR_PLATFORM(0xC980,132,132,"a8b6e5695090a558c67e7e776db8c4b642731a7ef7445608264b29f15529afd7","a8b6e5695090a558c67e7e776db8c4b642731a7ef7445608264b29f15529afd7"),
         PLATFORM_WIDTHS(0xC5F8,4,4,"87d0fad66b7f6fe31844c828bbfa818f478c885f0f7672d1bb38d89ed6bfb9d3","87d0fad66b7f6fe31844c828bbfa818f478c885f0f7672d1bb38d89ed6bfb9d3"),
-        PLATFORM_RANGES(0xC5FC,4,4,"ce513997025ae549282209565f4c74aae2258cd6c391acd643d3b7f1b8071c9a","ce513997025ae549282209565f4c74aae2258cd6c391acd643d3b7f1b8071c9a");
+        PLATFORM_RANGES(0xC5FC,4,4,"ce513997025ae549282209565f4c74aae2258cd6c391acd643d3b7f1b8071c9a","ce513997025ae549282209565f4c74aae2258cd6c391acd643d3b7f1b8071c9a"),
+        MAP_SPR_BOULDER(0x940A,13,14,"dd926b35e5d149b9d44622d28f34dd320667e9d025bf5ae52324a95a9c32576d","f1613b80dc72cd1d153d190f3a660e3990f92648d54e65c989aed93bc9189652");
         private final int offset,canonicalLength,length;
         private final String canonicalSha,sha;
         View(int offset,int canonicalLength,int length,String canonicalSha,String sha) {
@@ -95,7 +96,8 @@ public final class CdR12bObjectAssets {
         SWING(View.MAP_SPR_SWING,3,null,0,14,0,0,0,SourceId.ART_SWING),
         ROBOTGENERATOR(View.MAP_SPR_ROBOT_GENERATOR,8,View.ANI_ROBOT_GENERATOR,1,23,0,0,0,SourceId.ART_ROBOT_TRANSPORT_B),
         ANTON(View.MAP_SPR_ANTON,4,View.ANI_ANTON,2,22,0,0,0,SourceId.ART_ANTON),
-        PLATFORM(View.MAP_SPR_PLATFORM,3,null,0,57,0,0,0,SourceId.ART_PLATFORM);
+        PLATFORM(View.MAP_SPR_PLATFORM,3,null,0,57,0,0,0,SourceId.ART_PLATFORM),
+        BOULDER(View.MAP_SPR_BOULDER,1,null,0,19,0,0,0,SourceId.ART_BOULDER);
         final View map,script;final int frames,scripts,bound,root,start,end;final SourceId art;
         Key(View map,int frames,View script,int scripts,int bound,int root,int start,int end,SourceId art){
             this.map=map;this.frames=frames;this.script=script;this.scripts=scripts;this.bound=bound;this.root=root;this.start=start;this.end=end;this.art=art;
@@ -152,6 +154,8 @@ public final class CdR12bObjectAssets {
     public CdObjectVisualAssets robotGenerator() { return visual(Key.ROBOTGENERATOR); }
     public CdObjectVisualAssets anton() { return visual(Key.ANTON); }
     public CdObjectVisualAssets platform() { return visual(Key.PLATFORM); }
+    /** Native Boulder/Main:26-59; one counted frame, actual parent EVEN, existing19-tile source. */
+    public CdObjectVisualAssets boulder() { return visual(Key.BOULDER); }
 
     private synchronized CdObjectVisualAssets visual(Key key){
         var cached=visuals[key.ordinal()];if(cached!=null)return cached;
