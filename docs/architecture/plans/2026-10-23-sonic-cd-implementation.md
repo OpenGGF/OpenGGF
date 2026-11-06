@@ -1,5 +1,40 @@
 # Implement Sonic CD with complete regional parity
 
+## 6 November 2026 — Act3 data and natural Goal replay checkpoint
+
+Private local qualification now includes original-USA R13C/R13D data, preserving
+167 visual frames, all60 animation scripts and all61 native placement records
+without padding or sorting. Two explicit terrain shapes and geometry labels
+retain the existing shared decoders. Six latent animation scripts contain frame
+IDs above166; only this source format defers mapping cardinality to the unchanged
+selected-frame runtime fence. Legacy198 validation remains eager and unchanged.
+Source identity, reader bounds, decoded products/cursors, palette/PLC metadata,
+native placement order and exact player/source borrowing pass175 focused checks
+across16 classes, with zero failures/errors/skips and unchanged source (R16).
+No R13 Frame/FULL/World, PLC service, boss or regional admission follows.
+
+The permanent original controller now returns through16187, adding470 real R12B
+services and10 FULL/course restore-before-forward checkpoints. Native grounded
+jumps16042..16073 and16120..16151 clear the diagonal Spring and Boulder. Goal33
+enters routine4 at16102 and submits PLC12; the placed Signpost32 (saved252)
+first runs at16109. It is not a Goal-allocated child. The extension passes the
+selected replay case with no failures/errors/skips and unchanged source (R17b).
+An earlier fixture incorrectly expected that Signpost at16102; only the fixture
+and source label were corrected. No movement/collision state was retuned.
+Actual next16188 reaches still-unbound BigRing14/whole35; no later result is
+claimed. The last actual pixel proof remains Projector14708, separate from
+this state/replay extension.
+
+R16's Maven execution was1m47s. R17b's was53.869s (selected case14.18s).
+Queue wait, user wait and source/export overhead are recorded separately in the
+external evidence; this is no new full-suite or whole-act pass. Broad parent
+smoke remains incomplete as recorded below. Source reviews and Root corrections,
+exact case identities, source hashes and byte-preservation proofs are under
+`$SCD_ARTIFACT_ROOT/research/` and `.work/r12b-projector-batch-root-20261106/`.
+Next: qualify actual BigRing/Flash, old LevelStart/RTS/IPX return and the fixed
+Goal pixel proof; then join R13 loading/scroll/palette/current art and boss play.
+Main is untouched, and nothing is pushed or publicly disclosed.
+
 ## 6 November 2026 — native Results/Splash and source-format qualification
 
 Private/local work continues toward the full USA MVP, followed by JP/EU. Main

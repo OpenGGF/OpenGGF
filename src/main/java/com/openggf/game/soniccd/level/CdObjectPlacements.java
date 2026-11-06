@@ -90,6 +90,36 @@ public final class CdObjectPlacements {
                 Optional.of(bytes.slice(4, 8)), Optional.of(bytes.slice(nullOffset, 6)));
     }
 
+    /** Finite original USA R13C/D source order, admitted only by its authentic immutable asset owner. */
+    static CdObjectPlacements decodeR13NativeOrder(CdR13FutureAssets owner) {
+        Objects.requireNonNull(owner, "authenticated R13 asset owner").requireAuthenticatedLayout();
+        var bytes = Objects.requireNonNull(owner.nativeObjectLayout(), "authenticated R13 ObjectLayouts");
+        if (bytes.length() != 514) {
+            throw new IllegalArgumentException("R13 ObjectLayouts extent");
+        }
+        int nullOffset = bytes.unsignedWord(2);
+        if (bytes.unsignedWord(0) != 12 || nullOffset != 508
+                || bytes.unsignedWord(4) != 0xFFFF || bytes.unsignedLong(6) != 0 || bytes.unsignedWord(10) != 0
+                || bytes.unsignedWord(nullOffset) != 0xFFFF || bytes.unsignedLong(nullOffset + 2) != 0) {
+            throw new IllegalArgumentException("R13 ObjectLayouts relative pointers/backwards sentinel/Null list differ");
+        }
+        List<Placement> records = new ArrayList<>();
+        for (int at = 12; at < nullOffset; at += 8) {
+            int x = bytes.unsignedWord(at);
+            if (x == 0xFFFF) {
+                if (at + 8 != nullOffset) { throw new IllegalArgumentException("Data after R13 placement sentinel"); }
+                if (records.size() != 61) { throw new IllegalArgumentException("R13 placement record count"); }
+                return new CdObjectPlacements(records, bytes.slice(at, 8),
+                        Optional.of(bytes.slice(4, 8)), Optional.of(bytes.slice(nullOffset, 6)));
+            }
+            // N r1/stage_object_maps_3.asm retains row55 C10 before rows56..58 BF0.
+            // SpawnObjects_Forward's sequential BLS gate depends on this shipped reversal.
+            records.add(new Placement(records.size(), x, bytes.unsignedWord(at + 2), bytes.unsignedByte(at + 4),
+                    bytes.unsignedByte(at + 5), bytes.unsignedByte(at + 6), bytes.unsignedByte(at + 7)));
+        }
+        throw new IllegalArgumentException("Missing R13 forward placement sentinel");
+    }
+
     public List<Placement> records() { return records; }
     public CdAssetBytes forwardSentinel() { return forwardSentinel; }
     public Optional<CdAssetBytes> backwardSentinel() { return backwardSentinel; }

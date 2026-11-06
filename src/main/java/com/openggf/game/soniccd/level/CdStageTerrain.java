@@ -19,7 +19,9 @@ public final class CdStageTerrain {
         PPZ1_GOOD_FUTURE("R11C", 5792, 24192, 55296, 42, 4, 14, 2, 800),
         PPZ1_BAD_FUTURE("R11D", 5920, 25024, 55296, 42, 4, 14, 2, 800),
         PPZ2_PRESENT("R12A", 5824, 25952, 54272, 42, 4, 10, 2, 900),
-        PPZ2_PAST("R12B", 5664, 25504, 54272, 42, 4, 10, 2, 900);
+        PPZ2_PAST("R12B", 5664, 25504, 54272, 42, 4, 10, 2, 900),
+        PPZ3_GOOD_FUTURE("R13C", 6080, 25216, 54272, 15, 4, 10, 2, 800),
+        PPZ3_BAD_FUTURE("R13D", 6048, 26048, 54272, 15, 4, 10, 2, 800);
 
         private final String label;
         private final int blockBytes;

@@ -1028,7 +1028,74 @@ class TestSonicCdAct2ControllerRoute {
         assertEquals(0,target.state().section().queue().headSource());assertEquals(0,target.state().section().remainingTilesWord());
         System.out.println("Controller-only Act2: WARP13885, actual R12B FULL13886, loading returned"+targetReturnedCall+
                 ",1782 real target services returned through15717; native Projector/four later children, damage/LostRing prefix, Hurt/landing and fixedRight+B15601..15632. Full/course replay includes the actual damage, Hurt, landing, jump and later cuts. No new pixels, native/regional/audio or full-act parity claim.");
-        // The first formerly unowned15718 Spin34 visit is explored separately as its real binding is integrated.
+        // BEGIN measured native Spring/Boulder/Goal continuation through closed16187.
+        for (int call = 15718; call <= 16187; call++) {
+            var input = (call >= 16042 && call <= 16073 || call >= 16120 && call <= 16151)
+                    ? afterProjectorJump : afterProjectorRight;
+            boolean replay = call == 15718 || call == 16041 || call == 16042 || call == 16064
+                    || call == 16102 || call == 16109 || call == 16119 || call == 16120 || call == 16160 || call == 16187;
+            var beforeExtension = replay ? captureNative(h) : null;
+            var fullExtension = replay ? registry.capture() : null;
+            var courseExtension = replay ? registry.captureCourse() : null;
+            try { step(h, input); }
+            catch (RuntimeException | Error original) {
+                throw new AssertionError("R12B promoted continuation last returned=" + (call - 1)
+                        + ", first failed=" + call + ", actual player prefix=" + targetFrame.state(), original);
+            }
+            assertFalse(targetFrame.closed(), "Actual closed continuation call" + call);
+            assertSame(targetFrame, module.requirePlayerFrame()); assertSame(world, h.mode().getWorldSession());
+            assertEquals(generation + 1, h.mode().getLevelManager().getCompletedProductionLoadGeneration());
+            assertEquals(call - targetReturnedCall, targetFrame.environment().globals().levelFrames());
+            if (call == 16041) {
+                assertEquals(0, targetFrame.state().motion().flags() & 2);
+                assertEquals(0, targetFrame.state().motion().yVelocity());
+            }
+            if (call == 16042 || call == 16120) {
+                assertEquals(1, targetFrame.state().motion().playerJump());
+                assertNotEquals(0, targetFrame.state().motion().flags() & 2);
+            }
+            if (call == 16064) {
+                var diagonal = targetHost.placement().pool().state(38);
+                assertEquals(0x0A, diagonal.id()); assertEquals(0x14, diagonal.routine());
+                assertTrue(targetFrame.state().motion().xVelocity() > 0, "Native jump cleared the diagonal Spring");
+                assertTrue(targetHost.sounds().stream().noneMatch(SonicCdGameModule.PastSpringFm.class::isInstance));
+            }
+            if (call == 16102) {
+                var actualGoal = targetHost.placement().pool().state(33);
+                assertEquals(0x16, actualGoal.id()); assertEquals(4, actualGoal.routine());
+                assertEquals(0, targetHost.placement().pool().state(32).id(),
+                        "Goal completion submits PLC12; the later placed Signpost has not reached its spawn cut");
+            }
+            if (call == 16109) {
+                var actualSignpost = targetHost.placement().pool().state(32);
+                assertEquals(0x17, actualSignpost.id()); assertEquals(2, actualSignpost.routine());
+                assertEquals(252, actualSignpost.savedFlagsId());
+                assertEquals(10552, actualSignpost.centreX());
+            }
+            if (call == 16119) {
+                assertEquals(0, targetFrame.state().motion().flags() & 2);
+                assertEquals(0, targetFrame.state().motion().yVelocity());
+                var boulder = targetHost.placement().pool().state(34);
+                assertEquals(0x1B, boulder.id()); assertEquals(2, boulder.routine());
+                assertEquals(10144, boulder.centreX());
+            }
+            if (replay) {
+                var afterExtension = captureNative(h);
+                registry.restore(fullExtension); assertNativeCapture(beforeExtension, h);
+                step(h, input); assertNativeCapture(afterExtension, h);
+                registry.restoreCourse(courseExtension); assertNativeCapture(beforeExtension, h);
+                step(h, input); assertNativeCapture(afterExtension, h);
+            }
+        }
+        assertTrue((targetFrame.state().motion().centreX16_16() >>> 16) > 10144,
+                "Actual Boulder jump has passed its unchanged native solid centre");
+        assertEquals(0x16, targetHost.placement().pool().state(33).id());
+        assertEquals(4, targetHost.placement().pool().state(33).routine());
+        assertEquals(0x17, targetHost.placement().pool().state(32).id());
+        System.out.println("Controller-only R12B: returned16187 through real Spin, later Spring jump, Goal trigger"
+                + ", native placed Signpost and fresh Boulder jump; ten further FULL/course replay cuts."
+                + " No natural BigRing14 service, outgoing Results/RTS, new pixels or full-act/regional parity claim.");
+        // END measured native Spring/Boulder/Goal continuation through closed16187.
         // END measured natural TimeWarp230 old exit.
         // END measured natural TimeWarp save continuation.
         // END measured Swing promotion.

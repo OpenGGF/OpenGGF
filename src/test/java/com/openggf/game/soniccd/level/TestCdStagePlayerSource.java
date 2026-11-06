@@ -74,18 +74,21 @@ class TestCdStagePlayerSource {
     void publicSurfaceIsFinalReadonlyDataWithNamedFactoriesOnly() {
         assertTrue(Modifier.isFinal(CdStagePlayerSource.class.getModifiers()));
         var constructors = CdStagePlayerSource.class.getDeclaredConstructors();
-        assertEquals(3, constructors.length);
+        assertEquals(4, constructors.length);
         for (var constructor : constructors) assertTrue(Modifier.isPrivate(constructor.getModifiers()));
         assertEquals(Set.of(Arrays.asList(CdR11aAssets.class, CdR11bAssets.class),
                 Arrays.asList(CdR12aTerrainAssets.class, CdR12aPlayerAssets.class),
-                Arrays.asList(CdR12bTerrainAssets.class, CdR12bPlayerAssets.class)),
+                Arrays.asList(CdR12bTerrainAssets.class, CdR12bPlayerAssets.class),
+                Arrays.asList(CdR13FutureAssets.class)),
                 Arrays.stream(constructors).map(c -> Arrays.asList(c.getParameterTypes())).collect(Collectors.toSet()));
         var names = Arrays.stream(CdStagePlayerSource.class.getDeclaredMethods())
                 .filter(m -> Modifier.isPublic(m.getModifiers()))
                 .map(m -> m.getName() + "/" + m.getParameterCount()).collect(Collectors.toSet());
         assertEquals(Set.of("fromPresent/1", "fromPast/1", "fromAct2/2", "terrain/0", "player/0", "sonic/0",
-                "mappingAddress/0", "variant/0", "stage/0", "ordinaryPeriod/0", "ownsPresent/1", "ownsPast/1", "ownsAct2/2", "fromAct2Past/2", "ownsAct2Past/2"), names);
-        var fields = CdStagePlayerSource.class.getDeclaredFields(); assertEquals(13, fields.length);
+                "mappingAddress/0", "variant/0", "stage/0", "ordinaryPeriod/0", "ownsPresent/1", "ownsPast/1", "ownsAct2/2", "fromAct2Past/2", "ownsAct2Past/2", "fromAct3Future/1", "ownsAct3Future/1"), names);
+        var fields = CdStagePlayerSource.class.getDeclaredFields(); assertEquals(14, fields.length);
+        assertEquals(1, Arrays.stream(fields).filter(f -> f.getName().equals("act3Future")
+                && f.getType() == CdR13FutureAssets.class).count());
         for (var field : fields) {
             assertTrue(Modifier.isPrivate(field.getModifiers())); assertTrue(Modifier.isFinal(field.getModifiers()));
             assertFalse(field.getType().isArray(), "No copied mutable byte bank");

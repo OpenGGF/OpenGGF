@@ -282,8 +282,12 @@ matching area heading; see the
   field, bonus, score, saved-bank and sound order, including completed PLC failure
   prefixes. Results' outgoing programme lifetime remains separately gated.
   A natural Projector picture now has current-art and full/course pixel-replay
-  checks. Later-stage Sonic visuals have an explicit source format that retains
-  complete art without invented padding; live later-stage loading stays separate.
+  checks. The Past controller route now clears the diagonal Spring and Boulder
+  and triggers the Goal Post, with complete full/course restore-forward checks.
+  Act3 Good/Bad Future data retains its original167-frame Sonic format, complete
+  art and native placement order, including the shipped X-order reversal. Both
+  terrain geometries and player/source relations use the existing decoders;
+  live later-stage loading and boss gameplay stay separate.
   CD player headless boot loads the fixed
   roster before rewind controller creation while keeping no-device audio before
   playback. A separate real-World entry fixture retains its own visible-Sonic

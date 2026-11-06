@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestCdStageTerrain {
     @Test
     void exactPublicSurfaceAndLegacyRecordTypesRemainAvailable() throws Exception {
-        assertArrayEquals(new CdStageTerrain.Shape[]{PPZ1_PRESENT, PPZ1_PAST, PPZ1_GOOD_FUTURE, PPZ1_BAD_FUTURE, PPZ2_PRESENT, PPZ2_PAST}, CdStageTerrain.Shape.values());
+        assertArrayEquals(new CdStageTerrain.Shape[]{PPZ1_PRESENT, PPZ1_PAST, PPZ1_GOOD_FUTURE, PPZ1_BAD_FUTURE, PPZ2_PRESENT, PPZ2_PAST, PPZ3_GOOD_FUTURE, PPZ3_BAD_FUTURE}, CdStageTerrain.Shape.values());
         assertEquals(Set.of("values", "valueOf"), Arrays.stream(CdStageTerrain.Shape.class.getDeclaredMethods())
                 .filter(m -> Modifier.isPublic(m.getModifiers())).map(m -> m.getName()).collect(Collectors.toSet()));
         Set<String> legacy = Set.of("decode(" + "byte[],".repeat(8) + "byte[]):CdR11aTerrain",
@@ -63,7 +63,17 @@ class TestCdStageTerrain {
         assertEquals(811, act2.patternCount()); assertEquals(106, act2.chunkCount());
         assertEquals(5824, act2.blocks().length()); assertEquals(25952, act2.patterns().length());
         assertEquals(54272, act2.chunks().length()); assertEquals(900, act2.collision().ids().length());
-        for (var terrain : new CdStageTerrain[]{present, past, future, badFuture, act2}) {
+        var act3Good = new Fixture(PPZ3_GOOD_FUTURE).decode();
+        assertSame(PPZ3_GOOD_FUTURE, act3Good.shape());
+        assertEquals(760, act3Good.blockCount()); assertEquals(788, act3Good.patternCount()); assertEquals(106, act3Good.chunkCount());
+        assertEquals(6080, act3Good.blocks().length()); assertEquals(25216, act3Good.patterns().length());
+        assertEquals(54272, act3Good.chunks().length()); assertEquals(800, act3Good.collision().ids().length());
+        var act3Bad = new Fixture(PPZ3_BAD_FUTURE).decode();
+        assertSame(PPZ3_BAD_FUTURE, act3Bad.shape());
+        assertEquals(756, act3Bad.blockCount()); assertEquals(814, act3Bad.patternCount()); assertEquals(106, act3Bad.chunkCount());
+        assertEquals(6048, act3Bad.blocks().length()); assertEquals(26048, act3Bad.patterns().length());
+        assertEquals(54272, act3Bad.chunks().length()); assertEquals(800, act3Bad.collision().ids().length());
+        for (var terrain : new CdStageTerrain[]{present, past, future, badFuture, act2, act3Good, act3Bad}) {
             assertEquals(256, terrain.collision().angles().length()); assertEquals(4096, terrain.collision().heights().length());
             assertEquals(4096, terrain.collision().widths().length()); assertEquals(0x800, terrain.layout().ram().length());
         }
@@ -72,13 +82,14 @@ class TestCdStageTerrain {
     @Test
     void bothLayoutsPackNativeRowsIntoOneClearedRam() {
         for (var shape : CdStageTerrain.Shape.values()) {
-            var f = new Fixture(shape); f.fg[2] = (byte) 0x81; f.bg[2] = (byte) 0x82; f.fg[44] = 2;
+            boolean act3 = shape == PPZ3_GOOD_FUTURE || shape == PPZ3_BAD_FUTURE;
+            var f = new Fixture(shape); f.fg[2] = (byte) 0x81; f.bg[2] = (byte) 0x82; f.fg[act3 ? 17 : 44] = 2;
             f.fg[f.fg.length - 1] = (byte) (0x80 | f.chunkCount()); f.bg[f.bg.length - 1] = 1;
             byte[] expected = new byte[0x800]; expected[0] = (byte) 0x81; expected[0x40] = (byte) 0x82; expected[0x80] = 2;
-            expected[shape == PPZ1_PRESENT ? 0x3A9 : 0x1A9] = (byte) (0x80 | f.chunkCount());
-            expected[shape == PPZ1_PRESENT ? 0x3C5 : (shape == PPZ1_PAST || shape == PPZ2_PRESENT || shape == PPZ2_PAST) ? 0x0C9 : 0x0CD] = 1;
+            expected[shape == PPZ1_PRESENT ? 0x3A9 : act3 ? 0x18E : 0x1A9] = (byte) (0x80 | f.chunkCount());
+            expected[act3 ? 0x0C9 : shape == PPZ1_PRESENT ? 0x3C5 : (shape == PPZ1_PAST || shape == PPZ2_PRESENT || shape == PPZ2_PAST) ? 0x0C9 : 0x0CD] = 1;
             var t = f.decode(); assertArrayEquals(expected, t.layout().ram().copy());
-            assertEquals(42, t.layout().columns(FOREGROUND)); assertEquals(shape == PPZ1_PRESENT ? 6 : (shape == PPZ1_PAST || shape == PPZ2_PRESENT || shape == PPZ2_PAST) ? 10 : 14, t.layout().columns(BACKGROUND));
+            assertEquals(act3 ? 15 : 42, t.layout().columns(FOREGROUND)); assertEquals(act3 ? 10 : shape == PPZ1_PRESENT ? 6 : (shape == PPZ1_PAST || shape == PPZ2_PRESENT || shape == PPZ2_PAST) ? 10 : 14, t.layout().columns(BACKGROUND));
             assertEquals(shape == PPZ1_PRESENT ? 8 : 4, t.layout().rows(FOREGROUND));
             assertEquals(shape == PPZ1_PRESENT ? 8 : 2, t.layout().rows(BACKGROUND));
             assertEquals(0, t.layout().nativeCell(FOREGROUND, 63, 15).rawByte());
@@ -152,6 +163,10 @@ class TestCdStageTerrain {
     void layoutBoundsRejectBeforeNativeClearedCellAccess() {
         for (var shape : CdStageTerrain.Shape.values()) {
             var t = new Fixture(shape).decode(); var l = t.layout();
+            if (shape == PPZ3_GOOD_FUTURE || shape == PPZ3_BAD_FUTURE) {
+                assertThrows(IndexOutOfBoundsException.class, () -> l.cell(FOREGROUND, 15, 0));
+                assertEquals(0, l.nativeCell(FOREGROUND, 15, 0).rawByte());
+            }
             assertThrows(IndexOutOfBoundsException.class, () -> l.cell(FOREGROUND, 42, 0));
             assertThrows(IndexOutOfBoundsException.class, () -> l.cell(BACKGROUND, l.columns(BACKGROUND), 0));
             assertThrows(IndexOutOfBoundsException.class, () -> l.cell(FOREGROUND, 0, l.rows(FOREGROUND)));
@@ -329,6 +344,14 @@ class TestCdStageTerrain {
         private byte[] blocks, patterns, chunks, fg, bg, ids, angles, heights, widths;
         Fixture(CdStageTerrain.Shape shape) {
             this.shape = shape; boolean present = shape == PPZ1_PRESENT;
+            if (shape == PPZ3_GOOD_FUTURE || shape == PPZ3_BAD_FUTURE) {
+                blocks = new byte[shape == PPZ3_GOOD_FUTURE ? 6080 : 6048];
+                patterns = new byte[shape == PPZ3_GOOD_FUTURE ? 25216 : 26048];
+                chunks = new byte[54272]; fg = new byte[62]; bg = new byte[22]; ids = new byte[800];
+                angles = new byte[256]; heights = new byte[4096]; widths = new byte[4096];
+                fg[0] = 14; fg[1] = 3; bg[0] = 9; bg[1] = 1;
+                return;
+            }
             blocks = new byte[present ? 6432 : shape == PPZ1_PAST ? 5280 : shape == PPZ1_GOOD_FUTURE ? 5792 : shape == PPZ2_PRESENT ? 5824 : shape == PPZ2_PAST ? 5664 : 5920];
             patterns = new byte[present ? 25600 : shape == PPZ1_PAST ? 23872 : shape == PPZ1_GOOD_FUTURE ? 24192 : shape == PPZ2_PRESENT ? 25952 : shape == PPZ2_PAST ? 25504 : 25024];
             chunks = new byte[present ? 61952 : (shape == PPZ1_PAST || shape == PPZ2_PRESENT || shape == PPZ2_PAST) ? 54272 : 55296];
@@ -336,9 +359,20 @@ class TestCdStageTerrain {
             ids = new byte[present || shape == PPZ2_PRESENT || shape == PPZ2_PAST ? 900 : 800]; angles = new byte[256]; heights = new byte[4096]; widths = new byte[4096];
             fg[0] = 41; fg[1] = (byte) (present ? 7 : 3); bg[0] = (byte) (present ? 5 : (shape == PPZ1_PAST || shape == PPZ2_PRESENT || shape == PPZ2_PAST) ? 9 : 13); bg[1] = (byte) (present ? 7 : 1);
         }
-        int blockCount() { return shape == PPZ1_PRESENT ? 804 : shape == PPZ1_PAST ? 660 : shape == PPZ1_GOOD_FUTURE ? 724 : shape == PPZ2_PRESENT ? 728 : shape == PPZ2_PAST ? 708 : 740; }
-        int patternCount() { return shape == PPZ1_PRESENT ? 800 : shape == PPZ1_PAST ? 746 : shape == PPZ1_GOOD_FUTURE ? 756 : shape == PPZ2_PRESENT ? 811 : shape == PPZ2_PAST ? 797 : 782; }
-        int chunkCount() { return shape == PPZ1_PRESENT ? 121 : (shape == PPZ1_PAST || shape == PPZ2_PRESENT || shape == PPZ2_PAST) ? 106 : 108; }
+        int blockCount() {
+            if (shape == PPZ3_GOOD_FUTURE) return 760;
+            if (shape == PPZ3_BAD_FUTURE) return 756;
+            return shape == PPZ1_PRESENT ? 804 : shape == PPZ1_PAST ? 660 : shape == PPZ1_GOOD_FUTURE ? 724 : shape == PPZ2_PRESENT ? 728 : shape == PPZ2_PAST ? 708 : 740;
+        }
+        int patternCount() {
+            if (shape == PPZ3_GOOD_FUTURE) return 788;
+            if (shape == PPZ3_BAD_FUTURE) return 814;
+            return shape == PPZ1_PRESENT ? 800 : shape == PPZ1_PAST ? 746 : shape == PPZ1_GOOD_FUTURE ? 756 : shape == PPZ2_PRESENT ? 811 : shape == PPZ2_PAST ? 797 : 782;
+        }
+        int chunkCount() {
+            if (shape == PPZ3_GOOD_FUTURE || shape == PPZ3_BAD_FUTURE) return 106;
+            return shape == PPZ1_PRESENT ? 121 : (shape == PPZ1_PAST || shape == PPZ2_PRESENT || shape == PPZ2_PAST) ? 106 : 108;
+        }
         byte[][] arrays() { return new byte[][]{blocks, patterns, chunks, fg, bg, ids, angles, heights, widths}; }
         void set(int at, byte[] value) {
             switch (at) { case 0 -> blocks = value; case 1 -> patterns = value; case 2 -> chunks = value;

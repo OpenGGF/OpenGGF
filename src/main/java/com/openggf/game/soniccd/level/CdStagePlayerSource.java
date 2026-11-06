@@ -5,13 +5,14 @@ import com.openggf.game.soniccd.CdReleaseVariant;
 import com.openggf.game.soniccd.CdStageKey;
 import com.openggf.game.soniccd.CdStagePayload;
 import com.openggf.game.soniccd.media.CdMmdImage;
+import com.openggf.game.soniccd.release.CdRetailReleases;
 
 import java.util.Objects;
 
 /**
  * Read-only stage/player format binding over an existing aggregate. Native pin1ecc5f3a:
  * Sonic/Main.asm:146 selects MapSpr_Sonic; the actual authenticated R11A profile and
- * R11B/R12A/R12B asset descriptors bind its program-local address. No source bytes are read here.
+ * R11B/R12A/R12B/R13C/R13D asset descriptors bind its program-local address. No source bytes are read here.
  *
  * <p>Aggregate factories own media authentication. Consistent constructed package
  * fixtures remain data, not authenticated media. Reference relations below confer
@@ -26,6 +27,7 @@ public final class CdStagePlayerSource {
     private final CdR12aPlayerAssets act2Player;
     private final CdR12bTerrainAssets act2PastTerrain;
     private final CdR12bPlayerAssets act2PastPlayer;
+    private final CdR13FutureAssets act3Future;
     private final CdStageTerrain terrain;
     private final CdR11aPlayerAssets player;
     private final CdSonicVisualAssets sonic;
@@ -44,6 +46,7 @@ public final class CdStagePlayerSource {
         this.act2Player = null;
         this.act2PastTerrain = null;
         this.act2PastPlayer = null;
+        this.act3Future = null;
         CdStageTerrain.Shape expectedShape;
         if (present != null) {
             var identity = Objects.requireNonNull(present.identity(), "Present identity");
@@ -89,6 +92,7 @@ public final class CdStagePlayerSource {
     private CdStagePlayerSource(CdR12aTerrainAssets terrainAssets, CdR12aPlayerAssets playerAssets) {
         present = null; past = null; act2Terrain = terrainAssets; act2Player = playerAssets;
         act2PastTerrain = null; act2PastPlayer = null;
+        act3Future = null;
         var terrainIdentity = Objects.requireNonNull(terrainAssets.identity(), "Act2 terrain identity");
         var playerIdentity = Objects.requireNonNull(playerAssets.identity(), "Act2 player identity");
         var terrainProfile = Objects.requireNonNull(terrainAssets.profile(), "Act2 terrain profile");
@@ -121,6 +125,7 @@ public final class CdStagePlayerSource {
     private CdStagePlayerSource(CdR12bTerrainAssets terrainAssets, CdR12bPlayerAssets playerAssets) {
         present = null; past = null; act2Terrain = null; act2Player = null;
         act2PastTerrain = terrainAssets; act2PastPlayer = playerAssets;
+        act3Future = null;
         var terrainIdentity = Objects.requireNonNull(terrainAssets.identity(), "Act2 Past terrain identity");
         var playerIdentity = Objects.requireNonNull(playerAssets.identity(), "Act2 Past player identity");
         var terrainProfile = Objects.requireNonNull(terrainAssets.profile(), "Act2 Past terrain profile");
@@ -150,6 +155,54 @@ public final class CdStagePlayerSource {
         mappingAddress = CdR12bPlayerAssets.Asset.MAP_SPR_SONIC.nativeAddress();
         ordinaryPeriod = 0;
     }
+
+    // BEGIN original Act3 Future immutable data relation.
+    private CdStagePlayerSource(CdR13FutureAssets assets) {
+        present = null; past = null; act2Terrain = null; act2Player = null;
+        act2PastTerrain = null; act2PastPlayer = null; act3Future = assets;
+        var identity = Objects.requireNonNull(assets.identity(), "Act3 Future identity");
+        variant = Objects.requireNonNull(identity.variant(), "Act3 Future variant");
+        stage = Objects.requireNonNull(identity.stage(), "Act3 Future stage");
+        boolean good = stage.equals(CdStagePayload.R13C.stage()) && identity.file() == CdNativeFile.R13C;
+        boolean bad = stage.equals(CdStagePayload.R13D.stage()) && identity.file() == CdNativeFile.R13D;
+        String expectedHash = good ? "3bc8965dc5668a9d1223392f5f7762df41b930b797ebc76aaa5fcf334bc16b4f"
+                : "27e6c42268ea411d184b2b91b79ed626b39871b2823a5362573216ce29fd9356";
+        // Identity consistency only. Aggregate factories retain all actual media authentication.
+        if (variant != CdReleaseVariant.USA || (!good && !bad)
+                || identity.domain() != CdMmdImage.Domain.ORIGINAL_WORD_RAM
+                || !expectedHash.equals(identity.mmdSha256())
+                || !CdRetailReleases.USA.normalizedSha256().equals(identity.observedWholeDiscSha256())) {
+            throw new IllegalArgumentException("Act3 Future original source identity and stage differ");
+        }
+        terrain = Objects.requireNonNull(assets.terrain(), "Act3 Future terrain");
+        player = Objects.requireNonNull(assets.player(), "Act3 Future player data");
+        sonic = Objects.requireNonNull(assets.sonic(), "Act3 Future Sonic visuals");
+        if (terrain.shape() != (good ? CdStageTerrain.Shape.PPZ3_GOOD_FUTURE : CdStageTerrain.Shape.PPZ3_BAD_FUTURE)) {
+            throw new IllegalArgumentException("Act3 Future identity and native terrain format differ");
+        }
+        if (player.sonic() != sonic || sonic.sourceFormat() != CdSonicVisualAssets.SourceFormat.FRAMES_167) {
+            throw new IllegalArgumentException("Act3 Future player and Sonic visuals must be the same 167-frame product");
+        }
+        var mapping = Objects.requireNonNull(assets.range(CdR13FutureAssets.Asset.MAP_SPR_SONIC), "Act3 Future mapping range");
+        if (mapping.file() != identity.file() || mapping.domain() != identity.domain()
+                || mapping.fileOffset() != CdR13FutureAssets.Asset.MAP_SPR_SONIC.fileOffset(identity.file())
+                || mapping.length() != CdR13FutureAssets.Asset.MAP_SPR_SONIC.length(identity.file())) {
+            throw new IllegalArgumentException("Act3 Future mapping range and original source differ");
+        }
+        mappingAddress = mapping.nativeAddress();
+        ordinaryPeriod = 2;
+    }
+
+    /** Borrow original C/D immutable data only; no programme, Frame, FULL or invocation authority. */
+    public static CdStagePlayerSource fromAct3Future(CdR13FutureAssets assets) {
+        return new CdStagePlayerSource(Objects.requireNonNull(assets, "Act3 Future assets"));
+    }
+
+    /** Exact immutable aggregate relation only; equal metadata does not imply ownership or execution. */
+    public boolean ownsAct3Future(CdR13FutureAssets assets) {
+        return act3Future != null && act3Future == assets;
+    }
+    // END original Act3 Future immutable data relation.
 
     /** Original R12B data relation only. It does not select a destination or admit a Frame/load/World. */
     public static CdStagePlayerSource fromAct2Past(CdR12bTerrainAssets terrain, CdR12bPlayerAssets player) {

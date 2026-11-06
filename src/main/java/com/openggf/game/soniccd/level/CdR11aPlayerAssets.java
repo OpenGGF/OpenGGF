@@ -7,7 +7,8 @@ import java.util.Objects;
 /**
  * Bounded R11A player byte prerequisites at scddisasm 1ecc5f3a. No animation,
  * physics, CalcAngle/CalcSine arithmetic, DPLC residency or hardware parity is implemented.
- * Production bytes come only from CdR11aAssetLoader's authenticated supplied MMD.
+ * Production bytes come through authenticated programme factories; this decoder grants no execution.
+ * The explicit 167-frame source retains latent high-frame scripts; selected-frame bounds stay with animation.
  */
 public final class CdR11aPlayerAssets {
     public static final int ANIMATION_COUNT = 60;
@@ -33,7 +34,7 @@ public final class CdR11aPlayerAssets {
                                 CdSonicVisualAssets sonic) {
         this.sonic = Objects.requireNonNull(sonic, "sonic");
         this.animationTable = exact(animations, ANIMATION_BYTES, "Ani_Sonic");
-        this.animations = decodeAnimations(animationTable, sonic.mappingFrames().size());
+        this.animations = decodeAnimations(animationTable, sonic);
         this.miniAnimations = exact(miniAnimations, ANIMATION_COUNT, "live MiniAnims");
         for (int id = 0; id < ANIMATION_COUNT; id++) {
             if (this.miniAnimations.unsignedByte(id) >= ANIMATION_COUNT) {
@@ -92,7 +93,7 @@ public final class CdR11aPlayerAssets {
         return new CdR11aPlayerAssets(animations, miniAnimations, rampChunks, specialChunks, sineTable, arcTanTable, sonic);
     }
 
-    private static List<AnimationScript> decodeAnimations(CdAssetBytes table, int mappingCount) {
+    private static List<AnimationScript> decodeAnimations(CdAssetBytes table, CdSonicVisualAssets sonic) {
         int[] offsets = new int[ANIMATION_COUNT];
         int first = ANIMATION_BYTES;
         for (int id = 0; id < ANIMATION_COUNT; id++) {
@@ -116,13 +117,13 @@ public final class CdR11aPlayerAssets {
                 if (other > offset) { end = Math.min(end, other); }
             }
             var body = table.slice(offset, end - offset);
-            validateScript(body, mappingCount);
+            validateScript(body, sonic);
             scripts.add(new AnimationScript(offset, body));
         }
         return List.copyOf(scripts);
     }
 
-    private static void validateScript(CdAssetBytes body, int mappingCount) {
+    private static void validateScript(CdAssetBytes body, CdSonicVisualAssets sonic) {
         if (body.length() < 3) { throw new IllegalArgumentException("Truncated animation body"); }
         int header = body.unsignedByte(0);
         if (header >= 0x80 && header < 0xFC) {
@@ -135,7 +136,13 @@ public final class CdR11aPlayerAssets {
         for (int cursor = 1; cursor < body.length(); cursor++) {
             int value = body.unsignedByte(cursor);
             if (value < 0xFD) {
-                if (value >= mappingCount) { throw new IllegalArgumentException("Animation frame outside Sonic mappings"); }
+                // The original 167-frame sources retain six latent high-frame scripts verbatim.
+                // Syntax stays fully validated here; CdPlayerAnimation.result checks a frame only
+                // when the unchanged runtime actually selects it. The 198 format remains eager.
+                if (sonic.sourceFormat() != CdSonicVisualAssets.SourceFormat.FRAMES_167
+                        && value >= sonic.mappingFrames().size()) {
+                    throw new IllegalArgumentException("Animation frame outside Sonic mappings");
+                }
                 continue;
             }
             if (cursor == 1) { throw new IllegalArgumentException("Animation has no frame before command"); }
