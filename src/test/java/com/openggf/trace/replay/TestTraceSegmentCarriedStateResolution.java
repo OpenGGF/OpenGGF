@@ -217,7 +217,7 @@ class TestTraceSegmentCarriedStateResolution {
         List<String> all = new java.util.ArrayList<>();
         int checked = 0;
         for (String run : List.of(SONIC_TAILS, TAILS, KNUCKLES,
-                "s3k-multibonus", "s3-knux-multibonus-ss")) {
+                "s3-knux-multibonus-ss")) {
             Path runDir = TraceFixtureRoot.resolve(RUNS.resolve(run));
             if (!Files.isDirectory(runDir)) {
                 continue;

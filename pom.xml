@@ -417,7 +417,7 @@
                 s3k-knuckles-complete-superemeralds   67 segments   1041 MB
                 s2-sonic-tails-complete-emeralds      35 segments    449 MB
                 s1-sonic-complete-withemeralds        34 segments    322 MB
-                s3k-multibonus / s3-knux-multibonus-ss 25 segments   286 MB
+                s3-knux-multibonus-ss                 25 segments   286 MB
 
               Only the Knuckles super-emerald run exceeded 1g, which is why it
               alone died with "Java heap space" and wrote no report while every

@@ -315,7 +315,7 @@ class TestS3kSlotPlayerRuntime {
         // so the low-word reconstruction is exactly idx (the "+1" cancels out, it does
         // NOT carry through to the recovered row/col). See
         // S3kSlotCollisionSystem.tileResponseAnchorX/Y javadoc for the full derivation,
-        // confirmed against src/test/resources/traces/s3k/bonus_slots frame 445/446
+        // confirmed against src/test/resources/traces/s3k/runs/s3-knux-multibonus-ss/slots frame 445/446
         // (a bumper launch whose expected direction only matches with no +1).
         int row = 57;
         int col = 47;
