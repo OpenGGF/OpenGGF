@@ -59,6 +59,8 @@ class TestSonicCdPastDisplay {
         var selected = SonicCdPastDisplay.project(b);
         assertSame(b, selected.inputs());
         assertEquals(SpritePresentation.Frame.empty(), scene(selected).sprites());
+        assertEquals(32, scene(selected).selectedBackdropPaletteIndex(),
+                "LevelStart selects line 2/color 0; retained level pictures must not inherit legacy index 0");
         byte[] sat = new byte[640];
         sat[17] = 3;
         var input = inputs(Optional.empty(), sat, b.foreground(), b.background(), b.current(), b.player());
@@ -75,6 +77,7 @@ class TestSonicCdPastDisplay {
         var disabled = assertInstanceOf(SonicCdPastDisplay.Disabled.class, selected.projection()).scene();
         assertSame(input, selected.inputs());
         assertFalse(disabled.displayEnabled());
+        assertEquals(32, disabled.selectedBackdropPaletteIndex(), "Disabled level selection keeps its unsampled policy");
         assertNull(disabled.foreground());
         assertNull(disabled.background());
         assertEquals(SpritePresentation.Frame.empty(), disabled.sprites());

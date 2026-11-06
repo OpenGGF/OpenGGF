@@ -350,3 +350,27 @@ lifecycle/rewind cross-products remain unassessed for this target. Absence of an
 implementation is a gap, not evidence that a configuration is unsupported. Keep
 native320/Sonic development controls distinct from production breadth. Full USA
 completion precedes JP/EU, and no percentage or whole-game parity claim follows.
+
+### Selected level backdrop — 6 November 2026
+
+The shared immutable selected scene retains native palette entry `$20`
+(line2/colour0) from `LevelStart` in Level/Main.asm:225-243.
+WARP retains its independently selected entry0. The renderer samples the retained
+palette and carries the index in value equality; disabled display still paints
+black without sampling it. No RGB is fitted to a route or image.
+
+The first102-case focused selection returned101P/1F/0E/0S. Its new ambient-fade
+fixture sampled water residency before the restored fade had been uploaded;
+creating that texture after selecting the fade corrects the fixture only.
+The fresh47-case renderer plus natural-route run passed47/0F/E/S. Together with
+the unchanged56 non-renderer cases from the first run, all102 distinct selected
+identities pass across separate runs; this is not a single green102-case run.
+Explicit USA media and surfaceless EGL were present, and both source fingerprints
+were unchanged during execution.
+
+A newly exported real ENGINE controller-call13955 image has exactly24,719
+changed pixels compared with the earlier ENGINE image: opaque black becomes
+RGB73/182/146, with every other pixel unchanged. The same natural16-cut
+full/course state-and-pixel replay passes again. This compares two actual engine
+captures; no emulator-image, whole-act, audio or regional parity is asserted.
+The parent-merge smoke remains separate and pending.

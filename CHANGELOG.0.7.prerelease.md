@@ -297,7 +297,9 @@ Unreleased. The earlier development themes remain in
   velocity publication retain native order; Floating Block threads its two or
   four original Top-Solid calls through the same Frame. The natural controller
   now has sixteen selected-display pixel/replay cuts, eight with visible Sonic;
-  Wall visibility remains unmeasured. Restoring R12B projection rebuilds stored
+  Wall visibility remains unmeasured. Retained level pictures also keep their
+  native selected backdrop palette entry, restoring the green Past sky while
+  WARP retains its separate entry-zero backdrop. Restoring R12B projection rebuilds stored
   output without consuming a pending scroll-initialisation dispatch. Spikes and
   Log Shadow now bind their actual B metadata and private Solid/Y/Hurt/Draw
   publication through existing owners. A fixed jump clears the earlier Platform

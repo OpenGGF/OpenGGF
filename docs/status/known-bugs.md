@@ -31,8 +31,8 @@ special stages and Japan/Europe certification remain incomplete.
 
 **Cause:** bounded native owners fail at their first unowned action. Current-art,
 rewind and component positives do not certify native timing, images or gameplay
-parity. The retained level sky still samples palette0 instead of the native
-selected backdrop32; a source-backed selected-scene correction is in preparation.
+parity. The retained level sky now uses its selected native backdrop entry;
+this finite presentation correction does not certify complete native images.
 
 **Removal condition:** close the finite USA products in the
 [implementation plan](../architecture/plans/2026-10-23-sonic-cd-implementation.md),

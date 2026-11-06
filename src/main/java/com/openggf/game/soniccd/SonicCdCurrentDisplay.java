@@ -1,6 +1,7 @@
 package com.openggf.game.soniccd;
 
 import com.openggf.game.soniccd.level.CdAssetBytes;
+import com.openggf.game.soniccd.level.SonicCdLevel;
 import com.openggf.game.soniccd.objects.CdObjectDrawQueue;
 import com.openggf.game.soniccd.resources.CdObjectPresentation;
 import com.openggf.game.soniccd.resources.CdPlayerArtRuntime;
@@ -21,6 +22,9 @@ import static com.openggf.game.soniccd.SonicCdPastDisplay.*;
  * these immutable values; Sonic.LoadSonicDynPLC:3055-3100 owns the separate F000..F300 pixels.
  * Typed facades supply their finite current-pattern reader. This converter performs no service,
  * current-art mutation, source/World admission or live reborrow. Disabled display samples no art.
+ * LevelStart selects line 2/color 0 before fade enables the level (Main:225-243,314-325).
+ * Retain that existing level-geometry policy beside the selected palette, never query a live
+ * level at draw time. The initial disabled black output does not sample this index.
  */
 final class SonicCdCurrentDisplay {
     private SonicCdCurrentDisplay() { }
@@ -39,7 +43,7 @@ final class SonicCdCurrentDisplay {
         if (!inputs.displayEnabled()) {
             return new Disabled(new RetainedPlaneSceneRenderer.Scene(
                     null, null, hscrollWords(inputs.hscroll()), inputs.vscrollLongBits(), inputs.palette().copy(),
-                    false, SpritePresentation.Frame.empty(), Map.of()));
+                    false, SpritePresentation.Frame.empty(), Map.of(), SonicCdLevel.LEVEL_BACKDROP_PALETTE_INDEX));
         }
         DisplayFailure cpuFailure = selectedCpuFailure(inputs);
         if (cpuFailure != null) return new Blocked(cpuFailure);
@@ -60,7 +64,7 @@ final class SonicCdCurrentDisplay {
                     : SpritePresentation.Frame.empty();
             return new Ready(new RetainedPlaneSceneRenderer.Scene(
                     foreground, background, hscrollWords(inputs.hscroll()), inputs.vscrollLongBits(),
-                    inputs.palette().copy(), true, sprites, samples));
+                    inputs.palette().copy(), true, sprites, samples, SonicCdLevel.LEVEL_BACKDROP_PALETTE_INDEX));
         } catch (ReadStopped stopped) {
             return new Blocked(stopped.failure);
         }

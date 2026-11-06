@@ -16,6 +16,8 @@ import static com.openggf.game.soniccd.level.CdStageTerrain.Plane.*;
 
 /** Pure native-to-engine component conversion; authentication belongs to the independently bound stage asset loader. */
 class SonicCdLevelGeometry extends AbstractLevel {
+    /** LevelStart selects line 2/color 0 before enabling the level (Level/Main.asm:225-243). */
+    public static final int LEVEL_BACKDROP_PALETTE_INDEX = 0x20;
     private static final int GRID_SIDE = 16;
     private static final int NATIVE_COLUMNS = 64;
     private static final int NATIVE_ROWS = 16;
@@ -158,7 +160,7 @@ class SonicCdLevelGeometry extends AbstractLevel {
 
     /** Main.asm:233 writes VDP register $8720. */
     @Override
-    public int getBackdropPaletteLine() { return 2; }
+    public int getBackdropPaletteLine() { return LEVEL_BACKDROP_PALETTE_INDEX / 16; }
 
     /** Native GetLevelBlock's object-dependent loop remapping is not a static drawing operation. */
     @Override

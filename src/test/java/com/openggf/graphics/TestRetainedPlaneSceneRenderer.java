@@ -134,6 +134,103 @@ class TestRetainedPlaneSceneRenderer {
         assertEquals(0x12345678, scene.vscrollLongBits()); assertTrue(scene.nativePatterns().isEmpty());
     }
 
+    @Test void sceneRetainsAnExplicitBackdropIndexInItsValueAndLegacyConstructionMeansIndexZero() {
+        byte[] palette = backdropPalette();
+        var selected = backdropScene(palette, 32);
+        var same = backdropScene(palette.clone(), 32);
+        var zero = backdropScene(palette, 0);
+        var legacy = new RetainedPlaneSceneRenderer.Scene(zero.foreground(), zero.background(),
+                zero.packedHscroll256(), zero.vscrollLongBits(), palette, true, zero.sprites(), zero.nativePatterns());
+        word(palette, 32, 0xE00);
+        selected.selectedPalette128()[64] = -1;
+        assertEquals(32, selected.selectedBackdropPaletteIndex());
+        assertEquals(0x0E0, ((selected.selectedPalette128()[64] & 255) << 8)
+                | (selected.selectedPalette128()[65] & 255));
+        assertEquals(same, selected); assertEquals(same.hashCode(), selected.hashCode());
+        assertNotEquals(zero, selected); assertNotEquals(zero.hashCode(), selected.hashCode());
+        assertEquals(0, legacy.selectedBackdropPaletteIndex());
+        assertEquals(zero, legacy); assertEquals(zero.hashCode(), legacy.hashCode());
+    }
+
+    @Test void sceneRejectsBackdropIndicesOutsideTheCompleteSelectedPaletteEvenWhenDisabled() {
+        for (int index : new int[]{-1, 64, Integer.MIN_VALUE, Integer.MAX_VALUE}) {
+            assertThrows(IllegalArgumentException.class, () -> backdropScene(backdropPalette(), index));
+            assertThrows(IllegalArgumentException.class, () -> new RetainedPlaneSceneRenderer.Scene(
+                    null, null, new int[256], 0, backdropPalette(), false,
+                    SpritePresentation.Frame.empty(), Map.of(), index));
+        }
+        assertEquals(63, backdropScene(backdropPalette(), 63).selectedBackdropPaletteIndex());
+    }
+
+    @Test void eglSelectedBackdropUsesItsFrozenFullPaletteIndexAcrossQueuedAndLaterProducerChanges() throws Exception {
+        try (var f = Fixture.open(); var renderer = new RetainedPlaneSceneRenderer(f.graphics, PatternAtlasRange.OBJECTS)) {
+            byte[] producerPalette = backdropPalette();
+            var selected = backdropScene(producerPalette, 32);
+            var zero = backdropScene(producerPalette, 0);
+            var last = backdropScene(producerPalette, 63);
+            var before = selected.selectedPalette128();
+            var oldCommands = new AtomicInteger();
+            f.graphics.registerCommand((x, y, w, h) -> {
+                oldCommands.incrementAndGet(); word(producerPalette, 32, 0xE00);
+                var live = new com.openggf.level.Palette(); live.colors[0].fromSegaFormat(0xE0E);
+                f.graphics.cachePaletteTexture(live, 2);
+            });
+            var green = f.draw(renderer, selected);
+            assertEquals(1, oldCommands.get()); pixel(green, 0, 0, GREEN); pixel(green, 319, 223, GREEN);
+            pixel(f.draw(renderer, zero), 0, 0, RED);
+            pixel(f.draw(renderer, last), 0, 0, BLUE);
+            assertArrayEquals(bytes(green), bytes(f.draw(renderer, selected)), "Retained selection replays its old backdrop");
+            assertArrayEquals(before, selected.selectedPalette128()); assertEquals(32, selected.selectedBackdropPaletteIndex());
+            assertEquals(0x0E, producerPalette[64] & 255, "Renderer must not rewrite its producer's later palette");
+        }
+    }
+
+    @Test void eglSelectedBackdropIgnoresAmbientWaterAndDisplayedFadeWhileDisabledDisplayStillPaintsBlack() throws Exception {
+        try (var f = Fixture.open(); var renderer = new RetainedPlaneSceneRenderer(f.graphics, PatternAtlasRange.OBJECTS)) {
+            f.graphics.setWaterEnabled(true); f.graphics.setWaterlineScreenY(-1);
+            f.graphics.setUseUnderwaterPaletteForBackground(true);
+            PaletteUploadPresentation.restoreDisplayedFade(f.graphics, new PaletteUploadPresentation.DisplayedFade(
+                    PaletteFadePresentation.Mode.TO_WHITE, 21, PaletteFadePresentation.ALL_LINES, true));
+            // Establish the water texture from the already-selected displayed fade.
+            // Restoring the fade alone marks this residency dirty; it is not an upload.
+            int waterTexture = waterBank(f.graphics);
+            var fade = PaletteUploadPresentation.captureDisplayedFade(f.graphics);
+            byte[] water = textureBytes(waterTexture);
+            var selected = backdropScene(backdropPalette(), 32);
+            pixel(f.draw(renderer, selected), 100, 100, GREEN);
+            var disabled = new RetainedPlaneSceneRenderer.Scene(null, null, new int[256], 0,
+                    selected.selectedPalette128(), false, SpritePresentation.Frame.empty(), Map.of(), 32);
+            pixel(f.draw(renderer, disabled), 100, 100, BLACK);
+            pixel(f.draw(renderer, selected), 100, 100, GREEN);
+            assertTrue(f.graphics.isWaterEnabled()); assertTrue(f.graphics.isUseUnderwaterPaletteForBackground());
+            assertEquals(fade, PaletteUploadPresentation.captureDisplayedFade(f.graphics));
+            assertEquals(waterTexture, f.graphics.getUnderwaterPaletteTextureId());
+            assertArrayEquals(water, textureBytes(waterTexture));
+        }
+    }
+
+    @Test void eglBackdropPostUploadFailureRestoresAmbientStateWithoutPaintingOrChangingTheSelection() throws Exception {
+        try (var f = Fixture.open(); var renderer = new RetainedPlaneSceneRenderer(f.graphics, PatternAtlasRange.OBJECTS)) {
+            var selected = backdropScene(backdropPalette(), 32);
+            byte[] before = bytes(f.draw(renderer, selected));
+            byte[] palette = selected.selectedPalette128();
+            int waterTexture = waterBank(f.graphics); byte[] water = textureBytes(waterTexture);
+            f.graphics.setWaterEnabled(true); f.graphics.setUseUnderwaterPaletteForBackground(true);
+            var checks = new AtomicInteger(); var sentinel = new IllegalStateException("selected backdrop post-upload failure");
+            assertSame(sentinel, assertThrows(IllegalStateException.class, () -> renderer.draw(
+                    backdropScene(backdropPalette(), 0), 0, 0, () -> {
+                        if (checks.incrementAndGet() == 3) throw sentinel;
+                    })));
+            glFinish(); var pixels = BufferUtils.createByteBuffer(WIDTH * HEIGHT * 4);
+            glReadPixels(0, 0, WIDTH, HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+            assertArrayEquals(before, bytes(pixels), "Failed ownership check precedes backdrop painting");
+            assertTrue(f.graphics.isWaterEnabled()); assertTrue(f.graphics.isUseUnderwaterPaletteForBackground());
+            assertArrayEquals(water, textureBytes(waterTexture)); assertEquals(waterTexture, f.graphics.getUnderwaterPaletteTextureId());
+            assertArrayEquals(palette, selected.selectedPalette128()); assertEquals(32, selected.selectedBackdropPaletteIndex());
+            assertArrayEquals(before, bytes(f.draw(renderer, selected)), "Failed draw releases its scope for retained redraw");
+        }
+    }
+
     @Test void constructorRejectsLogicOnlyGraphicsBeforeAnyNativeContextIsRequired() {
         var graphics = new GraphicsManager(); graphics.initHeadless();
         try {
@@ -695,6 +792,18 @@ class TestRetainedPlaneSceneRenderer {
 
     private static RetainedPlaneSceneRenderer.Scene basic() {
         return scene(filled(1), filled(0), new int[256], 0, palette(), Map.of(0, solid(1), 1, solid(0)), List.of());
+    }
+
+    private static RetainedPlaneSceneRenderer.Scene backdropScene(byte[] palette, int index) {
+        var transparent = new RetainedPlaneSceneRenderer.PlaneImage(new int[CELLS]);
+        return new RetainedPlaneSceneRenderer.Scene(transparent, transparent, new int[256], 0,
+                palette, true, SpritePresentation.Frame.empty(), Map.of(0, solid(0)), index);
+    }
+
+    private static byte[] backdropPalette() {
+        byte[] palette = new byte[128];
+        word(palette, 0, 0x00E); word(palette, 32, 0x0E0); word(palette, 63, 0xE00);
+        return palette;
     }
 
     private static RetainedPlaneSceneRenderer.Scene scene(int[] fg, int[] bg, int[] h, int v, byte[] palette,

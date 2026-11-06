@@ -29,6 +29,8 @@ public final class CdWarpPresentation {
     private static final int TILE_COUNT = 101;
     private static final int WIDTH = 320;
     private static final int HEIGHT = 224;
+    /** WARP's separate InitMD table selects line 0/color 0 (Main.asm:135-136,571-579). */
+    private static final int BACKDROP_PALETTE_INDEX = 0;
 
     private CdWarpPresentation() { }
 
@@ -45,7 +47,7 @@ public final class CdWarpPresentation {
         check(assets, selected, logicalBase);
         if (!displayEnabled) return new com.openggf.graphics.RetainedPlaneSceneRenderer.Scene(
                 null, null, new int[256], 0, new byte[128], false,
-                SpritePresentation.Frame.empty(), java.util.Map.of());
+                SpritePresentation.Frame.empty(), java.util.Map.of(), BACKDROP_PALETTE_INDEX);
         if (!selected.displayEnabled()) throw new IllegalArgumentException("WARP has not enabled its selected display");
         int[] background = new int[2048];
         if (assets.backgroundPlane().length() != 4096 || assets.art().length() != TILE_COUNT * 32)
@@ -58,7 +60,7 @@ public final class CdWarpPresentation {
                 new com.openggf.graphics.RetainedPlaneSceneRenderer.PlaneImage(new int[2048]),
                 new com.openggf.graphics.RetainedPlaneSceneRenderer.PlaneImage(background), new int[256],
                 selected.displayedVscrollBgWord(), selected.displayedPalette().orElseThrow().copy(), true,
-                sprites(assets, selected, logicalBase), versions);
+                sprites(assets, selected, logicalBase), versions, BACKDROP_PALETTE_INDEX);
     }
 
     /** The selected physical64x32 name table, at zero horizontal scroll and wrapped selected VScroll. */

@@ -75,12 +75,23 @@ public final class RetainedPlaneSceneRenderer implements AutoCloseable {
     /**
      * Selected values, not admission. HScroll keeps all 256 packed LONGs, including
      * the untransferred tail; only a private GPU staging value is reduced modulo512.
-     * Disabled display may retain absent unsampled planes and never samples pixels.
+     * The backdrop index selects one of this picture's 64 palette words, independently
+     * of transparent tile colour zero. Disabled display never samples palette/plane pixels.
      */
     public record Scene(PlaneImage foreground, PlaneImage background, int[] packedHscroll256,
                         int vscrollLongBits, byte[] selectedPalette128, boolean displayEnabled,
                         SpritePresentation.Frame sprites,
-                        Map<Integer, SpritePresentation.PatternVersion> nativePatterns) {
+                        Map<Integer, SpritePresentation.PatternVersion> nativePatterns,
+                        int selectedBackdropPaletteIndex) {
+        /** Older component scenes selected palette entry zero; no game policy is inferred. */
+        public Scene(PlaneImage foreground, PlaneImage background, int[] packedHscroll256,
+                     int vscrollLongBits, byte[] selectedPalette128, boolean displayEnabled,
+                     SpritePresentation.Frame sprites,
+                     Map<Integer, SpritePresentation.PatternVersion> nativePatterns) {
+            this(foreground, background, packedHscroll256, vscrollLongBits, selectedPalette128,
+                    displayEnabled, sprites, nativePatterns, 0);
+        }
+
         public Scene {
             Objects.requireNonNull(packedHscroll256, "selected HScroll");
             Objects.requireNonNull(selectedPalette128, "selected palette");
@@ -88,6 +99,8 @@ public final class RetainedPlaneSceneRenderer implements AutoCloseable {
             Objects.requireNonNull(nativePatterns, "known selected pattern versions");
             if (packedHscroll256.length != 256) throw new IllegalArgumentException("Selected HScroll requires 256 LONGs");
             if (selectedPalette128.length != 128) throw new IllegalArgumentException("Selected palette requires 128 bytes");
+            if (selectedBackdropPaletteIndex < 0 || selectedBackdropPaletteIndex >= 64)
+                throw new IllegalArgumentException("Selected backdrop palette index must be 0..63");
             if (displayEnabled) {
                 Objects.requireNonNull(foreground, "enabled physical foreground");
                 Objects.requireNonNull(background, "enabled physical background");
@@ -110,11 +123,13 @@ public final class RetainedPlaneSceneRenderer implements AutoCloseable {
                     && Arrays.equals(packedHscroll256, scene.packedHscroll256)
                     && vscrollLongBits == scene.vscrollLongBits
                     && Arrays.equals(selectedPalette128, scene.selectedPalette128)
+                    && selectedBackdropPaletteIndex == scene.selectedBackdropPaletteIndex
                     && displayEnabled == scene.displayEnabled && sprites.equals(scene.sprites)
                     && nativePatterns.equals(scene.nativePatterns);
         }
         @Override public int hashCode() {
-            int hash = Objects.hash(foreground, background, vscrollLongBits, displayEnabled, sprites, nativePatterns);
+            int hash = Objects.hash(foreground, background, vscrollLongBits, displayEnabled, sprites, nativePatterns,
+                    selectedBackdropPaletteIndex);
             hash = 31 * hash + Arrays.hashCode(packedHscroll256);
             return 31 * hash + Arrays.hashCode(selectedPalette128);
         }
@@ -201,7 +216,7 @@ public final class RetainedPlaneSceneRenderer implements AutoCloseable {
                 backgroundScroll.upload(packed);
                 TilePriorityFBO priority = requirePriorityFbo();
                 revalidate(validateOwner);
-                paintBackdrop(backdrop(selected.selectedPalette128), cameraX, cameraY);
+                paintBackdrop(backdrop(selected.selectedPalette128, selected.selectedBackdropPaletteIndex), cameraX, cameraY);
                 prepareRasterState();
                 drawPlane(TilemapGpuRenderer.Layer.BACKGROUND, 0, false, selected, packed, texture, palette);
                 drawPlane(TilemapGpuRenderer.Layer.FOREGROUND, 0, false, selected, packed, texture, palette);
@@ -428,8 +443,8 @@ public final class RetainedPlaneSceneRenderer implements AutoCloseable {
                 0, priority, true, mask, false, 0);
     }
 
-    private int backdrop(byte[] palette) {
-        var colour = new Palette.Color(); colour.fromSegaFormat(palette, 0);
+    private int backdrop(byte[] palette, int selectedIndex) {
+        var colour = new Palette.Color(); colour.fromSegaFormat(palette, selectedIndex * 2);
         return DisplayColorConverter.toPackedRgb(colour.r & 255, colour.g & 255, colour.b & 255,
                 graphics.getDisplayColorProfile(), graphics.getDisplayColorExpansion());
     }
