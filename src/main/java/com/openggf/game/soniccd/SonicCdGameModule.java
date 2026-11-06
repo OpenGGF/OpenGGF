@@ -121,7 +121,7 @@ public final class SonicCdGameModule implements GameModule {
     private SonicCdAct2LoadingVisit act2Loading;
     private com.openggf.game.soniccd.level.SonicCdAct2Level act2Level;
     private long act2LoadGeneration = -1;
-    enum Act2LoadPhase { FIRST_PLC, SECTION_PLC, FROM_BLACK, BEGIN_LEVEL }
+    enum Act2LoadPhase { FIRST_PLC, SECTION_PLC, FROM_BLACK, BEGIN_LEVEL, OLD_WHITE_FADE, OLD_RETURNED }
     enum Act2LoadCall {
         LOAD_LEVEL_PCM, INIT_VDP, INIT_CONTROLLERS, NORMAL_LOAD, LEVEL_SERVICE, PROCESS_PLCS,
         PLAY_LEVEL_MUSIC, IMMEDIATE_LEVEL, IMMEDIATE_STANDARD, CLEAR_FLOWERS, CLEAR_OBJECTS,
@@ -154,9 +154,10 @@ public final class SonicCdGameModule implements GameModule {
         TUNNEL_DOOR_SPLASH_BODY, TUNNEL_DOOR_SPLASH_FM,
         ROBOT_GENERATOR_BODY,
         MOVING_SPRING_BODY,
-        SWING_BODY
+        SWING_BODY,
+        OLD_EXIT_PRELUDE, OLD_EXIT_CLEAR_PLCS, OLD_EXIT_FADE_SERVICE, OLD_EXIT_WHITE_COLOURS, OLD_EXIT_RETURN
     }
-    enum Act2Boundary { ENTRY, PRIMARY_BODY, RESERVED_HUD, DYNAMIC_OBJECTS, LEVEL_FLOW, POWERUP_ART, PALETTE_CYCLE, GLOBAL_ANIMATIONS, MONITOR_ITEM_REWARD, SHIELD_LAYER }
+    enum Act2Boundary { ENTRY, PRIMARY_BODY, RESERVED_HUD, DYNAMIC_OBJECTS, LEVEL_FLOW, POWERUP_ART, PALETTE_CYCLE, GLOBAL_ANIMATIONS, MONITOR_ITEM_REWARD, SHIELD_LAYER, OLD_EXIT_RESTART, OLD_EXIT_FIRST_LOAD, OLD_EXIT_SPECIAL_STAGE, OLD_EXIT_WARP_PROGRAMME }
     static final class UnsupportedAct2Loading extends UnsupportedOperationException {
         private final Act2Boundary boundary;
         UnsupportedAct2Loading(Act2Boundary boundary) { super("Actual R12A stopped at " + boundary); this.boundary = boundary; }
@@ -187,7 +188,7 @@ public final class SonicCdGameModule implements GameModule {
         if (!coldProgramStartAdmission || visit == null || act2Loading != visit || playerFrame == null
                 || playerFrame.closed() || playerActor != null || openingObjects != null || pastLoading != null
                 || mode == null || mode != playerMode || levelProgram == null
-                || levelProgram.phase() != LevelProgramPhase.ACT2_LOADING
+                || !act2ProgrammePhase(levelProgram.phase())
                 || mode.getWorldSession() != programWorld || programWorld.rootGameModule() != this
                 || programWorld.resolvedGameModule() != this || programWorld.getDataSource() != source
                 || !(mode.getLevelManager().getCurrentLevel() instanceof com.openggf.game.soniccd.level.SonicCdAct2Level level)
@@ -203,6 +204,66 @@ public final class SonicCdGameModule implements GameModule {
         if (mode.getCamera().getWidth() != 320 || mode.getCamera().getHeight() != 224)
             throw SonicCd.unsupported("Act2 requires actual native viewport");
     }
+    private static boolean act2ProgrammePhase(LevelProgramPhase phase) {
+        return phase == LevelProgramPhase.ACT2_LOADING || phase == LevelProgramPhase.OLD_EXIT_PRELUDE
+                || phase == LevelProgramPhase.WHITE_FADE || phase == LevelProgramPhase.OLD_RETURNED;
+    }
+    /** Retained Act2 capture/rendering remains admitted; ordinary plane/camera mutations do not. */
+    void requireAct2OrdinaryPresentation(CdPlayerFrameRuntime sourceFrame) {
+        requireAct2LoadingVisit(act2Loading);
+        if (sourceFrame != playerFrame || levelProgram.phase() != LevelProgramPhase.ACT2_LOADING)
+            throw new IllegalStateException("No ordinary Act2 presentation mutation during old programme exit");
+    }
+    /** Native Main19-35, only after the actual complete Act2 physical walk. */
+    void beginAct2OldProgrammeExit(SonicCdAct2LoadingVisit visit) {
+        requireAct2LoadingVisit(visit); visit.requireOldProgrammePrelude();
+        var p = levelProgram;
+        if (p.phase() != LevelProgramPhase.ACT2_LOADING) throw new IllegalStateException("Act2 old exit already entered");
+        playerFrame.beginLevelStart();
+        levelProgram = new LevelProgramState(0, p.timeStones(), p.specialStage(), 0, p.palFadeFlags(),
+                p.gameMode(), 0, 0, LevelProgramPhase.OLD_EXIT_PRELUDE, p.goodFutureFlags());
+    }
+    /** Main56 follows the reached loaded-PLC branch; an unowned first-load reset stops earlier. */
+    void markAct2OldProgrammeInitializing(SonicCdAct2LoadingVisit visit) {
+        requireAct2LoadingVisit(visit); visit.requireOldProgrammeStoreContinuation();
+        var p = levelProgram;
+        if (p.phase() != LevelProgramPhase.OLD_EXIT_PRELUDE) throw new IllegalStateException("No Act2 old initialization store");
+        levelProgram = new LevelProgramState(p.demoMode(), p.timeStones(), p.specialStage(), p.usePlayer2(),
+                p.palFadeFlags(), p.gameMode() | 0x80, p.levelStarted(), p.whiteFadeSteps(), p.phase(), p.goodFutureFlags());
+    }
+    /** Main64 branches on BSET's OLD bit; a skipped fade retains the newly set bit. */
+    boolean selectAct2OldWhiteExit(SonicCdAct2LoadingVisit visit) {
+        requireAct2LoadingVisit(visit); visit.requireOldProgrammeStoreContinuation();
+        var p = levelProgram;
+        if (p.phase() != LevelProgramPhase.OLD_EXIT_PRELUDE) throw new IllegalStateException("No Act2 old LevelStart prelude");
+        boolean fade = (p.palFadeFlags() & 1) != 0;
+        levelProgram = new LevelProgramState(p.demoMode(), p.timeStones(), p.specialStage(), p.usePlayer2(),
+                p.palFadeFlags() | 1, p.gameMode(), p.levelStarted(), 0,
+                fade ? LevelProgramPhase.WHITE_FADE : p.phase(), p.goodFutureFlags());
+        return fade;
+    }
+    /** One returned selector12/colour/ProcessPLCs iteration; native69 follows only the22nd. */
+    void completeAct2OldWhiteFadeWait(SonicCdAct2LoadingVisit visit) {
+        requireAct2LoadingVisit(visit); visit.requireOldProgrammeStoreContinuation();
+        var p = levelProgram;
+        if (p.phase() != LevelProgramPhase.WHITE_FADE || p.whiteFadeSteps() >= 22)
+            throw new IllegalStateException("No actual Act2 old white-fade wait");
+        int completed = p.whiteFadeSteps() + 1;
+        levelProgram = new LevelProgramState(p.demoMode(), p.timeStones(), p.specialStage(), p.usePlayer2(),
+                completed == 22 ? p.palFadeFlags() & ~1 : p.palFadeFlags(), p.gameMode(), p.levelStarted(),
+                completed, p.phase(), p.goodFutureFlags());
+    }
+    /** Main72-81 has cleared direction then the whole restart WORD; native act1 retains bit7. */
+    void completeAct2OldProgrammeReturn(SonicCdAct2LoadingVisit visit) {
+        requireAct2LoadingVisit(visit); visit.requireOldProgrammeStoreContinuation();
+        var p = levelProgram;
+        if (!(p.phase() == LevelProgramPhase.OLD_EXIT_PRELUDE && p.whiteFadeSteps() == 0
+                || p.phase() == LevelProgramPhase.WHITE_FADE && p.whiteFadeSteps() == 22))
+            throw new IllegalStateException("No completed Act2 old LevelStart return");
+        levelProgram = new LevelProgramState(p.demoMode(), p.timeStones(), p.specialStage(), p.usePlayer2(),
+                p.palFadeFlags(), p.gameMode(), p.levelStarted(), p.whiteFadeSteps(), LevelProgramPhase.OLD_RETURNED,
+                p.goodFutureFlags());
+    }
     /** Null denotes a normal or captured completed-save cut; only the private original
      * Primary publication window can return its exact prepared lock reference. */
     CdOpeningObjectRuntime.TimeWarpLockPublication requireAct2TimeWarpAdmission(CdPlayerFrameRuntime sourceFrame) {
@@ -215,17 +276,19 @@ public final class SonicCdGameModule implements GameModule {
     void serviceAct2Loading(int held) {
         playerPresentation.requirePastRenderIdle();
         // Reject nested public ingress before the terminal failure owner is entered.
-        if (act2Loading != null) act2Loading.requireItemShieldServiceIdle();
+        if (act2Loading != null) { act2Loading.requireItemShieldServiceIdle(); act2Loading.requireOldProgrammeServiceIdle(); }
         try { validateAct2LoadingCut(); act2Loading.service(held); playerPresentation.projectAct2Loading(); }
         catch (RuntimeException | Error failure) { closePlayerCycleAfterFailure(failure); throw failure; }
     }
     void completeAct2LoadingBeginLevel(SonicCdAct2LoadingVisit visit) {
         requireAct2LoadingVisit(visit); playerFrame.captureShared(); var p = levelProgram;
+        if (p.phase() != LevelProgramPhase.ACT2_LOADING) throw new IllegalStateException("Old Act2 programme cannot begin another ordinary level");
         levelProgram = new LevelProgramState(p.demoMode(), p.timeStones(), p.specialStage(), p.usePlayer2(),
                 p.palFadeFlags(), p.gameMode() & 0x7F, 1, p.whiteFadeSteps(), p.phase(), p.goodFutureFlags());
     }
     void clearAct2PaletteFlag(SonicCdAct2LoadingVisit visit) {
         requireAct2LoadingVisit(visit);
+        if (levelProgram.phase() != LevelProgramPhase.ACT2_LOADING) throw new IllegalStateException("Old Act2 programme has no initial palClear continuation");
         if (CdProgramInitialization.requirePalClearFlagBit0(programServices.initialization()))
             throw act2Boundary(Act2Boundary.ENTRY);
         // Main323 BCLR0 is reached: CLEAR remains CLEAR. Knowledge comes only from the cold MAINVARS clear.

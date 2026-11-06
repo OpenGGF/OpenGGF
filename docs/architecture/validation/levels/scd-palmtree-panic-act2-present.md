@@ -916,3 +916,46 @@ All12nonpasses reproduce on pre-Swing16bd matched controls. One baseline missing
 S1ROM skip versus candidate pass is separately recorded. Skip classification
 remains8allowed/62unclassified/2requiredGL, with no policy relaxation. Unknown
 coverage and absent normal verdict prevent broader certification.
+
+## Timer230 old exit and return — 6 November
+
+The unchanged controller now reaches native post-object prelude13507,22actual
+white-fade waits13508..13529 and OLD_RETURNED. Full/course before-forward checks
+cover13506→13507,13507→13508,13517→13518 and13528→13529, plus healthy endpoint
+restoration of complete loading/scroll values. Saved42/receipt, old R12A source,
+World/Frame/generation, completed SAT and camera remain distinct retained owners.
+The last physical pass retains genuine writes before queue abandonment; the
+subsequent selector12 waits run no ordinary body/HUD/level-frame/camera/SAT tail.
+Pre-colour palette selection and both current colour buffers follow the existing
+source palette owner. Native old-bit-clear controls take zero waits and retain
+BSET's new bit; old-bit-set takes22and clears only that bit. Direction clears
+before the full restart WORD, with raw80/spawn2retained. Actual natural path is
+old-bit-set, returned13529, V-int3108 and levelFrames3063.
+
+Separate13530 stops at OLD_EXIT_WARP_PROGRAMME before IPX blank/FM/WARP work,
+with no finished service or new target owner. The failed clock nonwrite is a
+source oracle/read-only raw-field comparison, not a closed capture after failure.
+No R12B live programme or new exit/WARP pixel claim follows; all23old selected
+Sonic endpoints remain. The next bridge must preserve zero-versus22wait history
+and the retained R12 command table rather than forcing the old R11A/R11B path.
+
+The first66run has62passes/3newfixture failures/1native observer error/0skips.
+Its41save/Presentation,10exact125→130census controls and3oldpermanent cases pass.
+Corrections preserve complete earlier ordinary V-int art/PLC/HUD value prefixes
+and use truly unowned ID7F with the full64negative image. No production tuning
+was required. The first76attempt failed at test compilation before any test
+ran (`Asset.values().length()` typo); Root corrected only the array access.
+Fresh76passes11exit+4permanent+16R12Bregistry+13data+12retail+20oldterrain with
+0failures/errors/skips. Source fingerprint
+`0d51dce6fa962470a04c2a985dce015135f9153b1ab276f7148a2f961a00f0af`,
+6November02:29:58.864984–02:30:48.270616Z/49.405632s, admission0s;
+normal-memory test preparation33.538s. All33incoming sourcepins,16dependencies,
+exact6classes/76identities, Java25/worktree/media/EGL and fresh XML matched;
+12owned report files were consumed after attribution. Independent static exit
+and R12Bsource reviews found no concrete P1/P2 within their stated non-execution
+scope. Broader smoke remains the separately recorded INCOMPLETE result.
+
+The new [Act2 Past matrix](scd-palmtree-panic-act2-past.md) records the actual
+37finite source bindings and remaining destination obligations. Source-profile
+metadata, decode completion and EOF checks establish neither current pixels nor
+live target gameplay. Runtime assets still come only from original media.

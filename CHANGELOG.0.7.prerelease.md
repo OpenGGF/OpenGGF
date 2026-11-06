@@ -265,10 +265,13 @@ Unreleased. The earlier development themes remain in
   prepared same-Frame publications and source-ordered failure prefixes. Existing
   art and checkpoint owners remain unchanged. The native timer-210 time-warp save
   now publishes its saved state, marked period and camera lock through the existing
-  Frame and World owners. Full/course controller replay continues through timer229,
-  retaining twenty-three selected Sonic render checkpoints. Swing parts remain
-  offscreen at the checked route cuts. Authenticated Act2 Past terrain and load
-  metadata are available separately; destination gameplay loading remains pending.
+  Frame and World owners. The timer-230 restart now finishes its physical object
+  pass before the old programme prelude, queue clear, conditional white fade and
+  return. Full/course controller replay covers that return while retaining all
+  twenty-three prior selected Sonic render checkpoints. Swing parts remain
+  offscreen at the checked route cuts. Authenticated Act2 Past terrain and all
+  thirty-seven finite section-art readers are available separately; the IPX/WARP
+  handoff and destination gameplay loading remain pending.
   Authenticated Act2 Spikes mapping and a named retained-source prefix factory
   reuse the existing common body and Std art owner; live Spikes dispatch remains
   separate from the qualified route.

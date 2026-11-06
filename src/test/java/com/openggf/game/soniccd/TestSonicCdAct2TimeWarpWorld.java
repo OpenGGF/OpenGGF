@@ -30,7 +30,7 @@ class TestSonicCdAct2TimeWarpWorld {
         var old=oldReturned();var retained=actualField(actualField(old.harness().module(),"pastLoading"),"saved");var s=sceneFrom(old);
         assertSame(retained,saved(s));assertTrue(completed(s).isEmpty());
         var before=captureNative(s.h());assertNull(s.h().module().requireAct2TimeWarpAdmission(s.frame()));
-        assertNativeCapture(before,s.h());assertEquals(125,SonicCdGameModule.Act2LoadCall.values().length);
+        assertNativeCapture(before,s.h());assertEquals(130,SonicCdGameModule.Act2LoadCall.values().length);
     }
     @Test void actualWorldSaveUsesPostChargeLocalEightAndCurrentWorldScrollSources() throws Exception {
         var s=prepared209();var oldSaved=saved(s);var oldState=s.frame().state();

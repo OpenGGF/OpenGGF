@@ -420,6 +420,23 @@ baseline ROM-dependent skip remains an input-coverage difference. Skip policy
 was not weakened:8allowed/62unclassified/2requiredGL skips remain. Local feature
 checkpoints preserve these limits rather than claiming release validation.
 
+The same6November continuation now qualifies actual230old-programme exit:
+13507prelude/ClearPLCs,22white waits13508–13529, then a separate13530
+OLD_EXIT_WARP_PROGRAMME boundary before the unowned IPX/WARP bridge.76focused
+checks pass0failures/errors/skips:11exit,4permanent routes/all23prior pixel cuts,
+16R12Bsource registry,25R12Bdata/retail and20oldterrain. Earlier66exposed three
+fixture assumptions (pre-VInt current values and supported Anton ID3F), corrected
+only in tests; the first76attempt was compilation-only incomplete from one test
+array-length typo. Original outcomes remain recorded. Full/course covers four
+exit edges and the healthy13529endpoint; no new white-frame or WARP pixel claim.
+
+The [Act2 Past prerequisite matrix](../architecture/validation/levels/scd-palmtree-panic-act2-past.md)
+records authenticated original-USA data and all37canonical/Java/native-refill
+reader views, output hashes/cursors, real lookahead bytes and finite EOF controls.
+It is explicitly data/reader-only: no target Frame, sparse current profile,
+section facade, live World, destination entry or route is certified. Full USA,
+JP/EU execution and native-image/audio parity remain unfinished.
+
 ### Historical26October pause checkpoint
 
 The [pause handover](../architecture/plans/2026-10-26-sonic-cd-handover.md)

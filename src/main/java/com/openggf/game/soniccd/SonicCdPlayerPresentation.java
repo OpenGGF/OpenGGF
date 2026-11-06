@@ -2079,6 +2079,12 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
 
     /** Ordinary source admission is stricter than observing the old programme's retained images. */
     private Act2Source requireAct2Source() {
+        var source = requireAct2AdmittedSource();
+        module.requireAct2OrdinaryPresentation(source.frame());
+        return source;
+    }
+    /** Same authenticated R12A data/save custody also owns retained old-exit pictures and restores. */
+    private Act2Source requireAct2AdmittedSource() {
         requireAct2TimeWarpIdle();
         var source = requireAct2BoundSource();
         var gates = source.frame().environment().movement().gates();
@@ -2091,6 +2097,11 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
     }
 
     private Act2Source requireAct2ClosedSource() {
+        var source = requireAct2AdmittedSource();
+        source.frame().captureShared();
+        return source;
+    }
+    private Act2Source requireAct2ClosedOrdinarySource() {
         var source = requireAct2Source();
         source.frame().captureShared();
         return source;
@@ -2111,7 +2122,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
      * SpecChunks/RAM/layout/palette installation and initial plane draw remain separate owners/cuts.
      */
     void completeAct2LoadScroll(CdPlayerFrameRuntime sourceFrame, int sourceHudTime) {
-        var source = requireAct2ClosedSource();
+        var source = requireAct2ClosedOrdinarySource();
         if (sourceFrame != source.frame()) throw new IllegalArgumentException("Foreign Act2 setup Frame");
         if ((sourceHudTime & ~0xFF) != 0) throw new IllegalArgumentException("Expected the raw HUD time byte");
         if (!loadScrollPending || !checkpointSetupPending) {
@@ -2149,7 +2160,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
 
     /** Main:249's B plane result only; actual preceding RAM/layout and FG draw remain Root-owned. */
     void initializeAct2PlaneAtLoad() {
-        var source = requireAct2ClosedSource();
+        var source = requireAct2ClosedOrdinarySource();
         if (!loadScrollPending || checkpointSetupPending) {
             throw new IllegalStateException("Initial Act2 Plane B follows completed setup/load scroll");
         }
@@ -2241,7 +2252,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
 
     /** Main178 clears cloud/camera-copy storage; RunMMD already cleared A800/CC00. */
     void clearAct2FlowersImages() {
-        requireAct2ClosedSource();
+        requireAct2ClosedOrdinarySource();
         var b = backgroundState;
         backgroundState = new CdR11aBackgroundScroll.State(b.cameraBgX(), b.cameraBgY(), b.cameraBg2X(),
                 b.cameraBg2Y(), b.cameraBg3X(), b.cameraBg3Y(), b.crossingRam(), b.scrollFlagsBg(),
@@ -2253,7 +2264,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
     }
     /** Main210's exact camera/crossing/flag image, before bounds and saved stores. */
     void clearAct2CameraImages() {
-        requireAct2ClosedSource();
+        requireAct2ClosedOrdinarySource();
         scrollState = new CdR11aForegroundScroll.State(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
         var b = backgroundState;
         backgroundState = new CdR11aBackgroundScroll.State(0, 0, 0, 0, 0, 0,
@@ -2261,7 +2272,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
     }
     /** Main225 clears selected plane and HScroll CPU image through their existing owners. */
     void clearAct2ScreenImages() {
-        requireAct2ClosedSource();
+        requireAct2ClosedOrdinarySource();
         planeState = new CdR11aBackgroundPlane.State(CdAssetBytes.copyOf(new byte[4096])); publishedPlane = planeState;
         var b = backgroundState;
         backgroundState = new CdR11aBackgroundScroll.State(b.cameraBgX(), b.cameraBgY(), b.cameraBg2X(),
@@ -2270,7 +2281,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
                 CdAssetBytes.copyOf(new byte[1024]), 0);
     }
     void initializeAct2LevelSizeImages() {
-        var source = requireAct2ClosedSource(); var bounds = source.assets().loadPlan().bounds(); var f = scrollState;
+        var source = requireAct2ClosedOrdinarySource(); var bounds = source.assets().loadPlan().bounds(); var f = scrollState;
         scrollState = new CdR11aForegroundScroll.State(f.cameraX(), f.cameraY16_16(), 16, 16,
                 f.scrollXDiff(), f.scrollYDiff(), f.scrollFlags(), bounds.bottom(), bounds.left(),
                 f.bottomBoundShift(), f.scrollLock());
@@ -2292,7 +2303,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
 
     CdObjectDrawQueue.DrawCameras continueAct2CameraAfterObjects(CdPlayerFrameRuntime sourceFrame,
                                                                 int sourceHudTime) {
-        var source = requireAct2ClosedSource();
+        var source = requireAct2ClosedOrdinarySource();
         if (sourceFrame != source.frame()) throw new IllegalArgumentException("Foreign Act2 ordinary camera Frame");
         if ((sourceHudTime & ~0xFF) != 0) throw new IllegalArgumentException("Expected the raw HUD time byte");
         if (loadScrollPending || checkpointSetupPending) {
@@ -2330,7 +2341,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
     }
 
     GoalPostBoundPublication prepareAct2TitleScrollLock(CdPlayerFrameRuntime sourceFrame, ScrollCapture expected, int value) {
-        var source = requireAct2ClosedSource();
+        var source = requireAct2ClosedOrdinarySource();
         if (sourceFrame != source.frame() || !sameAct2Scroll(Objects.requireNonNull(expected)))
             throw new IllegalArgumentException("Stale actual Title scroll source/full preimage");
         if (value != 0 && value != 1) throw new IllegalArgumentException("Native Title scrollLock BYTE0/1");
@@ -2342,7 +2353,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
                 expected.background(), expected.plane(), expected.copies()));
     }
     void validatePreparedAct2TitleScrollLock(GoalPostBoundPublication ready) {
-        if (Objects.requireNonNull(ready).source != requireAct2ClosedSource() || !sameAct2Scroll(ready.expected))
+        if (Objects.requireNonNull(ready).source != requireAct2ClosedOrdinarySource() || !sameAct2Scroll(ready.expected))
             throw new IllegalArgumentException("Stale prepared Title scroll preimage");
     }
     void applyPreparedAct2TitleScrollLock(GoalPostBoundPublication ready) {

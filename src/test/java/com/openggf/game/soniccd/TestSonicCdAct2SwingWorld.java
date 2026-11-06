@@ -36,7 +36,7 @@ class TestSonicCdAct2SwingWorld {
         assertSame(s.assets().objects().swing(),b.assets().visual());assertEquals(0x20ED60,b.assets().mappingAddressBits());
         assertSame(s.assets().objects().view(CdR12aProfile.Asset.SWING_MOTION),b.assets().motion());assertEquals(64,b.assets().motion().length());
         assertSame(s.placement(),actual(b,"placement"));assertEquals(3,b.assets().visual().mappingFrames().size());
-        assertEquals(125,SonicCdGameModule.Act2LoadCall.values().length);assertEquals(124,SonicCdGameModule.Act2LoadCall.SWING_BODY.ordinal());
+        assertEquals(130,SonicCdGameModule.Act2LoadCall.values().length);assertEquals(124,SonicCdGameModule.Act2LoadCall.SWING_BODY.ordinal());
         assertEquals(123,SonicCdGameModule.Act2LoadCall.MOVING_SPRING_BODY.ordinal());assertNativeCapture(before,s.h());
     }
 

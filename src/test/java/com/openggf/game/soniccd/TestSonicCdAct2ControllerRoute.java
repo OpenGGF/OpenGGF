@@ -783,31 +783,144 @@ class TestSonicCdAct2ControllerRoute {
         var warpLastClosed=module.act2LoadState();var warpLastPoolBytes=java.nio.ByteBuffer.allocate(96*64);
         for(var image:warpLastClosed.placement().pool().slots())warpLastPoolBytes.put(image.copyBytes());
         assertEquals("7988061948ffd8ed3d38a52bbd7f5d9a73b90fa513a340f47c0b85e58d1558bf",java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(warpLastPoolBytes.array())));
-        // Separate partial13507: all physical bodies ran, then restart branches before scroll/SAT. No closed capture/restore follows.
-        var warpStop=assertThrows(SonicCdGameModule.UnsupportedAct2Loading.class,()->step(h,controller(13507)));
-        assertEquals(SonicCdGameModule.Act2Boundary.LEVEL_FLOW,warpStop.boundary());assertEquals("Actual R12A stopped at LEVEL_FLOW",warpStop.getMessage());assertTrue(frame.closed());
-        var warpFailedPlacement=livePlacement.capture();assertEquals(warpLastClosed.placement().status(),warpFailedPlacement.status());
-        assertArrayEquals(warpLastClosed.placement().savedFlags().copy(),warpFailedPlacement.savedFlags().copy());
-        var warpFailedPoolBytes=java.nio.ByteBuffer.allocate(96*64);for(var image:warpFailedPlacement.pool().slots())warpFailedPoolBytes.put(image.copyBytes());
-        assertEquals("ac10a9caa06b3d89aa1ff49d699e204efffe037ff4b1f0965952c283272ffba6",java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(warpFailedPoolBytes.array())));
-        assertFalse(java.util.Arrays.equals(warpLastPoolBytes.array(),warpFailedPoolBytes.array()),"The failed13507 walk retains genuine dynamic writes, not an unchanged pool");
-        var warpFailedValues=actualField(swingVisit,"values");var warpFailedCalls=(java.util.List<?>)actualField(warpFailedValues,"calls");
-        assertEquals(java.util.List.of(
-                "ORDINARY_PUBLICATION","UPDATE_ANIMATED_TILES","ORDINARY_DRAW_LEVEL","ORDINARY_SLOW_PLC","UPDATE_HUD","ORDINARY_SERVICE","LEVEL_FRAME_INCREMENT","SPAWN_OBJECTS",
-                "PRIMARY_MAIN","SHIELD_ACTIVE","SHIELD_BODY","TIME_STARS_ACTIVE","TIME_STARS_BODY","TIME_STARS_ACTIVE","TIME_STARS_BODY","TIME_STARS_ACTIVE",
-                "TIME_STARS_BODY","TIME_STARS_ACTIVE","TIME_STARS_BODY","RESERVED_OBJECTS","SPRING_BODY","RING_BODY","RING_BODY","SPRING_BODY",
-                "RING_BODY","RING_BODY","MOVING_SPRING_BODY","RING_BODY","SPRING_BODY","RING_BODY","SPRING_BODY","FLOWER_BODY",
-                "SPRING_BODY","RING_BODY","RING_BODY","SPRING_BODY","RING_BODY","RING_BODY","SPRING_BODY","DYNAMIC_OBJECTS"),warpFailedCalls.stream().map(Object::toString).toList());
-        var warpFailedLevel=assertInstanceOf(com.openggf.game.soniccd.objects.CdLevelGlobals.class,actualField(warpFailedValues,"level"));
-        // Source oracles, not preobserved failed-cut diagnostics: Main.asm:608 HIGH-byte restart and Sub CPU.asm:11-12 fade command.
-        assertEquals(0x0100,warpFailedLevel.levelRestart());assertEquals(2,warpFailedLevel.spawnMode());
-        var warpFailedSounds=(java.util.List<?>)actualField(swingVisit,"sounds");
-        assertEquals(java.util.List.of(new SonicCdGameModule.PastFrameSound(new com.openggf.game.soniccd.player.CdPlayerFrameRuntime.BodySound(com.openggf.game.soniccd.player.CdPlayerBody.Sound.SCMD_FADECDA))),
-                warpFailedSounds.stream().filter(SonicCdGameModule.PastFrameSound.class::isInstance).toList());
-        var warpFailedCustody=actualField(actualField(warpFailedValues,"globals"),"timeWarpCustody");
-        assertSame(warpSaved210,actualField(warpFailedCustody,"saved"));assertSame(warpReceipt210,((java.util.Optional<?>)actualField(warpFailedCustody,"completed")).orElseThrow());
-        assertSame(warpPreviousCpu,((java.util.Optional<?>)actualField(actualField(warpFailedValues,"loop"),"completedDraw")).orElseThrow(),"No new Main SAT build at the restart branch");
-        System.out.println("Controller-only Act2 closed13506: original World/Frame/R12A source/epoch survive natural save13487 timer210 through229, exact saved42/knownmask and old local8/current scalar-scroll sources, raw80/spawn2/lock0100, saved/receipt identity nonwrites, three before-forward full/course edges and endpoint complete-value restore. Current Main Sonic draw is suppressed; selected prior VInt CPU remains separate. Partial13507 reaches all objects then LEVEL_FLOW before scroll/SAT, with exact40 receipts/raw96 and source-oracle restart0100/typed FADECDA. No closed13507, destination-load, new pixels or visibility claim.");
+        // BEGIN measured natural TimeWarp230 old exit; facts are expected values only.
+        assertEquals(SonicCdGameModule.LevelProgramPhase.ACT2_LOADING,module.levelProgramState().phase());
+        assertEquals(1,module.levelProgramState().palFadeFlags());assertEquals(0,module.levelProgramState().whiteFadeSteps());
+        var exitInitialValues=actualField(swingVisit,"values");var exitInitialLoop=actualField(exitInitialValues,"loop");
+        var exitPaletteTimers=actualField(exitInitialLoop,"paletteTimers7");var exitPaletteSteps=actualField(exitInitialLoop,"paletteSteps7");
+        var exitCodeTable=warpLastClosed.section().codeTable();com.openggf.game.soniccd.resources.CdR12aCameraArtResidency.State exitResidency=null;
+        var exitCpuImage=(com.openggf.game.soniccd.level.CdAssetBytes)actualField(exitInitialValues,"cpuSat");
+        var exitFrozenActor=frame.captureActor();var exitFrozenArt=frame.artState();var exitFrozenRing=warpLastClosed.ring();
+        var exitFrozenReserved=(com.openggf.game.soniccd.level.CdAssetBytes)actualField(exitInitialValues,"hudObjects");
+        var exitFrozenLive=actualField(actualField(exitInitialValues,"globals"),"live");
+        var exitFrozenSection=warpLastClosed.section();
+        String[] exitSelectedPaletteHashes={
+            "7efc9dacd5ab5b0c8e86bbd59026d8b53425cc53ac9bc0ea21c874cced38eb7b", // 13507
+            "7efc9dacd5ab5b0c8e86bbd59026d8b53425cc53ac9bc0ea21c874cced38eb7b", // 13508
+            "e5931efcd54dbad2dabe014e5f4b854ac3f21d929c3d9be50b3875c1dd9e2293", // 13509
+            "9a428feca1e241c235dfba431210cc2712132eaac6a952b41b52636d583b67c3", // 13510
+            "240590ab74b760423ad84074a5178810b03bb99fc451dc28f02f094ba666ce8f", // 13511
+            "278867b9b9c0b232fadec6e363b790da13e70309a33a765e2ae69e90fe41c7fa", // 13512
+            "c107f358a93ea5cc2fbe4664eceb81a10429a6bb925c8875cb72956971d49b97", // 13513
+            "63cdccb1f6c441416ce7dbe54e2422c8211d0bb6770cc1f4587c78d348567e63", // 13514
+            "45314c673dc749ccac7cfc9382f98557d5c5ab59e6122092d384c62888123052", // 13515
+            "54c4381402ff580d07a17fb5ee0929c05742d6e6a9c238e9d51f31a70ea89c61", // 13516
+            "4d027f01bb59cfa15dfacff71410c21f45ebe85ee1d893dcc6eaa80f3911448c", // 13517
+            "4b223ba4aad519eaf3aa1ce3a5e0e64901c51174bc04b60944481716c4f77b85", // 13518
+            "8507c999db9808c6bf3dd3d201bd2bd821139c874e02692f18b0bb25fa6d5527", // 13519
+            "e7fbe99c6cb938e7c6cefbce2c346a639a4ce259607dac13305f54599b3aaf07", // 13520
+            "a3193ed861ea932898a034215b3d754941a7be2d494337d4da8d54f6f6943ed4", // 13521
+            "142b1da1768449bbbcf55f1867236b13ff37808f3c19b607dfd1e07806329323", // 13522
+            "97ed8b8411de8cc1ff442df1d0696310c49e7a69fdc2bfe843ddcc08c6f62ec7", // 13523
+            "90a714f1efb218b906fd4168998ce80867c134b20e554a5dc0496d8991717058", // 13524
+            "05a4eecb53df4116df9f4a3d2fca0a3fd4e1cacc21a29c7ea5cce98a45584cf9", // 13525
+            "66dc89b66aecf902bd44125c1991b960754831a930cb2ca387aa4c5ebd55304a", // 13526
+            "376c9a4d0d7da033f5b30002c4789b80ccfd971b577b9721bee328e412c3cba1", // 13527
+            "dc59c4174d0ec06d2a1091106e821e3f6883a3ccc7096ebdb32c0ee279786ffc", // 13528
+            "f2dbbbbda7805eae87ded25e3e3b334bbde9f0ff29f6093188d7ec9bc5b529d0", // 13529
+        };
+        java.util.List<String> exitExpectedCalls=java.util.List.of(
+                "ORDINARY_PUBLICATION","UPDATE_ANIMATED_TILES","ORDINARY_DRAW_LEVEL","ORDINARY_SLOW_PLC","UPDATE_HUD","ORDINARY_SERVICE","LEVEL_FRAME_INCREMENT",
+                "SPAWN_OBJECTS","PRIMARY_MAIN","SHIELD_ACTIVE","SHIELD_BODY","TIME_STARS_ACTIVE","TIME_STARS_BODY","TIME_STARS_ACTIVE",
+                "TIME_STARS_BODY","TIME_STARS_ACTIVE","TIME_STARS_BODY","TIME_STARS_ACTIVE","TIME_STARS_BODY","RESERVED_OBJECTS","SPRING_BODY",
+                "RING_BODY","RING_BODY","SPRING_BODY","RING_BODY","RING_BODY","MOVING_SPRING_BODY","RING_BODY",
+                "SPRING_BODY","RING_BODY","SPRING_BODY","FLOWER_BODY","SPRING_BODY","RING_BODY","RING_BODY",
+                "SPRING_BODY","RING_BODY","RING_BODY","SPRING_BODY","DYNAMIC_OBJECTS","OLD_EXIT_PRELUDE","OLD_EXIT_CLEAR_PLCS");
+        for(int call=13507;call<=13529;call++) {
+            var input=controller(call);int waits=call-13507;
+            var exitPriorValues=actualField(swingVisit,"values");
+            var exitPriorPalette=(com.openggf.game.soniccd.level.CdAssetBytes)actualField(exitPriorValues,"cpuPalette");
+            var exitPriorWater=(com.openggf.game.soniccd.level.CdAssetBytes)actualField(exitPriorValues,"waterPalette");
+            var exitExpectedColours=waits==0?null:com.openggf.game.soniccd.resources.CdLevelPaletteFade.stepToWhite(
+                    new com.openggf.game.soniccd.resources.CdLevelPaletteFade.Palettes(exitPriorPalette,exitPriorWater));
+            if(call==13507 || call==13508 || call==13518 || call==13529)replayNextRight(h,input); // Existing before-forward full/course helper restores this cut.
+            step(h,input);
+            // Old exit has no ORDINARY_MAIN_RETURN; check the actual owners independently.
+            assertSame(frame,module.requirePlayerFrame());assertFalse(frame.closed());assertSame(source,frame.stageSource());
+            assertSame(world,h.mode().getWorldSession());assertEquals(generation,h.mode().getLevelManager().getCompletedProductionLoadGeneration());
+            assertSame(swingVisit,actualField(module,"act2Loading"));assertTrue(module.act2LoadingSelected());assertEquals(CdStageKey.parse("R12A"),source.stage());assertTrue(module.warpSceneState().isEmpty());
+            var exitState=module.act2LoadState();var exitValues=actualField(swingVisit,"values");var exitLoop=actualField(exitValues,"loop");
+            var exitProgramme=module.levelProgramState();boolean returned=waits==22;
+            assertEquals(returned?SonicCdGameModule.Act2LoadPhase.OLD_RETURNED:SonicCdGameModule.Act2LoadPhase.OLD_WHITE_FADE,exitState.phase());
+            assertEquals(returned?SonicCdGameModule.LevelProgramPhase.OLD_RETURNED:SonicCdGameModule.LevelProgramPhase.WHITE_FADE,exitProgramme.phase());
+            assertEquals(waits,exitProgramme.whiteFadeSteps());assertEquals(returned?0:1,exitProgramme.palFadeFlags());
+            assertEquals(0x80,exitProgramme.gameMode());assertEquals(0,exitProgramme.levelStarted());assertEquals(0,exitProgramme.demoMode());
+            assertEquals(0,exitProgramme.timeStones());assertEquals(0,exitProgramme.specialStage());assertEquals(0,exitProgramme.usePlayer2());assertEquals(java.util.OptionalInt.empty(),exitProgramme.goodFutureFlags());
+            assertEquals(new com.openggf.game.soniccd.objects.CdLevelGlobals(returned?0:0x0100,1,0,2,3,0,2,6,0),exitState.level());
+            assertEquals(0x80,frame.environment().movement().gates().timeZone());assertEquals(1,frame.environment().movement().gates().zoneAct());assertEquals(returned?0:255,frame.environment().movement().gates().timeWarpDirection());
+            assertEquals(230+waits,frame.environment().globals().timeWarpTimer());assertEquals(3063,frame.environment().globals().levelFrames());assertEquals(3086L+waits,frame.vIntClock().absoluteValue().orElseThrow());
+            assertEquals(8,frame.environment().controls().rawHeld());assertEquals(0,frame.environment().controls().rawTap());
+            assertEquals(8,frame.environment().controls().logicalHeld());assertEquals(0,frame.environment().controls().logicalTap());assertEquals(0,frame.environment().controls().controlLocked());assertFalse(frame.paused());
+            var exitCustody=actualField(actualField(exitValues,"globals"),"timeWarpCustody");assertSame(warpSaved210,actualField(exitCustody,"saved"));
+            assertSame(warpReceipt210,((java.util.Optional<?>)actualField(exitCustody,"completed")).orElseThrow());
+            assertArrayEquals(warpExpectedSaved,(byte[])actualField(warpSaved210,"bytes"));assertArrayEquals(warpExpectedKnown,warpSaved210.knownMask().copy());
+            assertSame(warpLockedForeground,warpPresentation.act2ForegroundImage());assertSame(warpBeforeBackground,warpPresentation.act2BackgroundImage());
+            assertEquals(0x0100,warpPresentation.act2ForegroundImage().scrollLock());assertEquals(6486,warpPresentation.act2ForegroundImage().cameraX());assertEquals(145,warpPresentation.act2ForegroundImage().cameraYWord());
+            var exitPoolBytes=java.nio.ByteBuffer.allocate(96*64);for(var image:exitState.placement().pool().slots())exitPoolBytes.put(image.copyBytes());
+            assertEquals("ac10a9caa06b3d89aa1ff49d699e204efffe037ff4b1f0965952c283272ffba6",java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(exitPoolBytes.array())));
+            assertEquals(warpLastClosed.placement().status(),exitState.placement().status());assertArrayEquals(warpLastClosed.placement().savedFlags().copy(),exitState.placement().savedFlags().copy());
+            var exitExpectedNow=new java.util.ArrayList<>(exitExpectedCalls);
+            for(int wait=0;wait<waits;wait++)exitExpectedNow.addAll(java.util.List.of("OLD_EXIT_FADE_SERVICE","OLD_EXIT_WHITE_COLOURS","PROCESS_PLCS"));
+            if(returned)exitExpectedNow.add("OLD_EXIT_RETURN");
+            assertEquals(exitExpectedNow,exitState.calls().stream().map(Object::toString).toList(),"No repeated ordinary body/HUD/level-frame/camera/SAT/tail work during selector12 waits");
+            var exitSection=exitState.section();assertSame(exitCodeTable,exitSection.codeTable());
+            // Ordinary V-int/HUD work precedes the13507prelude. Anchor its completed current
+            // value here, then prove all selector12 waits retain that exact image.
+            if(waits==0)exitResidency=exitSection.residency();
+            assertSame(exitResidency,exitSection.residency());
+            assertEquals(0x0600,exitSection.sectionWord());assertArrayEquals(new byte[96],exitSection.queue().bytes().copy());
+            assertEquals(0,exitSection.queue().headSource());assertEquals(0,exitSection.queue().headDestination());assertEquals(0,exitSection.remainingTilesWord());assertEquals(0,exitSection.processBudgetWord());
+            assertEquals(0,exitSection.hintWord());assertEquals(0,exitSection.padWord());assertFalse(exitSection.stopped());assertTrue(exitSection.decoder().isEmpty());
+            assertEquals("SavedDecoder[writer=CLEARED, repeatWord=0, pixelNibble=0, previousRow=0, readWord=0, shiftWord=0]",exitSection.savedDecoder().toString());
+            assertSame(exitPaletteTimers,actualField(exitLoop,"paletteTimers7"));assertSame(exitPaletteSteps,actualField(exitLoop,"paletteSteps7"));
+            assertEquals(0x003F,(int)actualField(((java.util.Optional<?>)actualField(actualField(exitValues,"globals"),"tail")).orElseThrow(),"paletteFadeInfoWord"));
+            var exitPalette=(com.openggf.game.soniccd.level.CdAssetBytes)actualField(exitValues,"cpuPalette");var exitWater=(com.openggf.game.soniccd.level.CdAssetBytes)actualField(exitValues,"waterPalette");
+            var exitDisplayedPalette=(com.openggf.game.soniccd.level.CdAssetBytes)actualField(exitValues,"displayedPalette");
+            assertArrayEquals(exitPriorPalette.copy(),exitDisplayedPalette.copy(),"The genuine selector12 publishes its prior current palette before colour work");
+            assertEquals(exitSelectedPaletteHashes[waits],java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(exitDisplayedPalette.copy())));
+            if(waits==0) {
+                assertSame(exitPriorPalette,exitPalette);assertSame(exitPriorWater,exitWater);
+                assertFalse(java.util.Arrays.equals(warpLastPoolBytes.array(),exitPoolBytes.array()),"The returned13507 prelude retains the genuine final physical walk");
+                var m=frame.state().motion();assertArrayEquals(new int[]{0x1A349000,0x016B7F00,1536,0,1536,2,0,0,132,9,19,0,0,0},
+                        new int[]{m.centreX16_16(),m.centreY16_16(),m.xVelocity(),m.yVelocity(),m.groundVelocity(),m.routine(),m.angle(),m.flags(),m.spriteFlags(),m.xRadius(),m.yRadius(),m.animation(),m.previousAnimation(),m.playerControl()});
+                exitFrozenActor=frame.captureActor();exitFrozenArt=frame.artState();exitFrozenRing=exitState.ring();exitFrozenReserved=exitState.reservedObjects();
+                exitFrozenLive=actualField(actualField(exitValues,"globals"),"live");exitFrozenSection=exitSection;
+            } else {
+                // Existing component oracle checks the caller's normal/water flow; selected hashes above are independently recorded ENGINE comparisons.
+                assertArrayEquals(exitExpectedColours.palette().copy(),exitPalette.copy());assertArrayEquals(exitExpectedColours.waterPalette().copy(),exitWater.copy());
+                assertEquals(exitFrozenActor,frame.captureActor());assertSame(exitFrozenArt,frame.artState());assertEquals(exitFrozenRing,exitState.ring());
+                assertSame(exitFrozenReserved,exitState.reservedObjects());assertSame(exitFrozenLive,actualField(actualField(exitValues,"globals"),"live"));assertEquals(exitFrozenSection,exitSection);
+            }
+            assertEquals("927a3b61c33cd4169db796a4e20d56eab47fd06edfad43a1415315e0c8afc2f5",java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(exitState.reservedObjects().copy())));
+            assertSame(warpPreviousCpu,((java.util.Optional<?>)actualField(exitLoop,"completedDraw")).orElseThrow());assertSame(exitCpuImage,actualField(exitValues,"cpuSat"));
+            var exitSelected=module.act2SelectedDisplay();assertInstanceOf(SonicCdPastDisplay.Ready.class,exitSelected.projection());var exitSelectedCpu=exitSelected.inputs().selectedCpu().orElseThrow();
+            assertEquals(33,exitSelectedCpu.spriteCount());assertArrayEquals(warpPreviousCpu.bytes(),exitSelectedCpu.bytes());assertEquals(warpPreviousCpu.provenance(),exitSelectedCpu.provenance());
+            assertEquals("1a8f631b1bf342ccdb6aa588ff812c8d024f57ea3a10c29ab48cabc87f6faa1f",java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(exitSelectedCpu.bytes())));
+            assertArrayEquals(exitCpuImage.copy(),((com.openggf.game.soniccd.level.CdAssetBytes)actualField(exitValues,"displayedSat")).copy());
+            assertSame(exitResidency,exitSelected.inputs().current());assertSame(frame.artState(),exitSelected.inputs().player());
+            assertSame(actualField(exitValues,"foregroundPlane"),exitSelected.inputs().foreground());assertSame(warpPresentation.act2PlaneImage(),exitSelected.inputs().background());
+            assertEquals("d06d7ac7ebf96364d6e05f67e8898137f71145e68c0bc98cdc3a5c81fc556820",java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(((com.openggf.game.soniccd.level.CdAssetBytes)actualField(exitValues,"displayedHScroll")).copy())));
+            assertEquals(0x0091001B,(int)actualField(exitValues,"displayedVScrollLongBits"));
+            // Retained Main CPU and already selected VInt CPU are separate partitions with equal bytes here; no new SAT build, pixels or visibility claim.
+        }
+        var exitClosed13529=captureNative(h);var exitEndFull=registry.capture();var exitEndCourse=registry.captureCourse();
+        registry.restore(exitEndFull);assertNativeCapture(exitClosed13529,h);registry.restoreCourse(exitEndCourse);assertNativeCapture(exitClosed13529,h);
+        var exitBeforeStopValues=actualField(swingVisit,"values");var exitBeforeStopCalls=actualField(exitBeforeStopValues,"calls");
+        var exitBeforeStopProgramme=module.levelProgramState();var exitBeforeStopClock=frame.vIntClock();
+        assertEquals(3108L,exitBeforeStopClock.absoluteValue().orElseThrow());assertEquals(SonicCdGameModule.LevelProgramPhase.OLD_RETURNED,exitBeforeStopProgramme.phase());
+        // Separate13530 stops BEFORE the unowned IPX blank/FM/WARP/source-load continuation. No closed capture/restore follows.
+        var exitStop=assertThrows(SonicCdGameModule.UnsupportedAct2Loading.class,()->step(h,controller(13530)));
+        assertEquals(SonicCdGameModule.Act2Boundary.OLD_EXIT_WARP_PROGRAMME,exitStop.boundary());assertEquals("Actual R12A stopped at OLD_EXIT_WARP_PROGRAMME",exitStop.getMessage());assertTrue(frame.closed());
+        var exitFailedValues=actualField(swingVisit,"values");assertSame(exitBeforeStopValues,exitFailedValues);assertSame(exitBeforeStopCalls,actualField(exitFailedValues,"calls"));
+        assertSame(exitBeforeStopProgramme,actualField(module,"levelProgram"));
+        // Source-oracle clock nonwrite: the partial JSON exposes no failed Frame clock; this raw field read does not capture/service a closed Frame.
+        assertSame(exitBeforeStopClock,actualField(frame,"vIntClock"));
+        assertEquals("OLD_RETURNED",actualField(exitFailedValues,"phase").toString());
+        var exitFailedCalls=(java.util.List<?>)actualField(exitFailedValues,"calls");assertEquals(109,exitFailedCalls.size());assertEquals("OLD_EXIT_RETURN",exitFailedCalls.getLast().toString());
+        var exitFailedLevel=assertInstanceOf(com.openggf.game.soniccd.objects.CdLevelGlobals.class,actualField(exitFailedValues,"level"));assertEquals(0,exitFailedLevel.levelRestart());assertEquals(2,exitFailedLevel.spawnMode());
+        assertSame(warpSaved210,actualField(actualField(actualField(exitFailedValues,"globals"),"timeWarpCustody"),"saved"));
+        System.out.println("Controller-only Act2 closed13529: the complete old13506 save route remains; natural13507 returns the post-all-objects prelude and ClearPLCs, then13508..13529 run exactly22 selector12 waits. Original World/Frame/R12A/source epoch/save42/receipt, frozen post13507 pool96/actor/reserved/HUD and retained CPU survive; selected palettes precede current normal/water colour work. Full/course before-forward edges cover13507,13508,13518,13529 plus complete endpoint restore. Separate13530 OLD_EXIT_WARP_PROGRAMME stops before IPX blank/FM/WARP/destination load. No closed13530, new sound semantics, pixels, visibility or native-parity claim.");
+        // END measured natural TimeWarp230 old exit.
         // END measured natural TimeWarp save continuation.
         // END measured Swing promotion.
     }

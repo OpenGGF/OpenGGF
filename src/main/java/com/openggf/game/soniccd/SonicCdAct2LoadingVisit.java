@@ -125,6 +125,8 @@ final class SonicCdAct2LoadingVisit {
     private transient TitleInvocation activeTitle;
     private boolean runningObjects, servicing, reservedPort, drawingReserved, ringPort, drawingRing;
     private boolean springPort, drawingSpring, queuePort, titlePort, drawingTitle;
+    // An invocation guard only. Values/LevelProgramState remain the sole captured exit owners.
+    private transient boolean oldProgrammeContinuation;
     private Values values;
     private List<SonicCdGameModule.PastSound> sounds = List.of();
     private record SourceView(CdR12aProfile.FileRange range, CdAssetBytes bytes) { }
@@ -487,7 +489,7 @@ final class SonicCdAct2LoadingVisit {
     private void requireIdleOwners() {
         requireBoulderPlatformIdle();
         module.requireAct2LoadingVisit(this);
-        if (activeMonitor!=null || monitorPort || drawingMonitor || servicing || runningObjects || drawQueue!=null || activePrimary!=null || activeReserved!=null || activeRing!=null || activeSpring!=null
+        if (oldProgrammeContinuation || activeMonitor!=null || monitorPort || drawingMonitor || servicing || runningObjects || drawQueue!=null || activePrimary!=null || activeReserved!=null || activeRing!=null || activeSpring!=null
                 || activeDrain!=null || activeTitle!=null || reservedPort || ringPort || springPort || queuePort || titlePort
                 || drawingReserved || drawingRing || drawingSpring || drawingTitle)
             throw new IllegalStateException("Act2 native operation is active");
@@ -536,6 +538,7 @@ final class SonicCdAct2LoadingVisit {
 
     void service(int held) {
         requireCurrent();
+        if (oldProgrammeExitSelected()) { serviceOldProgrammeExit(held); return; }
         if (values.phase()==BEGIN_LEVEL) { serviceLevel(held); return; }
         if (values.phase()==FROM_BLACK) { serviceFromBlack(held); return; }
         presentation.validateAct2LevelLoadPlane(); var selectedCpu=values.loop().completedDraw(); servicing=true;
@@ -640,7 +643,8 @@ final class SonicCdAct2LoadingVisit {
                 () -> module.act2Boundary(SonicCdGameModule.Act2Boundary.LEVEL_FLOW));
         if (demo == 0x0800) throw module.act2Boundary(SonicCdGameModule.Act2Boundary.LEVEL_FLOW);
         if (values.level().levelRestart() != 0) {
-            throw module.act2Boundary(SonicCdGameModule.Act2Boundary.LEVEL_FLOW);
+            beginOldProgrammeExit();
+            return;
         }
         call(POST_OBJECT_GUARDS);
         CdObjectDrawQueue.DrawCameras cameras;
@@ -684,6 +688,109 @@ final class SonicCdAct2LoadingVisit {
                 values.cpuSat(), values.displayedSat(), values.displayedHScroll(), values.foregroundPlane(), animated.ring(),
                 values.level(), values.globals(), values.hudObjects(), values.calls());
         loop(readyAnimationLoop); call(UPDATE_GLOBAL_ANIMATIONS); call(ORDINARY_MAIN_RETURN);
+    }
+
+    /** N1ecc5f3 Main407-408: only the completed physical pass can branch to old LevelStart. */
+    void requireOldProgrammePrelude() {
+        requireBoulderPlatformIdle(); module.requireAct2LoadingVisit(this);
+        if (!oldProgrammeContinuation || !runningObjects || servicing || values.phase() != BEGIN_LEVEL
+                || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null
+                || activeMonitor != null || activeTitle != null || activeDrain != null
+                || drawQueue == null || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING
+                || values.calls().isEmpty() || values.calls().getLast() != DYNAMIC_OBJECTS)
+            throw new IllegalStateException("No actual completed Act2 physical-pass LevelStart branch");
+        var l = values.level(); var gates = frame.environment().movement().gates();
+        if ((l.levelRestart() & 0xFF00) != 0x0100 || l.spawnMode() != 2 || gates.zoneAct() != 1
+                || gates.timeZone() < 0x80 || gates.timeZone() > 0x82 || !admittedTimeWarpPeriod(values, frame.environment()))
+            throw module.act2Boundary(SonicCdGameModule.Act2Boundary.OLD_EXIT_RESTART);
+    }
+    void requireOldProgrammeServiceIdle() {
+        if (oldProgrammeContinuation) throw new IllegalStateException("Act2 old programme continuation reentry");
+    }
+    void requireOldProgrammeStoreContinuation() {
+        requireBoulderPlatformIdle(); module.requireAct2LoadingVisit(this);
+        if (!oldProgrammeContinuation || servicing || activePrimary != null || activeReserved != null
+                || activeRing != null || activeSpring != null || activeMonitor != null || activeTitle != null
+                || activeDrain != null || (!runningObjects && drawQueue != null))
+            throw new IllegalStateException("No actual Act2 old programme store continuation");
+    }
+    private boolean oldProgrammeExitSelected() { return values.phase() == OLD_WHITE_FADE || values.phase() == OLD_RETURNED; }
+
+    /** Same-call native LevelStart19-81 prefix; the first fade VSync belongs to the following service. */
+    private void beginOldProgrammeExit() {
+        requireOldProgrammeServiceIdle(); oldProgrammeContinuation = true;
+        try {
+            requireOldProgrammePrelude();
+            var p = module.levelProgramState(); var l = values.level(); var g = values.globals();
+            boolean loaded = (l.plcLoadFlags() & 1) != 0;
+            boolean forceGoodFuture = p.timeStones() == 0x7F && frame.environment().globals().timeAttackMode() == 0;
+            var dev = forceGoodFuture ? new CdOpeningObjectRuntime.DevGlobals(1, g.retainedDev().projDestroyed()) : g.retainedDev();
+            var nextGlobals = new LoadingGlobals(g.live(), g.contact(), g.score(), g.drownTimerWord(), g.tail(),
+                    g.bonus(), g.layoutRam(), g.debugBlockWord(), OptionalInt.of(0), dev, g.checkpointSaved(), g.timeWarpCustody());
+            var nextLevel = new CdLevelGlobals(l.levelRestart(), l.updateHudTime(), l.checkpoint(), l.spawnMode(),
+                    l.plcLoadFlags() | 1, l.flowerCount(), l.fadeEnableDisplay(), l.powerup(), l.timeOver());
+            module.beginAct2OldProgrammeExit(this);
+            replace(values.phase(), values.section(), values.cpuPalette(), values.fadePalette(), values.displayedPalette(),
+                    values.cpuSat(), values.displayedSat(), values.displayedHScroll(), values.foregroundPlane(),
+                    values.ring(), nextLevel, nextGlobals, values.hudObjects(), values.calls());
+            call(OLD_EXIT_PRELUDE);
+            // Main40's first-load reset branch is not this loaded old-programme continuation.
+            if (!loaded) throw module.act2Boundary(SonicCdGameModule.Act2Boundary.OLD_EXIT_FIRST_LOAD);
+            module.markAct2OldProgrammeInitializing(this);
+            section(art::clearPlcs); call(OLD_EXIT_CLEAR_PLCS);
+            if (p.specialStage() != 0) throw module.act2Boundary(SonicCdGameModule.Act2Boundary.OLD_EXIT_SPECIAL_STAGE);
+            boolean fade = module.selectAct2OldWhiteExit(this);
+            // Main407 abandons transient pointers, retaining the prior completed CPU SAT/provenance.
+            drawQueue.abandonPassAtLevelStart(); drawQueue.close(); drawQueue = null;
+            fadeProgress(new FadeProgress(0, values.fadeProgress().displayEnabled()));
+            if (fade) {
+                phase(OLD_WHITE_FADE);
+                globals(v -> {
+                    var t = v.tail().orElseThrow();
+                    return new LoadingGlobals(v.live(), v.contact(), v.score(), v.drownTimerWord(),
+                            Optional.of(new TailValues(t.player2ControlsWord(), t.player2BoredWord(), t.unknownLevelByte(),
+                                    t.demoS1IndexWord(), 0x003F)), v.bonus(), v.layoutRam(), v.debugBlockWord(),
+                            v.pauseMusicBit(), v.retainedDev(), v.checkpointSaved(), v.timeWarpCustody());
+                });
+            } else finishOldProgrammeExit();
+        } finally { oldProgrammeContinuation = false; }
+    }
+    private void finishOldProgrammeExit() {
+        requireOldProgrammeStoreContinuation();
+        // Main72 precedes75. Act1/native Act2 does not take78's bit7 clear.
+        frame.clearLevelStartWarpDirection();
+        var l = values.level();
+        replace(values.phase(), values.section(), values.cpuPalette(), values.fadePalette(), values.displayedPalette(),
+                values.cpuSat(), values.displayedSat(), values.displayedHScroll(), values.foregroundPlane(), values.ring(),
+                new CdLevelGlobals(0, l.updateHudTime(), l.checkpoint(), l.spawnMode(), l.plcLoadFlags(), l.flowerCount(),
+                        l.fadeEnableDisplay(), l.powerup(), l.timeOver()), values.globals(), values.hudObjects(), values.calls());
+        module.completeAct2OldProgrammeReturn(this); phase(OLD_RETURNED); call(OLD_EXIT_RETURN);
+    }
+    private void serviceOldProgrammeExit(int held) {
+        requireOldProgrammeServiceIdle(); oldProgrammeContinuation = true;
+        try {
+            // IPX.RunMMD1373-1387 / RunLevel551-555 need their own actual programme bridge.
+            // No blank pulse, FM request, WARP scene, target data or old Frame service is invented.
+            if (values.phase() == OLD_RETURNED)
+                throw module.act2Boundary(SonicCdGameModule.Act2Boundary.OLD_EXIT_WARP_PROGRAMME);
+            if (values.phase() != OLD_WHITE_FADE || module.levelProgramState().phase() != SonicCdGameModule.LevelProgramPhase.WHITE_FADE)
+                throw new IllegalStateException("No Act2 old white-fade wait");
+            presentation.validateAct2LevelLoadPlane(); var selectedCpu = values.loop().completedDraw();
+            servicing = true;
+            try { frame.serviceLevelPaletteFade(held, this::publishFromBlack, this::fastPlc); }
+            finally { servicing = false; }
+            representedServiceCompleted(); call(OLD_EXIT_FADE_SERVICE);
+            var colours = CdLevelPaletteFade.stepToWhite(new CdLevelPaletteFade.Palettes(values.cpuPalette(), values.waterPalette()));
+            values = new Values(values.phase(), values.section(), colours.palette(), values.fadePalette(), colours.waterPalette(),
+                    values.displayedPalette(), values.cpuSat(), values.displayedSat(), values.displayedHScroll(),
+                    values.displayedVScrollLongBits(), values.foregroundPlane(), values.ring(), values.level(), values.globals(),
+                    values.hudObjects(), values.fadeProgress(), values.calls(), values.loop());
+            call(OLD_EXIT_WHITE_COLOURS); section(art::prepare); call(PROCESS_PLCS);
+            module.completeAct2OldWhiteFadeWait(this);
+            fadeProgress(new FadeProgress(values.fadeProgress().completedSteps() + 1, values.fadeProgress().displayEnabled()));
+            if (values.fadeProgress().completedSteps() == 22) finishOldProgrammeExit();
+            settleSelectedDisplay(selectedCpu);
+        } finally { oldProgrammeContinuation = false; }
     }
 
     private void cyclePalette() {
@@ -2754,13 +2861,30 @@ final class SonicCdAct2LoadingVisit {
         placement.validateRestore(capture.placement); frame.validateActorRestore(capture.actor); frame.validateSharedRestore(capture.shared);
         var v=capture.values; int steps=v.fadeProgress().completedSteps();
         boolean fading=v.phase()==FROM_BLACK, begun=v.phase()==BEGIN_LEVEL, first=v.phase()==FIRST_PLC;
-        if(programme.phase()!=SonicCdGameModule.LevelProgramPhase.ACT2_LOADING
-                || programme.levelStarted()!=(begun?1:0) || ((programme.gameMode()&0x80)==0)!=begun
+        boolean oldWhite=v.phase()==OLD_WHITE_FADE, oldReturned=v.phase()==OLD_RETURNED, oldExit=oldWhite||oldReturned;
+        boolean programmeMismatch;
+        if(oldExit) {
+            var gates=capture.shared.environment().movement().gates();
+            programmeMismatch=programme.phase()!=(oldWhite?SonicCdGameModule.LevelProgramPhase.WHITE_FADE:SonicCdGameModule.LevelProgramPhase.OLD_RETURNED)
+                    || programme.levelStarted()!=0 || (programme.gameMode()&0x80)==0 || programme.specialStage()!=0
+                    || programme.whiteFadeSteps()!=steps || !v.fadeProgress().displayEnabled()
+                    || (v.level().plcLoadFlags()&1)==0
+                    || (oldWhite && (steps>=22 || (programme.palFadeFlags()&1)==0
+                        || (v.level().levelRestart()&0xFF00)!=0x0100
+                        || v.globals().tail().orElseThrow().paletteFadeInfoWord()!=0x003F))
+                    || (oldReturned && (steps!=0 && steps!=22 || v.level().levelRestart()!=0 || gates.timeWarpDirection()!=0
+                        || ((programme.palFadeFlags()&1)!=0)!=(steps==0)));
+        } else {
+            programmeMismatch=programme.phase()!=SonicCdGameModule.LevelProgramPhase.ACT2_LOADING
+                    || programme.levelStarted()!=(begun?1:0) || ((programme.gameMode()&0x80)==0)!=begun
+                    || (fading && steps>=22) || (begun && steps!=22) || (!fading && !begun && steps!=0)
+                    || v.fadeProgress().displayEnabled()!=(steps!=0);
+        }
+        if(programmeMismatch
                 || capture.shared.environment().movement().gates().zoneAct()!=1
                 || !admittedTimeWarpPeriod(v,capture.shared.environment())
-                || capture.flags.load()!=first || capture.flags.setup()!=first
-                || (fading && steps>=22) || (begun && steps!=22) || (!fading && !begun && steps!=0)
-                || v.fadeProgress().displayEnabled()!=(steps!=0)) throw new IllegalArgumentException("Act2 captured native progress/source mismatch");
+                || capture.flags.load()!=first || capture.flags.setup()!=first)
+            throw new IllegalArgumentException("Act2 captured native progress/source mismatch");
         var retained=v.loop().selectedDisplay();
         SonicCdAct2Display.validateSelected(retained,new SonicCdAct2Display.Inputs(retained.inputs().selectedCpu(),v.displayedSat(),
                 v.displayedPalette(),v.displayedHScroll(),v.displayedVScrollLongBits(),v.fadeProgress().displayEnabled(),
@@ -2796,7 +2920,7 @@ final class SonicCdAct2LoadingVisit {
         var custody = cut.globals().timeWarpCustody();
         int period = environment.movement().gates().timeZone();
         if (period == 1) return custody.completed().isEmpty();
-        if (period < 0x80 || period > 0x82 || cut.phase() != BEGIN_LEVEL || cut.level().spawnMode() != 2
+        if (period < 0x80 || period > 0x82 || (cut.phase() != BEGIN_LEVEL && cut.phase() != OLD_WHITE_FADE && cut.phase() != OLD_RETURNED) || cut.level().spawnMode() != 2
                 || custody.completed().isEmpty()) return false;
         var proof = custody.completed().orElseThrow();
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
