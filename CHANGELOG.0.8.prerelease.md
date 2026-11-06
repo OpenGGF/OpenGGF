@@ -29,8 +29,10 @@ under the matching area heading; see the
   missing ROM, a short, black or frozen shot, or a death inside a shot. It
   writes a poster, a contact sheet and provenance (engine commit, manifest hash,
   frame ranges) beside each reel. The reels keep the 0.6 cut's feature beats as
-  well as its zones: live rewind, sidekick chains, Sonic 2 lending its art and
-  Super Sonic to Sonic 1, Knuckles in Sonic 2, two Tails, Knuckles as Sonic's
-  sidekick and the Data Select screen. `GameplayCaptureTool --rewind FRAME:LENGTH`
+  well as its zones: live rewind undoing a hit or a fall, sidekick chains (ten
+  Sonics in Scrap Brain, a crowd at the Emerald Hill 2 boss), borrowed art and
+  Super Sonic in Sonic 1 and Sonic 3&K, Knuckles in Sonic 2, a Casino Night
+  jackpot, custom-team Data Select saves, and every Sonic 3&K zone with its bonus
+  and special stages. `GameplayCaptureTool --rewind FRAME:LENGTH`
   holds the live rewind key over a window and draws the rewind plate, and
   `--emeralds` also takes Sonic 1 and Sonic 2's six emeralds.
