@@ -444,9 +444,9 @@ public final class GameplayCaptureTool {
                 throw new IllegalArgumentException("--act is one-based (1 or 2)");
             }
             if (titleScreen && (startX!=null || startY!=null || starPost || rings!=null || emeralds!=null
-                    || reverseGravity || endOfLevel || vIntRunCount!=null || cameraXSub!=null || !donor.equals("off")
+                    || reverseGravity || endOfLevel || vIntRunCount!=null || cameraXSub!=null
                     || ZoneIds.resolve(game,zone)!=0 || act!=1))
-                throw new IllegalArgumentException("--title-screen starts before assembly: use first zone/act and no positioned/donor setup");
+                throw new IllegalArgumentException("--title-screen starts before assembly: use first zone/act and no positioned setup");
             if (audio && (captureFrom!=0 || every!=1 || fps!=60)) throw new IllegalArgumentException("--audio requires capture-from 0, every 1, fps 60");
             if (nativePcm && (!audio || input == null || !input.toString().toLowerCase(Locale.ROOT).endsWith(".bk2")))
                 throw new IllegalArgumentException("--native-pcm requires --audio and a .bk2 --input whose SyncSettings select the output");

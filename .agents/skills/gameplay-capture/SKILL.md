@@ -79,7 +79,7 @@ Use a task directory outside the repository for captures the user should keep.
 | `--star-post` | off | Save a checkpoint at `--x/--y` and restart from it, instead of teleporting. Required wherever the act's `ScreenInit` runs a scripted intro that overrides `--x/--y` outright (S3K SSZ act 1) |
 | `--width <px>` | `320` | 320, 352, 400, 528 or 800; height is always 224 |
 | `--main`, `--sidekick` | `sonic`, `none` | Characters; `--sidekick tails` for a team |
-| `--donor off\|s1\|s2` | `off` | Cross-game donation; ROM from configuration unless `--donor-rom` |
+| `--donor off\|s1\|s2\|s3k` | `off` | Cross-game donation; ROM from configuration unless `--donor-rom` |
 | `--input <file>` | none | `Input Log.txt` or `.bk2`; neutral input after it ends |
 | `--settle <n>` | `0` | Neutral frames before the input log starts |
 | `--input-start <n>` | `0` | First movie frame to play (e.g. a level start late in a complete-run `.bk2`) |
@@ -90,7 +90,7 @@ Use a task directory outside the repository for captures the user should keep.
 | `--rings <n>` | unchanged | Declared ring count the route carried in; a boss filmed from a positioned start otherwise begins on 0 rings, where the first touch is fatal |
 | `--camera-x-sub <n>` | fresh | Declared inherited `Camera_X_pos` low word; only zones that keep a camera fraction (S3K DDZ) accept it |
 | `--rings <n>` | unchanged | Declared ring count the route carried in; a boss filmed from a positioned start otherwise begins on 0 rings, where the first touch is fatal |
-| `--title-screen` | off | Initialize the production title before first assembly; first zone/act only, no positioned/checkpoint/clock/donor seeds |
+| `--title-screen` | off | Initialize the production title before first assembly; first zone/act only, no positioned/checkpoint/clock seeds; `--donor` is allowed (boot activates it before the title, so `--donor s3k` on S1/S2 reaches the donated Data Select) |
 | `--save-slots <file.json>` | none | Declared Data Select setup (`--title-screen` only): a JSON object mapping slot numbers to save payloads, written through the production `SaveManager` before boot. Refuses to run without an explicit `-Dopenggf.saveRoot`, so it never touches the user's saves |
 | `--extra-teams <combos>` | config | Session override of `DATA_SELECT_EXTRA_PLAYER_COMBOS` (`--title-screen` only), e.g. `sonic,knuckles;knuckles,tails` |
 | `--interactive-pacing` | off | Use production presentation/input pacing, including menus and gameplay observer callbacks; P1 controller input only, fps 60, no debug stage completion |

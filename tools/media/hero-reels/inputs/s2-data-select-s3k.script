@@ -1,0 +1,18 @@
+# Source for s2-data-select-s3k.txt (InputLogAuthorTool --script). Title-first Sonic 2
+# capture with Sonic 3 & Knuckles donating (--donor s3k) and seeded saves
+# (s2-data-select-saves.json): wait for the Sonic 2 title menu, Start into the donated
+# S3K-style Data Select, walk the cursor right across three Sonic 2 saves to the Hill Top
+# save, start it, then run right; a jump followed by a second press in the air shows the
+# donated insta-shield.
+950 -
+1 S
+40 -
+repeat 3 { 1 R ; 24 - }
+10 -
+1 S
+120 -
+55 R
+16 R+A
+1 R
+1 R+A
+300 R

@@ -204,13 +204,17 @@ class TestGameplayCaptureToolArgs {
         var flags=new String[]{"--game","s2","--zone","ehz","--act","1","--out-dir","out","--title-screen","--audio"};
         var args=GameplayCaptureTool.Arguments.parse(flags);assertTrue(args.titleScreen());assertTrue(args.audio());
         for(String[] extra:new String[][]{{"--x","100"},{"--y","100"},{"--star-post"},{"--vint-run-count","12"},
-                {"--camera-x-sub","2"},{"--rings","1"},{"--emeralds","1111111"},{"--reverse-gravity"},{"--end-of-level"},{"--donor","s1"},
+                {"--camera-x-sub","2"},{"--rings","1"},{"--emeralds","1111111"},{"--reverse-gravity"},{"--end-of-level"},
                 {"--every","2"},{"--capture-from","1"},{"--fps","50"}}) {
             var combined=new java.util.ArrayList<String>(java.util.List.of(flags));combined.addAll(java.util.List.of(extra));
             assertThrows(IllegalArgumentException.class,()->GameplayCaptureTool.Arguments.parse(combined.toArray(String[]::new)),java.util.Arrays.toString(extra));
         }
         assertThrows(IllegalArgumentException.class,()->GameplayCaptureTool.Arguments.parse(new String[]{
                 "--game","s2","--zone","ehz","--act","2","--out-dir","out","--title-screen"}));
+        // Boot activates the donor before the title, so a donated Data Select is reachable title-first.
+        var donated=GameplayCaptureTool.Arguments.parse(new String[]{"--game","s2","--zone","ehz","--act","1",
+                "--out-dir","out","--title-screen","--donor","s3k"});
+        assertTrue(donated.titleScreen());assertEquals("s3k",donated.donor());
     }
 
     @Test
