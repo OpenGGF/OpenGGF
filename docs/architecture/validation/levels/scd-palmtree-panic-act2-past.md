@@ -255,12 +255,53 @@ image, audio, regional or full-act parity is claimed. Both bounded static review
 found no concrete P1/P2. Eleven final Java pins match;18 owned latest reports
 were consumed under the build lock, retaining source-bound evidence externally.
 
+## Spikes / Log Shadow batch and Platform jump — 6 November
+
+Three finite views append Spikes20BFA6/read24, Log2087A4/read16 and its eight
+base words208794/read16. There are49 views/25 counted roots/312 frames; eight
+static icons and all art producers are unchanged. Spikes uses the actual72-byte
+selector10 word0330; Log Past/act1 selects445E. Source-paired named factories
+preserve legacy DTOs and native algorithms. Spikes now exposes finite original
+pending Solid/Y/Hurt/Draw identities, always retired in finally; public equal
+records still grant no private World authority. Actual pass publication prepares
+complete pool/Frame/contact/FM values before the first owner write. Log uses its
+original own-store and Draw receipts with full96/bank/status/scalar nonwrites.
+These component obligations do not claim natural Spikes/Log contacts or pixels.
+
+The actual obstruction at14143 was already-bound Platform19/whole49/map20A804.
+The fixed controller now holds Right+B for eight services, then Right. Native
+jump releases the push link by14148; at14247 the actor is X7330.8B00/Y342.DC00,
+XV1454/YV-144/GV1466, camera7170/246. The permanent route qualifies312 target
+services and complete full/course before-forward replay, including jump start,
+held/release and later cuts. First14248 stops OBJECT_KIND/whole45/ID3E, native
+Pata-Bata, after the reached prefix; it is not a closed checkpoint. Input recipes
+are test controllers, never gameplay conditions or hydrated state.
+
+The initial162-case run executes156 positives, five component-fixture errors
+and the temporary observer's native stop, with no skips. Test captures made
+while input was pending are replaced with comparison-only expected values using
+an owner captured before arming; no restore/publication uses them. Dirty static
+bit20 is cleared in positive counted-mapping fixtures; the renderer's rejection
+of the mismatched static format remains correct. A debug-high-byte ingress that
+legitimately stops primary execution is replaced by ordinary offscreen Solid
+admission for the stale-pool case. Production is unchanged after initial162.
+The final16-case run passes all15 updated pass cases and the312-service route,
+0failures/errors/skips.161distinct regular identities qualify across runs, not
+one green161fleet. Two earlier compile-only attempts ran zero tests; three
+non-static Adoption qualifications and one lambda loop header were repaired.
+Static review found no concrete P1/P2. Eighteen owned latest XML/TXT reports were
+consumed under the build lease; exact source-bound receipts stay external.
+
+The earlier natural16-cut Sonic pixel window is retained unchanged and passes
+again in initial162. No new14247 image, Wall/Pata pixels, natural Spikes contact,
+complete act, native/audio/regional or broader-smoke result follows.
+
 ## Remaining act obligations
 
 | ID | Required next evidence | Current gap |
 | --- | --- | --- |
-| ENTRY | IPX/WARP/load dispatch, real saved pose, terrain/camera/control and post-entry player body | Actual private FULL/load/custody and saved/scroll publication qualify; natural Init/Main qualifies through14143 and sixteen selected-display pixel cuts; later traversal/lifecycle remain open |
-| OBJECT | Actual stage mapping/placement/body bindings, contacts, children, despawn/re-entry | Actual-source body factories, mapping catalogue and placement qualify as components; 208 natural target walks qualify, including FloatBlock; later kinds/contact outcomes remain open |
+| ENTRY | IPX/WARP/load dispatch, real saved pose, terrain/camera/control and post-entry player body | Actual private FULL/load/custody and saved/scroll publication qualify; natural Init/Main qualifies through14247 and sixteen earlier selected-display pixel cuts; later traversal/lifecycle remain open |
+| OBJECT | Actual stage mapping/placement/body bindings, contacts, children, despawn/re-entry | Actual-source body factories, mapping catalogue and placement qualify as components; 312 natural target walks qualify, including Platform jump/FloatBlock; Pata-Bata3E and later contacts remain open |
 | EVENT | Native stage gates, water/palette/background/terrain changes | Unimplemented target programme owners |
 | CAMERA | Correct stage scroll/parallax/culling and width-sensitive behavior | Live loading scroll/plane publication qualifies; ordinary camera/culling/width-sensitive traversal remains pending |
 | BOSS | Source inventory and route-specific applicability | Unassessed, not marked not-applicable |

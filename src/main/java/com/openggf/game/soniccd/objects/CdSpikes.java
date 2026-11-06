@@ -1,5 +1,11 @@
 package com.openggf.game.soniccd.objects;
 
+import com.openggf.game.soniccd.CdNativeFile;
+import com.openggf.game.soniccd.CdReleaseVariant;
+import com.openggf.game.soniccd.CdStagePayload;
+import com.openggf.game.soniccd.media.CdMmdImage;
+import com.openggf.game.soniccd.level.CdR12bObjectAssets;
+import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdObjectVisualAssets;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
@@ -288,6 +294,33 @@ public final class CdSpikes {
     private final HurtCommit hurtCommit;
     private final DrawObjectCall drawObject;
     private boolean running;
+    private transient Object pendingOperation;
+    private transient CdObjectPool.Snapshot pendingDrawCut;
+    private transient int runningWhole = -1;
+
+    /** Original synchronous producer receipt only; the caller separately owns phase, full-cut CAS and once-only use. */
+    public boolean isCurrentPrefixSolidCall(PrefixSolidCall call) {
+        return currentOperation(call) && call.actualCut().slots().get(runningWhole - 32).identity().wholeIndex() == runningWhole;
+    }
+    public boolean isCurrentYRewindCall(YRewindCall call) {
+        return currentOperation(call) && call.sourceIdentity().wholeIndex() == runningWhole;
+    }
+    public boolean isCurrentHurtCall(HurtCall call) {
+        return currentOperation(call) && call.sourceA2().identity().wholeIndex() == runningWhole;
+    }
+    public boolean isCurrentDrawCall(CdObjectPool pool, CdObjectState.Identity identity) {
+        return currentOperation(identity) && pool == placement.pool() && identity.wholeIndex() == runningWhole
+                && pendingDrawCut != null && pool.capture().slots().equals(pendingDrawCut.slots());
+    }
+    private boolean currentOperation(Object call) {
+        return running && runningWhole >= 32 && runningWhole < 128 && call != null && pendingOperation == call;
+    }
+    private void invokeOperation(Object call, Runnable callback) {
+        if (!running || pendingOperation != null) throw new IllegalStateException("Nested Spikes operation");
+        pendingOperation = Objects.requireNonNull(call);
+        try { callback.run(); } finally { pendingOperation = null; }
+    }
+
 
     public CdSpikes(CdObjectPlacementRuntime placement, BodyAssets assets, CdSolidObject sharedSolid,
                     SolidCommit solidCommit, YRewindCommit yRewindCommit, HurtCommit hurtCommit, DrawObjectCall drawObject) {
@@ -373,6 +406,34 @@ public final class CdSpikes {
                 solidCommit, yRewindCommit, hurtCommit, drawObject);
     }
 
+    /**
+     * Actual retained original-USA R12B placement/source over the existing raw72 operand and genuine
+     * stopped plain-Solid path. Common Spikes/Main.asm:19-83 is unchanged; no new Hurt/Frame authority.
+     * Present BodyAssets remains exactly74-byte format data, never a padded representation of B.
+     */
+    public static CdSpikes fromAct2PastAssetsWithPrefix(CdObjectPlacementRuntime placement, CdR12bTerrainAssets owner,
+                                                        CdSolidObject sharedSolid, PrefixSolidCommit solidCommit,
+                                                        YRewindCommit yRewindCommit, HurtCommit hurtCommit, DrawObjectCall drawObject) {
+        Objects.requireNonNull(placement, "actual R12B placement"); Objects.requireNonNull(owner, "actual R12B terrain");
+        if (!placement.sameAct2PastSource(owner))
+            throw new IllegalArgumentException("Spikes requires the same retained R12B placement/source");
+        return new CdSpikes(placement, act2PastAssets(owner.objects()), sharedSolid,
+                solidCommit, yRewindCommit, hurtCommit, drawObject);
+    }
+    private static NativeAssets act2PastAssets(CdR12bObjectAssets owner) {
+        Objects.requireNonNull(owner, "actual R12B object assets"); var identity=Objects.requireNonNull(owner.identity(), "R12B identity");
+        if (identity.variant()!=CdReleaseVariant.USA || identity.file()!=CdNativeFile.R12B
+                || identity.domain()!=CdMmdImage.Domain.ORIGINAL_WORD_RAM || !identity.stage().equals(CdStagePayload.R12B.stage()))
+            throw new IllegalArgumentException("Spikes requires actual original USA R12B metadata");
+        var tiles=owner.view(CdR12bObjectAssets.View.OBJECT_TILE_IDS);var visual=owner.spikes();
+        if (tiles.length()!=72)throw new IllegalArgumentException("R12B Spikes requires the actual72-byte tile directory");
+        if (visual.mappingFrames().size()!=1 || !visual.animations().isEmpty())
+            throw new IllegalArgumentException("R12B Spikes has one counted frame and no scripts");
+        for (var piece:visual.mappingFrames().getFirst().pieces())
+            if (piece.tileOffset()>8-piece.tileCount())throw new IllegalArgumentException("Spikes mapping exceeds its eight-tile source");
+        return new NativeAssets(secondary->readPastTileWord(tiles,secondary),CdR12bObjectAssets.View.MAP_SPR_SPIKES.range().nativeAddress());
+    }
+
     /** One physical RunObjects visit. Main ALWAYS reads primary Y, with no outer visibility admission. */
     public Result run(int wholeIndex, Globals globals, Inputs inputs) {
         if (running) { throw new IllegalStateException("Reentrant ObjSpikes dispatch"); }
@@ -387,7 +448,7 @@ public final class CdSpikes {
             throw new UnsupportedSpikes(UnsupportedBoundary.ROUTINE_DISPATCH, wholeIndex,
                     "oRoutine $" + Integer.toHexString(routine) + " indexes outside the two-word directory");
         }
-        running = true;
+        running = true; runningWhole = wholeIndex;
         try {
             var effects = new ArrayList<Effect>();
             if (routine == 0) {
@@ -429,7 +490,8 @@ public final class CdSpikes {
                 } else {
                     solid = sharedSolid.run(CdSolidObject.Entry.SOLID_OBJECT, state, player,
                             inputs.gates(), solidGlobals, solidCut);
-                    solidCommit.commit(new SolidCall(solidCut, player, solidGlobals, solid));
+                    var call = new SolidCall(solidCut, player, solidGlobals, solid);
+                    invokeOperation(call, () -> solidCommit.commit(call));
                 }
                 if (!pool.state(wholeIndex).equals(solid.object())) {
                     throw new IllegalStateException("SolidObject commit did not publish a0's final image");
@@ -452,7 +514,8 @@ public final class CdSpikes {
                     var motion = expected.motion();
                     int finalY = motion.centreY16_16() - (((short) motion.yVelocity()) << 8); // :70-75, LONG wraps.
                     var rewound = withY(expected, finalY);
-                    yRewindCommit.commit(new YRewindCall(state.identity(), expected, finalY));
+                    var rewindCall = new YRewindCall(state.identity(), expected, finalY);
+                    invokeOperation(rewindCall, () -> yRewindCommit.commit(rewindCall));
                     player = withActor(player, rewound); // Preserve EVERY post-Solid slot/link byte.
                     effects.add(new YRewound(finalY)); // Only after the standalone native store completed.
                     state = pool.state(wholeIndex);
@@ -461,7 +524,8 @@ public final class CdSpikes {
                     }
                     var hurtCut = pool.capture(); // Fresh AFTER successful prefix publication, never solidCut.
                     var hurt = CdPlayerTouchResponse.hurtPlayer(player.actor(), playerGlobals, worldGlobals, state, hurtCut);
-                    hurtCommit.commit(new HurtCall(hurtCut, state, player.actor(), playerGlobals, worldGlobals, hurt));
+                    var hurtCall = new HurtCall(hurtCut, state, player.actor(), playerGlobals, worldGlobals, hurt);
+                    invokeOperation(hurtCall, () -> hurtCommit.commit(hurtCall));
                     for (var changed : hurt.changedSlots()) {
                         if (!pool.state(changed.identity().wholeIndex()).equals(changed)) {
                             throw new IllegalStateException("HurtPlayer commit did not publish slot " + changed.identity().wholeIndex());
@@ -476,14 +540,16 @@ public final class CdSpikes {
                 }
             }
             state = pool.state(wholeIndex); // .Restore reloads ACTUAL live a0 after the completed Hurt call.
-            drawObject.drawObject(pool, state.identity()); // .Display:82, unconditional after normal Main.
+            var drawIdentity = state.identity(); pendingDrawCut = pool.capture();
+            try { invokeOperation(drawIdentity, () -> drawObject.drawObject(pool, drawIdentity)); } // .Display:82.
+            finally { pendingDrawCut = null; }
             state = pool.state(wholeIndex); // Keep actual Draw mutations; do not rewrite a stale pre-draw image.
             effects.add(new CallReturned(NativeCall.DRAW_OBJECT));
             boolean deleted = checkObjDespawn(state, globals); // :83, tail JMP, current X (never an anchor).
             effects.add(new DespawnChecked(deleted));
             return new Result(pool.state(wholeIndex), player, solidGlobals, playerGlobals, worldGlobals, effects);
         } finally {
-            running = false;
+            pendingOperation = null; pendingDrawCut = null; runningWhole = -1; running = false;
         }
     }
 
@@ -507,7 +573,8 @@ public final class CdSpikes {
         if (!cut.slots().equals(pool.capture().slots()))
             throw new IllegalStateException("Past Spikes helper changed its pure actual full96 source");
         try {
-            prefixSolidCommit.commit(new PrefixSolidCall(cut, inputs.player(), inputs.solidGlobals(), outcome));
+            var call = new PrefixSolidCall(cut, inputs.player(), inputs.solidGlobals(), outcome);
+            invokeOperation(call, () -> prefixSolidCommit.commit(call));
         } catch (RuntimeException | Error original) {
             // Retain any legitimate partial publication. Report unrelated-image corruption without
             // replacing the callback's identical failure; never retry or roll back another owner.

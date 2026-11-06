@@ -66,6 +66,9 @@ BREAKABLE_WALL_PIECE_DELTAS efdc 24 24 86444e752d8300afadd9aa1b5e2fa7a3252febf15
 BREAKABLE_WALL_PIECE_SPEEDS eff4 48 48 7a1571aadadf44de0c59b260de3ec3464b1b3676a4ea2cef273b069284032b31 7a1571aadadf44de0c59b260de3ec3464b1b3676a4ea2cef273b069284032b31
 MAP_SPR_FLOAT_BLOCK a1b0 76 76 98fa7f8f57a4f5d8a00cd60ac795f7331e5a9f6009af31fcfaf33b85b8ff6e5e 98fa7f8f57a4f5d8a00cd60ac795f7331e5a9f6009af31fcfaf33b85b8ff6e5e
 ANI_FLOAT_BLOCK a192 30 30 3c6451c3f6719a3765334aa1c13d2864ae4b92a523fb5a7e335c6dc362f8d6b9 3c6451c3f6719a3765334aa1c13d2864ae4b92a523fb5a7e335c6dc362f8d6b9
+MAP_SPR_SPIKES bfa6 24 24 db6b4414c086240e34231326d9832e5785550bdd914ef9d933cea9079bc78607 db6b4414c086240e34231326d9832e5785550bdd914ef9d933cea9079bc78607
+MAP_SPR_LOG_SHADOW 87a4 16 16 bb3b5b1a67fd3665a520a4a6c1d7ff89212992a766df61ec42b6c41aa1d38f7b bb3b5b1a67fd3665a520a4a6c1d7ff89212992a766df61ec42b6c41aa1d38f7b
+LOG_SHADOW_BASE_TILES 8794 16 16 b9a30c86ce81139722854af604422196b077c78a0e79dcac3cca3b506c06d637 b9a30c86ce81139722854af604422196b077c78a0e79dcac3cca3b506c06d637
             """;
     private static final String OPERANDS="""
 3838 43f900203c4a
@@ -123,6 +126,13 @@ a088 70054eb90020cbde
 a122 43f90020a192
 a150 43f90020a192
 a164 43f90020a192
+3cde 0020bed0
+3d12 00208716
+bee6 217c0020bfa60004
+befa 700a4eba0ce0
+8744 217c002087a40004
+8786 317b000c0002
+8764 7000103900ff152e0200007f0c0000026606d03900ff156ad040d03900ff1507d040317b000c00020068400000024e75
             """;
     private record VisualCase(String method,View map,View script,int frames,int scripts,int root,int maxEnd,String digest){}
     private static final List<VisualCase> VISUALS=List.of(
@@ -147,14 +157,16 @@ a164 43f90020a192
         new VisualCase("platform", View.MAP_SPR_PLATFORM, null, 3, 0, 0, 13, "54106a5fb3fff6388d1014b1f15688ef45568d49e9d04dfdc20187277c20d367"),
         new VisualCase("boulder", View.MAP_SPR_BOULDER, null, 1, 0, 0, 19, "dd926b35e5d149b9d44622d28f34dd320667e9d025bf5ae52324a95a9c32576d"),
         new VisualCase("breakableWall", View.MAP_SPR_BREAKABLE_WALL, null, 14, 0, 0, 57, "0e6119e55720d42fd03ab30cbc410f8ab6c6c354520eee340836c2985eeeefd9"),
-        new VisualCase("floatBlock", View.MAP_SPR_FLOAT_BLOCK, View.ANI_FLOAT_BLOCK, 6, 3, 0, 15, "65c5694bceb7a6beb494174e661f380f2b14a1e8578efd7631c62757105f61b8")
+        new VisualCase("floatBlock", View.MAP_SPR_FLOAT_BLOCK, View.ANI_FLOAT_BLOCK, 6, 3, 0, 15, "65c5694bceb7a6beb494174e661f380f2b14a1e8578efd7631c62757105f61b8"),
+        new VisualCase("spikes", View.MAP_SPR_SPIKES, null, 1, 0, 0, 8, "19bfd226ca0d6adf8dfefef89eed1fb6cf4b7e4c279b68255a2ff726468a1c14"),
+        new VisualCase("logShadow", View.MAP_SPR_LOG_SHADOW, null, 2, 0, 0, 16, "4832eeeee66550838053053d5b721a2ff138dc8134d9768b96939f3eac008e11")
     );
 
-    @Test void publicSurfaceIsOnlyTwentyNineMetadataMethodsWithPrivateOwnerConstruction() throws Exception {
+    @Test void publicSurfaceIsOnlyThirtyOneMetadataMethodsWithPrivateOwnerConstruction() throws Exception {
         var type=CdR12bObjectAssets.class;assertTrue(Modifier.isFinal(type.getModifiers()));
         assertEquals(1,type.getDeclaredConstructors().length);assertTrue(Modifier.isPrivate(type.getDeclaredConstructors()[0].getModifiers()));assertEquals(1,type.getDeclaredConstructors()[0].getParameterCount());
-        assertEquals(List.of("anton","boulder","breakableWall","collapsePlatform1","collapsePlatform2","collapsePlatform3","collapsePlatform4","floatBlock","flyingAnimal","fromAssets","groundAnimal","hudAssets","hudVisuals","identity","monitorTime","placements","platform","ringDeltas","rings","robotGenerator","springDiagonal","springHorizontal","springMappings","springVertical","swing","tamabbohDamaged","tamabbohMissile","tamabbohNormal","view"),Arrays.stream(type.getDeclaredMethods()).filter(m->Modifier.isPublic(m.getModifiers())).map(java.lang.reflect.Method::getName).sorted().toList());
-        assertEquals(46,View.values().length);assertEquals(22,VISUALS.size());
+        assertEquals(List.of("anton","boulder","breakableWall","collapsePlatform1","collapsePlatform2","collapsePlatform3","collapsePlatform4","floatBlock","flyingAnimal","fromAssets","groundAnimal","hudAssets","hudVisuals","identity","logShadow","monitorTime","placements","platform","ringDeltas","rings","robotGenerator","spikes","springDiagonal","springHorizontal","springMappings","springVertical","swing","tamabbohDamaged","tamabbohMissile","tamabbohNormal","view"),Arrays.stream(type.getDeclaredMethods()).filter(m->Modifier.isPublic(m.getModifiers())).map(java.lang.reflect.Method::getName).sorted().toList());
+        assertEquals(49,View.values().length);assertEquals(24,VISUALS.size());
         var getter=CdR12bTerrainAssets.class.getMethod("objects");assertEquals(type,getter.getReturnType());assertTrue(Modifier.isSynchronized(getter.getModifiers()));
         var seam=CdR12bTerrainAssets.class.getDeclaredMethod("objectView",View.class);assertFalse(Modifier.isPublic(seam.getModifiers()));
         assertTrue(Arrays.stream(type.getDeclaredConstructors()).noneMatch(c->Arrays.asList(c.getParameterTypes()).contains(CdMmdImage.class)));
@@ -172,7 +184,7 @@ a164 43f90020a192
     }
 
     @Test void everyOrderedFiniteViewPinsItsFullOriginalRangeCanonicalExtentHashAndImmutableCache() throws Exception {
-        var o=fromAssets(retail().assets());var lines=MANIFEST.lines().filter(s->!s.isBlank()).toList();assertEquals(46,lines.size());
+        var o=fromAssets(retail().assets());var lines=MANIFEST.lines().filter(s->!s.isBlank()).toList();assertEquals(49,lines.size());
         for(int i=0;i<lines.size();i++){var c=lines.get(i).split(" ");var v=View.values()[i];assertEquals(c[0],v.name());var r=v.range();var canonical=v.canonicalRange();
             assertEquals(Integer.parseInt(c[1],16),r.fileOffset());assertEquals(Integer.parseInt(c[2]),canonical.length());assertEquals(Integer.parseInt(c[3]),r.length());
             assertEquals(r.fileOffset(),canonical.fileOffset());assertEquals(CdNativeFile.R12B,r.file());assertEquals(CdMmdImage.Domain.ORIGINAL_WORD_RAM,r.domain());assertEquals(0x200000+r.fileOffset(),r.nativeAddress());
@@ -191,7 +203,7 @@ a164 43f90020a192
         assertEquals(0x002E,fromAssets(retail().assets()).view(View.DIAGONAL_SPRING_HEADER).unsignedWord(0));
     }
 
-    @Test void allTwentyTwoVisualsDecodeCompleteSourceRootsScriptsFlipsAndCountedBodiesWithLiteralDigests() throws Exception {
+    @Test void allTwentyFourVisualsDecodeCompleteSourceRootsScriptsFlipsAndCountedBodiesWithLiteralDigests() throws Exception {
         var o=fromAssets(retail().assets());for(var c:VISUALS){var method=CdR12bObjectAssets.class.getMethod(c.method());var v=(CdObjectVisualAssets)method.invoke(o);assertSame(v,method.invoke(o));
             assertEquals(c.frames(),v.mappingFrames().size(),c.method());assertEquals(c.scripts(),v.animations().size(),c.method());assertEquals(c.root(),v.mappingTableOffset());
             assertArrayEquals(o.view(c.map()).copy(),v.mappings().copy());assertArrayEquals(c.script()==null?new byte[0]:o.view(c.script()).copy(),v.animationTable().copy());
@@ -236,7 +248,7 @@ a164 43f90020a192
         assertSame(a.directArtSources().hudAssets(),o.hudAssets());assertSame(o.hudAssets(),o.hudAssets());
         assertEquals(14,registry.source(CdR12bSectionSources.SourceId.ART_RINGS).tileCount());assertEquals(36,registry.source(CdR12bSectionSources.SourceId.ART_SPRINGS).tileCount());
         assertEquals(57,registry.source(CdR12bSectionSources.SourceId.ART_PLATFORM).tileCount());assertEquals(23,registry.source(CdR12bSectionSources.SourceId.ART_ROBOT_TRANSPORT_B).tileCount());
-        assertEquals(46,View.values().length);assertEquals(37,registry.sources().size());assertSame(pointers,a.loadPlan().sourcePointers());assertEquals(25,CdR12bProfile.Asset.values().length);
+        assertEquals(49,View.values().length);assertEquals(37,registry.sources().size());assertSame(pointers,a.loadPlan().sourcePointers());assertEquals(25,CdR12bProfile.Asset.values().length);
         assertEquals(63,o.hudVisuals().mappingFrames().stream().flatMap(f->f.pieces().stream()).mapToInt(p->p.tileOffset()+p.tileCount()).max().orElse(0));
     }
 
@@ -413,6 +425,53 @@ a164 43f90020a192
         var visuals=new ArrayList<CdObjectVisualAssets>();for(int i=0;i<21;i++)visuals.add((CdObjectVisualAssets)CdR12bObjectAssets.class.getMethod(VISUALS.get(i).method()).invoke(o));
         assertThrows(IllegalArgumentException.class,o::floatBlock);assertSame(actual,o.view(View.ANI_FLOAT_BLOCK));var visual=o.floatBlock();assertSame(visual,o.floatBlock());verify(mock,times(2)).objectView(View.ANI_FLOAT_BLOCK);
         for(int i=0;i<44;i++)assertSame(views.get(i),o.view(View.values()[i]));for(int i=0;i<21;i++)assertSame(visuals.get(i),CdR12bObjectAssets.class.getMethod(VISUALS.get(i).method()).invoke(o));
+    }
+
+    @Test void spikesAndLogShadowUseTheActualR12bInitOperandsAndCompleteNativeBaseWordTable() throws Exception {
+        var f=retail();var o=fromAssets(f.assets());assertEquals(46,View.MAP_SPR_SPIKES.ordinal());assertEquals(47,View.MAP_SPR_LOG_SHADOW.ordinal());assertEquals(48,View.LOG_SHADOW_BASE_TILES.ordinal());
+        assertEquals(0x20BED0L,o.view(View.OBJECT_INDEX).unsignedLong((0x26-1)*4));assertEquals(0x208716L,o.view(View.OBJECT_INDEX).unsignedLong((0x33-1)*4));
+        assertEquals("217c0020bfa60004",HexFormat.of().formatHex(f.original().readFile(0xBEE6,8)));assertEquals("700a4eba0ce0",HexFormat.of().formatHex(f.original().readFile(0xBEFA,6)));
+        assertEquals("217c002087a40004",HexFormat.of().formatHex(f.original().readFile(0x8744,8)));assertEquals("317b000c0002",HexFormat.of().formatHex(f.original().readFile(0x8786,6)));
+        // Literal native period-mask/future-good/act read sequence; this data test never executes the body.
+        assertEquals("7000103900ff152e0200007f0c0000026606d03900ff156ad040d03900ff1507d040317b000c00020068400000024e75",HexFormat.of().formatHex(f.original().readFile(0x8764,48)));
+        assertEquals(0x20BFA6,View.MAP_SPR_SPIKES.range().nativeAddress());assertEquals(24,o.view(View.MAP_SPR_SPIKES).length());
+        assertEquals(0x2087A4,View.MAP_SPR_LOG_SHADOW.range().nativeAddress());assertEquals(16,o.view(View.MAP_SPR_LOG_SHADOW).length());
+        assertEquals(0x208794,View.LOG_SHADOW_BASE_TILES.range().nativeAddress());var bases=o.view(View.LOG_SHADOW_BASE_TILES);assertEquals(16,bases.length());
+        int[] expected={0x03CB,0x045E,0x0418,0x03F0,0x0428,0x038F,0x0428,0x037F};for(int i=0;i<8;i++)assertEquals(expected[i],bases.unsignedWord(i*2));
+        var ids=o.view(View.OBJECT_TILE_IDS);assertEquals(72,ids.length());assertEquals(0x30,(short)ids.unsignedWord(10*2));assertEquals(0x32,CdObjectTileIds.endOfBody(ids,10));assertEquals(0x0330,ids.unsignedWord(0x30));
+        // Constructed finite value ingress only; body admission is a separate prerequisite.
+        var values=new CdLogShadow.Assets(bases,o.logShadow(),View.MAP_SPR_LOG_SHADOW.range().nativeAddress());assertSame(bases,values.baseTileWords());assertSame(o.logShadow(),values.visual());assertEquals(0x2087A4,values.mappingsAddressBits());
+        assertEquals(8,f.assets().sectionSources().source(CdR12bSectionSources.SourceId.ART_SPIKES_V2).tileCount());assertEquals(16,f.assets().sectionSources().source(CdR12bSectionSources.SourceId.ART_LOG_SHADOW).tileCount());
+        assertEquals("8008",HexFormat.of().formatHex(f.original().readFile(0x38BD4,2)));assertEquals("0010",HexFormat.of().formatHex(f.original().readFile(0x36A7C,2)));
+    }
+
+    @Test void spikesAndLogShadowKeepAllLiteralStaticFramesAndNativeSourceTailsWithoutScripts() throws Exception {
+        var o=fromAssets(retail().assets());var spikes=o.spikes();var shadow=o.logShadow();assertSame(spikes,o.spikes());assertSame(shadow,o.logShadow());assertTrue(spikes.animations().isEmpty());assertTrue(shadow.animations().isEmpty());assertEquals(0,spikes.animationTable().length());assertEquals(0,shadow.animationTable().length());
+        assertEquals(24,spikes.mappings().length());assertEquals(16,shadow.mappings().length());assertEquals(0,spikes.mappingTableOffset());assertEquals(0,shadow.mappingTableOffset());
+        var spikeFrame=spikes.mappingFrames().getFirst();assertEquals(2,spikeFrame.relativeOffset());assertEquals(21,spikeFrame.bytes().length());assertEquals(List.of(new CdObjectVisualAssets.Piece(-16,5,0,-16),new CdObjectVisualAssets.Piece(0,5,4,-16),new CdObjectVisualAssets.Piece(-16,5,0,0),new CdObjectVisualAssets.Piece(0,5,4,0)),spikeFrame.pieces());
+        assertEquals("15e618f5e1de5906a2068dc25b3ad67824697845d1cce4a9646475620fb6a5fc",sha(spikeFrame.bytes().copy()));assertEquals(0,spikes.mappings().unsignedByte(23),"Real explicit include byte, not fabricated parent padding");
+        assertEquals(4,shadow.mappingFrames().get(0).relativeOffset());assertEquals(10,shadow.mappingFrames().get(1).relativeOffset());
+        assertEquals(List.of(new CdObjectVisualAssets.Piece(-16,15,0,-16)),shadow.mappingFrames().get(0).pieces());assertEquals(List.of(new CdObjectVisualAssets.Piece(-8,13,0,-16)),shadow.mappingFrames().get(1).pieces());
+        assertEquals("9ba739f1090e886bd2b6fc335a265b364efc035b84e9e254d414b13bf28abb04",sha(shadow.mappingFrames().get(0).bytes().copy()));assertEquals("cc9c1a07b2640e191c21b4519a5b600c4a4ace7258c6584e217992d7e4fcefa7",sha(shadow.mappingFrames().get(1).bytes().copy()));
+        assertEquals("19bfd226ca0d6adf8dfefef89eed1fb6cf4b7e4c279b68255a2ff726468a1c14",semanticDigest(spikes));assertEquals("4832eeeee66550838053053d5b721a2ff138dc8134d9768b96939f3eac008e11",semanticDigest(shadow));
+        assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decodeStatic(Arrays.copyOf(spikes.mappings().copy(),22),1,8));assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decodeStatic(spikes.mappings().copy(),1,7));
+        assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decodeStatic(Arrays.copyOf(shadow.mappings().copy(),15),2,16));assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decodeStatic(shadow.mappings().copy(),2,15));
+        byte[] badTail=spikes.mappings().copy();badTail[23]=1;assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decodeStatic(badTail,1,8));
+    }
+
+    @Test void spikesAndLogShadowSourceFaultsCannotCacheOrAlterThePreviousFortySixViewsAndTwentyTwoVisuals() throws Exception {
+        var real=retail().assets();var mock=mock(CdR12bTerrainAssets.class);when(mock.identity()).thenReturn(real.identity());when(mock.profile()).thenReturn(real.profile());when(mock.sectionSources()).thenReturn(real.sectionSources());
+        when(mock.objectView(any(View.class))).thenAnswer(c->real.objectView(c.getArgument(0,View.class)));
+        var spike=real.objectView(View.MAP_SPR_SPIKES);var shadow=real.objectView(View.MAP_SPR_LOG_SHADOW);var bases=real.objectView(View.LOG_SHADOW_BASE_TILES);
+        byte[] badShadow=shadow.copy();badShadow[0]^=1;byte[] badBases=bases.copy();badBases[0]^=1;
+        when(mock.objectView(View.MAP_SPR_SPIKES)).thenReturn(CdAssetBytes.copyOf(Arrays.copyOf(spike.copy(),23)),spike);when(mock.objectView(View.MAP_SPR_LOG_SHADOW)).thenReturn(CdAssetBytes.copyOf(badShadow),shadow);when(mock.objectView(View.LOG_SHADOW_BASE_TILES)).thenReturn(CdAssetBytes.copyOf(badBases),bases);
+        var o=CdR12bObjectAssets.bind(mock);var views=new ArrayList<CdAssetBytes>();for(int i=0;i<46;i++)views.add(o.view(View.values()[i]));
+        var visuals=new ArrayList<CdObjectVisualAssets>();for(int i=0;i<22;i++)visuals.add((CdObjectVisualAssets)CdR12bObjectAssets.class.getMethod(VISUALS.get(i).method()).invoke(o));
+        assertThrows(IllegalArgumentException.class,o::spikes);assertSame(spike,o.view(View.MAP_SPR_SPIKES));assertSame(o.spikes(),o.spikes());
+        assertThrows(IllegalArgumentException.class,o::logShadow);assertSame(shadow,o.view(View.MAP_SPR_LOG_SHADOW));assertSame(o.logShadow(),o.logShadow());
+        assertThrows(IllegalArgumentException.class,()->o.view(View.LOG_SHADOW_BASE_TILES));assertSame(bases,o.view(View.LOG_SHADOW_BASE_TILES));assertSame(bases,o.view(View.LOG_SHADOW_BASE_TILES));
+        for(var view:List.of(View.MAP_SPR_SPIKES,View.MAP_SPR_LOG_SHADOW,View.LOG_SHADOW_BASE_TILES))verify(mock,times(2)).objectView(view);
+        for(int i=0;i<46;i++)assertSame(views.get(i),o.view(View.values()[i]));for(int i=0;i<22;i++)assertSame(visuals.get(i),CdR12bObjectAssets.class.getMethod(VISUALS.get(i).method()).invoke(o));
     }
 
     private static String sha(byte[] bytes)throws Exception{return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));}

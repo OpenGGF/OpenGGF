@@ -962,7 +962,7 @@ class TestSonicCdAct2ControllerRoute {
         assertInstanceOf(SonicCdPastDisplay.Ready.class,targetSelected.projection(),"Actual completed target loading selects genuine current planes");
         assertTrue(targetSelected.inputs().selectedCpu().isEmpty(),"No ordinary CPU SAT or visible Sonic was fabricated during load");
         boolean targetSonicSelected=false;
-        for(int ordinary=1;ordinary<=208;ordinary++){
+        for(int ordinary=1;ordinary<=312;ordinary++){
             int call=targetReturnedCall+ordinary;
             var beforeOrdinary=captureNative(h);var fullOrdinary=registry.capture();var courseOrdinary=registry.captureCourse();
             try{step(h,controller(call));}
@@ -987,15 +987,19 @@ class TestSonicCdAct2ControllerRoute {
                 assertEquals(0x20A1B0,actualBlock.longBits(com.openggf.game.soniccd.objects.CdObjectState.LongField.MAPPINGS));
                 assertEquals(0x434C,actualBlock.word(com.openggf.game.soniccd.objects.CdObjectState.WordField.TILE));
             }
-            if(ordinary==1||ordinary==4||ordinary==12||ordinary==15||ordinary==16||ordinary==17||ordinary==31||ordinary==32||ordinary==33||ordinary==64||ordinary==128||ordinary==208){
+            if(ordinary==1||ordinary==4||ordinary==12||ordinary==15||ordinary==16||ordinary==17||ordinary==31||ordinary==32||ordinary==33||ordinary==64||ordinary==128||ordinary==208||ordinary==209||ordinary==216||ordinary==217||ordinary==240||ordinary==272||ordinary==312){
                 registry.restore(fullOrdinary);assertNativeCapture(beforeOrdinary,h);step(h,controller(call));assertNativeCapture(afterOrdinary,h);
                 registry.restoreCourse(courseOrdinary);assertNativeCapture(beforeOrdinary,h);step(h,controller(call));assertNativeCapture(afterOrdinary,h);
             }
         }
-        assertTrue(targetSonicSelected,"Fixed208 real target services must expose native Blink/Draw/DPLC/next8 provenance without actor or art injection");
+        assertTrue(targetSonicSelected,"Fixed312 real target services must expose native Blink/Draw/DPLC/next8 provenance without actor or art injection");
         System.out.println("Controller-only Act2: WARP returned13885, actual R12B FULL13886, loading returned"+targetReturnedCall+
-                ", 208 unpaused target ordinary calls returned through"+(targetReturnedCall+208)+". Genuine Boulder/Wall/FloatBlock, primary Main, live128-slot/camera/SAT/tail; selected Sonic provenance and full/course replay at native admissions and later cuts. No new screenshot, native/regional/audio or full-act parity claim.");
-        System.out.println("R12B closed14143 comparison-only actor="+targetFrame.state()+", scroll="+targetHost.scroll()+", placement="+targetHost.placement().status());
+                ", 312 unpaused target ordinary calls returned through"+(targetReturnedCall+312)+". Genuine Boulder/Wall/FloatBlock, primary Main, live128-slot/camera/SAT/tail; selected Sonic provenance and full/course replay at native admissions and later cuts. No new screenshot, native/regional/audio or full-act parity claim.");
+        System.out.println("R12B closed14247 comparison-only actor="+targetFrame.state()+", scroll="+targetHost.scroll()+", placement="+targetHost.placement().status());
+        // The fixed jump cleared the actual Platform49; next14248 is a measured unowned Pata-Bata3E.
+        var nextBoundary=assertThrows(SonicCdAct2PastObjectPass.Unowned.class,()->step(h,controller(14248)));
+        assertEquals(SonicCdAct2PastObjectPass.Boundary.OBJECT_KIND,nextBoundary.boundary());
+        assertEquals(45,nextBoundary.wholeIndex());assertEquals(0x3E,nextBoundary.value());assertTrue(targetFrame.closed());
         // END measured natural TimeWarp230 old exit.
         // END measured natural TimeWarp save continuation.
         // END measured Swing promotion.
@@ -1763,7 +1767,7 @@ class TestSonicCdAct2ControllerRoute {
     }
 
     private static LogicalInputSnapshot controller(int call) {
-        if (call < 1 || call > 14143) throw new IllegalArgumentException("Fixed ordinary controller recipe is1..14143; the finite tail observes R12B loading before ordinary objects");
+        if (call < 1 || call > 14248) throw new IllegalArgumentException("Fixed ordinary controller recipe is1..14248; the final service observes the measured Pata-Bata boundary");
         if (call > 10419) {
             // Exact old prefix through13098; then Left96, Left+B4, Left96, Right256.
             // The established held-Right suffix continues unchanged through the WARP return;
@@ -1771,6 +1775,7 @@ class TestSonicCdAct2ControllerRoute {
             int directions = call >= 13099 && call <= 13294 ? 4 : 8;
             int actions = call <= 13098 ? (call >= 11214 && (call - 11214) % 128 < 32 ? 2 : 0)
                     : (call >= 13195 && call <= 13198 ? 2 : 0);
+            if(call>=14144&&call<=14151)actions=2; // Fixed native jump input, never a state/camera write.
             return LogicalInputSnapshot.ofPlayers(PlayerInputState.of(directions, 0, actions, 0, false, false),
                     PlayerInputState.neutral());
         }

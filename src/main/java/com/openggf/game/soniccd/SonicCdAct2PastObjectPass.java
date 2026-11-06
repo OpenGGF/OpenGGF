@@ -72,7 +72,7 @@ final class SonicCdAct2PastObjectPass {
         }
     }
     private enum Phase { READY,WALKING,WALKED,DRAINING,DONE,FAILED,DISCARDED }
-    private enum Kind { PRIMARY,RESERVED,RING,SPRING,MONITOR,TIME_POST,COLLAPSE,PLATFORM,TAM,ANIMAL,SWING,ROBOT,ANTON,BOULDER,WALL,FLOAT_BLOCK,NULL }
+    private enum Kind { PRIMARY,RESERVED,RING,SPRING,MONITOR,TIME_POST,COLLAPSE,PLATFORM,TAM,ANIMAL,SWING,ROBOT,ANTON,BOULDER,WALL,FLOAT_BLOCK,SPIKES,LOG_SHADOW,NULL }
     private final Ports ports;private final CdR12bTerrainAssets terrain;private final CdR12bPlayerAssets player;
     private final CdPlayerFrameRuntime frame;private final CdObjectPlacementRuntime placement;
     private final CdAssetBytes objectIndex;private final CdObjectMappings mappings;
@@ -84,6 +84,7 @@ final class SonicCdAct2PastObjectPass {
     private CdSwing swing;private CdRobotGenerator robot;private CdAnton anton;
     private CdBreakableWall wall;
     private CdFloatBlock floatBlock;
+    private CdSpikes spikes;private CdLogShadow logShadow;
     private Phase phase=Phase.READY;private CdObjectDrawQueue queue;private Dispatch dispatch;
     private boolean port,queuePort;private Adoption pending;
     private static final class Dispatch {
@@ -95,6 +96,9 @@ final class SonicCdAct2PastObjectPass {
         List<byte[]> expectedImages;byte[] expectedSaved;CdSwing.PlayerCut playerCut;
         int wallBranch,wallSolids,wallFms,wallHalves,wallDraws;
         int floatOrdinal;boolean floatStopped;CdObjectPlacementRuntime.Status floatStatus;CdAssetBytes floatBank;
+        CdObjectPool.Snapshot spikePool;CdObjectPlacementRuntime.Snapshot spikeBase,spikeDrawCut;
+        CdSolidObject.Result spikeSolid;boolean spikeVertical,spikeStopped,spikeY,spikeHurt;
+        int spikeSolids,logInitialRoutine,logInitStores;boolean logSavedCleared,logDeleted;
         Dispatch(Kind kind,int whole){this.kind=kind;this.whole=whole;}
     }
     SonicCdAct2PastObjectPass(Ports ports,CdR12bTerrainAssets terrain,CdR12bPlayerAssets player,
@@ -163,6 +167,19 @@ final class SonicCdAct2PastObjectPass {
         },(p,id)->{requireKind(Kind.FLOAT_BLOCK);floatNonwrites();
             if(dispatch.floatStopped)throw new IllegalStateException("FloatBlock Draw after native stop");
             drawDynamic(Kind.FLOAT_BLOCK,p,id,()->floatBlock.isCurrentDrawCall(p,id));});
+        spikes=CdSpikes.fromAct2PastAssetsWithPrefix(placement,terrain,solid,this::spikesSolid,this::spikesY,this::spikesHurt,
+                (p,id)->{requireKind(Kind.SPIKES);spikesNonwrites();
+                    if(dispatch.spikeStopped||dispatch.spikeY!=dispatch.spikeHurt||!dispatch.spikeHurt&&spikesHurtReached())throw new IllegalStateException("Spikes Draw before reached native calls");
+                    drawDynamic(Kind.SPIKES,p,id,()->spikes.isCurrentDrawCall(p,id));dispatch.spikeDrawCut=placement.capture();});
+        logShadow=CdLogShadow.fromAct2PastAssets(placement,terrain,new CdLogShadow.DispatchObserver(){
+            public void beforePublication(CdLogShadow.Publication c){logBeforePublication(c);}
+            public void afterPublication(CdLogShadow.Publication c){logAfter(c,true);}
+            public void beforeCall(Object c){logBeforeDraw((CdLogShadow.DrawCall)c);}
+            public void afterCall(Object c){logAfter(c,false);}
+        },c->{requireKind(Kind.LOG_SHADOW);var d=dispatch;
+            if(d.operation!=c||d.used||!logShadow.isCurrentCall(c))throw new IllegalStateException("Not the original Log Draw");
+            claim(c,()->logShadow.isCurrentCall(c));placementCut(c.cut());source(c.source());d.used=true;
+            drawDynamic(Kind.LOG_SHADOW,placement.pool(),c.source().identity(),()->logShadow.isCurrentCall(c));});
         monitor=CdMonitor.fromAct2PastAssets(placement,terrain,solid,probes,new CdMonitor.PrefixSolidOwner(){
             public CdMonitor.LiveSolid preflight(CdMonitor.PrefixSolidCut c){requireKind(Kind.MONITOR);requireIdentity(c.objectIdentity());poolCut(c.callCut());
                 if(!c.expectedPlayer().equals(primary())||!c.expectedGates().equals(gates())||!c.expectedGlobals().equals(solidGlobals()))throw new IllegalArgumentException("Stale Monitor readback");
@@ -290,6 +307,21 @@ final class SonicCdAct2PastObjectPass {
                             ||result.effects().stream().filter(effect->effect instanceof CdFloatBlock.CallReturned call&&call.call()==CdFloatBlock.NativeCall.DRAW_OBJECT).count()!=(dispatch.drawn?1:0))
                         throw new IllegalStateException("FloatBlock completed metadata lacks actual publications");
                 }catch(RuntimeException|Error original){try{floatNonwrites();}catch(RuntimeException|Error check){if(check!=original)original.addSuppressed(check);}throw original;}}
+            case SPIKES->{var d=dispatch;d.spikeBase=placement.capture();d.spikePool=d.spikeBase.pool();d.spikeVertical=(placement.pool().state(whole).spriteFlags()&2)!=0;
+                try{var result=spikes.run(whole,new CdSpikes.Globals(g.timeZone(),g.timeWarpDirection(),cut.cameraXWord()),
+                        new CdSpikes.Inputs(primary(),gates(),solidGlobals(),spikesPlayerGlobals(),spikesWorldGlobals()));
+                    requireKind(Kind.SPIKES);verifySpikesTail(true);
+                    if(d.spikeStopped||!d.drawn||!result.state().equals(placement.pool().state(whole))||!result.player().equals(primary())
+                            ||!result.solidGlobals().equals(solidGlobals())||!result.playerGlobals().equals(spikesPlayerGlobals())||!result.worldGlobals().equals(spikesWorldGlobals())
+                            ||result.effects().stream().filter(CdSpikes.Solid.class::isInstance).count()!=d.spikeSolids
+                            ||result.effects().stream().filter(CdSpikes.YRewound.class::isInstance).count()!=(d.spikeY?1:0)
+                            ||result.effects().stream().filter(CdSpikes.Hurt.class::isInstance).count()!=(d.spikeHurt?1:0))
+                        throw new IllegalStateException("Spikes completed metadata differs from actual publications");
+                }catch(RuntimeException|Error original){try{if(d.spikeDrawCut==null)spikesNonwrites();else verifySpikesTail(false);}catch(RuntimeException|Error check){if(check!=original)original.addSuppressed(check);}throw original;}}
+            case LOG_SHADOW->{dispatch.logInitialRoutine=placement.pool().state(whole).routine();var result=logShadow.run(whole,new CdLogShadow.Globals(g.timeZone(),cut.goodFutureByte(),g.zoneAct()&255,g.timeWarpDirection(),cut.cameraXWord()));
+                requireKind(Kind.LOG_SHADOW);if(dispatch.operation!=null||!dispatch.drawn||dispatch.logInitialRoutine==0&&dispatch.logInitStores!=3
+                        ||!result.state().equals(placement.pool().state(whole))||result.deleted()!=dispatch.logDeleted)
+                    throw new IllegalStateException("Log omitted original native completion");}
             case MONITOR->monitor.runPast(whole,monitorGlobals(),new CdMonitor.SolidInputs(primary(),gates(),solidGlobals()));
             case TIME_POST->post.runPast(whole,postGlobals());
             case COLLAPSE->collapse.run(whole,new CdCollapsePlatform.DespawnGlobals(g.timeZone(),g.timeWarpDirection(),cut.cameraXWord()),new CdCollapsePlatform.Inputs(primary(),gates(),solidGlobals()));
@@ -341,7 +373,7 @@ final class SonicCdAct2PastObjectPass {
         if(whole==0){if(id==1||id==2)return Kind.PRIMARY;throw stop(Boundary.PLAYER_SLOT,whole,id);}
         if(whole<32){if((whole==2||whole==3||whole==5)&&id==0x1C||whole==31&&id==0x19)return Kind.RESERVED;
             throw stop(Boundary.PLAYER_SLOT,whole,id);}
-        return switch(id){case 0x0A->Kind.SPRING;case 0x10->Kind.RING;case 0x12->Kind.FLOAT_BLOCK;case 0x1B->Kind.BOULDER;case 0x36->Kind.WALL;case 0x19->placement.pool().state(whole).subtype()<8?Kind.MONITOR:Kind.TIME_POST;
+        return switch(id){case 0x0A->Kind.SPRING;case 0x10->Kind.RING;case 0x12->Kind.FLOAT_BLOCK;case 0x1B->Kind.BOULDER;case 0x36->Kind.WALL;case 0x26->Kind.SPIKES;case 0x33->Kind.LOG_SHADOW;case 0x19->placement.pool().state(whole).subtype()<8?Kind.MONITOR:Kind.TIME_POST;
             case 0x20->Kind.COLLAPSE;case 0x21->Kind.PLATFORM;case 0x22->Kind.TAM;case 0x24->Kind.ANIMAL;case 0x29->Kind.SWING;case 0x2D->Kind.ROBOT;case 0x3F->Kind.ANTON;
             default->throw stop(Boundary.OBJECT_KIND,whole,id);};
     }
@@ -384,6 +416,82 @@ final class SonicCdAct2PastObjectPass {
     private void sound(SonicCdGameModule.PastSound sound){var cut=read();var sounds=new ArrayList<>(cut.sounds());sounds.add(Objects.requireNonNull(sound));publish(cut,withSounds(cut,sounds),null,()->{},()->{});}
     private void angle(int expected,int value){if(solidGlobals().primaryAngle()!=expected)throw new IllegalArgumentException("Stale primary angle");var cut=read();
         publish(cut,cut,null,()->{if(solidGlobals().primaryAngle()!=expected)throw new IllegalArgumentException("Stale primary angle");},()->frame.applyObjectPrimaryAngle(value));}
+    private CdPlayerTouchResponse.PlayerGlobals spikesPlayerGlobals(){var c=read().globals().contact();var e=frame.environment();
+        return new CdPlayerTouchResponse.PlayerGlobals(c.timeWarp(),e.globals().invincible(),c.shield(),c.combineRing(),e.globals().debugCheat(),e.globals().debugMode(),e.movement().globals().scoreChain(),e.movement().gates().miniSonic());}
+    private CdPlayerTouchResponse.WorldGlobals spikesWorldGlobals(){var c=read().globals();var r=c.ring();var s=c.score();
+        return new CdPlayerTouchResponse.WorldGlobals(r.rings(),r.lives(),r.updateHudLives(),s.score(),s.nextLifeScore(),s.updateHudScore());}
+    private void spikesNonwrites(){var d=dispatch;var actual=placement.capture();
+        if(d.spikeBase==null||!d.spikeBase.status().equals(actual.status())||!same(d.spikeBase.savedFlags(),actual.savedFlags()))throw new IllegalStateException("Spikes changed placement status/bank before native tail");
+        for(var image:d.spikePool.slots())if(image.identity().wholeIndex()!=d.whole&&!image.equals(placement.pool().state(image.identity().wholeIndex())))throw new IllegalStateException("Spikes changed unrelated full64");}
+    private void spikesSolid(CdSpikes.PrefixSolidCall c){requireKind(Kind.SPIKES);spikesNonwrites();var d=dispatch;
+        if(d.spikeSolids!=0||d.spikeStopped||d.spikeY||d.drawn)throw new IllegalStateException("Spikes Solid order");
+        claim(c,()->spikes.isCurrentPrefixSolidCall(c));poolCut(c.actualCut());source(c.actualCut().slots().get(d.whole-32));
+        commitSolid(c.actualCut(),c.expectedPlayer(),c.expectedGlobals(),c.outcome());d.spikeSolids=1;d.spikePool=placement.pool().capture();
+        if(c.outcome() instanceof CdSolidObject.Completed done)d.spikeSolid=done.completedResult();else d.spikeStopped=true;
+    }
+    private boolean spikesHurtReached(){var d=dispatch;if(d.spikeSolid==null||d.spikeStopped||d.spikeVertical)return false;var p=primary().actor();var c=spikesPlayerGlobals();
+        return d.spikeSolid.d0().orElseThrow()!=0&&(placement.pool().state(d.whole).flags()&8)!=0&&c.timeWarp()==0&&c.invincible()==0&&p.motion().routine()<4&&p.hurt()==0;}
+    private void spikesY(CdSpikes.YRewindCall c){requireKind(Kind.SPIKES);spikesNonwrites();var d=dispatch;
+        if(d.spikeY||d.spikeHurt||d.drawn||!spikesHurtReached())throw new IllegalStateException("Spikes Y outside native Hurt gate");
+        claim(c,()->spikes.isCurrentYRewindCall(c));requireIdentity(c.sourceIdentity());if(!c.expectedActor().equals(primary().actor()))throw new IllegalArgumentException("Stale Spikes Y actor");
+        var prepared=frame.prepareObjectPreHurtYRewind(c.expectedActor(),c.finalYBits());var cut=read();
+        publish(cut,cut,null,()->frame.validatePreparedObjectSolidPublication(prepared),()->frame.applyPreparedObjectSolidPublication(prepared));d.spikeY=true;
+    }
+    private void spikesHurt(CdSpikes.HurtCall c){requireKind(Kind.SPIKES);spikesNonwrites();var d=dispatch;
+        if(!d.spikeY||d.spikeHurt||d.drawn||!spikesHurtReached())throw new IllegalStateException("Spikes Hurt without its native Y prefix");
+        claim(c,()->spikes.isCurrentHurtCall(c));poolCut(c.callCut());source(c.sourceA2());
+        var expected=c.expectedPlayer();var world=c.expectedWorld();var result=c.result();
+        if(!c.expectedActor().equals(primary().actor())||!expected.equals(spikesPlayerGlobals())||!world.equals(spikesWorldGlobals())||!result.world().equals(world))throw new IllegalArgumentException("Stale/unowned Spikes Hurt projection");
+        boolean find=expected.shield()==0&&world.rings()!=0;boolean kill=expected.shield()==0&&world.rings()==0&&expected.debugCheat()==0;
+        var exit=kill?(expected.debugMode()==0?CdPlayerTouchResponse.Exit.KILL_PLAYER:CdPlayerTouchResponse.Exit.KILL_PLAYER_DEBUG_NO_WRITE):CdPlayerTouchResponse.Exit.HURT;
+        int shield=exit==CdPlayerTouchResponse.Exit.HURT?expected.shield()&~1:expected.shield();int combine=exit==CdPlayerTouchResponse.Exit.HURT&&(expected.shield()&1)==0?0:expected.combineRing();var next=result.player();
+        if(result.exit()!=exit||next.timeWarp()!=expected.timeWarp()||next.shield()!=shield||next.combineRing()!=combine||next.debugCheat()!=expected.debugCheat()||next.debugMode()!=expected.debugMode()||next.miniSonic()!=expected.miniSonic())throw new IllegalArgumentException("Spikes Hurt changes unowned contact values");
+        var free=OptionalInt.empty();if(find)for(var image:c.callCut().slots())if(image.id()==0){free=OptionalInt.of(image.identity().wholeIndex());break;}
+        var calls=new ArrayList<CdPlayerTouchResponse.Call>();if(find)calls.add(new CdPlayerTouchResponse.FindObjSlot(free));
+        if(exit!=CdPlayerTouchResponse.Exit.KILL_PLAYER_DEBUG_NO_WRITE){calls.add(new CdPlayerTouchResponse.ResetOnFloor());if((c.expectedActor().motion().flags()&4)!=0)calls.add(new CdPlayerTouchResponse.PlayFm(CdPlayerTouchResponse.FmSound.FM_CHARGESTOP));if(exit==CdPlayerTouchResponse.Exit.KILL_PLAYER)calls.add(new CdPlayerTouchResponse.PlayFm(CdPlayerTouchResponse.FmSound.FM_HURT));}
+        if(!result.calls().equals(calls)||result.changedSlots().size()!=(free.isPresent()?1:0))throw new IllegalArgumentException("Spikes Hurt calls/allocations differ from reached native branch");
+        if(free.isPresent()){var before=c.callCut().slots().get(free.getAsInt()-32);var image=before.moveByte(ID,CdLostRing.OBJECT_ID).moveWord(X,c.expectedActor().motion().centreX16_16()>>>16).moveWord(Y,c.expectedActor().motion().centreY16_16()>>>16);
+            if(free.getAsInt()==d.whole||!result.changedSlots().getFirst().equals(image))throw new IllegalArgumentException("Spikes Hurt LostRing must be the genuine first-free ID/X/Y prefix");}
+        var output=CdObjectPool.overlay(c.callCut(),result.changedSlots());var prepared=frame.prepareObjectHurtResult(c.expectedActor(),expected,result);var cut=read();var g=cut.globals();
+        var globals=new SonicCdAct2PastWorldHost.Globals(g.ring(),g.live(),new CdPlayerBody.ContactGlobals(expected.timeWarp(),shield,combine),g.score(),g.projectorByte(),g.checkpointSaved(),g.drownTimerWord(),g.debugBlockWord(),g.pauseMusicBit(),g.bonus(),g.tail(),g.animations(),g.paletteSteps7(),g.paletteTimers7());
+        var sounds=new ArrayList<>(cut.sounds());for(var call:result.calls())if(call instanceof CdPlayerTouchResponse.PlayFm fm)sounds.add(new SonicCdGameModule.PastFrameSound(new CdPlayerFrameRuntime.ContactFmSound(fm.sound())));
+        publish(cut,withSounds(withGlobals(cut,globals),sounds),output,()->frame.validatePreparedObjectSolidPublication(prepared),()->frame.applyPreparedObjectSolidPublication(prepared));d.spikeHurt=true;d.spikePool=placement.pool().capture();
+    }
+    /** Native CheckObjDespawn/DespawnObject; observation only, never a second store execution. */
+    private boolean outsideOrWarp(CdObjectState source){var c=read();int period=frame.environment().movement().gates().timeZone();
+        return (source.spriteFlags()&128)==0&&(((source.centreX()&0xFF80)-((c.cameraXWord()-128)&0xFF80))&65535)>0x280||(period&128)!=0;}
+    private int savedTailIndex(CdObjectState source){var g=frame.environment().movement().gates();int period=g.timeZone()&127;
+        if((g.timeZone()&128)!=0){int adjusted=(period-(byte)g.timeWarpDirection())&65535;period=(short)adjusted<0?0:adjusted<3?adjusted:2;}
+        return 2+(short)((3*source.savedFlagsId()+period)&65535);}
+    private void verifySpikesTail(boolean completed){var d=dispatch;if(d.spikeDrawCut==null)throw new IllegalStateException("Spikes omitted native Draw");var before=d.spikeDrawCut;var actual=placement.capture();var source=before.pool().slots().get(d.whole-32);boolean delete=outsideOrWarp(source);
+        if(!before.status().equals(actual.status()))throw new IllegalStateException("Spikes tail changed placement status");for(var image:before.pool().slots())if(image.identity().wholeIndex()!=d.whole&&!image.equals(placement.pool().state(image.identity().wholeIndex())))throw new IllegalStateException("Spikes tail changed unrelated image");
+        byte[] saved=before.savedFlags().copy();boolean bankWritable=delete&&source.savedFlagsId()!=0;int at=bankWritable?savedTailIndex(source):-1;boolean valid=at>=2&&at<saved.length;if(bankWritable&&valid)saved[at]&=127;
+        var live=placement.pool().state(d.whole);boolean deleted=Arrays.equals(live.copyBytes(),new byte[64]);boolean bankFinal=Arrays.equals(saved,actual.savedFlags().copy());boolean bankBefore=same(before.savedFlags(),actual.savedFlags());
+        if(completed){if(delete&&bankWritable&&!valid||!bankFinal||delete!=deleted||!delete&&!live.equals(source))throw new IllegalStateException("Spikes native tail output mismatch");}
+        else if((!bankBefore&&!bankFinal)||!live.equals(source)&&!deleted||deleted&&(!delete||!bankFinal))throw new IllegalStateException("Spikes failed prefix exceeds native tail stores");
+    }
+    private void logStart(Object c){requireKind(Kind.LOG_SHADOW);var d=dispatch;if(d.operation!=null||!logShadow.isCurrentCall(c))throw new IllegalStateException("Not an original next Log operation");
+        d.operation=c;d.used=false;d.observedCut=placement.capture();d.observedGlobals=read();d.actor=frame.captureActor();d.shared=frame.captureShared();}
+    private void logBeforePublication(CdLogShadow.Publication c){logStart(c);var d=dispatch;placementCut(c.cut());source(c.source());if(c.ordinal()!=d.ordinal+1)throw new IllegalStateException("Log publication ordinal");
+        var images=new ArrayList<byte[]>();for(var image:c.cut().pool().slots())images.add(image.copyBytes());byte[] saved=c.cut().savedFlags().copy();var source=c.source();CdObjectState expected=null;
+        if(!d.drawn&&d.logInitialRoutine==0&&d.logInitStores<3){
+            expected=switch(d.logInitStores){case 0->source.addByte(ROUTINE,2).moveByte(SPRITE_FLAGS,source.spriteFlags()|4).moveByte(PRIORITY,6).moveLong(MAPPINGS,CdR12bObjectAssets.View.MAP_SPR_LOG_SHADOW.range().nativeAddress()).moveByte(MAP_FRAME,source.subtype()).moveByte(WIDTH,16).moveByte(Y_RADIUS,16);
+                case 1->source.moveWord(TILE,logBaseWord());case 2->source.moveWord(TILE,source.word(TILE)|0x4000);default->throw new IllegalStateException();};
+            if(c.savedIndex()!=-1||!expected.equals(c.output()))throw new IllegalArgumentException("Log changed a native Init store/nonwrite");d.logInitStores++;
+        }else{if(!d.drawn||!outsideOrWarp(source))throw new IllegalStateException("Log tail before its native despawn gate");
+            if(c.savedIndex()>=0){int at=savedTailIndex(source);if(d.logSavedCleared||source.savedFlagsId()==0||c.savedIndex()!=at||at<2||at>=saved.length||!source.equals(c.output()))throw new IllegalArgumentException("Log saved-bank operation mismatch");saved[at]&=127;expected=source;d.logSavedCleared=true;}
+            else{if(c.output()!=null||d.logDeleted||source.savedFlagsId()!=0&&!d.logSavedCleared)throw new IllegalArgumentException("Log Delete before native saved clear");d.logDeleted=true;}}
+        if(expected!=null){CdObjectPool.overlay(c.cut().pool(),List.of(expected));images.set(source.identity().dynamicIndex(),expected.copyBytes());}else images.set(source.identity().dynamicIndex(),new byte[64]);d.expectedImages=List.copyOf(images);d.expectedSaved=saved;
+    }
+    private int logBaseWord(){var g=frame.environment().movement().gates();int index=g.timeZone()&127;if(index==2)index=(index&0xFF00)|((index+read().goodFutureByte())&255);index=(index+index)&65535;index=(index&0xFF00)|((index+(g.zoneAct()&255))&255);int at=(short)((index+index)&65535);
+        var table=terrain.objects().view(CdR12bObjectAssets.View.LOG_SHADOW_BASE_TILES);if(at<0||(at&1)!=0||at>14||at>table.length()-2)throw new IllegalArgumentException("Unowned Log selected base");return table.unsignedWord(at);}
+    private void logBeforeDraw(CdLogShadow.DrawCall c){logStart(c);var d=dispatch;placementCut(c.cut());source(c.source());if(d.drawn||d.logInitialRoutine==0&&d.logInitStores!=3)throw new IllegalStateException("Log Draw before completed Init");
+        var images=new ArrayList<byte[]>();for(var image:c.cut().pool().slots())images.add(image.copyBytes());images.set(d.whole-32,c.source().moveByte(SPRITE_FLAGS,c.source().spriteFlags()&127).copyBytes());d.expectedImages=List.copyOf(images);d.expectedSaved=c.cut().savedFlags().copy();}
+    private void logAfter(Object c,boolean publication){requireKind(Kind.LOG_SHADOW);var d=dispatch;if(d.operation!=c||!logShadow.isCurrentCall(c)||!publication&&!d.used)throw new IllegalStateException("Log lacks its original completed operation");
+        requireFrame(d.actor,d.shared);requireCut(d.observedGlobals);var actual=placement.capture();if(!d.observedCut.status().equals(actual.status())||!Arrays.equals(d.expectedSaved,actual.savedFlags().copy()))throw new IllegalStateException("Log changed bank/status nonwrites");
+        for(int n=0;n<96;n++)if(!Arrays.equals(d.expectedImages.get(n),actual.pool().slots().get(n).copyBytes()))throw new IllegalStateException("Log native full96 output mismatch");
+        if(publication)d.ordinal++;d.operation=null;d.observedCut=null;d.observedGlobals=null;d.actor=null;d.shared=null;d.expectedImages=null;d.expectedSaved=null;checkpoint();
+    }
     private void commitSolid(CdObjectPool.Snapshot pool,CdSolidObject.Player expected,CdSolidObject.Globals globals,CdSolidObject.Outcome outcome){
         poolCut(pool);CdObjectState image;List<CdObjectState> others;List<CdPlayerTouchResponse.FmSound> fm;CdPlayerFrameRuntime.ObjectSolidPublication prepared;
         if(outcome instanceof CdSolidObject.Completed c){var r=c.completedResult();image=r.object();others=r.otherSlots();fm=r.fmRequests();prepared=frame.prepareObjectSolidResult(expected,globals,r);}

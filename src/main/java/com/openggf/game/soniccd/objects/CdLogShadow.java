@@ -3,6 +3,8 @@ package com.openggf.game.soniccd.objects;
 import com.openggf.game.soniccd.CdNativeFile;
 import com.openggf.game.soniccd.CdReleaseVariant;
 import com.openggf.game.soniccd.CdStagePayload;
+import com.openggf.game.soniccd.level.CdR12bObjectAssets;
+import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
 import com.openggf.game.soniccd.level.CdR12aObjectAssets;
 import com.openggf.game.soniccd.level.CdR12aProfile;
 import com.openggf.game.soniccd.media.CdMmdImage;
@@ -93,6 +95,16 @@ public final class CdLogShadow {
                 throw new IllegalArgumentException("LogShadow Act2 assets require the authenticated original USA R12A source");
             return new Assets(owner.view(CdR12aProfile.Asset.LOG_SHADOW_BASE_TILES), owner.logShadow(),
                     owner.profile().range(CdR12aProfile.Asset.MAP_SPR_LOG_SHADOW).nativeAddress());
+        }
+
+        /** Actual original-USA R12B base words and cached two-frame visual; no source relabeling. */
+        public static Assets fromAct2PastAssets(CdR12bObjectAssets owner) {
+            Objects.requireNonNull(owner, "actual R12B object assets"); var identity=Objects.requireNonNull(owner.identity(), "R12B identity");
+            if (identity.variant()!=CdReleaseVariant.USA || identity.file()!=CdNativeFile.R12B
+                    || identity.domain()!=CdMmdImage.Domain.ORIGINAL_WORD_RAM || !identity.stage().equals(CdStagePayload.R12B.stage()))
+                throw new IllegalArgumentException("LogShadow requires actual original USA R12B metadata");
+            return new Assets(owner.view(CdR12bObjectAssets.View.LOG_SHADOW_BASE_TILES), owner.logShadow(),
+                    CdR12bObjectAssets.View.MAP_SPR_LOG_SHADOW.range().nativeAddress());
         }
 
         /** Retains the authenticated owner's raw base view and actual mapping-view native address. */
@@ -222,6 +234,18 @@ public final class CdLogShadow {
                                            DispatchObserver observer, SourceDraw draw) {
         var body = new CdLogShadow(placement, Assets.fromAct2Assets(owner), (pool, identity) -> {
             throw new IllegalStateException("R12A Log requires its actual source Draw");
+        });
+        body.observer = Objects.requireNonNull(observer); body.sourceDraw = Objects.requireNonNull(draw); return body;
+    }
+
+    /** Exact retained R12B source with the existing native publication/Draw operation receipts. */
+    public static CdLogShadow fromAct2PastAssets(CdObjectPlacementRuntime placement, CdR12bTerrainAssets owner,
+                                                DispatchObserver observer, SourceDraw draw) {
+        Objects.requireNonNull(placement, "actual R12B placement"); Objects.requireNonNull(owner, "actual R12B terrain");
+        if (!placement.sameAct2PastSource(owner))
+            throw new IllegalArgumentException("LogShadow requires the same retained R12B placement/source");
+        var body = new CdLogShadow(placement, Assets.fromAct2PastAssets(owner.objects()), (pool, identity) -> {
+            throw new IllegalStateException("R12B Log requires its actual source Draw");
         });
         body.observer = Objects.requireNonNull(observer); body.sourceDraw = Objects.requireNonNull(draw); return body;
     }

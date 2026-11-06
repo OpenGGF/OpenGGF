@@ -2513,3 +2513,19 @@ has a separate comparison contract.125distinct positive identities across
 separate source-bound runs include repaired native-digest fixtures, all14parallax
 regressions and the final one-case natural EGL pass. No single125-green fleet,
 full-act/native/regional/audio or broader-smoke result is implied.
+
+
+### 6 November — R12B Spikes / Log Shadow batch and natural Platform jump
+
+The [Act2 Past matrix](../architecture/validation/levels/scd-palmtree-panic-act2-past.md)
+records49 finite views, source factories and actual physical-pass Spikes/Log
+publication through the existing Frame, pool, saved and scalar owners. Component
+checks cover original versus equal callback records, same-value/throwing cuts,
+Solid/Y/Hurt and Log store/delete behavior. Natural contacts/pixels remain open.
+The fixed eight-service jump clears Platform49;312 target services now qualify
+through14247 with full/course replay. First14248 is unowned Pata-Bata3E/whole45,
+not a completed service.161regular positive identities across separate runs
+exclude the temporary observer's native stop. Initial162 had156P/0F/6E/0S;
+five fixture errors were repaired, then all15 pass cases plus the extended route
+pass16/0F/E/S. Earlier compile failures executed no cases. No new screenshot or
+full-act/native/regional/audio/broader-smoke claim is added.
