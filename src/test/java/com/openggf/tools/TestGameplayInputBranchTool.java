@@ -53,4 +53,34 @@ class TestGameplayInputBranchTool {
         assertThrows(IllegalArgumentException.class, () -> GameplayInputBranchTool.prefixScript(movie, 11));
         assertEquals("", GameplayInputBranchTool.prefixScript(movie, 0));
     }
+
+    @Test void movieRangeScriptStartsInsideTheMovie(@TempDir Path dir) throws Exception {
+        var source = dir.resolve("source.bk2");
+        InputLogAuthorTool.author("4 L;3 R+A;2 -;5 D", source, "s1");
+        var movie = new Bk2MovieLoader().loadMovieOrInputLog(source);
+        assertEquals("2 R+A / -\n2 - / -\n1 D / -\n", GameplayInputBranchTool.movieScript(movie, 5, 5));
+        assertEquals(GameplayInputBranchTool.prefixScript(movie, 9), GameplayInputBranchTool.movieScript(movie, 0, 9));
+        assertEquals("", GameplayInputBranchTool.movieScript(movie, 14, 0));
+        assertThrows(IllegalArgumentException.class, () -> GameplayInputBranchTool.movieScript(movie, 10, 5));
+        assertThrows(IllegalArgumentException.class, () -> GameplayInputBranchTool.movieScript(movie, -1, 2));
+    }
+
+    @Test void polledScriptDropsOnlyTheDeclaredLagRows(@TempDir Path dir) throws Exception {
+        var source = dir.resolve("source.bk2");
+        InputLogAuthorTool.author("2 L;1 A;3 R;1 B;2 -", source, "s1");
+        var movie = new Bk2MovieLoader().loadMovieOrInputLog(source);
+        assertEquals("1 L / -\n3 R / -\n2 - / -\n",
+                GameplayInputBranchTool.polledScript(movie, 1, java.util.Set.of(2, 6)));
+        assertThrows(IllegalArgumentException.class,
+                () -> GameplayInputBranchTool.polledScript(movie, 3, java.util.Set.of(2)));
+    }
+
+    @Test void continuationResumesAfterTheCandidateOrFromADeclaredRow(@TempDir Path dir) throws Exception {
+        var source = dir.resolve("source.bk2");
+        InputLogAuthorTool.author("3 L;3 R;3 A;3 -", source, "s1");
+        var movie = new Bk2MovieLoader().loadMovieOrInputLog(source);
+        assertEquals("1 A / -\n", GameplayInputBranchTool.continuation(movie, 0, 4, "2 D;2 U", 1, -1));
+        assertEquals("1 R / -\n1 A / -\n", GameplayInputBranchTool.continuation(movie, 1, 4, "2 D", 2, 4));
+        assertEquals("", GameplayInputBranchTool.continuation(movie, 0, 4, "2 D", 0, 2));
+    }
 }

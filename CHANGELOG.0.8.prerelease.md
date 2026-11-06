@@ -41,4 +41,7 @@ under the matching area heading; see the
   holds the live rewind key over a window and draws the rewind plate,
   `--emeralds` also takes Sonic 1 and Sonic 2's six emeralds, and
   `--title-screen` now accepts `--donor`, since boot activates the donor before
-  the title.
+  the title. `GameplayInputBranchTool` takes `--input-start`, `--resume`,
+  `--resume-from` and `--skip-rows`, so a shot's input can be derived from a
+  level inside a complete-run movie, with one change and the recording's own
+  rows after it.
