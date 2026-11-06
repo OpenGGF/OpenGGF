@@ -282,8 +282,11 @@ Unreleased. The earlier development themes remain in
   roots plus eight monitor icons; legacy constructors retain their contracts. The first unpaused
   R12B physical walk now runs actual Sonic Init, reserved HUD and live dynamic
   slots through camera, CPU SAT and the ordinary tail, with full/course replay
-  in the constructed exit fixture. Later Sonic Main and selected Sonic remain
-  separate; no full-act parity is claimed.
+  in the constructed exit fixture. Genuine Main/touch publication now continues
+  the unchanged controller through twelve target services, with selected Sonic
+  provenance and rewind. A separate real-World entry fixture verifies visible
+  Sonic pixels, renderer omission and full/course pixel replay. No full-act or
+  native/regional parity is claimed.
   Authenticated Act2 Spikes mapping and a named retained-source prefix factory
   reuse the existing common body and Std art owner; live Spikes dispatch remains
   separate from the qualified route.

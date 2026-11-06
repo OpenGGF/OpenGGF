@@ -25,7 +25,8 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestSonicCdAct2TimeWarpExit {
     private final TestSonicCdPastLoadingWorld fixture=new TestSonicCdPastLoadingWorld();
     @BeforeEach void setup(){fixture.setup();}
-    @AfterEach void cleanup(){fixture.cleanup();}
+    private byte[] r12bExportRgba;private int r12bExportService;
+    @AfterEach void cleanup() throws Exception {fixture.cleanup();writeOptionalR12bSonic();}
     private record Scene(Harness h,SonicCdAct2LoadingVisit visit,CdPlayerFrameRuntime frame,CdObjectPlacementRuntime placement){}
 
     @Test void actualPrimaryRestartWaitsForThePhysicalPassThenAbandonsOnlyItsPendingDrawQueue() throws Exception {
@@ -412,6 +413,58 @@ class TestSonicCdAct2TimeWarpExit {
             assertArrayEquals(pixels,warpPixels(arrival.old()));
             assertInstanceOf(com.openggf.audio.NullAudioBackend.class,com.openggf.game.GameServices.audio().getBackend());
         }
+    }
+
+    @Test void actualR12bEightUnpausedServicesSelectGenuineSonicPixelsAndReplayWithoutPoseOrArtInjection() throws Exception {
+        byte[] export=null;int exportService=0;
+        try(var egl=TestSonicCdPastResultsRoute.Egl.open()){
+            var arrival=r12bArrive(prepared229(1));var budget=new R12bServiceBudget();
+            r12bDriveTo(arrival,budget,SonicCdAct2PastLoadingVisit.Phase.BEGIN_LEVEL);
+            var registry=arrival.old().h().mode().getRewindRegistry();boolean selectedSonic=false;
+            for(int ordinary=1;ordinary<=8;ordinary++){
+                var before=r12bProof(arrival);var full=registry.capture();var course=registry.captureCourse();
+                step(arrival.old().h(),neutral());assertFalse(arrival.frame().closed());var after=r12bProof(arrival);
+                registry.restore(full);r12bAssertProof(before,arrival,"ordinary full preimage"+ordinary);
+                step(arrival.old().h(),neutral());r12bAssertProof(after,arrival,"ordinary full forward"+ordinary);
+                registry.restoreCourse(course);r12bAssertProof(before,arrival,"ordinary course preimage"+ordinary);
+                step(arrival.old().h(),neutral());r12bAssertProof(after,arrival,"ordinary course forward"+ordinary);
+                var selected=r12bSelected(arrival);var cpu=selected.inputs().selectedCpu();
+                if(cpu.isPresent()&&cpu.orElseThrow().provenance().stream().anyMatch(p->p.slotRef().wholeIndex()==0)){
+                    selectedSonic=true;var ready=r12bReady(arrival);var nativeBefore=r12bProof(arrival);
+                    byte[] pixels=warpPixels(arrival.old());r12bAssertPicture(pixels);r12bAssertProof(nativeBefore,arrival,"selected Sonic draw");
+                    assertArrayEquals(pixels,warpPixels(arrival.old()));
+                    var omitted=TestSonicCdPastResultsRoute.omitWhole(ready.scene(),cpu.orElseThrow(),0);
+                    var binding=field(arrival.host(),"render");
+                    var renderer=assertInstanceOf(com.openggf.graphics.RetainedPlaneSceneRenderer.class,field(binding,"renderer"));
+                    org.lwjgl.opengl.GL11.glClearColor(1,0,1,1);org.lwjgl.opengl.GL11.glClear(org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT|org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT);
+                    var camera=arrival.old().h().mode().getCamera();renderer.draw(omitted,camera.getX(),camera.getY(),arrival.old().h().module()::validateAct2PastLoadingCut);
+                    org.lwjgl.opengl.GL11.glFinish();var raw=org.lwjgl.BufferUtils.createByteBuffer(320*224*4);
+                    org.lwjgl.opengl.GL11.glReadPixels(0,0,320,224,org.lwjgl.opengl.GL11.GL_RGBA,org.lwjgl.opengl.GL11.GL_UNSIGNED_BYTE,raw);
+                    var contrast=new byte[raw.capacity()];raw.get(contrast);assertEquals(org.lwjgl.opengl.GL11.GL_NO_ERROR,org.lwjgl.opengl.GL11.glGetError());
+                    assertFalse(Arrays.equals(pixels,contrast),"Genuine selected Sonic must contribute visible pixels");
+                    r12bAssertProof(nativeBefore,arrival,"renderer-only omission cannot change native owners");
+                    assertArrayEquals(pixels,warpPixels(arrival.old()));
+                    var pixelFull=registry.capture();var pixelCourse=registry.captureCourse();
+                    registry.restore(pixelFull);r12bAssertProof(nativeBefore,arrival,"selected Sonic full");assertArrayEquals(pixels,warpPixels(arrival.old()));
+                    registry.restoreCourse(pixelCourse);r12bAssertProof(nativeBefore,arrival,"selected Sonic course");assertArrayEquals(pixels,warpPixels(arrival.old()));
+                    if(export==null){export=pixels.clone();exportService=ordinary;}
+                }
+            }
+            assertTrue(selectedSonic,"Fixed eight neutral services must expose the source-native blink/draw/DPLC/next8 sequence");
+        }
+        r12bExportRgba=export;r12bExportService=exportService;
+    }
+    private void writeOptionalR12bSonic() throws Exception {
+        String output=System.getenv("SONICCD_R12B_ENTRY_OUTPUT");if(r12bExportRgba==null||output==null||output.isBlank())return;
+        var root=java.nio.file.Path.of(System.getProperty("user.home"),"Downloads","Sonic-CD","captures","engine").toRealPath();
+        var directory=java.nio.file.Path.of(output).toAbsolutePath().normalize();assertTrue(directory.startsWith(root)&&!directory.equals(root));
+        java.nio.file.Files.createDirectories(directory);assertEquals(directory,directory.toRealPath());
+        var image=new java.awt.image.BufferedImage(320,224,java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        for(int y=0;y<224;y++)for(int x=0;x<320;x++){int at=((223-y)*320+x)*4;
+            image.setRGB(x,y,0xFF000000|(r12bExportRgba[at]&255)<<16|(r12bExportRgba[at+1]&255)<<8|(r12bExportRgba[at+2]&255));}
+        if(!javax.imageio.ImageIO.write(image,"png",directory.resolve("ENGINE-R12B-constructed-entry-selected-Sonic.png").toFile()))throw new java.io.IOException("PNG unavailable");
+        java.nio.file.Files.writeString(directory.resolve("ENGINE-R12B-constructed-entry-selected-Sonic.txt"),
+                "ENGINE OpenGGF original-USA R12B. Constructed old timer229 fixture; actual World WARP/FULL/loading, followed by8 fixed neutral ordinary services. First captured selected Sonic service="+r12bExportService+". Real renderer/omission/full-course pixel replay. No pose/art injection, natural controller endpoint, emulator capture or parity claim. Exported after context/module/session/boot cleanup.\n");
     }
 
     @Test void actualR12bFullRejectsRetiredOldEpochAndUnscopedEqualPayloadBeforeAnyOwnerMutation() throws Exception {

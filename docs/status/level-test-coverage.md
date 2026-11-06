@@ -2458,3 +2458,14 @@ exit fixture. All104 distinct cases have positive outcomes across separate
 100-positive and repaired4-positive selections. No skips. The natural controller
 route remains qualified through loading13935; later Main and selected Sonic are
 next. No screenshot/native/regional/full-act certification follows.
+
+### 6 November — natural R12B Main and visible selected Sonic
+
+The [Act2 Past matrix](../architecture/validation/levels/scd-palmtree-panic-act2-past.md)
+now qualifies unchanged controller13947 with twelve native ordinary services,
+selected prior Sonic CPU provenance and full/course replay. A separate constructed
+entry World fixture renders real selected Sonic at its fourth ordinary service;
+repeat/omission and full/course pixel/state checks pass. Fresh45cases pass without
+failures, errors or skips. The exported ENGINE image belongs to that constructed
+fixture, not a natural13947 capture. Later traversal, lifecycle, native/audio/
+regional breadth and inherited broad-smoke obligations remain open.

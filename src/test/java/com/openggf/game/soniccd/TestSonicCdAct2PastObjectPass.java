@@ -93,12 +93,14 @@ class TestSonicCdAct2PastObjectPass {
         assertEquals(0x18,pool.state(33).id());assertTrue(f.ports.cut.completedCpu().isEmpty());
         assertThrows(IllegalStateException.class,()->pass.finishDraw(cameras()));assertFalse(f.frame.closed());
     }
-    @Test void nextSonicMainStopsBeforeBodyRatherThanSupplyingFalseTouchOrSupportOwners(){
+    @Test void nextSonicMainUsesActualTouchSupportAndTheOriginalCompletedExternalPublication(){
         actual();var f=fixture(false);var pass=f.pass();pass.runWalk(1);pass.finishDraw(cameras());
         var sample=f.frame.prepareInput(0);f.frame.serviceVBlank(sample.phase());f.frame.advanceLevelMainFrame();
-        var next=f.pass();var before=f.frame.state();var env=f.frame.environment();
-        var stop=assertThrows(Unowned.class,()->next.runWalk(2));assertEquals(Boundary.SONIC_MAIN,stop.boundary());
-        assertSame(before,f.frame.state());assertSame(env,f.frame.environment());assertFalse(f.frame.closed());
+        var next=f.pass();var before=f.frame.state();var clock=f.frame.vIntClock();var art=f.frame.artState();
+        assertDoesNotThrow(()->next.runWalk(2));assertFalse(f.frame.closed());assertEquals(2,f.frame.state().motion().routine());
+        assertEquals((before.history().index()+4)&255,f.frame.state().history().index(),"Source RecordPos common tail runs once");
+        assertSame(clock,f.frame.vIntClock());assertSame(art,f.frame.artState());assertEquals(2,f.frame.environment().globals().levelFrames());
+        assertNotNull(next.finishDraw(cameras()));
     }
     @Test void escapedOrRepeatedOpaqueAdoptionCannotReplayNativeEffects(){
         actual();var f=fixture(true);var pass=f.pass();pass.runWalk(1);assertFalse(f.ports.receipts.isEmpty());

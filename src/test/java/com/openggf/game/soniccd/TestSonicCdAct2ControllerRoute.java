@@ -961,11 +961,25 @@ class TestSonicCdAct2ControllerRoute {
         var targetSelected=assertInstanceOf(SonicCdAct2PastWorldHost.Published.class,targetHost.selected()).selection();
         assertInstanceOf(SonicCdPastDisplay.Ready.class,targetSelected.projection(),"Actual completed target loading selects genuine current planes");
         assertTrue(targetSelected.inputs().selectedCpu().isEmpty(),"No ordinary CPU SAT or visible Sonic was fabricated during load");
-        int targetStopCall=targetReturnedCall+1;
-        var targetStop=assertThrows(SonicCdAct2PastLoadingVisit.UnsupportedLoading.class,()->step(h,controller(targetStopCall)));
-        assertEquals(SonicCdAct2PastLoadingVisit.Boundary.ORDINARY_OBJECT_PASS,targetStop.boundary());assertTrue(targetFrame.closed());
+        boolean targetSonicSelected=false;
+        for(int ordinary=1;ordinary<=12;ordinary++){
+            int call=targetReturnedCall+ordinary;
+            var beforeOrdinary=captureNative(h);var fullOrdinary=registry.capture();var courseOrdinary=registry.captureCourse();
+            step(h,controller(call));var afterOrdinary=captureNative(h);
+            assertFalse(targetFrame.closed(),"Target ordinary call"+call);assertEquals(ordinary,targetFrame.environment().globals().levelFrames());
+            assertEquals(2,targetFrame.state().motion().routine());assertTrue(targetHost.video().completedCpu().isPresent());
+            assertSame(world,h.mode().getWorldSession());assertEquals(generation+1,h.mode().getLevelManager().getCompletedProductionLoadGeneration());
+            var selected=assertInstanceOf(SonicCdAct2PastWorldHost.Published.class,targetHost.selected()).selection();
+            assertInstanceOf(SonicCdPastDisplay.Ready.class,selected.projection(),"Actual target selected display at call"+call);
+            targetSonicSelected|=selected.inputs().selectedCpu().map(cpu->cpu.provenance().stream().anyMatch(p->p.slotRef().wholeIndex()==0)).orElse(false);
+            if(ordinary==1||ordinary==4||ordinary==12){
+                registry.restore(fullOrdinary);assertNativeCapture(beforeOrdinary,h);step(h,controller(call));assertNativeCapture(afterOrdinary,h);
+                registry.restoreCourse(courseOrdinary);assertNativeCapture(beforeOrdinary,h);step(h,controller(call));assertNativeCapture(afterOrdinary,h);
+            }
+        }
+        assertTrue(targetSonicSelected,"Fixed12 real target services must expose native Blink/Draw/DPLC/next8 provenance without actor or art injection");
         System.out.println("Controller-only Act2: WARP returned13885, actual R12B FULL13886, loading returned"+targetReturnedCall+
-                ", first"+targetStopCall+" ORDINARY_OBJECT_PASS before selector8. Same World, one target generation, actual saved42 and full/course replay of every loading service. Selected target planes Ready; no ordinary Sonic/objects, new screenshot, native/regional/audio parity claim.");
+                ", twelve unpaused target ordinary calls returned through"+(targetReturnedCall+12)+". Actual primary Init/Main, live128-slot walks and camera/SAT/tail; selected prior Sonic CPU provenance with full/course replay at first/fourth/twelfth. No new screenshot, native/regional/audio or full-act parity claim.");
         // END measured natural TimeWarp230 old exit.
         // END measured natural TimeWarp save continuation.
         // END measured Swing promotion.

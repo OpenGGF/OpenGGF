@@ -77,6 +77,7 @@ final class SonicCdAct2PastObjectPass {
     private final CdPlayerFrameRuntime frame;private final CdObjectPlacementRuntime placement;
     private final CdAssetBytes objectIndex;private final CdObjectMappings mappings;
     private final CdPlayerMath math;private final CdPlayerTerrain probes;private final CdSolidObject solid;
+    private final CdPlayerObjectTouch primaryScanner;private final CdPlayerTouchResponse primaryResponse;
     private CdRing ring;private CdSpring spring;private CdReservedHud hud;
     private CdMonitor monitor;private CdTimePost post;private CdCollapsePlatform collapse;
     private CdPlatform platform;private CdTamabboh tam;private CdAnimal animal;
@@ -102,6 +103,8 @@ final class SonicCdAct2PastObjectPass {
         mappings=CdObjectMappings.fromAct2PastAssets(terrain,player);
         math=new CdPlayerMath(player.player());probes=CdPlayerTerrain.fromStageTerrain(terrain.terrain());
         solid=new CdSolidObject(CdPlayerMovement.fromStageSource(frame.stageSource()));
+        primaryScanner=new CdPlayerObjectTouch(player.touchDimensions());
+        primaryResponse=new CdPlayerTouchResponse(player.view(CdR12bPlayerAssets.Asset.ENEMY_POINTS));
         ring=CdRing.fromAct2PastAssets(placement,terrain);
         spring=CdSpring.fromAct2PastAssets(placement,terrain,math,solid,
                 c->{requireKind(Kind.SPRING);claim(c,()->true);poolCut(c.callCut());commitSolid(c.callCut(),c.expectedPlayer(),c.expectedGlobals(),new CdSolidObject.Completed(c.result()));},
@@ -211,7 +214,8 @@ final class SonicCdAct2PastObjectPass {
     private void execute(Kind kind,int whole,int actualLevelFrame){
         var cut=read();var e=frame.environment();var g=e.movement().gates();
         switch(kind){
-            case PRIMARY->{if(frame.state().motion().routine()!=0)throw stop(Boundary.SONIC_MAIN,whole,frame.state().motion().routine());
+            case PRIMARY->{if(frame.state().motion().routine()==2){runPrimaryMain(actualLevelFrame);break;}
+                if(frame.state().motion().routine()!=0)throw stop(Boundary.SONIC_MAIN,whole,frame.state().motion().routine());
                 var publication=frame.runBody(actualLevelFrame);checkpoint();if(publication.result().boundary()!=CdPlayerBody.Boundary.INIT_RETURN||frame.display().isPresent())throw new IllegalStateException("Primary Init did not return its native no-draw boundary");
                 if(!publication.sounds().isEmpty()){var after=read();var sounds=new ArrayList<>(after.sounds());for(var sound:publication.sounds())sounds.add(new SonicCdGameModule.PastFrameSound(sound));
                     publish(after,withSounds(after,sounds),null,()->{},()->{});}}
@@ -238,6 +242,37 @@ final class SonicCdAct2PastObjectPass {
                 public int cameraXWord(){requireKind(Kind.ANIMAL);return read().cameraXWord();}private CdPlayerBody.Environment reached(){requireKind(Kind.ANIMAL);return frame.environment();}});
             case SWING->swing.run(whole,new CdSwing.Globals(cut.cameraXWord(),g.timeZone(),g.timeWarpDirection()));
             case ROBOT->robot.run(whole,new CdRobotGenerator.Globals(cut.goodFutureByte(),g.timeZone(),g.zoneAct()&255,g.timeWarpDirection(),cut.cameraXWord()),new CdRobotGenerator.Inputs(primary(),gates(),solidGlobals()));
+        }
+    }
+    /** Genuine routine2 call over the same post-Spawn pool; Frame owns actor adoption once. */
+    private void runPrimaryMain(int actualLevelFrame){
+        guard();var before=read();var placed=placement.capture();var pool=placed.pool();
+        var state=frame.state();var environment=frame.environment();var display=frame.display();
+        var art=frame.artState();var clock=frame.vIntClock();boolean paused=frame.paused();
+        var r=before.globals().ring();var score=before.globals().score();
+        var response=new CdPlayerBody.ResponseContext(primaryResponse,before.globals().contact(),
+                new CdPlayerTouchResponse.WorldGlobals(r.rings(),r.lives(),r.updateHudLives(),score.score(),score.nextLifeScore(),score.updateHudScore()));
+        var support=new CdPlayerMovement.ObjectContext(pool,state.objectLinks().standObject(),state.header().slotId(),state.header().width());
+        // Absent reserved/save contexts are explicit unowned reached branches. Zero direction/charge
+        // return before those reads, using the genuine shared helper; no default timer or result is supplied.
+        var warp=new CdPlayerTimeWarp.Context(OptionalInt.of(before.level().spawnMode()),Optional.empty(),Optional.empty(),OptionalInt.of(before.level().levelRestart()));
+        var publication=frame.runBody(actualLevelFrame,Optional.of(new CdPlayerBody.TouchContext(primaryScanner,pool,response)),
+                Optional.of(new CdPlayerBody.LevelContext(pool,r,before.level())),Optional.of(support),
+                Optional.of(new CdPlayerBody.TimeWarpContext(warp,before.globals().contact())));
+        guard();requireCut(before);requirePlacement(placed);
+        if(frame.state()!=publication.result().state()||frame.environment()!=publication.result().environment()
+                ||frame.display()!=publication.result().display()||frame.artState()!=art||frame.vIntClock()!=clock||frame.paused()!=paused)
+            throw new IllegalStateException("Primary Frame left its original completed result");
+        var plan=SonicCdAct2PastPrimaryPublication.prepare(publication,pool,before.globals(),before.level(),before.reservedSlots());
+        var sounds=new ArrayList<>(before.sounds());sounds.addAll(plan.sounds());
+        var next=new Cut(plan.globals(),plan.level(),before.goodFutureByte(),before.goodFutureFlags(),plan.reserved(),before.cpuSat(),before.completedCpu(),sounds,
+                before.cameraXWord(),before.cameraYWord(),before.timeAttackModeByte(),before.layerByte());
+        checkpoint();publish(before,next,plan.pool(),()->{},()->{});
+        var selected=plan.display();
+        if(selected.eligible()){
+            if(dispatch.drawn)throw new IllegalStateException("Primary DrawObject repeated");dispatch.drawn=true;
+            draw(new CdObjectDrawQueue.DrawCallCut(new CdObjectDrawQueue.CdSlotRef(0),selected.spriteFlags(),selected.centreXWord(),selected.centreYWord(),
+                    selected.yRadius(),selected.width(),selected.priority()));
         }
     }
     private int id(int whole){return whole==0?frame.state().header().slotId():whole<32?reserved(read(),whole).unsignedByte(0):placement.pool().state(whole).id();}
