@@ -1,0 +1,132 @@
+# Source for s1-ghz2-loop.bk2 (InputLogAuthorTool --script). Green Hill Act 2 from its level
+# start, derived with GameplayInputBranchTool from s1-complete-run.bk2 (not edited by hand):
+#   GameplayInputBranchTool --skip-rows 7094,7283,7746,7796,8110 --input-start 6622 --resume 500
+#     <s1 ROM> s1 ghz 2 320 sonic none src/test/resources/traces/s1/_movies/s1-complete-run.bk2
+#     1808 <out> '1 R'
+# --skip-rows drops the five native lag rows (ghz2_completerun rows 472, 661, 1124, 1174, 1488,
+# where the recorded gameplay_frame_counter repeats): VBlank_Lag (sonic.asm:711-712) never reaches
+# ReadJoypads, so the native pad was not polled there and a direct boot, which polls every step,
+# must not consume them. With them dropped, the unchanged replay matches the trace's positions on
+# every row through capture frame 2308. The one change is Right on frame 1808, the frame he lands
+# from the loop-side drop (trace row 1813), where the recording held nothing until row 1834; he
+# faces and runs right from the landing instead of running backwards. The loop and the rings are
+# unchanged (41 rings by frame 2035, as in the recording).
+55 R / -
+7 R+A / -
+11 R / -
+5 - / -
+8 L / -
+5 - / -
+44 R / -
+7 R+A / -
+32 R / -
+29 - / -
+6 A / -
+21 L+A / -
+7 L / -
+11 - / -
+14 L / -
+34 - / -
+9 R / -
+22 - / -
+33 R / -
+23 - / -
+63 R / -
+23 - / -
+6 B / -
+11 R+B / -
+2 B / -
+14 - / -
+13 R / -
+18 - / -
+34 R / -
+5 R+B / -
+9 R / -
+7 - / -
+17 L / -
+2 - / -
+34 R / -
+18 - / -
+11 B / -
+6 - / -
+21 L / -
+4 - / -
+35 R / -
+7 - / -
+8 R / -
+17 - / -
+67 L / -
+4 L+B / -
+3 L / -
+56 - / -
+10 L / -
+4 L+B / -
+7 L / -
+71 - / -
+23 R / -
+1 - / -
+28 L / -
+6 - / -
+6 R / -
+16 R+B / -
+45 R / -
+6 - / -
+16 L / -
+9 - / -
+40 R / -
+6 R+B / -
+27 R / -
+11 - / -
+18 L / -
+7 - / -
+11 R / -
+34 - / -
+11 R / -
+52 - / -
+1 R / -
+2 R+B / -
+4 R / -
+6 - / -
+6 R / -
+151 - / -
+27 R / -
+22 R+B / -
+12 R / -
+4 - / -
+15 L / -
+4 - / -
+30 R / -
+9 R+B / -
+12 R / -
+6 - / -
+4 L / -
+22 - / -
+13 R / -
+24 - / -
+5 L / -
+6 B / -
+6 - / -
+18 R / -
+8 - / -
+24 L / -
+4 - / -
+1 R
+20 - / -
+216 R / -
+35 - / -
+10 L / -
+7 L+B / -
+10 L / -
+8 - / -
+43 R / -
+21 - / -
+11 R+B / -
+12 R / -
+9 R+B / -
+28 - / -
+26 R / -
+11 - / -
+11 L / -
+4 - / -
+14 R / -
+4 R+B / -

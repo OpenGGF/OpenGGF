@@ -36,3 +36,6 @@ under the matching area heading; see the
   and special stages. `GameplayCaptureTool --rewind FRAME:LENGTH`
   holds the live rewind key over a window and draws the rewind plate, and
   `--emeralds` also takes Sonic 1 and Sonic 2's six emeralds.
+  `GameplayInputBranchTool` takes `--input-start`, `--resume`, `--resume-from`
+  and `--skip-rows`, so a shot's input can be derived from a level inside a
+  complete-run movie, with one change and the recording's own rows after it.

@@ -1,0 +1,53 @@
+# Source for s1-syz1-crab-rewind.bk2 (InputLogAuthorTool --script). Spring Yard Act 1 from its
+# level start, derived with GameplayInputBranchTool from s1-complete-run.bk2 (not edited by hand):
+#   GameplayInputBranchTool --input-start 61548 --resume 400 --resume-from 244
+#     <s1 ROM> s1 syz 1 320 sonic none src/test/resources/traces/s1/_movies/s1-complete-run.bk2
+#     247 <out> '69 R'
+# Rows 0-246 are the recording (it destroys the first Crabmeat). Rows 247-315 hold Right instead
+# of the recorded jump at row 248, so he runs into the second Crabmeat and is hurt at frame 260.
+# The manifest holds the live rewind key for frames 280-315; rewind steps back one frame per held
+# frame, so frame 316 resumes from the state after frame 243. The rows from 316 on are therefore
+# the recording's rows from 244 (--resume-from 244): the retry is the recorded jump, which bounces
+# on and destroys that Crabmeat. Checked: the retry matches syz1_completerun rows (frame - 72)
+# on every frame from 316 to 559.
+22 R / -
+9 R+B / -
+5 R / -
+44 - / -
+8 B / -
+6 L / -
+19 - / -
+10 R / -
+11 - / -
+2 L / -
+3 - / -
+14 B / -
+7 R+B / -
+9 R / -
+18 - / -
+9 L / -
+5 - / -
+13 R / -
+11 - / -
+22 R / -
+69 R
+3 R / -
+1 - / -
+9 B / -
+11 - / -
+11 L / -
+62 - / -
+3 R / -
+18 R+B / -
+2 R / -
+19 - / -
+18 L / -
+4 - / -
+26 R / -
+13 - / -
+10 B / -
+12 - / -
+10 L / -
+13 - / -
+8 L / -
+147 - / -
