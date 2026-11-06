@@ -59,6 +59,8 @@ public final class AnimationTranslator {
         result.setRunSpeedThreshold(donorProfile.getRunSpeedThreshold());
         result.setRunFramesUseWalkAnimationId(donorProfile.isRunFramesUseWalkAnimationId());
         result.setFallbackFrame(donorProfile.getFallbackFrame());
+        // Tumble frames index the donor's own mappings, so the donor's base travels with them.
+        result.setTumbleFrameBase(donorProfile.getTumbleFrameBase());
 
         // Translate each animation field
         // walkId is kept as a variable because airAnimId reuses it

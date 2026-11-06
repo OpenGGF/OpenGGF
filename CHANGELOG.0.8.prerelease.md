@@ -6,7 +6,18 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Sonic 1's Sonic on Sonic 3&K tumble objects:** Sonic 1 has no tumble frames,
+  so a donated Sonic 1 Sonic riding a Flying Battery wire cage or another tumble
+  object vanished. He now keeps his own walk and run frames there, and a donor's
+  own tumble frame base (Sonic 2 Tails') carries into its translated profile.
+
 ## Modding and tools
+
+- **Seeded Data Select captures:** `GameplayCaptureTool --save-slots <file.json>`
+  writes declared save slots through the production save manager into the
+  capture's private save root before a title-first capture, and `--extra-teams`
+  sets the Data Select extra team combos for that capture. The Sonic 3&K hero
+  reel uses both to show custom-team saves.
 
 ## Maintenance and release preparation
 

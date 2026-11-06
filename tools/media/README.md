@@ -270,8 +270,10 @@ label and, where it differs from the source's own team, the characters:
   `start` is the frame within the capture. `main` and `sidekick` name the team
   (`sidekick` takes a comma-separated chain, such as `sonic,sonic,sonic`).
   `expect_mode` and the optional `setup` keys (`x`, `y`, `rings`, `emeralds`,
-  `star_post`, `donor`, `rewind`, `title_screen`, `interactive_pacing`, ...)
-  map to the tool's flags. `rewind` is `"FRAME:LENGTH"` in capture frames and
+  `star_post`, `donor`, `rewind`, `title_screen`, `interactive_pacing`,
+  `save_slots`, `extra_teams`, ...) map to the tool's flags. `save_slots` names a
+  committed JSON file of Data Select save payloads that the capture writes into
+  its private save root; `extra_teams` sets the Data Select extra team combos. `rewind` is `"FRAME:LENGTH"` in capture frames and
   holds the live rewind key; `donor` lends another game's art and features
   (Sonic 1 only takes sidekicks with a donor). Author any new inputs with the
   [bk2-input-authoring](../../.agents/skills/bk2-input-authoring/SKILL.md) or

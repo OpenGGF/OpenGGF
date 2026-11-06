@@ -1,0 +1,10 @@
+# Source for s3k-data-select-teams.txt (InputLogAuthorTool --script). Title-first capture with
+# seeded saves (s3k-data-select-saves.json) and extra teams: wait for the title, Start into
+# Data Select, walk the cursor right across the six saved custom-team slots to the first NEW
+# slot, then press Down to cycle its team through the configured extra combinations.
+420 -
+1 S
+80 -
+repeat 7 { 1 R ; 27 - }
+repeat 3 { 1 D ; 29 - }
+40 -

@@ -1,0 +1,13 @@
+# Source for s3k-aiz2-special-ring.txt (InputLogAuthorTool --script). Angel Island 2 from a
+# declared position beside the giant ring at (0x19B8, 0x450), where the committed complete-run
+# movie enters its third Blue Spheres stage: walk left into the ring, then in the stage turn
+# left, turn right toward the blue spheres and jump.
+20 -
+50 L
+250 -
+1 L
+120 -
+1 R
+100 -
+1 A
+200 -

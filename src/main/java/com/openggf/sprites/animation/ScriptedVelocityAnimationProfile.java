@@ -74,7 +74,10 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
     private int runSlopeFrameStride;
     private int highSpeedSlopeFrameStride;
     private boolean doubleWalkRunAnimationSpeedWhenSliding;
-    // Tumble/rotation frame base: S2 = 0x5F (s2.asm:38216), S3K = 0x31 (sonic3k.asm:24995).
+    /** {@link #setTumbleFrameBase} value for a character whose mappings have no tumble frames. */
+    public static final int NO_TUMBLE_FRAMES = -1;
+    // Tumble/rotation frame base: S2 = 0x5F (s2.asm:38216), S3K = 0x31 (sonic3k.asm:24995),
+    // S1 = NO_TUMBLE_FRAMES.
     private int tumbleFrameBase = 0x5F;
     // Optional native flip_type-indexed tumble bases. S3K uses
     // byte_1286E={0,$3D,$49,$49} for types 0-3.
@@ -744,6 +747,10 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
 
     public int getTumbleFrameBase() {
         return tumbleFrameBase;
+    }
+
+    public boolean hasTumbleFrames() {
+        return tumbleFrameBase != NO_TUMBLE_FRAMES;
     }
 
     public int getTumbleTypeFrameBase(int flipType) {
