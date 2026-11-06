@@ -449,6 +449,13 @@ public final class GameplayCaptureTool {
                 default -> throw new IllegalArgumentException("Unknown game: " + game);
             };
             String constant = "ZONE_" + text.toUpperCase(Locale.ROOT);
+            if (game.equals("s1")) {
+                // The boot indexes Sonic1ZoneRegistry's play order (GHZ, MZ, SYZ, LZ, SLZ, SBZ),
+                // not the ROM zone ids in Sonic1Constants (GHZ, LZ, MZ, SLZ, SYZ, SBZ).
+                int index = java.util.List.of("GHZ", "MZ", "SYZ", "LZ", "SLZ", "SBZ")
+                        .indexOf(text.toUpperCase(Locale.ROOT));
+                if (index >= 0) return index;
+            }
             try {
                 return Class.forName(className).getField(constant).getInt(null);
             } catch (ReflectiveOperationException e) {

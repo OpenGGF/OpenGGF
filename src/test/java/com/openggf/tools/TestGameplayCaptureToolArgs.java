@@ -193,6 +193,12 @@ class TestGameplayCaptureToolArgs {
         assertEquals(0x0B, GameplayCaptureTool.ZoneIds.resolve("s3k", "0x0B"));
         assertEquals(7, GameplayCaptureTool.ZoneIds.resolve("s3k", "7"));
         assertEquals(0, GameplayCaptureTool.ZoneIds.resolve("s1", "ghz"));
+        // Sonic 1 names index the boot's zone registry (play order), not the ROM zone ids.
+        var s1Zones = new com.openggf.game.sonic1.Sonic1ZoneRegistry();
+        java.util.Map<String, String> s1Names = java.util.Map.of("ghz", "GREEN HILL", "mz", "MARBLE",
+                "syz", "SPRING YARD", "lz", "LABYRINTH", "slz", "STAR LIGHT", "sbz", "SCRAP BRAIN");
+        s1Names.forEach((name, title) ->
+                assertEquals(title, s1Zones.getZoneName(GameplayCaptureTool.ZoneIds.resolve("s1", name)), name));
         assertEquals(0, GameplayCaptureTool.ZoneIds.resolve("s2", "ehz"));
         assertThrows(IllegalArgumentException.class, () -> GameplayCaptureTool.ZoneIds.resolve("s3k", "nowhere"));
         assertThrows(IllegalArgumentException.class, () -> GameplayCaptureTool.ZoneIds.resolve("s4", "ghz"));
