@@ -11,6 +11,11 @@ import com.openggf.game.GameModule;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.PowerUpObject;
 import com.openggf.game.rewind.identity.ObjectRefId;
+import com.openggf.game.rewind.identity.RewindIdentityTable;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
+import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
+import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry;
+import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PerSlotEntry;
 import com.openggf.game.rewind.identity.SpawnRefId;
 import com.openggf.game.solid.ContactKind;
 import com.openggf.level.objects.boss.BossChildComponent;
@@ -2017,23 +2022,29 @@ public class ObjectManager {
     ObjectNativeSstWord2C nativeSstWord2C() { return nativeSstWord2C; }
 
     AbstractObjectInstance currentNativeSstOwner(int slot) {
-        return ObjectNativeSstOverwrite.currentOwner(activeObjects.values(),dynamicObjects,objectCallbacks,slot);
+        return ObjectNativeSstOverwrite.currentOwner(activeObjects.values(), dynamicObjects, objectCallbacks, slot);
     }
 
     AbstractObjectInstance createUncheckedDynamicObject(
-            java.util.function.Function<NativeSstState,AbstractObjectInstance> partialWriter) {
+            java.util.function.Function<NativeSstState, AbstractObjectInstance> partialWriter) {
         return ObjectNativeSstOverwrite.create(nativeSstSurface(), partialWriter);
     }
 
     ObjectNativeSstOverwrite.Surface nativeSstSurface() {
-        return new ObjectNativeSstOverwrite.Surface(objectServices,
-                slotLayout,slotAllocator,activeObjects,instanceToSpawn,dynamicObjects,objectCallbacks,
-                dynamicOwnership,rewindObjectIds,deferredDynamicExecThisFrame,execOrder,this::execIndexForSlot,
-                updating,currentExecSlot,this::addDynamicObject,this::markRewindAdoptionDirty,nativeSstWord2C);
+        return new ObjectNativeSstOverwrite.Surface(
+                objectServices, slotLayout, slotAllocator,
+                activeObjects, instanceToSpawn, dynamicObjects, objectCallbacks,
+                dynamicOwnership, rewindObjectIds, deferredDynamicExecThisFrame,
+                execOrder, this::execIndexForSlot, updating, currentExecSlot,
+                this::addDynamicObject, this::markRewindAdoptionDirty, nativeSstWord2C);
     }
 
     public ObjectRewindDynamicCodecs.ExactAdoptionSurface exactRewindAdoptionSurface() {
-        return new ObjectRewindDynamicCodecs.ExactAdoptionSurface(objectServices, slotLayout, slotAllocator, rewindObjectIds, dynamicObjects, dynamicOwnership.nonRewindableObjects(), execOrder, this::execIndexForSlot, slot -> objectIdInSlot(slot) >= 0, this::markRewindAdoptionDirty);
+        return new ObjectRewindDynamicCodecs.ExactAdoptionSurface(
+                objectServices, slotLayout, slotAllocator, rewindObjectIds,
+                dynamicObjects, dynamicOwnership.nonRewindableObjects(),
+                execOrder, this::execIndexForSlot, slot -> objectIdInSlot(slot) >= 0,
+                this::markRewindAdoptionDirty);
     }
     void markRewindAdoptionDirty() {
         bucketsDirty = true;
@@ -3924,27 +3935,7 @@ public class ObjectManager {
             objectCallbacks.unregister(removed);
             // Keep occurrence ownership available until its object-side keys
             // have expired; removal callbacks still observe an unregistered owner.
-            // ROM parity: an object's per-player pushing bits live in its SST
-            // slot's status byte, and every game's delete routine zeroes the
-            // whole slot -- S2 DeleteObject/DeleteObject2 (s2.asm:30329-30345),
-            // S1 DeleteObject/DeleteChild (_incObj/sub DeleteObject.asm:10-20),
-            // S3K Delete_Current_Sprite/Delete_Referenced_Sprite
-            // (sonic3k.asm:36148-36165). So a solid that unloads and is later
-            // reloaded from the same layout entry comes back with its pushing
-            // bits CLEAR, and its first SolidObject_TestClearPush takes the
-            // `beq SolidObject_NoCollision` exit (s2.asm:35462-35466) without
-            // writing the Walk/Run animation word. The engine keys that bit on
-            // the persistent ObjectSpawn record, which outlives the instance, so
-            // without this the stale bit survives the unload and the reloaded
-            // object publishes a release the ROM never performs.
-            solidContacts.releaseObjectPushLatchForAllPlayers(removed);
-            // Same delete-routine citation, standing half. The object-side
-            // standing bit is in that same zeroed status byte, so a reloaded
-            // solid must not answer "this player is standing on me" on the
-            // strength of a bit its predecessor set. Object-side only: none of
-            // the three routines touches the player's slot, so the player's own
-            // Status_OnObj and the engine's riding state are left alone.
-            solidContacts.releaseObjectStandingLatchForAllPlayers(removed);
+            solidContacts.releaseObjectLatchesForAllPlayers(removed);
             instanceToSpawn.remove(removed);
             placement.forgetTwoAxisOccurrence(spawn);
             notifyObjectManagerRemoval(removed, removalCallback);
@@ -4119,15 +4110,15 @@ public class ObjectManager {
             }
 
             @Override
-            public com.openggf.game.rewind.snapshot.ObjectManagerSnapshot capture() {
-                com.openggf.game.rewind.schema.RewindCaptureContext rewindContext = rewindCaptureContext();
+            public ObjectManagerSnapshot capture() {
+                RewindCaptureContext rewindContext = rewindCaptureContext();
                 // Capture per-active-slot state
-                List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PerSlotEntry> slots = new ArrayList<>();
+                List<PerSlotEntry> slots = new ArrayList<>();
                 for (Map.Entry<ObjectSpawn, ObjectInstance> entry : activeObjects.entrySet()) {
                     ObjectSpawn spawn = entry.getKey();
                     ObjectInstance inst = entry.getValue();
                     if (inst instanceof AbstractObjectInstance aoi) {
-                        slots.add(new com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PerSlotEntry(
+                        slots.add(new PerSlotEntry(
                                 objectCallbacks.call(inst, aoi::getSlotIndex),
                                 spawn,
                                 aoi.getClass().getName(),
@@ -4142,15 +4133,15 @@ public class ObjectManager {
                 // order — part of snapshot determinism — is unchanged.
                 Map<Object, String> slotSpawnKeys = new java.util.IdentityHashMap<>();
                 slots.sort(Comparator
-                        .comparingInt(com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PerSlotEntry::slotIndex)
+                        .comparingInt(PerSlotEntry::slotIndex)
                         .thenComparing(entry -> slotSpawnKeys.computeIfAbsent(
                                 entry, e -> ObjectRewindOrdering.spawnKey(entry.spawn()))));
 
                 // Capture reservedChildSlots
-                List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.ChildSpawnEntry> childSpawns = new ArrayList<>();
+                List<ObjectManagerSnapshot.ChildSpawnEntry> childSpawns = new ArrayList<>();
                 for (Map.Entry<ObjectSpawn, int[]> entry : reservedChildSlots.entrySet()) {
                     int[] slotArray = entry.getValue();
-                    childSpawns.add(new com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.ChildSpawnEntry(
+                    childSpawns.add(new ObjectManagerSnapshot.ChildSpawnEntry(
                             entry.getKey(),
                             Arrays.copyOf(slotArray, slotArray.length)
                     ));
@@ -4158,13 +4149,13 @@ public class ObjectManager {
                 Map<Object, String> childParentKeys = new java.util.IdentityHashMap<>();
                 Map<Object, String> childSlotKeys = new java.util.IdentityHashMap<>();
                 childSpawns.sort(Comparator
-                        .comparing((com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.ChildSpawnEntry entry) ->
+                        .comparing((ObjectManagerSnapshot.ChildSpawnEntry entry) ->
                                 childParentKeys.computeIfAbsent(
                                         entry, e -> ObjectRewindOrdering.spawnKey(entry.parentSpawn())))
                         .thenComparing(entry -> childSlotKeys.computeIfAbsent(
                                 entry, e -> Arrays.toString(entry.reservedSlots()))));
 
-                List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry> dynamicEntries =
+                List<DynamicObjectEntry> dynamicEntries =
                         new ArrayList<>();
                 for (ObjectInstance inst : dynamicObjects) {
                     if (dynamicOwnership.excludesFromRewind(inst)) {
@@ -4175,7 +4166,7 @@ public class ObjectManager {
                         var playerOwnerId = playerOwner == null ? null
                                 : rewindContext.requireIdentityTable().encodePlayer(playerOwner);
                         dynamicEntries.add(
-                                new com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry(
+                                new DynamicObjectEntry(
                                         inst.getClass().getName(),
                                         inst.getSpawn(),
                                         aoi.getSlotIndex(),
@@ -4189,12 +4180,12 @@ public class ObjectManager {
                 }
 
                 long[] bits = populationView.captureOwnedUsedSlotBits();
-                com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.SolidContactState solidContactState =
+                ObjectManagerSnapshot.SolidContactState solidContactState =
                         solidContacts.captureRewindState(rewindContext);
 
                 // No List.copyOf wrappers here: the ObjectManagerSnapshot
                 // compact constructor already copies its list components.
-                return new com.openggf.game.rewind.snapshot.ObjectManagerSnapshot(
+                return new ObjectManagerSnapshot(
                         bits,
                         slots,
                         frameCounter,
@@ -4210,10 +4201,10 @@ public class ObjectManager {
                         solidContactState,
                         planeSwitchers != null
                                 ? planeSwitchers.captureRewindState()
-                                : com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PlaneSwitcherSnapshot.empty(),
+                                : ObjectManagerSnapshot.PlaneSwitcherSnapshot.empty(),
                         touchResponses != null
                                 ? touchResponses.captureRewindState()
-                                : com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.TouchResponseOverlapState.empty(),
+                                : ObjectManagerSnapshot.TouchResponseOverlapState.empty(),
                         dynamicObjectIdCounter,
                         collisionResponseList.captureRewindState(rewindObjectIds::get),
                         sineCosineInputFraction
@@ -4221,384 +4212,333 @@ public class ObjectManager {
             }
 
             @Override
-            public void restore(com.openggf.game.rewind.snapshot.ObjectManagerSnapshot s) {
-                initialDispatch.retireState();
-                playerBoundRewind.clear();
-                sineCosineInputFraction = s.sineCosineInputFraction();
-                // The restore is TWO-PHASE so object-reference resolution is order-independent.
-                //   Phase 1 recreates (reuse / adopt / genericRecreate / registry) every
-                //           captured object — active and dynamic — and registers each under its
-                //           captured ObjectRefId in a fresh restore identity table, WITHOUT yet
-                //           applying any field blob.
-                //   Phase 2 applies each object's compact field blob against that fully-populated
-                //           table, so an ObjectReferenceCodec ref resolves to the RESTORED target
-                //           regardless of recreate order (forward refs included).
-                // A single-pass restore could only resolve refs whose target was recreated earlier
-                // in the loop; a forward ref to a later object resolved to the orphaned pre-restore
-                // instance (or threw). See TestTwoPhaseRestoreOrdering.
-                //
-                // The restore table registers the live players (unchanged across a restore) plus
-                // every restored object; it is the resolution table phase 2 hands to restore.
-                com.openggf.game.rewind.identity.RewindIdentityTable restoreTable =
-                        new com.openggf.game.rewind.identity.RewindIdentityTable();
-                registerPlayersInto(restoreTable);
-                // Resolve structural player bindings while this restore table is live. Keep one
-                // prepared identity per original entry so parked probe retries cannot duplicate work.
-                var preparedDynamicEntries = playerBoundRewind.prepareEntries(s.dynamicObjects(), restoreTable);
-                com.openggf.game.rewind.schema.RewindCaptureContext rewindContext =
-                        com.openggf.game.rewind.schema.RewindCaptureContext.withIdentityTable(restoreTable);
-                // Phase-2 work item: a recreated instance paired with the entry whose field
-                // blob must be applied to it once every id is registered.
-                record RestoreStatePair<E>(AbstractObjectInstance instance, E entry) {}
-                List<RestoreStatePair<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PerSlotEntry>>
-                        activeStateWork = new ArrayList<>();
-                List<RestoreStatePair<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry>>
-                        dynamicStateWork = new ArrayList<>();
+            public void restore(ObjectManagerSnapshot s) {
+                restoreObjectSnapshot(s);
+            }
+        };
+    }
 
-                // 0. Index live instances by spawn identity so matching snapshot entries
-                //    can reuse them in place instead of paying a full reconstruction.
-                Map<ObjectSpawn, ObjectInstance> previousActive = rewindRestoreReuseScratch;
-                previousActive.clear();
-                if (rewindInPlaceRestoreEnabled && !activeObjects.isEmpty()) {
-                    previousActive.putAll(activeObjects);
-                }
-                // 1. Clear current active objects (without mutating ObjectPlacementController state).
-                //    Extra live objects absent from the snapshot are dropped here exactly as the
-                //    pre-reuse path dropped them (reference drop, no onUnload), via not being
-                //    re-registered below.
-                clearActiveObjects();
-                dynamicObjects.clear();
-                dynamicOwnership.clear();
-                Arrays.fill(execOrder, null);
-                dynamicOwnership.rememberCapturedOrder(s.dynamicObjects());
-                // Capture construction-spawned children produced while active objects are
-                // reconstructed below, so the dynamic reconciliation loop can adopt them in
-                // place instead of recreating duplicates. (See registerRewindReconstructionChild.)
-                rewindReconstructionChildren.clear();
-                rewindReconstructionChildCapture = true;
+    /** One recreated object awaiting field restoration after all identities exist. */
+    private record RestoredObjectState(AbstractObjectInstance instance, PerObjectRewindSnapshot state) {}
 
-                // 2. Restore scalar counters and slot occupancy
-                slotAllocator.restoreFromLongArray(s.usedSlotsBits());
-                frameCounter = s.frameCounter();
-                vblaCounter = s.vblaCounter();
-                currentExecSlot = s.currentExecSlot();
-                slotAllocator.restorePeakSlotCount(s.peakSlotCount());
-                bucketsDirty = s.bucketsDirty();
-                markActiveObjectCachesDirty();
-                // Restore the object-id counter so any new objects spawned after restore
-                // (in replay or fresh gameplay) do not alias the restored objects' ids.
-                dynamicObjectIdCounter = s.dynamicObjectIdCounter();
-                rewindObjectIds.clear();
+    private void restoreObjectSnapshot(ObjectManagerSnapshot s) {
+        initialDispatch.retireState();
+        playerBoundRewind.clear();
+        sineCosineInputFraction = s.sineCosineInputFraction();
+        // The restore is TWO-PHASE so object-reference resolution is order-independent.
+        //   Phase 1 recreates (reuse / adopt / genericRecreate / registry) every
+        //           captured object — active and dynamic — and registers each under its
+        //           captured ObjectRefId in a fresh restore identity table, WITHOUT yet
+        //           applying any field blob.
+        //   Phase 2 applies each object's compact field blob against that fully-populated
+        //           table, so an ObjectReferenceCodec ref resolves to the RESTORED target
+        //           regardless of recreate order (forward refs included).
+        // A single-pass restore could only resolve refs whose target was recreated earlier
+        // in the loop; a forward ref to a later object resolved to the orphaned pre-restore
+        // instance (or threw). See TestTwoPhaseRestoreOrdering.
+        //
+        // The restore table registers the live players (unchanged across a restore) plus
+        // every restored object; it is the resolution table phase 2 hands to restore.
+        RewindIdentityTable restoreTable = new RewindIdentityTable();
+        registerPlayersInto(restoreTable);
+        // Resolve structural player bindings while this restore table is live. Keep one
+        // prepared identity per original entry so parked probe retries cannot duplicate work.
+        var preparedDynamicEntries = playerBoundRewind.prepareEntries(s.dynamicObjects(), restoreTable);
+        RewindCaptureContext rewindContext = RewindCaptureContext.withIdentityTable(restoreTable);
+        List<RestoredObjectState> restoredObjects = new ArrayList<>();
 
-                // 3. PHASE 1 (active objects): reuse the live instance in place when it
-                //    is provably equivalent to a fresh reconstruction, otherwise recreate
-                //    from the spawn as before. Register the captured id into the restore table
-                //    and defer the field-blob application to phase 2. The finally-clear
-                //    guarantees the scratch map never retains stale instance refs past this
-                //    restore, even when a factory throws.
-                try {
-                    for (com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PerSlotEntry entry : s.slots()) {
-                        ObjectSpawn spawn = entry.spawn();
-                        int targetSlot = entry.slotIndex();
-                        ObjectInstance previous = previousActive.get(spawn);
-                        if (previous != null) objectCallbacks.register(previous, spawn);
-                        ObjectInstance inst;
-                        if (previous instanceof AbstractObjectInstance previousAoi
-                                && canReuseForRewindRestore(previousAoi, entry)) {
-                            // Reused instances keep their injected services and renderer wiring.
-                            inst = previous;
-                        } else {
-                            if (previous != null) objectCallbacks.unregister(previous);
-                            // Use PRE_ALLOCATED_SLOT so the constructor picks up the correct slot
-                            int dynamicCountBefore = dynamicObjects.size();
-                            int reservedChildBefore = reservedChildSlots.size();
-                            int reconstructionChildBefore = rewindReconstructionChildren.size();
-                            inst = ObjectConstructionContext.withRewindActiveRestore(
-                                    () -> ObjectConstructionContext.with(objectServices, targetSlot,
-                                            () -> registry != null ? objectCallbacks.construct(
-                                                    spawn, () -> registry.create(spawn)) : null));
-                            if (inst != null) {
-                                if (inst instanceof AbstractObjectInstance constructed) {
-                                    objectCallbacks.run(constructed, () -> bindObjectServices(constructed));
-                                    objectCallbacks.run(constructed, () -> ObjectConstructionContext.withRewindActiveRestore(() -> {
-                                        constructed.recreateConstructionChildrenForRewind();
-                                        return null;
-                                    }));
-                                }
-                                // Constructors that spawn children or reserve child slots have
-                                // restore-relevant construction side effects that in-place reuse
-                                // would skip; latch those classes onto the recreate path. Under
-                                // rewind restore, child spawns are routed to
-                                // rewindReconstructionChildren (not dynamicObjects), so count that
-                                // growth too — otherwise a child-spawning boss would look
-                                // side-effect-free and wrongly become reuse-eligible.
-                                boolean constructionSideEffects =
-                                        dynamicObjects.size() != dynamicCountBefore
-                                        || reservedChildSlots.size() != reservedChildBefore
-                                        || rewindReconstructionChildren.size() != reconstructionChildBefore;
-                                rewindRestoreConstructionSideEffects.merge(
-                                        inst.getClass(), constructionSideEffects, Boolean::logicalOr);
-                            }
-                        }
-                        if (inst instanceof AbstractObjectInstance aoi) {
-                            objectCallbacks.run(aoi, () -> bindObjectServices(aoi));
-                            if (objectCallbacks.call(aoi, aoi::getSlotIndex) < 0 && targetSlot >= 0) {
-                                objectCallbacks.run(aoi, () -> aoi.setSlotIndex(targetSlot));
-                            }
-                            // Install a captured identity before registration so
-                            // registerActiveObject does not mint and consume a
-                            // throwaway dynamic ordinal. Legacy null-id entries
-                            // deliberately fall through and mint exactly once.
-                            if (entry.objectId() != null) {
-                                rewindObjectIds.put(inst, entry.objectId());
-                            }
-                            registerActiveObject(spawn, inst);
-                            if (entry.objectId() != null) {
-                                restoreTable.registerObject(inst, entry.objectId());
-                            }
-                            // Wire into execOrder if within the managed slot window
-                            int execIdx = execIndexForSlot(objectCallbacks.call(aoi, aoi::getSlotIndex));
-                            if (execIdx >= 0 && execIdx < execOrder.length) {
-                                execOrder[execIdx] = aoi;
-                            }
-                            // Defer per-instance field-blob application to phase 2.
-                            activeStateWork.add(new RestoreStatePair<>(aoi, entry));
-                        } else if (inst != null) {
-                            if (entry.objectId() != null) {
-                                rewindObjectIds.put(inst, entry.objectId());
-                            }
-                            registerActiveObject(spawn, inst);
-                            if (entry.objectId() != null) {
-                                restoreTable.registerObject(inst, entry.objectId());
-                            }
-                        }
+        // Index live instances by spawn identity so matching snapshot entries
+        // can reuse them in place instead of paying a full reconstruction.
+        Map<ObjectSpawn, ObjectInstance> previousActive = rewindRestoreReuseScratch;
+        previousActive.clear();
+        if (rewindInPlaceRestoreEnabled && !activeObjects.isEmpty()) {
+            previousActive.putAll(activeObjects);
+        }
+        // Clear current active objects (without mutating ObjectPlacementController state).
+        // Extra live objects absent from the snapshot are dropped here exactly as the
+        // pre-reuse path dropped them (reference drop, no onUnload), via not being
+        // re-registered below.
+        clearActiveObjects();
+        dynamicObjects.clear();
+        dynamicOwnership.clear();
+        Arrays.fill(execOrder, null);
+        dynamicOwnership.rememberCapturedOrder(s.dynamicObjects());
+        // Capture construction-spawned children produced while active objects are
+        // reconstructed below, so the dynamic reconciliation loop can adopt them in
+        // place instead of recreating duplicates. (See registerRewindReconstructionChild.)
+        rewindReconstructionChildren.clear();
+        rewindReconstructionChildCapture = true;
+
+        // Restore scalar counters and slot occupancy
+        slotAllocator.restoreFromLongArray(s.usedSlotsBits());
+        frameCounter = s.frameCounter();
+        vblaCounter = s.vblaCounter();
+        currentExecSlot = s.currentExecSlot();
+        slotAllocator.restorePeakSlotCount(s.peakSlotCount());
+        bucketsDirty = s.bucketsDirty();
+        markActiveObjectCachesDirty();
+        // Restore the object-id counter so any new objects spawned after restore
+        // (in replay or fresh gameplay) do not alias the restored objects' ids.
+        dynamicObjectIdCounter = s.dynamicObjectIdCounter();
+        rewindObjectIds.clear();
+
+        restoreActiveObjects(s.slots(), previousActive, restoreTable, restoredObjects);
+
+        // Restore reserved child slots after placed-object reconstruction.
+        reservedChildSlots.clear();
+        for (ObjectManagerSnapshot.ChildSpawnEntry ce : s.childSpawns()) {
+            reservedChildSlots.put(ce.parentSpawn(),
+                    Arrays.copyOf(ce.reservedSlots(), ce.reservedSlots().length));
+        }
+
+        restoreDynamicObjects(s.dynamicObjects(), preparedDynamicEntries,
+                restoreTable, restoredObjects);
+
+        // All identities exist before any field/reference restore. Settling runs
+        // only after every object's own state is restored, including its children.
+        restoreObjectFieldsAndSettle(restoredObjects, rewindContext);
+
+        if (s.placement() != null) {
+            twoAxisCameraYCoarse = placement.restoreRewindState(s.placement());
+            if (slotLayout.twoAxisCursorPlacement()) {
+                for (var entry : activeObjects.entrySet()) {
+                    if (entry.getValue() instanceof AbstractObjectInstance object
+                            && object.getRespawnStateIndex() >= 0) {
+                        placement.restoreTwoAxisOccurrence(entry.getKey(),
+                                object.getRespawnStateIndex(), object.getSlotIndex());
                     }
-                } finally {
-                    previousActive.clear();
                 }
+            }
+            // The S2 post-camera coarse-X unload latch must rewind with the
+            // placement cursors; a stale later-frame latch makes the first
+            // replayed frames' MarkObjGone checks unload against a future
+            // camera edge (legacy snapshots carry MIN_VALUE = live fallback).
+            s2LatchedObjectManagerCameraX = s.placement().s2LatchedCameraX();
+        }
 
-                // 4. Restore reservedChildSlots
-                reservedChildSlots.clear();
-                for (com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.ChildSpawnEntry ce : s.childSpawns()) {
-                    reservedChildSlots.put(ce.parentSpawn(),
-                            Arrays.copyOf(ce.reservedSlots(), ce.reservedSlots().length));
-                }
+        solidContacts.restoreRewindState(s.solidContactState(), rewindContext);
+        if (planeSwitchers != null) {
+            planeSwitchers.restoreRewindState(s.planeSwitchers());
+        }
 
-                // 5. PHASE 1 (dynamic objects): recreate each captured dynamic object and register
-                //    its captured id, still deferring field-blob application to phase 2.
-                //
-                // A captured entry can depend on a LATER entry in this same list finishing its
-                // own reconstruction first: a dynamically-spawned parent (e.g. a boss spawned by
-                // a zone event rather than the zone's static object layout table -- see
-                // Sonic1SYZBossInstance, GHZBossWreckingBall's owner, Sonic3kAIZ/MHZEvents
-                // minibosses) is itself a captured DynamicObjectEntry processed in this loop, and
-                // its OWN construction-spawned children were captured as EARLIER entries (inserted
-                // into dynamicObjects during the parent's constructor, before the parent itself was
-                // appended -- see registerRewindReconstructionChild). A first-pass attempt for such
-                // a child entry therefore used to run before the parent had been reconstructed at
-                // all: adoptRewindReconstructionChild found an empty pool (the parent hadn't run
-                // its constructor yet to populate it), and any RewindRecreatable#recreateForRewind()
-                // sibling-search fallback (e.g. nearestLiveBossForRewind) also failed (no live
-                // parent to find) -- silently discarding the child's entire captured state. A
-                // STATIC layout-spawned boss never hits this: it reconstructs in the Phase-1 ACTIVE
-                // loop above (step 3), before this dynamic loop starts, so its children's pool
-                // entries are already populated by the time this loop's adoption attempts run.
-                //
-                // reconstructDynamicEntry keeps the reconstruction-child pool active (via
-                // withRewindActiveRestore) across a dynamically-spawned parent's OWN
-                // reconstruction below, not just the pre-Phase-1 static case, so its fresh
-                // construction-spawned children land in the pool instead of live-spawning as
-                // unrelated new dynamic objects. Unresolved entries are parked and retried in a
-                // fixed-point loop (not just once): a single retry pass is not enough for a
-                // 3+-level captured chain (e.g. a grandchild whose intermediate parent entry
-                // ITSELF only resolves during the retry pass) -- the grandchild's one retry
-                // attempt would run before that intermediate parent's own retry has populated
-                // the pool with the grandchild's real captured sibling, dropping it exactly like
-                // the bug this loop exists to fix. Looping until a pass makes zero progress
-                // resolves any finite dependency depth; the parked count strictly decreases on
-                // every productive pass, so the loop terminates, and whatever remains unresolved
-                // once a pass resolves nothing has a permanently missing dependency (its owning
-                // parent could not itself reconstruct at all) and falls through to the existing
-                // clean unmatched-drop path below.
-                List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry>
-                        parkedDynamicEntries = new ArrayList<>();
-                java.util.function.Predicate<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry>
-                        reconstructDynamicEntry = entry -> {
-                    // Prefer adopting the construction-spawned child the reconstructed parent
-                    // already created and back-references. Adopting it in place gives exact
-                    // captured state AND keeps the parent's child reference valid, with no
-                    // double-spawn. Routine-spawned children (no construction counterpart) fall
-                    // back to the generic recreate path.
-                    AbstractObjectInstance adopted = adoptRewindReconstructionChild(entry);
-                    ObjectInstance inst = adopted != null
-                            ? adopted
-                            : ObjectConstructionContext.withRewindActiveRestore(
-                                    () -> objectCallbacks.construct(entry.ownerModId(),
-                                            () -> recreateDynamicObject(entry)));
-                    if (!(inst instanceof AbstractObjectInstance aoi)) {
-                        return false;
+        // ObjectTouchResponseController' double-buffer overlap state must be restored
+        // AFTER object restoration so slot lookup resolves to live
+        // post-restore instances. See iter-1631 root-cause analysis in
+        // docs/architecture/plans/2026-05-07-rewind-encounter-validation.md.
+        if (touchResponses != null) {
+            touchResponses.restoreRewindState(s.touchResponseOverlap());
+        }
+        collisionResponseList.restoreRewindState(
+                s.collisionResponseState(), restoreTable::resolve);
+        dynamicOwnership.restoreCapturedOrder(dynamicObjects, rewindObjectIds::get);
+
+        bucketsDirty = true;
+        markActiveObjectCachesDirty();
+    }
+
+    /** Reuse or reconstruct placed objects; publish identities before restoring any fields. */
+    private void restoreActiveObjects(List<PerSlotEntry> entries,
+            Map<ObjectSpawn, ObjectInstance> previousActive, RewindIdentityTable restoreTable,
+            List<RestoredObjectState> restoredObjects) {
+        try {
+            for (PerSlotEntry entry : entries) {
+                ObjectSpawn spawn = entry.spawn();
+                int targetSlot = entry.slotIndex();
+                ObjectInstance previous = previousActive.get(spawn);
+                if (previous != null) objectCallbacks.register(previous, spawn);
+                ObjectInstance inst;
+                if (previous instanceof AbstractObjectInstance previousAoi
+                        && canReuseForRewindRestore(previousAoi, entry)) {
+                    // Reused instances keep their injected services and renderer wiring.
+                    inst = previous;
+                } else {
+                    if (previous != null) objectCallbacks.unregister(previous);
+                    // Use PRE_ALLOCATED_SLOT so the constructor picks up the correct slot
+                    int dynamicCountBefore = dynamicObjects.size();
+                    int reservedChildBefore = reservedChildSlots.size();
+                    int reconstructionChildBefore = rewindReconstructionChildren.size();
+                    inst = ObjectConstructionContext.withRewindActiveRestore(
+                            () -> ObjectConstructionContext.with(objectServices, targetSlot,
+                                    () -> registry != null ? objectCallbacks.construct(
+                                            spawn, () -> registry.create(spawn)) : null));
+                    if (inst != null) {
+                        if (inst instanceof AbstractObjectInstance constructed) {
+                            objectCallbacks.run(constructed, () -> bindObjectServices(constructed));
+                            objectCallbacks.run(constructed, () -> ObjectConstructionContext.withRewindActiveRestore(() -> {
+                                constructed.recreateConstructionChildrenForRewind();
+                                return null;
+                            }));
+                        }
+                        // Constructors that spawn children or reserve child slots have
+                        // restore-relevant construction side effects that in-place reuse
+                        // would skip; latch those classes onto the recreate path. Under
+                        // rewind restore, child spawns are routed to
+                        // rewindReconstructionChildren (not dynamicObjects), so count that
+                        // growth too — otherwise a child-spawning boss would look
+                        // side-effect-free and wrongly become reuse-eligible.
+                        boolean constructionSideEffects =
+                                dynamicObjects.size() != dynamicCountBefore
+                                || reservedChildSlots.size() != reservedChildBefore
+                                || rewindReconstructionChildren.size() != reconstructionChildBefore;
+                        rewindRestoreConstructionSideEffects.merge(
+                                inst.getClass(), constructionSideEffects, Boolean::logicalOr);
                     }
+                }
+                if (inst instanceof AbstractObjectInstance aoi) {
                     objectCallbacks.run(aoi, () -> bindObjectServices(aoi));
-                    // Both adopted children and generic recreations must own the
-                    // captured slot before callbacks and execOrder registration.
-                    // A spawn-only constructor leaves slotIndex at -1; waiting
-                    // for phase-2 field restore loses the slot lookup used to
-                    // rebind riding/standing contacts to moving dynamic objects.
-                    // The allocator already owns the snapshot reservation.
-                    int slot = entry.slotIndex();
-                    if (slot >= 0) {
-                        objectCallbacks.run(aoi, () -> aoi.setSlotIndex(slot));
+                    if (objectCallbacks.call(aoi, aoi::getSlotIndex) < 0 && targetSlot >= 0) {
+                        objectCallbacks.run(aoi, () -> aoi.setSlotIndex(targetSlot));
                     }
-                    if (adopted == null) {
-                        objectCallbacks.run(aoi, () -> ObjectConstructionContext.withRewindActiveRestore(() -> {
-                            aoi.recreateConstructionChildrenForRewind();
-                            return null;
-                        }));
-                        // Went through the generic recreateForRewind() path, not adoption --
-                        // give owners that keep their own back-reference list (e.g.
-                        // AbstractBossChild -> parent.childComponents) a chance to re-register
-                        // this instance. Adopted candidates were already registered by the
-                        // owning parent's own construction-time spawn, so this is skipped for
-                        // them (see onRecreatedForRewind()'s javadoc).
-                        objectCallbacks.run(aoi, aoi::onRecreatedForRewind);
-                    }
-                    // Restore the captured rewind id so the identity table built from
-                    // the next rewindCaptureContext() re-uses the pre-restore id, and
-                    // register it in the restore table so phase-2 refs resolve here.
-                    // A null captured id means the object had no identity at capture, so no
-                    // captured ref points at it — minting a fresh id is enough (and it is not
-                    // added to the restore table because nothing resolves against it).
+                    // Install a captured identity before registration so
+                    // registerActiveObject does not mint and consume a
+                    // throwaway dynamic ordinal. Legacy null-id entries
+                    // deliberately fall through and mint exactly once.
                     if (entry.objectId() != null) {
-                        rewindObjectIds.put(aoi, entry.objectId());
-                        restoreTable.registerObject(aoi, entry.objectId());
-                    } else {
-                        assignRewindObjectId(aoi, objectCallbacks.call(aoi, aoi::getSpawn));
+                        rewindObjectIds.put(inst, entry.objectId());
                     }
-                    dynamicObjects.add(aoi);
-                    if (entry.rewindableAuxiliary()) {
-                        dynamicOwnership.markRestoredRewindable(aoi);
+                    registerActiveObject(spawn, inst);
+                    if (entry.objectId() != null) {
+                        restoreTable.registerObject(inst, entry.objectId());
                     }
-                    markActiveObjectCachesDirty();
+                    // Wire into execOrder if within the managed slot window
                     int execIdx = execIndexForSlot(objectCallbacks.call(aoi, aoi::getSlotIndex));
                     if (execIdx >= 0 && execIdx < execOrder.length) {
                         execOrder[execIdx] = aoi;
                     }
                     // Defer per-instance field-blob application to phase 2.
-                    dynamicStateWork.add(new RestoreStatePair<>(aoi, entry));
-                    return true;
-                };
-                for (com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry
-                        : s.dynamicObjects()) {
-                    var prepared = preparedDynamicEntries.get(entry);
-                    if (!reconstructDynamicEntry.test(prepared)) {
-                        parkedDynamicEntries.add(prepared);
+                    restoredObjects.add(new RestoredObjectState(aoi, entry.state()));
+                } else if (inst != null) {
+                    if (entry.objectId() != null) {
+                        rewindObjectIds.put(inst, entry.objectId());
+                    }
+                    registerActiveObject(spawn, inst);
+                    if (entry.objectId() != null) {
+                        restoreTable.registerObject(inst, entry.objectId());
                     }
                 }
-                boolean parkedPassMadeProgress = true;
-                while (parkedPassMadeProgress && !parkedDynamicEntries.isEmpty()) {
-                    parkedPassMadeProgress = false;
-                    List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry>
-                            stillParked = new ArrayList<>();
-                    for (com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry
-                            : parkedDynamicEntries) {
-                        if (reconstructDynamicEntry.test(entry)) {
-                            parkedPassMadeProgress = true;
-                        } else {
-                            stillParked.add(entry);
-                        }
-                    }
-                    parkedDynamicEntries = stillParked;
-                }
-                // Stop routing further child spawns into the reconstruction-children scratch:
-                // any spawns triggered from here on (Phase 2 state restore,
-                // afterRewindRestoreSettled, or later gameplay) are normal wiring, not
-                // reconstruction side effects to adopt.
-                rewindReconstructionChildCapture = false;
-                // Any reconstruction children NOT matched by a captured entry after BOTH passes
-                // were spawned by a parent whose child was not in dynamicObjects at capture (e.g.
-                // a same-class sibling destroyed and pruned before capture -- see
-                // adoptRewindReconstructionChild), or by a parent that could not itself
-                // reconstruct at all (its own captured entry above also returned false from both
-                // passes, so it is dropped the very same way, and the orphaned pool children it
-                // already spawned are dropped cleanly here rather than left dangling). They are
-                // unregistered here (never added to dynamicObjects/activeObjects), but the
-                // parent's OWN back-reference to them (e.g. AbstractBossInstance.childComponents)
-                // was already set unconditionally at construction time and is otherwise never told
-                // about the drop -- notify each so an owner tracking its own child-reference list
-                // can drop it too, or it remains a live orphan that still receives update() every
-                // frame. Clearing the scratch afterward guarantees no instances leak across
-                // restore passes.
-                for (AbstractObjectInstance unmatched : rewindReconstructionChildren) {
-                    objectCallbacks.run(unmatched, unmatched::onDroppedAsUnmatchedRewindReconstructionChild);
-                }
-                rewindReconstructionChildren.clear();
-
-                // 6. PHASE 2: every captured id is now registered in restoreTable, so applying
-                //    the field blobs resolves all object/player references — including forward
-                //    references to objects recreated later in phase 1.
-                for (RestoreStatePair<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PerSlotEntry>
-                        work : activeStateWork) {
-                    objectCallbacks.restoreRewind(
-                            work.instance(), work.entry().state(), rewindContext);
-                }
-                for (RestoreStatePair<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry>
-                        work : dynamicStateWork) {
-                    objectCallbacks.restoreRewind(
-                            work.instance(), work.entry().state(), rewindContext);
-                }
-
-                // 6b. Every object's own field-blob restore (including any of its children's)
-                // is now settled, so owners that derive state FROM their children
-                // can safely do so now -- doing it inline
-                // during phase 2 above would race, since restore order between a parent and
-                // its own children is not guaranteed.
-                for (RestoreStatePair<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PerSlotEntry>
-                        work : activeStateWork) {
-                    objectCallbacks.run(work.instance(), work.instance()::afterRewindRestoreSettled);
-                }
-                for (RestoreStatePair<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry>
-                        work : dynamicStateWork) {
-                    objectCallbacks.run(work.instance(), work.instance()::afterRewindRestoreSettled);
-                }
-
-                if (s.placement() != null) {
-                    twoAxisCameraYCoarse = placement.restoreRewindState(s.placement());
-                    if (slotLayout.twoAxisCursorPlacement()) {
-                        for (var entry : activeObjects.entrySet()) {
-                            if (entry.getValue() instanceof AbstractObjectInstance object
-                                    && object.getRespawnStateIndex() >= 0) {
-                                placement.restoreTwoAxisOccurrence(entry.getKey(),
-                                        object.getRespawnStateIndex(), object.getSlotIndex());
-                            }
-                        }
-                    }
-                    // The S2 post-camera coarse-X unload latch must rewind with the
-                    // placement cursors; a stale later-frame latch makes the first
-                    // replayed frames' MarkObjGone checks unload against a future
-                    // camera edge (legacy snapshots carry MIN_VALUE = live fallback).
-                    s2LatchedObjectManagerCameraX = s.placement().s2LatchedCameraX();
-                }
-
-                solidContacts.restoreRewindState(s.solidContactState(), rewindContext);
-                if (planeSwitchers != null) {
-                    planeSwitchers.restoreRewindState(s.planeSwitchers());
-                }
-
-                // ObjectTouchResponseController' double-buffer overlap state must be restored
-                // AFTER object restoration so slot lookup resolves to live
-                // post-restore instances. See iter-1631 root-cause analysis in
-                // docs/architecture/plans/2026-05-07-rewind-encounter-validation.md.
-                if (touchResponses != null) {
-                    touchResponses.restoreRewindState(s.touchResponseOverlap());
-                }
-                collisionResponseList.restoreRewindState(
-                        s.collisionResponseState(), restoreTable::resolve);
-                dynamicOwnership.restoreCapturedOrder(dynamicObjects, rewindObjectIds::get);
-
-                bucketsDirty = true;
-                markActiveObjectCachesDirty();
             }
-        };
+        } finally {
+            previousActive.clear();
+        }
+    }
+
+    /**
+     * Children may precede their parents in capture order. Retry unresolved entries
+     * until a pass makes no progress, allowing arbitrary finite parent/child depth.
+     * Construction children are adopted rather than duplicated; unmatched children
+     * are retired before field restoration can trigger ordinary live spawns.
+     */
+    private void restoreDynamicObjects(List<DynamicObjectEntry> entries,
+            Map<DynamicObjectEntry, DynamicObjectEntry> preparedDynamicEntries,
+            RewindIdentityTable restoreTable, List<RestoredObjectState> restoredObjects) {
+        List<DynamicObjectEntry> parkedDynamicEntries = new ArrayList<>();
+        for (DynamicObjectEntry entry : entries) {
+            var prepared = preparedDynamicEntries.get(entry);
+            if (!restoreDynamicObject(prepared, restoreTable, restoredObjects)) {
+                parkedDynamicEntries.add(prepared);
+            }
+        }
+        boolean parkedPassMadeProgress = true;
+        while (parkedPassMadeProgress && !parkedDynamicEntries.isEmpty()) {
+            parkedPassMadeProgress = false;
+            List<DynamicObjectEntry> stillParked = new ArrayList<>();
+            for (DynamicObjectEntry entry : parkedDynamicEntries) {
+                if (restoreDynamicObject(entry, restoreTable, restoredObjects)) {
+                    parkedPassMadeProgress = true;
+                } else {
+                    stillParked.add(entry);
+                }
+            }
+            parkedDynamicEntries = stillParked;
+        }
+        // Stop routing further child spawns into the reconstruction-children scratch:
+        // any spawns triggered from here on (Phase 2 state restore,
+        // afterRewindRestoreSettled, or later gameplay) are normal wiring, not
+        // reconstruction side effects to adopt.
+        rewindReconstructionChildCapture = false;
+        // A constructor can create children absent from the captured population.
+        // Notify their owners before dropping them so no parent retains a live orphan.
+        for (AbstractObjectInstance unmatched : rewindReconstructionChildren) {
+            objectCallbacks.run(unmatched, unmatched::onDroppedAsUnmatchedRewindReconstructionChild);
+        }
+        rewindReconstructionChildren.clear();
+    }
+
+    /** Publish one dynamic object's slot and identity, deferring its captured fields. */
+    private boolean restoreDynamicObject(DynamicObjectEntry entry,
+            RewindIdentityTable restoreTable, List<RestoredObjectState> restoredObjects) {
+        // Prefer adopting the construction-spawned child the reconstructed parent
+        // already created and back-references. Adopting it in place gives exact
+        // captured state AND keeps the parent's child reference valid, with no
+        // double-spawn. Routine-spawned children (no construction counterpart) fall
+        // back to the generic recreate path.
+        AbstractObjectInstance adopted = adoptRewindReconstructionChild(entry);
+        ObjectInstance inst = adopted != null
+                ? adopted
+                : ObjectConstructionContext.withRewindActiveRestore(
+                        () -> objectCallbacks.construct(entry.ownerModId(),
+                                () -> recreateDynamicObject(entry)));
+        if (!(inst instanceof AbstractObjectInstance aoi)) {
+            return false;
+        }
+        objectCallbacks.run(aoi, () -> bindObjectServices(aoi));
+        // Both adopted children and generic recreations must own the
+        // captured slot before callbacks and execOrder registration.
+        // A spawn-only constructor leaves slotIndex at -1; waiting
+        // for phase-2 field restore loses the slot lookup used to
+        // rebind riding/standing contacts to moving dynamic objects.
+        // The allocator already owns the snapshot reservation.
+        int slot = entry.slotIndex();
+        if (slot >= 0) {
+            objectCallbacks.run(aoi, () -> aoi.setSlotIndex(slot));
+        }
+        if (adopted == null) {
+            objectCallbacks.run(aoi, () -> ObjectConstructionContext.withRewindActiveRestore(() -> {
+                aoi.recreateConstructionChildrenForRewind();
+                return null;
+            }));
+            // Went through the generic recreateForRewind() path, not adoption --
+            // give owners that keep their own back-reference list (e.g.
+            // AbstractBossChild -> parent.childComponents) a chance to re-register
+            // this instance. Adopted candidates were already registered by the
+            // owning parent's own construction-time spawn, so this is skipped for
+            // them (see onRecreatedForRewind()'s javadoc).
+            objectCallbacks.run(aoi, aoi::onRecreatedForRewind);
+        }
+        // Restore the captured rewind id so the identity table built from
+        // the next rewindCaptureContext() re-uses the pre-restore id, and
+        // register it in the restore table so phase-2 refs resolve here.
+        // A null captured id means the object had no identity at capture, so no
+        // captured ref points at it — minting a fresh id is enough (and it is not
+        // added to the restore table because nothing resolves against it).
+        if (entry.objectId() != null) {
+            rewindObjectIds.put(aoi, entry.objectId());
+            restoreTable.registerObject(aoi, entry.objectId());
+        } else {
+            assignRewindObjectId(aoi, objectCallbacks.call(aoi, aoi::getSpawn));
+        }
+        dynamicObjects.add(aoi);
+        if (entry.rewindableAuxiliary()) {
+            dynamicOwnership.markRestoredRewindable(aoi);
+        }
+        markActiveObjectCachesDirty();
+        int execIdx = execIndexForSlot(objectCallbacks.call(aoi, aoi::getSlotIndex));
+        if (execIdx >= 0 && execIdx < execOrder.length) {
+            execOrder[execIdx] = aoi;
+        }
+        // Defer per-instance field-blob application to phase 2.
+        restoredObjects.add(new RestoredObjectState(aoi, entry.state()));
+        return true;
+    }
+
+    private void restoreObjectFieldsAndSettle(List<RestoredObjectState> restoredObjects,
+            RewindCaptureContext rewindContext) {
+        for (RestoredObjectState work : restoredObjects) {
+            objectCallbacks.restoreRewind(work.instance(), work.state(), rewindContext);
+        }
+        for (RestoredObjectState work : restoredObjects) {
+            objectCallbacks.run(work.instance(), work.instance()::afterRewindRestoreSettled);
+        }
     }
 
     /**
@@ -4612,7 +4552,7 @@ public class ObjectManager {
     }
 
     private boolean canReuseForRewindRestore(AbstractObjectInstance previous,
-            com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PerSlotEntry entry) {
+            PerSlotEntry entry) {
         if (objectCallbacks.call(previous, previous::getSlotIndex) != entry.slotIndex()) {
             return false;
         }
@@ -4679,9 +4619,9 @@ public class ObjectManager {
     }
 
     /**
-     * Builds a fresh {@link com.openggf.game.rewind.schema.RewindCaptureContext} reflecting
+     * Builds a fresh {@link RewindCaptureContext} reflecting
      * the current live object + player set. The returned context's
-     * {@link com.openggf.game.rewind.identity.RewindIdentityTable} maps every live object
+     * {@link RewindIdentityTable} maps every live object
      * to a stable {@link com.openggf.game.rewind.identity.ObjectRefId}.
      *
      * <p>This method is called internally by the capture/restore path and is also
@@ -4703,9 +4643,9 @@ public class ObjectManager {
                 dynamicOwnership.nonRewindableObjects(), rewindCaptureContext());
     }
 
-    private com.openggf.game.rewind.schema.RewindCaptureContext rewindCaptureContext() {
-        com.openggf.game.rewind.identity.RewindIdentityTable table =
-                new com.openggf.game.rewind.identity.RewindIdentityTable();
+    private RewindCaptureContext rewindCaptureContext() {
+        RewindIdentityTable table =
+                new RewindIdentityTable();
         registerPlayersInto(table);
         // Register every live object (placed + dynamic) so object-reference fields can
         // be captured as stable ObjectRefIds. The id was assigned when the object entered
@@ -4722,7 +4662,7 @@ public class ObjectManager {
                 table.registerObject(inst, id);
             }
         }
-        return com.openggf.game.rewind.schema.RewindCaptureContext.withIdentityTable(table);
+        return RewindCaptureContext.withIdentityTable(table);
     }
 
     /**
@@ -4731,7 +4671,7 @@ public class ObjectManager {
      * object set rebuilt by a restore. Resolve their current roster roles independently of
      * camera focus, which may follow P2. Capture and restore can use different incarnations.
      */
-    private void registerPlayersInto(com.openggf.game.rewind.identity.RewindIdentityTable table) {
+    private void registerPlayersInto(RewindIdentityTable table) {
         com.openggf.sprites.playable.AbstractPlayableSprite main = null;
         List<PlayableEntity> sidekicks = List.of();
         if (objectServices != null) {
@@ -4846,19 +4786,19 @@ public class ObjectManager {
     }
 
     /**
-     * Enqueues a captured {@link com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry}
+     * Enqueues a captured {@link DynamicObjectEntry}
      * for a player-bound dynamic class whose post-restore re-spawn happens
      * after object-manager restore (currently Shield + Stars). Called by the
      * recreate path.
      */
     void enqueuePendingPlayerBoundEntry(Class<?> baseType,
-            com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry) {
+            DynamicObjectEntry entry) {
         playerBoundRewind.enqueue(baseType, entry);
     }
 
     /** Checked native restitution retains this restore's admission and pending order. */
     ObjectRewindPlayerBindings.PendingReturn claimPendingPlayerBoundReturn(Class<?> baseType,
-            com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry, PlayableEntity owner) {
+            DynamicObjectEntry entry, PlayableEntity owner) {
         return playerBoundRewind.claimReturn(baseType, entry, owner);
     }
 
@@ -4870,7 +4810,7 @@ public class ObjectManager {
      * (animation cursor, timers, visibility flags, etc.) reapplied via
      * {@link AbstractObjectInstance#restoreRewindState}.
      */
-    com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry
+    DynamicObjectEntry
             consumePendingPlayerBoundEntry(Class<?> baseType) {
         return consumePendingPlayerBoundEntry(baseType, entry -> true);
     }
@@ -4881,9 +4821,9 @@ public class ObjectManager {
      * concrete class instead of consuming another player's pending same-type
      * shield from the FIFO queue.
      */
-    com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry
+    DynamicObjectEntry
             consumePendingPlayerBoundEntry(Class<?> baseType,
-                    Predicate<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry> matcher) {
+                    Predicate<DynamicObjectEntry> matcher) {
         return playerBoundRewind.consume(baseType, matcher);
     }
 
@@ -4898,7 +4838,7 @@ public class ObjectManager {
     }
 
     private ObjectInstance recreateDynamicObject(
-            com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry) {
+            DynamicObjectEntry entry) {
         entry = NativeCompetitionPlayerBoundRestore.rebind(this, objectServices, entry);
         DynamicObjectRecreateContext context = new DynamicObjectRecreateContext(this, rewindClassResolver);
         // Phase-2 generic recreate: only classes that explicitly implement
@@ -4915,7 +4855,7 @@ public class ObjectManager {
      * implements {@link RewindRecreatable}. Used to opt the class into the generic
      * recreate fallback without referencing any concrete game package.
      */
-    private static boolean isRewindRecreatable(com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry,
+    private static boolean isRewindRecreatable(DynamicObjectEntry entry,
                                                DynamicObjectRecreateContext context) {
         if (entry.className() == null) return false;
         return context.classResolver().resolve(entry.ownerModId(), entry.className())
@@ -4953,7 +4893,7 @@ public class ObjectManager {
      *
      * <p>Construction order is deterministic and normally equals the dynamic-object capture
      * order, so first-in-order FIFO alone pairs each captured
-     * {@link com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry} with the
+     * {@link DynamicObjectEntry} with the
      * same logical child the parent re-spawned -- UNLESS the parent has multiple indistinguishable
      * same-class siblings (e.g. EHZ's 3 {@code EHZBossWheel} children) and one of them was
      * destroyed and pruned before the frame being captured: the fixed-order re-spawn still
@@ -4974,7 +4914,7 @@ public class ObjectManager {
      * routine-spawned children, which fall back to the generic recreate path).
      */
     private AbstractObjectInstance adoptRewindReconstructionChild(
-            com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry) {
+            DynamicObjectEntry entry) {
         String className = entry.className();
         if (className == null) {
             return null;

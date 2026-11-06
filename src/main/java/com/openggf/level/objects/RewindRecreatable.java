@@ -6,10 +6,17 @@ package com.openggf.level.objects;
  *
  * <p>Implementing classes appear in the dynamic-object list at capture time (i.e.
  * runtime/routine-spawned dynamics, not construction-spawned children which are
- * handled by the adoption keystone). Their recreation during a rewind restore is
+ * adopted from their reconstructed parent). Their recreation during a rewind restore is
  * delegated to this method by
  * {@link ObjectRewindDynamicCodecs#genericRecreate(com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry, DynamicObjectRecreateContext)},
- * which is the entry point for Phase-2 generic recreate (Task 4).
+ * which supplies the generic reconstruction path.
+ *
+ * <p>The manager first reconstructs all placed and dynamic objects and registers
+ * their captured identities. Construction children are adopted; entries waiting
+ * for a parent are retried until no more can be reconstructed. Only then are
+ * captured fields and object references restored. Finally, settling hooks run
+ * after every object's fields are available. Implementors supply reconstruction,
+ * not field restoration or settling; see {@link ObjectManager#rewindSnapshottable()}.
  *
  * <p><strong>Contract for implementors:</strong>
  * <ul>

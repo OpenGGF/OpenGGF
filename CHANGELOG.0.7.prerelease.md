@@ -1950,6 +1950,12 @@ its original drawing priority.
 
 ## Maintenance and release preparation
 
+- Contributor readability: name the object rewind reconstruction/restoration
+  stages, group object-side solid latch expiry without releasing player state,
+  and make rewind HUD decisions and HCZ wall-event scheduling easier to follow.
+  Buzz Bomber lifetime checks now exercise the production badnik, and the testing
+  guide provides a focused trace diagnosis path without duplicate status claims.
+
 - `AGENTS.md` is now the only project instruction file. Claude Code loads it
   because the repository has no `CLAUDE.md`, and the commit hook rejects one.
   Skills are edited only under `.agents/skills/`; `tools/git/sync_skills.py`

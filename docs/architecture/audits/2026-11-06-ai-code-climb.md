@@ -237,3 +237,91 @@ Origin next and develop were independently checked equal to the baseline.
 Documentation validation and commit details are recorded in the final handoff.
 Next action: select one bounded intervention and collect its task-level baseline
 before making runtime changes. Keep this local task branch/worktree for that work.
+
+## First implementation increment
+
+Authorised on 2026-11-06 to work on the six contributor tasks. Preserve runtime
+behaviour; reduce actual reading and verification obstacles rather than inventing
+new gameplay corrections. Starting task commit: `e6337f9ce` (runtime baseline above).
+
+| Task | Bounded intervention | Owner |
+| --- | --- | --- |
+| Badnik correction | Make lifetime comments accurate and exercise the production Buzz Bomber | badnik_improvements |
+| Collision diagnosis | Give removal-side solid state expiry one named owner; preserve player state | lead |
+| Overlay change | Expand dense decision/construction code and expose existing presentation boundary | ui_improvements |
+| Zone event | Explain the existing HCZ producer/consumer phases beside dispatch | zone_trace_improvements |
+| Trace diagnosis | Remove duplicate mutable status and provide one existing-guide diagnostic path | zone_trace_improvements |
+| Focused test | Replace misleading substitute-only assurance with production witnesses | badnik_improvements + lead validation |
+
+The lead also improves the sampled rewind reconstruction hotspot with named
+stages in its current owner, avoiding a new framework or package-wide rewrite.
+Workers own disjoint files in the shared task worktree; no worker commits or
+Maven jobs during parallel editing. Central runtime validation starts after an
+explicit edit freeze. A separate detached cow worktree preserves baseline code
+and independent target output. Existing meaningful collision/rewind scenarios
+characterise ordering; new tests are justified only for actual evidence gaps.
+
+Validation: worker static checks; lead focused production regressions, existing
+solid/rewind/overlay/HCZ tests, the four required S3K checks, applicable guards,
+and change-based smoke with two workers. Inspect selection/class count before
+launch. Compare new failures against the same baseline selections; report skips
+and prerequisites. No public-release full-suite or exhaustive audit.
+
+Delivery selected by the user: push ai-code-climb and open a new draft PR against
+develop after validation. Keep its branch/worktree for further hill-climbing;
+do not integrate or push the destination branch.
+
+Implemented changes:
+
+- Badnik tests use the real Buzz Bomber for flight/camera retreat, both lifetime
+  chunk boundaries, destroyed rejection and same-instance manager retention.
+  Removed the mirrored substitute implementation; corrected stale lifetime prose.
+- Placed-solid deletion calls one object-latch release operation while occurrence
+  ownership is still available. Its new two-player test asserts both object bits
+  expire while player Status_OnObj, pushing and riding remain unchanged, and a
+  fresh instance cannot inherit its predecessor's spawn-keyed bits.
+- Rewind restoration has named placed, dynamic retry/adoption, single-entry
+  reconstruction, and field/settling stages in the existing owner. One deferred
+  state list preserves placed-then-dynamic order for both field and settling
+  passes. Expanded dense surface constructors; replaced historical terminology
+  in the implementor interface with the actual lifecycle. No new framework,
+  manager-lifetime state or public API.
+- Overlay status selection now shows empty/low/normal precedence explicitly;
+  expanded message arguments and exposed the existing policy/drawing boundary.
+- HCZ's post-physics handoff is named separately from pre-physics publication;
+  local documentation explains the scroll consumer and rewind relinking.
+- Trace leaf prose routes to scope/frontier evidence. The existing testing guide
+  supplies the class/fixture/lane/command/fresh-result diagnosis path.
+
+Provisional lead reassessment (static evidence, not measured human performance):
+
+| Sample | Before | After | Changed dimensions and evidence |
+| --- | ---: | ---: | --- |
+| Buzz Bomber | 67.5 | 73.75 | Understanding 2→3 (accurate range contract); verification 2→3 (production witnesses) |
+| Overlay | 75 | 80 | Rules 2→3 (local authority pointer); readability 3→4 (visible status precedence and arguments) |
+| Solid expiry | 36.25 | 41.25 | Verification 2→3 (two-player deletion/reload boundary); rules 2→3 (one named object-side operation) |
+| Linked-object rewind | 33.75 | 42.5 | Understanding 1→2, rules 2→3, readability 1→2 (named stages, lifecycle entry, reduced nesting) |
+| HCZ wall | 62.5 | 68.75 | Understanding 2→3, rules 2→3 (local phase/consumer map and named handoff) |
+| HCZ trace | 47.5 | 52.5 | Verification 2→3, rules 2→3 (one focused entry and no competing mutable status) |
+
+Other dimensions remain at baseline. These are modest local gains: packaging,
+cross-system coupling and prerequisite concept counts remain unresolved. In
+particular the latch helper does not consolidate the controller's maps, and
+rewind extraction does not make reconstruction independent of ObjectManager.
+The next hill-climb should test those harder boundaries with fresh contributor
+examples rather than awarding further points for more extraction or prose.
+
+Checkpoint: baseline focused selection passed 140 tests, candidate 145; both
+zero failures/errors/skips. Baseline and candidate HCZ trace each compared 3,519
+frames with zero errors/warnings and zero bootstrap errors/warnings. All verified
+ROM properties were discovered. Both focused builds used Java 25, -Dmse=off and
+surfaceless EGL. Focused queue wait was 0s for each; Maven execution was 1m40s
+baseline and 1m36s candidate. Trace Maven execution was 37.723s candidate; these
+are command/build durations, not contributor times. No user-response wait blocked
+implementation. An independent read-only GPT-6.1 review found no actionable
+defects: active/dynamic ordering, retries, identity publication, callback ownership,
+player-state retention and public signatures remain equivalent by inspection.
+The two-worker smoke comparison is pending (4,467 candidate classes plus guards;
+all categories selected). Source is frozen; no final delivery or complete
+validation claim yet. Planned completion uses a separate documentation-only
+commit for final results, avoiding edits during category runs.

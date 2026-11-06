@@ -481,6 +481,22 @@ public final class ObjectSolidContactController {
     }
 
     /**
+     * Releases the object's standing and pushing bits without changing players'
+     * riding state, Status_OnObj, pushing state or release animation.
+     *
+     * <p>The delete routines zero the object's slot, not the player's slot; see
+     * {@link #releaseObjectStandingLatchForAllPlayers}. Call this while placement
+     * occurrence ownership is still available: a persistent spawn key outlives
+     * the instance, but its native object-side bits must not survive a reload.
+     * Instance-only dynamic retirement also evicts per-frame keys through
+     * {@link #evictLatchForDestroyedInstance}.
+     */
+    void releaseObjectLatchesForAllPlayers(ObjectInstance instance) {
+        releaseObjectPushLatchForAllPlayers(instance);
+        releaseObjectStandingLatchForAllPlayers(instance);
+    }
+
+    /**
      * Clears the object-side pushing bit for one player only, without the
      * paired player-side clear or the {@code SolidObject_TestClearPush}
      * Walk/Run restart write, and reports whether the bit had been set.
@@ -1125,8 +1141,7 @@ public final class ObjectSolidContactController {
     }
 
     void suspendForVisualDirection(ObjectInstance object) {
-        releaseObjectPushLatchForAllPlayers(object);
-        releaseObjectStandingLatchForAllPlayers(object);
+        releaseObjectLatchesForAllPlayers(object);
         for (var entry : java.util.List.copyOf(ridingStates.entrySet()))
             if (entry.getValue().object == object) {
                 PlayableEntity player = entry.getKey();

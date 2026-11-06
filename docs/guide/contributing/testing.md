@@ -492,12 +492,48 @@ Current examples:
 - `TestS1Ghz1TraceReplay`
 - `TestS1Mz1TraceReplay`
 
-Run them with:
+Run these release-6 examples with the replay profile:
 
 ```bash
-python3 tools/testing/maven_queue.py -Dmse=off \
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dsurefire.forkCount=1 \
   -Dtest=TestS1Ghz1TraceReplay,TestS1Mz1TraceReplay test
 ```
+
+### Diagnose one trace replay
+
+Start at the concrete test class: its `game()`, `zone()`, `act()` and
+`traceDirectory()` identify the engine entry and fixture. Read that fixture's
+`metadata.json` for the recorded team, row count and `source_bk2`. Shared movies
+live under the game's `src/test/resources/traces/<game>/_movies/`; the replay
+loader resolves the metadata reference. A missing movie can skip the test.
+
+Use the [release-scope policy](../../status/trace-scope-release-6.md) and the
+`trace-replay` / `trace-replay-r7` profiles in [root pom.xml](../../../pom.xml) to find the lane.
+These are the selection authorities; a test's historical status comment is not
+a current result. For example, the HCZ Sonic/Tails leaf belongs to the
+release-6 lane:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay \
+  -Dsurefire.forkCount=1 \
+  '-Dtest=TestS3kSonicTailsHczSegmentTraceReplay' test
+```
+
+Use Java 25. Check the wrapper's verified-ROM discovery line and ensure the
+fixture payload and referenced movie are available. After completion, read this
+class's fresh Surefire result under `target/surefire-reports/` and its JSON/context
+reports under `target/trace-reports/`. Confirm the test executed, the compared
+rows cover the intended window, and there are no errors or skips; an exit code
+or an old report alone is insufficient. Preserve prior evidence before clearing
+generated reports, and keep output in this worktree's `target/`.
+
+For a real divergence, read the
+[trace diagnosis procedure](../../../.agents/skills/trace-replay-bug-fixing/SKILL.md)
+and its linked measurement hazards before reporting counts or changing code.
+Reports use trace row indices, which can differ from recorded frame numbers;
+trace comparisons do not authorise copying observed gameplay state into the
+engine. Record new measured frontiers in the existing
+[frontier log](../../status/trace-frontier-log.md), with the tested commit and command.
 
 For the full workflow, including recording traces and reading divergence reports, see
 [Trace Replay Testing](trace-replay.md).

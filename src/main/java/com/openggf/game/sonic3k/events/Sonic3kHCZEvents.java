@@ -360,16 +360,20 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
             updateAct1Fg();
             updateAct1Bg();
         } else {
-            updateAct2Fg();
-            if (!act2BgUpdatedPrePhysics) {
-                updateAct2Bg(frameCounter);
-            } else if (act2BgRoutine == BG_WALL_MOVE && eventsFg5) {
-                // Preserve the ROM-style same-frame FG -> BG handoff at the end
-                // of the wall chase without running the full BG move logic twice.
-                act2BgWallMove(frameCounter);
-            }
-            act2BgUpdatedPrePhysics = false;
+            updateAct2AfterPhysics(frameCounter);
         }
+    }
+
+    private void updateAct2AfterPhysics(int frameCounter) {
+        updateAct2Fg();
+        if (!act2BgUpdatedPrePhysics) {
+            updateAct2Bg(frameCounter);
+        } else if (act2BgRoutine == BG_WALL_MOVE && eventsFg5) {
+            // FG can end the chase after the pre-physics wall step. Consume that
+            // signal now, without advancing wall movement or shake a second time.
+            act2BgWallMove(frameCounter);
+        }
+        act2BgUpdatedPrePhysics = false;
     }
 
     /**
@@ -379,6 +383,18 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
      * background-collision FindFloor/FindWall path uses Camera_X/Y_diff. The
      * engine's normal scroll update happens later in the frame, so HCZ2 needs
      * the same pre-physics priming pattern used by MGZ2's BG-rise sequence.
+     *
+     * <p>The wall chase crosses three frame phases:
+     * <ol>
+     *   <li>This hook advances the BG routine and publishes wall/collision positions
+     *       before player physics consumes them.</li>
+     *   <li>{@link #update(int, int)} runs FG after physics, consuming its chase-end
+     *       signal without repeating a BG step already performed here.</li>
+     *   <li>The later scroll pass consumes the published wall offset and the prior
+     *       screen-shake setup; {@link #updateAct2Bg(int)} retains the next setup.</li>
+     * </ol>
+     * Rewind relinks the recreated wall through {@link #reconcileWallAfterRewindRestore()}
+     * before the next ordinary event write.
      */
     public void updatePrePhysics(int act, int frameCounter) {
         if (act != 1 || cutsceneActive) {
