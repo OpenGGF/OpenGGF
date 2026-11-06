@@ -72,7 +72,7 @@ final class SonicCdAct2PastObjectPass {
         }
     }
     private enum Phase { READY,WALKING,WALKED,DRAINING,DONE,FAILED,DISCARDED }
-    private enum Kind { PRIMARY,RESERVED,RING,SPRING,MONITOR,TIME_POST,COLLAPSE,PLATFORM,TAM,ANIMAL,SWING,ROBOT,ANTON,BOULDER,WALL,FLOAT_BLOCK,SPIKES,LOG_SHADOW,NULL }
+    private enum Kind { PRIMARY,RESERVED,RING,SPRING,MONITOR,TIME_POST,COLLAPSE,PLATFORM,TAM,ANIMAL,SWING,ROBOT,ANTON,BOULDER,WALL,FLOAT_BLOCK,SPIKES,LOG_SHADOW,NULL,PATA_BATA }
     private final Ports ports;private final CdR12bTerrainAssets terrain;private final CdR12bPlayerAssets player;
     private final CdPlayerFrameRuntime frame;private final CdObjectPlacementRuntime placement;
     private final CdAssetBytes objectIndex;private final CdObjectMappings mappings;
@@ -85,6 +85,7 @@ final class SonicCdAct2PastObjectPass {
     private CdBreakableWall wall;
     private CdFloatBlock floatBlock;
     private CdSpikes spikes;private CdLogShadow logShadow;
+    private CdPataBata pataBata;
     private Phase phase=Phase.READY;private CdObjectDrawQueue queue;private Dispatch dispatch;
     private boolean port,queuePort;private Adoption pending;
     private static final class Dispatch {
@@ -244,6 +245,8 @@ final class SonicCdAct2PastObjectPass {
                     public void beforeCall(Object c){observeBeforeCall(c,robot.currentCallOrdinal(c));}
                     public void afterCall(Object c){observeAfter(c,false);}
                 },new CdRobotGenerator.ReceiptGuard(){public void prepared(Object c){receiptPrepared(c);}public void completed(Object c){receiptCompleted(c);}});
+        pataBata=CdPataBata.fromAct2PastAssets(placement,terrain,player,math,
+                (p,id)->drawDynamic(Kind.PATA_BATA,p,id,()->pataBata.isCurrentDrawCall(p,id)));
     }
     boolean isCurrentAdoption(Adoption a){return a!=null&&pending==a&&port&&(phase==Phase.WALKING||phase==Phase.DRAINING);}
     /** Caller has already admitted selector8, incremented levelFrames once and run actual SpawnObjects. */
@@ -326,6 +329,7 @@ final class SonicCdAct2PastObjectPass {
             case TIME_POST->post.runPast(whole,postGlobals());
             case COLLAPSE->collapse.run(whole,new CdCollapsePlatform.DespawnGlobals(g.timeZone(),g.timeWarpDirection(),cut.cameraXWord()),new CdCollapsePlatform.Inputs(primary(),gates(),solidGlobals()));
             case PLATFORM->platform.run(whole,new CdPlatform.Globals(g.zoneAct(),cut.globals().ring().timeStopTimer(),cut.cameraXWord(),cut.cameraYWord(),g.timeZone()),new CdPlatform.Inputs(primary(),gates(),solidGlobals()));
+            case PATA_BATA->pataBata.run(whole,new CdPataBata.Globals(cut.goodFutureByte(),g.timeZone(),g.timeWarpDirection(),cut.cameraXWord()));
             case ANTON->anton.run(whole,new CdAnton.Globals(cut.goodFutureByte(),g.timeZone(),g.timeWarpDirection(),cut.cameraXWord(),solidGlobals().primaryAngle()));
             case TAM->tam.run(whole,new CdTamabboh.Globals(cut.goodFutureByte(),g.timeZone(),g.timeWarpDirection(),e.globals().debugMode(),cut.cameraXWord(),solidGlobals().primaryAngle()));
             case ANIMAL->animal.runWithReads(whole,new CdAnimal.Reads(){public int timeZone(){return reached().movement().gates().timeZone();}public int goodFuture(){requireKind(Kind.ANIMAL);return read().goodFutureByte();}
@@ -374,7 +378,7 @@ final class SonicCdAct2PastObjectPass {
         if(whole<32){if((whole==2||whole==3||whole==5)&&id==0x1C||whole==31&&id==0x19)return Kind.RESERVED;
             throw stop(Boundary.PLAYER_SLOT,whole,id);}
         return switch(id){case 0x0A->Kind.SPRING;case 0x10->Kind.RING;case 0x12->Kind.FLOAT_BLOCK;case 0x1B->Kind.BOULDER;case 0x36->Kind.WALL;case 0x26->Kind.SPIKES;case 0x33->Kind.LOG_SHADOW;case 0x19->placement.pool().state(whole).subtype()<8?Kind.MONITOR:Kind.TIME_POST;
-            case 0x20->Kind.COLLAPSE;case 0x21->Kind.PLATFORM;case 0x22->Kind.TAM;case 0x24->Kind.ANIMAL;case 0x29->Kind.SWING;case 0x2D->Kind.ROBOT;case 0x3F->Kind.ANTON;
+            case 0x20->Kind.COLLAPSE;case 0x21->Kind.PLATFORM;case 0x22->Kind.TAM;case 0x24->Kind.ANIMAL;case 0x29->Kind.SWING;case 0x2D->Kind.ROBOT;case 0x3F->Kind.ANTON;case 0x3E->Kind.PATA_BATA;
             default->throw stop(Boundary.OBJECT_KIND,whole,id);};
     }
     private void guard(){

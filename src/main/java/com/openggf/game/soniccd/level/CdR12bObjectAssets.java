@@ -12,8 +12,8 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * Detached original-USA R12B metadata for seventeen kinds: Ring, Spring, HUD, TimeIcon,
- * Monitor/TimePost, CollapsePlatform, Tamabboh, Animal, Swing, RobotGenerator, Anton, Platform, Boulder, BreakableWall, FloatBlock, Spikes, LogShadow.
+ * Detached original-USA R12B metadata for eighteen kinds: Ring, Spring, HUD, TimeIcon,
+ * Monitor/TimePost, CollapsePlatform, Tamabboh, Animal, Swing, RobotGenerator, Anton, Platform, Boulder, BreakableWall, FloatBlock, Spikes, LogShadow, PataBata.
  * N1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff: actual Act2Past includes and Init/Animate
  * operands are pinned in the companion report/tests. Authored by OpenAI Codex GPT-6.1 Sol.
  * Every byte is read from the authenticated terrain owner's retained original image.
@@ -71,7 +71,10 @@ public final class CdR12bObjectAssets {
         ANI_FLOAT_BLOCK(0xA192,30,30,"3c6451c3f6719a3765334aa1c13d2864ae4b92a523fb5a7e335c6dc362f8d6b9","3c6451c3f6719a3765334aa1c13d2864ae4b92a523fb5a7e335c6dc362f8d6b9"),
         MAP_SPR_SPIKES(0xBFA6,24,24,"db6b4414c086240e34231326d9832e5785550bdd914ef9d933cea9079bc78607","db6b4414c086240e34231326d9832e5785550bdd914ef9d933cea9079bc78607"),
         MAP_SPR_LOG_SHADOW(0x87A4,16,16,"bb3b5b1a67fd3665a520a4a6c1d7ff89212992a766df61ec42b6c41aa1d38f7b","bb3b5b1a67fd3665a520a4a6c1d7ff89212992a766df61ec42b6c41aa1d38f7b"),
-        LOG_SHADOW_BASE_TILES(0x8794,16,16,"b9a30c86ce81139722854af604422196b077c78a0e79dcac3cca3b506c06d637","b9a30c86ce81139722854af604422196b077c78a0e79dcac3cca3b506c06d637");
+        LOG_SHADOW_BASE_TILES(0x8794,16,16,"b9a30c86ce81139722854af604422196b077c78a0e79dcac3cca3b506c06d637","b9a30c86ce81139722854af604422196b077c78a0e79dcac3cca3b506c06d637"),
+        MAP_SPR_PATA_BATA_NORMAL(0xB2E4,34,34,"9165ad8d9f95bda2639172fe900f16dad44924af5f896a0223e6b9cb8bb7087b","9165ad8d9f95bda2639172fe900f16dad44924af5f896a0223e6b9cb8bb7087b"),
+        MAP_SPR_PATA_BATA_DAMAGED(0xB306,40,40,"96d4c533000d636452afa838266996b9c4853824e7b3377868f7876492858889","96d4c533000d636452afa838266996b9c4853824e7b3377868f7876492858889"),
+        ANI_PATA_BATA(0xB2D2,18,18,"a68b2c9721811294f0f2ae43e0f78acc91ed8211a5d0da2d08d2ba230b6a25f3","a68b2c9721811294f0f2ae43e0f78acc91ed8211a5d0da2d08d2ba230b6a25f3");
         private final int offset,canonicalLength,length;
         private final String canonicalSha,sha;
         View(int offset,int canonicalLength,int length,String canonicalSha,String sha) {
@@ -110,7 +113,9 @@ public final class CdR12bObjectAssets {
         BREAKABLEWALL(View.MAP_SPR_BREAKABLE_WALL,14,null,0,57,0,0,0,SourceId.ART_PLATFORM),
         FLOATBLOCK(View.MAP_SPR_FLOAT_BLOCK,6,View.ANI_FLOAT_BLOCK,3,15,0,0,0,SourceId.ART_BLOCK),
         SPIKES(View.MAP_SPR_SPIKES,1,null,0,8,0,0,0,SourceId.ART_SPIKES_V2),
-        LOGSHADOW(View.MAP_SPR_LOG_SHADOW,2,null,0,16,0,0,0,SourceId.ART_LOG_SHADOW);
+        LOGSHADOW(View.MAP_SPR_LOG_SHADOW,2,null,0,16,0,0,0,SourceId.ART_LOG_SHADOW),
+        PATABATANORMAL(View.MAP_SPR_PATA_BATA_NORMAL,3,View.ANI_PATA_BATA,2,50,0,0,0,SourceId.ART_PATA_BATA),
+        PATABATADAMAGED(View.MAP_SPR_PATA_BATA_DAMAGED,3,View.ANI_PATA_BATA,2,50,0,0,0,SourceId.ART_PATA_BATA);
         final View map,script;final int frames,scripts,bound,root,start,end;final SourceId art;
         Key(View map,int frames,View script,int scripts,int bound,int root,int start,int end,SourceId art){
             this.map=map;this.frames=frames;this.script=script;this.scripts=scripts;this.bound=bound;this.root=root;this.start=start;this.end=end;this.art=art;
@@ -173,6 +178,8 @@ public final class CdR12bObjectAssets {
     public CdObjectVisualAssets floatBlock() { return visual(Key.FLOATBLOCK); }
     public CdObjectVisualAssets spikes() { return visual(Key.SPIKES); }
     public CdObjectVisualAssets logShadow() { return visual(Key.LOGSHADOW); }
+    public CdObjectVisualAssets pataBataNormal() { return visual(Key.PATABATANORMAL); }
+    public CdObjectVisualAssets pataBataDamaged() { return visual(Key.PATABATADAMAGED); }
 
     private synchronized CdObjectVisualAssets visual(Key key){
         var cached=visuals[key.ordinal()];if(cached!=null)return cached;

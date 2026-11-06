@@ -322,6 +322,7 @@ class TestCdPastPataBata {
                 .moveByte(ANIMATION_FRAME, 0xE0));
         byte[] expected = h.state().copyBytes(); longword(expected, 8, 0x00FF8000);
         longword(expected, 12, 0x06FF1FFF); word(expected, 0x34, 0xFE00);
+        expected[0x1E] = (byte) 0xFF; // Object Animate.asm:24 SUBQ.B precedes the reached directory read.
         var failure = assertThrows(CdPataBata.UnsupportedPataBata.class, h::run);
         assertEquals(CdPataBata.UnsupportedBoundary.ANIMATE_OBJECT, failure.boundary());
         assertEquals(List.of(call(DESTROY_ON_GOOD_FUTURE)), failure.completedEffects());

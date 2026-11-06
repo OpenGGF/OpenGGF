@@ -225,7 +225,7 @@ public final class CdObjectMappings implements CdDrawMappings {
 
 
     /**
-     * Complete genuine original-USA R12B data catalogue:24 object roots plus198-frame Sonic.
+     * Complete genuine original-USA R12B data catalogue:26 object roots plus198-frame Sonic.
      * The existing stage-pair gate validates family/profile/disc lineage. These immutable
      * declarations grant no object invocation, Frame/World, art/current or pixel authority.
      * N1ecc5f3: Act 2 Past.asm includes; Object Functions.asm:327-343; native object Init roots.
@@ -267,6 +267,8 @@ public final class CdObjectMappings implements CdDrawMappings {
         addAct2PastObject(tables, objects, CdR12bObjectAssets.View.MAP_SPR_FLOAT_BLOCK, objects.floatBlock());
         addAct2PastObject(tables, objects, CdR12bObjectAssets.View.MAP_SPR_SPIKES, objects.spikes());
         addAct2PastObject(tables, objects, CdR12bObjectAssets.View.MAP_SPR_LOG_SHADOW, objects.logShadow());
+        addAct2PastObject(tables, objects, CdR12bObjectAssets.View.MAP_SPR_PATA_BATA_NORMAL, objects.pataBataNormal());
+        addAct2PastObject(tables, objects, CdR12bObjectAssets.View.MAP_SPR_PATA_BATA_DAMAGED, objects.pataBataDamaged());
         return declaredSourceViews(tables, act2PastMonitorItemStaticPieces(objects));
     }
 

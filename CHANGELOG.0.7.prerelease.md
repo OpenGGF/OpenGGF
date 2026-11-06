@@ -287,7 +287,7 @@ Unreleased. The earlier development themes remain in
   R12B physical walk now runs actual Sonic Init, reserved HUD and live dynamic
   slots through camera, CPU SAT and the ordinary tail, with full/course replay
   in the constructed exit fixture. Genuine Main/touch publication now continues
-  the fixed controller through 312 target services, with selected Sonic
+  the fixed controller through 580 target services, with selected Sonic
   provenance and rewind. The target Boulder, Breakable Wall and Floating Block
   bind their actual mappings and shared Solid publication. Wall FM and signed
   velocity publication retain native order; Floating Block threads its two or
@@ -297,7 +297,9 @@ Unreleased. The earlier development themes remain in
   output without consuming a pending scroll-initialisation dispatch. Spikes and
   Log Shadow now bind their actual B metadata and private Solid/Y/Hurt/Draw
   publication through existing owners. A fixed jump clears the earlier Platform
-  obstruction; Pata-Bata remains the next explicit body boundary. A separate
+  obstruction. Pata-Bata now reuses authenticated normal/damaged views and the
+  existing shared Math through an original Draw receipt; a second fixed input
+  segment reaches the next explicit Projector boundary with full/course replay. A separate
   real-World entry fixture retains its own visible-Sonic checks. No full-act or
   native/regional parity is claimed.
   Authenticated Act2 Spikes mapping and a named retained-source prefix factory

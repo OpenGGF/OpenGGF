@@ -56,7 +56,9 @@ class TestCdR12bObjectMappings {
             new ObjectRoot(MAP_SPR_BREAKABLE_WALL,0x20EE64,0,14,CdR12bObjectAssets::breakableWall),
             new ObjectRoot(MAP_SPR_FLOAT_BLOCK,0x20A1B0,0,6,CdR12bObjectAssets::floatBlock),
             new ObjectRoot(MAP_SPR_SPIKES,0x20BFA6,0,1,CdR12bObjectAssets::spikes),
-            new ObjectRoot(MAP_SPR_LOG_SHADOW,0x2087A4,0,2,CdR12bObjectAssets::logShadow));}
+            new ObjectRoot(MAP_SPR_LOG_SHADOW,0x2087A4,0,2,CdR12bObjectAssets::logShadow),
+            new ObjectRoot(MAP_SPR_PATA_BATA_NORMAL,0x20B2E4,0,3,CdR12bObjectAssets::pataBataNormal),
+            new ObjectRoot(MAP_SPR_PATA_BATA_DAMAGED,0x20B306,0,3,CdR12bObjectAssets::pataBataDamaged));}
 
     @BeforeAll static void originalSources()throws Exception{
         String root=System.getProperty("soniccd.media.root");assertNotNull(root);assertFalse(root.isBlank());Path cue;
@@ -68,23 +70,23 @@ class TestCdR12bObjectMappings {
         }
     }
 
-    @Test void exactTwentyFiveCountedRootsBorrowCompleteOriginalViewsAndNativeIndexedOffsets()throws Exception{
+    @Test void exactTwentySevenCountedRootsBorrowCompleteOriginalViewsAndNativeIndexedOffsets()throws Exception{
         var mapper=CdObjectMappings.fromAct2PastAssets(terrain,player);var table=tables(mapper);var expected=new HashSet<Integer>();expected.add(SONIC);
-        var o=terrain.objects();assertEquals(24,roots().size());int frames=0;
+        var o=terrain.objects();assertEquals(26,roots().size());int frames=0;
         for(var c:roots()){
             assertTrue(expected.add(c.pointer()));var actual=table.get(c.pointer());assertNotNull(actual);
             var visual=c.visual().apply(o);assertEquals(c.offset(),visual.mappingTableOffset());assertEquals(c.frames(),visual.mappingFrames().size());
             assertEquals(c.pointer()-c.offset(),actual.nativeStartBits());assertEquals(c.offset(),actual.tableOffset());assertEquals(c.frames(),actual.frameCount());
             assertSame(o.view(c.view()),actual.bytes());assertArrayEquals(visual.mappings().copy(),actual.bytes().copy());frames+=c.frames();
         }
-        assertEquals(114,frames);assertEquals(expected,table.keySet());assertEquals(25,table.size());
-        assertEquals(312,table.values().stream().mapToInt(CdObjectMappings.DeclaredTable::frameCount).sum());
+        assertEquals(120,frames);assertEquals(expected,table.keySet());assertEquals(27,table.size());
+        assertEquals(318,table.values().stream().mapToInt(CdObjectMappings.DeclaredTable::frameCount).sum());
         var sonic=table.get(SONIC);assertEquals(198,sonic.frameCount());assertEquals(0,sonic.tableOffset());
         assertArrayEquals(player.view(CdR12bPlayerAssets.Asset.MAP_SPR_SONIC).copy(),sonic.bytes().copy());
         assertEquals(8,statics(mapper).size());assertEquals(new HashSet<>(ICON_POINTERS),statics(mapper).keySet());
     }
 
-    @Test void allOneHundredFourteenObjectFrameBodiesMatchActualVisualPiecesWithEveryUnsignedFrameFence(){
+    @Test void allOneHundredTwentyObjectFrameBodiesMatchActualVisualPiecesWithEveryUnsignedFrameFence(){
         var mapper=CdObjectMappings.fromAct2PastAssets(terrain,player);var o=terrain.objects();int valid=0;
         for(var c:roots()){
             var visual=c.visual().apply(o);
@@ -98,7 +100,7 @@ class TestCdR12bObjectMappings {
             assertThrows(IllegalArgumentException.class,()->mapper.resolve(c.pointer(),false,-1));
             assertThrows(IllegalArgumentException.class,()->mapper.resolve(c.pointer(),false,256));
         }
-        assertEquals(114,valid);
+        assertEquals(120,valid);
     }
 
     @Test void all198SonicFramesMatchTheirExactCountedSourceBodiesAndDoNotWrapHighFrameBytes(){
@@ -210,7 +212,7 @@ class TestCdR12bObjectMappings {
 
     @Test void boulderRegistersTheActualR12bCountedRootAndLiteralTwoPieceBody()throws Exception{
         var objects=terrain.objects();var bytes=objects.view(MAP_SPR_BOULDER);var visual=objects.boulder();
-        assertEquals(49,CdR12bObjectAssets.View.values().length);assertEquals(39,MAP_SPR_BOULDER.ordinal());
+        assertEquals(52,CdR12bObjectAssets.View.values().length);assertEquals(39,MAP_SPR_BOULDER.ordinal());
         assertEquals(0x940A,MAP_SPR_BOULDER.range().fileOffset());assertEquals(0x20940A,MAP_SPR_BOULDER.range().nativeAddress());
         assertEquals(13,MAP_SPR_BOULDER.canonicalRange().length());assertEquals(14,bytes.length());
         assertEquals("000202f8020000ecf00f0003f400",HexFormat.of().formatHex(bytes.copy()),"Original thirteen-byte include plus real parent EVEN00");
@@ -329,6 +331,18 @@ class TestCdR12bObjectMappings {
         for(var source:List.of(new int[]{0x330,8},new int[]{0x45E,16}))for(int offset=0;offset<source[1];offset++){int pattern=source[0]+offset;var stop=assertThrows(CdR12bCameraArtResidency.OwnershipBoundary.class,()->CdR12bCameraArtResidency.readTile(unknown,pattern));assertEquals(CdR12bCameraArtResidency.Boundary.UNKNOWN_PATTERN,stop.boundary());assertEquals(pattern,stop.nativePatternId());}
         assertArrayEquals(spikesMask,unknown.region(CdR12bCameraArtResidency.Region.AT_6600).knownMask().copy());assertArrayEquals(shadowMask,unknown.region(CdR12bCameraArtResidency.Region.AT_6BC0).knownMask().copy());
         assertEquals(before.status(),placement.status());assertEquals(before.pool().slots(),placement.pool().capture().slots());assertArrayEquals(before.savedFlags().copy(),placement.capture().savedFlags().copy());assertEquals(8,statics(mapper).size());
+    }
+
+    @Test void pataBataRawPointersCompleteFramesAndCurrentArtRemainSeparate()throws Exception{
+        var mapper=CdObjectMappings.fromAct2PastAssets(terrain,player);var o=terrain.objects();
+        for(var c:List.of(new ObjectRoot(MAP_SPR_PATA_BATA_NORMAL,0x20B2E4,0,3,CdR12bObjectAssets::pataBataNormal),new ObjectRoot(MAP_SPR_PATA_BATA_DAMAGED,0x20B306,0,3,CdR12bObjectAssets::pataBataDamaged))){
+            assertSame(o.view(c.view()),tables(mapper).get(c.pointer()).bytes());for(int frame=0;frame<3;frame++){var v=c.visual().apply(o).mappingFrames().get(frame);assertEquals(new CdObjectDrawQueue.FrameMapping(v.pieces().size(),sourcePieces(v.bytes(),v.pieces().size())),mapper.resolve(c.pointer(),false,frame));}
+            for(int frame=3;frame<=255;frame++){int bad=frame;assertThrows(UnsupportedOperationException.class,()->mapper.resolve(c.pointer(),false,bad));}
+            for(int frame=0;frame<=255;frame++){int bad=frame;assertThrows(UnsupportedOperationException.class,()->mapper.resolve(c.pointer(),true,bad));}
+            for(int pointer:new int[]{c.pointer()-1,c.pointer()+1,c.pointer()+6,c.pointer()|0x01000000,c.pointer()|0xFF000000})assertThrows(UnsupportedOperationException.class,()->mapper.resolve(pointer,false,0));
+        }
+        assertEquals(50,terrain.sectionSources().source(CdR12bSectionSources.SourceId.ART_PATA_BATA).tileCount());assertEquals(8,statics(mapper).size());
+        var unknown=CdR12bCameraArtResidency.unknown();for(int i=0;i<50;i++){int tile=0x3EA+i;assertThrows(CdR12bCameraArtResidency.OwnershipBoundary.class,()->CdR12bCameraArtResidency.readTile(unknown,tile));}
     }
 
     private static List<CdObjectDrawQueue.RawPiece> sourcePieces(CdAssetBytes body,int count){

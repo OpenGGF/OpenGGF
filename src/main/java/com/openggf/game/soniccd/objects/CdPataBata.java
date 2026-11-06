@@ -12,6 +12,9 @@ import com.openggf.game.soniccd.level.CdR11bAssets;
 import com.openggf.game.soniccd.level.CdR12aObjectAssets;
 import com.openggf.game.soniccd.level.CdR12aProfile;
 import com.openggf.game.soniccd.level.CdR12aPlayerAssets;
+import com.openggf.game.soniccd.level.CdR12bObjectAssets;
+import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
+import com.openggf.game.soniccd.level.CdR12bPlayerAssets;
 import com.openggf.game.soniccd.player.CdPlayerMath;
 
 import java.util.ArrayList;
@@ -135,6 +138,30 @@ public final class CdPataBata {
                     owner.profile().range(CdR12aProfile.Asset.MAP_SPR_PATA_BATA2).nativeAddress(), new CdPlayerMath(playerAssets.player()));
         }
 
+        /** Actual original-USA R12B values. Descriptive Assets supply no body/World invocation authority. */
+        public static Assets fromAct2PastAssets(CdR12bObjectAssets owner, CdR12bPlayerAssets playerAssets) {
+            requireAct2PastPair(owner,playerAssets);
+            return bindAct2Past(owner,playerAssets,new CdPlayerMath(playerAssets.player()));
+        }
+
+        private static void requireAct2PastPair(CdR12bObjectAssets owner,CdR12bPlayerAssets playerAssets) {
+            Objects.requireNonNull(owner,"actual R12B object source");Objects.requireNonNull(playerAssets,"actual R12B player source");
+            var identity=Objects.requireNonNull(owner.identity(),"R12B identity");
+            if(identity.variant()!=CdReleaseVariant.USA||identity.file()!=CdNativeFile.R12B
+                    ||identity.domain()!=CdMmdImage.Domain.ORIGINAL_WORD_RAM||!identity.stage().equals(CdStagePayload.R12B.stage())
+                    ||!identity.equals(playerAssets.identity())||playerAssets.sonic()!=playerAssets.player().sonic())
+                throw new IllegalArgumentException("PataBata requires the same authenticated original USA R12B source pair");
+        }
+        private static Assets bindAct2Past(CdR12bObjectAssets owner,CdR12bPlayerAssets playerAssets,CdPlayerMath sharedMath) {
+            requireAct2PastPair(owner,playerAssets);Objects.requireNonNull(sharedMath,"shared actual player Math");
+            var tiles=owner.view(CdR12bObjectAssets.View.OBJECT_TILE_IDS);
+            if(tiles.length()!=72)throw new IllegalArgumentException("R12B PataBata requires the actual72-byte tile directory");
+            return new Assets(tiles,owner.pataBataNormal(),owner.pataBataDamaged(),
+                    new CdObjectAnimation.AnimationTable(owner.view(CdR12bObjectAssets.View.ANI_PATA_BATA),0,2),
+                    CdR12bObjectAssets.View.MAP_SPR_PATA_BATA_NORMAL.range().nativeAddress(),
+                    CdR12bObjectAssets.View.MAP_SPR_PATA_BATA_DAMAGED.range().nativeAddress(),sharedMath);
+        }
+
         /**
          * B binding over the authenticated original Past owner. These finite mappings share the
          * actual 18-byte animation table; 50 is the native art source's tile bound, not decoded art.
@@ -196,6 +223,18 @@ public final class CdPataBata {
     private final CdObjectPlacementRuntime runtime;
     private final Assets assets;
     private final DrawObjectCall drawObject;
+    private boolean running;
+    private transient int runningWhole=-1;
+    private transient CdObjectPool.Snapshot pendingDrawCut;
+    private transient CdObjectState.Identity pendingDrawIdentity;
+
+    /** Original synchronous producer only. World separately admits and consumes its physical call. */
+    public boolean isCurrentDrawCall(CdObjectPool pool,CdObjectState.Identity identity) {
+        return running&&pool==runtime.pool()&&identity!=null&&identity==pendingDrawIdentity
+                &&identity.wholeIndex()==runningWhole&&pendingDrawCut!=null
+                &&pool.capture().slots().equals(pendingDrawCut.slots());
+    }
+
 
     public CdPataBata(CdObjectPlacementRuntime runtime, Assets assets, DrawObjectCall drawObject) {
         this.runtime = Objects.requireNonNull(runtime, "runtime");
@@ -203,10 +242,28 @@ public final class CdPataBata {
         this.drawObject = Objects.requireNonNull(drawObject, "drawObject");
     }
 
+    /** Exact retained placement/pair, same native body and caller's shared immutable Math value.
+     * Math has no source-identity predicate: this factory cannot authenticate that helper's source.
+     * The private World supplies its sole Math derived from this actual player. No invocation authority is granted.
+     */
+    public static CdPataBata fromAct2PastAssets(CdObjectPlacementRuntime placement,CdR12bTerrainAssets owner,
+                                               CdR12bPlayerAssets playerAssets,CdPlayerMath sharedMath,DrawObjectCall drawObject) {
+        Objects.requireNonNull(placement,"actual R12B placement");Objects.requireNonNull(owner,"actual R12B terrain");
+        if(!placement.sameAct2PastSource(owner))throw new IllegalArgumentException("PataBata requires the same retained R12B placement/source");
+        return new CdPataBata(placement,Assets.bindAct2Past(owner.objects(),playerAssets,sharedMath),drawObject);
+    }
+
     public Assets assets() { return assets; }
 
     /** One body dispatch. No routine-table gate exists in the native TST/BNE entry. */
     public Result run(int wholeIndex, Globals globals) {
+        if(running)throw new IllegalStateException("PataBata cannot reenter its synchronous physical dispatch");
+        running=true;runningWhole=wholeIndex;
+        try{return runNative(wholeIndex,globals);}
+        finally{pendingDrawIdentity=null;pendingDrawCut=null;runningWhole=-1;running=false;}
+    }
+
+    private Result runNative(int wholeIndex, Globals globals) {
         Objects.requireNonNull(globals, "globals");
         var pool = runtime.pool();
         var state = pool.state(wholeIndex);
@@ -238,7 +295,9 @@ public final class CdPataBata {
         }
         effects.add(new CallReturned(NativeCall.ANIMATE_OBJECT));
         try {
-            drawObject.drawObject(pool, pool.state(wholeIndex).identity());
+            pendingDrawCut=pool.capture();pendingDrawIdentity=pool.state(wholeIndex).identity();
+            try{drawObject.drawObject(pool,pendingDrawIdentity);}
+            finally{pendingDrawIdentity=null;pendingDrawCut=null;}
         } catch (RuntimeException cause) {
             throw boundary(UnsupportedBoundary.DRAW_OBJECT, wholeIndex, effects, cause);
         }

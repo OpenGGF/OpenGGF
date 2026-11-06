@@ -2529,3 +2529,17 @@ exclude the temporary observer's native stop. Initial162 had156P/0F/6E/0S;
 five fixture errors were repaired, then all15 pass cases plus the extended route
 pass16/0F/E/S. Earlier compile failures executed no cases. No new screenshot or
 full-act/native/regional/audio/broader-smoke claim is added.
+
+
+### 6 November — R12B Pata-Bata and Projector frontier
+
+The [Act2 Past matrix](../architecture/validation/levels/scd-palmtree-panic-act2-past.md)
+now records52 views/27 counted roots/318 frames and a cached actual Pata-Bata
+binding with original Draw authority and unchanged algorithms.580 target
+ordinary services return through14515 with full/course replay; first14516 is
+Projector2E/whole32, not a completed service.162 distinct regular cases pass
+across separate runs. Initial163 had161P/2F; the legacy timer failure matches
+clean baseline and native SUBQ-before-read, so only its expected prefix changes.
+Both corrected assertions and the final route pass with zero skips. Temporary
+observers are removed exactly. The closed-Host diagnostic correction changes
+only the route fixture. No new pixels, full-act or parity claim is added.

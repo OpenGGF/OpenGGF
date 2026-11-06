@@ -296,12 +296,45 @@ The earlier natural16-cut Sonic pixel window is retained unchanged and passes
 again in initial162. No new14247 image, Wall/Pata pixels, natural Spikes contact,
 complete act, native/audio/regional or broader-smoke result follows.
 
+## Pata-Bata and the Projector frontier — 6 November
+
+Three appended views authenticate Pata-Bata normal20B2E4/read34,
+damaged20B306/read40 and shared animation20B2D2/read18. The catalogue has52
+views,26 object roots plus Sonic,318 frames and the same eight static icons.
+The source-paired factory reuses the actual placement/terrain/player and shared
+Math; Math itself exposes no independent asset identity predicate. The private
+pass supplies its actual helper. Original Draw receipts reject equal clones,
+replay and reentry; full96/source preservation and finally cleanup retain the
+unchanged native conversion, motion, single animator and Draw/reload/despawn.
+Conversion leaves ID18 at its physical slot without same-call redispatch.
+
+The first163-case selection has161P/2F/0E/0S: a missed complete-view assertion
+and an inherited malformed-animation expected timer. The latter reproduces on
+clean pre-change aa12afb11 with the identical expected0/actualFF byte. Native
+Object Animate.asm:24 decrements before the failed directory read; only the
+expected prefix changes. Both repaired cases pass2/0F/E/S, production unchanged.
+There are57 direct metadata/mapper/binding/pass cases, not the author's58;
+@TestInstance is not a test.162 distinct regular positive identities qualify
+across separate runs, not a single green fleet. Static review finds no P1/P2.
+
+A fixed Right+B8 clears the earlier Platform; Down+B16 at14408..14423 and then
+Right reaches14515. These are controller inputs, never actor/camera writes.
+The permanent route qualifies580 target services, selected Ready output and
+full/course restore-before-forward equality, including cuts surrounding both
+new input transitions and the last service. Attempt14516 reaches unowned
+Projector2E/whole32/savedDD; it closes the real Frame and is not a completed
+service. The exploratory test rethrows that failure and is removed by exact
+inverse. A Root post-failure diagnostic initially used a closed Host accessor;
+retaining its actual placement before the stop fixes only the fixture, followed
+by a fresh1/0F/E/S route run. No new screenshot, Pata pixels, complete act,
+native/audio/regional parity or broader-smoke result is claimed.
+
 ## Remaining act obligations
 
 | ID | Required next evidence | Current gap |
 | --- | --- | --- |
-| ENTRY | IPX/WARP/load dispatch, real saved pose, terrain/camera/control and post-entry player body | Actual private FULL/load/custody and saved/scroll publication qualify; natural Init/Main qualifies through14247 and sixteen earlier selected-display pixel cuts; later traversal/lifecycle remain open |
-| OBJECT | Actual stage mapping/placement/body bindings, contacts, children, despawn/re-entry | Actual-source body factories, mapping catalogue and placement qualify as components; 312 natural target walks qualify, including Platform jump/FloatBlock; Pata-Bata3E and later contacts remain open |
+| ENTRY | IPX/WARP/load dispatch, real saved pose, terrain/camera/control and post-entry player body | Actual private FULL/load/custody and saved/scroll publication qualify; natural Init/Main qualifies through14515 and sixteen earlier selected-display pixel cuts; later traversal/lifecycle remain open |
+| OBJECT | Actual stage mapping/placement/body bindings, contacts, children, despawn/re-entry | Actual-source body factories, mapping catalogue and placement qualify as components; 580 natural target walks qualify, including Platform jump/FloatBlock/Pata-Bata; Projector2E and later contacts remain open |
 | EVENT | Native stage gates, water/palette/background/terrain changes | Unimplemented target programme owners |
 | CAMERA | Correct stage scroll/parallax/culling and width-sensitive behavior | Live loading scroll/plane publication qualifies; ordinary camera/culling/width-sensitive traversal remains pending |
 | BOSS | Source inventory and route-specific applicability | Unassessed, not marked not-applicable |
@@ -309,7 +342,7 @@ complete act, native/audio/regional or broader-smoke result follows.
 | LOAD | Sparse current profile, actual section/PLC services, readiness, source replacement and next playable state | Actual source-ordered loading/PLCs/current selection qualify; first ordinary8/HUD/slow-PLC/object services qualify in the constructed fixture; route breadth remains pending |
 | REWIND | Nondefault target before/active/after mechanics and in-timeline loads with full/course replay | Target loading full/course and foreign-epoch controls qualify; ordinary mechanics/lifecycle timelines remain open |
 | PRESENT | Actual target mapping/current/plane/palette/scroll pixels and audio ownership | Actual selected terrain/Sonic framebuffer replay qualifies in the constructed entry fixture; native comparison and audio remain open |
-| ROUTE | Real target entry through mandatory mechanics/goal/results/next state | Entry/loading and first thirty-one ordinary walks qualify; complete route remains open |
+| ROUTE | Real target entry through mandatory mechanics/goal/results/next state | Entry/loading and580 ordinary walks qualify; Projector2E/goal/results/next state remain open |
 | ORACLE | Actual native timing/reference comparisons across supported configurations | Source/media/decoder facts only |
 
 All viewport presets, supported donor/main/team combinations and their entry/
