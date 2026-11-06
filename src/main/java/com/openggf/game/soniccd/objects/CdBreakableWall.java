@@ -1,5 +1,11 @@
 package com.openggf.game.soniccd.objects;
 
+import com.openggf.game.soniccd.CdNativeFile;
+import com.openggf.game.soniccd.CdReleaseVariant;
+import com.openggf.game.soniccd.CdStagePayload;
+import com.openggf.game.soniccd.media.CdMmdImage;
+import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
+import com.openggf.game.soniccd.level.CdR12bObjectAssets;
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdR12aObjectAssets;
 import com.openggf.game.soniccd.level.CdR12aProfile;
@@ -46,6 +52,21 @@ public final class CdBreakableWall {
             Objects.requireNonNull(pieceFrames); Objects.requireNonNull(pieceDeltas); Objects.requireNonNull(pieceSpeeds);
             if (pieceFrames.length() != 64 || pieceDeltas.length() != 24 || pieceSpeeds.length() != 48)
                 throw new IllegalArgumentException("Wall requires complete64/24/48-byte native tables");
+        }
+        /** Original-USA R12B complete native tables and its actual used mapping root; no art or World admission. */
+        public static Assets fromAct2PastAssets(CdR12bObjectAssets owner) {
+            Objects.requireNonNull(owner, "actual R12B object assets");var identity=Objects.requireNonNull(owner.identity(), "R12B identity");
+            if (identity.variant()!=CdReleaseVariant.USA || identity.file()!=CdNativeFile.R12B
+                    || identity.domain()!=CdMmdImage.Domain.ORIGINAL_WORD_RAM || !identity.stage().equals(CdStagePayload.R12B.stage()))
+                throw new IllegalArgumentException("Wall requires actual original USA R12B metadata");
+            var visual=owner.breakableWall();
+            if (visual.mappingFrames().size()!=14 || !visual.animations().isEmpty())
+                throw new IllegalArgumentException("Wall requires fourteen counted frames and no scripts");
+            for (var frame:visual.mappingFrames())for (var piece:frame.pieces())
+                if (piece.tileOffset()>57-piece.tileCount())throw new IllegalArgumentException("Wall mapping exceeds its57-tile Platform source");
+            return new Assets(owner.view(CdR12bObjectAssets.View.BREAKABLE_WALL_PIECE_FRAMES),
+                    owner.view(CdR12bObjectAssets.View.BREAKABLE_WALL_PIECE_DELTAS),owner.view(CdR12bObjectAssets.View.BREAKABLE_WALL_PIECE_SPEEDS),
+                    CdR12bObjectAssets.View.MAP_SPR_BREAKABLE_WALL.range().nativeAddress());
         }
         public static Assets fromObjectAssets(CdR12aObjectAssets owner) {
             Objects.requireNonNull(owner, "actual R12A object source");
@@ -229,6 +250,16 @@ public final class CdBreakableWall {
                                              DrawObject draw, PlayFm fm, DispatchObserver observer) {
         var body = fromAssets(placement, owner, solid, solidCommit, halve, draw, fm);
         body.observer = Objects.requireNonNull(observer); return body;
+    }
+    /** Same actual R12B relation with the existing completed/stopped Solid and private pending-operation protocol. */
+    public static CdBreakableWall fromAct2PastAssets(CdObjectPlacementRuntime placement, CdR12bTerrainAssets owner,
+                                                    CdSolidObject solid, SolidCommit solidCommit, HalveXVelocity halve,
+                                                    DrawObject draw, PlayFm fm, DispatchObserver observer) {
+        Objects.requireNonNull(placement, "actual R12B placement");Objects.requireNonNull(owner, "actual R12B terrain");
+        if (!placement.sameAct2PastSource(owner))
+            throw new IllegalArgumentException("Wall requires the same retained R12B placement/source");
+        var body=new CdBreakableWall(placement,Assets.fromAct2PastAssets(owner.objects()),solid,solidCommit,halve,draw,fm,true);
+        body.observer=Objects.requireNonNull(observer);return body;
     }
     private CdBreakableWall(CdObjectPlacementRuntime placement, Assets assets, CdSolidObject solid,
                             SolidCommit solidCommit, HalveXVelocity halve, DrawObject draw, PlayFm fm, boolean authenticated) {

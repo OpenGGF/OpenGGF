@@ -60,6 +60,10 @@ MAP_SPR_PLATFORM c980 132 132 a8b6e5695090a558c67e7e776db8c4b642731a7ef744560826
 PLATFORM_WIDTHS c5f8 4 4 87d0fad66b7f6fe31844c828bbfa818f478c885f0f7672d1bb38d89ed6bfb9d3 87d0fad66b7f6fe31844c828bbfa818f478c885f0f7672d1bb38d89ed6bfb9d3
 PLATFORM_RANGES c5fc 4 4 ce513997025ae549282209565f4c74aae2258cd6c391acd643d3b7f1b8071c9a ce513997025ae549282209565f4c74aae2258cd6c391acd643d3b7f1b8071c9a
 MAP_SPR_BOULDER 940a 13 14 dd926b35e5d149b9d44622d28f34dd320667e9d025bf5ae52324a95a9c32576d f1613b80dc72cd1d153d190f3a660e3990f92648d54e65c989aed93bc9189652
+MAP_SPR_BREAKABLE_WALL ee64 312 312 c561a76556cc21a46155e135205ab7c39cc8b007b9730c66e0a34a707d671226 c561a76556cc21a46155e135205ab7c39cc8b007b9730c66e0a34a707d671226
+BREAKABLE_WALL_PIECE_FRAMES ef9c 64 64 9ea247159cb7c1830c8392d11b18cd1ce1de576fa33e4451179201fbe800ac7f 9ea247159cb7c1830c8392d11b18cd1ce1de576fa33e4451179201fbe800ac7f
+BREAKABLE_WALL_PIECE_DELTAS efdc 24 24 86444e752d8300afadd9aa1b5e2fa7a3252febf156c023d05f7bcf152f706e94 86444e752d8300afadd9aa1b5e2fa7a3252febf156c023d05f7bcf152f706e94
+BREAKABLE_WALL_PIECE_SPEEDS eff4 48 48 7a1571aadadf44de0c59b260de3ec3464b1b3676a4ea2cef273b069284032b31 7a1571aadadf44de0c59b260de3ec3464b1b3676a4ea2cef273b069284032b31
             """;
     private static final String OPERANDS="""
 3838 43f900203c4a
@@ -105,6 +109,12 @@ c59c 117b105e002d
 b5a0 43fa0192
 3cb2 002093a0
 93ce 217c0020940a0004
+3d1e 0020ed0a
+ed4c 217c0020ee640004
+ed46 317c44be0002
+eda2 4bfa01f8
+edb0 49fa022a
+edb4 47fa023e
             """;
     private record VisualCase(String method,View map,View script,int frames,int scripts,int root,int maxEnd,String digest){}
     private static final List<VisualCase> VISUALS=List.of(
@@ -127,14 +137,15 @@ b5a0 43fa0192
         new VisualCase("robotGenerator", View.MAP_SPR_ROBOT_GENERATOR, View.ANI_ROBOT_GENERATOR, 8, 1, 0, 23, "3bd8efad099e8c5f657fa0bead62ab07f47730f8e68ecc06bdab5908e749f44a"),
         new VisualCase("anton", View.MAP_SPR_ANTON, View.ANI_ANTON, 4, 2, 0, 22, "223b12a951ec27c19c58f819ffb9457e08bc19ea3f199594606a721872a53b7b"),
         new VisualCase("platform", View.MAP_SPR_PLATFORM, null, 3, 0, 0, 13, "54106a5fb3fff6388d1014b1f15688ef45568d49e9d04dfdc20187277c20d367"),
-        new VisualCase("boulder", View.MAP_SPR_BOULDER, null, 1, 0, 0, 19, "dd926b35e5d149b9d44622d28f34dd320667e9d025bf5ae52324a95a9c32576d")
+        new VisualCase("boulder", View.MAP_SPR_BOULDER, null, 1, 0, 0, 19, "dd926b35e5d149b9d44622d28f34dd320667e9d025bf5ae52324a95a9c32576d"),
+        new VisualCase("breakableWall", View.MAP_SPR_BREAKABLE_WALL, null, 14, 0, 0, 57, "0e6119e55720d42fd03ab30cbc410f8ab6c6c354520eee340836c2985eeeefd9")
     );
 
-    @Test void publicSurfaceIsOnlyTwentySevenMetadataMethodsWithPrivateOwnerConstruction() throws Exception {
+    @Test void publicSurfaceIsOnlyTwentyEightMetadataMethodsWithPrivateOwnerConstruction() throws Exception {
         var type=CdR12bObjectAssets.class;assertTrue(Modifier.isFinal(type.getModifiers()));
         assertEquals(1,type.getDeclaredConstructors().length);assertTrue(Modifier.isPrivate(type.getDeclaredConstructors()[0].getModifiers()));assertEquals(1,type.getDeclaredConstructors()[0].getParameterCount());
-        assertEquals(List.of("anton","boulder","collapsePlatform1","collapsePlatform2","collapsePlatform3","collapsePlatform4","flyingAnimal","fromAssets","groundAnimal","hudAssets","hudVisuals","identity","monitorTime","placements","platform","ringDeltas","rings","robotGenerator","springDiagonal","springHorizontal","springMappings","springVertical","swing","tamabbohDamaged","tamabbohMissile","tamabbohNormal","view"),Arrays.stream(type.getDeclaredMethods()).filter(m->Modifier.isPublic(m.getModifiers())).map(java.lang.reflect.Method::getName).sorted().toList());
-        assertEquals(40,View.values().length);assertEquals(20,VISUALS.size());
+        assertEquals(List.of("anton","boulder","breakableWall","collapsePlatform1","collapsePlatform2","collapsePlatform3","collapsePlatform4","flyingAnimal","fromAssets","groundAnimal","hudAssets","hudVisuals","identity","monitorTime","placements","platform","ringDeltas","rings","robotGenerator","springDiagonal","springHorizontal","springMappings","springVertical","swing","tamabbohDamaged","tamabbohMissile","tamabbohNormal","view"),Arrays.stream(type.getDeclaredMethods()).filter(m->Modifier.isPublic(m.getModifiers())).map(java.lang.reflect.Method::getName).sorted().toList());
+        assertEquals(44,View.values().length);assertEquals(21,VISUALS.size());
         var getter=CdR12bTerrainAssets.class.getMethod("objects");assertEquals(type,getter.getReturnType());assertTrue(Modifier.isSynchronized(getter.getModifiers()));
         var seam=CdR12bTerrainAssets.class.getDeclaredMethod("objectView",View.class);assertFalse(Modifier.isPublic(seam.getModifiers()));
         assertTrue(Arrays.stream(type.getDeclaredConstructors()).noneMatch(c->Arrays.asList(c.getParameterTypes()).contains(CdMmdImage.class)));
@@ -152,7 +163,7 @@ b5a0 43fa0192
     }
 
     @Test void everyOrderedFiniteViewPinsItsFullOriginalRangeCanonicalExtentHashAndImmutableCache() throws Exception {
-        var o=fromAssets(retail().assets());var lines=MANIFEST.lines().filter(s->!s.isBlank()).toList();assertEquals(40,lines.size());
+        var o=fromAssets(retail().assets());var lines=MANIFEST.lines().filter(s->!s.isBlank()).toList();assertEquals(44,lines.size());
         for(int i=0;i<lines.size();i++){var c=lines.get(i).split(" ");var v=View.values()[i];assertEquals(c[0],v.name());var r=v.range();var canonical=v.canonicalRange();
             assertEquals(Integer.parseInt(c[1],16),r.fileOffset());assertEquals(Integer.parseInt(c[2]),canonical.length());assertEquals(Integer.parseInt(c[3]),r.length());
             assertEquals(r.fileOffset(),canonical.fileOffset());assertEquals(CdNativeFile.R12B,r.file());assertEquals(CdMmdImage.Domain.ORIGINAL_WORD_RAM,r.domain());assertEquals(0x200000+r.fileOffset(),r.nativeAddress());
@@ -171,7 +182,7 @@ b5a0 43fa0192
         assertEquals(0x002E,fromAssets(retail().assets()).view(View.DIAGONAL_SPRING_HEADER).unsignedWord(0));
     }
 
-    @Test void allTwentyVisualsDecodeCompleteSourceRootsScriptsFlipsAndCountedBodiesWithLiteralDigests() throws Exception {
+    @Test void allTwentyOneVisualsDecodeCompleteSourceRootsScriptsFlipsAndCountedBodiesWithLiteralDigests() throws Exception {
         var o=fromAssets(retail().assets());for(var c:VISUALS){var method=CdR12bObjectAssets.class.getMethod(c.method());var v=(CdObjectVisualAssets)method.invoke(o);assertSame(v,method.invoke(o));
             assertEquals(c.frames(),v.mappingFrames().size(),c.method());assertEquals(c.scripts(),v.animations().size(),c.method());assertEquals(c.root(),v.mappingTableOffset());
             assertArrayEquals(o.view(c.map()).copy(),v.mappings().copy());assertArrayEquals(c.script()==null?new byte[0]:o.view(c.script()).copy(),v.animationTable().copy());
@@ -216,7 +227,7 @@ b5a0 43fa0192
         assertSame(a.directArtSources().hudAssets(),o.hudAssets());assertSame(o.hudAssets(),o.hudAssets());
         assertEquals(14,registry.source(CdR12bSectionSources.SourceId.ART_RINGS).tileCount());assertEquals(36,registry.source(CdR12bSectionSources.SourceId.ART_SPRINGS).tileCount());
         assertEquals(57,registry.source(CdR12bSectionSources.SourceId.ART_PLATFORM).tileCount());assertEquals(23,registry.source(CdR12bSectionSources.SourceId.ART_ROBOT_TRANSPORT_B).tileCount());
-        assertEquals(40,View.values().length);assertEquals(37,registry.sources().size());assertSame(pointers,a.loadPlan().sourcePointers());assertEquals(25,CdR12bProfile.Asset.values().length);
+        assertEquals(44,View.values().length);assertEquals(37,registry.sources().size());assertSame(pointers,a.loadPlan().sourcePointers());assertEquals(25,CdR12bProfile.Asset.values().length);
         assertEquals(63,o.hudVisuals().mappingFrames().stream().flatMap(f->f.pieces().stream()).mapToInt(p->p.tileOffset()+p.tileCount()).max().orElse(0));
     }
 
@@ -292,6 +303,59 @@ b5a0 43fa0192
         for(int i=0;i<39;i++)assertSame(oldViews.get(i),o.view(View.values()[i]));
         for(int i=0;i<19;i++)assertSame(oldVisuals.get(i),CdR12bObjectAssets.class.getMethod(VISUALS.get(i).method()).invoke(o));
         assertEquals(37,real.sectionSources().sources().size());assertEquals(72,o.view(View.OBJECT_TILE_IDS).length());
+    }
+
+
+    @Test void breakableWallIndexInitAndAllThreeReachedRawTablesUseTheActualSelectedR12bRoot() throws Exception {
+        var f=retail();var o=fromAssets(f.assets());var map=View.MAP_SPR_BREAKABLE_WALL;
+        assertEquals(40,map.ordinal());assertEquals(41,View.BREAKABLE_WALL_PIECE_FRAMES.ordinal());assertEquals(42,View.BREAKABLE_WALL_PIECE_DELTAS.ordinal());assertEquals(43,View.BREAKABLE_WALL_PIECE_SPEEDS.ordinal());
+        assertEquals(0x20ED0AL,o.view(View.OBJECT_INDEX).unsignedLong((0x36-1)*4));assertEquals("217c0020ee640004",HexFormat.of().formatHex(f.original().readFile(0xED4C,8)));
+        assertEquals("317c44be0002",HexFormat.of().formatHex(f.original().readFile(0xED46,6)));
+        assertEquals("4bfa01f8",HexFormat.of().formatHex(f.original().readFile(0xEDA2,4)));assertEquals("49fa022a",HexFormat.of().formatHex(f.original().readFile(0xEDB0,4)));assertEquals("47fa023e",HexFormat.of().formatHex(f.original().readFile(0xEDB4,4)));
+        assertEquals(0x20EE64,map.range().nativeAddress());assertEquals(0xEE64,map.range().fileOffset());assertEquals(312,map.canonicalRange().length());assertEquals(312,map.range().length());
+        assertArrayEquals(f.original().readFile(0xF9F0,312),o.view(map).copy(),"Identical unused native copy is not the Init operand or a new admission");
+        assertEquals(0x20EF9C,View.BREAKABLE_WALL_PIECE_FRAMES.range().nativeAddress());assertEquals(0x20EFDC,View.BREAKABLE_WALL_PIECE_DELTAS.range().nativeAddress());assertEquals(0x20EFF4,View.BREAKABLE_WALL_PIECE_SPEEDS.range().nativeAddress());
+        var values=new CdBreakableWall.Assets(o.view(View.BREAKABLE_WALL_PIECE_FRAMES),o.view(View.BREAKABLE_WALL_PIECE_DELTAS),o.view(View.BREAKABLE_WALL_PIECE_SPEEDS),map.range().nativeAddress());
+        assertEquals(64,values.pieceFrames().length());assertEquals(24,values.pieceDeltas().length());assertEquals(48,values.pieceSpeeds().length());assertEquals(0x20EE64,values.mappingsAddress());
+        assertEquals(8,o.view(View.BREAKABLE_WALL_PIECE_FRAMES).unsignedByte(0),"No invented EVEN byte between even312 map and native piece-frame table");
+        assertEquals(57,f.assets().sectionSources().source(CdR12bSectionSources.SourceId.ART_PLATFORM).tileCount());
+    }
+
+    @Test void breakableWallAllFourteenLiteralFramesRetainCompleteEvenSourceWithoutScriptsOrArtHydration() throws Exception {
+        var o=fromAssets(retail().assets());var wall=o.breakableWall();assertSame(wall,o.breakableWall());assertEquals(312,wall.mappings().length());assertEquals(0,wall.mappingTableOffset());assertTrue(wall.animations().isEmpty());assertEquals(0,wall.animationTable().length());
+        int[] offsets={28,59,90,121,152,183,214,245,276,282,288,294,300,306};
+        List<List<CdObjectVisualAssets.Piece>> expected=List.of(
+                List.of(new CdObjectVisualAssets.Piece(-24,5,41,-16),new CdObjectVisualAssets.Piece(-8,5,49,-16),new CdObjectVisualAssets.Piece(8,5,41,-16),new CdObjectVisualAssets.Piece(-24,5,45,0),new CdObjectVisualAssets.Piece(-8,5,53,0),new CdObjectVisualAssets.Piece(8,5,45,0)),
+                List.of(new CdObjectVisualAssets.Piece(-24,5,41,-16),new CdObjectVisualAssets.Piece(-8,5,49,-16),new CdObjectVisualAssets.Piece(8,5,41,-16),new CdObjectVisualAssets.Piece(-24,5,51,0),new CdObjectVisualAssets.Piece(-8,5,43,0),new CdObjectVisualAssets.Piece(8,5,51,0)),
+                List.of(new CdObjectVisualAssets.Piece(-24,5,51,-16),new CdObjectVisualAssets.Piece(-8,5,43,-16),new CdObjectVisualAssets.Piece(8,5,51,-16),new CdObjectVisualAssets.Piece(-24,5,51,0),new CdObjectVisualAssets.Piece(-8,5,43,0),new CdObjectVisualAssets.Piece(8,5,51,0)),
+                List.of(new CdObjectVisualAssets.Piece(-24,5,51,-16),new CdObjectVisualAssets.Piece(-8,5,43,-16),new CdObjectVisualAssets.Piece(8,5,51,-16),new CdObjectVisualAssets.Piece(-24,5,45,0),new CdObjectVisualAssets.Piece(-8,5,53,0),new CdObjectVisualAssets.Piece(8,5,45,0)),
+                List.of(new CdObjectVisualAssets.Piece(-24,5,49,-16),new CdObjectVisualAssets.Piece(-8,5,41,-16),new CdObjectVisualAssets.Piece(8,5,49,-16),new CdObjectVisualAssets.Piece(-24,5,53,0),new CdObjectVisualAssets.Piece(-8,5,45,0),new CdObjectVisualAssets.Piece(8,5,53,0)),
+                List.of(new CdObjectVisualAssets.Piece(-24,5,49,-16),new CdObjectVisualAssets.Piece(-8,5,41,-16),new CdObjectVisualAssets.Piece(8,5,49,-16),new CdObjectVisualAssets.Piece(-24,5,43,0),new CdObjectVisualAssets.Piece(-8,5,51,0),new CdObjectVisualAssets.Piece(8,5,43,0)),
+                List.of(new CdObjectVisualAssets.Piece(-24,5,43,-16),new CdObjectVisualAssets.Piece(-8,5,51,-16),new CdObjectVisualAssets.Piece(8,5,43,-16),new CdObjectVisualAssets.Piece(-24,5,43,0),new CdObjectVisualAssets.Piece(-8,5,51,0),new CdObjectVisualAssets.Piece(8,5,43,0)),
+                List.of(new CdObjectVisualAssets.Piece(-24,5,43,-16),new CdObjectVisualAssets.Piece(-8,5,51,-16),new CdObjectVisualAssets.Piece(8,5,43,-16),new CdObjectVisualAssets.Piece(-24,5,53,0),new CdObjectVisualAssets.Piece(-8,5,45,0),new CdObjectVisualAssets.Piece(8,5,53,0)),
+                List.of(new CdObjectVisualAssets.Piece(-8,5,41,-8)),
+                List.of(new CdObjectVisualAssets.Piece(-8,5,49,-8)),
+                List.of(new CdObjectVisualAssets.Piece(-8,5,51,-8)),
+                List.of(new CdObjectVisualAssets.Piece(-8,5,43,-8)),
+                List.of(new CdObjectVisualAssets.Piece(-8,5,45,-8)),
+                List.of(new CdObjectVisualAssets.Piece(-8,5,53,-8)));
+        String[] hashes={"2c72d69ee4a5e78f5a101599d70e3aa48531db613393b7903a71a6cf293016c5","618545c0f7c8c66838f9617962a8ac057c817a3fa769add9575e35532cbcfc58","e563a8bf2e6c1586adb8e248cede34abc7effd76b6efa5d0c892e152d5be6a7e","74a75f5666dedf35aeb072774c5d2412a01e930ae595833bd9d5ef259ce3a7df","98302d0184179a35c3f58901f0a64f1beaf9c30643b67b13bb7786eda4f17f49","7772bbd7db35b149ca2cdf9b1de0ce975bb2c532726cbb8da259aabbf5201ded","1fcb8f0088eabdb3449aa0b458f14a3c557025df1f224255511e348781428654","ee9e75cd74ce9dc58acf122a0b2f941a3509aeda9a5d301ac1b107ac97b8a08d","52bb2505235d09159148a13d0c829e58c9caee8ec418632994b732783fcac8ba","98e56cebda01d6843b311cb7c4729d10da5b8ee167bf18e89d152cb24b98e2a2","18947d654324ed798a2bd7b5c3391db9ffb8f478cf3f310424bf9c2e5e07e67f","88c2f3b66d9d342c67e3942073eaf3a9c4e4bc8f67aabf8ca4312c5c856a9133","6a5899374c07cc07c79d0c613809a3e93f458bf6924a038c6e3ec06bc293c67e","592b6658f4db05dbce0675323084491ce6498c0b4a0891a36764ad5a759e5660"};
+        for(int i=0;i<14;i++){var frame=wall.mappingFrames().get(i);assertEquals(offsets[i],frame.relativeOffset());assertEquals(i<8?6:1,frame.pieces().size());assertEquals(expected.get(i),frame.pieces());assertEquals(hashes[i],sha(frame.bytes().copy()));}
+        assertEquals("0e6119e55720d42fd03ab30cbc410f8ab6c6c354520eee340836c2985eeeefd9",semanticDigest(wall));
+        assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decodeStatic(Arrays.copyOf(wall.mappings().copy(),311),14,57));
+        assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decodeStatic(wall.mappings().copy(),14,56));
+        byte[] hull=new byte[376];System.arraycopy(wall.mappings().copy(),0,hull,0,312);System.arraycopy(o.view(View.BREAKABLE_WALL_PIECE_FRAMES).copy(),0,hull,312,64);
+        assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decodeStatic(hull,14,57),"Piece tables cannot become an arbitrary mapping-source hull");
+    }
+
+    @Test void breakableWallBadViewCannotCacheOrAlterAnyOfThePreviousFortyViewsAndTwentyVisuals() throws Exception {
+        var real=retail().assets();var mock=mock(CdR12bTerrainAssets.class);when(mock.identity()).thenReturn(real.identity());when(mock.profile()).thenReturn(real.profile());when(mock.sectionSources()).thenReturn(real.sectionSources());
+        when(mock.objectView(any(View.class))).thenAnswer(c->real.objectView(c.getArgument(0,View.class)));
+        var actual=real.objectView(View.MAP_SPR_BREAKABLE_WALL);var bad=actual.copy();bad[0]^=1;when(mock.objectView(View.MAP_SPR_BREAKABLE_WALL)).thenReturn(CdAssetBytes.copyOf(bad),actual);
+        var o=CdR12bObjectAssets.bind(mock);var views=new ArrayList<CdAssetBytes>();for(int i=0;i<40;i++)views.add(o.view(View.values()[i]));
+        var visuals=new ArrayList<CdObjectVisualAssets>();for(int i=0;i<20;i++)visuals.add((CdObjectVisualAssets)CdR12bObjectAssets.class.getMethod(VISUALS.get(i).method()).invoke(o));
+        assertThrows(IllegalArgumentException.class,o::breakableWall);assertSame(actual,o.view(View.MAP_SPR_BREAKABLE_WALL));var wall=o.breakableWall();assertSame(wall,o.breakableWall());verify(mock,times(2)).objectView(View.MAP_SPR_BREAKABLE_WALL);
+        for(int i=0;i<40;i++)assertSame(views.get(i),o.view(View.values()[i]));for(int i=0;i<20;i++)assertSame(visuals.get(i),CdR12bObjectAssets.class.getMethod(VISUALS.get(i).method()).invoke(o));
     }
 
     private static String sha(byte[] bytes)throws Exception{return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));}

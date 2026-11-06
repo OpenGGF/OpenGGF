@@ -72,7 +72,7 @@ final class SonicCdAct2PastObjectPass {
         }
     }
     private enum Phase { READY,WALKING,WALKED,DRAINING,DONE,FAILED,DISCARDED }
-    private enum Kind { PRIMARY,RESERVED,RING,SPRING,MONITOR,TIME_POST,COLLAPSE,PLATFORM,TAM,ANIMAL,SWING,ROBOT,ANTON,BOULDER,NULL }
+    private enum Kind { PRIMARY,RESERVED,RING,SPRING,MONITOR,TIME_POST,COLLAPSE,PLATFORM,TAM,ANIMAL,SWING,ROBOT,ANTON,BOULDER,WALL,NULL }
     private final Ports ports;private final CdR12bTerrainAssets terrain;private final CdR12bPlayerAssets player;
     private final CdPlayerFrameRuntime frame;private final CdObjectPlacementRuntime placement;
     private final CdAssetBytes objectIndex;private final CdObjectMappings mappings;
@@ -82,6 +82,7 @@ final class SonicCdAct2PastObjectPass {
     private CdMonitor monitor;private CdTimePost post;private CdCollapsePlatform collapse;
     private CdPlatform platform;private CdTamabboh tam;private CdAnimal animal;private CdBoulder boulder;
     private CdSwing swing;private CdRobotGenerator robot;private CdAnton anton;
+    private CdBreakableWall wall;
     private Phase phase=Phase.READY;private CdObjectDrawQueue queue;private Dispatch dispatch;
     private boolean port,queuePort;private Adoption pending;
     private static final class Dispatch {
@@ -91,6 +92,7 @@ final class SonicCdAct2PastObjectPass {
         CdPlayerFrameRuntime.ActorState ownerActor;CdPlayerFrameRuntime.SharedState ownerShared;Cut ownerCut;
         CdPlayerFrameRuntime.ActorState actor;CdPlayerFrameRuntime.SharedState shared;
         List<byte[]> expectedImages;byte[] expectedSaved;CdSwing.PlayerCut playerCut;
+        int wallBranch,wallSolids,wallFms,wallHalves,wallDraws;
         Dispatch(Kind kind,int whole){this.kind=kind;this.whole=whole;}
     }
     SonicCdAct2PastObjectPass(Ports ports,CdR12bTerrainAssets terrain,CdR12bPlayerAssets player,
@@ -121,6 +123,36 @@ final class SonicCdAct2PastObjectPass {
             claim(c,()->boulder.isCurrentPrefixSolidCall(c));poolCut(c.callCut());
             commitSolid(c.callCut(),c.expectedPlayer(),c.expectedGlobals(),c.outcome());},
                 (p,id)->drawDynamic(Kind.BOULDER,p,id,()->true));
+        wall=CdBreakableWall.fromAct2PastAssets(placement,terrain,solid,c->{
+            wallCall(c,c.cut());var d=dispatch;if(d.wallBranch!=2||d.wallSolids!=0||d.wallDraws!=0)throw new IllegalStateException("Wall Solid order");
+            commitSolid(c.cut().placement().pool(),c.expectedPlayer(),c.expectedGlobals(),c.outcome());d.wallSolids=1;wallAck(c);
+        },c->{
+            wallCall(c,c.cut());var d=dispatch;if(d.wallBranch!=3||d.wallFms!=1||d.wallHalves!=0||d.wallDraws!=0)throw new IllegalStateException("Wall ASR order");
+            if(!c.expectedPlayer().equals(primary()))throw new IllegalArgumentException("Stale complete Wall player");
+            var prepared=frame.prepareObjectBreakableWallXVelocity(frame.state(),frame.environment());
+            if(prepared.finalState().motion().xVelocity()!=c.finalXVelocity())throw new IllegalArgumentException("Not actual Wall ASR value");
+            var cut=read();publish(cut,cut,null,()->frame.validatePreparedObjectSolidPublication(prepared),()->frame.applyPreparedObjectSolidPublication(prepared));
+            d.wallHalves=1;wallAck(c);
+        },(p,id)->{
+            requireKind(Kind.WALL);wall.validateCurrentDraw(p,id);claim(id,()->wall.matchesPendingOperation(id));var d=dispatch;
+            if(d.wallDraws!=0||d.wallBranch==2&&d.wallSolids!=1||d.wallBranch==3&&(d.wallFms!=1||d.wallHalves!=1))throw new IllegalStateException("Wall Draw order");
+            drawDynamic(Kind.WALL,p,id,()->wall.matchesPendingOperation(id));d.wallDraws=1;wallAck(id);
+        },c->{
+            wallCall(c,c.cut());var d=dispatch;if(d.wallBranch!=3||d.wallFms!=0||d.wallHalves!=0||d.wallDraws!=0)throw new IllegalStateException("Wall FM order");
+            sound(new SonicCdGameModule.PastWallFm(c.nativeId()));d.wallFms=1;wallAck(c);
+        },new CdBreakableWall.DispatchObserver(){
+            public void published(Object call){requireKind(Kind.WALL);
+                if(!wall.matchesPendingOperation(call)||dispatch.operation!=call||!dispatch.consumed.contains(call))throw new IllegalStateException("Wall omitted original publication receipt");
+                dispatch.operation=null;
+            }
+            public void completed(CdBreakableWall.Result result){requireKind(Kind.WALL);wall.validateCurrentCall(result);var d=dispatch;
+                if(d.completed||d.operation!=null||d.wallBranch==2&&(d.wallSolids!=1||d.wallDraws!=1)
+                        ||d.wallBranch==3&&(d.wallFms!=1||d.wallHalves!=1)||!result.state().equals(placement.pool().state(d.whole)))
+                    throw new IllegalStateException("Wall omitted actual completed source/operations");
+                d.completed=true;d.operation=result;
+            }
+            public void failed(Throwable original){requireKind(Kind.WALL);wall.validateCurrentCall(original);}
+        });
         monitor=CdMonitor.fromAct2PastAssets(placement,terrain,solid,probes,new CdMonitor.PrefixSolidOwner(){
             public CdMonitor.LiveSolid preflight(CdMonitor.PrefixSolidCut c){requireKind(Kind.MONITOR);requireIdentity(c.objectIdentity());poolCut(c.callCut());
                 if(!c.expectedPlayer().equals(primary())||!c.expectedGates().equals(gates())||!c.expectedGlobals().equals(solidGlobals()))throw new IllegalArgumentException("Stale Monitor readback");
@@ -237,6 +269,9 @@ final class SonicCdAct2PastObjectPass {
             case SPRING->spring.run(whole,new CdSpring.Globals(cut.cameraXWord()),new CdSpring.SolidInputs(primary(),gates(),solidGlobals()));
             case BOULDER->boulder.run(whole,new CdBoulder.Globals(g.timeZone(),g.timeWarpDirection(),cut.cameraXWord()),
                     new CdBoulder.SolidInputs(primary(),gates(),solidGlobals()));
+            case WALL->{var entry=placement.pool().state(whole);dispatch.wallBranch=entry.routine()==4?4:entry.unsignedByte(COLLISION_STATUS)==0?2:3;
+                var result=wall.run(whole,new CdBreakableWall.Globals(g.timeZone(),g.timeWarpDirection(),cut.cameraXWord()),new CdBreakableWall.Inputs(primary(),gates(),solidGlobals()));
+                requireKind(Kind.WALL);if(!dispatch.completed||dispatch.operation!=result)throw new IllegalStateException("Not actual completed Wall dispatch");}
             case MONITOR->monitor.runPast(whole,monitorGlobals(),new CdMonitor.SolidInputs(primary(),gates(),solidGlobals()));
             case TIME_POST->post.runPast(whole,postGlobals());
             case COLLAPSE->collapse.run(whole,new CdCollapsePlatform.DespawnGlobals(g.timeZone(),g.timeWarpDirection(),cut.cameraXWord()),new CdCollapsePlatform.Inputs(primary(),gates(),solidGlobals()));
@@ -288,7 +323,7 @@ final class SonicCdAct2PastObjectPass {
         if(whole==0){if(id==1||id==2)return Kind.PRIMARY;throw stop(Boundary.PLAYER_SLOT,whole,id);}
         if(whole<32){if((whole==2||whole==3||whole==5)&&id==0x1C||whole==31&&id==0x19)return Kind.RESERVED;
             throw stop(Boundary.PLAYER_SLOT,whole,id);}
-        return switch(id){case 0x0A->Kind.SPRING;case 0x10->Kind.RING;case 0x1B->Kind.BOULDER;case 0x19->placement.pool().state(whole).subtype()<8?Kind.MONITOR:Kind.TIME_POST;
+        return switch(id){case 0x0A->Kind.SPRING;case 0x10->Kind.RING;case 0x1B->Kind.BOULDER;case 0x36->Kind.WALL;case 0x19->placement.pool().state(whole).subtype()<8?Kind.MONITOR:Kind.TIME_POST;
             case 0x20->Kind.COLLAPSE;case 0x21->Kind.PLATFORM;case 0x22->Kind.TAM;case 0x24->Kind.ANIMAL;case 0x29->Kind.SWING;case 0x2D->Kind.ROBOT;case 0x3F->Kind.ANTON;
             default->throw stop(Boundary.OBJECT_KIND,whole,id);};
     }
@@ -316,6 +351,9 @@ final class SonicCdAct2PastObjectPass {
     private void requireWhole(Kind kind,int whole){requireKind(kind);if(dispatch.whole!=whole)throw new IllegalStateException("Wrong callback whole index");}
     private void claim(Object call,BooleanSupplier actual){if(dispatch==null||call==null||!actual.getAsBoolean()||!dispatch.consumed.add(call))throw new IllegalStateException("Cloned/repeated/foreign native callback");
         if(dispatch.kind==Kind.SWING||dispatch.kind==Kind.ROBOT){if(dispatch.operation!=call||!dispatch.prepared||dispatch.used)throw new IllegalStateException("Missing original prepared receipt");dispatch.used=true;}}
+    private void wallCall(Object call,CdBreakableWall.SourceCut cut){requireKind(Kind.WALL);wall.validateCurrentCall(call);
+        claim(call,()->wall.matchesPendingOperation(call));placementCut(cut.placement());source(cut.source());}
+    private void wallAck(Object call){dispatch.operation=call;wall.acknowledgeCurrentCall(call);}
     private void publish(Cut expected,Cut next,CdObjectPool.Snapshot pool,Runnable preflight,Runnable write){
         if(port||pending!=null)throw new IllegalStateException("Recursive R12B adoption");var a=new Adoption(expected,next,pool,preflight,write);pending=a;port=true;
         try{requireCut(expected);ports.adopt(a);if(!a.applied)throw new IllegalStateException("Root omitted actual adoption receipt");requireCut(next);requireFrame(a.afterActor,a.afterShared);requirePlacement(a.afterPlacement);if(dispatch!=null)checkpoint();}

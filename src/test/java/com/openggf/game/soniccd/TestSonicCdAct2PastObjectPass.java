@@ -159,6 +159,79 @@ class TestSonicCdAct2PastObjectPass {
         var cpu=pass.finishDraw(cameras());assertEquals(2,cpu.provenance().stream().filter(piece->piece.slotRef().wholeIndex()==65).count());
         assertFalse(f.frame.closed());
     }
+    @Test void actualWallInitSelectsTheReachedBRootAndPublishesRealSolidBeforeItsDeferredDraw(){
+        actual();var f=fixture(false);var pool=f.placement.pool();
+        pool.write(pool.state(69).moveByte(ID,0x36).moveWord(X,0x740).moveWord(Y,0x420));
+        var pass=f.pass();pass.runWalk(1);var wall=pool.state(69);
+        assertEquals(2,wall.routine());assertEquals(0x20EE64,wall.longBits(CdObjectState.LongField.MAPPINGS));
+        assertEquals(0x44BE,wall.word(TILE));assertEquals(0xEF,wall.unsignedByte(COLLISION_TYPE));
+        assertEquals(-0x123,f.frame.state().motion().xVelocity());assertEquals(0x234,f.frame.state().motion().yVelocity());
+        assertTrue(f.ports.cut.sounds().isEmpty());assertFalse(f.ports.receipts.isEmpty());
+        var cpu=pass.finishDraw(cameras());assertTrue(cpu.provenance().stream().anyMatch(p->p.slotRef().wholeIndex()==69));
+        assertFalse(f.frame.closed());
+    }
+    @Test void actualWallBreakPublishesFmThenSignedHalfVelocityAndEarlierChildrenWaitForNextPass(){
+        actual();var f=fixture(false);var pool=f.placement.pool();
+        pool.write(pool.state(69).moveByte(ID,0x36).moveByte(COLLISION_STATUS,1).moveWord(X,0x740).moveWord(Y,0x420));
+        var pass=f.pass();pass.runWalk(1);
+        assertEquals(-146,f.frame.state().motion().xVelocity());assertEquals(0x234,f.frame.state().motion().yVelocity());
+        assertEquals(0x07001234,f.frame.state().motion().centreX16_16());assertEquals(0x04205678,f.frame.state().motion().centreY16_16());
+        assertEquals(List.of(new SonicCdGameModule.PastWallFm(0xB0)),f.ports.cut.sounds());
+        assertEquals(4,pool.state(69).routine());
+        // PieceSpeeds row0 replaces the earlier saved XV word at the same2A storage.
+        assertEquals(0x0002F684,pool.state(69).longBits(CdObjectState.LongField.TAMABBOH_MISSILE_X_DELTA));
+        for(int whole=32;whole<=36;whole++){assertEquals(0x36,pool.state(whole).id());assertEquals(4,pool.state(whole).routine());}
+        assertEquals(6,pool.capture().slots().stream().filter(s->s.id()==0x36).count());
+        var cpu=pass.finishDraw(cameras());assertTrue(cpu.provenance().stream().anyMatch(p->p.slotRef().wholeIndex()==69));
+        assertTrue(cpu.provenance().stream().noneMatch(p->p.slotRef().wholeIndex()>=32&&p.slotRef().wholeIndex()<=36));
+        assertEquals(0,f.frame.state().history().index());assertFalse(f.frame.closed());
+    }
+    @Test void wallFragmentsAllocatedAfterAnEarlyParentRunTheirOwnFallInTheSamePhysicalPass(){
+        actual();var f=fixture(false);var pool=f.placement.pool();
+        pool.write(pool.state(32).moveByte(ID,0x36).moveByte(COLLISION_STATUS,1).moveWord(X,0x740).moveWord(Y,0x420));
+        var pass=f.pass();pass.runWalk(1);
+        // Main.asm PieceSpeeds row1 has Y delta0; its later physical Fall adds4000 before integration.
+        assertEquals(0x4000,pool.state(33).longBits(CdObjectState.LongField.TAMABBOH_MISSILE_Y_DELTA));
+        assertEquals(0x04204000,pool.state(33).longBits(CdObjectState.LongField.Y_POSITION));
+        assertEquals(0x73B,pool.state(33).centreX());assertEquals(9,pool.state(33).unsignedByte(MAP_FRAME));
+        var cpu=pass.finishDraw(cameras());
+        for(int whole=32;whole<=37;whole++){int selected=whole;assertEquals(4,pool.state(whole).routine());assertTrue(cpu.provenance().stream().anyMatch(p->p.slotRef().wholeIndex()==selected));}
+        assertEquals(List.of(new SonicCdGameModule.PastWallFm(0xB0)),f.ports.cut.sounds());assertFalse(f.frame.closed());
+    }
+    @Test void wallFmPublicationFaultRetainsOnlyItsNativeInitAndSavedVelocityPrefix(){
+        actual();var f=fixture(false);var pool=f.placement.pool();
+        pool.write(pool.state(69).moveByte(ID,0x36).moveByte(COLLISION_STATUS,1).moveWord(X,0x740).moveWord(Y,0x420));
+        var original=new IllegalStateException("constructed Wall FM owner fault");f.ports.beforeApply=()->{throw original;};
+        var pass=f.pass();assertSame(original,assertThrows(IllegalStateException.class,()->pass.runWalk(1)));
+        assertEquals(4,pool.state(69).routine());assertEquals(-0x123,(short)pool.state(69).word(TITLE_CARD_DEST_X));
+        assertEquals(-0x123,f.frame.state().motion().xVelocity());assertTrue(f.ports.cut.sounds().isEmpty());
+        assertEquals(1,pool.capture().slots().stream().filter(s->s.id()!=0).count());assertFalse(f.frame.closed());
+    }
+    @Test void wallHalfPublicationFaultPreservesTheEarlierFmAndNeverAllocatesFragments(){
+        actual();var f=fixture(false);var pool=f.placement.pool();
+        pool.write(pool.state(69).moveByte(ID,0x36).moveByte(COLLISION_STATUS,1).moveWord(X,0x740).moveWord(Y,0x420));
+        var original=new IllegalStateException("constructed Wall half owner fault");
+        f.ports.beforeApply=()->f.ports.beforeApply=()->{throw original;};
+        var pass=f.pass();assertSame(original,assertThrows(IllegalStateException.class,()->pass.runWalk(1)));
+        assertEquals(-0x123,f.frame.state().motion().xVelocity());assertEquals(List.of(new SonicCdGameModule.PastWallFm(0xB0)),f.ports.cut.sounds());
+        assertEquals(4,pool.state(69).routine());assertEquals(1,pool.capture().slots().stream().filter(s->s.id()!=0).count());
+        assertFalse(f.frame.closed());
+    }
+    @Test void wallFallDeletionCompletesWithTheActualClearedSourceAndNoDrawReceipt(){
+        actual();var f=fixture(false);var pool=f.placement.pool();
+        pool.write(pool.state(69).moveByte(ID,0x36).moveByte(ROUTINE,4).moveWord(X,0x740).moveWord(Y,0x600));
+        var pass=f.pass();pass.runWalk(1);assertArrayEquals(new byte[64],pool.state(69).copyBytes());
+        assertTrue(pass.finishDraw(cameras()).provenance().stream().noneMatch(p->p.slotRef().wholeIndex()==69));
+        assertTrue(f.ports.cut.sounds().isEmpty());assertEquals(-0x123,f.frame.state().motion().xVelocity());assertFalse(f.frame.closed());
+    }
+    @Test void equalWallSolidRecordCannotBorrowTheActualProducerPublication() throws Exception{
+        actual();var f=fixture(false);var pool=f.placement.pool();pool.write(pool.state(69).moveByte(ID,0x36).moveWord(X,0x740).moveWord(Y,0x420));
+        var pass=f.pass();var field=SonicCdAct2PastObjectPass.class.getDeclaredField("wall");field.setAccessible(true);var body=(CdBreakableWall)field.get(pass);
+        var port=CdBreakableWall.class.getDeclaredField("solidCommit");port.setAccessible(true);var original=(CdBreakableWall.SolidCommit)port.get(body);
+        port.set(body,(CdBreakableWall.SolidCommit)c->original.commit(new CdBreakableWall.SolidCall(c.cut(),c.expectedPlayer(),c.expectedGlobals(),c.outcome())));
+        assertThrows(IllegalStateException.class,()->pass.runWalk(1));assertEquals(2,pool.state(69).routine());
+        assertEquals(-0x123,f.frame.state().motion().xVelocity());assertTrue(f.ports.cut.sounds().isEmpty());assertFalse(f.frame.closed());
+    }
     private static final class TestPorts implements Ports {
         Cut cut;boolean valid=true,omit,reentry;int rejections;SonicCdAct2PastObjectPass pass;
         Runnable beforeApply;final List<SonicCdAct2PastObjectPass.Adoption> receipts=new ArrayList<>();

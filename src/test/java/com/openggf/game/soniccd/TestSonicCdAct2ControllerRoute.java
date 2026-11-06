@@ -962,7 +962,7 @@ class TestSonicCdAct2ControllerRoute {
         assertInstanceOf(SonicCdPastDisplay.Ready.class,targetSelected.projection(),"Actual completed target loading selects genuine current planes");
         assertTrue(targetSelected.inputs().selectedCpu().isEmpty(),"No ordinary CPU SAT or visible Sonic was fabricated during load");
         boolean targetSonicSelected=false;
-        for(int ordinary=1;ordinary<=15;ordinary++){
+        for(int ordinary=1;ordinary<=31;ordinary++){
             int call=targetReturnedCall+ordinary;
             var beforeOrdinary=captureNative(h);var fullOrdinary=registry.capture();var courseOrdinary=registry.captureCourse();
             try{step(h,controller(call));}
@@ -974,23 +974,25 @@ class TestSonicCdAct2ControllerRoute {
             var selected=assertInstanceOf(SonicCdAct2PastWorldHost.Published.class,targetHost.selected()).selection();
             assertInstanceOf(SonicCdPastDisplay.Ready.class,selected.projection(),"Actual target selected display at call"+call);
             targetSonicSelected|=selected.inputs().selectedCpu().map(cpu->cpu.provenance().stream().anyMatch(p->p.slotRef().wholeIndex()==0)).orElse(false);
-            if(ordinary==1||ordinary==4||ordinary==12||ordinary==15){
+            if(ordinary==16){
+                var actualBoulder=targetHost.placement().pool().state(65);assertEquals(0x1B,actualBoulder.id());assertEquals(2,actualBoulder.routine());
+                assertEquals(0x20940A,actualBoulder.longBits(com.openggf.game.soniccd.objects.CdObjectState.LongField.MAPPINGS));
+                assertEquals(0x035E,actualBoulder.word(com.openggf.game.soniccd.objects.CdObjectState.WordField.TILE));
+                var actualWall=targetHost.placement().pool().state(69);assertEquals(0x36,actualWall.id());assertEquals(2,actualWall.routine());
+                assertEquals(0x20EE64,actualWall.longBits(com.openggf.game.soniccd.objects.CdObjectState.LongField.MAPPINGS));
+                assertEquals(0x44BE,actualWall.word(com.openggf.game.soniccd.objects.CdObjectState.WordField.TILE));
+            }
+            if(ordinary==1||ordinary==4||ordinary==12||ordinary==15||ordinary==16||ordinary==17||ordinary==31){
                 registry.restore(fullOrdinary);assertNativeCapture(beforeOrdinary,h);step(h,controller(call));assertNativeCapture(afterOrdinary,h);
                 registry.restoreCourse(courseOrdinary);assertNativeCapture(beforeOrdinary,h);step(h,controller(call));assertNativeCapture(afterOrdinary,h);
             }
         }
-        assertTrue(targetSonicSelected,"Fixed15 real target services must expose native Blink/Draw/DPLC/next8 provenance without actor or art injection");
-        var targetPool=targetHost.placement().pool();
-        int targetFailedCall=targetReturnedCall+16;
+        assertTrue(targetSonicSelected,"Fixed31 real target services must expose native Blink/Draw/DPLC/next8 provenance without actor or art injection");
+        int targetFailedCall=targetReturnedCall+32;
         var targetStop=assertThrows(SonicCdAct2PastObjectPass.Unowned.class,()->step(h,controller(targetFailedCall)));
-        assertEquals(SonicCdAct2PastObjectPass.Boundary.OBJECT_KIND,targetStop.boundary());
-        assertEquals(69,targetStop.wholeIndex());assertEquals(0x36,targetStop.value());
-        // The failed call has a real completed Boulder prefix; it is not a closed/replayable13951 cut.
-        var actualBoulder=targetPool.state(65);assertEquals(0x1B,actualBoulder.id());assertEquals(2,actualBoulder.routine());
-        assertEquals(0x20940A,actualBoulder.longBits(com.openggf.game.soniccd.objects.CdObjectState.LongField.MAPPINGS));
-        assertEquals(0x035E,actualBoulder.word(com.openggf.game.soniccd.objects.CdObjectState.WordField.TILE));
+        assertEquals(SonicCdAct2PastObjectPass.Boundary.OBJECT_KIND,targetStop.boundary());assertEquals(33,targetStop.wholeIndex());assertEquals(0x12,targetStop.value());
         System.out.println("Controller-only Act2: WARP returned13885, actual R12B FULL13886, loading returned"+targetReturnedCall+
-                ", fifteen unpaused target ordinary calls returned through"+(targetReturnedCall+15)+". Actual primary Init/Main, live128-slot walks and camera/SAT/tail; selected prior Sonic CPU provenance with full/course replay at first/fourth/twelfth/fifteenth. Failed13951 retains native Boulder65 Init before the exact later ID36/whole69 boundary. No completed13951, new screenshot, native/regional/audio or full-act parity claim.");
+                ", 31 unpaused target ordinary calls returned through"+(targetReturnedCall+31)+". Genuine Boulder/Wall, primary Main, live128-slot/camera/SAT/tail; full/course replay at first/fourth/twelfth/fifteenth/sixteenth/seventeenth/last. First13967 stops exactly ID12/whole33. No completed13967, new screenshot, native/regional/audio or full-act parity claim.");
         // END measured natural TimeWarp230 old exit.
         // END measured natural TimeWarp save continuation.
         // END measured Swing promotion.

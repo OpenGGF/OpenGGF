@@ -2482,3 +2482,16 @@ Initial85 had one frontier failure; the route-only compile capture error ran no
 cases, then its corrected one-case run passed without failures/errors/skips.
 No natural Boulder pixels/contact, native/regional/audio/full-act or broad-smoke
 claim is added. Breakable Wall source binding is the next concrete owner.
+
+### 6 November — R12B Breakable Wall and FloatBlock admission
+
+The [Act2 Past matrix](../architecture/validation/levels/scd-palmtree-panic-act2-past.md)
+now qualifies unchanged controller13966 through31ordinary services, including
+closed Boulder/Wall source headers and full/course replay. Next13967 stops on
+native FloatBlock12/whole33, with no completed-call claim. The shared Wall body
+retains its original algorithms and now has actual B metadata, original private
+operation receipts and prepared same-Frame Solid/FM/signed-X publication.95distinct
+case identities pass across93+2runs; initial route-frontier and overwritten-storage
+fixture failures remain attributed. Static review found no concrete new P1/P2.
+Natural object pixels/contact, full-act/native/regional/audio and broad smoke
+remain separate open obligations.

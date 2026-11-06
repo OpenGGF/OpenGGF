@@ -52,7 +52,8 @@ class TestCdR12bObjectMappings {
             new ObjectRoot(MAP_SPR_ROBOT_GENERATOR,0x20E482,0,8,CdR12bObjectAssets::robotGenerator),
             new ObjectRoot(MAP_SPR_ANTON,0x20B160,0,4,CdR12bObjectAssets::anton),
             new ObjectRoot(MAP_SPR_PLATFORM,0x20C980,0,3,CdR12bObjectAssets::platform),
-            new ObjectRoot(MAP_SPR_BOULDER,0x20940A,0,1,CdR12bObjectAssets::boulder));}
+            new ObjectRoot(MAP_SPR_BOULDER,0x20940A,0,1,CdR12bObjectAssets::boulder),
+            new ObjectRoot(MAP_SPR_BREAKABLE_WALL,0x20EE64,0,14,CdR12bObjectAssets::breakableWall));}
 
     @BeforeAll static void originalSources()throws Exception{
         String root=System.getProperty("soniccd.media.root");assertNotNull(root);assertFalse(root.isBlank());Path cue;
@@ -64,23 +65,23 @@ class TestCdR12bObjectMappings {
         }
     }
 
-    @Test void exactTwentyOneCountedRootsBorrowCompleteOriginalViewsAndNativeIndexedOffsets()throws Exception{
+    @Test void exactTwentyTwoCountedRootsBorrowCompleteOriginalViewsAndNativeIndexedOffsets()throws Exception{
         var mapper=CdObjectMappings.fromAct2PastAssets(terrain,player);var table=tables(mapper);var expected=new HashSet<Integer>();expected.add(SONIC);
-        var o=terrain.objects();assertEquals(20,roots().size());int frames=0;
+        var o=terrain.objects();assertEquals(21,roots().size());int frames=0;
         for(var c:roots()){
             assertTrue(expected.add(c.pointer()));var actual=table.get(c.pointer());assertNotNull(actual);
             var visual=c.visual().apply(o);assertEquals(c.offset(),visual.mappingTableOffset());assertEquals(c.frames(),visual.mappingFrames().size());
             assertEquals(c.pointer()-c.offset(),actual.nativeStartBits());assertEquals(c.offset(),actual.tableOffset());assertEquals(c.frames(),actual.frameCount());
             assertSame(o.view(c.view()),actual.bytes());assertArrayEquals(visual.mappings().copy(),actual.bytes().copy());frames+=c.frames();
         }
-        assertEquals(91,frames);assertEquals(expected,table.keySet());assertEquals(21,table.size());
-        assertEquals(289,table.values().stream().mapToInt(CdObjectMappings.DeclaredTable::frameCount).sum());
+        assertEquals(105,frames);assertEquals(expected,table.keySet());assertEquals(22,table.size());
+        assertEquals(303,table.values().stream().mapToInt(CdObjectMappings.DeclaredTable::frameCount).sum());
         var sonic=table.get(SONIC);assertEquals(198,sonic.frameCount());assertEquals(0,sonic.tableOffset());
         assertArrayEquals(player.view(CdR12bPlayerAssets.Asset.MAP_SPR_SONIC).copy(),sonic.bytes().copy());
         assertEquals(8,statics(mapper).size());assertEquals(new HashSet<>(ICON_POINTERS),statics(mapper).keySet());
     }
 
-    @Test void allNinetyOneObjectFrameBodiesMatchActualVisualPiecesWithEveryUnsignedFrameFence(){
+    @Test void allOneHundredFiveObjectFrameBodiesMatchActualVisualPiecesWithEveryUnsignedFrameFence(){
         var mapper=CdObjectMappings.fromAct2PastAssets(terrain,player);var o=terrain.objects();int valid=0;
         for(var c:roots()){
             var visual=c.visual().apply(o);
@@ -94,7 +95,7 @@ class TestCdR12bObjectMappings {
             assertThrows(IllegalArgumentException.class,()->mapper.resolve(c.pointer(),false,-1));
             assertThrows(IllegalArgumentException.class,()->mapper.resolve(c.pointer(),false,256));
         }
-        assertEquals(91,valid);
+        assertEquals(105,valid);
     }
 
     @Test void all198SonicFramesMatchTheirExactCountedSourceBodiesAndDoNotWrapHighFrameBytes(){
@@ -206,7 +207,7 @@ class TestCdR12bObjectMappings {
 
     @Test void boulderRegistersTheActualR12bCountedRootAndLiteralTwoPieceBody()throws Exception{
         var objects=terrain.objects();var bytes=objects.view(MAP_SPR_BOULDER);var visual=objects.boulder();
-        assertEquals(40,CdR12bObjectAssets.View.values().length);assertEquals(39,MAP_SPR_BOULDER.ordinal());
+        assertEquals(44,CdR12bObjectAssets.View.values().length);assertEquals(39,MAP_SPR_BOULDER.ordinal());
         assertEquals(0x940A,MAP_SPR_BOULDER.range().fileOffset());assertEquals(0x20940A,MAP_SPR_BOULDER.range().nativeAddress());
         assertEquals(13,MAP_SPR_BOULDER.canonicalRange().length());assertEquals(14,bytes.length());
         assertEquals("000202f8020000ecf00f0003f400",HexFormat.of().formatHex(bytes.copy()),"Original thirteen-byte include plus real parent EVEN00");
@@ -257,6 +258,29 @@ class TestCdR12bObjectMappings {
         assertSame(registry,terrain.sectionSources());assertArrayEquals(original,objects.view(MAP_SPR_BOULDER).copy());
         assertEquals(before.status(),placement.status());assertEquals(before.pool().slots(),placement.pool().capture().slots());assertArrayEquals(before.savedFlags().copy(),placement.capture().savedFlags().copy());
         assertEquals(8,statics(mapper).size());assertEquals(new HashSet<>(ICON_POINTERS),statics(mapper).keySet());
+    }
+
+
+    @Test void breakableWallRegistersAllLiteralMainAndFragmentFramesOnlyAtTheSelectedR12bRoot()throws Exception{
+        var mapper=CdObjectMappings.fromAct2PastAssets(terrain,player);var source=terrain.objects().breakableWall();var table=tables(mapper).get(0x20EE64);
+        assertNotNull(table);assertEquals(0x20EE64,MAP_SPR_BREAKABLE_WALL.range().nativeAddress());assertSame(terrain.objects().view(MAP_SPR_BREAKABLE_WALL),table.bytes());assertEquals(312,table.bytes().length());assertEquals(0,table.tableOffset());assertEquals(14,table.frameCount());
+        var tiles=List.of(List.of(41,49,41,45,53,45),List.of(41,49,41,51,43,51),List.of(51,43,51,51,43,51),List.of(51,43,51,45,53,45),
+                List.of(49,41,49,53,45,53),List.of(49,41,49,43,51,43),List.of(43,51,43,43,51,43),List.of(43,51,43,53,45,53));
+        for(int frame=0;frame<8;frame++){var expected=new ArrayList<CdObjectDrawQueue.RawPiece>();for(int i=0;i<6;i++)expected.add(new CdObjectDrawQueue.RawPiece(new int[]{-24,-8,8}[i%3],5,tiles.get(frame).get(i),i<3?-16:0));
+            assertEquals(new CdObjectDrawQueue.FrameMapping(6,expected),mapper.resolve(0x20EE64,false,frame));}
+        int[] fragments={41,49,51,43,45,53};for(int i=0;i<6;i++)assertEquals(new CdObjectDrawQueue.FrameMapping(1,List.of(new CdObjectDrawQueue.RawPiece(-8,5,fragments[i],-8))),mapper.resolve(0x20EE64,false,8+i));
+        for(int frame=14;frame<=255;frame++){int invalid=frame;assertThrows(UnsupportedOperationException.class,()->mapper.resolve(0x20EE64,false,invalid));}
+        for(int frame=0;frame<=255;frame++){int selected=frame;assertThrows(UnsupportedOperationException.class,()->mapper.resolve(0x20EE64,true,selected));}
+        for(int invalid:new int[]{-1,256,Integer.MIN_VALUE,Integer.MAX_VALUE})assertThrows(IllegalArgumentException.class,()->mapper.resolve(0x20EE64,false,invalid));
+        for(int foreign:new int[]{0x20F9F0,0x20EE63,0x20EE65,0x20EE80,0x20EF9C,0x20EFDC,0x20EFF4,0x0120EE64,0x7F20EE64,0xFF20EE64}){
+            assertThrows(UnsupportedOperationException.class,()->mapper.resolve(foreign,false,0));assertThrows(UnsupportedOperationException.class,()->mapper.resolve(foreign,true,0));}
+        // Existing ART_PLATFORM supplies57 source tiles at97C0; resolving geometry never makes current patterns known.
+        assertEquals(57,terrain.sectionSources().source(CdR12bSectionSources.SourceId.ART_PLATFORM).tileCount());
+        var unknown=CdR12bCameraArtResidency.unknown();var mask=unknown.region(CdR12bCameraArtResidency.Region.AT_6BC0).knownMask().copy();
+        for(int offset=41;offset<57;offset++){int pattern=0x04BE+offset;var stop=assertThrows(CdR12bCameraArtResidency.OwnershipBoundary.class,()->CdR12bCameraArtResidency.readTile(unknown,pattern));
+            assertEquals(CdR12bCameraArtResidency.Boundary.UNKNOWN_PATTERN,stop.boundary());assertEquals(pattern,stop.nativePatternId());}
+        assertArrayEquals(mask,unknown.region(CdR12bCameraArtResidency.Region.AT_6BC0).knownMask().copy());
+        assertEquals(14,source.mappingFrames().size());assertEquals(8,statics(mapper).size());
     }
 
     private static List<CdObjectDrawQueue.RawPiece> sourcePieces(CdAssetBytes body,int count){

@@ -187,12 +187,36 @@ fleet. Nine installed Java pins match their qualified inputs. Static review
 finds no concrete P1/P2. No completed13951, natural Boulder pixel/contact,
 new screenshot, full-act/native/audio/regional parity or broad-smoke pass follows.
 
+## Breakable Wall and native FloatBlock frontier — 6 November
+
+ID36 now uses the actual reached Init map20EE64, not the unused identical copy
+20F9F0. Four finite mapping/fragment-table views append without art writes:
+44views/22counted roots/303frames/static8. The new source factory and Assets
+helper preserve all419 original body lines and legacy APIs. Native FM_B0 precedes
+one signed ASR.W player-X publication, then genuine allocation and Fall. Private
+World receipts adopt prepared pool/Frame/scalars/sounds at actual producer cuts;
+equal public call records do not grant authority. Early and late physical
+fragment visits, stopped/completed Solid, FM/half failure prefixes and deletion
+without Draw are explicitly exercised.
+
+The unchanged natural controller qualifies31 ordinary services through13966 with
+full/course cuts1/4/12/15/16/17/31 and real closed Boulder65/Wall69 headers. Next
+13967 stops exactly ID12/whole33 after the reached primary prefix; native ID12 is
+FloatBlock. It is not a closed checkpoint. The initial95 run has93P/2F/0E/0S:
+one route frontier and one Root assertion read the saved XV word after native
+fragment-X LONG replacement at2A. The corrected literal checks0002F684; production
+is unchanged. The two revised cases pass separately2/0F/0E/0S. These establish95
+distinct positive identities across runs, not a single95-green fleet. Exact9Java
+pins and source identities match;16latest owned reports are consumed. Static
+review finds no concrete new P1/P2. No natural Wall pixel/contact, new screenshot,
+full-act/native/audio/regional or broad-smoke claim follows.
+
 ## Remaining act obligations
 
 | ID | Required next evidence | Current gap |
 | --- | --- | --- |
-| ENTRY | IPX/WARP/load dispatch, real saved pose, terrain/camera/control and post-entry player body | Actual private FULL/load/custody and saved/scroll publication qualify; natural Init/Main and selected Sonic provenance qualify through13950; later traversal/lifecycle remain open |
-| OBJECT | Actual stage mapping/placement/body bindings, contacts, children, despawn/re-entry | Actual-source body factories, mapping catalogue and placement qualify as components; natural first fifteen complete target walks qualify; later kinds/contact outcomes remain open |
+| ENTRY | IPX/WARP/load dispatch, real saved pose, terrain/camera/control and post-entry player body | Actual private FULL/load/custody and saved/scroll publication qualify; natural Init/Main and selected Sonic provenance qualify through13966; later traversal/lifecycle remain open |
+| OBJECT | Actual stage mapping/placement/body bindings, contacts, children, despawn/re-entry | Actual-source body factories, mapping catalogue and placement qualify as components; natural first thirty-one complete target walks qualify; later kinds/contact outcomes remain open |
 | EVENT | Native stage gates, water/palette/background/terrain changes | Unimplemented target programme owners |
 | CAMERA | Correct stage scroll/parallax/culling and width-sensitive behavior | Live loading scroll/plane publication qualifies; ordinary camera/culling/width-sensitive traversal remains pending |
 | BOSS | Source inventory and route-specific applicability | Unassessed, not marked not-applicable |
@@ -200,7 +224,7 @@ new screenshot, full-act/native/audio/regional parity or broad-smoke pass follow
 | LOAD | Sparse current profile, actual section/PLC services, readiness, source replacement and next playable state | Actual source-ordered loading/PLCs/current selection qualify; first ordinary8/HUD/slow-PLC/object services qualify in the constructed fixture; route breadth remains pending |
 | REWIND | Nondefault target before/active/after mechanics and in-timeline loads with full/course replay | Target loading full/course and foreign-epoch controls qualify; ordinary mechanics/lifecycle timelines remain open |
 | PRESENT | Actual target mapping/current/plane/palette/scroll pixels and audio ownership | Actual selected terrain/Sonic framebuffer replay qualifies in the constructed entry fixture; native comparison and audio remain open |
-| ROUTE | Real target entry through mandatory mechanics/goal/results/next state | Entry/loading and first fifteen ordinary walks qualify; complete route remains open |
+| ROUTE | Real target entry through mandatory mechanics/goal/results/next state | Entry/loading and first thirty-one ordinary walks qualify; complete route remains open |
 | ORACLE | Actual native timing/reference comparisons across supported configurations | Source/media/decoder facts only |
 
 All viewport presets, supported donor/main/team combinations and their entry/
