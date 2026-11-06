@@ -17,7 +17,10 @@ under the matching area heading; see the
   writes declared save slots through the production save manager into the
   capture's private save root before a title-first capture, and `--extra-teams`
   sets the Data Select extra team combos for that capture. The Sonic 3&K hero
-  reel uses both to show custom-team saves.
+  reel uses both to show custom-team saves. Title-first headless boots also run the
+  donated Data Select warm-up that Engine runs before its startup mode, so a
+  Sonic 1 or Sonic 2 capture with S3K donating shows the generated zone previews
+  instead of S3K's placeholders.
 
 ## Maintenance and release preparation
 
