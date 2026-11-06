@@ -23,7 +23,10 @@ publish job from running. A manual dispatch is not a way to publish.
 
 Source and universal-JAR builds use JDK 25. Native packaging uses checksum-pinned GraalVM Community
 25.4.4.1.1+1.1 for Windows x64, Linux x64, and macOS Apple Silicon; Intel macOS uses the JVM
-distribution. The Java 25 migration does not enable preview APIs or optional VM
+distribution. The macOS leg is tolerated: since 0.7 its code-mod image needs about 5 GiB of live
+compiler heap, more than the free 7 GiB `macos-15` runner keeps resident, so the build pages and
+stalls. Its compile step stops after 45 minutes, and the release then publishes without
+`OpenGGF-macos.zip`. Windows, Linux and the universal JAR remain required. The Java 25 migration does not enable preview APIs or optional VM
 tuning. A manual dispatch on a candidate branch with `validate_roms=false`
 checks hosted-platform packaging without publishing; it does not replace required
 ROM/trace validation.
@@ -77,7 +80,7 @@ preparing the release. See [release rollover](release-rollover.md).
    ```
 
 5. Confirm the `release` job succeeded and the release exists at `v<version>`,
-   with Windows, macOS, Linux, and universal-JAR downloads:
+   with Windows, Linux, and universal-JAR downloads, plus macOS when its tolerated leg built:
 
    ```bash
    gh release view v<version> --json tagName,isDraft,isPrerelease,url,assets
