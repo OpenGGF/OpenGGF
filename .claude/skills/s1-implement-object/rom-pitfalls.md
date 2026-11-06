@@ -916,3 +916,19 @@ Check both original revisions, include a pointer-derived negative control, and
 exercise the actual consumer rather than only comparing resolver output. The
 [retail revision plan](../../../docs/architecture/plans/2026-10-28-retail-rom-revisions.md)
 records original hashes, inspected disassembly versions and validation scope.
+
+
+## RunPLC entry does not establish the arm's visible row (2026-11-06)
+
+`RunPLC` (`docs/s1disasm/sonic.asm:1379-1420`) tests its queue and decoder
+count after entry. An interrupt can retire the old head before those tests,
+or cross the accepted pattern-count write. Entry-time eligibility therefore
+cannot stamp a readiness edge. The shipped `FixBugs=0` write precedes
+`NemDec_BuildCodeTable`; `FixBugs=1` moves it after the builder.
+
+The native recorder observes the accepted count-writing instruction while the
+original descriptor is still intact, before the later source-pointer overwrite.
+Keep a correct queued engine head behind the dedicated readiness contract;
+never infer early arming from a held gameplay counter or fit a delay. Cover
+both interruption cuts and qualify the actual native write against the
+frame-end count before publishing timing streams.

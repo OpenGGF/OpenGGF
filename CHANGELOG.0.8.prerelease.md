@@ -32,6 +32,9 @@ under the matching area heading; see the
 - **Trace coverage and canonical fixtures:** independent strict replay covers all
   163 segments of the Knuckles super-emerald, Mega, Sonic+Tails and KiS2 chains,
   plus six previously untested standalone slices. Existing canonical identities
-  replace 30 duplicate fixture directories. New red frontiers remain visible.
+  replace 30 duplicate fixture directories. The S1 complete-emerald chain now
+  records native PLC readiness and clears its four queue timing frontiers;
+  its ending-load timing remains open. Physics and auxiliary observations
+  are preserved exactly. New red frontiers remain visible.
   Special-stage entry honors the recorded team and production lock-on module;
   the single entry-state import consumes S2-family manifest destination rings.

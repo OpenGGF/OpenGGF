@@ -1,0 +1,7 @@
+{"event":"hardware_work_completed","raw_frame":69,"boundary":"pre_main_loop","kind":"nemesis_plc_queue","ordinal":14,"submission_fingerprint":"sha256:3224e355943f9bc261e39b7d6c550e47b9ff10050a81ea2a1488a8bdefe2855a"}
+{"event":"hardware_work_completed","raw_frame":101,"boundary":"pre_main_loop","kind":"nemesis_plc_queue","ordinal":15,"submission_fingerprint":"sha256:32e1caaaf2cce87f56964e94b87703a377f717c4ca8e8ff9057dc1fb7d453ece"}
+{"event":"hardware_work_completed","raw_frame":108,"boundary":"pre_main_loop","kind":"nemesis_plc_queue","ordinal":16,"submission_fingerprint":"sha256:f5ff42a5f787169db10e4efe92b5fcf0373d1da1fdcceb90567a4ec5c1ccc792"}
+{"event":"hardware_work_completed","raw_frame":2926,"boundary":"pre_main_loop","kind":"nemesis_plc_queue","ordinal":17,"submission_fingerprint":"sha256:766b2fc7fa7662ce89c289f933718b2ffd110d031b70d4e196be0de4a06741b8"}
+{"event":"hardware_work_completed","raw_frame":2946,"boundary":"pre_main_loop","kind":"nemesis_plc_queue","ordinal":18,"submission_fingerprint":"sha256:80d40fa81e087e699ba42648513398a84e9c40615738b564c5e4f7afc464c3d1"}
+{"event":"hardware_work_completed","raw_frame":2958,"boundary":"pre_main_loop","kind":"nemesis_plc_queue","ordinal":19,"submission_fingerprint":"sha256:c426214c186a7a731efbdfa0c0b37fd85fef79deef78387f4bed1f1a6462a31a"}
+{"event":"hardware_work_completed","raw_frame":3068,"boundary":"pre_main_loop","kind":"nemesis_plc_queue","ordinal":20,"submission_fingerprint":"sha256:a06718c53378f9577a3c05c56f5f77a39110412e67e0569187ab1223f5c52aa3"}

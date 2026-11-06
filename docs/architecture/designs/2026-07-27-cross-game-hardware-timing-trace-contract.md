@@ -208,21 +208,19 @@ Kosinski pipelines, under the single authority boundary defined here.
   `HardwareTimingEventEngine`. The S2 DPLC pipeline is inside the contract's
   permitted scope and outside its built scope. Do not describe it as available.
 
-**Fixture coverage -- S3K only.** Every committed `hardware_timing.jsonl` in
-`src/test/resources/traces` is under `s3k/` (272 of them, plus 2
-`hardware_timing_interstitial.jsonl`). No committed S1 or S2 fixture carries
-one.
+**Fixture coverage -- S1 and S3K.** S3K has 244 committed
+`hardware_timing.jsonl` streams and four interstitial streams. The S1
+complete-emerald chain has 28 per-level streams carrying 242 observed
+`NEMESIS_PLC_QUEUE` arm edges. Its physics/aux payloads reproduce the prior
+capture byte-for-byte; publication preserves their original gzip containers.
+No S2 fixture carries recorded readiness.
 
-The consequence for S1 is specific, and is not the same thing as the mechanism
-being absent. Recorded admission is installed only by
-`GameplayModeContext.activateRecordedHardwareAdmission()`; with no stream, every
-kind stays at `HardwareReadinessAdmissionPolicy.LIVE`,
-`Sonic1PlcArmTiming.isRecordedAuthority()` returns false, and the arm is
-released by the same boundary that prepared it -- exactly the behaviour that
-predates the timing port. So the S1 path today is **implemented but dormant**:
-it is exercised by unit and guard tests, and by no committed trace fixture.
-A round debugging an S1 PLC divergence should reason about the native service
-model, not about a recorded edge, until an S1 fixture carrying a stream lands.
+The S1 chain now exercises `Sonic1PlcArmTiming` end to end. Admission is
+installed by `GameplayModeContext.activateRecordedHardwareAdmission()` and
+releases only a matching prepared production arm. Other S1 fixtures without a
+stream retain `HardwareReadinessAdmissionPolicy.LIVE`; coverage is a property
+of the dedicated stream, never the game or recorder name. The chain's four
+queue frontiers clear independently of its unresolved ending-load timing.
 
 Recorded timing is not the first resort for S1 in any case: a divergence that
 looks like elapsed hardware cost is usually a counted ROM wait loop in the
@@ -870,7 +868,12 @@ For the S3K Kos queues:
 - terminate within a bounded window.
 
 For the S1 Nemesis PLC queue, `S1PlcHardwareTimingObserver` follows the same
-rules against the ROM's own `v_plc_buffer` FIFO. Two of its properties are
+rules against the ROM's own `v_plc_buffer` FIFO. It observes the accepted
+shipped `RunPLC` count-writing instruction, after both eligibility tests and
+before the original head pointer is overwritten. Routine entry is too early:
+an intervening interrupt can cross the write or retire the old decoder before
+the tests. `FixBugs=0` writes before `NemDec_BuildCodeTable`; the fixed branch
+writes after it (`RunPLC`, sonic.asm:1379-1420). Two of its properties are
 load-bearing for the engine side and must not drift: it observes the head
 before the shift that destroys head identity, and it discards anything seen
 before a segment's first recorded row. The latter is why

@@ -124656,3 +124656,26 @@ runner and replay-helper objects remain those measured on the frozen candidate.
 Complete assertions, raw rows and source/input hashes support the gate: after
 these focused repairs, no existing identity is newly red, no existing first
 frontier moves earlier, and no new error appears on a baseline-clean row.
+
+## 2026-11-06 — S1 complete-emerald PLC arm streams
+
+Develop base `34b8830b1`, native recorder `d54cc514`: the complete-emerald chain
+publishes 28 native Nemesis arm streams/242 edges under the existing readiness
+contract. The observer samples the accepted shipped pattern-count write,
+not an entry-time prediction. No BK2 or physics/aux observation changes;
+all 68 stored compressed payload files remain byte-identical.
+
+Queued focused `-Ptrace-replay
+-Dtest=TestS1CompleteEmeraldRunChain#ghz1ToScrapBrainAcrossEverySpecialStage test`
+clears MZ2_3 3@101, MZ3_2 6@102, LZ3 3@10185 and LZ4 12@11 to zero errors.
+All 34 segments and 10,943 terminal rows are still driven. Exactly four of
+29 reports improve; the other 25 and every terminal comparison tuple are
+unchanged. The sole remaining axis is terminal ending art, 4,704 native versus
+4,784 engine edges; no ending delay or comparison change is introduced.
+
+The matched 45-class S1 trace selection retains all 71 identities: 70 pass
+and the chain remains red on its one ending axis. All other outcomes are
+exact. Eight of 92 reports, including cold-start queue controls, improve to
+zero errors; no report is lost or added. Ordinary and change-based smoke
+gates must complete before this major gain is delivered.
+[Recorder semantics, controls and publication evidence](../architecture/audits/2026-11-06-s1-chain-plc-timing.md).
