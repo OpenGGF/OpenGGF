@@ -17,7 +17,6 @@ import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.competition.*;
-import com.openggf.game.sonic2.titlecard.TitleCardManager;
 import com.openggf.graphics.*;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.TestEnvironment;
@@ -35,12 +34,12 @@ import static org.lwjgl.opengl.GL11.*;
 /**
  * Purpose: bounded C2 artifacts from the actual host and two-controller input movies.
  * Inputs: supplied S2 REV01 and the external native-evidence BK2s; no physics/aux/CSV input.
- * Origin: A2-S C2 checkpoint, 2026-11-07. Explicit Debug selector only; no CI fixture dependency.
+ * Origin: A2-S C2b cold checkpoint, 2026-11-07. Explicit Debug selector only; no CI fixture dependency.
  */
 @Isolated @RequiresRom(SonicGame.SONIC_2)
 class DebugSonic2CompetitionC2Capture {
     private static final Path REFERENCES=Path.of("/tmp/s2comp-analysis-20261107/native-refs");
-    private static final Path OUT=Path.of("target/s2comp-c2");
+    private static final Path OUT=Path.of("target/s2comp-c2b");
     @ParameterizedTest @ValueSource(strings={"flowers","finish","monitor"})
     void captureAvailableC2MovieCuts(String film) throws Exception {
         String movieName=switch(film){case "flowers"->"ehz-flowers";case "finish"->"ehz-finish";default->"ehz-monitor-high";};
@@ -58,22 +57,7 @@ class DebugSonic2CompetitionC2Capture {
             graphics.setViewport(0,0,320,224);glViewport(0,0,320,224);Files.createDirectories(OUT);
             Files.deleteIfExists(OUT.resolve(film+"-failure.txt"));
             var captured=new HashSet<String>();
-            var probe=new Sonic2NativeCompetitionHost.Views(){
-                public void prepare(GameplayModeContext context,Sonic2CompetitionSession session,
-                                    Sonic2CompetitionLevelProfile profile,Sonic2CompetitionNativeArt art){
-                    views.prepare(context,session,profile,art);
-                    if(!film.equals("flowers"))return;
-                    var title=(TitleCardManager)root.getTitleCardProvider();
-                    var video=context.getWorldSession().getGameModule().getGameService(Sonic2CompetitionVideoFrame.class);
-                    String name=title.capture().leavePass()==22 && !context.getCamera().isLevelStarted()
-                            && video.registers().capture().published()?"title-locked":
-                            context.getLevelManager().getFrameCounter()==50?"title-leave":null;
-                    if(name!=null && captured.add(name))try{capture(views,context,session,name,"existing title owner; native Obj34 field migration blocked",0);}
-                    catch(Exception failure){throw new RuntimeException(failure);}
-                }
-                public void draw(GameplayModeContext context,Sonic2CompetitionSession session){views.draw(context,session);}
-            };
-            var host=Sonic2NativeCompetitionHost.production(root,services,ignored->{},probe,false,true,
+            var host=Sonic2NativeCompetitionHost.production(root,services,ignored->{},views,false,true,
                     new com.openggf.game.sonic2.objects.Sonic2TeleportObjectFieldsAccess());
             host.clearMenuCameraRam(); // The movie enters through the real 2P menu camera-clear event.
             var input=new InputHandler();input.setLogicalOverride(LogicalInputSnapshot.neutral());
@@ -82,10 +66,14 @@ class DebugSonic2CompetitionC2Capture {
             session.updateMenu(LogicalInputSnapshot.ofPlayers(
                     PlayerInputState.of(0,0,0,0,true,true),PlayerInputState.neutral()),true);
             host.loadAct(session,0,0);
+            // Native cold screenshots retain alternating fields. Field0 changes on odd physical
+            // rows (zero pixel changes on even rows in c2b/cold-field-cadence.json).
+            // Capture both neighbours at rejected odd cuts; the official fixed-field0 pair uses
+            // the current odd row, while the accepted even1800 pair retains row1799.
             var cuts=new TreeMap<Integer,String>();
-            if(film.equals("flowers")){cuts.put(470,"flowers-1800");cuts.put(487,"flowers-1817");}
-            else if(film.equals("finish")){cuts.put(578,"hud-ring-1908");cuts.put(9570,"hud-lives-10900");}
-            else cuts.put(545,"monitor-1875");
+            if(film.equals("flowers")){cuts.put(470,"flowers-1800");cuts.put(487,"flowers-1817-before");cuts.put(488,"flowers-1817");}
+            else if(film.equals("finish")){cuts.put(579,"hud-ring-first-pickup-1908");cuts.put(580,"hud-ring-1909");}
+            else {cuts.put(545,"monitor-1875-before");cuts.put(546,"monitor-1875");}
             int target=cuts.lastKey(),attempts=0;
             while(host.context().getLevelManager().getFrameCounter()<target && attempts++<target+16){
                 var context=host.context();int next=context.getLevelManager().getFrameCounter()+1;
@@ -109,7 +97,6 @@ class DebugSonic2CompetitionC2Capture {
                         movieName+".bk2 controller-only cut; first ordinary physical1329; no state hydration",physical);
             }
             for(String name:cuts.values())assertTrue(captured.contains(name),"capture cut not reached: "+name);
-            if(film.equals("flowers")){assertTrue(captured.contains("title-locked"));assertTrue(captured.contains("title-leave"));}
             assertInstanceOf(NullAudioBackend.class,services.audio().getBackend());assertEquals(GL_NO_ERROR,glGetError());
         } finally {config.setConfigValue(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT,limits);TestEnvironment.resetAll();}
     }
@@ -137,7 +124,7 @@ class DebugSonic2CompetitionC2Capture {
                 +"P1Rings="+session.levelState(0).getRings()+" P2Rings="+session.levelState(1).getRings()+"\n"
                 +"ringPhasePort="+video.displayState().ringsAnimationFrame()+"\n"
                 +"NativeState=E1 production host with A1 backgrounds, retained plane owner and concrete C object fields\n"
-                +"TitleCard=native Obj34 single-owner migration blocked; title planes/art remain baseline\n"
+                +"TitleCard=lane T owns native Obj34; title acceptance excluded from A2-S C2b\n"
                 +"deferred="+Sonic2CompetitionObjectDisplay.deferred(context.getObjectManager())+"\n");
         var animation=context.getLevelManager().getAnimatedPatternManager();
         if(animation instanceof Sonic2CompetitionAnimatedArt owner)text.append("animation=").append(owner.capture()).append('\n');
