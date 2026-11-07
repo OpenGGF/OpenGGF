@@ -40,6 +40,19 @@ import static com.openggf.game.soniccd.objects.CdObjectState.LongField.*;
  */
 public final class CdRobotGenerator {
     public static final int OBJECT_ID = 0x2D;
+    /** Finite dispatch identity only; source operands remain independently supplied/authenticated. */
+    public enum Profile { PALMTREE(0x2D), COLLISION_CHAOS(0x37);
+        private final int id; Profile(int id) { this.id = id; } public int objectId() { return id; }
+    }
+    private Profile profile = Profile.PALMTREE;
+    public static CdRobotGenerator collisionChaos(CdObjectPlacementRuntime placement, Assets assets,
+            CdSolidObject solid, SolidCommit commit, GoodFutureStore future, AddPointsCall points,
+            FmCall fm, DrawObjectCall draw, DispatchObserver observer, ReceiptGuard guard) {
+        var body = new CdRobotGenerator(placement, assets, solid, commit, future, points, fm, draw);
+        body.profile = Profile.COLLISION_CHAOS;
+        body.observer = Objects.requireNonNull(observer); body.receiptGuard = Objects.requireNonNull(guard);
+        return body;
+    }
     public static final int EXPLOSION_ID = 0x18;
     public static final int HIT_POINTS = 0x96;
     public static final int FM_EXPLODE = 0x9E;
@@ -94,7 +107,8 @@ public final class CdRobotGenerator {
         }
     }
     /** Native raw bytes plus camera WORD; timeZone is deliberately not normalized to a period. */
-    public record Globals(int goodFuture, int timeZone, int act, int timeWarpDirection, int cameraXWord) {
+    public interface Reads {int goodFuture();int timeZone();int act();int timeWarpDirection();int cameraXWord();}
+    public record Globals(int goodFuture, int timeZone, int act, int timeWarpDirection, int cameraXWord) implements Reads {
         public Globals {
             byteValue(goodFuture); byteValue(timeZone); byteValue(act); byteValue(timeWarpDirection); wordValue(cameraXWord);
         }
@@ -251,10 +265,11 @@ public final class CdRobotGenerator {
         return pendingOrdinal;
     }
 
-    public Result run(int wholeIndex, Globals globals, Inputs inputs) {
+    public Result run(int wholeIndex, Globals globals, Inputs inputs) {return runWithReads(wholeIndex,globals,inputs);}
+    public Result runWithReads(int wholeIndex, Reads globals, Inputs inputs) {
         if (running) throw new IllegalStateException("Reentrant ObjRobotGenerator dispatch");
         var state = placement.pool().state(wholeIndex);
-        if (state.id() != OBJECT_ID) throw new IllegalArgumentException("Selected slot is not Robot Generator $2D");
+        if (state.id() != profile.objectId()) throw new IllegalArgumentException("Selected slot is not Robot Generator $2D");
         if ((state.routine() & 1) != 0 || state.routine() > 6)
             throw unsupported(UnsupportedBoundary.ROUTINE_DISPATCH, wholeIndex, state.routine());
         running = true; operationOrdinal = 0;
@@ -545,12 +560,21 @@ public final class CdRobotGenerator {
         return new UnsupportedRobotGenerator(boundary, whole, value);
     }
     private final class Cursor {
-        final int whole; final Globals sourceGlobals; final Inputs inputs; final List<Effect> effects = new ArrayList<>();
+        final int whole; final Reads sourceGlobals; final Inputs inputs; final List<Effect> effects = new ArrayList<>();
         CdObjectState state; CdSolidObject.Player player; CdSolidObject.Globals solidGlobals;
-        Cursor(CdObjectState state, Globals globals, Inputs inputs) {
+        Cursor(CdObjectState state, Reads globals, Inputs inputs) {
             this.state = state; whole = state.identity().wholeIndex(); sourceGlobals = globals; this.inputs = inputs;
         }
-        Globals globals() { return Objects.requireNonNull(sourceGlobals, "reached native globals"); }
+        Reads globals() {
+            var g=Objects.requireNonNull(sourceGlobals,"reached native globals");
+            return new Reads(){public int goodFuture(){return read(g::goodFuture,false);}public int timeZone(){return read(g::timeZone,false);}
+                public int act(){return read(g::act,false);}public int timeWarpDirection(){return read(g::timeWarpDirection,false);}
+                public int cameraXWord(){return read(g::cameraXWord,true);}};
+        }
+        int read(java.util.function.IntSupplier getter,boolean word){
+            var cut=capture(this);try{int v=getter.getAsInt();if(word)wordValue(v);else byteValue(v);assertPlacement(cut,cut.pool());return v;}
+            catch(RuntimeException|Error original){suppress(original,()->assertPlacement(cut,cut.pool()));throw original;}
+        }
         void prepareInputs() {
             if (player == null) { var in = Objects.requireNonNull(inputs, "reached native Solid inputs");
                 player = in.player(); solidGlobals = in.globals(); }

@@ -247,11 +247,16 @@ public final class CdR13Capsule {
             return r;
         }
     }
+    public record PaletteOperands(int nativeId,int destinationWord,int longwordCounter,CdAssetBytes bytes){
+        public PaletteOperands{Objects.requireNonNull(bytes);if((nativeId&~255)!=0||(destinationWord&~65535)!=0||longwordCounter<0||bytes.length()!=(longwordCounter+1)*4)throw new IllegalArgumentException("Native palette operands");}
+    }
     public final class PaletteCall extends Call{
         private PaletteCall(Cursor c){
             super(c,Site.RESTORE_PALETTE);
         }
+        public PaletteOperands sourceOperands(){return data.restoredPalette();}
         public CdR13FutureAssets.PaletteBinding binding(){
+            if(assets==null)throw new IllegalStateException("CC Capsule has source-neutral palette operands");
             return assets.restoredPalette();
         }
         public Completion complete(){
@@ -323,7 +328,15 @@ public final class CdR13Capsule {
         }
     }
     private final CdObjectPlacementRuntime placement;
+    /** Finite borrowed operands; construction is not source or live invocation authority. */
+    public interface SourceData {
+        CdAssetBytes view(CdR13CapsuleAssets.View view);
+        int mappingAddress();
+        int tileWord();
+        PaletteOperands restoredPalette();
+    }
     private final CdR13CapsuleAssets assets;
+    private final SourceData data;
     private final CdPlayerTerrain terrain;
     private final Ports ports;
     private boolean running;
@@ -332,8 +345,22 @@ public final class CdR13Capsule {
     private CdR13Capsule(CdObjectPlacementRuntime p,CdR13FutureAssets a,Ports ports){
         placement=p;
         assets=CdR13CapsuleAssets.bind(a);
+        data=new SourceData() {
+            public CdAssetBytes view(CdR13CapsuleAssets.View v){return assets.view(v);}
+            public int mappingAddress(){return assets.mappingAddress();}
+            public int tileWord(){return assets.tileWord();}
+            public PaletteOperands restoredPalette(){var p=assets.restoredPalette();return new PaletteOperands(p.nativeId(),p.destinationWord(),p.longwordCounter(),p.bytes());}
+        };
         terrain=CdPlayerTerrain.fromStageTerrain(a.terrain());
         this.ports=ports;
+    }
+    private CdR13Capsule(CdObjectPlacementRuntime p,SourceData data,CdPlayerTerrain terrain,Ports ports){
+        placement=Objects.requireNonNull(p);assets=null;this.data=Objects.requireNonNull(data);
+        this.terrain=Objects.requireNonNull(terrain);this.ports=Objects.requireNonNull(ports);
+    }
+    /** R31 uses the same native six-entry algorithm; Root binds the actual finite source and ports. */
+    public static CdR13Capsule collisionChaos(CdObjectPlacementRuntime p,SourceData data,CdPlayerTerrain terrain,Ports ports){
+        return new CdR13Capsule(p,data,terrain,ports);
     }
     public static CdR13Capsule fromAct3FutureAssets(CdObjectPlacementRuntime p,CdR13FutureAssets a,Ports ports){
         Objects.requireNonNull(p);
@@ -343,6 +370,7 @@ public final class CdR13Capsule {
         return new CdR13Capsule(p,a,ports);
     }
     public CdR13CapsuleAssets assets(){
+        if(assets==null)throw new IllegalStateException("This Capsule uses borrowed CC operands");
         return assets;
     }
     public boolean isCurrentCall(Call c){
@@ -398,8 +426,8 @@ public final class CdR13Capsule {
         write(s.moveByte(SPRITE_FLAGS,s.spriteFlags()|4));
         write(state(c.whole).addByte(ROUTINE,2));
         write(state(c.whole).moveByte(PRIORITY,4));
-        write(state(c.whole).moveLong(MAPPINGS,assets.mappingAddress()));
-        write(state(c.whole).moveWord(TILE,assets.tileWord()));
+        write(state(c.whole).moveLong(MAPPINGS,data.mappingAddress()));
+        write(state(c.whole).moveWord(TILE,data.tileWord()));
         write(state(c.whole).moveByte(X_RADIUS,32));
         write(state(c.whole).moveByte(WIDTH,32));
         write(state(c.whole).moveByte(Y_RADIUS,24));
@@ -456,7 +484,7 @@ public final class CdR13Capsule {
         write(state(w).moveByte(ROUTINE_2,1));
         write(state(w).moveWord(X,state(c.whole).centreX()));
         write(state(w).moveWord(Y,state(c.whole).centreY()));
-        var offsets=assets.view(CdR13CapsuleAssets.View.EXPLOSION_POSITIONS);
+        var offsets=data.view(CdR13CapsuleAssets.View.EXPLOSION_POSITIONS);
         write(state(w).addWord(X,offsets.signedByte(at)));
         write(state(w).addWord(Y,offsets.signedByte(at+1)));
         c.effects.add(new ChildCreated(w,0x18));
@@ -464,7 +492,7 @@ public final class CdR13Capsule {
     private void spawnSeeds(Cursor c){
         var palette=new PaletteCall(c);
         invoke(palette,()->ports.palette(palette));
-        c.effects.add(new PaletteReturned(palette.binding().nativeId()));
+        c.effects.add(new PaletteReturned(palette.sourceOperands().nativeId()));
         for(int n=0;n<7;n++){
             var slot=find(c,AllocationKind.SEED);
             if(slot.isEmpty())return;
@@ -474,11 +502,11 @@ public final class CdR13Capsule {
             write(state(w).moveWord(X,state(c.whole).centreX()));
             write(state(w).moveWord(Y,state(c.whole).centreY()));
             write(state(w).moveByte(ROUTINE,10));
-            write(state(w).moveLong(MAPPINGS,assets.mappingAddress()));
-            write(state(w).moveWord(TILE,assets.tileWord()));
+            write(state(w).moveLong(MAPPINGS,data.mappingAddress()));
+            write(state(w).moveWord(TILE,data.tileWord()));
             write(state(w).moveByte(ANIMATION,1));
             write(state(w).moveWord(Y_VELOCITY,-0x600));
-            write(state(w).moveWord(X_VELOCITY,assets.view(CdR13CapsuleAssets.View.SEED_VELOCITIES).unsignedWord(n*2)));
+            write(state(w).moveWord(X_VELOCITY,data.view(CdR13CapsuleAssets.View.SEED_VELOCITIES).unsignedWord(n*2)));
             c.effects.add(new ChildCreated(w,0x15));
         }
     }
@@ -518,7 +546,7 @@ public final class CdR13Capsule {
         store(c,Site.HUD_BONUS,Field.UPDATE_HUD_BONUS,1);
         int time=read(c,Site.TIME_MINUTES,Field.TIME_MINUTES)*60;
         time=(time+read(c,Site.TIME_SECONDS,Field.TIME_SECONDS))&65535;
-        var bonuses=assets.view(CdR13CapsuleAssets.View.TIME_BONUSES);
+        var bonuses=data.view(CdR13CapsuleAssets.View.TIME_BONUSES);
         int index=Math.min(time/15,bonuses.length()/2-1);
         store(c,Site.TIME_BONUS,Field.TIME_BONUS,bonuses.unsignedWord(index*2));
         store(c,Site.RING_BONUS,Field.RING_BONUS,(read(c,Site.RINGS,Field.RINGS)*100)&65535);
@@ -526,7 +554,7 @@ public final class CdR13Capsule {
     private void animate(Cursor c){
         var s=state(c.whole);
         var input=new CdObjectAnimation.State(s.unsignedByte(ANIMATION),s.unsignedByte(PREVIOUS_ANIMATION),s.unsignedByte(ANIMATION_FRAME),s.unsignedByte(ANIMATION_TIME),s.unsignedByte(MAP_FRAME),s.spriteFlags(),s.flags(),s.routine(),s.unsignedByte(ROUTINE_2));
-        var bytes=assets.view(CdR13CapsuleAssets.View.ANIMATIONS);
+        var bytes=data.view(CdR13CapsuleAssets.View.ANIMATIONS);
         if(input.animationId()!=input.previousId()){
             write(state(c.whole).moveByte(PREVIOUS_ANIMATION,input.animationId()));
             write(state(c.whole).moveByte(ANIMATION_FRAME,0));

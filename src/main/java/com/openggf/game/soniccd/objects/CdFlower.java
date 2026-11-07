@@ -177,6 +177,37 @@ public final class CdFlower {
     public interface ReceiptGuard { void prepared(Object call); void completed(Object call); }
     @FunctionalInterface public interface PrimaryAngleCommit { void commit(PrimaryAngleCall call); }
     @FunctionalInterface public interface SourceDraw { void draw(DrawCall call); }
+    /** Native saved-flower operands. The bank is the placement owner's bank; count/positions stay Root-owned. */
+    public enum SavedSite { TIME_ZONE, COUNT_READ, COUNT_INCREMENT, POSITION_X, POSITION_Y }
+    public record SavedCall(long ordinal, SavedSite site, CdObjectPlacementRuntime.Snapshot cut,
+                            CdObjectState source, int offset, int value) { }
+    @FunctionalInterface public interface SavedPort { int access(SavedCall call); }
+    private SavedPort savedPort;
+    private SavedCall pendingSaved;
+    public static CdFlower withSavedOwner(CdObjectPlacementRuntime runtime, Assets data, CdPlayerTerrain terrain,
+            SavedPort saved, PrimaryAngleCommit angle, SourceDraw draw, DispatchObserver observer, ReceiptGuard guard) {
+        var body=new CdFlower(runtime,data,terrain,(p,i)->{throw new IllegalStateException("Use original source Draw");});
+        body.savedPort=Objects.requireNonNull(saved);body.angleCommit=Objects.requireNonNull(angle);
+        body.sourceDraw=Objects.requireNonNull(draw);body.observer=Objects.requireNonNull(observer);
+        body.receiptGuard=Objects.requireNonNull(guard);return body;
+    }
+    private int saved(CdObjectState source,SavedSite site,int offset,int value) {
+        if(savedPort==null)throw new UnsupportedFlower(site==SavedSite.TIME_ZONE?UnsupportedBoundary.SAVED_FLAGS_INIT:UnsupportedBoundary.SAVED_FLAGS_LANDING,source.identity().wholeIndex(),"Missing original saved-flower owner");
+        var call=new SavedCall(++operationOrdinal,site,runtime.capture(),source,offset,value);
+        if(pendingSaved!=null)throw new IllegalStateException("Nested saved-flower call");pendingSaved=call;
+        try {
+            observer.beforeCall(call);receiptGuard.prepared(call);
+            int result=savedPort.access(call);
+            if((site==SavedSite.TIME_ZONE||site==SavedSite.COUNT_READ)&&(result&~255)!=0)throw new IllegalArgumentException("Native flower BYTE");
+            fenceSaved(call);observer.afterCall(call);receiptGuard.completed(call);fenceSaved(call);return result;
+        } catch(RuntimeException|Error original){try{fenceSaved(call);}catch(RuntimeException|Error f){if(f!=original)original.addSuppressed(f);}throw original;}
+        finally{pendingSaved=null;}
+    }
+    private void fenceSaved(SavedCall call) {
+        runtime.validateRestore(call.cut());var now=runtime.capture();
+        if(!now.pool().slots().equals(call.cut().pool().slots())||!now.status().equals(call.cut().status())
+                ||!java.util.Arrays.equals(now.savedFlags().copy(),call.cut().savedFlags().copy()))throw new IllegalStateException("Flower saved callback changed placement");
+    }
     private DispatchObserver observer;
     private ReceiptGuard receiptGuard;
     private PrimaryAngleCommit angleCommit;
@@ -190,7 +221,7 @@ public final class CdFlower {
     private CdObjectCollisionCheck.FloorDistance floorResult;
 
     public boolean isCurrentCall(Object call) {
-        return call != null && dispatching && (call == pendingPublication || call == pendingFloor || call == pendingAngle || call == pendingDraw);
+        return call != null && dispatching && (call == pendingPublication || call == pendingFloor || call == pendingAngle || call == pendingDraw || call == pendingSaved);
     }
     /** Only the actual completed terrain return while its original call is still pending. */
     public CdObjectCollisionCheck.FloorDistance currentFloorResult(FloorCall call) {
@@ -316,8 +347,8 @@ public final class CdFlower {
             case 0 -> {
                 state = init(state, pool);
                 effects.add(new CallReturned(NativeCall.INIT));
-                state = seed(state, pool, effects);                            // .NoFlags falls into ObjFlower_Seed
-                effects.add(new CallReturned(NativeCall.SEED));
+                if(state.routine()==2){state=seed(state,pool,effects);effects.add(new CallReturned(NativeCall.SEED));}
+                else effects.add(new CallReturned(NativeCall.ANIMATE)); // saved flag6 branches directly to Animate
             }
             case 2 -> {
                 state = seed(state, pool, effects);
@@ -356,8 +387,11 @@ public final class CdFlower {
         next = next.moveLong(MAPPINGS, assets.mappingsAddress());               // .GotPriority: MOVE.L #MapSpr_Flower,oMap(a0)
         if (next.subtype() == 0) {                                             // TST.B oSubtype(a0) / BNE.S .NoFlags
             observedWrite(next, StoreKind.INIT_BLOCKED);
-            throw new UnsupportedFlower(UnsupportedBoundary.SAVED_FLAGS_INIT, state.identity().wholeIndex(),
-                    "BSR.W ObjFlower_GetSavedFlags reads the unowned saved-flags bank and timeZone");
+            if(savedPort==null)throw new UnsupportedFlower(UnsupportedBoundary.SAVED_FLAGS_INIT,state.identity().wholeIndex(),"Unowned saved-flower source");
+            int period=saved(next,SavedSite.TIME_ZONE,0,0)&127;
+            int flag=runtime.capture().savedFlags().unsignedByte(2+3*next.savedFlagsId()+period);
+            next=sourcePrefix(next.moveByte(ROUTINE,4).moveByte(ANIMATION,3),StoreKind.SEED_READY);
+            if((flag&64)!=0)return animate(next);
         }
         // .NoFlags overwrites the init tile: the low-priority ANDI above is lost for every respawn-free flower.
         return sourcePrefix(next.moveWord(ANIMATION_WORD, 0x0002)                           // MOVE.W #2,oAnim(a0): oAnim 0, oPrevAnim 2
@@ -376,8 +410,15 @@ public final class CdFlower {
         var landed = state.addWord(Y, d1);                                     // ADD.W d1,oY(a0): integer word only
         if (landed.subtype() == 0) {                                           // TST.B oSubtype(a0) / BNE.S .TouchDown
             observedWrite(landed, StoreKind.SEED_MOVE);
-            throw new UnsupportedFlower(UnsupportedBoundary.SAVED_FLAGS_LANDING, state.identity().wholeIndex(),
-                    "flowerCount/flowerPosBuf record the landing in unowned saved storage");
+            if(savedPort==null)throw new UnsupportedFlower(UnsupportedBoundary.SAVED_FLAGS_LANDING,state.identity().wholeIndex(),"Unowned flower count/position source");
+            int period=saved(landed,SavedSite.TIME_ZONE,0,0)&127;
+            // GetSavedFlags returns the period in d1; it neither reads nor sets the saved byte here.
+            int index=saved(landed,SavedSite.COUNT_READ,period,0);
+            saved(landed,SavedSite.COUNT_INCREMENT,period,(index+1)&255);
+            int positionPeriod=saved(landed,SavedSite.TIME_ZONE,0,0)&127;
+            int offset=((index&63)*4+(positionPeriod<<8))&65535;
+            saved(landed,SavedSite.POSITION_X,offset,landed.centreX());
+            saved(landed,SavedSite.POSITION_Y,(offset+2)&65535,landed.centreY());
         }
         return animate(sourcePrefix(landed.moveByte(ROUTINE, 4)                             // .TouchDown: MOVE.B #4,oRoutine(a0)
                 .moveByte(ANIMATION, 1)                                        // MOVE.B #1,oAnim(a0)

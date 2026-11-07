@@ -146,6 +146,13 @@ public final class CdTimePost {
         return new CdTimePost(placement,CdMonitor.Assets.fromAct2PastAssets(owner.objects()),direction,subCpu,draw,true);
     }
 
+    /** Source-neutral entry for the same lazy native19/8,9 algorithm; Root binds actual operands. */
+    public static CdTimePost withSourceOwner(CdObjectPlacementRuntime runtime,CdMonitor.Assets assets,
+            DirectionCommit direction,SubCpuCall subCpu,CdMonitor.DrawObjectCall draw){
+        return new CdTimePost(runtime,assets,direction,subCpu,draw,true);
+    }
+    public Result runWithReads(int wholeIndex,PastGlobals globals){return runPast(wholeIndex,globals);}
+
     /** Named bounded Past mode shares all native branch/animation algorithms and existing ports. */
     public static CdTimePost withPastOwner(CdObjectPlacementRuntime runtime, CdMonitor.Assets assets,
                                            DirectionCommit directionCommit, SubCpuCall subCpu,

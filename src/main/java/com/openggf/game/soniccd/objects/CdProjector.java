@@ -23,6 +23,18 @@ import static com.openggf.game.soniccd.objects.CdObjectState.LongField.*;
  */
 public final class CdProjector {
     public static final int OBJECT_ID=0x2E,ANIMAL_ID=0x24,EXPLOSION_ID=0x18,FM_EXPLODE=0x9E;
+    /** Source-selected ABI. Never rewrites the live ID to enter the shared body. */
+    public enum Profile { PALMTREE(0x2E,0x24), COLLISION_CHAOS(0x38,0x39);
+        final int parent, animal; Profile(int parent,int animal){this.parent=parent;this.animal=animal;}
+    }
+    private Profile profile=Profile.PALMTREE;
+    public static CdProjector collisionChaos(CdObjectPlacementRuntime placement,Assets assets,CdSolidObject solid,
+            SolidCommit commit,ProjectorStore store,PlcCall plc,FmCall fm,DrawObjectCall draw,
+            DispatchObserver observer,ReceiptGuard guard) {
+        var body=new CdProjector(placement,assets,solid,commit,store,plc,fm,draw,observer,guard);
+        body.profile=Profile.COLLISION_CHAOS;return body;
+    }
+    private int tile(Cursor c){return profile==Profile.COLLISION_CHAOS?0x33E:read(c,c.reads::act,false)==0?0x403:0x3AF;}
     // Existing immutable slot aliases describe identical storage widths/offsets, not those other bodies.
     private static final CdObjectState.WordField TIMER=ROBOT_GENERATOR_TIMER,PARENT=EXPLOSION_POINTS_FRAME;
     private static final CdObjectState.LongField SCHEDULE=ROBOT_GENERATOR_SCHEDULE;
@@ -40,7 +52,7 @@ public final class CdProjector {
         }
     }
     /** Conditional reached operands, checked read-only against the complete actual placement cut. */
-    public interface Reads {int projDestroyed();int act();int timeZone();int timeWarpDirection();int cameraXWord();}
+    public interface Reads {int projDestroyed();int act();int timeZone();int timeWarpDirection();int cameraXWord();default int parentByte(int nativeAddress){throw new UnsupportedOperationException("Unowned raw Projector parent byte at "+Integer.toHexString(nativeAddress));}}
     public record Globals(int projDestroyed,int act,int timeZone,int timeWarpDirection,int cameraXWord) implements Reads {
         public Globals {byteValue(projDestroyed);byteValue(act);byteValue(timeZone);byteValue(timeWarpDirection);wordValue(cameraXWord);}
     }
@@ -99,7 +111,7 @@ public final class CdProjector {
     public long currentCallOrdinal(Object call){if(!isCurrentCall(call))throw new IllegalStateException("Not original current Projector call");return pendingOrdinal;}
     public Result run(int wholeIndex,Reads reads,Inputs inputs) {
         if(running)throw new IllegalStateException("Projector cannot reenter physical dispatch");running=true;operationOrdinal=0;
-        try {var state=placement.pool().state(wholeIndex);if(state.id()!=OBJECT_ID)throw new IllegalArgumentException("Not Projector2E");var c=new Cursor(state,Objects.requireNonNull(reads),inputs);
+        try {var state=placement.pool().state(wholeIndex);if(state.id()!=profile.parent)throw new IllegalArgumentException("Not Projector2E");var c=new Cursor(state,Objects.requireNonNull(reads),inputs);
             if(state.subtype()!=0){hologram(c);return new Result(placement.pool().state(wholeIndex),c.effects);}
             switch(state.routine()){case 0->init(c);case 2->active(c);case 4->startExploding(c);case 6->exploding(c);case 8->finalDelay(c);default->throw unsupported(UnsupportedBoundary.ROUTINE_DISPATCH,wholeIndex,state.routine());}
             draw(c);if(c.state.signedByte(ROUTINE)<=2){despawn(c);if(c.state.id()==0)plc(c,PlcRequest.RESTORE_ANIMALS);}return new Result(placement.pool().state(wholeIndex),c.effects);
@@ -109,8 +121,8 @@ public final class CdProjector {
         if(read(c,c.reads::projDestroyed,false)!=0){delete(c);return;}
         plc(c,PlcRequest.LOAD_HOLOGRAM_ANIMALS);
         c.write(c.state.addByte(ROUTINE,2));c.write(c.state.moveByte(SPRITE_FLAGS,c.state.spriteFlags()|4));c.write(c.state.moveByte(PRIORITY,4));c.write(c.state.moveByte(X_RADIUS,12));c.write(c.state.moveByte(WIDTH,12));c.write(c.state.moveByte(Y_RADIUS,12));c.write(c.state.moveByte(COLLISION_TYPE,0xFB));
-        c.write(c.state.moveWord(TILE,read(c,c.reads::act,false)==0?0x403:0x3AF));c.write(c.state.moveLong(MAPPINGS,assets.mappingsAddress()));c.write(c.state.moveLong(SCHEDULE,assets.explosionScheduleAddress()));
-        if(!child(c,OBJECT_ID,0xFF,-0x15,-7)||!child(c,OBJECT_ID,1,-0x58,-4)||!child(c,ANIMAL_ID,0x80,-0x58,-0x18)||!child(c,ANIMAL_ID,0x81,-0x64,4)){delete(c);return;}
+        c.write(c.state.moveWord(TILE,tile(c)));c.write(c.state.moveLong(MAPPINGS,assets.mappingsAddress()));c.write(c.state.moveLong(SCHEDULE,assets.explosionScheduleAddress()));
+        if(!child(c,c.state.id(),0xFF,-0x15,-7)||!child(c,c.state.id(),1,-0x58,-4)||!child(c,profile.animal,0x80,-0x58,-0x18)||!child(c,profile.animal,0x81,profile==Profile.COLLISION_CHAOS?-0x62:-0x64,profile==Profile.COLLISION_CHAOS?0:4)){delete(c);return;}
         active(c);
     }
     private boolean child(Cursor c,int id,int subtype,int dx,int dy) {
@@ -134,10 +146,20 @@ public final class CdProjector {
     }
     private void finalDelay(Cursor c) {c.write(c.state.addWord(TIMER,-1));if(c.state.word(TIMER)!=0)return;var call=new ProjectorDestroyedCall(capture(c),c.state,0xFF);observedCall(call,()->readOnly(c,call.actualCut(),()->projectorStore.store(call)));c.effects.add(new ProjectorDestroyed());delete(c);}
     private void hologram(Cursor c) {
-        int low=c.state.word(PARENT);if(low<0xD800||low>=0xF000||(low&63)!=0)throw unsupported(UnsupportedBoundary.PARENT_READ,c.whole,low);
-        var parent=placement.pool().state((low-0xD000)>>>6);if(parent.id()!=OBJECT_ID||parent.unsignedByte(CHILDREN_INVALID)!=0){delete(c);return;}
-        if(c.state.routine()==0){c.write(c.state.addByte(ROUTINE,2));c.write(c.state.moveByte(SPRITE_FLAGS,c.state.spriteFlags()|4));c.write(c.state.moveByte(PRIORITY,4));c.write(c.state.moveWord(TILE,read(c,c.reads::act,false)==0?0x403:0x3AF));c.write(c.state.moveLong(MAPPINGS,assets.mappingsAddress()));boolean small=c.state.signedByte(SUBTYPE)<0;c.write(c.state.moveByte(X_RADIUS,small?8:20));c.write(c.state.moveByte(WIDTH,small?8:20));c.write(c.state.moveByte(Y_RADIUS,small?4:24));c.write(c.state.moveByte(ANIMATION,small?0:1));}
+        int low=c.state.word(PARENT);
+        if(profile==Profile.COLLISION_CHAOS){
+            int address=((short)low)&0xFFFFFF;
+            if(parentByte(c,address)!=profile.parent||parentByte(c,(address+0x3F)&0xFFFFFF)!=0){delete(c);return;}
+        }else{
+            if(low<0xD800||low>=0xF000||(low&63)!=0)throw unsupported(UnsupportedBoundary.PARENT_READ,c.whole,low);
+            var parent=placement.pool().state((low-0xD000)>>>6);if(parent.id()!=profile.parent||parent.unsignedByte(CHILDREN_INVALID)!=0){delete(c);return;}
+        }
+        if(c.state.routine()==0){c.write(c.state.addByte(ROUTINE,2));c.write(c.state.moveByte(SPRITE_FLAGS,c.state.spriteFlags()|4));c.write(c.state.moveByte(PRIORITY,4));c.write(c.state.moveWord(TILE,tile(c)));c.write(c.state.moveLong(MAPPINGS,assets.mappingsAddress()));boolean small=c.state.signedByte(SUBTYPE)<0;c.write(c.state.moveByte(X_RADIUS,small?8:20));c.write(c.state.moveByte(WIDTH,small?8:20));c.write(c.state.moveByte(Y_RADIUS,small?4:24));c.write(c.state.moveByte(ANIMATION,small?0:1));}
         animate(c);draw(c);
+    }
+    private int parentByte(Cursor c,int address){
+        if(address>=0xFFD800&&address<0xFFF000){int low=address&65535;return Byte.toUnsignedInt(placement.pool().state((low-0xD000)>>>6).copyBytes()[low&63]);}
+        return read(c,()->c.reads.parentByte(address),false);
     }
     private int scheduleByte(Cursor c,int pointer,UnsupportedBoundary boundary){long at=(Integer.toUnsignedLong(pointer)-Integer.toUnsignedLong(assets.explosionScheduleAddress()))&0xFFFFFFFFL;if(at>=assets.explosionSchedule().length())throw unsupported(boundary,c.whole,Integer.toUnsignedLong(pointer));return assets.explosionSchedule().unsignedByte((int)at);}
     private void plc(Cursor c,PlcRequest request){var call=new PlcCallRequest(capture(c),c.state,request);observedCall(call,()->readOnly(c,call.actualCut(),()->plcCall.submit(call)));c.effects.add(new PlcSubmitted(request));}

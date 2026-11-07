@@ -332,6 +332,37 @@ class TestCdFlower {
      * The TestCdMosqui terrain: layout cell (2,7) covers world X $200..$2FF, Y $700..$7FF with chunk 2, whose block
      * row 8 is a full-height solid floor (top at world Y $780, angle $22) across every column.
      */
+    @Test void savedFlowerFlagSixBranchesStraightToAnimateWithoutFloor() {
+        var h=new Harness();h.converted(40,0x270,0x780,0,0);
+        h.runtime.bsetSavedFlag(10,1,CdObjectPlacementRuntime.SavedBit.MEMBER_7);
+        var sites=new ArrayList<CdFlower.SavedSite>();
+        var body=savedBody(h,c->{sites.add(c.site());assertEquals(CdFlower.SavedSite.TIME_ZONE,c.site());return 1;});
+        var s=body.run(40).state();assertEquals(4,s.routine());assertEquals(3,s.unsignedByte(ANIMATION));assertEquals(0x780,s.centreY());
+        assertEquals(List.of(CdFlower.SavedSite.TIME_ZONE),sites);
+    }
+    @Test void savedFlowerLandingUsesOldCountAndFreshPeriodBeforeSeparatePositionStores() {
+        var h=new Harness();h.converted(40,0x270,0x780,0,0);
+        h.write(h.slot(40).moveByte(ROUTINE,2).moveByte(Y_RADIUS,0));
+        var sites=new ArrayList<CdFlower.SavedSite>();var offsets=new ArrayList<Integer>();var values=new ArrayList<Integer>();
+        var body=savedBody(h,c->{sites.add(c.site());offsets.add(c.offset());values.add(c.value());return switch(c.site()) {case TIME_ZONE->sites.size()==1?1:2;case COUNT_READ->63;default->0;};});
+        body.run(40);
+        assertEquals(List.of(CdFlower.SavedSite.TIME_ZONE,CdFlower.SavedSite.COUNT_READ,CdFlower.SavedSite.COUNT_INCREMENT,CdFlower.SavedSite.TIME_ZONE,CdFlower.SavedSite.POSITION_X,CdFlower.SavedSite.POSITION_Y),sites);
+        assertEquals(List.of(0,1,1,0,764,766),offsets);assertEquals(64,values.get(2));assertEquals(0x270,values.get(4));assertEquals(0x77F,values.get(5));
+        assertEquals(4,h.slot(40).routine());assertEquals(0,h.runtime.savedFlag(10,1));
+    }
+    @Test void savedFlowerCountFaultKeepsLandingAndStopsBeforePositionOrAnimation() {
+        var h=new Harness();h.converted(40,0x270,0x780,0,0);h.write(h.slot(40).moveByte(ROUTINE,2).moveByte(Y_RADIUS,0));
+        var sites=new ArrayList<CdFlower.SavedSite>();var original=new IllegalStateException("native count owner");
+        var body=savedBody(h,c->{sites.add(c.site());if(c.site()==CdFlower.SavedSite.COUNT_INCREMENT)throw original;return c.site()==CdFlower.SavedSite.COUNT_READ?255:1;});
+        assertSame(original,assertThrows(IllegalStateException.class,()->body.run(40)));assertEquals(0x77F,h.slot(40).centreY());assertEquals(2,h.slot(40).routine());
+        assertEquals(List.of(CdFlower.SavedSite.TIME_ZONE,CdFlower.SavedSite.COUNT_READ,CdFlower.SavedSite.COUNT_INCREMENT),sites);
+    }
+    private static CdFlower savedBody(Harness h,CdFlower.SavedPort saved) {
+        return CdFlower.withSavedOwner(h.runtime,assets(),h.terrain.probes(),saved,c->{},c->h.draw.drawObject(h.pool(),c.source().identity()),
+            new CdFlower.DispatchObserver(){public void beforePublication(CdFlower.Publication c){}public void afterPublication(CdFlower.Publication c){}public void beforeCall(Object c){}public void afterCall(Object c){}},
+            new CdFlower.ReceiptGuard(){public void prepared(Object c){}public void completed(Object c){}});
+    }
+
     private static final class Terrain {
         final byte[] chunks = new byte[61952];
         final byte[] fg = new byte[338];
