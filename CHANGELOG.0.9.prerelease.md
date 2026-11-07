@@ -8,6 +8,10 @@ matching area heading; see the
 ## Gameplay and presentation
 
 - **Sonic CD development support:** authenticated user-disc sources now feed an
+  Private CCZ integration now has source-bound Frame publication, native HUD
+  metadata and sparse residency, real ordinary Core PLC/section access, and a
+  detached level view. Focused Frame/HUD regressions and exact fixture repairs
+  are qualified; live CCZ World and gameplay admission remain separate work.
   Fresh selected-profile boot now performs source-ordered SPX/MDINIT/BRAM
   initialization and real serialized storage-backend setup, preserving legacy
   entry behavior and unknown save tails. A private R31 handoff remains fenced

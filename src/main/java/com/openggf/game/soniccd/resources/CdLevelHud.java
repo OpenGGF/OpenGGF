@@ -2,6 +2,8 @@ package com.openggf.game.soniccd.resources;
 
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdR11bAssets;
+import com.openggf.game.soniccd.level.CdR31aAssets;
+import com.openggf.game.soniccd.level.CdR31aHudAssets;
 import com.openggf.game.soniccd.objects.CdCheckpointLiveAux;
 import com.openggf.game.soniccd.objects.CdLevelGlobals;
 import com.openggf.game.soniccd.objects.CdOpeningObjectRuntime;
@@ -353,6 +355,62 @@ public final class CdLevelHud {
         public CdR13SectionArt.SectionArtException original(){return original;}
         public Act3FutureState state(){return state;} public List<NativeCall> calls(){return calls;}
     }
+
+    // BEGIN explicit original R31 HUD facade 20261107.
+    /** Complete caller values only; no new persistent state, programme or selector8 authority. */
+    public record R31State(CdR31aSectionArt.State section,CdRingGlobals ring,CdLevelGlobals level,
+                           CdOpeningObjectRuntime.ScoreGlobals score,CdCheckpointLiveAux.State liveTime,
+                           Optional<BonusValues> bonus) {
+        public R31State {Objects.requireNonNull(section);Objects.requireNonNull(ring);Objects.requireNonNull(level);Objects.requireNonNull(score);Objects.requireNonNull(liveTime);Objects.requireNonNull(bonus);}
+    }
+    public record R31Result(R31State state,List<NativeCall> calls) {
+        public R31Result {Objects.requireNonNull(state);calls=List.copyOf(calls);}
+    }
+    public static final class UnsupportedR31Hud extends UnsupportedOperationException {
+        private static final long serialVersionUID=1L;
+        private final Boundary boundary;private final R31State state;private final List<NativeCall> calls;
+        private final int sourceOffset,destinationWord;
+        private UnsupportedR31Hud(Stop failure,R31State state,List<NativeCall> calls){
+            super(failure.boundary+" at HUD source "+failure.sourceOffset+", destination "+failure.destinationWord,failure.getCause());
+            boundary=failure.boundary;this.state=state;this.calls=List.copyOf(calls);sourceOffset=failure.sourceOffset;destinationWord=failure.destinationWord;
+        }
+        public Boundary boundary(){return boundary;}public R31State state(){return state;}
+        public List<NativeCall> calls(){return calls;}public int sourceOffset(){return sourceOffset;}
+        public int destinationWord(){return destinationWord;}
+    }
+    /** Source-bound facade delegates every operation and fault cut to the unchanged shared Cursor. */
+    public static final class R31 {
+        private final Assets assets;private final CdR31aSectionArt art;
+        public R31(CdR31aAssets assets,CdR31aHudAssets hud,CdR31aSectionArt art){
+            Objects.requireNonNull(assets);Objects.requireNonNull(hud);this.art=Objects.requireNonNull(art);
+            if(!hud.ownsAssets(assets)||!art.ownsAssets(assets))throw new IllegalArgumentException("Foreign original R31 HUD/section source");
+            this.assets=hud.hudAssets();
+        }
+        public R31Result run(R31State state,Inputs inputs){
+            Objects.requireNonNull(state);Objects.requireNonNull(inputs);art.validateState(state.section());
+            var initial=new Values<>(state.section(),state.ring(),state.level(),state.score(),state.liveTime(),state.bonus());
+            var cursor=new Cursor<>(initial,inputs,assets,art::writeCurrentTile);
+            try{cursor.run();}
+            catch(Stop failure){throw new UnsupportedR31Hud(failure,r31State(cursor.state,initial,state),cursor.calls);}
+            catch(CdR31aSectionArt.SectionArtException original){
+                var prefix=new R31State(original.state(),cursor.state.ring(),cursor.state.level(),cursor.state.score(),cursor.state.liveTime(),cursor.state.bonus());
+                throw new R31ArtFailure(original,prefix,cursor.calls);
+            }
+            return new R31Result(r31State(cursor.state,initial,state),cursor.calls);
+        }
+    }
+    private static R31State r31State(Values<CdR31aSectionArt.State> value,Values<CdR31aSectionArt.State> initial,R31State before){
+        return value==initial?before:new R31State(value.section(),value.ring(),value.level(),value.score(),value.liveTime(),value.bonus());
+    }
+    /** Actual caller must retain this prefix and rethrow original(); the ledger is not replay authority. */
+    public static final class R31ArtFailure extends RuntimeException {
+        private static final long serialVersionUID=1L;
+        private final CdR31aSectionArt.SectionArtException original;private final R31State state;private final List<NativeCall> calls;
+        private R31ArtFailure(CdR31aSectionArt.SectionArtException original,R31State state,List<NativeCall> calls){super(original);this.original=original;this.state=state;this.calls=List.copyOf(calls);}
+        public CdR31aSectionArt.SectionArtException original(){return original;}
+        public R31State state(){return state;}public List<NativeCall> calls(){return calls;}
+    }
+    // END explicit original R31 HUD facade 20261107.
 
     private enum Digits { SKIP_LEADING, ALWAYS, BLANK_LEADING }
     /** Ephemeral local cursor; no mutable field is retained by the component. */

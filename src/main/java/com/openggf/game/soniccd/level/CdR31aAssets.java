@@ -188,6 +188,26 @@ public final class CdR31aAssets {
     }
     // END fixed R31 CCZ12/common-events source borrow 20261107.
 
+    // BEGIN fixed R31 native-HUD source borrow 20261107.
+    /** Fixed consumer/table custody, outside the original63-view public inventory. */
+    static final class HudSource {
+        private final CdR31aAssets owner;
+        private final CdAssetBytes update,reset,divisors,vint;
+        private HudSource(CdR31aAssets owner,CdAssetBytes update,CdAssetBytes reset,CdAssetBytes divisors,CdAssetBytes vint) {
+            this.owner=owner;this.update=update;this.reset=reset;this.divisors=divisors;this.vint=vint;
+        }
+        boolean owns(CdR31aAssets expected){return owner==expected;}
+        CdAssetBytes update(){return update;}CdAssetBytes reset(){return reset;}
+        CdAssetBytes divisors(){return divisors;}CdAssetBytes vint(){return vint;}
+    }
+    HudSource hudSource() {
+        requireAuthenticated();
+        return new HudSource(this,CdAssetBytes.copyOf(image.readFile(0xA940,1118)),
+                CdAssetBytes.copyOf(image.readFile(0xAB86,12)),CdAssetBytes.copyOf(image.readFile(0xACE6,40)),
+                CdAssetBytes.copyOf(image.readFile(0x1DFA,6)));
+    }
+    // END fixed R31 native-HUD source borrow 20261107.
+
     /** Same-package immutable source custody, not a public arbitrary-address reader. */
     CdMmdImage originalImage(){return image;}
     void requireAuthenticated() {

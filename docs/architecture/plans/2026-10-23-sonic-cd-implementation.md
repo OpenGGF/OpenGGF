@@ -1,5 +1,39 @@
 # Implement Sonic CD with complete regional parity
 
+## 7 November 2026 — R31 Frame, HUD and private ordinary Core access
+
+The source-bound Frame bridge executes R31 Body once and publishes its prebuilt
+full before/after pair through a privately issued, same-Frame/thread/source call.
+Already-incremented levelFrames is projected locally before Body, without an early
+Frame store. Ordered typed native FM/music requests preserve the old sound stream;
+old six runBody bodies, constructors and captures remain byte-exact. Late, stale,
+foreign or duplicate adoption rejects; post-adoption failures retain the completed
+prefix and close the failed Frame. Actual World invocation remains a separate owner.
+
+Core ordinary access now privately retains one original prepared state pair, checks
+complete extents/source identity, and adopts after native publication without Host
+callbacks. Slow PLC, deferred preparation and section updates use the actual R31
+algorithms and retain their genuine fault/current prefixes. The real R31 HUD facade
+uses the unchanged shared Cursor with independently authenticated numbers1024,
+reset12 and divisors40. An explicit sparse profile adds only the native dynamic HUD
+spans and starts UNKNOWN; old profile/bounds remain unchanged. A detached CCZ level
+view converts those native geometry/palette sources without World or current-art
+admission. No synthetic initial actor, input, clock or pixel knowledge is added.
+
+R77 stopped test compilation at one missing HUD-test import, before discovery.
+R78 then ran1042 cases:1038 passed,4 new fixture expectations failed,0 errors/skips,
+with source unchanged. All815 old Frame,37 new bridge and26 new HUD cases passed.
+The exact test-only repairs follow native Title's selector-high clear, same-selector
+UpdateSectionArt return before InitPLC, and107 native chunks plus blank0=108 engine
+blocks. R79 selects all8 invocations in the three changed methods and passes8/0F/E/S
+on equal source. Production bytes are identical across R78/R79; this is qualification
+across those two receipts, not a fresh combined1042-pass verdict. Independent Frame
+review found no actionable P1/P2; Core/HUD review found only the disclosed import.
+After execution only two new test Javadocs clarify author provenance. Full original
+receipts and exact corrections remain external. Actual loading Host, ordinary loop,
+Module/World/FULL/capture adoption and the first genuine CCZ selected picture remain
+open. The protected natural route still ends21931 before the historical unlock read.
+
 ## 7 November 2026 — original boot and real storage initialization
 
 A fresh package-private entry now performs the authenticated original SPX,

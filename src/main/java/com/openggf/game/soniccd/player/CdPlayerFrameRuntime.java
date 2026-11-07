@@ -288,7 +288,7 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
 
     /** Symbolic IDs retain their original typed owner and source ordering, with no playback. */
     public sealed interface Sound permits BodySound, ChargeSound, MovementSound, ContactFmSound, ContactSubCpuCommand,
-            DriverRamWrite { }
+            DriverRamWrite, R31NativeSound { }
     public record BodySound(CdPlayerBody.Sound sound) implements Sound {
         public BodySound { Objects.requireNonNull(sound); }
     }
@@ -328,6 +328,79 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
     public record BodyPublication(CdPlayerBody.Result result, List<Sound> sounds) {
         public BodyPublication { Objects.requireNonNull(result); sounds = List.copyOf(sounds); }
     }
+
+    // BEGIN scoped original R31 Body publication values 20261107.
+    /** The three actual R31 request forms only, at their original Body effect positions.
+     * Native IDs/selector inputs are DATA, not playback, SubCPU acknowledgement or World authority. */
+    public record R31NativeSound(CdPlayerBody.R31Action request) implements Sound {
+        public R31NativeSound {
+            Objects.requireNonNull(request, "original R31 sound request");
+            if (!(request instanceof CdPlayerBody.R31FmRequest)
+                    && !(request instanceof CdPlayerBody.R31SubCpuRequest)
+                    && !(request instanceof CdPlayerBody.R31MusicRequest)) {
+                throw new IllegalArgumentException("Only original R31 FM, SubCPU or stage-music requests");
+            }
+        }
+    }
+
+    /** Complete immutable component output only. Equal values cannot construct an original call. */
+    public record R31Publication(BodyPublication body, CdPlayerBody.R31Values nativeValues) {
+        public R31Publication { Objects.requireNonNull(body); Objects.requireNonNull(nativeValues); }
+    }
+
+    /** Actual caller prebuilds all external owners and validates its private World/source cut BEFORE
+     * original.applyNative(). Complete pool/chunk/plane/global/music adoption remains caller-owned. */
+    public interface R31PublicationPort {
+        void publish(R31BodyCall original);
+    }
+
+    /** One original, synchronous pending Body call, never a captured/resumable capability.
+     * publication() is immutable DATA; only requireOwner/applyNative have a live operation scope.
+     * The real World separately authenticates its own retained source/epoch/phase/full native cut. */
+    public final class R31BodyCall {
+        private final R31Publication publication;
+        private final CdStagePlayerSource source;
+        private final CdPlayerBody.State expectedState, readyState;
+        private final CdPlayerBody.Environment expectedEnvironment, readyEnvironment;
+        private final Optional<CdPlayerBody.DisplayPublication> expectedDisplay, readyDisplay;
+        private final CdPlayerArtRuntime.State expectedArt;
+        private final VIntClock expectedClock;
+        private final boolean expectedPaused;
+        private final Thread invokingThread;
+        private boolean applied;
+
+        private R31BodyCall(R31Publication publication, CdStagePlayerSource source) {
+            this.publication = publication; this.source = source;
+            expectedState = state; expectedEnvironment = environment; expectedDisplay = display;
+            expectedArt = art.capture(); expectedClock = vIntClock; expectedPaused = paused;
+            invokingThread = Thread.currentThread();
+            var result = publication.body().result();
+            readyState = result.state(); readyEnvironment = result.environment(); readyDisplay = result.display();
+        }
+
+        public R31Publication publication() { return publication; }
+
+        /** Actual private pending identity plus complete Frame preimage, not value-CAS admission. */
+        public void requireOwner(CdPlayerFrameRuntime expected) {
+            Objects.requireNonNull(expected, "actual R31 Frame owner");
+            if (expected != CdPlayerFrameRuntime.this) throw new IllegalArgumentException("Foreign R31 Frame call owner");
+            if (Thread.currentThread() != invokingThread || !inOperation || pendingR31Body != this
+                    || applied || closed || bodyEntitled || pending != null
+                    || source != pastSource || state != expectedState || environment != expectedEnvironment
+                    || display != expectedDisplay || art.capture() != expectedArt || vIntClock != expectedClock
+                    || paused != expectedPaused) {
+                throw new IllegalStateException("No current unapplied original R31 Body call/full Frame cut");
+            }
+        }
+
+        /** Validate first, then assign only already-built Frame references. No effects/services replay. */
+        public void applyNative() {
+            requireOwner(CdPlayerFrameRuntime.this);
+            state = readyState; environment = readyEnvironment; display = readyDisplay;
+            applied = true;
+        }
+    }
+    // END scoped original R31 Body publication values.
 
     /**
      * Plain values an in-module death restart carries because LevelStart's .NormalLoad never writes them
@@ -384,6 +457,8 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
     private boolean bodyEntitled;
     // Meaningful only while bodyEntitled; no capture or independent service authority.
     private boolean mainFrameAdvanced;
+    // Original R31 call exists only on its synchronous inOperation stack; never captured.
+    private R31BodyCall pendingR31Body;
 
     private CdPlayerFrameRuntime(CdR11aAssets assets, ArtPublication publication, CdPlayerBody.State state,
                                  CdPlayerBody.Environment environment, CdPlayerArtRuntime.State artIngress) {
@@ -1445,6 +1520,62 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
             inOperation = false;
         }
     }
+
+    // BEGIN genuine R31 ordinary Frame bridge 20261107.
+    /**
+     * Distinct normal R31 Main/Hurt component entry. The six legacy runBody overloads retain their
+     * original R3 continuation fence. N objects/player.asm:272-335,353-415,2206-2239;
+     * r3/player_block_check.asm and r3/player_object_collide.asm at pin1ecc5f3a.
+     *
+     * Body executes once over its exact retained source and the complete explicit current cut.
+     * Already-incremented low16 levelFrames is projected into a LOCAL input; the live Frame pair
+     * stays unchanged through all fallible Body/sound/display preparation and caller preflight.
+     * The typed port must apply its exact original call once. It receives no arbitrary restore
+     * or Result-adoption entry. Public values confer no actual World/Module invocation authority.
+     *
+     * A pre-apply throw consumes entitlement but publishes no Body values, retaining earlier real
+     * V-int input/art/clock prefixes. A fault AFTER apply preserves that completed prefix and closes
+     * this Frame admission; no rollback or fabricated successful publication is supplied. Actual
+     * external native writes/planes/music/requests and whole-World capture remain caller-owned.
+     */
+    public R31Publication runR31Body(int levelFrames, CdPlayerBody.R31Context context,
+                                    R31PublicationPort port) {
+        requireBodyEntitlement();
+        bodyEntitled = false;
+        inOperation = true;
+        try {
+            Objects.requireNonNull(port, "actual R31 publication port");
+            var completed = body.stepR31(state, withLevelFrames(environment, levelFrames & 0xFFFF), context);
+            var publication = new R31Publication(new BodyPublication(completed.body(),
+                    collectR31Sounds(completed.body().effects())), completed.nativeValues());
+            var original = new R31BodyCall(publication, context.source());
+            pendingR31Body = original;
+            port.publish(original);
+            if (!original.applied) throw new IllegalStateException("Original R31 Body call was not applied");
+            return publication;
+        } catch (RuntimeException | Error original) {
+            if (pendingR31Body != null && pendingR31Body.applied) { closed = true; artPublication = null; }
+            throw original;
+        } finally {
+            pendingR31Body = null;
+            pending = null;
+            inOperation = false;
+        }
+    }
+
+    /** Reuse legacy extraction verbatim, inserting only actual R31 requests at their positions.
+     * R31BlockCall is a comparison log, never another source of sound or executable effects. */
+    private static List<Sound> collectR31Sounds(List<CdPlayerBody.Effect> effects) {
+        var sounds = new ArrayList<Sound>();
+        for (var effect : effects) {
+            if (effect instanceof CdPlayerBody.R31FmRequest request) sounds.add(new R31NativeSound(request));
+            else if (effect instanceof CdPlayerBody.R31SubCpuRequest request) sounds.add(new R31NativeSound(request));
+            else if (effect instanceof CdPlayerBody.R31MusicRequest request) sounds.add(new R31NativeSound(request));
+            else sounds.addAll(collectSounds(List.of(effect)));
+        }
+        return List.copyOf(sounds);
+    }
+    // END genuine R31 ordinary Frame bridge.
 
     /** Engine adapter preflight: distinguish an unserviced call from a failed serviced Body. */
     void requireBodyEntitlement() {

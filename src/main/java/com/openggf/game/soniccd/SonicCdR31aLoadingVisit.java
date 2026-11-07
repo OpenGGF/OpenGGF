@@ -127,11 +127,40 @@ final class SonicCdR31aLoadingVisit {
         CycleResult{SonicCdR31aLoadingVisit.palette(palette);extent(timers,7);extent(steps,7);writes=List.copyOf(writes);Objects.requireNonNull(fault);}
     }
     final class OrdinaryAccess {
+        // BEGIN R31 ordinary complete-pair prebuild 20261107. Private live-access identity only.
+        private State preparedBefore,prepared;
         private OrdinaryAccess(){}
         private void require(){if(this!=activeOrdinary||!running||failed||values.phase()!=Phase.READY||ordinary==null)throw new IllegalStateException("No actual R31 ordinary continuation");validateHost();}
         void requireOwner(OrdinaryOwner expected){require();if(expected!=ordinary)throw new IllegalArgumentException("Another ordinary owner");}
         State state(){require();return values;}
         void validate(State expected){require();if(expected!=values)throw new IllegalArgumentException("Stale complete Core cut");}
+        /** Pure complete prebuild; neither the candidate nor an equal clone is publication authority. */
+        State prepare(State expected,CdR31aSectionArt.State section,CdLevelGlobals level,CdAssetBytes reserved,
+                      CdAssetBytes normal,CdAssetBytes displayed){
+            validate(expected);art.validateState(Objects.requireNonNull(section));Objects.requireNonNull(level);
+            extent(reserved,1984);palette(normal);palette(displayed);
+            State ready=expected.art(section).level(level).reserved(reserved)
+                    .colours(normal,expected.fadePalette(),expected.waterPalette(),displayed);
+            preparedBefore=expected;prepared=ready;return ready;
+        }
+        /** Validate the original pending full pair before any coupled native owner assignment. */
+        void validatePrepared(State expected,State ready){
+            validate(expected);
+            if(preparedBefore!=expected||prepared!=ready)throw new IllegalArgumentException("No original prepared R31 ordinary pair");
+        }
+        /** Adopt only ready references after native publication. No Host/Frame callback or input read. */
+        void adoptAfterNative(State expected,State ready){
+            if(this!=activeOrdinary||!running||failed||values!=expected||preparedBefore!=expected||prepared!=ready)
+                throw new IllegalStateException("Original prevalidated R31 Core pair expired");
+            values=ready;preparedBefore=null;prepared=null;
+        }
+        /** Native slow service reads the actual scrollLock WORD; artOp retains reached fault prefixes. */
+        void serviceSlowPlc(State expected,int scrollLockWord){validate(expected);word(scrollLockWord);artOp(a->art.serviceSlow(a,scrollLockWord));}
+        /** Actual ProcessPLCs over the current descriptor/decoder pair, not completed-effect replay. */
+        void preparePlc(State expected){validate(expected);artOp(art::prepare);}
+        /** R31 has real camera sections. Do not substitute the native R13 no-op section programme. */
+        void updateSection(State expected,int cameraXWord){validate(expected);word(cameraXWord);artOp(a->art.updateSection(a,cameraXWord));}
+        // END R31 ordinary complete-pair prebuild 20261107.
         /** Native deferred Title PLC2; actual World first authenticates the original Title receipt. */
         void appendTitlePlc(State expected){validate(expected);artOp(a->art.appendList(a,2));call(Call.TITLE_PLC_APPEND);}
         /** Pure Main425 programme over the cached four scripts; caller must prebuild/adopt its coupled
