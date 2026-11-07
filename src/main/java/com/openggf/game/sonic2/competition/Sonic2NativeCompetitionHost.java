@@ -115,6 +115,8 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
         this.publishMode = Objects.requireNonNull(publishMode, "publishMode");
         this.views = Objects.requireNonNull(views, "views");
         this.nativeState = Objects.requireNonNull(nativeState, "nativeState");
+        if (nativeState instanceof com.openggf.game.sonic2.competition.state.Sonic2CompetitionNativeState production)
+            checkpointEnvironment = () -> production.primaryEnvironment(context(), session);
         this.teleportOnly = teleportOnly;
         this.overseas = overseas;
         this.pauseAudio = AudioNativePauseAccess.bind(services.audio());
@@ -182,6 +184,14 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
             resetNativePause();
             // Reuse this exact context: policy.retire resets the complete competition ledger.
             world.load(logicalZone(zone), act);
+            if (nativeState instanceof com.openggf.game.sonic2.competition.state.Sonic2CompetitionNativeState production) {
+                var registry = context().getRewindRegistry();
+                registry.deregisterPostRestoreCallback("sprite-powerup-derived-state");
+                registry.registerPostRestoreCallback("sprite-powerup-derived-state", () -> {
+                    if (session.teleportClock().active()) production.restoreFrozenEffects(context(), session);
+                    else context().getSpriteManager().refreshPowerUpObjectsAfterRewindRestore();
+                });
+            }
             module.nativeLifecycle().initializeAct();
             // The inherited VInt clock and native LF=0 are published only when
             // loadZoneAndAct returns. Assembly must not lose the 25 real waits.

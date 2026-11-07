@@ -16,40 +16,10 @@ import java.util.function.Supplier;
 
 /** Internal native gameplay seams; deliberately outside the creator API. */
 public final class ObjectManagerInternalAccess {
-    /** A processed-range extension retains the original allocation/placement semantics. */
-    public interface AllocationSemantics { ObjectSlotLayout allocationLayout(); }
-
-    /** World-owned semantic boundary; absent in ordinary gameplay. */
-    public interface NativeExecution {
-        void afterNativeWait();
-        boolean objectsFrozen();
-    }
-    public static NativeExecution nativeExecution(com.openggf.LevelFrameContext context) {
-        return com.openggf.game.session.WorldSessionPolicyAccess.getService(
-                context.levelManager() == null ? null : context.levelManager().getWorldSession(),
-                NativeExecution.class);
-    }
-    /** RunObjects was skipped; V-int and ObjectsManager still run. */
-    public static void runFrozenPlacementPass(ObjectManager manager) {
-        manager.advanceVblaCounter();
-        manager.nativeCompetitionStreaming().update();
-    }
-
     public static void swapNativePlaneSwitcherPlayers(ObjectManager manager, ObjectSpawn spawn,
             com.openggf.game.PlayableEntity first, com.openggf.game.PlayableEntity second) {
         var owner = manager.nativeTeleportPlaneSwitcherState();
         if (owner != null) owner.swapNativePlayerSides(spawn, first, second);
-    }
-
-    public static void repairNativeTeleportStanding(ObjectManager manager,
-            com.openggf.sprites.playable.AbstractPlayableSprite p1,
-            com.openggf.sprites.playable.AbstractPlayableSprite p2) {
-        manager.solidContacts().repairNativeTeleportStanding(p1, p2);
-    }
-
-    /** Preserve the object's registered callback/fault owner while applying a native field write. */
-    public static void mutateNativeObject(ObjectManager manager, ObjectInstance object, Runnable write) {
-        manager.objectCallbacks().run(object, write);
     }
 
     /** Recreate only the exact captured fixed owner; never mint a missing effect during rewind. */
@@ -67,6 +37,36 @@ public final class ObjectManagerInternalAccess {
         if (manager.currentNativeSstOwner(slot) != restored)
             throw new IllegalStateException("Captured fixed effect lost its native slot " + slot);
         return restored;
+    }
+
+    public static void repairNativeTeleportStanding(ObjectManager manager,
+            com.openggf.sprites.playable.AbstractPlayableSprite p1,
+            com.openggf.sprites.playable.AbstractPlayableSprite p2) {
+        manager.solidContacts().repairNativeTeleportStanding(p1, p2);
+    }
+
+    /** Preserve the object's registered callback/fault owner while applying a native field write. */
+    public static void mutateNativeObject(ObjectManager manager, ObjectInstance object, Runnable write) {
+        manager.objectCallbacks().run(object, write);
+    }
+
+    /** A processed-range extension retains the original allocation/placement semantics. */
+    public interface AllocationSemantics { ObjectSlotLayout allocationLayout(); }
+
+    /** World-owned semantic boundary; absent in ordinary gameplay. */
+    public interface NativeExecution {
+        void afterNativeWait();
+        boolean objectsFrozen();
+    }
+    public static NativeExecution nativeExecution(com.openggf.LevelFrameContext context) {
+        return com.openggf.game.session.WorldSessionPolicyAccess.getService(
+                context.levelManager() == null ? null : context.levelManager().getWorldSession(),
+                NativeExecution.class);
+    }
+    /** RunObjects was skipped; V-int and ObjectsManager still run. */
+    public static void runFrozenPlacementPass(ObjectManager manager) {
+        manager.advanceVblaCounter();
+        manager.nativeCompetitionStreaming().update();
     }
 
     public static void prepareInitialPlacementWindow(ObjectManager manager, List<ObjectSpawn> spawns,
