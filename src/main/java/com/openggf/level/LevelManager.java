@@ -3566,6 +3566,15 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         }
     }
 
+    /** Full native checkpoint restore, omitting only the initial title-card presentation.
+     * The caller owns life loss and the GAME OVER/TIME OVER decision before requesting reload.
+     * Available to live execution and input-only replay; checkpoint time is restored by the load.
+     */
+    public void restartCurrentLevelFromCheckpointAfterDeath() {
+        restartCurrentLevelAfterDeath();
+        skipPendingInitialTitleCardPresentation();
+    }
+
     /**
      * A fast death restart ({@link com.openggf.game.session.GameplayRunPolicy.DeathRestart#FAST_FROM_START}):
      * the same full death reload as {@link #restartCurrentLevelAfterDeath()}, but from the act's
@@ -3574,15 +3583,6 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * still decides whether a card exists, so a zone whose card belongs to a later cutscene
      * (S3K AIZ1's plane intro) keeps that card and its art admission for the cutscene.
      */
-    /** Full native checkpoint restore, omitting only the initial title-card presentation.
-     * The caller owns life loss and the GAME OVER/TIME OVER decision before requesting reload.
-     * Shared by the live loop and input-only replay; checkpoint time is restored by the load.
-     */
-    public void restartCurrentLevelFromCheckpointAfterDeath() {
-        restartCurrentLevelAfterDeath();
-        skipPendingInitialTitleCardPresentation();
-    }
-
     public void restartCurrentLevelFromStartAfterDeath() {
         checkpointCoordinator.restartFromStartAfterDeath();
     }
