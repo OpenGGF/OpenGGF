@@ -40,6 +40,15 @@ final class TraceCapturePresentationSetup implements AutoCloseable {
 
     static TraceCapturePresentationSetup open(SonicConfigurationService configuration,
             TraceCaptureDimensions dimensions, CallerState callerState) {
+        return open(configuration, dimensions, callerState, true);
+    }
+
+    /**
+     * {@code nativeSpriteLimits=false} renders without native sprite dropout, as normal
+     * play does by default; promotional footage uses it, ROM image comparison does not.
+     */
+    static TraceCapturePresentationSetup open(SonicConfigurationService configuration,
+            TraceCaptureDimensions dimensions, CallerState callerState, boolean nativeSpriteLimits) {
         Objects.requireNonNull(configuration, "configuration");
         Objects.requireNonNull(dimensions, "dimensions");
         Objects.requireNonNull(callerState, "callerState");
@@ -48,7 +57,7 @@ final class TraceCapturePresentationSetup implements AutoCloseable {
         Object previousScanlineLimit = callerState.scanlineLimit();
         try {
             // ROM image comparisons need native dropout even when normal play disables it.
-            configuration.setConfigValue(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT, true);
+            configuration.setConfigValue(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT, nativeSpriteLimits);
             if (configuration.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)) {
                 configuration.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
             }
@@ -72,7 +81,13 @@ final class TraceCapturePresentationSetup implements AutoCloseable {
     static TraceCapturePresentationSetup open(SonicConfigurationService configuration,
             TraceCaptureDimensions dimensions, CallerState callerState,
             com.openggf.audio.AudioManager audio, int requestedFps) {
-        var setup = open(configuration, dimensions, callerState);
+        return open(configuration, dimensions, callerState, audio, requestedFps, true);
+    }
+
+    static TraceCapturePresentationSetup open(SonicConfigurationService configuration,
+            TraceCaptureDimensions dimensions, CallerState callerState,
+            com.openggf.audio.AudioManager audio, int requestedFps, boolean nativeSpriteLimits) {
+        var setup = open(configuration, dimensions, callerState, nativeSpriteLimits);
         try {
             int hz = com.openggf.configuration.FrameRateResolver.simulation(configuration) == 50 ? 50 : requestedFps;
             setup.audioCadence = com.openggf.audio.AudioManagerInternalAccess.offlineServiceCadence(audio, hz);
