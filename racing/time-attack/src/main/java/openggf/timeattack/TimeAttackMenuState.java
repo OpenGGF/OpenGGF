@@ -2,7 +2,6 @@ package openggf.timeattack;
 
 
 import com.openggf.mods.run.MonitorRule;
-import com.openggf.mods.run.TrackKind;
 import openggf.timeattack.mp.VoteTrackPools;
 
 import java.io.IOException;
@@ -422,16 +421,13 @@ public final class TimeAttackMenuState {
     }
 
     /**
-     * Tags the menu draws on the focused track row only: its kind and the modes it races in
-     * ({@code ARENA}, {@code COMPETITION}). Every other row has none.
+     * Tags the menu draws on the focused track row of a hosted room: the track's kind and the modes
+     * it races in ({@link openggf.timeattack.ui.TrackBadges}). Every other row has none.
      */
     public List<String> focusBadges(Row row) {
         TimeAttackTrackCatalog.Track track = currentTrack();
         if (row != Row.TRACK || track == null || !hosting()) return List.of();
-        String kind = track.kind() == TrackKind.ARENA ? track.lapCount() + " LAPS" : "ACT";
-        String modes = track.modes().size() > 1 ? "BOTH MODES"
-                : track.modes().contains(CompetitionRoomSettings.Mode.COMPETITION) ? "COMPETITION" : "TIME ATTACK";
-        return List.of(kind, modes);
+        return openggf.timeattack.ui.TrackBadges.of(track);
     }
 
     /** The track's group as the pool editor captions it. */
@@ -442,6 +438,15 @@ public final class TimeAttackMenuState {
     public TimeAttackTrackCatalog.Track currentTrack() {
         List<TimeAttackTrackCatalog.Track> tracks = currentTracks();
         return trackIndex < tracks.size() ? tracks.get(trackIndex) : null;
+    }
+
+    /**
+     * The protocol key of the chosen track ({@code game:zone:act} or {@code game:arena:N}): an
+     * arena's menu index shares the zone field with acts, so only the key tells them apart.
+     */
+    public String currentTrackKey() {
+        TimeAttackTrackCatalog.Track track = currentTrack();
+        return track == null ? null : track.key();
     }
 
     public List<String> currentCharacters() {
