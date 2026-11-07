@@ -38,6 +38,8 @@ under the matching area heading; see the
   resume actual ROM-backed work; credits use their native wait and fade loops.
   Generic ending callers retain their gameplay order, and failed initialization
   preserves the original error while cleaning up its owned continuation.
-  Physics, auxiliary observations and movie input are preserved exactly. New red frontiers remain visible.
+  Physics, auxiliary observations and movie input are preserved exactly. New red
+  frontiers remain visible, including the fresh sanctuary's intermediate load
+  state; its routine comparison does not establish player dispatch.
   Special-stage entry honors the recorded team and production lock-on module;
   the single entry-state import consumes S2-family manifest destination rings.
