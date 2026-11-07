@@ -78,7 +78,7 @@ public final class Sonic2CompetitionRuntimeModule extends DelegatingGameModule {
         // state and other camera writers remain the root RAM owner's gate.
         lifecycle.recordCameraDisplacement(slot,
                 (short) ((camera.getX() - oldX) << 8),
-                (short) ((camera.getY() - oldY) << 8));
+                (short) ((camera.getY() - oldY) << 8), !host.session().teleportClock().active(), true);
     }
     @Override public ZoneFeatureProvider getZoneFeatureProvider() { return features; }
     @Override public RuntimeArtCoordinator createRuntimeArtCoordinator(HardwareTimingService timing) {
