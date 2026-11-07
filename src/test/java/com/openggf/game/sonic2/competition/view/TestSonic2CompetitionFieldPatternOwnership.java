@@ -125,6 +125,26 @@ class TestSonic2CompetitionFieldPatternOwnership {
             assertEquals(GL_NO_ERROR, glGetError());
         } finally { TestEnvironment.resetAll(); }
     }
+    @Test void animatedMapOverrunSeedsOnlyTheActuallyLoadedDeformationWordsInAllSixActs() throws Exception {
+        var rom = TestEnvironment.currentRom();
+        for (int zone : new int[]{0, 11, 12}) for (int act = 0; act < 2; act++) {
+            var source = new Sonic2CompetitionScrollSourceAdapter(rom,
+                    new com.openggf.game.sonic2.Sonic2GameModule().getScrollHandlerProvider().getZoneConstants());
+            var state = source.owner().capture();
+            short[] retained = new short[24]; java.util.Arrays.fill(retained, (short) 0x5A5A);
+            source.owner().restore(new com.openggf.game.sonic2.competition.scroll.Sonic2CompetitionScroll.State(
+                    state.p1(), state.p2(), retained, state.horizontal(), state.v1(), state.v2()));
+            var profile = Sonic2CompetitionLevelProfile.load(rom, zone, act);
+            var art = Sonic2CompetitionNativeArt.load(rom, profile);
+            source.applyLoadedLayerDefinition(art);
+            short[] actual = source.owner().capture().scratch();
+            if (art.animationCopiedWords() == 0) assertArrayEquals(retained, actual);
+            else for (int word = 0; word < actual.length; word++)
+                assertEquals(art.readWord(0xA800 + word * 2), actual[word] & 65535,
+                        "loaded LayerDef word " + word + " in " + profile.zoneAct());
+            for (short word : retained) assertEquals((short) 0x5A5A, word, "seed input is immutable");
+        }
+    }
     private static void assertAtlas(Sonic2CompetitionArtResidency art, GraphicsManager graphics) {
         var atlas = graphics.getPatternAtlas();
         var pages = new HashMap<Integer, java.nio.ByteBuffer>();

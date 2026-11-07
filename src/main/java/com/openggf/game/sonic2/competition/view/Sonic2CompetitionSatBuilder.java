@@ -15,7 +15,8 @@ import static com.openggf.game.sonic2.competition.view.Sonic2CompetitionDisplayI
 /**
  * CPU BuildSprites_2P (s2.asm:30987-31448), including native HUD and placed rings.
  * The host supplies actual resolved sources and commits the returned visibility /
- * display-list consumption decisions. It must invoke P2 only after Hint_flag clears.
+ * display-list consumption decisions. Both completed pages are published atomically;
+ * the shipped Hint_flag/partial-page race is explicitly unsupported.
  * This class does not call ordinary draw routines or advance any world owner.
  */
 public final class Sonic2CompetitionSatBuilder {

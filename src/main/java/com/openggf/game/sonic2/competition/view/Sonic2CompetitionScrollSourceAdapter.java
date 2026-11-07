@@ -39,6 +39,27 @@ public final class Sonic2CompetitionScrollSourceAdapter implements ScrollHandler
                 bgY << 16, x << 16, bg2Y, x << 16, 0);
         owner.initializeLevel(zone(), first, second);
     }
+    /**
+     * LoadLevelBlocks_2P (s2.asm:86878-86898), shipped fixBugs=0, writes beyond
+     * Block_Table into TempArray_LayerDef (s2.constants.asm:1088-1093). Translate
+     * only that actual loaded span into the deformation owner's semantic words.
+     * Level (s2.asm:4930-4941) performs this AFTER the initial deformation/clears.
+     */
+    public void applyLoadedLayerDefinition(com.openggf.game.sonic2.competition.Sonic2CompetitionNativeArt art) {
+        int first = 0x9000 + (short) art.profile().animationPatch().destinationByteOffset();
+        int end = first + art.animationCopiedWords() * 2;
+        if (end <= 0xA800 || first >= 0xA830) return;
+        var state = owner.capture();
+        short[] scratch = state.scratch();
+        for (int word = 0; word < scratch.length; word++) {
+            int address = 0xA800 + word * 2;
+            if (address >= first && address + 2 <= end) scratch[word] = (short) art.readWord(address);
+        }
+        // A1's immutable load/restore DTO is the published state-seeding seam;
+        // no parallel scratch owner or mutable RAM image is introduced here.
+        owner.restore(new Sonic2CompetitionScroll.State(state.p1(), state.p2(), scratch,
+                state.horizontal(), state.v1(), state.v2()));
+    }
     public void completeCameraPass(Sonic2CompetitionSession session, int vintRunCount) {
         if (profile == null) return;
         owner.update(zone(), profile.act(), camera(session, 0), camera(session, 1), vintRunCount);

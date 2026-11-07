@@ -87,6 +87,7 @@ public final class Sonic2CompetitionRuntimeModule extends DelegatingGameModule {
         var context = host.context();
         var session = host.session();
         scroll.initialize(host.profile(), session);
+        scroll.applyLoadedLayerDefinition(host.nativeArt());
         var planes = new Sonic2CompetitionPlanes();
         var planeScroll = new Sonic2CompetitionPlaneScroll();
         planeScroll.initialize(session.camera(0).getX(), session.camera(0).getY(),
