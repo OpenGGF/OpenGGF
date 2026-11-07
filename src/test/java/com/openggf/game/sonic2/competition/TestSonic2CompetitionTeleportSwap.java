@@ -94,7 +94,7 @@ class TestSonic2CompetitionTeleportSwap {
                     .filter(o->o.getSpawn()!=null && o.getSpawn().respawnTracked() && !o.isDestroyed())
                     .filter(o->o instanceof com.openggf.level.objects.AbstractObjectInstance)
                     .map(o->(com.openggf.level.objects.AbstractObjectInstance)o).findFirst().orElseThrow();
-            var spawn=w.host.context().getLevelManager().getLevel().getObjects().stream()
+            var spawn=w.host.context().getLevelManager().getCurrentLevel().getObjects().stream()
                     .filter(row->row.layoutIndex()==object.getSpawn().layoutIndex()).findFirst().orElseThrow();
             assertFalse(objects.isRemembered(spawn));
             object.setDestroyed(false);object.setDestroyed(true);w.tick();

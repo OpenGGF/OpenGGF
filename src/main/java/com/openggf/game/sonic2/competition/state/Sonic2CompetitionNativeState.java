@@ -18,12 +18,20 @@ import java.util.Objects;
 public final class Sonic2CompetitionNativeState implements Sonic2NativeCompetitionHost.NativeState {
     private final Sonic2TeleportPorts.BackgroundBanks backgrounds;
     private final Sonic2TeleportPorts.PlaneScroll planes;
+    private final Sonic2SecondaryInvincibility secondaryInvincibility = new Sonic2SecondaryInvincibility();
 
     public Sonic2CompetitionNativeState(Sonic2TeleportPorts.BackgroundBanks backgrounds,
                                        Sonic2TeleportPorts.PlaneScroll planes) {
         this.backgrounds = Objects.requireNonNull(backgrounds, "live BG/copy/flag banks");
         this.planes = Objects.requireNonNull(planes, "live plane scroll owner");
     }
+    public Sonic2SecondaryInvincibility initializeActorStatus(GameplayModeContext context, Sonic2CompetitionSession session) {
+        secondaryInvincibility.initialize(context, session);
+        return secondaryInvincibility;
+    }
+
+    public void retireActorStatus() { secondaryInvincibility.retire(); }
+
     @Override public boolean operational() {
         // Raw status_secondary.invincible must travel independently of Super_Sonic_flag before activation.
         return false;
@@ -55,6 +63,7 @@ public final class Sonic2CompetitionNativeState implements Sonic2NativeCompetiti
         var p1 = session.player(0); var p2 = session.player(1);
         boolean priority1 = p1.isHighPriority(), priority2 = p2.isHighPriority();
         PlayableSpriteInternalAccess.swapNativeTeleportActors(p1, p2);
+        secondaryInvincibility.swapPlayers();
         p1.setHighPriority(priority2); p2.setHighPriority(priority1);
         // teleport_swap_table (s2.asm:26169-26190). Progress, checkpoints and actor identities stay put.
         restoreCamera(session.camera(0), b, a, p1, true);

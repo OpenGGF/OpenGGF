@@ -4,6 +4,26 @@ import com.openggf.level.objects.ObjectInstance;
 
 /** Engine-only cross-package access to playable controller internals. */
 public final class PlayableSpriteInternalAccess {
+    /** Structural semantic owner. Null means the ordinary inferred status remains authoritative. */
+    public interface SecondaryInvincibility {
+        Boolean read();
+        void write(boolean value);
+    }
+
+    public static Boolean nativeSecondaryInvincibility(com.openggf.game.PlayableEntity player) {
+        if (!(player instanceof AbstractPlayableSprite actor)) return null;
+        var owner = actor.nativeSecondaryInvincibilityOwner();
+        return owner != null ? owner.read() : null;
+    }
+
+    public static void bindNativeSecondaryInvincibility(AbstractPlayableSprite player, SecondaryInvincibility owner) {
+        player.bindNativeSecondaryInvincibility(owner);
+    }
+
+    public static void writeNativeSecondaryInvincibility(AbstractPlayableSprite player, boolean value) {
+        player.writeNativeSecondaryInvincibility(value);
+    }
+
     /** Fixed-size private ghost state: no gameplay/controller owners or rewind payloads. */
     public record GhostPresentationState(
             short xPixel, short yPixel, short xSubpixel, short ySubpixel,

@@ -503,6 +503,8 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
             // Obj01_Init/Obj02_Init own the effective words, independent of profile binding.
             com.openggf.sprites.playable.PlayableSpriteInternalAccess.initializeNativeSpeedWords(player, context().getWorldSession());
         }
+        if (nativeState instanceof com.openggf.game.sonic2.competition.state.Sonic2CompetitionNativeState production)
+            replaceRewindAdapter(production.initializeActorStatus(context(), session));
         context().getLevelManager().refreshPlayablePowerUpSpawners();
     }
 
@@ -584,6 +586,10 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
         }
         @Override public void failedAssembly(LevelLoadCause cause) { resetLoadState(); resetNativePause(); }
         @Override public void closeScreens() { resetNativePause(); }
-        @Override public void retire() { resetLoadState(); resetNativePause(); session.reset(); }
+        @Override public void retire() {
+            if (nativeState instanceof com.openggf.game.sonic2.competition.state.Sonic2CompetitionNativeState production)
+                production.retireActorStatus();
+            resetLoadState(); resetNativePause(); session.reset();
+        }
     }
 }

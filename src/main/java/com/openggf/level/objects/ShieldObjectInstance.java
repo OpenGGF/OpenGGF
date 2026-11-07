@@ -80,6 +80,14 @@ public class ShieldObjectInstance extends AbstractObjectInstance
         if (destroyed) {
             return;
         }
+        // Obj38_Shield (s2.asm:42403-42408): invincibility holds the shield without animating.
+        Boolean raw = com.openggf.sprites.playable.PlayableSpriteInternalAccess.nativeSecondaryInvincibility(this.player);
+        if (raw != null) {
+            visible = false;
+            if (raw) return;
+            if (!this.player.hasShield()) { destroy(); return; }
+            visible = true;
+        }
         // AnimateSprite uses this object's obTimeFrame countdown; it is not
         // synchronized to the global V-int counter. The script delay is one less
         // than the number of updates each mapping frame remains displayed.

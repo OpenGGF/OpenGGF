@@ -26,19 +26,30 @@ final class NativeTeleportTestWorld {
     final InputHandler input = new InputHandler();
     final Sonic2NativeControlState controls = new Sonic2NativeControlState();
     final Sonic2NativeCompetitionHost host;
+    final Sonic2CompetitionNativeState nativeState;
     int planeSwaps;
     private NativeTeleportTestWorld(com.openggf.GameLoop loop, EngineContext services) {
+        nativeState = new Sonic2CompetitionNativeState(backgrounds, () -> planeSwaps++);
         host = new Sonic2NativeCompetitionHost(SessionManager.getCurrentWorldSession().rootGameModule(), services,
                 loop::setGameplayMode, new Sonic2NativeCompetitionHost.Views() {
                     public void prepare(GameplayModeContext c, Sonic2CompetitionSession s,
                                         Sonic2CompetitionLevelProfile p, Sonic2CompetitionNativeArt a) { }
                     public void draw(GameplayModeContext c, Sonic2CompetitionSession s) { }
-                }, new Sonic2CompetitionNativeState(backgrounds, () -> planeSwaps++));
+                }, nativeState);
         input.setLogicalOverride(LogicalInputSnapshot.neutral());
         host.bindNativeWaitInput(NativeWaitInput.from(input), controls);
         session.updateMenu(LogicalInputSnapshot.ofPlayers(
                 PlayerInputState.of(0,0,0,0,true,true), PlayerInputState.neutral()), true);
         host.loadAct(session, 0, 0);
+    }
+    /** Qualify the transaction before its production operational gate is enabled. */
+    void qualifyTeleport() {
+        var transaction=org.mockito.Mockito.mock(Sonic2CompetitionHost.class);
+        org.mockito.Mockito.when(transaction.swapNativeActorWorldState())
+                .thenAnswer(call -> nativeState.swapActorWorldState(host.context(),session));
+        org.mockito.Mockito.doAnswer(call -> { nativeState.freezeObjects(host.context(),call.getArgument(0));return null; })
+                .when(transaction).freezeObjects(0x40);
+        org.junit.jupiter.api.Assertions.assertTrue(session.teleportInitializedMonitor(transaction));
     }
     void tick() {
         var c=host.context();
