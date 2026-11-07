@@ -17,10 +17,18 @@ class TestSonic2CompetitionRingPhase {
     @Test
     void levelInactiveRestartDisprovesClosedFormAcrossTheRequiredLifecycle() {
         var state = new Counter();
+        var production = new com.openggf.game.sonic2.competition.state.Sonic2CompetitionRingAnimation();
         // Level_TtlCard and locked leave: neither LFC nor ChangeRingFrame.
         for (int i = 0; i < 25; i++) state.waitOnly();
         assertEquals(0, state.frame);
-        for (int i = 0; i < 8; i++) state.completedLevelLoop();
+        for (int i = 0; i < 8; i++) {
+            state.completedLevelLoop(); production.changeRingFrame();
+            assertEquals(state.frame, production.frame());
+            assertEquals(state.counter, production.capture().counter());
+        }
+        var saved = production.capture();
+        production.changeRingFrame();
+        production.restore(saved);
         assertEquals(8, state.lfc);
         assertEquals(1, state.frame);
         // Pause_Loop, lag interrupt, and TwoPlayerResults loop do not call either owner.
@@ -31,13 +39,17 @@ class TestSonic2CompetitionRingPhase {
         // Level_Inactive_flag, and branches to Level before its ring-frame call at line5109.
         state.lfc = (state.lfc + 1) & 65535;
         assertEquals(9, state.lfc);
+        assertEquals(state.frame, production.frame(), "restart bypasses the production call");
         assertEquals(1, state.frame);
         assertNotEquals(((state.lfc + 7) / 8) & 3, state.frame, "ceil(LFC/8) is not the retained state on this path");
         // Ordinary 2P act reload: LFC reset at :4773 and Oscillating_Data clear :4810.
         state = new Counter();
+        production.clearLevel();
+        assertEquals(0, production.frame());
         for (int i = 0; i < 25; i++) state.waitOnly();
         assertEquals(0, state.frame);
-        state.completedLevelLoop();
+        state.completedLevelLoop(); production.changeRingFrame();
+        assertEquals(state.frame, production.frame());
         assertEquals(1, state.frame);
     }
     private static final class Counter {

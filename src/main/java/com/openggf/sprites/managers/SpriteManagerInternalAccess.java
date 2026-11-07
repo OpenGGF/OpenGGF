@@ -6,6 +6,12 @@ import com.openggf.sprites.playable.PlayableMutatorPolicySource;
 public final class SpriteManagerInternalAccess {
     private SpriteManagerInternalAccess() { }
 
+    /** Read the completed BuildSprites admission before its transient hurt latch was consumed. */
+    public static boolean nativeDisplayAdmission(SpriteManager manager,
+            com.openggf.sprites.playable.AbstractPlayableSprite player) {
+        return manager.nativeDisplayAdmission(player);
+    }
+
     /** Real physics/history/animation within the initial scope; honors native forced controls. */
     public static void runNativeUncountedPlayablePass(SpriteManager manager) {
         requireEngineCaller();

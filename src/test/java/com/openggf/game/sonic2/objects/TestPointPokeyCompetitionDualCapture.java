@@ -67,7 +67,8 @@ class TestPointPokeyCompetitionDualCapture {
         f.cage.swapPlayerOwnership();
         assertEquals(0, field(f.cage, "playerState"));
         assertEquals(1, field(f.cage, "secondPlayerState"));
-        assertEquals(1, f.cage.prizeOwnerNativeSlot());
+        // swap_loop_objects changes $30/$34 but leaves $3E untouched (s2.asm:26081-26085).
+        assertEquals(0, f.cage.prizeOwnerNativeSlot());
         f.cage.swapPlayerOwnership();
         assertEquals(1, field(f.cage, "playerState"));
         assertEquals(0, field(f.cage, "secondPlayerState"));

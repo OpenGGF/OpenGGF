@@ -31,6 +31,8 @@ public final class Sonic2CompetitionVideoFrame {
     private final Supplier<Sample> source;
     private Sonic2CompetitionDisplaySources spriteSource;
     private Sonic2CompetitionDisplayState displayState = Sonic2CompetitionDisplayState.INACTIVE;
+    private java.util.function.Consumer<Boolean> cameraCopies = title -> { };
+    public void bindCameraCopies(java.util.function.Consumer<Boolean> copies) { cameraCopies = Objects.requireNonNull(copies); }
     private Runnable titleCardPlanes = () -> { };
 
     public Sonic2CompetitionVideoFrame(Sonic2CompetitionArtResidency art, Sonic2CompetitionPlaneScroll planeScroll,
@@ -77,7 +79,7 @@ public final class Sonic2CompetitionVideoFrame {
         boolean title = phase == PlcLifecyclePhase.LEVEL_TITLE_CARD;
         if (ordinary || title) art.serviceDmaQueueVBlank();
         if (title) titleCardPlanes.run();
-        if (ordinary || title) planeScroll.copyAtVInt(title);
+        if (ordinary || title) { planeScroll.copyAtVInt(title); cameraCopies.accept(title); }
         if (ordinary) planeScroll.drawForeground(planes, planeDraw);
         if (ordinary || title || phase == PlcLifecyclePhase.PALETTE_FADE) art.servicePlc(phase);
     }

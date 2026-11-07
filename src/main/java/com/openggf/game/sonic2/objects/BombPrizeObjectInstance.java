@@ -53,7 +53,10 @@ public class BombPrizeObjectInstance extends AbstractObjectInstance implements S
     private int parentObjectSlot = -1;
     private int recipientNativeSlot = -1;
 
-    void swapPlayerOwnership() { if (recipientNativeSlot >= 0) recipientNativeSlot ^= 1; }
+    void swapPlayerOwnership() {
+        // swap_loop_objects (s2.asm:26068-26096) visits Obj84/03/D6/85 only.
+        // ObjDC/ObjD3 actor-slot and parent-counter pointers remain unchanged.
+    }
 
     private void relinkPrizeCounter() {
         if (recipientNativeSlot < 0 || parentObjectSlot < 0) return;

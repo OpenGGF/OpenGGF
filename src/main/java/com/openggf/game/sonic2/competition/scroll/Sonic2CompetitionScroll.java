@@ -46,8 +46,25 @@ public final class Sonic2CompetitionScroll implements RewindSnapshottable<Sonic2
             return Arrays.copyOfRange(horizontalScroll, rasterStart, rasterStart + rasterHeight);
         }
     }
+    /** Remaining camera-table words; FG integer positions/latches belong to the cameras/plane scroll. */
+    public record CameraWords(int foregroundFractions, int copiedForegroundFractions,
+                              BackgroundBank backgroundCopy, int coarseX, long backgroundBlocks,
+                              long backgroundFlags, long backgroundFlagsCopy) {
+        public static final CameraWords ZERO = new CameraWords(0, 0, BackgroundBank.ZERO, 0, 0, 0, 0);
+        CameraWords clearFlags() {
+            return new CameraWords(foregroundFractions, copiedForegroundFractions, backgroundCopy,
+                    0, backgroundBlocks, 0, 0);
+        }
+        CameraWords copy(BackgroundBank background) {
+            return new CameraWords(foregroundFractions, foregroundFractions, background, coarseX,
+                    backgroundBlocks, backgroundFlags, backgroundFlags);
+        }
+    }
     public record State(BackgroundBank p1, BackgroundBank p2, short[] scratch,
-                        int[] horizontal, int v1, int v2) {
+                        int[] horizontal, int v1, int v2, CameraWords firstWords, CameraWords secondWords) {
+        public State(BackgroundBank p1, BackgroundBank p2, short[] scratch, int[] horizontal, int v1, int v2) {
+            this(p1, p2, scratch, horizontal, v1, v2, CameraWords.ZERO, CameraWords.ZERO);
+        }
         public State { scratch = scratch.clone(); horizontal = horizontal.clone(); }
         @Override public short[] scratch() { return scratch.clone(); }
         @Override public int[] horizontal() { return horizontal.clone(); }
@@ -58,6 +75,33 @@ public final class Sonic2CompetitionScroll implements RewindSnapshottable<Sonic2
     private short[] scratch = new short[24];
     private int[] horizontal = new int[224];
     private int v1, v2;
+    private CameraWords firstWords = CameraWords.ZERO, secondWords = CameraWords.ZERO;
+    /** teleport_swap_table (s2.asm:26169-26190): leave deformation scratch/output in place. */
+    public void swapPlayers() {
+        var bank = p1; p1 = p2; p2 = bank;
+        var words = firstWords; firstWords = secondWords; secondWords = words;
+    }
+    /** Level's explicit clears after initial deformation (s2.asm:4932-4936). */
+    public void clearInitialDisplayScroll() {
+        Arrays.fill(horizontal, 0);
+        v1 &= 0xffff;
+        v2 = (-224 << 16) | (v2 & 0xffff);
+    }
+    /** TitleScreen's Camera_RAM clear leaves the deformation scratch outside that span. */
+    public void menuClear() { p1 = p2 = BackgroundBank.ZERO; firstWords = secondWords = CameraWords.ZERO; }
+    /** Vint_Level (s2.asm:786-791) copies both complete banks;
+     * Vint_TitleCard (s2.asm:1052-1055) copies the complete P1 bank only. */
+    public void copyBackgroundsAtVInt(boolean title) {
+        firstWords = firstWords.copy(p1);
+        if (!title) secondWords = secondWords.copy(p2);
+    }
+    public void setCoarseX(int slot, int x) {
+        var old = slot == 0 ? firstWords : secondWords;
+        var next = new CameraWords(old.foregroundFractions(), old.copiedForegroundFractions(),
+                old.backgroundCopy(), x & 0xff00, old.backgroundBlocks(),
+                old.backgroundFlags(), old.backgroundFlagsCopy());
+        if (slot == 0) firstWords = next; else secondWords = next;
+    }
 
     public Sonic2CompetitionScroll(Rom rom) throws IOException {
         tables = new ParallaxTables(rom);
@@ -68,6 +112,7 @@ public final class Sonic2CompetitionScroll implements RewindSnapshottable<Sonic2
     public void initialize(BackgroundBank first, BackgroundBank second) {
         p1 = Objects.requireNonNull(first); p2 = Objects.requireNonNull(second);
         scratch = new short[24]; horizontal = new int[224]; v1 = v2 = 0;
+        firstWords = secondWords = CameraWords.ZERO;
     }
     /**
      * Accept banks prepared by the level camera initializer.
@@ -76,16 +121,18 @@ public final class Sonic2CompetitionScroll implements RewindSnapshottable<Sonic2
      */
     public void initializeLevel(Zone zone, BackgroundBank first, BackgroundBank second) {
         p1 = Objects.requireNonNull(first); p2 = Objects.requireNonNull(second);
+        firstWords = firstWords.clearFlags(); secondWords = secondWords.clearFlags();
         if (zone == Zone.EHZ) Arrays.fill(scratch, 0, 6, (short)0);
         horizontal = new int[224]; v1 = v2 = 0;
     }
     @Override public String key() { return "sonic2.competition.scroll"; }
-    @Override public State capture() { return new State(p1, p2, scratch, horizontal, v1, v2); }
+    @Override public State capture() { return new State(p1, p2, scratch, horizontal, v1, v2, firstWords, secondWords); }
     @Override public void restore(State state) {
         if (state.scratch.length != 24 || state.horizontal.length != 224)
             throw new IllegalArgumentException("Competition scroll snapshot shape");
         p1 = state.p1; p2 = state.p2; scratch = state.scratch(); horizontal = state.horizontal();
         v1 = state.v1; v2 = state.v2;
+        firstWords = state.firstWords; secondWords = state.secondWords;
     }
     public View view(int slot) {
         if (slot != 0 && slot != 1) throw new IllegalArgumentException("P1/P2 slot required");
