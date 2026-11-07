@@ -105,11 +105,20 @@ class TestSonic2CompetitionTeleportSwap {
 
     @Test void repeatedIdAndParentWritesPreserveExistingFixedEffectAnimationAndIdentity() throws Exception {
         NativeTeleportTestWorld.run(w -> {
+            // Obj38_Shield (s2.asm:42403-42408) and Obj35_Layer0Update (s2.asm:42493-42503)
+            // delete unqualified roots. Seed live effects before testing repeated ID/parent writes.
+            for(int i=0;i<2;i++) {
+                var actor=w.session.player(i);actor.giveShield();
+                var initialShield=(com.openggf.level.objects.ShieldObjectInstance)actor.getShieldObject();
+                initialShield.update(121,actor);initialShield.update(122,actor);
+                actor.giveInvincibility();
+            }
             w.host.requestTeleport(w.session);
             var p=w.session.player(0);
             var shield=(com.openggf.level.objects.ShieldObjectInstance)p.getShieldObject();
             var stars=(com.openggf.level.objects.InvincibilityStarsObjectInstance)p.getInvincibilityObject();
             shield.update(123,p);stars.update(123,p);
+            assertFalse(shield.isDestroyed());assertFalse(stars.isDestroyed());
             var shieldState=NativeTeleportTestWorld.value(shield.captureRewindState());
             var starState=NativeTeleportTestWorld.value(stars.captureRewindState());
             w.host.requestTeleport(w.session);
