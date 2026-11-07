@@ -598,16 +598,139 @@ public class TestTouchResponseManager {
         assertFalse(boss.wasAttacked);
     }
 
-    @Test
-    void s3kBossReboundKeepsActiveGlide() {
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"-1124,LEFT", "1124,RIGHT", "0,LEFT"})
+    void s3kOrdinaryBossReboundEndsOnlyActiveGlide(int speed, com.openggf.physics.Direction facing) {
         Knuckles knuckles = mockKnucklesTouchPlayer(GameRules.SONIC_3K);
         when(knuckles.getDoubleJumpFlag()).thenReturn(1);
-        MockAttackableEnemy boss = new MockAttackableEnemy(160, 112, 0xC8);
-        setupTableSize(8, 16, 16);
+        when(knuckles.getXSpeed()).thenReturn((short) speed);
+        when(knuckles.getYSpeed()).thenReturn((short) 96);
+        when(knuckles.getGSpeed()).thenReturn((short) -512);
+        MockAttackableEnemy boss = new MockAttackableEnemy(160, 112, 0x16) {
+            @Override public int getCollisionProperty() { return 8; }
+        };
+        setupTableSize(0x16, 16, 16);
+        objectManager.addDynamicObject(boss);
+        objectManager.update(0, knuckles, List.of(), 1);
+        assertTrue(boss.wasAttacked);
+        verify(knuckles).setXSpeed((short) -speed);
+        verify(knuckles).setYSpeed((short) -96);
+        verify(knuckles).setGSpeed((short) 512);
+        verify(knuckles).setDoubleJumpFlag(2);
+        verify(knuckles).setAnimationId(0x21);
+        verify(knuckles).setForcedAnimationId(0x21);
+        verify(knuckles).setDirection(facing);
+        verify(knuckles).restoreDefaultRadii();
+        verify(knuckles).setObjectMappingFrameControl(false);
+        verify(knuckles, never()).setAir(anyBoolean());
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {0, 2, 3, 4, 5})
+    void s3kOrdinaryBossReboundPreservesOtherAbilityStates(int flag) {
+        Knuckles knuckles = mockKnucklesTouchPlayer(GameRules.SONIC_3K);
+        when(knuckles.getDoubleJumpFlag()).thenReturn(flag);
+        when(knuckles.getInvincibleFrames()).thenReturn(1);
+        var boss = new MockAttackableEnemy(160, 112, 0x16) {
+            @Override public int getCollisionProperty() { return 8; }
+        };
+        setupTableSize(0x16, 16, 16);
         objectManager.addDynamicObject(boss);
         objectManager.update(0, knuckles, List.of(), 1);
         assertTrue(boss.wasAttacked);
         verify(knuckles, never()).setDoubleJumpFlag(anyInt());
+        verify(knuckles, never()).restoreDefaultRadii();
+        verify(knuckles, never()).setDirection(any());
+        verify(knuckles, never()).setAnimationId(anyInt());
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.MethodSource("killedEnemyTouchRules")
+    void bossReboundDoesNotChangeOtherCharacters(GameRules rules) {
+        when(player.getGameRules()).thenReturn(rules);
+        when(player.getDoubleJumpFlag()).thenReturn(1);
+        when(player.getInvincibleFrames()).thenReturn(1);
+        var boss = new MockAttackableEnemy(160, 112, 0x16) {
+            @Override public int getCollisionProperty() { return 8; }
+        };
+        setupTableSize(0x16, 16, 16);
+        objectManager.addDynamicObject(boss);
+        objectManager.update(0, player, List.of(), 1);
+        assertTrue(boss.wasAttacked);
+        verify(player, never()).setDoubleJumpFlag(anyInt());
+        verify(player, never()).restoreDefaultRadii();
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"true,-1124,LEFT", "false,1124,RIGHT"})
+    void realS3kBossAndKnucklesRestoreNativeGlidePose(
+            boolean aiz, int speed, com.openggf.physics.Direction facing) throws Exception {
+        // AIZ revealed body and CNZ miniboss closed body both dispatch ordinary
+        // Touch_Enemy via a raw enemy collision byte and nonzero boss property.
+        var knuckles = spy(new Knuckles("knuckles", (short) 150, (short) 93));
+        doReturn(GameRules.SONIC_3K).when(knuckles).getGameRules();
+        knuckles.setCentreX((short) 160);
+        knuckles.setCentreY((short) 112);
+        knuckles.applyCustomRadii(10, 10);
+        knuckles.setAir(true);
+        knuckles.setDoubleJumpFlag(1);
+        knuckles.setAnimationId(0x20);
+        knuckles.setForcedAnimationId(0x20);
+        knuckles.setXSpeed((short) speed);
+        knuckles.setYSpeed((short) 96);
+        knuckles.setGSpeed((short) -512);
+        int x = knuckles.getCentreX(), y = knuckles.getCentreY();
+        com.openggf.level.objects.boss.AbstractBossInstance boss;
+        if (aiz) {
+            var nativeBoss = ObjectConstructionContext.construct(objectManager.services(), () ->
+                    spy(new com.openggf.game.sonic3k.objects.AizEndBossInstance(
+                            new ObjectSpawn(160, 112, 0x92, 0, 0, false, 0))));
+            var field = com.openggf.game.sonic3k.objects.AizEndBossInstance.class
+                    .getDeclaredField("collisionEnabled");
+            field.setAccessible(true);
+            field.setBoolean(nativeBoss, true);
+            boss = nativeBoss;
+        } else {
+            boss = spy(new com.openggf.game.sonic3k.objects.CnzMinibossInstance(
+                    new ObjectSpawn(160, 112, 0xA6, 0, 0, false, 0)));
+        }
+        boss.getState().hitCount = 6;
+        // Isolate the native touch publication from the encounter's independent
+        // art/movement state machine; use its real collision/profile/hit callback.
+        doNothing().when(boss).update(anyInt(), any());
+        setupTableSize(aiz ? 0x16 : 0x0C, 16, 16);
+        objectManager.addDynamicObject(boss);
+        objectManager.update(0, knuckles, List.of(), 1);
+        verify(boss).onPlayerAttack(eq(knuckles), any());
+        assertEquals(2, knuckles.getDoubleJumpFlag());
+        assertEquals(0x21, knuckles.getAnimationId());
+        assertEquals(0x21, knuckles.getForcedAnimationId());
+        assertEquals(facing, knuckles.getDirection());
+        assertEquals(9, knuckles.getXRadius());
+        assertEquals(19, knuckles.getYRadius());
+        assertEquals(x, knuckles.getCentreX());
+        assertEquals(y, knuckles.getCentreY());
+        assertTrue(knuckles.getAir());
+        assertEquals(-speed, knuckles.getXSpeed());
+        assertEquals(-96, knuckles.getYSpeed());
+        assertEquals(512, knuckles.getGSpeed());
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.MethodSource("killedEnemyTouchRules")
+    void stockRulesOnlyEndS3kKnucklesGlide(GameRules rules) {
+        Knuckles knuckles = mockKnucklesTouchPlayer(rules);
+        when(knuckles.getDoubleJumpFlag()).thenReturn(1);
+        when(knuckles.getInvincibleFrames()).thenReturn(1);
+        var boss = new MockAttackableEnemy(160, 112, 0x16) {
+            @Override public int getCollisionProperty() { return 8; }
+        };
+        setupTableSize(0x16, 16, 16);
+        objectManager.addDynamicObject(boss);
+        objectManager.update(0, knuckles, List.of(), 1);
+        assertTrue(boss.wasAttacked);
+        verify(knuckles, times(rules == GameRules.SONIC_3K ? 1 : 0)).setDoubleJumpFlag(2);
+        verify(knuckles, times(rules == GameRules.SONIC_3K ? 1 : 0)).restoreDefaultRadii();
     }
 
     @org.junit.jupiter.params.ParameterizedTest

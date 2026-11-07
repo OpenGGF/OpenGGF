@@ -40,6 +40,8 @@ under the matching area heading; see the
   preserves the original error while cleaning up its owned continuation.
   AIZ2 art preparation preserves Knuckles' terrain-only branch; Sonic/Tails
   also submit the battleship object art.
+  Ordinary S3K boss rebounds end active Knuckles glide with the native falling
+  pose, facing and radii; velocity-only boss contacts retain their behavior.
   Physics, auxiliary observations and movie input are preserved exactly. New red frontiers remain visible.
   Special-stage entry honors the recorded team and production lock-on module;
   the single entry-state import consumes S2-family manifest destination rings.
