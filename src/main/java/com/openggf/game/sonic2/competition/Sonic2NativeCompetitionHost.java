@@ -438,6 +438,8 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
         replaceRewindAdapter(ObjectManagerInternalAccess.nativeCompetitionCollisionPointersRewindAdapter(objects));
         replaceRewindAdapter(module.nativeTitle());
         replaceRewindAdapter(pauseAdapter);
+        if (nativeSlowMotionFlag instanceof com.openggf.game.sonic2.competition.state.Sonic2NativeControlState controls)
+            replaceRewindAdapter(controls);
     }
 
     private void replaceRewindAdapter(RewindSnapshottable<?> adapter) {
