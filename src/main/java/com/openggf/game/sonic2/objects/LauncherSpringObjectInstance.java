@@ -124,6 +124,16 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
         this.currentSpriteY = spawn.y();
     }
 
+    /** Teleport swaps the two held-state banks; the actor objects retain slot identity. */
+    void swapPlayerOwnership() {
+        var roster = com.openggf.game.competition.NativeCompetitionRoster.from(services().worldSession());
+        if (roster == null) return;
+        var first = playerStates.remove(roster.player(0));
+        var second = playerStates.remove(roster.player(1));
+        if (second != null) playerStates.put(roster.player(0), second);
+        if (first != null) playerStates.put(roster.player(1), first);
+    }
+
     @Override
     public void releasePlayersForVisualDirection() {
         for (var entry : playerStates.entrySet()) if (entry.getValue().state != STATE_EMPTY)
