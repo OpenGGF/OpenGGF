@@ -181,7 +181,7 @@ class TestCdCczEnemyAdversarial {
         public CdPlayerMath.SineCosine sine(int a) { return h.sine(a); } public void sound(SoundCall c) { h.sound(c); }
         public void primaryAngle(AngleCall c) { h.primaryAngle(c); } public void draw(CdObjectPool p, CdObjectState.Identity i) { h.draw(p,i); }
     }
-    static void write(TestCdCczEnemyFamily.H h, int slot, byte[] bytes) { 
+    static void write(TestCdCczEnemyFamily.H h, int slot, byte[] bytes) {
         var state = h.pool.state(slot);
         for (var f : CdObjectState.LongField.values()) { int a = f.byteOffset(); state = state.moveLong(f, ((bytes[a]&255)<<24) | ((bytes[a+1]&255)<<16) | ((bytes[a+2]&255)<<8) | (bytes[a+3]&255)); }
         for (var f : CdObjectState.WordField.values()) { int a = f.byteOffset(); state = state.moveWord(f, ((bytes[a]&255)<<8) | (bytes[a+1]&255)); }

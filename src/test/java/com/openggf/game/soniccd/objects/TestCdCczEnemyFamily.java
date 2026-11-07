@@ -131,7 +131,7 @@ class TestCdCczEnemyFamily {
     }
     @ParameterizedTest @CsvSource({"-80,true", "79,true", "80,false", "-81,false"})
     void tentouWaitBoxUsesHalfOpenNativeRangeAndLazyX(int dy, boolean reached) {
-        // Native WaitForPlayer subtracts player Y from object Y (Tentou/Main.asm:134-139).
+        // Native WaitForPlayer subtracts player Y from object Y (Tentou/Main.asm:128-133).
         var h = new H(0x2E, 4); h.py -= dy; h.run(); assertEquals(reached, h.reads.contains("PX"));
     }
     @Test void tentouRiseHasNoProbeAndKeepsAnimationDrawWrapper() {
