@@ -236,10 +236,6 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
                 return pauseResult;
             }
             result = requireWorld().step(input, frame, () -> {
-                var sampled = sampleNativeInput();
-                if (!sampled.equals(input.logical()))
-                    throw new IllegalStateException("Native wait and playable dispatcher disagree on controller sample");
-                pause.acceptSample(sampled, nativeSlowMotionFlag.getAsBoolean());
                 context().getSpriteManager().update(input);
             });
             if (result == LevelFrameResult.GAMEPLAY_FRAME) {
@@ -533,6 +529,19 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
 
     private final class Policy implements WorldSessionPolicyState {
         @Override public <T> T getService(Class<T> type) {
+            if (type == ObjectManagerInternalAccess.NativeExecution.class)
+                return type.cast(new ObjectManagerInternalAccess.NativeExecution() {
+                    @Override public void afterNativeWait() {
+                        session.teleportClock().afterNativeWait(pause.gamePaused());
+                        if (pause.capture().continuation() == Sonic2CompetitionPause.Continuation.AWAITING_ORDINARY_SAMPLE) {
+                            var sampled = sampleNativeInput();
+                            if (!sampled.equals(SpriteManagerInternalAccess.publishedInput(context().getSpriteManager())))
+                                throw new IllegalStateException("Native wait and playable dispatcher disagree on controller sample");
+                            pause.acceptSample(sampled, nativeSlowMotionFlag.getAsBoolean());
+                        }
+                    }
+                    @Override public boolean objectsFrozen() { return session.teleportClock().active(); }
+                });
             if (type == NativeCompetitionRoster.class || type == Sonic2CompetitionSession.class) return type.cast(session);
             if (type == Sonic2CompetitionObjectHost.class) return type.cast(Sonic2NativeCompetitionHost.this);
             if (type == com.openggf.game.sonic2.bumpers.Sonic2NativeCNZBumpers.class)

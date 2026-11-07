@@ -16,6 +16,22 @@ import java.util.function.Supplier;
 
 /** Internal native gameplay seams; deliberately outside the creator API. */
 public final class ObjectManagerInternalAccess {
+    /** World-owned semantic boundary; absent in ordinary gameplay. */
+    public interface NativeExecution {
+        void afterNativeWait();
+        boolean objectsFrozen();
+    }
+    public static NativeExecution nativeExecution(com.openggf.LevelFrameContext context) {
+        return com.openggf.game.session.WorldSessionPolicyAccess.getService(
+                context.levelManager() == null ? null : context.levelManager().getWorldSession(),
+                NativeExecution.class);
+    }
+    /** RunObjects was skipped; V-int and ObjectsManager still run. */
+    public static void runFrozenPlacementPass(ObjectManager manager) {
+        manager.advanceVblaCounter();
+        manager.nativeCompetitionStreaming().update();
+    }
+
     public static void prepareInitialPlacementWindow(ObjectManager manager, List<ObjectSpawn> spawns,
                                                      int cameraX, PersistentRespawnState respawn) {
         manager.prepareInitialPlacementWindow(spawns, cameraX, respawn);
