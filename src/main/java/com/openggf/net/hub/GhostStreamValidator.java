@@ -189,7 +189,10 @@ public final class GhostStreamValidator {
                 resets++; lastReset = index;
                 nextResets.merge(frame.progress(), 1, Integer::sum);
             }
-            if (previous != null && !reset && frame.progress() < previous.progress() && remainingSwap == null)
+            // sub_36DFC (sonic3k.asm:74097-74207): native arena currentLap can fall
+            // on a backwards goal crossing. It is
+            // display-only here; swap ordering comes from validated displacement.
+            if (!arenaRespawns && previous != null && !reset && frame.progress() < previous.progress() && remainingSwap == null)
                 return violate("progress", "progress moved backwards without respawn or host swap");
             boolean arenaSwap = profile != null && profile.lapCount() > 0;
             boolean reachedSwap = remainingSwap != null && index >= swapFirst && (arenaSwap

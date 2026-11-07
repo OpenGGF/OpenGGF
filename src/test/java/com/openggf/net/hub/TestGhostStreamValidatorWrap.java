@@ -4,6 +4,15 @@ import com.openggf.net.protocol.*;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 class TestGhostStreamValidatorWrap {
+ @Test void nativeBackwardGoalCrossingDoesNotInvalidateArenaStream() {
+  var v=new GhostStreamValidator(new TrackValidationProfile(512,256,32,60,512,256,5,12),()->0,(k,d)->fail(d));
+  v.enableRespawns(true,true); v.onAttemptStart(1);
+  for(int i=0;i<2;i++) {
+   byte[] data=new byte[7];
+   GhostFrameCodec.encode(new GhostFrame(100-i,100,0,false,false,false,0,false,false,2-i,false,0),data,0);
+   assertEquals(GhostStreamValidator.Verdict.ACCEPT,v.onBatch(new GhostPackets.FramesBatch(1,i,1,data)));
+  }
+ }
  @Test void ignoredTargetFlagsAttemptWithinBoundedStream() {
   long[] now={0}; var violations=new java.util.ArrayList<String>();
   var v=new GhostStreamValidator(new TrackValidationProfile(1024,512,32,60),()->now[0],(k,d)->violations.add(k));

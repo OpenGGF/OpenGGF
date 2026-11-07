@@ -594,8 +594,9 @@ simulation, so the verifier's replay reaches the same verdict.
 
 Review correction (R1): room-level swap enablement freezes at RoundStart, including late
 joiners. Partner ordering uses accumulated displacement from validated positions, rather
-than the untrusted progress nibble. Ordinals may not decrease except on an admitted reset
-or swap; they remain display evidence, not proof of checkpoint/goal crossings. No ROM-free
+than the untrusted progress nibble. Act ordinals may not decrease except on an admitted reset or swap. Native arena
+current-lap counters also fall on backwards goal crossings, so their ordinal remains
+display evidence and cannot choose partners; validated displacement owns that ordering. No ROM-free
 host check can prove that a continuously streamed, speed-bounded position avoids a hazard,
 or that a shoe timer is truthful. Targets must be positions actually accepted from that
 participant. Verified replay remains the authority for those claims.
