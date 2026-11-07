@@ -102,6 +102,7 @@ class TestRaceClientLoopback {
             a.sendControl(new ControlMessage.AttemptStart(1));
             b.sendControl(new ControlMessage.AttemptStart(1));
             for (var client:java.util.List.of(a,b)) {
+                client.sendControl(new ControlMessage.CheckpointReached(1,0,1,1100+client.playerSlot()*200,100));
                 byte[] frames = new byte[3*GhostFrameCodec.BYTES];
                 for(int i=0;i<3;i++) GhostFrameCodec.encode(new GhostFrame(1100+client.playerSlot()*200+i,100,0,
                         false,false,false,2,false,false,1,false,0),frames,i*GhostFrameCodec.BYTES);
