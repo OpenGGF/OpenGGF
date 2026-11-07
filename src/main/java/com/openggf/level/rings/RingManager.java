@@ -649,6 +649,14 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                 levelManager != null ? levelManager.getObjectManager() : null);
     }
 
+    NativeCompetitionRingStreaming nativeDisplayStreaming() {
+        if (!nativeCompetitionStreamingActive())
+            throw new IllegalStateException("Native competition ring streaming is inactive");
+        return nativeCompetitionStreaming;
+    }
+
+    int nativeDisplayStageFrame(int frameCounter) { return stageRingFrame(frameCounter); }
+
     private int stageRingFrame(int frameCounter) {
         // A provider owns retained ROM state; S1/S2 retain their existing
         // counter-derived presentation when no such provider is installed.
