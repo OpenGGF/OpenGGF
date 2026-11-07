@@ -12300,3 +12300,33 @@ User's stopping point is now reached: no time-warp or controlled-Body
 implementation. The next-based feature worktree owns shared merge verification,
 final CD-only checks, handover, authorized feature-only push and cleanup.
 The full-USA-then-Japan/Europe objective remains unfinished.
+
+
+## 7 November 2026 — qualified private CCZ pinball components
+
+P3 supplies Bumper, BumperPlatform, Flipper, GlassShatter and the complete Pocket
+parent/child graph over one finite context and source-bound borrowed asset data.
+Original mutation/call receipts describe synchronous production, while returned
+values/effects confer no replay or live World/Frame/source authority. Root still
+owns actual source/mapper/Frame/World/dispatch and current-art integration.
+
+The Pocket raw-child link can name its own slot. Native ReleasePlayer writes that
+child routine before testing/clearing caught; the helper must reload the current
+parent image rather than overwrite routine4 with its retained routine20 image.
+Root's regression uses both caught0/255 and checks full64, all95 neighbours,
+complete actor nonwrites, source inputs and ordered sound/draw/despawn calls.
+R91b actually executes this one fresh test and fails against the original body.
+Its source-bound receipt remains INCOMPLETE because the declared literal identity
+wrongly included parentheses absent from Surefire's actual name. The observed
+failure is retained as evidence; no identity normalization or repaired receipt is
+used. An earlier R91 disappeared during storage failure after compilation and
+queue wait, with no terminal/test evidence; exact processes were absent before
+its replacement. Queue locks were never removed.
+
+R92 changes only the source-backed image reload and passes43 focused cases
+(37 family,6 storage), zero failures/errors/skips, exact source before/after.
+Normal-memory preparation took1m45s, shared test admission waited2312s, Maven
+test execution took1.745s; total terminal callback interval after admission2.43s.
+These times overlap and are not summed. This is constructed component coverage,
+not natural CCZ, pixel, full-USA or regional parity. Only this plan and prerelease
+changelog change after qualification; the ten tested Java files remain exact.

@@ -17,6 +17,8 @@ matching area heading; see the
   selected sprite list and full-word time-stop gating. Private HUD adoption
   retains the real prefix across typed callback failures;175 focused checks
   pass after a reproduced error-path correction, ahead of live World admission.
+  CCZ pinball/player-capture components now preserve native contact, child and
+  raw-link behavior with43 focused checks; their live World binding remains separate.
   Private CCZ integration now has source-bound Frame publication, native HUD
   metadata and sparse residency, real ordinary Core PLC/section access, and a
   detached level view. Focused Frame/HUD regressions and exact fixture repairs
