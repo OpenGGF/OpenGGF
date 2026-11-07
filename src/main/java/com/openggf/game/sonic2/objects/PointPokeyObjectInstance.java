@@ -395,7 +395,7 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
             playCasinoBonusSound();
 
             // Award 100 points (per ROM: d0=10 → AddPoints2 adds d0*10 = 100)
-            services().gameState().addScore(100);
+            Sonic2ObjectScore.award(services(), player, 100);
 
             // Spawn floating "100" points sprite at cage position
             spawnFreeChild(() -> new PointsObjectInstance(

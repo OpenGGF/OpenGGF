@@ -31,20 +31,16 @@ class TestNativeCompetitionBadnikScore {
     @AfterEach void cleanup() { SessionManager.clear(); }
 
     @Test
-    void eachNativeHumanKeepsItsOwnScoreAndExistingBadnikChain() {
-        var fixture = new Fixture(true);
-        var nativeSession = fixture.roster;
-        assertSame(nativeSession, NativeCompetitionRoster.from(fixture.world));
-        fixture.kill(nativeSession.player(1));
-        assertScores(fixture, 0, 100, 0);
-        fixture.kill(nativeSession.player(0));
-        assertScores(fixture, 100, 100, 0);
-        fixture.kill(nativeSession.player(1));
-        assertScores(fixture, 100, 300, 0);
-        fixture.kill(nativeSession.player(0));
-        assertScores(fixture, 300, 300, 0);
-        assertFalse(nativeSession.player(0).isCpuControlled());
-        assertFalse(nativeSession.player(1).isCpuControlled());
+    void eachNativeHumanCreditsItsOwnBank() {
+        // Deliberately isolate the attackers: ROM uses one shared chain word.
+        // Interleaved-chain/reset parity needs the session/physics chain owner.
+        for (int slot = 0; slot < 2; slot++) {
+            var fixture = new Fixture(true);
+            assertSame(fixture.roster, NativeCompetitionRoster.from(fixture.world));
+            fixture.kill(fixture.roster.player(slot));
+            assertScores(fixture, slot == 0 ? 100 : 0, slot == 1 ? 100 : 0, 0);
+            assertFalse(fixture.roster.player(slot).isCpuControlled());
+        }
     }
 
     @Test
