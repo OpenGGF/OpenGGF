@@ -20,6 +20,7 @@ public final class VerifierSwapLog {
             if (matches.size() != 1) return false;
             var r = matches.getFirst();
             if(r.nativeRequestFrame()!=null && (r.nativeRequestFrame()<0 || r.nativeRequestFrame()>r.requestFrame())) return false;
+            if ("EXPIRED".equals(r.outcome()) && r.applyFrame() <= r.requestFrame() + 180) return false;
             if (recorded.step() != r.applyFrame() || r.applyFrame() < r.requestFrame()
                     || !"EXPIRED".equals(r.outcome()) && r.applyFrame() > r.requestFrame() + 180) return false;
             if (recorded.event() instanceof RaceEvent.SwapFallback) {

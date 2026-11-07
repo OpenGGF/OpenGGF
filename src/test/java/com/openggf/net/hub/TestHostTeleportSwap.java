@@ -31,6 +31,12 @@ class TestHostTeleportSwap {
   var stale=new HostTeleportSwap.Observation(1,10,0,false,2,player(1,2,10).target());
   assertInstanceOf(ControlMessage.TeleportNoPartner.class,request(0,10,List.of(player(0,1,10),stale)));
  }
+ @Test void expiryCannotBeClaimedInsideTheApplyWindow() {
+  var receipt=assertInstanceOf(ControlMessage.TeleportNoPartner.class,request(0,10,List.of(player(0,1,10))));
+  assertThrows(IllegalArgumentException.class,()->host.outcome(0,new ControlMessage.TeleportOutcome(receipt.swapId(),11,"EXPIRED")));
+  host.outcome(0,new ControlMessage.TeleportOutcome(receipt.swapId(),191,"EXPIRED"));
+  assertEquals("EXPIRED",host.log().getFirst().outcomes().get(0).outcome());
+ }
  @Test void capRefusalCannotBypassRequestFrameBounds() {
   assertThrows(IllegalArgumentException.class,()->host.request(0,1,Integer.MAX_VALUE,1,1000,0,
    List.of(player(0,1,10)),(slot,m)->fail("malformed request must not create a receipt")));

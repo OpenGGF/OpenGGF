@@ -1367,7 +1367,10 @@ public final class RoomHost {
                 } catch (IllegalArgumentException invalid) { recordAttemptViolation(member, invalid.getMessage()); }
             }
             case ControlMessage.TeleportOutcome outcome -> {
-                try { swaps.outcome(member.slot, outcome);
+                try {
+                    if (outcome.applyFrame() > hub.latestValidatedFrame(member.slot) + GhostStreamValidator.MAX_FRAME_LEAD)
+                        throw new IllegalArgumentException("swap outcome ahead of validated stream");
+                    swaps.outcome(member.slot, outcome);
                     if (!"APPLIED".equals(outcome.outcome())) hub.cancelSwap(member.slot);
                 }
                 catch (IllegalArgumentException invalid) { recordAttemptViolation(member, invalid.getMessage()); }

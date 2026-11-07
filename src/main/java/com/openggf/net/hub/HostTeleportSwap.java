@@ -134,7 +134,9 @@ public final class HostTeleportSwap {
             Decision d = log.get(i); var c = d.command();
             if (d.swapId() != outcome.swapId()) continue;
             int first = c == null ? d.requestFrame() : c.slotA() == slot ? c.sentAtFrameA() : c.sentAtFrameB();
-            if (outcome.applyFrame() < first || !"EXPIRED".equals(outcome.outcome()) && outcome.applyFrame() > first + 180
+            if (outcome.applyFrame() < first
+                    || "EXPIRED".equals(outcome.outcome()) && outcome.applyFrame() <= first + 180
+                    || !"EXPIRED".equals(outcome.outcome()) && outcome.applyFrame() > first + 180
                     || !("APPLIED".equals(outcome.outcome()) && c != null || "FALLBACK".equals(outcome.outcome()) || "EXPIRED".equals(outcome.outcome()) || c == null && "REFUSED".equals(outcome.outcome())))
                 throw new IllegalArgumentException("invalid swap outcome window");
             var outcomes = new HashMap<>(d.outcomes()); outcomes.put(slot, outcome);

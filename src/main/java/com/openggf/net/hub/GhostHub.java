@@ -350,6 +350,9 @@ public final class GhostHub {
             closeIfThresholdReached(p);
         }
     }
+    int latestValidatedFrame(int slot) {
+        Player p = players.get(slot); return p == null || p.last == null ? -1 : p.frameIndex;
+    }
     void cancelSwap(int slot) { Player p = players.get(slot); if (p != null) p.validator.cancelSwap(); }
 
     void admitSwap(int slot, com.openggf.net.protocol.ControlMessage.SwapTarget target, int first) {
