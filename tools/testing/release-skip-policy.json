@@ -631,6 +631,41 @@
       "evidence": "src/test/java/com/openggf/tests/trace/runs/TestTraceRunDescriptorPlanningPerformance.java:30",
       "allowed_when_absent": null,
       "note": "Explicit retained-heap benchmark; -Dopenggf.trace.segmentDescriptorBenchmark=true."
+    },
+    {
+      "match": "com.openggf.game.sonic3k.competition.TestS3kCompetitionArenaPixels#actualNativeArenasRenderBothHumansWithoutAdvancingFromDraw",
+      "category": "gl-context",
+      "evidence": "src/test/java/com/openggf/game/sonic3k/competition/TestS3kCompetitionArenaPixels.java:171",
+      "allowed_when_absent": "gl",
+      "note": "Explicit PresentationOffscreenTestContext.requested() opt-in; run with surfaceless EGL."
+    },
+    {
+      "match": "com.openggf.game.sonic3k.competition.TestS3kCompetitionArenaPixels#actualAlzRetainsPublishedPixelsThroughDestructiveHumanRestore",
+      "category": "gl-context",
+      "evidence": "src/test/java/com/openggf/game/sonic3k/competition/TestS3kCompetitionArenaPixels.java:171",
+      "allowed_when_absent": "gl",
+      "note": "Explicit PresentationOffscreenTestContext.requested() opt-in; run with surfaceless EGL."
+    },
+    {
+      "match": "com.openggf.game.sonic3k.competition.TestS3kCompetitionArenaPixels#actualAlzCountdownStartsBothClocksAndHumanInputSeparatesPublishedViews",
+      "category": "gl-context",
+      "evidence": "src/test/java/com/openggf/game/sonic3k/competition/TestS3kCompetitionArenaPixels.java:47",
+      "allowed_when_absent": "gl",
+      "note": "Explicit PresentationOffscreenTestContext.requested() opt-in; run with surfaceless EGL."
+    },
+    {
+      "match": "com.openggf.game.sonic3k.competition.TestS3kCompetitionMenuPixels#actualRomMenusUseTheirNativePlanesMappingsAndIntensityWithoutAdvancingTheWorld",
+      "category": "gl-context",
+      "evidence": "src/test/java/com/openggf/game/sonic3k/competition/TestS3kCompetitionMenuPixels.java:31",
+      "allowed_when_absent": "gl",
+      "note": "Explicit PresentationOffscreenTestContext.requested() opt-in; run with surfaceless EGL."
+    },
+    {
+      "match": "com.openggf.TestS3kSoloArenaViewPixels#soloViewDraws224RowsAndMiniatureGhostWithoutAnyVisibilityWrites",
+      "category": "gl-context",
+      "evidence": "src/test/java/com/openggf/TestS3kSoloArenaViewPixels.java:39",
+      "allowed_when_absent": "gl",
+      "note": "Explicit PresentationOffscreenTestContext.requested() opt-in; run with surfaceless EGL."
     }
   ]
 }
