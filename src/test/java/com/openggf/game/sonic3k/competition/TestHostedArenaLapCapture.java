@@ -76,6 +76,38 @@ class TestHostedArenaLapCapture {
         }
     }
 
+    @Test void falseStartHoldsBothRaceObservationsAndNativeLapTimeThroughTheReset() throws Exception {
+        try (var fixture = new HostedArenaFixture()) {
+            var arena = new S3kHostedArenaSession(fixture.host,new HostedArenaRequest(0,"sonic",false), () -> {});
+            var session = fixture.host.session();
+            var player = session.player(0);
+            var goal = fixture.host.world().context().getObjectManager().getActiveObjects().stream()
+                    .filter(com.openggf.game.sonic3k.competition.objects.CompetitionGoalObjectInstance.class::isInstance)
+                    .findFirst().orElseThrow();
+            fixture.iteration(() -> arena.step(PlayerInputState.neutral()));
+            player.setObjectControl(1); player.setSolidBits(0xC,0xD);
+            player.setCentre(goal.getX()-64,goal.getY());
+            fixture.iteration(() -> arena.step(PlayerInputState.neutral()));
+            player.setCentre(goal.getX()+1,goal.getY());
+            fixture.iteration(() -> arena.step(PlayerInputState.neutral()));
+            assertTrue(session.controlsLocked(),"crossing before native GO must start the penalty");
+            assertEquals(0,session.falseStarter());
+            int held = 0;
+            while (session.controlsLocked()) {
+                assertEquals(new RaceClock(false,0,0,RaceClock.Failure.NONE),arena.observation().race());
+                assertEquals(0,session.nativeLapTimerFrames(0));
+                assertEquals(0,session.timeCentiseconds(0));
+                assertTrue(held++ < 120,"the native penalty must reach its reset boundary");
+                fixture.iteration(() -> arena.step(PlayerInputState.neutral()));
+            }
+            assertEquals(120,held);
+            assertFalse(session.started(),"reset must replay the native countdown before GO");
+            assertEquals(new RaceClock(false,0,0,RaceClock.Failure.NONE),arena.observation().race());
+            assertEquals(0,session.nativeLapTimerFrames(0));
+            assertEquals(0,session.timeCentiseconds(0));
+        }
+    }
+
     @Test void capIsTimeOverAndStartCannotPauseHostedPlay() throws Exception {
         try (var fixture = new HostedArenaFixture()) {
             var arena = new S3kHostedArenaSession(fixture.host,new HostedArenaRequest(2,"tails",false), () -> {});

@@ -86,6 +86,16 @@ matched. Compare the full captured player and keep those fields in the oracle;
 fix the invocation boundary instead of excluding them. See the
 [hosted checkpoint evidence](validation/2026-11-07-s3k-hosted-arena-lane-b.md).
 
+Cross-boot rewind comparisons must compare ROM resources by contents, while
+retaining the snapshot's gameplay bytes. A resumed S2 object pass held separate
+`SpriteAnimationSet` instances with equal scripts in the live and replay boots.
+Canonicalize every script field, including trailing ROM bytes, inside compact
+blob opaque values; retain the blob schema, type and every scalar byte. Negative
+controls must change both a resource frame and a scalar byte and fail equality.
+Do not drop the opaque array or compare resource `toString()` values. The
+[Competition engine evidence](validation/2026-11-07-s3k-hosted-arena-lane-b.md)
+records this oracle correction and its bounded replay test.
+
 Capture boot must preserve an existing native camera binding. After ScreenInit
 sets `Scroll_lock`, even `Camera.setFocusedSprite` resets physical and render-copy
 coordinates; guarding only the following forced snap leaves that overwrite.

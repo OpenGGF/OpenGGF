@@ -201,6 +201,22 @@ class TestTeleportSwapApply {
                     replay.swaps().consumeApplied().outcome());
         }
     }
+    @Test void comparisonRetainsAnimationContentsAndEveryCompactBlobByte() {
+        var a=new com.openggf.sprites.animation.SpriteAnimationSet();
+        var b=new com.openggf.sprites.animation.SpriteAnimationSet();
+        var script=new com.openggf.sprites.animation.SpriteAnimationScript(5,List.of(2,3),
+                com.openggf.sprites.animation.SpriteAnimationEndAction.LOOP,0,List.of(255,4));
+        a.addScript(1,script); b.addScript(1,script);
+        var left=new com.openggf.game.rewind.schema.RewindObjectStateBlob(3,getClass(),new byte[]{1,2},new Object[]{a});
+        var right=new com.openggf.game.rewind.schema.RewindObjectStateBlob(3,getClass(),new byte[]{1,2},new Object[]{b});
+        assertEquals(canonical(left),canonical(right),"equal resources have different Java identities across boots");
+        b.addScript(1,new com.openggf.sprites.animation.SpriteAnimationScript(5,List.of(2,4),
+                com.openggf.sprites.animation.SpriteAnimationEndAction.LOOP,0,List.of(255,4)));
+        assertNotEquals(canonical(left),canonical(right),"changing a resource frame must fail equality");
+        b.addScript(1,script);
+        var scalarChanged=new com.openggf.game.rewind.schema.RewindObjectStateBlob(3,getClass(),new byte[]{1,3},new Object[]{b});
+        assertNotEquals(canonical(left),canonical(scalarChanged),"compact gameplay bytes remain authoritative");
+    }
     private void nativeRequestPrelude(Run run) {
         var level=run.mode().getLevelManager();
         if ((level.getFrameCounter()&1)!=0) step(run);
@@ -225,26 +241,6 @@ class TestTeleportSwapApply {
         var canonical=new TreeMap<String,Object>(); values.forEach((key,value)->canonical.put(key,canonical(value)));
         return canonical;
     }
-    private Object canonical(Object value) {
-        if (value==null) return null;
-        if (value instanceof AbstractPlayableSprite player) return "player:"+player.getCode();
-        var type=value.getClass();
-        if(type.isArray()) {
-            var list=new ArrayList<Object>();
-            for(int i=0;i<java.lang.reflect.Array.getLength(value);i++) list.add(canonical(java.lang.reflect.Array.get(value,i)));
-            return list;
-        }
-        if(value instanceof List<?> list) return list.stream().map(this::canonical).toList();
-        if(value instanceof Map<?,?> map) {
-            var out=new TreeMap<String,Object>();map.forEach((key,entry)->out.put(String.valueOf(canonical(key)),canonical(entry)));return out;
-        }
-        if(type.isRecord()) {
-            var out=new TreeMap<String,Object>();out.put("record-type",type.getName());
-            for(var field:type.getRecordComponents()) try {
-                var accessor=field.getAccessor();accessor.setAccessible(true);out.put(field.getName(),canonical(accessor.invoke(value)));
-            } catch(ReflectiveOperationException failure) { throw new AssertionError(failure); }
-            return out;
-        }
-        return value;
-    }
+    private Object canonical(Object value) { return RaceStateSnapshots.canonical(value); }
+
 }

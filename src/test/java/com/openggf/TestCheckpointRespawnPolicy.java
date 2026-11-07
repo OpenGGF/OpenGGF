@@ -69,11 +69,11 @@ class TestCheckpointRespawnPolicy {
         assertFalse(level.isTitleCardRequested());
         assertFalse(context.getFadeManager().isActive(),"checkpoint continuation must not add a live-only fade");
         assertEquals(initialLives-1,state.getLives());
+        var owners = new java.util.TreeMap<String,Object>();
+        context.getRewindRegistry().capture().entries().forEach((key,value) ->
+                owners.put(key,RaceStateSnapshots.canonical(value)));
         return new Result(new Core(player.getCentreX(),player.getCentreY(),level.getLevelGamestate().getTimerFrames(),
                 level.getLevelGamestate().getRings(),state.getLives(),level.getCheckpointState().getLastCheckpointIndex()),
-                java.util.Map.of("checkpoint-player",player.captureRewindState(),
-                        "checkpoint-camera",GameServices.camera().capture(),
-                        "checkpoint-bank",((CheckpointState)level.getCheckpointState()).captureRewindState(),
-                        "checkpoint-game-state",state.capture()));
+                owners);
     }
 }

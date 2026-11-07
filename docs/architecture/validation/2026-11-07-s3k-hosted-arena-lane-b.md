@@ -82,6 +82,30 @@ or category run was claimed. The final selected Surefire reports were classified
 `skipped=0 allowed=0 unclassified=0 required_skipped=0 undeclared_input=0 stale_rules=0`.
 A category-run VERDICT is not applicable to this direct focused Maven selection.
 
+At `53ffeed7b`, the two lean batches ran with 1 GiB test heaps and normal-memory
+compilation. All ROMs were found. Batch 1: 455 tests, 454 passed, one failed,
+zero errors/skips/OOMs; compile 37.838s, admission wait 589s, test Maven 16.538s.
+Its unchanged baseline guard passed all 363 cases. Arena equivalence, lap capture,
+checkpoint owners, monitor draws, native arena shoe fields, 64-pass S2 freeze,
+request/fallback behavior and both EGL pixel tests passed. The replay comparison
+failed only on fresh-boot SpriteAnimationSet identities at resumed step 64.
+The correction compares every script field within compact opaque values, retains
+all scalar bytes, and adds negative controls for both resource and scalar changes.
+
+Batch 2: 168 tests, 166 passed, two failed, zero errors/skips/OOMs; compile
+37.422s, admission wait 500s, test Maven 13.644s. It also waited 330–360s for this
+worktree's build lock before compilation. Both failures were fixed-count registry
+assertions: the registered sonic2.race-swap adapter changes the explicit total
+from 17 to 18. The updated contract names that key and asserts its survival on
+reattachment. All loading, API, frame-owner, monitor and underwater tests passed.
+Both selected report sets classified with zero skips and no stale rules.
+
+The bounded follow-up compiles and selects TestTeleportSwapApply,
+TestHostedArenaLapCapture, TestCheckpointRespawnPolicy and
+TestGameplayModeContextRewindRegistry. It adds a direct false-start clock assertion
+through the native 120-tick penalty/reset and strengthens checkpoint comparison to
+all registered rewind owners, canonicalized by value. Its results are pending.
+
 ## Rejected probes and queue history
 
 | Job | Queue wait | Maven execution | Result |
