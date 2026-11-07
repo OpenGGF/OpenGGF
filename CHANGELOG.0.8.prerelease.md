@@ -20,8 +20,8 @@ under the matching area heading; see the
 
 ## Maintenance and release preparation
 
-- **Contributor readability:** live objects, slots and stable identities have one
-  population owner; actor reconstruction and contact memory have separate owners
+- **Contributor readability:** live objects, slots and stable identities share
+  population storage; actor reconstruction and contact memory have separate owners
   behind the existing runtime entry points. Retiring multipart solids expires
   owned contact bits and frame history without releasing player state. Contact
   restore discards uncaptured future observations. Production badnik and contact
@@ -30,7 +30,8 @@ under the matching area heading; see the
   its next screen-shake value without using the renderer as scratch state.
   Failed trace replays print their exact test/report/triage route; triage reads
   compressed fixture auxiliaries, preserves pre-trace evidence and distinguishes
-  incomplete or unknown completion from a completed comparison.
+  incomplete or unknown completion from a completed comparison. Retained raw-field
+  diagnostics follow that storage and are exercised on successful test paths.
 
 - **Scripted website hero reels:** `tools/media/hero_reels.py` regenerates
   the Sonic 1, Sonic 2 and Sonic 3&K title-card reels from the current engine

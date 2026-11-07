@@ -1259,3 +1259,121 @@ capture commands included machine-local home paths. Replacing those paths with
 `<main-checkout>` and `<agent-temp>` placeholders preserves the command arguments
 and output identity without publishing host-specific paths. No test result or
 runtime source changed; no hook bypass was used.
+
+## Independent Opus scrutiny and diagnostic follow-up — 2026-11-07
+
+User requested Opus scrutiny of the whole PR. Claude Opus 5.5, maximum effort
+and fast mode disabled, reviewed all 70 changed files in
+`c1029d3b4...1bec750ed` and neighboring callers. It performed read-only git/gh,
+bytecode, whitespace, mirror and citation inspection; it ran no Maven tests,
+changed no files and posted no GitHub review. It found no gameplay defect, but
+identified a P2 regression in retained diagnostic readers. Its conclusions are
+static review evidence, not a fresh runtime pass.
+
+The extraction repair was incomplete: two raw roster reads in the Gumball
+exit observer, one in the bonus-slot retirement diagnostic, and eight reads
+in the ColdCampaign journal still target removed manager fields. The first
+pair swallow reflection failure into `DIAG_INVALID`; the journal throws before
+its first SSZ pool sample. Earlier statements that source-sensitive consumers
+were repaired describe an incomplete inventory. A quoted-field search across
+source/tools found these remaining readers; snapshot-schema field labels are
+separate and remain unchanged. The fix must read the actual population fields,
+without introducing public runtime APIs, callbacks or a second object roster.
+
+New passing-path assertions require the real Gumball and slot diagnostics to
+contain roster detail and not `DIAG_INVALID`. A separate bounded EGL/ROM test
+opens the preserved journal, samples its first actual SSZ1 population, checks
+passivity/output and closes it with explicit incomplete qualification. This is
+not a campaign run or renewed historical journal qualification. The combined
+nine-case RED selection is queued at this checkpoint; no RED/GREEN result is
+inferred yet.
+
+Accepted small P3 corrections: explain why reconstruction retries continue
+until a pass makes no progress; describe the HCZ input as a supplied event
+clock, because pre-physics uses the level counter while the dead/absent-player
+post-physics fallback uses the event-manager counter. Preserve both clocks and
+all gameplay branches. Clarify that population ownership means storage and
+ordinary operations, with trusted placement-transfer, streaming, exact-adoption
+and native-overwrite writers still present. The broader single-owner claim in
+the changelog/PR description needs the same qualification.
+
+Remaining review observations, not addressed by this diagnostic repair:
+contact memory and its snapshot record share a simple name; package placement
+exposes many contact mutations; manager/population/lifecycle callbacks and raw
+trusted slot writers remain; slot publication assumes today's identity mapping;
+optional aux corruption currently prevents a triage brief; Windows PowerShell
+5.1 quoting is unverified for special-character paths. The historical override
+regex misses modifier forms not used today. These are separate next-cleanup or
+validation questions, not new demonstrated gameplay regressions. No maximum
+understanding/readability score, causal human trial or aggregate repository
+score is inferred from the review. No additional reviewer is needed for these
+small, lead-owned corrections.
+
+### Diagnostic repair verification
+
+The initial RED selection completed nine cases: five failures, zero errors or
+skips. Four passing-path assertions caught `DIAG_INVALID NoSuchFieldException:
+dynamicObjects`; the journal failed at the removed manager `slotLayout` field.
+Queue wait was 389 seconds; Maven execution 43.566 seconds.
+
+After redirecting population reads, the four-class selection ran 54 cases:
+19 HCZ, eight bonus-portal, one initial-SSZ journal and 22 of 26 Gumball cases
+passed, with four Gumball assertion failures and zero errors/skips. Queue wait
+was 683 seconds; Maven execution 2 minutes 9 seconds. The journal's actual
+initial SSZ pool, unchanged observation/passivity counts and explicitly
+incomplete qualification were verified. The native/wide/donor slot pilots
+produced valid roster diagnostics after ordinary reward retirement.
+
+The newly exercised Gumball observer also revealed an inherited stale field:
+`activeBonusStageProvider` and `bonusStageTransitionPending` already live in
+`GameLoop.bonusSession` at the c102 baseline, not directly in `GameLoop`.
+They were hidden behind the earlier diagnostic failure. Read those fields from
+the actual bonus-session owner without calling gameplay getters or changing
+state. The four failures are additional diagnostic coverage, not demonstrated
+gameplay regressions introduced by this PR. Only the affected Gumball class
+needs a follow-up run; other tested sources remain unchanged.
+
+The final Gumball follow-up completed all 26 cases with zero failures, errors or
+skips (463 seconds queued; Maven 52.621 seconds). It exercises the native and
+representative wider/donor/roster reward paths, ordinary contacts and repeated
+whole-world restoration, including valid retained diagnostic payloads. A
+read-only bytecode inspection also checked the remaining Gumball reader field
+names against their compiled owner hierarchies. It found no missing fields;
+that shape check does not substitute for the observed test execution.
+
+Final focused coverage consists of the unchanged 28 HCZ/bonus/journal checks
+that passed in the preceding four-class run and the 26 affected Gumball cases
+that passed after the last test-only adapter correction. There was no fresh
+all-54 run, no repeated broad smoke and no new campaign qualification. The
+earlier four-failure run remains recorded above. The preserved journal has
+updated source-epoch notes rather than claiming its historical body hashes
+qualify these changed adapters.
+
+Commands (Java 25, Lua 5.4, unset display variables, verified ROM discovery;
+all test commands use the queue and explicit surfaceless EGL):
+
+```bash
+# RED: 9 cases / 5 failures / 0 errors / 0 skips before reader repairs.
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS3kGumballPachinkoRewardMechanics#actualNativeContactAndNaturalLifecycleReplaysItsCompleteWorldTwice,TestS3kBonusPortalMechanismProducts#shortSlotInteriorReplayUsesTheActualPortalAndReturn,TestColdCampaignPoolJournal' test -B
+# First repair: 54 cases / 4 diagnostic failures / 0 errors / 0 skips.
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS3kGumballPachinkoRewardMechanics,TestS3kBonusPortalMechanismProducts,TestColdCampaignPoolJournal,TestSonic3kHCZEvents' test -B
+# Final adapter correction: all 26 affected Gumball cases passed, zero skips.
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS3kGumballPachinkoRewardMechanics' test -B
+```
+
+The small follow-up changes only diagnostic/test adapters and assertions,
+explanations/private parameter names, plus removal of the unused identity
+forwarder. No gameplay branch, clock source, field codec, native table or
+published API changed. The earlier broad smoke/guard/trace/render results
+remain scoped to their recorded source commit; their inherited failure/frontier
+verdicts are unchanged. Queue and Maven times above are separate; user wait was
+zero and unmeasured work time remains unknown. No second Opus review or new
+contributor score is claimed.
+
+Final source/test diff from reviewed head `1bec750ed` has SHA-256
+`fb23719791b08f40c5fc4cd1d83d9483a4ddd18f5b688f74d6057dab3565fcd0` (including the new journal regression test).
+Whitespace, mirrors and added relative-link scope were checked; commit hooks
+check staged policy and citations. Both contributing models are credited in
+the final co-author block. The existing PR remains draft against develop;
+keep the task branch/worktree. No validation job remains live, and no new
+baseline worktree or destination integration is required for this repair.

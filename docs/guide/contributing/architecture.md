@@ -91,7 +91,7 @@ Start at the responsibility, rather than reading `ObjectManager` end to end:
 | Change or investigation | Owner |
 | --- | --- |
 | Correct one object's movement, lifetime tail or render-flag branch | Its existing `game.sonic*/objects` routine and production-entity test |
-| Which objects are live, which slots they own, or which identity they retain | `ObjectPopulation` |
+| Live membership, slot and identity storage, and ordinary admission/retirement | `ObjectPopulation`; trusted placement-transfer, streaming, adoption and native-overwrite writers remain |
 | Recreate linked objects, adopt construction children, or order a restore | `ObjectRewindLifecycle` |
 | Standing/pushing latch identity, ride lifetime, frame markers, or saved contacts | `contact.SolidContactState` |
 | Classify a solid contact or decide its gameplay response | `ObjectSolidContactController` |

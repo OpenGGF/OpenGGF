@@ -1023,7 +1023,13 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
     // with screen shake, speed ramping, and BG collision gating.
     // =========================================================================
 
-    private void updateAct2Bg(int levelFrameCounter) {
+    /**
+     * Normal pre-physics dispatch supplies LevelManager's frame counter. The
+     * post-physics fallback supplies Sonic3kLevelEventManager's counter when
+     * no pre-physics hook ran (for example, a dead or absent player). Both paths
+     * use their supplied clock without resampling it here.
+     */
+    private void updateAct2Bg(int dispatchFrameCounter) {
         // HCZ2_ScreenEvent (sonic3k.asm:106040-106043) consumes the offset
         // BEFORE HCZ2BGE_WallMove (sonic3k.asm:106099-106105) calls the shake setup.
         // Our wall/collision prelude runs early: publish the retained setup for
@@ -1042,10 +1048,10 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
                 // ROM HCZ2BGE_WallMoveInit adds four to the routine and falls
                 // straight through into HCZ2BGE_WallMove on the same dispatch.
                 if (act2BgRoutine == BG_WALL_MOVE) {
-                    nextScreenShakeOffset = act2BgWallMove(levelFrameCounter);
+                    nextScreenShakeOffset = act2BgWallMove(dispatchFrameCounter);
                 }
             }
-            case BG_WALL_MOVE -> nextScreenShakeOffset = act2BgWallMove(levelFrameCounter);
+            case BG_WALL_MOVE -> nextScreenShakeOffset = act2BgWallMove(dispatchFrameCounter);
             case BG_WALL_TRANSITION -> {
                 act2BgTransition();
                 nextScreenShakeOffset = 0;
@@ -1121,7 +1127,7 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
      * ROM: sonic3k.asm lines 106094-106116 (dispatch) and 106129-106170 (HCZ2_WallMove).
      * Runs wall movement logic each frame and gates BG collision.
      */
-    private int act2BgWallMove(int levelFrameCounter) {
+    private int act2BgWallMove(int dispatchFrameCounter) {
         if (endWallChaseIfSignalled()) {
             return getTimedShakeOffset();
         }
@@ -1131,12 +1137,12 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
         updateBgCollisionGating();
 
         // Run wall movement logic
-        updateWallMove(levelFrameCounter);
+        updateWallMove(dispatchFrameCounter);
 
         // loc_5100C (sonic3k.asm:106188-106198) installs the timed flag on
         // the stop pass, before this background dispatch prepares its shake.
         int nextScreenShakeOffset = wallMoving
-                ? getContinuousShakeOffset(levelFrameCounter)
+                ? getContinuousShakeOffset(dispatchFrameCounter)
                 : getTimedShakeOffset();
 
         // Update scroll handler with current wall offset
@@ -1208,7 +1214,7 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
      *   <li>Stop at offset -$600, play sfx_Crash, set timed shake</li>
      * </ol>
      */
-    private void updateWallMove(int levelFrameCounter) {
+    private void updateWallMove(int dispatchFrameCounter) {
         // Once the wall has reached its stop position, don't restart
         if (wallStopped) {
             return;
@@ -1262,7 +1268,7 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
 
         // Play rumble sound every 16 frames
         // ROM: move.w (Level_frame_counter).w,d0 / andi.w #$F,d0 / bne.s + / move.w #sfx_Rumble2,...
-        if ((levelFrameCounter & 0x0F) == 0) {
+        if ((dispatchFrameCounter & 0x0F) == 0) {
             var audioManager = audio();
             if (audioManager != null) {
                 audioManager.playSfx(Sonic3kSfx.RUMBLE_2.id);
@@ -1318,12 +1324,12 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
     };
 
     /**
-     * Get continuous screen shake offset based on the level clock.
+     * Get continuous screen shake offset from the supplied dispatch counter.
      * ROM: ShakeScreen_Setup with Screen_shake_flag = -1 (bmi.s branch).
-     * Uses ScreenShakeArray2 indexed by {@code levelFrameCounter & 0x3F}.
+     * Uses ScreenShakeArray2 indexed by {@code dispatchFrameCounter & 0x3F}.
      */
-    private int getContinuousShakeOffset(int levelFrameCounter) {
-        return SCREEN_SHAKE_ARRAY_CONTINUOUS[levelFrameCounter & 0x3F];
+    private int getContinuousShakeOffset(int dispatchFrameCounter) {
+        return SCREEN_SHAKE_ARRAY_CONTINUOUS[dispatchFrameCounter & 0x3F];
     }
 
     /**

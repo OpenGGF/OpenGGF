@@ -57,6 +57,11 @@ import java.util.TreeMap;
  * compiled/executed identically on BASE8030832d2 (R32/56945) and committed781c296ab
  * (R33/70631), each18603 verified observations. R34 preservation changes this header
  * only relative to that tested body; it installs no campaign instrumentation.
+ *
+ * Compatibility maintenance (2026-11-07): raw population reads follow the extracted
+ * ObjectPopulation owner. The hashes above qualify their historical source epochs.
+ * TestColdCampaignPoolJournal checks an initial SSZ1 sample and passivity only; it
+ * does not renew campaign, typed-prefix or full-route qualification.
  */
 final class ColdCampaignPoolJournal {
     private static final String PROPERTY = "openggf.cold.poolJournal";
@@ -324,8 +329,9 @@ final class ColdCampaignPoolJournal {
                 history.p2InputMask(), history.p2ActionMask(), history.p2StartPressed()));
         if (!ssz) return new Picture(false, manager, state, bindings, metadata);
         if (manager == null) throw new AssertionError("R16 SSZ1 has no actual manager");
-        ObjectSlotLayout layout = (ObjectSlotLayout) raw(manager, "slotLayout");
-        Object allocator = raw(manager, "slotAllocator");
+        Object population = raw(manager, "population");
+        ObjectSlotLayout layout = (ObjectSlotLayout) raw(population, "slots");
+        Object allocator = raw(population, "allocator");
         BitSet used = bits(raw(allocator, "used"));
         if (used.length() > layout.dynamicSlotCount()) throw new AssertionError("R16 allocator extent");
         Object camera = raw(manager, "camera");
@@ -337,12 +343,12 @@ final class ColdCampaignPoolJournal {
         metadata.put("copiedCameraXY", camera == null ? null : List.of(raw(camera, "renderCopyX"), raw(camera, "renderCopyY")));
         metadata.put("managerCameraX", raw(manager, "s2LatchedObjectManagerCameraX"));
         metadata.put("managerCameraYCoarse", raw(manager, "twoAxisCameraYCoarse"));
-        state.put("idCounter", raw(manager, "dynamicObjectIdCounter"));
+        state.put("idCounter", raw(population, "nextIdentityOrdinal"));
         state.put("layout", List.of(layout.firstDynamicSlot(), layout.dynamicSlotCount(), layout.processSlotCount()));
-        Map<?, ?> active = (Map<?, ?>) raw(manager, "activeObjects");
-        Collection<?> dynamics = (Collection<?>) raw(manager, "dynamicObjects");
-        Map<?, ?> ids = (Map<?, ?>) raw(manager, "rewindObjectIds");
-        Object[] exec = (Object[]) raw(manager, "execOrder");
+        Map<?, ?> active = (Map<?, ?>) raw(population, "placed");
+        Collection<?> dynamics = (Collection<?>) raw(population, "dynamic");
+        Map<?, ?> ids = (Map<?, ?>) raw(population, "identities");
+        Object[] exec = (Object[]) raw(population, "executionOrder");
         Object retirement = raw(manager, "slotRetirement");
         Object[] borrowed = (Object[]) raw(retirement, "ownersByOwnSlot");
         BitSet pendingReleases = bits(raw(retirement, "pendingChildReleases"));
@@ -382,7 +388,7 @@ final class ColdCampaignPoolJournal {
         r30ProjectActors(state, keys, union, activeSpawns, dynamicSet);
         // TEMP R30 END typed-picture
         TreeMap<Integer, List<String>> reservations = new TreeMap<>();
-        Map<?, ?> childSlots = (Map<?, ?>) raw(manager, "reservedChildSlots");
+        Map<?, ?> childSlots = (Map<?, ?>) raw(population, "reservedChildren");
         var childReservations = new ArrayList<Object>();
         for (var entry : childSlots.entrySet()) {
             ObjectSpawn parent = (ObjectSpawn) entry.getKey();

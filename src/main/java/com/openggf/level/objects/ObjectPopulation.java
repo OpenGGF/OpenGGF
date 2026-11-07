@@ -24,7 +24,7 @@ import java.util.function.Supplier;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry;
 
 /**
- * Owns the live object population: placement identity, dynamic membership, SST
+ * Owns storage and ordinary operations for placement identity, dynamic membership, SST
  * occupancy/execution slots, child reservations and stable rewind identities.
  * Rendering and rewind operate on this one population; neither keeps a shadow
  * inventory. World clocks, placement cursors and contacts belong to their owners.
@@ -38,7 +38,8 @@ final class ObjectPopulation {
     // semantic operations below. Trusted execution-slot writers still include
     // the manager's live cursor phase and native overwrite/adoption surfaces;
     // the child-reservation ledger owns reservation-array/allocator transitions,
-    // and native occurrence detach may update the reverse placement association.
+    // and placement ownership transfer/release and competition occurrence detach
+    // may also update membership and its reverse placement association.
     // Those paths must preserve callback reads, cache boundaries and slot order;
     // actor rewind uses the named reconstruction/reset operations, not raw clears.
     final ObjectSlotLayout slots;

@@ -3704,21 +3704,6 @@ public class ObjectManager {
         population.clearPlaced();
     }
 
-    /**
-     * Assigns a stable rewind identity to {@code instance} the first time it enters
-     * the live object set. The id encodes the spawn's layout index plus the next
-     * identity ordinal owned by {@link ObjectPopulation} (incremented after assignment), making
-     * it unique within a session and re-mintable in the same order on re-simulation.
-     *
-     * <p>Internally-constructed dynamics such as player-bound power-up SST owners
-     * have no placement spawn. They still receive a stable dynamic identity using
-     * their allocated slot plus the monotonic dynamic ordinal. Their captured
-     * dynamic entry carries that identity through recreation.
-     */
-    void assignRewindObjectId(ObjectInstance instance, ObjectSpawn spawn) {
-        population.publishIdentity(instance, spawn);
-    }
-
     private void projectPublishedPopulationIdentity(ObjectInstance instance, boolean firstIdentity) {
         nativeSstWord2C.projectPublished(instance, firstIdentity);
     }

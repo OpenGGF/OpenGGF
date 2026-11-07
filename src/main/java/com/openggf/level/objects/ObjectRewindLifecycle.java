@@ -25,7 +25,7 @@ import java.util.function.Supplier;
  * effects deferred to the later refresh hook complete a separate scalar-only
  * handoff and do not join this pass's already-expired reference table.
  *
- * <p>The population owns live membership, slots and identities. The manager owns
+ * <p>The population owns storage and ordinary membership/identity operations. The manager owns
  * world clocks, placement and contacts; its named counter-publication phase runs
  * between resetting the population and reconstructing actors. The only manager
  * hooks used here are ordinary admission, service binding and cache invalidation,
@@ -207,6 +207,7 @@ final class ObjectRewindLifecycle {
         return rewindContext;
     }
 
+    /** Reuse or construct placed actors and publish identities; field restoration follows reconstruction. */
     private void restoreActiveObjects(List<PerSlotEntry> entries,
             Map<ObjectSpawn, ObjectInstance> previousActive, RewindIdentityTable restoreTable,
             List<RestoredObjectState> restoredObjects) {
@@ -281,6 +282,9 @@ final class ObjectRewindLifecycle {
                 parkedDynamicEntries.add(prepared);
             }
         }
+        // Snapshot order may put a child before the parent that constructs it.
+        // Each successful pass can expose another generation of adoptable children;
+        // one retry cannot resolve deeper chains. Stop when no entry makes progress.
         boolean parkedPassMadeProgress = true;
         while (parkedPassMadeProgress && !parkedDynamicEntries.isEmpty()) {
             parkedPassMadeProgress = false;
@@ -307,6 +311,7 @@ final class ObjectRewindLifecycle {
         constructionChildren.clear();
     }
 
+    /** Adopt or recreate one dynamic actor and publish its captured slot/identity before restoring fields. */
     private boolean restoreDynamicObject(DynamicObjectEntry entry,
             RewindIdentityTable restoreTable, List<RestoredObjectState> restoredObjects) {
         // Prefer adopting the construction-spawned child the reconstructed parent
