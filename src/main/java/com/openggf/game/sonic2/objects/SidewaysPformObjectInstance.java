@@ -415,6 +415,10 @@ public class SidewaysPformObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean isCustomOutOfRange(int cameraX) {
+        // Obj7A_Main (s2.asm:56353-56359): 2P displays without retiring either endpoint.
+        if (com.openggf.game.competition.NativeCompetitionRoster.from(services().worldSession()) != null) {
+            return false;
+        }
         if (isChild) {
             return false;
         }
