@@ -1924,6 +1924,14 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
                     new EnemyKosEntry(
                             Sonic3kConstants.ART_KOSM_ROCKN_ADDR,
                             Sonic3kConstants.ARTTILE_ROCKN));
+            // Both LRZ acts select the same ordered native batch. Standalone
+            // renderer decoding does not submit these Queue_Kos_Module jobs.
+            // LoadEnemyArt (sonic3k.asm:64321-64353),
+            // PLCKosM_LRZ (sonic3k.asm:64463-64467). No FixBugs conditional.
+            case Sonic3kZoneIds.ZONE_LRZ -> List.of(
+                    new EnemyKosEntry(Sonic3kConstants.ART_KOSM_FIREWORM_SEGMENTS_ADDR, 0x512),
+                    new EnemyKosEntry(Sonic3kConstants.ART_KOSM_IWAMODOKI_ADDR, 0x530),
+                    new EnemyKosEntry(Sonic3kConstants.ART_KOSM_TOXOMISTER_ADDR, 0x562));
             // Offs_LoadEnemyArt -> PLCKosM_SSZ, also restored by loc_91570.
             // This is physical residency, independent of the prepared standalone sheet.
             case Sonic3kZoneIds.ZONE_SSZ -> List.of(new EnemyKosEntry(
