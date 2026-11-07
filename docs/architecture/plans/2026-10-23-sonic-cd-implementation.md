@@ -4,14 +4,17 @@
 
 The controller recipe now keeps its original jump pulses only through17782,
 then holds Right. It enters the actual raw91 loop at17762, traverses it without
-changing physics and reaches the genuine Boss/Fight1 at18028. Selected native
-Boss/limb CPU pieces and ready current art are observed at18294. First19143
-stops after the real physical walk at the explicit PRIMARY_DEATH_CAMERA owner;
-last19142 returned. This is an observed exploratory error, not a passing replay
-certificate or Boss defeat. The105-cut dense first-loop window records actual
-physics1536/12/128, controls and planes without another probe or Body call.
-The temporary observer is removed byte-exact after its terminal source-equal run.
-Permanent Boss/pixel promotion and the missing death-camera caller are next.
+changing physics and reaches the genuine Boss/Fight1 at18028. The permanent seventh controller case now reaches18294, including genuine
+Boss/limb CPU pieces, ready current art and an actual rendered fight. All seven
+permanent cases pass with unchanged source, no failures/errors/skips; FULL/course
+state-before-forward and pixel replay, Boss-group renderer omission and resource
+retirement are checked. The actual ENGINE PNG is retained externally after full
+renderer/session cleanup. This proves the route into the fight, not defeat.
+The exploratory continuation separately returns19142 and first19143 stops after
+the real physical walk at the explicit PRIMARY_DEATH_CAMERA owner. The105-cut
+first-loop window records actual physics1536/12/128, controls and planes without
+another probe or Body call. The temporary observer was removed byte-exact;
+the missing death-camera/lifecycle caller and IPX progress join are next.
 
 Normal R31 MODE now uses genuine CCZ terrain and native raw0100/1 metadata.
 Its existing PPZ ramp guard already returns before layout/table for that whole

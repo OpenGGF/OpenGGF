@@ -216,6 +216,7 @@ class TestSonicCdAct2ControllerRoute {
         org.junit.jupiter.api.Assumptions.assumeTrue(futureMediaRoot!=null&&!futureMediaRoot.isBlank(),"Optional configured USA CD media absent");
         assertTrue(Files.isDirectory(Path.of(futureMediaRoot).resolve("USA")),"Configured USA CD media root must exist; no cached-source fallback");
         byte[] futureImageForExport=null;int futureVisibleCallForExport=-1;
+        byte[] bossImageForExport=null;String bossSelectionForExport=null;
         try(var egl=TestSonicCdPastResultsRoute.Egl.open()) {
         var old = ready(); var h = old.harness(); var module = h.module();
         var right = controller(10419);
@@ -1161,8 +1162,8 @@ class TestSonicCdAct2ControllerRoute {
         assertEquals(new SonicCdGameModule.PastProgrammeSound(SonicCdGameModule.ProgramSound.STOP_FM),targetHost.sounds().getLast());
         System.out.println("R12B_NATURAL_END16979 {program:"+target.state().program()+",level:"+target.state().level()
                 +",module:"+module.levelProgramState()+",clock:"+targetFrame.vIntClock()+",ring:"+targetHost.globals().ring()+"}");
-        // BEGIN finite natural R13D loading/first-Sonic regression candidate; author Java/EGL UNRUN.
-        // The actual incoming programme byte selects the retained original D; no new input recipe follows16979.
+        // BEGIN measured natural R13D loading/Boss route promotion through18294; author Java/EGL UNRUN.
+        // Actual incoming goodFuture selects D. Fixed inputs never depend on observed state.
         assertEquals(0,target.state().program().goodFutureByte(),"Source prerequisite: actual incoming bad Future selection");
         assertEquals(0,target.state().program().specialStageByte(),"RunBossLevel must follow the genuine non-SpecialStage branch");
         var actualData=assertInstanceOf(CdGameDataSource.class,world.getDataSource());
@@ -1174,24 +1175,34 @@ class TestSonicCdAct2ControllerRoute {
         var servicesBeforeFuture=module.programServicesState();
         R13NaturalOwners futureOwners=null;
         var futurePhases=java.util.EnumSet.noneOf(SonicCdAct3FutureLoadingVisit.Phase.class);
-        int firstReady=-1,firstSelectedSonic=-1,firstVisibleSonic=-1,firstTitlePlc=-1,positiveEnd=-1;
+        int firstReady=-1,firstSelectedSonic=-1,firstVisibleSonic=-1,firstTitlePlc=-1,firstServicedTitle=-1,firstBossFight=-1,firstBossPlc=-1;
         boolean title4Created=false,originalSonicInit=false,originalSonicMain=false,loadingReplay=false,deferredTitleServiced=false;
-        for(int actualCall=16980;actualCall<=20000;actualCall++) {
-            var r13Registry=h.mode().getRewindRegistry();
-            boolean canReplay=module.act3FutureLoadingSelected();
+        for(int actualCall=16980;actualCall<=18294;actualCall++) {
+            // Exact Root-measured recipe: B16/Right16 on17143..17782, then Right only.
+            var actualInput=actualCall>17142&&actualCall<=17782&&(actualCall-17143)%32<16?jump:right;
+            var r13Registry=h.mode().getRewindRegistry();boolean canReplay=module.act3FutureLoadingSelected();
             var fullBefore=canReplay?r13Registry.capture():null;var courseBefore=canReplay?r13Registry.captureCourse():null;
             var beforePhase=canReplay?module.act3FutureLoadingVisit().state().phase():null;
             int beforeRoutine=canReplay?module.requirePlayerFrame().state().motion().routine():-1;
             int beforeLevelFrame=canReplay?module.requirePlayerFrame().environment().globals().levelFrames():-1;
             var oldCpu=canReplay?module.act3FutureWorldHost().video().completedCpu():java.util.Optional.<com.openggf.game.soniccd.objects.CdObjectDrawQueue.CpuSat>empty();
-            // Actual before-forward pixels, when the retained selection is already a complete Ready picture.
-            byte[] pixelsBefore=canReplay&&beforePhase==SonicCdAct3FutureLoadingVisit.Phase.READY
+            String beforeBoss=canReplay?naturalR13BossKey(futureOwners.host().placement().pool().capture()):"";
+            int beforeFight=canReplay?futureOwners.frame().environment().movement().bounds().bossFight():-1;
+            boolean beforeWork=canReplay&&(futureOwners.visit().state().section().queue().headSource()!=0
+                    ||futureOwners.visit().state().section().remainingTilesWord()!=0);
+            boolean fixedCut=actualCall==17762||actualCall==17782||actualCall==18028||actualCall==18294;
+            boolean sampleBefore=firstServicedTitle<0||fixedCut||(actualCall-firstServicedTitle)%128==0;
+            String beforeDiagnostic="closed"+(actualCall-1)+", phase="+beforePhase+", routine="+beforeRoutine
+                    +", fight="+beforeFight+", Boss="+beforeBoss;
+            // Actual prior selection; native Hurt/occlusion need not leave Sonic in later pictures.
+            byte[] pixelsBefore=canReplay&&sampleBefore&&beforePhase==SonicCdAct3FutureLoadingVisit.Phase.READY
                     &&module.act3FutureWorldHost().selected() instanceof SonicCdAct3FutureWorldHost.Published p
-                    &&p.selection().projection() instanceof SonicCdPastDisplay.Ready?drawNaturalR13Image(h,futureOwners):null;
+                    &&p.selection().projection() instanceof SonicCdPastDisplay.Ready
+                    ?(firstServicedTitle<0?drawNaturalR13Image(h,futureOwners):drawNaturalR13SelectedImage(h,futureOwners,actualCall-1)):null;
             if(canReplay)assertNaturalR13Snapshots(h,fullBefore,courseBefore,"before actual forward"+actualCall);
-            try {step(h,right);} // The exact same held Right; no search, pulse, seed or corrective store.
+            try {step(h,actualInput);} // Same fixed input for the actual forward and both replay scopes.
             catch(RuntimeException|Error original) {
-                System.out.println("R13_NATIVE_PREREQUISITE_STOP actualCall="+actualCall+", priorPhase="+beforePhase+", original="+original);
+                System.out.println("R13_BOSS_ROUTE_FIRST_FAILURE actualCall="+actualCall+", actualInput="+actualInput+", lastClosed="+beforeDiagnostic+", original="+original);
                 throw original;
             }
             assertTrue(module.act3FutureLoadingSelected(),"R13_NATIVE_PREREQUISITE: genuine old return did not select Future FULL");
@@ -1213,13 +1224,16 @@ class TestSonicCdAct2ControllerRoute {
             if(core.hudSlots().unsignedByte(3*64)==CdTitleCard.OBJECT_ID)title4Created=true;
             if(beforePhase==SonicCdAct3FutureLoadingVisit.Phase.READY) {
                 assertFalse(futureOwners.frame().paused());
-                assertEquals((beforeLevelFrame+1)&0xFFFF,futureOwners.frame().environment().globals().levelFrames(),"One genuine native ordinary Main");
-                if(beforeRoutine==0) {assertEquals(2,futureOwners.frame().state().motion().routine());originalSonicInit=true;}
-                else if(beforeRoutine==2) {assertEquals(2,futureOwners.frame().state().motion().routine());assertTrue(futureOwners.frame().display().isPresent());originalSonicMain=true;}
+                assertEquals((beforeLevelFrame+1)&0xFFFF,futureOwners.frame().environment().globals().levelFrames(),"One original unpaused Main");
+                if(beforeRoutine==0){assertEquals(2,futureOwners.frame().state().motion().routine());originalSonicInit=true;}
+                else if(beforeRoutine==2) {
+                    if(!deferredTitleServiced)assertEquals(2,futureOwners.frame().state().motion().routine(),"Original pre-release Title policy");
+                    assertTrue(futureOwners.frame().display().isPresent());originalSonicMain=true;
+                }
                 var selected=assertInstanceOf(SonicCdAct3FutureWorldHost.Published.class,futureOwners.host().selected()).selection();
-                assertNaturalR13SnapshotValue(oldCpu,selected.inputs().selectedCpu(),"selector8 retains the actual prior CPU, not the just-finished NOW CPU");
+                assertNaturalR13SnapshotValue(oldCpu,selected.inputs().selectedCpu(),"Selector8 keeps actual prior CPU, never NOW");
                 if(oldCpu.isPresent())assertSame(oldCpu.orElseThrow(),selected.inputs().selectedCpu().orElseThrow());
-                assertEquals("DONE",actualField(actualField(futureOwners.ordinary(),"objects"),"phase").toString(),"Original increasing physical walk and drain completed");
+                assertEquals("DONE",actualField(actualField(futureOwners.ordinary(),"objects"),"phase").toString(),"Original physical walk/drain completed");
             }
             var fullAfter=r13Registry.capture();var courseAfter=r13Registry.captureCourse();
             assertNaturalR13Snapshots(h,fullAfter,courseAfter,"after actual forward before pixels"+actualCall);
@@ -1227,11 +1241,11 @@ class TestSonicCdAct2ControllerRoute {
             if(phase==SonicCdAct3FutureLoadingVisit.Phase.READY) {
                 if(firstReady<0)firstReady=actualCall;
                 assertEquals(22,core.fromFadeSteps(),"Native22-source-step palette fade completed");
-                if(futureOwners.host().selected() instanceof SonicCdAct3FutureWorldHost.Published p
-                        &&p.selection().inputs().selectedCpu().isPresent()
-                        &&p.selection().inputs().selectedCpu().orElseThrow().provenance().stream().anyMatch(v->v.slotRef().wholeIndex()==0)) {
+                var selected=assertInstanceOf(SonicCdAct3FutureWorldHost.Published.class,futureOwners.host().selected()).selection();
+                if(firstServicedTitle>=0)assertInstanceOf(SonicCdPastDisplay.Ready.class,selected.projection(),"Actual selected-current scene at"+actualCall+": "+selected.projection());
+                if(selected.inputs().selectedCpu().isPresent()
+                        &&selected.inputs().selectedCpu().orElseThrow().provenance().stream().anyMatch(v->v.slotRef().wholeIndex()==0)) {
                     selectedSonic=true;
-                    // A blocked selected-native image is a hard prerequisite failure, never a passing fallback or a fitted input.
                     if(firstSelectedSonic<0){firstSelectedSonic=actualCall;newlySelected=true;}
                     if(firstVisibleSonic<0) {
                         selectedPixels=drawNaturalR13SelectedSonic(h,futureOwners,actualCall);
@@ -1243,44 +1257,61 @@ class TestSonicCdAct2ControllerRoute {
                 }
             }
             long titlePlcs=core.calls().stream().filter(c->c==SonicCdAct3FutureLoadingVisit.Call.TITLE_PLC_APPEND).count();
-            assertTrue(titlePlcs<=1,"Original whole4 Title must not replay its deferred PLC2");
-            boolean newTitle=titlePlcs==1&&firstTitlePlc<0;
-            if(newTitle) {
-                firstTitlePlc=actualCall;
-                assertTrue(core.section().queue().headSource()!=0||core.section().remainingTilesWord()!=0,
-                        "Original deferred2 must create real pending source work before a later V-int services it");
+            assertTrue(titlePlcs<=1,"Original whole4 Title must not replay deferred PLC2");boolean newTitle=titlePlcs==1&&firstTitlePlc<0;
+            if(newTitle){firstTitlePlc=actualCall;assertTrue(core.section().queue().headSource()!=0||core.section().remainingTilesWord()!=0,"Original deferred2 creates pending source work");}
+            if(firstTitlePlc>=0&&actualCall>firstTitlePlc&&core.section().queue().headSource()==0&&core.section().remainingTilesWord()==0)deferredTitleServiced=true;
+            boolean firstRelease=firstServicedTitle<0&&firstVisibleSonic>=0&&deferredTitleServiced&&futureOwners.frame().environment().controls().controlLocked()==0;
+            if(firstRelease)firstServicedTitle=actualCall;
+            int fight=futureOwners.frame().environment().movement().bounds().bossFight();
+            if(firstBossFight<0&&fight!=0)firstBossFight=actualCall;
+            long bossPlcs=core.calls().stream().filter(c->c==SonicCdAct3FutureLoadingVisit.Call.BOSS_PLC_APPEND).count();
+            assertTrue(bossPlcs<=1,"Original parent Init may append PLC4 only once");boolean newBossPlc=bossPlcs==1&&firstBossPlc<0;
+            if(newBossPlc){firstBossPlc=actualCall;assertTrue(core.section().queue().headSource()!=0||core.section().remainingTilesWord()!=0);}
+            boolean work=core.section().queue().headSource()!=0||core.section().remainingTilesWord()!=0;
+            String boss=naturalR13BossKey(futureOwners.host().placement().pool().capture());
+            boolean changedBoss=!beforeBoss.equals(boss),changedFight=beforeFight!=fight;
+            if(actualCall==17762||actualCall==17782) {
+                var motion=futureOwners.frame().state().motion();var layout=futureOwners.source().terrain().layout();
+                assertEquals(0x91,layout.cell(com.openggf.game.soniccd.level.CdStageTerrain.Plane.FOREGROUND,
+                        (motion.centreX16_16()>>>16)>>>8,(motion.centreY16_16()>>>16)>>>8).rawByte(),"Original first loop placement");
             }
-            if(firstTitlePlc>=0&&actualCall>firstTitlePlc&&core.section().queue().headSource()==0&&core.section().remainingTilesWord()==0)
-                deferredTitleServiced=true;
-            boolean end=firstVisibleSonic>=0&&deferredTitleServiced&&futureOwners.frame().environment().controls().controlLocked()==0;
-            boolean replay=canReplay&&(phase!=beforePhase||newlySelected||newTitle||end);
+            R13BossPixels bossPixels=actualCall==18294?drawNaturalR13SelectedBoss(h,futureOwners):null;
+            if(bossPixels!=null){bossImageForExport=bossPixels.rgba();bossSelectionForExport=bossPixels.selectedWholes().toString();}
+            boolean replay=canReplay&&(phase!=beforePhase||newlySelected||newTitle||firstRelease||changedFight||changedBoss
+                    ||newBossPlc||beforeWork&&!work||fixedCut);
             if(replay) {
-                // All snapshots were captured from this real epoch before pixel work and the actual forward call.
-                if(selectedPixels==null&&selectedSonic)selectedPixels=drawNaturalR13SelectedSonic(h,futureOwners,actualCall);
+                if(selectedPixels==null&&selectedSonic&&(firstServicedTitle<0||firstRelease))selectedPixels=drawNaturalR13SelectedSonic(h,futureOwners,actualCall);
+                byte[] actualPixels=selectedPixels!=null?selectedPixels.rgba():phase==SonicCdAct3FutureLoadingVisit.Phase.READY&&firstServicedTitle>=0
+                        ?drawNaturalR13SelectedImage(h,futureOwners,actualCall):null;
                 assertNaturalR13Snapshots(h,fullAfter,courseAfter,"before FULL/course replay"+actualCall);
                 for(boolean courseScope:new boolean[]{false,true}) {
                     if(courseScope)r13Registry.restoreCourse(courseBefore);else r13Registry.restore(fullBefore);
                     assertNaturalR13Owners(h,futureOwners);assertNaturalR13Snapshots(h,fullBefore,courseBefore,"restored before"+courseScope+"/"+actualCall);
-                    if(pixelsBefore!=null)assertArrayEquals(pixelsBefore,drawNaturalR13Image(h,futureOwners),"Actual before-forward pixels restored");
+                    if(pixelsBefore!=null)assertArrayEquals(pixelsBefore,firstServicedTitle>=0?drawNaturalR13SelectedImage(h,futureOwners,actualCall-1)
+                            :drawNaturalR13Image(h,futureOwners),"Actual before-forward pixels restored");
                     assertNaturalR13Snapshots(h,fullBefore,courseBefore,"before replay forward"+courseScope+"/"+actualCall);
-                    step(h,right);assertNaturalR13Owners(h,futureOwners);
-                    assertNaturalR13Snapshots(h,fullAfter,courseAfter,"after replay forward"+courseScope+"/"+actualCall);
+                    try {step(h,actualInput);}catch(RuntimeException|Error original) {
+                        System.out.println("R13_BOSS_ROUTE_REPLAY_FAILURE actualCall="+actualCall+", course="+courseScope+", lastClosed="+beforeDiagnostic+", original="+original);throw original;
+                    }
+                    assertNaturalR13Owners(h,futureOwners);assertNaturalR13Snapshots(h,fullAfter,courseAfter,"after replay forward"+courseScope+"/"+actualCall);
                     if(selectedPixels!=null) {
                         var replayPixels=drawNaturalR13SelectedSonic(h,futureOwners,actualCall);
                         assertArrayEquals(selectedPixels.rgba(),replayPixels.rgba(),"Actual after-forward pixels restored");
-                        assertArrayEquals(selectedPixels.withoutSonic(),replayPixels.withoutSonic(),"Same retained Scene omission contrast");
+                        assertArrayEquals(selectedPixels.withoutSonic(),replayPixels.withoutSonic(),"Same opening Sonic omission contrast");
+                    } else if(actualPixels!=null)assertArrayEquals(actualPixels,drawNaturalR13SelectedImage(h,futureOwners,actualCall),"Actual selected scene repeats without requiring Sonic visibility");
+                    if(bossPixels!=null) {
+                        var replayBoss=drawNaturalR13SelectedBoss(h,futureOwners);assertEquals(bossPixels.selectedWholes(),replayBoss.selectedWholes());
+                        assertArrayEquals(bossPixels.rgba(),replayBoss.rgba(),"Actual selected Boss image replays");
+                        assertArrayEquals(bossPixels.withoutBoss(),replayBoss.withoutBoss(),"Same renderer-only Boss group omission replays");
                     }
                     assertNaturalR13Snapshots(h,fullAfter,courseAfter,"after replay pixels"+courseScope+"/"+actualCall);
                 }
                 if(phase!=SonicCdAct3FutureLoadingVisit.Phase.READY)loadingReplay=true;
             }
-            if(end) {positiveEnd=actualCall;break;}
         }
-        assertNotNull(futureOwners,"R13_NATIVE_PREREQUISITE: no retained Future FULL by finite20000");
-        assertTrue(firstReady>=16980&&firstSelectedSonic>=firstReady&&firstVisibleSonic>=firstSelectedSonic,
-                "R13_NATIVE_PREREQUISITE: no actual Ready/selected/visible Sonic by20000");
-        assertTrue(positiveEnd>=firstVisibleSonic&&firstTitlePlc>=firstReady,
-                "R13_NATIVE_PREREQUISITE: original Title2 and its actual queue did not complete by20000");
+        assertNotNull(futureOwners,"R13_NATIVE_PREREQUISITE: no retained Future FULL by finite18294");
+        assertTrue(firstReady>=16980&&firstSelectedSonic>=firstReady&&firstVisibleSonic>=firstSelectedSonic,"Original Ready/selected/visible Sonic prerequisite");
+        assertTrue(firstServicedTitle>=firstVisibleSonic&&firstTitlePlc>=firstReady,"Original Title2 and its actual queue must complete");
         assertTrue(title4Created&&originalSonicInit&&originalSonicMain&&loadingReplay,
                 "Genuine whole4 Title creation, native Init/Main and loading checkpoint replay are required");
         assertTrue(futurePhases.contains(SonicCdAct3FutureLoadingVisit.Phase.FIRST_PLC));
@@ -1297,12 +1328,18 @@ class TestSonicCdAct2ControllerRoute {
         assertEquals(22,finalCore.calls().stream().filter(c->c==SonicCdAct3FutureLoadingVisit.Call.FROM_FADE_SERVICE).count());
         assertNaturalR13Owners(h,futureOwners);
         var finalFull=h.mode().getRewindRegistry().capture();var finalCourse=h.mode().getRewindRegistry().captureCourse();
-        drawNaturalR13SelectedSonic(h,futureOwners,positiveEnd);assertNaturalR13Snapshots(h,finalFull,finalCourse,"final state before retirement");
+        assertEquals(17142,firstServicedTitle,"Qualified original Title/queue/unlock cut");
+        assertEquals(18028,firstBossFight,"Original Boss Init/fight cut");assertEquals(firstBossFight,firstBossPlc);
+        assertEquals(0,finalCore.section().queue().headSource());assertEquals(0,finalCore.section().remainingTilesWord());
+        assertNotNull(bossImageForExport);assertNotNull(bossSelectionForExport);
+        assertArrayEquals(bossImageForExport,drawNaturalR13SelectedBoss(h,futureOwners).rgba());
+        assertNaturalR13Snapshots(h,finalFull,finalCourse,"final18294 state before retirement");
         retireNaturalR13Renderer(h,futureOwners);
         System.out.println("ENGINE original-USA natural same-World R13D: firstReady="+firstReady+", firstSelectedSonic="+firstSelectedSonic
-                +", firstVisibleSonic="+firstVisibleSonic+", originalTitle2="+firstTitlePlc+", positiveEnd="+positiveEnd
-                +"; fixed Right after16979, genuine loading/native Body, complete FULL/course and pixel replay. Actual values when executed; no native-image/boss/full-act/parity claim.");
-        // END finite natural R13D loading/first-Sonic regression candidate.
+                +", firstVisibleSonic="+firstVisibleSonic+", originalTitle2="+firstTitlePlc+", titleServiced="+firstServicedTitle
+                +", actualBossFight="+firstBossFight+", originalBossPLC4="+firstBossPlc+", endpoint18294 selectedBoss="+bossSelectionForExport
+                +"; exact fixed ordinary input; original source/current/priorCPU, complete FULL/course and selected pixel replay. No defeat/Results/full-act/native-image/audio/regional/parity claim.");
+        // END measured natural R13D loading/Boss route promotion through18294.
         // END measured native BigRing/Results/old-programme return through closed16979.
         // END measured natural TimeWarp230 old exit.
         // END measured natural TimeWarp save continuation.
@@ -1310,7 +1347,137 @@ class TestSonicCdAct2ControllerRoute {
         } finally {fixture.cleanup();}
         // Export is optional and occurs after all module/session/graphics/EGL/fixture cleanup.
         writeOptionalNaturalR13Capture(futureImageForExport,futureVisibleCallForExport);
+        writeOptionalNaturalR13BossCapture(bossImageForExport,bossSelectionForExport);
     }
+
+    // BEGIN natural R13D selected Boss comparison helpers 20261107; no gameplay/publication authority.
+    private record R13BossPixels(byte[] rgba,byte[] withoutBoss,java.util.List<Integer> selectedWholes) {
+        private R13BossPixels {rgba=rgba.clone();withoutBoss=withoutBoss.clone();selectedWholes=java.util.List.copyOf(selectedWholes);}
+        @Override public byte[] rgba(){return rgba.clone();}
+        @Override public byte[] withoutBoss(){return withoutBoss.clone();}
+    }
+    /** Same bounded native ID/routine key as the frozen observer; comparison only, never input selection. */
+    private static String naturalR13BossKey(com.openggf.game.soniccd.objects.CdObjectPool.Snapshot pool) {
+        var key=new java.util.StringJoiner(",");for(var slot:pool.slots())if(slot.id()>=0x2A&&slot.id()<=0x32)
+            key.add(slot.identity().wholeIndex()+":"+Integer.toHexString(slot.id())+"/"+slot.routine()+"/"
+                    +slot.unsignedByte(com.openggf.game.soniccd.objects.CdObjectState.ByteField.ROUTINE_2));return key.toString();
+    }
+    /** Actual selected-current source proof from the frozen observer, without requiring Sonic provenance. */
+    private static byte[] drawNaturalR13SelectedImage(Harness h,R13NaturalOwners o,int call) throws Exception {
+        assertNaturalR13Owners(h,o);var selected=assertInstanceOf(SonicCdAct3FutureWorldHost.Published.class,o.host().selected()).selection();var inputs=selected.inputs();
+        var scene=assertInstanceOf(SonicCdPastDisplay.Ready.class,selected.projection(),"Actual selected scene at"+call+": "+selected.projection()).scene();
+        var cpu=inputs.selectedCpu().orElseThrow(()->new AssertionError("Actual selected prior CPU absent at"+call));assertArrayEquals(cpu.bytes(),inputs.selectedSat().copy());
+        assertEquals(inputs.displayEnabled(),scene.displayEnabled());assertSame(o.host().video().current(),inputs.current());
+        assertTrue(o.host().geometryReady());assertEquals(o.assets().range(com.openggf.game.soniccd.level.CdR13FutureAssets.Asset.LEVEL_COLLISION).nativeAddress(),o.host().collisionPointer().orElseThrow());
+        assertArrayEquals(o.assets().terrain().blocks().copy(),o.visit().state().blocksRam().orElseThrow().copy());assertArrayEquals(o.assets().terrain().layout().ram().copy(),o.visit().state().layoutRam().orElseThrow().copy());
+        assertArrayEquals(o.frame().artState().cpuBuffer().copy(),inputs.player().cpuBuffer().copy());assertArrayEquals(o.frame().artState().residentBank().copy(),inputs.player().residentBank().copy());
+        assertEquals(o.frame().artState().lastFrame(),inputs.player().lastFrame());assertEquals(o.frame().artState().dirty(),inputs.player().dirty());
+        assertArrayEquals(inputs.palette().copy(),scene.selectedPalette128());assertEquals(inputs.vscrollLongBits(),scene.vscrollLongBits());assertEquals(0x20,scene.selectedBackdropPaletteIndex());
+        var fg=scene.foreground().words64x32();var bg=scene.background().words64x32();for(int y=0;y<32;y++)for(int x=0;x<64;x++){assertEquals(inputs.foreground().word(x,y),fg[y*64+x]);assertEquals(inputs.background().word(x,y),bg[y*64+x]);}
+        var hs=scene.packedHscroll256();for(int i=0;i<256;i++)assertEquals((int)inputs.hscroll().unsignedLong(i*4),hs[i]);
+        for(var entry:scene.nativePatterns().entrySet()){int id=entry.getKey();var raw=id>=0x780&&id<0x798?inputs.player().residentBank().slice((id-0x780)*32,32):com.openggf.game.soniccd.resources.CdR13ArtResidency.readTile(inputs.current(),id);assertEquals(com.openggf.game.soniccd.resources.CdObjectPresentation.patternVersion(raw),entry.getValue());}
+        assertEquals(com.openggf.game.soniccd.resources.CdObjectPresentation.convert(cpu,id->new com.openggf.game.soniccd.resources.CdObjectPresentation.TilePattern(PatternAtlasRange.OBJECTS.base()+id,java.util.Objects.requireNonNull(scene.nativePatterns().get(id)))),scene.sprites());
+        byte[] image=drawNaturalR13Image(h,o);assertArrayEquals(image,drawNaturalR13Image(h,o),"Repeated actual renderer selected pixels");return image;
+    }
+    /** Native Eggman Init/child declarations and live original routine/mapping/tile joins at the measured cut.
+     * N1ecc: EggmanObject_0_Routine0 (src/objects/r1/boss.asm:307-330), sub_20BD36 (:346-470),
+     * EggmanObject_0_RoutineC/4 (:502-571). Physical slots/routines are Root's measured output assertions. */
+    private static java.util.List<Integer> assertNaturalR13BossEndpoint(R13NaturalOwners o,
+            com.openggf.game.soniccd.objects.CdObjectDrawQueue.CpuSat cpu) throws Exception {
+        var metadata=com.openggf.game.soniccd.level.CdR13BossAssets.bind(o.assets());assertTrue(metadata.ownsAssets(o.assets()));
+        assertEquals(o.assets().identity(),metadata.identity());
+        var live=o.host().placement().pool().capture().slots().stream().filter(slot->slot.id()>=0x2A&&slot.id()<=0x32).toList();
+        assertEquals(java.util.List.of(32,37,38,39,40,41,42,43,44,45,46,47,48,49,50),live.stream().map(slot->slot.identity().wholeIndex()).toList());
+        assertEquals(0x2A,live.getFirst().id());assertEquals(4,live.getFirst().routine());assertEquals(342,live.getFirst().centreY());
+        assertEquals(14,metadata.children().size());
+        assertEquals(metadata.children().stream().map(child->child.objectId()).toList(),live.subList(1,live.size()).stream().map(slot->slot.id()).toList(),
+                "All original native child declarations, in their actual allocation/physical order");
+        for(int n=0;n<metadata.children().size();n++)assertEquals(n,metadata.children().get(n).ordinal());
+        assertEquals(java.util.List.of(4,2,12,2,4,16,4,10,2,8,2,2,4,2,2),live.stream().map(slot->slot.routine()).toList(),"Measured original parent/child routines");
+        var parts=com.openggf.game.soniccd.level.CdR13BossAssets.Part.values();var visuals=com.openggf.game.soniccd.level.CdR13BossAssets.Visual.values();
+        for(var slot:live) {
+            var part=parts[slot.id()-0x2A];assertEquals(slot.id(),part.nativeId());var body=metadata.body(part);
+            assertEquals(0,slot.routine()&1);assertTrue(slot.routine()/2<body.routineTargets().size(),"Actual native routine-directory bound");
+            int visualIndex=slot.id()==0x32?9:slot.id()==0x31?(slot.identity().wholeIndex()==49?8:7):slot.id()-0x2A;
+            var visual=visuals[visualIndex];assertEquals(body.tileWord(),visual.baseTileWord());
+            assertEquals(visual.baseTileWord(),slot.word(com.openggf.game.soniccd.objects.CdObjectState.WordField.TILE));
+            assertEquals(metadata.range(visual.mappingTable()).nativeAddress(),slot.longBits(com.openggf.game.soniccd.objects.CdObjectState.LongField.MAPPINGS),
+                    "Original selected programme's mapping root, including the two distinct native forearms");
+        }
+        assertEquals(1,o.frame().environment().movement().bounds().bossFight());assertEquals(1,o.host().globals().bossFlagsByte().orElseThrow());
+        assertEquals(1,o.visit().state().calls().stream().filter(call->call==SonicCdAct3FutureLoadingVisit.Call.BOSS_PLC_APPEND).count());
+        assertEquals(0,o.visit().state().section().queue().headSource());assertEquals(0,o.visit().state().section().remainingTilesWord());
+        var liveWholes=live.stream().map(slot->slot.identity().wholeIndex()).collect(java.util.stream.Collectors.toSet());
+        var selected=cpu.provenance().stream().map(piece->piece.slotRef().wholeIndex()).filter(liveWholes::contains).distinct().toList();
+        assertEquals(java.util.List.of(40,39,44,47,46,43,45,32,37,38,42,50,41,49),selected,"Original selected prior-CPU Boss order, not physical order or NOW");
+        assertFalse(selected.contains(48),"The live second arm is genuinely absent from this selected prior CPU");
+        assertEquals(java.util.Set.of(0x2A,0x2B,0x2C,0x2D,0x2E,0x2F,0x30,0x31,0x32),live.stream().filter(slot->selected.contains(slot.identity().wholeIndex())).map(slot->slot.id()).collect(java.util.stream.Collectors.toSet()));
+        return selected;
+    }
+    /** One stable filter over the ORIGINAL CPU/Scene. Never repeatedly omit with mismatched tile offsets. */
+    private static RetainedPlaneSceneRenderer.Scene omitNaturalR13BossGroup(RetainedPlaneSceneRenderer.Scene scene,
+            com.openggf.game.soniccd.objects.CdObjectDrawQueue.CpuSat cpu,java.util.Set<Integer> wholes) {
+        assertFalse(wholes.isEmpty());byte[] raw=cpu.bytes();var tiles=new java.util.ArrayList<SpritePresentation.Tile>();int at=0;
+        for(int index=cpu.spriteCount()-1;index>=0;index--) {
+            int size=raw[index*8+2]&15,count=(((size>>>2)&3)+1)*((size&3)+1);
+            if(!wholes.contains(cpu.provenance().get(index).slotRef().wholeIndex()))tiles.addAll(scene.sprites().tiles().subList(at,at+count));
+            at+=count;
+        }
+        assertEquals(scene.sprites().tiles().size(),at);assertTrue(tiles.size()<at,"Selected Boss group must own original sprite entries");
+        var picture=new SpritePresentation.Frame(tiles,scene.sprites().primitives(),scene.sprites().patternVersions());
+        var omitted=new RetainedPlaneSceneRenderer.Scene(scene.foreground(),scene.background(),scene.packedHscroll256(),scene.vscrollLongBits(),
+                scene.selectedPalette128(),scene.displayEnabled(),picture,scene.nativePatterns(),scene.selectedBackdropPaletteIndex());
+        assertNaturalR12bOmissionPartitions(scene,omitted);assertEquals(scene.sprites().primitives(),omitted.sprites().primitives());return omitted;
+    }
+    /** Real current planes/SAT/palette/backdrop and renderer-only Boss omission; no gameplay image is published. */
+    private static R13BossPixels drawNaturalR13SelectedBoss(Harness h,R13NaturalOwners o) throws Exception {
+        assertNaturalR13Owners(h,o);assertEquals(SonicCdAct3FutureLoadingVisit.Phase.READY,o.visit().state().phase());
+        var registry=h.mode().getRewindRegistry();var full=registry.capture();var course=registry.captureCourse();
+        var placement=o.host().placement().capture();var clock=o.frame().vIntClock();var art=o.frame().artState();var publication=o.host().selected();
+        var selected=assertInstanceOf(SonicCdAct3FutureWorldHost.Published.class,publication).selection();var inputs=selected.inputs();
+        var scene=assertInstanceOf(SonicCdPastDisplay.Ready.class,selected.projection()).scene();
+        var cpu=inputs.selectedCpu().orElseThrow();var wholes=assertNaturalR13BossEndpoint(o,cpu);
+        byte[] actual=drawNaturalR13SelectedImage(h,o,18294);assertTrue(scene.displayEnabled());assertFalse(scene.nativePatterns().isEmpty());
+        var binding=actualField(o.host(),"render");var renderer=assertInstanceOf(RetainedPlaneSceneRenderer.class,actualField(binding,"renderer"));
+        assertSame(o.world(),actualField(binding,"world"));assertSame(o.level(),actualField(binding,"level"));assertEquals(o.generation(),actualField(binding,"generation"));
+        assertSame(GameServices.graphics(),actualField(binding,"graphics"));assertSame(GameServices.graphics().getPatternAtlas(),actualField(binding,"atlas"));
+        assertSame(h.mode().getCamera(),actualField(binding,"camera"));assertSame(Thread.currentThread(),actualField(binding,"thread"));
+        assertEquals("surfaceless-egl",actualField(binding,"backend"));assertSame(org.lwjgl.opengl.GL.getCapabilities(),actualField(binding,"capabilities"));
+        var omitted=omitNaturalR13BossGroup(scene,cpu,java.util.Set.copyOf(wholes));var camera=h.mode().getCamera();long epoch=o.level().currentEpoch();
+        clearPixels();renderer.draw(omitted,camera.getX(),camera.getY(),h.module()::validateAct3FutureLoadingCut);byte[] without=pixels();
+        assertFalse(Arrays.equals(actual,without),"Fixed18294 selected Boss group must contribute visible pixels; no alternative cut/search");
+        clearPixels();renderer.draw(omitted,camera.getX(),camera.getY(),h.module()::validateAct3FutureLoadingCut);assertArrayEquals(without,pixels());
+        assertEquals(epoch,o.level().currentEpoch());assertSame(publication,o.host().selected());assertSame(inputs.current(),o.host().video().current());
+        assertSame(art,o.frame().artState());assertEquals(clock,o.frame().vIntClock());
+        assertNaturalR13SnapshotValue(placement,o.host().placement().capture(),"Boss omission complete placement/pool/status/saved nonwrites");
+        assertNaturalR13Snapshots(h,full,course,"Boss omission complete FULL/course nonwrites");
+        assertArrayEquals(actual,drawNaturalR13SelectedImage(h,o,18294),"Original selected scene redraw");
+        assertNaturalR13Snapshots(h,full,course,"Boss original image restored without gameplay publication");
+        return new R13BossPixels(actual,without,wholes);
+    }
+    /** Optional ENGINE output only after every live fixture/session/graphics/EGL owner has closed. */
+    private static void writeOptionalNaturalR13BossCapture(byte[] rgba,String selectedWholes) throws Exception {
+        String output=System.getenv("SONICCD_R13_BOSS_OUTPUT");if(output==null||output.isBlank())return;
+        assertNotNull(rgba);assertEquals(320*224*4,rgba.length);assertNotNull(selectedWholes);
+        var directory=Path.of(output);assertTrue(directory.isAbsolute());assertEquals(directory,directory.normalize());assertEquals(output,directory.toString());
+        var owned=Path.of(System.getProperty("user.home"),"Downloads","Sonic-CD","captures","engine").toAbsolutePath().normalize();
+        assertTrue(directory.startsWith(owned)&&!directory.equals(owned),"Optional Boss export requires its own canonical child of captures/engine");
+        // Check every existing component and both destinations BEFORE creating even a directory.
+        for(var ancestor=directory;ancestor!=null;ancestor=ancestor.getParent()) {
+            assertFalse(Files.isSymbolicLink(ancestor),"No symlink traversal before capture writes");
+            if(Files.exists(ancestor,java.nio.file.LinkOption.NOFOLLOW_LINKS))assertTrue(Files.isDirectory(ancestor,java.nio.file.LinkOption.NOFOLLOW_LINKS));
+        }
+        String stem="ENGINE-R13D-natural-Boss-call-18294";var png=directory.resolve(stem+".png");var text=directory.resolve(stem+".txt");
+        assertFalse(Files.exists(png,java.nio.file.LinkOption.NOFOLLOW_LINKS));assertFalse(Files.exists(text,java.nio.file.LinkOption.NOFOLLOW_LINKS));
+        Files.createDirectories(directory);assertEquals(directory,directory.toRealPath());assertEquals(owned,owned.toRealPath());
+        writeEngineCapturePng(rgba,png);
+        Files.writeString(text,"ENGINE OpenGGF original-USA actual same-World R13D at returned call18294.\n"
+                +"Original route through17142; fixed Right+B16/Right16 through17782, then Right only through18294.\n"
+                +"Actual parent32 ID2A/routine4/Y342 and original native children; selected prior-CPU Boss wholes="+selectedWholes+".\n"
+                +"Actual selected current planes/SAT/palette/backdrop; stable renderer-only Boss group omission changes visible pixels; FULL/course/pixel replay and atlas retirement.\n"
+                +"Written after module/session/graphics/EGL/fixture cleanup. No defeat/Results/native screenshot/full-act/audio/regional/parity claim.\n");
+    }
+    // END natural R13D selected Boss comparison helpers 20261107.
 
     // BEGIN finite natural R13D comparison/render helpers 20261106.
     /** Comparison-only retained actual owners, never input to a production factory or publication. */

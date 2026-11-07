@@ -299,7 +299,10 @@ matching area heading; see the
   fades and deferred Title art. Its original physical startup walk reuses the
   shared object bodies; current planes, prior CPU sprites and Sonic art render
   through the existing renderer. Fixed-controller state and selected-pixel
-  replay cover the first visible Sonic and completed Title art service. Host
+  replay cover the first visible Sonic, completed Title art service and an actual
+  rendered Boss fight reached with fixed controller input. Boss-only renderer
+  omission and complete restore/current-picture checks preserve the same owners;
+  defeating the Boss remains separate. Host
   course reset publishes Act3 consistently to the manager and World so the
   act-scoped rewind allowance refills once. Cached Boss/limb/bumper, Capsule and
   Results owners now publish through the actual physical walk and same Frame.
