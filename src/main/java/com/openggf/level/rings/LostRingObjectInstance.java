@@ -312,6 +312,20 @@ public class LostRingObjectInstance extends AbstractObjectInstance
             return !boundaryChecksOnlyOnCadence;
         }
 
+        // loc_121D0 (s2.asm:25252-25255) is reached only AFTER movement,
+        // the falling test and the probe cadence in Obj37_Main (s2.asm:25203-25227).
+        // fixBugs=0 retains the shared spill timer; this is an earlier offscreen
+        // delete, not a per-ring timer or unconditional competition init delete.
+        ObjectServices services = servicesOrNull();
+        if (ringFloorProbeRequiresRenderFlag() && !hasRomRenderFlagForFloorProbe()
+                && services != null && NativeCompetitionRoster.from(services.worldSession()) != null
+                && services.gameModule() != null
+                && services.gameModule().getGameService(com.openggf.game.internal.NativeLostRingLifetime.class)
+                    == com.openggf.game.internal.NativeLostRingLifetime.DELETE_OFFSCREEN_ON_FLOOR_PROBE) {
+            setDestroyed(true);
+            return false;
+        }
+
         if (!ringFloorProbeRequiresRenderFlag() || hasRomRenderFlagForFloorProbe()) {
             if (reverseGravity) {
                 // S3K reverse gravity: probe the ceiling (top edge, y - y_radius) while rising
@@ -454,6 +468,7 @@ public class LostRingObjectInstance extends AbstractObjectInstance
             }
         }
         boolean checksBoundary = stepPhysics(0x18 /* GRAVITY */, true);
+        if (isDestroyed()) return; // loc_121D0 returns through DeleteObject, never DisplaySprite.
 
         // S1/S2 reach this from every movement branch; S3K reaches it only while
         // moving toward the active surface on the floor-probe cadence phase.

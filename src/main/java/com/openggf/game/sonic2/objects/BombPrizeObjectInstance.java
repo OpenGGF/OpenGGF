@@ -45,12 +45,29 @@ public class BombPrizeObjectInstance extends AbstractObjectInstance implements S
     // Display delay before active
     private int displayDelay;
 
-    // Reference to parent counter (for decrementing). Un-final for rewind: the
-    // shared array reference cannot be captured/relinked, so spawn-based recreate
-    // uses a fresh placeholder; only the parent slot-machine bookkeeping decrement drifts.
+    // Rebind the parent-owned counter by exact SST slot before each child pass.
+    // Rewind can recreate the parent while retaining this child instance.
     private int[] prizeCounter;
     @RewindTransient(reason = "Structural ObjD6 parent link; live prize children are spawned and owned by PointPokey.")
     private PointPokeyObjectInstance parent;
+    private int parentObjectSlot = -1;
+    private int recipientNativeSlot = -1;
+
+    void swapPlayerOwnership() { if (recipientNativeSlot >= 0) recipientNativeSlot ^= 1; }
+
+    private void relinkPrizeCounter() {
+        if (recipientNativeSlot < 0 || parentObjectSlot < 0) return;
+        var manager = services().objectManager();
+        if (manager == null) return;
+        for (var object : manager.getActiveObjects()) {
+            if (object instanceof PointPokeyObjectInstance cage && cage.getSlotIndex() == parentObjectSlot) {
+                parent = cage;
+                prizeCounter = cage.prizeCounterForChild();
+                return;
+            }
+        }
+    }
+
 
     // Reference to LevelManager for rendering
 
@@ -79,6 +96,10 @@ public class BombPrizeObjectInstance extends AbstractObjectInstance implements S
         this.displayDelay = displayDelay;
         this.prizeCounter = prizeCounter;
         this.parent = parent;
+        if (parent != null) {
+            parentObjectSlot = parent.getSlotIndex();
+            recipientNativeSlot = parent.prizeOwnerNativeSlot();
+        }
     }
 
     BombPrizeObjectInstance(ObjectSpawn spawn) {
@@ -87,7 +108,13 @@ public class BombPrizeObjectInstance extends AbstractObjectInstance implements S
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
+        relinkPrizeCounter();
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        if (recipientNativeSlot >= 0) {
+            var roster = com.openggf.game.competition.NativeCompetitionRoster.from(services().worldSession());
+            if (roster == null) throw new IllegalStateException("Native CNZ prize lost its roster");
+            player = roster.player(recipientNativeSlot);
+        }
         if (isDestroyed()) {
             return;
         }
@@ -125,14 +152,14 @@ public class BombPrizeObjectInstance extends AbstractObjectInstance implements S
 
                 // Decrement prize counter
                 if (prizeCounter != null && prizeCounter.length > 0) {
-                    prizeCounter[0]--;
+                    prizeCounter[0] = recipientNativeSlot >= 0 ? (prizeCounter[0] - 1) & 0xFFFF : prizeCounter[0] - 1;
                 }
                 setDestroyed(true);
             }
         }
 
         // Check if off-screen for cleanup
-        if (!isOnScreen(64)) {
+        if (recipientNativeSlot < 0 && !isOnScreen(64)) {
             setDestroyed(true);
         }
     }

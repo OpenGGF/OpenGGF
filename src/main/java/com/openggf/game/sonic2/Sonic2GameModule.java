@@ -414,6 +414,8 @@ public class Sonic2GameModule implements GameModule, com.openggf.game.internal.S
                                 kit.backdrop().picture(), scroll, act, 512, 512);
                     });
         }
+        if (type == com.openggf.game.internal.NativeLostRingLifetime.class)
+            return type.cast(com.openggf.game.internal.NativeLostRingLifetime.DELETE_OFFSCREEN_ON_FLOOR_PROBE);
         if (type == CNZPrizeSoundState.class) return (T) cnzPrizeSoundState;
         if (type == S2DataSelectImageCacheManager.class) return (T) getDataSelectImageCacheManager();
         if (type == Sonic2LevelEventManager.class) return (T) levelEventManager;

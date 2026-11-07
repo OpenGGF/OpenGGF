@@ -88,6 +88,11 @@ public class ForcedSpinObjectInstance extends BoxObjectInstance implements Rewin
     // Track initialization state
     private boolean initialized;
 
+    /** Teleport transfers crossing bytes while native human identities stay in their slots. */
+    void swapPlayerOwnership() {
+        boolean past = sonicPastTrigger; sonicPastTrigger = tailsPastTrigger; tailsPastTrigger = past;
+    }
+
     public ForcedSpinObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name,
                 WIDTH_TABLE[spawn.subtype() & 0x03],  // halfWidth from width table
