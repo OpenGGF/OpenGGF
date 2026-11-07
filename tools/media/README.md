@@ -291,7 +291,10 @@ python3 -m unittest tools/media/test_hero_reels.py
 
 `build` compiles through the Maven queue (`--skip-compile` reuses
 `target/classes`). It finds the original ROMs by SHA-1, the same way the test
-wrapper does, and runs one display-free surfaceless-EGL JVM per shot, one
+wrapper does, including the optional S&K + Sonic 2 lock-on dump: Knuckles in
+Sonic 2 shots need it for the lock-on chip's own art and palettes, and a shot
+that falls back to tier one (S&K stand-in art) fails the build. It runs one
+display-free surfaceless-EGL JVM per shot, one
 after another, in a private configuration directory. The checkout's
 `config.yaml` is never read or written. Shots are joined with hard cuts, or
 optional `dip_in`/`dip_out` frames, then scaled 2x with nearest-neighbour,

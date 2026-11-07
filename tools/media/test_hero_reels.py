@@ -147,6 +147,12 @@ class Commands(unittest.TestCase):
         self.assertIn('catalogDir: "/repo/src/test/resources/traces"', text)
         self.assertNotIn('sonic2', text)
 
+    def test_runtime_config_lists_the_lock_on_dump_folder_only_when_found(self):
+        self.assertIn('directory: "empty-rom-dir"', hero.runtime_config({'s2': '/roms/s2.gen'}))
+        text = hero.runtime_config({'s2': '/roms/s2.gen', 'kis2': '/dumps/kis2.gen'}, root=Path('/repo'))
+        self.assertIn('directory: "/dumps"', text)
+        self.assertNotIn('kis2', text)
+
     def test_missing_rom_fails_loudly(self):
         with self.assertRaisesRegex(hero.ReelError, 'no verified s2 ROM'):
             hero.require_rom({'s1': '/roms/s1.gen'}, 's2')
