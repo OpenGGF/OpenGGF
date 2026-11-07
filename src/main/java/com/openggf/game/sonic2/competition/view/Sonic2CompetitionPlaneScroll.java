@@ -36,12 +36,42 @@ public final class Sonic2CompetitionPlaneScroll implements RewindSnapshottable<S
         live[slot] = new Player(x & 65535, y & 65535, horizontal, vertical, flags);
         if (slot == 1) postLoadScrollClear = false;
     }
-    /** Level (s2.asm:4930-4941) clears the display scroll page after its initial deformation. */
+    /** Cold Camera_RAM, then LevelSizeLoad. The host supplies retained state on later loads. */
     public void initialize(int firstX, int firstY, int secondX, int secondY) {
+        var zero = new Player(0, 0, 0, 0, 0);
+        initializeLevel(new State(List.of(zero, zero), List.of(zero, zero), false, true),
+                firstX, firstY, secondX, secondY);
+    }
+    /**
+     * LevelSizeLoad (s2.asm:14665-14683) clears live/copied scroll flags,
+     * preserves copy positions, and seeds only P1 crossing latches to $1010
+     * (s2.asm:14707). The caller owns the actual retained camera-state lifetime.
+     * Level (s2.asm:4930-4941) subsequently clears the display scroll page.
+     */
+    public void initializeLevel(State retained, int firstX, int firstY, int secondX, int secondY) {
+        java.util.Objects.requireNonNull(retained);
+        if (retained.live().size() != 2 || retained.copied().size() != 2)
+            throw new IllegalArgumentException("Two native camera banks required");
+        var second = retained.live().get(1);
+        live[0] = new Player(firstX & 65535, firstY & 65535, 16, 16, 0);
+        live[1] = new Player(secondX & 65535, secondY & 65535,
+                second.horizontalLatch(), second.verticalLatch(), 0);
+        for (int slot = 0; slot < 2; slot++) {
+            var old = retained.copied().get(slot);
+            copied[slot] = new Player(old.x(), old.y(), old.horizontalLatch(), old.verticalLatch(), 0);
+        }
+        redraw = false;
         postLoadScrollClear = true;
-        live[0] = new Player(firstX & 65535, firstY & 65535, 0, 0, 0);
-        live[1] = new Player(secondX & 65535, secondY & 65535, 0, 0, 0);
-        copyAtVInt(false);
+    }
+    /** Camera_RAM clear on the native menu entry path: TitleScreen (s2.asm:4269-4273).
+     * Camera_Positions_Copy / Camera_Positions_Copy_P2 (s2.constants.asm:1268-1288).
+     * The host, rather than this owner, detects that menu event.
+     */
+    public void menuClear() {
+        var zero = new Player(0, 0, 0, 0, 0);
+        java.util.Arrays.fill(live, zero); java.util.Arrays.fill(copied, zero);
+        redraw = false;
+        postLoadScrollClear = true;
     }
     /** Title-card VInt copies only P1; P2 must retain its last ordinary copy. */
     public void copyAtVInt(boolean titleCard) {

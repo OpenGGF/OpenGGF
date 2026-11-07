@@ -8,9 +8,9 @@ class TestSonic2CompetitionPlaneScroll {
     @Test void boundaryLatchesFollowBothDirectionsAndFrozenCallsRetainPositionsWithoutFlags() {
         var scroll = new Sonic2CompetitionPlaneScroll();
         scroll.initialize(0, 0, 112, 64);
-        scroll.completeCameraPass(0, 0, 0, 0, 0, false); // native initial equality toggles the zero latches
+        scroll.completeCameraPass(0, 0, 0, 0, 0, false); // LevelSizeLoad seeded P1 latches to $10/$10
         scroll.copyAtVInt(false);
-        assertEquals(10, scroll.copy(0).flags());
+        assertEquals(0, scroll.copy(0).flags());
         scroll.completeCameraPass(0, 0, 0, 15, 15, false); scroll.copyAtVInt(false);
         assertEquals(0, scroll.copy(0).flags());
         scroll.completeCameraPass(0, 15, 15, 16, 16, false); scroll.copyAtVInt(false);
@@ -64,5 +64,45 @@ class TestSonic2CompetitionPlaneScroll {
         assertFalse(scroll.postLoadScrollClear());
         scroll.restore(saved);
         assertTrue(scroll.postLoadScrollClear());
+    }
+    @Test void coldInitializationSeedsOnlyP1LatchesAndLeavesCameraCopiesCleared() {
+        var scroll = new Sonic2CompetitionPlaneScroll();
+        scroll.initialize(17, 33, 49, 65);
+        var state = scroll.capture();
+        assertEquals(16, state.live().get(0).horizontalLatch());
+        assertEquals(16, state.live().get(0).verticalLatch());
+        assertEquals(0, state.live().get(1).horizontalLatch());
+        assertEquals(0, state.live().get(1).verticalLatch());
+        for (int slot = 0; slot < 2; slot++) {
+            assertEquals(0, scroll.copy(slot).x()); assertEquals(0, scroll.copy(slot).y());
+        }
+        scroll.copyAtVInt(true);
+        assertEquals(17, scroll.copy(0).x()); assertEquals(33, scroll.copy(0).y());
+        assertEquals(0, scroll.copy(1).x()); assertEquals(0, scroll.copy(1).y());
+        scroll.copyAtVInt(false);
+        assertEquals(49, scroll.copy(1).x()); assertEquals(65, scroll.copy(1).y());
+    }
+    @Test void explicitRetainedLevelInputAndMenuClearHaveDifferentNativeEffects() {
+        var prior = new Sonic2CompetitionPlaneScroll(); prior.initialize(0, 0, 0, 0);
+        prior.completeCameraPass(1, 0, 0, 32, 32, false);
+        prior.copyAtVInt(false); prior.requestRedraw();
+        var retained = prior.capture();
+        var next = new Sonic2CompetitionPlaneScroll();
+        next.initializeLevel(retained, 100, 200, 300, 400);
+        var loaded = next.capture();
+        assertEquals(16, loaded.live().get(0).horizontalLatch());
+        assertEquals(16, loaded.live().get(1).horizontalLatch());
+        assertEquals(16, loaded.live().get(1).verticalLatch());
+        assertEquals(300, loaded.live().get(1).x()); assertEquals(400, loaded.live().get(1).y());
+        assertEquals(32, next.copy(1).x()); assertEquals(32, next.copy(1).y());
+        assertEquals(0, loaded.live().get(1).flags()); assertEquals(0, next.copy(1).flags());
+        assertFalse(loaded.redraw()); assertTrue(loaded.postLoadScrollClear());
+        assertEquals(10, retained.copied().get(1).flags(), "retained input is immutable");
+        next.menuClear();
+        for (var row : next.capture().live()) assertEquals(new Sonic2CompetitionPlaneScroll.Player(0,0,0,0,0), row);
+        for (var row : next.capture().copied()) assertEquals(new Sonic2CompetitionPlaneScroll.Player(0,0,0,0,0), row);
+        next.initializeLevel(next.capture(), 11, 12, 13, 14);
+        assertEquals(0, next.capture().live().get(1).horizontalLatch());
+        assertEquals(0, next.copy(1).x()); assertEquals(0, next.copy(1).y());
     }
 }
