@@ -123,8 +123,9 @@ public final class VerifierWorker {
         } catch (RuntimeException invalid) {
             return VerdictCodec.RESULT_FAIL_DIVERGENT;
         }
-        String recordedTrack = recording.start().gameId() + ":"
-                + recording.start().zone() + ":" + recording.start().act();
+        String recordedTrack = new com.openggf.net.protocol.TrackKey(recording.start().gameId(),
+                recording.start().trackKind().name(), recording.start().zone(), recording.start().act()).format();
+        if (!VerifierSwapLog.matches(recording, job.swaps())) return VerdictCodec.RESULT_FAIL_DIVERGENT;
         if (!recordedTrack.equals(job.trackKey())
                 || !recording.start().character().equals(job.character())
                 || !recording.start().fingerprint().equals(

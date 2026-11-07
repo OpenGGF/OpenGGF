@@ -9,6 +9,19 @@ class TestHostRoundEngineCompetition {
     long now;
     List<ControlMessage> messages = new ArrayList<>();
     HostRoundEngine engine = new HostRoundEngine(() -> now, messages::add);
+    @Test void configuredStartDelayIsUsedByHost() {
+        now = 123;
+        engine.startRound(new ControlMessage.RoundConfig("s3k",0,0,60,"OPEN",null,"ARENA","COMPETITION","ITEMS",60,15));
+        assertEquals(15123, engine.snapshot().countdownEndsAtHubMillis());
+        now = 15122; engine.onTick(); assertEquals(HostRoundEngine.Phase.COUNTDOWN, engine.phase());
+        now++; engine.onTick(); assertEquals(HostRoundEngine.Phase.RUNNING, engine.phase());
+    }
+    @Test void taintIsProjectedIntoLiveAndBestLapStandings() {
+        start(); engine.setSwapTaint(slot -> slot == 0);
+        assertTrue(engine.startAttempt("p0",1)); assertNotNull(finish(0,100));
+        assertTrue(engine.standings().getFirst().taintedSwap());
+        assertTrue(engine.page(0,10,"BEST_LAP").getFirst().taintedSwap());
+    }
     void start() {
         assertTrue(engine.startRound(new ControlMessage.RoundConfig("s3k", 0, 0, 600, "OPEN", null, "ARENA", "COMPETITION", "ITEMS", 30)));
         for (int i=0;i<4;i++) engine.register(i,"p"+i,"Player"+i,"sonic");

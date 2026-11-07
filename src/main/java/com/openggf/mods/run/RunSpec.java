@@ -20,7 +20,10 @@ import java.util.Objects;
  */
 @ModApi
 public record RunSpec(String gameId, int zone, int act, String character, GameplayRunPolicy policy,
-                      RunArea area, TrackKind kind) {
+                      RunArea area, TrackKind kind, boolean swapEnabled) {
+    public RunSpec(String gameId, int zone, int act, String character, GameplayRunPolicy policy, RunArea area, TrackKind kind) {
+        this(gameId, zone, act, character, policy, area, kind, false);
+    }
     public RunSpec(String gameId, int zone, int act, String character, GameplayRunPolicy policy, RunArea area) {
         this(gameId, zone, act, character, policy, area, TrackKind.ACT);
     }

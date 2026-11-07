@@ -473,7 +473,7 @@ public final class ControlJsonCodec {
             }
             case ControlMessage.RaceCutoff cutoff -> { if (cutoff.roundId() <= 0 || cutoff.endsAtHubMillis() < 0) invalid("race cutoff"); }
             case ControlMessage.TeleportRequest request -> { validateAttempt(request.attemptId()); nonnegative(request.requestFrame()); }
-            case ControlMessage.TeleportNoPartner request -> { validateAttempt(request.attemptId()); nonnegative(request.requestFrame()); }
+            case ControlMessage.TeleportNoPartner request -> { if (request.swapId() <= 0) invalid("swap id"); validateAttempt(request.attemptId()); nonnegative(request.requestFrame()); }
             case ControlMessage.TeleportOutcome outcome -> {
                 if (outcome.swapId() <= 0 || outcome.swapId() > 0xffffffffL) invalid("swap ID");
                 nonnegative(outcome.applyFrame()); token(outcome.outcome(), "APPLIED", "FALLBACK");
@@ -876,6 +876,7 @@ public final class ControlJsonCodec {
 
     private static void validateRoundConfig(ControlMessage.RoundConfig config) {
         requireText(config.gameId(), "round game");
+        if (config.startInSeconds() != 5 && config.startInSeconds() != 10 && config.startInSeconds() != 15) invalid("start delay");
         validateTrackKind(config.trackKind(), config.zone(), config.act());
         token(config.mode(), "TIME_ATTACK", "COMPETITION");
         token(config.monitors(), "NORMAL", "RANDOM", "ITEMS", "OFF");

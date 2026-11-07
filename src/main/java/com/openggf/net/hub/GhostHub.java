@@ -327,6 +327,11 @@ public final class GhostHub {
                 : f.x() / (double) Math.max(1, currentProfile == null ? 65536 : currentProfile.levelWidthPx()));
         return new HostTeleportSwap.Observation(slot, p.frameIndex, p.seenAt, f.hurt() || f.finished(), progress, target);
     }
+    void enableRespawns(int slot, boolean enabled, boolean arena) {
+        Player p = players.get(slot);
+        if (p != null) p.validator.enableRespawns(enabled, arena);
+    }
+
     void admitSwap(int slot, com.openggf.net.protocol.ControlMessage.SwapTarget target, int first) {
         Player p = players.get(slot);
         if (p != null) p.validator.admitSwap(target, first);

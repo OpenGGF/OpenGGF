@@ -252,7 +252,7 @@ public final class TimeAttackMenuState {
             LOGGER.log(Level.WARNING, "Failed listing ghost imports for " + currentGameId(), e);
             extraGhosts = List.of();
         }
-        launchRequest = new TimeAttackLaunchRequest(currentGameId(), track.zone(), track.act(), character, extraGhosts);
+        launchRequest = new TimeAttackLaunchRequest(currentGameId(), track.zone(), track.act(), character, extraGhosts, track.kind(), raceMode(), competitionSettings().monitors(), false);
     }
 
     private boolean matchesTrack(Path path, TimeAttackTrackCatalog.Track track) {

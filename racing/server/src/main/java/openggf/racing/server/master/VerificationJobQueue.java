@@ -19,7 +19,30 @@ public final class VerificationJobQueue {
                       String character, int claimedTimeFrames,
                       int firstInputFrame, int finishFrame,
                       String inputRecordingHashHex, String ghostStreamHashHex,
-                      boolean spotCheck, long createdAtMillis) {
+                      boolean spotCheck, long createdAtMillis, List<SwapReceipt> swaps) {
+        public Job { swaps = swaps == null ? List.of() : List.copyOf(swaps); }
+        public Job(String jobId, String roomId, int slot, String identityFingerprint, String attemptRef,
+                String determinismFingerprint, String trackKey, String character, int claimedTimeFrames,
+                int firstInputFrame, int finishFrame, String inputRecordingHashHex, String ghostStreamHashHex,
+                boolean spotCheck, long createdAtMillis) {
+            this(jobId,roomId,slot,identityFingerprint,attemptRef,determinismFingerprint,trackKey,character,
+                    claimedTimeFrames,firstInputFrame,finishFrame,inputRecordingHashHex,ghostStreamHashHex,
+                    spotCheck,createdAtMillis,List.of());
+        }
+    }
+    public record SwapReceipt(long swapId, int requestFrame, int applyFrame, String outcome,
+            com.openggf.net.protocol.ControlMessage.SwapTarget target) { }
+    public static List<SwapReceipt> swapReceipts(com.openggf.net.hub.RoomHost room, int slot) {
+        return swapReceipts(com.openggf.net.hub.HostTeleportSwap.logFor(room), slot);
+    }
+    public static List<SwapReceipt> swapReceipts(List<com.openggf.net.hub.HostTeleportSwap.Decision> log, int slot) {
+        return log.stream()
+                .filter(d -> d.outcomes().containsKey(slot)).map(d -> {
+                    var o = d.outcomes().get(slot); var c = d.command();
+                    var target = c == null ? null : c.slotA() == slot ? c.targetB() : c.targetA();
+                    int first = c == null ? d.requestFrame() : c.slotA() == slot ? c.sentAtFrameA() : c.sentAtFrameB();
+                    return new SwapReceipt(d.swapId(), first, o.applyFrame(), o.outcome(), target);
+                }).toList();
     }
 
     private static final class Entry {
@@ -59,7 +82,7 @@ public final class VerificationJobQueue {
                 candidate.character(), candidate.claimedTimeFrames(),
                 candidate.firstInputFrame(), candidate.finishFrame(),
                 candidate.inputRecordingHashHex(), candidate.ghostStreamHashHex(),
-                candidate.spotCheck(), now);
+                candidate.spotCheck(), now, candidate.swaps());
         entries.put(id, new Entry(job, uploadDeadlineAtMillis));
         return id;
     }

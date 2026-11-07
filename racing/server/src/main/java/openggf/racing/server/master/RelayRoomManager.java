@@ -578,6 +578,8 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory, Au
                     .filter(result -> result.fingerprint() != null
                             && result.finish() != null)
                     .toList();
+            var swapReceipts = new java.util.HashMap<Integer, List<VerificationJobQueue.SwapReceipt>>();
+            for (var candidate : candidates) swapReceipts.put(candidate.slot(), VerificationJobQueue.swapReceipts(room, candidate.slot()));
             String trackKey = trackKey(room.descriptor());
             String fingerprint = room.determinismFingerprint();
             execute(brokerLoop, WorkBudget.Task.reserved(reserved, List.of(reserved), () -> {
@@ -604,7 +606,7 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory, Au
                     submitVerification(roomId, candidate.slot(), candidate.participantId(),
                             candidate.fingerprint(),
                             candidate.finish(), trackKey, candidate.character(),
-                            fingerprint, true);
+                            fingerprint, true, swapReceipts.get(candidate.slot()));
                 }
             }, () -> { }));
         } catch (RuntimeException | Error failure) {
@@ -696,10 +698,12 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory, Au
         long bytes = retainedBytes(roomId, participantId, identityFingerprint,
                 trackKey, character, determinismFingerprint, finish.inputRecordingHashHex(),
                 finish.ghostStreamHashHex(), finish.inputRecordingRef());
+        var swaps = access == null ? List.<VerificationJobQueue.SwapReceipt>of()
+                : VerificationJobQueue.swapReceipts(access.room(), slot);
         Runnable submission = () -> submitVerification(roomId, slot, participantId,
                 identityFingerprint, finish, trackKey, character,
-                determinismFingerprint, spotCheck);
-        if (lifetime != null) toBroker(lifetime, bytes, submission);
+                determinismFingerprint, spotCheck, swaps);
+        if (lifetime != null) toBroker(lifetime, bytes + swaps.size() * 256L, submission);
         else {
             synchronized (lifetimes) {
                 if (closed) return;
@@ -712,11 +716,18 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory, Au
     }
 
     private void submitVerification(String roomId, int slot, String participantId,
+            String identityFingerprint, ControlMessage.AttemptFinish finish, String trackKey,
+            String character, String determinismFingerprint, boolean spotCheck) {
+        submitVerification(roomId,slot,participantId,identityFingerprint,finish,trackKey,character,
+                determinismFingerprint,spotCheck,List.of());
+    }
+
+    private void submitVerification(String roomId, int slot, String participantId,
                                     String identityFingerprint,
                                     ControlMessage.AttemptFinish finish,
                                     String trackKey, String character,
                                     String determinismFingerprint,
-                                    boolean spotCheck) {
+                                    boolean spotCheck, List<VerificationJobQueue.SwapReceipt> swaps) {
         if (closed || verificationConfig == null || verificationJobs == null) {
             return;
         }
@@ -730,7 +741,7 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory, Au
                 determinismFingerprint, trackKey, character, finish.timeFrames(),
                 finish.clockStartFrame(), finish.finishFrame(),
                 finish.inputRecordingHashHex(), finish.ghostStreamHashHex(),
-                spotCheck, clock.getAsLong());
+                spotCheck, clock.getAsLong(), swaps);
         RelayLifetime lifetime = rooms.get(roomId);
         WorkBudget.Reservation delivery = null;
         if (!spotCheck && lifetime != null && participantId != null) {

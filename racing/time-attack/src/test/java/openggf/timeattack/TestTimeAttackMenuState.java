@@ -276,4 +276,14 @@ class TestTimeAttackMenuState {
         state.adjust(1);
         assertEquals("Normal", state.settingValue(TimeAttackMenuState.Row.MONITORS));
     }
+    @Test void arenaLaunchRequestRetainsKindAtIndexZero(@TempDir Path root) {
+        TimeAttackMenuState state = hosted("s3k", root);
+        focus(state, TimeAttackMenuState.Row.RACE_MODE); state.adjust(1);
+        focus(state, TimeAttackMenuState.Row.TRACK);
+        state.adjust(-1); // last arena
+        for(int i=0;i<4;i++) state.adjust(-1); // arena zero
+        assertEquals("s3k:arena:0",state.currentTrackKey());
+        state.update(new TimeAttackMenuState.MenuKeys(false,false,false,false,true,false));
+        assertEquals(com.openggf.mods.run.TrackKind.ARENA,state.consumeLaunchRequest().kind());
+    }
 }

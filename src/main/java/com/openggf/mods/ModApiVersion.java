@@ -91,6 +91,9 @@ public final class ModApiVersion {
      * Full/Quick/Off communication with semantic quick content, a local English
      * catalogue and read-only global personal chat display preferences. Protocol 7 combines
      * these controls with private admission, invite authority and correlated master requests.
+     * RunSpec carries neutral-default swap enablement. Competition rounds carry start-in,
+     * standings swap taint and host-assigned solo-fallback IDs. Ghost streams reserve layer
+     * bit 7 for bounded anchored respawns; RaceSignal exposes arena death respawn to hosts.
      * Protocol 9 adds competition track kinds, race clocks, monitor policies, lap/progress
      * metadata, standings boards and bounded teleport event contracts. Remote ghost registries
      * accept explicit local-track wrap geometry for playback and extrapolation; room hosts

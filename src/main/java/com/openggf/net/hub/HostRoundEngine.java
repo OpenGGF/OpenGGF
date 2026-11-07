@@ -165,7 +165,7 @@ public final class HostRoundEngine {
         config = newConfig;
         if (votedNextConfig == null) planRevision++;
         roundId++;
-        countdownEndsAt = now + (competition() ? 10_000 : COUNTDOWN_MILLIS);
+        countdownEndsAt = now + (competition() ? newConfig.startInSeconds() * 1000L : COUNTDOWN_MILLIS);
         entrants.clear(); entrantIdentities.clear(); started.clear(); out.clear(); cutoffAt = Long.MAX_VALUE; winnerFrames = -1;
         // Shipped acts and arenas cap the race clock at ten minutes. Competition
         // uses that hard limit plus reload/finish transit allowance, not the TA retry window.
@@ -492,7 +492,7 @@ public final class HostRoundEngine {
         if (competition()) for (String outcome : List.of("DNF", "DNS")) {
             for (Entrant e : entrants.values()) if (outcome.equals(out.get(e.id())) && !bests.containsKey(e.id()))
                 rows.add(new ControlMessage.StandingsRow(e.slot(), e.name(), e.character(), 0,
-                        rows.size() + 1, verifiedRoom ? "VERIFIED" : "UNVERIFIED", outcome, 0, List.of()));
+                        rows.size() + 1, verifiedRoom ? "VERIFIED" : "UNVERIFIED", outcome, 0, List.of(), taintedSwap(e.slot())));
         }
         return List.copyOf(rows);
     }
@@ -505,7 +505,11 @@ public final class HostRoundEngine {
         return verifiedRoom || competition() || publishUnverifiedStandings;
     }
 
-    private static List<ControlMessage.StandingsRow> standings(List<Best> sorted) {
+    private java.util.function.IntPredicate swapTaint = slot -> false;
+    void setSwapTaint(java.util.function.IntPredicate source) { swapTaint = source; }
+    private boolean taintedSwap(int slot) { return swapTaint.test(slot); }
+
+    private List<ControlMessage.StandingsRow> standings(List<Best> sorted) {
         List<ControlMessage.StandingsRow> rows = new ArrayList<>(sorted.size());
         for (int index = 0; index < sorted.size(); index++) {
             Best best = sorted.get(index);
@@ -513,7 +517,7 @@ public final class HostRoundEngine {
                     best.character(), best.timeFrames(),
                     index > 0 && sorted.get(index - 1).timeFrames() == best.timeFrames()
                         ? rows.get(index - 1).rank() : index + 1, best.verifyState(), "FINISHED",
-                    best.finish().lapFrames().stream().mapToInt(Integer::intValue).min().orElse(0), best.finish().lapFrames()));
+                    best.finish().lapFrames().stream().mapToInt(Integer::intValue).min().orElse(0), best.finish().lapFrames(), taintedSwap(best.slot())));
         }
         return List.copyOf(rows);
     }
@@ -534,7 +538,7 @@ public final class HostRoundEngine {
             Best b = sorted.get(i);
             int rank = i > 0 && lapTime(sorted.get(i-1)) == lapTime(b) ? rows.get(i-1).rank() : i+1;
             rows.add(new ControlMessage.StandingsRow(b.slot(), b.displayName(), b.character(), b.timeFrames(), rank,
-                    b.verifyState(), "FINISHED", lapTime(b), b.finish().lapFrames()));
+                    b.verifyState(), "FINISHED", lapTime(b), b.finish().lapFrames(), taintedSwap(b.slot())));
         }
         return rows.stream().skip((long) page * pageSize).limit(pageSize).toList();
     }
@@ -592,7 +596,7 @@ public final class HostRoundEngine {
         return standings().stream().limit(STANDINGS_BROADCAST_CAP).toList();
     }
 
-    private static List<ControlMessage.StandingsRow> broadcastStandings(
+    private List<ControlMessage.StandingsRow> broadcastStandings(
             List<Best> sorted) {
         return standings(sorted.subList(0,
                 Math.min(STANDINGS_BROADCAST_CAP, sorted.size())));
@@ -658,11 +662,11 @@ public final class HostRoundEngine {
             TrackKey track = TrackKey.parse(winner);
             votedNextConfig = new ControlMessage.RoundConfig(track.gameId(), track.zone(), track.act(),
                     config.windowSeconds(), config.characterPolicy(), config.lockedCharacter(), track.kind(),
-                    config.mode(), config.monitors(), config.cutoffSeconds());
+                    config.mode(), config.monitors(), config.cutoffSeconds(), config.startInSeconds());
             if (!TrackRules.monitorsLegal(votedNextConfig))
                 votedNextConfig = new ControlMessage.RoundConfig(track.gameId(), track.zone(), track.act(),
                         config.windowSeconds(), config.characterPolicy(), config.lockedCharacter(), track.kind(),
-                        config.mode(), "ARENA".equals(track.kind()) ? "ITEMS" : "NORMAL", config.cutoffSeconds());
+                        config.mode(), "ARENA".equals(track.kind()) ? "ITEMS" : "NORMAL", config.cutoffSeconds(), config.startInSeconds());
         } else votedNextConfig = config;
         planRevision++;
         broadcaster.accept(new ControlMessage.TrackVoteResult(

@@ -51,7 +51,11 @@ public sealed interface ControlMessage {
 
     @com.openggf.game.ModApi
     record RoundConfig(String gameId, int zone, int act, int windowSeconds,
-                       String characterPolicy, String lockedCharacter, String trackKind, String mode, String monitors, int cutoffSeconds) {
+                       String characterPolicy, String lockedCharacter, String trackKind, String mode, String monitors, int cutoffSeconds, int startInSeconds) {
+        public RoundConfig(String gameId, int zone, int act, int windowSeconds, String characterPolicy,
+                String lockedCharacter, String trackKind, String mode, String monitors, int cutoffSeconds) {
+            this(gameId, zone, act, windowSeconds, characterPolicy, lockedCharacter, trackKind, mode, monitors, cutoffSeconds, 10);
+        }
         public RoundConfig(String gameId, int zone, int act, int windowSeconds,
                        String characterPolicy, String lockedCharacter) {
             this(gameId, zone, act, windowSeconds, characterPolicy, lockedCharacter, "ACT", "TIME_ATTACK", "NORMAL", 60);
@@ -83,7 +87,11 @@ public sealed interface ControlMessage {
 
     @com.openggf.game.ModApi
     record StandingsRow(int slot, String displayName, String character,
-                        int bestTimeFrames, int rank, String verifyState, String outcome, int bestLapFrames, List<Integer> lapFrames) {
+                        int bestTimeFrames, int rank, String verifyState, String outcome, int bestLapFrames, List<Integer> lapFrames, boolean taintedSwap) {
+        public StandingsRow(int slot, String displayName, String character, int bestTimeFrames, int rank,
+                String verifyState, String outcome, int bestLapFrames, List<Integer> lapFrames) {
+            this(slot, displayName, character, bestTimeFrames, rank, verifyState, outcome, bestLapFrames, lapFrames, false);
+        }
         public StandingsRow { lapFrames = List.copyOf(lapFrames); }
         public StandingsRow(int slot, String displayName, String character,
                         int bestTimeFrames, int rank, String verifyState) {
@@ -665,7 +673,7 @@ public sealed interface ControlMessage {
     @com.openggf.game.ModApi
     record TeleportSwap(long swapId, long roundId, int slotA, int slotB, SwapTarget targetA, SwapTarget targetB, int sentAtFrameA, int sentAtFrameB) implements ControlMessage { }
     @com.openggf.game.ModApi
-    record TeleportNoPartner(int attemptId, int requestFrame) implements ControlMessage { }
+    record TeleportNoPartner(long swapId, int attemptId, int requestFrame) implements ControlMessage { }
     @com.openggf.game.ModApi
     record TeleportOutcome(long swapId, int applyFrame, String outcome) implements ControlMessage { }
     @com.openggf.game.ModApi

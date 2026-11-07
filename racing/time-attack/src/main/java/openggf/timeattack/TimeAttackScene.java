@@ -152,6 +152,8 @@ public final class TimeAttackScene implements ModScene {
     /** The vote pool a room hosted for {@code gameId} carries: the chosen custom pool or the default. */
     private List<String> hostedVotePool(String gameId) {
         String chosen = state.currentPoolName();
+        if (chosen.isEmpty()) return TimeAttackTrackCatalog.eligibleFor(gameId, state.raceMode()).stream()
+                .map(TimeAttackTrackCatalog.Track::key).toList();
         return chosen.isEmpty() ? VoteTrackPools.forGame(gameId)
                 : settings.votePool(gameId, chosen).map(pool -> VoteTrackPools.keysOf(gameId, pool))
                         .orElseGet(() -> VoteTrackPools.forGame(gameId));
@@ -426,7 +428,7 @@ public final class TimeAttackScene implements ModScene {
         }
         List<String> votePool = hostedVotePool(request.gameId());
         if (mode != TimeAttackMenuState.Mode.JOIN_LAN) {
-            Optional<String> rejected = VoteTrackPools.rejection(request.gameId(), votePool, state.lockedCharacter());
+            Optional<String> rejected = VoteTrackPools.rejection(request.gameId(), votePool, state.lockedCharacter(), state.raceMode());
             if (rejected.isPresent()) {
                 status = rejected.get();
                 return;
@@ -435,7 +437,7 @@ public final class TimeAttackScene implements ModScene {
         status = "";
         RaceSession.RoundSetup setup = new RaceSession.RoundSetup(request.gameId(), request.zone(),
                 request.act(), request.character(), state.characterPolicy(), state.lockedCharacter(),
-                state.windowSeconds(), votePool);
+                state.windowSeconds(), votePool, request.kind(), state.competitionSettings());
         switch (mode) {
             case HOST_LAN -> openAccess((policy, password) -> session.hostLan(setup, fingerprint.get(), policy, password));
             case JOIN_LAN -> {
@@ -492,6 +494,7 @@ public final class TimeAttackScene implements ModScene {
             if (invites != null) invites.close();
             invites = new LobbyInviteController(session.coordinator(), session.isHosting(),
                     session::manualInviteFallback, this::cue, System::currentTimeMillis);
+            lobby.setCompetitionSource(raceSession.coordinator()::competitionHudState);
             lobby.setInviteAction(invites::open);
             lobby.setReadyRuleListener(rule -> {
                 settings.setReadyRule(rule);

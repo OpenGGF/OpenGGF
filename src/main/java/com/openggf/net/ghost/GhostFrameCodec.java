@@ -17,7 +17,7 @@ public final class GhostFrameCodec {
         out[off + 5] = (byte) ((f.hFlip() ? 0x01 : 0)
                 | (f.vFlip() ? 0x02 : 0) | (f.finished() ? 0x04 : 0) | (f.hurt() ? 0x08 : 0) | (f.progress() << 4));
         out[off + 6] = (byte) ((f.priorityBucket() & 0x07)
-                | (f.highPriority() ? 0x08 : 0) | (f.secondaryPath() ? 0x10 : 0) | (f.shoeKind() << 5));
+                | (f.highPriority() ? 0x08 : 0) | (f.secondaryPath() ? 0x10 : 0) | (f.shoeKind() << 5) | (f.respawnReset() ? 0x80 : 0));
     }
 
     public static GhostFrame decode(byte[] in, int off) {
@@ -28,6 +28,6 @@ public final class GhostFrameCodec {
         int layer = in[off + 6] & 0xFF;
         return new GhostFrame(x, y, mapping, (flags & 0x01) != 0,
                 (flags & 0x02) != 0, (flags & 0x04) != 0,
-                layer & 0x07, (layer & 0x08) != 0, (flags & 0x08) != 0, flags >>> 4, (layer & 0x10) != 0, (layer >>> 5) & 3);
+                layer & 0x07, (layer & 0x08) != 0, (flags & 0x08) != 0, flags >>> 4, (layer & 0x10) != 0, (layer >>> 5) & 3, (layer & 0x80) != 0);
     }
 }

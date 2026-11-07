@@ -26,6 +26,16 @@ public final class GhostStreamValidator {
         swapTarget = target; swapFirst = first; swapLast = first + 180;
     }
     private TrackValidationProfile profile;
+    private boolean respawnsEnabled, arenaRespawns;
+    // Transport admission bounds, not native gameplay constants: one marked transition,
+    // at most eight returns per lap/checkpoint and 64 per attempt, spaced two seconds apart.
+    private static final int MAX_RESETS_PER_PROGRESS = 8;
+    private int resetCount, lastResetFrame;
+    private final java.util.Map<Integer, Integer> resetsByProgress = new java.util.HashMap<>();
+    private final java.util.Map<Integer, GhostFrame> anchors = new java.util.HashMap<>();
+    /** Competition only. Markers cannot move beyond an already observed checkpoint. */
+    void enableRespawns(boolean enabled) { enableRespawns(enabled, profile != null && profile.lapCount() > 0); }
+    void enableRespawns(boolean enabled, boolean arena) { respawnsEnabled = enabled; arenaRespawns = arena; }
     private final LongSupplier wallClockMillis;
     private final ViolationSink sink;
 
@@ -65,6 +75,7 @@ public final class GhostStreamValidator {
         attemptFlagged = false;
         attemptStarted = true;
         previousFrame = null;
+        resetCount = 0; lastResetFrame = -120; anchors.clear(); resetsByProgress.clear();
         swapTarget = null;
         streamDigest = newDigest();
         sealedStreamHash = null;
@@ -115,16 +126,33 @@ public final class GhostStreamValidator {
                 : TrackValidationProfile.GLOBAL_SPEED_CEILING_PX_PER_FRAME;
         GhostFrame previous = previousFrame;
         var remainingSwap = swapTarget;
+        int resets = resetCount, lastReset = lastResetFrame;
+        var nextAnchors = new java.util.HashMap<>(anchors);
+        var nextResets = new java.util.HashMap<>(resetsByProgress);
         byte[] frameData = batch.frameData();
         for (int i = 0; i < batch.frameCount(); i++) {
             GhostFrame frame;
             try { frame = GhostFrameCodec.decode(frameData, i * GhostFrameCodec.BYTES); }
             catch (IllegalArgumentException invalid) { return violate("pose", "invalid ghost pose bits"); }
-            if (previous != null) {
+            int index = batch.startFrameIndex() + i;
+            boolean reset = frame.respawnReset();
+            boolean arena = arenaRespawns;
+            int anchorKey = arena ? 0 : frame.progress();
+            if (reset) {
+                GhostFrame anchor = nextAnchors.get(anchorKey);
+                if (!respawnsEnabled || previous == null || anchor == null || resets >= 64
+                        || nextResets.getOrDefault(frame.progress(), 0) >= MAX_RESETS_PER_PROGRESS
+                        || index - lastReset < 120 || frame.progress() > previous.progress()
+                        || Math.abs(TrackRules.delta(frame.x() - anchor.x(), profile == null ? 0 : profile.wrapWidthPx())) > maxSpeed
+                        || Math.abs(TrackRules.delta(frame.y() - anchor.y(), profile == null ? 0 : profile.wrapHeightPx())) > maxSpeed)
+                    return violate("respawn-reset", "unbounded or unanchored respawn");
+                resets++; lastReset = index;
+                nextResets.merge(frame.progress(), 1, Integer::sum);
+            }
+            if (previous != null && !reset) {
                 int dx = Math.abs(TrackRules.delta(frame.x() - previous.x(), profile == null ? 0 : profile.wrapWidthPx()));
                 int dy = Math.abs(TrackRules.delta(frame.y() - previous.y(), profile == null ? 0 : profile.wrapHeightPx()));
                 if (dx > maxSpeed || dy > maxSpeed) {
-                    int index = batch.startFrameIndex() + i;
                     if (remainingSwap != null && index >= swapFirst && index <= swapLast
                             && Math.abs(frame.x() - remainingSwap.centreX()) <= maxSpeed
                             && Math.abs(frame.y() - remainingSwap.centreY()) <= maxSpeed) {
@@ -141,9 +169,12 @@ public final class GhostStreamValidator {
                 return violate("bounds",
                         "position " + frame.x() + "," + frame.y() + " outside level");
             }
+            nextAnchors.putIfAbsent(anchorKey, frame);
             previous = frame;
         }
         swapTarget = remainingSwap;
+        resetCount = resets; lastResetFrame = lastReset;
+        resetsByProgress.clear(); resetsByProgress.putAll(nextResets); anchors.clear(); anchors.putAll(nextAnchors);
         previousFrame = previous;
         streamDigest.update(frameData);
         nextExpectedFrameIndex = batch.startFrameIndex() + batch.frameCount();

@@ -9,7 +9,7 @@ import java.util.function.*;
 public final class HostTeleportSwap {
     public record Observation(int slot, int frame, long seenAt, boolean hurt, double progress, SwapTarget target) { }
     public record Decision(int requester, int attemptId, int requestFrame, long hubMillis, Observation requesterState,
-                           List<Observation> candidates, ControlMessage.TeleportSwap command,
+                           List<Observation> candidates, long swapId, ControlMessage.TeleportSwap command,
                            Map<Integer, ControlMessage.TeleportOutcome> outcomes, boolean tainted) {
         public Decision { candidates = List.copyOf(candidates); outcomes = Map.copyOf(outcomes); }
     }
@@ -61,14 +61,15 @@ public final class HostTeleportSwap {
         recordedEvents.merge(slot, 1, Integer::sum);
         recordedEvents.merge(partner.slot(), 1, Integer::sum);
         pending.put(slot, nextId); pending.put(partner.slot(), nextId);
-        log.add(new Decision(slot, attempt, frame, now, self, candidates, command, Map.of(), false));
+        log.add(new Decision(slot, attempt, frame, now, self, candidates, command.swapId(), command, Map.of(), false));
         send.accept(slot, command); send.accept(partner.slot(), command); return command;
     }
     private ControlMessage.TeleportNoPartner noPartner(int slot, int attempt, int frame, long now,
             Observation self, List<Observation> candidates, BiConsumer<Integer, ControlMessage> send) {
-        var reply = new ControlMessage.TeleportNoPartner(attempt, frame);
+        var reply = new ControlMessage.TeleportNoPartner(++nextId, attempt, frame);
         recordedEvents.merge(slot, 1, Integer::sum);
-        log.add(new Decision(slot, attempt, frame, now, self, candidates, null, Map.of(), false));
+        pending.put(slot, reply.swapId());
+        log.add(new Decision(slot, attempt, frame, now, self, candidates, reply.swapId(), null, Map.of(), false));
         send.accept(slot, reply);
         return reply;
     }
@@ -101,13 +102,13 @@ public final class HostTeleportSwap {
         if (!Objects.equals(pending.get(slot), outcome.swapId())) throw new IllegalArgumentException("unknown swap outcome");
         for (int i = 0; i < log.size(); i++) {
             Decision d = log.get(i); var c = d.command();
-            if (c == null || c.swapId() != outcome.swapId()) continue;
-            int first = c.slotA() == slot ? c.sentAtFrameA() : c.sentAtFrameB();
+            if (d.swapId() != outcome.swapId()) continue;
+            int first = c == null ? d.requestFrame() : c.slotA() == slot ? c.sentAtFrameA() : c.sentAtFrameB();
             if (outcome.applyFrame() < first || outcome.applyFrame() > first + 180
-                    || !("APPLIED".equals(outcome.outcome()) || "FALLBACK".equals(outcome.outcome())))
+                    || !("APPLIED".equals(outcome.outcome()) && c != null || "FALLBACK".equals(outcome.outcome())))
                 throw new IllegalArgumentException("invalid swap outcome window");
             var outcomes = new HashMap<>(d.outcomes()); outcomes.put(slot, outcome);
-            log.set(i, new Decision(d.requester(), d.attemptId(), d.requestFrame(), d.hubMillis(), d.requesterState(), d.candidates(), c, outcomes, d.tainted()));
+            log.set(i, new Decision(d.requester(), d.attemptId(), d.requestFrame(), d.hubMillis(), d.requesterState(), d.candidates(), d.swapId(), c, outcomes, d.tainted()));
             pending.remove(slot);
             if ("APPLIED".equals(outcome.outcome())) cooldown.put(slot, outcome.applyFrame() + 64);
             return;
@@ -117,7 +118,7 @@ public final class HostTeleportSwap {
         for (int i = 0; i < log.size(); i++) {
             Decision d = log.get(i); var c = d.command();
             if (c != null && (c.slotA() == source || c.slotB() == source))
-                log.set(i, new Decision(d.requester(), d.attemptId(), d.requestFrame(), d.hubMillis(), d.requesterState(), d.candidates(), c, d.outcomes(), true));
+                log.set(i, new Decision(d.requester(), d.attemptId(), d.requestFrame(), d.hubMillis(), d.requesterState(), d.candidates(), d.swapId(), c, d.outcomes(), true));
         }
     }
 }
