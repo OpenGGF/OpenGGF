@@ -67,6 +67,91 @@ class TestSonic2CompetitionVisit {
             title.reset();
         } finally { TestEnvironment.resetAll(); }
     }
+    @Test void qualifiedProviderBindsRealTeleportAndRewind() throws Exception {
+        var menus = new NativeMenuController();
+        try {
+            HeadlessTestFixture.builder().withZoneAndAct(0,0).build();
+            var input=new InputHandler();input.setLogicalOverride(NEUTRAL);
+            var context=new NativeMenuHostContext(EngineServices.current(),
+                    SessionManager.getCurrentWorldSession().rootGameModule(),input,ignored -> { });
+            var provider=new Sonic2NativeModeProvider(true,zone -> zone==0);
+            var visit=assertInstanceOf(Sonic2CompetitionVisit.class,provider.competitionScreen(context));
+            assertTrue(menus.open(visit));tick(menus,input,START);
+            assertNotNull(visit.host().profile(),"afterFrame must load the actual native world");
+            var mode=visit.host().context();
+            var video=mode.getWorldSession().getGameModule().getGameService(
+                    com.openggf.game.sonic2.competition.view.Sonic2CompetitionVideoFrame.class);
+            var planes=video.planeScroll();
+            var snapshots = mode.getRewindRegistry();
+            var beforeTeleport = snapshots.capture();
+            var scrollHandler = mode.getWorldSession().getGameModule().getScrollHandlerProvider().getHandler(0);
+            var scrollBefore = (com.openggf.game.sonic2.competition.scroll.Sonic2CompetitionScroll.State) scrollHandler.captureRewindState();
+            var planeBefore = planes.capture();
+            assertTrue(visit.host().swapNativeActorWorldState(),"actual native transaction is operational");
+            var scrollAfter = (com.openggf.game.sonic2.competition.scroll.Sonic2CompetitionScroll.State) scrollHandler.captureRewindState();
+            var background=scrollAfter.p1();
+            var environment=visit.host().nativeState().primaryEnvironment(mode,visit.session());
+            assertAll(
+                () -> assertEquals(planeBefore.live().get(1),planes.capture().live().get(0)),
+                () -> assertEquals(planeBefore.copied().get(0),planes.capture().copied().get(1)),
+                () -> assertEquals(scrollBefore.p2(),scrollAfter.p1()),
+                () -> assertArrayEquals(new int[]{background.x()>>>16,background.y()>>>16,background.x2()>>>16,
+                    background.y2()>>>16,background.x3()>>>16,background.y3()>>>16},
+                    new int[]{environment.bgX(),environment.bgY(),environment.bg2X(),environment.bg2Y(),environment.bg3X(),environment.bg3Y()}));
+            snapshots.restore(beforeTeleport);
+            assertTrue(mode.getRewindRegistry().capture().containsKey("sonic2.competition.halfpipe"),
+                    "the real halfpipe must be registered with the live world");
+        } finally { menus.close();TestEnvironment.resetAll(); }
+    }
+    @Test void qualifiedProviderRunsRealGoalResultsAndSecondActWithoutPrivateStateMutation() throws Exception {
+        var menus = new NativeMenuController();
+        try {
+            HeadlessTestFixture.builder().withZoneAndAct(0,0).build();
+            var input = new InputHandler(); input.setLogicalOverride(NEUTRAL);
+            var context = new NativeMenuHostContext(EngineServices.current(),
+                    SessionManager.getCurrentWorldSession().rootGameModule(), input, ignored -> { });
+            var provider = new Sonic2NativeModeProvider(true, zone -> zone == 0);
+            var visit = assertInstanceOf(Sonic2CompetitionVisit.class,provider.competitionScreen(context));
+            assertTrue(menus.open(visit));
+            assertTrue(visit.host().nativeState().operational(), "real corrected C object owners must be installed");
+            tick(menus,input,START);
+            assertEquals(Sonic2CompetitionSession.Phase.ACT,visit.session().phase());
+            var mode = visit.host().context();
+            var video = mode.getWorldSession().getGameModule().getGameService(
+                    com.openggf.game.sonic2.competition.view.Sonic2CompetitionVideoFrame.class);
+            var planes = video.planeScroll();
+            var goal = visit.host().profile().signposts().getFirst();
+            int target = Math.min(visit.host().profile().bounds().maxX(),goal.x()-0xA0);
+            int x = 0;
+            while (x != target) {
+                x += Math.clamp(target-x,-0x100,0x100);
+                for(int slot=0;slot<2;slot++) {
+                    position(visit.session().player(slot),Math.min(x+0xA0,goal.x()-0x20),0x100);
+                    visit.session().camera(slot).setX((short)x);
+                }
+                tick(menus,input,NEUTRAL);
+            }
+            for(int i=0;i<320 && visit.session().phase()==Sonic2CompetitionSession.Phase.ACT;i++) {
+                for(int slot=0;slot<2;slot++) position(visit.session().player(slot),
+                        i==0 && slot==1 ? goal.x()-0x20 : goal.x()+8,goal.y()-0x40);
+                tick(menus,input,NEUTRAL);
+            }
+            assertEquals(Sonic2CompetitionSession.Phase.ACT_RESULTS,visit.session().phase());
+            assertNotNull(visit.session().actResult(0,0));
+            var retained = planes.capture();
+            for(int i=0;i<180 && visit.session().act()==0;i++) tick(menus,input,START);
+            assertEquals(1,visit.session().act());
+            assertEquals(1,visit.host().profile().act(), "afterFrame must load the actual second-act terrain");
+            assertEquals(Sonic2CompetitionSession.Phase.ACT,visit.session().phase());
+            assertSame(mode,visit.host().context());
+            var second = mode.getWorldSession().getGameModule().getGameService(
+                    com.openggf.game.sonic2.competition.view.Sonic2CompetitionVideoFrame.class);
+            assertSame(planes,second.planeScroll(),"act reload retains the actual plane-scroll owner");
+            assertEquals(retained.copied().get(1).x(), second.planeScroll().copy(1).x(), "title retains P2 copied X across acts");
+            assertEquals(retained.copied().get(1).y(), second.planeScroll().copy(1).y(), "title retains P2 copied Y across acts");
+            assertEquals(0,second.displayState().ringsAnimationFrame(),"Level entry clears ring phase");
+        } finally { menus.close(); TestEnvironment.resetAll(); }
+    }
     private static void tick(NativeMenuController menus,InputHandler input,LogicalInputSnapshot sample) {
         input.setLogicalOverride(sample);
         var mode=SessionManager.getCurrentGameplayMode();

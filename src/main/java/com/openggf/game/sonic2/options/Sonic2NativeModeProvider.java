@@ -71,7 +71,7 @@ public final class Sonic2NativeModeProvider implements NativeTitleModeProvider {
         try {
             return new com.openggf.game.sonic2.competition.Sonic2CompetitionVisit(context, optionsState,
                     overseas, fromOptions, qualified,
-                    com.openggf.game.sonic2.competition.state.Sonic2TeleportPorts.UNBOUND_OBJECT_FIELDS, entryProgress);
+                    new com.openggf.game.sonic2.objects.Sonic2TeleportObjectFieldsAccess(), entryProgress);
         } catch (java.io.IOException failure) {
             throw new java.io.UncheckedIOException("Cannot construct native S2 competition visit", failure);
         }
