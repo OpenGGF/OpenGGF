@@ -33,11 +33,22 @@ public final class Sonic2CompetitionScrollSourceAdapter implements ScrollHandler
         };
         // InitCameraValues (s2.asm:14882-14902), InitCam_EHZ (s2.asm:14926-14940),
         // InitCam_MCZ (s2.asm:15025-15042), InitCam_CNZ (s2.asm:15044-15049).
-        int bg2Y = profile.romZone() == 0 ? 0 : y << 16;
-        var first = new Sonic2CompetitionScroll.BackgroundBank(0, bgY << 16, x << 16, bg2Y, x << 16, 0);
-        var second = new Sonic2CompetitionScroll.BackgroundBank(profile.romZone() == 12 ? x << 16 : 0,
-                bgY << 16, x << 16, bg2Y, x << 16, 0);
+        var retained = owner.capture();
+        var first = initialBank(retained.p1(), x, y, bgY, false);
+        var second = initialBank(retained.p2(), x, y, bgY, true);
         owner.initializeLevel(zone(), first, second);
+    }
+    private static int word(int fixed, int value) { return (value << 16) | (fixed & 65535); }
+    private Sonic2CompetitionScroll.BackgroundBank initialBank(Sonic2CompetitionScroll.BackgroundBank old,
+            int x, int y, int bgY, boolean second) {
+        // InitCameraValues writes WORDs, preserving their fractional halves.
+        // The zone initializers explicitly clear only the listed LONGs.
+        boolean ehz = profile.romZone() == 0, mcz = profile.romZone() == 11;
+        int bgX = !second || ehz || mcz ? 0 : word(old.x(), x);
+        int initialY = ehz || !mcz ? 0 : word(old.y(), bgY);
+        return new Sonic2CompetitionScroll.BackgroundBank(bgX, initialY,
+                word(old.x2(), x), ehz ? 0 : word(old.y2(), y),
+                word(old.x3(), x), ehz ? 0 : old.y3());
     }
     /**
      * LoadLevelBlocks_2P (s2.asm:86878-86898), shipped fixBugs=0, writes beyond
@@ -58,7 +69,7 @@ public final class Sonic2CompetitionScrollSourceAdapter implements ScrollHandler
         // A1's immutable load/restore DTO is the published state-seeding seam;
         // no parallel scratch owner or mutable RAM image is introduced here.
         owner.restore(new Sonic2CompetitionScroll.State(state.p1(), state.p2(), scratch,
-                state.horizontal(), state.v1(), state.v2()));
+                state.horizontal(), state.v1(), state.v2(), state.firstWords(), state.secondWords()));
     }
     public void completeCameraPass(Sonic2CompetitionSession session, int vintRunCount) {
         if (profile == null) return;

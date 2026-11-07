@@ -13,6 +13,16 @@ public final class Sonic2TeleportPorts {
     public record BackgroundPosition(int x, int y, int x2, int y2, int x3, int y3) { }
     /** Lane A2-R: the live tile-plane scroll caches must follow the exchanged native camera banks. */
     @FunctionalInterface public interface PlaneScroll { void swapPlayers(); }
+    public interface ObjectFields {
+        boolean operational();
+        ObjectPlayerFields fields(com.openggf.level.objects.AbstractObjectInstance object);
+    }
+    public static final ObjectFields UNBOUND_OBJECT_FIELDS = new ObjectFields() {
+        public boolean operational() { return false; }
+        public ObjectPlayerFields fields(com.openggf.level.objects.AbstractObjectInstance object) {
+            throw new IllegalStateException("Corrected native object teleport fields are not installed");
+        }
+    };
     /** Lane C object instances: only the per-player fields named by swap_loop_objects. */
     public interface ObjectPlayerFields { void swapPlayers(); }
 }

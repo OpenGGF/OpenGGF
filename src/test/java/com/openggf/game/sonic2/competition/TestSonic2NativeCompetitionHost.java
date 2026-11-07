@@ -185,7 +185,12 @@ class TestSonic2NativeCompetitionHost {
                             PlayerInputState.of(AbstractPlayableSprite.INPUT_DOWN | AbstractPlayableSprite.INPUT_LEFT,
                                     AbstractPlayableSprite.INPUT_LEFT, 0, 0, false, false));
                     input.setLogicalOverride(entrySample);
+                    int incomingVint = com.openggf.game.session.EngineTiming.vIntRunCounter(services).objectClockSeed();
                     host.loadAct(session, zone[0], 0);
+                    assertTrue(host.initialVintRunCount() - incomingVint > 0,
+                            "actual initial PLC/title waits must advance the inherited V-int before initial deformation");
+                    assertEquals(host.initialVintRunCount() + 25, host.context().getObjectManager().getVblaCounter(),
+                            "outer load completion must retain initial waits plus the25 title leave waits");
                     assertEquals(26, views.preparations, "one leading BuildSprites plus 25 leave iterations");
                     assertEquals(25, driver.nativeSamples, "each real title wait must sample the shared input once");
                     assertEquals(0, input.updates, "the native wait sample port never advances outer input");

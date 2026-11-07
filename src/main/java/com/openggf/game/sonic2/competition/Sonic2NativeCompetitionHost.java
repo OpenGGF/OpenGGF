@@ -83,6 +83,40 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
     private BooleanSupplier nativeSlowMotionFlag;
     private Supplier<Sonic2CompetitionCheckpoints.PrimaryEnvironment> checkpointEnvironment;
     private boolean pendingTitleExit;
+    private int initialVintRunCount;
+    int initialVintRunCount() { return initialVintRunCount; }
+    private final com.openggf.game.sonic2.competition.view.Sonic2CompetitionPlaneScroll retainedPlaneScroll =
+            new com.openggf.game.sonic2.competition.view.Sonic2CompetitionPlaneScroll();
+    com.openggf.game.sonic2.competition.view.Sonic2CompetitionPlaneScroll retainedPlaneScroll() { return retainedPlaneScroll; }
+    public void clearMenuCameraRam() {
+        retainedPlaneScroll.menuClear();
+        if (module != null) module.clearMenuCameraRam();
+    }
+    public void close() {
+        if (world != null && com.openggf.game.session.SessionManager.getCurrentGameplayMode() == context())
+            com.openggf.game.session.SessionManager.closeGameplaySession();
+    }
+    public com.openggf.game.sonic2.competition.state.Sonic2CompetitionNativeState nativeState() {
+        return (com.openggf.game.sonic2.competition.state.Sonic2CompetitionNativeState) nativeState;
+    }
+    public static Sonic2NativeCompetitionHost production(GameModule root, EngineContext services,
+            Consumer<GameplayModeContext> publish, Views views, boolean teleportOnly, boolean overseas,
+            com.openggf.game.sonic2.competition.state.Sonic2TeleportPorts.ObjectFields objects) {
+        var reference = new Sonic2NativeCompetitionHost[1];
+        var backgrounds = new com.openggf.game.sonic2.competition.state.Sonic2TeleportPorts.BackgroundBanks() {
+            public void swapPlayers() { reference[0].module.scroll().owner().swapPlayers(); }
+            public com.openggf.game.sonic2.competition.state.Sonic2TeleportPorts.BackgroundPosition primaryPosition() {
+                var bank = reference[0].module.scroll().owner().view(0).background();
+                return new com.openggf.game.sonic2.competition.state.Sonic2TeleportPorts.BackgroundPosition(
+                        bank.x() >>> 16, bank.y() >>> 16, bank.x2() >>> 16, bank.y2() >>> 16,
+                        bank.x3() >>> 16, bank.y3() >>> 16);
+            }
+        };
+        var nativeState = new com.openggf.game.sonic2.competition.state.Sonic2CompetitionNativeState(
+                backgrounds, () -> reference[0].module.planeScroll().swapPlayers(), objects);
+        reference[0] = new Sonic2NativeCompetitionHost(root, services, publish, views, nativeState, teleportOnly, overseas);
+        return reference[0];
+    }
     private record PauseSnapshot(Sonic2CompetitionPause.State planner, boolean pendingTitleExit) { }
     private final RewindSnapshottable<PauseSnapshot> pauseAdapter = new RewindSnapshottable<>() {
         @Override public String key() { return pause.key(); }
@@ -164,6 +198,7 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
                 || supplied.romZone() != zone || supplied.act() != act)
             throw new IllegalArgumentException("Load must match the session's active native act");
         if (session != null && supplied != session) throw new IllegalStateException("Host already owns another session");
+        int enteringVint = com.openggf.game.session.EngineTiming.vIntRunCounter(services).objectClockSeed();
         try {
             // Verify/decode the destination before retiring the outgoing mode.
             var nextProfile = Sonic2CompetitionLevelProfile.load(services.roms().getRom(), zone, act);
@@ -183,7 +218,11 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
             profile = nextProfile;
             resetNativePause();
             // Reuse this exact context: policy.retire resets the complete competition ledger.
+            initialVintRunCount = enteringVint;
             world.load(logicalZone(zone), act);
+            // Legacy outer load completion restores its pre-load clock. Keep the
+            // actual title/PLC waits serviced by this native load instead.
+            context().getObjectManager().initVblaCounter(initialVintRunCount);
             if (nativeState instanceof com.openggf.game.sonic2.competition.state.Sonic2CompetitionNativeState production) {
                 var registry = context().getRewindRegistry();
                 registry.deregisterPostRestoreCallback("sprite-powerup-derived-state");
@@ -318,6 +357,7 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
     @Override public void freezeObjects(int ticks) { nativeState.freezeObjects(context(), ticks); }
 
     void prepareLoad(LevelLoadContext load) throws IOException {
+        module.clearRingAnimation();
         art = Sonic2CompetitionNativeArt.load(services.roms().getRom(), profile);
         load.setRom(services.roms().getRom());
         load.setZone(profile.romZone()); load.setAct(profile.act());
@@ -337,8 +377,24 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
         plc.transact(operations.toArray(Sonic2PlcService.Operation[]::new));
         // Level_TtlCard (s2.asm:4914-4926) waits for these descriptors before
         // geometry/player assembly. Replay only its omitted PLC boundaries.
-        SkippedPresentationPlcLifecycle.drain(module.nativeVramOwner().plcLifecycle(),
-                PlcLifecyclePhase.LEVEL_TITLE_CARD, plc::isBusy);
+        // Hand the actual incoming global clock to this load's current owner
+        // before replaying the real Level_TtlCard waits (s2.asm:4914-4926).
+        var clock = context().getObjectManager();
+        if (clock != null) clock.initVblaCounter(initialVintRunCount);
+        else com.openggf.game.session.EngineTiming.vIntRunCounter(services).seed(Integer.toUnsignedLong(initialVintRunCount));
+        var coordinator = new com.openggf.game.resources.PlcFrameLifecycleCoordinator(module.nativeVramOwner().plcLifecycle());
+        while (plc.isBusy()) {
+            coordinator.runLogicalIteration(() -> { }, frame -> {
+                if (!frame.claim(PlcLifecyclePhase.LEVEL_TITLE_CARD)) throw new IllegalStateException("Title wait already claimed");
+                var objects = context().getObjectManager();
+                if (objects != null) objects.advanceVblaCounter();
+                else com.openggf.game.session.EngineTiming.vIntRunCounter(services).serviceRepresentedVBlank();
+                if (module.nativeVramOwner().plcLifecycle().hasPreparationBoundary(PlcLifecyclePhase.LEVEL_TITLE_CARD))
+                    frame.prepareAfterLoop(PlcLifecyclePhase.LEVEL_TITLE_CARD);
+                return null;
+            });
+        }
+        initialVintRunCount = com.openggf.game.session.EngineTiming.vIntRunCounter(services).objectClockSeed();
         module.initializeHudArt(); // Level_TtlCard (s2.asm:4914-4927), after the PLC drain and before terrain.
         // LoadZoneTiles patches its own span after the real initial PLC writes;
         // completed high VRAM uploads remain intact for native presentation.
@@ -458,7 +514,7 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
         registry.register(adapter);
     }
 
-    void initializeRuntimeState() { module.clearRingAnimation(); module.onLevelLoad(); }
+    void initializeRuntimeState() { module.onLevelLoad(); }
     void initializeRings() {
         LevelArtInternalAccess.initializeNativeCompetitionRings(context().getLevelManager(), new Sonic2CompetitionRingStreaming());
     }
@@ -579,6 +635,8 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
         }
         @Override public void afterNativeTick(LevelFrameContext frame, LogicalInputSnapshot input) {
             module.nativeFeatures().updateNativeCursors();
+            if (!context().getLevelManager().isLevelInactiveForTransition())
+                for (int slot = 0; slot < 2; slot++) module.scroll().owner().setCoarseX(slot, session.camera(slot).getX());
             session.advanceActFlow(); // LevelManager already advanced each bank's timer once.
             int timeOver = session.consumeTimeOverRequests();
             for (int slot = 0; slot < 2; slot++) if ((timeOver & 1 << slot) != 0 && !session.player(slot).getDead())
