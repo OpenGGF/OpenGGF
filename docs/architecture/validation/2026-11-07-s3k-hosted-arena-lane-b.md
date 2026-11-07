@@ -7,6 +7,60 @@ S2 World REV01, native Competition owners and the
 Origin: lane B resumed at `407711a53` on branch `s3k-competition-mode`, 2026-11-07.
 This records the engine lane; end-to-end network and verifier integration belong to the lead and other lanes.
 
+## Final engine-lane qualification
+
+The latest combined report set contains **625 passing cases**, zero failures,
+errors or skips, from 68 Surefire reports (63 top-level classes).
+This is a focused selection, not a full-suite or category-run pass. Production
+sources last changed at `53ffeed7b`; later changes are tests and evidence only.
+The final checkpoint fixture was tested at `c22d3b843`.
+
+The unchanged 33-class S3K Competition guard passed all 363 cases, including the
+previous lane's TestS3kSoloSwapItem. Native-menu/hosted equivalence and all four lap
+capture cases pass on the verified locked-on ROM. Checkpoint reload now compares
+every registered rewind owner's captured values through GameLoop and the direct
+LevelManager owner: no owner key or gameplay field is excluded. Animation resources,
+terrain descriptors, palettes and patterns compare by complete values across fresh
+boots. Destructive controls prove resource frames, compact bytes, block descriptors,
+collision indices and the original one-pixel pose difference cannot pass equality.
+
+S2 monitor draws, event admission, both native fallbacks, exact streamed fields,
+64 inhibited object passes/48 white passes, and the 80-step live/RecordingFrameDriver
+comparison pass. The replay independently reproduces a positive native swap request.
+All required S3K loading guards, hosted regressions, API checks, monitor regressions
+and surfaceless EGL probes pass. Every wrapper reported missing=none for ROM inputs.
+No lean test OOM occurred. The final skip classification reports zero skipped,
+unclassified, required-skipped or stale-policy cases. A category-run VERDICT is not
+applicable because these are direct focused wrapper runs.
+
+| Source / selection | Lane | Result | Normal-memory compile | Shared admission wait | Test Maven execution |
+| --- | --- | --- | --- | --- | --- |
+| ed28ff14a / earlier combined 50 selectors | normal | 518 passed, 0 skipped | Included in Maven time | 1,404s | 120s including compile |
+| 53ffeed7b / 47-class batch | lean | 454 passed, 1 oracle failure, 0 skipped | 37.838s | 589s | 16.538s |
+| 53ffeed7b / 15 selectors, 16 classes | lean | 166 passed, 2 registry-contract failures, 0 skipped | 37.422s | 500s | 13.644s |
+| 8ac40af4f / four affected classes | lean | 40 passed, 1 expanded-oracle failure, 0 skipped | 37.916s | 409s | 4.320s |
+| 50fd9a049 / two affected classes | lean | 6 passed, 1 fixture-isolation failure, 0 skipped | 36.471s | 388s | 3.078s |
+| c22d3b843 / checkpoint class | lean | 1 passed, 0 skipped | 46.511s | 490s | 2.427s |
+
+Batch 2 additionally waited 330–360s on this worktree's build lock before compilation;
+that is separate from its shared admission wait. Lean runs use normal compile memory
+and 1 GiB test heaps. Historical failures and their exact corrections are retained
+below. No unrelated processes were stopped and no queue locks were deleted. User
+approval wait was zero; implementation/debug/orchestration time was not instrumented.
+
+Earlier resource-constrained requests are also distinct from test execution:
+the own normal post-results request was retired after approximately 3,254s queued,
+with no tests executed, when the user authorized lean execution. Its lean replacement
+at efa2f02a3 compiled for 94s, waited 2,741s and executed for 4.445s: 39 passed,
+one checkpoint-boundary assertion failed, zero skips/OOMs. The corrected checkpoint
+retry at 479ff91da compiled for 38.340s, waited 1,072s and executed for 2.196s:
+one passed, zero skips/OOMs. A later lean request compiled for 95s and waited 409s
+but launched no tests because committing changed its frozen tree fingerprint.
+The fixed-source requests in the final table supersede that request.
+
+The following sections retain the chronological implementation/evidence checkpoints;
+old pending statements describe those particular attempts, not outstanding checks.
+
 ## Implemented behavior
 
 - `6c24ce0f1`: S2/S3K monitor OFF deletes on initialization without recording a break.
@@ -77,7 +131,7 @@ TestS2RandomisedMonitorContents, TestS3kArenaSwapApplier, TestTeleportSwapApply,
 TestModApiSignatureSurface and TestModApiPinPolicy. No test pass is claimed for that request.
 
 These are focused, positioned tests. They do not certify a full player-input route,
-a network race or complete checkpoint-world equivalence. No full suite
+a network race. The later full checkpoint-owner comparison is qualified above. No full suite
 or category run was claimed. The final selected Surefire reports were classified:
 `skipped=0 allowed=0 unclassified=0 required_skipped=0 undeclared_input=0 stale_rules=0`.
 A category-run VERDICT is not applicable to this direct focused Maven selection.
@@ -129,6 +183,8 @@ for a lean retry; no production change was required.
 
 ## Rejected probes and queue history
 
+All rows in this early table used the normal lane.
+
 | Job | Queue wait | Maven execution | Result |
 | --- | --- | --- | --- |
 | First guard | 1,082s | Not started | ENOSPC during queue admission |
@@ -172,7 +228,7 @@ explicitly transient.
 The new focused tests check field preservation, native clocks during 64 inhibited
 object passes, the white-flash phase, unsafe/dead/finished fallbacks, delayed
 requests, native empty-slot arena parity and live versus RecordingFrameDriver
-canonical snapshots over 80 steps. Their results are pending, not assumed. The replay comparison also independently
+canonical snapshots over 80 steps. Their first-run results and subsequent oracle corrections are recorded below. The replay comparison also independently
 raises the native monitor request before injecting the logged application.
 The latter uses the canonical replay frame owner; it does not wire the separate
 AttemptReplayHarness or validate server authorization of the event log.
@@ -192,14 +248,19 @@ the flash without changing native palette bytes or VBlank upload state. It inclu
 an EGL pixel test of ordinary/water/private rows and cleanup after a draw failure;
 its explicit EGL opt-in has its own skip classification. LevelRenderer is untouched.
 
-No source under net/** or racing/**, S2 competition, shared competition,
+The existing TestGameplayModeContextRewindRegistry contract was updated to name
+the additional adapter and expect 18 keys; no baseline Competition guard source
+changed. No source under net/** or racing/**, S2 competition, shared competition,
 NativeCompetitionRenderer or LevelRenderer was edited. PlayableSpriteMovement
 remains unedited with CRLF intact.
 
 Other owners must carry the round's frozen swapEnabled into both live and replay
 policy construction; the engine never infers it from current peers. The
-AttemptReplayHarness must inject the recorded event through RaceSwapApplier.queueForStep,
-consume request/outcome observations, and call the single checkpoint reload owner.
+AttemptReplayHarness must reset its applier once per attempt and inject recorded
+events on the engine thread through RaceSwapApplier.queueForStep, consume
+request/outcome observations, and call the single checkpoint reload owner.
+S2 resolves the service through GameModule.getGameService(RaceSwapApplier.class);
+arenas expose their session-scoped instance through HostedArenaSession.raceSwaps().
 A rejected recorded fallback must be rechecked using the logged original target.
 Network logging, hash binding, outcome authorization and complete route verification
 remain outside lane B.
@@ -232,3 +293,32 @@ Both were launched in the background with `timeout 7200`, logs under this worktr
 shown in the table's corresponding final subsets. The API-only command selects
 `TestModApiSignatureSurface,TestModApiPinPolicy`; the first three EGL probes select
 `TestS3kSoloArenaViewPixels` with the surfaceless property.
+
+
+## Final lean reproduction
+
+The exact 47-class first selection is reproduced by expanding the package before
+calling --lean (the lean wrapper rejects wildcard selectors):
+
+```bash
+guard=$(rg --files src/test/java/com/openggf/game/sonic3k/competition -g 'Test*.java' | sed -e 's#.*/##' -e 's/\.java$//' | sort | paste -sd, -)
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dtest=$guard,TestHostedRunController,TestSceneRunLauncher,TestFastDeathRestart,TestGameplayRunPolicy,TestHostedRunActCompletionWiring,TestHostedArenaEquivalence,TestCheckpointRespawnPolicy,TestMonitorOffPolicy,TestS3kSoloArenaViewPixels,TestS2RandomisedMonitorContents,TestTeleportSwapApply,TestPaletteDrawProjectionPixels" test
+
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestModApiSignatureSurface,TestModApiPinPolicy,TestLevelFrameHardwareTimingBoundaries,TestRecordingFrameDriverInputOnly,com.openggf.game.sonic2.objects.TestMonitorObjectInstance,TestSonic2MonitorMusicAdmission,TestSonic2CompetitionMonitorConsumer,TestMonitorIconTiming,TestLiveRewindMonitorState,TestGameplayModeContextRewindRegistry,TestUnderwaterPaletteUpload' test
+```
+
+The bounded follow-ups use the same flags and these exact selectors, respectively:
+
+```text
+-Dtest=TestTeleportSwapApply,TestHostedArenaLapCapture,TestCheckpointRespawnPolicy,TestGameplayModeContextRewindRegistry
+-Dtest=TestTeleportSwapApply,TestCheckpointRespawnPolicy
+-Dtest=TestCheckpointRespawnPolicy
+```
+
+Each request used timeout 7200 in the background, with logs under target/lane-b.
+The merged report set and its skip classification are disposable target outputs.
+No branch was pushed or merged.

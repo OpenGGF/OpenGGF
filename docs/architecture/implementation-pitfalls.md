@@ -96,6 +96,14 @@ Do not drop the opaque array or compare resource `toString()` values. The
 [Competition engine evidence](validation/2026-11-07-s3k-hosted-arena-lane-b.md)
 records this oracle correction and its bounded replay test.
 
+Clearing the active gameplay session does not reset a cached game module. For a
+cold-boot equivalence test, reset both SessionManager and GameModuleRegistry
+before each side. Reusing S2's module produced PLC load epochs 3/5 and title-card
+frame counts 53/106 while all gameplay owners matched. Keep those lifetime fields
+in the oracle; isolate the boots instead of filtering the fields. The
+[complete checkpoint comparison](validation/2026-11-07-s3k-hosted-arena-lane-b.md)
+compares every registered owner after this fixture correction (2026-11-07).
+
 Capture boot must preserve an existing native camera binding. After ScreenInit
 sets `Scroll_lock`, even `Camera.setFocusedSprite` resets physical and render-copy
 coordinates; guarding only the following forced snap leaves that overwrite.
