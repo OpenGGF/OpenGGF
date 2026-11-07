@@ -105,6 +105,8 @@ public final class HostRoundEngine {
             out.putIfAbsent(id, "DNS".equals(reason) ? "DNS" : "DNF");
     }
     private boolean validTiming(ControlMessage.AttemptFinish f) {
+        if (competition() && f.clockStartFrame() != com.openggf.game.internal.CompetitionTrackRules.clockStartFrame(
+                new TrackKey(config.gameId(), config.trackKind(), config.zone(), config.act()))) return false;
         int laps = profile == null ? ("ARENA".equals(config.trackKind()) ? 5 : 0) : profile.lapCount();
         if (f.lapFrames().size() != laps) return false;
         long sum = 0;

@@ -5,6 +5,11 @@ import com.openggf.net.protocol.TrackKey;
 /** Game-owned catalogue policy for the shipped race tracks and monitor sets. */
 public final class CompetitionTrackRules {
     private CompetitionTrackRules() { }
+    public static int clockStartFrame(TrackKey key) {
+        // loc_3713A (sonic3k.asm:74391-74436), sub_371BE
+        // (sonic3k.asm:74437-74457): blank, 3, 2, 1, then native GO.
+        return "s3k".equals(key.gameId()) && "ARENA".equals(key.kind()) ? 4 * 60 : 0;
+    }
     public static boolean legal(TrackKey key, String mode) {
         if ("ARENA".equals(key.kind())) return "s3k".equals(key.gameId()) && key.zone() < 5 && "COMPETITION".equals(mode);
         return "TIME_ATTACK".equals(mode) || "COMPETITION".equals(mode) && !"s1".equals(key.gameId());

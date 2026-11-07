@@ -616,7 +616,10 @@ refusal receipts; v2 remains readable.
 
 Pending finish claims cannot arm the verified-room cutoff. Finish admission bounds elapsed
 frames against scheduled GO and arrival (two seconds of transport slack), and bounds the
-clock prefix against AttemptStart and the hub's contiguous stream. Placement still compares
+clock prefix against AttemptStart and the hub's contiguous stream. The game-owned
+catalogue also fixes the Competition prefix itself: step zero on acts and step 240
+(native neon GO) on the shipped arenas; latency slack cannot rename executed race steps
+as countdown steps. Placement still compares
 accepted elapsed frame counts without latency adjustments.
 
 

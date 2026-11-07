@@ -9,6 +9,14 @@ class TestHostRoundEngineCompetition {
     long now;
     List<ControlMessage> messages = new ArrayList<>();
     HostRoundEngine engine = new HostRoundEngine(() -> now, messages::add);
+    @Test void forgedClockPrefixIsRejectedEvenInsideLatencyAllowance() {
+        start(); engine.startAttempt("p0",1);
+        var f = new ControlMessage.AttemptFinish(1,5,335,340,List.of(1,1,1,1,1),List.of(),"ab".repeat(32),"cd".repeat(32),null);
+        assertNull(engine.onAttemptFinish(0,"p0",null,"P","sonic",f,false));
+        assertTrue(messages.stream().noneMatch(ControlMessage.RaceCutoff.class::isInstance));
+        assertEquals(openggf.timeattack.MassStartRelease.ARENA_LEAD_FRAMES,
+                com.openggf.game.internal.CompetitionTrackRules.clockStartFrame(new com.openggf.net.protocol.TrackKey("s3k","ARENA",0,0)));
+    }
     @Test void forgedFiveFrameFinishNeverArmsCutoff() {
         start(); engine.startAttempt("p0",1); now = 30_000;
         var f = new ControlMessage.AttemptFinish(1,5,1235,1240,List.of(1,1,1,1,1),List.of(),"ab".repeat(32),"cd".repeat(32),null);
