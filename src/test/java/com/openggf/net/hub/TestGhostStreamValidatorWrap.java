@@ -4,6 +4,17 @@ import com.openggf.net.protocol.*;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 class TestGhostStreamValidatorWrap {
+ @Test void arenaShoeReceiptNeverAdmitsAPositionDiscontinuity() {
+  var v=new GhostStreamValidator(new TrackValidationProfile(1024,256,32,60,512,256,5,12),()->0,(k,d)->{});
+  v.enableRespawns(true,true); v.onAttemptStart(1);
+  assertEquals(GhostStreamValidator.Verdict.ACCEPT,batch(v,0,100,100));
+  v.admitSwap(new ControlMessage.SwapTarget(400,100,0,0,false,false,0,false,1,75,0),1);
+  byte[] data=new byte[7];
+  GhostFrameCodec.encode(new GhostFrame(400,100,0,false,false,false,0,false,false,0,false,1),data,0);
+  assertEquals(GhostStreamValidator.Verdict.DROP,v.onBatch(new GhostPackets.FramesBatch(1,1,1,data)));
+  GhostFrameCodec.encode(new GhostFrame(100,100,0,false,false,false,0,false,false,0,false,1),data,0);
+  assertEquals(GhostStreamValidator.Verdict.ACCEPT,v.onBatch(new GhostPackets.FramesBatch(1,1,1,data)));
+ }
  @Test void nativeBackwardGoalCrossingDoesNotInvalidateArenaStream() {
   var v=new GhostStreamValidator(new TrackValidationProfile(512,256,32,60,512,256,5,12),()->0,(k,d)->fail(d));
   v.enableRespawns(true,true); v.onAttemptStart(1);

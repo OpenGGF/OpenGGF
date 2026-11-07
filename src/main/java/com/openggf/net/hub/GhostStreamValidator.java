@@ -194,7 +194,7 @@ public final class GhostStreamValidator {
             // display-only here; swap ordering comes from validated displacement.
             if (!arenaRespawns && previous != null && !reset && frame.progress() < previous.progress() && remainingSwap == null)
                 return violate("progress", "progress moved backwards without respawn or host swap");
-            boolean arenaSwap = profile != null && profile.lapCount() > 0;
+            boolean arenaSwap = arenaRespawns;
             boolean reachedSwap = remainingSwap != null && index >= swapFirst && (arenaSwap
                     ? frame.shoeKind() == remainingSwap.shoeKind() : Math.abs(TrackRules.delta(frame.x() - remainingSwap.centreX(), profile == null ? 0 : profile.wrapWidthPx())) <= maxSpeed
                     && Math.abs(TrackRules.delta(frame.y() - remainingSwap.centreY(), profile == null ? 0 : profile.wrapHeightPx())) <= maxSpeed);
@@ -209,7 +209,7 @@ public final class GhostStreamValidator {
                 int dx = Math.abs(TrackRules.delta(frame.x() - previous.x(), profile == null ? 0 : profile.wrapWidthPx()));
                 int dy = Math.abs(TrackRules.delta(frame.y() - previous.y(), profile == null ? 0 : profile.wrapHeightPx()));
                 if (dx > maxSpeed || dy > maxSpeed) {
-                    if (!reachedSwap || index > swapLast) return violate("speed",
+                    if (arenaSwap || !reachedSwap || index > swapLast) return violate("speed",
                             "delta " + dx + "," + dy + " exceeds " + maxSpeed);
                 }
             }
