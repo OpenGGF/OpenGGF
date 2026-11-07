@@ -318,3 +318,33 @@ No ending delivery or producer publication has occurred. The new producer
 publication and develop pin remain the user's category-3 decision; the earlier
 approval named only the queue observer commit. Ordinary unit corrections follow
 the user's recorded defect ruling, without changing trace assertions.
+
+### Approved integration and post-integration checks
+
+The user approved producer `161e45ac81f972559280597a36c0c9d97286fc61` publication
+and delivery of the ending branch and pin. Fresh fetches show no commits or
+changed paths beyond gate base `c1029d3b4`; `f2ad93c14` / PR #267 is already an
+ancestor of both that base and the frozen `90105d1df` gate source. The existing
+complete smoke attribution is therefore reused, without claiming a new smoke run.
+
+Manual fast-forward integration into the main checkout's existing develop branch
+preserves all four user submodule heads, statuses, nested diffs, indexes and
+untracked bytes, plus all nine root untracked file hashes. No branch switch,
+stash, user-reference reset or change to the movie/trace assertions occurs.
+
+On integrated `c6c45a6d9`, a queued clean build (`clean test-compile`, tests skipped
+only for that compilation step) passes. The separately queued original
+`TestS1CompleteEmeraldRunChain#ghz1ToScrapBrainAcrossEverySpecialStage` passes with
+zero skips; all 29 report bodies are literal matches to the qualified candidate.
+The subsequent full 45-class S1 profile passes 71 cases with zero skips. All
+71 identities/outcomes and all 92 comparison report bodies match the earlier
+green profile literally. Commands and receipts are under `ending-delivery-clean`,
+`ending-delivery-chain` and `ending-delivery-s1-profile` in the task artifact.
+
+TraceChaser was pushed first, through the ordinary hook path. Remote main is
+verified at `161e45ac81f972559280597a36c0c9d97286fc61`, so the approved develop pin
+will reference a published commit. This final qualification changes prose only;
+runtime, tests, fixtures and the pin remain identical to the integrated source
+that passed the clean build and post-integration checks. Final remote and cleanup
+receipts belong to the external task report. The five-axis S1 chain objective is
+met; no additional frontier work is part of this delivery.

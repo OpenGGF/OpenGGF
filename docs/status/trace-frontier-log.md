@@ -124753,3 +124753,15 @@ S1 chain/profile remains 71 PASS / zero skips with all 92 comparison bodies exac
 to the earlier green candidate. See the audit for commands, source and limits.
 Diagnostics were archived, reviewed and officially acknowledged. Producer161
 and the ending pin remain local pending the reserved category-3 decision.
+
+The user approved producer `161e45ac` publication and the ending pin delivery.
+Fresh fetches find no commits beyond the qualified gate base `c1029d3b4`;
+`f2ad93c14` / PR #267 was already included. The existing smoke attribution is
+reused explicitly. Main-checkout integration preserves all user reference state.
+A clean build on integrated `c6c45a6d9` passes, followed by the original chain
+(zero skips, 29 report bodies exact) and the full S1 profile (71 PASS, zero skips,
+all 92 report bodies exact to the qualified candidate). TraceChaser remote main
+is verified at `161e45ac` before the develop push. This qualification changes
+prose only; all five axes are clear and the original chain reaches EOF. Final
+remote verification and accounted worktree cleanup are recorded in the task
+artifact; the S1 chain loop stops after delivery.
