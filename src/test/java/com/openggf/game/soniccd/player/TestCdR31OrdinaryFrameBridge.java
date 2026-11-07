@@ -223,9 +223,9 @@ class TestCdR31OrdinaryFrameBridge {
     }
 
     @Test void exactApiHasNoRawRestoreEscapeAndScopeCannotCaptureMutateCloseOrCancel() throws Exception {
-        assertEquals(CdPlayerFrameRuntime.R31Publication.class,CdPlayerFrameRuntime.class.getMethod("runR31Body",int.class,CdPlayerBody.R31Context.class,CdPlayerFrameRuntime.R31PublicationPort.class).getReturnType());assertEquals(1,Arrays.stream(CdPlayerFrameRuntime.class.getDeclaredMethods()).filter(v->v.getName().equals("runR31Body")).count());
+        assertEquals(CdPlayerFrameRuntime.R31Publication.class,CdPlayerFrameRuntime.class.getMethod("runR31Body",int.class,CdPlayerBody.R31Context.class,CdPlayerFrameRuntime.R31PublicationPort.class).getReturnType());assertEquals(2,Arrays.stream(CdPlayerFrameRuntime.class.getDeclaredMethods()).filter(v->v.getName().equals("runR31Body")).count());
         assertEquals(List.of("publish"),Arrays.stream(CdPlayerFrameRuntime.R31PublicationPort.class.getDeclaredMethods()).map(v->v.getName()).toList());assertEquals(2,CdPlayerFrameRuntime.R31Publication.class.getRecordComponents().length);assertEquals(3,CdPlayerFrameRuntime.ActorState.class.getRecordComponents().length);assertEquals(5,CdPlayerFrameRuntime.SharedState.class.getRecordComponents().length);assertEquals(8,CdPlayerBody.State.class.getRecordComponents().length);
-        assertTrue(Arrays.stream(CdPlayerFrameRuntime.R31BodyCall.class.getDeclaredConstructors()).allMatch(c->Modifier.isPrivate(c.getModifiers())));assertEquals(List.of("applyNative/0","prepareDisplayFlag/1","publication/0","requireOwner/1"),Arrays.stream(CdPlayerFrameRuntime.R31BodyCall.class.getDeclaredMethods()).filter(m->Modifier.isPublic(m.getModifiers())).map(m->m.getName()+"/"+m.getParameterCount()).sorted().toList());assertEquals(7,CdPlayerFrameRuntime.Sound.class.getPermittedSubclasses().length);
+        assertTrue(Arrays.stream(CdPlayerFrameRuntime.R31BodyCall.class.getDeclaredConstructors()).allMatch(c->Modifier.isPrivate(c.getModifiers())));assertEquals(List.of("applyNative/0","lastPrefix/0","prepareDisplayFlag/1","publication/0","requireOwner/1"),Arrays.stream(CdPlayerFrameRuntime.R31BodyCall.class.getDeclaredMethods()).filter(m->Modifier.isPublic(m.getModifiers())).map(m->m.getName()+"/"+m.getParameterCount()).sorted().toList());assertEquals(7,CdPlayerFrameRuntime.Sound.class.getPermittedSubclasses().length);
         assertThrows(IllegalArgumentException.class,()->new CdPlayerFrameRuntime.R31NativeSound(new CdPlayerBody.R31PlaceBlock(0,0,OptionalInt.empty(),OptionalInt.empty(),false,0,0,Optional.empty())));assertThrows(NullPointerException.class,()->new CdPlayerFrameRuntime.R31NativeSound(null));
         try(var r=rig(2,2,null,null)){var a=r.frame().captureActor();var s=r.frame().captureShared();r.frame().runR31Body(service(r.frame(),0),context(r),call->{assertThrows(NullPointerException.class,()->call.requireOwner(null));assertThrows(IllegalStateException.class,()->r.frame().captureActor());assertThrows(IllegalStateException.class,()->r.frame().captureShared());assertThrows(IllegalStateException.class,()->r.frame().restoreActor(a));assertThrows(IllegalStateException.class,()->r.frame().restoreShared(s));assertThrows(IllegalStateException.class,()->r.frame().clearPendingInput());assertThrows(IllegalStateException.class,()->r.frame().close());call.applyNative();});assertTrue(r.frame().captureShared().vIntClock().absoluteValue().isEmpty());
             int word=service(r.frame(),0);var b=before(r.frame());assertThrows(NullPointerException.class,()->r.frame().runR31Body(word,context(r),null));assertBefore(r.frame(),b);assertThrows(IllegalStateException.class,()->r.frame().runR31Body(word,context(r),APPLY));
@@ -262,6 +262,218 @@ class TestCdR31OrdinaryFrameBridge {
             var state=f.state();int n=service(f,0);var p=f.runBody(n);assertEquals(CdPlayerBody.Boundary.INIT_RETURN,p.result().boundary());assertEquals(2,f.state().motion().routine());assertEquals(f.stageSource().mappingAddress(),f.state().header().mappingAddress());assertEquals(0x780,f.state().header().tile());assertEquals(state.motion().centreX16_16(),f.state().motion().centreX16_16());assertTrue(p.sounds().isEmpty());assertTrue(f.display().isEmpty());
             int next=service(f,0);var before=before(f);var actualR31=data();var r31=new CdPlayerBody.R31Context(CdStagePlayerSource.fromR31aAssets(actualR31.a()),actualR31.a(),actualR31.a().terrain(),new CdObjectPool().capture(),Optional.empty(),CdPlayerObjectTouch.fromR31aAssets(actualR31.a()),new CdPlayerBody.ResponseContext(CdPlayerTouchResponse.fromR31aAssets(actualR31.a()),new CdPlayerBody.ContactGlobals(0,0,0),new CdPlayerTouchResponse.WorldGlobals(1,3,0,0,5000,0)),OptionalInt.empty(),OptionalInt.empty(),OptionalInt.empty(),0x20,0x300);
             assertThrows(IllegalArgumentException.class,()->f.runR31Body(next,r31,call->fail("Protected family used R3 port")));assertBefore(f,before);
+        }
+    }
+
+    @Test void liveChunkIsPublishedBeforeLaterOriginalScreenLookupFault() throws Exception {
+        try(var r=rig(4,2,0,null)){
+            r.pool().write(r.pool().state(32).moveLong(CdObjectState.LongField.MAPPINGS,0x123456)
+                    .moveWord(CdObjectState.WordField.X_FRACTION,0xA5A5));
+            var context=visibleContext(r);int frames=service(r.frame(),0);var ingress=before(r.frame());
+            var current=new AtomicReference<>(r.terrain());var prefix=new AtomicReference<CdPlayerBody.R31Prefix>();
+            var fault=new IllegalArgumentException("later original screen lookup failure");
+            assertSame(fault,assertThrows(IllegalArgumentException.class,()->r.frame().runR31Body(frames,context,
+                    call->fail("stopped call cannot publish final Body"),new CdPlayerFrameRuntime.R31PlaceBlockPort(){
+                public void store(CdPlayerFrameRuntime.R31PlaceBlockCall call){
+                    var chunk=assertInstanceOf(CdPlayerBody.R31ChunkWord.class,call.store());
+                    assertEquals(12,chunk.byteOffset());assertEquals(0x613C,chunk.previousWord());
+                    call.requireOwner(r.frame());assertSame(ingress.state(),call.before().state());
+                    var ready=call.prefix();r.pool().validateRestore(ready.nativeValues().snapshot());
+                    assertEquals(2,ready.state().motion().routine());assertEquals(120,ready.state().timers().hurt());
+                    assertEquals(ingress.state().history(),ready.state().history());assertEquals(0,ready.state().history().index());
+                    assertEquals(ingress.state().objectLinks(),ready.state().objectLinks());
+                    assertEquals(ingress.state().rotationAngle(),ready.state().rotationAngle());
+                    assertEquals(ingress.state().timers().reset(),ready.state().timers().reset());
+                    assertEquals(frames,ready.environment().globals().levelFrames());assertTrue(call.sounds().isEmpty());
+                    assertEquals(OptionalInt.of(0),ready.nativeValues().noBumperByte());
+                    call.requireOwner(r.frame());call.applyNative();r.pool().restore(ready.nativeValues().snapshot());
+                    current.set(ready.nativeValues().terrain());prefix.set(ready);
+                }
+                public void screen(CdPlayerFrameRuntime.R31PlaceBlockScreenCall call){
+                    call.requireOwner(r.frame());assertEquals(2,call.sequence());
+                    assertSame(prefix.get(),call.before());assertEquals(0,current.get().chunks().unsignedWord(12));
+                    assertEquals(0x29,r.pool().state(32).id());assertEquals(0x60,r.pool().state(32).centreX());
+                    assertEquals(0x400,r.pool().state(32).centreY());throw fault;
+                }
+            })));
+            assertSame(prefix.get().state(),r.frame().state());assertSame(prefix.get().environment(),r.frame().environment());
+            assertSame(ingress.art(),r.frame().artState());assertSame(ingress.clock(),r.frame().vIntClock());
+            assertSame(ingress.display(),r.frame().display());assertEquals(0x123456,r.pool().state(32).longBits(CdObjectState.LongField.MAPPINGS));
+            assertEquals(0xA5A5,r.pool().state(32).word(CdObjectState.WordField.X_FRACTION));
+            assertTrue(r.frame().closed());assertEquals(0,fault.getSuppressed().length);
+        }
+    }
+
+    @ParameterizedTest @ValueSource(ints={0,1,2,3})
+    void laterPlaneWordPreparationFaultRetainsChunkAndOnlyEarlierReachedWords(int failingWord) throws Exception {
+        try(var r=rig(4,2,0,null)){
+            var fault=new AssertionError("literal Plane A word lookup "+failingWord);
+            var calls=new ArrayList<CdPlayerFrameRuntime.R31PlaceBlockCall>();
+            var current=new AtomicReference<>(r.terrain());int[] plane=new int[2048];Arrays.fill(plane,0xBEEF);
+            assertSame(fault,assertThrows(AssertionError.class,()->r.frame().runR31Body(service(r.frame(),0),visibleContext(r),
+                    call->fail("stopped word call reached final Body"),call->{
+                call.requireOwner(r.frame());calls.add(call);
+                if(call.store() instanceof CdPlayerBody.R31PlaneAWord word){
+                    if(word.index()==failingWord)throw fault;
+                    assertEquals(r.terrain().blocks().unsignedWord(word.index()*2),word.word());
+                    assertEquals(12+(word.index()&1),word.column());assertEquals(word.index()/2,word.row());
+                    call.applyNative();plane[word.row()*64+word.column()]=word.word();
+                }else{call.applyNative();current.set(call.prefix().nativeValues().terrain());}
+            })));
+            assertEquals(0,current.get().chunks().unsignedWord(12));assertEquals(failingWord+2,calls.size());
+            for(int n=0;n<4;n++)assertEquals(n<failingWord?r.terrain().blocks().unsignedWord(n*2):0xBEEF,plane[(n/2)*64+12+(n&1)]);
+            assertSame(calls.get(calls.size()-2).prefix().state(),r.frame().state());
+            assertTrue(r.frame().closed());for(var call:calls)assertThrows(IllegalStateException.class,call::applyNative);
+        }
+    }
+
+    @Test void genuineFullLiveContinuationPublishesTwentyStoresAndFinalComparesLastPrefix() throws Exception {
+        try(var r=rig(4,2,0,null)){
+            var current=new AtomicReference<>(r.terrain());var latest=new AtomicReference<CdPlayerBody.R31Prefix>();
+            var ingress=r.frame().state();var stores=new ArrayList<CdPlayerBody.R31PlaceStore>();int[] sequence={0};
+            var result=r.frame().runR31Body(service(r.frame(),0),visibleContext(r),call->{
+                assertSame(latest.get(),call.lastPrefix().orElseThrow());assertSame(latest.get().state(),r.frame().state());
+                assertSame(latest.get().environment(),r.frame().environment());assertNotSame(ingress,r.frame().state());
+                assertSame(current.get(),call.lastPrefix().orElseThrow().nativeValues().terrain());
+                r.pool().validateRestore(call.publication().nativeValues().snapshot());
+                call.requireOwner(r.frame());call.applyNative();r.pool().restore(call.publication().nativeValues().snapshot());
+            },new CdPlayerFrameRuntime.R31PlaceBlockPort(){
+                public void store(CdPlayerFrameRuntime.R31PlaceBlockCall call){
+                    assertEquals(++sequence[0],call.sequence());call.requireOwner(r.frame());stores.add(call.store());
+                    assertTrue(call.sounds().isEmpty(),"SubCPU is after all four complete original PlaceBlock calls");
+                    assertThrows(UnsupportedOperationException.class,()->call.sounds().add(new CdPlayerFrameRuntime.R31NativeSound(new CdPlayerBody.R31SubCpuRequest(0x92))));
+                    r.pool().validateRestore(call.prefix().nativeValues().snapshot());call.requireOwner(r.frame());call.applyNative();
+                    r.pool().restore(call.prefix().nativeValues().snapshot());current.set(call.prefix().nativeValues().terrain());latest.set(call.prefix());
+                    assertThrows(IllegalStateException.class,call::applyNative);
+                }
+                public void screen(CdPlayerFrameRuntime.R31PlaceBlockScreenCall call){
+                    assertEquals(++sequence[0],call.sequence());call.verifyNative();assertThrows(IllegalStateException.class,call::verifyNative);
+                }
+            });
+            assertEquals(24,sequence[0]);assertEquals(20,stores.size());assertEquals(4,stores.stream().filter(CdPlayerBody.R31ChunkWord.class::isInstance).count());
+            assertEquals(16,stores.stream().filter(CdPlayerBody.R31PlaneAWord.class::isInstance).count());assertAdopted(r.frame(),result);
+            assertEquals(List.of(new CdPlayerFrameRuntime.R31NativeSound(new CdPlayerBody.R31SubCpuRequest(0x92))),result.body().sounds());
+            assertEquals(4,r.frame().state().history().index());assertEquals(0x29,r.pool().state(32).id());
+        }
+    }
+
+    @Test void liveOffscreenChunkStoresNeverIssuePlaneWords() throws Exception {
+        try(var r=rig(4,2,0,null)){
+            var c=visibleContext(r);var far=withCamera(c,0x2000,0x2000);var stores=new ArrayList<CdPlayerBody.R31PlaceStore>();
+            var p=r.frame().runR31Body(service(r.frame(),0),far,APPLY,call->{stores.add(call.store());call.applyNative();});
+            assertEquals(4,stores.size());assertTrue(stores.stream().allMatch(CdPlayerBody.R31ChunkWord.class::isInstance));
+            assertTrue(p.body().result().effects().stream().filter(CdPlayerBody.R31PlaceBlock.class::isInstance)
+                    .map(CdPlayerBody.R31PlaceBlock.class::cast).noneMatch(CdPlayerBody.R31PlaceBlock::onscreen));
+        }
+    }
+
+    @Test void blankNativeNeighbourSkipsBothStoreAndScreenRead() throws Exception {
+        try(var r=rig(4,2,0,null)){
+            var c=visibleContext(r);var t=c.currentTerrain();var col=t.collision();byte[] fg=r.assets().view(CdR31aAssets.Asset.LAYOUT_FG).copy();
+            for(int n=2;n<fg.length;n++)fg[n]=1;
+            // Probe at y3FF uses layout row3. First two targets y400 use native blank row4.
+            fg[2+4*t.layout().columns(CdStageTerrain.Plane.FOREGROUND)]=0;
+            var terrain=CdStageTerrain.decode(t.shape(),t.blocks().copy(),t.patterns().copy(),t.chunks().copy(),fg,
+                    r.assets().view(CdR31aAssets.Asset.LAYOUT_BG).copy(),col.ids().copy(),col.angles().copy(),col.heights().copy(),col.widths().copy());
+            var changed=new CdPlayerBody.R31Context(c.source(),c.assets(),terrain,c.snapshot(),c.objects(),c.scanner(),c.response(),c.noBumperByte(),c.bossStartedByte(),c.goodFutureByte(),c.cameraXWord(),c.cameraYWord());
+            var stores=new ArrayList<CdPlayerFrameRuntime.R31PlaceBlockCall>();int[] screens={0};
+            var p=r.frame().runR31Body(service(r.frame(),0),changed,APPLY,new CdPlayerFrameRuntime.R31PlaceBlockPort(){
+                public void store(CdPlayerFrameRuntime.R31PlaceBlockCall call){assertEquals(0x3F0,call.yWord());stores.add(call);call.applyNative();}
+                public void screen(CdPlayerFrameRuntime.R31PlaceBlockScreenCall call){screens[0]++;assertEquals(0x3F0,call.yWord());call.verifyNative();}
+            });
+            assertEquals(10,stores.size());assertEquals(2,screens[0]);var places=p.body().result().effects().stream()
+                    .filter(CdPlayerBody.R31PlaceBlock.class::isInstance).map(CdPlayerBody.R31PlaceBlock.class::cast).toList();
+            assertEquals(4,places.size());for(int n=0;n<2;n++){assertTrue(places.get(n).chunkByteOffset().isEmpty());assertFalse(places.get(n).onscreen());}
+        }
+    }
+
+    @Test void liveReceiptsRejectForeignStaleDuplicateReentryAndMidCallCapture() throws Exception {
+        try(var r=rig(4,2,0,null);var foreign=rig(4,2,0,null)){
+            var saved=new AtomicReference<CdPlayerFrameRuntime.R31PlaceBlockCall>();
+            r.frame().runR31Body(service(r.frame(),0),visibleContext(r),APPLY,call->{
+                if(saved.get()==null)saved.set(call);else assertThrows(IllegalStateException.class,saved.get()::applyNative);
+                assertThrows(IllegalArgumentException.class,()->call.requireOwner(foreign.frame()));
+                var fault=new AtomicReference<Throwable>();var thread=new Thread(()->{try{call.applyNative();}catch(Throwable t){fault.set(t);}});
+                thread.start();try{thread.join(5000);}catch(InterruptedException e){Thread.currentThread().interrupt();throw new AssertionError(e);}
+                assertFalse(thread.isAlive());assertInstanceOf(IllegalStateException.class,fault.get());
+                assertThrows(IllegalStateException.class,()->r.frame().captureActor());assertThrows(IllegalStateException.class,()->r.frame().captureShared());
+                assertThrows(IllegalStateException.class,()->r.frame().close());assertThrows(IllegalStateException.class,()->r.frame().runR31Body(1,visibleContext(r),APPLY,v->fail("reentry")));
+                call.applyNative();assertThrows(IllegalStateException.class,call::applyNative);
+            });
+            assertThrows(IllegalStateException.class,saved.get()::applyNative);
+            r.frame().runR31Body(service(r.frame(),0),visibleContext(r),APPLY,call->{assertThrows(IllegalStateException.class,saved.get()::applyNative);call.applyNative();});
+        }
+    }
+
+    @Test void omittedChunkAndScreenAcknowledgementsStopAtTheirOriginalCuts() throws Exception {
+        try(var r=rig(4,2,0,null)){
+            int n=service(r.frame(),0);var before=before(r.frame());var kept=new AtomicReference<CdPlayerFrameRuntime.R31PlaceBlockCall>();
+            assertThrows(IllegalStateException.class,()->r.frame().runR31Body(n,visibleContext(r),APPLY,kept::set));
+            assertBefore(r.frame(),before);assertFalse(r.frame().closed());assertThrows(IllegalStateException.class,kept.get()::applyNative);
+        }
+        try(var r=rig(4,2,0,null)){
+            var prefix=new AtomicReference<CdPlayerBody.R31Prefix>();
+            assertThrows(IllegalStateException.class,()->r.frame().runR31Body(service(r.frame(),0),visibleContext(r),APPLY,new CdPlayerFrameRuntime.R31PlaceBlockPort(){
+                public void store(CdPlayerFrameRuntime.R31PlaceBlockCall call){prefix.set(call.prefix());call.applyNative();}
+                public void screen(CdPlayerFrameRuntime.R31PlaceBlockScreenCall call){}
+            }));assertTrue(r.frame().closed());assertSame(prefix.get().state(),r.frame().state());assertEquals(0,prefix.get().nativeValues().terrain().chunks().unsignedWord(12));
+        }
+    }
+
+    @Test void unrelatedFrameEnvironmentChangeIsRejectedAndSuppressedUnderOriginalFault() throws Exception {
+        try(var r=rig(4,2,0,null)){
+            int n=service(r.frame(),0);var before=before(r.frame());var field=CdPlayerFrameRuntime.class.getDeclaredField("environment");field.setAccessible(true);
+            var original=new IllegalArgumentException("original external preparation failure");
+            assertSame(original,assertThrows(IllegalArgumentException.class,()->r.frame().runR31Body(n,visibleContext(r),APPLY,call->{
+                var old=r.frame().environment();var g=old.globals();var other=new CdPlayerBody.Environment(old.movement(),old.controls(),
+                        new CdPlayerBody.Globals(g.levelFrames(),g.cameraXCentre(),g.timeAttackMode(),g.debugMode(),g.debugCheat(),g.timeWarpTimer(),1,g.bossMusic()),old.dynamicSlots());
+                try{field.set(r.frame(),other);}catch(IllegalAccessException e){throw new AssertionError(e);}
+                assertThrows(IllegalStateException.class,call::applyNative);throw original;
+            })));
+            assertEquals(1,original.getSuppressed().length);assertSame(before.state(),r.frame().state());
+            field.set(r.frame(),before.environment());assertFalse(r.frame().closed());
+        }
+    }
+
+    @Test void nonDestructiveSoundDoesNotIssueAnyLiveWriteReceipt() throws Exception {
+        try(var r=rig(4,2,5,null)){
+            var p=r.frame().runR31Body(service(r.frame(),0),visibleContext(r),call->{
+                assertSame(r.frame().state(),call.lastPrefix().orElseThrow().state());call.applyNative();
+            },call->fail("FM request/equal data cannot grant PlaceBlock store authority"));
+            assertEquals(List.of(new CdPlayerFrameRuntime.R31NativeSound(new CdPlayerBody.R31FmRequest(0xB5))),p.body().sounds());
+        }
+    }
+
+    private static CdPlayerBody.R31Context visibleContext(Rig r){return withCamera(context(r),0x20,0x380);}
+    private static CdPlayerBody.R31Context withCamera(CdPlayerBody.R31Context c,int x,int y){return new CdPlayerBody.R31Context(c.source(),c.assets(),c.currentTerrain(),c.snapshot(),c.objects(),c.scanner(),c.response(),c.noBumperByte(),c.bossStartedByte(),c.goodFutureByte(),x,y);}
+
+    @Test void optInRejectsEqualForeignSourceBeforeAnyOriginalStoreOrScreenCall() throws Exception {
+        try(var r=rig(4,2,0,null)){
+            var c=visibleContext(r);var wrong=new CdPlayerBody.R31Context(CdStagePlayerSource.fromR31aAssets(c.assets()),c.assets(),c.currentTerrain(),c.snapshot(),c.objects(),c.scanner(),c.response(),c.noBumperByte(),c.bossStartedByte(),c.goodFutureByte(),c.cameraXWord(),c.cameraYWord());
+            int n=service(r.frame(),0);var before=before(r.frame());
+            assertThrows(IllegalArgumentException.class,()->r.frame().runR31Body(n,wrong,call->fail("foreign final"),new CdPlayerFrameRuntime.R31PlaceBlockPort(){
+                public void store(CdPlayerFrameRuntime.R31PlaceBlockCall call){fail("foreign source store");}
+                public void screen(CdPlayerFrameRuntime.R31PlaceBlockScreenCall call){fail("foreign source screen");}
+            }));assertBefore(r.frame(),before);
+            assertTrue(Arrays.stream(CdPlayerFrameRuntime.R31PlaceBlockCall.class.getDeclaredConstructors()).allMatch(v->Modifier.isPrivate(v.getModifiers())));
+            assertTrue(Arrays.stream(CdPlayerFrameRuntime.R31PlaceBlockScreenCall.class.getDeclaredConstructors()).allMatch(v->Modifier.isPrivate(v.getModifiers())));
+        }
+    }
+
+    @Test void equalCompleteActorAndEnvironmentValuesCannotReplaceTheCurrentPrivatePair() throws Exception {
+        try(var r=rig(4,2,0,null)){
+            var stateField=CdPlayerFrameRuntime.class.getDeclaredField("state");stateField.setAccessible(true);
+            var envField=CdPlayerFrameRuntime.class.getDeclaredField("environment");envField.setAccessible(true);
+            r.frame().runR31Body(service(r.frame(),0),visibleContext(r),APPLY,call->{
+                var s=r.frame().state();var e=r.frame().environment();
+                var equalState=new CdPlayerBody.State(s.motion(),s.animation(),s.header(),s.timers(),s.history(),s.rotationDistance(),s.objectLinks(),s.rotationAngle());
+                var equalEnvironment=new CdPlayerBody.Environment(e.movement(),e.controls(),e.globals(),e.dynamicSlots());
+                try{
+                    stateField.set(r.frame(),equalState);assertEquals(s,r.frame().state());assertThrows(IllegalStateException.class,call::applyNative);stateField.set(r.frame(),s);
+                    envField.set(r.frame(),equalEnvironment);assertEquals(e,r.frame().environment());assertThrows(IllegalStateException.class,call::applyNative);envField.set(r.frame(),e);
+                }catch(IllegalAccessException error){throw new AssertionError(error);}
+                call.applyNative();
+            });
         }
     }
 

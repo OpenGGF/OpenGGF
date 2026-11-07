@@ -729,6 +729,32 @@ public final class HeadlessGameBoot implements AutoCloseable {
         }
     }
 
+    /** Actual freshly prepared selected-profile Module/final slot, not native Title or DEV boot.
+     * Module's original private boot/publication guards alone admit its R31 FULL handoff.
+     * Construction does not sample input, service VInt, seed clocks or enter ordinary gameplay. */
+    public GameLoop bootSonicCdSelectedProfile(com.openggf.game.soniccd.CdGameDataSource source,
+            com.openggf.game.soniccd.SonicCdGameModule root,com.openggf.game.save.SaveSessionContext finalContext) throws IOException {
+        java.util.Objects.requireNonNull(source,"source");java.util.Objects.requireNonNull(root,"fresh selected Module");java.util.Objects.requireNonNull(finalContext,"final selected context");
+        if(!"scd".equals(finalContext.gameCode())||finalContext.activeSlot().isEmpty()||finalContext.activeSlot().getAsInt()<=0
+                ||!"sonic".equals(finalContext.selectedTeam().mainCharacter())||!finalContext.selectedTeam().sidekicks().isEmpty())throw new IllegalArgumentException("Actual CD slot and Sonic-only selected team required");
+        var config=engineServices.configuration();String sidekick=config.getString(SonicConfiguration.SIDEKICK_CHARACTER_CODE);
+        if(closed||bootToTitle||moduleDecoratorConfigured||logicalWidth!=320||logicalHeight!=224||gameplayWidth!=320||gameplayHeight!=224
+                ||!"sonic".equals(config.getString(SonicConfiguration.MAIN_CHARACTER_CODE))||(sidekick!=null&&!sidekick.isBlank())
+                ||config.getBoolean(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED))throw new IllegalArgumentException("Selected CD loading requires open native Sonic-only boot without title/decorator");
+        retireBootSession();EngineContext services=engineServices;services.roms().setRom(null);
+        com.openggf.graphics.color.DisplayColorProfileController.applySavedSettings(services.configuration(),services.graphics());
+        SessionManager.armNextGameplayAdmissionPolicy(HardwareReadinessAdmissionPolicy.LIVE);
+        try{
+            GameplayModeContext mode=SessionManager.openGameplaySession(root,root,source,finalContext);
+            GameplaySessionFactory.attachManagers(mode,services,createGameplayCamera(services));GameModuleRegistry.setCurrent(root);
+            installAudioBackend();TraceReplaySessionBootstrap.resetLevelSubsystemsForReplay();
+            root.createGame(source); // Original selected owner performs its real privately staged FULL assembly.
+            if(!(mode.getLevelManager().getCurrentLevel() instanceof com.openggf.game.soniccd.level.SonicCdR31aLevel actual)
+                    ||actual.assets()!=source.r31aAssets().orElseThrow())throw new IllegalStateException("Original selected handoff did not assemble its actual R31 source");
+            return createLevelLoop(mode);
+        }catch(RuntimeException|Error failure){try{retireBootSession();}catch(RuntimeException|Error cleanup){if(cleanup!=failure)failure.addSuppressed(cleanup);}throw failure;}
+    }
+
     /** Common session/loop attachment for cartridge gameplay and prepared static terrain. */
     private GameLoop attachLevelLoop(GameplayModeContext mode) {
         GameplaySessionFactory.attachManagers(mode, engineServices, createGameplayCamera(engineServices));

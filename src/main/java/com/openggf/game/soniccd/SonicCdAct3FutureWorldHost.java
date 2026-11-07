@@ -22,7 +22,7 @@ import static com.openggf.game.soniccd.SonicCdAct3FutureLoadingVisit.*;
  */
 final class SonicCdAct3FutureWorldHost implements Host,AutoCloseable {
  interface Authority {
-  void require(SonicCdAct3FutureWorldHost host,SonicCdAct3FutureLoadingVisit core,SonicCdAct3FutureOrdinaryWorld world,
+  void require(SonicCdAct3FutureWorldHost host,SonicCdAct3FutureLoadingVisit core,CdWorld world,
                CdPlayerFrameRuntime frame,CdR13FutureAssets assets,CdR13SectionArt art);
   int selectedGoodFutureByte(SonicCdAct3FutureWorldHost host);
   SonicCdGameModule.PastSound levelMusic(SonicCdAct3FutureWorldHost host,Program actualProgramme,int rawTimeZone,int timeAttackMode);
@@ -137,7 +137,7 @@ final class SonicCdAct3FutureWorldHost implements Host,AutoCloseable {
  private final Authority authority;private final CdR13FutureAssets assets;private final CdPlayerFrameRuntime frame;private final CdR13SectionArt art;
  private final CdObjectPlacementRuntime placement;private final CdR13FutureScrollPalette scrollRules;private final CdR13PlaneSources planeSources;
  private final CdR11aBackgroundPlane backgroundWriter;private final CdR11bForegroundPlane foregroundWriter;
- private final ZoneScrollHandler handler=new Projection();private SonicCdAct3FutureLoadingVisit owner;private SonicCdAct3FutureOrdinaryWorld world;
+ private final ZoneScrollHandler handler=new Projection();private SonicCdAct3FutureLoadingVisit owner;private CdWorld world;
  private Image image;private RenderBinding render;private boolean acting,publishing,drawing,closing,closed;
  SonicCdAct3FutureWorldHost(Authority authority,CdR13FutureAssets assets,CdPlayerFrameRuntime frame,CdR13SectionArt art,Initial initial){
   this.authority=Objects.requireNonNull(authority);this.assets=Objects.requireNonNull(assets);this.frame=Objects.requireNonNull(frame);this.art=Objects.requireNonNull(art);Objects.requireNonNull(initial);
@@ -148,12 +148,12 @@ final class SonicCdAct3FutureWorldHost implements Host,AutoCloseable {
   image=new Image(this,initial.globals(),initial.scroll(),initial.foreground(),initial.background(),initial.video(),Set.of(),false,OptionalLong.empty(),OptionalInt.empty(),OptionalLong.empty(),OptionalInt.empty(),List.of());
  }
  void install(SonicCdAct3FutureLoadingVisit core){idle();if(owner!=null||Objects.requireNonNull(core).assets()!=assets||core.state().phase()!=Phase.ENTRY||core.state().section().residency()!=image.video().current())throw new IllegalArgumentException("One actual Core/entry/current relation");authority.require(this,core,null,frame,assets,art);owner=core;}
- void bindWorld(SonicCdAct3FutureOrdinaryWorld actual){current();if(world!=null||owner.state().phase()!=Phase.ENTRY)throw new IllegalStateException("Bind actual World once before begin");authority.require(this,owner,Objects.requireNonNull(actual),frame,assets,art);world=actual;}
+ void bindWorld(CdWorld actual){current();if(world!=null||owner.state().phase()!=Phase.ENTRY)throw new IllegalStateException("Bind actual World once before begin");authority.require(this,owner,Objects.requireNonNull(actual),frame,assets,art);world=actual;}
  void requireRenderIdle(){if(drawing)throw new IllegalStateException("R13 retained draw active");}
  private void idle(){requireRenderIdle();if(closed||closing)throw new IllegalStateException("R13 Host retired");}
  private void bound(){if(owner==null)throw new IllegalStateException("R13 Host not installed");authority.require(this,owner,world,frame,assets,art);if(frame.closed()||!frame.stageSource().ownsAct3Future(assets))throw new IllegalStateException("R13 Frame/source retired");}
  private void current(){idle();bound();}
- void requireAuthority(Authority a,SonicCdAct3FutureOrdinaryWorld w){current();if(a!=authority||w!=world)throw new IllegalArgumentException("Another actual World/authority");}
+ void requireAuthority(Authority a,CdWorld w){current();if(a!=authority||w!=world)throw new IllegalArgumentException("Another actual World/authority");}
  @Override public void validate(SonicCdAct3FutureLoadingVisit core,CdPlayerFrameRuntime f,CdR13FutureAssets a,CdR13SectionArt section){current();if(core!=owner||f!=frame||a!=assets||section!=art)throw new IllegalArgumentException("Foreign Core/Frame/assets/art");}
  Globals globals(){current();return image.globals();}CdObjectPlacementRuntime placement(){current();return placement;}
  @Override public Scroll scroll(){current();return image.scroll();}Video video(){current();return image.video();}Selected selected(){current();return image.video().selected();}
@@ -165,7 +165,7 @@ final class SonicCdAct3FutureWorldHost implements Host,AutoCloseable {
  @Override public int selectedGoodFutureByte(){current();return authority.selectedGoodFutureByte(this);}
  @Override public int livesByte(){current();return image.globals().ring().lives();}
  @Override public Object capture(){current();if(acting||publishing)throw new IllegalStateException("R13 Host operation active");return new Snapshot(image,placement.capture());}
- @Override public void validateRestore(Object value){current();if(acting||publishing)throw new IllegalStateException("R13 Host operation active");if(!(value instanceof Snapshot s)||s.image().owner()!=this)throw new IllegalArgumentException("Foreign Host snapshot");placement.validateRestore(s.placement());}
+ @Override public void validateRestore(Object value){current();if(world!=null&&world.isOrdinaryRunning())throw new IllegalStateException("World service active");if(acting||publishing)throw new IllegalStateException("R13 Host operation active");if(!(value instanceof Snapshot s)||s.image().owner()!=this)throw new IllegalArgumentException("Foreign Host snapshot");placement.validateRestore(s.placement());}
  @Override public void restore(Object value){validateRestore(value);var s=(Snapshot)value;placement.restore(s.placement());image=s.image();}
  private Image copy(Globals g,Scroll s,CdR11aBackgroundPlane.State fg,CdR11aBackgroundPlane.State bg,Video v,List<SonicCdGameModule.PastSound> sounds){return new Image(this,g,s,fg,bg,v,image.clears(),image.geometryReady(),image.collisionPointer(),g.tail().isPresent()?OptionalInt.empty():image.fadeInfoWithoutTail(),image.rngSeedLong(),image.targetRightBoundWord(),sounds);}
  private void globals(Globals g){image=copy(g,image.scroll(),image.foreground(),image.background(),image.video(),image.sounds());}
@@ -417,6 +417,7 @@ final class SonicCdAct3FutureWorldHost implements Host,AutoCloseable {
 
     /** Logic-only callers need no GL. Real drawing lazily borrows the existing governed renderer. */
     void draw() {
+        if(world!=null&&world.isOrdinaryRunning())throw new IllegalStateException("World service active");
         current();if(acting||publishing)throw new IllegalStateException("R13 loading operation active");frame.captureShared();
         var selected=image.video().selected();var scene=scene(selected);var graphics=GameServices.graphics();
         if(graphics.isHeadlessMode()||!graphics.isGlInitialized())return;
@@ -456,6 +457,7 @@ final class SonicCdAct3FutureWorldHost implements Host,AutoCloseable {
             throw new IllegalStateException("R13 retained source/World/level/generation/graphics lifetime changed");
     }
     @Override public void close() {
+        if(world!=null&&world.isOrdinaryRunning())throw new IllegalStateException("World service active");
         requireRenderIdle();
         if(closed)return;if(closing||acting||publishing)throw new IllegalStateException("R13 Host operation active");
         closing=true;

@@ -137,8 +137,163 @@ public final class SonicCdGameModule implements GameModule {
                 ||image.cut()!=cut||image.facts()==null)throw new IllegalArgumentException("Foreign progress/source/lifetime/shared capture pair");
     }
     /** Pure observation only; live timeStones is sampled from its actual current programme owner. */
-    CdIpxProgress.State ipxProgressState(){if(selectedProfile!=null)return selectedProfile.state().progress();return ipxProgress.project(levelProgramState().timeStones());}
+    CdIpxProgress.State ipxProgressState(){if(r31Loading!=null)return ipxProgress.project(r31Loading.state().program().timeStonesByte());if(selectedProfile!=null)return selectedProfile.state().progress();return ipxProgress.project(levelProgramState().timeStones());}
     // END IPX PERSISTENT PROGRESS OWNER 20261107
+
+    // BEGIN genuine fresh selected-profile R31 loading assembly 20261107.
+    private final SonicCdR31aLevelInitProfile r31Profile=new SonicCdR31aLevelInitProfile(this);
+    private final SonicCdR31aZoneRegistry r31Zones=new SonicCdR31aZoneRegistry(this);
+    private com.openggf.game.soniccd.level.CdR31aAssets stagedR31;
+    private LevelLoadContext stagedR31Context;
+    private com.openggf.game.soniccd.level.SonicCdR31aLevel r31Level;
+    private SonicCdR31aLoadingVisit r31Loading;
+    private SonicCdR31aWorldHost r31Host;
+    private CdWorld r31World;
+    private com.openggf.game.soniccd.resources.CdR31aSectionArt r31Art;
+    private CdOriginalBootPrefix.Continuation r31Permit;
+    private CdSelectedProfileVisit.State r31SelectedFinal;
+    private Object r31Epoch;
+    private Thread r31Thread;
+    private long r31LoadGeneration=-1,r31PreviousGeneration=-1;
+    private boolean constructingR31,r31PermitConsumed,r31ServiceActive,r31Retired;
+    private record R31Shared(SonicCdR31aLoadingVisit.Snapshot loading,ProgramServicesState services,
+            OptionalInt goodFutureFlags,IpxProgressImage progress,Object epoch,CdSelectedProfileVisit.State selected){}
+    boolean r31RegistrySelected(){return stagedR31!=null||r31Loading!=null;}
+    boolean r31LoadingSelected(){return r31Loading!=null;}
+    com.openggf.game.soniccd.level.CdR31aAssets actualR31RegistryAssets(){
+        if(!r31RegistrySelected())throw new IllegalStateException("No actual R31 programme selection");
+        return stagedR31!=null?stagedR31:r31Level.assets();
+    }
+    SonicCdR31aLoadingVisit r31LoadingVisit(){validateR31LoadingCut();return r31Loading;}
+    void drawR31World(){Objects.requireNonNull(r31World).draw();}
+    void drawAct3FutureWorld(){Objects.requireNonNull(act3FutureWorld).draw();}
+    SonicCdR31aWorldHost r31WorldHost(){return Objects.requireNonNull(r31Host,"No actual R31 loading Host");}
+    private void requireR31Pair(SonicCdR31aLoadingVisit core,SonicCdR31aLoadingVisit.Host host,
+            CdPlayerFrameRuntime frame,com.openggf.game.soniccd.resources.CdR31aSectionArt art){
+        var mode=SessionManager.getCurrentGameplayMode();var world=SessionManager.getCurrentWorldSession();
+        if(originalBoot==null||selectedProfile==null||r31Retired||r31Permit==null||r31Epoch==null||r31Thread!=Thread.currentThread()
+                ||core==null||core!=r31Loading||host!=r31Host||frame!=playerFrame||frame==null||frame.closed()||art!=r31Art
+                ||r31Level==null||mode==null||mode!=playerMode||world!=programWorld||mode.getWorldSession()!=world
+                ||world.rootGameModule()!=this||world.resolvedGameModule()!=this||world.getDataSource()!=source
+                ||source!=originalBoot.source()||source.r31aAssets().orElseThrow()!=r31Level.assets()
+                ||selectedProfile.state()!=r31SelectedFinal||!frame.stageSource().ownsR31aAssets(r31Level.assets())||!art.ownsAssets(r31Level.assets())
+                ||mode.getLevelManager().getCurrentLevel()!=r31Level||playerActor!=null||openingObjects!=null
+                ||!mode.getSpriteManager().getAllSprites().isEmpty()||!mode.getSpriteManager().getRegisteredSidekicks().isEmpty())
+            throw new IllegalStateException("Actual original R31 source/World/Frame/Host/Core/epoch pair changed");
+        long expected=stagedR31!=null?r31PreviousGeneration:r31LoadGeneration;
+        if(mode.getLevelManager().getCompletedProductionLoadGeneration()!=expected)throw new IllegalStateException("Actual R31 load generation changed");
+        if(mode.getCamera().getWidth()!=320||mode.getCamera().getHeight()!=224)throw SonicCd.unsupported("Native R31 viewport");
+        if(constructingR31)validateR31LoadRequest(stagedR31Context);
+        else{
+            if(r31PermitConsumed)originalBoot.requireConsumed(this,world,selectedProfileInvocation);
+            else originalBoot.requireHandoffStarted(this,world,selectedProfileInvocation);
+        }
+    }
+    void validateR31LoadingCut(){playerPresentation.requirePastRenderIdle();requireR31Pair(r31Loading,r31Host,playerFrame,r31Art);playerFrame.captureActor();playerFrame.captureShared();}
+    void serviceR31Loading(int held){
+        playerPresentation.requirePastRenderIdle();validateR31LoadingCut();r31Loading.requireServiceIdle();
+        if(r31ServiceActive)throw new IllegalStateException("R31 native service reentry");
+        if((held&~255)!=0)throw new IllegalArgumentException("Native held BYTE required");
+        r31ServiceActive=true;
+        try{r31Loading.service(held);syncR31Initialization();r31Host.projectCamera(GameServices.camera());}
+        catch(RuntimeException|Error original){
+            try{syncR31Initialization();}catch(RuntimeException|Error projection){if(projection!=original)original.addSuppressed(projection);}
+            r31Retired=true;originalBoot.retire(programWorld);closePlayerCycleAfterFailure(original);
+            throw original;
+        }finally{r31ServiceActive=false;}
+    }
+    private void syncR31Initialization(){if(r31Loading!=null&&programServices.initialization()!=r31Loading.state().initialization())programServices=new ProgramServicesState(programServices.loads(),r31Loading.state().initialization(),programServices.environment(),programServices.completedCalls());}
+    void validateR31LoadRequest(LevelLoadContext context){
+        var mode=SessionManager.getCurrentGameplayMode();var world=SessionManager.getCurrentWorldSession();
+        if(originalBoot==null||r31Retired||stagedR31==null||context==null||context!=stagedR31Context||r31Permit==null||r31Thread!=Thread.currentThread()
+                ||source!=originalBoot.source()||source.r31aAssets().orElseThrow()!=stagedR31||selectedProfile.state()!=r31SelectedFinal
+                ||mode==null||world!=programWorld||world!=mode.getWorldSession()||world.rootGameModule()!=this||world.resolvedGameModule()!=this||world.getDataSource()!=source
+                ||context.getLevelIndex()!=r31Zones.loadingIndex()||context.getLoadMode()!=LevelLoadMode.FULL
+                ||context.getLoadCause()!=LevelLoadCause.STAGE_RETURN_FULL_ASSEMBLY||context.getAssemblyKind()!=LevelAssemblyKind.FRESH_LEVEL_ASSEMBLY
+                ||context.getZone()!=1||context.getAct()!=0||!context.isIncludePostLoadAssembly()||context.hasCheckpoint()||context.getRom()!=null
+                ||context.isShowTitleCard()||context.isTitleCardRequiredInHeadlessMode()||context.isQueueFreshLevelRuntimeArt())
+            throw SonicCd.unsupported("R31 FULL requires its original applied fresh selected-profile handoff");
+    }
+    private final SonicCdR31aWorldHost.Authority r31Authority=new SonicCdR31aWorldHost.Authority(){
+        @Override public void require(SonicCdR31aWorldHost host,SonicCdR31aLoadingVisit core,CdPlayerFrameRuntime frame,
+                com.openggf.game.soniccd.level.CdR31aAssets assets,com.openggf.game.soniccd.resources.CdR31aSectionArt art){
+            if(assets!=actualR31RegistryAssets())throw new IllegalArgumentException("Foreign actual R31 aggregate");requireR31Pair(core,host,frame,art);
+        }
+        @Override public void levelMusic(SonicCdR31aWorldHost host,CdCommand command){
+            requireR31Pair(r31Loading,host,playerFrame,r31Art);r31Loading.requireAction(host,SonicCdR31aLoadingVisit.Action.PLAY_LEVEL_MUSIC,r31Loading.state());
+            if(r31Loading.state().music().orElseThrow()!=command)throw new IllegalArgumentException("Not the selected source-backed R31 music");
+        }
+        @Override public void resetGoodFutureFlags(SonicCdR31aWorldHost host){
+            requireR31Pair(r31Loading,host,playerFrame,r31Art);r31Loading.requireAction(host,SonicCdR31aLoadingVisit.Action.FRESH_RESET_SUFFIX,r31Loading.state());
+            var p=levelProgram;levelProgram=new LevelProgramState(p.demoMode(),p.timeStones(),p.specialStage(),p.usePlayer2(),p.palFadeFlags(),p.gameMode(),p.levelStarted(),p.whiteFadeSteps(),p.phase(),OptionalInt.of(0));
+        }
+        @Override public void serviceVInt(SonicCdR31aWorldHost host){requireR31Pair(r31Loading,host,playerFrame,r31Art);r31Loading.requireAction(host,SonicCdR31aLoadingVisit.Action.VINT_COMPLETED,r31Loading.state());EngineTiming.vIntRunCounter(EngineServices.current()).serviceRepresentedVBlank();}
+        @Override public void loadingPublication(SonicCdR31aWorldHost host,SonicCdR31aLoadingVisit core,SonicCdR31aLoadingVisit.Publication original,CdAssetBytes palette){
+            requireR31Pair(core,host,playerFrame,r31Art);host.requireLoadingPublication(original,palette);
+            if(!r31PermitConsumed){r31Permit.consume(core,host,original);r31PermitConsumed=true;}
+            else originalBoot.requireConsumed(SonicCdGameModule.this,programWorld,selectedProfileInvocation);
+        }
+    };
+    void installR31LoadingVisit(){
+        validateR31LoadRequest(stagedR31Context);
+        if(playerFrame!=null||playerActor!=null||openingObjects!=null||pastLoading!=null||act2Loading!=null||act2PastLoading!=null||act3FutureLoading!=null||r31Loading!=null)throw new IllegalStateException("No old gameplay owner may be grafted into fresh R31");
+        playerMode=SessionManager.getCurrentGameplayMode();
+        if(!(playerMode.getLevelManager().getCurrentLevel() instanceof com.openggf.game.soniccd.level.SonicCdR31aLevel level)||level.assets()!=stagedR31)throw new IllegalArgumentException("Foreign prepared R31 terrain");
+        try{
+            // Actual IPX RunMMD source-selected PCM/header/clear prefix, before this programme's Start.
+            var loads=SonicCdProgramLoadServices.loadLevelR3Pcm(programServices.loads(),source.r3PcmSource().orElseThrow());
+            programServices=withProgramCall(ProgramStartCall.LOAD_LEVEL_PCM,loads,programServices.initialization());
+            var clear=originalBoot.workClears();var main=originalBoot.mainClears();var selected=r31SelectedFinal.globals().orElseThrow();var before=clear.environment();var movement=before.movement();var gate=movement.gates();
+            var environment=new CdPlayerBody.Environment(new com.openggf.game.soniccd.player.CdPlayerMovement.Environment(movement.physics(),movement.bounds(),
+                    new com.openggf.game.soniccd.player.CdPlayerMovement.Gates(selected.zoneAct().orElseThrow(),selected.period(),gate.miniSonic(),gate.waterSlide(),gate.windTunnel(),gate.speedShoes(),gate.timeWarpDirection()),movement.globals()),before.controls(),
+                    new CdPlayerBody.Globals(before.globals().levelFrames(),before.globals().cameraXCentre(),selected.timeAttack(),before.globals().debugMode(),before.globals().debugCheat(),before.globals().timeWarpTimer(),before.globals().invincible(),before.globals().bossMusic()),before.dynamicSlots());
+            // RunMMD [FF2000,FFFB00) repeats the named work clears; MAINVARS/palettes/cloud/saved carry survives.
+            playerFrame=CdPlayerFrameRuntime.fromR31aEntry(stagedR31,clear.primary(),environment,clear.playerArt(),new CdPlayerFrameRuntime.VIntClock(java.util.OptionalLong.empty(),0));
+            var g=clear.globals();var ring=g.ring();var live=CdCheckpointLiveAux.writeTimeLong(g.live(),selected.time());
+            var globals=new SonicCdR31aWorldHost.Globals(new CdRingGlobals(selected.rings(),selected.lives().orElseThrow(),ring.livesFlags(),ring.updateHudRings(),ring.updateHudLives(),ring.timeStopTimer(),ring.ringAnimationTimer(),ring.ringAnimationFrame()),live,g.contact(),
+                    new CdOpeningObjectRuntime.ScoreGlobals(selected.score(),g.score().nextLifeScore(),g.score().updateHudScore()),OptionalInt.of(selected.projector()),g.checkpointSaved(),g.drownTimerWord(),g.debugBlockWord(),g.pauseMusicBit(),g.bonus(),g.tail(),g.animations(),g.paletteSteps7(),g.paletteTimers7(),g.layerByte(),g.bossFlagsByte(),g.eventRoutineWord());
+            var hud=com.openggf.game.soniccd.level.CdR31aHudAssets.fromAssets(stagedR31);
+            var current=com.openggf.game.soniccd.resources.CdR31aArtResidency.unknownForNativeHud(stagedR31,hud);
+            if(!originalBoot.state().video().patternsCleared())throw new IllegalStateException("Original MD physical clear is absent");
+            current=com.openggf.game.soniccd.resources.CdR31aArtResidency.clear(current); // projection of the real earlier MD clear, not a new service
+            var originalVideo=originalBoot.state().video();var plane=new com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.State(originalVideo.plane().orElseThrow());
+            var physicalHscroll=originalBoot.physicalClears().hscroll();int[] selectedHscroll=new int[256];for(int i=0;i<256;i++)selectedHscroll[i]=(int)physicalHscroll.unsignedLong(i*4);
+            // Disabled retained physical picture from actual MD pattern/name/SAT/HScroll/CRAM clears.
+            var scene=new com.openggf.graphics.RetainedPlaneSceneRenderer.Scene(null,null,selectedHscroll,(int)originalVideo.vscroll().orElseThrow(),originalVideo.displayedPalette().orElseThrow().copy(),originalVideo.displayEnabled().orElseThrow(),com.openggf.graphics.SpritePresentation.Frame.empty(),java.util.Map.of(),0x20);
+            r31Level=level;r31Art=com.openggf.game.soniccd.resources.CdR31aSectionArt.fromAssets(stagedR31);
+            var plc=clear.plc();var section=r31Art.fromValues(clear.nemesisTable(),current,originalBoot.state().main().orElseThrow().sectionWord(),plc.queue(),Optional.empty(),plc.saved(),plc.remaining(),plc.budget(),plc.hint(),plc.pad());
+            // The cold actual placement/pool is created at this real RunMMD clear, not by Host defaults.
+            var placement=CdObjectPlacementRuntime.fromR31aAssets(stagedR31,main.savedFlags());
+            var nativeCarry=clear.nativeCarry();
+            r31Host=new SonicCdR31aWorldHost(r31Authority,stagedR31,playerFrame,r31Art,new SonicCdR31aWorldHost.Initial(globals,clear.scroll(),new SonicCdR31aWorldHost.Planes(plane,plane),new SonicCdR31aWorldHost.Video(clear.cpuSat(),Optional.empty(),playerFrame.artState(),current,new SonicCdR31aWorldHost.Carried(scene)),placement,nativeCarry));
+            var m=originalBoot.state().main().orElseThrow();var p=new SonicCdR31aLoadingVisit.Program(m.demoModeWord(),r31SelectedFinal.progress().timeStonesByte().orElseThrow(),selected.goodFuture(),m.usePlayer2Byte(),selected.specialStage(),m.palFadeFlagsByte(),clear.gameModeByte(),m.levelStartedByte(),clear.demoDataIndexWord());
+            var oldLevel=m.level();var levelGlobals=new CdLevelGlobals(oldLevel.levelRestart(),oldLevel.updateHudTime(),selected.checkpoint(),oldLevel.spawnMode(),selected.plcLoadFlags().orElseThrow(),oldLevel.flowerCount(),oldLevel.fadeEnableDisplay(),oldLevel.powerup(),oldLevel.timeOver());
+            levelProgram=new LevelProgramState(p.demoModeWord(),p.timeStonesByte(),p.specialStageByte(),p.usePlayer2Byte(),p.palFadeFlagsByte(),p.gameModeByte(),p.levelStartedByte(),0,LevelProgramPhase.R31_LOADING,OptionalInt.of(main.goodFutureFlags()));
+            var palettes=originalBoot.state().cpuPalettes().orElseThrow();
+            r31Loading=new SonicCdR31aLoadingVisit(r31Host,stagedR31,playerFrame,r31Art,new SonicCdR31aLoadingVisit.Entry(programServices.initialization(),originalBoot.environment(),section,p,levelGlobals,palettes.normal(),palettes.fade(),clear.waterPalette(),originalVideo.displayedPalette().orElseThrow(),clear.reserved(),originalVideo.displayEnabled().orElseThrow()));
+            r31Host.install(r31Loading);r31Host.retainOriginalMainClears(r31Authority,main);
+            r31World=new CdWorld(r31Authority,r31Loading,r31Host,playerFrame,stagedR31,r31Art,com.openggf.game.soniccd.level.CdR31aObjectAssets.fromAssets(stagedR31));
+            r31Host.bindOrdinaryWorld(r31Authority,r31World);r31Loading.bindOrdinaryOwner(r31Host,r31World);
+            r31Permit.bindLoading(r31Loading,r31Host,playerFrame,r31Art);
+            r31Loading.begin();syncR31Initialization();r31Host.projectCamera(GameServices.camera());
+        }catch(IOException failure){throw new UncheckedIOException("Cannot assemble actual original R31 source",failure);}
+        catch(SonicCdProgramLoadServices.Unsupported stopped){programServices=new ProgramServicesState(stopped.completedPrefix(),programServices.initialization(),programServices.environment(),programServices.completedCalls());throw stopped;}
+    }
+    void registerR31RestoreProjection(){validateR31LoadingCut();var registry=Objects.requireNonNull(playerMode.getRewindRegistry());registry.deregisterPostRestoreCallback(RESTORE_CALLBACK_KEY);registry.registerPostRestoreCallback(RESTORE_CALLBACK_KEY,playerPresentation::afterRestore);}
+    private R31Shared captureR31(){
+        validateR31LoadingCut();originalBoot.requireConsumed(this,programWorld,selectedProfileInvocation);validateProgramServicesState(programServices);
+        var snapshot=r31World.captureR31();return new R31Shared(snapshot,programServices,levelProgram.goodFutureFlags(),captureIpxProgress(snapshot.state()),r31Epoch,r31SelectedFinal);
+    }
+    private void validateR31Restore(R31Shared s){
+        validateR31LoadingCut();originalBoot.requireConsumed(this,programWorld,selectedProfileInvocation);
+        if(s==null||s.epoch()!=r31Epoch||s.selected()!=r31SelectedFinal)throw new IllegalArgumentException("Foreign R31 selected/native epoch capture");
+        r31World.validateRestore(s.loading());validateProgramServicesState(s.services());validateIpxProgress(s.progress(),s.loading().state());
+        var c=s.loading().state();var p=c.program();
+        var complete=new LevelProgramState(p.demoModeWord(),p.timeStonesByte(),p.specialStageByte(),p.usePlayer2Byte(),p.palFadeFlagsByte(),p.gameModeByte(),p.levelStartedByte(),c.initialFadeSteps(),LevelProgramPhase.R31_LOADING,s.goodFutureFlags());
+        if(!s.services().initialization().equals(c.initialization()))throw new IllegalArgumentException("Foreign complete R31 programme/initialization capture");
+    }
+    private void restoreR31(R31Shared s){validateR31Restore(s);var c=s.loading().state();var p=c.program();var ready=new LevelProgramState(p.demoModeWord(),p.timeStonesByte(),p.specialStageByte(),p.usePlayer2Byte(),p.palFadeFlagsByte(),p.gameModeByte(),p.levelStartedByte(),c.initialFadeSteps(),LevelProgramPhase.R31_LOADING,s.goodFutureFlags());try{r31World.restore(s.loading());programServices=s.services();levelProgram=ready;ipxProgress=s.progress().facts();}catch(RuntimeException|Error failure){r31Retired=true;originalBoot.retire(programWorld);closePlayerCycleAfterFailure(failure);throw failure;}}
+    // END genuine fresh selected-profile R31 loading assembly.
 
     // R13 is admitted only by the privately staged, completed old R12B/IPX return.
     private final SonicCdAct3FutureLevelInitProfile act3FutureProfile = new SonicCdAct3FutureLevelInitProfile(this);
@@ -147,7 +302,7 @@ public final class SonicCdGameModule implements GameModule {
     private LevelLoadContext stagedAct3FutureContext;
     private SonicCdAct3FutureLoadingVisit act3FutureLoading;
     private SonicCdAct3FutureWorldHost act3FutureHost;
-    private SonicCdAct3FutureOrdinaryWorld act3FutureWorld;
+    private CdWorld act3FutureWorld;
     private com.openggf.game.soniccd.level.SonicCdAct3FutureLevel act3FutureLevel;
     private com.openggf.game.soniccd.resources.CdR13SectionArt act3FutureArt;
     private com.openggf.game.soniccd.level.CdR13ProgrammeAssets act3ProgrammeAssets;
@@ -254,7 +409,7 @@ public final class SonicCdGameModule implements GameModule {
     }
     private final SonicCdAct3FutureWorldHost.Authority act3Authority = new SonicCdAct3FutureWorldHost.Authority() {
         @Override public void require(SonicCdAct3FutureWorldHost host,SonicCdAct3FutureLoadingVisit core,
-                                      SonicCdAct3FutureOrdinaryWorld world,CdPlayerFrameRuntime frame,
+                                      CdWorld world,CdPlayerFrameRuntime frame,
                                       com.openggf.game.soniccd.level.CdR13FutureAssets assets,
                                       com.openggf.game.soniccd.resources.CdR13SectionArt art) {
             if(host!=act3FutureHost||core!=act3FutureLoading||frame!=playerFrame||art!=act3FutureArt
@@ -442,7 +597,7 @@ public final class SonicCdGameModule implements GameModule {
                     new SonicCdAct3FutureLoadingVisit.Entry(section,program,c.core().level(),c.core().normalPalette(),c.core().fadePalette(),
                             zeroPast(128),video.selection().displayedPalette(),zeroPast(1984),false));
             act3FutureHost.install(act3FutureLoading);
-            act3FutureWorld=new SonicCdAct3FutureOrdinaryWorld(act3Authority,act3FutureLoading,act3FutureHost,playerFrame,c.assets(),act3FutureArt,
+            act3FutureWorld=new CdWorld(act3Authority,act3FutureLoading,act3FutureHost,playerFrame,c.assets(),act3FutureArt,
                     com.openggf.game.soniccd.level.CdR13ObjectAssets.fromAssets(c.assets()),
                     com.openggf.game.soniccd.level.CdR13PlayerCollisionAssets.fromAssets(c.assets()));
             act3FutureHost.bindWorld(act3FutureWorld);act3FutureLoading.bindOrdinaryOwner(act3FutureHost,act3FutureWorld);
@@ -1372,6 +1527,12 @@ public final class SonicCdGameModule implements GameModule {
         }
     }
     @Override public Level loadLevelOverride(int levelIndex) {
+        if(stagedR31!=null){
+            validateR31LoadRequest(stagedR31Context);
+            if(levelIndex!=r31Zones.loadingIndex())throw SonicCd.unsupported("R31 descriptor index");
+            try{return new com.openggf.game.soniccd.level.SonicCdR31aLevel(stagedR31);}
+            catch(IOException failure){throw new UncheckedIOException("Original R31 geometry read failed",failure);}
+        }
         if (stagedAct3Future != null) {
             validateAct3FutureLoadRequest(stagedAct3FutureContext);
             if(levelIndex!=2)throw SonicCd.unsupported("R13 level index");
@@ -1722,7 +1883,8 @@ public final class SonicCdGameModule implements GameModule {
     private CdWarpScene.State warpState;
     private List<ProgramSound> programSounds = List.of();
 
-    enum LevelProgramPhase { LEVEL, WHITE_FADE, RETURNED, WARP, PAST_PENDING, PAST_LOADING, OLD_EXIT_PRELUDE, OLD_BLACK_FADE, OLD_CLEAR_WAIT, OLD_RETURNED, OLD_IPX_RETURNED, ACT2_LOADING, ACT2_PAST_LOADING, ACT3_FUTURE_LOADING }
+    enum LevelProgramPhase { LEVEL, WHITE_FADE, RETURNED, WARP, PAST_PENDING, PAST_LOADING, OLD_EXIT_PRELUDE, OLD_BLACK_FADE, OLD_CLEAR_WAIT, OLD_RETURNED, OLD_IPX_RETURNED, ACT2_LOADING, ACT2_PAST_LOADING, ACT3_FUTURE_LOADING, R31_LOADING
+    }
     /** Completed source requests only: no sound-driver execution or old Frame ledger mutation. */
     enum ProgramSound {
         STOP_FM(0xE0), WARP_DIRECT_FM_D8(0xD8);
@@ -1780,6 +1942,7 @@ public final class SonicCdGameModule implements GameModule {
 
     /** Pure value observation; no entry, fade, capture or native service is performed. */
     LevelProgramState levelProgramState() {
+        if(r31Loading!=null){var s=r31Loading.state();var p=s.program();return new LevelProgramState(p.demoModeWord(),p.timeStonesByte(),p.specialStageByte(),p.usePlayer2Byte(),p.palFadeFlagsByte(),p.gameModeByte(),p.levelStartedByte(),s.initialFadeSteps(),LevelProgramPhase.R31_LOADING,levelProgram.goodFutureFlags());}
         if (act3FutureLoading != null) {
             var state=act3FutureLoading.state();var p=state.program();
             return new LevelProgramState(p.demoModeWord(),p.timeStonesByte(),p.specialStageByte(),p.usePlayer2Byte(),
@@ -2227,7 +2390,7 @@ public final class SonicCdGameModule implements GameModule {
         @Override public Object capture() {
             if(act3FutureLoading!=null) {
                 validateAct3FutureLoadingCut();validateProgramServicesState(programServices);
-                var loading=act3FutureLoading.capture();
+                var loading=act3FutureWorld.captureR13();
                 return new Act3FutureShared(loading,programServices,levelProgram.goodFutureFlags(),captureIpxProgress(loading.state()));
             }
             if (act2PastLoading != null) {
@@ -2256,7 +2419,7 @@ public final class SonicCdGameModule implements GameModule {
         @Override public void validateRestore(Object value) {
             if(act3FutureLoading!=null) {
                 if(!(value instanceof Act3FutureShared future))throw new IllegalArgumentException("Foreign programme epoch in R13");
-                validateAct3FutureLoadingCut();act3FutureLoading.validateRestore(future.loading());validateProgramServicesState(future.services());validateIpxProgress(future.ipxProgress(),future.loading().state());
+                validateAct3FutureLoadingCut();act3FutureWorld.validateRestore(future.loading());validateProgramServicesState(future.services());validateIpxProgress(future.ipxProgress(),future.loading().state());
                 if(future.loading().state().phase()==SonicCdAct3FutureLoadingVisit.Phase.OLD_IPX_BOSS_RETURNED
                         &&future.ipxProgress().facts().savedLevel().zoneByte().isEmpty())
                     throw new IllegalArgumentException("Returned boss capture requires its original known saved high BYTE");
@@ -2304,7 +2467,7 @@ public final class SonicCdGameModule implements GameModule {
             if(value instanceof Act3FutureShared future) {
                 var p=levelProgram;var ready=new LevelProgramState(p.demoMode(),p.timeStones(),p.specialStage(),p.usePlayer2(),
                         p.palFadeFlags(),p.gameMode(),p.levelStarted(),p.whiteFadeSteps(),p.phase(),future.goodFutureFlags());
-                try{act3FutureLoading.restore(future.loading());levelProgram=ready;programServices=future.services();ipxProgress=future.ipxProgress().facts();}
+                try{act3FutureWorld.restore(future.loading());levelProgram=ready;programServices=future.services();ipxProgress=future.ipxProgress().facts();}
                 catch(RuntimeException|Error failure){closePlayerCycleAfterFailure(failure);throw failure;}
                 return;
             }
@@ -2452,15 +2615,23 @@ public final class SonicCdGameModule implements GameModule {
     private void enterOriginalR31Programme(CdSelectedProfileVisit.Publication original){
         // This is the original applied selected-entry cut. Its scope is NOT retained for later frames.
         var permit=originalBoot.issueR31(this,original);
-        // Root must prebuild/admit the actual R31 Frame/art/Host pair and bind this private permit.
-        // A failed unowned cut retires it; catching the exception never grants a continuation.
-        throw originalBoot.unownedR31(permit);
+        r31Permit=permit;r31SelectedFinal=original.after();stagedR31=source.r31aAssets().orElseThrow(()->SonicCd.unsupported("Same-CUE original R31 data absent"));
+        programWorld=SessionManager.getCurrentWorldSession();r31Thread=Thread.currentThread();r31Epoch=new Object();
+        playerMode=SessionManager.getCurrentGameplayMode();r31PreviousGeneration=playerMode.getLevelManager().getCompletedProductionLoadGeneration();r31LoadGeneration=Math.incrementExact(r31PreviousGeneration);
+        stagedR31Context=SonicCdLevelInitProfile.staticStageContext();stagedR31Context.setLevelIndex(r31Zones.loadingIndex());stagedR31Context.setZone(1);stagedR31Context.setAct(0);stagedR31Context.setLoadCause(LevelLoadCause.STAGE_RETURN_FULL_ASSEMBLY);
+        constructingR31=true;
+        try{playerMode.getLevelManager().loadLevel(r31Zones.loadingIndex(),LevelLoadMode.FULL,stagedR31Context);
+            if(playerMode.getLevelManager().getCurrentLevel()!=r31Level||playerMode.getLevelManager().getCompletedProductionLoadGeneration()!=r31LoadGeneration)throw new IllegalStateException("R31 FULL generation did not commit");
+            selectedProfile.completeProgrammeHandoff(this,original);
+        }catch(IOException failure){r31Retired=true;originalBoot.retire(programWorld);throw new UncheckedIOException("Original R31 FULL assembly failed",failure);}
+        catch(RuntimeException|Error failure){r31Retired=true;originalBoot.retire(programWorld);closePlayerCycleAfterFailure(failure);throw failure;}
+        finally{constructingR31=false;stagedR31=null;stagedR31Context=null;}
     }
     void requireOriginalBootR31Loading(CdOriginalBootPrefix.Continuation permit,SonicCdR31aLoadingVisit core,
             SonicCdR31aLoadingVisit.Host host,CdPlayerFrameRuntime frame,
             com.openggf.game.soniccd.resources.CdR31aSectionArt art){
-        // Precise next Root seam: source/World/generation/full-current-pair validation. No data admits it.
-        throw SonicCd.unsupported("original R31 Frame/art/Host full-pair World owner");
+        if(permit!=r31Permit)throw new IllegalArgumentException("Another original R31 continuation");
+        requireR31Pair(core,host,frame,art);
     }
     private void validateOriginalBootServices(ProgramServicesState value){
         originalBoot.requireConsumed(this,SessionManager.getCurrentWorldSession(),selectedProfileInvocation);
@@ -2505,10 +2676,18 @@ public final class SonicCdGameModule implements GameModule {
     private com.openggf.game.session.WorldSessionPolicyState openSelectedProfilePolicy(WorldSession world){
         return new com.openggf.game.session.WorldSessionPolicyState(){
             private void requireInstalled(){if(com.openggf.game.session.WorldSessionPolicyAccess.getService(world,getClass())!=this)throw new IllegalStateException("Not this World's original selected policy");}
-            private final RewindSnapshottable<SelectedShared> capture=new RewindSnapshottable<>(){
+            private final NativeRewindRestoreGuard<Object> capture=new NativeRewindRestoreGuard<>(){
                 @Override public String key(){return "soniccd-selected-profile-pre-level";}
-                @Override public SelectedShared capture(){requireInstalled();return new SelectedShared(SonicCdGameModule.this,source,ipxProgressLifetime,selectedProfile.capture(world),ipxProgress);}
-                @Override public void restore(SelectedShared image){
+                @Override public Object capture(){requireInstalled();if(r31Retired)throw new IllegalStateException("Selected R31 lifetime retired");if(r31LoadingSelected())return captureR31();return new SelectedShared(SonicCdGameModule.this,source,ipxProgressLifetime,selectedProfile.capture(world),ipxProgress);}
+                @Override public void validateRestore(Object value){
+                    requireInstalled();if(r31Retired)throw new IllegalStateException("Selected R31 lifetime retired");if(r31LoadingSelected()){if(!(value instanceof R31Shared r31))throw new IllegalArgumentException("Pre-level capture cannot restore a consumed R31 permit");validateR31Restore(r31);return;}
+                    if(!(value instanceof SelectedShared image))throw new IllegalArgumentException("Foreign selected pre-level capture");
+                    if(image.owner()!=SonicCdGameModule.this||image.source()!=source||image.progressLifetime()!=ipxProgressLifetime)throw new IllegalArgumentException("Foreign selected Module/source/progress capture");
+                    selectedProfile.validateRestore(image.visit(),world);var facts=IpxProgressFacts.from(image.visit().state().progress());if(!facts.equals(image.facts()))throw new IllegalArgumentException("Selected complete progress/capture pair differs");
+                }
+                @Override public void restore(Object value){
+                    validateRestore(value);if(value instanceof R31Shared r31){restoreR31(r31);return;}
+                    var image=(SelectedShared)value;
                     requireInstalled();
                     if(image==null||image.owner()!=SonicCdGameModule.this||image.source()!=source||image.progressLifetime()!=ipxProgressLifetime)
                         throw new IllegalArgumentException("Foreign selected Module/source/progress capture");
@@ -2523,7 +2702,7 @@ public final class SonicCdGameModule implements GameModule {
             @Override public void bindRoster(com.openggf.sprites.managers.SpriteManager sprites){ }
             @Override public void failedAssembly(LevelLoadCause cause){ }
             @Override public void closeScreens(){ }
-            @Override public boolean holdsGameplay(){return true;} // no clock/ordinary level owner is admitted
+            @Override public boolean holdsGameplay(){return !r31LoadingSelected();} // actual loading owns HOLD; the common World owns ordinary service
             @Override public void retire(){requireInstalled();if(SessionManager.getCurrentWorldSession()==world)throw new IllegalStateException("Actual World retirement must precede selected profile retirement");selectedProfile.retire(world);if(originalBoot!=null)originalBoot.retire(world);}
         };
     }
@@ -2542,6 +2721,7 @@ public final class SonicCdGameModule implements GameModule {
     }
 
     @Override public String getIdentifier() {
+        if(r31RegistrySelected())return "Sonic CD (selected profile; original R31 loading)";
         if(selectedProfile!=null)return "Sonic CD (selected profile; pre-level native programme entry fenced)";
         return openingObjectsAdmission ? "Sonic CD (development USA R11A opening objects PLAYER)"
                 : playerAdmission ? "Sonic CD (development terrain-only R11A PLAYER)" : "Sonic CD (development STATIC R11A)";
@@ -2550,7 +2730,9 @@ public final class SonicCdGameModule implements GameModule {
 
     @Override public Game createGame(GameDataSource dataSource) {
         CdGameDataSource candidate = SonicCd.requireSource(dataSource);
-        if(selectedProfile!=null){runSelectedProfile(candidate);throw SonicCd.unsupported("original selected R31 Game/World assembly owner");}
+        if(selectedProfile!=null&&r31Loading!=null&&stagedR31==null)throw new IllegalStateException("Actual selected programme handoff already completed");
+        if(selectedProfile!=null&&stagedR31==null){runSelectedProfile(candidate);return new SonicCd(candidate);}
+        if(stagedR31!=null){if(candidate!=source)throw new IllegalArgumentException("Foreign selected source object");validateR31LoadRequest(stagedR31Context);return new SonicCd(candidate);}
         authenticateOpeningSource(candidate); // Actual retained media before replacing source/presentation state.
         if (source != null && !source.identity().equals(candidate.identity())) {
             throw new IllegalArgumentException("CD module is pinned to another authenticated source; open a new module/world");
@@ -3192,6 +3374,7 @@ public final class SonicCdGameModule implements GameModule {
     }
 
     CdPlayerFrameRuntime requirePlayerFrame() {
+        if(r31Loading!=null){validateR31LoadingCut();return playerFrame;}
         if(act3FutureLoading!=null){validateAct3FutureLoadingCut();return playerFrame;}
         if (act2PastLoading != null) { validateAct2PastLoadingCut(); return playerFrame; }
         if (act2Loading != null) { validateAct2LoadingCut(); return playerFrame; }
@@ -3210,6 +3393,9 @@ public final class SonicCdGameModule implements GameModule {
 
     /** Close the source siblings after an advanced failure; never fabricate rollback or a retry cut. */
     void closePlayerCycleAfterFailure(Throwable failure) {
+        if(r31Loading!=null){r31Retired=true;if(originalBoot!=null)originalBoot.retire(programWorld);try{if(r31World!=null)r31World.close();else if(r31Host!=null)r31Host.close();}catch(RuntimeException|Error cleanup){if(cleanup!=failure)failure.addSuppressed(cleanup);}}
+        try { if(act3FutureWorld!=null)act3FutureWorld.close(); }
+        catch(RuntimeException|Error cleanup){if(cleanup!=failure)failure.addSuppressed(cleanup);}
         try { if (openingObjects != null) openingObjects.close(); }
         catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
         try { if (playerFrame != null) playerFrame.close(); }
@@ -3220,6 +3406,7 @@ public final class SonicCdGameModule implements GameModule {
     void closeTerrainPlayer() {
         if (!playerAdmission) return;
         playerPresentation.requirePastRenderIdle(); // Reject a caught recursive close before retiring any owner.
+        if(r31Loading!=null){if(r31Thread!=Thread.currentThread()||r31ServiceActive)throw new IllegalStateException("R31 teardown cannot reenter its actual thread/service");r31Loading.requireRetirementIdle(r31Host);}
         var oldFrame = playerFrame;
         var oldObjects = openingObjects;
         var oldActor = playerActor;
@@ -3231,7 +3418,7 @@ public final class SonicCdGameModule implements GameModule {
         } finally {
             try {
                 try {
-                    try { if(act3FutureHost!=null)act3FutureHost.close(); }
+                    try { if(r31World!=null)r31World.close();else if(r31Host!=null)r31Host.close(); if(act3FutureWorld!=null)act3FutureWorld.close();else if(act3FutureHost!=null)act3FutureHost.close(); }
                     finally { if (act2PastHost != null) act2PastHost.close(); }
                 }
                 finally { playerPresentation.unbind(); }
@@ -3254,6 +3441,8 @@ public final class SonicCdGameModule implements GameModule {
                     act2PastLoading = null; act2PastHost = null; act2PastLevel = null; act2PastLoadGeneration = -1;
                     act3FutureLoading=null;act3FutureHost=null;act3FutureWorld=null;act3FutureLevel=null;act3FutureArt=null;
                     act3ProgrammeAssets=null;act3FutureLoadGeneration=-1;act3SelectedGoodFuture=-1;constructingAct3Future=false;
+                    if(r31Loading!=null){r31Retired=true;if(originalBoot!=null)originalBoot.retire(programWorld);}
+                    r31Loading=null;r31Host=null;r31World=null;r31Level=null;r31Art=null;
                     levelProgram = null;
                     warpState = null; warpScene = null; warpAssets = null; programSounds = List.of();
                     openingPlc = null;
@@ -3281,12 +3470,13 @@ public final class SonicCdGameModule implements GameModule {
         if (source != null && !source.identity().equals(candidate.identity())) {
             throw new IllegalArgumentException("CD runtime source differs from this module's authenticated binding");
         }
-        authenticateOpeningSource(candidate);
+        if(!r31RegistrySelected())authenticateOpeningSource(candidate);
         return candidate;
     }
 
     @Override public Level transformDecodedLevel(Level decoded) {
         var candidate = requireRuntimeSource();
+        if(stagedR31!=null){validateR31LoadRequest(stagedR31Context);if(!(decoded instanceof com.openggf.game.soniccd.level.SonicCdR31aLevel r31)||r31.assets()!=stagedR31)throw new IllegalArgumentException("Foreign prepared R31 geometry");return r31;}
         if(stagedAct3Future!=null) {
             validateAct3FutureLoadRequest(stagedAct3FutureContext);
             if(!(decoded instanceof com.openggf.game.soniccd.level.SonicCdAct3FutureLevel future)
@@ -3353,10 +3543,11 @@ public final class SonicCdGameModule implements GameModule {
         // Loading has no independently ticking host HUD. Native ring/time values live
         // once in PastLoadingVisit and its existing module capture. The generic level
         // adapter explicitly supports an absent HUD partition; never invent a timer.
-        if (pastLoading != null || act2Loading != null || act2PastLoading != null || act3FutureLoading!=null) return null;
+        if (pastLoading != null || act2Loading != null || act2PastLoading != null || act3FutureLoading!=null || r31Loading!=null) return null;
         return playerAdmission ? new SonicCdDevelopmentPlayerState() : new SonicCdStaticState.Level();
     }
     @Override public ZoneRegistry getZoneRegistry() {
+        if(r31RegistrySelected())return r31Zones;
         if(act3FutureRegistrySelected())return act3Zones;
         return stagedAct2 != null || act2Loading != null || stagedAct2Past != null || act2PastLoading != null ? act2Zones : zones;
     }
@@ -3367,6 +3558,7 @@ public final class SonicCdGameModule implements GameModule {
     @Override public PhysicsProvider getPhysicsProvider() { return rules; }
     @Override public GameAudioProfile getAudioProfile() { return audio; }
     @Override public LevelInitProfile getLevelInitProfile() {
+        if(r31RegistrySelected())return r31Profile;
         if(act3FutureRegistrySelected())return act3FutureProfile;
         return stagedAct2Past != null || act2PastLoading != null ? act2PastProfile : stagedAct2 != null || act2Loading != null ? act2Profile : stagedPast != null || pastLoading != null ? pastProfile : playerAdmission ? playerProfile : profile;
     }

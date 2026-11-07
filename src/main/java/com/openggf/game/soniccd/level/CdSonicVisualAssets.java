@@ -21,17 +21,24 @@ public final class CdSonicVisualAssets {
 
     /** Fixed native source layouts, not a caller-defined frame count or inferred padding policy. */
     public enum SourceFormat {
-        FRAMES_198_WITH_EVEN_BYTE(198, 3004, 1636, 69471, 1),
-        FRAMES_167(167, 2443, 1338, 57120, 0);
+        FRAMES_198_WITH_EVEN_BYTE(198, 3004, 1636, 69471, 1, 69472),
+        FRAMES_167(167, 2443, 1338, 57120, 0, 57120),
+        // N1ecc5f3: sprites/r4/player.asm and player_gfx.asm; gfx/r4/player.unc.
+        // Mapping include's enclosing EVEN is separate; raw art is already tile-aligned.
+        // Full DPLC reads retain following mapping/DPLC/Points/Capsule bytes, not invented padding.
+        // .GfxScript29 (src/sprites/r4/player_gfx.asm:1195-1210),
+        // .GfxScriptAd (src/sprites/r4/player_gfx.asm:1248-1286).
+        FRAMES_188(188, 3493, 1862, 76928, 0, 82944);
 
-        private final int frameCount, mappingMaximum, dplcMaximum, rawArtBytes, alignmentBytes;
+        private final int frameCount, mappingMaximum, dplcMaximum, rawArtBytes, alignmentBytes, artReadBytes;
 
-        SourceFormat(int frameCount, int mappingMaximum, int dplcMaximum, int rawArtBytes, int alignmentBytes) {
+        SourceFormat(int frameCount, int mappingMaximum, int dplcMaximum, int rawArtBytes, int alignmentBytes, int artReadBytes) {
             this.frameCount = frameCount;
             this.mappingMaximum = mappingMaximum;
             this.dplcMaximum = dplcMaximum;
             this.rawArtBytes = rawArtBytes;
             this.alignmentBytes = alignmentBytes;
+            this.artReadBytes = artReadBytes;
         }
     }
 
@@ -48,16 +55,18 @@ public final class CdSonicVisualAssets {
 
     private CdSonicVisualAssets(SourceFormat format, byte[] mapping, byte[] dplc, byte[] art) {
         this.sourceFormat = Objects.requireNonNull(format);
-        // The 167 mapping include can end on its byte count; its enclosing EVEN is a separate source byte.
-        int mappingMinimum = format.frameCount * 2 + (format == SourceFormat.FRAMES_167 ? 1 : 2);
+        // The 167/188 mapping includes can end on their byte count; enclosing EVEN is separate.
+        int mappingMinimum = format.frameCount * 2 + (format == SourceFormat.FRAMES_198_WITH_EVEN_BYTE ? 2 : 1);
         this.mappings = boundedTable(mapping, mappingMinimum, format.mappingMaximum, "mappings");
         this.dplcs = boundedTable(dplc, format.frameCount * 2 + 2, format.dplcMaximum, "DPLCs");
         if (format == SourceFormat.FRAMES_198_WITH_EVEN_BYTE) {
             if (art.length != 69472 || art[69471] != 0) {
                 throw new IllegalArgumentException("Sonic art requires the actual 69471 bytes plus one zero EVEN byte");
             }
-        } else if (art.length != format.rawArtBytes) {
-            throw new IllegalArgumentException("Sonic 167-frame art requires the actual 57120 bytes without padding");
+        } else if (art.length != format.artReadBytes) {
+            throw new IllegalArgumentException(format == SourceFormat.FRAMES_167
+                    ? "Sonic 167-frame art requires the actual 57120 bytes without padding"
+                    : "Sonic 188-frame art requires the actual 82944-byte file-backed read view (76928 raw bytes)");
         }
         this.art = CdAssetBytes.copyOf(art);
         List<MappingFrame> maps = new ArrayList<>();
@@ -67,7 +76,8 @@ public final class CdSonicVisualAssets {
             int count = mappings.unsignedByte(mapOffset);
             // The native five-byte mapping pieces are retained uninterpreted.
             // _Objects/Sonic/Data/Mappings.asm:Local_Map (198), sprites/player.asm:.Sprites (167).
-            // Both use signed word directory offsets and byte counts of native five-byte pieces.
+            // R4 sprites/r4/player.asm:.Sprites (188) uses the same piece encoding.
+            // All use signed word directory offsets and byte counts of native five-byte pieces.
             CdAssetBytes mapBody = body(mappings, mapOffset, 1 + count * 5);
             maps.add(new MappingFrame(mapOffset, count, mapBody));
 
@@ -84,7 +94,9 @@ public final class CdSonicVisualAssets {
                 if (entry.artByteOffset() > art.length - entry.byteLength()) {
                     throw new IllegalArgumentException(format.alignmentBytes == 1
                             ? "DPLC reads beyond file-backed Sonic art including actual EVEN byte"
-                            : "DPLC reads beyond file-backed Sonic art without padding");
+                            : format == SourceFormat.FRAMES_167
+                            ? "DPLC reads beyond file-backed Sonic art without padding"
+                            : "DPLC reads beyond actual file-backed Sonic source view");
                 }
                 entries.add(entry);
                 outputBytes += entry.byteLength();

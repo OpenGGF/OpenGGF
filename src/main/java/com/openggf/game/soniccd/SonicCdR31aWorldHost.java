@@ -121,11 +121,19 @@ final class SonicCdR31aWorldHost implements Host,AutoCloseable {
   Initial{Objects.requireNonNull(globals);Objects.requireNonNull(scroll);Objects.requireNonNull(planes);Objects.requireNonNull(video);Objects.requireNonNull(placement);Objects.requireNonNull(nativeCarry);if(globals.tail().isPresent()&&nativeCarry.fadeInfoWithoutTail().isPresent())throw new IllegalArgumentException("One complete fade-info owner required");}
   CdR11aBackgroundPlane.State foreground(){return planes.foreground();}CdR11aBackgroundPlane.State background(){return planes.background();}
  }
+ /** One captured source-specific current/scratch partition; no invocation authority. */
+ private record Writers(CdStageTerrain terrain,CdR11bForegroundPlane foreground,CdR11aBackgroundPlane background){
+  Writers{Objects.requireNonNull(terrain);Objects.requireNonNull(foreground);Objects.requireNonNull(background);}
+ }
+ private record OrdinaryImage(CdStageTerrain terrain,OptionalInt noBumper,OptionalInt bossStarted,
+                              Optional<CdAssetBytes> shieldCpu,Writers writers) {
+  OrdinaryImage{Objects.requireNonNull(terrain);optionalByte(noBumper);optionalByte(bossStarted);Objects.requireNonNull(shieldCpu);shieldCpu.ifPresent(b->extent(b,0x480));if(Objects.requireNonNull(writers).terrain()!=terrain)throw new IllegalArgumentException("Current terrain/writer pair differs");}
+ }
  private record Image(SonicCdR31aWorldHost owner,Globals globals,Scroll scroll,CdR11aBackgroundPlane.State foreground,
                       CdR11aBackgroundPlane.State background,Video video,Set<Action> clears,boolean geometryReady,
                       OptionalLong collisionPointer,OptionalInt fadeInfoWithoutTail,OptionalLong rngSeedLong,
-                      OptionalInt targetRightBoundWord,List<SonicCdGameModule.PastSound> sounds){
-  Image{clears=Set.copyOf(clears);Objects.requireNonNull(collisionPointer);Objects.requireNonNull(fadeInfoWithoutTail);Objects.requireNonNull(rngSeedLong);Objects.requireNonNull(targetRightBoundWord);targetRightBoundWord.ifPresent(SonicCdR31aWorldHost::word);fadeInfoWithoutTail.ifPresent(SonicCdR31aWorldHost::word);if(globals.tail().isPresent()&&fadeInfoWithoutTail.isPresent())throw new IllegalArgumentException("One palette fade-info owner required");if(rngSeedLong.isPresent()&&(rngSeedLong.getAsLong()<0||rngSeedLong.getAsLong()>0xFFFFFFFFL))throw new IllegalArgumentException("Native RNG LONG");sounds=List.copyOf(sounds);}
+                      OptionalInt targetRightBoundWord,List<SonicCdGameModule.PastSound> sounds,OrdinaryImage ordinary){
+  Image{Objects.requireNonNull(ordinary);clears=Set.copyOf(clears);Objects.requireNonNull(collisionPointer);Objects.requireNonNull(fadeInfoWithoutTail);Objects.requireNonNull(rngSeedLong);Objects.requireNonNull(targetRightBoundWord);targetRightBoundWord.ifPresent(SonicCdR31aWorldHost::word);fadeInfoWithoutTail.ifPresent(SonicCdR31aWorldHost::word);if(globals.tail().isPresent()&&fadeInfoWithoutTail.isPresent())throw new IllegalArgumentException("One palette fade-info owner required");if(rngSeedLong.isPresent()&&(rngSeedLong.getAsLong()<0||rngSeedLong.getAsLong()>0xFFFFFFFFL))throw new IllegalArgumentException("Native RNG LONG");sounds=List.copyOf(sounds);}
  }
  private static final class Snapshot {
   private final Image image;private final CdObjectPlacementRuntime.Snapshot placement;
@@ -138,8 +146,12 @@ final class SonicCdR31aWorldHost implements Host,AutoCloseable {
                               Camera camera,GraphicsManager graphics,PatternAtlas atlas,GLCapabilities capabilities,Thread thread,String backend,RetainedPlaneSceneRenderer renderer){}
  private final Authority authority;private final CdR31aAssets assets;private final CdPlayerFrameRuntime frame;private final CdR31aSectionArt art;
  private final CdObjectPlacementRuntime placement;private final CdR31aLevelEvents events;private final CdStageTerrain terrain;
- private final CdR11aBackgroundPlane backgroundWriter;private final CdR11bForegroundPlane foregroundWriter;
+ private Writers writers(CdStageTerrain current){
+  try{return new Writers(current,CdR11bForegroundPlane.fromTables(current.blocks(),current.chunks(),current.layout().ram()),CdR11aBackgroundPlane.bindR31a(assets,current));}
+  catch(IOException fault){throw new java.io.UncheckedIOException("Cannot prepare current R31 terrain writers",fault);}
+ }
  private final ZoneScrollHandler handler=new Projection();private final Thread thread=Thread.currentThread();
+ private CdWorld ordinary;
  private SonicCdR31aLoadingVisit owner;private Image image;private RenderBinding render;
  private boolean acting,publishing,eventing,storing,readingCpu,checkingAuthority,drawing,closing,closed;
  private Publication activePublication;private CdAssetBytes activePalette;
@@ -148,8 +160,8 @@ final class SonicCdR31aWorldHost implements Host,AutoCloseable {
   if(!frame.stageSource().ownsR31aAssets(assets)||!art.ownsAssets(assets)||!initial.video().current().ownsAssets(assets)||!initial.video().current().hasNativeHudProfile()||!initial.placement().ownsR31aAssets(assets))throw new IllegalArgumentException("Exact original R31 Frame/art/native-HUD/placement relation required");
   if(initial.video().playerArt()!=frame.artState())throw new IllegalArgumentException("Ingress must borrow the exact current Frame player image");
   placement=initial.placement();var p=placement.capture();if(p.pool().slots().size()!=96||p.savedFlags().length()!=766)throw new IllegalArgumentException("Complete original placement pool/bank required");
-  events=CdR31aLevelEvents.fromAssets(assets);terrain=assets.terrain();backgroundWriter=CdR11aBackgroundPlane.bindR31a(assets,terrain);foregroundWriter=CdR11bForegroundPlane.fromTables(terrain.blocks(),terrain.chunks(),terrain.layout().ram());
-  var carry=initial.nativeCarry();image=new Image(this,initial.globals(),initial.scroll(),initial.foreground(),initial.background(),initial.video(),Set.of(),false,carry.collisionPointer(),carry.fadeInfoWithoutTail(),carry.rngSeedLong(),carry.targetRightBoundWord(),List.of());
+  events=CdR31aLevelEvents.fromAssets(assets);terrain=assets.terrain();
+  var carry=initial.nativeCarry();image=new Image(this,initial.globals(),initial.scroll(),initial.foreground(),initial.background(),initial.video(),Set.of(),false,carry.collisionPointer(),carry.fadeInfoWithoutTail(),carry.rngSeedLong(),carry.targetRightBoundWord(),List.of(),new OrdinaryImage(terrain,OptionalInt.empty(),OptionalInt.empty(),Optional.empty(),writers(terrain)));
  }
  void install(SonicCdR31aLoadingVisit core){idle();if(owner!=null||Objects.requireNonNull(core).assets()!=assets||core.state().phase()!=Phase.START||core.state().section().residency()!=image.video().current())throw new IllegalArgumentException("One actual Core/Start/current relation");var selected=image.video().selected();if(selectedEnabled(selected)!=core.state().displayEnabled()||!Arrays.equals(selectedPalette(selected),core.state().displayedPalette().copy()))throw new IllegalArgumentException("Initial physical selected display differs from actual Core entry");requireAuthority(core);owner=core;}
  void requireRenderIdle(){if(drawing)throw new IllegalStateException("R31A retained draw active");}
@@ -184,15 +196,102 @@ final class SonicCdR31aWorldHost implements Host,AutoCloseable {
  ZoneScrollHandler handler(){current();return handler;}
  @Override public int livesByte(){current();return image.globals().ring().lives();}
  @Override public Object capture(){current();operationIdle();return new Snapshot(image,placement.capture());}
- @Override public void validateRestore(Object value){current();operationIdle();if(!(value instanceof Snapshot s)||s.image.owner()!=this)throw new IllegalArgumentException("Foreign Host snapshot");placement.validateRestore(s.placement);if(!s.image.video().current().ownsAssets(assets))throw new IllegalArgumentException("Foreign captured source");}
+ @Override public void validateRestore(Object value){current();if(ordinary!=null&&ordinary.isOrdinaryRunning())throw new IllegalStateException("World service active");operationIdle();if(!(value instanceof Snapshot s)||s.image.owner()!=this)throw new IllegalArgumentException("Foreign Host snapshot");placement.validateRestore(s.placement);if(!s.image.video().current().ownsAssets(assets))throw new IllegalArgumentException("Foreign captured source");}
  @Override public void restore(Object value){validateRestore(value);var s=(Snapshot)value;placement.restore(s.placement);image=s.image;}
- private Image copy(Globals g,Scroll scroll,CdR11aBackgroundPlane.State fg,CdR11aBackgroundPlane.State bg,Video v,List<SonicCdGameModule.PastSound> sounds){return new Image(this,g,scroll,fg,bg,v,image.clears(),image.geometryReady(),image.collisionPointer(),g.tail().isPresent()?OptionalInt.empty():image.fadeInfoWithoutTail(),image.rngSeedLong(),image.targetRightBoundWord(),sounds);}
+ private Image copy(Globals g,Scroll scroll,CdR11aBackgroundPlane.State fg,CdR11aBackgroundPlane.State bg,Video v,List<SonicCdGameModule.PastSound> sounds){return new Image(this,g,scroll,fg,bg,v,image.clears(),image.geometryReady(),image.collisionPointer(),g.tail().isPresent()?OptionalInt.empty():image.fadeInfoWithoutTail(),image.rngSeedLong(),image.targetRightBoundWord(),sounds,image.ordinary());}
  private static Set<Action> completed(Image i,Action action){var set=EnumSet.noneOf(Action.class);set.addAll(i.clears());set.add(action);return Set.copyOf(set);}
- private Image receipt(Image i,Action action){return new Image(this,i.globals(),i.scroll(),i.foreground(),i.background(),i.video(),completed(i,action),i.geometryReady(),i.collisionPointer(),i.fadeInfoWithoutTail(),i.rngSeedLong(),i.targetRightBoundWord(),i.sounds());}
+ private Image receipt(Image i,Action action){return new Image(this,i.globals(),i.scroll(),i.foreground(),i.background(),i.video(),completed(i,action),i.geometryReady(),i.collisionPointer(),i.fadeInfoWithoutTail(),i.rngSeedLong(),i.targetRightBoundWord(),i.sounds(),i.ordinary());}
  private Image globalsImage(Globals globals){return copy(globals,image.scroll(),image.foreground(),image.background(),image.video(),image.sounds());}
  private Image videoImage(Video video){return copy(image.globals(),image.scroll(),image.foreground(),image.background(),video,image.sounds());}
  private Image scrollImage(Scroll scroll){return copy(image.globals(),scroll,image.foreground(),image.background(),image.video(),image.sounds());}
- private Image fadeInfo(int value){var g=image.globals();if(g.tail().isEmpty())return new Image(this,g,image.scroll(),image.foreground(),image.background(),image.video(),image.clears(),image.geometryReady(),image.collisionPointer(),OptionalInt.of(value),image.rngSeedLong(),image.targetRightBoundWord(),image.sounds());var t=g.tail().orElseThrow();return globalsImage(new Globals(g.ring(),g.live(),g.contact(),g.score(),g.projectorByte(),g.checkpointSaved(),g.drownTimerWord(),g.debugBlockWord(),g.pauseMusicBit(),g.bonus(),Optional.of(new Tail(t.player2ControlsWord(),t.player2BoredWord(),t.unknownLevelByte(),t.demoS1IndexWord(),value)),g.animations(),g.paletteSteps7(),g.paletteTimers7(),g.layerByte(),g.bossFlagsByte(),g.eventRoutineWord()));}
+ private Image fadeInfo(int value){var g=image.globals();if(g.tail().isEmpty())return new Image(this,g,image.scroll(),image.foreground(),image.background(),image.video(),image.clears(),image.geometryReady(),image.collisionPointer(),OptionalInt.of(value),image.rngSeedLong(),image.targetRightBoundWord(),image.sounds(),image.ordinary());var t=g.tail().orElseThrow();return globalsImage(new Globals(g.ring(),g.live(),g.contact(),g.score(),g.projectorByte(),g.checkpointSaved(),g.drownTimerWord(),g.debugBlockWord(),g.pauseMusicBit(),g.bonus(),Optional.of(new Tail(t.player2ControlsWord(),t.player2BoredWord(),t.unknownLevelByte(),t.demoS1IndexWord(),value)),g.animations(),g.paletteSteps7(),g.paletteTimers7(),g.layerByte(),g.bossFlagsByte(),g.eventRoutineWord()));}
+
+ // Common World is the sole lifetime/admission coordinator. Host retains one captured native image.
+ /** Named immutable early writer products; these data values confer no entry or invocation. */
+ void retainOriginalMainClears(Authority expected,CdOriginalBootPrefix.MainClears clears){
+  current();operationIdle();if(expected!=authority||ordinary!=null||owner.state().phase()!=Phase.START)throw new IllegalStateException("Original pre-Start clear projection only");
+  var c=Objects.requireNonNull(clears);var old=image.ordinary();
+  var ready=withOrdinary(image,new OrdinaryImage(old.terrain(),OptionalInt.of(c.noBumperByte()),old.bossStarted(),Optional.of(c.shieldCpu()),old.writers()));
+  image=ready;
+ }
+ void bindOrdinaryWorld(Authority expected,CdWorld world){current();operationIdle();if(expected!=authority||ordinary!=null||owner.state().phase()!=Phase.START)throw new IllegalStateException("Bind one original World before Start");ordinary=Objects.requireNonNull(world);}
+ void requireOrdinaryWorld(Authority expected,CdWorld world){current();if(expected!=authority||world==null||ordinary!=world)throw new IllegalArgumentException("Foreign actual World/authority");}
+ private void ordinaryCut(CdOrdinaryLoop.Cut cut){current();if(ordinary==null)throw new IllegalStateException("No original World");ordinary.requireCut(cut);}
+ CdStageTerrain currentTerrain(){current();return image.ordinary().terrain();}
+ OptionalInt noBumperByte(){current();return image.ordinary().noBumper();}
+ OptionalInt bossStartedByte(){current();return image.ordinary().bossStarted();}
+ Optional<CdAssetBytes> shieldCpu(){current();return image.ordinary().shieldCpu();}
+ private Image withOrdinary(Image i,OrdinaryImage o){return new Image(this,i.globals(),i.scroll(),i.foreground(),i.background(),i.video(),i.clears(),i.geometryReady(),i.collisionPointer(),i.fadeInfoWithoutTail(),i.rngSeedLong(),i.targetRightBoundWord(),i.sounds(),o);}
+ private static Object ordinaryValue(OrdinaryImage o){return List.of(o.terrain(),o.noBumper(),o.bossStarted(),o.shieldCpu().map(SonicCdR31aWorldHost::bytes));}
+ static final class PreparedOrdinary {
+  private final SonicCdR31aWorldHost owner;private final Object scope;private final ExternalCut before;private final Image ready;
+  private PreparedOrdinary(SonicCdR31aWorldHost owner,Object scope,ExternalCut before,Image ready){this.owner=owner;this.scope=scope;this.before=before;this.ready=ready;}
+ }
+ PreparedOrdinary prepareOrdinary(Globals expected,Video video,Globals ready,List<SonicCdGameModule.PastSound> suffix,Optional<CdObjectDrawQueue.CpuSat> cpu){
+  current();if(ordinary==null||!ordinary.isOrdinaryRunning()||expected!=image.globals()||video!=image.video())throw new IllegalArgumentException("Stale complete Host pair");
+  var before=externalCut();var sounds=new ArrayList<>(image.sounds());sounds.addAll(List.copyOf(suffix));
+  var v=new Video(cpu.map(c->CdAssetBytes.copyOf(c.bytes())).orElse(video.cpuSat()),cpu,frame.artState(),owner.state().section().residency(),video.selected());
+  var next=copy(Objects.requireNonNull(ready),image.scroll(),image.foreground(),image.background(),refreshed(v),sounds);
+  return new PreparedOrdinary(this,ordinary.actualScope(),before,next);
+ }
+ PreparedOrdinary prepareScrollLock(PreparedOrdinary p,int lock){
+  validateOrdinary(p);word(lock);var i=p.ready;var s=i.scroll();var f=s.foreground();
+  var fg=new CdR11aForegroundScroll.State(f.cameraX(),f.cameraY16_16(),f.horizontalCrossed(),f.verticalCrossed(),f.scrollXDiff(),f.scrollYDiff(),f.scrollFlags(),f.destBottomBound(),f.destLeftBound(),f.bottomBoundShift(),lock);
+  var scroll=new Scroll(fg,s.background(),s.copies(),s.foregroundXFractionWord(),s.topBoundWord(),s.waterDeformWord());
+  var ready=new Image(this,i.globals(),scroll,i.foreground(),i.background(),i.video(),i.clears(),i.geometryReady(),i.collisionPointer(),i.fadeInfoWithoutTail(),i.rngSeedLong(),i.targetRightBoundWord(),i.sounds(),i.ordinary());
+  return new PreparedOrdinary(this,p.scope,p.before,ready);
+ }
+ PreparedOrdinary preparePrimary(SonicCdR31aObjectPass.PrimarySubmission original,Globals globals,List<SonicCdGameModule.PastSound> sounds){
+  ordinaryCut(CdOrdinaryLoop.Cut.RUN_OBJECTS);ordinary.requirePrimary(original);var values=original.publication().nativeValues();
+  // Final Body data cannot replay a chunk/plane store; only genuine reached receipts publish it.
+  if(values.terrain()!=image.ordinary().terrain())throw new IllegalArgumentException("Final Body changed terrain outside original PlaceBlock prefixes");
+  var p=prepareOrdinary(image.globals(),image.video(),globals,sounds,original.next().completedCpu());var old=p.ready.ordinary();
+  return new PreparedOrdinary(this,p.scope,p.before,withOrdinary(p.ready,new OrdinaryImage(old.terrain(),values.noBumperByte(),old.bossStarted(),old.shieldCpu(),old.writers())));
+ }
+ /** Only called inside this World's original physical pass and private Frame helper receipt. */
+ PreparedOrdinary preparePlaceBlock(CdPlayerFrameRuntime.R31PlaceBlockCall original,Globals globals,List<SonicCdGameModule.PastSound> sounds){
+  ordinaryCut(CdOrdinaryLoop.Cut.RUN_OBJECTS);ordinary.requirePlace(original);
+  var before=original.before().nativeValues();var values=original.prefix().nativeValues();var old=image.ordinary();
+  if(before.terrain()!=old.terrain()||!before.noBumperByte().equals(old.noBumper()))throw new IllegalArgumentException("Stale current terrain/scratch prefix");
+  var p=prepareOrdinary(image.globals(),image.video(),globals,sounds,image.video().completedCpu());
+  var fg=p.ready.foreground();var readyWriters=old.writers();
+  if(original.store() instanceof CdPlayerBody.R31ChunkWord word){
+   if(before.terrain().chunks().unsignedWord(word.byteOffset())!=word.previousWord())throw new IllegalArgumentException("Changed original chunk WORD");
+   byte[] expected=before.terrain().chunks().copy();expected[word.byteOffset()]=0;expected[word.byteOffset()+1]=0;
+   if(!Arrays.equals(expected,values.terrain().chunks().copy())||!Arrays.equals(before.terrain().layout().ram().copy(),values.terrain().layout().ram().copy()))throw new IllegalArgumentException("PlaceBlock changed another chunk/layout byte");
+   readyWriters=writers(values.terrain()); // authentic materials/full tables checked before adoption
+  }else{
+   if(values.terrain()!=before.terrain())throw new IllegalArgumentException("Plane store changed current terrain");
+   var word=(CdPlayerBody.R31PlaneAWord)original.store();byte[] bytes=fg.nameTable().copy();int offset=(word.row()*64+word.column())*2;
+   bytes[offset]=(byte)(word.word()>>>8);bytes[offset+1]=(byte)word.word();fg=new CdR11aBackgroundPlane.State(CdAssetBytes.copyOf(bytes));
+  }
+  var i=p.ready;var nativeImage=new OrdinaryImage(values.terrain(),values.noBumperByte(),old.bossStarted(),old.shieldCpu(),readyWriters);
+  // Keep OLD selected CPU/palette/scroll/art. Only the genuinely written physical word changes.
+  var video=refreshed(i.video(),fg,i.background());
+  var ready=new Image(this,i.globals(),i.scroll(),fg,i.background(),video,i.clears(),i.geometryReady(),i.collisionPointer(),i.fadeInfoWithoutTail(),i.rngSeedLong(),i.targetRightBoundWord(),i.sounds(),nativeImage);
+  return new PreparedOrdinary(this,p.scope,p.before,ready);
+ }
+ /** Screen is verification only: no projection/source lookup or prepared native write. */
+ PreparedOrdinary preparePlaceScreenFence(CdPlayerFrameRuntime.R31PlaceBlockScreenCall original){
+  ordinaryCut(CdOrdinaryLoop.Cut.RUN_OBJECTS);ordinary.requirePlace(original);
+  return new PreparedOrdinary(this,ordinary.actualScope(),externalCut(),image);
+ }
+ void validateOrdinary(PreparedOrdinary p){current();if(p==null||p.owner!=this||ordinary==null||!ordinary.isCurrentScope(p.scope))throw new IllegalArgumentException("Expired/foreign prepared pair");unchanged(p.before);}
+ void adoptAfterNative(PreparedOrdinary p){if(p.owner!=this||image!=p.before.image())throw new IllegalStateException("Prevalidated Host pair expired");image=p.ready;}
+ Optional<CdObjectDrawQueue.CpuSat> beforeSelector8(){ordinaryCut(CdOrdinaryLoop.Cut.BEFORE_SELECTOR8);image=videoImage(withSelectedVscroll(image.video(),image.scroll().background().vscroll()));return image.video().completedCpu();}
+ void publishOrdinary(CdAssetBytes palette,Optional<CdObjectDrawQueue.CpuSat> selected){
+  ordinaryCut(CdOrdinaryLoop.Cut.PUBLISH_LEVEL);var v=image.video();
+  if(selected!=v.completedCpu()||palette!=owner.state().normalPalette())throw new IllegalArgumentException("Exact OLD CPU and normal palette required");
+  var i=new Inputs(selected,v.cpuSat(),palette,selectedHscroll(image.scroll().background().hscrollRam()),image.scroll().background().vscroll(),owner.state().displayEnabled(),image.foreground(),image.background(),owner.state().section().residency(),frame.artState());
+  image=videoImage(new Video(v.cpuSat(),v.completedCpu(),i.player(),i.current(),new Published(project(i))));
+ }
+ void settleOrdinary(Optional<CdObjectDrawQueue.CpuSat> selected){
+  ordinaryCut(CdOrdinaryLoop.Cut.SETTLE_SELECTED_CPU);var v=image.video();
+  if(!(v.selected() instanceof Published p)||p.selection().inputs().selectedCpu()!=selected)throw new IllegalArgumentException("Exact borrowed OLD CPU required");
+  var i=p.selection().inputs();var n=new Inputs(selected,i.selectedSat(),i.palette(),i.hscroll(),i.vscrollLongBits(),i.displayEnabled(),image.foreground(),image.background(),owner.state().section().residency(),frame.artState());
+  image=videoImage(new Video(v.cpuSat(),v.completedCpu(),n.player(),n.current(),new Published(project(n))));
+ }
+
  @Override public void storeScroll(Scroll before,Scroll ready){current();operationIdle();owner.requireScrollStore(this,before,ready);if(image.scroll()!=before)throw new IllegalStateException("Stale complete scroll");storing=true;try{var next=scrollImage(Objects.requireNonNull(ready));image=next;}finally{storing=false;}}
  @Override public CdAssetBytes cpuSat(State expected){current();operationIdle();owner.requireCpuSat(this,expected);readingCpu=true;try{return image.video().cpuSat();}finally{readingCpu=false;}}
  @Override public void events(State state){
@@ -221,17 +320,21 @@ final class SonicCdR31aWorldHost implements Host,AutoCloseable {
    case RESET_SAVED_OBJECT_FLAGS -> {var ready=receipt(image,action);placement.resetSavedObjectFlags();image=ready;}
    case FRESH_RESET_SUFFIX -> {var g=image.globals();var r=g.ring();var next=with(g,new CdRingGlobals(r.rings(),frame.environment().globals().timeAttackMode()==0?3:1,r.livesFlags(),r.updateHudRings(),r.updateHudLives(),r.timeStopTimer(),r.ringAnimationTimer(),r.ringAnimationFrame()),g.live(),g.contact(),new CdOpeningObjectRuntime.ScoreGlobals(0,g.score().nextLifeScore(),g.score().updateHudScore()),g.pauseMusicBit(),g.bonus(),g.animations(),g.paletteSteps7(),g.paletteTimers7());var ready=receipt(globalsImage(next),action);external(()->authority.resetGoodFutureFlags(this));image=ready;}
    case PLAY_LEVEL_MUSIC -> {if(state.calls().contains(Call.PLAY_LEVEL_MUSIC))throw new IllegalStateException("Music replay");var command=state.music().orElseThrow(()->new IllegalStateException("No original R31 programme command"));var sounds=new ArrayList<>(image.sounds());sounds.add(new SonicCdGameModule.PastLevelMusic(command));var ready=receipt(copy(image.globals(),image.scroll(),image.foreground(),image.background(),image.video(),sounds),action);external(()->authority.levelMusic(this,command));image=ready;}
-   case CLEAR_FLOWERS -> image=receipt(globalsImage(image.globals().flowers()),action);
+   case CLEAR_FLOWERS -> {
+    var o=image.ordinary();var ready=globalsImage(image.globals().flowers());
+    // Main178-184 [FF1600,FF2000): R3 noBumper FF1950 AND aniArtBuffer FF1980..FF1E00.
+    image=receipt(withOrdinary(ready,new OrdinaryImage(o.terrain(),OptionalInt.of(0),o.bossStarted(),Optional.of(zero(0x480)),o.writers())),action);
+   }
    case CLEAR_OBJECTS -> {if(frame.state().header().slotId()!=0||!allZero(state.reserved()))throw new HostBoundary(Boundary.LOAD_PRODUCT);var actual=placement.capture();var staging=CdObjectPool.stagingCopy(actual.pool());staging.clearDynamicSlots();var cleared=staging.capture();var ready=receipt(image,action);placement.pool().validateRestore(cleared);if(!samePlacement(actual,placement.capture()))throw new IllegalStateException("Pool clear preimage changed");placement.pool().restore(cleared);image=ready;}
-   case CLEAR_MISC -> {var ready=globalsImage(image.globals().misc());image=receipt(new Image(this,ready.globals(),ready.scroll(),ready.foreground(),ready.background(),ready.video(),ready.clears(),ready.geometryReady(),ready.collisionPointer(),ready.fadeInfoWithoutTail(),OptionalLong.of(0),ready.targetRightBoundWord(),ready.sounds()),action);}
-   case CLEAR_CAMERA -> {if(!coldSpawner(placement.status()))throw new HostBoundary(Boundary.SPAWNER_CAMERA_CLEAR_OWNER);var ready=globalsImage(image.globals().camera());image=receipt(new Image(this,ready.globals(),ready.scroll(),ready.foreground(),ready.background(),ready.video(),ready.clears(),ready.geometryReady(),ready.collisionPointer(),ready.fadeInfoWithoutTail(),ready.rngSeedLong(),OptionalInt.of(0),ready.sounds()),action);}
+   case CLEAR_MISC -> {var ready=globalsImage(image.globals().misc());image=receipt(new Image(this,ready.globals(),ready.scroll(),ready.foreground(),ready.background(),ready.video(),ready.clears(),ready.geometryReady(),ready.collisionPointer(),ready.fadeInfoWithoutTail(),OptionalLong.of(0),ready.targetRightBoundWord(),ready.sounds(),ready.ordinary()),action);}
+   case CLEAR_CAMERA -> {if(!coldSpawner(placement.status()))throw new HostBoundary(Boundary.SPAWNER_CAMERA_CLEAR_OWNER);var ready=globalsImage(image.globals().camera());var cleared=receipt(new Image(this,ready.globals(),ready.scroll(),ready.foreground(),ready.background(),ready.video(),ready.clears(),ready.geometryReady(),ready.collisionPointer(),ready.fadeInfoWithoutTail(),ready.rngSeedLong(),OptionalInt.of(0),ready.sounds(),ready.ordinary()),action);var o=cleared.ordinary();image=withOrdinary(cleared,new OrdinaryImage(o.terrain(),o.noBumper(),OptionalInt.of(0),o.shieldCpu(),o.writers()));}
    case CLEAR_SCREEN -> {clearScreen(state);image=receipt(image,action);}
-   case LEVEL_SIZE -> image=receipt(new Image(this,image.globals(),image.scroll(),image.foreground(),image.background(),image.video(),image.clears(),image.geometryReady(),image.collisionPointer(),image.fadeInfoWithoutTail(),image.rngSeedLong(),OptionalInt.of(assets.bounds().right()),image.sounds()),action);
+   case LEVEL_SIZE -> image=receipt(new Image(this,image.globals(),image.scroll(),image.foreground(),image.background(),image.video(),image.clears(),image.geometryReady(),image.collisionPointer(),image.fadeInfoWithoutTail(),image.rngSeedLong(),OptionalInt.of(assets.bounds().right()),image.sounds(),image.ordinary()),action);
    case DROWN_TIMER -> image=receipt(globalsImage(image.globals().drown()),action);
-   case LEVEL_LAYOUT -> {if(state.blocksRam().isEmpty()||state.layoutRam().isEmpty()||!Arrays.equals(state.blocksRam().orElseThrow().copy(),terrain.blocks().copy())||!Arrays.equals(state.layoutRam().orElseThrow().copy(),terrain.layout().ram().copy()))throw new HostBoundary(Boundary.LOAD_PRODUCT);image=receipt(new Image(this,image.globals(),image.scroll(),image.foreground(),image.background(),image.video(),image.clears(),true,image.collisionPointer(),image.fadeInfoWithoutTail(),image.rngSeedLong(),image.targetRightBoundWord(),image.sounds()),action);}
+   case LEVEL_LAYOUT -> {if(state.blocksRam().isEmpty()||state.layoutRam().isEmpty()||!Arrays.equals(state.blocksRam().orElseThrow().copy(),terrain.blocks().copy())||!Arrays.equals(state.layoutRam().orElseThrow().copy(),terrain.layout().ram().copy()))throw new HostBoundary(Boundary.LOAD_PRODUCT);image=receipt(new Image(this,image.globals(),image.scroll(),image.foreground(),image.background(),image.video(),image.clears(),true,image.collisionPointer(),image.fadeInfoWithoutTail(),image.rngSeedLong(),image.targetRightBoundWord(),image.sounds(),image.ordinary()),action);}
    case INITIAL_FOREGROUND -> {initialForeground(state);image=receipt(image,action);}
    case INITIAL_BACKGROUND -> {initialBackground();image=receipt(image,action);}
-   case COLLISION_POINTER -> {long pointer=assets.view(CdR31aAssets.Asset.LEVEL_COL_INDEX).unsignedLong((frame.environment().movement().gates().zoneAct()>>>8)*4);if(pointer!=assets.range(CdR31aAssets.Asset.LEVEL_COLLISION).nativeAddress())throw new HostBoundary(Boundary.LOAD_PRODUCT);image=receipt(new Image(this,image.globals(),image.scroll(),image.foreground(),image.background(),image.video(),image.clears(),image.geometryReady(),OptionalLong.of(pointer),image.fadeInfoWithoutTail(),image.rngSeedLong(),image.targetRightBoundWord(),image.sounds()),action);}
+   case COLLISION_POINTER -> {long pointer=assets.view(CdR31aAssets.Asset.LEVEL_COL_INDEX).unsignedLong((frame.environment().movement().gates().zoneAct()>>>8)*4);if(pointer!=assets.range(CdR31aAssets.Asset.LEVEL_COLLISION).nativeAddress())throw new HostBoundary(Boundary.LOAD_PRODUCT);image=receipt(new Image(this,image.globals(),image.scroll(),image.foreground(),image.background(),image.video(),image.clears(),image.geometryReady(),OptionalLong.of(pointer),image.fadeInfoWithoutTail(),image.rngSeedLong(),image.targetRightBoundWord(),image.sounds(),image.ordinary()),action);}
    case TITLE_CARD_CREATE -> {if(state.reserved().unsignedByte(192)!=0x3C)throw new HostBoundary(Boundary.LOAD_PRODUCT);var ready=receipt(image,action);var publication=frame.prepareObjectTitleCardGlobal(frame.state(),frame.environment(),CdTitleCard.StoreField.CONTROL_LOCK_BYTE,1);frame.validatePreparedObjectSolidPublication(publication);frame.applyPreparedObjectSolidPublication(publication);image=ready;}
    case BEGIN_MAIN -> image=receipt(globalsImage(image.globals().beginMain()),action);
    case UPDATE_ANIMATED_TILES -> {if(CdPowerupArtRuntime.gate(state.level().powerup()).copyRequired())throw new HostBoundary(Boundary.ACTIVE_POWERUP);image=receipt(image,action);}
@@ -249,7 +352,7 @@ final class SonicCdR31aWorldHost implements Host,AutoCloseable {
   if(frame.state().header().slotId()!=0||frame.state().motion().spriteFlags()!=0||frame.state().header().tile()!=0)throw new HostBoundary(Boundary.CLEAR_SCREEN_PLAYER_ALIAS);
  }
  private void initialForeground(State state){if(!image.geometryReady())throw new HostBoundary(Boundary.GEOMETRY_NOT_LOADED);var s=image.scroll();var f=s.foreground();var bg=assets.view(CdR31aAssets.Asset.LAYOUT_BG);int cursor=64+bg.unsignedByte(1)*128+bg.unsignedByte(0)+1;var ram=state.layoutRam().orElseThrow();var metadata=new CdR11bForegroundPlane.CallerMetadata(cursor<ram.length()?OptionalInt.of(ram.unsignedByte(cursor)):OptionalInt.empty());
-  try{adoptForeground(foregroundWriter.initialize(image.foreground(),new CdR11aBackgroundPlane.Camera((f.cameraX()<<16)|s.foregroundXFractionWord(),f.cameraY16_16()),f.scrollFlags(),metadata),false);}catch(CdR11bForegroundPlane.InvalidPlane original){try{adoptForeground(original.completedPrefix(),false);}catch(RuntimeException|Error publication){if(publication!=original)original.addSuppressed(publication);}throw original;}
+  try{adoptForeground(image.ordinary().writers().foreground().initialize(image.foreground(),new CdR11aBackgroundPlane.Camera((f.cameraX()<<16)|s.foregroundXFractionWord(),f.cameraY16_16()),f.scrollFlags(),metadata),false);}catch(CdR11bForegroundPlane.InvalidPlane original){try{adoptForeground(original.completedPrefix(),false);}catch(RuntimeException|Error publication){if(publication!=original)original.addSuppressed(publication);}throw original;}
  }
  /** Native name-table writes affect current physical planes after selection, without
   * selecting another CPU/palette/HScroll image or replaying draw observations. */
@@ -257,14 +360,14 @@ final class SonicCdR31aWorldHost implements Host,AutoCloseable {
   var v=image.video();if(v.selected() instanceof Published p){var old=p.selection().inputs();var i=new Inputs(old.selectedCpu(),old.selectedSat(),old.palette(),old.hscroll(),old.vscrollLongBits(),old.displayEnabled(),foreground,background,v.current(),v.playerArt());v=new Video(v.cpuSat(),v.completedCpu(),v.playerArt(),v.current(),new Published(project(i)));}
   return copy(image.globals(),scroll,foreground,background,v,image.sounds());
  }
- private void initialBackground(){if(!image.geometryReady())throw new HostBoundary(Boundary.GEOMETRY_NOT_LOADED);var s=image.scroll();var out=backgroundWriter.initialize(image.background(),live(s.background()),flags(s.background()));image=planeImage(s,image.foreground(),out.state());}
+ private void initialBackground(){if(!image.geometryReady())throw new HostBoundary(Boundary.GEOMETRY_NOT_LOADED);var s=image.scroll();var out=image.ordinary().writers().background().initialize(image.background(),live(s.background()),flags(s.background()));image=planeImage(s,image.foreground(),out.state());}
  private void drawCopied(){var s=image.scroll();var c=s.copies();if(!image.geometryReady()&&((c.foregroundFlags()|c.backgroundFlags().bg1())&0xFF00)!=0)throw new HostBoundary(Boundary.GEOMETRY_NOT_LOADED);
-  var bg=backgroundWriter.incremental(image.background(),live(s.background()),c.background(),c.backgroundFlags());var copies=new Copies(c.foregroundX16_16(),c.foregroundY16_16(),c.background(),c.foregroundFlags(),bg.flags());var ready=new Scroll(s.foreground(),s.background(),copies,s.foregroundXFractionWord(),s.topBoundWord(),s.waterDeformWord());image=planeImage(ready,image.foreground(),bg.state());
+  var bg=image.ordinary().writers().background().incremental(image.background(),live(s.background()),c.background(),c.backgroundFlags());var copies=new Copies(c.foregroundX16_16(),c.foregroundY16_16(),c.background(),c.foregroundFlags(),bg.flags());var ready=new Scroll(s.foreground(),s.background(),copies,s.foregroundXFractionWord(),s.topBoundWord(),s.waterDeformWord());image=planeImage(ready,image.foreground(),bg.state());
   // Native BG rows/drawn columns restore a0 (R31 Stage Draw118-136,184-190).
   // Inherit BG IDs+1 without columns, or the post16-read directory cursor.
   int index=1;for(var read:bg.sections())if(read.phase()==CdR11aBackgroundPlane.Phase.INCREMENTAL_COLUMN)index=read.tableIndex()+1;
   var ids=assets.view(CdR31aAssets.Asset.BG_SECTIONS);var metadata=new CdR11bForegroundPlane.CallerMetadata(index>=0&&index<ids.length()?OptionalInt.of(ids.unsignedByte(index)):OptionalInt.empty());
-  try{adoptForeground(foregroundWriter.incremental(image.foreground(),new CdR11aBackgroundPlane.Camera(copies.foregroundX16_16(),copies.foregroundY16_16()),copies.foregroundFlags(),metadata),true);}catch(CdR11bForegroundPlane.InvalidPlane original){try{adoptForeground(original.completedPrefix(),true);}catch(RuntimeException|Error publication){if(publication!=original)original.addSuppressed(publication);}throw original;}
+  try{adoptForeground(image.ordinary().writers().foreground().incremental(image.foreground(),new CdR11aBackgroundPlane.Camera(copies.foregroundX16_16(),copies.foregroundY16_16()),copies.foregroundFlags(),metadata),true);}catch(CdR11bForegroundPlane.InvalidPlane original){try{adoptForeground(original.completedPrefix(),true);}catch(RuntimeException|Error publication){if(publication!=original)original.addSuppressed(publication);}throw original;}
  }
  private void adoptForeground(CdR11bForegroundPlane.Result result,boolean consume){var s=image.scroll();var c=s.copies();if(consume)c=new Copies(c.foregroundX16_16(),c.foregroundY16_16(),c.background(),result.flagsWord(),c.backgroundFlags());var ready=new Scroll(s.foreground(),s.background(),c,s.foregroundXFractionWord(),s.topBoundWord(),s.waterDeformWord());image=planeImage(ready,result.state(),image.background());}
  @Override public CdAssetBytes publish(Publication selected){
@@ -292,7 +395,8 @@ final class SonicCdR31aWorldHost implements Host,AutoCloseable {
    frame.validatePreparedPlayerPatternClear(player);frame.applyPreparedPlayerPatternClear(player);image=ready;
   }else{var next=new Video(v.cpuSat(),v.completedCpu(),frame.artState(),current,v.selected());image=videoImage(refreshed(next));}
  }
- private Video refreshed(Video v){if(!(v.selected() instanceof Published p))return v;var old=p.selection().inputs();var i=new Inputs(old.selectedCpu(),old.selectedSat(),old.palette(),old.hscroll(),old.vscrollLongBits(),old.displayEnabled(),image.foreground(),image.background(),v.current(),v.playerArt());return new Video(v.cpuSat(),v.completedCpu(),v.playerArt(),v.current(),new Published(project(i)));}
+ private Video refreshed(Video v){return refreshed(v,image.foreground(),image.background());}
+ private Video refreshed(Video v,CdR11aBackgroundPlane.State foreground,CdR11aBackgroundPlane.State background){if(!(v.selected() instanceof Published p))return v;var old=p.selection().inputs();var i=new Inputs(old.selectedCpu(),old.selectedSat(),old.palette(),old.hscroll(),old.vscrollLongBits(),old.displayEnabled(),foreground,background,v.current(),v.playerArt());return new Video(v.cpuSat(),v.completedCpu(),v.playerArt(),v.current(),new Published(project(i)));}
  private Video selectedDisplay(Video v,boolean enabled){Selected selected;if(v.selected() instanceof Published p){var o=p.selection().inputs();var i=new Inputs(o.selectedCpu(),o.selectedSat(),o.palette(),o.hscroll(),o.vscrollLongBits(),enabled,o.foreground(),o.background(),o.current(),o.player());selected=new Published(project(i));}else{var o=((Carried)v.selected()).scene();selected=new Carried(new RetainedPlaneSceneRenderer.Scene(o.foreground(),o.background(),o.packedHscroll256(),o.vscrollLongBits(),o.selectedPalette128(),enabled,o.sprites(),o.nativePatterns(),o.selectedBackdropPaletteIndex()));}return new Video(v.cpuSat(),v.completedCpu(),v.playerArt(),v.current(),selected);}
  private Video withSelectedPalette(Video v,CdAssetBytes palette){Selected selected;if(v.selected() instanceof Published p){var o=p.selection().inputs();selected=new Published(project(new Inputs(o.selectedCpu(),o.selectedSat(),palette,o.hscroll(),o.vscrollLongBits(),o.displayEnabled(),o.foreground(),o.background(),o.current(),o.player())));}else{var o=((Carried)v.selected()).scene();selected=new Carried(new RetainedPlaneSceneRenderer.Scene(o.foreground(),o.background(),o.packedHscroll256(),o.vscrollLongBits(),palette.copy(),o.displayEnabled(),o.sprites(),o.nativePatterns(),o.selectedBackdropPaletteIndex()));}return new Video(v.cpuSat(),v.completedCpu(),v.playerArt(),v.current(),selected);}
  private Video withSelectedVscroll(Video v,int bits){Selected selected;if(v.selected() instanceof Published p){var o=p.selection().inputs();selected=new Published(project(new Inputs(o.selectedCpu(),o.selectedSat(),o.palette(),o.hscroll(),bits,o.displayEnabled(),o.foreground(),o.background(),o.current(),o.player())));}else{var o=((Carried)v.selected()).scene();selected=new Carried(new RetainedPlaneSceneRenderer.Scene(o.foreground(),o.background(),o.packedHscroll256(),bits,o.selectedPalette128(),o.displayEnabled(),o.sprites(),o.nativePatterns(),o.selectedBackdropPaletteIndex()));}return new Video(v.cpuSat(),v.completedCpu(),v.playerArt(),v.current(),selected);}
@@ -339,6 +443,7 @@ final class SonicCdR31aWorldHost implements Host,AutoCloseable {
 
     /** Logic-only callers need no GL. Real drawing lazily borrows the existing governed renderer. */
     void draw() {
+        if(ordinary!=null&&ordinary.isOrdinaryRunning())throw new IllegalStateException("World service active");
         current();if(acting||publishing)throw new IllegalStateException("R31A loading operation active");frame.captureShared();
         var selected=image.video().selected();var scene=scene(selected);var graphics=GameServices.graphics();
         if(graphics.isHeadlessMode()||!graphics.isGlInitialized())return;
@@ -378,6 +483,7 @@ final class SonicCdR31aWorldHost implements Host,AutoCloseable {
             throw new IllegalStateException("R31A retained source/World/level/generation/graphics lifetime changed");
     }
     @Override public void close() {
+        if(ordinary!=null&&ordinary.isOrdinaryRunning())throw new IllegalStateException("World service active");
         requireRenderIdle();
         if(Thread.currentThread()!=thread)throw new IllegalStateException("Another R31A Host lifetime thread");
         if(closed)return;if(closing||acting||publishing)throw new IllegalStateException("R31A Host operation active");
@@ -388,7 +494,7 @@ final class SonicCdR31aWorldHost implements Host,AutoCloseable {
 
  private static CdR11aBackgroundPlane.LiveCameras live(CdR11aBackgroundScroll.State b){return new CdR11aBackgroundPlane.LiveCameras(new CdR11aBackgroundPlane.Camera(b.cameraBgX(),b.cameraBgY()),new CdR11aBackgroundPlane.Camera(b.cameraBg2X(),b.cameraBg2Y()),new CdR11aBackgroundPlane.Camera(b.cameraBg3X(),b.cameraBg3Y()));}
  private static CdR11aBackgroundPlane.FlagWords flags(CdR11aBackgroundScroll.State b){return new CdR11aBackgroundPlane.FlagWords(b.scrollFlagsBg(),b.scrollFlagsBg2(),b.scrollFlagsBg3());}
- private static Globals with(Globals g,CdRingGlobals ring,CdCheckpointLiveAux.State live,CdPlayerBody.ContactGlobals contact,CdOpeningObjectRuntime.ScoreGlobals score,OptionalInt pause,Optional<CdLevelHud.BonusValues> bonus,Optional<CdGlobalObjectAnimation.Extras> animations,CdAssetBytes steps,CdAssetBytes timers){return new Globals(ring,live,contact,score,g.projectorByte(),g.checkpointSaved(),g.drownTimerWord(),g.debugBlockWord(),pause,bonus,g.tail(),animations,steps,timers,g.layerByte(),g.bossFlagsByte(),g.eventRoutineWord());}
+ static Globals with(Globals g,CdRingGlobals ring,CdCheckpointLiveAux.State live,CdPlayerBody.ContactGlobals contact,CdOpeningObjectRuntime.ScoreGlobals score,OptionalInt pause,Optional<CdLevelHud.BonusValues> bonus,Optional<CdGlobalObjectAnimation.Extras> animations,CdAssetBytes steps,CdAssetBytes timers){return new Globals(ring,live,contact,score,g.projectorByte(),g.checkpointSaved(),g.drownTimerWord(),g.debugBlockWord(),pause,bonus,g.tail(),animations,steps,timers,g.layerByte(),g.bossFlagsByte(),g.eventRoutineWord());}
  /** CLR camera range has no broader spawner-reset seam. Unbound -1 is this existing
   * runtime's cold null-cursor representation; saved header bytes are outside that clear. */
  private static boolean coldSpawner(CdObjectPlacementRuntime.Status s){return s.routine()==0&&s.previousChunkWord()==0&&s.rightRecordIndex()==0&&s.leftRecordIndex()==0&&s.nullRightByteOffset()==-1&&s.nullLeftByteOffset()==-1;}
@@ -401,7 +507,7 @@ final class SonicCdR31aWorldHost implements Host,AutoCloseable {
  private static Object selectedValue(Selected selected){if(selected instanceof Carried c)return c.scene();var s=((Published)selected).selection();return List.of(inputsValue(s.inputs()),s.projection());}
  private static Object scrollValueKey(Scroll s){var b=s.background();return List.of(s.foreground(),s.copies(),s.foregroundXFractionWord(),s.topBoundWord(),s.waterDeformWord(),List.of(b.cameraBgX(),b.cameraBgY(),b.cameraBg2X(),b.cameraBg2Y(),b.cameraBg3X(),b.cameraBg3Y(),bytes(b.crossingRam()),b.scrollFlagsBg(),b.scrollFlagsBg2(),b.scrollFlagsBg3(),bytes(b.cloudRam()),bytes(b.deformationRam()),bytes(b.hscrollRam()),b.vscroll()));}
  private static Object globalsValue(Globals g){return List.of(g.ring(),g.live(),g.contact(),g.score(),g.projectorByte(),g.checkpointSaved(),g.drownTimerWord(),g.debugBlockWord(),g.pauseMusicBit(),g.bonus(),g.tail(),g.animations(),bytes(g.paletteSteps7()),bytes(g.paletteTimers7()),g.layerByte(),g.bossFlagsByte(),g.eventRoutineWord());}
- private static Object imageValue(Image i){var v=i.video();return List.of(i.owner(),globalsValue(i.globals()),scrollValueKey(i.scroll()),bytes(i.foreground().nameTable()),bytes(i.background().nameTable()),List.of(bytes(v.cpuSat()),cpuValue(v.completedCpu()),playerValue(v.playerArt()),v.current(),selectedValue(v.selected())),i.clears(),i.geometryReady(),i.collisionPointer(),i.fadeInfoWithoutTail(),i.rngSeedLong(),i.targetRightBoundWord(),i.sounds());}
+ private static Object imageValue(Image i){var v=i.video();return List.of(i.owner(),globalsValue(i.globals()),scrollValueKey(i.scroll()),bytes(i.foreground().nameTable()),bytes(i.background().nameTable()),List.of(bytes(v.cpuSat()),cpuValue(v.completedCpu()),playerValue(v.playerArt()),v.current(),selectedValue(v.selected())),i.clears(),i.geometryReady(),i.collisionPointer(),i.fadeInfoWithoutTail(),i.rngSeedLong(),i.targetRightBoundWord(),i.sounds(),ordinaryValue(i.ordinary()));}
  private static void optionalByte(OptionalInt v){Objects.requireNonNull(v);v.ifPresent(SonicCdR31aWorldHost::octet);}
  private static boolean allZero(CdAssetBytes b){for(byte value:b.copy())if(value!=0)return false;return true;}
  private static CdAssetBytes zero(int n){return CdAssetBytes.copyOf(new byte[n]);}

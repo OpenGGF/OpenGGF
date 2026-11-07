@@ -660,6 +660,27 @@ public final class CdPlayerBody {
     public record R31Result(Result body, R31Values nativeValues) {
         public R31Result{Objects.requireNonNull(body);Objects.requireNonNull(nativeValues);}
     }
+    /** Immutable reached prefix DATA. No completion boundary/display or invocation authority. */
+    public record R31Prefix(State state, Environment environment, R31Values nativeValues, List<Effect> effects) {
+        public R31Prefix { Objects.requireNonNull(state); Objects.requireNonNull(environment);
+            Objects.requireNonNull(nativeValues); effects=List.copyOf(effects); }
+    }
+    /** Only PlaceBlock's actual zero chunk WORD and its four physical Plane A WORD destinations. */
+    public sealed interface R31PlaceStore permits R31ChunkWord, R31PlaneAWord { }
+    public record R31ChunkWord(int byteOffset, int previousWord) implements R31PlaceStore {
+        public R31ChunkWord { if(byteOffset<0||byteOffset>0xD600-2||(byteOffset&1)!=0)
+            throw new IllegalArgumentException("Native chunk WORD offset required"); wordValue(previousWord); }
+        public int word() { return 0; }
+    }
+    public record R31PlaneAWord(int index, int column, int row, int word) implements R31PlaceStore {
+        public R31PlaneAWord { if(index<0||index>3||column<0||column>63||row<0||row>31)
+            throw new IllegalArgumentException("Native Plane A destination required"); wordValue(word); }
+    }
+    // Package-private: only the synchronous Frame producer opts in; public records cannot issue calls.
+    interface R31LivePlacePort {
+        void store(CdR31SpecialBlockCollision.PlaceBlock operation, R31PlaceStore store, R31Prefix prefix);
+        void screen(CdR31SpecialBlockCollision.PlaceBlock operation, R31Prefix prefix);
+    }
     /** Finite native semantic requests/observations. Values are not executable callbacks or completed live effects. */
     public sealed interface R31Action extends Effect permits R31BlockStore, R31PlaceBlock, R31FmRequest, R31SubCpuRequest, R31MusicRequest { }
     public record R31BlockStore(CdR31SpecialBlockCollision.Site site, CdR31SpecialBlockCollision.Field field,
@@ -699,6 +720,9 @@ public final class CdPlayerBody {
      * exposes no Body result, staged pool/chunks/requests or helper prefix; original inputs stay intact.
      */
     public R31Result stepR31(State state,Environment environment,R31Context context) {
+        return stepR31(state, environment, context, null);
+    }
+    R31Result stepR31(State state, Environment environment, R31Context context, R31LivePlacePort live) {
         Objects.requireNonNull(state);Objects.requireNonNull(environment);Objects.requireNonNull(context);
         if(sourceBinding==null||player.sourceGraph()!=CdR11aPlayerAssets.SourceGraph.R3||context.source()!=sourceBinding
                 ||!sourceBinding.ownsR31aAssets(context.assets())||!context.scanner().ownsR31aAssets(context.assets())
@@ -716,7 +740,7 @@ public final class CdPlayerBody {
                     ||support.playerSlotId()!=state.header().slotId()||support.playerWidth()!=state.header().width())
                 throw new IllegalArgumentException("Exact support/pool/header/stand-link projection required");
         }
-        var c=new Cursor(state,environment);var plan=new R31Planning(context,c);c.r31Planning=plan;
+        var c=new Cursor(state,environment);var plan=new R31Planning(context,c,live);c.r31Planning=plan;
         c.applyCharge(CdPlayerCharge.beforeRoutineDispatch(c.chargeState()));c.returned(NativeCall.CHARGE_BEFORE_DISPATCH);
         if(c.motion.routine()==2){r31Main(c,plan);return new R31Result(c.finish(Boundary.MAIN_RETURN),plan.values());}
         r31Hurt(c,plan);return new R31Result(c.finish(Boundary.HURT_RETURN),plan.values());
@@ -754,9 +778,9 @@ public final class CdPlayerBody {
         recordPosition(c);animate(c);drawObject(c);
     }
     private final class R31Planning {
-        final R31Context context;final Cursor cursor;final CdObjectPool pool;
+        final R31Context context;final Cursor cursor;final CdObjectPool pool;final R31LivePlacePort live;
         CdStageTerrain current;OptionalInt noBumper;ContactGlobals contact;CdPlayerTouchResponse.WorldGlobals world;
-        R31Planning(R31Context context,Cursor cursor){this.context=context;this.cursor=cursor;current=context.currentTerrain();
+        R31Planning(R31Context context,Cursor cursor,R31LivePlacePort live){this.context=context;this.cursor=cursor;this.live=live;current=context.currentTerrain();
             CdPlayerMovement.withR31CurrentTerrain(context.source(),current);pool=CdObjectPool.stagingCopy(context.snapshot());noBumper=context.noBumperByte();contact=context.response().contact();world=context.response().world();}
         CdPlayerMovement movement(){return CdPlayerMovement.withR31CurrentTerrain(context.source(),current);}
         R31Values values(){return new R31Values(current,pool.capture(),noBumper,contact,world);}
@@ -768,8 +792,8 @@ public final class CdPlayerBody {
                     if(placement instanceof CdTerrainCollision.Available a)return a.word().rawWord();
                     if(placement instanceof CdTerrainCollision.Blank)return current.chunks().unsignedWord(0); // Native GetBlock's returned pointer IS dereferenced here.
                     unsupported(UnsupportedBoundary.R3_BLOCK_WORD_OWNER);throw new AssertionError();}
-                @Override public void store(CdR31SpecialBlockCollision.Store call){call.requireOwner(original[0]);var effect=new R31BlockStore(call.site(),call.field(),call.form(),call.expectedRaw(),call.operand(),call.resultRaw());call.applyNative();cursor.effects.add(effect);}
-                @Override public void placeBlock(CdR31SpecialBlockCollision.PlaceBlock call){call.requireOwner(original[0]);place(call.xWord(),call.yWord());call.completedNative();}
+                @Override public void store(CdR31SpecialBlockCollision.Store call){call.requireOwner(original[0]);var effect=new R31BlockStore(call.site(),call.field(),call.form(),call.expectedRaw(),call.operand(),call.resultRaw());call.applyNative();adoptBlockState(original[0].state());cursor.effects.add(effect);}
+                @Override public void placeBlock(CdR31SpecialBlockCollision.PlaceBlock call){call.requireOwner(original[0]);place(call);call.completedNative();}
                 @Override public void fm(CdR31SpecialBlockCollision.Fm call){call.requireOwner(original[0]);cursor.effects.add(new R31FmRequest(call.nativeId()));call.completedNative();}
                 @Override public void subCpu(CdR31SpecialBlockCollision.SubCpu call){call.requireOwner(original[0]);cursor.effects.add(new R31SubCpuRequest(call.nativeId()));call.completedNative();}
             });original[0]=helper;
@@ -777,16 +801,39 @@ public final class CdPlayerBody {
             var a=result.state().actor();cursor.motion=a.motion();cursor.hurt=a.timers().hurt();noBumper=result.state().noBumperByte();
             cursor.effects.add(new R31BlockCall(site,result));cursor.returned(NativeCall.R3_SPECIAL_BLOCK_COLLISION);
         }
-        void place(int x,int y){
-            // PlaceBlockAtPos/GetBlockDataAbsXY: shared chunk definition BEFORE the independent screen decision.
+        void adoptBlockState(CdR31SpecialBlockCollision.State state) {
+            var a=state.actor();cursor.motion=a.motion();cursor.hurt=a.timers().hurt();noBumper=state.noBumperByte();
+        }
+        R31Prefix prefix(){return new R31Prefix(cursor.stateValue(),cursor.environmentValue(),values(),cursor.effects);}
+        void emit(CdR31SpecialBlockCollision.PlaceBlock operation,R31PlaceStore store){
+            if(live!=null)live.store(operation,store,prefix());
+        }
+        void place(CdR31SpecialBlockCollision.PlaceBlock operation){
+            int x=operation.xWord(),y=operation.yWord();
+            // N Block Draw.asm GetBlockDataAbsXY:202-235, PlaceBlockAtPos:286-315.
+            // The old metadata WORD is read even though its selected block pointer is discarded.
             int layoutAt=((y>>>1)&0x380)+((x>>>8)&0x7F);int raw=current.layout().ram().unsignedByte(layoutAt);
             int column=(x&0x1F0)>>>3,row=(y&0xF0)>>>3;
             if(raw==0){cursor.effects.add(new R31PlaceBlock(x,y,OptionalInt.empty(),OptionalInt.empty(),false,column,row,Optional.empty()));return;}
             int id=(raw-1)&0x7F;int offset=(((id>>>7)|(id<<9))&0xFFFF)+((y+y)&0x1E0)+((x>>>3)&0x1E);
             if(offset<0||offset>current.chunks().length()-2||(offset&1)!=0)unsupported(UnsupportedBoundary.R3_CHUNK_WRITE_OWNER);
             int previous=current.chunks().unsignedWord(offset);byte[] chunks=current.chunks().copy();chunks[offset]=0;chunks[offset+1]=0;replaceChunks(chunks);
+            emit(operation,new R31ChunkWord(offset,previous)); // real chunk store BEFORE screen operands/decision
+            if(live!=null)live.screen(operation,prefix());
             boolean onscreen=r31Onscreen(x,y,context.cameraXWord(),context.cameraYWord());
-            cursor.effects.add(new R31PlaceBlock(x,y,OptionalInt.of(offset),OptionalInt.of(previous),onscreen,column,row,onscreen?Optional.of(current.blocks().slice(0,8)):Optional.empty()));
+            Optional<CdAssetBytes> plane=Optional.empty();
+            if(onscreen){
+                // DrawBlock:121-130: zero metadata selects unflipped block0. Each LONG source
+                // read completes before either of its two semantic WORD stores; do not pre-read row2.
+                int a=current.blocks().unsignedWord(0),b=current.blocks().unsignedWord(2);
+                emit(operation,new R31PlaneAWord(0,column,row,a));
+                emit(operation,new R31PlaneAWord(1,column+1,row,b));
+                int c=current.blocks().unsignedWord(4),d=current.blocks().unsignedWord(6);
+                emit(operation,new R31PlaneAWord(2,column,(row+1)&31,c));
+                emit(operation,new R31PlaneAWord(3,column+1,(row+1)&31,d));
+                plane=Optional.of(current.blocks().slice(0,8));
+            }
+            cursor.effects.add(new R31PlaceBlock(x,y,OptionalInt.of(offset),OptionalInt.of(previous),onscreen,column,row,plane));
         }
         void replaceChunks(byte[] chunks){var col=current.collision();byte[] fg=context.assets().view(CdR31aAssets.Asset.LAYOUT_FG).copy(),bg=context.assets().view(CdR31aAssets.Asset.LAYOUT_BG).copy();
             encodeLayout(current,CdStageTerrain.Plane.FOREGROUND,fg);encodeLayout(current,CdStageTerrain.Plane.BACKGROUND,bg);
@@ -1553,11 +1600,14 @@ public final class CdPlayerBody {
             hurt = actor.hurt(); rotationDistance = actor.rotationDistance();
         }
         State stateValue() {return new State(motion,animation,header,new Timers(hurt,invincibilityTimer,shoesTimer,resetTimer),history,rotationDistance,objectLinks,rotationAngle);}
+        Environment environmentValue() {
+            return new Environment(env.movement(), controls,
+                    new Globals(levelFrames,camX,timeAttack,debugMode,debugCheat,timeWarpTimer,invincible,bossMusic),env.dynamicSlots());
+        }
         Result finish(Boundary boundary) {
             var state = new State(motion, animation, header, new Timers(hurt, invincibilityTimer, shoesTimer, resetTimer),
                     history, rotationDistance, objectLinks, rotationAngle);
-            var globals = new Globals(levelFrames, camX, timeAttack, debugMode, debugCheat, timeWarpTimer, invincible, bossMusic);
-            var environment = new Environment(env.movement(), controls, globals, env.dynamicSlots());
+            var environment = environmentValue();
             Optional<DisplayPublication> display = boundary == Boundary.MAIN_RETURN
                     || boundary == Boundary.CONTROLLED_MAIN_RETURN || boundary == Boundary.HURT_RETURN
                     || boundary == Boundary.DEAD_RETURN ? Optional.of(new DisplayPublication(displayEligible, header.mappingAddress(), header.tile(), header.priority(),

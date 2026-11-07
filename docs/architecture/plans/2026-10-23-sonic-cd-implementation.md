@@ -12370,3 +12370,46 @@ World, a natural CCZ route, changed-terrain Host PlaceBlock, TT ordinary service
 pixels, native-image/audio parity or regional completion. Those integrations
 remain separate. The common World/PlaceBlock source packet is independently
 reviewed and prepared externally, but not part of this1155-case source.
+
+## 7 November 2026 — common World and shared TT definitions
+
+R96 installs the actual common `CdWorld` and removes the R13-only ordinary
+coordinator. Module, presentation and retained Host callers use that same World
+for R13 and R31. R31 keeps its original Core loading, Frame, ordinary services
+and physical object pass; the original PlaceBlock producer's prepared prefix
+bridge joins those owners rather than replaying a result or cloning terrain
+mutation. Existing R13 behavior remains in the selected regression cohort.
+
+The independently authenticated R31/R32 and ten original-USA TT programmes now
+share a closed `CdProgrammeDefinition`, reader, load-table parser and success-only
+caches. Programme-specific data, include/header/reader extents, source identities
+and actual section/PLC differences remain explicit. TT's188-frame Sonic source
+format preserves the existing167-frame contract. Unsupported TT decoder products
+still reject before work/cache publication; metadata does not admit a TT player,
+terrain Shape, Ready World, current-art or deferred-water service.
+
+Root preserves all twelve fixed R31 consumer views, including CCZ12 at the
+original eight-byte span, plus the fifteen finite intro borrowed views in the
+private R31 definition. The direct actual-media/cache regression and existing
+intro checks pass. No whole-image accessor, public definition builder or equal
+public-data invocation authority is added. Two independent source reviews cover
+the common World/PlaceBlock join and the definition integration, with no concrete
+P1/P2 findings in their bounded scopes.
+
+The source-bound normal-lane request passes668 tests in36 classes, zero failures,
+errors or skips, with all42 declared Java payloads and identical before/after
+source fingerprint `2600e1909585d546448540c632411105587491dc7acc87ad1a668f53fd71694d`.
+It used Java25, `-Dmse=off`, original USA media and configured surfaceless EGL.
+Shared admission waited732s; Maven execution took4m26s; the held terminal callback
+interval was267.558s. Those intervals overlap and are not summed. Fresh report
+counts/properties matched every selected class;237 unrelated stale reports were
+ignored. This is a focused pass, not a category or full-suite VERDICT.
+
+The selected-entry CCZ controls complete223 ordinary services and stop before
+Ring ID$10/whole33 on service224. They also retain the established200-to201 state
+and pixel rewind controls. That selected historical-save entry is not a natural
+R13-to-CCZ transition, a complete act, native parity or regional completion.
+Natural Host-coupled PlaceBlock remains unreached by that controller prefix;
+Monitor's changed-terrain probe fence is retained. Ring continuation, remaining
+CCZ family bindings, TT World/service joins and full-USA-then-JP/EU qualification
+remain separate work.

@@ -176,4 +176,19 @@ class TestCdProgrammeReader {
   assertTrue(geometry.getObjects().isEmpty());assertTrue(geometry.getRings().isEmpty());
  }
 
+ @Test void r31FixedBorrowedViewsRetainEveryOriginalConsumerAndCache()throws Exception {
+  var fixture=TestCdR31aAssets.actual();var reader=fixture.assets().internalReader();
+  var keys=CdProgrammeReader.Borrow.values();
+  int[] offsets={0x1A76,0x1AB0,0x299C,0x3626,0x36A0,0x3748,0x375A,0x3760,0xA940,0xAB86,0xACE6,0x1DFA};
+  int[] lengths={58,28,40,122,14,18,6,8,1118,12,40,6};
+  assertEquals(12,keys.length);
+  for(int i=0;i<keys.length;i++) {
+   var view=reader.view(keys[i]);
+   assertArrayEquals(fixture.image().readFile(offsets[i],lengths[i]),view.copy(),keys[i].name());
+   assertSame(view,reader.view(keys[i]),keys[i].name());
+  }
+  assertSame(reader.view(CdProgrammeReader.Borrow.CCZ12),reader.view(CdProgrammeReader.Borrow.CCZ12));
+  assertEquals(63,fixture.assets().ranges().size());
+ }
+
 }

@@ -689,7 +689,12 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
 
     void afterRestore() {
         requirePastRenderIdle();
+        if(module.r31LoadingSelected())module.validateR31LoadingCut();
         try {
+            if(module.r31LoadingSelected()) {
+                module.validateR31LoadingCut();module.r31WorldHost().projectCamera(GameServices.camera());
+                GameServices.level().recomputeParallaxAfterRewindRestore();heldPhase=null;return;
+            }
             if(module.act3FutureLoadingSelected()) {
                 module.validateAct3FutureLoadingCut();module.act3FutureWorldHost().projectCamera(GameServices.camera());
                 GameServices.level().recomputeParallaxAfterRewindRestore();heldPhase=null;return;
@@ -843,6 +848,13 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         throw new IllegalStateException("CD uses the complete controlled-frame disposition");
     }
     @Override public GameplayFrameDisposition beforeFrame(CourseControl course, LogicalInputSnapshot input) {
+        if(module.r31LoadingSelected()) {
+            requirePastRenderIdle();
+            if(input!=null&&input.debugModeTogglePressed())throw SonicCd.unsupported("R31 loading has no debug movement");
+            if(input!=null&&!input.player2().equals(com.openggf.control.PlayerInputState.neutral()))throw SonicCd.unsupported("R31 loading requires neutral controller2");
+            int held=nativeHeldByte(input,SpriteManagerInternalAccess.inputSuppressed(GameServices.sprites()));
+            heldPhase=null;module.serviceR31Loading(held);return GameplayFrameDisposition.HOLD;
+        }
         if(module.act3FutureLoadingSelected()) {
             requirePastRenderIdle();
             if(input!=null&&input.debugModeTogglePressed())throw SonicCd.unsupported("R13 has no debug movement");
@@ -954,7 +966,11 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
     @Override public PlcLifecyclePhase heldVBlankPhase() { return heldPhase; }
     @Override public void afterTick(CourseControl course, boolean advanced) {
         requirePastRenderIdle(); // Reentry rejection is observational, outside native failure closure.
+        if(module.r31LoadingSelected())module.validateR31LoadingCut();
         try {
+            if(module.r31LoadingSelected()) {
+                module.validateR31LoadingCut();if(advanced||heldPhase!=null)throw new IllegalStateException("R31 loading advanced the generic gameplay owner");return;
+            }
             if(module.act3FutureLoadingSelected()) {
                 module.validateAct3FutureLoadingCut();
                 if(advanced||heldPhase!=null)throw new IllegalStateException("R13 advanced the generic gameplay owner");
@@ -1017,9 +1033,10 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
     }
 
     @Override public boolean drawScene() { return true; }
-    @Override public boolean presentationPaused() { return frame != null && frame.paused(); }
+    @Override public boolean presentationPaused() { if(module.r31LoadingSelected())return module.requirePlayerFrame().paused();return frame != null && frame.paused(); }
     @Override public void drawOverlay() {
         requirePastRenderIdle(); // Rejected recursive drawing must not enter native failure closure.
+        if(module.r31LoadingSelected())module.validateR31LoadingCut();
         try { drawCompletedOverlay(); }
         catch (RuntimeException | Error failure) {
             module.closePlayerCycleAfterFailure(failure);
@@ -1043,7 +1060,8 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
     }
 
     private void drawCompletedOverlay() {
-        if(module.act3FutureLoadingSelected()){module.act3FutureWorldHost().draw();return;}
+        if(module.r31LoadingSelected()){module.drawR31World();return;}
+        if(module.act3FutureLoadingSelected()){module.drawAct3FutureWorld();return;}
         if (module.act2PastLoadingSelected()) { module.act2PastWorldHost().draw(); return; }
         if (module.act2LoadingSelected()) {
             if (module.warpProgramSelected()) drawAct2WarpProgram(); else drawAct2SelectedDisplay();
@@ -1151,6 +1169,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
 
     /** Native service/capture/restore may not reenter from an old queued graphics command. */
     void requirePastRenderIdle() {
+        if(module.r31LoadingSelected())module.r31WorldHost().requireRenderIdle();
         if(module.act3FutureLoadingSelected())module.act3FutureWorldHost().requireRenderIdle();
         if (module.act2PastLoadingSelected()) module.act2PastWorldHost().requireRenderIdle();
         if (drawingPast || drawingAct2 || drawingWarp) throw new IllegalStateException("Past selected draw is active");
@@ -1294,17 +1313,18 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         if (rom != null) throw new UnsupportedOperationException("CD scroll is source-bound, not cartridge-backed");
     }
     @Override public ZoneScrollHandler getHandler(int zoneIndex) {
+        if(module.r31LoadingSelected()){module.r31WorldHost().requireRenderIdle();module.validateR31LoadingCut();if(zoneIndex!=1)throw SonicCd.unsupported("Actual R31 zone1 handler");return module.r31WorldHost().handler();}
         if (zoneIndex != 0) throw new UnsupportedOperationException("Only Palmtree Panic is admitted");
         if(module.act3FutureLoadingSelected())return module.act3FutureWorldHost().handler();
         return module.act2PastLoadingSelected() ? module.act2PastWorldHost().handler() : scroll;
     }
     @Override public ZoneConstants getZoneConstants() {
         return new ZoneConstants() {
-            @Override public int getZoneCount() { return 1; }
+            @Override public int getZoneCount() { return module.r31RegistrySelected()?module.getZoneRegistry().getZoneCount():1; }
             @Override public String getZoneName(int index) { return module.getZoneRegistry().getZoneName(index); }
         };
     }
-    @Override public void resetZoneState() { scroll.resetProjection(); }
+    @Override public void resetZoneState() { if(module.r31LoadingSelected()){module.r31WorldHost().requireRenderIdle();module.validateR31LoadingCut();return;}scroll.resetProjection(); }
 
     private void projectCamera(Camera camera) {
         var bounds = frame.environment().movement().bounds();

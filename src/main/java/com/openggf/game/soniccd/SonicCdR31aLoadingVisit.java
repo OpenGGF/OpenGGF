@@ -180,6 +180,10 @@ final class SonicCdR31aLoadingVisit {
             if(before.residency()!=next.section().residency())act(Action.CURRENT_ART);
         }
         // END R31 ordinary native HUD adoption 20261107.
+        /** Only the original active OrdinaryAccess can invoke these existing Core algorithms. */
+        void copyCameraAndDrawLevel(State expected){validate(expected);copyAndDraw();}
+        void scroll(State expected){validate(expected);levelScroll();}
+        void finishVInt(State expected){validate(expected);act(Action.VINT_COMPLETED);}
         /** Native deferred Title PLC2; actual World first authenticates the original Title receipt. */
         void appendTitlePlc(State expected){validate(expected);artOp(a->art.appendList(a,2));call(Call.TITLE_PLC_APPEND);}
         /** Pure Main425 programme over the cached four scripts; caller must prebuild/adopt its coupled
@@ -233,6 +237,13 @@ final class SonicCdR31aLoadingVisit {
     }
     private void requireSource(){var g=frame.environment().movement().gates();if(!frame.stageSource().ownsR31aAssets(assets)||!art.ownsAssets(assets)||g.zoneAct()!=0x100||g.timeZone()!=1)throw new IllegalStateException("R31 raw source/gates changed");}
     void requireServiceIdle(){current();}
+    /** Retirement checks local activity without borrowing an expired boot/session permit.
+     * The Module/World still validate their exact retained pair, thread and render lifetime. */
+    void requireRetirementIdle(Host expected){
+        if(expected!=host||running||observing||checking||validating||activeAction!=null||activePublication!=null
+                ||eventsActive||cpuReading||activeScrollBefore!=null||activeOrdinary!=null)
+            throw new IllegalStateException("R31 retirement cannot interrupt an original Core operation");
+    }
     void requireAction(Host expected,Action action,State state){if(expected!=host||!running||failed||activeAction!=action||values!=state)throw new IllegalStateException("No original Core action");validateHost();}
     void requirePublication(Host expected,Publication p){if(expected!=host||!running||failed||activePublication==null)throw new IllegalStateException("No original Core publication");if(p!=activePublication)throw new IllegalArgumentException("Equal values are not original publication");validateHost();}
     void requireScrollStore(Host expected,Scroll before,Scroll ready){if(expected!=host||!running||failed||activeScrollBefore==null)throw new IllegalStateException("No original Core scroll store");if(before!=activeScrollBefore||ready!=activeScrollReady)throw new IllegalArgumentException("Equal values are not original scroll store");validateHost();}

@@ -189,9 +189,20 @@ public final class CdR31SpecialBlockCollision {
     private void invoke(Operation call,Runnable action,boolean acknowledgement){
         if(pending!=null||!running)throw new IllegalStateException("R31 helper reentry");
         var beforePool=pool.map(CdObjectPool::capture);pending=call;inPort=true;
-        try{action.run();call.current();if(beforePool.isPresent()&&!beforePool.orElseThrow().slots().equals(pool.orElseThrow().capture().slots()))throw new IllegalStateException("R31 semantic port changed unrelated pool bytes");
-            if(acknowledgement&&!call.consumed)throw new IllegalStateException("Original R31 helper/store did not complete");}
+        try{action.run();verifyPort(call,beforePool,acknowledgement);}
+        catch(RuntimeException|Error original){
+            try{verifyPort(call,beforePool,false);}catch(RuntimeException|Error verification){
+                if(verification!=original)original.addSuppressed(verification);
+            }
+            throw original;
+        }
         finally{pending=null;inPort=false;}
+    }
+    private void verifyPort(Operation call,Optional<CdObjectPool.Snapshot> beforePool,boolean acknowledgement){
+        call.current();
+        if(beforePool.isPresent()&&!beforePool.orElseThrow().slots().equals(pool.orElseThrow().capture().slots()))
+            throw new IllegalStateException("R31 semantic port changed unrelated pool bytes");
+        if(acknowledgement&&!call.consumed)throw new IllegalStateException("Original R31 helper/store did not complete");
     }
     private boolean check(){
         var m=state.actor().motion();int quadrant=((angle(m.xVelocity(),m.yVelocity())-0x20)&255)&0xC0;

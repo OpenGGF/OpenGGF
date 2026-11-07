@@ -68,6 +68,59 @@ final class CdOriginalBootPrefix {
         CdOriginalBootPrefix boot(){return boot;}CdSelectedProfileVisit.Prepared selected(){return selected;}
     }
 
+    // BEGIN named original clear products for the subsequent genuine R31 source handoff.
+    // These immutable values are observations of fixed writers, never invocation/capture authority.
+    record MainClears(CdAssetBytes savedFlags,CdAssetBytes cloudRam,int levelFrames,int miniSonic,
+            int speedShoes,int debugMode,int debugCheat,int invincible,int bossMusic,int debugAngle,
+            int debugAngleShift,int debugQuadrant,int debugFloorDistance,int goodFutureFlags,
+            int noBumperByte,CdAssetBytes shieldCpu) {
+        MainClears{if((noBumperByte&~255)!=0||Objects.requireNonNull(shieldCpu).length()!=0x480)throw new IllegalArgumentException("Named MAINVARS scratch extents");}
+    }
+    record WorkClears(com.openggf.game.soniccd.player.CdPlayerBody.State primary,
+            com.openggf.game.soniccd.player.CdPlayerBody.Environment environment,
+            com.openggf.game.soniccd.resources.CdPlayerArtRuntime.State playerArt,
+            SonicCdR31aWorldHost.Globals globals,SonicCdR31aLoadingVisit.Scroll scroll,
+            CdAssetBytes reserved,CdAssetBytes waterPalette,CdAssetBytes cpuSat,CdAssetBytes nemesisTable,
+            SonicCdR31aWorldHost.NativeCarry nativeCarry,PlcClears plc,int gameModeByte,int demoDataIndexWord) { }
+    record PlcClears(com.openggf.game.soniccd.resources.CdR11aPlcBuffer.State queue,
+            com.openggf.game.soniccd.resources.CdR11aSectionArt.SavedDecoder saved,int remaining,int budget,int hint,int pad) { }
+    private MainClears mainClears;
+    private WorkClears workClears;
+    record PhysicalClears(CdAssetBytes playerResident,CdAssetBytes hscroll) { }
+    private PhysicalClears mdClears;
+    PhysicalClears physicalClears(){return Objects.requireNonNull(mdClears,"Original MD physical clear not reached");}
+    MainClears mainClears(){return Objects.requireNonNull(mainClears,"Original MAINVARS clear not reached");}
+    WorkClears workClears(){return Objects.requireNonNull(workClears,"Original broad BRAM clear not reached");}
+    private WorkClears clearedWork(){
+        var c=mainClears();
+        // BRAM Initialization64-69 [FFA000,FFFC00), together with the retained MAINVARS outputs.
+        // Definitions125-167: actual primary/history/artCPU/reserved/pool. No actor Init executes here.
+        var actor=new com.openggf.game.soniccd.player.CdPlayerBody.State(new com.openggf.game.soniccd.player.CdPlayerMotionState(
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0),
+                new com.openggf.game.soniccd.player.CdPlayerBody.AnimationCursor(0,0,0),new com.openggf.game.soniccd.player.CdPlayerBody.Header(0,0,0,0,0),
+                new com.openggf.game.soniccd.player.CdPlayerBody.Timers(0,0,0,0),new com.openggf.game.soniccd.player.CdPlayerBody.History(zero(256),0),0,new com.openggf.game.soniccd.player.CdPlayerBody.ObjectLinks(0,0),0);
+        var environment=new com.openggf.game.soniccd.player.CdPlayerBody.Environment(new com.openggf.game.soniccd.player.CdPlayerMovement.Environment(
+                new com.openggf.game.soniccd.player.CdPlayerMovement.Physics(0,0,0),new com.openggf.game.soniccd.player.CdPlayerMovement.Bounds(0,0,0,0),
+                new com.openggf.game.soniccd.player.CdPlayerMovement.Gates(0,0,c.miniSonic(),0,0,c.speedShoes(),0),
+                new com.openggf.game.soniccd.player.CdPlayerMovement.Globals(0,0,0,0,0,0,c.debugAngle(),c.debugAngleShift(),c.debugQuadrant(),c.debugFloorDistance())),
+                new com.openggf.game.soniccd.player.CdPlayerBody.Controls(0,0,0,0,0),new com.openggf.game.soniccd.player.CdPlayerBody.Globals(c.levelFrames(),0,0,c.debugMode(),c.debugCheat(),0,c.invincible(),c.bossMusic()),com.openggf.game.soniccd.player.CdPlayerBody.DynamicSlots.UNIMPLEMENTED);
+        var live=com.openggf.game.soniccd.objects.CdCheckpointLiveAux.writeTimeLong(com.openggf.game.soniccd.objects.CdCheckpointLiveAux.unknown(),0);
+        live=com.openggf.game.soniccd.objects.CdCheckpointLiveAux.writeWaterHeight2(live,0);live=com.openggf.game.soniccd.objects.CdCheckpointLiveAux.writeWaterRoutine(live,0);live=com.openggf.game.soniccd.objects.CdCheckpointLiveAux.writeWaterFullscreen(live,0);
+        byte[] mask=new byte[31];java.util.Arrays.fill(mask,(byte)1);
+        var saved=com.openggf.game.soniccd.objects.CdCheckpointSaveData.State.supplied(zero(mask.length),CdAssetBytes.copyOf(mask));
+        var globals=new SonicCdR31aWorldHost.Globals(new com.openggf.game.soniccd.objects.CdRingGlobals(0,0,0,0,0,0,0,0),live,
+                new com.openggf.game.soniccd.player.CdPlayerBody.ContactGlobals(0,0,0),new com.openggf.game.soniccd.objects.CdOpeningObjectRuntime.ScoreGlobals(0,0,0),OptionalInt.of(0),saved,OptionalInt.of(0),OptionalInt.of(0),OptionalInt.of(0),
+                Optional.of(new com.openggf.game.soniccd.resources.CdLevelHud.BonusValues(0,0,0)),Optional.of(new SonicCdR31aWorldHost.Tail(0,0,0,0,0)),
+                Optional.of(new com.openggf.game.soniccd.objects.CdGlobalObjectAnimation.Extras(0,0,0,0,new com.openggf.game.soniccd.objects.CdRingSpillGlobals(0,0,0))),zero(7),zero(7),OptionalInt.of(0),OptionalInt.of(0),OptionalInt.of(0));
+        var fg=new com.openggf.game.soniccd.scroll.CdR11aForegroundScroll.State(0,0,0,0,0,0,0,0,0,0,0);
+        var bg=new com.openggf.game.soniccd.scroll.CdR11aBackgroundScroll.State(0,0,0,0,0,0,zero(8),0,0,0,c.cloudRam(),zero(512),zero(1024),0);
+        var camera=new com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.Camera(0,0);
+        var copies=new SonicCdR31aLoadingVisit.Copies(0,0,new com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.CopiedCameras(camera,camera,camera),0,new com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.FlagWords(0,0,0));
+        return new WorkClears(actor,environment,new com.openggf.game.soniccd.resources.CdPlayerArtRuntime.State(zero(768),physicalClears().playerResident(),0,false),globals,new SonicCdR31aLoadingVisit.Scroll(fg,bg,copies,0,0,0),zero(1984),zero(128),zero(640),zero(512),new SonicCdR31aWorldHost.NativeCarry(OptionalLong.of(0),OptionalInt.empty(),OptionalLong.of(0),OptionalInt.of(0)),
+                new PlcClears(com.openggf.game.soniccd.resources.CdR11aPlcBuffer.cleared(),new com.openggf.game.soniccd.resources.CdR11aSectionArt.SavedDecoder(com.openggf.game.soniccd.resources.CdR11aSectionArt.Writer.CLEARED,0,0,0,0,0),0,0,0,0),0,0);
+    }
+    // END named original clear products.
+
     private final CdGameDataSource source;
     private final SaveManager manager;
     private final int slot;
@@ -145,7 +198,8 @@ final class CdOriginalBootPrefix {
         replace(CdProgramInitialization.initializeControllers(state.initialization()),state.loads(),state.progress(),state.main(),state.video(),state.cpuPalettes(),state.wordRam(),state.fm());call(Call.CONTROLLER_SETUP);
         // MD170-179 clears all physical patterns. These are the finite selected engine outputs,
         // not a virtual VRAM bank or stage-art default. Source-selected residency is projected later.
-        video(new Video(state.video().displayedPalette(),Optional.of(zero(4096)),Optional.of(zero(640)),state.video().hscroll(),state.video().vscroll(),state.video().displayEnabled(),true));call(Call.PATTERN_CLEAR);
+        var physicalReady=new PhysicalClears(zero(768),zero(1024)); // MD170-179 covers resident F000..F300 and physical HScroll FC00..10000.
+        video(new Video(state.video().displayedPalette(),Optional.of(zero(4096)),Optional.of(zero(640)),state.video().hscroll(),state.video().vscroll(),state.video().displayEnabled(),true));mdClears=physicalReady;call(Call.PATTERN_CLEAR);
         video(new Video(state.video().displayedPalette(),state.video().plane(),state.video().sat(),state.video().hscroll(),OptionalLong.of(0),state.video().displayEnabled(),true));call(Call.VSCROLL_CLEAR);
         call(Call.IPX_VIDEO_CACHE);
         video(new Video(state.video().displayedPalette(),state.video().plane(),state.video().sat(),OptionalLong.of(0),state.video().vscroll(),state.video().displayEnabled(),true));call(Call.HSCROLL_CLEAR);
@@ -164,7 +218,8 @@ final class CdOriginalBootPrefix {
         // BRAM64-69, original18-byte operands at file012E: count16FF =>5888 LONGs,
         // [FFA000,FFFC00). Both CPU palettes are established HERE, never by RunMMD.
         var palettes=new CpuPalettes(zero(128),zero(128));
-        replace(state.initialization(),state.loads(),state.progress(),state.main(),state.video(),Optional.of(palettes),state.wordRam(),state.fm());call(Call.BRAM_VARIABLES_CLEAR);
+        var workReady=clearedWork();
+        replace(state.initialization(),state.loads(),state.progress(),state.main(),state.video(),Optional.of(palettes),state.wordRam(),state.fm());workClears=workReady;call(Call.BRAM_VARIABLES_CLEAR);
         call(Call.BRAM_SELECTOR_CLEAR);
         // Actual configured backing-store work replaces hardware-facing InitBuRAM73.
         // No slot/payload/probe/fallback, and no firmware or future-writeability claim.
@@ -173,9 +228,10 @@ final class CdOriginalBootPrefix {
         backendInitialization=initialized;call(Call.BACKEND_INITIALIZED);call(Call.BRAM_PARAMETERS);phase(Phase.STORAGE);
     }
     private void clearMain(){
+        var mainReady=new MainClears(zero(766),zero(512),0,0,0,0,0,0,0,0,0,0,0,0,0,zero(0x480)); // MAINVARS21-192, before selected reads.
         var z=OptionalInt.of(0);var p=new CdIpxProgress.State(new CdIpxProgress.SavedLevel(z,z),z,z,z,z,z,z,z);
         var main=new MainImage(new CdLevelGlobals(0,0,0,0,0,0,0,0,0),0,0,0,0,0);
-        replace(CdProgramInitialization.clearMainVariables(state.initialization()),state.loads(),p,Optional.of(main),state.video(),state.cpuPalettes(),state.wordRam(),state.fm());call(Call.MAIN_VARIABLES_CLEAR);
+        replace(CdProgramInitialization.clearMainVariables(state.initialization()),state.loads(),p,Optional.of(main),state.video(),state.cpuPalettes(),state.wordRam(),state.fm());mainClears=mainReady;call(Call.MAIN_VARIABLES_CLEAR);
     }
     private void returnStopAndBlank(){
         // IPX1375-77: the actual Main CPU queue2 store, not StopSound/driver execution.

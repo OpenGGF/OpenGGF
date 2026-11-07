@@ -44,8 +44,8 @@ class TestSonicCdAct3FutureDeathCameraModule {
                 step(h,right);same.invoke(null,afterFull,registry.capture(),"death replay FULL");same.invoke(null,afterCourse,registry.captureCourse(),"death replay course");
             }
             TestSonicCdAct3FutureDeathCameraWorld.actor(frame,8,0x200,1,0,0);
-            var stopped=assertThrows(SonicCdAct3FutureOrdinaryWorld.Stopped.class,()->step(h,right));
-            assertEquals(SonicCdAct3FutureOrdinaryWorld.Boundary.LEVEL_FLOW,stopped.boundary());assertEquals(1,core.state().level().levelRestart());
+            var stopped=assertThrows(CdWorld.Stopped.class,()->step(h,right));
+            assertEquals(CdWorld.Boundary.LEVEL_FLOW,stopped.boundary());assertEquals(1,core.state().level().levelRestart());
             assertEquals(0,frame.state().timers().reset());assertTrue(core.failed());assertTrue(frame.closed());
             assertSame(source,frame.stageSource());assertSame(world,h.mode().getWorldSession());assertEquals(generation,h.mode().getLevelManager().getCompletedProductionLoadGeneration());
             assertThrows(IllegalStateException.class,()->module.serviceAct3FutureLoading(8));

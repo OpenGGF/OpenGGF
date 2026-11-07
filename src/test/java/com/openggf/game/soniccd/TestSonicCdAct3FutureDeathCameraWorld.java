@@ -85,8 +85,8 @@ class TestSonicCdAct3FutureDeathCameraWorld {
         try(var f=ready(TestCdR13PlaneSources.actual().getFirst())) {
             actor(f.frame,6,0x500,0,0,0);var p=f.host.placement().pool();for(int i=32;i<128;i++)p.write(p.state(i).moveByte(ID,3));
             var pool=p.capture();var oldCpu=f.host.video().completedCpu();
-            var failure=assertThrows(SonicCdAct3FutureOrdinaryWorld.Stopped.class,()->f.core.service(0));
-            assertEquals(SonicCdAct3FutureOrdinaryWorld.Boundary.PRIMARY_DEATH_ALIAS,failure.boundary());assertEquals(pool.slots(),p.capture().slots());
+            var failure=assertThrows(CdWorld.Stopped.class,()->f.core.service(0));
+            assertEquals(CdWorld.Boundary.PRIMARY_DEATH_ALIAS,failure.boundary());assertEquals(pool.slots(),p.capture().slots());
             assertEquals(8,f.frame.state().motion().routine());assertEquals(2,rawGlobals(f.host).ring().lives());assertEquals(0,f.core.state().level().updateHudTime());
             assertSame(oldCpu,rawVideo(f.host).completedCpu());assertTrue(f.core.failed());assertThrows(IllegalStateException.class,()->f.core.service(0));
         }
@@ -123,8 +123,8 @@ class TestSonicCdAct3FutureDeathCameraWorld {
             // Explicit dirty programme data: CLR.L spans all three flower bytes plus adjacent fade.
             level(f.core,new CdLevelGlobals(0,0,5,7,0xA5,0x123456,0xBB,0,9));
             var before=f.core.state().level();var camera=f.host.scroll().foreground();int sounds=f.host.sounds().size();
-            var failure=assertThrows(SonicCdAct3FutureOrdinaryWorld.Stopped.class,()->f.core.service(0));
-            assertEquals(SonicCdAct3FutureOrdinaryWorld.Boundary.LEVEL_FLOW,failure.boundary());
+            var failure=assertThrows(CdWorld.Stopped.class,()->f.core.service(0));
+            assertEquals(CdWorld.Boundary.LEVEL_FLOW,failure.boundary());
             var next=f.core.state().level();assertEquals(1,next.levelRestart());assertEquals(0,next.flowerCount());assertEquals(0,next.fadeEnableDisplay());
             assertEquals(0,next.spawnMode());assertEquals(before.plcLoadFlags(),next.plcLoadFlags());assertEquals(before.checkpoint(),next.checkpoint());
             byte[] flags=new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES];flags[0]=flags[1]=1;
@@ -224,7 +224,7 @@ class TestSonicCdAct3FutureDeathCameraWorld {
     private static SonicCdAct3FutureWorldHost.Video rawVideo(SonicCdAct3FutureWorldHost h)throws Exception{return (SonicCdAct3FutureWorldHost.Video)rawHost(h,"video");}
     private static SonicCdAct3FutureLoadingVisit.Scroll rawScroll(SonicCdAct3FutureWorldHost h)throws Exception{return (SonicCdAct3FutureLoadingVisit.Scroll)rawHost(h,"scroll");}
     @SuppressWarnings("unchecked") private static List<SonicCdGameModule.PastSound> rawSounds(SonicCdAct3FutureWorldHost h)throws Exception{return (List<SonicCdGameModule.PastSound>)rawHost(h,"sounds");}
-    private static boolean cutIs(SonicCdAct3FutureOrdinaryWorld world,CdOrdinaryLoop.Cut cut){try{var f=SonicCdAct3FutureOrdinaryWorld.class.getDeclaredField("cut");f.setAccessible(true);return f.get(world)==cut;}catch(ReflectiveOperationException error){throw new AssertionError(error);}}
+    private static boolean cutIs(CdWorld world,CdOrdinaryLoop.Cut cut){try{var f=CdWorld.class.getDeclaredField("cut");f.setAccessible(true);return f.get(world)==cut;}catch(ReflectiveOperationException error){throw new AssertionError(error);}}
     private static TestSonicCdAct3FutureWorldHost.Fixture ready(CdR13FutureAssets a){var f=new TestSonicCdAct3FutureWorldHost.Fixture(a,3);f.ready();f.core.service(0);return f;}
     /** Labelled component actor ingress; legitimate CaptureOwner is reused only inside this test fixture. */
     static void actor(CdPlayerFrameRuntime frame,int routine,int y,int reset,int yVelocity,int control){
@@ -248,7 +248,7 @@ class TestSonicCdAct3FutureDeathCameraWorld {
      * It supplies no actual Module/render admission and is never installed by production. */
     static final class FaultAuthority implements SonicCdAct3FutureWorldHost.Authority {
         FaultFixture f;Runnable hook=()->{};boolean invoking;
-        public void require(SonicCdAct3FutureWorldHost h,SonicCdAct3FutureLoadingVisit c,SonicCdAct3FutureOrdinaryWorld w,CdPlayerFrameRuntime frame,CdR13FutureAssets a,CdR13SectionArt art){
+        public void require(SonicCdAct3FutureWorldHost h,SonicCdAct3FutureLoadingVisit c,CdWorld w,CdPlayerFrameRuntime frame,CdR13FutureAssets a,CdR13SectionArt art){
             if(f!=null&&(f.host!=h||f.core!=null&&f.core!=c||w!=null&&f.world!=null&&f.world!=w||f.frame!=frame||f.assets!=a||f.art!=art))throw new IllegalStateException("Foreign declared fault fixture");
             if(!invoking){invoking=true;try{hook.run();}finally{invoking=false;}}
         }
@@ -257,7 +257,7 @@ class TestSonicCdAct3FutureDeathCameraWorld {
         public void serviceVInt(SonicCdAct3FutureWorldHost h){}public void resetGoodFutureFlags(SonicCdAct3FutureWorldHost h){}
     }
  static final class FaultFixture implements AutoCloseable {
-  final CdR13FutureAssets assets;final CdR13SectionArt art;final CdPlayerFrameRuntime frame;final SonicCdAct3FutureWorldHost host;final SonicCdAct3FutureLoadingVisit core;final SonicCdAct3FutureOrdinaryWorld world;final FaultAuthority auth=new FaultAuthority();
+  final CdR13FutureAssets assets;final CdR13SectionArt art;final CdPlayerFrameRuntime frame;final SonicCdAct3FutureWorldHost host;final SonicCdAct3FutureLoadingVisit core;final CdWorld world;final FaultAuthority auth=new FaultAuthority();
   FaultFixture(CdR13FutureAssets a,int flags){this(a,flags,OptionalInt.empty(),OptionalInt.empty(),OptionalInt.empty(),OptionalInt.empty(),true,0,OptionalInt.empty());}
   FaultFixture(CdR13FutureAssets a,int flags,int palFlags,OptionalInt water){this(a,flags,OptionalInt.empty(),OptionalInt.empty(),OptionalInt.empty(),OptionalInt.empty(),true,palFlags,water);}
   FaultFixture(CdR13FutureAssets a,int flags,boolean bind){this(a,flags,OptionalInt.empty(),OptionalInt.empty(),OptionalInt.empty(),OptionalInt.empty(),bind,0,OptionalInt.empty());}
@@ -273,7 +273,7 @@ class TestSonicCdAct3FutureDeathCameraWorld {
    var scene=new RetainedPlaneSceneRenderer.Scene(null,null,new int[256],0,new byte[128],false,SpritePresentation.Frame.empty(),Map.of(),32);
    var video=new SonicCdAct3FutureWorldHost.Video(fill(640,0xA5),Optional.empty(),frame.artState(),section.residency(),new SonicCdAct3FutureWorldHost.Carried(scene));
    host=new SonicCdAct3FutureWorldHost(auth,a,frame,art,new SonicCdAct3FutureWorldHost.Initial(globals,scroll,new CdR11aBackgroundPlane.State(fill(4096,0xA5)),new CdR11aBackgroundPlane.State(fill(4096,0xB6)),video,fill(CdObjectPlacementRuntime.SAVED_BANK_BYTES,0)));
-   core=new SonicCdAct3FutureLoadingVisit(host,a,frame,art,entry);auth.f=this;host.install(core);world=bind?new SonicCdAct3FutureOrdinaryWorld(auth,core,host,frame,a,art,CdR13ObjectAssets.fromAssets(a),CdR13PlayerCollisionAssets.fromAssets(a)):null;if(bind){host.bindWorld(world);core.bindOrdinaryOwner(host,world);}
+   core=new SonicCdAct3FutureLoadingVisit(host,a,frame,art,entry);auth.f=this;host.install(core);world=bind?new CdWorld(auth,core,host,frame,a,art,CdR13ObjectAssets.fromAssets(a),CdR13PlayerCollisionAssets.fromAssets(a)):null;if(bind){host.bindWorld(world);core.bindOrdinaryOwner(host,world);}
   }
   void ready(){core.begin();for(int i=0;i<256;i++){if(core.state().phase()==Phase.READY)return;core.service(0);}fail("Bounded actual loading component did not return Ready");}
   public void close(){host.close();frame.close();}

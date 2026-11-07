@@ -31,8 +31,8 @@ class TestSonicCdAct3FutureModuleEndFlags {
                 step(h,call<=14516?(LogicalInputSnapshot)early.invoke(null,call):call<=16187?(LogicalInputSnapshot)goal.invoke(null,call):right);
             assertTrue(module.act3FutureLoadingSelected());var frame=module.requirePlayerFrame();var source=frame.stageSource();
             var core=module.act3FutureLoadingVisit();assertEquals(SonicCdAct3FutureLoadingVisit.Phase.READY,core.state().phase());
-            var host=module.act3FutureWorldHost();var world=(SonicCdAct3FutureOrdinaryWorld)actualField(module,"act3FutureWorld");
-            var pass=(SonicCdAct3FutureObjectPass)actualField(world,"objects");
+            var host=module.act3FutureWorldHost();var world=(CdWorld)actualField(module,"act3FutureWorld");
+            var pass=(SonicCdAct3FutureObjectPass)actualField(actualField(world,"binding"),"objects");
             var authority=(SonicCdAct3FutureWorldHost.Authority)actualField(module,"act3Authority");
             var before=(SonicCdGameModule.LevelProgramState)actualField(module,"levelProgram");
             assertThrows(IllegalStateException.class,()->authority.resultsFlags(host,pass));

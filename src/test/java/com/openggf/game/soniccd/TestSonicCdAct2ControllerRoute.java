@@ -1209,7 +1209,7 @@ class TestSonicCdAct2ControllerRoute {
             if(futureOwners==null) {
                 var futureFrame=module.requirePlayerFrame();var futureVisit=module.act3FutureLoadingVisit();var futureHost=module.act3FutureWorldHost();
                 futureOwners=new R13NaturalOwners(futureFrame,futureFrame.stageSource(),futureHost,futureVisit,
-                        assertInstanceOf(SonicCdAct3FutureOrdinaryWorld.class,actualField(module,"act3FutureWorld")),futureAssets,
+                        assertInstanceOf(CdWorld.class,actualField(module,"act3FutureWorld")),futureAssets,
                         assertInstanceOf(com.openggf.game.soniccd.level.SonicCdAct3FutureLevel.class,h.mode().getLevelManager().getCurrentLevel()),
                         world,Math.incrementExact(previousGeneration));
                 assertTrue(targetFrame.closed());assertNotSame(targetFrame,futureFrame);assertNotSame(endSource,futureFrame.stageSource());
@@ -1233,7 +1233,7 @@ class TestSonicCdAct2ControllerRoute {
                 var selected=assertInstanceOf(SonicCdAct3FutureWorldHost.Published.class,futureOwners.host().selected()).selection();
                 assertNaturalR13SnapshotValue(oldCpu,selected.inputs().selectedCpu(),"Selector8 keeps actual prior CPU, never NOW");
                 if(oldCpu.isPresent())assertSame(oldCpu.orElseThrow(),selected.inputs().selectedCpu().orElseThrow());
-                assertEquals("DONE",actualField(actualField(futureOwners.ordinary(),"objects"),"phase").toString(),"Original physical walk/drain completed");
+                assertEquals("DONE",actualField(actualField(actualField(futureOwners.ordinary(),"binding"),"objects"),"phase").toString(),"Original physical walk/drain completed");
             }
             var fullAfter=r13Registry.capture();var courseAfter=r13Registry.captureCourse();
             assertNaturalR13Snapshots(h,fullAfter,courseAfter,"after actual forward before pixels"+actualCall);
@@ -1483,7 +1483,7 @@ class TestSonicCdAct2ControllerRoute {
     /** Comparison-only retained actual owners, never input to a production factory or publication. */
     private record R13NaturalOwners(com.openggf.game.soniccd.player.CdPlayerFrameRuntime frame,
             com.openggf.game.soniccd.level.CdStagePlayerSource source,SonicCdAct3FutureWorldHost host,
-            SonicCdAct3FutureLoadingVisit visit,SonicCdAct3FutureOrdinaryWorld ordinary,
+            SonicCdAct3FutureLoadingVisit visit,CdWorld ordinary,
             com.openggf.game.soniccd.level.CdR13FutureAssets assets,com.openggf.game.soniccd.level.SonicCdAct3FutureLevel level,
             Object world,long generation) { }
     private record R13NaturalPixels(byte[] rgba,byte[] withoutSonic) {

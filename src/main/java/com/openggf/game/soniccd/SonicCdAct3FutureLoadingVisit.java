@@ -133,7 +133,7 @@ final class SonicCdAct3FutureLoadingVisit {
             values=ready;preparedBefore=null;prepared=null;
         }
         /** Only this original ordinary continuation and its completed physical World walk may transfer. */
-        void beginOldExit(SonicCdAct3FutureOrdinaryWorld expected){
+        void beginOldExit(CdWorld expected){
             require();if(expected==null||expected!=ordinary)throw new IllegalStateException("No actual completed R13 World walk");
             expected.requireOldExitOwner(SonicCdAct3FutureLoadingVisit.this);beginRetainedOldExit(expected);
         }
@@ -258,7 +258,7 @@ final class SonicCdAct3FutureLoadingVisit {
         var g=frame.environment().movement().gates();
         if(!frame.stageSource().ownsAct3Future(assets)||g.zoneAct()!=0x100||g.timeZone()!=1)stop(Boundary.OLD_EXIT_ENTRY);
     }
-    private void beginRetainedOldExit(SonicCdAct3FutureOrdinaryWorld actual){
+    private void beginRetainedOldExit(CdWorld actual){
         // Main405-408 reaches LevelStart only AFTER the actual increasing RunObjects returned.
         requireRetainedExitGates();if(values.level().levelRestart()!=2||values.program().demoDataIndexWord()==0x800)stop(Boundary.OLD_EXIT_ENTRY);
         actual.abandonOldExitWalk(this);values=values.phase(Phase.OLD_EXIT_PRELUDE);call(Call.OLD_EXIT_BEGIN);

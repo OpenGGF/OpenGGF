@@ -9,6 +9,37 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class TestCdSonicVisualAssets {
     @Test
+    void explicit188FormatOwnsItsByteEndingMappingAndFullNativeReadView() {
+        byte[] maps = new byte[377], dplc = new byte[380], art = new byte[82944];
+        for (int i = 0; i < 188; i++) {
+            word(maps, i*2, 376); word(dplc, i*2, 376);
+        }
+        word(dplc, 376, 1); word(dplc, 378, 0x963); // last actual R4 tile, no EVEN byte.
+        var v = CdSonicVisualAssets.decode(CdSonicVisualAssets.SourceFormat.FRAMES_188, maps, dplc, art);
+        assertEquals(188, v.mappingFrames().size());
+        assertEquals(188, v.dplcFrames().size());
+        assertEquals(76928, v.rawArt().length());
+        assertEquals(82944, v.artReadView().length());
+        assertEquals(76896, v.dplcFrames().getFirst().pieces().getFirst().artByteOffset());
+        assertThrows(IllegalStateException.class, v::alignmentByte);
+        word(dplc, 378, 0xA1F); // source B3/B4 read after raw art, through the exact finite endpoint.
+        art[82943] = 42;
+        var tail = CdSonicVisualAssets.decode(CdSonicVisualAssets.SourceFormat.FRAMES_188, maps, dplc, art);
+        assertEquals(42, tail.artPiece(0,0).unsignedByte(31));
+        word(dplc, 378, 0xA20);
+        assertThrows(IllegalArgumentException.class,
+                () -> CdSonicVisualAssets.decode(CdSonicVisualAssets.SourceFormat.FRAMES_188, maps, dplc, art));
+        word(dplc, 378, 0x963);
+        word(maps, 0, 374); // inside the 188-WORD directory.
+        assertThrows(IllegalArgumentException.class,
+                () -> CdSonicVisualAssets.decode(CdSonicVisualAssets.SourceFormat.FRAMES_188, maps, dplc, art));
+        word(maps, 0, 376);
+        assertThrows(IllegalArgumentException.class, () -> CdSonicVisualAssets.decode(maps, dplc, art));
+        assertThrows(IllegalArgumentException.class,
+                () -> CdSonicVisualAssets.decode(CdSonicVisualAssets.SourceFormat.FRAMES_167, maps, dplc, art));
+    }
+
+    @Test
     void dplcCanReadTheActualSingleEvenByteBeyondTheRawSourceBlob() {
         Fixture f = new Fixture();
         word(f.dplc, 396, 1);

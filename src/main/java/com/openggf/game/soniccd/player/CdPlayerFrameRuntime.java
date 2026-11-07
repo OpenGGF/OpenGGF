@@ -354,6 +354,112 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
         void publish(R31BodyCall original);
     }
 
+    /** Opt-in original PlaceBlock consumer. Prebuild ALL external state/cache/plane/sound changes,
+     * revalidate the full external cut and this receipt, apply once, then adopt only built references.
+     * Screen verification supplies no predicate/operands: Body alone evaluates its native branch. */
+    public interface R31PlaceBlockPort {
+        void store(R31PlaceBlockCall original);
+        default void screen(R31PlaceBlockScreenCall original) { original.verifyNative(); }
+    }
+    private final class R31Invocation {
+        final Object identity=new Object();
+        final CdStagePlayerSource source;
+        final Thread thread=Thread.currentThread();
+        CdPlayerBody.R31Prefix last;
+        int sequence;
+        boolean published;
+        R31Invocation(CdPlayerBody.R31Context context) {
+            source=context.source();
+            last=new CdPlayerBody.R31Prefix(state,environment,
+                    new CdPlayerBody.R31Values(context.currentTerrain(),context.snapshot(),context.noBumperByte(),
+                            context.response().contact(),context.response().world()),List.of());
+        }
+    }
+    /** Private constructors and pending identity authenticate only this original synchronous Frame
+     * invocation. Immutable prefixes/sounds are DATA. No captured/mid-call continuation exists. */
+    public abstract sealed class R31PlaceCall permits R31PlaceBlockCall,R31PlaceBlockScreenCall {
+        private final R31Invocation invocation;
+        private final Object identity;
+        private final int sequence;
+        private final CdR31SpecialBlockCollision.PlaceBlock operation;
+        private final CdR31SpecialBlockCollision.Source helperSource;
+        private final CdPlayerBody.R31Prefix before;
+        private final Optional<CdPlayerBody.DisplayPublication> expectedDisplay=display;
+        private final CdPlayerArtRuntime.State expectedArt=art.capture();
+        private final VIntClock expectedClock=vIntClock;
+        private final boolean expectedPaused=paused;
+        private boolean applied;
+        private R31PlaceCall(CdR31SpecialBlockCollision.PlaceBlock operation) {
+            invocation=Objects.requireNonNull(r31Invocation);identity=invocation.identity;
+            sequence=++invocation.sequence;this.operation=operation;helperSource=operation.source();before=invocation.last;
+        }
+        public final int sequence(){return sequence;}
+        public final int operationOrdinal(){return operation.ordinal();}
+        public final int xWord(){return operation.xWord();}
+        public final int yWord(){return operation.yWord();}
+        public final CdR31SpecialBlockCollision.Site site(){return operation.site();}
+        public final CdStagePlayerSource source(){return invocation.source;}
+        public final CdPlayerBody.R31Prefix before(){return before;}
+        public final Optional<CdPlayerBody.DisplayPublication> display(){return expectedDisplay;}
+        public final CdPlayerArtRuntime.State artState(){return expectedArt;}
+        public final VIntClock clock(){return expectedClock;}
+        public final boolean paused(){return expectedPaused;}
+        public final void requireOwner(CdPlayerFrameRuntime expected){
+            if(expected!=CdPlayerFrameRuntime.this)throw new IllegalArgumentException("Foreign PlaceBlock Frame");
+            verifyCut();
+            if(applied)throw new IllegalStateException("Original PlaceBlock receipt already consumed");
+        }
+        private void verifyCut(){
+            if(Thread.currentThread()!=invocation.thread||!inOperation||closed||bodyEntitled||pending!=null
+                    ||r31Invocation!=invocation||identity!=invocation.identity||pendingR31Place!=this
+                    ||pendingR31Body!=null||sequence!=invocation.sequence||invocation.source!=pastSource
+                    ||display!=expectedDisplay||art.capture()!=expectedArt||vIntClock!=expectedClock||paused!=expectedPaused)
+                throw new IllegalStateException("Expired/foreign original PlaceBlock invocation/phase");
+            operation.current();
+            if(operation.source()!=helperSource)throw new IllegalStateException("Changed original helper source");
+            var cut=applied?invocation.last:before;
+            if(state!=cut.state()||environment!=cut.environment())
+                throw new IllegalStateException("Changed complete PlaceBlock Frame pair");
+        }
+        final void verifyReturned(boolean normal){
+            verifyCut();
+            if(normal&&!applied)throw new IllegalStateException("Original PlaceBlock receipt not consumed");
+        }
+        final void consume(){requireOwner(CdPlayerFrameRuntime.this);applied=true;}
+    }
+    public final class R31PlaceBlockCall extends R31PlaceCall {
+        private final CdPlayerBody.R31PlaceStore store;
+        private final CdPlayerBody.R31Prefix prefix;
+        private final List<Sound> sounds;
+        private R31PlaceBlockCall(CdR31SpecialBlockCollision.PlaceBlock operation,
+                                 CdPlayerBody.R31PlaceStore store,CdPlayerBody.R31Prefix prefix){
+            super(operation);this.store=store;this.prefix=prefix;sounds=collectR31Sounds(prefix.effects());
+        }
+        public CdPlayerBody.R31PlaceStore store(){return store;}
+        public CdPlayerBody.R31Prefix prefix(){return prefix;}
+        /** Complete reached sound prefix, never playback authority; consumer retains an exact ledger. */
+        public List<Sound> sounds(){return sounds;}
+        public void applyNative(){
+            consume();state=prefix.state();environment=prefix.environment();
+            r31Invocation.last=prefix;r31Invocation.published=true;
+        }
+    }
+    /** Original camera lookup/verification cut after the chunk store; no write or caller predicate. */
+    public final class R31PlaceBlockScreenCall extends R31PlaceCall {
+        private R31PlaceBlockScreenCall(CdR31SpecialBlockCollision.PlaceBlock operation){super(operation);}
+        public void verifyNative(){consume();}
+    }
+    private void invokeR31Place(R31PlaceCall call,Runnable action){
+        if(pendingR31Place!=null)throw new IllegalStateException("Original PlaceBlock port reentry");
+        pendingR31Place=call;
+        try{
+            action.run();call.verifyReturned(true);
+        }catch(RuntimeException|Error original){
+            try{call.verifyReturned(false);}catch(RuntimeException|Error verification){if(verification!=original)original.addSuppressed(verification);}
+            throw original;
+        }finally{pendingR31Place=null;}
+    }
+
     /** One original, synchronous pending Body call, never a captured/resumable capability.
      * publication() is immutable DATA; requireOwner/prepareDisplayFlag/applyNative have a live scope.
      * The real World separately authenticates its own retained source/epoch/phase/full native cut. */
@@ -367,6 +473,8 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
         private final VIntClock expectedClock;
         private final boolean expectedPaused;
         private final Thread invokingThread;
+        private final R31Invocation invocation;
+        private final Optional<CdPlayerBody.R31Prefix> lastPrefix;
         // BEGIN pending R31 primary display flag data 20261107.
         private CdPlayerBody.State readyDisplayState;
         private boolean displayPrepared;
@@ -375,6 +483,8 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
 
         private R31BodyCall(R31Publication publication, CdStagePlayerSource source) {
             this.publication = publication; this.source = source;
+            invocation=r31Invocation;
+            lastPrefix=invocation==null?Optional.empty():Optional.of(invocation.last);
             expectedState = state; expectedEnvironment = environment; expectedDisplay = display;
             expectedArt = art.capture(); expectedClock = vIntClock; expectedPaused = paused;
             invokingThread = Thread.currentThread();
@@ -386,6 +496,9 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
          * A prepared Draw state is separate DATA returned by prepareDisplayFlag; compare that returned
          * state against the final actual Frame after applyNative. This publication never replays Draw. */
         public R31Publication publication() { return publication; }
+        /** Complete last published native prefix (or actual ingress before any store), for external
+         * preflight. Final apply compares the current pair here, never the stale original ingress. */
+        public Optional<CdPlayerBody.R31Prefix> lastPrefix(){return lastPrefix;}
 
         // BEGIN pending R31 primary display preparation 20261107.
         /**
@@ -426,13 +539,26 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
         public void requireOwner(CdPlayerFrameRuntime expected) {
             Objects.requireNonNull(expected, "actual R31 Frame owner");
             if (expected != CdPlayerFrameRuntime.this) throw new IllegalArgumentException("Foreign R31 Frame call owner");
+            verifyCut();
+            if(applied)throw new IllegalStateException("Original R31 Body call already applied");
+        }
+        private void verifyCut(){
+            var actualState=applied?(displayPrepared?readyDisplayState:readyState):expectedState;
+            var actualEnvironment=applied?readyEnvironment:expectedEnvironment;
+            var actualDisplay=applied?readyDisplay:expectedDisplay;
             if (Thread.currentThread() != invokingThread || !inOperation || pendingR31Body != this
-                    || applied || closed || bodyEntitled || pending != null
-                    || source != pastSource || state != expectedState || environment != expectedEnvironment
-                    || display != expectedDisplay || art.capture() != expectedArt || vIntClock != expectedClock
+                    || closed || bodyEntitled || pending != null || pendingR31Place!=null
+                    || r31Invocation!=invocation || (invocation!=null&&invocation.last!=lastPrefix.orElseThrow())
+                    || (invocation!=null&&!applied&&(state!=invocation.last.state()||environment!=invocation.last.environment()))
+                    || source != pastSource || state != actualState || environment != actualEnvironment
+                    || display != actualDisplay || art.capture() != expectedArt || vIntClock != expectedClock
                     || paused != expectedPaused) {
-                throw new IllegalStateException("No current unapplied original R31 Body call/full Frame cut");
+                throw new IllegalStateException("No current original R31 Body call/full Frame cut");
             }
+        }
+        private void verifyReturned(boolean normal){
+            verifyCut();
+            if(normal&&!applied)throw new IllegalStateException("Original R31 Body call was not applied");
         }
 
         /** Validate first, then assign only already-built Frame references. No effects/services replay. */
@@ -502,6 +628,8 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
     private boolean mainFrameAdvanced;
     // Original R31 call exists only on its synchronous inOperation stack; never captured.
     private R31BodyCall pendingR31Body;
+    private R31Invocation r31Invocation;
+    private R31PlaceCall pendingR31Place;
 
     private CdPlayerFrameRuntime(CdR11aAssets assets, ArtPublication publication, CdPlayerBody.State state,
                                  CdPlayerBody.Environment environment, CdPlayerArtRuntime.State artIngress) {
@@ -1583,24 +1711,52 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
      */
     public R31Publication runR31Body(int levelFrames, CdPlayerBody.R31Context context,
                                     R31PublicationPort port) {
+        return runR31BodyInternal(levelFrames,context,port,null);
+    }
+    /** Opt-in real original stores; legacy three-argument entry remains whole-call atomic. */
+    public R31Publication runR31Body(int levelFrames,CdPlayerBody.R31Context context,
+                                     R31PublicationPort port,R31PlaceBlockPort places){
+        Objects.requireNonNull(places,"original PlaceBlock consumer");
+        return runR31BodyInternal(levelFrames,context,port,places);
+    }
+    private R31Publication runR31BodyInternal(int levelFrames,CdPlayerBody.R31Context context,
+                                            R31PublicationPort port,R31PlaceBlockPort places){
         requireBodyEntitlement();
         bodyEntitled = false;
         inOperation = true;
         try {
             Objects.requireNonNull(port, "actual R31 publication port");
-            var completed = body.stepR31(state, withLevelFrames(environment, levelFrames & 0xFFFF), context);
+            Objects.requireNonNull(context,"original R31 context");
+            CdPlayerBody.R31LivePlacePort live=null;
+            if(places!=null){
+                r31Invocation=new R31Invocation(context);
+                live=new CdPlayerBody.R31LivePlacePort(){
+                    public void store(CdR31SpecialBlockCollision.PlaceBlock operation,CdPlayerBody.R31PlaceStore store,CdPlayerBody.R31Prefix prefix){
+                        var call=new R31PlaceBlockCall(operation,store,prefix);invokeR31Place(call,()->places.store(call));
+                    }
+                    public void screen(CdR31SpecialBlockCollision.PlaceBlock operation,CdPlayerBody.R31Prefix prefix){
+                        var call=new R31PlaceBlockScreenCall(operation);invokeR31Place(call,()->places.screen(call));
+                    }
+                };
+            }
+            var completed = body.stepR31(state, withLevelFrames(environment, levelFrames & 0xFFFF), context,live);
             var publication = new R31Publication(new BodyPublication(completed.body(),
                     collectR31Sounds(completed.body().effects())), completed.nativeValues());
             var original = new R31BodyCall(publication, context.source());
             pendingR31Body = original;
-            port.publish(original);
-            if (!original.applied) throw new IllegalStateException("Original R31 Body call was not applied");
+            try{port.publish(original);original.verifyReturned(true);}
+            catch(RuntimeException|Error fault){
+                try{original.verifyReturned(false);}catch(RuntimeException|Error verification){if(verification!=fault)fault.addSuppressed(verification);}
+                throw fault;
+            }
             return publication;
         } catch (RuntimeException | Error original) {
-            if (pendingR31Body != null && pendingR31Body.applied) { closed = true; artPublication = null; }
+            if ((pendingR31Body != null && pendingR31Body.applied)||(r31Invocation!=null&&r31Invocation.published)) { closed = true; artPublication = null; }
             throw original;
         } finally {
             pendingR31Body = null;
+            pendingR31Place = null;
+            r31Invocation = null;
             pending = null;
             inOperation = false;
         }

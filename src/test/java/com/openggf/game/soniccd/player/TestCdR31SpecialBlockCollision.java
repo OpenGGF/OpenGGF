@@ -94,6 +94,20 @@ class TestCdR31SpecialBlockCollision {
     @Test void exactOriginalReceiptsCannotBeConsumedByAnotherComponent(){var h=new Harness(0x84);var c=h.component(data());var foreign=new Harness().component(data());h.onRead=()->{h.reads.getLast().requireOwner(c);assertThrows(IllegalArgumentException.class,()->h.reads.getLast().requireOwner(foreign));};c.run(Site.MAIN_AFTER_MODE,PRESENT,actor(2,0,0,256,0));assertThrows(IllegalStateException.class,()->h.leaked.requireOwner(foreign));assertThrows(IllegalStateException.class,()->h.leaked.requireOwner(c));}
     @Test void unacknowledgedFmRetainsVelocityPrefixAndExpiresReceipt(){var h=new Harness(0x84);h.omitFm=true;var c=h.component(data());assertThrows(IllegalStateException.class,()->c.run(Site.MAIN_AFTER_MODE,PRESENT,actor(2,0,0,256,0)));assertEquals(-0x700,c.state().actor().motion().yVelocity());assertTrue(c.failed());}
     @Test void completedGeometryReceiptExpiresAndDoesNotReplay(){var h=new Harness(0x13C);var c=h.component(data());c.run(Site.MAIN_AFTER_MODE,PRESENT,actor(2,0,0,256,0));assertThrows(IllegalStateException.class,()->h.leakedPlace.completedNative());assertEquals(4,h.placements);}
+    @Test void thrownOriginalHelperKeepsIdentityAndSuppressesUnrelatedPoolVerificationFault() {
+        var pool=new CdObjectPool();var original=new IllegalArgumentException("original screen lookup fault");
+        var c=new CdR31SpecialBlockCollision(data(),Optional.of(pool),new Ports(){
+            public int readBlock(BlockRead call){return 0x13C;}
+            public void store(Store call){call.applyNative();}
+            public void placeBlock(PlaceBlock call){
+                pool.write(pool.state(33).moveByte(CdObjectState.ByteField.ID,0x19));throw original;
+            }
+        });
+        assertSame(original,assertThrows(IllegalArgumentException.class,()->c.run(Site.MAIN_AFTER_MODE,PRESENT,actor(2,0,0,256,0))));
+        assertEquals(1,original.getSuppressed().length);
+        assertTrue(original.getSuppressed()[0].getMessage().contains("unrelated pool bytes"));
+        assertEquals(0x29,pool.state(32).id());assertEquals(0x19,pool.state(33).id());assertTrue(c.failed());
+    }
     @Test void missingGetBlockOwnerStopsAtItsReachedRead(){var before=actor(2,0,0,256,0);var c=new CdR31SpecialBlockCollision(data(),Optional.empty(),new Ports(){});assertEquals(Boundary.BLOCK_WORD_READ,assertThrows(Unowned.class,()->c.run(Site.MAIN_AFTER_MODE,PRESENT,before)).boundary());assertSame(before,c.state());}
     @Test void missingActualPoolStopsAfterVelocityFlagsBeforeFirstAllocation(){var h=new Harness(0x13C);var c=new CdR31SpecialBlockCollision(data(),Optional.empty(),h);assertEquals(Boundary.SPAWN_OBJECT_POOL,assertThrows(Unowned.class,()->c.run(Site.MAIN_AFTER_MODE,PRESENT,actor(2,0,0,256,0))).boundary());assertEquals(-1701,c.state().actor().motion().yVelocity());assertEquals(0,h.placements);assertEquals(0,h.pool.state(32).id());}
     @Test void unboundChunkMutationStopsAtFirstPlaceAfterActualChildPrefix(){var pool=new CdObjectPool();var c=new CdR31SpecialBlockCollision(data(),Optional.of(pool),new Ports(){public int readBlock(BlockRead r){return 0x13C;}public void store(Store s){s.applyNative();}});assertEquals(Boundary.SHARED_CHUNK_MUTATION_OWNER,assertThrows(Unowned.class,()->c.run(Site.MAIN_AFTER_MODE,PRESENT,actor(2,0,0,256,0))).boundary());assertEquals(0x29,pool.state(32).id());assertEquals(0x110,pool.state(32).centreX());}

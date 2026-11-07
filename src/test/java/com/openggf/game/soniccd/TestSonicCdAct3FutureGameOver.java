@@ -128,7 +128,7 @@ class TestSonicCdAct3FutureGameOver {
     @Test void actualScalarCallbackFaultRetainsFadeAndHeaderButRejectsForeignFullPoolOrFrame() throws Exception {
         for(int kind=0;kind<3;kind++)try(var f=new FaultFixture(TestCdR13PlaneSources.actual().getFirst(),3)) {
             f.ready();f.core.service(0);var pool=f.host.placement().pool();pool.clearDynamicSlots();pool.write(pool.state(32).moveByte(ID,0x3B));
-            var passField=SonicCdAct3FutureOrdinaryWorld.class.getDeclaredField("objects");passField.setAccessible(true);var pass=passField.get(f.world);var bodyField=SonicCdAct3FutureObjectPass.class.getDeclaredField("gameOver");bodyField.setAccessible(true);var body=(CdGameOver)bodyField.get(pass);
+            var passField=r13BindingType().getDeclaredField("objects");passField.setAccessible(true);var pass=passField.get(r13Binding(f.world));var bodyField=SonicCdAct3FutureObjectPass.class.getDeclaredField("gameOver");bodyField.setAccessible(true);var body=(CdGameOver)bodyField.get(pass);
             var original=new AssertionError("original actual scalar callback");int mode=kind;boolean[] fired={false};f.auth.hook=()->{var c=pending(body);if(!fired[0]&&c instanceof CdGameOver.ScalarCall v&&body.isCurrentPrimitive(c)&&v.field()==CdGameOver.Scalar.POWERUP){fired[0]=true;if(mode==0)throw original;if(mode==1)pool.write(pool.state(127).moveByte(SUBTYPE,0x77));else{var e=f.frame.environment();var b=e.movement().bounds();f.frame.applyScrollFeedback(new CdPlayerMovement.Bounds(b.left(),b.right(),0x456,b.bossFight()),e.movement().globals().cameraYCentre());}}};
             if(kind==0)assertSame(original,assertThrows(AssertionError.class,()->f.core.service(0)));else assertThrows(RuntimeException.class,()->f.core.service(0));
             f.auth.hook=()->{};assertTrue(fired[0]);assertTrue(f.core.failed());assertTrue(f.frame.closed());assertEquals(2,pool.state(32).routine());assertEquals(0x3B,pool.state(32).id());assertEquals(0,f.core.state().level().powerup());
@@ -138,7 +138,7 @@ class TestSonicCdAct3FutureGameOver {
     @Test void caughtActualScalarReentryCannotReplaceTheOriginalPrivateInvocation() throws Exception {
         try(var f=new FaultFixture(TestCdR13PlaneSources.actual().getFirst(),3)) {
             f.ready();f.core.service(0);var pool=f.host.placement().pool();pool.clearDynamicSlots();pool.write(pool.state(32).moveByte(ID,0x3B));
-            var passField=SonicCdAct3FutureOrdinaryWorld.class.getDeclaredField("objects");passField.setAccessible(true);var pass=passField.get(f.world);var bodyField=SonicCdAct3FutureObjectPass.class.getDeclaredField("gameOver");bodyField.setAccessible(true);var body=(CdGameOver)bodyField.get(pass);boolean[] tried={false};
+            var passField=r13BindingType().getDeclaredField("objects");passField.setAccessible(true);var pass=passField.get(r13Binding(f.world));var bodyField=SonicCdAct3FutureObjectPass.class.getDeclaredField("gameOver");bodyField.setAccessible(true);var body=(CdGameOver)bodyField.get(pass);boolean[] tried={false};
             f.auth.hook=()->{var c=pending(body);if(!tried[0]&&c instanceof CdGameOver.ScalarCall&&body.isCurrentPrimitive(c)){tried[0]=true;assertThrows(IllegalStateException.class,()->f.core.service(0));assertThrows(IllegalStateException.class,f.core::capture);}};
             f.core.service(0);assertTrue(tried[0]);assertFalse(f.core.failed());assertEquals(8,f.core.state().level().powerup());assertEquals(0,pool.state(32).id());
         }
@@ -163,13 +163,13 @@ class TestSonicCdAct3FutureGameOver {
     /** Explicit test-only callback-fault Authority over the exact immutable fixture construction. */
     static final class FaultAuthority implements SonicCdAct3FutureWorldHost.Authority {
         FaultFixture f;Runnable hook=()->{};boolean invoking;
-        public void require(SonicCdAct3FutureWorldHost h,SonicCdAct3FutureLoadingVisit c,SonicCdAct3FutureOrdinaryWorld w,CdPlayerFrameRuntime frame,CdR13FutureAssets a,CdR13SectionArt art){if(f!=null&&(f.host!=h||f.core!=null&&f.core!=c||w!=null&&f.world!=null&&f.world!=w||f.frame!=frame||f.assets!=a||f.art!=art))throw new IllegalStateException("Foreign declared fault owner");if(!invoking){invoking=true;try{hook.run();}finally{invoking=false;}}}
+        public void require(SonicCdAct3FutureWorldHost h,SonicCdAct3FutureLoadingVisit c,CdWorld w,CdPlayerFrameRuntime frame,CdR13FutureAssets a,CdR13SectionArt art){if(f!=null&&(f.host!=h||f.core!=null&&f.core!=c||w!=null&&f.world!=null&&f.world!=w||f.frame!=frame||f.assets!=a||f.art!=art))throw new IllegalStateException("Foreign declared fault owner");if(!invoking){invoking=true;try{hook.run();}finally{invoking=false;}}}
         public int selectedGoodFutureByte(SonicCdAct3FutureWorldHost h){return f.assets.identity().file()==CdNativeFile.R13C?1:0;}
         public SonicCdGameModule.PastSound levelMusic(SonicCdAct3FutureWorldHost h,Program p,int period,int attack){return new SonicCdGameModule.PastProgrammeSound(SonicCdGameModule.ProgramSound.STOP_FM);}
         public void serviceVInt(SonicCdAct3FutureWorldHost h){}public void resetGoodFutureFlags(SonicCdAct3FutureWorldHost h){}
     }
  static final class FaultFixture implements AutoCloseable {
-  final CdR13FutureAssets assets;final CdR13SectionArt art;final CdPlayerFrameRuntime frame;final SonicCdAct3FutureWorldHost host;final SonicCdAct3FutureLoadingVisit core;final SonicCdAct3FutureOrdinaryWorld world;final FaultAuthority auth=new FaultAuthority();
+  final CdR13FutureAssets assets;final CdR13SectionArt art;final CdPlayerFrameRuntime frame;final SonicCdAct3FutureWorldHost host;final SonicCdAct3FutureLoadingVisit core;final CdWorld world;final FaultAuthority auth=new FaultAuthority();
   FaultFixture(CdR13FutureAssets a,int flags){this(a,flags,OptionalInt.empty(),OptionalInt.empty(),OptionalInt.empty(),OptionalInt.empty(),true,0,OptionalInt.empty());}
   FaultFixture(CdR13FutureAssets a,int flags,int palFlags,OptionalInt water){this(a,flags,OptionalInt.empty(),OptionalInt.empty(),OptionalInt.empty(),OptionalInt.empty(),true,palFlags,water);}
   FaultFixture(CdR13FutureAssets a,int flags,boolean bind){this(a,flags,OptionalInt.empty(),OptionalInt.empty(),OptionalInt.empty(),OptionalInt.empty(),bind,0,OptionalInt.empty());}
@@ -185,10 +185,13 @@ class TestSonicCdAct3FutureGameOver {
    var scene=new RetainedPlaneSceneRenderer.Scene(null,null,new int[256],0,new byte[128],false,SpritePresentation.Frame.empty(),Map.of(),32);
    var video=new SonicCdAct3FutureWorldHost.Video(fill(640,0xA5),Optional.empty(),frame.artState(),section.residency(),new SonicCdAct3FutureWorldHost.Carried(scene));
    host=new SonicCdAct3FutureWorldHost(auth,a,frame,art,new SonicCdAct3FutureWorldHost.Initial(globals,scroll,new CdR11aBackgroundPlane.State(fill(4096,0xA5)),new CdR11aBackgroundPlane.State(fill(4096,0xB6)),video,fill(CdObjectPlacementRuntime.SAVED_BANK_BYTES,0)));
-   core=new SonicCdAct3FutureLoadingVisit(host,a,frame,art,entry);auth.f=this;host.install(core);world=bind?new SonicCdAct3FutureOrdinaryWorld(auth,core,host,frame,a,art,CdR13ObjectAssets.fromAssets(a),CdR13PlayerCollisionAssets.fromAssets(a)):null;if(bind){host.bindWorld(world);core.bindOrdinaryOwner(host,world);}
+   core=new SonicCdAct3FutureLoadingVisit(host,a,frame,art,entry);auth.f=this;host.install(core);world=bind?new CdWorld(auth,core,host,frame,a,art,CdR13ObjectAssets.fromAssets(a),CdR13PlayerCollisionAssets.fromAssets(a)):null;if(bind){host.bindWorld(world);core.bindOrdinaryOwner(host,world);}
   }
   void ready(){core.begin();for(int i=0;i<256;i++){if(core.state().phase()==Phase.READY)return;core.service(0);}fail("Bounded actual loading component did not return Ready");}
   public void close(){host.close();frame.close();}
  }
  static CdAssetBytes fill(int n,int value){byte[] b=new byte[n];Arrays.fill(b,(byte)value);return CdAssetBytes.copyOf(b);}
+
+ private static Object r13Binding(CdWorld world)throws Exception{var f=CdWorld.class.getDeclaredField("binding");f.setAccessible(true);return f.get(world);}
+ private static Class<?> r13BindingType()throws Exception{return java.util.Arrays.stream(CdWorld.class.getDeclaredClasses()).filter(c->c.getSimpleName().equals("R13")).findFirst().orElseThrow();}
 }

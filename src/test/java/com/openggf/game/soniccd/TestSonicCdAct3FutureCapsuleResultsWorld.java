@@ -50,7 +50,7 @@ class TestSonicCdAct3FutureCapsuleResultsWorld {
  static final class Authority implements SonicCdAct3FutureWorldHost.Authority {
   Fixture f;boolean flagsOwner=true;int flagStores;Runnable beforeFlags=()->{};SonicCdAct3FutureObjectPass pass;SonicCdAct3FutureObjectPass.Adoption adoption;
   SonicCdAct3FutureObjectPass.ResultsFlagsImage flags=new SonicCdAct3FutureObjectPass.ResultsFlagsImage(new Object(),OptionalInt.empty());
-  public void require(SonicCdAct3FutureWorldHost h,SonicCdAct3FutureLoadingVisit c,SonicCdAct3FutureOrdinaryWorld w,CdPlayerFrameRuntime frame,CdR13FutureAssets a,CdR13SectionArt art){if(f!=null&&(f.host!=h||f.core!=null&&f.core!=c||w!=null&&f.world!=null&&f.world!=w||f.frame!=frame||f.assets!=a||f.art!=art))throw new IllegalStateException("Declared COMPONENT relation foreign");}
+  public void require(SonicCdAct3FutureWorldHost h,SonicCdAct3FutureLoadingVisit c,CdWorld w,CdPlayerFrameRuntime frame,CdR13FutureAssets a,CdR13SectionArt art){if(f!=null&&(f.host!=h||f.core!=null&&f.core!=c||w!=null&&f.world!=null&&f.world!=w||f.frame!=frame||f.assets!=a||f.art!=art))throw new IllegalStateException("Declared COMPONENT relation foreign");}
   public int selectedGoodFutureByte(SonicCdAct3FutureWorldHost h){return f.assets.identity().file()==CdNativeFile.R13C?1:0;}
   public SonicCdGameModule.PastSound levelMusic(SonicCdAct3FutureWorldHost h,Program p,int period,int attack){return new SonicCdGameModule.PastProgrammeSound(SonicCdGameModule.ProgramSound.STOP_FM);}
   public void serviceVInt(SonicCdAct3FutureWorldHost h){} public void resetGoodFutureFlags(SonicCdAct3FutureWorldHost h){flags=new SonicCdAct3FutureObjectPass.ResultsFlagsImage(new Object(),OptionalInt.of(0));}
@@ -58,7 +58,7 @@ class TestSonicCdAct3FutureCapsuleResultsWorld {
   public SonicCdAct3FutureWorldHost.ResultsFlagsStore prepareResultsFlags(SonicCdAct3FutureWorldHost h,SonicCdAct3FutureObjectPass p,SonicCdAct3FutureObjectPass.Adoption a,SonicCdAct3FutureObjectPass.ResultsFlagsImage expected,int value){assertTrue(p.isCurrentEndFlagsPublication(a));assertSame(flags,expected);pass=p;adoption=a;beforeFlags.run();var next=new SonicCdAct3FutureObjectPass.ResultsFlagsImage(new Object(),OptionalInt.of(value));return new SonicCdAct3FutureWorldHost.ResultsFlagsStore(){boolean applied;public void validate(){assertFalse(applied);assertTrue(p.isCurrentEndFlagsPublication(a));assertSame(expected,flags);}public void adoptAfterNative(){if(applied||flags!=expected)throw new IllegalStateException("Constructed component flags pair expired");flags=next;flagStores++;applied=true;}};}
  }
  static final class Fixture implements AutoCloseable {
-  final CdR13FutureAssets assets;final CdR13SectionArt art;final CdPlayerFrameRuntime frame;final SonicCdAct3FutureWorldHost host;final SonicCdAct3FutureLoadingVisit core;final SonicCdAct3FutureOrdinaryWorld world;final Authority auth=new Authority();
+  final CdR13FutureAssets assets;final CdR13SectionArt art;final CdPlayerFrameRuntime frame;final SonicCdAct3FutureWorldHost host;final SonicCdAct3FutureLoadingVisit core;final CdWorld world;final Authority auth=new Authority();
   Fixture(CdR13FutureAssets a,int flags){this(a,flags,OptionalInt.empty(),OptionalInt.empty(),OptionalInt.empty(),OptionalInt.empty(),true,0,OptionalInt.empty());}
   Fixture(CdR13FutureAssets a,int flags,int palFlags,OptionalInt water){this(a,flags,OptionalInt.empty(),OptionalInt.empty(),OptionalInt.empty(),OptionalInt.empty(),true,palFlags,water);}
   Fixture(CdR13FutureAssets a,int flags,boolean bind){this(a,flags,OptionalInt.empty(),OptionalInt.empty(),OptionalInt.empty(),OptionalInt.empty(),bind,0,OptionalInt.empty());}
@@ -74,7 +74,7 @@ class TestSonicCdAct3FutureCapsuleResultsWorld {
    var scene=new RetainedPlaneSceneRenderer.Scene(null,null,new int[256],0,new byte[128],false,SpritePresentation.Frame.empty(),Map.of(),32);
    var video=new SonicCdAct3FutureWorldHost.Video(fill(640,0xA5),Optional.empty(),frame.artState(),section.residency(),new SonicCdAct3FutureWorldHost.Carried(scene));
    host=new SonicCdAct3FutureWorldHost(auth,a,frame,art,new SonicCdAct3FutureWorldHost.Initial(globals,scroll,new CdR11aBackgroundPlane.State(fill(4096,0xA5)),new CdR11aBackgroundPlane.State(fill(4096,0xB6)),video,fill(CdObjectPlacementRuntime.SAVED_BANK_BYTES,0)));
-   core=new SonicCdAct3FutureLoadingVisit(host,a,frame,art,entry);auth.f=this;host.install(core);world=bind?new SonicCdAct3FutureOrdinaryWorld(auth,core,host,frame,a,art,CdR13ObjectAssets.fromAssets(a),CdR13PlayerCollisionAssets.fromAssets(a)):null;if(bind){host.bindWorld(world);core.bindOrdinaryOwner(host,world);}
+   core=new SonicCdAct3FutureLoadingVisit(host,a,frame,art,entry);auth.f=this;host.install(core);world=bind?new CdWorld(auth,core,host,frame,a,art,CdR13ObjectAssets.fromAssets(a),CdR13PlayerCollisionAssets.fromAssets(a)):null;if(bind){host.bindWorld(world);core.bindOrdinaryOwner(host,world);}
   }
   void ready(){core.begin();for(int i=0;i<256;i++){if(core.state().phase()==Phase.READY)return;core.service(0);}fail("Bounded actual loading component did not return Ready");}
   public void close(){host.close();frame.close();}

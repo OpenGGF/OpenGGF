@@ -16,21 +16,29 @@ matching area heading; see the
   R31 and R32 load metadata now share one finite PLC, palette and section-table
   parser. CCZ intro facing clears and Robot Generator conditional reads preserve
   their native callback and fault prefixes;1,155 focused checks pass without skips.
+  One source-bound World now replaces the R13-only coordinator and drives both
+  R13 and R31 through their existing ordinary owners. Selected original-USA CCZ
+  entry completes223 controller services before the explicit Ring boundary on224;
+  the original PlaceBlock prefix bridge is installed, with natural reach still pending.
+  All ten TT data profiles now use the same closed definition/reader/parser path,
+  including the explicit188-frame Sonic format and retained CCZ consumer/intro
+  views. The combined World/data integration passes668 focused checks without
+  skips; TT decoder, ordinary-service and live World admission remain separate.
   CCZ ordinary scheduling now preserves native VBlank/Main order, the old
   selected sprite list and full-word time-stop gating. Private HUD adoption
   retains the real prefix across typed callback failures;175 focused checks
-  pass after a reproduced error-path correction, ahead of live World admission.
+  pass after a reproduced error-path correction.
   CCZ pinball/player-capture components now preserve native contact, child and
   raw-link behavior with43 focused checks; their live World binding remains separate.
   Private CCZ integration now has source-bound Frame publication, native HUD
   metadata and sparse residency, real ordinary Core PLC/section access, and a
   detached level view. Focused Frame/HUD regressions and exact fixture repairs
-  are qualified; live CCZ World and gameplay admission remain separate work.
+  are qualified; remaining CCZ object bindings and full-act gameplay remain separate.
   Fresh selected-profile boot now performs source-ordered SPX/MDINIT/BRAM
   initialization and real serialized storage-backend setup, preserving legacy
-  entry behavior and unknown save tails. A private R31 handoff remains fenced
-  before the missing live World;147 focused checks pass with explicit nested
-  evidence reconciliation, without a gameplay or native-driver completion claim.
+  entry behavior and unknown save tails. Its147 focused startup checks retain
+  explicit nested evidence reconciliation, without a complete gameplay or
+  native-driver claim.
   An experimental Palmtree Panic player, terrain and native-object runtime uses
   authenticated user-disc sources, current-art loading, checkpoint lifecycle and
   rewind checks. Pre-save time

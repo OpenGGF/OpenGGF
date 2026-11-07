@@ -200,6 +200,45 @@ class TestSonicCdR31aObjectPass {
             assertEquals(actor,h.frame.captureActor());assertEquals(shared,h.frame.captureShared());}
     }
 
+    /** Constructed complete component ingress, not Boot/World admission. The Frame/helper/pass
+     * are real private producers; faults occur in the original external preparation callbacks. */
+    @Test void originalPlaceScreenFaultRetainsChunkActorDirtyChildAndNoPhysicalPlaneWords()throws Exception{
+        try(var h=new Harness()){
+            placeActor(h);h.placement.pool().write(h.placement.pool().state(32).moveLong(CdObjectState.LongField.MAPPINGS,0x123456).moveWord(X_FRACTION,0xA5A5));
+            var fault=new AssertionError("original post-chunk screen verification");h.screenFault=fault;h.service();var clock=h.frame.vIntClock();var art=h.frame.artState();
+            assertSame(fault,assertThrows(AssertionError.class,h::walk));assertEquals(1,h.placeStores.size());assertEquals(12,((CdPlayerBody.R31ChunkWord)h.placeStores.getFirst().store()).byteOffset());
+            assertEquals(0,h.cut.currentTerrain().chunks().unsignedWord(12));assertEquals(2,h.frame.state().motion().routine());assertEquals(120,h.frame.state().timers().hurt());assertEquals(0,h.frame.state().history().index());
+            assertEquals(0x29,h.placement.pool().state(32).id());assertEquals(0x123456,h.placement.pool().state(32).longBits(CdObjectState.LongField.MAPPINGS));assertEquals(0xA5A5,h.placement.pool().state(32).word(X_FRACTION));
+            assertSame(clock,h.frame.vIntClock());assertSame(art,h.frame.artState());assertTrue(h.frame.closed());assertEquals(0,h.primaryPublications);assertTrue(h.cut.sounds().isEmpty());
+            assertTrue(Arrays.stream(h.placePlane).allMatch(v->v==0xBEEF));assertThrows(IllegalStateException.class,()->h.pass.requirePlace(h.placeStores.getFirst()));
+        }
+    }
+    @Test void eachOriginalPlanePreparationFaultRetainsOnlyTheReachedPhysicalWordPrefix()throws Exception{
+        for(int failing=0;failing<4;failing++)try(var h=new Harness()){
+            placeActor(h);h.failPlane=failing;var fault=new IllegalArgumentException("original Plane A preparation "+failing);h.placeFault=fault;h.service();
+            assertSame(fault,assertThrows(IllegalArgumentException.class,h::walk));assertEquals(0,h.cut.currentTerrain().chunks().unsignedWord(12));assertEquals(failing+2,h.placeStores.size());
+            for(int n=0;n<4;n++)assertEquals(n<failing?h.assets.terrain().blocks().unsignedWord(n*2):0xBEEF,h.placePlane[(n/2)*64+12+(n&1)]);
+            assertTrue(h.frame.closed());assertEquals(0,h.primaryPublications);assertTrue(h.cut.sounds().isEmpty());
+        }
+    }
+    @Test void actualLastPrefixAllowsFinalDrawAndAppendsOnlyTheNewSoundBeforeUnknownChildDispatch()throws Exception{
+        try(var h=new Harness()){
+            placeActor(h);h.beforePrimary=()->{assertSame(h.placeStores.getLast().prefix().state(),h.frame.state());assertSame(h.placeStores.getLast().prefix().environment(),h.frame.environment());assertSame(h.placeStores.getLast().prefix().nativeValues().terrain(),h.cut.currentTerrain());};h.service();
+            var frontier=assertThrows(SonicCdR31aObjectPass.Unowned.class,h::walk);assertEquals(SonicCdR31aObjectPass.Boundary.OBJECT_FAMILY,frontier.boundary());assertEquals(32,frontier.wholeIndex());assertEquals(0x29,frontier.value());
+            assertEquals(20,h.placeStores.size());assertEquals(4,h.placeScreens);assertEquals(1,h.primaryPublications);assertEquals(1,h.cut.sounds().size());assertInstanceOf(SonicCdGameModule.PastFrameSound.class,h.cut.sounds().getFirst());
+            assertEquals(4,h.originalPrimary.body().result().effects().stream().filter(CdPlayerBody.R31PlaceBlock.class::isInstance).count());assertFalse(h.frame.closed());
+        }
+    }
+    private static void placeActor(Harness h)throws Exception{
+        primaryActor(h,4,4,2,0);var t=h.assets.terrain();byte[] fg=h.assets.view(CdR31aAssets.Asset.LAYOUT_FG).copy();
+        Arrays.fill(fg,2,2+t.layout().columns(CdStageTerrain.Plane.FOREGROUND)*t.layout().rows(CdStageTerrain.Plane.FOREGROUND),(byte)1);
+        byte[] chunks=t.chunks().copy();int id=h.assets.view(CdR31aAssets.Asset.PLAYER_BLOCKS_A).unsignedWord(2)|0x6000;
+        for(int at=0;at<512;at+=2){chunks[at]=(byte)(id>>>8);chunks[at+1]=(byte)id;}
+        var c=t.collision();var current=CdStageTerrain.decode(t.shape(),t.blocks().copy(),t.patterns().copy(),chunks,fg,h.assets.view(CdR31aAssets.Asset.LAYOUT_BG).copy(),c.ids().copy(),c.angles().copy(),c.heights().copy(),c.widths().copy());
+        var old=h.cut;h.cut=new SonicCdR31aObjectPass.Cut(old.core(),old.ring(),current,old.contact(),old.world(),old.noBumperByte(),0x20,0x380,old.scrollLockWord(),old.layerByte(),old.cpuSat(),old.completedCpu(),old.sounds());
+        Arrays.fill(h.placePlane,0xBEEF);
+    }
+
     private static final class Harness implements SonicCdR31aObjectPass.Ports,AutoCloseable {
         final CdR31aAssets assets=actual();final CdR31aObjectAssets objects=CdR31aObjectAssets.fromAssets(assets);
         final CdObjectPlacementRuntime placement=CdObjectPlacementRuntime.fromR31aAssets(assets,fill(CdObjectPlacementRuntime.SAVED_BANK_BYTES,0));
@@ -230,6 +269,19 @@ class TestSonicCdR31aObjectPass {
             return new CdPlayerBody.R31Context(frame.stageSource(),assets,cut.currentTerrain(),placement.pool().capture(),Optional.empty(),
                 CdPlayerObjectTouch.fromR31aAssets(assets),new CdPlayerBody.ResponseContext(CdPlayerTouchResponse.fromR31aAssets(assets),cut.contact(),cut.world()),
                 cut.noBumperByte(),OptionalInt.empty(),OptionalInt.empty(),cut.cameraXWord(),cut.cameraYWord());
+        }
+        final List<CdPlayerFrameRuntime.R31PlaceBlockCall> placeStores=new ArrayList<>();int placeScreens,failPlane=-1;Throwable placeFault,screenFault;final int[] placePlane=new int[2048];
+        public void placeBlock(SonicCdR31aObjectPass owner,CdPlayerFrameRuntime.R31PlaceBlockCall original){
+            assertSame(pass,owner);pass.requirePlace(original);placeStores.add(original);var next=pass.preparedPlace(original);
+            if(original.store() instanceof CdPlayerBody.R31PlaneAWord word){
+                if(word.index()==failPlane){if(placeFault instanceof Error e)throw e;throw (RuntimeException)placeFault;}
+                int at=word.row()*64+word.column(),ready=word.word();pass.requirePlace(original);pass.applyPlace(original);placePlane[at]=ready;
+            }else pass.applyPlace(original);
+            cut=next;
+        }
+        public void placeScreen(SonicCdR31aObjectPass owner,CdPlayerFrameRuntime.R31PlaceBlockScreenCall original){
+            assertSame(pass,owner);pass.requirePlace(original);placeScreens++;
+            if(screenFault instanceof Error e)throw e;if(screenFault instanceof RuntimeException e)throw e;pass.verifyPlaceScreen(original);
         }
         public void primary(SonicCdR31aObjectPass.PrimarySubmission p){primaryPublications++;
             if(!realPrimary)throw p.unowned();lastPrimary=p;p.validateBefore();prePrimary=frame.state();readyPrimary=p.readyState();originalPrimary=p.publication();
