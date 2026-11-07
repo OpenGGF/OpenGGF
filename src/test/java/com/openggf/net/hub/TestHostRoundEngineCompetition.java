@@ -9,6 +9,27 @@ class TestHostRoundEngineCompetition {
     long now;
     List<ControlMessage> messages = new ArrayList<>();
     HostRoundEngine engine = new HostRoundEngine(() -> now, messages::add);
+    @Test void confirmedWinnerReclassifiesRetainedOutOfWindowClaims() {
+        start(); engine.setVerifiedRoom(true);
+        engine.startAttempt("p0",1); engine.startAttempt("p1",1);
+        assertNotNull(finish(0,100)); assertNotNull(finish(1,2000));
+        engine.onVerdict(0,1,true); engine.onVerdict(1,1,true);
+        assertEquals("DNF",engine.standings().stream().filter(r -> r.slot()==1).findFirst().orElseThrow().outcome());
+    }
+    @Test void fasterConfirmedWinnerRecomputesFrameWindow() {
+        start(); engine.setVerifiedRoom(true);
+        for(int i=0;i<3;i++) engine.startAttempt("p"+i,1);
+        assertNotNull(finish(0,100)); assertNotNull(finish(1,1900));
+        engine.onVerdict(0,1,true); engine.onVerdict(1,1,true);
+        assertNotNull(finish(2,90)); engine.onVerdict(2,1,true);
+        assertEquals(2,engine.standings().getFirst().slot());
+        assertEquals("DNF",engine.standings().stream().filter(r -> r.slot()==1).findFirst().orElseThrow().outcome());
+    }
+    @Test void verifierLatencyDoesNotMoveCutoffFromFinishArrival() {
+        start(); engine.setVerifiedRoom(true); engine.startAttempt("p0",1); assertNotNull(finish(0,100));
+        now=15000; engine.onVerdict(0,1,true);
+        assertTrue(messages.stream().anyMatch(m -> m instanceof ControlMessage.RaceCutoff c && c.endsAtHubMillis()==40000));
+    }
     @Test void forgedClockPrefixIsRejectedEvenInsideLatencyAllowance() {
         start(); engine.startAttempt("p0",1);
         var f = new ControlMessage.AttemptFinish(1,5,335,340,List.of(1,1,1,1,1),List.of(),"ab".repeat(32),"cd".repeat(32),null);

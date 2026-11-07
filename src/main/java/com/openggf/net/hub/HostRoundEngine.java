@@ -76,6 +76,9 @@ public final class HostRoundEngine {
     private TrackValidationProfile profile;
     private long cutoffAt = Long.MAX_VALUE;
     private int winnerFrames = -1;
+    private final Map<String, Best> competitionClaims = new LinkedHashMap<>();
+    private final Map<String, Long> finishArrivals = new LinkedHashMap<>();
+    private final java.util.Set<String> cutoffExcluded = new java.util.HashSet<>();
 
     boolean competition() { return config != null && "COMPETITION".equals(config.mode()); }
     void profile(TrackValidationProfile value) { profile = value; }
@@ -169,6 +172,7 @@ public final class HostRoundEngine {
         roundId++;
         countdownEndsAt = now + (competition() ? newConfig.startInSeconds() * 1000L : COUNTDOWN_MILLIS);
         entrants.clear(); entrantIdentities.clear(); started.clear(); out.clear(); cutoffAt = Long.MAX_VALUE; winnerFrames = -1;
+        competitionClaims.clear(); finishArrivals.clear(); cutoffExcluded.clear();
         // Shipped acts and arenas cap the race clock at ten minutes. Competition
         // uses that hard limit plus reload/finish transit allowance, not the TA retry window.
         deadline = countdownEndsAt + (competition() ? 630 : newConfig.windowSeconds()) * 1000L;
@@ -342,32 +346,56 @@ public final class HostRoundEngine {
                 verifiedBests.put(participantId, verified);
             }
         }
-        if (competition()) {
-            winnerFrames = verifiedBests.values().stream().mapToInt(Best::timeFrames).min().orElse(-1);
-            // Pending claims cannot close the race or permanently exclude honest finishes.
-            cutoffAt = winnerFrames < 0 ? Long.MAX_VALUE : Math.min(cutoffAt,
-                    hubClockMillis.getAsLong() + config.cutoffSeconds() * 1000L);
-            if (winnerFrames >= 0) broadcaster.accept(new ControlMessage.RaceCutoff(roundId, cutoffAt));
-        }
-        // A verdict on the shown claim always changes its row (state or time),
-        // even outside the broadcast cap; one on a hidden claim changes nothing.
-        boolean changed = showBest(participantId);
+        // Refresh every retained finish: a newly confirmed winner can narrow the
+        // frame window, and removing a failed claim must not discard honest claims.
+        boolean changed = competition() ? refreshCompetitionCutoff() : showBest(participantId);
         if (competition() && !pass && !bests.containsKey(participantId))
             changed |= out.putIfAbsent(participantId, "DNF") == null;
         if (changed) broadcaster.accept(new ControlMessage.StandingsDelta(broadcastStandings()));
     }
 
+    private boolean insideCompetitionWindow(Best best) {
+        return best != null && (!competition() || winnerFrames < 0
+                || (long) best.timeFrames() <= winnerFrames + config.cutoffSeconds() * 60L
+                    && finishArrivals.getOrDefault(best.participantId(), Long.MAX_VALUE) <= cutoffAt + FINISH_GRACE_MILLIS);
+    }
+
+    private boolean refreshCompetitionCutoff() {
+        Best winner = (verifiedRoom ? verifiedBests : competitionClaims).values().stream()
+                .min(STANDING_ORDER).orElse(null);
+        long previousCutoff = cutoffAt;
+        winnerFrames = winner == null ? -1 : winner.timeFrames();
+        cutoffAt = winner == null ? Long.MAX_VALUE
+                : finishArrivals.get(winner.participantId()) + config.cutoffSeconds() * 1000L;
+        if (winner != null && cutoffAt != previousCutoff)
+            broadcaster.accept(new ControlMessage.RaceCutoff(roundId, cutoffAt));
+        boolean changed = false;
+        for (String id : competitionClaims.keySet()) {
+            changed |= showBest(id);
+            boolean retained = !verifiedRoom || verifiedBests.containsKey(id) || pendingCandidates.containsKey(id);
+            if (retained && !bests.containsKey(id)) {
+                cutoffExcluded.add(id);
+                changed |= !"DNF".equals(out.put(id,"DNF"));
+            } else if (bests.containsKey(id) && cutoffExcluded.remove(id)) {
+                changed |= out.remove(id) != null;
+            }
+        }
+        return changed;
+    }
+
     /** Recomputes a verified room's shown best; returns whether it changed. */
     private boolean showBest(String participantId) {
-        Best shown = verifiedBests.get(participantId);
+        Best shown = competition() && !verifiedRoom ? competitionClaims.get(participantId) : verifiedBests.get(participantId);
+        if (!insideCompetitionWindow(shown)) shown = null;
         for (Best candidate : pendingCandidates.getOrDefault(participantId, List.of())) {
-            if (shown == null || STANDING_ORDER.compare(candidate, shown) < 0) {
+            if (insideCompetitionWindow(candidate) && (shown == null || STANDING_ORDER.compare(candidate, shown) < 0)) {
                 shown = candidate;
             }
         }
-        Best lapBest = verifiedLapBests.get(participantId);
+        Best lapBest = competition() && !verifiedRoom ? competitionClaims.get(participantId) : verifiedLapBests.get(participantId);
+        if (!insideCompetitionWindow(lapBest) || lapTime(lapBest) <= 0) lapBest = null;
         for (Best candidate : pendingCandidates.getOrDefault(participantId, List.of())) {
-            if (lapTime(candidate) > 0 && (lapBest == null || lapTime(candidate) < lapTime(lapBest))) lapBest = candidate;
+            if (insideCompetitionWindow(candidate) && lapTime(candidate) > 0 && (lapBest == null || lapTime(candidate) < lapTime(lapBest))) lapBest = candidate;
         }
         Best previousLap = lapBest == null ? lapBests.remove(participantId) : lapBests.put(participantId, lapBest);
         Best previous = shown == null ? bests.remove(participantId)
@@ -442,8 +470,8 @@ public final class HostRoundEngine {
                 || competition() && (out.containsKey(participantId)
                     || !Objects.equals(started.get(participantId), finish.attemptId())
                     || bests.containsKey(participantId)
-                    || !verifiedRoom && cutoffAt != Long.MAX_VALUE && now > cutoffAt + FINISH_GRACE_MILLIS
-                    || !verifiedRoom && winnerFrames >= 0 && (long) finish.timeFrames() > winnerFrames + config.cutoffSeconds() * 60L)
+                    || cutoffAt != Long.MAX_VALUE && now > cutoffAt + FINISH_GRACE_MILLIS
+                    || winnerFrames >= 0 && (long) finish.timeFrames() > winnerFrames + config.cutoffSeconds() * 60L)
                 || finish.attemptId() <= lastFinishedAttemptByParticipant
                 .getOrDefault(participantId, Integer.MIN_VALUE)
                 || finish.finishFrame() > 37800
@@ -465,17 +493,14 @@ public final class HostRoundEngine {
         Best improved = new Best(slot, participantId, fingerprint,
                 displayName, character, finish.timeFrames(),
                 achievedCounter++, finish, verifiedRoom ? "PENDING" : "UNVERIFIED");
+        if (competition()) { competitionClaims.put(participantId, improved); finishArrivals.put(participantId, now); }
         if (verifiedRoom) {
             pendingCandidates.computeIfAbsent(participantId, ignored -> new ArrayList<>())
                     .add(improved);
         }
         if (betterLap) lapBests.put(participantId, improved);
         if (existing == null || existing.timeFrames() > improved.timeFrames()) bests.put(participantId, improved);
-        if (competition() && !verifiedRoom && winnerFrames < 0) {
-            winnerFrames = finish.timeFrames();
-            cutoffAt = now + config.cutoffSeconds() * 1000L;
-            broadcaster.accept(new ControlMessage.RaceCutoff(roundId, cutoffAt));
-        }
+        if (competition() && !verifiedRoom) refreshCompetitionCutoff();
         List<Best> sorted = sortedBests();
         // Keep every finish notification: clients outside the cap also use it
         // to refresh their around-you page. Reuse this ordering for private rank.

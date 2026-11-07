@@ -52,7 +52,7 @@ monitor setting.
 | D12 | Round end | The round ends at the earliest of: (a) everyone finished or out; (b) first accepted finish plus the **cutoff** (host setting, default 60 s; precedent: S2 VS `Loser_Time_Left = $3C3C`, `loc_40FE4 (s2.asm:88079-88106)`); (c) the hard window (the track's time limit plus 30 s). A finish counts only if `timeFrames ≤ winnerFrames + cutoff×60`. Messages keep the existing `FINISH_GRACE_MILLIS` to arrive. |
 | D13 | Monitor setting, normal acts | Competition mode only, chosen by the host: NORMAL / RANDOMISED / COMPETITION_ITEMS / OFF, mapped per game in §7. Time Attack mode is always NORMAL. The setting is part of `GameplayRunPolicy`, so objects read it through `services().runPolicy()`. It is bound into the recording hash. |
 | D14 | Teleport | A **server-mediated swap** (user decision, §8), in Competition mode only:<br>• The breaker's client requests a swap at the break step. The host picks the nearest running rival by progress, preferring the one ahead, and sends **one `TeleportSwap` command to both clients**.<br>• Each client applies the other's hub-observed state at its next step boundary.<br>• Each application is a recorded input event bound into the recording hash, and the verifier checks it against the host's swap log.<br>• With no eligible partner, the ROM's solo outcome applies: invincibility on S2 acts (`s2.asm:25766-25772`), and the empty-slot shoe swap on arenas.<br>The S3K arena swap item (`loc_3652A`) uses the same mechanism, with its own swapped fields. |
-| D15 | Live positions | Estimates for display, never used for placement. They come from a 4-bit **progress ordinal** in ghost-frame byte 5, bits 4-7 (the arena's current lap, or an act's highest star post + 1, clamped to 15). The ordinal is mirrored by the hub into the roster status byte's high nibble. Within an ordinal, progress is wrap-aware distance along the lap (arenas) or x / level width (acts). Byte 6 bits 4-6, reserved today, carry the swap-relevant pose: bit 4 is the secondary collision path, and bits 5-6 are the arena shoe kind (§8.3). Bit 7 stays reserved. The 2026-07-04 design held these bits for a mapping-frame extension; no character needs one today. |
+| D15 | Live positions | Estimates for display, never used for placement. They come from a 4-bit **progress ordinal** in ghost-frame byte 5, bits 4-7 (the arena's current lap, or an act's highest star post + 1, clamped to 15). The ordinal is mirrored by the hub into the roster status byte's high nibble. Within an ordinal, progress is wrap-aware distance along the lap (arenas) or x / level width (acts). Byte 6 bits 4-6, reserved today, carry the swap-relevant pose: bit 4 is the secondary collision path, and bits 5-6 are the arena shoe kind (§8.3). Bit 7 marks an admitted respawn reset. The 2026-07-04 design held these bits for a mapping-frame extension; no character needs one today. |
 | D16 | Ghost art | Every player in a round runs the same track, so the **local track picks the art family**. In an arena, ghosts draw with the ROM miniature art and mappings, the same family as `S3kMiniatureSprite`. `GhostPose` is unchanged. |
 | D17 | Standings visibility | User decision. **Unverified rooms publish the Competition finish order, lap times and best lap, clearly labelled UNVERIFIED.** Verified rooms remain the only trusted boards: `PENDING` → `VERIFIED` as today. This deliberately amends the trust decision of the 2026-07-04 security design, which `RoomHost.java:212-216` implements by never publishing unverified standings. The amendment is scoped to Competition-mode placement boards (§8.7). **Time Attack-mode standings in unverified rooms:** the user's decision covers Competition only. This design recommends the same UNVERIFIED publication for Time Attack boards, for consistency: one room should not label one mode's board and hide the other's. It is flagged for the lead and kept behind the same host switch, so it can land with this work or be held back. |
 | D18 | Protocol | Version 9 (`Protocol.java:12`). The strict codec is kept, with no compatibility path; clients, hosts and master upgrade together. |
@@ -352,13 +352,13 @@ The progress strip and the "estimated position" in `MultiplayerHudRenderer`
 
 - **Descriptor.** `AttemptStartDescriptor` becomes `(gameId, trackKind, zone, act, character,
   fingerprint, mode, monitors, deathRestart, swapEnabled)`. `swapEnabled` is frozen from the
-  `RaceLaunch` (§8.2). `AttemptInputRecording` writes a format byte, version 2, so the SHA-256
+  `RaceLaunch` (§8.2). `AttemptInputRecording` writes a format byte, version 3 (with canonical v2 read support), so the SHA-256
   binds them. The decoder stays canonical-checked. The verifier's
   `recordedTrack.equals(job.trackKey())` includes the kind.
-- **Race events.** Recording v2 appends a canonical, step-ordered event list:
+- **Race events.** Recording v3 appends a canonical, step-ordered event list:
   `(step u32, kind u8, swapId u32, payload)`, at most 64 events.
   - Kinds are `SWAP_APPLY` (with the full `SwapTarget`, §8.3) and `SWAP_FALLBACK`.
-  - An event applies **before** the recorded step executes, both live and on replay.
+  - An event applies **before** the recorded step executes, both live and on replay. REFUSED and EXPIRED receipts record a fallback event; EXPIRED is valid only after the 180-step apply window.
   - The list is inside the hashed encoding, so `inputRecordingSha256Hex` binds every externally
     supplied event.
 - **Frame cap.** `MAX_FRAMES` rises to **37,800** (10 min 30 s) in `AttemptInputRecording`,
@@ -496,7 +496,7 @@ The rule is deterministic over hub state, and the log records the inputs it used
 - **Request cap:** at most `profile.maxSwapSources` requests per attempt. This is the number of
   monitors in the act's object layout, or 2 × (laps + 1) item pickups on an arena; the bundled
   profile carries it. Requests over the cap, requests outside RUNNING, and requests in rounds
-  whose settings cannot teleport are rejected and counted as violations.
+  whose settings cannot teleport remain violations. Well-formed source-cap and cooldown refusals receive an identified fallback and reason, because native death reloads can re-arm a source.
 
 ### 8.3 What is swapped, and what the command carries
 
@@ -618,7 +618,10 @@ the saved-centre receipt.
 Recording v3 widens event counts to 1024 so repeated native pickups after deaths can retain
 refusal receipts; v2 remains readable.
 
-Pending finish claims cannot arm the verified-room cutoff. Finish admission bounds elapsed
+Pending finish claims cannot arm the verified-room cutoff. A confirmed winner recomputes
+both the frame bound and the wall cutoff from its original finish arrival. Retained claims
+outside that window become DNF; claims remain available for reclassification. Verifier
+processing latency never extends the cutoff. Finish admission bounds elapsed
 frames against scheduled GO and arrival (two seconds of transport slack), and bounds the
 clock prefix against AttemptStart and the hub's contiguous stream. The game-owned
 catalogue also fixes the Competition prefix itself: step zero on acts and step 240
