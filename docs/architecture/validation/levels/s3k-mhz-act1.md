@@ -678,3 +678,74 @@ pass their unchanged input controls (8 tests,5 existing failures,0 errors/skips)
 The comparison-only exporter is restored byte-for-byte; neither replay input nor
 protected bootstrap changes. This bounded pass is not broad smoke or full-suite
 qualification. The integration lead owns the remaining shared-code sweep.
+
+
+## Fresh shrine routine frontier — 2026-11-07
+
+A fresh CURRENT `8afbc8b7` five-replay control reproduces the four stopped
+routine `$00/$02` fronts and the distinct MHZ3 camera/physics front exactly;
+complete report JSONs match the archived controls. No runtime correction is
+made. These mismatches compare a native pre-player load state with the engine's
+constructed player state before its first sprite scan, rather than proving an
+incorrect `Sonic_Init` routine value.
+
+`loc_62B6` (sonic3k.asm:7762-7767) skips the title owner for `$1701`.
+`loc_6310` (sonic3k.asm:7788-7798) still calls `LoadLevelLoadBlock`, whose
+`loc_7870` (sonic3k.asm:9772-9780) waits for terrain art before
+`loc_6468` (sonic3k.asm:7880-7887) spawns players and runs the first
+`Process_Sprites`. `Sonic_Init` (sonic3k.asm:21938-21952) and
+`Tails_Init` (sonic3k.asm:26141-26155) then publish routine 2 and body radii.
+Shipped `FixBugs=0` has no alternate branch at these sites.
+
+All four native suffixes contain 61 routine-zero rows, cleared radius/collision
+state, old rings and no sidekick or sanctuary objects. Two fixtures then
+capture actual assembly: routine 2 and the position `$1640/$03A3` and animation
+`$1C` written by `sub_90A4C` (sonic3k.asm:197928-197936). The other two end earlier.
+The observed 61 rows describe the fixtures; they authorize no fitted delay.
+The recorder's main-player presence is hardcoded to 1, while
+`TraceCharacterState.routineFromSprite` defaults to 2 from engine state.
+Neither field alone proves that native player initialization ran.
+
+The approved read-only probe reproduces every full current report. All four
+`$1701` loads execute `freshLevelLoadPlan`'s **no-phase-admission** rejection;
+the later title-suppression gate is not executed. Initial sprites are requested
+with heuristic routine 2 already visible. A compiled HPZS `initialDispatch`
+observer emits no stack, while profile/request witnesses fire in the same run:
+the scene's first scan has not been observed, so it is not called early.
+
+The actual raw ERROR counts remain 13/13/13/12 for the four targets and 7,041 for
+MHZ3. Compared with the explicitly older camera witnesses, all 6,998 actual rows
+have identical fields, zero added/removed ERROR tuples and no coverage changes;
+6,619 rows are error-free and 6,314 have every observed value matching. This is
+measured row equality across named source epochs, not a runtime fix or a
+relabelled old baseline. Metadata differs by recording date and three explicit
+zero Act3 carry fields; physics, aux and hardware payloads match their hashes.
+The four last physical comparisons are their first-error rows; later records
+contain only ten hardware errors each. Missing physics suffixes are unknown,
+not parity. No grouped span is expanded into invented observations.
+
+No initialization-phase
+companion exists in these run roots. A correct continuation needs independently
+selected ROM-backed load work and native phase/service observations through
+the existing timing authority; physics/aux values and queue completions cannot
+create them. This is a named production-load/timing gap, with source ownership
+in `Sonic3kLevelInitProfile.freshLevelLoadPlan` and the shared native-load/title
+selection owners. No routine override, object removal, skipped initial scan,
+importer change or timing extension is delivered. Other MHZ fronts remain
+unattributed, and existing route/product/native-pixel limits remain open.
+
+
+Final restored-source validation selects 21 concrete classes: 125 tests,
+120 passes and the same 5 inherited trace failures, 0 errors and 0 skips.
+All five full trace reports equal the unmodified current reports. The 16
+control classes cover actual fresh shrine entry, results rebuild, checkpoint
+camera ownership, two-cycle shrine graph/initial-camera rewind, all four S3K
+keepgreens (both existing level-loading classes), hardware-timing authority,
+trace invariants, pending-load rewind and headless audio/backend isolation.
+These controls preserve existing behavior; they do not implement the missing
+load interval. All three observed source files and compiled classes are restored
+byte-for-byte, with no compiled observer marker. Java 25, surfaceless EGL,
+explicit original ROM properties, one alphabetical fork and queued Maven are
+used throughout. No shared executable source changed, so no S1-chain rerun or
+shared-code smoke is claimed. Broad profiles, native capture/publication,
+frontier-log updates and integration remain lead-owned.

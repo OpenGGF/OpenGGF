@@ -84,6 +84,7 @@ under the matching area heading; see the
   Physics, auxiliary observations and movie input are preserved exactly.
   The LRZ title owner submits its three enemy archives in native order,
   preventing a later results-art FIFO overflow. Existing animation and route
-  frontiers remain visible.
+  frontiers remain visible, including the fresh sanctuary's intermediate load
+  state; its routine comparison does not establish player dispatch.
   Special-stage entry honors the recorded team and production lock-on module;
   the single entry-state import consumes S2-family manifest destination rings.
