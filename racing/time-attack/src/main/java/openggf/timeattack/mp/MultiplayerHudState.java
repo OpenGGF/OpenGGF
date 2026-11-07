@@ -3,6 +3,7 @@ package openggf.timeattack.mp;
 import com.openggf.net.protocol.ControlMessage;
 import com.openggf.net.client.RemoteGhostRegistry;
 
+import openggf.timeattack.CompetitionHudState;
 import java.util.List;
 import java.util.Map;
 
@@ -33,7 +34,24 @@ public record MultiplayerHudState(
         Map<Integer, Integer> nameColours,
         int localSlot,
         int tick,
-        Map<Integer, Integer> hurtFlash) {
+        Map<Integer, Integer> hurtFlash,
+        CompetitionHudState competition) {
+
+    /** Existing callers retain the Time Attack display defaults. */
+    public MultiplayerHudState(boolean active, String phase, long remainingWindowMillis,
+            long remainingCountdownMillis, List<ControlMessage.StandingsRow> standings,
+            List<String> chatLines, boolean connectionLost, String kickReason,
+            int totalPlayers, List<RemoteGhostRegistry.FarPlayer> farPlayers,
+            String characterPolicy, List<String> voteOptions,
+            List<ControlMessage.VoteCount> voteCounts, long voteRemainingMillis,
+            String voteResultTrackKey, List<ControlMessage.StandingsRow> podiumRows,
+            int localRank, Map<Integer, Integer> nameColours, int localSlot, int tick,
+            Map<Integer, Integer> hurtFlash) {
+        this(active, phase, remainingWindowMillis, remainingCountdownMillis, standings, chatLines,
+                connectionLost, kickReason, totalPlayers, farPlayers, characterPolicy, voteOptions,
+                voteCounts, voteRemainingMillis, voteResultTrackKey, podiumRows, localRank,
+                nameColours, localSlot, tick, hurtFlash, CompetitionHudState.inactive());
+    }
 
     /** A snapshot with no hurt flashes (and no local slot). */
     public MultiplayerHudState(boolean active, String phase, long remainingWindowMillis,
@@ -74,6 +92,7 @@ public record MultiplayerHudState(
     }
 
     public MultiplayerHudState {
+        java.util.Objects.requireNonNull(competition);
         nameColours = Map.copyOf(nameColours);
         hurtFlash = Map.copyOf(hurtFlash);
         standings = List.copyOf(standings);
