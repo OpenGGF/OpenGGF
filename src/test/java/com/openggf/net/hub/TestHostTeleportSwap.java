@@ -31,6 +31,11 @@ class TestHostTeleportSwap {
   var stale=new HostTeleportSwap.Observation(1,10,0,false,2,player(1,2,10).target());
   assertInstanceOf(ControlMessage.TeleportNoPartner.class,request(0,10,List.of(player(0,1,10),stale)));
  }
+ @Test void capRefusalCannotBypassRequestFrameBounds() {
+  assertThrows(IllegalArgumentException.class,()->host.request(0,1,Integer.MAX_VALUE,1,1000,0,
+   List.of(player(0,1,10)),(slot,m)->fail("malformed request must not create a receipt")));
+  assertTrue(host.log().isEmpty());
+ }
  @Test void waitsForRequestStreamAndEnforcesCap() {
   assertNull(request(0,11,List.of(player(0,1,10),player(1,2,10))));
   host.drain(1100,List.of(player(0,1,11),player(1,2,11)),(slot,m)->sent.add(m),(slot,d)->fail(d));

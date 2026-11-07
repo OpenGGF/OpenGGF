@@ -31,6 +31,8 @@ public final class HostTeleportSwap {
     void clear() { log.clear(); pending.clear(); cooldown.clear(); requests.clear(); deferred.clear(); recordedEvents.clear(); }
     ControlMessage request(int slot, int attempt, int frame, long round, long now, int cap,
                            Collection<Observation> observations, BiConsumer<Integer, ControlMessage> send) {
+        // Bound receipt arithmetic before cap/fallback paths, including expiry +181.
+        if (frame < 0 || frame > 37800) throw new IllegalArgumentException("swap frame outside recording");
         if (deferred.containsKey(slot)) return noPartner(slot, attempt, frame, now, null, List.of(), send, "UNAVAILABLE");
         int sourceCap = Math.min(cap, MAX_RECORDED_EVENTS);
         Observation self = observations.stream().filter(o -> o.slot() == slot).findFirst().orElse(null);
