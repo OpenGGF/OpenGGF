@@ -45,4 +45,24 @@ class TestSonic2CompetitionHudArt {
                 assertEquals(Im2FieldOracle.pixel(rom.readBytes(0x4134C, 22 * 32), 10, x, y * 2),
                         patterns[0x37B].getPixel(x, y), "HUD colon cell must hold Art_Hud, not MilesLife2P");
     }
+    @Test void livesFlagsRewriteOnlyTheChangedPlayersPatternsAndPauseRetainsTheRequest() throws Exception {
+        var rom=TestEnvironment.currentRom();var art=new Sonic2CompetitionArtResidency(rom,new Sonic2PlcService(rom));
+        var hud=new Sonic2CompetitionHudArt(rom,art);hud.initialize(3,12);art.serviceDmaQueueVBlank();
+        var original=art.capture();var state=hud.capture();
+        hud.update(3,2,true);assertEquals(state,hud.capture());assertEquals(original,art.capture());
+        hud.update(3,2,false);var changed=art.capture();
+        for(int slot=0;slot<2048;slot++) {
+            if(slot==0x6FD || slot==0x6FF)assertNotSame(original.slots()[slot],changed.slots()[slot]);
+            else assertSame(original.slots()[slot],changed.slots()[slot],"only P2 lives writes at slot "+slot);
+        }
+        assertArrayEquals(new byte[32],art.patternBytes(0x6FD));
+        assertArrayEquals(rom.readBytes(0x4164C+2*32,32),art.patternBytes(0x6FF));
+        var next=art.capture();hud.update(13,2,false);
+        assertArrayEquals(rom.readBytes(0x4164C+32,32),art.patternBytes(0x7DD));
+        assertArrayEquals(rom.readBytes(0x4164C+3*32,32),art.patternBytes(0x7DF));
+        for(int tile=0;tile<22;tile++)assertSame(next.slots()[0x6E2+tile],art.capture().slots()[0x6E2+tile],
+                "2P HUD selects the shared number alphabet; it never rewrites per-player ring/time art");
+        art.restore(original);hud.restore(state);hud.update(3,12,false);assertEquals(original,art.capture());
+    }
+
 }

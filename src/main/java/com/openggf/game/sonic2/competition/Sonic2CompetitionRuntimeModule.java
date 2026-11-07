@@ -88,6 +88,8 @@ public final class Sonic2CompetitionRuntimeModule extends DelegatingGameModule {
         hudArt = new Sonic2CompetitionHudArt(host.rom(), nativeVramOwner());
         hudArt.initialize(
                 host.session().gameState(0).getLives(), host.session().gameState(1).getLives());
+        var registry=host.context().getRewindRegistry();
+        registry.deregister(hudArt.key()); registry.register(hudArt);
     }
     private void installDisplayArtOwners() {
         var context = host.context();
@@ -95,8 +97,11 @@ public final class Sonic2CompetitionRuntimeModule extends DelegatingGameModule {
         // Ordinary S2 animation construction primes 1P script destinations. Rebuild
         // the derived field table once, then retire BOTH halves of the combined owner.
         fields.rebuild();
-        var patterns = fields;
         try {
+            var slots=host.profile().romZone()==12 ? new Sonic2CompetitionSlotPictures(
+                    com.openggf.data.RomByteReader.fromRom(host.rom()),nativeVramOwner(),
+                    ()->features.getSlotMachineManager()==null ? null : features.getSlotMachineManager().snapshot()) : null;
+            var patterns=new Sonic2CompetitionAnimatedArt(host.rom(),host.profile().romZone(),nativeVramOwner(),slots);
             var palettes = com.openggf.game.sonic2.Sonic2PaletteCycleInternalAccess.create(host.rom(),
                     context.getLevelManager().getCurrentLevel(), host.profile().romZone());
             com.openggf.level.LevelAnimationInternalAccess.installNativeAnimatedPatternManager(context, patterns);
