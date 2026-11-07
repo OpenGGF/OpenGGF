@@ -20,6 +20,11 @@ public final class GhostStreamValidator {
     public static final long PACING_WARMUP_MILLIS = 3000;
     public static final int PACING_MIN_FPS = 54;
 
+    private int swapFirst = -1, swapLast;
+    private com.openggf.net.protocol.ControlMessage.SwapTarget swapTarget;
+    void admitSwap(com.openggf.net.protocol.ControlMessage.SwapTarget target, int first) {
+        swapTarget = target; swapFirst = first; swapLast = first + 180;
+    }
     private TrackValidationProfile profile;
     private final LongSupplier wallClockMillis;
     private final ViolationSink sink;
@@ -60,6 +65,7 @@ public final class GhostStreamValidator {
         attemptFlagged = false;
         attemptStarted = true;
         previousFrame = null;
+        swapTarget = null;
         streamDigest = newDigest();
         sealedStreamHash = null;
     }
@@ -108,15 +114,22 @@ public final class GhostStreamValidator {
                 ? profile.maxSpeedPxPerFrame()
                 : TrackValidationProfile.GLOBAL_SPEED_CEILING_PX_PER_FRAME;
         GhostFrame previous = previousFrame;
+        var remainingSwap = swapTarget;
         byte[] frameData = batch.frameData();
         for (int i = 0; i < batch.frameCount(); i++) {
-            GhostFrame frame = GhostFrameCodec.decode(
-                    frameData, i * GhostFrameCodec.BYTES);
+            GhostFrame frame;
+            try { frame = GhostFrameCodec.decode(frameData, i * GhostFrameCodec.BYTES); }
+            catch (IllegalArgumentException invalid) { return violate("pose", "invalid ghost pose bits"); }
             if (previous != null) {
-                int dx = Math.abs(frame.x() - previous.x());
-                int dy = Math.abs(frame.y() - previous.y());
+                int dx = Math.abs(TrackRules.delta(frame.x() - previous.x(), profile == null ? 0 : profile.wrapWidthPx()));
+                int dy = Math.abs(TrackRules.delta(frame.y() - previous.y(), profile == null ? 0 : profile.wrapHeightPx()));
                 if (dx > maxSpeed || dy > maxSpeed) {
-                    return violate("speed",
+                    int index = batch.startFrameIndex() + i;
+                    if (remainingSwap != null && index >= swapFirst && index <= swapLast
+                            && Math.abs(frame.x() - remainingSwap.centreX()) <= maxSpeed
+                            && Math.abs(frame.y() - remainingSwap.centreY()) <= maxSpeed) {
+                        remainingSwap = null;
+                    } else return violate("speed",
                             "delta " + dx + "," + dy + " exceeds " + maxSpeed);
                 }
             }
@@ -130,6 +143,7 @@ public final class GhostStreamValidator {
             }
             previous = frame;
         }
+        swapTarget = remainingSwap;
         previousFrame = previous;
         streamDigest.update(frameData);
         nextExpectedFrameIndex = batch.startFrameIndex() + batch.frameCount();

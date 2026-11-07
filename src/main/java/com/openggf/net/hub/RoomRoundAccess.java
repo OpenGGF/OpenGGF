@@ -12,6 +12,12 @@ public final class RoomRoundAccess {
 
     private RoomRoundAccess() { }
 
+    public static void configureIdentity(RoomHost room, ControlMessage.RoomDescriptor descriptor) {
+        room.configureIdentity(descriptor);
+    }
+    public static void publishUnverifiedTimeAttack(RoomHost room, boolean publish) {
+        room.round().setPublishUnverifiedStandings(publish);
+    }
     public static List<Result> results(RoomHost room) {
         return room.round().results().stream()
                 .map(result -> new Result(result.slot(), result.participantId(),
@@ -22,6 +28,9 @@ public final class RoomRoundAccess {
     public static void onVerdictForParticipant(RoomHost room, String participantId,
                                                 int attemptId, String recordingHash,
                                                 boolean pass) {
+        if (!pass) room.round().results().stream().filter(r -> r.participantId().equals(participantId)
+                && r.finish().attemptId() == attemptId && r.finish().inputRecordingHashHex().equals(recordingHash))
+                .findFirst().ifPresent(r -> room.taintSwaps(r.slot()));
         room.round().onVerdictForParticipant(participantId, attemptId,
                 recordingHash, pass);
     }

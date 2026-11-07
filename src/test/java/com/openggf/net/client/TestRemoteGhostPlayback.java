@@ -13,6 +13,24 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class TestRemoteGhostPlayback {
 
+    @Test void configuredRegistryExtrapolatesAcrossWrapAndPreservesProgress() {
+        for (boolean before : List.of(true,false)) {
+            var registry = new RemoteGhostRegistry();
+            registry.onRoomState(List.of(new ControlMessage.PlayerInfo(0,"fp","A","sonic")));
+            if (before) registry.configureGeometry(512,0);
+            byte[] data = new byte[9 * GhostFrameCodec.BYTES];
+            for (int i=0;i<9;i++) GhostFrameCodec.encode(new GhostFrame((452+i*8)%512,64,1,
+                    false,false,false,2,false,false,3,true,2),data,i*GhostFrameCodec.BYTES);
+            registry.onAggregate(new GhostPackets.Aggregate(0,List.of(new GhostPackets.AggregateEntry(0,1,0,9,data))));
+            if (!before) registry.configureGeometry(512,0);
+            for (int i=0;i<9;i++) assertFalse(registry.advanceAll(-1).isEmpty());
+            var frame = registry.advanceAll(-1).getFirst().state().frame();
+            assertEquals(12,frame.x()); assertEquals(3,frame.progress());
+            assertTrue(frame.secondaryPath()); assertEquals(2,frame.shoeKind());
+            assertThrows(IllegalArgumentException.class,()->registry.configureGeometry(-1,0));
+        }
+    }
+
     @Test void expiredNearPlaybackReturnsToFreshCoarseRosterAndCanResume() {
         var registry = new RemoteGhostRegistry();
         registry.onRoomState(List.of(new ControlMessage.PlayerInfo(0,"fp","A","sonic",false)));

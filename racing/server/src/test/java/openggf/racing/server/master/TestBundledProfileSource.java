@@ -22,6 +22,17 @@ class TestBundledProfileSource {
     }
 
     @Test
+    void arenaKeysHaveSeparateLapProfiles() {
+        var source = new BundledProfileSource();
+        for (int i = 0; i < 5; i++) {
+            var profile = source.profileFor(com.openggf.net.protocol.TrackKey.parse("s3k:arena:" + i)).orElseThrow();
+            assertEquals(5, profile.lapCount());
+            assertEquals(12, profile.maxSwapSources());
+        }
+        assertTrue(source.profileFor(com.openggf.net.protocol.TrackKey.parse("s3k:arena:5")).isEmpty());
+    }
+
+    @Test
     void everyEligibleTimeAttackActHasBounds() {
         // The master admits vote pools and track updates only for eligible acts with bounds, so the
         // regenerated table (TrackProfileExportTool) must cover the whole eligible catalog.
