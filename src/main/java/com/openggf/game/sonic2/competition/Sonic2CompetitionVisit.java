@@ -24,6 +24,7 @@ public final class Sonic2CompetitionVisit implements NativeMenuScreen {
     private final Sonic2CompetitiveSpecialStageAdapter halfpipe;
     private final Sonic2NativeControlState controls = new Sonic2NativeControlState();
     private RewindRegistry registry;
+    private boolean registeredSessionDirectly;
     private boolean closed;
     private boolean initialized;
     private final com.openggf.game.GameStateManager sourceProgress;
@@ -51,8 +52,7 @@ public final class Sonic2CompetitionVisit implements NativeMenuScreen {
             };
             host = Sonic2NativeCompetitionHost.production(context.rootModule(), context.engine(), mode -> {
                 context.publishMode().accept(mode);
-                registry = mode.getRewindRegistry();
-                for (var adapter : halfpipe.rewindAdapters()) registry.register(adapter);
+                bindRegistry(mode.getRewindRegistry(), false);
             }, qualifiedViews, options.teleportOnlyMonitors(), overseas, objects);
             host.bindNativeWaitInput(NativeWaitInput.from(context.input()), controls);
             screen = new Sonic2CompetitionScreen(session, host, halfpipe, context.engine().roms().getRom(), () -> {
@@ -76,8 +76,52 @@ public final class Sonic2CompetitionVisit implements NativeMenuScreen {
         host.clearMenuCameraRam();
         screen.initialize();
         initialized = true;
+        var mode = java.util.Objects.requireNonNull(
+                com.openggf.game.session.SessionManager.getCurrentGameplayMode(), "live native menu registry owner");
+        bindRegistry(mode.getRewindRegistry(), true);
     }
-    @Override public void update(InputHandler input) { screen.update(input); }
+    private void releaseRegistry() {
+        if (registry == null) return;
+        for (var adapter : halfpipe.rewindAdapters()) registry.deregister(adapter.key());
+        registry.deregister(controls.key());
+        if (registeredSessionDirectly) registry.deregister(session().key());
+        registry = null;
+        registeredSessionDirectly = false;
+    }
+    private void bindRegistry(RewindRegistry target, boolean standalone) {
+        if (registry == target && registeredSessionDirectly == standalone) return;
+        releaseRegistry();
+        registry = java.util.Objects.requireNonNull(target);
+        // Before an act opens, the visit owns its session directly. The native
+        // world's policy graph owns that same session after the transfer.
+        if (standalone) registry.registerOrRefresh(session());
+        registeredSessionDirectly = standalone;
+        registry.registerOrRefresh(controls);
+        for (var adapter : halfpipe.rewindAdapters()) registry.registerOrRefresh(adapter);
+    }
+    private void advanceBoundWaitClock() {
+        var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+        var objects = mode == null ? null : mode.getObjectManager();
+        // The outer engine already ticks the unbound global clock. A bound
+        // object clock must still tick on menu/results/halfpipe waits with no LevelLoop.
+        if (objects != null) objects.advanceVblaCounter();
+    }
+    @Override public void update(InputHandler input) {
+        if (session().phase() == Sonic2CompetitionSession.Phase.SPECIAL_STAGE) {
+            var frame = com.openggf.game.competition.NativeCompetitionIterationAccess.currentFrame();
+            com.openggf.game.competition.NativeCompetitionIterationAccess.runLoop(frame, () -> {
+                var phase = com.openggf.game.resources.PlcLifecyclePhase.SPECIAL_STAGE;
+                if (!frame.claim(phase)) throw new IllegalStateException("Competitive halfpipe wait already owned");
+                advanceBoundWaitClock();
+                screen.update(input);
+                frame.prepareAfterLoop(phase);
+                return null;
+            });
+        } else {
+            if (session().phase() != Sonic2CompetitionSession.Phase.ACT) advanceBoundWaitClock();
+            screen.update(input);
+        }
+    }
     @Override public void afterFrame() { screen.afterFrame(); }
     @Override public void draw() { screen.draw(); }
     @Override public void setClearColor() { screen.setClearColor(); }
@@ -86,7 +130,7 @@ public final class Sonic2CompetitionVisit implements NativeMenuScreen {
         if (closed) return;
         closed = true;
         try {
-            if (registry != null) for (var adapter : halfpipe.rewindAdapters()) registry.deregister(adapter.key());
+            releaseRegistry();
             // Return the native P1 bank to the caller's persistent progress owner
             // before retiring/resetting the competition world.
             if (initialized) sourceProgress.restore(screen.session().gameState(0).capture());

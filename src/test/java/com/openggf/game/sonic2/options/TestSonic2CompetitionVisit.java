@@ -67,6 +67,54 @@ class TestSonic2CompetitionVisit {
             title.reset();
         } finally { TestEnvironment.resetAll(); }
     }
+    @Test void menuOnlyVisitRegistersAndRetiresItsActualOwners() throws Exception {
+        var menus=new NativeMenuController();
+        try {
+            HeadlessTestFixture.builder().withZoneAndAct(0,0).build();
+            var mode=SessionManager.getCurrentGameplayMode();var registry=mode.getRewindRegistry();
+            var input=new InputHandler();input.setLogicalOverride(NEUTRAL);
+            var context=new NativeMenuHostContext(EngineServices.current(),
+                    SessionManager.getCurrentWorldSession().rootGameModule(),input,ignored -> { });
+            var visit=assertInstanceOf(Sonic2CompetitionVisit.class,
+                    new Sonic2NativeModeProvider(true,zone -> zone==0).competitionScreen(context));
+            assertTrue(menus.open(visit));
+            var active=registry.capture();menus.close();var retired=registry.capture();
+            assertAll(
+                () -> assertTrue(active.containsKey("sonic2.competition.halfpipe")),
+                () -> assertTrue(active.containsKey(visit.session().key())),
+                () -> assertTrue(active.containsKey(visit.controls().key())),
+                () -> assertFalse(retired.containsKey("sonic2.competition.halfpipe")),
+                () -> assertFalse(retired.containsKey(visit.session().key())),
+                () -> assertFalse(retired.containsKey(visit.controls().key())),
+                () -> assertSame(mode,SessionManager.getCurrentGameplayMode()));
+        } finally { menus.close();TestEnvironment.resetAll(); }
+    }
+    @Test void standaloneHalfpipeWaitsOwnTheirClockWithoutRunningTheSourceLevel() throws Exception {
+        var menus=new NativeMenuController();
+        try {
+            HeadlessTestFixture.builder().withZoneAndAct(0,0).build();
+            var mode=SessionManager.getCurrentGameplayMode();var objects=mode.getObjectManager();
+            int clock=objects.getVblaCounter(),levelFrame=mode.getLevelManager().getFrameCounter();
+            var input=new InputHandler();input.setLogicalOverride(NEUTRAL);
+            var context=new NativeMenuHostContext(EngineServices.current(),
+                    SessionManager.getCurrentWorldSession().rootGameModule(),input,ignored -> { });
+            var visit=assertInstanceOf(Sonic2CompetitionVisit.class,
+                    new Sonic2NativeModeProvider(true,zone -> zone==0).competitionScreen(context));
+            assertTrue(menus.open(visit));tick(menus,input,NEUTRAL);
+            var select=LogicalInputSnapshot.ofPlayers(PlayerInputState.of(10,10,0,0,true,true),PlayerInputState.neutral());
+            tick(menus,input,select);
+            var phases=new java.util.ArrayList<com.openggf.game.resources.PlcLifecyclePhase>();
+            for(int i=0;i<3;i++) phases.add(tick(menus,input,NEUTRAL));
+            assertAll(
+                () -> assertEquals(Sonic2CompetitionSession.Phase.SPECIAL_STAGE,visit.session().phase()),
+                () -> assertEquals(4,visit.session().specialStageIndex()),
+                () -> assertNull(visit.host().profile(),"special-only entry must not fabricate an act load"),
+                () -> assertSame(mode,SessionManager.getCurrentGameplayMode()),
+                () -> assertEquals(clock+5,objects.getVblaCounter()),
+                () -> assertEquals(levelFrame,mode.getLevelManager().getFrameCounter()),
+                () -> assertEquals(java.util.Collections.nCopies(3,com.openggf.game.resources.PlcLifecyclePhase.SPECIAL_STAGE),phases));
+        } finally { menus.close();TestEnvironment.resetAll(); }
+    }
     @Test void qualifiedProviderBindsRealTeleportAndRewind() throws Exception {
         var menus = new NativeMenuController();
         try {
@@ -152,21 +200,22 @@ class TestSonic2CompetitionVisit {
             assertEquals(0,second.displayState().ringsAnimationFrame(),"Level entry clears ring phase");
         } finally { menus.close(); TestEnvironment.resetAll(); }
     }
-    private static void tick(NativeMenuController menus,InputHandler input,LogicalInputSnapshot sample) {
+    private static com.openggf.game.resources.PlcLifecyclePhase tick(NativeMenuController menus,InputHandler input,LogicalInputSnapshot sample) {
         input.setLogicalOverride(sample);
         var mode=SessionManager.getCurrentGameplayMode();
         LevelFrameStep.updateTimers(LevelFrameContext.from(mode));
         var phase = NativeMenuController.phase(menus.screen().mode());
         boolean menu = menus.screen().mode() != com.openggf.game.GameMode.COMPETITION;
-        mode.plcFrameLifecycle().runLogicalIteration(mode::updateFade,frame->{
+        var owner = mode.plcFrameLifecycle().runLogicalIteration(mode::updateFade,frame->{
             if (menu) assertTrue(frame.claim(phase));
             NativeCompetitionIterationAccess.runAdmitted(frame,()->menus.update(input,false));
             if (menu) frame.prepareAfterLoop(phase);
-            return null;
+            return frame.ownerPhase();
         });
         // A fresh actual wait sample during the synchronous entry observes Start released.
         input.setLogicalOverride(NEUTRAL);
         assertTrue(menus.completeFrame());
+        return owner;
     }
     private static void position(AbstractPlayableSprite player,int x,int y) {
         assertFalse(player.getDead());
