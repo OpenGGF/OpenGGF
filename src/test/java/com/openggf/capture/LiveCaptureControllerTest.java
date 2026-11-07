@@ -358,6 +358,133 @@ class LiveCaptureControllerTest {
         assertTrue(h.audioClosed, "the retry released the lease");
     }
 
+    @Test void drainFallbackRetainsRefusedRealLeaseUntilOwnerThreadStop() throws Exception {
+        Harness h = new Harness();
+        h.sampleRate = 5;
+        AudioPresentationProducer producer = captureProducer();
+        try {
+            h.audioFactory = producer::attachCapture;
+            LiveCaptureController c = h.controller();
+            try {
+                c.start(h.viewport, 2);
+                c.capturePresentedFrame(h.viewport);
+                // A foreign caller cannot drain or detach the producer's lease.
+                h.finalizer.submit(() -> c.capturePresentedFrame(h.viewport))
+                        .get(2, TimeUnit.SECONDS);
+                c.capturePresentedFrame(h.viewport);
+                assertEquals(LiveCaptureController.State.ACTIVE, c.state());
+                assertEquals(List.of(2, 3, 2), h.recorder.frames.stream()
+                        .map(CapturedFrame::sampleCount).toList());
+                assertSilent(h.recorder.frames.get(1));
+                assertSilent(h.recorder.frames.get(2));
+                assertEquals(1, producer.transactionFingerprint().captureCount());
+
+                c.requestStop(LiveCaptureController.StopReason.USER);
+                h.finalizer.submit(() -> {}).get(2, TimeUnit.SECONDS);
+                assertEquals(LiveCaptureController.State.INACTIVE, c.state());
+                assertEquals(0, producer.transactionFingerprint().captureCount(),
+                        "silence must not overwrite the real lease awaiting owner-thread detach");
+                assertFalse(h.recorder.aborted);
+            } finally {
+                c.close();
+            }
+        } finally {
+            producer.close();
+        }
+    }
+
+    @Test void restartDetachesPreviousRealLeaseBeforeAttachingFreshAudio() throws Exception {
+        Harness h = new Harness();
+        h.sampleRate = 5;
+        AudioPresentationProducer producer = captureProducer();
+        try {
+            h.audioFactory = producer::attachCapture;
+            LiveCaptureController c = h.controller();
+            try {
+                c.start(h.viewport, 2);
+                h.finalizer.submit(() -> c.requestStop(LiveCaptureController.StopReason.USER))
+                        .get(2, TimeUnit.SECONDS);
+                h.finalizer.submit(() -> {}).get(2, TimeUnit.SECONDS);
+                assertEquals(LiveCaptureController.State.INACTIVE, c.state());
+                assertEquals(1, producer.transactionFingerprint().captureCount());
+
+                c.start(h.viewport, 2);
+                assertEquals(LiveCaptureController.State.ACTIVE, c.state());
+                assertNull(c.lastFailure());
+                assertEquals(1, producer.transactionFingerprint().captureCount(),
+                        "restart must retire the old lease before acquiring another");
+                c.close();
+                assertEquals(0, producer.transactionFingerprint().captureCount());
+            } finally {
+                c.close();
+            }
+        } finally {
+            producer.close();
+        }
+    }
+
+    @Test void metadataFallbackRetainsRefusedLeaseForCloseRetry() {
+        Harness h = new Harness();
+        h.failAudioSampleRate = true;
+        h.failAudioClose = true;
+        LiveCaptureController c = h.controller();
+        try {
+            c.start(h.viewport, 60);
+            c.capturePresentedFrame(h.viewport);
+            assertEquals(LiveCaptureController.State.ACTIVE, c.state());
+            assertSilent(h.recorder.frames.getFirst());
+            assertEquals(1, h.audioCloseCalls);
+            h.failAudioClose = false;
+            c.close();
+            assertEquals(2, h.audioCloseCalls,
+                    "startup silence must retain the failed metadata handle's detach obligation");
+            assertTrue(h.audioClosed);
+        } finally {
+            c.close();
+        }
+    }
+
+    @Test void restartWithDetachStillRefusedUsesSilenceWithoutAnotherAttach() throws Exception {
+        Harness h = new Harness();
+        h.sampleRate = 5;
+        AudioPresentationProducer producer = captureProducer();
+        int[] attachCalls = {0};
+        try {
+            h.audioFactory = rate -> {
+                attachCalls[0]++;
+                return producer.attachCapture(rate);
+            };
+            LiveCaptureController c = h.controller();
+            try {
+                c.start(h.viewport, 2);
+                h.finalizer.submit(() -> c.requestStop(LiveCaptureController.StopReason.USER))
+                        .get(2, TimeUnit.SECONDS);
+                h.finalizer.submit(() -> {}).get(2, TimeUnit.SECONDS);
+                h.finalizer.submit(() -> c.start(h.viewport, 2)).get(2, TimeUnit.SECONDS);
+                c.capturePresentedFrame(h.viewport);
+                assertEquals(LiveCaptureController.State.ACTIVE, c.state());
+                assertSilent(h.recorder.frames.getFirst());
+                assertEquals(1, attachCalls[0],
+                        "a refused old detach must prevent another factory acquisition");
+                c.close();
+                assertEquals(0, producer.transactionFingerprint().captureCount());
+            } finally {
+                c.close();
+            }
+        } finally {
+            producer.close();
+        }
+    }
+
+    private static AudioPresentationProducer captureProducer() {
+        AudioVoiceRegistry registry = new AudioVoiceRegistry(mock(SmpsSfxInstantiation.class),
+                mock(AudioPresentationDependencyResolver.class),
+                new SmpsCoordFlagHandlerOwner(new SmpsCoordFlagRuntimeState()), ignored -> {});
+        return new AudioPresentationProducer(5, 2, 5, 0, registry,
+                new AudioPresentationCommandQueue(registry::isRendering),
+                new AudioPresentationMixer(3, registry::onVoiceFailure), new NoDeviceAudioSink(5));
+    }
+
     @Test void audioAttachFailureStartsActiveVideoWithSilentStereoTrack() {
         Harness h = new Harness();
         h.failAudio = true;
@@ -557,6 +684,8 @@ class LiveCaptureControllerTest {
                 failGrab, failAudioClose, audioClosed;
         int sampleRate = 48_000;
         LiveCaptureAudioHandle suppliedAudio;
+        LiveCaptureController.AudioHandleFactory audioFactory;
+        ExecutorService finalizer;
         int debugFailAfterFrames = -1;
         int audioCloseCalls;
         int grabs;
@@ -564,10 +693,11 @@ class LiveCaptureControllerTest {
         Thread grabberCloseThread;
 
         LiveCaptureController controller() {
-            ExecutorService executor = Executors.newSingleThreadExecutor();
-            executors.add(executor);
+            finalizer = Executors.newSingleThreadExecutor();
+            executors.add(finalizer);
             return new LiveCaptureController(new LiveCaptureController.Dependencies(
                     rate -> {
+                        if (audioFactory != null) return audioFactory.open(rate);
                         if (failAudio) throw new IllegalStateException("audio");
                         if (suppliedAudio != null) return suppliedAudio;
                         LiveCaptureAudioHandle raw = new LiveCaptureAudioHandle() {
@@ -599,10 +729,10 @@ class LiveCaptureControllerTest {
                                 return clock.captureSnapshot();
                             }
                             public void close() {
-                                audioClosed = true;
                                 audioCloseCalls++;
                                 events.add("audio-close");
                                 if (failAudioClose) throw new IllegalStateException("audio close");
+                                audioClosed = true;
                             }
                         };
                         return DebugFailAfterFramesAudioHandle.maybeWrap(
@@ -636,7 +766,7 @@ class LiveCaptureControllerTest {
                     (v, rate) -> {
                         if (failRecorderCreate) throw new IllegalStateException("recorder");
                         return recorder;
-                    }, executor, Duration.ofSeconds(1)));
+                    }, finalizer, Duration.ofSeconds(1)));
         }
 
         final class FakeRecorder extends CaptureRecorder {
