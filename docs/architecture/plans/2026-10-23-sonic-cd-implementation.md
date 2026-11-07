@@ -12524,3 +12524,61 @@ Queue admission waited457s. The source-bound execution/callback interval is
 is not inferred from per-class totals. Java25, original USA media and surfaceless
 EGL were selected. This focused result supplies no category/full-suite VERDICT,
 complete act, live TT route, native execution or JP/EU completion.
+
+## 7 November 2026 — CCZ P2 and shared whole-zone DATA composition
+
+R108 installs seven cached CCZ Solid/hazard family bindings through the existing
+common World. The authentic R31 source adds 27 finite borrowed table/mapping/STORE
+views to the existing reader; no compatibility reader or duplicate image owner
+is restored. Original source/dispatch/thread/site/cursor, full pool/placement and
+complete Frame pair guards own every reached publication. Actual reserved-player
+flag writes preserve all other counterpart bytes. Native helper stops are captured
+before fallible publication preparation and retain their original throwable.
+Frame exposes only the finite prepare-time Flame stores. Fire's original animator,
+Drum's missing art clock and Spring-child/raw-parent boundaries remain explicit;
+these bindings do not certify every family on the natural controller route.
+
+All ten original-USA QQZ and ten Wacky Workbench DATA profiles share the existing
+reader, decoder and load-table algorithms. Canonical data, Java read products and
+independent native-style read hulls stay distinct. The closed definition uses a
+generic data-only marker, preserving typed earlier bindings; no R6 nullable state
+union or World admission is added. R6 Present/Past selection supplies no retained
+goodFuture value. Optional Future selector constraints remain descriptive and
+never initialize the actual live BYTE. Eleven targeted RED cases yielded seven
+passes and exactly four A/B assertion failures, zero errors/skips, with identical
+source. The corrected source and optional-constraint controls pass in R108.
+
+One common parser now supports separately bounded threshold/initial/update
+columns. Actual R53C/D retains 2/3/3 WORDs and exposes only two active rows; the
+unused third words remain validated DATA. Packed rows and InitQueueUpdateRts
+remain supported, including the old one-List CameraSections constructor. No
+synthetic threshold, source padding or camera/queue invocation is introduced.
+The first independent source reviews of P2, R5/R6 and the new column feature are
+recorded separately: P2/columns had no actionable findings; the two R6 corrections
+are Root changes covered by this composite. Those source reviews are not tests.
+
+The inherited stage-source fixture now names its six actual private constructors
+and existing common-reader field; production ownership is unchanged. The primary
+already contained the API-audit shadow corrections in e34050b55. Only eight extra
+scope-test methods are added, preserving its implementation and 37 prior methods.
+The exact Python slice passes 45 focused cases; the combined 226-case safety run
+has 221 passes and five explicit optional-input skips, separate from Java results.
+
+R108 passes 1,033 invocations across 50 selected classes, zero failures/errors/
+skips. All 21 installed source/test payloads are exact; before/after fingerprint is
+b3372c4eccf0622a9a868ff046920182e0963d87b7f8ce38961f671e3f2368dd.
+The fresh Root World XML records 350 returned services and attempted351 stopping
+at PRIMARY_DEATH_CAMERA before its two camera-bound stores and DrawObjects.
+This is the explicitly constructed historical-save CCZ ingress, not a natural
+R13-to-CCZ transition. Closed full/course state and engine-pixel replay checks pass;
+no native pixel parity or completed351 is claimed. The original natural full-route
+frontier21931/first21932 remains a separate obligation.
+
+Queue wait was639s. The source-bound execution/callback interval is255.703s;
+concise output did not retain a separate Maven-only wall duration, which remains
+unknown. Java25, original USA media and surfaceless EGL were selected. Eight
+unchanged component classes already qualified in saved R106 were omitted from
+this affected-owner cohort; their old passes are not added to this total. There
+is no category/full-suite VERDICT, new-zone World/terrain/player admission, native
+execution or JP/EU completion. Fresh origin/next38c69fae is already an ancestor;
+MAIN was not switched or edited, and no push/PR/publication occurred.

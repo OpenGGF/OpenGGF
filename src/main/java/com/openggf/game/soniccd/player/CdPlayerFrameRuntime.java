@@ -79,6 +79,17 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
         applyPreparedObjectSolidPublication(prepareObjectPreHurtYRewind(expectedActor, finalYLongBits));
     }
 
+    /** CC Flame HitPlayer (Fire Shooter/Main.asm:328-333). Preparation only, complete pair CAS.
+     * Native stores only YVel, air/stand flags and animation. Existing aggregate builder retains
+     * all other State8/Environment values, including the unchanged raw stand/push links. */
+    public ObjectSolidPublication prepareObjectCcFlameLaunch(CdPlayerBody.State expected,CdPlayerBody.Environment env) {
+        requireOpenIdle();requireClosedFrame();if(state!=expected||environment!=env)throw new IllegalArgumentException("Stale complete CC Flame pair");
+        var m=state.motion();var h=state.header();var g=environment.movement().globals();
+        var motion=new CdPlayerMotionState(m.centreX16_16(),m.centreY16_16(),m.xVelocity(),-0x700,m.groundVelocity(),m.routine(),m.angle(),(m.flags()|2)&~8,m.spriteFlags(),m.xRadius(),m.yRadius(),0x10,m.previousAnimation(),m.playerJump(),m.charge(),m.moveLock(),m.stick(),m.playerControl(),m.previousPrimaryAngle(),m.previousSecondaryAngle());
+        var actor=new CdPlayerTouchResponse.Actor(motion,h.tile(),h.priority(),state.timers().hurt(),state.rotationDistance());
+        return buildObjectSolidPublication(new CdSolidObject.Player(actor,h.slotId(),state.objectLinks().pushObject(),state.objectLinks().standObject()),new CdSolidObject.Globals(env.globals().invincible(),g.scoreChain(),g.primaryAngle(),g.secondaryAngle()));
+    }
+
     /** P5's finite pre-Hurt store. Full State8/Environment CAS; no invocation authority in DTOs. */
     public ObjectSolidPublication prepareObjectIntroYRewind(CdPlayerBody.State expected,CdPlayerBody.Environment env,int value) {
         requireOpenIdle();requireClosedFrame();if(state!=expected||environment!=env)throw new IllegalArgumentException("Stale complete intro player pair");

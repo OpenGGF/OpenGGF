@@ -479,7 +479,7 @@ class TestSonicCdR31aObjectPass {
         h.service();return h;
     }
 
-    private static final class Harness implements SonicCdR31aObjectPass.Ports,AutoCloseable {
+    static final class Harness implements SonicCdR31aObjectPass.Ports,AutoCloseable {
         final CdR31aAssets assets=actual();final CdR31aObjectAssets objects=CdR31aObjectAssets.fromAssets(assets);
         final CdObjectPlacementRuntime placement=CdObjectPlacementRuntime.fromR31aAssets(assets,fill(CdObjectPlacementRuntime.SAVED_BANK_BYTES,0));
         CdPlayerFrameRuntime frame;SonicCdR31aObjectPass pass;SonicCdR31aObjectPass.Cut cut;

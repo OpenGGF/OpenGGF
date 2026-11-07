@@ -18,13 +18,40 @@ final class CdProgrammeDefinition {
               Object blocks, Object graphics) { R3 { roles = Map.copyOf(roles); } }
     record Slice(Object key, int offset, int length) { }
     record Palette(Object key, int destination, int counter) { }
-    enum CycleKind { STANDARD, UPPER }
-    enum CycleProgramme { STANDARD_FOUR, UPPER_SIX_OR_STANDARD_FOUR, STANDARD_FOUR_WITH_RETAINED_UPPER, THREE_SOURCE_ACT_GATED }
+    enum CycleKind { STANDARD, UPPER, BYTE_HEADER_4 }
+    enum CycleProgramme { STANDARD_FOUR, UPPER_SIX_OR_STANDARD_FOUR, STANDARD_FOUR_WITH_RETAINED_UPPER, THREE_SOURCE_ACT_GATED, R5_PRESENT_BACKGROUND_CONVEYOR, R5_PAST_BACKGROUND_CONVEYOR, R5_FUTURE_BOSS_GATED_CONVEYOR, FOUR_WITH_BOSS_COLOR_OVERRIDE }
     record Cycle(CycleKind kind, Slice script, Slice colors) { }
     record SectionRow(int threshold, int initial, int update) { }
     sealed interface Sections permits CameraSections, InitQueueUpdateRts { }
-    record CameraSections(List<SectionRow> rows) implements Sections {
-        CameraSections { rows = List.copyOf(rows); }
+    sealed interface SectionOperands permits PackedSectionRows, SectionColumns { }
+    /** Original contiguous threshold/update/initial n/n/n layout. */
+    enum PackedSectionRows implements SectionOperands { INSTANCE }
+    /** Complete bounded column, including authentic words unused by the active threshold rows. */
+    record SectionWords(Slice source, List<Integer> words) {
+        SectionWords {
+            Objects.requireNonNull(source);Objects.requireNonNull(source.key());words=List.copyOf(words);
+            if(source.offset()<0 || (source.offset()&1)!=0 || words.isEmpty()
+                    || source.length()!=words.size()*2L || (long)source.offset()+source.length()>Integer.MAX_VALUE)
+                throw new IllegalArgumentException("Section column slice/word extent differs");
+            for(int word:words)if((word&~0xFFFF)!=0)throw new IllegalArgumentException("Section operand is not a WORD");
+        }
+    }
+    record SectionColumns(int activeThresholdCount, SectionWords thresholds, SectionWords initial,
+                          SectionWords update) implements SectionOperands {
+        SectionColumns {
+            Objects.requireNonNull(thresholds);Objects.requireNonNull(initial);Objects.requireNonNull(update);
+            if(activeThresholdCount<1 || activeThresholdCount>thresholds.words().size()
+                    || activeThresholdCount>initial.words().size() || activeThresholdCount>update.words().size())
+                throw new IllegalArgumentException("Active section rows exceed actual columns");
+        }
+    }
+    record CameraSections(List<SectionRow> rows, SectionOperands operands) implements Sections {
+        CameraSections(List<SectionRow> rows) { this(rows,PackedSectionRows.INSTANCE); }
+        CameraSections {
+            rows=List.copyOf(rows);Objects.requireNonNull(operands);
+            if(operands instanceof SectionColumns columns && rows.size()!=columns.activeThresholdCount())
+                throw new IllegalArgumentException("Active section row inventory differs");
+        }
     }
     record InitQueueUpdateRts(int initialQueueId) implements Sections { }
     enum PointerKind { LIVE, COPIED }
@@ -66,7 +93,8 @@ final class CdProgrammeDefinition {
         operands=List.copyOf(b.operands); sources=List.copyOf(b.sources);
         loadRoles=Map.copyOf(b.loadRoles); visual=Objects.requireNonNull(b.visual);
         r3=Optional.ofNullable(b.r3); tt=Optional.ofNullable(b.tt); load=Objects.requireNonNull(b.load);
-        if(r3.isPresent()==tt.isPresent())throw new IllegalArgumentException("Selected data binding differs");
+        if((r3.isPresent()?1:0)+(tt.isPresent()?1:0)+(b.dataOnly?1:0)!=1)
+            throw new IllegalArgumentException("Selected data binding differs");
         if (load.roots().size()!=load.directoryCount() || load.directoryCount()<1
                 || load.maximumCount()<1 || load.maximumCount()>15)
             throw new IllegalArgumentException("Finite programme directory differs");
@@ -116,6 +144,7 @@ final class CdProgrammeDefinition {
         Visual visual;
         R3 r3;
         CdR4DataLayout.Programme tt;
+        boolean dataOnly; // Generic source-only data, not live terrain/player/World admission.
         Load load;
         private Builder(CdStagePayload payload,CdNativeFile file,int fileBytes,String sha,CdMmdHeader header) {
             this.payload=payload;this.file=file;this.fileBytes=fileBytes;this.sha=sha;this.header=header;
@@ -135,6 +164,14 @@ final class CdProgrammeDefinition {
             for(var p:CdR4DataLayout.Programme.values()) {
                 var b=new Builder(p.payload(),p.file(),p.fileBytes(),p.fileSha256(),originalHeader());
                 CdR4ProgrammeProfiles.configure(b,p);result.add(new CdProgrammeDefinition(b));
+            }
+            for(var p:CdR5DataLayout.Programme.values()) {
+                var b=new Builder(p.payload(),p.file(),p.fileBytes(),p.fileSha256(),originalHeader());
+                CdR5ProgrammeProfiles.configure(b,p);result.add(new CdProgrammeDefinition(b));
+            }
+            for(var p:CdR6DataLayout.Programme.values()) {
+                var b=new Builder(p.payload(),p.file(),p.fileBytes(),p.fileSha256(),originalHeader());
+                CdR6ProgrammeProfiles.configure(b,p);result.add(new CdProgrammeDefinition(b));
             }
             return List.copyOf(result);
         }
@@ -200,6 +237,7 @@ final class CdProgrammeDefinition {
         b.borrow(CdProgrammeReader.Borrow.HUD_DIVISORS,0xACE6,40);
         b.borrow(CdProgrammeReader.Borrow.HUD_VINT,0x1DFA,6);
         for(var view:CdR31IntroAssets.View.values())b.borrow(view,view.offset,view.length);
+        for(var view:CdR31aSolidsSource.View.values())b.borrow(view,view.offset,view.length);
         r3Bindings(b,0x100,CdStageTerrain.Shape.CCZ1_PRESENT,CdProgrammeReader.Blocks.R31,CdR31aLoadMetadata.SourceId.STAGE_GFX,
             new Object[]{CdR31aAssets.Asset.ANI_SONIC,CdR31aAssets.Asset.MINI_ANIMATIONS,CdR31aAssets.Asset.SPEC_CHUNKS,CdR31aAssets.Asset.SINE_TABLE,CdR31aAssets.Asset.ARC_TAN_TABLE,CdR31aAssets.Asset.MAP_SPR_SONIC,CdR31aAssets.Asset.DPLC_SONIC,CdR31aAssets.Asset.ART_SONIC,CdR31aAssets.Asset.LEVEL_CHUNKS,CdR31aAssets.Asset.LAYOUT_FG,CdR31aAssets.Asset.LAYOUT_BG,CdR31aAssets.Asset.LEVEL_COLLISION,CdR31aAssets.Asset.COL_ANGLE_MAP,CdR31aAssets.Asset.COL_HEIGHT_MAP,CdR31aAssets.Asset.COL_WIDTH_MAP,CdR31aAssets.Asset.OBJECT_LAYOUTS},
             new Object[]{CdR31aAssets.Asset.PLC_LISTS,CdR31aAssets.Asset.PALETTE_TABLE,CdR31aAssets.Asset.PALETTE_CYCLES,CdR31aAssets.Asset.SECTIONS,CdR31aAssets.Asset.BG_POINTERS,CdR31aAssets.Asset.PAL_S1_TITLE,CdR31aAssets.Asset.PAL_S1_LEVEL_SELECT,CdR31aAssets.Asset.PAL_SONIC,CdR31aAssets.Asset.PAL_LEVEL,CdR31aAssets.Asset.PAL_LEVEL_END});

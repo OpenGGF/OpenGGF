@@ -18,8 +18,9 @@ matching area heading; see the
   their native callback and fault prefixes;1,155 focused checks pass without skips.
   One source-bound World now replaces the R13-only coordinator and drives both
   R13 and R31 through their existing ordinary owners. Selected original-USA CCZ
-  entry now completes345 controller services through Ring and the intro family,
-  stopping before MetalPlatform at attempted346. Full/course restore retains
+  entry now completes350 controller services through Ring, the intro family and
+  guarded CCZ Solid publication, stopping at death-camera ownership on attempted351.
+  Full/course restore retains
   selected closed state and pixels. Compound Solid preparation faults preserve
   the original native exception; available prefixes publish after preparation;
   the original PlaceBlock prefix bridge is installed, with natural reach still pending.
@@ -41,6 +42,11 @@ matching area heading; see the
   TT solid/mover components retain signed WORD displacements and staged stores
   when an original callback throws Error. The combined CCZ/TT integration passes
   1,140 focused checks without skips; TT live World admission remains separate.
+  All ten QQZ and ten Wacky Workbench DATA profiles use the same reader. The
+  common section parser retains authentic independent columns and unused words;
+  Present/Past metadata leaves retained good-future progress unconstrained.
+  The combined CCZ publication/DATA/parser batch passes1,033 focused checks
+  without skips. New zones' live terrain, player and World admission remains separate.
   CCZ ordinary scheduling now preserves native VBlank/Main order, the old
   selected sprite list and full-word time-stop gating. Private HUD adoption
   retains the real prefix across typed callback failures;175 focused checks

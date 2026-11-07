@@ -21,6 +21,7 @@ import com.openggf.game.soniccd.level.CdR13ResultsAssets;
 import com.openggf.game.soniccd.level.CdR31aAssets;
 import com.openggf.game.soniccd.level.CdR31aObjectAssets;
 import com.openggf.game.soniccd.level.CdR31IntroAssets;
+import com.openggf.game.soniccd.level.CdR31aSolidsSource;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -490,6 +491,7 @@ public final class CdObjectMappings implements CdDrawMappings {
         tables.add(new DeclaredTable(intro.metalMappings(),intro.metalMappingBytes(),0,16));
         tables.add(new DeclaredTable(intro.amyMappings(),intro.amyMappingBytes(),0,14));
         tables.add(new DeclaredTable(intro.rollMappings(),intro.rollMappingBytes(),0,13));
+        tables.addAll(CdR31aSolidsSource.fromAssets(assets).mappings());
         return declaredSourceViews(tables, List.of());
     }
     // END R31 COMMON COUNTED METADATA JOIN 20261107

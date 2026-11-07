@@ -90,6 +90,8 @@ final class CdProgrammeLoadTables {
         // Select the actual semantic alternative BEFORE attempting a possibly absent section role.
         sectionProgramme=switch(profile.sections()) {
             case CameraSections expected -> {
+                if(expected.operands() instanceof SectionColumns columns)
+                    yield sectionColumns(reader,expected,columns,directoryCount);
                 var bytes=reader.loadView(CdProgrammeReader.LoadRole.SECTIONS);int n=expected.rows().size();
                 var parsed=new ArrayList<SectionRow>();
                 for(int i=0;i<n;i++) {
@@ -126,6 +128,42 @@ final class CdProgrammeLoadTables {
         sections=definition.r3().map(binding->((CameraSections)sectionProgramme).rows().stream()
             .map(row->new CdR11bLoadPlan.SectionArt(row.threshold(),row.initial(),row.update())).toList());
         backgroundPointers=definition.r3().map(binding->((BackgroundTables)backgroundProgramme).tables().getFirst().values());
+    }
+    /** Separate source columns; active reads retain threshold/initial/update ordering.
+     * Read unused words afterwards as DATA validation, never as synthetic camera rows.
+     * N1ecc5f3 r5/section_gfx_3c.asm:3-65 and section_gfx_3d.asm:3-65.
+     */
+    private static CameraSections sectionColumns(CdProgrammeReader reader,CameraSections expected,
+                                                 SectionColumns columns,int directoryCount) {
+        var views=new IdentityHashMap<Object,CdAssetBytes>();
+        var thresholds=new ArrayList<Integer>();var initial=new ArrayList<Integer>();var update=new ArrayList<Integer>();
+        var rows=new ArrayList<SectionRow>();int n=columns.activeThresholdCount();
+        for(int i=0;i<n;i++) {
+            int threshold=sectionWord(reader,columns.thresholds(),i,false,directoryCount,thresholds,views);
+            int init=sectionWord(reader,columns.initial(),i,true,directoryCount,initial,views);
+            int next=sectionWord(reader,columns.update(),i,true,directoryCount,update,views);
+            rows.add(new SectionRow(threshold,init,next));
+        }
+        for(int i=n;i<columns.thresholds().words().size();i++)
+            sectionWord(reader,columns.thresholds(),i,false,directoryCount,thresholds,views);
+        for(int i=n;i<Math.max(columns.initial().words().size(),columns.update().words().size());i++) {
+            if(i<columns.initial().words().size())sectionWord(reader,columns.initial(),i,true,directoryCount,initial,views);
+            if(i<columns.update().words().size())sectionWord(reader,columns.update(),i,true,directoryCount,update,views);
+        }
+        if(!rows.equals(expected.rows()))throw new IllegalArgumentException("Section range/initial/update operands differ");
+        return new CameraSections(rows,new SectionColumns(n,
+            new SectionWords(columns.thresholds().source(),thresholds),new SectionWords(columns.initial().source(),initial),
+            new SectionWords(columns.update().source(),update)));
+    }
+    private static int sectionWord(CdProgrammeReader reader,SectionWords column,int index,boolean plc,
+                                   int directoryCount,List<Integer> retained,Map<Object,CdAssetBytes> views) {
+        // Borrow only when this column is reached. Bounds are checked at each actual WORD,
+        // so a missing unused tail cannot displace a preceding active field/read fault.
+        var source=column.source();var bytes=views.computeIfAbsent(source.key(),reader::loadViewForKey);
+        int word=bytes.unsignedWord(source.offset()+index*2);
+        if(plc && word>=directoryCount)throw new IllegalArgumentException("Section PLC ID outside native directory");
+        if(word!=column.words().get(index))throw new IllegalArgumentException("Section column operand differs");
+        retained.add(word);return word;
     }
     private static CdAssetBytes slice(CdProgrammeReader reader,Slice slice,Map<Object,CdAssetBytes> views) {
         var bytes=views.computeIfAbsent(slice.key(),reader::loadViewForKey);

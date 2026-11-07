@@ -48,14 +48,14 @@ final class SonicCdR31aObjectPass {
             Objects.requireNonNull(completedCpu);sounds=List.copyOf(sounds);}
     }
     enum Boundary { OBJECT_INDEX,OBJECT_FAMILY,PHYSICAL_OWNER,PRIMARY_ROUTINE,PRIMARY_CONTEXT_OWNER,
-        PRIMARY_DISPLAY_OWNER,CURRENT_TERRAIN_OWNER,VINT,LAYER,TITLE_PLC_OWNER,INTRO_GLOBAL_OWNER,INTRO_PLC_OWNER }
+        PRIMARY_DISPLAY_OWNER,CURRENT_TERRAIN_OWNER,VINT,LAYER,TITLE_PLC_OWNER,INTRO_GLOBAL_OWNER,INTRO_PLC_OWNER,P2_ART_CLOCK_OWNER,P2_ANIMATION_OWNER,P2_PARENT_OWNER,SPRING_CHILD_OWNER }
     static final class Unowned extends UnsupportedOperationException {
         private final Boundary boundary;private final int wholeIndex,value;
         private Unowned(Boundary b,int w,int v){super("R31 initial "+b+" at whole "+w+" value$"+Integer.toHexString(v));boundary=b;wholeIndex=w;value=v;}
         Boundary boundary(){return boundary;}int wholeIndex(){return wholeIndex;}int value(){return value;}
     }
     private enum Phase { READY,WALKING,WALKED,DRAINING,DONE,FAILED,DISCARDED }
-    private enum Kind { PRIMARY,HUD,TITLE,MONITOR,RING,INTRO,METAL,AMY,HEART,EXHAUST,ROLL }
+    private enum Kind { PRIMARY,HUD,TITLE,MONITOR,RING,INTRO,METAL,AMY,HEART,EXHAUST,ROLL,CC_SPIKES,BLOCK,HIDDEN,METAL_PLATFORM,DOOR,FIRE,DRUM }
     private static final class Dispatch {
         final Kind kind;final int whole,routine;final Object body;final Thread thread=Thread.currentThread();
         final Set<Object> calls=Collections.newSetFromMap(new IdentityHashMap<>());
@@ -245,6 +245,9 @@ final class SonicCdR31aObjectPass {
     private final CdObjectMappings mappings;private final CdPlayerTerrain terrain;private final CdSolidObject solid;
     private final CdReservedHud hud;private final CdTitleCard title;private final CdMonitor monitor;private final CdRing ring;
     private final CdR31IntroAssets introAssets;private final CdIntroSpikes spikes;private final CdAmyRose amy;private final CdMetalSonic metal;private final CdRollTunnel roll;private final CdSpinTunnelTag despawn;
+    private final CdR31aSolidsSource solidsSource;private final CdR31SolidHazardAssets solidsData;
+    private final CdCcSpikes ccSpikes;private final CdBlock block;private final CdHiddenBlock hidden;private final CdMetalPlatform metalPlatform;private final CdDoor door;private final CdFireShooter fire;private final CdDrumPlatform drum;
+    private P2Invocation p2;
     private IntroInvocation intro;private IntroPlcSubmission introPlc;
     private Phase phase=Phase.READY;private CdObjectDrawQueue queue;private Dispatch dispatch;
     private boolean checking,reading,adopting,drawing,plc;private Thread walkingThread;
@@ -260,6 +263,7 @@ final class SonicCdR31aObjectPass {
         mappings=CdObjectMappings.fromR31aAssets(assets,common);
         ring=CdRing.fromR31aAssets(placement,assets,common);
         introAssets=CdR31IntroAssets.fromAssets(assets);spikes=new CdIntroSpikes(introAssets);amy=new CdAmyRose(introAssets);metal=new CdMetalSonic(introAssets);roll=new CdRollTunnel(CdRollTunnel.Assets.fromAssets(introAssets));despawn=new CdSpinTunnelTag(new CdSpinTunnelTag.Assets(introAssets.rollMappings()));
+        solidsSource=CdR31aSolidsSource.fromAssets(assets);solidsData=solidsSource.data();ccSpikes=new CdCcSpikes(solidsData);block=new CdBlock(solidsData);hidden=new CdHiddenBlock(solidsData);metalPlatform=new CdMetalPlatform(solidsData);door=new CdDoor(solidsData);fire=new CdFireShooter(solidsData);drum=new CdDrumPlatform(solidsData);
         originalTerrain=assets.terrain();terrain=CdPlayerTerrain.fromStageTerrain(originalTerrain);solid=new CdSolidObject(CdPlayerMovement.fromStageSource(frame.stageSource()));
         hud=new CdReservedHud(common.reservedHudAssets(),new CdReservedHud.Slots(){
             public CdAssetBytes read(int w){requireWhole(Kind.HUD,w);return reserved(SonicCdR31aObjectPass.this.read(),w);}
@@ -310,10 +314,11 @@ final class SonicCdR31aObjectPass {
         }catch(RuntimeException|Error original){phase=Phase.FAILED;queue.close();throw original;}finally{walkingThread=null;}
     }
     void discard(){if(busy()||phase==Phase.WALKING||phase==Phase.DRAINING||dispatch!=null)throw new IllegalStateException("Active R31 pass");if(queue!=null)queue.close();queue=null;phase=Phase.DISCARDED;}
-    private boolean busy(){return intro!=null||introPlc!=null||primaryInvocation!=null||placeCall!=null||checking||reading||adopting||drawing||plc||pending!=null||primaryPending!=null||plcPending!=null||primaryDraw!=null;}
-    private Object body(Kind k){return switch(k){case PRIMARY->frame;case HUD->hud;case TITLE->title;case MONITOR->monitor;case RING->ring;case INTRO->spikes;case METAL,EXHAUST->metal;case AMY,HEART->amy;case ROLL->roll;};}
+    private boolean busy(){return p2!=null||intro!=null||introPlc!=null||primaryInvocation!=null||placeCall!=null||checking||reading||adopting||drawing||plc||pending!=null||primaryPending!=null||plcPending!=null||primaryDraw!=null;}
+    private Object body(Kind k){return switch(k){case PRIMARY->frame;case HUD->hud;case TITLE->title;case MONITOR->monitor;case RING->ring;case INTRO->spikes;case METAL,EXHAUST->metal;case AMY,HEART->amy;case ROLL->roll;case CC_SPIKES->ccSpikes;case BLOCK->block;case HIDDEN->hidden;case METAL_PLATFORM->metalPlatform;case DOOR->door;case FIRE->fire;case DRUM->drum;};}
     private void execute(Kind kind,int w,int levelFrames){var c=read();var e=frame.environment();var g=e.movement().gates();switch(kind){
         case PRIMARY->runPrimary(levelFrames);
+        case CC_SPIKES,BLOCK,HIDDEN,METAL_PLATFORM,DOOR,FIRE,DRUM->runP2(kind,w);
         case INTRO,METAL,AMY,HEART,EXHAUST,ROLL->runIntro(kind,w);
         case HUD->hud.runLive(w,new CdReservedHud.LiveGlobals(e.globals().debugCheat(),c.ring().rings(),e.globals().timeAttackMode(),g.timeWarpDirection(),e.globals().timeWarpTimer(),levelFrames,this::vIntLow));
         case TITLE->title.run(w);
@@ -426,6 +431,160 @@ final class SonicCdR31aObjectPass {
         }finally{pending=null;adopting=false;}
     }
     // END original primary source-cut and flag helpers 20261107.
+    private enum P2Op { NONE,PREFIX,READ,CONTACT,REWIND,HURT,LAUNCH,SINE,FM,DRAW,DESPAWN,PROJECTILE,PARENT_X,PARENT_Y,ANIMATE }
+    /** Original current cached-body stack only. Staging/results are never an ingress token. */
+    private final class P2Invocation {
+        final Kind kind;final int whole,routine;final Object producer;final Thread thread=Thread.currentThread();
+        final CdObjectPool staging=CdObjectPool.stagingCopy(placement.pool().capture());
+        CdObjectPlacementRuntime.Snapshot live=placement.capture();P2Op op=P2Op.NONE;
+        int contacts,lastD0,hurtRead,parentReads,fm,launch;boolean rewind,hurt,portFailed;int lastPeriod;
+        P2Invocation(Kind kind,int whole){this.kind=kind;this.whole=whole;routine=dispatch.routine;producer=body(kind);}
+    }
+    private void requireP2(){
+        if(p2==null||dispatch==null||p2.thread!=Thread.currentThread()||p2.producer!=dispatch.body||p2.producer!=body(p2.kind)
+                ||p2.whole!=dispatch.whole||!solidsSource.owns(assets)||solidsSource.data()!=solidsData)
+            throw new IllegalStateException("No original cached P2 invocation");
+        requireKind(p2.kind);requirePlacement(p2.live);
+    }
+    private void p2Sync(){p2.live=placement.capture();p2.staging.restore(p2.live.pool());checkpoint();}
+    /** Publish only native stores reached in this still-current original invocation. */
+    private void p2Flush(){
+        requireP2();var output=p2.staging.capture();placement.pool().validateRestore(output);
+        if(!output.slots().equals(p2.live.pool().slots())){var cut=read();publish(cut,cut,output,null);}
+        p2.live=placement.capture();
+    }
+    private <T>T p2Call(P2Op site,CdObjectPool staging,int whole,java.util.function.Supplier<T> action){
+        requireP2();if(p2.op!=P2Op.NONE||staging!=p2.staging||whole!=p2.whole)throw new IllegalStateException("Foreign/reentrant P2 site/pool/whole");
+        p2.op=site;
+        try{p2Flush();return action.get();}catch(RuntimeException|Error original){p2.portFailed=true;throw original;}finally{p2.op=P2Op.NONE;}
+    }
+    private <T>T p2Call(P2Op site,java.util.function.Supplier<T> action){
+        if(p2==null)throw new IllegalStateException("No P2 scalar producer");return p2Call(site,p2.staging,p2.whole,action);
+    }
+    private int p2Read(String field){return p2Call(P2Op.READ,()->{
+        var f=readFrame();var placed=placement.capture();var cut=read();var e=frame.environment();var m=frame.state().motion();int v;
+        switch(field){
+            case "ACT"->{if(p2.kind!=Kind.CC_SPIKES||p2.routine!=0)throw new IllegalStateException("No Spikes Init act read");v=e.movement().gates().zoneAct()&255;}
+            case "PERIOD"->{if(p2.kind!=Kind.BLOCK&&p2.kind!=Kind.FIRE&&p2.kind!=Kind.DRUM)throw new IllegalStateException("No P2 period site");v=e.movement().gates().timeZone();p2.lastPeriod=v;}
+            case "GOOD"->{if(p2.kind!=Kind.FIRE||p2.lastPeriod==0||p2.lastPeriod==1)throw new IllegalStateException("No reached Future fire gate");v=cut.core().program().goodFutureByte();}
+            case "CAMERA"->v=cut.cameraXWord();
+            case "ART"->{if(p2.kind!=Kind.DRUM)throw new IllegalStateException("No Drum art clock site");throw stop(Boundary.P2_ART_CLOCK_OWNER,p2.whole,0);}
+            case "X"->{if(p2.kind!=Kind.HIDDEN&&p2.kind!=Kind.FIRE)throw new IllegalStateException("No P2 player X site");v=m.centreX16_16()>>>16;}
+            case "Y"->{if(p2.kind!=Kind.DOOR)throw new IllegalStateException("No Door player Y site");v=m.centreY16_16()>>>16;}
+            default->{
+                var source=p2.staging.state(p2.whole);
+                if(p2.kind!=Kind.CC_SPIKES||p2.lastD0==0||source.unsignedByte(MAP_FRAME)!=0||(source.flags()&8)==0)
+                    throw new IllegalStateException("No original Spikes Hurt guard");
+                String[] order={"WARP","INV","ROUTINE","HURT"};if(p2.hurtRead>=order.length||!field.equals(order[p2.hurtRead++]))throw new IllegalStateException("Wrong Spikes guard order");
+                v=switch(field){case "WARP"->cut.contact().timeWarp();case "INV"->e.globals().invincible();case "ROUTINE"->m.routine();case "HURT"->frame.state().timers().hurt();default->throw new IllegalStateException("Unknown P2 read");};
+            }
+        }
+        requireFrame(f);requirePlacement(placed);requireCut(cut);return v;
+    });}
+    private final CdCcObjectServices p2Services=new CdCcObjectServices(){
+        public int act(){return p2Read("ACT");}public int timeZone(){return p2Read("PERIOD");}public int goodFuture(){return p2Read("GOOD");}
+        public int cameraX(){return p2Read("CAMERA");}public int animationArtTimer(){return p2Read("ART");}
+        public int primaryX(){return p2Read("X");}public int primaryY(){return p2Read("Y");}
+        public int timeWarp(){return p2Read("WARP");}public int invincible(){return p2Read("INV");}
+        public int primaryRoutine(){return p2Read("ROUTINE");}public int primaryHurt(){return p2Read("HURT");}
+        public int contact(CdObjectPool staging,int whole,CdSolidObject.Entry entry){return p2Call(P2Op.CONTACT,staging,whole,()->p2Contact(entry));}
+        public void rewindPrimaryYBeforeHurt(){p2Call(P2Op.REWIND,()->{
+            if(p2.kind!=Kind.CC_SPIKES||p2.hurtRead!=4||p2.rewind)throw new IllegalStateException("No original Spikes Y LONG rewind");
+            var state=frame.state();var env=frame.environment();var m=state.motion();var ready=frame.prepareObjectIntroYRewind(state,env,m.centreY16_16()-((short)m.yVelocity()<<8));
+            var cut=read();publish(cut,cut,null,ready);p2.rewind=true;p2Sync();return null;
+        });}
+        public void hurtPrimary(CdObjectPool staging,int whole){p2Call(P2Op.HURT,staging,whole,()->{
+            if(p2.kind!=Kind.CC_SPIKES||!p2.rewind||p2.hurt)throw new IllegalStateException("No original Spikes direct Hurt");p2.hurt=true;p2Hurt();return null;
+        });}
+        public void launchPrimaryFromFlame(){p2Call(P2Op.LAUNCH,()->{
+            var source=p2.staging.state(p2.whole);if(p2.kind!=Kind.FIRE||source.subtype()!=1||source.routine()!=4||p2.lastD0==0||p2.launch++!=0)throw new IllegalStateException("No original same-primary flame launch");
+            var ready=frame.prepareObjectCcFlameLaunch(frame.state(),frame.environment());var cut=read();publish(cut,cut,null,ready);p2Sync();return null;
+        });}
+        public int sine(int angle){return p2Call(P2Op.SINE,()->{if(p2.kind!=Kind.METAL_PLATFORM)throw new IllegalStateException("No Metal bob sine site");return introAssets.sine(angle);});}
+        public void playFm(int id){p2Call(P2Op.FM,()->{if(p2.kind!=Kind.CC_SPIKES||id!=0xB7||p2.fm++!=0||(p2.staging.state(p2.whole).spriteFlags()&128)==0)throw new IllegalStateException("No original Spikes FM B7");sound(new SonicCdGameModule.PastCcFm(id));p2Sync();return null;});}
+        public void draw(CdObjectPool staging,int whole){p2Call(P2Op.DRAW,staging,whole,()->{drawDynamic(p2.kind,placement.pool(),placement.pool().state(whole).identity());p2Sync();return null;});}
+        public void despawnR3(CdObjectPool staging,int whole){p2Call(P2Op.DESPAWN,staging,whole,()->{p2Despawn(false);return null;});}
+        public void checkProjectileDespawn(CdObjectPool staging,int whole){p2Call(P2Op.PROJECTILE,staging,whole,()->{
+            if(p2.kind!=Kind.FIRE)throw new IllegalStateException("No original projectile despawn");p2Despawn(true);return null;
+        });}
+        public int parentX(int raw,CdObjectPool staging){return p2Call(P2Op.PARENT_X,staging,p2.whole,()->p2Parent(raw,false));}
+        public int parentY(int raw,CdObjectPool staging){return p2Call(P2Op.PARENT_Y,staging,p2.whole,()->p2Parent(raw,true));}
+        public void animate(CdObjectPool staging,int whole,CdObjectAnimation.AnimationTable table){p2Call(P2Op.ANIMATE,staging,whole,()->{
+            if(p2.kind!=Kind.FIRE||table!=solidsData.fireAnimation())throw new IllegalArgumentException("Foreign Fire selected animation");
+            // The released pure owner has no original stopped-prefix publication port. A completed
+            // State is not authority to retry/replay its writes. Do not clone the pending owner.
+            throw stop(Boundary.P2_ANIMATION_OWNER,whole,p2.staging.state(whole).unsignedByte(ANIMATION));
+        });}
+    };
+    private int p2Parent(int raw,boolean y){
+        var source=p2.staging.state(p2.whole);
+        if(p2.kind!=Kind.CC_SPIKES||!dispatch.drawn||raw!=source.word(SWING_MAX)||p2.parentReads!=(y?1:0))throw new IllegalStateException("No next original post-Draw parent read");
+        p2.parentReads++;int at=(short)raw+(y?12:8)-(int)0xFFFFD800;
+        if(at<0||at+1>=96*64)throw stop(Boundary.P2_PARENT_OWNER,p2.whole,raw);
+        int first=Byte.toUnsignedInt(p2.staging.state(32+at/64).copyBytes()[at%64]);at++;
+        return(first<<8)|Byte.toUnsignedInt(p2.staging.state(32+at/64).copyBytes()[at%64]);
+    }
+    private int p2Contact(CdSolidObject.Entry entry){
+        boolean top=p2.kind==Kind.METAL_PLATFORM||p2.kind==Kind.DOOR||p2.kind==Kind.DRUM;
+        if(entry!=(top?CdSolidObject.Entry.TOP_SOLID_OBJECT:CdSolidObject.Entry.SOLID_OBJECT)
+                &&!(p2.kind==Kind.DRUM&&entry==CdSolidObject.Entry.GET_OFF_OBJECT))throw new IllegalArgumentException("Wrong native P2 contact entry");
+        if(++p2.contacts>(p2.kind==Kind.METAL_PLATFORM||p2.kind==Kind.DRUM?2:1))throw new IllegalStateException("Repeated native P2 contact site");
+        if(entry!=CdSolidObject.Entry.GET_OFF_OBJECT&&read().currentTerrain()!=originalTerrain)throw stop(Boundary.CURRENT_TERRAIN_OWNER,p2.whole,entry.ordinal());
+        var state=frame.state();var env=frame.environment();var player=primary();var global=solidGlobals();var cut=read();var pool=p2.staging.capture();
+        CdSolidObject.SelectedOutcome selected=null;CdSolidObject.PlayerSelection selection=null;CdSolidObject.Outcome outcome;
+        if(entry==CdSolidObject.Entry.TOP_SOLID_OBJECT){
+            selection=new CdSolidObject.PlayerSelection(CdSolidObject.PlayerSlot.PRIMARY,reserved(cut,1).unsignedByte(0x22));
+            selected=solid.runWithPrefix(entry,p2.staging.state(p2.whole),player,gates(),global,pool,selection);outcome=selected.outcome();
+        }else outcome=solid.runWithPrefix(entry,p2.staging.state(p2.whole),player,gates(),global,pool);
+        // Capture the native cause FIRST. ALL later prefix preparation/read/publication failures
+        // are subordinate to it; an unprepared prefix is never reported as adopted.
+        if(outcome instanceof CdSolidObject.NativeStopped stopped){
+            var original=stopped.stop().originalException();final var actualSelected=selected;final var actualSelection=selection;
+            verify(original,()->publishP2Contact(state,env,player,global,cut,pool,actualSelection,actualSelected,outcome));throw original;
+        }
+        return publishP2Contact(state,env,player,global,cut,pool,selection,selected,outcome);
+    }
+    private int publishP2Contact(CdPlayerBody.State state,CdPlayerBody.Environment env,CdSolidObject.Player player,
+            CdSolidObject.Globals global,Cut cut,CdObjectPool.Snapshot pool,CdSolidObject.PlayerSelection selection,
+            CdSolidObject.SelectedOutcome selected,CdSolidObject.Outcome outcome){
+        requireP2();requireCut(cut);var next=cut;CdPlayerFrameRuntime.ObjectSolidPublication ready;
+        if(selected!=null){
+            ready=frame.prepareObjectSelectedSolid(state,env,player,selection,selected);
+            if(selected.counterpart().stored()){byte[] raw=reserved(cut,1).copy();raw[0x22]=(byte)selected.counterpart().value();next=withReserved(cut,replace(cut.core().reserved(),1,CdAssetBytes.copyOf(raw)));}
+        }else ready=outcome instanceof CdSolidObject.Completed done?frame.prepareObjectSolidResult(player,global,done.completedResult()):frame.prepareObjectSolidPrefix(player,global,((CdSolidObject.NativeStopped)outcome).prefix());
+        CdObjectState own;List<CdObjectState> others;List<CdPlayerTouchResponse.FmSound> fm;int d0=0;
+        if(outcome instanceof CdSolidObject.Completed done){var result=done.completedResult();own=result.object();others=result.otherSlots();fm=result.fmRequests();d0=result.d0().orElse(0);}
+        else{var prefix=((CdSolidObject.NativeStopped)outcome).prefix();own=prefix.object();others=prefix.otherSlots();fm=prefix.fmRequests();}
+        var images=new ArrayList<CdObjectState>();images.add(own);images.addAll(others);var output=CdObjectPool.overlay(pool,images);p2.staging.restore(output);
+        var sounds=new ArrayList<>(next.sounds());for(var sound:fm)sounds.add(new SonicCdGameModule.PastFrameSound(new CdPlayerFrameRuntime.ContactFmSound(sound)));
+        var publication=copy(next,next.core(),next.scrollLockWord(),next.cpuSat(),next.completedCpu(),sounds);
+        publish(cut,publication,output,ready);p2Sync();p2.lastD0=d0;return d0;
+    }
+    private void p2Hurt(){
+        var cut=read();var e=frame.environment();var g=e.movement();var globals=new CdPlayerTouchResponse.PlayerGlobals(cut.contact().timeWarp(),e.globals().invincible(),cut.contact().shield(),cut.contact().combineRing(),e.globals().debugCheat(),e.globals().debugMode(),g.globals().scoreChain(),g.gates().miniSonic());
+        var actor=primary().actor();var pool=p2.staging.capture();var result=CdPlayerTouchResponse.hurtPlayer(actor,globals,cut.world(),p2.staging.state(p2.whole),pool);
+        var ready=frame.prepareObjectHurtResult(actor,globals,result);var output=CdObjectPool.overlay(pool,result.changedSlots());p2.staging.restore(output);
+        var sounds=new ArrayList<>(cut.sounds());for(var event:result.calls())if(event instanceof CdPlayerTouchResponse.PlayFm f)sounds.add(new SonicCdGameModule.PastFrameSound(new CdPlayerFrameRuntime.ContactFmSound(f.sound())));
+        var r=cut.ring();var w=result.world();var ring=new CdRingGlobals(w.rings(),w.lives(),r.livesFlags(),r.updateHudRings(),w.updateHudLives(),r.timeStopTimer(),r.ringAnimationTimer(),r.ringAnimationFrame());
+        var next=new Cut(cut.core(),ring,cut.currentTerrain(),new CdPlayerBody.ContactGlobals(result.player().timeWarp(),result.player().shield(),result.player().combineRing()),w,cut.noBumperByte(),cut.cameraXWord(),cut.cameraYWord(),cut.scrollLockWord(),cut.layerByte(),cut.cpuSat(),cut.completedCpu(),sounds,cut.amyCapturedByte());
+        publish(cut,next,output,ready);p2Sync();
+    }
+    private void p2Despawn(boolean projectile){
+        var source=p2.staging.state(p2.whole);int id=source.savedFlagsId(),period=frame.environment().movement().gates().timeZone();
+        if(projectile){var g=frame.environment().movement().gates();var actual=despawn.despawn(source,new CdSpinTunnelTag.DespawnGlobals(g.timeZone(),g.timeWarpDirection(),read().cameraXWord()));
+            if(!actual.deleteObject())return;id=actual.loadedClear().map(CdSpinTunnelTag.LoadedClear::savedId).orElse(0);period=actual.loadedClear().map(CdSpinTunnelTag.LoadedClear::period).orElse(0);}
+        if(id!=0)placement.savedFlag(id,period); // native reached bank validation BEFORE deletion
+        var next=CdObjectPool.stagingCopy(p2.staging.capture());next.deleteObject(p2.whole);var output=next.capture();placement.pool().validateRestore(output);p2.staging.restore(output);
+        requireP2();if(id!=0)placement.bclrSavedFlag(id,period,CdObjectPlacementRuntime.SavedBit.LOADED);placement.pool().restore(output);p2Sync();
+    }
+    private void runP2(Kind kind,int whole){
+        if(p2!=null)throw new IllegalStateException("P2 reentry");p2=new P2Invocation(kind,whole);
+        try{switch(kind){case CC_SPIKES->ccSpikes.run(p2.staging,whole,p2Services);case BLOCK->block.run(p2.staging,whole,p2Services);case HIDDEN->hidden.run(p2.staging,whole,p2Services);case METAL_PLATFORM->metalPlatform.run(p2.staging,whole,p2Services);case DOOR->door.run(p2.staging,whole,p2Services);case FIRE->fire.run(p2.staging,whole,p2Services);case DRUM->drum.run(p2.staging,whole,p2Services);default->throw new IllegalStateException("Not P2");}
+            p2.op=P2Op.PREFIX;p2Flush();
+        }catch(RuntimeException|Error original){if(!p2.portFailed)verify(original,()->{p2.op=P2Op.PREFIX;p2Flush();});throw original;}
+        finally{p2=null;}
+    }
+
     private enum IntroOp { NONE,READ,PLAYER,SOLID,GET_OFF,HURT,FM,PLC,CPU,CAPTURE,PALETTE,DRAW,DESPAWN,ROLL }
     /** Never returned/captured. Only the actual cached component stack owns this scope. */
     private final class IntroInvocation {
@@ -545,6 +704,7 @@ final class SonicCdR31aObjectPass {
     private int routine(int w){return w==0?frame.state().motion().routine():w<32?reserved(read(),w).unsignedByte(0x24):placement.pool().state(w).routine();}
     private Kind kind(int w,int id){if(id<1||id>0x3C)throw stop(Boundary.OBJECT_INDEX,w,id);
         if(w==0){if(id!=1)throw stop(Boundary.PHYSICAL_OWNER,w,id);return Kind.PRIMARY;}
+        if(w>=32){var selected=switch(id){case 0x20->Kind.CC_SPIKES;case 0x21->Kind.BLOCK;case 0x22->Kind.HIDDEN;case 0x23->Kind.METAL_PLATFORM;case 0x26->Kind.DOOR;case 0x27->Kind.FIRE;case 0x28->Kind.DRUM;default->null;};if(selected!=null)return selected;if(id==0x0A)throw stop(Boundary.SPRING_CHILD_OWNER,w,id);}
         if(w>=32&&id>=0x30&&id<=0x35)return switch(id){case 0x30->Kind.INTRO;case 0x31->Kind.METAL;case 0x32->Kind.AMY;case 0x33->Kind.HEART;case 0x34->Kind.EXHAUST;default->Kind.ROLL;};
         if(id==0x3C)return Kind.TITLE;
         if(id==0x10){if(w<32)throw stop(Boundary.PHYSICAL_OWNER,w,id);return Kind.RING;}

@@ -74,12 +74,13 @@ class TestCdStagePlayerSource {
     void publicSurfaceIsFinalReadonlyDataWithNamedFactoriesOnly() {
         assertTrue(Modifier.isFinal(CdStagePlayerSource.class.getModifiers()));
         var constructors = CdStagePlayerSource.class.getDeclaredConstructors();
-        assertEquals(5, constructors.length);
+        assertEquals(6, constructors.length);
         for (var constructor : constructors) assertTrue(Modifier.isPrivate(constructor.getModifiers()));
         assertEquals(Set.of(Arrays.asList(CdR11aAssets.class, CdR11bAssets.class),
                 Arrays.asList(CdR12aTerrainAssets.class, CdR12aPlayerAssets.class),
                 Arrays.asList(CdR12bTerrainAssets.class, CdR12bPlayerAssets.class),
-                Arrays.asList(CdR13FutureAssets.class), Arrays.asList(CdR31aAssets.class)),
+                Arrays.asList(CdR13FutureAssets.class), Arrays.asList(CdR31aAssets.class),
+                Arrays.asList(CdProgrammeReader.class)),
                 Arrays.stream(constructors).map(c -> Arrays.asList(c.getParameterTypes())).collect(Collectors.toSet()));
         var names = Arrays.stream(CdStagePlayerSource.class.getDeclaredMethods())
                 .filter(m -> Modifier.isPublic(m.getModifiers()))
@@ -89,8 +90,8 @@ class TestCdStagePlayerSource {
         var fields = CdStagePlayerSource.class.getDeclaredFields(); assertEquals(15, fields.length);
         assertEquals(1, Arrays.stream(fields).filter(f -> f.getName().equals("act3Future")
                 && f.getType() == CdR13FutureAssets.class).count());
-        assertEquals(1, Arrays.stream(fields).filter(f -> f.getName().equals("r31a")
-                && f.getType() == CdR31aAssets.class).count());
+        assertEquals(1, Arrays.stream(fields).filter(f -> f.getName().equals("r3Source")
+                && f.getType() == CdProgrammeReader.class).count());
         for (var field : fields) {
             assertTrue(Modifier.isPrivate(field.getModifiers())); assertTrue(Modifier.isFinal(field.getModifiers()));
             assertFalse(field.getType().isArray(), "No copied mutable byte bank");

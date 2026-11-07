@@ -422,5 +422,94 @@ class CustodyControls(MotivatingRed):
             self.a._DEPS = saved
 
 
+class ReviewedShadowControls(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        MotivatingRed.setUpClass.__func__(cls)
+
+    setUp = CustodyControls.setUp
+    git = CustodyControls.git
+    flags = CustodyControls.flags
+    main = CustodyControls.main
+
+    def cli_caller(self, text, extra=()):
+        self.caller.chmod(0o644)
+        self.caller.write_text(text + "\n")
+        self.caller.chmod(0o444)
+        data = self.caller.read_bytes()
+        flags = self.flags()[:-2] + ['--caller-final', str(self.caller), self.a.sha(data), str(len(data)), '0444', *extra, '--json']
+        code, output = self.main(flags=flags)
+        return code, json.loads(output)
+
+
+
+    def test_annotation_arguments_qualification_and_modifiers_keep_uncertainty(self):
+        for declaration in ('@SuppressWarnings("unused") Assets a=new Assets();',
+                            'final @Deprecated Assets a=new Assets();',
+                            '@q.Mark Assets a=new Assets();',
+                            '@Deprecated @q.Mark(values={1,2}) Assets a=new Assets();'):
+            with self.subTest(declaration=declaration):
+                code, result = self.cli_caller('package p; import q.R13; class Caller { R13 a; void check(){ '
+                                               + declaration + ' a.originalImage(); } }')
+                self.assertEqual(3, code)
+                self.assertEqual(1, len(result['advisory_hits']))
+                row = result['callers'][0]['references'][0]
+                self.assertEqual('unresolved_receiver', row['classification'])
+                self.assertIsNone(row['receiver']['owner'])
+
+    def test_annotated_block_shadow_restores_the_outer_foreign_field(self):
+        code, result = self.cli_caller('package p; import q.R13; class Caller { R13 a; void check(){ '
+                'a.originalImage(); { @Deprecated Assets a=new Assets(); a.originalImage(); } a.originalImage(); } }')
+        self.assertEqual(3, code)
+        self.assertEqual(['q.R13', None, 'q.R13'],
+                         [r['receiver']['owner'] for r in result['callers'][0]['references']])
+        self.assertEqual(1, len(result['advisory_hits']))
+
+    def test_annotated_for_shadow_ends_with_its_body(self):
+        code, result = self.cli_caller('package p; import q.R13; class Caller { R13 a; void check(){ '
+                'for(@Deprecated Assets a:values){ a.originalImage(); } a.originalImage(); } }')
+        self.assertEqual(3, code)
+        self.assertEqual([None, 'q.R13'],
+                         [r['receiver']['owner'] for r in result['callers'][0]['references']])
+
+    def test_annotated_field_is_unknown_rather_than_an_invented_owner(self):
+        code, result = self.cli_caller('package p; class Caller { @Deprecated Assets a; void check(){ a.originalImage(); } }')
+        self.assertEqual(3, code)
+        self.assertIsNone(result['callers'][0]['references'][0]['receiver']['owner'])
+
+    def test_member_constructor_and_selected_name_shadows_are_unknown(self):
+        for caller in ('package p; import q.R13; class Caller { static class R13 {} '
+                       'void check(){ var a=new R13(); a.originalImage(); } }',
+                       'package p; class Caller { static class Assets {} '
+                       'void check(Assets a){ a.originalImage(); } }'):
+            with self.subTest(caller=caller):
+                code, result = self.cli_caller(caller)
+                self.assertEqual(3, code)
+                self.assertEqual(1, len(result['advisory_hits']))
+                self.assertIsNone(result['callers'][0]['references'][0]['receiver']['owner'])
+
+    def test_enclosing_member_shadow_is_visible_to_a_nested_sibling_method(self):
+        code, result = self.cli_caller('package p; import q.R13; class Caller { static class R13 {} '
+                'class Nested { void check(R13 a){ a.originalImage(); } } }')
+        self.assertEqual(3, code)
+        self.assertIsNone(result['callers'][0]['references'][0]['receiver']['owner'])
+
+    def test_member_shadow_does_not_escape_its_enclosing_top_level_type(self):
+        code, result = self.cli_caller('package p; import q.R13; class First { static class R13 {} '
+                'void check(R13 a){ a.originalImage(); } } '
+                'class Other { void check(R13 a){ a.originalImage(); } } '
+                'class Last { void check(Assets a){ a.originalImage(); } }')
+        self.assertEqual(3, code)
+        self.assertEqual([None, 'q.R13', 'p.Assets'],
+                         [r['receiver']['owner'] for r in result['callers'][0]['references']])
+
+    def test_annotation_context_exhaustion_is_incomplete(self):
+        code, result = self.cli_caller('package p; import q.R13; class Caller { R13 a; void check(){ '
+                '@q.Outer.Inner.Deep.Mark Assets a=new Assets(); a.originalImage(); } }',
+                ('--max-context-tokens', '4'))
+        self.assertEqual(3, code)
+        self.assertEqual('incomplete', result['status'])
+
+
 if __name__ == '__main__':
     unittest.main()
