@@ -1748,6 +1748,10 @@ public class ObjectManager {
         objectDrawing.drawUnifiedBucketWithPriority(bucket, gfx);
     }
 
+    ObjectDrawInternalAccess.Drawing nativeDisplayDrawing() {
+        return objectDrawing;
+    }
+
     void drawBucketWithSlotEmissions(int bucket, GraphicsManager graphics,
             List<com.openggf.level.render.SpriteSlotEmission> external) {
         objectDrawing.drawBucketWithSlotEmissions(bucket, graphics, external);

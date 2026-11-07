@@ -26,6 +26,20 @@ public final class ObjectDrawInternalAccess {
         manager.drawBucketWithSlotEmissions(bucket, graphics, external);
     }
 
+    public interface NativeDisplayOrderVisitor {
+        void admission(int bucket, int slot, ObjectInstance owner, boolean nativeSubmission);
+    }
+
+    /** Read-only unified bucket/FIFO order, with the ordinary SAT path's slot suppression. */
+    public static void visitNativeDisplayOrder(ObjectManager manager, NativeDisplayOrderVisitor visitor) {
+        Class<?> caller = com.openggf.util.EngineCallerAccess.callerOutside(ObjectDrawInternalAccess.class);
+        if (caller.getClassLoader() != ObjectDrawInternalAccess.class.getClassLoader()) {
+            throw new SecurityException("Native display observation belongs to the engine renderer");
+        }
+        java.util.Objects.requireNonNull(visitor);
+        java.util.Objects.requireNonNull(manager).nativeDisplayDrawing().visitNativeDisplayOrder(visitor);
+    }
+
     /** Manager-owned presentation collaborator; all lists and callbacks retain their identity. */
     static final class Drawing {
         private final ObjectManager manager;
@@ -66,6 +80,21 @@ public final class ObjectDrawInternalAccess {
                 NativeSpriteSubmissionQueue queue) {
             ObjectRenderParts.populateBuckets(active, dynamic, queue, currentOwner, externalResolver,
                     manager.stageplayDirection, unifiedBuckets, lowPriorityBuckets, highPriorityBuckets);
+        }
+
+        void visitNativeDisplayOrder(NativeDisplayOrderVisitor visitor) {
+            ensureBuckets.run();
+            var nativeSlots = new java.util.HashSet<Integer>();
+            var queue = manager.nativeSpriteSubmissions();
+            for (int ordinal = 0; ordinal < queue.size(); ordinal++) nativeSlots.add(queue.slotAt(ordinal));
+            for (int bucket = RenderPriority.MIN; bucket <= RenderPriority.MAX; bucket++) {
+                var entries = unifiedBuckets[bucket - RenderPriority.MIN];
+                for (int i = entries.size() - 1; i >= 0; i--) {
+                    var entry = entries.get(i);
+                    if (!entry.nativeSubmission() && nativeSlots.contains(entry.slot())) continue;
+                    visitor.admission(bucket, entry.slot(), entry.instance(), entry.nativeSubmission());
+                }
+            }
         }
 
         void drawLowPriority() {
