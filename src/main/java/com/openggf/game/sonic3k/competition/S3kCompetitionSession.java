@@ -274,6 +274,9 @@ public final class S3kCompetitionSession implements WorldSessionPolicyState,
     public int bottomY() { return nativeObjectContext().bottomY(); }
     public int trigger(int index) { return triggers[index & 0xF]; }
     public void setTrigger(int index, int value) { triggers[index & 0xF] = value & 0xFF; }
+    boolean resultsRequested() { return resultSent; }
+    int highestLap(int slot) { return highestLaps[slot]; }
+    boolean timeOver(int slot) { return finished[slot] && laps[slot] <= TOTAL_LAPS; }
     public int lap(int slot) { return laps[slot]; }
     public int rings(int slot) { return rings[slot]; }
     // Raw RAM writes do not invoke GiveRing's threshold awards. Native GiveRing owns those separately.

@@ -9855,6 +9855,7 @@ METHOD com.openggf.level.LevelManager public  void resetTileOffsetPositionActual
 METHOD com.openggf.level.LevelManager public  void resetTileOffsetPositionEffectiveForFullRefresh()
 METHOD com.openggf.level.LevelManager public  void respawnPlayer()
 METHOD com.openggf.level.LevelManager public  void restartCurrentLevelAfterDeath()
+METHOD com.openggf.level.LevelManager public  void restartCurrentLevelFromCheckpointAfterDeath()
 METHOD com.openggf.level.LevelManager public  void restartCurrentLevelFromConfiguration()
 METHOD com.openggf.level.LevelManager public  void restartCurrentLevelFromStartAfterDeath()
 METHOD com.openggf.level.LevelManager public  void restoreBackgroundVdpPlane(byte[])

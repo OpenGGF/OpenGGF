@@ -97,6 +97,10 @@ final class GameLoopContinueCoordinator {
      * at once under a fast-restart run policy.
      */
     void startRespawn(com.openggf.game.session.GameplayRunPolicy policy, Runnable fadeOutMusic) {
+        if (policy.deathRestart() == com.openggf.game.session.GameplayRunPolicy.DeathRestart.FAST_FROM_CHECKPOINT) {
+            restartFromCheckpointAfterDeath();
+            return;
+        }
         if (policy.fastDeathRestart()) {
             restartFromStartAfterDeath();
             return;
@@ -125,6 +129,13 @@ final class GameLoopContinueCoordinator {
         loop.announceHostedRunLevelReady(true);
         java.util.logging.Logger.getLogger(GameLoop.class.getName())
                 .info("Fast death restart from the act start");
+    }
+
+    void restartFromCheckpointAfterDeath() {
+        loop.levelManager.restartCurrentLevelFromCheckpointAfterDeath();
+        loop.activateScheduledPlaybackForLoadedLevel();
+        GameLoopPlcLifecycle.startFromBlack(loop.resolveGameplayModeContext(), loop.fadeManager, null);
+        loop.announceHostedRunLevelReady(true);
     }
 
     private void publishClock(int vintRunCount) {

@@ -55,6 +55,12 @@ final class HostedRunController {
     private final GhostRenderRegistry.GhostLayerRenderer layerRenderer = this::renderGhostsForLayer;
     private GhostRenderRegistry registeredRegistry;
 
+    private com.openggf.game.arena.HostedArenaSession arenaSession;
+    void bindArena(com.openggf.game.arena.HostedArenaSession session) {
+        arenaSession = session;
+        ghostRenderer.setArtSource(session.ghostArtSource());
+    }
+
     private RunSpec spec;
     private RunHost host;
     private Handle handle;
@@ -203,7 +209,9 @@ final class HostedRunController {
             return;
         }
         String determinismFingerprint = new DeterminismFingerprint(AppVersion.get(), romChecksumOrZero()).asString();
-        stepOrdinal = 0;
+        boolean checkpointRespawn = deathRestart && spec.policy().deathRestart()
+                == com.openggf.game.session.GameplayRunPolicy.DeathRestart.FAST_FROM_CHECKPOINT;
+        if (!checkpointRespawn) stepOrdinal = 0;
         debugAssistThisStep = false;
         // The load that just finished satisfies any retry requested before it (for example a
         // second press during the reload fade); only a request made from here on reloads again.
@@ -226,7 +234,10 @@ final class HostedRunController {
         }
         int[] size = levelSize();
         RunLevelStart start = new RunLevelStart(spec, determinismFingerprint, debugAssisted, size[0], size[1],
-                deathRestart);
+                checkpointRespawn ? com.openggf.mods.run.LevelStartCause.CHECKPOINT_RESPAWN
+                        : deathRestart ? com.openggf.mods.run.LevelStartCause.FAST_DEATH_RESTART
+                        : com.openggf.mods.run.LevelStartCause.LAUNCH,
+                com.openggf.mods.run.TrackGeometry.ACT);
         guarded(() -> host.onLevelReady(start));
         if (host != null) applyLevelCover();
     }
@@ -342,6 +353,41 @@ final class HostedRunController {
         inputHeld = hold;
     }
 
+    boolean admitArenaStep(InputHandler input) { return admitStep(input); }
+
+    com.openggf.control.PlayerInputState beforeArenaStep(InputHandler input) {
+        beforeStep(input);
+        pendingStartHeld = false;
+        if (controlsHeld) pendingHeldMask = 0;
+        var p1 = input.logical().player1();
+        return inputHeld || controlsHeld ? com.openggf.control.PlayerInputState.neutral()
+                : com.openggf.control.PlayerInputState.of(p1.heldMask(),p1.pressedMask(),
+                        p1.actionHeldMask(),p1.actionPressedMask(),false,false);
+    }
+
+    void onArenaReady(com.openggf.mods.run.TrackGeometry geometry) {
+        if (host == null) return;
+        stepOrdinal = 0;
+        debugAssistThisStep = false;
+        retryRequested = false;
+        actCompleteSeen = false;
+        ghostRenderer.clearSlots();
+        attachRenderer(GameServices.ghostRenderRegistryOrNull());
+        int[] size = levelSize();
+        var start = new RunLevelStart(spec,new DeterminismFingerprint(AppVersion.get(),romChecksumOrZero()).asString(),
+                false,size[0],size[1],com.openggf.mods.run.LevelStartCause.LAUNCH,geometry);
+        guarded(() -> host.onLevelReady(start));
+    }
+
+    void afterArenaStep(com.openggf.game.arena.ArenaStep arena,boolean complete) {
+        if (host == null) return;
+        actCompleteSeen |= complete;
+        var step = new RunStep(stepOrdinal++,pendingHeldMask,false,arena.pose(),complete,-1,debugAssistThisStep,
+                arena.race(),com.openggf.mods.run.RaceSignal.NONE,com.openggf.mods.run.RaceEventResult.NONE);
+        debugAssistThisStep = false;
+        guarded(() -> host.afterStep(step));
+    }
+
     /** Captures player 1's admitted input for the step about to execute. */
     void beforeStep(InputHandler input) {
         var p1 = input.logical().player1();
@@ -380,9 +426,20 @@ final class HostedRunController {
         int checkpointIndex = checkpointState != null ? checkpointState.getLastCheckpointIndex() : -1;
         actCompleteSeen |= actComplete;
         RunStep step = new RunStep(stepOrdinal++, pendingHeldMask, pendingStartHeld, poseOf(player),
-                actComplete, checkpointIndex, debugAssistThisStep);
+                actComplete, checkpointIndex, debugAssistThisStep, actRaceClock(level,gameState),
+                com.openggf.mods.run.RaceSignal.NONE,com.openggf.mods.run.RaceEventResult.NONE);
         debugAssistThisStep = false;
         guarded(() -> host.afterStep(step));
+    }
+
+    private com.openggf.mods.run.RaceClock actRaceClock(com.openggf.level.LevelManager level,
+            com.openggf.game.GameStateManager state) {
+        if (spec.policy().deathRestart()!=com.openggf.game.session.GameplayRunPolicy.DeathRestart.FAST_FROM_CHECKPOINT)
+            return com.openggf.mods.run.RaceClock.ACT;
+        var failure = state.getLives() == 0 ? com.openggf.mods.run.RaceClock.Failure.GAME_OVER
+                : level.getLevelGamestate().isTimeOver() ? com.openggf.mods.run.RaceClock.Failure.TIME_OVER
+                : com.openggf.mods.run.RaceClock.Failure.NONE;
+        return new com.openggf.mods.run.RaceClock(true,0,0,failure);
     }
 
     static PlayerPose poseOf(AbstractPlayableSprite sprite) {
@@ -478,6 +535,8 @@ final class HostedRunController {
         localLook.clear();
         handle.active = false;
         host = null;
+        arenaSession = null;
+        ghostRenderer.setArtSource(null);
         spec = null;
         handle = null;
         retryRequested = false;
@@ -518,7 +577,8 @@ final class HostedRunController {
         }
         AbstractPlayableSprite player;
         try {
-            player = RecordingMainPlayerResolver.resolve(configuration, sprites);
+            player = arenaSession == null ? RecordingMainPlayerResolver.resolve(configuration, sprites)
+                    : arenaSession.localPlayer();
         } catch (IllegalStateException e) {
             return;
         }

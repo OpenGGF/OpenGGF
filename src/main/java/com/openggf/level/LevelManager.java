@@ -3574,6 +3574,15 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * still decides whether a card exists, so a zone whose card belongs to a later cutscene
      * (S3K AIZ1's plane intro) keeps that card and its art admission for the cutscene.
      */
+    /** Full native checkpoint restore, omitting only the initial title-card presentation.
+     * The caller owns life loss and the GAME OVER/TIME OVER decision before requesting reload.
+     * Shared by the live loop and input-only replay; checkpoint time is restored by the load.
+     */
+    public void restartCurrentLevelFromCheckpointAfterDeath() {
+        restartCurrentLevelAfterDeath();
+        skipPendingInitialTitleCardPresentation();
+    }
+
     public void restartCurrentLevelFromStartAfterDeath() {
         checkpointCoordinator.restartFromStartAfterDeath();
     }

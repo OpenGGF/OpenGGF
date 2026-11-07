@@ -10,6 +10,20 @@ This document tracks **intentional deviations** from the original Sonic 1 / 2 / 
 
 Each entry describes what the ROM does, what we do, and why — focusing on *why* the divergence is acceptable.
 
+## Hosted Competition checkpoint reload and monitor OFF (2026-11-07)
+
+`FAST_FROM_CHECKPOINT` omits the death reload's fade to black and initial title-card
+presentation. The ordinary native death decision still takes a life and selects
+GAME OVER or TIME OVER. The shared LevelManager reload owner preserves the banked
+star post, its act timer and the game's normal respawn consequences. Hosted attempt
+ordinals continue across this reload; they do not receive the star-post timer refund.
+
+S2 and S3K monitors under the hosted OFF rule delete their placement on initialization,
+without marking it remembered. This is a room rule rather than a ROM content value:
+content zero awards Robotnik/Eggman and cannot represent OFF. S1 is unchanged.
+See the [Competition design](../architecture/designs/2026-11-07-s3k-competition-time-attack-tracks-design.md#6-death-without-restarts).
+
+
 **TAS mechanism verdicts (2026-10-26):** the
 [executed verdict record](../architecture/validation/2026-10-26-tas-trick-verdicts.md)
 separates supported tricks from reached compatibility gaps. Newly demonstrated

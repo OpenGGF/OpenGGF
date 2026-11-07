@@ -9,6 +9,16 @@ This document tracks **intentional deviations** from the original Sonic 3 & Knuc
 
 Each entry describes what the ROM does, what we do, and why — focusing on *why* the divergence is acceptable.
 
+## Hosted solo arena presentation (2026-11-07)
+
+Hosted Competition arenas use one 320×224 P1 view instead of the ROM split screen.
+The extra rows are a display projection of the native terrain and sprite sources;
+the native cameras, both 112-row sprite pages and their visibility writes still run.
+The display camera does not feed death checks or physics. Remote ghosts use the
+ROM miniature mappings and art, without becoming native participants.
+See the [Competition design](architecture/designs/2026-11-07-s3k-competition-time-attack-tracks-design.md#46-full-screen-arena-view-s3k-presentation-only).
+
+
 **DEZ tube interact word (2026-10-30):** fresh original-input callbacks
 [identify the row14502 owner](status/trace-frontier-log.md#2026-10-30--dez-gravity-tube-live-interact-word-at-p2-row-14502):
 S3K's existing CPU compare needs the tube's live routine high word4, which its
