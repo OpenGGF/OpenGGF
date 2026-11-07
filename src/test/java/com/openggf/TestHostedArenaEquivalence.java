@@ -26,12 +26,14 @@ class TestHostedArenaEquivalence {
                 fixture.menuLaunch(items);
                 for (int frame=0; frame<700; frame++) {
                     prepare(fixture,frame);
-                    fixture.nativeStep(PlayerInputState.neutral());
+                    fixture.nativeStep(buttons(frame));
                     expected.add(fixture.host.session().capture());
                     if (frame == 2) assertTrue(fixture.host.session().controlsLocked(),"script must enter native false start");
                     if (frame == 500) assertTrue(fixture.host.session().player(0).dead(),"script must enter native death");
                     if (frame == 501) assertFalse(fixture.host.session().player(0).dead(),"script must cross native respawn row");
                 }
+                assertNotEquals(expected.get(520).players().getFirst().body().xFixed(),
+                        expected.get(600).players().getFirst().body().xFixed(),"script must execute real movement after respawn");
             }
             try (var fixture = new HostedArenaFixture()) {
                 var policy = GameplayRunPolicy.competition();
@@ -49,7 +51,10 @@ class TestHostedArenaEquivalence {
                         SessionManager.getCurrentGameplayMode().getWorldSession());
                 for (int frame=0; frame<700; frame++) {
                     prepare(fixture,frame);
+                    fixture.input.setLogicalOverride(com.openggf.control.LogicalInputSnapshot.ofPlayers(
+                            buttons(frame),PlayerInputState.neutral()));
                     fixture.iteration(() -> loop.getNativeMenuScreen().update(fixture.input));
+                    assertEquals(buttons(frame).heldMask(),steps.getLast().heldMask());
                     assertEquals(expected.get(frame), fixture.host.session().capture(), "frame " + frame + ", items=" + items);
                     if (frame == 0) {
                         var player = fixture.host.session().player(0);
@@ -68,6 +73,12 @@ class TestHostedArenaEquivalence {
                 assertEquals(699,steps.getLast().ordinal());
             }
         }
+    }
+    private static PlayerInputState buttons(int frame) {
+        if (frame < 520) return PlayerInputState.neutral();
+        int action = frame >= 550 && frame < 556 ? com.openggf.control.InputActionMasks.ACTION_A : 0;
+        return PlayerInputState.of(8,frame == 520 ? 8 : 0,action,
+                frame == 550 ? action : 0,false,false);
     }
     static void prepare(HostedArenaFixture fixture, int frame) {
         var session = fixture.host.session();
