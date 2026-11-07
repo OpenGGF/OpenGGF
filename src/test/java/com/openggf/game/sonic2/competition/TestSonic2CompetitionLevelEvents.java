@@ -267,7 +267,7 @@ class TestSonic2CompetitionLevelEvents {
     }
 
     @Test
-    void activeTeleportRejectsBeforeEitherCameraPathAndClearsTheEarlierPrimarySample() {
+    void activeTeleportRetainsHorizontalWordsWhileBothCameraPathsRemainOperational() {
         var fixture = new Fixture();
         var motions = new ArrayList<Motion>();
         var events = fixture.withMotion((slot, oldX, oldY, frozen) ->
@@ -289,17 +289,15 @@ class TestSonic2CompetitionLevelEvents {
         assertTrue(fixture.session.teleportInitializedMonitor(host));
         assertEquals(0x40, fixture.session.teleportTimer());
 
-        assertThrows(UnsupportedOperationException.class, events::updateAfterObjectsBeforeCamera);
-        assertThrows(UnsupportedOperationException.class, events::update);
+        events.updateAfterObjectsBeforeCamera();
+        fixture.p1.updatePosition();
         events.updateFixedInLevelObjects();
-
-        assertTrue(motions.isEmpty());
+        events.update();
+        assertEquals(2, motions.size());
         assertEquals(0x200, fixture.p1.getX());
-        assertEquals(0x200, fixture.p1.getXCopy());
         assertEquals(0x300, fixture.p2.getX());
-        assertEquals(0x300, fixture.p2.getXCopy());
-        assertEquals(0x3000, fixture.p1.getMaxX());
-        assertEquals(0x3000, fixture.p2.getMaxX());
+        assertEquals(0x2920, fixture.p1.getMaxX());
+        assertEquals(0x2920, fixture.p2.getMaxX());
     }
 
     @Test

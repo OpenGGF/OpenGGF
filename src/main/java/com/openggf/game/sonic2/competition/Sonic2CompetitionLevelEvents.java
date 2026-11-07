@@ -18,7 +18,7 @@ public final class Sonic2CompetitionLevelEvents implements LevelEventProvider {
         void completed(int slot, short oldX, short oldY, boolean frozen);
     }
 
-    private record CameraSample(short x, short y, boolean frozen) { }
+    private record CameraSample(short x, short y, boolean frozen, int horizontalDelay) { }
 
     private final Sonic2CompetitionSession session;
     private final TitleCardManager title;
@@ -77,7 +77,6 @@ public final class Sonic2CompetitionLevelEvents implements LevelEventProvider {
     @Override public void updateAfterObjectsBeforeCamera() {
         clearCameraSample();
         if (act < 0) return;
-        requireQualifiedCameraPath();
         primaryCameraSample = sample(Objects.requireNonNull(session.camera(0), "native P1 camera"));
     }
 
@@ -86,35 +85,36 @@ public final class Sonic2CompetitionLevelEvents implements LevelEventProvider {
         // Consume before the callback: a failed camera/callback must never
         // publish the previous pass's sample during a later continuation.
         clearCameraSample();
-        if (before != null) cameraMotion.completed(0, before.x(), before.y(), before.frozen());
+        if (before != null) {
+            retainTeleportHorizontalWords(session.camera(0), before);
+            cameraMotion.completed(0, before.x(), before.y(), before.frozen());
+        }
     }
 
     void clearCameraSample() { primaryCameraSample = null; }
 
     private static CameraSample sample(Camera camera) {
-        return new CameraSample(camera.getX(), camera.getY(), camera.getFrozen());
+        return new CameraSample(camera.getX(), camera.getY(), camera.getFrozen(), camera.getHorizScrollDelay());
     }
 
-    private void requireQualifiedCameraPath() {
-        // ScrollHoriz (s2.asm:18041-18044) retains its prior diff WORD when
-        // Teleport_flag skips scrolling. The canonical integer camera has no
-        // qualified native teleport worker; reject before sampling or motion.
-        if (session.teleportTimer() != 0) {
-            clearCameraSample();
-            throw new UnsupportedOperationException("Native teleport camera path is not qualified");
+    private void retainTeleportHorizontalWords(Camera camera, CameraSample before) {
+        // ScrollHoriz (s2.asm:18041-18044): no X or delay write; ScrollVerti still runs.
+        if (session.teleportClock().active()) {
+            camera.setXAfterRenderCopy(before.x());
+            camera.setHorizScrollDelay(before.horizontalDelay());
         }
     }
 
     @Override
     public void update() {
         if (act < 0) return;
-        requireQualifiedCameraPath();
         Camera p2 = Objects.requireNonNull(session.camera(1), "native P2 camera");
         // DeformBgLayer (s2.asm:15097-15175) scrolls P1, then P2, before
         // RunDynamicLevelEvents. The canonical world pass already scrolled P1.
         // P2 has its own boundary bank and no dynamic bottom-boundary easing tail.
         var before = sample(p2);
         p2.updatePosition();
+        retainTeleportHorizontalWords(p2, before);
         cameraMotion.completed(1, before.x(), before.y(), before.frozen());
         p2.captureRenderCopy();
 

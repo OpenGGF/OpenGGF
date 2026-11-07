@@ -366,7 +366,8 @@ public class CrawlBadnikInstance extends AbstractBadnikInstance implements Touch
             // for the next touch pass; invincibility downgrades it to normal ENEMY flags.
             // loc_3D36C (s2.asm:82573-82581) reads native invincibility,
             // which also covers Super Sonic while his timed power-up is zero.
-            attackingCollisionFlags = player.isSuperSonic() || player.getInvincibleFrames() > 0 ? 0x17 : 0x97;
+            Boolean raw = com.openggf.sprites.playable.PlayableSpriteInternalAccess.nativeSecondaryInvincibility(player);
+            attackingCollisionFlags = (raw != null ? raw : player.isSuperSonic() || player.getInvincibleFrames() > 0) ? 0x17 : 0x97;
             animFrame = FRAME_WALK_2;
             return;
         }

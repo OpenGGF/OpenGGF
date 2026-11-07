@@ -1233,11 +1233,17 @@ final class ObjectTouchResponseController {
         if (player == null) {
             return false;
         }
-        if (player.isSuperSonic()
-                || player.getInvincibleFrames() > 0
-                || isSpinAttackAnimation(player)
-                || (instaShieldActive && player == currentPlayer)) {
-            return true;
+        Boolean raw = com.openggf.sprites.playable.PlayableSpriteInternalAccess.nativeSecondaryInvincibility(player);
+        if (raw != null) {
+            // Touch_Enemy (s2.asm:85479-85486): global powered form and time are not this bit.
+            if (raw || isSpinAttackAnimation(player) || (instaShieldActive && player == currentPlayer)) return true;
+        } else {
+            if (player.isSuperSonic()
+                    || player.getInvincibleFrames() > 0
+                    || isSpinAttackAnimation(player)
+                    || (instaShieldActive && player == currentPlayer)) {
+                return true;
+            }
         }
 
         PlayerCapabilityRules capabilityRules = playerCapabilityRulesOrNull(player);

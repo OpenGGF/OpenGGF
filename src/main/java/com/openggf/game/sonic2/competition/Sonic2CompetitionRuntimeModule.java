@@ -61,6 +61,10 @@ public final class Sonic2CompetitionRuntimeModule extends DelegatingGameModule {
     }
 
     @Override public com.openggf.game.ScrollHandlerProvider getScrollHandlerProvider() { return scroll; }
+    @Override public com.openggf.level.objects.ObjectRegistry createObjectRegistry() {
+        return new com.openggf.game.sonic2.competition.state.Sonic2LevelOnlyObjectRegistry(super.createObjectRegistry());
+    }
+
     @Override public LevelInitProfile getLevelInitProfile() { return profile; }
     @Override public LevelEventProvider getLevelEventProvider() { return events; }
     void initializeBoundaryWords() {
@@ -167,7 +171,7 @@ public final class Sonic2CompetitionRuntimeModule extends DelegatingGameModule {
         // state and other camera writers remain the root RAM owner's gate.
         lifecycle.recordCameraDisplacement(slot,
                 (short) ((camera.getX() - oldX) << 8),
-                (short) ((camera.getY() - oldY) << 8));
+                (short) ((camera.getY() - oldY) << 8), !host.session().teleportClock().active(), true);
     }
     @Override public ZoneFeatureProvider getZoneFeatureProvider() { return features; }
     @Override public RuntimeArtCoordinator createRuntimeArtCoordinator(HardwareTimingService timing) {

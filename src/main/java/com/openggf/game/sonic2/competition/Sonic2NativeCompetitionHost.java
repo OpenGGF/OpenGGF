@@ -115,6 +115,8 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
         this.publishMode = Objects.requireNonNull(publishMode, "publishMode");
         this.views = Objects.requireNonNull(views, "views");
         this.nativeState = Objects.requireNonNull(nativeState, "nativeState");
+        if (nativeState instanceof com.openggf.game.sonic2.competition.state.Sonic2CompetitionNativeState production)
+            checkpointEnvironment = () -> production.primaryEnvironment(context(), session);
         this.teleportOnly = teleportOnly;
         this.overseas = overseas;
         this.pauseAudio = AudioNativePauseAccess.bind(services.audio());
@@ -182,6 +184,14 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
             resetNativePause();
             // Reuse this exact context: policy.retire resets the complete competition ledger.
             world.load(logicalZone(zone), act);
+            if (nativeState instanceof com.openggf.game.sonic2.competition.state.Sonic2CompetitionNativeState production) {
+                var registry = context().getRewindRegistry();
+                registry.deregisterPostRestoreCallback("sprite-powerup-derived-state");
+                registry.registerPostRestoreCallback("sprite-powerup-derived-state", () -> {
+                    if (session.teleportClock().active()) production.restoreFrozenEffects(context(), session);
+                    else context().getSpriteManager().refreshPowerUpObjectsAfterRewindRestore();
+                });
+            }
             module.nativeLifecycle().initializeAct();
             // The inherited VInt clock and native LF=0 are published only when
             // loadZoneAndAct returns. Assembly must not lose the 25 real waits.
@@ -236,10 +246,6 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
                 return pauseResult;
             }
             result = requireWorld().step(input, frame, () -> {
-                var sampled = sampleNativeInput();
-                if (!sampled.equals(input.logical()))
-                    throw new IllegalStateException("Native wait and playable dispatcher disagree on controller sample");
-                pause.acceptSample(sampled, nativeSlowMotionFlag.getAsBoolean());
                 context().getSpriteManager().update(input);
             });
             if (result == LevelFrameResult.GAMEPLAY_FRAME) {
@@ -442,6 +448,8 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
         replaceRewindAdapter(ObjectManagerInternalAccess.nativeCompetitionCollisionPointersRewindAdapter(objects));
         replaceRewindAdapter(module.nativeTitle());
         replaceRewindAdapter(pauseAdapter);
+        if (nativeSlowMotionFlag instanceof com.openggf.game.sonic2.competition.state.Sonic2NativeControlState controls)
+            replaceRewindAdapter(controls);
     }
 
     private void replaceRewindAdapter(RewindSnapshottable<?> adapter) {
@@ -495,6 +503,8 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
             // Obj01_Init/Obj02_Init own the effective words, independent of profile binding.
             com.openggf.sprites.playable.PlayableSpriteInternalAccess.initializeNativeSpeedWords(player, context().getWorldSession());
         }
+        if (nativeState instanceof com.openggf.game.sonic2.competition.state.Sonic2CompetitionNativeState production)
+            replaceRewindAdapter(production.initializeActorStatus(context(), session));
         context().getLevelManager().refreshPlayablePowerUpSpawners();
     }
 
@@ -533,6 +543,19 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
 
     private final class Policy implements WorldSessionPolicyState {
         @Override public <T> T getService(Class<T> type) {
+            if (type == ObjectManagerInternalAccess.NativeExecution.class)
+                return type.cast(new ObjectManagerInternalAccess.NativeExecution() {
+                    @Override public void afterNativeWait() {
+                        session.teleportClock().afterNativeWait(pause.gamePaused());
+                        if (pause.capture().continuation() == Sonic2CompetitionPause.Continuation.AWAITING_ORDINARY_SAMPLE) {
+                            var sampled = sampleNativeInput();
+                            if (!sampled.equals(SpriteManagerInternalAccess.publishedInput(context().getSpriteManager())))
+                                throw new IllegalStateException("Native wait and playable dispatcher disagree on controller sample");
+                            pause.acceptSample(sampled, nativeSlowMotionFlag.getAsBoolean());
+                        }
+                    }
+                    @Override public boolean objectsFrozen() { return session.teleportClock().active(); }
+                });
             if (type == NativeCompetitionRoster.class || type == Sonic2CompetitionSession.class) return type.cast(session);
             if (type == Sonic2CompetitionObjectHost.class) return type.cast(Sonic2NativeCompetitionHost.this);
             if (type == com.openggf.game.sonic2.bumpers.Sonic2NativeCNZBumpers.class)
@@ -563,6 +586,10 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
         }
         @Override public void failedAssembly(LevelLoadCause cause) { resetLoadState(); resetNativePause(); }
         @Override public void closeScreens() { resetNativePause(); }
-        @Override public void retire() { resetLoadState(); resetNativePause(); session.reset(); }
+        @Override public void retire() {
+            if (nativeState instanceof com.openggf.game.sonic2.competition.state.Sonic2CompetitionNativeState production)
+                production.retireActorStatus();
+            resetLoadState(); resetNativePause(); session.reset();
+        }
     }
 }
