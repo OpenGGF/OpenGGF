@@ -52,17 +52,23 @@ class TestSonic2CompetitionViewsPixels {
             graphics.setViewport(0, 0, 320, 224); glViewport(0, 0, 320, 224);
             Files.createDirectories(OUTPUT);
             var session = new Sonic2CompetitionSession();
-            var titleCaptured = new boolean[1];
+            var titleCaptured = new boolean[2];
             var probe = new Sonic2NativeCompetitionHost.Views() {
                 public void prepare(GameplayModeContext context, Sonic2CompetitionSession state,
                                     Sonic2CompetitionLevelProfile profile, Sonic2CompetitionNativeArt art) {
                     views.prepare(context, state, profile, art);
                     var video = context.getWorldSession().getGameModule().getGameService(Sonic2CompetitionVideoFrame.class);
                     if (zone == 0 && !titleCaptured[0] && !context.getCamera().isLevelStarted()
+                            && ((TitleCardManager) root.getTitleCardProvider()).capture().leavePass() == 22
                             && video.registers().capture().published()
                             && video.registers().capture().upperPlane() == Sonic2CompetitionPlanes.PlaneId.FOREGROUND_P2) {
                         titleCaptured[0] = true;
-                        try { capture(views, context, state, "ehz-title-planes", "locked native title leave; planes only at C1"); }
+                        try { capture(views, context, state, "ehz-title-locked-planes", "locked background departure, leave pass 22; native f1325; planes only"); }
+                        catch (Exception failure) { throw new RuntimeException(failure); }
+                    }
+                    if (zone == 0 && !titleCaptured[1] && context.getLevelManager().getFrameCounter() == 50) {
+                        titleCaptured[1] = true;
+                        try { capture(views, context, state, "ehz-title-planes", "text departure, LFC50; native f1380 retained field0 from f1379; title art pending S5"); }
                         catch (Exception failure) { throw new RuntimeException(failure); }
                     }
                 }
@@ -79,6 +85,9 @@ class TestSonic2CompetitionViewsPixels {
             session.updateMenu(LogicalInputSnapshot.ofPlayers(
                     PlayerInputState.of(menuMask, menuMask, menuMask, menuMask, true, true), PlayerInputState.neutral()), true);
             host.loadAct(session, zone, 0);
+            var resident=host.context().getWorldSession().getGameModule().getGameService(Sonic2CompetitionArtResidency.class);
+            for (int tile=0;tile<22;tile++) assertArrayEquals(TestEnvironment.currentRom().readBytes(0x4134C+tile*32,32),
+                    resident.patternBytes(0x6E2+tile), "Hud_Base field cell source slot "+Integer.toHexString(0x6E2+tile));
             graphics.bindRuntimeManagedReferences(host.context().getCamera(), host.context().getFadeManager());
             var title = (TitleCardManager) root.getTitleCardProvider();
             int ticks = 0;
@@ -89,10 +98,12 @@ class TestSonic2CompetitionViewsPixels {
             capture(views, host.context(), session, name, "first native display after title owner completion");
             if (zone == 0) {
                 assertTrue(titleCaptured[0]);
-                // Independent seeded split fixture, no reference CSV/state hydration. The
-                // two humans/cameras still belong to the one production native world.
+                // Lead-authorized observation fixture: native moving camera history,
+                // not gameplay hydration or a new runtime delay. Vint_Level (s2.asm:756)
+                // publishes the previous completed DeformBgLayer output. BizHawk's
+                // f2300 even rows retain f2299 (H=-2001); its latest f2300 H is -2004.
                 var second = session.player(1);
-                NativePositionOps.writeXPosResetSubpixel(second, 2167);
+                NativePositionOps.writeXPosResetSubpixel(second, 2161);
                 NativePositionOps.writeYPosResetSubpixel(second, 784);
                 second.setXSpeed((short)0); second.setYSpeed((short)0); second.setGSpeed((short)0);
                 session.camera(1).updatePosition(true); session.camera(1).captureRenderCopy();
@@ -101,11 +112,21 @@ class TestSonic2CompetitionViewsPixels {
                 video.planes().apply(draw.initialForeground(camera(session,0), camera(session,1)));
                 video.planeScroll().initialize(session.camera(0).getX(), session.camera(0).getY(),
                         session.camera(1).getX(), session.camera(1).getY());
-                step(host, input); step(host, input);
+                step(host, input); // completed camera 2001 / native f2298
+                NativePositionOps.writeXPosResetSubpixel(second, 2164);
+                step(host, input); // native f2299: publish H=-2001, complete camera 2004
+                assertEquals(2004, session.camera(1).getX());
+                assertEquals(-2001, (short)(video.registers().capture().horizontal().get(180) >>> 16));
+                capture(views, host.context(), session, "ehz-separated", "native camera history 2001->2004; f2300 field0 retained from f2299; published H=-2001");
+                NativePositionOps.writeXPosResetSubpixel(second, 2167);
+                step(host, input); // native f2300: publish H=-2004, complete camera 2007
+                assertEquals(2007, session.camera(1).getX());
+                assertEquals(-2004, (short)(video.registers().capture().horizontal().get(180) >>> 16));
+                capture(views, host.context(), session, "ehz-separated-latest", "native f2300 latest publication H=-2004, fixed-field projection; compare with retained field0 separately");
                 assertTrue(second.getCentreX() - session.player(0).getCentreX() >= 128);
                 assertTrue(second.getCentreY() - session.player(0).getCentreY() >= 64);
                 assertTrue(second.isRenderFlagOnScreen(), "P2 own-view visibility must reach the actual human");
-                capture(views, host.context(), session, "ehz-separated", "seeded P2 position; explicit initial FG load, then two native waits");
+
             }
             assertEquals(GL_NO_ERROR, glGetError());
             assertInstanceOf(NullAudioBackend.class, services.audio().getBackend());
@@ -175,15 +196,52 @@ class TestSonic2CompetitionViewsPixels {
         var registers = video.registers().capture();
         PaletteUploadPresentation.withoutDisplayedFade(GameServices.graphics(), () -> views.draw(context, session));
         var image = ScreenshotCapture.captureFramebuffer(320, 224);
+        TestSonic2CompetitionFieldPatternOwnership.assertAtlas(video.art(), GameServices.graphics());
         assertTrue(java.util.Arrays.stream(image.pixels()).distinct().count() > 2, "capture must contain rendered content");
         ScreenshotCapture.savePNG(image, OUTPUT.resolve(name + ".png"));
         Files.writeString(OUTPUT.resolve(name + ".txt"), description + "\nscroll=A1 Sonic2CompetitionScroll\n"
                 + "initial-deform seed pending=" + name.startsWith("ehz-") + "\n"
+                + "ring-phase port pending=" + (video.displayState().ringsAnimationFrame() < 0) + "\n"
+                + "publishedCamera2=" + registers.secondCamera().x() + "," + registers.secondCamera().y() + "\n"
                 + "postLoadScrollClear=" + video.planeScroll().postLoadScrollClear() + "\n"
                 + "levelFrame=" + levelFrame + " vint=" + vint + " upperPlane=" + registers.upperPlane() + "\n"
                 + "P1=" + session.player(0).getCentreX() + "," + session.player(0).getCentreY()
                 + " P2=" + session.player(1).getCentreX() + "," + session.player(1).getCentreY() + "\n"
                 + "camera1=" + first.x() + "," + first.y() + " camera2=" + second.x() + "," + second.y() + "\n");
+        var provenance = new StringBuilder();
+        for (var page : java.util.List.of(registers.pages().first(), registers.pages().second())) {
+            provenance.append("page ").append(page.player()).append('\n');
+            for (var entry : page.entries()) provenance.append(entry).append(" projected=")
+                    .append(entry.x()).append(',').append(Math.floorDiv(entry.y()+1,2)).append('\n');
+        }
+        for (int slot=0;slot<2;slot++) {
+            var ringWindow=com.openggf.level.rings.RingNativeDisplayInternalAccess.window(
+                    context.getLevelManager().getRingManager(),context.getLevelManager().getCurrentLevel().getRings(),slot,levelFrame);
+            provenance.append("ring window ").append(slot).append(' ').append(ringWindow).append('\n');
+        }
+        for (int[] point : new int[][]{{65,8},{65,118},{70,128},{76,130},{110,147},{115,148}}) {
+            int y=point[1],x=point[0];
+            int h=(short)(registers.horizontal().get(y)>>>16);
+            int v=(y<108?registers.foreground1():registers.foreground2())>>1;
+            var plane=y<108?registers.upperPlane():Sonic2CompetitionPlanes.PlaneId.FOREGROUND_P2;
+            int word=video.planes().cell(plane,(x-h)>>3,(y+v)>>3);
+            provenance.append("FG ").append(x).append(',').append(y).append(" h=").append(h).append(" v=").append(v)
+                    .append(" word=").append(Integer.toHexString(word)).append('\n');
+        }
+        provenance.append("EHZ pulse slots39C/39D blank=").append(
+                java.util.Arrays.equals(new byte[32],video.art().patternBytes(0x39C))
+                && java.util.Arrays.equals(new byte[32],video.art().patternBytes(0x39D))).append('\n');
+        var empty = new Sonic2CompetitionSpritePages.Pair(Sonic2CompetitionSatBuilder.Page.empty(0),
+                Sonic2CompetitionSatBuilder.Page.empty(1));
+        video.registers().restore(new Sonic2CompetitionViewRegisters.State(registers.published(),
+                registers.foreground1(), registers.background1(), registers.foreground2(), registers.background2(),
+                registers.horizontal(), registers.upperPlane(), registers.nextUpperPlane(),
+                registers.firstCamera(), registers.secondCamera(), empty, registers.paletteWords()));
+        try {
+            PaletteUploadPresentation.withoutDisplayedFade(GameServices.graphics(), () -> views.draw(context, session));
+            ScreenshotCapture.savePNG(ScreenshotCapture.captureFramebuffer(320,224), OUTPUT.resolve(name+"-planes-only.png"));
+        } finally { video.registers().restore(registers); }
+        Files.writeString(OUTPUT.resolve(name+"-provenance.txt"), provenance);
         assertEquals(first, session.camera(0).capture()); assertEquals(second, session.camera(1).capture());
         assertEquals(levelFrame, context.getLevelManager().getFrameCounter());
         assertEquals(objectFrame, context.getObjectManager().getFrameCounter());

@@ -145,7 +145,16 @@ class TestSonic2CompetitionFieldPatternOwnership {
             for (short word : retained) assertEquals((short) 0x5A5A, word, "seed input is immutable");
         }
     }
-    private static void assertAtlas(Sonic2CompetitionArtResidency art, GraphicsManager graphics) {
+    static void assertAtlas(Sonic2CompetitionArtResidency art, GraphicsManager graphics) {
+        int active = glGetInteger(org.lwjgl.opengl.GL13.GL_ACTIVE_TEXTURE);
+        int texture = glGetInteger(GL_TEXTURE_BINDING_2D);
+        try { assertAtlasContents(art, graphics); }
+        finally {
+            org.lwjgl.opengl.GL13.glActiveTexture(active);
+            glBindTexture(GL_TEXTURE_2D, texture);
+        }
+    }
+    private static void assertAtlasContents(Sonic2CompetitionArtResidency art, GraphicsManager graphics) {
         var atlas = graphics.getPatternAtlas();
         var pages = new HashMap<Integer, java.nio.ByteBuffer>();
         byte[] source = new byte[65536];

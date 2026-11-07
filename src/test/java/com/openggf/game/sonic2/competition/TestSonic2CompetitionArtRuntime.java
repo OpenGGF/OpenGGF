@@ -122,7 +122,7 @@ class TestSonic2CompetitionArtRuntime {
         assertNotSame(firstPlc, secondPlc);
         assertSame(secondPlc, secondOwner.plcService());
         assertEquals(secondSubmitted, secondPlc.capture());
-        assertArrayEquals(new byte[65536], bytes(secondOwner));
+        assertArrayEquals(inheritedStandardPatterns(rom), bytes(secondOwner));
         assertEquals(0, secondOwner.capture().sonicLast());
         assertEquals(0, secondOwner.capture().tailsLast());
         assertEquals(0, secondOwner.capture().tailLast());
@@ -306,6 +306,17 @@ class TestSonic2CompetitionArtRuntime {
         actors.tails().setMappingFrame(1);
         runtime.playerLoadPlcOwnedByObject(actors.tails());
         runtime.requireOwner().serviceVBlank(PlcLifecyclePhase.LEVEL_TITLE_CARD);
+    }
+
+    private static byte[] inheritedStandardPatterns(Rom rom) throws Exception {
+        byte[] expected = new byte[2048 * 32];
+        var entries = com.openggf.level.resources.PlcParser.parse(rom,
+                Sonic2Constants.ART_LOAD_CUES_ADDR, Sonic2Constants.PLC_STD1).entries();
+        for (var entry : entries) {
+            byte[] decoded = com.openggf.level.resources.PlcParser.decompressEntryRaw(rom, entry);
+            System.arraycopy(decoded, 0, expected, entry.tileIndex() * 32, decoded.length);
+        }
+        return expected;
     }
 
     private static byte[] bytes(Sonic2CompetitionArtResidency owner) {
