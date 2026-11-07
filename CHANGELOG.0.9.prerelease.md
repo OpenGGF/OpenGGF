@@ -11,6 +11,8 @@ matching area heading; see the
   duplicated CCZ reading, decoding and cache algorithms while keeping each act's
   authenticated data independent. R32A declarative layouts use the same reader;
   existing player, terrain, loading and controller contracts remain qualified.
+  Original CCZ intro data also uses the common reader through fixed native views,
+  preserving the historical odd mapping include and keeping public raw-image access closed.
   CCZ ordinary scheduling now preserves native VBlank/Main order, the old
   selected sprite list and full-word time-stop gating. Private HUD adoption
   retains the real prefix across typed callback failures;175 focused checks

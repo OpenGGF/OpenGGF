@@ -50,6 +50,21 @@ class TestCdProgrammeReader {
   assertSame(a.blocksDecode(),reader.decoded(CdProgrammeReader.Blocks.R31));
   assertSame(a.terrain(),reader.terrain());assertSame(a.sonic(),reader.sonic());
  }
+ @Test void introUsesOnlyItsFixedOriginalViewsThroughTheSameReader()throws Exception {
+  var fixture=TestCdR31aAssets.actual();var a=fixture.assets();var reader=a.internalReader();
+  var intro=CdR31IntroAssets.fromAssets(a);
+  assertEquals(15,CdR31IntroAssets.View.values().length);
+  for(var view:CdR31IntroAssets.View.values()) {
+   var actual=reader.view(view);
+   assertArrayEquals(fixture.image().readFile(view.offset,view.length),actual.copy(),view.name());
+   assertSame(actual,reader.view(view));
+  }
+  assertSame(reader.view(CdR31IntroAssets.View.INTRO_MAPPINGS),intro.introMappingBytes());
+  assertSame(reader.view(CdR31IntroAssets.View.METAL_MAPPINGS),intro.metalMappingBytes());
+  assertSame(reader.view(CdR31IntroAssets.View.AMY_MAPPINGS),intro.amyMappingBytes());
+  assertSame(reader.view(CdR31IntroAssets.View.ROLL_MAPPINGS),intro.rollMappingBytes());
+  assertEquals(63,a.ranges().size());
+ }
  @Test void independentEqualOriginalsHaveIndependentCustodyAndProducts()throws Exception {
   var f=TestCdR31aAssets.actual();var p=TestCdR31aAssets.source(f,f.image());
   var first=CdProgrammeReader.open(p,CdStagePayload.R31A.stage());

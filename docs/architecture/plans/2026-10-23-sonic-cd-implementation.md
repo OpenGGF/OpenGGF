@@ -1,5 +1,29 @@
 # Implement Sonic CD with complete regional parity
 
+## 7 November 2026 — original intro data uses the common reader
+
+Qualified CCZ enemy, intro and ecology component packets are joined privately
+with the shared reader. Preflight caught P5's removed `originalImage()` call
+before compilation. Its15 exact original views now use that same reader's
+closed R31A-only key registry, retaining native operand/read order, lazy mapping
+reads and the unchanged63-view public inventory. The data holder publishes no
+raw image reader, independent cache, live source or invocation authority. One
+actual-media test checks all15 views, shared cache identity and retained ranges.
+
+R93 runs25 classes/914 cases:914 passed, zero failures/errors/skips, identical
+source fingerprints and exact selected fresh reports. Existing standalone author
+component passes are not substituted for this composite result. Test admission
+waited2290s; execution is separately recorded in the terminal source-bound receipt.
+This save changes no tested Java after execution except the already-pinned three
+reader/data/test files; this plan and prerelease prose document the result.
+
+Independent source reviews then identified two unrelated existing component
+fault-order defects: facing bits must clear before the fallible primary-X read;
+Robot's lazy getters must respect despawn branches and carry the first active
+goodFuture observation into its store. R93 has no tests for these cases. Prepared
+Root corrections remain separate and UNRUN at this save; a914 pass does not close
+them or establish live CCZ World/dispatch/current pixels or USA/regional parity.
+
 ## 7 November 2026 — one programme reader, independent CCZ data
 
 Package-private `CdProgrammeReader` now owns finite raw/compressed reads, successful

@@ -91,6 +91,7 @@ final class CdProgrammeReader {
    borrowedSpans.put(Borrow.HUD_RESET,new Span(0xAB86,12,null));
    borrowedSpans.put(Borrow.HUD_DIVISORS,new Span(0xACE6,40,null));
    borrowedSpans.put(Borrow.HUD_VINT,new Span(0x1DFA,6,null));
+   for(var view:CdR31IntroAssets.View.values())borrowedSpans.put(view,new Span(view.offset,view.length,null));
   } else {
    for(var s:CdR32aLoadLayout.SourceId.values())compressed.put(s,new Compressed(s.fileOffset(),s.includeBytes(),s.readerBytes(),s.headerWord(),s.codeTableBytes(),s.consumedInputBytes(),s.outputBytes(),s==CdR32aLoadLayout.SourceId.STAGE_BLOCKS?0x2000:65536,s.includeSha256(),s.readerSha256(),s.outputSha256()));
   }
