@@ -17,7 +17,9 @@ public final class Sonic2CompetitionViewRegisters implements RewindSnapshottable
     }
     private State state;
     public Sonic2CompetitionViewRegisters(CameraSnapshot first, CameraSnapshot second) {
-        state = new State(false, 0, 0, 0, 0, java.util.Collections.nCopies(224, 0),
+        // Level (s2.asm:4930-4941): after initial DeformBgLayer, clear P1 FG,
+        // write -screen_height to P2 FG, and clear the entire H-scroll page.
+        state = new State(false, 0, 0, -224, 0, java.util.Collections.nCopies(224, 0),
                 PlaneId.FOREGROUND_P1, PlaneId.FOREGROUND_P1, first, second,
                 new Sonic2CompetitionSpritePages.Pair(Sonic2CompetitionSatBuilder.Page.empty(0),
                         Sonic2CompetitionSatBuilder.Page.empty(1)), java.util.Collections.nCopies(64, 0));

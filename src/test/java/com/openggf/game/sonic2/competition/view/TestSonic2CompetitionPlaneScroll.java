@@ -51,4 +51,18 @@ class TestSonic2CompetitionPlaneScroll {
         assertSame(planes.fieldPlane(BACKGROUND), planes.source(FOREGROUND_P1).backgroundPlane());
         assertSame(planes.fieldPlane(BACKGROUND), planes.source(FOREGROUND_P2).backgroundPlane());
     }
+    @org.junit.jupiter.api.Test void explicitPostLoadClearSurvivesUntilCompletedDeformationAndRestores() {
+        var scroll = new Sonic2CompetitionPlaneScroll();
+        scroll.initialize(0, 560, 0, 565);
+        assertTrue(scroll.postLoadScrollClear());
+        var saved = scroll.capture();
+        scroll.completeCameraPass(0, 0, 560, 0, 560, false);
+        assertTrue(scroll.postLoadScrollClear(), "P1 alone is not a completed two-camera deformation");
+        scroll.completeCameraPass(1, 0, 565, 0, 565, true);
+        assertTrue(scroll.postLoadScrollClear(), "Scroll_lock retains the post-load display words");
+        scroll.completeCameraPass(1, 0, 565, 0, 565, false);
+        assertFalse(scroll.postLoadScrollClear());
+        scroll.restore(saved);
+        assertTrue(scroll.postLoadScrollClear());
+    }
 }

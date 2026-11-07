@@ -106,4 +106,13 @@ class TestSonic2CompetitionViewRegisters {
         };
         assertEquals(expected, calls);
     }
+    @Test void levelPostDeformClearsPrecedeInitialBackgroundPublication() {
+        var camera = new Camera().capture();
+        var owner = new Sonic2CompetitionViewRegisters(camera, camera);
+        var state = owner.capture();
+        assertFalse(state.published());
+        assertEquals(0, state.foreground1());
+        assertEquals(-224, state.foreground2());
+        assertEquals(java.util.Collections.nCopies(224, 0), state.horizontal());
+    }
 }

@@ -6,12 +6,14 @@ import java.util.List;
 /** Native block-crossing latches and VInt camera/flag copies; never tracks a player. */
 public final class Sonic2CompetitionPlaneScroll implements RewindSnapshottable<Sonic2CompetitionPlaneScroll.State> {
     public record Player(int x, int y, int horizontalLatch, int verticalLatch, int flags) { }
-    public record State(List<Player> live, List<Player> copied, boolean redraw) {
+    public record State(List<Player> live, List<Player> copied, boolean redraw, boolean postLoadScrollClear) {
         public State { live = List.copyOf(live); copied = List.copyOf(copied); }
     }
     private final Player[] live = {new Player(0,0,0,0,0), new Player(0,0,0,0,0)};
     private final Player[] copied = live.clone();
     private boolean redraw;
+    private boolean postLoadScrollClear = true;
+    public boolean postLoadScrollClear() { return postLoadScrollClear; }
 
     /** DeformBgLayer clears flags before Scroll_lock, retaining camera/latches when frozen. */
     public void completeCameraPass(int slot, int oldX, int oldY, int x, int y, boolean frozen) {
@@ -32,8 +34,11 @@ public final class Sonic2CompetitionPlaneScroll implements RewindSnapshottable<S
             flags |= (short) (y - oldY) < 0 ? 1 : 2;
         }
         live[slot] = new Player(x & 65535, y & 65535, horizontal, vertical, flags);
+        if (slot == 1) postLoadScrollClear = false;
     }
+    /** Level (s2.asm:4930-4941) clears the display scroll page after its initial deformation. */
     public void initialize(int firstX, int firstY, int secondX, int secondY) {
+        postLoadScrollClear = true;
         live[0] = new Player(firstX & 65535, firstY & 65535, 0, 0, 0);
         live[1] = new Player(secondX & 65535, secondY & 65535, 0, 0, 0);
         copyAtVInt(false);
@@ -59,9 +64,10 @@ public final class Sonic2CompetitionPlaneScroll implements RewindSnapshottable<S
         a = copied[0]; copied[0] = copied[1]; copied[1] = a;
     }
     @Override public String key() { return "sonic2.competition.plane-scroll"; }
-    @Override public State capture() { return new State(List.of(live), List.of(copied), redraw); }
+    @Override public State capture() { return new State(List.of(live), List.of(copied), redraw, postLoadScrollClear); }
     @Override public void restore(State state) {
         for (int i = 0; i < 2; i++) { live[i] = state.live().get(i); copied[i] = state.copied().get(i); }
         redraw = state.redraw();
+        postLoadScrollClear = state.postLoadScrollClear();
     }
 }
