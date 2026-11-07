@@ -303,8 +303,11 @@ matching area heading; see the
   rendered Boss fight reached with fixed controller input. Boss-only renderer
   omission and complete restore/current-picture checks preserve the same owners.
   A further fixed-input route defeats the native Boss, replays the health/escape/
-  removal cuts and renders its selected defeat picture; the source-placed Capsule
-  and natural act completion remain separate. Native Dead/Restart now rejoin the actual
+  removal cuts and renders its selected defeat picture. The fixed controller now
+  activates the actual Capsule, runs Results and reaches the old-programme/IPX
+  return, with twelve full/course edges and selected Capsule/Results pixel
+  omission checks; the missing historical unlock still fences the next call.
+  Native Dead/Restart now rejoin the actual
   caller with paired death-camera bounds, original no-draw restart and complete
   restore checks. Cached native GameOver now preserves original sound, allocation,
   text mappings and deletion order; active text art and reset remain explicit
@@ -337,8 +340,8 @@ matching area heading; see the
   signatures and legacy behavior remain unchanged. Frontend/Module save binding
   and native progress completion remain separate; initialization-local buffer
   commands are distinguished from later IPX progress calls. Data custody
-  grants no next-zone gameplay. Natural Capsule/Results completion, full acts and
-  regional parity remain separate.
+  grants no next-zone gameplay. Collision Chaos gameplay, broader act coverage
+  and regional parity remain separate.
   CD player headless boot loads the fixed
   roster before rewind controller creation while keeping no-device audio before
   playback. A separate real-World entry fixture retains its own visible-Sonic

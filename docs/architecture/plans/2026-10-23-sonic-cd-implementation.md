@@ -12,14 +12,18 @@ unchanged source, no failures/errors/skips:10 new custody,36 old stock,8 R31,
 complete constructor inventory migrates3..8→3..9. Source retention supplies no
 profile, local-buffer, frontend or Module completion.
 
-The separate fixed-jump observer activates the actual Capsule at21187 and runs
-through the Results/programme return to21931. First21932 reaches the existing
-IPX_RUN_R1_TIME_ATTACK_UNLOCK_OWNER, not another object family. R59 is an
-exploratory error result, not a passed permanent route:1case/0failures/1error/
-0skips, source unchanged. Its temporary eighth controller case is removed
-byte-exact. A permanent FULL/course/pixel exit proof is being authored against
-this measured recipe; no new Capsule screenshot or positive endpoint is claimed
-until that proof runs. The historical route's missing save history stays unknown.
+The measured fixed-jump recipe is now a permanent natural Capsule/Results proof.
+R61 passes9cases with unchanged source and0failures/errors/skips: both Boss/
+Capsule tests and all7 existing Controller cases. Twelve fixed FULL/course edges
+cover Capsule activation21187, original allocation/sound order, Results,22 black
+waits, final clear/RTS and actual old-programme/IPX return21931. The actual selected
+Capsule21188 and Results21504 pictures are visible; renderer-only group omission
+changes their pixels, and cleanup preserves an unrelated resource witness.
+Independent bounded source review finds no concrete P1/P2. No production changes
+were needed for this proof. R59 separately observed first21932 reaching
+IPX_RUN_R1_TIME_ATTACK_UNLOCK_OWNER; the positive case ends before that call.
+The historical route's missing save history stays unknown. R31 loading/gameplay,
+audio, whole-game and regional parity, and broad smoke remain unqualified.
 
 ## 7 November 2026 — bounded public-method inventory preflight
 
