@@ -33,8 +33,9 @@ under the matching area heading; see the
   163 segments of the Knuckles super-emerald, Mega, Sonic+Tails and KiS2 chains,
   plus six previously untested standalone slices. Existing canonical identities
   replace 30 duplicate fixture directories. The S1 complete-emerald chain now
-  records native PLC readiness and clears its four queue timing frontiers;
-  its ending-load timing remains open. Physics and auxiliary observations
-  are preserved exactly. New red frontiers remain visible.
+  records native PLC readiness and real ending/credits initialization timing,
+  clearing its four queue frontiers and terminal art frontier. Ending loads
+  resume actual ROM-backed work; credits use their native wait and fade loops.
+  Physics, auxiliary observations and movie input are preserved exactly. New red frontiers remain visible.
   Special-stage entry honors the recorded team and production lock-on module;
   the single entry-state import consumes S2-family manifest destination rings.

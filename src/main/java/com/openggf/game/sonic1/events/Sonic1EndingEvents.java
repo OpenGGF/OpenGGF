@@ -5,6 +5,8 @@ import com.openggf.game.sonic1.objects.Sonic1EndingSonicObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
+import com.openggf.sprites.NativePositionOps;
 
 /**
  * Sonic 1 ending sequence bootstrap events.
@@ -79,6 +81,11 @@ class Sonic1EndingEvents extends Sonic1ZoneEvents {
         }
     }
 
+    void prepareNativeInitialPlayer(AbstractPlayableSprite player) {
+        applyBootstrap(player);
+        bootstrapApplied = true;
+    }
+
     private void applyBootstrap(AbstractPlayableSprite player) {
         // ROM GM_Ending init: face left, lock controls, force LEFT input, inertia = -$800.
         for (AbstractPlayableSprite participant : participants(player)) {
@@ -116,9 +123,16 @@ class Sonic1EndingEvents extends Sonic1ZoneEvents {
             participant.clearForcedInputMask();
             participant.setGSpeed((short) 0);
             participant.setXSpeed((short) 0);
-            participant.setControlLocked(true);
-            participant.setAnimationId(participant.resolveAnimationId(CanonicalAnimation.WAIT));
-            participant.setAnimationFrameIndex(0);
+            // End_MoveSon2 (sonic.asm:3787-3796): f_playerctrl=$81
+            // suppresses movement and touch, but Sonic_Animate/LoadGfx still
+            // run once before End_MoveSon3 replaces the Sonic object.
+            participant.setControlLocked(false);
+            ObjectControlState.nativeBit7FullControl().applyTo(participant);
+            int waiting = participant.resolveAnimationId(CanonicalAnimation.WAIT);
+            participant.setAnimationId(waiting);
+            participant.getAnimationManager().publishPreviousAnimationId(waiting);
+            participant.setMappingFrame(3); // fr_Wait2, forced after BuildSprites
+            participant.setAnimationTick(3);
         }
     }
 
@@ -130,13 +144,18 @@ class Sonic1EndingEvents extends Sonic1ZoneEvents {
     private void updateStop(AbstractPlayableSprite player) {
         for (AbstractPlayableSprite participant : participants(player)) {
             if (participant == player) {
-                participant.setCentreX((short) 0x00A0);
+                NativePositionOps.writeXPosPreserveSubpixel(participant, 0x00A0);
             }
             participant.setGSpeed((short) 0);
             participant.setXSpeed((short) 0);
             participant.clearForcedInputMask();
             participant.setControlLocked(true);
             participant.setHidden(true);
+            // End_MoveSon3 changes obID to EndSonic (sonic.asm:3807-3810).
+            // The separate ending object owns presentation now; retire the
+            // ordinary playable animation/DPLC owner rather than leaving a
+            // hidden Sonic to submit idle art throughout the cutscene.
+            participant.setNativeSlotPresent(false);
         }
 
         eventRoutine = END_MOVE_DONE;

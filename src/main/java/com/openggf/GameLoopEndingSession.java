@@ -3,14 +3,12 @@ package com.openggf;
 import com.openggf.audio.AudioManager;
 import com.openggf.camera.Camera;
 import com.openggf.control.InputHandler;
-import com.openggf.game.DemoLamppostState;
 import com.openggf.game.EndingPhase;
 import com.openggf.game.EndingProvider;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameModule;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.TitleScreenProvider;
-import com.openggf.game.ZoneFeatureProvider;
 import com.openggf.game.internal.EndingEntryPresentation;
 import com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame;
 import com.openggf.game.save.SaveReason;
@@ -65,8 +63,36 @@ final class GameLoopEndingSession {
         endingTransitionPending = false;
     }
 
+    void serviceNativeEndingVBlank(PlcLifecycleFrame frame) {
+        if (!(endingProvider instanceof com.openggf.game.internal.NativeEndingVBlank nativeEnding)) return;
+        switch (host.currentMode()) {
+            case CREDITS_TEXT, CREDITS_DEMO, TRY_AGAIN_END, ENDING_CUTSCENE ->
+                frame.serviceAlternateNativeVBlankClock(() -> nativeEnding.serviceEndingVBlank(frame.ownerPhase()));
+            default -> { }
+        }
+    }
+
     void runFrame(PlcLifecycleFrame frame) {
-        GameLoopPlcLifecycle.runPhase(frame, GameLoopPlcLifecycle.endingPhase(endingProvider), this::updateEnding);
+        if (endingProvider instanceof com.openggf.game.internal.NativeEndingVBlank
+                && frame.isOwnedBy(com.openggf.game.resources.PlcLifecyclePhase.PALETTE_FADE)) {
+            // The palette routine owns this entire counted interrupt, including
+            // its final wait. Its caller can only arm the next loop's wait.
+            serviceNativeEndingVBlank(frame);
+            // Returning from the last palette wait may prepare the next load
+            // on this loop tail, without executing its next gameplay body.
+            if (endingProvider.hasDemoLoadRequest()) {
+                endingProvider.consumeDemoLoadRequest();
+                loadEndingDemoZone();
+            }
+            return;
+        }
+        GameLoopPlcLifecycle.runPhase(frame, GameLoopPlcLifecycle.endingPhase(endingProvider), () -> {
+            if (endingProvider instanceof com.openggf.game.internal.NativeEndingVBlank) {
+                LevelFrameStep.dispatchGameVBlank(LevelFrameContext.from(host.resolvedGameplayContext()), frame);
+                serviceNativeEndingVBlank(frame);
+            }
+            updateEnding();
+        });
     }
 
     /**
@@ -187,6 +213,9 @@ final class GameLoopEndingSession {
      * CREDITS_DEMO phase: update provider, run level physics with demo input.
      */
     private void updateEndingCreditsDemo() {
+        boolean scrollFrozenAtEntry = endingProvider.isScrollFrozen()
+                || endingProvider.plcLifecyclePhaseOverride().orElse(null)
+                    == com.openggf.game.resources.PlcLifecyclePhase.CREDITS_DEMO_FADE;
         boolean shouldAdvanceFrozenScene = endingProvider.shouldAdvanceFrozenDemoScene();
         endingProvider.update();
         shouldAdvanceFrozenScene = shouldAdvanceFrozenScene || endingProvider.shouldAdvanceFrozenDemoScene();
@@ -224,34 +253,35 @@ final class GameLoopEndingSession {
         }
 
         com.openggf.sprites.managers.SpriteManagerInternalAccess.runCreditsDemoGameplay(
-                host.sprites(), host.module(), sprite, this::runEndingCreditsGameplay);
+                host.sprites(), host.module(), sprite, () -> runEndingCreditsGameplay(scrollFrozenAtEntry));
     }
 
-    private void runEndingCreditsGameplay() {
+    private void runEndingCreditsGameplay(boolean scrollFrozen) {
+        if (!scrollFrozen) host.level().advanceLevelFrameCounter();
         // Run level physics — follows LevelFrameStep canonical order (steps 1-4),
         // but steps 5-6 are conditional on scroll-freeze state during ending fadeout.
         host.sprites().publishHeldInputForLevelEvents(host.input());
-        host.level().updateZoneFeaturesPrePhysics();
-        // Mirror LevelFrameStep step 1c: S1/S2 move the water level before the
-        // player's underwater check; LevelManager.update() skips the move when
-        // this flag is set, so run it here too.
-        if (host.level().advanceWaterLevelBeforePlayerPhysics()) {
-            host.level().advanceDynamicWaterLevel();
+        // Level_FDLoop (sonic.asm:3073-3090) retains ExecuteObjects and
+        // ObjPosLoad, but omits LZWaterFeatures, deformation/events and the
+        // level-loop oscillator. Preserve the last water-slide controls.
+        if (!scrollFrozen) {
+            host.level().updateZoneFeaturesPrePhysics();
+            if (host.level().advanceWaterLevelBeforePlayerPhysics())
+                host.level().advanceDynamicWaterLevel();
         }
         host.sprites().update(host.input());
-        host.level().updateObjectPositionsPostPhysicsWithoutTouches();
+        host.level().updateObjectPositionsPostPhysicsWithoutTouches(null, !scrollFrozen);
         // Camera/scroll in ROM order (DeformLayers (REV01).asm:16-18): the camera
         // move/clamp (ScrollVertical) runs BEFORE the zone event handler, and the
         // boundary easing (DynamicLevelEvents tail) runs AFTER it. Mirrors
         // LevelFrameStep steps 4a/4b/4c. Camera/scroll only if not frozen (during
         // fadeout, scroll freezes).
-        boolean scrollFrozen = endingProvider.isScrollFrozen();
         if (!scrollFrozen) {
             host.camera().updatePosition();
             host.camera().captureRenderCopy();
         }
         LevelEventProvider levelEvents = host.module().getLevelEventProvider();
-        if (levelEvents != null) {
+        if (!scrollFrozen && levelEvents != null) {
             levelEvents.update();
         }
         if (!scrollFrozen) {
@@ -260,9 +290,6 @@ final class GameLoopEndingSession {
                 levelEvents.updateAfterCameraBoundaryEasing();
             }
             host.level().postCameraObjectPlacementSync();
-            // The ending cutscene drives LevelManager directly rather than
-            // through LevelFrameStep, which now owns the loop-top increment.
-            host.level().advanceLevelFrameCounter();
             host.level().update();
             host.level().refreshObjectPostCameraRenderState();
         }
@@ -316,7 +343,12 @@ final class GameLoopEndingSession {
         int startX = endingProvider.getDemoStartX();
         int startY = endingProvider.getDemoStartY();
 
-        try {
+        if (endingProvider instanceof com.openggf.game.internal.NativeEndingDemoAssembly nativeDemo)
+            nativeDemo.beginDemoLoad();
+        var profile = host.module().getLevelInitProfile();
+        try (var scope = profile instanceof com.openggf.game.internal.NativeEndingDemoLoadProfile nativeDemo
+                ? nativeDemo.beginEndingDemoLoad(endingProvider)
+                : com.openggf.game.internal.NativeLevelLoadCallerScope.NONE) {
             // Suppress zone music — credits music should continue playing
             host.level().setSuppressNextMusicChange(true);
             host.level().loadZoneAndAct(zone, act);
@@ -328,59 +360,20 @@ final class GameLoopEndingSession {
             return;
         }
 
+        if (com.openggf.level.NativeLevelLoadAccess.isPending(host.level())) {
+            com.openggf.level.NativeLevelLoadAccess.afterCompletion(host.level(),
+                    () -> finishEndingDemoZone(zone, act, startX, startY));
+            return;
+        }
+        finishEndingDemoZone(zone, act, startX, startY);
+    }
+
+    private void finishEndingDemoZone(int zone, int act, int startX, int startY) {
+        host.level().consumeTitleCardRequest();
         // Suppress HUD during credits demos (ROM: HUD is never drawn during credits)
         host.level().setForceHudSuppressed(true);
 
-        // Position the player at the demo start position (ROM uses center coordinates)
-        DemoLamppostState lamppost = endingProvider.getDemoLamppostState();
-        String mainCode = host.mainCharacterCode();
-        var sprite = host.sprites().getSprite(mainCode);
-        if (sprite instanceof AbstractPlayableSprite player) {
-            // ROM: EndingDemoLoad clears rings, time, score, lamppost (sonic.asm:4148-4152)
-            player.setRingCount(0);
-            player.setXSpeed((short) 0);
-            player.setYSpeed((short) 0);
-            player.setGSpeed((short) 0);
-            // Don't set controlLocked — ROM doesn't use obj_control during demos.
-            // PlayableSpriteMovement re-reads obj_control and would block all input.
-            player.setControlLocked(false);
-            player.setForcedInputMask(0);
-
-            if (lamppost != null) {
-                // Demo starts at a lamppost — restore saved position/camera/water
-                player.setCentreX((short) lamppost.playerX());
-                player.setCentreY((short) lamppost.playerY());
-                player.setRingCount(lamppost.rings());
-                host.camera().setX((short) lamppost.cameraX());
-                host.camera().setY((short) lamppost.cameraY());
-                host.camera().setMaxY((short) lamppost.cameraMaxY());
-
-                // Restore lamppost water state
-                int featureZone = host.level().getFeatureZoneId();
-                int featureAct = host.level().getFeatureActId();
-                WaterSystem localWater = host.water();
-                localWater.setWaterLevelDirect(featureZone, featureAct,
-                        lamppost.waterHeight());
-                localWater.setWaterLevelTarget(featureZone, featureAct,
-                        lamppost.waterHeight());
-                ZoneFeatureProvider zfp = host.level().getZoneFeatureProvider();
-                if (zfp != null) {
-                    zfp.setWaterRoutine(lamppost.waterRoutine());
-                }
-            } else {
-                // All other demos: use startpos (center coordinates)
-                player.setCentreX((short) startX);
-                player.setCentreY((short) startY);
-            }
-        }
-
-        // Snap camera to player position (unless lamppost demo has explicit camera coords)
-        if (lamppost == null) {
-            host.camera().updatePosition(true);
-        }
-
-        // Prepare the viewport and native player initialization before the fade.
-        host.level().prepareEndingDemoScene();
+        EndingDemoLevelAssembly.prepareIfUnowned(host, endingProvider, startX, startY);
 
         // Suppress player keyboard input — demo input comes from forcedInputMask only
         host.sprites().setInputSuppressed(true);

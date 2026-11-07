@@ -12,6 +12,8 @@ import java.io.IOException;
 final class NativeLevelLoadController {
     NativeLevelLoadPhaseAdmission admission = NativeLevelLoadPhaseAdmission.IMMEDIATE;
     PendingLoad pending;
+    PendingInitialization initialization;
+    private record PendingInitialization(LevelLoadAttempt attempt, Runnable completion, Runnable cleanup) { }
     boolean prefix;
     boolean titlePrefixReady;
     long ordinal;
@@ -35,7 +37,7 @@ final class NativeLevelLoadController {
     }
 
     void execute(LevelManager manager, int levelIndex, LevelLoadMode loadMode, LevelLoadContext ctx) throws IOException {
-        if (pending != null) throw new IllegalStateException("A native level load is already pending");
+        if (pending != null || initialization != null) throw new IllegalStateException("A native initialization is already pending");
         titlePrefixReady = false;
         manager.discardInitialProcessSpritesLifecycle();
         var attempt = new LevelLoadAttempt(manager.getWorldSession(), manager.spriteManager, loadMode, ctx,
@@ -98,7 +100,55 @@ final class NativeLevelLoadController {
         }
     }
 
+    void beginInitialization(LevelManager manager, com.openggf.game.internal.NativeLevelLoadPlan plan,
+            Runnable zeroRoutineVInt, Runnable completion, Runnable cleanup) {
+        if (pending != null || initialization != null) throw new IllegalStateException("A native initialization is already pending");
+        var context = new LevelLoadContext();
+        var attempt = new LevelLoadAttempt(manager.getWorldSession(), manager.spriteManager, LevelLoadMode.FULL, context);
+        initialization = new PendingInitialization(attempt, completion, cleanup);
+        try {
+            attempt.executeInitializationPlan(plan, zeroRoutineVInt, ordinal = Math.incrementExact(ordinal), admission);
+            finishInitialization();
+        } catch (RuntimeException | Error failure) {
+            abortInitialization(failure); throw failure;
+        }
+    }
+
+    private void finishInitialization() {
+        var current = initialization;
+        if (current == null || !current.attempt.isComplete()) return;
+        initialization = null;
+        Throwable primary = null;
+        try { current.completion.run(); }
+        catch (RuntimeException | Error failure) { primary = failure; throw failure; }
+        finally {
+            try { current.cleanup.run(); }
+            catch (RuntimeException | Error cleanup) {
+                if (primary != null) primary.addSuppressed(cleanup); else throw cleanup;
+            }
+        }
+    }
+
+    private void abortInitialization(Throwable failure) {
+        var current = initialization;
+        initialization = null;
+        if (current != null) {
+            try { current.cleanup.run(); }
+            catch (RuntimeException | Error cleanup) { failure.addSuppressed(cleanup); }
+        }
+    }
+
+    com.openggf.game.internal.NativeLevelLoadPhaseAdmission.PreparedPhase preparedPhase() {
+        return initialization != null ? initialization.attempt.preparedPhase()
+                : pending == null ? null : pending.attempt.preparedPhase();
+    }
+
     void resume(LevelManager manager) {
+        if (initialization != null) {
+            try { initialization.attempt.resume(admission); finishInitialization(); }
+            catch (RuntimeException | Error failure) { abortInitialization(failure); throw failure; }
+            return;
+        }
         PendingLoad current = pending;
         if (current == null) return;
         var previous = manager.nativePlcLoadAdmission;

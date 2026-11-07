@@ -25,7 +25,10 @@ class TestSonic1PlcLifecycle {
                 PlcLifecyclePhase.ENDING, PlcLifecyclePhase.POST_CREDITS);
         EnumSet<PlcLifecyclePhase> three = EnumSet.of(
                 PlcLifecyclePhase.ORDINARY_LEVEL, PlcLifecyclePhase.CREDITS_DEMO,
-                PlcLifecyclePhase.CREDITS_DEMO_FADE, PlcLifecyclePhase.NORMAL_PAUSE);
+                PlcLifecyclePhase.CREDITS_DEMO_FADE, PlcLifecyclePhase.NORMAL_PAUSE,
+                // Level_DelayLoop (sonic.asm:2960-2963) selects VBlank_Levels;
+                // VBlank_UpdateScreen (sonic.asm:863-867) services three tiles.
+                PlcLifecyclePhase.LEVEL_ENTRY_WAIT);
         for (PlcLifecyclePhase phase : PlcLifecyclePhase.values()) {
             reset(queue);
             service.serviceVBlank(phase);

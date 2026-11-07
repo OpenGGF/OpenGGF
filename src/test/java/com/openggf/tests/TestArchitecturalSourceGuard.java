@@ -723,12 +723,12 @@ class TestArchitecturalSourceGuard {
             new MethodBudget(TITLE_CARD_LIFECYCLE_PATH, "enterTitleCard", 47),
             new MethodBudget(TITLE_CARD_LIFECYCLE_PATH, "exitTitleCard", 65),
             new MethodBudget(TITLE_CARD_LIFECYCLE_PATH, "runInputNeutralTitleCardPlayerPrelude", 19),
-            new MethodBudget(GAME_LOOP_PATH, "stepInternal", 52),
+            new MethodBudget(GAME_LOOP_PATH, "stepInternal", 42),
             // 2026-10-27: native code mods remove the obsolete boot-notice dispatch.
             new MethodBudget(GAME_LOOP_PATH, "stepInternalBody", 256),
             new MethodBudget(BONUS_SESSION_PATH, "doExitBonusStage", 90),
             new MethodBudget(SPECIAL_STAGE_LIFECYCLE_PATH, "updateSpecialStageInput", 9),
-            new MethodBudget(ENDING_SESSION_PATH, "loadEndingDemoZone", 84),
+            new MethodBudget(ENDING_SESSION_PATH, "loadEndingDemoZone", 30),
             // 2026-08-26: exact merged spans after title-card destination/return
             // synthesis and bonus-stage rewind-adapter handoff.
             new MethodBudget(SPECIAL_STAGE_LIFECYCLE_PATH, "enterTitleCardFromResults", 8),

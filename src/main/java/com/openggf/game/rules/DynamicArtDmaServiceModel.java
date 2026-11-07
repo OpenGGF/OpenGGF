@@ -31,8 +31,14 @@ public enum DynamicArtDmaServiceModel {
     SONIC_1_VBLANK_SONIC_GFX(true) {
         @Override
         public boolean services(PlcLifecyclePhase phase) {
-            return phase != null && phase != PlcLifecyclePhase.LAG
-                    && phase != PlcLifecyclePhase.PALETTE_FADE;
+            if (phase == null) return false;
+            // VBlank_Title (sonic.asm:778-789) never transfers v_sgfx_buffer.
+            // A final demo DPLC remains pending across credits text and is
+            // replaced by the next production Sonic initialization.
+            return switch (phase) {
+                case LAG, PALETTE_FADE, TITLE_SCREEN, LEVEL_SELECT, CREDITS_TEXT, POST_CREDITS -> false;
+                default -> true;
+            };
         }
     },
     /**
@@ -68,7 +74,7 @@ public enum DynamicArtDmaServiceModel {
                         TWO_PLAYER_RESULTS, CREDITS_TEXT, CREDITS_DEMO,
                         ENDING, POST_CREDITS, NORMAL_PAUSE,
                         SPECIAL_STAGE_PAUSE, LEVEL_TITLE_CARD -> true;
-                case TITLE_SCREEN, LEVEL_SELECT,
+                case TITLE_SCREEN, LEVEL_SELECT, LEVEL_ENTRY_WAIT,
                         PALETTE_FADE, CREDITS_DEMO_FADE, LAG -> false;
             };
         }

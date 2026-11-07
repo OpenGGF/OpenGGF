@@ -97,8 +97,14 @@ public class Sonic1CreditsManager {
         requestDemoLoad = false;
         requestTextReturn = false;
         requestFinished = false;
-        queueNextDemoPlcs();
+        // GM_Credits owns its outgoing fade and font setup before it queues
+        // the next demo. The generic ending shell must not fade to white.
+        GameServices.audio().playMusic(Sonic1Music.CREDITS.id);
+        beginTextEntry();
+        LOGGER.info("Credits sequence initialized, starting credit 0");
+    }
 
+    private void prepareCreditText() {
         // Initialize text renderer from title screen data.
         // Ensure data is loaded (it normally is from the title screen, but be safe).
         Sonic1TitleScreenDataLoader dataLoader = resolveTitleScreenDataLoader();
@@ -108,17 +114,27 @@ public class Sonic1CreditsManager {
         textRenderer.initialize(dataLoader);
         textRenderer.setViewportWidth(viewportWidth);
 
-        // Play credits music (ROM: move.w #MusID_Credits,d0; jsr PlaySound)
-        GameServices.audio().playMusic(Sonic1Music.CREDITS.id);
+    }
 
-        // Start with fade from black to reveal first credit text
+    private void beginTextEntry() {
+        var plc = GameServices.module().getGameService(Sonic1PlcService.class);
+        try { if (plc != null) plc.transact(Sonic1PlcService.clear()); }
+        catch (IOException failure) { throw new java.io.UncheckedIOException(failure); }
+        state = State.TEXT_FADE_OUT;
+        fadeManager().startFadeToBlack(nativeCompletion(() ->
+                Sonic1CreditsScreenLoad.begin(creditsNum, this::prepareCreditText, this::revealCreditText)),
+                com.openggf.graphics.PaletteFadePresentation.ROM_FADE_FRAMES
+                        - com.openggf.graphics.PaletteFadePresentation.COLOR_STEPS);
+    }
+
+    private void revealCreditText() {
+        queueNextDemoPlcs();
+        textRenderer.markGpuDirty();
+        timer = Sonic1CreditsDemoData.TEXT_DISPLAY_FRAMES;
         state = State.TEXT_FADE_IN;
-        fadeManager().startFadeFromBlack(nativeCompletion(() -> {
-            state = State.TEXT_DISPLAY;
-            timer = Sonic1CreditsDemoData.TEXT_DISPLAY_FRAMES;
-        }));
-
-        LOGGER.info("Credits sequence initialized, starting credit 0");
+        fadeManager().startFadeFromBlack(nativeCompletion(() -> state = State.TEXT_DISPLAY),
+                com.openggf.graphics.PaletteFadePresentation.ROM_FADE_FRAMES
+                        - com.openggf.graphics.PaletteFadePresentation.COLOR_STEPS);
     }
 
     /**
@@ -185,7 +201,8 @@ public class Sonic1CreditsManager {
             fadeManager().startFadeToBlack(nativeCompletion(() -> {
                 state = State.DEMO_LOADING;
                 requestDemoLoad = true;
-            }));
+            }), com.openggf.graphics.PaletteFadePresentation.ROM_FADE_FRAMES
+                    - com.openggf.graphics.PaletteFadePresentation.COLOR_STEPS);
         }
     }
 
@@ -194,13 +211,22 @@ public class Sonic1CreditsManager {
      */
     private void updateDemoLoadDelay() {
         demoLoadDelay--;
+        // VBlank_Levels (sonic.asm:824-840) decrements v_generictimer during these waits.
+        // VBlank_PaletteFade (sonic.asm:967-971) does not.
+        if (timer > 0) timer--;
         if (demoLoadDelay > 0) {
             return;
         }
 
         state = State.DEMO_FADE_IN;
         fadeManager().startFadeFromBlack(
-                nativeCompletion(() -> state = State.DEMO_PLAYING));
+                nativeCompletion(() -> {
+                    var profile = GameServices.module().getLevelInitProfile();
+                    if (profile instanceof com.openggf.game.internal.NativeEndingDemoLoadProfile nativeDemo)
+                        nativeDemo.completeDemoPresentationPlcs();
+                    state = State.DEMO_PLAYING;
+                }), com.openggf.graphics.PaletteFadePresentation.ROM_FADE_FRAMES
+                        - com.openggf.graphics.PaletteFadePresentation.COLOR_STEPS);
     }
 
     /**
@@ -297,17 +323,7 @@ public class Sonic1CreditsManager {
     public void onReturnToText() {
         demoInputPlayer = null;
         demoLoadDelay = 0;
-        queueNextDemoPlcs();
-
-        // Zone loading during demo phase overwrites GPU patterns/palette
-        textRenderer.markGpuDirty();
-
-        // Start fade from black to reveal credit text
-        state = State.TEXT_FADE_IN;
-        fadeManager().startFadeFromBlack(nativeCompletion(() -> {
-            state = State.TEXT_DISPLAY;
-            timer = Sonic1CreditsDemoData.TEXT_DISPLAY_FRAMES;
-        }));
+        beginTextEntry();
 
         LOGGER.info("Showing credit text " + creditsNum);
     }
@@ -326,8 +342,8 @@ public class Sonic1CreditsManager {
             int header = resolve(GameServices.rom().getRom(), Sonic1Constants.LEVEL_HEADERS_ADDR) + zone * 16;
             int primary = GameServices.rom().getRom().readByte(header) & 0xFF;
             plcService.transact(primary == 0
-                    ? new Sonic1PlcService.Operation[] {Sonic1PlcService.clear(), Sonic1PlcService.appendOperation(1)}
-                    : new Sonic1PlcService.Operation[] {Sonic1PlcService.clear(), Sonic1PlcService.appendOperation(primary), Sonic1PlcService.appendOperation(1)});
+                    ? new Sonic1PlcService.Operation[] {Sonic1PlcService.appendOperation(1)}
+                    : new Sonic1PlcService.Operation[] {Sonic1PlcService.appendOperation(primary), Sonic1PlcService.appendOperation(1)});
         } catch (Exception e) {
             LOGGER.fine("Credits PLC queue unavailable: " + e.getMessage());
         }
@@ -422,11 +438,11 @@ public class Sonic1CreditsManager {
     }
 
     /**
-     * Only the hidden post-load delay should advance non-player demo scene
-     * state. The visible fade-in should stay static.
+     * Hidden Level_Delay and palette loops both leave object execution parked.
      */
     public boolean shouldAdvanceFrozenDemoScene() {
-        return state == State.DEMO_LOAD_DELAY;
+        // Level_Delay and PalFadeIn_Alt service interrupts, never ExecuteObjects.
+        return false;
     }
 
     /**

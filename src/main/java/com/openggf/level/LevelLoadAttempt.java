@@ -25,7 +25,7 @@ final class LevelLoadAttempt {
     private final java.util.function.Consumer<LevelLoadCause> afterAdmission;
     private ObjectCallbackAbortException deferredStepAbort;
     private com.openggf.game.internal.NativeLevelLoadPlan continuation;
-    private com.openggf.game.internal.NativeFreshLevelLoadProfile nativeProfile;
+    private Runnable serviceZeroRoutineVInt;
     private com.openggf.game.internal.NativeLevelLoadPhaseAdmission.PreparedPhase preparedPhase;
     private int sectionIndex, phaseOrdinal;
     private boolean sectionPrepared, complete, failed;
@@ -69,7 +69,7 @@ final class LevelLoadAttempt {
             context.setLoadMode(mode);
             if (profile instanceof com.openggf.game.internal.NativeFreshLevelLoadProfile nativeLoad) {
                 continuation = nativeLoad.freshLevelLoadPlan(context);
-                if (continuation != null) nativeProfile = nativeLoad;
+                if (continuation != null) serviceZeroRoutineVInt = nativeLoad::serviceLoadZeroRoutineVInt;
             }
             if (continuation != null) {
                 loadOrdinal = nextLoadOrdinal.getAsLong();
@@ -91,6 +91,17 @@ final class LevelLoadAttempt {
             preparedPhase = null;
             throw failure;
         }
+    }
+
+    /** A production screen initializer uses the same prepared-phase executor. */
+    void executeInitializationPlan(com.openggf.game.internal.NativeLevelLoadPlan plan,
+            Runnable zeroRoutineVInt, long ordinal,
+            com.openggf.game.internal.NativeLevelLoadPhaseAdmission admission) {
+        if (continuation != null || complete || failed) throw new IllegalStateException("load attempt already used");
+        continuation = java.util.Objects.requireNonNull(plan);
+        serviceZeroRoutineVInt = java.util.Objects.requireNonNull(zeroRoutineVInt);
+        loadOrdinal = ordinal;
+        resume(admission);
     }
 
     void resume(com.openggf.game.internal.NativeLevelLoadPhaseAdmission admission) {
@@ -123,7 +134,7 @@ final class LevelLoadAttempt {
                     var decision = java.util.Objects.requireNonNull(admission.next(preparedPhase), "phase admission");
                     if (decision == com.openggf.game.internal.NativeLevelLoadPhaseAdmission.Decision.HOLD) return;
                     if (decision == com.openggf.game.internal.NativeLevelLoadPhaseAdmission.Decision.RESUME) break;
-                    nativeProfile.serviceLoadZeroRoutineVInt();
+                    serviceZeroRoutineVInt.run();
                 }
             }
             for (InitStep step : section.commit()) executeStep(step);

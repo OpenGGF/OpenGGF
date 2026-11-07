@@ -192,7 +192,8 @@ public class Sonic1EndingSonicObjectInstance extends AbstractObjectInstance
     private void updateLookUp() {
         if (emeraldMaster != null && emeraldMaster.hasReachedMaxRadius()) {
             // ROM: move.w #1,(f_restart).w — triggers white flash
-            triggerFlash();
+            // End_AllEmlds keeps executing objects; its white-out is driven
+            // every third object loop, rather than a blocking fade.
             timer = TIMER_FLASH_1;
             routine = 0x08;
         }
@@ -201,6 +202,15 @@ public class Sonic1EndingSonicObjectInstance extends AbstractObjectInstance
     /** Routine 0x08: Clear emerald object RAM after flash, advance to 0x0A. */
     private void updateClrObjRam() {
         timer--;
+        var graphics = services().graphicsManager();
+        if (graphics != null) {
+            // End_AllEmlds (sonic.asm:3725-3729) starts with delay zero,
+            // reloads two after each change, and saturates at white.
+            int steps = Math.min(com.openggf.graphics.PaletteFadePresentation.COLOR_STEPS,
+                    (TIMER_FLASH_1 - timer + 2) / 3);
+            graphics.setPaletteFadePresentation(com.openggf.graphics.PaletteFadePresentation.Mode.TO_WHITE,
+                    steps, com.openggf.graphics.PaletteFadePresentation.ALL_LINES);
+        }
         if (timer > 0) {
             return;
         }
@@ -214,8 +224,9 @@ public class Sonic1EndingSonicObjectInstance extends AbstractObjectInstance
         // Layout buffer row stride is $80; offset $80 = row 1, col 0.
         // After write, ROM calls DrawChunks to re-render with flower blocks visible.
         patchLayoutWithFlowers();
-        // ROM: move.w #1,(f_restart).w — second flash/palette reload
-        triggerFlash();
+        // End_SlowFade calls PaletteWhiteIn after the actual flower redraw.
+        // Its waits never ExecuteObjects (sonic.asm:3734-3753).
+        startFlowerReveal();
         routine = 0x0A;
         // ROM: move.b #1,obAnim(a0) — byte write sets anim to 1 (confused)
         setAnimation(1);
@@ -249,6 +260,8 @@ public class Sonic1EndingSonicObjectInstance extends AbstractObjectInstance
         currentFrame = 5;
         setAnimation(2);
         spawnSTH();
+        // ESon_BadEnding explicitly branches to ESon_Animate on this pass.
+        updateAnimate();
     }
 
     /** Routines 0x04, 0x0A, 0x0E, 0x12: Advance animation (Obj87_Animate). */
@@ -272,13 +285,11 @@ public class Sonic1EndingSonicObjectInstance extends AbstractObjectInstance
             return;
         }
         animId = id;
-        animFrameIndex = 0;
-        int[] frames = getAnimFrames(id);
-        int delay = getAnimDelay(id);
-        if (frames.length > 0) {
-            currentFrame = frames[0];
-        }
-        animTimer = delay;
+        // ESon_MakeEmeralds/DeleteEmeralds/MakeLogo only write obAnim.
+        // AnimateSprite (sub AnimateSprite.asm:12-31) resets and publishes
+        // the first mapping when the next ESon_Animate actually runs.
+        animFrameIndex = -1;
+        animTimer = 0;
     }
 
     private void advanceAnimFrame() {
@@ -395,16 +406,16 @@ public class Sonic1EndingSonicObjectInstance extends AbstractObjectInstance
         spawnChild(Sonic1EndingSTHObjectInstance::new);
     }
 
-    private void triggerFlash() {
-        try {
-            var fadeManager = services().fadeManager();
-            if (!fadeManager.isActive()) {
-                fadeManager.startFadeToWhite(() ->
-                        fadeManager.startFadeFromWhite(null));
-            }
-        } catch (Exception e) {
-            LOGGER.fine("Flash not available: " + e.getMessage());
-        }
+    private void startFlowerReveal() {
+        var level = services().levelManager();
+        var fade = services().fadeManager();
+        if (level == null || fade == null) return;
+        level.setLevelInactiveForTransition(true);
+        var marker = services().nativeFadeLifecycle().beginNativeBlockingFade();
+        com.openggf.graphics.FadeManagerInternalAccess.startFadeFromWhite(fade, marker.wrapCompletion(() ->
+                com.openggf.level.NativeLevelLoadAccess.finishBlockingLevelReveal(level)),
+                com.openggf.graphics.PaletteFadePresentation.ROM_FADE_FRAMES
+                        - com.openggf.graphics.PaletteFadePresentation.COLOR_STEPS);
     }
 
     // ========================================================================

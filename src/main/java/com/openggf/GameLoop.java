@@ -1171,21 +1171,11 @@ public class GameLoop {
             completeNativeMenuFrame();
             return;
         }
-        Runnable productionIteration = () -> {
-            GameLoopPlcLifecycle.runLogicalIteration(lifecycleContext.plcFrameLifecycle(),
-                    lifecycleContext, holdsSourceGameplayDuringFade(), continueScreen::updateFade, frame -> {
-                        activePlcLifecycleFrame = frame;
-                        try {
-                            stepInternalBody();
-                            return null;
-                        } finally {
-                            activePlcLifecycleFrame = null;
-                        }
-                    });
-            // The outgoing token has finished; keep setup inside trace failure
-            // containment and before another tick or presentation sees its world.
-            completeNativeMenuFrame();
-        };
+        Runnable productionIteration = () -> GameLoopPlcLifecycle.runProductionIteration(
+                lifecycleContext, levelManager, holdsSourceGameplayDuringFade(), continueScreen::updateFade,
+                frame -> activePlcLifecycleFrame = frame, this::stepInternalBody,
+                endingSession::serviceNativeEndingVBlank, this::completeNativeMenuFrame,
+                () -> inputHandler.update());
         TraceSessionLauncher.runProductionIterationIfActive(
                 productionIteration, this::advanceTraceRunPhysicalRow);
     }
@@ -1484,6 +1474,13 @@ public class GameLoop {
     }
 
     private boolean prepareAdmittedIteration(boolean doFrameStep, boolean overlayOwnsPause) {
+        if (GameLoopPlcLifecycle.resumeNativeInitialization(levelManager,
+                this::resolveGameplayModeContext, activePlcLifecycleFrame)) {
+            inputHandler.update();
+            updateNonGameplayAudio(doFrameStep);
+            return false;
+        }
+
         syncPlaybackInputBridge();
         LevelFrameResult admission = levelIterationAdmission.admit(
                 currentGameMode, () -> updateTitleCardMode(doFrameStep),
@@ -1782,6 +1779,10 @@ public class GameLoop {
                 }
                 userRecordingControls.afterLevelFrame();
                 hostedRuns.afterStep();
+                LevelModeSwitch.afterGameplay(levelManager,
+                        () -> userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED),
+                        this::startZoneActFade, () -> runPolicy().returnsToHostOnActCompletion(),
+                        this::completeHostedRunAct, endingSession::startEndingFade);
             } else if (levelManager.getObjectManager() != null
                     && !holdVblankForPendingLoad) {
                 // ROM v_vbla_byte increments in VBlank even on rows where
@@ -3175,7 +3176,7 @@ public class GameLoop {
     private void doZoneAct(int zone, int act, int postLoadMusicId) {
         boolean restoreSanctuaryOrigin =
                 levelManager.isSanctuaryOriginRestorePending(zone, act);
-        try {
+        try (var caller = com.openggf.level.NativeLevelLoadAccess.beginModeSwitchLoad(levelManager, zone, act)) {
             // A cutscene may still have a source-zone music fade in flight.
             // Load the destination normally, then issue its requested track
             // last so the old fade cannot win the handoff.
@@ -3203,36 +3204,33 @@ public class GameLoop {
             }
             levelIterationAdmission.loadedFreshBoundary(
                     levelManager.hasPendingFreshLevelTransitionBoundary());
-            activateScheduledPlaybackForLoadedLevel();
-            if (postLoadMusicId >= 0) {
-                audioManager.playMusic(postLoadMusicId);
-            }
-            if (restoreSanctuaryOrigin) {
-                var sprite = spriteManager.getSprite(resolveMainCharacterCode());
-                if (sprite instanceof AbstractPlayableSprite playable) {
-                    restoreBigRingReturn(playable);
-                }
+            if (com.openggf.level.NativeLevelLoadAccess.isTitlelessPending(levelManager)) {
+                boolean revealOwned = com.openggf.level.NativeLevelLoadAccess.titlelessOwnsEntryReveal(levelManager);
+                com.openggf.level.NativeLevelLoadAccess.afterCompletion(levelManager,
+                        () -> finishZoneActPublication(zone, act, postLoadMusicId, restoreSanctuaryOrigin, revealOwned));
+                return;
             }
         } catch (IOException e) {
             throw new RuntimeException("Failed to load zone " + zone + " act " + act, e);
         }
+        finishZoneActPublication(zone, act, postLoadMusicId, restoreSanctuaryOrigin, false);
+    }
 
+    private void finishZoneActPublication(int zone, int act, int postLoadMusicId,
+                                         boolean restoreSanctuaryOrigin, boolean nativeRevealCompleted) {
+        activateScheduledPlaybackForLoadedLevel();
+        if (postLoadMusicId >= 0) audioManager.playMusic(postLoadMusicId);
+        if (restoreSanctuaryOrigin) {
+            var sprite = spriteManager.getSprite(resolveMainCharacterCode());
+            if (sprite instanceof AbstractPlayableSprite playable) restoreBigRingReturn(playable);
+        }
         // An overlay already visible before spawn is as much an advantage as toggling
         // one on mid-run, so the host hears about it with the level start.
         hostedRuns.onLevelReady(debugOverlayManager.isEnabled(DebugOverlayToggle.OVERLAY));
 
-        if (GameLoopPlcLifecycle.usesWhiteLevelEntry(GameServices.module(), zone, act)) {
-            GameLoopPlcLifecycle.startFromWhite(resolveGameplayModeContext(), fadeManager, null);
-        } else if (levelManager.hasPendingFreshLevelTransitionBoundary()
-                && getTitleCardProviderLazy() instanceof com.openggf.game.internal.FreshLevelTitleBoundaryPublication boundary
-                && boundary.installsImmediateFreshLevelPalette()) {
-            // This row still belongs to the outgoing fade. The pending title
-            // request is consumed next iteration; keep destination setup hidden
-            // until that card has installed its own black field.
-            fadeManager.holdBlack();
-        } else {
-            GameLoopPlcLifecycle.startFromBlack(resolveGameplayModeContext(), fadeManager, null);
-        }
+        GameLoopPlcLifecycle.revealLoadedLevel(levelManager, GameServices::module,
+                this::resolveGameplayModeContext, fadeManager, this::getTitleCardProviderLazy,
+                zone, act, nativeRevealCompleted);
 
         LOGGER.info("Loaded zone " + zone + " act " + act);
     }

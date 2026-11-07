@@ -124688,3 +124688,45 @@ No existing identity is newly red, no frontier moves earlier and no new clean-ro
 error remains. The gate passes for this four-axis major gain; ending remains
 separate. Recorder publication and the pin update are user-approved after gate.
 [Recorder semantics, controls and publication evidence](../architecture/audits/2026-11-06-s1-chain-plc-timing.md).
+
+## 2026-11-07 — S1 complete-emerald ending and credits continuations
+
+On develop base `c1029d3b4` (pre-task `34b8830b1`), the complete-emerald chain
+now passes its unchanged full assertion through all 34 segments and 10,943
+terminal rows. Queue axes remain zero. The ending tail changes from 10,334
+errors/4,704 warnings, 4,704 native versus 4,784 engine edges, to zero differences
+and 4,704/4,704 edges. The original first edge used mapping 32 at movie 214203;
+native mapping 30 at 214287 now matches. Movie frames here are evidence only.
+
+`GM_Ending`, credits font setup and credits demo loads now prepare real resumable
+production work through `NativeLevelLoadController`. The existing initialization
+contract releases matching phases and observed zero-routine interrupts; ordinary
+live callers select the same production continuations with immediate readiness.
+Ending actor ownership, uncounted initial assembly, `VBlank_Title` DMA,
+`Level_DelayLoop` PLC service and `Level_FDLoop` clock/water ownership follow their
+ROM owners. No fitted delay, new timing kind or trace assertion change is used.
+The user-approved ordinary logo unit correction records immediate `ESth_Delay`
+fall-through and object survival until the credits screen clears Object RAM.
+
+Canonical native producer `161e45ac` records the original unedited movie. All 68
+stored physics/aux payloads and all 28 queue streams remain byte-identical. Only
+34 recording dates, terminal admission census and the initialization companion
+are added/updated. The companion has 724 events across 18 production loads;
+the terminal census has 147 runs/10,943 rows, including 710 lag rows. Strict v5
+validation passes. Native source-only tests pass 185 cases. Broader native S1
+units pass 142 cases with the same 40 literal first-line failures and two skips
+as the qualified producer baseline; no native all-green claim is made.
+
+Queued `-Ptrace-replay -Dtest=TestS1CompleteEmeraldRunChain#ghz1ToScrapBrainAcrossEverySpecialStage test`
+passes. The complete 45-class S1 selection passes all 71 cases with zero skips.
+All other 70 testcase identities/outcomes are exact to the pre-task baseline.
+All 92 comparison report identities remain: 89 bodies are exact to the queue
+fix delivery; three only lose the terminal-art failure string. Relative to the
+pre-task baseline, eight queue reports and these three terminal reports improve;
+the other 81 report bodies are exact.
+
+Focused ordinary checks and the final change-based smoke gate are recorded in
+the [S1 chain audit](../architecture/audits/2026-11-06-s1-chain-plc-timing.md).
+Producer publication and the new develop pin remain reserved until that gate
+passes and the user approves this new producer commit; earlier approval named
+only `d54cc514`.

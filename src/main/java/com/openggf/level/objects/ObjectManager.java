@@ -477,7 +477,7 @@ public class ObjectManager {
     }
 
     public void reset(int cameraX) {
-        reset(cameraX, null, true);
+        reset(cameraX, null, true, true);
     }
 
     /**
@@ -486,7 +486,7 @@ public class ObjectManager {
      * live in the next frame's ExecuteObjects pass.
      */
     public void resetForSynchronousActTransition(int cameraX) {
-        reset(cameraX, null, false);
+        reset(cameraX, null, false, true);
     }
 
     /**
@@ -496,7 +496,7 @@ public class ObjectManager {
      * to reproduce the native Level_Init-before-ObjPosLoad allocation order.
      */
     public void resetForPreludeHydration(int cameraX) {
-        reset(cameraX, null, false);
+        reset(cameraX, null, false, true);
     }
 
     /**
@@ -506,11 +506,11 @@ public class ObjectManager {
      * and left live by a later bit-only restore.
      */
     public void reset(int cameraX, PersistentRespawnState persistentRespawnState) {
-        reset(cameraX, persistentRespawnState, true);
+        reset(cameraX, persistentRespawnState, true, true);
     }
 
-    private void reset(int cameraX, PersistentRespawnState persistentRespawnState,
-            boolean materializeInitialWindow) {
+    void reset(int cameraX, PersistentRespawnState persistentRespawnState,
+            boolean materializeInitialWindow, boolean installFixedObjects) {
         initialDispatch.retireState();
         if (stageplayDirection != null) {
             stageplayDirection.close();
@@ -554,7 +554,8 @@ public class ObjectManager {
         if (touchResponses != null) {
             touchResponses.reset();
         }
-        ConfiguredObjectInstaller.install(fixedSstObjects, placement, this::addRewindableAuxiliaryDynamicObject);
+        if (installFixedObjects)
+            ConfiguredObjectInstaller.install(fixedSstObjects, placement, this::addRewindableAuxiliaryDynamicObject);
         // Materialize the current ObjectPlacementController window immediately after reset.
         // S1 needs this for ROM parity at level start; for S2/S3K it keeps
         // manual camera resets and headless probes from sitting on an empty

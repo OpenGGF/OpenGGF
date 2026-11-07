@@ -1,4 +1,4 @@
-# S1 complete-emerald chain: native PLC arm timing
+# S1 complete-emerald chain: native PLC and initialization timing
 
 ## Scope and source
 
@@ -123,6 +123,112 @@ The candidate was rebased onto develop `f2ad93c143` before validation. Its
 upstream change concerns S3K beta-notice wording; no S1 conflict or behavior
 change was introduced. A final fetch finds the same destination. The user
 approved publication of recorder `d54cc514` and its OpenGGF pin after this gate.
-Final integration and bounded post-integration checks remain delivery steps.
+The four-axis gain was delivered as `394ebb014ffc8ceecc2e064be5017b1feecc6ab7`
+and qualification commit `c1029d3b4baa736a44e245f86ad2482cf62a4961`. Separated
+post-integration chain and ordinary guard checks passed by matched attribution;
+the chain retained only the ending failure.
 Detailed commands, raw observations, complete assertions, input hashes and
 queue/execution receipts are retained under `/tmp/trace-s1-chain-20261106/`.
+
+## Ending and credits continuation
+
+The next candidate uses TraceChaser `161e45ac81f972559280597a36c0c9d97286fc61`.
+`Sonic1EndingLoad`, `Sonic1CreditsScreenLoad` and `Sonic1CreditsDemoLoad` prepare
+real ROM-backed operations through `NativeLevelLoadController`. The existing
+initialization port may only hold/resume the matching load/phase identity and
+select its observed zero-routine service. Actual CPU sprite construction and
+uncounted initial object passes belong to production. Scoped execution resources
+close before every return to the host; no counter, decoder progress, coordinate
+or comparison-row value enters the continuation.
+
+Independent source encoders qualify ending, font and all eight demo selections.
+Native saved-state probes reuse the original movie and reload the saved states
+near the window. The full observed tail has 724 events: 391 holds, 288 zero-routine
+services and 45 resumes across 18 loads. Its original 113-event ending prefix is
+byte-identical. Every fixed recorder cut has an opcode control. Actual credits
+initialization visits 338 callbacks, including children, from 50 owner/routine
+pairs. The reviewed closure excludes Basaran's clock-reading range and fresh
+Burrobot's later moving state; ordinary rings are distinct from lost rings.
+Reached LZ setup clock reads and unknown callbacks reject capture. Zero-routine
+service changes neither gameplay RNG nor the level counter in pre-demo mode.
+Ending initial-object interrupts remain unsupported. This is no claim about
+chip-level sound ordering or arbitrary callbacks.
+
+The ending actor is initialized at the native production cut rather than
+admitting the old atomic level load early. Native counted entry and palette
+waits then release ordinary movement. EndSonic owns its subsequent actor slot,
+animation restart and flower reveal. The logo's delay decrements immediately on
+fall-through from `ESth_Delay` to `ESth_GotoCredits`; its owner sets game mode
+without deleting the object. The actual credits setup later clears Object RAM.
+The user approved correcting the ordinary unit test and clarified that future
+unit defects encoding non-ROM behavior may be repaired routinely; trace
+comparison and assertion semantics remain reserved and unchanged.
+
+Credits page setup, four hidden level waits, palette loops and `Level_FDLoop`
+have separate production owners. Demo initial assembly preserves inherited
+level/sprite clocks independently before their native post-pass clears. The
+active ending provider is passed through a bounded caller scope, not obtained
+from the module's provider factory. `VBlank_Title` omits Sonic DMA, retaining a
+last-demo pending DPLC until later production replaces it. `Level_FDLoop` runs
+objects and placement without LZ water features, events or global oscillation.
+That distinction prevents an erroneous slide release during LZ's final fade.
+Secondary level PLC submission and `Level_ClrCardArt` retain their actual loop
+boundaries, without bootstrap queue drains or simulated palette iterations.
+
+A scratch-input full-chain proof passes all 34 segments and 10,943 terminal rows,
+with 4,704 native and engine art edges. Earlier candidates are retained in the
+local task artifact: factory ownership prevented demo phase admission; a shared
+fresh-epoch assertion rejected valid inherited clocks; title-screen DMA created
+extra art edges; and running water features during the final fade changed LZ
+movement. Each was corrected at its ROM owner. No measured delay, CPU pricing,
+new timing kind, BK2 edit or weakened trace assertion was used.
+
+Canonical full capture, final S1 outcome comparison and smoke qualification are
+recorded below when complete. Producer publication and the new develop pin are
+separate reserved decisions; the earlier approval named only `d54cc514`.
+
+### Canonical publication and final candidate qualification
+
+Canonical native capture on producer `161e45ac` completed successfully using the
+original movie and `--load-queue-state --initialization-timing`. All 68 logical
+physics/aux payloads, all 28 queue streams and the BK2 match the prior canonical
+publication. The installed publication retains the original 68 compressed files
+literally. Its only metadata delta is 34 recording dates; the manifest adds the
+terminal admission census. The initialization companion also matches the
+independently qualified saved-tail capture byte-for-byte: 5,402 stored bytes,
+SHA-256 `37a5daf04174f434c6e2aceabe75489336bb503b436da571e561e6fb60dba3f8`,
+724 events/18 loads (391 HOLD, 288 zero-routine interrupts, 45 RESUME). The
+terminal census has 147 runs/10,943 rows, including 710 lag rows. Strict v5
+frame-keyed auxiliary validation passes.
+
+The unchanged original target passes against these canonical fixtures. The
+45-class S1 trace selection passes all 71 cases without skips. The other 70
+existing testcase identities, outcomes and messages are exact to pre-task base
+`34b8830b1`. All 92 comparison reports remain; 89 bodies are exact to the queue
+fix delivery. Each of the other three only removes its terminal-art failure
+string; every gap field and other failure is unchanged. Relative to pre-task,
+eight queue reports and those three terminal reports improve; 81 bodies are exact.
+The complete chain reaches all 34 segments and 10,943 tail rows with 4,704 native
+and engine edges. No other S1 trace test changes outcome.
+
+The initial focused set exposed two obsolete ordinary unit expectations: its
+phase table lacked the newly modeled three-tile `Level_DelayLoop` service, and
+its fade source guard expected the old concurrent API call instead of direct
+whiteout plus the blocking reveal. Both are corrected with owning ROM citations,
+under the user's clarified unit-defect ruling. Trace assertions are unchanged.
+Focused rerun and final smoke results follow below after completion.
+
+The focused ordinary selection passes all 628 cases across 63 explicitly
+requested classes, with zero skips. It covers fixture/schema/compression/gitlink
+and timing-authority guards, unchanged source budgets, every new owner, affected
+rewind boundaries and the four S3K keep-green obligations (both level-loading
+classes). The broader smoke gate is pending; this is a bounded focused pass.
+
+The normal commit hook also caught an unintended public fade overload. The
+counted native reveal now uses the existing internal graphics bridge and a
+package-private overload; the Mod API descriptor and signature pin are unchanged.
+After that access repair, the repeated S1 profile again passes 71/71, and every
+one of its 92 comparison report bodies is byte-identical to the earlier green
+candidate. The final focused set, expanded with compiled Mod API signatures and
+general fade tests, passes all 644 cases across 65 classes with zero skips.
+The final frozen-source change-based smoke gate remains pending.
