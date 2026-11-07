@@ -309,7 +309,9 @@ matching area heading; see the
   detach through the same CUE, preserving the saved bank and spawner algorithms;
   common Sonic data keeps the absent PPZ ramp explicit. An authenticated R31
   Frame entry now runs genuine normal/shrunk Init with native raw zone gates;
-  ordinary Main/Hurt stay gated pending their actual owners. A finite IPX progress
+  normal MODE uses real CCZ terrain while ordinary Body Main/Hurt stay gated
+  pending their actual owners. Existing PPZ movement algorithms remain unchanged.
+  A finite IPX progress
   component preserves unknown-byte and save-field alias semantics without claiming
   save completion. Data custody grants no next-zone gameplay. Natural boss defeat, full acts and regional parity remain
   separate.

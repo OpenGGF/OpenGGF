@@ -1,5 +1,30 @@
 # Implement Sonic CD with complete regional parity
 
+## 7 November 2026 — natural Boss reach and normal R31 MODE
+
+The controller recipe now keeps its original jump pulses only through17782,
+then holds Right. It enters the actual raw91 loop at17762, traverses it without
+changing physics and reaches the genuine Boss/Fight1 at18028. Selected native
+Boss/limb CPU pieces and ready current art are observed at18294. First19143
+stops after the real physical walk at the explicit PRIMARY_DEATH_CAMERA owner;
+last19142 returned. This is an observed exploratory error, not a passing replay
+certificate or Boss defeat. The105-cut dense first-loop window records actual
+physics1536/12/128, controls and planes without another probe or Body call.
+The temporary observer is removed byte-exact after its terminal source-equal run.
+Permanent Boss/pixel promotion and the missing death-camera caller are next.
+
+Normal R31 MODE now uses genuine CCZ terrain and native raw0100/1 metadata.
+Its existing PPZ ramp guard already returns before layout/table for that whole
+zone word; no empty or borrowed ramp is supplied. All movement kernels and old
+PPZ gates remain unchanged. Mini/marked periods and R3 Kill continuation retain
+precise unsupported boundaries; Body Main/Hurt remain gated before MODE. The
+source-only input vector that already selected active timewarp now stops at its
+actual next TIME_WARP_ACTIVE owner instead of its obsolete family rejection.
+R48 passes934cases/0failures/errors/skips with unchanged source, including15new
+normal-MODE vectors,38 legacy stage Body/Movement controls,7 geometry controls,
+815 Frame controls and all selected source-entry factories. This remains
+component support, not R31 programme loading, Ready, ordinary World or pixels.
+
 ## 7 November 2026 — R31 component Init and IPX progress
 
 The authenticated R31A source now constructs the existing Frame from complete

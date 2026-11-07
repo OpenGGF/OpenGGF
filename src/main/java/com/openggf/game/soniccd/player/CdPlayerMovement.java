@@ -16,7 +16,7 @@ import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 
 /**
- * One source-bound PPZ normal-sized MODE call (Main.asm:675-776), plus the shared
+ * One source-bound normal-sized MODE call (PPZ Main.asm:675-776 / R3 player.asm:634-732), plus the shared
  * native collision and level-bound subroutine ports used by Hurt.
  * Source pin: 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff. FixBugs=0 semantics;
  * no repaired sign asymmetry, byte/word overflow, skid-register or high-memory-byte Y read.
@@ -28,6 +28,8 @@ import java.util.function.Supplier;
  * names the exact instruction continuation after its eventual return; its tail
  * has not executed. After the caller's one KillPlayer call, resumeAfterLevelBound
  * runs that unfinished tail once. Unsupported owners/probe failures throw without publication.
+ * Original R31A admits only raw0100/1 normal MODE. Mini/marked periods and the unowned
+ * R3 KillPlayer continuation remain explicit stops; no Body Main/Hurt/World is admitted.
  * No services, source/JSON/trace reader, default table or secondary loop exists.
  */
 public final class CdPlayerMovement {
@@ -144,7 +146,7 @@ public final class CdPlayerMovement {
     }
     public enum UnsupportedBoundary {
         ROUTINE, SOURCE_FAMILY, MINIATURE, OBJECT_CONTROL, OBJECT_SUPPORT, CONTROL_OWNER,
-        BORED_GIVE_UP, RAMP_ENTRY, TIME_WARP_ACTIVE, RESERVED_OBJECT_SLOT, OBJECT_ADDRESS
+        BORED_GIVE_UP, RAMP_ENTRY, TIME_WARP_ACTIVE, RESERVED_OBJECT_SLOT, OBJECT_ADDRESS, R3_KILL_OWNER
     }
     /** A bounded missing owner, not a partially completed MODE result. */
     public static final class UnsupportedMotion extends UnsupportedOperationException {
@@ -223,7 +225,8 @@ public final class CdPlayerMovement {
         Objects.requireNonNull(source, "stage player source");
         var terrainData = source.terrain();
         assets = source.player(); layout = terrainData.layout().ram(); ordinaryPeriod = source.ordinaryPeriod();
-        ordinaryZoneAct = source.stage().actNumber() - 1;
+        ordinaryZoneAct = assets.sourceGraph() == CdR11aPlayerAssets.SourceGraph.R3
+                ? source.ordinaryZoneActWord() : source.stage().actNumber() - 1;
         terrain = CdPlayerTerrain.fromStageTerrain(terrainData);
         math = new CdPlayerMath(assets); ground = new CdPlayerGroundCollision(terrain);
     }
@@ -288,6 +291,7 @@ public final class CdPlayerMovement {
         Objects.requireNonNull(objects);
         if (state.routine() != 2) unsupported(UnsupportedBoundary.ROUTINE);
         if (state.animation() == 0x2B) unsupported(UnsupportedBoundary.BORED_GIVE_UP);
+        requireR3NormalSource(environment);
         int period = environment.gates().timeZone();
         boolean activePeriod = period >= 0x80 && period <= 0x82;
         if (environment.gates().zoneAct() != ordinaryZoneAct || (period != ordinaryPeriod && !(stopAtTimeWarp && activePeriod))) {
@@ -357,6 +361,7 @@ public final class CdPlayerMovement {
             case MD_JUMP_AFTER_TIME_WARP -> AIR | ROLL;
             default -> throw new IllegalArgumentException("Not a TimeWarp continuation");
         };
+        requireR3NormalSource(stopped.environment());requireR3NormalSource(returnedEnvironment);
         var before = stopped.environment(); var gates = before.gates();
         int period = returnedEnvironment.gates().timeZone();
         if (period != gates.timeZone()) {
@@ -410,6 +415,9 @@ public final class CdPlayerMovement {
         if (marker < 0 || marker != stopped.effects().size() - 1) {
             throw new IllegalArgumentException("A KILL_PLAYER stop ends at its single KillRequest");
         }
+        // This existing prebuild contract is specifically PP KillPlayer. No R3 Body/Kill owner
+        // is supplied by normal MODE admission, so a public equal Result cannot stand in for it.
+        if (assets.sourceGraph() == CdR11aPlayerAssets.SourceGraph.R3) unsupported(UnsupportedBoundary.R3_KILL_OWNER);
         requireKillPlayerUnwritten(stopped, returnedState, returnedEnvironment);
         return afterLevelBound(new Cursor(returnedState, new Input(0, 0), returnedEnvironment, objects), stopped.continuation());
     }
@@ -467,7 +475,17 @@ public final class CdPlayerMovement {
         if (c.bored >= 10800) unsupported(UnsupportedBoundary.BORED_GIVE_UP);
     }
 
-    /** Handle3DRamp (782-831). Raw layout/table match sets only control bit 1; no new trajectory. */
+    /** R31A normal MODE source admission only. This does not certify external TimeWarp/Kill calls. */
+    private void requireR3NormalSource(Environment environment) {
+        if (assets.sourceGraph() != CdR11aPlayerAssets.SourceGraph.R3) return;
+        var gates = environment.gates();
+        if (gates.zoneAct() != ordinaryZoneAct || gates.timeZone() != ordinaryPeriod)
+            unsupported(UnsupportedBoundary.SOURCE_FAMILY);
+        if (gates.miniSonic() != 0) unsupported(UnsupportedBoundary.MINIATURE);
+    }
+
+    /** Handle3DRamp (782-831). Raw layout/table match sets only control bit 1; no new trajectory.
+     * R3 PlayerCheckBooster3d:736-740 has this SAME whole-WORD early return before its table. */
     private void ramp(Cursor c) {
         // Handle3DRamp (Main.asm:783-786): raw Present only, including before any layout/table read.
         if (c.env.gates().timeZone() != 1 || c.env.gates().zoneAct() != 0) return;
