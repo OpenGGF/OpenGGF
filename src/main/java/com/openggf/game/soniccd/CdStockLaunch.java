@@ -11,6 +11,7 @@ import com.openggf.game.soniccd.level.CdR13FutureAssets;
 import com.openggf.game.soniccd.level.CdR31aAssets;
 import com.openggf.game.soniccd.media.CdProgramAssets;
 import com.openggf.game.soniccd.media.CdTimeWarpPrograms;
+import com.openggf.game.soniccd.media.CdInitialSaveAssets;
 import com.openggf.game.soniccd.release.CdRetailRelease;
 import com.openggf.game.soniccd.release.CdRetailReleases;
 
@@ -78,7 +79,11 @@ public final class CdStockLaunch {
             // Data presence grants no next-zone execution and regional custody remains explicitly absent.
             Optional<CdR31aAssets> r31a = release.variant() == CdReleaseVariant.USA
                     ? Optional.of(CdR31aAssets.fromPrograms(media, CdStagePayload.R31A.stage())) : Optional.empty();
-            return new CdGameDataSource(release, assets, fmSoundAssets, timeWarpPrograms, act2Assets, act2Past, act3Future, r31a);
+            // Retain the original initial-save source from THIS same open authenticated CUE.
+            // This reads only source media: no user profile/default creation, platform save I/O or invocation.
+            Optional<CdInitialSaveAssets> initialSave = release.variant() == CdReleaseVariant.USA
+                    ? Optional.of(CdInitialSaveAssets.fromPrograms(media)) : Optional.empty();
+            return new CdGameDataSource(release, assets, fmSoundAssets, timeWarpPrograms, act2Assets, act2Past, act3Future, r31a, initialSave);
         }
     }
 

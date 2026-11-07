@@ -329,7 +329,8 @@ matching area heading; see the
   boss-return join now publishes saved-zone/checkpoint state once and retains it
   through existing capture lifetimes, stopping at unknown unlock history.
   Original initial-save sources retain complete data and shorter native copy
-  extents. An internal selected-slot codec/bootstrap distinguishes genuine absence
+  extents, detached from the same authenticated stock disc before it closes.
+  Legacy constructors and regional absences remain explicit. An internal selected-slot codec/bootstrap distinguishes genuine absence
   from corrupt, quarantined or unknown history and uses the existing save writer
   for exclusive fresh publication in the canonical CD namespace. Historical values, unknown native tails,
   conflicts and cleanup/completion failures stay distinct; published SaveManager

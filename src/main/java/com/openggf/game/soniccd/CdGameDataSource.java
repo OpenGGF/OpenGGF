@@ -14,6 +14,7 @@ import com.openggf.game.soniccd.level.CdR13FutureAssets;
 import com.openggf.game.soniccd.level.CdR31aAssets;
 import com.openggf.game.soniccd.level.CdObjectPlacements;
 import com.openggf.game.soniccd.media.CdTimeWarpPrograms;
+import com.openggf.game.soniccd.media.CdInitialSaveAssets;
 import com.openggf.game.soniccd.release.CdRetailRelease;
 
 import java.io.ByteArrayInputStream;
@@ -26,7 +27,7 @@ import java.util.Optional;
  * Detached stock-disc capability for the first static R11A consumer. Instances come from
  * {@link CdStockLaunch}, which authenticates actual user media before publishing these assets.
  * USA also retains its authenticated FM bank, finite WARP/R11B program images, Act2 data pairs
- * both Act3 future programmes, and original Collision Chaos Act1 data.
+ * both Act3 future programmes, original Collision Chaos Act1 data, and original initial-save data.
  * JP/EU FM/program consumers remain explicitly unsupported.
  * No retained file handles, cartridge address space, creator root or runtime reference files.
  * This data identity is not a firmware, gameplay or execution-environment certificate.
@@ -79,6 +80,7 @@ public final class CdGameDataSource implements GameDataSource {
     private final Optional<Act2PastAssets> act2PastAssets;
     private final Optional<Act3FutureAssets> act3FutureAssets;
     private final Optional<CdR31aAssets> r31aAssets;
+    private final Optional<CdInitialSaveAssets> initialSaveAssets;
     private final String identity;
 
     CdGameDataSource(CdRetailRelease release, CdR11aAssets assets, Optional<CdFmSoundAssets> fmSoundAssets) {
@@ -111,6 +113,14 @@ public final class CdGameDataSource implements GameDataSource {
                      Optional<CdTimeWarpPrograms> timeWarpPrograms, Optional<Act2Assets> act2Assets,
                      Optional<Act2PastAssets> act2PastAssets, Optional<Act3FutureAssets> act3FutureAssets,
                      Optional<CdR31aAssets> r31aAssets) {
+        this(release, assets, fmSoundAssets, timeWarpPrograms, act2Assets, act2PastAssets, act3FutureAssets, r31aAssets, Optional.empty());
+    }
+
+    // BEGIN detached same-CUE original initial-save DATA 20261107.
+    CdGameDataSource(CdRetailRelease release, CdR11aAssets assets, Optional<CdFmSoundAssets> fmSoundAssets,
+                     Optional<CdTimeWarpPrograms> timeWarpPrograms, Optional<Act2Assets> act2Assets,
+                     Optional<Act2PastAssets> act2PastAssets, Optional<Act3FutureAssets> act3FutureAssets,
+                     Optional<CdR31aAssets> r31aAssets, Optional<CdInitialSaveAssets> initialSaveAssets) {
         this.release = Objects.requireNonNull(release, "release");
         this.assets = Objects.requireNonNull(assets, "assets");
         this.fmSoundAssets = Objects.requireNonNull(fmSoundAssets, "fmSoundAssets");
@@ -119,6 +129,7 @@ public final class CdGameDataSource implements GameDataSource {
         this.act2PastAssets = Objects.requireNonNull(act2PastAssets, "act2PastAssets");
         this.act3FutureAssets = Objects.requireNonNull(act3FutureAssets, "act3FutureAssets");
         this.r31aAssets = Objects.requireNonNull(r31aAssets, "r31aAssets");
+        this.initialSaveAssets = Objects.requireNonNull(initialSaveAssets, "initialSaveAssets");
         var binding = assets.identity();
         if (binding.variant() != release.variant()
                 || !binding.observedWholeDiscSha256().equals(release.normalizedSha256())) {
@@ -184,6 +195,18 @@ public final class CdGameDataSource implements GameDataSource {
             // Reuse the authentic private image/cache relation; matching public metadata is insufficient.
             CdObjectPlacements.fromR31aAssets(next);
         }
+        if (initialSaveAssets.isPresent()) {
+            // The final/private source factory authenticated the original complete file pair,
+            // header, operands and finite tables. Presence here is only an immutable DATA relation.
+            var initial = initialSaveAssets.orElseThrow().identity();
+            if (release.variant() != CdReleaseVariant.USA || initial.variant() != binding.variant()
+                    || initial.initializationFile() != CdNativeFile.BURAMINIT
+                    || initial.subCpuFile() != CdNativeFile.BURAMSUB
+                    || !initial.observedWholeDiscSha256().equals(binding.observedWholeDiscSha256())
+                    || !initial.observedWholeDiscSha256().equals(release.normalizedSha256()))
+                throw new IllegalArgumentException("Detached initial-save pair, stage and observed retail content do not agree");
+        }
+        // END detached same-CUE original initial-save DATA.
         // Whole-disc content also covers later data. Identity never certifies capability presence.
         identity = "scd:detached-stage-v1:" + release.key() + ":" + binding.stage().nativeId()
                 + ":" + binding.observedWholeDiscSha256() + ":" + binding.mmdSha256();
@@ -209,6 +232,9 @@ public final class CdGameDataSource implements GameDataSource {
 
     /** Detached original-USA R31A only; no programme, Frame, FULL or runtime admission. */
     public Optional<CdR31aAssets> r31aAssets() { return r31aAssets; }
+
+    /** Package-private original-USA initial tables only. No profile/storage/Module/IPX invocation authority. */
+    Optional<CdInitialSaveAssets> initialSaveAssets() { return initialSaveAssets; }
 
     @Override public Optional<Rom> rom() { return Optional.empty(); }
     @Override public String identity() { return identity; }

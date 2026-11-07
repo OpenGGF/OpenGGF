@@ -1,5 +1,26 @@
 # Implement Sonic CD with complete regional parity
 
+## 7 November 2026 — same-disc initial-save custody and observed natural exit
+
+Stock USA preparation now detaches the original initial-save pair while its
+existing authenticated CUE is still open. A package-private typed borrow and
+constructor retain it with strict same-release/disc validation. Every old
+constructor explicitly omits the new product; public APIs, logical asset paths,
+identity spelling and JP/EU absence remain unchanged. R60 passes100 cases with
+unchanged source, no failures/errors/skips:10 new custody,36 old stock,8 R31,
+8 R13,12 initial-source and26 canonical profile checks. Only the indispensable
+complete constructor inventory migrates3..8→3..9. Source retention supplies no
+profile, local-buffer, frontend or Module completion.
+
+The separate fixed-jump observer activates the actual Capsule at21187 and runs
+through the Results/programme return to21931. First21932 reaches the existing
+IPX_RUN_R1_TIME_ATTACK_UNLOCK_OWNER, not another object family. R59 is an
+exploratory error result, not a passed permanent route:1case/0failures/1error/
+0skips, source unchanged. Its temporary eighth controller case is removed
+byte-exact. A permanent FULL/course/pixel exit proof is being authored against
+this measured recipe; no new Capsule screenshot or positive endpoint is claimed
+until that proof runs. The historical route's missing save history stays unknown.
+
 ## 7 November 2026 — bounded public-method inventory preflight
 
 The existing declaration census has an opt-in direct literal public-method list
