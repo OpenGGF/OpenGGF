@@ -45,6 +45,9 @@ class TestHostedArenaLapCapture {
             }
             assertEquals(RaceClock.Failure.NONE,arena.observation().race().failure());
             assertTrue(session.finished(0));
+            assertTrue(arena.trackFinished());
+            assertFalse(arena.observation().race().running(),"native clock stops on the fifth lap crossing");
+            assertFalse(arena.resultsRequested(),"track completion precedes the native results wait");
         }
     }
     @Test void backwardCrossingAndDeathRollbackDoNotBookAnotherLap() throws Exception {

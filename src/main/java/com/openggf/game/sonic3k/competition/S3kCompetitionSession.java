@@ -274,6 +274,7 @@ public final class S3kCompetitionSession implements WorldSessionPolicyState,
     public int bottomY() { return nativeObjectContext().bottomY(); }
     public int trigger(int index) { return triggers[index & 0xF]; }
     public void setTrigger(int index, int value) { triggers[index & 0xF] = value & 0xFF; }
+    boolean timerRunning(int slot) { return timerRunning[slot]; }
     boolean resultsRequested() { return resultSent; }
     int highestLap(int slot) { return highestLaps[slot]; }
     boolean timeOver(int slot) { return finished[slot] && laps[slot] <= TOTAL_LAPS; }

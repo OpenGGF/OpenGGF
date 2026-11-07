@@ -49,7 +49,7 @@ public final class S3kHostedArenaSession implements HostedArenaSession {
                 (player.nativeRenderFlags() & 1) != 0, (player.nativeRenderFlags() & 2) != 0,
                 2, player.highPriority(), player.routine() == 4, player.topSolidBit() == 0xE, shoes);
         // Raw lap falls on backwards crossings/death. Only highestLap books a completed lap.
-        var clock = new RaceClock(session.started(), session.lap(0), session.highestLap(0),
+        var clock = new RaceClock(session.timerRunning(0), session.lap(0), session.highestLap(0),
                 session.timeOver(0) ? RaceClock.Failure.TIME_OVER : RaceClock.Failure.NONE);
         return new ArenaStep(pose, clock);
     }
@@ -65,6 +65,9 @@ public final class S3kHostedArenaSession implements HostedArenaSession {
                 .findFirst().orElseThrow(() -> new IllegalStateException("Arena has no native goal")).getX();
     }
     @Override public AbstractPlayableSprite localPlayer() { return host.player(0); }
+    @Override public boolean trackFinished() {
+        return host.session().finished(0) && host.session().lap(0) > S3kCompetitionSession.TOTAL_LAPS;
+    }
     @Override public boolean resultsRequested() { return host.session().resultsRequested(); }
     @Override public com.openggf.game.arena.GhostArtSource ghostArtSource() {
         return new com.openggf.game.arena.GhostArtSource() {

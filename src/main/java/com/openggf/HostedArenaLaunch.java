@@ -44,7 +44,7 @@ final class HostedArenaLaunch implements NativeMenuScreen {
         if (!loop.hostedRuns.admitArenaStep(input)) return;
         PlayerInputState admitted = loop.hostedRuns.beforeArenaStep(input);
         var step = session.step(admitted);
-        loop.hostedRuns.afterArenaStep(step,session.resultsRequested());
+        loop.hostedRuns.afterArenaStep(step,session.trackFinished());
     }
     @Override public void draw() {
         // Presentation remains a capability of the native session, not a gameplay update.

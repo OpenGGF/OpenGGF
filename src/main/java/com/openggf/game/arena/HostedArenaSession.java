@@ -10,6 +10,7 @@ public interface HostedArenaSession extends AutoCloseable {
     TrackGeometry geometry();
     AbstractPlayableSprite localPlayer();
     boolean resultsRequested();
+    boolean trackFinished();
     void draw();
     GhostArtSource ghostArtSource();
     @Override void close();

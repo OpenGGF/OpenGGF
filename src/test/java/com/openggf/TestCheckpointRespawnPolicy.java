@@ -43,6 +43,7 @@ class TestCheckpointRespawnPolicy {
         var player = (AbstractPlayableSprite)GameServices.camera().getFocusedSprite();
         var checkpoint = assertInstanceOf(CheckpointState.class,level.getCheckpointState());
         var state = GameServices.gameState();
+        int initialLives = state.getLives();
         level.getLevelGamestate().setTimerFrames(600);
         checkpoint.saveCheckpoint(1,player.getCentreX()+128,player.getCentreY(),false);
         assertTrue(player.applyCrushDeath());
@@ -53,13 +54,13 @@ class TestCheckpointRespawnPolicy {
             assertTrue(steps.getLast().ordinal()>4,"checkpoint respawn must retain the attempt step ordinal");
         } else {
             // Native death decision runs before the reload owner, on both live and replay paths.
-            for(int frame=0;frame<600 && state.getLives()==3;frame++) loop.step();
+            for(int frame=0;frame<600 && state.getLives()==initialLives;frame++) loop.step();
             level.restartCurrentLevelFromCheckpointAfterDeath();
         }
         player = (AbstractPlayableSprite)GameServices.camera().getFocusedSprite();
         assertFalse(player.getDead());
         assertFalse(level.isTitleCardRequested());
-        assertEquals(2,state.getLives());
+        assertEquals(initialLives-1,state.getLives());
         return new Result(player.getCentreX(),player.getCentreY(),level.getLevelGamestate().getTimerFrames(),
                 level.getLevelGamestate().getRings(),state.getLives(),level.getCheckpointState().getLastCheckpointIndex());
     }
