@@ -420,7 +420,11 @@ class TestSonic2NativeCompetitionHost {
         var snapshot = owner.capture();
         assertSame(session.player(0), snapshot.sonic(), "Sonic DMA must bind the actual current P1");
         assertSame(session.player(1), snapshot.tails(), "Tails DMA must bind the actual current human P2");
-        assertEquals(List.of(owner.capture().slots()), List.of(snapshot.slots()));
+        var currentSlots = owner.capture().slots();
+        var snapshotSlots = snapshot.slots();
+        assertEquals(currentSlots.length, snapshotSlots.length);
+        for (int index = 0; index < currentSlots.length; index++)
+            assertSame(currentSlots[index], snapshotSlots[index], "native snapshot shares slot " + index);
         assertEquals(owner.plcService().capture(), snapshot.plc());
         return owner;
     }
