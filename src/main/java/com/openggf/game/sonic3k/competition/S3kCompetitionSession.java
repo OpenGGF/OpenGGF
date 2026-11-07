@@ -165,14 +165,29 @@ public final class S3kCompetitionSession implements WorldSessionPolicyState,
     public record State(Arena arena, int levelFrameCounter, boolean go, int falseStartTicks, int falseStartFrame,
             int falseStarter, int replenishmentOffset, int finishWait, boolean resultSent,
             List<PlayerState> players, List<StartPosition> starts, List<Integer> triggers,
-            List<List<Integer>> grandPrixTimes, int goalTimerMask, S3kCompetitionDamage.State damage) {
+            List<List<Integer>> grandPrixTimes, int goalTimerMask, S3kCompetitionDamage.State damage, ShoeSlot unusedShoeSlot) {
+        public State(Arena arena, int levelFrameCounter, boolean go, int falseStartTicks, int falseStartFrame,
+                int falseStarter, int replenishmentOffset, int finishWait, boolean resultSent,
+                List<PlayerState> players, List<StartPosition> starts, List<Integer> triggers,
+                List<List<Integer>> grandPrixTimes, int goalTimerMask, S3kCompetitionDamage.State damage) {
+            this(arena, levelFrameCounter, go, falseStartTicks, falseStartFrame, falseStarter,
+                    replenishmentOffset, finishWait, resultSent, players, starts, triggers, grandPrixTimes,
+                    goalTimerMask, damage, ShoeSlot.CLEARED);
+        }
         public State {
+            Objects.requireNonNull(unusedShoeSlot);
             players = List.copyOf(players);
             starts = List.copyOf(starts);
             triggers = List.copyOf(triggers);
             grandPrixTimes = grandPrixTimes.stream().map(List::copyOf).toList();
         }
     }
+
+    /** The unspawned P2 slot still participates in loc_3652A, but never ticks shoes. */
+    public record ShoeSlot(int status, int timer, S3kCompetitionPlayer.Speeds speeds) {
+        static final ShoeSlot CLEARED = new ShoeSlot(0, 0, new S3kCompetitionPlayer.Speeds(0, 0, 0));
+    }
+    private ShoeSlot unusedShoeSlot = ShoeSlot.CLEARED;
 
     private final Config config;
     private S3kCompetitionResources resources = S3kCompetitionResources.LOCKED_ON;
@@ -458,7 +473,21 @@ public final class S3kCompetitionSession implements WorldSessionPolicyState,
 
     /** Full status_secondary bytes swap, not only the speed-shoes bit (FixBugs=0). */
     private void swapShoes() {
-        if (players.size() != 2) return;
+        // loc_3652A (sonic3k.asm:73480-73525), shipped FixBugs=0:
+        // no Not_ghost_flag test. Even the unspawned slot receives and retains the bytes.
+        if (players.size() == 1) {
+            var a = players.getFirst();
+            var previous = new ShoeSlot(a.statusSecondary(), a.speedShoesTimer(), a.speeds());
+            a.setStatusSecondary(unusedShoeSlot.status());
+            a.setSpeedShoesTimer(unusedShoeSlot.timer());
+            a.resetSpeeds();
+            if ((a.statusSecondary() & SPEED_SHOES) != 0) a.setSpeeds(unusedShoeSlot.speeds());
+            // A normal tuple is never consumed while the shoe bit is clear.
+            unusedShoeSlot = new ShoeSlot(previous.status(), previous.timer(),
+                    (previous.status() & SPEED_SHOES) != 0 ? previous.speeds()
+                            : ShoeSlot.CLEARED.speeds());
+            return;
+        }
         S3kCompetitionPlayer a = players.get(0), b = players.get(1);
         int status = a.statusSecondary(), timer = a.speedShoesTimer();
         S3kCompetitionPlayer.Speeds speeds = a.speeds(), otherSpeeds = b.speeds();
@@ -554,6 +583,7 @@ public final class S3kCompetitionSession implements WorldSessionPolicyState,
         Arrays.fill(respawnPending, false); Arrays.fill(timerRunning, false); Arrays.fill(finished, false);
         Arrays.fill(lapFrames, 0); Arrays.fill(completedCentiseconds, 0); Arrays.fill(rings, 0);
         damage.resetForArena();
+        unusedShoeSlot = ShoeSlot.CLEARED;
         for (int[] times : lapTimes) Arrays.fill(times, 0);
         Arrays.fill(triggers, 0);
         go = false; falseStartTicks = 0; falseStarter = -1; replenishmentOffset = 0;
@@ -594,7 +624,7 @@ public final class S3kCompetitionSession implements WorldSessionPolicyState,
         return new State(arena, levelFrameCounter, go, falseStartTicks, falseStartFrame, falseStarter,
                 replenishmentOffset, finishWait, resultSent, states, starts,
                 Arrays.stream(triggers).boxed().toList(), Arrays.stream(grandPrixTimes)
-                .map(times -> Arrays.stream(times).boxed().toList()).toList(), goalTimerMask, damage.capture());
+                .map(times -> Arrays.stream(times).boxed().toList()).toList(), goalTimerMask, damage.capture(), unusedShoeSlot);
     }
     @Override public void restore(State state) {
         if (state.players().size() != players.size()) throw new IllegalArgumentException("Competition roster changed across restore");
@@ -603,6 +633,7 @@ public final class S3kCompetitionSession implements WorldSessionPolicyState,
         replenishmentOffset = state.replenishmentOffset(); finishWait = state.finishWait(); resultSent = state.resultSent();
         goalTimerMask = state.goalTimerMask();
         damage.restore(state.damage());
+        unusedShoeSlot = state.unusedShoeSlot();
         starts = state.starts();
         for (int slot = 0; slot < players.size(); slot++) {
             PlayerState p = state.players().get(slot);
