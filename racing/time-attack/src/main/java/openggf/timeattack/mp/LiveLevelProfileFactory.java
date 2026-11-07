@@ -16,6 +16,6 @@ public final class LiveLevelProfileFactory {
                 TrackValidationProfile.GLOBAL_SPEED_CEILING_PX_PER_FRAME,
                 TrackValidationProfile.FRAME_RATE_CAP, start.geometry().wrapWidthPx(),
                 start.geometry().wrapHeightPx(), start.geometry().lapCount(),
-                start.geometry().lapCount() > 0 ? 2 * (start.geometry().lapCount() + 1) : 0);
+                start.maxSwapSources());
     }
 }

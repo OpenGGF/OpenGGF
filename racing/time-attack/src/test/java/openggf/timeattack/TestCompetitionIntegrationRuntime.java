@@ -15,9 +15,14 @@ class TestCompetitionIntegrationRuntime {
                 CompetitionRoomSettings.Mode.COMPETITION,MonitorRule.COMPETITION_ITEMS,true));
         r.beginAttemptForTest("fp"); return r;
     }
+    @Test void liveActProfileCarriesTheEngineSourceInventory() {
+        var r=runtime(TrackKind.ACT);
+        var start=new RunLevelStart(r.runSpec(),"fp",false,4096,1024,LevelStartCause.LAUNCH,TrackGeometry.ACT,31);
+        assertEquals(31,openggf.timeattack.mp.LiveLevelProfileFactory.fromLevelStart(start).maxSwapSources());
+    }
     @Test void arenaZeroAndAizOneHaveDifferentRunKindsAndSwapReachesEngine() {
         var arena = runtime(TrackKind.ARENA);
-        assertEquals(TrackKind.ARENA,arena.runSpec().kind()); assertTrue(arena.runSpec().swapEnabled());
+        assertEquals(TrackKind.ARENA,arena.runSpec().kind()); assertTrue(arena.runSpec().swapEnabled()); assertTrue(arena.runSpec().policy().swapEnabled());
         var act = runtime(TrackKind.ACT);
         assertEquals(TrackKind.ACT,act.runSpec().kind());
         assertFalse(new RunSpec("s3k",0,0,"sonic",TimeAttackRuntime.runPolicy()).swapEnabled());

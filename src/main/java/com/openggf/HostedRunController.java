@@ -249,7 +249,8 @@ final class HostedRunController {
                 checkpointRespawn ? com.openggf.mods.run.LevelStartCause.CHECKPOINT_RESPAWN
                         : deathRestart ? com.openggf.mods.run.LevelStartCause.FAST_DEATH_RESTART
                         : com.openggf.mods.run.LevelStartCause.LAUNCH,
-                com.openggf.mods.run.TrackGeometry.ACT);
+                com.openggf.mods.run.TrackGeometry.ACT, raceSwaps == null || raceMode.getLevelManager().getCurrentLevel() == null
+                        ? 0 : raceSwaps.maxSwapSources(raceMode));
         guarded(() -> host.onLevelReady(start));
         if (host != null) applyLevelCover();
     }

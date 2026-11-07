@@ -13,11 +13,17 @@ import com.openggf.game.ModApi;
  * @param levelWidth             width of the act's foreground layout in pixels
  * @param levelHeight            height of the act's foreground layout in pixels
  * @param cause                  why this level became ready
+ * @param maxSwapSources         ROM layout source cap for hosted swap requests
  * @param geometry               wrap and lap metadata; zero for ordinary acts
  */
 @ModApi
 public record RunLevelStart(RunSpec spec, String determinismFingerprint, boolean debugAssisted,
-                            int levelWidth, int levelHeight, LevelStartCause cause, TrackGeometry geometry) {
+                            int levelWidth, int levelHeight, LevelStartCause cause, TrackGeometry geometry, int maxSwapSources) {
+    public RunLevelStart(RunSpec spec, String determinismFingerprint, boolean debugAssisted,
+            int levelWidth, int levelHeight, LevelStartCause cause, TrackGeometry geometry) {
+        this(spec,determinismFingerprint,debugAssisted,levelWidth,levelHeight,cause,geometry,
+                geometry.lapCount() > 0 ? 2 * (geometry.lapCount()+1) : 0);
+    }
     public RunLevelStart(RunSpec spec, String determinismFingerprint, boolean debugAssisted, int levelWidth, int levelHeight, boolean deathRestart) {
         this(spec, determinismFingerprint, debugAssisted, levelWidth, levelHeight, deathRestart ? LevelStartCause.FAST_DEATH_RESTART : LevelStartCause.LAUNCH, TrackGeometry.ACT);
     }

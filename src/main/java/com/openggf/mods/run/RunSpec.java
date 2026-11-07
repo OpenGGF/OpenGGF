@@ -22,7 +22,7 @@ import java.util.Objects;
 public record RunSpec(String gameId, int zone, int act, String character, GameplayRunPolicy policy,
                       RunArea area, TrackKind kind, boolean swapEnabled) {
     public RunSpec(String gameId, int zone, int act, String character, GameplayRunPolicy policy, RunArea area, TrackKind kind) {
-        this(gameId, zone, act, character, policy, area, kind, false);
+        this(gameId, zone, act, character, policy, area, kind, policy.swapEnabled());
     }
     public RunSpec(String gameId, int zone, int act, String character, GameplayRunPolicy policy, RunArea area) {
         this(gameId, zone, act, character, policy, area, TrackKind.ACT);

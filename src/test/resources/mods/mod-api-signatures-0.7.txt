@@ -1971,6 +1971,7 @@ CONSTRUCTOR com.openggf.mods.run.RaceEventResult public  <init>(com.openggf.mods
 CONSTRUCTOR com.openggf.mods.run.RunArea public  <init>(int,int,int,int,int,int)
 CONSTRUCTOR com.openggf.mods.run.RunLevelStart public  <init>(com.openggf.mods.run.RunSpec,java.lang.String,boolean,int,int,boolean)
 CONSTRUCTOR com.openggf.mods.run.RunLevelStart public  <init>(com.openggf.mods.run.RunSpec,java.lang.String,boolean,int,int,com.openggf.mods.run.LevelStartCause,com.openggf.mods.run.TrackGeometry)
+CONSTRUCTOR com.openggf.mods.run.RunLevelStart public  <init>(com.openggf.mods.run.RunSpec,java.lang.String,boolean,int,int,com.openggf.mods.run.LevelStartCause,com.openggf.mods.run.TrackGeometry,int)
 CONSTRUCTOR com.openggf.mods.run.RunSpec public  <init>(java.lang.String,int,int,java.lang.String,com.openggf.game.session.GameplayRunPolicy)
 CONSTRUCTOR com.openggf.mods.run.RunSpec public  <init>(java.lang.String,int,int,java.lang.String,com.openggf.game.session.GameplayRunPolicy,com.openggf.mods.run.RunArea)
 CONSTRUCTOR com.openggf.mods.run.RunSpec public  <init>(java.lang.String,int,int,java.lang.String,com.openggf.game.session.GameplayRunPolicy,com.openggf.mods.run.RunArea,com.openggf.mods.run.TrackKind)
@@ -12921,6 +12922,7 @@ METHOD com.openggf.mods.run.RunLevelStart public  com.openggf.mods.run.RunSpec s
 METHOD com.openggf.mods.run.RunLevelStart public  com.openggf.mods.run.TrackGeometry geometry()
 METHOD com.openggf.mods.run.RunLevelStart public  int levelHeight()
 METHOD com.openggf.mods.run.RunLevelStart public  int levelWidth()
+METHOD com.openggf.mods.run.RunLevelStart public  int maxSwapSources()
 METHOD com.openggf.mods.run.RunLevelStart public  java.lang.String determinismFingerprint()
 METHOD com.openggf.mods.run.RunLevelStart public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.mods.run.RunLevelStart public,final  int hashCode()
@@ -19555,6 +19557,7 @@ RECORD-COMPONENT com.openggf.mods.run.RunLevelStart determinismFingerprint java.
 RECORD-COMPONENT com.openggf.mods.run.RunLevelStart geometry com.openggf.mods.run.TrackGeometry
 RECORD-COMPONENT com.openggf.mods.run.RunLevelStart levelHeight int
 RECORD-COMPONENT com.openggf.mods.run.RunLevelStart levelWidth int
+RECORD-COMPONENT com.openggf.mods.run.RunLevelStart maxSwapSources int
 RECORD-COMPONENT com.openggf.mods.run.RunLevelStart spec com.openggf.mods.run.RunSpec
 RECORD-COMPONENT com.openggf.mods.run.RunSpec act int
 RECORD-COMPONENT com.openggf.mods.run.RunSpec area com.openggf.mods.run.RunArea
