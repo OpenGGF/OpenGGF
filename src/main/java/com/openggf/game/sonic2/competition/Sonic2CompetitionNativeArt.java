@@ -2,21 +2,20 @@ package com.openggf.game.sonic2.competition;
 
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
-import com.openggf.game.sonic2.competition.interlace.Sonic2InterlaceVram;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Objects;
 
 /**
- * Immutable ROM-backed native terrain RAM and initial zone-art VRAM.
+ * Immutable ROM-backed native terrain RAM and decoded zone-art inputs.
  *
  * <p>The RAM image owns the decoded Chunk_Table ($0000-$7FFF), Level_Layout
  * ($8000-$8FFF), and Block_Table ($9000-$A7FF), including LoadAnimatedBlocks'
  * shipped writes into the following deformation scratch. Other RAM bytes begin
  * at zero; this is not a snapshot of the complete running game's work RAM.
- * The VRAM image contains only LoadZoneTiles' initial art. PLCs, animated art,
- * playable DPLCs, planes and SAT publication remain the native world's owners.</p>
+ * Pattern residency, animated art, playable DPLCs, planes and sprite pages
+ * remain separate semantic owners in the native world.</p>
  */
 public final class Sonic2CompetitionNativeArt {
     private static final int WORK_RAM_SIZE = 0x10000;
@@ -26,16 +25,14 @@ public final class Sonic2CompetitionNativeArt {
 
     private final Sonic2CompetitionLevelProfile profile;
     private final Sonic2CompetitionLevelProfile.BaseTerrain baseTerrain;
-    private final Sonic2InterlaceVram vram;
     private final byte[] workRam;
     private final int animationCopiedWords;
 
     private Sonic2CompetitionNativeArt(Sonic2CompetitionLevelProfile profile,
             Sonic2CompetitionLevelProfile.BaseTerrain baseTerrain,
-            Sonic2InterlaceVram vram, byte[] workRam, int animationCopiedWords) {
+            byte[] workRam, int animationCopiedWords) {
         this.profile = profile;
         this.baseTerrain = baseTerrain;
-        this.vram = vram;
         this.workRam = workRam;
         this.animationCopiedWords = animationCopiedWords;
     }
@@ -62,11 +59,7 @@ public final class Sonic2CompetitionNativeArt {
         }
         int copied = loadAnimatedBlocks(RomByteReader.fromRom(rom),
                 profile.animationPatch().address(), ram);
-        // LoadZoneTiles (s2.asm:6471-6485): the bytes remain in native upload
-        // order. Only their VDP interpretation changes to interlace 8x16 cells.
-        var vram = new Sonic2InterlaceVram(new byte[Sonic2InterlaceVram.SIZE])
-                .withWrite(0, terrain.patternBytes());
-        return new Sonic2CompetitionNativeArt(profile, terrain, vram, ram, copied);
+        return new Sonic2CompetitionNativeArt(profile, terrain, ram, copied);
     }
 
     private static int loadAnimatedBlocks(RomByteReader rom, int mapAddress, byte[] ram) {
@@ -102,9 +95,6 @@ public final class Sonic2CompetitionNativeArt {
 
     /** Raw source terrain before the animated block patch, including unchanged chunk bytes. */
     public Sonic2CompetitionLevelProfile.BaseTerrain baseTerrain() { return baseTerrain; }
-
-    /** Initial zone art only; this image contains no PLC, playable-DPLC, plane or SAT uploads. */
-    public Sonic2InterlaceVram vram() { return vram; }
 
     /** All $C00 native block words after LoadAnimatedBlocks; scratch spill remains in work RAM. */
     public byte[] blockTableBytes() {

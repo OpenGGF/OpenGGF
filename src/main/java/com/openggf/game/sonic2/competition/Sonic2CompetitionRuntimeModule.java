@@ -13,7 +13,7 @@ import com.openggf.game.RuntimeArtCoordinator;
 import com.openggf.game.resources.PlcLifecycleService;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.patch.DelegatingGameModule;
-import com.openggf.game.sonic2.competition.interlace.Sonic2InterlaceVramService;
+import com.openggf.game.sonic2.competition.view.Sonic2CompetitionArtResidency;
 import com.openggf.game.sonic2.resources.Sonic2PlcService;
 import com.openggf.game.sonic2.Sonic2GameOverFlowProvider;
 import com.openggf.game.sonic2.competition.lifecycle.Sonic2CompetitionLifecycle;
@@ -59,7 +59,25 @@ public final class Sonic2CompetitionRuntimeModule extends DelegatingGameModule {
 
     @Override public LevelInitProfile getLevelInitProfile() { return profile; }
     @Override public LevelEventProvider getLevelEventProvider() { return events; }
-    void initializeBoundaryWords() { events.initializeBoundaryWords(); }
+    void initializeBoundaryWords() {
+        events.initializeBoundaryWords();
+        installDisplayArtOwners();
+    }
+    private void installDisplayArtOwners() {
+        var context = host.context();
+        var fields = nativeVramOwner().fields();
+        // Ordinary S2 animation construction primes 1P script destinations. Rebuild
+        // the derived field table once, then retire BOTH halves of the combined owner.
+        fields.rebuild();
+        var patterns = fields;
+        try {
+            var palettes = com.openggf.game.sonic2.Sonic2PaletteCycleInternalAccess.create(host.rom(),
+                    context.getLevelManager().getCurrentLevel(), host.profile().romZone());
+            com.openggf.level.LevelAnimationInternalAccess.installNativeAnimatedPatternManager(context, patterns);
+            com.openggf.level.LevelAnimationInternalAccess.installNativeAnimatedPaletteManager(context, palettes);
+            context.getAnimatedTileChannelGraph().clear();
+        } catch (IOException failure) { throw new java.io.UncheckedIOException(failure); }
+    }
     TitleCardManager nativeTitle() { return nativeTitle; }
     void runNativeTitleSlots() { events.updateFixedInLevelObjectsBeforeDynamicObjects(); }
     Sonic2CompetitionZoneFeatures nativeFeatures() { return features; }
@@ -113,12 +131,12 @@ public final class Sonic2CompetitionRuntimeModule extends DelegatingGameModule {
         return Objects.requireNonNull(runtimeArt, "Native world must create its stable art coordinator first");
     }
 
-    Sonic2InterlaceVramService nativeVramOwner() { return requireArtRuntime().requireOwner(); }
+    Sonic2CompetitionArtResidency nativeVramOwner() { return requireArtRuntime().requireOwner(); }
     void bindNativeArtPlayers() { if (runtimeArt != null) runtimeArt.bindPlayers(host.session()); }
 
     @Override public <T> T getGameService(Class<T> type) {
         var owner = runtimeArt == null ? null : runtimeArt.ownerOrNull();
-        if (type == Sonic2InterlaceVramService.class) return type.cast(owner);
+        if (type == Sonic2CompetitionArtResidency.class) return type.cast(owner);
         if (type == Sonic2PlcService.class) return type.cast(owner == null ? null : owner.plcService());
         if (type == PlcLifecycleService.class) return type.cast(owner == null ? null : owner.plcLifecycle());
         if (type == Sonic2CompetitionLifecycle.class || type == NativePlayerDeathPass.class)
@@ -135,7 +153,11 @@ public final class Sonic2CompetitionRuntimeModule extends DelegatingGameModule {
         adapters.add(lifecycle);
         return List.copyOf(adapters);
     }
-    @Override public Level loadLevelOverride(int index) throws IOException { return host.decodeTerrain(); }
+    @Override public Level loadLevelOverride(int index) throws IOException {
+        var terrain = (Sonic2CompetitionTerrain) host.decodeTerrain();
+        terrain.bindFieldPatterns(nativeVramOwner().fields());
+        return terrain;
+    }
     @Override public boolean supportsSidekick() { return false; }
     @Override public TitleCardProvider getTitleCardProvider() { return null; }
 }

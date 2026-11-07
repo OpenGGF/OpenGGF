@@ -29,8 +29,7 @@ import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.game.sonic2.bumpers.CNZBumperDataLoader;
 import com.openggf.game.sonic2.bumpers.CNZBumperType;
 import com.openggf.game.sonic2.bumpers.CNZNativeBumperTable;
-import com.openggf.game.sonic2.competition.interlace.Sonic2InterlaceVram;
-import com.openggf.game.sonic2.competition.interlace.Sonic2InterlaceVramService;
+import com.openggf.game.sonic2.competition.view.Sonic2CompetitionArtResidency;
 import com.openggf.game.sonic2.competition.lifecycle.Sonic2CompetitionLifecycle;
 import com.openggf.game.sonic2.objects.Sonic2GameOverCardObjectInstance;
 import com.openggf.game.sonic2.resources.Sonic2PlcService;
@@ -408,11 +407,11 @@ class TestSonic2NativeCompetitionHost {
         nativeVramOwner(host, session);
     }
 
-    private static Sonic2InterlaceVramService nativeVramOwner(Sonic2NativeCompetitionHost host,
+    private static Sonic2CompetitionArtResidency nativeVramOwner(Sonic2NativeCompetitionHost host,
                                                             Sonic2CompetitionSession session) {
         var mode = host.context();
         var module = mode.getWorldSession().getGameModule();
-        var owner = module.getGameService(Sonic2InterlaceVramService.class);
+        var owner = module.getGameService(Sonic2CompetitionArtResidency.class);
         assertNotNull(owner, "the runtime module must expose its selected physical VRAM owner");
         assertInstanceOf(PlayerDplcDmaSink.class, mode.runtimeArtCoordinator());
         assertNotSame(owner, mode.runtimeArtCoordinator(), "the context needs a stable forwarder across act owners");
@@ -421,7 +420,7 @@ class TestSonic2NativeCompetitionHost {
         var snapshot = owner.capture();
         assertSame(session.player(0), snapshot.sonic(), "Sonic DMA must bind the actual current P1");
         assertSame(session.player(1), snapshot.tails(), "Tails DMA must bind the actual current human P2");
-        assertSame(owner.current(), snapshot.vram());
+        assertEquals(List.of(owner.capture().slots()), List.of(snapshot.slots()));
         assertEquals(owner.plcService().capture(), snapshot.plc());
         return owner;
     }
@@ -1371,8 +1370,8 @@ class TestSonic2NativeCompetitionHost {
     private record Bank(Sonic2CompetitionResults.Metrics metrics, int lives, int continues,
             int nextLife, Sonic2CompetitionPlayerState.Checkpoint checkpoint, boolean paused, boolean timeOver) { }
 
-    private record NativeArtState(Sonic2InterlaceVramService owner, Sonic2InterlaceVram vram,
-            NemesisPlcQueueSnapshot plc, List<Sonic2InterlaceVramService.DmaTransfer> pending,
+    private record NativeArtState(Sonic2CompetitionArtResidency owner, List<Sonic2CompetitionArtResidency.Slot> slots,
+            NemesisPlcQueueSnapshot plc, List<Sonic2CompetitionArtResidency.Upload> pending,
             int sonicLast, int tailsLast, int tailLast) { }
 
     private static WorldState state(Driver driver) throws Exception {
@@ -1385,11 +1384,11 @@ class TestSonic2NativeCompetitionHost {
         Object bumperState = snapshot.get(NATIVE_BUMPERS);
         if (driver.host.profile().romZone() == 12) assertNotNull(bumperState);
         else assertNull(bumperState, "other native zones do not own CNZ bumper state");
-        assertNotNull(snapshot.get(Sonic2InterlaceVramService.REWIND_KEY),
+        assertNotNull(snapshot.get(Sonic2CompetitionArtResidency.REWIND_KEY),
                 "the stable early art binding must participate in actual registry capture");
         var owner = nativeVramOwner(driver.host, session);
         var art = owner.capture();
-        var nativeArt = new NativeArtState(owner, art.vram(), art.plc(), art.pending(),
+        var nativeArt = new NativeArtState(owner, List.of(art.slots()), art.plc(), art.pending(),
                 art.sonicLast(), art.tailsLast(), art.tailLast());
         var pause = snapshot.get(driver.host.nativePause().key());
         assertNotNull(pause, "the actual pause continuation and consumable exit must be captured");
