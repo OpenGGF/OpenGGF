@@ -33,7 +33,8 @@ public final class Sonic2CompetitionSession implements NativeCompetitionRoster,
     private final List<Sonic2CompetitionResults.Wins> ledger = new ArrayList<>(Collections.nCopies(12, null));
     private Phase phase = Phase.SELECT;
     private int selection, zone, act, firstFinisher = -1, loserTimeLeft, specialIndex, specialSector;
-    private int teleportTimer;
+    private final com.openggf.game.sonic2.competition.state.Sonic2TeleportClock teleportClock =
+            new com.openggf.game.sonic2.competition.state.Sonic2TeleportClock();
     private boolean spinComplete;
     private int timeOverMask;
     private int pendingTimeOverMask;
@@ -70,7 +71,7 @@ public final class Sonic2CompetitionSession implements NativeCompetitionRoster,
 
     public record Snapshot(Phase phase, int selection, int zone, int act, int firstFinisher,
                            int loserTimeLeft, boolean spinComplete, int specialIndex, int specialSector,
-                           int teleportTimer, int timeOverMask, int pendingTimeOverMask, boolean gameOver, int presentationFrame,
+                           com.openggf.game.sonic2.competition.state.Sonic2TeleportClock.State teleport, int timeOverMask, int pendingTimeOverMask, boolean gameOver, int presentationFrame,
                            boolean resultsPlcReady, int levelMusic,
                            List<Integer> specialRings,
                            List<Sonic2CompetitionResults.Wins> ledger,
@@ -146,8 +147,9 @@ public final class Sonic2CompetitionSession implements NativeCompetitionRoster,
     public int specialStageIndex() { return specialIndex; }
     public int specialSector() { return specialSector; }
     public List<Integer> specialRings() { return List.copyOf(specialRings); }
-    public int teleportTimer() { return teleportTimer; }
-    public boolean teleportWhite() { return teleportTimer >= 0x10; }
+    public int teleportTimer() { return teleportClock.timer(); }
+    public com.openggf.game.sonic2.competition.state.Sonic2TeleportClock teleportClock() { return teleportClock; }
+    public boolean teleportWhite() { return teleportClock.timer() >= 0x10; }
     public boolean timeOver(int slot) { checkSlot(slot); return (timeOverMask & (1 << slot)) != 0; }
     /** Actor owner consumes each KillCharacter request once; flags persist through the death card. */
     public int consumeTimeOverRequests() { int value = pendingTimeOverMask; pendingTimeOverMask = 0; return value; }
@@ -284,7 +286,8 @@ public final class Sonic2CompetitionSession implements NativeCompetitionRoster,
     private void startAct() {
         for (var state : progress) state.resetAct();
         firstFinisher = -1; loserTimeLeft = 0; spinComplete = false;
-        teleportTimer = timeOverMask = pendingTimeOverMask = 0;
+        teleportClock.reset();
+        timeOverMask = pendingTimeOverMask = 0;
         p1Result = p2Result = null;
         phase = Phase.ACT;
     }
@@ -304,7 +307,6 @@ public final class Sonic2CompetitionSession implements NativeCompetitionRoster,
             if (!progress[1].isTimerPaused()) requestTimeOver(1);
         }
         if (progress[1].isTimeOver() && !timeOver(1)) requestTimeOver(1);
-        if (teleportTimer > 0) teleportTimer--;
         if (loserTimeLeft != 0 && (!progress[0].isTimerPaused() || !progress[1].isTimerPaused())) {
             int sub = (loserTimeLeft & 0xFF) - 1;
             if (sub > 0) loserTimeLeft = (loserTimeLeft & 0xFF00) | sub;
@@ -438,12 +440,13 @@ public final class Sonic2CompetitionSession implements NativeCompetitionRoster,
         if (revisionProfile.revision() == com.openggf.data.RetailRomRevision.S2_REV01) {
             for (var player : players) if (player != null) player.setMappingFrame(0);
         }
-        teleportTimer = 0x40;
+        teleportClock.start(0x40);
         host.freezeObjects(0x40);
         return true;
     }
     public void reset() {
-        phase = Phase.SELECT; selection = zone = act = specialIndex = specialSector = teleportTimer = 0;
+        phase = Phase.SELECT; selection = zone = act = specialIndex = specialSector = 0;
+        teleportClock.reset();
         firstFinisher = -1; loserTimeLeft = timeOverMask = pendingTimeOverMask = 0; spinComplete = gameOver = false;
         presentationFrame = 0;
         resultsPlcReady = false; levelMusic = 0;
@@ -454,7 +457,7 @@ public final class Sonic2CompetitionSession implements NativeCompetitionRoster,
     @Override public String key() { return "sonic2-native-competition"; }
     @Override public Snapshot capture() {
         return new Snapshot(phase, selection, zone, act, firstFinisher, loserTimeLeft, spinComplete,
-                specialIndex, specialSector, teleportTimer, timeOverMask, pendingTimeOverMask, gameOver, presentationFrame,
+                specialIndex, specialSector, teleportClock.capture(), timeOverMask, pendingTimeOverMask, gameOver, presentationFrame,
                 resultsPlcReady, levelMusic,
                 specialRings, ledger,
                 progress[0].capture(), progress[1].capture(), p1Result, p2Result);
@@ -462,7 +465,7 @@ public final class Sonic2CompetitionSession implements NativeCompetitionRoster,
     @Override public void restore(Snapshot s) {
         phase = s.phase(); selection = s.selection(); zone = s.zone(); act = s.act();
         firstFinisher = s.firstFinisher(); loserTimeLeft = s.loserTimeLeft(); spinComplete = s.spinComplete();
-        specialIndex = s.specialIndex(); specialSector = s.specialSector(); teleportTimer = s.teleportTimer();
+        specialIndex = s.specialIndex(); specialSector = s.specialSector(); teleportClock.restore(s.teleport());
         timeOverMask = s.timeOverMask(); pendingTimeOverMask = s.pendingTimeOverMask(); gameOver = s.gameOver();
         presentationFrame = s.presentationFrame();
         resultsPlcReady = s.resultsPlcReady(); levelMusic = s.levelMusic();
