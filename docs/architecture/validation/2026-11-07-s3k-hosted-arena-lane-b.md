@@ -117,6 +117,16 @@ block descriptor and alternate collision index. Checkpoint diagnostics collect
 all differing owner keys. The affected TestTeleportSwapApply and
 TestCheckpointRespawnPolicy follow-up is pending; production behavior is unchanged.
 
+The terrain-value follow-up at `50fd9a049` ran 7 tests: 6 passed, one checkpoint
+comparison failed, zero errors/skips/OOMs. Compile 36.471s, admission wait 388s,
+test Maven 3.078s. All decoded terrain and gameplay owners matched. Two module
+lifetime fields remained: s2-plc-art.loadEpoch 3 versus 5 and s2-title-card.frameCounter
+53 versus 106. The checkpoint fixture reused its cached module across the two
+boots. It now clears SessionManager and GameModuleRegistry before each boot,
+matching the independent-boot setup already used by the replay test. Neither
+field is omitted or rewritten. The single affected checkpoint class is queued
+for a lean retry; no production change was required.
+
 ## Rejected probes and queue history
 
 | Job | Queue wait | Maven execution | Result |

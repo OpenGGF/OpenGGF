@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @RequiresRom(SonicGame.SONIC_2)
 class TestCheckpointRespawnPolicy {
-    @AfterEach void close() { SessionManager.clear(); }
+    @AfterEach void close() { SessionManager.clear(); GameModuleRegistry.reset(); }
 
     @Test void loopAndDirectOwnerRestoreTheSameCheckpointAndPreserveAttemptOrdinal() {
         var direct = run(false);
@@ -33,6 +33,9 @@ class TestCheckpointRespawnPolicy {
     private record Core(int x,int y,long timer,int rings,int lives,int checkpoint) { }
     private record Result(Core core,java.util.Map<String,Object> owners) { }
     private Result run(boolean loopPath) {
+        // Each side is a fresh boot: cached module PLC/title-card generations are not shared.
+        SessionManager.clear();
+        GameModuleRegistry.reset();
         HeadlessTestFixture.builder().withZoneAndAct(0,0).build();
         var context = SessionManager.getCurrentGameplayMode();
         var policy = GameplayRunPolicy.competition();
