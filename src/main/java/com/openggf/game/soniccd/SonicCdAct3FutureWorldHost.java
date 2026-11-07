@@ -28,6 +28,12 @@ final class SonicCdAct3FutureWorldHost implements Host,AutoCloseable {
   SonicCdGameModule.PastSound levelMusic(SonicCdAct3FutureWorldHost host,Program actualProgramme,int rawTimeZone,int timeAttackMode);
   void serviceVInt(SonicCdAct3FutureWorldHost host);
   void resetGoodFutureFlags(SonicCdAct3FutureWorldHost host);
+  // BEGIN IPX BOSS RETURN AUTHORITY 20261107
+  /** Only the original private Core/Host call may borrow the actual Module progress owner. */
+  default Optional<IpxProgressStore> prepareIpxBossReturn(SonicCdAct3FutureWorldHost host,SonicCdAct3FutureLoadingVisit.IpxBossReturnCall call){return Optional.empty();}
+  /** Reached RunR1/UnlockTimeAttackLevel operand; no native return/store authority from the value. */
+  default OptionalInt runR1UnlockByte(SonicCdAct3FutureWorldHost host){return OptionalInt.empty();}
+  // END IPX BOSS RETURN AUTHORITY 20261107
   /** Actual Module/knowledge image only; absence means the owner is unavailable, not byte zero. */
   default Optional<SonicCdAct3FutureObjectPass.ResultsFlagsImage> resultsFlags(SonicCdAct3FutureWorldHost host,SonicCdAct3FutureObjectPass pass){return Optional.empty();}
   /** Prebuild the native CLR/RMW against the full programme/knowledge image, with no owner writes. */
@@ -227,6 +233,35 @@ final class SonicCdAct3FutureWorldHost implements Host,AutoCloseable {
  void publishOrdinary(CdAssetBytes palette,Optional<CdObjectDrawQueue.CpuSat> cpu){ordinaryCut(SonicCdAct3FutureOrdinaryLoop.Cut.PUBLISH_LEVEL);var v=image.video();if(cpu!=v.completedCpu()||palette!=owner.state().normalPalette())throw new IllegalArgumentException("Selected CPU/palette is not current cut");var old=inputs(v.selected());byte[] h=old.hscroll().copy();System.arraycopy(image.scroll().background().hscrollRam().copy(),0,h,0,0x380);var s=image.scroll();var i=new Inputs(cpu,v.cpuSat(),palette,CdAssetBytes.copyOf(h),s.background().vscroll(),owner.state().displayEnabled(),image.foreground(),image.background(),v.current(),frame.artState());video(new Video(v.cpuSat(),v.completedCpu(),i.player(),i.current(),new Published(project(i))));}
  void settleOrdinary(Optional<CdObjectDrawQueue.CpuSat> cpu){ordinaryCut(SonicCdAct3FutureOrdinaryLoop.Cut.SETTLE_SELECTED_CPU);var v=image.video();var old=inputs(v.selected());if(cpu!=old.selectedCpu())throw new IllegalArgumentException("Selected CPU replaced");var current=owner.state().section().residency();var i=new Inputs(cpu,old.selectedSat(),old.palette(),old.hscroll(),old.vscrollLongBits(),old.displayEnabled(),image.foreground(),image.background(),current,frame.artState());video(new Video(v.cpuSat(),v.completedCpu(),i.player(),current,new Published(project(i))));}
  private static Inputs inputs(Selected s){if(s instanceof Published p)return p.selection().inputs();throw new HostBoundary(Boundary.SELECTED_DISPLAY);}
+ // BEGIN IPX BOSS RETURN HOST 20261107
+ interface IpxProgressStore{CdIpxProgress.Result result();void validate();void adoptAfterNative();}
+ static final class IpxBossReturn {
+  private final Image before;private final IpxProgressStore progress;private boolean applied;
+  private IpxBossReturn(Image before,IpxProgressStore progress){this.before=before;this.progress=progress;}
+  CdIpxProgress.Result result(){return progress.result();}boolean ownsProgress(IpxProgressStore actual){return progress==actual;}
+ }
+ private boolean preparingIpxBossReturn;
+ Optional<IpxBossReturn> prepareIpxBossReturn(SonicCdAct3FutureLoadingVisit.IpxBossReturnCall call){
+  current();owner.requireIpxBossReturnPreparation(this,call);
+  if(preparingIpxBossReturn||acting||publishing)throw new IllegalStateException("IPX Host preparation active");
+  if(!(call.hostSnapshot() instanceof Snapshot captured)||captured.image()!=image)throw new IllegalStateException("Not the original full Host image");
+  var before=image;preparingIpxBossReturn=true;
+  try{var progress=Objects.requireNonNull(authority.prepareIpxBossReturn(this,call));return progress.map(p->new IpxBossReturn(before,p));}
+  finally{preparingIpxBossReturn=false;}
+ }
+ void requireIpxBossAuthorityPreparation(SonicCdAct3FutureLoadingVisit.IpxBossReturnCall call){
+  if(!preparingIpxBossReturn)throw new IllegalStateException("No actual Host-to-Module IPX preparation");owner.requireIpxBossReturnPreparation(this,call);
+ }
+ void validateIpxBossReturn(IpxBossReturn p){
+  current();owner.requireIpxBossReturnCandidate(this,p);if(p.applied||p.before!=image)throw new IllegalStateException("Stale complete Host IPX pair");p.progress.validate();
+ }
+ void adoptIpxBossReturnAfterNative(IpxBossReturn p){
+  owner.requireIpxBossReturnCommit(this,p);if(p.applied||p.before!=image)throw new IllegalStateException("Original Host IPX pair expired");
+  p.progress.adoptAfterNative();p.applied=true; // no Host scalar/image/pool/bank/selected/current write exists here
+ }
+ OptionalInt runR1UnlockByte(){current();owner.requireRunR1UnlockRead(this);return Objects.requireNonNull(authority.runR1UnlockByte(this));}
+ // END IPX BOSS RETURN HOST 20261107
+
  // Original private Core blank scope retains this complete prebuild; public values cannot adopt it.
  Prepared prepareOldExitBlank(){
   current();owner.requireOldExitBlankPreparation(this);if(acting||publishing)throw new IllegalStateException("R13 Host active");

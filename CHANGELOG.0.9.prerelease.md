@@ -317,8 +317,12 @@ matching area heading; see the
   normal MODE uses real CCZ terrain while ordinary Body Main/Hurt stay gated
   pending their actual owners. Existing PPZ movement algorithms remain unchanged.
   A finite IPX progress
-  component preserves unknown-byte and save-field alias semantics without claiming
-  save completion. Data custody grants no next-zone gameplay. Natural boss defeat, full acts and regional parity remain
+  component preserves unknown-byte and save-field alias semantics. Its actual
+  boss-return join now publishes saved-zone/checkpoint state once and retains it
+  through existing capture lifetimes, stopping at unknown unlock history.
+  Original initial-save sources retain complete data and shorter native copy
+  extents without granting profile creation or save completion. Data custody
+  grants no next-zone gameplay. Natural boss defeat, full acts and regional parity remain
   separate.
   CD player headless boot loads the fixed
   roster before rewind controller creation while keeping no-device audio before

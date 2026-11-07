@@ -1547,7 +1547,7 @@ class TestSonicCdAct2ControllerRoute {
                 names.add(c.getName());var getter=c.getAccessor();getter.setAccessible(true);
                 assertNaturalR13SnapshotValue(getter.invoke(expected),getter.invoke(actual),label+"."+c.getName());
             }
-            assertEquals(java.util.Set.of("loading","services","goodFutureFlags"),names,"Complete actual module shared capture");return;
+            assertEquals(java.util.Set.of("loading","services","goodFutureFlags","ipxProgress"),names,"Complete actual module shared capture");return;
         }
         assertNaturalR12bSnapshotValue(expected,actual,label);
     }

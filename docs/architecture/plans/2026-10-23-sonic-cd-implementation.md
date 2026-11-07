@@ -1,5 +1,34 @@
 # Implement Sonic CD with complete regional parity
 
+## 7 November 2026 — actual IPX progress return and original save-source data
+
+The original R13 boss-return invocation now prebuilds actual Module progress and
+Core checkpoint/RTS state, fences the complete source/Frame/Host/pool cut, then
+publishes saved-high once before checkpoint0 and the returned stack phase.
+Repeated service reads the genuinely unknown unlock history without repeating
+ADDQ or closing the healthy retained Frame. All five existing shared capture
+payloads retain the actual progress/source/lifetime and restore it without entry
+or effect replay. Live timeStones stays in its existing programme owner; achieved
+IPX goodFutures, live goodFuture and level goodFutureFlags remain distinct.
+
+R52 passes141cases/0failures/errors/skips on unchanged source. This includes29
+pure progress controls,8 actual Module return tests, both end-flag cases,23 old
+exit tests, all7 permanent controller/pixel routes, old Core/Host checks,18 death
+caller cases and12 original initial-save-source checks. The disjoint Host death
+block and the later Boss-route body are preserved by exact inverse composition.
+The temporary failed death observer is removed byte-exact by this import.
+
+A new immutable asset owner reads the original USA BRAMINIT/BURAMSUB pair through
+existing media readers. It retains all706 actual initial-data bytes, the native
+676/28/704/704-byte transfers and the unresolved1546-byte MMD copy tail without
+padding. This establishes source data, not a new or retained user save profile.
+The existing route's title/unlock/save-policy history remains UNKNOWN; actual
+storage/bootstrap, unlock/title/save continuation and R31 FULL remain unbound.
+Separately, the original controller now returns19143 with FULL/course replay and
+continues through19219; first19220 reaches native GameOver3B at whole51. That
+exploratory run errors at the next family and is not a permanent positive endpoint
+or Boss defeat. The normal-movement/body/loading next-zone work remains separate.
+
 ## 7 November 2026 — actual death-camera and lifecycle caller
 
 The genuine R13 World now accepts the existing Body's incoming Dead6/Restart8.

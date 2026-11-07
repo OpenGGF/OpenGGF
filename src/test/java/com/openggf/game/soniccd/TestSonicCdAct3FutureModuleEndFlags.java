@@ -53,7 +53,7 @@ class TestSonicCdAct3FutureModuleEndFlags {
             // Completed stores precede the genuine later terminal boundary; no failure replay is invented.
         } finally {fixture.cleanup();}
     }
-    @Test void actualModuleRetainsOldExitAndBothRewindScopesAtTheMissingSavedZoneFence() throws Exception {
+    @Test void actualModuleRetainsOldExitAndBothRewindScopesAtTheUnknownUnlockFence() throws Exception {
         var fixture=new TestSonicCdPastLoadingWorld();fixture.setup();
         try(var egl=TestSonicCdPastResultsRoute.Egl.open()) {
             var prepared=ready();var h=prepared.harness();var module=h.module();
@@ -90,9 +90,14 @@ class TestSonicCdAct3FutureModuleEndFlags {
             assertTrue(replayedFade&&replayedReturned&&replayedBlank);assertEquals(22,core.oldExitSteps());
             assertEquals(SonicCdAct3FutureLoadingVisit.Phase.OLD_IPX_RETURNED,core.state().phase());assertEquals(clock.deltaSinceAdmittedCut()+23,frame.vIntClock().deltaSinceAdmittedCut());
             assertEquals(SonicCdGameModule.LevelProgramPhase.OLD_IPX_RETURNED,module.levelProgramState().phase());
-            var beforeFull=registry.capture();var beforeCourse=registry.captureCourse();
+            assertEquals(0,module.ipxProgressState().savedLevel().word().orElseThrow());
             var missing=assertThrows(SonicCdAct3FutureLoadingVisit.UnsupportedLoading.class,()->module.serviceAct3FutureLoading(8));
-            assertEquals(SonicCdAct3FutureLoadingVisit.Boundary.IPX_BOSS_SAVED_ZONE_OWNER,missing.boundary());
+            assertEquals(SonicCdAct3FutureLoadingVisit.Boundary.IPX_RUN_R1_TIME_ATTACK_UNLOCK_OWNER,missing.boundary());
+            assertEquals(0x100,module.ipxProgressState().savedLevel().word().orElseThrow());
+            assertEquals(SonicCdAct3FutureLoadingVisit.Phase.OLD_IPX_BOSS_RETURNED,core.state().phase());
+            var beforeFull=registry.capture();var beforeCourse=registry.captureCourse();
+            var repeated=assertThrows(SonicCdAct3FutureLoadingVisit.UnsupportedLoading.class,()->module.serviceAct3FutureLoading(8));
+            assertEquals(SonicCdAct3FutureLoadingVisit.Boundary.IPX_RUN_R1_TIME_ATTACK_UNLOCK_OWNER,repeated.boundary());
             assertFalse(frame.closed());assertFalse(core.failed());assertSame(frame,module.requirePlayerFrame());assertSame(source,frame.stageSource());assertSame(world,h.mode().getWorldSession());
             assertEquals(generation,h.mode().getLevelManager().getCompletedProductionLoadGeneration());assertEquals(0x100,frame.environment().movement().gates().zoneAct());assertEquals(1,frame.environment().movement().gates().timeZone());
             same.invoke(null,beforeFull,registry.capture(),"healthy missing-owner FULL nonwrite");same.invoke(null,beforeCourse,registry.captureCourse(),"healthy missing-owner course nonwrite");

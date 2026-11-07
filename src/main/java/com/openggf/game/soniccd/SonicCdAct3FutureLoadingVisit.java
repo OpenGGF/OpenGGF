@@ -19,8 +19,8 @@ import java.util.function.Supplier;
  * This component creates no Module/World/GPU/clock owner or public admission factory.
  */
 final class SonicCdAct3FutureLoadingVisit {
-    enum Phase { ENTRY, INITIAL_TO_WHITE, INITIAL_TO_BLACK, FIRST_PLC, LEVEL_PLC, FROM_WHITE, FROM_BLACK, READY, OLD_EXIT_PRELUDE, OLD_BLACK_FADE, OLD_CLEAR_WAIT, OLD_RETURNED, OLD_IPX_RETURNED }
-    enum Boundary { ENTRY, PAL_CLEAR_KNOWLEDGE, CHECKPOINT_LOAD, LEVEL_RESTART_RETURN, NO_LIVES_RETURN, DEMO_RETURN, ACTIVE_POWERUP, ORDINARY_OWNER, OLD_EXIT_ENTRY, OLD_EXIT_WHITE_RETURN, IPX_BOSS_GAME_OVER, IPX_BOSS_SAVED_ZONE_OWNER }
+    enum Phase { ENTRY, INITIAL_TO_WHITE, INITIAL_TO_BLACK, FIRST_PLC, LEVEL_PLC, FROM_WHITE, FROM_BLACK, READY, OLD_EXIT_PRELUDE, OLD_BLACK_FADE, OLD_CLEAR_WAIT, OLD_RETURNED, OLD_IPX_RETURNED, OLD_IPX_BOSS_RETURNED }
+    enum Boundary { ENTRY, PAL_CLEAR_KNOWLEDGE, CHECKPOINT_LOAD, LEVEL_RESTART_RETURN, NO_LIVES_RETURN, DEMO_RETURN, ACTIVE_POWERUP, ORDINARY_OWNER, OLD_EXIT_ENTRY, OLD_EXIT_WHITE_RETURN, IPX_BOSS_GAME_OVER, IPX_BOSS_SAVED_ZONE_OWNER, IPX_RUN_R1_TIME_ATTACK_UNLOCK_OWNER, IPX_RUN_R1_UNLOCK_CONTINUATION_OWNER }
     enum Action {
         ENTRY_STORES,FRESH_RESET_PREFIX,RESET_SAVED_OBJECT_FLAGS,FRESH_RESET_SUFFIX,INITIAL_FADE_SETUP,PRELUDE_END,
         NORMAL_LOAD_PALETTE,PLAY_LEVEL_MUSIC,CLEAR_POWERUP_FLOWERS,CLEAR_DRAW_QUEUE,CLEAR_FLOWERS,CLEAR_OBJECTS,
@@ -40,7 +40,7 @@ final class SonicCdAct3FutureLoadingVisit {
         IMMEDIATE_STANDARD,PALETTE_SONIC,BLOCKS_RAM,PALETTE_LEVEL,QUEUED_LEVEL,LOAD_PLAYER,LIFE_ICON,
         FROM_FADE_SERVICE,FROM_FADE_COLOURS,TITLE_PLC_APPEND,BOSS_PLC_APPEND,RESULTS_PLC_APPEND,
         OLD_EXIT_FADE_SETUP,OLD_EXIT_SETTLE_CURRENT,OLD_EXIT_BLANK,OLD_EXIT_BEGIN,OLD_EXIT_BLACK_SERVICE,
-        OLD_EXIT_BLACK_COLOURS,OLD_EXIT_CLEAR,OLD_EXIT_CLEAR_SERVICE,OLD_EXIT_RTS,OLD_EXIT_IPX_RETURN
+        OLD_EXIT_BLACK_COLOURS,OLD_EXIT_CLEAR,OLD_EXIT_CLEAR_SERVICE,OLD_EXIT_RTS,OLD_EXIT_IPX_RETURN,IPX_BOSS_RETURN
     }
     static final class UnsupportedLoading extends UnsupportedOperationException {
         private final Boundary boundary;
@@ -252,7 +252,7 @@ final class SonicCdAct3FutureLoadingVisit {
     }
     // BEGIN R13 retained old-programme exit. No public State or raw destination grants this scope.
     boolean oldProgrammeSelected(){return oldPhase(values.phase());}
-    private static boolean oldPhase(Phase p){return p==Phase.OLD_EXIT_PRELUDE||p==Phase.OLD_BLACK_FADE||p==Phase.OLD_CLEAR_WAIT||p==Phase.OLD_RETURNED||p==Phase.OLD_IPX_RETURNED;}
+    private static boolean oldPhase(Phase p){return p==Phase.OLD_EXIT_PRELUDE||p==Phase.OLD_BLACK_FADE||p==Phase.OLD_CLEAR_WAIT||p==Phase.OLD_RETURNED||p==Phase.OLD_IPX_RETURNED||p==Phase.OLD_IPX_BOSS_RETURNED;}
     int oldExitSteps(){return Collections.frequency(values.calls(),Call.OLD_EXIT_BLACK_COLOURS);}
     private void requireRetainedExitGates(){
         var g=frame.environment().movement().gates();
@@ -312,9 +312,94 @@ final class SonicCdAct3FutureLoadingVisit {
     }
     // END R13 retained old-programme exit.
 
+    // BEGIN IPX BOSS RETURN OWNER 20261107
+    /** Only the actual service stack creates this call; its complete observed cut grants no public authority. */
+    static final class IpxBossReturnCall {
+        private final Observation before;private final int livesByte;
+        private IpxBossReturnCall(Observation before,int livesByte){this.before=before;this.livesByte=livesByte;}
+        State state(){return before.core();}int livesByte(){return livesByte;}Object hostSnapshot(){return before.host();}
+    }
+    private IpxBossReturnCall ipxBossCall;
+    private SonicCdAct3FutureWorldHost.IpxBossReturn ipxBossPrepared;
+    private boolean ipxBossCommitting,runR1UnlockRead;
+    private void requireIpxBossBase(Host expected,IpxBossReturnCall call){
+        if(expected!=host||!running||failed||call==null||call!=ipxBossCall||ipxBossCommitting
+                ||values!=call.before.core()||values.phase()!=Phase.OLD_IPX_RETURNED)
+            throw new IllegalStateException("No original live IPX boss-return call");
+        unchanged(call.before); // actual full Frame pair/art/clock/display + Host/pool96/bank/status
+    }
+    void requireIpxBossReturnPreparation(Host expected,IpxBossReturnCall call){
+        requireIpxBossBase(expected,call);if(ipxBossPrepared!=null)throw new IllegalStateException("Original IPX preparation already returned");
+    }
+    void requireIpxBossReturnCandidate(Host expected,SonicCdAct3FutureWorldHost.IpxBossReturn candidate){
+        requireIpxBossBase(expected,ipxBossCall);if(candidate==null||candidate!=ipxBossPrepared)throw new IllegalStateException("Not the original complete IPX candidate");
+    }
+    void requireIpxProgressCandidate(Host expected,IpxBossReturnCall call,SonicCdAct3FutureWorldHost.IpxProgressStore store){
+        requireIpxBossBase(expected,call);if(ipxBossPrepared==null||!ipxBossPrepared.ownsProgress(store))throw new IllegalStateException("Not the original Module IPX pair");
+    }
+    void requireIpxProgressCommit(Host expected,IpxBossReturnCall call,SonicCdAct3FutureWorldHost.IpxProgressStore store){
+        if(expected!=host||!running||failed||!ipxBossCommitting||call==null||call!=ipxBossCall
+                ||values!=call.before.core()||ipxBossPrepared==null||!ipxBossPrepared.ownsProgress(store))
+            throw new IllegalStateException("Original prevalidated Module IPX pair expired");
+    }
+    void requireIpxBossReturnCommit(Host expected,SonicCdAct3FutureWorldHost.IpxBossReturn candidate){
+        if(expected!=host||!running||failed||!ipxBossCommitting||ipxBossCall==null
+                ||values!=ipxBossCall.before.core()||candidate==null||candidate!=ipxBossPrepared)
+            throw new IllegalStateException("Original prevalidated Host IPX pair expired");
+    }
+    void requireRunR1UnlockRead(Host expected){
+        if(expected!=host||!running||failed||!runR1UnlockRead||values.phase()!=Phase.OLD_IPX_BOSS_RETURNED)
+            throw new IllegalStateException("No original returned RunR1 unlock read");validateHost();
+    }
+    private void serviceIpxBossReturn(){
+        int lives=-1;
+        if(values.phase()==Phase.OLD_IPX_RETURNED){lives=observe(host::livesByte);octet(lives);if(lives==0)stop(Boundary.IPX_BOSS_GAME_OVER);}
+        if(!(host instanceof SonicCdAct3FutureWorldHost))stop(Boundary.IPX_BOSS_SAVED_ZONE_OWNER);
+        var actual=(SonicCdAct3FutureWorldHost)host;
+        if(values.phase()==Phase.OLD_IPX_RETURNED){
+            Boundary missing=null;running=true;
+            try{
+                ipxBossCall=new IpxBossReturnCall(observation(),lives);
+                var prepared=actual.prepareIpxBossReturn(ipxBossCall);
+                if(prepared.isEmpty())missing=Boundary.IPX_BOSS_SAVED_ZONE_OWNER;
+                else{
+                    ipxBossPrepared=prepared.orElseThrow();var nativeResult=ipxBossPrepared.result();
+                    if(nativeResult.missingRead().isPresent()){
+                        if(nativeResult.missingRead().orElseThrow()!=CdIpxProgress.Read.SAVED_LEVEL_ZONE)
+                            throw new IllegalStateException("Unexpected IPX first-read result");
+                        missing=Boundary.IPX_BOSS_SAVED_ZONE_OWNER;
+                    }else{
+                        var stores=nativeResult.writes();
+                        if(nativeResult.cut()!=CdIpxProgress.Cut.RETURN_TO_BOSS_CALLER
+                                ||!stores.checkpointByte().equals(OptionalInt.of(0))||stores.plcLoadFlagsByte().isPresent()
+                                ||stores.zoneActWord().isPresent()||stores.projectorByte().isPresent()
+                                ||stores.goodFutureByte().isPresent()||stores.amyCapturedByte().isPresent())
+                            throw new IllegalStateException("Not the original bounded boss return");
+                        var l=values.level();var calls=new ArrayList<>(values.calls());calls.add(Call.IPX_BOSS_RETURN);
+                        var ready=values.level(level(l,l.levelRestart(),l.updateHudTime(),0,l.spawnMode(),l.plcLoadFlags(),l.flowerCount(),l.fadeEnableDisplay(),l.powerup(),l.timeOver()))
+                                .phase(Phase.OLD_IPX_BOSS_RETURNED).calls(calls);
+                        actual.validateIpxBossReturn(ipxBossPrepared); // every fallible aggregate/owner preflight precedes native stores
+                        ipxBossCommitting=true;
+                        actual.adoptIpxBossReturnAfterNative(ipxBossPrepared); // saved high first; Host is a strict nonwrite
+                        values=ready; // actual checkpoint BYTE0, then native RTS/caller phase
+                    }
+                }
+            }catch(RuntimeException|Error original){terminal(original);throw original;}
+            finally{ipxBossCommitting=false;ipxBossPrepared=null;ipxBossCall=null;running=false;}
+            if(missing!=null)stop(missing); // actual missing-owner stops keep healthy retained owners open
+        }
+        OptionalInt unlock;running=true;runR1UnlockRead=true;
+        try{unlock=Objects.requireNonNull(observe(actual::runR1UnlockByte));unlock.ifPresent(SonicCdAct3FutureLoadingVisit::octet);}
+        catch(RuntimeException|Error original){terminal(original);throw original;}
+        finally{runR1UnlockRead=false;running=false;}
+        // Current fresh/unknown retained lineages have no historical unlock producer. No title/save default.
+        stop(unlock.isEmpty()?Boundary.IPX_RUN_R1_TIME_ATTACK_UNLOCK_OWNER:Boundary.IPX_RUN_R1_UNLOCK_CONTINUATION_OWNER);
+    }
+    // END IPX BOSS RETURN OWNER 20261107
+
     void service(int held){
         current();octet(held);if(values.phase()==Phase.ENTRY)throw new IllegalStateException("Begin before service");if(values.phase()==Phase.READY&&ordinary==null)stop(Boundary.ORDINARY_OWNER);
-        if(values.phase()==Phase.OLD_IPX_RETURNED){int lives=observe(host::livesByte);octet(lives);stop(lives==0?Boundary.IPX_BOSS_GAME_OVER:Boundary.IPX_BOSS_SAVED_ZONE_OWNER);}
+        if(values.phase()==Phase.OLD_IPX_RETURNED||values.phase()==Phase.OLD_IPX_BOSS_RETURNED){serviceIpxBossReturn();return;}
         running=true;try{switch(values.phase()){
             case INITIAL_TO_WHITE,INITIAL_TO_BLACK -> fadeService(held,true);
             case FROM_WHITE,FROM_BLACK -> fadeService(held,false);
@@ -396,10 +481,12 @@ final class SonicCdAct3FutureLoadingVisit {
     Snapshot capture(){current();var external=Objects.requireNonNull(observe(host::capture));validateHost();return new Snapshot(this,values,frame.captureActor(),frame.captureShared(),external);}
     void validateRestore(Snapshot snapshot){current();Objects.requireNonNull(snapshot);if(snapshot.owner!=this)throw new IllegalArgumentException("Another R13 visit capture");frame.validateActorRestore(snapshot.actor);frame.validateSharedRestore(snapshot.shared);observe(()->{host.validateRestore(snapshot.host);return Boolean.TRUE;});validateHost();art.initSection(snapshot.state.section());var g=snapshot.shared.environment().movement().gates();var s=snapshot.state;
         if(oldPhase(s.phase())){
+            int returned=Collections.frequency(s.calls(),Call.IPX_BOSS_RETURN);
+            if(returned!=(s.phase()==Phase.OLD_IPX_BOSS_RETURNED?1:0)||(s.phase()==Phase.OLD_IPX_BOSS_RETURNED&&s.level().checkpoint()!=0))throw new IllegalArgumentException("Captured native boss caller stack/checkpoint differs");
             int steps=Collections.frequency(s.calls(),Call.OLD_EXIT_BLACK_COLOURS);
             if(g.zoneAct()!=0x100||g.timeZone()!=1||s.section().stopped()||s.phase()==Phase.OLD_EXIT_PRELUDE||s.fromFadeSteps()!=22||steps<0||steps>22||s.program().demoModeWord()!=0||s.program().usePlayer2Byte()!=0||s.program().levelStartedByte()!=0||(s.program().gameModeByte()&128)==0||(s.level().plcLoadFlags()&1)==0||Collections.frequency(s.calls(),Call.OLD_EXIT_BEGIN)!=1
                     ||(s.phase()==Phase.OLD_BLACK_FADE?(steps>=22||s.level().levelRestart()!=2||(s.program().palFadeFlagsByte()&1)==0):(s.level().levelRestart()!=0||s.program().palFadeFlagsByte()!=0))
-                    ||(s.phase()==Phase.OLD_IPX_RETURNED&&s.displayEnabled()))throw new IllegalArgumentException("Captured retained R13 exit source/phase/progress differs");return;
+                    ||((s.phase()==Phase.OLD_IPX_RETURNED||s.phase()==Phase.OLD_IPX_BOSS_RETURNED)&&s.displayEnabled()))throw new IllegalArgumentException("Captured retained R13 exit source/phase/progress differs");return;
         }
         if(g.zoneAct()!=2||(g.timeZone()!=2&&g.timeZone()!=0x82)||s.section().stopped()||(s.phase()==Phase.READY?s.fromFadeSteps()!=22:s.fromFadeSteps()==22)||(s.phase()==Phase.INITIAL_TO_BLACK||s.phase()==Phase.INITIAL_TO_WHITE)&&s.initialFadeSteps()>=22)throw new IllegalArgumentException("Captured R13 source/phase/progress differs");}
     void restore(Snapshot snapshot){validateRestore(snapshot);running=true;try{host.restore(snapshot.host);validateHost();frame.restoreActor(snapshot.actor);frame.restoreShared(snapshot.shared);values=snapshot.state;}catch(RuntimeException|Error f){terminal(f);throw f;}finally{running=false;}}

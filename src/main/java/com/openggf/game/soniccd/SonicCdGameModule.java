@@ -109,6 +109,33 @@ public final class SonicCdGameModule implements GameModule {
     private LevelLoadContext stagedRestartContext;
     private LevelProgramState levelProgram;
 
+    // BEGIN IPX PERSISTENT PROGRESS OWNER 20261107
+    /** The actual Core/Module owns live timeStones. This retained image deliberately stores no duplicate. */
+    private record IpxProgressFacts(CdIpxProgress.SavedLevel savedLevel,OptionalInt goodFuturesByte,
+            OptionalInt titleFlagsByte,OptionalInt timeAttackUnlockByte,OptionalInt unknownBackupByte,
+            OptionalInt currentSpecialStageByte,OptionalInt saveDisabledByte){
+        private IpxProgressFacts{new CdIpxProgress.State(savedLevel,goodFuturesByte,titleFlagsByte,timeAttackUnlockByte,
+                unknownBackupByte,currentSpecialStageByte,OptionalInt.empty(),saveDisabledByte);}
+        private CdIpxProgress.State project(int actualTimeStones){return new CdIpxProgress.State(savedLevel,goodFuturesByte,
+                titleFlagsByte,timeAttackUnlockByte,unknownBackupByte,currentSpecialStageByte,OptionalInt.of(actualTimeStones),saveDisabledByte);}
+        private static IpxProgressFacts from(CdIpxProgress.State value){return new IpxProgressFacts(value.savedLevel(),value.goodFuturesByte(),
+                value.titleFlagsByte(),value.timeAttackUnlockByte(),value.unknownBackupByte(),value.currentSpecialStageByte(),value.saveDisabledByte());}
+    }
+    private IpxProgressFacts ipxProgress=IpxProgressFacts.from(CdIpxProgress.unknown());
+    private Object ipxProgressLifetime=new Object();
+    /** Exact original shared-payload cut pairing; equality of facts is never restore/publication authority. */
+    private record IpxProgressImage(SonicCdGameModule owner,CdGameDataSource source,Object lifetime,
+                                    Object cut,IpxProgressFacts facts){}
+    private IpxProgressImage captureIpxProgress(Object cut){return new IpxProgressImage(this,Objects.requireNonNull(source),
+            ipxProgressLifetime,Objects.requireNonNull(cut),ipxProgress);}
+    private void validateIpxProgress(IpxProgressImage image,Object cut){
+        if(image==null||image.owner()!=this||image.source()!=source||image.lifetime()!=ipxProgressLifetime
+                ||image.cut()!=cut||image.facts()==null)throw new IllegalArgumentException("Foreign progress/source/lifetime/shared capture pair");
+    }
+    /** Pure observation only; live timeStones is sampled from its actual current programme owner. */
+    CdIpxProgress.State ipxProgressState(){return ipxProgress.project(levelProgramState().timeStones());}
+    // END IPX PERSISTENT PROGRESS OWNER 20261107
+
     // R13 is admitted only by the privately staged, completed old R12B/IPX return.
     private final SonicCdAct3FutureLevelInitProfile act3FutureProfile = new SonicCdAct3FutureLevelInitProfile(this);
     private final SonicCdAct3ZoneRegistry act3Zones = new SonicCdAct3ZoneRegistry(this);
@@ -129,7 +156,7 @@ public final class SonicCdGameModule implements GameModule {
                                   SonicCdAct2PastWorldHost.Scroll scroll, CdAssetBytes savedFlags,
                                   long generation, LevelProgramState program) { }
     private record Act3FutureShared(SonicCdAct3FutureLoadingVisit.Snapshot loading,
-                                   ProgramServicesState services, OptionalInt goodFutureFlags) { }
+                                   ProgramServicesState services, OptionalInt goodFutureFlags, IpxProgressImage ipxProgress) { }
     boolean act3FutureRegistrySelected() { return stagedAct3Future != null || act3FutureLoading != null; }
     boolean act3FutureLoadingSelected() { return act3FutureLoading != null; }
     com.openggf.game.soniccd.level.CdR13FutureAssets actualAct3RegistryAssets() {
@@ -167,10 +194,13 @@ public final class SonicCdGameModule implements GameModule {
         try { act3FutureLoading.service(held);act3FutureHost.projectCamera(GameServices.camera()); }
         catch(RuntimeException|Error failure){
             boolean returned=failure instanceof SonicCdAct3FutureLoadingVisit.UnsupportedLoading stopped
-                    &&act3FutureLoading.state().phase()==SonicCdAct3FutureLoadingVisit.Phase.OLD_IPX_RETURNED
+                    &&(act3FutureLoading.state().phase()==SonicCdAct3FutureLoadingVisit.Phase.OLD_IPX_RETURNED
+                        ||act3FutureLoading.state().phase()==SonicCdAct3FutureLoadingVisit.Phase.OLD_IPX_BOSS_RETURNED)
                     &&!act3FutureLoading.failed()
                     &&(stopped.boundary()==SonicCdAct3FutureLoadingVisit.Boundary.IPX_BOSS_SAVED_ZONE_OWNER
-                    ||stopped.boundary()==SonicCdAct3FutureLoadingVisit.Boundary.IPX_BOSS_GAME_OVER);
+                    ||stopped.boundary()==SonicCdAct3FutureLoadingVisit.Boundary.IPX_BOSS_GAME_OVER
+                    ||stopped.boundary()==SonicCdAct3FutureLoadingVisit.Boundary.IPX_RUN_R1_TIME_ATTACK_UNLOCK_OWNER
+                    ||stopped.boundary()==SonicCdAct3FutureLoadingVisit.Boundary.IPX_RUN_R1_UNLOCK_CONTINUATION_OWNER);
             if(!returned)closePlayerCycleAfterFailure(failure);throw failure;
         }
     }
@@ -292,6 +322,38 @@ public final class SonicCdGameModule implements GameModule {
                 }
             };
         }
+        // BEGIN ORIGINAL IPX MODULE RECEIPT 20261107
+        @Override public Optional<SonicCdAct3FutureWorldHost.IpxProgressStore> prepareIpxBossReturn(
+                SonicCdAct3FutureWorldHost host,SonicCdAct3FutureLoadingVisit.IpxBossReturnCall call){
+            if(host!=act3FutureHost)throw new IllegalStateException("Foreign IPX progress Host");
+            host.requireIpxBossAuthorityPreparation(call);requireAct3FutureLoadingVisit(act3FutureLoading);
+            var core=act3FutureLoading;var before=ipxProgress;var programme=levelProgram;var services=programServices;var media=source;var lifetime=ipxProgressLifetime;
+            if(call.state()!=core.state()||call.livesByte()!=host.globals().ring().lives())throw new IllegalStateException("Stale actual boss return operands");
+            var result=CdIpxProgress.bossReturned(before.project(core.state().program().timeStonesByte()),call.livesByte());
+            var ready=result.missingRead().isPresent()?before:IpxProgressFacts.from(result.progress()); // all fallible aggregates BEFORE any saved/checkpoint store
+            return Optional.of(new SonicCdAct3FutureWorldHost.IpxProgressStore(){
+                private boolean applied;
+                @Override public CdIpxProgress.Result result(){return result;}
+                @Override public void validate(){
+                    if(applied||ipxProgress!=before||levelProgram!=programme||programServices!=services||source!=media||ipxProgressLifetime!=lifetime)
+                        throw new IllegalStateException("Original complete Module progress preimage expired");
+                    requireAct3FutureLoadingVisit(core);core.requireIpxProgressCandidate(host,call,this);
+                }
+                @Override public void adoptAfterNative(){
+                    core.requireIpxProgressCommit(host,call,this);
+                    if(applied||ipxProgress!=before||levelProgram!=programme||programServices!=services||source!=media||ipxProgressLifetime!=lifetime)
+                        throw new IllegalStateException("Original prevalidated Module progress pair expired");
+                    ipxProgress=ready;applied=true; // saved high first; no callback/read/allocation follows this assignment
+                }
+            });
+        }
+        @Override public OptionalInt runR1UnlockByte(SonicCdAct3FutureWorldHost host){
+            if(host!=act3FutureHost)throw new IllegalStateException("Foreign returned RunR1 Host");
+            requireAct3FutureLoadingVisit(act3FutureLoading);act3FutureLoading.requireRunR1UnlockRead(host);
+            return ipxProgress.timeAttackUnlockByte(); // actual historical operand; empty is UNKNOWN, never zero
+        }
+        // END ORIGINAL IPX MODULE RECEIPT 20261107
+
         @Override public void resetGoodFutureFlags(SonicCdAct3FutureWorldHost host) {
             if(host!=act3FutureHost)throw new IllegalArgumentException("Foreign R13 first-load host");
             requireAct3FutureLoadingVisit(act3FutureLoading);var p=levelProgram;
@@ -408,7 +470,7 @@ public final class SonicCdGameModule implements GameModule {
                                 SonicCdAct2LoadingVisit.PastReturn retained, long generation,
                                 LevelProgramState program) { }
     private record Act2PastShared(SonicCdAct2PastLoadingVisit.Snapshot loading,
-                                  ProgramServicesState services, OptionalInt goodFutureFlags) { }
+                                  ProgramServicesState services, OptionalInt goodFutureFlags, IpxProgressImage ipxProgress) { }
     boolean act2PastRegistrySelected() { return stagedAct2Past != null || act2PastLoading != null; }
     boolean act2PastLoadingSelected() { return act2PastLoading != null; }
     SonicCdAct2PastLoadingVisit act2PastLoadingVisit() { validateAct2PastLoadingCut(); return act2PastLoading; }
@@ -678,7 +740,7 @@ public final class SonicCdGameModule implements GameModule {
                              SonicCdPastLoadingVisit.ExitCarry mainvars, int displayedVScrollLongBits,
                              long generation, LevelProgramState program) { }
     private record Act2OpeningShared(SonicCdAct2LoadingVisit.Snapshot loading, ProgramServicesState services,
-                                     LevelProgramState program, CdWarpScene.State warp, List<ProgramSound> sounds) {
+                                     LevelProgramState program, CdWarpScene.State warp, List<ProgramSound> sounds, IpxProgressImage ipxProgress) {
         private Act2OpeningShared { sounds = List.copyOf(sounds); }
     }
 
@@ -1016,7 +1078,7 @@ public final class SonicCdGameModule implements GameModule {
                              long generation, LevelProgramState program, CdAssetBytes savedObjectFlags,
                              CdOpeningObjectRuntime.DevGlobals retainedDev, CdCheckpointSaveData.State checkpointSaved) { }
     private record PastOpeningShared(SonicCdPastLoadingVisit.Snapshot loading, ProgramServicesState services,
-                                     LevelProgramState program) { }
+                                     LevelProgramState program, IpxProgressImage ipxProgress) { }
 
     boolean pastLoadingSelected() { return pastLoading != null; }
     PastLoadState pastLoadState() {
@@ -1717,7 +1779,7 @@ public final class SonicCdGameModule implements GameModule {
                         case OLD_BLACK_FADE -> LevelProgramPhase.OLD_BLACK_FADE;
                         case OLD_CLEAR_WAIT -> LevelProgramPhase.OLD_CLEAR_WAIT;
                         case OLD_RETURNED -> LevelProgramPhase.OLD_RETURNED;
-                        case OLD_IPX_RETURNED -> LevelProgramPhase.OLD_IPX_RETURNED;
+                        case OLD_IPX_RETURNED, OLD_IPX_BOSS_RETURNED -> LevelProgramPhase.OLD_IPX_RETURNED;
                         default -> LevelProgramPhase.ACT3_FUTURE_LOADING;
                     },levelProgram.goodFutureFlags());
         }
@@ -2147,7 +2209,7 @@ public final class SonicCdGameModule implements GameModule {
                                       CdOpeningObjectRuntime.Snapshot objects,
                                       SonicCdPlayerPresentation.ScrollPublication scroll,
                                       LevelProgramState program, CdWarpScene.State warp,
-                                      List<ProgramSound> sounds, ProgramServicesState services) {
+                                      List<ProgramSound> sounds, ProgramServicesState services, IpxProgressImage ipxProgress) {
         private OpeningSharedState { sounds = List.copyOf(sounds); Objects.requireNonNull(services); }
     }
     private final NativeRewindRestoreGuard<Object> sharedOpeningAdapter = new NativeRewindRestoreGuard<>() {
@@ -2155,38 +2217,46 @@ public final class SonicCdGameModule implements GameModule {
         @Override public Object capture() {
             if(act3FutureLoading!=null) {
                 validateAct3FutureLoadingCut();validateProgramServicesState(programServices);
-                return new Act3FutureShared(act3FutureLoading.capture(),programServices,levelProgram.goodFutureFlags());
+                var loading=act3FutureLoading.capture();
+                return new Act3FutureShared(loading,programServices,levelProgram.goodFutureFlags(),captureIpxProgress(loading.state()));
             }
             if (act2PastLoading != null) {
                 validateAct2PastLoadingCut(); validateProgramServicesState(programServices);
-                return new Act2PastShared(act2PastLoading.capture(),programServices,levelProgram.goodFutureFlags());
+                var loading=act2PastLoading.capture();
+                return new Act2PastShared(loading,programServices,levelProgram.goodFutureFlags(),captureIpxProgress(loading));
             }
             if (act2Loading != null) {
                 validateAct2LoadingCut(); validateProgramServicesState(programServices);
-                return new Act2OpeningShared(act2Loading.capture(), programServices, levelProgramState(), warpState, programSounds);
+                var loading=act2Loading.capture();
+                return new Act2OpeningShared(loading, programServices, levelProgramState(), warpState, programSounds,captureIpxProgress(loading));
             }
             if (pastLoading != null) {
                 validatePastLoadingCut(); validateProgramServicesState(programServices);
-                return new PastOpeningShared(pastLoading.capture(), programServices, levelProgramState());
+                var loading=pastLoading.capture();
+                return new PastOpeningShared(loading, programServices, levelProgramState(),captureIpxProgress(loading));
             }
             requireTerrainPlayerReady();
             requireOpeningClosedCut();
             playerActor.requireCompletedNativeFrame();
             validateProgramServicesState(programServices);
-            return new OpeningSharedState(playerFrame.captureShared(), openingObjects.captureClosedCut(),
-                    playerPresentation.captureScrollPublication(), levelProgramState(), warpState, programSounds, programServices);
+            var objects=openingObjects.captureClosedCut();
+            return new OpeningSharedState(playerFrame.captureShared(), objects,
+                    playerPresentation.captureScrollPublication(), levelProgramState(), warpState, programSounds, programServices,captureIpxProgress(objects));
         }
         @Override public void validateRestore(Object value) {
             if(act3FutureLoading!=null) {
                 if(!(value instanceof Act3FutureShared future))throw new IllegalArgumentException("Foreign programme epoch in R13");
-                validateAct3FutureLoadingCut();act3FutureLoading.validateRestore(future.loading());validateProgramServicesState(future.services());
+                validateAct3FutureLoadingCut();act3FutureLoading.validateRestore(future.loading());validateProgramServicesState(future.services());validateIpxProgress(future.ipxProgress(),future.loading().state());
+                if(future.loading().state().phase()==SonicCdAct3FutureLoadingVisit.Phase.OLD_IPX_BOSS_RETURNED
+                        &&future.ipxProgress().facts().savedLevel().zoneByte().isEmpty())
+                    throw new IllegalArgumentException("Returned boss capture requires its original known saved high BYTE");
                 if(future.goodFutureFlags().isPresent()&&(future.goodFutureFlags().getAsInt()&~255)!=0)
                     throw new IllegalArgumentException("Captured R13 flag exceeds BYTE");
                 return;
             }
             if (act2PastLoading != null) {
                 if (!(value instanceof Act2PastShared past)) throw new IllegalArgumentException("Foreign programme epoch in R12B");
-                validateAct2PastLoadingCut(); act2PastLoading.validateRestore(past.loading()); validateProgramServicesState(past.services());
+                validateAct2PastLoadingCut(); act2PastLoading.validateRestore(past.loading()); validateProgramServicesState(past.services());validateIpxProgress(past.ipxProgress(),past.loading());
                 // This private capture carries the actual mutable Results/first-load flag BYTE.
                 // Core's same-owner Snapshot was validated above; public equal values mint no restore.
                 if(past.goodFutureFlags().isPresent()&&(past.goodFutureFlags().getAsInt()&~255)!=0)
@@ -2195,13 +2265,13 @@ public final class SonicCdGameModule implements GameModule {
             }
             if (act2Loading != null) {
                 if (!(value instanceof Act2OpeningShared act2)) throw new IllegalArgumentException("Foreign programme epoch in Act2");
-                act2Loading.validateRestore(act2.loading(), act2.program()); validateProgramServicesState(act2.services());
+                act2Loading.validateRestore(act2.loading(), act2.program()); validateProgramServicesState(act2.services());validateIpxProgress(act2.ipxProgress(),act2.loading());
                 validateWarpProgramCut(act2.program(), act2.warp(), act2.sounds());
                 return;
             }
             if (pastLoading != null) {
                 if (!(value instanceof PastOpeningShared past)) throw new IllegalArgumentException("Prior programme snapshot in Past epoch");
-                pastLoading.validateRestore(past.loading(), past.program()); validateProgramServicesState(past.services());
+                pastLoading.validateRestore(past.loading(), past.program()); validateProgramServicesState(past.services());validateIpxProgress(past.ipxProgress(),past.loading());
                 if (!pastProgrammePhase(past.program().phase())) throw new IllegalArgumentException("Foreign Past programme phase");
                 return;
             }
@@ -2217,28 +2287,28 @@ public final class SonicCdGameModule implements GameModule {
             playerPresentation.validateScrollPublication(snapshot.scroll());
             validateLevelProgramCut(snapshot.program(), snapshot.frame(), snapshot.objects());
             validateWarpProgramCut(snapshot.program(), snapshot.warp(), snapshot.sounds());
-            validateProgramServicesState(snapshot.services());
+            validateProgramServicesState(snapshot.services());validateIpxProgress(snapshot.ipxProgress(),snapshot.objects());
         }
         @Override public void restore(Object value) {
             validateRestore(value); // Keep direct adapter restore guarded as well as composite restore.
             if(value instanceof Act3FutureShared future) {
                 var p=levelProgram;var ready=new LevelProgramState(p.demoMode(),p.timeStones(),p.specialStage(),p.usePlayer2(),
                         p.palFadeFlags(),p.gameMode(),p.levelStarted(),p.whiteFadeSteps(),p.phase(),future.goodFutureFlags());
-                try{act3FutureLoading.restore(future.loading());levelProgram=ready;programServices=future.services();}
+                try{act3FutureLoading.restore(future.loading());levelProgram=ready;programServices=future.services();ipxProgress=future.ipxProgress().facts();}
                 catch(RuntimeException|Error failure){closePlayerCycleAfterFailure(failure);throw failure;}
                 return;
             }
             if (value instanceof Act2PastShared past) {
                 var p=levelProgram;var ready=new LevelProgramState(p.demoMode(),p.timeStones(),p.specialStage(),p.usePlayer2(),
                         p.palFadeFlags(),p.gameMode(),p.levelStarted(),p.whiteFadeSteps(),p.phase(),past.goodFutureFlags());
-                try { act2PastLoading.restore(past.loading());levelProgram=ready;programServices = past.services(); }
+                try { act2PastLoading.restore(past.loading());levelProgram=ready;programServices = past.services();ipxProgress=past.ipxProgress().facts(); }
                 catch (RuntimeException | Error failure) { closePlayerCycleAfterFailure(failure); throw failure; }
                 return;
             }
             if (value instanceof Act2OpeningShared act2) {
                 try {
                     levelProgram = act2.program(); act2Loading.restore(act2.loading(), act2.program()); programServices = act2.services();
-                    warpState = act2.warp(); programSounds = act2.sounds();
+                    warpState = act2.warp(); programSounds = act2.sounds();ipxProgress=act2.ipxProgress().facts();
                 } catch (RuntimeException | Error failure) { closePlayerCycleAfterFailure(failure); throw failure; }
                 return;
             }
@@ -2247,7 +2317,7 @@ public final class SonicCdGameModule implements GameModule {
                     // The outer preflight validated the whole pair before this first adoption.
                     // Restore the programme phase before its flags/scroll projections select admission.
                     levelProgram = past.program();
-                    pastLoading.restore(past.loading(), past.program()); programServices = past.services();
+                    pastLoading.restore(past.loading(), past.program()); programServices = past.services();ipxProgress=past.ipxProgress().facts();
                 }
                 catch (RuntimeException | Error failure) { closePlayerCycleAfterFailure(failure); throw failure; }
                 return;
@@ -2260,6 +2330,7 @@ public final class SonicCdGameModule implements GameModule {
                 levelProgram = snapshot.program(); // Exact immutable adoption; no entry, fade or scene replay.
                 warpState = snapshot.warp(); programSounds = snapshot.sounds();
                 programServices = snapshot.services(); // Exact value adoption; never replay Start/load requests.
+                ipxProgress=snapshot.ipxProgress().facts(); // original captured facts, no NewGame/entry/effects replay
             } catch (RuntimeException | Error failure) {
                 closePlayerCycleAfterFailure(failure);
                 throw failure;
@@ -2438,6 +2509,14 @@ public final class SonicCdGameModule implements GameModule {
             var nextProgram = !openingObjectsAdmission ? null : carry == null
                     ? LevelProgramState.freshBeginLevel()
                     : Objects.requireNonNull(carry.program(), "Same-program reload requires its actual programme carry");
+            // Only this distinct fresh semantic entry establishes NewGame's source-written progress facts.
+            // The pre-existing later BeginLevel programme already supplies native timeStones0; no old stores replay.
+            var nextIpx=ipxProgress;var nextIpxLifetime=ipxProgressLifetime;
+            if(openingObjectsAdmission&&carry==null){
+                var fresh=CdIpxProgress.newGameStores(ipxProgress.project(nextProgram.timeStones()));
+                if(fresh.progress().timeStonesByte().orElseThrow()!=nextProgram.timeStones())throw new IllegalStateException("Fresh NewGame timeStones projection differs");
+                nextIpx=IpxProgressFacts.from(fresh.progress());nextIpxLifetime=new Object();
+            }
             // Declared DEV native V-int seed0 at this admitted cut, not measured retail entry.
             var loadVisit = openingObjectsAdmission ? new CheckpointLoadVisit(carry, candidate.assets(), mode) : null;
             boolean checkpoint = checkpointRestartStaged();
@@ -2516,6 +2595,7 @@ public final class SonicCdGameModule implements GameModule {
                     ProgramStartCall.DECLARED_BEGIN_LEVEL_INGRESS, programServices.loads(), programServices.initialization());
             playerPresentation.bindFrame(playerFrame, playerActor, openingObjects);
             levelProgram = nextProgram;
+            ipxProgress=nextIpx;ipxProgressLifetime=nextIpxLifetime; // exact fresh/carry adoption, never restore/load initialization
             // This explicitly later DEV assembly supersedes the source-position clear outputs.
             // It does not pretend the omitted native Title/PLC/load prelude executed.
             programServices = selectedDevCut; programStartVideo = null;

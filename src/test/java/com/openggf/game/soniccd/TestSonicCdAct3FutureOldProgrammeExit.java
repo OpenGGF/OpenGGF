@@ -47,7 +47,7 @@ class TestSonicCdAct3FutureOldProgrammeExit {
  }
  @Test void appendedEnumsAndDistinctFrameApisKeepLegacyOrdinalsAndNoNewFactory()throws Exception{
   assertEquals(List.of(Phase.ENTRY,Phase.INITIAL_TO_WHITE,Phase.INITIAL_TO_BLACK,Phase.FIRST_PLC,Phase.LEVEL_PLC,Phase.FROM_WHITE,Phase.FROM_BLACK,Phase.READY),Arrays.asList(Phase.values()).subList(0,8));
-  assertEquals(13,Phase.values().length);assertEquals(12,Boundary.values().length);assertEquals(40,Action.values().length);assertEquals(67,Call.values().length);assertEquals(56,Call.RESULTS_PLC_APPEND.ordinal());
+  assertEquals(14,Phase.values().length);assertEquals(14,Boundary.values().length);assertEquals(40,Action.values().length);assertEquals(68,Call.values().length);assertEquals(56,Call.RESULTS_PLC_APPEND.ordinal());
   for(var row:List.of(new Object[]{"serviceAct3FutureOldProgrammeExitPaletteFade",6},new Object[]{"serviceAct3FutureOldProgrammeExitLoad",7})){var methods=Arrays.stream(CdPlayerFrameRuntime.class.getDeclaredMethods()).filter(m->m.getName().equals(row[0])).toList();assertEquals(1,methods.size());var m=methods.getFirst();assertTrue(java.lang.reflect.Modifier.isPublic(m.getModifiers()));assertFalse(java.lang.reflect.Modifier.isStatic(m.getModifiers()));assertEquals(((Number)row[1]).intValue(),m.getParameterCount());assertEquals(void.class,m.getReturnType());assertEquals(CdR13FutureAssets.class,m.getParameterTypes()[1]);}
   var seam=SonicCdAct3FutureObjectPass.class.getDeclaredMethod("abandonCompletedWalk");assertEquals(void.class,seam.getReturnType());assertFalse(java.lang.reflect.Modifier.isPublic(seam.getModifiers()));
  }
