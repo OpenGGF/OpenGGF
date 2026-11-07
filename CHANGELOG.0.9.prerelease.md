@@ -369,6 +369,9 @@ matching area heading; see the
   one internal implementation across the R13 and R31 Hosts, preserving the native
   896-byte prefix and genuine 128-byte selected tail. The reuse decision keeps
   authentic programme data separate while consolidating lifecycle algorithms.
+  R13 and R31 now use one internal ordinary scheduler with the original Frame,
+  selected old CPU, full-WORD palette gate and typed native-transfer outcome.
+  Invalid held input is rejected before borrowing or retiring a healthy loop.
   A finite IPX progress
   component preserves unknown-byte and save-field alias semantics. Its actual
   boss-return join now publishes saved-zone/checkpoint state once and retains it

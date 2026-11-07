@@ -173,7 +173,7 @@ class TestSonicCdAct3FutureDeathCameraWorld {
             bounds(f.frame,0x456);assertThrows(IllegalArgumentException.class,()->f.frame.applyPreparedObjectSolidPublication(prepared));
             assertThrows(IllegalArgumentException.class,()->f.frame.prepareAct3FutureLevelMainDeathCamera(f.assets,s,env,0x101));
             assertEquals(0x456,f.frame.environment().movement().bounds().bottom());
-            assertThrows(IllegalStateException.class,()->f.host.prepareLevelMainDeathCamera(0x101));assertThrows(IllegalStateException.class,()->f.world.requireCut(SonicCdAct3FutureOrdinaryLoop.Cut.POST_OBJECT_CAMERA));
+            assertThrows(IllegalStateException.class,()->f.host.prepareLevelMainDeathCamera(0x101));assertThrows(IllegalStateException.class,()->f.world.requireCut(CdOrdinaryLoop.Cut.POST_OBJECT_CAMERA));
             debug(f.frame,1);assertThrows(IllegalStateException.class,()->f.frame.prepareAct3FutureLevelMainDeathCamera(f.assets,f.frame.state(),f.frame.environment(),1));
         }
     }
@@ -209,7 +209,7 @@ class TestSonicCdAct3FutureDeathCameraWorld {
         boolean before=false,after=false;for(int ordinal=1;ordinal<=40;ordinal++)try(var f=new FaultFixture(TestCdR13PlaneSources.actual().getFirst(),3)) {
             f.ready();f.core.service(0);actor(f.frame,6,0x200,0,-0x100,0);camera(f.host,0x0101BEEF,0x789,0);bounds(f.frame,0x310);
             var original=new AssertionError("original post-walk authority fault "+ordinal);int at=ordinal;int[] calls={0};boolean[] fired={false};
-            f.auth.hook=()->{if(cutIs(f.world,SonicCdAct3FutureOrdinaryLoop.Cut.POST_OBJECT_CAMERA)&&++calls[0]==at){fired[0]=true;throw original;}};
+            f.auth.hook=()->{if(cutIs(f.world,CdOrdinaryLoop.Cut.POST_OBJECT_CAMERA)&&++calls[0]==at){fired[0]=true;throw original;}};
             try{f.core.service(0);assertFalse(fired[0]);}catch(AssertionError error){assertSame(original,error);assertTrue(f.core.failed());}
             f.auth.hook=()->{};int bottom=f.frame.environment().movement().bounds().bottom();int dest=rawScroll(f.host).foreground().destBottomBound();
             assertEquals(0x01FF0000,f.frame.state().motion().centreY16_16());assertEquals(4,f.frame.state().history().index());
@@ -224,7 +224,7 @@ class TestSonicCdAct3FutureDeathCameraWorld {
     private static SonicCdAct3FutureWorldHost.Video rawVideo(SonicCdAct3FutureWorldHost h)throws Exception{return (SonicCdAct3FutureWorldHost.Video)rawHost(h,"video");}
     private static SonicCdAct3FutureLoadingVisit.Scroll rawScroll(SonicCdAct3FutureWorldHost h)throws Exception{return (SonicCdAct3FutureLoadingVisit.Scroll)rawHost(h,"scroll");}
     @SuppressWarnings("unchecked") private static List<SonicCdGameModule.PastSound> rawSounds(SonicCdAct3FutureWorldHost h)throws Exception{return (List<SonicCdGameModule.PastSound>)rawHost(h,"sounds");}
-    private static boolean cutIs(SonicCdAct3FutureOrdinaryWorld world,SonicCdAct3FutureOrdinaryLoop.Cut cut){try{var f=SonicCdAct3FutureOrdinaryWorld.class.getDeclaredField("cut");f.setAccessible(true);return f.get(world)==cut;}catch(ReflectiveOperationException error){throw new AssertionError(error);}}
+    private static boolean cutIs(SonicCdAct3FutureOrdinaryWorld world,CdOrdinaryLoop.Cut cut){try{var f=SonicCdAct3FutureOrdinaryWorld.class.getDeclaredField("cut");f.setAccessible(true);return f.get(world)==cut;}catch(ReflectiveOperationException error){throw new AssertionError(error);}}
     private static TestSonicCdAct3FutureWorldHost.Fixture ready(CdR13FutureAssets a){var f=new TestSonicCdAct3FutureWorldHost.Fixture(a,3);f.ready();f.core.service(0);return f;}
     /** Labelled component actor ingress; legitimate CaptureOwner is reused only inside this test fixture. */
     static void actor(CdPlayerFrameRuntime frame,int routine,int y,int reset,int yVelocity,int control){

@@ -1,5 +1,35 @@
 # Implement Sonic CD with complete regional parity
 
+## 7 November 2026 — one ordinary scheduler, qualified live routes
+
+Package-private `CdOrdinaryLoop` replaces both the R13 and R31 scheduling
+algorithms. The real R13 World/Host now use its cuts; source-specific R31 component
+contracts use the same kernel. The exact retained `CdStagePlayerSource` is checked
+against its actual Frame. Actual World/epoch/callback/publication custody remains
+in the existing private owner, not in enum values or completed data. Two old
+scheduler sources and their obsolete generated classes were removed.
+
+The common sequence borrows OLD CPU once, preserves the original Frame input,
+service/Finish/count/pause and selected-picture settlement, then advances the level
+WORD and physical walk. A private owner returns a typed completed transfer or the
+ordinary tail. A healthy transfer skips Draw, time-stop, tail and RETURN checks
+without failure retirement; an unowned transfer still throws its original fault.
+After Draw, the full timeStop WORD gates only palette cycling; section, PLC and
+global animation continue. Tidal deferred frame service is not admitted through
+this standard programme. R13's invalid held values now follow R31's safe outer
+preflight, before callbacks/catches, with an explicit regression.
+
+R89 compiled production but stopped test compilation at one fixture constructor
+still passing the old asset type; no test ran. R89b changed only that argument and
+passes128/0F/E/S on identical source across eight classes: both Hosts, both source
+loop contracts, selected-HScroll helper, death-camera World, both natural
+Boss/Capsule/Results cases and all seven controller cases. Existing FULL/course
+state and pixel assertions remain exercised. This removes duplicated standard
+scheduling while preserving the measured21931 return; it grants no fresh CCZ
+World/Ready/ordinary/pixel or full-USA/regional completion claim. Broader lifecycle
+and reader consolidation remain active. Only this plan and the prerelease
+changelog change after the successful run; tested Java remains exact.
+
 ## 7 November 2026 — runtime reuse decision and first caller migration
 
 One shared CD lifecycle is the selected architecture. Programme identities and

@@ -4,7 +4,7 @@ import com.openggf.game.soniccd.objects.*;
 import com.openggf.game.soniccd.player.*;
 import com.openggf.game.soniccd.resources.*;
 import java.util.*;
-import static com.openggf.game.soniccd.SonicCdAct3FutureOrdinaryLoop.Cut;
+import static com.openggf.game.soniccd.CdOrdinaryLoop.Cut;
 /** Exact retained source/Frame/Core/Host ordinary composition; native Main333-432,VInt821-847.
  * No State, constructed Host, equal receipt or component Authority grants Module/FULL admission.
  * Original body, art, HUD, placement and physical-pass owners execute once; no completed effects replay.
@@ -15,14 +15,14 @@ final class SonicCdAct3FutureOrdinaryWorld implements SonicCdAct3FutureLoadingVi
  private final SonicCdAct3FutureWorldHost.Authority authority;private final SonicCdAct3FutureLoadingVisit core;private final SonicCdAct3FutureWorldHost host;
  private final CdPlayerFrameRuntime frame;private final CdR13FutureAssets assets;private final CdR13SectionArt art;private final CdR13ObjectAssets metadata;
  private final CdR13FutureScrollPalette palette;private final CdPlayerObjectTouch scanner;private final CdPlayerTouchResponse response;
- private final SonicCdAct3FutureObjectPass objects;private final SonicCdAct3FutureOrdinaryLoop loop;
+ private final SonicCdAct3FutureObjectPass objects;private final CdOrdinaryLoop loop;
  private SonicCdAct3FutureLoadingVisit.OrdinaryAccess active;private Cut cut;private boolean walkReturned;
  SonicCdAct3FutureOrdinaryWorld(SonicCdAct3FutureWorldHost.Authority authority,SonicCdAct3FutureLoadingVisit core,SonicCdAct3FutureWorldHost host,
                                CdPlayerFrameRuntime frame,CdR13FutureAssets assets,CdR13SectionArt art,CdR13ObjectAssets metadata,CdR13PlayerCollisionAssets collision){
   this.authority=Objects.requireNonNull(authority);this.core=Objects.requireNonNull(core);this.host=Objects.requireNonNull(host);this.frame=Objects.requireNonNull(frame);this.assets=Objects.requireNonNull(assets);this.art=Objects.requireNonNull(art);this.metadata=Objects.requireNonNull(metadata);Objects.requireNonNull(collision);
   if(core.assets()!=assets||!frame.stageSource().ownsAct3Future(assets)||!art.ownsAssets(assets)||!metadata.ownsAssets(assets)||!collision.ownsAssets(assets))throw new IllegalArgumentException("Exact R13 Core/Frame/source/art/metadata relation required");
   palette=CdR13FutureScrollPalette.bind(assets);scanner=new CdPlayerObjectTouch(collision.touchDimensions());response=CdPlayerTouchResponse.fromAct3FutureAssets(collision);
-  objects=new SonicCdAct3FutureObjectPass(new ObjectPorts(),assets,metadata,frame,host.placement());loop=new SonicCdAct3FutureOrdinaryLoop(frame,assets,new LoopPorts());frame.bindArtPublication(this::playerArt);
+  objects=new SonicCdAct3FutureObjectPass(new ObjectPorts(),assets,metadata,frame,host.placement());loop=new CdOrdinaryLoop(frame,frame.stageSource(),new LoopPorts());frame.bindArtPublication(this::playerArt);
  }
  private void require(){host.requireRenderIdle();host.requireAuthority(authority,this);if(active==null||frame.closed()||!frame.stageSource().ownsAct3Future(assets))throw new IllegalStateException("No actual R13 ordinary continuation");active.requireOwner(this);}
  Object actualScope(){require();return active;}
@@ -59,8 +59,8 @@ final class SonicCdAct3FutureOrdinaryWorld implements SonicCdAct3FutureLoadingVi
   frame.applyPreparedObjectSolidPublication(fp);host.adoptAfterNative(hp);
  }
  // END R13 LEVEL MAIN DEATH CAMERA WORLD JOIN 20261107
- private final class LoopPorts implements SonicCdAct3FutureOrdinaryLoop.Ports {
-  public void requireCurrent(Cut at,CdPlayerFrameRuntime f,CdR13FutureAssets a){require();if(f!=frame||a!=assets)throw new IllegalArgumentException("Another ordinary loop");cut=at;}
+ private final class LoopPorts implements CdOrdinaryLoop.Ports {
+  public void requireCurrent(Cut at,CdPlayerFrameRuntime f,CdStagePlayerSource a){require();if(f!=frame||a!=frame.stageSource())throw new IllegalArgumentException("Another ordinary loop");cut=at;}
   public Optional<CdObjectDrawQueue.CpuSat> beforeSelector8(){require();return host.beforeSelector8();}
   public void publishLevel(Optional<CdObjectDrawQueue.CpuSat> selected){require();var s=active.state();host.publishOrdinary(s.normalPalette(),selected);adopt(host.globals(),s.section(),s.level(),s.hudSlots(),s.normalPalette(),s.normalPalette(),List.of(),host.video().completedCpu());}
   public void updateAnimTiles(){require();var s=active.state();var l=s.level();var gate=CdPowerupArtRuntime.gate(l.powerup());var next=new CdLevelGlobals(l.levelRestart(),l.updateHudTime(),l.checkpoint(),l.spawnMode(),l.plcLoadFlags(),l.flowerCount(),l.fadeEnableDisplay(),gate.powerup(),l.timeOver());adopt(host.globals(),s.section(),next,s.hudSlots(),s.normalPalette(),s.displayedPalette(),List.of(),host.video().completedCpu());if(gate.copyRequired())throw new Stopped(Boundary.ACTIVE_POWERUP_CPU);}
@@ -76,14 +76,15 @@ final class SonicCdAct3FutureOrdinaryWorld implements SonicCdAct3FutureLoadingVi
   public void settleSelectedCpu(Optional<CdObjectDrawQueue.CpuSat> selected){require();host.settleOrdinary(selected);}
   public void spawnObjects(){require();host.placement().spawnObjects(host.scroll().foreground().cameraX(),frame.environment().movement().gates().timeZone());}
   public void runObjects(int levelFrame){require();walkReturned=false;objects.runWalk(levelFrame);walkReturned=true;}
-  public boolean postObjectCameraTransferred(){
+  public CdOrdinaryLoop.MainContinuation postObjectCamera(){
    require();var s=active.state();var g=frame.environment().movement().gates();
-   if(s.program().demoDataIndexWord()!=0x800&&s.level().levelRestart()==2&&g.timeZone()==1&&g.zoneAct()==0x100){active.beginOldExit(SonicCdAct3FutureOrdinaryWorld.this);return true;}
-   postObjectCamera();return false;
+   if(s.program().demoDataIndexWord()!=0x800&&s.level().levelRestart()==2&&g.timeZone()==1&&g.zoneAct()==0x100){active.beginOldExit(SonicCdAct3FutureOrdinaryWorld.this);return CdOrdinaryLoop.MainContinuation.TRANSFERRED;}
+   continueCamera();return CdOrdinaryLoop.MainContinuation.ORDINARY_TAIL;
   }
-  public void postObjectCamera(){require();var s=active.state();if(s.program().demoDataIndexWord()==0x800||s.level().levelRestart()!=0)throw new Stopped(Boundary.LEVEL_FLOW);if(frame.environment().globals().debugMode()==0&&frame.state().motion().routine()>=6){deathCamera();return;}host.scrollOrdinary(s.level().updateHudTime());}
+  private void continueCamera(){require();var s=active.state();if(s.program().demoDataIndexWord()==0x800||s.level().levelRestart()!=0)throw new Stopped(Boundary.LEVEL_FLOW);if(frame.environment().globals().debugMode()==0&&frame.state().motion().routine()>=6){deathCamera();return;}host.scrollOrdinary(s.level().updateHudTime());}
   public void drawObjects(){require();var s=host.scroll();var b=s.background();objects.finishDraw(new CdObjectDrawQueue.DrawCameras(new CdObjectDrawQueue.CameraWords(s.foreground().cameraX(),s.foreground().cameraYWord()),new CdObjectDrawQueue.CameraWords(b.cameraBgXWord(),b.cameraBgYWord()),new CdObjectDrawQueue.CameraWords(b.cameraBg3X()>>>16,b.cameraBg3Y()>>>16)));}
-  public void paletteCycleIfTimeRunning(){require();var s=active.state();var g=host.globals();var result=palette.palette(new CdR13FutureScrollPalette.PaletteState(s.normalPalette(),g.paletteTimers7(),g.paletteSteps7()),g.ring().timeStopTimer());var n=result.state();var ready=SonicCdAct3FutureWorldHost.with(g,g.ring(),g.live(),g.contact(),g.score(),g.pauseMusicBit(),g.bonus(),g.animations(),n.steps(),n.timers());adopt(ready,s.section(),s.level(),s.hudSlots(),n.palette(),s.displayedPalette(),List.of(),host.video().completedCpu());if(!result.completed())throw new Stopped(Boundary.PALETTE_SOURCE);}
+  public int timeStopWord(){requireCut(Cut.READ_TIME_STOP_WORD);return host.globals().ring().timeStopTimer();}
+  public void paletteCycle(){requireCut(Cut.PALETTE_CYCLE);var s=active.state();var g=host.globals();var result=palette.palette(new CdR13FutureScrollPalette.PaletteState(s.normalPalette(),g.paletteTimers7(),g.paletteSteps7()),g.ring().timeStopTimer());var n=result.state();var ready=SonicCdAct3FutureWorldHost.with(g,g.ring(),g.live(),g.contact(),g.score(),g.pauseMusicBit(),g.bonus(),g.animations(),n.steps(),n.timers());adopt(ready,s.section(),s.level(),s.hudSlots(),n.palette(),s.displayedPalette(),List.of(),host.video().completedCpu());if(!result.completed())throw new Stopped(Boundary.PALETTE_SOURCE);}
   public void updateSectionArt(){require();active.updateSection(active.state());}
   public void preparePlc(){require();active.preparePlc(active.state());}
   public void updateGlobalAnimations(){require();var g=host.globals();var extras=g.animations().orElseThrow(()->new Stopped(Boundary.MISSING_GLOBAL_ANIMATIONS));var out=CdGlobalObjectAnimation.step(extras,g.ring());globals(SonicCdAct3FutureWorldHost.with(g,out.ring(),g.live(),g.contact(),g.score(),g.pauseMusicBit(),g.bonus(),Optional.of(out.extras()),g.paletteSteps7(),g.paletteTimers7()),List.of());}

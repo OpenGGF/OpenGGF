@@ -1,6 +1,6 @@
 package com.openggf.game.soniccd;
 
-import com.openggf.game.soniccd.level.CdR31aAssets;
+import com.openggf.game.soniccd.level.CdStagePlayerSource;
 import com.openggf.game.soniccd.objects.CdObjectDrawQueue.CpuSat;
 import com.openggf.game.soniccd.player.CdPlayerFrameRuntime;
 
@@ -8,12 +8,14 @@ import java.util.Objects;
 import java.util.Optional;
 
 /**
- * R3 semantic Main333-432 / VInt_Level821-847 scheduling, N1ecc5f3a.
+ * Shared standard Main333-432 / VInt_Level821-847 scheduling, N1ecc5f3a.
+ * Original source-bound Worlds supply their actual primary, zone and transfer owners.
+ * Tidal deferred frame service is a different semantic programme, not admitted here.
  * The real private ports own source/World/epoch/thread/current pair and every reached
  * producer. This component owns no native values, input/clock algorithm, pool,
  * capture participant, current art, physical walk or World invocation authority.
  */
-final class SonicCdR31aOrdinaryLoop {
+final class CdOrdinaryLoop {
     enum Cut {
         BEFORE_SELECTOR8, PREPARE_INPUT, PUBLISH_LEVEL, UPDATE_ANIM_TILES, COPY_CAMERA_DRAW_LEVEL,
         SERVICE_SLOW_PLC, UPDATE_HUD, MAIN_MUSIC, SETTLE_SELECTED_CPU, ADVANCE_LEVEL_FRAME,
@@ -21,9 +23,12 @@ final class SonicCdR31aOrdinaryLoop {
         PALETTE_CYCLE, UPDATE_SECTION_ART, PREPARE_PLC, UPDATE_GLOBAL_ANIMATIONS, RETURN
     }
 
+    /** Completed private owner outcome; the enum itself grants no transfer authority. */
+    enum MainContinuation { ORDINARY_TAIL, TRANSFERRED }
+
     interface Ports {
         /** Actual private invocation/source/epoch/current-pair validation at each reached cut. */
-        void requireCurrent(Cut cut, CdPlayerFrameRuntime frame, CdR31aAssets assets);
+        void requireCurrent(Cut cut, CdPlayerFrameRuntime frame, CdStagePlayerSource source);
         /** Source VScroll selection and the existing OLD CPU image; never a newly built SAT. */
         Optional<CpuSat> beforeSelector8();
         /** After actual ReadControllers, before the Frame's bound Sonic art publication. */
@@ -40,33 +45,33 @@ final class SonicCdR31aOrdinaryLoop {
         /** Actual increasing physical walk; a returned data value cannot attest its completion. */
         void runObjects(int actualLevelFrame);
         /**
-         * Main405-418: actual demo/restart tests, then death bounds or CC events/scroll.
-         * A reached unowned LevelStart/lifecycle transfer must throw its original typed fault;
-         * returning grants only continuation to the ordinary Draw/tail, never transfer success.
+         * Main405-418: actual demo/restart tests, then death bounds or zone events/scroll.
+         * TRANSFERRED requires the actual owner to have completed its native transfer prefix.
+         * A reached unowned lifecycle action throws its original typed fault before the tail.
          */
-        void postObjectCamera();
+        MainContinuation postObjectCamera();
         void drawObjects();
         /** Reached TST.W timeStopTimer (Main423), not a byte/boolean projection. */
         int timeStopWord();
         void paletteCycle();
-        /** Actual R31 section owner; not the R13 Act3 RTS profile. */
+        /** Actual source section owner, including a source-proven RTS programme. */
         void updateSectionArt();
         void preparePlc();
         void updateGlobalAnimations();
     }
 
     private final CdPlayerFrameRuntime frame;
-    private final CdR31aAssets assets;
+    private final CdStagePlayerSource source;
     private final Ports ports;
     private boolean running;
     private boolean failed;
 
-    SonicCdR31aOrdinaryLoop(CdPlayerFrameRuntime frame, CdR31aAssets assets, Ports ports) {
+    CdOrdinaryLoop(CdPlayerFrameRuntime frame, CdStagePlayerSource source, Ports ports) {
         this.frame = Objects.requireNonNull(frame, "actual Frame");
-        this.assets = Objects.requireNonNull(assets, "actual original R31 assets");
-        this.ports = Objects.requireNonNull(ports, "actual private R31 ports");
-        if (!frame.stageSource().ownsR31aAssets(assets)) {
-            throw new IllegalArgumentException("Ordinary loop requires the Frame's exact retained R31 pair");
+        this.source = Objects.requireNonNull(source, "actual retained stage source");
+        this.ports = Objects.requireNonNull(ports, "actual private World ports");
+        if (frame.stageSource() != source) {
+            throw new IllegalArgumentException("Ordinary loop requires the Frame's exact retained source");
         }
         requireIdle();
     }
@@ -103,7 +108,9 @@ final class SonicCdR31aOrdinaryLoop {
             int actualLevelFrame = frame.advanceLevelMainFrame();
             at(Cut.SPAWN_OBJECTS, ports::spawnObjects);
             at(Cut.RUN_OBJECTS, () -> ports.runObjects(actualLevelFrame));
-            at(Cut.POST_OBJECT_CAMERA, ports::postObjectCamera);
+            check(Cut.POST_OBJECT_CAMERA);
+            if (Objects.requireNonNull(ports.postObjectCamera(), "actual Main continuation")
+                    == MainContinuation.TRANSFERRED) return;
             at(Cut.DRAW_OBJECTS, ports::drawObjects);
             check(Cut.READ_TIME_STOP_WORD);
             int timeStop = ports.timeStopWord();
@@ -128,12 +135,12 @@ final class SonicCdR31aOrdinaryLoop {
     }
 
     private void check(Cut cut) {
-        if (!running || failed) throw new IllegalStateException("No active R31 ordinary-loop scope");
-        ports.requireCurrent(cut, frame, assets);
+        if (!running || failed) throw new IllegalStateException("No active Ordinary-loop scope");
+        ports.requireCurrent(cut, frame, source);
     }
 
     private void requireIdle() {
-        if (running) throw new IllegalStateException("R31 ordinary-loop reentry");
-        if (failed || frame.closed()) throw new IllegalStateException("R31 ordinary-loop admission is closed");
+        if (running) throw new IllegalStateException("Ordinary-loop reentry");
+        if (failed || frame.closed()) throw new IllegalStateException("Ordinary-loop admission is closed");
     }
 }

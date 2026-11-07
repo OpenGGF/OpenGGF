@@ -23,7 +23,7 @@ class TestSonicCdR31aOrdinaryLoop {
 
     @Test void firstRunUsesActualFrameInitFinishAndTheCompleteNativeSchedule() throws Exception {
         try(var h=new Harness()){
-            var old=h.queue.cpuSat();h.loop.run(8);assertEquals(ORDER,h.order);assertEquals(Arrays.asList(SonicCdR31aOrdinaryLoop.Cut.values()),h.cuts);
+            var old=h.queue.cpuSat();h.loop.run(8);assertEquals(ORDER,h.order);assertEquals(Arrays.asList(CdOrdinaryLoop.Cut.values()),h.cuts);
             assertEquals(1,h.frame.environment().globals().levelFrames());assertEquals(1,h.frame.vIntClock().deltaSinceAdmittedCut());assertTrue(h.frame.vIntClock().absoluteValue().isEmpty());
             assertEquals(CdPlayerBody.Boundary.INIT_RETURN,h.body.result().boundary());assertEquals(2,h.frame.state().motion().routine());assertEquals(h.assets.range(CdR31aAssets.Asset.MAP_SPR_SONIC).nativeAddress(),h.frame.state().header().mappingAddress());
             assertSame(old,h.published.orElseThrow());assertSame(h.published,h.settled);assertNotSame(old,h.queue.cpuSat());assertEquals(1,h.beforeReads);assertEquals(8,h.frame.environment().controls().rawHeld());assertEquals(8,h.frame.environment().controls().rawTap());
@@ -36,7 +36,7 @@ class TestSonicCdR31aOrdinaryLoop {
 
     @Test void pauseHoldReleaseAndUnpauseKeepOriginalRawEdgesAndSkipEveryMainTail() throws Exception {
         try(var h=new Harness()){
-            for(int held:new int[]{128,128,0}){h.order.clear();h.cuts.clear();h.loop.run(held);assertTrue(h.frame.paused());assertNull(h.body);assertEquals(0,h.frame.environment().globals().levelFrames());assertFalse(h.order.contains("SPAWN"));assertFalse(h.order.contains("TIME"));assertEquals(SonicCdR31aOrdinaryLoop.Cut.RETURN,h.cuts.getLast());}
+            for(int held:new int[]{128,128,0}){h.order.clear();h.cuts.clear();h.loop.run(held);assertTrue(h.frame.paused());assertNull(h.body);assertEquals(0,h.frame.environment().globals().levelFrames());assertFalse(h.order.contains("SPAWN"));assertFalse(h.order.contains("TIME"));assertEquals(CdOrdinaryLoop.Cut.RETURN,h.cuts.getLast());}
             h.order.clear();h.loop.run(128);assertFalse(h.frame.paused());assertEquals(128,h.frame.environment().controls().rawTap());assertEquals(CdPlayerBody.Boundary.INIT_RETURN,h.body.result().boundary());assertEquals(1,h.frame.environment().globals().levelFrames());assertEquals(4,h.frame.vIntClock().deltaSinceAdmittedCut());assertEquals(1,Collections.frequency(h.order,"BODY"));
         }
     }
@@ -46,7 +46,7 @@ class TestSonicCdR31aOrdinaryLoop {
     }
 
     @Test void caughtReentryAtEveryCutIncludingInvalidNestedInputCannotPoisonTheOuterRun() throws Exception {
-        try(var h=new Harness()){h.nested=true;h.loop.run(8);assertEquals(ORDER,h.order);assertEquals(2*SonicCdR31aOrdinaryLoop.Cut.values().length,h.nestedRejected);assertEquals(1,h.beforeReads);assertEquals(1,h.frame.vIntClock().deltaSinceAdmittedCut());}
+        try(var h=new Harness()){h.nested=true;h.loop.run(8);assertEquals(ORDER,h.order);assertEquals(2*CdOrdinaryLoop.Cut.values().length,h.nestedRejected);assertEquals(1,h.beforeReads);assertEquals(1,h.frame.vIntClock().deltaSinceAdmittedCut());}
     }
 
     @Test void everyPortRuntimeExceptionAndErrorPreservesItsExactPrefixAndRetires() throws Exception {
@@ -58,13 +58,13 @@ class TestSonicCdR31aOrdinaryLoop {
     }
 
     @Test void everyAuthorityCutFaultStopsBeforeItsOperationAndCannotBeRetried() throws Exception {
-        for(var cut:SonicCdR31aOrdinaryLoop.Cut.values())try(var h=new Harness()){
+        for(var cut:CdOrdinaryLoop.Cut.values())try(var h=new Harness()){
             h.cutStop=cut;h.original=new AssertionError("stale original authority "+cut);assertSame(h.original,assertThrows(AssertionError.class,()->h.loop.run(8)));assertEquals(cut,h.cuts.getLast());var old=List.copyOf(h.cuts);assertThrows(IllegalStateException.class,()->h.loop.run(8));assertEquals(old,h.cuts);
         }
     }
 
     @Test void actualPortCustodyMayExpireAfterBodyAndItsOriginalFaultIsNotNormalized() throws Exception {
-        try(var h=new Harness()){h.cutStop=SonicCdR31aOrdinaryLoop.Cut.POST_OBJECT_CAMERA;h.original=new UnsupportedOperationException("constructed actual source/epoch owner expired");assertSame(h.original,assertThrows(UnsupportedOperationException.class,()->h.loop.run(0)));assertEquals(2,h.frame.state().motion().routine());assertFalse(h.order.contains("CAMERA"));assertFalse(h.order.contains("DRAW"));assertFalse(h.order.contains("SECTION"));}
+        try(var h=new Harness()){h.cutStop=CdOrdinaryLoop.Cut.POST_OBJECT_CAMERA;h.original=new UnsupportedOperationException("constructed actual source/epoch owner expired");assertSame(h.original,assertThrows(UnsupportedOperationException.class,()->h.loop.run(0)));assertEquals(2,h.frame.state().motion().routine());assertFalse(h.order.contains("CAMERA"));assertFalse(h.order.contains("DRAW"));assertFalse(h.order.contains("SECTION"));}
     }
 
     @Test void selectedOldCpuIsBorrowedOnceAndNeverReplacedByTheNowCpu() throws Exception {
@@ -85,7 +85,7 @@ class TestSonicCdR31aOrdinaryLoop {
 
     @Test void nullForeignSameImageAndClosedFrameRejectBeforeAnyCallerPort() throws Exception {
         try(var h=new Harness()){
-            assertThrows(NullPointerException.class,()->new SonicCdR31aOrdinaryLoop(null,h.assets,h));assertThrows(NullPointerException.class,()->new SonicCdR31aOrdinaryLoop(h.frame,null,h));assertThrows(NullPointerException.class,()->new SonicCdR31aOrdinaryLoop(h.frame,h.assets,null));assertThrows(IllegalArgumentException.class,()->new SonicCdR31aOrdinaryLoop(h.frame,actual().get(1),h));assertTrue(h.cuts.isEmpty());h.frame.close();assertThrows(IllegalStateException.class,()->new SonicCdR31aOrdinaryLoop(h.frame,h.assets,h));assertThrows(IllegalStateException.class,()->h.loop.run(0));assertTrue(h.order.isEmpty());
+            assertThrows(NullPointerException.class,()->new CdOrdinaryLoop(null,h.frame.stageSource(),h));assertThrows(NullPointerException.class,()->new CdOrdinaryLoop(h.frame,null,h));assertThrows(NullPointerException.class,()->new CdOrdinaryLoop(h.frame,h.frame.stageSource(),null));assertThrows(IllegalArgumentException.class,()->new CdOrdinaryLoop(h.frame,CdStagePlayerSource.fromR31aAssets(actual().get(1)),h));assertTrue(h.cuts.isEmpty());h.frame.close();assertThrows(IllegalStateException.class,()->new CdOrdinaryLoop(h.frame,h.frame.stageSource(),h));assertThrows(IllegalStateException.class,()->h.loop.run(0));assertTrue(h.order.isEmpty());
         }
     }
 
@@ -114,21 +114,21 @@ class TestSonicCdR31aOrdinaryLoop {
     }
 
     @Test void kernelAddsOnlySchedulingReferencesAndFlagsWithoutValueOrCaptureState() throws Exception {
-        assertFalse(Modifier.isPublic(SonicCdR31aOrdinaryLoop.class.getModifiers()));assertEquals(List.of(3),Arrays.stream(SonicCdR31aOrdinaryLoop.class.getDeclaredConstructors()).map(c->c.getParameterCount()).toList());assertTrue(Arrays.stream(SonicCdR31aOrdinaryLoop.class.getDeclaredMethods()).noneMatch(m->Modifier.isPublic(m.getModifiers())));assertEquals(20,SonicCdR31aOrdinaryLoop.Cut.values().length);assertEquals(18,SonicCdR31aOrdinaryLoop.Ports.class.getDeclaredMethods().length);
-        var types=Arrays.stream(SonicCdR31aOrdinaryLoop.class.getDeclaredFields()).map(f->f.getType().getSimpleName()).sorted().toList();assertEquals(List.of("CdPlayerFrameRuntime","CdR31aAssets","Ports","boolean","boolean"),types);assertTrue(Arrays.stream(SonicCdR31aOrdinaryLoop.Ports.class.getDeclaredMethods()).noneMatch(m->m.isDefault()));
+        assertFalse(Modifier.isPublic(CdOrdinaryLoop.class.getModifiers()));assertEquals(List.of(3),Arrays.stream(CdOrdinaryLoop.class.getDeclaredConstructors()).map(c->c.getParameterCount()).toList());assertTrue(Arrays.stream(CdOrdinaryLoop.class.getDeclaredMethods()).noneMatch(m->Modifier.isPublic(m.getModifiers())));assertEquals(20,CdOrdinaryLoop.Cut.values().length);assertEquals(18,CdOrdinaryLoop.Ports.class.getDeclaredMethods().length);
+        var types=Arrays.stream(CdOrdinaryLoop.class.getDeclaredFields()).map(f->f.getType().getSimpleName()).sorted().toList();assertEquals(List.of("CdPlayerFrameRuntime","CdStagePlayerSource","Ports","boolean","boolean"),types);assertTrue(Arrays.stream(CdOrdinaryLoop.Ports.class.getDeclaredMethods()).noneMatch(m->m.isDefault()));
     }
 
     @ParameterizedTest(name="native timeStop WORD {0}")
     @ValueSource(ints={0,1,256,32768,65535})
     void completeWordTimeStopGatesOnlyCyclesAndKeepsSectionPrepareAndAnimations(int word) throws Exception {
-        try(var h=new Harness()){h.timeStop=word;h.loop.run(0);assertEquals(word==0,h.order.contains("PALETTE"));assertEquals(1,Collections.frequency(h.order,"TIME"));assertTrue(h.order.indexOf("TIME")<h.order.indexOf("SECTION"));assertTrue(h.order.indexOf("SECTION")<h.order.indexOf("PREPARE"));assertTrue(h.order.indexOf("PREPARE")<h.order.indexOf("GLOBAL"));if(word!=0)assertFalse(h.cuts.contains(SonicCdR31aOrdinaryLoop.Cut.PALETTE_CYCLE));}
+        try(var h=new Harness()){h.timeStop=word;h.loop.run(0);assertEquals(word==0,h.order.contains("PALETTE"));assertEquals(1,Collections.frequency(h.order,"TIME"));assertTrue(h.order.indexOf("TIME")<h.order.indexOf("SECTION"));assertTrue(h.order.indexOf("SECTION")<h.order.indexOf("PREPARE"));assertTrue(h.order.indexOf("PREPARE")<h.order.indexOf("GLOBAL"));if(word!=0)assertFalse(h.cuts.contains(CdOrdinaryLoop.Cut.PALETTE_CYCLE));}
     }
 
     private static final class NativeTransferUnowned extends UnsupportedOperationException {private NativeTransferUnowned(){super("Constructed actual Main405/408 LevelStart owner unavailable");}}
-    private static final class Harness implements SonicCdR31aOrdinaryLoop.Ports,AutoCloseable {
-        final CdR31aAssets assets;final CdPlayerFrameRuntime frame;final SonicCdR31aOrdinaryLoop loop;final CdObjectDrawQueue queue;final CdObjectPool pool=new CdObjectPool();
-        CdStageTerrain terrain;final List<String> order=new ArrayList<>();final List<SonicCdR31aOrdinaryLoop.Cut> cuts=new ArrayList<>();Optional<CdObjectDrawQueue.CpuSat> borrowed,published,settled;CdObjectDrawQueue.CpuSat replacement;
-        String stop;Throwable original;SonicCdR31aOrdinaryLoop.Cut cutStop;boolean nested,replaceNowAtPublication,selectAbsent,nullBorrow,transfer;int nestedRejected,beforeReads,timeStop,actualBodyWord=-1;long beforeVintDelta;CdPlayerFrameRuntime.BodyPublication body;CdPlayerFrameRuntime.R31Publication r31;final NativeTransferUnowned transferStop=new NativeTransferUnowned();
+    private static final class Harness implements CdOrdinaryLoop.Ports,AutoCloseable {
+        final CdR31aAssets assets;final CdPlayerFrameRuntime frame;final CdOrdinaryLoop loop;final CdObjectDrawQueue queue;final CdObjectPool pool=new CdObjectPool();
+        CdStageTerrain terrain;final List<String> order=new ArrayList<>();final List<CdOrdinaryLoop.Cut> cuts=new ArrayList<>();Optional<CdObjectDrawQueue.CpuSat> borrowed,published,settled;CdObjectDrawQueue.CpuSat replacement;
+        String stop;Throwable original;CdOrdinaryLoop.Cut cutStop;boolean nested,replaceNowAtPublication,selectAbsent,nullBorrow,transfer;int nestedRejected,beforeReads,timeStop,actualBodyWord=-1;long beforeVintDelta;CdPlayerFrameRuntime.BodyPublication body;CdPlayerFrameRuntime.R31Publication r31;final NativeTransferUnowned transferStop=new NativeTransferUnowned();
         Harness()throws Exception{this(0,0,0,clock());}
         Harness(int frames,int raw,int locked,CdPlayerFrameRuntime.VIntClock clock)throws Exception{
             assets=actual().getFirst();terrain=assets.terrain();var start=assets.initialCentre();var b=assets.bounds();
@@ -136,10 +136,10 @@ class TestSonicCdR31aOrdinaryLoop {
             var env=new CdPlayerBody.Environment(new CdPlayerMovement.Environment(new CdPlayerMovement.Physics(0,0,0),new CdPlayerMovement.Bounds(b.left(),b.right(),b.bottom(),0),new CdPlayerMovement.Gates(0x100,1,0,0,0,0,0),new CdPlayerMovement.Globals(0,b.cameraCentreY(),0,0,0,0,0,0,0,0)),new CdPlayerBody.Controls(raw,0,0,0,locked),new CdPlayerBody.Globals(frames,160,0,0,0,0,0,0),CdPlayerBody.DynamicSlots.UNIMPLEMENTED);
             byte[] cpu=new byte[768],resident=new byte[768];for(int i=0;i<768;i++){cpu[i]=(byte)(i*7+3);resident[i]=(byte)(i*11+5);}frame=CdPlayerFrameRuntime.fromR31aEntry(assets,actor,env,new CdPlayerArtRuntime.State(cpu,resident,0,true),clock);frame.bindArtPublication((request,value)->{assertEquals(0xF000,request.vramByteAddress());assertSame(value,frame.artState());record("ART");});
             var mapping=CdObjectMappings.fromR31aAssets(assets,CdR31aObjectAssets.fromAssets(assets));byte[] sat=new byte[640];for(int i=0;i<640;i++)sat[i]=(byte)(i*3+7);
-            queue=new CdObjectDrawQueue(new CdObjectDrawQueue.CdDrawSlots(){public CdObjectDrawQueue.LiveDrawSlot read(CdObjectDrawQueue.CdSlotRef r){throw new AssertionError("Empty component queue must not dereference slots");}public void writeOnScreenBit(CdObjectDrawQueue.CdSlotRef r,boolean v){throw new AssertionError("Empty queue must not write slot bits");}},mapping,sat);finishEmpty();loop=new SonicCdR31aOrdinaryLoop(frame,assets,this);
+            queue=new CdObjectDrawQueue(new CdObjectDrawQueue.CdDrawSlots(){public CdObjectDrawQueue.LiveDrawSlot read(CdObjectDrawQueue.CdSlotRef r){throw new AssertionError("Empty component queue must not dereference slots");}public void writeOnScreenBit(CdObjectDrawQueue.CdSlotRef r,boolean v){throw new AssertionError("Empty queue must not write slot bits");}},mapping,sat);finishEmpty();loop=new CdOrdinaryLoop(frame,frame.stageSource(),this);
         }
         void record(String s){order.add(s);if(s.equals(stop))raise(original);}
-        public void requireCurrent(SonicCdR31aOrdinaryLoop.Cut c,CdPlayerFrameRuntime f,CdR31aAssets a){assertSame(frame,f);assertSame(assets,a);cuts.add(c);if(c==cutStop)raise(original);if(nested){assertThrows(IllegalStateException.class,()->loop.run(0));assertThrows(IllegalStateException.class,()->loop.run(256));nestedRejected+=2;}}
+        public void requireCurrent(CdOrdinaryLoop.Cut c,CdPlayerFrameRuntime f,CdStagePlayerSource a){assertSame(frame,f);assertSame(frame.stageSource(),a);cuts.add(c);if(c==cutStop)raise(original);if(nested){assertThrows(IllegalStateException.class,()->loop.run(0));assertThrows(IllegalStateException.class,()->loop.run(256));nestedRejected+=2;}}
         public Optional<CdObjectDrawQueue.CpuSat> beforeSelector8(){record("BEFORE");beforeReads++;beforeVintDelta=frame.vIntClock().deltaSinceAdmittedCut();borrowed=selectAbsent?Optional.empty():Optional.of(queue.cpuSat());return nullBorrow?null:borrowed;}
         public void publishLevel(Optional<CdObjectDrawQueue.CpuSat> cpu){record("PUBLISH");assertSame(borrowed,cpu);published=cpu;assertEquals(beforeVintDelta,frame.vIntClock().deltaSinceAdmittedCut(),"Actual publication precedes this service Finish");if(replaceNowAtPublication)replacement=finishEmpty();}
         public void updateAnimTiles(){record("ANIM");}public void copyCameraAndDrawLevel(){record("PLANES");}public void serviceSlowPlc(){record("SLOW");}public void updateHud(){record("HUD");}public void mainMusic(){record("MUSIC");}
@@ -149,7 +149,7 @@ class TestSonicCdR31aOrdinaryLoop {
             var context=new CdPlayerBody.R31Context(frame.stageSource(),assets,terrain,pool.capture(),Optional.empty(),CdPlayerObjectTouch.fromR31aAssets(assets),new CdPlayerBody.ResponseContext(CdPlayerTouchResponse.fromR31aAssets(assets),new CdPlayerBody.ContactGlobals(0,0,0),new CdPlayerTouchResponse.WorldGlobals(1,3,0,0,5000,0)),OptionalInt.empty(),OptionalInt.empty(),OptionalInt.empty(),0x20,0x300);
             r31=frame.runR31Body(word,context,call->{var next=call.publication().nativeValues();pool.validateRestore(next.snapshot());call.applyNative();pool.restore(next.snapshot());terrain=next.terrain();});body=r31.body();
         }}
-        public void postObjectCamera(){record("CAMERA");if(transfer)throw transferStop;}public void drawObjects(){record("DRAW");finishEmpty();}public int timeStopWord(){record("TIME");return timeStop;}public void paletteCycle(){record("PALETTE");}public void updateSectionArt(){record("SECTION");}public void preparePlc(){record("PREPARE");}public void updateGlobalAnimations(){record("GLOBAL");}
+        public CdOrdinaryLoop.MainContinuation postObjectCamera(){record("CAMERA");if(transfer)throw transferStop;return CdOrdinaryLoop.MainContinuation.ORDINARY_TAIL;}public void drawObjects(){record("DRAW");finishEmpty();}public int timeStopWord(){record("TIME");return timeStop;}public void paletteCycle(){record("PALETTE");}public void updateSectionArt(){record("SECTION");}public void preparePlc(){record("PREPARE");}public void updateGlobalAnimations(){record("GLOBAL");}
         CdObjectDrawQueue.CpuSat finishEmpty(){queue.beginPass();var camera=new CdObjectDrawQueue.CameraWords(0,0);return queue.finishAfterCamera(new CdObjectDrawQueue.DrawCameras(camera,camera,camera));}
         public void close(){frame.close();queue.close();}
     }
