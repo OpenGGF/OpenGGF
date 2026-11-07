@@ -1,8 +1,7 @@
 # Game Status
 
-Reviewed against the **0.7.prerelease development branch on 2026-10-23**.
-Published 0.6 packages have a narrower feature set; this is not their release
-certification. The [release notes](../../../CHANGELOG.md) describe each release.
+Reviewed against the **0.7 development branch on 2026-10-23**, before the
+0.7.20261105 release; this is not release certification. The [release notes](../../../CHANGELOG.md) describe each release.
 
 Implementation, playable routes and verified ROM parity are separate claims.
 The [level coverage backlog](../../status/level-test-coverage.md) records tested

@@ -124575,3 +124575,116 @@ Develop integration, post-integration focused/source checks, push verification
 and fully accounted cleanup follow this qualification and are recorded by the
 lead. Explicit old AIZ worktree, all native/tmp evidence and main user changes
 remain preserved.
+
+## 2026-11-06 — Coverage-first fleet: canonical segments and Crawl handoff
+
+**Base:** original develop `0d8ffdcd6`; updated integration base `df96b343c`.
+**Frozen candidate:** `93a819645`. **Maintenance qualification:** `6de8264fb`.
+See the [coverage, duplicate evidence and complete new-identity frontier table](../architecture/audits/2026-11-06-trace-coverage-deduplication.md).
+
+All 163 segments in the four requested campaigns and six standalone slices now
+have direct strict comparisons: 150 new replay identities plus 19 reused ones.
+Every fixture link is verified from literal source paths. The new identities
+produce 32 passes, 117 assertion failures and one FIFO execution error, without
+skips. They are new coverage, separately reported from existing identities.
+Added profile execution is 265.800 JUnit seconds (91.325 r6 / 174.475 r7), including
+two team/bootstrap controls; strict replay alone is 264.388 seconds. Seven KiS2
+special stages now enter as recorded solo Knuckles through the real production
+module resolver; each exposes the unchanged art-owner frontier at row 108.
+S2-family manifest destination rings use the existing single entry import under
+ruling A. No row hydration or special-stage runtime repair is introduced.
+
+Thirty proven duplicate directories, 24,215,833 bytes plus the obsolete manifest,
+are removed: all 25 `s3k-multibonus` segments, S1/S3K standalone special stages and
+three S3K standalone bonus copies. Source movie, offset, length and exact payload
+hashes agree with the retained canonical run segments. Existing replay identities
+and assertions survive. Publication/carried-state consumers, typed session tests,
+header inventory and upstream hero manifest use the canonical fixtures. Gumball
+and Pachinko round-trip captures remain absent; no recording occurs. The zone
+label corrections remain a recorded follow-up, without renames.
+
+S2 Crawl pause proximity includes the zero timer pass and accepted ordinary enemy
+contact retires through its owner, including Super Sonic. CNZ2 improves from
+188,220 errors at row 7849 to 49,194 at 10361. The chain advances from segment
+21/CNZ2 (cursor 138828) to segment 23/HTZ2 (155218). Actual row comparison finds
+zero new errors on 7,849 baseline-clean rows; later additions follow existing
+divergence. Newly reached HTZ suffixes are unqualified. ARZ2 remains 4,442 errors
+at 5512; capsule admission, rather than the earlier Obj89 hypothesis, is the
+observed contact owner. Four special-stage return gaps remain one frame apart.
+Owning routines and tests are in the [Crawl audit](../architecture/audits/2026-11-06-s2-crawl-enemy-handoff.md).
+
+S1 and KiS2 cheap investigations stop with executed evidence. S1's four PLC axes
+remain 3/6/3/12 errors at rows 101/102/10185/11: correct heads lack a proven timed
+preparation boundary. Its fifth axis is early ending admission, with terminal art
+4,704 native versus 4,784 engine edges. Owners are readiness publication/timing
+and the real resumable ending load. KiS2 retains five axes and stops at segment
+14/cursor 65856. Monitor producer phase/allocation, late Egg Prison/end-checker
+results submission, and Obj1E tube call inputs/dispatch are the shared blockers;
+queue evolution matches after its actual five-row submission delay. CPZ's glide
+flag is zero. No fitted quotient, skip, budget or delay is delivered. The other
+fleet's glide/history, LBZ2, CNZ, FBZ and protected bootstrap remain untouched.
+
+Fresh original and updated baseline profiles produce identical complete outcomes
+and all 428 corresponding JSON reports across 1,089 existing cases. ONE frozen
+candidate sweep produces:
+
+| Profile | Updated-base cases / F / E / skips | Frozen cases / F / E / skips |
+| --- | --- | --- |
+| trace-replay | 898 / 9 / 0 / 7 | 957 / 60 / 0 / 7 |
+| trace-replay-r7 | 121 / 66 / 0 / 0 | 214 / 133 / 1 / 0 |
+| trace-segments | 70 / 40 / 0 / 0 | 70 / 40 / 0 / 0 |
+
+All existing r7/segment outcomes and reports are exact. The two changed r6 chain
+reports exactly reproduce the verified Crawl lane. The sole new existing red is
+a stale root-directory inventory count; focused repair retains all 62 logical
+headers and passes. No existing identity/report is lost or rebaselined.
+
+ONE change-based smoke selects 4,468 classes with workers 2. It completes all
+91 ordinary batches and 836 passing guards. Its raw verdict is retained:
+
+```text
+VERDICT FAILED: head=93a8196459c6 source=07d27bb7de6a change-based 4468/4468 candidate classes; ordinary 91/91 batches; guards 1/1 batches; tests=37837 failures=29 errors=2 skipped=49 (allowed=49 unexplained=0); missing ROM properties=none; skip inputs audio_reference_files=false,gl=false,s1_bizhawk_reference=false,s2_bk2=false,s3k_observations=false; bounded smoke selection, not a full-suite pass
+```
+
+Actual updated-base focused controls reproduce all 29 assertion failures across
+88 cases: 28 complete messages/bodies are exact and one differs only in a Java
+object identity display. The two new typed-session missing-path errors are fixed
+with canonical paths; all four cases pass. The inventory test passes, and all 21
+hero-tool tests pass. These bounded repairs follow the frozen measurement; no
+second sweep/smoke or final-SHA broad pass is claimed. Production, fixture, POM,
+runner and replay-helper objects remain those measured on the frozen candidate.
+Complete assertions, raw rows and source/input hashes support the gate: after
+these focused repairs, no existing identity is newly red, no existing first
+frontier moves earlier, and no new error appears on a baseline-clean row.
+
+## 2026-11-06 — S1 complete-emerald PLC arm streams
+
+Develop base `34b8830b1`, native recorder `d54cc514`: the complete-emerald chain
+publishes 28 native Nemesis arm streams/242 edges under the existing readiness
+contract. The observer samples the accepted shipped pattern-count write,
+not an entry-time prediction. No BK2 or physics/aux observation changes;
+all 68 stored compressed payload files remain byte-identical.
+
+Queued focused `-Ptrace-replay
+-Dtest=TestS1CompleteEmeraldRunChain#ghz1ToScrapBrainAcrossEverySpecialStage test`
+clears MZ2_3 3@101, MZ3_2 6@102, LZ3 3@10185 and LZ4 12@11 to zero errors.
+All 34 segments and 10,943 terminal rows are still driven. Exactly four of
+29 reports improve; the other 25 and every terminal comparison tuple are
+unchanged. The sole remaining axis is terminal ending art, 4,704 native versus
+4,784 engine edges; no ending delay or comparison change is introduced.
+
+The matched 45-class S1 trace selection retains all 71 identities: 70 pass
+and the chain remains red on its one ending axis. All other outcomes are
+exact. Eight of 92 reports, including cold-start queue controls, improve to
+zero errors; no report is lost or added. Focused ordinary guards pass all
+400 cases. Change-based smoke at `394ebb014` completes 4,469 classes, all
+91 ordinary batches and 836 passing guards: 37,839 tests, 29 inherited failures,
+zero errors and 49 allowed skips. Its raw verdict remains FAILED. Fresh matched
+pre-task controls attribute all 29 failure occurrences across 456 cases; 25
+assertions match literally and four differ only in set order/object identities.
+Three Islands' exact 50-class/two-fork batch is repeated in the prepared checkout
+to preserve its machine-local ROM catalogue; no ROM is linked or changed.
+No existing identity is newly red, no frontier moves earlier and no new clean-row
+error remains. The gate passes for this four-axis major gain; ending remains
+separate. Recorder publication and the pin update are user-approved after gate.
+[Recorder semantics, controls and publication evidence](../architecture/audits/2026-11-06-s1-chain-plc-timing.md).

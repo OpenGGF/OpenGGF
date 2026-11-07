@@ -93,7 +93,7 @@ python3 tools/testing/maven_queue.py -Dmse=off -Ptracechaser-integration \
 
 | Event | What runs |
 |---|---|
-| Push to `develop` or `next` | Basic CI: the `smoke` profile, once the branch has had no push for 30 minutes. |
+| Push to `develop` or `next` | Basic CI: the `smoke` profile, once the branch has had no push for 30 minutes. Branch policy runs at once in its own workflow and checks every commit since its last successful run. |
 | Non-draft pull request, any base | Routine CI: branch policy, the bounded smoke suite and `-Pguards`. Draft PRs run nothing until marked ready; a newer push cancels the older run. |
 | Push to `master` | The Release workflow below: full validation, native packaging, publication. |
 | Push to a feature or bugfix branch | Nothing. Open a pull request, or run CI by hand. |

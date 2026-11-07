@@ -42,3 +42,22 @@ Shared expected values are identical and no recorded row is dropped. Full raw
 fields, first-added snapshots, source/fixture controls and rejected test-fixture
 attempts are retained in the dated task artifact. Temporary logging is restored;
 full combined-profile and shared-smoke qualification remain lead-owned.
+
+
+## Crawl pause and enemy handoff follow-up, 2026-11-06
+
+The [bounded handoff audit](../../audits/2026-11-06-s2-crawl-enemy-handoff.md)
+records the matched `0d8ffdcd6` baseline, executed contact probes and exact raw
+row gate. `TestCrawlBadnikInstance` now covers the pause timer's zero pass,
+uncurled Super Sonic's special-to-enemy flag selection, and accepted rolling /
+non-rolling enemy callbacks. No new persistent object fields are introduced;
+existing generic rewind ownership and inherited lifecycle/width/donor/team gaps
+remain unchanged.
+
+The complete S+T chain now matches CNZ2 through row10360, then diverges on
+Tails X at10361 (`$21AE/$21B0` ROM/engine). Raw errors fall188220 to49194.
+The CNZ2 exit is observed and the continuous run reaches HTZ2 segment23, where
+its next missing level-advance boundary is at moviecursor155218. Newly reached
+HTZ1/HTZ2 and their art gaps lack a matched pre-fix suffix and are not certified.
+Both existing ARZ2/CNZ2 level-select controls retain their passing outcomes.
+The original row7849 frontier in the table above is the historical before state.

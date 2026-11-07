@@ -5,7 +5,7 @@ for looking things up. To learn Stageplay, start with
 [your first film](stageplay-first-film.md); for the terminal tools, see
 [Stageplay from the terminal](stageplay-authoring.md).
 
-It describes the **0.7.prerelease development line**. The screenplay is
+It describes the **0.8.prerelease development line**. The screenplay is
 version 7 and the saved scene (`.stageplay`) is version 8. Both formats are
 unpublished: only the current version is accepted, and older files are not
 migrated.

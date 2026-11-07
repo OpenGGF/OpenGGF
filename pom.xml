@@ -6,7 +6,7 @@
 
     <groupId>com.openggf</groupId>
     <artifactId>OpenGGF</artifactId>
-    <version>0.7.prerelease</version>
+    <version>0.8.prerelease</version>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -417,7 +417,7 @@
                 s3k-knuckles-complete-superemeralds   67 segments   1041 MB
                 s2-sonic-tails-complete-emeralds      35 segments    449 MB
                 s1-sonic-complete-withemeralds        34 segments    322 MB
-                s3k-multibonus / s3-knux-multibonus-ss 25 segments   286 MB
+                s3-knux-multibonus-ss                 25 segments   286 MB
 
               Only the Knuckles super-emerald run exceeded 1g, which is why it
               alone died with "Java heap space" and wrote no report while every
@@ -681,6 +681,8 @@
                                 <include>**/tests/trace/runs/TestS3kKnucklesSuperEmeraldRunChain.java</include>
                                 <include>**/tests/trace/runs/TestS3kMegaRunChain.java</include>
                                 <include>**/tests/trace/s3k/tailsfullchain/*.java</include>
+                                <include>**/tests/trace/s3k/knucklessuper/*.java</include>
+                                <include>**/tests/trace/s3k/megarun/*.java</include>
                                 <include>**/tests/trace/runs/TestS3kTailsFullChainRunChain.java</include>
                                 <include>**/tests/trace/runs/TestS3kTailsFullChainRunPrefix.java</include>
                             </includes>

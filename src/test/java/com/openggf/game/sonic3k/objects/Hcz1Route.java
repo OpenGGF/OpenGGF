@@ -7,6 +7,7 @@ import com.openggf.debug.playback.Bk2MovieLoader;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.objects.badniks.BlastoidBadnikInstance;
+import com.openggf.game.sonic3k.objects.badniks.MegaChopperBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.tests.HeadlessTestFixture;
@@ -49,6 +50,7 @@ final class Hcz1Route {
     int frames = 0;
     boolean recovery = false;
     boolean jumpHeld = false;
+    boolean shakeLeft = false;
     Stage stage = Stage.FIRST_FAN;
     int charge = 0;
     int dashPhase = 0;
@@ -357,6 +359,16 @@ final class Hcz1Route {
             if (stage == Stage.FAN_BUTTON) {
                 mask = 8;
             }
+            // A Mega Chopper capture of P1 sets Ctrl_1_locked, and the carry writes
+            // Ctrl_1&$8C8C to Ctrl_1_logical, so A/B/C cannot jump free
+            // (MegaChopper_CheckCapture (sonic3k.asm:184505-184529),
+            // MegaChopper_CarryFollowPlayer (sonic3k.asm:184439-184454)). Escape the way the ROM
+            // allows: Check_LRControllerShake (sonic3k.asm:179972-179993) counts each newly
+            // pressed Left/Right that differs from the last.
+            if (live.isControlLocked() && megaChopperCarrying(live)) {
+                shakeLeft = !shakeLeft;
+                mask = shakeLeft ? 4 : 8;
+            }
             // Keep the route latch separate from the boss override below.
             jumpHeld = (mask & 16) != 0;
         }
@@ -430,6 +442,14 @@ final class Hcz1Route {
         return GameServices.level().getObjectManager().getActiveObjects().stream()
                 .filter(HczMinibossInstance.class::isInstance).map(HczMinibossInstance.class::cast)
                 .findFirst().orElse(null);
+    }
+
+    /** A live Mega Chopper held at its capture offset: CheckCapture admits |dy| < $10 and child_dx is a byte. */
+    private static boolean megaChopperCarrying(com.openggf.sprites.playable.AbstractPlayableSprite live) {
+        return GameServices.level().getObjectManager().getActiveObjects().stream()
+                .anyMatch(o -> o instanceof MegaChopperBadnikInstance && !o.isDestroyed()
+                        && Math.abs(o.getX() - live.getCentreX()) < 0x20
+                        && Math.abs(o.getY() - live.getCentreY()) < 0x20);
     }
 
     private static int steer(int projectedX, int targetX, int tolerance) {

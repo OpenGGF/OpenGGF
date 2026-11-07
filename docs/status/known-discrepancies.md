@@ -1341,7 +1341,7 @@ scheduler live. A present empty file is an explicit v5 recorded stream with
 the complete registry and no edges. Legacy schema-1/schema-2 fixtures and
 their metadata selectors are not supported runtime inputs.
 
-### Coverage: implemented for S1 and S3K, fixtures S3K-only
+### Coverage: implemented and exercised by S1 and S3K fixtures
 
 Three separate questions; do not collapse them.
 
@@ -1363,19 +1363,20 @@ only when the capture observed an edge. **S2 is not implemented at either end**
 — no source under `game/sonic2/` references `HardwareWorkKind`, and no S2
 recorder constructs `HardwareTimingEventEngine`.
 
-**Fixture coverage is S3K-only.** Every committed `hardware_timing.jsonl` under
-`src/test/resources/traces` is beneath `s3k/` (272, plus 2
-`hardware_timing_interstitial.jsonl`). No committed S1 or S2 fixture carries
-one.
+**Fixture coverage includes one S1 chain and S3K.** The S1 complete-emerald
+chain carries 28 native timing streams with 242 Nemesis arm edges. Its four
+held-head queue axes clear through matching prepared production work, while
+its separate terminal ending-load/art axis remains open. All 68 physics/aux
+payloads reproduce the prior native observations exactly; their existing
+compressed files remain byte-identical. Other S1 fixtures without a stream
+retain live admission. S3K has 244 per-segment streams and four interstitial
+streams; no S2 fixture supplies readiness.
 
-So the S1 path is **implemented but dormant**, which is not the same as absent.
-Recorded admission is installed only by
-`GameplayModeContext.activateRecordedHardwareAdmission()`; with no stream every
-kind stays at `HardwareReadinessAdmissionPolicy.LIVE`,
-`isRecordedAuthority()` is false, and the arm is released by the boundary that
-prepared it — the pre-timing-port behaviour. An S1 trace divergence today must
-be reasoned about against the native service model, because no committed
-fixture can supply an edge.
+The native S1 observer now samples the accepted pattern-count write instead
+of predicting it from routine entry. The original head identity remains
+available there. Entry-time tests can be invalidated by an intervening
+interrupt, so they cannot establish the visible arm row. This changes no
+kind, readiness authority or gameplay comparison.
 
 "Re-record it with the hardware-timing stream" is now available for S1 and
 still unavailable for S2. It is not the first resort for S1 in any case: a

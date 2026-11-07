@@ -28,10 +28,12 @@ class TestModApiReleasePolicy {
     @Test
     void repositoryDescriptorRetainsUnpublishedCandidateAfterRollover() throws IOException {
         ModApiReleasePolicy policy = ModApiReleasePolicy.read(POLICY_PATH);
-        assertTrue(List.of("develop", "next").contains(policy.targetBranch()));
-        assertEquals(new ModApiReleasePolicy.ReleaseLine(0, 6), policy.masterLine());
-        assertEquals(new ModApiReleasePolicy.ReleaseLine(0, 7), policy.developLine());
-        assertEquals(new ModApiReleasePolicy.ReleaseLine(0, 8), policy.nextLine());
+        // 0.7 ships the API as an unpublished candidate: master, develop and next
+        // each carry their own targetBranch with the 0.7/0.8/0.9 engine lines.
+        assertTrue(ModApiReleasePolicy.BRANCHES.contains(policy.targetBranch()));
+        assertEquals(new ModApiReleasePolicy.ReleaseLine(0, 7), policy.masterLine());
+        assertEquals(new ModApiReleasePolicy.ReleaseLine(0, 8), policy.developLine());
+        assertEquals(new ModApiReleasePolicy.ReleaseLine(0, 9), policy.nextLine());
         assertEquals(SemanticVersion.parse("0.7.0"), policy.currentApi());
         assertEquals(ModApiReleasePolicy.Status.CANDIDATE, policy.currentStatus());
         assertEquals(List.of(), policy.publishedBaselines());

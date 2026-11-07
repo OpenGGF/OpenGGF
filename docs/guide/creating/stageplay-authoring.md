@@ -8,7 +8,7 @@ use it to direct without menus or a desktop.
 This page is the command reference and the technical detail behind it. The
 [reference](stageplay-reference.md) documents the screenplay format, and the
 [directing guide](stageplay-directing.md) explains the ideas. The tools target
-the **0.7.prerelease development line**.
+the **0.8.prerelease development line**.
 
 - [Set up](#set-up)
 - [A typical session](#a-typical-session)
@@ -317,7 +317,7 @@ The editors' **Export film** runs the same exporter in a separate process. To
 run it directly:
 
 ```bash
-java --enable-native-access=ALL-UNNAMED -cp target/OpenGGF-0.7.prerelease-jar-with-dependencies.jar \
+java --enable-native-access=ALL-UNNAMED -cp target/OpenGGF-0.8.prerelease-jar-with-dependencies.jar \
   com.openggf.tools.StageplayCaptureTool --scene SCENE.stageplay --out FILM.mkv --s2-rom PATH
 ```
 

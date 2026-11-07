@@ -14,21 +14,21 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestGameSupportNotices {
     @TempDir Path directory;
 
-    @Test void sonic3AndKnucklesIsGatedAsAlphaAndTheOthersStartFreely() {
+    @Test void sonic3AndKnucklesIsGatedAsBetaAndTheOthersStartFreely() {
         var notices = new GameSupportNotices(SonicConfigurationService.createStandalone(directory));
-        assertEquals(Optional.of(GameSupportNotices.Stage.ALPHA), notices.pendingNotice("s3k"));
-        assertEquals(Optional.of(GameSupportNotices.Stage.ALPHA), notices.pendingNotice("S3K"), "game IDs ignore case");
+        assertEquals(Optional.of(GameSupportNotices.Stage.BETA), notices.pendingNotice("s3k"));
+        assertEquals(Optional.of(GameSupportNotices.Stage.BETA), notices.pendingNotice("S3K"), "game IDs ignore case");
         assertEquals(Optional.empty(), notices.pendingNotice("s1"));
         assertEquals(Optional.empty(), notices.pendingNotice("s2"));
         assertEquals(Optional.empty(), notices.pendingNotice(null));
     }
 
     @Test void dontShowAgainPersistsAcrossLaunches() {
-        new GameSupportNotices(SonicConfigurationService.createStandalone(directory)).dismiss("s3k", GameSupportNotices.Stage.ALPHA);
+        new GameSupportNotices(SonicConfigurationService.createStandalone(directory)).dismiss("s3k", GameSupportNotices.Stage.BETA);
         var fresh = SonicConfigurationService.createStandalone(directory);
-        assertEquals("s3k:alpha", fresh.getString(SonicConfiguration.HUB_DISMISSED_NOTICES));
+        assertEquals("s3k:beta", fresh.getString(SonicConfiguration.HUB_DISMISSED_NOTICES));
         assertEquals(Optional.empty(), new GameSupportNotices(fresh).pendingNotice("s3k"));
-        assertEquals(Optional.of(GameSupportNotices.Stage.ALPHA), new GameSupportNotices(fresh).stageOf("s3k"),
+        assertEquals(Optional.of(GameSupportNotices.Stage.BETA), new GameSupportNotices(fresh).stageOf("s3k"),
                 "hiding the notice does not change the game's stage");
     }
 

@@ -940,7 +940,8 @@ though the rest of the Python safety suite uses private repositories or mocks.
 
 ## CI selection and scheduling
 
-CI runs smoke on develop/next after a 30-minute quiet period. Non-draft pull
+CI runs smoke on develop/next after a 30-minute quiet period, and
+`push-policy.yml` runs branch policy from the last successful check. Non-draft pull
 requests run branch policy, smoke and separate guards; manual CI uses smoke and
 guards too. Feature/bugfix pushes run nothing. Direct integration pushes are not
 guard-checked by CI. Master pushes run Release's explicit `-Pfull-suite`, guards,
