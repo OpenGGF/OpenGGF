@@ -28,6 +28,9 @@ class TestHostedArenaEquivalence {
                     prepare(fixture,frame);
                     fixture.nativeStep(PlayerInputState.neutral());
                     expected.add(fixture.host.session().capture());
+                    if (frame == 2) assertTrue(fixture.host.session().controlsLocked(),"script must enter native false start");
+                    if (frame == 500) assertTrue(fixture.host.session().player(0).dead(),"script must enter native death");
+                    if (frame == 501) assertFalse(fixture.host.session().player(0).dead(),"script must cross native respawn row");
                 }
             }
             try (var fixture = new HostedArenaFixture()) {
