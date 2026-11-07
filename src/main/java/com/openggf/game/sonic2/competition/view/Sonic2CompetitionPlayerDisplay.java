@@ -11,7 +11,10 @@ public final class Sonic2CompetitionPlayerDisplay {
     private Sonic2CompetitionPlayerDisplay() { }
     /** Obj01_Init (s2.asm:36179-36201), Obj02_Init (s2.asm:38899-38931). */
     public static ObjectSlot body(RomByteReader rom, AbstractPlayableSprite player, int slot) {
-        if (!player.shouldRefreshRenderFlagThisFrame()) return null;
+        return body(rom, player, slot, player.shouldRefreshRenderFlagThisFrame());
+    }
+    static ObjectSlot body(RomByteReader rom, AbstractPlayableSprite player, int slot, boolean admitted) {
+        if (!admitted) return null;
         int flags = 4 | (player.getRenderHFlip() ? 1 : 0) | (player.getRenderVFlip() ? 2 : 0);
         int mapping = slot == 0 ? Sonic2Constants.MAP_UNC_SONIC_ADDR : Sonic2Constants.MAP_UNC_TAILS_ADDR;
         int art = slot == 0 ? Sonic2Constants.ART_TILE_SONIC : Sonic2Constants.ART_TILE_TAILS;

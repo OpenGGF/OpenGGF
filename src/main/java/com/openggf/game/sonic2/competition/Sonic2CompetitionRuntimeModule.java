@@ -39,6 +39,8 @@ public final class Sonic2CompetitionRuntimeModule extends DelegatingGameModule {
     private final Sonic2CompetitionScrollSourceAdapter scroll;
     private Sonic2CompetitionVideoFrame videoFrame;
     private Sonic2CompetitionHudArt hudArt;
+    private final com.openggf.game.sonic2.competition.state.Sonic2CompetitionRingAnimation rings =
+            new com.openggf.game.sonic2.competition.state.Sonic2CompetitionRingAnimation();
 
     public Sonic2CompetitionRuntimeModule(GameModule base, Sonic2NativeCompetitionHost host) throws IOException {
         super(base, "engine:s2-native-competition");
@@ -51,7 +53,10 @@ public final class Sonic2CompetitionRuntimeModule extends DelegatingGameModule {
         nativeTitle = title;
         features = new Sonic2CompetitionZoneFeatures(host);
         this.events = new Sonic2CompetitionLevelEvents(host.session(), nativeTitle,
-                host::deformNativeEntry, this::completeCameraPass);
+                host::deformNativeEntry, this::completeCameraPass, () -> {
+                    // Level_MainLoop skips ChangeRingFrame on Level_Inactive_flag.
+                    if (!host.context().getLevelManager().isLevelInactiveForTransition()) rings.changeRingFrame();
+                });
         lifecycle = new Sonic2CompetitionLifecycle(host.rom(), host.session(), (slot, timeOver) -> {
             var context = host.context();
             var flow = context.getWorldSession().getGameModule().getGameOverFlowProvider();
@@ -68,6 +73,7 @@ public final class Sonic2CompetitionRuntimeModule extends DelegatingGameModule {
 
     @Override public LevelInitProfile getLevelInitProfile() { return profile; }
     @Override public LevelEventProvider getLevelEventProvider() { return events; }
+    void clearRingAnimation() { rings.clearLevel(); }
     void initializeBoundaryWords() {
         events.initializeBoundaryWords();
         installDisplayArtOwners();
@@ -119,7 +125,8 @@ public final class Sonic2CompetitionRuntimeModule extends DelegatingGameModule {
                     pages, registers, this::displaySample);
             videoFrame.bindSpriteSource(com.openggf.data.RomByteReader.fromRom(host.rom()));
             videoFrame.bindDisplayState(new Sonic2CompetitionDisplayState() {
-                // B supplies the Teleport_flag owner at integration. Never infer it from a timer.
+                @Override public int ringsAnimationFrame() { return rings.frame(); }
+                @Override public boolean teleportFlag() { return session.teleportClock().capture().flag(); }
                 @Override public int teleportTimer() { return session.teleportTimer(); }
                 @Override public boolean gamePaused() { return host.nativePause().gamePaused(); }
             });
@@ -236,6 +243,7 @@ public final class Sonic2CompetitionRuntimeModule extends DelegatingGameModule {
         super.rewindAdapters().stream().filter(adapter -> !(adapter instanceof Sonic2PlcService))
                 .forEach(adapters::add);
         adapters.add(lifecycle);
+        adapters.add(rings);
         return List.copyOf(adapters);
     }
     @Override public Level loadLevelOverride(int index) throws IOException {

@@ -186,6 +186,7 @@ class TestSonic2NativeCompetitionHost {
                                     AbstractPlayableSprite.INPUT_LEFT, 0, 0, false, false));
                     input.setLogicalOverride(entrySample);
                     host.loadAct(session, zone[0], 0);
+                    assertEquals(26, views.preparations, "one leading BuildSprites plus 25 leave iterations");
                     assertEquals(25, driver.nativeSamples, "each real title wait must sample the shared input once");
                     assertEquals(0, input.updates, "the native wait sample port never advances outer input");
                     assertEquals(Sonic2CompetitionPause.convertLogical(entrySample.player1()),
@@ -1520,18 +1521,11 @@ class TestSonic2NativeCompetitionHost {
             var objects = context.getObjectManager();
             var lifecycle = context.getWorldSession().getGameModule().getGameService(Sonic2CompetitionLifecycle.class);
             assertNotNull(lifecycle);
-            if (objects.getFrameCounter() == 0) {
-                entryVInt = objects.getVblaCounter();
-                lastEntryPass = 0;
-                for (int slot = 0; slot < 2; slot++) {
-                    assertEquals(0, lifecycle.nativeRoutineByte(slot), "the initial view observes actual native Init");
-                    var player = session.player(slot);
-                    assertEquals(0, player.getXSpeed());
-                    assertEquals(0, player.getYSpeed());
-                    assertEquals(0, player.getGSpeed());
-                    assertEquals(0, player.getAngle());
+            if (context.getLevelManager().getFrameCounter() == 0) {
+                if (objects.getFrameCounter() == 1) {
+                    entryVInt = objects.getVblaCounter();
+                    lastEntryPass = 0;
                 }
-            } else if (context.getLevelManager().getFrameCounter() == 0) {
                 if (objects.getFrameCounter() != lastEntryPass) {
                     assertEquals(lastEntryPass + 1, objects.getFrameCounter(),
                             "the actual view must observe the leading pass and each of the 25 native waits");

@@ -193,11 +193,9 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
                 });
             }
             module.nativeLifecycle().initializeAct();
-            // The inherited VInt clock and native LF=0 are published only when
-            // loadZoneAndAct returns. Assembly must not lose the 25 real waits.
-            views.prepare(world.context(), session, profile, art);
+            // Level_FromCheckpoint owns the leading BuildSprites, then each
+            // title leave iteration owns exactly one more. Load itself has none.
             runNativeEntry();
-            views.prepare(world.context(), session, profile, art);
         } catch (IOException failure) {
             throw new UncheckedIOException("Cannot load native S2 competition act", failure);
         } finally {
@@ -264,7 +262,8 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
         }
         // A failed presentation preparation cannot undo the world body or its
         // completed pause/title continuation. The view owner handles its fault.
-        views.prepare(context(), session, profile, art);
+        if (result == LevelFrameResult.GAMEPLAY_FRAME)
+            views.prepare(context(), session, profile, art);
         return result;
     }
 
@@ -459,7 +458,7 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
         registry.register(adapter);
     }
 
-    void initializeRuntimeState() { module.onLevelLoad(); }
+    void initializeRuntimeState() { module.clearRingAnimation(); module.onLevelLoad(); }
     void initializeRings() {
         LevelArtInternalAccess.initializeNativeCompetitionRings(context().getLevelManager(), new Sonic2CompetitionRingStreaming());
     }
