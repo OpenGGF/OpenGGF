@@ -1,5 +1,35 @@
 # Implement Sonic CD with complete regional parity
 
+## 7 November 2026 — internal selected-slot save bootstrap
+
+An internal CD profile codec/bootstrap now uses the existing SaveManager writer
+for actual selected-slot reads and exclusive fresh creation. Only a genuine
+missing-file observation, with no corrupt/quarantine/unknown-history evidence,
+may consume original initial data. Valid historical profiles retain their values;
+errors, checksum warnings, conflicts, cleanup failures and interrupted completion
+remain distinct. The codec preserves the native676/28/704/706 extents, two unknown
+tail bytes and saved WORD/unlock overlap. Private original storage receipts supply
+no Module invocation or gameplay authority. No user save was read by validation.
+
+SaveManager keeps its public ModApi signatures and legacy read/replacement
+behavior. The new non-ModApi bridge shares its writer, envelope and quarantine
+owner. Fresh creation uses exclusive link publication; unsupported host storage
+and post-publication cleanup never become a successful default or temporary save.
+R57 discovers179 cases:177pass/2new ZIP-fixture failures/0errors/skips, unchanged
+source. The fixtures had not established their parent directory before demanding
+an exact missing-file observation. Two test-only directory creations reach the
+intended unsupported-link operation. R57R2 then passes179/0/0/0, source unchanged,
+including all54new cases and125 existing shared save/API/IPX/source cases. The
+original declaration count missed9 fully qualified parameterized rows; all16
+RuntimeSaveContext invocations are now accounted for. Independent bounded source
+review found no P1/P2 defect. Broad smoke remains incomplete.
+
+This is a qualified internal service, not frontend/Module binding or native save
+completion. The ongoing historical route's title/unlock/policy remains UNKNOWN;
+no fresh profile is retroactively substituted into it. Genuine selected-slot
+bootstrap/lifetime, original read/write publication and temporary-save ownership
+must be joined before natural RunR3 can use these values.
+
 ## 7 November 2026 — natural Boss defeat, native GameOver and R31 components
 
 A separate permanent input-only regression now defeats the actual R13D Boss.

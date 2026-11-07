@@ -327,7 +327,12 @@ matching area heading; see the
   boss-return join now publishes saved-zone/checkpoint state once and retains it
   through existing capture lifetimes, stopping at unknown unlock history.
   Original initial-save sources retain complete data and shorter native copy
-  extents without granting profile creation or save completion. Data custody
+  extents. An internal selected-slot codec/bootstrap distinguishes genuine absence
+  from corrupt, quarantined or unknown history and uses the existing save writer
+  for exclusive fresh publication. Historical values, unknown native tails,
+  conflicts and cleanup/completion failures stay distinct; published SaveManager
+  signatures and legacy behavior remain unchanged. Frontend/Module save binding
+  and native progress completion remain separate. Data custody
   grants no next-zone gameplay. Natural Capsule/Results completion, full acts and
   regional parity remain separate.
   CD player headless boot loads the fixed
