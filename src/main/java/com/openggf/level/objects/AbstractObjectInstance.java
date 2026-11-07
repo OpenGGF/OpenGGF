@@ -28,11 +28,18 @@ import java.util.logging.Logger;
 public abstract class AbstractObjectInstance implements ObjectInstance {
     // Family links are lifecycle metadata, not compact gameplay fields. The lifecycle
     // captures only parents present in the snapshot and reinstalls legacy evidence.
-    private AbstractObjectInstance rewindConstructionParent;
+    private java.lang.ref.WeakReference<AbstractObjectInstance> rewindConstructionParent;
     private com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.ConstructionFamily rewindConstructionFamily =
             new com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.ConstructionFamily(false, null);
 
-    final AbstractObjectInstance rewindConstructionParent() { return rewindConstructionParent; }
+    final AbstractObjectInstance rewindConstructionParent() {
+        return rewindConstructionParent == null ? null : rewindConstructionParent.get();
+    }
+
+    private void rememberConstructionParent(AbstractObjectInstance parent) {
+        rewindConstructionParent = new java.lang.ref.WeakReference<>(parent);
+        rewindConstructionFamily = new com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.ConstructionFamily(true, null);
+    }
     final com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.ConstructionFamily rewindConstructionFamily() {
         return rewindConstructionFamily;
     }
@@ -40,7 +47,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
             com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.ConstructionFamily family,
             AbstractObjectInstance parent) {
         rewindConstructionFamily = family;
-        rewindConstructionParent = parent;
+        rewindConstructionParent = parent == null ? null : new java.lang.ref.WeakReference<>(parent);
     }
 
     private static final Logger LOG = Logger.getLogger(AbstractObjectInstance.class.getName());
@@ -1258,7 +1265,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
         ObjectServices owner = tryServices();
         ObjectManager om = owner != null ? owner.objectManager() : staticObjectManager();
         if (om == null) return;
-        if (object != null) object.rewindConstructionParent = this;
+        if (object != null) object.rememberConstructionParent(this);
         // A managed callback failure belongs to that owner. It must not retry in
         // an ambient session; only a truly unowned bootstrap uses the bridge.
         if (ObjectConstructionContext.isRewindActiveRestore()) {
@@ -1287,7 +1294,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
         ObjectServices owner = tryServices();
         ObjectManager om = owner != null ? owner.objectManager() : staticObjectManager();
         if (om == null) return;
-        if (object != null) object.rewindConstructionParent = this;
+        if (object != null) object.rememberConstructionParent(this);
         if (ObjectConstructionContext.isRewindActiveRestore()) {
             om.registerRewindReconstructionChild(object);
         } else {
@@ -1317,7 +1324,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
     /** Report structural children only after their native allocation and outside rewind probes. */
     private void notifyOwnedChild(ObjectInstance child) {
         if (!ObjectConstructionContext.isProbeConstruction() && child instanceof AbstractObjectInstance actor) {
-            actor.rewindConstructionParent = this;
+            actor.rememberConstructionParent(this);
         }
         if(!ObjectConstructionContext.isProbeConstruction() && !ObjectConstructionContext.isRewindActiveRestore()) {
             ObjectDirectionAccess.childSpawned(services(), this, child);

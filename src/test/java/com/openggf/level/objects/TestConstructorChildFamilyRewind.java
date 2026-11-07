@@ -129,6 +129,31 @@ class TestConstructorChildFamilyRewind {
     }
 
     @Test
+    void independentlyRecreatableChildSurvivesWhenCapturedParentCannotRecreate() {
+        var manager = createHarness();
+        var source = manager.createDynamicObject(() -> new DeferredRoutineParent(spawnAt(0x100)));
+        source.spawnLater();
+        var snapshot = manager.rewindSnapshottable().capture();
+        var childEntry = snapshot.dynamicObjects().getLast();
+        assertNotNull(childEntry.constructionFamily().parentId());
+        manager.rewindSnapshottable().restore(snapshot);
+        assertEquals(1, manager.getActiveObjects().size());
+        var child = assertInstanceOf(RoutineChild.class, manager.getActiveObjects().iterator().next());
+        assertSame(child, manager.captureIdentityContext().requireIdentityTable().resolve(childEntry.objectId()));
+        assertEquals(childEntry.slotIndex(), child.getSlotIndex());
+        var recaptured = manager.rewindSnapshottable().capture().dynamicObjects().getFirst();
+        assertTrue(recaptured.constructionFamily().known());
+        assertNull(recaptured.constructionFamily().parentId(), "absent owners are not captured identities");
+    }
+
+    static final class DeferredRoutineParent extends AbstractObjectInstance implements RewindRecreatable {
+        DeferredRoutineParent(ObjectSpawn spawn) { super(spawn, "deferred-routine"); }
+        void spawnLater() { spawnFreeChild(() -> new RoutineChild(getSpawn())); }
+        @Override public AbstractObjectInstance recreateForRewind(RewindRecreateContext context) { return null; }
+        @Override public void appendRenderCommands(List<GLCommand> commands) { }
+    }
+
+    @Test
     void oldConstructionContextRecipeRetainsDirectCallerCompatibility() {
         var manager = createHarness();
         var source = manager.createDynamicObject(() -> new ContextOnly(spawnAt(0x100)));

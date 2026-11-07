@@ -413,8 +413,13 @@ are the authoritative reference-disposition owners. Read final/structural rules,
 global field-name rules and per-class overrides before assuming a parent/child
 field becomes an identity reference. Captured reference fields resolve in phase 2;
 excluded structural/final links need construction or an explicit class contract.
-Routine-spawned children without constructor candidates need their own recreate
-path. The coverage analyzer recognizes explicit hooks; its new-gap guard fails
+Children without constructor candidates need their own recreate path. After
+family retries stop making progress, independent recreation may proceed even when
+a captured parent failed or defers to later player refresh; adoption remains blocked
+for that missing parent. Family metadata distinguishes parents, not construction
+from routine births. A same-class/subtype routine child can still consume a
+constructor candidate within its own family according to capture order; an explicit
+class contract is needed when those roles must be distinguished. The coverage analyzer recognizes explicit hooks; its new-gap guard fails
 against the committed baseline. Do not add a marker or expand that baseline to
 make an unsupported child appear covered.
 

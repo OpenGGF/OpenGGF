@@ -448,7 +448,10 @@ routine or the manager's lifetime policy can still retire them off camera.
 Dynamic retirement resolves the solid's contact key and expires its bits/history
 only when no surviving solid owns that same resolved spawn key. Non-solid children
 with a borrowed spawn do not own it; instance and occurrence owners remain separate.
-Player ride/status survives object-side expiry. Start at
+This surviving-owner check applies to dynamic retirement. Placed unload/latched
+destruction still uses its older unconditional spawn-key expiry; shared keys across
+those placed/dynamic boundaries remain a separate limitation. Player ride/status
+survives object-side expiry. Start at
 `ObjectSolidContactController.evictRetiredDynamic`, then `ObjectPopulation` for the
 explicit-removal versus destroyed-cleanup ordering. Focused witnesses:
 `TestDynamicSolidContactRetirement`, `TestSolidContactState`,

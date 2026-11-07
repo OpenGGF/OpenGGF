@@ -27,7 +27,9 @@ under the matching area heading; see the
   restore discards uncaptured future observations. Sole spawn-keyed dynamic solids
   now expire contact bits without clearing surviving shared owners. Constructor-child
   rewind adoption uses captured parent families, preserving interleaved structural
-  links; generic recreation installs construction services centrally. Ordinary
+  links; independent children can recreate when a parent defers to player refresh,
+  and CNZ defeat candidates retain their ship family. Generic recreation installs
+  construction services centrally. Ordinary
   family/reference/coverage guidance points to the actual owners. Production badnik and contact
   witnesses, shared coarse-X arithmetic with explicit native/wider bounds, and
   a typed rewind HUD frame make contribution paths easier to follow. HCZ owns

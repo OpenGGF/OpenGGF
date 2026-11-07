@@ -1717,3 +1717,109 @@ Relative-link paths in the three touched guides/maps exist; diff whitespace is
 clean. Targeted pinned-disassembly citation check reports 12 ok, one near and
 18 context-only/unverifiable references, no stale/out-of-range. The full catalogue
 still contains inherited stale references; reference checkouts were not changed.
+
+### Asynchronous review handoff — 2026-11-07 12:02 UTC
+
+Candidate commit is ef531d992c9a6e982aa0fd0ca93a1cde583c828c. Runtime/test/ordinary
+navigation diff SHA-256 against e8 (src/main/java, src/test/java, docs/guide/contributing,
+engine-map) is ee100f880dbb256eebacb6acb92227563011e9ff94f479d7c3643e40113096ef.
+Only this handoff text is subsequently uncommitted; runtime/test source is frozen.
+No task-branch push, destination write, PR-body update or cleanup has occurred.
+PR 266 remains draft, remote head e8d90f4e0. It is linked to the lead's T3 thread.
+
+The candidate S2 EHZ1 heldout ran through maven_queue.py --normal -Dmse=off
+-Dopenggf.headless.gl=surfaceless-egl -Ptrace-replay -Dtest=TestS2Ehz1TraceReplay
+test -B under Java25, Lua5.4, unset display variables. One test passed without
+failures/errors/skips. Its fresh parsed report has 5852 compared rows, gate reached,
+5852 planned rows, verification all, zero gameplay/bootstrap errors/warnings.
+Maven execution including preparation was 40.280 s, queue admission 6 s. Report
+is target/trace-reports/trace/s2_ehz1-single-a8d3097bda2b7f9f.json. Baseline matching
+trace is still pending; this is no new HCZ2 or general parity claim.
+
+The sole Opus correctness delegate (claudeAgent/claude-opus-5-5, effort max,
+fastMode false) is still running. Stable task key:
+node:delegated-task:command%3Amcp%3A2520d5cd-c6a1-4403-bbeb-5f40f4b95a71%3Adelegate-task%3Aai-code-climb-opus-correctness-ef531d992-20261107.
+Its mode-wait call reached the ten-minute timeout and returned next: completion
+wakes this thread, end the turn, do not wait/poll. No findings or approval exist
+at this handoff. T3 owns lifecycle; no replacement/recheck delegate was launched.
+The blind original C/D task measurement has NOT been launched; it must be one
+separate fresh Opus task after final fixes, with exact rubric only (extracted in
+ignored target/code-climb-rubric.txt), no audit/changelog/history/PR/log access,
+no prior scores or desired target.
+
+Live validation: clean owned e8 baseline smoke+guards, native exec session 6271,
+run 20261107T113946Z-9dcbbe16 in .worktrees/ai-code-climb-sol-baseline; stdout
+redirected to its target/code-climb-sol-baseline.log. It is progressing/queuing
+between 91 ordinary batches, two workers, 40-minute execution cap excluding
+queue. Keep this existing job alive; no candidate category job exists. Its
+baseline tree must not be edited or built during that run. Queue waits are
+independent of execution (individual waits up to 211 s observed so far); final
+aggregate timing is pending. User wait zero; other unmeasured time unknown.
+
+Resume on Opus completion: read findings and fix meaningful issues yourself,
+focused retest as affected, then pin final source. Run the one blind affected-task
+measurement and candidate change-based smoke with automatic guards against e8
+(4473 currently selected versus baseline4471). Reuse no older broad passes.
+Finish baseline trace after its category run. Compare exact failure identities,
+kinds/types/full assertions and complete skip dictionaries, not totals. Inspect
+and acknowledge failed diagnostics only after preserving needed evidence in this
+audit. New/worse failures block push. No release/full-suite/exhaustive run.
+After verified task-only push, next tool call must link PR266; update its draft
+body with source-specific results/limits and fresh C/D vectors, leaving A/B/E/F
+older. No merge/destination push or CI babysitting. Native-remove only the clean
+owned baseline after jobs/results are accounted for; keep ai-code-climb worktree.
+Any further AI commit needs seven matching policy trailers, final versioned
+coauthor block (add Opus when its review contributes), exact interpret-trailers
+verification and normal hooks. Required delivery steps remain incomplete.
+
+### Opus correctness findings and Sol corrections
+
+Opus 5.5 completed the read-only review of ef531d992 against e8 with no blocker
+in the two demonstrated ownership fixes. It identified a latent deferred-parent
+regression: owned-helper lightning sparks waited forever for a shield that is
+intentionally restored later. Two new controls exercise that live public shield
+path and an independently recreatable child whose parent returns null. Their
+actual RED is recorded below after inspecting the fresh queue result; no old
+pass establishes this case. Sol owns the corrections and focused validation.
+
+The terminal fallback now runs only after ordinary family retries exhaust
+progress. Independently recreatable children can then proceed without an
+unresolved parent, while adoption still requires the exact restored parent.
+Recapture retains a deferred parent's id only when that parent actually joins
+the next captured population. Constructor-only children without parents still
+need their own explicit recreation contract. The CNZ restore hook now offers
+explosion/flame candidates through the ship, their live spawning owner, rather
+than offering permanently unmatched boss-family candidates. Scratch ship services
+are bound before that owned-helper call; no encounter algorithm/order changes.
+
+Family metadata does not distinguish constructor births from routine births.
+Same-class/subtype children within one family can consume candidates by capture
+order; this pre-existing limitation remains explicit. Placed unload/latched
+destroy still unconditionally expires spawn keys, a separate inherited asymmetry
+from the repaired dynamic path. The unload-mutation witness now pins callback
+timing, not key-alias inheritance as desired semantics. A weak runtime parent
+association avoids adding metadata-only retention of retired parent graphs;
+actual final links retain their own ordinary lifetime semantics. No coverage,
+API, debt or skip-policy baseline has been weakened.
+
+The reviewer counterexamples executed RED on ef531d992 plus the two new methods:
+2 cases, 2 assertion failures, zero errors/skips (sparks expected4/actual0;
+independent child expected1/actual0). Normal-memory preparation Maven40.973 s,
+admission75 s, test Maven3.140 s. The obsolete first GREEN request was cancelled
+while still queued, before compilation/tests, after identifying that the new
+shield test compared complete slots before the intentional deferred refresh.
+Its corrected assertion compares spark state/pixels before refresh and complete
+slots afterward; no production change was made for that fixture correction.
+
+The final focused review-fix run passed126 cases, zero failures/errors/skips:
+ConstructorChildFamilyRewind, DynamicSolidContactRetirement,
+S3kCnzEndBossGraphRewind (including the ROM defeat graph), LightningSparkArtRewind
+(actual deferred-shield control and existing art/retirement pixels),
+ShieldRewindPendingRestore, ObjectManagerDynamicChainRewindRestore,
+TwoPhaseRestoreOrdering, ObjectRemovalCallbackOwnership,
+ModOwnedDynamicObjectRewind and the four mandatory S3K startup classes. It used
+maven_queue.py --normal, Java25, -Dmse=off, surfaceless EGL, unset display variables
+and Lua5.4; verified ROM discovery missing=none. Maven total114 s includes normal
+compilation and tests; queue wait is separately recorded in its admission line.
+This source remains pending broad comparison, final-source EHZ1 rerun and blind
+C/D measurement. It is not a smoke/full-suite/route-parity certification.

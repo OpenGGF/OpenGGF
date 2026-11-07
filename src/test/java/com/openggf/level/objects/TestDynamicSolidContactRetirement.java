@@ -231,15 +231,25 @@ class TestDynamicSolidContactRetirement {
         var manager = manager(List.of());
         var sibling = new SpawnSolid(new ObjectSpawn(300, 100, 1, 0, 0, false, 0));
         var solid = new SpawnSolid(spawn()) {
-            @Override public void onUnload() { sibling.updateDynamicSpawn(100, 100); }
+            boolean unloadObserved;
+            @Override public void onUnload() {
+                unloadObserved = true;
+                // Expiry has already run for explicit removal, but not cleanup.
+                assertEquals(retirement == Retirement.DESTROYED_CLEANUP,
+                        manager.hasObjectStandingBit(observedRider, this));
+                sibling.updateDynamicSpawn(100, 100);
+            }
+            PlayableEntity observedRider;
         };
         manager.addDynamicObject(solid);
         manager.addDynamicObject(sibling);
         var contacts = contactPair(manager, solid, "unload-key");
+        solid.observedRider = contacts.rider();
         retirement.retire(manager, solid);
-        assertEquals(retirement == Retirement.DESTROYED_CLEANUP,
-                manager.hasObjectStandingBit(contacts.rider(), sibling),
-                "cleanup expires after unload; explicit removal expires before unload");
+        // This pins callback timing, not whether value-key aliases should inherit bits.
+        // Both observations belong to the retired incarnation's existing boundary.
+        assertTrue(solid.unloadObserved);
+        assertSame(solid, manager.getRidingObject(contacts.rider()));
     }
 
     @ParameterizedTest

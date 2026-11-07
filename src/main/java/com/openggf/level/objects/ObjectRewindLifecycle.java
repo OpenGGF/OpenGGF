@@ -162,9 +162,18 @@ final class ObjectRewindLifecycle {
         // admissions are unknown, never evidence that the actor has no owner.
         if (actor.rewindConstructionFamily() == null) return null;
         var parent = actor.rewindConstructionParent();
-        return parent == null ? actor.rewindConstructionFamily()
-                : new ObjectManagerSnapshot.ConstructionFamily(true,
-                        captured.contains(parent) ? population.identities.get(parent) : null);
+        if (parent != null) {
+            return new ObjectManagerSnapshot.ConstructionFamily(true,
+                    captured.contains(parent) ? population.identities.get(parent) : null);
+        }
+        var family = actor.rewindConstructionFamily();
+        // A deferred parent's id can outlive this pass's table. Retain it only
+        // when that parent really joins the next captured population.
+        if (family.parentId() != null && captured.stream().noneMatch(
+                object -> family.parentId().equals(population.identities.get(object)))) {
+            return new ObjectManagerSnapshot.ConstructionFamily(true, null);
+        }
+        return family;
     }
 
     RewindCaptureContext captureIdentityContext() {
@@ -306,18 +315,23 @@ final class ObjectRewindLifecycle {
         // Snapshot order may put a child before the parent that constructs it.
         // Each successful pass can expose another generation of adoptable children;
         // one retry cannot resolve deeper chains. Stop when no entry makes progress.
-        boolean parkedPassMadeProgress = true;
-        while (parkedPassMadeProgress && !parkedDynamicEntries.isEmpty()) {
-            parkedPassMadeProgress = false;
-            List<DynamicObjectEntry> stillParked = new ArrayList<>();
-            for (DynamicObjectEntry entry : parkedDynamicEntries) {
-                if (restoreDynamicObject(entry, restoreTable, restoredObjects)) {
-                    parkedPassMadeProgress = true;
-                } else {
-                    stillParked.add(entry);
+        // First exhaust ordinary family reconstruction. Only then may an independently
+        // recreatable child proceed without a parent that failed/deferred recreation.
+        // Known missing parents still cannot authorize constructor-child adoption.
+        for (boolean allowMissingParent : new boolean[] {false, true}) {
+            boolean parkedPassMadeProgress = true;
+            while (parkedPassMadeProgress && !parkedDynamicEntries.isEmpty()) {
+                parkedPassMadeProgress = false;
+                List<DynamicObjectEntry> stillParked = new ArrayList<>();
+                for (DynamicObjectEntry entry : parkedDynamicEntries) {
+                    if (restoreDynamicObject(entry, restoreTable, restoredObjects, allowMissingParent)) {
+                        parkedPassMadeProgress = true;
+                    } else {
+                        stillParked.add(entry);
+                    }
                 }
+                parkedDynamicEntries = stillParked;
             }
-            parkedDynamicEntries = stillParked;
         }
         // Stop routing further child spawns into the reconstruction-children scratch:
         // any spawns triggered from here on (Phase 2 state restore,
@@ -335,6 +349,12 @@ final class ObjectRewindLifecycle {
     /** Adopt or recreate one dynamic actor and publish its captured slot/identity before restoring fields. */
     private boolean restoreDynamicObject(DynamicObjectEntry entry,
             RewindIdentityTable restoreTable, List<RestoredObjectState> restoredObjects) {
+        return restoreDynamicObject(entry, restoreTable, restoredObjects, false);
+    }
+
+    private boolean restoreDynamicObject(DynamicObjectEntry entry,
+            RewindIdentityTable restoreTable, List<RestoredObjectState> restoredObjects,
+            boolean allowMissingParent) {
         // Prefer adopting the construction-spawned child the reconstructed parent
         // already created and back-references. Adopting it in place gives exact
         // captured state AND keeps the parent's child reference valid, with no
@@ -344,8 +364,8 @@ final class ObjectRewindLifecycle {
         AbstractObjectInstance parent = null;
         if (family != null && family.parentId() != null) {
             var resolved = restoreTable.resolve(family.parentId());
-            if (!(resolved instanceof AbstractObjectInstance owner)) return false;
-            parent = owner;
+            if (resolved instanceof AbstractObjectInstance owner) parent = owner;
+            else if (!allowMissingParent) return false;
         }
         AbstractObjectInstance adopted = adoptRewindReconstructionChild(entry, parent);
         ObjectInstance inst = adopted != null
