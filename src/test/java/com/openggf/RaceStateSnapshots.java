@@ -23,6 +23,10 @@ final class RaceStateSnapshots {
             }
             return colours;
         }
+        if (value instanceof com.openggf.level.Block block) return canonical(block.saveState());
+        if (value instanceof com.openggf.level.Chunk chunk) return canonical(chunk.saveState());
+        if (value instanceof com.openggf.level.PatternDesc desc) return desc.get();
+        if (value instanceof com.openggf.level.ChunkDesc desc) return desc.get();
         if (value instanceof com.openggf.level.Pattern pattern) {
             var pixels=new ArrayList<Integer>();
             for(int y=0;y<8;y++) for(int x=0;x<8;x++) pixels.add(pattern.getPixel(x,y)&255);

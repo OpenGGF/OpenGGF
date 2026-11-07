@@ -106,6 +106,17 @@ TestGameplayModeContextRewindRegistry. It adds a direct false-start clock assert
 through the native 120-tick penalty/reset and strengthens checkpoint comparison to
 all registered rewind owners, canonicalized by value. Its results are pending.
 
+The four-class lean follow-up at `8ac40af4f` ran 41 tests: 40 passed, one failed,
+zero errors/skips/OOMs. Normal compilation took 37.916s, admission wait 409s, and
+test Maven execution 4.320s. The 80-step live/replay comparison, its destructive
+resource/scalar controls, the explicit 18-key registry and all four lap cases
+passed. The expanded checkpoint comparison reached decoded Block identities.
+Block.saveState and Chunk.saveState retain every descriptor and collision index;
+the value oracle now uses those arrays, with destructive controls for a changed
+block descriptor and alternate collision index. Checkpoint diagnostics collect
+all differing owner keys. The affected TestTeleportSwapApply and
+TestCheckpointRespawnPolicy follow-up is pending; production behavior is unchanged.
+
 ## Rejected probes and queue history
 
 | Job | Queue wait | Maven execution | Result |

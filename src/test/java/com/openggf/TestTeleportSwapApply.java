@@ -201,7 +201,7 @@ class TestTeleportSwapApply {
                     replay.swaps().consumeApplied().outcome());
         }
     }
-    @Test void comparisonRetainsAnimationContentsAndEveryCompactBlobByte() {
+    @Test void comparisonRetainsResourceContentsAndEveryCompactBlobByte() {
         var a=new com.openggf.sprites.animation.SpriteAnimationSet();
         var b=new com.openggf.sprites.animation.SpriteAnimationSet();
         var script=new com.openggf.sprites.animation.SpriteAnimationScript(5,List.of(2,3),
@@ -216,6 +216,14 @@ class TestTeleportSwapApply {
         b.addScript(1,script);
         var scalarChanged=new com.openggf.game.rewind.schema.RewindObjectStateBlob(3,getClass(),new byte[]{1,3},new Object[]{b});
         assertNotEquals(canonical(left),canonical(scalarChanged),"compact gameplay bytes remain authoritative");
+        var blockA=new com.openggf.level.Block(); var blockB=new com.openggf.level.Block();
+        assertEquals(canonical(blockA),canonical(blockB));
+        blockB.setChunkDesc(0,0,new com.openggf.level.ChunkDesc(0x2001));
+        assertNotEquals(canonical(blockA),canonical(blockB),"a changed terrain descriptor must fail equality");
+        var chunkA=new com.openggf.level.Chunk(); var chunkB=new com.openggf.level.Chunk();
+        assertEquals(canonical(chunkA),canonical(chunkB));
+        chunkB.setSolidTileAltIndex(2);
+        assertNotEquals(canonical(chunkA),canonical(chunkB),"the alternate collision index must remain authoritative");
     }
     private void nativeRequestPrelude(Run run) {
         var level=run.mode().getLevelManager();

@@ -24,8 +24,10 @@ class TestCheckpointRespawnPolicy {
         var throughLoop = run(true);
         assertEquals(direct.core(),throughLoop.core());
         assertEquals(direct.owners().keySet(),throughLoop.owners().keySet());
-        direct.owners().forEach((key,value) -> assertEquals(java.util.List.of(),
-                com.openggf.game.rewind.RewindSnapshotDiff.diffKey(key,value,throughLoop.owners().get(key)),key));
+        var differences = new ArrayList<String>();
+        direct.owners().forEach((key,value) -> differences.addAll(
+                com.openggf.game.rewind.RewindSnapshotDiff.diffKey(key,value,throughLoop.owners().get(key))));
+        assertEquals(java.util.List.of(),differences,"every registered checkpoint owner");
     }
 
     private record Core(int x,int y,long timer,int rings,int lives,int checkpoint) { }
