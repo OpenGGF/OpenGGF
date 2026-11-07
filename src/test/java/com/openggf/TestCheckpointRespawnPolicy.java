@@ -22,10 +22,14 @@ class TestCheckpointRespawnPolicy {
         var direct = run(false);
         SessionManager.clear();
         var throughLoop = run(true);
-        assertEquals(direct,throughLoop);
+        assertEquals(direct.core(),throughLoop.core());
+        assertEquals(direct.owners().keySet(),throughLoop.owners().keySet());
+        direct.owners().forEach((key,value) -> assertEquals(java.util.List.of(),
+                com.openggf.game.rewind.RewindSnapshotDiff.diffKey(key,value,throughLoop.owners().get(key)),key));
     }
 
-    private record Result(int x,int y,long timer,int rings,int lives,int checkpoint) { }
+    private record Core(int x,int y,long timer,int rings,int lives,int checkpoint) { }
+    private record Result(Core core,java.util.Map<String,Object> owners) { }
     private Result run(boolean loopPath) {
         HeadlessTestFixture.builder().withZoneAndAct(0,0).build();
         var context = SessionManager.getCurrentGameplayMode();
@@ -62,7 +66,11 @@ class TestCheckpointRespawnPolicy {
         assertFalse(player.getDead());
         assertFalse(level.isTitleCardRequested());
         assertEquals(initialLives-1,state.getLives());
-        return new Result(player.getCentreX(),player.getCentreY(),level.getLevelGamestate().getTimerFrames(),
-                level.getLevelGamestate().getRings(),state.getLives(),level.getCheckpointState().getLastCheckpointIndex());
+        return new Result(new Core(player.getCentreX(),player.getCentreY(),level.getLevelGamestate().getTimerFrames(),
+                level.getLevelGamestate().getRings(),state.getLives(),level.getCheckpointState().getLastCheckpointIndex()),
+                java.util.Map.of("checkpoint-player",player.captureRewindState(),
+                        "checkpoint-camera",GameServices.camera().capture(),
+                        "checkpoint-bank",((CheckpointState)level.getCheckpointState()).captureRewindState(),
+                        "checkpoint-game-state",state.capture()));
     }
 }
