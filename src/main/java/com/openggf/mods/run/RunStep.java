@@ -18,5 +18,9 @@ import com.openggf.game.ModApi;
  */
 @ModApi
 public record RunStep(long ordinal, int heldMask, boolean startHeld, PlayerPose player,
-                      boolean actComplete, int checkpointIndex, boolean debugAssisted) {
+                      boolean actComplete, int checkpointIndex, boolean debugAssisted,
+                      RaceClock race, RaceSignal signal, RaceEventResult applied) {
+    public RunStep(long ordinal, int heldMask, boolean startHeld, PlayerPose player, boolean actComplete, int checkpointIndex, boolean debugAssisted) {
+        this(ordinal, heldMask, startHeld, player, actComplete, checkpointIndex, debugAssisted, RaceClock.ACT, RaceSignal.NONE, RaceEventResult.NONE);
+    }
 }

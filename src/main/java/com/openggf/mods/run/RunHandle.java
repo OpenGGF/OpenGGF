@@ -73,4 +73,7 @@ public interface RunHandle {
 
     /** True until the run has ended. */
     boolean isActive();
+
+    /** Queues an external event before the next executed step; engine support is opt-in. */
+    default void queueRaceEvent(RaceEvent event) { }
 }

@@ -17,6 +17,9 @@ import java.util.function.Predicate;
 @com.openggf.game.ModApi
 public final class HostRoundEngine {
     @com.openggf.game.ModApi
+    public enum RoundMode { TIME_ATTACK, COMPETITION }
+
+    @com.openggf.game.ModApi
     public enum Phase { LOBBY, COUNTDOWN, RUNNING, ROUND_END, VOTE }
 
     public static final long COUNTDOWN_MILLIS = 3000;
@@ -28,7 +31,10 @@ public final class HostRoundEngine {
 
     @com.openggf.game.ModApi
     public record FinishOutcome(int slot, int rank, boolean outsideBroadcastCap,
-                                int attemptId) {
+                                int attemptId, String outcome) {
+        public FinishOutcome(int slot, int rank, boolean outsideBroadcastCap, int attemptId) {
+            this(slot, rank, outsideBroadcastCap, attemptId, "FINISHED");
+        }
     }
 
     record Result(int slot, String participantId, String fingerprint,
@@ -349,9 +355,9 @@ public final class HostRoundEngine {
                 || attemptFlagged || finish.timeFrames() <= 0
                 || finish.attemptId() <= lastFinishedAttemptByParticipant
                 .getOrDefault(participantId, Integer.MIN_VALUE)
-                || finish.firstInputFrame() < 0
-                || finish.finishFrame() < finish.firstInputFrame()
-                || finish.finishFrame() - finish.firstInputFrame()
+                || finish.clockStartFrame() < 0
+                || finish.finishFrame() < finish.clockStartFrame()
+                || finish.finishFrame() - finish.clockStartFrame()
                 != finish.timeFrames()
                 || !isSha256Hex(finish.inputRecordingHashHex())) {
             return null;

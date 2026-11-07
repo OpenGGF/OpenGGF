@@ -725,7 +725,7 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory, Au
                         + (participantId == null ? "" : participantId + "#")
                         + finish.attemptId(),
                 determinismFingerprint, trackKey, character, finish.timeFrames(),
-                finish.firstInputFrame(), finish.finishFrame(),
+                finish.clockStartFrame(), finish.finishFrame(),
                 finish.inputRecordingHashHex(), finish.ghostStreamHashHex(),
                 spotCheck, clock.getAsLong());
         RelayLifetime lifetime = rooms.get(roomId);
