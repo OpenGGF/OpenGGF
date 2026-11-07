@@ -1,6 +1,7 @@
 package com.openggf.game.soniccd.level;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -32,7 +33,7 @@ public final class CdR11aPlayerAssets {
     private final List<AnimationScript> animations;
     private final CdAssetBytes miniAnimations;
     private final Optional<CdAssetBytes> rampChunks;
-    private final CdR31aAssets r31a;
+    private final CdProgrammeReader r3Source;
     private final CdAssetBytes specialChunks;
     private final CdAssetBytes sineTable;
     private final CdAssetBytes arcTanTable;
@@ -56,8 +57,8 @@ public final class CdR11aPlayerAssets {
 
     private CdR11aPlayerAssets(byte[] animations, byte[] miniAnimations, RampInput rampInput,
                                 byte[] specialChunks, byte[] sineTable, byte[] arcTanTable,
-                                CdSonicVisualAssets sonic, CdR31aAssets r31a) {
-        this.r31a = r31a;
+                                CdSonicVisualAssets sonic, CdProgrammeReader r3Source) {
+        this.r3Source = r3Source;
         this.sonic = Objects.requireNonNull(sonic, "sonic");
         this.animationTable = exact(animations, ANIMATION_BYTES, "Ani_Sonic");
         this.animations = decodeAnimations(animationTable, sonic);
@@ -82,8 +83,8 @@ public final class CdR11aPlayerAssets {
             }
             this.rampChunks = Optional.of(ramp);
         } else {
-            if (rampInput != R3RampInput.UNOWNED || r31a == null)
-                throw new IllegalArgumentException("Only actual R31A owns the R3 core-data profile");
+            if (rampInput != R3RampInput.UNOWNED || r3Source == null)
+                throw new IllegalArgumentException("Only actual retained R3 programme owns the R3 core-data profile");
             this.rampChunks = Optional.empty();
         }
         // LevelSizeLoad copies one long; Sonic_SpecialChunks compares all four
@@ -141,14 +142,29 @@ public final class CdR11aPlayerAssets {
         var sonic = Objects.requireNonNull(assets.sonic(), "R31A Sonic visuals");
         if (sonic.sourceFormat() != CdSonicVisualAssets.SourceFormat.FRAMES_167 || sonic.mappingFrames().size() != 167)
             throw new IllegalArgumentException("R31A common data requires its retained 167-frame visual product");
-        return new CdR11aPlayerAssets(assets.view(CdR31aAssets.Asset.ANI_SONIC).copy(),
-                assets.view(CdR31aAssets.Asset.MINI_ANIMATIONS).slice(0, ANIMATION_COUNT).copy(), R3RampInput.UNOWNED,
-                assets.view(CdR31aAssets.Asset.SPEC_CHUNKS).copy(), assets.view(CdR31aAssets.Asset.SINE_TABLE).copy(),
-                assets.view(CdR31aAssets.Asset.ARC_TAN_TABLE).slice(0, 257).copy(), sonic, assets);
+        var reader=Objects.requireNonNull(assets.internalReader(),"actual R31A source relation");
+        if(sonic!=reader.sonic())throw new IllegalArgumentException("R31A projected visual differs");
+        for(var role:List.of(CdProgrammeReader.Role.ANI,CdProgrammeReader.Role.MINI,CdProgrammeReader.Role.SPECIAL,CdProgrammeReader.Role.SINE,CdProgrammeReader.Role.ATAN)) {
+            var key=switch(role){case ANI->CdR31aAssets.Asset.ANI_SONIC;case MINI->CdR31aAssets.Asset.MINI_ANIMATIONS;
+                case SPECIAL->CdR31aAssets.Asset.SPEC_CHUNKS;case SINE->CdR31aAssets.Asset.SINE_TABLE;case ATAN->CdR31aAssets.Asset.ARC_TAN_TABLE;
+                default->throw new IllegalArgumentException("Not a player table role");};
+            if(!Arrays.equals(Objects.requireNonNull(assets.view(key)).copy(),reader.role(role).copy()))throw new IllegalArgumentException("R31A projected player table differs: "+key);
+        }
+        return fromR3Programme(reader);
     }
-    public SourceGraph sourceGraph() { return r31a == null ? SourceGraph.PPZ : SourceGraph.R3; }
-    /** Exact immutable data custody only; no callback, invocation, physics or source-family authority. */
-    public boolean ownsR31aAssets(CdR31aAssets assets) { return r31a != null && r31a == assets; }
+    static CdR11aPlayerAssets fromR3Programme(CdProgrammeReader actual) {
+        Objects.requireNonNull(actual,"actual retained R3 programme").requireRetained();
+        var sonic=actual.sonic();
+        if(sonic.sourceFormat()!=CdSonicVisualAssets.SourceFormat.FRAMES_167 || sonic.mappingFrames().size()!=167)
+            throw new IllegalArgumentException("R3 requires retained 167-frame visuals");
+        return new CdR11aPlayerAssets(actual.role(CdProgrammeReader.Role.ANI).copy(),
+            actual.role(CdProgrammeReader.Role.MINI).slice(0,ANIMATION_COUNT).copy(),R3RampInput.UNOWNED,
+            actual.role(CdProgrammeReader.Role.SPECIAL).copy(),actual.role(CdProgrammeReader.Role.SINE).copy(),
+            actual.role(CdProgrammeReader.Role.ATAN).slice(0,257).copy(),sonic,actual);
+    }
+    public SourceGraph sourceGraph() { return r3Source == null ? SourceGraph.PPZ : SourceGraph.R3; }
+    public boolean ownsR31aAssets(CdR31aAssets assets) { return assets!=null && r3Source!=null && r3Source==assets.internalReader(); }
+    boolean ownsProgramme(CdProgrammeReader actual){return r3Source!=null && r3Source==actual;}
 
     private static List<AnimationScript> decodeAnimations(CdAssetBytes table, CdSonicVisualAssets sonic) {
         int[] offsets = new int[ANIMATION_COUNT];

@@ -30,7 +30,7 @@ public final class CdStagePlayerSource {
     private final CdR12bTerrainAssets act2PastTerrain;
     private final CdR12bPlayerAssets act2PastPlayer;
     private final CdR13FutureAssets act3Future;
-    private final CdR31aAssets r31a;
+    private final CdProgrammeReader r3Source;
     private final CdStageTerrain terrain;
     private final CdR11aPlayerAssets player;
     private final CdSonicVisualAssets sonic;
@@ -50,7 +50,7 @@ public final class CdStagePlayerSource {
         this.act2PastTerrain = null;
         this.act2PastPlayer = null;
         this.act3Future = null;
-        this.r31a = null;
+        this.r3Source = null;
         CdStageTerrain.Shape expectedShape;
         if (present != null) {
             var identity = Objects.requireNonNull(present.identity(), "Present identity");
@@ -97,7 +97,7 @@ public final class CdStagePlayerSource {
         present = null; past = null; act2Terrain = terrainAssets; act2Player = playerAssets;
         act2PastTerrain = null; act2PastPlayer = null;
         act3Future = null;
-        r31a = null;
+        r3Source = null;
         var terrainIdentity = Objects.requireNonNull(terrainAssets.identity(), "Act2 terrain identity");
         var playerIdentity = Objects.requireNonNull(playerAssets.identity(), "Act2 player identity");
         var terrainProfile = Objects.requireNonNull(terrainAssets.profile(), "Act2 terrain profile");
@@ -131,7 +131,7 @@ public final class CdStagePlayerSource {
         present = null; past = null; act2Terrain = null; act2Player = null;
         act2PastTerrain = terrainAssets; act2PastPlayer = playerAssets;
         act3Future = null;
-        r31a = null;
+        r3Source = null;
         var terrainIdentity = Objects.requireNonNull(terrainAssets.identity(), "Act2 Past terrain identity");
         var playerIdentity = Objects.requireNonNull(playerAssets.identity(), "Act2 Past player identity");
         var terrainProfile = Objects.requireNonNull(terrainAssets.profile(), "Act2 Past terrain profile");
@@ -165,7 +165,7 @@ public final class CdStagePlayerSource {
     // BEGIN original Act3 Future immutable data relation.
     private CdStagePlayerSource(CdR13FutureAssets assets) {
         present = null; past = null; act2Terrain = null; act2Player = null;
-        act2PastTerrain = null; act2PastPlayer = null; act3Future = assets; r31a = null;
+        act2PastTerrain = null; act2PastPlayer = null; act3Future = assets; r3Source = null;
         var identity = Objects.requireNonNull(assets.identity(), "Act3 Future identity");
         variant = Objects.requireNonNull(identity.variant(), "Act3 Future variant");
         stage = Objects.requireNonNull(identity.stage(), "Act3 Future stage");
@@ -202,7 +202,7 @@ public final class CdStagePlayerSource {
     // BEGIN original R31A immutable core-data relation. No programme/Frame/World grant.
     private CdStagePlayerSource(CdR31aAssets assets) throws IOException {
         present = null; past = null; act2Terrain = null; act2Player = null;
-        act2PastTerrain = null; act2PastPlayer = null; act3Future = null; r31a = assets;
+        act2PastTerrain = null; act2PastPlayer = null; act3Future = null; r3Source = assets.internalReader();
         var identity = Objects.requireNonNull(assets.identity(), "R31A identity");
         variant = Objects.requireNonNull(identity.variant(), "R31A variant");
         stage = Objects.requireNonNull(identity.stage(), "R31A stage");
@@ -229,10 +229,21 @@ public final class CdStagePlayerSource {
     public static CdStagePlayerSource fromR31aAssets(CdR31aAssets assets) throws IOException {
         return new CdStagePlayerSource(Objects.requireNonNull(assets, "Original R31A assets"));
     }
-    public boolean ownsR31aAssets(CdR31aAssets assets) { return r31a != null && r31a == assets; }
+    public boolean ownsR31aAssets(CdR31aAssets assets) { return assets!=null && r3Source!=null && r3Source==assets.internalReader(); }
     /** Native raw WORD metadata: R31A is0100, not native-round-minus-one or a truncated act byte.
      * Existing PPZ data bindings remain0000/0001/0002. No raw Frame gate is changed or admitted. */
-    public int ordinaryZoneActWord() { return r31a != null ? 0x100 : stage.actNumber() - 1; }
+    public int ordinaryZoneActWord() { return r3Source != null ? r3Source.ordinaryZoneActWord() : stage.actNumber() - 1; }
+    /** Internal data binding only. Does not widen existing runtime admission. */
+    private CdStagePlayerSource(CdProgrammeReader actual)throws IOException {
+        Objects.requireNonNull(actual,"actual retained programme").requireRetained();
+        present=null;past=null;act2Terrain=null;act2Player=null;act2PastTerrain=null;act2PastPlayer=null;act3Future=null;r3Source=actual;
+        variant=CdReleaseVariant.USA;stage=actual.stage();player=CdR11aPlayerAssets.fromR3Programme(actual);
+        terrain=actual.terrain();sonic=actual.sonic();
+        if(terrain.shape()!=actual.terrainShape() || !player.ownsProgramme(actual) || player.sonic()!=sonic
+            || sonic.sourceFormat()!=CdSonicVisualAssets.SourceFormat.FRAMES_167)throw new IllegalArgumentException("R3 retained terrain/player relation differs");
+        mappingAddress=0x22DF20;ordinaryPeriod=1;
+    }
+    static CdStagePlayerSource fromProgramme(CdProgrammeReader actual)throws IOException {return new CdStagePlayerSource(actual);}
     // END original R31A immutable core-data relation.
 
     /** Borrow original C/D immutable data only; no programme, Frame, FULL or invocation authority. */

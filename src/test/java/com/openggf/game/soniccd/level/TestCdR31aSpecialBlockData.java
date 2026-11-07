@@ -1,5 +1,6 @@
 package com.openggf.game.soniccd.level;
 
+import com.openggf.game.soniccd.media.CdMmdImage;
 import org.junit.jupiter.api.Test;
 import java.util.HexFormat;
 import java.util.List;
@@ -37,7 +38,7 @@ class TestCdR31aSpecialBlockData {
     }
 
     @Test void allSixteenSelectorWordsRetainNativeAliasesAndActualTargets() throws Exception {
-        var a=TestCdR31aAssets.actual().assets();var root=a.view(PLAYER_BLOCK_ROUTINES);
+        var fixture=TestCdR31aAssets.actual();var a=fixture.assets();var root=a.view(PLAYER_BLOCK_ROUTINES);
         int[] relative={0x20,0x20,0xD0,0xD0,0x266,0x122,0x134,0x134,0x242,0x19A,0x19A,0x19A,0x17E,0x122,0x122,0x146};
         int[] targets={0x206942,0x206942,0x2069F2,0x2069F2,0x206B88,0x206A44,0x206A56,0x206A56,
                 0x206B64,0x206ABC,0x206ABC,0x206ABC,0x206AA0,0x206A44,0x206A44,0x206A68};
@@ -56,10 +57,10 @@ class TestCdR31aSpecialBlockData {
                 "044100126b2c303b106a43fb00660242000f0243000f",
                 "32030241000f0c01000864080804000b66a460900804000b668a609a",
                 "0242fff050420243fff050433203926800089468000c4eb900200a1a4eb900200782c3fcf900e08131410010"};
-        for(int i=0;i<starts.length;i++)assertEquals(heads[i],hex(a,starts[i],heads[i].length()/2));
+        for(int i=0;i<starts.length;i++)assertEquals(heads[i],hex(fixture.image(),starts[i],heads[i].length()/2));
         // Source Routine4 alone has two ASR.L #8/#1 pairs; Routine1E has one ASR.L #8 per product.
-        assertEquals("e081e28131410010",hex(a,0x6A18,8));
-        assertEquals("e08131410010",hex(a,0x6A8E,6));
+        assertEquals("e081e28131410010",hex(fixture.image(),0x6A18,8));
+        assertEquals("e08131410010",hex(fixture.image(),0x6A8E,6));
     }
 
     @Test void allBumperPointerAndProfileBytesAreExactSixteenColumnData() throws Exception {
@@ -74,24 +75,24 @@ class TestCdR31aSpecialBlockData {
     }
 
     @Test void actualPcIndexedConsumerPairsSelectAllThreeExposedRoots() throws Exception {
-        var a=TestCdR31aAssets.actual().assets();
+        var fixture=TestCdR31aAssets.actual();var a=fixture.assets();
         int[] at={0x683A,0x683E,0x68E8,0x68EC,0x6AC2,0x6AC6};
         String[] nativeBytes={"323b101c","43fb1018","303b1038","4ebb0034","303b106a","43fb0066"};
         var roots=List.of(PLAYER_BLOCKS,PLAYER_BLOCKS,PLAYER_BLOCK_ROUTINES,PLAYER_BLOCK_ROUTINES,PLAYER_BUMPER_COLLIDE,PLAYER_BUMPER_COLLIDE);
         for(int i=0;i<at.length;i++){
-            assertEquals(nativeBytes[i],hex(a,at[i],4));
-            int displacement=(byte)a.originalImage().readFile(at[i]+3,1)[0];
+            assertEquals(nativeBytes[i],hex(fixture.image(),at[i],4));
+            int displacement=(byte)fixture.image().readFile(at[i]+3,1)[0];
             assertEquals(a.range(roots.get(i)).nativeAddress(),0x200000+at[i]+2+displacement);
         }
-        assertEquals("d241323b101c43fb10187c003c197200b0711000677e544151cefff6",hex(a,0x6838,28));
-        assertEquals("044100126b2c303b106a43fb00660242000f0243000f",hex(a,0x6ABC,22));
+        assertEquals("d241323b101c43fb10187c003c197200b0711000677e544151cefff6",hex(fixture.image(),0x6838,28));
+        assertEquals("044100126b2c303b106a43fb00660242000f0243000f",hex(fixture.image(),0x6ABC,22));
     }
 
     @Test void equalTerrainHeightBytesDoNotReplaceTheReachedBumperSource() throws Exception {
-        var a=TestCdR31aAssets.actual().assets();
+        var fixture=TestCdR31aAssets.actual();var a=fixture.assets();
         var ids=List.of(PLAYER_BUMPER_COLLIDE_1,PLAYER_BUMPER_COLLIDE_2,PLAYER_BUMPER_COLLIDE_3);
         for(int i=0;i<3;i++){
-            assertArrayEquals(a.originalImage().readFile(0x1DF90+16*i,16),a.view(ids.get(i)).copy());
+            assertArrayEquals(fixture.image().readFile(0x1DF90+16*i,16),a.view(ids.get(i)).copy());
             assertEquals(0x206B34+16*i,a.range(ids.get(i)).nativeAddress());
             assertNotEquals(0x21DF90+16*i,a.range(ids.get(i)).nativeAddress());
         }
@@ -107,7 +108,7 @@ class TestCdR31aSpecialBlockData {
         assertEquals(0,raw.length()&1);int[] out=new int[raw.length()/2];
         for(int i=0;i<out.length;i++)out[i]=raw.unsignedWord(i*2);return out;
     }
-    private static String hex(CdR31aAssets a,int offset,int length)throws Exception{
-        return HexFormat.of().formatHex(a.originalImage().readFile(offset,length));
+    private static String hex(CdMmdImage image,int offset,int length)throws Exception{
+        return HexFormat.of().formatHex(image.readFile(offset,length));
     }
 }

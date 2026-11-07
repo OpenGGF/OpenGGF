@@ -48,7 +48,6 @@ public final class CdR31aLoadPlan {
     private final CdR31aLoadMetadata sources;
     private final List<NativeReader> readers;
     private final List<PlcOperation> start;
-    private final CdAssetBytes[] nativeViews=new CdAssetBytes[37];
     private CdR31aLoadPlan(CdR31aAssets assets) {
         this.assets=Objects.requireNonNull(assets,"actual original USA R31A assets");assets.requireAuthenticated();
         sources=assets.loadMetadata();if(!sources.ownsAssets(assets) || sources.sources().size()!=37 || sources.plcs().size()!=19)
@@ -57,12 +56,6 @@ public final class CdR31aLoadPlan {
                 || assets.levelIndex().levelArt().nativeAddress()!=0x237BEE || assets.levelIndex().blocks().nativeAddress()!=0x236C76)
             throw new IllegalArgumentException("R31A literal tagged load operands differ");
         // Actual R31A instructions, not equal-looking PPZ/other-release offsets or native address-shaped labels.
-        require(0x15E4,"700045f90020fac070001012670461000fca700161000fc4");
-        require(0x3580,"45f90020fac02f0a588a221a0281003fffff204149f900ff20006100ed82");
-        require(0x35B4,"4a3900ff152267064ef90020bef60839000100ff151c670a7000101267046100ee784e75");
-        require(0x1AD6,"203c742000027400143900ff152e08820007ef4a2d40000443f900232f3c47f12000");
-        require(0xBEF6,"43fa0050700072003038f700b0596504540160f813c100ff1574303b10464ef90020244c");
-        require(0xBF1A,"43fa002c700072003038f700b0596504540160f8b23900ff157466024e7513c100ff1574303b10104ef90020247e");
         var rr=new ArrayList<NativeReader>();
         for(var line:NATIVE_READERS.strip().lines().toList()) {
             var w=line.split(" ");var id=CdR31aLoadMetadata.SourceId.valueOf(w[0]);
@@ -79,13 +72,7 @@ public final class CdR31aLoadPlan {
     public List<NativeReader> nativeReaders(){return readers;}
     public NativeReader nativeReader(CdR31aLoadMetadata.SourceId id){return readers.get(Objects.requireNonNull(id).ordinal());}
     public synchronized CdAssetBytes nativeView(CdR31aLoadMetadata.SourceId id) {
-        var r=nativeReader(id);int index=id.ordinal();if(nativeViews[index]!=null)return nativeViews[index];
-        CdAssetBytes bytes=r.byteLength()==r.source().includeBytes()?sources.canonicalView(id)
-                :r.byteLength()==r.source().javaReaderBytes()?sources.javaView(id)
-                :CdAssetBytes.copyOf(assets.originalImage().readFile(r.source().fileOffset(),r.byteLength()));
-        if(bytes.unsignedWord(0)!=r.source().headerWord() || !r.sha256().equals(CdR11aProfile.sha256(bytes.copy())))
-            throw new IllegalArgumentException("R31A retained native reader span differs");
-        nativeViews[index]=bytes;return bytes;
+        return assets.internalReader().nativeInput(id);
     }
     public List<CdR31aLoadMetadata.PlcList> plcs(){return sources.plcs();}
     public List<CdR11bLoadPlan.SectionArt> sections(){return sources.sections();}
@@ -117,13 +104,9 @@ public final class CdR31aLoadPlan {
         var list=plcs().get(id);var rows=list.entries().stream().map(e->new CdR11aPlcBuffer.Entry(sources.source(e.source()).nativeAddress(),e.vramAddress())).toList();
         return new PlcOperation(delivery,id,list,rows);
     }
-    private void require(int at,String hex) {
-        if(!HexFormat.of().formatHex(assets.originalImage().readFile(at,hex.length()/2)).equals(hex))
-            throw new IllegalArgumentException("R31A selected native load operand differs at "+Integer.toHexString(at));
-    }
     private static void nativeByte(int x){if((x&~255)!=0)throw new IllegalArgumentException("Native BYTE required");}
     private static void word(int x){if((x&~65535)!=0)throw new IllegalArgumentException("Native WORD required");}
-    private static final String NATIVE_READERS="""
+    static final String NATIVE_READERS="""
 STAGE_GFX 99 10162 10162 f959c37d4a78c6fbe47ebf119e8db80fe2a5121093482559cc61675f5feb7b37
 CHECKPOINT_GFX 53 212 212 e6af441ac5e051484bcd2993ad2736262b9c8f9a379bc714711e045f3f83e7bf
 GOAL_GFX 88 449 449 1ba1c7e9a34a071c8786cc2eb94eaf2adf0e58b480ef8d62f6501bb7f3006250

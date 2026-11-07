@@ -41,7 +41,7 @@ class TestCdR31SpecialBlockDataFactory {
     }
 
     @Test void completeDirectoryOperandsAndOriginalPcRootsRetainTheirSourceMeaning() throws Exception {
-        var a=TestCdR31aAssets.actual().assets();Data.fromAssets(a);
+        var fixture=TestCdR31aAssets.actual();var a=fixture.assets();Data.fromAssets(a);
         assertArrayEquals(new int[]{0x2A,8,0x52,0x30},words(a.view(PLAYER_BLOCKS)));
         assertArrayEquals(new int[]{6,22,38},words(a.view(PLAYER_BUMPER_COLLIDE)));
         assertArrayEquals(new int[]{0x20,0x20,0xD0,0xD0,0x266,0x122,0x134,0x134,0x242,0x19A,0x19A,0x19A,0x17E,0x122,0x122,0x146},words(a.view(PLAYER_BLOCK_ROUTINES)));
@@ -49,13 +49,13 @@ class TestCdR31SpecialBlockDataFactory {
         String[] code={"323b101c","43fb1018","303b1038","4ebb0034","303b106a","43fb0066"};
         int[] roots={0x206858,0x206858,0x206922,0x206922,0x206B2E,0x206B2E};
         for(int i=0;i<at.length;i++){
-            byte[] raw=a.originalImage().readFile(at[i],4);assertEquals(code[i],HexFormat.of().formatHex(raw));
+            byte[] raw=fixture.image().readFile(at[i],4);assertEquals(code[i],HexFormat.of().formatHex(raw));
             assertEquals(roots[i],0x200000+at[i]+2+raw[3]);
         }
     }
 
     @Test void fullOriginalMathViewsRetainKnownValuesAndGenuineUnreadEvenTail() throws Exception {
-        var a=TestCdR31aAssets.actual().assets();var data=Data.fromAssets(a);
+        var fixture=TestCdR31aAssets.actual();var a=fixture.assets();var data=Data.fromAssets(a);
         var sine=data.sineWords().orElseThrow();var atan=data.arcTanBytes().orElseThrow();
         assertSame(a.view(SINE_TABLE),sine);assertSame(a.view(ARC_TAN_TABLE),atan);
         assertEquals(640,sine.length());assertEquals(258,atan.length());
@@ -65,8 +65,8 @@ class TestCdR31SpecialBlockDataFactory {
         for(int i=0;i<si.length;i++)assertEquals(sv[i],(short)sine.unsignedWord(si[i]*2));
         int[] ai={0,1,32,64,128,192,255,256,257},av={0,0,5,10,19,26,32,32,0};
         for(int i=0;i<ai.length;i++)assertEquals(av[i],atan.unsignedByte(ai[i]));
-        assertArrayEquals(a.originalImage().readFile(0x79A,640),sine.copy());
-        assertArrayEquals(a.originalImage().readFile(0xA80,258),atan.copy());
+        assertArrayEquals(fixture.image().readFile(0x79A,640),sine.copy());
+        assertArrayEquals(fixture.image().readFile(0xA80,258),atan.copy());
         // Atan's byte257 is retained actual EVEN data; the existing algorithm reaches at most256.
         assertEquals(0,atan.unsignedByte(257));assertThrows(IndexOutOfBoundsException.class,()->atan.unsignedByte(258));
     }

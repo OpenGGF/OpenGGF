@@ -14,7 +14,6 @@ import java.util.*;
  */
 public final class CdR31aAssets {
     private static final String MMD_SHA="30bb932c3f7a18f0629dcee56fb982280e0b6d6063fb67392b23771f77e7682e";
-    private static final CdMmdHeader HEADER=new CdMmdHeader(0,0,0,0,0x200100,0x20010C,0x200112);
     public record Identity(CdReleaseVariant variant,CdStageKey stage,CdNativeFile file,
                            CdMmdImage.Domain domain,String mmdSha256,String observedWholeDiscSha256) {
         public Identity {
@@ -91,7 +90,7 @@ public final class CdR31aAssets {
         PLAYER_BUMPER_COLLIDE_1(0x6B34,16,"46fd7d2954ec5a94f0ab18ed3ce82ef3738b9e9a5f444e952caccba97ec43cd8"),
         PLAYER_BUMPER_COLLIDE_2(0x6B44,16,"7039c80bf965bd800e6e814ae50b42d9316184aa79c63a41075fa1945bf7dd47"),
         PLAYER_BUMPER_COLLIDE_3(0x6B54,16,"55863b4d00c3326f9acf1d393883e0964cd7598563e7f4548d12a1eea4fdf745");
-        private final int offset,length;private final String sha;
+        final int offset,length;final String sha;
         Asset(int offset,int length,String sha){this.offset=offset;this.length=length;this.sha=sha;}
     }
     public record Range(Asset asset,int fileOffset,int length,String sha256) {
@@ -99,43 +98,35 @@ public final class CdR31aAssets {
             if(fileOffset!=asset.offset || length!=asset.length || !sha256.equals(asset.sha))throw new IllegalArgumentException("Only fixed R31A source ranges");}
         public int nativeAddress(){return 0x200000+fileOffset;}public int endExclusive(){return fileOffset+length;}
     }
-    private final Identity identity;private final CdMmdImage image;
-    private final CdAssetBytes[] views=new CdAssetBytes[Asset.values().length];private final List<Range> ranges;
+    private final Identity identity;private final CdProgrammeReader reader;
+    private final List<Range> ranges;
     private final CdSonicVisualAssets sonic;private final List<CdAssetBytes> placementRows;
     private final CdObjectPlacements placements;
     private final CdR11bLoadPlan.LevelIndex levelIndex;private final CdR11bLoadPlan.Bounds bounds;private final CdR11bLoadPlan.InitialCentre initialCentre;
     private final CdR31aLoadMetadata loadMetadata;
-    private CdNemesisAsset.Decoded blocks;private CdStageTerrain terrain;
-    private CdR31aAssets(Identity identity,CdMmdImage image)throws IOException {
-        this.identity=identity;this.image=image;var rr=new ArrayList<Range>();
-        for(var a:Asset.values()){var r=new Range(a,a.offset,a.length,a.sha);var bytes=CdAssetBytes.copyOf(image.readFile(r.fileOffset(),r.length()));
-            if(!r.sha256().equals(CdR11aProfile.sha256(bytes.copy())))throw new IOException("R31A original source span differs: "+a);
-            views[a.ordinal()]=bytes;rr.add(r);}
-        ranges=List.copyOf(rr);
+
+    private CdR31aAssets(CdProgrammeReader reader)throws IOException {
+        this.reader=Objects.requireNonNull(reader);
+        if(!reader.stage().equals(CdStagePayload.R31A.stage()))throw new IllegalArgumentException("R31A retained source differs");
+        identity=new Identity(CdReleaseVariant.USA,reader.stage(),reader.file(),CdMmdImage.Domain.ORIGINAL_WORD_RAM,reader.mmdSha(),reader.discSha());
+        var rr=new ArrayList<Range>();for(var a:Asset.values())rr.add(new Range(a,a.offset,a.length,a.sha));ranges=List.copyOf(rr);
         var index=view(Asset.LEVEL_DATA_INDEX);
         levelIndex=new CdR11bLoadPlan.LevelIndex(new CdR11bLoadPlan.TaggedPointer(index.unsignedLong(0)),
                 new CdR11bLoadPlan.TaggedPointer(index.unsignedLong(4)),(int)index.unsignedLong(8),index.slice(12,2),index.slice(14,2));
         var size=view(Asset.CAM_BOUNDS);bounds=new CdR11bLoadPlan.Bounds(size.unsignedWord(0),size.unsignedWord(2),size.unsignedWord(4),size.unsignedWord(6),size.unsignedWord(8),size.unsignedWord(10));
         var start=view(Asset.LEVEL_START_LOC);initialCentre=new CdR11bLoadPlan.InitialCentre(start.unsignedWord(0),start.unsignedWord(2));
-        sonic=CdSonicVisualAssets.decode(CdSonicVisualAssets.SourceFormat.FRAMES_167,view(Asset.MAP_SPR_SONIC).copy(),view(Asset.DPLC_SONIC).copy(),view(Asset.ART_SONIC).copy());
+        sonic=reader.sonic();
         placementRows=readPlacementRows();placements=CdObjectPlacements.decodeR31NativeOrder(this);loadMetadata=CdR31aLoadMetadata.fromAssets(this);
     }
     public static CdR31aAssets fromPrograms(CdProgramAssets programs,CdStageKey stage)throws IOException {
         Objects.requireNonNull(programs,"actual complete-disc data source");Objects.requireNonNull(stage,"explicit selected stage");
         if(!stage.equals(CdStagePayload.R31A.stage()))throw new UnsupportedOperationException("Only original USA R31A startup data reviewed");
-        if(programs.header().observedVariant().orElse(null)!=CdReleaseVariant.USA)throw new IOException("R31A requires original USA media");
-        var release=CdRetailReleases.find(programs.identity()).orElseThrow(()->new IOException("R31A requires a known complete-disc content profile"));
-        if(release.variant()!=CdReleaseVariant.USA)throw new IOException("R31A source release differs");
-        var catalogue=programs.catalogue().orElseThrow(()->new IOException("R31A source catalogue unavailable"));
-        var payload=catalogue.stage(stage);
-        if(catalogue.release()!=CdReleaseVariant.USA || payload==null || payload!=CdStagePayload.R31A
-                || payload.file()!=CdNativeFile.R31A || !payload.stage().equals(stage))throw new IOException("R31A catalogue stage/file/release differs");
-        var image=programs.mmd(CdNativeFile.R31A);verifyImage(image);verifyOperands(image);
-        return new CdR31aAssets(new Identity(CdReleaseVariant.USA,stage,CdNativeFile.R31A,CdMmdImage.Domain.ORIGINAL_WORD_RAM,MMD_SHA,programs.identity().normalizedSha256()),image);
+        return new CdR31aAssets(CdProgrammeReader.open(programs,stage));
     }
+
     public Identity identity(){return identity;}public List<Range> ranges(){return ranges;}
     public Range range(Asset asset){return ranges.get(Objects.requireNonNull(asset).ordinal());}
-    public CdAssetBytes view(Asset asset){return views[Objects.requireNonNull(asset).ordinal()];}
+    public CdAssetBytes view(Asset asset){return reader.view(Objects.requireNonNull(asset));}
     public CdSonicVisualAssets sonic(){return sonic;}
     /** Exact original raw eight-byte rows, retained independently of the typed placement relation. */
     public List<CdAssetBytes> placementRows(){return placementRows;}
@@ -144,24 +135,15 @@ public final class CdR31aAssets {
     public CdR11bLoadPlan.LevelIndex levelIndex(){return levelIndex;}public CdR11bLoadPlan.Bounds bounds(){return bounds;}
     public CdR11bLoadPlan.InitialCentre initialCentre(){return initialCentre;}
     public CdR31aLoadMetadata loadMetadata(){return loadMetadata;}
-    public synchronized CdNemesisAsset.Decoded blocksDecode()throws IOException {
-        if(blocks==null){var p=CdNemesisAsset.decode(view(Asset.LEVEL_BLOCKS).copy(),5248,0x2000);
-            if(p.consumedInputBytes()!=3959 || !"108e1dc9e6fb4c14578ca3073fbd9099f9fe5028d10fed98dad102ce56076964".equals(CdR11aProfile.sha256(p.bytes().copy())))throw new IOException("R31A finite block product differs");blocks=p;}
-        return blocks;
-    }
+    public synchronized CdNemesisAsset.Decoded blocksDecode()throws IOException {return reader.decoded(CdProgrammeReader.Blocks.R31);}
     public CdNemesisAsset.Decoded levelTilesDecode()throws IOException{return loadMetadata.decoded(CdR31aLoadMetadata.SourceId.STAGE_GFX);}
-    public synchronized CdStageTerrain terrain()throws IOException {
-        if(terrain==null)terrain=CdStageTerrain.decode(CdStageTerrain.Shape.CCZ1_PRESENT,blocksDecode().bytes().copy(),levelTilesDecode().bytes().copy(),
-                view(Asset.LEVEL_CHUNKS).copy(),view(Asset.LAYOUT_FG).copy(),view(Asset.LAYOUT_BG).copy(),view(Asset.LEVEL_COLLISION).copy(),
-                view(Asset.COL_ANGLE_MAP).copy(),view(Asset.COL_HEIGHT_MAP).copy(),view(Asset.COL_WIDTH_MAP).copy());
-        return terrain;
-    }
+    public synchronized CdStageTerrain terrain()throws IOException {return reader.terrain();}
     // BEGIN fixed R31 programme music source borrow, outside the63-view public inventory.
     record ProgrammeMusicSource(CdAssetBytes consumer,CdAssetBytes commands) { }
     ProgrammeMusicSource programmeMusicSource() {
         requireAuthenticated();
-        return new ProgrammeMusicSource(CdAssetBytes.copyOf(image.readFile(0x1A76,58)),
-                CdAssetBytes.copyOf(image.readFile(0x1AB0,28)));
+        return new ProgrammeMusicSource(reader.view(CdProgrammeReader.Borrow.MUSIC_CONSUMER),
+                reader.view(CdProgrammeReader.Borrow.MUSIC_COMMANDS));
     }
     // END fixed R31 programme music source borrow.
     // BEGIN fixed R31 CCZ12/common-events source borrow 20261107.
@@ -181,10 +163,10 @@ public final class CdR31aAssets {
     }
     LevelEventsSource levelEventsSource() {
         requireAuthenticated();
-        return new LevelEventsSource(this,CdAssetBytes.copyOf(image.readFile(0x299C,40)),
-                CdAssetBytes.copyOf(image.readFile(0x3626,122)),CdAssetBytes.copyOf(image.readFile(0x36A0,14)),
-                CdAssetBytes.copyOf(image.readFile(0x3748,18)),CdAssetBytes.copyOf(image.readFile(0x375A,6)),
-                CdAssetBytes.copyOf(image.readFile(0x3760,8)));
+        return new LevelEventsSource(this,reader.view(CdProgrammeReader.Borrow.SCROLL_CONSUMER),
+                reader.view(CdProgrammeReader.Borrow.COMMON_EVENTS),reader.view(CdProgrammeReader.Borrow.ZONE_DIRECTORY),
+                reader.view(CdProgrammeReader.Borrow.CCZ_DISPATCH),reader.view(CdProgrammeReader.Borrow.ACT_DIRECTORY),
+                reader.view(CdProgrammeReader.Borrow.CCZ12));
     }
     // END fixed R31 CCZ12/common-events source borrow 20261107.
 
@@ -202,17 +184,16 @@ public final class CdR31aAssets {
     }
     HudSource hudSource() {
         requireAuthenticated();
-        return new HudSource(this,CdAssetBytes.copyOf(image.readFile(0xA940,1118)),
-                CdAssetBytes.copyOf(image.readFile(0xAB86,12)),CdAssetBytes.copyOf(image.readFile(0xACE6,40)),
-                CdAssetBytes.copyOf(image.readFile(0x1DFA,6)));
+        return new HudSource(this,reader.view(CdProgrammeReader.Borrow.HUD_UPDATE),
+                reader.view(CdProgrammeReader.Borrow.HUD_RESET),reader.view(CdProgrammeReader.Borrow.HUD_DIVISORS),
+                reader.view(CdProgrammeReader.Borrow.HUD_VINT));
     }
     // END fixed R31 native-HUD source borrow 20261107.
 
-    /** Same-package immutable source custody, not a public arbitrary-address reader. */
-    CdMmdImage originalImage(){return image;}
+    CdProgrammeReader internalReader(){return reader;}
     void requireAuthenticated() {
-        try{verifyImage(image);}catch(IOException fault){throw new IllegalStateException("Retained R31A source differs",fault);}
-        if(identity.file()!=CdNativeFile.R31A || !identity.stage().equals(CdStagePayload.R31A.stage())
+        reader.requireRetained();
+        if(identity.file()!=reader.file() || !identity.stage().equals(reader.stage())
                 || identity.variant()!=CdReleaseVariant.USA || identity.domain()!=CdMmdImage.Domain.ORIGINAL_WORD_RAM)throw new IllegalStateException("Retained R31A owner differs");
     }
     private List<CdAssetBytes> readPlacementRows() {
@@ -223,26 +204,5 @@ public final class CdR31aAssets {
         for(int at=12;at<end-8;at+=8){var row=raw.slice(at,8);int x=row.unsignedWord(0),id=row.unsignedByte(4)&127,mask=row.unsignedByte(6);
             if(x<previous || x==65535 || id<1 || id>60 || mask==0 || (mask&~0xE0)!=0)throw new IllegalArgumentException("R31A native raw placement fields/order differ");list.add(row);previous=x;}
         if(list.size()!=517)throw new IllegalArgumentException("R31A source row count");return List.copyOf(list);
-    }
-    private static void verifyImage(CdMmdImage image)throws IOException {
-        Objects.requireNonNull(image,"actual selected original MMD");
-        if(image.fileBytes()!=262144 || !HEADER.equals(image.header()) || image.fileBackedCopyBytes()!=0 || image.unresolvedCopyBytes()!=0
-                || !MMD_SHA.equals(CdR11aProfile.sha256(image.readFile(0,image.fileBytes()))))throw new IOException("Original USA R31A image/header differs");
-    }
-    private static void verifyOperands(CdMmdImage image)throws IOException {
-        require(image,0x15E6,"45f90020fac0");require(image,0x3580,"45f90020fac0");require(image,0x35FC,"43f90021f9bc");
-        require(image,0x2450,"43f90020fad0");require(image,0x39A2,"43f900203db4");
-        require(image,0x283A,"41f90020287c");require(image,0x28C8,"43f900202940");require(image,0x2934,"43f900202944");
-        require(image,0x3FD6,"217c0022df200004");require(image,0x5B62,"45f90022e8ac");require(image,0x5B92,"43f900220000");
-        require(image,0x561A,"43f90020590a");require(image,0x71CA,"45f90020754a");require(image,0x2BE8,"47f900202c1249f90023a746");
-        require(image,0xFAC0,"03237bee02236c760021000000810404");
-        // Source-selected PC-relative roots and complete counted-scan/bumper-index operands.
-        // Historical off_206930 is a label; actual original-R31A native address is 0x206922.
-        require(image,0x6838,"d241323b101c43fb10187c003c197200b0711000677e544151cefff6");
-        require(image,0x68E8,"303b10384ebb0034");
-        require(image,0x6ABC,"044100126b2c303b106a43fb00660242000f0243000f");
-    }
-    private static void require(CdMmdImage image,int at,String hex)throws IOException {
-        if(!HexFormat.of().formatHex(image.readFile(at,hex.length()/2)).equals(hex))throw new IOException("R31A original selected operand differs at "+Integer.toHexString(at));
     }
 }

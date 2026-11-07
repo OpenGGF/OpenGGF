@@ -1,5 +1,29 @@
 # Implement Sonic CD with complete regional parity
 
+## 7 November 2026 — one programme reader, independent CCZ data
+
+Package-private `CdProgrammeReader` now owns finite raw/compressed reads, successful
+view caches, retained programme images and terrain decoding. The R31 facade
+consumes it after deleting its duplicate algorithms and caches; independently
+authenticated R32A layouts use that same reader. Shared R3 player parsing keeps
+167-frame source semantics, actual raw/live extents and reached high-frame limits.
+CCZ2 Present terrain is appended without changing the CCZ1 ordinal or admitting a
+new live World. Load-table grammar consolidation remains a separate active slice.
+
+R90 stopped production compilation at one missing import; R90b stopped test
+compilation at removed raw-image callers and an invalid method reference. Neither
+ran tests. R90c compiled and ran1186 cases across21 classes:1185 passed, one error,
+zero failures/skips. The error was an obsolete private-field reflection assertion
+(`r31a` rather than the new common `r3Source`). R90d changes only that assertion,
+keeps production byte exact, and passes all six affected source-contract cases.
+Together the two source-bound runs cover all1186 distinct selected identities;
+this is not one fully green1186-case invocation. The successful controller,
+natural Boss/Capsule/Results and loading/reader checks retain their original
+source-bound evidence. R90c queue1593s/Maven157s; R90d's lean request waited in
+shared admission and then executed in3.53s. No full-suite, new CCZ World/route,
+regional or native-parity claim follows. External evidence and input snapshots
+remain under the Sonic-CD Downloads research/work directories.
+
 ## 7 November 2026 — one ordinary scheduler, qualified live routes
 
 Package-private `CdOrdinaryLoop` replaces both the R13 and R31 scheduling

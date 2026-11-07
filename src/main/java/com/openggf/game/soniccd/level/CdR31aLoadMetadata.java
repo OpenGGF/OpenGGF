@@ -69,8 +69,6 @@ public final class CdR31aLoadMetadata {
     private final CdR31aAssets assets;private final List<Source> sources;private final Map<Long,Source> addresses;
     private final List<PlcList> plcs;private final List<Palette> palettes;private final List<Cycle> cycles;
     private final List<CdR11bLoadPlan.SectionArt> sections;private final List<Integer> backgroundPointers;
-    private final CdAssetBytes[][] sourceViews=new CdAssetBytes[SourceId.values().length][2];
-    private final CdNemesisAsset.Decoded[] products=new CdNemesisAsset.Decoded[SourceId.values().length];
     private CdR31aLoadMetadata(CdR31aAssets assets) {
         this.assets=Objects.requireNonNull(assets,"actual retained R31A owner");assets.requireAuthenticated();
         var list=new ArrayList<Source>();var map=new HashMap<Long,Source>();
@@ -94,21 +92,9 @@ public final class CdR31aLoadMetadata {
     public List<CdR11bLoadPlan.SectionArt> sections(){return sections;}public List<Integer> backgroundPointers(){return backgroundPointers;}
     /** Describes Main's actual calls only; the caller owns the real native branch/order/adoption. */
     public List<Integer> immediatePlcIds(){return List.of(3,1);}public int conditionalQueuedPlcId(){return 2;}
-    public synchronized CdAssetBytes canonicalView(SourceId id){return sourceView(id,0);}
-    public synchronized CdAssetBytes javaView(SourceId id){return sourceView(id,1);}
-    private CdAssetBytes sourceView(SourceId id,int kind) {
-        Objects.requireNonNull(id);var cache=sourceViews[id.ordinal()];if(cache[kind]!=null)return cache[kind];int length=kind==0?id.include:id.reader;
-        if(cache[1-kind]!=null && id.include==id.reader){cache[kind]=cache[1-kind];return cache[kind];}
-        var b=CdAssetBytes.copyOf(assets.originalImage().readFile(id.offset,length));String hash=kind==0?id.includeSha:id.readerSha;
-        if(b.unsignedWord(0)!=id.header || !hash.equals(CdR11aProfile.sha256(b.copy())))throw new IllegalArgumentException("R31A original bounded compressed source differs");
-        cache[kind]=b;return b;
-    }
-    public synchronized CdNemesisAsset.Decoded decoded(SourceId id)throws IOException {
-        Objects.requireNonNull(id);if(products[id.ordinal()]!=null)return products[id.ordinal()];var s=source(id);
-        var p=CdNemesisAsset.decode(javaView(id).copy(),s.outputBytes(),65536);
-        if(p.consumedInputBytes()!=s.expectedJavaConsumedBytes() || !s.decodedSha256().equals(CdR11aProfile.sha256(p.bytes().copy())))throw new IOException("R31A existing Java source product/cursor differs");
-        products[id.ordinal()]=p;return p;
-    }
+    public synchronized CdAssetBytes canonicalView(SourceId id){return assets.internalReader().canonicalInput(id);}
+    public synchronized CdAssetBytes javaView(SourceId id){return assets.internalReader().javaInput(id);}
+    public synchronized CdNemesisAsset.Decoded decoded(SourceId id)throws IOException {return assets.internalReader().decoded(id);}
     private List<PlcList> decodePlcs() {
         var b=assets.view(CdR31aAssets.Asset.PLC_LISTS);var all=new ArrayList<PlcList>();var encounter=new LinkedHashSet<SourceId>();var bodies=new HashSet<Integer>();
         for(int i=0;i<19;i++){int at=(short)b.unsignedWord(i*2);if(at<38 || (at&1)!=0 || at>b.length()-2)throw new IllegalArgumentException("R31A signed PLC root");int n=(short)b.unsignedWord(at)+1;if(n<1||n>15||2+6*n>b.length()-at)throw new IllegalArgumentException("R31A PLC finite counter");

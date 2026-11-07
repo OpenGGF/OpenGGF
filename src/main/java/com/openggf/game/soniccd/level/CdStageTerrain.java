@@ -22,7 +22,8 @@ public final class CdStageTerrain {
         PPZ2_PAST("R12B", 5664, 25504, 54272, 42, 4, 10, 2, 900),
         PPZ3_GOOD_FUTURE("R13C", 6080, 25216, 54272, 15, 4, 10, 2, 800),
         PPZ3_BAD_FUTURE("R13D", 6048, 26048, 54272, 15, 4, 10, 2, 800),
-        CCZ1_PRESENT("R31A", 5248, 22208, 54784, 48, 6, 7, 3, 700);
+        CCZ1_PRESENT("R31A", 5248, 22208, 54784, 48, 6, 7, 3, 700),
+        CCZ2_PRESENT("R32A", 5248, 22208, 54784, 40, 6, 7, 3, 700);
 
         private final String label;
         private final int blockBytes;

@@ -7,7 +7,10 @@ matching area heading; see the
 
 ## Gameplay and presentation
 
-- **Sonic CD development support:** authenticated user-disc sources now feed an
+- **Sonic CD development support:** a common programme reader now replaces
+  duplicated CCZ reading, decoding and cache algorithms while keeping each act's
+  authenticated data independent. R32A declarative layouts use the same reader;
+  existing player, terrain, loading and controller contracts remain qualified.
   CCZ ordinary scheduling now preserves native VBlank/Main order, the old
   selected sprite list and full-word time-stop gating. Private HUD adoption
   retains the real prefix across typed callback failures;175 focused checks
@@ -21,8 +24,9 @@ matching area heading; see the
   entry behavior and unknown save tails. A private R31 handoff remains fenced
   before the missing live World;147 focused checks pass with explicit nested
   evidence reconciliation, without a gameplay or native-driver completion claim.
-  experimental Palmtree Panic player, terrain and native-object runtime with
-  current-art loading, checkpoint lifecycle and rewind checks. Pre-save time
+  An experimental Palmtree Panic player, terrain and native-object runtime uses
+  authenticated user-disc sources, current-art loading, checkpoint lifecycle and
+  rewind checks. Pre-save time
   warp now creates native history-driven stars through the existing art service,
   including visible controller-route and state/pixel rewind checks. Native
   object-controlled Sonic rejoins the common player tail without running ordinary
