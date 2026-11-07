@@ -138,6 +138,8 @@ public final class Sonic2CompetitionRuntimeModule extends DelegatingGameModule {
                     pages, registers, this::displaySample);
             videoFrame.bindCameraCopies(scroll.owner()::copyBackgroundsAtVInt);
             videoFrame.bindSpriteSource(com.openggf.data.RomByteReader.fromRom(host.rom()));
+            videoFrame.setHudPatterns(()->hudArt.update(session.gameState(0).getLives(),
+                    session.gameState(1).getLives(),videoFrame.displayState().gamePaused()));
             videoFrame.bindDisplayState(new Sonic2CompetitionDisplayState() {
                 @Override public int ringsAnimationFrame() { return rings.frame(); }
                 @Override public boolean teleportFlag() { return session.teleportClock().capture().flag(); }
@@ -239,6 +241,9 @@ public final class Sonic2CompetitionRuntimeModule extends DelegatingGameModule {
     void bindNativeArtPlayers() { if (runtimeArt != null) runtimeArt.bindPlayers(host.session()); }
 
     @Override public <T> T getGameService(Class<T> type) {
+        if(type==com.openggf.level.objects.ObjectDrawInternalAccess.NativeDisplayOwner.class)
+            return type.cast((com.openggf.level.objects.ObjectDrawInternalAccess.NativeDisplayOwner)
+                    Sonic2CompetitionObjectDisplay::adopted);
         var owner = runtimeArt == null ? null : runtimeArt.ownerOrNull();
         if (type == Sonic2CompetitionHudArt.class) return type.cast(hudArt);
         if (type == Sonic2CompetitionVideoFrame.class) return type.cast(videoFrame);

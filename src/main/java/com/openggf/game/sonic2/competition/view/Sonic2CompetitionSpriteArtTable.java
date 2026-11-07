@@ -38,6 +38,12 @@ public final class Sonic2CompetitionSpriteArtTable {
             Map.entry(0xDC, new Pending("RingPrize", "loc_2BD4E (s2.asm:59272-59313)", "Lane C owns this object; display adoption deferred"))
     );
 
+    /** Fixed player accessories are not object-layout IDs; their existing SST owner supplies identity. */
+    private static final java.util.List<Row> FIXED_ROLE_ROWS = java.util.List.of(
+            new Row("shield",0x38,new Entry(Sonic2Constants.MAP_UNC_SHIELD_ADDR,
+                    0x04BE,0x18,4,0,ObjectArtKeys.SHIELD,"Obj38_Main (s2.asm:42393-42401)"),1,0,0));
+    public static java.util.List<Row> fixedRoleRows() { return FIXED_ROLE_ROWS; }
+
     /** One ROM Init variant; masks are the actual placement byte selectors. */
     public record Row(String role, int id, Entry display, int priorityBucket, int subtypeMask, int subtypeValue) {
         public boolean accepts(int subtype) { return (subtype & subtypeMask)==subtypeValue; }
