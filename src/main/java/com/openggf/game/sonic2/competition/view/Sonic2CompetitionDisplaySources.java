@@ -15,7 +15,7 @@ public final class Sonic2CompetitionDisplaySources {
     public Sonic2CompetitionDisplaySources(RomByteReader rom) { this.rom = rom; }
     public Build current(GameplayModeContext context, Sonic2CompetitionSession session,
                          Sonic2CompetitionLevelProfile profile, List<Admission> objects, Sonic2CompetitionDisplayState displayState) {
-        int frame = context.getLevelManager().getFrameCounter() & 65535;
+        int frame = context.getLevelManager().getFrameCounter();
         var rings = context.getLevelManager().getRingManager();
         var rows = context.getLevelManager().getCurrentLevel().getRings();
         var first = RingNativeDisplayInternalAccess.window(rings, rows, 0, frame);
@@ -37,7 +37,7 @@ public final class Sonic2CompetitionDisplaySources {
             }
         }
         return new Build(camera(session, 0), camera(session, 1),
-                new Hud(context.getCamera().isLevelStarted(), frame, hud(session, 0), hud(session, 1), session.loserTimeLeft()),
+                new Hud(context.getCamera().isLevelStarted(), frame & 65535, hud(session, 0), hud(session, 1), session.loserTimeLeft()),
                 ringWindow(first, frame), ringWindow(second, frame), first.animationFrame(), admissions,
                 displayState.teleportFlag());
     }

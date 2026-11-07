@@ -236,11 +236,18 @@ public final class Sonic2CompetitionArtResidency implements RuntimeArtCoordinato
         return frame;
     }
 
+    private Sonic2CompetitionVideoFrame videoFrame;
+    public void bindVideoFrame(Sonic2CompetitionVideoFrame frame) { videoFrame = Objects.requireNonNull(frame); }
+
     public void serviceVBlank(PlcLifecyclePhase phase) {
         Objects.requireNonNull(phase);
         var beforeSlots = slots;
         var beforePending = List.copyOf(pending);
         try {
+            if (videoFrame != null && Sonic2CompetitionVideoFrame.accepts(phase)) {
+                videoFrame.serviceVBlank(phase);
+                return;
+            }
             if (servicesPlayerDma(phase)) serviceDmaQueueVBlank();
             servicePlc(phase);
         } catch (RuntimeException failure) {

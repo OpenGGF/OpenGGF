@@ -54,6 +54,11 @@ public final class Sonic2CompetitionVideoFrame {
         // A2-S supplies ordered ObjectManager admissions after C1. No alternate draw fallback.
         spritePages.prepare(Objects.requireNonNull(spriteSource, "Native sprite inputs").current(
                 context, session, profile, List.of(), displayState));
+        // BuildSprites_2P merges P1/P2 visibility. Replace the generic primary-
+        // camera result for the actual admitted humans; omitted bodies retain it.
+        for (var visibility : spritePages.visibility())
+            if (visibility.slot() < 2)
+                session.player(visibility.slot()).setRenderFlagOnScreen(visibility.onScreen());
     }
     public void setTitleCardPlanes(Runnable draw) { titleCardPlanes = Objects.requireNonNull(draw); }
     public static boolean accepts(PlcLifecyclePhase phase) {
