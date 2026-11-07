@@ -71,7 +71,7 @@ public final class Sonic2CompetitionLevelInitProfile extends AbstractLevelInitPr
         // Vint_CtrlDMA services only the actual queued DMA, including a LAG
         // classification. The claimed lifecycle already owns normal PLC/tail.
         var owner = context.getWorldSession().getGameModule().getGameService(
-                com.openggf.game.sonic2.competition.interlace.Sonic2InterlaceVramService.class);
+                com.openggf.game.sonic2.competition.view.Sonic2CompetitionArtResidency.class);
         Objects.requireNonNull(owner, "native VRAM owner").serviceDmaQueueVBlank();
     }
 

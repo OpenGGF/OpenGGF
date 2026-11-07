@@ -7,7 +7,7 @@ import com.openggf.game.internal.PlayerDplcDmaSink;
 import com.openggf.game.resources.QueueDiagnosticSnapshot;
 import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.rewind.RewindSnapshottable;
-import com.openggf.game.sonic2.competition.interlace.Sonic2InterlaceVramService;
+import com.openggf.game.sonic2.competition.view.Sonic2CompetitionArtResidency;
 import com.openggf.game.sonic2.resources.Sonic2PlcService;
 import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.level.render.SpriteDplcFrame;
@@ -21,12 +21,13 @@ import java.util.Objects;
  * The rewind binding precedes camera and playable reconstruction; the policy
  * subsequently rebinds the selected owner to the restored canonical humans.
  */
-final class Sonic2CompetitionArtRuntime implements RuntimeArtCoordinator, PlayerDplcDmaSink {
+final class Sonic2CompetitionArtRuntime implements RuntimeArtCoordinator, PlayerDplcDmaSink,
+        com.openggf.sprites.render.PlayerResidentBanks.Authority {
     private final RuntimeArtCoordinator delegate;
-    private Sonic2InterlaceVramService owner;
+    private Sonic2CompetitionArtResidency owner;
     private RewindRegistry registered;
     private final RewindSnapshottable<Binding> bindingAdapter = new RewindSnapshottable<>() {
-        @Override public String key() { return Sonic2InterlaceVramService.REWIND_KEY; }
+        @Override public String key() { return Sonic2CompetitionArtResidency.REWIND_KEY; }
         @Override public Binding capture() {
             return owner == null ? new Binding(null, null) : new Binding(owner, owner.capture());
         }
@@ -45,15 +46,20 @@ final class Sonic2CompetitionArtRuntime implements RuntimeArtCoordinator, Player
     }
 
     void install(Rom rom, Sonic2PlcService plc, NativeCompetitionRoster roster) {
-        var next = new Sonic2InterlaceVramService(rom, plc, delegate);
+        var next = new Sonic2CompetitionArtResidency(rom, plc, delegate);
         bindPlayers(next, roster);
         next.resetForNativeEntry();
         owner = next;
     }
 
-    Sonic2InterlaceVramService ownerOrNull() { return owner; }
+    @Override public boolean ownsBank(AbstractPlayableSprite player,
+            com.openggf.sprites.render.PlayerResidentBanks.Role role) {
+        return owner != null && owner.ownsPlayer(player);
+    }
 
-    Sonic2InterlaceVramService requireOwner() {
+    Sonic2CompetitionArtResidency ownerOrNull() { return owner; }
+
+    Sonic2CompetitionArtResidency requireOwner() {
         if (owner == null) throw new IllegalStateException("Native S2 art has not been installed");
         return owner;
     }
@@ -64,7 +70,7 @@ final class Sonic2CompetitionArtRuntime implements RuntimeArtCoordinator, Player
         if (owner != null) bindPlayers(owner, roster);
     }
 
-    private static void bindPlayers(Sonic2InterlaceVramService target, NativeCompetitionRoster roster) {
+    private static void bindPlayers(Sonic2CompetitionArtResidency target, NativeCompetitionRoster roster) {
         Objects.requireNonNull(roster, "native roster");
         var sonic = roster.player(0);
         var tails = roster.player(1);
@@ -142,12 +148,12 @@ final class Sonic2CompetitionArtRuntime implements RuntimeArtCoordinator, Player
         Objects.requireNonNull(registry, "registry");
         if (registered == null) return;
         if (registered != registry) throw new IllegalStateException("Foreign native art rewind registry");
-        registry.deregister(Sonic2InterlaceVramService.REWIND_KEY);
+        registry.deregister(Sonic2CompetitionArtResidency.REWIND_KEY);
         delegate.deregisterRewindAdapters(registry);
         registered = null;
     }
 
-    private record Binding(Sonic2InterlaceVramService owner, Sonic2InterlaceVramService.Snapshot snapshot) {
+    private record Binding(Sonic2CompetitionArtResidency owner, Sonic2CompetitionArtResidency.Snapshot snapshot) {
         private Binding {
             if ((owner == null) != (snapshot == null))
                 throw new IllegalArgumentException("Native art owner and snapshot must be present together");

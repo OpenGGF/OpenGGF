@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.competition.interlace;
 
+import com.openggf.game.sonic2.competition.view.Sonic2CellWord;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -31,11 +33,11 @@ public final class Sonic2InterlaceDecoder {
     /** Already-native attributes: bit 10 is ignored, and must not be halved again. */
     public record NameWord(int value) {
         public NameWord { value &= 0xFFFF; }
-        public int patternIndex() { return value & 0x3FF; }
-        public int palette() { return value >>> 13 & 3; }
-        public boolean priority() { return (value & 0x8000) != 0; }
-        public boolean hFlip() { return (value & 0x0800) != 0; }
-        public boolean vFlip() { return (value & 0x1000) != 0; }
+        public int patternIndex() { return new Sonic2CellWord(value).patternIndex(); }
+        public int palette() { return new Sonic2CellWord(value).palette(); }
+        public boolean priority() { return new Sonic2CellWord(value).priority(); }
+        public boolean hFlip() { return new Sonic2CellWord(value).hFlip(); }
+        public boolean vFlip() { return new Sonic2CellWord(value).vFlip(); }
     }
 
     /** Name-table dimensions in native cells; scroll offsets are source-pixel offsets. */
