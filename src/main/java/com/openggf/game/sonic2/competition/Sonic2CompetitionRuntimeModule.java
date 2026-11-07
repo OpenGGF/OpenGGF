@@ -38,6 +38,7 @@ public final class Sonic2CompetitionRuntimeModule extends DelegatingGameModule {
     private final Sonic2CompetitionLifecycle lifecycle;
     private final Sonic2CompetitionScrollSourceAdapter scroll;
     private Sonic2CompetitionVideoFrame videoFrame;
+    private Sonic2CompetitionHudArt hudArt;
 
     public Sonic2CompetitionRuntimeModule(GameModule base, Sonic2NativeCompetitionHost host) throws IOException {
         super(base, "engine:s2-native-competition");
@@ -67,6 +68,11 @@ public final class Sonic2CompetitionRuntimeModule extends DelegatingGameModule {
         events.initializeBoundaryWords();
         installDisplayArtOwners();
         initializeDisplay();
+    }
+    void initializeHudArt() throws IOException {
+        hudArt = new Sonic2CompetitionHudArt(host.rom(), nativeVramOwner());
+        hudArt.initialize(
+                host.session().gameState(0).getLives(), host.session().gameState(1).getLives());
     }
     private void installDisplayArtOwners() {
         var context = host.context();
@@ -196,6 +202,7 @@ public final class Sonic2CompetitionRuntimeModule extends DelegatingGameModule {
         // service directly, before selecting this act's physical VRAM owner.
         var plc = Objects.requireNonNull(super.getGameService(Sonic2PlcService.class), "fresh S2 PLC service");
         videoFrame = null;
+        hudArt = null;
         requireArtRuntime().install(rom, plc, host.session());
     }
 
@@ -208,6 +215,7 @@ public final class Sonic2CompetitionRuntimeModule extends DelegatingGameModule {
 
     @Override public <T> T getGameService(Class<T> type) {
         var owner = runtimeArt == null ? null : runtimeArt.ownerOrNull();
+        if (type == Sonic2CompetitionHudArt.class) return type.cast(hudArt);
         if (type == Sonic2CompetitionVideoFrame.class) return type.cast(videoFrame);
         if (type == Sonic2CompetitionArtResidency.class) return type.cast(owner);
         if (type == Sonic2PlcService.class) return type.cast(owner == null ? null : owner.plcService());

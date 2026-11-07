@@ -334,6 +334,7 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
         // geometry/player assembly. Replay only its omitted PLC boundaries.
         SkippedPresentationPlcLifecycle.drain(module.nativeVramOwner().plcLifecycle(),
                 PlcLifecyclePhase.LEVEL_TITLE_CARD, plc::isBusy);
+        module.initializeHudArt(); // Level_TtlCard (s2.asm:4914-4927), after the PLC drain and before terrain.
         // LoadZoneTiles patches its own span after the real initial PLC writes;
         // completed high VRAM uploads remain intact for native presentation.
         module.nativeVramOwner().loadZoneArt(profile);

@@ -17,6 +17,23 @@ class TestSonic2CompetitionArtResidency {
     private Sonic2CompetitionArtResidency owner() {
         return new Sonic2CompetitionArtResidency(TestEnvironment.currentRom(), new Sonic2PlcService(TestEnvironment.currentRom()));
     }
+    @Test void inheritedTitleStandardArtIncludesHudLivesAndRingsWithoutChangingPlcQueue() throws Exception {
+        var owner = owner();
+        var queue = owner.plcService().capture();
+        owner.loadInheritedStandardArt();
+        var definition = PlcParser.parse(TestEnvironment.currentRom(), Sonic2Constants.ART_LOAD_CUES_ADDR,
+                Sonic2Constants.PLC_STD1);
+        assertEquals(4, definition.entries().size());
+        for (var entry : definition.entries()) {
+            byte[] decoded = PlcParser.decompressEntryRaw(TestEnvironment.currentRom(), entry);
+            for (int i = 0; i < decoded.length / 32; i++)
+                assertArrayEquals(Arrays.copyOfRange(decoded, i * 32, (i + 1) * 32),
+                        owner.patternBytes(entry.tileIndex() + i));
+        }
+        assertEquals(queue, owner.plcService().capture(), "inherited completion is not a new PLC submission");
+        assertTrue(java.util.stream.IntStream.range(0,32).anyMatch(i -> owner.patternBytes(0x6BC)[i] != 0));
+        assertTrue(java.util.stream.IntStream.range(0,32).anyMatch(i -> owner.patternBytes(0x6DA)[i] != 0));
+    }
     @Test void queueCapacityPhaseGateAndImmutableSlotRestore() {
         var owner = owner();
         var zero = owner.capture();
