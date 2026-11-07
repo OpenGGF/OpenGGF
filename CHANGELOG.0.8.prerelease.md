@@ -38,6 +38,9 @@ under the matching area heading; see the
   resume actual ROM-backed work; credits use their native wait and fade loops.
   Generic ending callers retain their gameplay order, and failed initialization
   preserves the original error while cleaning up its owned continuation.
-  Physics, auxiliary observations and movie input are preserved exactly. New red frontiers remain visible.
+  Physics, auxiliary observations and movie input are preserved exactly.
+  The LRZ title owner submits its three enemy archives in native order,
+  preventing a later results-art FIFO overflow. Existing animation and route
+  frontiers remain visible.
   Special-stage entry honors the recorded team and production lock-on module;
   the single entry-state import consumes S2-family manifest destination rings.

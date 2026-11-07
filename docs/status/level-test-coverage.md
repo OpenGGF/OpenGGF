@@ -1,5 +1,13 @@
 # Level test coverage backlog
 
+LRZ title-owned enemy art (2026-11-07): the [submission audit](../architecture/audits/2026-11-07-lrz-enemy-art-submission.md)
+and [Act1](../architecture/validation/levels/s3k-lrz-act1.md) /
+[Act2](../architecture/validation/levels/s3k-lrz-act2.md) matrices record the native
+three-archive recipe, two-act title/queue/rewind regression and matched Knuckles /
+Tails segment controls. The Knuckles `lrz_2` FIFO abort is resolved, with first
+remaining error 604; no actual common baseline clean row gains ERROR. Its newly
+observed suffix has no paired baseline, and broader coverage gaps remain inherited.
+
 ICZ2 rider-order maintenance (2026-11-05): the
 [Act2 matrix](../architecture/validation/levels/s3k-icz-act2.md#native-rider-impulse-order--2026-11-05)
 records deterministic native P1/P2 tension-platform impulses, existing extra
