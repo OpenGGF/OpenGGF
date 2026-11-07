@@ -9,7 +9,7 @@ class TestControlCodecCompetition {
     static List<ControlMessage> shapes() {
         var t = new ControlMessage.SwapTarget(65535, 0, -4096, 4096, true, true, 7, true, 2, 75, 15);
         return List.of(new ControlMessage.RaceCutoff(1, 2000),
-                new ControlMessage.TeleportRequest(1, 0), new ControlMessage.TeleportNoPartner(1, 0),
+                new ControlMessage.TeleportRequest(1, 0), new ControlMessage.TeleportNoPartner(1L, 1, 0),
                 new ControlMessage.TeleportSwap(1, 1, 0, 255, t, t, 0, 50),
                 new ControlMessage.TeleportOutcome(1, 50, "APPLIED"),
                 new ControlMessage.TeleportOutcome(1, 50, "FALLBACK"),

@@ -1973,6 +1973,7 @@ CONSTRUCTOR com.openggf.mods.run.RunLevelStart public  <init>(com.openggf.mods.r
 CONSTRUCTOR com.openggf.mods.run.RunSpec public  <init>(java.lang.String,int,int,java.lang.String,com.openggf.game.session.GameplayRunPolicy)
 CONSTRUCTOR com.openggf.mods.run.RunSpec public  <init>(java.lang.String,int,int,java.lang.String,com.openggf.game.session.GameplayRunPolicy,com.openggf.mods.run.RunArea)
 CONSTRUCTOR com.openggf.mods.run.RunSpec public  <init>(java.lang.String,int,int,java.lang.String,com.openggf.game.session.GameplayRunPolicy,com.openggf.mods.run.RunArea,com.openggf.mods.run.TrackKind)
+CONSTRUCTOR com.openggf.mods.run.RunSpec public  <init>(java.lang.String,int,int,java.lang.String,com.openggf.game.session.GameplayRunPolicy,com.openggf.mods.run.RunArea,com.openggf.mods.run.TrackKind,boolean)
 CONSTRUCTOR com.openggf.mods.run.RunStep public  <init>(long,int,boolean,com.openggf.mods.run.PlayerPose,boolean,int,boolean)
 CONSTRUCTOR com.openggf.mods.run.RunStep public  <init>(long,int,boolean,com.openggf.mods.run.PlayerPose,boolean,int,boolean,com.openggf.mods.run.RaceClock,com.openggf.mods.run.RaceSignal,com.openggf.mods.run.RaceEventResult)
 CONSTRUCTOR com.openggf.mods.run.SwapTarget public  <init>(int,int,int,int,boolean,boolean,int,boolean,int,int,int)
@@ -2034,6 +2035,7 @@ CONSTRUCTOR com.openggf.net.client.RoomJoinOptions public  <init>(com.openggf.ne
 CONSTRUCTOR com.openggf.net.ghost.GhostFrame public  <init>(int,int,int,boolean,boolean,boolean,int,boolean)
 CONSTRUCTOR com.openggf.net.ghost.GhostFrame public  <init>(int,int,int,boolean,boolean,boolean,int,boolean,boolean)
 CONSTRUCTOR com.openggf.net.ghost.GhostFrame public  <init>(int,int,int,boolean,boolean,boolean,int,boolean,boolean,int,boolean,int)
+CONSTRUCTOR com.openggf.net.ghost.GhostFrame public  <init>(int,int,int,boolean,boolean,boolean,int,boolean,boolean,int,boolean,int,boolean)
 CONSTRUCTOR com.openggf.net.host.jdk.JdkHostLimits public  <init>(int,int,long,long,long,long,long,int,int,int,int,int,int)
 CONSTRUCTOR com.openggf.net.host.jdk.JdkRaceHostServer$RetirementReceipt public  <init>(boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.net.hub.GhostHub public  <init>(java.util.function.LongSupplier,com.openggf.net.hub.TrackValidationProfileSource,com.openggf.net.hub.GhostHub$HubViolationRecorder)
@@ -2156,6 +2158,7 @@ CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomTrackUpdate public  <ini
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomTrackUpdate public  <init>(java.lang.String,int,int,java.lang.String)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoundConfig public  <init>(java.lang.String,int,int,int,java.lang.String,java.lang.String)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoundConfig public  <init>(java.lang.String,int,int,int,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String,int)
+CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoundConfig public  <init>(java.lang.String,int,int,int,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String,int,int)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoundConfigure public  <init>(com.openggf.net.protocol.ControlMessage$RoundConfig)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoundConfigure public  <init>(com.openggf.net.protocol.ControlMessage$RoundConfig,long)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoundEnd public  <init>(java.util.List<com.openggf.net.protocol.ControlMessage$StandingsRow>)
@@ -2174,8 +2177,9 @@ CONSTRUCTOR com.openggf.net.protocol.ControlMessage$StandingsPageRequest public 
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$StandingsPageRequest public  <init>(int,java.lang.String)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$StandingsRow public  <init>(int,java.lang.String,java.lang.String,int,int,java.lang.String)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$StandingsRow public  <init>(int,java.lang.String,java.lang.String,int,int,java.lang.String,java.lang.String,int,java.util.List<java.lang.Integer>)
+CONSTRUCTOR com.openggf.net.protocol.ControlMessage$StandingsRow public  <init>(int,java.lang.String,java.lang.String,int,int,java.lang.String,java.lang.String,int,java.util.List<java.lang.Integer>,boolean)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$SwapTarget public  <init>(int,int,int,int,boolean,boolean,int,boolean,int,int,int)
-CONSTRUCTOR com.openggf.net.protocol.ControlMessage$TeleportNoPartner public  <init>(int,int)
+CONSTRUCTOR com.openggf.net.protocol.ControlMessage$TeleportNoPartner public  <init>(long,int,int)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$TeleportOutcome public  <init>(long,int,java.lang.String)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$TeleportRequest public  <init>(int,int)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$TeleportSwap public  <init>(long,long,int,int,com.openggf.net.protocol.ControlMessage$SwapTarget,com.openggf.net.protocol.ControlMessage$SwapTarget,int,int)
@@ -3629,6 +3633,7 @@ FIELD com.openggf.mods.run.RaceEventResult public,static,final com.openggf.mods.
 FIELD com.openggf.mods.run.RaceEventResult$Outcome public,static,final com.openggf.mods.run.RaceEventResult$Outcome APPLIED
 FIELD com.openggf.mods.run.RaceEventResult$Outcome public,static,final com.openggf.mods.run.RaceEventResult$Outcome FALLBACK
 FIELD com.openggf.mods.run.RaceEventResult$Outcome public,static,final com.openggf.mods.run.RaceEventResult$Outcome NONE
+FIELD com.openggf.mods.run.RaceSignal public,static,final com.openggf.mods.run.RaceSignal ARENA_DEATH_RESPAWN
 FIELD com.openggf.mods.run.RaceSignal public,static,final com.openggf.mods.run.RaceSignal NONE
 FIELD com.openggf.mods.run.RaceSignal public,static,final com.openggf.mods.run.RaceSignal SWAP_REQUEST
 FIELD com.openggf.mods.run.RunEndReason public,static,final com.openggf.mods.run.RunEndReason ABORTED
@@ -12915,6 +12920,7 @@ METHOD com.openggf.mods.run.RunLevelStart public  java.lang.String determinismFi
 METHOD com.openggf.mods.run.RunLevelStart public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.mods.run.RunLevelStart public,final  int hashCode()
 METHOD com.openggf.mods.run.RunLevelStart public,final  java.lang.String toString()
+METHOD com.openggf.mods.run.RunSpec public  boolean swapEnabled()
 METHOD com.openggf.mods.run.RunSpec public  com.openggf.game.session.GameplayRunPolicy policy()
 METHOD com.openggf.mods.run.RunSpec public  com.openggf.mods.run.RunArea area()
 METHOD com.openggf.mods.run.RunSpec public  com.openggf.mods.run.TrackKind kind()
@@ -13664,6 +13670,7 @@ METHOD com.openggf.net.ghost.GhostFrame public  boolean finished()
 METHOD com.openggf.net.ghost.GhostFrame public  boolean hFlip()
 METHOD com.openggf.net.ghost.GhostFrame public  boolean highPriority()
 METHOD com.openggf.net.ghost.GhostFrame public  boolean hurt()
+METHOD com.openggf.net.ghost.GhostFrame public  boolean respawnReset()
 METHOD com.openggf.net.ghost.GhostFrame public  boolean secondaryPath()
 METHOD com.openggf.net.ghost.GhostFrame public  boolean vFlip()
 METHOD com.openggf.net.ghost.GhostFrame public  int mappingFrame()
@@ -14367,6 +14374,7 @@ METHOD com.openggf.net.protocol.ControlMessage$RoomTrackUpdate public,final  int
 METHOD com.openggf.net.protocol.ControlMessage$RoomTrackUpdate public,final  java.lang.String toString()
 METHOD com.openggf.net.protocol.ControlMessage$RoundConfig public  int act()
 METHOD com.openggf.net.protocol.ControlMessage$RoundConfig public  int cutoffSeconds()
+METHOD com.openggf.net.protocol.ControlMessage$RoundConfig public  int startInSeconds()
 METHOD com.openggf.net.protocol.ControlMessage$RoundConfig public  int windowSeconds()
 METHOD com.openggf.net.protocol.ControlMessage$RoundConfig public  int zone()
 METHOD com.openggf.net.protocol.ControlMessage$RoundConfig public  java.lang.String characterPolicy()
@@ -14435,6 +14443,7 @@ METHOD com.openggf.net.protocol.ControlMessage$StandingsPageRequest public  java
 METHOD com.openggf.net.protocol.ControlMessage$StandingsPageRequest public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.net.protocol.ControlMessage$StandingsPageRequest public,final  int hashCode()
 METHOD com.openggf.net.protocol.ControlMessage$StandingsPageRequest public,final  java.lang.String toString()
+METHOD com.openggf.net.protocol.ControlMessage$StandingsRow public  boolean taintedSwap()
 METHOD com.openggf.net.protocol.ControlMessage$StandingsRow public  int bestLapFrames()
 METHOD com.openggf.net.protocol.ControlMessage$StandingsRow public  int bestTimeFrames()
 METHOD com.openggf.net.protocol.ControlMessage$StandingsRow public  int rank()
@@ -14463,6 +14472,7 @@ METHOD com.openggf.net.protocol.ControlMessage$SwapTarget public,final  int hash
 METHOD com.openggf.net.protocol.ControlMessage$SwapTarget public,final  java.lang.String toString()
 METHOD com.openggf.net.protocol.ControlMessage$TeleportNoPartner public  int attemptId()
 METHOD com.openggf.net.protocol.ControlMessage$TeleportNoPartner public  int requestFrame()
+METHOD com.openggf.net.protocol.ControlMessage$TeleportNoPartner public  long swapId()
 METHOD com.openggf.net.protocol.ControlMessage$TeleportNoPartner public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.net.protocol.ControlMessage$TeleportNoPartner public,final  int hashCode()
 METHOD com.openggf.net.protocol.ControlMessage$TeleportNoPartner public,final  java.lang.String toString()
@@ -19546,6 +19556,7 @@ RECORD-COMPONENT com.openggf.mods.run.RunSpec character java.lang.String
 RECORD-COMPONENT com.openggf.mods.run.RunSpec gameId java.lang.String
 RECORD-COMPONENT com.openggf.mods.run.RunSpec kind com.openggf.mods.run.TrackKind
 RECORD-COMPONENT com.openggf.mods.run.RunSpec policy com.openggf.game.session.GameplayRunPolicy
+RECORD-COMPONENT com.openggf.mods.run.RunSpec swapEnabled boolean
 RECORD-COMPONENT com.openggf.mods.run.RunSpec zone int
 RECORD-COMPONENT com.openggf.mods.run.RunStep actComplete boolean
 RECORD-COMPONENT com.openggf.mods.run.RunStep applied com.openggf.mods.run.RaceEventResult
@@ -19692,6 +19703,7 @@ RECORD-COMPONENT com.openggf.net.ghost.GhostFrame hurt boolean
 RECORD-COMPONENT com.openggf.net.ghost.GhostFrame mappingFrame int
 RECORD-COMPONENT com.openggf.net.ghost.GhostFrame priorityBucket int
 RECORD-COMPONENT com.openggf.net.ghost.GhostFrame progress int
+RECORD-COMPONENT com.openggf.net.ghost.GhostFrame respawnReset boolean
 RECORD-COMPONENT com.openggf.net.ghost.GhostFrame secondaryPath boolean
 RECORD-COMPONENT com.openggf.net.ghost.GhostFrame shoeKind int
 RECORD-COMPONENT com.openggf.net.ghost.GhostFrame vFlip boolean
@@ -19997,6 +20009,7 @@ RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoundConfig gameId java
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoundConfig lockedCharacter java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoundConfig mode java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoundConfig monitors java.lang.String
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoundConfig startInSeconds int
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoundConfig trackKind java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoundConfig windowSeconds int
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoundConfig zone int
@@ -20032,6 +20045,7 @@ RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$StandingsRow lapFrames 
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$StandingsRow outcome java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$StandingsRow rank int
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$StandingsRow slot int
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$StandingsRow taintedSwap boolean
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$StandingsRow verifyState java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$SwapTarget centreX int
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$SwapTarget centreY int
@@ -20046,6 +20060,7 @@ RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$SwapTarget xVel int
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$SwapTarget yVel int
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$TeleportNoPartner attemptId int
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$TeleportNoPartner requestFrame int
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$TeleportNoPartner swapId long
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$TeleportOutcome applyFrame int
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$TeleportOutcome outcome java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$TeleportOutcome swapId long

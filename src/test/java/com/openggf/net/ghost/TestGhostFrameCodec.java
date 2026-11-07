@@ -37,11 +37,12 @@ class TestGhostFrameCodec {
     }
 
     @Test
-    void reservedLayerBitDecodeIgnoredAndEncodeZero() {
+    void respawnLayerBitPreservesPriority() {
         byte[] buf = new byte[7];
         GhostFrameCodec.encode(new GhostFrame(1, 1, 1, false, false, false, 7, true), buf, 0);
         assertEquals(0, (buf[6] & 0xF0));
-        buf[6] |= (byte) 0x80; // bit 7 remains reserved
+        buf[6] |= (byte) 0x80; // bit 7 marks a bounded respawn
         assertEquals(7, GhostFrameCodec.decode(buf, 0).priorityBucket());
+        assertTrue(GhostFrameCodec.decode(buf, 0).respawnReset());
     }
 }
