@@ -45,7 +45,9 @@ class TestSonic2CompetitionCameraBanks {
         owner.restore(before);
         assertEquals(first, owner.capture().firstWords());
     }
-    @Test void levelInitializersPreserveWordFractionsAndOnlyClearTheirNativeLongs() throws Exception {
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {0, 11, 12})
+    void levelInitializersPreserveWordFractionsAndOnlyClearTheirNativeLongs(int zone) throws Exception {
         var rom=GameServices.rom().getRom();
         var adapter=new Sonic2CompetitionScrollSourceAdapter(rom,
                 new com.openggf.game.sonic2.Sonic2GameModule().getScrollHandlerProvider().getZoneConstants());
@@ -56,22 +58,23 @@ class TestSonic2CompetitionCameraBanks {
         session.bindCameras(first,second);
         var bank=new Sonic2CompetitionScroll.BackgroundBank(0x11223344,0x22334455,0x33445566,0x44556677,0x55667788,0x66778899);
         var words=new Sonic2CompetitionScroll.CameraWords(1,2,bank,0x1200,3,4,5);
-        for(int zone:new int[]{0,11,12}) {
             adapter.owner().restore(new Sonic2CompetitionScroll.State(bank,bank,new short[24],new int[224],0,0,words,words));
             adapter.initialize(com.openggf.game.sonic2.competition.Sonic2CompetitionLevelProfile.load(rom,zone,0),session);
             var state=adapter.owner().capture();
-            assertEquals(0x12005566,state.p1().x2());assertEquals(0x12007788,state.p1().x3());
-            assertEquals(zone==0?0:0x06006677,state.p1().y2());
-            assertEquals(zone==0?0:bank.y3(),state.p1().y3());
-            assertEquals(zone==11?0x00C04455:0,state.p1().y());
-            assertEquals(zone==12?0x12003344:0,state.p2().x());
-            assertEquals(0,state.firstWords().coarseX());
-            assertEquals(0,state.firstWords().backgroundFlags());
-            assertEquals(0,state.firstWords().backgroundFlagsCopy());
-            assertEquals(3,state.firstWords().backgroundBlocks());
-            assertEquals(bank,state.firstWords().backgroundCopy());
-        }
+        assertAll(
+            () -> assertEquals(0x12005566,state.p1().x2()),
+            () -> assertEquals(0x12007788,state.p1().x3()),
+            () -> assertEquals(zone==0?0:0x06006677,state.p1().y2()),
+            () -> assertEquals(zone==0?0:bank.y3(),state.p1().y3()),
+            () -> assertEquals(zone==11?0x00C04455:0,state.p1().y()),
+            () -> assertEquals(zone==12?0x12003344:0,state.p2().x()),
+            () -> assertEquals(0,state.firstWords().coarseX()),
+            () -> assertEquals(0,state.firstWords().backgroundFlags()),
+            () -> assertEquals(0,state.firstWords().backgroundFlagsCopy()),
+            () -> assertEquals(3,state.firstWords().backgroundBlocks()),
+            () -> assertEquals(bank,state.firstWords().backgroundCopy()));
     }
+
     @Test void initialDeformReadsVintThenExplicitClearPreservesBackgroundAndScratch() throws Exception {
         var owner = new Sonic2CompetitionScroll(GameServices.rom().getRom());
         owner.initialize(Sonic2CompetitionScroll.BackgroundBank.ZERO,Sonic2CompetitionScroll.BackgroundBank.ZERO);

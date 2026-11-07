@@ -1577,6 +1577,9 @@ public class SpriteManager implements PlayableSstDispatcher {
 	}
 
 	private void beginPlayableFrame(List<AbstractPlayableSprite> playables) {
+		// The prior BuildSprites admission expires before any new playable pass,
+		// including uncounted title passes on the next level's zero epoch.
+		nativeDisplayAdmissions.clear();
 		playableFrameActive = true;
 		playableUpdateOrder.clear();
 		deferredPostTickMutations.clear();
