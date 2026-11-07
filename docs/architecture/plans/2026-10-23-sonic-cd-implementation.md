@@ -1,5 +1,34 @@
 # Implement Sonic CD with complete regional parity
 
+## 7 November 2026 — R31 component Init and IPX progress
+
+The authenticated R31A source now constructs the existing Frame from complete
+explicit values and runs the real R3 normal or shrunk Init. Source gates require
+raw0100/1 and the actual R3 data relation; old PPZ gates remain unchanged.
+Every R3 nonzero routine stops before predispatch at a distinct continuation-owner
+boundary. Movement/Main/Hurt, helper/touch ownership and real programme loading
+are still separate work. No blank ramp data or default actor/clock/art is supplied.
+
+A package-private IPX value component models independent saved high/low knowledge,
+NewGame stores, Boss return arithmetic, RunR1 flag operations and exact partial
+save-field projections. Typed save requests are not save completion. Achieved
+IPX goodFutures, live goodFuture and level goodFutureFlags remain distinct.
+Source review found no defect; its29 component cases pass. The live Module still
+stops at its retained saved-zone owner until the original invocation is joined.
+
+R44's933-case selection passes0failures/errors/skips on unchanged source,
+including the21 new Init/Frame cases,815 existing Frame cases, targeted PPZ Main
+controls, earlier-act factories, the actual visible-Sonic controller and both
+Module exit cases. These are component/caller checks, not R31 Ready/gameplay.
+
+The existing opt-in import preflight now observes nonstatic nested member types
+after static-star imports. Two independent-review counterexamples were corrected:
+qualified inner construction suppresses false missing-import hints, and enum
+constant bodies preserve incomplete scope. All81 existing/new Python tests pass
+with actual immutable/frozen forward inputs and no skips. Default no-opt-in JSON
+and the legacy scope parser remain unchanged. The tool remains bounded advisory
+lexical evidence, never a Java compiler or admission gate.
+
 ## 7 November 2026 — retained Act3 exit and Collision Chaos source custody
 
 Cached Boss, limb and bumper owners now execute through the genuine physical

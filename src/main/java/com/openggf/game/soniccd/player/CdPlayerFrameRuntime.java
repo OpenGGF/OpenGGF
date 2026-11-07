@@ -14,6 +14,8 @@ import com.openggf.game.soniccd.level.CdR12aPlayerAssets;
 import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
 import com.openggf.game.soniccd.level.CdR12bPlayerAssets;
 import com.openggf.game.soniccd.level.CdR13FutureAssets;
+import com.openggf.game.soniccd.level.CdR31aAssets;
+import com.openggf.game.soniccd.level.CdR11aPlayerAssets;
 import com.openggf.game.soniccd.level.CdStagePlayerSource;
 import com.openggf.game.soniccd.objects.CdBigRing;
 import com.openggf.game.soniccd.objects.CdR13Boss;
@@ -28,6 +30,7 @@ import com.openggf.game.soniccd.objects.CdTunnelPath;
 import com.openggf.game.soniccd.objects.CdTimeWarpLoadData;
 import com.openggf.game.soniccd.resources.CdPlayerArtRuntime;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -482,6 +485,29 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
         return new CdPlayerFrameRuntime(CdStagePlayerSource.fromAct3Future(assets), state, environment, artIngress, clock);
     }
     // END explicit original R13 Future Frame component ingress.
+
+    // BEGIN explicit original R31A Frame component ingress (Init only).
+    /** Authenticated same-source R3 data plus complete explicit values; no defaults, Init, clear,
+     * source service, art upload, clock tick or programme/World/FULL authority is performed here.
+     * R31A has actual raw0100/1. Body admits only genuine PlayerInit (N objects/player.asm:139-157);
+     * Main/Hurt/lifecycle continuations remain the explicit R3_CONTINUATION_OWNER boundary.
+     * The existing private source/CaptureOwner and art service owners are fresh; callback unbound. */
+    public static CdPlayerFrameRuntime fromR31aEntry(CdR31aAssets assets, CdPlayerBody.State state,
+                                                     CdPlayerBody.Environment environment,
+                                                     CdPlayerArtRuntime.State artIngress, VIntClock clock) throws IOException {
+        Objects.requireNonNull(assets, "Original R31A assets");
+        Objects.requireNonNull(state, "R31A complete player state");
+        Objects.requireNonNull(environment, "R31A complete player environment");
+        Objects.requireNonNull(artIngress, "R31A complete player art ingress");
+        Objects.requireNonNull(clock, "R31A complete V-int clock");
+        var source = CdStagePlayerSource.fromR31aAssets(assets);
+        var gates = environment.movement().gates();
+        if (!source.ownsR31aAssets(assets) || source.player().sourceGraph() != CdR11aPlayerAssets.SourceGraph.R3
+                || gates.zoneAct() != source.ordinaryZoneActWord() || gates.timeZone() != source.ordinaryPeriod())
+            throw new UnsupportedFrame(UnsupportedBoundary.SOURCE_FAMILY, "R31A component entry requires its actual raw0100/1 source");
+        return new CdPlayerFrameRuntime(source, state, environment, artIngress, clock);
+    }
+    // END explicit original R31A Frame component ingress.
 
     /**
      * Explicit new terrain-only development ingress, not a generic constructor
@@ -2014,6 +2040,12 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
     }
     private void requireSourceFamily() {
         var gates = environment.movement().gates();
+        if (pastSource != null && pastSource.player().sourceGraph() == CdR11aPlayerAssets.SourceGraph.R3) {
+            if (!pastSource.stage().equals(CdStagePayload.R31A.stage()) || variant != CdReleaseVariant.USA
+                    || gates.zoneAct() != 0x100 || gates.timeZone() != 1)
+                throw new UnsupportedFrame(UnsupportedBoundary.SOURCE_FAMILY, "Only retained original R31A raw0100/1 is admitted for component Init");
+            return; // Shared service values only; Body separately fences every unowned R3 continuation.
+        }
         // The bound program continues while native timeZone carries an active destination marker.
         boolean activePeriod = gates.timeZone() >= 0x80 && gates.timeZone() <= 0x82;
         int ordinaryPeriod = pastSource == null ? 1 : pastSource.ordinaryPeriod();

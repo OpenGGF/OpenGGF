@@ -468,7 +468,7 @@ public final class CdPlayerBody {
         MINIATURE_INIT, MAPPING_BINDING, WATERFALL_SPLASH_CREATION, DEBUG_ENTRY, OBJECT_CONTROL,
         HISTORY_ADDRESS, TOUCH_SCAN, ROLL_TUNNEL_OWNER, STANDING_OBJECT_MOVE,
         TIME_WARP_TIMER_START, TIME_WARP_RESTART_WRITE, TIME_WARP_SPAWN_MODE, TIME_WARP_STAR_SLOT,
-        TIME_WARP_SLOW_RESET, TIME_WARP_STOP_RESET, LEVEL_MUSIC_GOOD_FUTURE
+        TIME_WARP_SLOW_RESET, TIME_WARP_STOP_RESET, LEVEL_MUSIC_GOOD_FUTURE, R3_CONTINUATION_OWNER
     }
     /** No staged state or effects escape. */
     public static final class UnsupportedBody extends UnsupportedOperationException {
@@ -527,7 +527,8 @@ public final class CdPlayerBody {
     private CdPlayerBody(CdStagePlayerSource source, CdPlayerMovement movement) {
         player = source.player(); sonic = source.sonic(); layout = source.terrain().layout().ram();
         mappingAddress = source.mappingAddress(); variant = source.variant(); ordinaryPeriod = source.ordinaryPeriod();
-        ordinaryZoneAct = source.stage().actNumber() - 1;
+        ordinaryZoneAct = player.sourceGraph() == CdR11aPlayerAssets.SourceGraph.R3
+                ? source.ordinaryZoneActWord() : source.stage().actNumber() - 1;
         this.movement = movement; animator = new CdPlayerAnimation(player);
     }
 
@@ -597,6 +598,9 @@ public final class CdPlayerBody {
         }
         if (state.header().slotId() != 1) unsupported(UnsupportedBoundary.SLOT_ID);
         var gates = environment.movement().gates();
+        boolean r3 = player.sourceGraph() == CdR11aPlayerAssets.SourceGraph.R3;
+        // R31A Init is the only admitted R3 routine here. No marked-period/warp continuation is implied.
+        if (r3 && (gates.zoneAct() != 0x100 || gates.timeZone() != 1)) unsupported(UnsupportedBoundary.SOURCE_FAMILY);
         boolean activePeriod = gates.timeZone() >= 0x80 && gates.timeZone() <= 0x82;
         if (gates.zoneAct() != ordinaryZoneAct || (gates.timeZone() != ordinaryPeriod && !(activePeriod && timeWarpContext.isPresent()))) {
             unsupported(UnsupportedBoundary.SOURCE_FAMILY);
@@ -605,6 +609,9 @@ public final class CdPlayerBody {
         if (environment.globals().timeAttackMode() == 0 && (environment.globals().debugMode() >>> 8) != 0) {
             unsupported(UnsupportedBoundary.DEBUG_UPDATE);
         }
+        // R3 Main/Hurt require actual PlayerCheckBlock/no-bumper/geometry/touch owners. Reject
+        // before any staged predispatch prefix, including controlled Main; no PP RTS substitutes them.
+        if (r3 && state.motion().routine() != 0) unsupported(UnsupportedBoundary.R3_CONTINUATION_OWNER);
         Cursor c = new Cursor(state, environment);
         c.applyCharge(CdPlayerCharge.beforeRoutineDispatch(c.chargeState())); // EXACTLY ONCE, using prior rolling bit.
         c.returned(NativeCall.CHARGE_BEFORE_DISPATCH);
@@ -625,7 +632,10 @@ public final class CdPlayerBody {
     /** ObjSonic_Init (135-155). No fallthrough to Main, animation, history or display. */
     private void initialize(Cursor c) {
         c.setRoutine(2); c.setRadii(9, 19);
-        if (c.env.movement().gates().miniSonic() != 0) unsupported(UnsupportedBoundary.MINIATURE_INIT);
+        if (c.env.movement().gates().miniSonic() != 0) {
+            if (player.sourceGraph() != CdR11aPlayerAssets.SourceGraph.R3) unsupported(UnsupportedBoundary.MINIATURE_INIT);
+            c.setRadii(5, 10); // R3 PlayerInit:143-146, AFTER the original normal Y19/X9 stores.
+        }
         c.header = new Header(c.header.slotId(), mappingAddress, 0x780, 2, 0x18);
         c.actor(ActorField.MAPPING_ADDRESS, mappingAddress); c.actor(ActorField.TILE, 0x780);
         c.actor(ActorField.PRIORITY, 2); c.actor(ActorField.WIDTH, 0x18); c.setSpriteFlags(4);

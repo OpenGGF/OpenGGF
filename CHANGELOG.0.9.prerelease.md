@@ -307,8 +307,11 @@ matching area heading; see the
   IPX blank with full/course replay, stopping honestly at missing persistent
   programme state. Original-USA Collision Chaos data and517 native placements
   detach through the same CUE, preserving the saved bank and spawner algorithms;
-  common Sonic data keeps the absent PPZ ramp explicit. Data custody grants no
-  next-zone gameplay. Natural boss defeat, full acts and regional parity remain
+  common Sonic data keeps the absent PPZ ramp explicit. An authenticated R31
+  Frame entry now runs genuine normal/shrunk Init with native raw zone gates;
+  ordinary Main/Hurt stay gated pending their actual owners. A finite IPX progress
+  component preserves unknown-byte and save-field alias semantics without claiming
+  save completion. Data custody grants no next-zone gameplay. Natural boss defeat, full acts and regional parity remain
   separate.
   CD player headless boot loads the fixed
   roster before rewind controller creation while keeping no-device audio before
@@ -340,7 +343,10 @@ matching area heading; see the
 
 ## Modding and tools
 
-- **Sonic CD integration checks:** a focused category now includes the CD source
+- **Sonic CD integration checks:** opt-in import preflight now reports likely
+  missing ordinary imports of selected nonstatic member types after static-star
+  imports, preserving unresolved receiver and anonymous-scope uncertainty. It
+  keeps the existing default checks and budgets unchanged. A focused category now includes the CD source
   package and its shared dependencies while preserving existing gameplay coverage.
   The matching policy and runner fail closed with an older reader. Candidate
   reduction is measured as coverage selection, not a claimed runtime speedup.

@@ -1,6 +1,6 @@
 ---
 name: java-project-import-preflight
-description: Find bounded source-only missing-import and opt-in known-enum constant hints for explicitly selected project Java sources before costly compile validation, using immutable Git type provenance and an exact source blob or pinned FINAL bytes. Does not resolve a classpath or certify compilation.
+description: Find bounded source-only missing-import, opt-in known-enum constant and direct-member import hints for explicitly selected project Java sources before costly compile validation, using immutable Git type provenance and an exact source blob or pinned FINAL bytes. Does not resolve a classpath or certify compilation.
 ---
 
 Use [java_project_import_preflight.py](../../../tools/soniccd/java_project_import_preflight.py)
@@ -12,7 +12,8 @@ still owns source custody and the task's actual compile/test evidence.
 
 Supply a canonical absolute local Git metadata directory, an exact lowercase
 40-hex commit, and at least one `--known-type FQCN=exact/path.java` or
-`--known-enum FQCN.Enum=exact/path.java` selection. The16-selection cap is shared.
+`--known-enum FQCN.Enum=exact/path.java` selection, or an explicit member-owner
+selection below. The16-selection cap is shared.
 Each known type must have a matching ordinary top-level declaration and package
 in that exact regular Git blob. Filenames alone establish nothing. Use the owning
 Git/disassembly lookup separately if the type/path is not already known.
@@ -90,7 +91,7 @@ validated. External libraries and unselected project types stay out of scope.
 Unicode preprocessing and unsupported non-ASCII identifier grammar reject
 incomplete; Unicode within ordinary comments/literals is merely redacted.
 
-Bounds can only be lowered:16 total selected types/enums,1MiB/file,4MiB aggregate selected
+Bounds can only be lowered:16 total selected types/enums/member owners,1MiB/file,4MiB aggregate selected
 source bytes,100000 aggregate tokens,4096-token contexts,32 brace levels,256 root
 hits across both checks,30 seconds checked between bounded operations and inside scope scans, and
 1MiB accepted result JSON. Paths have at most4096 characters/64 components.
@@ -121,3 +122,67 @@ generic parameter-list clue (`<@` or `,@`) conservatively blocks enum-member
 hints for the consumer and reports incomplete. This includes type-use cases the
 helper cannot distinguish; ordinary annotations outside generic lists retain
 their existing behavior. No Java binding or compiler claim is added.
+
+## Opt-in member types after a static on-demand import
+
+Use this additional check for unqualified types after `import static Outer.*`,
+such as `OrdinaryAccess`, `BlockRead`, `Store`, `PlaceBlock`, `Fm` or `SubCpu`.
+That import does not import nonstatic member classes. An ordinary named import
+(`import package.Outer.BlockRead;`), ordinary owner on-demand import
+(`import package.Outer.*;`) or explicit `Outer.BlockRead` spelling can address the
+member import; owner-root visibility, accessibility and compilation remain separate.
+A package on-demand import `package.*` and being in the same package do not make
+nonstatic nested types available by themselves.
+
+Select the exact ordinary owner, including nested owners when needed:
+
+```bash
+--known-member-owner 'package.Outer=exact/immutable/Outer.java'
+```
+
+For an owner not yet committed, independently pin its canonical FINAL source and
+use this separate explicit mapping. It never falls back to a checkout:
+
+```bash
+--known-member-owner-final "package.Outer=$OWNER_BYTES=$OWNER_SHA256=$ABSOLUTE_OWNER_JAVA"
+```
+
+Both options are repeatable and share the existing16-selection cap with types and
+enums. Git directory/revision and the exact consumer source/FINAL declarations
+remain required. FINAL owner paths use the same no-follow, hardlink/alias rejection,
+byte/hash pins and source re-observation as the consumer. A file reused for several
+owners or as consumer is byte/token-accounted once. No Java input executes.
+
+The new fields appear **only when opted in**: `member_check_version:1`,
+`known_member_owners` (direct declarations, staticness, source pins and incomplete
+reasons) and `member_uses`. New advisory hints have kind
+`possible_missing_nonstatic_member_import`, the ordinary suggested import when
+unambiguous, and reason `static_on_demand_excludes_nonstatic_member_class`.
+Existing no-opt-in JSON, limits, import/enum behavior and exit meanings are unchanged.
+Only direct declarations under explicitly selected static-on-demand owners are
+checked; absent inherited/unselected names are not certified.
+
+Member records/enums/interfaces, classes declared in interfaces and explicitly
+static classes are static. Other ordinary direct member classes are nonstatic.
+Same enclosing actual lexical declarations, actual named/owner-on-demand imports
+and explicit qualification are distinguished. Unknown modifiers, local/anonymous,
+inheritance/generic scopes, conflicting imports, indirect qualifiers and type/value
+or method shadows stay incomplete/advisory. A possible hint may remain ambiguous
+inside an anonymous Ports implementation; adding the correct import can remove that
+hint while other scopes remain incomplete. Do not read exit0 as Java resolution.
+
+All existing byte/token/context/depth/time/output bounds remain. The256 `max_hits`
+ceiling is shared across root/enum/member observations and separately caps the
+selected direct-member inventory. No new source discovery, classpath, index, mutation,
+permission workflow or runtime authority is added. Run the standard-library
+[synthetic member controls](../../../tools/soniccd/test_java_member_import_preflight.py)
+with `python3 -B`, `PYTHONDONTWRITEBYTECODE=1` and an owned temporary root; they use
+in-memory Git fixtures and clean their files. Supplying the explicit
+`PREFLIGHT_COMPAT_BASELINE_GIT_DIR` additionally compares no-opt-in JSON/errors and
+limits with the hash-pinned immutable baseline; this optional read does not write Git.
+
+Qualified inner construction (`receiver.new Inner()` with optional explicit constructor
+type arguments) is selected through its receiver, so it receives no missing-import
+hint; receiver binding stays incomplete. Enum constant-specific class bodies also
+keep opt-in member observations incomplete, including bodies in a selected owner.
+These checks do not change the legacy no-opt-in scope parser or certify Java binding.

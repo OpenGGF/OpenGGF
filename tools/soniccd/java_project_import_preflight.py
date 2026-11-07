@@ -4,6 +4,7 @@
 Inputs: canonical Git metadata, full commit, explicit qualified type=source pairs,
 and one exact Git source or externally byte/hash-pinned FINAL Java file.
 Opt-in known enums compare only explicit owner.enum.MEMBER constant selectors.
+Opt-in member owners diagnose nonstatic member classes after static-star imports.
 Origin: 2026-11-05 Sonic CD source-only handoff missed CdR12aCameraArtResidency
 import; 92-second Maven test-precompile rejected it before tests launched.
 Reuses hash-pinned enum lexer and census safe readers; never a Java compiler.
@@ -637,6 +638,226 @@ def analyze_enums(scope, known, engine, prior_hits):
     return uses, hints, sorted(set(reasons))
 
 
+MEMBER_LIMITATIONS = [
+    'Opt-in member-owner checks observe only direct ordinary declared member types under an explicitly imported static-on-demand owner. Nonstatic member classes require ordinary type imports, qualification or a lexical owner; no compiler, accessibility, inherited/type/value resolution claim.',
+    'Selected member uses remain lexical candidates. Unsupported owner modifiers, inheritance, generic/anonymous/local scopes, value/method shadows, competing imports and indirect qualifiers are incomplete/advisory, never a clean binding proof. Implicit-static records/enums/interfaces and interface members are distinguished from nonstatic classes.',
+    'Member owners use exact immutable Git mappings or independently byte/hash-pinned canonical FINAL files. All selection, source, token, context, depth, time, hit/output and no-follow/re-observation bounds are shared; direct member inventory also cannot exceed max_hits.',
+]
+
+
+def member_enum_anonymous_reasons(scope, engine):
+    """Opt-in uncertainty only; the legacy shared Scope/JSON stays byte-exact."""
+    reasons = []
+    for declaration in scope.declarations:
+        engine.check()
+        if scope.v(declaration['start']) != 'enum':
+            continue
+        at = start = declaration['opening'] + 1
+        while at < declaration['closing'] and scope.v(at) != ';':
+            engine.check()
+            need(at-start <= engine.limits.max_context_tokens, 'Enum constant context budget exhausted')
+            token = scope.v(at)
+            if token in ('(', '[', '{'):
+                end = scope.java.pairs[at] + 1
+                need(end-start <= engine.limits.max_context_tokens, 'Enum constant context budget exhausted')
+                if token == '{':
+                    reasons.append('Enum constant anonymous type scope unsupported at line ' + str(scope.ts[at].line))
+                at = end
+            else:
+                if token == ',':
+                    start = at + 1
+                at += 1
+    return reasons
+
+
+def member_qualified_construction(scope, position, engine):
+    """Observe .new (including bounded explicit constructor arguments), not its receiver type."""
+    at = position - 1
+    if scope.v(at) == '>':
+        depth = 0
+        while at >= scope.header_end:
+            engine.check()
+            need(position-at <= engine.limits.max_context_tokens, 'Member constructor context budget exhausted')
+            if scope.v(at) == '>':
+                depth += 1
+            elif scope.v(at) == '<':
+                depth -= 1
+                if depth == 0:
+                    at -= 1
+                    break
+            elif scope.v(at) in (';', '{', '}', '='):
+                return False
+            at -= 1
+    return scope.v(at) == 'new' and scope.v(at-1) == '.'
+
+
+def known_member_owner(scope, qualified, provenance, engine):
+    """Direct declarations only; never infer inherited members or staticness."""
+    matches = [d for d in scope.declarations if d['qualified'] == qualified and not d['local']]
+    need(len(matches) == 1, 'Known member owner lacks exact ordinary declaration provenance: ' + qualified, 2)
+    owner = matches[0]
+    reasons = list(scope.reasons) + member_enum_anonymous_reasons(scope, engine)
+    members = []
+    modifiers = {'public','protected','private','abstract','final','static','strictfp'}
+    for declaration in scope.declarations:
+        engine.check()
+        if declaration['owner'] != qualified or declaration['local']:
+            continue
+        kind = scope.v(declaration['start'])
+        static_kind, is_static = 'unknown_member_staticness', None
+        if kind in ('record','enum','interface'):
+            static_kind, is_static = 'implicit_static_' + kind, True
+        elif scope.v(owner['start']) == 'interface':
+            static_kind, is_static = 'implicit_static_interface_member', True
+        else:
+            at = declaration['start'] - 1
+            prefix = []
+            while at >= scope.header_end and scope.v(at) not in (';','{','}'):
+                engine.check()
+                need(declaration['start']-at <= engine.limits.max_context_tokens, 'Member modifier context budget exhausted')
+                prefix.append(scope.v(at));at -= 1
+            if all(word in modifiers for word in prefix):
+                is_static = 'static' in prefix
+                static_kind = 'explicit_static_class' if is_static else 'nonstatic_member_class'
+            else:
+                reasons.append('Unsupported direct member modifier context at line ' + str(scope.ts[declaration['name_at']].line))
+        need(len(members) < engine.limits.max_hits, 'Known member inventory budget exhausted')
+        members.append(dict(name=declaration['name'], qualified_name=declaration['qualified'], owner=qualified,
+            kind=kind, static=is_static, static_kind=static_kind, declaration_line=scope.ts[declaration['name_at']].line))
+    if len({m['qualified_name'] for m in members}) != len(members):
+        reasons.append('Duplicate direct member declarations unresolved')
+    return dict(qualified_name=qualified, package=scope.java.package, members=members,
+                incomplete_reasons=sorted(set(reasons)), provenance=provenance)
+
+
+def analyze_members(scope, owners, engine, prior_hits):
+    """Static-star import diagnostic, not general Java name resolution."""
+    uses, hints = [], []
+    reasons = [item['qualified_name'] + ': ' + reason for item in owners for reason in item['incomplete_reasons']]
+    active = [item for item in owners if (True,item['qualified_name']+'.*') in scope.java.imports]
+    names = {}
+    for item in active:
+        for member in item['members']:
+            names.setdefault(member['name'],[]).append((item,member))
+    if not names:
+        return uses,hints,sorted(set(reasons))
+    member_scope_reasons = member_enum_anonymous_reasons(scope, engine)
+    reasons.extend(member_scope_reasons)
+    by_name, visible_cache = {}, {}
+    for declaration in scope.declarations:
+        engine.check()
+        by_name.setdefault(declaration['name'],[]).append(declaration)
+    duplicate_types = len({d['qualified'] for d in scope.declarations}) != len(scope.declarations)
+    if duplicate_types:
+        reasons.append('Duplicate consumer type declarations unresolved for member binding')
+    def visible(name,position):
+        key = name,position
+        if key not in visible_cache:
+            containing,rows = set(),[]
+            if name in by_name:
+                for declaration in scope.declarations:
+                    engine.check()
+                    if declaration['opening'] < position < declaration['closing']:
+                        containing.add(declaration['qualified'])
+                for declaration in by_name[name]:
+                    engine.check()
+                    if not declaration['local'] and (declaration['top_level'] or declaration['owner'] in containing):
+                        rows.append(declaration)
+            visible_cache[key] = rows
+        return visible_cache[key]
+    _, lexer = dependencies()
+    shadows = lexer.direct_shadow_names(scope.java,'<consumer>','<member owner>','')
+    annotated_generic = False
+    for i,token in enumerate(scope.ts):
+        engine.check()
+        if token.value in ('<',',') and scope.v(i+1) == '@': annotated_generic = True
+        if scope.v(i-1) in ('<',',') and scope.v(i+1) in ('>',',','extends','&'): shadows.add(token.value)
+        if scope.v(i+1) == '-' and scope.v(i+2) == '>': shadows.add(token.value)
+    declarations = {d['name_at'] for d in scope.declarations}
+    for i,token in enumerate(scope.ts):
+        engine.check()
+        if i < scope.header_end or i in declarations or token.value not in names:
+            continue
+        need(prior_hits+len(uses) < engine.limits.max_hits, 'Selected-type/enum/member hit budget exhausted')
+        matches = names[token.value]
+        unique = len(matches) == 1
+        owner,member = matches[0]
+        candidates = sorted(m['qualified_name'] for _,m in matches)
+        uncertain = not unique or bool(scope.reasons) or bool(owner['incomplete_reasons']) or annotated_generic or duplicate_types or bool(member_scope_reasons)
+        local_reasons = []
+        available, availability = False, 'static_on_demand_excludes_nonstatic_member_class'
+        qualified = scope.v(i-1) == '.'
+        if member_qualified_construction(scope, i, engine):
+            available, availability, uncertain = True, 'unresolved_qualified_construction_receiver', True
+            local_reasons.append('Qualified inner construction receiver unresolved at line ' + str(token.line))
+        elif qualified:
+            at = i-2; parts = []
+            while IDENT.fullmatch(scope.v(at)) and scope.v(at) not in RESERVED:
+                engine.check();need(i-at <= engine.limits.max_context_tokens,'Member qualifier context budget exhausted')
+                parts.append(scope.v(at))
+                if scope.v(at-1) != '.': break
+                at -= 2
+            prefix = '.'.join(reversed(parts))
+            local_owner = owner['qualified_name'][len(owner['package'])+1:] if owner['package'] else owner['qualified_name']
+            expected = prefix in (owner['qualified_name'],local_owner,owner['qualified_name'].rsplit('.',1)[-1])
+            available,availability = True,'qualified_member_spelling' if expected else 'unresolved_qualified_receiver'
+            if not expected:
+                uncertain = True;local_reasons.append('Indirect/unknown member qualifier at line ' + str(token.line))
+            elif prefix != owner['qualified_name']:
+                first = prefix.split('.')[0]
+                top_spelling = first == local_owner.split('.')[0]
+                imported_root = (owner['package']+'.'+first if owner['package'] else first) if top_spelling else owner['qualified_name']
+                if not ((False,imported_root) in scope.java.imports or top_spelling and (scope.java.package == owner['package'] or
+                        (False,owner['package']+'.*') in scope.java.imports) or visible(first,i)):
+                    uncertain = True;local_reasons.append('Member qualifier root availability unresolved at line ' + str(token.line))
+            first = prefix.split('.')[0] if prefix else ''
+            expected_import = owner['qualified_name'] if first == owner['qualified_name'].rsplit('.',1)[-1] else '.'.join(filter(None,[owner['package'],first]))
+            if first in shadows or any(not name.endswith('.*') and name.rsplit('.',1)[-1] == first and name != expected_import
+                                       for _,name in scope.java.imports):
+                uncertain = True;local_reasons.append('Member qualifier root shadow unresolved at line ' + str(token.line))
+        else:
+            local = visible(token.value,i)
+            direct = [name for static,name in scope.java.imports if not static and not name.endswith('.*') and name.rsplit('.',1)[-1] == token.value]
+            if local:
+                selected = any(not d['top_level'] and d['qualified'] in candidates for d in local)
+                available,availability = True,'enclosing_type' if selected else 'lexical_type_declaration'
+            elif unique and direct == [member['qualified_name']]:
+                available,availability = True,'ordinary_named_import'
+            elif direct:
+                available,availability,uncertain = True,'competing_named_import',True
+                local_reasons.append('Competing ordinary named member import at line ' + str(token.line))
+            elif unique and (False,owner['qualified_name']+'.*') in scope.java.imports:
+                available,availability = True,'ordinary_owner_on_demand_import'
+            elif unique and member['static'] is True:
+                available,availability = True,'static_on_demand_import'
+            elif member['static'] is None:
+                availability,uncertain = 'unresolved_member_staticness',True
+            if not local:
+                if token.value in shadows:
+                    uncertain = True;local_reasons.append('Member type/value/declaration shadow unresolved: ' + token.value)
+                type_context = (IDENT.fullmatch(scope.v(i+1)) and scope.v(i+1) not in RESERVED or
+                    scope.v(i-1) in ('new','instanceof') or scope.v(i+1)=='[' or scope.v(i+1)=='.' and scope.v(i+2)=='class')
+                if not type_context:
+                    uncertain = True;local_reasons.append('Member type/value use context unresolved at line ' + str(token.line))
+            for static,name in scope.java.imports:
+                engine.check()
+                if (static and name.endswith('.*') and name != owner['qualified_name']+'.*' or
+                    not static and name.endswith('.*') and name != owner['qualified_name']+'.*' or
+                    static and not name.endswith('.*') and name.rsplit('.',1)[-1]==token.value):
+                    uncertain = True;local_reasons.append('Other/static member import binding unresolved at line ' + str(token.line))
+        if uncertain and not local_reasons:
+            local_reasons.append('Selected member owner/containing scope unresolved at line ' + str(token.line))
+        reasons.extend(local_reasons)
+        uses.append(dict(name=token.value,line=token.line,owner=owner['qualified_name'] if unique else None,
+            candidates=candidates,static_kind=member['static_kind'] if unique else 'ambiguous_selected_owners',
+            availability=availability,ambiguous=uncertain))
+        if not available and any(m['static'] is False for _,m in matches):
+            hints.append(dict(kind='possible_missing_nonstatic_member_import',name=token.value,line=token.line,
+                suggested_import=member['qualified_name'] if unique else None,candidates=candidates,
+                reason='static_on_demand_excludes_nonstatic_member_class',ambiguous=uncertain))
+    return uses,hints,sorted(set(reasons))
+
+
 def parser():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--git-dir', required=True)
@@ -645,6 +866,10 @@ def parser():
                    help='Explicit ordinary top-level project type and exact immutable Java source')
     p.add_argument('--known-enum', action='append', default=[], metavar='FQCN=PATH',
                    help='Opt-in fully qualified ordinary enum (including nested owners) and exact immutable source')
+    p.add_argument('--known-member-owner', action='append', default=[], metavar='FQCN=PATH',
+                   help='Opt-in direct member-type import check for one exact immutable owner source')
+    p.add_argument('--known-member-owner-final', action='append', default=[], metavar='FQCN=BYTES=SHA256=ABS_PATH',
+                   help='Opt-in owner from an independently byte/hash-pinned canonical external FINAL Java source')
     source = p.add_mutually_exclusive_group(required=True)
     source.add_argument('--source', help='Exact relative Java blob at revision')
     source.add_argument('--final', help='Canonical external FINAL Java file')
@@ -668,7 +893,14 @@ def run(args):
          'Revision must be an existing local commit', 2)
     type_selections = args.known_type or []
     enum_selections = getattr(args, 'known_enum', []) or []
-    need(1 <= len(type_selections) + len(enum_selections) <= limits.max_known_types and
+    member_selections = getattr(args, 'known_member_owner', []) or []
+    member_finals = getattr(args, 'known_member_owner_final', []) or []
+    member_opt_in = bool(member_selections or member_finals)
+    if member_opt_in:
+        need(len(type_selections)+len(enum_selections)+len(member_selections)+len(member_finals) <= limits.max_known_types
+             and len(set(member_selections))==len(member_selections) and len(set(member_finals))==len(member_finals),
+             'Distinct type/enum/member-owner selections must fit the shared bound',2)
+    need((member_opt_in or 1 <= len(type_selections) + len(enum_selections)) and len(type_selections)+len(enum_selections) <= limits.max_known_types and
          len(set(type_selections)) == len(type_selections) and len(set(enum_selections)) == len(enum_selections),
          'Select distinct known types/enums within shared bound', 2)
     known, enums, saved, by_path = [], [], [], {}
@@ -704,17 +936,56 @@ def run(args):
         _, provenance, scope = by_path[path]
         enums.append(known_enum(scope, qualified, provenance, engine))
     need(len({k['qualified_name'] for k in enums}) == len(enums), 'Duplicate selected qualified enum', 2)
+    member_owners, owner_final_cache = [], {}
+    for selection in member_selections:
+        need(isinstance(selection,str) and len(selection)<=8192 and selection.count('=')==1,
+             'Known member owner requires FQCN=exact/path.java',2)
+        qualified,path = selection.split('=')
+        need(all(IDENT.fullmatch(part) and part not in RESERVED for part in qualified.split('.')),
+             'Invalid qualified member owner',2)
+        relative(path)
+        if path not in by_path:
+            data,provenance = engine.blob(git_dir,args.revision,path)
+            owner_scope = engine.parse(data)
+            by_path[path] = data,provenance,owner_scope
+            saved.append((path,data,provenance))
+        _,provenance,owner_scope = by_path[path]
+        member_owners.append(known_member_owner(owner_scope,qualified,provenance,engine))
+    for selection in member_finals:
+        need(isinstance(selection,str) and len(selection)<=8192 and len(selection.split('=',3))==4,
+             'FINAL member owner requires FQCN=BYTES=SHA256=ABS_PATH',2)
+        qualified,size_text,digest,path_text = selection.split('=',3)
+        need(all(IDENT.fullmatch(part) and part not in RESERVED for part in qualified.split('.')) and
+             re.fullmatch(r'0|[1-9][0-9]{0,11}',size_text) and SHA256.fullmatch(digest),
+             'Invalid FINAL member owner declaration/pins',2)
+        size = int(size_text);need(size<=limits.max_file_bytes,'FINAL member owner exceeds source bound',2)
+        path = absolute(path_text)
+        need(path.name.endswith('.java'),'FINAL member owner must name exact Java source',2)
+        if path not in owner_final_cache:
+            engine.account(size);data,signature = read_final(path,limits.max_file_bytes)
+            need(len(data)==size and sha(data)==digest,'FINAL member owner byte/SHA256 pin mismatch',2)
+            provenance = dict(kind='external_final',path=str(path),bytes=len(data),sha256=sha(data))
+            owner_final_cache[path] = data,signature,provenance,engine.parse(data)
+        data,_,provenance,owner_scope = owner_final_cache[path]
+        need(len(data)==size and sha(data)==digest,'Conflicting FINAL member owner pins',2)
+        member_owners.append(known_member_owner(owner_scope,qualified,provenance,engine))
+    need(len({item['qualified_name'] for item in member_owners})==len(member_owners),'Duplicate selected member owner',2)
+    need(sum(len(item['members']) for item in member_owners)<=limits.max_hits,'Known member inventory budget exhausted')
     final_path = final_sig = None
     if args.final is not None:
         final_path = absolute(args.final)
         need(isinstance(args.final_sha256, str) and SHA256.fullmatch(args.final_sha256) and
              type(args.final_bytes) is int and 0 <= args.final_bytes <= limits.max_file_bytes,
              'FINAL requires externally supplied byte/SHA256 pins within bound', 2)
-        engine.account(args.final_bytes)
-        data, final_sig = read_final(final_path, limits.max_file_bytes)
+        if final_path in owner_final_cache:
+            data,final_sig,_,scope = owner_final_cache[final_path]
+        else:
+            engine.account(args.final_bytes)
+            data, final_sig = read_final(final_path, limits.max_file_bytes)
         need(len(data) == args.final_bytes and sha(data) == args.final_sha256, 'FINAL byte/SHA256 pin mismatch', 2)
         provenance = dict(kind='external_final', path=str(final_path), bytes=len(data), sha256=sha(data))
-        scope = engine.parse(data)
+        if final_path not in owner_final_cache:
+            scope = engine.parse(data)
     else:
         need(args.final_sha256 is None and args.final_bytes is None, 'Orphan FINAL pins', 2)
         path = relative(args.source)
@@ -727,10 +998,16 @@ def run(args):
     uses, hints, reasons = analyze(scope, known, engine)
     enum_uses, enum_hints, enum_reasons = analyze_enums(scope, enums, engine, len(uses))
     hints.extend(enum_hints)
-    reasons = sorted(set(reasons + enum_reasons))
+    member_uses,member_hints,member_reasons = analyze_members(scope,member_owners,engine,len(uses)+len(enum_uses))
+    hints.extend(member_hints)
+    reasons = sorted(set(reasons + enum_reasons + member_reasons))
     for path, previous, previous_provenance in saved:
         repeat, repeat_provenance = engine.blob(git_dir, args.revision, path, account=False)
         need(repeat == previous and repeat_provenance == previous_provenance, 'Immutable selected source changed on re-observation')
+    for owner_path,(previous,signature,_,_) in owner_final_cache.items():
+        engine.check()
+        repeat,repeat_signature = read_final(owner_path,limits.max_file_bytes)
+        need(repeat==previous and repeat_signature==signature,'FINAL member owner changed on re-observation')
     if final_path is not None:
         repeat, repeat_sig = read_final(final_path, limits.max_file_bytes)
         need(repeat == data and repeat_sig == final_sig, 'FINAL source changed on re-observation')
@@ -741,6 +1018,9 @@ def run(args):
                   imports=[dict(static=s, name=n) for s, n in scope.java.imports],
                   uses=uses, hints=hints, incomplete_reasons=reasons, limits=vars(limits),
                   selected_bytes=engine.bytes, selected_tokens=engine.tokens, limitations=LIMITATIONS)
+    if member_opt_in:
+        result.update(member_check_version=1,known_member_owners=member_owners,member_uses=member_uses)
+        result['limitations'] = [*LIMITATIONS,*MEMBER_LIMITATIONS]
     need(len(render(result)) <= limits.max_output_bytes, 'JSON output byte budget exhausted')
     return result
 

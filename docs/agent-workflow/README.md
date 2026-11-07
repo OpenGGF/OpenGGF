@@ -44,7 +44,7 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 
 ## Tools
 
-- [Java project import preflight](../../tools/soniccd/java_project_import_preflight.py): bounded read-only missing-import hints for explicitly selected immutable project types and an exact Git consumer or byte/hash-pinned FINAL source. Checks lexical imports/package/member scopes, keeps shadowing and unsupported syntax incomplete, and never certifies compilation or import completeness; [mirrored skill](../../.agents/skills/java-project-import-preflight/SKILL.md). Origin: 2026-11-05 Sonic CD source-handoff import failure.
+- [Java project import preflight](../../tools/soniccd/java_project_import_preflight.py): bounded read-only missing-import hints, plus opt-in direct-member static-import checks, for explicitly selected immutable or byte/hash-pinned FINAL Java owners and an exact Git consumer or byte/hash-pinned FINAL source. Checks lexical imports/package/member scopes, keeps shadowing and unsupported syntax incomplete, and never certifies compilation or import completeness; [mirrored skill](../../.agents/skills/java-project-import-preflight/SKILL.md). Origin: 2026-11-05 Sonic CD source-handoff import failure.
 
 - [Native S3K initialization timing](../../tools/tracechaser/docs/capture-s3k.md): `--initialization-timing` observes load-phase service and completion, with rejection diagnostics for unsupported interrupted routines and later callbacks; it exports no CPU/slot state. Origin: [2026-11-03 synchronous loading](../architecture/designs/2026-11-03-synchronous-load-vint-accounting.md).
 
