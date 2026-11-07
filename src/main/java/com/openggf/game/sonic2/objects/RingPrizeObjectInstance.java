@@ -163,7 +163,7 @@ public class RingPrizeObjectInstance extends AbstractObjectInstance
         }
 
         if (!com.openggf.game.mutators.LevelMutatorPolicyAccess.ringsAllowed(services())) {
-            if (!ringCollected && prizeCounter != null && prizeCounter.length > 0) prizeCounter[0]--;
+            if (!ringCollected && prizeCounter != null && prizeCounter.length > 0) prizeCounter[0] = recipientNativeSlot >= 0 ? (prizeCounter[0] - 1) & 0xFFFF : prizeCounter[0] - 1;
             ringCollected = true; setDestroyed(true); return;
         }
 
@@ -273,7 +273,7 @@ public class RingPrizeObjectInstance extends AbstractObjectInstance
 
         // Decrement prize counter
         if (prizeCounter != null && prizeCounter.length > 0) {
-            prizeCounter[0]--;
+            prizeCounter[0] = recipientNativeSlot >= 0 ? (prizeCounter[0] - 1) & 0xFFFF : prizeCounter[0] - 1;
         }
 
         // Add ring to player

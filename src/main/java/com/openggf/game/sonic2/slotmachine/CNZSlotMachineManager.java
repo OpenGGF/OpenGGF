@@ -228,6 +228,13 @@ public class CNZSlotMachineManager {
         return reward;
     }
 
+    /** loc_2BD4E (s2.asm:59307-59308): spend the GLOBAL ring word after allocation. */
+    public int consumeNativeRingReward() {
+        if (reward <= 0) throw new IllegalStateException("No native ring reward remains");
+        reward = (reward - 1) & 0xFFFF;
+        return reward;
+    }
+
     /**
      * Reset the slot machine for next use.
      */

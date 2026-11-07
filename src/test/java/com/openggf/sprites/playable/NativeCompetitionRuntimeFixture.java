@@ -32,7 +32,10 @@ public final class NativeCompetitionRuntimeFixture implements NativeCompetitionR
     public Tails p2;
     private final PlayableRuntimeContext context;
 
-    public NativeCompetitionRuntimeFixture() {
+    public NativeCompetitionRuntimeFixture() { this(null); }
+
+    /** Optional owned timer service for tests that restore full playable snapshots. */
+    public NativeCompetitionRuntimeFixture(com.openggf.timer.TimerManager timers) {
         var policy = new WorldSessionPolicyState() {
             @Override public <T> T getService(Class<T> type) {
                 return type == NativeCompetitionRoster.class ? type.cast(NativeCompetitionRuntimeFixture.this) : null;
@@ -54,7 +57,7 @@ public final class NativeCompetitionRuntimeFixture implements NativeCompetitionR
         when(level.getWorldSession()).thenReturn(world);
         when(level.getLevelGamestate()).thenReturn(ordinary);
         context = new PlayableRuntimeContext(module, ordinaryCamera, level, null, null, sprites,
-                ordinaryGame, null, GameServices.audio());
+                ordinaryGame, timers, GameServices.audio());
         replacePlayers();
     }
 

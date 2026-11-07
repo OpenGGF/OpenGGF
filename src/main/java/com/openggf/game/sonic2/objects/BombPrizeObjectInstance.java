@@ -152,7 +152,7 @@ public class BombPrizeObjectInstance extends AbstractObjectInstance implements S
 
                 // Decrement prize counter
                 if (prizeCounter != null && prizeCounter.length > 0) {
-                    prizeCounter[0]--;
+                    prizeCounter[0] = recipientNativeSlot >= 0 ? (prizeCounter[0] - 1) & 0xFFFF : prizeCounter[0] - 1;
                 }
                 setDestroyed(true);
             }

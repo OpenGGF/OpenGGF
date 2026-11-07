@@ -124,11 +124,14 @@ class TestPointPokeyCompetitionDualCapture {
                 var field = PointPokeyObjectInstance.class.getDeclaredField(entry.getKey());
                 field.setAccessible(true); field.setInt(f.cage,entry.getValue());
             }
+            write(f.machine,"reward",reward > 0 ? 5 : -1);
+            write(f.cage,"nativeBombRemaining",5);
             var pass = PointPokeyObjectInstance.class.getDeclaredMethod("runPayoutPass",
                     AbstractPlayableSprite.class,int.class);
             pass.setAccessible(true);
             when(f.world.level.getFrameCounter()).thenReturn(1);
             pass.invoke(f.cage,f.world.p2,2); // V-int even, native level clock odd.
+            assertEquals(reward > 0 ? 5 : -1,f.machine.getReward());
             assertEquals(5,field(f.cage,"prizesToSpawn"));
             assertEquals(0x24,field(f.cage,"prizeAngle"));
             assertEquals(0,f.cage.prizeCounterForChild()[0]);
@@ -136,6 +139,7 @@ class TestPointPokeyCompetitionDualCapture {
             f.objects.reserveAllButNFreeSlots(1);
             when(f.world.level.getFrameCounter()).thenReturn(3);
             pass.invoke(f.cage,f.world.p2,4); // Admission follows level clock, never V-int.
+            assertEquals(reward > 0 ? 4 : -1,f.machine.getReward());
             assertEquals(4,field(f.cage,"prizesToSpawn"));
             assertEquals((0x24+(reward<0 ? 0x90 : 0x89))&255,field(f.cage,"prizeAngle"));
             assertEquals(1,f.cage.prizeCounterForChild()[0]);
@@ -267,6 +271,89 @@ class TestPointPokeyCompetitionDualCapture {
         assertEquals(3,counter[0]);
     }
 
+    @Test void nativeCagesSpendOneSharedRingBudgetAndRewind() throws Exception {
+        var f=new Fixture(); nativeAllocator(f);
+        var first=f.linkedCage();var second=f.linkedCage();
+        first.onSolidContact(f.world.p1,new SolidContact(true,false,false,true,false),0);
+        second.onSolidContact(f.world.p2,new SolidContact(true,false,false,true,false),0);
+        write(f.machine,"routine",0x18);write(f.machine,"reward",1);
+        var machine=f.machine.rewindAdapter();var machineSaved=machine.capture();
+        var firstSaved=first.captureRewindState();var secondSaved=second.captureRewindState();
+        var p1=f.world.p1.captureRewindState();var p2=f.world.p2.captureRewindState();
+        for(int replay=0;replay<2;replay++) {
+            first.update(2,f.world.p1);second.update(2,f.world.p1);
+            assertEquals(0,f.machine.getReward(),"loc_2BD4E consumes the GLOBAL word exactly once");
+            assertEquals(1,f.objects.getActiveObjects().stream().filter(RingPrizeObjectInstance.class::isInstance).count());
+            assertTrue(f.world.p1.isObjectControlled());assertFalse(f.world.p2.isObjectControlled());
+            f.objects.reset(0);machine.restore(machineSaved);
+            first.restoreRewindState(firstSaved);second.restoreRewindState(secondSaved);
+            f.world.p1.restoreRewindState(p1);f.world.p2.restoreRewindState(p2);
+        }
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"0,128,0","64,0,128","128,-128,0","192,0,-128"})
+    void nativePrizeUsesCalcSineAxesAndRetainsTheAngleWord(int angle,int dx,int dy) throws Exception {
+        var f=new Fixture();nativeAllocator(f);f.capture(1);
+        write(f.machine,"reward",2);write(f.cage,"prizeAngle",angle);write(f.cage,"playerState",3);
+        var pass=PointPokeyObjectInstance.class.getDeclaredMethod("runPayoutPass",AbstractPlayableSprite.class,int.class);
+        pass.setAccessible(true);pass.invoke(f.cage,f.world.p2,2);
+        var prize=f.objects.getActiveObjects().stream().filter(RingPrizeObjectInstance.class::isInstance).findFirst().orElseThrow();
+        assertEquals(256+dx,prize.getX());assertEquals(256+dy,prize.getY());
+        assertEquals(angle+0x89,field(f.cage,"prizeAngle"));
+        var saved=f.cage.captureRewindState();write(f.cage,"prizeAngle",0);
+        f.cage.restoreRewindState(saved);assertEquals(angle+0x89,field(f.cage,"prizeAngle"));
+    }
+
+    @Test void nativeReleaseRetainsPrivateWordsUntilANewSpinActuallyStarts() throws Exception {
+        var f=new Fixture();var cage=f.linkedCage();
+        cage.onSolidContact(f.world.p1,new SolidContact(true,false,false,true,false),0);
+        write(cage,"prizeAngle",0x1200);write(cage,"nativeBombRemaining",68);
+        var eject=PointPokeyObjectInstance.class.getDeclaredMethod("ejectPlayer",AbstractPlayableSprite.class);
+        eject.setAccessible(true);eject.invoke(cage,f.world.p1);
+        var retained=cage.captureRewindState();
+        write(cage,"prizeAngle",0);write(cage,"nativeBombRemaining",0);
+        cage.restoreRewindState(retained);
+        assertEquals(0x1200,field(cage,"prizeAngle"));assertEquals(68,field(cage,"nativeBombRemaining"));
+        for(int i=0;i<31;i++)cage.update(i,f.world.p1);
+        cage.onSolidContact(f.world.p1,new SolidContact(true,false,false,true,false),32);
+        assertEquals(0x1200,field(cage,"prizeAngle"),"capturing during an existing roll does not clear the word");
+        eject.invoke(cage,f.world.p1);for(int i=0;i<31;i++)cage.update(i,f.world.p1);
+        write(f.machine,"routine",0x18);
+        cage.onSolidContact(f.world.p1,new SolidContact(true,false,false,true,false),64);
+        assertEquals(0,field(cage,"prizeAngle"));assertEquals(0xFFFF,field(cage,"nativeBombRemaining"));
+        assertTrue(f.machine.isInUse());
+    }
+
+    @Test void nativePayoutStillChecksTheRetainedOffscreenFlag() throws Exception {
+        var f=new Fixture();nativeAllocator(f);var cage=f.linkedCage();
+        cage.onSolidContact(f.world.p1,new SolidContact(true,false,false,true,false),0);
+        write(cage,"playerState",3);write(f.machine,"routine",0x18);write(f.machine,"reward",5);
+        retainedVisibility(cage,false);cage.update(2,f.world.p1);
+        assertFalse(f.world.p1.isObjectControlled());assertEquals(5,f.machine.getReward());
+        assertTrue(f.objects.getActiveObjects().isEmpty());
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest @org.junit.jupiter.params.provider.ValueSource(booleans={false,true})
+    void nativePrizeCounterUnderflowIsAWord(boolean bomb) {
+        var f=new Fixture();f.capture(0);int[] counter=f.cage.prizeCounterForChild();
+        AbstractObjectInstance child=bomb
+                ?new BombPrizeObjectInstance(256,256,256,256,1,counter,f.cage)
+                :new RingPrizeObjectInstance(256,256,256,256,1,counter,f.cage);
+        child.setServices(f.services);child.update(1,f.world.p2);
+        assertEquals(0xFFFF,counter[0]);
+    }
+
+    private static void nativeAllocator(Fixture f) {
+        f.objects=new ObjectManager(List.of(),new Sonic2ObjectRegistry(),0,null,null,null,f.world.cameras[0],f.services);
+        when(f.world.level.getFrameCounter()).thenReturn(1);
+    }
+    private static void write(Object target,String name,int value) throws Exception {
+        var type=target instanceof com.openggf.game.sonic2.slotmachine.CNZSlotMachineManager
+                ? com.openggf.game.sonic2.slotmachine.CNZSlotMachineManager.class : PointPokeyObjectInstance.class;
+        var field=type.getDeclaredField(name);field.setAccessible(true);field.setInt(target,value);
+    }
+
     private static void retainedVisibility(PointPokeyObjectInstance cage,boolean visible) throws Exception {
         var seen=AbstractObjectInstance.class.getDeclaredField("renderFlagPassSeen");
         var flag=AbstractObjectInstance.class.getDeclaredField("renderFlagOnScreen");
@@ -280,7 +367,7 @@ class TestPointPokeyCompetitionDualCapture {
     }
 
     private static final class Fixture {
-        final NativeCompetitionRuntimeFixture world = new NativeCompetitionRuntimeFixture();
+        final NativeCompetitionRuntimeFixture world = new NativeCompetitionRuntimeFixture(new com.openggf.timer.TimerManager());
         ObjectManager objects;
         int casinoSounds;
         boolean nativeMode=true;

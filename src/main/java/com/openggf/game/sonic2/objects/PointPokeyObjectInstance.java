@@ -106,6 +106,8 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
     private int slotReward = 0;
     private int prizesToSpawn = 0;        // Total prizes left to spawn (SlotMachine_Reward equivalent)
     private int prizeAngle = 0;
+    // Native objoff_2A is a private bomb word, NOT a copy of SlotMachine_Reward.
+    private int nativeBombRemaining;
     private final int[] activePrizeCount = new int[1];  // Active prizes on screen (objoff_2C equivalent)
 
     // Contact tracking
@@ -307,6 +309,12 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
             slotMachineManager = getSlotMachineManager();
             if (slotMachineManager != null && slotMachineManager.isAvailable()) {
                 slotMachineManager.activate();
+                if (roster != null) {
+                    // loc_2BC0C (s2.asm:59210-59215): only a NEW spin resets
+                    // objoff_2E and writes the objoff_2A bomb sentinel.
+                    prizeAngle = 0;
+                    nativeBombRemaining = 0xFFFF;
+                }
                 playerState = STATE_WAITING_SLOT;
             } else if (nativeRoster() != null) {
                 // loc_2BC0C captures during the initial reel roll too, but only
@@ -374,8 +382,12 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
         capturedPlayerUsesRideState = false;
         capturedSidekickIndex = -1;
         activePrizeCount[0] = 0;
-        prizesToSpawn = 0;
-        prizeAngle = 0;
+        // loc_2BE2E (s2.asm:59343-59357) clears objoff_2C, not the
+        // objoff_2A bomb remainder or objoff_2E angle. Retain those native words.
+        if (nativeRoster() == null) {
+            prizesToSpawn = 0;
+            prizeAngle = 0;
+        }
     }
 
     /**
@@ -543,6 +555,13 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
             // SlotMachine_Routine returns to $18; reward 0 immediately ejects
             // (s2.asm:58727-58731, 58628-58638).
             slotReward = slotMachineManager.getReward();
+            if (nativeRoster() != null) {
+                // loc_2BDF8 (s2.asm:59315-59322) enters the payout directly;
+                // it does not clear either private counter/angle at this boundary.
+                playerState = STATE_SPAWNING_PRIZES;
+                runPayoutPass(player, vIntRunCount);
+                return;
+            }
 
             if (slotReward == 0) {
                 // No reward - just eject
@@ -582,6 +601,12 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
      * - Eject when all prizes spawned AND all collected/expired (activePrizeCount == 0)
      */
     private void updateSpawningPrizes(AbstractPlayableSprite player, int vIntRunCount) {
+        if (nativeRoster() != null) {
+            // Both engine phases are the ROM's same held state ($30/$34=2):
+            // re-read retained visibility and the shared machine routine EVERY pass.
+            updateWaitingSlot(player, vIntRunCount);
+            return;
+        }
         // Keep player locked
         keepPlayerLocked(player);
 
@@ -593,6 +618,10 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
 
     /** One pass of loc_2BC86 / loc_2BD4E after the occupied cage's shared prelude. */
     private void runPayoutPass(AbstractPlayableSprite player, int vIntRunCount) {
+        if (nativeRoster() != null) {
+            runNativePayoutPass(player, vIntRunCount);
+            return;
+        }
         try {
             // NO SFX during prize spawning - ROM only plays sound during waiting/countdown
 
@@ -627,6 +656,38 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
                 if (state != null) {
                     state.advanceBombPayout();
                 }
+            }
+        }
+    }
+
+    /** loc_2BC86 / loc_2BD4E (s2.asm:59221-59312): native shared/private words. */
+    private void runNativePayoutPass(AbstractPlayableSprite player, int vIntRunCount) {
+        slotMachineManager = java.util.Objects.requireNonNull(getSlotMachineManager(), "Native CNZ machine");
+        slotReward = (short) slotMachineManager.getReward();
+        boolean bombs = slotReward < 0;
+        if (bombs && (nativeBombRemaining & 0x8000) != 0) nativeBombRemaining = 0x64;
+        // This field remains the presentation/debug view, never ring-budget authority.
+        prizesToSpawn = bombs ? nativeBombRemaining : slotReward;
+        try {
+            if (prizesToSpawn != 0) {
+                if ((levelFrameCounter(vIntRunCount) & 1) == 0 || (activePrizeCount[0] & 0xFFFF) >= MAX_PRIZES)
+                    return;
+                if (!spawnPrize(player, vIntRunCount)) return;
+                if (bombs) {
+                    nativeBombRemaining = (nativeBombRemaining - 1) & 0xFFFF;
+                    prizesToSpawn = nativeBombRemaining;
+                } else {
+                    // Multiple cages/actors consume the SAME SlotMachine_Reward.
+                    prizesToSpawn = slotMachineManager.consumeNativeRingReward();
+                }
+            }
+            if ((activePrizeCount[0] & 0xFFFF) == 0) ejectPlayer(player);
+        } finally {
+            // loc_2BD48 is reached on every non-release bomb return, including
+            // even clocks, a full child pool and failed allocation.
+            if (bombs && playerState == STATE_SPAWNING_PRIZES) {
+                var sound = services().gameModule().getGameService(CNZPrizeSoundState.class);
+                if (sound != null) sound.advanceBombPayout();
             }
         }
     }
@@ -856,6 +917,12 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
         double radians = (prizeAngle / 256.0) * 2.0 * Math.PI;
         int offsetX = (int) (Math.sin(radians) * PRIZE_RADIUS);
         int offsetY = (int) (Math.cos(radians) * PRIZE_RADIUS);
+        if (nativeMode) {
+            // loc_2BD4E (s2.asm:59289-59300): CalcSine d1=cos -> X,
+            // d0=sin -> Y; ASR rounds negative values down, not toward zero.
+            offsetX = com.openggf.physics.TrigLookupTable.cosHex(prizeAngle & 0xFF) >> 1;
+            offsetY = com.openggf.physics.TrigLookupTable.sinHex(prizeAngle & 0xFF) >> 1;
+        }
 
         int startX = spawn.x() + offsetX;
         int startY = spawn.y() + offsetY;
@@ -886,7 +953,8 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
         }
 
         // Wrap angle
-        prizeAngle &= 0xFF;
+        // ADDI.W retains the entire native objoff_2E, although CalcSine reads its low byte.
+        prizeAngle &= nativeMode ? 0xFFFF : 0xFF;
         return true;
     }
 
