@@ -40,11 +40,14 @@ under the matching area heading; see the
   frame ranges) beside each reel. The reels keep the 0.6 cut's feature beats as
   well as its zones: live rewind undoing a hit or a fall, sidekick chains (ten
   Sonics in Scrap Brain, a crowd at the Emerald Hill 2 boss), borrowed art and
-  Super Sonic in Sonic 1 and Sonic 3&K, Knuckles in Sonic 2, a Casino Night
-  jackpot, custom-team Data Select saves, Sonic 2 saves in Sonic 3&K's donated
-  Data Select, and every Sonic 3&K zone with its bonus
-  and special stages. `GameplayCaptureTool --rewind FRAME:LENGTH`
+  Super Sonic in Sonic 1 and Sonic 3&K, Sonic 3&K's Super Sonic in Sonic 2
+  with Knuckles following, Knuckles climbing a Hill Top cliff in Sonic 2, Sonic 1
+  rolling under the Flying Battery elevator, a Casino Night jackpot,
+  custom-team Data Select saves, and every Sonic 3&K zone with its bonus
+  and special stages. Shots sit inside their acts, and Super Sonic transforms
+  only once the replay has collected 50 rings. `GameplayCaptureTool --rewind FRAME:LENGTH`
   holds the live rewind key over a window and draws the rewind plate,
+  `--timer FRAMES` sets the level timer a positioned start carried in,
   `--emeralds` also takes Sonic 1 and Sonic 2's six emeralds, and
   `--title-screen` now accepts `--donor`, since boot activates the donor before
   the title. `GameplayInputBranchTool` takes `--input-start`, `--resume`,

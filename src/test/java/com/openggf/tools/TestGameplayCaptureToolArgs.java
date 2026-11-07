@@ -111,6 +111,21 @@ class TestGameplayCaptureToolArgs {
     }
 
     @Test
+    void timerIsUnsetUntilDeclaredAndRejectsNegativeOrTitleFirstUse() {
+        String[] base = {"--zone", "htz", "--act", "1", "--out-dir", "out"};
+        assertNull(GameplayCaptureTool.Arguments.parse(base).timerFrames());
+        var flags = new java.util.ArrayList<>(java.util.List.of(base));
+        flags.addAll(java.util.List.of("--timer", "0x1010"));
+        assertEquals(0x1010, GameplayCaptureTool.Arguments.parse(flags.toArray(String[]::new)).timerFrames());
+        var negative = new java.util.ArrayList<>(java.util.List.of(base));
+        negative.addAll(java.util.List.of("--timer", "-1"));
+        assertThrows(IllegalArgumentException.class,
+                () -> GameplayCaptureTool.Arguments.parse(negative.toArray(String[]::new)));
+        assertThrows(IllegalArgumentException.class, () -> GameplayCaptureTool.Arguments.parse(new String[] {
+                "--zone", "ehz", "--act", "1", "--out-dir", "out", "--title-screen", "--timer", "60"}));
+    }
+
+    @Test
     void ringsIsUnsetUntilAskedForAndThenCarriesTheDeclaredCount() {
         GameplayCaptureTool.Arguments bare = GameplayCaptureTool.Arguments.parse(new String[] {
                 "--zone", "ssz", "--act", "1", "--out-dir", "out"});

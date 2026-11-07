@@ -108,6 +108,7 @@ public final class GameplayCaptureTool {
                 nativePcm = new NativePcmCapture(outDir, GameServices.audio());
             }
             session.boot(romPath, zone, act, settings);
+            if (arguments.timerFrames() != null) session.declareTimer(arguments.timerFrames());
             if (nativePcm != null) nativePcm.endBoot();
             var audio = GameServices.audio();
             int sampleRate = arguments.audio() ? audio.outputSampleRate() : 0;
@@ -277,7 +278,24 @@ public final class GameplayCaptureTool {
                             Integer vIntRunCount, Integer cameraXSub, boolean starPost, Integer rings, boolean reverseGravity,
                             Path mod, boolean titleScreen, boolean audio, boolean interactivePacing,
                             boolean nativePcm, boolean endOfLevel, int rewindFrom, int rewindFrames,
-                            Path saveSlots, String extraTeams) {
+                            Path saveSlots, String extraTeams, Integer timerFrames) {
+
+        /** Without a declared level timer. */
+        public Arguments(String game, Path rom, String zone, int act, Integer startX, Integer startY, int width,
+                         String mainCharacter, String sidekickCharacter, String donor, Path donorRom, Path input,
+                         int settle, int inputStart, Integer frames, int captureFrom, int every, Set<Integer> stills,
+                         boolean stopOnDeath, int deathGrace, boolean video, int scale, int fps,
+                         Path outDir, String emeralds, boolean titleCard, boolean completeSpecialStage,
+                         Integer vIntRunCount, Integer cameraXSub, boolean starPost, Integer rings, boolean reverseGravity,
+                         Path mod, boolean titleScreen, boolean audio, boolean interactivePacing,
+                         boolean nativePcm, boolean endOfLevel, int rewindFrom, int rewindFrames,
+                         Path saveSlots, String extraTeams) {
+            this(game, rom, zone, act, startX, startY, width, mainCharacter, sidekickCharacter, donor, donorRom, input,
+                    settle, inputStart, frames, captureFrom, every, stills, stopOnDeath, deathGrace, video, scale, fps,
+                    outDir, emeralds, titleCard, completeSpecialStage, vIntRunCount, cameraXSub, starPost, rings,
+                    reverseGravity, mod, titleScreen, audio, interactivePacing, nativePcm, endOfLevel,
+                    rewindFrom, rewindFrames, saveSlots, extraTeams, null);
+        }
 
         /** Without seeded Data Select saves or extra teams. */
         public Arguments(String game, Path rom, String zone, int act, Integer startX, Integer startY, int width,
@@ -361,6 +379,7 @@ public final class GameplayCaptureTool {
             Integer vIntRunCount = null;
             Integer cameraXSub = null;
             Integer rings = null;
+            Integer timerFrames = null;
             boolean titleCard = false;
             boolean completeSpecialStage = false;
             Path mod = null;
@@ -417,6 +436,10 @@ public final class GameplayCaptureTool {
                     case "--vint-run-count" -> vIntRunCount = number(value(argv, ++i, flag), flag);
                     case "--camera-x-sub" -> cameraXSub = number(value(argv, ++i, flag), flag);
                     case "--rings" -> rings = number(value(argv, ++i, flag), flag);
+                    case "--timer" -> {
+                        timerFrames = number(value(argv, ++i, flag), flag);
+                        if (timerFrames < 0) throw new IllegalArgumentException("--timer needs a frame count of 0 or more");
+                    }
                     case "--complete-special-stage" -> completeSpecialStage = true;
                     case "--save-slots" -> saveSlots = Path.of(value(argv, ++i, flag));
                     case "--extra-teams" -> extraTeams = value(argv, ++i, flag);
@@ -443,7 +466,7 @@ public final class GameplayCaptureTool {
             if (act < 1) {
                 throw new IllegalArgumentException("--act is one-based (1 or 2)");
             }
-            if (titleScreen && (startX!=null || startY!=null || starPost || rings!=null || emeralds!=null
+            if (titleScreen && (startX!=null || startY!=null || starPost || rings!=null || timerFrames!=null || emeralds!=null
                     || reverseGravity || endOfLevel || vIntRunCount!=null || cameraXSub!=null
                     || ZoneIds.resolve(game,zone)!=0 || act!=1))
                 throw new IllegalArgumentException("--title-screen starts before assembly: use first zone/act and no positioned setup");
@@ -460,7 +483,7 @@ public final class GameplayCaptureTool {
                     settle, inputStart, frames, captureFrom, every, Set.copyOf(stills), stopOnDeath, deathGrace,
                     video, scale, fps, outDir, emeralds, titleCard, completeSpecialStage,
                     vIntRunCount, cameraXSub, starPost, rings, reverseGravity, mod, titleScreen, audio, interactivePacing,
-                    nativePcm, endOfLevel, rewindFrom, rewindFrames, saveSlots, extraTeams);
+                    nativePcm, endOfLevel, rewindFrom, rewindFrames, saveSlots, extraTeams, timerFrames);
         }
 
         private static String value(String[] argv, int index, String flag) {

@@ -1,0 +1,11 @@
+# Source for s3k-fbz2-s1-elevator.txt (InputLogAuthorTool --script). Flying Battery 2 with Sonic 1
+# donating, from a declared position (x 0xF12, y 0x7EC) right of the descending $0DC0 elevator.
+# This is the right-to-left crossing recorded on 2026-09-14
+# (docs/architecture/plans/2026-09-14-fbz-completion.md, "Reverse crossing: speed compared at
+# the same observed elevator phase"). Sonic 1 has no spindash, so he runs left, then holds Down
+# to roll under the cars between their descents and clears X 3407 on frame 244. The 100 neutral
+# frames set the elevator phase.
+100 -
+106 L
+130 D
+60 -

@@ -38,6 +38,7 @@ CAPTURE_FLAGS = {  # manifest key -> GameplayCaptureTool flag (values pass throu
     'width': '--width', 'vint_run_count': '--vint-run-count',
     'donor': '--donor',      # cross-game donation: the host borrows the donor's art and features
     'rewind': '--rewind',    # 'FRAME:LENGTH' in capture frames: hold the live rewind key
+    'timer': '--timer',      # level timer in frames that a positioned start carried in
     'extra_teams': '--extra-teams',  # Data Select extra team combos, e.g. 'sonic,knuckles;knuckles,tails'
 }
 CAPTURE_FILES = {'save_slots': '--save-slots'}  # repository-relative files, passed as absolute paths

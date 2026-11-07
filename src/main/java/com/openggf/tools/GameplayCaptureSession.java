@@ -111,6 +111,17 @@ public final class GameplayCaptureSession implements AutoCloseable {
      * Records live rewind history for this capture (off by default), so {@link #holdLiveRewind}
      * can run the production held-key rewind with its VHS picture and transport plate.
      */
+    /**
+     * Declared capture setup: the level timer a positioned start carried in, in frames (the HUD
+     * clock's minutes, seconds and frames). Without it a shot filmed deep in an act from a
+     * positioned boot shows TIME 0:00. Written after boot, through the same setter checkpoint
+     * restores use.
+     */
+    public void declareTimer(long frames) {
+        requireBooted();
+        GameServices.level().getLevelGamestate().setTimerFrames(frames);
+    }
+
     public void enableLiveRewind() {
         GameServices.configuration().setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, true);
     }

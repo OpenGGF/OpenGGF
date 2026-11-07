@@ -85,11 +85,11 @@ Use a task directory outside the repository for captures the user should keep.
 | `--input-start <n>` | `0` | First movie frame to play (e.g. a level start late in a complete-run `.bk2`) |
 | `--emeralds <6-7 digits>` | unchanged | `Collected_emeralds_array` setup applied after boot: seven S3K values (0 none, 1 Chaos, 2 grey Super, 3 Super), or six for S1/S2 (1 collected) |
 | `--rewind FRAME:LENGTH` | off | Hold the live rewind key for `LENGTH` frames from capture frame `FRAME`: production held-key rewind with its VHS picture, reverse audio and transport plate. Play then resumes from the restored state with the movie's later input; not with `--interactive-pacing` |
+| `--timer FRAMES` | unset | Declared level timer in frames, written after boot (3600 per minute). A positioned start deep in an act otherwise shows TIME 0:00; take the value from the trace row the position came from. Not with `--title-screen` |
 | `--vint-run-count <n>` | fresh | Declared inherited `V_int_run_count` (objects gating on its low bits, e.g. DDZ turret aim) |
 | `--end-of-level` | off | Direct-level only: seed declared inherited `End_of_level_flag` once after declared setup; does not prove boss or route completion |
 | `--rings <n>` | unchanged | Declared ring count the route carried in; a boss filmed from a positioned start otherwise begins on 0 rings, where the first touch is fatal |
 | `--camera-x-sub <n>` | fresh | Declared inherited `Camera_X_pos` low word; only zones that keep a camera fraction (S3K DDZ) accept it |
-| `--rings <n>` | unchanged | Declared ring count the route carried in; a boss filmed from a positioned start otherwise begins on 0 rings, where the first touch is fatal |
 | `--title-screen` | off | Initialize the production title before first assembly; first zone/act only, no positioned/checkpoint/clock seeds; `--donor` is allowed (boot activates it before the title, so `--donor s3k` on S1/S2 reaches the donated Data Select) |
 | `--save-slots <file.json>` | none | Declared Data Select setup (`--title-screen` only): a JSON object mapping slot numbers to save payloads, written through the production `SaveManager` before boot. Refuses to run without an explicit `-Dopenggf.saveRoot`, so it never touches the user's saves |
 | `--extra-teams <combos>` | config | Session override of `DATA_SELECT_EXTRA_PLAYER_COMBOS` (`--title-screen` only), e.g. `sonic,knuckles;knuckles,tails` |
