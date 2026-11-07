@@ -8,6 +8,10 @@ handler, and post-physics-only fallback witnesses. The signed countdown follows
 `ScreenShakeArray`; these component checks supplement the existing whole-world
 moving-wall rewind witness. Exact executions and the act-spanning replay
 comparison belong to the [cleanup audit](../../audits/2026-11-06-ai-code-climb.md#next-increment-remaining-contributor-paths-2026-11-07).
+The final combined selection passed 372 cases without skips, including these
+component and full-world rewind witnesses. Baseline/candidate act-spanning HCZ2
+reports are exactly equal: 26 inherited errors at frame 6640, 14,149 compared
+rows and reached 14,208-row gate; eight advertised aux schemas are absent.
 The route, viewport, donor, team and audiovisual gaps below remain inherited;
 this cleanup does not certify the act.
 

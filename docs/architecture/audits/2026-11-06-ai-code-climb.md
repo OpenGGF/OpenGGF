@@ -1064,3 +1064,198 @@ automatic rescore for the boundary corrections. User wait remains zero.
 Strict new HCZ test citation check exits zero: one OK, two near and two
 unverifiable references. Reference checkouts differ from pins and were preserved;
 this does not assert a debt-free global citation inventory.
+
+### Capture and domain validation at ce4ae5d96
+
+The three actual capture commands completed successfully (not just presentation
+unit tests). Their environment was `env -u DISPLAY -u WAYLAND_DISPLAY
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4`; each used
+`python3 tools/testing/maven_queue.py -Dmse=off
+-Dopenggf.headless.gl=surfaceless-egl` followed by:
+
+```text
+compile exec:java -Dexec.mainClass=com.openggf.tools.TransportHudDesignCaptureTool '-Dexec.args=<main-checkout>/s2.gen <out>/transport-320 320'
+compile exec:java -Dexec.mainClass=com.openggf.tools.TransportHudDesignCaptureTool '-Dexec.args=<main-checkout>/s2.gen <out>/transport-400 400'
+test-compile exec:java -Dexec.classpathScope=test -Dexec.mainClass=com.openggf.tools.OverlayDesignCaptureTool '-Dexec.args=<main-checkout>/s2.gen <out>/overlay-320 320 3'
+```
+
+`<out>` is `<agent-temp>/code-climb-08-1794020193813046359`.
+All tools confirmed installed `NullAudioBackend`. Inspected PNGs: transport 320
+low/empty, transport 400 simultaneous empty, and overlay 320 live rewind. Each
+has a nonblank gameplay scene and Sonic; plates retain readable values, lives-row
+clearance and simultaneous playback separation. Native outputs are 320/400 by
+224, rendered at scale three. These verify reflection/rendering, not ROM parity.
+The exec plugin warned that Discord presence's worker lingered after interruption
+during capture shutdown; the Maven processes then exited successfully. No audio
+device backend was used by the capture.
+
+| Command | Queue seconds | Maven execution | Command wall seconds |
+| --- | ---: | --- | ---: |
+| Transport 320 | 87 | 1m17s | 165.53 |
+| Transport 400 | 28 | 17.446s | 46.24 |
+| Overlay 320 | 49 | 51.803s | 101.38 |
+| Candidate HCZ2 segment | 30 | 42.563s | 73.30 |
+
+Candidate HCZ2 command appended `-Ptrace-segments -Dsurefire.forkCount=1
+-Dtrace.print.summary=true -Dtest=TestS3kSonicTailsHcz2SegmentTraceReplay test`
+to the same queued/EGL prefix. It ran one case, one comparison failure, zero
+errors/skips: 26 groups, zero warnings, first at frame 6640
+`player_animation_id`, expected `0x0013`, actual `0x0005`. The report has 14,149
+compared gameplay rows, a reached 14,208 planned-row gate, no bootstrap errors
+or warnings, and physics/animation verification. Eight advertised auxiliary
+schemas are absent: cage state/execution, velocity/position writes, Sonic
+position history, Tails CPU normal step, CNZ cylinder state/execution. This is
+conditional segment instrumentation, not run-chain parity or act certification.
+Baseline attribution remains pending.
+
+The exact emitted diagnostic argv was parsed with `shlex.split`, checked for
+the Python queue launcher and TraceTriageTool main class, and checked for its
+explicit report/fixture arguments. The fixture's gzip aux file exists. Execution
+is queued; a command string assertion is not yet credited as process proof.
+
+### Final second-increment validation and delivery
+
+Frozen candidate source is `ce4ae5d96f07f06b3f5274d19e809a76db041b84`, with
+only the preceding capture-evidence audit addition uncommitted. That audit-only
+diff SHA-256 was `2f94581ce525d64630fb024b53406f2dc9993e0a6549530ebf7e551417710f6b`;
+the category runner fingerprint is `c4466294f3b1b52786a8bf0816421c3167779e3709faaa69fb26fe9d263b9b88`.
+Baseline source is clean `c1029d3b4baa736a44e245f86ad2482cf62a4961`, runner
+fingerprint `106100136fed`. No source or documentation was changed while either
+category job held its tree. Both selections completed all 91 ordinary batches
+and their guard lane; no missing ROM properties, omitted negative-case records
+or unexplained/required skips occurred.
+
+Same display-free Java/Lua environment as above:
+
+```bash
+# Baseline, reused transferred job in its clean detached tree:
+python3 tools/testing/run_categories.py --category all --workers 2 --headless-gl surfaceless-egl --run
+# Candidate, frozen after actual capture/replay/triage checks:
+python3 tools/testing/run_categories.py --base c1029d3b4baa736a44e245f86ad2482cf62a4961 --workers 2 --headless-gl surfaceless-egl --run
+```
+
+| Source | Candidate classes | Ordinary cases / failures / errors / skips | Guards | Final verdict |
+| --- | ---: | --- | --- | --- |
+| c102 baseline | 4,469 | 37,003 / 29 / 0 / 49 allowed | 836 passed, zero skips | FAILED |
+| ce4ae5 candidate | 4,470 | 37,050 / 29 / 0 / 49 allowed | 843 passed, zero skips | FAILED |
+
+Both final `VERDICT FAILED` lines report complete selected coverage, no missing
+ROM properties and 49 allowed / zero unexplained skips. These are bounded smoke
+results, not release full-suite passes. Exact negative-case reconciliation found
+the same 29 failure identities, exception types and failure kinds. Twenty-six
+assertion messages match byte-for-byte. Three match after explicit evidence
+review: Three Islands' expected FieldScreen/actual StoryScreen differ only in
+JVM identity hashes; the Sonic native/wide MHZ1 expected checkpoint collections
+use `Set.of` (test lines 79 and 89), with identical members but different printed
+order, and identical actual collections. No gameplay values, assertion limits or
+test behavior were changed. All 49 **complete skip dictionaries** match exactly,
+including identities, messages and policy classifications; no field was dropped
+from that comparison. The racing host-ghost failure did not recur in either new
+category run. The earlier failed run and its unresolved causal attribution above
+remain historical evidence, not retroactively green.
+
+Current baseline failures below also occur on the candidate. All are
+`org.opentest4j.AssertionFailedError`; the table retains the complete assertion
+message rather than a count-only attribution. Identity hashes and expected-set
+order differ only in the three reviewed cases described above.
+
+| Test identity | Baseline assertion |
+| --- | --- |
+| `com.openggf.mods.code.TestThreeIslandsScene#tailsJoinsInTheFieldAndTheTravellingShopReturnsToTheSameSpot` | expected: <true> but was: <false> |
+| `com.openggf.mods.code.TestThreeIslandsScene#aSonic1ZonePlaysItsOwnRomSongWithoutPlaceholderSwitches` | expected: <DUNGEON> but was: <STORY> |
+| `com.openggf.mods.code.TestThreeIslandsScene#startupIsPlayableAndArrivalDialogueAndRestStayInTheField` | expected: <FIELD> but was: <STORY> |
+| `com.openggf.mods.code.TestThreeIslandsScene#greenHillMysteriesUseRealInteractionsAndPersistThroughContinue` | expected: <FIELD> but was: <STORY> |
+| `com.openggf.mods.code.TestThreeIslandsScene#physicalTrailsConnectFieldsAndBattleUsesTheEncounterField` | cannot walk straight into Star Light ==> expected: <threeislands.screen.FieldScreen@522a094b> but was: <threeislands.screen.StoryScreen@2d76033f> |
+| `com.openggf.mods.code.TestThreeIslandsScene#allStoryLandmarksHavePlayableInteriorsWithIndependentGatesSavesAndRewards` | ghz enters through its actual doorway ==> expected: <DUNGEON> but was: <MENU_ROOT> |
+| `com.openggf.mods.code.TestThreeIslandsScene#travellerDialogueWaitsForTheDiscoveryOrRescueItDescribes` | expected: <STORY> but was: <MENU_ROOT> |
+| `com.openggf.mods.code.TestThreeIslandsScene#explorationUsesTwoAxesAndStoryDiscoveriesPersistAcrossContinue` | a discovery opens dialogue ==> expected: <STORY> but was: <FIELD> |
+| `com.openggf.mods.scene.host.TestPrivateLobbyScreenRendering#actualLobbyAndFullTextPixelsSupportMultipleReadablePages` | Right reaches new full-text pixels ==> expected: <false> but was: <true> |
+| `com.openggf.tests.TestLrzSszCheckpointRoutes#ordinarySszOpeningPhysicallySavesTheFirstAuthoredPost` | ordinary opening remains alive at input 6499 ==> expected: <false> but was: <true> |
+| `com.openggf.tests.TestS3kCnz1MinibossCompletionEdge#placedMinibossOrdinaryHitsDriveDefeatResultsAndReleasedCnz2(Row)[2]` | sonic+solo@320: fixed input did not complete the edge: spawn=190 gate=288 release=408 hits=[1150, 1593, 2046] kill=-1 sign=-1 results=-1 load=-1 apparent=-1 title=-1 last=p=3375,032C v=12,0 g=12 a=false r=false h=false ring=0 c=3260,02B8 s=3375,0330 b=32C2,029A/6/1/false t=32A0,02D6 {CnzMinibossCoilInstance=1, CnzMinibossInstance=1, CnzMinibossScrollControlInstance=1, CnzMinibossTopInstance=1} act=0/0 bg=8 flag=true rel=true |
+| `com.openggf.tests.TestS3kCnz1MinibossCompletionEdge#placedMinibossOrdinaryHitsDriveDefeatResultsAndReleasedCnz2(Row)[4]` | sonic+solo@800 frame 1564: P1 died p=328B,02EC v=0,-1792 g=0 a=true r=false h=false ring=0 c=31E0,028C s=32A1,02B5 b=3277,029C/A/3/false t=3334,02AE {CnzMinibossCoilInstance=1, CnzMinibossInstance=1, CnzMinibossScrollControlInstance=1, CnzMinibossSparkInstance=3, CnzMinibossTopInstance=1} act=0/0 bg=8 flag=true rel=true ==> expected: <false> but was: <true> |
+| `com.openggf.tests.TestS3kCnz1MinibossCompletionEdge#recordedOrdinaryInputReplaysAndRewindsEveryEdgeBoundaryTwice(Row)[2]` | sonic+solo@320: fixed input did not complete the edge: spawn=190 gate=288 release=408 hits=[1150, 1593, 2046] kill=-1 sign=-1 results=-1 load=-1 apparent=-1 title=-1 last=p=3375,032C v=12,0 g=12 a=false r=false h=false ring=0 c=3260,02B8 s=3375,0330 b=32C2,029A/6/1/false t=32A0,02D6 {CnzMinibossCoilInstance=1, CnzMinibossInstance=1, CnzMinibossScrollControlInstance=1, CnzMinibossTopInstance=1} act=0/0 bg=8 flag=true rel=true |
+| `com.openggf.tests.TestS3kCnz1MinibossCompletionEdge#recordedOrdinaryInputReplaysAndRewindsEveryEdgeBoundaryTwice(Row)[4]` | sonic+solo@800 frame 1564: P1 died p=328B,02EC v=0,-1792 g=0 a=true r=false h=false ring=0 c=31E0,028C s=32A1,02B5 b=3277,029C/A/3/false t=3334,02AE {CnzMinibossCoilInstance=1, CnzMinibossInstance=1, CnzMinibossScrollControlInstance=1, CnzMinibossSparkInstance=3, CnzMinibossTopInstance=1} act=0/0 bg=8 flag=true rel=true ==> expected: <false> but was: <true> |
+| `com.openggf.tests.TestS3kCnz1MinibossCompletionEdge#truncatedAfterApproachNeverCompletesTheEdge` | sonic+solo@320: fixed input did not complete the edge: spawn=190 gate=288 release=408 hits=[1150, 1593, 2046] kill=-1 sign=-1 results=-1 load=-1 apparent=-1 title=-1 last=p=3375,032C v=12,0 g=12 a=false r=false h=false ring=0 c=3260,02B8 s=3375,0330 b=32C2,029A/6/1/false t=32A0,02D6 {CnzMinibossCoilInstance=1, CnzMinibossInstance=1, CnzMinibossScrollControlInstance=1, CnzMinibossTopInstance=1} act=0/0 bg=8 flag=true rel=true |
+| `com.openggf.tests.TestS3kFreshLevelRngState#actualFreshBoundaryClearsRngAndTheRegisteredWorldRestoresIt(int, int)[2]` | native D01 skips the ordinary title owner ==> expected: <false> but was: <true> |
+| `com.openggf.tests.TestS3kIcz1PhysicalLowerPlatformReplay#nativeSonicContactsAndRidesTheLowerPieceWithTwoFreshWorldReplays` | actual final neutral crosses the sampled turn ==> expected: <true> but was: <false> |
+| `com.openggf.tests.TestS3kMhzAct2AuthoredRoute#incomingRoutesCompleteActTwoWithLiveRewindBoundaries(String, int)[1]` | expected: <[defeat, ship-carry, capsule-results, weather-fade, chase-hit, fbz-loaded, ship, admission, last-hit]> but was: <[]> |
+| `com.openggf.tests.TestS3kMhzAct2AuthoredRoute#incomingRoutesCompleteActTwoWithLiveRewindBoundaries(String, int)[2]` | cold route death at 36000 ==> expected: <false> but was: <true> |
+| `com.openggf.tests.TestS3kMhzAct2AuthoredRoute#incomingRoutesCompleteActTwoWithLiveRewindBoundaries(String, int)[3]` | cold route death at 26152 ==> expected: <false> but was: <true> |
+| `com.openggf.tests.TestS3kMhzAct2EntryHeadless#coldEntryPressesLiftsAndReleasesNativeTeamWithReplay(WidescreenAspect, String, String)[12]` | level event must preserve the cutscene-owned minimum ==> expected: <872> but was: <896> |
+| `com.openggf.tests.TestS3kMhzAuthoredRoute#freshSonicCompletesActOneAndReplaysItsLiveInteractions` | expected: <[pulley, first-hit, last-hit-approach, sticky-vine, act-two-released, defeat]> but was: <[pulley]> |
+| `com.openggf.tests.TestS3kMhzTailsAuthoredRoute#freshTailsCompletesActOneAndReplaysItsLiveInteractions` | expected: <[act-two-released, upper-flight, early-traversal, last-hit-approach, lower-approach, defeat, first-hit]> but was: <[lower-approach, upper-flight, early-traversal]> |
+| `com.openggf.tests.TestS3kMhzTeamAuthoredRoute#nativePairCompletesActOneAndReplaysItsLiveInteractions` | cold route death at 26152 ==> expected: <false> but was: <true> |
+| `com.openggf.tests.TestS3kMhzWideAuthoredRoute#wideSonicCompletesActOneAndReplaysItsLiveInteractions` | expected: <[incoming-results, before-pulley, act-two-released, arena-approach, early-traversal, spike-passage, pulley-release, pulley-pull, sticky-vine, defeat, boss-hp-5, boss-hp-4, boss-hp-3, boss-hp-2, lower-loop, upper-loop, boss-hp-1]> but was: <[upper-loop, sticky-vine, pulley-pull, arena-approach, spike-passage, before-pulley, pulley-release, lower-loop, early-traversal]> |
+| `com.openggf.tools.TestDezIncomingFinalRouteCapture#incomingFinalFightRestoresAndReplaysEveryPhase(int)[1]` | death at 14633 ==> expected: <false> but was: <true> |
+| `com.openggf.tools.TestDezIncomingFinalRouteCapture#incomingFinalFightRestoresAndReplaysEveryPhase(int)[2]` | death at 14638 ==> expected: <false> but was: <true> |
+| `com.openggf.tools.TestIcz2ColdCubeBridgeRoute#coldSonicShattersThePlacedCubePressesButton2AndCrossesTheFallingBridgeWithWorldReplay` | expected: <6> but was: <5> |
+| `com.openggf.tools.audio.completerun.s3k.TestS3kCompleteRunReferenceProducer#fixedProducerRejectsEveryMismatchedTypedRequestBeforePublication` | Unexpected exception type thrown, expected: <java.nio.file.FileAlreadyExistsException> but was: <java.lang.IllegalArgumentException> |
+
+HCZ2 baseline command used the same queued/EGL prefix as candidate, with
+`-Ptrace-segments -Dsurefire.forkCount=1 -Dtrace.print.summary=true
+-Dtest=TestS3kSonicTailsHcz2SegmentTraceReplay test`. It executed one comparison
+failure, zero errors/skips: 26 groups at frame 6640 `player_animation_id`, exactly
+as candidate. **The entire parsed report JSON is equal**, including all error
+records, 14,149 compared rows, the reached 14,208-row gate, no bootstrap errors
+or warnings and eight absent advertised aux schemas. This act-spanning segment
+therefore retains its inherited frontier; no run-chain or whole-act parity is
+claimed and no frontier-log correction is required.
+
+Candidate held-out command used `-Ptrace-replay -Dsurefire.forkCount=1
+-Dtrace.print.summary=true -Dtest=TestS2Ehz1TraceReplay test`: one passed case,
+zero failures/errors/skips; 5,852 planned and compared rows, gate reached, zero
+comparison/bootstrap errors or warnings, no missing-advertised-schema list.
+The actual HCZ2 diagnostic command was executed as parsed subprocess argv,
+without shell evaluation: `python3 tools/testing/maven_queue.py -Dmse=off
+exec:java -Dexec.mainClass=com.openggf.tools.TraceTriageTool` with the exact
+emitted `-Dexec.args=--report <actual allocation> --fixture <hcz_2 directory>`.
+It exited zero, selected the exact allocation and fixture, printed COMPLETE
+with the 14,208-row gate, read the sibling context at 6640 and decompressed
+`aux_state.jsonl.gz`, printing focus-row zone, CPU, oscillation and object
+evidence. Its saved-report-only warning remains visible. This is fresh process
+proof of the emitted route, beyond synthetic command-string tests.
+
+No optional delegate or new contributor scoring round was used. The prior
+lifetime/HUD scores remain 70/82.5 for their earlier revisions, with the explicit
+boundary corrections described above and no automatic revised score. HCZ 87.5
+and trace 81.25 remain static assessments; the earlier two held-outs 85/85 remain
+older measurements. Understanding/readability 4 and any repository aggregate
+grade remain unproved.
+
+| Validation | Queue seconds | Preparation / Maven or lane execution seconds |
+| --- | ---: | --- |
+| Baseline category | 3882 | preparation 118.51; ordinary 1574.86; guards 160.07 |
+| Candidate category | 3152 | preparation 35.81; ordinary 1561.74; guards 162.14 |
+| Baseline HCZ2 | 40 | Maven 41.642 |
+| Actual emitted triage | 186 | Maven 0.542 |
+| Candidate held-out EHZ | 6 | Maven 37.726 |
+
+Queue totals sum acquired-wait seconds from the category logs (rounded by the
+queue). Lane execution and preparation are separate; their sums exclude queue
+wait and do not measure human work. User wait was zero; remaining work/unknown
+time is unmeasured. Capture, combined-focused and true-RED costs are above.
+The commit hook emitted a broken-pipe diagnostic while committing ce4ae5, but
+exited successfully and retained all policy/co-author trailers; no hook was
+bypassed. Final evidence/docs checks and owned-baseline cleanup follow below.
+
+Both retained category diagnostics were inspected and then acknowledged with
+`run_categories.py --acknowledge 20261107T021429Z-1c82400d` in the baseline and
+`--acknowledge 20261107T030806Z-32d6e0e0` in the task tree, after preserving
+comparison evidence here. Native `git worktree remove` removed only the clean
+detached `ai-code-climb-08-baseline`; stale metadata was pruned. Ignored report,
+configuration example, sample-mod saves, target and Python caches were generated
+by the tests. Existing ROM/configuration/reference symlinks were post-checkout
+hook-owned resources. Main ROM device/inode/size/mtime metadata remained identical
+across removal. No manual ROM copy/link/rename/delete, main edit, branch switch
+or destination push occurred.
+
+No validation job remains live. Keep `ai-code-climb` and its worktree while
+[PR 266](https://github.com/OpenGGF/OpenGGF/pull/266) remains open and draft
+against develop. Final delivery consists of the source commit ce4ae5 and a
+documentation-only evidence commit after the frozen run; there is no merge.
+
+The first evidence commit attempt was rejected by the resource hook because
+capture commands included machine-local home paths. Replacing those paths with
+`<main-checkout>` and `<agent-temp>` placeholders preserves the command arguments
+and output identity without publishing host-specific paths. No test result or
+runtime source changed; no hook bypass was used.
