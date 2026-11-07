@@ -25,10 +25,18 @@ public final class ObjectManagerInternalAccess {
     /** Recreate only the exact captured fixed owner; never mint a missing effect during rewind. */
     public static com.openggf.game.PowerUpObject restoreNativeTeleportFixedEffect(ObjectManager manager,
             int slot, com.openggf.sprites.playable.AbstractPlayableSprite player, boolean stars) {
+        var restored = restoreCapturedNativeFixedEffect(manager, slot, player, stars);
+        if (restored == null) throw new IllegalStateException("Missing captured fixed effect at " + slot);
+        return restored;
+    }
+
+    /** Null means the captured native slot was empty; status bits never synthesize an owner. */
+    public static com.openggf.game.PowerUpObject restoreCapturedNativeFixedEffect(ObjectManager manager,
+            int slot, com.openggf.sprites.playable.AbstractPlayableSprite player, boolean stars) {
         Class<?> type = stars ? InvincibilityStarsObjectInstance.class : ShieldObjectInstance.class;
         var captured = manager.consumePendingPlayerBoundEntry(type, entry -> entry.slotIndex() == slot
                 && entry.playerOwner() == player && entry.className().equals(type.getName()) && entry.objectId() != null);
-        if (captured == null) throw new IllegalStateException("Missing captured fixed effect at " + slot);
+        if (captured == null) return null;
         // The ordinary trusted spawner consumes this same snapshot, including identity, callback owner and scalars.
         manager.claimPendingPlayerBoundReturn(type, captured, player).returnPending();
         var spawner = java.util.Objects.requireNonNull(player.getPowerUpSpawner());

@@ -54,6 +54,10 @@ public final class Sonic2SecondaryInvincibility implements RewindSnapshottable<S
                             // invincible_monitor (s2.asm:25987-26000): Sonic_InvincibilityStars / Tails_InvincibilityStars.
                             return Sonic2CompetitionNativeState.grantStars(context, actor, index == 0 ? 0x88 : 0x8C);
                         }
+                        @Override public void restoreCapturedEffects() {
+                            if (read() == null) throw new IllegalStateException("Retired native effect restore");
+                            Sonic2CompetitionNativeState.restoreCapturedPlayerEffects(context, session, index, false);
+                        }
                     });
         }
     }

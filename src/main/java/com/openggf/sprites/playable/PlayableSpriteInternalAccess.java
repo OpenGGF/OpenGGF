@@ -10,6 +10,7 @@ public final class PlayableSpriteInternalAccess {
         void write(boolean value);
         com.openggf.game.PowerUpObject grantShield();
         com.openggf.game.PowerUpObject grantInvincibilityStars();
+        void restoreCapturedEffects();
     }
 
     public static Boolean nativeSecondaryInvincibility(com.openggf.game.PlayableEntity player) {

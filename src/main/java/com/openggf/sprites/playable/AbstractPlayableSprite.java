@@ -740,7 +740,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 return nativeSecondaryInvincibility;
         }
 
-        Boolean nativeSecondaryInvincibility() {
+        private Boolean nativeSecondaryInvincibility() {
                 return nativeSecondaryInvincibility == null ? null : nativeSecondaryInvincibility.read();
         }
 
@@ -1531,6 +1531,13 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * deferred until the registry's post-restore phase.
          */
         public void refreshPowerUpObjectsAfterRewindRestore() {
+                if (nativeSecondaryInvincibility() != null) {
+                        // Obj38_Shield (s2.asm:42403-42408) returns under invincibility before testing shield status.
+                        // A captured hidden shield can therefore exist with status clear, even after teleport freeze.
+                        // Rebuild the captured native slots; neither status nor global Super may mint/delete their owners.
+                        nativeSecondaryInvincibility.restoreCapturedEffects();
+                        return;
+                }
                 if (!shield || shieldType == null) {
                         if (shieldObject != null) {
                                 shieldObject.destroy();
@@ -1571,17 +1578,6 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         private void refreshInvincibilityStarsAfterRewindRestore() {
-                Boolean raw = nativeSecondaryInvincibility();
-                if (raw != null) {
-                        // Obj35_Layer0Update (s2.asm:42493-42503), fixBugs=0: global Super never deletes stars.
-                        // Recreate only a captured star graph, including the zero-timer bit transferred to P2.
-                        com.openggf.level.objects.PlayerBoundPowerUpRestoreAccess.refreshInvincibilityStarsAfterRewindRestore(
-                                currentObjectManagerIfAvailable(), () -> powerUpSpawner, this, 0,
-                                raw, () -> invincibilityObject, () -> shieldObject,
-                                value -> invincibilityObject = value);
-                        if (shieldObject != null) shieldObject.setVisible(!raw);
-                        return;
-                }
                 boolean preserve = invincibleFrames <= 0 && getSuperStateController() instanceof
                                 com.openggf.game.internal.NativeSuperStateBeforeAnimation nativeSuper
                                 && nativeSuper.preserveExistingInvincibilityStars();

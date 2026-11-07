@@ -100,6 +100,45 @@ class TestSonic2CompetitionSecondaryInvincibility {
             assertEquals(19,other.getInvincibleFrames());
         });
     }
+    @Test void rewindAfterFreezeKeepsTheHiddenShieldWhoseStatusBitIsClear() throws Exception {
+        NativeTeleportTestWorld.run(w -> {
+            var p1=w.session.player(0);var p2=w.session.player(1);
+            var progress=p1.currentGameState();progress.configureSpecialStageProgress(7,7);
+            for(int i=0;i<7;i++)progress.markEmeraldCollected(i);
+            p1.giveInvincibility(); // No shield monitor was collected by either actor.
+            p1.setRingCount(100);p1.setAir(true);p1.setJumping(true);p1.setYSpeed((short)0x28);
+            p1.currentLevelState().resumeTimer();
+            assertInstanceOf(Sonic2SuperStateController.class,p1.getSuperStateController()).checkTransformationBeforeMove();
+            var registry=w.host.context().getRewindRegistry();
+            var beforeTeleport=registry.capture();registry.restore(beforeTeleport);
+            assertNull(p1.getShieldObject(),"a set invincibility bit must not synthesize an absent shield ID");
+            assertNull(NativeSstSlotAccess.currentOwner(w.host.context().getObjectManager(),0x86));
+            w.qualifyTeleport();
+            for(int tick=0;tick<64;tick++)w.tick();
+            assertEquals(0,w.session.teleportTimer());
+            assertEquals(Boolean.TRUE,PlayableSpriteInternalAccess.nativeSecondaryInvincibility(p2));
+            assertEquals(0,p2.getInvincibleFrames());assertFalse(p2.hasShield());
+            var hidden=p2.getShieldObject();assertNotNull(hidden);assertFalse(hidden.isDestroyed());assertFalse(visible(hidden));
+            var snapshot=registry.capture();
+            PlayableSpriteInternalAccess.writeNativeSecondaryInvincibility(p2,false);
+            ((ObjectInstance)hidden).update(100,p2);assertTrue(hidden.isDestroyed());
+            registry.restore(snapshot);
+            assertCapturedHiddenShield(w,p2);
+            // Break the liveness comparison deliberately, then restore the same captured graph again.
+            p2.getShieldObject().destroy();
+            assertThrows(AssertionError.class,()->assertCapturedHiddenShield(w,p2));
+            registry.restore(snapshot);assertCapturedHiddenShield(w,p2);
+        });
+    }
+    private static void assertCapturedHiddenShield(NativeTeleportTestWorld w,AbstractPlayableSprite player) throws Exception {
+        assertEquals(0,w.session.teleportTimer());
+        assertEquals(Boolean.TRUE,PlayableSpriteInternalAccess.nativeSecondaryInvincibility(player));
+        assertFalse(player.hasShield());
+        var shield=player.getShieldObject();assertNotNull(shield);assertFalse(shield.isDestroyed());
+        assertSame(shield,NativeSstSlotAccess.currentOwner(w.host.context().getObjectManager(),0x87));
+        assertTrue(shield.isShieldFor(player,com.openggf.game.ShieldType.BASIC));assertFalse(visible(shield));
+        assertNotNull(player.getInvincibilityObject());assertFalse(player.getInvincibilityObject().isDestroyed());
+    }
     private static boolean visible(Object shield) throws Exception {
         var field=ShieldObjectInstance.class.getDeclaredField("visible");field.setAccessible(true);return field.getBoolean(shield);
     }

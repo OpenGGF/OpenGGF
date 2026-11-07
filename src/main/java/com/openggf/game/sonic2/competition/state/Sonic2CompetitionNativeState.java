@@ -88,16 +88,34 @@ public final class Sonic2CompetitionNativeState implements Sonic2NativeCompetiti
 
     /** Restore already captured fixed occupants without executing their inactive-status routines. */
     public void restoreFrozenEffects(GameplayModeContext context, Sonic2CompetitionSession session) {
-        for (int slot = 0; slot < 2; slot++) {
-            var objects = context.getObjectManager();
-            var shield = com.openggf.level.objects.NativeSstSlotAccess.currentOwner(objects, 0x86 + slot);
-            var stars = com.openggf.level.objects.NativeSstSlotAccess.currentOwner(objects, slot == 0 ? 0x88 : 0x8C);
-            var shieldHandle = shield instanceof com.openggf.game.PowerUpObject handle ? handle
-                    : ObjectManagerInternalAccess.restoreNativeTeleportFixedEffect(objects, 0x86 + slot, session.player(slot), false);
-            var starsHandle = stars instanceof com.openggf.game.PowerUpObject handle ? handle
-                    : ObjectManagerInternalAccess.restoreNativeTeleportFixedEffect(objects, slot == 0 ? 0x88 : 0x8C, session.player(slot), true);
-            PlayableSpriteInternalAccess.applyNativeTeleportEffects(session.player(slot), shieldHandle, starsHandle);
+        for (int slot = 0; slot < 2; slot++) restoreCapturedPlayerEffects(context, session, slot, true);
+    }
+
+    static void restoreCapturedPlayerEffects(GameplayModeContext context, Sonic2CompetitionSession session,
+            int slot, boolean required) {
+        var player = session.player(slot);
+        var shield = restoreCapturedEffect(context, player, 0x86 + slot, false, required);
+        var stars = restoreCapturedEffect(context, player, slot == 0 ? 0x88 : 0x8C, true, required);
+        PlayableSpriteInternalAccess.applyNativeTeleportEffects(player, shield, stars);
+        if (shield != null) shield.refreshArtAfterRewindRestore();
+        if (stars != null) stars.refreshArtAfterRewindRestore();
+    }
+
+    private static com.openggf.game.PowerUpObject restoreCapturedEffect(GameplayModeContext context,
+            com.openggf.sprites.playable.AbstractPlayableSprite player, int slot, boolean stars, boolean required) {
+        var objects = context.getObjectManager();
+        var current = com.openggf.level.objects.NativeSstSlotAccess.currentOwner(objects, slot);
+        if (current != null) {
+            boolean matches = stars
+                    ? current instanceof com.openggf.level.objects.InvincibilityStarsObjectInstance starOwner
+                            && !starOwner.isDestroyed() && starOwner.boundPlayer() == player
+                    : current instanceof com.openggf.level.objects.ShieldObjectInstance shieldOwner
+                            && !shieldOwner.isDestroyed() && shieldOwner.isShieldFor(player, com.openggf.game.ShieldType.BASIC);
+            if (!matches) throw new IllegalStateException("Foreign captured native effect at " + slot);
+            return (com.openggf.game.PowerUpObject) current;
         }
+        return required ? ObjectManagerInternalAccess.restoreNativeTeleportFixedEffect(objects, slot, player, stars)
+                : ObjectManagerInternalAccess.restoreCapturedNativeFixedEffect(objects, slot, player, stars);
     }
 
     private static void rebindEffects(GameplayModeContext context,
