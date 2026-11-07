@@ -13,6 +13,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @RequiresRom(SonicGame.SONIC_3K)
 class TestAttemptReplayHarnessPlannedArena {
     @Test void twoBoundedPlannerAttemptsThenInputOnlyReplayFallback() throws Exception {
+        Files.createDirectories(Path.of("target/lane-f"));
         var rom=Path.of(System.getProperty("s3k.rom.path","s3k.gen"));
         var start=new AttemptStartDescriptor("s3k",1,0,"sonic",AttemptReplayHarness.fingerprintForRom(rom),
                 TrackKind.ARENA,CompetitionRoomSettings.Mode.COMPETITION,MonitorRule.OFF,

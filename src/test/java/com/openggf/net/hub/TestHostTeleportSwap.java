@@ -92,7 +92,8 @@ class TestHostTeleportSwap {
   assertThrows(IllegalArgumentException.class,()->host.outcome(0,new ControlMessage.TeleportOutcome(c.swapId(),191,"APPLIED")));
   host.outcome(0,new ControlMessage.TeleportOutcome(c.swapId(),11,"APPLIED"));
   host.outcome(1,new ControlMessage.TeleportOutcome(c.swapId(),11,"FALLBACK"));
-  assertInstanceOf(ControlMessage.TeleportNoPartner.class,request(1,10,players));
+  var refusal=assertInstanceOf(ControlMessage.TeleportNoPartner.class,request(1,10,players));
+  host.outcome(1,new ControlMessage.TeleportOutcome(refusal.swapId(),12,"REFUSED"));
   host.drain(1000,List.of(player(0,1,75),player(1,2,75),player(2,3,75)),(slot,m)->sent.add(m),(slot,d)->fail(d));
   assertEquals(3,host.log().size());
   assertInstanceOf(ControlMessage.TeleportSwap.class,host.log().getLast().command());

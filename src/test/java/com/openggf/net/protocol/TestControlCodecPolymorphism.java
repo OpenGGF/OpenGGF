@@ -99,7 +99,7 @@ class TestControlCodecPolymorphism {
                     case "board" -> "TOTAL";
                     case "verifyState" -> "NONE";
                     case "outcome" -> type == ControlMessage.TeleportOutcome.class ? "APPLIED" : "FINISHED";
-                    case "reason" -> type == ControlMessage.AttemptReset.class ? "RETRY" : "fixture";
+                    case "reason" -> type == ControlMessage.AttemptReset.class ? "RETRY" : type == ControlMessage.TeleportNoPartner.class ? "NO_PARTNER" : "fixture";
                     case "phraseId" -> QuickChatPhrase.BRUTAL.name();
                     case "rule" -> "DEFAULT_BY_SIZE";
                     case "characterPolicy" -> "OPEN";
