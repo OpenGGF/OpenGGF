@@ -73,12 +73,19 @@ class TestHostedArenaEquivalence {
     @Test void nativeMenuAndHostedSoloMatchRaceHaveIdenticalStateAcrossFalseStartAndDeath() throws Exception {
         for (boolean items : new boolean[]{false,true}) {
             var expected = new ArrayList<S3kCompetitionSession.State>();
+            var expectedPoses = new ArrayList<PlayerPose>();
             try (var fixture = new HostedArenaFixture()) {
                 fixture.menuLaunch(items);
                 for (int frame=0; frame<700; frame++) {
                     prepare(fixture,frame);
                     fixture.nativeStep(buttons(frame));
                     expected.add(fixture.host.session().capture());
+                    var sprite = fixture.host.player(0);
+                    var nativePlayer = fixture.host.session().player(0);
+                    int shoeKind = !sprite.hasSpeedShoes() ? 0 : nativePlayer.speeds().maxSpeed()==0x300 ? 2 : 1;
+                    expectedPoses.add(new PlayerPose(sprite.getCentreX(),sprite.getCentreY(),sprite.getMappingFrame(),
+                            sprite.getRenderHFlip(),sprite.getRenderVFlip(),sprite.getPriorityBucket(),
+                            sprite.isHighPriority(),sprite.isHurt(),sprite.getTopSolidBit()==0xE,shoeKind));
                     if (frame == 2) assertTrue(fixture.host.session().controlsLocked(),"script must enter native false start");
                     if (frame == 500) assertTrue(fixture.host.session().player(0).dead(),"script must enter native death");
                     if (frame == 501) assertFalse(fixture.host.session().player(0).dead(),"script must cross native respawn row");
@@ -116,8 +123,7 @@ class TestHostedArenaEquivalence {
                                 "negative control: one changed centre pixel must fail the session comparison");
                         player.restore(saved);
                     }
-                    assertEquals(expected.get(frame).players().getFirst().body().xFixed() >> 16,
-                            steps.getLast().player().centreX());
+                    assertEquals(expectedPoses.get(frame),steps.getLast().player(),"native pose at frame " + frame);
                 }
                 assertEquals(1, fixture.host.players().size());
                 assertEquals(700,steps.size());
