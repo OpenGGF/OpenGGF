@@ -671,6 +671,8 @@ final class HostedRunController {
         @Override
         public void retry() {
             if (active) {
+                if (spec.kind() == com.openggf.mods.run.TrackKind.ARENA)
+                    throw new UnsupportedOperationException("Arena runs cannot retry");
                 retryRequested = true;
             }
         }

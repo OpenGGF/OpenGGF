@@ -19,6 +19,57 @@ import static org.junit.jupiter.api.Assertions.*;
 @Isolated
 @RequiresRom(SonicGame.SONIC_3K)
 class TestHostedArenaEquivalence {
+    @Test void resultsHoldNativeStateWhileHostInputAndLeaveRemainLive() throws Exception {
+        try (var fixture = new HostedArenaFixture()) {
+            var base = GameplayRunPolicy.competition();
+            var policy = new GameplayRunPolicy(false,false,base.actCompletion(),false,false,base.deathRestart(),
+                    false,false,MonitorRule.OFF);
+            var spec = new RunSpec("s3k",0,0,"sonic",policy,null,TrackKind.ARENA);
+            var steps = new ArrayList<RunStep>();
+            var admissions = new java.util.concurrent.atomic.AtomicInteger();
+            var ended = new ArrayList<RunEndReason>();
+            var loop = new GameLoop(fixture.input);
+            var handle = loop.beginHostedRun(spec,new RunHost() {
+                @Override public boolean admitStep(RunInput input) { admissions.incrementAndGet(); return true; }
+                @Override public void afterStep(RunStep step) { steps.add(step); }
+            },ended::add);
+            HostedArenaLaunch.open(loop,spec,new NativeMenuHostContext(EngineServices.current(),
+                    new Sonic3kGameModule(),fixture.input,loop::setGameplayMode));
+            fixture.host = (S3kCompetitionNativeHost) NativeCompetitionRoster.from(
+                    SessionManager.getCurrentGameplayMode().getWorldSession());
+            assertThrows(UnsupportedOperationException.class,handle::retry);
+            var session = fixture.host.session();
+            var player = session.player(0);
+            session.signalGo();
+            player.setObjectControl(1); player.setSolidBits(0xC,0xD);
+            var goal = fixture.host.world().context().getObjectManager().getActiveObjects().stream()
+                    .filter(com.openggf.game.sonic3k.competition.objects.CompetitionGoalObjectInstance.class::isInstance)
+                    .findFirst().orElseThrow();
+            for (int crossing=0;crossing<6;crossing++) {
+                player.setCentre(goal.getX()-64,goal.getY());
+                session.observeGoal(goal.getX(),goal.getY(),goal.getSpawn().subtype());
+                player.setCentre(goal.getX()+1,goal.getY());
+                session.observeGoal(goal.getX(),goal.getY(),goal.getSpawn().subtype());
+            }
+            session.finishFromNeon();
+            fixture.input.setLogicalOverride(com.openggf.control.LogicalInputSnapshot.neutral());
+            for (int frame=0;frame<160;frame++)
+                fixture.iteration(() -> loop.getNativeMenuScreen().update(fixture.input));
+            var held = session.capture();
+            assertTrue(held.resultSent(),"script must exhaust the native results wait");
+            int stepCount = steps.size();
+            int admissionCount = admissions.get();
+            for (int frame=0;frame<10;frame++)
+                fixture.iteration(() -> loop.getNativeMenuScreen().update(fixture.input));
+            assertEquals(held,session.capture(),"results hold must not advance native state");
+            assertEquals(stepCount,steps.size(),"held presentations are not executed run steps");
+            assertEquals(admissionCount+10,admissions.get(),"host input remains live above the held view");
+            handle.leave();
+            fixture.iteration(() -> loop.getNativeMenuScreen().update(fixture.input));
+            assertEquals(java.util.List.of(RunEndReason.LEFT),ended);
+        }
+    }
+
     @Test void nativeMenuAndHostedSoloMatchRaceHaveIdenticalStateAcrossFalseStartAndDeath() throws Exception {
         for (boolean items : new boolean[]{false,true}) {
             var expected = new ArrayList<S3kCompetitionSession.State>();

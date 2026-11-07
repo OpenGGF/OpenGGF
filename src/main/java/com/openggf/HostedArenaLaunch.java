@@ -42,6 +42,8 @@ final class HostedArenaLaunch implements NativeMenuScreen {
         var reason = loop.hostedRuns.consumeLeave();
         if (reason!=null) { loop.endHostedRun(reason); return; }
         if (!loop.hostedRuns.admitArenaStep(input)) return;
+        // Keep the host's menu live, but retain the final native presentation after results.
+        if (session.resultsRequested()) return;
         PlayerInputState admitted = loop.hostedRuns.beforeArenaStep(input);
         var step = session.step(admitted);
         loop.hostedRuns.afterArenaStep(step,session.trackFinished());
