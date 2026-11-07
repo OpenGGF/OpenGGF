@@ -8,7 +8,12 @@ public sealed interface ControlMessage {
     @com.openggf.game.ModApi
     record RoomDescriptor(String name, String gameId, int zone, int act, String characterPolicy,
                           String lockedCharacter, int maxPlayers, boolean verified,
+                          RoomAccessPolicy accessPolicy, String chatMode, String trackKind, String mode) {
+        public RoomDescriptor(String name, String gameId, int zone, int act, String characterPolicy,
+                          String lockedCharacter, int maxPlayers, boolean verified,
                           RoomAccessPolicy accessPolicy, String chatMode) {
+            this(name, gameId, zone, act, characterPolicy, lockedCharacter, maxPlayers, verified, accessPolicy, chatMode, "ACT", "TIME_ATTACK");
+        }
         public RoomDescriptor {
             java.util.Objects.requireNonNull(accessPolicy, "access policy");
             validatedChatMode(chatMode);
@@ -46,14 +51,24 @@ public sealed interface ControlMessage {
 
     @com.openggf.game.ModApi
     record RoundConfig(String gameId, int zone, int act, int windowSeconds,
+                       String characterPolicy, String lockedCharacter, String trackKind, String mode, String monitors, int cutoffSeconds) {
+        public RoundConfig(String gameId, int zone, int act, int windowSeconds,
                        String characterPolicy, String lockedCharacter) {
+            this(gameId, zone, act, windowSeconds, characterPolicy, lockedCharacter, "ACT", "TIME_ATTACK", "NORMAL", 60);
+        }
     }
 
     @com.openggf.game.ModApi
     record RaceLaunch(long roundId, long planRevision, RoundConfig config,
                       String participantId, int slot, String fingerprint,
                       String effectiveCharacter, long countdownEndsAtHubMillis,
+                      long deadlineHubMillis, boolean swapEnabled) {
+        public RaceLaunch(long roundId, long planRevision, RoundConfig config,
+                      String participantId, int slot, String fingerprint,
+                      String effectiveCharacter, long countdownEndsAtHubMillis,
                       long deadlineHubMillis) {
+            this(roundId, planRevision, config, participantId, slot, fingerprint, effectiveCharacter, countdownEndsAtHubMillis, deadlineHubMillis, false);
+        }
     }
 
     @com.openggf.game.ModApi
@@ -68,13 +83,23 @@ public sealed interface ControlMessage {
 
     @com.openggf.game.ModApi
     record StandingsRow(int slot, String displayName, String character,
+                        int bestTimeFrames, int rank, String verifyState, String outcome, int bestLapFrames, List<Integer> lapFrames) {
+        public StandingsRow { lapFrames = List.copyOf(lapFrames); }
+        public StandingsRow(int slot, String displayName, String character,
                         int bestTimeFrames, int rank, String verifyState) {
+            this(slot, displayName, character, bestTimeFrames, rank, verifyState, "FINISHED", 0, List.of());
+        }
     }
 
     @com.openggf.game.ModApi
     record RoomSummary(String roomId, String name, String gameId, int zone, int act,
                        String characterPolicy, int playerCount, int maxPlayers,
+                       String routing, boolean verified, String chatMode, String trackKind, String mode) {
+        public RoomSummary(String roomId, String name, String gameId, int zone, int act,
+                       String characterPolicy, int playerCount, int maxPlayers,
                        String routing, boolean verified, String chatMode) {
+            this(roomId, name, gameId, zone, act, characterPolicy, playerCount, maxPlayers, routing, verified, chatMode, "ACT", "TIME_ATTACK");
+        }
         public RoomSummary {
             validatedChatMode(chatMode);
         }
@@ -213,7 +238,11 @@ public sealed interface ControlMessage {
     /** Host to clients: authoritative sender identity and current track context. */
     @com.openggf.game.ModApi
     record QuickChatBroadcast(int slot, String displayName, String phraseId,
-                              String gameId, int zone, int act) implements ControlMessage {
+                              String gameId, int zone, int act, String trackKind) implements ControlMessage {
+        public QuickChatBroadcast(int slot, String displayName, String phraseId,
+                              String gameId, int zone, int act) {
+            this(slot, displayName, phraseId, gameId, zone, act, "ACT");
+        }
     }
 
     @com.openggf.game.ModApi
@@ -261,13 +290,22 @@ public sealed interface ControlMessage {
     }
 
     @com.openggf.game.ModApi
-    record AttemptFinish(int attemptId, int timeFrames, int firstInputFrame, int finishFrame,
+    record AttemptFinish(int attemptId, int timeFrames, int clockStartFrame, int finishFrame,
+                         List<Integer> lapFrames, List<Integer> splitFrames,
+                         String inputRecordingHashHex, String ghostStreamHashHex, String inputRecordingRef) implements ControlMessage {
+        public AttemptFinish { lapFrames = List.copyOf(lapFrames); splitFrames = List.copyOf(splitFrames); }
+        public AttemptFinish(int attemptId, int timeFrames, int clockStartFrame, int finishFrame,
                          String inputRecordingHashHex, String ghostStreamHashHex,
-                         String inputRecordingRef) implements ControlMessage {
+                         String inputRecordingRef) {
+            this(attemptId, timeFrames, clockStartFrame, finishFrame, List.of(), List.of(), inputRecordingHashHex, ghostStreamHashHex, inputRecordingRef);
+        }
     }
 
     @com.openggf.game.ModApi
-    record AttemptReset(int attemptId) implements ControlMessage {
+    record AttemptReset(int attemptId, String reason) implements ControlMessage {
+        public AttemptReset(int attemptId) {
+            this(attemptId, "RETRY");
+        }
     }
 
     @com.openggf.game.ModApi
@@ -495,23 +533,35 @@ public sealed interface ControlMessage {
     }
 
     @com.openggf.game.ModApi
-    record StandingsPageRequest(int page) implements ControlMessage {
+    record StandingsPageRequest(int page, String board) implements ControlMessage {
+        public StandingsPageRequest(int page) {
+            this(page, "TOTAL");
+        }
     }
 
     @com.openggf.game.ModApi
-    record StandingsPage(List<StandingsRow> rows, int page, int totalPages)
+    record StandingsPage(List<StandingsRow> rows, int page, int totalPages, String board)
             implements ControlMessage {
+        public StandingsPage(List<StandingsRow> rows, int page, int totalPages) {
+            this(rows, page, totalPages, "TOTAL");
+        }
         public StandingsPage {
             rows = List.copyOf(rows);
         }
     }
 
     @com.openggf.game.ModApi
-    record RankUpdate(int rank, int bestTimeFrames) implements ControlMessage {
+    record RankUpdate(int rank, int bestTimeFrames, String board) implements ControlMessage {
+        public RankUpdate(int rank, int bestTimeFrames) {
+            this(rank, bestTimeFrames, "TOTAL");
+        }
     }
 
     @com.openggf.game.ModApi
-    record RoomTrackUpdate(String roomId, int zone, int act) implements ControlMessage {
+    record RoomTrackUpdate(String roomId, int zone, int act, String trackKind) implements ControlMessage {
+        public RoomTrackUpdate(String roomId, int zone, int act) {
+            this(roomId, zone, act, "ACT");
+        }
         public RoomTrackUpdate {
             if (roomId == null || roomId.isBlank() || zone < 0 || zone > 999
                     || act < 0 || act > 999) {
@@ -608,6 +658,19 @@ public sealed interface ControlMessage {
         }
     }
 
+    @com.openggf.game.ModApi
+    record RaceCutoff(long roundId, long endsAtHubMillis) implements ControlMessage { }
+    @com.openggf.game.ModApi
+    record TeleportRequest(int attemptId, int requestFrame) implements ControlMessage { }
+    @com.openggf.game.ModApi
+    record TeleportSwap(long swapId, long roundId, int slotA, int slotB, SwapTarget targetA, SwapTarget targetB, int sentAtFrameA, int sentAtFrameB) implements ControlMessage { }
+    @com.openggf.game.ModApi
+    record TeleportNoPartner(int attemptId, int requestFrame) implements ControlMessage { }
+    @com.openggf.game.ModApi
+    record TeleportOutcome(long swapId, int applyFrame, String outcome) implements ControlMessage { }
+    @com.openggf.game.ModApi
+    record SwapTarget(int centreX, int centreY, int xVel, int yVel, boolean facingLeft, boolean secondaryPath, int priorityBucket, boolean highPriority, int shoeKind, int shoeTimer, int progress) { }
+
     private static void validatedChatMode(String mode) {
         if (ChatMode.parse(mode) == null) {
             throw new IllegalArgumentException("invalid chat mode");
@@ -624,9 +687,6 @@ public sealed interface ControlMessage {
     }
 
     private static void validatedTrackKey(String key) {
-        if (key == null || key.length() > 32
-                || !key.matches("[a-z0-9]{1,8}:[0-9]{1,3}:[0-9]{1,3}")) {
-            throw new IllegalArgumentException("invalid track key");
-        }
+        TrackKey.parse(key);
     }
 }

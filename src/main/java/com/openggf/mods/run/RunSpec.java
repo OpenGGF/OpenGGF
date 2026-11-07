@@ -20,13 +20,17 @@ import java.util.Objects;
  */
 @ModApi
 public record RunSpec(String gameId, int zone, int act, String character, GameplayRunPolicy policy,
-                      RunArea area) {
+                      RunArea area, TrackKind kind) {
+    public RunSpec(String gameId, int zone, int act, String character, GameplayRunPolicy policy, RunArea area) {
+        this(gameId, zone, act, character, policy, area, TrackKind.ACT);
+    }
     /** The whole act from its usual start. */
     public RunSpec(String gameId, int zone, int act, String character, GameplayRunPolicy policy) {
         this(gameId, zone, act, character, policy, null);
     }
 
     public RunSpec {
+        Objects.requireNonNull(kind, "kind");
         Objects.requireNonNull(gameId, "gameId");
         Objects.requireNonNull(character, "character");
         Objects.requireNonNull(policy, "policy");

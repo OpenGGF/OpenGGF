@@ -91,6 +91,8 @@ public final class ModApiVersion {
      * Full/Quick/Off communication with semantic quick content, a local English
      * catalogue and read-only global personal chat display preferences. Protocol 7 combines
      * these controls with private admission, invite authority and correlated master requests.
+     * Protocol 9 adds competition track kinds, race clocks, monitor policies, lap/progress
+     * metadata, standings boards and bounded teleport event contracts.
      * Protocol 8 adds broker-bound listed joins, explicit listener admission states,
      * complete direct registration ownership, acknowledged route retirement,
      * local broker-granted owner self-join, committed round revisions and

@@ -50,7 +50,7 @@ public final class ControlJsonCodec {
             ControlMessage.SelectCharacter.class, ControlMessage.RoundConfigure.class,
             ControlMessage.AttemptStart.class, ControlMessage.AttemptReset.class,
             ControlMessage.TrackVote.class, ControlMessage.AttemptFinish.class,
-            ControlMessage.StandingsPageRequest.class);
+            ControlMessage.StandingsPageRequest.class, ControlMessage.TeleportRequest.class, ControlMessage.TeleportOutcome.class);
 
     private static final Set<Class<?>> ROOM_SERVER_TYPES = Set.of(
             ControlMessage.Welcome.class, ControlMessage.JoinAccepted.class,
@@ -67,7 +67,7 @@ public final class ControlJsonCodec {
             ControlMessage.StandingsPage.class, ControlMessage.RankUpdate.class,
             ControlMessage.RoomAccessChallenge.class, ControlMessage.RoomAccessState.class,
             ControlMessage.RoomPasswordChanged.class, ControlMessage.RoomInviteInvalidated.class,
-            ControlMessage.RoomInvite.class, ControlMessage.RoomInviteRejected.class);
+            ControlMessage.RoomInvite.class, ControlMessage.RoomInviteRejected.class, ControlMessage.RaceCutoff.class, ControlMessage.TeleportSwap.class, ControlMessage.TeleportNoPartner.class);
 
     private static final Set<Class<?>> MASTER_CLIENT_TYPES = Set.of(
             ControlMessage.Hello.class, ControlMessage.AuthProof.class,
@@ -327,6 +327,7 @@ public final class ControlJsonCodec {
                 validateSlot(quick.slot());
                 requireText(quick.displayName(), "chat sender");
                 requireText(quick.gameId(), "chat game");
+                validateTrackKind(quick.trackKind(), quick.zone(), quick.act());
                 if (QuickChatPhrase.parse(quick.phraseId()) == null
                         || quick.zone() < 0 || quick.act() < 0) {
                     throw new ProtocolViolationException("invalid quick chat context");
@@ -459,12 +460,30 @@ public final class ControlJsonCodec {
             case ControlMessage.AttemptStart start -> validateAttempt(start.attemptId());
             case ControlMessage.AttemptFinish finish -> {
                 validateAttempt(finish.attemptId());
-                if (finish.timeFrames() <= 0 || finish.firstInputFrame() < 0
-                        || finish.finishFrame() < finish.firstInputFrame()) invalid("attempt finish");
+                if (finish.timeFrames() <= 0 || finish.clockStartFrame() < 0
+                        || finish.finishFrame() < finish.clockStartFrame()) invalid("attempt finish");
+                validateFrames(finish.lapFrames(), 5);
+                validateFrames(finish.splitFrames(), 32);
                 validateHash(finish.inputRecordingHashHex());
                 validateHash(finish.ghostStreamHashHex());
             }
-            case ControlMessage.AttemptReset reset -> validateAttempt(reset.attemptId());
+            case ControlMessage.AttemptReset reset -> {
+                validateAttempt(reset.attemptId());
+                token(reset.reason(), "RETRY", "LEFT", "GAME_OVER", "TIME_OVER", "DISCONNECT");
+            }
+            case ControlMessage.RaceCutoff cutoff -> { if (cutoff.roundId() <= 0 || cutoff.endsAtHubMillis() < 0) invalid("race cutoff"); }
+            case ControlMessage.TeleportRequest request -> { validateAttempt(request.attemptId()); nonnegative(request.requestFrame()); }
+            case ControlMessage.TeleportNoPartner request -> { validateAttempt(request.attemptId()); nonnegative(request.requestFrame()); }
+            case ControlMessage.TeleportOutcome outcome -> {
+                if (outcome.swapId() <= 0 || outcome.swapId() > 0xffffffffL) invalid("swap ID");
+                nonnegative(outcome.applyFrame()); token(outcome.outcome(), "APPLIED", "FALLBACK");
+            }
+            case ControlMessage.TeleportSwap swap -> {
+                if (swap.swapId() <= 0 || swap.swapId() > 0xffffffffL || swap.roundId() <= 0 || swap.slotA() == swap.slotB()) invalid("swap identity");
+                validateSlot(swap.slotA()); validateSlot(swap.slotB());
+                nonnegative(swap.sentAtFrameA()); nonnegative(swap.sentAtFrameB());
+                validateSwapTarget(swap.targetA()); validateSwapTarget(swap.targetB());
+            }
             case ControlMessage.TrackVote vote -> validateTrackKey(vote.trackKey());
             case ControlMessage.TrackVoteOffer offer -> {
                 validateUniqueTrackKeys(offer.trackKeys(), 8);
@@ -627,14 +646,16 @@ public final class ControlJsonCodec {
             }
             case ControlMessage.StandingsPageRequest request -> {
                 if (request.page() < 0) invalid("standings page");
+                token(request.board(), "TOTAL", "BEST_LAP");
             }
-            case ControlMessage.StandingsPage page -> validatePage(page.page(), page.totalPages(), false);
+            case ControlMessage.StandingsPage page -> { validatePage(page.page(), page.totalPages(), false); token(page.board(), "TOTAL", "BEST_LAP"); }
             case ControlMessage.RankUpdate rank -> {
+                token(rank.board(), "TOTAL", "BEST_LAP");
                 if (rank.rank() < 1 || rank.bestTimeFrames() < 1) invalid("rank update");
             }
             case ControlMessage.RoomTrackUpdate update -> {
                 requireText(update.roomId(), "room ID");
-                validateTrack(update.zone(), update.act());
+                validateTrackKind(update.trackKind(), update.zone(), update.act());
             }
             case ControlMessage.RoomAccessChallenge challenge -> {
                 requireText(challenge.challengeId(), "access challenge");
@@ -728,12 +749,32 @@ public final class ControlJsonCodec {
         if (attemptId < 0) invalid("attempt ID");
     }
 
+    private static void token(String value, String... allowed) {
+        if (value == null || !java.util.Arrays.asList(allowed).contains(value)) invalid("token");
+    }
+    private static void nonnegative(int value) { if (value < 0) invalid("frame"); }
+    private static void validateFrames(List<Integer> frames, int max) {
+        requireItems(frames, "frames");
+        if (frames.size() > max) invalid("frames");
+        for (int frame : frames) nonnegative(frame);
+    }
+    private static void validateTrackKind(String kind, int zone, int act) {
+        token(kind, "ACT", "ARENA"); validateTrack(zone, act);
+        if ("ARENA".equals(kind) && act != 0) invalid("arena act");
+    }
+    private static void validateSwapTarget(ControlMessage.SwapTarget t) {
+        if (t == null || t.centreX() < 0 || t.centreX() > 65535 || t.centreY() < 0 || t.centreY() > 65535
+                || t.xVel() < -0x1000 || t.xVel() > 0x1000 || t.yVel() < -0x1000 || t.yVel() > 0x1000
+                || t.priorityBucket() < 0 || t.priorityBucket() > 7 || t.shoeKind() < 0 || t.shoeKind() > 2
+                || t.shoeTimer() < 0 || t.shoeTimer() > 75 || t.progress() < 0 || t.progress() > 15) invalid("swap target");
+    }
+
     private static void validateHash(String value) {
         if (value == null || !value.matches("[0-9a-fA-F]{64}")) invalid("hash");
     }
 
     private static void validateTrackKey(String key) {
-        if (key == null || !key.matches("[a-z0-9]{1,8}:[0-9]{1,3}:[0-9]{1,3}")) invalid("track key");
+        try { TrackKey.parse(key); } catch (IllegalArgumentException e) { invalid("track key"); }
     }
 
     private static void validateUniqueTrackKeys(List<String> keys, int maxCount) {
@@ -770,7 +811,8 @@ public final class ControlJsonCodec {
         if (room == null) invalid("room");
         requireText(room.name(), "room name");
         requireText(room.gameId(), "room game");
-        validateTrack(room.zone(), room.act());
+        validateTrackKind(room.trackKind(), room.zone(), room.act());
+        token(room.mode(), "TIME_ATTACK", "COMPETITION");
         if (room.maxPlayers() < 1 || room.maxPlayers() > Protocol.MAX_PLAYERS_RELAY
                 || room.accessPolicy() == null) invalid("room capacity");
         validateCharacterPolicy(room.characterPolicy(), room.lockedCharacter());
@@ -785,7 +827,8 @@ public final class ControlJsonCodec {
         requireText(summary.roomId(), "room ID");
         requireText(summary.name(), "room name");
         requireText(summary.gameId(), "room game");
-        validateTrack(summary.zone(), summary.act());
+        validateTrackKind(summary.trackKind(), summary.zone(), summary.act());
+        token(summary.mode(), "TIME_ATTACK", "COMPETITION");
         if (summary.maxPlayers() < 1 || summary.maxPlayers() > Protocol.MAX_PLAYERS_RELAY
                 || summary.playerCount() < 0 || summary.playerCount() > summary.maxPlayers()) {
             invalid("room summary capacity");
@@ -833,7 +876,10 @@ public final class ControlJsonCodec {
 
     private static void validateRoundConfig(ControlMessage.RoundConfig config) {
         requireText(config.gameId(), "round game");
-        validateTrack(config.zone(), config.act());
+        validateTrackKind(config.trackKind(), config.zone(), config.act());
+        token(config.mode(), "TIME_ATTACK", "COMPETITION");
+        token(config.monitors(), "NORMAL", "RANDOM", "ITEMS", "OFF");
+        if (config.cutoffSeconds() < 1 || config.cutoffSeconds() > 3600) invalid("cutoff");
         if (config.windowSeconds() <= 0 || config.windowSeconds() > 3600
                 || (!"OPEN".equals(config.characterPolicy())
                 && !"LOCKED".equals(config.characterPolicy()))) {
@@ -868,12 +914,14 @@ public final class ControlJsonCodec {
         requireItems(rows, field);
         for (ControlMessage.StandingsRow row : rows) {
             if (row.slot() < 0 || row.slot() >= Protocol.MAX_PLAYERS_RELAY
-                    || row.bestTimeFrames() <= 0 || row.rank() <= 0) {
+                    || ("FINISHED".equals(row.outcome()) ? row.bestTimeFrames() <= 0 : row.bestTimeFrames() != 0) || row.rank() <= 0) {
                 throw new ProtocolViolationException("invalid " + field);
             }
             requireText(row.displayName(), "standing name");
             requireText(row.character(), "standing character");
-            requireText(row.verifyState(), "standing verification state");
+            token(row.verifyState(), "NONE", "PENDING", "VERIFIED", "UNVERIFIED");
+            token(row.outcome(), "FINISHED", "DNF", "DNS");
+            nonnegative(row.bestLapFrames()); validateFrames(row.lapFrames(), 5);
         }
     }
 
