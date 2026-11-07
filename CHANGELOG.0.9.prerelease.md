@@ -24,6 +24,11 @@ matching area heading; see the
   including the explicit188-frame Sonic format and retained CCZ consumer/intro
   views. The combined World/data integration passes668 focused checks without
   skips; TT decoder, ordinary-service and live World admission remain separate.
+  All419 TT compressed sources now have checked Java products and independent
+  finite native-style read contracts through that reader. One animation kernel
+  serves the existing pure API and guarded live Checkpoint, Tamabboh and Disc
+  callers, replacing their duplicate prefix reconstructions. The combined1,039
+  data/animation checks pass without skips; existing Frame and CCZ views remain.
   TT enemy, hazard, route and boss components reuse shared owners. Door crossing
   retains the native BYTE comparison; BreakPole preserves timer/controller/target
   read order and raw self-link clamps. Guarded Hurt uses the original shared

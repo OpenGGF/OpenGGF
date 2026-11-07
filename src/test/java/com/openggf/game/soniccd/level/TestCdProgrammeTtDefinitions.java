@@ -142,16 +142,18 @@ class TestCdProgrammeTtDefinitions {
         assertNotSame(da.sonic(),db.sonic());assertNotSame(da.view(R41A.range("PlayerGfx")),db.view(R41A.range("PlayerGfx")));
         assertNotSame(da.tables(),db.tables());assertNotSame(da.tables().plcs().get(0).body(),db.tables().plcs().get(0).body());
     }
-    @Test void all419CompressedIncludesAreRealButMissingDecoderProfilesNeverFallBack()throws Exception {
+    @Test void all419CompressedIncludesAndQualifiedProductsUseTheirOriginalBounds()throws Exception {
         int total=0;
         for(var p:CdR4DataLayout.Programme.values()) {
             var r=reader(p);var data=CdProgrammeData.fromReader(r);assertEquals(EXPECTED.get(p.ordinal()).sources(),data.compressedRanges().size());
             for(var key:data.compressedRanges()) {
                 total++;var include=data.canonicalInput(key);assertSame(include,data.canonicalInput(key));assertEquals(key.length(),include.length());
                 assertEquals(key.sha256(),CdR11aProfile.sha256(include.copy()));assertEquals((include.unsignedWord(0)&32767)*32,r.loadOutputBytes(key));
-                assertTrue(assertThrows(UnsupportedOperationException.class,()->data.javaInput(key)).getMessage().contains("Java decoder profile unavailable"));
-                assertTrue(assertThrows(UnsupportedOperationException.class,()->data.decoded(key)).getMessage().contains("Java decoder profile unavailable"));
-                assertTrue(assertThrows(UnsupportedOperationException.class,()->data.nativeInput(key)).getMessage().contains("native prefetch profile unavailable"));
+                var contract=data.productContract(key);
+                assertEquals(contract.javaProduct().input().length(),data.javaInput(key).length());
+                assertEquals(contract.nativeInput().length(),data.nativeInput(key).length());
+                assertEquals(contract.javaProduct().outputSha(),CdR11aProfile.sha256(data.decoded(key).bytes().copy()));
+                assertSame(data.decoded(key),data.decoded(key));
                 assertSame(include,data.canonicalInput(key));
             }
         }

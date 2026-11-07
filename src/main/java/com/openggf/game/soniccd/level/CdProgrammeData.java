@@ -24,6 +24,10 @@ final class CdProgrammeData {
     CdAssetBytes javaInput(CdR4DataLayout.Range declaration) { return reader.javaInput(declaration); }
     CdAssetBytes nativeInput(CdR4DataLayout.Range declaration) { return reader.nativeInput(declaration); }
     CdNemesisAsset.Decoded decoded(CdR4DataLayout.Range declaration)throws IOException { return reader.decoded(declaration); }
+    CdR4ProgrammeProfiles.Product productContract(CdR4DataLayout.Range declaration) {
+        reader.canonicalInput(declaration); // Actual owner authenticates the key/include before descriptive facts.
+        return CdR4ProgrammeProfiles.contract(programme,declaration);
+    }
     List<CdR4DataLayout.Range> compressedRanges() {
         return reader.definition().sources().stream().map(s->(CdR4DataLayout.Range)s.key()).toList();
     }

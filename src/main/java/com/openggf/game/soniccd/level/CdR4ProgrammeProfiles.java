@@ -6,14 +6,31 @@ import static com.openggf.game.soniccd.level.CdProgrammeDefinition.*;
 /**
  * Closed TT binding facts from FINAL 4c6055a95 and its independently authenticated
  * shared-parser-differences.json (6621161b8dddef1de1308157c16a3666be207900cb329c66477400ae68706c62).
- * Actual bytes are always read/authenticated by CdProgrammeReader. No decoder cursor,
- * native prefetch, terrain Shape, player source, World or water-service admission is supplied.
+ * Actual bytes are always read/authenticated by CdProgrammeReader. Finite products/read endpoints are source-qualified separately for Java and native-style reads.
+ * No terrain Shape, player source, World or water-service admission is supplied.
  */
 final class CdR4ProgrammeProfiles {
     private CdR4ProgrammeProfiles() { }
+    /** Descriptive checked DATA only; neither a prepared operation nor authority to replay one. */
+    record Product(JavaProduct javaProduct,ReadExtent nativeInput,int nativePrepared,int nativeConsumed) { }
+    // Row: key header Java-view table-end Java-consumed Java-sha output-sha native-view prepare consumed native-sha.
+    // Native read order: N common/nemesis.asm:15-105,147-195; final writers109-143.
+    // Facts are independently derived from actual originals using the existing semantic decoders.
+    private static Product product(String[] w) {
+        if(w.length!=11)throw new IllegalArgumentException("TT finite product row differs");
+        return new Product(new JavaProduct(new ReadExtent(Integer.parseInt(w[2]),w[5]),
+            Integer.parseInt(w[3]),Integer.parseInt(w[4]),w[6]),
+            new ReadExtent(Integer.parseInt(w[7]),w[10]),Integer.parseInt(w[8]),Integer.parseInt(w[9]));
+    }
+    static Product contract(CdR4DataLayout.Programme p,CdR4DataLayout.Range key) {
+        for(var line:facts(p).sourceRows().strip().lines().toList()) {
+            var w=line.split(" ");if(p.range(w[0])==key)return product(w);
+        }
+        throw new IllegalArgumentException("Foreign TT product key");
+    }
     private record PaletteFact(String range,int destination,int counter) { }
     private record CycleFact(CycleKind kind,String script,String colors) { }
-    private record Facts(String headers,List<Integer> roots,int bodies,int maximumCount,List<String> encountered,
+    private record Facts(String sourceRows,List<Integer> roots,int bodies,int maximumCount,List<String> encountered,
                          List<PaletteFact> palettes,List<CycleFact> cycles,CycleProgramme cycleProgramme,
                          int plcOffset,int plcBytes,String plcSha,SectionFact section,BackgroundKind background) { }
     private sealed interface SectionFact permits CameraFact,RtsFact { }
@@ -25,11 +42,17 @@ final class CdR4ProgrammeProfiles {
         var f=facts(p);b.tt=p;
         for(var r:p.ranges())b.raw(r,r.fileOffset(),r.length(),r.sha256());
         for(var operand:p.operands())b.operand(operand.fileOffset(),operand.encodedHex());
-        for(var line:f.headers().strip().lines().toList()) {
+        for(var line:f.sourceRows().strip().lines().toList()) {
             var words=line.split(" ");var range=p.range(words[0]);int header=Integer.parseInt(words[1],16);
+            var product=product(words);var java=product.javaProduct();var nativeRead=product.nativeInput();
+            if(java.input().length()<range.length() || java.input().length()>range.length()+1
+                    || java.tableBytes()<3 || java.tableBytes()>java.consumed() || java.consumed()>java.input().length()
+                    || product.nativePrepared()!=java.tableBytes()+2 || product.nativeConsumed()<product.nativePrepared()
+                    || nativeRead.length()!=Math.max(range.length(),product.nativeConsumed()) || nativeRead.length()>range.length()+1)
+                throw new IllegalArgumentException("TT finite product/read extent differs");
             b.sources.add(new Compressed(range,new Span(range,range.fileOffset(),range.length(),range.sha256()),
                 OptionalInt.of(header),(header&0x7FFF)*32,range.key().equals("StageBlocks")?0x2000:65536,
-                Optional.empty(),Optional.empty(),true));
+                Optional.of(java),Optional.of(nativeRead),true));
         }
         b.visual=new Visual(p.sonicFormat(),p.range("PlayerSprites"),p.range("PlayerGfxScript"),p.range("PlayerArtReadView"));
         b.loadRole(CdProgrammeReader.LoadRole.PLC,b.joined("PLC",f.plcOffset(),f.plcBytes(),f.plcSha()));
@@ -57,49 +80,49 @@ final class CdR4ProgrammeProfiles {
     private static Facts facts(CdR4DataLayout.Programme p) {
         return switch(p) {
             case R41A -> new Facts("""
-                WaterSurfaceGfx 806E
-                FlowerGfx 0027
-                TitleCardTextGfx 8038
-                BubbleNumbersGfx 0067
-                SpikeBallGfx 0010
-                ChainGfx 0008
-                TurbineGfxA 0020
-                CollapseFloorGfxA 0004
-                ElectricBeamGfxA 0005
-                ShootGfx 8012
-                TonboGfx 002A
-                TagaTagaGfx 001C
-                YagoGfx 0024
-                AmenboGfx 0020
-                WoodBlockGfx 8008
-                AnimalsGfx 8010
-                RobotTransportGfxA 000F
-                PointsGfx 0005
-                CapsuleGfx 8068
-                BigRingGfx 806A
-                GoalGfx 8018
-                SignpostGfx 804C
-                ResultsGfx 8078
-                TitleCardGfx 806D
-                Spring45Gfx 002E
-                SpringGfx 8024
-                MonitorTimeGfx 8052
-                ExplosionGfx 0046
-                RingGfx 000E
-                HudGfx 801B
-                CheckpointGfx 800C
-                StageBlocks 80B3
-                StageGfx 8258
-                BreakPoleGfxAB 8008
-                SpikesV4Gfx 8010
-                BlockGfxA 8020
-                SwitchGfx 8006
-                SlopeElevatorGfxA 8008
-                SwingGfxAB 000C
-                PrizePointsGfx 8002
-                DoorGfxA 8010
-                GeyserGfx 803C
-                BigRingFlashGfx 804D
+                WaterSurfaceGfx 806E 1089 62 1089 725a485aa9184899bb08cd1eb353461b574be6c3459bea10bca132e991cd4dcf 096df644ea3a771a04c657f65d1c312009af4e31788a9e59cbcfc60de53770fb 1089 64 1089 725a485aa9184899bb08cd1eb353461b574be6c3459bea10bca132e991cd4dcf
+                FlowerGfx 0027 676 73 675 56d28520fd0ec8c01068edebad2877c14836ffc876aafc32fb4121e53b1248b2 940eaecd3f31f50adef3d7774ebf8be982f6a4d2b3a068a45ab46237439b5874 676 75 676 56d28520fd0ec8c01068edebad2877c14836ffc876aafc32fb4121e53b1248b2
+                TitleCardTextGfx 8038 268 57 268 ffa8ce899df304b9658a7cd04c561bbabcd924426482f1440f11a33986ce9c87 4644e5513e3c0ae3bdf04133b3f8b828fb3bc247161d8e48f2307ec6ae4fc540 269 59 269 81f31548635a39b9f0e91d51ee32522f81c32aa8d30195ae86adc8e9cd882b4f
+                BubbleNumbersGfx 0067 1558 57 1557 4872f3d6aeff93d14bfe19c55c183f33976f7a0030532c6cf5e2f7b8d538fc36 cde5082d23b8ac1b3aa30879be33ec7d3d690223d5f03dd2211ccbff221b8f90 1558 59 1558 4872f3d6aeff93d14bfe19c55c183f33976f7a0030532c6cf5e2f7b8d538fc36
+                SpikeBallGfx 0010 266 53 266 f138f259dbb8e10841c3c2999edb4f07ce91e50d38ebf4cb7e6e1ed132137606 6a84100136936dd16d30e77076ee9d1df60954ccc7a278d222684dffce63c68f 267 55 267 2c16aa672c78198ec68c0a4ca31cdbc700b03d99c65d6dbadb4a86666b866ace
+                ChainGfx 0008 162 39 161 48d66771ed0561c49dace9415db18cc5289f98cfffa5462f7099dabf2d18888b d8ec3695235800e3fcc5bc7be45ac463125cac4852ef2dc2885ef41a97e1ab87 162 41 162 48d66771ed0561c49dace9415db18cc5289f98cfffa5462f7099dabf2d18888b
+                TurbineGfxA 0020 564 65 564 d7c286a9edef70b8c5f6b1e981677c49bc181ad2b863e1080833ea0384d77ed7 871cb4a7a22fc15b2c9490e2dc615a1188dd68ccfeb637be621c946c1e6f344f 565 67 565 fed59343332cfcf8c56c2c41c63f520b0493b2fe5d51db2d6d6e38a441d76efc
+                CollapseFloorGfxA 0004 88 29 88 302902d0ad8d631f790349369bb8376a7134756203d034b915b4bc3789623dc0 1c97573358f831b4005fef0c2bff15022dfe6962ea84dbb149076388f2201623 89 31 89 1e8129146c17adf19fd581c4841a04b502516adf0fa8141de64c98cd32d142fe
+                ElectricBeamGfxA 0005 127 39 127 1bd9915dd9300d4edc16377c274b433708189c56da43822e93b693f73635fd0c 2a22d1f72e3ffe565a9dfcf82a2865f6148d0c38388ceb66c710ae623b67a3b8 127 41 127 1bd9915dd9300d4edc16377c274b433708189c56da43822e93b693f73635fd0c
+                ShootGfx 8012 412 81 412 9bdec1913a358a123d93403357d8af6803f1d9ff13e5f25a5b504936ec80b817 dac142cc8ee5322793026a2130201c732c2ec6cc18e102fd063de942e286db4b 413 83 413 0c679a395503fecc477ae87b544e17a572e9d52fc0fcabbedd09e4adab859de9
+                TonboGfx 002A 676 66 675 3a84550334baac52f4b559f828e42c59da8b6154c08150e64dff1af15150a3a2 c1cf81069466c9d6819e1e5bf97e70ee34e6636d5d7c5f1e8e0a567b766f8141 676 68 676 3a84550334baac52f4b559f828e42c59da8b6154c08150e64dff1af15150a3a2
+                TagaTagaGfx 001C 383 80 383 771017ab60633d7dccbd2eb325b45538d4e6e6dcb2311182d72065e6d7bad589 e40619e823d8d91b3af5484183f974ddf330910c1579e1d34e9ebc32a3938202 383 82 383 771017ab60633d7dccbd2eb325b45538d4e6e6dcb2311182d72065e6d7bad589
+                YagoGfx 0024 727 93 727 f5c087826d7ef1d9171bb3c2427a2ceceee17400893223a941075b3502ab9ec0 873cae33a92b491f3448c19377169bb5a03e1a523993e07c6e45969ca6b03799 727 95 727 f5c087826d7ef1d9171bb3c2427a2ceceee17400893223a941075b3502ab9ec0
+                AmenboGfx 0020 536 69 536 b83b73e321758da08e9a7bf202acc2f72f23788fad11409ca8393638269e1e87 96bd4bf08d453de37765ac532e47111ef34e8cc5c80e55050235530ecb1cea59 537 71 537 dfe03ae9694f9e4927de705da583cd29dcfa7afda9172c7e8967d4b5fe76fa46
+                WoodBlockGfx 8008 148 46 147 af23e47a4803612393e718469123272932ad46eef41fb5e4b91b0086ec716334 a5f970c14ccaedaf6780c1dca0f5820b3f1a3db2cff8252bbcffac18ca001e65 148 48 148 af23e47a4803612393e718469123272932ad46eef41fb5e4b91b0086ec716334
+                AnimalsGfx 8010 356 70 355 88f31ca8417f41db54a1379bf54a2a375927cd6c520b6a6737989f27f8b205a6 391983566d0cc50c15360a364e7f1598fbb42c52d9690f50f31a5580b74e6d7b 356 72 356 88f31ca8417f41db54a1379bf54a2a375927cd6c520b6a6737989f27f8b205a6
+                RobotTransportGfxA 000F 332 77 332 26fb61222365ec1dc3a6c442401cdbc52e5eaf7e2a77903cb93570c7d325fcda ce19033d1380d75b2e7b816bd76bfdae7453c77dea728280dd3d2d90cfaaaa67 332 79 332 26fb61222365ec1dc3a6c442401cdbc52e5eaf7e2a77903cb93570c7d325fcda
+                PointsGfx 0005 101 29 101 9c01f8d17db4a5a30267f66d3c1e13d17223af14c6312963b69ab36fb9356176 2270d6453b2d2526412afab1ba19c3cf175b571a41766dc4fe0da422283d57db 101 31 101 9c01f8d17db4a5a30267f66d3c1e13d17223af14c6312963b69ab36fb9356176
+                CapsuleGfx 8068 1704 99 1703 da055a9f3c79f60b0bf6a784e89785bdc65eb37c7a598d95cf6a8f5fdc9ab808 b61c6d944dce535ccb74d0a374ac873e95a5e0b3911b465f62bb025b03660236 1704 101 1704 da055a9f3c79f60b0bf6a784e89785bdc65eb37c7a598d95cf6a8f5fdc9ab808
+                BigRingGfx 806A 1034 59 1033 5bfa84d7d4335e190e3287337f1595b3808fd1d3592615bfbc684d9a2bbdebf6 31cec10e677637f390c0a2b25d09f4ee9e3fe39f651801546e69b13150cee70c 1034 61 1034 5bfa84d7d4335e190e3287337f1595b3808fd1d3592615bfbc684d9a2bbdebf6
+                GoalGfx 8018 448 86 448 24aac969ce8508df0f412a0ad98d87102adc2029b3ae1f28b972eb7b6646979f 68359c6e3dc65e9cf72db3d20ce887acc3728fdd32de20abc1fd5af185ff4c9a 449 88 449 1ba1c7e9a34a071c8786cc2eb94eaf2adf0e58b480ef8d62f6501bb7f3006250
+                SignpostGfx 804C 1500 115 1500 2fb00eeee801d1f46cc06eae234fb15fa3dd984f325315c430f13d1e0d3fac67 7ffb01a6c7ffc333ade235f0c945561970c5b98eb0904a15fec3c164fc8ccb7c 1501 117 1501 c44aa3a5ef0fe775973ebd9f915c6b78b521a2107b4b69af6fa182de1a152c1d
+                ResultsGfx 8078 1354 65 1354 c88b40a5d2d17ddd96fb2b28dbdbdbe5f1a67f7b02671c6410f7d64a306c3c40 fdb13e161a5862fe4f8c550291bba36589028b8a7cc0394638c019a0ab35760d 1354 67 1354 c88b40a5d2d17ddd96fb2b28dbdbdbe5f1a67f7b02671c6410f7d64a306c3c40
+                TitleCardGfx 806D 940 71 939 8d70c7bedf08d9d0c4a4d01290fb78032820933ab43d1636262e16e601347bc8 68b70b1e8189073c24642b8939420ac4d3c3ba1d6a1c9c00d6538390d1764f7a 940 73 940 8d70c7bedf08d9d0c4a4d01290fb78032820933ab43d1636262e16e601347bc8
+                Spring45Gfx 002E 780 75 779 3cf30cb03a63f3d160c0b2dbbd0cf1f7803871f860125a5b44bf0a1cc0dc362a 1ae40f48422bc8b884ae4c85288d3f363737cd3e6979c458b93aac15ed581c8b 780 77 780 3cf30cb03a63f3d160c0b2dbbd0cf1f7803871f860125a5b44bf0a1cc0dc362a
+                SpringGfx 8024 547 80 547 52aa905cb632245c5922a198776a7ec46936102616db34a002648b45132a9847 8e3c6d91a395d24872b4ae5da293cd21d8e68230687ef9f07feb62ec2612f416 547 82 547 52aa905cb632245c5922a198776a7ec46936102616db34a002648b45132a9847
+                MonitorTimeGfx 8052 1541 105 1541 a11f69add660dbe82c86dd3227efe6154dc2de2f3ac3f82f7806fb3698a0b902 7575dcf197dbc2f246838cfedcb95af40100d449f0a0c5a48b7294c27c9a924f 1541 107 1541 a11f69add660dbe82c86dd3227efe6154dc2de2f3ac3f82f7806fb3698a0b902
+                ExplosionGfx 0046 1256 89 1256 1f642f6b44332f7ffa63d84970ff1abbacd72bbbd400417c5b3800215d7ec5c1 434f2415b56d7623e57fd94533506804d7ee1fe3a0321f77bfe86f58d8ff6664 1257 91 1257 c37077d4a4bf8aab8c50bd454137dba54a054c5a756b0f3a00515468d81fcdfe
+                RingGfx 000E 244 46 244 530877e432ceab7df543eaae5d3a6f705137526f54cdae8251b7fec288119ea2 c1f35c87c98d27990926ad515264ab1e8a5c9385b087931d79ff24709afd6abb 244 48 244 530877e432ceab7df543eaae5d3a6f705137526f54cdae8251b7fec288119ea2
+                HudGfx 801B 300 49 300 d3df1675439d1bb043f747ba8d3a975b31af8d423a09df30da9a9cae22084deb 0a448ef2c11a1414886684523d551d65af43e4f0c02e08c73e869437b15b40fc 301 51 301 fb31ef2bca6df6e547b6e578c1455730a6665226befb550fd6c03e2a9a1a88b5
+                CheckpointGfx 800C 212 51 211 e6af441ac5e051484bcd2993ad2736262b9c8f9a379bc714711e045f3f83e7bf b376ac203a8c3cf754d2d9bcc4a55dbcb287ead82bbb304b19b7fb5181f2c3a3 212 53 212 e6af441ac5e051484bcd2993ad2736262b9c8f9a379bc714711e045f3f83e7bf
+                StageBlocks 80B3 4076 63 4075 9156647d5f57d03925656dd578ec741d0c506031f12964bd4f5dbdcc57b6a457 382fed6403c27611ea6294b65390ace46c95edeb8047abdcf4e979972a8eb4a7 4076 65 4076 9156647d5f57d03925656dd578ec741d0c506031f12964bd4f5dbdcc57b6a457
+                StageGfx 8258 9482 99 9482 cafed5778e68796b0631b48f9dc24a55208def60b0350bdb86c302dcfd84d7d3 307edc2f7f7ae5c6d411fd52c6f0f12948f9fcb46f01dd55f0d42d033eb5316d 9483 101 9483 82316c7c742a032f5b0642c458265ba6b49eaa0e473e9859eb82307ede8c9256
+                BreakPoleGfxAB 8008 142 48 141 5ac7a71911f8f17c0efd1e7685a10aa16c7dfaf71cc0d9b7c7ae4cba67c9beb2 d32a4b9b95b3c7fc95c86c91dd85eaf44e463bd56802fcbef7f05be16b80a577 142 50 142 5ac7a71911f8f17c0efd1e7685a10aa16c7dfaf71cc0d9b7c7ae4cba67c9beb2
+                SpikesV4Gfx 8010 154 38 153 bbc5f9665364f85c4068ad62d12d2aec7f78b603bca0704534b92c4f82298a72 72665dcfa02abb8b558d854148ee7c1d4422316ce3a3caf9a86619ef18ec334b 154 40 154 bbc5f9665364f85c4068ad62d12d2aec7f78b603bca0704534b92c4f82298a72
+                BlockGfxA 8020 466 96 465 fb777b9d2e1f4ad85ff5939ae3b4c8dd6708a15e3dc75c0b8cfe5e644db2cc3a fd0056fc3eb4592501363f5e69d6c572ace5dd56e6a8d93cf0172eda652f576d 466 98 466 fb777b9d2e1f4ad85ff5939ae3b4c8dd6708a15e3dc75c0b8cfe5e644db2cc3a
+                SwitchGfx 8006 82 20 82 a7c595cdd4d541ac97948c563f81f056b14b2d0c40c38f4dfe12d267942642e7 8f8b7e742c91918853011a322ce6705e83b109e33ad474467a99c8055c67f314 82 22 82 a7c595cdd4d541ac97948c563f81f056b14b2d0c40c38f4dfe12d267942642e7
+                SlopeElevatorGfxA 8008 132 42 132 45003c585672074164cd247f6907c7b7254c95ab46e8d1429c897eaa77d73963 30940a7fefc9220e1461a267ddc82717ad2a77039fdd5ea55890c0fcf58bc48a 133 44 133 ec70c4e31a610fbdd2e18a14e2c22fe1cec552c092b12ed472a7885c4d102ede
+                SwingGfxAB 000C 276 76 276 312256cc42b99e3ca001e0c51ac98aea8035b25c8b2304103f7beaf8bc5a308f e992fa0d5dc914a4f0bcad27080c6d37145ea4b40f6b496c3a6514862c62e7cd 276 78 276 312256cc42b99e3ca001e0c51ac98aea8035b25c8b2304103f7beaf8bc5a308f
+                PrizePointsGfx 8002 35 13 35 7c9cb1140c4cb5a820f9fe688ee7768112967cc4ab48932b5629e94701e15d62 392cd91bad2777cfadabfd1961be78f35af1ccfa01276469464f35af68c3f7ca 35 15 35 7c9cb1140c4cb5a820f9fe688ee7768112967cc4ab48932b5629e94701e15d62
+                DoorGfxA 8010 230 52 229 9de06934092b00022f0f807e893c157de37f7144277f781f667f0a2688dbeabf 5ede07a3f04ca26adb49d2f51f605b42ce3d2ba12ba1bd4754dd1c3ab88220a4 230 54 230 9de06934092b00022f0f807e893c157de37f7144277f781f667f0a2688dbeabf
+                GeyserGfx 803C 582 52 582 7a491f965047f62189b6eee13b2b57c6c7ec1266a1e0694d37b124dadde5eab3 a3d1646acbd49b64b8e3aec2ab2340910ef92f68cc648a282273adf8ed3c9488 583 54 583 b8c8de57801d0671411f3ae89b5d587f1f5e06b01d8475c26d885c7293a4f415
+                BigRingFlashGfx 804D 384 36 384 6106d2692b34f73a6d928e651c9547e5dfe2dc00bdb0b4136dc42e603ce0efa7 39e7bb895c1492e9847de7a67ddc61108dc553b9443ad17d61ea5c8b47fdf8b6 385 38 385 e59af60b6dd221ca0b6c993894db9e69567814126686e9f2270bba02e2adf25b
                 """,
                 List.of(0xFEA8,0xFEB6,0xFF1A,0xFEA8,0xFF70,0xFFC6,0xFFCE,0xFF1A,0xFF1A,0xFF1A,0xFF1A,0xFF1A,0xFF1A,0xFF1A,0xFF1A,0xFF1A,0xFF12,0xFF1A,0xFFD6),8,15,
                 List.of("StageGfx","CheckpointGfx","WaterSurfaceGfx","TitleCardGfx","TitleCardTextGfx","TonboGfx","DoorGfxA","BlockGfxA","BubbleNumbersGfx","SwitchGfx","SpringGfx","HudGfx","MonitorTimeGfx","ExplosionGfx","PointsGfx","FlowerGfx","RingGfx","BreakPoleGfxAB","GeyserGfx","SwingGfxAB","SlopeElevatorGfxA","CollapseFloorGfxA","ChainGfx","SpikeBallGfx","TurbineGfxA","SpikesV4Gfx","AmenboGfx","TagaTagaGfx","YagoGfx","AnimalsGfx","GoalGfx","RobotTransportGfxA","ResultsGfx","SignpostGfx","BigRingGfx","BigRingFlashGfx"),
@@ -108,51 +131,51 @@ final class CdR4ProgrammeProfiles {
                 CycleProgramme.UPPER_SIX_OR_STANDARD_FOUR,0xFE82,360,"19969be448699bdbae24e60a1443814b39ccc7245c32100f68b3e9928223e8d5",
                 new CameraFact(0xC03E,18,"6b1762bbd486c4cf403af6b288610fcc68fdfba179ee706b7dfadf081b3e9276",List.of(new SectionRow(0x1280,2,5),new SectionRow(0x1500,4,6),new SectionRow(0xFFFF,2,5))),BackgroundKind.COPIED_AND_LIVE);
             case R41B -> new Facts("""
-                BreakPoleGfxAB 8008
-                SpikesV4Gfx 8010
-                BlockGfxB 0020
-                SwitchGfx 8006
-                SwingGfxAB 000C
-                DoorGfxB 0010
-                UnusedPlatformGfxBCD 8020
-                RotateBlockGfx 804C
-                SpikeBallGfx 0010
-                ChainGfx 0008
-                TurbineGfxB 8020
-                CollapseFloorGfxB 0004
-                ElectricBeamGfxB 0005
-                ShootGfx 8012
-                TonboGfx 002A
-                TagaTagaGfx 001C
-                YagoGfx 0024
-                AmenboGfx 0020
-                RobotTransportGfxB 0017
-                HologramGfx 0033
-                PointsGfx 0005
-                CapsuleGfx 8068
-                BigRingGfx 806A
-                GoalGfx 8018
-                SignpostGfx 804C
-                ResultsGfx 8078
-                TitleCardGfx 806D
-                Spring45Gfx 002E
-                SpringGfx 8024
-                MonitorTimeGfx 8052
-                ExplosionGfx 0046
-                RingGfx 000E
-                HudGfx 801B
-                CheckpointGfx 800C
-                WaterSurfaceGfx 806E
-                FlowerGfx 0027
-                TitleCardTextGfx 8038
-                BubbleNumbersGfx 0067
-                StageBlocks 808E
-                StageGfx 8236
-                AnimalsGfx 8010
-                BigRingFlashGfx 804D
-                PrizePointsGfx 8002
-                GeyserGfx 803C
-                WoodBlockGfx 8008
+                BreakPoleGfxAB 8008 142 48 141 5ac7a71911f8f17c0efd1e7685a10aa16c7dfaf71cc0d9b7c7ae4cba67c9beb2 d32a4b9b95b3c7fc95c86c91dd85eaf44e463bd56802fcbef7f05be16b80a577 142 50 142 5ac7a71911f8f17c0efd1e7685a10aa16c7dfaf71cc0d9b7c7ae4cba67c9beb2
+                SpikesV4Gfx 8010 154 38 153 bbc5f9665364f85c4068ad62d12d2aec7f78b603bca0704534b92c4f82298a72 72665dcfa02abb8b558d854148ee7c1d4422316ce3a3caf9a86619ef18ec334b 154 40 154 bbc5f9665364f85c4068ad62d12d2aec7f78b603bca0704534b92c4f82298a72
+                BlockGfxB 0020 610 52 609 e2a12f5e7615dd409d812a63be16f58549ee9f89059a8ccf68c69eeacb1de2d6 11c3578073254909a9eae54f530132689251d2cf5ea4e4ea295783537406a0a1 610 54 610 e2a12f5e7615dd409d812a63be16f58549ee9f89059a8ccf68c69eeacb1de2d6
+                SwitchGfx 8006 82 20 82 a7c595cdd4d541ac97948c563f81f056b14b2d0c40c38f4dfe12d267942642e7 8f8b7e742c91918853011a322ce6705e83b109e33ad474467a99c8055c67f314 82 22 82 a7c595cdd4d541ac97948c563f81f056b14b2d0c40c38f4dfe12d267942642e7
+                SwingGfxAB 000C 276 76 276 312256cc42b99e3ca001e0c51ac98aea8035b25c8b2304103f7beaf8bc5a308f e992fa0d5dc914a4f0bcad27080c6d37145ea4b40f6b496c3a6514862c62e7cd 276 78 276 312256cc42b99e3ca001e0c51ac98aea8035b25c8b2304103f7beaf8bc5a308f
+                DoorGfxB 0010 318 54 318 ddeda8b84ad785d849f1612cd50186d0b21f36a49912f74ab95e5d2ccc3f7ecf 071fcd48eed3b98ea14f368138f82e8f7b22e28266a3af82b7de29c19b556eea 319 56 319 a206ce2014a655c7c2f2c172159845e2eda4c2e912c4459c440d6be4ddabf73b
+                UnusedPlatformGfxBCD 8020 434 82 434 2bda34166f29d16803d72e7d604a9a674fdaf019960e1e6d10ed2c195a237a50 5bd264873b0feddb81840716a931f6c5973245a023b22e827a5f6701b08e79f6 435 84 435 97b084c25f6f19e1926d4de83b1f5bd9caf3a75fde0a611da9f15f87abe687af
+                RotateBlockGfx 804C 856 51 856 17486fa00ffaff6af64726948f62e2f508aee81b2e850bf7fb16cb7ec2507008 55f4bf4858c4291685d816d70ab18c69e677318f54805f90e35fc90c7e844417 857 53 857 d8a7c68c2291fcfa17ea321f669e0cc387768551cd0988f3f00a5ad7205948b2
+                SpikeBallGfx 0010 266 53 266 f138f259dbb8e10841c3c2999edb4f07ce91e50d38ebf4cb7e6e1ed132137606 6a84100136936dd16d30e77076ee9d1df60954ccc7a278d222684dffce63c68f 267 55 267 2c16aa672c78198ec68c0a4ca31cdbc700b03d99c65d6dbadb4a86666b866ace
+                ChainGfx 0008 162 39 161 48d66771ed0561c49dace9415db18cc5289f98cfffa5462f7099dabf2d18888b d8ec3695235800e3fcc5bc7be45ac463125cac4852ef2dc2885ef41a97e1ab87 162 41 162 48d66771ed0561c49dace9415db18cc5289f98cfffa5462f7099dabf2d18888b
+                TurbineGfxB 8020 578 74 578 6f45036d14eb87f01fa00e0f6af9f271a1c0dfc90ffc53a78e1acc2abc94c66b 7b823a9c0384799717c27fe3e912d57860e6190c7f98165784fd5aaf0382a1f5 579 76 579 89e94b0a9e8124bf6bd5acce07c6ea1598bd389c1d16933cb7c2dc72660f46be
+                CollapseFloorGfxB 0004 110 34 110 ccabc4deb281c9208a185b93c2ae76605e6ad2264474c290475d909c32c5e536 13ea926e0ed0482057a47a54c89c2e810516b3359a252b6123fa4559945e2e96 110 36 110 ccabc4deb281c9208a185b93c2ae76605e6ad2264474c290475d909c32c5e536
+                ElectricBeamGfxB 0005 134 39 134 e19b7f6725976c5382738f701d15c8ae03e5dccb8d5efd14bbc2e9f698b37907 3a6f1e09653d66198b627dff77a147b77cff35dfc1b1f64b4bdd8b590a114beb 135 41 135 d8e0c03d9e4d4bdf4c35bd741529ddb8746cba069118eb7cb450e4c12c0f2720
+                ShootGfx 8012 412 81 412 9bdec1913a358a123d93403357d8af6803f1d9ff13e5f25a5b504936ec80b817 dac142cc8ee5322793026a2130201c732c2ec6cc18e102fd063de942e286db4b 413 83 413 0c679a395503fecc477ae87b544e17a572e9d52fc0fcabbedd09e4adab859de9
+                TonboGfx 002A 676 66 675 3a84550334baac52f4b559f828e42c59da8b6154c08150e64dff1af15150a3a2 c1cf81069466c9d6819e1e5bf97e70ee34e6636d5d7c5f1e8e0a567b766f8141 676 68 676 3a84550334baac52f4b559f828e42c59da8b6154c08150e64dff1af15150a3a2
+                TagaTagaGfx 001C 383 80 383 771017ab60633d7dccbd2eb325b45538d4e6e6dcb2311182d72065e6d7bad589 e40619e823d8d91b3af5484183f974ddf330910c1579e1d34e9ebc32a3938202 383 82 383 771017ab60633d7dccbd2eb325b45538d4e6e6dcb2311182d72065e6d7bad589
+                YagoGfx 0024 727 93 727 f5c087826d7ef1d9171bb3c2427a2ceceee17400893223a941075b3502ab9ec0 873cae33a92b491f3448c19377169bb5a03e1a523993e07c6e45969ca6b03799 727 95 727 f5c087826d7ef1d9171bb3c2427a2ceceee17400893223a941075b3502ab9ec0
+                AmenboGfx 0020 536 69 536 b83b73e321758da08e9a7bf202acc2f72f23788fad11409ca8393638269e1e87 96bd4bf08d453de37765ac532e47111ef34e8cc5c80e55050235530ecb1cea59 537 71 537 dfe03ae9694f9e4927de705da583cd29dcfa7afda9172c7e8967d4b5fe76fa46
+                RobotTransportGfxB 0017 434 92 434 4e655639807a4b3203e9b5e723e484bd95a38f832babb3f82ba44215d7d27806 672db05e55714cc5efa6a3f2d5cc21fa455e8d031aebc9f7d4fc14aa001565d6 434 94 434 4e655639807a4b3203e9b5e723e484bd95a38f832babb3f82ba44215d7d27806
+                HologramGfx 0033 1024 106 1024 1df8b669f556ef15e4c3c687bc890f5e037c90e5366097db036aff136a6c45e5 4f1061c0e3a9256e6fbdfe721e35b0021c91909a52815036c6456498ac2b7d77 1024 108 1024 1df8b669f556ef15e4c3c687bc890f5e037c90e5366097db036aff136a6c45e5
+                PointsGfx 0005 101 29 101 9c01f8d17db4a5a30267f66d3c1e13d17223af14c6312963b69ab36fb9356176 2270d6453b2d2526412afab1ba19c3cf175b571a41766dc4fe0da422283d57db 101 31 101 9c01f8d17db4a5a30267f66d3c1e13d17223af14c6312963b69ab36fb9356176
+                CapsuleGfx 8068 1704 99 1703 da055a9f3c79f60b0bf6a784e89785bdc65eb37c7a598d95cf6a8f5fdc9ab808 b61c6d944dce535ccb74d0a374ac873e95a5e0b3911b465f62bb025b03660236 1704 101 1704 da055a9f3c79f60b0bf6a784e89785bdc65eb37c7a598d95cf6a8f5fdc9ab808
+                BigRingGfx 806A 1034 59 1033 5bfa84d7d4335e190e3287337f1595b3808fd1d3592615bfbc684d9a2bbdebf6 31cec10e677637f390c0a2b25d09f4ee9e3fe39f651801546e69b13150cee70c 1034 61 1034 5bfa84d7d4335e190e3287337f1595b3808fd1d3592615bfbc684d9a2bbdebf6
+                GoalGfx 8018 448 86 448 24aac969ce8508df0f412a0ad98d87102adc2029b3ae1f28b972eb7b6646979f 68359c6e3dc65e9cf72db3d20ce887acc3728fdd32de20abc1fd5af185ff4c9a 449 88 449 1ba1c7e9a34a071c8786cc2eb94eaf2adf0e58b480ef8d62f6501bb7f3006250
+                SignpostGfx 804C 1500 115 1500 2fb00eeee801d1f46cc06eae234fb15fa3dd984f325315c430f13d1e0d3fac67 7ffb01a6c7ffc333ade235f0c945561970c5b98eb0904a15fec3c164fc8ccb7c 1501 117 1501 c44aa3a5ef0fe775973ebd9f915c6b78b521a2107b4b69af6fa182de1a152c1d
+                ResultsGfx 8078 1354 65 1354 c88b40a5d2d17ddd96fb2b28dbdbdbe5f1a67f7b02671c6410f7d64a306c3c40 fdb13e161a5862fe4f8c550291bba36589028b8a7cc0394638c019a0ab35760d 1354 67 1354 c88b40a5d2d17ddd96fb2b28dbdbdbe5f1a67f7b02671c6410f7d64a306c3c40
+                TitleCardGfx 806D 940 71 939 8d70c7bedf08d9d0c4a4d01290fb78032820933ab43d1636262e16e601347bc8 68b70b1e8189073c24642b8939420ac4d3c3ba1d6a1c9c00d6538390d1764f7a 940 73 940 8d70c7bedf08d9d0c4a4d01290fb78032820933ab43d1636262e16e601347bc8
+                Spring45Gfx 002E 780 75 779 3cf30cb03a63f3d160c0b2dbbd0cf1f7803871f860125a5b44bf0a1cc0dc362a 1ae40f48422bc8b884ae4c85288d3f363737cd3e6979c458b93aac15ed581c8b 780 77 780 3cf30cb03a63f3d160c0b2dbbd0cf1f7803871f860125a5b44bf0a1cc0dc362a
+                SpringGfx 8024 547 80 547 52aa905cb632245c5922a198776a7ec46936102616db34a002648b45132a9847 8e3c6d91a395d24872b4ae5da293cd21d8e68230687ef9f07feb62ec2612f416 547 82 547 52aa905cb632245c5922a198776a7ec46936102616db34a002648b45132a9847
+                MonitorTimeGfx 8052 1541 105 1541 a11f69add660dbe82c86dd3227efe6154dc2de2f3ac3f82f7806fb3698a0b902 7575dcf197dbc2f246838cfedcb95af40100d449f0a0c5a48b7294c27c9a924f 1541 107 1541 a11f69add660dbe82c86dd3227efe6154dc2de2f3ac3f82f7806fb3698a0b902
+                ExplosionGfx 0046 1256 89 1256 1f642f6b44332f7ffa63d84970ff1abbacd72bbbd400417c5b3800215d7ec5c1 434f2415b56d7623e57fd94533506804d7ee1fe3a0321f77bfe86f58d8ff6664 1257 91 1257 c37077d4a4bf8aab8c50bd454137dba54a054c5a756b0f3a00515468d81fcdfe
+                RingGfx 000E 244 46 244 530877e432ceab7df543eaae5d3a6f705137526f54cdae8251b7fec288119ea2 c1f35c87c98d27990926ad515264ab1e8a5c9385b087931d79ff24709afd6abb 244 48 244 530877e432ceab7df543eaae5d3a6f705137526f54cdae8251b7fec288119ea2
+                HudGfx 801B 300 49 300 d3df1675439d1bb043f747ba8d3a975b31af8d423a09df30da9a9cae22084deb 0a448ef2c11a1414886684523d551d65af43e4f0c02e08c73e869437b15b40fc 301 51 301 fb31ef2bca6df6e547b6e578c1455730a6665226befb550fd6c03e2a9a1a88b5
+                CheckpointGfx 800C 212 51 211 e6af441ac5e051484bcd2993ad2736262b9c8f9a379bc714711e045f3f83e7bf b376ac203a8c3cf754d2d9bcc4a55dbcb287ead82bbb304b19b7fb5181f2c3a3 212 53 212 e6af441ac5e051484bcd2993ad2736262b9c8f9a379bc714711e045f3f83e7bf
+                WaterSurfaceGfx 806E 1089 62 1089 725a485aa9184899bb08cd1eb353461b574be6c3459bea10bca132e991cd4dcf 096df644ea3a771a04c657f65d1c312009af4e31788a9e59cbcfc60de53770fb 1089 64 1089 725a485aa9184899bb08cd1eb353461b574be6c3459bea10bca132e991cd4dcf
+                FlowerGfx 0027 676 73 675 56d28520fd0ec8c01068edebad2877c14836ffc876aafc32fb4121e53b1248b2 940eaecd3f31f50adef3d7774ebf8be982f6a4d2b3a068a45ab46237439b5874 676 75 676 56d28520fd0ec8c01068edebad2877c14836ffc876aafc32fb4121e53b1248b2
+                TitleCardTextGfx 8038 268 57 268 ffa8ce899df304b9658a7cd04c561bbabcd924426482f1440f11a33986ce9c87 4644e5513e3c0ae3bdf04133b3f8b828fb3bc247161d8e48f2307ec6ae4fc540 269 59 269 81f31548635a39b9f0e91d51ee32522f81c32aa8d30195ae86adc8e9cd882b4f
+                BubbleNumbersGfx 0067 1558 57 1557 4872f3d6aeff93d14bfe19c55c183f33976f7a0030532c6cf5e2f7b8d538fc36 cde5082d23b8ac1b3aa30879be33ec7d3d690223d5f03dd2211ccbff221b8f90 1558 59 1558 4872f3d6aeff93d14bfe19c55c183f33976f7a0030532c6cf5e2f7b8d538fc36
+                StageBlocks 808E 3578 61 3577 d3d38f6a4476a7046851dbc264a88332a8bd2f927706b6c26d5f0c863f1872bc f8447efdaaa04404e384b6522232883885f1de888b7943c7aa51e4a750785b93 3578 63 3578 d3d38f6a4476a7046851dbc264a88332a8bd2f927706b6c26d5f0c863f1872bc
+                StageGfx 8236 9528 97 9528 97818cd4c8ac2f79718bb47c7fe9d7eacc36daea391e30cac002637aae78f700 12de0183eca4b00029c808f704824beb38d9d0905b5ca01cf8da452b7e8c5969 9529 99 9529 caa463a239878efcbde3e2e7ee804b3db069858ed03527e357a17e0100bb6f5a
+                AnimalsGfx 8010 356 70 355 88f31ca8417f41db54a1379bf54a2a375927cd6c520b6a6737989f27f8b205a6 391983566d0cc50c15360a364e7f1598fbb42c52d9690f50f31a5580b74e6d7b 356 72 356 88f31ca8417f41db54a1379bf54a2a375927cd6c520b6a6737989f27f8b205a6
+                BigRingFlashGfx 804D 384 36 384 6106d2692b34f73a6d928e651c9547e5dfe2dc00bdb0b4136dc42e603ce0efa7 39e7bb895c1492e9847de7a67ddc61108dc553b9443ad17d61ea5c8b47fdf8b6 385 38 385 e59af60b6dd221ca0b6c993894db9e69567814126686e9f2270bba02e2adf25b
+                PrizePointsGfx 8002 35 13 35 54da773c1b40711314c5d1f0d5ca3a4b6690ffc32ba94d0de5fef1e9dd9a3911 392cd91bad2777cfadabfd1961be78f35af1ccfa01276469464f35af68c3f7ca 35 15 35 54da773c1b40711314c5d1f0d5ca3a4b6690ffc32ba94d0de5fef1e9dd9a3911
+                GeyserGfx 803C 582 52 582 7a491f965047f62189b6eee13b2b57c6c7ec1266a1e0694d37b124dadde5eab3 a3d1646acbd49b64b8e3aec2ab2340910ef92f68cc648a282273adf8ed3c9488 583 54 583 125f32de03bb4c6c60e12ddc49cef1eca5bce1297a9c3b46a716a14c2f5f99ea
+                WoodBlockGfx 8008 148 46 147 af23e47a4803612393e718469123272932ad46eef41fb5e4b91b0086ec716334 a5f970c14ccaedaf6780c1dca0f5820b3f1a3db2cff8252bbcffac18ca001e65 148 48 148 af23e47a4803612393e718469123272932ad46eef41fb5e4b91b0086ec716334
                 """,
                 List.of(0xF848,0xF850,0xF8B4,0xF848,0xF8EC,0xF91E,0xF956,0xF96A,0xF978,0xF8B4,0xF8B4,0xF8B4,0xF8B4,0xF8B4,0xF8B4,0xF8B4,0xF8AC,0xF8B4,0xF980),10,15,
                 List.of("StageGfx","WaterSurfaceGfx","TitleCardGfx","TitleCardTextGfx","TonboGfx","DoorGfxB","BlockGfxB","BubbleNumbersGfx","SwitchGfx","SpringGfx","HudGfx","MonitorTimeGfx","ExplosionGfx","PointsGfx","FlowerGfx","RingGfx","BreakPoleGfxAB","RotateBlockGfx","TurbineGfxB","SpikesV4Gfx","AmenboGfx","TagaTagaGfx","YagoGfx","AnimalsGfx","GoalGfx","HologramGfx","RobotTransportGfxB","ResultsGfx","SignpostGfx","BigRingGfx","BigRingFlashGfx"),
@@ -161,52 +184,52 @@ final class CdR4ProgrammeProfiles {
                 CycleProgramme.THREE_SOURCE_ACT_GATED,0xF822,370,"f75a5484ac43cf221699eb53352c4d48f876ab0ec092fd9a7a818c08a94132b7",
                 new CameraFact(0xC0D8,30,"75fe3787aa514dd398c0e21ea8bee62ba89257915d41930425333a6f1d86b687",List.of(new SectionRow(0x680,2,6),new SectionRow(0xA80,4,7),new SectionRow(0x1280,2,6),new SectionRow(0x1680,5,8),new SectionRow(0xFFFF,2,6))),BackgroundKind.DIRECT_CAMERA);
             case R41C -> new Facts("""
-                BreakPoleGfxC 8008
-                SpikesV4Gfx 8010
-                UnusedPlatformGfxC 8010
-                BlockGfxC 8020
-                SwitchGfx 8006
-                SwingGfxC 000C
-                DoorGfxC 8010
-                RotateBlockGfx 804C
-                UnusedPlatformGfxBCD 8020
-                SlopeElevatorGfxC 8008
-                SpikeBallGfx 0010
-                ChainGfx 0008
-                TurbineGfxC 0010
-                CollapseFloorGfxC 0004
-                ElectricBeamGfxC 0005
-                ShootGfx 8012
-                TonboGfx 002A
-                TagaTagaGfx 001C
-                YagoGfx 0024
-                FloatElevatorGfxC 8020
-                AmenboGfx 0020
-                WoodBlockGfx 8008
-                AnimalsGfx 8010
-                PointsGfx 0005
-                CapsuleGfx 8068
-                BigRingGfx 806A
-                GoalGfx 8018
-                SignpostGfx 804C
-                ResultsGfx 8078
-                TitleCardGfx 806D
-                Spring45Gfx 002E
-                SpringGfx 8024
-                MonitorTimeGfx 8052
-                ExplosionGfx 0046
-                RingGfx 000E
-                HudGfx 801B
-                CheckpointGfx 800C
-                WaterSurfaceGfx 806E
-                FlowerGfx 0027
-                TitleCardTextGfx 8038
-                BubbleNumbersGfx 0067
-                StageBlocks 80E9
-                StageGfx 821F
-                PrizePointsGfx 8002
-                BigRingFlashGfx 804D
-                GeyserGfx 803C
+                BreakPoleGfxC 8008 124 39 124 34c419e28ff02d8373a44df0e37cbfc4578f9c88e809c84fff8169e1d6bc3f68 05f0bb80b66ff68196d171f7f5382bfa723f08380df2c09c831ea2068d797c00 125 41 125 02942dfd0cec4cf509ff01f7eaf1ff9c8d044fe8a67ac1f49904bb8d97ccff6b
+                SpikesV4Gfx 8010 154 38 153 bbc5f9665364f85c4068ad62d12d2aec7f78b603bca0704534b92c4f82298a72 72665dcfa02abb8b558d854148ee7c1d4422316ce3a3caf9a86619ef18ec334b 154 40 154 bbc5f9665364f85c4068ad62d12d2aec7f78b603bca0704534b92c4f82298a72
+                UnusedPlatformGfxC 8010 250 60 249 ff3636f38e9abf8c8646f172ad71004ae70ead5307595f8418eb72c09f2499e5 fc7721d4b3493bf3bddb6ac73417160b7772e6907b11c9f16ee511c93f95223e 250 62 250 ff3636f38e9abf8c8646f172ad71004ae70ead5307595f8418eb72c09f2499e5
+                BlockGfxC 8020 560 97 560 a133118c62b56c56057b0ed9db541edcaa443bf70d6e2cbe27dd55965a8e83fc 330c811b541b1bfe5c132183fe2f6aee49a79a5227058698c86230ff9acfd7af 560 99 560 a133118c62b56c56057b0ed9db541edcaa443bf70d6e2cbe27dd55965a8e83fc
+                SwitchGfx 8006 82 20 82 a7c595cdd4d541ac97948c563f81f056b14b2d0c40c38f4dfe12d267942642e7 8f8b7e742c91918853011a322ce6705e83b109e33ad474467a99c8055c67f314 82 22 82 a7c595cdd4d541ac97948c563f81f056b14b2d0c40c38f4dfe12d267942642e7
+                SwingGfxC 000C 273 74 273 a7df54f38e7be30f6a2d59194b36797329d92fcec2236266cb3e0c8cbd933c8e c22923ba0421fe499fee3d6a4c2f713669bd22c28d6faba9e66dd5e2dd4faee8 273 76 273 a7df54f38e7be30f6a2d59194b36797329d92fcec2236266cb3e0c8cbd933c8e
+                DoorGfxC 8010 230 65 230 3a5a92281033d4ecfa7d2120b2fcaa441564ce7dca6baadd3c3bdf4bd5e5236a 721b24b17907ea3be7d69454da63de0ff46632441f36f0ec3adbec587813ff89 230 67 230 3a5a92281033d4ecfa7d2120b2fcaa441564ce7dca6baadd3c3bdf4bd5e5236a
+                RotateBlockGfx 804C 856 51 856 17486fa00ffaff6af64726948f62e2f508aee81b2e850bf7fb16cb7ec2507008 55f4bf4858c4291685d816d70ab18c69e677318f54805f90e35fc90c7e844417 857 53 857 f2b71fc2cdef399d7aa70a0b108b6a8fc4b3556ec53e2938fd2897d6f23bcaa6
+                UnusedPlatformGfxBCD 8020 434 82 434 2bda34166f29d16803d72e7d604a9a674fdaf019960e1e6d10ed2c195a237a50 5bd264873b0feddb81840716a931f6c5973245a023b22e827a5f6701b08e79f6 435 84 435 97b084c25f6f19e1926d4de83b1f5bd9caf3a75fde0a611da9f15f87abe687af
+                SlopeElevatorGfxC 8008 139 35 139 dbaa12bf3e630e11ccdeebfa62b4a2130836ea1c90b1a13d723595e5b505bb9f c0575092002a1b372442f7284a7d61c2aeb3adc5741d840b819170fb8e1f75f2 139 37 139 dbaa12bf3e630e11ccdeebfa62b4a2130836ea1c90b1a13d723595e5b505bb9f
+                SpikeBallGfx 0010 266 53 266 f138f259dbb8e10841c3c2999edb4f07ce91e50d38ebf4cb7e6e1ed132137606 6a84100136936dd16d30e77076ee9d1df60954ccc7a278d222684dffce63c68f 267 55 267 2c16aa672c78198ec68c0a4ca31cdbc700b03d99c65d6dbadb4a86666b866ace
+                ChainGfx 0008 162 39 161 48d66771ed0561c49dace9415db18cc5289f98cfffa5462f7099dabf2d18888b d8ec3695235800e3fcc5bc7be45ac463125cac4852ef2dc2885ef41a97e1ab87 162 41 162 48d66771ed0561c49dace9415db18cc5289f98cfffa5462f7099dabf2d18888b
+                TurbineGfxC 0010 302 55 302 d1829b445c205fedb7d7573f410176401c5d46bb8eb4b16676c1bbff958fecb1 6c0c0a6bf2289c53cad7d7cc29381656c9cf5d7e114ee3ea7702d23701514a76 303 57 303 890c4ffa6b45e1e176f8541ac95bfb6a7c9b1e1bbb7326bf64b6fede5ff4560f
+                CollapseFloorGfxC 0004 120 39 120 23afcf9c20585a2aabb59766432cfc2b3a52585f78f1cb751d84e3d6caba56ff 24ccb0b6b2e4a53f2e31142be915a143c00e8182f562d2e92565b84cfc28ee8c 120 41 120 23afcf9c20585a2aabb59766432cfc2b3a52585f78f1cb751d84e3d6caba56ff
+                ElectricBeamGfxC 0005 121 37 121 e74110effb9760e70dfe3948cf3d1c12a5e97d124f167299529d3f45e9d7cc62 2d46162b4f6a7f119d9b13a87497477697524c3ae5dde083da9c070af068274c 121 39 121 e74110effb9760e70dfe3948cf3d1c12a5e97d124f167299529d3f45e9d7cc62
+                ShootGfx 8012 412 81 412 9bdec1913a358a123d93403357d8af6803f1d9ff13e5f25a5b504936ec80b817 dac142cc8ee5322793026a2130201c732c2ec6cc18e102fd063de942e286db4b 413 83 413 0c679a395503fecc477ae87b544e17a572e9d52fc0fcabbedd09e4adab859de9
+                TonboGfx 002A 676 66 675 3a84550334baac52f4b559f828e42c59da8b6154c08150e64dff1af15150a3a2 c1cf81069466c9d6819e1e5bf97e70ee34e6636d5d7c5f1e8e0a567b766f8141 676 68 676 3a84550334baac52f4b559f828e42c59da8b6154c08150e64dff1af15150a3a2
+                TagaTagaGfx 001C 383 80 383 771017ab60633d7dccbd2eb325b45538d4e6e6dcb2311182d72065e6d7bad589 e40619e823d8d91b3af5484183f974ddf330910c1579e1d34e9ebc32a3938202 383 82 383 771017ab60633d7dccbd2eb325b45538d4e6e6dcb2311182d72065e6d7bad589
+                YagoGfx 0024 727 93 727 393b5f068b88223d0a08e1d2482a0529b4fdf4b6d762eed31f2a87f8ea12338c 873cae33a92b491f3448c19377169bb5a03e1a523993e07c6e45969ca6b03799 727 95 727 393b5f068b88223d0a08e1d2482a0529b4fdf4b6d762eed31f2a87f8ea12338c
+                FloatElevatorGfxC 8020 428 85 427 4f539399fec1e7fdebdd8dbc115fb4dcfa713b042a36d0968320ab21a4aa8693 3a846a459698daa53dbc1c021b9a73a0132e9741e00d73591d21becdb4ff14bd 428 87 428 4f539399fec1e7fdebdd8dbc115fb4dcfa713b042a36d0968320ab21a4aa8693
+                AmenboGfx 0020 536 69 536 b83b73e321758da08e9a7bf202acc2f72f23788fad11409ca8393638269e1e87 96bd4bf08d453de37765ac532e47111ef34e8cc5c80e55050235530ecb1cea59 537 71 537 dfe03ae9694f9e4927de705da583cd29dcfa7afda9172c7e8967d4b5fe76fa46
+                WoodBlockGfx 8008 148 46 147 af23e47a4803612393e718469123272932ad46eef41fb5e4b91b0086ec716334 a5f970c14ccaedaf6780c1dca0f5820b3f1a3db2cff8252bbcffac18ca001e65 148 48 148 af23e47a4803612393e718469123272932ad46eef41fb5e4b91b0086ec716334
+                AnimalsGfx 8010 356 70 355 88f31ca8417f41db54a1379bf54a2a375927cd6c520b6a6737989f27f8b205a6 391983566d0cc50c15360a364e7f1598fbb42c52d9690f50f31a5580b74e6d7b 356 72 356 88f31ca8417f41db54a1379bf54a2a375927cd6c520b6a6737989f27f8b205a6
+                PointsGfx 0005 101 29 101 9c01f8d17db4a5a30267f66d3c1e13d17223af14c6312963b69ab36fb9356176 2270d6453b2d2526412afab1ba19c3cf175b571a41766dc4fe0da422283d57db 101 31 101 9c01f8d17db4a5a30267f66d3c1e13d17223af14c6312963b69ab36fb9356176
+                CapsuleGfx 8068 1704 99 1703 da055a9f3c79f60b0bf6a784e89785bdc65eb37c7a598d95cf6a8f5fdc9ab808 b61c6d944dce535ccb74d0a374ac873e95a5e0b3911b465f62bb025b03660236 1704 101 1704 da055a9f3c79f60b0bf6a784e89785bdc65eb37c7a598d95cf6a8f5fdc9ab808
+                BigRingGfx 806A 1034 59 1033 5bfa84d7d4335e190e3287337f1595b3808fd1d3592615bfbc684d9a2bbdebf6 31cec10e677637f390c0a2b25d09f4ee9e3fe39f651801546e69b13150cee70c 1034 61 1034 5bfa84d7d4335e190e3287337f1595b3808fd1d3592615bfbc684d9a2bbdebf6
+                GoalGfx 8018 448 86 448 24aac969ce8508df0f412a0ad98d87102adc2029b3ae1f28b972eb7b6646979f 68359c6e3dc65e9cf72db3d20ce887acc3728fdd32de20abc1fd5af185ff4c9a 449 88 449 1ba1c7e9a34a071c8786cc2eb94eaf2adf0e58b480ef8d62f6501bb7f3006250
+                SignpostGfx 804C 1500 115 1500 2fb00eeee801d1f46cc06eae234fb15fa3dd984f325315c430f13d1e0d3fac67 7ffb01a6c7ffc333ade235f0c945561970c5b98eb0904a15fec3c164fc8ccb7c 1501 117 1501 c44aa3a5ef0fe775973ebd9f915c6b78b521a2107b4b69af6fa182de1a152c1d
+                ResultsGfx 8078 1354 65 1354 c88b40a5d2d17ddd96fb2b28dbdbdbe5f1a67f7b02671c6410f7d64a306c3c40 fdb13e161a5862fe4f8c550291bba36589028b8a7cc0394638c019a0ab35760d 1354 67 1354 c88b40a5d2d17ddd96fb2b28dbdbdbe5f1a67f7b02671c6410f7d64a306c3c40
+                TitleCardGfx 806D 940 71 939 8d70c7bedf08d9d0c4a4d01290fb78032820933ab43d1636262e16e601347bc8 68b70b1e8189073c24642b8939420ac4d3c3ba1d6a1c9c00d6538390d1764f7a 940 73 940 8d70c7bedf08d9d0c4a4d01290fb78032820933ab43d1636262e16e601347bc8
+                Spring45Gfx 002E 780 75 779 3cf30cb03a63f3d160c0b2dbbd0cf1f7803871f860125a5b44bf0a1cc0dc362a 1ae40f48422bc8b884ae4c85288d3f363737cd3e6979c458b93aac15ed581c8b 780 77 780 3cf30cb03a63f3d160c0b2dbbd0cf1f7803871f860125a5b44bf0a1cc0dc362a
+                SpringGfx 8024 547 80 547 52aa905cb632245c5922a198776a7ec46936102616db34a002648b45132a9847 8e3c6d91a395d24872b4ae5da293cd21d8e68230687ef9f07feb62ec2612f416 547 82 547 52aa905cb632245c5922a198776a7ec46936102616db34a002648b45132a9847
+                MonitorTimeGfx 8052 1541 105 1541 a11f69add660dbe82c86dd3227efe6154dc2de2f3ac3f82f7806fb3698a0b902 7575dcf197dbc2f246838cfedcb95af40100d449f0a0c5a48b7294c27c9a924f 1541 107 1541 a11f69add660dbe82c86dd3227efe6154dc2de2f3ac3f82f7806fb3698a0b902
+                ExplosionGfx 0046 1256 89 1256 1f642f6b44332f7ffa63d84970ff1abbacd72bbbd400417c5b3800215d7ec5c1 434f2415b56d7623e57fd94533506804d7ee1fe3a0321f77bfe86f58d8ff6664 1257 91 1257 c37077d4a4bf8aab8c50bd454137dba54a054c5a756b0f3a00515468d81fcdfe
+                RingGfx 000E 244 46 244 530877e432ceab7df543eaae5d3a6f705137526f54cdae8251b7fec288119ea2 c1f35c87c98d27990926ad515264ab1e8a5c9385b087931d79ff24709afd6abb 244 48 244 530877e432ceab7df543eaae5d3a6f705137526f54cdae8251b7fec288119ea2
+                HudGfx 801B 300 49 300 d3df1675439d1bb043f747ba8d3a975b31af8d423a09df30da9a9cae22084deb 0a448ef2c11a1414886684523d551d65af43e4f0c02e08c73e869437b15b40fc 301 51 301 fb31ef2bca6df6e547b6e578c1455730a6665226befb550fd6c03e2a9a1a88b5
+                CheckpointGfx 800C 212 51 211 e6af441ac5e051484bcd2993ad2736262b9c8f9a379bc714711e045f3f83e7bf b376ac203a8c3cf754d2d9bcc4a55dbcb287ead82bbb304b19b7fb5181f2c3a3 212 53 212 e6af441ac5e051484bcd2993ad2736262b9c8f9a379bc714711e045f3f83e7bf
+                WaterSurfaceGfx 806E 1089 62 1089 725a485aa9184899bb08cd1eb353461b574be6c3459bea10bca132e991cd4dcf 096df644ea3a771a04c657f65d1c312009af4e31788a9e59cbcfc60de53770fb 1089 64 1089 725a485aa9184899bb08cd1eb353461b574be6c3459bea10bca132e991cd4dcf
+                FlowerGfx 0027 676 73 675 56d28520fd0ec8c01068edebad2877c14836ffc876aafc32fb4121e53b1248b2 940eaecd3f31f50adef3d7774ebf8be982f6a4d2b3a068a45ab46237439b5874 676 75 676 56d28520fd0ec8c01068edebad2877c14836ffc876aafc32fb4121e53b1248b2
+                TitleCardTextGfx 8038 268 57 268 ffa8ce899df304b9658a7cd04c561bbabcd924426482f1440f11a33986ce9c87 4644e5513e3c0ae3bdf04133b3f8b828fb3bc247161d8e48f2307ec6ae4fc540 269 59 269 81f31548635a39b9f0e91d51ee32522f81c32aa8d30195ae86adc8e9cd882b4f
+                BubbleNumbersGfx 0067 1558 57 1557 4872f3d6aeff93d14bfe19c55c183f33976f7a0030532c6cf5e2f7b8d538fc36 cde5082d23b8ac1b3aa30879be33ec7d3d690223d5f03dd2211ccbff221b8f90 1558 59 1558 4872f3d6aeff93d14bfe19c55c183f33976f7a0030532c6cf5e2f7b8d538fc36
+                StageBlocks 80E9 5538 65 5537 242da5d73e38e63adcc7c515c10cb8018b7a2dc9d9d37dde987a43d89aa5caad d94e6648e001edadb6e39cdeca11692a08bf8d24be64872cefc60c59e4df5ef6 5538 67 5538 242da5d73e38e63adcc7c515c10cb8018b7a2dc9d9d37dde987a43d89aa5caad
+                StageGfx 821F 9255 89 9255 0a91a5a08d0a7499eb3c06043b30eab5df2e697f83d88232a9a2c36a5404ac2a c1e8785738b0c65f335527c080d1a2a1996fc3e16046e3c80d3452cc63dfd87f 9255 91 9255 0a91a5a08d0a7499eb3c06043b30eab5df2e697f83d88232a9a2c36a5404ac2a
+                PrizePointsGfx 8002 35 13 35 7c9cb1140c4cb5a820f9fe688ee7768112967cc4ab48932b5629e94701e15d62 392cd91bad2777cfadabfd1961be78f35af1ccfa01276469464f35af68c3f7ca 35 15 35 7c9cb1140c4cb5a820f9fe688ee7768112967cc4ab48932b5629e94701e15d62
+                BigRingFlashGfx 804D 384 36 384 6106d2692b34f73a6d928e651c9547e5dfe2dc00bdb0b4136dc42e603ce0efa7 39e7bb895c1492e9847de7a67ddc61108dc553b9443ad17d61ea5c8b47fdf8b6 385 38 385 e59af60b6dd221ca0b6c993894db9e69567814126686e9f2270bba02e2adf25b
+                GeyserGfx 803C 582 52 582 7a491f965047f62189b6eee13b2b57c6c7ec1266a1e0694d37b124dadde5eab3 a3d1646acbd49b64b8e3aec2ab2340910ef92f68cc648a282273adf8ed3c9488 583 54 583 125f32de03bb4c6c60e12ddc49cef1eca5bce1297a9c3b46a716a14c2f5f99ea
                 """,
                 List.of(0xF4A2,0xF4AA,0xF506,0xF4A2,0xF506,0xF506,0xF506,0xF506,0xF506,0xF506,0xF506,0xF506,0xF506,0xF506,0xF506,0xF506,0xF550,0xF506,0xF558),5,15,
                 List.of("StageGfx","WaterSurfaceGfx","TitleCardGfx","TitleCardTextGfx","DoorGfxC","AnimalsGfx","BlockGfxC","BubbleNumbersGfx","SwitchGfx","SpringGfx","HudGfx","MonitorTimeGfx","ExplosionGfx","PointsGfx","FlowerGfx","RingGfx","BreakPoleGfxC","SwingGfxC","SlopeElevatorGfxC","PrizePointsGfx","SpikeBallGfx","TurbineGfxC","SpikesV4Gfx","AmenboGfx","TagaTagaGfx","YagoGfx","TonboGfx","GoalGfx","ResultsGfx","SignpostGfx","BigRingGfx","BigRingFlashGfx"),
@@ -215,51 +238,51 @@ final class CdR4ProgrammeProfiles {
                 CycleProgramme.THREE_SOURCE_ACT_GATED,0xF47C,240,"56d336690714f59fb45badced63b1aa20cbb1fb736080963c69cb2eec53291c9",
                 new RtsFact(2),BackgroundKind.DIRECT_CAMERA);
             case R41D -> new Facts("""
-                BreakPoleGfxD 0008
-                SpikesV4Gfx 8010
-                UnusedPlatformGfxD 8010
-                BlockGfxD 8020
-                SwitchGfx 8006
-                SwingGfxD 000C
-                PrizePointsGfx 8002
-                DoorGfxD 8010
-                GeyserGfx 803C
-                UnusedPlatformGfxBCD 8020
-                SlopeElevatorGfxD 8008
-                SpikeBallGfx 0010
-                ChainGfx 0008
-                TurbineGfxD 0010
-                CollapseFloorGfxD 0004
-                ElectricBeamGfxD 0005
-                ShootGfx 8012
-                TonboGfx 002A
-                TagaTagaGfx 001C
-                YagoGfx 0024
-                FloatElevatorGfxD 8020
-                AmenboGfx 0020
-                WoodBlockGfx 8008
-                PointsGfx 0005
-                CapsuleGfx 8068
-                BigRingGfx 806A
-                GoalGfx 8018
-                SignpostGfx 804C
-                ResultsGfx 8078
-                TitleCardGfx 806D
-                Spring45Gfx 002E
-                SpringGfx 8024
-                MonitorTimeGfx 8052
-                ExplosionGfx 0046
-                RingGfx 000E
-                HudGfx 801B
-                CheckpointGfx 800C
-                WaterSurfaceGfx 806E
-                FlowerGfx 0027
-                TitleCardTextGfx 8038
-                BubbleNumbersGfx 0067
-                StageBlocks 8096
-                StageGfx 8237
-                AnimalsGfx 8010
-                BigRingFlashGfx 804D
+                BreakPoleGfxD 0008 170 44 169 fc9b15eab9130289d66d8cfcaad1e592667e03e94e3b7981f55bf8818983f2eb 539cc25aebd8053873bbc322438974dafdc34aefbab258f874066d2ec749e723 170 46 170 fc9b15eab9130289d66d8cfcaad1e592667e03e94e3b7981f55bf8818983f2eb
+                SpikesV4Gfx 8010 154 38 153 bbc5f9665364f85c4068ad62d12d2aec7f78b603bca0704534b92c4f82298a72 72665dcfa02abb8b558d854148ee7c1d4422316ce3a3caf9a86619ef18ec334b 154 40 154 bbc5f9665364f85c4068ad62d12d2aec7f78b603bca0704534b92c4f82298a72
+                UnusedPlatformGfxD 8010 400 71 400 c8d5ccec47fa741ea29d5f2690ee70c6a89dd28afd0077b751bd1c683b1657f1 52ba3adba95f1a772521c3956bc351423b0ea889133a7580a01a595799bfaca8 400 73 400 c8d5ccec47fa741ea29d5f2690ee70c6a89dd28afd0077b751bd1c683b1657f1
+                BlockGfxD 8020 696 95 695 d806a116624c4b33e1359fa08f9bbde90a791cff80c4513923de43e995aaa859 2bc036638b7575bf9902fd02fde6116ca3fa60e7d2f8566de88e1821a9df6d41 696 97 696 d806a116624c4b33e1359fa08f9bbde90a791cff80c4513923de43e995aaa859
+                SwitchGfx 8006 82 20 82 a7c595cdd4d541ac97948c563f81f056b14b2d0c40c38f4dfe12d267942642e7 8f8b7e742c91918853011a322ce6705e83b109e33ad474467a99c8055c67f314 82 22 82 a7c595cdd4d541ac97948c563f81f056b14b2d0c40c38f4dfe12d267942642e7
+                SwingGfxD 000C 273 74 273 a7df54f38e7be30f6a2d59194b36797329d92fcec2236266cb3e0c8cbd933c8e c22923ba0421fe499fee3d6a4c2f713669bd22c28d6faba9e66dd5e2dd4faee8 273 76 273 a7df54f38e7be30f6a2d59194b36797329d92fcec2236266cb3e0c8cbd933c8e
+                PrizePointsGfx 8002 35 13 35 7c9cb1140c4cb5a820f9fe688ee7768112967cc4ab48932b5629e94701e15d62 392cd91bad2777cfadabfd1961be78f35af1ccfa01276469464f35af68c3f7ca 35 15 35 7c9cb1140c4cb5a820f9fe688ee7768112967cc4ab48932b5629e94701e15d62
+                DoorGfxD 8010 214 59 214 ba7e2927e4e89da3cd443730d097133f47248b1b138a43f9bf4a7b4787417959 8adf24293a5041f97f9efc33665d364a3e36906bb3c8f8ca98b2a62d4e919a5a 215 61 215 3f059a3deab91b5a7f3558ad865955547b7ba73258368b3567580d067bcd67bb
+                GeyserGfx 803C 582 52 582 7a491f965047f62189b6eee13b2b57c6c7ec1266a1e0694d37b124dadde5eab3 a3d1646acbd49b64b8e3aec2ab2340910ef92f68cc648a282273adf8ed3c9488 583 54 583 125f32de03bb4c6c60e12ddc49cef1eca5bce1297a9c3b46a716a14c2f5f99ea
+                UnusedPlatformGfxBCD 8020 434 82 434 2bda34166f29d16803d72e7d604a9a674fdaf019960e1e6d10ed2c195a237a50 5bd264873b0feddb81840716a931f6c5973245a023b22e827a5f6701b08e79f6 435 84 435 97b084c25f6f19e1926d4de83b1f5bd9caf3a75fde0a611da9f15f87abe687af
+                SlopeElevatorGfxD 8008 180 50 178 40aa0cad686a4cd36a2b17ab5e529cd939c86ba2e3fa873b6af8a48e523f4f19 ab4b7e19466031f774ba8639a89da9fe3a12bc20cdcf6acf0c97ace87a256567 180 52 180 40aa0cad686a4cd36a2b17ab5e529cd939c86ba2e3fa873b6af8a48e523f4f19
+                SpikeBallGfx 0010 266 53 266 f138f259dbb8e10841c3c2999edb4f07ce91e50d38ebf4cb7e6e1ed132137606 6a84100136936dd16d30e77076ee9d1df60954ccc7a278d222684dffce63c68f 267 55 267 2c16aa672c78198ec68c0a4ca31cdbc700b03d99c65d6dbadb4a86666b866ace
+                ChainGfx 0008 162 39 161 48d66771ed0561c49dace9415db18cc5289f98cfffa5462f7099dabf2d18888b d8ec3695235800e3fcc5bc7be45ac463125cac4852ef2dc2885ef41a97e1ab87 162 41 162 48d66771ed0561c49dace9415db18cc5289f98cfffa5462f7099dabf2d18888b
+                TurbineGfxD 0010 370 66 369 7c7d8af0c43484f3abb68373b3bd2c8b99cabeed522e4b855a4716ce8630e5e8 43712a9bf004dd544992d47a63353c549e7fbcd9ddc924ef4440cf2ecaafef78 370 68 370 7c7d8af0c43484f3abb68373b3bd2c8b99cabeed522e4b855a4716ce8630e5e8
+                CollapseFloorGfxD 0004 122 37 121 20e075a013a567a65a52da2c94a70e16958cdf15ac1dc0a8ed3d99efdef28226 c1b257bcbef9a6164f4bd9c525a2ee5d1819d18581d02f6798d1aac4455fab1e 122 39 122 20e075a013a567a65a52da2c94a70e16958cdf15ac1dc0a8ed3d99efdef28226
+                ElectricBeamGfxD 0005 126 38 126 96159dce00dcb5dcb66417fda83717d29a7c6bd4fb5281a3828389c368792a8c 9ed4956cfc353adf378efcd3b1ed3bd8825eeca688870fd550556237d3b99a38 127 40 127 a6fff8fb165c1d4032e2d0eef16d1123537b0026c5740ab99a2171eb7ac4e778
+                ShootGfx 8012 412 81 412 9bdec1913a358a123d93403357d8af6803f1d9ff13e5f25a5b504936ec80b817 dac142cc8ee5322793026a2130201c732c2ec6cc18e102fd063de942e286db4b 413 83 413 0c679a395503fecc477ae87b544e17a572e9d52fc0fcabbedd09e4adab859de9
+                TonboGfx 002A 676 66 675 3a84550334baac52f4b559f828e42c59da8b6154c08150e64dff1af15150a3a2 c1cf81069466c9d6819e1e5bf97e70ee34e6636d5d7c5f1e8e0a567b766f8141 676 68 676 3a84550334baac52f4b559f828e42c59da8b6154c08150e64dff1af15150a3a2
+                TagaTagaGfx 001C 383 80 383 771017ab60633d7dccbd2eb325b45538d4e6e6dcb2311182d72065e6d7bad589 e40619e823d8d91b3af5484183f974ddf330910c1579e1d34e9ebc32a3938202 383 82 383 771017ab60633d7dccbd2eb325b45538d4e6e6dcb2311182d72065e6d7bad589
+                YagoGfx 0024 727 93 727 393b5f068b88223d0a08e1d2482a0529b4fdf4b6d762eed31f2a87f8ea12338c 873cae33a92b491f3448c19377169bb5a03e1a523993e07c6e45969ca6b03799 727 95 727 393b5f068b88223d0a08e1d2482a0529b4fdf4b6d762eed31f2a87f8ea12338c
+                FloatElevatorGfxD 8020 460 89 459 10ff48df55ef76adc36b6d21574cab354548edc5332416b1473478bfec267d57 0efe73c0c28fafc2e9a44dcc288054fa9af66d9558d2dd60acf1ca057e18047a 461 91 461 12cf3573fdac5b58c1d4c7e004a5ee01e066974220d42a65c019cf594aee4578
+                AmenboGfx 0020 536 69 536 b83b73e321758da08e9a7bf202acc2f72f23788fad11409ca8393638269e1e87 96bd4bf08d453de37765ac532e47111ef34e8cc5c80e55050235530ecb1cea59 537 71 537 dfe03ae9694f9e4927de705da583cd29dcfa7afda9172c7e8967d4b5fe76fa46
+                WoodBlockGfx 8008 148 46 147 af23e47a4803612393e718469123272932ad46eef41fb5e4b91b0086ec716334 a5f970c14ccaedaf6780c1dca0f5820b3f1a3db2cff8252bbcffac18ca001e65 148 48 148 af23e47a4803612393e718469123272932ad46eef41fb5e4b91b0086ec716334
+                PointsGfx 0005 101 29 101 9c01f8d17db4a5a30267f66d3c1e13d17223af14c6312963b69ab36fb9356176 2270d6453b2d2526412afab1ba19c3cf175b571a41766dc4fe0da422283d57db 101 31 101 9c01f8d17db4a5a30267f66d3c1e13d17223af14c6312963b69ab36fb9356176
+                CapsuleGfx 8068 1704 99 1703 da055a9f3c79f60b0bf6a784e89785bdc65eb37c7a598d95cf6a8f5fdc9ab808 b61c6d944dce535ccb74d0a374ac873e95a5e0b3911b465f62bb025b03660236 1704 101 1704 da055a9f3c79f60b0bf6a784e89785bdc65eb37c7a598d95cf6a8f5fdc9ab808
+                BigRingGfx 806A 1034 59 1033 5bfa84d7d4335e190e3287337f1595b3808fd1d3592615bfbc684d9a2bbdebf6 31cec10e677637f390c0a2b25d09f4ee9e3fe39f651801546e69b13150cee70c 1034 61 1034 5bfa84d7d4335e190e3287337f1595b3808fd1d3592615bfbc684d9a2bbdebf6
+                GoalGfx 8018 448 86 448 24aac969ce8508df0f412a0ad98d87102adc2029b3ae1f28b972eb7b6646979f 68359c6e3dc65e9cf72db3d20ce887acc3728fdd32de20abc1fd5af185ff4c9a 449 88 449 1ba1c7e9a34a071c8786cc2eb94eaf2adf0e58b480ef8d62f6501bb7f3006250
+                SignpostGfx 804C 1500 115 1500 2fb00eeee801d1f46cc06eae234fb15fa3dd984f325315c430f13d1e0d3fac67 7ffb01a6c7ffc333ade235f0c945561970c5b98eb0904a15fec3c164fc8ccb7c 1501 117 1501 c44aa3a5ef0fe775973ebd9f915c6b78b521a2107b4b69af6fa182de1a152c1d
+                ResultsGfx 8078 1354 65 1354 c88b40a5d2d17ddd96fb2b28dbdbdbe5f1a67f7b02671c6410f7d64a306c3c40 fdb13e161a5862fe4f8c550291bba36589028b8a7cc0394638c019a0ab35760d 1354 67 1354 c88b40a5d2d17ddd96fb2b28dbdbdbe5f1a67f7b02671c6410f7d64a306c3c40
+                TitleCardGfx 806D 940 71 939 8d70c7bedf08d9d0c4a4d01290fb78032820933ab43d1636262e16e601347bc8 68b70b1e8189073c24642b8939420ac4d3c3ba1d6a1c9c00d6538390d1764f7a 940 73 940 8d70c7bedf08d9d0c4a4d01290fb78032820933ab43d1636262e16e601347bc8
+                Spring45Gfx 002E 780 75 779 3cf30cb03a63f3d160c0b2dbbd0cf1f7803871f860125a5b44bf0a1cc0dc362a 1ae40f48422bc8b884ae4c85288d3f363737cd3e6979c458b93aac15ed581c8b 780 77 780 3cf30cb03a63f3d160c0b2dbbd0cf1f7803871f860125a5b44bf0a1cc0dc362a
+                SpringGfx 8024 547 80 547 52aa905cb632245c5922a198776a7ec46936102616db34a002648b45132a9847 8e3c6d91a395d24872b4ae5da293cd21d8e68230687ef9f07feb62ec2612f416 547 82 547 52aa905cb632245c5922a198776a7ec46936102616db34a002648b45132a9847
+                MonitorTimeGfx 8052 1541 105 1541 a11f69add660dbe82c86dd3227efe6154dc2de2f3ac3f82f7806fb3698a0b902 7575dcf197dbc2f246838cfedcb95af40100d449f0a0c5a48b7294c27c9a924f 1541 107 1541 a11f69add660dbe82c86dd3227efe6154dc2de2f3ac3f82f7806fb3698a0b902
+                ExplosionGfx 0046 1256 89 1256 1f642f6b44332f7ffa63d84970ff1abbacd72bbbd400417c5b3800215d7ec5c1 434f2415b56d7623e57fd94533506804d7ee1fe3a0321f77bfe86f58d8ff6664 1257 91 1257 c37077d4a4bf8aab8c50bd454137dba54a054c5a756b0f3a00515468d81fcdfe
+                RingGfx 000E 244 46 244 530877e432ceab7df543eaae5d3a6f705137526f54cdae8251b7fec288119ea2 c1f35c87c98d27990926ad515264ab1e8a5c9385b087931d79ff24709afd6abb 244 48 244 530877e432ceab7df543eaae5d3a6f705137526f54cdae8251b7fec288119ea2
+                HudGfx 801B 300 49 300 d3df1675439d1bb043f747ba8d3a975b31af8d423a09df30da9a9cae22084deb 0a448ef2c11a1414886684523d551d65af43e4f0c02e08c73e869437b15b40fc 301 51 301 fb31ef2bca6df6e547b6e578c1455730a6665226befb550fd6c03e2a9a1a88b5
+                CheckpointGfx 800C 212 51 211 e6af441ac5e051484bcd2993ad2736262b9c8f9a379bc714711e045f3f83e7bf b376ac203a8c3cf754d2d9bcc4a55dbcb287ead82bbb304b19b7fb5181f2c3a3 212 53 212 e6af441ac5e051484bcd2993ad2736262b9c8f9a379bc714711e045f3f83e7bf
+                WaterSurfaceGfx 806E 1089 62 1089 725a485aa9184899bb08cd1eb353461b574be6c3459bea10bca132e991cd4dcf 096df644ea3a771a04c657f65d1c312009af4e31788a9e59cbcfc60de53770fb 1089 64 1089 725a485aa9184899bb08cd1eb353461b574be6c3459bea10bca132e991cd4dcf
+                FlowerGfx 0027 676 73 675 56d28520fd0ec8c01068edebad2877c14836ffc876aafc32fb4121e53b1248b2 940eaecd3f31f50adef3d7774ebf8be982f6a4d2b3a068a45ab46237439b5874 676 75 676 56d28520fd0ec8c01068edebad2877c14836ffc876aafc32fb4121e53b1248b2
+                TitleCardTextGfx 8038 268 57 268 ffa8ce899df304b9658a7cd04c561bbabcd924426482f1440f11a33986ce9c87 4644e5513e3c0ae3bdf04133b3f8b828fb3bc247161d8e48f2307ec6ae4fc540 269 59 269 81f31548635a39b9f0e91d51ee32522f81c32aa8d30195ae86adc8e9cd882b4f
+                BubbleNumbersGfx 0067 1558 57 1557 4872f3d6aeff93d14bfe19c55c183f33976f7a0030532c6cf5e2f7b8d538fc36 cde5082d23b8ac1b3aa30879be33ec7d3d690223d5f03dd2211ccbff221b8f90 1558 59 1558 4872f3d6aeff93d14bfe19c55c183f33976f7a0030532c6cf5e2f7b8d538fc36
+                StageBlocks 8096 3668 59 3668 c823f2cac7f5f2805a9ee6b5162cc9a8784b4c57e4eb1da0ce62a2ad21e0024d 1d4b2087f0eddfc9e32d76235946427175f3443afc3167b3ca7687933434d86b 3669 61 3669 5bcb81b55753dbc089cee352c85d8ade30ac455cc2739b5de646132a0d8b8c33
+                StageGfx 8237 10546 99 10545 38a6679f40098458f4827cb8c27fdc7c8ec495695ff6f1f0725ea56c73a8a857 9bddf6e5c343fbe367f780dca7fa75b01fa86f6df2b0ec9ce88fdc4e4f54df54 10546 101 10546 38a6679f40098458f4827cb8c27fdc7c8ec495695ff6f1f0725ea56c73a8a857
+                AnimalsGfx 8010 356 70 355 88f31ca8417f41db54a1379bf54a2a375927cd6c520b6a6737989f27f8b205a6 391983566d0cc50c15360a364e7f1598fbb42c52d9690f50f31a5580b74e6d7b 356 72 356 88f31ca8417f41db54a1379bf54a2a375927cd6c520b6a6737989f27f8b205a6
+                BigRingFlashGfx 804D 384 36 384 6106d2692b34f73a6d928e651c9547e5dfe2dc00bdb0b4136dc42e603ce0efa7 39e7bb895c1492e9847de7a67ddc61108dc553b9443ad17d61ea5c8b47fdf8b6 385 38 385 e59af60b6dd221ca0b6c993894db9e69567814126686e9f2270bba02e2adf25b
                 """,
                 List.of(0xF490,0xF498,0xF4F4,0xF490,0xF4F4,0xF4F4,0xF4F4,0xF4F4,0xF4F4,0xF4F4,0xF4F4,0xF4F4,0xF4F4,0xF4F4,0xF4F4,0xF4F4,0xF53E,0xF4F4,0xF546),5,15,
                 List.of("StageGfx","WaterSurfaceGfx","TitleCardGfx","TitleCardTextGfx","DoorGfxD","AnimalsGfx","BlockGfxD","BubbleNumbersGfx","SwitchGfx","SpringGfx","HudGfx","MonitorTimeGfx","ExplosionGfx","PointsGfx","FlowerGfx","RingGfx","BreakPoleGfxD","SwingGfxD","SlopeElevatorGfxD","PrizePointsGfx","SpikeBallGfx","TurbineGfxD","SpikesV4Gfx","AmenboGfx","TagaTagaGfx","YagoGfx","TonboGfx","GoalGfx","ResultsGfx","SignpostGfx","BigRingGfx","BigRingFlashGfx"),
@@ -268,48 +291,48 @@ final class CdR4ProgrammeProfiles {
                 CycleProgramme.THREE_SOURCE_ACT_GATED,0xF46A,240,"e294fe6fd79aab1b227d867ff2f501f07081ee437b3a1232351018679f70d45c",
                 new RtsFact(2),BackgroundKind.DIRECT_CAMERA);
             case R42A -> new Facts("""
-                SpikeBallGfx 0010
-                ChainGfx 0008
-                TurbineGfxA 0020
-                CollapseFloorGfxA 0004
-                ElectricBeamGfxA 0005
-                ShootGfx 8012
-                TonboGfx 002A
-                RobotTransportGfxA 000F
-                PointsGfx 0005
-                CapsuleGfx 8068
-                BigRingGfx 806A
-                GoalGfx 8018
-                SignpostGfx 804C
-                ResultsGfx 8078
-                TitleCardGfx 806D
-                Spring45Gfx 002E
-                SpringGfx 8024
-                MonitorTimeGfx 8052
-                ExplosionGfx 0046
-                RingGfx 000E
-                HudGfx 801B
-                CheckpointGfx 800C
-                WaterSurfaceGfx 806E
-                FlowerGfx 0027
-                TitleCardTextGfx 8038
-                BubbleNumbersGfx 0067
-                StageBlocks 8071
-                StageGfx 8223
-                BreakPoleGfxAB 8008
-                SpikesV4Gfx 8010
-                BlockGfxA 8020
-                SwitchGfx 8006
-                SlopeElevatorGfxA 8008
-                SwingGfxAB 000C
-                PrizePointsGfx 8002
-                DoorGfxA 8010
-                WoodBlockGfx 8008
-                AmenboGfx 0020
-                TagaTagaGfx 001C
-                YagoGfx 0024
-                AnimalsGfx 8010
-                BigRingFlashGfx 804D
+                SpikeBallGfx 0010 266 53 266 f138f259dbb8e10841c3c2999edb4f07ce91e50d38ebf4cb7e6e1ed132137606 6a84100136936dd16d30e77076ee9d1df60954ccc7a278d222684dffce63c68f 267 55 267 2c16aa672c78198ec68c0a4ca31cdbc700b03d99c65d6dbadb4a86666b866ace
+                ChainGfx 0008 162 39 161 48d66771ed0561c49dace9415db18cc5289f98cfffa5462f7099dabf2d18888b d8ec3695235800e3fcc5bc7be45ac463125cac4852ef2dc2885ef41a97e1ab87 162 41 162 48d66771ed0561c49dace9415db18cc5289f98cfffa5462f7099dabf2d18888b
+                TurbineGfxA 0020 564 65 564 d7c286a9edef70b8c5f6b1e981677c49bc181ad2b863e1080833ea0384d77ed7 871cb4a7a22fc15b2c9490e2dc615a1188dd68ccfeb637be621c946c1e6f344f 565 67 565 fed59343332cfcf8c56c2c41c63f520b0493b2fe5d51db2d6d6e38a441d76efc
+                CollapseFloorGfxA 0004 88 29 88 302902d0ad8d631f790349369bb8376a7134756203d034b915b4bc3789623dc0 1c97573358f831b4005fef0c2bff15022dfe6962ea84dbb149076388f2201623 89 31 89 1e8129146c17adf19fd581c4841a04b502516adf0fa8141de64c98cd32d142fe
+                ElectricBeamGfxA 0005 127 39 127 1bd9915dd9300d4edc16377c274b433708189c56da43822e93b693f73635fd0c 2a22d1f72e3ffe565a9dfcf82a2865f6148d0c38388ceb66c710ae623b67a3b8 127 41 127 1bd9915dd9300d4edc16377c274b433708189c56da43822e93b693f73635fd0c
+                ShootGfx 8012 412 81 412 9bdec1913a358a123d93403357d8af6803f1d9ff13e5f25a5b504936ec80b817 dac142cc8ee5322793026a2130201c732c2ec6cc18e102fd063de942e286db4b 413 83 413 0c679a395503fecc477ae87b544e17a572e9d52fc0fcabbedd09e4adab859de9
+                TonboGfx 002A 676 66 675 3a84550334baac52f4b559f828e42c59da8b6154c08150e64dff1af15150a3a2 c1cf81069466c9d6819e1e5bf97e70ee34e6636d5d7c5f1e8e0a567b766f8141 676 68 676 3a84550334baac52f4b559f828e42c59da8b6154c08150e64dff1af15150a3a2
+                RobotTransportGfxA 000F 332 77 332 26fb61222365ec1dc3a6c442401cdbc52e5eaf7e2a77903cb93570c7d325fcda ce19033d1380d75b2e7b816bd76bfdae7453c77dea728280dd3d2d90cfaaaa67 332 79 332 26fb61222365ec1dc3a6c442401cdbc52e5eaf7e2a77903cb93570c7d325fcda
+                PointsGfx 0005 101 29 101 9c01f8d17db4a5a30267f66d3c1e13d17223af14c6312963b69ab36fb9356176 2270d6453b2d2526412afab1ba19c3cf175b571a41766dc4fe0da422283d57db 101 31 101 9c01f8d17db4a5a30267f66d3c1e13d17223af14c6312963b69ab36fb9356176
+                CapsuleGfx 8068 1704 99 1703 da055a9f3c79f60b0bf6a784e89785bdc65eb37c7a598d95cf6a8f5fdc9ab808 b61c6d944dce535ccb74d0a374ac873e95a5e0b3911b465f62bb025b03660236 1704 101 1704 da055a9f3c79f60b0bf6a784e89785bdc65eb37c7a598d95cf6a8f5fdc9ab808
+                BigRingGfx 806A 1034 59 1033 5bfa84d7d4335e190e3287337f1595b3808fd1d3592615bfbc684d9a2bbdebf6 31cec10e677637f390c0a2b25d09f4ee9e3fe39f651801546e69b13150cee70c 1034 61 1034 5bfa84d7d4335e190e3287337f1595b3808fd1d3592615bfbc684d9a2bbdebf6
+                GoalGfx 8018 448 86 448 24aac969ce8508df0f412a0ad98d87102adc2029b3ae1f28b972eb7b6646979f 68359c6e3dc65e9cf72db3d20ce887acc3728fdd32de20abc1fd5af185ff4c9a 449 88 449 1ba1c7e9a34a071c8786cc2eb94eaf2adf0e58b480ef8d62f6501bb7f3006250
+                SignpostGfx 804C 1500 115 1500 2fb00eeee801d1f46cc06eae234fb15fa3dd984f325315c430f13d1e0d3fac67 7ffb01a6c7ffc333ade235f0c945561970c5b98eb0904a15fec3c164fc8ccb7c 1501 117 1501 c44aa3a5ef0fe775973ebd9f915c6b78b521a2107b4b69af6fa182de1a152c1d
+                ResultsGfx 8078 1354 65 1354 c88b40a5d2d17ddd96fb2b28dbdbdbe5f1a67f7b02671c6410f7d64a306c3c40 fdb13e161a5862fe4f8c550291bba36589028b8a7cc0394638c019a0ab35760d 1354 67 1354 c88b40a5d2d17ddd96fb2b28dbdbdbe5f1a67f7b02671c6410f7d64a306c3c40
+                TitleCardGfx 806D 940 71 939 8d70c7bedf08d9d0c4a4d01290fb78032820933ab43d1636262e16e601347bc8 68b70b1e8189073c24642b8939420ac4d3c3ba1d6a1c9c00d6538390d1764f7a 940 73 940 8d70c7bedf08d9d0c4a4d01290fb78032820933ab43d1636262e16e601347bc8
+                Spring45Gfx 002E 780 75 779 3cf30cb03a63f3d160c0b2dbbd0cf1f7803871f860125a5b44bf0a1cc0dc362a 1ae40f48422bc8b884ae4c85288d3f363737cd3e6979c458b93aac15ed581c8b 780 77 780 3cf30cb03a63f3d160c0b2dbbd0cf1f7803871f860125a5b44bf0a1cc0dc362a
+                SpringGfx 8024 547 80 547 52aa905cb632245c5922a198776a7ec46936102616db34a002648b45132a9847 8e3c6d91a395d24872b4ae5da293cd21d8e68230687ef9f07feb62ec2612f416 547 82 547 52aa905cb632245c5922a198776a7ec46936102616db34a002648b45132a9847
+                MonitorTimeGfx 8052 1541 105 1541 a11f69add660dbe82c86dd3227efe6154dc2de2f3ac3f82f7806fb3698a0b902 7575dcf197dbc2f246838cfedcb95af40100d449f0a0c5a48b7294c27c9a924f 1541 107 1541 a11f69add660dbe82c86dd3227efe6154dc2de2f3ac3f82f7806fb3698a0b902
+                ExplosionGfx 0046 1256 89 1256 1f642f6b44332f7ffa63d84970ff1abbacd72bbbd400417c5b3800215d7ec5c1 434f2415b56d7623e57fd94533506804d7ee1fe3a0321f77bfe86f58d8ff6664 1257 91 1257 c37077d4a4bf8aab8c50bd454137dba54a054c5a756b0f3a00515468d81fcdfe
+                RingGfx 000E 244 46 244 530877e432ceab7df543eaae5d3a6f705137526f54cdae8251b7fec288119ea2 c1f35c87c98d27990926ad515264ab1e8a5c9385b087931d79ff24709afd6abb 244 48 244 530877e432ceab7df543eaae5d3a6f705137526f54cdae8251b7fec288119ea2
+                HudGfx 801B 300 49 300 d3df1675439d1bb043f747ba8d3a975b31af8d423a09df30da9a9cae22084deb 0a448ef2c11a1414886684523d551d65af43e4f0c02e08c73e869437b15b40fc 301 51 301 fb31ef2bca6df6e547b6e578c1455730a6665226befb550fd6c03e2a9a1a88b5
+                CheckpointGfx 800C 212 51 211 e6af441ac5e051484bcd2993ad2736262b9c8f9a379bc714711e045f3f83e7bf b376ac203a8c3cf754d2d9bcc4a55dbcb287ead82bbb304b19b7fb5181f2c3a3 212 53 212 e6af441ac5e051484bcd2993ad2736262b9c8f9a379bc714711e045f3f83e7bf
+                WaterSurfaceGfx 806E 1089 62 1089 725a485aa9184899bb08cd1eb353461b574be6c3459bea10bca132e991cd4dcf 096df644ea3a771a04c657f65d1c312009af4e31788a9e59cbcfc60de53770fb 1089 64 1089 725a485aa9184899bb08cd1eb353461b574be6c3459bea10bca132e991cd4dcf
+                FlowerGfx 0027 676 73 675 56d28520fd0ec8c01068edebad2877c14836ffc876aafc32fb4121e53b1248b2 940eaecd3f31f50adef3d7774ebf8be982f6a4d2b3a068a45ab46237439b5874 676 75 676 56d28520fd0ec8c01068edebad2877c14836ffc876aafc32fb4121e53b1248b2
+                TitleCardTextGfx 8038 268 57 268 ffa8ce899df304b9658a7cd04c561bbabcd924426482f1440f11a33986ce9c87 4644e5513e3c0ae3bdf04133b3f8b828fb3bc247161d8e48f2307ec6ae4fc540 269 59 269 81f31548635a39b9f0e91d51ee32522f81c32aa8d30195ae86adc8e9cd882b4f
+                BubbleNumbersGfx 0067 1558 57 1557 4872f3d6aeff93d14bfe19c55c183f33976f7a0030532c6cf5e2f7b8d538fc36 cde5082d23b8ac1b3aa30879be33ec7d3d690223d5f03dd2211ccbff221b8f90 1558 59 1558 4872f3d6aeff93d14bfe19c55c183f33976f7a0030532c6cf5e2f7b8d538fc36
+                StageBlocks 8071 2708 59 2707 9cbfc936df4f7d1cf490da76cd06f63fa628203cac196602f46392b4e61341e7 e4efef34be22f37f3225411b6283590c6ebf71a68834277a670e8d7bb27078e7 2708 61 2708 9cbfc936df4f7d1cf490da76cd06f63fa628203cac196602f46392b4e61341e7
+                StageGfx 8223 8924 97 8923 c93c3a1fecde9dd4984d50c08c00cc8cf676998da0c9a239c8ea509fea2dd691 27db26947a1370e03e57193d3b63a7c12912bb1fc908b3d05ec62af0aae9bde9 8924 99 8924 c93c3a1fecde9dd4984d50c08c00cc8cf676998da0c9a239c8ea509fea2dd691
+                BreakPoleGfxAB 8008 142 48 141 5ac7a71911f8f17c0efd1e7685a10aa16c7dfaf71cc0d9b7c7ae4cba67c9beb2 d32a4b9b95b3c7fc95c86c91dd85eaf44e463bd56802fcbef7f05be16b80a577 142 50 142 5ac7a71911f8f17c0efd1e7685a10aa16c7dfaf71cc0d9b7c7ae4cba67c9beb2
+                SpikesV4Gfx 8010 154 38 153 bbc5f9665364f85c4068ad62d12d2aec7f78b603bca0704534b92c4f82298a72 72665dcfa02abb8b558d854148ee7c1d4422316ce3a3caf9a86619ef18ec334b 154 40 154 bbc5f9665364f85c4068ad62d12d2aec7f78b603bca0704534b92c4f82298a72
+                BlockGfxA 8020 466 96 465 fb777b9d2e1f4ad85ff5939ae3b4c8dd6708a15e3dc75c0b8cfe5e644db2cc3a fd0056fc3eb4592501363f5e69d6c572ace5dd56e6a8d93cf0172eda652f576d 466 98 466 fb777b9d2e1f4ad85ff5939ae3b4c8dd6708a15e3dc75c0b8cfe5e644db2cc3a
+                SwitchGfx 8006 82 20 82 a7c595cdd4d541ac97948c563f81f056b14b2d0c40c38f4dfe12d267942642e7 8f8b7e742c91918853011a322ce6705e83b109e33ad474467a99c8055c67f314 82 22 82 a7c595cdd4d541ac97948c563f81f056b14b2d0c40c38f4dfe12d267942642e7
+                SlopeElevatorGfxA 8008 132 42 132 45003c585672074164cd247f6907c7b7254c95ab46e8d1429c897eaa77d73963 30940a7fefc9220e1461a267ddc82717ad2a77039fdd5ea55890c0fcf58bc48a 133 44 133 ec70c4e31a610fbdd2e18a14e2c22fe1cec552c092b12ed472a7885c4d102ede
+                SwingGfxAB 000C 276 76 276 312256cc42b99e3ca001e0c51ac98aea8035b25c8b2304103f7beaf8bc5a308f e992fa0d5dc914a4f0bcad27080c6d37145ea4b40f6b496c3a6514862c62e7cd 276 78 276 312256cc42b99e3ca001e0c51ac98aea8035b25c8b2304103f7beaf8bc5a308f
+                PrizePointsGfx 8002 35 13 35 7c9cb1140c4cb5a820f9fe688ee7768112967cc4ab48932b5629e94701e15d62 392cd91bad2777cfadabfd1961be78f35af1ccfa01276469464f35af68c3f7ca 35 15 35 7c9cb1140c4cb5a820f9fe688ee7768112967cc4ab48932b5629e94701e15d62
+                DoorGfxA 8010 230 52 229 9de06934092b00022f0f807e893c157de37f7144277f781f667f0a2688dbeabf 5ede07a3f04ca26adb49d2f51f605b42ce3d2ba12ba1bd4754dd1c3ab88220a4 230 54 230 9de06934092b00022f0f807e893c157de37f7144277f781f667f0a2688dbeabf
+                WoodBlockGfx 8008 148 46 147 af23e47a4803612393e718469123272932ad46eef41fb5e4b91b0086ec716334 a5f970c14ccaedaf6780c1dca0f5820b3f1a3db2cff8252bbcffac18ca001e65 148 48 148 af23e47a4803612393e718469123272932ad46eef41fb5e4b91b0086ec716334
+                AmenboGfx 0020 536 69 536 b83b73e321758da08e9a7bf202acc2f72f23788fad11409ca8393638269e1e87 96bd4bf08d453de37765ac532e47111ef34e8cc5c80e55050235530ecb1cea59 537 71 537 dfe03ae9694f9e4927de705da583cd29dcfa7afda9172c7e8967d4b5fe76fa46
+                TagaTagaGfx 001C 383 80 383 771017ab60633d7dccbd2eb325b45538d4e6e6dcb2311182d72065e6d7bad589 e40619e823d8d91b3af5484183f974ddf330910c1579e1d34e9ebc32a3938202 383 82 383 771017ab60633d7dccbd2eb325b45538d4e6e6dcb2311182d72065e6d7bad589
+                YagoGfx 0024 727 93 727 f5c087826d7ef1d9171bb3c2427a2ceceee17400893223a941075b3502ab9ec0 873cae33a92b491f3448c19377169bb5a03e1a523993e07c6e45969ca6b03799 727 95 727 f5c087826d7ef1d9171bb3c2427a2ceceee17400893223a941075b3502ab9ec0
+                AnimalsGfx 8010 356 70 355 88f31ca8417f41db54a1379bf54a2a375927cd6c520b6a6737989f27f8b205a6 391983566d0cc50c15360a364e7f1598fbb42c52d9690f50f31a5580b74e6d7b 356 72 356 88f31ca8417f41db54a1379bf54a2a375927cd6c520b6a6737989f27f8b205a6
+                BigRingFlashGfx 804D 384 36 384 6106d2692b34f73a6d928e651c9547e5dfe2dc00bdb0b4136dc42e603ce0efa7 39e7bb895c1492e9847de7a67ddc61108dc553b9443ad17d61ea5c8b47fdf8b6 385 38 385 e59af60b6dd221ca0b6c993894db9e69567814126686e9f2270bba02e2adf25b
                 """,
                 List.of(0xFADE,0xFAEC,0xFB50,0xFADE,0xFBAC,0xFC08,0xFC10,0xFB50,0xFB50,0xFB50,0xFB50,0xFB50,0xFB50,0xFB50,0xFB50,0xFB50,0xFB48,0xFB50,0xFC18,0xFC2C),9,15,
                 List.of("StageGfx","CheckpointGfx","WaterSurfaceGfx","TitleCardGfx","TitleCardTextGfx","TonboGfx","DoorGfxA","BlockGfxA","BubbleNumbersGfx","SwitchGfx","SpringGfx","HudGfx","MonitorTimeGfx","ExplosionGfx","PointsGfx","FlowerGfx","RingGfx","ShootGfx","ElectricBeamGfxA","SwingGfxAB","WoodBlockGfx","SlopeElevatorGfxA","CollapseFloorGfxA","ChainGfx","SpikeBallGfx","TurbineGfxA","SpikesV4Gfx","AmenboGfx","TagaTagaGfx","YagoGfx","AnimalsGfx","BreakPoleGfxAB","RobotTransportGfxA","ResultsGfx","SignpostGfx","BigRingGfx","BigRingFlashGfx","GoalGfx"),
@@ -318,51 +341,51 @@ final class CdR4ProgrammeProfiles {
                 CycleProgramme.STANDARD_FOUR_WITH_RETAINED_UPPER,0xFAB6,382,"b6c4e7ded1a8998c8d404c29120a20479c77e6e819668b54d564d74dea3d26ab",
                 new CameraFact(0xBF94,18,"34dedd9006846648e333e778e1f76def642dcc16bc7b9034a9b7d0a5b0f9093c",List.of(new SectionRow(0x1180,2,5),new SectionRow(0x1580,4,6),new SectionRow(0xFFFF,2,5))),BackgroundKind.DIRECT_CAMERA);
             case R42B -> new Facts("""
-                BreakPoleGfxAB 8008
-                SpikesV4Gfx 8010
-                BlockGfxB 0020
-                SwitchGfx 8006
-                SwingGfxAB 000C
-                PrizePointsGfx 8002
-                DoorGfxB 0010
-                GeyserGfx 803C
-                UnusedPlatformGfxBCD 8020
-                RotateBlockGfx 804C
-                SpikeBallGfx 0010
-                ChainGfx 0008
-                TurbineGfxB 8020
-                CollapseFloorGfxB 0004
-                ElectricBeamGfxB 0005
-                ShootGfx 8012
-                TonboGfx 002A
-                TagaTagaGfx 001C
-                YagoGfx 0024
-                AmenboGfx 0020
-                WoodBlockGfx 8008
-                AnimalsGfx 8010
-                RobotTransportGfxB 0017
-                HologramGfx 0033
-                PointsGfx 0005
-                CapsuleGfx 8068
-                BigRingGfx 806A
-                GoalGfx 8018
-                SignpostGfx 804C
-                ResultsGfx 8078
-                TitleCardGfx 806D
-                Spring45Gfx 002E
-                SpringGfx 8024
-                MonitorTimeGfx 8052
-                ExplosionGfx 0046
-                RingGfx 000E
-                HudGfx 801B
-                CheckpointGfx 800C
-                WaterSurfaceGfx 806E
-                FlowerGfx 0027
-                TitleCardTextGfx 8038
-                BubbleNumbersGfx 0067
-                StageBlocks 808E
-                StageGfx 8236
-                BigRingFlashGfx 804D
+                BreakPoleGfxAB 8008 142 48 141 5ac7a71911f8f17c0efd1e7685a10aa16c7dfaf71cc0d9b7c7ae4cba67c9beb2 d32a4b9b95b3c7fc95c86c91dd85eaf44e463bd56802fcbef7f05be16b80a577 142 50 142 5ac7a71911f8f17c0efd1e7685a10aa16c7dfaf71cc0d9b7c7ae4cba67c9beb2
+                SpikesV4Gfx 8010 154 38 153 bbc5f9665364f85c4068ad62d12d2aec7f78b603bca0704534b92c4f82298a72 72665dcfa02abb8b558d854148ee7c1d4422316ce3a3caf9a86619ef18ec334b 154 40 154 bbc5f9665364f85c4068ad62d12d2aec7f78b603bca0704534b92c4f82298a72
+                BlockGfxB 0020 610 52 609 e2a12f5e7615dd409d812a63be16f58549ee9f89059a8ccf68c69eeacb1de2d6 11c3578073254909a9eae54f530132689251d2cf5ea4e4ea295783537406a0a1 610 54 610 e2a12f5e7615dd409d812a63be16f58549ee9f89059a8ccf68c69eeacb1de2d6
+                SwitchGfx 8006 82 20 82 a7c595cdd4d541ac97948c563f81f056b14b2d0c40c38f4dfe12d267942642e7 8f8b7e742c91918853011a322ce6705e83b109e33ad474467a99c8055c67f314 82 22 82 a7c595cdd4d541ac97948c563f81f056b14b2d0c40c38f4dfe12d267942642e7
+                SwingGfxAB 000C 276 76 276 312256cc42b99e3ca001e0c51ac98aea8035b25c8b2304103f7beaf8bc5a308f e992fa0d5dc914a4f0bcad27080c6d37145ea4b40f6b496c3a6514862c62e7cd 276 78 276 312256cc42b99e3ca001e0c51ac98aea8035b25c8b2304103f7beaf8bc5a308f
+                PrizePointsGfx 8002 35 13 35 54da773c1b40711314c5d1f0d5ca3a4b6690ffc32ba94d0de5fef1e9dd9a3911 392cd91bad2777cfadabfd1961be78f35af1ccfa01276469464f35af68c3f7ca 35 15 35 54da773c1b40711314c5d1f0d5ca3a4b6690ffc32ba94d0de5fef1e9dd9a3911
+                DoorGfxB 0010 318 54 318 ddeda8b84ad785d849f1612cd50186d0b21f36a49912f74ab95e5d2ccc3f7ecf 071fcd48eed3b98ea14f368138f82e8f7b22e28266a3af82b7de29c19b556eea 319 56 319 a206ce2014a655c7c2f2c172159845e2eda4c2e912c4459c440d6be4ddabf73b
+                GeyserGfx 803C 582 52 582 7a491f965047f62189b6eee13b2b57c6c7ec1266a1e0694d37b124dadde5eab3 a3d1646acbd49b64b8e3aec2ab2340910ef92f68cc648a282273adf8ed3c9488 583 54 583 125f32de03bb4c6c60e12ddc49cef1eca5bce1297a9c3b46a716a14c2f5f99ea
+                UnusedPlatformGfxBCD 8020 434 82 434 2bda34166f29d16803d72e7d604a9a674fdaf019960e1e6d10ed2c195a237a50 5bd264873b0feddb81840716a931f6c5973245a023b22e827a5f6701b08e79f6 435 84 435 97b084c25f6f19e1926d4de83b1f5bd9caf3a75fde0a611da9f15f87abe687af
+                RotateBlockGfx 804C 856 51 856 17486fa00ffaff6af64726948f62e2f508aee81b2e850bf7fb16cb7ec2507008 55f4bf4858c4291685d816d70ab18c69e677318f54805f90e35fc90c7e844417 857 53 857 d8a7c68c2291fcfa17ea321f669e0cc387768551cd0988f3f00a5ad7205948b2
+                SpikeBallGfx 0010 266 53 266 f138f259dbb8e10841c3c2999edb4f07ce91e50d38ebf4cb7e6e1ed132137606 6a84100136936dd16d30e77076ee9d1df60954ccc7a278d222684dffce63c68f 267 55 267 2c16aa672c78198ec68c0a4ca31cdbc700b03d99c65d6dbadb4a86666b866ace
+                ChainGfx 0008 162 39 161 48d66771ed0561c49dace9415db18cc5289f98cfffa5462f7099dabf2d18888b d8ec3695235800e3fcc5bc7be45ac463125cac4852ef2dc2885ef41a97e1ab87 162 41 162 48d66771ed0561c49dace9415db18cc5289f98cfffa5462f7099dabf2d18888b
+                TurbineGfxB 8020 578 74 578 6f45036d14eb87f01fa00e0f6af9f271a1c0dfc90ffc53a78e1acc2abc94c66b 7b823a9c0384799717c27fe3e912d57860e6190c7f98165784fd5aaf0382a1f5 579 76 579 89e94b0a9e8124bf6bd5acce07c6ea1598bd389c1d16933cb7c2dc72660f46be
+                CollapseFloorGfxB 0004 110 34 110 ccabc4deb281c9208a185b93c2ae76605e6ad2264474c290475d909c32c5e536 13ea926e0ed0482057a47a54c89c2e810516b3359a252b6123fa4559945e2e96 110 36 110 ccabc4deb281c9208a185b93c2ae76605e6ad2264474c290475d909c32c5e536
+                ElectricBeamGfxB 0005 134 39 134 e19b7f6725976c5382738f701d15c8ae03e5dccb8d5efd14bbc2e9f698b37907 3a6f1e09653d66198b627dff77a147b77cff35dfc1b1f64b4bdd8b590a114beb 135 41 135 d8e0c03d9e4d4bdf4c35bd741529ddb8746cba069118eb7cb450e4c12c0f2720
+                ShootGfx 8012 412 81 412 9bdec1913a358a123d93403357d8af6803f1d9ff13e5f25a5b504936ec80b817 dac142cc8ee5322793026a2130201c732c2ec6cc18e102fd063de942e286db4b 413 83 413 0c679a395503fecc477ae87b544e17a572e9d52fc0fcabbedd09e4adab859de9
+                TonboGfx 002A 676 66 675 3a84550334baac52f4b559f828e42c59da8b6154c08150e64dff1af15150a3a2 c1cf81069466c9d6819e1e5bf97e70ee34e6636d5d7c5f1e8e0a567b766f8141 676 68 676 3a84550334baac52f4b559f828e42c59da8b6154c08150e64dff1af15150a3a2
+                TagaTagaGfx 001C 383 80 383 771017ab60633d7dccbd2eb325b45538d4e6e6dcb2311182d72065e6d7bad589 e40619e823d8d91b3af5484183f974ddf330910c1579e1d34e9ebc32a3938202 383 82 383 771017ab60633d7dccbd2eb325b45538d4e6e6dcb2311182d72065e6d7bad589
+                YagoGfx 0024 727 93 727 f5c087826d7ef1d9171bb3c2427a2ceceee17400893223a941075b3502ab9ec0 873cae33a92b491f3448c19377169bb5a03e1a523993e07c6e45969ca6b03799 727 95 727 f5c087826d7ef1d9171bb3c2427a2ceceee17400893223a941075b3502ab9ec0
+                AmenboGfx 0020 536 69 536 b83b73e321758da08e9a7bf202acc2f72f23788fad11409ca8393638269e1e87 96bd4bf08d453de37765ac532e47111ef34e8cc5c80e55050235530ecb1cea59 537 71 537 dfe03ae9694f9e4927de705da583cd29dcfa7afda9172c7e8967d4b5fe76fa46
+                WoodBlockGfx 8008 148 46 147 af23e47a4803612393e718469123272932ad46eef41fb5e4b91b0086ec716334 a5f970c14ccaedaf6780c1dca0f5820b3f1a3db2cff8252bbcffac18ca001e65 148 48 148 af23e47a4803612393e718469123272932ad46eef41fb5e4b91b0086ec716334
+                AnimalsGfx 8010 356 70 355 88f31ca8417f41db54a1379bf54a2a375927cd6c520b6a6737989f27f8b205a6 391983566d0cc50c15360a364e7f1598fbb42c52d9690f50f31a5580b74e6d7b 356 72 356 88f31ca8417f41db54a1379bf54a2a375927cd6c520b6a6737989f27f8b205a6
+                RobotTransportGfxB 0017 434 92 434 4e655639807a4b3203e9b5e723e484bd95a38f832babb3f82ba44215d7d27806 672db05e55714cc5efa6a3f2d5cc21fa455e8d031aebc9f7d4fc14aa001565d6 434 94 434 4e655639807a4b3203e9b5e723e484bd95a38f832babb3f82ba44215d7d27806
+                HologramGfx 0033 1024 106 1024 1df8b669f556ef15e4c3c687bc890f5e037c90e5366097db036aff136a6c45e5 4f1061c0e3a9256e6fbdfe721e35b0021c91909a52815036c6456498ac2b7d77 1024 108 1024 1df8b669f556ef15e4c3c687bc890f5e037c90e5366097db036aff136a6c45e5
+                PointsGfx 0005 101 29 101 9c01f8d17db4a5a30267f66d3c1e13d17223af14c6312963b69ab36fb9356176 2270d6453b2d2526412afab1ba19c3cf175b571a41766dc4fe0da422283d57db 101 31 101 9c01f8d17db4a5a30267f66d3c1e13d17223af14c6312963b69ab36fb9356176
+                CapsuleGfx 8068 1704 99 1703 da055a9f3c79f60b0bf6a784e89785bdc65eb37c7a598d95cf6a8f5fdc9ab808 b61c6d944dce535ccb74d0a374ac873e95a5e0b3911b465f62bb025b03660236 1704 101 1704 da055a9f3c79f60b0bf6a784e89785bdc65eb37c7a598d95cf6a8f5fdc9ab808
+                BigRingGfx 806A 1034 59 1033 5bfa84d7d4335e190e3287337f1595b3808fd1d3592615bfbc684d9a2bbdebf6 31cec10e677637f390c0a2b25d09f4ee9e3fe39f651801546e69b13150cee70c 1034 61 1034 5bfa84d7d4335e190e3287337f1595b3808fd1d3592615bfbc684d9a2bbdebf6
+                GoalGfx 8018 448 86 448 24aac969ce8508df0f412a0ad98d87102adc2029b3ae1f28b972eb7b6646979f 68359c6e3dc65e9cf72db3d20ce887acc3728fdd32de20abc1fd5af185ff4c9a 449 88 449 1ba1c7e9a34a071c8786cc2eb94eaf2adf0e58b480ef8d62f6501bb7f3006250
+                SignpostGfx 804C 1500 115 1500 2fb00eeee801d1f46cc06eae234fb15fa3dd984f325315c430f13d1e0d3fac67 7ffb01a6c7ffc333ade235f0c945561970c5b98eb0904a15fec3c164fc8ccb7c 1501 117 1501 c44aa3a5ef0fe775973ebd9f915c6b78b521a2107b4b69af6fa182de1a152c1d
+                ResultsGfx 8078 1354 65 1354 c88b40a5d2d17ddd96fb2b28dbdbdbe5f1a67f7b02671c6410f7d64a306c3c40 fdb13e161a5862fe4f8c550291bba36589028b8a7cc0394638c019a0ab35760d 1354 67 1354 c88b40a5d2d17ddd96fb2b28dbdbdbe5f1a67f7b02671c6410f7d64a306c3c40
+                TitleCardGfx 806D 940 71 939 8d70c7bedf08d9d0c4a4d01290fb78032820933ab43d1636262e16e601347bc8 68b70b1e8189073c24642b8939420ac4d3c3ba1d6a1c9c00d6538390d1764f7a 940 73 940 8d70c7bedf08d9d0c4a4d01290fb78032820933ab43d1636262e16e601347bc8
+                Spring45Gfx 002E 780 75 779 3cf30cb03a63f3d160c0b2dbbd0cf1f7803871f860125a5b44bf0a1cc0dc362a 1ae40f48422bc8b884ae4c85288d3f363737cd3e6979c458b93aac15ed581c8b 780 77 780 3cf30cb03a63f3d160c0b2dbbd0cf1f7803871f860125a5b44bf0a1cc0dc362a
+                SpringGfx 8024 547 80 547 52aa905cb632245c5922a198776a7ec46936102616db34a002648b45132a9847 8e3c6d91a395d24872b4ae5da293cd21d8e68230687ef9f07feb62ec2612f416 547 82 547 52aa905cb632245c5922a198776a7ec46936102616db34a002648b45132a9847
+                MonitorTimeGfx 8052 1541 105 1541 a11f69add660dbe82c86dd3227efe6154dc2de2f3ac3f82f7806fb3698a0b902 7575dcf197dbc2f246838cfedcb95af40100d449f0a0c5a48b7294c27c9a924f 1541 107 1541 a11f69add660dbe82c86dd3227efe6154dc2de2f3ac3f82f7806fb3698a0b902
+                ExplosionGfx 0046 1256 89 1256 1f642f6b44332f7ffa63d84970ff1abbacd72bbbd400417c5b3800215d7ec5c1 434f2415b56d7623e57fd94533506804d7ee1fe3a0321f77bfe86f58d8ff6664 1257 91 1257 c37077d4a4bf8aab8c50bd454137dba54a054c5a756b0f3a00515468d81fcdfe
+                RingGfx 000E 244 46 244 530877e432ceab7df543eaae5d3a6f705137526f54cdae8251b7fec288119ea2 c1f35c87c98d27990926ad515264ab1e8a5c9385b087931d79ff24709afd6abb 244 48 244 530877e432ceab7df543eaae5d3a6f705137526f54cdae8251b7fec288119ea2
+                HudGfx 801B 300 49 300 d3df1675439d1bb043f747ba8d3a975b31af8d423a09df30da9a9cae22084deb 0a448ef2c11a1414886684523d551d65af43e4f0c02e08c73e869437b15b40fc 301 51 301 fb31ef2bca6df6e547b6e578c1455730a6665226befb550fd6c03e2a9a1a88b5
+                CheckpointGfx 800C 212 51 211 e6af441ac5e051484bcd2993ad2736262b9c8f9a379bc714711e045f3f83e7bf b376ac203a8c3cf754d2d9bcc4a55dbcb287ead82bbb304b19b7fb5181f2c3a3 212 53 212 e6af441ac5e051484bcd2993ad2736262b9c8f9a379bc714711e045f3f83e7bf
+                WaterSurfaceGfx 806E 1089 62 1089 725a485aa9184899bb08cd1eb353461b574be6c3459bea10bca132e991cd4dcf 096df644ea3a771a04c657f65d1c312009af4e31788a9e59cbcfc60de53770fb 1089 64 1089 725a485aa9184899bb08cd1eb353461b574be6c3459bea10bca132e991cd4dcf
+                FlowerGfx 0027 676 73 675 56d28520fd0ec8c01068edebad2877c14836ffc876aafc32fb4121e53b1248b2 940eaecd3f31f50adef3d7774ebf8be982f6a4d2b3a068a45ab46237439b5874 676 75 676 56d28520fd0ec8c01068edebad2877c14836ffc876aafc32fb4121e53b1248b2
+                TitleCardTextGfx 8038 268 57 268 ffa8ce899df304b9658a7cd04c561bbabcd924426482f1440f11a33986ce9c87 4644e5513e3c0ae3bdf04133b3f8b828fb3bc247161d8e48f2307ec6ae4fc540 269 59 269 81f31548635a39b9f0e91d51ee32522f81c32aa8d30195ae86adc8e9cd882b4f
+                BubbleNumbersGfx 0067 1558 57 1557 4872f3d6aeff93d14bfe19c55c183f33976f7a0030532c6cf5e2f7b8d538fc36 cde5082d23b8ac1b3aa30879be33ec7d3d690223d5f03dd2211ccbff221b8f90 1558 59 1558 4872f3d6aeff93d14bfe19c55c183f33976f7a0030532c6cf5e2f7b8d538fc36
+                StageBlocks 808E 3578 61 3577 d3d38f6a4476a7046851dbc264a88332a8bd2f927706b6c26d5f0c863f1872bc f8447efdaaa04404e384b6522232883885f1de888b7943c7aa51e4a750785b93 3578 63 3578 d3d38f6a4476a7046851dbc264a88332a8bd2f927706b6c26d5f0c863f1872bc
+                StageGfx 8236 9528 97 9528 97818cd4c8ac2f79718bb47c7fe9d7eacc36daea391e30cac002637aae78f700 12de0183eca4b00029c808f704824beb38d9d0905b5ca01cf8da452b7e8c5969 9529 99 9529 caa463a239878efcbde3e2e7ee804b3db069858ed03527e357a17e0100bb6f5a
+                BigRingFlashGfx 804D 384 36 384 6106d2692b34f73a6d928e651c9547e5dfe2dc00bdb0b4136dc42e603ce0efa7 39e7bb895c1492e9847de7a67ddc61108dc553b9443ad17d61ea5c8b47fdf8b6 385 38 385 e59af60b6dd221ca0b6c993894db9e69567814126686e9f2270bba02e2adf25b
                 """,
                 List.of(0xFC4E,0xFC56,0xFCBA,0xFC4E,0xFCF8,0xFD30,0xFD6E,0xFD82,0xFD90,0xFCBA,0xFCBA,0xFCBA,0xFCBA,0xFCBA,0xFCBA,0xFCBA,0xFCB2,0xFCBA,0xFDA4),10,15,
                 List.of("StageGfx","WaterSurfaceGfx","TitleCardGfx","TitleCardTextGfx","TonboGfx","DoorGfxB","BlockGfxB","BubbleNumbersGfx","SwitchGfx","SpringGfx","HudGfx","MonitorTimeGfx","ExplosionGfx","PointsGfx","FlowerGfx","RingGfx","BreakPoleGfxAB","RotateBlockGfx","CollapseFloorGfxB","TurbineGfxB","SpikesV4Gfx","AmenboGfx","TagaTagaGfx","YagoGfx","AnimalsGfx","GoalGfx","HologramGfx","RobotTransportGfxB","ResultsGfx","SignpostGfx","BigRingGfx","BigRingFlashGfx"),
@@ -371,52 +394,52 @@ final class CdR4ProgrammeProfiles {
                 CycleProgramme.THREE_SOURCE_ACT_GATED,0xFC28,400,"c74d275900bdfdd01e5ad5e0c6548caca556d7b95e2b37f38a08a3eda725fc60",
                 new CameraFact(0xC19C,30,"698a1e79b364ca76e21c18375f8d5e72126e2e5e3bece9a52e9515d85ba9fc1f",List.of(new SectionRow(0xA80,2,6),new SectionRow(0xE80,4,7),new SectionRow(0x1000,2,6),new SectionRow(0x1F80,5,8),new SectionRow(0xFFFF,2,6))),BackgroundKind.DIRECT_CAMERA);
             case R42C -> new Facts("""
-                BreakPoleGfxC 8008
-                SpikesV4Gfx 8010
-                UnusedPlatformGfxC 8010
-                BlockGfxC 8020
-                SwitchGfx 8006
-                SwingGfxC 000C
-                PrizePointsGfx 8002
-                DoorGfxC 8010
-                RotateBlockGfx 804C
-                GeyserGfx 803C
-                UnusedPlatformGfxBCD 8020
-                SlopeElevatorGfxC 8008
-                SpikeBallGfx 0010
-                ChainGfx 0008
-                TurbineGfxC 0010
-                CollapseFloorGfxC 0004
-                ElectricBeamGfxC 0005
-                ShootGfx 8012
-                TonboGfx 002A
-                TagaTagaGfx 001C
-                YagoGfx 0024
-                FloatElevatorGfxC 8020
-                AmenboGfx 0020
-                WoodBlockGfx 8008
-                AnimalsGfx 8010
-                PointsGfx 0005
-                CapsuleGfx 8068
-                BigRingGfx 806A
-                GoalGfx 8018
-                SignpostGfx 804C
-                ResultsGfx 8078
-                TitleCardGfx 806D
-                Spring45Gfx 002E
-                SpringGfx 8024
-                MonitorTimeGfx 8052
-                ExplosionGfx 0046
-                RingGfx 000E
-                HudGfx 801B
-                CheckpointGfx 800C
-                WaterSurfaceGfx 806E
-                FlowerGfx 0027
-                TitleCardTextGfx 8038
-                BubbleNumbersGfx 0067
-                StageBlocks 80E9
-                StageGfx 821F
-                BigRingFlashGfx 804D
+                BreakPoleGfxC 8008 124 39 124 34c419e28ff02d8373a44df0e37cbfc4578f9c88e809c84fff8169e1d6bc3f68 05f0bb80b66ff68196d171f7f5382bfa723f08380df2c09c831ea2068d797c00 125 41 125 02942dfd0cec4cf509ff01f7eaf1ff9c8d044fe8a67ac1f49904bb8d97ccff6b
+                SpikesV4Gfx 8010 154 38 153 bbc5f9665364f85c4068ad62d12d2aec7f78b603bca0704534b92c4f82298a72 72665dcfa02abb8b558d854148ee7c1d4422316ce3a3caf9a86619ef18ec334b 154 40 154 bbc5f9665364f85c4068ad62d12d2aec7f78b603bca0704534b92c4f82298a72
+                UnusedPlatformGfxC 8010 250 60 249 ff3636f38e9abf8c8646f172ad71004ae70ead5307595f8418eb72c09f2499e5 fc7721d4b3493bf3bddb6ac73417160b7772e6907b11c9f16ee511c93f95223e 250 62 250 ff3636f38e9abf8c8646f172ad71004ae70ead5307595f8418eb72c09f2499e5
+                BlockGfxC 8020 560 97 560 a133118c62b56c56057b0ed9db541edcaa443bf70d6e2cbe27dd55965a8e83fc 330c811b541b1bfe5c132183fe2f6aee49a79a5227058698c86230ff9acfd7af 560 99 560 a133118c62b56c56057b0ed9db541edcaa443bf70d6e2cbe27dd55965a8e83fc
+                SwitchGfx 8006 82 20 82 a7c595cdd4d541ac97948c563f81f056b14b2d0c40c38f4dfe12d267942642e7 8f8b7e742c91918853011a322ce6705e83b109e33ad474467a99c8055c67f314 82 22 82 a7c595cdd4d541ac97948c563f81f056b14b2d0c40c38f4dfe12d267942642e7
+                SwingGfxC 000C 273 74 273 a7df54f38e7be30f6a2d59194b36797329d92fcec2236266cb3e0c8cbd933c8e c22923ba0421fe499fee3d6a4c2f713669bd22c28d6faba9e66dd5e2dd4faee8 273 76 273 a7df54f38e7be30f6a2d59194b36797329d92fcec2236266cb3e0c8cbd933c8e
+                PrizePointsGfx 8002 35 13 35 7c9cb1140c4cb5a820f9fe688ee7768112967cc4ab48932b5629e94701e15d62 392cd91bad2777cfadabfd1961be78f35af1ccfa01276469464f35af68c3f7ca 35 15 35 7c9cb1140c4cb5a820f9fe688ee7768112967cc4ab48932b5629e94701e15d62
+                DoorGfxC 8010 230 65 230 3a5a92281033d4ecfa7d2120b2fcaa441564ce7dca6baadd3c3bdf4bd5e5236a 721b24b17907ea3be7d69454da63de0ff46632441f36f0ec3adbec587813ff89 230 67 230 3a5a92281033d4ecfa7d2120b2fcaa441564ce7dca6baadd3c3bdf4bd5e5236a
+                RotateBlockGfx 804C 856 51 856 17486fa00ffaff6af64726948f62e2f508aee81b2e850bf7fb16cb7ec2507008 55f4bf4858c4291685d816d70ab18c69e677318f54805f90e35fc90c7e844417 857 53 857 f2b71fc2cdef399d7aa70a0b108b6a8fc4b3556ec53e2938fd2897d6f23bcaa6
+                GeyserGfx 803C 582 52 582 7a491f965047f62189b6eee13b2b57c6c7ec1266a1e0694d37b124dadde5eab3 a3d1646acbd49b64b8e3aec2ab2340910ef92f68cc648a282273adf8ed3c9488 583 54 583 125f32de03bb4c6c60e12ddc49cef1eca5bce1297a9c3b46a716a14c2f5f99ea
+                UnusedPlatformGfxBCD 8020 434 82 434 2bda34166f29d16803d72e7d604a9a674fdaf019960e1e6d10ed2c195a237a50 5bd264873b0feddb81840716a931f6c5973245a023b22e827a5f6701b08e79f6 435 84 435 97b084c25f6f19e1926d4de83b1f5bd9caf3a75fde0a611da9f15f87abe687af
+                SlopeElevatorGfxC 8008 139 35 139 dbaa12bf3e630e11ccdeebfa62b4a2130836ea1c90b1a13d723595e5b505bb9f c0575092002a1b372442f7284a7d61c2aeb3adc5741d840b819170fb8e1f75f2 139 37 139 dbaa12bf3e630e11ccdeebfa62b4a2130836ea1c90b1a13d723595e5b505bb9f
+                SpikeBallGfx 0010 266 53 266 f138f259dbb8e10841c3c2999edb4f07ce91e50d38ebf4cb7e6e1ed132137606 6a84100136936dd16d30e77076ee9d1df60954ccc7a278d222684dffce63c68f 267 55 267 2c16aa672c78198ec68c0a4ca31cdbc700b03d99c65d6dbadb4a86666b866ace
+                ChainGfx 0008 162 39 161 48d66771ed0561c49dace9415db18cc5289f98cfffa5462f7099dabf2d18888b d8ec3695235800e3fcc5bc7be45ac463125cac4852ef2dc2885ef41a97e1ab87 162 41 162 48d66771ed0561c49dace9415db18cc5289f98cfffa5462f7099dabf2d18888b
+                TurbineGfxC 0010 302 55 302 d1829b445c205fedb7d7573f410176401c5d46bb8eb4b16676c1bbff958fecb1 6c0c0a6bf2289c53cad7d7cc29381656c9cf5d7e114ee3ea7702d23701514a76 303 57 303 890c4ffa6b45e1e176f8541ac95bfb6a7c9b1e1bbb7326bf64b6fede5ff4560f
+                CollapseFloorGfxC 0004 120 39 120 23afcf9c20585a2aabb59766432cfc2b3a52585f78f1cb751d84e3d6caba56ff 24ccb0b6b2e4a53f2e31142be915a143c00e8182f562d2e92565b84cfc28ee8c 120 41 120 23afcf9c20585a2aabb59766432cfc2b3a52585f78f1cb751d84e3d6caba56ff
+                ElectricBeamGfxC 0005 121 37 121 e74110effb9760e70dfe3948cf3d1c12a5e97d124f167299529d3f45e9d7cc62 2d46162b4f6a7f119d9b13a87497477697524c3ae5dde083da9c070af068274c 121 39 121 e74110effb9760e70dfe3948cf3d1c12a5e97d124f167299529d3f45e9d7cc62
+                ShootGfx 8012 412 81 412 9bdec1913a358a123d93403357d8af6803f1d9ff13e5f25a5b504936ec80b817 dac142cc8ee5322793026a2130201c732c2ec6cc18e102fd063de942e286db4b 413 83 413 0c679a395503fecc477ae87b544e17a572e9d52fc0fcabbedd09e4adab859de9
+                TonboGfx 002A 676 66 675 3a84550334baac52f4b559f828e42c59da8b6154c08150e64dff1af15150a3a2 c1cf81069466c9d6819e1e5bf97e70ee34e6636d5d7c5f1e8e0a567b766f8141 676 68 676 3a84550334baac52f4b559f828e42c59da8b6154c08150e64dff1af15150a3a2
+                TagaTagaGfx 001C 383 80 383 771017ab60633d7dccbd2eb325b45538d4e6e6dcb2311182d72065e6d7bad589 e40619e823d8d91b3af5484183f974ddf330910c1579e1d34e9ebc32a3938202 383 82 383 771017ab60633d7dccbd2eb325b45538d4e6e6dcb2311182d72065e6d7bad589
+                YagoGfx 0024 727 93 727 393b5f068b88223d0a08e1d2482a0529b4fdf4b6d762eed31f2a87f8ea12338c 873cae33a92b491f3448c19377169bb5a03e1a523993e07c6e45969ca6b03799 727 95 727 393b5f068b88223d0a08e1d2482a0529b4fdf4b6d762eed31f2a87f8ea12338c
+                FloatElevatorGfxC 8020 428 85 427 4f539399fec1e7fdebdd8dbc115fb4dcfa713b042a36d0968320ab21a4aa8693 3a846a459698daa53dbc1c021b9a73a0132e9741e00d73591d21becdb4ff14bd 428 87 428 4f539399fec1e7fdebdd8dbc115fb4dcfa713b042a36d0968320ab21a4aa8693
+                AmenboGfx 0020 536 69 536 b83b73e321758da08e9a7bf202acc2f72f23788fad11409ca8393638269e1e87 96bd4bf08d453de37765ac532e47111ef34e8cc5c80e55050235530ecb1cea59 537 71 537 dfe03ae9694f9e4927de705da583cd29dcfa7afda9172c7e8967d4b5fe76fa46
+                WoodBlockGfx 8008 148 46 147 af23e47a4803612393e718469123272932ad46eef41fb5e4b91b0086ec716334 a5f970c14ccaedaf6780c1dca0f5820b3f1a3db2cff8252bbcffac18ca001e65 148 48 148 af23e47a4803612393e718469123272932ad46eef41fb5e4b91b0086ec716334
+                AnimalsGfx 8010 356 70 355 88f31ca8417f41db54a1379bf54a2a375927cd6c520b6a6737989f27f8b205a6 391983566d0cc50c15360a364e7f1598fbb42c52d9690f50f31a5580b74e6d7b 356 72 356 88f31ca8417f41db54a1379bf54a2a375927cd6c520b6a6737989f27f8b205a6
+                PointsGfx 0005 101 29 101 9c01f8d17db4a5a30267f66d3c1e13d17223af14c6312963b69ab36fb9356176 2270d6453b2d2526412afab1ba19c3cf175b571a41766dc4fe0da422283d57db 101 31 101 9c01f8d17db4a5a30267f66d3c1e13d17223af14c6312963b69ab36fb9356176
+                CapsuleGfx 8068 1704 99 1703 da055a9f3c79f60b0bf6a784e89785bdc65eb37c7a598d95cf6a8f5fdc9ab808 b61c6d944dce535ccb74d0a374ac873e95a5e0b3911b465f62bb025b03660236 1704 101 1704 da055a9f3c79f60b0bf6a784e89785bdc65eb37c7a598d95cf6a8f5fdc9ab808
+                BigRingGfx 806A 1034 59 1033 5bfa84d7d4335e190e3287337f1595b3808fd1d3592615bfbc684d9a2bbdebf6 31cec10e677637f390c0a2b25d09f4ee9e3fe39f651801546e69b13150cee70c 1034 61 1034 5bfa84d7d4335e190e3287337f1595b3808fd1d3592615bfbc684d9a2bbdebf6
+                GoalGfx 8018 448 86 448 24aac969ce8508df0f412a0ad98d87102adc2029b3ae1f28b972eb7b6646979f 68359c6e3dc65e9cf72db3d20ce887acc3728fdd32de20abc1fd5af185ff4c9a 449 88 449 1ba1c7e9a34a071c8786cc2eb94eaf2adf0e58b480ef8d62f6501bb7f3006250
+                SignpostGfx 804C 1500 115 1500 2fb00eeee801d1f46cc06eae234fb15fa3dd984f325315c430f13d1e0d3fac67 7ffb01a6c7ffc333ade235f0c945561970c5b98eb0904a15fec3c164fc8ccb7c 1501 117 1501 c44aa3a5ef0fe775973ebd9f915c6b78b521a2107b4b69af6fa182de1a152c1d
+                ResultsGfx 8078 1354 65 1354 c88b40a5d2d17ddd96fb2b28dbdbdbe5f1a67f7b02671c6410f7d64a306c3c40 fdb13e161a5862fe4f8c550291bba36589028b8a7cc0394638c019a0ab35760d 1354 67 1354 c88b40a5d2d17ddd96fb2b28dbdbdbe5f1a67f7b02671c6410f7d64a306c3c40
+                TitleCardGfx 806D 940 71 939 8d70c7bedf08d9d0c4a4d01290fb78032820933ab43d1636262e16e601347bc8 68b70b1e8189073c24642b8939420ac4d3c3ba1d6a1c9c00d6538390d1764f7a 940 73 940 8d70c7bedf08d9d0c4a4d01290fb78032820933ab43d1636262e16e601347bc8
+                Spring45Gfx 002E 780 75 779 3cf30cb03a63f3d160c0b2dbbd0cf1f7803871f860125a5b44bf0a1cc0dc362a 1ae40f48422bc8b884ae4c85288d3f363737cd3e6979c458b93aac15ed581c8b 780 77 780 3cf30cb03a63f3d160c0b2dbbd0cf1f7803871f860125a5b44bf0a1cc0dc362a
+                SpringGfx 8024 547 80 547 52aa905cb632245c5922a198776a7ec46936102616db34a002648b45132a9847 8e3c6d91a395d24872b4ae5da293cd21d8e68230687ef9f07feb62ec2612f416 547 82 547 52aa905cb632245c5922a198776a7ec46936102616db34a002648b45132a9847
+                MonitorTimeGfx 8052 1541 105 1541 a11f69add660dbe82c86dd3227efe6154dc2de2f3ac3f82f7806fb3698a0b902 7575dcf197dbc2f246838cfedcb95af40100d449f0a0c5a48b7294c27c9a924f 1541 107 1541 a11f69add660dbe82c86dd3227efe6154dc2de2f3ac3f82f7806fb3698a0b902
+                ExplosionGfx 0046 1256 89 1256 1f642f6b44332f7ffa63d84970ff1abbacd72bbbd400417c5b3800215d7ec5c1 434f2415b56d7623e57fd94533506804d7ee1fe3a0321f77bfe86f58d8ff6664 1257 91 1257 c37077d4a4bf8aab8c50bd454137dba54a054c5a756b0f3a00515468d81fcdfe
+                RingGfx 000E 244 46 244 530877e432ceab7df543eaae5d3a6f705137526f54cdae8251b7fec288119ea2 c1f35c87c98d27990926ad515264ab1e8a5c9385b087931d79ff24709afd6abb 244 48 244 530877e432ceab7df543eaae5d3a6f705137526f54cdae8251b7fec288119ea2
+                HudGfx 801B 300 49 300 d3df1675439d1bb043f747ba8d3a975b31af8d423a09df30da9a9cae22084deb 0a448ef2c11a1414886684523d551d65af43e4f0c02e08c73e869437b15b40fc 301 51 301 fb31ef2bca6df6e547b6e578c1455730a6665226befb550fd6c03e2a9a1a88b5
+                CheckpointGfx 800C 212 51 211 e6af441ac5e051484bcd2993ad2736262b9c8f9a379bc714711e045f3f83e7bf b376ac203a8c3cf754d2d9bcc4a55dbcb287ead82bbb304b19b7fb5181f2c3a3 212 53 212 e6af441ac5e051484bcd2993ad2736262b9c8f9a379bc714711e045f3f83e7bf
+                WaterSurfaceGfx 806E 1089 62 1089 725a485aa9184899bb08cd1eb353461b574be6c3459bea10bca132e991cd4dcf 096df644ea3a771a04c657f65d1c312009af4e31788a9e59cbcfc60de53770fb 1089 64 1089 725a485aa9184899bb08cd1eb353461b574be6c3459bea10bca132e991cd4dcf
+                FlowerGfx 0027 676 73 675 56d28520fd0ec8c01068edebad2877c14836ffc876aafc32fb4121e53b1248b2 940eaecd3f31f50adef3d7774ebf8be982f6a4d2b3a068a45ab46237439b5874 676 75 676 56d28520fd0ec8c01068edebad2877c14836ffc876aafc32fb4121e53b1248b2
+                TitleCardTextGfx 8038 268 57 268 ffa8ce899df304b9658a7cd04c561bbabcd924426482f1440f11a33986ce9c87 4644e5513e3c0ae3bdf04133b3f8b828fb3bc247161d8e48f2307ec6ae4fc540 269 59 269 81f31548635a39b9f0e91d51ee32522f81c32aa8d30195ae86adc8e9cd882b4f
+                BubbleNumbersGfx 0067 1558 57 1557 4872f3d6aeff93d14bfe19c55c183f33976f7a0030532c6cf5e2f7b8d538fc36 cde5082d23b8ac1b3aa30879be33ec7d3d690223d5f03dd2211ccbff221b8f90 1558 59 1558 4872f3d6aeff93d14bfe19c55c183f33976f7a0030532c6cf5e2f7b8d538fc36
+                StageBlocks 80E9 5538 65 5537 242da5d73e38e63adcc7c515c10cb8018b7a2dc9d9d37dde987a43d89aa5caad d94e6648e001edadb6e39cdeca11692a08bf8d24be64872cefc60c59e4df5ef6 5538 67 5538 242da5d73e38e63adcc7c515c10cb8018b7a2dc9d9d37dde987a43d89aa5caad
+                StageGfx 821F 9255 89 9255 045a1156cedc7629bd274d441c8c023d7d345a3a54c1f0c817115af0b1a749e1 c1e8785738b0c65f335527c080d1a2a1996fc3e16046e3c80d3452cc63dfd87f 9255 91 9255 045a1156cedc7629bd274d441c8c023d7d345a3a54c1f0c817115af0b1a749e1
+                BigRingFlashGfx 804D 384 36 384 6106d2692b34f73a6d928e651c9547e5dfe2dc00bdb0b4136dc42e603ce0efa7 39e7bb895c1492e9847de7a67ddc61108dc553b9443ad17d61ea5c8b47fdf8b6 385 38 385 e59af60b6dd221ca0b6c993894db9e69567814126686e9f2270bba02e2adf25b
                 """,
                 List.of(0xFDEE,0xFDF6,0xFE52,0xFDEE,0xFE52,0xFE52,0xFE52,0xFE52,0xFE52,0xFE52,0xFE52,0xFE52,0xFE52,0xFE52,0xFE52,0xFE52,0xFEA2,0xFE52,0xFEAA),5,15,
                 List.of("StageGfx","WaterSurfaceGfx","TitleCardGfx","TitleCardTextGfx","DoorGfxC","AnimalsGfx","BlockGfxC","BubbleNumbersGfx","SwitchGfx","SpringGfx","HudGfx","MonitorTimeGfx","ExplosionGfx","PointsGfx","FlowerGfx","RingGfx","BreakPoleGfxC","FloatElevatorGfxC","UnusedPlatformGfxC","SwingGfxC","CollapseFloorGfxC","SpikeBallGfx","TurbineGfxC","SpikesV4Gfx","AmenboGfx","TagaTagaGfx","YagoGfx","TonboGfx","GoalGfx","ResultsGfx","SignpostGfx","BigRingGfx","BigRingFlashGfx"),
@@ -425,51 +448,51 @@ final class CdR4ProgrammeProfiles {
                 CycleProgramme.THREE_SOURCE_ACT_GATED,0xFDC8,246,"8f833347ebfcdc63f2c194ded768b21e15a066d8095b8c6385411a2ea53f528f",
                 new RtsFact(2),BackgroundKind.DIRECT_CAMERA);
             case R42D -> new Facts("""
-                BreakPoleGfxD 0008
-                SpikesV4Gfx 8010
-                UnusedPlatformGfxD 8010
-                BlockGfxD 8020
-                SwitchGfx 8006
-                SwingGfxD 000C
-                PrizePointsGfx 8002
-                DoorGfxD 8010
-                GeyserGfx 803C
-                UnusedPlatformGfxBCD 8020
-                SlopeElevatorGfxD 8008
-                SpikeBallGfx 0010
-                ChainGfx 0008
-                TurbineGfxD 0010
-                CollapseFloorGfxD 0004
-                ElectricBeamGfxD 0005
-                ShootGfx 8012
-                TonboGfx 002A
-                TagaTagaGfx 001C
-                YagoGfx 0024
-                FloatElevatorGfxD 8020
-                AmenboGfx 0020
-                WoodBlockGfx 8008
-                PointsGfx 0005
-                CapsuleGfx 8068
-                BigRingGfx 806A
-                GoalGfx 8018
-                SignpostGfx 804C
-                ResultsGfx 8078
-                TitleCardGfx 806D
-                Spring45Gfx 002E
-                SpringGfx 8024
-                MonitorTimeGfx 8052
-                ExplosionGfx 0046
-                RingGfx 000E
-                HudGfx 801B
-                CheckpointGfx 800C
-                WaterSurfaceGfx 806E
-                FlowerGfx 0027
-                TitleCardTextGfx 8038
-                BubbleNumbersGfx 0067
-                StageBlocks 808F
-                StageGfx 8240
-                AnimalsGfx 8010
-                BigRingFlashGfx 804D
+                BreakPoleGfxD 0008 170 44 169 fc9b15eab9130289d66d8cfcaad1e592667e03e94e3b7981f55bf8818983f2eb 539cc25aebd8053873bbc322438974dafdc34aefbab258f874066d2ec749e723 170 46 170 fc9b15eab9130289d66d8cfcaad1e592667e03e94e3b7981f55bf8818983f2eb
+                SpikesV4Gfx 8010 154 38 153 bbc5f9665364f85c4068ad62d12d2aec7f78b603bca0704534b92c4f82298a72 72665dcfa02abb8b558d854148ee7c1d4422316ce3a3caf9a86619ef18ec334b 154 40 154 bbc5f9665364f85c4068ad62d12d2aec7f78b603bca0704534b92c4f82298a72
+                UnusedPlatformGfxD 8010 400 71 400 c8d5ccec47fa741ea29d5f2690ee70c6a89dd28afd0077b751bd1c683b1657f1 52ba3adba95f1a772521c3956bc351423b0ea889133a7580a01a595799bfaca8 400 73 400 c8d5ccec47fa741ea29d5f2690ee70c6a89dd28afd0077b751bd1c683b1657f1
+                BlockGfxD 8020 696 95 695 d806a116624c4b33e1359fa08f9bbde90a791cff80c4513923de43e995aaa859 2bc036638b7575bf9902fd02fde6116ca3fa60e7d2f8566de88e1821a9df6d41 696 97 696 d806a116624c4b33e1359fa08f9bbde90a791cff80c4513923de43e995aaa859
+                SwitchGfx 8006 82 20 82 a7c595cdd4d541ac97948c563f81f056b14b2d0c40c38f4dfe12d267942642e7 8f8b7e742c91918853011a322ce6705e83b109e33ad474467a99c8055c67f314 82 22 82 a7c595cdd4d541ac97948c563f81f056b14b2d0c40c38f4dfe12d267942642e7
+                SwingGfxD 000C 273 74 273 a7df54f38e7be30f6a2d59194b36797329d92fcec2236266cb3e0c8cbd933c8e c22923ba0421fe499fee3d6a4c2f713669bd22c28d6faba9e66dd5e2dd4faee8 273 76 273 a7df54f38e7be30f6a2d59194b36797329d92fcec2236266cb3e0c8cbd933c8e
+                PrizePointsGfx 8002 35 13 35 7c9cb1140c4cb5a820f9fe688ee7768112967cc4ab48932b5629e94701e15d62 392cd91bad2777cfadabfd1961be78f35af1ccfa01276469464f35af68c3f7ca 35 15 35 7c9cb1140c4cb5a820f9fe688ee7768112967cc4ab48932b5629e94701e15d62
+                DoorGfxD 8010 214 59 214 ba7e2927e4e89da3cd443730d097133f47248b1b138a43f9bf4a7b4787417959 8adf24293a5041f97f9efc33665d364a3e36906bb3c8f8ca98b2a62d4e919a5a 215 61 215 3f059a3deab91b5a7f3558ad865955547b7ba73258368b3567580d067bcd67bb
+                GeyserGfx 803C 582 52 582 7a491f965047f62189b6eee13b2b57c6c7ec1266a1e0694d37b124dadde5eab3 a3d1646acbd49b64b8e3aec2ab2340910ef92f68cc648a282273adf8ed3c9488 583 54 583 125f32de03bb4c6c60e12ddc49cef1eca5bce1297a9c3b46a716a14c2f5f99ea
+                UnusedPlatformGfxBCD 8020 434 82 434 2bda34166f29d16803d72e7d604a9a674fdaf019960e1e6d10ed2c195a237a50 5bd264873b0feddb81840716a931f6c5973245a023b22e827a5f6701b08e79f6 435 84 435 97b084c25f6f19e1926d4de83b1f5bd9caf3a75fde0a611da9f15f87abe687af
+                SlopeElevatorGfxD 8008 180 50 178 40aa0cad686a4cd36a2b17ab5e529cd939c86ba2e3fa873b6af8a48e523f4f19 ab4b7e19466031f774ba8639a89da9fe3a12bc20cdcf6acf0c97ace87a256567 180 52 180 40aa0cad686a4cd36a2b17ab5e529cd939c86ba2e3fa873b6af8a48e523f4f19
+                SpikeBallGfx 0010 266 53 266 f138f259dbb8e10841c3c2999edb4f07ce91e50d38ebf4cb7e6e1ed132137606 6a84100136936dd16d30e77076ee9d1df60954ccc7a278d222684dffce63c68f 267 55 267 2c16aa672c78198ec68c0a4ca31cdbc700b03d99c65d6dbadb4a86666b866ace
+                ChainGfx 0008 162 39 161 48d66771ed0561c49dace9415db18cc5289f98cfffa5462f7099dabf2d18888b d8ec3695235800e3fcc5bc7be45ac463125cac4852ef2dc2885ef41a97e1ab87 162 41 162 48d66771ed0561c49dace9415db18cc5289f98cfffa5462f7099dabf2d18888b
+                TurbineGfxD 0010 370 66 369 7c7d8af0c43484f3abb68373b3bd2c8b99cabeed522e4b855a4716ce8630e5e8 43712a9bf004dd544992d47a63353c549e7fbcd9ddc924ef4440cf2ecaafef78 370 68 370 7c7d8af0c43484f3abb68373b3bd2c8b99cabeed522e4b855a4716ce8630e5e8
+                CollapseFloorGfxD 0004 122 37 121 20e075a013a567a65a52da2c94a70e16958cdf15ac1dc0a8ed3d99efdef28226 c1b257bcbef9a6164f4bd9c525a2ee5d1819d18581d02f6798d1aac4455fab1e 122 39 122 20e075a013a567a65a52da2c94a70e16958cdf15ac1dc0a8ed3d99efdef28226
+                ElectricBeamGfxD 0005 126 38 126 96159dce00dcb5dcb66417fda83717d29a7c6bd4fb5281a3828389c368792a8c 9ed4956cfc353adf378efcd3b1ed3bd8825eeca688870fd550556237d3b99a38 127 40 127 a6fff8fb165c1d4032e2d0eef16d1123537b0026c5740ab99a2171eb7ac4e778
+                ShootGfx 8012 412 81 412 9bdec1913a358a123d93403357d8af6803f1d9ff13e5f25a5b504936ec80b817 dac142cc8ee5322793026a2130201c732c2ec6cc18e102fd063de942e286db4b 413 83 413 0c679a395503fecc477ae87b544e17a572e9d52fc0fcabbedd09e4adab859de9
+                TonboGfx 002A 676 66 675 3a84550334baac52f4b559f828e42c59da8b6154c08150e64dff1af15150a3a2 c1cf81069466c9d6819e1e5bf97e70ee34e6636d5d7c5f1e8e0a567b766f8141 676 68 676 3a84550334baac52f4b559f828e42c59da8b6154c08150e64dff1af15150a3a2
+                TagaTagaGfx 001C 383 80 383 771017ab60633d7dccbd2eb325b45538d4e6e6dcb2311182d72065e6d7bad589 e40619e823d8d91b3af5484183f974ddf330910c1579e1d34e9ebc32a3938202 383 82 383 771017ab60633d7dccbd2eb325b45538d4e6e6dcb2311182d72065e6d7bad589
+                YagoGfx 0024 727 93 727 393b5f068b88223d0a08e1d2482a0529b4fdf4b6d762eed31f2a87f8ea12338c 873cae33a92b491f3448c19377169bb5a03e1a523993e07c6e45969ca6b03799 727 95 727 393b5f068b88223d0a08e1d2482a0529b4fdf4b6d762eed31f2a87f8ea12338c
+                FloatElevatorGfxD 8020 460 89 459 10ff48df55ef76adc36b6d21574cab354548edc5332416b1473478bfec267d57 0efe73c0c28fafc2e9a44dcc288054fa9af66d9558d2dd60acf1ca057e18047a 461 91 461 12cf3573fdac5b58c1d4c7e004a5ee01e066974220d42a65c019cf594aee4578
+                AmenboGfx 0020 536 69 536 b83b73e321758da08e9a7bf202acc2f72f23788fad11409ca8393638269e1e87 96bd4bf08d453de37765ac532e47111ef34e8cc5c80e55050235530ecb1cea59 537 71 537 dfe03ae9694f9e4927de705da583cd29dcfa7afda9172c7e8967d4b5fe76fa46
+                WoodBlockGfx 8008 148 46 147 af23e47a4803612393e718469123272932ad46eef41fb5e4b91b0086ec716334 a5f970c14ccaedaf6780c1dca0f5820b3f1a3db2cff8252bbcffac18ca001e65 148 48 148 af23e47a4803612393e718469123272932ad46eef41fb5e4b91b0086ec716334
+                PointsGfx 0005 101 29 101 9c01f8d17db4a5a30267f66d3c1e13d17223af14c6312963b69ab36fb9356176 2270d6453b2d2526412afab1ba19c3cf175b571a41766dc4fe0da422283d57db 101 31 101 9c01f8d17db4a5a30267f66d3c1e13d17223af14c6312963b69ab36fb9356176
+                CapsuleGfx 8068 1704 99 1703 da055a9f3c79f60b0bf6a784e89785bdc65eb37c7a598d95cf6a8f5fdc9ab808 b61c6d944dce535ccb74d0a374ac873e95a5e0b3911b465f62bb025b03660236 1704 101 1704 da055a9f3c79f60b0bf6a784e89785bdc65eb37c7a598d95cf6a8f5fdc9ab808
+                BigRingGfx 806A 1034 59 1033 5bfa84d7d4335e190e3287337f1595b3808fd1d3592615bfbc684d9a2bbdebf6 31cec10e677637f390c0a2b25d09f4ee9e3fe39f651801546e69b13150cee70c 1034 61 1034 5bfa84d7d4335e190e3287337f1595b3808fd1d3592615bfbc684d9a2bbdebf6
+                GoalGfx 8018 448 86 448 24aac969ce8508df0f412a0ad98d87102adc2029b3ae1f28b972eb7b6646979f 68359c6e3dc65e9cf72db3d20ce887acc3728fdd32de20abc1fd5af185ff4c9a 449 88 449 1ba1c7e9a34a071c8786cc2eb94eaf2adf0e58b480ef8d62f6501bb7f3006250
+                SignpostGfx 804C 1500 115 1500 2fb00eeee801d1f46cc06eae234fb15fa3dd984f325315c430f13d1e0d3fac67 7ffb01a6c7ffc333ade235f0c945561970c5b98eb0904a15fec3c164fc8ccb7c 1501 117 1501 c44aa3a5ef0fe775973ebd9f915c6b78b521a2107b4b69af6fa182de1a152c1d
+                ResultsGfx 8078 1354 65 1354 c88b40a5d2d17ddd96fb2b28dbdbdbe5f1a67f7b02671c6410f7d64a306c3c40 fdb13e161a5862fe4f8c550291bba36589028b8a7cc0394638c019a0ab35760d 1354 67 1354 c88b40a5d2d17ddd96fb2b28dbdbdbe5f1a67f7b02671c6410f7d64a306c3c40
+                TitleCardGfx 806D 940 71 939 8d70c7bedf08d9d0c4a4d01290fb78032820933ab43d1636262e16e601347bc8 68b70b1e8189073c24642b8939420ac4d3c3ba1d6a1c9c00d6538390d1764f7a 940 73 940 8d70c7bedf08d9d0c4a4d01290fb78032820933ab43d1636262e16e601347bc8
+                Spring45Gfx 002E 780 75 779 3cf30cb03a63f3d160c0b2dbbd0cf1f7803871f860125a5b44bf0a1cc0dc362a 1ae40f48422bc8b884ae4c85288d3f363737cd3e6979c458b93aac15ed581c8b 780 77 780 3cf30cb03a63f3d160c0b2dbbd0cf1f7803871f860125a5b44bf0a1cc0dc362a
+                SpringGfx 8024 547 80 547 52aa905cb632245c5922a198776a7ec46936102616db34a002648b45132a9847 8e3c6d91a395d24872b4ae5da293cd21d8e68230687ef9f07feb62ec2612f416 547 82 547 52aa905cb632245c5922a198776a7ec46936102616db34a002648b45132a9847
+                MonitorTimeGfx 8052 1541 105 1541 a11f69add660dbe82c86dd3227efe6154dc2de2f3ac3f82f7806fb3698a0b902 7575dcf197dbc2f246838cfedcb95af40100d449f0a0c5a48b7294c27c9a924f 1541 107 1541 a11f69add660dbe82c86dd3227efe6154dc2de2f3ac3f82f7806fb3698a0b902
+                ExplosionGfx 0046 1256 89 1256 1f642f6b44332f7ffa63d84970ff1abbacd72bbbd400417c5b3800215d7ec5c1 434f2415b56d7623e57fd94533506804d7ee1fe3a0321f77bfe86f58d8ff6664 1257 91 1257 c37077d4a4bf8aab8c50bd454137dba54a054c5a756b0f3a00515468d81fcdfe
+                RingGfx 000E 244 46 244 530877e432ceab7df543eaae5d3a6f705137526f54cdae8251b7fec288119ea2 c1f35c87c98d27990926ad515264ab1e8a5c9385b087931d79ff24709afd6abb 244 48 244 530877e432ceab7df543eaae5d3a6f705137526f54cdae8251b7fec288119ea2
+                HudGfx 801B 300 49 300 d3df1675439d1bb043f747ba8d3a975b31af8d423a09df30da9a9cae22084deb 0a448ef2c11a1414886684523d551d65af43e4f0c02e08c73e869437b15b40fc 301 51 301 fb31ef2bca6df6e547b6e578c1455730a6665226befb550fd6c03e2a9a1a88b5
+                CheckpointGfx 800C 212 51 211 e6af441ac5e051484bcd2993ad2736262b9c8f9a379bc714711e045f3f83e7bf b376ac203a8c3cf754d2d9bcc4a55dbcb287ead82bbb304b19b7fb5181f2c3a3 212 53 212 e6af441ac5e051484bcd2993ad2736262b9c8f9a379bc714711e045f3f83e7bf
+                WaterSurfaceGfx 806E 1089 62 1089 725a485aa9184899bb08cd1eb353461b574be6c3459bea10bca132e991cd4dcf 096df644ea3a771a04c657f65d1c312009af4e31788a9e59cbcfc60de53770fb 1089 64 1089 725a485aa9184899bb08cd1eb353461b574be6c3459bea10bca132e991cd4dcf
+                FlowerGfx 0027 676 73 675 56d28520fd0ec8c01068edebad2877c14836ffc876aafc32fb4121e53b1248b2 940eaecd3f31f50adef3d7774ebf8be982f6a4d2b3a068a45ab46237439b5874 676 75 676 56d28520fd0ec8c01068edebad2877c14836ffc876aafc32fb4121e53b1248b2
+                TitleCardTextGfx 8038 268 57 268 ffa8ce899df304b9658a7cd04c561bbabcd924426482f1440f11a33986ce9c87 4644e5513e3c0ae3bdf04133b3f8b828fb3bc247161d8e48f2307ec6ae4fc540 269 59 269 81f31548635a39b9f0e91d51ee32522f81c32aa8d30195ae86adc8e9cd882b4f
+                BubbleNumbersGfx 0067 1558 57 1557 4872f3d6aeff93d14bfe19c55c183f33976f7a0030532c6cf5e2f7b8d538fc36 cde5082d23b8ac1b3aa30879be33ec7d3d690223d5f03dd2211ccbff221b8f90 1558 59 1558 4872f3d6aeff93d14bfe19c55c183f33976f7a0030532c6cf5e2f7b8d538fc36
+                StageBlocks 808F 3462 59 3462 5bcf91ccfb2bc44e294283230a2ed8ca56799bd7fa1c81377c1f7ab19586a049 934ed7af0f73cbef95d42995d1e268c9caaa8bf543dd5d977bce5a6054c56848 3463 61 3463 93f823c7525d53bd0706a9b96268a5b2f5023b2495f2a04f926c3e8de312535c
+                StageGfx 8240 10318 99 10318 2691bdf4ccc37512f71229adefa6a64a76c537a99afddecaab3296ce775c0bba beba50dd97828769e7528540ee98eda0d6211081b27f845d8e22fd429a806354 10319 101 10319 d2b33e517ec2e239a4e0e487780d9986336355df3404dd43e9426ff1e36e593d
+                AnimalsGfx 8010 356 70 355 88f31ca8417f41db54a1379bf54a2a375927cd6c520b6a6737989f27f8b205a6 391983566d0cc50c15360a364e7f1598fbb42c52d9690f50f31a5580b74e6d7b 356 72 356 88f31ca8417f41db54a1379bf54a2a375927cd6c520b6a6737989f27f8b205a6
+                BigRingFlashGfx 804D 384 36 384 6106d2692b34f73a6d928e651c9547e5dfe2dc00bdb0b4136dc42e603ce0efa7 39e7bb895c1492e9847de7a67ddc61108dc553b9443ad17d61ea5c8b47fdf8b6 385 38 385 e59af60b6dd221ca0b6c993894db9e69567814126686e9f2270bba02e2adf25b
                 """,
                 List.of(0xFDDC,0xFDE4,0xFE40,0xFDDC,0xFE40,0xFE40,0xFE40,0xFE40,0xFE40,0xFE40,0xFE40,0xFE40,0xFE40,0xFE40,0xFE40,0xFE40,0xFE90,0xFE40,0xFE98),5,15,
                 List.of("StageGfx","WaterSurfaceGfx","TitleCardGfx","TitleCardTextGfx","DoorGfxD","AnimalsGfx","BlockGfxD","BubbleNumbersGfx","SwitchGfx","SpringGfx","HudGfx","MonitorTimeGfx","ExplosionGfx","PointsGfx","FlowerGfx","RingGfx","BreakPoleGfxD","FloatElevatorGfxD","UnusedPlatformGfxD","SwingGfxD","CollapseFloorGfxD","SpikeBallGfx","TurbineGfxD","SpikesV4Gfx","AmenboGfx","TagaTagaGfx","YagoGfx","TonboGfx","GoalGfx","ResultsGfx","SignpostGfx","BigRingGfx","BigRingFlashGfx"),
@@ -478,37 +501,37 @@ final class CdR4ProgrammeProfiles {
                 CycleProgramme.THREE_SOURCE_ACT_GATED,0xFDB6,246,"5cf8964af93388b728c74ed729fdc21d90aca02a27c78284cf8fcb7945e6fcd7",
                 new RtsFact(2),BackgroundKind.DIRECT_CAMERA);
             case R43C -> new Facts("""
-                PointsGfx 0005
-                CapsuleGfx 8068
-                BigRingGfx 806A
-                GoalGfx 8018
-                SignpostGfx 804C
-                ResultsGfx 8078
-                TitleCardGfx 806D
-                Spring45Gfx 002E
-                SpringGfx 8024
-                MonitorTimeGfx 8052
-                ExplosionGfx 0046
-                RingGfx 000E
-                HudGfx 801B
-                CheckpointGfx 800C
-                WaterSurfaceGfx 806E
-                FlowerGfx 0027
-                TitleCardTextGfx 8038
-                BubbleNumbersGfx 0067
-                StageBlocks 80E9
-                StageGfx 821F
-                TonboGfx 002A
-                DoorGfxC 8010
-                DoorGfxD 8010
-                BlockGfxC 8020
-                BlockGfxD 8020
-                AnimalsGfx 8010
-                SwitchGfx 8006
-                BossChaseGfx 80A6
-                BossBubbleGfx 00FA
-                SwingGfxC 000C
-                SwingGfxD 000C
+                PointsGfx 0005 101 29 101 9c01f8d17db4a5a30267f66d3c1e13d17223af14c6312963b69ab36fb9356176 2270d6453b2d2526412afab1ba19c3cf175b571a41766dc4fe0da422283d57db 101 31 101 9c01f8d17db4a5a30267f66d3c1e13d17223af14c6312963b69ab36fb9356176
+                CapsuleGfx 8068 1704 99 1703 da055a9f3c79f60b0bf6a784e89785bdc65eb37c7a598d95cf6a8f5fdc9ab808 b61c6d944dce535ccb74d0a374ac873e95a5e0b3911b465f62bb025b03660236 1704 101 1704 da055a9f3c79f60b0bf6a784e89785bdc65eb37c7a598d95cf6a8f5fdc9ab808
+                BigRingGfx 806A 1034 59 1033 5bfa84d7d4335e190e3287337f1595b3808fd1d3592615bfbc684d9a2bbdebf6 31cec10e677637f390c0a2b25d09f4ee9e3fe39f651801546e69b13150cee70c 1034 61 1034 5bfa84d7d4335e190e3287337f1595b3808fd1d3592615bfbc684d9a2bbdebf6
+                GoalGfx 8018 448 86 448 24aac969ce8508df0f412a0ad98d87102adc2029b3ae1f28b972eb7b6646979f 68359c6e3dc65e9cf72db3d20ce887acc3728fdd32de20abc1fd5af185ff4c9a 449 88 449 1ba1c7e9a34a071c8786cc2eb94eaf2adf0e58b480ef8d62f6501bb7f3006250
+                SignpostGfx 804C 1500 115 1500 2fb00eeee801d1f46cc06eae234fb15fa3dd984f325315c430f13d1e0d3fac67 7ffb01a6c7ffc333ade235f0c945561970c5b98eb0904a15fec3c164fc8ccb7c 1501 117 1501 c44aa3a5ef0fe775973ebd9f915c6b78b521a2107b4b69af6fa182de1a152c1d
+                ResultsGfx 8078 1354 65 1354 c88b40a5d2d17ddd96fb2b28dbdbdbe5f1a67f7b02671c6410f7d64a306c3c40 fdb13e161a5862fe4f8c550291bba36589028b8a7cc0394638c019a0ab35760d 1354 67 1354 c88b40a5d2d17ddd96fb2b28dbdbdbe5f1a67f7b02671c6410f7d64a306c3c40
+                TitleCardGfx 806D 940 71 939 8d70c7bedf08d9d0c4a4d01290fb78032820933ab43d1636262e16e601347bc8 68b70b1e8189073c24642b8939420ac4d3c3ba1d6a1c9c00d6538390d1764f7a 940 73 940 8d70c7bedf08d9d0c4a4d01290fb78032820933ab43d1636262e16e601347bc8
+                Spring45Gfx 002E 780 75 779 3cf30cb03a63f3d160c0b2dbbd0cf1f7803871f860125a5b44bf0a1cc0dc362a 1ae40f48422bc8b884ae4c85288d3f363737cd3e6979c458b93aac15ed581c8b 780 77 780 3cf30cb03a63f3d160c0b2dbbd0cf1f7803871f860125a5b44bf0a1cc0dc362a
+                SpringGfx 8024 547 80 547 52aa905cb632245c5922a198776a7ec46936102616db34a002648b45132a9847 8e3c6d91a395d24872b4ae5da293cd21d8e68230687ef9f07feb62ec2612f416 547 82 547 52aa905cb632245c5922a198776a7ec46936102616db34a002648b45132a9847
+                MonitorTimeGfx 8052 1541 105 1541 a11f69add660dbe82c86dd3227efe6154dc2de2f3ac3f82f7806fb3698a0b902 7575dcf197dbc2f246838cfedcb95af40100d449f0a0c5a48b7294c27c9a924f 1541 107 1541 a11f69add660dbe82c86dd3227efe6154dc2de2f3ac3f82f7806fb3698a0b902
+                ExplosionGfx 0046 1256 89 1256 1f642f6b44332f7ffa63d84970ff1abbacd72bbbd400417c5b3800215d7ec5c1 434f2415b56d7623e57fd94533506804d7ee1fe3a0321f77bfe86f58d8ff6664 1257 91 1257 c37077d4a4bf8aab8c50bd454137dba54a054c5a756b0f3a00515468d81fcdfe
+                RingGfx 000E 244 46 244 530877e432ceab7df543eaae5d3a6f705137526f54cdae8251b7fec288119ea2 c1f35c87c98d27990926ad515264ab1e8a5c9385b087931d79ff24709afd6abb 244 48 244 530877e432ceab7df543eaae5d3a6f705137526f54cdae8251b7fec288119ea2
+                HudGfx 801B 300 49 300 d3df1675439d1bb043f747ba8d3a975b31af8d423a09df30da9a9cae22084deb 0a448ef2c11a1414886684523d551d65af43e4f0c02e08c73e869437b15b40fc 301 51 301 fb31ef2bca6df6e547b6e578c1455730a6665226befb550fd6c03e2a9a1a88b5
+                CheckpointGfx 800C 212 51 211 e6af441ac5e051484bcd2993ad2736262b9c8f9a379bc714711e045f3f83e7bf b376ac203a8c3cf754d2d9bcc4a55dbcb287ead82bbb304b19b7fb5181f2c3a3 212 53 212 e6af441ac5e051484bcd2993ad2736262b9c8f9a379bc714711e045f3f83e7bf
+                WaterSurfaceGfx 806E 1089 62 1089 725a485aa9184899bb08cd1eb353461b574be6c3459bea10bca132e991cd4dcf 096df644ea3a771a04c657f65d1c312009af4e31788a9e59cbcfc60de53770fb 1089 64 1089 725a485aa9184899bb08cd1eb353461b574be6c3459bea10bca132e991cd4dcf
+                FlowerGfx 0027 676 73 675 56d28520fd0ec8c01068edebad2877c14836ffc876aafc32fb4121e53b1248b2 940eaecd3f31f50adef3d7774ebf8be982f6a4d2b3a068a45ab46237439b5874 676 75 676 56d28520fd0ec8c01068edebad2877c14836ffc876aafc32fb4121e53b1248b2
+                TitleCardTextGfx 8038 268 57 268 ffa8ce899df304b9658a7cd04c561bbabcd924426482f1440f11a33986ce9c87 4644e5513e3c0ae3bdf04133b3f8b828fb3bc247161d8e48f2307ec6ae4fc540 269 59 269 81f31548635a39b9f0e91d51ee32522f81c32aa8d30195ae86adc8e9cd882b4f
+                BubbleNumbersGfx 0067 1558 57 1557 4872f3d6aeff93d14bfe19c55c183f33976f7a0030532c6cf5e2f7b8d538fc36 cde5082d23b8ac1b3aa30879be33ec7d3d690223d5f03dd2211ccbff221b8f90 1558 59 1558 4872f3d6aeff93d14bfe19c55c183f33976f7a0030532c6cf5e2f7b8d538fc36
+                StageBlocks 80E9 5538 65 5537 242da5d73e38e63adcc7c515c10cb8018b7a2dc9d9d37dde987a43d89aa5caad d94e6648e001edadb6e39cdeca11692a08bf8d24be64872cefc60c59e4df5ef6 5538 67 5538 242da5d73e38e63adcc7c515c10cb8018b7a2dc9d9d37dde987a43d89aa5caad
+                StageGfx 821F 9255 89 9255 0a91a5a08d0a7499eb3c06043b30eab5df2e697f83d88232a9a2c36a5404ac2a c1e8785738b0c65f335527c080d1a2a1996fc3e16046e3c80d3452cc63dfd87f 9255 91 9255 0a91a5a08d0a7499eb3c06043b30eab5df2e697f83d88232a9a2c36a5404ac2a
+                TonboGfx 002A 676 66 675 3a84550334baac52f4b559f828e42c59da8b6154c08150e64dff1af15150a3a2 c1cf81069466c9d6819e1e5bf97e70ee34e6636d5d7c5f1e8e0a567b766f8141 676 68 676 3a84550334baac52f4b559f828e42c59da8b6154c08150e64dff1af15150a3a2
+                DoorGfxC 8010 230 65 230 3a5a92281033d4ecfa7d2120b2fcaa441564ce7dca6baadd3c3bdf4bd5e5236a 721b24b17907ea3be7d69454da63de0ff46632441f36f0ec3adbec587813ff89 230 67 230 3a5a92281033d4ecfa7d2120b2fcaa441564ce7dca6baadd3c3bdf4bd5e5236a
+                DoorGfxD 8010 214 59 214 ba7e2927e4e89da3cd443730d097133f47248b1b138a43f9bf4a7b4787417959 8adf24293a5041f97f9efc33665d364a3e36906bb3c8f8ca98b2a62d4e919a5a 215 61 215 bd5e3343942ebc99e06fe9c5eb11ee6926fc2ecdcd60dbdea3bb6deffc8fcd58
+                BlockGfxC 8020 560 97 560 a133118c62b56c56057b0ed9db541edcaa443bf70d6e2cbe27dd55965a8e83fc 330c811b541b1bfe5c132183fe2f6aee49a79a5227058698c86230ff9acfd7af 560 99 560 a133118c62b56c56057b0ed9db541edcaa443bf70d6e2cbe27dd55965a8e83fc
+                BlockGfxD 8020 696 95 695 d806a116624c4b33e1359fa08f9bbde90a791cff80c4513923de43e995aaa859 2bc036638b7575bf9902fd02fde6116ca3fa60e7d2f8566de88e1821a9df6d41 696 97 696 d806a116624c4b33e1359fa08f9bbde90a791cff80c4513923de43e995aaa859
+                AnimalsGfx 8010 356 70 355 88f31ca8417f41db54a1379bf54a2a375927cd6c520b6a6737989f27f8b205a6 391983566d0cc50c15360a364e7f1598fbb42c52d9690f50f31a5580b74e6d7b 356 72 356 88f31ca8417f41db54a1379bf54a2a375927cd6c520b6a6737989f27f8b205a6
+                SwitchGfx 8006 82 20 82 a7c595cdd4d541ac97948c563f81f056b14b2d0c40c38f4dfe12d267942642e7 8f8b7e742c91918853011a322ce6705e83b109e33ad474467a99c8055c67f314 82 22 82 a7c595cdd4d541ac97948c563f81f056b14b2d0c40c38f4dfe12d267942642e7
+                BossChaseGfx 80A6 1998 97 1997 d12f26278ab6ab00000a5d856166356d3fc34c74b90de608431f08ccfecbadce 23847410b7b81e1ef3874c421127f0faee3f7b732668d6ada032a9a359adaa2e 1998 99 1998 d12f26278ab6ab00000a5d856166356d3fc34c74b90de608431f08ccfecbadce
+                BossBubbleGfx 00FA 3528 123 3527 45546b1dbfd690187f1fc9adfa0673858ad5bca586dab14bd46320c56be67e60 cb6544a869456214f6f759e0c9df51677461d4f264c612d8808c7be15bd21b57 3528 125 3528 45546b1dbfd690187f1fc9adfa0673858ad5bca586dab14bd46320c56be67e60
+                SwingGfxC 000C 273 74 273 a860da5e50fd479f2b6ce61e5ceb7f9981cf0e87135720251994711daf3a18ce c22923ba0421fe499fee3d6a4c2f713669bd22c28d6faba9e66dd5e2dd4faee8 273 76 273 a860da5e50fd479f2b6ce61e5ceb7f9981cf0e87135720251994711daf3a18ce
+                SwingGfxD 000C 273 74 273 a7df54f38e7be30f6a2d59194b36797329d92fcec2236266cb3e0c8cbd933c8e c22923ba0421fe499fee3d6a4c2f713669bd22c28d6faba9e66dd5e2dd4faee8 273 76 273 a7df54f38e7be30f6a2d59194b36797329d92fcec2236266cb3e0c8cbd933c8e
                 """,
                 List.of(0xD244,0xD24C,0xD290,0xD244,0xD2BC,0xD290,0xD290,0xD290,0xD290,0xD290,0xD290,0xD290,0xD290,0xD290,0xD290,0xD290,0xD2C4,0xD290,0xD2CC),6,11,
                 List.of("StageGfx","WaterSurfaceGfx","TitleCardGfx","TitleCardTextGfx","BubbleNumbersGfx","SpringGfx","HudGfx","MonitorTimeGfx","ExplosionGfx","PointsGfx","FlowerGfx","RingGfx","BossChaseGfx","SwingGfxC","TonboGfx","DoorGfxC","AnimalsGfx","BlockGfxC","SwitchGfx","BossBubbleGfx","ResultsGfx","CapsuleGfx"),
@@ -517,37 +540,37 @@ final class CdR4ProgrammeProfiles {
                 CycleProgramme.THREE_SOURCE_ACT_GATED,0xD21E,182,"78e14560fa4c0d201231605eca94ff8294d00a2c31f3c72f5675f9f7ff50507f",
                 new RtsFact(2),BackgroundKind.DIRECT_CAMERA);
             case R43D -> new Facts("""
-                PointsGfx 0005
-                CapsuleGfx 8068
-                BigRingGfx 806A
-                GoalGfx 8018
-                SignpostGfx 804C
-                ResultsGfx 8078
-                TitleCardGfx 806D
-                Spring45Gfx 002E
-                SpringGfx 8024
-                MonitorTimeGfx 8052
-                ExplosionGfx 0046
-                RingGfx 000E
-                HudGfx 801B
-                CheckpointGfx 800C
-                WaterSurfaceGfx 806E
-                FlowerGfx 0027
-                TitleCardTextGfx 8038
-                BubbleNumbersGfx 0067
-                StageBlocks 80B0
-                StageGfx 8237
-                TonboGfx 002A
-                DoorGfxC 8010
-                DoorGfxD 8010
-                BlockGfxC 8020
-                BlockGfxD 8020
-                AnimalsGfx 8010
-                SwitchGfx 8006
-                BossChaseGfx 80A6
-                BossBubbleGfx 00FA
-                SwingGfxD 000C
-                SwingGfxC 000C
+                PointsGfx 0005 101 29 101 9c01f8d17db4a5a30267f66d3c1e13d17223af14c6312963b69ab36fb9356176 2270d6453b2d2526412afab1ba19c3cf175b571a41766dc4fe0da422283d57db 101 31 101 9c01f8d17db4a5a30267f66d3c1e13d17223af14c6312963b69ab36fb9356176
+                CapsuleGfx 8068 1704 99 1703 da055a9f3c79f60b0bf6a784e89785bdc65eb37c7a598d95cf6a8f5fdc9ab808 b61c6d944dce535ccb74d0a374ac873e95a5e0b3911b465f62bb025b03660236 1704 101 1704 da055a9f3c79f60b0bf6a784e89785bdc65eb37c7a598d95cf6a8f5fdc9ab808
+                BigRingGfx 806A 1034 59 1033 5bfa84d7d4335e190e3287337f1595b3808fd1d3592615bfbc684d9a2bbdebf6 31cec10e677637f390c0a2b25d09f4ee9e3fe39f651801546e69b13150cee70c 1034 61 1034 5bfa84d7d4335e190e3287337f1595b3808fd1d3592615bfbc684d9a2bbdebf6
+                GoalGfx 8018 448 86 448 24aac969ce8508df0f412a0ad98d87102adc2029b3ae1f28b972eb7b6646979f 68359c6e3dc65e9cf72db3d20ce887acc3728fdd32de20abc1fd5af185ff4c9a 449 88 449 1ba1c7e9a34a071c8786cc2eb94eaf2adf0e58b480ef8d62f6501bb7f3006250
+                SignpostGfx 804C 1500 115 1500 2fb00eeee801d1f46cc06eae234fb15fa3dd984f325315c430f13d1e0d3fac67 7ffb01a6c7ffc333ade235f0c945561970c5b98eb0904a15fec3c164fc8ccb7c 1501 117 1501 c44aa3a5ef0fe775973ebd9f915c6b78b521a2107b4b69af6fa182de1a152c1d
+                ResultsGfx 8078 1354 65 1354 c88b40a5d2d17ddd96fb2b28dbdbdbe5f1a67f7b02671c6410f7d64a306c3c40 fdb13e161a5862fe4f8c550291bba36589028b8a7cc0394638c019a0ab35760d 1354 67 1354 c88b40a5d2d17ddd96fb2b28dbdbdbe5f1a67f7b02671c6410f7d64a306c3c40
+                TitleCardGfx 806D 940 71 939 8d70c7bedf08d9d0c4a4d01290fb78032820933ab43d1636262e16e601347bc8 68b70b1e8189073c24642b8939420ac4d3c3ba1d6a1c9c00d6538390d1764f7a 940 73 940 8d70c7bedf08d9d0c4a4d01290fb78032820933ab43d1636262e16e601347bc8
+                Spring45Gfx 002E 780 75 779 3cf30cb03a63f3d160c0b2dbbd0cf1f7803871f860125a5b44bf0a1cc0dc362a 1ae40f48422bc8b884ae4c85288d3f363737cd3e6979c458b93aac15ed581c8b 780 77 780 3cf30cb03a63f3d160c0b2dbbd0cf1f7803871f860125a5b44bf0a1cc0dc362a
+                SpringGfx 8024 547 80 547 52aa905cb632245c5922a198776a7ec46936102616db34a002648b45132a9847 8e3c6d91a395d24872b4ae5da293cd21d8e68230687ef9f07feb62ec2612f416 547 82 547 52aa905cb632245c5922a198776a7ec46936102616db34a002648b45132a9847
+                MonitorTimeGfx 8052 1541 105 1541 a11f69add660dbe82c86dd3227efe6154dc2de2f3ac3f82f7806fb3698a0b902 7575dcf197dbc2f246838cfedcb95af40100d449f0a0c5a48b7294c27c9a924f 1541 107 1541 a11f69add660dbe82c86dd3227efe6154dc2de2f3ac3f82f7806fb3698a0b902
+                ExplosionGfx 0046 1256 89 1256 1f642f6b44332f7ffa63d84970ff1abbacd72bbbd400417c5b3800215d7ec5c1 434f2415b56d7623e57fd94533506804d7ee1fe3a0321f77bfe86f58d8ff6664 1257 91 1257 c37077d4a4bf8aab8c50bd454137dba54a054c5a756b0f3a00515468d81fcdfe
+                RingGfx 000E 244 46 244 530877e432ceab7df543eaae5d3a6f705137526f54cdae8251b7fec288119ea2 c1f35c87c98d27990926ad515264ab1e8a5c9385b087931d79ff24709afd6abb 244 48 244 530877e432ceab7df543eaae5d3a6f705137526f54cdae8251b7fec288119ea2
+                HudGfx 801B 300 49 300 d3df1675439d1bb043f747ba8d3a975b31af8d423a09df30da9a9cae22084deb 0a448ef2c11a1414886684523d551d65af43e4f0c02e08c73e869437b15b40fc 301 51 301 fb31ef2bca6df6e547b6e578c1455730a6665226befb550fd6c03e2a9a1a88b5
+                CheckpointGfx 800C 212 51 211 e6af441ac5e051484bcd2993ad2736262b9c8f9a379bc714711e045f3f83e7bf b376ac203a8c3cf754d2d9bcc4a55dbcb287ead82bbb304b19b7fb5181f2c3a3 212 53 212 e6af441ac5e051484bcd2993ad2736262b9c8f9a379bc714711e045f3f83e7bf
+                WaterSurfaceGfx 806E 1089 62 1089 725a485aa9184899bb08cd1eb353461b574be6c3459bea10bca132e991cd4dcf 096df644ea3a771a04c657f65d1c312009af4e31788a9e59cbcfc60de53770fb 1089 64 1089 725a485aa9184899bb08cd1eb353461b574be6c3459bea10bca132e991cd4dcf
+                FlowerGfx 0027 676 73 675 56d28520fd0ec8c01068edebad2877c14836ffc876aafc32fb4121e53b1248b2 940eaecd3f31f50adef3d7774ebf8be982f6a4d2b3a068a45ab46237439b5874 676 75 676 56d28520fd0ec8c01068edebad2877c14836ffc876aafc32fb4121e53b1248b2
+                TitleCardTextGfx 8038 268 57 268 ffa8ce899df304b9658a7cd04c561bbabcd924426482f1440f11a33986ce9c87 4644e5513e3c0ae3bdf04133b3f8b828fb3bc247161d8e48f2307ec6ae4fc540 269 59 269 81f31548635a39b9f0e91d51ee32522f81c32aa8d30195ae86adc8e9cd882b4f
+                BubbleNumbersGfx 0067 1558 57 1557 4872f3d6aeff93d14bfe19c55c183f33976f7a0030532c6cf5e2f7b8d538fc36 cde5082d23b8ac1b3aa30879be33ec7d3d690223d5f03dd2211ccbff221b8f90 1558 59 1558 4872f3d6aeff93d14bfe19c55c183f33976f7a0030532c6cf5e2f7b8d538fc36
+                StageBlocks 80B0 3784 61 3783 85384ee8fe2ecc5deb64f679a0753304ff8f54794504a06eaeb20e4f72dcaead e6d242395d75a5b2f761b5cb3e64cde0c24dbf9a799d311ffa0c0da1795e27fc 3784 63 3784 85384ee8fe2ecc5deb64f679a0753304ff8f54794504a06eaeb20e4f72dcaead
+                StageGfx 8237 10546 99 10545 38a6679f40098458f4827cb8c27fdc7c8ec495695ff6f1f0725ea56c73a8a857 9bddf6e5c343fbe367f780dca7fa75b01fa86f6df2b0ec9ce88fdc4e4f54df54 10546 101 10546 38a6679f40098458f4827cb8c27fdc7c8ec495695ff6f1f0725ea56c73a8a857
+                TonboGfx 002A 676 66 675 3a84550334baac52f4b559f828e42c59da8b6154c08150e64dff1af15150a3a2 c1cf81069466c9d6819e1e5bf97e70ee34e6636d5d7c5f1e8e0a567b766f8141 676 68 676 3a84550334baac52f4b559f828e42c59da8b6154c08150e64dff1af15150a3a2
+                DoorGfxC 8010 230 65 230 3a5a92281033d4ecfa7d2120b2fcaa441564ce7dca6baadd3c3bdf4bd5e5236a 721b24b17907ea3be7d69454da63de0ff46632441f36f0ec3adbec587813ff89 230 67 230 3a5a92281033d4ecfa7d2120b2fcaa441564ce7dca6baadd3c3bdf4bd5e5236a
+                DoorGfxD 8010 214 59 214 ba7e2927e4e89da3cd443730d097133f47248b1b138a43f9bf4a7b4787417959 8adf24293a5041f97f9efc33665d364a3e36906bb3c8f8ca98b2a62d4e919a5a 215 61 215 bd5e3343942ebc99e06fe9c5eb11ee6926fc2ecdcd60dbdea3bb6deffc8fcd58
+                BlockGfxC 8020 560 97 560 a133118c62b56c56057b0ed9db541edcaa443bf70d6e2cbe27dd55965a8e83fc 330c811b541b1bfe5c132183fe2f6aee49a79a5227058698c86230ff9acfd7af 560 99 560 a133118c62b56c56057b0ed9db541edcaa443bf70d6e2cbe27dd55965a8e83fc
+                BlockGfxD 8020 696 95 695 d806a116624c4b33e1359fa08f9bbde90a791cff80c4513923de43e995aaa859 2bc036638b7575bf9902fd02fde6116ca3fa60e7d2f8566de88e1821a9df6d41 696 97 696 d806a116624c4b33e1359fa08f9bbde90a791cff80c4513923de43e995aaa859
+                AnimalsGfx 8010 356 70 355 88f31ca8417f41db54a1379bf54a2a375927cd6c520b6a6737989f27f8b205a6 391983566d0cc50c15360a364e7f1598fbb42c52d9690f50f31a5580b74e6d7b 356 72 356 88f31ca8417f41db54a1379bf54a2a375927cd6c520b6a6737989f27f8b205a6
+                SwitchGfx 8006 82 20 82 a7c595cdd4d541ac97948c563f81f056b14b2d0c40c38f4dfe12d267942642e7 8f8b7e742c91918853011a322ce6705e83b109e33ad474467a99c8055c67f314 82 22 82 a7c595cdd4d541ac97948c563f81f056b14b2d0c40c38f4dfe12d267942642e7
+                BossChaseGfx 80A6 1998 97 1997 d12f26278ab6ab00000a5d856166356d3fc34c74b90de608431f08ccfecbadce 23847410b7b81e1ef3874c421127f0faee3f7b732668d6ada032a9a359adaa2e 1998 99 1998 d12f26278ab6ab00000a5d856166356d3fc34c74b90de608431f08ccfecbadce
+                BossBubbleGfx 00FA 3528 123 3527 45546b1dbfd690187f1fc9adfa0673858ad5bca586dab14bd46320c56be67e60 cb6544a869456214f6f759e0c9df51677461d4f264c612d8808c7be15bd21b57 3528 125 3528 45546b1dbfd690187f1fc9adfa0673858ad5bca586dab14bd46320c56be67e60
+                SwingGfxD 000C 273 74 273 a7df54f38e7be30f6a2d59194b36797329d92fcec2236266cb3e0c8cbd933c8e c22923ba0421fe499fee3d6a4c2f713669bd22c28d6faba9e66dd5e2dd4faee8 273 76 273 a7df54f38e7be30f6a2d59194b36797329d92fcec2236266cb3e0c8cbd933c8e
+                SwingGfxC 000C 273 74 273 a860da5e50fd479f2b6ce61e5ceb7f9981cf0e87135720251994711daf3a18ce c22923ba0421fe499fee3d6a4c2f713669bd22c28d6faba9e66dd5e2dd4faee8 273 76 273 a860da5e50fd479f2b6ce61e5ceb7f9981cf0e87135720251994711daf3a18ce
                 """,
                 List.of(0xD258,0xD260,0xD2A4,0xD258,0xD2D0,0xD2A4,0xD2A4,0xD2A4,0xD2A4,0xD2A4,0xD2A4,0xD2A4,0xD2A4,0xD2A4,0xD2A4,0xD2A4,0xD2D8,0xD2A4,0xD2E0),6,11,
                 List.of("StageGfx","WaterSurfaceGfx","TitleCardGfx","TitleCardTextGfx","BubbleNumbersGfx","SpringGfx","HudGfx","MonitorTimeGfx","ExplosionGfx","PointsGfx","FlowerGfx","RingGfx","BossChaseGfx","SwingGfxD","TonboGfx","DoorGfxD","AnimalsGfx","BlockGfxD","SwitchGfx","BossBubbleGfx","ResultsGfx","CapsuleGfx"),

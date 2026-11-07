@@ -218,6 +218,18 @@ public final class CdTamabboh {
     private final PlayFmSound playFmSound;
     private final DrawObjectCall drawObject;
     private boolean running;
+    private CdObjectAnimationBinding.Guard animationGuard;
+    private final CdObjectAnimationBinding.Pending pendingAnimation = new CdObjectAnimationBinding.Pending();
+    boolean isCurrentAnimation(CdObjectAnimation.Prefix prefix, CdObjectAnimation.Operation operation) {
+        return running && currentCursor != null && pendingAnimation.isCurrent(prefix, operation);
+    }
+
+    /** Bind only the actual Runtime's private guard; legacy components retain structural placement guards. */
+    void bindAnimationGuard(CdObjectAnimationBinding.Guard guard) {
+        if (running || animationGuard != null) throw new IllegalStateException("Animation guard already bound or body running");
+        animationGuard = Objects.requireNonNull(guard, "actual animation invocation guard");
+    }
+
     private transient Cursor currentCursor;
     private transient PrimaryAngleCall pendingAngle;
     private transient PlayerReadCall pendingPlayer;
@@ -397,7 +409,7 @@ public final class CdTamabboh {
                 default -> throw unsupported(UnsupportedBoundary.ROUTINE_DISPATCH, c, c.state.routine());
             }
             draw(c); despawn(c, globals); return c.finish();
-        } finally { currentCursor = null; running = false; }
+        } finally { pendingAnimation.retire(); currentCursor = null; running = false; }
     }
 
     /** Object Time Check.asm:12-44: Delete64, restore only XY WORDs, ID18, skip body wrapper. */
@@ -572,62 +584,28 @@ public final class CdTamabboh {
         }
     }
 
-    /** Shared step owns successful animation; original call image is supplied once, without double SUBQ. */
+    /** One reached native helper; pointer validity is checked only after the kernel's timer gate. */
     private void animate(Cursor c, boolean missile) {
-        var original = c.state; var table = animationReadPrefixes(c, missile);
-        var result = CdObjectAnimation.step(new CdObjectAnimation.State(original.unsignedByte(ANIMATION),
-                original.unsignedByte(PREVIOUS_ANIMATION), original.unsignedByte(ANIMATION_FRAME), original.unsignedByte(ANIMATION_TIME),
-                original.unsignedByte(MAP_FRAME), original.spriteFlags(), original.flags(), original.routine(), original.unsignedByte(ROUTINE_2)), table);
-        c.state = original.moveByte(ANIMATION, result.animationId()).moveByte(PREVIOUS_ANIMATION, result.previousId())
-                .moveByte(ANIMATION_FRAME, result.scriptIndex()).moveByte(ANIMATION_TIME, result.timer()).moveByte(MAP_FRAME, result.mapFrame())
-                .moveByte(SPRITE_FLAGS, result.spriteFlags()).moveByte(FLAGS, result.statusFlags())
-                .moveByte(ROUTINE, result.routine()).moveByte(ROUTINE_2, result.routine2());
-        c.publish(); c.returned(NativeCall.ANIMATE_OBJECT);
-    }
-    /** Object Animate:20-33,59-76: publish only reached reset/SUBQ/speed/FF/FE failure prefixes. */
-    private CdObjectAnimation.AnimationTable animationReadPrefixes(Cursor c, boolean missile) {
-        int animation = c.state.unsignedByte(ANIMATION);
-        if (animation != c.state.unsignedByte(PREVIOUS_ANIMATION)) {
-            c.state = c.state.moveByte(PREVIOUS_ANIMATION, animation).moveByte(ANIMATION_FRAME, 0).moveByte(ANIMATION_TIME, 0);
-        }
-        c.state = c.state.addByte(ANIMATION_TIME, -1); c.publish();
-        if (c.state.signedByte(ANIMATION_TIME) >= 0) {
-            // Shared step returns before ANY pointer-directory read. This required, unconsumed
-            // argument neither resolves nor substitutes a live foreign Var30 pointer; that pointer
-            // is checked only on the next actually reached native directory read below.
-            var unread = missile ? assets.missile() : assets.normal();
-            return new CdObjectAnimation.AnimationTable(unread.animationTable(), 0, unread.animations().size());
-        }
-        var visual = assets.missile();
-        if (!missile) {
-            int pointer = c.state.longBits(TAMABBOH_ANIMATION_SCRIPT);
-            if (pointer == assets.normalAnimationAddress()) visual = assets.normal();
-            else if (pointer == assets.damagedAnimationAddress()) visual = assets.damaged();
-            else throw unsupported(UnsupportedBoundary.ANIMATION_POINTER, c, pointer); // FULL32, never masked/reselected by subtype.
-        }
+        int pointer = c.state.longBits(TAMABBOH_ANIMATION_SCRIPT);
+        var visual = missile ? assets.missile() : pointer == assets.damagedAnimationAddress() ? assets.damaged() : assets.normal();
         var table = new CdObjectAnimation.AnimationTable(visual.animationTable(), 0, visual.animations().size());
-        if (animation >= table.scriptCount()) throw unsupported(UnsupportedBoundary.ANIMATION_DIRECTORY_ENTRY, c, 2 * animation);
-        int script = (short) table.bytes().unsignedWord(2 * animation);
-        int speed = animationByte(c, table, UnsupportedBoundary.ANIMATION_SPEED_ADDRESS, script);
-        c.state = c.state.moveByte(ANIMATION_TIME, speed); c.publish();
-        int index = c.state.unsignedByte(ANIMATION_FRAME);
-        int frame = animationByte(c, table, UnsupportedBoundary.ANIMATION_FRAME_ADDRESS, script + 1 + index);
-        if (frame == 0xFF) {
-            c.state = c.state.moveByte(ANIMATION_FRAME, 0); c.publish();
-            animationByte(c, table, UnsupportedBoundary.ANIMATION_FRAME_ADDRESS, script + 1);
-        } else if (frame == 0xFE) {
-            int back = animationByte(c, table, UnsupportedBoundary.ANIMATION_OPERAND_ADDRESS, script + 2 + index);
-            index = (index - back) & 255; c.state = c.state.moveByte(ANIMATION_FRAME, index); c.publish();
-            animationByte(c, table, UnsupportedBoundary.ANIMATION_FRAME_ADDRESS, script + 1 + index);
-        } else if (frame == 0xFD) {
-            animationByte(c, table, UnsupportedBoundary.ANIMATION_OPERAND_ADDRESS, script + 2 + index);
-        }
-        // FC increments routine in the shared owner; its real trailing00 is NOT an operand.
-        return table;
+        CdObjectAnimationBinding.run(placement, c.wholeIndex, table,
+                () -> running && currentCursor == c, state -> c.state = state, pendingAnimation.wrap(animationGuard),
+                op -> {
+                    if (op.kind() == CdObjectAnimation.Kind.DIRECTORY && !missile
+                            && pointer != assets.normalAnimationAddress() && pointer != assets.damagedAnimationAddress())
+                        throw unsupported(UnsupportedBoundary.ANIMATION_POINTER, c, pointer);
+                }, read -> unsupported(animationBoundary(read.boundary()), c, read.value()));
+        c.returned(NativeCall.ANIMATE_OBJECT);
     }
-    private static int animationByte(Cursor c, CdObjectAnimation.AnimationTable table, UnsupportedBoundary boundary, int address) {
-        if (address < 0 || address >= table.bytes().length()) throw unsupported(boundary, c, address);
-        return table.bytes().unsignedByte(address);
+    private static UnsupportedBoundary animationBoundary(CdObjectAnimation.Kind kind) {
+        return switch (kind) {
+            case DIRECTORY -> UnsupportedBoundary.ANIMATION_DIRECTORY_ENTRY;
+            case SPEED -> UnsupportedBoundary.ANIMATION_SPEED_ADDRESS;
+            case FRAME, FF_FIRST, FE_TARGET -> UnsupportedBoundary.ANIMATION_FRAME_ADDRESS;
+            case FE_OPERAND, FD_OPERAND -> UnsupportedBoundary.ANIMATION_OPERAND_ADDRESS;
+            default -> throw new IllegalArgumentException("Not an actual animation read boundary");
+        };
     }
 
     /** Existing DrawObject is mutating. Reload live source before the wrapper's anchor/saved tail. */

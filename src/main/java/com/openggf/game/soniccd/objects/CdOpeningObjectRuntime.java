@@ -594,6 +594,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     private boolean inTimePostSubCpu;
     // Ephemeral callback validation only; cleared in runCheckpoint finally, never captured/replayed.
     private boolean inCheckpointDispatch;
+    private record CheckpointInvocation(CdCheckpoint body, int whole, Thread thread) { }
+    private transient CheckpointInvocation activeCheckpointInvocation;
     private int checkpointGlobalStores;
     private CdObjectState checkpointActivationSource;
     private CdLevelGlobals checkpointActivationLevel;
@@ -607,13 +609,14 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     private record PlatformInvocation(CdPlatform body, int wholeIndex) { }
     private transient PlatformInvocation activePlatformInvocation;
     /** Actual cached-body visit and stable Frame player only; never captured or a public capability. */
-    private record TamabbohInvocation(CdTamabboh body, int wholeIndex, CdPlayerBody.State player) { }
+    private record TamabbohInvocation(CdTamabboh body, int wholeIndex, CdPlayerBody.State player, Thread thread) { }
     private transient TamabbohInvocation activeTamabbohInvocation;
     // BEGIN Disc09 private invocation. Not a capture, gameplay phase, ROM clock or public capability.
     private enum DiscStep { SOLID, ACQUIRE, ORBIT, INPUT, JUMP_CLEAR, JUMP_VELOCITY, FM, HITBOX, DONE, STOPPED }
     private static final class SpinningDiscInvocation {
         private final CdSpinningDisc body;
         private final int wholeIndex;
+        private final Thread thread = Thread.currentThread();
         private DiscStep next = DiscStep.SOLID;
         private SpinningDiscInvocation(CdSpinningDisc body, int wholeIndex) {
             this.body = body; this.wholeIndex = wholeIndex;
@@ -1050,6 +1053,9 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                     @Override public CdCheckpointSaveData.State currentState() { return currentCheckpointSavedState(); }
                     @Override public CdCheckpointSaveData.Result save(CdCheckpoint.SaveCall call) { return saveCheckpoint(call); }
                 }, this::playCheckpointFm, (pool, slot) -> drawDynamic(pool, slot.wholeIndex()));
+        tamabboh.bindAnimationGuard(animationGuard(tamabboh, CdTamabboh.OBJECT_ID));
+        checkpoint.bindAnimationGuard(animationGuard(checkpoint, CdCheckpoint.OBJECT_ID));
+        spinningDisc.bindAnimationGuard(animationGuard(spinningDisc, CdSpinningDisc.OBJECT_ID));
         floatBlock = new CdFloatBlock(placement, CdFloatBlock.Assets.fromObjectAssets(objects),
                 solid, this::commitTopSolid,
                 (pool, slot) -> drawDynamic(pool, slot.wholeIndex()));
@@ -1781,7 +1787,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                     var globals = new CdTamabboh.Globals(devGlobals.goodFuture(), gates.timeZone(),
                             gates.timeWarpDirection(), environment.globals().debugMode(), preScrollForeground.xWord(),
                             frame.environment().movement().globals().primaryAngle());
-                    activeTamabbohInvocation = new TamabbohInvocation(tamabboh, whole, frame.state());
+                    activeTamabbohInvocation = new TamabbohInvocation(tamabboh, whole, frame.state(), Thread.currentThread());
                     try {
                         tamabboh.run(whole, globals); // Completed effects are observations, never replay commands.
                     } finally {
@@ -2184,6 +2190,120 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
      * reloaded CheckObjDespawn tail are later cuts: a failure there retains the already completed prefix.
      */
 
+    /** The actual cached dispatch, independent of mutable routine (FC may change it inside animation). */
+    private Object requireAnimationOrigin(Object body, int id, int whole, boolean inside) {
+        checkActive(Phase.DYNAMIC_SLOTS);
+        if (whole != dispatchWholeIndex || frame.assets() != assets || !placement.hasAuthenticatedSource()
+                || frame.environment().dynamicSlots() != CdPlayerBody.DynamicSlots.UNIMPLEMENTED
+                || inDrawCallback || (!inside && inSolidCommit) || inSpringLaunch || inSpinTunnelCommit || inTunnelDoorFm
+                || inHorizontalTunnelDoorSolid || inHorizontalTunnelDoorFm || inMonitorAngle || inMonitorFm
+                || inMonitorAward || inTimePostDirection || inTimePostSubCpu
+                || activeCollapseInvocation != null || activePlatformInvocation != null
+                || activeTunnelPathInvocation != null || activeSonicHoleInvocation != null) {
+            throw new IllegalStateException("Animation requires its actual idle mutual-callback/source/Frame cut");
+        }
+        Object origin;
+        if (body == tamabboh && id == CdTamabboh.OBJECT_ID && activeTamabbohInvocation != null
+                && activeTamabbohInvocation.body() == body && activeTamabbohInvocation.wholeIndex() == whole
+                && activeTamabbohInvocation.thread() == Thread.currentThread()
+                && activeSpinningDiscInvocation == null && !inCheckpointDispatch) origin = activeTamabbohInvocation;
+        else if (body == checkpoint && id == CdCheckpoint.OBJECT_ID && inCheckpointDispatch && activeCheckpointInvocation != null
+                && activeCheckpointInvocation.body() == body && activeCheckpointInvocation.whole() == whole
+                && activeCheckpointInvocation.thread() == Thread.currentThread()
+                && activeTamabbohInvocation == null && activeSpinningDiscInvocation == null) origin = activeCheckpointInvocation;
+        else if (body == spinningDisc && id == CdSpinningDisc.OBJECT_ID && activeSpinningDiscInvocation != null
+                && activeSpinningDiscInvocation.body == body && activeSpinningDiscInvocation.wholeIndex == whole
+                && activeSpinningDiscInvocation.thread == Thread.currentThread()
+                && activeTamabbohInvocation == null && !inCheckpointDispatch) origin = activeSpinningDiscInvocation;
+        else throw new IllegalStateException("Animation has no exact original cached-body invocation");
+        frame.captureActor(); frame.captureShared(); // Existing closed-cut/full-pair guard, no restore/publication.
+        var source = placement.pool().state(whole); placement.pool().validateWrite(source);
+        if (source.id() != id) throw new IllegalStateException("Animation lost its original physical source ID");
+        return origin;
+    }
+
+    /** Full immutable external owners sampled at the ACTUAL helper entry, never at visit ingress. */
+    private final class AnimationOwners {
+        final CdPlayerFrameRuntime.ActorState actor = frame.captureActor();
+        final CdPlayerFrameRuntime.SharedState shared = frame.captureShared();
+        final CdReservedObjectBank.Snapshot reservedCut = reserved.capture();
+        final Object[] values = {levelGlobals, ringGlobals, spillGlobals, devGlobals, contactGlobals, scoreGlobals,
+                checkpointState, timeWarpSavedState, powerupArtState, sectionArtState, palettes, sounds, displayed,
+                preScrollForeground, postScrollForeground, expectedPlayerCut};
+        final boolean camera = cameraPrepared;
+        void verify() {
+            frame.validateActorRestore(actor); frame.validateSharedRestore(shared);
+            if (frame.state() != actor.state() || frame.environment() != shared.environment()
+                    || !actor.equals(frame.captureActor()) || !shared.equals(frame.captureShared())
+                    || !reserved.capture().slots().equals(reservedCut.slots()) || cameraPrepared != camera)
+                throw new IllegalStateException("Animation changed the actual complete Frame/reserved cut");
+            Object[] now = {levelGlobals, ringGlobals, spillGlobals, devGlobals, contactGlobals, scoreGlobals,
+                    checkpointState, timeWarpSavedState, powerupArtState, sectionArtState, palettes, sounds, displayed,
+                    preScrollForeground, postScrollForeground, expectedPlayerCut};
+            for (int n = 0; n < values.length; n++) if (values[n] != now[n])
+                throw new IllegalStateException("Animation changed an external Runtime owner");
+        }
+    }
+
+    private boolean isOriginalAnimation(Object body, CdObjectAnimation.Prefix prefix, CdObjectAnimation.Operation op) {
+        if (body == tamabboh) return tamabboh.isCurrentAnimation(prefix, op);
+        if (body == checkpoint) return checkpoint.isCurrentAnimation(prefix, op);
+        if (body == spinningDisc) return spinningDisc.isCurrentAnimation(prefix, op);
+        return false;
+    }
+
+    /** Private original-call guard. Public values/equal cuts/issued operations never establish origin. */
+    private CdObjectAnimationBinding.Guard animationGuard(Object body, int id) {
+        return new CdObjectAnimationBinding.Guard() {
+            private AnimationOwners owners;
+            private Object origin;
+            private CdObjectAnimation.Prefix pendingPrefix;
+            private CdObjectAnimation.Operation pending;
+            private CdObjectPlacementRuntime.Snapshot before;
+            @Override public void before(CdObjectAnimation.Prefix prefix, CdObjectAnimation.Operation op) {
+                if (!prefix.isCurrent(op) || !isOriginalAnimation(body, prefix, op) || pending != null)
+                    throw new IllegalStateException("Non-original animation operation");
+                try {
+                    var current = requireAnimationOrigin(body, id, op.wholeIndex(), false);
+                    if (owners == null) {
+                        if (op.kind() != CdObjectAnimation.Kind.ENTER) throw new IllegalStateException("No actual animation entry");
+                        owners = new AnimationOwners(); origin = current;
+                    }
+                    if (origin != current) throw new IllegalStateException("Retired animation invocation");
+                    owners.verify(); before = placement.capture();
+                    pendingPrefix = prefix; pending = op; inSolidCommit = true;
+                } catch (RuntimeException | Error failure) { owners = null; origin = null; throw failure; }
+            }
+            @Override public void after(CdObjectAnimation.Prefix prefix, CdObjectAnimation.Operation op) {
+                if (pendingPrefix != prefix || pending != op || !prefix.isCurrent(op) || !isOriginalAnimation(body, prefix, op)) {
+                    // The original body may throw before delegating before(). Retire its helper cut,
+                    // while a foreign/retained operation must never clear a legitimate pending cut.
+                    if (pending == null && isOriginalAnimation(body, prefix, op)) { owners = null; origin = null; }
+                    throw new IllegalStateException("Missing exact original pending animation operation");
+                }
+                boolean failed = true;
+                try {
+                    if (origin != requireAnimationOrigin(body, id, op.wholeIndex(), true))
+                        throw new IllegalStateException("Retired animation invocation");
+                    owners.verify(); placement.validateRestore(before);
+                    var expected = before.pool();
+                    if (op.completed() && op.kind() == CdObjectAnimation.Kind.STORE) {
+                        var source = expected.slots().get(op.wholeIndex() - CdObjectPool.FIRST_WHOLE_INDEX);
+                        expected = CdObjectPool.overlay(expected, List.of(source.moveByte(op.field(), op.value())));
+                    }
+                    if (!placement.status().equals(before.status())
+                            || !java.util.Arrays.equals(placement.capture().savedFlags().copy(), before.savedFlags().copy())
+                            || !placement.pool().capture().slots().equals(expected.slots()))
+                        throw new IllegalStateException("Animation changed undeclared full placement/source fields");
+                    failed = false;
+                } finally {
+                    pendingPrefix = null; pending = null; before = null; inSolidCommit = false;
+                    if (failed || !op.completed() || op.kind() == CdObjectAnimation.Kind.RETURN) { owners = null; origin = null; }
+                }
+            }
+        };
+    }
+
     /** One real physical body call, never an effect replay or a retained callback entitlement. */
     private void runCheckpoint(int whole) {
         checkActive(Phase.DYNAMIC_SLOTS);
@@ -2192,6 +2312,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         }
         resetCheckpointDispatch();
         inCheckpointDispatch = true;
+        activeCheckpointInvocation = new CheckpointInvocation(checkpoint, whole, Thread.currentThread());
         try {
             var gates = frame.environment().movement().gates();
             checkpoint.run(whole, new CdCheckpoint.DespawnGlobals(gates.timeZone(),
@@ -2203,6 +2324,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
 
     private void resetCheckpointDispatch() {
         inCheckpointDispatch = false;
+        activeCheckpointInvocation = null;
         checkpointGlobalStores = 0;
         checkpointActivationSource = null;
         checkpointActivationLevel = null;

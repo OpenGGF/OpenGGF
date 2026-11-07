@@ -12445,3 +12445,42 @@ intervals overlap and are not summed. This focused request supplies no category
 or full-suite VERDICT, live TT service, native execution, pixels or regional
 completion. The TT solid/mover signed-displacement and Error-prefix findings
 remain uninstalled Root corrections, outside these40 payloads.
+
+
+## 7 November 2026 — shared animation and complete TT decoder products
+
+R102 joins all419 authenticated original-USA TT compressed products through the
+existing programme reader and decoders. Java output/read extents and separately
+source-derived native-style read contracts remain distinct; this is not native
+execution or live TT terrain, Ready, water-service, World or current-art admission.
+Root retains Reader18, all twelve fixed CCZ consumer views and fifteen P5 views.
+
+One nine-scalar animation kernel now serves both the existing pure step and the
+private synchronous pool Prefix entry. Checkpoint, Tamabboh and Disc use the same
+original prefix producer; six duplicate reconstruction methods are removed.
+Original operation identity, construction thread, cached body/slot, source64,
+full96 and complete Frame State/Environment guards retire on every exit. Earlier
+reached stores and original RuntimeException/Error identity survive later faults.
+Public equal records and captures supply no execution authority. Frame APIs and
+the28 inherited pure animation tests remain unchanged. First independent source
+reviews found no concrete P1/P2 in these bounded DATA and caller deltas.
+
+R100 executed1,039 cases:1,037 passed and two inherited Runtime fixtures failed.
+R101 selects those exact two identities on saved474fbbf59 and reproduces both
+status/type/message triples with identical before/after source. Its focused
+baseline is not a whole-cohort baseline pass. The storage-only malformed-capture
+helper now distinguishes generic parameter types instead of raw Optional; the
+obsolete finite-Y rejection fixture now checks the previously implemented native
+nine-bit Y projection while retaining the original CPU word and healthy owner.
+No production payload changed between R100 and R102. Original failed receipts
+remain preserved; the renamed Y fixture is an explicit expectation migration.
+
+R102 passes1,039 cases across24 classes, zero failures/errors/skips, including
+all519 ordinary Runtime cases and14 exact installed Java payloads. Source-bound
+before/after fingerprint is 933a9978372223f398b1d1cec88f05357974a7db240d2de4c0dde613bcb90094.
+Java25, -Dmse=off and original USA media were used. Queue wait527s and Maven
+execution2m06s are separate; held callback interval127.387s overlaps execution.
+This focused result supplies no category/full-suite VERDICT, complete act,
+native gameplay/pixel parity or JP/EU result. The selected CCZ Ring/P5 World
+continuation, its compound native-stop preparation correction, TT solid/mover
+corrections and subsequent actual World joins remain separate work.

@@ -119,12 +119,13 @@ final class CdProgrammeReader {
             case 2 -> source.nativeInput().orElseThrow(()->new UnsupportedOperationException(name()+" native prefetch profile unavailable: "+key));
             default -> throw new IllegalArgumentException("Unowned input kind");
         };
-        var cache=inputs.computeIfAbsent(key,k->new CdAssetBytes[3]);if(cache[kind]!=null)return cache[kind];
+        var cache=inputs.get(key);if(cache!=null && cache[kind]!=null)return cache[kind];
         CdAssetBytes bytes=null;
-        for(var existing:cache)if(existing!=null && existing.length()==extent.length()) {bytes=existing;break;}
+        if(cache!=null)for(var existing:cache)if(existing!=null && existing.length()==extent.length()) {bytes=existing;break;}
         if(bytes==null)bytes=read(source.include().offset(),extent.length());
         if(bytes.unsignedWord(0)!=actual.header() || !extent.sha().equals(CdR11aProfile.sha256(bytes.copy())))
             throw new IllegalArgumentException(name()+" original bounded compressed source differs");
+        if(cache==null) {cache=new CdAssetBytes[3];inputs.put(key,cache);}
         cache[kind]=bytes;return bytes;
     }
     synchronized CdNemesisAsset.Decoded decoded(Object key)throws IOException {

@@ -56,6 +56,123 @@ class TestCdOpeningObjectRuntime {
     private static final CdLevelGlobals RESTART_LEVEL = new CdLevelGlobals(0, 1, 0, 0, 3, 0x112233, 0x80, 8, 0);
     private static CdR11aAssets mediaAssets;
 
+    /** Actual cached producers over independently loaded USA assets; no forged invocation or pool owner. */
+    @Test void animationPrefixOriginalOperationsKeepFullPairAndRetireForAllThreeActualBodies() throws Exception {
+        for (int which = 0; which < 3; which++) try (var f = new Fixture()) {
+            springDeviceCut(f); f.makePlayerAbsent(); var body = animationPrefixSeed(f, which);
+            var real = (CdObjectAnimationBinding.Guard) checkpointGet(body, "animationGuard");
+            var scopes = new ArrayList<CdObjectAnimation.Prefix>(); var ops = new ArrayList<CdObjectAnimation.Operation>();
+            var stores = new ArrayList<String>();
+            animationPrefixReplaceGuard(body, new CdObjectAnimationBinding.Guard() {
+                public void before(CdObjectAnimation.Prefix p, CdObjectAnimation.Operation op) {
+                    if(op.kind()==CdObjectAnimation.Kind.ENTER) {
+                        var pool=f.runtime.placement().pool();var before=pool.capture();
+                        // A second real issued Prefix on the SAME pool, slot and active dispatch is
+                        // still not the cached body's pending helper. No forged owner or DTO is used.
+                        final CdObjectAnimation.Prefix[] foreign=new CdObjectAnimation.Prefix[1];
+                        foreign[0]=new CdObjectAnimation.Prefix(pool,40,new CdObjectAnimation.Guard(){
+                            public void before(CdObjectAnimation.Operation other){real.before(foreign[0],other);}
+                            public void after(CdObjectAnimation.Operation other){real.after(foreign[0],other);}
+                        });
+                        assertThrows(IllegalStateException.class,()->foreign[0].step(new CdObjectAnimation.AnimationTable(CdAssetBytes.copyOf(new byte[]{0,2,1,0}),0,1)));
+                        assertEquals(before.slots(),pool.capture().slots());
+                    }
+                    real.before(p, op); assertTrue(p.isCurrent(op)); scopes.add(p); ops.add(op);
+                }
+                public void after(CdObjectAnimation.Prefix p, CdObjectAnimation.Operation op) {
+                    real.after(p, op);
+                    if(op.completed() && op.kind()==CdObjectAnimation.Kind.STORE) stores.add(op.field()+"="+op.value());
+                }
+            });
+            var player=f.frame.state();var env=f.frame.environment();var before=f.runtime.placement().capture();
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertSame(player,f.frame.state());assertSame(env,f.frame.environment());
+            assertEquals(before.status(),f.runtime.placement().status());
+            assertArrayEquals(before.savedFlags().copy(),f.runtime.placement().capture().savedFlags().copy());
+            assertEquals(2,stores.stream().filter("SPRITE_FLAGS=4"::equals).count());
+            assertEquals(1,scopes.stream().distinct().count());for(int n=0;n<ops.size();n++)assertFalse(scopes.get(n).isCurrent(ops.get(n)));
+            assertNull(checkpointGet(f.runtime,which==0?"activeTamabbohInvocation":which==1?"activeCheckpointInvocation":"activeSpinningDiscInvocation"));
+            assertEquals(false,checkpointGet(f.runtime,"inSolidCommit"));
+            // A real issued operation from a foreign scope still supplies NO actual cached dispatch.
+            var foreign=new CdObjectPool();
+            assertThrows(IllegalStateException.class,()->new CdObjectAnimation.Prefix(foreign,32,new CdObjectAnimation.Guard(){
+                CdObjectAnimation.Prefix own;
+                public void before(CdObjectAnimation.Operation op) { real.before(scopes.getFirst(),op); }
+                public void after(CdObjectAnimation.Operation op) { }
+            }).step(new CdObjectAnimation.AnimationTable(CdAssetBytes.copyOf(new byte[]{0,2,1,0}),0,1)));
+            assertEquals(0,foreign.state(32).unsignedByte(ANIMATION_TIME));
+        }
+    }
+
+    @Test void animationPrefixActualGuardsRejectFullStateEnvironmentAndSavedMutationAndPreserveError() throws Exception {
+        for(int which=0;which<3;which++) for(int attack=0;attack<3;attack++) for(boolean throwsOriginal:new boolean[]{false,true}) try(var f=new Fixture()) {
+            springDeviceCut(f);f.makePlayerAbsent();var body=animationPrefixSeed(f,which);
+            var real=(CdObjectAnimationBinding.Guard)checkpointGet(body,"animationGuard");
+            final int selected=attack;var original=new AssertionError("original animation callback");
+            animationPrefixReplaceGuard(body,new CdObjectAnimationBinding.Guard(){
+                public void before(CdObjectAnimation.Prefix p,CdObjectAnimation.Operation op) {
+                    if(op.kind()==CdObjectAnimation.Kind.FRAME) {
+                        if(selected==0) {
+                            var a=f.frame.captureActor();var t=a.state();var cursor=t.animation();
+                            var changed=new CdPlayerBody.State(t.motion(),new CdPlayerBody.AnimationCursor(cursor.scriptIndex(),cursor.timer()^1,cursor.mapFrame()),
+                                    t.header(),t.timers(),t.history(),t.rotationDistance(),t.objectLinks(),t.rotationAngle());
+                            f.frame.restoreActor(new CdPlayerFrameRuntime.ActorState(a.owner(),changed,a.display()));
+                        } else if(selected==1) {
+                            var a=f.frame.captureShared();var e=a.environment();var c=e.controls();
+                            var changed=new CdPlayerBody.Environment(e.movement(),new CdPlayerBody.Controls(c.rawHeld()^1,c.rawTap(),c.logicalHeld(),c.logicalTap(),c.controlLocked()),e.globals(),e.dynamicSlots());
+                            f.frame.restoreShared(new CdPlayerFrameRuntime.SharedState(a.owner(),changed,a.artState(),a.paused(),a.vIntClock()));
+                        } else {
+                            var place=f.runtime.placement();
+                            if((place.savedFlag(0,0)&1)==0)place.bsetSavedFlag(0,0,CdObjectPlacementRuntime.SavedBit.MEMBER_1);
+                            else place.bclrSavedFlag(0,0,CdObjectPlacementRuntime.SavedBit.MEMBER_1);
+                        }
+                        if(throwsOriginal)throw original;
+                    }
+                    real.before(p,op);
+                }
+                public void after(CdObjectAnimation.Prefix p,CdObjectAnimation.Operation op) { real.after(p,op); }
+            });
+            var failure=assertThrows(Throwable.class,f.runtime::runDynamicSlotsAfterReservedSlots);
+            if(throwsOriginal){assertSame(original,failure);assertTrue(failure.getSuppressed().length>0);}else assertInstanceOf(IllegalStateException.class,failure);
+            assertTrue(f.runtime.closed());assertTrue(f.frame.closed());
+            assertNull(checkpointGet(f.runtime,which==0?"activeTamabbohInvocation":which==1?"activeCheckpointInvocation":"activeSpinningDiscInvocation"));
+            assertEquals(false,checkpointGet(f.runtime,"inSolidCommit"));
+        }
+    }
+
+    @Test void animationPrefixActualGuardRejectsForeignThreadAndRuntimeReentryBeforeStores() throws Exception {
+        for(int which=0;which<3;which++)try(var f=new Fixture()) {
+            springDeviceCut(f);f.makePlayerAbsent();var body=animationPrefixSeed(f,which);
+            var real=(CdObjectAnimationBinding.Guard)checkpointGet(body,"animationGuard");
+            animationPrefixReplaceGuard(body,new CdObjectAnimationBinding.Guard(){
+                public void before(CdObjectAnimation.Prefix p,CdObjectAnimation.Operation op) {
+                    if(op.kind()==CdObjectAnimation.Kind.ENTER) {
+                        var problem=new java.util.concurrent.atomic.AtomicReference<Throwable>();
+                        var thread=new Thread(()->{try{assertThrows(IllegalStateException.class,()->real.before(p,op));}catch(Throwable t){problem.set(t);}});
+                        thread.start();try{thread.join();}catch(InterruptedException e){throw new AssertionError(e);}
+                        if(problem.get()!=null)throw new AssertionError(problem.get());
+                    }
+                    real.before(p,op);
+                    if(op.kind()==CdObjectAnimation.Kind.FRAME)assertThrows(IllegalStateException.class,f.runtime::captureClosedCut);
+                }
+                public void after(CdObjectAnimation.Prefix p,CdObjectAnimation.Operation op){real.after(p,op);}
+            });
+            assertThrows(IllegalStateException.class,f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertTrue(f.runtime.closed());assertTrue(f.frame.closed());assertEquals(false,checkpointGet(f.runtime,"inSolidCommit"));
+        }
+    }
+
+    private static Object animationPrefixSeed(Fixture f,int which) throws Exception {
+        var pool=f.runtime.placement().pool();var source=pool.state(40);
+        source=which==0?tamabbohImage(f,source,8,0):which==1?checkpointImage(f,source,6):disc09Image(f,source,2,4,0,0x100,0x780);
+        pool.write(source.moveByte(FLAGS,0).moveByte(ANIMATION,0).moveByte(PREVIOUS_ANIMATION,0).moveByte(ANIMATION_TIME,0).moveByte(ANIMATION_FRAME,0));
+        return checkpointGet(f.runtime,which==0?"tamabboh":which==1?"checkpoint":"spinningDisc");
+    }
+    private static void animationPrefixReplaceGuard(Object body,CdObjectAnimationBinding.Guard wrapper) throws Exception {
+        // Wrap the real cached guard only. Never forge an invocation, source owner or authenticated assets.
+        var field=body.getClass().getDeclaredField("animationGuard");field.setAccessible(true);field.set(body,wrapper);
+    }
+
     @Test void planeServiceCutRunsAfterPowerupArtAndBeforeFinishWithoutASecondInputOrClock() throws Exception {
         var level = new CdLevelGlobals(0, 0, 0, 0, 3, 0, 2, 0x88, 0);
         try (var f = new Fixture(level)) {
@@ -485,9 +602,9 @@ class TestCdOpeningObjectRuntime {
         }
     }
 
-    // Catches clamping/recomputing a completed CPU Y, swallowing finite-picture
-    // policy failure, rolling back the old cycle, or treating it as a build error.
-    @Test void unrunFiniteYPublicationFailureClosesAfterTheCpuCycleAlreadyCommitted() throws Exception {
+    // The selected renderer now projects the native stored Y through nine bits.
+    // Catches rewriting the committed CPU word or rejecting that supported publication.
+    @Test void nativeWrappedYPublicationKeepsTheCompletedCpuCycleAndHealthyOwner() throws Exception {
         try (var f = new Fixture()) {
             f.service(0);
             f.runtime.spawnBeforeReservedSlots();
@@ -500,14 +617,17 @@ class TestCdOpeningObjectRuntime {
             var committed = f.runtime.placement().capture();
             var globals = f.runtime.ringGlobals();
             f.frame.prepareInput(0x80);
-            assertThrows(UnsupportedOperationException.class,
-                    () -> f.runtime.serviceVBlank(PlcLifecyclePhase.NORMAL_PAUSE));
-            assertTrue(f.runtime.closed());
-            assertTrue(f.frame.closed());
+            assertDoesNotThrow(() -> f.runtime.serviceVBlank(PlcLifecyclePhase.NORMAL_PAUSE));
+            assertFalse(f.runtime.closed());
+            assertFalse(f.frame.closed());
+            assertTrue(f.frame.paused());
+            assertSame(cpu, f.runtime.cpuSat());
+            assertTrue(f.runtime.displayedFrame().tiles().stream().anyMatch(tile -> tile.y() == 0x118),
+                    "Stored SAT Y$398 projects to ($398 & $1FF) - $80 = $118");
             assertEquals(committed.pool().slots(), f.runtime.placement().capture().pool().slots());
             assertEquals(globals, f.runtime.ringGlobals());
             assertEquals(0x398, word(cpu.bytes(), 0));
-            assertThrows(IllegalStateException.class, f.runtime::displayedFrame);
+            assertNotNull(f.runtime.captureClosedCut());
         }
     }
 
@@ -4956,10 +5076,12 @@ class TestCdOpeningObjectRuntime {
     private static Object horizontalReplacePartition(Object capture, Class<?> partitionType, Object replacement) throws Exception {
         var constructors = capture.getClass().getDeclaredConstructors(); assertEquals(1, constructors.length);
         var constructor = constructors[0]; var types = constructor.getParameterTypes(); var values = new Object[types.length];
+        var genericTypes = constructor.getGenericParameterTypes();
         for (int index = 0; index < types.length; index++) {
             if (types[index] == partitionType) { values[index] = replacement; continue; }
-            final Class<?> type = types[index];
-            var fields = java.util.Arrays.stream(capture.getClass().getDeclaredFields()).filter(field -> field.getType() == type).toList();
+            final var type = genericTypes[index];
+            var fields = java.util.Arrays.stream(capture.getClass().getDeclaredFields())
+                    .filter(field -> field.getGenericType().equals(type)).toList();
             assertEquals(1, fields.size(), "unambiguous immutable storage partition " + type);
             var field = fields.getFirst(); field.setAccessible(true); values[index] = field.get(capture);
         }
@@ -9106,7 +9228,7 @@ class TestCdOpeningObjectRuntime {
         var origin=CdOpeningObjectRuntime.class.getDeclaredField("activeTamabbohInvocation");
         assertTrue(java.lang.reflect.Modifier.isPrivate(origin.getModifiers()));assertTrue(java.lang.reflect.Modifier.isTransient(origin.getModifiers()));
         assertTrue(origin.getType().isRecord());assertTrue(java.lang.reflect.Modifier.isPrivate(origin.getType().getModifiers()));
-        assertEquals(List.of(CdTamabboh.class,int.class,CdPlayerBody.State.class),
+        assertEquals(List.of(CdTamabboh.class,int.class,CdPlayerBody.State.class,Thread.class),
                 java.util.Arrays.stream(origin.getType().getRecordComponents()).map(java.lang.reflect.RecordComponent::getType).toList());
         assertFalse(java.util.Arrays.stream(CdOpeningObjectRuntime.Snapshot.class.getDeclaredFields()).anyMatch(v->
                 v.getType()==CdTamabboh.class||v.getType()==origin.getType()||v.getType()==CdTamabboh.Globals.class

@@ -206,6 +206,19 @@ public final class CdSpinningDisc {
     @FunctionalInterface private interface TileOperand { int read(int secondary); }
     private TileOperand sourceTile;
     private boolean running;
+    private transient Cursor currentCursor;
+    private CdObjectAnimationBinding.Guard animationGuard;
+    private final CdObjectAnimationBinding.Pending pendingAnimation = new CdObjectAnimationBinding.Pending();
+    boolean isCurrentAnimation(CdObjectAnimation.Prefix prefix, CdObjectAnimation.Operation operation) {
+        return running && currentCursor != null && pendingAnimation.isCurrent(prefix, operation);
+    }
+
+    /** Bind only the actual Runtime's private guard; legacy components retain structural placement guards. */
+    void bindAnimationGuard(CdObjectAnimationBinding.Guard guard) {
+        if (running || animationGuard != null) throw new IllegalStateException("Animation guard already bound or body running");
+        animationGuard = Objects.requireNonNull(guard, "actual animation invocation guard");
+    }
+
 
     /** Source-pair ingress only; caller retains every actual helper/publication authority. */
     public static CdSpinningDisc fromAct2PastAssets(CdObjectPlacementRuntime placement, CdR12bTerrainAssets owner,
@@ -238,7 +251,7 @@ public final class CdSpinningDisc {
         try {
             Objects.requireNonNull(globals, "globals"); var pool = placement.pool(); var source = pool.state(wholeIndex);
             if (source.id() != OBJECT_ID) throw new IllegalArgumentException("Selected slot is not Disc ID $09");
-            var c = new Cursor(pool, source);
+            var c = new Cursor(pool, source); currentCursor = c;
             switch (source.routine()) {
                 case 0 -> { init(c); main(c); }
                 case 2 -> main(c);
@@ -246,7 +259,7 @@ public final class CdSpinningDisc {
             }
             if (globals.timeStopTimerWord() == 0) animate(c);
             draw(c); despawn(c, globals); return new Result(c.state, c.effects);
-        } finally { running = false; }
+        } finally { pendingAnimation.retire(); currentCursor = null; running = false; }
     }
     /** Init:36-44: map and header prefix precede the reached selector6/subtype2 read. */
     private void init(Cursor c) {
@@ -554,52 +567,24 @@ public final class CdSpinningDisc {
         PlayerResult result() { return new PlayerResult(stateValue(), environmentValue(), stores); }
     }
 
-    /** Shared animator ONCE on original image. Only a reached-read failure uses the existing prefix adapter. */
+    /** One reached native AnimateObject call; the shared kernel publishes every completed store. */
     private void animate(Cursor c) {
-        var original = c.state;
         var table = new CdObjectAnimation.AnimationTable(assets.visual().animationTable(), 0, assets.visual().animations().size());
-        CdObjectAnimation.State result;
-        try {
-            result = CdObjectAnimation.step(new CdObjectAnimation.State(original.unsignedByte(ANIMATION), original.unsignedByte(PREVIOUS_ANIMATION),
-                    original.unsignedByte(ANIMATION_FRAME), original.unsignedByte(ANIMATION_TIME), original.unsignedByte(MAP_FRAME), original.spriteFlags(),
-                    original.flags(), original.routine(), original.unsignedByte(ROUTINE_2)), table);
-        } catch (UnsupportedOperationException reachedRead) {
-            animationReadPrefixes(c, table); // Object Animate:20-33,59-76, as Tamabboh/Checkpoint. No second step.
-            throw reachedRead;
-        }
-        c.state = original.moveByte(ANIMATION, result.animationId()).moveByte(PREVIOUS_ANIMATION, result.previousId())
-                .moveByte(ANIMATION_FRAME, result.scriptIndex()).moveByte(ANIMATION_TIME, result.timer()).moveByte(MAP_FRAME, result.mapFrame())
-                .moveByte(SPRITE_FLAGS, result.spriteFlags()).moveByte(FLAGS, result.statusFlags()).moveByte(ROUTINE, result.routine()).moveByte(ROUTINE_2, result.routine2());
-        c.publish(); c.returned(NativeCall.ANIMATE_OBJECT);
+        CdObjectAnimationBinding.run(placement, c.wholeIndex, table,
+                () -> running && currentCursor == c, state -> c.state = state,
+                pendingAnimation.wrap(animationGuard), op -> { }, read -> unsupported(animationBoundary(read.boundary()), c, read.value()));
+        c.returned(NativeCall.ANIMATE_OBJECT);
     }
-    /** Reached fault prefix only: no frame interpretation, synthesis, fallback bytes or successful animation. */
-    private static void animationReadPrefixes(Cursor c, CdObjectAnimation.AnimationTable table) {
-        int animation = c.state.unsignedByte(ANIMATION);
-        if (animation != c.state.unsignedByte(PREVIOUS_ANIMATION)) {
-            c.state = c.state.moveByte(PREVIOUS_ANIMATION, animation).moveByte(ANIMATION_FRAME, 0).moveByte(ANIMATION_TIME, 0);
-        }
-        c.state = c.state.addByte(ANIMATION_TIME, -1); c.publish();
-        if (c.state.signedByte(ANIMATION_TIME) >= 0) return;
-        int directory = 2 * animation;
-        if (animation >= table.scriptCount()) throw unsupported(UnsupportedBoundary.ANIMATION_DIRECTORY_ENTRY, c, directory);
-        int script = (short) table.bytes().unsignedWord(directory);
-        int speed = animationByte(c, table, UnsupportedBoundary.ANIMATION_SPEED_ADDRESS, script);
-        c.state = c.state.moveByte(ANIMATION_TIME, speed); c.publish();
-        int index = c.state.unsignedByte(ANIMATION_FRAME);
-        int frame = animationByte(c, table, UnsupportedBoundary.ANIMATION_FRAME_ADDRESS, script + 1 + index);
-        if (frame == 0xFF) {
-            c.state = c.state.moveByte(ANIMATION_FRAME, 0); c.publish();
-            animationByte(c, table, UnsupportedBoundary.ANIMATION_FRAME_ADDRESS, script + 1);
-        } else if (frame == 0xFE) {
-            int back = animationByte(c, table, UnsupportedBoundary.ANIMATION_OPERAND_ADDRESS, script + 2 + index);
-            index = (index - back) & 255; c.state = c.state.moveByte(ANIMATION_FRAME, index); c.publish();
-            animationByte(c, table, UnsupportedBoundary.ANIMATION_FRAME_ADDRESS, script + 1 + index);
-        } else if (frame == 0xFD) animationByte(c, table, UnsupportedBoundary.ANIMATION_OPERAND_ADDRESS, script + 2 + index);
+    private static UnsupportedBoundary animationBoundary(CdObjectAnimation.Kind kind) {
+        return switch (kind) {
+            case DIRECTORY -> UnsupportedBoundary.ANIMATION_DIRECTORY_ENTRY;
+            case SPEED -> UnsupportedBoundary.ANIMATION_SPEED_ADDRESS;
+            case FRAME, FF_FIRST, FE_TARGET -> UnsupportedBoundary.ANIMATION_FRAME_ADDRESS;
+            case FE_OPERAND, FD_OPERAND -> UnsupportedBoundary.ANIMATION_OPERAND_ADDRESS;
+            default -> throw new IllegalArgumentException("Not an actual animation read boundary");
+        };
     }
-    private static int animationByte(Cursor c, CdObjectAnimation.AnimationTable table, UnsupportedBoundary boundary, int address) {
-        if (address < 0 || address >= table.bytes().length()) throw unsupported(boundary, c, address);
-        return table.bytes().unsignedByte(address);
-    }
+
     private void draw(Cursor c) {
         try { drawObject.drawObject(c.pool, c.state.identity()); }
         finally { c.state = c.pool.state(c.wholeIndex); }
