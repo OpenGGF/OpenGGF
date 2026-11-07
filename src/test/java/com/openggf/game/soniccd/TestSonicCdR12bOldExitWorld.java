@@ -60,8 +60,29 @@ class TestSonicCdR12bOldExitWorld {
     @Test void ipxBlankStopsFmAndDisablesTheSelectedPictureWithoutAnyOldFrameReadFinishOrClock()throws Exception{
         var a=returned();var actor=a.frame().captureActor();var shared=a.frame().captureShared();var source=a.frame().stageSource();var section=a.core().state().section();var palette=a.core().state().normalPalette();var picture=((SonicCdAct2PastWorldHost.Published)a.host().selected()).selection().inputs();var oldSounds=a.host().sounds();forwardExit(a);healthy(a,SonicCdAct2PastLoadingVisit.Phase.OLD_IPX_RETURNED);assertEquals(actor,a.frame().captureActor());assertEquals(shared,a.frame().captureShared());assertSame(source,a.frame().stageSource());assertSame(section,a.core().state().section());assertSame(palette,a.core().state().normalPalette());var selected=((SonicCdAct2PastWorldHost.Published)a.host().selected()).selection().inputs();assertFalse(selected.displayEnabled());assertSame(picture.selectedSat(),selected.selectedSat());assertSame(picture.palette(),selected.palette());assertEquals(oldSounds.size()+1,a.host().sounds().size());assertEquals(new SonicCdGameModule.PastProgrammeSound(SonicCdGameModule.ProgramSound.STOP_FM),a.host().sounds().getLast());assertEquals(0xFF,a.h().module().act2PastOldProgrammeReturnCode());
     }
-    @Test void nextActAdmissionStopsHonestlyAndRepeatedRejectedForwardKeepsTheHealthyBlank()throws Exception{
-        var a=returned();forwardExit(a);var before=a.h().mode().getRewindRegistry().capture();var generation=a.h().mode().getLevelManager().getCompletedProductionLoadGeneration();for(int n=0;n<2;n++){var e=assertThrows(SonicCdAct2PastLoadingVisit.UnsupportedLoading.class,()->forwardExit(a));assertEquals(SonicCdAct2PastLoadingVisit.Boundary.NEXT_ACT_PROGRAMME_ADMISSION,e.boundary());healthy(a,SonicCdAct2PastLoadingVisit.Phase.OLD_IPX_RETURNED);values(before,a.h().mode().getRewindRegistry().capture(),"healthy RunR13 boundary");assertEquals(generation,a.h().mode().getLevelManager().getCompletedProductionLoadGeneration());}
+    @Test void actualNextActAdmissionReplacesTheHealthyBlankWithOneSameWorldR13FullEpoch()throws Exception{
+        var a=returned();forwardExit(a);healthy(a,SonicCdAct2PastLoadingVisit.Phase.OLD_IPX_RETURNED);
+        var module=a.h().module();var mode=a.h().mode();var world=mode.getWorldSession();var manager=mode.getLevelManager();
+        long generation=manager.getCompletedProductionLoadGeneration();var oldSource=a.frame().stageSource();
+        var oldState=a.core().state();var oldProgramme=module.programServicesState().completedCalls();
+        var actualData=assertInstanceOf(CdGameDataSource.class,world.getDataSource());
+        var selected=actualData.act3FutureAssets().orElseThrow().select(oldState.program().goodFutureByte());
+        forwardExit(a); // Genuine Module RunR13/FULL caller; the old unsupported assertion is obsolete.
+        assertSame(world,mode.getWorldSession());assertEquals(generation+1,manager.getCompletedProductionLoadGeneration());
+        assertTrue(a.frame().closed());assertSame(oldState,a.core().state());
+        assertTrue(module.act3FutureLoadingSelected());var nextFrame=module.requirePlayerFrame();var nextCore=module.act3FutureLoadingVisit();
+        assertNotSame(a.frame(),nextFrame);assertNotSame(oldSource,nextFrame.stageSource());assertFalse(nextFrame.closed());assertFalse(nextCore.failed());
+        assertSame(selected,nextCore.assets());assertTrue(nextFrame.stageSource().ownsAct3Future(selected));
+        assertSame(selected,assertInstanceOf(com.openggf.game.soniccd.level.SonicCdAct3FutureLevel.class,manager.getCurrentLevel()).assets());
+        assertEquals(2,nextFrame.environment().movement().gates().zoneAct());assertEquals(2,nextFrame.environment().movement().gates().timeZone());
+        assertEquals(SonicCdGameModule.LevelProgramPhase.ACT3_FUTURE_LOADING,module.levelProgramState().phase());
+        var completed=module.programServicesState().completedCalls();assertEquals(oldProgramme,completed.subList(0,oldProgramme.size()));
+        assertEquals(List.of(SonicCdGameModule.ProgramStartCall.LOAD_LEVEL_PCM,SonicCdGameModule.ProgramStartCall.INIT_VDP,
+                SonicCdGameModule.ProgramStartCall.INIT_CONTROLLERS),completed.subList(oldProgramme.size(),completed.size()));
+        forwardExit(a); // Repeated public forward services the new retained visit, with no second FULL.
+        assertSame(nextFrame,module.requirePlayerFrame());assertSame(nextCore,module.act3FutureLoadingVisit());
+        assertEquals(generation+1,manager.getCompletedProductionLoadGeneration());assertSame(world,mode.getWorldSession());
+        assertFalse(nextFrame.closed());assertFalse(nextCore.failed());
     }
     @Test void fullAndCourseReplayRetainTheSameOwnersAcrossPreludeFadeClearReturnAndBlank()throws Exception{
         var a=prepared();replay(a);for(int n=0;n<10;n++)forwardExit(a);replay(a);for(int n=11;n<21;n++)forwardExit(a);replay(a);replay(a);replay(a);healthy(a,SonicCdAct2PastLoadingVisit.Phase.OLD_IPX_RETURNED);

@@ -3,12 +3,19 @@ package com.openggf.game.soniccd.level;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
+import com.openggf.game.soniccd.CdNativeFile;
+import com.openggf.game.soniccd.CdReleaseVariant;
+import com.openggf.game.soniccd.CdStagePayload;
+import com.openggf.game.soniccd.media.CdMmdImage;
+import com.openggf.game.soniccd.release.CdRetailReleases;
 
 /**
  * Bounded R11A player byte prerequisites at scddisasm 1ecc5f3a. No animation,
  * physics, CalcAngle/CalcSine arithmetic, DPLC residency or hardware parity is implemented.
  * Production bytes come through authenticated programme factories; this decoder grants no execution.
  * The explicit 167-frame source retains latent high-frame scripts; selected-frame bounds stay with animation.
+ * Original R31A borrows this common contract with an explicit R3 graph and unowned PPZ ramp access.
  */
 public final class CdR11aPlayerAssets {
     public static final int ANIMATION_COUNT = 60;
@@ -24,7 +31,8 @@ public final class CdR11aPlayerAssets {
     private final CdAssetBytes animationTable;
     private final List<AnimationScript> animations;
     private final CdAssetBytes miniAnimations;
-    private final CdAssetBytes rampChunks;
+    private final Optional<CdAssetBytes> rampChunks;
+    private final CdR31aAssets r31a;
     private final CdAssetBytes specialChunks;
     private final CdAssetBytes sineTable;
     private final CdAssetBytes arcTanTable;
@@ -32,6 +40,24 @@ public final class CdR11aPlayerAssets {
     private CdR11aPlayerAssets(byte[] animations, byte[] miniAnimations, byte[] rampChunks,
                                 byte[] specialChunks, byte[] sineTable, byte[] arcTanTable,
                                 CdSonicVisualAssets sonic) {
+        this(animations, miniAnimations, new PpzRampInput(rampChunks), specialChunks, sineTable, arcTanTable, sonic, null);
+    }
+
+    /** Finite data graph only; it grants no routine/source-family execution admission. */
+    public enum SourceGraph { PPZ, R3 }
+    /** The R3 product deliberately has no PPZ table; access cannot manufacture an empty/default view. */
+    public static final class UnownedPpzRamp extends UnsupportedOperationException {
+        private UnownedPpzRamp() { super("R3 source does not own the PPZ 3D ramp chunk table"); }
+    }
+    // Private tagged inputs preserve legacy validation order without supplying ANY ramp bytes for R3.
+    private sealed interface RampInput permits PpzRampInput, R3RampInput { }
+    private record PpzRampInput(byte[] bytes) implements RampInput { }
+    private enum R3RampInput implements RampInput { UNOWNED }
+
+    private CdR11aPlayerAssets(byte[] animations, byte[] miniAnimations, RampInput rampInput,
+                                byte[] specialChunks, byte[] sineTable, byte[] arcTanTable,
+                                CdSonicVisualAssets sonic, CdR31aAssets r31a) {
+        this.r31a = r31a;
         this.sonic = Objects.requireNonNull(sonic, "sonic");
         this.animationTable = exact(animations, ANIMATION_BYTES, "Ani_Sonic");
         this.animations = decodeAnimations(animationTable, sonic);
@@ -44,14 +70,21 @@ public final class CdR11aPlayerAssets {
 
         // ObjSonic_Handle3DRamp.ChunkList (Sonic/Main.asm:797-831): five
         // positive raw layout-byte identities followed by the actual $FF sentinel.
-        this.rampChunks = exact(rampChunks, 6, "3D ramp chunks");
-        for (int i = 0; i < 5; i++) {
-            if (this.rampChunks.unsignedByte(i) == 0 || this.rampChunks.signedByte(i) < 0) {
-                throw new IllegalArgumentException("Early/invalid R11A ramp chunk sentinel");
+        if (rampInput instanceof PpzRampInput input) {
+            var ramp = exact(input.bytes(), 6, "3D ramp chunks");
+            for (int i = 0; i < 5; i++) {
+                if (ramp.unsignedByte(i) == 0 || ramp.signedByte(i) < 0) {
+                    throw new IllegalArgumentException("Early/invalid R11A ramp chunk sentinel");
+                }
             }
-        }
-        if (this.rampChunks.unsignedByte(5) != 0xFF) {
-            throw new IllegalArgumentException("Missing reviewed R11A ramp chunk sentinel");
+            if (ramp.unsignedByte(5) != 0xFF) {
+                throw new IllegalArgumentException("Missing reviewed R11A ramp chunk sentinel");
+            }
+            this.rampChunks = Optional.of(ramp);
+        } else {
+            if (rampInput != R3RampInput.UNOWNED || r31a == null)
+                throw new IllegalArgumentException("Only actual R31A owns the R3 core-data profile");
+            this.rampChunks = Optional.empty();
         }
         // LevelSizeLoad copies one long; Sonic_SpecialChunks compares all four
         // raw bytes independently (Scroll:113-129; Sonic/Main.asm:2522-2544).
@@ -92,6 +125,30 @@ public final class CdR11aPlayerAssets {
                                             CdSonicVisualAssets sonic) {
         return new CdR11aPlayerAssets(animations, miniAnimations, rampChunks, specialChunks, sineTable, arcTanTable, sonic);
     }
+
+    /** Original-USA R31A common data only. Legacy PlayerCheckBooster3dSurfaceType returns
+     * before its table for raw0100/1 (N objects/player.asm:736-740); no PPZ ramp bytes are borrowed.
+     * Raw80 Mini and258 Atan includes remain in the immutable aggregate; only live60/257 are consumed.
+     * The same script/math/167 visual validators execute; no Body/Frame/World admission is granted. */
+    public static CdR11aPlayerAssets fromR31aAssets(CdR31aAssets assets) {
+        Objects.requireNonNull(assets, "Original R31A assets");assets.requireAuthenticated();
+        var id = Objects.requireNonNull(assets.identity(), "R31A identity");
+        if (id.variant() != CdReleaseVariant.USA || id.file() != CdNativeFile.R31A
+                || !CdStagePayload.R31A.stage().equals(id.stage()) || id.domain() != CdMmdImage.Domain.ORIGINAL_WORD_RAM
+                || !"30bb932c3f7a18f0629dcee56fb982280e0b6d6063fb67392b23771f77e7682e".equals(id.mmdSha256())
+                || !CdRetailReleases.USA.normalizedSha256().equals(id.observedWholeDiscSha256()))
+            throw new IllegalArgumentException("R31A common data requires its original USA source identity");
+        var sonic = Objects.requireNonNull(assets.sonic(), "R31A Sonic visuals");
+        if (sonic.sourceFormat() != CdSonicVisualAssets.SourceFormat.FRAMES_167 || sonic.mappingFrames().size() != 167)
+            throw new IllegalArgumentException("R31A common data requires its retained 167-frame visual product");
+        return new CdR11aPlayerAssets(assets.view(CdR31aAssets.Asset.ANI_SONIC).copy(),
+                assets.view(CdR31aAssets.Asset.MINI_ANIMATIONS).slice(0, ANIMATION_COUNT).copy(), R3RampInput.UNOWNED,
+                assets.view(CdR31aAssets.Asset.SPEC_CHUNKS).copy(), assets.view(CdR31aAssets.Asset.SINE_TABLE).copy(),
+                assets.view(CdR31aAssets.Asset.ARC_TAN_TABLE).slice(0, 257).copy(), sonic, assets);
+    }
+    public SourceGraph sourceGraph() { return r31a == null ? SourceGraph.PPZ : SourceGraph.R3; }
+    /** Exact immutable data custody only; no callback, invocation, physics or source-family authority. */
+    public boolean ownsR31aAssets(CdR31aAssets assets) { return r31a != null && r31a == assets; }
 
     private static List<AnimationScript> decodeAnimations(CdAssetBytes table, CdSonicVisualAssets sonic) {
         int[] offsets = new int[ANIMATION_COUNT];
@@ -174,8 +231,8 @@ public final class CdR11aPlayerAssets {
     public AnimationScript animation(int nativeId) { return animations.get(nativeId); }
     public CdAssetBytes miniAnimations() { return miniAnimations; }
     public int miniAnimationId(int nativeId) { return miniAnimations.unsignedByte(nativeId); }
-    /** Five raw layout-byte IDs and the actual signed-negative sentinel, with no layout lookup. */
-    public CdAssetBytes rampChunks() { return rampChunks; }
+    /** PPZ-only five raw layout-byte IDs and signed-negative sentinel; R3 access is explicitly unowned. */
+    public CdAssetBytes rampChunks() { return rampChunks.orElseThrow(UnownedPpzRamp::new); }
     /** Native order: loop, special loop, special roll tunnel, regular roll tunnel. */
     public CdAssetBytes specialChunks() { return specialChunks; }
     public CdAssetBytes sineTable() { return sineTable; }

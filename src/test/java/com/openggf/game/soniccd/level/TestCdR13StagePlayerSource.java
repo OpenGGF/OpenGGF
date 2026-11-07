@@ -74,11 +74,11 @@ class TestCdR13StagePlayerSource {
         }
     }
     @Test void newSurfaceAddsOnlyTheNamedDataFactoryRelationAndOneFinalOwnerField() {
-        assertTrue(Modifier.isFinal(CdStagePlayerSource.class.getModifiers()));var constructors=CdStagePlayerSource.class.getDeclaredConstructors();assertEquals(4,constructors.length);for(var c:constructors)assertTrue(Modifier.isPrivate(c.getModifiers()));
-        assertEquals(Set.of(List.of(CdR11aAssets.class,CdR11bAssets.class),List.of(CdR12aTerrainAssets.class,CdR12aPlayerAssets.class),List.of(CdR12bTerrainAssets.class,CdR12bPlayerAssets.class),List.of(CdR13FutureAssets.class)),Arrays.stream(constructors).map(c->Arrays.asList(c.getParameterTypes())).collect(Collectors.toSet()));
+        assertTrue(Modifier.isFinal(CdStagePlayerSource.class.getModifiers()));var constructors=CdStagePlayerSource.class.getDeclaredConstructors();assertEquals(5,constructors.length);for(var c:constructors)assertTrue(Modifier.isPrivate(c.getModifiers()));
+        assertEquals(Set.of(List.of(CdR11aAssets.class,CdR11bAssets.class),List.of(CdR12aTerrainAssets.class,CdR12aPlayerAssets.class),List.of(CdR12bTerrainAssets.class,CdR12bPlayerAssets.class),List.of(CdR13FutureAssets.class),List.of(CdR31aAssets.class)),Arrays.stream(constructors).map(c->Arrays.asList(c.getParameterTypes())).collect(Collectors.toSet()));
         var names=Arrays.stream(CdStagePlayerSource.class.getDeclaredMethods()).filter(m->Modifier.isPublic(m.getModifiers())).map(m->m.getName()+"/"+m.getParameterCount()).collect(Collectors.toSet());
-        assertEquals(Set.of("fromPresent/1","fromPast/1","fromAct2/2","fromAct2Past/2","fromAct3Future/1","terrain/0","player/0","sonic/0","mappingAddress/0","variant/0","stage/0","ordinaryPeriod/0","ownsPresent/1","ownsPast/1","ownsAct2/2","ownsAct2Past/2","ownsAct3Future/1"),names);
-        var fields=CdStagePlayerSource.class.getDeclaredFields();assertEquals(14,fields.length);assertEquals(1,Arrays.stream(fields).filter(f->f.getType()==CdR13FutureAssets.class).count());for(var f:fields){assertTrue(Modifier.isPrivate(f.getModifiers()));assertTrue(Modifier.isFinal(f.getModifiers()));assertFalse(f.getType().isArray());}
+        assertEquals(Set.of("fromPresent/1","fromPast/1","fromAct2/2","fromAct2Past/2","fromAct3Future/1","terrain/0","player/0","sonic/0","mappingAddress/0","variant/0","stage/0","ordinaryPeriod/0","ownsPresent/1","ownsPast/1","ownsAct2/2","ownsAct2Past/2","ownsAct3Future/1","fromR31aAssets/1","ownsR31aAssets/1","ordinaryZoneActWord/0"),names);
+        var fields=CdStagePlayerSource.class.getDeclaredFields();assertEquals(15,fields.length);assertEquals(1,Arrays.stream(fields).filter(f->f.getType()==CdR13FutureAssets.class).count());assertEquals(1,Arrays.stream(fields).filter(f->f.getName().equals("r31a")&&f.getType()==CdR31aAssets.class).count());for(var f:fields){assertTrue(Modifier.isPrivate(f.getModifiers()));assertTrue(Modifier.isFinal(f.getModifiers()));assertFalse(f.getType().isArray());}
     }
 
     private record Fixture(CdR13FutureAssets good,CdR13FutureAssets bad,CdR13FutureAssets sameGood,CdR12bTerrainAssets oldTerrain,CdR12bPlayerAssets oldPlayer){}

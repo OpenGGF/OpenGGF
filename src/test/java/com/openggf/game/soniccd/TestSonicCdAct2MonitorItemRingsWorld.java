@@ -214,7 +214,7 @@ class TestSonicCdAct2MonitorItemRingsWorld {
                 "PastTunnelDoorFm","PastMonitorFm","PastTimePostSubCpu","PastTamabbohFm","PastCollapsePlatformFm","PastMosquiFm",
                 "PastLostRingFm","PastRobotGeneratorFm","PastProjectorFm","PastSignpostSound","PastBigRingFm","PastResultsSound",
                 "PastProgrammeSound","PastWallFm","PastTunnelPathFm","PastMonitorItemShieldFm","PastMonitorItemRing","PastTunnelDoorSplashFm",
-                "PastDiscFm","PastVerticalDoorFm","PastSpeedShoesSubCpu","PastLevelMusic"),
+                "PastDiscFm","PastVerticalDoorFm","PastSpeedShoesSubCpu","PastLevelMusic","PastR13BossFm","PastR13BossSubCpu","PastR13CapsuleExplosion","PastR13CapsuleSubCpu"),
                 Arrays.stream(SonicCdGameModule.PastSound.class.getPermittedSubclasses()).map(Class::getSimpleName).toList());
         assertThrows(NullPointerException.class,()->new SonicCdGameModule.PastMonitorItemRing(null));
         assertEquals(1,ringSounds(s).size());retired(s);

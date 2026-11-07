@@ -1,5 +1,45 @@
 # Implement Sonic CD with complete regional parity
 
+## 7 November 2026 — retained Act3 exit and Collision Chaos source custody
+
+Cached Boss, limb and bumper owners now execute through the genuine physical
+walk, shared collision and same-Frame publication. Capsule and Results use their
+original source metadata and private completion receipts. The real Module adopts
+Results flags and sound requests without replaying returned effects. A labelled
+constructed Results ingress reaches the native22 black waits, final selectorC,
+old RTS and coherent IPX blank on the same World. Complete FULL/course replay
+covers the fade, return and blank; the following unavailable saved-zone owner
+leaves the retained Frame healthy. This is live caller coverage, not natural
+Boss defeat or act completion.
+
+The retained-exit qualification discovered1050 cases:1049passed/1failed/0errors
+or skips with unchanged source. The sole failure was an inherited assertion that
+RunR13/FULL was unsupported. It reproduces exactly on saved4add. Its replacement
+passes the actual same-World successor, old Frame retirement and once-only load
+creation. The other1049 passes and this exact rerun are separate observations;
+no fresh combined1050 all-green run is claimed. Earlier Boss1293 positives and
+the two exact corrected PLC-oracle reruns are also separate evidence.
+
+Original USA Collision Chaos R31A now retains63 bounded views, corrected native
+EVEN layout extent,656blocks/694patterns/107chunks and all517 native placement
+rows. Its224 saved ordinals reuse the existing766-byte bank and96-slot spawner
+algorithm. Shared player/math/animation data explicitly leaves the PPZ ramp
+unowned; raw native zoneAct is0100. Source/placement qualification passes208
+cases without failures/errors/skips. Same-CUE stock retention passes67 cases,
+including all earlier stock contracts and JP/EU absence. Legacy constructors and
+source identity remain unchanged; data presence grants no direct boot or FULL.
+
+Three finite controller recipes return through24000 but do not reach the Boss.
+The last Right+B16/Right16 observer samples a maximum X1998.67 and intentionally
+fails its observation bound. Complete restore/current-picture checks run at
+selected cuts; no new image is exported. Its temporary source is removed and the
+permanent seven-case fixture restored byte-exact. Native terrain/control diagnosis
+near this slope, the persistent IPX progress/save owner, and R31 source-specific
+Frame Init are the next joins. R31 ordinary Main/Hurt/World, natural Boss defeat,
+full USA and regional parity remain open. Parent next38c69fae is freshly fetched
+and already an ancestor; MAIN and remotes are unchanged. These focused checks do
+not replace the incomplete broad parent smoke qualification.
+
 ## 6 November 2026 — actual Act3 loading and first visible Sonic
 
 The original fixed controller route now reaches the actual same-World R13D

@@ -301,8 +301,14 @@ matching area heading; see the
   through the existing renderer. Fixed-controller state and selected-pixel
   replay cover the first visible Sonic and completed Title art service. Host
   course reset publishes Act3 consistently to the manager and World so the
-  act-scoped rewind allowance refills once. Boss, Capsule and Results components
-  use authenticated future metadata; live boss combat and regional parity remain
+  act-scoped rewind allowance refills once. Cached Boss/limb/bumper, Capsule and
+  Results owners now publish through the actual physical walk and same Frame.
+  The retained Act3 exit preserves22 black waits, final clear, RTS and coherent
+  IPX blank with full/course replay, stopping honestly at missing persistent
+  programme state. Original-USA Collision Chaos data and517 native placements
+  detach through the same CUE, preserving the saved bank and spawner algorithms;
+  common Sonic data keeps the absent PPZ ramp explicit. Data custody grants no
+  next-zone gameplay. Natural boss defeat, full acts and regional parity remain
   separate.
   CD player headless boot loads the fixed
   roster before rewind controller creation while keeping no-device audio before

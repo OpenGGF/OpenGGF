@@ -8,6 +8,7 @@ import com.openggf.game.soniccd.level.CdR12aPlayerAssets;
 import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
 import com.openggf.game.soniccd.level.CdR12bPlayerAssets;
 import com.openggf.game.soniccd.level.CdR13FutureAssets;
+import com.openggf.game.soniccd.level.CdR31aAssets;
 import com.openggf.game.soniccd.media.CdProgramAssets;
 import com.openggf.game.soniccd.media.CdTimeWarpPrograms;
 import com.openggf.game.soniccd.release.CdRetailRelease;
@@ -73,7 +74,11 @@ public final class CdStockLaunch {
                     ? Optional.of(new CdGameDataSource.Act3FutureAssets(
                             CdR13FutureAssets.fromPrograms(media, CdStagePayload.R13C.stage()),
                             CdR13FutureAssets.fromPrograms(media, CdStagePayload.R13D.stage()))) : Optional.empty();
-            return new CdGameDataSource(release, assets, fmSoundAssets, timeWarpPrograms, act2Assets, act2Past, act3Future);
+            // Native IPX.RunR3/RunR31 chooses this programme later; detach it from THIS original CUE.
+            // Data presence grants no next-zone execution and regional custody remains explicitly absent.
+            Optional<CdR31aAssets> r31a = release.variant() == CdReleaseVariant.USA
+                    ? Optional.of(CdR31aAssets.fromPrograms(media, CdStagePayload.R31A.stage())) : Optional.empty();
+            return new CdGameDataSource(release, assets, fmSoundAssets, timeWarpPrograms, act2Assets, act2Past, act3Future, r31a);
         }
     }
 

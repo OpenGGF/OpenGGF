@@ -38,7 +38,7 @@ class TestSonicCdAct2RobotGeneratorWorld {
         assertEquals(0x20E734,b.assets().explosionScheduleAddress());assertEquals(22,b.assets().baseTiles().length());
         assertEquals(130,SonicCdGameModule.Act2LoadCall.values().length);assertEquals(119,SonicCdGameModule.Act2LoadCall.MONITOR_ITEM_RING_AWARD.ordinal());
         assertEquals(120,SonicCdGameModule.Act2LoadCall.TUNNEL_DOOR_SPLASH_BODY.ordinal());assertEquals(121,SonicCdGameModule.Act2LoadCall.TUNNEL_DOOR_SPLASH_FM.ordinal());
-        assertEquals(122,SonicCdGameModule.Act2LoadCall.ROBOT_GENERATOR_BODY.ordinal());assertEquals(28,SonicCdGameModule.PastSound.class.getPermittedSubclasses().length);
+        assertEquals(122,SonicCdGameModule.Act2LoadCall.ROBOT_GENERATOR_BODY.ordinal());assertEquals(32,SonicCdGameModule.PastSound.class.getPermittedSubclasses().length);
         assertThrows(IllegalStateException.class,()->invoke(s.visit(),"runRobotGenerator",new Class<?>[]{int.class},127));assertNativeCapture(before,s.h());
     }
 

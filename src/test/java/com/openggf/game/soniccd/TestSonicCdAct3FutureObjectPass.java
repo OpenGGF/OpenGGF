@@ -52,7 +52,7 @@ class TestSonicCdAct3FutureObjectPass {
         for(var a:actual()){var h=new Host(a);h.good=OptionalInt.of(0);h.seedDynamic(32,0x24,1);h.walk();assertEquals(0,h.placement.pool().state(32).id());h.finish();}
     }
     @Test void capsuleBossAndOtherFamiliesStopAtTheirActualPhysicalIdentityWithEarlierPrefix()throws Exception{
-        for(var a:actual())for(int id:new int[]{0x15,0x2A}){var h=new Host(a);h.seedReserved(2,0x1C,0);h.seedDynamic(32,id,0);var old=h.reserved(2);
+        for(var a:actual())for(int id:new int[]{0x03}){var h=new Host(a);h.seedReserved(2,0x1C,0);h.seedDynamic(32,id,0);var old=h.reserved(2);
             var e=assertThrows(SonicCdAct3FutureObjectPass.Unowned.class,h::walk);assertEquals(id,e.value());assertEquals(32,e.wholeIndex());assertEquals(SonicCdAct3FutureObjectPass.Boundary.OBJECT_FAMILY,e.boundary());assertFalse(Arrays.equals(old.copy(),h.reserved(2).copy()));assertEquals(id,h.placement.pool().state(32).id());}
     }
     @Test void titleDefersRealPlcTwoAndRetainsReachedRoutineScrollPrefixWhenOwnerMissing()throws Exception{

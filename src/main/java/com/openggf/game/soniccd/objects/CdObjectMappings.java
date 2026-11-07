@@ -15,6 +15,9 @@ import com.openggf.game.soniccd.level.CdStagePlayerSource;
 import com.openggf.game.soniccd.level.CdR13FutureAssets;
 import com.openggf.game.soniccd.level.CdR13ObjectAssets;
 import com.openggf.game.soniccd.level.CdR13ReusedObjectAssets;
+import com.openggf.game.soniccd.level.CdR13BossAssets;
+import com.openggf.game.soniccd.level.CdR13CapsuleAssets;
+import com.openggf.game.soniccd.level.CdR13ResultsAssets;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -402,6 +405,33 @@ public final class CdObjectMappings implements CdDrawMappings {
         tables.add(new DeclaredTable(source.range(owner.identity().file()).nativeAddress(),raw,visual.mappingTableOffset(),visual.mappingFrames().size()));
     }
     // END R13 REUSED MAPPING JOIN 20261106
+
+    // BEGIN R13 BOSS MAPPING JOIN 20261106
+    /** Add actual ten Boss mapping roots. Old2/3 factories and raw resolver remain exact. */
+    public static CdObjectMappings fromAct3FutureAssets(CdR13FutureAssets assets,CdR13ObjectAssets startup,CdR13ReusedObjectAssets reused,CdR13BossAssets boss){
+        var base=fromAct3FutureAssets(assets,startup,reused);Objects.requireNonNull(boss,"actual original Boss data");
+        if(!boss.ownsAssets(assets))throw new IllegalArgumentException("Boss mapping aggregate differs");
+        var tables=new ArrayList<>(base.tables.values());
+        for(var source:CdR13BossAssets.Visual.values()){var raw=boss.view(source.mappingTable());var visual=boss.visual(source);requireEqualBytes(raw,visual.mappings());
+            for(var frame:visual.mappingFrames())requireEqualBytes(frame.bytes(),raw.slice(frame.relativeOffset(),1+frame.pieces().size()*5));
+            tables.add(new DeclaredTable(boss.range(source.mappingTable()).nativeAddress(),raw,0,source.frameCount()));}
+        return declaredSourceViews(tables,new ArrayList<>(base.staticPieces.values()));
+    }
+    // END R13 BOSS MAPPING JOIN 20261106
+
+    // BEGIN R13 CAPSULE RESULTS MAPPING JOIN 20261106
+    /** Add the actual Capsule9 and four Results5 counted roots; old2/3/4 catalogues stay exact. */
+    public static CdObjectMappings fromAct3FutureAssets(CdR13FutureAssets assets,CdR13ObjectAssets startup,
+            CdR13ReusedObjectAssets reused,CdR13BossAssets boss,CdR13CapsuleAssets capsule,CdR13ResultsAssets results){
+        var base=fromAct3FutureAssets(assets,startup,reused,boss);Objects.requireNonNull(capsule);Objects.requireNonNull(results);
+        if(!capsule.ownsAssets(assets)||!results.ownsAssets(assets))throw new IllegalArgumentException("Capsule/Results mapping aggregate differs");
+        var tables=new ArrayList<>(base.tables.values());var raw=capsule.view(CdR13CapsuleAssets.View.MAPPINGS);var visual=capsule.visual();requireEqualBytes(raw,visual.mappings());
+        for(var frame:visual.mappingFrames())requireEqualBytes(frame.bytes(),raw.slice(frame.relativeOffset(),1+frame.pieces().size()*5));
+        tables.add(new DeclaredTable(capsule.mappingAddress(),raw,0,9));
+        for(var root:results.mappingRoots())tables.add(new DeclaredTable(results.mappingAddress(),root.source(),root.tableOffset(),root.frameCount()));
+        return declaredSourceViews(tables,new ArrayList<>(base.staticPieces.values()));
+    }
+    // END R13 CAPSULE RESULTS MAPPING JOIN 20261106
 
     @Override public MappingBody resolve(int addressBits, boolean staticPiece, int mapFrameByte) {
         if (mapFrameByte < 0 || mapFrameByte > 255) {

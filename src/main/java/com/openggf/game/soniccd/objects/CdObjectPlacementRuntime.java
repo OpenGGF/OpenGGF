@@ -11,6 +11,7 @@ import com.openggf.game.soniccd.level.CdR12aObjectAssets;
 import com.openggf.game.soniccd.level.CdR12aTerrainAssets;
 import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
 import com.openggf.game.soniccd.level.CdR13FutureAssets;
+import com.openggf.game.soniccd.level.CdR31aAssets;
 import com.openggf.game.soniccd.level.CdStagePlayerSource;
 import com.openggf.game.soniccd.media.CdMmdImage;
 
@@ -55,11 +56,12 @@ public final class CdObjectPlacementRuntime {
         private final Status status;
         private final CdObjectPool.Snapshot pool;
         private final CdAssetBytes savedFlags;
+        private final CdR31aAssets r31aSource;
         private Snapshot(Object owner, CdObjectPlacements placements, Optional<CdR11aAssets.Identity> identity,
                          Optional<CdR11bAssets.Identity> pastIdentity,
                          Optional<CdR12aTerrainAssets.Identity> act2Identity,
                          Optional<CdR12bTerrainAssets.Identity> act2PastIdentity,
-                         Status status, CdObjectPool.Snapshot pool, CdAssetBytes savedFlags) {
+                         Status status, CdObjectPool.Snapshot pool, CdAssetBytes savedFlags, CdR31aAssets r31aSource) {
             this.owner = owner;
             this.placements = placements;
             this.identity = identity;
@@ -69,6 +71,7 @@ public final class CdObjectPlacementRuntime {
             this.status = status;
             this.pool = pool;
             this.savedFlags = savedFlags;
+            this.r31aSource = r31aSource;
         }
         public Status status() { return status; }
         public CdObjectPool.Snapshot pool() { return pool; }
@@ -82,6 +85,7 @@ public final class CdObjectPlacementRuntime {
     private final Optional<CdR12aTerrainAssets.Identity> act2Identity;
     private final Optional<CdR12bTerrainAssets.Identity> act2PastIdentity;
     private final CdR13FutureAssets act3Future; // Exact retained aggregate, never a public identity certificate.
+    private final CdR31aAssets r31aSource; // Exact original R31A owner, independent of legacy identity projections.
     private final CdObjectPool pool = new CdObjectPool();
     private final byte[] savedFlags = new byte[SAVED_BANK_BYTES];
     private int routine;
@@ -124,6 +128,15 @@ public final class CdObjectPlacementRuntime {
                                      Optional<CdR11bAssets.Identity> pastIdentity,
                                      Optional<CdR12aTerrainAssets.Identity> act2Identity,
                                      Optional<CdR12bTerrainAssets.Identity> act2PastIdentity, CdR13FutureAssets act3Future) {
+        this(placements, identity, pastIdentity, act2Identity, act2PastIdentity, act3Future, null);
+    }
+
+    private CdObjectPlacementRuntime(CdObjectPlacements placements, Optional<CdR11aAssets.Identity> identity,
+                                     Optional<CdR11bAssets.Identity> pastIdentity,
+                                     Optional<CdR12aTerrainAssets.Identity> act2Identity,
+                                     Optional<CdR12bTerrainAssets.Identity> act2PastIdentity, CdR13FutureAssets act3Future,
+                                     CdR31aAssets r31aSource) {
+        this.r31aSource = r31aSource;
         this.act3Future = act3Future;
         this.placements = Objects.requireNonNull(placements);
         this.identity = identity;
@@ -266,11 +279,34 @@ public final class CdObjectPlacementRuntime {
     public boolean ownsAct3FutureAssets(CdR13FutureAssets assets) { return assets != null && act3Future == assets && placements == assets.placements(); }
     // END R13 RETAINED PLACEMENT ADAPTER 20261106
 
+    // BEGIN R31A RETAINED PLACEMENT ADAPTER 20261107
+    /**
+     * Original USA R31A source and exact surviving2+$2FC bank; no native reset, Init or World admission.
+     * R3 Legacy Act1 Shared includes common/object_spawn.asm:31-312. Its saved ordinal is a BYTE;
+     * source row indices0..516 remain full list cursors, not saved IDs. The actual source has224 saved rows.
+     */
+    public static CdObjectPlacementRuntime fromR31aAssets(CdR31aAssets assets, CdAssetBytes exactSavedBank) {
+        Objects.requireNonNull(exactSavedBank, "exact carried saved-object bank");
+        if (exactSavedBank.length() != SAVED_BANK_BYTES) {
+            throw new IllegalArgumentException("Carried saved-object bank must be 2+$2FC bytes, was " + exactSavedBank.length());
+        }
+        var layout = CdObjectPlacements.fromR31aAssets(assets);
+        var runtime = new CdObjectPlacementRuntime(layout, Optional.empty(), Optional.empty(),
+                Optional.empty(), Optional.empty(), null, assets);
+        exactSavedBank.buffer().get(runtime.savedFlags);
+        return runtime;
+    }
+    /** Actual retained owner and its cached native layout; equal identities or rows confer no relation. */
+    public boolean ownsR31aAssets(CdR31aAssets assets) {
+        return assets != null && r31aSource == assets && placements == assets.placements();
+    }
+    // END R31A RETAINED PLACEMENT ADAPTER 20261107
+
     public CdObjectPlacements placements() { return placements; }
     public Optional<CdR11aAssets.Identity> sourceIdentity() { return identity; }
 
     /** Package-local admission guards; the public identity accessor retains its A-only contract. */
-    boolean hasAuthenticatedSource() { return identity.isPresent() || pastIdentity.isPresent() || act2Identity.isPresent() || act2PastIdentity.isPresent() || act3Future != null; }
+    boolean hasAuthenticatedSource() { return identity.isPresent() || pastIdentity.isPresent() || act2Identity.isPresent() || act2PastIdentity.isPresent() || act3Future != null || r31aSource != null; }
     boolean sameBSource(CdR11bAssets assets) {
         return pastIdentity.equals(Optional.of(Objects.requireNonNull(assets, "assets").identity()));
     }
@@ -430,14 +466,14 @@ public final class CdObjectPlacementRuntime {
     }
 
     public Snapshot capture() {
-        return new Snapshot(owner, placements, identity, pastIdentity, act2Identity, act2PastIdentity, status(), pool.capture(), CdAssetBytes.copyOf(savedFlags));
+        return new Snapshot(owner, placements, identity, pastIdentity, act2Identity, act2PastIdentity, status(), pool.capture(), CdAssetBytes.copyOf(savedFlags), r31aSource);
     }
 
     public void validateRestore(Snapshot snapshot) {
         Objects.requireNonNull(snapshot);
         if (snapshot.owner != owner || snapshot.placements != placements || !snapshot.identity.equals(identity)
                 || !snapshot.pastIdentity.equals(pastIdentity) || !snapshot.act2Identity.equals(act2Identity)
-                || !snapshot.act2PastIdentity.equals(act2PastIdentity)) {
+                || !snapshot.act2PastIdentity.equals(act2PastIdentity) || snapshot.r31aSource != r31aSource) {
             throw new IllegalArgumentException("Foreign CD placement source/runtime capture");
         }
         pool.validateRestore(snapshot.pool);

@@ -70,6 +70,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.OptionalInt;
 
 /**
@@ -164,7 +165,14 @@ public final class SonicCdGameModule implements GameModule {
         playerPresentation.requirePastRenderIdle();validateAct3FutureLoadingCut();act3FutureLoading.requireServiceIdle();
         if((held&~255)!=0)throw new IllegalArgumentException("Native held BYTE required");
         try { act3FutureLoading.service(held);act3FutureHost.projectCamera(GameServices.camera()); }
-        catch(RuntimeException|Error failure){closePlayerCycleAfterFailure(failure);throw failure;}
+        catch(RuntimeException|Error failure){
+            boolean returned=failure instanceof SonicCdAct3FutureLoadingVisit.UnsupportedLoading stopped
+                    &&act3FutureLoading.state().phase()==SonicCdAct3FutureLoadingVisit.Phase.OLD_IPX_RETURNED
+                    &&!act3FutureLoading.failed()
+                    &&(stopped.boundary()==SonicCdAct3FutureLoadingVisit.Boundary.IPX_BOSS_SAVED_ZONE_OWNER
+                    ||stopped.boundary()==SonicCdAct3FutureLoadingVisit.Boundary.IPX_BOSS_GAME_OVER);
+            if(!returned)closePlayerCycleAfterFailure(failure);throw failure;
+        }
     }
     void validateAct3FutureLoadRequest(LevelLoadContext context) {
         var mode=SessionManager.getCurrentGameplayMode();
@@ -240,6 +248,49 @@ public final class SonicCdGameModule implements GameModule {
             if(host!=act3FutureHost)throw new IllegalArgumentException("Foreign R13 V-int host");
             requireAct3FutureLoadingVisit(act3FutureLoading);
             EngineTiming.vIntRunCounter(EngineServices.current()).serviceRepresentedVBlank();
+        }
+        @Override public Optional<SonicCdAct3FutureObjectPass.ResultsFlagsImage> resultsFlags(
+                SonicCdAct3FutureWorldHost host,SonicCdAct3FutureObjectPass pass) {
+            if(host!=act3FutureHost||act3FutureWorld==null)
+                throw new IllegalStateException("No actual R13 Module flags owner");
+            requireAct3FutureLoadingVisit(act3FutureLoading);act3FutureWorld.requireObjectPass(pass);
+            if(!pass.isCurrentEndOwnersRead())throw new IllegalStateException("No original end-object flags read");
+            var p=Objects.requireNonNull(levelProgram,"Actual Module programme owner");
+            return Optional.of(new SonicCdAct3FutureObjectPass.ResultsFlagsImage(p,p.goodFutureFlags()));
+        }
+        @Override public SonicCdAct3FutureWorldHost.ResultsFlagsStore prepareResultsFlags(
+                SonicCdAct3FutureWorldHost host,SonicCdAct3FutureObjectPass pass,
+                SonicCdAct3FutureObjectPass.Adoption actual,
+                SonicCdAct3FutureObjectPass.ResultsFlagsImage expected,int value) {
+            if(host!=act3FutureHost||act3FutureWorld==null)
+                throw new IllegalStateException("No actual R13 Module flags publication");
+            requireAct3FutureLoadingVisit(act3FutureLoading);act3FutureWorld.requireObjectPass(pass);
+            Objects.requireNonNull(actual);Objects.requireNonNull(expected);
+            var before=Objects.requireNonNull(levelProgram);
+            if((value&~255)!=0||!pass.isCurrentEndFlagsPublication(actual)
+                    ||actual.endExpected().flags().orElseThrow()!=expected||expected.fence()!=before
+                    ||!expected.value().equals(before.goodFutureFlags())
+                    ||actual.endNext().flagsByte().orElseThrow()!=value)
+                throw new IllegalArgumentException("Not the original complete Module flags pair");
+            // CLR.B establishes known zero without reading an unknown old byte. Only this
+            // original pending native publication supplies authority; values are not commands.
+            var after=new LevelProgramState(before.demoMode(),before.timeStones(),before.specialStage(),
+                    before.usePlayer2(),before.palFadeFlags(),before.gameMode(),before.levelStarted(),
+                    before.whiteFadeSteps(),before.phase(),OptionalInt.of(value));
+            return new SonicCdAct3FutureWorldHost.ResultsFlagsStore() {
+                private boolean applied;
+                @Override public void validate() {
+                    if(applied||levelProgram!=before||!pass.isCurrentEndFlagsPublication(actual))
+                        throw new IllegalStateException("Original Module flags publication expired");
+                    requireAct3FutureLoadingVisit(act3FutureLoading);act3FutureWorld.requireObjectPass(pass);
+                }
+                @Override public void adoptAfterNative() {
+                    // All owners were preflighted before native stores. The publication is now
+                    // applied, so its before-native predicate must not be re-entered here.
+                    if(applied||levelProgram!=before)throw new IllegalStateException("Module flags pair changed");
+                    levelProgram=after;applied=true;
+                }
+            };
         }
         @Override public void resetGoodFutureFlags(SonicCdAct3FutureWorldHost host) {
             if(host!=act3FutureHost)throw new IllegalArgumentException("Foreign R13 first-load host");
@@ -834,7 +885,17 @@ public final class SonicCdGameModule implements GameModule {
         PastLoadBoundary boundary() { return boundary; }
     }
     // Typed request metadata and one native music-latch projection; no audio synthesis.
-    sealed interface PastSound permits PastCheckpointFm, PastFrameSound, PastSubCpuSound, PastRingFm, PastRingSubCpu, PastSpringFm, PastTunnelDoorFm, PastMonitorFm, PastTimePostSubCpu, PastTamabbohFm, PastCollapsePlatformFm, PastMosquiFm, PastLostRingFm, PastRobotGeneratorFm, PastProjectorFm, PastSignpostSound, PastBigRingFm, PastResultsSound, PastProgrammeSound, PastWallFm, PastTunnelPathFm, PastMonitorItemShieldFm, PastMonitorItemRing, PastTunnelDoorSplashFm, PastDiscFm, PastVerticalDoorFm, PastSpeedShoesSubCpu, PastLevelMusic { }
+    sealed interface PastSound permits PastCheckpointFm, PastFrameSound, PastSubCpuSound, PastRingFm, PastRingSubCpu, PastSpringFm, PastTunnelDoorFm, PastMonitorFm, PastTimePostSubCpu, PastTamabbohFm, PastCollapsePlatformFm, PastMosquiFm, PastLostRingFm, PastRobotGeneratorFm, PastProjectorFm, PastSignpostSound, PastBigRingFm, PastResultsSound, PastProgrammeSound, PastWallFm, PastTunnelPathFm, PastMonitorItemShieldFm, PastMonitorItemRing, PastTunnelDoorSplashFm, PastDiscFm, PastVerticalDoorFm, PastSpeedShoesSubCpu, PastLevelMusic, PastR13BossFm, PastR13BossSubCpu, PastR13CapsuleExplosion, PastR13CapsuleSubCpu { }
+    record PastR13CapsuleExplosion() implements PastSound { }
+    record PastR13CapsuleSubCpu(com.openggf.game.soniccd.objects.CdR13Capsule.CpuCommand command) implements PastSound {
+        PastR13CapsuleSubCpu { Objects.requireNonNull(command); }
+    }
+    record PastR13BossFm(com.openggf.game.soniccd.objects.CdR13Boss.FmSound sound) implements PastSound {
+        PastR13BossFm { Objects.requireNonNull(sound); }
+    }
+    record PastR13BossSubCpu(com.openggf.game.soniccd.objects.CdR13Boss.CpuCommand command) implements PastSound {
+        PastR13BossSubCpu { Objects.requireNonNull(command); }
+    }
     record PastSpeedShoesSubCpu(com.openggf.game.soniccd.player.CdPlayerSpeedShoesReward.SubCpuCommand command) implements PastSound {
         PastSpeedShoesSubCpu { Objects.requireNonNull(command); }
     }
@@ -1650,8 +1711,15 @@ public final class SonicCdGameModule implements GameModule {
         if (act3FutureLoading != null) {
             var state=act3FutureLoading.state();var p=state.program();
             return new LevelProgramState(p.demoModeWord(),p.timeStonesByte(),p.specialStageByte(),p.usePlayer2Byte(),
-                    p.palFadeFlagsByte(),p.gameModeByte(),p.levelStartedByte(),state.initialFadeSteps(),
-                    LevelProgramPhase.ACT3_FUTURE_LOADING,levelProgram.goodFutureFlags());
+                    p.palFadeFlagsByte(),p.gameModeByte(),p.levelStartedByte(),act3FutureLoading.oldProgrammeSelected()?act3FutureLoading.oldExitSteps():state.initialFadeSteps(),
+                    switch(state.phase()) {
+                        case OLD_EXIT_PRELUDE -> LevelProgramPhase.OLD_EXIT_PRELUDE;
+                        case OLD_BLACK_FADE -> LevelProgramPhase.OLD_BLACK_FADE;
+                        case OLD_CLEAR_WAIT -> LevelProgramPhase.OLD_CLEAR_WAIT;
+                        case OLD_RETURNED -> LevelProgramPhase.OLD_RETURNED;
+                        case OLD_IPX_RETURNED -> LevelProgramPhase.OLD_IPX_RETURNED;
+                        default -> LevelProgramPhase.ACT3_FUTURE_LOADING;
+                    },levelProgram.goodFutureFlags());
         }
         if (act2PastLoading != null) {
             var p = act2PastLoading.state().program();

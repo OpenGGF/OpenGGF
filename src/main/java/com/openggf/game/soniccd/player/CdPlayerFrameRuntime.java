@@ -1242,6 +1242,48 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
                     "Old programme exit requires retained R11A/R11B with raw1/1 or retained R12B with actual Results2/2 Gates");
     }
 
+    // BEGIN distinct retained R13 Results old-programme value services.
+    /** Actual retained C/D source with Results' raw present1/zoneAct0100. Root authenticates
+     * its private completed-walk/exit phase; this complete-pair component service grants no World.
+     * Native Main85-115 / VInt894-907 / Finish704-715,971-995; no Body or destination-source admission. */
+    public void serviceAct3FutureOldProgrammeExitPaletteFade(int heldByte, CdR13FutureAssets source,
+                                                             CdPlayerBody.State expectedState,
+                                                             CdPlayerBody.Environment expectedEnvironment,
+                                                             Runnable publication, Runnable fastPlcService) {
+        if ((heldByte & ~0xFF) != 0) throw new IllegalArgumentException("Expected an unsigned native held byte");
+        Objects.requireNonNull(publication, "old R13 palette publication");
+        Objects.requireNonNull(fastPlcService, "old R13 fast PLC service");
+        serviceAct3FutureOldProgrammeExitEntry(heldByte, source, expectedState, expectedEnvironment, publication, null, fastPlcService);
+    }
+    /** Original selectorC publication, camera copies/DrawLevel and fast service, then shared Finish/count. */
+    public void serviceAct3FutureOldProgrammeExitLoad(int heldByte, CdR13FutureAssets source,
+                                                      CdPlayerBody.State expectedState,
+                                                      CdPlayerBody.Environment expectedEnvironment,
+                                                      Runnable publication, Runnable copyAndDraw, Runnable fastPlcService) {
+        if ((heldByte & ~0xFF) != 0) throw new IllegalArgumentException("Expected an unsigned native held byte");
+        Objects.requireNonNull(publication, "old R13 palette/HScroll/SAT publication");
+        Objects.requireNonNull(copyAndDraw, "old R13 camera copies and DrawLevel");
+        Objects.requireNonNull(fastPlcService, "old R13 fast PLC service");
+        serviceAct3FutureOldProgrammeExitEntry(heldByte, source, expectedState, expectedEnvironment, publication, copyAndDraw, fastPlcService);
+    }
+    private void serviceAct3FutureOldProgrammeExitEntry(int heldByte, CdR13FutureAssets source,
+                                                        CdPlayerBody.State expectedState, CdPlayerBody.Environment expectedEnvironment,
+                                                        Runnable publication, Runnable copyAndDraw, Runnable fastPlcService) {
+        requireOpenIdle(); requireClosedFrame();
+        Objects.requireNonNull(source, "retained original R13 source");
+        Objects.requireNonNull(expectedState, "old R13 actual State");
+        Objects.requireNonNull(expectedEnvironment, "old R13 actual Environment");
+        if (!state.equals(expectedState) || !environment.equals(expectedEnvironment))
+            throw new IllegalArgumentException("Stale old R13 State/Environment cut");
+        if (assets != null || pastSource == null || !pastSource.ownsAct3Future(source))
+            throw new IllegalArgumentException("Exact retained original R13 source required");
+        var gates = environment.movement().gates();
+        if (gates.zoneAct() != 0x100 || gates.timeZone() != 1)
+            throw new UnsupportedFrame(UnsupportedBoundary.SOURCE_FAMILY, "Retained R13 Results requires actual raw0100/1");
+        serviceAdmittedLevelEntry(heldByte, publication, copyAndDraw, fastPlcService);
+    }
+    // END distinct retained R13 Results old-programme value services.
+
     /** Shared controller/timer/failure kernel; selector12 has no camera-copy/DrawLevel cut. */
     private void serviceLevelEntry(int heldByte, Runnable palettePublication, Runnable copyAndDraw,
                                    Runnable fastPlcService) {
@@ -1354,11 +1396,21 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
                                    Optional<CdPlayerBody.LevelContext> levelContext,
                                    Optional<CdPlayerMovement.ObjectContext> objects,
                                    Optional<CdPlayerBody.TimeWarpContext> timeWarpContext) {
+        return runBody(levelFrames,touchContext,levelContext,objects,timeWarpContext,Optional.empty());
+    }
+    // BEGIN R13 OPTIONAL BOSS FRAME BODY ENTRY 20261106
+    /** Borrow only this actual call's marker; existing entitlement/whole Body atomic adoption remains.
+     * A stopped pure SPECIAL prefix is not a successful Frame publication. No owner is minted here. */
+    public BodyPublication runBody(int levelFrames,Optional<CdPlayerBody.TouchContext> touchContext,
+                                   Optional<CdPlayerBody.LevelContext> levelContext,
+                                   Optional<CdPlayerMovement.ObjectContext> objects,
+                                   Optional<CdPlayerBody.TimeWarpContext> timeWarpContext,
+                                   Optional<CdPlayerBody.BossSpecialContext> bossSpecialContext) {
         requireBodyEntitlement();
         bodyEntitled = false;
         inOperation = true;
         try {
-            var result = body.step(state, withLevelFrames(environment, levelFrames & 0xFFFF), touchContext, levelContext, objects, timeWarpContext);
+            var result = body.step(state, withLevelFrames(environment, levelFrames & 0xFFFF), touchContext, levelContext, objects, timeWarpContext,bossSpecialContext);
             var publication = new BodyPublication(result, collectSounds(result.effects()));
             state = result.state(); environment = result.environment(); display = result.display();
             return publication;
@@ -2018,6 +2070,7 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
             else if (effect instanceof CdPlayerBody.ModeEffect mode) collectMovementSound(mode.effect(), sounds);
             else if (effect instanceof CdPlayerBody.AirCollisionEffect air) collectMovementSound(air.effect(), sounds);
             else if (effect instanceof CdPlayerBody.ObjectTouchResponse touch) collectContactSounds(touch.result().calls(), sounds);
+            else if (effect instanceof CdPlayerBody.ObjectBossTouchResponse touch) collectContactSounds(touch.result().values().calls(), sounds);
             else if (effect instanceof CdPlayerBody.KillPlayerCall kill) collectContactSounds(kill.result().calls(), sounds);
             else if (effect instanceof CdPlayerBody.Z80RamWrite driver) sounds.add(new DriverRamWrite(driver.address(), driver.value()));
         }

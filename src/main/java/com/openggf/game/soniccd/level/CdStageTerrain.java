@@ -21,7 +21,8 @@ public final class CdStageTerrain {
         PPZ2_PRESENT("R12A", 5824, 25952, 54272, 42, 4, 10, 2, 900),
         PPZ2_PAST("R12B", 5664, 25504, 54272, 42, 4, 10, 2, 900),
         PPZ3_GOOD_FUTURE("R13C", 6080, 25216, 54272, 15, 4, 10, 2, 800),
-        PPZ3_BAD_FUTURE("R13D", 6048, 26048, 54272, 15, 4, 10, 2, 800);
+        PPZ3_BAD_FUTURE("R13D", 6048, 26048, 54272, 15, 4, 10, 2, 800),
+        CCZ1_PRESENT("R31A", 5248, 22208, 54784, 48, 6, 7, 3, 700);
 
         private final String label;
         private final int blockBytes;
@@ -91,7 +92,9 @@ public final class CdStageTerrain {
 
         // Native clear $800; minus-one dimensions; FG+$00/BG+$40; row stride $80. Never repeat rows.
         private static void copyPlane(byte[] source, int width, int height, int base, byte[] ram, Shape shape) {
-            if (source.length != 2 + width * height || Byte.toUnsignedInt(source[0]) + 1 != width
+            // Layout includes retain native EVEN padding. Only width*height cells are copied;
+            // the one unread byte on odd-sized layouts is not a row or runtime default.
+            if (source.length != ((2 + width * height + 1) & ~1) || Byte.toUnsignedInt(source[0]) + 1 != width
                     || Byte.toUnsignedInt(source[1]) + 1 != height) {
                 throw new IllegalArgumentException("Unsupported " + shape.label + " layout dimensions or extent");
             }

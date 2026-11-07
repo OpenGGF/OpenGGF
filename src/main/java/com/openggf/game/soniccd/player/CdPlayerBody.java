@@ -163,6 +163,15 @@ public final class CdPlayerBody {
         }
     }
 
+    // BEGIN R13 OPTIONAL BOSS TOUCH CONTEXT 20261106
+    /** Borrowed values only. Original snapshot entitlement is distinct from the local post-MODE
+     * overlay sent to BOTH scan and response. The actual World supplies this exact cached response,
+     * original borrowed snapshot and current Frame bossFight byte; none grants invocation authority. */
+    public record BossSpecialContext(CdPlayerTouchResponse response,CdObjectPool.Snapshot snapshot,int bossFightByte) {
+        public BossSpecialContext{Objects.requireNonNull(response);Objects.requireNonNull(snapshot);byteValue(bossFightByte);}
+    }
+    // END R13 OPTIONAL BOSS TOUCH CONTEXT 20261106
+
     /**
      * Ephemeral declared pure input, NOT a world/source ownership certificate.
      * The external world binding/preflight owns the actual scanner table and
@@ -251,7 +260,7 @@ public final class CdPlayerBody {
     public enum Sound { SCMD_R1AMUS, FM_9C, SCMD_FADECDA, SCMD_PASTMUS, SCMD_R1DMUS }
     public sealed interface Effect permits ActorWrite, GlobalWrite, ChargeEffect, ModeEffect,
             CallReturned, DisplayEligibility, PositionHistoryWrite, AnimationPublication,
-            ObjectTouchResult, ObjectTouchResponse, TouchScanCompleted, SoundRequest,
+            ObjectTouchResult, ObjectTouchResponse, ObjectBossTouchResponse, TouchScanCompleted, SoundRequest,
             AirCollisionEffect, KillPlayerCall, LevelWrite, DeadCheckGone, UncheckedAliasWrite,
             Z80RamWrite, ResetSavedObjectFlagsRequest, RestartCut, TimeWarpCall { }
     public record ActorWrite(ActorField field, int value) implements Effect {
@@ -321,6 +330,13 @@ public final class CdPlayerBody {
             return new ContactGlobals(p.timeWarp(), p.shield(), p.combineRing());
         }
     }
+    // BEGIN R13 COMPLETED BOSS TOUCH OBSERVATION 20261106
+    /** Final values without a fabricated common Exit, including inactive/no-common returns. */
+    public record ObjectBossTouchResponse(CdPlayerTouchResponse.BossSpecialCompleted result) implements Effect {
+        public ObjectBossTouchResponse{Objects.requireNonNull(result);}
+    }
+    // END R13 COMPLETED BOSS TOUCH OBSERVATION 20261106
+
     public record TouchScanCompleted(int slotsVisited) implements Effect { }
     public record SoundRequest(Sound sound) implements Effect {
         public SoundRequest { Objects.requireNonNull(sound); }
@@ -565,8 +581,17 @@ public final class CdPlayerBody {
     public Result step(State state, Environment environment, Optional<TouchContext> touchContext,
                        Optional<LevelContext> levelContext, Optional<CdPlayerMovement.ObjectContext> objects,
                        Optional<TimeWarpContext> timeWarpContext) {
+        return step(state,environment,touchContext,levelContext,objects,timeWarpContext,Optional.empty());
+    }
+    // BEGIN R13 OPTIONAL BOSS BODY ENTRY 20261106
+    /** Healthy opt-in continuation only. Existing stopped Body/Frame remains throw-atomic:
+     * a stopped pure boss prefix is NOT a completed Body publication and is not adopted here. */
+    public Result step(State state,Environment environment,Optional<TouchContext> touchContext,
+                       Optional<LevelContext> levelContext,Optional<CdPlayerMovement.ObjectContext> objects,
+                       Optional<TimeWarpContext> timeWarpContext,Optional<BossSpecialContext> bossSpecialContext) {
         Objects.requireNonNull(state); Objects.requireNonNull(environment); Objects.requireNonNull(touchContext);
         Objects.requireNonNull(levelContext); Objects.requireNonNull(objects); Objects.requireNonNull(timeWarpContext);
+        Objects.requireNonNull(bossSpecialContext);
         if (state.header().slotId() == 0) {
             return new Result(state, environment, List.of(), Optional.empty(), Boundary.SLOT_ABSENT, Optional.empty());
         }
@@ -585,7 +610,7 @@ public final class CdPlayerBody {
         c.returned(NativeCall.CHARGE_BEFORE_DISPATCH);
         switch (c.motion.routine()) {
             case 0 -> { initialize(c); return c.finish(Boundary.INIT_RETURN); }
-            case 2 -> { return c.finish(main(c, touchContext, objects, timeWarpContext)); }
+            case 2 -> { return c.finish(main(c, touchContext, objects, timeWarpContext, bossSpecialContext)); }
             case 4 -> { hurt(c, objects); return c.finish(Boundary.HURT_RETURN); } // Never samples touchContext.
             case 6 -> { dead(c, level(levelContext, UnsupportedBoundary.DEAD_ROUTINE)); return c.finish(Boundary.DEAD_RETURN); }
             case 8 -> {
@@ -609,7 +634,8 @@ public final class CdPlayerBody {
 
     /** ObjSonic_Main (285-351), literal call and branch order. */
     private Boundary main(Cursor c, Optional<TouchContext> touchContext,
-                      Optional<CdPlayerMovement.ObjectContext> objects, Optional<TimeWarpContext> timeWarpContext) {
+                      Optional<CdPlayerMovement.ObjectContext> objects, Optional<TimeWarpContext> timeWarpContext,
+                      Optional<BossSpecialContext> bossSpecialContext) {
         requireBoundMapping(c);
         extendedCamera(c); waterfall(c);
         if (c.debugCheat != 0 && (c.controls.rawTap() & 0x10) != 0) unsupported(UnsupportedBoundary.DEBUG_ENTRY);
@@ -665,7 +691,7 @@ public final class CdPlayerBody {
         }
         animate(c);
         if ((byte) c.motion.playerControl() >= 0 && c.motion.animation() != 0x2B) {
-            touch(c, touchContext, objects);
+            touch(c, touchContext, objects, bossSpecialContext);
         }
         specialChunks(c);
         return controlled ? Boundary.CONTROLLED_MAIN_RETURN : Boundary.MAIN_RETURN;
@@ -754,8 +780,8 @@ public final class CdPlayerBody {
     }
 
     /** Player_ObjCollide (PP Player Object Collision.asm:7-98), exactly Main:347. */
-    private static void touch(Cursor c, Optional<TouchContext> touchContext,
-                              Optional<CdPlayerMovement.ObjectContext> objects) {
+    private void touch(Cursor c, Optional<TouchContext> touchContext,
+                              Optional<CdPlayerMovement.ObjectContext> objects, Optional<BossSpecialContext> bossSpecialContext) {
         boolean patched = c.effects.stream().anyMatch(effect -> effect instanceof ModeEffect mode
                 && mode.effect() instanceof CdPlayerMovement.ObjectPatch);
         // An omitted later touch owner cannot be invented from support input. Keep the ordered patch
@@ -768,6 +794,7 @@ public final class CdPlayerBody {
             return;
         }
         var input = touchContext.orElseThrow();
+        var originalTouchSnapshot=input.snapshot();
         if (patched) {
             var original = objects.orElseThrow().slots();
             // Identical selected images in a different capture do NOT establish the shared call cut.
@@ -799,10 +826,17 @@ public final class CdPlayerBody {
                         .unsignedByte(CdObjectState.ByteField.COLLISION_TYPE));
                 default -> false;
             };
-            if (input.response().isEmpty() || !ownedHandler) {
+            boolean bossHandler=kind==CdPlayerObjectTouch.Kind.SPECIAL&&bossSpecialContext.isPresent()
+                    &&CdPlayerTouchResponse.ownsBossSpecialCollision(handler.selectedSlot().orElseThrow().unsignedByte(CdObjectState.ByteField.COLLISION_TYPE));
+            if (input.response().isEmpty() || (!ownedHandler&&!bossHandler)) {
                 throw new UnsupportedTouchHandler(handler);
             }
-            respond(c, handler, input.response().orElseThrow(), input.snapshot());
+            if(bossHandler){var marker=bossSpecialContext.orElseThrow();var response=input.response().orElseThrow();
+                if(ordinaryZoneAct!=2||ordinaryPeriod!=2)unsupported(UnsupportedBoundary.SOURCE_FAMILY);
+                if(marker.response()!=response.response()||marker.snapshot()!=originalTouchSnapshot
+                        ||marker.bossFightByte()!=c.env.movement().bounds().bossFight())throw new IllegalArgumentException("Stale/foreign actual boss touch context");
+                respondBoss(c,handler,response,input.snapshot());
+            }else respond(c, handler, input.response().orElseThrow(), input.snapshot());
         } else {
             c.effects.add(new ObjectTouchResult(selected));
         }
@@ -831,6 +865,19 @@ public final class CdPlayerBody {
         c.setScoreChain(result.player().scoreChain());
         c.effects.add(new ObjectTouchResponse(result));
     }
+
+    // BEGIN R13 HEALTHY BOSS SPECIAL RESPONSE 20261106
+    private static void respondBoss(Cursor c,CdPlayerObjectTouch.HandlerBoundary selected,ResponseContext owner,CdObjectPool.Snapshot snapshot){
+        var movement=c.env.movement();var contact=owner.contact();
+        var player=new CdPlayerTouchResponse.PlayerGlobals(contact.timeWarp(),c.invincible,contact.shield(),contact.combineRing(),c.debugCheat,c.debugMode,movement.globals().scoreChain(),movement.gates().miniSonic());
+        // Actual local Frame-derived immutable bounds at the reached native read, after preceding MODE.
+        var outcome=owner.response().respondBossSpecial(selected,c.responseActor(),player,owner.world(),movement.bounds().bossFight(),snapshot);
+        if(outcome instanceof CdPlayerTouchResponse.BossSpecialStopped stopped)throw stopped.originalException();
+        var completed=(CdPlayerTouchResponse.BossSpecialCompleted)outcome;var values=completed.values();
+        c.adopt(values.actor());c.invincible=values.player().invincible();c.setScoreChain(values.player().scoreChain());
+        c.effects.add(new ObjectBossTouchResponse(completed));
+    }
+    // END R13 HEALTHY BOSS SPECIAL RESPONSE 20261106
 
     /**
      * ObjSonic_Hurt (2351-2366), literal call order. There is no Display (no hurt, invincibility or

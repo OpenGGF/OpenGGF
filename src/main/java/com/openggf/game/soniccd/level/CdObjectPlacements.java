@@ -9,13 +9,26 @@ import java.util.Optional;
 
 /** Static placement ABI, not spawned runtime objects or saved-object state. */
 public final class CdObjectPlacements {
+    /** Finite value widths; selecting a layout does not authenticate an original source. */
+    public enum Layout {
+        LEGACY_497(497, 64), R31A_517(517, 60);
+        private final int rows, objectIds;
+        Layout(int rows, int objectIds) { this.rows = rows; this.objectIds = objectIds; }
+    }
+
     /** All encoded fields are retained, including currently uninterpreted Y flag bits 12/13. */
     public record Placement(int index, int centreX, int packedY, int encodedId, int subtype,
-                             int periodFlags, int subtype2) {
+                             int periodFlags, int subtype2, Layout layout) {
+        /** Original seven-argument admission remains bounded to indices0..496 and IDs1..64. */
+        public Placement(int index, int centreX, int packedY, int encodedId, int subtype,
+                         int periodFlags, int subtype2) {
+            this(index, centreX, packedY, encodedId, subtype, periodFlags, subtype2, Layout.LEGACY_497);
+        }
         public Placement {
-            if (index < 0 || index >= 497 || centreX < 0 || centreX >= 0xFFFF
+            Objects.requireNonNull(layout, "finite placement layout");
+            if (index < 0 || index >= layout.rows || centreX < 0 || centreX >= 0xFFFF
                     || (packedY & ~0xFFFF) != 0 || (encodedId & ~0xFF) != 0
-                    || (encodedId & 0x7F) < 1 || (encodedId & 0x7F) > 64
+                    || (encodedId & 0x7F) < 1 || (encodedId & 0x7F) > layout.objectIds
                     || (subtype & ~0xFF) != 0 || (subtype2 & ~0xFF) != 0) {
                 throw new IllegalArgumentException("Invalid native placement fields");
             }
@@ -38,9 +51,17 @@ public final class CdObjectPlacements {
     private final CdAssetBytes forwardSentinel;
     private final Optional<CdAssetBytes> backwardSentinel;
     private final Optional<CdAssetBytes> nullList;
+    private final CdR31aAssets r31aSource; // Actual retained owner, never a public value certificate.
 
     private CdObjectPlacements(List<Placement> records, CdAssetBytes sentinel,
                                 Optional<CdAssetBytes> backwardSentinel, Optional<CdAssetBytes> nullList) {
+        this(records, sentinel, backwardSentinel, nullList, null);
+    }
+
+    private CdObjectPlacements(List<Placement> records, CdAssetBytes sentinel,
+                                Optional<CdAssetBytes> backwardSentinel, Optional<CdAssetBytes> nullList,
+                                CdR31aAssets r31aSource) {
+        this.r31aSource = r31aSource;
         this.records = List.copyOf(records);
         this.forwardSentinel = sentinel;
         this.backwardSentinel = backwardSentinel;
@@ -119,6 +140,54 @@ public final class CdObjectPlacements {
         }
         throw new IllegalArgumentException("Missing R13 forward placement sentinel");
     }
+
+    // BEGIN R31A RETAINED PLACEMENT SOURCE 20261107
+    /**
+     * Actual R3 Legacy Act1 Shared includes common/object_spawn.asm and r3/stage_object_maps_1.asm.
+     * StageObjectMaps/StageObjects/StageObjectsNull (stage_object_maps_1.asm:3-325) retain517 rows.
+     * This finite decoder is reachable only through the original authenticated R31A asset owner.
+     */
+    static CdObjectPlacements decodeR31NativeOrder(CdR31aAssets owner) {
+        Objects.requireNonNull(owner, "authenticated R31A asset owner").requireAuthenticated();
+        var bytes = Objects.requireNonNull(owner.view(CdR31aAssets.Asset.OBJECT_LAYOUTS), "authenticated R31A ObjectLayouts");
+        if (bytes.length() != 4162) { throw new IllegalArgumentException("R31A ObjectLayouts extent"); }
+        int nullOffset = bytes.unsignedWord(2);
+        if (bytes.unsignedWord(0) != 12 || nullOffset != 4156
+                || bytes.unsignedWord(4) != 0xFFFF || bytes.unsignedLong(6) != 0 || bytes.unsignedWord(10) != 0
+                || bytes.unsignedWord(nullOffset) != 0xFFFF || bytes.unsignedLong(nullOffset + 2) != 0) {
+            throw new IllegalArgumentException("R31A ObjectLayouts relative pointers/backwards sentinel/Null list differ");
+        }
+        List<Placement> records = new ArrayList<>();
+        int previousX = -1;
+        for (int at = 12; at < nullOffset; at += 8) {
+            int x = bytes.unsignedWord(at);
+            if (x == 0xFFFF) {
+                if (at + 8 != nullOffset || records.size() != 517 || bytes.unsignedLong(at + 2) != 0
+                        || bytes.unsignedWord(at + 6) != 0) {
+                    throw new IllegalArgumentException("R31A placement count/forward sentinel differs");
+                }
+                return new CdObjectPlacements(records, bytes.slice(at, 8),
+                        Optional.of(bytes.slice(4, 8)), Optional.of(bytes.slice(nullOffset, 6)), owner);
+            }
+            if (x < previousX) { throw new IllegalArgumentException("R31A placements are not in native X order"); }
+            records.add(new Placement(records.size(), x, bytes.unsignedWord(at + 2), bytes.unsignedByte(at + 4),
+                    bytes.unsignedByte(at + 5), bytes.unsignedByte(at + 6), bytes.unsignedByte(at + 7), Layout.R31A_517));
+            previousX = x;
+        }
+        throw new IllegalArgumentException("Missing R31A forward placement sentinel");
+    }
+
+    /**
+     * Cross-package authenticated source relation; no raw-byte or caller-asserted identity ingress.
+     * Public Placement values, even identical ones, cannot manufacture this retained owner/cache relation.
+     */
+    public static CdObjectPlacements fromR31aAssets(CdR31aAssets owner) {
+        Objects.requireNonNull(owner, "authenticated R31A asset owner").requireAuthenticated();
+        var decoded = Objects.requireNonNull(owner.placements(), "retained R31A placements");
+        if (decoded.r31aSource != owner) { throw new IllegalArgumentException("Foreign R31A placement source/cache"); }
+        return decoded;
+    }
+    // END R31A RETAINED PLACEMENT SOURCE 20261107
 
     public List<Placement> records() { return records; }
     public CdAssetBytes forwardSentinel() { return forwardSentinel; }

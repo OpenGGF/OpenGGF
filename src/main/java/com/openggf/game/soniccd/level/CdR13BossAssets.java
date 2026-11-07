@@ -102,6 +102,7 @@ public final class CdR13BossAssets {
         public Palette{Objects.requireNonNull(colours);}
     }
     private static final CdMmdHeader HEADER=new CdMmdHeader(0,0,0,0,0x200100,0x20010C,0x200112);
+    private final CdR13FutureAssets owner;
     private final CdR13FutureAssets.Identity identity;
     private final Map<Table,CdAssetBytes> views;
     private final List<Range> ranges;
@@ -112,7 +113,7 @@ public final class CdR13BossAssets {
     private final Palette palette;
 
     private CdR13BossAssets(CdR13FutureAssets owner){
-        Objects.requireNonNull(owner,"actual original future owner");owner.requireAuthenticatedLayout();identity=Objects.requireNonNull(owner.identity());var image=Objects.requireNonNull(owner.originalImage());
+        Objects.requireNonNull(owner,"actual original future owner");this.owner=owner;owner.requireAuthenticatedLayout();identity=Objects.requireNonNull(owner.identity());var image=Objects.requireNonNull(owner.originalImage());
         boolean good=identity.file()==CdNativeFile.R13C;
         String expected=good?"3bc8965dc5668a9d1223392f5f7762df41b930b797ebc76aaa5fcf334bc16b4f":"27e6c42268ea411d184b2b91b79ed626b39871b2823a5362573216ce29fd9356";
         if(identity.variant()!=CdReleaseVariant.USA||identity.domain()!=CdMmdImage.Domain.ORIGINAL_WORD_RAM
@@ -157,6 +158,7 @@ public final class CdR13BossAssets {
         palette=new Palette(5,destination,counter,address,view(Table.BOSS_PALETTE),0x200000+selector,loader);
     }
     public static CdR13BossAssets bind(CdR13FutureAssets owner){return new CdR13BossAssets(owner);}
+    public boolean ownsAssets(CdR13FutureAssets owner){return this.owner==owner;}
     public CdR13FutureAssets.Identity identity(){return identity;}
     public List<Range> ranges(){return ranges;}
     public Range range(Table table){return Objects.requireNonNull(table).range(identity.file()==CdNativeFile.R13C,identity.file());}

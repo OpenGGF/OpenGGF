@@ -127,7 +127,7 @@ class TestCdR12bData {
         assertArrayEquals(new CdStageTerrain.Shape[]{CdStageTerrain.Shape.PPZ1_PRESENT, CdStageTerrain.Shape.PPZ1_PAST,
                 CdStageTerrain.Shape.PPZ1_GOOD_FUTURE, CdStageTerrain.Shape.PPZ1_BAD_FUTURE,
                 CdStageTerrain.Shape.PPZ2_PRESENT, CdStageTerrain.Shape.PPZ2_PAST,
-                CdStageTerrain.Shape.PPZ3_GOOD_FUTURE, CdStageTerrain.Shape.PPZ3_BAD_FUTURE}, CdStageTerrain.Shape.values());
+                CdStageTerrain.Shape.PPZ3_GOOD_FUTURE, CdStageTerrain.Shape.PPZ3_BAD_FUTURE, CdStageTerrain.Shape.CCZ1_PRESENT}, CdStageTerrain.Shape.values());
         var t = new TerrainFixture().decode(); assertEquals(708, t.blockCount()); assertEquals(797, t.patternCount()); assertEquals(106, t.chunkCount());
         var geometry = new SonicCdLevelGeometry(t, CdAssetBytes.copyOf(new byte[128]), 0, 0, 0x2897, 0, 0x310);
         assertTrue(geometry.getObjects().isEmpty()); assertTrue(geometry.getRings().isEmpty());
