@@ -121,6 +121,15 @@ final class ObjectRewindLifecycle {
     private List<DynamicObjectEntry> captureDynamicActors(RewindCaptureContext rewindContext) {
         List<DynamicObjectEntry> dynamicEntries =
                 new ArrayList<>();
+        var captured = java.util.Collections.newSetFromMap(new IdentityHashMap<ObjectInstance, Boolean>());
+        for (ObjectInstance placed : population.placed.values()) {
+            if (placed instanceof AbstractObjectInstance) captured.add(placed);
+        }
+        for (ObjectInstance dynamic : population.dynamic) {
+            if (dynamic instanceof AbstractObjectInstance && !population.dynamicOwnership.excludesFromRewind(dynamic)) {
+                captured.add(dynamic);
+            }
+        }
         for (ObjectInstance inst : population.dynamic) {
             if (population.dynamicOwnership.excludesFromRewind(inst)) {
                 continue;
@@ -139,11 +148,23 @@ final class ObjectRewindLifecycle {
                                 population.identities.get(inst),
                                 callbacks.owner(inst),
                                 population.dynamicOwnership.isRewindableAuxiliary(inst),
-                                playerOwnerId));
+                                playerOwnerId,
+                                captureFamily(aoi, captured)));
             }
         }
 
         return dynamicEntries;
+    }
+
+    private ObjectManagerSnapshot.ConstructionFamily captureFamily(AbstractObjectInstance actor,
+            java.util.Set<ObjectInstance> captured) {
+        // Legacy restores stay explicitly legacy on recapture. Fresh uninstrumented
+        // admissions are unknown, never evidence that the actor has no owner.
+        if (actor.rewindConstructionFamily() == null) return null;
+        var parent = actor.rewindConstructionParent();
+        return parent == null ? actor.rewindConstructionFamily()
+                : new ObjectManagerSnapshot.ConstructionFamily(true,
+                        captured.contains(parent) ? population.identities.get(parent) : null);
     }
 
     RewindCaptureContext captureIdentityContext() {
@@ -319,7 +340,14 @@ final class ObjectRewindLifecycle {
         // captured state AND keeps the parent's child reference valid, with no
         // double-spawn. Routine-spawned children (no construction counterpart) fall
         // back to the generic recreate path.
-        AbstractObjectInstance adopted = adoptRewindReconstructionChild(entry);
+        var family = entry.constructionFamily();
+        AbstractObjectInstance parent = null;
+        if (family != null && family.parentId() != null) {
+            var resolved = restoreTable.resolve(family.parentId());
+            if (!(resolved instanceof AbstractObjectInstance owner)) return false;
+            parent = owner;
+        }
+        AbstractObjectInstance adopted = adoptRewindReconstructionChild(entry, parent);
         ObjectInstance inst = adopted != null
                 ? adopted
                 : ObjectConstructionContext.withRewindActiveRestore(
@@ -352,6 +380,7 @@ final class ObjectRewindLifecycle {
             // them (see onRecreatedForRewind()'s javadoc).
             callbacks.run(aoi, aoi::onRecreatedForRewind);
         }
+        aoi.restoreConstructionFamily(family, parent);
         population.publishReconstructedDynamic(aoi, entry, restoreTable);
         // Defer per-instance field-blob application to phase 2.
         restoredObjects.add(new RestoredObjectState(aoi, entry.state()));
@@ -451,7 +480,7 @@ final class ObjectRewindLifecycle {
      * convention; adopting the actual constructor child preserves parent references.
      */
     private AbstractObjectInstance adoptRewindReconstructionChild(
-            DynamicObjectEntry entry) {
+            DynamicObjectEntry entry, AbstractObjectInstance parent) {
         String className = entry.className();
         if (className == null) {
             return null;
@@ -463,6 +492,15 @@ final class ObjectRewindLifecycle {
             if (!child.getClass().getName().equals(className) || !java.util.Objects.equals(
                     entry.ownerModId(), callbacks.owner(child))) {
                 continue;
+            }
+            var family = entry.constructionFamily();
+            if (family != null) {
+                if (family.known()) {
+                    // Known missing/excluded owners never borrow another family's child.
+                    if (parent == null || child.rewindConstructionParent() != parent) continue;
+                } else if (child.rewindConstructionParent() != null) {
+                    continue; // fresh uninstrumented admissions cannot borrow a known family
+                }
             }
             if (fifoFallbackIndex < 0) {
                 fifoFallbackIndex = i;

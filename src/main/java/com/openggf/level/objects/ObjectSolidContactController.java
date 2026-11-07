@@ -281,6 +281,27 @@ public final class ObjectSolidContactController {
         contactState.evictLatchForDestroyedSpawn(spawn);
     }
 
+    /** Population-aware dynamic expiry, called at the existing retirement boundary. */
+    void evictRetiredDynamic(ObjectInstance instance) {
+        var callbacks = objectManager.objectCallbacks;
+        // Non-solid children can carry their parent's spawn as provenance only.
+        if (!(instance instanceof SolidObjectProvider)) {
+            callbacks.run(instance, () -> contactState.evictLatchForDestroyedInstance(instance));
+            return;
+        }
+        Object key = callbacks.call(instance, () -> contactState.resolvedOwnerKey(instance));
+        if (key instanceof ObjectSpawn) {
+            for (ObjectInstance other : objectManager.contactRetirementCandidates()) {
+                if (other == instance || !(other instanceof SolidObjectProvider)) continue;
+                if (callbacks.call(other, other::isDestroyed)) continue;
+                Object otherKey = callbacks.call(other, () -> contactState.resolvedOwnerKey(other));
+                if (java.util.Objects.equals(key, otherKey)
+                        && objectManager.containsContactRetirementCandidate(other)) return;
+            }
+        }
+        contactState.evictResolvedOwnerKey(key);
+    }
+
     void evictLatchForDestroyedInstance(ObjectInstance instance) {
         contactState.evictLatchForDestroyedInstance(instance);
     }

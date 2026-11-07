@@ -41,7 +41,8 @@ import java.util.Set;
  * without invoking them (which has construction side effects). Therefore, in Phase 1,
  * any class with no codec is reported with a {@code #recreate} gap key even if it
  * is in fact correctly layout-recreated. These false positives are acceptable: they
- * are captured in the committed baseline (Task 7) and never fail the build (report-only).
+ * are captured in the committed baseline. TestRewindCoverageGuard fails on NEW
+ * gaps; this analyzer is diagnostic, but its guard is a ratchet, not report-only.
  * Closing this set — by adding a registry audit API that declares layout-spawnable
  * classes — is explicitly deferred to Phase 2.
  *

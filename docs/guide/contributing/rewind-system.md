@@ -385,6 +385,50 @@ The audio gate properties can be overridden with
 `openggf.rewind.benchmark.audio.maxReplayMeanNs`, and
 `openggf.rewind.benchmark.audio.maxAllocatedBytes`.
 
+## Ordinary dynamic objects and constructor children
+
+Start at `level.objects.ObjectRewindLifecycle`: capture → reconstruct/adopt and
+publish identities → restore fields/references → settle. `ObjectPopulation` owns
+membership and identity publication, not the reconstruction recipe. Generic
+`RewindRecreatable.recreateForRewind` calls run inside the construction-services
+context. Use `SpawnRewindRecreatable` for an exact `ObjectSpawn` constructor;
+`SpawnConstructionContextRewindRecreatable` is the compatible old name, not a
+second recipe. Parent-linked hooks still supply their actual construction logic.
+
+Owned `spawnChild`, `spawnFreeChild`, `spawnChildAfterSlot` and direct child wrappers
+record the actual parent without running external child notifications during
+restore/probes. `DynamicObjectEntry.constructionFamily` captures its stable id
+only if the parent is in the captured population. Restore waits for that parent
+before adopting a constructor child, then matches class/creator/subtype and FIFO
+within that family. Fixed-point retries handle nested generations. Moving XY is
+not family evidence. Known missing/excluded owners cannot borrow another family's
+candidate. Fresh uninstrumented admissions are explicitly unknown; only candidates
+without a known parent are eligible. Old 4–9 argument entry constructors retain
+legacy FIFO behavior and stay explicitly legacy on recapture. They cannot provide
+the family guarantee of current owned-helper captures.
+
+Adoption preserves constructor-established links in both directions. It does not
+repair every link: `schema.RewindPolicyRegistry` and `DefaultObjectRewindPolicies`
+are the authoritative reference-disposition owners. Read final/structural rules,
+global field-name rules and per-class overrides before assuming a parent/child
+field becomes an identity reference. Captured reference fields resolve in phase 2;
+excluded structural/final links need construction or an explicit class contract.
+Routine-spawned children without constructor candidates need their own recreate
+path. The coverage analyzer recognizes explicit hooks; its new-gap guard fails
+against the committed baseline. Do not add a marker or expand that baseline to
+make an unsupported child appear covered.
+
+Run the ordinary family witnesses and neighbors through the queue:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestConstructorChildFamilyRewind,TestObjectManagerDynamicChainRewindRestore,TestTwoPhaseRestoreOrdering,TestObjectManagerRewindSnapshot,TestModOwnedDynamicObjectRewind' test -B
+```
+
+`TestObjectRewindExactAdoption` covers the separate FBZ exact-SST adoption surface;
+it does not establish ordinary constructor-family adoption. Recreate probes must
+remain side-effect-free; unmatched constructed children receive their existing
+owner cleanup hook before being discarded.
+
 ## Technical Architecture
 
 The main classes live under `com.openggf.game.rewind`:

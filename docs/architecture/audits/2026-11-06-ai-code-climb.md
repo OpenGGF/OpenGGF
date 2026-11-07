@@ -1552,3 +1552,168 @@ unknown, and no new user approval was needed.
 All three bounded reviewers completed with no pending children or live jobs.
 Keep `ai-code-climb` and its worktree for the open draft PR; do not merge it
 or update a destination branch as part of this assessment.
+
+## Sol implementation / Opus review continuation — 2026-11-07
+
+User selected Sol for continued investigation/implementation and retained Opus
+as independent reviewer. New increment base is
+`e8d90f4e080bf95242604a3a34a2fe851267cf22` (assessed runtime/navigation
+`336db11fd`). Delivery remains the existing open draft PR 266 against develop.
+Keep the task branch/worktree and preserve main/unrelated work. No destination
+merge or branch push is authorised by this continuation.
+
+Two bounded Sol workers (GPT-6.1 Sol, ultra effort, default service/fast mode
+off) wrote disjoint ROM-free witnesses without builds or runtime changes:
+`TestConstructorChildFamilyRewind` and `TestDynamicSolidContactRetirement`.
+Root owns shared-tree freeze and validation; both files are handed off and
+frozen. No worker validation job exists. Ten cases are selected together for
+RED through the ordinary queue, lean execution after normal compilation.
+A lean OOM is a failed run and requires a normal rerun, not a skip.
+
+Hypotheses: (1) class/creator/subtype/FIFO construction-child adoption can cross
+two captured parent families even while IDs, slots and scalar state look right;
+(2) the default spawn key can outlive sole dynamic-solid retirement. Neither is
+a demonstrated runtime defect at this checkpoint. Controls cover one moving
+family, two same-class/same-subtype families with both structural link directions,
+explicit/cleanup retirement, forced reconstruction before equal-spawn replacement,
+a live placed parent's shared spawn, and an instance-keyed sibling. The S2
+DeleteObject/DeleteObject2 lines were independently read at pinned `34fc7f130a96`;
+the deletion contract expires object bits without rewriting player slots.
+
+Design constraints before production changes: preserve native slot/callback
+ordering, player rides/status, creator ownership, strict restoration and API
+pins. Family matching cannot use fitted XY or nearest-parent heuristics: a
+child can move after construction. Prefer explicit structural ownership and a
+captured stable parent identity if the witnesses demonstrate the gap; represent
+legacy metadata separately from a known absent/excluded parent. Do not modify
+the pinned public PerObjectRewindSnapshot or introduce another general registry.
+Nested generations and routine-spawned/orphan children need separate controls.
+Contact expiry must not clear a live parent's/sibling's shared key. Use the
+existing key semantics and dispatch guards rather than unconditional spawn clears.
+
+The coherent cleanup priority is the ordinary reconstruction contract: central
+construction-services admission and one supported spawn-construction recipe,
+then short authoritative routing to adoption, reference policy and coverage
+checks. Existing marker/guard/guide contradictions and stale contact entry
+points must be reconciled; another marker or facade without deleted burden
+would not satisfy this intervention. Final source design follows the RED
+outcome. Opus reviews the concrete implementation and affected original trials;
+no achieved score is promised.
+
+### Confirmed RED and implementation handoff
+
+The combined witness run executed ten cases: five failures, zero errors/skips.
+The two-family case preserved membership/IDs/slots/scalars but failed both
+captured structural directions in both families on the first restore. Sole
+spawn-keyed retirement retained standing/pushing bits, and equal-spawn
+replacement inherited those bits, for explicit removal and destroyed cleanup.
+The one moving-family and both shared-spawn controls passed. These are actual
+minimal engine counterexamples, not only static hypotheses. No shipped route
+failure or baseline-introduction attribution is inferred.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=<java-25> LUA_BIN=<lua-5.4> python3 tools/testing/maven_queue.py --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestConstructorChildFamilyRewind,TestDynamicSolidContactRetirement' test -B
+```
+
+Normal-memory test compilation: Maven 39.578 seconds. Recorded execution
+admission wait: 82 seconds; lean test execution: Maven 2.172 seconds (JUnit
+0.563/0.073 seconds). No OOM occurred. User wait was zero; other unmeasured
+cost remains unknown. Source is e8d90f4e0 plus the two new witness files;
+no runtime implementation exists yet. Root inspected the fresh failures and
+closed its sole job session; no validation job remains live.
+
+Sol implementation lead owns the next source/test/doc changes and shared
+validation. Chosen direction: family-constrained construction-child adoption
+with stable captured owner information, preserving explicit unknown/legacy
+versus known missing/excluded owners; retirement adapter that expires a sole
+spawn-keyed solid without clearing a surviving resolved owner. Preserve all
+callback, unload, membership/identity and player-state ordering. Moving XY,
+nearest-parent selection, unconditional spawn eviction and a new general
+registry are rejected. Snapshot metadata must survive prepared-entry copies,
+strict diff/capture/restore and old constructor forms; do not alter the pinned
+PerObjectRewindSnapshot public surface.
+
+After proven repairs, consolidate the supported construction-services recipe
+and actual guide/guard contract. Do not add a new adoption marker just to hide
+the mismatch. Correct stale contact/rewind entry points and route reference
+policy explicitly. Opus remains the reviewer, with prior grades/targets withheld
+from any fresh task-based scoring. The lead must record final design tradeoffs,
+required focused/guard/native neighbors, baseline/candidate comparison and
+limits before updating the open draft PR. Existing runtime evidence is not a
+pass cache for changed shared reconstruction/contact code.
+
+### Sol ownership increment — implementation and focused validation
+
+Sol owns implementation, validation and draft-PR delivery; Opus 5.5 remains the
+sole independent reviewer. Main develop and its unrelated files/submodules are
+untouched. The owned clean detached baseline is
+`.worktrees/ai-code-climb-sol-baseline` at e8d90f4e0; cowtree completed with the
+repository's normal managed-resource hook. Keep the task worktree and branch.
+
+Family evidence is typed on DynamicObjectEntry: legacy null, fresh unknown, or
+known structural parent (stable id only when that parent is actually captured).
+Owned child helpers record the actual parent without external probe/restore
+notifications. Adoption waits for parent publication and confines subtype/FIFO
+matching to that family; fixed-point retries retain nested generations. Known
+missing/excluded owners cannot donate another family's constructor child.
+Routine children still use supported generic recreation. Old entry constructor
+ABIs remain; prepared-player and native competition copies retain metadata.
+Strict record comparison sees it; PerObjectRewindSnapshot/API pins are unchanged.
+Legacy restores deliberately recapture legacy evidence rather than claim a family
+proof they never supplied. Unknown direct admission is not known no-owner.
+
+The two runtime association fields have exact central transient dispositions:
+the lifecycle captures their typed evidence, rather than serializing raw parents.
+No coverage, annotation-debt or signature baseline was relaxed. Generic hook
+invocation installs construction services centrally; the old context interface
+is a compatibility adapter over the same spawn recipe, retaining direct-call
+context behavior. A whole marker/package migration is outside this increment.
+
+Dynamic contact retirement resolves the owner's actual key at the existing
+expiry boundary and checks surviving solid membership by resolved-key value.
+Non-solid provenance, instance/occurrence keys, rides and player status remain
+separate. The scan uses a membership snapshot, not render/slot cache rebuilding,
+and guards virtual reads with each object's callback owner and dispatch validity.
+The captured retirement callback retains only the removed receiver's owner after
+unregister, without reviving registration. Explicit expiry still precedes unload;
+destroyed cleanup still expires after unload and before iterator removal.
+
+Rejected: XY/full-spawn family matching (moving-child control); unrestricted fresh
+FIFO (two-family RED); treating excluded identities as captured parents; a new
+adoption marker masking analyzer gaps; unconditional spawn eviction (shared-owner
+controls); cache rebuilding during retirement (unrelated getter witness).
+
+Focused queue commands all used Java 25, -Dmse=off, unset DISPLAY/WAYLAND_DISPLAY,
+Lua 5.4 and surfaceless EGL. All ROM properties were found. The initial GREEN
+preparation was correctly aborted after concurrent edits: compile succeeded but
+zero tests launched; it is not validation credit. The subsequent frozen focused
+run passed 133 cases, zero failures/errors/skips (normal compilation Maven 95 s,
+admission wait 0 s, execution Maven 5.623 s). Expanded boundaries/startup passed
+123 cases, zero failures/errors/skips (compile Maven 130 s, admission wait 19 s,
+execution Maven 6.300 s). This includes nested/sibling families, missing/excluded
+owners, unknown raw admission, legacy recapture, routine recreation, shared solid
+keys, unload-key ordering, unrelated getters, dispatch invalidation, multipart,
+occurrence contact and all four required S3K startup classes. Exact class
+selections remain in the lead's queue commands, not a new pass-cache contract.
+User wait is zero; other unmeasured time is unknown. No shipped-route failure,
+introduction attribution or new HCZ parity claim follows from these witnesses.
+
+Final contract guards, source pin, bounded Opus correctness review, fresh C/D
+measurement and baseline/candidate smoke comparison are pending at this checkpoint.
+Baseline selects 4471 smoke classes plus automatic guards with two workers and a
+40-minute execution cap excluding queue; candidate adds the two witnesses.
+No broad candidate job or delegate is live yet. Source must remain frozen during
+candidate broad validation. New/worse failures block pushing the draft branch.
+
+Contract check update: architecture ratchet (8), spawn-recipe cleanup (46), exact
+field policies (14), dynamic contact retirement (14) and candidate API signatures
+(12) all passed. The family class's new direct-call compatibility test initially
+erred after construction by requiring a service binding from a hook that only
+promises construction context. Its constructor had succeeded. The corrected
+assertion checks the actual constructor context; the eight-case family rerun
+passed with zero failures/errors/skips. No production change followed that test
+correction. The other seven family cases passed in the contract run as well.
+Relative-link paths in the three touched guides/maps exist; diff whitespace is
+clean. Targeted pinned-disassembly citation check reports 12 ok, one near and
+18 context-only/unverifiable references, no stale/out-of-range. The full catalogue
+still contains inherited stale references; reference checkouts were not changed.

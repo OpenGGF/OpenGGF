@@ -4,12 +4,13 @@ package com.openggf.level.objects;
  * Uniform recreate hook for dynamic objects that cannot be reconstructed from an
  * {@link ObjectSpawn} alone via the game registry's factory.
  *
- * <p>Implementing classes appear in the dynamic-object list at capture time (i.e.
- * runtime/routine-spawned dynamics, not construction-spawned children which are
- * adopted from their reconstructed parent). Their recreation during a rewind restore is
- * delegated to this method by
- * {@link ObjectRewindDynamicCodecs#genericRecreate(com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry, DynamicObjectRecreateContext)},
- * which supplies the generic reconstruction path.
+ * <p>Dynamic entries first try construction-child adoption in ObjectRewindLifecycle.
+ * An owned helper records the actual parent; adoption waits for that captured
+ * parent's identity and matches class/creator/subtype within its family. A child
+ * produced only by its parent's constructor can be adoption-only, but routine or
+ * independent admissions need an explicit recreate hook. The coverage analyzer
+ * recognizes hooks, not proof of constructor-only admission: adoption-only classes
+ * still need an honest coverage disposition rather than a marker hiding the gap.
  *
  * <p>{@link ObjectRewindLifecycle} reconstructs the normal actor graph and
  * registers its captured identities, adopting constructor children and retrying
@@ -25,14 +26,15 @@ package com.openggf.level.objects;
  * <p><strong>Contract for implementors:</strong>
  * <ul>
  *   <li>The returned instance must be of the same concrete class as the captured object.</li>
- *   <li>Object-reference fields (e.g. parent back-references) must <em>not</em> be
- *       wired here — they are resolved from the compact blob after recreate returns.</li>
+ *   <li>Captured object-reference fields resolve from the compact blob later.
+ *       Final/structural links excluded by reference policy must instead be established
+ *       by construction/adoption or a class-specific recreation contract.</li>
  *   <li>Scalar fields set in the constructor may use placeholder values (e.g. 0); the
  *       standard scalar-restore pass applied after recreate will overwrite them with the
  *       exact captured values.</li>
- *   <li>The implementation must not call {@code services()} during its constructor (the
- *       injection ThreadLocal may not be set); use {@link RewindRecreateContext#objectServices()}
- *       if runtime context is needed during reconstruction.</li>
+ *   <li>The generic recreate dispatcher installs construction services around this hook,
+ *       including nested constructors. Spawn-only classes use SpawnRewindRecreatable;
+ *       the old construction-context interface is a compatibility alias.</li>
  * </ul>
  *
  * <p><strong>ArchUnit constraint:</strong> This interface lives in {@code level.objects}

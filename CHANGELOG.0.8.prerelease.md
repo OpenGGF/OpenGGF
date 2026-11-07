@@ -24,7 +24,11 @@ under the matching area heading; see the
   population storage; actor reconstruction and contact memory have separate owners
   behind the existing runtime entry points. Retiring multipart solids expires
   owned contact bits and frame history without releasing player state. Contact
-  restore discards uncaptured future observations. Production badnik and contact
+  restore discards uncaptured future observations. Sole spawn-keyed dynamic solids
+  now expire contact bits without clearing surviving shared owners. Constructor-child
+  rewind adoption uses captured parent families, preserving interleaved structural
+  links; generic recreation installs construction services centrally. Ordinary
+  family/reference/coverage guidance points to the actual owners. Production badnik and contact
   witnesses, shared coarse-X arithmetic with explicit native/wider bounds, and
   a typed rewind HUD frame make contribution paths easier to follow. HCZ owns
   its next screen-shake value without using the renderer as scratch state.

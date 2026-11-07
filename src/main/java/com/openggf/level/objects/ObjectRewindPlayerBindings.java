@@ -60,7 +60,7 @@ final class ObjectRewindPlayerBindings {
                 return new DynamicObjectEntry(
                         captured.className(), captured.spawn(), captured.slotIndex(), captured.state(), owner,
                         captured.objectId(), captured.ownerModId(), captured.rewindableAuxiliary(),
-                        captured.playerOwnerId());
+                        captured.playerOwnerId(), captured.constructionFamily());
             });
         }
         return preparedEntries;

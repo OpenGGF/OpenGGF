@@ -152,7 +152,7 @@ final class ObjectPopulation {
             removalCallback = callbacks.captureRemovalCallback(object);
         }
         invalidateMembership.run();
-        expireObjectState.accept(object);
+        removalCallback.runRetirement(() -> expireObjectState.accept(object));
         dynamicOwnership.remove(object);
         identities.remove(object);
         notifyWorld.accept(object, removalCallback);
@@ -277,7 +277,7 @@ final class ObjectPopulation {
                 }
                 var removalCallback = callbacks.captureRemovalCallback(object);
                 callbacks.runAndUnregister(object, object::onUnload);
-                expireObjectState.accept(object);
+                removalCallback.runRetirement(() -> expireObjectState.accept(object));
                 dynamicOwnership.remove(object);
                 identities.remove(object);
                 notifyWorld.accept(object, removalCallback);

@@ -1670,6 +1670,19 @@ public class ObjectManager {
         objectDrawing.drawBucketInstancesWithPriority(entries, bucket, gfx, external);
     }
 
+    /** Retirement reads membership directly, without rebuilding render/slot caches. */
+    List<ObjectInstance> contactRetirementCandidates() {
+        List<ObjectInstance> candidates = new ArrayList<>(population.placed.values());
+        candidates.addAll(population.dynamic);
+        return candidates;
+    }
+
+    boolean containsContactRetirementCandidate(ObjectInstance candidate) {
+        for (ObjectInstance object : population.placed.values()) if (object == candidate) return true;
+        for (ObjectInstance object : population.dynamic) if (object == candidate) return true;
+        return false;
+    }
+
     public Collection<ObjectInstance> getActiveObjects() {
         rebuildActiveObjectCaches();
         return cachedActiveObjects;
@@ -2022,7 +2035,7 @@ public class ObjectManager {
         // Delete_Current_Sprite clears object-side contact memory before the slot's
         // ownership disappears (sonic3k.asm:36148-36165); player rides remain alone.
         return population.retireDynamic(object, removalCallback,
-                solidContacts::evictLatchForDestroyedInstance, this::notifyObjectManagerRemoval);
+                solidContacts::evictRetiredDynamic, this::notifyObjectManagerRemoval);
     }
 
     private void notifyObjectManagerRemoval(ObjectInstance object,
@@ -3150,7 +3163,7 @@ public class ObjectManager {
      */
     void cleanupDestroyedDynamicObjects() {
         if (population.retireDestroyedDynamics(this::releaseSlot,
-                solidContacts::evictLatchForDestroyedInstance, this::notifyObjectManagerRemoval)) {
+                solidContacts::evictRetiredDynamic, this::notifyObjectManagerRemoval)) {
             bucketsDirty = true;
             markActiveObjectCachesDirty();
         }

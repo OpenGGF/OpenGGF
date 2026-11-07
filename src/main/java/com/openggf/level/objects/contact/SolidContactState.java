@@ -133,6 +133,12 @@ public final class SolidContactState {
                 .add(key);
     }
 
+    /** Internal resolved owner, using the same value equality as the latch maps. */
+    public Object resolvedOwnerKey(ObjectInstance instance) { return latchKeyFor(instance); }
+
+    /** Expire bits and frame history together; player rides/status remain untouched. */
+    public void evictResolvedOwnerKey(Object key) { evictLatchKey(key); }
+
     private Object latchKeyFor(ObjectInstance instance) {
         var initialDispatch = access.captureDispatchGuard();
         if (instance == null) {
@@ -502,9 +508,8 @@ public final class SolidContactState {
 
     public void evictLatchForDestroyedInstance(ObjectInstance instance) {
         var initialDispatch = access.captureDispatchGuard();
-        // Mirror latchKeyFor: spawn-backed instances were keyed
-        // by spawn (already evicted via evictLatchForDestroyedSpawn);
-        // spawnless dynamic objects were keyed by the instance reference.
+        // This primitive handles instance/occurrence keys only. Dynamic retirement
+        // resolves shared spawn ownership in ObjectSolidContactController.
         if (access.usesOccurrenceKey(instance)
                 || (instance instanceof SolidObjectProvider provider
                         && afterCallback(initialDispatch, provider.usesInstanceSolidStateLatchKey()))) {

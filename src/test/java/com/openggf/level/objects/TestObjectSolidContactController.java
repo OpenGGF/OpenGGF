@@ -230,6 +230,29 @@ class TestObjectSolidContactController {
     }
 
     @Test
+    void survivorKeyInvalidationCancelsDynamicRetirementBeforeExpiry() {
+        ObjectManager[] manager = new ObjectManager[1];
+        boolean[] armed = {false};
+        var owner = new PieceSolid(spawn(), false, false);
+        var neighbor = new PieceSolid(spawn(), false, false) {
+            @Override public boolean usesInstanceSolidStateLatchKey() {
+                if (armed[0]) { armed[0] = false; manager[0].reset(0); }
+                return false;
+            }
+        };
+        manager[0] = boundaryEnabledManager(owner);
+        manager[0].addDynamicObject(neighbor);
+        try (var scope = manager[0].beginInitialProcessSprites(0,
+                new ContactSonic("retirement-key-invalidation"), List.of())) {
+            armed[0] = true;
+            var failure = assertThrows(RuntimeException.class,
+                    () -> manager[0].solidContacts().evictRetiredDynamic(owner));
+            assertTrue(ObjectManagerInternalAccess.isInitialDispatchCancellation(failure));
+            assertFalse(manager[0].hasActiveInitialProcessSpritesDispatch());
+        }
+    }
+
+    @Test
     void removingDynamicMultipartSolidExpiresBothPlayersObjectBitsWithoutReleasingTheirRides() {
         var owner = new PieceSolid(spawn(), true, true);
         var manager = boundaryEnabledManager(owner);
