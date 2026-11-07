@@ -27,6 +27,24 @@ under the matching area heading; see the
   route errors and the special-stage return timing differences remain open.
 
 
+- **Time Attack Competition mode and the Sonic 3&K Competition arenas:** a
+  multiplayer room can now race in Competition mode as well as Time Attack.
+  Everyone starts at the same scheduled moment, there are no restarts, and the
+  first past the post wins. Placement counts each player's own frames from GO,
+  so network lag never changes the order. The host picks the monitor rules
+  (normal, randomised, competition items or off) and a cutoff after the first
+  finisher. Sonic 2 and Sonic 3&K acts can be raced in either mode.
+  - Sonic 3&K's five Competition arenas (Azure Lake, Balloon Park, Chrome
+    Gadget, Desert Palace and Endless Mine) are new Competition-only tracks.
+    Each player races them alone in one full-screen view, under the shipped
+    Match Race rules: five laps, losing a lap for a backwards crossing or a
+    death, false starts and the 9'59"99 limit.
+  - Lap times, the total and the best lap are shown and ranked.
+  - A teleport monitor swaps you with the nearest racer through the host.
+  - Rooms without a verifier show the finish order labelled UNVERIFIED.
+  - Solo arena runs now swap shoe state with the empty second slot, as the
+    ROM does, instead of ignoring the swap item.
+
 ## Modding and tools
 
 - **Seeded Data Select captures:** `GameplayCaptureTool --save-slots <file.json>`
