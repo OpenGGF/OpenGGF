@@ -42,6 +42,11 @@ public final class RoomRoundAccess {
                 result.character(), result.finish())));
     }
 
+    /** Read on the owning room thread; never substitutes the current round for a missing launch. */
+    public static ControlMessage.RaceLaunch frozenLaunchForParticipant(RoomHost room, int slot, String participantId) {
+        return room.frozenLaunchForParticipant(slot, participantId);
+    }
+
     public static String participantIdForSlot(RoomHost room, int slot,
                                                String fingerprint) {
         return room.participantIdForSlot(slot, fingerprint);

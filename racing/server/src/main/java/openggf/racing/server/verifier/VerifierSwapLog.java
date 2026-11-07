@@ -19,6 +19,7 @@ public final class VerifierSwapLog {
             var matches = receipts.stream().filter(r -> r.swapId() == id).toList();
             if (matches.size() != 1) return false;
             var r = matches.getFirst();
+            if(r.nativeRequestFrame()!=null && (r.nativeRequestFrame()<0 || r.nativeRequestFrame()>r.requestFrame())) return false;
             if (recorded.step() != r.applyFrame() || r.applyFrame() < r.requestFrame()
                     || r.applyFrame() > r.requestFrame() + 180) return false;
             if (recorded.event() instanceof RaceEvent.SwapFallback) {

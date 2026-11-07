@@ -38,6 +38,77 @@ class TestVerifierWorker {
     @TempDir Path dir;
 
     @Test
+    void replayLapSplitAndFailureComparisonsRejectIndependently() throws Exception {
+        var recording = recording("s3k",0,0,"sonic","fp");
+        var old = matchingJob(recording,"gg");
+        var job = new VerificationJobQueue.Job(old.jobId(),old.roomId(),old.slot(),old.identityFingerprint(),
+                old.attemptRef(),old.determinismFingerprint(),old.trackKey(),old.character(),100,1,101,
+                old.inputRecordingHashHex(),"gg",false,0,List.of(),List.of(20,20,20,20,20),List.of(50));
+        var pass = new AttemptReplayHarness.Result(true,1,101,100,"gg",102,null,
+                List.of(20,20,20,20,20),List.of(50),com.openggf.mods.run.RaceClock.Failure.NONE);
+        assertDecision(job,recording.encode(),pass,VerdictCodec.RESULT_PASS,true);
+        assertDecision(job,recording.encode(),new AttemptReplayHarness.Result(true,1,101,100,"gg",102,null,
+                List.of(19,21,20,20,20),List.of(50),com.openggf.mods.run.RaceClock.Failure.NONE),
+                VerdictCodec.RESULT_FAIL_TIME_MISMATCH,true);
+        assertDecision(job,recording.encode(),new AttemptReplayHarness.Result(true,1,101,100,"gg",102,null,
+                pass.lapFrames(),List.of(49),com.openggf.mods.run.RaceClock.Failure.NONE),
+                VerdictCodec.RESULT_FAIL_TIME_MISMATCH,true);
+        assertDecision(job,recording.encode(),new AttemptReplayHarness.Result(true,1,101,100,"gg",102,null,
+                pass.lapFrames(),pass.splitFrames(),com.openggf.mods.run.RaceClock.Failure.TIME_OVER),
+                VerdictCodec.RESULT_FAIL_DIVERGENT,true);
+    }
+
+    @Test
+    void nativeRequestFramesMustExactlyMatchRequesterReceipts() throws Exception {
+        var recording=new AttemptInputRecording(new AttemptStartDescriptor("s3k",0,0,"sonic","fp",
+                com.openggf.mods.run.TrackKind.ACT,openggf.timeattack.CompetitionRoomSettings.Mode.COMPETITION,
+                com.openggf.mods.run.MonitorRule.OFF,
+                com.openggf.game.session.GameplayRunPolicy.DeathRestart.FAST_FROM_CHECKPOINT,true));
+        recording.appendFrame(0,false);recording.appendFrame(8,false);
+        recording.appendEvent(1,new com.openggf.mods.run.RaceEvent.SwapFallback(7));
+        var old=matchingJob(recording,"gg");
+        var job=new VerificationJobQueue.Job(old.jobId(),old.roomId(),old.slot(),old.identityFingerprint(),old.attemptRef(),
+                old.determinismFingerprint(),old.trackKey(),old.character(),100,1,101,old.inputRecordingHashHex(),"gg",false,0,
+                List.of(new VerificationJobQueue.SwapReceipt(7,0,1,"FALLBACK",null,0)),List.of(),List.of(),
+                new VerificationJobQueue.LaunchPolicy("COMPETITION","OFF",true));
+        assertDecision(job,recording.encode(),passReplay(),VerdictCodec.RESULT_FAIL_DIVERGENT,true);
+        var replay=new AttemptReplayHarness.Result(true,1,101,100,"gg",102,null,List.of(),List.of(),
+                com.openggf.mods.run.RaceClock.Failure.NONE,List.of(0));
+        assertDecision(job,recording.encode(),replay,VerdictCodec.RESULT_PASS,true);
+        assertDecision(job,recording.encode(),new AttemptReplayHarness.Result(true,1,101,100,"gg",102,null,
+                List.of(),List.of(),com.openggf.mods.run.RaceClock.Failure.NONE,List.of(0,1)),
+                VerdictCodec.RESULT_FAIL_DIVERGENT,true);
+    }
+
+    @Test
+    void tamperedClientPolicyIsRejectedAgainstFrozenHostLaunchBeforeReplay() throws Exception {
+        var mode=openggf.timeattack.CompetitionRoomSettings.Mode.COMPETITION;
+        var monitor=com.openggf.mods.run.MonitorRule.COMPETITION_ITEMS;
+        for(int changed=0;changed<3;changed++) {
+            var recording=new AttemptInputRecording(new AttemptStartDescriptor("s2",0,0,"sonic","fp",
+                    com.openggf.mods.run.TrackKind.ACT,
+                    changed==0?openggf.timeattack.CompetitionRoomSettings.Mode.TIME_ATTACK:mode,
+                    changed==1?com.openggf.mods.run.MonitorRule.OFF:monitor,
+                    com.openggf.game.session.GameplayRunPolicy.DeathRestart.FAST_FROM_CHECKPOINT,changed!=2));
+            recording.appendFrame(8,false);
+            var job=new VerificationJobQueue.Job("policy","r",0,"player","attempt","fp","s2:0:0","sonic",100,1,101,
+                    HexFormat.of().formatHex(recording.sha256()),"gg",false,0,List.of(),List.of(),List.of(),
+                    new VerificationJobQueue.LaunchPolicy("COMPETITION","ITEMS",true));
+            assertDecision(job,recording.encode(),passReplay(),VerdictCodec.RESULT_FAIL_TRACK_MISMATCH,false);
+        }
+    }
+
+    @Test
+    void absentFrozenHostPolicyCannotTrustTheClientDescriptor() throws Exception {
+        var recording=recording("s3k",0,0,"sonic","fp");
+        var old=matchingJob(recording,"gg");
+        var job=new VerificationJobQueue.Job(old.jobId(),old.roomId(),old.slot(),old.identityFingerprint(),old.attemptRef(),
+                old.determinismFingerprint(),old.trackKey(),old.character(),100,1,101,old.inputRecordingHashHex(),"gg",false,0,
+                List.of(),List.of(),List.of(),null);
+        assertDecision(job,recording.encode(),passReplay(),VerdictCodec.RESULT_VOID_VERIFIER_UNAVAILABLE,false);
+    }
+
+    @Test
     void noJobReturnsFalse() throws Exception {
         FakeApi api = new FakeApi(null, new byte[0]);
         VerifierWorker worker = new VerifierWorker(api,
