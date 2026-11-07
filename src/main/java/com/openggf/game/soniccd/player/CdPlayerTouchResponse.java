@@ -60,6 +60,94 @@ public final class CdPlayerTouchResponse {
         return c.finish();
     }
     // END direct native HurtPlayer value entry.
+    /** Complete kernel pair; values alone authenticate no Frame, Environment or invocation. */
+    public record HurtPair(Actor actor, PlayerGlobals player, WorldGlobals world) {
+        public HurtPair { Objects.requireNonNull(actor); Objects.requireNonNull(player); Objects.requireNonNull(world); }
+    }
+    public enum HurtCut { SOUND, RETURN }
+    public record HurtPrefix(HurtPair pair, List<CdObjectState> changedSlots, List<Call> calls,
+                             Optional<Exit> exit) {
+        public HurtPrefix { Objects.requireNonNull(pair); changedSlots=List.copyOf(changedSlots);
+            calls=List.copyOf(calls); Objects.requireNonNull(exit); }
+    }
+    /** Current original kernel cut. Its private constructor/current visit are not World authority.
+     * Retained data or an equal caller key cannot resume or publish any operation. */
+    public static final class HurtStep {
+        private final HurtVisit visit;
+        private final HurtPrefix prefix;
+        private final HurtCut cut;
+        private final FmSound sound;
+        private final int target;
+        private boolean claimed;
+        private HurtStep(HurtVisit visit,HurtCut cut,FmSound sound) {
+            this.visit=visit;this.cut=cut;this.sound=sound;
+            prefix=visit.cursor.hurtPrefix();target=visit.cursor.bossContinuationWhole;
+        }
+        public HurtPrefix prefix() { return prefix; }
+        public HurtCut cut() { return cut; }
+        public Optional<FmSound> sound() { return Optional.ofNullable(sound); }
+        public int returnedTargetWholeIndex() { return target; }
+        public boolean isCurrent() { return visit.current==this; }
+        public void claim(Object originalInvocation) {
+            if(!isCurrent()||claimed||visit.originalInvocation!=originalInvocation)
+                throw new IllegalStateException("Stale, foreign or repeated original Hurt cut");
+            claimed=true;
+        }
+    }
+    @FunctionalInterface public interface HurtObserver { void reached(HurtStep step); }
+    /** Terminal calculated prefix only. Source/owner publication happened solely at original live cuts. */
+    public static final class HurtOutcome {
+        private final HurtPrefix prefix;
+        private final Throwable failure;
+        private HurtOutcome(HurtPrefix prefix,Throwable failure) { this.prefix=prefix;this.failure=failure; }
+        public HurtPrefix prefix() { return prefix; }
+        public Optional<Throwable> failure() { return Optional.ofNullable(failure); }
+    }
+    /**
+     * Source-equivalent guarded Hurt entry: R4 sub_20730C (player_object_collide.asm:208-265),
+     * N1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff. Uses exactly the existing touchHazard/Hurt/kill/reset
+     * algorithms, never PPZ's SPECIAL/Enemy tail or its handler admission. Source-family guards on
+     * existing entries are unchanged. The caller supplies the original synchronous invocation key,
+     * actual complete same-owner pool/source and actual kernel pair. Root authenticates its private
+     * World/Frame/source/full State+Environment separately. Observer cuts occur at original FM calls
+     * and the actual return, not by replaying completed calls/results. Failed callbacks retain the
+     * calculated reached prefix and identical fault, and expire every cut; caller retains its actual
+     * already published prefix and rethrows that same fault. No pool or external state is owned here.
+     */
+    public static HurtOutcome visitGuardedHurt(HurtPair pair,CdObjectState source,
+            CdObjectPool.Snapshot cut,Object originalInvocation,HurtObserver observer) {
+        Objects.requireNonNull(pair);Objects.requireNonNull(source);Objects.requireNonNull(cut);
+        Objects.requireNonNull(originalInvocation);Objects.requireNonNull(observer);
+        if(!source.equals(cut.slots().get(source.identity().dynamicIndex())))
+            throw new IllegalArgumentException("Original Hurt needs complete same-owner source/cut");
+        var c=new Cursor(pair.actor(),pair.player(),pair.world(),cut);
+        c.bossContinuationWhole=source.identity().wholeIndex();
+        c.hurtVisit=new HurtVisit(originalInvocation,c,observer);
+        try {
+            touchHazard(c,source.identity().wholeIndex());
+            c.hurtVisit.emit(HurtCut.RETURN,null);
+            return new HurtOutcome(c.hurtPrefix(),null);
+        } catch(RuntimeException|Error fault) {
+            return new HurtOutcome(c.hurtPrefix(),fault);
+        } finally { c.hurtVisit.current=null; }
+    }
+    private static final class HurtVisit {
+        final Object originalInvocation;final Cursor cursor;final HurtObserver observer;
+        HurtStep current;
+        HurtVisit(Object key,Cursor c,HurtObserver observer) {originalInvocation=key;cursor=c;this.observer=observer;}
+        void emit(HurtCut cut,FmSound sound) {
+            var step=new HurtStep(this,cut,sound);current=step;
+            try { observer.reached(step);if(!step.claimed)throw new IllegalStateException("Unclaimed original Hurt cut"); }
+            finally {current=null;}
+        }
+    }
+    /** Projection only: native reset's last jump store is after its original sound call. */
+    private static CdPlayerMotionState resetBeforeSound(CdPlayerMotionState m,int originalJump) {
+        return new CdPlayerMotionState(m.centreX16_16(),m.centreY16_16(),m.xVelocity(),m.yVelocity(),m.groundVelocity(),
+            m.routine(),m.angle(),m.flags(),m.spriteFlags(),m.xRadius(),m.yRadius(),m.animation(),m.previousAnimation(),
+            originalJump,m.charge(),m.moveLock(),m.stick(),m.playerControl(),m.previousPrimaryAngle(),m.previousSecondaryAngle());
+    }
+
     /** EnemyPoints: four native words (Player Object Collision.asm:200-204). */
     public static final int ENEMY_POINTS_BYTES = 8;
 
@@ -598,6 +686,12 @@ public final class CdPlayerTouchResponse {
      * this helper performs no routine dispatch, integration, camera freeze or continuation.
      */
     public static KillResult killPlayer(Actor actor, int invincible, int debugMode, int scoreChain, int miniSonic) {
+        return killPlayer(actor,invincible,debugMode,scoreChain,miniSonic,null);
+    }
+    private record KillPrefix(Actor actor,int invincible,int scoreChain,FmSound sound) { }
+    private static KillResult killPlayer(Actor actor,int invincible,int debugMode,int scoreChain,int miniSonic,
+                                        java.util.function.Consumer<KillPrefix> observer) {
+
         Objects.requireNonNull(actor); byteValue(invincible); wordValue(debugMode);
         wordValue(scoreChain); byteValue(miniSonic);
         if (debugMode != 0) {
@@ -616,6 +710,8 @@ public final class CdPlayerTouchResponse {
                 throw new IllegalStateException("ResetOnFloor requests only FM_CHARGESTOP");
             }
             calls.add(new PlayFm(FmSound.FM_CHARGESTOP));
+            if(observer!=null)observer.accept(new KillPrefix(new Actor(resetBeforeSound(reset.motion(),actor.motion().playerJump()),
+                actor.tile(),actor.priority(),actor.hurt(),actor.rotationDistance()),0,scoreChain,FmSound.FM_CHARGESTOP));
         }
         m = reset.motion();
         int y = m.centreY16_16() >>> 16;
@@ -625,18 +721,26 @@ public final class CdPlayerTouchResponse {
                 m.previousPrimaryAngle(), m.previousSecondaryAngle());
         var result = new Actor(killed, actor.tile() | 0x8000, 0, actor.hurt(), y & 0xFF);
         calls.add(new PlayFm(FmSound.FM_HURT));
+        if(observer!=null)observer.accept(new KillPrefix(result,0,reset.scoreChain(),FmSound.FM_HURT));
         return new KillResult(result, 0, reset.scoreChain(), calls, Exit.KILL_PLAYER);
     }
 
     /** Selected touch calls the SAME KillPlayer owner; no duplicated kill algorithm. */
     private static void killPlayer(Cursor c) {
+        boolean observed=c.hurtVisit!=null;
+        if(observed&&c.debugMode==0)c.calls.add(new ResetOnFloor());
         var result = killPlayer(new Actor(c.motion(), c.tile, c.priority, c.hurt, c.rotationDistance),
-                c.invincible, c.debugMode, c.scoreChain, c.miniSonic);
+                c.invincible, c.debugMode, c.scoreChain, c.miniSonic,observed?prefix->{
+                    c.motion(prefix.actor().motion());c.tile=prefix.actor().tile();c.priority=prefix.actor().priority();
+                    c.hurt=prefix.actor().hurt();c.rotationDistance=prefix.actor().rotationDistance();
+                    c.invincible=prefix.invincible();c.scoreChain=prefix.scoreChain();
+                    c.calls.add(new PlayFm(prefix.sound()));c.hurtVisit.emit(HurtCut.SOUND,prefix.sound());
+                }:null);
         c.motion(result.actor().motion());
         c.tile = result.actor().tile(); c.priority = result.actor().priority();
         c.hurt = result.actor().hurt(); c.rotationDistance = result.actor().rotationDistance();
         c.invincible = result.invincible(); c.scoreChain = result.scoreChain();
-        c.calls.addAll(result.calls()); c.minusOne(result.exit());
+        if(!observed)c.calls.addAll(result.calls()); c.minusOne(result.exit());
     }
 
     private static void requireGroup(int group, int expected) {
@@ -657,6 +761,7 @@ public final class CdPlayerTouchResponse {
         Exit exit;
         // BEGIN boss-only semantic continuation target; legacy calls leave this disabled.
         int bossContinuationWhole = -1;
+        HurtVisit hurtVisit;
         // END boss-only semantic continuation target.
 
         Cursor(Actor actor, PlayerGlobals g, WorldGlobals w, CdObjectPool.Snapshot callCut) {
@@ -692,14 +797,25 @@ public final class CdPlayerTouchResponse {
         /** BSR Player_ResetOnFloor through the single shared implementation. */
         void resetOnFloor() {
             calls.add(new ResetOnFloor());
+            int originalJump=jump;
             var reset = CdPlayerMovement.resetOnFloor(motion(), miniSonic);
-            motion(reset.motion()); scoreChain = reset.scoreChain();
+            if(hurtVisit==null) {
+                motion(reset.motion());scoreChain=reset.scoreChain();
+            } else motion(resetBeforeSound(reset.motion(),originalJump));
             for (var request : reset.sounds()) {
                 if (request.sound() != CdPlayerMovement.Sound.FM_CHARGESTOP) {
                     throw new IllegalStateException("ResetOnFloor requests only FM_CHARGESTOP");
                 }
                 calls.add(new PlayFm(FmSound.FM_CHARGESTOP));
+                if(hurtVisit!=null)hurtVisit.emit(HurtCut.SOUND,FmSound.FM_CHARGESTOP);
             }
+            if(hurtVisit!=null) {motion(reset.motion());scoreChain=reset.scoreChain();}
+        }
+        HurtPrefix hurtPrefix() {
+            return new HurtPrefix(new HurtPair(new Actor(motion(),tile,priority,hurt,rotationDistance),
+                new PlayerGlobals(timeWarp,invincible,shield,combineRing,debugCheat,debugMode,scoreChain,miniSonic),
+                new WorldGlobals(rings,lives,updateHudLives,score,nextLifeScore,updateHudScore)),
+                List.copyOf(changed.values()),calls,Optional.ofNullable(exit));
         }
         void minusOne(Exit value) { d0 = OptionalInt.of(-1); exit = value; }
         CdPlayerMotionState motion() {

@@ -12413,3 +12413,35 @@ Natural Host-coupled PlaceBlock remains unreached by that controller prefix;
 Monitor's changed-terrain probe fence is retained. Ring continuation, remaining
 CCZ family bindings, TT World/service joins and full-USA-then-JP/EU qualification
 remain separate work.
+
+## 7 November 2026 — qualified TT component prefixes
+
+The finite TT ecology, switch/route, boss/exit components now share the existing
+pool, Solid, player movement/reset/kill and guarded-Hurt algorithms. This is a
+component library join, not TT World/Frame/source/art admission. Original private
+World invocation, full raw State/Environment and cross-owner preparation remain
+separate obligations; public component records and equal data grant no authority.
+
+Root R97 reproduced six source-order defects across59 cases:53 passed,5 failed
+assertions and1 error, with no skips. The error was the incorrect early rejection
+of an unreached raw captured link, not compilation/setup failure. R98 reproduced
+the original sound-fault replacement:50 passed and1 failed assertion, no errors
+or skips. Both original failed source-bound receipts retain exact source before/
+after identities. Door now keeps the horizontal BYTE threshold distinct from
+the vertical WORD threshold. BreakPole retains the raw link until a reached
+target access and loads source Y before target mutation, including self-links.
+The extra literal self-link clamp regression has no separately executed RED.
+Hurt cleanup skips same-object suppression while preserving distinct secondary
+faults and the original RuntimeException/Error identity.
+
+R99 passes409 tests across14 classes, zero failures/errors/skips, including all
+191 existing touch-response checks and the16-case R13 and16-case R31 response
+groups. The source-bound normal-lane run checks40 declared Java payloads and
+identical before/after fingerprint
+`039af773af04f575aaefe8b554eaf263da75b974e85df80c3f9d6c269dc2517a`.
+Java25, `-Dmse=off` and original USA media were used. Shared admission waited623s;
+Maven execution took1m48s; the terminal callback interval was109.308s. These
+intervals overlap and are not summed. This focused request supplies no category
+or full-suite VERDICT, live TT service, native execution, pixels or regional
+completion. The TT solid/mover signed-displacement and Error-prefix findings
+remain uninstalled Root corrections, outside these40 payloads.

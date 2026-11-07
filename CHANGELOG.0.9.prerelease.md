@@ -24,6 +24,12 @@ matching area heading; see the
   including the explicit188-frame Sonic format and retained CCZ consumer/intro
   views. The combined World/data integration passes668 focused checks without
   skips; TT decoder, ordinary-service and live World admission remain separate.
+  TT enemy, hazard, route and boss components reuse shared owners. Door crossing
+  retains the native BYTE comparison; BreakPole preserves timer/controller/target
+  read order and raw self-link clamps. Guarded Hurt uses the original shared
+  allocator return target and sound prefixes without replacing an original fault
+  through self-suppression. The combined409 component checks pass without skips;
+  actual TT World/Frame/source/art admission remains separate.
   CCZ ordinary scheduling now preserves native VBlank/Main order, the old
   selected sprite list and full-word time-stop gating. Private HUD adoption
   retains the real prefix across typed callback failures;175 focused checks
