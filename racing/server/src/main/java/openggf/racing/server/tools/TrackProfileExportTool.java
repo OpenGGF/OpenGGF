@@ -117,7 +117,7 @@ public final class TrackProfileExportTool {
         int width = Math.multiplyExact(level.getLayerWidthBlocks(0), blockSize);
         int height = Math.multiplyExact(level.getLayerHeightBlocks(0), blockSize);
         Map<String, Object> entry = new LinkedHashMap<>();
-        entry.put("key", track.gameId() + ":" + track.zone() + ":" + track.act());
+        entry.put("key", track.key());
         entry.put("levelWidthPx", width);
         entry.put("levelHeightPx", height);
         entry.put("maxSpeedPxPerFrame",

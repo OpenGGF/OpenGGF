@@ -29,6 +29,14 @@ class TestControlCodecCompetition {
         return new ControlMessage.RoundStart(cfg, 1000, 61000,
                 new ControlMessage.RaceLaunch(1,1,cfg,"participant",0,"fingerprint","sonic",1000,61000,true));
     }
+    @Test void arenaVoteResultDecodesForBroadcastAndLateJoinReplay() {
+        var c = new ControlJsonCodec();
+        var cfg = launch().config();
+        var result = new ControlMessage.TrackVoteResult("s3k:arena:4", cfg, 2);
+        assertEquals(result, c.decodeRoomServer(c.encode(null, result)).message());
+        // The committed plan replay uses the same server message on a fresh connection.
+        assertEquals(result, new ControlJsonCodec().decodeRoomServer(c.encode(null, result)).message());
+    }
     @Test void fuzzClosedSwapOutcomes() {
         var c = new ControlJsonCodec();
         var random = new java.util.Random(9);

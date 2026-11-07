@@ -1358,6 +1358,7 @@ public final class RaceSession implements AutoCloseable {
         private final Thread thread;
         private final AtomicBoolean heartbeatPending = new AtomicBoolean();
         private volatile boolean stopped;
+        private String advertisedKind;
         private int advertisedZone;
         private int advertisedAct;
         private String advertisedChatMode;
@@ -1366,6 +1367,7 @@ public final class RaceSession implements AutoCloseable {
             this.client = client;
             this.roomId = roomId;
             this.server = server;
+            this.advertisedKind = null;
             this.advertisedZone = setup == null ? -1 : setup.zone();
             this.advertisedAct = setup == null ? -1 : setup.act();
             this.thread = Thread.ofVirtual().name("time-attack-master-link").start(this::run);
@@ -1407,8 +1409,9 @@ public final class RaceSession implements AutoCloseable {
                 return;
             }
             ControlMessage.RoomDescriptor current = server.room().descriptor();
-            if (current.zone() != advertisedZone || current.act() != advertisedAct) {
-                client.sendControl(new ControlMessage.RoomTrackUpdate(roomId, current.zone(), current.act()));
+            if (current.zone() != advertisedZone || current.act() != advertisedAct || !Objects.equals(current.trackKind(), advertisedKind)) {
+                client.sendControl(new ControlMessage.RoomTrackUpdate(roomId, current.zone(), current.act(), current.trackKind()));
+                advertisedKind = current.trackKind();
                 advertisedZone = current.zone();
                 advertisedAct = current.act();
             }
