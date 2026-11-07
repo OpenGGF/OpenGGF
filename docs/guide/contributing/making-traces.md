@@ -1,60 +1,37 @@
 # Making your own traces
 
-A trace records what the original game did on every frame of a BizHawk movie.
-OpenGGF replays the same movie and compares its own state against those rows.
-This page takes you from a movie you recorded to a trace candidate you can
-inspect, replay locally and propose for publication.
-
-Recording is optional. Normal builds do not need TraceChaser or BizHawk.
-Existing replay tests use the movies and trace fixtures already in the repository. The commands below come from the pinned
-[TraceChaser](../../../tools/tracechaser/docs/native-headless.md) submodule.
-When this page and those documents disagree, the submodule wins.
+Start with a short movie of one level. You need a verified game ROM, a BizHawk
+movie and a Linux x64 machine for capture. You do not need to write Java tests
+or publish a fixture to make your first trace.
 
 ```mermaid
-flowchart TD
-    A[Record a power-on BK2 in BizHawk 2.11] --> B[Check the BK2 header and sync settings]
-    B --> C[Initialize TraceChaser and preflight BizHawk]
-    C --> D[Capture with run.sh into a new scratch directory]
-    D --> E[Validate v5 with validate_trace_v5.py]
-    E --> F[Inspect metadata, rows and inventory]
-    F --> G[Gzip any plain physics and aux payloads]
-    G --> H[Replay locally against the candidate]
-    H --> I[Publication review and approval]
-    E -- rejected --> D
-    F -- wrong zone, route or length --> A
+flowchart LR
+    A[Set up once] --> B[Record a movie]
+    B --> C[Capture and validate]
+    C --> D[Trace files ready to inspect]
 ```
 
-## 1. Record a movie
+## 1. Set up once
 
-Record the movie yourself in EmuHawk (the BizHawk GUI). The native harness
-reads the BK2's `Header.txt`, `SyncSettings.json` and `Input Log.txt`, and
-rejects a movie that breaks the middle four rows below:
+You need Python 3, Mono 6.12 with `xbuild`, `monodis` and the pinned Roslyn
+compiler. Follow the [harness requirements](../../../tools/tracechaser/bizhawk-headless/README.md#requirements)
+if these are not installed. Java and Maven are only needed later for engine replay.
 
-| Requirement | Detail |
-|---|---|
-| BizHawk 2.11 | The capture runtime must be exactly 2.11; preflight rejects 2.11.1 and later. Record the movie with 2.11 too. |
-| Genesis Plus GX core | `Header.txt` has `Core Genplus-gx` and `Platform GEN`. |
-| Power-on start | `StartsFromSavestate` and `StartsFromSaveRam` are absent or `False`. Use "Record Movie" from power-on, not from a savestate. |
-| Pinned controller and region settings | `SyncSettings.json` has `UseSixButton: false`, `ControlTypeLeft: 1`, `ControlTypeRight: 1`, `Region: 0` and `LoadBIOS: false`, among other pinned fields. |
-| Both pads in the log | `Input Log.txt` has the `System`, `P1` and `P2` groups, each with its full button set. |
-| The verified ROM | Record and capture with the exact dump listed in the root [AGENTS.md](../../../AGENTS.md#rom-and-reference-setup) table. The capture identifies the game from the ROM SHA-1. |
-
-Play from the title screen into the level you want and stop the movie after
-the section you care about. Keep the BK2 file name. Complete-run metadata and
-run manifests record it as `source_bk2`, and replay looks up a shared movie by
-that name.
-
-Check a recorded movie before capturing:
+From your OpenGGF checkout, initialize TraceChaser and install the supported
+BizHawk 2.11 release:
 
 ```bash
-unzip -p /absolute/path/trace-research/inputs/ghz1-attempt.bk2 Header.txt
-unzip -p /absolute/path/trace-research/inputs/ghz1-attempt.bk2 SyncSettings.json
+git submodule update --init --recursive tools/tracechaser &&
+tools/tracechaser-bootstrap.sh --check &&
+tools/tracechaser/bizhawk/fetch_bizhawk_2_11_linux.sh
 ```
 
-The minimal `.bk2` written by `InputLogAuthorTool` has no `SyncSettings.json`,
-so the native harness rejects it. Use EmuHawk recordings for traces.
+If you already have BizHawk installed, use the existing-installation instructions
+below instead of the fetch command. Keep the same terminal open for the commands
+on this page.
 
-## 2. Set up the capture tools
+<details>
+<summary>Existing BizHawk installation and setup details</summary>
 
 Native capture runs on Linux x64 under Mono, with no display.
 
@@ -88,7 +65,109 @@ Keep inputs and outputs in a directory outside both repositories. Avoid `/tmp`
 for long runs because it may be a small memory filesystem. See
 [Scratch and security](../../../tools/tracechaser/docs/scratch-and-security.md).
 
-## 3. Choose a profile
+</details>
+
+## 2. Record a short movie
+
+Open your [verified ROM](dev-setup.md#rom-files) in BizHawk 2.11's GUI,
+EmuHawk. Use the Genesis Plus GX core and record a BK2 movie starting from
+power-on. Play into the level you want, stop recording after the section you
+care about, and save the `.bk2` outside the repository.
+
+Use the default 3-button controllers and auto region. Movies starting from a
+savestate or save RAM are not accepted. Keep the original movie filename.
+
+<details>
+<summary>Exact movie settings and how to check them</summary>
+
+Record the movie yourself in EmuHawk (the BizHawk GUI). The native harness
+reads the BK2's `Header.txt`, `SyncSettings.json` and `Input Log.txt`, and
+rejects a movie that breaks the middle four rows below:
+
+| Requirement | Detail |
+|---|---|
+| BizHawk 2.11 | The capture runtime must be exactly 2.11; preflight rejects 2.11.1 and later. Record the movie with 2.11 too. |
+| Genesis Plus GX core | `Header.txt` has `Core Genplus-gx` and `Platform GEN`. |
+| Power-on start | `StartsFromSavestate` and `StartsFromSaveRam` are absent or `False`. Use "Record Movie" from power-on, not from a savestate. |
+| Pinned controller and region settings | `SyncSettings.json` has `UseSixButton: false`, `ControlTypeLeft: 1`, `ControlTypeRight: 1`, `Region: 0` and `LoadBIOS: false`, among other pinned fields. |
+| Both pads in the log | `Input Log.txt` has the `System`, `P1` and `P2` groups, each with its full button set. |
+| The verified ROM | Record and capture with the exact dump listed in the root [AGENTS.md](../../../AGENTS.md#rom-and-reference-setup) table. The capture identifies the game from the ROM SHA-1. |
+
+Play from the title screen into the level you want and stop the movie after
+the section you care about. Keep the BK2 file name. Complete-run metadata and
+run manifests record it as `source_bk2`, and replay looks up a shared movie by
+that name.
+
+Check a recorded movie before capturing:
+
+```bash
+unzip -p /absolute/path/trace-research/inputs/ghz1-attempt.bk2 Header.txt
+unzip -p /absolute/path/trace-research/inputs/ghz1-attempt.bk2 SyncSettings.json
+```
+
+The minimal `.bk2` written by `InputLogAuthorTool` has no `SyncSettings.json`,
+so the native harness rejects it. Use EmuHawk recordings for traces.
+
+</details>
+
+## 3. Capture and validate
+
+Run this from your OpenGGF checkout. Change the three paths at the top.
+The example captures the first gameplay segment for Sonic 1, Sonic 2 or Sonic
+3 & Knuckles, selected from the ROM. For another segment or a whole run, see
+"Other routes and complete runs" below.
+
+```bash
+ROM=/absolute/path/to/your-game.gen
+MOVIE=/absolute/path/to/your-recording.bk2
+OUT=/absolute/path/to/trace-research/first-capture
+
+OPENGGF="$PWD"
+TRACECHASER="$OPENGGF/tools/tracechaser"
+mkdir -p "$(dirname "$OUT")"
+
+"$TRACECHASER/bizhawk-headless/run.sh" \
+  --tracechaser-root "$TRACECHASER" \
+  --input-repository-root "$OPENGGF" \
+  --fixture-root "$OPENGGF/src/test/resources/traces" \
+  --mode trace --rom "$ROM" --movie "$MOVIE" --output "$OUT" \
+  --compress-threshold 0 &&
+python3 "$TRACECHASER/traces/validate_trace_v5.py" \
+  --require-frame-keyed-auxiliary "$OUT"
+```
+
+Choose an output directory that does not exist yet, outside both repositories.
+The recorder builds itself on the first run. It compresses the payloads for you,
+and the validator runs only if capture succeeds.
+
+When both commands succeed, your trace is in `$OUT`. Check its starting level
+and frame count:
+
+```bash
+python3 -m json.tool "$OUT/metadata.json"
+```
+
+Look for the expected `game`, `zone`, `act` and `trace_frame_count`.
+You now have a trace candidate. A successful capture records what the ROM did;
+it does not mean OpenGGF can replay that route accurately.
+
+## If something goes wrong
+
+| Symptom | Next step |
+| --- | --- |
+| Missing compiler, Mono or BizHawk | Open the setup details above and check the harness requirements. |
+| Movie header or sync settings rejected | Open the movie settings above. Record from power-on with the supported core and settings. |
+| Output directory already exists | Pick a fresh name, such as `second-capture`. |
+| Wrong level or too few frames | Check the movie and choose the appropriate profile below. |
+| Capture or validation fails | Keep the command output. Fix the reported cause before treating the trace as usable. |
+
+## When you need more
+
+The remaining steps are for choosing another route, investigating the output,
+or adding a fixture to OpenGGF. You can stop here after a first capture.
+
+<details>
+<summary>Other routes and complete runs</summary>
 
 The ROM selects the game. There is no game flag.
 
@@ -107,36 +186,18 @@ spell the profile exactly. Per-game details are in
 [capture-s3k](../../../tools/tracechaser/docs/capture-s3k.md).
 Add `--load-queue-state` only when you need per-frame load-queue diagnostics.
 
-## 4. Capture
+</details>
 
-This example records one Sonic 1 level. Replace the `/absolute/path` paths with your
-own absolute paths. `run.sh` requires all four root flags as absolute paths and
-refuses an `--output` directory that already exists or sits inside either
-repository.
+<details>
+<summary>Inspect the files and save an inventory</summary>
+
+Set `WORK` to an absolute research directory outside the repositories, then
+create its evidence directory before using the inventory command:
 
 ```bash
-OPENGGF=/absolute/path/src/OpenGGF
-TRACECHASER="$OPENGGF/tools/tracechaser"
-WORK=/absolute/path/trace-research
-mkdir -p "$WORK/scratch" "$WORK/evidence"
-OUT="$WORK/scratch/s1-ghz1-attempt-1"   # must not exist yet
-
-"$TRACECHASER/bizhawk-headless/run.sh" \
-  --tracechaser-root "$TRACECHASER" \
-  --input-repository-root "$OPENGGF" \
-  --fixture-root "$OPENGGF/src/test/resources/traces" \
-  --mode trace \
-  --rom "$OPENGGF/Sonic The Hedgehog (W) (REV01) [!].gen" \
-  --movie "$WORK/inputs/ghz1-attempt.bk2" \
-  --output "$OUT"
+WORK=/absolute/path/to/trace-research
+mkdir -p "$WORK/evidence"
 ```
-
-Use whatever file name your verified ROM has. The first run builds the harness
-under `tools/tracechaser/bizhawk-headless/bin/`, which Git ignores. A failed
-capture leaves no output directory; fix the cause and run again with the same
-or a new path.
-
-## 5. Validate and inspect
 
 Validate the whole candidate root. The validator only reads.
 
@@ -167,24 +228,16 @@ python3 "$TRACECHASER/traces/trace_fixture_inventory.py" generate "$OUT" \
 The [trace v5 reference](../../../tools/tracechaser/docs/trace-v5.md) defines
 every field.
 
-## 6. Compress payloads for commits
-
-OpenGGF never commits plain `physics*.csv` or `aux_state*.jsonl`. The harness
-gzips payloads of 1 MiB or more by default, so a short level can come out
-plain. Either capture with `--compress-threshold 0`, or compress each plain
-payload deterministically and delete the plain file:
-
-```bash
-gzip -9 -n -c "$OUT/physics.csv" > "$OUT/physics.csv.gz" && rm "$OUT/physics.csv"
-gzip -9 -n -c "$OUT/aux_state.jsonl" > "$OUT/aux_state.jsonl.gz" && rm "$OUT/aux_state.jsonl"
-```
-
-Never leave a plain file beside its `.gz`, because the loader prefers the plain
-file. Metadata and manifests stay plain. For timing files, follow the
+The quickstart uses `--compress-threshold 0`, so no manual gzip step is needed.
+For captures made without it, follow the
 [compression rules](trace-replay.md#compressing-trace-payloads).
-Validate and regenerate the inventory after any compression.
 
-## 7. Replay it, and what that proves
+</details>
+
+<details>
+<summary>Compare your trace against the engine</summary>
+
+Set `WORK` as described in the inventory section above.
 
 Replay needs a test class that names the trace directory. Follow
 [Adding a new trace test](trace-replay.md#adding-a-new-trace-test) to write
@@ -229,7 +282,10 @@ Keep these limits in mind:
 
 [Reading divergences](trace-replay.md#reading-divergences) explains the report.
 
-## 8. Propose it for publication
+</details>
+
+<details>
+<summary>Propose a trace for the repository</summary>
 
 Installing a trace into `src/test/resources/traces` needs maintainer approval
 of the exact candidate bytes. Follow
@@ -248,3 +304,5 @@ Before you ask, have this ready:
       skips
 
 Never commit the ROM, savestates or the BizHawk distribution.
+
+</details>
