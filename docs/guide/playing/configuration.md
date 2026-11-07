@@ -7,6 +7,26 @@ reference to `config.yaml.example` without replacing your settings. A legacy
 questions. For the full reference of every key, see the
 [Configuration Reference](../../../CONFIGURATION.md).
 
+Most answers name a menu first and then the equivalent `config.yaml` keys. Menu
+choices you save are written to `config.yaml`.
+
+- [How do I change the interface language?](#how-do-i-change-the-interface-language)
+- [How do I change the window size?](#how-do-i-change-the-window-size)
+- [How do I change fullscreen mode?](#how-do-i-change-fullscreen-mode)
+- [How do I skip the title screen?](#how-do-i-skip-the-title-screen)
+- [How do I start on a specific zone?](#how-do-i-start-on-a-specific-zone)
+- [How do I play as Tails?](#how-do-i-play-as-tails)
+- [How do I enable cross-game features?](#how-do-i-enable-cross-game-features)
+- [How do I change controls?](#how-do-i-change-controls)
+- [How do I enable the editor overlay?](#how-do-i-enable-the-editor-overlay)
+- [How do I enable live rewind?](#how-do-i-enable-live-rewind)
+- [How do I mute audio?](#how-do-i-mute-audio)
+- [How do I make colors less bright?](#how-do-i-make-colors-less-bright)
+- [How do I use a wider display aspect?](#how-do-i-use-a-wider-display-aspect)
+- [How do I switch between NTSC and PAL?](#how-do-i-switch-between-ntsc-and-pal)
+- [How do I use different ROM filenames?](#how-do-i-use-different-rom-filenames)
+- [How do I skip S3K intro cutscenes?](#how-do-i-skip-s3k-intro-cutscenes)
+
 ---
 
 ## How do I change the interface language?
@@ -164,6 +184,9 @@ qualified by modifiers. The following formats all work:
 - `"SHIFT+O"`
 - `"CTRL+SHIFT+O"`
 
+<details>
+<summary>Modifier names and which shortcuts honour chords</summary>
+
 The modifier names are `CTRL`/`CONTROL`, `SHIFT`, `ALT`/`OPTION`, and
 `META`/`SUPER`/`CMD`/`COMMAND`/`WIN`, all case-insensitive. For the chord-aware
 shortcuts listed below, matching is exact: a binding fires only with the modifiers
@@ -177,12 +200,17 @@ currently read the bare key: their modifiers are dropped, and some also require
 that no modifier is held. The full per-binding
 table is in [CONFIGURATION.md](../../../CONFIGURATION.md).
 
+</details>
+
 Invalid names log a warning and fall back to the default binding for that action.
 Leaving a binding empty (`""`) is different: it switches that shortcut off, and no
-default is substituted. If you want
-the raw numeric values, find the code for your preferred key in the
-[GLFW key reference](https://www.glfw.org/docs/latest/group__keys.html).
+default is substituted.
 
+<details>
+<summary>Numeric GLFW key codes</summary>
+
+For raw numeric values, find the code for your preferred key in the
+[GLFW key reference](https://www.glfw.org/docs/latest/group__keys.html).
 Common key codes:
 
 | Key | Code | Key | Code |
@@ -193,6 +221,8 @@ Common key codes:
 | Arrow Right | 262 | Escape | 256 |
 | A | 65 | Z | 90 |
 | S | 83 | X | 88 |
+
+</details>
 
 Example: rebind Player 1 action A (jump) to the A key:
 
@@ -260,7 +290,12 @@ and freezes graphical fade progression to the restored rewind snapshots. The
 game resumes normal forward audio/fade presentation when the key is released.
 
 Held rewind defaults to one rewind step per visual frame and stops immediately when
-released. Experimental tape-coast rewind is available only when
+released.
+
+<details>
+<summary>Experimental tape-coast rewind speed</summary>
+
+Experimental tape-coast rewind is available only when
 `rewind.tapeCoastEnabled` is set to `true`. With coast enabled, the rewind
 speed starts at `rewind.tapeCoastMinSteps` on press (values below 1.0 give
 a slow-motion start), accelerates while held using
@@ -268,6 +303,8 @@ a slow-motion start), accelerates while held using
 and decays after release using `rewind.tapeCoastDeceleration`. Reverse audio
 is resampled in lockstep with the current rewind speed, so fast rewind pitches up
 and slow-motion rewind plays back lower and stretched in time.
+
+</details>
 
 ## How do I mute audio?
 
@@ -289,12 +326,17 @@ display:
   colorExpansion: "LIMITED"
 ```
 
+<details>
+<summary>How Limited expansion interacts with colour profiles</summary>
+
 Expansion is separate from **Colour profile**. Limited applies a rounded 238/255
 output gain after palette fades and the selected profile, including arbitrary
 creator palette colours. With Raw RGB, the eight ROM channel levels become
 0, 34, 68, 102, 136, 170, 204 and 238, matching GPGX normal digital output.
 It does not emulate shadow/highlight or a 16–235 video range. Shader effects and
 UI colours drawn outside the palette pipeline retain their own colour contracts.
+
+</details>
 
 The default colour profile is Raw RGB. You can independently select a darker
 analogue-style presentation or a softer NTSC-style presentation:

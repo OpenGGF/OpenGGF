@@ -60,13 +60,21 @@ synthesized offline and never plays through a speaker.
 
 ## A typical session
 
+Set the ROM path and a films folder outside the repository, then run the steps
+in order. `floors.json` is a query file you write first; its format is under
+[Find floors](#find-floors).
+
 ```bash
-python3 tools/stageplay/stageplay.py init --out /your/films/take1.screenplay.json
-python3 tools/stageplay/stageplay.py catalog --game s2 --rom /path/to/sonic2.gen --character tails --zone 0 --act 0
-python3 tools/stageplay/stageplay.py ground --set s2/0/0 --queries /your/films/floors.json --s2-rom /path/to/sonic2.gen
-python3 tools/stageplay/stageplay.py compile --script /your/films/take1.screenplay.json --out /your/films/take1.stageplay
-python3 tools/stageplay/stageplay.py simulate --scene /your/films/take1.stageplay --out /your/films/take1.jsonl --s2-rom /path/to/sonic2.gen
-python3 tools/stageplay/stageplay.py render --scene /your/films/take1.stageplay --out /your/films/take1.mkv --s2-rom /path/to/sonic2.gen --scale 2
+S2_ROM=/path/to/sonic2.gen
+FILMS=/your/films
+mkdir -p "$FILMS"
+
+python3 tools/stageplay/stageplay.py init --out "$FILMS/take1.screenplay.json"
+python3 tools/stageplay/stageplay.py catalog --game s2 --rom "$S2_ROM" --character tails --zone 0 --act 0
+python3 tools/stageplay/stageplay.py ground --set s2/0/0 --queries "$FILMS/floors.json" --s2-rom "$S2_ROM"
+python3 tools/stageplay/stageplay.py compile --script "$FILMS/take1.screenplay.json" --out "$FILMS/take1.stageplay"
+python3 tools/stageplay/stageplay.py simulate --scene "$FILMS/take1.stageplay" --out "$FILMS/take1.jsonl" --s2-rom "$S2_ROM"
+python3 tools/stageplay/stageplay.py render --scene "$FILMS/take1.stageplay" --out "$FILMS/take1.mkv" --s2-rom "$S2_ROM" --scale 2
 ```
 
 1. `init` writes a starter screenplay (Tails in Emerald Hill).

@@ -11,14 +11,27 @@ pattern.
 
 **Prerequisites:** You should have completed [Dev Setup](dev-setup.md), read the
 [Architecture](architecture.md) page, and be comfortable reading 68000 assembly at the
-level covered in the [68000 Primer](../cross-referencing/68000-primer.md).
+level covered in the [68000 Primer](../cross-referencing/68000-primer.md). Initialize
+the Sonic 2 disassembly with `git submodule update --init docs/s2disasm`, and have the
+Sonic 2 REV01 ROM in place for step 7.
+
+| Step | You produce |
+|---|---|
+| [1. Read the disassembly](#step-1-read-the-disassembly) | Notes on each routine, constant and animation |
+| [2. Plan](#step-2-plan-the-implementation) | Two classes and a state map |
+| [3. Register](#step-3-register-the-object) | Name and factory entries for ID `0x22` |
+| [4. Shooter](#step-4-implement-the-shooter) | `ArrowShooterObjectInstance` |
+| [5. Arrow](#step-5-implement-the-arrow) | `ArrowProjectileInstance` |
+| [6. Art](#step-6-art-and-plc-wiring) | The art key both classes use |
+| [7. Test](#step-7-test-it) | A manual check in ARZ and a `HeadlessTestFixture` test |
 
 ---
 
 ## Step 1: Read the Disassembly
 
-Open `docs/s2disasm/s2.asm` and search for `Obj22`. You will find the object starting
-around line 51034.
+Open `docs/s2disasm/s2.asm` and search for `Obj22:`. In the pinned revision the
+object is `Obj22 (s2.asm:51510-51649)`, from its "Object 22" header to the sprite
+mappings include. Line numbers drift between revisions, so search by label.
 
 ### The Routine Dispatch Table
 
@@ -612,7 +625,7 @@ The real implementations are at:
   (search for `ARROW_SHOOTER`)
 - **Name mapping:** `src/main/java/com/openggf/game/sonic2/objects/Sonic2ObjectRegistryData.java`
   (search for `0x22`)
-- **ASM source:** `docs/s2disasm/s2.asm` lines 51034-51168
+- **ASM source:** `Obj22 (s2.asm:51510-51649)` in `docs/s2disasm/s2.asm`
 - **Sprite mappings:** `docs/s2disasm/mappings/sprite/obj22.asm`
 
 Compare your work against these files. Pay particular attention to:

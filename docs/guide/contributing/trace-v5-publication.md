@@ -16,6 +16,21 @@ native implementation. Both are opaque provenance; neither selects parsing or
 replay. `lua_script_version` was removed, not renamed. V5 also removes
 `csv_version`, `ss_csv_version`, `hardware_timing_schema`, and `run_schema`.
 
+Refreshing canonical fixtures follows this order. Each box is a section below;
+nothing is copied into `src/test/resources/traces` before the approval step.
+
+```mermaid
+flowchart LR
+    A[Capture to a new<br/>scratch root] --> B[Validate and compare<br/>against the installed fleet]
+    B --> C[Replay Java tests<br/>from the scratch root]
+    C --> D[Freeze exact bytes<br/>and deltas]
+    D --> E[User approves<br/>those bytes]
+    E --> F[Install atomically<br/>and re-run gates]
+```
+
+For a first personal trace that is not published, use
+[Making your own traces](making-traces.md) instead.
+
 ## Capture matrix
 
 All production capture uses `tools/tracechaser/bizhawk-headless/run.sh --mode trace` with a
@@ -37,6 +52,10 @@ widths: S1 14, S2 48, and S3K 20. Presence of
 timing registry. The loader prefers a plain sibling when both exist and applies
 the same strict UTF-8 and event validation after decompression. Every run
 manifest has `dynamic_art_gap_transitions`, including an empty array.
+
+<details>
+<summary>S3K initialization timing streams</summary>
+
 S3K complete-run capture can opt into a run-root `initialization_timing.jsonl`
 stream. Its absolute BK2 row namespace, independently selected ROM-backed phase
 identity and fail-closed service windows are distinct from comparison payloads.
@@ -51,6 +70,8 @@ readiness during matching represented loads outside structural segments.
 the phase stream's absolute zero-based movie namespace. Existing interstitial
 provenance is unchanged and supplies no timing authority. Producer compression
 also covers empty/tiny initialization companions.
+
+</details>
 
 ## Candidate validation and comparison
 
@@ -154,5 +175,6 @@ scratch root.
 6. Re-run native gates, validator/comparator, fixture guards, all eight credits
    replays, the full trace fleet, and the three-ROM Java suite.
 
-Recorded timing remains subject to hard rule 4 throughout: it may delay the
+Recorded timing remains subject to runtime invariant 4 in the root
+[AGENTS.md](../../../AGENTS.md#runtime-invariants) throughout: it may delay the
 readiness of matching production work and nothing else.

@@ -12,6 +12,15 @@ on the frame where it first appears.
 > invariant, the four mission rules, the diagnose-fix-regen-loop workflow, recorder extension
 > recipe, and pointers to disassembly and process skills.
 
+| You want to | Go to |
+|---|---|
+| Run an existing trace test | [Running existing trace tests](#running-existing-trace-tests) |
+| Understand a failure report | [Reading divergences](#reading-divergences) |
+| Record your first trace | [Making your own traces](making-traces.md) |
+| Refresh or publish a fixture | [Recording or refreshing a trace](#recording-or-refreshing-a-trace), then [Trace v5 capture and publication](trace-v5-publication.md) |
+| Add a replay test class | [Adding a new trace test](#adding-a-new-trace-test) |
+| Know what a pass proves | [Questions and answers](#questions-and-answers) |
+
 ## Questions and answers
 
 ### What is a trace?
@@ -301,36 +310,6 @@ availability reason without inventing a gameplay mismatch.
 
 ## Running existing trace tests
 
-Full S3K campaign certification uses `assertCompleteCampaignReplay`: the manifest
-must contain a native recorder-observed `expected_movie_end_mode`, and its final
-segment must fit within the actual source BK2. The drive then compares the
-remaining movie tail and terminal mode/art; passing preflight alone does not
-certify a campaign. The field check cannot authenticate provenance: reviewers
-must verify that the value came from the native recorder and matching inputs.
-Missing endpoint evidence fails before engine boot. Partial
-runs, round trips and prefix/frontier checks retain optional endpoints through
-their existing replay helpers. A `complete_run` segment profile or a full-run
-filename does not supply an endpoint observation. The three S3K
-campaign manifests (Knuckles Super Emerald, Tails full chain, Sonic+Tails complete
-emeralds) carry the native observation `title_screen`, captured by TraceChaser
-from the final input frame; see the
-[five-manifest audit](../../architecture/audits/2026-10-29-s3k-campaign-terminal-certification.md)
-for the history. Do not fill missing observations by hand.
-
-Segment entry kind comes only from the recorder's `level_entry_placement_source`
-(`start_table`, `starpost_restore`, `special_stage_restore`): the placement branch
-the ROM took when that segment's load began (S3K `loc_1BE46` /
-`Load_Starpost_Settings`, S2 `LevelSizeLoad`). `TraceReplayBootstrap` maps it in
-`recordedEntryPlacementProvenance`: an S3K start-table segment boots as a fresh
-post-spawn body (ROM camera derivation including the Tails-alone +4), an S3K
-restore as a post-spawn return (zone intros skipped, as `SpawnLevelMainSprites`
-does), and an S2/KiS2 start-table segment with a native title-card prelude as a
-native load. S2 restores and fixtures without the field keep the unclassified
-setup. Coordinates, manifest topology and run names never select the entry kind.
-The same observation records `last_star_post_hit`, the raw star-post byte the load
-read (bit 7 retained on special-stage returns). Replay does not read it yet; it is
-the ROM-observed index for importing carried segment state.
-
 Trace replay tests require:
 
 - the matching ROM for the game(s) you want to replay, in the repo root or main checkout
@@ -361,6 +340,10 @@ Check the selected test identities, skips and actual replay reports. A successfu
 Maven invocation with missing ROMs does not establish parity. Use absolute paths
 in worktrees and inspect `target/surefire-reports/TEST-*.xml` when attribution is unclear.
 
+**It worked if** the selected classes ran, none were skipped, and Maven passed.
+A failure writes the JSON and context reports described below; start from the
+first divergent frame in the context file.
+
 Useful optional override while tuning S1 oscillation alignment:
 
 ```bash
@@ -378,21 +361,58 @@ The JSON groups divergences by field and frame range. The context file is the fa
 the first non-cascading failure — open it, scroll to the first error, look at the side-by-side
 ROM-vs-engine columns.
 
-> **Diagnosing tip — "phantom landing" patterns.** When a sidekick lands on a
-> surface ROM keeps falling through (engine `tails_y_speed=0x0000` and
-> `tails_g_speed=<prior_x_speed>` while ROM `tails_y_speed` keeps advancing
-> by gravity), the fingerprint maps to one of two ROM paths: terrain
-> `Sonic_HitFloor` or solid-object `SolidObjectTopSloped2` /
-> `SolidObject_Landed`. Add a `setGSpeed` velocity-probe in
-> `AbstractPlayableSprite` that prints the call site and check the stack;
-> if it points into `ObjectManager.SolidContacts.resolveContactInternal`,
-> the offender is a solid object whose state machine has drifted from ROM
-> (e.g. AIZ F7127 was the AIZ collapsing platform stuck in
-> `state==2`/solid-stay forever; ROM's `loc_205DE` at sonic3k.asm:44895-44899
-> unconditionally promotes to the falling state when its post-fragment
-> timer underflows, but the engine had been gating that promotion on a
-> still-standing player). The correct fix touches the object's state
-> machine, not the collision sensor.
+<details>
+<summary>Diagnosing tip: "phantom landing" patterns</summary>
+
+When a sidekick lands on a
+surface ROM keeps falling through (engine `tails_y_speed=0x0000` and
+`tails_g_speed=<prior_x_speed>` while ROM `tails_y_speed` keeps advancing
+by gravity), the fingerprint maps to one of two ROM paths: terrain
+`Sonic_HitFloor` or solid-object `SolidObjectTopSloped2` /
+`SolidObject_Landed`. Add a `setGSpeed` velocity-probe in
+`AbstractPlayableSprite` that prints the call site and check the stack;
+if it points into `ObjectManager.SolidContacts.resolveContactInternal`,
+the offender is a solid object whose state machine has drifted from ROM
+(e.g. AIZ F7127 was the AIZ collapsing platform stuck in
+`state==2`/solid-stay forever; ROM's `loc_205DE` at sonic3k.asm:44895-44899
+unconditionally promotes to the falling state when its post-fragment
+timer underflows, but the engine had been gating that promotion on a
+still-standing player). The correct fix touches the object's state
+machine, not the collision sensor.
+
+</details>
+
+### Campaign endpoints and segment entry kind
+
+Full S3K campaign certification uses `assertCompleteCampaignReplay`: the manifest
+must contain a native recorder-observed `expected_movie_end_mode`, and its final
+segment must fit within the actual source BK2. The drive then compares the
+remaining movie tail and terminal mode/art; passing preflight alone does not
+certify a campaign. The field check cannot authenticate provenance: reviewers
+must verify that the value came from the native recorder and matching inputs.
+Missing endpoint evidence fails before engine boot. Partial
+runs, round trips and prefix/frontier checks retain optional endpoints through
+their existing replay helpers. A `complete_run` segment profile or a full-run
+filename does not supply an endpoint observation. The three S3K
+campaign manifests (Knuckles Super Emerald, Tails full chain, Sonic+Tails complete
+emeralds) carry the native observation `title_screen`, captured by TraceChaser
+from the final input frame; see the
+[five-manifest audit](../../architecture/audits/2026-10-29-s3k-campaign-terminal-certification.md)
+for the history. Do not fill missing observations by hand.
+
+Segment entry kind comes only from the recorder's `level_entry_placement_source`
+(`start_table`, `starpost_restore`, `special_stage_restore`): the placement branch
+the ROM took when that segment's load began (S3K `loc_1BE46` /
+`Load_Starpost_Settings`, S2 `LevelSizeLoad`). `TraceReplayBootstrap` maps it in
+`recordedEntryPlacementProvenance`: an S3K start-table segment boots as a fresh
+post-spawn body (ROM camera derivation including the Tails-alone +4), an S3K
+restore as a post-spawn return (zone intros skipped, as `SpawnLevelMainSprites`
+does), and an S2/KiS2 start-table segment with a native title-card prelude as a
+native load. S2 restores and fixtures without the field keep the unclassified
+setup. Coordinates, manifest topology and run names never select the entry kind.
+The same observation records `last_star_post_hit`, the raw star-post byte the load
+read (bit 7 retained on special-stage returns). Replay does not read it yet; it is
+the ROM-observed index for importing carried segment state.
 
 ## Rendering An Existing Trace Segment
 
@@ -439,15 +459,20 @@ Prerequisites:
 - initialize the pinned submodule with `git submodule update --init --recursive tools/tracechaser`
   and check it with `tools/tracechaser-bootstrap.sh --check`
 
-Examples:
+Example, run from the OpenGGF checkout root. Set the three paths first; `OUT`
+must not exist yet and must be outside both repositories:
 
 ```bash
+S3K_ROM=/absolute/path/to/s3k.gen
+MOVIE=/absolute/path/to/movie.bk2
+OUT=/absolute/scratch/candidate
+
 tools/tracechaser/bizhawk-headless/run.sh \
   --tracechaser-root "$PWD/tools/tracechaser" \
   --input-repository-root "$PWD" \
   --fixture-root "$PWD/src/test/resources/traces" --mode trace \
-  --rom "$S3K_ROM_PATH" --movie /absolute/movie.bk2 \
-  --output /absent/scratch/candidate --trace-profile aiz_end_to_end
+  --rom "$S3K_ROM" --movie "$MOVIE" \
+  --output "$OUT" --trace-profile aiz_end_to_end
 ```
 
 Capture only to a new scratch root. Never copy candidate bytes into
