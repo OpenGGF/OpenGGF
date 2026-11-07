@@ -189,7 +189,12 @@ public final class DestructionEffects {
                     ? PoweredBadnikScoring.incrementChain(player)
                     : player.incrementBadnikChain();
             if (services != null) {
-                services.gameState().addScore(pointsValue);
+                // AddPoints2 (s2.asm:87835-87842) selects the native attacker's
+                // progress bank; ordinary team awards retain the shared bank.
+                var roster = com.openggf.game.competition.NativeCompetitionRoster.from(services.worldSession());
+                int slot = roster != null && player instanceof com.openggf.sprites.playable.AbstractPlayableSprite actor
+                        ? roster.slotOf(actor) : -1;
+                (slot >= 0 ? roster.gameState(slot) : services.gameState()).addScore(pointsValue);
             }
         }
 
