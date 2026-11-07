@@ -1,5 +1,8 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.game.sonic2.competition.view.Sonic2NativeDisplaySource;
+import com.openggf.game.sonic2.competition.view.Sonic2CompetitionDisplayInputs.*;
+
 import com.openggf.level.objects.ObjectVisualFacing;
 
 import com.openggf.game.PlayableEntity;
@@ -21,7 +24,7 @@ import java.util.List;
  * allocation from Obj26_Break.
  */
 public final class MonitorContentsObjectInstance extends AbstractMonitorObjectInstance
-        implements SpawnNullableReferenceRewindRecreatable, ObjectVisualFacing.NonDirectional {
+        implements Sonic2NativeDisplaySource, SpawnNullableReferenceRewindRecreatable, ObjectVisualFacing.NonDirectional {
     // Obj2E raises a reward icon vertically; the portrait/icon is not a facing body.
 
     private static final int ICON_FRAME_OFFSET = 1;
@@ -83,4 +86,15 @@ public final class MonitorContentsObjectInstance extends AbstractMonitorObjectIn
         }
         drawMonitorIcon(subtype + ICON_FRAME_OFFSET, spawn.x(), iconSubY >> 8);
     }
+
+    // Obj2E_Init (s2.asm:25745-25774): first piece of the selected monitor frame, static_mappings.
+    @Override public ObjectSlot nativeDisplaySlot() {
+        if(isDestroyed() || !iconActive) return null;
+        try {
+            int pointer=0x12D36+services().romReader().readS16BE(0x12D36+(subtype+1)*2)+2;
+            return new ObjectSlot(0x2E,0x24,spawn.x()&0xFFFF,(iconSubY>>8)&0xFFFF,8,0,
+                    new Mapping(pointer,0),0x8340,null);
+        } catch(java.io.IOException e) { throw new java.io.UncheckedIOException(e); }
+    }
+
 }

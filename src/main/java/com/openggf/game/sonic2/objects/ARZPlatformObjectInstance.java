@@ -1,5 +1,8 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.game.sonic2.competition.view.Sonic2NativeDisplaySource;
+import com.openggf.game.sonic2.competition.view.Sonic2CompetitionDisplayInputs.*;
+
 import com.openggf.level.objects.ObjectVisualFacing;
 
 import com.openggf.game.PlayableEntity;
@@ -37,7 +40,7 @@ import java.util.logging.Logger;
  * Implements movement behaviors and rendering from the disassembly.
  */
 public class ARZPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+        implements Sonic2NativeDisplaySource, SolidObjectProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
     // Obj18 moves a geometric platform; bobbing/falling and placement flips do not face a body.
 
     private static final Logger LOGGER = Logger.getLogger(ARZPlatformObjectInstance.class.getName());
@@ -478,6 +481,14 @@ public class ARZPlatformObjectInstance extends AbstractObjectInstance
         this.timer = extra.timer();
         this.yVel = extra.yVel();
         this.yRadius = extra.yRadius();
+    }
+
+
+    // Obj18_Init (s2.asm:23176-23218): EHZ placements use frame zero, width $20, world coordinates.
+    @Override public ObjectSlot nativeDisplaySlot() {
+        if(isDestroyed()) return null;
+        return new ObjectSlot(0x18,4,x&0xFFFF,y&0xFFFF,32,0,
+                new Mapping(0x107F6,mappingFrame),0x4000,null);
     }
 
 }

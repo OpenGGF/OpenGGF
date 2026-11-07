@@ -1,5 +1,8 @@
 package com.openggf.game.sonic2.objects.badniks;
 
+import com.openggf.game.sonic2.competition.view.Sonic2NativeDisplaySource;
+import com.openggf.game.sonic2.competition.view.Sonic2CompetitionDisplayInputs.*;
+
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.AbstractBadnikInstance;
 
@@ -21,7 +24,7 @@ import java.util.List;
  *
  * ROM reference: ObjA3 in s2.asm.
  */
-public class FlasherBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable, ObjectVisualFacing.Source {
+public class FlasherBadnikInstance extends AbstractBadnikInstance implements Sonic2NativeDisplaySource, RewindRecreatable, ObjectVisualFacing.Source {
     @Override public ObjectVisualFacing.Basis nativeFacing() {
         return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
     }
@@ -320,4 +323,11 @@ public class FlasherBadnikInstance extends AbstractBadnikInstance implements Rew
         // ObjA3 uses x_flip = 0 while moving left, x_flip = 1 while moving right.
         renderer.drawFrameIndex(animFrame, currentX, currentY, !facingLeft, false);
     }
+
+    // ObjA3_SubObjData (s2.asm:76377-76378): native Init bit15 cannot be represented by this owner's ordinary low-priority pass.
+    @Override public ObjectSlot nativeDisplaySlot() {
+        return isDestroyed() ? null : new ObjectSlot(0xA3,4|(!facingLeft ? 1 : 0),
+                currentX&0xFFFF,currentY&0xFFFF,16,0,new Mapping(0x388F0,animFrame),0x81D4,null);
+    }
+
 }
