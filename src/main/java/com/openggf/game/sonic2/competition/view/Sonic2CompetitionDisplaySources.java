@@ -38,8 +38,21 @@ public final class Sonic2CompetitionDisplaySources {
         }
         return new Build(camera(session, 0), camera(session, 1),
                 new Hud(context.getCamera().isLevelStarted(), frame & 65535, hud(session, 0), hud(session, 1), session.loserTimeLeft()),
-                ringWindow(first, frame), ringWindow(second, frame), first.animationFrame(), admissions,
+                ringWindow(first, frame), ringWindow(second, frame),
+                ringFrame(displayState.ringsAnimationFrame(), first.animationFrame()), admissions,
                 displayState.teleportFlag());
+    }
+    /**
+     * A retained clock port/provider alone owns the phase. No LFC derivation:
+     * Level_MainLoop (s2.asm:5092-5109) can increment LFC then restart before
+     * ChangeRingFrame, through loc_1429C (s2.asm:27999-28004), including the
+     * loc_14270 (s2.asm:27980-27989). Unwired C1b uses the cold frame
+     * zero and remains unqualified; the lead supplies the retained owner.
+     */
+    static int ringFrame(int port, int provider) {
+        if (port < -1 || port > 3 || provider < -1 || provider > 3)
+            throw new IllegalArgumentException("Native ring phase must be 0..3 or absent");
+        return port >= 0 ? port : provider >= 0 ? provider : 0;
     }
     private static Camera camera(Sonic2CompetitionSession session, int slot) {
         var camera = session.camera(slot); return new Camera(camera.getX() & 65535, camera.getY() & 65535);

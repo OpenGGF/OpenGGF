@@ -6,6 +6,11 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class TestRingNativeDisplayInternalAccess {
+    @Test void absentNativeFrameOwnerNeverFallsBackToTheOrdinaryCounterDerivedClock() {
+        var manager = mock(RingManager.class);
+        doCallRealMethod().when(manager).nativeDisplayStageFrame(anyInt());
+        for (int frame : new int[]{0, 7, 8, 91, 65535}) assertEquals(-1, manager.nativeDisplayStageFrame(frame));
+    }
     @Test void eachViewReadsOnlyItsRealCursorWindowAndDoesNotClearSparkleOrReadTheUnion() {
         var manager = mock(RingManager.class);
         var streaming = mock(NativeCompetitionRingStreaming.class);

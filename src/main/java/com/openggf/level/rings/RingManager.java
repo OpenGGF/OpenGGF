@@ -655,7 +655,12 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         return nativeCompetitionStreaming;
     }
 
-    int nativeDisplayStageFrame(int frameCounter) { return stageRingFrame(frameCounter); }
+    int nativeDisplayStageFrame(int frameCounter) {
+        if (levelManager != null && levelManager.getAnimatedPatternManager()
+                instanceof com.openggf.level.animation.StageRingAnimationFrameProvider provider)
+            return provider.stageRingAnimationFrame();
+        return -1; // No retained native phase owner; never substitute the ordinary presentation clock.
+    }
 
     private int stageRingFrame(int frameCounter) {
         // A provider owns retained ROM state; S1/S2 retain their existing
