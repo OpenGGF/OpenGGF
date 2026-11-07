@@ -178,4 +178,22 @@ final class CdProgrammeReader {
    role(Role.CHUNKS).copy(),role(Role.FG).copy(),role(Role.BG).copy(),role(Role.COLLISION).copy(),role(Role.ANGLE).copy(),role(Role.HEIGHT).copy(),role(Role.WIDTH).copy());
   return terrain;
  }
+ // Closed load-table roles; no arbitrary address read is exposed.
+ enum LoadRole { PLC, PALETTE, CYCLES, SECTIONS, BG_POINTERS, PAL_TITLE, PAL_SELECT, PAL_SONIC, PAL_LEVEL, PAL_END }
+ private static final Enum<?>[] R31_LOAD_KEYS = {CdR31aAssets.Asset.PLC_LISTS,CdR31aAssets.Asset.PALETTE_TABLE,CdR31aAssets.Asset.PALETTE_CYCLES,CdR31aAssets.Asset.SECTIONS,CdR31aAssets.Asset.BG_POINTERS,CdR31aAssets.Asset.PAL_S1_TITLE,CdR31aAssets.Asset.PAL_S1_LEVEL_SELECT,CdR31aAssets.Asset.PAL_SONIC,CdR31aAssets.Asset.PAL_LEVEL,CdR31aAssets.Asset.PAL_LEVEL_END};
+ private static final Enum<?>[] R32_LOAD_KEYS = {CdR32aDataLayout.Asset.PLC_LISTS,CdR32aDataLayout.Asset.PALETTE_TABLE,CdR32aDataLayout.Asset.PALETTE_CYCLES,CdR32aDataLayout.Asset.SECTIONS,CdR32aDataLayout.Asset.BG_POINTERS,CdR32aDataLayout.Asset.PAL_S1_TITLE,CdR32aDataLayout.Asset.PAL_S1_LEVEL_SELECT,CdR32aDataLayout.Asset.PAL_SONIC,CdR32aDataLayout.Asset.PAL_LEVEL,CdR32aDataLayout.Asset.PAL_LEVEL_END};
+ Enum<?> loadKey(LoadRole role) {return (payload==CdStagePayload.R31A?R31_LOAD_KEYS:R32_LOAD_KEYS)[Objects.requireNonNull(role).ordinal()];}
+ CdAssetBytes loadView(LoadRole role) {return view(loadKey(role));}
+ int loadFileOffset(LoadRole role) {return spans.get(loadKey(role)).offset;}
+ Enum<?> loadSource(long nativeAddress) {
+  for(var e:compressed.entrySet())if(e.getKey()!=Blocks.R31 && 0x200000L+e.getValue().offset==nativeAddress)return e.getKey();
+  throw new IllegalArgumentException(name()+" unknown PLC compressed source: "+Long.toHexString(nativeAddress));
+ }
+ int loadOutputBytes(Enum<?> key) {return source(key).output;}
+ private CdProgrammeLoadTables loadTables;
+ synchronized CdProgrammeLoadTables loadTables() {
+  if(loadTables==null)loadTables=CdProgrammeLoadTables.decode(this);
+  return loadTables;
+ }
+
 }

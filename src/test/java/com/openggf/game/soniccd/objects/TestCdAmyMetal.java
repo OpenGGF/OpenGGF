@@ -192,4 +192,36 @@ class TestCdAmyMetal {
         assertEquals(0x4FF1234,bad.state(40).longBits(CdObjectState.LongField.X_POSITION));assertEquals(0xFF00,bad.state(40).word(CdObjectState.WordField.X_VELOCITY));
     }
 
+    @Test void playerFacingReadSeesBothClearedBitsAndRetainsTheWholeNativePrefixOnFailure() throws Exception {
+        var actualAssets=assets();
+        for(int routine:new int[]{0,2,6,8}) {
+            boolean amy=routine<4;int whole=40;
+            var p=pool(whole,amy?0x32:0x31,routine);
+            b(p,whole,0x22,0xA5);b(p,whole,1,0xE1);b(p,whole,0x1A,0x73);b(p,whole,0x3D,0x5C);
+            b(p,whole,0x3A,0x80);l(p,whole,8,0x04001234);l(p,whole,0xC,0x03005678);
+            w(p,whole,0x10,0x123);w(p,whole,0x12,0xFEDC);w(p,whole,0x30,0x1357);
+            l(p,32,8,0x11223344);b(p,127,0x3F,0xB6);
+            var before=p.capture();var expected=p.state(whole).copyBytes();
+            if(amy&&routine==0) {
+                expected[0x3E]=(byte)255;expected[1]|=4;expected[2]=0x23;expected[3]=0x5E;
+                expected[0x18]=1;bytes(expected,4,0,0x23,0xBD,0xB2);
+            }
+            expected[0x22]&=(byte)~1;expected[1]&=(byte)~1;
+            var h=new Host();var inputs=Map.copyOf(h.values);var failure=new IllegalStateException("player-X facing cut");
+            CdIntroSpikes.Cut[] observed={null};
+            h.onReadCut=(field,cut)->{if(field==PLAYER_X){observed[0]=cut;throw failure;}};
+            assertSame(failure,assertThrows(IllegalStateException.class,()->{
+                if(amy)new CdAmyRose(actualAssets).run(p,whole,h);else new CdMetalSonic(actualAssets).run(p,whole,h);
+            }));
+            assertNotNull(observed[0]);assertSame(actualAssets,observed[0].assets());
+            assertArrayEquals(expected,observed[0].source().copyBytes());
+            assertArrayEquals(expected,p.state(whole).copyBytes());
+            assertEquals(p.capture().slots(),observed[0].pool().slots());
+            for(int n=32;n<128;n++)if(n!=whole)assertEquals(before.slots().get(n-32),p.state(n),"Nonwritten neighbour "+n);
+            assertEquals(inputs,h.values);assertTrue(h.writes.isEmpty());
+            assertEquals(amy?(routine==0?List.of("read:TIME_ATTACK","read:AMY_CAPTURED","plc:11","palette","read:PLAYER_X"):
+                    List.of("read:TIME_ATTACK","read:AMY_CAPTURED","read:PLAYER_X")):List.of("read:PLAYER_X"),h.events);
+        }
+    }
+
 }

@@ -12330,3 +12330,43 @@ test execution took1.745s; total terminal callback interval after admission2.43s
 These times overlap and are not summed. This is constructed component coverage,
 not natural CCZ, pixel, full-USA or regional parity. Only this plan and prerelease
 changelog change after qualification; the ten tested Java files remain exact.
+
+## 7 November 2026 — shared load tables and native call cuts
+
+R31 metadata deletes its private PLC/palette/cycle/section/background parsing
+loops and adapts the common finite `CdProgrammeLoadTables` product. R32's actual
+media path consumes that same parser, preserving independent declarations,
+signed directory roots, source-before-destination reads, body aliases and
+encounter order. The existing common reader keeps its success-only cache and
+the fifteen closed R31 intro views; no whole-image getter or live R32/TT
+admission is introduced.
+
+The Amy/Metal shared facing helper now clears both native facing bits before
+the fallible player-X read. Four caller-site controls assert the complete raw
+prefix and original failure. Robot Generator retains the goodFuture value from
+its reached gate rather than issuing a second read after hit stores. Its
+despawn branch reads period/direction only at their native reached cuts:
+outside/savedID0 deletes without period, while a saved clear uses its own raw
+period read. Two component controls check full64/full96 and unchanged saved,
+placement, globals and original failure behavior. These fixes were independently
+source-reviewed before corrected-source execution; no executed RED is claimed
+for the three newly appended ordinary test methods.
+
+R94 is terminal0 / BUILD SUCCESS:1,155 cases across39 classes, zero failures,
+errors or skips. The source-bound runner checked all70 declared Java payloads,
+FINAL dependencies, fresh exact class counts/properties and identical before/
+after source fingerprints. Its original source head is
+`a3f8ddf3f93be19f84f468e4cf517dda8012339d` plus the declared payloads; saved
+commit attribution uses exact file bytes rather than that dirty HEAD label.
+Shared admission waited5801s, then Maven execution took1m56s; the terminal
+callback interval after admission was117.557s. These intervals overlap and
+are not summed. The focused request has no category VERDICT or full-suite claim.
+
+The command used the existing source-bound runner's normal lane and Maven queue,
+Java25, `-Dmse=off`, the actual USA media root and configured surfaceless EGL
+properties. The finite cohort combines the qualified reader/parser and CCZ
+families with the three native-cut regressions; it does not execute a new live
+World, a natural CCZ route, changed-terrain Host PlaceBlock, TT ordinary service,
+pixels, native-image/audio parity or regional completion. Those integrations
+remain separate. The common World/PlaceBlock source packet is independently
+reviewed and prepared externally, but not part of this1155-case source.

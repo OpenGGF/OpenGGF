@@ -13,6 +13,9 @@ matching area heading; see the
   existing player, terrain, loading and controller contracts remain qualified.
   Original CCZ intro data also uses the common reader through fixed native views,
   preserving the historical odd mapping include and keeping public raw-image access closed.
+  R31 and R32 load metadata now share one finite PLC, palette and section-table
+  parser. CCZ intro facing clears and Robot Generator conditional reads preserve
+  their native callback and fault prefixes;1,155 focused checks pass without skips.
   CCZ ordinary scheduling now preserves native VBlank/Main order, the old
   selected sprite list and full-word time-stop gating. Private HUD adoption
   retains the real prefix across typed callback failures;175 focused checks

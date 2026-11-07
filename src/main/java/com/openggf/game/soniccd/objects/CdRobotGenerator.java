@@ -305,7 +305,8 @@ public final class CdRobotGenerator {
     }
     private void active(Cursor c) {
         c.enter(NativeRoutine.ACTIVE_PAST);
-        if (c.globals().goodFuture() != 0 || c.globals().timeZone() != 0) return;
+        int expectedGoodFuture = c.globals().goodFuture();
+        if (expectedGoodFuture != 0 || c.globals().timeZone() != 0) return;
         c.write(c.state.addWord(ROBOT_GENERATOR_TIMER, 1));
         if ((c.state.word(ROBOT_GENERATOR_TIMER) & 7) == 0)
             c.write(c.state.addWord(Y, c.state.signedWord(ROBOT_GENERATOR_FLOAT_STEP)));
@@ -316,7 +317,7 @@ public final class CdRobotGenerator {
         }
         c.write(c.state.moveByte(COLLISION_TYPE, 0).moveByte(COLLISION_STATUS, 0)
                 .moveWord(ROBOT_GENERATOR_TIMER, 0).moveByte(MAP_FRAME, 7).addByte(ROUTINE, 2));
-        var cut = capture(c); var good = new GoodFutureCall(cut, c.state, c.globals().goodFuture(), 1);
+        var cut = capture(c); var good = new GoodFutureCall(cut, c.state, expectedGoodFuture, 1);
         observedCall(good, () -> readOnly(c, good.actualCut(), () -> goodFutureStore.store(good)));
         c.effects.add(new GoodFutureStored(good.expectedGoodFuture(), 1));
         cut = capture(c); var points = new PointsCall(cut, c.state, HIT_POINTS);
@@ -462,12 +463,12 @@ public final class CdRobotGenerator {
         var g = c.globals(); int x = c.state.centreX();
         boolean outside = c.state.signedByte(SPRITE_FLAGS) >= 0
                 && (((x & 0xFF80) - ((g.cameraXWord() - 0x80) & 0xFF80)) & 0xFFFF) > 0x280;
-        boolean warp = (g.timeZone() & 0x80) != 0, deleted = outside || warp;
+        boolean deleted = outside || (g.timeZone() & 0x80) != 0;
         if (deleted) {
             int id = c.state.savedFlagsId();
             if (id != 0) {
-                int period = g.timeZone() & 0x7F;
-                if (warp) { int adjusted = (period - (byte) g.timeWarpDirection()) & 0xFFFF;
+                int rawPeriod = g.timeZone(), period = rawPeriod & 0x7F;
+                if ((rawPeriod & 0x80) != 0) { int adjusted = (period - (byte) g.timeWarpDirection()) & 0xFFFF;
                     period = (short) adjusted < 0 ? 0 : adjusted < 3 ? adjusted : 2; }
                 int index = 2 + (short) ((3 * id + period) & 0xFFFF);
                 if (index < 2 || index >= CdObjectPlacementRuntime.SAVED_BANK_BYTES)

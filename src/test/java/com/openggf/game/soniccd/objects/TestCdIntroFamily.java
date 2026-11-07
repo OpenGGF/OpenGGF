@@ -29,9 +29,10 @@ class TestCdIntroFamily {
         final List<String> events=new ArrayList<>();final List<Integer> visited=new ArrayList<>();
         final EnumMap<CdIntroSpikes.PlayerStore,Integer> writes=new EnumMap<>(CdIntroSpikes.PlayerStore.class);
         RuntimeException fault;String faultAt;boolean contact;CdObjectPool pool;int solidFlags=8;Runnable onRead;
+        java.util.function.BiConsumer<CdIntroSpikes.Read,CdIntroSpikes.Cut> onReadCut;
         Host(){for(var r:CdIntroSpikes.Read.values())values.put(r,0);}
         void event(String event){events.add(event);if(event.equals(faultAt))throw fault;}
-        public int read(CdIntroSpikes.Read f,CdIntroSpikes.Cut c){event("read:"+f);if(onRead!=null)onRead.run();return values.get(f);}
+        public int read(CdIntroSpikes.Read f,CdIntroSpikes.Cut c){event("read:"+f);if(onReadCut!=null)onReadCut.accept(f,c);if(onRead!=null)onRead.run();return values.get(f);}
         public void playerStore(CdIntroSpikes.PlayerStore f,int v,CdIntroSpikes.Cut c){event("store:"+f);writes.put(f,v);}
         public boolean solid(CdIntroSpikes.Cut c){event("solid");if(pool!=null)pool.write(c.source().moveByte(CdObjectState.ByteField.FLAGS,solidFlags));return contact;}
         public void getOff(CdIntroSpikes.Cut c){event("getOff");}

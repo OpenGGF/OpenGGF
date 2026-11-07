@@ -6,12 +6,18 @@ import java.util.List;
  * Candidate declarative R32A PLC, section, palette and finite compressed-source layout.
  * N1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff: Graphics Lists (Act 2 Variant).asm,
  * r3/section_gfx_2a.asm, stage_data_load_2a.asm and the actual R3 Act2 include graph.
- * No parsing algorithm, asset owner, queue, load service, timing or residency implementation.
- * Shared reader design is pending. Extra read bytes are actual original neighbors required
+ * Actual parsing uses the common retained programme reader; declarations remain independent
+ * expectations. No queue, load service, timing or residency implementation. Extra read bytes are actual original neighbors required
  * by the existing Java NemesisReader; native prefetch endpoints are not inferred.
  */
 public final class CdR32aLoadLayout {
     private CdR32aLoadLayout() { }
+
+    /** Detached data only, through the actual media pipeline and the common parser. */
+    static CdProgrammeLoadTables readTables(com.openggf.game.soniccd.media.CdProgramAssets actual)
+            throws java.io.IOException {
+        return CdProgrammeReader.open(actual, CdR32aDataLayout.STAGE).loadTables();
+    }
 
     public enum SourceId {
         POINTS_GFX(0x2EDE6, 100, 101, 0x0005, 29, 160, 101,

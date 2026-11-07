@@ -74,15 +74,16 @@ public final class CdR31aLoadMetadata {
         var list=new ArrayList<Source>();var map=new HashMap<Long,Source>();
         for(var id:SourceId.values()){var s=new Source(id);if(id.offset<0 || id.reader<id.include || id.reader>id.include+1 || id.consumed>id.reader
                 || id.table<3 || id.table>id.consumed || id.reader>0x40000-id.offset || map.putIfAbsent(s.nativeAddress(),s)!=null)throw new IllegalArgumentException("R31A fixed source extent differs");list.add(s);}
-        sources=List.copyOf(list);addresses=Map.copyOf(map);plcs=decodePlcs();
-        var table=assets.view(CdR31aAssets.Asset.PALETTE_TABLE);
-        var ids=List.of(CdR31aAssets.Asset.PAL_S1_TITLE,CdR31aAssets.Asset.PAL_S1_TITLE,CdR31aAssets.Asset.PAL_S1_LEVEL_SELECT,CdR31aAssets.Asset.PAL_SONIC,CdR31aAssets.Asset.PAL_LEVEL,CdR31aAssets.Asset.PAL_LEVEL_END);
-        var pp=new ArrayList<Palette>();for(int i=0;i<6;i++){var source=ids.get(i);int destination=i<4?0xFB00:0xFB20,counter=i==3?7:i<3?31:23;
-            if(table.unsignedLong(i*8)!=assets.range(source).nativeAddress() || table.unsignedWord(i*8+4)!=destination || table.unsignedWord(i*8+6)!=counter)throw new IllegalArgumentException("R31A actual palette operand differs");pp.add(new Palette(i,destination,counter,source,assets.view(source)));}palettes=List.copyOf(pp);
-        var cc=assets.view(CdR31aAssets.Asset.PALETTE_CYCLES);int[] scripts={0,14,52,90},colors={8,48,84,96},ends={14,52,90,100};var cy=new ArrayList<Cycle>();
-        for(int i=0;i<4;i++)cy.add(new Cycle(cc.slice(scripts[i],colors[i]-scripts[i]),cc.slice(colors[i],ends[i]-colors[i])));cycles=List.copyOf(cy);
-        var ss=assets.view(CdR31aAssets.Asset.SECTIONS);var se=new ArrayList<CdR11bLoadPlan.SectionArt>();for(int i=0;i<4;i++)se.add(new CdR11bLoadPlan.SectionArt(ss.unsignedWord(i*2),ss.unsignedWord(16+i*2),ss.unsignedWord(8+i*2)));sections=List.copyOf(se);
-        var bp=assets.view(CdR31aAssets.Asset.BG_POINTERS);backgroundPointers=List.of((int)bp.unsignedLong(0),(int)bp.unsignedLong(4),(int)bp.unsignedLong(8),(int)bp.unsignedLong(12));
+        sources=List.copyOf(list);addresses=Map.copyOf(map);
+        var tables=assets.internalReader().loadTables();
+        var adaptedBodies=new IdentityHashMap<CdProgrammeLoadTables.Body,List<PlcEntry>>();
+        plcs=tables.plcs().stream().map(p->new PlcList(p.nativeId(),p.body().fileOffset(),
+            adaptedBodies.computeIfAbsent(p.body(),body->List.copyOf(body.entries().stream()
+                .map(e->new PlcEntry((SourceId)e.source(),e.vramAddress())).toList())))).toList();
+        palettes=tables.palettes().stream().map(p->new Palette(p.nativeId(),p.destinationWord(),p.longwordCounter(),
+            (CdR31aAssets.Asset)p.source(),p.bytes())).toList();
+        cycles=tables.cycles().stream().map(c->new Cycle(c.script(),c.colors())).toList();
+        sections=tables.sections();backgroundPointers=tables.backgroundPointers();
     }
     public static CdR31aLoadMetadata fromAssets(CdR31aAssets assets){return new CdR31aLoadMetadata(assets);}
     public boolean ownsAssets(CdR31aAssets expected){return assets==expected;}public CdR31aAssets.Identity identity(){return assets.identity();}
@@ -95,10 +96,4 @@ public final class CdR31aLoadMetadata {
     public synchronized CdAssetBytes canonicalView(SourceId id){return assets.internalReader().canonicalInput(id);}
     public synchronized CdAssetBytes javaView(SourceId id){return assets.internalReader().javaInput(id);}
     public synchronized CdNemesisAsset.Decoded decoded(SourceId id)throws IOException {return assets.internalReader().decoded(id);}
-    private List<PlcList> decodePlcs() {
-        var b=assets.view(CdR31aAssets.Asset.PLC_LISTS);var all=new ArrayList<PlcList>();var encounter=new LinkedHashSet<SourceId>();var bodies=new HashSet<Integer>();
-        for(int i=0;i<19;i++){int at=(short)b.unsignedWord(i*2);if(at<38 || (at&1)!=0 || at>b.length()-2)throw new IllegalArgumentException("R31A signed PLC root");int n=(short)b.unsignedWord(at)+1;if(n<1||n>15||2+6*n>b.length()-at)throw new IllegalArgumentException("R31A PLC finite counter");
-            var rows=new ArrayList<PlcEntry>();for(int j=0;j<n;j++){var s=source(b.unsignedLong(at+2+j*6));encounter.add(s.id());rows.add(new PlcEntry(s.id(),b.unsignedWord(at+6+j*6)));}bodies.add(at);all.add(new PlcList(i,0xFAD0+at,rows));}
-        if(bodies.size()!=14 || !List.copyOf(encounter).equals(Arrays.asList(SourceId.values())))throw new IllegalArgumentException("R31A native source/list encounter order differs");return List.copyOf(all);
-    }
 }

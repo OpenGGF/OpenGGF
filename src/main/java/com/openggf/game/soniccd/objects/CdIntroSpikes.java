@@ -161,7 +161,7 @@ final class P5Call {
     void childB(int slot,int at,int value){pool.write(pool.state(slot).moveByte(bf(at),value));}
     void childW(int slot,int at,int value){pool.write(pool.state(slot).moveWord(wf(at),value));}
     void moveX(){l(8,l(8)+((short)w(0x10)<<8));}void moveY(){l(0xC,l(0xC)+((short)w(0x12)<<8));}
-    void face(int target){flip(false);if(s().centreX()>=target)flip(true);}
+    void facePlayer(){flip(false);int x=s().centreX(),target=read(CdIntroSpikes.Read.PLAYER_X);if(x>=target)flip(true);}
     void flip(boolean flipped){b(0x22,flipped?s().flags()|1:s().flags()&~1);b(1,flipped?s().spriteFlags()|1:s().spriteFlags()&~1);}
     int linkedId(int raw){return linkedByte(raw,0);}
     int linkedFlags(int raw){return linkedByte(raw,0x22);}

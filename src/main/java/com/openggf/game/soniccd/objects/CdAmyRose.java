@@ -22,7 +22,7 @@ public final class CdAmyRose {
                 if((byte)c.b(0x3E)>=0){c.stable(()->{ports.loadPlc(0xB,c.cut());return null;});c.b(0x3E,0xFF);}
                 c.b(1,c.s().spriteFlags()|4);c.w(2,0x235E);c.b(0x18,1);c.l(4,assets.amyMappings());
                 c.stable(()->{ports.palette(assets.amyPalette(),c.cut());return null;});
-                c.face(c.read(PLAYER_X));
+                c.facePlayer();
                 if(c.read(PLAYER_X)>=c.s().centreX())c.b(0x24,c.s().routine()+2);
                 c.animateIntro(assets.amyAnimations());
             }
@@ -32,7 +32,7 @@ public final class CdAmyRose {
                 if(link!=0 && c.linkedCaptureFlag(link)!=0) {
                     c.b(0x24,4);c.stable(()->{ports.subCpu(0x7D,c.cut());return null;});
                 } else {
-                    c.face(c.read(PLAYER_X));
+                    c.facePlayer();
                     if((c.s().flags()&1)!=0 && c.s().centreX()<0x80){c.b(0x1C,0);c.w(0x10,0);}
                     else {
                         if(c.s().centreX()<0x3C0) {

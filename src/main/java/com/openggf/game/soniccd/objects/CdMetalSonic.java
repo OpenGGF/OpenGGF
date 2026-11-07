@@ -42,14 +42,14 @@ public final class CdMetalSonic {
                 c.animateIntro(assets.metalAnimations());
             }
             case 6 -> {
-                c.face(c.read(PLAYER_X));bob(c);
+                c.facePlayer();bob(c);
                 int timer=c.b(0x3A)+4;c.b(0x3A,timer);
                 if(timer>255) {c.b(0x24,c.s().routine()+2);c.w(0x12,-0x2C0);c.w(0x3E,0xB);c.b(0x3B,0x40);c.b(0x30,0x50);}
                 c.animateIntro(assets.metalAnimations());
             }
             case 8 -> {
                 // A1 still names primary after SetFacing/Bob; reads remain at their actual cuts.
-                c.face(c.read(PLAYER_X));
+                c.facePlayer();
                 boolean check=true;
                 if(c.b(0x3B)!=0) {
                     c.moveX();c.moveY();c.w(0x12,c.w(0x12)+c.w(0x3E));c.b(0x3B,c.b(0x3B)-1);

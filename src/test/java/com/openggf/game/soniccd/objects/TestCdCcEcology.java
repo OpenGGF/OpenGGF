@@ -104,6 +104,57 @@ class TestCdCcEcology {
         assertSame(original,assertThrows(IllegalStateException.class,()->b.runWithReads(80,null,null)));assertEquals(0x18,p.pool().state(32).id());assertEquals(1,p.pool().state(32).unsignedByte(ROUTINE_2));assertEquals(a.explosionScheduleAddress()+3,p.pool().state(80).longBits(ROBOT_GENERATOR_SCHEDULE));
     }
 
+    @Test void ccRobotOutsideDespawnReadsPeriodOnlyForTheReachedSavedClear(){
+        for(int savedId:new int[]{0,1}) {
+            var p=placement();p.pool().write(p.pool().state(80).moveByte(ID,0x37).moveByte(ROUTINE,2)
+                    .moveByte(SAVED_FLAGS_ID,savedId).moveByte(SPRITE_FLAGS,0x81).moveWord(X,0x1000).moveWord(Y,0x200));
+            var before=p.capture();var status=p.status();var events=new ArrayList<String>();int[] periodReads={0};
+            var body=ccRobotForReadOrder(p,events,c->{throw new AssertionError("unexpected goodFuture store");},c->{throw new AssertionError("unexpected points");});
+            body.runWithReads(80,new CdRobotGenerator.Reads(){
+                public int goodFuture(){events.add("good");return 1;}
+                public int timeZone(){events.add("period");if(savedId==0||++periodReads[0]>1)throw new AssertionError("period read outside its native cut");return 1;}
+                public int act(){throw new AssertionError("act");}public int timeWarpDirection(){throw new AssertionError("direction");}
+                public int cameraXWord(){events.add("camera");return 0;}
+            },null);
+            assertArrayEquals(new byte[64],p.pool().state(80).copyBytes());
+            assertEquals(savedId==0?List.of("good","draw","camera"):List.of("good","draw","camera","period"),events);
+            assertEquals(savedId,periodReads[0]);assertEquals(status,p.status());
+            assertArrayEquals(before.savedFlags().copy(),p.capture().savedFlags().copy());
+            for(int n=32;n<128;n++)if(n!=80)assertEquals(before.pool().slots().get(n-32),p.pool().state(n),"Nonwritten neighbour "+n);
+        }
+    }
+    @Test void ccRobotHitCarriesTheGateValueThroughTheStoreBeforePointsFailure(){
+        var p=placement();p.pool().write(p.pool().state(80).moveByte(ID,0x37).moveByte(ROUTINE,2)
+                .moveByte(SPRITE_FLAGS,0x81).moveByte(COLLISION_TYPE,0xFA).moveByte(COLLISION_STATUS,0xA3)
+                .moveWord(X,0x1000).moveWord(Y,0x200).moveWord(Y_FRACTION,0xBEEF)
+                .moveWord(ROBOT_GENERATOR_TIMER,7).moveWord(ROBOT_GENERATOR_FLOAT_STEP,3));
+        var before=p.capture();var status=p.status();var expected=p.pool().state(80).moveWord(Y,0x203)
+                .moveByte(COLLISION_TYPE,0).moveByte(COLLISION_STATUS,0).moveWord(ROBOT_GENERATOR_TIMER,0)
+                .moveByte(MAP_FRAME,7).moveByte(ROUTINE,4);
+        var events=new ArrayList<String>();int[] gateReads={0},good={0};var pointFault=new IllegalStateException("points reached");
+        var body=ccRobotForReadOrder(p,events,c->{
+            assertEquals(0,c.expectedGoodFuture());assertEquals(1,c.value());assertEquals(expected,c.expectedSource());
+            events.add("storeGood");good[0]=c.value();
+        },c->{assertEquals(expected,c.expectedSource());events.add("points");throw pointFault;});
+        assertSame(pointFault,assertThrows(IllegalStateException.class,()->body.runWithReads(80,new CdRobotGenerator.Reads(){
+            public int goodFuture(){events.add("good");if(++gateReads[0]>1)throw new AssertionError("second non-native goodFuture read");return good[0];}
+            public int timeZone(){events.add("period");return 0;}
+            public int act(){throw new AssertionError("act");}public int timeWarpDirection(){throw new AssertionError("direction");}
+            public int cameraXWord(){throw new AssertionError("camera after failed points");}
+        },null)));
+        assertEquals(List.of("good","period","storeGood","points"),events);assertEquals(1,gateReads[0]);assertEquals(1,good[0]);
+        assertEquals(expected,p.pool().state(80));assertEquals(status,p.status());
+        assertArrayEquals(before.savedFlags().copy(),p.capture().savedFlags().copy());
+        for(int n=32;n<128;n++)if(n!=80)assertEquals(before.pool().slots().get(n-32),p.pool().state(n),"Nonwritten neighbour "+n);
+    }
+    private static CdRobotGenerator ccRobotForReadOrder(CdObjectPlacementRuntime p,List<String> events,
+            CdRobotGenerator.GoodFutureStore good,CdRobotGenerator.AddPointsCall points){
+        return CdRobotGenerator.collisionChaos(p,all.getFirst().robot(),solid,c->{throw new AssertionError("Unexpected Solid");},
+                good,points,c->{throw new AssertionError("Unexpected FM");},c->{events.add("draw");p.pool().write(c.expectedSource().moveByte(SPRITE_FLAGS,c.expectedSource().spriteFlags()&127));},
+                new CdRobotGenerator.DispatchObserver(){public void beforePublication(CdRobotGenerator.Publication c){}public void afterPublication(CdRobotGenerator.Publication c){}public void beforeCall(Object c){}public void afterCall(Object c){}},
+                new CdRobotGenerator.ReceiptGuard(){public void prepared(Object c){}public void completed(Object c){}});
+    }
+
     static CdProjector projector(CdObjectPlacementRuntime p){return CdProjector.collisionChaos(p,all.getFirst().projector(),solid,c->{throw new AssertionError("Unexpected Solid");},c->{},c->{},c->{},c->p.pool().write(c.expectedSource().moveByte(SPRITE_FLAGS,c.expectedSource().spriteFlags()&127)),new CdProjector.DispatchObserver(){public void beforePublication(CdProjector.Publication c){}public void afterPublication(CdProjector.Publication c){}public void beforeCall(Object c){}public void afterCall(Object c){}},new CdProjector.ReceiptGuard(){public void prepared(Object c){}public void completed(Object c){}});}
     static final class H {
         final CdObjectPlacementRuntime p=placement();final CdCcAnimal body;int period=1,good=1,destroyed=1,act=0,camera=0x1000,parentId=0x38,parentFlag=0,draws;RuntimeException fault;CdCcAnimal.Call last;
