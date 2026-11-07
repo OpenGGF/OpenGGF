@@ -49,6 +49,8 @@ OBJECT_INDEX 3B82 3B9A 256 430ff3d7defba4d3c7da091a430c95024d9a58c318b6174d704c9
 PAL_SONIC 61C 688 32 8391d8af82c19043c89e32abf87bdd057dbe2a845c58a3a58761edceaeeb9f8a 8391d8af82c19043c89e32abf87bdd057dbe2a845c58a3a58761edceaeeb9f8a
 PAL_LEVEL 63C 6A8 96 29d86b702295ed28d6d6c4fe4e829333036d0bb2b3c69f4ddb71e38b71a8e8cd 7a34893db95e1d9c0e4ab5acf2a492857d7b660f3e34263b60bd889fb8d03cb2
 DIAGONAL_SPRING_HEADER 31E2E 31E2E 2 3639618e90314d0feb7ce289d97468263ca4af996ffc621399d092e1f12aa1dd 3639618e90314d0feb7ce289d97468263ca4af996ffc621399d092e1f12aa1dd
+GAME_OVER_CODE D954 D96C 228 d81476d2deb155dba7420e02b696281166039854d767bfcad8b9b7546f385f61 b59a31ca104128837c4407461ea9452c702037bf0a9a176a643546df2f1f7c06
+MAP_SPR_GAME_OVER DA38 DA50 56 ab185aa60f83919e611dd47457d7fb9b5b87e99f2b9210d0dc0508c71dcea44b ab185aa60f83919e611dd47457d7fb9b5b87e99f2b9210d0dc0508c71dcea44b
 """.strip();
     private static final String INDEX_C = "203CF0 203CF0 206144 203C82 203C82 205D0E 203C82 203C82 203C82 207CC2 2060DE 2060A6 205FCE 205F78 207B76 208192 208476 203C82 203C82 20B194 20AF16 20B2CC 20B450 205DB4 2089B4 208B30 207AFE 209008 203C82 203C82 205E42 203C82 20A55A 209AB6 20A064 20AC2E 203C82 20A46C 203C82 20A134 203C82 20B958 20C1B8 20CE18 20D240 20D47E 20C97C 20CA6A 20CB9C 20CD3A 203C82 206320 203C82 203C82 203C82 203C82 203C82 20DBF6 20D954 20DA70 2098CA 20976C 209606 209DEC";
     private static final String INDEX_D = "203D08 203D08 20615C 203C9A 203C9A 205D26 203C9A 203C9A 203C9A 207CDA 2060F6 2060BE 205FE6 205F90 207B8E 2081AA 20848E 203C9A 203C9A 20B1AC 20AF2E 20B2E4 20B468 205DCC 2089CC 208B48 207B16 209020 203C9A 203C9A 205E5A 203C9A 20A572 209ACE 20A07C 20AC46 203C9A 20A484 203C9A 20A14C 203C9A 20B970 20C1D0 20CE30 20D258 20D496 20C994 20CA82 20CBB4 20CD52 203C9A 206338 203C9A 203C9A 203C9A 203C9A 203C9A 20DC0E 20D96C 20DA88 2098E2 209784 20961E 209E04";
@@ -101,9 +103,9 @@ dade 45f90020e154
 9590 45f90020957e
 """.strip();
 
-    @Test void completeTwentyFiveViewManifestPinsBothOriginalImagesAndExactBounds() throws Exception {
+    @Test void completeTwentySevenViewManifestPinsBothOriginalImagesAndExactBounds() throws Exception {
         var f=TestCdR13FutureAssets.retail();var lines=MANIFEST.lines().toList();
-        assertEquals(25,lines.size());assertEquals(25,CdR13ObjectAssets.View.values().length);
+        assertEquals(27,lines.size());assertEquals(27,CdR13ObjectAssets.View.values().length);
         for(var a:f.all()) {
             var o=CdR13ObjectAssets.fromAssets(a);var image=f.image(a.identity().file());
             assertSame(a.identity(),o.identity());assertSame(a.placements(),o.placements());assertTrue(o.ownsAssets(a));
@@ -262,7 +264,7 @@ dade 45f90020e154
         assertEquals(List.of("flyingAnimal/0","fromAssets/1","groundAnimal/0","hudAssets/0","hudVisuals/0","identity/0","monitorTime/0","ownsAssets/1","placements/0","ringDeltas/0","rings/0","springDiagonal/0","springHorizontal/0","springMappings/0","springVertical/0","titleCard/0","titleCardAssets/0","view/1"),
                 Arrays.stream(CdR13ObjectAssets.class.getDeclaredMethods()).filter(m->Modifier.isPublic(m.getModifiers())).map(m->m.getName()+"/"+m.getParameterCount()).sorted().toList());
         assertEquals(0,CdR13ObjectAssets.class.getConstructors().length);assertEquals(1,CdR13ObjectAssets.class.getDeclaredConstructors().length);
-        assertEquals(List.of("act2MonitorItemStaticPieces/1","act2PastMonitorItemStaticPieces/1","declaredSourceViews/2","fromAct2PastAssets/2","fromAct3FutureAssets/2", "fromAct3FutureAssets/3", "fromAct3FutureAssets/4", "fromAct3FutureAssets/6","fromOpeningAssets/2","resolve/3"),
+        assertEquals(List.of("act2MonitorItemStaticPieces/1","act2PastMonitorItemStaticPieces/1","declaredSourceViews/2","fromAct2PastAssets/2","fromAct3FutureAssets/2", "fromAct3FutureAssets/3", "fromAct3FutureAssets/4", "fromAct3FutureAssets/6","fromOpeningAssets/2","resolve/3","withAct3FutureGameOver/3"),
                 Arrays.stream(CdObjectMappings.class.getDeclaredMethods()).filter(m->Modifier.isPublic(m.getModifiers())).map(m->m.getName()+"/"+m.getParameterCount()).sorted().toList());
         assertEquals(19,CdR13SectionSources.SourceId.values().length);assertEquals(29,CdR13FutureAssets.Asset.values().length);
         assertEquals(16,Arrays.stream(CdR13FutureAssets.class.getDeclaredMethods()).filter(m->Modifier.isPublic(m.getModifiers())).count());

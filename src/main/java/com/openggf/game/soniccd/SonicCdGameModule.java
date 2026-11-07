@@ -947,7 +947,7 @@ public final class SonicCdGameModule implements GameModule {
         PastLoadBoundary boundary() { return boundary; }
     }
     // Typed request metadata and one native music-latch projection; no audio synthesis.
-    sealed interface PastSound permits PastCheckpointFm, PastFrameSound, PastSubCpuSound, PastRingFm, PastRingSubCpu, PastSpringFm, PastTunnelDoorFm, PastMonitorFm, PastTimePostSubCpu, PastTamabbohFm, PastCollapsePlatformFm, PastMosquiFm, PastLostRingFm, PastRobotGeneratorFm, PastProjectorFm, PastSignpostSound, PastBigRingFm, PastResultsSound, PastProgrammeSound, PastWallFm, PastTunnelPathFm, PastMonitorItemShieldFm, PastMonitorItemRing, PastTunnelDoorSplashFm, PastDiscFm, PastVerticalDoorFm, PastSpeedShoesSubCpu, PastLevelMusic, PastR13BossFm, PastR13BossSubCpu, PastR13CapsuleExplosion, PastR13CapsuleSubCpu { }
+    sealed interface PastSound permits PastCheckpointFm, PastFrameSound, PastSubCpuSound, PastRingFm, PastRingSubCpu, PastSpringFm, PastTunnelDoorFm, PastMonitorFm, PastTimePostSubCpu, PastTamabbohFm, PastCollapsePlatformFm, PastMosquiFm, PastLostRingFm, PastRobotGeneratorFm, PastProjectorFm, PastSignpostSound, PastBigRingFm, PastResultsSound, PastProgrammeSound, PastWallFm, PastTunnelPathFm, PastMonitorItemShieldFm, PastMonitorItemRing, PastTunnelDoorSplashFm, PastDiscFm, PastVerticalDoorFm, PastSpeedShoesSubCpu, PastLevelMusic, PastR13BossFm, PastR13BossSubCpu, PastR13CapsuleExplosion, PastR13CapsuleSubCpu, PastR13GameOverSubCpu { }
     record PastR13CapsuleExplosion() implements PastSound { }
     record PastR13CapsuleSubCpu(com.openggf.game.soniccd.objects.CdR13Capsule.CpuCommand command) implements PastSound {
         PastR13CapsuleSubCpu { Objects.requireNonNull(command); }
@@ -984,6 +984,11 @@ public final class SonicCdGameModule implements GameModule {
     record PastCheckpointFm(CdCheckpoint.FmSound sound) implements PastSound {
         PastCheckpointFm { Objects.requireNonNull(sound); }
     }
+    // BEGIN R13 GAME OVER IMMUTABLE SUBCPU REQUEST 20261107
+    record PastR13GameOverSubCpu(com.openggf.game.soniccd.objects.CdGameOver.SubCpuCommand command) implements PastSound {
+        PastR13GameOverSubCpu { Objects.requireNonNull(command); }
+    }
+    // END R13 GAME OVER IMMUTABLE SUBCPU REQUEST 20261107
     record PastFrameSound(CdPlayerFrameRuntime.Sound sound) implements PastSound {
         PastFrameSound { Objects.requireNonNull(sound); }
     }

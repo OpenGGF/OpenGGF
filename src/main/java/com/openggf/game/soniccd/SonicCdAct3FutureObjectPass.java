@@ -33,6 +33,9 @@ final class SonicCdAct3FutureObjectPass {
         default ReusedOwners reusedOwners(ReusedOwners expected){return null;}
         default BossOwners bossOwners(BossOwners expected){return null;}
         default EndOwners endOwners(EndOwners expected){return null;}
+        // R13 GAME OVER HOST PORTS 20261107
+        default GameOverOwners gameOverOwners(GameOverOwners expected){return null;}
+        default void storeGameOver(GameOverStore actual){throw actual.unowned();}
         default void submitResultsPlc(EndPlcSubmission actual){throw actual.unowned();}
         default void submitBossPlc(BossPlcSubmission submission){throw submission.unowned();}
 
@@ -63,14 +66,14 @@ final class SonicCdAct3FutureObjectPass {
     }
     // END R13 BOSS SEMANTIC OWNER VALUES 20261106
     enum Boundary { OBJECT_FAMILY,OBJECT_INDEX,PLAYER_SLOT,PRIMARY_OWNER,PRIMARY_RESULT,GOOD_FUTURE,PROJECTOR,
-                    LAYER,VINT,PLC_OWNER,PLC_HEAD,REUSED_GLOBALS_OWNER,SPILL_GLOBALS_OWNER,BOSS_OWNERS,BOSS_FLAGS,TARGET_RIGHT_BOUND,BOSS_PLC_OWNER,END_OWNERS,END_CLOCK,END_BONUS,END_TAIL,RESULTS_FLAGS_OWNER,RESULTS_FLAGS,RESULTS_PLC_OWNER }
+                    LAYER,VINT,PLC_OWNER,PLC_HEAD,REUSED_GLOBALS_OWNER,SPILL_GLOBALS_OWNER,BOSS_OWNERS,BOSS_FLAGS,TARGET_RIGHT_BOUND,BOSS_PLC_OWNER,END_OWNERS,END_CLOCK,END_BONUS,END_TAIL,RESULTS_FLAGS_OWNER,RESULTS_FLAGS,RESULTS_PLC_OWNER,GAME_OVER_OWNERS,GAME_OVER_STORE }
     static final class Unowned extends UnsupportedOperationException {
         private final Boundary boundary;private final int wholeIndex,value;
         private Unowned(Boundary b,int whole,int value){super("R13 startup "+b+" at whole"+whole+" value$"+Integer.toHexString(value));boundary=b;wholeIndex=whole;this.value=value;}
         Boundary boundary(){return boundary;}int wholeIndex(){return wholeIndex;}int value(){return value;}
     }
     private enum Phase { READY,WALKING,WALKED,DRAINING,DONE,FAILED,DISCARDED }
-    private enum Kind { PRIMARY,HUD,TITLE,RING,SPRING,MONITOR,ANIMAL,TAM,ROLL,EXPLOSION,POINTS,FLOWER,LOST_RING,MONITOR_ITEM,BOSS,CAPSULE,RESULTS,NULL }
+    private enum Kind { PRIMARY,HUD,TITLE,RING,SPRING,MONITOR,ANIMAL,TAM,ROLL,EXPLOSION,POINTS,FLOWER,LOST_RING,MONITOR_ITEM,BOSS,CAPSULE,RESULTS,GAME_OVER,NULL }
     private static final class Dispatch {
         final Kind kind;final int whole;final Set<Object> consumed=Collections.newSetFromMap(new IdentityHashMap<>());
         CdPlayerFrameRuntime.ActorState ownerActor,actor;CdPlayerFrameRuntime.SharedState ownerShared,shared;
@@ -78,7 +81,7 @@ final class SonicCdAct3FutureObjectPass {
         Object operation;long ordinal;boolean drawn,prepared,completed,used;
         List<byte[]> expectedImages;byte[] expectedSaved;
         final Deque<EffectScope> effects=new ArrayDeque<>();long effectOrdinal,publications;
-        CdMonitorItem.Result monitorResult;CdLostRing.InputReads lostInputs;CdLostRing.Ports lostPorts;int bossOrder,endOrder;
+        CdMonitorItem.Result monitorResult;CdGameOver.Result gameOverResult;CdLostRing.InputReads lostInputs;CdLostRing.Ports lostPorts;int bossOrder,endOrder;
         Dispatch(Kind kind,int whole){this.kind=kind;this.whole=whole;}
     }
     /** Opaque original publication. Values are prepared cuts, never a native invocation certificate. */
@@ -148,6 +151,7 @@ final class SonicCdAct3FutureObjectPass {
     private final CdObjectMappings mappings;private final CdPlayerMath math;private final CdPlayerTerrain terrain;private final CdSolidObject solid;
     private final CdRing ring;private final CdSpring spring;private final CdReservedHud hud;private final CdMonitor monitor;private CdAnimal animal;private final CdTitleCard title;
     private final CdR13ReusedObjectAssets reused;private CdTamabboh tam;private final CdSpinTunnelTag roll;
+    private CdGameOver gameOver;private boolean gameOverRead;private GameOverStore gameOverStore;
     private CdExplosion explosion;private CdPoints points;private CdFlower flower;private CdLostRing lostRing;private CdMonitorItem monitorItem;
     private boolean reusedRead,bossRead;private CdR13Boss boss;private final CdR13CapsuleAssets capsuleData;
     private BossScope bossScope;private BossPlcSubmission bossPlc;
@@ -163,7 +167,12 @@ final class SonicCdAct3FutureObjectPass {
     SonicCdAct3FutureObjectPass(Host host,CdR13FutureAssets assets,CdR13ObjectAssets objects,CdPlayerFrameRuntime frame,CdObjectPlacementRuntime placement){
         this.host=Objects.requireNonNull(host);this.assets=Objects.requireNonNull(assets);this.objects=Objects.requireNonNull(objects);this.frame=Objects.requireNonNull(frame);this.placement=Objects.requireNonNull(placement);
         if(!frame.stageSource().ownsAct3Future(assets)||!objects.ownsAssets(assets)||!placement.ownsAct3FutureAssets(assets)||placement.placements()!=assets.placements())throw new IllegalArgumentException("R13 pass requires exact retained Frame/source/metadata/placement");
-        reused=CdR13ReusedObjectAssets.fromAssets(assets,objects);objectIndex=objects.view(CdR13ObjectAssets.View.OBJECT_INDEX);extent(objectIndex,256);boss=CdR13Boss.fromAct3FutureAssets(placement,assets,new BossPorts());capsule=CdR13Capsule.fromAct3FutureAssets(placement,assets,new CapsulePorts());capsuleData=capsule.assets();resultsData=CdR13ResultsAssets.bind(assets,capsuleData);results=CdResults.fromAct3FutureAssets(placement,assets,resultsData,this::resultsRead,this::resultsBonus,this::resultsPoints,this::resultsPlc,this::resultsSound,this::resultsDraw,this::resultsProgramme,this::resultsAction);mappings=CdObjectMappings.fromAct3FutureAssets(assets,objects,reused,boss.assets(),capsuleData,resultsData);
+        reused=CdR13ReusedObjectAssets.fromAssets(assets,objects);objectIndex=objects.view(CdR13ObjectAssets.View.OBJECT_INDEX);extent(objectIndex,256);boss=CdR13Boss.fromAct3FutureAssets(placement,assets,new BossPorts());capsule=CdR13Capsule.fromAct3FutureAssets(placement,assets,new CapsulePorts());capsuleData=capsule.assets();resultsData=CdR13ResultsAssets.bind(assets,capsuleData);results=CdResults.fromAct3FutureAssets(placement,assets,resultsData,this::resultsRead,this::resultsBonus,this::resultsPoints,this::resultsPlc,this::resultsSound,this::resultsDraw,this::resultsProgramme,this::resultsAction);mappings=CdObjectMappings.withAct3FutureGameOver(CdObjectMappings.fromAct3FutureAssets(assets,objects,reused,boss.assets(),capsuleData,resultsData),assets,objects);
+        // BEGIN R13 CACHED GAME OVER PRODUCER 20261107
+        gameOver=CdGameOver.fromAct3FutureAssets(placement,assets,objects,this::gameOverDraw,this::gameOverSound,
+            new CdGameOver.DispatchObserver(){public void beforeOperation(Object c){gameOverBefore(c);}public void afterOperation(Object c){effectAfter(c);}public void failedOperation(Object c,Throwable original){effectFailed(c);}},
+            new CdGameOver.ReceiptGuard(){public void prepared(Object c){effectPrepared(c);}public void completed(Object c){effectCompleted(c);}});
+        // END R13 CACHED GAME OVER PRODUCER 20261107
         math=new CdPlayerMath(assets.player());terrain=CdPlayerTerrain.fromStageTerrain(assets.terrain());solid=new CdSolidObject(CdPlayerMovement.fromStageSource(frame.stageSource()));
         ring=CdRing.fromAct3FutureAssets(placement,assets,objects);
         spring=CdSpring.fromAct3FutureAssets(placement,assets,objects,math,solid,
@@ -242,7 +251,7 @@ final class SonicCdAct3FutureObjectPass {
 
     /** Caller already performed actual unpaused selector8, levelFrames increment and SpawnObjects. */
     void runWalk(int actualLevelFrame){
-        if((phase!=Phase.READY&&phase!=Phase.DONE)||port||queuePort||plcPort||dispatch!=null||pending!=null||primaryCall!=null||reading||checking||reusedRead||bossRead||bossScope!=null||bossPlc!=null||endRead||endScope!=null||endPlc!=null||preparedEnd!=null)throw new IllegalStateException("R13 pass not idle");
+        if((phase!=Phase.READY&&phase!=Phase.DONE)||port||queuePort||plcPort||dispatch!=null||pending!=null||primaryCall!=null||reading||checking||reusedRead||bossRead||bossScope!=null||bossPlc!=null||endRead||endScope!=null||endPlc!=null||preparedEnd!=null||gameOverRead||gameOverStore!=null)throw new IllegalStateException("R13 pass not idle");
         word(actualLevelFrame);guard();if(frame.paused())throw new IllegalStateException("Paused loop has no unpaused object walk");
         if(frame.environment().globals().levelFrames()!=actualLevelFrame)throw new IllegalArgumentException("Not actual levelFrames");
         var cut=read();queue=new CdObjectDrawQueue(new DrawSlots(),mappings,cut.cpuSat().copy(),List.of(new CdObjectDrawQueue.CdSlotRef(1),new CdObjectDrawQueue.CdSlotRef(2),new CdObjectDrawQueue.CdSlotRef(3),new CdObjectDrawQueue.CdSlotRef(4),new CdObjectDrawQueue.CdSlotRef(5),new CdObjectDrawQueue.CdSlotRef(31)));
@@ -281,6 +290,7 @@ final class SonicCdAct3FutureObjectPass {
         case SPRING->spring.run(whole,new CdSpring.Globals(cut.cameraXWord()),new CdSpring.SolidInputs(primary(),gates(),solidGlobals()));
         case MONITOR->{var result=monitor.runPast(whole,monitorReads(),new CdMonitor.SolidInputs(primary(),gates(),solidGlobals()));if(!result.state().equals(placement.pool().state(whole))||!result.finalPlayer().equals(primary())||!result.finalGlobals().equals(solidGlobals()))throw new IllegalStateException("Incomplete original Monitor return");}
         case CAPSULE->{var result=capsule.run(whole);if(endScope!=null||!result.state().equals(placement.pool().state(whole)))throw new IllegalStateException("Incomplete original Capsule return");}
+        case GAME_OVER->{var result=gameOver.run(whole,gameOverGlobals());if(dispatch.gameOverResult!=result||!dispatch.effects.isEmpty()||!result.state().equals(placement.pool().state(whole)))throw new IllegalStateException("Incomplete original GameOver return");}
         case RESULTS->{var result=results.run(whole);if(endScope!=null||!result.state().equals(placement.pool().state(whole)))throw new IllegalStateException("Incomplete original Results return");}
         case BOSS->{var result=boss.run(whole);if(bossScope!=null||!result.state().equals(placement.pool().state(whole)))throw new IllegalStateException("Incomplete original Boss return");}
         case TAM->{var result=tam.run(whole,tamReads());if(!result.state().equals(placement.pool().state(whole)))throw new IllegalStateException("Incomplete original Tam return");}
@@ -298,7 +308,7 @@ final class SonicCdAct3FutureObjectPass {
         if(handler==(int)objectIndex.unsignedLong(3*4))return Kind.NULL; // Actual native ObjNull entry4 and its aliases, not a foreign programme address.
         if(whole==0){if(id==1||id==2)return Kind.PRIMARY;throw stop(Boundary.PLAYER_SLOT,whole,id);}
         if(whole<32){if(whole==4&&id==0x3C)return Kind.TITLE;if(((whole==2||whole==3||whole==5)&&id==0x1C)||(whole==31&&id==0x19))return Kind.HUD;throw stop(Boundary.PLAYER_SLOT,whole,id);}
-        return switch(id){case 0x15->Kind.CAPSULE;case 0x3A->Kind.RESULTS;case 0x10->Kind.RING;case 0x0A->Kind.SPRING;case 0x19->{if(placement.pool().state(whole).subtype()>=8)throw stop(Boundary.OBJECT_FAMILY,whole,id);yield Kind.MONITOR;}case 0x24->Kind.ANIMAL;case 0x2A,0x2B,0x2C,0x2D,0x2E,0x2F,0x30,0x31,0x32->Kind.BOSS;case 0x22->Kind.TAM;case 0x34->Kind.ROLL;case 0x18->Kind.EXPLOSION;case 0x1F->Kind.FLOWER;case 0x11->Kind.LOST_RING;case 0x1A->Kind.MONITOR_ITEM;case 0x1C->{if((placement.pool().state(whole).subtype()&128)==0)throw stop(Boundary.OBJECT_FAMILY,whole,id);yield Kind.POINTS;}case 0x3C->Kind.TITLE;default->throw stop(Boundary.OBJECT_FAMILY,whole,id);};
+        return switch(id){case 0x3B->Kind.GAME_OVER;case 0x15->Kind.CAPSULE;case 0x3A->Kind.RESULTS;case 0x10->Kind.RING;case 0x0A->Kind.SPRING;case 0x19->{if(placement.pool().state(whole).subtype()>=8)throw stop(Boundary.OBJECT_FAMILY,whole,id);yield Kind.MONITOR;}case 0x24->Kind.ANIMAL;case 0x2A,0x2B,0x2C,0x2D,0x2E,0x2F,0x30,0x31,0x32->Kind.BOSS;case 0x22->Kind.TAM;case 0x34->Kind.ROLL;case 0x18->Kind.EXPLOSION;case 0x1F->Kind.FLOWER;case 0x11->Kind.LOST_RING;case 0x1A->Kind.MONITOR_ITEM;case 0x1C->{if((placement.pool().state(whole).subtype()&128)==0)throw stop(Boundary.OBJECT_FAMILY,whole,id);yield Kind.POINTS;}case 0x3C->Kind.TITLE;default->throw stop(Boundary.OBJECT_FAMILY,whole,id);};
     }
     private void guard(){if(checking)throw new IllegalStateException("Reentrant R13 owner validation");if(frame.closed()||!frame.stageSource().ownsAct3Future(assets)||!objects.ownsAssets(assets)||!placement.ownsAct3FutureAssets(assets)||placement.placements()!=assets.placements())throw new IllegalStateException("Closed/foreign R13 source binding");checking=true;try{host.validate(this,frame,assets,objects,placement);}finally{checking=false;}}
     /** Read-only complete values work even at the genuine pre-primary Body entitlement, where capture is not admitted. */
@@ -352,6 +362,7 @@ final class SonicCdAct3FutureObjectPass {
         final Object call;final CdObjectPlacementRuntime.Snapshot before;final boolean publication;
         CdPlayerFrameRuntime.ActorState actor;CdPlayerFrameRuntime.SharedState shared;Cut cut;
         List<CdObjectState> expected;byte[] saved;boolean prepared,used,after;
+        GameOverOwners gameOverOwners;
         EffectScope(Object call,CdObjectPlacementRuntime.Snapshot before,boolean publication,
                     CdPlayerFrameRuntime.ActorState actor,CdPlayerFrameRuntime.SharedState shared,Cut cut){
             this.call=call;this.before=before;this.publication=publication;this.actor=actor;this.shared=shared;this.cut=cut;
@@ -360,7 +371,7 @@ final class SonicCdAct3FutureObjectPass {
     }
     private boolean actualEffect(Object c){return dispatch!=null&&switch(dispatch.kind){
         case EXPLOSION->explosion.isCurrentCall(c);case FLOWER->flower.isCurrentCall(c);case POINTS->points.isCurrentCall(c);
-        case MONITOR_ITEM->monitorItem.isCurrentCall(c);default->false;};}
+        case MONITOR_ITEM->monitorItem.isCurrentCall(c);case GAME_OVER->gameOver.isCurrentCall(c);default->false;};}
     private EffectScope effectTop(Object c){var d=dispatch;if(d==null||d.effects.isEmpty()||d.effects.peek().call!=c||!actualEffect(c))throw new IllegalStateException("No original current effect operation");return d.effects.peek();}
     private EffectScope effectBegin(Object call,long ordinal,CdObjectPlacementRuntime.Snapshot cut,CdObjectState source,boolean publication){
         if(dispatch==null||port||queuePort||plcPort||!actualEffect(call))throw new IllegalStateException("No private current effect dispatch");
@@ -372,7 +383,7 @@ final class SonicCdAct3FutureObjectPass {
     }
     private void effectPublication(Object call,long ordinal,CdObjectPlacementRuntime.Snapshot cut,CdObjectState source,CdObjectState before,CdObjectState output,int savedIndex){
         if(dispatch==null||!actualEffect(call))throw new IllegalStateException("No original effect publication");
-        boolean operationOrdinal=dispatch.kind==Kind.FLOWER||dispatch.kind==Kind.MONITOR_ITEM;
+        boolean operationOrdinal=dispatch.kind==Kind.FLOWER||dispatch.kind==Kind.MONITOR_ITEM||dispatch.kind==Kind.GAME_OVER;
         if(!operationOrdinal&&ordinal!=dispatch.publications+1)throw new IllegalStateException("Not next original native publication");
         var scope=effectBegin(call,operationOrdinal?ordinal:0,cut,source,true);if(!operationOrdinal)dispatch.publications=ordinal;
         var images=new ArrayList<>(cut.pool().slots());
@@ -389,23 +400,23 @@ final class SonicCdAct3FutureObjectPass {
     }
     private boolean effectDelete(EffectScope s){return switch(s.call){
         case CdExplosion.Publication c->c.output()==null;case CdPoints.Publication c->c.output()==null;
-        case CdMonitorItem.DeleteCall ignored->true;default->false;};}
+        case CdMonitorItem.DeleteCall ignored->true;case CdGameOver.Publication c->c.output()==null;default->false;};}
     private int effectSourceWhole(EffectScope s){return switch(s.call){
         case CdExplosion.Publication c->c.source().identity().wholeIndex();case CdPoints.Publication c->c.source().identity().wholeIndex();
         case CdMonitorItem.DeleteCall c->c.source().identity().wholeIndex();
         default->dispatch.whole;};}
     private void effectVerify(EffectScope s){
-        guard();requireFrame(s.actor,s.shared);requireCut(s.cut,false);var live=placement.capture();
+        guard();requireFrame(s.actor,s.shared);requireCut(s.cut,false);if(s.gameOverOwners!=null)borrowGameOver(s.gameOverOwners);var live=placement.capture();
         if(!s.before.status().equals(live.status())||!Arrays.equals(s.saved,live.savedFlags().copy()))throw new IllegalStateException("Effect changed placement status or saved nonwrites");
         int deleted=effectDelete(s)?effectSourceWhole(s):-1;
         for(int n=0;n<96;n++){byte[] expected=deleted==n+32?new byte[64]:s.expected.get(n).copyBytes();
             if(!Arrays.equals(expected,live.pool().slots().get(n).copyBytes()))throw new IllegalStateException("Effect changed an unowned full96 byte at whole "+(n+32));}
     }
     private void effectPrepared(Object call){var s=effectTop(call);if(s.prepared||s.after)throw new IllegalStateException("Repeated effect preparation");
-        requireFrame(s.actor,s.shared);requireCut(s.cut,false);requirePlacement(s.before);s.prepared=true;}
+        requireFrame(s.actor,s.shared);requireCut(s.cut,false);requirePlacement(s.before);if(s.gameOverOwners!=null)borrowGameOver(s.gameOverOwners);s.prepared=true;}
     private void effectUse(Object call){var s=effectTop(call);if(!s.prepared||s.used||s.after||!dispatch.consumed.add(call))throw new IllegalStateException("Repeated/cloned/unprepared effect callback");
         requireKind(dispatch.kind);requirePlacement(s.before);s.used=true;}
-    private void effectPort(Object call,Runnable work){var s=effectTop(call);effectUse(call);work.run();s.actor=frame.captureActor();s.shared=frame.captureShared();s.cut=read();}
+    private void effectPort(Object call,Runnable work){var s=effectTop(call);effectUse(call);work.run();s.actor=frame.captureActor();s.shared=frame.captureShared();s.cut=read();if(dispatch.kind==Kind.GAME_OVER)s.gameOverOwners=borrowGameOver(null);}
     private void effectAfter(Object call){var s=effectTop(call);if(!s.prepared||s.after)throw new IllegalStateException("Missing original effect preparation");
         if(call instanceof CdFlower.FloorCall c){Objects.requireNonNull(flower.currentFloorResult(c));s.used=true;}
         if(dispatch.kind==Kind.MONITOR_ITEM&&!s.publication&&!(call instanceof CdMonitorItem.DrawCall)&&!(call instanceof CdMonitorItem.DeleteCall)){
@@ -418,6 +429,10 @@ final class SonicCdAct3FutureObjectPass {
             else if(call instanceof CdMonitorItem.RingCall){if(!(result instanceof CdMonitorItem.RingAwardResult))throw new IllegalStateException("Missing actual Ring completion");}
             else throw new IllegalStateException("Unexpected completed Monitor reward port");s.used=true;
         }
+        if(dispatch.kind==Kind.GAME_OVER&&!s.publication){Object result=gameOver.currentResult(call);
+            if(call instanceof CdGameOver.ReadCall){if(!(result instanceof CdGameOver.Globals))throw new IllegalStateException("Missing actual GameOver read");}
+            else if(call instanceof CdGameOver.CompletionCall){if(!(result instanceof CdGameOver.Result r))throw new IllegalStateException("Missing original GameOver result");dispatch.gameOverResult=r;s.used=true;}
+            else if(!(call instanceof CdGameOver.ScalarCall)&&!(call instanceof CdGameOver.SoundCall)&&!(call instanceof CdGameOver.DrawCall))throw new IllegalStateException("Unexpected GameOver operation");}
         if(!s.publication&&!s.used&&!(call instanceof CdMonitorItem.DeleteCall))throw new IllegalStateException("Native callback omitted private receipt");
         effectVerify(s);s.after=true;
     }
@@ -495,6 +510,44 @@ final class SonicCdAct3FutureObjectPass {
         var observations=reward.commands().stream().map(command->switch(command){case SCMD_FADEPCM->CdMonitorItem.AwardSound.SCMD_FADEPCM;case SCMD_SHOESMUS->CdMonitorItem.AwardSound.SCMD_SHOESMUS;}).toList();var result=new CdMonitorItem.AwardResult(observations);var cut=read();publish(cut,cut,null,ready,()->{});
         for(var command:reward.commands())sound(new SonicCdGameModule.PastSpeedShoesSubCpu(command));done[0]=result;});return done[0];}
     // END R13 REUSED SCOPED PUBLICATIONS 20261106
+
+    // BEGIN R13 ORIGINAL GAME OVER WORLD JOIN 20261107
+    record GameOverOwners(Object hostFence,Object coreFence,CdLevelGlobals level){GameOverOwners{Objects.requireNonNull(hostFence);Objects.requireNonNull(coreFence);Objects.requireNonNull(level);}}
+    final class GameOverStore {
+        private final CdGameOver.ScalarCall call;private final GameOverOwners expected;private final Cut cut;
+        private final CdPlayerFrameRuntime.ActorState actor;private final CdPlayerFrameRuntime.SharedState shared;private final CdObjectPlacementRuntime.Snapshot placed;private boolean done;
+        private GameOverStore(CdGameOver.ScalarCall call,GameOverOwners expected){this.call=call;this.expected=expected;cut=read();actor=frame.captureActor();shared=frame.captureShared();placed=placement.capture();}
+        SonicCdAct3FutureObjectPass owner(){return SonicCdAct3FutureObjectPass.this;}CdGameOver.ScalarCall call(){return call;}GameOverOwners expected(){return expected;}
+        void validateBefore(){if(!isCurrentGameOverStore(this)||done)throw new IllegalStateException("No original GameOver store");requireFrame(actor,shared);requireCut(cut,false);requirePlacement(placed);borrowGameOver(expected);}
+        void acknowledge(){if(!isCurrentGameOverStore(this)||done)throw new IllegalStateException("GameOver scalar completion expired");requireFrame(actor,shared);requireCut(cut,false);requirePlacement(placed);done=true;}
+        Unowned unowned(){validateBefore();return stop(Boundary.GAME_OVER_STORE,dispatch.whole,call.field().ordinal());}
+    }
+    boolean isCurrentGameOverStore(GameOverStore store){return store!=null&&store==gameOverStore&&dispatch!=null&&dispatch.kind==Kind.GAME_OVER&&gameOver.isCurrentPrimitive(store.call);}
+    boolean isCurrentGameOverOwnersRead(){return gameOverRead&&dispatch!=null&&dispatch.kind==Kind.GAME_OVER&&!dispatch.effects.isEmpty()&&gameOver.isCurrentCall(dispatch.effects.peek().call);}
+    private GameOverOwners borrowGameOver(GameOverOwners expected){
+        requireKind(Kind.GAME_OVER);if(gameOverRead||dispatch.effects.isEmpty()||!gameOver.isCurrentCall(dispatch.effects.peek().call))throw new IllegalStateException("No original GameOver owner read");
+        var actor=frame.captureActor();var shared=frame.captureShared();var cut=placement.capture();gameOverRead=true;
+        try{var value=host.gameOverOwners(expected);requireFrame(actor,shared);requirePlacement(cut);if(value==null)throw stop(Boundary.GAME_OVER_OWNERS,dispatch.whole,0);if(expected!=null&&(value.hostFence()!=expected.hostFence()||value.coreFence()!=expected.coreFence()||value.level()!=expected.level()))throw new IllegalArgumentException("Stale complete GameOver owner fence");return value;}
+        catch(RuntimeException|Error original){try{requireFrame(actor,shared);requirePlacement(cut);}catch(RuntimeException|Error check){if(check!=original)original.addSuppressed(check);}throw original;}finally{gameOverRead=false;}
+    }
+    private void gameOverBefore(Object call){long ordinal=gameOver.currentOrdinal(call);switch(call){
+        case CdGameOver.Publication c->effectPublication(c,ordinal,c.cut(),c.source(),c.before(),c.output(),-1);
+        case CdGameOver.ReadCall c->effectCall(c,ordinal,c.cut(),c.source(),false);
+        case CdGameOver.ScalarCall c->effectCall(c,ordinal,c.cut(),c.source(),false);
+        case CdGameOver.SoundCall c->effectCall(c,ordinal,c.cut(),c.source(),false);
+        case CdGameOver.DrawCall c->effectCall(c,ordinal,c.cut(),c.source(),true);
+        case CdGameOver.CompletionCall c->effectCall(c,ordinal,c.cut(),c.source(),false);
+        default->throw new IllegalArgumentException("Unknown original GameOver operation");}effectTop(call).gameOverOwners=borrowGameOver(null);
+    }
+    private <T>T gameOverOperation(Class<T> type){requireKind(Kind.GAME_OVER);var s=dispatch.effects.peek();if(s==null||!type.isInstance(s.call)||!gameOver.isCurrentPrimitive(s.call))throw new IllegalStateException("No original GameOver primitive");return type.cast(s.call);}
+    private CdGameOver.GlobalsPort gameOverGlobals(){return new CdGameOver.GlobalsPort(){
+        public CdGameOver.Globals read(){var call=gameOverOperation(CdGameOver.ReadCall.class);CdGameOver.Globals[] result={null};effectPort(call,()->{var owners=borrowGameOver(effectTop(call).gameOverOwners);result[0]=new CdGameOver.Globals(SonicCdAct3FutureObjectPass.this.read().ring().lives(),owners.level().powerup(),owners.level().timeOver());});return result[0];}
+        public void writePowerup(int value){gameOverScalar(CdGameOver.Scalar.POWERUP,value);}public void writeTimeOver(int value){gameOverScalar(CdGameOver.Scalar.TIME_OVER,value);}};}
+    private void gameOverScalar(CdGameOver.Scalar field,int value){var call=gameOverOperation(CdGameOver.ScalarCall.class);if(call.field()!=field||call.value()!=value)throw new IllegalArgumentException("Different original GameOver scalar");effectPort(call,()->{
+        if(gameOverStore!=null)throw new IllegalStateException("Nested GameOver scalar");var actual=new GameOverStore(call,borrowGameOver(effectTop(call).gameOverOwners));gameOverStore=actual;try{actual.validateBefore();host.storeGameOver(actual);if(!actual.done)throw new IllegalStateException("Missing original GameOver store completion");}finally{gameOverStore=null;}});}
+    private void gameOverSound(CdGameOver.SubCpuCommand command){var call=gameOverOperation(CdGameOver.SoundCall.class);if(call.command()!=command)throw new IllegalArgumentException("Different original GameOver command");effectPort(call,()->{borrowGameOver(effectTop(call).gameOverOwners);sound(new SonicCdGameModule.PastR13GameOverSubCpu(command));});}
+    private void gameOverDraw(CdObjectPool pool,CdObjectState.Identity identity){var call=gameOverOperation(CdGameOver.DrawCall.class);if(pool!=placement.pool()||!call.source().identity().equals(identity))throw new IllegalArgumentException("Different original GameOver draw");effectPort(call,()->drawDynamic(Kind.GAME_OVER,pool,identity,()->gameOver.isCurrentPrimitive(call)));}
+    // END R13 ORIGINAL GAME OVER WORLD JOIN 20261107
 
     // BEGIN R13 ORIGINAL BOSS CALLBACK JOIN 20261106
     boolean isCurrentBossOperation(CdR13Boss.Call c){return phase==Phase.WALKING&&dispatch!=null&&dispatch.kind==Kind.BOSS&&bossScope!=null&&bossScope.call==c&&boss.isCurrentCall(c);}

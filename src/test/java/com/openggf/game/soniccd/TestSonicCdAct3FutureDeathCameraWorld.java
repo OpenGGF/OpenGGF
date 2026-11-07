@@ -91,7 +91,7 @@ class TestSonicCdAct3FutureDeathCameraWorld {
             assertSame(oldCpu,rawVideo(f.host).completedCpu());assertTrue(f.core.failed());assertThrows(IllegalStateException.class,()->f.core.service(0));
         }
     }
-    @Test void genuineGoneWritesLivesHudAndOnlyFirstFreeIdBeforeTheUnownedGameOverDispatch() throws Exception {
+    @Test void genuineGoneCreatesThenDeletesNormalTextWithAllOtherSlotsIntact() throws Exception {
         try(var f=ready(TestCdR13PlaneSources.actual().getFirst())) {
             actor(f.frame,6,0x500,0,0,0);var placed=f.host.placement();var pool=placed.pool();
             // Explicit component empty-pool ingress; native spawner returns at its retained camera chunk.
@@ -99,20 +99,21 @@ class TestSonicCdAct3FutureDeathCameraWorld {
             // Slot32 is deleted stale storage; only ID is written by the native allocation.
             pool.write(pool.state(32).moveByte(SUBTYPE,0xA5).moveByte(SPRITE_FLAGS,0x24).moveWord(X,0xBEEF));
             var before=pool.capture();var ring=f.host.globals().ring();
-            var failure=assertThrows(SonicCdAct3FutureObjectPass.Unowned.class,()->f.core.service(0));
-            assertEquals(SonicCdAct3FutureObjectPass.Boundary.OBJECT_FAMILY,failure.boundary());assertEquals(32,failure.wholeIndex());assertEquals(0x3B,failure.value());
-            assertEquals(before.slots().getFirst().moveByte(ID,0x3B),pool.state(32));
+            f.core.service(0); // The newly admitted native lives-remain Init consumes its actual ID3B visit and deletes it.
+            assertArrayEquals(new byte[64],pool.state(32).copyBytes());
+            assertEquals(8,f.core.state().level().powerup());assertEquals(0,f.core.state().level().timeOver());
+            assertEquals(new SonicCdGameModule.PastR13GameOverSubCpu(CdGameOver.SubCpuCommand.SCMD_FADEPCM),f.host.sounds().getLast());
             for(int i=1;i<96;i++)assertEquals(before.slots().get(i),pool.capture().slots().get(i));
             assertEquals(ring.lives()-1,rawGlobals(f.host).ring().lives());assertEquals((ring.updateHudLives()+1)&255,rawGlobals(f.host).ring().updateHudLives());
             assertEquals(0,f.core.state().level().updateHudTime());assertEquals(8,f.frame.state().motion().routine());
             assertEquals(60,f.frame.state().timers().reset());assertEquals(0,f.frame.state().motion().yVelocity());
-            assertTrue(f.core.failed());assertThrows(IllegalStateException.class,f.core::capture);
+            assertFalse(f.core.failed());assertFalse(f.frame.closed());assertDoesNotThrow(f.core::capture);
         }
     }
     @Test void unsignedGoneComparisonIncludesWordWrapAndEquality() throws Exception {
         for(int[] v:new int[][]{{0xFF80,0x80,6},{0xFF80,0x81,8},{0x310,0x410,6}})try(var f=ready(TestCdR13PlaneSources.actual().getFirst())) {
             actor(f.frame,6,v[1],0,0,0);bounds(f.frame,v[0]);
-            if(v[2]==8)assertThrows(SonicCdAct3FutureObjectPass.Unowned.class,()->f.core.service(0));else f.core.service(0);
+            f.core.service(0); // Native ID3B's normal lives-remain deletion now completes this same physical walk.
             assertEquals(v[2],f.frame.state().motion().routine());
         }
     }

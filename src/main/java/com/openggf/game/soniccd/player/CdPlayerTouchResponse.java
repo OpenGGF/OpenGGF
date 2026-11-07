@@ -2,6 +2,7 @@ package com.openggf.game.soniccd.player;
 
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
+import com.openggf.game.soniccd.level.CdR31aAssets;
 import com.openggf.game.soniccd.objects.CdObjectPool;
 import com.openggf.game.soniccd.objects.CdObjectState;
 
@@ -179,7 +180,10 @@ public final class CdPlayerTouchResponse {
         /** Player_TouchSpecial .FlagCollision or rolling .CheckIfRoll (:383-395): one byte increment. */
         SPECIAL_FLAG_INCREMENT(false),
         /** .CheckIfRoll/.End4 (:389-395): animation is not 2; no writes. */
-        SPECIAL_ROLL_NO_WRITE(false);
+        SPECIAL_ROLL_NO_WRITE(false),
+        // BEGIN R31 source SPECIAL no-action RTS; append preserves every old ordinal.
+        SPECIAL_NO_WRITE(false);
+        // END R31 source SPECIAL no-action RTS.
 
         private final boolean explicitMinusOne;
         Exit(boolean explicitMinusOne) { this.explicitMinusOne = explicitMinusOne; }
@@ -208,7 +212,11 @@ public final class CdPlayerTouchResponse {
         }
     }
 
-    public enum UnsupportedBoundary { ODD_ENEMY_POINTS_ADDRESS }
+    public enum UnsupportedBoundary { ODD_ENEMY_POINTS_ADDRESS,
+        // BEGIN R31 precise SPECIAL ownership cuts; old ordinal0 remains unchanged.
+        R3_BOSS_STARTED_OWNER, R3_BOSS_SPECIAL_RESPONSE_OWNER
+        // END R31 precise SPECIAL ownership cuts.
+    }
     /** A native stop with no partial result: nothing staged before it is published. */
     public static final class UnsupportedResponse extends UnsupportedOperationException {
         private final UnsupportedBoundary boundary;
@@ -217,6 +225,9 @@ public final class CdPlayerTouchResponse {
     }
 
     private final CdAssetBytes enemyPoints;
+    // BEGIN R31 exact immutable semantic source; public values grant no execution authority.
+    private final CdR31aAssets r31aAssets;
+    // END R31 exact immutable semantic source.
 
     /** Pure format consumer for the complete EnemyPoints table, not an authenticated asset constructor. */
     public CdPlayerTouchResponse(CdAssetBytes enemyPoints) {
@@ -225,6 +236,7 @@ public final class CdPlayerTouchResponse {
             throw new IllegalArgumentException("EnemyPoints requires exactly 8 bytes");
         }
         this.enemyPoints = enemyPoints;
+        this.r31aAssets = null;
     }
 
     /** Runtime bytes come only from the authenticated R11A object-asset view; no literal fallback. */
@@ -232,6 +244,52 @@ public final class CdPlayerTouchResponse {
         return new CdPlayerTouchResponse(Objects.requireNonNull(assets, "assets")
                 .view(CdR11aObjectAssets.Table.ENEMY_POINTS).bytes());
     }
+
+    // BEGIN R31 authenticated ordinary touch response metadata/profile.
+    public static CdPlayerTouchResponse fromR31aAssets(CdR31aAssets assets) {
+        var source = Objects.requireNonNull(assets, "actual original R31A assets");
+        return new CdPlayerTouchResponse(source, source.view(CdR31aAssets.Asset.ENEMY_POINTS));
+    }
+    private CdPlayerTouchResponse(CdR31aAssets assets, CdAssetBytes points) {
+        r31aAssets = assets; enemyPoints = points;
+        if (enemyPoints.length() != ENEMY_POINTS_BYTES) throw new IllegalArgumentException("EnemyPoints requires exactly 8 bytes");
+    }
+    public boolean ownsR31aAssets(CdR31aAssets assets) { return r31aAssets != null && r31aAssets == assets; }
+    /** r3/player_object_collide.asm:300-314,358-360,390-396: flag27, not PPZ21/2F. */
+    private static boolean ownsR3SpecialFlagCollision(int rawCollisionTypeByte) {
+        byteValue(rawCollisionTypeByte);
+        if ((rawCollisionTypeByte & 0xC0) != 0xC0) return false;
+        return switch (rawCollisionTypeByte & 0x3F) {
+            case 0x17, 0x1F, 0x23, 0x27, 0x3A, 0x3B -> true;
+            default -> false;
+        };
+    }
+    /**
+     * Explicit R3 SPECIAL call with the actual raw boss_started byte. Value input is not a global owner.
+     * Owns the source no-action branches only; reached R3 boss responses remain a precise boundary.
+     * No boss_started read is inferred from Bounds, pool IDs or a PPZ bossFight projection.
+     */
+    public Result respondR3Special(CdPlayerObjectTouch.HandlerBoundary selected, Actor actor, PlayerGlobals player,
+                                  WorldGlobals world, int bossStartedByte, CdObjectPool.Snapshot callCut) {
+        Objects.requireNonNull(selected, "selected R3 SPECIAL"); Objects.requireNonNull(actor); Objects.requireNonNull(player);
+        Objects.requireNonNull(world); Objects.requireNonNull(callCut); byteValue(bossStartedByte);
+        if (r31aAssets == null || selected.r31aAssets() != r31aAssets)
+            throw new IllegalArgumentException("R3 SPECIAL requires the exact original selector/source owner");
+        var source = selected.selectedSlot().orElseThrow();
+        if (selected.kind() != CdPlayerObjectTouch.Kind.SPECIAL || (source.unsignedByte(CdObjectState.ByteField.COLLISION_TYPE) & 0xC0) != 0xC0)
+            throw new IllegalArgumentException("Only the selected R3 SPECIAL entry belongs here");
+        if (!source.equals(callCut.slots().get(source.identity().dynamicIndex())))
+            throw new IllegalArgumentException("R3 SPECIAL source is not the complete same-owner call-cut image");
+        int raw = source.unsignedByte(CdObjectState.ByteField.COLLISION_TYPE);
+        if (ownsR3SpecialFlagCollision(raw)) return respond(selected, actor, player, world, callCut);
+        int selector = raw & 0x3F;
+        // Source315-354: other nonzero boss_started bytes FALL THROUGH to case1; never normalize to boolean1/0.
+        boolean action = bossStartedByte == 0 ? false : bossStartedByte == 4 ? selector == 0x3F || selector == 0x3E
+                : bossStartedByte == 5 ? selector == 0x3D : selector >= 0x3C && selector <= 0x3F;
+        if (action) throw new UnsupportedResponse(UnsupportedBoundary.R3_BOSS_SPECIAL_RESPONSE_OWNER);
+        return new Result(actor, player, world, List.of(), List.of(), OptionalInt.empty(), Exit.SPECIAL_NO_WRITE);
+    }
+    // END R31 authenticated ordinary touch response metadata/profile.
 
     // BEGIN original R13 boss SPECIAL continuation; no legacy handler admission change.
     /** Authenticated original C/D EnemyPoints only; runtime invocation/source authority stays with the caller. */
@@ -298,6 +356,10 @@ public final class CdPlayerTouchResponse {
         Objects.requireNonNull(selected, "selected boss handler"); Objects.requireNonNull(actor);
         Objects.requireNonNull(player); Objects.requireNonNull(world); Objects.requireNonNull(callCut);
         byteValue(bossFight);
+        // BEGIN R31 cannot borrow the PPZ/R13 bossFight continuation contract.
+        if (r31aAssets != null || selected.r31aAssets() != null)
+            throw new IllegalArgumentException("Legacy boss SPECIAL requires its PPZ source rules");
+        // END R31 cannot borrow the PPZ/R13 bossFight continuation contract.
         var source = selected.selectedSlot().orElseThrow();
         int originalWhole = source.identity().wholeIndex();
         if (selected.kind() != CdPlayerObjectTouch.Kind.SPECIAL
@@ -344,6 +406,10 @@ public final class CdPlayerTouchResponse {
         Objects.requireNonNull(selected, "selected handler"); Objects.requireNonNull(actor, "actor");
         Objects.requireNonNull(player, "player globals"); Objects.requireNonNull(world, "world globals");
         Objects.requireNonNull(callCut, "call-cut snapshot");
+        // BEGIN R31 exact original selector identity; equal values grant no source-profile admission.
+        if (r31aAssets != selected.r31aAssets())
+            throw new IllegalArgumentException("Touch response requires the exact selector/source owner");
+        // END R31 exact original selector identity.
         var slot = selected.selectedSlot().orElseThrow();
         int a1 = slot.identity().wholeIndex();
         if (!callCut.slots().get(a1 - CdObjectPool.FIRST_WHOLE_INDEX).equals(slot)) {
@@ -357,9 +423,16 @@ public final class CdPlayerTouchResponse {
             case MONITOR -> { requireGroup(group, 0x40); touchMonitor(c, a1); }
             case SPECIAL -> {
                 requireGroup(group, 0xC0);
+                // BEGIN R31 differing native flag selectors and first missing global read.
+                if (r31aAssets != null) {
+                    if (!ownsR3SpecialFlagCollision(slot.unsignedByte(CdObjectState.ByteField.COLLISION_TYPE)))
+                        throw new UnsupportedResponse(UnsupportedBoundary.R3_BOSS_STARTED_OWNER);
+                } else {
                 if (!ownsSpecialFlagCollision(slot.unsignedByte(CdObjectState.ByteField.COLLISION_TYPE))) {
                     throw new IllegalArgumentException("Unowned Player_TouchSpecial selector");
                 }
+                }
+                // END R31 differing native flag selectors and first missing global read.
                 touchSpecialFlag(c, a1);
             }
             default -> throw new IllegalArgumentException("Only selected ENEMY/HAZARD/MONITOR and SPECIAL flag handlers are owned here: " + selected.kind());

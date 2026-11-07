@@ -301,10 +301,14 @@ matching area heading; see the
   through the existing renderer. Fixed-controller state and selected-pixel
   replay cover the first visible Sonic, completed Title art service and an actual
   rendered Boss fight reached with fixed controller input. Boss-only renderer
-  omission and complete restore/current-picture checks preserve the same owners;
-  defeating the Boss remains separate. Native Dead/Restart now rejoin the actual
+  omission and complete restore/current-picture checks preserve the same owners.
+  A further fixed-input route defeats the native Boss, replays the health/escape/
+  removal cuts and renders its selected defeat picture; the source-placed Capsule
+  and natural act completion remain separate. Native Dead/Restart now rejoin the actual
   caller with paired death-camera bounds, original no-draw restart and complete
-  restore checks, retaining explicit GameOver/reset owner boundaries. Host
+  restore checks. Cached native GameOver now preserves original sound, allocation,
+  text mappings and deletion order; active text art and reset remain explicit
+  owners. Host
   course reset publishes Act3 consistently to the manager and World so the
   act-scoped rewind allowance refills once. Cached Boss/limb/bumper, Capsule and
   Results owners now publish through the actual physical walk and same Frame.
@@ -315,15 +319,17 @@ matching area heading; see the
   common Sonic data keeps the absent PPZ ramp explicit. An authenticated R31
   Frame entry now runs genuine normal/shrunk Init with native raw zone gates;
   normal MODE uses real CCZ terrain while ordinary Body Main/Hurt stay gated
-  pending their actual owners. Existing PPZ movement algorithms remain unchanged.
+  pending their actual owners. Complete R31 PLC/section/residency components and
+  exact-source raw2C touch/response views retain their native distinctions without
+  granting World admission. Existing PPZ movement algorithms remain unchanged.
   A finite IPX progress
   component preserves unknown-byte and save-field alias semantics. Its actual
   boss-return join now publishes saved-zone/checkpoint state once and retains it
   through existing capture lifetimes, stopping at unknown unlock history.
   Original initial-save sources retain complete data and shorter native copy
   extents without granting profile creation or save completion. Data custody
-  grants no next-zone gameplay. Natural boss defeat, full acts and regional parity remain
-  separate.
+  grants no next-zone gameplay. Natural Capsule/Results completion, full acts and
+  regional parity remain separate.
   CD player headless boot loads the fixed
   roster before rewind controller creation while keeping no-device audio before
   playback. A separate real-World entry fixture retains its own visible-Sonic

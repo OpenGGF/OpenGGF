@@ -120,6 +120,17 @@ final class SonicCdAct3FutureOrdinaryWorld implements SonicCdAct3FutureLoadingVi
    requireCut(Cut.RUN_OBJECTS);if(p.owner()!=objects||!objects.isCurrentResultsPlcSubmission(p)||p.nativeId()!=16)throw new IllegalArgumentException("Not actual Results cue16");p.validate();var before=active.state();if(p.expectedOwners().coreFence()!=before)throw new IllegalArgumentException("Stale original Results Core image");
    try{active.appendResultsPlc(before);var after=active.state();validateResultsPlcCore(before,after,true);host.validateEndPlcPrefix(p,after);p.acknowledge();}catch(RuntimeException|Error original){try{var after=active.state();validateResultsPlcCore(before,after,false);host.validateEndPlcPrefix(p,after);p.validatePrefix();}catch(RuntimeException|Error check){if(check!=original)original.addSuppressed(check);}throw original;}
   }
+  // BEGIN R13 ORIGINAL GAME OVER CORE SCALAR JOIN 20261107
+  public SonicCdAct3FutureObjectPass.GameOverOwners gameOverOwners(SonicCdAct3FutureObjectPass.GameOverOwners expected){
+   requireCut(Cut.RUN_OBJECTS);var actual=host.readGameOverOwners(objects);if(expected!=null&&(expected.hostFence()!=actual.hostFence()||expected.coreFence()!=actual.coreFence()||expected.level()!=actual.level()))throw new IllegalArgumentException("Stale actual GameOver owners");return actual;
+  }
+  public void storeGameOver(SonicCdAct3FutureObjectPass.GameOverStore actual){
+   requireCut(Cut.RUN_OBJECTS);if(actual.owner()!=objects||!objects.isCurrentGameOverStore(actual))throw new IllegalArgumentException("No original GameOver scalar invocation");actual.validateBefore();var before=active.state();if(actual.expected().coreFence()!=before||actual.expected().level()!=before.level())throw new IllegalArgumentException("Different actual GameOver Core");
+   var old=before.level();var call=actual.call();var next=new CdLevelGlobals(old.levelRestart(),old.updateHudTime(),old.checkpoint(),old.spawnMode(),old.plcLoadFlags(),old.flowerCount(),old.fadeEnableDisplay(),call.field()==CdGameOver.Scalar.POWERUP?call.value():old.powerup(),call.field()==CdGameOver.Scalar.TIME_OVER?call.value():old.timeOver());
+   var ready=active.prepare(before,before.section(),next,before.hudSlots(),before.normalPalette(),before.displayedPalette());var hp=host.prepareGameOverScalar(actual,before,next);active.validate(before);host.validateGameOverScalar(hp,actual,before);
+   active.adoptAfterNative(before,ready);host.adoptAfterNative(hp);actual.acknowledge();
+  }
+  // END R13 ORIGINAL GAME OVER CORE SCALAR JOIN 20261107
   public void primary(SonicCdAct3FutureObjectPass.PrimaryCall call){
    requireCut(Cut.RUN_OBJECTS);if(call.owner()!=objects)throw new IllegalArgumentException("Another primary producer");var before=active.state();var g=host.globals();var placed=host.placement().capture();var pool=placed.pool();var state=frame.state();var env=frame.environment();var artImage=frame.artState();var clock=frame.vIntClock();boolean paused=frame.paused();var fence=host.prepareOrdinary(g,host.video(),g,List.of(),host.video().completedCpu());CdPlayerFrameRuntime.BodyPublication publication;
    if(state.motion().routine()==0){publication=frame.runBody(call.levelFrameWord());if(publication.result().boundary()!=CdPlayerBody.Boundary.INIT_RETURN)throw new IllegalStateException("Genuine Sonic Init omitted its original return");}

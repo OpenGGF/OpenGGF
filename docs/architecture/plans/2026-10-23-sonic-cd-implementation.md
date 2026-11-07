@@ -1,5 +1,39 @@
 # Implement Sonic CD with complete regional parity
 
+## 7 November 2026 — natural Boss defeat, native GameOver and R31 components
+
+A separate permanent input-only regression now defeats the actual R13D Boss.
+It follows the original route and fixed jump sequence, observes health3→2→1,
+then native Defeat6 at19317, escape8/10, score100, original explosion/music,
+BossFight release and DeleteObject64 at19658. Full/course state and selected
+pixels replay at the retained cuts; selected Boss-group omission changes the
+actual19317 image. Renderer/session resources retire before external export.
+The source-placed Capsule is present at19658 but outside that selected picture;
+there is no Capsule-pixel, natural Results or completed-act claim. The separate
+fixed Left+Down capsule observer returns all26000 calls and intentionally fails
+its bound. It is removed byte-exact before this save; the seven older permanent
+controller cases remain unchanged.
+
+The actual native GameOver ID3B now uses the existing cached body, original
+source mappings and ordered private operation receipts. The normal lives2 path
+retains FadePCM/header/powerup8/timeOver clear/Delete64; text paths retain genuine
+allocation and physical order. Active CPU text art, reset/LevelStart and storage
+remain explicit owners. Independent Host/Module composition preserves the live
+IPX progress join. R54 discovers153 cases:152 pass, one stale public-method
+inventory fails, no errors/skips. R55 discovers343:342 pass, one Root-written
+expected-order error fails, no errors/skips. Its61 new R31 art/touch cases and
+legacy controls pass. The exact sorted-inventory correction passes in R56,
+alongside the new permanent defeat case; its third, temporary controller case
+has the intentional bound failure. All three runs have unchanged source. These
+are separate qualified observations, not a fresh combined all-green run.
+
+R31 now has complete source-derived PLC/section plans and residency components,
+plus exact-source raw2C touch selection and R3-specific response cuts. Shared
+decoders and legacy touch algorithms remain intact. These are component results;
+ordinary R31 Body Main/Hurt, programme loading, FULL, Ready and gameplay are not
+admitted. The save/profile bootstrap and Body staging packets remain separate.
+Broad parent smoke is still incomplete; no native/audio/regional parity follows.
+
 ## 7 November 2026 — actual IPX progress return and original save-source data
 
 The original R13 boss-return invocation now prebuilds actual Module progress and

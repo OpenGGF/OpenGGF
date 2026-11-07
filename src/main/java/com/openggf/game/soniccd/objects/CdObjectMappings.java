@@ -433,6 +433,17 @@ public final class CdObjectMappings implements CdDrawMappings {
     }
     // END R13 CAPSULE RESULTS MAPPING JOIN 20261106
 
+    // BEGIN R13 GAME OVER MAPPING JOIN 20261107
+    /** Add the authentic two GAME and two TIME frames, with independent roots0/+4.
+     * Existing catalogue factories remain exact; this supplies no selected/current art. */
+    public static CdObjectMappings withAct3FutureGameOver(CdObjectMappings base,CdR13FutureAssets assets,CdR13ObjectAssets owner){
+        Objects.requireNonNull(base,"existing mapping catalogue");var data=CdGameOver.Assets.fromAct3FutureAssets(assets,owner);
+        var tables=new ArrayList<>(base.tables.values());tables.add(new DeclaredTable(data.gameOverMappingsAddress(),data.mappings(),0,GAME_OVER_FRAMES));
+        tables.add(new DeclaredTable(data.gameOverMappingsAddress(),data.mappings(),CdGameOver.Assets.TIME_OVER_TABLE_OFFSET,GAME_OVER_FRAMES));
+        return declaredSourceViews(tables,new ArrayList<>(base.staticPieces.values()));
+    }
+    // END R13 GAME OVER MAPPING JOIN 20261107
+
     @Override public MappingBody resolve(int addressBits, boolean staticPiece, int mapFrameByte) {
         if (mapFrameByte < 0 || mapFrameByte > 255) {
             throw new IllegalArgumentException("Mapping frame must be the full unsigned native byte");

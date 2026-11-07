@@ -5,6 +5,8 @@ import com.openggf.game.soniccd.CdReleaseVariant;
 import com.openggf.game.soniccd.CdStageKey;
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
+import com.openggf.game.soniccd.level.CdR13FutureAssets;
+import com.openggf.game.soniccd.level.CdR13ObjectAssets;
 import com.openggf.game.soniccd.media.CdMmdImage;
 
 import java.util.ArrayList;
@@ -147,7 +149,7 @@ public final class CdGameOver {
      * The raw shared MapSpr_GameOver/MapSpr_TimeOver include (Mappings.asm:1-58) and the native long Init stores in
      * oMap. Both tables are kept exactly: GAME's two signed relative words are based at +0 and TIME's at +4, so nothing
      * is compacted, rebased or presented as one uniform four-entry header. Validation is structural and bounded; it is
-     * not media authentication. Production obtains the record only through {@link #fromObjectAssets}. A future
+     * not media authentication. Production obtains the record through authenticated stage factories. A future
      * resolver/renderer owner reads {@link #mappings()} and the two addresses; this record resolves and draws nothing.
      */
     public record Assets(CdAssetBytes mappings, int gameOverMappingsAddress) {
@@ -186,6 +188,21 @@ public final class CdGameOver {
             var view = assets.view(CdR11aObjectAssets.Table.GAME_OVER_MAPPINGS);
             return new Assets(view.bytes(), view.range().nativeAddress());
         }
+
+        // BEGIN R13 AUTHENTIC GAME OVER ASSETS 20261107
+        /** Actual C/D ID3B/Init operands and complete56 source; no selected art or runtime authority. */
+        public static Assets fromAct3FutureAssets(CdR13FutureAssets assets,CdR13ObjectAssets owner){
+            Objects.requireNonNull(assets,"actual R13 source");Objects.requireNonNull(owner,"actual R13 object metadata");
+            if(!owner.ownsAssets(assets)||!owner.identity().equals(assets.identity()))throw new IllegalArgumentException("Different R13 GameOver metadata owner");
+            var code=owner.view(CdR13ObjectAssets.View.GAME_OVER_CODE);int entry=CdR13ObjectAssets.View.GAME_OVER_CODE.range(assets.identity().file()).nativeAddress();
+            var raw=owner.view(CdR13ObjectAssets.View.MAP_SPR_GAME_OVER);int root=CdR13ObjectAssets.View.MAP_SPR_GAME_OVER.range(assets.identity().file()).nativeAddress();
+            if(owner.view(CdR13ObjectAssets.View.OBJECT_INDEX).unsignedLong((OBJECT_ID-1)*4)!=entry||code.unsignedWord(14)!=4||code.unsignedWord(16)!=0xBC
+                    ||code.unsignedWord(0x38)!=0x217C||code.unsignedLong(0x3A)!=root||code.unsignedWord(0x3E)!=4
+                    ||code.unsignedWord(0x5A)!=0x217C||code.unsignedLong(0x5C)!=root+4||code.unsignedWord(0x60)!=4)
+                throw new IllegalArgumentException("R13 original GameOver dispatch/mapping operands differ");
+            return new Assets(raw,root);
+        }
+        // END R13 AUTHENTIC GAME OVER ASSETS 20261107
 
         /**
          * Each table entry is a signed word relative to its OWN label. The four bodies must begin right after the
@@ -272,7 +289,17 @@ public final class CdGameOver {
     public Assets assets() { return assets; }
 
     /** One ObjGameOver dispatch for the whole-pool dynamic slot currently holding ID $3B. */
-    public Result run(int wholeIndex, GlobalsPort globals) {
+    // BEGIN R13 ORIGINAL GAME OVER DISPATCH 20261107
+    public Result run(int wholeIndex,GlobalsPort globals){
+        if(observer==null)return runOriginal(wholeIndex,globals);
+        if(running||failed)throw new IllegalStateException("GameOver source invocation active/retired");
+        running=true;activeWhole=wholeIndex;ordinal=0;
+        try{var result=runOriginal(wholeIndex,globals);var cut=runtime.capture();return observed(new CompletionCall(cut,source()),cut,r->result);}
+        catch(RuntimeException|Error original){failed=true;throw original;}
+        finally{running=false;pending=null;operationResult=null;resultReady=false;primitive=false;}
+    }
+    // END R13 ORIGINAL GAME OVER DISPATCH 20261107
+    private Result runOriginal(int wholeIndex, GlobalsPort globals) {
         Objects.requireNonNull(globals, "globals");
         var pool = runtime.pool();
         var state = pool.state(wholeIndex);
@@ -294,28 +321,28 @@ public final class CdGameOver {
     private void init(CdObjectState state, GlobalsPort globals, List<Effect> effects) {
         var pool = runtime.pool();
         int whole = state.identity().wholeIndex();
-        effects.add(new SubCpuRequest(SubCpuCommand.SCMD_FADEPCM));              // MOVE.W #SCMD_FADEPCM,d0 / JSR SubCPUCmd
-        pool.write(state.addByte(ROUTINE, 2)                                     // ADDQ.B #2,oRoutine(a0)
+        sound(effects,SubCpuCommand.SCMD_FADEPCM);              // MOVE.W #SCMD_FADEPCM,d0 / JSR SubCPUCmd
+        write(state.addByte(ROUTINE, 2)                                     // ADDQ.B #2,oRoutine(a0)
                 .moveWord(X_FRACTION, SCREEN_Y_WORD)                             // MOVE.W #96+128,oYScr(a0): the WORD at $0A
                 .moveWord(X, GAME_START_X)                                       // MOVE.W #0+128,oX(a0)
                 .moveWord(GAME_OVER_DEST_X, DESTINATION_X)                       // MOVE.W #160+128,oGmOverDestX(a0)
                 .moveWord(TILE, NATIVE_TILE_WORD)                                // MOVE.W #$8544,oTile(a0)
                 .moveLong(MAPPINGS, assets.gameOverMappingsAddress()));          // MOVE.L #MapSpr_GameOver,oMap(a0)
-        globals.writePowerup(POWERUP_GAME_OVER);                                 // MOVE.B #8,powerup
+        writePowerup(globals,POWERUP_GAME_OVER);                                 // MOVE.B #8,powerup
         int timeOver = read(globals).timeOver();                                 // BCLR #0,timeOver: Z is the old bit 0
-        globals.writeTimeOver(timeOver & 0xFE);
+        writeTimeOver(globals,timeOver & 0xFE);
         if ((timeOver & 1) != 0) {                                               // BEQ.S .NotTimeOver not taken
             if (read(globals).lives() != 0) {                                    // TST.B lives / BEQ.S .GameOver
-                pool.write(pool.state(whole)
+                write(pool.state(whole)
                         .moveLong(MAPPINGS, assets.timeOverMappingsAddress()));  // MOVE.L #MapSpr_TimeOver,oMap(a0)
-                globals.writePowerup((read(globals).powerup() + POWERUP_TIME_OVER_STEP) & 0xFF); // ADDQ.B #2,powerup
+                writePowerup(globals,(read(globals).powerup() + POWERUP_TIME_OVER_STEP) & 0xFF); // ADDQ.B #2,powerup
             }                                                                    // BRA.S .GameOver
         } else if (read(globals).lives() != 0) {                                 // .NotTimeOver: TST.B lives / BNE.S .Destroy
             delete(whole, DeleteEntry.LIVES_REMAIN, effects);
             effects.add(new CallReturned(NativeCall.INIT));
             return;
         }
-        globals.writePowerup(read(globals).powerup() | POWERUP_LOAD_BIT);       // .GameOver: BSET #7,powerup
+        writePowerup(globals,read(globals).powerup() | POWERUP_LOAD_BIT);       // .GameOver: BSET #7,powerup
         var found = pool.findObjSlot();                                          // JSR FindObjSlot: first oID-zero slot
         if (found.isEmpty()) {                                                   // BEQ.S .SpawnOverText not taken
             effects.add(new OverTextSlotUnavailable());
@@ -325,7 +352,7 @@ public final class CdGameOver {
         }
         int child = found.getAsInt();
         var parent = pool.state(whole);
-        pool.write(pool.state(child)
+        write(pool.state(child)
                 .moveByte(ID, OBJECT_ID)                                         // MOVE.B #$3B,oID(a1)
                 .moveByte(ROUTINE, parent.routine())                             // MOVE.B oRoutine(a0),oRoutine(a1)
                 .moveWord(TILE, parent.word(TILE))                               // MOVE.W oTile(a0),oTile(a1)
@@ -340,7 +367,7 @@ public final class CdGameOver {
             main(pool.state(whole), effects);
             return;
         }
-        effects.add(new SubCpuRequest(SubCpuCommand.SCMD_GMOVERMUS));            // MOVE.W #SCMD_GMOVERMUS,d0 / JMP SubCPUCmd
+        sound(effects,SubCpuCommand.SCMD_GMOVERMUS);            // MOVE.W #SCMD_GMOVERMUS,d0 / JMP SubCPUCmd
         effects.add(new CallReturned(NativeCall.INIT));
     }
 
@@ -352,21 +379,85 @@ public final class CdGameOver {
         if (destination != x) {                                                  // CMP.W oX(a0),d1 / BEQ.S .Draw
             int d0 = (short) destination >= (short) x ? SPEED : -SPEED;          // BGE.S .AddX is signed / NEG.W d0
             state = state.moveWord(X, x + d0);                                   // .AddX: ADD.W d0,oX(a0): the word only
-            pool.write(state);
+            write(state);
         }
         effects.add(new CallReturned(NativeCall.MAIN));
-        drawObject.drawObject(pool, state.identity());                           // .Draw: JMP DrawObject
+        draw(state.identity());                           // .Draw: JMP DrawObject
         effects.add(new CallReturned(NativeCall.DRAW_OBJECT));
     }
 
     private void delete(int whole, DeleteEntry entry, List<Effect> effects) {
-        runtime.pool().deleteObject(whole);                                      // DeleteObject: all 16 longwords
+        deleteStore(whole);                                      // DeleteObject: all 16 longwords
         effects.add(new Deleted(entry));
     }
 
-    private static Globals read(GlobalsPort globals) {
-        return Objects.requireNonNull(globals.read(), "Game Over globals");
+    private Globals read(GlobalsPort globals) {
+        if(observer==null)return Objects.requireNonNull(globals.read(),"Game Over globals");
+        var cut=runtime.capture();return observed(new ReadCall(cut,source()),cut,r->Objects.requireNonNull(globals.read(),"Game Over globals"));
     }
+
+    // BEGIN R13 ORIGINAL GAME OVER OPERATION SEAM 20261107
+    /** Opted-in R13 ports execute original requests synchronously. Returned Effect metadata is
+     * comparison-only there; legacy constructor callers retain their existing after-return contract. */
+    public record Publication(CdObjectPlacementRuntime.Snapshot cut,CdObjectState source,CdObjectState before,CdObjectState output){}
+    public record ReadCall(CdObjectPlacementRuntime.Snapshot cut,CdObjectState source){}
+    public enum Scalar { POWERUP, TIME_OVER }
+    public record ScalarCall(CdObjectPlacementRuntime.Snapshot cut,CdObjectState source,Scalar field,int value){public ScalarCall{Objects.requireNonNull(field);byteValue(value,"GameOver scalar");}}
+    public record SoundCall(CdObjectPlacementRuntime.Snapshot cut,CdObjectState source,SubCpuCommand command){public SoundCall{Objects.requireNonNull(command);}}
+    public record DrawCall(CdObjectPlacementRuntime.Snapshot cut,CdObjectState source){}
+    public record CompletionCall(CdObjectPlacementRuntime.Snapshot cut,CdObjectState source){}
+    public interface DispatchObserver{void beforeOperation(Object call);void afterOperation(Object call);void failedOperation(Object call,Throwable original);}
+    public interface ReceiptGuard{void prepared(Object call);void completed(Object call);}
+    @FunctionalInterface public interface SubCpuPort{void command(SubCpuCommand command);}
+    private DispatchObserver observer;private ReceiptGuard receiptGuard;private SubCpuPort subCpu;
+    private boolean running,failed,primitive,resultReady;private int activeWhole;private long ordinal;private Object pending,operationResult;
+    /** Same original algorithm over the exact actual placement/source/metadata. Legacy constructor is unchanged. */
+    public static CdGameOver fromAct3FutureAssets(CdObjectPlacementRuntime runtime,CdR13FutureAssets assets,CdR13ObjectAssets owner,
+            DrawObjectCall draw,SubCpuPort sound,DispatchObserver observer,ReceiptGuard guard){
+        Objects.requireNonNull(runtime);Objects.requireNonNull(assets);if(!runtime.ownsAct3FutureAssets(assets))throw new IllegalArgumentException("Different R13 GameOver placement");
+        var result=new CdGameOver(runtime,Assets.fromAct3FutureAssets(assets,owner),draw);result.subCpu=Objects.requireNonNull(sound);result.observer=Objects.requireNonNull(observer);result.receiptGuard=Objects.requireNonNull(guard);return result;
+    }
+    public boolean isCurrentCall(Object call){return running&&call!=null&&pending==call;}
+    public boolean isCurrentPrimitive(Object call){return isCurrentCall(call)&&primitive;}
+    public long currentOrdinal(Object call){if(!isCurrentCall(call))throw new IllegalStateException("No original GameOver operation");return ordinal;}
+    public Object currentResult(Object call){if(!isCurrentCall(call)||!resultReady||primitive)throw new IllegalStateException("No original completed GameOver operation");return operationResult;}
+    private CdObjectState source(){return runtime.pool().state(activeWhole);}
+    private static final class Receipt{List<CdObjectState> expected;int deleted=-1;Receipt(CdObjectPlacementRuntime.Snapshot cut){expected=cut.pool().slots();}}
+    @FunctionalInterface private interface Operation<T>{T run(Receipt receipt);}
+    private <T>T observed(Object call,CdObjectPlacementRuntime.Snapshot cut,Operation<T> operation){
+        if(pending!=null)throw new IllegalStateException("Nested GameOver operation");pending=call;ordinal++;resultReady=false;var receipt=new Receipt(cut);
+        try{verify(cut,receipt);observer.beforeOperation(call);verify(cut,receipt);receiptGuard.prepared(call);verify(cut,receipt);
+            T result;primitive=true;try{result=operation.run(receipt);}finally{primitive=false;}verify(cut,receipt);operationResult=result;resultReady=true;
+            observer.afterOperation(call);verify(cut,receipt);receiptGuard.completed(call);verify(cut,receipt);return result;
+        }catch(RuntimeException|Error original){suppress(original,()->verify(cut,receipt));suppress(original,()->observer.failedOperation(call,original));suppress(original,()->verify(cut,receipt));throw original;}
+        finally{primitive=false;pending=null;operationResult=null;resultReady=false;}
+    }
+    private void verify(CdObjectPlacementRuntime.Snapshot cut,Receipt receipt){
+        runtime.validateRestore(cut);var actual=runtime.capture();if(!actual.status().equals(cut.status())||!java.util.Arrays.equals(actual.savedFlags().copy(),cut.savedFlags().copy()))throw new IllegalStateException("GameOver changed placement/saved nonwrites");
+        for(int n=0;n<96;n++){byte[] expected=n+32==receipt.deleted?new byte[64]:receipt.expected.get(n).copyBytes();if(!java.util.Arrays.equals(expected,actual.pool().slots().get(n).copyBytes()))throw new IllegalStateException("GameOver changed unowned full96 bytes at "+(n+32));}
+    }
+    private static void suppress(Throwable original,Runnable check){try{check.run();}catch(RuntimeException|Error failure){if(failure!=original)original.addSuppressed(failure);}}
+    private void write(CdObjectState output){
+        if(observer==null){runtime.pool().write(output);return;}var cut=runtime.capture();var before=runtime.pool().state(output.identity().wholeIndex());var next=CdObjectPool.overlay(cut.pool(),List.of(output));
+        observed(new Publication(cut,source(),before,output),cut,r->{runtime.pool().write(output);r.expected=next.slots();return null;});
+    }
+    private void deleteStore(int whole){
+        if(observer==null){runtime.pool().deleteObject(whole);return;}var cut=runtime.capture();observed(new Publication(cut,source(),source(),null),cut,r->{runtime.pool().deleteObject(whole);r.deleted=whole;return null;});
+    }
+    private void writePowerup(GlobalsPort globals,int value){
+        if(observer==null){globals.writePowerup(value);return;}var cut=runtime.capture();observed(new ScalarCall(cut,source(),Scalar.POWERUP,value),cut,r->{globals.writePowerup(value);return null;});
+    }
+    private void writeTimeOver(GlobalsPort globals,int value){
+        if(observer==null){globals.writeTimeOver(value);return;}var cut=runtime.capture();observed(new ScalarCall(cut,source(),Scalar.TIME_OVER,value),cut,r->{globals.writeTimeOver(value);return null;});
+    }
+    private void sound(List<Effect> effects,SubCpuCommand command){
+        if(observer!=null){var cut=runtime.capture();observed(new SoundCall(cut,source(),command),cut,r->{subCpu.command(command);return null;});}effects.add(new SubCpuRequest(command));
+    }
+    private void draw(CdObjectState.Identity identity){
+        if(observer==null){drawObject.drawObject(runtime.pool(),identity);return;}var cut=runtime.capture();var source=source();
+        observed(new DrawCall(cut,source),cut,r->{try{drawObject.drawObject(runtime.pool(),identity);}finally{int flags=runtime.pool().state(identity.wholeIndex()).spriteFlags();r.expected=CdObjectPool.overlay(cut.pool(),List.of(source.moveByte(SPRITE_FLAGS,flags))).slots();}return null;});
+    }
+    // END R13 ORIGINAL GAME OVER OPERATION SEAM 20261107
 
     private static void byteValue(int value, String name) {
         if ((value & ~0xFF) != 0) { throw new IllegalArgumentException(name + " must be an unsigned native byte"); }
