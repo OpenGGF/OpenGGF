@@ -78,7 +78,8 @@ import java.util.OptionalInt;
  * separately named terrain-only and USA opening-object development PLAYER entries.
  * The opening entry executes the bounded Ring/Mosqui owners, not a retail title
  * ingress or full route. Native title/new-game/HUD/audio driver, saves, export and
- * editor entry remain unavailable.
+ * editor entry remain unavailable from those default/development entries. The distinct selected-profile
+ * entry owns pre-level storage/progress only and fences actual programme/clock/level admission.
  * The full native metadata catalogue is not a load-capability list. GameLoop
  * remains the sole mode writer.
  */
@@ -97,6 +98,8 @@ public final class SonicCdGameModule implements GameModule {
     private final SonicCdPlayerInitProfile playerProfile;
     private final PlayableCharacterRegistry characters;
     private CdGameDataSource source;
+    private final CdSelectedProfileVisit selectedProfile;
+    private final Object selectedProfileInvocation;
     private GameplayModeContext playerMode;
     private CdPlayerFrameRuntime playerFrame;
     private CdPlayableSonic playerActor;
@@ -133,7 +136,7 @@ public final class SonicCdGameModule implements GameModule {
                 ||image.cut()!=cut||image.facts()==null)throw new IllegalArgumentException("Foreign progress/source/lifetime/shared capture pair");
     }
     /** Pure observation only; live timeStones is sampled from its actual current programme owner. */
-    CdIpxProgress.State ipxProgressState(){return ipxProgress.project(levelProgramState().timeStones());}
+    CdIpxProgress.State ipxProgressState(){if(selectedProfile!=null)return selectedProfile.state().progress();return ipxProgress.project(levelProgramState().timeStones());}
     // END IPX PERSISTENT PROGRESS OWNER 20261107
 
     // R13 is admitted only by the privately staged, completed old R12B/IPX return.
@@ -2373,6 +2376,12 @@ public final class SonicCdGameModule implements GameModule {
 
     private SonicCdGameModule(boolean playerAdmission, boolean openingObjectsAdmission,
                               CdProgramInitialization.ExecutionEnvironment explicitEnvironment) {
+        this(playerAdmission, openingObjectsAdmission, explicitEnvironment, null);
+    }
+
+    private SonicCdGameModule(boolean playerAdmission, boolean openingObjectsAdmission,
+                              CdProgramInitialization.ExecutionEnvironment explicitEnvironment,
+                              CdSelectedProfileVisit.Prepared selected) {
         coldProgramStartAdmission = explicitEnvironment != null;
         programServices = initialProgramServices(explicitEnvironment);
         this.playerAdmission = playerAdmission;
@@ -2386,7 +2395,85 @@ public final class SonicCdGameModule implements GameModule {
                         this::constructTerrainPlayer, null, PlayerCharacter.SONIC_ALONE, SecondaryAbility.NONE, false,
                         code -> { throw SonicCd.unsupported("generic playable-art loading; CD owns its complete resident bank"); }))
                 : PlayableCharacterRegistry.empty();
+        selectedProfileInvocation = selected == null ? null : new Object();
+        selectedProfile = selected == null ? null : new CdSelectedProfileVisit(this, selected, selectedProfileInvocation);
     }
+
+    // BEGIN actual selected-profile pre-level Module owner 20261107.
+    /** Supplied engine-menu request only; this does not execute or certify native Title. */
+    public enum ProfileEntry { NEW_GAME, LOAD_GAME }
+    /** Actual storage outcome; only this factory can construct an attempt/fresh Module bundle. */
+    public static final class SelectedProfileAttempt {
+        private final CdSaveProfileBootstrap.Result result;private final SonicCdGameModule module;
+        private SelectedProfileAttempt(CdSaveProfileBootstrap.Result result,SonicCdGameModule module){this.result=result;this.module=module;}
+        public String outcome(){return result.disposition().name();}
+        public Optional<SonicCdGameModule> module(){return Optional.ofNullable(module);}
+        public Optional<Throwable> failure(){return result.failure();}
+        public Optional<Throwable> quarantineFailure(){return result.quarantineFailure();}
+        public Optional<Throwable> cleanupFailure(){return result.cleanupFailure();}
+        public Optional<Boolean> persistentPublication(){return result.persistentPublication();}
+    }
+    /** Real strict selected-slot storage, original same-CUE source, and a fresh pre-level Module.
+     * No existing Module is mutated; enum/attempt values grant no World or programme-entry authority. */
+    public static SelectedProfileAttempt prepareSelectedProfile(CdGameDataSource source,
+            com.openggf.game.save.SaveManager manager,int slot,ProfileEntry entry){
+        var prepared=CdSelectedProfileVisit.prepare(source,manager,slot,entry);
+        var module=prepared.healthy()?new SonicCdGameModule(true,true,null,prepared):null;
+        return new SelectedProfileAttempt(prepared.result(),module);
+    }
+    boolean ownsSelectedProfileVisit(CdSelectedProfileVisit expected){return selectedProfile!=null&&selectedProfile==expected;}
+    CdSelectedProfileVisit.State selectedProfileState(){if(selectedProfile==null)throw new IllegalStateException("No selected profile owner");return selectedProfile.state();}
+    private void runSelectedProfile(CdGameDataSource candidate){
+        var world=SessionManager.getCurrentWorldSession();
+        if(world==null||world.rootGameModule()!=this||world.resolvedGameModule()!=this||world.getDataSource()!=candidate||candidate!=selectedProfile.source()
+                ||SessionManager.getCurrentGameplayMode()==null||SessionManager.getCurrentGameplayMode().getWorldSession()!=world)
+            throw new IllegalStateException("Actual selected fresh Module/source/World required");
+        var context=world.getSaveSessionContext();
+        if(context==null||!getGameCode().equals(context.gameCode())||context.activeSlot().isEmpty())throw new IllegalStateException("Actual final selected save context required");
+        // World/context/source validation in the visit precedes any initial publication or I/O.
+        selectedProfile.run(world,original->{
+            selectedProfile.requirePublication(this,original);
+            if(playerFrame!=null||playerActor!=null||openingObjects!=null||levelProgram!=null||stagedRestart!=null||stagedPast!=null||stagedAct2!=null||stagedAct2Past!=null||stagedAct3Future!=null)
+                throw new IllegalStateException("Selected pre-level visit cannot borrow an old gameplay owner");
+            var before=ipxProgress;var services=programServices;var lifetime=ipxProgressLifetime;var priorSource=this.source;
+            var expected=IpxProgressFacts.from(original.before().progress());
+            if(!before.equals(expected))throw new IllegalStateException("Selected complete progress preimage differs");
+            var ready=IpxProgressFacts.from(original.after().progress()); // every fallible aggregate BEFORE the first store
+            selectedProfile.requirePublication(this,original);
+            if(ipxProgress!=before||programServices!=services||ipxProgressLifetime!=lifetime||this.source!=priorSource)
+                throw new IllegalStateException("Selected Module complete preimage changed");
+            original.applyNative(this);this.source=candidate;ipxProgress=ready;
+        },selectedProfileInvocation);
+        throw new AssertionError("Selected native programme entry must remain an explicit boundary");
+    }
+    private record SelectedShared(SonicCdGameModule owner,CdGameDataSource source,Object progressLifetime,
+                                  CdSelectedProfileVisit.Snapshot visit,IpxProgressFacts facts) { }
+    private com.openggf.game.session.WorldSessionPolicyState openSelectedProfilePolicy(WorldSession world){
+        return new com.openggf.game.session.WorldSessionPolicyState(){
+            private void requireInstalled(){if(com.openggf.game.session.WorldSessionPolicyAccess.getService(world,getClass())!=this)throw new IllegalStateException("Not this World's original selected policy");}
+            private final RewindSnapshottable<SelectedShared> capture=new RewindSnapshottable<>(){
+                @Override public String key(){return "soniccd-selected-profile-pre-level";}
+                @Override public SelectedShared capture(){requireInstalled();return new SelectedShared(SonicCdGameModule.this,source,ipxProgressLifetime,selectedProfile.capture(world),ipxProgress);}
+                @Override public void restore(SelectedShared image){
+                    requireInstalled();
+                    if(image==null||image.owner()!=SonicCdGameModule.this||image.source()!=source||image.progressLifetime()!=ipxProgressLifetime)
+                        throw new IllegalArgumentException("Foreign selected Module/source/progress capture");
+                    selectedProfile.validateRestore(image.visit(),world);var ready=IpxProgressFacts.from(image.visit().state().progress());
+                    if(!ready.equals(image.facts()))throw new IllegalArgumentException("Selected complete progress/capture pair differs");
+                    selectedProfile.restore(image.visit(),world);ipxProgress=image.facts();
+                }
+            };
+            @Override public <T>T getService(Class<T> type){return type==getClass()?type.cast(this):null;}
+            @Override public RewindSnapshottable<?> rewindAdapter(){return capture;}
+            @Override public void beforeAssembly(LevelLoadCause cause){ }
+            @Override public void bindRoster(com.openggf.sprites.managers.SpriteManager sprites){ }
+            @Override public void failedAssembly(LevelLoadCause cause){ }
+            @Override public void closeScreens(){ }
+            @Override public boolean holdsGameplay(){return true;} // no clock/ordinary level owner is admitted
+            @Override public void retire(){requireInstalled();if(SessionManager.getCurrentWorldSession()==world)throw new IllegalStateException("Actual World retirement must precede selected profile retirement");selectedProfile.retire(world);}
+        };
+    }
+    // END actual selected-profile pre-level Module owner.
 
     /** Explicit private development entry; does not change the stock registry or menu. */
     public static SonicCdGameModule terrainOnlyDevelopmentPlayer() { return new SonicCdGameModule(true, false); }
@@ -2401,6 +2488,7 @@ public final class SonicCdGameModule implements GameModule {
     }
 
     @Override public String getIdentifier() {
+        if(selectedProfile!=null)return "Sonic CD (selected profile; pre-level native programme entry fenced)";
         return openingObjectsAdmission ? "Sonic CD (development USA R11A opening objects PLAYER)"
                 : playerAdmission ? "Sonic CD (development terrain-only R11A PLAYER)" : "Sonic CD (development STATIC R11A)";
     }
@@ -2408,6 +2496,7 @@ public final class SonicCdGameModule implements GameModule {
 
     @Override public Game createGame(GameDataSource dataSource) {
         CdGameDataSource candidate = SonicCd.requireSource(dataSource);
+        if(selectedProfile!=null)runSelectedProfile(candidate);
         authenticateOpeningSource(candidate); // Actual retained media before replacing source/presentation state.
         if (source != null && !source.identity().equals(candidate.identity())) {
             throw new IllegalArgumentException("CD module is pinned to another authenticated source; open a new module/world");
@@ -3230,10 +3319,13 @@ public final class SonicCdGameModule implements GameModule {
     @Override public GameplayFrameController gameplayFrameController() { return playerAdmission ? playerPresentation : presentation; }
     @Override public PlayableCharacterRegistry getPlayableCharacterRegistry() { return characters; }
     @Override public List<RewindSnapshottable<?>> rewindAdapters() {
+        if(selectedProfile!=null)return List.of(); // actual World policy owns the pre-level profile capture
         return openingObjectsAdmission ? List.of(sharedOpeningAdapter)
                 : playerAdmission ? List.of(sharedPlayerAdapter) : List.of();
     }
     @Override public <T> T getGameService(Class<T> type) {
+        if(selectedProfile!=null&&type==com.openggf.game.session.WorldSessionPolicyProvider.class)
+            return type.cast((com.openggf.game.session.WorldSessionPolicyProvider)this::openSelectedProfilePolicy);
         if (openingObjectsAdmission) {
             // Even a failed owner remains selected until teardown: returning null here
             // would silently fall back to normal gameplay after a terminal failure.
@@ -3246,5 +3338,5 @@ public final class SonicCdGameModule implements GameModule {
     @Override public void onNewGameFromTitle(GameStateManager gameState) { throw SonicCd.unsupported("native new-game entry"); }
     @Override public TitleScreenProvider getTitleScreenProvider() { throw SonicCd.unsupported("native title entry"); }
     @Override public LevelSelectProvider getLevelSelectProvider() { throw SonicCd.unsupported("native level select"); }
-    @Override public SaveSnapshotProvider getSaveSnapshotProvider() { throw SonicCd.unsupported("campaign saves/BRAM"); }
+    @Override public SaveSnapshotProvider getSaveSnapshotProvider() { if(selectedProfile!=null)return selectedProfile.genericProvider();throw SonicCd.unsupported("campaign saves/BRAM"); }
 }

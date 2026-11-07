@@ -1,5 +1,30 @@
 # Implement Sonic CD with complete regional parity
 
+## 7 November 2026 — selected-slot Module pre-level ownership
+
+An explicit selected-slot factory now prepares a fresh Module from real strict
+storage and the same original initial-save source. Engine-menu NEW_GAME/LOAD_GAME
+intent stays distinct from created/existing storage origin. Only the actual
+SessionManager World, source reference and final scd slot context admit the
+private invocation. It performs initialization-local policy/read/write, the704-byte
+temporary afterimage with two independently unknown tail bytes, separate IPX reads,
+menu/reset stores and the reached synchronous save. Main stones and the four Sub
+special-stage reset fields remain separate. Capture/restore uses the original
+installed World policy and I/O lifetime; generic cartridge restoration rejects.
+
+The healthy visit stops precisely before its R11/R31 programme entry, or before a
+later zone's unowned RunRx save continuation. It creates no actor, Frame, Core,
+clock seed or DEV readiness. The old DEV route and its unknown history remain
+unchanged. This supplies neither native Title/firmware behavior nor R31 loading.
+
+R63 discovers90cases on unchanged source:88pass/2new fixture failures/0errors/
+skips; all71 existing cases pass. Root corrects only the fixture prerequisite
+(resetAll creates a standard World, so clear it before demanding no World) and
+its expected existing UnsupportedOperationException from DEV admission. R63R2
+then passes90/0/0/0, unchanged source. Independent bounded review identifies that
+same exception mismatch and no additional actionable production P1/P2. No save
+was read or written outside TempDir validation. Broad smoke remains incomplete.
+
 ## 7 November 2026 — original R3PCM source and finite loader selection
 
 The exact original-USA R3PCM file now detaches through the existing complete-disc

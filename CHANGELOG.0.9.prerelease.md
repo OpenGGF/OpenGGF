@@ -337,8 +337,11 @@ matching area heading; see the
   from corrupt, quarantined or unknown history and uses the existing save writer
   for exclusive fresh publication in the canonical CD namespace. Historical values, unknown native tails,
   conflicts and cleanup/completion failures stay distinct; published SaveManager
-  signatures and legacy behavior remain unchanged. Frontend/Module save binding
-  and native progress completion remain separate; initialization-local buffer
+  signatures and legacy behavior remain unchanged. A fresh selected-slot Module
+  now owns the real World/slot-bound initialization cache, separate IPX reads,
+  engine-menu intent and synchronous save prefixes, stopping before programme
+  loading without a DEV seed or Frame. Native Title and live loading remain
+  separate; initialization-local buffer
   commands are distinguished from later IPX progress calls. Data custody
   grants no next-zone gameplay. The exact original-USA R3PCM file and finite
   loader source/initial-variable selection now remain distinct from R1, preserving
