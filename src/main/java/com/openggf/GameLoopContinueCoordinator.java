@@ -134,7 +134,6 @@ final class GameLoopContinueCoordinator {
     void restartFromCheckpointAfterDeath() {
         loop.levelManager.restartCurrentLevelFromCheckpointAfterDeath();
         loop.activateScheduledPlaybackForLoadedLevel();
-        GameLoopPlcLifecycle.startFromBlack(loop.resolveGameplayModeContext(), loop.fadeManager, null);
         loop.announceHostedRunLevelReady(true);
     }
 

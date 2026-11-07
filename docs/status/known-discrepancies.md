@@ -12,7 +12,7 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 
 ## Hosted Competition checkpoint reload and monitor OFF (2026-11-07)
 
-`FAST_FROM_CHECKPOINT` omits the death reload's fade to black and initial title-card
+`FAST_FROM_CHECKPOINT` omits the death reload's fades and initial title-card
 presentation. The ordinary native death decision still takes a life and selects
 GAME OVER or TIME OVER. The shared LevelManager reload owner preserves the banked
 star post, its act timer and the game's normal respawn consequences. Hosted attempt

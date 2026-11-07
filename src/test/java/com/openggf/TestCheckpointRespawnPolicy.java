@@ -58,13 +58,16 @@ class TestCheckpointRespawnPolicy {
             assertEquals(LevelStartCause.CHECKPOINT_RESPAWN,starts.getFirst().cause());
             assertTrue(steps.getLast().ordinal()>4,"checkpoint respawn must retain the attempt step ordinal");
         } else {
-            // Native death decision runs before the reload owner, on both live and replay paths.
-            for(int frame=0;frame<600 && state.getLives()==initialLives;frame++) loop.step();
+            // Life loss precedes the native restart request. Wait for the actual production
+            // boundary, then consume it just as GameLoop does before calling the same owner.
+            for(int frame=0;frame<600 && !level.isRespawnRequestedForRewind();frame++) loop.step();
+            assertTrue(level.consumeRespawnRequest(),"native death routine must request respawn before a direct reload");
             level.restartCurrentLevelFromCheckpointAfterDeath();
         }
         player = (AbstractPlayableSprite)GameServices.camera().getFocusedSprite();
         assertFalse(player.getDead());
         assertFalse(level.isTitleCardRequested());
+        assertFalse(context.getFadeManager().isActive(),"checkpoint continuation must not add a live-only fade");
         assertEquals(initialLives-1,state.getLives());
         return new Result(new Core(player.getCentreX(),player.getCentreY(),level.getLevelGamestate().getTimerFrames(),
                 level.getLevelGamestate().getRings(),state.getLives(),level.getCheckpointState().getLastCheckpointIndex()),
