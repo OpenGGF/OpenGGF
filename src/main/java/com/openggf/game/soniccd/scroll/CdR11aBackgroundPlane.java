@@ -11,8 +11,11 @@ import com.openggf.game.soniccd.level.CdR12bProfile;
 import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
 import com.openggf.game.soniccd.level.CdStageTerrain;
 import com.openggf.game.soniccd.level.CdR13PlaneSources;
+import com.openggf.game.soniccd.level.CdR31aAssets;
 
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
@@ -181,6 +184,54 @@ public final class CdR11aBackgroundPlane {
         this.terrainBlocks = terrain.blocks(); this.terrainChunks = terrain.chunks();
         this.terrainLayout = terrain.layout().ram(); this.initialRowMask = 0x1F0;
     }
+
+    // BEGIN R31 original-source profile; all old constructors and drawing kernels stay exact.
+    /**
+     * Original USA R31A data binding. N1ecc Stage Draw (Act 1 Present).asm:262-300
+     * selects the actual50-byte BG_SECTIONS/four-pointer BG_POINTERS with initial mask$3F0.
+     * No Frame, World, copied/live camera service, display, current art or startup grant.
+     */
+    public static CdR11aBackgroundPlane bindR31a(CdR31aAssets assets) throws IOException {
+        Objects.requireNonNull(assets, "actual original R31A source");
+        return new CdR11aBackgroundPlane(assets, assets.terrain());
+    }
+
+    /**
+     * Explicit immutable current layout/chunk definitions over the same original R31 material.
+     * Value equality grants no runtime/mutation owner or invocation authority. No data defaults.
+     */
+    public static CdR11aBackgroundPlane bindR31a(CdR31aAssets assets, CdStageTerrain currentTerrain)
+            throws IOException {
+        return new CdR11aBackgroundPlane(Objects.requireNonNull(assets, "actual original R31A source"),
+                Objects.requireNonNull(currentTerrain, "explicit current R31A terrain"));
+    }
+
+    private CdR11aBackgroundPlane(CdR31aAssets assets, CdStageTerrain current) throws IOException {
+        var original = assets.terrain();
+        if (current.shape() != CdStageTerrain.Shape.CCZ1_PRESENT
+                || original.shape() != CdStageTerrain.Shape.CCZ1_PRESENT
+                || !sameMaterial(current.blocks(), original.blocks())
+                || !sameMaterial(current.patterns(), original.patterns())
+                || !sameMaterial(current.collision().ids(), original.collision().ids())
+                || !sameMaterial(current.collision().angles(), original.collision().angles())
+                || !sameMaterial(current.collision().heights(), original.collision().heights())
+                || !sameMaterial(current.collision().widths(), original.collision().widths())) {
+            throw new IllegalArgumentException("Current terrain must preserve original R31A shape and material");
+        }
+        this.ids = assets.view(CdR31aAssets.Asset.BG_SECTIONS);
+        this.livePointers = assets.view(CdR31aAssets.Asset.BG_POINTERS);
+        shape(ids, 50, Boundary.TABLE_SHAPE);
+        shape(livePointers, 16, Boundary.TABLE_SHAPE);
+        this.terrainBlocks = current.blocks();
+        this.terrainChunks = current.chunks();
+        this.terrainLayout = current.layout().ram();
+        this.initialRowMask = 0x3F0;
+    }
+
+    private static boolean sameMaterial(CdAssetBytes current, CdAssetBytes original) {
+        return current == original || Arrays.equals(current.copy(), original.copy());
+    }
+    // END R31 original-source profile.
 
     // Past InitLevelDrawBG:899-914, BGCameraSectIDs/BGCameraSects:934-947, N1ecc5f3a.
     // Same DrawLevelBG1/Block Draw algorithm; only source shapes and initial row mask differ.

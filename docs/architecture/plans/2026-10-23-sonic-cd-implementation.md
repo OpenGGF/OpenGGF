@@ -1,5 +1,28 @@
 # Implement Sonic CD with complete regional parity
 
+## 7 November 2026 — original Collision Chaos background components
+
+The shared background drawing kernel now has two explicit R31 bindings over the
+actual50-byte section/16-byte pointer tables and native3F0 initial mask. Current
+chunks/layouts remain explicit while original blocks/patterns/collision material
+must match. Every old constructor and drawing kernel stays byte-exact; first
+missing section50 and raw chunk128 remain reached faults rather than padded data.
+
+A distinct pure CCZ scroll component consumes the actual repeat/water/wobble
+views and caller-supplied post-event/foreground values. It preserves fractions,
+WORD/LONG wrap and DIVS overflow, high-byte crossing flags, actual water phase,
+254 deformation WORD stores and233–240 HScroll LONGs with untouched tails.
+Earlier event/flag clears are not moved into this slice. Reached immutable fault
+prefixes describe comparisons only; they confer no publication or resume right.
+
+R66 passes135cases on unchanged source with0failures/errors/skips:12new drawing,
+44new scroll and79existing background-plane cases. Root compared the bounded
+source arithmetic/order and unchanged drawing-kernel inverse. Original-USA
+source cases execute, while dirty/current/malformed vectors remain explicitly
+constructed. The run uses the installed explicit nested-report tool candidate
+(441Python checks pass; independent tool review pending) and checks all six fresh
+suite reports. No R31 loader, Frame, Ready, current-art pixels or World is admitted.
+
 ## 7 November 2026 — same-CUE R3PCM stock custody
 
 Stock USA preparation now retains the original R3PCM file after its existing

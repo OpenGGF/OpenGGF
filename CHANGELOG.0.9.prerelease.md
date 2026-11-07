@@ -326,7 +326,10 @@ matching area heading; see the
   against the resulting chunk image; ordinary Frame/World admission stays gated.
   Complete R31 PLC/section/residency components and
   exact-source raw2C touch/response views retain their native distinctions without
-  granting World admission. Existing PPZ movement algorithms remain unchanged.
+  granting World admission. Source-bound Collision Chaos background drawing now
+  uses its exact50/16-byte tables and3F0 mask; a pure scroll/deformation/water owner
+  retains native fractions, flags, wraps and finite tails. Existing PPZ drawing
+  and movement algorithms remain unchanged; live R31 loading stays separate.
   A finite IPX progress
   component preserves unknown-byte and save-field alias semantics. Its actual
   boss-return join now publishes saved-zone/checkpoint state once and retains it
