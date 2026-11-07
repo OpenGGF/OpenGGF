@@ -28,8 +28,9 @@ final class NativeTeleportTestWorld {
     final Sonic2NativeCompetitionHost host;
     final Sonic2CompetitionNativeState nativeState;
     int planeSwaps;
-    private NativeTeleportTestWorld(com.openggf.GameLoop loop, EngineContext services) {
-        nativeState = new Sonic2CompetitionNativeState(backgrounds, () -> planeSwaps++);
+    private NativeTeleportTestWorld(com.openggf.GameLoop loop, EngineContext services, Sonic2TeleportPorts.ObjectFields fields) {
+        nativeState = fields == null ? new Sonic2CompetitionNativeState(backgrounds, () -> planeSwaps++)
+                : new Sonic2CompetitionNativeState(backgrounds, () -> planeSwaps++, fields);
         host = new Sonic2NativeCompetitionHost(SessionManager.getCurrentWorldSession().rootGameModule(), services,
                 loop::setGameplayMode, new Sonic2NativeCompetitionHost.Views() {
                     public void prepare(GameplayModeContext c, Sonic2CompetitionSession s,
@@ -76,7 +77,8 @@ final class NativeTeleportTestWorld {
         }
         return source;
     }
-    static void run(Check check) throws Exception {
+    static void run(Check check) throws Exception { run(null, check); }
+    static void run(Sonic2TeleportPorts.ObjectFields fields, Check check) throws Exception {
         var services=EngineServices.current(); var config=services.configuration();
         var before=new EnumMap<SonicConfiguration,Object>(SonicConfiguration.class);
         for (var key:SonicConfiguration.values()) before.put(key,config.getConfigValue(key));
@@ -92,7 +94,7 @@ final class NativeTeleportTestWorld {
             config.resolveDisplayAspect();
             try (var boot=new HeadlessGameBoot(320,224,services)) {
                 var loop=boot.boot(RomTestUtils.ensureSonic2RomAvailable().toPath().toAbsolutePath(),0,0);
-                check.run(new NativeTeleportTestWorld(loop,services));
+                check.run(new NativeTeleportTestWorld(loop,services,fields));
             }
         } finally {
             com.openggf.tests.TestEnvironment.resetAll();

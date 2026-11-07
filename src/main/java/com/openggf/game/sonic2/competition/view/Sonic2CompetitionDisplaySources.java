@@ -24,7 +24,9 @@ public final class Sonic2CompetitionDisplaySources {
         int ordinal = 0;
         for (int bucket = 0; bucket < 8; bucket++) {
             for (int slot = 0; slot < 2; slot++) if (session.player(slot).getPriorityBucket() == bucket) {
-                var body = Sonic2CompetitionPlayerDisplay.body(rom, session.player(slot), slot);
+                var body = Sonic2CompetitionPlayerDisplay.body(rom, session.player(slot), slot,
+                        com.openggf.sprites.managers.SpriteManagerInternalAccess.nativeDisplayAdmission(
+                                context.getSpriteManager(), session.player(slot)));
                 if (body != null) admissions.add(new Admission(slot, bucket, ordinal++, body));
             }
             for (var object : objects) if (object.bucket() == bucket)

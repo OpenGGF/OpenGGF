@@ -38,12 +38,19 @@ public final class Sonic2CompetitionRuntimeModule extends DelegatingGameModule {
     private final Sonic2CompetitionLifecycle lifecycle;
     private final Sonic2CompetitionScrollSourceAdapter scroll;
     private Sonic2CompetitionVideoFrame videoFrame;
+    private final Sonic2CompetitionPlaneScroll planeScroll;
+    Sonic2CompetitionScrollSourceAdapter scroll() { return scroll; }
+    Sonic2CompetitionPlaneScroll planeScroll() { return planeScroll; }
+    void clearMenuCameraRam() { planeScroll.menuClear(); scroll.owner().menuClear(); }
     private Sonic2CompetitionHudArt hudArt;
+    private final com.openggf.game.sonic2.competition.state.Sonic2CompetitionRingAnimation rings =
+            new com.openggf.game.sonic2.competition.state.Sonic2CompetitionRingAnimation();
 
     public Sonic2CompetitionRuntimeModule(GameModule base, Sonic2NativeCompetitionHost host) throws IOException {
         super(base, "engine:s2-native-competition");
         if (base.getGameId() != GameId.S2) throw new IllegalArgumentException("S2 ROM module required");
         this.host = Objects.requireNonNull(host, "host");
+        planeScroll = host.retainedPlaneScroll();
         scroll = new Sonic2CompetitionScrollSourceAdapter(host.rom(), base.getScrollHandlerProvider().getZoneConstants());
         this.profile = new Sonic2CompetitionLevelInitProfile(host);
         if (!(base.getTitleCardProvider() instanceof TitleCardManager title))
@@ -51,7 +58,10 @@ public final class Sonic2CompetitionRuntimeModule extends DelegatingGameModule {
         nativeTitle = title;
         features = new Sonic2CompetitionZoneFeatures(host);
         this.events = new Sonic2CompetitionLevelEvents(host.session(), nativeTitle,
-                host::deformNativeEntry, this::completeCameraPass);
+                host::deformNativeEntry, this::completeCameraPass, () -> {
+                    // Level_MainLoop skips ChangeRingFrame on Level_Inactive_flag.
+                    if (!host.context().getLevelManager().isLevelInactiveForTransition()) rings.changeRingFrame();
+                });
         lifecycle = new Sonic2CompetitionLifecycle(host.rom(), host.session(), (slot, timeOver) -> {
             var context = host.context();
             var flow = context.getWorldSession().getGameModule().getGameOverFlowProvider();
@@ -68,6 +78,7 @@ public final class Sonic2CompetitionRuntimeModule extends DelegatingGameModule {
 
     @Override public LevelInitProfile getLevelInitProfile() { return profile; }
     @Override public LevelEventProvider getLevelEventProvider() { return events; }
+    void clearRingAnimation() { rings.clearLevel(); }
     void initializeBoundaryWords() {
         events.initializeBoundaryWords();
         installDisplayArtOwners();
@@ -97,12 +108,15 @@ public final class Sonic2CompetitionRuntimeModule extends DelegatingGameModule {
         var context = host.context();
         var session = host.session();
         scroll.initialize(host.profile(), session);
-        scroll.applyLoadedLayerDefinition(host.nativeArt());
+        // Level's initial deformation precedes its explicit FG/H-scroll clears,
+        // loaded block-map writes and initial BG draw (s2.asm:4930-4941).
+        scroll.completeCameraPass(session, host.initialVintRunCount());
+        scroll.owner().clearInitialDisplayScroll();
         var planes = new Sonic2CompetitionPlanes();
-        var planeScroll = new Sonic2CompetitionPlaneScroll();
-        planeScroll.initialize(session.camera(0).getX(), session.camera(0).getY(),
+        planeScroll.initializeLevel(planeScroll.capture(), session.camera(0).getX(), session.camera(0).getY(),
                 session.camera(1).getX(), session.camera(1).getY());
         var registers = new Sonic2CompetitionViewRegisters(session.camera(0).capture(), session.camera(1).capture());
+        scroll.applyLoadedLayerDefinition(host.nativeArt());
         var draw = new Sonic2CompetitionPlaneDraw(host.nativeArt().workRamBytes());
         // C1 has terrain planes only during the title card. A2-S owns the live
         // Obj34 fill/reveal hook, without a draw-time plane reconstruction.
@@ -117,9 +131,11 @@ public final class Sonic2CompetitionRuntimeModule extends DelegatingGameModule {
                     com.openggf.data.RomByteReader.fromRom(host.rom())));
             videoFrame = new Sonic2CompetitionVideoFrame(nativeVramOwner(), planeScroll, planes, draw,
                     pages, registers, this::displaySample);
+            videoFrame.bindCameraCopies(scroll.owner()::copyBackgroundsAtVInt);
             videoFrame.bindSpriteSource(com.openggf.data.RomByteReader.fromRom(host.rom()));
             videoFrame.bindDisplayState(new Sonic2CompetitionDisplayState() {
-                // B supplies the Teleport_flag owner at integration. Never infer it from a timer.
+                @Override public int ringsAnimationFrame() { return rings.frame(); }
+                @Override public boolean teleportFlag() { return session.teleportClock().capture().flag(); }
                 @Override public int teleportTimer() { return session.teleportTimer(); }
                 @Override public boolean gamePaused() { return host.nativePause().gamePaused(); }
             });
@@ -236,6 +252,7 @@ public final class Sonic2CompetitionRuntimeModule extends DelegatingGameModule {
         super.rewindAdapters().stream().filter(adapter -> !(adapter instanceof Sonic2PlcService))
                 .forEach(adapters::add);
         adapters.add(lifecycle);
+        adapters.add(rings);
         return List.copyOf(adapters);
     }
     @Override public Level loadLevelOverride(int index) throws IOException {

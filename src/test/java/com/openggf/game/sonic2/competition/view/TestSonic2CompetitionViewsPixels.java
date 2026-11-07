@@ -140,7 +140,6 @@ class TestSonic2CompetitionViewsPixels {
      * (s2.asm:41063-41079), Tails_HurtStop (s2.asm:41105-41116).
      */
     @org.junit.jupiter.api.Test
-    @org.junit.jupiter.api.Disabled("Lead C1 deferral: SpriteManager must cache admission before clearing HurtStop latch; expose via SpriteManagerInternalAccess")
     void hurtLandingInCompetitionKeepsItsDirectLandingFrameAdmission() throws Exception {
         GameServices.audio().setBackend(new NullAudioBackend());
         HeadlessTestFixture.builder().withZoneAndAct(0, 0).build();

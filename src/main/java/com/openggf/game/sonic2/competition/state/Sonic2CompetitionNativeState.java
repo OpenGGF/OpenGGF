@@ -18,10 +18,22 @@ import java.util.Objects;
 public final class Sonic2CompetitionNativeState implements Sonic2NativeCompetitionHost.NativeState {
     private final Sonic2TeleportPorts.BackgroundBanks backgrounds;
     private final Sonic2TeleportPorts.PlaneScroll planes;
+    private final Sonic2TeleportPorts.ObjectFields objectOwners;
     private final Sonic2SecondaryInvincibility secondaryInvincibility = new Sonic2SecondaryInvincibility();
 
     public Sonic2CompetitionNativeState(Sonic2TeleportPorts.BackgroundBanks backgrounds,
                                        Sonic2TeleportPorts.PlaneScroll planes) {
+        this(backgrounds, planes, new Sonic2TeleportPorts.ObjectFields() {
+            public boolean operational() { return true; }
+            public Sonic2TeleportPorts.ObjectPlayerFields fields(com.openggf.level.objects.AbstractObjectInstance object) {
+                if (object instanceof Sonic2TeleportPorts.ObjectPlayerFields fields) return fields;
+                throw new IllegalStateException("Native per-player teleport fields unbound");
+            }
+        });
+    }
+    public Sonic2CompetitionNativeState(Sonic2TeleportPorts.BackgroundBanks backgrounds,
+            Sonic2TeleportPorts.PlaneScroll planes, Sonic2TeleportPorts.ObjectFields objectOwners) {
+        this.objectOwners = Objects.requireNonNull(objectOwners);
         this.backgrounds = Objects.requireNonNull(backgrounds, "live BG/copy/flag banks");
         this.planes = Objects.requireNonNull(planes, "live plane scroll owner");
     }
@@ -32,9 +44,10 @@ public final class Sonic2CompetitionNativeState implements Sonic2NativeCompetiti
 
     public void retireActorStatus() { secondaryInvincibility.retire(); }
 
-    @Override public boolean operational() { return true; }
+    @Override public boolean operational() { return objectOwners.operational(); }
 
     @Override public boolean swapActorWorldState(GameplayModeContext context, Sonic2CompetitionSession session) {
+        if (!operational()) return false;
         var module = context.getWorldSession().getGameModule();
         var lifecycle = Objects.requireNonNull(module.getGameService(Sonic2CompetitionLifecycle.class));
         // teleport_monitor (s2.asm:26003-26011): unsigned primary routines, even after ACT_RESULTS.
@@ -43,16 +56,17 @@ public final class Sonic2CompetitionNativeState implements Sonic2NativeCompetiti
         if (objects.getLastProcessSlotExclusive() < 0x90)
             throw new IllegalStateException("Native teleport requires the level-only object range");
         var objectFields = new java.util.ArrayList<Runnable>();
-        for (var object : objects.getActiveObjects()) {
+        for (var object : objects.getActiveObjects().stream().sorted(java.util.Comparator.comparingInt(
+                value -> value instanceof com.openggf.level.objects.AbstractObjectInstance nativeObject
+                        ? nativeObject.getSlotIndex() : Integer.MAX_VALUE)).toList()) {
             if (!(object instanceof com.openggf.level.objects.AbstractObjectInstance nativeObject)
-                    || nativeObject.getSlotIndex() < 16 || nativeObject.getSlotIndex() >= 128) continue;
+                    || nativeObject.isDestroyed() || nativeObject.getSlotIndex() < 16 || nativeObject.getSlotIndex() >= 128) continue;
             int id = nativeObject.getLiveObjectId();
             if (id == 3) {
                 objectFields.add(() -> ObjectManagerInternalAccess.swapNativePlaneSwitcherPlayers(
                         objects, object.getSpawn(), session.player(0), session.player(1)));
             } else if (id == 0x84 || id == 0xD6 || id == 0x85) {
-                if (!(object instanceof Sonic2TeleportPorts.ObjectPlayerFields fields))
-                    throw new IllegalStateException("Native per-player teleport fields unbound for object " + id);
+                var fields = objectOwners.fields(nativeObject);
                 objectFields.add(() -> ObjectManagerInternalAccess.mutateNativeObject(objects, object, fields::swapPlayers));
             }
         }

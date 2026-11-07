@@ -1577,6 +1577,9 @@ public class SpriteManager implements PlayableSstDispatcher {
 	}
 
 	private void beginPlayableFrame(List<AbstractPlayableSprite> playables) {
+		// The prior BuildSprites admission expires before any new playable pass,
+		// including uncounted title passes on the next level's zero epoch.
+		nativeDisplayAdmissions.clear();
 		playableFrameActive = true;
 		playableUpdateOrder.clear();
 		deferredPostTickMutations.clear();
@@ -1677,13 +1680,21 @@ public class SpriteManager implements PlayableSstDispatcher {
 		}
 	}
 
+	private final java.util.Map<AbstractPlayableSprite, Boolean> nativeDisplayAdmissions = new java.util.IdentityHashMap<>();
+
+	boolean nativeDisplayAdmission(AbstractPlayableSprite player) {
+		return nativeDisplayAdmissions.getOrDefault(player, player.shouldRefreshRenderFlagThisFrame());
+	}
+
 	public void refreshPlayableRenderFlags(Camera camera) {
 		if (camera == null) {
 			return;
 		}
+		nativeDisplayAdmissions.clear();
 		for (Sprite sprite : getAllSprites()) {
 			if (sprite instanceof AbstractPlayableSprite playable) {
 				boolean refresh = playable.shouldRefreshRenderFlagThisFrame();
+				nativeDisplayAdmissions.put(playable, refresh);
 				// The hurt routine's unconditional DisplaySprite owns only the
 				// current BuildSprites pass.
 				playable.clearHurtRoutineOwnedDisplayLatch();

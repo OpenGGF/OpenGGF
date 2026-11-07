@@ -24,6 +24,7 @@ public final class Sonic2CompetitionLevelEvents implements LevelEventProvider {
     private final TitleCardManager title;
     private final Runnable deformEntry;
     private final CameraMotion cameraMotion;
+    private final Runnable changeRingFrame;
     private CameraSample primaryCameraSample;
     private int act = -1;
     private short actTwoMaxX;
@@ -38,6 +39,12 @@ public final class Sonic2CompetitionLevelEvents implements LevelEventProvider {
 
     Sonic2CompetitionLevelEvents(Sonic2CompetitionSession session, TitleCardManager title,
             Runnable deformEntry, CameraMotion cameraMotion) {
+        this(session, title, deformEntry, cameraMotion, () -> { });
+    }
+
+    Sonic2CompetitionLevelEvents(Sonic2CompetitionSession session, TitleCardManager title,
+            Runnable deformEntry, CameraMotion cameraMotion, Runnable changeRingFrame) {
+        this.changeRingFrame = Objects.requireNonNull(changeRingFrame);
         this.session = Objects.requireNonNull(session, "session");
         this.title = title;
         this.deformEntry = deformEntry;
@@ -136,6 +143,7 @@ public final class Sonic2CompetitionLevelEvents implements LevelEventProvider {
     @Override
     public void updateAtLevelLoopTail() {
         if (act < 0) return;
+        changeRingFrame.run();
         // SetLevelEndType (s2.asm:6128-6147) enables the signpost for every native
         // competition act. CheckLoadSignpostArt (s2.asm:6154-6172) first tests the
         // global Debug_placement_mode, owned by the primary player.
