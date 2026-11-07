@@ -253,6 +253,23 @@ final class SonicCdAct3FutureWorldHost implements Host,AutoCloseable {
  static Globals with(Globals g,CdRingGlobals ring,CdCheckpointLiveAux.State live,CdPlayerBody.ContactGlobals contact,CdOpeningObjectRuntime.ScoreGlobals score,OptionalInt pause,Optional<CdLevelHud.BonusValues> bonus,Optional<CdGlobalObjectAnimation.Extras> animations,CdAssetBytes steps,CdAssetBytes timers){return new Globals(ring,live,contact,score,g.projectorByte(),g.checkpointSaved(),g.drownTimerWord(),g.debugBlockWord(),pause,bonus,g.tail(),animations,steps,timers,g.layerByte(),g.bossFlagsByte(),g.eventRoutineWord());}
  Prepared prepareOrdinary(Globals expected,Video video,Globals next,List<SonicCdGameModule.PastSound> append,Optional<CdObjectDrawQueue.CpuSat> cpu){ordinaryIdle();if(world==null)throw new IllegalStateException("No original ordinary owner");var scope=world.actualScope();if(expected!=image.globals()||video!=image.video())throw new IllegalStateException("Stale complete Host pair");Objects.requireNonNull(next);var v=video;if(cpu!=v.completedCpu()){if(cpu.isEmpty())throw new IllegalArgumentException("Cannot erase actual CPU provenance");v=new Video(CdAssetBytes.copyOf(cpu.orElseThrow().bytes()),cpu,v.playerArt(),v.current(),v.selected());}var sounds=new ArrayList<>(image.sounds());sounds.addAll(List.copyOf(append));return new Prepared(image,copy(next,image.scroll(),image.foreground(),image.background(),v,sounds),scope);}
  Prepared prepareScrollLock(Prepared prepared,int scrollLock){validateOrdinary(prepared);word(scrollLock);var a=prepared.after;var s=a.scroll();var f=s.foreground();var fg=new CdR11aForegroundScroll.State(f.cameraX(),f.cameraY16_16(),f.horizontalCrossed(),f.verticalCrossed(),f.scrollXDiff(),f.scrollYDiff(),f.scrollFlags(),f.destBottomBound(),f.destLeftBound(),f.bottomBoundShift(),scrollLock);return new Prepared(prepared.before,new Image(this,a.globals(),new Scroll(fg,s.background(),s.copies(),s.foregroundXFractionWord(),s.topBoundWord()),a.foreground(),a.background(),a.video(),a.clears(),a.geometryReady(),a.collisionPointer(),a.fadeInfoWithoutTail(),a.rngSeedLong(),a.targetRightBoundWord(),a.sounds()),prepared.scope);}
+ // BEGIN R13 LEVEL MAIN DEATH CAMERA HOST JOIN 20261107
+ /** Native Main413-415. Preserve the full Host image except destBottomBound; this
+  * private post-walk scope, not a public value/receipt, owns the matching Frame store. */
+ Prepared prepareLevelMainDeathCamera(int expectedCameraYWord){
+  ordinaryCut(SonicCdAct3FutureOrdinaryLoop.Cut.POST_OBJECT_CAMERA);word(expectedCameraYWord);
+  var state=owner.state();var e=frame.environment();
+  if(state.program().demoDataIndexWord()==0x800||state.level().levelRestart()!=0||frame.paused()||e.globals().debugMode()!=0||frame.state().motion().routine()<6)throw new IllegalStateException("Native death-camera branch not reached");
+  var before=image;var s=before.scroll();var f=s.foreground();if(f.cameraYWord()!=expectedCameraYWord)throw new IllegalArgumentException("Stale actual cameraY WORD");
+  var fg=f.destBottomBound()==expectedCameraYWord?f:foreground(f,f.scrollFlags(),expectedCameraYWord,f.destLeftBound(),f.bottomBoundShift());
+  var scroll=fg==f?s:new Scroll(fg,s.background(),s.copies(),s.foregroundXFractionWord(),s.topBoundWord());
+  var after=new Image(this,before.globals(),scroll,before.foreground(),before.background(),before.video(),before.clears(),before.geometryReady(),before.collisionPointer(),before.fadeInfoWithoutTail(),before.rngSeedLong(),before.targetRightBoundWord(),before.sounds());
+  return new Prepared(before,after,world.actualScope());
+ }
+ /** Final full-image/scope recheck after validateOrdinary's last authority read. No callback
+  * follows these checks; callers retain actual placement/Frame references for their final CAS. */
+ void validatePrimaryDeathPublication(Prepared prepared){validateOrdinary(prepared);if(prepared.before!=image||world==null||!world.isCurrentScope(prepared.scope))throw new IllegalStateException("Primary death Host pair changed during validation");}
+ // END R13 LEVEL MAIN DEATH CAMERA HOST JOIN 20261107
  // BEGIN R13 BOSS HOST IMAGE JOIN 20261106
  SonicCdAct3FutureObjectPass.BossOwners readBossOwners(SonicCdAct3FutureObjectPass pass){
   current();if(world==null)throw new IllegalStateException("No actual Boss World");world.requireObjectPass(pass);

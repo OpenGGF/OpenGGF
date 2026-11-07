@@ -125,7 +125,8 @@ final class SonicCdAct3FutureObjectPass {
             if(cut.programmeOwner()!=programmeOwner||cut.programme()!=programme||frame.state()!=result.state()||frame.environment()!=result.environment()||frame.display()!=result.display()
                     ||frame.artState()!=art||frame.vIntClock()!=clock||frame.paused()!=paused)throw new IllegalArgumentException("Primary left its original Frame/programme result");
             CdPlayerBody.DisplayEligibility selected=null;for(var effect:result.effects())if(effect instanceof CdPlayerBody.DisplayEligibility d){if(selected!=null)throw new IllegalArgumentException("Multiple original primary Display cuts");selected=d;}
-            if(result.boundary()==CdPlayerBody.Boundary.INIT_RETURN){if(selected!=null||result.display().isPresent())throw new IllegalArgumentException("Primary Init has no Draw");}
+            // R13 PRIMARY RESTART NO-DRAW COMPLETION 20261107: native Sonic/Main2453-2494 never calls DrawObject.
+            if(result.boundary()==CdPlayerBody.Boundary.INIT_RETURN||result.boundary()==CdPlayerBody.Boundary.RESTART_RETURN){if(selected!=null||result.display().isPresent())throw new IllegalArgumentException("Primary Init/Restart has no Draw");}
             else if(selected==null||result.display().isEmpty()||selected.eligible()!=result.display().orElseThrow().queued())throw stop(Boundary.PRIMARY_RESULT,0,result.boundary().ordinal());
             completed=true;checkpoint();if(selected!=null&&selected.eligible()){dispatch.drawn=true;draw(new CdObjectDrawQueue.DrawCallCut(new CdObjectDrawQueue.CdSlotRef(0),selected.spriteFlags(),selected.centreXWord(),selected.centreYWord(),selected.yRadius(),selected.width(),selected.priority()));}}
     }

@@ -1960,6 +1960,42 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
         environment = new CdPlayerBody.Environment(movement, environment.controls(), environment.globals(), environment.dynamicSlots());
     }
 
+    // BEGIN R13 LEVEL MAIN DEATH CAMERA VALUE JOIN 20261107
+    /**
+     * Level_MainLoop's MOVE.W cameraY,bottomBound (N1ecc Level/Main.asm:409-415).
+     * Prepare only this native WORD writer over the complete actual pair. The original
+     * World owns the post-RunObjects branch and the matching Host destBottomBound store.
+     * This is immutable value data, not call/World authority. No scroll/events, camera
+     * centre, actor, input, clocks, art, display or source family is reconstructed here.
+     */
+    public ObjectSolidPublication prepareAct3FutureLevelMainDeathCamera(CdR13FutureAssets assets,
+                                                                       CdPlayerBody.State expectedState,
+                                                                       CdPlayerBody.Environment expectedEnvironment,
+                                                                       int cameraYWord) {
+        requireOpenIdle(); requireClosedFrame();
+        Objects.requireNonNull(assets, "actual R13 assets");
+        Objects.requireNonNull(expectedState, "Level Main State");
+        Objects.requireNonNull(expectedEnvironment, "Level Main Environment");
+        if (!stageSource().ownsAct3Future(assets)) throw new IllegalArgumentException("Another R13 source");
+        requireSourceFamily();
+        if ((cameraYWord & ~0xFFFF) != 0) throw new IllegalArgumentException("cameraY requires an unsigned native WORD");
+        if (!state.equals(expectedState) || !environment.equals(expectedEnvironment))
+            throw new IllegalArgumentException("Stale Level Main State/Environment pair");
+        if (paused || environment.globals().debugMode() != 0 || state.motion().routine() < 6)
+            throw new IllegalStateException("Level Main death-camera branch was not selected");
+        var currentState = state; var currentEnvironment = environment;
+        var movement = currentEnvironment.movement(); var bounds = movement.bounds();
+        var nextEnvironment = currentEnvironment;
+        if (bounds.bottom() != cameraYWord) {
+            var nextBounds = new CdPlayerMovement.Bounds(bounds.left(), bounds.right(), cameraYWord, bounds.bossFight());
+            var nextMovement = new CdPlayerMovement.Environment(movement.physics(), nextBounds, movement.gates(), movement.globals());
+            nextEnvironment = new CdPlayerBody.Environment(nextMovement, currentEnvironment.controls(),
+                    currentEnvironment.globals(), currentEnvironment.dynamicSlots());
+        }
+        return new ObjectSolidPublication(currentState, currentEnvironment, currentState, nextEnvironment);
+    }
+    // END R13 LEVEL MAIN DEATH CAMERA VALUE JOIN 20261107
+
     /**
      * Narrow production object-queue publication port, NOT a GPU/draw hook.
      * Object Functions.DrawObject:137-138 clears bit7 before camera/queue tests;

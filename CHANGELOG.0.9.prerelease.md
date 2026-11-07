@@ -302,7 +302,9 @@ matching area heading; see the
   replay cover the first visible Sonic, completed Title art service and an actual
   rendered Boss fight reached with fixed controller input. Boss-only renderer
   omission and complete restore/current-picture checks preserve the same owners;
-  defeating the Boss remains separate. Host
+  defeating the Boss remains separate. Native Dead/Restart now rejoin the actual
+  caller with paired death-camera bounds, original no-draw restart and complete
+  restore checks, retaining explicit GameOver/reset owner boundaries. Host
   course reset publishes Act3 consistently to the manager and World so the
   act-scoped rewind allowance refills once. Cached Boss/limb/bumper, Capsule and
   Results owners now publish through the actual physical walk and same Frame.

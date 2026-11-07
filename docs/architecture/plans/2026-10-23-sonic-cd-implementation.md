@@ -1,5 +1,26 @@
 # Implement Sonic CD with complete regional parity
 
+## 7 November 2026 — actual death-camera and lifecycle caller
+
+The genuine R13 World now accepts the existing Body's incoming Dead6/Restart8.
+A Main/Hurt result that becomes routine6 still completes its original incoming
+publication. After the real full physical walk, native death camera handling
+copies cameraY WORD to Frame.bottomBound and Host.destBottomBound, skips scroll
+and continues the ordinary draw/palette/section/PLC/animation tail. Both values
+are prebuilt and fenced before either adoption; no Frame aggregate is rebuilt by
+World. Restart has its genuine no-draw completion and ordered semantic requests.
+
+R50 discovers939 cases,935P/4F/0E/S with unchanged source. The four new fixture
+failures were assumptions of an empty native startup pool and a staged Host
+camera not yet projected to the real engine camera. Explicit isolated component
+pool ingresses, a full preexisting-pool oracle and the actual camera projection
+correct only the two test files. R50b passes all18new cases/0F/E/S, production
+unchanged; the921 inherited R50 positives remain separate, not a new combined pass.
+Actual Module FULL/course replay is covered. This is caller/lifecycle support,
+not natural death continuation until the original controller is rerun. GameOver
+ID3B, exhausted native allocation alias and levelRestart1→LevelStart remain
+precise honest stops. No audio/driver/CPU/bus emulation or synthetic reset exists.
+
 ## 7 November 2026 — natural Boss reach and normal R31 MODE
 
 The controller recipe now keeps its original jump pulses only through17782,
@@ -14,7 +35,8 @@ The exploratory continuation separately returns19142 and first19143 stops after
 the real physical walk at the explicit PRIMARY_DEATH_CAMERA owner. The105-cut
 first-loop window records actual physics1536/12/128, controls and planes without
 another probe or Body call. The temporary observer was removed byte-exact;
-the missing death-camera/lifecycle caller and IPX progress join are next.
+the death-camera/lifecycle caller is now qualified separately below; the actual
+controller continuation and IPX progress join are next.
 
 Normal R31 MODE now uses genuine CCZ terrain and native raw0100/1 metadata.
 Its existing PPZ ramp guard already returns before layout/table for that whole
