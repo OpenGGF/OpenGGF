@@ -32,10 +32,7 @@ public final class Sonic2CompetitionNativeState implements Sonic2NativeCompetiti
 
     public void retireActorStatus() { secondaryInvincibility.retire(); }
 
-    @Override public boolean operational() {
-        // Raw status_secondary.invincible must travel independently of Super_Sonic_flag before activation.
-        return false;
-    }
+    @Override public boolean operational() { return true; }
 
     @Override public boolean swapActorWorldState(GameplayModeContext context, Sonic2CompetitionSession session) {
         var module = context.getWorldSession().getGameModule();
