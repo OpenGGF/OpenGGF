@@ -129,6 +129,10 @@ public final class RoomHost {
     private String roomTrackKind = "ACT", roomMode = "TIME_ATTACK";
     List<HostTeleportSwap.Decision> swapLog() { return swaps.log(); }
     void taintSwaps(int slot) { swaps.taint(slot); }
+    private boolean taintedSwap(int slot) {
+        return swaps.log().stream().anyMatch(d -> d.tainted() && d.command() != null
+                && (d.command().slotA() == slot || d.command().slotB() == slot));
+    }
     void configureIdentity(ControlMessage.RoomDescriptor descriptor) {
         configureTrackIdentity(descriptor.trackKind(), descriptor.mode());
     }
@@ -499,6 +503,7 @@ public final class RoomHost {
             return false;
         }
         swaps.clear();
+        round.setSwapTaint(this::taintedSwap);
         roomTrackKind = roundConfig.trackKind(); roomMode = roundConfig.mode();
         for (Member member : members.values()) {
             if (member.admitted()) round.register(member.slot, member.participantId, member.displayName,
@@ -1330,7 +1335,10 @@ public final class RoomHost {
                     requestStartRound(configure.config());
                 }
             }
-            case ControlMessage.AttemptStart start -> startAttempt(member, start.attemptId());
+            case ControlMessage.AttemptStart start -> {
+                startAttempt(member, start.attemptId());
+                hub.enableRespawns(member.slot, round.competition(), "ARENA".equals(roomTrackKind));
+            }
             case ControlMessage.AttemptReset reset -> {
                 round.forfeit(member.participantId, reset.reason());
                 resetAttempt(member, reset.attemptId());

@@ -22,7 +22,12 @@ class TestHostTeleportSwap {
  }
  @Test void noPartnerFinishedDisconnectedAndStaleExcluded() {
   assertInstanceOf(ControlMessage.TeleportNoPartner.class,request(0,10,List.of(player(0,1,10))));
-  assertNull(host.log().getFirst().command());
+  var decision = host.log().getFirst();
+  assertNull(decision.command());
+  var fallback = (ControlMessage.TeleportNoPartner) sent.getFirst();
+  assertEquals(fallback.swapId(), decision.swapId());
+  host.outcome(0,new ControlMessage.TeleportOutcome(fallback.swapId(),11,"FALLBACK"));
+  assertEquals(fallback.swapId(),host.log().getFirst().outcomes().get(0).swapId());
   var stale=new HostTeleportSwap.Observation(1,10,0,false,2,player(1,2,10).target());
   assertInstanceOf(ControlMessage.TeleportNoPartner.class,request(0,10,List.of(player(0,1,10),stale)));
  }
