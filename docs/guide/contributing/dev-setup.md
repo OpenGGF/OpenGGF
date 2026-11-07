@@ -49,6 +49,8 @@ That resolver derives the expected commit from the gitlink and refuses a dirty
 checkout, symbolic-link or non-directory path component, or a target that
 resolves outside the pinned checkout. Status 2 means uninitialized, status 3
 means the wrong commit, and status 4 means an unsafe or missing path.
+To record a trace from your own BizHawk movie, see
+[Making your own traces](making-traces.md).
 
 The executable OpenGGF JAR with all dependencies is written to the current
 worktree's Maven output tree:

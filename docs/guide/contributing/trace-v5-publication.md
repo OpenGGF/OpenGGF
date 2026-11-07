@@ -27,7 +27,7 @@ verified user-supplied ROM and a destination that does not exist.
 | S1 complete/named run | BK2 + `--trace-profile complete_run` or `--run-id <id>` | segments; named runs include a manifest |
 | S1 credits demos | no BK2; `--trace-profile credits_demo --credits-target all` | all eight ROM-owned credits fixtures atomically |
 | S2 standard/level select | BK2 + profile; optional `--gameplay-segment <n>` | one selected gameplay segment |
-| S2 complete/named run | BK2 + `--trace-profile complete_run` or `--run-id <id>` | segments and optional manifest |
+| S2 complete/named run | BK2 + `--run-id <id>` | segments and mandatory manifest |
 | S3K standard | BK2 + `--trace-profile aiz_end_to_end`, `level_gated_reset_aware`, or `gameplay_unlock` | one fixture |
 | S3K complete/named run | BK2 + `--trace-profile complete_run` or `--run-id <id>` | level, bonus, and special-stage segments; optional manifest |
 

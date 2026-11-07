@@ -53,6 +53,7 @@ You want to add objects, bosses, zones, or engine improvements.
 - [Zone and Act Test Standard](contributing/level-test-standard.md) -- Route, character, rewind and load-boundary obligations
 - [Testing](contributing/testing.md) -- Writing and running tests
 - [Trace Replay Testing](contributing/trace-replay.md) -- BizHawk recordings, replay tests, and divergence analysis
+- [Making Your Own Traces](contributing/making-traces.md) -- Record a BK2, capture a v5 trace, validate it, and replay it locally
 
 ### I want to create levels
 
