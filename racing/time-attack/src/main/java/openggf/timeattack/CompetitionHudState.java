@@ -37,10 +37,20 @@ public record CompetitionHudState(CompetitionRoomSettings.Mode mode, TrackKind t
         public static SwapNotice fallback() { return new SwapNotice("", 90); }
     }
 
-    /** Zero total/best lap means unavailable for a non-finisher; reason explains DNF/DNS. */
+    /**
+     * Zero total/best lap means unavailable for a non-finisher; reason explains DNF/DNS. slot is the
+     * player's room slot (name colour, the local row), or -1 when unknown.
+     */
     public record PlacementRow(int rank, String name, String character, int totalFrames,
             int bestLapFrames, List<Integer> lapFrames, Outcome outcome, String reason,
-            VerifyState verifyState, boolean taintedSwap) {
+            VerifyState verifyState, boolean taintedSwap, int slot) {
+        /** The C1 shape, without a room slot. */
+        public PlacementRow(int rank, String name, String character, int totalFrames,
+                int bestLapFrames, List<Integer> lapFrames, Outcome outcome, String reason,
+                VerifyState verifyState, boolean taintedSwap) {
+            this(rank, name, character, totalFrames, bestLapFrames, lapFrames, outcome, reason, verifyState,
+                    taintedSwap, -1);
+        }
         public PlacementRow {
             Objects.requireNonNull(name);
             Objects.requireNonNull(character);

@@ -24,8 +24,8 @@ public final class LapTimeFormat {
 
     /** One lap's frames as ROM hundredths: whole seconds, then {@code byte_37E52[frames % 60]}. */
     public static int centiseconds(int frames) {
-        int value = Math.max(0, frames);
-        return Math.min(MAX_CENTISECONDS, value / 60 * 100 + value % 60 * 100 / 60);
+        long value = Math.max(0, frames);
+        return (int) Math.min(MAX_CENTISECONDS, value / 60 * 100 + value % 60 * 100 / 60);
     }
 
     /** ROM hundredths as the competition clock draws them: {@code 0'21"50}. */
