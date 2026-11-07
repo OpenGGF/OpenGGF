@@ -410,10 +410,10 @@ class TestTimeAttackRuntime {
         // A ghost recorded for a DIFFERENT track must never race in this one.
         byte[] frames = new byte[com.openggf.net.ghost.GhostFrameCodec.BYTES];
         var wrongTrack = new openggf.timeattack.ghost.GhostRecording(
-                new openggf.timeattack.ghost.GhostHeader(1, "s3k", 1, 0, "sonic", "x", 0, 100,
+                new openggf.timeattack.ghost.GhostHeader(openggf.timeattack.ghost.GhostFileCodec.FORMAT_VERSION, "s3k", 1, 0, "sonic", "x", 0, 100,
                         new int[0], new byte[32]), frames);
         var rightTrack = new openggf.timeattack.ghost.GhostRecording(
-                new openggf.timeattack.ghost.GhostHeader(1, "s3k", 0, 0, "tails", "y", 0, 100,
+                new openggf.timeattack.ghost.GhostHeader(openggf.timeattack.ghost.GhostFileCodec.FORMAT_VERSION, "s3k", 0, 0, "tails", "y", 0, 100,
                         new int[0], new byte[32]), frames);
         Path wrong = importDir.resolve("wrong.ggfghost");
         Path right = importDir.resolve("right.ggfghost");

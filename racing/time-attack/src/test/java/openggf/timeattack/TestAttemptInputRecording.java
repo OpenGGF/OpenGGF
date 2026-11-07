@@ -19,10 +19,13 @@ class TestAttemptInputRecording {
     void checkedDecoderRejectsNoncanonicalUtfBeforeHashingCanThrowUncheckedIo() throws Exception {
         var bytes=new java.io.ByteArrayOutputStream();
         try(var output=new java.io.DataOutputStream(bytes)) {
+            output.writeByte(AttemptInputRecording.FORMAT_VERSION);
             output.writeUTF("s3k");output.writeByte(0);output.writeByte(0);output.writeUTF("sonic");
             // DataInputStream accepts raw NUL bytes, but canonical modified UTF needs twice the bytes.
             // Re-encoding this decoded value would exceed writeUTF's unsigned-short limit.
-            output.writeShort(40000);output.write(new byte[40000]);output.writeInt(0);
+            output.writeShort(40000);output.write(new byte[40000]);
+            output.writeUTF("ACT");output.writeUTF("TIME_ATTACK");output.writeUTF("NORMAL");
+            output.writeUTF("FAST_FROM_START");output.writeBoolean(false);output.writeInt(0);output.writeByte(0);
         }
         assertTrue(bytes.size()<AttemptInputRecording.MAX_ENCODED_BYTES);
         assertThrows(java.io.IOException.class,()->AttemptInputRecording.decodeChecked(bytes.toByteArray()));
@@ -77,7 +80,7 @@ class TestAttemptInputRecording {
         rec.appendFrame(0x08, false);
         byte[] encoded = rec.encode();
         // The frame-count int is the 4 bytes immediately before the single mask byte.
-        int lengthOffset = encoded.length - 1 - 4;
+        int lengthOffset = encoded.length - 1 - 1 - 4;
         encoded[lengthOffset] = (byte) 0x7F; // claim ~2 billion frames
         assertThrows(java.io.UncheckedIOException.class, () -> AttemptInputRecording.decode(encoded));
     }

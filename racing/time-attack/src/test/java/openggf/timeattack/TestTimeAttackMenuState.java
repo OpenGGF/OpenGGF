@@ -98,7 +98,7 @@ class TestTimeAttackMenuState {
     }
 
     private static void writeImport(Path path, int zone, int act) throws Exception {
-        var header = new openggf.timeattack.ghost.GhostHeader(1, "s3k", zone, act, "sonic", "racer",
+        var header = new openggf.timeattack.ghost.GhostHeader(openggf.timeattack.ghost.GhostFileCodec.FORMAT_VERSION, "s3k", zone, act, "sonic", "racer",
                 0, 1, new int[0], new byte[32]);
         var capture = new openggf.timeattack.ghost.GhostCaptureBuffer();
         capture.capture(new com.openggf.net.ghost.GhostFrame(
