@@ -16,6 +16,9 @@ import java.util.function.Supplier;
 
 /** Internal native gameplay seams; deliberately outside the creator API. */
 public final class ObjectManagerInternalAccess {
+    /** A processed-range extension retains the original allocation/placement semantics. */
+    public interface AllocationSemantics { ObjectSlotLayout allocationLayout(); }
+
     /** World-owned semantic boundary; absent in ordinary gameplay. */
     public interface NativeExecution {
         void afterNativeWait();
@@ -47,6 +50,23 @@ public final class ObjectManagerInternalAccess {
     /** Preserve the object's registered callback/fault owner while applying a native field write. */
     public static void mutateNativeObject(ObjectManager manager, ObjectInstance object, Runnable write) {
         manager.objectCallbacks().run(object, write);
+    }
+
+    /** Recreate only the exact captured fixed owner; never mint a missing effect during rewind. */
+    public static com.openggf.game.PowerUpObject restoreNativeTeleportFixedEffect(ObjectManager manager,
+            int slot, com.openggf.sprites.playable.AbstractPlayableSprite player, boolean stars) {
+        Class<?> type = stars ? InvincibilityStarsObjectInstance.class : ShieldObjectInstance.class;
+        var captured = manager.consumePendingPlayerBoundEntry(type, entry -> entry.slotIndex() == slot
+                && entry.playerOwner() == player && entry.className().equals(type.getName()) && entry.objectId() != null);
+        if (captured == null) throw new IllegalStateException("Missing captured fixed effect at " + slot);
+        // The ordinary trusted spawner consumes this same snapshot, including identity, callback owner and scalars.
+        manager.claimPendingPlayerBoundReturn(type, captured, player).returnPending();
+        var spawner = java.util.Objects.requireNonNull(player.getPowerUpSpawner());
+        var restored = stars ? spawner.spawnInvincibilityStars(player)
+                : spawner.spawnShield(player, com.openggf.game.ShieldType.BASIC);
+        if (manager.currentNativeSstOwner(slot) != restored)
+            throw new IllegalStateException("Captured fixed effect lost its native slot " + slot);
+        return restored;
     }
 
     public static void prepareInitialPlacementWindow(ObjectManager manager, List<ObjectSpawn> spawns,

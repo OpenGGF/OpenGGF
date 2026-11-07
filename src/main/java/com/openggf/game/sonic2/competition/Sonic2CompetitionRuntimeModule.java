@@ -57,6 +57,10 @@ public final class Sonic2CompetitionRuntimeModule extends DelegatingGameModule {
         }, host::checkpointEnvironment);
     }
 
+    @Override public com.openggf.level.objects.ObjectRegistry createObjectRegistry() {
+        return new com.openggf.game.sonic2.competition.state.Sonic2LevelOnlyObjectRegistry(super.createObjectRegistry());
+    }
+
     @Override public LevelInitProfile getLevelInitProfile() { return profile; }
     @Override public LevelEventProvider getLevelEventProvider() { return events; }
     void initializeBoundaryWords() { events.initializeBoundaryWords(); }
