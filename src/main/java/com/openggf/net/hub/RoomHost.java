@@ -1350,6 +1350,11 @@ public final class RoomHost {
                 round.forfeit(member.participantId, reset.reason());
                 resetAttempt(member, reset.attemptId());
             }
+            case ControlMessage.CheckpointReached checkpoint -> {
+                if (!round.competition() || member.activeAttemptId != checkpoint.attemptId() || !"ACT".equals(roomTrackKind))
+                    recordAttemptViolation(member,"checkpoint outside Competition act attempt");
+                else hub.checkpoint(member.slot,checkpoint);
+            }
             case ControlMessage.TeleportRequest request -> {
                 try {
                     if (!round.competition() || round.phase() != HostRoundEngine.Phase.RUNNING

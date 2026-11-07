@@ -86,7 +86,8 @@ public final class ModApiVersion {
      * Hub preferences include optional title music, its volume, last focused game,
      * dismissed game support notices, and per-game last-act/leader history for
      * zone-start Continue.
-     * Competition fallback receipts carry a host refusal reason.
+     * Competition fallback receipts carry a host refusal reason. RunStep exposes the
+     * saved checkpoint centre and the room wire binds it to its activation frame.
      * Shared network contracts include direct/relay room clients, JDK room hosting,
      * identity, bounded ghost transport and protocol messages/codecs. Protocol 6 adds
      * Full/Quick/Off communication with semantic quick content, a local English

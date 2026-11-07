@@ -116,7 +116,7 @@ class TestControlCodecPolymorphism {
                 } : parameterTypes[index] == int.class ? switch (name) {
                     case "protocolVersion" -> Protocol.VERSION;
                     case "maxPlayers" -> 8;
-                    case "slotB" -> 1;
+                    case "slotB", "progress" -> 1;
                     case "timeFrames", "bestTimeFrames", "rank", "totalPages" -> 1;
                     default -> 0;
                 } : parameterTypes[index] == long.class ? switch (name) {

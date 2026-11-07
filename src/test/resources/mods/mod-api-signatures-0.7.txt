@@ -1102,6 +1102,7 @@ CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$AuthProof visible @co
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$Chat visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$ChatBroadcast visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$ChatModeState visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$CheckpointReached visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$Heartbeat visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$Hello visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$InviteOperation visible @com.openggf.game.ModApi
@@ -1978,6 +1979,7 @@ CONSTRUCTOR com.openggf.mods.run.RunSpec public  <init>(java.lang.String,int,int
 CONSTRUCTOR com.openggf.mods.run.RunSpec public  <init>(java.lang.String,int,int,java.lang.String,com.openggf.game.session.GameplayRunPolicy,com.openggf.mods.run.RunArea,com.openggf.mods.run.TrackKind,boolean)
 CONSTRUCTOR com.openggf.mods.run.RunStep public  <init>(long,int,boolean,com.openggf.mods.run.PlayerPose,boolean,int,boolean)
 CONSTRUCTOR com.openggf.mods.run.RunStep public  <init>(long,int,boolean,com.openggf.mods.run.PlayerPose,boolean,int,boolean,com.openggf.mods.run.RaceClock,com.openggf.mods.run.RaceSignal,com.openggf.mods.run.RaceEventResult)
+CONSTRUCTOR com.openggf.mods.run.RunStep public  <init>(long,int,boolean,com.openggf.mods.run.PlayerPose,boolean,int,boolean,com.openggf.mods.run.RaceClock,com.openggf.mods.run.RaceSignal,com.openggf.mods.run.RaceEventResult,int,int)
 CONSTRUCTOR com.openggf.mods.run.SwapTarget public  <init>(int,int,int,int,boolean,boolean,int,boolean,int,int,int)
 CONSTRUCTOR com.openggf.mods.run.TrackGeometry public  <init>(int,int,int,int)
 CONSTRUCTOR com.openggf.mods.scene.ActLaunch public  <init>(com.openggf.game.ZoneKey$Mod,int,com.openggf.game.CharacterKey,java.util.List<com.openggf.game.CharacterKey>,java.util.OptionalInt,java.util.OptionalInt,int,java.util.Map<java.lang.String,java.lang.String>)
@@ -2075,6 +2077,7 @@ CONSTRUCTOR com.openggf.net.protocol.ControlMessage$AuthProof public  <init>(jav
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$Chat public  <init>(java.lang.String)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$ChatBroadcast public  <init>(int,java.lang.String,java.lang.String)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$ChatModeState public  <init>(java.lang.String)
+CONSTRUCTOR com.openggf.net.protocol.ControlMessage$CheckpointReached public  <init>(int,int,int,int,int)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$Heartbeat public  <init>(java.lang.String,int)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$Hello public  <init>(int,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String,long)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$JoinAccepted public  <init>(java.lang.String,int,com.openggf.net.protocol.ControlMessage$RoomDescriptor,com.openggf.net.protocol.ControlMessage$RoundSnapshot)
@@ -4434,6 +4437,7 @@ INTERFACE com.openggf.net.protocol.ControlMessage$AuthProof com.openggf.net.prot
 INTERFACE com.openggf.net.protocol.ControlMessage$Chat com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$ChatBroadcast com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$ChatModeState com.openggf.net.protocol.ControlMessage
+INTERFACE com.openggf.net.protocol.ControlMessage$CheckpointReached com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$Heartbeat com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$Hello com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$JoinAccepted com.openggf.net.protocol.ControlMessage
@@ -12946,6 +12950,8 @@ METHOD com.openggf.mods.run.RunStep public  com.openggf.mods.run.PlayerPose play
 METHOD com.openggf.mods.run.RunStep public  com.openggf.mods.run.RaceClock race()
 METHOD com.openggf.mods.run.RunStep public  com.openggf.mods.run.RaceEventResult applied()
 METHOD com.openggf.mods.run.RunStep public  com.openggf.mods.run.RaceSignal signal()
+METHOD com.openggf.mods.run.RunStep public  int checkpointCentreX()
+METHOD com.openggf.mods.run.RunStep public  int checkpointCentreY()
 METHOD com.openggf.mods.run.RunStep public  int checkpointIndex()
 METHOD com.openggf.mods.run.RunStep public  int heldMask()
 METHOD com.openggf.mods.run.RunStep public  long ordinal()
@@ -13968,6 +13974,14 @@ METHOD com.openggf.net.protocol.ControlMessage$ChatModeState public  java.lang.S
 METHOD com.openggf.net.protocol.ControlMessage$ChatModeState public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.net.protocol.ControlMessage$ChatModeState public,final  int hashCode()
 METHOD com.openggf.net.protocol.ControlMessage$ChatModeState public,final  java.lang.String toString()
+METHOD com.openggf.net.protocol.ControlMessage$CheckpointReached public  int attemptId()
+METHOD com.openggf.net.protocol.ControlMessage$CheckpointReached public  int centreX()
+METHOD com.openggf.net.protocol.ControlMessage$CheckpointReached public  int centreY()
+METHOD com.openggf.net.protocol.ControlMessage$CheckpointReached public  int frame()
+METHOD com.openggf.net.protocol.ControlMessage$CheckpointReached public  int progress()
+METHOD com.openggf.net.protocol.ControlMessage$CheckpointReached public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.net.protocol.ControlMessage$CheckpointReached public,final  int hashCode()
+METHOD com.openggf.net.protocol.ControlMessage$CheckpointReached public,final  java.lang.String toString()
 METHOD com.openggf.net.protocol.ControlMessage$Heartbeat public  int playerCount()
 METHOD com.openggf.net.protocol.ControlMessage$Heartbeat public  java.lang.String roomId()
 METHOD com.openggf.net.protocol.ControlMessage$Heartbeat public,final  boolean equals(java.lang.Object)
@@ -17326,6 +17340,7 @@ NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlM
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$Chat
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$ChatBroadcast
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$ChatModeState
+NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$CheckpointReached
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$Heartbeat
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$Hello
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$InviteOperation
@@ -17649,6 +17664,7 @@ PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.Control
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$Chat
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$ChatBroadcast
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$ChatModeState
+PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$CheckpointReached
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$Heartbeat
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$Hello
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$JoinAccepted
@@ -19571,6 +19587,8 @@ RECORD-COMPONENT com.openggf.mods.run.RunSpec swapEnabled boolean
 RECORD-COMPONENT com.openggf.mods.run.RunSpec zone int
 RECORD-COMPONENT com.openggf.mods.run.RunStep actComplete boolean
 RECORD-COMPONENT com.openggf.mods.run.RunStep applied com.openggf.mods.run.RaceEventResult
+RECORD-COMPONENT com.openggf.mods.run.RunStep checkpointCentreX int
+RECORD-COMPONENT com.openggf.mods.run.RunStep checkpointCentreY int
 RECORD-COMPONENT com.openggf.mods.run.RunStep checkpointIndex int
 RECORD-COMPONENT com.openggf.mods.run.RunStep debugAssisted boolean
 RECORD-COMPONENT com.openggf.mods.run.RunStep heldMask int
@@ -19798,6 +19816,11 @@ RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$ChatBroadcast displayNa
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$ChatBroadcast slot int
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$ChatBroadcast text java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$ChatModeState mode java.lang.String
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$CheckpointReached attemptId int
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$CheckpointReached centreX int
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$CheckpointReached centreY int
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$CheckpointReached frame int
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$CheckpointReached progress int
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$Heartbeat playerCount int
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$Heartbeat roomId java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$Hello appearance java.lang.String
@@ -22160,6 +22183,7 @@ TYPE record public,static,final com.openggf.net.protocol.ControlMessage$AuthProo
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$Chat SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$ChatBroadcast SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$ChatModeState SUPER java.lang.Record
+TYPE record public,static,final com.openggf.net.protocol.ControlMessage$CheckpointReached SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$Heartbeat SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$Hello SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$JoinAccepted SUPER java.lang.Record
@@ -23447,6 +23471,7 @@ TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$AuthProof @com.openggf.g
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$Chat @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$ChatBroadcast @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$ChatModeState @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$CheckpointReached @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$Heartbeat @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$Hello @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$InviteOperation @com.openggf.game.ModApi

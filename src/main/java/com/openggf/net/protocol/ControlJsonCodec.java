@@ -50,7 +50,7 @@ public final class ControlJsonCodec {
             ControlMessage.SelectCharacter.class, ControlMessage.RoundConfigure.class,
             ControlMessage.AttemptStart.class, ControlMessage.AttemptReset.class,
             ControlMessage.TrackVote.class, ControlMessage.AttemptFinish.class,
-            ControlMessage.StandingsPageRequest.class, ControlMessage.TeleportRequest.class, ControlMessage.TeleportOutcome.class);
+            ControlMessage.StandingsPageRequest.class, ControlMessage.TeleportRequest.class, ControlMessage.TeleportOutcome.class, ControlMessage.CheckpointReached.class);
 
     private static final Set<Class<?>> ROOM_SERVER_TYPES = Set.of(
             ControlMessage.Welcome.class, ControlMessage.JoinAccepted.class,
@@ -472,6 +472,12 @@ public final class ControlJsonCodec {
                 token(reset.reason(), "RETRY", "LEFT", "GAME_OVER", "TIME_OVER", "DISCONNECT");
             }
             case ControlMessage.RaceCutoff cutoff -> { if (cutoff.roundId() <= 0 || cutoff.endsAtHubMillis() < 0) invalid("race cutoff"); }
+            case ControlMessage.CheckpointReached checkpoint -> {
+                validateAttempt(checkpoint.attemptId()); nonnegative(checkpoint.frame());
+                if (checkpoint.progress() < 1 || checkpoint.progress() > 15
+                        || checkpoint.centreX() < 0 || checkpoint.centreX() > 65535
+                        || checkpoint.centreY() < 0 || checkpoint.centreY() > 65535) invalid("checkpoint anchor");
+            }
             case ControlMessage.TeleportRequest request -> { validateAttempt(request.attemptId()); nonnegative(request.requestFrame()); }
             case ControlMessage.TeleportNoPartner request -> { if (request.swapId() <= 0) invalid("swap id"); validateAttempt(request.attemptId()); nonnegative(request.requestFrame()); token(request.reason(), "NO_PARTNER", "SOURCE_CAP", "COOLDOWN", "DEFERRAL_EXPIRED", "UNAVAILABLE"); }
             case ControlMessage.TeleportOutcome outcome -> {

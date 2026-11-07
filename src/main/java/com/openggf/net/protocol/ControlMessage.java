@@ -671,6 +671,8 @@ public sealed interface ControlMessage {
     @com.openggf.game.ModApi
     record TeleportRequest(int attemptId, int requestFrame) implements ControlMessage { }
     @com.openggf.game.ModApi
+    record CheckpointReached(int attemptId, int frame, int progress, int centreX, int centreY) implements ControlMessage { }
+    @com.openggf.game.ModApi
     record TeleportSwap(long swapId, long roundId, int slotA, int slotB, SwapTarget targetA, SwapTarget targetB, int sentAtFrameA, int sentAtFrameB) implements ControlMessage { }
     @com.openggf.game.ModApi
     record TeleportNoPartner(long swapId, int attemptId, int requestFrame, String reason) implements ControlMessage {

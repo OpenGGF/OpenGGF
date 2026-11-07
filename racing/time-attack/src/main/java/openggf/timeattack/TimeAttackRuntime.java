@@ -94,10 +94,12 @@ public final class TimeAttackRuntime implements RunHost {
 
         void onAttemptVoided(int attemptOrdinal);
         default void onAttemptVoided(int attemptOrdinal, String reason) { onAttemptVoided(attemptOrdinal); }
+        default void onCheckpoint(int attemptOrdinal, int frame, int progress, int x, int y) { }
         default void onTeleportRequest(int attemptOrdinal, int frame) { }
         default void onTeleportOutcome(long swapId, int frame, String outcome) { }
     }
 
+    private int reportedCheckpointAttempt = Integer.MIN_VALUE, reportedCheckpoint = -1;
     private final GhostStore store;
     private final java.nio.file.Path identityDir;
     private final java.util.function.BooleanSupplier launchBlocked;
@@ -733,6 +735,16 @@ public final class TimeAttackRuntime implements RunHost {
         }
         if (competition() && step.signal() == com.openggf.mods.run.RaceSignal.ARENA_DEATH_RESPAWN)
             pendingRespawnReset = true;
+        if (competition() && launch.kind() == com.openggf.mods.run.TrackKind.ACT && isAttemptActive()) {
+            if (reportedCheckpointAttempt != attemptOrdinal) {
+                reportedCheckpointAttempt = attemptOrdinal; reportedCheckpoint = -1;
+            }
+            if (step.checkpointIndex() >= 0 && step.checkpointIndex() != reportedCheckpoint) {
+                reportedCheckpoint = step.checkpointIndex();
+                if (attemptListener != null) attemptListener.onCheckpoint(attemptOrdinal, inputRecording.frameCount(),
+                        Math.clamp(step.checkpointIndex()+1,1,15), step.checkpointCentreX(), step.checkpointCentreY());
+            }
+        }
         PlayerPose pose = step.player();
         localCentreX = pose.centreX();
         localCentreY = pose.centreY();

@@ -337,9 +337,19 @@ public final class GhostHub {
     }
     void enableRespawns(int slot, boolean enabled, boolean arena) {
         Player p = players.get(slot);
-        if (p != null) p.validator.enableRespawns(enabled, arena);
+        if (p != null) {
+            p.validator.enableRespawns(enabled, arena);
+            p.validator.requireCheckpointReceipts(enabled && !arena);
+        }
     }
 
+    void checkpoint(int slot, com.openggf.net.protocol.ControlMessage.CheckpointReached checkpoint) {
+        Player p = players.get(slot);
+        if (p != null) {
+            p.validator.checkpoint(checkpoint.attemptId(),checkpoint.frame(),checkpoint.progress(),checkpoint.centreX(),checkpoint.centreY());
+            closeIfThresholdReached(p);
+        }
+    }
     void cancelSwap(int slot) { Player p = players.get(slot); if (p != null) p.validator.cancelSwap(); }
 
     void admitSwap(int slot, com.openggf.net.protocol.ControlMessage.SwapTarget target, int first) {

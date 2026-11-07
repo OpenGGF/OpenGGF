@@ -74,6 +74,8 @@ class TestCheckpointRespawnPolicy {
         assertFalse(level.isTitleCardRequested());
         assertFalse(context.getFadeManager().isActive(),"checkpoint continuation must not add a live-only fade");
         assertEquals(initialLives-1,state.getLives());
+        assertEquals(checkpoint.getSavedX(),steps.getLast().checkpointCentreX());
+        assertEquals(checkpoint.getSavedY(),steps.getLast().checkpointCentreY());
         var owners = new java.util.TreeMap<String,Object>();
         context.getRewindRegistry().capture().entries().forEach((key,value) ->
                 owners.put(key,RaceStateSnapshots.canonical(value)));

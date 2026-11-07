@@ -27,7 +27,19 @@ public final class GhostStreamValidator {
     }
     void cancelSwap() { swapTarget = null; }
     private TrackValidationProfile profile;
-    private boolean respawnsEnabled, arenaRespawns;
+    private boolean respawnsEnabled, arenaRespawns, checkpointReceiptsRequired;
+    private record Checkpoint(int progress, int x, int y) { }
+    private final java.util.Map<Integer, Checkpoint> checkpointReceipts = new java.util.HashMap<>();
+    void requireCheckpointReceipts(boolean required) { checkpointReceiptsRequired = required; }
+    boolean checkpoint(int attempt, int frame, int progress, int x, int y) {
+        if (!attemptStarted || attempt != currentAttemptId || !checkpointReceiptsRequired
+                || frame < nextExpectedFrameIndex || frame > nextExpectedFrameIndex + MAX_FRAME_LEAD
+                || progress < 1 || progress > 15 || checkpointReceipts.containsKey(frame)
+                || x < 0 || y < 0 || x > 65535 || y > 65535) {
+            violate("checkpoint", "invalid saved checkpoint receipt"); return false;
+        }
+        checkpointReceipts.put(frame,new Checkpoint(progress,x,y)); return true;
+    }
     // Transport admission bounds, not native gameplay constants: one marked transition,
     // at most eight returns per lap/checkpoint and 64 per attempt, spaced two seconds apart.
     private static final int MAX_RESETS_PER_PROGRESS = 8;
@@ -78,7 +90,7 @@ public final class GhostStreamValidator {
         attemptStarted = true;
         previousFrame = null;
         resetCount = 0; lastResetFrame = -120; anchors.clear(); savedAnchors.clear(); resetsByProgress.clear();
-        swapTarget = null;
+        swapTarget = null; checkpointReceipts.clear();
         streamDigest = newDigest();
         sealedStreamHash = null;
     }
@@ -141,15 +153,30 @@ public final class GhostStreamValidator {
             boolean reset = frame.respawnReset();
             boolean arena = arenaRespawns;
             int anchorKey = arena ? 0 : frame.progress();
+            Checkpoint checkpoint = checkpointReceipts.get(index);
+            if (checkpoint != null) {
+                int dx = TrackRules.delta(frame.x() - checkpoint.x(), profile == null ? 0 : profile.wrapWidthPx());
+                int dy = TrackRules.delta(frame.y() - checkpoint.y(), profile == null ? 0 : profile.wrapHeightPx());
+                // Obj79_CheckActivation (s2.asm:44634-44643), sub_2D028
+                // (sonic3k.asm:61655-61663): [-8,7] x [-64,39], plus the
+                // movement between activation and the post-step streamed pose.
+                if (frame.progress() != checkpoint.progress() || dx < -8-maxSpeed || dx > 7+maxSpeed
+                        || dy < -64-maxSpeed || dy > 39+maxSpeed)
+                    return violate("checkpoint", "saved centre outside ROM activation geometry");
+                nextAnchors.put(checkpoint.progress(),new GhostFrame(checkpoint.x(),checkpoint.y(),0,false,false,false,0,false));
+                nextSavedAnchors.add(checkpoint.progress());
+            }
+            if (checkpointReceiptsRequired && frame.progress() > 0 && !nextSavedAnchors.contains(frame.progress()))
+                return violate("checkpoint", "progress without a validated saved checkpoint");
             if (reset) {
                 GhostFrame anchor = nextAnchors.get(anchorKey);
                 // Activation samples the player, whereas SaveData stores the post centre:
                 // Obj79_CheckActivation (s2.asm:44639-44643), Obj79_SaveData
                 // (s2.asm:44738-44739), Obj79_LoadData (s2.asm:44778-44779).
                 // S3K: sub_2D028 (sonic3k.asm:61655-61663), sub_2D164
-                // (sonic3k.asm:61743-61746). First return resolves that activation
-                // envelope to a saved centre; subsequent returns use the fixed centre.
-                boolean activationAnchor = !arena && !nextSavedAnchors.contains(anchorKey);
+                // (sonic3k.asm:61743-61746). Hosted acts use the validated saved
+                // centre; standalone legacy callers resolve the activation envelope on return.
+                boolean activationAnchor = !checkpointReceiptsRequired && !arena && !nextSavedAnchors.contains(anchorKey);
                 int xTolerance = maxSpeed + (activationAnchor ? 8 : 0);
                 int yTolerance = maxSpeed + (activationAnchor ? 64 : 0);
                 if (!respawnsEnabled || previous == null || anchor == null || resets >= 64
@@ -201,6 +228,7 @@ public final class GhostStreamValidator {
         previousFrame = previous;
         streamDigest.update(frameData);
         nextExpectedFrameIndex = batch.startFrameIndex() + batch.frameCount();
+        checkpointReceipts.keySet().removeIf(frame -> frame < nextExpectedFrameIndex);
         rateTokens = availableTokens - batch.frameCount();
         if (rateLastRefillMillis == Long.MIN_VALUE || now > rateLastRefillMillis) {
             rateLastRefillMillis = now;

@@ -458,7 +458,9 @@ final class HostedRunController {
         RunStep step = new RunStep(stepOrdinal++, pendingHeldMask, pendingStartHeld, poseOf(player),
                 actComplete, checkpointIndex, debugAssistThisStep, actRaceClock(level,gameState),
                 raceSwaps==null ? com.openggf.mods.run.RaceSignal.NONE : raceSwaps.consumeSignal(),
-                raceSwaps==null ? com.openggf.mods.run.RaceEventResult.NONE : raceSwaps.consumeApplied());
+                raceSwaps==null ? com.openggf.mods.run.RaceEventResult.NONE : raceSwaps.consumeApplied(),
+                checkpointState == null ? 0 : checkpointState.getSavedX(),
+                checkpointState == null ? 0 : checkpointState.getSavedY());
         debugAssistThisStep = false;
         guarded(() -> host.afterStep(step));
     }

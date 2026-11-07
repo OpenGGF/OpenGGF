@@ -607,10 +607,13 @@ an expiry receipt and a violation, releasing their pending slot. Verification re
 receipt even if the recipient omitted it from its recording. Applied S2 commands must reach
 the target within 180 frames and maxSpeed tolerance; arenas check the exchanged shoe kind,
 since the ROM does not exchange arena positions. Fallback outcomes cancel this obligation.
-The first checkpoint return is bounded by the ROM activation envelope plus one streamed
-step, then fixes subsequent respawns to that saved centre. The ghost transport does not
-carry a post's ROM identity or centre: without exported checkpoint coordinates, the first
-centre is geometry-bounded evidence rather than an independently authenticated post.
+Competition acts transmit the native saved post centre with checkpoint progress and its
+activation frame. The hub validates that frame against the ROM activation rectangle plus
+one streamed step, then anchors respawns to the saved centre. Unreceipted progress changes
+are rejected. The coordinates remain client-supplied, geometry-bounded evidence; the
+verifier's native replay and ghost hash authenticate the actual checkpoint and return.
+Legacy standalone validator callers retain geometry-only admission; hosted acts require
+the saved-centre receipt.
 Recording v3 widens event counts to 1024 so repeated native pickups after deaths can retain
 refusal receipts; v2 remains readable.
 

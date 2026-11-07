@@ -29,7 +29,8 @@ class TestGhostRespawnReset {
         assertEquals(GhostStreamValidator.Verdict.DROP,send(v,131,4000,1,false));
     }
     @Test void jumpThroughAtMaximumActivationHeightCanReturnToSavedPostCentre() {
-        var v = validator(true);
+        var v = validator(true); v.requireCheckpointReceipts(true);
+        assertTrue(v.checkpoint(1,0,1,100,164));
         byte[] data = new byte[7];
         for (int i=0;i<=120;i++) {
             now = i * 1000L / 60;
@@ -37,6 +38,13 @@ class TestGhostRespawnReset {
             assertEquals(GhostStreamValidator.Verdict.ACCEPT,v.onBatch(new GhostPackets.FramesBatch(1,i,1,data)));
         }
         assertEquals(0,v.violationCount());
+    }
+    @Test void forgedCheckpointCentreAndUnreceiptedProgressAreRejected() {
+        var v=validator(true); v.requireCheckpointReceipts(true);
+        assertTrue(v.checkpoint(1,0,1,100,400));
+        assertEquals(GhostStreamValidator.Verdict.DROP,send(v,0,100,1,false));
+        var withoutReceipt=validator(true); withoutReceipt.requireCheckpointReceipts(true);
+        assertEquals(GhostStreamValidator.Verdict.DROP,send(withoutReceipt,0,100,1,false));
     }
     @Test void timeAttackAndUnanchoredFirstFrameCannotReset() {
         var v = validator(false);

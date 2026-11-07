@@ -807,6 +807,11 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     }
 
     @Override
+    public void onCheckpoint(int attempt, int frame, int progress, int x, int y) {
+        if (!terminal && competition()) transport.sendControl(new ControlMessage.CheckpointReached(attempt,frame,progress,x,y));
+    }
+
+    @Override
     public void onTeleportRequest(int attemptOrdinal, int frame) {
         if (!terminal && competition()) transport.sendControl(new ControlMessage.TeleportRequest(attemptOrdinal, frame));
     }
