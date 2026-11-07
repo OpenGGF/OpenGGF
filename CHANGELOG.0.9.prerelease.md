@@ -8,6 +8,10 @@ matching area heading; see the
 ## Gameplay and presentation
 
 - **Sonic CD development support:** authenticated user-disc sources now feed an
+  CCZ ordinary scheduling now preserves native VBlank/Main order, the old
+  selected sprite list and full-word time-stop gating. Private HUD adoption
+  retains the real prefix across typed callback failures;175 focused checks
+  pass after a reproduced error-path correction, ahead of live World admission.
   Private CCZ integration now has source-bound Frame publication, native HUD
   metadata and sparse residency, real ordinary Core PLC/section access, and a
   detached level view. Focused Frame/HUD regressions and exact fixture repairs

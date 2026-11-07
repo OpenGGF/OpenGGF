@@ -1,5 +1,35 @@
 # Implement Sonic CD with complete regional parity
 
+## 7 November 2026 — actual R31 scheduler and private Core HUD lane
+
+The new source-bound scheduling kernel owns only call order. It borrows the old
+CPU sprite-list reference once before input, reuses it through selector8 and
+settlement, and calls actual Frame VBlank/Finish/pause before Main increment,
+spawn, the physical walk, scroll and new CPU construction. The reached time-stop
+read is a WORD; any nonzero value, including0100, skips palette cycles before real
+R31 section/PLC/global-animation tails. Invalid idle input and caught nested entry
+reject before retirement. No snapshot/value/effect is a native execution receipt.
+
+Private Core runHud uses the actual R31 facade once, retains its genuine section/
+level prefix, and leaves ring/score/time/bonus adoption to the live external owner.
+A review identified a real catch-scope bug in the initial version: a Host-thrown
+HUD-shaped exception could be recaught as a new operand fault and replace the
+completed prefix with a foreign state. Root added two genuinely obtained typed
+fault adversaries, observed both fail in R81, and moved successful retention outside
+the native-HUD catch. Callback faults now propagate unchanged after the actual
+prefix; native operand-fault retention and suppressed publication failures remain.
+
+R80 ran173:171 passed,2 new helper expectations failed,0 errors/skips/equal source.
+Those helpers incorrectly excluded the real CURRENT_ART audit call; exact expected
+prefix plus one call now preserves every other nonwrite assertion. R81 is meaningful
+RED2/2 with foreign-prefix assertions. R82 passes175/0F/E/S across5 complete classes
+on unchanged source:82 Core,25 new loop,5 old R13 loop,37 Frame bridge and26 HUD.
+Independent bounded review has only that resolved P2; exact frozen inputs/inverses
+and original receipts remain external. After R82 only one test header clarifies
+author provenance. Actual R31 loading Host and fresh Module/World/FULL integration
+remain separate work; this result is no Ready, ordinary World, pixel, native audio,
+whole-game or regional parity claim.
+
 ## 7 November 2026 — R31 Frame, HUD and private ordinary Core access
 
 The source-bound Frame bridge executes R31 Body once and publishes its prebuilt

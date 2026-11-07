@@ -161,6 +161,25 @@ final class SonicCdR31aLoadingVisit {
         /** R31 has real camera sections. Do not substitute the native R13 no-op section programme. */
         void updateSection(State expected,int cameraXWord){validate(expected);word(cameraXWord);artOp(a->art.updateSection(a,cameraXWord));}
         // END R31 ordinary complete-pair prebuild 20261107.
+        // BEGIN R31 ordinary native HUD adoption 20261107.
+        /** Actual shared HUD call over the current Core pair. External ring/score/live/bonus
+         * prefixes remain in the typed result/fault for the original World owner to adopt once. */
+        CdLevelHud.R31Result runHud(State expected,CdLevelHud.R31State input,CdLevelHud.Inputs inputs){
+            validate(expected);Objects.requireNonNull(input);Objects.requireNonNull(inputs);
+            if(input.section()!=values.section()||input.level()!=values.level())throw new IllegalArgumentException("HUD requires actual R31 Core pair");
+            if(hud==null)hud=new CdLevelHud.R31(assets,CdR31aHudAssets.fromAssets(assets),art);
+            CdLevelHud.R31Result result;
+            try{result=hud.run(input,inputs);}
+            catch(CdLevelHud.UnsupportedR31Hud original){try{retainHud(original.state());}catch(RuntimeException|Error publication){if(publication!=original)original.addSuppressed(publication);}throw original;}
+            catch(CdLevelHud.R31ArtFailure prefix){try{retainHud(prefix.state());}catch(RuntimeException|Error publication){if(publication!=prefix.original())prefix.original().addSuppressed(publication);}throw prefix;}
+            // A Host publication fault is not a failure of the already completed HUD operation.
+            retainHud(result.state());return result;
+        }
+        private void retainHud(CdLevelHud.R31State next){
+            var before=values.section();values=values.art(next.section()).level(next.level());
+            if(before.residency()!=next.section().residency())act(Action.CURRENT_ART);
+        }
+        // END R31 ordinary native HUD adoption 20261107.
         /** Native deferred Title PLC2; actual World first authenticates the original Title receipt. */
         void appendTitlePlc(State expected){validate(expected);artOp(a->art.appendList(a,2));call(Call.TITLE_PLC_APPEND);}
         /** Pure Main425 programme over the cached four scripts; caller must prebuild/adopt its coupled
@@ -182,6 +201,7 @@ final class SonicCdR31aLoadingVisit {
     private final Host host;private final CdR31aAssets assets;private final CdPlayerFrameRuntime frame;private final CdR31aSectionArt art;
     private final CdProgramInitialization.ExecutionEnvironment executionEnvironment;private final CdR31aBackgroundScroll background;
     private final CdR31aProgrammeAssets programme;private final CdStageTerrain terrain;private final List<CdLevelPaletteCycle.Script> cycles;
+    private CdLevelHud.R31 hud; // Immutable source-bound facade cache; no invocation/capture authority.
     private State values;private boolean running,failed,eventsActive,cpuReading,observing,checking,validating;
     private Action activeAction;private Publication activePublication;private Scroll activeScrollBefore,activeScrollReady;
     private OrdinaryOwner ordinary;private OrdinaryAccess activeOrdinary;
