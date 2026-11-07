@@ -15,6 +15,11 @@ under the matching area heading; see the
   shared touch owner. The Sonic+Tails chain advances from CNZ2 to HTZ2; later
   route errors and the special-stage return timing differences remain open.
 
+- **S2 diagonal launcher springs:** capture both riders before deciding to
+  release or decompress. A fresh Tails capture now uses the native launch force
+  and can hold Sonic on the spring. The complete-chain CNZ2 segment is green;
+  later campaign and art-gap failures remain open.
+
 
 ## Modding and tools
 
