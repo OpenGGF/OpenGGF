@@ -27,6 +27,7 @@ public final class MonitorContentsObjectInstance extends AbstractMonitorObjectIn
     private static final int ICON_FRAME_OFFSET = 1;
 
     private int subtype;
+    private boolean contentsInitialized;
 
     public MonitorContentsObjectInstance(int x, int y, int subtype, PlayableEntity player) {
         this(new ObjectSpawn(x, y, Sonic2ObjectIds.MONITOR_CONTENTS, subtype, 0, false, 0), player);
@@ -49,8 +50,45 @@ public final class MonitorContentsObjectInstance extends AbstractMonitorObjectIn
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
         updateDynamicSpawn(spawn.x(), iconSubY >> 8);
+        if (iconPendingInit) { iconPendingInit = false; return; }
+        if (!contentsInitialized) {
+            var policy = services().runPolicy();
+            if (policy.monitors() == com.openggf.mods.run.MonitorRule.OFF) {
+                setDestroyed(true);
+                return;
+            }
+            if (usesHostedRandomContents(policy.monitors())) {
+                var level = services().levelManager();
+                subtype = selectHostedContents(policy.monitors(),level.getFrameCounter(),
+                        !level.getLevelGamestate().isTimerPaused(),policy.swapEnabled());
+            }
+            contentsInitialized = true;
+        }
         updateIcon();
     }
+
+    static boolean usesHostedRandomContents(com.openggf.mods.run.MonitorRule rule) {
+        return rule == com.openggf.mods.run.MonitorRule.RANDOMISED
+                || rule == com.openggf.mods.run.MonitorRule.COMPETITION_ITEMS;
+    }
+
+    static int selectHostedContents(com.openggf.mods.run.MonitorRule rule,int levelFrame,
+            boolean timerRunning,boolean swapEnabled) {
+        // Obj2E_Init (s2.asm:25755-25776) samples Level_frame_counter at this SST's init,
+        // rather than V_int_run_count or the frame when its parent shell broke.
+        int content = switch (rule) {
+            case RANDOMISED -> (levelFrame & 7) + 1;
+            // D22 invention: use bit 0 for teleport/Robotnik, based on the ROM timer draw.
+            // Robotnik's membership and this one-bit set are room rules, not shipped S2.
+            case COMPETITION_ITEMS -> (levelFrame & 1) != 0 ? 8 : 3;
+            default -> throw new IllegalArgumentException("No hosted content draw for " + rule);
+        };
+        // Obj2E_Init's two timer flags must both be one. The frozen launch flag stands
+        // in for the partner's flag; live roster changes cannot affect this draw.
+        return content == 8 && (!timerRunning || !swapEnabled) ? 7 : content;
+    }
+
+    int selectedSubtype() { return subtype; }
 
     @Override
     protected void applyPowerup(PlayableEntity player) {

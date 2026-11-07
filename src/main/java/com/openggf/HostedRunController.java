@@ -55,9 +55,14 @@ final class HostedRunController {
     private final GhostRenderRegistry.GhostLayerRenderer layerRenderer = this::renderGhostsForLayer;
     private GhostRenderRegistry registeredRegistry;
 
+    @com.openggf.game.rewind.RewindTransient(reason="Run input queue, consumed before the next executed step")
+    private com.openggf.mods.run.RaceEvent pendingRaceEvent;
+    private com.openggf.game.arena.RaceSwapApplier raceSwaps;
     private com.openggf.game.arena.HostedArenaSession arenaSession;
     void bindArena(com.openggf.game.arena.HostedArenaSession session) {
         arenaSession = session;
+        raceSwaps = session.raceSwaps();
+        if (raceSwaps != null) raceSwaps.reset();
         ghostRenderer.setArtSource(session.ghostArtSource());
     }
 
@@ -106,6 +111,8 @@ final class HostedRunController {
         this.spec = Objects.requireNonNull(spec, "spec");
         this.host = Objects.requireNonNull(host, "host");
         this.handle = new Handle();
+        pendingRaceEvent = null;
+        raceSwaps = null;
         localLook.request(com.openggf.net.identity.PlayerAppearance.STOCK);
         retryRequested = false;
         leaveReason = null;
@@ -210,10 +217,13 @@ final class HostedRunController {
         if (host == null) {
             return;
         }
+        var raceMode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+        raceSwaps = raceMode == null ? null : com.openggf.game.arena.RaceSwapRuntime.applier(raceMode.getWorldSession().getGameModule());
+        if (raceSwaps != null) raceSwaps.reset();
         String determinismFingerprint = new DeterminismFingerprint(AppVersion.get(), romChecksumOrZero()).asString();
         boolean checkpointRespawn = deathRestart && spec.policy().deathRestart()
                 == com.openggf.game.session.GameplayRunPolicy.DeathRestart.FAST_FROM_CHECKPOINT;
-        if (!checkpointRespawn) stepOrdinal = 0;
+        if (!checkpointRespawn) { stepOrdinal = 0; pendingRaceEvent = null; }
         debugAssistThisStep = false;
         // The load that just finished satisfies any retry requested before it (for example a
         // second press during the reload fade); only a request made from here on reloads again.
@@ -385,7 +395,8 @@ final class HostedRunController {
         if (host == null) return;
         actCompleteSeen |= complete;
         var step = new RunStep(stepOrdinal++,pendingHeldMask,false,arena.pose(),complete,-1,debugAssistThisStep,
-                arena.race(),com.openggf.mods.run.RaceSignal.NONE,com.openggf.mods.run.RaceEventResult.NONE);
+                arena.race(),raceSwaps==null ? com.openggf.mods.run.RaceSignal.NONE : raceSwaps.consumeSignal(),
+                raceSwaps==null ? com.openggf.mods.run.RaceEventResult.NONE : raceSwaps.consumeApplied());
         debugAssistThisStep = false;
         guarded(() -> host.afterStep(step));
     }
@@ -395,6 +406,11 @@ final class HostedRunController {
         var p1 = input.logical().player1();
         pendingHeldMask = inputHeld ? 0 : p1.heldMask();
         pendingStartHeld = !inputHeld && p1.startHeld();
+        if (pendingRaceEvent != null) {
+            if (raceSwaps == null) throw new IllegalStateException("The run has no native race-swap service");
+            raceSwaps.queueForStep(pendingRaceEvent);
+            pendingRaceEvent = null;
+        }
     }
 
     /** A debug shortcut was used this frame; reported with the next step. */
@@ -429,7 +445,8 @@ final class HostedRunController {
         actCompleteSeen |= actComplete;
         RunStep step = new RunStep(stepOrdinal++, pendingHeldMask, pendingStartHeld, poseOf(player),
                 actComplete, checkpointIndex, debugAssistThisStep, actRaceClock(level,gameState),
-                com.openggf.mods.run.RaceSignal.NONE,com.openggf.mods.run.RaceEventResult.NONE);
+                raceSwaps==null ? com.openggf.mods.run.RaceSignal.NONE : raceSwaps.consumeSignal(),
+                raceSwaps==null ? com.openggf.mods.run.RaceEventResult.NONE : raceSwaps.consumeApplied());
         debugAssistThisStep = false;
         guarded(() -> host.afterStep(step));
     }
@@ -497,6 +514,15 @@ final class HostedRunController {
         return host != null ? reason : null;
     }
 
+    /** Scoped game presentation, shared by live rendering and state-free redraw. */
+    void drawScene(Runnable draw) {
+        if (raceSwaps == null) { draw.run(); return; }
+        ghostRenderer.setPaletteFlash(raceSwaps.whitensPalette());
+        try {
+            raceSwaps.draw(com.openggf.game.session.SessionManager.getCurrentGameplayMode(),GameServices.graphics(),draw);
+        } finally { ghostRenderer.setPaletteFlash(false); }
+    }
+
     /** Draws the host's screen-space overlay. */
     void drawOverlay(LevelOverlayCanvas canvas) {
         if (host != null && leaveReason == null) {
@@ -537,6 +563,9 @@ final class HostedRunController {
         localLook.clear();
         handle.active = false;
         host = null;
+        pendingRaceEvent = null;
+        if (raceSwaps != null) raceSwaps.reset();
+        raceSwaps = null;
         arenaSession = null;
         ghostRenderer.setArtSource(null);
         spec = null;
@@ -667,6 +696,16 @@ final class HostedRunController {
 
     private final class Handle implements RunHandle {
         private boolean active = true;
+
+        @Override public void queueRaceEvent(com.openggf.mods.run.RaceEvent event) {
+            if (!active) return;
+            Objects.requireNonNull(event,"event");
+            if (!spec.policy().swapEnabled()) throw new IllegalStateException("Swaps are disabled for this attempt");
+            if (raceSwaps == null) throw new IllegalStateException("The native run is not ready for race events");
+            if (pendingRaceEvent != null || raceSwaps != null && raceSwaps.hasQueuedEvent())
+                throw new IllegalStateException("A race event is already queued");
+            pendingRaceEvent = event;
+        }
 
         @Override
         public void retry() {

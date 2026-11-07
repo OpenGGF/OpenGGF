@@ -229,6 +229,20 @@ comparison closing the845 targeted wall/peppermint component pixels with no new
 bad pixels. Remaining HUD/bootstrap and tiny RGB differences, native-high-glass
 control and full-product/integration qualification remain open.
 
+## Hosted network arena shoe partner (2026-11-07)
+
+In an eligible hosted Competition attempt, the native swap box requests a
+server-selected remote partner instead of exchanging with the unspawned second
+slot immediately. An admitted command replaces only the speed-shoe bit, shoe
+timer and native speed triple from the streamed partner. Position and other
+local state remain local, as the arena swap never moves either player. Each
+client applies at its own next executed step. A delayed no-partner or rejected
+command uses the shipped empty-slot shoe exchange; dead or finished recipients
+receive no effect. With swapping disabled, the native solo effect remains
+immediate. This is an intentional network room rule, distinct from the fixed
+solo parity defect in loc_3652A.
+See the [Competition swap design](architecture/designs/2026-11-07-s3k-competition-time-attack-tracks-design.md#83-what-is-swapped-and-what-the-command-carries).
+
 ## Table of Contents
 
 1. [YM Service Timing: Source-Relative Timeline Without Absolute VInt Phase](#ym-service-timing-source-relative-timeline-without-absolute-vint-phase)

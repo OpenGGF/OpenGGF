@@ -35,6 +35,7 @@ final class HostedArenaLaunch implements NativeMenuScreen {
     @Override public void initialize() {
         session = provider.open(new HostedArenaRequest(spec.zone(),spec.character(),
                 spec.policy().monitors()==MonitorRule.COMPETITION_ITEMS),context);
+        loop.resolveGameplayModeContext().beginGameplayRun(spec.policy(),spec.zone(),spec.act());
         loop.hostedRuns.bindArena(session);
         loop.hostedRuns.onArenaReady(session.geometry());
     }

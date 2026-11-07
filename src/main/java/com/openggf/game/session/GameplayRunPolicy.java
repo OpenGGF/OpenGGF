@@ -25,6 +25,8 @@ import java.util.Objects;
  * @param editorEntry       whether the level editor may be opened during the run
  * @param deathRestart      what a death of the main player leads to
  * @param livesCounter      whether the HUD draws the lives counter
+ * @param swapEnabled frozen round eligibility for server-mediated partner swaps; never inferred
+ *                    from currently connected players
  * @param zoneIntros        whether an act opens with its shipped intro cutscene (S3K Angel
  *                          Island 1's plane intro); false starts where the intro would hand
  *                          the player control, as the engine's skip-intros start does
@@ -37,7 +39,12 @@ public record GameplayRunPolicy(boolean specialStageEntry,
                                 boolean editorEntry,
                                 DeathRestart deathRestart,
                                 boolean livesCounter,
-                                boolean zoneIntros, com.openggf.mods.run.MonitorRule monitors) {
+                                boolean zoneIntros, com.openggf.mods.run.MonitorRule monitors,
+                                boolean swapEnabled) {
+    /** Compatibility construction: a non-networked run never requests a partner swap. */
+    public GameplayRunPolicy(boolean specialStageEntry, boolean bonusStageEntry, ActCompletion actCompletion, boolean liveRewind, boolean editorEntry, DeathRestart deathRestart, boolean livesCounter, boolean zoneIntros, com.openggf.mods.run.MonitorRule monitors) {
+        this(specialStageEntry, bonusStageEntry, actCompletion, liveRewind, editorEntry, deathRestart, livesCounter, zoneIntros, monitors, false);
+    }
     public GameplayRunPolicy(boolean specialStageEntry, boolean bonusStageEntry, ActCompletion actCompletion, boolean liveRewind, boolean editorEntry, DeathRestart deathRestart, boolean livesCounter, boolean zoneIntros) {
         this(specialStageEntry, bonusStageEntry, actCompletion, liveRewind, editorEntry, deathRestart, livesCounter, zoneIntros, com.openggf.mods.run.MonitorRule.NORMAL);
     }
@@ -106,7 +113,7 @@ public record GameplayRunPolicy(boolean specialStageEntry,
      */
     public GameplayRunPolicy withFastRestarts() {
         return new GameplayRunPolicy(specialStageEntry, bonusStageEntry, actCompletion, liveRewind,
-                editorEntry, DeathRestart.FAST_FROM_START, false, zoneIntros, monitors);
+                editorEntry, DeathRestart.FAST_FROM_START, false, zoneIntros, monitors, swapEnabled);
     }
 
     /**
@@ -115,7 +122,7 @@ public record GameplayRunPolicy(boolean specialStageEntry,
      */
     public GameplayRunPolicy withoutZoneIntros() {
         return new GameplayRunPolicy(specialStageEntry, bonusStageEntry, actCompletion, liveRewind,
-                editorEntry, deathRestart, livesCounter, false, monitors);
+                editorEntry, deathRestart, livesCounter, false, monitors, swapEnabled);
     }
 
     /** True when a death reloads the act at once instead of following the shipped game. */

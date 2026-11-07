@@ -11,6 +11,7 @@ public interface HostedArenaSession extends AutoCloseable {
     AbstractPlayableSprite localPlayer();
     boolean resultsRequested();
     boolean trackFinished();
+    default RaceSwapApplier raceSwaps() { return null; }
     void draw();
     GhostArtSource ghostArtSource();
     @Override void close();

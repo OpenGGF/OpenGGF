@@ -475,8 +475,20 @@ public final class S3kCompetitionSession implements WorldSessionPolicyState,
         }
     }
 
-    /** Full status_secondary bytes swap, not only the speed-shoes bit (FixBugs=0). */
+    /** Run-host interception; the default always executes the native effect. */
+    @com.openggf.game.rewind.RewindTransient(reason="Hosted run signal callback; native session state owns only item effects")
+    private java.util.function.BooleanSupplier hostedSwapRequest = () -> false;
+
+    void setHostedSwapRequest(java.util.function.BooleanSupplier request) {
+        hostedSwapRequest = Objects.requireNonNull(request);
+    }
+
     private void swapShoes() {
+        if (!hostedSwapRequest.getAsBoolean()) soloSwapShoes();
+    }
+
+    /** Full status_secondary bytes swap, not only the speed-shoes bit (FixBugs=0). */
+    void soloSwapShoes() {
         // loc_3652A (sonic3k.asm:73480-73525), shipped FixBugs=0:
         // no Not_ghost_flag test. Even the unspawned slot receives and retains the bytes.
         if (players.size() == 1) {

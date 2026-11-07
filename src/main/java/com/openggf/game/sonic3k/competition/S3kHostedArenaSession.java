@@ -18,6 +18,7 @@ public final class S3kHostedArenaSession implements HostedArenaSession {
     private final S3kCompetitionNativeHost host;
     private final Runnable closeViews;
     private boolean closed;
+    private final S3kArenaSwapApplier raceSwaps;
 
     public S3kHostedArenaSession(S3kCompetitionNativeHost host, HostedArenaRequest request, Runnable closeViews) {
         this.host = Objects.requireNonNull(host);
@@ -29,6 +30,9 @@ public final class S3kHostedArenaSession implements HostedArenaSession {
                 S3kCompetitionSession.Mode.MATCH_RACE,
                 S3kCompetitionSession.GRAND_PRIX_ORDER.get(request.arenaIndex()), request.itemsEnabled(), 1),
                 List.of(character)));
+        raceSwaps = new S3kArenaSwapApplier(host,this::geometry);
+        host.session().setHostedSwapRequest(raceSwaps::requestNative);
+        host.world().context().getRewindRegistry().register(raceSwaps);
     }
 
     @Override public ArenaStep step(PlayerInputState input) {
@@ -37,6 +41,7 @@ public final class S3kHostedArenaSession implements HostedArenaSession {
         // Start belongs to the run host, including on replay. P2 remains an empty native slot.
         var masked = PlayerInputState.of(input.heldMask(), input.pressedMask(),
                 input.actionHeldMask(), input.actionPressedMask(), false, false);
+        raceSwaps.executeQueued(host.world().context());
         host.stepArena(LogicalInputSnapshot.ofPlayers(masked, PlayerInputState.neutral()), host.session());
         return observation();
     }
@@ -105,6 +110,7 @@ public final class S3kHostedArenaSession implements HostedArenaSession {
         int screen = ((player-camera+12)&mask)-12;
         return player-screen;
     }
+    @Override public com.openggf.game.arena.RaceSwapApplier raceSwaps() { return raceSwaps; }
     @Override public void draw() { host.drawArena(); }
     @Override public void close() {
         if (closed) return;

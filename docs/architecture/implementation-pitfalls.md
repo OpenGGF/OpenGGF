@@ -68,6 +68,24 @@ copies plus shake, refresh derived playable offsets at the existing post-camera
 Render_Sprites boundary, and preserve both native words. See the
 [ending lifecycle evidence](designs/2026-10-13-s3k-ending-lifecycle.md).
 
+Looping arena cameras and actors can occupy different images of the same track.
+In the hosted arena probe, camera X1936 and actor X1072 still placed P1 at screen
+X160 through the native 1024px wrap; raw subtraction put a nearby ghost offscreen.
+Derive the display origin from P1's native wrapped SAT anchor, including its range
+half extent, and keep the native camera unchanged. Check a ghost relative to P1,
+not only a ghost placed relative to the renderer's own camera origin: that latter
+fixture can pass while hiding an image-selection error. The
+[hosted arena validation](validation/2026-11-07-s3k-hosted-arena-lane-b.md) retains
+the failed probes, accepted SAT evidence and RGB-alpha checks (2026-11-07).
+
+A native death's life-loss row is earlier than its reload request. A direct
+checkpoint-reload comparison must wait for and consume the same production
+respawn request as GameLoop. Calling the owner at life loss produced unequal
+`prePhysicsYSpeed` and `prePhysicsCentreY`, even though position, lives and timer
+matched. Compare the full captured player and keep those fields in the oracle;
+fix the invocation boundary instead of excluding them. See the
+[hosted checkpoint evidence](validation/2026-11-07-s3k-hosted-arena-lane-b.md).
+
 Capture boot must preserve an existing native camera binding. After ScreenInit
 sets `Scroll_lock`, even `Camera.setFocusedSprite` resets physical and render-copy
 coordinates; guarding only the following forced snap leaves that overwrite.

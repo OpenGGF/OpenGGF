@@ -39,6 +39,9 @@ import java.util.logging.Logger;
  * ({@link AppearancePalettes}) and keeps its colours, fading only with distance.
  */
 public final class GhostRenderer {
+    @com.openggf.game.rewind.RewindTransient(reason="Draw-scope palette projection, never simulation authority")
+    private boolean paletteFlash;
+    public void setPaletteFlash(boolean enabled) { paletteFlash=enabled; }
     private static final Logger LOGGER = Logger.getLogger(GhostRenderer.class.getName());
     private static final int FULL_OPACITY_DISTANCE = 32;
 
@@ -213,11 +216,11 @@ public final class GhostRenderer {
      */
     private boolean applyLook(Slot slot, PlayerAppearance look, String localCharacter) {
         slot.lastUsedFrame = frame;
-        String key = look.encode();
+        String key = paletteFlash ? "native-white-flash" : look.encode();
         if (!key.equals(slot.lookKey)) {
             slot.releasePalette();
             slot.lookKey = key;
-            if (!look.isStock()) {
+            if (!paletteFlash && !look.isStock()) {
                 slot.palette = acquirePalette(slot.code, look, localCharacter);
                 if (slot.palette == null && releaseIdlePalettes(frame) > 0) {
                     slot.palette = acquirePalette(slot.code, look, localCharacter);
