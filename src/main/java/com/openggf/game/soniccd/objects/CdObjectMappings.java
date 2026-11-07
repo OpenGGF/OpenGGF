@@ -18,6 +18,8 @@ import com.openggf.game.soniccd.level.CdR13ReusedObjectAssets;
 import com.openggf.game.soniccd.level.CdR13BossAssets;
 import com.openggf.game.soniccd.level.CdR13CapsuleAssets;
 import com.openggf.game.soniccd.level.CdR13ResultsAssets;
+import com.openggf.game.soniccd.level.CdR31aAssets;
+import com.openggf.game.soniccd.level.CdR31aObjectAssets;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -443,6 +445,46 @@ public final class CdObjectMappings implements CdDrawMappings {
         return declaredSourceViews(tables,new ArrayList<>(base.staticPieces.values()));
     }
     // END R13 GAME OVER MAPPING JOIN 20261107
+
+    // BEGIN R31 COMMON COUNTED METADATA JOIN 20261107
+    /**
+     * Same actual R31 aggregate: Sonic167, HUD4, Monitor20, Title9 counted roots only.
+     * Genuine Sonic2444 and Title276 read views retain their original unread EVEN bytes.
+     * No handler/Init-PC/dispatch closure, raw static icons, art/current or World authority.
+     */
+    public static CdObjectMappings fromR31aAssets(CdR31aAssets assets, CdR31aObjectAssets common) {
+        Objects.requireNonNull(assets, "actual original R31A data");
+        Objects.requireNonNull(common, "same-source R31A common metadata");
+        if (!common.ownsAssets(assets) || !common.identity().equals(assets.identity())) {
+            throw new IllegalArgumentException("R31 common mapping aggregate differs");
+        }
+        var sonic = assets.sonic(); // Mapping portion of the existing actual167-format product only.
+        var canonical = assets.view(CdR31aAssets.Asset.MAP_SPR_SONIC);
+        var reader = assets.view(CdR31aAssets.Asset.SONIC_MAPPING_READ_VIEW);
+        if (sonic.mappingFrames().size() != 167) throw new IllegalArgumentException("Actual R31 Sonic167 required");
+        requireEqualBytes(canonical, sonic.mappings());
+        requireEqualBytes(canonical, reader.slice(0, canonical.length()));
+        for (var frame : sonic.mappingFrames()) {
+            requireEqualBytes(frame.bytes(), reader.slice(frame.relativeOffset(), 1 + frame.pieceCount() * 5));
+        }
+        var tables = new ArrayList<DeclaredTable>();
+        tables.add(new DeclaredTable(assets.range(CdR31aAssets.Asset.SONIC_MAPPING_READ_VIEW).nativeAddress(), reader, 0, 167));
+        var sources = List.of(CdR31aAssets.Asset.HUD_MAPPINGS, CdR31aAssets.Asset.MONITOR_MAPPINGS,
+                CdR31aAssets.Asset.TITLE_MAPPING_READ_VIEW);
+        var visuals = List.of(common.hudVisuals(), common.monitorTime(), common.titleCard());
+        for (int i = 0; i < sources.size(); i++) {
+            var source = sources.get(i);
+            var bytes = assets.view(source);
+            var visual = visuals.get(i);
+            requireEqualBytes(bytes, visual.mappings());
+            for (var frame : visual.mappingFrames()) {
+                requireEqualBytes(frame.bytes(), bytes.slice(frame.relativeOffset(), 1 + frame.pieces().size() * 5));
+            }
+            tables.add(new DeclaredTable(assets.range(source).nativeAddress(), bytes, 0, visual.mappingFrames().size()));
+        }
+        return declaredSourceViews(tables, List.of());
+    }
+    // END R31 COMMON COUNTED METADATA JOIN 20261107
 
     @Override public MappingBody resolve(int addressBits, boolean staticPiece, int mapFrameByte) {
         if (mapFrameByte < 0 || mapFrameByte > 255) {

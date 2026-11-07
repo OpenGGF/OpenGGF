@@ -1,5 +1,27 @@
 # Implement Sonic CD with complete regional parity
 
+## 7 November 2026 — R31 common metadata and original system source
+
+The R31 wrapper binds only its existing HUD4, Monitor20 and Title9 counted
+views to the same authenticated aggregate. The mapping join keeps all167 Sonic
+frames and their genuine2444-byte reader, plus the native276-byte Title reader
+and168-tile metadata hull. No art producer, descriptor or decoder is added.
+The only inherited test change appends the new mapper factory to its complete
+public inventory. A fixed package-private file borrow retains the complete
+original-USA SPX image and native initialization-clear operands as inert data;
+it grants no clear, PCM driver, boot, clock or World invocation authority.
+
+R67 finishes Maven successfully with44 passing cases, but its evidence receipt
+remains INCOMPLETE: mixing a two-method Catalogue selector with whole roots
+omits18 nested declarations under Surefire's global method filter. R67b changes
+only that selection, executing the two complete nested roots:24passes with no
+failures/errors/skips and unchanged source. Exact nine-suite reconciliation
+qualifies62 distinct identities across the two runs:38 unchanged flat cases
+from R67 and24 nested-root cases from R67b. Each XML is fresh within its owning
+invocation, source snapshots match across both, and the Catalogue retains its
+exact two identities. This is not a fresh single-run62-case pass. A bounded
+selector correction is separate; no test or production source was tuned.
+
 ## 7 November 2026 — explicit nested JUnit attribution
 
 The packet runner now accepts an optional exact report-group declaration,
@@ -40,7 +62,7 @@ R66 passes135cases on unchanged source with0failures/errors/skips:12new drawing,
 source arithmetic/order and unchanged drawing-kernel inverse. Original-USA
 source cases execute, while dirty/current/malformed vectors remain explicitly
 constructed. The run uses the installed explicit nested-report tool candidate
-(441Python checks pass; independent tool review pending) and checks all six fresh
+(441Python checks pass; subsequently saved and independently reviewed) and checks all six fresh
 suite reports. No R31 loader, Frame, Ready, current-art pixels or World is admitted.
 
 ## 7 November 2026 — same-CUE R3PCM stock custody

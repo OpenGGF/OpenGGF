@@ -98,6 +98,23 @@ public final class CdProgramAssets implements AutoCloseable {
         return files.openFile(Objects.requireNonNull(file).isoName());
     }
 
+    // BEGIN fixed original system-program file borrow; not a catalogue slot or execution port.
+    record SystemProgramFile(Iso9660FileSystem.Entry entry,
+                             com.openggf.game.soniccd.level.CdAssetBytes bytes) { }
+
+    /** Package-only finite original path/extent. No caller path, address, range or mutable file handle. */
+    SystemProgramFile systemProgramFile() throws IOException {
+        var entry = files.entry("SPX___.BIN;1");
+        if (!"/SPX___.BIN;1".equals(entry.path()) || entry.directory() || entry.version() != 1
+                || entry.extentBlock() != 10237 || entry.size() != 17408) {
+            throw new IOException("Original USA system-program fixed file extent differs");
+        }
+        var bytes = com.openggf.game.soniccd.level.CdAssetBytes.copyOf(
+                files.readFile("SPX___.BIN;1", 0, 17408));
+        return new SystemProgramFile(entry, bytes);
+    }
+    // END fixed original system-program file borrow.
+
     /** A detached immutable file image. Its bytes remain readable after this owner closes. */
     public CdMmdImage mmd(CdNativeFile file) throws IOException {
         Objects.requireNonNull(file);

@@ -264,7 +264,7 @@ dade 45f90020e154
         assertEquals(List.of("flyingAnimal/0","fromAssets/1","groundAnimal/0","hudAssets/0","hudVisuals/0","identity/0","monitorTime/0","ownsAssets/1","placements/0","ringDeltas/0","rings/0","springDiagonal/0","springHorizontal/0","springMappings/0","springVertical/0","titleCard/0","titleCardAssets/0","view/1"),
                 Arrays.stream(CdR13ObjectAssets.class.getDeclaredMethods()).filter(m->Modifier.isPublic(m.getModifiers())).map(m->m.getName()+"/"+m.getParameterCount()).sorted().toList());
         assertEquals(0,CdR13ObjectAssets.class.getConstructors().length);assertEquals(1,CdR13ObjectAssets.class.getDeclaredConstructors().length);
-        assertEquals(List.of("act2MonitorItemStaticPieces/1","act2PastMonitorItemStaticPieces/1","declaredSourceViews/2","fromAct2PastAssets/2","fromAct3FutureAssets/2", "fromAct3FutureAssets/3", "fromAct3FutureAssets/4", "fromAct3FutureAssets/6","fromOpeningAssets/2","resolve/3","withAct3FutureGameOver/3"),
+        assertEquals(List.of("act2MonitorItemStaticPieces/1","act2PastMonitorItemStaticPieces/1","declaredSourceViews/2","fromAct2PastAssets/2","fromAct3FutureAssets/2", "fromAct3FutureAssets/3", "fromAct3FutureAssets/4", "fromAct3FutureAssets/6","fromOpeningAssets/2","fromR31aAssets/2","resolve/3","withAct3FutureGameOver/3"),
                 Arrays.stream(CdObjectMappings.class.getDeclaredMethods()).filter(m->Modifier.isPublic(m.getModifiers())).map(m->m.getName()+"/"+m.getParameterCount()).sorted().toList());
         assertEquals(19,CdR13SectionSources.SourceId.values().length);assertEquals(29,CdR13FutureAssets.Asset.values().length);
         assertEquals(16,Arrays.stream(CdR13FutureAssets.class.getDeclaredMethods()).filter(m->Modifier.isPublic(m.getModifiers())).count());

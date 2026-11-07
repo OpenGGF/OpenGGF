@@ -330,6 +330,10 @@ matching area heading; see the
   uses its exact50/16-byte tables and3F0 mask; a pure scroll/deformation/water owner
   retains native fractions, flags, wraps and finite tails. Existing PPZ drawing
   and movement algorithms remain unchanged; live R31 loading stays separate.
+  Same-source R31 HUD, Monitor and Title views now reuse their original counted
+  mappings and genuine even-byte reader extents. A finite original-USA system
+  programme source retains the authenticated SPX image and its initialization
+  clear description without executing that clear or creating boot authority.
   A finite IPX progress
   component preserves unknown-byte and save-field alias semantics. Its actual
   boss-return join now publishes saved-zone/checkpoint state once and retains it
