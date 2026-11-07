@@ -192,6 +192,8 @@ public class CNZSlotMachineManager {
     /**
      * Check if slot machine is available (inactive).
      */
+    public boolean isInUse() { return inUse; }
+
     public boolean isAvailable() {
         return routine == ROUTINE_INACTIVE && !inUse;
     }

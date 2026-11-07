@@ -119,6 +119,42 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
     private boolean capturedPlayerUsesRideState = false;
     private int capturedSidekickIndex = -1;
 
+    // ObjD6_Main (s2.asm:59151-59170) dispatches $30/$32 then $34/$36.
+    // Only the capture state/timer/standing latch are per actor; payout counters
+    // and the animation remain shared, as in the object SST.
+    private int secondPlayerState;
+    private int secondCountdown;
+    private boolean secondOccupied;
+    private boolean secondUsesRideState;
+    @com.openggf.game.rewind.RewindTransient(reason = "object-pass selector; always restored to P1 before returning")
+    private int nativePlayerSlotBeingUpdated;
+    private int prizeOwnerNativeSlot = -1;
+    private boolean nativeCageAnimationActive;
+    private boolean nativeLastAnimationActive;
+
+    private com.openggf.game.competition.NativeCompetitionRoster nativeRoster() {
+        var injected = tryServices();
+        return injected != null
+                ? com.openggf.game.competition.NativeCompetitionRoster.from(injected.worldSession()) : null;
+    }
+
+    private void swapCaptureBanks() {
+        int state = playerState; playerState = secondPlayerState; secondPlayerState = state;
+        int timer = countdown; countdown = secondCountdown; secondCountdown = timer;
+        boolean occupied = playerOccupied; playerOccupied = secondOccupied; secondOccupied = occupied;
+        boolean ride = capturedPlayerUsesRideState;
+        capturedPlayerUsesRideState = secondUsesRideState; secondUsesRideState = ride;
+    }
+
+    /** Teleport swaps actor state while human identities retain their native slots. */
+    void swapPlayerOwnership() {
+        swapCaptureBanks();
+        if (prizeOwnerNativeSlot >= 0) prizeOwnerNativeSlot ^= 1;
+    }
+
+    int[] prizeCounterForChild() { return activePrizeCount; }
+    int prizeOwnerNativeSlot() { return prizeOwnerNativeSlot; }
+
     // Reference to level manager (for spawning prizes)
 
     // Cached slot display offset (calculated once at first render)
@@ -143,6 +179,11 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
     @Override
     public PointPokeyObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         return new PointPokeyObjectInstance(ctx.spawn(), "PointPokey");
+    }
+
+    @Override public int getOnScreenHalfWidth() {
+        // ObjD6_Init (s2.asm:59141-59149) writes width_pixels=$18.
+        return nativeRoster() != null ? 0x18 : super.getOnScreenHalfWidth();
     }
 
     @Override
@@ -170,16 +211,29 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
     @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        var roster = nativeRoster();
+        if (roster != null) {
+            int slot = roster.slotOf(player);
+            int state = slot == nativePlayerSlotBeingUpdated ? playerState : secondPlayerState;
+            return slot >= 0 && !isDestroyed() && !player.isObjectControlled() && state == STATE_IDLE
+                    && (!isLinkedMode || !getSlotMachineManager().isInUse());
+        }
         return !isDestroyed();
     }
 
     @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        if (player == null) {
-            return;
-        }
+        var roster = nativeRoster();
+        int slot = roster != null && playerEntity instanceof AbstractPlayableSprite actor ? roster.slotOf(actor) : -1;
+        if (roster != null && slot < 0) return;
+        if (slot == 1) swapCaptureBanks();
+        try { onSolidContactSingle(playerEntity, contact, frameCounter); }
+        finally { if (slot == 1) swapCaptureBanks(); }
+    }
 
+    private void onSolidContactSingle(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
+        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        if (player == null) return;
         lastContactFrame = frameCounter;
 
         // Only capture if in idle state and player is touching from above
@@ -202,6 +256,12 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
     }
 
     private void capturePlayer(AbstractPlayableSprite player, boolean useRideState, int sidekickIndex) {
+        var roster = nativeRoster();
+        // loc_2BBF8 (s2.asm:59183-59191): the shared in-use latch rejects
+        // a second linked capture before touching the actor or either state bank.
+        if (roster != null && (player.isObjectControlled()
+                || (isLinkedMode && getSlotMachineManager().isInUse()))) return;
+        if (roster != null) prizeOwnerNativeSlot = roster.slotOf(player);
         // Force rolling state FIRST - this changes player height from 38 to 28.
         // Must be done before setCentreY, otherwise the center calculation uses
         // wrong height and shifts when setRolling changes it.
@@ -235,8 +295,11 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
         player.setGSpeed((short) 0);
 
         // Switch to appropriate state based on mode
-        mappingFrame = FRAME_ACTIVE;
-        animationTimer = 0;
+        nativeCageAnimationActive = true;
+        if (roster == null) {
+            mappingFrame = FRAME_ACTIVE;
+            animationTimer = 0;
+        }
         playerOccupied = true;
 
         if (isLinkedMode) {
@@ -244,6 +307,10 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
             slotMachineManager = getSlotMachineManager();
             if (slotMachineManager != null && slotMachineManager.isAvailable()) {
                 slotMachineManager.activate();
+                playerState = STATE_WAITING_SLOT;
+            } else if (nativeRoster() != null) {
+                // loc_2BC0C captures during the initial reel roll too, but only
+                // starts a new spin / sets InUse when routine is already $18.
                 playerState = STATE_WAITING_SLOT;
             } else {
                 // Slot machine busy - use simple countdown instead
@@ -256,8 +323,9 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
             countdown = COUNTDOWN_FRAMES;
         }
 
-        // Play casino bonus sound
-        playCasinoBonusSound();
+        // loc_2BC0C (s2.asm:59190-59216) does not play a capture sound.
+        // Ordinary campaign behavior stays with its existing path.
+        if (roster == null) playCasinoBonusSound();
     }
 
     /**
@@ -297,8 +365,11 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
         // and SlotMachineInUse only after this timer expires.
         playerState = STATE_RELEASE_COOLDOWN;
         countdown = 0x1E;
-        mappingFrame = FRAME_IDLE;
-        animationTimer = 0;
+        nativeCageAnimationActive = false;
+        if (nativeRoster() == null) {
+            mappingFrame = FRAME_IDLE;
+            animationTimer = 0;
+        }
         playerOccupied = false;
         capturedPlayerUsesRideState = false;
         capturedSidekickIndex = -1;
@@ -313,8 +384,11 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
      */
     private void resetCageState() {
         playerState = STATE_IDLE;
-        mappingFrame = FRAME_IDLE;
-        animationTimer = 0;
+        nativeCageAnimationActive = false;
+        if (nativeRoster() == null) {
+            mappingFrame = FRAME_IDLE;
+            animationTimer = 0;
+        }
         playerOccupied = false;
         capturedPlayerUsesRideState = false;
 
@@ -341,11 +415,43 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        if (player == null) {
+        var roster = nativeRoster();
+        if (roster != null) {
+            updateNativePlayers(roster, vIntRunCount);
             return;
         }
+        updateSingle(vIntRunCount, playerEntity);
+    }
 
+    private void updateNativePlayers(com.openggf.game.competition.NativeCompetitionRoster roster, int vIntRunCount) {
+        for (int slot = 0; slot < 2; slot++) {
+            nativePlayerSlotBeingUpdated = slot;
+            if (slot == 1) swapCaptureBanks();
+            try {
+                var actor = roster.player(slot);
+                if (playerState == STATE_IDLE) {
+                    // loc_2BBF8 guards BEFORE its SingleCharacter solid call.
+                    // P1 can set InUse before P2 reaches this same check.
+                    if (actor.isObjectControlled()
+                            || (isLinkedMode && getSlotMachineManager().isInUse())) continue;
+                    var result = services().solidExecution().resolveSolidNowOnly(actor);
+                    if (capturesFromSolidReturn(result)) capturePlayer(actor, result);
+                } else updateSingle(vIntRunCount, actor);
+            } finally {
+                if (slot == 1) swapCaptureBanks();
+                nativePlayerSlotBeingUpdated = 0;
+            }
+        }
+        // ObjD6_Main animates once after BOTH player routines.
+        flushNativeCageAnimation();
+    }
+
+    private void updateSingle(int vIntRunCount, PlayableEntity playerEntity) {
+        // The zone adapter restores the single slot manager; recreated cages
+        // rebind that structural reference before resuming a captured payout.
+        if (isLinkedMode && slotMachineManager == null) slotMachineManager = getSlotMachineManager();
+        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        if (player == null) return;
         // If player entered debug mode while captured, reset cage state
         if (player.isDebugMode() && playerState != STATE_IDLE) {
             resetCageState();
@@ -431,7 +537,8 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
         // DO NOT update here - that would cause 2x speed reels!
 
         // Check if slot machine is done
-        if (slotMachineManager != null && slotMachineManager.isComplete()) {
+        if (slotMachineManager != null && (nativeRoster() != null
+                ? !slotMachineManager.isRunning() : slotMachineManager.isComplete())) {
             // ROM ObjD6 branches to prize/release handling as soon as
             // SlotMachine_Routine returns to $18; reward 0 immediately ejects
             // (s2.asm:58727-58731, 58628-58638).
@@ -506,7 +613,7 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
                 if (activePrizeCount[0] >= MAX_PRIZES) {
                     return;
                 }
-                spawnPrize(player, vIntRunCount);
+                if (!spawnPrize(player, vIntRunCount)) return;
                 prizesToSpawn--;
             }
 
@@ -530,6 +637,9 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
      * frames; loc_2BD4E reads Level_frame_counter.
      */
     private int levelFrameCounter(int vIntRunCount) {
+        // Native loc_2BD4E (s2.asm:59272-59280) reads Level_frame_counter.
+        // The object-pass argument is V_int_run_count and cannot substitute.
+        if (nativeRoster() != null) return services().levelManager().getFrameCounter();
         return services().levelManager() != null
                 ? services().levelManager().getFrameCounter()
                 : vIntRunCount;
@@ -557,14 +667,18 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
         // ROM ObjD6 occupied routine tests render_flags.on_screen before the
         // simple countdown or linked-slot handling. If bit 7 is clear, it jumps
         // directly to loc_2BE2E and releases the player (s2.asm:59334-59338).
-        if (isWithinOnScreenRenderBounds()) {
-            return false;
-        }
+        // loc_2BDF8 (s2.asm:59315-59318) reads the retained render bit,
+        // not a fresh geometric query after either camera has moved.
+        boolean onScreen = nativeRoster() != null
+                ? isWithinSolidContactBounds() : isWithinOnScreenRenderBounds();
+        if (onScreen) return false;
         ejectPlayer(player);
         return true;
     }
 
     private AbstractPlayableSprite capturedPlayerFor(AbstractPlayableSprite mainPlayer) {
+        var roster = nativeRoster();
+        if (roster != null) return roster.player(nativePlayerSlotBeingUpdated);
         if (capturedSidekickIndex < 0) {
             return mainPlayer;
         }
@@ -602,7 +716,12 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
         if (countdown >= 0) {
             return;
         }
-        resetCageState();
+        if (nativeRoster() != null) {
+            // loc_2BE9C (s2.asm:59368-59377) clears only this state word and
+            // the linked global InUse latch. It does not rewrite the animation.
+            playerState = STATE_IDLE;
+            if (isLinkedMode && slotMachineManager != null) slotMachineManager.releaseUse();
+        } else resetCageState();
     }
 
     /**
@@ -611,6 +730,21 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
      * This creates the two-color flashing effect from Ani_objD6 animation 1.
      */
     private void updateCageAnimation() {
+        if (nativeRoster() == null) animateCageOnce();
+    }
+
+    private void flushNativeCageAnimation() {
+        // ObjD6_Main (s2.asm:59151-59170) animates AFTER both actor routines.
+        // Ani_objD6 (s2.asm:59380-59385): delay 1, frames 1/0. Writing the
+        // same anim again (or 0 then 1 in one pass) must retain script phase.
+        if (nativeLastAnimationActive != nativeCageAnimationActive) {
+            nativeLastAnimationActive = nativeCageAnimationActive;
+            mappingFrame = nativeCageAnimationActive ? FRAME_ACTIVE : FRAME_IDLE;
+            animationTimer = 0;
+        } else if (nativeCageAnimationActive) animateCageOnce();
+    }
+
+    private void animateCageOnce() {
         animationTimer++;
         if (animationTimer >= ACTIVE_ANIM_SPEED) {
             animationTimer = 0;
@@ -708,11 +842,14 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
      * Spawn a prize (ring or bomb) at an angle from the cage.
      * Per disassembly, prizes spiral inward from a starting radius of 128 pixels.
      */
-    private void spawnPrize(AbstractPlayableSprite player, int vIntRunCount) {
+    private boolean spawnPrize(AbstractPlayableSprite player, int vIntRunCount) {
         ObjectManager objectManager = services().objectManager();
-        if (objectManager == null) {
-            return;
-        }
+        boolean nativeMode = nativeRoster() != null;
+        if (objectManager == null) return !nativeMode;
+        int reservedSlot = nativeMode ? objectManager.allocateDynamicSlot() : -1;
+        // loc_2BC86 (s2.asm:59221-59234) and loc_2BD4E (s2.asm:59272-59280)
+        // return before spending reward, angle or active count when AllocateObject fails.
+        if (nativeMode && reservedSlot < 0) return false;
 
         // Calculate spawn position using sin/cos
         // ROM uses angle 0-255 format, we convert to radians
@@ -732,20 +869,25 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
 
         if (slotReward < 0) {
             // Bombs
-            spawnFreeChild(() -> new BombPrizeObjectInstance(
-                    startX, startY, spawn.x(), spawn.y(),
-                    displayDelay, activePrizeCount, this));
+            java.util.function.Supplier<BombPrizeObjectInstance> factory = () -> new BombPrizeObjectInstance(
+                    startX, startY, spawn.x(), spawn.y(), displayDelay, activePrizeCount, this);
+            if (nativeMode) objectManager.addDynamicObjectAtSlot(
+                    ObjectConstructionContext.with(services(), reservedSlot, factory), reservedSlot);
+            else spawnFreeChild(factory);
             prizeAngle += BOMB_ANGLE_INCREMENT;
         } else {
             // Rings
-            spawnFreeChild(() -> new RingPrizeObjectInstance(
-                    startX, startY, spawn.x(), spawn.y(),
-                    displayDelay, activePrizeCount, this));
+            java.util.function.Supplier<RingPrizeObjectInstance> factory = () -> new RingPrizeObjectInstance(
+                    startX, startY, spawn.x(), spawn.y(), displayDelay, activePrizeCount, this);
+            if (nativeMode) objectManager.addDynamicObjectAtSlot(
+                    ObjectConstructionContext.with(services(), reservedSlot, factory), reservedSlot);
+            else spawnFreeChild(factory);
             prizeAngle += RING_ANGLE_INCREMENT;
         }
 
         // Wrap angle
         prizeAngle &= 0xFF;
+        return true;
     }
 
     @Override

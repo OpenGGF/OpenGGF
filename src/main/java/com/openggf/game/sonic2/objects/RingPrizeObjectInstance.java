@@ -55,9 +55,29 @@ public class RingPrizeObjectInstance extends AbstractObjectInstance
     private int displayDelay;
 
     // Reference to parent counter (for decrementing)
-    private final int[] prizeCounter;
+    private int[] prizeCounter;
+    @RewindTransient(reason = "Ordinary final-array restore identity; values are captured by prizeCounter, native links rebind by SST slot")
+    private int[] ordinaryCounterRestoreTarget;
     @RewindTransient(reason = "Structural ObjD6 parent link; live prize children are spawned and owned by PointPokey.")
     private PointPokeyObjectInstance parent;
+    private int parentObjectSlot = -1;
+    private int recipientNativeSlot = -1;
+
+    void swapPlayerOwnership() { if (recipientNativeSlot >= 0) recipientNativeSlot ^= 1; }
+
+    private void relinkPrizeCounter() {
+        if (recipientNativeSlot < 0 || parentObjectSlot < 0) return;
+        var manager = services().objectManager();
+        if (manager == null) return;
+        for (var object : manager.getActiveObjects()) {
+            if (object instanceof PointPokeyObjectInstance cage && cage.getSlotIndex() == parentObjectSlot) {
+                parent = cage;
+                prizeCounter = cage.prizeCounterForChild();
+                return;
+            }
+        }
+    }
+
 
     // Animation state
     private int animTimer = 0;
@@ -99,7 +119,12 @@ public class RingPrizeObjectInstance extends AbstractObjectInstance
         this.machineY = machineY;
         this.displayDelay = displayDelay;
         this.prizeCounter = prizeCounter;
+        this.ordinaryCounterRestoreTarget = prizeCounter;
         this.parent = parent;
+        if (parent != null) {
+            parentObjectSlot = parent.getSlotIndex();
+            recipientNativeSlot = parent.prizeOwnerNativeSlot();
+        }
     }
 
     RingPrizeObjectInstance(int x, int y, int ignoredSubtype, boolean ignoredFlag) {
@@ -107,8 +132,32 @@ public class RingPrizeObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    protected void afterGenericRewindStateRestored(com.openggf.game.rewind.schema.RewindCaptureContext context) {
+        if (recipientNativeSlot >= 0) {
+            ordinaryCounterRestoreTarget = null;
+            return;
+        }
+        // Before native rebinding this was a final array: ordinary restores
+        // copied values IN PLACE. Preserve that alias contract for campaign play.
+        if (prizeCounter == null) {
+            ordinaryCounterRestoreTarget = null;
+            return;
+        }
+        if (ordinaryCounterRestoreTarget == null || ordinaryCounterRestoreTarget.length != prizeCounter.length)
+            throw new IllegalStateException("Ordinary ring-prize counter shape changed during restore");
+        System.arraycopy(prizeCounter, 0, ordinaryCounterRestoreTarget, 0, prizeCounter.length);
+        prizeCounter = ordinaryCounterRestoreTarget;
+    }
+
+    @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
+        relinkPrizeCounter();
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        if (recipientNativeSlot >= 0) {
+            var roster = com.openggf.game.competition.NativeCompetitionRoster.from(services().worldSession());
+            if (roster == null) throw new IllegalStateException("Native CNZ prize lost its roster");
+            player = roster.player(recipientNativeSlot);
+        }
         if (isDestroyed()) {
             return;
         }
@@ -133,7 +182,7 @@ public class RingPrizeObjectInstance extends AbstractObjectInstance
         }
 
         // Check if off-screen for cleanup (only in spiral state)
-        if (state == STATE_SPIRAL && !isOnScreen(64)) {
+        if (state == STATE_SPIRAL && recipientNativeSlot < 0 && !isOnScreen(64)) {
             setDestroyed(true);
         }
     }
