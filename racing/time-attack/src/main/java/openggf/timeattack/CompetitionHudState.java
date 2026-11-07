@@ -11,12 +11,17 @@ import java.util.Objects;
  * participant count. Position never decides placement. cutoffRemainingMillis is shown only
  * while cutoffArmed; timeToStartMillis is the host-scheduled GO countdown. RELEASED is the
  * neutral phase for existing Time Attack paths. unverified labels the entire standings plate.
+ * progressPermille maps a room slot to its display-only share of the whole race (0-1000: the
+ * progress ordinal plus the in-ordinal fraction, design 4.8); an empty map keeps the strip on
+ * x / level width. lateJoin marks a member who joined after the launch freeze and waits for
+ * the next round (design 4.5).
  */
 public record CompetitionHudState(CompetitionRoomSettings.Mode mode, TrackKind trackKind,
         int currentLap, int lapCount, int currentLapFrames, List<Integer> completedLapFrames,
         int bestLapFrames, int estimatedPosition, int fieldSize, boolean cutoffArmed,
         long cutoffRemainingMillis, MassStartPhase massStartPhase, long timeToStartMillis,
-        SwapNotice swapNotice, List<PlacementRow> placements, boolean unverified) {
+        SwapNotice swapNotice, List<PlacementRow> placements, boolean unverified,
+        java.util.Map<Integer, Integer> progressPermille, boolean lateJoin) {
     public enum MassStartPhase { LOADING, HELD, COUNTDOWN, RELEASED }
     public enum Outcome { FINISHED, DNF, DNS }
     public enum VerifyState { PENDING, VERIFIED, UNVERIFIED }
@@ -54,7 +59,23 @@ public record CompetitionHudState(CompetitionRoomSettings.Mode mode, TrackKind t
         Objects.requireNonNull(swapNotice);
         completedLapFrames = List.copyOf(completedLapFrames);
         placements = List.copyOf(placements);
+        progressPermille = java.util.Map.copyOf(progressPermille);
     }
+
+    /** The C1 shape: no race-progress estimates and no late join. */
+    public CompetitionHudState(CompetitionRoomSettings.Mode mode, TrackKind trackKind,
+            int currentLap, int lapCount, int currentLapFrames, List<Integer> completedLapFrames,
+            int bestLapFrames, int estimatedPosition, int fieldSize, boolean cutoffArmed,
+            long cutoffRemainingMillis, MassStartPhase massStartPhase, long timeToStartMillis,
+            SwapNotice swapNotice, List<PlacementRow> placements, boolean unverified) {
+        this(mode, trackKind, currentLap, lapCount, currentLapFrames, completedLapFrames, bestLapFrames,
+                estimatedPosition, fieldSize, cutoffArmed, cutoffRemainingMillis, massStartPhase,
+                timeToStartMillis, swapNotice, placements, unverified, java.util.Map.of(), false);
+    }
+
+    public boolean isCompetition() { return mode == CompetitionRoomSettings.Mode.COMPETITION; }
+
+    public boolean isArena() { return trackKind == TrackKind.ARENA; }
 
     /** Existing Time Attack paths have no lap, position, cutoff, start gate or swap overlay. */
     public static CompetitionHudState inactive() {
