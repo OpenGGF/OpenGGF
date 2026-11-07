@@ -1685,6 +1685,14 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         public void giveShield(ShieldType type) {
+                if (type == ShieldType.BASIC && nativeSecondaryInvincibility() != null) {
+                        // shield_monitor (s2.asm:25953-25967) writes the recipient's fixed ID/parent, without clearing animation.
+                        shield = true;
+                        shieldType = type;
+                        shieldObject = nativeSecondaryInvincibility.grantShield();
+                        if (shieldObject != null) shieldObject.setVisible(!nativeSecondaryInvincibility());
+                        return;
+                }
                 // Monitor shield rewards set shield status even while transformed (S2 and S3K).
                 // Remove existing shield before granting new one
                 if (hasShield()) {
@@ -1822,18 +1830,17 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         throw new IllegalArgumentException("Invincibility duration must be 1..3600 native frames");
                 }
                 if (nativeSecondaryInvincibility() != null) {
-                        // invincible_monitor (s2.asm:25977-25978): literal timer write, independent bit set.
+                        // invincible_monitor (s2.asm:25977-26000): raw status, literal time, recipient's fixed ID/parent.
                         writeNativeSecondaryInvincibility(true);
                         setInvincibleFrames(durationFrames);
-                } else {
-                        setInvincibleFrames(Math.max(getInvincibleFrames(), durationFrames));
+                        invincibilityObject = nativeSecondaryInvincibility.grantInvincibilityStars();
+                        if (shieldObject != null) shieldObject.setVisible(false);
+                        return;
                 }
+                setInvincibleFrames(Math.max(getInvincibleFrames(), durationFrames));
                 if (shieldObject != null) {
                         shieldObject.setVisible(false);
                 }
-                // invincible_monitor (s2.asm:25987-26000) writes Obj35's fixed ID even after its previous owner deleted.
-                if (nativeSecondaryInvincibility() != null && invincibilityObject != null
-                                && invincibilityObject.isDestroyed()) invincibilityObject = null;
                 if (invincibilityObject == null && powerUpSpawner != null) {
                         invincibilityObject = powerUpSpawner.spawnInvincibilityStars(this);
                 }

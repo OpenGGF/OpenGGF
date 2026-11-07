@@ -17,6 +17,11 @@ class TestSonic2CompetitionSecondaryInvincibility {
             var progress=p1.currentGameState();progress.configureSpecialStageProgress(7,7);
             for(int i=0;i<7;i++)progress.markEmeraldCollected(i);
             p1.giveShield();p2.giveShield();p1.giveInvincibility();
+            var objects=w.host.context().getObjectManager();
+            assertSame(p1.getShieldObject(),NativeSstSlotAccess.currentOwner(objects,0x86));
+            assertSame(p2.getShieldObject(),NativeSstSlotAccess.currentOwner(objects,0x87));
+            assertSame(p1.getInvincibilityObject(),NativeSstSlotAccess.currentOwner(objects,0x88));
+            var repeatedShield=p2.getShieldObject();p2.giveShield();assertSame(repeatedShield,p2.getShieldObject());
             p1.setRingCount(100);p1.setAir(true);p1.setJumping(true);p1.setYSpeed((short)0x28);
             p1.currentLevelState().resumeTimer();
             var superOwner=assertInstanceOf(Sonic2SuperStateController.class,p1.getSuperStateController());
@@ -88,6 +93,7 @@ class TestSonic2CompetitionSecondaryInvincibility {
             assertEquals(Boolean.FALSE,PlayableSpriteInternalAccess.nativeSecondaryInvincibility(player));
             assertEquals(7,player.getInvincibleFrames(),"KillCharacter clears the status byte, not the timer WORD");
             var other=w.session.player(1);other.giveInvincibility(19);
+            assertSame(other.getInvincibilityObject(),NativeSstSlotAccess.currentOwner(w.host.context().getObjectManager(),0x8C));
             assertTrue(other.applyHurtOrDeath(0,com.openggf.game.DamageCause.TIME_OVER,false),
                     "TimeOver2 calls KillCharacter directly even with raw protection");
             assertEquals(Boolean.FALSE,PlayableSpriteInternalAccess.nativeSecondaryInvincibility(other));

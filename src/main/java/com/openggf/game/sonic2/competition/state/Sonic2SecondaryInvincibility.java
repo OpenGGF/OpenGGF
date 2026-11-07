@@ -44,6 +44,16 @@ public final class Sonic2SecondaryInvincibility implements RewindSnapshottable<S
                             if (read() == null) return;
                             if (index == 0) primary = value; else secondary = value;
                         }
+                        @Override public com.openggf.game.PowerUpObject grantShield() {
+                            if (read() == null) throw new IllegalStateException("Retired native effect producer");
+                            // shield_monitor (s2.asm:25953-25967): Sonic_Shield / Tails_Shield.
+                            return Sonic2CompetitionNativeState.grantShield(context, actor, 0x86 + index);
+                        }
+                        @Override public com.openggf.game.PowerUpObject grantInvincibilityStars() {
+                            if (read() == null) throw new IllegalStateException("Retired native effect producer");
+                            // invincible_monitor (s2.asm:25987-26000): Sonic_InvincibilityStars / Tails_InvincibilityStars.
+                            return Sonic2CompetitionNativeState.grantStars(context, actor, index == 0 ? 0x88 : 0x8C);
+                        }
                     });
         }
     }

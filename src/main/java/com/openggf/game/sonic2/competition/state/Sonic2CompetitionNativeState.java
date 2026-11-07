@@ -106,19 +106,29 @@ public final class Sonic2CompetitionNativeState implements Sonic2NativeCompetiti
     private static void rebindEffects(GameplayModeContext context,
             com.openggf.sprites.playable.AbstractPlayableSprite player, int shieldSlot, int starsSlot) {
         // swap_players (s2.asm:26098-26104,26124-26128): fixed IDs/parents are written even without status.
+        PlayableSpriteInternalAccess.applyNativeTeleportEffects(player,
+                grantShield(context, player, shieldSlot), grantStars(context, player, starsSlot));
+    }
+
+    static com.openggf.game.PowerUpObject grantShield(GameplayModeContext context,
+            com.openggf.sprites.playable.AbstractPlayableSprite player, int slot) {
         var objects = context.getObjectManager();
-        var existingShield = com.openggf.level.objects.NativeSstSlotAccess.currentOwner(objects, shieldSlot);
-        var existingStars = com.openggf.level.objects.NativeSstSlotAccess.currentOwner(objects, starsSlot);
-        // ID/parent writes do not clear an already-live effect's animation words or identity.
-        var shield = existingShield instanceof com.openggf.level.objects.ShieldObjectInstance live
+        var current = com.openggf.level.objects.NativeSstSlotAccess.currentOwner(objects, slot);
+        // ID/parent writes preserve all other words of an already-live fixed effect.
+        return current instanceof com.openggf.level.objects.ShieldObjectInstance live
                 && !live.isDestroyed() && live.isShieldFor(player, com.openggf.game.ShieldType.BASIC) ? live
-                : ObjectManagerInternalAccess.replaceNativeCompetitionFixedObject(objects, shieldSlot,
+                : ObjectManagerInternalAccess.replaceNativeCompetitionFixedObject(objects, slot,
                         () -> new com.openggf.level.objects.ShieldObjectInstance(player));
-        var stars = existingStars instanceof com.openggf.level.objects.InvincibilityStarsObjectInstance live
+    }
+
+    static com.openggf.game.PowerUpObject grantStars(GameplayModeContext context,
+            com.openggf.sprites.playable.AbstractPlayableSprite player, int slot) {
+        var objects = context.getObjectManager();
+        var current = com.openggf.level.objects.NativeSstSlotAccess.currentOwner(objects, slot);
+        return current instanceof com.openggf.level.objects.InvincibilityStarsObjectInstance live
                 && !live.isDestroyed() && live.boundPlayer() == player ? live
-                : ObjectManagerInternalAccess.replaceNativeCompetitionFixedObject(objects, starsSlot,
+                : ObjectManagerInternalAccess.replaceNativeCompetitionFixedObject(objects, slot,
                         () -> new com.openggf.level.objects.InvincibilityStarsObjectInstance(player));
-        PlayableSpriteInternalAccess.applyNativeTeleportEffects(player, shield, stars);
     }
 
     private static void restoreCamera(Camera camera, CameraSnapshot incoming, CameraSnapshot own,
