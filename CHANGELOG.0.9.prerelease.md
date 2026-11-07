@@ -18,7 +18,10 @@ matching area heading; see the
   their native callback and fault prefixes;1,155 focused checks pass without skips.
   One source-bound World now replaces the R13-only coordinator and drives both
   R13 and R31 through their existing ordinary owners. Selected original-USA CCZ
-  entry completes223 controller services before the explicit Ring boundary on224;
+  entry now completes345 controller services through Ring and the intro family,
+  stopping before MetalPlatform at attempted346. Full/course restore retains
+  selected closed state and pixels. Compound Solid preparation faults preserve
+  the original native exception; available prefixes publish after preparation;
   the original PlaceBlock prefix bridge is installed, with natural reach still pending.
   All ten TT data profiles now use the same closed definition/reader/parser path,
   including the explicit188-frame Sonic format and retained CCZ consumer/intro
@@ -35,6 +38,9 @@ matching area heading; see the
   allocator return target and sound prefixes without replacing an original fault
   through self-suppression. The combined409 component checks pass without skips;
   actual TT World/Frame/source/art admission remains separate.
+  TT solid/mover components retain signed WORD displacements and staged stores
+  when an original callback throws Error. The combined CCZ/TT integration passes
+  1,140 focused checks without skips; TT live World admission remains separate.
   CCZ ordinary scheduling now preserves native VBlank/Main order, the old
   selected sprite list and full-word time-stop gating. Private HUD adoption
   retains the real prefix across typed callback failures;175 focused checks

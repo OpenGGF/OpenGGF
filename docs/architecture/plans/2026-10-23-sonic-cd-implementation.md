@@ -12484,3 +12484,43 @@ This focused result supplies no category/full-suite VERDICT, complete act,
 native gameplay/pixel parity or JP/EU result. The selected CCZ Ring/P5 World
 continuation, its compound native-stop preparation correction, TT solid/mover
 corrections and subsequent actual World joins remain separate work.
+
+## 7 November 2026 — CCZ Ring/intro and TT solid component composition
+
+R106 joins the actual CCZ Ring, Amy/Metal, intro and RollTunnel callers into the
+existing common World. Four authenticated Ring ranges append to the retained
+public inventory; existing reader caches and closed P5 views remain shared.
+RollTunnel uses the existing semantic rolling-motion builder. Original private
+producer/site/thread/source/pool/full-Frame checks still own publication; completed
+records and effects grant no replay authority.
+
+Root reproduced the intro Solid compound-fault defect with three genuine-ingress
+cases: the available-prefix control passed and the RuntimeException/Error
+preparation faults failed. The correction captures the native stop before every
+fallible prefix preparation, preserves its original exception, and suppresses a
+distinct secondary failure. P2's later join must retain this correction. The
+earlier incomplete request compiled no tests because two Ring prerequisites were
+missing; its receipt remains separate from the executed RED and GREEN evidence.
+
+TT Crush consumes its native signed WORD displacement through an explicitly
+bounded relative table. Separate reached LONG reads preserve the first timer
+store if the second read fails. Swing keeps the reached phase/init stores when
+a borrowed sine callback throws Error; Outcome retains that original throwable.
+A native-stop accessor exposes only an actual original Solid stop, never a
+fabricated helper prefix. Eight RED controls produced one pass and seven expected
+failures. The corrected 101-case component cohort retains all 92 author cases,
+adds nine native-cut/compatibility controls, and passes without skips. These
+components do not admit a TT World, terrain/player owner or current-art service.
+
+R106 passes 1,140 invocations across 50 selected classes, zero failures/errors/
+skips, with all 38 installed Java payloads exact. Source fingerprints before and
+after are 628c001c139013923f7acc5a51f02132315ecfc8faa3c686354cbc12ba143ab5.
+The fresh World report records 345 returned services on the explicitly
+constructed historical-save CCZ ingress; attempted346 stops at ID$23, whole49.
+This is not natural R13-to-CCZ qualification. Selected full/course restore checks
+compare actual closed state and engine pixels; no native pixel parity is claimed.
+Queue admission waited457s. The source-bound execution/callback interval is
+255.536s; a distinct Maven-only duration was not captured by concise output and
+is not inferred from per-class totals. Java25, original USA media and surfaceless
+EGL were selected. This focused result supplies no category/full-suite VERDICT,
+complete act, live TT route, native execution or JP/EU completion.

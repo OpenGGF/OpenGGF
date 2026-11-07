@@ -114,8 +114,9 @@ final class SonicCdR31aWorldHost implements Host,AutoCloseable {
  /** Existing actual placement owner, never saved bytes plus a constructor-created native pool. */
  record Planes(CdR11aBackgroundPlane.State foreground,CdR11aBackgroundPlane.State background){Planes{Objects.requireNonNull(foreground);Objects.requireNonNull(background);}}
  /** Retained named native values/knowledge, never a default or generic address-based storage token. */
- record NativeCarry(OptionalLong collisionPointer,OptionalInt fadeInfoWithoutTail,OptionalLong rngSeedLong,OptionalInt targetRightBoundWord){
-  NativeCarry{Objects.requireNonNull(collisionPointer);Objects.requireNonNull(fadeInfoWithoutTail);Objects.requireNonNull(rngSeedLong);Objects.requireNonNull(targetRightBoundWord);fadeInfoWithoutTail.ifPresent(SonicCdR31aWorldHost::word);targetRightBoundWord.ifPresent(SonicCdR31aWorldHost::word);for(var value:new OptionalLong[]{collisionPointer,rngSeedLong})if(value.isPresent()&&(value.getAsLong()<0||value.getAsLong()>0xFFFFFFFFL))throw new IllegalArgumentException("Native unsigned LONG bits required");}
+ record NativeCarry(OptionalLong collisionPointer,OptionalInt fadeInfoWithoutTail,OptionalLong rngSeedLong,OptionalInt targetRightBoundWord,OptionalInt amyCapturedByte){
+  NativeCarry(OptionalLong c,OptionalInt f,OptionalLong r,OptionalInt t){this(c,f,r,t,OptionalInt.empty());}
+  NativeCarry{optionalByte(amyCapturedByte);Objects.requireNonNull(collisionPointer);Objects.requireNonNull(fadeInfoWithoutTail);Objects.requireNonNull(rngSeedLong);Objects.requireNonNull(targetRightBoundWord);fadeInfoWithoutTail.ifPresent(SonicCdR31aWorldHost::word);targetRightBoundWord.ifPresent(SonicCdR31aWorldHost::word);for(var value:new OptionalLong[]{collisionPointer,rngSeedLong})if(value.isPresent()&&(value.getAsLong()<0||value.getAsLong()>0xFFFFFFFFL))throw new IllegalArgumentException("Native unsigned LONG bits required");}
  }
  record Initial(Globals globals,Scroll scroll,Planes planes,Video video,CdObjectPlacementRuntime placement,NativeCarry nativeCarry){
   Initial{Objects.requireNonNull(globals);Objects.requireNonNull(scroll);Objects.requireNonNull(planes);Objects.requireNonNull(video);Objects.requireNonNull(placement);Objects.requireNonNull(nativeCarry);if(globals.tail().isPresent()&&nativeCarry.fadeInfoWithoutTail().isPresent())throw new IllegalArgumentException("One complete fade-info owner required");}
@@ -126,8 +127,8 @@ final class SonicCdR31aWorldHost implements Host,AutoCloseable {
   Writers{Objects.requireNonNull(terrain);Objects.requireNonNull(foreground);Objects.requireNonNull(background);}
  }
  private record OrdinaryImage(CdStageTerrain terrain,OptionalInt noBumper,OptionalInt bossStarted,
-                              Optional<CdAssetBytes> shieldCpu,Writers writers) {
-  OrdinaryImage{Objects.requireNonNull(terrain);optionalByte(noBumper);optionalByte(bossStarted);Objects.requireNonNull(shieldCpu);shieldCpu.ifPresent(b->extent(b,0x480));if(Objects.requireNonNull(writers).terrain()!=terrain)throw new IllegalArgumentException("Current terrain/writer pair differs");}
+                              Optional<CdAssetBytes> shieldCpu,Writers writers,OptionalInt amyCaptured) {
+  OrdinaryImage{optionalByte(amyCaptured);Objects.requireNonNull(terrain);optionalByte(noBumper);optionalByte(bossStarted);Objects.requireNonNull(shieldCpu);shieldCpu.ifPresent(b->extent(b,0x480));if(Objects.requireNonNull(writers).terrain()!=terrain)throw new IllegalArgumentException("Current terrain/writer pair differs");}
  }
  private record Image(SonicCdR31aWorldHost owner,Globals globals,Scroll scroll,CdR11aBackgroundPlane.State foreground,
                       CdR11aBackgroundPlane.State background,Video video,Set<Action> clears,boolean geometryReady,
@@ -161,7 +162,7 @@ final class SonicCdR31aWorldHost implements Host,AutoCloseable {
   if(initial.video().playerArt()!=frame.artState())throw new IllegalArgumentException("Ingress must borrow the exact current Frame player image");
   placement=initial.placement();var p=placement.capture();if(p.pool().slots().size()!=96||p.savedFlags().length()!=766)throw new IllegalArgumentException("Complete original placement pool/bank required");
   events=CdR31aLevelEvents.fromAssets(assets);terrain=assets.terrain();
-  var carry=initial.nativeCarry();image=new Image(this,initial.globals(),initial.scroll(),initial.foreground(),initial.background(),initial.video(),Set.of(),false,carry.collisionPointer(),carry.fadeInfoWithoutTail(),carry.rngSeedLong(),carry.targetRightBoundWord(),List.of(),new OrdinaryImage(terrain,OptionalInt.empty(),OptionalInt.empty(),Optional.empty(),writers(terrain)));
+  var carry=initial.nativeCarry();image=new Image(this,initial.globals(),initial.scroll(),initial.foreground(),initial.background(),initial.video(),Set.of(),false,carry.collisionPointer(),carry.fadeInfoWithoutTail(),carry.rngSeedLong(),carry.targetRightBoundWord(),List.of(),new OrdinaryImage(terrain,OptionalInt.empty(),OptionalInt.empty(),Optional.empty(),writers(terrain),carry.amyCapturedByte()));
  }
  void install(SonicCdR31aLoadingVisit core){idle();if(owner!=null||Objects.requireNonNull(core).assets()!=assets||core.state().phase()!=Phase.START||core.state().section().residency()!=image.video().current())throw new IllegalArgumentException("One actual Core/Start/current relation");var selected=image.video().selected();if(selectedEnabled(selected)!=core.state().displayEnabled()||!Arrays.equals(selectedPalette(selected),core.state().displayedPalette().copy()))throw new IllegalArgumentException("Initial physical selected display differs from actual Core entry");requireAuthority(core);owner=core;}
  void requireRenderIdle(){if(drawing)throw new IllegalStateException("R31A retained draw active");}
@@ -211,7 +212,7 @@ final class SonicCdR31aWorldHost implements Host,AutoCloseable {
  void retainOriginalMainClears(Authority expected,CdOriginalBootPrefix.MainClears clears){
   current();operationIdle();if(expected!=authority||ordinary!=null||owner.state().phase()!=Phase.START)throw new IllegalStateException("Original pre-Start clear projection only");
   var c=Objects.requireNonNull(clears);var old=image.ordinary();
-  var ready=withOrdinary(image,new OrdinaryImage(old.terrain(),OptionalInt.of(c.noBumperByte()),old.bossStarted(),Optional.of(c.shieldCpu()),old.writers()));
+  var ready=withOrdinary(image,new OrdinaryImage(old.terrain(),OptionalInt.of(c.noBumperByte()),old.bossStarted(),Optional.of(c.shieldCpu()),old.writers(),old.amyCaptured()));
   image=ready;
  }
  void bindOrdinaryWorld(Authority expected,CdWorld world){current();operationIdle();if(expected!=authority||ordinary!=null||owner.state().phase()!=Phase.START)throw new IllegalStateException("Bind one original World before Start");ordinary=Objects.requireNonNull(world);}
@@ -219,10 +220,12 @@ final class SonicCdR31aWorldHost implements Host,AutoCloseable {
  private void ordinaryCut(CdOrdinaryLoop.Cut cut){current();if(ordinary==null)throw new IllegalStateException("No original World");ordinary.requireCut(cut);}
  CdStageTerrain currentTerrain(){current();return image.ordinary().terrain();}
  OptionalInt noBumperByte(){current();return image.ordinary().noBumper();}
+ OptionalInt amyCapturedByte(){current();return image.ordinary().amyCaptured();}
+ PreparedOrdinary prepareAmyCaptured(PreparedOrdinary p,OptionalInt value){validateOrdinary(p);optionalByte(value);var o=p.ready.ordinary();return new PreparedOrdinary(this,p.scope,p.before,withOrdinary(p.ready,new OrdinaryImage(o.terrain(),o.noBumper(),o.bossStarted(),o.shieldCpu(),o.writers(),value)));}
  OptionalInt bossStartedByte(){current();return image.ordinary().bossStarted();}
  Optional<CdAssetBytes> shieldCpu(){current();return image.ordinary().shieldCpu();}
  private Image withOrdinary(Image i,OrdinaryImage o){return new Image(this,i.globals(),i.scroll(),i.foreground(),i.background(),i.video(),i.clears(),i.geometryReady(),i.collisionPointer(),i.fadeInfoWithoutTail(),i.rngSeedLong(),i.targetRightBoundWord(),i.sounds(),o);}
- private static Object ordinaryValue(OrdinaryImage o){return List.of(o.terrain(),o.noBumper(),o.bossStarted(),o.shieldCpu().map(SonicCdR31aWorldHost::bytes));}
+ private static Object ordinaryValue(OrdinaryImage o){return List.of(o.terrain(),o.noBumper(),o.bossStarted(),o.shieldCpu().map(SonicCdR31aWorldHost::bytes),o.amyCaptured());}
  static final class PreparedOrdinary {
   private final SonicCdR31aWorldHost owner;private final Object scope;private final ExternalCut before;private final Image ready;
   private PreparedOrdinary(SonicCdR31aWorldHost owner,Object scope,ExternalCut before,Image ready){this.owner=owner;this.scope=scope;this.before=before;this.ready=ready;}
@@ -246,7 +249,7 @@ final class SonicCdR31aWorldHost implements Host,AutoCloseable {
   // Final Body data cannot replay a chunk/plane store; only genuine reached receipts publish it.
   if(values.terrain()!=image.ordinary().terrain())throw new IllegalArgumentException("Final Body changed terrain outside original PlaceBlock prefixes");
   var p=prepareOrdinary(image.globals(),image.video(),globals,sounds,original.next().completedCpu());var old=p.ready.ordinary();
-  return new PreparedOrdinary(this,p.scope,p.before,withOrdinary(p.ready,new OrdinaryImage(old.terrain(),values.noBumperByte(),old.bossStarted(),old.shieldCpu(),old.writers())));
+  return new PreparedOrdinary(this,p.scope,p.before,withOrdinary(p.ready,new OrdinaryImage(old.terrain(),values.noBumperByte(),old.bossStarted(),old.shieldCpu(),old.writers(),old.amyCaptured())));
  }
  /** Only called inside this World's original physical pass and private Frame helper receipt. */
  PreparedOrdinary preparePlaceBlock(CdPlayerFrameRuntime.R31PlaceBlockCall original,Globals globals,List<SonicCdGameModule.PastSound> sounds){
@@ -265,7 +268,7 @@ final class SonicCdR31aWorldHost implements Host,AutoCloseable {
    var word=(CdPlayerBody.R31PlaneAWord)original.store();byte[] bytes=fg.nameTable().copy();int offset=(word.row()*64+word.column())*2;
    bytes[offset]=(byte)(word.word()>>>8);bytes[offset+1]=(byte)word.word();fg=new CdR11aBackgroundPlane.State(CdAssetBytes.copyOf(bytes));
   }
-  var i=p.ready;var nativeImage=new OrdinaryImage(values.terrain(),values.noBumperByte(),old.bossStarted(),old.shieldCpu(),readyWriters);
+  var i=p.ready;var nativeImage=new OrdinaryImage(values.terrain(),values.noBumperByte(),old.bossStarted(),old.shieldCpu(),readyWriters,old.amyCaptured());
   // Keep OLD selected CPU/palette/scroll/art. Only the genuinely written physical word changes.
   var video=refreshed(i.video(),fg,i.background());
   var ready=new Image(this,i.globals(),i.scroll(),fg,i.background(),video,i.clears(),i.geometryReady(),i.collisionPointer(),i.fadeInfoWithoutTail(),i.rngSeedLong(),i.targetRightBoundWord(),i.sounds(),nativeImage);
@@ -323,11 +326,11 @@ final class SonicCdR31aWorldHost implements Host,AutoCloseable {
    case CLEAR_FLOWERS -> {
     var o=image.ordinary();var ready=globalsImage(image.globals().flowers());
     // Main178-184 [FF1600,FF2000): R3 noBumper FF1950 AND aniArtBuffer FF1980..FF1E00.
-    image=receipt(withOrdinary(ready,new OrdinaryImage(o.terrain(),OptionalInt.of(0),o.bossStarted(),Optional.of(zero(0x480)),o.writers())),action);
+    image=receipt(withOrdinary(ready,new OrdinaryImage(o.terrain(),OptionalInt.of(0),o.bossStarted(),Optional.of(zero(0x480)),o.writers(),o.amyCaptured())),action);
    }
    case CLEAR_OBJECTS -> {if(frame.state().header().slotId()!=0||!allZero(state.reserved()))throw new HostBoundary(Boundary.LOAD_PRODUCT);var actual=placement.capture();var staging=CdObjectPool.stagingCopy(actual.pool());staging.clearDynamicSlots();var cleared=staging.capture();var ready=receipt(image,action);placement.pool().validateRestore(cleared);if(!samePlacement(actual,placement.capture()))throw new IllegalStateException("Pool clear preimage changed");placement.pool().restore(cleared);image=ready;}
    case CLEAR_MISC -> {var ready=globalsImage(image.globals().misc());image=receipt(new Image(this,ready.globals(),ready.scroll(),ready.foreground(),ready.background(),ready.video(),ready.clears(),ready.geometryReady(),ready.collisionPointer(),ready.fadeInfoWithoutTail(),OptionalLong.of(0),ready.targetRightBoundWord(),ready.sounds(),ready.ordinary()),action);}
-   case CLEAR_CAMERA -> {if(!coldSpawner(placement.status()))throw new HostBoundary(Boundary.SPAWNER_CAMERA_CLEAR_OWNER);var ready=globalsImage(image.globals().camera());var cleared=receipt(new Image(this,ready.globals(),ready.scroll(),ready.foreground(),ready.background(),ready.video(),ready.clears(),ready.geometryReady(),ready.collisionPointer(),ready.fadeInfoWithoutTail(),ready.rngSeedLong(),OptionalInt.of(0),ready.sounds(),ready.ordinary()),action);var o=cleared.ordinary();image=withOrdinary(cleared,new OrdinaryImage(o.terrain(),o.noBumper(),OptionalInt.of(0),o.shieldCpu(),o.writers()));}
+   case CLEAR_CAMERA -> {if(!coldSpawner(placement.status()))throw new HostBoundary(Boundary.SPAWNER_CAMERA_CLEAR_OWNER);var ready=globalsImage(image.globals().camera());var cleared=receipt(new Image(this,ready.globals(),ready.scroll(),ready.foreground(),ready.background(),ready.video(),ready.clears(),ready.geometryReady(),ready.collisionPointer(),ready.fadeInfoWithoutTail(),ready.rngSeedLong(),OptionalInt.of(0),ready.sounds(),ready.ordinary()),action);var o=cleared.ordinary();image=withOrdinary(cleared,new OrdinaryImage(o.terrain(),o.noBumper(),OptionalInt.of(0),o.shieldCpu(),o.writers(),o.amyCaptured()));}
    case CLEAR_SCREEN -> {clearScreen(state);image=receipt(image,action);}
    case LEVEL_SIZE -> image=receipt(new Image(this,image.globals(),image.scroll(),image.foreground(),image.background(),image.video(),image.clears(),image.geometryReady(),image.collisionPointer(),image.fadeInfoWithoutTail(),image.rngSeedLong(),OptionalInt.of(assets.bounds().right()),image.sounds(),image.ordinary()),action);
    case DROWN_TIMER -> image=receipt(globalsImage(image.globals().drown()),action);

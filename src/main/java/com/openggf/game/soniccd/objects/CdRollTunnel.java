@@ -48,36 +48,15 @@ public final class CdRollTunnel {
         if(o.routine()==0)o=o.addByte(ROUTINE,2).moveByte(SPRITE_FLAGS,o.spriteFlags()|4)
                 .moveWord(TILE,0x544).moveLong(MAPPINGS,assets.powerupMappings())
                 .moveByte(MAP_FRAME,o.subtype()+1);
+        var shared=CdSpinTunnelTag.prepareRollingMotion(motion,o.centreX(),o.centreY(),o.subtype(),
+                new CdSpinTunnelTag.Gates(gates.zone(),gates.debugModeWord(),gates.debugCheatWord(),gates.held()));
         var stores=EnumSet.noneOf(CdIntroSpikes.PlayerStore.class);
-        var result=motion;
-        if(motion.animation()!=0x2B && motion.routine()<6 && (gates.debugModeWord()>>>8)==0
-                && range(motion.centreX16_16()>>>16,o.centreX()) && range(motion.centreY16_16()>>>16,o.centreY())) {
-            int xv=motion.xVelocity(),yv=motion.yVelocity(),gv=motion.groundVelocity(),flags=motion.flags();
-            int subtype=o.subtype(),y=motion.centreY16_16(),xr=motion.xRadius(),yr=motion.yRadius(),anim=motion.animation();
-            if(subtype==0) {
-                xv=minimum(xv,gates.zone()==5?0xD00:0xA00);gv=xv;
-                if((((motion.angle()+0x20)&255)&0xC0)==0x80)gv=(short)-gv;
-                stores.add(X_VELOCITY);stores.add(GROUND_VELOCITY);
-            } else if(subtype==1) {
-                yv=minimum(yv,0xD00);gv=yv;flags|=2;
-                stores.add(Y_VELOCITY);stores.add(GROUND_VELOCITY);
-            } else if(subtype==4) {
-                if(xv>=0 && (gates.held()&1)!=0){yv=-0xA00;gv=yv;flags|=2;stores.add(Y_VELOCITY);stores.add(GROUND_VELOCITY);}
-            } else if(subtype==2?yv<0:yv>=0) {
-                int v=(gates.held()&8)!=0?0xD00:(gates.held()&4)!=0?-0xD00:0;
-                if(v!=0){if(subtype!=2)flags|=2;xv=v;gv=v;stores.add(X_VELOCITY);stores.add(GROUND_VELOCITY);}
-            }
-            boolean rolling=(flags&4)!=0;flags|=4;stores.add(FLAGS);
-            if(!rolling){yr=0xE;xr=7;y=((((y>>>16)+5)&0xFFFF)<<16)|(y&0xFFFF);anim=2;
-                stores.add(Y_RADIUS);stores.add(X_RADIUS);stores.add(Y_WORD);stores.add(ANIMATION);}
-            result=new CdPlayerMotionState(motion.centreX16_16(),y,xv,yv,gv,motion.routine(),motion.angle(),flags,
-                    motion.spriteFlags(),xr,yr,anim,motion.previousAnimation(),motion.playerJump(),motion.charge(),
-                    motion.moveLock(),motion.stick(),motion.playerControl(),motion.previousPrimaryAngle(),motion.previousSecondaryAngle());
-        }
-        return new Result(before,o,motion,result,stores,(gates.debugCheatWord()>>>8)!=0);
+        for(var field:shared.executedWrites())stores.add(switch(field){
+            case CENTRE_Y_WORD->Y_WORD;case X_VELOCITY->X_VELOCITY;case Y_VELOCITY->Y_VELOCITY;
+            case GROUND_VELOCITY->GROUND_VELOCITY;case FLAGS->FLAGS;case Y_RADIUS->Y_RADIUS;
+            case X_RADIUS->X_RADIUS;case ANIMATION->ANIMATION;});
+        return new Result(before,o,motion,shared.finalMotion(),stores,(gates.debugCheatWord()>>>8)!=0);
     }
-    private static int minimum(int v,int floor){int magnitude=v<0?(short)-v:v;if((magnitude&0xFFFF)<floor)magnitude=floor;return v<0?(short)-magnitude:(short)magnitude;}
-    private static boolean range(int player,int origin){int d=(player-origin+0x28)&0xFFFF;return (short)d>=0&&d<0x50;}
     private static void byteValue(int v){if((v&~255)!=0)throw new IllegalArgumentException("BYTE");}
     private static void wordValue(int v){if((v&~65535)!=0)throw new IllegalArgumentException("WORD");}
 }

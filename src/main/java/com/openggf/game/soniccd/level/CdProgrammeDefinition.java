@@ -186,7 +186,7 @@ final class CdProgrammeDefinition {
             "51c6a77d51fc3817ff0935c4095cd2ad6c3e809e9348507299b03f313dff09a3"),OptionalInt.empty(),5248,0x2000,
             Optional.of(new JavaProduct(new ReadExtent(3960,"51c6a77d51fc3817ff0935c4095cd2ad6c3e809e9348507299b03f313dff09a3"),0,3959,
                 "108e1dc9e6fb4c14578ca3073fbd9099f9fe5028d10fed98dad102ce56076964")),Optional.empty(),false));
-        // Fixed borrowed views are separate from the63 public ranges. Root's finite P5 registration belongs here.
+        // Fixed borrowed views are separate from the public ranges. Root's finite P5 registration belongs here.
         b.borrow(CdProgrammeReader.Borrow.MUSIC_CONSUMER,0x1A76,58);
         b.borrow(CdProgrammeReader.Borrow.MUSIC_COMMANDS,0x1AB0,28);
         b.borrow(CdProgrammeReader.Borrow.SCROLL_CONSUMER,0x299C,40);

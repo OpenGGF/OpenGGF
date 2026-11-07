@@ -15,6 +15,8 @@ import com.openggf.game.soniccd.level.CdR12bObjectAssets;
 import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
 import com.openggf.game.soniccd.level.CdR13FutureAssets;
 import com.openggf.game.soniccd.level.CdR13ObjectAssets;
+import com.openggf.game.soniccd.level.CdR31aAssets;
+import com.openggf.game.soniccd.level.CdR31aObjectAssets;
 import com.openggf.game.soniccd.media.CdMmdImage;
 
 import java.util.List;
@@ -101,10 +103,11 @@ public final class CdRing {
             if (variant != CdReleaseVariant.USA
                     || !(stage.equals(CdStageKey.parse("R11A")) || stage.equals(CdStageKey.parse("R11B"))
                     || stage.equals(CdStageKey.parse("R12A")) || stage.equals(CdStageKey.parse("R12B"))
-                    || stage.equals(CdStageKey.parse("R13C")) || stage.equals(CdStageKey.parse("R13D")))
-                    || zoneByte != 0) {
-                // MMZ's explicit priority/subtype2/tile branch is not executed in PPZ zone 0 (:159-166).
-                throw new UnsupportedOperationException("ObjRing body is bounded to USA R11A/R11B/authenticated R12A/R12B zone 0; selected "
+                    || stage.equals(CdStageKey.parse("R13C")) || stage.equals(CdStageKey.parse("R13D"))
+                    || stage.equals(CdStageKey.parse("R31A")))
+                    || zoneByte != (stage.equals(CdStageKey.parse("R31A")) ? 1 : 0)) {
+                // MMZ's explicit priority/subtype2/tile branch is absent in PPZ0 and CC1 (:159-166).
+                throw new UnsupportedOperationException("ObjRing body requires reviewed USA PPZ zone0 or authenticated R31A zone1; selected "
                         + variant + " " + stage.nativeId() + " zone=" + zoneByte);
             }
             if ((timeZoneByte & 0x7F) > 2) {
@@ -130,6 +133,7 @@ public final class CdRing {
     private final Optional<CdR12aTerrainAssets.Identity> act2Identity;
     private final Optional<CdR12bTerrainAssets.Identity> act2PastIdentity;
     private final Optional<CdR13FutureAssets.Identity> act3FutureIdentity;
+    private final CdR31aAssets r31Assets;
 
     /** Pure declared-input consumer, like the placement/visual decoders; no asset identity is conferred. */
     public CdRing(CdObjectPlacementRuntime placement, SourceData data) {
@@ -167,6 +171,14 @@ public final class CdRing {
                    Optional<CdR11aAssets.Identity> identity, Optional<CdR11aObjectAssets.ArtBinding> art,
                    Optional<CdR11bAssets.Identity> pastIdentity, Optional<CdR12aTerrainAssets.Identity> act2Identity,
                    Optional<CdR12bTerrainAssets.Identity> act2PastIdentity, Optional<CdR13FutureAssets.Identity> act3FutureIdentity) {
+        this(placement,data,identity,art,pastIdentity,act2Identity,act2PastIdentity,act3FutureIdentity,null);
+    }
+    private CdRing(CdObjectPlacementRuntime placement,SourceData data,
+                   Optional<CdR11aAssets.Identity> identity,Optional<CdR11aObjectAssets.ArtBinding> art,
+                   Optional<CdR11bAssets.Identity> pastIdentity,Optional<CdR12aTerrainAssets.Identity> act2Identity,
+                   Optional<CdR12bTerrainAssets.Identity> act2PastIdentity,Optional<CdR13FutureAssets.Identity> act3FutureIdentity,
+                   CdR31aAssets r31Assets) {
+        this.r31Assets=r31Assets;
         this.act3FutureIdentity = act3FutureIdentity;
         this.placement = Objects.requireNonNull(placement, "placement");
         this.data = Objects.requireNonNull(data, "data");
@@ -279,6 +291,15 @@ public final class CdRing {
     }
     // END R13 RETAINED RING ADAPTER 20261106
 
+    /** Same body, exact original R31 source and placement; no live invocation is conferred.
+     * N1ecc5f3a objects/ring.asm:3-305, RingInit's zone6-only branch is absent at CC zone1. */
+    public static CdRing fromR31aAssets(CdObjectPlacementRuntime placement,CdR31aAssets assets,CdR31aObjectAssets objects) {
+        Objects.requireNonNull(placement);Objects.requireNonNull(assets);Objects.requireNonNull(objects);
+        if(!placement.ownsR31aAssets(assets)||!objects.ownsAssets(assets))
+            throw new IllegalArgumentException("Ring requires exact retained R31 source/placement");
+        return new CdRing(placement,objects.ringData(),Optional.empty(),Optional.empty(),Optional.empty(),Optional.empty(),Optional.empty(),Optional.empty(),assets);
+    }
+
     public SourceData sourceData() { return data; }
     public Optional<CdR11aAssets.Identity> sourceIdentity() { return identity; }
     public Optional<CdR11aObjectAssets.ArtBinding> artBinding() { return art; }
@@ -305,6 +326,11 @@ public final class CdRing {
 
     /** Supported arithmetic alone cannot relabel a bound source or lend R12A/R12B admission to raw data. */
     private void requireBoundSource(Inputs inputs) {
+        if(inputs.stage().equals(CdStageKey.parse("R31A")) && r31Assets==null)
+            throw new UnsupportedOperationException("R31 Ring requires actual retained source/placement");
+        if(r31Assets!=null && (!placement.ownsR31aAssets(r31Assets)||inputs.variant()!=r31Assets.identity().variant()
+                ||!inputs.stage().equals(r31Assets.identity().stage())))
+            throw new IllegalArgumentException("Ring inputs differ from retained R31 source");
         // Original R13 C/D metadata alone cannot lend domain admission to declared/raw Ring data.
         if ((inputs.stage().equals(CdStageKey.parse("R13C")) || inputs.stage().equals(CdStageKey.parse("R13D"))) && act3FutureIdentity.isEmpty())
             throw new UnsupportedOperationException("R13 Ring requires its actual retained source/placement relation");

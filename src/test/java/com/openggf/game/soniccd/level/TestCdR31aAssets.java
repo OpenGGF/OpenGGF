@@ -72,9 +72,13 @@ PLAYER_BUMPER_COLLIDE 6b2e 6 b310628db3d435d16937fc75ab8b04097658ac0fcf15530843d
 PLAYER_BUMPER_COLLIDE_1 6b34 16 46fd7d2954ec5a94f0ab18ed3ce82ef3738b9e9a5f444e952caccba97ec43cd8
 PLAYER_BUMPER_COLLIDE_2 6b44 16 7039c80bf965bd800e6e814ae50b42d9316184aa79c63a41075fa1945bf7dd47
 PLAYER_BUMPER_COLLIDE_3 6b54 16 55863b4d00c3326f9acf1d393883e0964cd7598563e7f4548d12a1eea4fdf745
+RING_BODY 9768 740 2fe09f8bef2a5da08bf7995bbe9a7f5bcf4493f825a9d40a6caa5e8db85731f9
+RING_DELTAS 9780 32 35a686e2b0201c8422a64ded0a656e400b929d3fdeab89343e725e103ac55e86
+RING_ANIMATIONS 9bdc 8 4718d601ad9887e43a5091a017284dc4669f6ca9cb70f3458f4b2f543f26ff7a
+RING_MAPPINGS 9be4 68 306667dca113be405fd1d78fd69b09152b853236db8ad8fbeb6a73bbde3be7e8
  """;
  @Test void wholeSourceIdentityAndCompleteLiteralViewManifestAreAuthenticated()throws Exception{
-  var a=actual().assets();assertEquals(CdReleaseVariant.USA,a.identity().variant());assertEquals(CdStagePayload.R31A.stage(),a.identity().stage());assertEquals(CdNativeFile.R31A,a.identity().file());assertEquals(CdMmdImage.Domain.ORIGINAL_WORD_RAM,a.identity().domain());assertEquals("30bb932c3f7a18f0629dcee56fb982280e0b6d6063fb67392b23771f77e7682e",a.identity().mmdSha256());assertEquals(63,CdR31aAssets.Asset.values().length);
+  var a=actual().assets();assertEquals(CdReleaseVariant.USA,a.identity().variant());assertEquals(CdStagePayload.R31A.stage(),a.identity().stage());assertEquals(CdNativeFile.R31A,a.identity().file());assertEquals(CdMmdImage.Domain.ORIGINAL_WORD_RAM,a.identity().domain());assertEquals("30bb932c3f7a18f0629dcee56fb982280e0b6d6063fb67392b23771f77e7682e",a.identity().mmdSha256());assertEquals(67,CdR31aAssets.Asset.values().length);
   var lines=MANIFEST.strip().lines().toList();assertEquals(lines.size(),a.ranges().size());for(int i=0;i<lines.size();i++){var p=lines.get(i).split(" ");var id=CdR31aAssets.Asset.valueOf(p[0]);assertEquals(i,id.ordinal());var r=a.range(id);assertEquals(Integer.parseInt(p[1],16),r.fileOffset());assertEquals(Integer.parseInt(p[2]),r.length());assertEquals(p[3],hash(a.view(id).copy()));assertEquals(0x200000+r.fileOffset(),r.nativeAddress());assertSame(a.view(id),a.view(id));assertThrows(IndexOutOfBoundsException.class,()->a.view(id).unsignedByte(r.length()));}
  }
  @Test void actualTerrainUsesExistingNemesisAndExactNewFiniteShape()throws Exception{

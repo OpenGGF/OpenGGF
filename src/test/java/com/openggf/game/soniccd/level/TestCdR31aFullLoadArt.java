@@ -22,7 +22,7 @@ class TestCdR31aFullLoadArt {
         var a=actual();var p=CdR31aLoadPlan.fromAssets(a);var art=fromAssets(a);
         assertTrue(p.ownsAssets(a));assertTrue(art.ownsAssets(a));assertFalse(p.ownsAssets(null));assertFalse(art.ownsAssets(null));
         assertSame(a.identity(),p.identity());assertSame(a.identity(),art.identity());assertSame(a.loadMetadata(),p.sources());
-        assertEquals(63,CdR31aAssets.Asset.values().length);assertEquals(37,CdR31aLoadMetadata.SourceId.values().length);
+        assertEquals(67,CdR31aAssets.Asset.values().length);assertEquals(37,CdR31aLoadMetadata.SourceId.values().length);
         assertEquals(19,p.plcs().size());assertEquals(4,p.sections().size());assertEquals(a.bounds(),p.bounds());assertEquals(a.initialCentre(),p.initialCentre());
         assertThrows(NullPointerException.class,()->CdR31aLoadPlan.fromAssets(null));assertThrows(NullPointerException.class,()->fromAssets(null));
         var f=TestCdR31aAssets.actual();var other=CdR31aAssets.fromPrograms(TestCdR31aAssets.source(f,f.image()),CdStagePayload.R31A.stage());

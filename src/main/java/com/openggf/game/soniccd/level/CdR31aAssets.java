@@ -89,7 +89,12 @@ public final class CdR31aAssets {
         PLAYER_BUMPER_COLLIDE(0x6B2E,6,"b310628db3d435d16937fc75ab8b04097658ac0fcf15530843d3c0aa591cae74"),
         PLAYER_BUMPER_COLLIDE_1(0x6B34,16,"46fd7d2954ec5a94f0ab18ed3ce82ef3738b9e9a5f444e952caccba97ec43cd8"),
         PLAYER_BUMPER_COLLIDE_2(0x6B44,16,"7039c80bf965bd800e6e814ae50b42d9316184aa79c63a41075fa1945bf7dd47"),
-        PLAYER_BUMPER_COLLIDE_3(0x6B54,16,"55863b4d00c3326f9acf1d393883e0964cd7598563e7f4548d12a1eea4fdf745");
+        PLAYER_BUMPER_COLLIDE_3(0x6B54,16,"55863b4d00c3326f9acf1d393883e0964cd7598563e7f4548d12a1eea4fdf745"),
+        // Finite R31 Ring extension; reader/cache/decode algorithms remain unchanged.
+        RING_BODY(0x9768,740,"2fe09f8bef2a5da08bf7995bbe9a7f5bcf4493f825a9d40a6caa5e8db85731f9"),
+        RING_DELTAS(0x9780,32,"35a686e2b0201c8422a64ded0a656e400b929d3fdeab89343e725e103ac55e86"),
+        RING_ANIMATIONS(0x9BDC,8,"4718d601ad9887e43a5091a017284dc4669f6ca9cb70f3458f4b2f543f26ff7a"),
+        RING_MAPPINGS(0x9BE4,68,"306667dca113be405fd1d78fd69b09152b853236db8ad8fbeb6a73bbde3be7e8");
         final int offset,length;final String sha;
         Asset(int offset,int length,String sha){this.offset=offset;this.length=length;this.sha=sha;}
     }

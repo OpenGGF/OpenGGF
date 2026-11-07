@@ -111,17 +111,27 @@ import static org.junit.jupiter.api.Assertions.*;
    TestSonicCdR31aSelectedProfileLoading.step(b,8);assertFalse(b.module.requirePlayerFrame().closed());
   }
  }
- /** Genuine historical selected ingress. This is a measured unsupported-family witness,
-  * not positive route completion; ID10 is ObjRing (native Object Index Act1Present:27). */
- @Test void genuineControllerReachesTheSourceBoundRingDispatchFrontier()throws Exception{
+ /** Genuine historical selected ingress: bounded positive Ring continuation and first-owner witness. */
+ @Test void genuineControllerContinuesThroughRingAndIntroToTheNextMeasuredOwner()throws Exception{
   try(var b=fixture.start(1,0x80)){
    TestSonicCdR31aSelectedProfileLoading.ready(b);var frame=b.module.requirePlayerFrame();var host=b.module.r31WorldHost();var world=world(b.module);var placement=host.placement();
-   var terrain=host.currentTerrain();long generation=b.mode.getLevelManager().getCompletedProductionLoadGeneration();
-   for(int n=1;n<=223;n++){
+   var core=b.module.r31LoadingVisit();var terrain=host.currentTerrain();long generation=b.mode.getLevelManager().getCompletedProductionLoadGeneration();
+   int completed=0;SonicCdR31aObjectPass.Unowned frontier=null;var firstClosedFamilies=new TreeMap<Integer,String>();
+   var lastClosedCore=core.state();var lastClosedActor=frame.state();var lastClosedEnvironment=frame.environment();var lastClosedBank=placement.capture();var lastClosedCpu=host.video().completedCpu();var lastClosedScroll=host.scroll();
+   java.util.Optional<com.openggf.game.soniccd.objects.CdObjectDrawQueue.CpuSat> ringCpu=java.util.Optional.empty();
+   for(int n=1;n<=1200;n++){
+    try{
     TestSonicCdR31aSelectedProfileLoading.step(b,8);
+    }catch(SonicCdR31aObjectPass.Unowned reached){frontier=reached;break;}
+    completed=n;
+    for(var row:placement.capture().pool().slots())if(row.id()!=0&&row.routine()!=0)firstClosedFamilies.putIfAbsent(row.id(),"service="+n+",whole="+row.identity().wholeIndex()+",routine="+row.routine());
+    lastClosedCore=core.state();lastClosedActor=frame.state();lastClosedEnvironment=frame.environment();lastClosedBank=placement.capture();lastClosedCpu=host.video().completedCpu();lastClosedScroll=host.scroll();
     assertSame(frame,b.module.requirePlayerFrame());assertSame(host,b.module.r31WorldHost());assertSame(world,world(b.module));assertEquals(generation,b.mode.getLevelManager().getCompletedProductionLoadGeneration());
     assertSame(terrain,host.currentTerrain(),"No genuine PlaceBlock store was reached on this bounded route");assertEquals(n,frame.environment().globals().levelFrames());
-    if(n==200){
+    if(n==224){var ring=placement.pool().state(33);assertEquals(0x10,ring.id());assertEquals(2,ring.routine());assertEquals(0x209BE4,ring.longBits(com.openggf.game.soniccd.objects.CdObjectState.LongField.MAPPINGS));assertEquals(0xA7AE,ring.word(com.openggf.game.soniccd.objects.CdObjectState.WordField.TILE));ringCpu=host.video().completedCpu();assertTrue(ringCpu.isPresent());}
+    if(n==225){var selected=assertInstanceOf(SonicCdR31aWorldHost.Published.class,host.selected()).selection().inputs().selectedCpu().orElseThrow();var old=ringCpu.orElseThrow();assertArrayEquals(old.bytes(),selected.bytes(),"Actual selector8 chooses the preceding completed RunObjects CPU");assertEquals(old.spriteCount(),selected.spriteCount());assertEquals(old.provenance(),selected.provenance());}
+    if(n==223 || n==224 || n==225 || n%100==0)exportClosedPicture(b,TestSonicCdR31aSelectedProfileLoading.draw(b),"controller-p5-service"+n);
+    if(n==200 || n==222 || n==224 || n==250 || n==300){
      var registry=b.mode.getRewindRegistry();var full=registry.capture();var course=registry.captureCourse();var before=TestSonicCdR31aSelectedProfileLoading.values(b);
      var beforePixels=TestSonicCdR31aSelectedProfileLoading.draw(b);TestSonicCdR31aSelectedProfileLoading.step(b,8);var after=TestSonicCdR31aSelectedProfileLoading.values(b);var afterPixels=TestSonicCdR31aSelectedProfileLoading.draw(b);
      for(boolean courseScope:new boolean[]{false,true}){
@@ -132,13 +142,30 @@ import static org.junit.jupiter.api.Assertions.*;
      registry.restore(full);assertEquals(before,TestSonicCdR31aSelectedProfileLoading.values(b));
     }
    }
-   assertEquals(0,frame.environment().controls().controlLocked());assertEquals(1,b.module.r31LoadingVisit().state().calls().stream().filter(c->c==SonicCdR31aLoadingVisit.Call.TITLE_PLC_APPEND).count());
-   TestSonicCdR31aSelectedProfileLoading.exportPicture(b,TestSonicCdR31aSelectedProfileLoading.draw(b),"controller-before-ring-frontier");
-   var frontier=assertThrows(SonicCdR31aObjectPass.Unowned.class,()->TestSonicCdR31aSelectedProfileLoading.step(b,8));
-   assertEquals(SonicCdR31aObjectPass.Boundary.OBJECT_FAMILY,frontier.boundary());assertEquals(33,frontier.wholeIndex());assertEquals(0x10,frontier.value());
-   assertEquals(0x10,placement.pool().state(33).id());assertEquals(0,placement.pool().state(33).routine(),"Unknown Ring Init was never called");
-   assertEquals(224,frame.environment().globals().levelFrames());assertTrue(frame.closed());assertThrows(IllegalStateException.class,()->b.module.serviceR31Loading(8));
-   System.out.println("R31_WORLD_FRONTIER completed223 ordinary services; next service224: original ID10 Ring at whole33; no PlaceBlock store reached; actor="+frame.state()+"; full/course values and actual pixels replayed at service200/201");
+   // The original failure retires the live Module/Host pair. Read retained Frame/pool
+   // comparison metadata only; never re-enter its closed authority merely to report it.
+   System.out.println("R31_P5_CONTINUATION completed="+completed+" frontier="+frontier+" PARTIAL_actor="+frame.state()+" PARTIAL_environment="+frame.environment());
+   System.out.println("R31_P5_LAST_CLOSED coreLevel="+lastClosedCore.level()+" actor="+lastClosedActor+" environment="+lastClosedEnvironment+" camera="+lastClosedScroll+" CPU="+lastClosedCpu+" bank="+lastClosedBank);
+   System.out.println("R31_P5_OBSERVED_RETURNED_FAMILIES "+firstClosedFamilies);
+   String captureDir=System.getProperty("soniccd.r31.capture.dir");
+   if(captureDir!=null){var text=new StringBuilder("ENGINE observed continuation; completed="+completed+"; attempted="+(completed+1)+"; frontier="+frontier+"\nLAST_CLOSED_actor="+lastClosedActor+"\nLAST_CLOSED_environment="+lastClosedEnvironment+"\nLAST_CLOSED_camera="+lastClosedScroll+"\nLAST_CLOSED_CPU="+lastClosedCpu.map(c->HexFormat.of().formatHex(c.bytes()))+"\nObserved returned dynamic family states="+firstClosedFamilies+"\nPARTIAL_actor="+frame.state()+"\nPARTIAL_environment="+frame.environment()+"\n");
+    for(var bank:List.of(lastClosedBank,placement.capture())){text.append(bank==lastClosedBank?"LAST_CLOSED_BANK\n":"PARTIAL_BANK\n");text.append(bank.status()).append("\nSaved=").append(HexFormat.of().formatHex(bank.savedFlags().copy())).append("\n");for(var row:bank.pool().slots())text.append("whole").append(row.identity().wholeIndex()).append('=').append(HexFormat.of().formatHex(row.copyBytes())).append('\n');}
+    java.nio.file.Files.writeString(Path.of(captureDir).resolve("continuation-evidence.txt"),text,java.nio.file.StandardOpenOption.CREATE_NEW);
+   }
+   var ring=placement.pool().state(33);
+   System.out.println("R31_P5_PARTIAL whole33="+java.util.HexFormat.of().formatHex(ring.copyBytes())+" status="+placement.status()+" saved="+java.util.HexFormat.of().formatHex(placement.capture().savedFlags().copy()));
+   assertEquals(0,frame.environment().controls().controlLocked());assertEquals(1,core.state().calls().stream().filter(c->c==SonicCdR31aLoadingVisit.Call.TITLE_PLC_APPEND).count());
+   assertTrue(completed>=224,"The previously returned source prefix is preserved");
+   if(frontier!=null){
+    assertEquals(SonicCdR31aObjectPass.Boundary.OBJECT_FAMILY,frontier.boundary(),"Other owner frontiers require their exact qualification");
+    assertNotEquals(0x10,frontier.value(),"Ring is now owned");assertFalse(frontier.value()>=0x30&&frontier.value()<=0x35,"The complete P5 dispatch graph is owned");assertEquals(frontier.value(),placement.pool().state(frontier.wholeIndex()).id());
+    assertEquals(completed+1,frame.environment().globals().levelFrames());assertTrue(frame.closed());
+    var beforeState=frame.state();var beforeEnvironment=frame.environment();var beforeClock=frame.vIntClock();var beforePool=placement.capture();
+    assertThrows(IllegalStateException.class,()->b.module.serviceR31Loading(8));
+    assertSame(beforeState,frame.state());assertSame(beforeEnvironment,frame.environment());assertSame(beforeClock,frame.vIntClock());
+    var afterPool=placement.capture();assertEquals(beforePool.status(),afterPool.status());assertEquals(beforePool.pool().slots(),afterPool.pool().slots());assertArrayEquals(beforePool.savedFlags().copy(),afterPool.savedFlags().copy());
+   }else assertEquals(1200,completed);
+
   }
  }
  @Test void componentApiHasNoPublicWorldOrCompletedValueEntry(){
@@ -146,6 +173,18 @@ import static org.junit.jupiter.api.Assertions.*;
   assertTrue(Arrays.stream(CdWorld.class.getDeclaredConstructors()).noneMatch(c->Modifier.isPublic(c.getModifiers())));
   var runs=Arrays.stream(CdWorld.class.getDeclaredMethods()).filter(m->m.getName().equals("run")).toList();assertEquals(2,runs.size());
   assertTrue(runs.stream().allMatch(m->m.getParameterTypes()[1]==SonicCdR31aLoadingVisit.OrdinaryAccess.class||m.getParameterTypes()[1]==SonicCdAct3FutureLoadingVisit.OrdinaryAccess.class));
+ }
+ /** Observation only from a returned ordinary cut. Selected CPU is the OLD producer; the
+  * retained partial bank printed after a fault is never labelled as this closed picture. */
+ private static void exportClosedPicture(TestSonicCdR31aSelectedProfileLoading.Booted b,byte[] rgba,String name)throws Exception{
+  TestSonicCdR31aSelectedProfileLoading.exportPicture(b,rgba,name);String raw=System.getProperty("soniccd.r31.capture.dir");if(raw==null)return;
+  var host=b.module.r31WorldHost();var frame=b.module.requirePlayerFrame();var bank=host.placement().capture();
+  var selected=assertInstanceOf(SonicCdR31aWorldHost.Published.class,host.selected()).selection().inputs().selectedCpu();
+  var text=new StringBuilder("ENGINE observed fully returned ordinary cut; no native parity claim\n");
+  text.append("State8=").append(frame.state()).append("\nEnvironment=").append(frame.environment()).append("\nClock=").append(frame.vIntClock()).append("\nCamera=").append(host.scroll()).append("\nPlacementStatus=").append(bank.status()).append("\nSaved=").append(HexFormat.of().formatHex(bank.savedFlags().copy())).append("\n");
+  for(var row:bank.pool().slots())text.append("whole").append(row.identity().wholeIndex()).append('=').append(HexFormat.of().formatHex(row.copyBytes())).append('\n');
+  text.append("OLD_selected_CPU=").append(selected.map(c->HexFormat.of().formatHex(c.bytes()))).append("\nCompleted_CPU=").append(host.video().completedCpu().map(c->HexFormat.of().formatHex(c.bytes()))).append("\nAmyCaptured=").append(host.amyCapturedByte()).append("\nSoundCalls=").append(host.sounds()).append('\n');
+  java.nio.file.Files.writeString(Path.of(raw).resolve(name+".state.txt"),text,java.nio.file.StandardOpenOption.CREATE_NEW);
  }
  private static CdWorld world(SonicCdGameModule module)throws Exception{var f=SonicCdGameModule.class.getDeclaredField("r31World");f.setAccessible(true);return assertInstanceOf(CdWorld.class,f.get(module));}
 }

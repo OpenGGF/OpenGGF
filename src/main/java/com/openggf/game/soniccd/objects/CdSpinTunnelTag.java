@@ -208,13 +208,21 @@ public final class CdSpinTunnelTag {
                     .moveByte(MAP_FRAME, object.subtype()).addByte(MAP_FRAME, 1);
         }
 
+        return new Result(beforeObject, object, prepareRollingMotion(motion,object.centreX(),object.centreY(),object.subtype(),gates),
+                (gates.debugCheatWord() >>> 8) != 0);
+    }
+
+    /** Shared equal native Tag/Roll arithmetic only. Values carry no source or invocation authority.
+     * N1ecc5f3a Tag37-161 and CC Roll Tunnel/Main37-210 retain distinct IDs/operands/callers. */
+    static PlayerResult prepareRollingMotion(CdPlayerMotionState motion,int objectX,int objectY,int subtype,Gates gates) {
+        Objects.requireNonNull(motion);Objects.requireNonNull(gates);byteValue(subtype);wordValue(objectX);wordValue(objectY);
         CdPlayerMotionState next = motion;
         var stores = EnumSet.noneOf(PlayerField.class);
         // Tag:37-44,166-188. Other actor flags/controls/charge/radii are NOT admission gates.
         if (motion.animation() != 0x2B && motion.routine() < 6
                 && (gates.debugModeWord() >>> 8) == 0
-                && inRange(motion.centreX16_16() >>> 16, object.centreX())
-                && inRange(motion.centreY16_16() >>> 16, object.centreY())) {
+                && inRange(motion.centreX16_16() >>> 16, objectX)
+                && inRange(motion.centreY16_16() >>> 16, objectY)) {
             int xv = motion.xVelocity();
             int yv = motion.yVelocity();
             int gv = motion.groundVelocity();
@@ -223,7 +231,6 @@ public final class CdSpinTunnelTag {
             int yr = motion.yRadius();
             int animation = motion.animation();
             int y = motion.centreY16_16();
-            int subtype = object.subtype();
 
             if (subtype == 0) {
                 // .AbsVX/.GotXCap/.CheckXSign (Tag:47-76): unsigned minimum, not maximum.
@@ -284,9 +291,7 @@ public final class CdSpinTunnelTag {
                     animation, motion.previousAnimation(), motion.playerJump(), motion.charge(), motion.moveLock(),
                     motion.stick(), motion.playerControl(), motion.previousPrimaryAngle(), motion.previousSecondaryAngle());
         }
-        // The wrapper's TST.B debugCheat follows EVERY returning Main path (Tag:12-17).
-        return new Result(beforeObject, object, new PlayerResult(motion, next, stores),
-                (gates.debugCheatWord() >>> 8) != 0);
+        return new PlayerResult(motion,next,stores);
     }
 
     /**

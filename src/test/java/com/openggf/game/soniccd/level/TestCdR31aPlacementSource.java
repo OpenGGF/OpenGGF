@@ -21,7 +21,7 @@ class TestCdR31aPlacementSource {
     @Test void all517RowsRetainEveryOriginalFieldAndTrueSourceIndex() throws Exception {
         var a=actual().assets();var p=a.placements();var raw=a.view(CdR31aAssets.Asset.OBJECT_LAYOUTS);
         assertSame(p,CdObjectPlacements.fromR31aAssets(a));assertSame(p,a.placements());
-        assertEquals(517,p.records().size());assertEquals(63,CdR31aAssets.Asset.values().length);
+        assertEquals(517,p.records().size());assertEquals(67,CdR31aAssets.Asset.values().length);
         for(int i=0;i<517;i++){
             var row=p.records().get(i);int at=12+8*i;
             assertEquals(i,row.index());assertEquals(CdObjectPlacements.Layout.R31A_517,row.layout());
@@ -126,7 +126,7 @@ class TestCdR31aPlacementSource {
         for(var c:CdObjectPlacements.class.getDeclaredConstructors())assertTrue(Modifier.isPrivate(c.getModifiers()));
         assertEquals(List.of(7,8),Arrays.stream(CdObjectPlacements.Placement.class.getConstructors()).map(c->c.getParameterCount()).sorted().toList());
         assertEquals(CdObjectPlacements.class,CdR31aAssets.class.getDeclaredMethod("placements").getReturnType());
-        assertEquals(63,aCount());
+        assertEquals(67,aCount());
     }
     private static int aCount(){return CdR31aAssets.Asset.values().length;}
 }

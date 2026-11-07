@@ -10,10 +10,12 @@ import com.openggf.game.soniccd.objects.CdTitleCard;
 
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.ArrayList;
+import com.openggf.game.soniccd.objects.CdRing;
 
 /**
  * Actual original-USA R31 common startup metadata only, from existing authenticated Asset views.
- * N1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff R3 shared/Compatibility joins HUD, Monitor
+ * N1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff R3 shared/Compatibility joins HUD, Monitor, Ring
  * and Title sources; r3/title_card_data.asm and sprites/r3/title_card.asm supply actual64/275+EVEN.
  * This does not authenticate handler PCs/Init directories/dispatch, create a Body/World/Frame,
  * decode/read/select art, establish residency, run scripts or manufacture operation authority.
@@ -41,6 +43,22 @@ public final class CdR31aObjectAssets {
     public static CdR31aObjectAssets fromAssets(CdR31aAssets assets) { return new CdR31aObjectAssets(assets); }
     public boolean ownsAssets(CdR31aAssets assets) { return this.assets == assets; }
     public CdR31aAssets.Identity identity() { return identity; }
+
+    /** N1ecc5f3a objects/ring.asm RingInit/RingSparkle: actual operands, DATA only.
+     * Whole RING_BODY authenticates the historical ABI and excludes the zone6 branch at zone1. */
+    public CdRing.SourceData ringData() {
+        var body=assets.view(CdR31aAssets.Asset.RING_BODY);
+        if(assets.view(CdR31aAssets.Asset.OBJECT_INDEX).unsignedLong(0x3C)!=0x209768L
+                || body.unsignedLong(0x96+2)!=0x209780L || body.unsignedLong(0x14C+2)!=0x209BE4L || body.unsignedWord(0x154+2)!=0xA7AE
+                || body.unsignedLong(0x27C+2)!=0x209BDCL)
+            throw new IllegalArgumentException("R31 Ring original operands differ");
+        var raw=assets.view(CdR31aAssets.Asset.RING_DELTAS);
+        var deltas=new ArrayList<CdR11aObjectAssets.Delta>();
+        for(int i=0;i<32;i+=2)deltas.add(new CdR11aObjectAssets.Delta(raw.signedByte(i),raw.signedByte(i+1)));
+        return new CdRing.SourceData(deltas,assets.range(CdR31aAssets.Asset.RING_MAPPINGS).nativeAddress(),0xA7AE,
+                CdObjectVisualAssets.decode(assets.view(CdR31aAssets.Asset.RING_MAPPINGS).copy(),9,
+                        assets.view(CdR31aAssets.Asset.RING_ANIMATIONS).copy(),1,14));
+    }
 
     /** Shared native HUD table:4 frames, max operand $3D+2=63, no digit/life art access. */
     public synchronized CdObjectVisualAssets hudVisuals() {

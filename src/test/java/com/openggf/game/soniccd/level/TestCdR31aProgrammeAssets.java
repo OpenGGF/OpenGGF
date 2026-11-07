@@ -102,7 +102,7 @@ class TestCdR31aProgrammeAssets {
     }
 
     @Test void completeViewsAndEveryOldPublicAggregateApiRemainImmutableAndUnchanged() throws Exception {
-        assertEquals(63, CdR31aAssets.Asset.values().length);
+        assertEquals(67, CdR31aAssets.Asset.values().length);
         assertEquals(List.of("blocksDecode/0", "bounds/0", "fromPrograms/2", "identity/0", "initialCentre/0", "levelIndex/0", "levelTilesDecode/0", "loadMetadata/0", "placementRows/0", "placements/0", "range/1", "ranges/0", "sonic/0", "terrain/0", "view/1"), publicMethods(CdR31aAssets.class));
         var a = actual().getFirst(); var oldViews = Arrays.stream(CdR31aAssets.Asset.values()).map(a::view).toList();
         var ranges = a.ranges(); var identity = a.identity(); var placements = a.placements();

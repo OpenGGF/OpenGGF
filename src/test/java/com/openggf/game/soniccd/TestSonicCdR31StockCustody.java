@@ -23,7 +23,7 @@ class TestSonicCdR31StockCustody {
         assertEquals("30bb932c3f7a18f0629dcee56fb982280e0b6d6063fb67392b23771f77e7682e",next.identity().mmdSha256());
         assertEquals(s.release().normalizedSha256(),next.identity().observedWholeDiscSha256());
         assertSame(next.placements(),CdObjectPlacements.fromR31aAssets(next));assertEquals(517,next.placements().records().size());
-        assertEquals(63,next.ranges().size());assertEquals(167,next.sonic().mappingFrames().size());
+        assertEquals(67,next.ranges().size());assertEquals(167,next.sonic().mappingFrames().size());
         var player=CdStagePlayerSource.fromR31aAssets(next);assertTrue(player.ownsR31aAssets(next));assertEquals(0x100,player.ordinaryZoneActWord());
         assertTrue(s.rom().isEmpty());assertFalse(s.identity().contains(".cue"));
     }

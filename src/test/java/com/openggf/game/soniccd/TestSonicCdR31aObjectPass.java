@@ -239,6 +239,246 @@ class TestSonicCdR31aObjectPass {
         Arrays.fill(h.placePlane,0xBEEF);
     }
 
+    // Actual R31 source/algorithm, constructed component ingress; never World route authority.
+    @Test void ringBindingRequiresExactSourceAndRejectsRawOrRelabelledInputs()throws Exception{
+        try(var h=new Harness()){
+            var data=h.objects.ringData();assertEquals(0x209BE4,data.mappingAddress());assertEquals(0xA7AE,data.baseTileWord());assertEquals(9,data.visuals().mappingFrames().size());
+            assertEquals(new CdR11aObjectAssets.Delta(-24,16),data.deltas().get(15));
+            assertThrows(IllegalArgumentException.class,()->new CdRing(h.placement,data));
+            try(var programs=CdProgramAssets.open(Path.of(System.getProperty("soniccd.media.root"),"USA","Sonic CD (US).cue"),Optional.of(CdReleaseVariant.USA),Optional.empty())){
+                var other=CdR31aAssets.fromPrograms(programs,CdStagePayload.R31A.stage());assertNotSame(h.assets,other);assertEquals(h.assets.identity(),other.identity());
+                assertThrows(IllegalArgumentException.class,()->CdRing.fromR31aAssets(h.placement,other,CdR31aObjectAssets.fromAssets(other)));
+            }
+            h.dynamic(32,0x10,0,0);var before=h.placement.capture();var ring=CdRing.fromR31aAssets(h.placement,h.assets,h.objects);
+            assertThrows(IllegalArgumentException.class,()->ring.executeSelected(32,new CdRing.Inputs(CdReleaseVariant.USA,CdStageKey.parse("R11A"),0,0,1,0),null,null));same(before,h.placement);
+            assertThrows(UnsupportedOperationException.class,()->ring.executeSelected(32,new CdRing.Inputs(CdReleaseVariant.USA,CdStageKey.parse("R31A"),0,0,1,0),null,null));same(before,h.placement);
+        }
+    }
+    @Test void ringInitPreservesEveryDirtyByteOutsideLiteralStoresAndDrawClear()throws Exception{
+        try(var h=new Harness()){
+            h.dynamic(32,0x10,0,0);var before=h.placement.pool().state(32).moveWord(X,0x100).moveWord(Y,0x100).moveWord(X_FRACTION,0xCAFE).moveWord(Y_FRACTION,0xBEEF).moveByte(SAVED_FLAGS_ID,3).moveByte(FLAGS,0xA5).moveByte(ANIMATION_TIME,0xD7).moveByte(ROUTINE_2,0xC3).moveLong(CdObjectState.LongField.CHECKPOINT_PARENT,0xA1B2C3D4).moveByte(STAND_LINK_3D,0xE5);
+            h.placement.pool().write(before);h.placement.bsetSavedFlag(3,1,CdObjectPlacementRuntime.SavedBit.LOADED);var actor=h.frame.captureActor();var shared=h.frame.captureShared();
+            h.walk();var expected=before.moveByte(ROUTINE,2).moveWord(RING_ANCHOR_X,0x100).moveLong(CdObjectState.LongField.MAPPINGS,0x209BE4).moveWord(TILE,0xA7AE).moveByte(PRIORITY,2).moveByte(SPRITE_FLAGS,4).moveByte(COLLISION_TYPE,0x47).moveByte(WIDTH,8).moveByte(Y_RADIUS,8).moveByte(RING_MEMBER,1).moveByte(MAP_FRAME,0);
+            assertEquals(expected,h.placement.pool().state(32));assertEquals(0,h.placement.savedFlag(3,1));assertEquals(actor,h.frame.captureActor());assertEquals(shared,h.frame.captureShared());h.finish();assertTrue(h.cut.completedCpu().isPresent());
+        }
+    }
+    @Test void ringChildrenUseNextPhysicalFreeSlotsAndRunLaterInTheSamePass()throws Exception{
+        try(var h=new Harness()){
+            h.dynamic(32,0x10,0,0x22);h.placement.pool().write(h.placement.pool().state(32).moveWord(X,0x100).moveWord(Y,0x100).moveByte(SAVED_FLAGS_ID,7));
+            h.dynamic(33,0x10,2,0);h.placement.pool().write(h.placement.pool().state(33).moveWord(RING_ANCHOR_X,0x400));
+            h.walk();for(int[] row:new int[][]{{32,0x100,1},{34,0x120,2},{35,0x140,3}}){var state=h.placement.pool().state(row[0]);assertEquals(2,state.routine());assertEquals(row[1],state.centreX());assertEquals(row[2],state.unsignedByte(RING_MEMBER));assertEquals(0x100,state.word(RING_ANCHOR_X));assertEquals(7,state.savedFlagsId());}
+            assertArrayEquals(new byte[64],h.placement.pool().state(33).copyBytes(),"Culled original occupant deletes before the already allocated later children run");h.finish();assertEquals(0x10,h.placement.pool().state(35).id());
+        }
+    }
+    @Test void ringFullPoolStopsExpansionAfterLoadedClearAndKeepsUnknownLaterOwner()throws Exception{
+        try(var h=new Harness()){
+            for(int w=32;w<128;w++)h.dynamic(w,0x29,0,0);h.dynamic(32,0x10,0,6);h.placement.pool().write(h.placement.pool().state(32).moveByte(SAVED_FLAGS_ID,3));h.placement.bsetSavedFlag(3,1,CdObjectPlacementRuntime.SavedBit.LOADED);
+            var status=h.placement.status();var e=assertThrows(SonicCdR31aObjectPass.Unowned.class,h::walk);assertEquals(33,e.wholeIndex());assertEquals(0x29,e.value());assertEquals(2,h.placement.pool().state(32).routine());assertEquals(0,h.placement.savedFlag(3,1));assertEquals(status,h.placement.status());assertEquals(0x29,h.placement.pool().state(127).id());
+        }
+    }
+    @Test void ringCollectPublishesSharedWorldGlobalsAndSoundOnlyAtTheOriginalCall()throws Exception{
+        for(int rings:new int[]{0,99})try(var h=new Harness()){
+            h.dynamic(32,0x10,4,0);h.placement.pool().write(h.placement.pool().state(32).moveByte(SAVED_FLAGS_ID,3).moveByte(RING_MEMBER,1).moveLong(CdObjectState.LongField.MAPPINGS,0x209BE4).moveWord(TILE,0xA7AE));h.rings(rings);
+            h.walk();assertEquals(rings+1,h.cut.ring().rings());assertEquals(h.cut.ring().rings(),h.cut.world().rings());assertEquals(h.cut.ring().lives(),h.cut.world().lives());assertEquals(h.cut.ring().updateHudLives(),h.cut.world().updateHudLives());assertEquals(1,h.placement.savedFlag(3,1));assertEquals(6,h.placement.pool().state(32).routine());assertEquals(1,h.cut.sounds().size());
+            assertEquals(rings==99?new SonicCdGameModule.PastRingSubCpu(CdRing.SubCpuCommand.SCMD_YESSFX):new SonicCdGameModule.PastRingFm(CdRing.FmSound.FM_RING),h.cut.sounds().getFirst());h.finish();assertThrows(IllegalStateException.class,h.lastAdoption::applyNative);
+        }
+    }
+    @Test void ringSoundPreparationFaultRetainsRewardPrefixBeforeSavedBitAndSparkle()throws Exception{
+        try(var h=new Harness()){
+            h.dynamic(32,0x10,4,0);h.placement.pool().write(h.placement.pool().state(32).moveByte(SAVED_FLAGS_ID,3).moveByte(RING_MEMBER,1));var fault=new AssertionError("actual Ring FM preparation");
+            h.beforeAdopt=()->{if(!h.lastAdoption.next().sounds().isEmpty())throw fault;};
+            assertSame(fault,assertThrows(AssertionError.class,h::walk));assertEquals(1,h.cut.ring().rings());assertEquals(1,h.cut.world().rings());assertEquals(6,h.placement.pool().state(32).routine());assertEquals(0,h.placement.savedFlag(3,1));assertTrue(h.cut.sounds().isEmpty());assertThrows(IllegalStateException.class,h.lastAdoption::applyNative);
+        }
+    }
+    @Test void ringLaterMappingFaultRetainsCollectSavedSoundAndDrawPrefixWithOldCpu()throws Exception{
+        try(var h=new Harness()){
+            h.dynamic(32,0x10,4,0);h.placement.pool().write(h.placement.pool().state(32).moveByte(SAVED_FLAGS_ID,3).moveByte(RING_MEMBER,1).moveLong(CdObjectState.LongField.MAPPINGS,0xFF209BE4).moveByte(SPRITE_FLAGS,0x84));var old=h.cut.cpuSat();
+            h.walk();assertEquals(1,h.cut.sounds().size());assertEquals(1,h.placement.savedFlag(3,1));assertEquals(4,h.placement.pool().state(32).spriteFlags());assertThrows(UnsupportedOperationException.class,h::finish);assertSame(old,h.cut.cpuSat());assertEquals(1,h.cut.ring().rings());
+        }
+    }
+
+    // Constructed full component ingress, not a selected World/capture authority. Native P5
+    // runs on its original cached producer; injected faults are original external preparations.
+    @Test void amyUnknownCaptureKnowledgeStopsBeforePlcOrAnyObjectWrite()throws Exception{
+        try(var h=new Harness()){
+            h.dynamic(32,0x32,0,0);var before=h.placement.capture();var state=h.frame.state();var env=h.frame.environment();
+            var fault=assertThrows(SonicCdR31aObjectPass.Unowned.class,h::walk);
+            assertEquals(SonicCdR31aObjectPass.Boundary.INTRO_GLOBAL_OWNER,fault.boundary());same(before,h.placement);
+            assertSame(state,h.frame.state());assertSame(env,h.frame.environment());assertNull(h.lastIntroPlc);
+        }
+    }
+    @Test void amyFirstPlcFailureRetainsOriginalUninitializedObjectAndCannotBeRetried()throws Exception{
+        try(var h=new Harness()){
+            h.amyKnown(0);h.dynamic(32,0x32,0,0);var before=h.placement.capture();var state=h.frame.state();var env=h.frame.environment();
+            var fault=assertThrows(SonicCdR31aObjectPass.Unowned.class,h::walk);
+            assertEquals(SonicCdR31aObjectPass.Boundary.INTRO_PLC_OWNER,fault.boundary());assertEquals(11,fault.value());same(before,h.placement);
+            assertSame(state,h.frame.state());assertSame(env,h.frame.environment());assertNotNull(h.lastIntroPlc);
+            assertThrows(IllegalStateException.class,h.lastIntroPlc::validateBefore);assertThrows(IllegalStateException.class,h.lastIntroPlc::acknowledge);
+            assertThrows(IllegalStateException.class,h::walk);
+        }
+    }
+    @Test void amyPalettePreparationFaultRetainsGraphicPrefixAndCompleteFrameNonwrites()throws Exception{
+        try(var h=new Harness()){
+            h.amyKnown(0);h.dynamic(32,0x32,0,0);var before=h.placement.pool().state(32).moveByte(COLLAPSE_SOLID_MARKER,255).moveByte(SPRITE_FLAGS,0x85).moveByte(FLAGS,0xA5).moveWord(X_FRACTION,0xBEEF);
+            h.placement.pool().write(before);var actor=h.frame.captureActor();var shared=h.frame.captureShared();var palette=h.cut.core().normalPalette();var cpu=h.cut.cpuSat();
+            var fault=new AssertionError("original Amy palette preparation");h.beforeAdopt=()->{if(h.lastAdoption.introPalette())throw fault;};
+            assertSame(fault,assertThrows(AssertionError.class,h::walk));
+            var expected=before.moveByte(SPRITE_FLAGS,0x85).moveWord(TILE,0x235E).moveByte(PRIORITY,1).moveLong(CdObjectState.LongField.MAPPINGS,0x23BDB2);
+            assertEquals(expected,h.placement.pool().state(32));assertSame(palette,h.cut.core().normalPalette());assertSame(cpu,h.cut.cpuSat());assertEquals(actor,h.frame.captureActor());assertEquals(shared,h.frame.captureShared());
+            assertThrows(IllegalStateException.class,h.lastAdoption::applyNative);
+        }
+    }
+    @Test void actualFacingReadFaultKeepsR94ClearAndEarlierPaletteWithoutSelfSuppression()throws Exception{
+        try(var h=new Harness()){
+            h.amyKnown(0);h.dynamic(32,0x32,0,0);h.placement.pool().write(h.placement.pool().state(32).moveByte(COLLAPSE_SOLID_MARKER,255).moveByte(FLAGS,1).moveByte(SPRITE_FLAGS,0x85));
+            var actor=h.frame.captureActor();var shared=h.frame.captureShared();var fault=new IllegalArgumentException("original player X read");
+            h.onRead=()->{var s=h.placement.pool().state(32);if(s.longBits(CdObjectState.LongField.MAPPINGS)==0x23BDB2&&(s.flags()&1)==0&&(s.spriteFlags()&1)==0)throw fault;};
+            assertSame(fault,assertThrows(IllegalArgumentException.class,h::walk));assertEquals(0,h.placement.pool().state(32).flags()&1);assertEquals(0,h.placement.pool().state(32).spriteFlags()&1);
+            assertArrayEquals(CdR31IntroAssets.fromAssets(h.assets).amyPalette().copy(),h.cut.core().normalPalette().slice(32,32).copy());
+            assertEquals(actor,h.frame.captureActor());assertEquals(shared,h.frame.captureShared());assertTrue(Arrays.stream(fault.getSuppressed()).noneMatch(x->x==fault));
+        }
+    }
+    @Test void capturedAmyPublishesFlagBeforePaletteAndDeletesOnlyAfterBothOriginalCalls()throws Exception{
+        try(var h=new Harness()){
+            h.amyKnown(1);h.dynamic(32,0x32,255,0);var before=h.placement.pool().state(32);var palette=h.cut.core().normalPalette();var fault=new AssertionError("original capture palette");
+            h.beforeAdopt=()->{if(h.lastAdoption.introPalette())throw fault;};
+            assertSame(fault,assertThrows(AssertionError.class,h::walk));assertEquals(OptionalInt.of(255),h.cut.amyCapturedByte());assertEquals(before,h.placement.pool().state(32));assertSame(palette,h.cut.core().normalPalette());
+        }
+        try(var h=new Harness()){
+            h.amyKnown(1);h.dynamic(32,0x32,255,0);var actor=h.frame.captureActor();var shared=h.frame.captureShared();h.walk();
+            assertEquals(OptionalInt.of(255),h.cut.amyCapturedByte());assertArrayEquals(new byte[64],h.placement.pool().state(32).copyBytes());
+            assertArrayEquals(h.assets.view(CdR31aAssets.Asset.PAL_LEVEL).slice(0,32).copy(),h.cut.core().normalPalette().slice(32,32).copy());assertEquals(actor,h.frame.captureActor());assertEquals(shared,h.frame.captureShared());h.finish();
+        }
+    }
+    @Test void metalNativeSoundPreparationFailureRetainsTimerFlipAndAccelerationPrefix()throws Exception{
+        try(var h=new Harness()){
+            h.dynamic(32,0x31,2,0);h.placement.pool().write(h.placement.pool().state(32).moveByte(SPRITE_FLAGS,0x84).moveByte(TUNNEL_DOOR_TIMER_HIGH,1));
+            var fault=new AssertionError("original Metal FM CA");h.beforeAdopt=()->{if(!h.lastAdoption.next().sounds().isEmpty())throw fault;};
+            assertSame(fault,assertThrows(AssertionError.class,h::walk));var s=h.placement.pool().state(32);assertEquals(4,s.routine());assertEquals(0xFFF0,s.word(EXPLOSION_POINTS_FRAME));assertEquals(0,Byte.toUnsignedInt(s.copyBytes()[0x3A]));assertEquals(1,s.flags()&1);assertTrue(h.cut.sounds().isEmpty());
+        }
+    }
+    @Test void p5OriginalAdoptionRejectsOtherThreadReentryAndExpiredSameValueReceipt()throws Exception{
+        try(var h=new Harness()){
+            h.amyKnown(1);h.dynamic(32,0x32,255,0);h.beforeAdopt=()->{
+                var a=h.lastAdoption;var error=new java.util.concurrent.atomic.AtomicReference<Throwable>();var t=new Thread(()->{try{a.applyNative();}catch(Throwable e){error.set(e);}},"foreign-P5-adoption");
+                t.start();try{t.join(5000);}catch(InterruptedException e){throw new AssertionError(e);}assertFalse(t.isAlive());assertInstanceOf(IllegalStateException.class,error.get());
+                assertThrows(IllegalStateException.class,h::walk);assertThrows(IllegalStateException.class,h.pass::discard);
+            };
+            h.walk();assertThrows(IllegalStateException.class,h.lastAdoption::applyNative);h.finish();
+        }
+    }
+    @Test void p5UsesAllOriginalMetalFramesWithoutPaddingTheOddInclude()throws Exception{
+        try(var h=new Harness()){
+            var mapper=CdObjectMappings.fromR31aAssets(h.assets,h.objects);var p5=CdR31IntroAssets.fromAssets(h.assets);
+            assertEquals(349,p5.metalMappingBytes().length());
+            // sprites/r3/metal_sonic.asm .Sprite0..f: literal byte counts and final raw pieces.
+            int[] counts={2,2,6,6,6,6,6,6,6,6,1,1,1,1,0,2};
+            for(int n=0;n<16;n++)assertEquals(counts[n],mapper.resolve(p5.metalMappings(),false,n).pieces().size());
+            assertEquals(List.of(new CdObjectDrawQueue.RawPiece(-24,15,0x30,-20),new CdObjectDrawQueue.RawPiece(8,9,0x40,-12)),mapper.resolve(p5.metalMappings(),false,15).pieces());
+            assertThrows(UnsupportedOperationException.class,()->mapper.resolve(p5.metalMappings(),false,16));
+            assertThrows(UnsupportedOperationException.class,()->mapper.resolve(0xFF23BC54,false,15));
+        }
+    }
+    @Test void introCurrentTerrainFenceRetainsLiteralPrefixBeforeFirstUnownedProbe()throws Exception{
+        try(var h=new Harness()){
+            h.dynamic(32,0x30,2,1);h.terrainDiverged=true;var pool=h.placement.capture();var actor=h.frame.captureActor();var shared=h.frame.captureShared();
+            var fault=assertThrows(SonicCdR31aObjectPass.Unowned.class,h::walk);
+            assertEquals(SonicCdR31aObjectPass.Boundary.CURRENT_TERRAIN_OWNER,fault.boundary());assertEquals(32,fault.wholeIndex());same(pool,h.placement);
+            assertEquals(actor,h.frame.captureActor());assertEquals(shared,h.frame.captureShared());assertThrows(IllegalStateException.class,h::walk);
+        }
+    }
+    @Test void p5PalettePreparerCannotChangeAnotherPhysicalSlotBeforeTheOriginalAdoption()throws Exception{
+        try(var h=new Harness()){
+            h.amyKnown(1);h.dynamic(32,0x32,255,0);var captured=h.cut.amyCapturedByte();var palette=h.cut.core().normalPalette();
+            h.beforeAdopt=()->h.placement.pool().write(h.placement.pool().state(127).moveWord(X_FRACTION,0xCAFE));
+            assertThrows(IllegalArgumentException.class,h::walk);assertEquals(captured,h.cut.amyCapturedByte());assertSame(palette,h.cut.core().normalPalette());
+            assertEquals(0xCAFE,h.placement.pool().state(127).word(X_FRACTION));assertEquals(0x32,h.placement.pool().state(32).id());
+        }
+    }
+
+    @Test void introYBuilderChecksEveryStateAndEnvironmentIdentityBeforePreparingTheExistingFormula()throws Exception{
+        try(var h=new Harness()){
+            var state=h.frame.state();var env=h.frame.environment();
+            var equalState=new CdPlayerBody.State(state.motion(),state.animation(),state.header(),state.timers(),state.history(),state.rotationDistance(),state.objectLinks(),state.rotationAngle());
+            var equalEnv=new CdPlayerBody.Environment(env.movement(),env.controls(),env.globals(),env.dynamicSlots());
+            assertEquals(state,equalState);assertEquals(env,equalEnv);
+            assertThrows(IllegalArgumentException.class,()->h.frame.prepareObjectIntroYRewind(equalState,env,state.motion().centreY16_16()));
+            assertThrows(IllegalArgumentException.class,()->h.frame.prepareObjectIntroYRewind(state,equalEnv,state.motion().centreY16_16()));
+            var ready=h.frame.prepareObjectIntroYRewind(state,env,state.motion().centreY16_16());
+            assertEquals(state,ready.finalState());assertEquals(env,ready.finalEnvironment());assertSame(state,h.frame.state());assertSame(env,h.frame.environment());
+        }
+    }
+
+    @Test void shatteredIntroGetOffRunsAcrossChangedTerrainBecauseItHasNoProbeRead()throws Exception{
+        try(var h=new Harness()){
+            h.amyKnown(0);h.terrainDiverged=true;h.dynamic(32,0x30,2,0);h.dynamic(33,0x31,2,0);
+            h.placement.pool().write(h.placement.pool().state(32).moveWord(X,0x120).moveWord(Y,0x200).moveByte(WIDTH,18).moveByte(Y_RADIUS,32).moveLong(CdObjectState.LongField.MAPPINGS,0x23BE60));
+            h.placement.pool().write(h.placement.pool().state(33).moveWord(X,0x120).moveWord(Y,0x200).moveLong(CdObjectState.LongField.MAPPINGS,0x23BC54).moveByte(MAP_FRAME,14));
+            var actor=h.frame.captureActor();var shared=h.frame.captureShared();h.walk();assertEquals(4,h.placement.pool().state(32).routine());
+            assertEquals(3,h.placement.pool().state(34).unsignedByte(SWING_PART));assertEquals(2,h.placement.pool().state(35).unsignedByte(SWING_PART));assertEquals(1,h.placement.pool().state(36).unsignedByte(SWING_PART));
+            assertEquals(actor,h.frame.captureActor());assertEquals(shared,h.frame.captureShared());h.finish();
+        }
+    }
+
+
+    // Compound-fault controls use genuine cached Intro and shared Solid through public constructed
+    // Frame entry. StackWalker only chooses this test port's fault cut; it never supplies runtime state.
+    @Test void introNativeReservedStandStopPublishesItsAvailablePrefix() throws Exception {
+        try(var h=introNativeStandHarness()) {
+            var original=assertThrows(CdSolidObject.UnsupportedSolidObject.class,h::walk);
+            assertEquals(CdSolidObject.UnsupportedBoundary.RESERVED_SLOT_ADDRESS,original.boundary());
+            assertEquals(1,original.slotByte());assertEquals(CdSolidObject.Routine.STAND_ON_OBJECT,original.routine());
+            assertEquals(8,h.placement.pool().state(32).flags()&8);
+            assertEquals(1,h.frame.state().objectLinks().standObject());
+            assertEquals(0,original.getSuppressed().length);
+            assertThrows(IllegalStateException.class,h::walk);
+        }
+    }
+    @Test void introNativeStopKeepsTheOriginalWhenPrefixReadThrowsRuntime() throws Exception {
+        introNativeStopWithPreparationFault(new IllegalStateException("post-native prefix preparation"));
+    }
+    @Test void introNativeStopKeepsTheOriginalWhenPrefixReadThrowsError() throws Exception {
+        introNativeStopWithPreparationFault(new AssertionError("post-native prefix preparation error"));
+    }
+    private static void introNativeStopWithPreparationFault(Throwable fault) throws Exception {
+        try(var h=introNativeStandHarness()) {
+            var source=h.placement.pool().state(32);var pool=h.placement.capture();int[] selectedReads={0};
+            h.onRead=()->{
+                boolean inside=StackWalker.getInstance().walk(frames->frames.anyMatch(f->
+                        f.getClassName().equals(SonicCdR31aObjectPass.class.getName())&&f.getMethodName().equals("introSolid")));
+                // First: requireOriginalIntroTerrain before Solid. Second: prebuild after NativeStopped.
+                if(inside&&++selectedReads[0]==2) {
+                    if(fault instanceof RuntimeException e)throw e;throw (Error)fault;
+                }
+            };
+            var original=assertThrows(CdSolidObject.UnsupportedSolidObject.class,h::walk);
+            assertEquals(CdSolidObject.UnsupportedBoundary.RESERVED_SLOT_ADDRESS,original.boundary());
+            assertEquals(1,original.slotByte());assertEquals(CdSolidObject.Routine.STAND_ON_OBJECT,original.routine());
+            assertNotSame(fault,original);assertEquals(2,selectedReads[0]);
+            assertEquals(1,original.getSuppressed().length);assertSame(fault,original.getSuppressed()[0]);
+            // Failed preparation never adopts the unavailable Solid prefix. Earlier real Init remains.
+            assertSame(source,h.placement.pool().state(32));same(pool,h.placement);
+            assertEquals(2,h.frame.state().motion().routine());assertEquals(8,h.frame.state().motion().flags()&8);
+            assertEquals(1,h.frame.state().objectLinks().standObject());assertTrue(h.cut.completedCpu().isEmpty());
+            assertThrows(IllegalStateException.class,h::walk);
+            if(h.lastAdoption!=null)assertThrows(IllegalStateException.class,h.lastAdoption::applyNative);
+        }
+    }
+    private static Harness introNativeStandHarness() throws Exception {
+        var h=new Harness();h.frame.close();var s=state(1,0,0);var m=s.motion();
+        var motion=new CdPlayerMotionState(m.centreX16_16(),m.centreY16_16(),m.xVelocity(),m.yVelocity(),m.groundVelocity(),
+                m.routine(),m.angle(),8,m.spriteFlags(),m.xRadius(),m.yRadius(),m.animation(),m.previousAnimation(),
+                m.playerJump(),m.charge(),m.moveLock(),m.stick(),m.playerControl(),m.previousPrimaryAngle(),m.previousSecondaryAngle());
+        var actor=new CdPlayerBody.State(motion,s.animation(),s.header(),s.timers(),s.history(),s.rotationDistance(),
+                new CdPlayerBody.ObjectLinks(0,1),s.rotationAngle());
+        h.frame=CdPlayerFrameRuntime.fromR31aEntry(h.assets,actor,environment(),art(),new CdPlayerFrameRuntime.VIntClock(OptionalLong.of(0),0));
+        h.pass=new SonicCdR31aObjectPass(h.assets,h.frame,h.placement,h.objects,h);
+        h.dynamic(32,0x30,2,1);
+        h.placement.pool().write(h.placement.pool().state(32).moveWord(X,96).moveWord(Y,1055)
+                .moveByte(SPRITE_FLAGS,0x84).moveByte(WIDTH,18).moveByte(Y_RADIUS,32));
+        h.service();return h;
+    }
+
     private static final class Harness implements SonicCdR31aObjectPass.Ports,AutoCloseable {
         final CdR31aAssets assets=actual();final CdR31aObjectAssets objects=CdR31aObjectAssets.fromAssets(assets);
         final CdObjectPlacementRuntime placement=CdObjectPlacementRuntime.fromR31aAssets(assets,fill(CdObjectPlacementRuntime.SAVED_BANK_BYTES,0));
@@ -250,6 +490,7 @@ class TestSonicCdR31aObjectPass {
         SonicCdR31aObjectPass.PrimarySubmission lastPrimary;CdPlayerBody.State prePrimary,readyPrimary;
         CdPlayerFrameRuntime.R31Publication originalPrimary;
         // END qualified original primary test wiring 20261107.
+        SonicCdR31aObjectPass.IntroPlcSubmission lastIntroPlc;
         SonicCdR31aObjectPass.Adoption lastAdoption;SonicCdR31aObjectPass.PlcSubmission lastPlc;
         Harness() throws Exception {this(OptionalLong.of(0));}
         Harness(OptionalLong absolute) throws Exception {
@@ -262,7 +503,7 @@ class TestSonicCdR31aObjectPass {
             pass=new SonicCdR31aObjectPass(assets,frame,placement,objects,this);
         }
         public void validate(SonicCdR31aObjectPass p,CdR31aAssets a,CdPlayerFrameRuntime f,CdObjectPlacementRuntime v,CdR31aObjectAssets o){if(!active||p!=pass||a!=assets||f!=frame||v!=placement||o!=objects)throw new IllegalStateException("No constructed private caller");}
-        public SonicCdR31aObjectPass.Cut read(){reads++;onRead.run();if(terrainDiverged)return new SonicCdR31aObjectPass.Cut(cut.core(),cut.ring(),divergedTerrain,cut.contact(),cut.world(),cut.noBumperByte(),cut.cameraXWord(),cut.cameraYWord(),cut.scrollLockWord(),cut.layerByte(),cut.cpuSat(),cut.completedCpu(),cut.sounds());return cut;}
+        public SonicCdR31aObjectPass.Cut read(){reads++;onRead.run();if(terrainDiverged)return new SonicCdR31aObjectPass.Cut(cut.core(),cut.ring(),divergedTerrain,cut.contact(),cut.world(),cut.noBumperByte(),cut.cameraXWord(),cut.cameraYWord(),cut.scrollLockWord(),cut.layerByte(),cut.cpuSat(),cut.completedCpu(),cut.sounds(),cut.amyCapturedByte());return cut;}
         public void adopt(SonicCdR31aObjectPass.Adoption a){lastAdoption=a;a.validateBefore();beforeAdopt.run();if(fault instanceof RuntimeException e)throw e;if(fault instanceof Error e)throw e;var next=a.next();a.applyNative();cut=next;adoptions++;var once=afterAdopt;afterAdopt=()->{};once.run();}
         public CdPlayerBody.R31Context primaryContext(){
             if(!realPrimary)throw new AssertionError("Constructed initial tests do not mint Main/Hurt context");
@@ -290,6 +531,7 @@ class TestSonicCdR31aObjectPass {
             if(omitPrimary)return;p.applyNative();cut=next;
             if(failAfterPrimary){if(primaryFault instanceof Error e)throw e;if(primaryFault instanceof RuntimeException e)throw e;}
         }
+        public void submitIntroPlc(SonicCdR31aObjectPass.IntroPlcSubmission p){lastIntroPlc=p;p.validateBefore();throw p.unowned();}
         public void submitTitlePlc(SonicCdR31aObjectPass.PlcSubmission p){lastPlc=p;p.validateBefore();throw p.unowned();}
         void primary(int id,int routine,int flags)throws java.io.IOException {frame.close();frame=CdPlayerFrameRuntime.fromR31aEntry(assets,state(id,routine,flags),environment(),art(),new CdPlayerFrameRuntime.VIntClock(OptionalLong.of(0),0));pass=new SonicCdR31aObjectPass(assets,frame,placement,objects,this);}
         void service(){frame.bindArtPublication((dma,full)->{});var selected=frame.prepareInput(0);frame.serviceVBlank(selected.phase());frame.advanceLevelMainFrame();}
@@ -300,7 +542,8 @@ class TestSonicCdR31aObjectPass {
         void edit(int w,java.util.function.Consumer<byte[]> change){byte[] bank=cut.core().reserved().copy();byte[] row=Arrays.copyOfRange(bank,(w-1)*64,w*64);change.accept(row);System.arraycopy(row,0,bank,(w-1)*64,64);var s=cut.core();
             var ready=new SonicCdR31aLoadingVisit.State(s.phase(),s.initialization(),s.section(),s.program(),s.level(),s.normalPalette(),s.fadePalette(),s.waterPalette(),s.displayedPalette(),CdAssetBytes.copyOf(bank),s.blocksRam(),s.layoutRam(),s.initialFadeSteps(),s.fromFadeSteps(),s.displayEnabled(),s.calls(),s.returnKind(),s.music());
             cut=new SonicCdR31aObjectPass.Cut(ready,cut.ring(),cut.currentTerrain(),cut.contact(),cut.world(),cut.noBumperByte(),cut.cameraXWord(),cut.cameraYWord(),cut.scrollLockWord(),cut.layerByte(),cut.cpuSat(),cut.completedCpu(),cut.sounds());}
-        void rings(int n){var r=cut.ring();cut=new SonicCdR31aObjectPass.Cut(cut.core(),new CdRingGlobals(n,r.lives(),r.livesFlags(),r.updateHudRings(),r.updateHudLives(),r.timeStopTimer(),r.ringAnimationTimer(),r.ringAnimationFrame()),cut.currentTerrain(),cut.contact(),cut.world(),cut.noBumperByte(),cut.cameraXWord(),cut.cameraYWord(),cut.scrollLockWord(),cut.layerByte(),cut.cpuSat(),cut.completedCpu(),cut.sounds());}
+        void rings(int n){var r=cut.ring();cut=new SonicCdR31aObjectPass.Cut(cut.core(),new CdRingGlobals(n,r.lives(),r.livesFlags(),r.updateHudRings(),r.updateHudLives(),r.timeStopTimer(),r.ringAnimationTimer(),r.ringAnimationFrame()),cut.currentTerrain(),cut.contact(),new CdPlayerTouchResponse.WorldGlobals(n,r.lives(),r.updateHudLives(),cut.world().score(),cut.world().nextLifeScore(),cut.world().updateHudScore()),cut.noBumperByte(),cut.cameraXWord(),cut.cameraYWord(),cut.scrollLockWord(),cut.layerByte(),cut.cpuSat(),cut.completedCpu(),cut.sounds());}
+        void amyKnown(int value){cut=new SonicCdR31aObjectPass.Cut(cut.core(),cut.ring(),cut.currentTerrain(),cut.contact(),cut.world(),cut.noBumperByte(),cut.cameraXWord(),cut.cameraYWord(),cut.scrollLockWord(),cut.layerByte(),cut.cpuSat(),cut.completedCpu(),cut.sounds(),OptionalInt.of(value));}
         void dynamic(int w,int id,int routine,int subtype){placement.pool().write(placement.pool().state(w).moveByte(ID,id).moveByte(ROUTINE,routine).moveByte(SUBTYPE,subtype));}
         public void close(){frame.close();}
     }

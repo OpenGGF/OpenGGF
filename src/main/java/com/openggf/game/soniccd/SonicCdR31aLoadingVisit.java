@@ -186,6 +186,8 @@ final class SonicCdR31aLoadingVisit {
         void finishVInt(State expected){validate(expected);act(Action.VINT_COMPLETED);}
         /** Native deferred Title PLC2; actual World first authenticates the original Title receipt. */
         void appendTitlePlc(State expected){validate(expected);artOp(a->art.appendList(a,2));call(Call.TITLE_PLC_APPEND);}
+        /** Original AmyInit AddGfxQueue11; current OrdinaryAccess identity remains mandatory. */
+        void appendIntroPlc(State expected){validate(expected);artOp(a->art.appendList(a,0xB));}
         /** Pure Main425 programme over the cached four scripts; caller must prebuild/adopt its coupled
          * timer/step/normal owners. This result grants no native completion/publication authority. */
         CycleResult preparePaletteCycles(State expected,CdAssetBytes timers,CdAssetBytes steps,int timeStopByte){

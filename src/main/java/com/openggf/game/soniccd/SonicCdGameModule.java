@@ -264,7 +264,8 @@ public final class SonicCdGameModule implements GameModule {
             var plc=clear.plc();var section=r31Art.fromValues(clear.nemesisTable(),current,originalBoot.state().main().orElseThrow().sectionWord(),plc.queue(),Optional.empty(),plc.saved(),plc.remaining(),plc.budget(),plc.hint(),plc.pad());
             // The cold actual placement/pool is created at this real RunMMD clear, not by Host defaults.
             var placement=CdObjectPlacementRuntime.fromR31aAssets(stagedR31,main.savedFlags());
-            var nativeCarry=clear.nativeCarry();
+            var carriedNative=clear.nativeCarry();
+            var nativeCarry=new SonicCdR31aWorldHost.NativeCarry(carriedNative.collisionPointer(),carriedNative.fadeInfoWithoutTail(),carriedNative.rngSeedLong(),carriedNative.targetRightBoundWord(),selected.amyCaptured());
             r31Host=new SonicCdR31aWorldHost(r31Authority,stagedR31,playerFrame,r31Art,new SonicCdR31aWorldHost.Initial(globals,clear.scroll(),new SonicCdR31aWorldHost.Planes(plane,plane),new SonicCdR31aWorldHost.Video(clear.cpuSat(),Optional.empty(),playerFrame.artState(),current,new SonicCdR31aWorldHost.Carried(scene)),placement,nativeCarry));
             var m=originalBoot.state().main().orElseThrow();var p=new SonicCdR31aLoadingVisit.Program(m.demoModeWord(),r31SelectedFinal.progress().timeStonesByte().orElseThrow(),selected.goodFuture(),m.usePlayer2Byte(),selected.specialStage(),m.palFadeFlagsByte(),clear.gameModeByte(),m.levelStartedByte(),clear.demoDataIndexWord());
             var oldLevel=m.level();var levelGlobals=new CdLevelGlobals(oldLevel.levelRestart(),oldLevel.updateHudTime(),selected.checkpoint(),oldLevel.spawnMode(),selected.plcLoadFlags().orElseThrow(),oldLevel.flowerCount(),oldLevel.fadeEnableDisplay(),oldLevel.powerup(),oldLevel.timeOver());
@@ -1106,7 +1107,7 @@ public final class SonicCdGameModule implements GameModule {
         PastLoadBoundary boundary() { return boundary; }
     }
     // Typed request metadata and one native music-latch projection; no audio synthesis.
-    sealed interface PastSound permits PastCheckpointFm, PastFrameSound, PastSubCpuSound, PastRingFm, PastRingSubCpu, PastSpringFm, PastTunnelDoorFm, PastMonitorFm, PastTimePostSubCpu, PastTamabbohFm, PastCollapsePlatformFm, PastMosquiFm, PastLostRingFm, PastRobotGeneratorFm, PastProjectorFm, PastSignpostSound, PastBigRingFm, PastResultsSound, PastProgrammeSound, PastWallFm, PastTunnelPathFm, PastMonitorItemShieldFm, PastMonitorItemRing, PastTunnelDoorSplashFm, PastDiscFm, PastVerticalDoorFm, PastSpeedShoesSubCpu, PastLevelMusic, PastR13BossFm, PastR13BossSubCpu, PastR13CapsuleExplosion, PastR13CapsuleSubCpu, PastR13GameOverSubCpu { }
+    sealed interface PastSound permits PastIntroFm, PastIntroSubCpu, PastCheckpointFm, PastFrameSound, PastSubCpuSound, PastRingFm, PastRingSubCpu, PastSpringFm, PastTunnelDoorFm, PastMonitorFm, PastTimePostSubCpu, PastTamabbohFm, PastCollapsePlatformFm, PastMosquiFm, PastLostRingFm, PastRobotGeneratorFm, PastProjectorFm, PastSignpostSound, PastBigRingFm, PastResultsSound, PastProgrammeSound, PastWallFm, PastTunnelPathFm, PastMonitorItemShieldFm, PastMonitorItemRing, PastTunnelDoorSplashFm, PastDiscFm, PastVerticalDoorFm, PastSpeedShoesSubCpu, PastLevelMusic, PastR13BossFm, PastR13BossSubCpu, PastR13CapsuleExplosion, PastR13CapsuleSubCpu, PastR13GameOverSubCpu { }
     record PastR13CapsuleExplosion() implements PastSound { }
     record PastR13CapsuleSubCpu(com.openggf.game.soniccd.objects.CdR13Capsule.CpuCommand command) implements PastSound {
         PastR13CapsuleSubCpu { Objects.requireNonNull(command); }
@@ -1148,6 +1149,8 @@ public final class SonicCdGameModule implements GameModule {
         PastR13GameOverSubCpu { Objects.requireNonNull(command); }
     }
     // END R13 GAME OVER IMMUTABLE SUBCPU REQUEST 20261107
+    record PastIntroFm(int nativeId) implements PastSound {PastIntroFm{if(nativeId!=0xA3&&nativeId!=0xCA)throw new IllegalArgumentException("Actual intro FM");}}
+    record PastIntroSubCpu(int nativeId) implements PastSound {PastIntroSubCpu{if(nativeId!=0x7D)throw new IllegalArgumentException("Actual intro SubCPU");}}
     record PastFrameSound(CdPlayerFrameRuntime.Sound sound) implements PastSound {
         PastFrameSound { Objects.requireNonNull(sound); }
     }

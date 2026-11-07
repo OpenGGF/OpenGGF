@@ -20,6 +20,7 @@ import com.openggf.game.soniccd.level.CdR13CapsuleAssets;
 import com.openggf.game.soniccd.level.CdR13ResultsAssets;
 import com.openggf.game.soniccd.level.CdR31aAssets;
 import com.openggf.game.soniccd.level.CdR31aObjectAssets;
+import com.openggf.game.soniccd.level.CdR31IntroAssets;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -448,7 +449,7 @@ public final class CdObjectMappings implements CdDrawMappings {
 
     // BEGIN R31 COMMON COUNTED METADATA JOIN 20261107
     /**
-     * Same actual R31 aggregate: Sonic167, HUD4, Monitor20, Title9 counted roots only.
+     * Same actual R31 aggregate: Sonic167, HUD4, Monitor20, Title9 and Ring9 counted roots only.
      * Genuine Sonic2444 and Title276 read views retain their original unread EVEN bytes.
      * No handler/Init-PC/dispatch closure, raw static icons, art/current or World authority.
      */
@@ -482,6 +483,13 @@ public final class CdObjectMappings implements CdDrawMappings {
             }
             tables.add(new DeclaredTable(assets.range(source).nativeAddress(), bytes, 0, visual.mappingFrames().size()));
         }
+        var ring=common.ringData();
+        tables.add(new DeclaredTable(ring.mappingAddress(),ring.visuals().mappings(),0,9));
+        var intro=CdR31IntroAssets.fromAssets(assets);
+        tables.add(new DeclaredTable(intro.introMappings(),intro.introMappingBytes(),0,15));
+        tables.add(new DeclaredTable(intro.metalMappings(),intro.metalMappingBytes(),0,16));
+        tables.add(new DeclaredTable(intro.amyMappings(),intro.amyMappingBytes(),0,14));
+        tables.add(new DeclaredTable(intro.rollMappings(),intro.rollMappingBytes(),0,13));
         return declaredSourceViews(tables, List.of());
     }
     // END R31 COMMON COUNTED METADATA JOIN 20261107

@@ -426,7 +426,7 @@ final class CdWorld implements SonicCdAct3FutureLoadingVisit.OrdinaryOwner,
   }
   private SonicCdR31aObjectPass.Cut objectCut(){
    require();var g=host.globals();var f=host.scroll().foreground();var v=host.video();var r=g.ring();var score=g.score();
-   return new SonicCdR31aObjectPass.Cut(active.state(),r,host.currentTerrain(),g.contact(),new CdPlayerTouchResponse.WorldGlobals(r.rings(),r.lives(),r.updateHudLives(),score.score(),score.nextLifeScore(),score.updateHudScore()),host.noBumperByte(),f.cameraX(),f.cameraYWord(),f.scrollLock(),g.layerByte(),v.cpuSat(),v.completedCpu(),host.sounds());
+   return new SonicCdR31aObjectPass.Cut(active.state(),r,host.currentTerrain(),g.contact(),new CdPlayerTouchResponse.WorldGlobals(r.rings(),r.lives(),r.updateHudLives(),score.score(),score.nextLifeScore(),score.updateHudScore()),host.noBumperByte(),f.cameraX(),f.cameraYWord(),f.scrollLock(),g.layerByte(),v.cpuSat(),v.completedCpu(),host.sounds(),host.amyCapturedByte());
   }
   private List<SonicCdGameModule.PastSound> soundSuffix(SonicCdR31aObjectPass.Cut next){
    var before=host.sounds();if(next.sounds().size()<before.size()||!next.sounds().subList(0,before.size()).equals(before))throw new IllegalArgumentException("Original sound prefix replaced");return next.sounds().subList(before.size(),next.sounds().size());
@@ -439,10 +439,11 @@ final class CdWorld implements SonicCdAct3FutureLoadingVisit.OrdinaryOwner,
    public void adopt(SonicCdR31aObjectPass.Adoption original){
     require();if(original.owner()!=objects)throw new IllegalArgumentException("Foreign actual pass publication");original.validateBefore();
     var next=original.next();var before=active.state();var candidate=next.core();
-    if(candidate.phase()!=before.phase()||candidate.initialization()!=before.initialization()||candidate.section()!=before.section()||candidate.program()!=before.program()||candidate.level()!=before.level()||candidate.normalPalette()!=before.normalPalette()||candidate.fadePalette()!=before.fadePalette()||candidate.waterPalette()!=before.waterPalette()||candidate.displayedPalette()!=before.displayedPalette()||candidate.blocksRam()!=before.blocksRam()||candidate.layoutRam()!=before.layoutRam()||candidate.initialFadeSteps()!=before.initialFadeSteps()||candidate.fromFadeSteps()!=before.fromFadeSteps()||candidate.displayEnabled()!=before.displayEnabled()||!candidate.calls().equals(before.calls())||candidate.returnKind()!=before.returnKind()||candidate.music()!=before.music())throw new IllegalArgumentException("Pass changed unowned Core fields");
+    if(candidate.phase()!=before.phase()||candidate.initialization()!=before.initialization()||candidate.section()!=before.section()||candidate.program()!=before.program()||candidate.level()!=before.level()||(!original.introPalette()&&candidate.normalPalette()!=before.normalPalette())||candidate.fadePalette()!=before.fadePalette()||candidate.waterPalette()!=before.waterPalette()||candidate.displayedPalette()!=before.displayedPalette()||candidate.blocksRam()!=before.blocksRam()||candidate.layoutRam()!=before.layoutRam()||candidate.initialFadeSteps()!=before.initialFadeSteps()||candidate.fromFadeSteps()!=before.fromFadeSteps()||candidate.displayEnabled()!=before.displayEnabled()||!candidate.calls().equals(before.calls())||candidate.returnKind()!=before.returnKind()||candidate.music()!=before.music())throw new IllegalArgumentException("Pass changed unowned Core fields");
     if(next.currentTerrain()!=host.currentTerrain()||!next.noBumperByte().equals(host.noBumperByte()))throw new IllegalArgumentException("Nonprimary pass changed terrain/scratch");
-    var ready=active.prepare(before,before.section(),before.level(),candidate.reserved(),before.normalPalette(),before.displayedPalette());
+    var ready=active.prepare(before,before.section(),before.level(),candidate.reserved(),candidate.normalPalette(),before.displayedPalette());
     var hp=host.prepareOrdinary(host.globals(),host.video(),worldValues(next),soundSuffix(next),next.completedCpu());
+    hp=host.prepareAmyCaptured(hp,next.amyCapturedByte());
     if(next.scrollLockWord()!=host.scroll().foreground().scrollLock())hp=host.prepareScrollLock(hp,next.scrollLockWord());
     active.validatePrepared(before,ready);host.validateOrdinary(hp);original.validateBefore();original.applyNative();active.adoptAfterNative(before,ready);host.adoptAfterNative(hp);
    }
@@ -469,6 +470,7 @@ final class CdWorld implements SonicCdAct3FutureLoadingVisit.OrdinaryOwner,
     var hp=host.preparePrimary(original,worldValues(next),soundSuffix(next));
     active.validatePrepared(before,ready);host.validateOrdinary(hp);original.validateBefore();original.applyNative();active.adoptAfterNative(before,ready);host.adoptAfterNative(hp);
    }
+   public void submitIntroPlc(SonicCdR31aObjectPass.IntroPlcSubmission original){requireCut(Cut.RUN_OBJECTS);if(original.owner()!=objects)throw new IllegalArgumentException("Foreign original Amy PLC11");original.validateBefore();active.appendIntroPlc(active.state());original.acknowledge();}
    public void submitTitlePlc(SonicCdR31aObjectPass.PlcSubmission original){requireCut(Cut.RUN_OBJECTS);if(original.owner()!=objects||original.nativeId()!=2)throw new IllegalArgumentException("Foreign actual Title PLC2");original.validateBefore();active.appendTitlePlc(active.state());original.acknowledge();}
   }
  }

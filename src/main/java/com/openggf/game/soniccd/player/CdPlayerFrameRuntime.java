@@ -79,6 +79,12 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
         applyPreparedObjectSolidPublication(prepareObjectPreHurtYRewind(expectedActor, finalYLongBits));
     }
 
+    /** P5's finite pre-Hurt store. Full State8/Environment CAS; no invocation authority in DTOs. */
+    public ObjectSolidPublication prepareObjectIntroYRewind(CdPlayerBody.State expected,CdPlayerBody.Environment env,int value) {
+        requireOpenIdle();requireClosedFrame();if(state!=expected||environment!=env)throw new IllegalArgumentException("Stale complete intro player pair");
+        var h=state.header();return prepareObjectPreHurtYRewind(new CdPlayerTouchResponse.Actor(state.motion(),h.tile(),h.priority(),state.timers().hurt(),state.rotationDistance()),value);
+    }
+
     /** Prepare the existing checked Y-only formula without adopting either Frame aggregate. */
     public ObjectSolidPublication prepareObjectPreHurtYRewind(CdPlayerTouchResponse.Actor expectedActor, int finalYLongBits) {
         validateObjectPreHurtYRewind(expectedActor, finalYLongBits);

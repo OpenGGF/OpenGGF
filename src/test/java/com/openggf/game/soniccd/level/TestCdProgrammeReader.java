@@ -24,7 +24,7 @@ class TestCdProgrammeReader {
   verifyNoInteractions(actual);
  }
  @Test void rawAndCompressedInventoriesRemainIndependent() {
-  assertEquals(63,CdR31aAssets.Asset.values().length);
+  assertEquals(67,CdR31aAssets.Asset.values().length);
   assertEquals(62,CdR32aDataLayout.Asset.values().length);
   assertEquals(37,CdR31aLoadMetadata.SourceId.values().length);
   assertEquals(41,CdR32aLoadLayout.SourceId.values().length);
@@ -63,7 +63,7 @@ class TestCdProgrammeReader {
   assertSame(reader.view(CdR31IntroAssets.View.METAL_MAPPINGS),intro.metalMappingBytes());
   assertSame(reader.view(CdR31IntroAssets.View.AMY_MAPPINGS),intro.amyMappingBytes());
   assertSame(reader.view(CdR31IntroAssets.View.ROLL_MAPPINGS),intro.rollMappingBytes());
-  assertEquals(63,a.ranges().size());
+  assertEquals(67,a.ranges().size());
  }
  @Test void independentEqualOriginalsHaveIndependentCustodyAndProducts()throws Exception {
   var f=TestCdR31aAssets.actual();var p=TestCdR31aAssets.source(f,f.image());
@@ -188,7 +188,7 @@ class TestCdProgrammeReader {
    assertSame(view,reader.view(keys[i]),keys[i].name());
   }
   assertSame(reader.view(CdProgrammeReader.Borrow.CCZ12),reader.view(CdProgrammeReader.Borrow.CCZ12));
-  assertEquals(63,fixture.assets().ranges().size());
+  assertEquals(67,fixture.assets().ranges().size());
  }
 
 }
