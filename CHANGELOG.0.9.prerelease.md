@@ -18,8 +18,9 @@ matching area heading; see the
   their native callback and fault prefixes;1,155 focused checks pass without skips.
   One source-bound World now replaces the R13-only coordinator and drives both
   R13 and R31 through their existing ordinary owners. Selected original-USA CCZ
-  entry now completes350 controller services through Ring, the intro family and
-  guarded CCZ Solid publication, stopping at death-camera ownership on attempted351.
+  entry now completes434 controller services through Ring, the intro family,
+  guarded Solid publication and the shared native primary death lifecycle,
+  stopping before Game Over ownership on attempted435.
   Full/course restore retains
   selected closed state and pixels. Compound Solid preparation faults preserve
   the original native exception; available prefixes publish after preparation;
@@ -47,6 +48,12 @@ matching area heading; see the
   Present/Past metadata leaves retained good-future progress unconstrained.
   The combined CCZ publication/DATA/parser batch passes1,033 focused checks
   without skips. New zones' live terrain, player and World admission remains separate.
+  All ten Stardust Speedway and ten Metallic Madness DATA profiles also use that
+  reader/parser. Unavailable load or visual formats retain explicit selected-access
+  boundaries; real no-section and unavailable-palette metadata does not invent work.
+  R13 and R31 now share death-camera stores and lifecycle preparation. The combined
+  1,460 checks pass without failures, errors or skips, including315 direct Body cases;
+  no completed Game Over/reload, natural CCZ transition or regional parity is claimed.
   CCZ ordinary scheduling now preserves native VBlank/Main order, the old
   selected sprite list and full-word time-stop gating. Private HUD adoption
   retains the real prefix across typed callback failures;175 focused checks

@@ -112,7 +112,7 @@ import static org.junit.jupiter.api.Assertions.*;
   }
  }
  /** Genuine historical selected ingress: bounded positive Ring continuation and first-owner witness. */
- @Test void genuineControllerContinuesThroughP2ToTheNextMeasuredOwner()throws Exception{
+ @Test void genuineControllerContinuesThroughDeathToTheNextMeasuredOwner()throws Exception{
   try(var b=fixture.start(1,0x80)){
    TestSonicCdR31aSelectedProfileLoading.ready(b);var frame=b.module.requirePlayerFrame();var host=b.module.r31WorldHost();var world=world(b.module);var placement=host.placement();
    var core=b.module.r31LoadingVisit();var terrain=host.currentTerrain();long generation=b.mode.getLevelManager().getCompletedProductionLoadGeneration();
@@ -120,12 +120,22 @@ import static org.junit.jupiter.api.Assertions.*;
    var lastClosedCore=core.state();var lastClosedActor=frame.state();var lastClosedEnvironment=frame.environment();var lastClosedBank=placement.capture();var lastClosedCpu=host.video().completedCpu();var lastClosedScroll=host.scroll();
    var p2registry=b.mode.getRewindRegistry();var p2full=p2registry.capture();var p2course=p2registry.captureCourse();
    TestSonicCdR31aSelectedProfileLoading.Values p2before=null;byte[] p2pixels=null;int p2replayNext=-1;boolean p2replayed=false;
+   int deathCut=-1;boolean deathReplayed=false;
    java.util.Optional<com.openggf.game.soniccd.objects.CdObjectDrawQueue.CpuSat> ringCpu=java.util.Optional.empty();
    for(int n=1;n<=1200;n++){
     try{
     TestSonicCdR31aSelectedProfileLoading.step(b,8);
     }catch(SonicCdR31aObjectPass.Unowned reached){frontier=reached;break;}catch(CdWorld.Unowned reached){frontier=reached;break;}
     completed=n;
+    if(frame.state().motion().routine()>=6&&frame.environment().globals().debugMode()==0){
+     assertEquals(host.scroll().foreground().cameraYWord(),frame.environment().movement().bounds().bottom());assertEquals(host.scroll().foreground().cameraYWord(),host.scroll().foreground().destBottomBound());
+     assertEquals(lastClosedScroll.foreground().cameraY16_16(),host.scroll().foreground().cameraY16_16(),"Native death branch skips LevelScroll");
+     if(deathCut<0){deathCut=n;exportClosedPicture(b,TestSonicCdR31aSelectedProfileLoading.draw(b),"death-entry-service"+n);}
+     if(n==deathCut+1){var registry=b.mode.getRewindRegistry();var full=registry.capture();var course=registry.captureCourse();var before=TestSonicCdR31aSelectedProfileLoading.values(b);var pixels=TestSonicCdR31aSelectedProfileLoading.draw(b);TestSonicCdR31aSelectedProfileLoading.step(b,8);var after=TestSonicCdR31aSelectedProfileLoading.values(b);var nextPixels=TestSonicCdR31aSelectedProfileLoading.draw(b);
+      for(boolean useCourse:new boolean[]{false,true}){if(useCourse)registry.restoreCourse(course);else registry.restore(full);assertEquals(before,TestSonicCdR31aSelectedProfileLoading.values(b));assertArrayEquals(pixels,TestSonicCdR31aSelectedProfileLoading.draw(b));TestSonicCdR31aSelectedProfileLoading.step(b,8);assertEquals(after,TestSonicCdR31aSelectedProfileLoading.values(b));assertArrayEquals(nextPixels,TestSonicCdR31aSelectedProfileLoading.draw(b));}
+      registry.restore(full);deathReplayed=true;exportClosedPicture(b,pixels,"death-first-body-service"+n);
+     }
+    }
     boolean firstP2=false;
     for(var row:placement.capture().pool().slots())if(row.id()!=0&&row.routine()!=0){boolean added=firstClosedFamilies.putIfAbsent(row.id(),"service="+n+",whole="+row.identity().wholeIndex()+",routine="+row.routine())==null;if(added&&Set.of(0x20,0x21,0x22,0x23,0x26,0x27,0x28).contains(row.id()))firstP2=true;}
     if(p2replayNext==n&&!p2replayed){var after=TestSonicCdR31aSelectedProfileLoading.values(b);var pixels=TestSonicCdR31aSelectedProfileLoading.draw(b);var closed=p2registry.capture();
@@ -139,7 +149,7 @@ import static org.junit.jupiter.api.Assertions.*;
     assertSame(terrain,host.currentTerrain(),"No genuine PlaceBlock store was reached on this bounded route");assertEquals(n,frame.environment().globals().levelFrames());
     if(n==224){var ring=placement.pool().state(33);assertEquals(0x10,ring.id());assertEquals(2,ring.routine());assertEquals(0x209BE4,ring.longBits(com.openggf.game.soniccd.objects.CdObjectState.LongField.MAPPINGS));assertEquals(0xA7AE,ring.word(com.openggf.game.soniccd.objects.CdObjectState.WordField.TILE));ringCpu=host.video().completedCpu();assertTrue(ringCpu.isPresent());}
     if(n==225){var selected=assertInstanceOf(SonicCdR31aWorldHost.Published.class,host.selected()).selection().inputs().selectedCpu().orElseThrow();var old=ringCpu.orElseThrow();assertArrayEquals(old.bytes(),selected.bytes(),"Actual selector8 chooses the preceding completed RunObjects CPU");assertEquals(old.spriteCount(),selected.spriteCount());assertEquals(old.provenance(),selected.provenance());}
-    if(n==223 || n==224 || n==225 || n%100==0)exportClosedPicture(b,TestSonicCdR31aSelectedProfileLoading.draw(b),"controller-p2-service"+n);
+    if(n==223 || n==224 || n==225 || n%100==0)exportClosedPicture(b,TestSonicCdR31aSelectedProfileLoading.draw(b),"controller-death-service"+n);
     if(n==200 || n==222 || n==224 || n==250 || n==300){
      var registry=b.mode.getRewindRegistry();var full=registry.capture();var course=registry.captureCourse();var before=TestSonicCdR31aSelectedProfileLoading.values(b);
      var beforePixels=TestSonicCdR31aSelectedProfileLoading.draw(b);TestSonicCdR31aSelectedProfileLoading.step(b,8);var after=TestSonicCdR31aSelectedProfileLoading.values(b);var afterPixels=TestSonicCdR31aSelectedProfileLoading.draw(b);
@@ -153,24 +163,24 @@ import static org.junit.jupiter.api.Assertions.*;
    }
    // The original failure retires the live Module/Host pair. Read retained Frame/pool
    // comparison metadata only; never re-enter its closed authority merely to report it.
-   System.out.println("R31_P2_CONTINUATION completed="+completed+" frontier="+frontier+" PARTIAL_actor="+frame.state()+" PARTIAL_environment="+frame.environment());
-   System.out.println("R31_P2_LAST_CLOSED coreLevel="+lastClosedCore.level()+" actor="+lastClosedActor+" environment="+lastClosedEnvironment+" camera="+lastClosedScroll+" CPU="+lastClosedCpu+" bank="+lastClosedBank);
-   System.out.println("R31_P2_OBSERVED_RETURNED_FAMILIES "+firstClosedFamilies);
+   System.out.println("R31_DEATH_CONTINUATION completed="+completed+" frontier="+frontier+" PARTIAL_actor="+frame.state()+" PARTIAL_environment="+frame.environment());
+   System.out.println("R31_DEATH_LAST_CLOSED coreLevel="+lastClosedCore.level()+" actor="+lastClosedActor+" environment="+lastClosedEnvironment+" camera="+lastClosedScroll+" CPU="+lastClosedCpu+" bank="+lastClosedBank);
+   System.out.println("R31_DEATH_OBSERVED_RETURNED_FAMILIES "+firstClosedFamilies);
    String captureDir=System.getProperty("soniccd.r31.capture.dir");
    if(captureDir!=null){var text=new StringBuilder("ENGINE observed continuation; completed="+completed+"; attempted="+(completed+1)+"; frontier="+frontier+"\nLAST_CLOSED_actor="+lastClosedActor+"\nLAST_CLOSED_environment="+lastClosedEnvironment+"\nLAST_CLOSED_camera="+lastClosedScroll+"\nLAST_CLOSED_CPU="+lastClosedCpu.map(c->HexFormat.of().formatHex(c.bytes()))+"\nObserved returned dynamic family states="+firstClosedFamilies+"\nPARTIAL_actor="+frame.state()+"\nPARTIAL_environment="+frame.environment()+"\n");
     for(var bank:List.of(lastClosedBank,placement.capture())){text.append(bank==lastClosedBank?"LAST_CLOSED_BANK\n":"PARTIAL_BANK\n");text.append(bank.status()).append("\nSaved=").append(HexFormat.of().formatHex(bank.savedFlags().copy())).append("\n");for(var row:bank.pool().slots())text.append("whole").append(row.identity().wholeIndex()).append('=').append(HexFormat.of().formatHex(row.copyBytes())).append('\n');}
     java.nio.file.Files.writeString(Path.of(captureDir).resolve("continuation-evidence.txt"),text,java.nio.file.StandardOpenOption.CREATE_NEW);
    }
    var ring=placement.pool().state(33);
-   System.out.println("R31_P2_PARTIAL whole33="+java.util.HexFormat.of().formatHex(ring.copyBytes())+" status="+placement.status()+" saved="+java.util.HexFormat.of().formatHex(placement.capture().savedFlags().copy()));
+   System.out.println("R31_DEATH_PARTIAL whole33="+java.util.HexFormat.of().formatHex(ring.copyBytes())+" status="+placement.status()+" saved="+java.util.HexFormat.of().formatHex(placement.capture().savedFlags().copy()));
    assertEquals(0,frame.environment().controls().controlLocked());assertEquals(1,core.state().calls().stream().filter(c->c==SonicCdR31aLoadingVisit.Call.TITLE_PLC_APPEND).count());
    assertTrue(p2replayed,"Post-P2 FULL/course next-return and pixels were genuinely replayed");
-   assertTrue(completed>=346,"The previously returned source prefix is preserved");
+   assertTrue(completed>350,"The old death-camera frontier must now return");assertTrue(deathReplayed,"Actual death FULL/course and next-state/pixels replayed");
    if(frontier!=null){
     if(frontier instanceof SonicCdR31aObjectPass.Unowned objectFrontier){
     assertTrue(EnumSet.of(SonicCdR31aObjectPass.Boundary.OBJECT_FAMILY,SonicCdR31aObjectPass.Boundary.SPRING_CHILD_OWNER,SonicCdR31aObjectPass.Boundary.P2_ANIMATION_OWNER,SonicCdR31aObjectPass.Boundary.P2_ART_CLOCK_OWNER,SonicCdR31aObjectPass.Boundary.P2_PARENT_OWNER,SonicCdR31aObjectPass.Boundary.CURRENT_TERRAIN_OWNER).contains(objectFrontier.boundary()),"Only explicit first missing native owner may stop the controller");
     assertNotEquals(0x10,objectFrontier.value(),"Ring is now owned");if(objectFrontier.boundary()==SonicCdR31aObjectPass.Boundary.OBJECT_FAMILY){assertFalse(objectFrontier.value()>=0x30&&objectFrontier.value()<=0x35,"The complete P5 graph is owned");assertFalse(Set.of(0x20,0x21,0x22,0x23,0x26,0x27,0x28).contains(objectFrontier.value()),"The complete P2 dispatch graph is owned");}if(objectFrontier.boundary()==SonicCdR31aObjectPass.Boundary.OBJECT_FAMILY||objectFrontier.boundary()==SonicCdR31aObjectPass.Boundary.SPRING_CHILD_OWNER)assertEquals(objectFrontier.value(),placement.pool().state(objectFrontier.wholeIndex()).id());
-    }else assertEquals(CdWorld.Boundary.PRIMARY_DEATH_CAMERA,assertInstanceOf(CdWorld.Unowned.class,frontier).boundary());
+    }else assertEquals(CdWorld.Boundary.LEVEL_FLOW,assertInstanceOf(CdWorld.Unowned.class,frontier).boundary());
     assertEquals(completed+1,frame.environment().globals().levelFrames());assertTrue(frame.closed());
     var beforeState=frame.state();var beforeEnvironment=frame.environment();var beforeClock=frame.vIntClock();var beforePool=placement.capture();
     assertThrows(IllegalStateException.class,()->b.module.serviceR31Loading(8));

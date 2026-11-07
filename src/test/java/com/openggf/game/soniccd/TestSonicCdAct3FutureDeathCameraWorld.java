@@ -152,29 +152,29 @@ class TestSonicCdAct3FutureDeathCameraWorld {
     @Test void preparedCameraRetainsEveryOtherFrameFieldAndUsesTheRawUnsignedWord() throws Exception {
         try(var f=ready(TestCdR13PlaneSources.actual().getFirst())) {
             actor(f.frame,8,0x200,0,0,0);var state=f.frame.state();var e=f.frame.environment();var m=e.movement();
-            var p=f.frame.prepareAct3FutureLevelMainDeathCamera(f.assets,state,e,0xF123);
+            var p=f.frame.prepareLevelMainDeathCamera(f.frame.stageSource(),state,e,0xF123);
             assertSame(state,p.finalState());assertSame(state,f.frame.state());assertSame(e,f.frame.environment());
             f.frame.applyPreparedObjectSolidPublication(p);var n=f.frame.environment();assertEquals(0xF123,n.movement().bounds().bottom());
             assertEquals(m.bounds().left(),n.movement().bounds().left());assertEquals(m.bounds().right(),n.movement().bounds().right());assertEquals(m.bounds().bossFight(),n.movement().bounds().bossFight());
             assertSame(m.physics(),n.movement().physics());assertSame(m.gates(),n.movement().gates());assertSame(m.globals(),n.movement().globals());
             assertSame(e.controls(),n.controls());assertSame(e.globals(),n.globals());assertSame(e.dynamicSlots(),n.dynamicSlots());
-            var equal=f.frame.prepareAct3FutureLevelMainDeathCamera(f.assets,state,n,0xF123);assertSame(n,equal.finalEnvironment());
+            var equal=f.frame.prepareLevelMainDeathCamera(f.frame.stageSource(),state,n,0xF123);assertSame(n,equal.finalEnvironment());
         }
     }
     @Test void malformedForeignStaleAndUnreachedCameraValuesCannotWrite() throws Exception {
         var all=TestCdR13PlaneSources.actual();try(var f=ready(all.getFirst())) {
             var state=f.frame.state();var e=f.frame.environment();
-            assertThrows(IllegalStateException.class,()->f.frame.prepareAct3FutureLevelMainDeathCamera(f.assets,state,e,1));
+            assertThrows(IllegalStateException.class,()->f.frame.prepareLevelMainDeathCamera(f.frame.stageSource(),state,e,1));
             actor(f.frame,8,0x200,0,0,0);var s=f.frame.state();var env=f.frame.environment();
-            for(int word:new int[]{-1,65536})assertThrows(IllegalArgumentException.class,()->f.frame.prepareAct3FutureLevelMainDeathCamera(f.assets,s,env,word));
-            assertThrows(NullPointerException.class,()->f.frame.prepareAct3FutureLevelMainDeathCamera(null,s,env,1));
-            assertThrows(IllegalArgumentException.class,()->f.frame.prepareAct3FutureLevelMainDeathCamera(all.getLast(),s,env,1));
-            var prepared=f.frame.prepareAct3FutureLevelMainDeathCamera(f.assets,s,env,0x101);
+            for(int word:new int[]{-1,65536})assertThrows(IllegalArgumentException.class,()->f.frame.prepareLevelMainDeathCamera(f.frame.stageSource(),s,env,word));
+            assertThrows(NullPointerException.class,()->f.frame.prepareLevelMainDeathCamera(null,s,env,1));
+            assertThrows(IllegalArgumentException.class,()->f.frame.prepareLevelMainDeathCamera(CdStagePlayerSource.fromAct3Future(all.getLast()),s,env,1));
+            var prepared=f.frame.prepareLevelMainDeathCamera(f.frame.stageSource(),s,env,0x101);
             bounds(f.frame,0x456);assertThrows(IllegalArgumentException.class,()->f.frame.applyPreparedObjectSolidPublication(prepared));
-            assertThrows(IllegalArgumentException.class,()->f.frame.prepareAct3FutureLevelMainDeathCamera(f.assets,s,env,0x101));
+            assertThrows(IllegalArgumentException.class,()->f.frame.prepareLevelMainDeathCamera(f.frame.stageSource(),s,env,0x101));
             assertEquals(0x456,f.frame.environment().movement().bounds().bottom());
             assertThrows(IllegalStateException.class,()->f.host.prepareLevelMainDeathCamera(0x101));assertThrows(IllegalStateException.class,()->f.world.requireCut(CdOrdinaryLoop.Cut.POST_OBJECT_CAMERA));
-            debug(f.frame,1);assertThrows(IllegalStateException.class,()->f.frame.prepareAct3FutureLevelMainDeathCamera(f.assets,f.frame.state(),f.frame.environment(),1));
+            debug(f.frame,1);assertThrows(IllegalStateException.class,()->f.frame.prepareLevelMainDeathCamera(f.frame.stageSource(),f.frame.state(),f.frame.environment(),1));
         }
     }
     @Test void fullComponentRestoreReplaysOriginalDeathServicesWithoutEffectReplay() throws Exception {

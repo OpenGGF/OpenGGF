@@ -601,6 +601,12 @@ public final class CdPlayerBody {
     public Result step(State state,Environment environment,Optional<TouchContext> touchContext,
                        Optional<LevelContext> levelContext,Optional<CdPlayerMovement.ObjectContext> objects,
                        Optional<TimeWarpContext> timeWarpContext,Optional<BossSpecialContext> bossSpecialContext) {
+        return stepShared(state,environment,touchContext,levelContext,objects,timeWarpContext,bossSpecialContext,false);
+    }
+    private Result stepShared(State state,Environment environment,Optional<TouchContext> touchContext,
+                              Optional<LevelContext> levelContext,Optional<CdPlayerMovement.ObjectContext> objects,
+                              Optional<TimeWarpContext> timeWarpContext,Optional<BossSpecialContext> bossSpecialContext,
+                              boolean r31Lifecycle){
         Objects.requireNonNull(state); Objects.requireNonNull(environment); Objects.requireNonNull(touchContext);
         Objects.requireNonNull(levelContext); Objects.requireNonNull(objects); Objects.requireNonNull(timeWarpContext);
         Objects.requireNonNull(bossSpecialContext);
@@ -610,7 +616,8 @@ public final class CdPlayerBody {
         if (state.header().slotId() != 1) unsupported(UnsupportedBoundary.SLOT_ID);
         var gates = environment.movement().gates();
         boolean r3 = player.sourceGraph() == CdR11aPlayerAssets.SourceGraph.R3;
-        // R31A Init is the only admitted R3 routine here. No marked-period/warp continuation is implied.
+        // Legacy callers admit R31A Init only; the Frame-only lifecycle entry also admits Dead/Restart.
+        // No marked-period/warp continuation is implied.
         if (r3 && (gates.zoneAct() != 0x100 || gates.timeZone() != 1)) unsupported(UnsupportedBoundary.SOURCE_FAMILY);
         boolean activePeriod = gates.timeZone() >= 0x80 && gates.timeZone() <= 0x82;
         if (gates.zoneAct() != ordinaryZoneAct || (gates.timeZone() != ordinaryPeriod && !(activePeriod && timeWarpContext.isPresent()))) {
@@ -622,7 +629,7 @@ public final class CdPlayerBody {
         }
         // R3 Main/Hurt require actual PlayerCheckBlock/no-bumper/geometry/touch owners. Reject
         // before any staged predispatch prefix, including controlled Main; no PP RTS substitutes them.
-        if (r3 && state.motion().routine() != 0) unsupported(UnsupportedBoundary.R3_CONTINUATION_OWNER);
+        if (r3 && state.motion().routine() != 0 && !r31Lifecycle) unsupported(UnsupportedBoundary.R3_CONTINUATION_OWNER);
         Cursor c = new Cursor(state, environment);
         c.applyCharge(CdPlayerCharge.beforeRoutineDispatch(c.chargeState())); // EXACTLY ONCE, using prior rolling bit.
         c.returned(NativeCall.CHARGE_BEFORE_DISPATCH);
@@ -724,9 +731,7 @@ public final class CdPlayerBody {
     }
     R31Result stepR31(State state, Environment environment, R31Context context, R31LivePlacePort live) {
         Objects.requireNonNull(state);Objects.requireNonNull(environment);Objects.requireNonNull(context);
-        if(sourceBinding==null||player.sourceGraph()!=CdR11aPlayerAssets.SourceGraph.R3||context.source()!=sourceBinding
-                ||!sourceBinding.ownsR31aAssets(context.assets())||!context.scanner().ownsR31aAssets(context.assets())
-                ||!context.response().response().ownsR31aAssets(context.assets()))throw new IllegalArgumentException("Exact authenticated R31 Body/source/helper relation required");
+        requireR31Context(context);
         if(state.header().slotId()==0)return new R31Result(new Result(state,environment,List.of(),Optional.empty(),Boundary.SLOT_ABSENT,Optional.empty()),
                 new R31Values(context.currentTerrain(),context.snapshot(),context.noBumperByte(),context.response().contact(),context.response().world()));
         if(state.header().slotId()!=1)unsupported(UnsupportedBoundary.SLOT_ID);
@@ -744,6 +749,23 @@ public final class CdPlayerBody {
         c.applyCharge(CdPlayerCharge.beforeRoutineDispatch(c.chargeState()));c.returned(NativeCall.CHARGE_BEFORE_DISPATCH);
         if(c.motion.routine()==2){r31Main(c,plan);return new R31Result(c.finish(Boundary.MAIN_RETURN),plan.values());}
         r31Hurt(c,plan);return new R31Result(c.finish(Boundary.HURT_RETURN),plan.values());
+    }
+    private void requireR31Context(R31Context context){
+        if(sourceBinding==null||player.sourceGraph()!=CdR11aPlayerAssets.SourceGraph.R3||context.source()!=sourceBinding
+                ||!sourceBinding.ownsR31aAssets(context.assets())||!context.scanner().ownsR31aAssets(context.assets())
+                ||!context.response().response().ownsR31aAssets(context.assets()))throw new IllegalArgumentException("Exact authenticated R31 Body/source/helper relation required");
+    }
+    /** Frame-only finite admission, N objects/player.asm:2244-2352. All actual semantic work stays
+     * in the same shared dispatch/Dead/Restart, animation, gravity and history owners as R13. */
+    Result stepR31Lifecycle(State state,Environment environment,R31Context context,LevelContext level){
+        Objects.requireNonNull(state);Objects.requireNonNull(environment);Objects.requireNonNull(context);Objects.requireNonNull(level);
+        requireR31Context(context);
+        if(state.motion().routine()!=6&&state.motion().routine()!=8)unsupported(UnsupportedBoundary.R3_CONTINUATION_OWNER);
+        if(environment.movement().gates().miniSonic()!=0)unsupported(UnsupportedBoundary.R3_MINIATURE_OWNER);
+        if(level.snapshot()!=context.snapshot()||level.ring().rings()!=context.response().world().rings()
+                ||level.ring().lives()!=context.response().world().lives()||level.ring().updateHudLives()!=context.response().world().updateHudLives())
+            throw new IllegalArgumentException("Lifecycle requires the same actual pool/ring cut");
+        return stepShared(state,environment,Optional.empty(),Optional.of(level),context.objects(),Optional.empty(),Optional.empty(),true);
     }
     private void r31Main(Cursor c,R31Planning plan) {
         requireBoundMapping(c);extendedCamera(c);

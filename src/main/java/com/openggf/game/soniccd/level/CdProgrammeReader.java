@@ -25,7 +25,7 @@ final class CdProgrammeReader {
     private final Map<Long,Object> plcSources=new HashMap<>();
     private final Map<Object,CdAssetBytes[]> inputs=new IdentityHashMap<>();
     private final Map<Object,CdNemesisAsset.Decoded> products=new IdentityHashMap<>();
-    private final CdSonicVisualAssets sonic;
+    private final Optional<CdSonicVisualAssets> sonic;
     private CdStageTerrain terrain;
     private CdProgrammeLoadTables loadTables;
 
@@ -62,8 +62,11 @@ final class CdProgrammeReader {
             if(source.plc() && plcSources.putIfAbsent(0x200000L+include.offset(),source.key())!=null)
                 throw new IllegalArgumentException(name()+" duplicate PLC source address");
         }
-        var visual=definition.visual();
-        sonic=CdSonicVisualAssets.decode(visual.format(),view(visual.mapping()).copy(),view(visual.dplc()).copy(),view(visual.art()).copy());
+        sonic=switch(definition.visual()) {
+            case CdProgrammeDefinition.Visual visual -> Optional.of(CdSonicVisualAssets.decode(visual.format(),
+                view(visual.mapping()).copy(),view(visual.dplc()).copy(),view(visual.art()).copy()));
+            case CdProgrammeDefinition.UnsupportedVisual ignored -> Optional.empty();
+        };
     }
     static CdProgrammeReader open(CdProgramAssets actual,CdStageKey selected)throws IOException {
         Objects.requireNonNull(actual,"actual complete-disc data source");Objects.requireNonNull(selected,"explicit selected stage");
@@ -137,7 +140,7 @@ final class CdProgrammeReader {
             throw new IOException(name()+" existing Java source product/cursor differs");
         products.put(key,result);return result;
     }
-    CdSonicVisualAssets sonic() { return sonic; }
+    CdSonicVisualAssets sonic() { return sonic.orElseThrow(()->new UnsupportedOperationException(((CdProgrammeDefinition.UnsupportedVisual)definition.visual()).reason())); }
     void requireRetained() { try {verifyImage();} catch(IOException fault) {throw new IllegalStateException("Retained "+name()+" source differs",fault);} }
     CdProgrammeDefinition definition() { return definition; }
     CdStageKey stage() { return definition.payload().stage(); }

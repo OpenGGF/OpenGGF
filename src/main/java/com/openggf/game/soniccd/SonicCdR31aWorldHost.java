@@ -244,6 +244,15 @@ final class SonicCdR31aWorldHost implements Host,AutoCloseable {
   var ready=new Image(this,i.globals(),scroll,i.foreground(),i.background(),i.video(),i.clears(),i.geometryReady(),i.collisionPointer(),i.fadeInfoWithoutTail(),i.rngSeedLong(),i.targetRightBoundWord(),i.sounds(),i.ordinary());
   return new PreparedOrdinary(this,p.scope,p.before,ready);
  }
+ /** Native Level_MainLoop:413-415, only the current original completed-walk scope. */
+ PreparedOrdinary prepareLevelMainDeathCamera(int cameraY){
+  ordinaryCut(CdOrdinaryLoop.Cut.POST_OBJECT_CAMERA);var core=owner.state();var e=frame.environment();
+  if(core.program().demoDataIndexWord()==0x800||core.level().levelRestart()!=0||frame.paused()||e.globals().debugMode()!=0||frame.state().motion().routine()<6)throw new IllegalStateException("Native death-camera branch not reached");
+  var before=externalCut();var i=image;var s=i.scroll();var f=CdPrimaryLifecycle.freezeDestination(s.foreground(),cameraY);
+  var next=f==s.foreground()?s:new Scroll(f,s.background(),s.copies(),s.foregroundXFractionWord(),s.topBoundWord(),s.waterDeformWord());
+  return new PreparedOrdinary(this,ordinary.actualScope(),before,copy(i.globals(),next,i.foreground(),i.background(),i.video(),i.sounds()));
+ }
+ void validatePrimaryDeathPublication(PreparedOrdinary p){validateOrdinary(p);if(image!=p.before.image()||!ordinary.isCurrentScope(p.scope))throw new IllegalStateException("Changed original death publication pair");}
  PreparedOrdinary preparePrimary(SonicCdR31aObjectPass.PrimarySubmission original,Globals globals,List<SonicCdGameModule.PastSound> sounds){
   ordinaryCut(CdOrdinaryLoop.Cut.RUN_OBJECTS);ordinary.requirePrimary(original);var values=original.publication().nativeValues();
   // Final Body data cannot replay a chunk/plane store; only genuine reached receipts publish it.

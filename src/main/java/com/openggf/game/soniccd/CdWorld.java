@@ -140,7 +140,7 @@ final class CdWorld implements SonicCdAct3FutureLoadingVisit.OrdinaryOwner,
   requireCut(Cut.POST_OBJECT_CAMERA);if(!walkReturned)throw new IllegalStateException("No completed actual physical walk");
   var before=active.state();var actor=frame.state();var environment=frame.environment();var display=frame.display();var artImage=frame.artState();var clock=frame.vIntClock();boolean paused=frame.paused();var placement=host.placement();var placed=placement.capture();
   int cameraY=host.scroll().foreground().cameraYWord();
-  var fp=frame.prepareAct3FutureLevelMainDeathCamera(assets,actor,environment,cameraY);var hp=host.prepareLevelMainDeathCamera(cameraY);
+  var fp=frame.prepareLevelMainDeathCamera(frame.stageSource(),actor,environment,cameraY);var hp=host.prepareLevelMainDeathCamera(cameraY);
   active.validate(before);host.validatePrimaryDeathPublication(hp);frame.validatePreparedObjectSolidPublication(fp);
   var now=placement.capture();if(core.state()!=before||frame.state()!=actor||frame.environment()!=environment||frame.display()!=display||frame.artState()!=artImage||frame.vIntClock()!=clock||frame.paused()!=paused||!placed.status().equals(now.status())||!placed.pool().slots().equals(now.pool().slots())||!same(placed.savedFlags(),now.savedFlags()))throw new IllegalStateException("Death camera changed an unowned completed-walk partition");
   frame.applyPreparedObjectSolidPublication(fp);host.adoptAfterNative(hp);
@@ -177,7 +177,6 @@ final class CdWorld implements SonicCdAct3FutureLoadingVisit.OrdinaryOwner,
   public void updateGlobalAnimations(){require();var g=host.globals();var extras=g.animations().orElseThrow(()->new Stopped(Boundary.MISSING_GLOBAL_ANIMATIONS));var out=CdGlobalObjectAnimation.step(extras,g.ring());globals(SonicCdAct3FutureWorldHost.with(g,out.ring(),g.live(),g.contact(),g.score(),g.pauseMusicBit(),g.bonus(),Optional.of(out.extras()),g.paletteSteps7(),g.paletteTimers7()),List.of());}
  }
  private SonicCdAct3FutureObjectPass.Cut objectCut(){require();var s=active.state();var g=host.globals();var v=host.video();var f=host.scroll().foreground();return new SonicCdAct3FutureObjectPass.Cut(core,s.program(),g.ring(),s.hudSlots(),v.cpuSat(),v.completedCpu(),host.sounds(),f.cameraX(),f.cameraYWord(),frame.environment().globals().timeAttackMode(),g.layerByte(),OptionalInt.of(s.program().goodFutureByte()),g.projectorByte(),f.scrollLock(),OptionalLong.of(s.section().queue().headSource()));}
- private static boolean same(CdAssetBytes a,CdAssetBytes b){return Arrays.equals(a.copy(),b.copy());}
  private static boolean sameCut(SonicCdAct3FutureObjectPass.Cut a,SonicCdAct3FutureObjectPass.Cut b){return a.programmeOwner()==b.programmeOwner()&&a.programme()==b.programme()&&a.ring().equals(b.ring())&&same(a.reservedSlots(),b.reservedSlots())&&same(a.cpuSat(),b.cpuSat())&&a.completedCpu().equals(b.completedCpu())&&a.sounds().equals(b.sounds())&&a.cameraXWord()==b.cameraXWord()&&a.cameraYWord()==b.cameraYWord()&&a.timeAttackModeByte()==b.timeAttackModeByte()&&a.layerByte().equals(b.layerByte())&&a.goodFutureByte().equals(b.goodFutureByte())&&a.projectorByte().equals(b.projectorByte())&&a.scrollLockWord()==b.scrollLockWord()&&a.plcHeadLong().equals(b.plcHeadLong());}
  private final class ObjectPorts implements SonicCdAct3FutureObjectPass.Host {
   public void validate(SonicCdAct3FutureObjectPass p,CdPlayerFrameRuntime f,CdR13FutureAssets a,CdR13ObjectAssets m,CdObjectPlacementRuntime placement){require();if(p!=objects||f!=frame||a!=assets||m!=metadata||placement!=host.placement()||(cut!=Cut.RUN_OBJECTS&&cut!=Cut.DRAW_OBJECTS))throw new IllegalStateException("No actual increasing physical R13 pass");}
@@ -240,51 +239,24 @@ final class CdWorld implements SonicCdAct3FutureLoadingVisit.OrdinaryOwner,
   * CdOpeningObjectRuntime.commitDeadGone/commitRestart. No GameOver or LevelStart owner is invented. */
  private void publishLifecycle(CdPlayerFrameRuntime.BodyPublication publication,CdObjectPool.Snapshot pool,
                                SonicCdAct3FutureWorldHost.Globals g,SonicCdAct3FutureLoadingVisit.State before){
+  var nativeStop=CdPrimaryLifecycle.aliasReached(publication.result())?new Stopped(Boundary.PRIMARY_DEATH_ALIAS):null;
+  try{
   var result=publication.result();boolean dead=result.boundary()==CdPlayerBody.Boundary.DEAD_RETURN;
   var placement=host.placement();var placed=placement.capture();var artImage=frame.artState();var clock=frame.vIntClock();boolean paused=frame.paused();
   if(!placed.pool().slots().equals(pool.slots()))throw new IllegalArgumentException("Stale lifecycle full96 input");
   if(!dead&&result.boundary()!=CdPlayerBody.Boundary.RESTART_RETURN)throw new IllegalArgumentException("Not an original lifecycle return");
-  CdPlayerBody.DeadCheckGone gone=null;CdPlayerBody.RestartCut restart=null;int resets=0;var aliases=new ArrayList<CdPlayerBody.UncheckedAliasWrite>();var driver=new ArrayList<CdPlayerBody.Z80RamWrite>();
-  for(var effect:result.effects()){
-   if(effect instanceof CdPlayerBody.DeadCheckGone v){if(gone!=null||restart!=null||!dead)throw new IllegalArgumentException("Repeated/foreign death summary");gone=v;}
-   else if(effect instanceof CdPlayerBody.RestartCut v){if(gone!=null||restart!=null||dead)throw new IllegalArgumentException("Repeated/foreign restart summary");restart=v;}
-   else if(effect instanceof CdPlayerBody.ResetSavedObjectFlagsRequest)resets++;
-   else if(effect instanceof CdPlayerBody.UncheckedAliasWrite v)aliases.add(v);
-   else if(effect instanceof CdPlayerBody.Z80RamWrite v)driver.add(v);
-   else if(effect instanceof CdPlayerBody.ObjectTouchResult||effect instanceof CdPlayerBody.ObjectTouchResponse||effect instanceof CdPlayerBody.ObjectBossTouchResponse||effect instanceof CdPlayerBody.TimeWarpCall||effect instanceof CdPlayerBody.ModeEffect)throw new IllegalArgumentException("Lifecycle return mixed another primary owner");
-  }
-  var ring=g.ring();var level=before.level();var nextPool=pool;boolean alias=false;
-  if(gone!=null){
-   if(resets!=0||!driver.isEmpty()||gone.updateHudTime()!=0)throw new IllegalArgumentException("Death summary changed restart nonwrites");
-   var found=gone.allocation().map(CdPlayerTouchResponse.FindObjSlot::wholeIndex).orElse(OptionalInt.empty());
-   if(gone.allocation().isPresent()){
-    OptionalInt first=OptionalInt.empty();for(var slot:pool.slots())if(slot.id()==0){first=OptionalInt.of(slot.identity().wholeIndex());break;}
-    if(!first.equals(found))throw new IllegalArgumentException("Death allocation is not the native first-free slot");
-   }
-   alias=gone.allocation().isPresent()&&found.isEmpty();
-   var expectedAliases=alias?List.of(new CdPlayerBody.UncheckedAliasWrite(0xFFF000,0x3B)):List.of();
-   if(!aliases.equals(expectedAliases))throw new IllegalArgumentException("Death alias differs from actual exhausted allocation");
-   if(gone.gameOverImage().isPresent()){
-    var image=gone.gameOverImage().orElseThrow();var expected=pool.slots().get(image.identity().dynamicIndex()).moveByte(CdObjectState.ByteField.ID,0x3B);
-    if(!image.equals(expected))throw new IllegalArgumentException("Death allocation changed bytes other than oID");
-    nextPool=CdObjectPool.overlay(pool,List.of(image));
-   }
-   ring=new CdRingGlobals(ring.rings(),gone.lives(),ring.livesFlags(),ring.updateHudRings(),gone.updateHudLives(),ring.timeStopTimer(),ring.ringAnimationTimer(),ring.ringAnimationFrame());
-   level=new CdLevelGlobals(level.levelRestart(),gone.updateHudTime(),level.checkpoint(),level.spawnMode(),level.plcLoadFlags(),level.flowerCount(),level.fadeEnableDisplay(),level.powerup(),level.timeOver());
-  }else if(restart!=null){
-   var next=restart.next();if(!restart.resetSavedObjectFlags()||resets!=1||next.levelRestart()!=1||next.flowerCount()!=0||next.fadeEnableDisplay()!=0||!aliases.isEmpty()||!driver.equals(List.of(new CdPlayerBody.Z80RamWrite(0x1C3E,1))))throw new IllegalArgumentException("Restart omitted its native complete publication");
-   level=next;
-  }else if(resets!=0||!aliases.isEmpty()||!driver.isEmpty()||result.effects().stream().anyMatch(CdPlayerBody.LevelWrite.class::isInstance))throw new IllegalArgumentException("Lifecycle writes omitted their one summary");
-  var sounds=new ArrayList<SonicCdGameModule.PastSound>();for(var sound:publication.sounds())sounds.add(new SonicCdGameModule.PastFrameSound(sound));
+  var plan=CdPrimaryLifecycle.prepare(publication,pool,g.ring(),before.level());
+  var ring=plan.ring();var level=plan.level();var nextPool=plan.pool();var sounds=plan.sounds();boolean alias=plan.alias();
   var globals=SonicCdAct3FutureWorldHost.with(g,ring,g.live(),g.contact(),g.score(),g.pauseMusicBit(),g.bonus(),g.animations(),g.paletteSteps7(),g.paletteTimers7());
   var ready=active.prepare(before,before.section(),level,before.hudSlots(),before.normalPalette(),before.displayedPalette());var hp=host.prepareOrdinary(g,host.video(),globals,sounds,host.video().completedCpu());
   placement.pool().validateRestore(nextPool);active.validate(before);host.validatePrimaryDeathPublication(hp);
   var now=placement.capture();if(core.state()!=before||frame.state()!=result.state()||frame.environment()!=result.environment()||frame.display()!=result.display()||frame.artState()!=artImage||frame.vIntClock()!=clock||frame.paused()!=paused||!placed.status().equals(now.status())||!placed.pool().slots().equals(now.pool().slots())||!same(placed.savedFlags(),now.savedFlags()))throw new IllegalStateException("Lifecycle changed another full actual owner during preparation");
   // All prebuilt values/ownership checks precede this callback-free native commit prefix.
-  placement.pool().restore(nextPool);if(restart!=null)placement.resetSavedObjectFlags();active.adoptAfterNative(before,ready);host.adoptAfterNative(hp);
+  placement.pool().restore(nextPool);if(plan.resetSaved())placement.resetSavedObjectFlags();active.adoptAfterNative(before,ready);host.adoptAfterNative(hp);
   // The original whole Body is atomic; no buffer/slot stands in for the unowned $FFF000 target.
   // Its completed actor/global prefix is retained, but there is no successful PrimaryCall/Draw/physical tail.
-  if(alias)throw new Stopped(Boundary.PRIMARY_DEATH_ALIAS);
+  }catch(RuntimeException|Error preparation){if(nativeStop==null)throw preparation;if(preparation!=nativeStop)nativeStop.addSuppressed(preparation);throw nativeStop;}
+  if(nativeStop!=null)throw nativeStop;
  }
  // END R13 COMPLETED PRIMARY LIFECYCLE WORLD JOIN 20261107
  // BEGIN R13 ACTUAL BOSS PLC CORE NONWRITES 20261106
@@ -378,6 +350,15 @@ final class CdWorld implements SonicCdAct3FutureLoadingVisit.OrdinaryOwner,
    catch(CdLevelHud.UnsupportedR31Hud original){verify(original,()->retainHud(original.state()));throw original;}
    catch(CdLevelHud.R31ArtFailure prefix){var original=prefix.original();verify(original,()->retainHud(prefix.state()));throw original;}
   }
+  private void deathCamera(){
+   requireCut(Cut.POST_OBJECT_CAMERA);if(!walkReturned)throw new IllegalStateException("No completed actual physical walk");
+   var before=active.state();var actor=frame.state();var environment=frame.environment();var display=frame.display();var artImage=frame.artState();var clock=frame.vIntClock();boolean paused=frame.paused();var placement=host.placement();var placed=placement.capture();
+   int cameraY=host.scroll().foreground().cameraYWord();
+   var fp=frame.prepareLevelMainDeathCamera(frame.stageSource(),actor,environment,cameraY);var hp=host.prepareLevelMainDeathCamera(cameraY);
+   active.validate(before);host.validatePrimaryDeathPublication(hp);frame.validatePreparedObjectSolidPublication(fp);
+   var now=placement.capture();if(core.state()!=before||frame.state()!=actor||frame.environment()!=environment||frame.display()!=display||frame.artState()!=artImage||frame.vIntClock()!=clock||frame.paused()!=paused||!placed.status().equals(now.status())||!placed.pool().slots().equals(now.pool().slots())||!same(placed.savedFlags(),now.savedFlags()))throw new IllegalStateException("Death camera changed an unowned completed-walk partition");
+   frame.applyPreparedObjectSolidPublication(fp);host.adoptAfterNative(hp);
+  }
   private final class LoopPorts implements CdOrdinaryLoop.Ports {
    public void requireCurrent(Cut at,CdPlayerFrameRuntime f,CdStagePlayerSource source){require();if(f!=frame||source!=frame.stageSource())throw new IllegalArgumentException("Foreign source-bound loop");cut=at;}
    public Optional<CdObjectDrawQueue.CpuSat> beforeSelector8(){require();return host.beforeSelector8();}
@@ -409,7 +390,7 @@ final class CdWorld implements SonicCdAct3FutureLoadingVisit.OrdinaryOwner,
    public CdOrdinaryLoop.MainContinuation postObjectCamera(){
     require();if(!walkReturned)throw new IllegalStateException("No completed actual physical walk");var s=active.state();
     if(s.program().demoDataIndexWord()==0x800||s.level().levelRestart()!=0)throw new Unowned(Boundary.LEVEL_FLOW);
-    if(frame.environment().globals().debugMode()==0&&frame.state().motion().routine()>=6)throw new Unowned(Boundary.PRIMARY_DEATH_CAMERA);
+    if(frame.environment().globals().debugMode()==0&&frame.state().motion().routine()>=6){deathCamera();return CdOrdinaryLoop.MainContinuation.ORDINARY_TAIL;}
     active.scroll(s);return CdOrdinaryLoop.MainContinuation.ORDINARY_TAIL;
    }
    public void drawObjects(){require();var s=host.scroll();var b=s.background();objects.finishDraw(new CdObjectDrawQueue.DrawCameras(new CdObjectDrawQueue.CameraWords(s.foreground().cameraX(),s.foreground().cameraYWord()),new CdObjectDrawQueue.CameraWords(b.cameraBgXWord(),b.cameraBgYWord()),new CdObjectDrawQueue.CameraWords(b.cameraBg3X()>>>16,b.cameraBg3Y()>>>16)));}
@@ -466,7 +447,7 @@ final class CdWorld implements SonicCdAct3FutureLoadingVisit.OrdinaryOwner,
    }
    public void primary(SonicCdR31aObjectPass.PrimarySubmission original){
     requirePrimary(original);var before=active.state();var next=original.next();
-    var ready=active.prepare(before,before.section(),before.level(),before.reserved(),before.normalPalette(),before.displayedPalette());
+    var ready=active.prepare(before,before.section(),next.core().level(),before.reserved(),before.normalPalette(),before.displayedPalette());
     var hp=host.preparePrimary(original,worldValues(next),soundSuffix(next));
     active.validatePrepared(before,ready);host.validateOrdinary(hp);original.validateBefore();original.applyNative();active.adoptAfterNative(before,ready);host.adoptAfterNative(hp);
    }
@@ -474,6 +455,7 @@ final class CdWorld implements SonicCdAct3FutureLoadingVisit.OrdinaryOwner,
    public void submitTitlePlc(SonicCdR31aObjectPass.PlcSubmission original){requireCut(Cut.RUN_OBJECTS);if(original.owner()!=objects||original.nativeId()!=2)throw new IllegalArgumentException("Foreign actual Title PLC2");original.validateBefore();active.appendTitlePlc(active.state());original.acknowledge();}
   }
  }
+ private static boolean same(CdAssetBytes a,CdAssetBytes b){return Arrays.equals(a.copy(),b.copy());}
  private static void verify(Throwable original,Runnable verification){try{verification.run();}catch(RuntimeException|Error fault){if(fault!=original)original.addSuppressed(fault);}}
 
 }

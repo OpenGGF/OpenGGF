@@ -12582,3 +12582,52 @@ this affected-owner cohort; their old passes are not added to this total. There
 is no category/full-suite VERDICT, new-zone World/terrain/player admission, native
 execution or JP/EU completion. Fresh origin/next38c69fae is already an ancestor;
 MAIN was not switched or edited, and no push/PR/publication occurred.
+
+
+## R109: shared primary lifecycle and R7/R8 DATA (2026-11-07)
+
+One shared lifecycle fold now serves genuine R13 and R31 producers. The private
+Frame invocation admits R31 Dead/Restart through the retained Body algorithms;
+legacy public Body source gates remain unchanged. Actual completed physical walks
+freeze camera bounds through one prepare-time writer and skip ordinary scrolling
+on the selected native death branch. Original pool/saved-bank/Frame/Core/Host
+publication remains prepared before assignment, with native faults retained.
+R13's displaced inline lifecycle arithmetic is deleted. Exhausted raw allocation
+stays unowned; component restart publication is not a completed World reload.
+
+All ten original-USA R7 and ten R8 definitions use the existing authenticated
+reader, decoder and table parser. The common schema represents unavailable visual
+or load access explicitly. Four R7 load profiles remain gated, and R8's different
+188-frame visual extents remain unsupported pending their separate qualified
+format. Genuine Init/Update RTS has no invented queue, and a zero-address palette
+descriptor retains its raw values without supplying bytes or an executable no-op.
+All eight existing cycle ordinals remain; three semantic alternatives append.
+The single stale R8 ordinal assertion changes4 to10; old contracts are retained.
+Root P5/P2 borrowed views, generic DATA marker and independent section columns
+remain. No duplicated loader, raw-image compatibility owner, zone state union,
+source padding, live progress initialization or new World admission is added.
+
+R109 passes1,460 invocations across50 selected classes, zero failures/errors/skips,
+with Java25, original USA media and surfaceless EGL. Its23 installed Java payloads
+match the pinned candidate exactly. Tested HEAD is908d18451128e274ff7d1e68004cec46318133bc;
+before/after source fingerprint is
+315f891219d42e4f97c5b5ef233b8df916fae0869c08004cd4adccf700016f86.
+The315 direct Body invocations are now observed, distinct from their prior static
+count; the eight new death-pass and59 Frame-bridge cases also pass. Six unchanged
+focused metadata/factory/placement classes from R108 were omitted to keep this
+composite at50 classes; their earlier results are not relabelled fresh.
+
+Fresh Root World XML73fb010feb777ed0fc13e5814b8a5310e3ee44b7f9fae2be41edf8fd5b87185e
+records434 returned services. Attempted435 stops at Game Over ID$3B, whole35,
+retaining partial routine8/reset60. The closed FULL/course and engine-pixel replay
+checks pass. This is the historical-save selected CCZ recipe; no completed435,
+World reload, natural R13-to-CCZ, native-image or regional parity is claimed.
+The original full-route21931/first21932 remains a separate obligation.
+
+Queue wait was684s. The source-bound execution/callback interval from23:43:14.059334
+through23:47:41.149437UTC was267.090s; a separate Maven-only wall duration is not
+retained in concise output. First source reviews for the death slice and R7/R8
+DATA found no P1/P2; lexical preflights explicitly retained anonymous/wildcard/
+budget uncertainty, with actual compilation and focused execution supplying the
+checks here. No category/full-suite or native execution claim. MAIN is untouched,
+parent next38c69fae is the latest fetched ancestor, and nothing is pushed.

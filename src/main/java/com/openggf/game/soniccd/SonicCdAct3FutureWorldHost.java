@@ -314,7 +314,7 @@ final class SonicCdAct3FutureWorldHost implements Host,AutoCloseable {
   var state=owner.state();var e=frame.environment();
   if(state.program().demoDataIndexWord()==0x800||state.level().levelRestart()!=0||frame.paused()||e.globals().debugMode()!=0||frame.state().motion().routine()<6)throw new IllegalStateException("Native death-camera branch not reached");
   var before=image;var s=before.scroll();var f=s.foreground();if(f.cameraYWord()!=expectedCameraYWord)throw new IllegalArgumentException("Stale actual cameraY WORD");
-  var fg=f.destBottomBound()==expectedCameraYWord?f:foreground(f,f.scrollFlags(),expectedCameraYWord,f.destLeftBound(),f.bottomBoundShift());
+  var fg=CdPrimaryLifecycle.freezeDestination(f,expectedCameraYWord);
   var scroll=fg==f?s:new Scroll(fg,s.background(),s.copies(),s.foregroundXFractionWord(),s.topBoundWord());
   var after=new Image(this,before.globals(),scroll,before.foreground(),before.background(),before.video(),before.clears(),before.geometryReady(),before.collisionPointer(),before.fadeInfoWithoutTail(),before.rngSeedLong(),before.targetRightBoundWord(),before.sounds());
   return new Prepared(before,after,world.actualScope());

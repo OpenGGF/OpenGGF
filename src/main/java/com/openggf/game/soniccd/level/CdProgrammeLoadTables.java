@@ -12,7 +12,13 @@ final class CdProgrammeLoadTables {
     record Body(int fileOffset,List<Entry> entries) { Body { entries=List.copyOf(entries); } }
     record Plc(int nativeId,Body body) { }
     record Palette(int nativeId,Object source,long sourceNativeAddress,
-                   int destinationWord,int longwordCounter,CdAssetBytes bytes) { }
+                   int destinationWord,int longwordCounter,Optional<CdAssetBytes> sourceBytes) {
+        Palette(int nativeId,Object source,long address,int destination,int counter,CdAssetBytes bytes) {
+            this(nativeId,source,address,destination,counter,Optional.of(bytes));
+        }
+        Palette { Objects.requireNonNull(sourceBytes); }
+        CdAssetBytes bytes() { return sourceBytes.orElseThrow(()->new UnsupportedOperationException("Native zero-address palette read is unavailable")); }
+    }
     record Cycle(CdAssetBytes script,CdAssetBytes colors,CycleKind kind) { }
     sealed interface BackgroundData permits DirectCameraData,BackgroundTables { }
     enum DirectCameraData implements BackgroundData { INSTANCE }
@@ -72,11 +78,16 @@ final class CdProgrammeLoadTables {
         for(int id=0;id<profile.palettes().size();id++) {
             var expected=profile.palettes().get(id);var source=expected.key();
             long address=table.unsignedLong(id*8);
-            if(address!=0x200000L+reader.fileOffset(source))throw new IllegalArgumentException("Actual palette operand differs");
+            if(address!=(source==UnavailablePaletteSource.ZERO_ADDRESS?0:0x200000L+reader.fileOffset(source)))throw new IllegalArgumentException("Actual palette operand differs");
             int destination=table.unsignedWord(id*8+4);
             if(destination!=expected.destination())throw new IllegalArgumentException("Actual palette operand differs");
             int counter=table.unsignedWord(id*8+6);
             if(counter!=expected.counter())throw new IllegalArgumentException("Actual palette operand differs");
+            if(source==UnavailablePaletteSource.ZERO_ADDRESS) {
+                if(destination!=0 || counter!=65535)throw new IllegalArgumentException("Unavailable palette descriptor differs");
+                parsedPalettes.add(new Palette(id,source,address,destination,counter,Optional.empty()));
+                continue; // No address-zero bytes, fabricated padding or executable palette product.
+            }
             var bytes=reader.loadViewForKey(source); // Validate pointer, destination, counter before the full source borrow.
             if((counter+1L)*4!=bytes.length())throw new IllegalArgumentException("Palette source/count extent differs");
             parsedPalettes.add(new Palette(id,source,address,destination,counter,bytes));
@@ -89,6 +100,7 @@ final class CdProgrammeLoadTables {
 
         // Select the actual semantic alternative BEFORE attempting a possibly absent section role.
         sectionProgramme=switch(profile.sections()) {
+            case NoSections noSections -> noSections; // Actual Init/Update RTS: no invented initial queue ID.
             case CameraSections expected -> {
                 if(expected.operands() instanceof SectionColumns columns)
                     yield sectionColumns(reader,expected,columns,directoryCount);

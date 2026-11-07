@@ -112,13 +112,20 @@ final class SonicCdR31aObjectPass {
         private final CdPlayerFrameRuntime.R31BodyCall original;private final Cut expected,next;
         private final CdPlayerBody.R31Context context;private final CdObjectPlacementRuntime.Snapshot placed;
         private final CdPlayerBody.State readyState;
+        private final CdPrimaryLifecycle.Plan lifecycle;private final CdObjectPool.Snapshot poolOutput;
         private final Thread thread=Thread.currentThread();private boolean applied;
         private PrimarySubmission(CdPlayerFrameRuntime.R31BodyCall c,Cut e,CdPlayerBody.R31Context context,CdPlayerBody.State readyState,List<CdPlayerFrameRuntime.Sound> reachedSounds){
             original=c;expected=e;this.context=context;this.readyState=Objects.requireNonNull(readyState);placed=placement.capture();
             var publication=c.publication();var values=publication.nativeValues();var sounds=new ArrayList<>(e.sounds());
             for(var sound:soundSuffix(reachedSounds,publication.body().sounds()))sounds.add(new SonicCdGameModule.PastFrameSound(sound));
-            next=withNativeValues(e,values,sounds);
-            placement.pool().validateRestore(values.snapshot());
+            var boundary=publication.body().result().boundary();
+            lifecycle=boundary==CdPlayerBody.Boundary.DEAD_RETURN||boundary==CdPlayerBody.Boundary.RESTART_RETURN
+                    ?CdPrimaryLifecycle.prepare(publication.body(),values.snapshot(),e.ring(),e.core().level()):null;
+            poolOutput=lifecycle==null?values.snapshot():lifecycle.pool();
+            var nativeNext=withNativeValues(e,values,sounds);
+            if(lifecycle==null)next=nativeNext;
+            else{var w=nativeNext.world();var r=lifecycle.ring();next=new Cut(e.core().level(lifecycle.level()),r,nativeNext.currentTerrain(),nativeNext.contact(),new CdPlayerTouchResponse.WorldGlobals(r.rings(),r.lives(),r.updateHudLives(),w.score(),w.nextLifeScore(),w.updateHudScore()),nativeNext.noBumperByte(),nativeNext.cameraXWord(),nativeNext.cameraYWord(),nativeNext.scrollLockWord(),nativeNext.layerByte(),nativeNext.cpuSat(),nativeNext.completedCpu(),nativeNext.sounds(),nativeNext.amyCapturedByte());}
+            placement.pool().validateRestore(poolOutput);
         }
         SonicCdR31aObjectPass owner(){return SonicCdR31aObjectPass.this;}
         CdPlayerFrameRuntime.R31Publication publication(){return original.publication();}
@@ -130,8 +137,9 @@ final class SonicCdR31aObjectPass {
                     ||primaryDraw.invoking||primaryDraw.required&&(!primaryDraw.returned||!primaryDraw.clearSeen))
                 throw new IllegalStateException("No completed original primary Draw preparation");
             if(context.source()!=frame.stageSource()||context.assets()!=assets)throw new IllegalArgumentException("Foreign original R31 context");
-            placement.pool().validateRestore(publication().nativeValues().snapshot());}
-        void applyNative(){validateBefore();original.applyNative();placement.pool().restore(publication().nativeValues().snapshot());applied=true;}
+            placement.pool().validateRestore(poolOutput);}
+        void applyNative(){validateBefore();original.applyNative();placement.pool().restore(poolOutput);if(lifecycle!=null&&lifecycle.resetSaved())placement.resetSavedObjectFlags();applied=true;}
+        void requireOutput(){poolCut(poolOutput);}
         Unowned unowned(){validateBefore();return stop(Boundary.PRIMARY_CONTEXT_OWNER,0,dispatch.routine);}
     }
     /** Actual Title deferred PLC2 call, not a prepared arbitrary Core/art setter. */
@@ -225,10 +233,10 @@ final class SonicCdR31aObjectPass {
         private final Thread thread=Thread.currentThread();private final boolean required;
         private CdPlayerBody.State readyState;private CdObjectDrawQueue.DrawCallCut drawCut;
         private boolean invoking,clearSeen,returned;
-        private PrimaryDraw(CdPlayerFrameRuntime.R31BodyCall original,Cut cut){
+        private PrimaryDraw(CdPlayerFrameRuntime.R31BodyCall original,Cut cut,boolean stopped){
             this.original=original;this.cut=cut;before=readFrame();placed=placement.capture();
             var result=original.publication().body().result();readyState=result.state();
-            required=result.display().isPresent()&&result.display().orElseThrow().queued();
+            required=!stopped&&result.display().isPresent()&&result.display().orElseThrow().queued();
         }
         private void validate(){
             if(primaryDraw!=this||thread!=Thread.currentThread()||walkingThread!=Thread.currentThread()
@@ -341,7 +349,7 @@ final class SonicCdR31aObjectPass {
         if(routine==0){var before=read();var placed=placement.capture();var original=frame.runBody(levelFrames);
             if(original.result().boundary()!=CdPlayerBody.Boundary.INIT_RETURN||original.result().display().isPresent()||!original.sounds().isEmpty())
                 throw new IllegalStateException("R31 native Init RTS contract changed");requireCut(before);requirePlacement(placed);return;}
-        if(routine!=2&&routine!=4)throw stop(Boundary.PRIMARY_ROUTINE,0,routine);
+        if(routine!=2&&routine!=4&&routine!=6&&routine!=8)throw stop(Boundary.PRIMARY_ROUTINE,0,routine);
         var before=read();var saved=readFrame();var placed=placement.capture();CdPlayerBody.R31Context context;
         try{reading=true;context=Objects.requireNonNull(ports.primaryContext());requireFrame(saved);requirePlacement(placed);}
         catch(RuntimeException|Error original){verify(original,()->{requireFrame(saved);requirePlacement(placed);});throw original;}finally{reading=false;}
@@ -351,14 +359,18 @@ final class SonicCdR31aObjectPass {
                 ||!context.response().world().equals(before.world()))throw new IllegalArgumentException("Foreign complete R31 primary context");
         poolCut(context.snapshot());requireCut(before);
         primaryInvocation=new PrimaryInvocation(context,placed,before);
-        try{frame.runR31Body(levelFrames,context,original->{
+        try{CdPlayerFrameRuntime.R31PublicationPort publish=original->{
+            // Native unowned alias is reached before the Body's tail Draw. Capture its original
+            // cause BEFORE any fresh read, pool/Frame/Core preparation, queue or publication.
+            var completed=original.publication().body().result();
+            var nativeStop=CdPrimaryLifecycle.aliasReached(completed)?new CdWorld.Unowned(CdWorld.Boundary.PRIMARY_DEATH_ALIAS):null;
+            try{
             requireKind(Kind.PRIMARY);original.requireOwner(frame);
             var comparison=original.lastPrefix().orElseThrow(()->new IllegalStateException("No actual opt-in last prefix"));
             requirePrefix(comparison,primaryInvocation.current);requirePlacementOutput(placed,comparison.nativeValues().snapshot());
             var current=primaryInvocation.current;
-            var completed=original.publication().body().result();
             // BEGIN genuine original pending primary Draw join 20261107.
-            var scope=new PrimaryDraw(original,current);primaryDraw=scope;
+            var scope=new PrimaryDraw(original,current,nativeStop!=null);primaryDraw=scope;
             try{
                 if(scope.required){
                     scope.validate();var selected=primaryEligibility(completed);
@@ -371,11 +383,15 @@ final class SonicCdR31aObjectPass {
                 var p=new PrimarySubmission(original,current,context,scope.readyState,primaryInvocation.sounds);primaryPending=p;
                 try{p.validateBefore();ports.primary(p);if(!p.applied)throw new IllegalStateException("Missing actual R31 primary adoption");
                     requireCut(p.next());if(!frame.state().equals(p.readyState())||!frame.environment().equals(completed.environment())||!frame.display().equals(completed.display()))
-                        throw new IllegalStateException("Incomplete original Frame pair adoption");poolCut(original.publication().nativeValues().snapshot());}
+                        throw new IllegalStateException("Incomplete original Frame pair adoption");p.requireOutput();}
                 finally{primaryPending=null;}
             }finally{primaryDraw=null;}
             // END genuine original pending primary Draw join 20261107.
-        },new CdPlayerFrameRuntime.R31PlaceBlockPort(){
+            }catch(RuntimeException|Error preparation){if(nativeStop==null)throw preparation;if(preparation!=nativeStop)nativeStop.addSuppressed(preparation);throw nativeStop;}
+            if(nativeStop!=null)throw nativeStop;
+        };
+        if(routine==6||routine==8)frame.runR31Lifecycle(levelFrames,context,new CdPlayerBody.LevelContext(context.snapshot(),before.ring(),before.core().level()),publish);
+        else frame.runR31Body(levelFrames,context,publish,new CdPlayerFrameRuntime.R31PlaceBlockPort(){
             public void store(CdPlayerFrameRuntime.R31PlaceBlockCall original){publishPlace(original);}
             public void screen(CdPlayerFrameRuntime.R31PlaceBlockScreenCall original){publishPlace(original);}
         });}finally{primaryInvocation=null;}

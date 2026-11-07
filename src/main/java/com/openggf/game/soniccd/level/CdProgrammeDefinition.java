@@ -13,16 +13,20 @@ final class CdProgrammeDefinition {
     /** Empty header means the explicitly registered retained raw header (legacy R31 blocks only). */
     record Compressed(Object key, Span include, OptionalInt header, int output, int capacity,
                       Optional<JavaProduct> javaProduct, Optional<ReadExtent> nativeInput, boolean plc) { }
-    record Visual(CdSonicVisualAssets.SourceFormat format, Object mapping, Object dplc, Object art) { }
+    sealed interface VisualBinding permits Visual, UnsupportedVisual { }
+    record Visual(CdSonicVisualAssets.SourceFormat format, Object mapping, Object dplc, Object art) implements VisualBinding { }
+    record UnsupportedVisual(String reason) implements VisualBinding { UnsupportedVisual { Objects.requireNonNull(reason); } }
+    /** Literal zero pointer / FFFF DBF count is retained, never treated as an executable no-op. */
+    enum UnavailablePaletteSource { ZERO_ADDRESS }
     record R3(int ordinaryZoneActWord, CdStageTerrain.Shape shape, Map<CdProgrammeReader.Role,Object> roles,
               Object blocks, Object graphics) { R3 { roles = Map.copyOf(roles); } }
     record Slice(Object key, int offset, int length) { }
     record Palette(Object key, int destination, int counter) { }
     enum CycleKind { STANDARD, UPPER, BYTE_HEADER_4 }
-    enum CycleProgramme { STANDARD_FOUR, UPPER_SIX_OR_STANDARD_FOUR, STANDARD_FOUR_WITH_RETAINED_UPPER, THREE_SOURCE_ACT_GATED, R5_PRESENT_BACKGROUND_CONVEYOR, R5_PAST_BACKGROUND_CONVEYOR, R5_FUTURE_BOSS_GATED_CONVEYOR, FOUR_WITH_BOSS_COLOR_OVERRIDE }
+    enum CycleProgramme { STANDARD_FOUR, UPPER_SIX_OR_STANDARD_FOUR, STANDARD_FOUR_WITH_RETAINED_UPPER, THREE_SOURCE_ACT_GATED, R5_PRESENT_BACKGROUND_CONVEYOR, R5_PAST_BACKGROUND_CONVEYOR, R5_FUTURE_BOSS_GATED_CONVEYOR, FOUR_WITH_BOSS_COLOR_OVERRIDE, THREE_MIRRORED, SOURCE_RTS, SOURCE_ACT_GATED }
     record Cycle(CycleKind kind, Slice script, Slice colors) { }
     record SectionRow(int threshold, int initial, int update) { }
-    sealed interface Sections permits CameraSections, InitQueueUpdateRts { }
+    sealed interface Sections permits CameraSections, InitQueueUpdateRts, NoSections { }
     sealed interface SectionOperands permits PackedSectionRows, SectionColumns { }
     /** Original contiguous threshold/update/initial n/n/n layout. */
     enum PackedSectionRows implements SectionOperands { INSTANCE }
@@ -54,6 +58,7 @@ final class CdProgrammeDefinition {
         }
     }
     record InitQueueUpdateRts(int initialQueueId) implements Sections { }
+    enum NoSections implements Sections { INSTANCE }
     enum PointerKind { LIVE, COPIED }
     record Pointers(PointerKind kind, Object key, List<Integer> expected) {
         Pointers { expected = List.copyOf(expected); }
@@ -80,10 +85,12 @@ final class CdProgrammeDefinition {
     private final List<Operand> operands;
     private final List<Compressed> sources;
     private final Map<CdProgrammeReader.LoadRole,Object> loadRoles;
-    private final Visual visual;
+    private final VisualBinding visual;
     private final Optional<R3> r3;
     private final Optional<CdR4DataLayout.Programme> tt;
-    private final Load load;
+    private final Optional<Load> load;
+    private final boolean dataOnly;
+    private final String loadBoundary;
 
     private CdProgrammeDefinition(Builder b) {
         payload=Objects.requireNonNull(b.payload); file=Objects.requireNonNull(b.file);
@@ -92,12 +99,20 @@ final class CdProgrammeDefinition {
         raw=List.copyOf(b.raw); borrowed=Collections.unmodifiableMap(new IdentityHashMap<>(b.borrowed));
         operands=List.copyOf(b.operands); sources=List.copyOf(b.sources);
         loadRoles=Map.copyOf(b.loadRoles); visual=Objects.requireNonNull(b.visual);
-        r3=Optional.ofNullable(b.r3); tt=Optional.ofNullable(b.tt); load=Objects.requireNonNull(b.load);
-        if((r3.isPresent()?1:0)+(tt.isPresent()?1:0)+(b.dataOnly?1:0)!=1)
+        r3=Optional.ofNullable(b.r3); tt=Optional.ofNullable(b.tt); load=Optional.ofNullable(b.load);
+        dataOnly=b.dataOnly;loadBoundary=b.loadBoundary;
+        if((r3.isPresent()?1:0)+(tt.isPresent()?1:0)+(dataOnly?1:0)!=1)
             throw new IllegalArgumentException("Selected data binding differs");
-        if (load.roots().size()!=load.directoryCount() || load.directoryCount()<1
-                || load.maximumCount()<1 || load.maximumCount()>15)
-            throw new IllegalArgumentException("Finite programme directory differs");
+        if(load.isEmpty()) {
+            if(!dataOnly || loadBoundary==null || loadBoundary.isBlank())
+                throw new IllegalArgumentException("Missing explicit data-only load boundary");
+        } else {
+            if(loadBoundary!=null)throw new IllegalArgumentException("Admitted load has a boundary");
+            var admitted=load.orElseThrow();
+            if(admitted.roots().size()!=admitted.directoryCount() || admitted.directoryCount()<1
+                    || admitted.maximumCount()<1 || admitted.maximumCount()>15)
+                throw new IllegalArgumentException("Finite programme directory differs");
+        }
     }
     static CdProgrammeDefinition select(CdStageKey stage) {
         return Definitions.ALL.stream().filter(d->d.payload.stage().equals(stage)).findFirst()
@@ -112,8 +127,9 @@ final class CdProgrammeDefinition {
     Map<Object,Span> borrowed() { return borrowed; }
     List<Operand> operands() { return operands; }
     List<Compressed> sources() { return sources; }
-    Visual visual() { return visual; }
-    Load load() { return load; }
+    VisualBinding visual() { return visual; }
+    Load load() { return load.orElseThrow(()->new UnsupportedOperationException(loadBoundary)); }
+    boolean dataOnly() { return dataOnly; }
     Optional<R3> r3() { return r3; }
     Optional<CdR4DataLayout.Programme> tt() { return tt; }
     Object loadKey(CdProgrammeReader.LoadRole role) {
@@ -141,11 +157,12 @@ final class CdProgrammeDefinition {
         final List<Operand> operands=new ArrayList<>();
         final List<Compressed> sources=new ArrayList<>();
         final Map<CdProgrammeReader.LoadRole,Object> loadRoles=new EnumMap<>(CdProgrammeReader.LoadRole.class);
-        Visual visual;
+        VisualBinding visual;
         R3 r3;
         CdR4DataLayout.Programme tt;
         boolean dataOnly; // Generic source-only data, not live terrain/player/World admission.
         Load load;
+        String loadBoundary;
         private Builder(CdStagePayload payload,CdNativeFile file,int fileBytes,String sha,CdMmdHeader header) {
             this.payload=payload;this.file=file;this.fileBytes=fileBytes;this.sha=sha;this.header=header;
         }
@@ -172,6 +189,14 @@ final class CdProgrammeDefinition {
             for(var p:CdR6DataLayout.Programme.values()) {
                 var b=new Builder(p.payload(),p.file(),p.fileBytes(),p.fileSha256(),originalHeader());
                 CdR6ProgrammeProfiles.configure(b,p);result.add(new CdProgrammeDefinition(b));
+            }
+            for(var p:CdR7DataLayout.Programme.values()) {
+                var b=new Builder(p.payload(),p.file(),p.fileBytes(),p.fileSha256(),originalHeader());
+                CdR7ProgrammeProfiles.configure(b,p);result.add(new CdProgrammeDefinition(b));
+            }
+            for(var p:CdR8DataLayout.Programme.values()) {
+                var b=new Builder(p.payload(),p.file(),262144,p.fileSha256(),originalHeader());
+                CdR8ProgrammeProfiles.configure(b,p);result.add(new CdProgrammeDefinition(b));
             }
             return List.copyOf(result);
         }

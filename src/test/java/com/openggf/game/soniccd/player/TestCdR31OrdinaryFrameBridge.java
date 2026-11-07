@@ -444,6 +444,59 @@ class TestCdR31OrdinaryFrameBridge {
         }
     }
 
+    // Constructed authenticated component ingress only. These are literal R3 PlayerDead/Restart
+    // controls; the fresh selected World controller supplies the separate real death witness.
+    private static CdPlayerBody.LevelContext life(CdPlayerBody.R31Context c,int resetLevel){
+        return new CdPlayerBody.LevelContext(c.snapshot(),new CdRingGlobals(1,3,0,0,0,0,0,0),new CdLevelGlobals(0,1,0,2,3,0x1234,0x56,7,8));
+    }
+    private static Pair lifecyclePair(int routine,int y,int yVelocity,int reset)throws Exception{
+        var f=data();var s=TestCdR31PlayerBodyMainHurt.state(f,routine,2,0,0);var m=s.motion();
+        var motion=new CdPlayerMotionState(m.centreX16_16(),(y<<16)|0xA5A5,m.xVelocity(),yVelocity,m.groundVelocity(),routine,m.angle(),m.flags(),m.spriteFlags(),m.xRadius(),m.yRadius(),0x18,m.previousAnimation(),m.playerJump(),m.charge(),m.moveLock(),m.stick(),m.playerControl(),m.previousPrimaryAngle(),m.previousSecondaryAngle());
+        return new Pair(new CdPlayerBody.State(motion,s.animation(),s.header(),new CdPlayerBody.Timers(s.timers().hurt(),s.timers().invincibility(),s.timers().speedShoes(),reset),s.history(),s.rotationDistance(),s.objectLinks(),s.rotationAngle()),TestCdR31PlayerBodyMainHurt.environment(f));
+    }
+    @Test void originalR31DeadUsesSharedNativeGravityHistoryAndUnconditionalDraw()throws Exception{
+        try(var r=rig(6,2,null,lifecyclePair(6,0x200,-0x100,0))){
+            var state=r.frame().state();var c=context(r);var p=r.frame().runR31Lifecycle(service(r.frame(),8),c,life(c,0),APPLY);var b=p.body().result();
+            assertEquals(CdPlayerBody.Boundary.DEAD_RETURN,b.boundary());assertEquals(state.motion().centreY16_16()-0x10000,b.state().motion().centreY16_16());assertEquals(-0xC8,b.state().motion().yVelocity());
+            assertEquals(4,b.state().history().index());assertTrue(b.display().orElseThrow().queued());assertTrue(b.modeBoundary().isEmpty());
+            var calls=TestCdR31PlayerBodyMainHurt.calls(b);for(var call:List.of(CdPlayerBody.NativeCall.DEAD_CHECK_GONE,CdPlayerBody.NativeCall.OBJ_MOVE_GRAVITY,CdPlayerBody.NativeCall.RECORD_POSITION,CdPlayerBody.NativeCall.ANIMATE))assertEquals(1,Collections.frequency(calls,call));
+            assertFalse(calls.contains(CdPlayerBody.NativeCall.MODE));assertFalse(calls.contains(CdPlayerBody.NativeCall.R3_SPECIAL_BLOCK_COLLISION));assertAdopted(r.frame(),p);
+        }
+    }
+    @Test void deadGoneRetainsDirtyFirstFreeAndNativeCountersAsComparisonOnly()throws Exception{
+        try(var r=rig(6,2,null,lifecyclePair(6,0x700,0,0))){
+            r.pool().write(r.pool().state(32).moveWord(CdObjectState.WordField.X_FRACTION,0xA5A5));var pool=r.pool().capture();var c=context(r);
+            var p=r.frame().runR31Lifecycle(service(r.frame(),0),c,life(c,0),APPLY);var gone=p.body().result().effects().stream().filter(CdPlayerBody.DeadCheckGone.class::isInstance).map(CdPlayerBody.DeadCheckGone.class::cast).findFirst().orElseThrow();
+            assertEquals(8,r.frame().state().motion().routine());assertEquals(60,r.frame().state().timers().reset());assertEquals(0,r.frame().state().motion().yVelocity());
+            assertEquals(2,gone.lives());assertEquals(1,gone.updateHudLives());assertEquals(0,gone.updateHudTime());assertEquals(32,gone.allocation().orElseThrow().wholeIndex().orElseThrow());
+            assertEquals(pool.slots().getFirst().moveByte(CdObjectState.ByteField.ID,0x3B),gone.gameOverImage().orElseThrow());assertEquals(pool.slots(),r.pool().capture().slots(),"Frame does not replay the summary into external pool");
+        }
+    }
+    @Test void restartCountsRawWordsWithoutDrawHistoryOrAnimationWork()throws Exception{
+        for(int timer:new int[]{0,2,0x8000,0xFFFF})try(var r=rig(8,2,null,lifecyclePair(8,0x200,0,timer))){var before=r.frame().state();var c=context(r);var p=r.frame().runR31Lifecycle(service(r.frame(),0),c,life(c,0),APPLY);
+            assertEquals(timer==0?0:timer-1,r.frame().state().timers().reset());assertEquals(before.history(),r.frame().state().history());assertEquals(before.animation(),r.frame().state().animation());assertTrue(p.body().result().display().isEmpty());assertTrue(p.body().sounds().isEmpty());assertFalse(p.body().result().effects().stream().anyMatch(CdPlayerBody.RestartCut.class::isInstance));}
+    }
+    @Test void restartZeroCutUsesSharedExactStoresAndOrderedRequestsWithoutReplayingReset()throws Exception{
+        try(var r=rig(8,2,null,lifecyclePair(8,0x200,0,1))){var c=context(r);var p=r.frame().runR31Lifecycle(service(r.frame(),0),c,life(c,0),APPLY);var b=p.body().result();var cut=b.effects().stream().filter(CdPlayerBody.RestartCut.class::isInstance).map(CdPlayerBody.RestartCut.class::cast).findFirst().orElseThrow();
+            assertEquals(CdPlayerBody.Boundary.RESTART_RETURN,b.boundary());assertEquals(new CdLevelGlobals(1,1,0,2,1,0,0,7,8),cut.next());assertTrue(cut.resetSavedObjectFlags());assertEquals(1,b.effects().stream().filter(CdPlayerBody.ResetSavedObjectFlagsRequest.class::isInstance).count());
+            assertEquals(List.of(new CdPlayerBody.Z80RamWrite(0x1C3E,1)),b.effects().stream().filter(CdPlayerBody.Z80RamWrite.class::isInstance).toList());assertEquals(List.of(new CdPlayerFrameRuntime.DriverRamWrite(0x1C3E,1),new CdPlayerFrameRuntime.BodySound(CdPlayerBody.Sound.SCMD_FADECDA)),p.body().sounds());assertTrue(b.display().isEmpty());assertEquals(0,b.state().timers().reset());}
+    }
+    @Test void lifecycleRejectsMainForeignPoolAndWrongCurrentSourceBeforePublication()throws Exception{
+        try(var r=rig(2,2,null,null)){var c=context(r);assertEquals(CdPlayerBody.UnsupportedBoundary.R3_CONTINUATION_OWNER,assertThrows(CdPlayerBody.UnsupportedBody.class,()->r.frame().runR31Lifecycle(service(r.frame(),0),c,life(c,0),call->fail("No main lifecycle"))).boundary());}
+        try(var r=rig(6,2,null,lifecyclePair(6,0x200,0,0))){var c=context(r);var wrong=new CdPlayerBody.LevelContext(new CdObjectPool().capture(),life(c,0).ring(),life(c,0).level());assertThrows(IllegalArgumentException.class,()->r.frame().runR31Lifecycle(service(r.frame(),0),c,wrong,call->fail("No foreign pool")));}
+        try(var r=rig(6,2,null,lifecyclePair(6,0x200,0,0));var other=rig(6,2,null,null)){var c=context(other);assertThrows(IllegalArgumentException.class,()->r.frame().runR31Lifecycle(service(r.frame(),0),c,life(c,0),call->fail("No foreign source")));}
+    }
+    @Test void originalLifecyclePrebuildFailureRetainsIngressAndOriginalError()throws Exception{
+        try(var r=rig(6,2,null,lifecyclePair(6,0x200,0,0))){var c=context(r);int n=service(r.frame(),0);var before=before(r.frame());var error=new AssertionError("fallible external preparation");var saved=new AtomicReference<CdPlayerFrameRuntime.R31BodyCall>();
+            assertSame(error,assertThrows(AssertionError.class,()->r.frame().runR31Lifecycle(n,c,life(c,0),call->{saved.set(call);throw error;})));assertBefore(r.frame(),before);assertEquals(0,error.getSuppressed().length);assertThrows(IllegalStateException.class,saved.get()::applyNative);}
+    }
+    @Test void lifecyclePublicationIsThreadBoundOnceOnly()throws Exception{
+        try(var r=rig(8,2,null,lifecyclePair(8,0x200,0,2))){var c=context(r);var saved=new AtomicReference<CdPlayerFrameRuntime.R31BodyCall>();r.frame().runR31Lifecycle(service(r.frame(),0),c,life(c,0),call->{saved.set(call);var foreign=new AtomicReference<Throwable>();var t=new Thread(()->{try{call.applyNative();}catch(Throwable e){foreign.set(e);}});t.start();try{t.join();}catch(InterruptedException e){throw new AssertionError(e);}assertInstanceOf(IllegalStateException.class,foreign.get());call.applyNative();assertThrows(IllegalStateException.class,call::applyNative);});assertThrows(IllegalStateException.class,saved.get()::applyNative);}
+    }
+    @Test void postApplyLifecycleErrorKeepsReachedPairAndRetiresFrame()throws Exception{
+        try(var r=rig(8,2,null,lifecyclePair(8,0x200,0,2))){var c=context(r);var error=new AssertionError("after original apply");assertSame(error,assertThrows(AssertionError.class,()->r.frame().runR31Lifecycle(service(r.frame(),0),c,life(c,0),call->{call.applyNative();throw error;})));assertEquals(1,r.frame().state().timers().reset());assertTrue(r.frame().closed());assertEquals(0,error.getSuppressed().length);}
+    }
+
     private static CdPlayerBody.R31Context visibleContext(Rig r){return withCamera(context(r),0x20,0x380);}
     private static CdPlayerBody.R31Context withCamera(CdPlayerBody.R31Context c,int x,int y){return new CdPlayerBody.R31Context(c.source(),c.assets(),c.currentTerrain(),c.snapshot(),c.objects(),c.scanner(),c.response(),c.noBumperByte(),c.bossStartedByte(),c.goodFutureByte(),x,y);}
 

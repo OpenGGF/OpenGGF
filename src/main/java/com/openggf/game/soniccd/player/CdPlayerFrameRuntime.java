@@ -1728,16 +1728,23 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
      */
     public R31Publication runR31Body(int levelFrames, CdPlayerBody.R31Context context,
                                     R31PublicationPort port) {
-        return runR31BodyInternal(levelFrames,context,port,null);
+        return runR31BodyInternal(levelFrames,context,port,null,null);
     }
     /** Opt-in real original stores; legacy three-argument entry remains whole-call atomic. */
     public R31Publication runR31Body(int levelFrames,CdPlayerBody.R31Context context,
                                      R31PublicationPort port,R31PlaceBlockPort places){
         Objects.requireNonNull(places,"original PlaceBlock consumer");
-        return runR31BodyInternal(levelFrames,context,port,places);
+        return runR31BodyInternal(levelFrames,context,port,places,null);
+    }
+    /** Same original pending-call bridge for the shared native Dead/Restart algorithms. The borrowed
+     * level cut is DATA only. Existing Main/Hurt entries and legacy runBody retain their admission. */
+    public R31Publication runR31Lifecycle(int levelFrames,CdPlayerBody.R31Context context,
+                                        CdPlayerBody.LevelContext level,R31PublicationPort port){
+        Objects.requireNonNull(level,"actual lifecycle level cut");
+        return runR31BodyInternal(levelFrames,context,port,null,level);
     }
     private R31Publication runR31BodyInternal(int levelFrames,CdPlayerBody.R31Context context,
-                                            R31PublicationPort port,R31PlaceBlockPort places){
+                                            R31PublicationPort port,R31PlaceBlockPort places,CdPlayerBody.LevelContext level){
         requireBodyEntitlement();
         bodyEntitled = false;
         inOperation = true;
@@ -1745,8 +1752,10 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
             Objects.requireNonNull(port, "actual R31 publication port");
             Objects.requireNonNull(context,"original R31 context");
             CdPlayerBody.R31LivePlacePort live=null;
-            if(places!=null){
+            if(places!=null||level!=null){
                 r31Invocation=new R31Invocation(context);
+            }
+            if(places!=null){
                 live=new CdPlayerBody.R31LivePlacePort(){
                     public void store(CdR31SpecialBlockCollision.PlaceBlock operation,CdPlayerBody.R31PlaceStore store,CdPlayerBody.R31Prefix prefix){
                         var call=new R31PlaceBlockCall(operation,store,prefix);invokeR31Place(call,()->places.store(call));
@@ -1756,7 +1765,10 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
                     }
                 };
             }
-            var completed = body.stepR31(state, withLevelFrames(environment, levelFrames & 0xFFFF), context,live);
+            var input=withLevelFrames(environment,levelFrames&0xFFFF);
+            var completed=level==null?body.stepR31(state,input,context,live):new CdPlayerBody.R31Result(
+                    body.stepR31Lifecycle(state,input,context,level),
+                    new CdPlayerBody.R31Values(context.currentTerrain(),context.snapshot(),context.noBumperByte(),context.response().contact(),context.response().world()));
             var publication = new R31Publication(new BodyPublication(completed.body(),
                     collectR31Sounds(completed.body().effects())), completed.nativeValues());
             var original = new R31BodyCall(publication, context.source());
@@ -2315,15 +2327,15 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
      * This is immutable value data, not call/World authority. No scroll/events, camera
      * centre, actor, input, clocks, art, display or source family is reconstructed here.
      */
-    public ObjectSolidPublication prepareAct3FutureLevelMainDeathCamera(CdR13FutureAssets assets,
+    public ObjectSolidPublication prepareLevelMainDeathCamera(CdStagePlayerSource source,
                                                                        CdPlayerBody.State expectedState,
                                                                        CdPlayerBody.Environment expectedEnvironment,
                                                                        int cameraYWord) {
         requireOpenIdle(); requireClosedFrame();
-        Objects.requireNonNull(assets, "actual R13 assets");
+        Objects.requireNonNull(source, "actual stage source");
         Objects.requireNonNull(expectedState, "Level Main State");
         Objects.requireNonNull(expectedEnvironment, "Level Main Environment");
-        if (!stageSource().ownsAct3Future(assets)) throw new IllegalArgumentException("Another R13 source");
+        if (stageSource()!=source) throw new IllegalArgumentException("Another exact stage source");
         requireSourceFamily();
         if ((cameraYWord & ~0xFFFF) != 0) throw new IllegalArgumentException("cameraY requires an unsigned native WORD");
         if (!state.equals(expectedState) || !environment.equals(expectedEnvironment))
