@@ -56,7 +56,67 @@ public final class PlayableSpriteInternalAccess {
         player.nativeSpeedWords.forget();
     }
 
-    /** Primitive only: the currently unavailable native teleport transaction must own its eventual call. */
+    /** Actor-only primitive; the world owner validates routines and performs the rest of the table. */
+    public static void swapNativeTeleportActors(AbstractPlayableSprite first, AbstractPlayableSprite second) {
+        var a = first.captureNativeTeleportState();
+        var b = second.captureNativeTeleportState();
+        var am = first.controller.getMovement().captureRewindState();
+        var bm = second.controller.getMovement().captureRewindState();
+        first.controller.getMovement().restoreRewindState(withTeleportTilt(am, bm));
+        second.controller.getMovement().restoreRewindState(withTeleportTilt(bm, am));
+        first.applyNativeTeleportState(b);
+        second.applyNativeTeleportState(a);
+        // super_shoes (s2.asm:25924-25949) writes the effective bank.
+        // Obj01_ChkShoes (s2.asm:36307-36329) restores Sonic's bank at expiry.
+        // Obj02_ChkShoes (s2.asm:39043-39056) restores Tails' bank at expiry.
+        // fixBugs=0: transfer effective WORDs, never recompute them from the receiving character.
+        swapNativeSpeedWords(first, second);
+        installTransferredShoes(first, b.shoes(), b.shoeTime());
+        installTransferredShoes(second, a.shoes(), a.shoeTime());
+    }
+
+    private static com.openggf.sprites.managers.PlayableSpriteMovement.RewindState withTeleportTilt(
+            com.openggf.sprites.managers.PlayableSpriteMovement.RewindState own,
+            com.openggf.sprites.managers.PlayableSpriteMovement.RewindState incoming) {
+        return new com.openggf.sprites.managers.PlayableSpriteMovement.RewindState(
+                own.jumpPressed(),
+                own.jumpPrevious(),
+                own.jumpReleasedSinceJump(),
+                own.testKeyPressed(),
+                own.inputUp(),
+                own.inputDown(),
+                own.inputLeft(),
+                own.inputRight(),
+                own.inputJump(),
+                own.inputJumpPress(),
+                own.inputRawLeft(),
+                own.inputRawRight(),
+                own.facingFlipForcesPushClearAfterGroundWall(),
+                own.wasCrouching(),
+                own.preMoveBalanceEvaluated(),
+                own.preMoveBalanceState(),
+                own.preMoveBalanceDirection(),
+                incoming.latchedNextTilt(),
+                incoming.latchedTilt(),
+                own.deathElapsedFrames());
+    }
+
+    public static void applyNativeTeleportEffects(AbstractPlayableSprite player,
+            com.openggf.game.PowerUpObject shield, com.openggf.game.PowerUpObject stars) {
+        player.applyNativeTeleportEffects(shield, stars);
+    }
+
+    private static void installTransferredShoes(AbstractPlayableSprite player, boolean active, int ticks) {
+        String code = "SpeedShoes-" + player.getCode();
+        if (!active || ticks == 0) player.currentTimerManager().removeTimerForCode(code);
+        else {
+            var timer = new com.openggf.timer.timers.SpeedShoesTimer(code, player);
+            timer.setTicks(ticks);
+            player.currentTimerManager().registerTimer(timer);
+        }
+    }
+
+    /** Primitive used only within a complete native teleport transaction. */
     public static void swapNativeSpeedWords(AbstractPlayableSprite first, AbstractPlayableSprite second) {
         var firstWords = first.nativeSpeedPolicy() != null ? first.nativeSpeedWords.capture() : null;
         var secondWords = second.nativeSpeedPolicy() != null ? second.nativeSpeedWords.capture() : null;

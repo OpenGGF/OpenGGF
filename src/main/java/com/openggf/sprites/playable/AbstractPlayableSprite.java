@@ -987,6 +987,143 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 }
         }
 
+        // teleport_swap_table (s2.asm:26169-26190). Stat/input history is deliberately absent.
+        NativeTeleportActorState captureNativeTeleportState() {
+                return new NativeTeleportActorState(
+                        getCentreX(),
+                        getCentreY(),
+                        xSubpixel,
+                        ySubpixel,
+                        xSpeed,
+                        ySpeed,
+                        gSpeed,
+                        xRadius,
+                        yRadius,
+                        priorityBucket,
+                        renderFlagWidthPixels,
+                        mappingFrame,
+                        animationId,
+                        animationFrameIndex,
+                        animationTick,
+                        direction,
+                        air,
+                        rolling,
+                        onObject,
+                        rollingJump,
+                        pushing,
+                        inWater,
+                        waterPhysicsActive,
+                        layer,
+                        preventTailsRespawn,
+                        hurt,
+                        objectRoutineOverride,
+                        angle,
+                        flipAngle,
+                        flipTurned,
+                        controller.getDrowning().getRemainingAir(),
+                        objectControlled,
+                        objectControlAllowsCpu,
+                        objectControlSuppressesMovement,
+                        objectMappingFrameControl,
+                        shield,
+                        shieldType,
+                        speedShoes,
+                        sliding,
+                        flipsRemaining,
+                        flipSpeed,
+                        moveLockTimer,
+                        invulnerableFrames,
+                        invincibleFrames,
+                        currentSpeedShoesRemainingTicks(),
+                        stickToConvex,
+                        spindash,
+                        pinballMode,
+                        pinballSpeedLock,
+                        spindashCounter,
+                        jumping,
+                        interactSlotIndex,
+                        latchedSolidObjectId,
+                        latchedSolidObjectReleased,
+                        latchedSolidObjectBound,
+                        topSolidBit,
+                        lrbSolidBit,
+                        runningMode,
+                        xHistory,
+                        yHistory,
+                        historyPos);
+        }
+
+        void applyNativeTeleportEffects(PowerUpObject shield, PowerUpObject stars) {
+                shieldObject = shield;
+                invincibilityObject = stars;
+        }
+
+        void applyNativeTeleportState(NativeTeleportActorState s) {
+                xSubpixel = s.xSub();
+                ySubpixel = s.ySub();
+                xSpeed = s.xSpeed();
+                ySpeed = s.ySpeed();
+                gSpeed = s.inertia();
+                xRadius = s.xRadius();
+                yRadius = s.yRadius();
+                priorityBucket = s.priority();
+                renderFlagWidthPixels = s.displayWidth();
+                mappingFrame = s.mappingFrame();
+                animationId = s.animation();
+                animationFrameIndex = s.animationFrame();
+                animationTick = s.animationDuration();
+                direction = s.direction();
+                air = s.air();
+                rolling = s.rolling();
+                onObject = s.onObject();
+                rollingJump = s.rollingJump();
+                pushing = s.pushing();
+                inWater = s.inWater();
+                waterPhysicsActive = s.waterPhysicsActive();
+                layer = s.layer();
+                preventTailsRespawn = s.preventRespawn();
+                hurt = s.hurt();
+                objectRoutineOverride = s.routineOverride();
+                angle = s.angle();
+                flipAngle = s.flipAngle();
+                flipTurned = s.flipTurned();
+                objectControlled = s.objectControlled();
+                objectControlAllowsCpu = s.allowsCpu();
+                objectControlSuppressesMovement = s.suppressesMovement();
+                objectMappingFrameControl = s.mappingControl();
+                shield = s.shield();
+                shieldType = s.shieldType();
+                speedShoes = s.shoes();
+                sliding = s.sliding();
+                flipsRemaining = s.flipsRemaining();
+                flipSpeed = s.flipSpeed();
+                moveLockTimer = s.moveLock();
+                invulnerableFrames = s.invulnerability();
+                invincibleFrames = s.invincibility();
+                stickToConvex = s.stickToConvex();
+                spindash = s.spindash();
+                pinballMode = s.pinball();
+                pinballSpeedLock = s.pinballLock();
+                spindashCounter = s.spindashCounter();
+                jumping = s.jumping();
+                interactSlotIndex = s.interact();
+                latchedSolidObjectId = s.latchedId();
+                latchedSolidObjectReleased = s.latchedReleased();
+                latchedSolidObjectBound = s.latchedBound();
+                topSolidBit = s.topSolidBit();
+                lrbSolidBit = s.lrbSolidBit();
+                runningMode = s.groundMode();
+                controller.getDrowning().setRemainingAirFromFixedCountdown(s.airLeft());
+                System.arraycopy(s.xHistory(), 0, xHistory, 0, xHistory.length);
+                System.arraycopy(s.yHistory(), 0, yHistory, 0, yHistory.length);
+                historyPos = s.historyIndex();
+                // Radius changes do not alter the transferred native centre words.
+                com.openggf.sprites.NativePositionOps.writeXPosResetSubpixel(this, s.x());
+                com.openggf.sprites.NativePositionOps.writeYPosResetSubpixel(this, s.y());
+                xSubpixel = s.xSub(); ySubpixel = s.ySub();
+                updateSensorOffsetsFromRadii();
+        }
+
         /** Captures the mutable playable-sprite surface for rewind restore. */
         public PerObjectRewindSnapshot captureRewindState() {
                 return captureRewindState(true);
