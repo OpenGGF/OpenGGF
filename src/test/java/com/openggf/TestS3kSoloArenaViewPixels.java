@@ -16,7 +16,6 @@ import com.openggf.tools.GameplayCaptureSession;
 import com.openggf.tools.PresentationOffscreenTestContext;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Isolated;
-import java.util.Arrays;
 import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -25,6 +24,11 @@ import static org.lwjgl.opengl.GL11.*;
 @Isolated
 @RequiresRom(SonicGame.SONIC_3K)
 class TestS3kSoloArenaViewPixels {
+    private static boolean sameRgb(com.openggf.graphics.RgbaImage first,com.openggf.graphics.RgbaImage second) {
+        // A changed framebuffer alpha alone does not prove visible ghost compositing.
+        return java.util.stream.IntStream.range(0,first.pixels().length).allMatch(index ->
+                (first.pixels()[index]&0xFFFFFF)==(second.pixels()[index]&0xFFFFFF));
+    }
     private static void assertUnchanged(com.openggf.game.rewind.CompositeSnapshot before,
             com.openggf.game.rewind.CompositeSnapshot after) {
         assertEquals(before.entries().keySet(),after.entries().keySet());
@@ -38,7 +42,12 @@ class TestS3kSoloArenaViewPixels {
             capture.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(),0,0,settings);
             capture.step(null);
             var engine = EngineServices.current();
-            var provider = new S3kHostedArenaProvider();
+            var view = new java.util.concurrent.atomic.AtomicReference<S3kSoloArenaViews>();
+            var provider = new S3kHostedArenaProvider(ctx -> {
+                var next = new S3kSoloArenaViews(ctx.engine().graphics());
+                view.set(next);
+                return next;
+            });
             for(int arena=0;arena<5;arena++) {
                 try (var session = provider.open(new HostedArenaRequest(arena,"sonic",false),
                         new NativeMenuHostContext(engine,new Sonic3kGameModule(),new InputHandler(),capture.loop()::setGameplayMode))) {
@@ -51,6 +60,9 @@ class TestS3kSoloArenaViewPixels {
                             return null;
                         });
                     }
+                    assertTrue(java.util.stream.IntStream.range(0,16)
+                            .anyMatch(colour -> host.palettes().readCurrentColor(0,colour)!=0),
+                            "native player palette must be visible before pixel comparison");
                     var before = context.getRewindRegistry().capture();
                     glViewport(0,0,320,224);
                     glClearColor(1,0,1,1); glClear(GL_COLOR_BUFFER_BIT);
@@ -62,14 +74,33 @@ class TestS3kSoloArenaViewPixels {
                     var ghosts = new GhostRenderer();
                     ghosts.setArtSource(session.ghostArtSource());
                     var player = session.localPlayer();
-                    var ghost = new ActiveGhost("remote","sonic",new GhostFrame(player.getCentreX()+40,
-                            player.getCentreY(),player.getMappingFrame(),false,false,false,2,false));
-                    context.getGhostRenderRegistry().register((bucket,high) -> ghosts.renderForLayer(List.of(ghost),
+                    // A visible high-priority sky pose rules out a valid terrain occlusion of the probe.
+                    var source = session.ghostArtSource();
+                    var ghost = new ActiveGhost("remote","sonic",new GhostFrame(source.cameraX()+240,
+                            source.cameraY()+40,host.players().getFirst().mappingFrame(),false,false,false,2,true));
+                    var activeGhost = new java.util.concurrent.atomic.AtomicReference<>(ghost);
+                    context.getGhostRenderRegistry().register((bucket,high) -> ghosts.renderForLayer(List.of(activeGhost.get()),
                             bucket,high,player.getCentreX(),player.getCentreY(),"sonic"));
+                    var prepared = view.get().prepareSprites(context,host,host.scroll());
+                    var ghostTiles = prepared.tiles().stream().filter(com.openggf.graphics.SpritePresentation.Tile::ghost).toList();
+                    System.out.println("arena="+arena+" player="+player.getCentreX()+","+player.getCentreY()
+                            +" camera="+session.ghostArtSource().cameraX()+","+session.ghostArtSource().cameraY()
+                            +" spriteMapping="+player.getMappingFrame()+" nativeMapping="+host.players().getFirst().mappingFrame()
+                            +" ghostTiles="+ghostTiles);
                     glClear(GL_COLOR_BUFFER_BIT); session.draw();
                     var withGhost = ScreenshotCapture.captureFramebuffer(320,224);
-                    assertFalse(Arrays.equals(baseline.pixels(),
-                            withGhost.pixels()),"miniature ghost must change pixels");
+                    var pictures = java.nio.file.Path.of("target/lane-b/pixel-diagnostics");
+                    java.nio.file.Files.createDirectories(pictures);
+                    ScreenshotCapture.savePNG(baseline,pictures.resolve("arena-"+arena+"-baseline.png"));
+                    ScreenshotCapture.savePNG(withGhost,pictures.resolve("arena-"+arena+"-ghost.png"));
+                    assertFalse(ghostTiles.isEmpty(),"SAT must retain ghost tiles in arena "+arena);
+                    assertFalse(sameRgb(baseline,withGhost),"miniature ghost must change pixels in arena "+arena);
+                    activeGhost.set(new ActiveGhost(ghost.slotId(),ghost.characterCode(),ghost.frame(),null,.5f));
+                    glClear(GL_COLOR_BUFFER_BIT); session.draw();
+                    var translucent = ScreenshotCapture.captureFramebuffer(320,224);
+                    ScreenshotCapture.savePNG(translucent,pictures.resolve("arena-"+arena+"-half-alpha.png"));
+                    assertFalse(sameRgb(withGhost,translucent),
+                            "SAT must retain ghost translucency in arena "+arena);
                     assertUnchanged(before,context.getRewindRegistry().capture());
                     ghosts.clearSlots();
                 }
