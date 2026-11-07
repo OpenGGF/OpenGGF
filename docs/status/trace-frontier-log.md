@@ -124741,3 +124741,15 @@ the cited ROM handlers. The restored post-demo handoff is covered for native and
 generic callers. The repeated S1 profile passes 71/71 with all 92 report bodies
 exact to the earlier green candidate. Final smoke qualification is pending;
 see the audit for focused results and the CWD/catalogue attribution limit.
+
+Final repaired candidate `90105d1df` qualifies the delivery gate: all 4,481
+classes / 91 ordinary batches plus guards complete; 37,871 cases, 28 inherited
+failures, zero errors, 49 allowed skips and zero unexplained skips. All 836 guards
+pass. The raw runner verdict remains FAILED because it includes inherited
+failures. Full identity/type/assertion attribution finds no new or worse result:
+26 literal messages, two differences only in Java Set iteration order. All
+91 batch selections match the preceding same-selection controls. The unchanged
+S1 chain/profile remains 71 PASS / zero skips with all 92 comparison bodies exact
+to the earlier green candidate. See the audit for commands, source and limits.
+Diagnostics were archived, reviewed and officially acknowledged. Producer161
+and the ending pin remain local pending the reserved category-3 decision.

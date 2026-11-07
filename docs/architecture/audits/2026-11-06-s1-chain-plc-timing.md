@@ -287,3 +287,34 @@ source-size ratchet: removing the duplicate consume reduces the measured method
 from 30 lines to 29. Tightening that budget makes the 87-case guard rerun pass.
 All 794 distinct focused checks are qualified by those runs; a single combined
 794-case pass is not claimed. The final frozen-source smoke rerun is pending.
+
+### Repaired ending delivery qualification
+
+Frozen source `90105d1dff3d6c64295db3cdac2c429b7fbead5b` completes the full
+change-based smoke selection against pre-task `34b8830b1` with two workers and
+surfaceless EGL: 4,481 candidate classes, all 91 ordinary batches and the guard
+batch, 37,871 cases, 28 failures, zero errors, 49 allowed skips and zero
+unexplained skips. All six ROM properties are present. The runner's raw
+`VERDICT FAILED` counts inherited failures; the delivery gate passes by complete
+identity/type/assertion attribution. Twenty-six failure messages match literally;
+two differ only in Java Set iteration order with identical expected/actual
+elements. All 836 guard cases pass without skips. No new or worsened failure
+remains, and all 91 batch selections match the preceding qualified controls.
+This is bounded smoke qualification, not a public-release full-suite pass.
+
+Command: `python3 tools/testing/run_categories.py --base
+34b8830b1856395c4ea7d3f9da02bbee9c3355c7 --workers 2 --headless-gl
+surfaceless-egl --run --keep-diagnostics`. Run ID:
+`20261107T040255Z-cf779890`. The 101 bounded evidence files and complete failure
+attribution are preserved under the task artifact; diagnostics were reviewed
+and deleted with the runner's official acknowledgement. The source stayed
+clean and unchanged throughout the run. Ordinary execution is 1,548.78 seconds,
+guards 153.93 seconds, preparation 37.14 seconds and rounded admission wait
+1,358 seconds; wall time is 3,113.061228 seconds.
+
+Fresh fetches retain develop `c1029d3b4` and producer main `d54cc514`. Engine
+commits `637c23624` and `90105d1df` and producer `161e45ac` are prepared locally.
+No ending delivery or producer publication has occurred. The new producer
+publication and develop pin remain the user's category-3 decision; the earlier
+approval named only the queue observer commit. Ordinary unit corrections follow
+the user's recorded defect ruling, without changing trace assertions.
