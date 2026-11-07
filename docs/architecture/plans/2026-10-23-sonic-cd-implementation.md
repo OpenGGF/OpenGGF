@@ -1,5 +1,31 @@
 # Implement Sonic CD with complete regional parity
 
+## 7 November 2026 — actual R31 loading Host and native resident clear
+
+The source-bound Host now owns the actual retained placement bank, scroll/planes,
+CPU and selected images, loading globals, native clear products and lazy governed
+renderer. Original C/12 publications retain their actual palette and immutable
+physical state; successful metadata grants no Module invocation or ordinary World
+admission. Unknown input fields and a noncold spawner remain explicit boundaries.
+
+Independent review found two concrete P2s. Authority validation now checks the full
+supplied Core, installed owner, Host lifecycle, Frame pair/art/clock and complete
+placement on both return and throwing exits, preserving the original exception and
+suppressing nonwrite violations. Native InitVDP also clears the separately owned
+Sonic resident768 bank. A same-owner prepared Frame value-CAS prebuilds that clear,
+retaining CPU art, last cue, dirty state, actor, globals and clock; the Host prebuilds
+its matching image before adopting either ready reference. No source service or
+snapshot-as-gameplay write supplies the clear.
+
+R83 passed203 before those adversaries existed. R84 reproduced both findings with
+three behavioral failures/three cases on unchanged source. Corrected R85 passes
+1023/0F/E/S across seven complete classes, including all815 legacy Frame cases,
+33 Host controls and the earlier Core/loop/bridge/HUD cohort. Source/dependency
+observations match and Maven returned0. Resource admission waited349s; Maven took
+2m03s; no user wait occurred. Constructed actual-source controls qualify components,
+not actual fresh Module/World loading, Ready, ordinary gameplay, pixels, full USA or
+regional parity. Those joins remain the next implementation work.
+
 ## 7 November 2026 — actual R31 scheduler and private Core HUD lane
 
 The new source-bound scheduling kernel owns only call order. It borrows the old

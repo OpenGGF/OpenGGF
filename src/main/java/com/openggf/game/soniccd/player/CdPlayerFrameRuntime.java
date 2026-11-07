@@ -2157,6 +2157,43 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
         state = nextState; display = nextDisplay;
     }
 
+    /** Prepared resident-only InitVDP clear; observational data, not native invocation authority. */
+    public static final class PlayerPatternClear {
+        private final CaptureOwner owner;
+        private final ActorState beforeActor;
+        private final SharedState beforeShared;
+        private final CdPlayerArtRuntime.State ready;
+        private PlayerPatternClear(CaptureOwner owner, ActorState beforeActor, SharedState beforeShared,
+                                   CdPlayerArtRuntime.State ready) {
+            this.owner = owner; this.beforeActor = beforeActor; this.beforeShared = beforeShared; this.ready = ready;
+        }
+        public CdPlayerArtRuntime.State artState() { return ready; }
+    }
+
+    /** Native InitVDP clears the $F000 resident window, preserving CPU RAM, cue and dirty state. */
+    public PlayerPatternClear preparePlayerPatternClear() {
+        requireOpenIdle(); requireClosedFrame();
+        var actor = captureActor(); var shared = captureShared(); var before = shared.artState();
+        var ready = new CdPlayerArtRuntime.State(before.cpuBuffer(),
+                CdAssetBytes.copyOf(new byte[CdPlayerArtRuntime.RESIDENT_WINDOW_BYTES]), before.lastFrame(), before.dirty());
+        return new PlayerPatternClear(captureOwner, actor, shared, ready);
+    }
+
+    /** Same-owner full closed-pair CAS. Equal values do not confer native execution authority. */
+    public void validatePreparedPlayerPatternClear(PlayerPatternClear prepared) {
+        requireOpenIdle(); requireClosedFrame(); Objects.requireNonNull(prepared, "prepared pattern clear");
+        requireOwner(prepared.owner);
+        if (!captureActor().equals(prepared.beforeActor) || !captureShared().equals(prepared.beforeShared)) {
+            throw new IllegalStateException("Prepared pattern clear has a stale complete Frame pair");
+        }
+    }
+
+    /** Adopt only the prebuilt art reference after all potentially failing preparation. */
+    public void applyPreparedPlayerPatternClear(PlayerPatternClear prepared) {
+        validatePreparedPlayerPatternClear(prepared);
+        art.restore(prepared.ready);
+    }
+
     public ActorState captureActor() {
         requireOpenIdle(); requireClosedFrame(); return new ActorState(captureOwner, state, display);
     }

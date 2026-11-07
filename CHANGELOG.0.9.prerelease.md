@@ -356,7 +356,11 @@ matching area heading; see the
   selector-C wait and flower-counter reset, real PLCs, CCZ scroll and ordered
   normal/water fades. Selector12 enables display in initial fades and retains
   the palette actually published by its original Host callback. Boot, World and
-  ordinary-loop admission remain separate.
+  ordinary-loop admission remain separate. A retained loading Host now preserves
+  complete physical images and original palette publication, checks every Module
+  callback against the borrowed native owners, and clears the actual separate
+  Sonic resident bank at InitVDP while preserving CPU/cue/dirty state. Actual fresh
+  World and ordinary gameplay admission remain separate.
   A finite IPX progress
   component preserves unknown-byte and save-field alias semantics. Its actual
   boss-return join now publishes saved-zone/checkpoint state once and retains it
