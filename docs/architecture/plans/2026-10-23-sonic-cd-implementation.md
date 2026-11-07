@@ -1,5 +1,24 @@
 # Implement Sonic CD with complete regional parity
 
+## 7 November 2026 — bounded public-method inventory preflight
+
+The existing declaration census has an opt-in direct literal public-method list
+comparison. It detects both the actual missing GameOver mapper method and the
+right-multiset/wrong-order fixture error. Overloads and lexical name/arity order
+remain exact. Unresolved generic, inherited, wildcard and unsupported scopes
+stay incomplete, even when a written list matches. No compiler/admission or
+passing-test certificate is inferred.
+
+Independent review found four P2 gaps: enhanced-for helper shadow, a skipped
+parenthesized assertion, duplicated-output reservations and an uncapped FINAL
+recheck. Five Root regression controls reproduce RED; all35 inventory controls
+then pass after bounded corrections. The installed six-module Python run has
+181tests,176passed/5inherited explicit-optional skips/0failures/errors. Actual
+stale/order/corrected frozen inputs retain their expected conditional findings
+and exit3. Exact strict dependency pins and generated skill mirrors move together;
+default no-opt-in behavior and old safety tests are preserved. Broad engine
+validation and actual gameplay remain separate.
+
 ## 7 November 2026 — R31 pure Main/Hurt and canonical profile qualification
 
 The distinct stepR31 entry now runs source-ordered normal Main/Hurt on complete

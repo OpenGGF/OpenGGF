@@ -36,7 +36,7 @@ RESERVED = frozenset(('abstract assert boolean break byte case catch char class 
     'switch synchronized this throw throws transient try void volatile while true false null _').split())
 TYPE_WORDS = frozenset(('class', 'interface', 'enum', 'record'))
 DEPENDENCIES = {
-    'java_declaration_census.py': (45026, '91d710f6b8aefbe918ff19ef085113cd12ea3d5d1cc30ad856fb25ab192465ff'),
+    'java_declaration_census.py': (65795, '304b6314407adaa114ae06f17e9e0c23da93f89110e454a1c681dfe51000a625'),
     'enum_contract_audit.py': (47279, 'bc4d7daf1689216391efd423b4628c728a1f0b63395e89398b09930f686a770d'),
 }
 LIMITATIONS = [

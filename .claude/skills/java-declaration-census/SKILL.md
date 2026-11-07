@@ -1,6 +1,6 @@
 ---
 name: java-declaration-census
-description: Inventory written Java source declarations or a bounded ordinary JUnit Test subset at an immutable Git commit, optionally checking an explicitly pinned FINAL file. Use for source handoff inventories and stale simple whole-class count and literal method selector checks, not compilation, ABI or JUnit discovery/execution claims.
+description: Inventory written Java source declarations or a bounded ordinary JUnit Test subset at an immutable Git commit, optionally checking an explicitly pinned FINAL file. Use for source handoff inventories and stale simple whole-class count and literal method selector/public name-arity inventory checks, not compilation, ABI or JUnit discovery/execution claims.
 ---
 
 Use the repository's [census tool](../../../tools/soniccd/java_declaration_census.py) to count record components, written constructors/methods and overload signatures. This is read-only convenience evidence, with source lines and Git blob/SHA256 provenance. It establishes no owner, phase, authentication, compilation, test result or binary compatibility.
@@ -110,5 +110,61 @@ static five-method proposal is complete. This hint neither supplies nor relaxes
 validation or the owning task's required tests. It creates no report/XML pass
 cache, receipt or output file; JSON goes only to stdout.
 
+For a **literal public method inventory preflight**, append the caller-known owner
+and one immutable consumer source to ordinary declaration mode:
+
+```bash
+python3 -B tools/soniccd/java_declaration_census.py \
+  --git-dir "$OPENGGF_ROOT/.git" --revision FULL_40_HEX_COMMIT \
+  --source src/main/java/p/Owner.java \
+  --public-method-inventory p.Owner \
+  --inventory-test-source src/test/java/q/Inventory.java
+```
+
+Existing `--final` pins still select owner FINAL when supplied. Independently,
+`--inventory-test-final /canonical/FINAL.java` requires
+`--inventory-test-final-bytes SUPPLIED_BYTES` and
+`--inventory-test-final-sha256 SUPPLIED_SHA256`. These pins must come from the
+trusted handoff, as for owner FINAL. All potential four files share the existing
+2 MiB total and 1 MiB per-file ceilings; token/context/declaration bounds still
+apply. No source/package mapping or caller-known binding is independently Java
+resolution. No test is edited or executed.
+
+This opt-in recognizes only expected-first `assertEquals(List.of("name/arity",
+...), Arrays.stream(Owner.class.getDeclaredMethods()).filter(m ->
+Modifier.isPublic(m.getModifiers())).map(m -> m.getName()+"/"+
+m.getParameterCount()).sorted().toList())`, with direct known imports or fully
+qualified helper spellings. It retains repeated name/arity entries for overloads
+and compares the literal's actual order to natural Java String order. A correct
+multiset in the wrong order is `order_mismatch`; missing/extra entries are
+`member_mismatch`. For example, `withAct3FutureGameOver/3` sorts after `resolve/3`.
+No numeric-arity ordering, set deduplication, alternate comparator, alias or
+computed/escaped expected list is inferred.
+
+Only in this mode, `inventory_test` carries both observed consumer provenances,
+and `public_method_inventory` identifies the selected owner/test sides, observed
+written public list, literal checks and conditional findings. FINAL is selected
+independently for each side, without union/fallback. Generic/record/inherited or
+bridge scopes, unresolved helper/shadow bindings, consumer wildcard ambiguity,
+unsupported selected reflection chains or absent supported checks are incomplete.
+`matches` is null then; per-check `observed_matches` and findings can still expose
+a written-source mismatch. A corrected list with no finding and incomplete scope
+is not a clean Java/API certificate.
+
+Ordinary declaration diff remains present and unchanged in this opt-in. Invalid
+input/pins exit2; incomplete source/diff/inventory exits3; otherwise source changes
+or a complete inventory mismatch exit1; only a complete unchanged matching request
+exits0. This mode cannot combine with JUnit `--test-inventory`. Without opting in,
+existing declaration and ordinary-test JSON/modes/exit rules remain unchanged.
+Run [the literal inventory controls](../../../tools/soniccd/test_java_public_method_inventory.py)
+when changing this mode. Keep the import preflight's exact census dependency pin
+and its dependency regression pin in sync after reviewing census changes; never
+relax the hash check or accept old/new fallback hashes.
+
 For tool changes, also run [the inventory safety tests](../../../tools/soniccd/test_java_test_inventory.py).
 Use [the standard-library tests](../../../tools/soniccd/test_java_declaration_census.py) with `TMPDIR` set to owned scratch and `PYTHONDONTWRITEBYTECODE=1`; synthetic Git fixtures are disposable. Run the existing enum safety suite if the shared dependency changes. Keep this skill byte-identical to `.claude/skills/java-declaration-census/SKILL.md`.
+
+Enhanced-for helper shadows and selected class-literal uses outside the direct
+reflection assertion remain incomplete, including mixed supported/unsupported
+assertions. Expected/extra rows and payloads are reserved before output expansion;
+consumer FINAL rechecks retain the remaining aggregate and pinned-size caps.

@@ -371,7 +371,11 @@ matching area heading; see the
 - **Sonic CD integration checks:** opt-in import preflight now reports likely
   missing ordinary imports of selected nonstatic member types after static-star
   imports, preserving unresolved receiver and anonymous-scope uncertainty. It
-  keeps the existing default checks and budgets unchanged. A focused category now includes the CD source
+  keeps the existing default checks and budgets unchanged. The declaration census
+  can compare a direct literal public-method inventory with written declarations,
+  preserving overload multiplicity and Java lexical order. Shadowed, generic or
+  unsupported scopes remain incomplete; output and reread budgets stay bounded.
+  A focused category now includes the CD source
   package and its shared dependencies while preserving existing gameplay coverage.
   The matching policy and runner fail closed with an older reader. Candidate
   reduction is measured as coverage selection, not a claimed runtime speedup.

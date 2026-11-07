@@ -762,6 +762,310 @@ def compare(before, after):
                 literal_ambiguities=literal_ambiguities)
 
 
+
+# BEGIN opt-in literal public method inventory 20261107.
+PUBLIC_INVENTORY_LIMITATIONS = [
+    'Opt-in source comparison only: caller-known owner/source mapping is supplied, not independently resolved Java. No compiler, reflection execution, ABI, bridge or inherited-method certificate.',
+    'Only expected-first literal List.of name/decimal-arity strings and the direct Arrays.stream(Owner.class.getDeclaredMethods()).filter(public).map(name+"/"+parameterCount).sorted().toList() shape are recognized. Natural ASCII Java String order and duplicates are preserved; no alternate comparator, alias, count inference or test editing.',
+    'Unsupported owner/consumer inheritance, generics, records, binding/shadow clues, wildcard ambiguity and other selected reflection shapes remain incomplete. Written-source mismatches can remain visible as conditional observations; matches is null when incomplete.',
+    'Owner FINAL and test FINAL are selected independently, without union/fallback. All four potential inputs share the existing total-byte bound and are rechecked. Additional contexts, rows and output use the existing bounds. No new cache, gate or output file.',
+]
+
+
+def _public_literal_payloads(data, java, limits):
+    """Recover only simple ASCII literal payloads AFTER the pinned lexer validated/redacted.
+
+    Delimiter scanning mirrors the approved lexer; never interprets Java escapes or
+    executes an expression. Text blocks/characters/escaped strings stay unsupported.
+    Every raw literal is aligned to its existing redacted token, including unrelated ones.
+    """
+    text = data.decode('utf-8').replace('\r\n', '\n').replace('\r', '\n')
+    indices = iter(i for i, t in enumerate(java.tokens) if t.value == '<literal>')
+    result, pos = {}, 0
+    while pos < len(text):
+        if text.startswith('//', pos):
+            end = text.find('\n', pos+2)
+            pos = len(text) if end < 0 else end
+        elif text.startswith('/*', pos):
+            pos = text.find('*/', pos+2)+2  # Already validated by the pinned lexer.
+        elif text[pos] in ('"', "'"):
+            marker = '"""' if text.startswith('"""', pos) else text[pos]
+            end = pos+len(marker)
+            while end < len(text):
+                if text[end] == '\\':
+                    end += 2
+                elif text.startswith(marker, end):
+                    end += len(marker)
+                    break
+                else:
+                    end += 1
+            token = next(indices, None)
+            require(token is not None, 'Literal/token alignment incomplete')
+            # No copy of a large unrelated text block or arbitrary string is needed.
+            value = None
+            if marker == '"' and end-pos-2 <= limits.max_context_tokens:
+                payload = text[pos+1:end-1]
+                if payload == '/' or re.fullmatch(r'[A-Za-z_$][A-Za-z0-9_$]*/[0-9]+', payload):
+                    value = payload
+            result[token] = value
+            pos = end
+        else:
+            pos += 1
+    require(next(indices, None) is None, 'Literal/token alignment incomplete')
+    return result
+
+
+def public_method_inventory(owner_data, test_data, limits, selected_owner):
+    """Bounded exact written public name/arity vs one declared literal reflection shape."""
+    limits.validate()
+    require(isinstance(selected_owner, str) and 0 < len(selected_owner) <= 4096 and
+            all(IDENT.fullmatch(x) and x not in RESERVED for x in selected_owner.split('.')),
+            'Public inventory requires exact qualified owner', 2)
+    require(len(owner_data)+len(test_data) <= limits.max_total_bytes, 'Public inventory combined byte budget exceeded')
+    od, oj = source_declarations(owner_data, limits)
+    td, tj = source_declarations(test_data, limits)
+    reasons, checks, findings = [], [], []
+    output_rows, output_chars = 0, len(selected_owner)+2048
+
+    def reason(message):
+        nonlocal output_rows, output_chars
+        if message not in reasons:
+            require(output_rows < limits.max_declarations and output_chars+len(message)+16 <= limits.max_total_bytes,
+                    'Public inventory output/reason budget exhausted')
+            output_rows += 1; output_chars += len(message)+16
+            reasons.append(message)
+
+    types = {'.'.join(filter(None, (r['owner'], r['name']))): (r, span)
+             for r, span in zip(od.result, od.spans) if r['kind'] in ('class','record','interface','enum')}
+    selected = types.get(selected_owner)
+    if selected is None:
+        reason('Selected owner is not an observed named declaration')
+    else:
+        row, (start, end) = selected
+        if row['kind'] != 'class':
+            reason('Selected owner is not an ordinary class; implicit/generated members unresolved')
+        if any(t.value in ('<','extends','implements','permits') for t in oj.tokens[start:end]):
+            reason('Owner generic/inherited/bridge scopes unresolved')
+    for name, (ancestor, (start, end)) in types.items():
+        if selected_owner.startswith(name+'.') and any(t.value in ('<','extends','implements','permits') for t in oj.tokens[start:end]):
+            reason('Enclosing owner generic/inherited scope unresolved')
+    observed = []
+    for row, (start, end) in zip(od.result, od.spans):
+        if row['owner'] == selected_owner and row['kind'] == 'method' and 'public' in row['modifiers']:
+            if any(t.value == '<' for t in oj.tokens[start:end]):
+                reason('Public generic signature/bridge scope unresolved at line '+str(row['line']))
+            require(len(row['name']) <= limits.max_context_tokens, 'Public method name context budget exceeded')
+            require(output_rows < limits.max_declarations and output_chars+len(row['name'])+32 <= limits.max_total_bytes,
+                    'Public inventory output budget exhausted')
+            observed.append(row['name']+'/'+str(row['arity']))
+            output_rows += 1; output_chars += len(row['name'])+32
+    # Only ASCII names and decimal arities are admitted; Python and Java natural
+    # String sorting agree for this subset. No set/deduplication or numeric sort.
+    observed.sort()
+    payloads = _public_literal_payloads(test_data, tj, limits)
+    ts = tj.tokens
+    values = [t.value for t in ts]
+    owner_spellings = (selected_owner, selected_owner.rsplit('.',1)[-1])
+    qual = r'[A-Za-z_$][A-Za-z0-9_$]*(?:\.[A-Za-z_$][A-Za-z0-9_$]*)*'
+    chain = re.compile(r'(?P<arrays>'+qual+r')\.stream\((?P<owner>'+qual+r')\.class\.getDeclaredMethods\(\)\)'
+        r'\.filter\((?P<f>[A-Za-z_$][A-Za-z0-9_$]*)->(?P<modifier>'+qual+r')\.isPublic\((?P=f)\.getModifiers\(\)\)\)'
+        r'\.map\((?P<m>[A-Za-z_$][A-Za-z0-9_$]*)->(?P=m)\.getName\(\)\+<literal>\+(?P=m)\.getParameterCount\(\)\)'
+        r'\.sorted\(\)\.toList\(\)')
+    ordinary_imports = [name for static, name in tj.imports if not static]
+    static_imports = [name for static, name in tj.imports if static]
+    if any(name.endswith('.*') for name in ordinary_imports):
+        reason('Consumer ordinary wildcard import bindings unresolved')
+    if any(name.endswith('.*') and name != 'org.junit.jupiter.api.Assertions.*' for name in static_imports):
+        reason('Consumer static wildcard import bindings unresolved')
+    declared_names = {r['name'] for r in td.result if r['kind'] in ('class','interface','enum','record','method')}
+    parameters = {p['name'] for row in td.result for p in row['parameters']}
+    sensitive = {'List','Arrays','Modifier','assertEquals',owner_spellings[-1],selected_owner.split('.')[0],'java','org'}
+    if any(not name.endswith('.*') and name.rsplit('.',1)[-1] in sensitive for name in static_imports):
+        reason('Consumer named static helper/owner binding unresolved')
+    if (declared_names | parameters) & sensitive:
+        reason('Consumer declaration/parameter shadows a selected helper/owner root')
+    for i, v in enumerate(values):
+        if v in sensitive and (i == 0 or values[i-1] != '.') and i+1 < len(values) and values[i+1] in ('=',',',';','[',')','-',':'):
+            reason('Consumer possible local/field root binding unresolved at line '+str(ts[i].line))
+
+    def binding(spelling, expected):
+        if spelling == expected:
+            root = spelling.split('.')[0]
+            if root in declared_names | parameters or any(x.rsplit('.',1)[-1] == root for x in ordinary_imports if not x.endswith('.*')):
+                reason('Qualified helper root shadow/unresolved: '+root)
+        elif spelling != expected.rsplit('.',1)[-1] or (expected not in ordinary_imports and tj.package != expected.rsplit('.',1)[0]):
+            reason('Consumer helper binding unresolved: '+spelling)
+        elif any(x.rsplit('.',1)[-1] == spelling and x != expected for x in ordinary_imports if not x.endswith('.*')):
+            reason('Competing consumer import for '+spelling)
+
+    def class_literal_positions(start, end):
+        found = []
+        for i in range(start+2, end):
+            if values[i] != 'class' or values[i-1] != '.':
+                continue
+            a = i-2
+            while a >= start+2 and values[a-1] == '.' and IDENT.fullmatch(values[a-2]):
+                a -= 2
+            if ''.join(values[a:i-1]) in owner_spellings:
+                found.append(i)
+        return found
+
+    from bisect import bisect_left
+    selected_literals = class_literal_positions(0,len(ts))
+    reached = [i+2 for i in selected_literals if i+2 < len(ts) and values[i+1] == '.'
+               and values[i+2] in ('getDeclaredMethods','getMethods')]
+    handled = set()
+    for at, token in enumerate(ts):
+        if token.value != 'assertEquals' or at+1 >= len(ts) or values[at+1] != '(':
+            continue
+        end = tj.pairs[at+1]
+        selected_positions = reached[bisect_left(reached,at+2):bisect_left(reached,end)]
+        if not selected_positions:
+            continue
+        handled.update(selected_positions)
+        require(end-at <= limits.max_context_tokens, 'Public inventory assertion context budget exhausted')
+        # Split only immediate arguments, without scanning/copying a nested scope.
+        args, begin, i = [], at+2, at+2
+        while i < end:
+            if values[i] in ('(','[','{'):
+                i = tj.pairs[i]+1
+            elif values[i] == ',':
+                args.append((begin,i));begin=i+1;i+=1
+            else:
+                i+=1
+        args.append((begin,end))
+        if len(args) != 2:
+            reason('Selected assertion is not an expected-first two-argument inventory at line '+str(token.line));continue
+        left, right = args
+        a,b = left
+        opening = next((i for i in range(a,b) if values[i] == '('),None)
+        if opening is None or ''.join(values[a:opening]) not in ('List.of','java.util.List.of') or tj.pairs[opening] != b-1:
+            reason('Expected inventory is not a direct literal List.of at line '+str(token.line));continue
+        expected, i, literal_ok = [], opening+1, True
+        while i < b-1:
+            if values[i] != '<literal>' or payloads.get(i) is None or payloads[i] == '/':
+                literal_ok=False;break
+            require(len(expected) < limits.max_declarations, 'Public inventory literal row budget exhausted')
+            expected.append(payloads[i]);i+=1
+            if i < b-1:
+                if values[i] != ',' or i+1 == b-1:
+                    literal_ok=False;break
+                i+=1
+        if not literal_ok:
+            reason('Inventory literal/escape/expression unsupported at line '+str(token.line));continue
+        actual = ''.join(values[right[0]:right[1]])
+        match = chain.fullmatch(actual)
+        if match is None or match['owner'] not in owner_spellings or len(selected_positions) != 1:
+            reason('Selected reflection/filter/map/natural-sort chain unsupported at line '+str(token.line));continue
+        slash = [i for i in range(*right) if values[i] == '<literal>']
+        if len(slash) != 1 or payloads.get(slash[0]) != '/':
+            reason('Name/arity separator must be the unescaped slash literal at line '+str(token.line));continue
+        containing = [(r,span) for r,span in zip(td.result,td.spans) if r['kind']=='method' and
+                      span[1] < at and values[span[1]] == '{' and at < tj.pairs[span[1]]]
+        if len(containing) != 1:
+            reason('Assertion ordinary method scope unresolved at line '+str(token.line))
+        else:
+            row, span = containing[0]
+            if any(t.value == '<' for t in ts[span[0]:span[1]]):
+                reason('Consumer generic method scope unresolved at line '+str(token.line))
+            for parent, parent_span in zip(td.result,td.spans):
+                full = '.'.join(filter(None,(parent['owner'],parent['name'])))
+                if parent['kind'] in ('class','record','enum','interface') and (full == row['owner'] or row['owner'].startswith(full+'.')) and (parent['kind'] != 'class' or any(t.value in ('<','extends','implements','permits') for t in ts[parent_span[0]:parent_span[1]])):
+                    reason('Consumer inherited/generic/nonordinary scope unresolved at line '+str(token.line))
+        binding(''.join(values[a:opening-2]),'java.util.List')
+        binding(match['arrays'],'java.util.Arrays');binding(match['modifier'],'java.lang.reflect.Modifier')
+        binding(match['owner'],selected_owner)
+        if at >= 1 and values[at-1] == '.':
+            start = at-2
+            while start >= 2 and values[start-1] == '.' and IDENT.fullmatch(values[start-2]):start-=2
+            binding(''.join(values[start:at-1]),'org.junit.jupiter.api.Assertions')
+        elif 'org.junit.jupiter.api.Assertions.*' not in static_imports and 'org.junit.jupiter.api.Assertions.assertEquals' not in static_imports:
+            reason('Unqualified assertEquals binding unresolved')
+        # Reserve a conservative per-check upper bound BEFORE multiset/output expansion.
+        require(output_rows+2*len(expected)+2*len(observed)+2 <= limits.max_declarations,
+                'Public inventory aggregate row/output budget exhausted')
+        reserve=1024+2*sum(len(v)+32 for v in expected)+2*sum(len(v)+32 for v in observed)
+        require(output_chars+reserve <= limits.max_total_bytes,'Public inventory aggregate output byte budget exhausted')
+        output_rows+=2*len(expected)+2*len(observed)+2;output_chars+=reserve
+        # Counter preserves duplicates; source natural order and literal order remain separate.
+        from collections import Counter
+        missing_counts, extra_counts = Counter(observed)-Counter(expected), Counter(expected)-Counter(observed)
+        missing, extra = [], []
+        for value in observed:
+            if missing_counts[value]:missing.append(value);missing_counts[value]-=1
+        for value in expected:
+            if extra_counts[value]:extra.append(value);extra_counts[value]-=1
+        same_multiset = not missing and not extra
+        equal = expected == observed
+        kind = None if equal else 'order_mismatch' if same_multiset else 'member_mismatch'
+        entry=dict(line=token.line,expected_literal=expected,observed_matches=equal,same_multiset=same_multiset,
+                   missing_from_literal=missing,extra_in_literal=extra,finding=kind)
+        checks.append(entry)
+        if kind is not None:findings.append(dict(line=token.line,kind=kind))
+    if set(selected_literals)-{i-2 for i in handled}:
+        reason('Selected class literal exists outside the supported direct reflection assertion')
+    if not checks:
+        reason('No supported selected public-method inventory assertion observed')
+    complete = not reasons
+    return dict(selected_owner=selected_owner,binding_basis='Explicit caller-known owner/source mapping; no independent Java resolution',
+                observed_public_methods=observed,checks=checks,findings=findings,complete=complete,
+                incomplete_reasons=reasons,matches=all(c['observed_matches'] for c in checks) if complete else None)
+
+
+def _public_inventory_options(args, limits):
+    owner = getattr(args,'public_method_inventory',None)
+    names = ('inventory_test_source','inventory_test_final','inventory_test_final_sha256','inventory_test_final_bytes')
+    if owner is None:
+        require(all(getattr(args,k,None) is None for k in names),'Orphan public inventory test options',2)
+        return None
+    require(isinstance(owner,str) and 0 < len(owner) <= 4096 and
+            all(IDENT.fullmatch(x) and x not in RESERVED for x in owner.split('.')),
+            'Public inventory requires exact qualified owner',2)
+    require(args.test_inventory is None,'Public method inventory and JUnit test inventory are separate modes',2)
+    require(getattr(args,'inventory_test_source',None) is not None,'Public inventory requires immutable inventory-test-source',2)
+    source=relative(args.inventory_test_source)
+    final=getattr(args,'inventory_test_final',None)
+    if final is None:
+        require(args.inventory_test_final_sha256 is None and args.inventory_test_final_bytes is None,
+                'Orphan inventory-test FINAL pins',2)
+    else:
+        final=absolute(final)
+        require(isinstance(args.inventory_test_final_sha256,str) and SHA256.fullmatch(args.inventory_test_final_sha256) and
+                type(args.inventory_test_final_bytes) is int and 0 <= args.inventory_test_final_bytes <= limits.max_file_bytes,
+                'Inventory-test FINAL requires external bytes/SHA256 pins within budget',2)
+    return source,final
+
+
+def _append_public_inventory(args, limits, result, git_dir, owner_data, owner_final_data, options):
+    source, final=options
+    selected_owner=owner_final_data if owner_final_data is not None else owner_data
+    used=len(owner_data)+(len(owner_final_data) if owner_final_data is not None else 0)
+    reserved=args.inventory_test_final_bytes if final is not None else 0
+    require(used+reserved < limits.max_total_bytes,'Combined inventory byte budget exhausted before test read')
+    data,provenance=read_baseline(git_dir,args.revision,source,min(limits.max_file_bytes,limits.max_total_bytes-used-reserved))
+    selected_test=data;final_data=final_sig=None
+    tests=dict(baseline=dict(provenance=provenance))
+    if final is not None:
+        final_data,final_sig=read_final(final,min(limits.max_file_bytes,limits.max_total_bytes-used-len(data)))
+        require(len(final_data)==args.inventory_test_final_bytes and sha(final_data)==args.inventory_test_final_sha256,
+                'Inventory-test FINAL bytes/SHA256 mismatch',2)
+        tests['final']=dict(provenance=dict(path=str(final),bytes=len(final_data),sha256=sha(final_data)))
+        selected_test=final_data
+    observed=public_method_inventory(selected_owner,selected_test,limits,args.public_method_inventory)
+    observed.update(owner_source='final' if owner_final_data is not None else 'baseline',test_source='final' if final is not None else 'baseline')
+    result['public_method_inventory']=observed
+    result['inventory_test']=tests
+    result['limitations']=result['limitations']+PUBLIC_INVENTORY_LIMITATIONS
+    if not observed['complete']:result['status']='incomplete'
+    repeat,rp=read_baseline(git_dir,args.revision,source,min(limits.max_file_bytes,limits.max_total_bytes-used-reserved))
+    require(repeat==data and rp==provenance,'Immutable inventory test changed between observations')
+    if final is not None:
+        try:repeat,rs=read_final(final,min(limits.max_file_bytes,limits.max_total_bytes-used-len(data),len(final_data)))
+        except CensusError as error:raise CensusError('Inventory-test FINAL changed/unreadable: '+str(error)) from error
+        require(repeat==final_data and rs==final_sig,'Inventory-test FINAL changed between observations')
+# END opt-in literal public method inventory 20261107.
+
+
 def parser():
     p = argparse.ArgumentParser(description=__doc__, epilog='Exit: 0 complete/equal; 1 complete diff changes; '
                                 '2 invalid input/pin/read; 3 incomplete/limit/observed change. '
@@ -776,6 +1080,11 @@ def parser():
     p.add_argument('--expected-count', type=int, help='Compare static proposal for FINAL if supplied, otherwise baseline')
     p.add_argument('--require-ordinary-test', action='append', metavar='METHOD',
                    help='Require a direct ordinary @Test name in the selected inventory (repeatable, at most 50)')
+    p.add_argument('--public-method-inventory', metavar='OWNER', help='Opt-in caller-known ordinary-class public name/arity literal comparison; source diff still applies, incomplete exits3 before mismatches' )
+    p.add_argument('--inventory-test-source', help='Exact immutable Git .java consumer containing the literal inventory assertion')
+    p.add_argument('--inventory-test-final', help='Optional canonical pinned FINAL inventory-test .java source')
+    p.add_argument('--inventory-test-final-sha256', help='Externally supplied inventory-test FINAL SHA256')
+    p.add_argument('--inventory-test-final-bytes', type=int, help='Externally supplied inventory-test FINAL bytes')
     for name,value in vars(Limits()).items():
         p.add_argument('--'+name.replace('_','-'),type=int,default=value,help=f'Lowerable bound, maximum {value}')
     return p
@@ -794,6 +1103,7 @@ def run(args):
                 all(isinstance(name, str) and len(name) <= 4096 and IDENT.fullmatch(name) and
                     name not in RESERVED for name in requested) and len(set(requested)) == len(requested),
                 'Require test-inventory and 1..50 distinct ordinary method identifiers (maximum 4096 characters each)', 2)
+    public_options = _public_inventory_options(args, limits)
     source = relative(args.source)
     git_dir = absolute(args.git_dir)
     root_id = directory_id(git_dir)
@@ -853,6 +1163,8 @@ def run(args):
             elif not result['diff']['complete']:
                 result['status'] = 'incomplete'
                 result['error'] = 'Redacted declaration literals cannot be compared across different file bytes'
+    if public_options is not None:
+        _append_public_inventory(args,limits,result,git_dir,data,final_data,public_options)
     require(directory_id(git_dir) == root_id, 'Git directory identity changed')
     repeat, repeat_provenance = read_baseline(git_dir,args.revision,source,limits.max_file_bytes)
     require(repeat == data and repeat_provenance == provenance, 'Immutable baseline changed between observations')
@@ -872,7 +1184,8 @@ def main(argv=None):
         code = 3 if result['status'] == 'incomplete' else int(
             result.get('expected_count',{}).get('matches') is False or
             result.get('ordinary_test_selection',{}).get('matches') is False or
-            result.get('diff',{}).get('has_changes',False))
+            result.get('diff',{}).get('has_changes',False) or
+            result.get('public_method_inventory',{}).get('matches') is False)
     except CensusError as error:
         code = error.code
         result = dict(version=VERSION,status='incomplete' if code == 3 else 'error',
