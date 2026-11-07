@@ -38,6 +38,7 @@ class TestCheckpointRespawnPolicy {
             @Override public void onLevelReady(RunLevelStart start) { starts.add(start); }
             @Override public void afterStep(RunStep step) { steps.add(step); }
         },ignored -> {});
+        assertTrue(loop.hostedRuns.ownsStart(GameMode.LEVEL),"Competition host owns pause without a scene overlay");
         for(int i=0;i<4;i++) loop.step();
         var level = GameServices.level();
         var player = (AbstractPlayableSprite)GameServices.camera().getFocusedSprite();

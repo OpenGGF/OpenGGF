@@ -129,11 +129,13 @@ final class HostedRunController {
     }
 
     /**
-     * True while a run plays behind a scene: Start and the pause key belong to the scene, so the
-     * host neither toggles its pause nor lets the ROM pause the level.
+     * Start and the pause key belong to the host for scene-covered runs and checkpoint-preserving
+     * Competition acts. Opening the race menu must not pause the simulation.
      */
     boolean ownsStart(com.openggf.game.GameMode mode) {
-        return overlay != null && host != null && mode == com.openggf.game.GameMode.LEVEL;
+        return host != null && mode == com.openggf.game.GameMode.LEVEL
+                && (overlay != null || spec.policy().deathRestart()
+                == com.openggf.game.session.GameplayRunPolicy.DeathRestart.FAST_FROM_CHECKPOINT);
     }
 
     /**
