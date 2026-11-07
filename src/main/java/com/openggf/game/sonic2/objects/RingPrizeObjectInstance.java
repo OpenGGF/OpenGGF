@@ -56,8 +56,6 @@ public class RingPrizeObjectInstance extends AbstractObjectInstance
 
     // Reference to parent counter (for decrementing)
     private int[] prizeCounter;
-    @RewindTransient(reason = "Ordinary final-array restore identity; values are captured by prizeCounter, native links rebind by SST slot")
-    private int[] ordinaryCounterRestoreTarget;
     @RewindTransient(reason = "Structural ObjD6 parent link; live prize children are spawned and owned by PointPokey.")
     private PointPokeyObjectInstance parent;
     private int parentObjectSlot = -1;
@@ -119,7 +117,6 @@ public class RingPrizeObjectInstance extends AbstractObjectInstance
         this.machineY = machineY;
         this.displayDelay = displayDelay;
         this.prizeCounter = prizeCounter;
-        this.ordinaryCounterRestoreTarget = prizeCounter;
         this.parent = parent;
         if (parent != null) {
             parentObjectSlot = parent.getSlotIndex();
@@ -129,24 +126,6 @@ public class RingPrizeObjectInstance extends AbstractObjectInstance
 
     RingPrizeObjectInstance(int x, int y, int ignoredSubtype, boolean ignoredFlag) {
         this(x, y, x, y, 0, new int[]{0});
-    }
-
-    @Override
-    protected void afterGenericRewindStateRestored(com.openggf.game.rewind.schema.RewindCaptureContext context) {
-        if (recipientNativeSlot >= 0) {
-            ordinaryCounterRestoreTarget = null;
-            return;
-        }
-        // Before native rebinding this was a final array: ordinary restores
-        // copied values IN PLACE. Preserve that alias contract for campaign play.
-        if (prizeCounter == null) {
-            ordinaryCounterRestoreTarget = null;
-            return;
-        }
-        if (ordinaryCounterRestoreTarget == null || ordinaryCounterRestoreTarget.length != prizeCounter.length)
-            throw new IllegalStateException("Ordinary ring-prize counter shape changed during restore");
-        System.arraycopy(prizeCounter, 0, ordinaryCounterRestoreTarget, 0, prizeCounter.length);
-        prizeCounter = ordinaryCounterRestoreTarget;
     }
 
     @Override
