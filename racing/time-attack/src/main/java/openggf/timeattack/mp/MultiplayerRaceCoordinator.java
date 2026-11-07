@@ -272,7 +272,7 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
                         }
                     } else if (control.message() instanceof ControlMessage.TeleportNoPartner none) {
                         if (runtime != null && publisherActive && none.attemptId() == publisher.currentAttemptId()) {
-                            runtime.queueSwap(new com.openggf.mods.run.RaceEvent.SwapFallback(0), "");
+                            runtime.queueSwap(new com.openggf.mods.run.RaceEvent.SwapFallback(none.swapId()), "");
                         }
                     } else if (control.message() instanceof ControlMessage.RaceCutoff cutoff) {
                         if (session.launch() != null && cutoff.roundId() == session.launch().roundId())
@@ -406,6 +406,7 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     @Override
     public void levelReady(RunLevelStart start) {
         levelLoaded = true;
+        registry.configureGeometry(start.geometry().wrapWidthPx(), start.geometry().wrapHeightPx());
         quickChat.resetRaceInput();
         if (levelReadyHook != null) {
             levelReadyHook.accept(start);
@@ -527,6 +528,11 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
         if (session.chatMode().allowsQuickChat() && !session.chatDisabled()) quickChat.open();
     }
 
+    public openggf.timeattack.CompetitionHudState competitionHudState() {
+        return runtime != null && runtime.isActive() ? runtime.competitionHudState()
+                : competitionHud(openggf.timeattack.CompetitionHudState.inactive());
+    }
+
     @Override
     public openggf.timeattack.CompetitionHudState competitionHud(openggf.timeattack.CompetitionHudState local) {
         var rows = (latestRoundClosed ? finalPlacements : combinedStandings()).stream().map(row ->
@@ -534,7 +540,7 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
                         row.character(), row.bestTimeFrames(), row.bestLapFrames(), row.lapFrames(),
                         openggf.timeattack.CompetitionHudState.Outcome.valueOf(row.outcome()),
                         "FINISHED".equals(row.outcome()) ? "" : row.outcome(),
-                        openggf.timeattack.CompetitionHudState.VerifyState.valueOf(row.verifyState()), false)).toList();
+                        openggf.timeattack.CompetitionHudState.VerifyState.valueOf(row.verifyState()), row.taintedSwap(), row.slot())).toList();
         var phase = latestRoundClosed ? openggf.timeattack.CompetitionHudState.MassStartPhase.RELEASED
                 : !levelLoaded ? openggf.timeattack.CompetitionHudState.MassStartPhase.LOADING
                 : holdGameplay() ? openggf.timeattack.CompetitionHudState.MassStartPhase.HELD
@@ -561,7 +567,10 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
                 }
             }
         }
-        return new openggf.timeattack.CompetitionHudState(local.mode(), local.trackKind(), local.currentLap(),
+        var config = session.roundConfig();
+        var mode = config == null ? local.mode() : openggf.timeattack.CompetitionRoomSettings.Mode.valueOf(config.mode());
+        var kind = config == null ? local.trackKind() : com.openggf.mods.run.TrackKind.valueOf(config.trackKind());
+        return new openggf.timeattack.CompetitionHudState(mode, kind, local.currentLap(),
                 local.lapCount(), local.currentLapFrames(), local.completedLapFrames(), local.bestLapFrames(),
                 estimate, competitionFieldSize, cutoffEndsAtHubMillis > 0,
                 Math.max(0, cutoffEndsAtHubMillis - session.hubNowEstimateMillis()), phase,

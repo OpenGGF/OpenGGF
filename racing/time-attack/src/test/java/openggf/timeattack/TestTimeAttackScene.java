@@ -270,6 +270,20 @@ class TestTimeAttackScene {
     }
 
     @Test
+    void competitionArenaPoolPassesSceneStartValidation() {
+        fingerprint = Optional.of(FP);
+        open(List.of("s3k"));
+        chooseMode(1); // HOST LAN
+        tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN); // race mode
+        tap(org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT); // Competition
+        for (int i=0;i<3;i++) tap(org.lwjgl.glfw.GLFW.GLFW_KEY_UP); // track
+        tap(org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT); // last arena
+        for (int i=0;i<9;i++) tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN); // start
+        tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+        assertEquals("", scene.status(), "Competition's default arena pool must not use the TA-only validator");
+    }
+
+    @Test
     void multiplayerWithoutAFingerprintExplainsTheMissingRom() {
         open(List.of("s2"));
         chooseMode(1); // HOST LAN

@@ -115,8 +115,7 @@ public final class TimeAttackRuntime implements RunHost {
     public double progressEstimate(int ordinal, int x) {
         return RaceProgressEstimate.progress(ordinal, x, levelWidth, geometry.wrapWidthPx(), geometry.lapLineX());
     }
-    private final CompetitionRaceMenu raceMenu = new CompetitionRaceMenu();
-    public CompetitionRaceMenu raceMenu() { return raceMenu; }
+    private openggf.timeattack.mp.RaceLobbyScreen.RaceMenu liveRaceMenu;
     private CompetitionHudState.SwapNotice swapNotice = CompetitionHudState.SwapNotice.none();
     private final java.util.Map<Long, String> swapPartners = new java.util.HashMap<>();
     private final java.util.Set<Long> queuedSwaps = new java.util.HashSet<>();
@@ -162,6 +161,7 @@ public final class TimeAttackRuntime implements RunHost {
     private int leadInSteps;
     /** The step just admitted runs with the player's input held (the lead-in). */
     private boolean holdInputThisStep;
+    private boolean pendingRespawnReset;
     /**
      * Frames sampled before the player had control, and any queued behind them, waiting for
      * the attempt listener. A room's {@code AttemptStart} goes out with the first frame, so it
@@ -242,7 +242,7 @@ public final class TimeAttackRuntime implements RunHost {
         swapNotice = CompetitionHudState.SwapNotice.none();
         queuedSwaps.clear();
         swapPartners.clear();
-        raceMenu.close();
+        liveRaceMenu = null;
         localProgressOrdinal = 0;
         capture.reset();
         tainted = false;
@@ -410,7 +410,7 @@ public final class TimeAttackRuntime implements RunHost {
 
     public RunSpec runSpec() {
         return new RunSpec(launch.gameId(), launch.zone(), launch.act(), launch.character(),
-                competition() ? competitionPolicy(launch.monitors()) : runPolicy(), null, launch.kind());
+                competition() ? competitionPolicy(launch.monitors()) : runPolicy(), null, launch.kind(), launch.swapEnabled());
     }
 
     /**
@@ -426,7 +426,7 @@ public final class TimeAttackRuntime implements RunHost {
      * lead-in: the digits appear only once the reloaded level is visible and frozen.
      */
     public int countdownDigit() {
-        return restartCountdownFrames > 0 ? (restartCountdownFrames + 59) / 60 : 0;
+        return launch != null && launch.kind() == com.openggf.mods.run.TrackKind.ARENA ? 0 : restartCountdownFrames > 0 ? (restartCountdownFrames + 59) / 60 : 0;
     }
 
     /** True while a death restart's lead-in steps run with the player's input held. */
@@ -510,11 +510,12 @@ public final class TimeAttackRuntime implements RunHost {
                 sampledFrame.mappingFrame(), sampledFrame.hFlip(), sampledFrame.vFlip(),
                 false,
                 sampledFrame.priorityBucket(), sampledFrame.highPriority(), sampledFrame.hurt(), sampledFrame.progress(),
-                sampledFrame.secondaryPath(), sampledFrame.shoeKind());
+                sampledFrame.secondaryPath(), sampledFrame.shoeKind(), pendingRespawnReset);
+        pendingRespawnReset = false;
         capture.capture(attempt.phase() == TimeAttackAttempt.Phase.FINISHED
                 ? new GhostFrame(streamed.x(), streamed.y(), streamed.mappingFrame(), streamed.hFlip(),
                         streamed.vFlip(), true, streamed.priorityBucket(), streamed.highPriority(),
-                        streamed.hurt(), streamed.progress(), streamed.secondaryPath(), streamed.shoeKind()) : streamed);
+                        streamed.hurt(), streamed.progress(), streamed.secondaryPath(), streamed.shoeKind(), streamed.respawnReset()) : streamed);
         offerFrame(streamed);
         if (before != TimeAttackAttempt.Phase.FINISHED
                 && attempt.phase() == TimeAttackAttempt.Phase.FINISHED) {
@@ -582,10 +583,12 @@ public final class TimeAttackRuntime implements RunHost {
         levelWidth = start.levelWidth();
         geometry = start.geometry();
         if (attempt != null && attempt.continuesAcross(start.cause())) {
+            pendingRespawnReset = true;
             if (start.debugAssisted()) markTainted();
             if (companion != null) companion.levelReady(start);
             return;
         }
+        pendingRespawnReset = false;
         localCentreX = -1;
         // A death restart reloads the act under a still-running attempt; it can never finish.
         voidCurrentAttempt();
@@ -633,6 +636,7 @@ public final class TimeAttackRuntime implements RunHost {
 
     /** The countdown digit drawn over the run: a fast restart's, else the companion's round start. */
     private int shownCountdownDigit() {
+        if (launch != null && launch.kind() == com.openggf.mods.run.TrackKind.ARENA) return 0;
         int digit = countdownDigit();
         return digit == 0 && companion != null ? companion.countdownDigit() : digit;
     }
@@ -642,14 +646,18 @@ public final class TimeAttackRuntime implements RunHost {
         // the retry key.
         FrameCompanion partner = companion;
         boolean admitted = partner == null || partner.admit(input);
-        if (competition()) {
-            if (input.input().menuStart() || input.keyPressed(com.openggf.mods.scene.SceneKeys.ESCAPE)) raceMenu.toggle();
-            else if (raceMenu.open()) {
-                if (input.input().menuUp() || input.input().menuDown()) raceMenu.move();
-                if (input.input().menuAccept()) {
-                    if (raceMenu.selected() == CompetitionRaceMenu.Action.LEAVE) leaveRun();
-                    else if (partner != null) partner.openRaceChat();
-                    raceMenu.close();
+        if (competition() && input.input() != null) {
+            if (input.input().menuStart() || input.keyPressed(com.openggf.mods.scene.SceneKeys.ESCAPE)) {
+                if (liveRaceMenu == null) liveRaceMenu = new openggf.timeattack.mp.RaceLobbyScreen.RaceMenu();
+                else if (liveRaceMenu.update(false, false, false, true)
+                        == openggf.timeattack.mp.RaceLobbyScreen.RaceMenu.Outcome.CLOSE) liveRaceMenu = null;
+            } else if (liveRaceMenu != null) {
+                switch (liveRaceMenu.update(input.input().menuUp(), input.input().menuDown(),
+                        input.input().menuAccept(), false)) {
+                    case FORFEIT -> { leaveRun(); liveRaceMenu = null; }
+                    case CHAT -> { if (partner != null) partner.openRaceChat(); liveRaceMenu = null; }
+                    case CLOSE -> liveRaceMenu = null;
+                    case NONE -> { }
                 }
             }
         }
@@ -682,7 +690,7 @@ public final class TimeAttackRuntime implements RunHost {
     /** Lead-in steps run with the player's input held. */
     @Override
     public boolean holdsPlayerInput() {
-        return holdInputThisStep || competition() && raceMenu.open();
+        return holdInputThisStep || competition() && liveRaceMenu != null;
     }
 
     /** Solo runs return to their host; a multiplayer companion may keep an open window going. */
@@ -715,6 +723,8 @@ public final class TimeAttackRuntime implements RunHost {
                 && competition() && launch.swapEnabled() && attemptListener != null) {
             attemptListener.onTeleportRequest(attemptOrdinal, inputRecording.frameCount());
         }
+        if (competition() && step.signal() == com.openggf.mods.run.RaceSignal.ARENA_DEATH_RESPAWN)
+            pendingRespawnReset = true;
         PlayerPose pose = step.player();
         localCentreX = pose.centreX();
         localCentreY = pose.centreY();
@@ -748,6 +758,7 @@ public final class TimeAttackRuntime implements RunHost {
         if (companion != null) {
             companion.drawOverlay(canvas, levelWidth, localCentreX);
         }
+        if (liveRaceMenu != null) liveRaceMenu.draw(canvas);
         int digit = countdownDigit();
         if (digit > 0) {
             openggf.timeattack.mp.MultiplayerHudRenderer.drawCountdown(canvas, digit);

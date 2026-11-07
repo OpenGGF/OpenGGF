@@ -253,6 +253,7 @@ public final class RaceSession implements AutoCloseable {
                     roomConfig(name, setup, fingerprint, policy, op.password, chatMode), me,
                     TrackValidationProfileSource.none())), JdkRaceHostServer::close);
             op.await(server.room().ready(), RaceClient.JOIN_TIMEOUT_MILLIS, ignored -> { });
+            server.room().configureTrackIdentity(setup.kind().name(), setup.competition().mode().name());
             MasterClient registered = null;
             DirectRoomRegistration registration = null;
             if (seekListing) {
@@ -274,8 +275,10 @@ public final class RaceSession implements AutoCloseable {
                             roomConfig(name, setup, fingerprint, policy, op.password, chatMode), me,
                             TrackValidationProfileSource.none()), JdkRaceHostServer::close);
                     op.await(server.room().ready(), RaceClient.JOIN_TIMEOUT_MILLIS, ignored -> { });
+            server.room().configureTrackIdentity(setup.kind().name(), setup.competition().mode().name());
                 }
             }
+            server.room().configureTrackIdentity(setup.kind().name(), setup.competition().mode().name());
             String pin = server.tlsCertificateSha256();
             String invite = "HOST_IP:" + server.port() + "#" + DirectJoinAddress.shareCode(pin, me.fingerprint());
             RaceConnection client;
@@ -555,6 +558,8 @@ public final class RaceSession implements AutoCloseable {
             DirectRoomRegistration registration;
             if (direct) {
                 op.await(server.room().ready(), RaceClient.JOIN_TIMEOUT_MILLIS, ignored -> { });
+            server.room().configureTrackIdentity(setup.kind().name(), setup.competition().mode().name());
+                server.room().configureTrackIdentity(setup.kind().name(), setup.competition().mode().name());
                 registration = registerDirect(op, client, server, setup, fingerprint);
                 created = registration.created();
             } else {
@@ -1314,7 +1319,7 @@ public final class RaceSession implements AutoCloseable {
                     case RANDOMISED -> "RANDOM";
                     case COMPETITION_ITEMS -> "ITEMS";
                     default -> setup.competition().monitors().name();
-                }, setup.competition().cutoffSeconds());
+                }, setup.competition().cutoffSeconds(), setup.competition().startInSeconds());
     }
 
     static String rootMessage(Throwable failure) {
