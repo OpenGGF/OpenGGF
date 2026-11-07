@@ -932,3 +932,38 @@ Keep a correct queued engine head behind the dedicated readiness contract;
 never infer early arming from a held gameplay counter or fit a delay. Cover
 both interruption cuts and qualify the actual native write against the
 frame-end count before publishing timing streams.
+
+
+## Ending and credits loops retain different clocks and transfer owners (2026-11-07)
+
+`Level_FDLoop` (`docs/s1disasm/sonic.asm:3073-3090`) runs demo input, objects,
+sprites and placement, while omitting LZ water features, level events and global
+oscillation. Running the ordinary pre-physics water-slide update here can release
+Sonic during the final fade even when every earlier demo row matches. Object
+passes continue while the level counter stays frozen; the next uncounted initial
+pass must preserve those independently owned clocks until the post-pass clear.
+
+`VBlank_Title` (`docs/s1disasm/sonic.asm:778-787`) services PLCs without Sonic's
+staged-art transfer. A final demo DPLC can remain pending across credits text;
+its next owner may replace it. Do not flush it merely because a counted VBlank
+occurred. `Level_Delay` (`docs/s1disasm/sonic.asm:2957-2967`) similarly supplies
+four level VBlanks without a `RunPLC` tail. New explosion/animal cues belong after
+`Level_ClrCardArt` (`docs/s1disasm/sonic.asm:2979-2989`), following the real palette
+loop, not an extra bootstrap drain or simulated fade.
+
+`ESth_Delay` (`docs/s1disasm/_incObj/87, 88, 89 Ending Sequence Sonic, Emeralds, Logo.asm:276-282`)
+falls straight into `ESth_GotoCredits`
+(`docs/s1disasm/_incObj/87, 88, 89 Ending Sequence Sonic, Emeralds, Logo.asm:285-296`).
+The initial delay decrement occurs in that same object pass. Expiry writes game
+mode but does not delete the logo; the later credits setup clears Object RAM.
+Ordinary unit expectations must reflect that fall-through and lifetime.
+
+Keep native demo-loop clock and water rules behind the supporting production
+capability; generic ending helpers retain their own gameplay order. Open a native
+demo-load scope only when both the ending provider and load profile support it,
+and retain the post-physics return-to-text/completion handoff inside sprite dispatch.
+
+Use the existing initialization timing contract only for independently prepared
+ROM work. Qualify selected clock/RNG-sensitive callbacks before commuting any
+zero-routine service. The [chain audit](../../../docs/architecture/audits/2026-11-06-s1-chain-plc-timing.md)
+records the bounded callback proof, source vectors and rejected approaches.

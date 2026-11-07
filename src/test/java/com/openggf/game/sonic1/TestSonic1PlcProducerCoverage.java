@@ -438,6 +438,15 @@ class TestSonic1PlcProducerCoverage {
         for (int credit = 0; credit < CREDITS_NATIVE_ZONES.length; credit++) {
             setCreditsNumber(credits, credit);
             credits.onReturnToText();
+            // GM_Credits (sonic.asm:3829-3855) clears PLCs, fades out and loads
+            // its font before the AddPLC calls at Cred_SkipObjGfx (sonic.asm:3867-3870).
+            assertTrue(queue.capture().queuedEntries().isEmpty(),
+                    "the outgoing palette routine must precede demo PLC submission");
+            var fade = GameServices.fade();
+            for (int wait = 0; wait < com.openggf.graphics.PaletteFadePresentation.ROM_FADE_FRAMES; wait++)
+                fade.update();
+            assertEquals(Sonic1CreditsManager.State.TEXT_FADE_IN, credits.getState(),
+                    "actual screen/font setup completes before the next demo is queued");
 
             int primary = primaryForNativeZone(CREDITS_NATIVE_ZONES[credit]);
             assertEquals(expectedDescriptors(primary, 1), queue.capture().queuedEntries(),

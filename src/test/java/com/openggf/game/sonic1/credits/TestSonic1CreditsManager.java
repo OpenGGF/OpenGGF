@@ -49,13 +49,19 @@ public class TestSonic1CreditsManager {
     }
 
     @Test
-    public void testFrozenSceneOnlyAdvancesDuringHiddenLoadDelay() throws Exception {
+    public void testHiddenLoadWaitsDoNotExecuteTheScene() throws Exception {
         Sonic1CreditsManager manager = new Sonic1CreditsManager();
 
         setState(manager, Sonic1CreditsManager.State.DEMO_LOAD_DELAY);
-        assertTrue(manager.shouldAdvanceFrozenDemoScene());
+        // Level_Delay (sonic.asm:2957-2967) contains only four VBlank waits and the fade.
+        assertFalse(manager.shouldAdvanceFrozenDemoScene());
+        var owner = new Sonic1EndingProvider();
+        owner.bindCreditsManagerForLifecycleTest(manager);
+        assertEquals(java.util.Optional.of(com.openggf.game.resources.PlcLifecyclePhase.LEVEL_ENTRY_WAIT),
+                owner.plcLifecyclePhaseOverride());
 
         setState(manager, Sonic1CreditsManager.State.DEMO_FADE_IN);
+        assertTrue(owner.plcLifecyclePhaseOverride().isEmpty());
         assertFalse(manager.shouldAdvanceFrozenDemoScene());
 
         setState(manager, Sonic1CreditsManager.State.DEMO_PLAYING);

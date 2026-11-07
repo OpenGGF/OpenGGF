@@ -313,7 +313,7 @@ public final class Sonic2InterlaceVramService implements RuntimeArtCoordinator,
         return switch (phase) {
             case CONTINUE_SCREEN, LEVEL_SELECT, ORDINARY_LEVEL, SPECIAL_STAGE, SPECIAL_STAGE_RESULTS, TWO_PLAYER_RESULTS,
                     CREDITS_TEXT, CREDITS_DEMO, ENDING, POST_CREDITS, NORMAL_PAUSE, LEVEL_TITLE_CARD -> true;
-            case TITLE_SCREEN, PALETTE_FADE, CREDITS_DEMO_FADE, LAG, SPECIAL_STAGE_PAUSE -> false;
+            case TITLE_SCREEN, LEVEL_ENTRY_WAIT, PALETTE_FADE, CREDITS_DEMO_FADE, LAG, SPECIAL_STAGE_PAUSE -> false;
         };
     }
 

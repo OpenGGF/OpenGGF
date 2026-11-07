@@ -6,6 +6,12 @@ import com.openggf.sprites.playable.PlayableMutatorPolicySource;
 public final class SpriteManagerInternalAccess {
     private SpriteManagerInternalAccess() { }
 
+    /** Real physics/history/animation within the initial scope; honors native forced controls. */
+    public static void runNativeUncountedPlayablePass(SpriteManager manager) {
+        requireEngineCaller();
+        manager.runNativeUncountedPlayablePass();
+    }
+
     /** Optional native credits input semantics wrap only the ending owner's gameplay callback. */
     public static void runCreditsDemoGameplay(SpriteManager manager, com.openggf.game.GameModule module,
             com.openggf.sprites.Sprite sprite, Runnable frame) {

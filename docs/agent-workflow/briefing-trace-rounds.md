@@ -71,6 +71,23 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Absolute ROM test properties do not describe every input to UI and creator
+checks. Some catalogue readers scan configured filenames and `roms.directory`,
+whose default is the working directory. A prepared checkout with ROM links and
+a clean worktree without them can produce different outcomes even with identical
+six ROM properties. The S1 chain delivery controls reproduced the suspension
+pixel failure only in the same worktree: empty stock availability opened master
+title onboarding before Resume could consume Enter. Match the catalogue/CWD
+before attributing it, and never create or move ROM links to force a result.
+
+A copied category command running `surefire:test` skips Maven's `validate` phase.
+Create both `${openggf.test.tmpdir}/fork-1` and `fork-2` as the category runner
+does, along with its report directory. Merely creating their shared parent is
+insufficient under `-Ptest-concurrent`: JUnit temp-directory and Mockito agent
+initialization errors can cascade through otherwise valid tests. Preserve such
+an invocation as invalid setup evidence, repair the prerequisite, and rerun the
+same selection before comparing source outcomes.
+
 A native recorder test can inspect a different checkout from the one that was
 built (2026-11-03, S3K loading). Positional parent-directory walks in a nested
 producer worktree selected the wrong consumer root and producer sources. A

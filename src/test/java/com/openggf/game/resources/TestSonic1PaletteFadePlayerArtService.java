@@ -103,16 +103,18 @@ class TestSonic1PaletteFadePlayerArtService {
     }
 
     @Test
-    void theSonic1PolicyChangesOnlyTheProvenPaletteFadeException() {
+    void theSonic1PolicyFollowsReviewedNativeVBlankHandlers() {
         var model = DynamicArtDmaServiceModel.SONIC_1_VBLANK_SONIC_GFX;
         assertFalse(model.services(null));
-        assertFalse(model.services(PlcLifecyclePhase.LAG));
-        assertFalse(model.services(PlcLifecyclePhase.PALETTE_FADE));
-        for (PlcLifecyclePhase phase : PlcLifecyclePhase.values()) {
-            if (phase != PlcLifecyclePhase.LAG && phase != PlcLifecyclePhase.PALETTE_FADE) {
-                assertTrue(model.services(phase), "retain existing phase policy for " + phase);
-            }
-        }
+        // VBlank_Title (sonic.asm:778-788) omits Sonic DMA; it also owns credits
+        // and post-credits screens. VBlank_PaletteFade (sonic.asm:967-970) and
+        // the already-reviewed lag loop retain the staged player buffer too.
+        var withoutSonicDma = java.util.EnumSet.of(PlcLifecyclePhase.LAG,
+                PlcLifecyclePhase.PALETTE_FADE, PlcLifecyclePhase.TITLE_SCREEN,
+                PlcLifecyclePhase.LEVEL_SELECT, PlcLifecyclePhase.CREDITS_TEXT,
+                PlcLifecyclePhase.POST_CREDITS);
+        for (PlcLifecyclePhase phase : PlcLifecyclePhase.values())
+            assertEquals(!withoutSonicDma.contains(phase), model.services(phase), phase.name());
     }
 
     private static PlcFrameLifecycleCoordinator coordinator(

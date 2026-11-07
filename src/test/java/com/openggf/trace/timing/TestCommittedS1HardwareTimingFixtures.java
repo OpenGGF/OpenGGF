@@ -91,4 +91,46 @@ class TestCommittedS1HardwareTimingFixtures {
         assertEquals("sha256:0495d001d7b7d63f2d70ab32c084cb31f69866a3a401d712c7ecc2861dd2206e",
                 edges.getFirst().submissionFingerprint());
     }
+
+    @Test
+    void initializationRetainsItsIndependentlyQualifiedNativeInventory() throws Exception {
+        Path path = RUN.resolve("initialization_timing.jsonl.gz");
+        assertEquals(5402, Files.size(path));
+        assertEquals("37a5daf04174f434c6e2aceabe75489336bb503b436da571e561e6fb60dba3f8", sha256(Files.readAllBytes(path)));
+        byte[] logical;
+        try (var input = new java.util.zip.GZIPInputStream(Files.newInputStream(path))) {
+            logical = input.readAllBytes();
+        }
+        assertEquals(172836, logical.length);
+        assertEquals("d01a12d3115a0148e9110c726a5fc3b9e1bdfef811f465645b2c5208b689036f", sha256(logical));
+        var manifest = com.openggf.trace.TraceRunManifest.load(RUN.resolve("run_manifest.json"));
+        var events = InitializationTimingStreamLoader.loadRun(RUN, manifest, 225101).events();
+        assertEquals(724, events.size());
+        assertEquals(18, events.stream().map(InitializationTimingEvent::loadOrdinal).distinct().count());
+        assertEquals(391, events.stream().filter(e -> e.operation() == InitializationTimingEvent.Operation.HOLD).count());
+        assertEquals(288, events.stream().filter(e -> e.operation() == InitializationTimingEvent.Operation.VINT_0).count());
+        assertEquals(45, events.stream().filter(e -> e.operation() == InitializationTimingEvent.Operation.RESUME).count());
+        assertEquals(214180, events.getFirst().rawFrame());
+        assertEquals(222321, events.getLast().rawFrame());
+    }
+
+    @Test
+    void terminalAdmissionRetainsTheNativeOriginalMovieExtent() throws Exception {
+        var manifest = com.openggf.trace.TraceRunManifest.load(RUN.resolve("run_manifest.json"));
+        var runs = manifest.terminalAdmissionRuns();
+        assertEquals(147, runs.size());
+        assertEquals(10943, runs.stream().mapToInt(Integer::intValue).sum());
+        int lag = 0;
+        for (int i = 1; i < runs.size(); i += 2) lag += runs.get(i);
+        assertEquals(710, lag);
+        byte[] canonical = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsBytes(runs);
+        assertEquals("8b570f6ed2683c0e2fa0276b6987ced79a7e656e5b683c24c6a6d0ea818157d9", sha256(canonical));
+        assertFalse(manifest.terminalRowIsLagged(214158, 225101, 214158));
+        assertThrows(IllegalStateException.class, () -> manifest.terminalRowIsLagged(214158, 225102, 214158));
+    }
+
+    private static String sha256(byte[] bytes) throws Exception {
+        return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
+    }
+
 }

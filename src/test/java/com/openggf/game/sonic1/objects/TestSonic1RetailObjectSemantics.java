@@ -87,10 +87,13 @@ class TestSonic1RetailObjectSemantics {
         logo.setServices(services);
         for (int frame = 0; frame < 15; frame++) logo.update(frame, null);
         int delay = Sonic1RomProfile.isRev00(reader) ? 120 : 300;
-        for (int frame = 0; frame < delay; frame++) logo.update(15 + frame, null);
+        // ESth_Delay (87, 88, 89 Ending Sequence Sonic, Emeralds, Logo.asm:276-282)
+        // falls into ESth_GotoCredits (87, 88, 89 Ending Sequence Sonic, Emeralds, Logo.asm:285-296):
+        // decrement on the arrival pass, then request the mode without deleting this object.
+        for (int frame = 0; frame < delay - 1; frame++) logo.update(15 + frame, null);
         assertEquals(0, transitions[0]);
-        logo.update(15 + delay, null);
+        logo.update(14 + delay, null);
         assertEquals(1, transitions[0]);
-        assertTrue(logo.isDestroyed());
+        assertFalse(logo.isDestroyed(), "GM_Credits clears this slot after the outgoing fade");
     }
 }

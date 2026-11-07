@@ -227,6 +227,41 @@ public class Sonic1 extends Game implements PlayerSpriteArtProvider, AnimatedPat
         return level;
     }
 
+    record EndingLoadSelection(com.openggf.game.internal.NativeLevelLoadInputs inputs) { }
+
+    /** Independently selected resources of GM_Ending's real synchronous setup. */
+    EndingLoadSelection selectEndingLoad(int levelIndex) throws IOException {
+        if (levelIndex != S1_LEVEL_INDEX_ENDING_FLOWERS
+                && levelIndex != S1_LEVEL_INDEX_ENDING_NO_EMERALDS) return null;
+        int act = levelIndex == S1_LEVEL_INDEX_ENDING_FLOWERS ? 0 : 1;
+        // End_LoadData (sonic.asm:3593-3607) uses QuickPLC Ending, the ending
+        // header/layout, GHZ collision and Kos_EndFlowers, before End_LoadSonic.
+        int zone = Sonic1Constants.ZONE_ENDZ;
+        int header = resolve(rom, Sonic1Constants.LEVEL_HEADERS_ADDR) + zone * 16;
+        int plcTable = resolve(rom, Sonic1Constants.ART_LOAD_CUES_ADDR);
+        int plcOffset = plcTable + S1_PLCID_ENDING * 2;
+        int plc = plcTable + rom.read16BitAddr(plcOffset);
+        int entries = PlcParser.parse(rom, plcTable, S1_PLCID_ENDING).entries().size();
+        int layoutEntry = resolve(rom, Sonic1Constants.LEVEL_INDEX_ADDR)
+                + (zone * ACT_SLOTS_PER_ZONE + act) * 6;
+        int[] layouts = getLayoutAddresses(zone, act);
+        var regions = List.of(
+                new com.openggf.game.internal.NativeLevelLoadInputs.RegionSelection(header, 16),
+                new com.openggf.game.internal.NativeLevelLoadInputs.RegionSelection(plcOffset, 2),
+                new com.openggf.game.internal.NativeLevelLoadInputs.RegionSelection(plc, 2 + entries * 6),
+                new com.openggf.game.internal.NativeLevelLoadInputs.RegionSelection(layoutEntry, 6),
+                new com.openggf.game.internal.NativeLevelLoadInputs.RegionSelection(
+                        resolve(rom, Sonic1Constants.OBJ_POS_INDEX_ADDR) + (zone * ACT_SLOTS_PER_ZONE + act) * 4, 4),
+                new com.openggf.game.internal.NativeLevelLoadInputs.RegionSelection(
+                        resolve(rom, Sonic1Constants.START_LOC_ARRAY_ADDR) + (zone * ACT_SLOTS_PER_ZONE + act) * 4, 4),
+                new com.openggf.game.internal.NativeLevelLoadInputs.RegionSelection(
+                        resolve(rom, Sonic1Constants.LEVEL_SIZE_ARRAY_ADDR) + (zone * ACT_SLOTS_PER_ZONE + act) * 12, 12));
+        var choices = List.of(layouts[0], layouts[1],
+                resolve(rom, Sonic1Constants.KOS_END_FLOWERS_ADDR), getCollisionIndexAddr(zone));
+        return new EndingLoadSelection(com.openggf.game.internal.NativeLevelLoadInputs.fromRom(
+                RomByteReader.fromRom(rom), regions, choices));
+    }
+
     @Override
     public int getMusicId(int levelIdx) throws IOException {
         // Sonic 1 level indices are 0x80-based, 3 acts per zone

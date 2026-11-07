@@ -44,6 +44,8 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 
 ## Tools
 
+- [Native S1 ending initialization timing](../../tools/tracechaser/docs/capture-s1.md#ending-initialization-timing): observe actual ending/font/demo loads with fixed opcode cuts and fail-closed callback qualification, then compare independently encoded ROM fingerprints before publication. Reuse a saved native state near later probes and the unedited movie; retain strict full-run comparison. The [S1 chain audit](../architecture/audits/2026-11-06-s1-chain-plc-timing.md) records the bounded clock/RNG proof and limits (2026-11-07).
+
 - [Native S3K initialization timing](../../tools/tracechaser/docs/capture-s3k.md): `--initialization-timing` observes load-phase service and completion, with rejection diagnostics for unsupported interrupted routines and later callbacks; it exports no CPU/slot state. Origin: [2026-11-03 synchronous loading](../architecture/designs/2026-11-03-synchronous-load-vint-accounting.md).
 
 - [Shared-checkout integration](../../tools/git/INTEGRATION.md): `integrate.py`

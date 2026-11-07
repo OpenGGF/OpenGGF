@@ -1365,10 +1365,16 @@ recorder constructs `HardwareTimingEventEngine`.
 
 **Fixture coverage includes one S1 chain and S3K.** The S1 complete-emerald
 chain carries 28 native timing streams with 242 Nemesis arm edges. Its four
-held-head queue axes clear through matching prepared production work, while
-its separate terminal ending-load/art axis remains open. All 68 physics/aux
+held-head queue axes clear through matching prepared production work. Its
+ending/credits continuation also consumes the existing synchronous-initialization
+contract, plus terminal lag admission; the full-chain terminal art comparison
+now matches through actual native cuts and counted ROM waits. All 68 physics/aux
 payloads reproduce the prior native observations exactly; their existing
-compressed files remain byte-identical. Other S1 fixtures without a stream
+compressed files remain byte-identical. The dedicated root initialization
+companion covers 18 loads and 45 phases. Recorder guards reject unreviewed
+initial callback states and reached LZ setup clock reads; ending initial-object
+interrupts remain unsupported. This is neither arbitrary callback scheduling
+nor an exact live-load timing claim. Other S1 fixtures without a stream
 retain live admission. S3K has 244 per-segment streams and four interstitial
 streams; no S2 fixture supplies readiness.
 

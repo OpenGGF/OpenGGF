@@ -124688,3 +124688,80 @@ No existing identity is newly red, no frontier moves earlier and no new clean-ro
 error remains. The gate passes for this four-axis major gain; ending remains
 separate. Recorder publication and the pin update are user-approved after gate.
 [Recorder semantics, controls and publication evidence](../architecture/audits/2026-11-06-s1-chain-plc-timing.md).
+
+## 2026-11-07 — S1 complete-emerald ending and credits continuations
+
+On develop base `c1029d3b4` (pre-task `34b8830b1`), the complete-emerald chain
+now passes its unchanged full assertion through all 34 segments and 10,943
+terminal rows. Queue axes remain zero. The ending tail changes from 10,334
+errors/4,704 warnings, 4,704 native versus 4,784 engine edges, to zero error
+comparisons and 4,704/4,704 edges. The old first-edge mismatch was engine mapping
+32 at movie 214203 versus native mapping 30 at 214287. Movie frames here are
+evidence only; the passing assertion does not establish zero warnings.
+
+`GM_Ending`, credits font setup and credits demo loads now prepare real resumable
+production work through `NativeLevelLoadController`. The existing initialization
+contract releases matching phases and observed zero-routine interrupts; ordinary
+live callers select the same production continuations with immediate readiness.
+Ending actor ownership, uncounted initial assembly, `VBlank_Title` DMA,
+`Level_DelayLoop` PLC service and `Level_FDLoop` clock/water ownership follow their
+ROM owners. No fitted delay, new timing kind or trace assertion change is used.
+The user-approved ordinary logo unit correction records immediate `ESth_Delay`
+fall-through and object survival until the credits screen clears Object RAM.
+
+Canonical native producer `161e45ac` records the original unedited movie. All 68
+stored physics/aux payloads and all 28 queue streams remain byte-identical. Only
+34 recording dates, terminal admission census and the initialization companion
+are added/updated. The companion has 724 events across 18 production loads;
+the terminal census has 147 runs/10,943 rows, including 710 lag rows. Strict v5
+validation passes. Native source-only tests pass 185 cases. Broader native S1
+units pass 142 cases with the same 40 literal first-line failures and two skips
+as the qualified producer baseline; no native all-green claim is made.
+
+Queued `-Ptrace-replay -Dtest=TestS1CompleteEmeraldRunChain#ghz1ToScrapBrainAcrossEverySpecialStage test`
+passes. The complete 45-class S1 selection passes all 71 cases with zero skips.
+All other 70 testcase identities/outcomes are exact to the pre-task baseline.
+All 92 comparison report identities remain: 89 bodies are exact to the queue
+fix delivery; three only lose the terminal-art failure string. Relative to the
+pre-task baseline, eight queue reports and these three terminal reports improve;
+the other 81 report bodies are exact.
+
+Focused ordinary checks and the final change-based smoke gate are recorded in
+the [S1 chain audit](../architecture/audits/2026-11-06-s1-chain-plc-timing.md).
+Producer publication and the new develop pin remain reserved until that gate
+passes and the user approves this new producer commit; earlier approval named
+only `d54cc514`.
+
+The initial ending smoke on `637c23624` failed: 37,863 cases, 39 failures,
+11 errors and 49 allowed skips. Same-selection controls attribute 28 inherited
+occurrences and 22 new ones; that candidate was not delivered. Repairs preserve
+generic demo callers, optional admission inputs, single title-request ownership
+and structured initialization cleanup. Ordinary DMA/font unit defects follow
+the cited ROM handlers. The restored post-demo handoff is covered for native and
+generic callers. The repeated S1 profile passes 71/71 with all 92 report bodies
+exact to the earlier green candidate. Final smoke qualification is pending;
+see the audit for focused results and the CWD/catalogue attribution limit.
+
+Final repaired candidate `90105d1df` qualifies the delivery gate: all 4,481
+classes / 91 ordinary batches plus guards complete; 37,871 cases, 28 inherited
+failures, zero errors, 49 allowed skips and zero unexplained skips. All 836 guards
+pass. The raw runner verdict remains FAILED because it includes inherited
+failures. Full identity/type/assertion attribution finds no new or worse result:
+26 literal messages, two differences only in Java Set iteration order. All
+91 batch selections match the preceding same-selection controls. The unchanged
+S1 chain/profile remains 71 PASS / zero skips with all 92 comparison bodies exact
+to the earlier green candidate. See the audit for commands, source and limits.
+Diagnostics were archived, reviewed and officially acknowledged. Producer161
+and the ending pin remain local pending the reserved category-3 decision.
+
+The user approved producer `161e45ac` publication and the ending pin delivery.
+Fresh fetches find no commits beyond the qualified gate base `c1029d3b4`;
+`f2ad93c14` / PR #267 was already included. The existing smoke attribution is
+reused explicitly. Main-checkout integration preserves all user reference state.
+A clean build on integrated `c6c45a6d9` passes, followed by the original chain
+(zero skips, 29 report bodies exact) and the full S1 profile (71 PASS, zero skips,
+all 92 report bodies exact to the qualified candidate). TraceChaser remote main
+is verified at `161e45ac` before the develop push. This qualification changes
+prose only; all five axes are clear and the original chain reaches EOF. Final
+remote verification and accounted worktree cleanup are recorded in the task
+artifact; the S1 chain loop stops after delivery.

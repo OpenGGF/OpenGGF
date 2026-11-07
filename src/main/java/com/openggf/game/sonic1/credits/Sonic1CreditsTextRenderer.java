@@ -39,11 +39,11 @@ public class Sonic1CreditsTextRenderer {
      * @param dataLoader the title screen data loader (must have loaded credit text patterns)
      */
     public void initialize(Sonic1TitleScreenDataLoader dataLoader) {
-        if (initialized) {
-            return;
-        }
-
-        mappingFrames = Sonic1CreditsMappings.createFrames();
+        try {
+            var reader = com.openggf.data.RomByteReader.fromRom(GameServices.rom().getRom());
+            mappingFrames = com.openggf.game.sonic1.S1SpriteDataLoader.loadMappingFrames(reader,
+                    com.openggf.game.sonic1.Sonic1RomProfile.resolve(reader, Sonic1CreditsScreenLoad.MAP_CREDITS), 9);
+        } catch (java.io.IOException failure) { throw new java.io.UncheckedIOException(failure); }
 
         if (dataLoader == null || dataLoader.getCreditTextPatterns() == null
                 || dataLoader.getCreditTextPatterns().length == 0) {
@@ -60,14 +60,9 @@ public class Sonic1CreditsTextRenderer {
         renderer = new PatternSpriteRenderer(sheet);
         dataLoaderRef = dataLoader;
 
-        GraphicsManager gm = GameServices.graphics();
-        // Reset cache flags so patterns and palette are re-uploaded to GPU
-        // (zone palettes will have overwritten the GPU palette since title screen)
-        dataLoader.resetCache();
-        dataLoader.cacheCreditTextToGpu(gm);
-        dataLoader.cachePalettesToGpu(gm);
-        renderer.ensurePatternsCached(gm, Sonic1TitleScreenDataLoader.CREDIT_TEXT_PATTERN_BASE);
-
+        // CPU preparation is real initialization work. GPU publication is
+        // deferred until the scene draws after its load and reveal boundary.
+        gpuDirty = true;
         initialized = true;
         LOGGER.info("Credits text renderer initialized with " + mappingFrames.size() + " frames");
     }
@@ -78,7 +73,7 @@ public class Sonic1CreditsTextRenderer {
      * @param creditsNum credit index (0-8)
      */
     public void draw(int creditsNum) {
-        if (!initialized || renderer == null || !renderer.isReady()) {
+        if (!initialized || renderer == null) {
             return;
         }
         if (creditsNum < 0 || creditsNum >= mappingFrames.size()) {
@@ -91,6 +86,7 @@ public class Sonic1CreditsTextRenderer {
             dataLoaderRef.resetCache();
             dataLoaderRef.cacheCreditTextToGpu(gm);
             dataLoaderRef.cachePalettesToGpu(gm);
+            renderer.ensurePatternsCached(gm, Sonic1TitleScreenDataLoader.CREDIT_TEXT_PATTERN_BASE);
             gpuDirty = false;
         }
 

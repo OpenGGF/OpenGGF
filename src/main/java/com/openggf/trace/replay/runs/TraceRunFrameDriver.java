@@ -44,7 +44,15 @@ public final class TraceRunFrameDriver {
             boolean terminalSegmentRow,
             boolean deferBoundaryCommitAfterRow,
             boolean commitDeferredBoundaryAfterClosure,
-            boolean observedVblankCounterAdvance) {
+            boolean observedVblankCounterAdvance,
+            boolean observedLagRow) {
+        public Step(Disposition disposition, int movieRow, boolean terminalSegmentRow,
+                boolean deferBoundaryCommitAfterRow, boolean commitDeferredBoundaryAfterClosure,
+                boolean observedVblankCounterAdvance) {
+            this(disposition, movieRow, terminalSegmentRow, deferBoundaryCommitAfterRow,
+                    commitDeferredBoundaryAfterClosure, observedVblankCounterAdvance, false);
+        }
+
         public Step(
                 Disposition disposition,
                 int movieRow,
@@ -141,6 +149,10 @@ public final class TraceRunFrameDriver {
 
     public Disposition currentDisposition() {
         return currentStep != null ? currentStep.disposition() : null;
+    }
+
+    public boolean currentRowIsObservedLag() {
+        return currentStep != null && currentStep.observedLagRow();
     }
 
     public boolean defersBoundaryCommitAfterCurrentRow() {
