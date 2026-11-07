@@ -37,7 +37,13 @@ public record GameplayRunPolicy(boolean specialStageEntry,
                                 boolean editorEntry,
                                 DeathRestart deathRestart,
                                 boolean livesCounter,
-                                boolean zoneIntros) {
+                                boolean zoneIntros, com.openggf.mods.run.MonitorRule monitors) {
+    public GameplayRunPolicy(boolean specialStageEntry, boolean bonusStageEntry, ActCompletion actCompletion, boolean liveRewind, boolean editorEntry, DeathRestart deathRestart, boolean livesCounter, boolean zoneIntros) {
+        this(specialStageEntry, bonusStageEntry, actCompletion, liveRewind, editorEntry, deathRestart, livesCounter, zoneIntros, com.openggf.mods.run.MonitorRule.NORMAL);
+    }
+    public static GameplayRunPolicy competition() {
+        return new GameplayRunPolicy(false, false, ActCompletion.RETURN_TO_HOST, false, false, DeathRestart.FAST_FROM_CHECKPOINT, false, false, com.openggf.mods.run.MonitorRule.NORMAL);
+    }
 
     /** What the engine does when a run's act is complete. */
     @ModApi
@@ -63,7 +69,8 @@ public record GameplayRunPolicy(boolean specialStageEntry,
          * {@link #FAST_RESTART_SKIP_FRAMES} steps), then the act reloads at once from its start,
          * with star-post progress cleared and no title card.
          */
-        FAST_FROM_START
+        FAST_FROM_START,
+        FAST_FROM_CHECKPOINT
     }
 
     /**
@@ -73,6 +80,7 @@ public record GameplayRunPolicy(boolean specialStageEntry,
     public static final int FAST_RESTART_SKIP_FRAMES = 30;
 
     public GameplayRunPolicy {
+        Objects.requireNonNull(monitors, "monitors");
         Objects.requireNonNull(actCompletion, "actCompletion");
         Objects.requireNonNull(deathRestart, "deathRestart");
     }
@@ -98,7 +106,7 @@ public record GameplayRunPolicy(boolean specialStageEntry,
      */
     public GameplayRunPolicy withFastRestarts() {
         return new GameplayRunPolicy(specialStageEntry, bonusStageEntry, actCompletion, liveRewind,
-                editorEntry, DeathRestart.FAST_FROM_START, false, zoneIntros);
+                editorEntry, DeathRestart.FAST_FROM_START, false, zoneIntros, monitors);
     }
 
     /**
@@ -107,7 +115,7 @@ public record GameplayRunPolicy(boolean specialStageEntry,
      */
     public GameplayRunPolicy withoutZoneIntros() {
         return new GameplayRunPolicy(specialStageEntry, bonusStageEntry, actCompletion, liveRewind,
-                editorEntry, deathRestart, livesCounter, false);
+                editorEntry, deathRestart, livesCounter, false, monitors);
     }
 
     /** True when a death reloads the act at once instead of following the shipped game. */

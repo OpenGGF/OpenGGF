@@ -67,6 +67,20 @@ class TestProtocolFuzzing {
         }
     }
 
+    @Test
+    void competitionShapeMutationsStaySafe() {
+        var codec = new ControlJsonCodec();
+        Random random = new Random(SEED);
+        for (var shape : TestControlCodecCompetition.shapes()) {
+            String valid = codec.encode(null, shape);
+            for (int i=0; i<500; i++) {
+                char[] chars = valid.toCharArray();
+                chars[random.nextInt(chars.length)] = (char) random.nextInt(128);
+                assertSafe(() -> codec.decode(new String(chars)));
+            }
+        }
+    }
+
     private static void assertBinarySafe(byte[] bytes) {
         assertSafe(() -> GhostPackets.decodeFrames(bytes));
         assertSafe(() -> GhostPackets.decodeAggregate(bytes));
