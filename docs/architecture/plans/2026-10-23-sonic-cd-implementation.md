@@ -1,5 +1,20 @@
 # Implement Sonic CD with complete regional parity
 
+## 7 November 2026 — original R31 music selection
+
+The finite programme wrapper authenticates the actual R31A58-byte consumer and
+complete28-byte command table from its same original aggregate. The four-field
+selector preserves raw zone/act, period bit7 masking, time-attack gating,
+conditional full-byte goodFuture addition and wrapped native indexing; the
+first unowned selected byte has a typed address fault. It returns command data
+only. One fixed package-private borrow leaves all63 public descriptors,15 public
+asset methods and existing caches unchanged; exact removal recovers the base.
+
+R68 qualifies19cases with unchanged source and0failures/errors/skips:10new
+actual-source/arithmetic/bounds/identity cases plus9 existing aggregate cases.
+Root compared the bounded consumer and source/helper inverse. This creates no
+SubCPU acknowledgement, audio output, live loader, Frame or World authority.
+
 ## 7 November 2026 — R31 common metadata and original system source
 
 The R31 wrapper binds only its existing HUD4, Monitor20 and Title9 counted

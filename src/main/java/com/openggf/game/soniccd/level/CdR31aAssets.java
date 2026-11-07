@@ -156,6 +156,14 @@ public final class CdR31aAssets {
                 view(Asset.COL_ANGLE_MAP).copy(),view(Asset.COL_HEIGHT_MAP).copy(),view(Asset.COL_WIDTH_MAP).copy());
         return terrain;
     }
+    // BEGIN fixed R31 programme music source borrow, outside the63-view public inventory.
+    record ProgrammeMusicSource(CdAssetBytes consumer,CdAssetBytes commands) { }
+    ProgrammeMusicSource programmeMusicSource() {
+        requireAuthenticated();
+        return new ProgrammeMusicSource(CdAssetBytes.copyOf(image.readFile(0x1A76,58)),
+                CdAssetBytes.copyOf(image.readFile(0x1AB0,28)));
+    }
+    // END fixed R31 programme music source borrow.
     /** Same-package immutable source custody, not a public arbitrary-address reader. */
     CdMmdImage originalImage(){return image;}
     void requireAuthenticated() {

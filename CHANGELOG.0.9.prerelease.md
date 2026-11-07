@@ -354,7 +354,10 @@ matching area heading; see the
   before the same CUE closes, with legacy omissions and public source APIs intact.
   Its finite loader source/initial-variable selection remains distinct from R1, preserving
   matching-instance reuse and reached UNKNOWN prefixes; PCM driver execution,
-  output and live loading admission stay separate. Collision Chaos gameplay, broader act coverage
+  output and live loading admission stay separate. Original R31 music selection
+  now consumes its own authenticated28-byte table and complete58-byte consumer,
+  retaining raw period/time-attack/future and wrapped index semantics as command
+  data only. Collision Chaos gameplay, broader act coverage
   and regional parity remain separate.
   CD player headless boot loads the fixed
   roster before rewind controller creation while keeping no-device audio before
