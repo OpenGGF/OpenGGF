@@ -1,5 +1,21 @@
 # Implement Sonic CD with complete regional parity
 
+## 7 November 2026 — same-CUE R3PCM stock custody
+
+Stock USA preparation now retains the original R3PCM file after its existing
+initial-save factory, before the same authenticated CUE closes. The internal
+constructor10 appends one optional typed source; every constructor3..9 explicitly
+omits it. Source/release/disc/original-domain relations are checked without a new
+host path, public method, late media reopen, driver installation or World grant.
+JP/EU absence, existing data identity and earlier factory/error order stay exact.
+
+R64 passes84cases on unchanged source,0failures/errors/skips:10new custody cases
+and74existing stock/initial-source cases, original USA/JP/EU media and Java25.
+Only the two complete constructor inventories migrate3..9→3..10; all earlier
+algorithm bodies and source omissions remain unchanged. Root reviewed the small
+production diff and exact inverse. Source availability is now ready for a future
+real R31 loading caller; it does not supply that caller or PCM/audio completion.
+
 ## 7 November 2026 — selected-slot Module pre-level ownership
 
 An explicit selected-slot factory now prepares a fresh Module from real strict

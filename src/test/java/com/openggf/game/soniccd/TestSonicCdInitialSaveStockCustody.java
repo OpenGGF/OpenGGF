@@ -149,7 +149,7 @@ class TestSonicCdInitialSaveStockCustody {
         assertTrue(Modifier.isPrivate(field.getModifiers()));
         assertTrue(Modifier.isFinal(field.getModifiers()));
         assertEquals(borrow.getGenericReturnType(), field.getGenericType());
-        assertEquals(List.of(3, 4, 5, 6, 7, 8, 9), Arrays.stream(CdGameDataSource.class.getDeclaredConstructors()).map(v -> v.getParameterCount()).sorted().toList());
+        assertEquals(List.of(3, 4, 5, 6, 7, 8, 9, 10), Arrays.stream(CdGameDataSource.class.getDeclaredConstructors()).map(v -> v.getParameterCount()).sorted().toList());
         assertTrue(Arrays.stream(CdGameDataSource.class.getDeclaredConstructors()).noneMatch(v -> Modifier.isPublic(v.getModifiers())));
         assertEquals(List.of("act2Assets", "act2PastAssets", "act3FutureAssets", "assets", "fmSoundAssets", "identity", "openAsset", "r31aAssets", "release", "rom", "timeWarpPrograms"),
                 Arrays.stream(CdGameDataSource.class.getDeclaredMethods()).filter(v -> Modifier.isPublic(v.getModifiers())).map(v -> v.getName()).sorted().toList());

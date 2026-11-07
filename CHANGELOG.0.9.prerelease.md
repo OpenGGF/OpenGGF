@@ -343,8 +343,9 @@ matching area heading; see the
   loading without a DEV seed or Frame. Native Title and live loading remain
   separate; initialization-local buffer
   commands are distinguished from later IPX progress calls. Data custody
-  grants no next-zone gameplay. The exact original-USA R3PCM file and finite
-  loader source/initial-variable selection now remain distinct from R1, preserving
+  grants no next-zone gameplay. The exact original-USA R3PCM file is retained
+  before the same CUE closes, with legacy omissions and public source APIs intact.
+  Its finite loader source/initial-variable selection remains distinct from R1, preserving
   matching-instance reuse and reached UNKNOWN prefixes; PCM driver execution,
   output and live loading admission stay separate. Collision Chaos gameplay, broader act coverage
   and regional parity remain separate.

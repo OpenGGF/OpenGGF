@@ -12,6 +12,7 @@ import com.openggf.game.soniccd.level.CdR31aAssets;
 import com.openggf.game.soniccd.media.CdProgramAssets;
 import com.openggf.game.soniccd.media.CdTimeWarpPrograms;
 import com.openggf.game.soniccd.media.CdInitialSaveAssets;
+import com.openggf.game.soniccd.media.CdR3PcmSource;
 import com.openggf.game.soniccd.release.CdRetailRelease;
 import com.openggf.game.soniccd.release.CdRetailReleases;
 
@@ -83,7 +84,11 @@ public final class CdStockLaunch {
             // This reads only source media: no user profile/default creation, platform save I/O or invocation.
             Optional<CdInitialSaveAssets> initialSave = release.variant() == CdReleaseVariant.USA
                     ? Optional.of(CdInitialSaveAssets.fromPrograms(media)) : Optional.empty();
-            return new CdGameDataSource(release, assets, fmSoundAssets, timeWarpPrograms, act2Assets, act2Past, act3Future, r31a, initialSave);
+            // Retain R3PCM from THIS same still-open authenticated CUE, after all prior factories.
+            // This is exact inert source custody, not PCM installation/driver/output or R31 admission.
+            Optional<CdR3PcmSource> r3PcmSource = release.variant() == CdReleaseVariant.USA
+                    ? Optional.of(CdR3PcmSource.fromPrograms(media)) : Optional.empty();
+            return new CdGameDataSource(release, assets, fmSoundAssets, timeWarpPrograms, act2Assets, act2Past, act3Future, r31a, initialSave, r3PcmSource);
         }
     }
 
