@@ -1,5 +1,25 @@
 # Implement Sonic CD with complete regional parity
 
+## 7 November 2026 — explicit nested JUnit attribution
+
+The packet runner now accepts an optional exact report-group declaration,
+separating Maven root selectors from nested Surefire suites/counts/actual owners.
+Zero parent reports require declared positive descendant work. Actual qualified
+case identities stay distinct; global duplicates, unknown reports/owners,
+stale/missing/unrewritten reports and mismatched counts/environment reject.
+Flat defaults and the flat comparison interface remain unchanged. Bounded
+exports/diagnostics retain the topology and original failed/incomplete verdicts;
+no receipt repair, discovery, pass cache or execution authority is introduced.
+
+Installed Python verification passes441cases with0failures/errors/skips, including
+all380 baseline controls plus61 new cases. Independent bounded review finds no
+P1/P2 after14 fresh adversarial probes and matched flat-output bytes. Both skill
+validators pass; the canonical skill generated its identical Claude mirror.
+R66 independently exercises the real nested run path with135 actual Java cases,
+unchanged source and no failures/errors/skips. Original R62 remains incomplete
+in its retained wrapper receipt and separately qualified by its explicit Root
+XML reconciliation; the new feature does not rewrite that history.
+
 ## 7 November 2026 — original Collision Chaos background components
 
 The shared background drawing kernel now has two explicit R31 bindings over the

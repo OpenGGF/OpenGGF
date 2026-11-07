@@ -397,7 +397,10 @@ matching area heading; see the
   structured result, retaining complete source and fresh JUnit verification.
   Explicit JUnit evidence export saves complete bounded case identities, outcomes,
   environment and report hashes to a new external artifact, with XML observation
-  kept separate from command completion and tested-source attribution.
+  kept separate from command completion and tested-source attribution. Optional
+  exact nested-report groups retain actual ancestor/child case identities,
+  validate empty-parent topology and keep bounded diagnostics consistent while
+  preserving strict flat defaults and original failed/incomplete receipts.
   Optional terminal run receipts retain the full source-bound result and exact
   cases before compact output, including failed or incomplete checks. They use
   the same bounded exclusive external writer and never delete reports or act

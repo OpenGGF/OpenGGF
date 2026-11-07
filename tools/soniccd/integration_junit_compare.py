@@ -68,17 +68,19 @@ def _directories(root):
 
 
 class _Evidence:
-    def __init__(self, root, classes, since, properties, *, require_environment=True):
+    def __init__(self, root, classes, since, properties, *, require_environment=True, report_groups=None):
         self.root, self.head = packet.worktree(root)
         self.directories = _directories(self.root)
         self.inventory = _inventory(self.root)
         self.saved = []
         self.bytes = self.cases = 0
-        expected = {f'TEST-{name}.xml' for name in classes}
+        nested = {} if report_groups is None else dict(report_groups=report_groups)
+        inventory = packet.report_inventory(classes, report_groups) if report_groups is not None else classes
+        expected = {f'TEST-{name}.xml' for name in inventory}
         selected = [info for name, info in self.inventory.items() if name in expected]
         packet.require(sum(info[2] for info in selected) <= MAX_SELECTED_BYTES,
                        'Selected XML exceeds per-side byte limit')
-        self.summary = packet.junit_summary(self.root, classes, since, properties, _read_report=self.read)
+        self.summary = packet.junit_summary(self.root, classes, since, properties, _read_report=self.read, **nested)
         # Run receipts retain the runner's existing failed environment verdict and cases.
         # Standalone JUnit exports/comparisons keep their strict rejection default.
         if require_environment:

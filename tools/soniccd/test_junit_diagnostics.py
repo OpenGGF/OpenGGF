@@ -440,5 +440,167 @@ class DiagnosticsTests(unittest.TestCase):
         self.assertEqual(before, after)
 
 
+class NestedDiagnosticsTests(unittest.TestCase):
+    """Actual-owner/topology projection; owned synthetic receipt/XML only."""
+    setUp = DiagnosticsTests.setUp
+    save_receipt = DiagnosticsTests.save_receipt
+    invoke = DiagnosticsTests.invoke
+    rejected = DiagnosticsTests.rejected
+
+    def fixture(self, outcome='passed'):
+        DiagnosticsTests.fixture(self, outcome='passed')
+        self.child = CLASS+'$Actual'
+        self.topology = {CLASS:{CLASS:dict(expected_tests=0,owners=[CLASS]),
+                               self.child:dict(expected_tests=2,owners=[CLASS,self.child])}}
+        for owner, cases in ((CLASS,()),(self.child,((CLASS,'parent()'),(self.child,'child()')))):
+            suite=ET.Element('testsuite',name=owner,tests=str(len(cases)),
+                failures=str(int(bool(cases) and outcome=='failure')), errors=str(int(bool(cases) and outcome=='error')),
+                skipped=str(int(bool(cases) and outcome=='skipped')))
+            props=ET.SubElement(suite,'properties')
+            for key,value in {'java.version':'25.0.1','user.dir':str(self.root),'openggf.headless.gl':'surfaceless-egl'}.items():
+                ET.SubElement(props,'property',name=key,value=value)
+            for index,(actual,label) in enumerate(cases):
+                case=ET.SubElement(suite,'testcase',classname=actual,name=label)
+                if index==0 and outcome!='passed': ET.SubElement(case,outcome,message='exact failure',type='example.Cause')
+                ET.SubElement(case,'system-out').text='OBS actual owner\n'
+            ET.SubElement(suite,'system-out').text='OBS '+owner+'\n'
+            ET.ElementTree(suite).write(self.reports/('TEST-'+owner+'.xml'),encoding='utf-8',xml_declaration=True)
+        with mock.patch.object(diagnostics.packet,'worktree',return_value=(self.root,'1'*40)):
+            summary=diagnostics.packet.junit_summary(self.root,[CLASS],1,{'openggf.headless.gl':'surfaceless-egl'},report_groups=self.topology)
+        run=self.document['run']
+        run.update(report_groups=copy.deepcopy(self.topology), expected_tests={CLASS:2}, junit=summary,
+                   status='passed' if summary['clean'] else 'failed',clean=summary['clean'],maven_returncode=0 if summary['clean'] else 1)
+        self.save_receipt()
+        return summary
+
+    def inspect(self, name=None, **kwargs):
+        return json.loads(diagnostics.inspect_diagnostics(str(self.evidence),name or self.child,**kwargs))
+
+    def mutate(self, action):
+        self.fixture(); action(self.document['run']); self.save_receipt()
+
+    def reject_child(self):
+        with self.assertRaises((diagnostics.packet.PacketError,ValueError,TypeError,KeyError)):
+            self.inspect()
+
+    def test_nested_child_actual_identities_in_bounded_records(self):
+        self.fixture(); result=self.inspect()
+        identities=[r['case_identity'] for r in result['diagnostics']['records'] if r['scope']=='case']
+        self.assertEqual(identities,[CLASS+'#parent()',self.child+'#child()'])
+        self.assertEqual(result['expected_tests'],2); self.assertEqual(result['expected_root_tests'],2)
+        self.assertEqual(result['root_selector'],CLASS); self.assertEqual(result['counts_scope'],'selected report suite')
+
+    def test_empty_parent_permitted_with_explicit_actual_descendant_receipt_work(self):
+        self.fixture(); result=self.inspect(CLASS)
+        self.assertEqual(result['counts']['tests'],0);self.assertEqual(result['expected_tests'],0)
+        self.assertEqual(result['expected_root_tests'],2);self.assertTrue(result['run_clean'])
+
+    def test_failed_skip_error_and_nonzero_verdicts_are_retained(self):
+        for status in ('failure','error','skipped'):
+            self.fixture(status); result=self.inspect()
+            self.assertEqual(result['run_status'],'failed'); self.assertFalse(result['run_clean'])
+        self.fixture(); self.document['run'].update(status='failed',clean=False,maven_returncode=1);self.save_receipt()
+        self.assertEqual(self.inspect()['maven_returncode'],1)
+
+    def test_multilevel_ancestors_and_same_label_have_distinct_actual_owners(self):
+        self.fixture()
+        run=self.document['run'];deep=self.child+'$Deep'
+        # Add a positive root case (one report may carry an ancestor's invocation elsewhere).
+        run['report_groups'][CLASS][deep]=dict(expected_tests=1,owners=[CLASS,self.child,deep])
+        run['expected_tests'][CLASS]=3
+        group=copy.deepcopy(next(g for g in run['junit']['classes'] if g['name']==self.child))
+        group.update(name=deep,cases=[dict(identity=deep+'#parent()',status='passed',message='',type='')],counts=dict(tests=1,failures=0,errors=0,skipped=0))
+        run['junit']['classes'].append(group);run['junit']['tests']=3
+        run['junit']['report_groups']=copy.deepcopy(run['report_groups']);self.save_receipt()
+        self.assertEqual(self.inspect()['run_counts']['tests'],3)
+        # The unselected synthetic deep XML is deliberately absent: no sibling scan/read.
+        self.assertFalse((self.reports/('TEST-'+deep+'.xml')).exists())
+
+    def test_malformed_topology_missing_ancestor_foreign_and_sibling_owners_reject(self):
+        for kind in ('missing-ancestor','foreign','sibling','zero-leaf','unknown-field','boolean'):
+            with self.subTest(kind=kind):
+                self.fixture();run=self.document['run'];group=run['report_groups'][CLASS]
+                if kind=='missing-ancestor':group[self.child+'$Deep']=group.pop(self.child)
+                elif kind=='foreign':group[self.child]['owners']=['foreign.Owner']
+                elif kind=='sibling':group[self.child]['owners']=[CLASS+'$Sibling']
+                elif kind=='zero-leaf':group[self.child]['expected_tests']=0
+                elif kind=='unknown-field':group[self.child]['wildcard']=True
+                else:group[CLASS]['expected_tests']=False
+                run['junit']['report_groups']=copy.deepcopy(run['report_groups']);self.save_receipt();self.reject_child()
+
+    def test_topology_must_match_run_and_junit_declarations(self):
+        self.fixture();self.document['run']['junit']['report_groups'][CLASS][self.child]['owners']=[self.child]
+        self.save_receipt();self.reject_child()
+        self.fixture();self.document['run'].pop('report_groups');self.save_receipt();self.reject_child()
+        self.fixture();self.document['run']['junit']['report_groups'][CLASS][CLASS]['expected_tests']=False
+        self.save_receipt();self.reject_child()
+
+    def test_receipt_foreign_owner_alias_and_provenance_reject(self):
+        for kind in ('foreign','simple','sibling','relabel','provenance'):
+            self.fixture();group=next(g for g in self.document['run']['junit']['classes'] if g['name']==self.child)
+            case=group['cases'][0]
+            if kind=='foreign':case['identity']='foreign.Owner#parent()'
+            elif kind=='simple':case['identity']='TestObserver#parent()'
+            elif kind=='sibling':case['identity']=CLASS+'$Sibling#parent()'
+            elif kind=='relabel':case['identity']=self.child+'#parent()';case.pop('reported_classname')
+            else:case['reported_classname']=self.child
+            self.save_receipt();self.reject_child()
+
+    def test_duplicate_identity_across_selected_and_unselected_reports_reject(self):
+        self.fixture();run=self.document['run'];groups=run['junit']['classes']
+        parent=next(g for g in groups if g['name']==CLASS);child=next(g for g in groups if g['name']==self.child)
+        parent['cases']=[dict(identity=CLASS+'#parent()',status='passed',message='',type='')]
+        parent['counts']['tests']=1;run['expected_tests'][CLASS]=3;run['junit']['tests']=3
+        run['report_groups'][CLASS][CLASS]['expected_tests']=1
+        run['junit']['report_groups']=copy.deepcopy(run['report_groups'])
+        self.save_receipt();self.reject_child()
+
+    def test_root_suite_aggregate_and_unselected_environment_contradictions_reject(self):
+        for kind in ('root','suite','aggregate','environment'):
+            self.fixture();run=self.document['run'];parent=next(g for g in run['junit']['classes'] if g['name']==CLASS)
+            if kind=='root':run['expected_tests'][CLASS]=3
+            elif kind=='suite':parent['counts']['tests']=1
+            elif kind=='aggregate':run['junit']['tests']=3
+            else:parent['properties']['user.dir']='/wrong'
+            self.save_receipt();self.reject_child()
+
+    def test_honest_environment_failure_stays_failed(self):
+        self.fixture();run=self.document['run'];parent=next(g for g in run['junit']['classes'] if g['name']==CLASS)
+        parent['properties']['user.dir']='/wrong';run['junit'].update(clean=False,issues=[CLASS+': wrong user.dir'])
+        run.update(status='failed',clean=False);self.save_receipt()
+        self.assertEqual(self.inspect()['run_status'],'failed')
+
+    def test_source_hash_inequality_and_old_incomplete_reject_despite_later_success(self):
+        for field in ('source','status','terminal'):
+            self.fixture();run=self.document['run']
+            if field=='source':run['source_after']['fingerprint']='b'*64
+            elif field=='status':run.update(status='incomplete',clean=False,evidence_error='old missing child')
+            else:run.pop('completed_at')
+            self.save_receipt();before=self.evidence.read_bytes();self.reject_child();self.assertEqual(self.evidence.read_bytes(),before)
+
+    def test_literal_method_expectations_remain_strict(self):
+        self.fixture();run=self.document['run'];run.update(methods={CLASS:['selected']},expected_cases={CLASS:[CLASS+'#parent()',self.child+'#child()']})
+        self.save_receipt();self.assertEqual(self.inspect()['run_status'],'passed')
+        run['expected_cases'][CLASS][1]=self.child+'#other()';self.save_receipt();self.reject_child()
+
+    def test_selected_hash_staleness_and_foreign_xml_reject(self):
+        self.fixture();path=self.reports/('TEST-'+self.child+'.xml');path.write_bytes(path.read_bytes()+b'\n');self.reject_child()
+        self.fixture();group=next(g for g in self.document['run']['junit']['classes'] if g['name']==self.child)
+        self.document['run']['junit']['since_ns']=group['mtime_ns']+1;self.save_receipt();self.reject_child()
+        self.fixture();suite=ET.parse(path);suite.getroot().find('testcase').set('classname','foreign.Owner');suite.write(path)
+        group=next(g for g in self.document['run']['junit']['classes'] if g['name']==self.child);raw=path.read_bytes()
+        group.update(xml_sha256=hashlib.sha256(raw).hexdigest(),xml_bytes=len(raw),mtime_ns=path.stat().st_mtime_ns)
+        self.save_receipt();self.reject_child()
+
+    def test_no_process_or_discovery_and_inputs_preserved(self):
+        self.fixture();before={p:(p.read_bytes(),p.stat().st_mode,p.stat().st_mtime_ns) for p in self.base.rglob('*') if p.is_file()}
+        with mock.patch('subprocess.Popen',side_effect=AssertionError('no process')), \
+             mock.patch.object(diagnostics.strict,'_inventory',side_effect=AssertionError('no discovery')), \
+             mock.patch.object(diagnostics.packet,'worktree',side_effect=AssertionError('no source/Git')):
+            result=self.inspect(max_output_bytes=4096)
+        self.assertLessEqual(result['output_bytes'],4096)
+        self.assertEqual(before,{p:(p.read_bytes(),p.stat().st_mode,p.stat().st_mtime_ns) for p in self.base.rglob('*') if p.is_file()})
+
+
 if __name__ == '__main__':
     unittest.main()

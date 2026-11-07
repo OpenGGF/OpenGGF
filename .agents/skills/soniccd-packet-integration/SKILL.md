@@ -144,6 +144,72 @@ requires baseline readiness and emits nothing on rejection; do not combine it wi
 `--installed`. Shell redirection creates/truncates its chosen file even on failure:
 check the command status before using it. No mode infers or approves native/API claims.
 
+## Opt in to a finite nested Surefire report group
+
+Origin: 2026-11-07 private Sonic CD nested-suite attribution. Maven root
+selectors and the exact report/owner inventory are separate declarations. Keep
+version1 and the existing flat defaults; add optional `tests.report_groups` only
+when independently established nested topology, counts and actual owners require
+it. `tests.classes` still selects the Maven roots; `tests.expected_tests` pins each
+root's aggregate invocation count across its explicitly declared reports:
+
+```json
+"classes": ["example.Outer"],
+"expected_tests": {"example.Outer": 2},
+"report_groups": {
+  "example.Outer": {
+    "example.Outer": {"expected_tests": 0, "owners": ["example.Outer"]},
+    "example.Outer$Actual": {
+      "expected_tests": 2,
+      "owners": ["example.Outer", "example.Outer$Actual"]
+    }
+  }
+}
+```
+
+This is an illustrative fragment of `tests`, not a complete handoff. Groups cover
+exactly the declared roots, include every intermediate `$` binary-name ancestor,
+and contain at most50 reports total. Each report has exactly `expected_tests`
+(nonnegative integer, at most1000000) and `owners` (distinct exact qualified self
+or explicitly declared ancestors). Root counts remain positive and must equal the
+sum of declared report counts. An empty report must have an explicitly declared
+positive descendant; observed exact per-report counts must also match, so empty
+leaves, all-empty groups and declared-but-absent work reject. Sibling, descendant,
+foreign and simple-name owner aliases are never admitted. No count is inferred.
+
+Case identity uses the actual qualified `classname` plus literal `#name`, even
+when an ancestor's testcase appears in a descendant report. Duplicate identities
+reject globally across all selected reports. Optional method selectors still
+belong to roots; their `expected_cases` list is the complete literal actual-owner
+identity inventory across that root's declared reports. No method discovery or
+inherited invocation resolution is claimed.
+
+For read-only XML inspection/export, pass `junit --report-groups` naming one
+explicit JSON file containing just the `report_groups` object above, together
+with `--class` for every root. The Python `junit_summary`, `save_junit_evidence`
+and bounded reader APIs accept the same optional `report_groups` keyword. Fresh
+report inventory must match exactly; undeclared children are unexpected, selected
+stale/missing reports reject, and unrelated stale files remain unparsed. Opt-in
+inspection uses the existing bounded no-alias UTF8/XML reader even without export.
+Every report, including empty ancestors, retains environment and count checks.
+
+`run` rechecks rewrite/freshness for every declared report and preserves the same
+admission/terminal callbacks, queue leases, source/dependency checks, negative
+outcomes and public receipt semantics. The declaration is retained in opt-in run
+and XML evidence; XML-only exports still establish no command/source authority.
+No discovery, pass caching, Maven retry or repair/reclassification of a retained
+incomplete run occurs. The existing `junit_diagnostics.py` reader accepts nested
+receipts only with matching explicit run/JUnit topology and exact suite/root
+counts. It checks qualified identities globally across the recorded inventory,
+then reads only the selected report XML. Ancestor-owned case diagnostics retain
+their actual owner; an explicitly empty parent retains zero suite counts and a
+separate positive root aggregate. Unselected XML is not read or authenticated.
+Original failed verdicts remain failed; incomplete receipts are rejected even
+when later XML succeeds. `compare-junit` keeps its existing flat interface. The
+[synthetic controls](../../../tools/soniccd/test_integration_nested_reports.py)
+use temporary files and faked source/worktree/queue observations; they do not
+validate real Maven discovery, queue leases, source custody or any game behavior.
+
 ## Check explicit source selectors before a costly run
 
 Use the optional read-only `selectors` mode when a handoff's class names or source

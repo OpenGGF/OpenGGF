@@ -542,7 +542,84 @@ def requested_properties(values):
     return result
 
 
-def junit_summary(root, classes, since, properties, *, _read_report=None):
+# Finite opt-in report topology; root selectors never become report discovery rules.
+MAX_REPORT_SUITES = 50
+
+
+def report_inventory(classes, report_groups):
+    """Validate explicit nested inventory; return suite declarations keyed by exact FQN.
+
+    Origin: 2026-11-07 nested Surefire attribution. No XML/count inference. Binary
+    member ancestry is literal '$', never a dotted/simple-name alias or prefix glob.
+    """
+    require(isinstance(report_groups, dict) and set(report_groups) == set(classes),
+            "report_groups: require exact root selector inventory")
+    require(1 <= len(classes) <= 50 and len(set(classes)) == len(classes),
+            "report_groups: require 1..50 distinct root selectors")
+    require(all(isinstance(root, str) for root in classes), "report_groups: invalid root selector")
+    require(not any(a != b and a.startswith(b + "$") for a in classes for b in classes),
+            "report_groups: overlapping root selectors")
+    inventory = {}
+    for root in classes:
+        require(isinstance(root, str) and len(root) <= 512 and "." in root and CLASS.fullmatch(root),
+                "report_groups: invalid qualified root selector")
+        group = report_groups[root]
+        require(isinstance(group, dict) and root in group and 1 <= len(group) <= MAX_REPORT_SUITES,
+                "report_groups: require bounded inventory including root report")
+        require(len(inventory) + len(group) <= MAX_REPORT_SUITES,
+                "report_groups: total report suite limit exceeded")
+        require(all(isinstance(name, str) and len(name) <= 512 and CLASS.fullmatch(name)
+                    and (name == root or name.startswith(root + "$")) for name in group),
+                "report_groups: invalid or foreign suite name")
+        for name, entry in group.items():
+            require(isinstance(name, str) and len(name) <= 512 and CLASS.fullmatch(name)
+                    and (name == root or name.startswith(root + "$")) and name not in inventory,
+                    "report_groups: invalid, overlapping or foreign suite")
+            if name != root:
+                require(name.rsplit("$", 1)[0] in group,
+                        "report_groups: every nested report ancestor must be explicit")
+            keys(entry, ("expected_tests", "owners"), "report_groups suite")
+            count, owners = entry["expected_tests"], entry["owners"]
+            require(type(count) is int and 0 <= count <= 1_000_000,
+                    "report_groups: require bounded nonnegative suite count")
+            require(isinstance(owners, list) and 1 <= len(owners) <= MAX_REPORT_SUITES
+                    and all(isinstance(owner, str) and owner in group
+                            and (owner == name or name.startswith(owner + "$")) for owner in owners)
+                    and len(set(owners)) == len(owners),
+                    "report_groups: owners must be distinct explicit qualified self/ancestors")
+            if count == 0:
+                require(any(child.startswith(name + "$") and isinstance(declared, dict)
+                            and type(declared.get("expected_tests")) is int
+                            and declared["expected_tests"] > 0 for child, declared in group.items()),
+                        "report_groups: empty suite requires explicit positive descendant work")
+            inventory[name] = entry
+        require(sum(entry["expected_tests"] for entry in group.values()) > 0,
+                "report_groups: all-empty group rejected")
+    return inventory
+
+
+def read_report_groups(path):
+    """Read one bounded explicit declaration, never discover reports or modify evidence."""
+    saved = snapshot(canonical(Path(path)))
+    require(len(saved.data) <= MAX_RECIPE, "report_groups declaration exceeds 4 MiB")
+    try:
+        value = json.loads(saved.data.decode("utf-8", errors="strict"), object_pairs_hook=unique,
+                           parse_constant=lambda _: require(False, "Nonfinite JSON number"))
+    except RecursionError as error:
+        raise PacketError("report_groups JSON nesting exceeds decoder limit") from error
+    unchanged(saved)
+    return value
+
+
+def junit_summary(root, classes, since, properties, *, _read_report=None, report_groups=None):
+    # Opt-in uses the existing bounded/no-alias reader even without export. The
+    # default flat path retains its historical snapshot/output behavior exactly.
+    if report_groups is not None and _read_report is None:
+        from integration_junit_compare import _Evidence
+        observed = _Evidence(root, classes, since, properties, require_environment=False,
+                             report_groups=report_groups)
+        observed.recheck()
+        return observed.summary
     # Comparison supplies a bounded reader; existing callers retain snapshot semantics.
     root, head = worktree(root)
     require(classes and len(classes) == len(set(classes)) and all(CLASS.fullmatch(c) for c in classes),
@@ -550,7 +627,8 @@ def junit_summary(root, classes, since, properties, *, _read_report=None):
     reports = canonical(root / "target/surefire-reports")
     require(reports.is_dir(), f"Missing reports directory: {reports}")
     all_paths = sorted(reports.glob("TEST-*.xml"))
-    expected = {f"TEST-{name}.xml" for name in classes}
+    inventory = report_inventory(classes, report_groups) if report_groups is not None else None
+    expected = {f"TEST-{name}.xml" for name in (inventory if inventory is not None else classes)}
     stale = {path.name for path in all_paths if path.lstat().st_mtime_ns < since}
     require(not (expected & stale), f"Stale XML for requested classes: {sorted(expected & stale)}")
     paths = [path for path in all_paths if path.name not in stale]
@@ -560,6 +638,9 @@ def junit_summary(root, classes, since, properties, *, _read_report=None):
                   attribution="XML observations only; caller must establish command completion and unchanged source",
                   tests=0, failures=0, errors=0, skipped=0, classes=[], issues=[],
                   ignored_stale_reports=len(stale))
+    if inventory is not None:
+        result["report_groups"] = report_groups
+    global_identities = set()
     for path in paths:
         saved = (_read_report or snapshot)(path)
         require(saved.info.st_mtime_ns >= since, f"Stale XML: {path} mtime_ns={saved.info.st_mtime_ns} cutoff_ns={since}")
@@ -587,11 +668,15 @@ def junit_summary(root, classes, since, properties, *, _read_report=None):
         cases, counts, identities = [], dict(tests=0, failures=0, errors=0, skipped=0), set()
         for case in suite.findall("testcase"):
             reported_owner = case.get("classname")
-            require(reported_owner in (name, name.rsplit(".", 1)[-1]) and bool(case.get("name")),
+            allowed_owners = inventory[name]["owners"] if inventory is not None else (name, name.rsplit(".", 1)[-1])
+            require(reported_owner in allowed_owners and bool(case.get("name")),
                     f"Testcase class/name owner mismatch: {path}")
             require(all(node.tag in ("failure", "error", "skipped", "system-out", "system-err") for node in case),
                     f"Unsupported testcase result structure: {path}")
-            identity = name + "#" + case.get("name")
+            identity = (reported_owner if inventory is not None else name) + "#" + case.get("name")
+            if inventory is not None:
+                require(identity not in global_identities, f"Duplicate test identity: {identity}")
+                global_identities.add(identity)
             require(identity not in identities, f"Duplicate test identity: {identity}")
             identities.add(identity)
             outcomes = [node for node in case if node.tag in ("failure", "error", "skipped")]
@@ -606,7 +691,11 @@ def junit_summary(root, classes, since, properties, *, _read_report=None):
                               type=outcome.get("type", "") if outcome is not None else ""))
             if reported_owner != name:
                 cases[-1]["reported_classname"] = reported_owner
-        require(counts["tests"] > 0, f"No observed testcases: {path}")
+        if inventory is None:
+            require(counts["tests"] > 0, f"No observed testcases: {path}")
+        else:
+            require(counts["tests"] == inventory[name]["expected_tests"],
+                    f"Unexpected declared report test count: {name}")
         for key, observed in counts.items():
             require(suite.get(key) is not None and suite.get(key).isdigit() and int(suite.get(key)) == observed,
                     f"XML count mismatch {name} {key}: declared={suite.get(key)} observed={observed}")
@@ -670,6 +759,7 @@ def main(argv=None):
     junit = commands.add_parser("junit", help="inspect exact flat Surefire report set; does not execute tests")
     junit.add_argument("--worktree", required=True)
     junit.add_argument("--class", dest="classes", action="append", required=True, help="exact class name; repeat for complete expected class set")
+    junit.add_argument("--report-groups", type=Path, help="optional explicit nested report-group JSON; --class remains root selectors")
     junit.add_argument("--since", required=True, help="run-start ISO-8601 timestamp with timezone, e.g. 2026-10-26T10:00:00Z")
     junit.add_argument("--property", action="append", default=[], metavar="NAME=VALUE",
                        help="exact expected property; repeat. Allowlist: " + ", ".join(sorted(PROPERTIES - {"java.version", "user.dir"})))
@@ -743,16 +833,17 @@ def main(argv=None):
                 require(not args.maven_terminal, "--maven-terminal is only meaningful with --apply")
                 result = plan_report(*validate_packet(args.worktree, manifest))
         else:
+            nested = {} if args.report_groups is None else dict(report_groups=read_report_groups(args.report_groups))
             if args.evidence is not None:
                 from integration_junit_evidence import save_junit_evidence
                 try:
                     result = save_junit_evidence(args.worktree, args.classes, cutoff(args.since),
-                            requested_properties(args.property), args.evidence)
+                            requested_properties(args.property), args.evidence, **nested)
                 except (ValueError, OSError) as error:
                     # Script execution and imported helpers may have distinct module instances.
                     raise PacketError(str(error), getattr(error, "report", None)) from error
             else:
-                result = junit_summary(args.worktree, args.classes, cutoff(args.since), requested_properties(args.property))
+                result = junit_summary(args.worktree, args.classes, cutoff(args.since), requested_properties(args.property), **nested)
         compact_compile = args.command == "compile" and args.compact_output
         print(json.dumps(result, indent=None if compact_compile else 2,
                          separators=(",", ":") if compact_compile else None, ensure_ascii=True))

@@ -87,7 +87,9 @@ def _tests(value):
     required = ("classes", "properties", "expected_tests", "java_major")
     # Optional fields are a pair, never an inferred/default identity inventory.
     selected = isinstance(value, dict) and bool({"methods", "expected_cases"} & set(value))
-    packet.keys(value, required + (("methods", "expected_cases") if selected else ()), "tests")
+    nested = isinstance(value, dict) and "report_groups" in value
+    packet.keys(value, required + (("methods", "expected_cases") if selected else ())
+                + (("report_groups",) if nested else ()), "tests")
     classes = value["classes"]
     packet.require(isinstance(classes, list) and 1 <= len(classes) <= MAX_CLASSES,
                    "tests.classes: require 1..50 exact fully qualified class names")
@@ -108,6 +110,11 @@ def _tests(value):
                    "tests.expected_tests: require bounded positive integer counts")
     packet.require(type(value["java_major"]) is int and value["java_major"] == 25,
                    "tests.java_major: this repository requires Java 25")
+    inventory = packet.report_inventory(classes, value["report_groups"]) if nested else None
+    if nested:
+        packet.require(all(sum(entry["expected_tests"] for entry in value["report_groups"][root].values())
+                           == expected[root] for root in classes),
+                       "tests.expected_tests: root totals must equal declared report-group totals")
     if selected:
         methods, cases = value["methods"], value["expected_cases"]
         packet.require(isinstance(methods, dict) and bool(methods) and set(methods) <= set(classes),
@@ -129,7 +136,9 @@ def _tests(value):
                            "tests.expected_cases: require literal identity array matching expected_tests count")
             for identity in identities:
                 _plain(identity, 2048, "tests.expected_cases", nonempty=True)
-                packet.require(identity.startswith(name + "#") and len(identity) > len(name) + 1
+                owners = {owner for entry in value["report_groups"][name].values() for owner in entry["owners"]} if nested else {name}
+                owner, separator, label = identity.partition("#")
+                packet.require(owner in owners and separator and bool(label)
                                and not any(ord(char) < 32 or ord(char) == 127 for char in identity),
                                "tests.expected_cases: require literal full owning Class#case-name without controls")
             packet.require(len(set(identities)) == len(identities), "tests.expected_cases: duplicate identity")

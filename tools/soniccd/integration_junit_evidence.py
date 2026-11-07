@@ -110,7 +110,7 @@ def _write_evidence(path, parents, protected, payload, *, recheck=None):
     return dict(evidence=str(path), sha256=packet.digest(payload), bytes=len(payload))
 
 
-def save_junit_evidence(root, classes, since, properties, output):
+def save_junit_evidence(root, classes, since, properties, output, *, report_groups=None):
     """Observe XML and exclusively save an inventory, never a pass cache or run receipt."""
     packet.require(os.name == 'posix' and hasattr(os, 'O_NOFOLLOW') and hasattr(os, 'O_DIRECTORY'),
                    'Evidence export requires POSIX no-follow directory descriptors')
@@ -121,7 +121,8 @@ def save_junit_evidence(root, classes, since, properties, output):
     properties = _properties(properties)
     protected = _protected(root)
     path, parents = _destination(output, protected)
-    observed = _Evidence(root, classes, since, properties)
+    nested = {} if report_groups is None else dict(report_groups=report_groups)
+    observed = _Evidence(root, classes, since, properties, **nested)
     report = observed.summary
     report['requested_classes'] = list(classes)
     document = dict(version=1, kind='junit-xml-observations', report=report,

@@ -118,9 +118,9 @@ def _source(value):
     _integer(value['gitlinks'], 'source gitlink count', maximum=value['files'])
 
 
-def _case_inventory(group):
+def _case_inventory(group, declaration=None, global_identities=None):
     cases = group.get('cases')
-    _require(isinstance(cases, list) and 0 < len(cases) <= strict.MAX_CASES, 'Missing/bounded case inventory')
+    _require(isinstance(cases, list) and (0 if declaration is not None else 1) <= len(cases) <= strict.MAX_CASES, 'Missing/bounded case inventory')
     counts = dict.fromkeys(COUNTS, 0)
     identities = set()
     for case in cases:
@@ -128,17 +128,27 @@ def _case_inventory(group):
             {'identity', 'status', 'message', 'type'},
             {'identity', 'status', 'message', 'type', 'reported_classname'}), 'Invalid receipt case fields')
         identity = _text(case['identity'], 'case identity')
-        _require(identity.startswith(group['name'] + '#') and len(identity) > len(group['name']) + 1
-                 and identity not in identities, 'Wrong or duplicate receipt case identity')
+        if declaration is None:
+            _require(identity.startswith(group['name'] + '#') and len(identity) > len(group['name']) + 1
+                     and identity not in identities, 'Wrong or duplicate receipt case identity')
+        else:
+            owner, separator, label = identity.partition('#')
+            _require(owner in declaration['owners'] and separator and bool(label)
+                     and identity not in global_identities, 'Wrong or duplicate receipt case identity')
+            global_identities.add(identity)
+            _require((case.get('reported_classname') == owner if owner != group['name']
+                      else 'reported_classname' not in case), 'Wrong reported qualified case owner')
         identities.add(identity)
         _require(case['status'] in STATUSES, 'Unknown receipt case outcome')
         _text(case['message'], 'case message'); _text(case['type'], 'case type')
-        if 'reported_classname' in case:
+        if declaration is None and 'reported_classname' in case:
             _require(case['reported_classname'] == group['name'].rsplit('.', 1)[-1], 'Wrong reported simple case owner')
         counts['tests'] += 1
         if case['status'] != 'passed':
             counts[{'failure': 'failures', 'error': 'errors', 'skipped': 'skipped'}[case['status']]] += 1
     _require(_counts(group.get('counts')) == counts, 'Receipt case/count mismatch')
+    if declaration is not None:
+        _require(counts['tests'] == declaration['expected_tests'], 'Receipt report expectation/count mismatch')
     return counts
 
 
@@ -161,13 +171,23 @@ def _receipt(document, name):
     _require(isinstance(classes, list) and 0 < len(classes) <= strict.MAX_CLASSES
              and len(set(classes)) == len(classes), 'Invalid declared class inventory')
     for item in classes: _class(item)
-    _require(name in classes, 'Selected class is absent from receipt')
+    nested = 'report_groups' in run
+    inventory = packet.report_inventory(classes, run['report_groups']) if nested else None
+    report_names = inventory if nested else classes
+    _require(name in report_names, 'Selected class is absent from receipt')
     expected = run.get('expected_tests')
     _require(isinstance(expected, dict) and set(expected) == set(classes), 'Missing expected class counts')
     for count in expected.values(): _integer(count, 'expected tests', minimum=1, maximum=strict.MAX_CASES)
+    if nested:
+        _require(all(sum(entry['expected_tests'] for entry in group.values()) == expected[root]
+                     for root, group in run['report_groups'].items()), 'Receipt root/group expectation mismatch')
     _require(isinstance(run.get('issues'), list) and all(isinstance(v, str) for v in run['issues']), 'Invalid recorded run issues')
     junit = run.get('junit')
     _require(isinstance(junit, dict) and isinstance(junit.get('classes'), list), 'Missing complete JUnit observations')
+    _require(('report_groups' in junit) == nested and (not nested or junit['report_groups'] == run['report_groups']),
+             'Receipt report topology mismatch')
+    if nested:
+        packet.report_inventory(classes, junit['report_groups'])  # Reject bool/float equality aliases too.
     _require(junit.get('head_at_inspection') == run['source_before']['head'], 'Recorded JUnit/source HEAD mismatch')
     _integer(junit.get('since_ns'), 'XML cutoff', minimum=1)
     requested = junit.get('requested_properties')
@@ -175,12 +195,13 @@ def _receipt(document, name):
              and isinstance(v, str) for k, v in requested.items()), 'Unsupported requested property inventory')
     _require(isinstance(junit.get('issues'), list) and all(isinstance(v, str) for v in junit['issues']), 'Invalid recorded XML issues')
     groups, total = {}, dict.fromkeys(COUNTS, 0)
+    global_identities = set()
     environment_complete = True
     for group in junit['classes']:
-        _require(isinstance(group, dict) and group.get('name') in classes and group['name'] not in groups,
+        _require(isinstance(group, dict) and group.get('name') in report_names and group['name'] not in groups,
                  'Receipt suite/class mismatch')
         groups[group['name']] = group
-        for key, value in _case_inventory(group).items(): total[key] += value
+        for key, value in _case_inventory(group, inventory[group['name']] if nested else None, global_identities).items(): total[key] += value
         _require(total['tests'] <= strict.MAX_CASES, 'Receipt exceeds testcase budget')
         props = group.get('properties')
         _require(isinstance(props, dict) and set(props) == {'java.version', 'user.dir', *requested}
@@ -191,18 +212,32 @@ def _receipt(document, name):
         if (not props['java.version'] or props['user.dir'] != junit.get('worktree')
                 or any(props[key] is None or props[key] != value for key, value in requested.items())):
             environment_complete = False
-    _require(set(groups) == set(classes) and all(junit.get(k) == v and type(junit.get(k)) is int for k, v in total.items()),
+    _require(set(groups) == set(report_names) and all(junit.get(k) == v and type(junit.get(k)) is int for k, v in total.items()),
              'Receipt aggregate count/class mismatch')
     xml_clean = not (junit['issues'] or not environment_complete or total['failures'] or total['errors'] or total['skipped'])
     _require(type(junit.get('clean')) is bool and junit['clean'] == xml_clean, 'Inconsistent recorded XML verdict')
-    expected_match = all(groups[k]['counts']['tests'] == expected[k] for k in classes)
+    if nested:
+        expected_match = all(sum(groups[name]['counts']['tests'] for name in group) == expected[root]
+                             for root, group in run['report_groups'].items())
+        # Validate the same optional literal method inventory, without discovery.
+        if 'methods' in run or 'expected_cases' in run:
+            from integration_handoff import _tests
+            _tests(dict(classes=classes, properties=requested, expected_tests=expected, java_major=25,
+                        report_groups=run['report_groups'], methods=run.get('methods'), expected_cases=run.get('expected_cases')))
+            _require(all({case['identity'] for suite_name in run['report_groups'][root]
+                          for case in groups[suite_name]['cases']} == set(identities)
+                         for root, identities in run['expected_cases'].items()), 'Receipt literal case inventory mismatch')
+        expected_match = expected_match and all((group['properties'].get('java.version') or '').split('.')[0] == '25'
+                                                for group in groups.values())
+    else:
+        expected_match = all(groups[k]['counts']['tests'] == expected[k] for k in classes)
     should_pass = code == 0 and xml_clean and not run['issues'] and expected_match
     _require(run['clean'] == (run['status'] == 'passed') and (run['status'] == 'passed') == should_pass,
              'Inconsistent recorded run verdict')
     return run, junit, groups[name]
 
 
-def _project(suite, name, requested):
+def _project(suite, name, requested, declaration=None):
     _require(suite.tag == 'testsuite' and suite.get('name') == name, 'XML suite/class mismatch')
     _require(all(n.tag in ('properties', 'testcase', 'system-out', 'system-err') for n in suite), 'Unsupported suite structure')
     props = {}
@@ -215,9 +250,10 @@ def _project(suite, name, requested):
     cases, counts, identities = [], dict.fromkeys(COUNTS, 0), set()
     for case in suite.findall('testcase'):
         owner, label = case.get('classname'), case.get('name')
-        _require(owner in (name, name.rsplit('.', 1)[-1]) and bool(label), 'XML case owner/name mismatch')
+        allowed = declaration['owners'] if declaration is not None else (name, name.rsplit('.', 1)[-1])
+        _require(owner in allowed and bool(label), 'XML case owner/name mismatch')
         _require(all(n.tag in ('failure', 'error', 'skipped', 'system-out', 'system-err') for n in case), 'Unsupported case structure')
-        identity = name + '#' + label
+        identity = (owner if declaration is not None else name) + '#' + label
         _require(identity not in identities, 'Duplicate XML case identity')
         identities.add(identity)
         outcomes = [n for n in case if n.tag in ('failure', 'error', 'skipped')]
@@ -229,19 +265,19 @@ def _project(suite, name, requested):
         if owner != name: item['reported_classname'] = owner
         cases.append(item); counts['tests'] += 1
         if status != 'passed': counts[{'failure': 'failures', 'error': 'errors', 'skipped': 'skipped'}[status]] += 1
-    _require(cases and all(suite.get(k) is not None and suite.get(k).isdigit() and int(suite.get(k)) == v for k, v in counts.items()),
+    _require((bool(cases) if declaration is None else counts['tests'] == declaration['expected_tests']) and all(suite.get(k) is not None and suite.get(k).isdigit() and int(suite.get(k)) == v for k, v in counts.items()),
              'XML declared/observed count mismatch')
     return selected, cases, counts
 
 
-def _diagnostic_fields(suite, name):
+def _diagnostic_fields(suite, name, actual_owner=False):
     case_index = 0
     for node in suite:
         if node.tag in ('system-out', 'system-err'):
             _require(not len(node), 'Nested stream XML is unsupported')
             yield dict(scope='suite', kind=node.tag), node.text or '', True
         elif node.tag == 'testcase':
-            identity = name + '#' + node.get('name')
+            identity = (node.get('classname') if actual_owner else name) + '#' + node.get('name')
             metadata = dict(scope='case', case_index=case_index, case_identity=identity[:MAX_ID_CHARACTERS],
                 case_identity_characters=len(identity), case_identity_truncated=len(identity) > MAX_ID_CHARACTERS,
                 case_identity_sha256=packet.digest(identity.encode('utf-8')))
@@ -255,11 +291,11 @@ def _diagnostic_fields(suite, name):
             case_index += 1
 
 
-def _records(suite, name, prefixes, max_lines, max_line_chars):
+def _records(suite, name, prefixes, max_lines, max_line_chars, actual_owner=False):
     stats = dict(input_lines=0, input_characters=0, filtered_lines=0, filtered_characters=0,
                  selected_lines=0, selected_characters=0)
     records = []
-    for metadata, text, stream in _diagnostic_fields(suite, name):
+    for metadata, text, stream in _diagnostic_fields(suite, name, actual_owner):
         for line_number, line in enumerate(text.splitlines(keepends=True) or [''], 1):
             stats['input_lines'] += 1; stats['input_characters'] += len(line)
             _require(stats['input_lines'] <= MAX_INPUT_LINES, 'Diagnostic input line budget exceeded; inspection incomplete')
@@ -324,16 +360,21 @@ def inspect_diagnostics(evidence, test_class, *, prefixes=(), max_lines=32, max_
     _require(type(group.get('mtime_ns')) is int and group['mtime_ns'] == observed.info.st_mtime_ns
              and group['mtime_ns'] >= junit['since_ns'], 'Selected XML is stale or changed from receipt')
     suite = ET.fromstring(observed.data)
-    props, cases, counts = _project(suite, name, junit['requested_properties'])
+    declaration = None
+    if 'report_groups' in run:
+        root_selector = next(root for root, group in run['report_groups'].items() if name in group)
+        declaration = run['report_groups'][root_selector][name]
+    props, cases, counts = _project(suite, name, junit['requested_properties'], declaration)
     _require(props == group['properties'], 'Selected XML/property correspondence mismatch')
     _require(cases == group['cases'] and counts == group['counts'], 'Selected XML/case/count correspondence mismatch')
-    records, stats = _records(suite, name, prefixes, max_lines, max_line_chars)
+    records, stats = _records(suite, name, prefixes, max_lines, max_line_chars, declaration is not None)
+    expected_count = declaration['expected_tests'] if declaration is not None else run['expected_tests'][name]
     result = dict(version=1, kind='junit-diagnostics-observations', inspection_status='verified-correspondence',
         test_class=name, evidence=dict(path=str(path), sha256=packet.digest(saved.data), bytes=len(saved.data)),
         xml=dict(path=str(xml), sha256=packet.digest(observed.data), bytes=len(observed.data), mtime_ns=observed.info.st_mtime_ns),
         run_status=run['status'], run_clean=run['clean'], maven_returncode=run['maven_returncode'],
         run_counts={key: junit[key] for key in COUNTS}, counts=counts, counts_scope='selected class',
-        expected_tests=run['expected_tests'][name], expected_count_matches=run['expected_tests'][name] == counts['tests'],
+        expected_tests=expected_count, expected_count_matches=expected_count == counts['tests'],
         recorded_source_equal=True, recorded_source=dict(head=run['source_before']['head'], fingerprint=run['source_before']['fingerprint'],
             identity_sha256=packet.digest(_encode(run['source_before']))),
         case_inventory_sha256=packet.digest(_encode(cases)), properties=props, prefixes=list(prefixes), attribution=ATTRIBUTION,
@@ -341,6 +382,9 @@ def inspect_diagnostics(evidence, test_class, *, prefixes=(), max_lines=32, max_
         limits=dict(max_input_bytes_per_file=packet.MAX_FILE, max_xml_depth=strict.MAX_XML_DEPTH,
             max_testcases=strict.MAX_CASES, max_input_lines=MAX_INPUT_LINES, max_lines=max_lines,
             max_line_characters=max_line_chars, max_output_bytes=max_output_bytes, max_case_identity_characters=MAX_ID_CHARACTERS))
+    if declaration is not None:
+        result.update(root_selector=root_selector, expected_root_tests=run['expected_tests'][root_selector],
+                      counts_scope='selected report suite', allowed_owners=declaration['owners'])
     payload = _finish(result, records, stats, max_output_bytes)
     packet.unchanged(observed, message='Selected XML changed during diagnostic inspection')
     packet.unchanged(saved, message='Receipt changed during diagnostic inspection')

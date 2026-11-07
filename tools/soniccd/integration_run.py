@@ -412,6 +412,8 @@ def run_handoff(root, spec_path, *, lane='normal', execute=False, compact_output
     packet.require(ready['ready'], 'Installed handoff is blocked; inspect handoff --installed first')
     tests = ready['tests']
     methods = tests.get('methods', {})
+    nested = {} if 'report_groups' not in tests else dict(report_groups=tests['report_groups'])
+    inventory = packet.report_inventory(tests['classes'], tests['report_groups']) if nested else None
     selectors = [name + ('#' + '+'.join(sorted(methods[name])) if name in methods else '')
                  for name in tests['classes']]
     args = ['-Dmse=off','-Dtest='+','.join(selectors)]
@@ -428,6 +430,8 @@ def run_handoff(root, spec_path, *, lane='normal', execute=False, compact_output
         result.update(methods=methods, expected_cases=tests['expected_cases'])
         result['observation'] += (' Exact literal case identities are observations only; '
             'method ownership, discovery and one invocation per selector/overload are not inferred.')
+    if nested:
+        result.update(nested)
     progress = _ConciseMavenProgress(sys.stderr) if maven_progress == 'concise' else None
     if progress is not None:
         result['maven_progress'] = progress.metadata()
@@ -460,27 +464,27 @@ def run_handoff(root, spec_path, *, lane='normal', execute=False, compact_output
             result['source_after'] = source_identity(root)
             packet.require(result['source_after'] == initial, 'Source changed during execution')
             current = _report_signatures(root)
-            for name in tests['classes']:
+            for name in (inventory if inventory is not None else tests['classes']):
                 filename = 'TEST-'+name+'.xml'
                 packet.require(filename in current and
                                current[filename] != state['reports'].get(filename),
                                'Requested XML was not rewritten by this invocation: '+name)
             if destination is None:
-                summary = packet.junit_summary(root, tests['classes'], state['since'], tests['properties'])
+                summary = packet.junit_summary(root, tests['classes'], state['since'], tests['properties'], **nested)
             else:
                 # The same authoritative parser, with the existing bounded/no-alias reader.
                 # Environment issues remain the runner's failed result rather than disappearing.
                 from integration_junit_compare import _Evidence
                 observed = _Evidence(root, tests['classes'], state['since'], tests['properties'],
-                                     require_environment=False)
+                                     require_environment=False, **nested)
                 state['evidence'] = observed
                 summary = observed.summary
             result['junit'] = summary
             case_identity_issues = []
             for suite in summary['classes']:
-                if suite['counts']['tests'] != tests['expected_tests'][suite['name']]:
+                if inventory is None and suite['counts']['tests'] != tests['expected_tests'][suite['name']]:
                     result['issues'].append('Unexpected test count: '+suite['name'])
-                if suite['name'] in methods:
+                if inventory is None and suite['name'] in methods:
                     expected_ids = set(tests['expected_cases'][suite['name']])
                     observed_ids = {case['identity'] for case in suite['cases']}
                     if observed_ids != expected_ids:
@@ -490,6 +494,14 @@ def run_handoff(root, spec_path, *, lane='normal', execute=False, compact_output
                 version = suite['properties'].get('java.version','')
                 if version.split('.')[0] != str(tests['java_major']):
                     result['issues'].append('Java major mismatch: '+suite['name'])
+            if inventory is not None:
+                for name in methods:
+                    expected_ids = set(tests['expected_cases'][name])
+                    observed_ids = {case['identity'] for suite in summary['classes']
+                                    if suite['name'] in tests['report_groups'][name] for case in suite['cases']}
+                    if observed_ids != expected_ids:
+                        case_identity_issues.append(dict(class_name=name, missing=sorted(expected_ids-observed_ids),
+                                                         unexpected=sorted(observed_ids-expected_ids)))
             if case_identity_issues:
                 result['case_identity_issues'] = case_identity_issues
                 raise packet.PacketError('Unexpected case identity inventory for method-selected classes')
