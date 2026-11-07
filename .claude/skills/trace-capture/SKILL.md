@@ -49,6 +49,7 @@ the repository for durable captures; `target/trace-videos` is disposable output.
 | `--codec <name>` | `CAPTURE_CODEC=ffv1` | Video codec; changing it may change losslessness |
 | `--clip frames:START:END` | None | Fast-forward from the original start, then capture the inclusive zero-based trace-row window, retaining elapsed-VBlank title/lag frames; explicit windows do not add `--tail-frames` |
 | `--no-ghosts` / `--ghosts` | `TRACE_SHOW_DESYNC_GHOSTS=true` | Desync ghost visibility |
+| `--no-sprite-limits` | Native sprite limits on | Render without native sprite dropout, as normal play does by default; for promotional footage, not ROM image comparison |
 
 A full-run capture presents no frame on trace lag rows (`lag_counter` != 0): MKV frame
 n is row n only until the first lag row, then row minus the lag rows before it (measured

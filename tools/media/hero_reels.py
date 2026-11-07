@@ -229,8 +229,10 @@ def headless_env():
 def trace_args(game, shot, out_dir, root=ROOT):
     trace_dir = root / TRACE_ROOT / game / shot['trace']
     end = shot['start'] + shot['frames'] - 1
+    # Reels show the game as it plays, without the native sprite dropout that
+    # TraceCaptureTool otherwise keeps for ROM image comparison.
     return ['--trace', str(trace_dir), '--clip', f"frames:{shot['start']}:{end}", '--no-ghosts',
-            '--scale', '1', '--codec', 'ffv1', '--out-dir', str(out_dir)]
+            '--no-sprite-limits', '--scale', '1', '--codec', 'ffv1', '--out-dir', str(out_dir)]
 
 
 def capture_args(game, shot, rom, out_dir, root=ROOT):

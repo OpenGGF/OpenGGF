@@ -97,11 +97,12 @@ class ManifestValidation(unittest.TestCase):
 
 
 class Commands(unittest.TestCase):
-    def test_trace_shot_uses_inclusive_clip_window_without_ghosts(self):
+    def test_trace_shot_uses_inclusive_clip_window_without_ghosts_or_sprite_limits(self):
         args = hero.trace_args('s1', manifest()['shots'][0], Path('/out'), root=Path('/repo'))
         self.assertEqual('/repo/src/test/resources/traces/s1/ghz1_completerun', args[1])
         self.assertIn('frames:600:839', args)
         self.assertIn('--no-ghosts', args)
+        self.assertIn('--no-sprite-limits', args)
         self.assertEqual('1', args[args.index('--scale') + 1])
 
     def test_capture_shot_steps_through_window_end_and_captures_every_frame(self):

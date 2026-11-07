@@ -14,6 +14,8 @@ public final class LiveLevelProfileFactory {
         }
         return new TrackValidationProfile(start.levelWidth(), start.levelHeight(),
                 TrackValidationProfile.GLOBAL_SPEED_CEILING_PX_PER_FRAME,
-                TrackValidationProfile.FRAME_RATE_CAP);
+                TrackValidationProfile.FRAME_RATE_CAP, start.geometry().wrapWidthPx(),
+                start.geometry().wrapHeightPx(), start.geometry().lapCount(),
+                start.geometry().lapCount() > 0 ? 2 * (start.geometry().lapCount() + 1) : 0);
     }
 }
