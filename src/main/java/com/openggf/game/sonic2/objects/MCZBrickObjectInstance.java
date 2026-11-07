@@ -1,5 +1,8 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.game.sonic2.competition.view.Sonic2NativeDisplaySource;
+import com.openggf.game.sonic2.competition.view.Sonic2CompetitionDisplayInputs.*;
+
 import com.openggf.level.objects.ObjectVisualFacing;
 
 import com.openggf.debug.DebugRenderContext;
@@ -53,7 +56,7 @@ import java.util.logging.Logger;
  * </ul>
  */
 public class MCZBrickObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, TouchResponseProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+        implements Sonic2NativeDisplaySource, SolidObjectProvider, TouchResponseProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
     // Obj75 owns brick/chain/spike-ball geometry; orbital phase does not face a creature.
 
     private static final Logger LOGGER = Logger.getLogger(MCZBrickObjectInstance.class.getName());
@@ -457,7 +460,7 @@ public class MCZBrickObjectInstance extends AbstractObjectInstance
         }
     }
 
-    private static final class MCZBrickDisplayChild extends AbstractObjectInstance implements RewindRecreatable {
+    private static final class MCZBrickDisplayChild extends AbstractObjectInstance implements RewindRecreatable, Sonic2NativeDisplaySource {
         private final MCZBrickObjectInstance parent;
         private int x;
         private int y;
@@ -493,6 +496,13 @@ public class MCZBrickObjectInstance extends AbstractObjectInstance
                     .orElse(null);
         }
 
+        @Override public java.util.List<DisplaySlot> nativeDisplaySlots() {
+            ObjectSlot display=nativeDisplaySlot();
+            return display==null ? java.util.List.of() : java.util.List.of(new DisplaySlot(getSlotIndex(),5,display));
+        }
+        @Override public ObjectSlot nativeDisplaySlot() {
+            return isDestroyed() || parent.isDestroyed() ? null : parent.nativeChainDisplay();
+        }
         private void syncFromParent() {
             this.x = parent.displayChildX();
             this.y = parent.displayChildY();
@@ -527,6 +537,20 @@ public class MCZBrickObjectInstance extends AbstractObjectInstance
         public void appendRenderCommands(List<GLCommand> commands) {
             // Parent renders the full Obj75 multi-sprite assembly; this instance occupies the ROM SST child slot.
         }
+    }
+
+
+    // Obj75_Init (s2.asm:55679-55743); native parent is a brick or the swinging spike ball.
+    @Override public ObjectSlot nativeDisplaySlot() {
+        if(isDestroyed()) return null;
+        return new ObjectSlot(0x75,4,getX()&0xFFFF,getY()&0xFFFF,16,0,
+                new Mapping(0x28D8A,mode==Mode.BRICK ? 2 : 0),0x2000,null);
+    }
+    private ObjectSlot nativeChainDisplay() {
+        var children=new java.util.ArrayList<Child>();
+        for(int i=0;i<chainCount;i++) children.add(new Child(chainX[i]&0xFFFF,chainY[i]&0xFFFF,1));
+        return new ObjectSlot(0x75,0x54,chainX[4]&0xFFFF,chainY[4]&0xFFFF,0,0,
+                new Mapping(0x28D8A,0),0x2000,new MultiSprite(0,64,64,children));
     }
 
 }

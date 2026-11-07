@@ -27,7 +27,7 @@ import java.util.List;
  * - X-flip clear: velocity = +2 (rightward)
  * - X-flip set: velocity = -2 (leftward)
  */
-public class CNZConveyorBeltObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.Source {
+public class CNZConveyorBeltObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.Source, com.openggf.game.sonic2.competition.view.Sonic2NativeDisplaySource {
     @Override
     public ObjectVisualFacing.Basis nativeFacing() {
         // Obj72's belt owns its transport direction in objoff_36 (velocityX),
@@ -160,5 +160,9 @@ public class CNZConveyorBeltObjectInstance extends AbstractObjectInstance implem
     @Override
     public int getPriorityBucket() {
         return 0; // No rendering
+    }
+    /** Obj72_Main (s2.asm:55421-55426): MarkObjGone3, not DisplaySprite. */
+    @Override public com.openggf.game.sonic2.competition.view.Sonic2CompetitionDisplayInputs.ObjectSlot nativeDisplaySlot() {
+        return null;
     }
 }

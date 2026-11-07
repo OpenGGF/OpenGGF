@@ -1,5 +1,8 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.game.sonic2.competition.view.Sonic2NativeDisplaySource;
+import com.openggf.game.sonic2.competition.view.Sonic2CompetitionDisplayInputs.*;
+
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.BoxObjectInstance;
 
@@ -33,7 +36,7 @@ import java.util.List;
  * <b>Disassembly Reference:</b> s2.asm lines 58279-58366 (ObjD4)
  */
 public class CNZBigBlockObjectInstance extends BoxObjectInstance
-        implements SolidObjectProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+        implements Sonic2NativeDisplaySource, SolidObjectProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
     // ObjD4 translates a block; placement flips select its travel offset, not body facing.
 
     // Constants from disassembly
@@ -276,5 +279,11 @@ public class CNZBigBlockObjectInstance extends BoxObjectInstance
                 yVel & 0xFFFF,
                 targetX & 0xFFFF,
                 targetY & 0xFFFF);
+    }
+
+    // ObjD4_Init (s2.asm:58910-58928): status flips select travel, but render_flags is reset to4.
+    @Override public ObjectSlot nativeDisplaySlot() {
+        return isDestroyed() ? null : new ObjectSlot(0xD4,4,x&0xFFFF,y&0xFFFF,32,0,
+                new Mapping(0x2B9CA,0),0x41B6,null);
     }
 }
