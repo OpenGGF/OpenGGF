@@ -74,10 +74,12 @@ class TestS3kSoloArenaViewPixels {
                     var ghosts = new GhostRenderer();
                     ghosts.setArtSource(session.ghostArtSource());
                     var player = session.localPlayer();
-                    // A visible high-priority sky pose rules out a valid terrain occlusion of the probe.
+                    // A nearby high-priority airborne pose tests the same loop image as P1 without terrain occlusion.
                     var source = session.ghostArtSource();
-                    var ghost = new ActiveGhost("remote","sonic",new GhostFrame(source.cameraX()+240,
-                            source.cameraY()+40,host.players().getFirst().mappingFrame(),false,false,false,2,true));
+                    var nativePiece = view.get().projectNativeSprites(context,host,host.scroll())
+                            .pieces().stream().filter(piece -> piece.nativeSlot()==0).findFirst().orElseThrow();
+                    var ghost = new ActiveGhost("remote","sonic",new GhostFrame(player.getCentreX()+40,
+                            player.getCentreY()-32,host.players().getFirst().mappingFrame(),false,false,false,2,true));
                     var activeGhost = new java.util.concurrent.atomic.AtomicReference<>(ghost);
                     context.getGhostRenderRegistry().register((bucket,high) -> ghosts.renderForLayer(List.of(activeGhost.get()),
                             bucket,high,player.getCentreX(),player.getCentreY(),"sonic"));
@@ -94,6 +96,12 @@ class TestS3kSoloArenaViewPixels {
                     ScreenshotCapture.savePNG(baseline,pictures.resolve("arena-"+arena+"-baseline.png"));
                     ScreenshotCapture.savePNG(withGhost,pictures.resolve("arena-"+arena+"-ghost.png"));
                     assertFalse(ghostTiles.isEmpty(),"SAT must retain ghost tiles in arena "+arena);
+                    assertEquals((float)(nativePiece.screenX()+40),ghostTiles.getFirst().x(),"ghost shares P1's horizontal loop image");
+                    assertEquals((float)(nativePiece.screenY()-32),ghostTiles.getFirst().y(),"ghost shares P1's vertical loop image");
+                    assertTrue(ghostTiles.stream().anyMatch(tile -> {
+                        var pattern = prepared.patternVersions().get(tile.patternId());
+                        return pattern != null && (pattern.a()!=0 || pattern.b()!=0 || pattern.c()!=0 || pattern.d()!=0);
+                    }),"prepared ghost must retain nonempty ROM pattern versions in arena "+arena);
                     assertFalse(sameRgb(baseline,withGhost),"miniature ghost must change pixels in arena "+arena);
                     activeGhost.set(new ActiveGhost(ghost.slotId(),ghost.characterCode(),ghost.frame(),null,.5f));
                     glClear(GL_COLOR_BUFFER_BIT); session.draw();

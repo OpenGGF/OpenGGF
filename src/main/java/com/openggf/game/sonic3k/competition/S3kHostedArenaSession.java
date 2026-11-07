@@ -89,9 +89,21 @@ public final class S3kHostedArenaSession implements HostedArenaSession {
                 try { return host.assets().arenaPalette(host.session().arena())["knuckles".equals(character) ? 1 : 0]; }
                 catch (java.io.IOException failure) { throw new java.io.UncheckedIOException(failure); }
             }
-            @Override public int cameraX() { return host.scroll().view(0).camera().x(); }
-            @Override public int cameraY() { return S3kSoloArenaViews.displayY(host.scroll()); }
+            @Override public int cameraX() {
+                return projectedOrigin(host.session().player(0).centreX(),host.scroll().view(0).camera().x(),
+                        host.scroll().profile().xWrapMask());
+            }
+            @Override public int cameraY() {
+                return projectedOrigin(host.session().player(0).centreY(),S3kSoloArenaViews.displayY(host.scroll()),
+                        host.scroll().profile().yWrapMask());
+            }
         };
+    }
+    private static int projectedOrigin(int player,int camera,int mask) {
+        // Select the same image as S3kCompetitionSpritePages' miniature source (12px half extent).
+        // The mod places ghosts nearest P1; native camera words can occupy another loop image.
+        int screen = ((player-camera+12)&mask)-12;
+        return player-screen;
     }
     @Override public void draw() { host.drawArena(); }
     @Override public void close() {

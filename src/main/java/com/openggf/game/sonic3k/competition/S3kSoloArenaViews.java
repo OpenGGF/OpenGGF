@@ -45,10 +45,14 @@ public final class S3kSoloArenaViews implements S3kCompetitionNativeHost.Views, 
         renderer.draw(context,List.of(new NativeCompetitionRenderer.View(roster.camera(0).capture(),0,224,
                 y,backgroundY,0,host.planes().widthTiles()*8,scroll.projectSoloHorizontalScroll(y),sprites)),rgb);
     }
+    public S3kCompetitionSpritePages.Frame projectNativeSprites(GameplayModeContext context,
+            S3kCompetitionNativeHost host,S3kCompetitionScroll scroll) {
+        return host.spritePages().projectSolo(context.getObjectManager(),host.players(),scroll,displayY(scroll));
+    }
     /** Read-only prepared presentation, also inspectable without replaying native visibility. */
     public com.openggf.graphics.SpritePresentation.Frame prepareSprites(GameplayModeContext context,
             S3kCompetitionNativeHost host,S3kCompetitionScroll scroll) {
-        var page = host.spritePages().projectSolo(context.getObjectManager(),host.players(),scroll,displayY(scroll));
+        var page = projectNativeSprites(context,host,scroll);
         return S3kCompetitionViews.prepareFrame(graphics,host.artProvider(),page,0,224,bucket -> {
             context.getGhostRenderRegistry().renderForLayer(bucket,false);
             context.getGhostRenderRegistry().renderForLayer(bucket,true);
