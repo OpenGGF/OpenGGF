@@ -125,6 +125,25 @@ public final class RoomHost {
     private String listedRoomId;
     // Slots in the last broadcast top ten, for private rank updates on push-out.
     private Set<Integer> broadcastTopSlots = Set.of();
+    private final HostTeleportSwap swaps = new HostTeleportSwap();
+    private String roomTrackKind = "ACT", roomMode = "TIME_ATTACK";
+    List<HostTeleportSwap.Decision> swapLog() { return swaps.log(); }
+    void taintSwaps(int slot) { swaps.taint(slot); }
+    void configureIdentity(ControlMessage.RoomDescriptor descriptor) {
+        configureTrackIdentity(descriptor.trackKind(), descriptor.mode());
+    }
+
+    /** Initializes kind and mode before a room's first round; legacy constructors default to acts. */
+    public void configureTrackIdentity(String trackKind, String mode) {
+        if (round.phase() != HostRoundEngine.Phase.LOBBY || round.roundId() != 0)
+            throw new IllegalStateException("track identity is frozen after the first round starts");
+        var key = new com.openggf.net.protocol.TrackKey(roomGameId, trackKind, roomZone, roomAct);
+        if (!TrackRules.legal(key, mode)) throw new IllegalArgumentException("track illegal for mode");
+        boolean changedKind = !roomTrackKind.equals(trackKind);
+        roomTrackKind = trackKind; roomMode = mode;
+        if (changedKind) hub.setTrack(key);
+        round.profile(hub.profile());
+    }
     private String roomGameId;
     private int roomZone;
     private int roomAct;
@@ -210,10 +229,9 @@ public final class RoomHost {
                         System.Logger.Level.WARNING, "lobby presence violation slot=" + slot + ": " + detail));
         this.round = new HostRoundEngine(wallClockMillis, this::broadcast);
         round.setVerifiedRoom(config.verified());
-        // A room without an independent replay verifier may retain claims for
-        // trust accrual and operator spot checks, but must not present them to
-        // peers as competitive standings.
-        round.setPublishUnverifiedStandings(false);
+        // D17 publishes casual claims explicitly as UNVERIFIED. The separate
+        // trust and spot-check paths continue to consume the original claims.
+        round.setPublishUnverifiedStandings(true);
         round.setPendingExpiryListener((slot, attemptId) -> {
             if (this.hooks.verificationHooks() != null) {
                 this.hooks.verificationHooks().onPendingExpired(
@@ -415,8 +433,9 @@ public final class RoomHost {
             }
             return;
         }
-        if (round.phase() != HostRoundEngine.Phase.RUNNING
-                || member.activeAttemptId < 0) {
+        if ((round.phase() != HostRoundEngine.Phase.RUNNING
+                && !(round.competition() && "ARENA".equals(roomTrackKind)
+                && round.phase() == HostRoundEngine.Phase.COUNTDOWN)) || member.activeAttemptId < 0) {
             if (!isRefusedAttemptBatch(member, data)) {
                 recordAttemptViolation(member, "binary outside active attempt");
             }
@@ -448,6 +467,10 @@ public final class RoomHost {
         for (Member loiterer : loiterers) {
             drop(loiterer, "handshake timeout");
         }
+        if (round.competition() && round.phase() == HostRoundEngine.Phase.RUNNING)
+            swaps.drain(now, swapObservations(), this::sendSwap, (slot, detail) -> {
+                Member m = memberForSlot(slot); if (m != null) recordAttemptViolation(m, detail);
+            });
         hub.tick();
         if (betweenRounds()) {
             lobby.tick();
@@ -469,13 +492,17 @@ public final class RoomHost {
     }
 
     public boolean requestStartRound(ControlMessage.RoundConfig roundConfig) {
-        if (roundConfig == null || !trackAllowed(roundConfig)) {
+        if (roundConfig == null || !TrackRules.monitorsLegal(roundConfig) || !trackAllowed(roundConfig)) {
             return false;
         }
         if (!round.startRound(roundConfig)) {
             return false;
         }
+        swaps.clear();
+        roomTrackKind = roundConfig.trackKind(); roomMode = roundConfig.mode();
         for (Member member : members.values()) {
+            if (member.admitted()) round.register(member.slot, member.participantId, member.displayName,
+                    member.launch == null ? member.character : member.launch.effectiveCharacter(), member.fingerprint);
             member.violationsThisRound = 0;
             member.finishedThisRound = false;
             member.activeAttemptId = -1;
@@ -489,7 +516,8 @@ public final class RoomHost {
         if (!readyRequired()) {
             readyEveryone();
         }
-        hub.setTrack(roundConfig.gameId(), roundConfig.zone(), roundConfig.act());
+        hub.setTrack(new com.openggf.net.protocol.TrackKey(roundConfig.gameId(), roundConfig.trackKind(), roundConfig.zone(), roundConfig.act()));
+        round.profile(hub.profile());
         roomGameId = roundConfig.gameId();
         roomZone = roundConfig.zone();
         roomAct = roundConfig.act();
@@ -498,6 +526,7 @@ public final class RoomHost {
 
     public void applyTrackValidationProfile(TrackValidationProfile profile) {
         hub.applyProfile(profile);
+        round.profile(profile);
     }
 
     public int playerCount() {
@@ -549,7 +578,7 @@ public final class RoomHost {
     public ControlMessage.RoomDescriptor descriptor() {
         return new ControlMessage.RoomDescriptor(config.roomName(), roomGameId,
                 roomZone, roomAct, config.characterPolicy(),
-                config.lockedCharacter(), config.maxPlayers(), config.verified(), accessPolicy, chatMode.name());
+                config.lockedCharacter(), config.maxPlayers(), config.verified(), accessPolicy, chatMode.name(), roomTrackKind, roomMode);
     }
 
     public void sendToSlot(int slot, ControlMessage message) {
@@ -1068,8 +1097,10 @@ public final class RoomHost {
         member.memberSinceMillis = wallClockMillis.getAsLong();
         member.token = tokens.issue();
         member.participantId = UUID.randomUUID().toString();
-        if (round.phase() == HostRoundEngine.Phase.COUNTDOWN
-                || round.phase() == HostRoundEngine.Phase.RUNNING) {
+        if ((round.phase() == HostRoundEngine.Phase.COUNTDOWN
+                || round.phase() == HostRoundEngine.Phase.RUNNING)
+                && (!round.competition() || wallClockMillis.getAsLong() <= snapshot.countdownEndsAtHubMillis() - 2000
+                && round.register(member.slot, member.participantId, member.displayName, member.character, member.fingerprint))) {
             member.launch = launchFor(member, snapshot.config(),
                     snapshot.countdownEndsAtHubMillis(), snapshot.deadlineHubMillis());
             snapshot = new ControlMessage.RoundSnapshot(snapshot.phase(), snapshot.config(),
@@ -1300,7 +1331,25 @@ public final class RoomHost {
                 }
             }
             case ControlMessage.AttemptStart start -> startAttempt(member, start.attemptId());
-            case ControlMessage.AttemptReset reset -> resetAttempt(member, reset.attemptId());
+            case ControlMessage.AttemptReset reset -> {
+                round.forfeit(member.participantId, reset.reason());
+                resetAttempt(member, reset.attemptId());
+            }
+            case ControlMessage.TeleportRequest request -> {
+                try {
+                    if (!round.competition() || round.phase() != HostRoundEngine.Phase.RUNNING
+                            || member.activeAttemptId != request.attemptId() || !member.launch.swapEnabled())
+                        throw new IllegalArgumentException("swap outside enabled running attempt");
+                    var observations = swapObservations();
+                    swaps.request(member.slot, request.attemptId(), request.requestFrame(),
+                            round.roundId(), now, hub.profile() == null ? 0 : hub.profile().maxSwapSources(), observations, this::sendSwap);
+
+                } catch (IllegalArgumentException invalid) { recordAttemptViolation(member, invalid.getMessage()); }
+            }
+            case ControlMessage.TeleportOutcome outcome -> {
+                try { swaps.outcome(member.slot, outcome); }
+                catch (IllegalArgumentException invalid) { recordAttemptViolation(member, invalid.getMessage()); }
+            }
             case ControlMessage.TrackVote vote ->
                     round.onTrackVote(member.slot, vote.trackKey());
             case ControlMessage.AttemptFinish finish -> {
@@ -1315,21 +1364,24 @@ public final class RoomHost {
                         finish, !hub.hasFinishEvidence(member.slot,
                                 finish.attemptId(), finish.finishFrame(),
                                 finish.ghostStreamHashHex()));
+                if (outcome == null) round.forfeit(member.participantId, "INVALID_FINISH");
                 clearActiveAttempt(member);
                 // After the reset clearActiveAttempt reported, a finish ends FINISHED
                 // even when uncredited: roster status is coarse course progress (a
                 // sender's own finished frame bit also reports it), not standings.
                 hub.onAttemptFinished(member.slot, finish.attemptId());
                 member.finishedThisRound = round.hasBestForParticipant(member.participantId);
-                if (outcome != null && config.verified() && outcome.outsideBroadcastCap()) {
-                    send(member, new ControlMessage.RankUpdate(
-                            outcome.rank(), finish.timeFrames()));
+                if (outcome != null) {
+                    for (String board : List.of("TOTAL", "BEST_LAP")) {
+                        var rank = round.rankUpdateForParticipant(member.participantId, board);
+                        if (rank != null && ("BEST_LAP".equals(board) || outcome.outsideBroadcastCap())) send(member, rank);
+                    }
                 }
                 if (outcome != null && config.verified()
                         && hooks.verificationHooks() != null) {
                     hooks.verificationHooks().onFinishNeedingVerification(
                             hooks.roomId(), member.slot, member.fingerprint, finish,
-                            roomGameId + ":" + roomZone + ":" + roomAct,
+                            new com.openggf.net.protocol.TrackKey(roomGameId, roomTrackKind, roomZone, roomAct).format(),
                             member.launch.effectiveCharacter(),
                             config.requiredDeterminismFingerprint(), false);
                 }
@@ -1340,8 +1392,8 @@ public final class RoomHost {
                         >= STANDINGS_PAGE_INTERVAL_MILLIS) {
                     member.lastStandingsPageMillis = now;
                     send(member, new ControlMessage.StandingsPage(
-                            round.page(request.page(), STANDINGS_PAGE_SIZE),
-                            request.page(), round.totalPages(STANDINGS_PAGE_SIZE)));
+                            round.page(request.page(), STANDINGS_PAGE_SIZE, request.board()),
+                            request.page(), round.totalPages(STANDINGS_PAGE_SIZE, request.board()), request.board()));
                 }
             }
             default -> drop(member,
@@ -1386,6 +1438,17 @@ public final class RoomHost {
         return true;
     }
 
+    private List<HostTeleportSwap.Observation> swapObservations() {
+        return members.values().stream().filter(m -> m.activeAttemptId >= 0)
+                .map(m -> hub.observation(m.slot)).filter(java.util.Objects::nonNull).toList();
+    }
+    private void sendSwap(int slot, ControlMessage message) {
+        if (message instanceof ControlMessage.TeleportSwap c && !"ARENA".equals(roomTrackKind))
+            hub.admitSwap(slot, slot == c.slotA() ? c.targetB() : c.targetA(),
+                    slot == c.slotA() ? c.sentAtFrameA() : c.sentAtFrameB());
+        sendToSlot(slot, message);
+    }
+
     private void startAttempt(Member member, int attemptId) {
         if (member.launch == null || member.launch.roundId() != round.roundId()) {
             recordAttemptViolation(member, "attempt without frozen launch");
@@ -1398,7 +1461,7 @@ public final class RoomHost {
         // Clock skew near the countdown or deadline is not misbehaviour. Keep the
         // id so ordering stays strict and its trailing traffic can be recognised.
         member.lastAttemptId = attemptId;
-        if (!round.mayStartAttempt()) {
+        if (!round.startAttempt(member.participantId, attemptId)) {
             member.refusedAttemptId = attemptId;
             return;
         }
@@ -1488,7 +1551,10 @@ public final class RoomHost {
                                                 long countdownEndsAt, long deadline) {
         return new ControlMessage.RaceLaunch(round.roundId(), round.planRevision(), selected,
                 member.participantId, member.slot, member.fingerprint, member.character,
-                countdownEndsAt, deadline);
+                countdownEndsAt, deadline, playerCount() >= 2 && "COMPETITION".equals(selected.mode())
+                        && ("ARENA".equals(selected.trackKind()) && "ITEMS".equals(selected.monitors())
+                        || "s2".equals(selected.gameId()) && ("RANDOM".equals(selected.monitors())
+                        || "ITEMS".equals(selected.monitors()))));
     }
 
     /**
@@ -1507,7 +1573,7 @@ public final class RoomHost {
         // A slot without a row lost its only result and has no rank to report.
         for (ControlMessage.StandingsRow row : round.standings()) {
             Member member = pushedOut.remove(row.slot()) ? memberForSlot(row.slot()) : null;
-            if (member != null) {
+            if (member != null && "FINISHED".equals(row.outcome())) {
                 send(member, new ControlMessage.RankUpdate(row.rank(), row.bestTimeFrames()));
             }
         }
@@ -1586,6 +1652,7 @@ public final class RoomHost {
         tokens.revoke(member.token);
         hub.removePlayer(member.slot);
         lobby.removeMember(member.slot);
+        swaps.onPlayerLeft(member.slot);
         round.onPlayerLeft(member.slot);
     }
 
@@ -1599,12 +1666,15 @@ public final class RoomHost {
     }
 
     private boolean trackAllowed(ControlMessage.RoundConfig requested) {
+        try {
+            if (!TrackRules.legal(new com.openggf.net.protocol.TrackKey(requested.gameId(), requested.trackKind(), requested.zone(), requested.act()), requested.mode())) return false;
+        } catch (IllegalArgumentException invalidKey) { return false; }
         ControlMessage.RoundConfig voted = round.votedNextConfig();
         if (voted != null) {
             return voted.equals(requested);
         }
-        if (requested.gameId().equals(roomGameId)
-                && requested.zone() == roomZone && requested.act() == roomAct) {
+        if (new com.openggf.net.protocol.TrackKey(requested.gameId(), requested.trackKind(), requested.zone(), requested.act())
+                .equals(new com.openggf.net.protocol.TrackKey(roomGameId, roomTrackKind, roomZone, roomAct))) {
             return true;
         }
         return false;

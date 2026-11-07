@@ -98,8 +98,9 @@ class TestMasterEndToEnd {
         host.sendControl(new ControlMessage.StandingsPageRequest(0));
         ControlMessage.StandingsPage page = (ControlMessage.StandingsPage)
                 awaitControl(host, ControlMessage.StandingsPage.class, 10_000);
-        assertTrue(page.rows().isEmpty());
-        assertEquals(0, page.totalPages());
+        assertEquals(4,page.rows().size());
+        assertTrue(page.rows().stream().allMatch(row -> "UNVERIFIED".equals(row.verifyState())));
+        assertEquals(1, page.totalPages());
 
         guest3.close();
         await(host, event -> event instanceof RaceClient.Control control

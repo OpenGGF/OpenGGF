@@ -41,6 +41,9 @@ public final class GhostHub {
         int totalViolations;
         // Finished or reset with no newer accepted batch; see tick().
         boolean silent;
+        GhostFrame last, previous;
+        int frameIndex, shoeOnset;
+        long seenAt;
 
         Player(String fingerprint, HubConnection connection) {
             this.fingerprint = fingerprint;
@@ -74,13 +77,20 @@ public final class GhostHub {
 
     public void setTrack(String gameId, int zone, int act) {
         currentProfile = profiles.profileFor(gameId, zone, act).orElse(null);
+        classifier.geometry(currentProfile);
         for (Map.Entry<Integer, Player> entry : players.entrySet()) {
             resetPlayerStream(entry.getKey(), entry.getValue());
         }
     }
 
+    void setTrack(com.openggf.net.protocol.TrackKey key) {
+        setTrack(key.gameId(), key.zone(), key.act());
+        if (profiles instanceof KeyedTrackValidationProfileSource keyed) applyProfile(keyed.profileFor(key).orElse(null));
+    }
+
     public void applyProfile(TrackValidationProfile profileOrNull) {
         currentProfile = profileOrNull;
+        classifier.geometry(currentProfile);
         for (Player player : players.values()) {
             player.validator.updateProfile(profileOrNull);
         }
@@ -119,10 +129,18 @@ public final class GhostHub {
                 player.silent = false;
                 GhostFrame lastFrame = GhostFrameCodec.decode(batch.frameData(),
                         (batch.frameCount() - 1) * GhostFrameCodec.BYTES);
+                byte[] data = batch.frameData();
+                for (int i = 0; i < batch.frameCount(); i++) {
+                    GhostFrame f = GhostFrameCodec.decode(data, i * GhostFrameCodec.BYTES);
+                    if (player.last == null || player.last.shoeKind() != f.shoeKind()) player.shoeOnset = batch.startFrameIndex() + i;
+                    player.previous = player.last; player.last = f;
+                }
+                player.frameIndex = batch.startFrameIndex() + batch.frameCount() - 1;
+                player.seenAt = wallClockMillis.getAsLong();
                 classifier.updatePosition(slot, lastFrame.x(), lastFrame.y());
-                lastStatus.put(slot, lastFrame.finished()
+                lastStatus.put(slot, (lastFrame.progress() << 4) | (lastFrame.finished()
                         ? GhostPackets.ROSTER_STATUS_FINISHED
-                        : GhostPackets.ROSTER_STATUS_RUNNING);
+                        : GhostPackets.ROSTER_STATUS_RUNNING));
             }
             case DROP -> closeIfThresholdReached(player);
             case KICK -> player.connection.close("ghost stream violations");
@@ -244,6 +262,7 @@ public final class GhostHub {
     public void onAttemptStart(int slot, int attemptId) {
         Player player = players.get(slot);
         if (player != null) {
+            player.last = null; player.previous = null;
             player.validator.onAttemptStart(attemptId);
         }
     }
@@ -278,7 +297,7 @@ public final class GhostHub {
 
     private void markSilent(int slot, Player player, int rosterStatus) {
         player.silent = true;
-        lastStatus.put(slot, rosterStatus);
+        lastStatus.put(slot, (lastStatus.getOrDefault(slot, 0) & 0xF0) | rosterStatus);
     }
 
     public boolean hasFinishEvidence(int slot, int attemptId, int finishFrame,
@@ -291,6 +310,26 @@ public final class GhostHub {
                 attemptId, finishFrame, claimedStreamHashHex);
         closeIfThresholdReached(player);
         return accepted;
+    }
+
+    TrackValidationProfile profile() { return currentProfile; }
+    HostTeleportSwap.Observation observation(int slot) {
+        Player p = players.get(slot);
+        if (p == null || p.last == null || p.silent || p.validator.isAttemptFlagged()) return null;
+        GhostFrame f = p.last, prev = p.previous == null ? f : p.previous;
+        int dx = TrackRules.delta(f.x() - prev.x(), currentProfile == null ? 0 : currentProfile.wrapWidthPx());
+        int dy = TrackRules.delta(f.y() - prev.y(), currentProfile == null ? 0 : currentProfile.wrapHeightPx());
+        var target = new com.openggf.net.protocol.ControlMessage.SwapTarget(f.x(), f.y(), Math.clamp(dx * 256, -4096, 4096),
+                Math.clamp(dy * 256, -4096, 4096), f.hFlip(), f.secondaryPath(), f.priorityBucket(),
+                f.highPriority(), f.shoeKind(), f.shoeKind() == 0 ? 0 : Math.max(0, 75 - (p.frameIndex - p.shoeOnset) / 8), f.progress());
+        double progress = f.progress() + (currentProfile != null && currentProfile.wrapWidthPx() > 0
+                ? Math.floorMod(f.x(), currentProfile.wrapWidthPx()) / (double) currentProfile.wrapWidthPx()
+                : f.x() / (double) Math.max(1, currentProfile == null ? 65536 : currentProfile.levelWidthPx()));
+        return new HostTeleportSwap.Observation(slot, p.frameIndex, p.seenAt, f.hurt() || f.finished(), progress, target);
+    }
+    void admitSwap(int slot, com.openggf.net.protocol.ControlMessage.SwapTarget target, int first) {
+        Player p = players.get(slot);
+        if (p != null) p.validator.admitSwap(target, first);
     }
 
     public int tickCount() {

@@ -92,7 +92,9 @@ public final class ModApiVersion {
      * catalogue and read-only global personal chat display preferences. Protocol 7 combines
      * these controls with private admission, invite authority and correlated master requests.
      * Protocol 9 adds competition track kinds, race clocks, monitor policies, lap/progress
-     * metadata, standings boards and bounded teleport event contracts.
+     * metadata, standings boards and bounded teleport event contracts. Remote ghost registries
+     * accept explicit local-track wrap geometry for playback and extrapolation; room hosts
+     * accept initial track kind/mode without changing legacy constructor defaults.
      * Protocol 8 adds broker-bound listed joins, explicit listener admission states,
      * complete direct registration ownership, acknowledged route retirement,
      * local broker-granted owner self-join, committed round revisions and

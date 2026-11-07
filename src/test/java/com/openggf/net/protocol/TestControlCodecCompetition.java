@@ -29,6 +29,15 @@ class TestControlCodecCompetition {
         return new ControlMessage.RoundStart(cfg, 1000, 61000,
                 new ControlMessage.RaceLaunch(1,1,cfg,"participant",0,"fingerprint","sonic",1000,61000,true));
     }
+    @Test void fuzzClosedSwapOutcomes() {
+        var c = new ControlJsonCodec();
+        var random = new java.util.Random(9);
+        for (int i = 0; i < 200; i++) {
+            String unknown = "INVALID_" + Integer.toUnsignedString(random.nextInt());
+            String encoded = c.encode(null, new ControlMessage.TeleportOutcome(1, 1, "APPLIED"));
+            assertThrows(ProtocolViolationException.class, () -> c.decode(encoded.replace("APPLIED", unknown)));
+        }
+    }
     @Test void roundTripsAndDirections() {
         var c = new ControlJsonCodec();
         for (var m : shapes()) assertEquals(m, c.decode(c.encode(null,m)).message());
