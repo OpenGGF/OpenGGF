@@ -71,7 +71,14 @@ public final class S3kHostedArenaSession implements HostedArenaSession {
             @Override public com.openggf.sprites.art.SpriteArtSet art(String character) {
                 var sheet = host.assets().miniature(S3kCompetitionPlayer.Character.valueOf(character.toUpperCase(Locale.ROOT)));
                 var frames = java.util.stream.IntStream.range(0,sheet.getFrameCount()).mapToObj(sheet::getFrame).toList();
-                return new com.openggf.sprites.art.SpriteArtSet(sheet.getPatterns(),frames,List.of(),
+                // Assets already resolved ROM DPLCs into absolute mapping tile offsets.
+                // Populate the private static bank once; empty later plans retain those tiles.
+                var initial = new com.openggf.level.render.SpriteDplcFrame(List.of(
+                        new com.openggf.level.render.TileLoadRequest(0,sheet.getPatterns().length,0)));
+                var retained = new com.openggf.level.render.SpriteDplcFrame(List.of());
+                var plans = java.util.stream.IntStream.range(0,frames.size())
+                        .mapToObj(frame -> frame == 0 ? initial : retained).toList();
+                return new com.openggf.sprites.art.SpriteArtSet(sheet.getPatterns(),frames,plans,
                         "knuckles".equals(character) ? 1 : 0,0,0,sheet.getPatterns().length,null,null);
             }
             @Override public com.openggf.level.Palette palette(String character) {
