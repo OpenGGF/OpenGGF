@@ -119,7 +119,8 @@ public final class GhostRenderer {
             }
             var camera = GameServices.cameraOrNull();
             if (camera != null) {
-                queueNameplate(ghost, camera.getXWithShake(), camera.getYWithShake(), alpha);
+                queueNameplate(ghost, artSource == null ? camera.getXWithShake() : artSource.cameraX(),
+                        artSource == null ? camera.getYWithShake() : artSource.cameraY(), alpha);
             }
         }
     }
