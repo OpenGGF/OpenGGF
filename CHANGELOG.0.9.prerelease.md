@@ -340,7 +340,10 @@ matching area heading; see the
   signatures and legacy behavior remain unchanged. Frontend/Module save binding
   and native progress completion remain separate; initialization-local buffer
   commands are distinguished from later IPX progress calls. Data custody
-  grants no next-zone gameplay. Collision Chaos gameplay, broader act coverage
+  grants no next-zone gameplay. The exact original-USA R3PCM file and finite
+  loader source/initial-variable selection now remain distinct from R1, preserving
+  matching-instance reuse and reached UNKNOWN prefixes; PCM driver execution,
+  output and live loading admission stay separate. Collision Chaos gameplay, broader act coverage
   and regional parity remain separate.
   CD player headless boot loads the fixed
   roster before rewind controller creation while keeping no-device audio before

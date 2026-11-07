@@ -1,6 +1,7 @@
 package com.openggf.game.soniccd;
 
 import com.openggf.game.soniccd.level.CdAssetBytes;
+import com.openggf.game.soniccd.media.CdR3PcmSource;
 import com.openggf.game.soniccd.media.CdTimeWarpPrograms;
 
 import java.util.Objects;
@@ -63,34 +64,65 @@ final class SonicCdProgramLoadServices {
     static State loadLevelR1Pcm(State before, CdTimeWarpPrograms required) {
         Objects.requireNonNull(before, "programme-load value");
         Objects.requireNonNull(required, "actual authenticated programme bundle");
-        requireNoIncompleteRequest(before);
+        return loadLevelPcm(before, new RequiredPcm(required, null));
+    }
 
+    // BEGIN R3PCM finite source choice, shared SPX suffix, no driver execution.
+    static State loadLevelR3Pcm(State before, CdR3PcmSource required) {
+        Objects.requireNonNull(before, "programme-load value");
+        Objects.requireNonNull(required, "actual authenticated original R3PCM source");
+        return loadLevelPcm(before, new RequiredPcm(null, required));
+    }
+
+    /** Private finite choice; only genuine existing R1 or private-constructed R3 custody enters. */
+    private static final class RequiredPcm {
+        private final CdTimeWarpPrograms r1;
+        private final CdR3PcmSource r3;
+        private RequiredPcm(CdTimeWarpPrograms r1, CdR3PcmSource r3) {
+            if ((r1 == null) == (r3 == null)) throw new IllegalArgumentException("One original PCM source choice");
+            this.r1 = r1;
+            this.r3 = r3;
+        }
+        private Object key() { return r1 != null ? r1.source() : r3.source(); }
+        private CdAssetBytes bytes() { return r1 != null ? r1.r1Pcm() : r3.bytes(); }
+        private int fileBytes() { return r1 != null ? PCM_FILE_BYTES : 242597; }
+        private LoadAttempt attempt(LoadPrefix prefix, Boundary stopped) {
+            return new LoadAttempt(r1 != null ? r1.source() : null, r3 != null ? r3.source() : null, prefix, stopped);
+        }
+        private RequestedPcm selector() {
+            return new RequestedPcm(r1 != null ? r1.source() : null, r3 != null ? r3.source() : null);
+        }
+        private DriverInstance driver(CdAssetBytes bytes) {
+            return new DriverInstance(r1 != null ? r1.source() : null, r3 != null ? r3.source() : null, bytes);
+        }
+    }
+
+    private static State loadLevelPcm(State before, RequiredPcm required) {
+        requireNoIncompleteRequest(before);
         var music = new State(before.pcmKnowledge, before.installed, before.selectorKnowledge,
                 before.requestedSelector, OptionalInt.of(MUSIC_SETTING), before.masterSetting,
-                new LoadAttempt(required.source(), LoadPrefix.CDDA_MUSIC_WRITTEN, null), before.lastPastWrite);
+                required.attempt(LoadPrefix.CDDA_MUSIC_WRITTEN, null), before.lastPastWrite);
         var reset = new State(music.pcmKnowledge, music.installed, music.selectorKnowledge,
                 music.requestedSelector, music.musicSetting, OptionalInt.of(MASTER_SETTING),
-                new LoadAttempt(required.source(), LoadPrefix.CDDA_MASTER_WRITTEN, null), music.lastPastWrite);
-
-        // SPX:762-764 reads the actual current driver only after ResetCDDAVol returns.
+                required.attempt(LoadPrefix.CDDA_MASTER_WRITTEN, null), music.lastPastWrite);
+        // Both native CDDA stores precede comparison. UNKNOWN retains that exact stopped prefix.
         if (reset.pcmKnowledge == PcmKnowledge.UNKNOWN) {
             throw stopped(Boundary.PCM_KNOWLEDGE_UNKNOWN, reset);
         }
-        if (reset.installed != null && sameSource(reset.installed.driver.source, required.source())) {
+        if (reset.installed != null && reset.installed.driver.sourceKey().equals(required.key())) {
             return new State(reset.pcmKnowledge, reset.installed, reset.selectorKnowledge,
                     reset.requestedSelector, reset.musicSetting, reset.masterSetting,
-                    new LoadAttempt(required.source(), LoadPrefix.MATCH_REUSED, null), reset.lastPastWrite);
+                    required.attempt(LoadPrefix.MATCH_REUSED, null), reset.lastPastWrite);
         }
-
-        // SPX:767 writes the selector before LoadFile:769. This prefix is not installed readiness.
+        // SPX767 selects the filename before769 LoadFile. This is not InitDriver/UpdateDriver.
         var selected = new State(reset.pcmKnowledge, reset.installed, SelectorKnowledge.SELECTED,
-                new RequestedPcm(required.source()), reset.musicSetting, reset.masterSetting,
-                new LoadAttempt(required.source(), LoadPrefix.SELECTOR_WRITTEN, null), reset.lastPastWrite);
-        CdAssetBytes bytes = required.r1Pcm();
-        if (bytes.length() != PCM_FILE_BYTES) {
+                required.selector(), reset.musicSetting, reset.masterSetting,
+                required.attempt(LoadPrefix.SELECTOR_WRITTEN, null), reset.lastPastWrite);
+        CdAssetBytes bytes = required.bytes();
+        if (bytes.length() != required.fileBytes()) {
             throw stopped(Boundary.PCM_INSTALLATION_UNSUPPORTED, selected);
         }
-        // Variables (_Driver.asm:33-34) is original source data, never a mutable generic RAM bank.
+        // Both original BOSS0 banks include the same literal $900-byte zero Variables template.
         for (int offset = 0; offset < VARIABLE_BYTES; offset++) {
             if (bytes.unsignedByte(VARIABLE_BASE + offset) != 0) {
                 throw stopped(Boundary.PCM_INSTALLATION_UNSUPPORTED, selected);
@@ -101,11 +133,12 @@ final class SonicCdProgramLoadServices {
                 bytes.unsignedByte(VARIABLE_BASE + 0xD));
         var variables = new DriverVariables(bytes.unsignedByte(VARIABLE_BASE + 2),
                 bytes.unsignedByte(VARIABLE_BASE + 9), queue, bytes.unsignedLong(VARIABLE_BASE + 0x10));
-        var installed = new InstalledPcm(new DriverInstance(required.source(), bytes), variables);
+        var installed = new InstalledPcm(required.driver(bytes), variables);
         return new State(PcmKnowledge.LOADED, installed, selected.selectorKnowledge,
                 selected.requestedSelector, selected.musicSetting, selected.masterSetting,
-                new LoadAttempt(required.source(), LoadPrefix.SOURCE_INSTALLED, null), null);
+                required.attempt(LoadPrefix.SOURCE_INSTALLED, null), null);
     }
+    // END R3PCM finite source choice.
 
     /** SPCmd_PlayPastMus writes queue slot0; it does not process that queue or start a track. */
     static State requestPastMusic(State before) {
@@ -132,6 +165,12 @@ final class SonicCdProgramLoadServices {
         Objects.requireNonNull(candidate, "programme-load value");
         Objects.requireNonNull(sessionPrograms, "actual authenticated session programme data");
         candidate.validateShape();
+        // Legacy capture stays R1-only; R3/mixed prefixes use the explicitly supplied data pair.
+        if ((candidate.installed != null && candidate.installed.driver.r3Source != null)
+                || (candidate.requestedSelector != null && candidate.requestedSelector.r3Source != null)
+                || candidate.lastLoad.r3Source != null) {
+            throw new IllegalArgumentException("R3 source requires explicit capture data");
+        }
         var source = sessionPrograms.source();
         if ((candidate.installed != null && !sameSource(candidate.installed.driver.source, source))
                 || (candidate.requestedSelector != null && !sameSource(candidate.requestedSelector.source, source))
@@ -140,8 +179,28 @@ final class SonicCdProgramLoadServices {
         }
     }
 
+    // BEGIN explicit R1/R3 finite capture consistency; no session or invocation authority.
+    static void validateWithR3ForCapture(State candidate, CdTimeWarpPrograms sessionR1, CdR3PcmSource sessionR3) {
+        Objects.requireNonNull(candidate, "programme-load value");
+        Objects.requireNonNull(sessionR1, "actual retained R1 bundle");
+        Objects.requireNonNull(sessionR3, "actual retained R3 source");
+        candidate.validateShape();
+        if (!sessionR1.source().wholeDiscSha256().equals(sessionR3.source().wholeDiscSha256())) {
+            throw new IllegalArgumentException("PCM sources differ in complete-disc identity");
+        }
+        Object r1 = sessionR1.source(), r3 = sessionR3.source();
+        for (Object key : new Object[]{candidate.installed == null ? null : candidate.installed.driver.sourceKey(),
+                candidate.requestedSelector == null ? null : candidate.requestedSelector.sourceKey(),
+                candidate.lastLoad.sourceKey()}) {
+            if (key != null && !key.equals(r1) && !key.equals(r3)) {
+                throw new IllegalArgumentException("Programme value differs from supplied original R1/R3 data");
+            }
+        }
+    }
+    // END explicit R1/R3 capture consistency.
+
     private static boolean sameSource(CdTimeWarpPrograms.Source first, CdTimeWarpPrograms.Source second) {
-        // Only genuine CdTimeWarpPrograms can mint DriverInstance. Source records alone cannot.
+        // Legacy R1 validation has already excluded R3. Source records alone cannot mint a driver.
         return first.equals(second);
     }
 
@@ -157,7 +216,8 @@ final class SonicCdProgramLoadServices {
     private static Unsupported stopped(Boundary boundary, State prefix) {
         var stopped = new State(prefix.pcmKnowledge, prefix.installed, prefix.selectorKnowledge,
                 prefix.requestedSelector, prefix.musicSetting, prefix.masterSetting,
-                new LoadAttempt(prefix.lastLoad.requiredSource, prefix.lastLoad.prefix, boundary), prefix.lastPastWrite);
+                new LoadAttempt(prefix.lastLoad.requiredSource, prefix.lastLoad.r3Source,
+                        prefix.lastLoad.prefix, boundary), prefix.lastPastWrite);
         return new Unsupported(boundary, stopped);
     }
 
@@ -206,7 +266,7 @@ final class SonicCdProgramLoadServices {
                 throw new IllegalArgumentException("Past request has no matching actual driver queue");
             }
             if (lastLoad.prefix == LoadPrefix.NONE) {
-                if (lastLoad.requiredSource != null || lastLoad.stoppedAt != null || installed != null
+                if (lastLoad.sourceKey() != null || lastLoad.stoppedAt != null || installed != null
                         || requestedSelector != null || lastPastWrite != null
                         || musicSetting.isPresent() || masterSetting.isPresent()
                         || (pcmKnowledge == PcmKnowledge.UNKNOWN) != (selectorKnowledge == SelectorKnowledge.UNKNOWN)) {
@@ -214,20 +274,20 @@ final class SonicCdProgramLoadServices {
                 }
                 return;
             }
-            if (lastLoad.requiredSource == null || musicSetting.orElse(-1) != MUSIC_SETTING
+            if (lastLoad.sourceKey() == null || musicSetting.orElse(-1) != MUSIC_SETTING
                     || (lastLoad.prefix != LoadPrefix.CDDA_MUSIC_WRITTEN
                         && masterSetting.orElse(-1) != MASTER_SETTING)) {
                 throw new IllegalArgumentException("Programme request omits its source or ordered CDDA prefix");
             }
             if (lastLoad.prefix == LoadPrefix.MATCH_REUSED || lastLoad.prefix == LoadPrefix.SOURCE_INSTALLED) {
                 if (lastLoad.stoppedAt != null || installed == null || requestedSelector == null
-                        || !sameSource(installed.driver.source, lastLoad.requiredSource)
-                        || !sameSource(requestedSelector.source, lastLoad.requiredSource)) {
+                        || !installed.driver.sourceKey().equals(lastLoad.sourceKey())
+                        || !requestedSelector.sourceKey().equals(lastLoad.sourceKey())) {
                     throw new IllegalArgumentException("Completed programme request has no matching installation");
                 }
             }
             if (lastLoad.prefix == LoadPrefix.SELECTOR_WRITTEN
-                    && (requestedSelector == null || !sameSource(requestedSelector.source, lastLoad.requiredSource))) {
+                    && (requestedSelector == null || !requestedSelector.sourceKey().equals(lastLoad.sourceKey()))) {
                 throw new IllegalArgumentException("Pending programme selector is missing or inconsistent");
             }
             if (lastLoad.stoppedAt != null
@@ -281,24 +341,36 @@ final class SonicCdProgramLoadServices {
 
     static final class DriverInstance {
         private final CdTimeWarpPrograms.Source source;
+        private final CdR3PcmSource.Source r3Source;
         private final CdAssetBytes originalSource;
         private DriverInstance(CdTimeWarpPrograms.Source source, CdAssetBytes originalSource) {
-            this.source = Objects.requireNonNull(source);
+            this(Objects.requireNonNull(source), null, originalSource);
+        }
+        private DriverInstance(CdTimeWarpPrograms.Source source, CdR3PcmSource.Source r3Source,
+                               CdAssetBytes originalSource) {
+            if ((source == null) == (r3Source == null)) throw new IllegalArgumentException("One PCM driver source");
+            this.source = source;
+            this.r3Source = r3Source;
             this.originalSource = Objects.requireNonNull(originalSource);
         }
-        CdTimeWarpPrograms.Source source() { return source; }
-        CdNativeFile file() { return CdNativeFile.R1PCM; }
+        CdTimeWarpPrograms.Source source() {
+            if (source == null) throw new IllegalStateException("R3 has an explicit r3Source identity");
+            return source;
+        }
+        Optional<CdR3PcmSource.Source> r3Source() { return Optional.ofNullable(r3Source); }
+        private Object sourceKey() { return source != null ? source : r3Source; }
+        CdNativeFile file() { return r3Source == null ? CdNativeFile.R1PCM : CdNativeFile.R3PCM; }
         CdAssetBytes originalSource() { return originalSource; }
         // Private construction consumes a genuine authenticated bundle. Its complete-disc source
-        // identity fixes R1PCM bytes; separate immutable views of that same data compare equal.
+        // identity fixes the selected file; separate immutable views of that same data compare equal.
         // Native reuse still preserves this exact instance, checked with identity where required.
 
         @Override public boolean equals(Object other) {
             return this == other || other instanceof DriverInstance value
-                    && Objects.equals(source, value.source);
+                    && Objects.equals(source, value.source) && Objects.equals(r3Source, value.r3Source);
         }
         @Override public int hashCode() {
-            return Objects.hash(source);
+            return r3Source == null ? Objects.hash(source) : Objects.hash(CdNativeFile.R3PCM, r3Source);
         }
 
     }
@@ -370,39 +442,60 @@ final class SonicCdProgramLoadServices {
 
     static final class RequestedPcm {
         private final CdTimeWarpPrograms.Source source;
-        private RequestedPcm(CdTimeWarpPrograms.Source source) { this.source = Objects.requireNonNull(source); }
-        CdTimeWarpPrograms.Source source() { return source; }
-        CdNativeFile file() { return CdNativeFile.R1PCM; }
+        private final CdR3PcmSource.Source r3Source;
+        private RequestedPcm(CdTimeWarpPrograms.Source source) { this(Objects.requireNonNull(source), null); }
+        private RequestedPcm(CdTimeWarpPrograms.Source source, CdR3PcmSource.Source r3Source) {
+            if ((source == null) == (r3Source == null)) throw new IllegalArgumentException("One requested PCM source");
+            this.source = source;
+            this.r3Source = r3Source;
+        }
+        CdTimeWarpPrograms.Source source() {
+            if (source == null) throw new IllegalStateException("R3 has an explicit r3Source identity");
+            return source;
+        }
+        Optional<CdR3PcmSource.Source> r3Source() { return Optional.ofNullable(r3Source); }
+        private Object sourceKey() { return source != null ? source : r3Source; }
+        CdNativeFile file() { return r3Source == null ? CdNativeFile.R1PCM : CdNativeFile.R3PCM; }
         @Override public boolean equals(Object other) {
             return this == other || other instanceof RequestedPcm value
-                    && Objects.equals(source, value.source);
+                    && Objects.equals(source, value.source) && Objects.equals(r3Source, value.r3Source);
         }
         @Override public int hashCode() {
-            return Objects.hash(source);
+            return r3Source == null ? Objects.hash(source) : Objects.hash(CdNativeFile.R3PCM, r3Source);
         }
 
     }
 
     static final class LoadAttempt {
         private final CdTimeWarpPrograms.Source requiredSource;
+        private final CdR3PcmSource.Source r3Source;
         private final LoadPrefix prefix;
         private final Boundary stoppedAt;
         private LoadAttempt(CdTimeWarpPrograms.Source requiredSource, LoadPrefix prefix, Boundary stoppedAt) {
+            this(requiredSource, null, prefix, stoppedAt);
+        }
+        private LoadAttempt(CdTimeWarpPrograms.Source requiredSource, CdR3PcmSource.Source r3Source,
+                            LoadPrefix prefix, Boundary stoppedAt) {
+            if (requiredSource != null && r3Source != null) throw new IllegalArgumentException("One load source identity");
             this.requiredSource = requiredSource;
+            this.r3Source = r3Source;
             this.prefix = Objects.requireNonNull(prefix);
             this.stoppedAt = stoppedAt;
         }
+        private Object sourceKey() { return requiredSource != null ? requiredSource : r3Source; }
+        Optional<CdR3PcmSource.Source> requiredR3Source() { return Optional.ofNullable(r3Source); }
         Optional<CdTimeWarpPrograms.Source> requiredSource() { return Optional.ofNullable(requiredSource); }
         LoadPrefix prefix() { return prefix; }
         Optional<Boundary> stoppedAt() { return Optional.ofNullable(stoppedAt); }
         @Override public boolean equals(Object other) {
             return this == other || other instanceof LoadAttempt value
-                    && Objects.equals(requiredSource, value.requiredSource)
+                    && Objects.equals(requiredSource, value.requiredSource) && Objects.equals(r3Source, value.r3Source)
                     && prefix == value.prefix
                     && stoppedAt == value.stoppedAt;
         }
         @Override public int hashCode() {
-            return Objects.hash(requiredSource, prefix, stoppedAt);
+            return r3Source == null ? Objects.hash(requiredSource, prefix, stoppedAt)
+                    : Objects.hash(CdNativeFile.R3PCM, r3Source, prefix, stoppedAt);
         }
 
     }

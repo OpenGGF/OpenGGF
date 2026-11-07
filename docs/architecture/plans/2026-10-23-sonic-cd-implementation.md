@@ -1,5 +1,25 @@
 # Implement Sonic CD with complete regional parity
 
+## 7 November 2026 — original R3PCM source and finite loader selection
+
+The exact original-USA R3PCM file now detaches through the existing complete-disc
+pipeline. The pure loader represents its native CDDA-setting/selector/source
+adoption order, authentic initial variables and exact-instance reuse. R1/R3
+identities and typed capture checks remain distinct; the old R1 specialization,
+enums and hash rules stay unchanged. UNKNOWN installation still stops after the
+completed CDDA prefix. Source adoption does not execute UpdateDriver/InitDriver,
+produce audio, acknowledge transport or admit a Module/World.
+
+R62 Maven returns0 with unchanged source and29 actual cases,0failures/errors/
+skips:14 new source/loader and15 existing R1 checks. The existing strict flat XML
+helper marks its receipt incomplete because Surefire emits three extra nested
+aggregate reports with parent-owned cases and zero-case parent reports. Root
+separately reconciles the exact seven fresh files, all29 actual owner/name
+identities, counts, properties and unchanged source. The original incomplete
+receipt is retained, not relabelled passed; no duplicate Maven run is launched.
+Independent bounded review finds no actionable P1/P2. Optional explicit nested
+report attribution is now a separate tooling task, preserving strict defaults.
+
 ## 7 November 2026 — same-disc initial-save custody and observed natural exit
 
 Stock USA preparation now detaches the original initial-save pair while its
