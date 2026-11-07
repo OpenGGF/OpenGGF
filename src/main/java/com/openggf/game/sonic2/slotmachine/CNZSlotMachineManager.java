@@ -150,6 +150,45 @@ public class CNZSlotMachineManager {
                 reward & 0xFFFF, pos, speed, rout);
     }
 
+    /** Complete engine state, separate from the comparison-only ROM Snapshot. */
+    public record RewindState(int routine, int timer, int index,
+            java.util.List<Integer> indices, java.util.List<Integer> offsets,
+            java.util.List<Integer> speeds, java.util.List<Integer> subroutines,
+            int target1, int target23, int reward, boolean determined, boolean inUse,
+            int activationFrame, int completionFrame, int fineTuneSeed,
+            int dispatchedVint, int frameCounter) { }
+
+    public com.openggf.game.rewind.RewindSnapshottable<RewindState> rewindAdapter() {
+        return new com.openggf.game.rewind.RewindSnapshottable<>() {
+            @Override public String key() { return "sonic2_native_slot_machine"; }
+            @Override public RewindState capture() {
+                return new RewindState(routine, slotTimer, slotIndex,
+                        copy(slotIndices), copy(slotOffsets), copy(slotSpeeds), copy(slotSubroutines),
+                        slot1Target, slot23Target, reward, rewardDetermined, inUse,
+                        lastActivationFrame, lastCompletionFrame, lastFineTuneTimerSeed,
+                        lastDispatchedVint, CNZSlotMachineManager.this.frameCounter);
+            }
+            @Override public void restore(RewindState state) {
+                routine = state.routine(); slotTimer = state.timer(); slotIndex = state.index();
+                restoreArray(slotIndices, state.indices()); restoreArray(slotOffsets, state.offsets());
+                restoreArray(slotSpeeds, state.speeds()); restoreArray(slotSubroutines, state.subroutines());
+                slot1Target = state.target1(); slot23Target = state.target23();
+                reward = state.reward(); rewardDetermined = state.determined(); inUse = state.inUse();
+                lastActivationFrame = state.activationFrame(); lastCompletionFrame = state.completionFrame();
+                lastFineTuneTimerSeed = state.fineTuneSeed(); lastDispatchedVint = state.dispatchedVint();
+                CNZSlotMachineManager.this.frameCounter = state.frameCounter();
+            }
+        };
+    }
+
+    private static java.util.List<Integer> copy(int[] values) {
+        return java.util.Arrays.stream(values).boxed().toList();
+    }
+
+    private static void restoreArray(int[] destination, java.util.List<Integer> values) {
+        for (int i = 0; i < destination.length; i++) destination[i] = values.get(i);
+    }
+
     /**
      * Check if slot machine is available (inactive).
      */
