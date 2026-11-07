@@ -393,7 +393,7 @@ public class ObjectManager {
         }
         ObjectSpawn spawn = population.spawnByInstance.get(owner);
         int ownSlot = objectCallbacks.call(object, object::getSlotIndex);
-        if (!unloadCounterBasedOutOfRange(owner, spawn, ownSlot, cameraX)) {
+        if (!unloadIfOutsideLifetimeWindow(owner, spawn, ownSlot, cameraX)) {
             return false;
         }
         population.executionOrder[execIndexForSlot(execSlot)] = null;
@@ -799,7 +799,6 @@ public class ObjectManager {
                 runExecLoop(cameraX, player, activeSidekicks, inlineSolidResolution, solidPostMovement);
                 runAfterExecBeforePlacement(afterExecBeforePlacement);
             } else {
-                syncActiveSpawnsUnload();
                 cleanupDestroyedDynamicObjects();
                 syncActiveSpawnsLoad(true);
                 assignPendingPlayerSlotAllocations();
@@ -1085,7 +1084,7 @@ public class ObjectManager {
                 boolean checksOutOfRangeAfter = objectCallbacks.call(
                         instance, instance::checksOutOfRangeAfterRoutine);
                 if (!checksOutOfRangeAfter
-                        && unloadCounterBasedOutOfRange(instance, spawn,
+                        && unloadIfOutsideLifetimeWindow(instance, spawn,
                                 slotIndexForExec(currentExecSlot), cameraX)) {
                     population.executionOrder[currentExecSlot] = null;
                     objectsRemoved = true;
@@ -1097,7 +1096,7 @@ public class ObjectManager {
 
                 if (checksOutOfRangeAfter
                         && !objectCallbacks.call(instance, instance::isDestroyed)
-                        && unloadCounterBasedOutOfRange(instance, spawn,
+                        && unloadIfOutsideLifetimeWindow(instance, spawn,
                                 slotIndexForExec(currentExecSlot), cameraX)) {
                     population.executionOrder[currentExecSlot] = null;
                     objectsRemoved = true;
@@ -1146,7 +1145,7 @@ public class ObjectManager {
                 }
                 executeObjectWithSolidContext(
                         inst, player, sidekicks, inlineSolidResolution, solidPostMovement);
-                if (unloadCounterBasedOutOfRange(inst, null, -1, cameraX)) {
+                if (unloadIfOutsideLifetimeWindow(inst, null, -1, cameraX)) {
                     objectsRemoved = true;
                     continue;
                 }
@@ -1183,7 +1182,7 @@ public class ObjectManager {
                 }
                 executeObjectWithSolidContext(
                         inst, player, sidekicks, inlineSolidResolution, solidPostMovement);
-                if (unloadCounterBasedOutOfRange(inst, spawn, -1, cameraX)) {
+                if (unloadIfOutsideLifetimeWindow(inst, spawn, -1, cameraX)) {
                     objectsRemoved = true;
                     continue;
                 }
@@ -1219,8 +1218,10 @@ public class ObjectManager {
     }
 
     /**
-     * Runs the standard exec loop for non-counter-based respawn (S2/S3K).
-     * This preserves the existing behavior where unload and load happen before exec.
+     * Runs the non-counter slot pass (S2/S3K). Each live object's manager-owned
+     * lifetime check follows its routine, on its updated reference coordinate.
+     * The caller schedules placement loading: S2 loads afterward; S3K's two-axis
+     * placement loads before this pass. Object-owned self-deletes remain in their routines.
      */
     void runExecLoop(int cameraX, PlayableEntity player,
             List<? extends PlayableEntity> sidekicks,
@@ -1302,18 +1303,13 @@ public class ObjectManager {
                 executeObjectWithSolidContext(
                         instance, player, sidekicks, inlineSolidResolution, solidPostMovement);
 
-                // ROM parity: each object calls RememberState / out_of_range
-                // at the END of its routine, AFTER updating position. S2/S3K
-                // objects end their routines with `jmpto JmpTo_MarkObjGone_P1`
-                // (docs/s2disasm/s2.asm MarkObjGone_P1 line ~30080), which
-                // checks the object's CURRENT x_pos(a0) — not its spawn x —
-                // against the camera window. Moving objects (e.g. Buzzer
-                // flying 174 px west of spawn) survive as long as their
-                // current position is in range. This check runs for both
-                // counter-based (S1) and non-counter (S2/S3K) placement.
+                // This pass retires out-of-range objects after their routine,
+                // using getOutOfRangeReferenceX() (live X unless the ROM uses an anchor).
+                // The separate S1 counter pass selects pre/post-routine timing through
+                // checksOutOfRangeAfterRoutine(); this pass always checks afterward.
                 if (!objectCallbacks.call(instance, instance::isDestroyed)) {
                     ObjectSpawn oorSpawn = population.spawnByInstance.get(instance);
-                    if (unloadCounterBasedOutOfRange(instance, oorSpawn,
+                    if (unloadIfOutsideLifetimeWindow(instance, oorSpawn,
                             slotIndexForExec(currentExecSlot), unloadCameraX)) {
                         population.executionOrder[currentExecSlot] = null;
                         objectsRemoved = true;
@@ -1365,7 +1361,7 @@ public class ObjectManager {
                 executeObjectWithSolidContext(
                         inst, player, sidekicks, inlineSolidResolution, solidPostMovement);
                 if (!objectCallbacks.call(inst, inst::isDestroyed)
-                        && unloadCounterBasedOutOfRange(inst, null, -1, unloadCameraX)) {
+                        && unloadIfOutsideLifetimeWindow(inst, null, -1, unloadCameraX)) {
                     objectsRemoved = true;
                     continue;
                 }
@@ -1407,7 +1403,7 @@ public class ObjectManager {
                 executeObjectWithSolidContext(
                         inst, player, sidekicks, inlineSolidResolution, solidPostMovement);
                 if (!objectCallbacks.call(inst, inst::isDestroyed)
-                        && unloadCounterBasedOutOfRange(inst, spawn, -1, unloadCameraX)) {
+                        && unloadIfOutsideLifetimeWindow(inst, spawn, -1, unloadCameraX)) {
                     objectsRemoved = true;
                     continue;
                 }
@@ -3144,75 +3140,10 @@ public class ObjectManager {
     }
 
     /**
-     * Phase 1 of spawn window sync for non-counter placement.
-     * <p>
-     * For S2/S3K-style ObjectPlacementController, {@code activeSpawns} only tracks the current
-     * ObjPosLoad candidate window. Live objects are retired by their own
-     * RememberState/out_of_range-equivalent code paths during execution, not by
-     * leaving the spawn candidate set.
-     */
-    private void syncActiveSpawnsUnload() {
-        // Intentionally empty. For non-counter ObjectPlacementController, live objects are kept
-        // alive until their own execution tail path retires them.
-        /*
-        Iterator<Map.Entry<ObjectSpawn, ObjectInstance>> iterator = population.placed.entrySet().iterator();
-        while (iterator.hasNext()) {
-            Map.Entry<ObjectSpawn, ObjectInstance> entry = iterator.next();
-            ObjectSpawn spawn = entry.getKey();
-            ObjectInstance instance = entry.getValue();
-
-            boolean removedFromPlacement = !activeSpawns.contains(spawn);
-            // ROM parity: do NOT run a second out-of-range check here for S1.
-            // The ROM only checks out_of_range during ExecuteObjects (each
-            // object's own RememberState call). The centralized check here
-            // was causing 20+ extra unloads during camera backtracking because
-            // it runs BEFORE objects execute — objects that would survive the
-            // ROM's single check (by having moved closer to Sonic) get killed
-            // before they get a chance to update their position this frame.
-            boolean outOfRange = false;
-
-            if ((removedFromPlacement || outOfRange)
-                    && !objectCallbacks.call(instance, instance::isPersistent)) {
-                // Release the SST slot so it can be reused by future objects
-                if (instance instanceof AbstractObjectInstance aoi) {
-                    int slot = objectCallbacks.call(instance, aoi::getSlotIndex);
-                    if (slot >= 0) {
-                        releaseSlot(slot);
-                    }
-                }
-                // Also release any reserved child slots for this spawn
-                freeAllReservedChildSlots(spawn);
-                // ROM parity: RememberState clears bit 7 when the object
-                // actually unloads (goes off-screen). This is the engine's
-                // equivalent — the ObjectInstance is being released because
-                // it left the screen. Destroyed objects are handled separately
-                // (removeFromActive path) and never reach here, so their bits
-                // stay set.
-                if (counterBased) {
-                    placement.clearCounterForSpawn(spawn);
-                }
-                if (outOfRange) {
-                    placement.removeFromActiveForUnload(spawn);
-                }
-                objectCallbacks.runAndUnregister(instance, instance::onUnload);
-                population.spawnByInstance.remove(instance);
-                iterator.remove();
-                changed = true;
-            }
-        }
-
-        if (changed) {
-            bucketsDirty = true;
-            markActiveObjectCachesDirty();
-        }
-        */
-    }
-
-    /**
      * Frees slots of dynamic objects explicitly marked as destroyed.
      * <p>
-     * Called after {@link #syncActiveSpawnsUnload()} to release slots held by
-     * dynamic children whose parent's {@code onUnload()} set them to destroyed.
+     * Releases slots held by dynamic children whose parent's {@code onUnload()}
+     * set them to destroyed, before the next placement load or execution pass.
      * This is a targeted pass — only objects with {@code isDestroyed() == true}
      * are freed, matching the ROM's ExecuteObjects behavior where these objects
      * would delete themselves before ObjPosLoad runs.
@@ -3226,50 +3157,19 @@ public class ObjectManager {
     }
 
     /**
-     * Pure-function limit for the viewport-scaled {@code out_of_range} variant:
-     * {@code 128 (behind-camera) + viewportWidth (screen) + 192 (ahead)}.
-     * <p>
-     * At native viewport width (320 px, {@code DISPLAY_ASPECT = NATIVE_4_3}) this
-     * returns exactly {@code 640}, reproducing the ROM {@code cmpi.w #$280,d0}
-     * constant bit-for-bit.  At widescreen widths the limit widens with the
-     * configured viewport so objects near the visible right edge are not
-     * incorrectly despawned (declared divergence — see
-     * docs/status/known-discrepancies.md "Object Despawn and Visibility Windows", entry #14).
-     * <p>
-     * Used by {@link #isOutOfRangeS1} for non-S1-counter placement and mirrored
-     * in {@link AbstractObjectInstance#isInRange()}.
-     */
-    private static final int S1_NATIVE_OUT_OF_RANGE_LIMIT = 128 + 320 + 192;
-
-    static int outOfRangeLimit(int viewportWidth) {
-        return 128 + viewportWidth + 192;
-    }
-
-    /**
-     * ROM parity: S1 {@code out_of_range} macro (Macros.asm line 278).
-     * <p>
-     * Computes unsigned 16-bit distance between object and screen position:
-     * <pre>
-     *   d0 = obX & 0xFF80
-     *   d1 = (v_screenposx - 128) & 0xFF80
-     *   distance = (d0 - d1) & 0xFFFF   (unsigned 16-bit)
-     *   out_of_range when distance > limit  (bhi = unsigned greater)
-     * </pre>
-     * S1 counter-based placement uses the ROM's fixed limit
-     * {@code 128 + 320 + 192}; other legacy paths keep the viewport-scaled
-     * declared divergence so objects near a wider visible right edge are not
-     * incorrectly despawned (see KNOWN_DISCREPANCIES.md entry #14
-     * "Object Despawn and Visibility Windows").
-     * Catches both left (negative wraps to large unsigned) and right out of range.
+     * Selects the legacy unload bound; {@link ObjectRangeOps} owns the ROM's
+     * chunk alignment and unsigned word comparison. S1 counter placement keeps
+     * the native 640 bound even at widescreen. Other legacy paths use
+     * 128 + viewport width + 192 (848 at width 528). An object's isPersistent()
+     * may veto the native decision using its own viewport-aware lifetime check;
+     * Buzz Bomber does this. Keep these caller policies distinct.
+     * See docs/status/known-discrepancies.md, "Object Despawn and Visibility Windows".
      */
     private boolean isOutOfRangeS1(int objX, int cameraX) {
-        int objRounded = objX & 0xFF80;
-        int screenRounded = (cameraX - 128) & 0xFF80;
-        int distance = (objRounded - screenRounded) & 0xFFFF;
         int limit = placement.isCounterBasedRespawn()
-                ? S1_NATIVE_OUT_OF_RANGE_LIMIT
-                : outOfRangeLimit(camera.getWidth());
-        return distance > limit;
+                ? ObjectRangeOps.OUT_OF_RANGE_BOUND
+                : ObjectRangeOps.viewportOutOfRangeBound(camera.getWidth());
+        return ObjectRangeOps.outOfRangeX(objX, cameraX, limit);
     }
 
     /**
@@ -3337,7 +3237,7 @@ public class ObjectManager {
     /**
      * Mirror of the S1 {@code RememberState}/{@code Cat_Despawn} respawn-table
      * bit-7 clear for objects that delete themselves off-screen instead of
-     * routing through {@link #unloadCounterBasedOutOfRange}.
+     * routing through {@link #unloadIfOutsideLifetimeWindow}.
      * <p>
      * Some S1 objects own their {@code out_of_range} tail (they set
      * {@link ObjectInstance#usesCustomOutOfRangeCheck()} with a no-op
@@ -3364,11 +3264,18 @@ public class ObjectManager {
         placement.clearCounterForSpawn(spawn);
         // ROM parity: bit 7 is cleared but the cursor may still sit between this
         // spawn's entry and the window edge, so keep it dormant until ObjPosLoad
-        // reprocesses it (matches unloadCounterBasedOutOfRange).
+        // reprocesses it (matches unloadIfOutsideLifetimeWindow).
         placement.markDormant(spawn);
     }
 
-    private boolean unloadCounterBasedOutOfRange(ObjectInstance instance, ObjectSpawn spawn,
+    /**
+     * Shared manager retirement for counter and non-counter execution. The caller
+     * chooses when to check; the object's persistence hook can veto retirement,
+     * and its reference/custom predicate chooses what is outside the window.
+     * Sprite visibility is a separate question. Once admitted here, removal frees
+     * the owned slot, calls onUnload and applies the placement's respawn policy.
+     */
+    private boolean unloadIfOutsideLifetimeWindow(ObjectInstance instance, ObjectSpawn spawn,
             int expectedSlotIndex, int cameraX) {
         // Authoring may bind a placed actor outside the primary window between ticks.
         // Its already-published native kill must reach the destruction dispatcher; a
@@ -3378,21 +3285,21 @@ public class ObjectManager {
         ObjectSpawn positionSpawn = spawn != null ? spawn
                 : objectCallbacks.call(instance, instance::getSpawn);
         // Fallback dynamic children may exist briefly without any spawn-backed
-        // identity. They still need update() calls, but cannot participate in
-        // S1's out_of_range unload check.
+        // identity. They still need update() calls, but this shared retirement
+        // path requires a spawn record before consulting lifetime hooks.
         if (positionSpawn == null) {
             return false;
         }
-        boolean persistent;
+        boolean vetoesRangeUnload;
         try {
-            persistent = objectCallbacks.call(instance, instance::isPersistent);
+            vetoesRangeUnload = objectCallbacks.call(instance, instance::isPersistent);
         } catch (NullPointerException e) {
-            throw new IllegalStateException(describeCounterBasedUnloadObject(instance, spawn), e);
+            throw new IllegalStateException(describeOutOfRangeObject(instance, spawn), e);
         }
         boolean outOfRange = objectCallbacks.call(instance, instance::usesCustomOutOfRangeCheck)
                 ? objectCallbacks.call(instance, () -> instance.isCustomOutOfRange(cameraX))
                 : isObjectOutOfRange(instance, spawn, cameraX);
-        if (persistent || !outOfRange) {
+        if (vetoesRangeUnload || !outOfRange) {
             return false;
         }
         if (instance instanceof AbstractObjectInstance aoi) {
@@ -3444,12 +3351,12 @@ public class ObjectManager {
             // Use the object's explicit ROM reference X when provided.
             return objectCallbacks.call(instance, instance::getOutOfRangeReferenceX);
         } catch (NullPointerException e) {
-            throw new IllegalStateException(describeCounterBasedUnloadObject(instance, spawn), e);
+            throw new IllegalStateException(describeOutOfRangeObject(instance, spawn), e);
         }
     }
 
-    private String describeCounterBasedUnloadObject(ObjectInstance instance, ObjectSpawn spawn) {
-        StringBuilder sb = new StringBuilder("Counter-based out_of_range check failed for ");
+    private String describeOutOfRangeObject(ObjectInstance instance, ObjectSpawn spawn) {
+        StringBuilder sb = new StringBuilder("Object out_of_range check failed for ");
         sb.append(instance.getClass().getName());
         if (instance instanceof AbstractObjectInstance aoi) {
             sb.append(" slot=").append(objectCallbacks.call(instance, aoi::getSlotIndex));
@@ -3474,14 +3381,13 @@ public class ObjectManager {
     }
 
     /**
-     * Phase 2 of spawn window sync: load new objects from the ObjectPlacementController window.
+     * Materializes the ObjectPlacementController's candidate window. Candidates
+     * leaving that window do not retire live objects; execution owns retirement.
      * <p>
-     * ROM parity: ObjPosLoad runs AFTER ExecuteObjects. By loading new objects
-     * after the exec loop, children allocated during the exec loop (Ring_Main,
-     * CStom_Main, etc.) get slots BEFORE new ObjectPlacementController objects, matching the
-     * ROM's slot assignment order. Objects loaded here don't execute until the
-     * next frame, matching ROM timing where ObjPosLoad objects first run during
-     * the following frame's ExecuteObjects.
+     * The caller chooses loading order. S1/S2 load after their object pass, so
+     * routine-created children receive slots before new placements and the new
+     * placements first execute next frame. S3K's two-axis path loads before its
+     * pass; reset also uses this method to materialize the initial window.
      */
     private void syncActiveSpawnsLoad(boolean allowVerticalLoadBypassForS2) {
         if (competitionStreaming.initializeUpfrontPlacement()) return;

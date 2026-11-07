@@ -1,6 +1,7 @@
 package com.openggf.game.sonic1.objects.badniks;
 
 import com.openggf.camera.Camera;
+import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
@@ -28,12 +29,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * to use spawn X, sprite visibility or a viewport margin must break these checks.
  */
 public class TestBuzzBomberLifecycle {
+    private SonicConfigurationService configuration;
     private Camera camera;
     private ObjectServices objectServices;
 
     @BeforeEach
     void setUp() {
-        SonicConfigurationService configuration = SonicConfigurationService.createStandalone();
+        configuration = SonicConfigurationService.createStandalone();
         configuration.resetToDefaults();
         camera = new Camera(configuration);
         camera.resetState();
@@ -121,6 +123,46 @@ public class TestBuzzBomberLifecycle {
         assertEquals(1, registry.creationCount);
     }
 
+    @Test
+    void counterManagerRetainsBuzzBomberUntilItsWidenedLifetimeWindowEnds() {
+        configuration.setConfigValue(SonicConfiguration.DISPLAY_ASPECT, "ULTRA_21_9");
+        configuration.resolveDisplayAspect();
+        camera.refreshViewportDimensions(configuration);
+        assertEquals(528, camera.getWidth());
+        setCameraX(800);
+        BuzzBomberRegistry registry = new BuzzBomberRegistry();
+        ObjectManager manager = new ObjectManager(
+                List.of(buzzBomberSpawn(1200)), registry, 0, null, null,
+                null, camera, objectServices);
+        manager.enableCounterBasedRespawn();
+        manager.reset(800);
+
+        for (int tick = 1; tick <= 101; tick++) {
+            manager.update(800, null, null, tick);
+        }
+        Sonic1BuzzBomberBadnikInstance bomber = registry.instance;
+        assertEquals(800, bomber.getX());
+
+        // The moved X occupies chunk 768. At camera 128 its distance is 768:
+        // beyond the manager's native 640, but inside Buzz's widened 848.
+        setCameraX(128);
+        manager.update(128, null, null, 102);
+
+        assertSame(bomber, manager.getActiveObjects().iterator().next(),
+                "S1 counter culling must respect the production badnik's widened persistence");
+        assertEquals(796, bomber.getX(), "the retained badnik still executes its movement");
+        assertEquals(1, registry.creationCount);
+
+        // Retreating another chunk makes that same live chunk's distance 896.
+        setCameraX(0);
+        manager.update(0, null, null, 103);
+
+        assertFalse(manager.getActiveObjects().contains(bomber),
+                "the badnik must retire once both native and widened windows reject its live X");
+        assertEquals(792, bomber.getX(), "RememberState culling remains after the movement routine");
+        assertEquals(1, registry.creationCount, "retirement must not recreate the distant placement");
+    }
+
     private Sonic1BuzzBomberBadnikInstance createBuzzBomber(int x) {
         Sonic1BuzzBomberBadnikInstance bomber =
                 new Sonic1BuzzBomberBadnikInstance(buzzBomberSpawn(x));
@@ -130,7 +172,7 @@ public class TestBuzzBomberLifecycle {
 
     private void setCameraX(int x) {
         camera.setX((short) x);
-        AbstractObjectInstance.updateCameraBounds(x, 0, x + 320, 224, 0);
+        AbstractObjectInstance.updateCameraBounds(x, 0, x + camera.getWidth(), 224, 0);
     }
 
     private static ObjectSpawn buzzBomberSpawn(int x) {

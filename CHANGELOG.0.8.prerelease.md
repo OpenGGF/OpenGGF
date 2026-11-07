@@ -25,8 +25,12 @@ under the matching area heading; see the
   behind the existing runtime entry points. Retiring multipart solids expires
   owned contact bits and frame history without releasing player state. Contact
   restore discards uncaptured future observations. Production badnik and contact
-  witnesses, clearer rewind HUD/HCZ phase flow, and focused lifecycle/trace
-  commands make contribution paths easier to follow.
+  witnesses, shared coarse-X arithmetic with explicit native/wider bounds, and
+  a typed rewind HUD frame make contribution paths easier to follow. HCZ owns
+  its next screen-shake value without using the renderer as scratch state.
+  Failed trace replays print their exact test/report/triage route; triage reads
+  compressed fixture auxiliaries, preserves pre-trace evidence and distinguishes
+  incomplete or unknown completion from a completed comparison.
 
 - **Scripted website hero reels:** `tools/media/hero_reels.py` regenerates
   the Sonic 1, Sonic 2 and Sonic 3&K title-card reels from the current engine

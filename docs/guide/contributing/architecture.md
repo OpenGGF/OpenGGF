@@ -90,15 +90,44 @@ Start at the responsibility, rather than reading `ObjectManager` end to end:
 
 | Change or investigation | Owner |
 | --- | --- |
+| Correct one object's movement, lifetime tail or render-flag branch | Its existing `game.sonic*/objects` routine and production-entity test |
 | Which objects are live, which slots they own, or which identity they retain | `ObjectPopulation` |
 | Recreate linked objects, adopt construction children, or order a restore | `ObjectRewindLifecycle` |
 | Standing/pushing latch identity, ride lifetime, frame markers, or saved contacts | `contact.SolidContactState` |
 | Classify a solid contact or decide its gameplay response | `ObjectSolidContactController` |
+| Coarse X-range arithmetic or its native/viewport bound | `ObjectRangeOps`; the calling object/manager still chooses lifetime policy |
+| When a manager range check runs and how retirement releases slots/respawn state | `ObjectManager.updateCounterBasedExecThenLoad`, `runExecLoop` and `unloadIfOutsideLifetimeWindow` |
 
 `ObjectManager` keeps the existing runtime entry points. The capability owners
 hold the state and rules behind them; they are not alternate public creator APIs.
 Their Javadoc defines the local invariants. For example, removing a solid clears
 its object-side bits without clearing the player's riding flags.
+
+For an ordinary badnik correction, stay in the existing leaf routine unless the
+failure crosses one of these shared boundaries. Placement loading decides which
+entries may be created; leaving that candidate window does not retire an existing
+actor. Lifetime retirement and the retained render flag are also separate:
+an actor can remain alive outside the visible sprite rectangle, and a ROM branch
+may read visibility from the previous render pass.
+
+| ROM difference being modelled | Existing hook or owner |
+| --- | --- |
+| Same range comparison, different current/original/parent X | `ObjectInstance.getOutOfRangeReferenceX` |
+| Different delete predicate | `usesCustomOutOfRangeCheck` / `isCustomOutOfRange`; preserve existing object-owned delete tails |
+| Object must survive the manager's range decision | `isPersistent` veto; it can be conditional on the object's own window |
+| Check before or after movement in S1's slot pass | `checksOutOfRangeAfterRoutine`; the non-counter pass already checks afterward |
+| Prior-render visibility controls a branch or self-delete | The object's retained render-state path, separate from coarse range arithmetic |
+
+The two bounds are intentionally distinct. S1 counter placement keeps native
+640. A viewport-aware object tail uses `128 + width + 192`, which is 848 at width
+528. Buzz Bomber's persistence veto can therefore keep its live chunk at distance
+768 after the manager's native check rejects it. Removing that hook as redundant
+would change widescreen lifetime. `TestBuzzBomberLifecycle` exercises the actual
+badnik and this manager boundary; `TestObjectRangeHelpers` and
+`TestAbstractObjectInstanceRange` cover the arithmetic and word-wrap boundaries.
+Use an anchored-object check such as `TestSonic1LavaGeyserOutOfRange` when changing
+shared range behavior. An object-local update test alone cannot prove manager
+retirement timing or slot/respawn effects.
 
 Contact changes start with three different lifetimes:
 

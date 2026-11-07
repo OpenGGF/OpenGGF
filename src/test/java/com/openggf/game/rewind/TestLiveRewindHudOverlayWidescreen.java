@@ -14,11 +14,10 @@ class TestLiveRewindHudOverlayWidescreen {
     @Test
     void renderCentersNativeHudAtEveryLiveWidth() {
         RecordingTextRenderer text = new RecordingTextRenderer();
-        LiveRewindHudOverlay overlay = new LiveRewindHudOverlay(() -> "REWIND 12");
 
         for (int width : new int[] {320, 352, 400}) {
             text.draws.clear();
-            overlay.render(text, null, width);
+            LiveRewindHudOverlay.render(text, null, width, 12, null);
             int expectedX = (width - 320) / 2 + 8;
             assertTrue(text.draws.stream().anyMatch(draw -> draw.text.equals("REW")
                     && draw.x == expectedX + 17));

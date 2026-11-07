@@ -352,11 +352,11 @@ public final class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjec
     }
 
     /**
-     * Opt out of {@code ObjectManager.unloadCounterBasedOutOfRange()} so this
+     * Opt out of {@code ObjectManager.unloadIfOutsideLifetimeWindow()} so this
      * platform's lifecycle is governed exclusively by ROM's
      * {@code Sprite_OnScreen_Test} analog inside {@link #update}. The two
      * checks share the same 0x280 threshold but differ by one frame:
-     * {@code unloadCounterBasedOutOfRange} compares against the CURRENT
+     * {@code unloadIfOutsideLifetimeWindow} compares against the CURRENT
      * frame's camera_x, while ROM's S3K {@code Sprite_OnScreen_Test} reads
      * {@code Camera_X_pos_coarse_back} which {@code Load_Sprites} updates
      * AFTER {@code Process_Sprites} (sonic3k.asm:37585 loc_1B7F2). Letting

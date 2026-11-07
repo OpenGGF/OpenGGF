@@ -8,6 +8,14 @@ import com.openggf.game.PlayableEntity;
 
 import java.util.List;
 
+/**
+ * An admitted runtime object and its execution, drawing and lifetime hooks.
+ * For an ordinary object correction, start in its concrete routine. If the
+ * manager's range retirement is involved, choose the ROM reference coordinate
+ * with {@link #getOutOfRangeReferenceX()}, the predicate with
+ * {@link #usesCustomOutOfRangeCheck()}, and S1 slot-pass timing with
+ * {@link #checksOutOfRangeAfterRoutine()}. These are separate from sprite visibility.
+ */
 @com.openggf.game.ModApi
 public interface ObjectInstance {
     default ObjectPresentationMetadata presentationMetadata() { return ObjectPresentationMetadata.NONE; }
@@ -229,9 +237,20 @@ public interface ObjectInstance {
     }
 
     /**
-     * Returns true if this object should remain active even when its spawn position
-     * is outside the camera window. Used by objects like spin tubes that need to
-     * continue controlling the player after they've moved far from the object's origin.
+     * Returns true to veto the manager's ordinary out-of-range retirement,
+     * including its custom-predicate path. This can be unconditional while a
+     * semantic owner is active, or conditional on an object-specific lifetime
+     * window. It does not mean that the sprite is visible or that a destroyed
+     * object survives removal.
+     * <p>
+     * For example, Buzz Bomber tests its live X with the viewport-aware range
+     * helper. At width 528 this admits distance 768 under bound 848 even though
+     * S1 counter placement's native bound 640 rejects it. An anchor-only change
+     * should instead override {@link #getOutOfRangeReferenceX()}.
+     * <p>
+     * Persistent dynamic transition snapshots also consult this hook; their
+     * transition rules still decide which candidates carry across. Rewind
+     * recreation remains a separate {@link RewindRecreatable} contract.
      */
     default boolean isPersistent() {
         return false;
@@ -297,8 +316,11 @@ public interface ObjectInstance {
      * <p>
      * Most objects use their current X position, but some S1 objects store a
      * separate anchor/origin in objoff_30/32/3A and feed that to the macro.
-     * The counter-based unload path must use the same reference X or grouped
-     * child objects can despawn before the parent anchor leaves range.
+     * The manager's standard range path uses this coordinate in both counter
+     * and non-counter passes. Change this hook when the ROM uses the same
+     * comparison with another anchor; it does not change the comparison or
+     * execution phase. Grouped children must use the ROM's parent anchor when
+     * their own position is not the coordinate tested by that routine.
      */
     default int getOutOfRangeReferenceX() {
         return getX();
@@ -312,6 +334,9 @@ public interface ObjectInstance {
      * {@link #getOutOfRangeReferenceX()}. Use a full override only for ROM
      * routines that do not call the standard macro, such as objects that test
      * both ends of a movement range before deleting.
+     * The persistence veto remains independent of this replacement predicate.
+     * Existing objects that retire themselves may deliberately supply a false
+     * custom predicate so the manager leaves that routine's delete timing alone.
      */
     default boolean usesCustomOutOfRangeCheck() {
         return false;
@@ -330,6 +355,9 @@ public interface ObjectInstance {
      * {@code executeObjectWithSolidContext} has run the routine and applied the
      * frame's movement — matching ROM's post-move unload timing and mirroring
      * the non-counter {@code runExecLoop} (S2/S3K MarkObjGone at routine end).
+     * This hook selects timing only in S1's slot-ordered counter pass. The
+     * non-counter pass and unslotted compatibility fallbacks already check
+     * after execution.
      * <p>
      * Leave false for objects whose ROM {@code out_of_range} is at routine
      * START (static scenery / fixed-anchor objects that test before any move);

@@ -550,23 +550,33 @@ live under the game's `src/test/resources/traces/<game>/_movies/`; the replay
 loader resolves the metadata reference. A missing movie can skip the test.
 
 Use the [release-scope policy](../../status/trace-scope-release-6.md) and the
-`trace-replay` / `trace-replay-r7` profiles in [root pom.xml](../../../pom.xml) to find the lane.
+`trace-replay`, `trace-replay-r7` and `trace-segments` profiles in
+[root pom.xml](../../../pom.xml) to find the lane.
 These are the selection authorities; a test's historical status comment is not
-a current result. For example, the HCZ Sonic/Tails leaf belongs to the
-release-6 lane:
+a current result. The HCZ Sonic/Tails leaf is standalone segment instrumentation;
+its lane is `trace-segments`, while run chains supply release-gate evidence:
 
 ```bash
-python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay \
-  -Dsurefire.forkCount=1 \
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-segments \
+  -Dsurefire.forkCount=1 -Dtrace.print.summary=true \
   '-Dtest=TestS3kSonicTailsHczSegmentTraceReplay' test
 ```
 
 Use Java 25. Check the wrapper's verified-ROM discovery line and ensure the
-fixture payload and referenced movie are available. After completion, read this
-class's fresh Surefire result under `target/surefire-reports/` and its JSON/context
-reports under `target/trace-reports/`. Confirm the test executed, the compared
-rows cover the intended window, and there are no errors or skips; an exit code
-or an old report alone is insufficient. Preserve prior evidence before clearing
+fixture payload and referenced movie are available. A failed replay prints its
+concrete test, resolved fixture, exact published report and a copyable triage
+command. `trace.print.summary=true` also prints that route for a successful
+replay. Copy the command to inspect the report, its sibling context and the
+fixture's plain or compressed auxiliary evidence without finding hashed report
+names yourself.
+
+After completion, read this class's fresh Surefire result under
+`target/surefire-reports/`. The triage brief distinguishes a completed comparison
+gate, an incomplete prefix and legacy reports whose completion is unknown.
+Planned trace rows and gameplay comparisons count different boundaries; their
+totals need not match. Triage reads saved evidence and does not certify its
+freshness or process success. Confirm this invocation executed without errors
+or skips and reached its intended gate. Preserve prior evidence before clearing
 generated reports, and keep output in this worktree's `target/`.
 
 For a real divergence, read the

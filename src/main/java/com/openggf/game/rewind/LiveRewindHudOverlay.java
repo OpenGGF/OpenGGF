@@ -4,9 +4,6 @@ import com.openggf.game.presentation.TransportHud;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.PixelFontTextRenderer;
 
-import java.util.Objects;
-import java.util.function.Supplier;
-
 /**
  * Native-pixel transport plate above the original game's lives counter.
  *
@@ -24,29 +21,19 @@ final class LiveRewindHudOverlay {
 
     private static final int FRAMES_PER_SECOND = 60;
 
-    private final Supplier<String> statusSupplier;
-    private final Supplier<LiveRewindManager.BudgetHudState> budgetSupplier;
-
-    LiveRewindHudOverlay(Supplier<String> statusSupplier) {
-        this(statusSupplier, () -> null);
-    }
-
-    LiveRewindHudOverlay(Supplier<String> statusSupplier,
-                         Supplier<LiveRewindManager.BudgetHudState> budgetSupplier) {
-        this.statusSupplier = Objects.requireNonNull(statusSupplier, "statusSupplier");
-        this.budgetSupplier = Objects.requireNonNull(budgetSupplier, "budgetSupplier");
-    }
+    private LiveRewindHudOverlay() { }
 
     /** {@code graphics} draws the backing plate; null (logic-only hosts) draws the text alone. */
-    public void render(PixelFontTextRenderer text, GraphicsManager graphics, int viewportWidth) {
-        TransportHud.Message message = message(statusSupplier.get(), budgetSupplier.get());
+    static void render(PixelFontTextRenderer text, GraphicsManager graphics, int viewportWidth,
+                       Integer rewindFrame, LiveRewindManager.BudgetHudState budget) {
+        TransportHud.Message message = message(rewindFrame, budget);
         if (message != null) {
             TransportHud.render(text, graphics, viewportWidth, TransportHud.Placement.ABOVE_LIVES, message);
         }
     }
 
-    /** The plate for this status and budget, or null when nothing is shown. */
-    static TransportHud.Message message(String status, LiveRewindManager.BudgetHudState budget) {
+    /** The plate for the eligible frame and budget, or null when neither should be shown. */
+    static TransportHud.Message message(Integer rewindFrame, LiveRewindManager.BudgetHudState budget) {
         if (budget != null && budget.visible() && !budget.unlimited() && budget.maximumFrames() > 0) {
             int maximum = budget.maximumFrames();
             int remaining = budget.empty() ? 0 : Math.clamp(budget.remainingFrames(), 0, maximum);
@@ -69,11 +56,10 @@ final class LiveRewindHudOverlay {
                     progressPercent,
                     seconds(maximum, budget.framesPerSecond()));
         }
-        if (status == null || status.isBlank()) {
+        if (rewindFrame == null) {
             return null;
         }
-        String value = status.startsWith("REWIND ") ? "F:" + status.substring(7) : status;
-        return new TransportHud.Message(TransportHud.Status.REWIND, "REW", value, "", -1);
+        return new TransportHud.Message(TransportHud.Status.REWIND, "REW", "F:" + rewindFrame, "", -1);
     }
 
     /** Tenths of a second, rounded up: {@code 0.0s} appears only when nothing is left. */

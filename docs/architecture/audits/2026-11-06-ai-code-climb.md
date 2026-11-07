@@ -895,3 +895,172 @@ Only guard tests, their fixture and this evidence changed after `c7971220b`;
 runtime code remains at `6bd548335`. The ordinary smoke verdicts and historical
 unattributed socket assertion above remain unchanged. No fresh ordinary or
 trace success is inferred from this guard-only follow-up.
+
+## Next increment: remaining contributor paths, 2026-11-07
+
+User requested continuing the climb. Current upstream is
+`c1029d3b4baa736a44e245f86ad2482cf62a4961`; merge `26b7a251b` reconciles it into
+the retained task branch. Upstream source merged without conflicts. The sole
+conflict was the 0.7 changelog rollover: preserve its frozen redirect and carry
+this branch's unreleased maintenance note into `CHANGELOG.0.8.prerelease.md`,
+selected by the merged POM. Main remains on develop with its unrelated files
+and reference checkouts preserved. Delivery remains the existing draft PR 266.
+
+Three read-only investigations found concrete interventions for the four
+remaining paths:
+
+| Workstream | Hypothesis and bounded intervention | Preserve |
+| --- | --- | --- |
+| Lifetime and HUD | One unsigned coarse-X calculation replaces three implementations; remove the no-op unload phase. Supply the HUD a frame and budget directly, removing its private format/parse protocol and adapter lifecycle. | Native versus viewport bounds, camera/anchor choice, Stageplay, Buzz persistence, render flags and timing; allowance ownership, empty precedence, PAL cadence, scripted hiding and shared visual chrome |
+| HCZ event | Calculate next shake in the event owner, then publish the retained current value once. Name end-signal cleanup separately so post-physics handoff cannot invoke wall movement. | Scalar rewind schema, missing-handler behavior, level clock, phase order, wall thresholds and fixed-point motion, collision release and transition/refresh precedence |
+| Trace diagnosis | Repair the existing replay/report/triage handoff: retain the actual report allocation, publish once, resolve sibling context and compressed fixture auxiliaries, reject unsupported reports and distinguish incomplete/unknown completion. | Report identity/filenames/three-field owner sidecar, existing CLI forms, comparison-only evidence and failure/suppression behavior |
+
+Rejected: another trace registry/source-discovery framework; a new wall state
+object requiring rewind codec/accessor plumbing; collapsing native and wider
+window policies; moving UI classes just to change package names. These add
+concepts or erase genuine distinctions before removing the observed burden.
+No achieved scores are assigned to the designs. Fresh task-based assessment
+follows implementation; understanding/readability 4 remains the stronger aim.
+
+Owners: lifetime_ui_climb_design (range and HUD source/tests), zone_climb_design
+(HCZ event and its checks), trace_climb_design (replay publication, triage and
+focused guide), lead (integration, shared validation, changelog and this audit).
+Trace diagnostics first gets a genuine RED for false-clean input. Other source
+edits wait until that focused run ends, then workers edit disjoint files without
+concurrent builds. The lead freezes the combined tree before integrated checks.
+
+A clean detached cow baseline at c1029d3b4 has 4,469 smoke candidates plus guards;
+use two workers and the 40-minute execution cap excluding queue delay. Its
+original log redirection failed before Python started because target did not
+exist; creating the output directory repaired setup, then the planned job was
+submitted. No tests ran in that failed launcher. Java 25, Lua 5.4, unset display
+variables and surfaceless EGL remain the environment. No release full-suite or
+exhaustive audit is requested.
+
+Focused range/HUD/HCZ/triage checks precede a frozen change-based candidate run
+against c1029d3b4. HCZ1's green replay does not prove the Act 2 wall path: compare
+a real act-spanning HCZ2 replay on baseline/candidate, retain exact inherited
+errors, and use natural wall-stop/exit plus full-world rewind witnesses. Hold
+out signed camera wrap/anchored objects, exhausted hidden HUD and an S2 trace
+fixture. Attribute failures by identity/assertion and skips, not totals. Queue,
+execution, user wait and unmeasured work remain separate.
+
+### Initial implementation checks and corrections
+
+All commands in this increment use Java 25, `-Dmse=off`, the Maven queue,
+verified ROM discovery, unset `DISPLAY`/`WAYLAND_DISPLAY`, and explicit
+surfaceless EGL where rendering is exercised. These are bounded checks.
+
+- Range/HUD: 131 cases across 15 classes passed without failures, errors or
+  skips. This covers the production Buzz Bomber and native/wider counter
+  boundary, signed-wrap arithmetic, Stageplay activation, finite/empty/PAL HUD
+  messages, actual scripted-manager hiding and shared presentation pixels.
+  Source: `26b7a251b` plus the combined diff at that run; diff SHA-256
+  `49460d0acfe7d008641c2795d0b55c04afc59e1392e0fede596ecdb02279293e`.
+  Queue admission was 402 seconds; Maven execution 34.572 seconds.
+- Trace triage first reproduced three real assertion failures in 24 cases:
+  an incomplete clean prefix looked completed, a producer serialization-error
+  document was accepted, and a missing comparison count was accepted. Queue
+  admission was zero; Maven execution 1 minute 34 seconds. After repairing
+  parsing/publication and the diagnostic handoff, all 55 cases across triage,
+  report policy, completion gates and terminal dynamic-art tests passed with
+  no skips (183 seconds queued; Maven 1 minute 32 seconds).
+- The first HCZ selection ran 174 cases: two failures, zero errors/skips.
+  Both were incorrect expectations in new tests, expecting -4 instead of -3
+  at index 2 of the descending timed shake. The pinned ROM
+  `8b2cf3c4178f2382f844da67798de4befc50c5e0` has
+  `ScreenShakeArray (sonic3k.asm:104277-104279)`; indexing 13 down to 0 yields
+  `-4,4,-3,3,-3,3,-2,2,-2,2,-1,1,-1,1`. Correct only those expectations;
+  do not change production output to fit the tests. Queue admission was
+  381 seconds; Maven execution 37.436 seconds. The existing whole-world
+  moving/stationary wall restore witnesses already passed in that run.
+- Lead review found another real diagnostic omission: pre-trace aux evidence
+  uses frame -1, while the context table begins at 0. Forty frame-0 events
+  exhausted the triage excerpt before its bootstrap snapshot. The new CLI
+  regression compiled and failed its actual evidence assertion (1 failure,
+  zero errors/skips; Maven 33.078 seconds). Context remains centred on 0;
+  bootstrap aux now centres on -1. The post-fix check is still required.
+- A combined follow-up request was cancelled while still queued so that the
+  lifetime boundary naming/documentation correction could finish before the
+  next build. It acquired no Maven slot and executed no tests.
+
+Fresh static assessment of the initial lifetime/HUD diff scored 70/82.5,
+respectively. Lifetime vector: `[3,3,3,3,2,3,2,3]`; HUD:
+`[4,3,3,4,3,3,2,4]`, in rubric order. These are not achieved repository
+scores. The reviewer found no behavioral regression, but identified overlapping
+lifetime hooks, a misleading private unload name and phase comment, an
+unforegrounded native S1 bound, and a rewind guide contradicting finite-budget
+presentation. The ensuing source/guide correction addresses those concrete
+findings; no automatic rescore is inferred. Runtime success does not by itself
+improve these static contributor scores. User wait was zero; unmeasured work
+and any unrecorded admission time remain unknown.
+
+### Contributor boundary correction and fresh event/trace assessment
+
+The follow-up retains exported hooks and callback order, but names the private
+manager operation `unloadIfOutsideLifetimeWindow`. Its local variable makes
+persistence's range-retirement veto explicit. Interface, package and guide
+contracts distinguish reference, predicate, veto, slot-pass timing, placement
+loading and retained-render visibility. Native S1 counter bound 640 and
+viewport-aware object bound 848 at width 528 are now foregrounded. The existing
+widescreen discrepancy text previously overstated that every manager path
+widens; it is corrected. The rewind guide now describes finite/empty/unlimited,
+regional cadence and module-scripted hiding rather than an always-frame plate.
+Two active skill reference names and their generated mirrors follow the rename;
+historical records retain their original names.
+
+A fresh independent read-only assessment of HCZ/trace, without prior audit,
+changelog, grades or targets, found no material behavioral defect. Its vectors
+and scores are:
+
+| Journey | Vector in rubric order | Weighted score |
+| --- | --- | ---: |
+| HCZ2 moving-wall phase/end-event | `[4,3,3,4,3,4,4,3]` | 87.5 |
+| Diagnose a failing trace | `[3,4,3,3,3,3,4,3]` | 81.25 |
+
+HCZ's remaining barrier is following dispatch through the feature provider,
+event manager and a large event class with unrelated carrier/load work. Trace
+still spans invocation, allocation, publication and interpretation owners;
+legacy basename examples are a false lead. The command-generation tests inspect
+strings but do not prove actual Maven argument parsing. Executing the emitted
+route against a real replay is therefore a required follow-up. These are
+static usability assessments, not observed runtime passes, human timing
+measurements, whole-repository scores or evidence of maximum readability.
+
+Validation handoff: lead owns sessions 2797 (clean c102 baseline category,
+`20261107T021429Z-1c82400d`) and 57112 (combined focused selection after the
+private-helper rename and bootstrap fix). The former was at ordinary batch
+40/91 and the latter still queued at the last observation. No other worker or
+validation job for this increment remains live. The candidate plan selects
+4,470 smoke classes plus guards with two workers, 40-minute execution cap
+excluding queue delay; do not mutate its tree while a category run is active.
+No push of the merge or this new increment has occurred yet. Both category
+comparison and domain/capture checks remain required before draft delivery.
+
+### Validation lead checkpoint
+
+The transferred combined focused run completed successfully: 372 cases, zero
+failures, errors or skips (32 executed classes; 31 selector names). Its existing
+`target/code-climb-08-combined-focused.log` records 100 seconds of queue admission
+and Maven execution of 1 minute 40 seconds. This proves the corrected timed-shake
+expectations and bootstrap frame -1 regression GREEN. Source was merge
+`26b7a251b66fa5c140e98272cf2cbfbf08105dbc` plus the increment diff.
+
+Afterward, only stale private-helper identifiers in the cage/platform comments,
+the rewind guide's budget-to-plate wording and TraceTriageTool's usage Javadoc
+changed. The latter now starts with the emitted explicit report/fixture route
+and queued invocation; legacy lookup behavior remains intact. Current scoped
+diff SHA-256: `c69f75aba9f6d2e12dff33001b1d1081efdeeee3b4397786858ba7d9c5dbce2f`. No runtime edits followed the focused run.
+
+The validation lead reused the baseline job and observed its existing process
+and log because unified session 2797 is unavailable in this transferred context.
+It remains the sole observer. Candidate capture tools run sequentially through
+the queue, with unset displays, Java 25, Lua 5.4, explicit surfaceless EGL and
+boot-owned NullAudioBackend assertions. No fresh contributor review was launched;
+prior static scores remain measurements of their stated revisions, with no
+automatic rescore for the boundary corrections. User wait remains zero.
+
+`git diff --check`, skill mirror `--check`, and four added relative links pass.
+Strict new HCZ test citation check exits zero: one OK, two near and two
+unverifiable references. Reference checkouts differ from pins and were preserved;
+this does not assert a debt-free global citation inventory.
