@@ -1315,7 +1315,8 @@ final class ObjectTouchResponseController {
      * negates THEN halves both via {@code asr.w} ({@code neg / neg / asr / asr}),
      * gated by {@code bossHitHalvesBounceVelocity}.
      * S3K additionally negates ground velocity ({@code bossHitNegatesGroundSpeed}).
-     * KiS2 ordinary boss hits also leave active glide; multi-sprite hits retain it.
+     * S3K and KiS2 ordinary boss hits also leave active Knuckles glide;
+     * multi-sprite velocity-only hits retain it.
      * None of these paths sets the air flag.
      */
     private void applyBossBounce(PlayableEntity player, TouchResponseProfile profile) {
@@ -1334,11 +1335,14 @@ final class ObjectTouchResponseController {
         }
         if (rules != null && rules.bossHitEndsActiveGlide()
                 && (profile == null || profile.attackBouncePolicy() != TouchAttackBouncePolicy.BOSS_REFLECT)
-                && player instanceof AbstractPlayableSprite sprite
+                && player instanceof Knuckles sprite
                 && sprite.getDoubleJumpFlag() == 1) {
-            // KiS2 gameRevision=3 Touch_Enemy_Part2: only the ordinary
-            // collision_property rebound exits active glide; the multi-sprite
-            // boss_hitcount2 branch returns before these writes. Sliding stays active.
+            // S3K Touch_Enemy .bossnotdefeated (sonic3k.asm:20961-20977):
+            // character_id=2 / double_jump_flag=1 restores the falling pose.
+            // This shipped FixBugs=0 tail has no FixBugs alternate.
+            // KiS2 gameRevision=3 Touch_Enemy_Part2 has the same ordinary-hit
+            // tail; its multi-sprite boss_hitcount2 branch returns before it.
+            // Sliding and other characters retain their ability state.
             sprite.setDoubleJumpFlag(2);
             sprite.setAnimationId(0x21);
             sprite.setForcedAnimationId(0x21);

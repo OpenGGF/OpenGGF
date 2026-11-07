@@ -24,6 +24,8 @@ The initial native/default binding covers all three solo mains at 320; the finit
 | REWIND: normal entry world | Complete registered-world capture/restore and 45 ordinary Right-input frames twice; all title-card pattern bytes compared by content | Qualified for all 140 finite products. Held Right is requalified by the 2026-10-17 input correction below; the 2026-10-14 runs held Down. No P1 death or hidden life loss is permitted. This does not certify later event/interaction/child lifetimes or cross-load history policy. |
 | OBJECT / EVENT / CAMERA: battleship loop and bomb child | `TestAiz2ShipLoopRewindRoundTrip#battleshipSurvivesRewindRestoreAndCameraLockIsNotOrphaned`, `TestAiz2TransientChildRewind#shipBombSurvivesRewindRestoreWithMidFlightState` | Constructed ship/child plus declared camera/autoscroll state; active graph checks do not prove natural placement admission. Listed bindings were setup-inspected, not independently rerun as a whole in this slice. |
 | OBJECT / SLOT: battleship propellers, ship exit and tree maker | `TestAiz2BattleshipSlotOwnership`, `TestAizBattleshipPropellerSlots` (a28c5ab47); `TestAiz2MakeTreeScriptOwnership`, `TestSonic3kAIZEvents#aiz2TreeSpawnerReadsAizMakeTreeScriptFromTheRom` | Propellers and ship exit (a28c5ab47) match native SST occupancy on `aiz_5` sample rows 2377-2830 and 3861-3951 (comparison-only slot probe); their old-source witnesses failed 5/5 on f96d31379. The tree maker reads AIZMakeTreeScript from ROM $23C13C: all 17 entries, one after-current attempt per pass, retry on failed allocation, deletion on the following pass, script priority. Its old-source witnesses failed 8 of 9 by assertion on a28c5ab47 (the rewind case is completeness, not a witness), and a same-pass-delete mutation failed the lifetime witness. Native occupancy on `aiz_5` rows 4001-4096 now equals the engine on every sample (was none), and the boss sits in slot 7 at 4109; on `aiz_completerun` the tree slots equal native at every sampled row 22768-22860 and tree screen X equals native `x_pos` - 128 to row 22816. Chain segment 8 went from 1692 errors (first 6111) to 35 (first 6989 `camera_y` +2 in the Knuckles cutscene); see the trace frontier log, 2026-10-16. LIMITED/RAW_RGB pictures against native (BK2 23700-23860) show the two formerly dropped trunks; whole frames still differ through the AnPal_AIZ2 cycle phase (engine one frame late, index two steps ahead; owner open) and player pose. Inherited gaps: the Translate_Camera2ObjX shake term for propellers and bombs (Y +-4 on shake rows); the small craft's bucket 2 against ROM priority $300; the tree X source is the engine smooth scroll, its Events_fg_1 model (3 px from `aiz_completerun` row 22837); bomb/explosion slot rows from 2861/3149/3215; the `loc_69482` child (ChildObjDat_69D66, native slot 9 at row 24683), so the engine capsule sits in slot 9 against native 10. The bridge display SST (`b96ef2c4d`: `TestAizCollapsingLogBridgeDisplaySst`, old source 4/4 red) and the ship's escape signal (`cdeb2dbc0`: `TestAizEndBossInstance#shipEscapeSignalWaitsForStartDefeatAfterTheFadeToLevelMusicWait`) put the bridge child, StillSprite, drawbridge and Robotnik's ship in their native slots; the zone slice falls from 9 errors (first 25038) to 1 (26179) and chain segment 8, after the spin dash camera fix (`11af51ca0`), to 4 errors on the HCZ destination row 7126 (engine PLC drain one row late). Chain rows 6111 and 6989 now match. |
+| EVENT / ART: character-specific resize submission | `TestSonic3kAIZEvents#aiz2ResizeArtSubmissionsFollowNativeCharacterBranch` | [November 7 owner check](#native-resize-art-owners--2026-11-07): real direct/KosM submissions at both thresholds, native source/destination identities, registered restore and no resubmission. Knuckles omits the Sonic-only object archive; broader art and route obligations remain open. |
+| BOSS / HIT: ordinary active-glide rebound | `TestTouchResponseManager#s3kOrdinaryBossReboundEndsOnlyActiveGlide`, `#realS3kBossAndKnucklesRestoreNativeGlidePose` | [November 7 rebound check](#ordinary-boss-glide-rebound--2026-11-07): native flag/animation/facing/radii and no position/air write, real AIZ and CNZ touch owners, other ability states/characters and stock S1/S2 negatives; existing KiS2 controls preserved. Route suffix and presentation breadth remain open. |
 | BOSS / LOAD: end-boss graph, splash and sequence | `TestS3kAizEndBossGraphRewind`, `TestAiz2BossEndSequenceObjects`, `TestAizEndBossInstance` | Component/late boss contracts; independent arena entry and all required character routes remain open. Listed bindings were setup-inspected, not independently rerun as a whole in this slice. |
 | OBJECT / CAMERA: forest ring and team bounds | `TestAiz2ForestRingCameraGeneration`, `TestS3kAiz2BigRingFormation`, `TestS3kAiz2BigRingCollision`, `TestS3kAiz2SidekickBoundsSync` | Local scene/bounds contracts; configuration and before/active/after placement breadth remain open. Listed bindings were setup-inspected, not independently rerun as a whole in this slice. |
 | LIFE / LOAD: physical post, actual death/restart and incoming/outgoing worlds | Native checkpoint/death/reload owners and the edges listed above | All 140 supported preset/donor/main/roster products are qualified by `TestS3kAiz2EntryMatrix#actualDeathReloadPreservesTheSupportedProductAndReplaysEachIncomingWorldTwice`: two actual deaths/reloads, exactly one life lost per restart, new world owners, outgoing live-history retirement, restored current roster/camera and two complete-world 45-frame restore/replay cycles after each released destination. Physical post activation and incoming/outgoing route edges remain separate obligations. |
@@ -1514,3 +1516,92 @@ fixture, all 12 cases pass with the correction. No category run or broad trace
 profile was repeated in this lane; final composition and smoke belong to the
 lead. The known helper-order pitfall is already recorded in the S3K object
 skill's “Native top helpers use the landing surface before floor reset” entry.
+
+## Native resize art owners — 2026-11-07
+
+`AIZ2_SonicResize4` (sonic3k.asm:39145-39165) submits the block table at
+`+$AB8`, terrain tiles at `$1FC`, and object-ship art at `$500`.
+`AIZ2_KnuxResize4` (sonic3k.asm:39256-39278) submits only the first two.
+These are shipped `FixBugs=0` paths without a conditional alternate. The event
+retains that distinction through its existing production queue helper.
+
+The new threshold test uses the registered event and real ROM-backed jobs;
+it observes source/destination identities, captures/restores pending handles,
+and verifies forward update does not resubmit. It supplies no trace jobs,
+readiness release or forced completion. The Sonic-only bombing handoff control
+also passes. Old-source Knuckles submitted two module archives where native
+requires one; the corrected two-branch/restore cases and Sonic handoff pass 3/3.
+
+The full Mega art-only differential uses unchanged `GameRules` and touch code.
+Against the exact `8afbc8b7` baseline, segment 8 (`aiz_5`, AIZ2 after bonus return)
+has 1,755 common actual rows and falls from 10,012 to 3,447 raw field ERRORs;
+first ERROR moves from row 897 to row 1117. All eight preceding represented
+segments are exactly unchanged, including 7,430 zero-ERROR AIZ3 rows. No
+baseline-clean row becomes red. Seven newly red fields at already-red rows
+1117–1118 are a previously masked, absent EggRobo head submission:
+`sub_67B14` / `loc_67B1C` (sonic3k.asm:136125-136132), archive `$15FDDC`,
+native direct payload `$15FDDE` to `$D000`. Three existing queue ERROR values
+also change there. Full actual-row attribution, not grouped span expansion,
+retains those limits. The original downstream death/reload at movie cursor
+25811 remains in this art-only control.
+
+This is a bounded character-branch/production/restore check, not a new act,
+viewport, donor, team-product or pixel certificate. The head producer, later
+physical behavior and full route/load closure remain separate obligations.
+The wave lead owns frontier-log updates and combined delivery qualification.
+
+## Ordinary boss glide rebound — 2026-11-07
+
+`Touch_Enemy`'s `.bossnotdefeated` tail (sonic3k.asm:20961-20977) requires
+character 2 and active glide flag 1, then writes flag 2, animation `$21`, facing
+from reflected signed X velocity (zero faces left), and the default radii.
+It does not change position or set airborne status. This shipped `FixBugs=0`
+tail has no conditional alternate. S3K now enables the existing semantic
+`bossHitEndsActiveGlide` rule; the rebound tail retains the native Knuckles
+predicate. KiS2's rule and ordinary/multi-sprite distinction, all glide/history
+code, and S1/S2 rule values are unchanged. No new rule, API field or trace input
+is introduced.
+
+Discriminating old-source tests retained active glide after the ordinary hit;
+the real CNZ boss witness did too. Corrected tests cover negative, positive and
+zero reflected facing, animation/forced animation, real AIZ and CNZ profiles
+and hit callbacks, 9/19 radii restored from 10/10, unchanged centre/air state,
+other ability states and characters, and S1/S2 negatives. The real-boss component
+inlets isolate touch from independent encounter art/movement dispatch. The
+AIZ constructor uses injected construction context; its first setup error was
+retained separately from the old-source native failures.
+
+The composed candidate passes 309 focused/control cases, zero skips, across
+19 requested simple class names / 20 resolved classes (both existing
+`TestSonic3kLevelLoading` classes run). This includes 98 touch cases, 56 AIZ event
+cases, existing KiS2 controls, affected touch/player/boss/event rewind checks,
+timing/trace guards, the four S3K keep-greens and the delivered complete S1
+emerald chain. This is a focused selection, not smoke or a profile sweep.
+
+The art-only/composed differential removes all 3,437 gameplay ERROR tuples on
+the 1,755 common Mega segment-8 rows, with no new or changed ERROR tuple and no
+coverage loss. Rows 1168–1169 now match native animation, mapping and velocities.
+Against original `8afbc8b7`, only the ten queue ERRORs described above remain on
+common rows; the seven changed agreeing fields and three changed existing ERROR
+values are confined to the already-red EggRobo-head rows 1117–1118. No originally
+clean row becomes red. All eight preceding segments remain exactly unchanged.
+
+The candidate additionally observes 1,727 rows through actual row 3487, with
+10,927 suffix ERRORs. The first newly observed discrepancy is rings at row 1932;
+that suffix is unqualified, not baseline agreement. The run reaches the native
+load tail and stops with `unconsumed initialization timing before raw frame
+27561`; it no longer stops at the old death/reload cursor 25811. This is a later
+frontier, not a green Mega chain or a qualification of the load/init owner.
+
+A final observer-free full-class replay passes both existing prefix controls
+and reproduces all ten full-chain JSON payloads and the entire throwable exactly.
+Six additional report payloads belong to the two prefix selections. The
+comparison-only exporter source is restored byte-for-byte, and both affected
+class files match the prior restored hashes with no observer markers. Exactly
+three additional full Mega executions were used: art-only, composition, and
+observer-free restoration. Source/inputs/options, complete XML/JSON/raw rows,
+full throwable comparisons and separate queue/execution timings are retained
+in the wave's `mega-native-owners` handoff. No fixture, tolerance, timing
+readiness, queue capacity or harness assertion changed. The head producer,
+new suffix, broader route/preset/donor/team/pixel certification and combined
+wave integration remain open.
