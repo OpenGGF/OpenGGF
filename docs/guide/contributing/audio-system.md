@@ -18,8 +18,9 @@ SmpsSequencer       Processes sequence commands each frame.
   |                 Manages channel state, tempo, loops, modulation.
   |                 Produces register writes.
   |
-  +---> Ym2612Chip  FM synthesis (6 channels). Software emulation based
-  |                 on Genesis Plus GX reference core.
+  +---> FM chip     FM synthesis (6 channels). audio.fmCore selects
+  |                 FastYm2612Chip ("fast", the default) or Ym2612Chip
+  |                 ("accurate", the Nuked-OPN2 port and parity oracle).
   |
   +---> PsgChip     PSG (4 channels: 3 tone + 1 noise). Software emulation
   |                 based on SMS Power documentation.
@@ -172,17 +173,24 @@ in S2, SFX IDs start at a different value than music IDs).
 
 ### Using RomOffsetFinder
 
+These searches use the Sonic 2 disassembly and `s2.gen` by default; see
+[Tooling](../cross-referencing/tooling.md#romoffsetfinder) for `--game`, ROM path
+and disassembly options.
+
 ```bash
 # Find music-related addresses
-python3 tools/testing/maven_queue.py exec:java -Dexec.mainClass="com.openggf.tools.disasm.RomOffsetFinder" \
+python3 tools/testing/maven_queue.py -Dmse=off compile exec:java \
+    -Dexec.mainClass="com.openggf.tools.disasm.RomOffsetFinder" \
     -Dexec.args="search Mus" -q
 
 # Find SFX pointer tables
-python3 tools/testing/maven_queue.py exec:java -Dexec.mainClass="com.openggf.tools.disasm.RomOffsetFinder" \
+python3 tools/testing/maven_queue.py -Dmse=off compile exec:java \
+    -Dexec.mainClass="com.openggf.tools.disasm.RomOffsetFinder" \
     -Dexec.args="search SndPtr" -q
 
 # Search ROM for a pointer pattern
-python3 tools/testing/maven_queue.py exec:java -Dexec.mainClass="com.openggf.tools.disasm.RomOffsetFinder" \
+python3 tools/testing/maven_queue.py -Dmse=off compile exec:java \
+    -Dexec.mainClass="com.openggf.tools.disasm.RomOffsetFinder" \
     -Dexec.args="search-rom \"07 72 73 26\"" -q
 ```
 

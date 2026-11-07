@@ -51,6 +51,18 @@ different game:
 
 ### Commands
 
+| Command | Use it when |
+|---|---|
+| [`search`](#search----find-items-by-name) | You know part of a label name |
+| [`verify`](#verify----check-a-calculated-offset) | You want to confirm an address before using it |
+| [`find`](#find----resolve-one-resource) | You want one label's ROM offset |
+| [`list`](#list----list-items-by-type) | You want every resource of a compression type |
+| [`test`](#test----test-decompression-at-an-offset) | You have an offset and want to know what it decompresses as |
+| [`search-rom`](#search-rom----find-raw-hex-patterns-in-the-rom) | The data has no usable label |
+| [`plc`](#plc----inspect-plc-entries) | You want the art a zone or event loads |
+| [`verify-batch`](#verify-batch----batch-verify) | You want a broad check of many addresses |
+| [`export`](#export----generate-java-constants) | You are adding constants to the engine |
+
 #### search -- Find items by name
 
 Search for disassembly labels matching a partial name. This is the most commonly used
