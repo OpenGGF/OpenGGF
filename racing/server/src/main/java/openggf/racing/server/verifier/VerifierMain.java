@@ -25,12 +25,18 @@ public final class VerifierMain {
         }
         HttpMasterApi api = new HttpMasterApi(options.master(),
                 options.registrationToken(), options.trustInsecure());
-        VerifierWorker worker = new VerifierWorker(api, (recording, fingerprint) -> {
+        VerifierWorker worker = new VerifierWorker(api, new VerifierWorker.Replayer() {
+            @Override public AttemptReplayHarness.Result replay(openggf.timeattack.AttemptInputRecording recording, String fingerprint) {
+                return replay(recording,fingerprint,java.util.List.of());
+            }
+            @Override public AttemptReplayHarness.Result replay(openggf.timeattack.AttemptInputRecording recording, String fingerprint,
+                    java.util.List<openggf.racing.server.master.VerificationJobQueue.SwapReceipt> receipts) {
             Path rom = roms.get(fingerprint);
             return rom == null
                     ? new AttemptReplayHarness.Result(false, -1, -1, -1,
                     "", 0, "fingerprint mismatch")
-                    : AttemptReplayHarness.replay(recording, rom);
+                    : AttemptReplayHarness.replay(recording, rom,ignored -> {},receipts);
+            }
         }, identity);
         VerifierShutdown shutdown = new VerifierShutdown();
         Thread owner = Thread.currentThread();

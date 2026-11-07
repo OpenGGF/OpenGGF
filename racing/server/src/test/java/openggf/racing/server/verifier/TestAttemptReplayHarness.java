@@ -128,7 +128,7 @@ class TestAttemptReplayHarness {
         return recording;
     }
 
-    private static List<GhostFrame> captureLive(AttemptInputRecording recording,
+    static List<GhostFrame> captureLive(AttemptInputRecording recording,
                                                 Path romPath, Path root) throws Exception {
         AttemptReplayHarness.disableExternalContentForDeterminism();
         SonicConfigurationService configuration = null;
@@ -158,7 +158,13 @@ class TestAttemptReplayHarness {
             configuration.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
             AbstractPlayableSprite player = GameplayTeamBootstrap.registerActiveTeam(
                     module, GameServices.sprites(), configuration).mainSprite();
-            mode.beginGameplayRun(TimeAttackRuntime.runPolicy(),
+            var start = recording.start();
+            var launch = new TimeAttackLaunchRequest(start.gameId(),start.zone(),start.act(),start.character(),
+                    List.of(),start.trackKind(),start.mode(),start.monitors(),start.swapEnabled());
+            var policy = start.mode() == openggf.timeattack.CompetitionRoomSettings.Mode.COMPETITION
+                    ? TimeAttackRuntime.competitionPolicy(start.monitors()) : TimeAttackRuntime.runPolicy();
+            mode.beginGameplayRun(new com.openggf.mods.run.RunSpec(start.gameId(),start.zone(),start.act(),start.character(),
+                    policy,null,start.trackKind(),start.swapEnabled()).policy(),
                     recording.start().zone(), recording.start().act());
             GameServices.level().loadZoneAndAct(recording.start().zone(), recording.start().act());
             GameServices.camera().setFocusedSprite(player);
@@ -172,9 +178,7 @@ class TestAttemptReplayHarness {
 
             TimeAttackRuntime runtime = new TimeAttackRuntime(new GhostStore(root),
                     root.resolve("identity"), () -> false);
-            runtime.armForLaunch(new TimeAttackLaunchRequest(recording.start().gameId(),
-                    recording.start().zone(), recording.start().act(),
-                    recording.start().character(), List.of()));
+            runtime.armForLaunch(launch);
             runtime.setAttemptListener(new TimeAttackRuntime.AttemptListener() {
                 @Override public void onAttemptBegan(int ordinal) { }
                 @Override public void onFrameSampled(int ordinal, GhostFrame frame) {
@@ -202,6 +206,12 @@ class TestAttemptReplayHarness {
                         : checkpoint.getLastCheckpointIndex();
                 runtime.afterStep(new RunStep(index, mask, false,
                         NativePlayerPose.capture(player), completed, checkpointIndex, false));
+                if (recording.start().deathRestart() == com.openggf.game.session.GameplayRunPolicy.DeathRestart.FAST_FROM_CHECKPOINT
+                        && GameServices.level().consumeRespawnRequest()) {
+                    GameServices.level().restartCurrentLevelFromCheckpointAfterDeath();
+                    runtime.onLevelReady(new RunLevelStart(runtime.runSpec(),recording.start().fingerprint(),false,
+                            0,0,com.openggf.mods.run.LevelStartCause.CHECKPOINT_RESPAWN,com.openggf.mods.run.TrackGeometry.ACT));
+                }
                 if (!runtime.isAttemptActive()) break;
             }
             runtime.deactivate();

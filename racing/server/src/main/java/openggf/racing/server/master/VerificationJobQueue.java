@@ -13,14 +13,40 @@ public final class VerificationJobQueue {
     private static final long TERMINAL_CACHE_MILLIS = 60_000;
     public enum State { AWAITING_UPLOAD, QUEUED, LEASED, DONE, VOID }
 
+    public record LaunchPolicy(String mode,String monitors,boolean swapEnabled) {
+        public static LaunchPolicy from(com.openggf.net.protocol.ControlMessage.RaceLaunch launch) {
+            return launch == null ? null : new LaunchPolicy(launch.config().mode(),launch.config().monitors(),launch.swapEnabled());
+        }
+        static LaunchPolicy legacyTimeAttack() { return new LaunchPolicy("TIME_ATTACK","NORMAL",false); }
+    }
+
     public record Job(String jobId, String roomId, int slot,
                       String identityFingerprint, String attemptRef,
                       String determinismFingerprint, String trackKey,
                       String character, int claimedTimeFrames,
                       int firstInputFrame, int finishFrame,
                       String inputRecordingHashHex, String ghostStreamHashHex,
-                      boolean spotCheck, long createdAtMillis, List<SwapReceipt> swaps) {
-        public Job { swaps = swaps == null ? List.of() : List.copyOf(swaps); }
+                      boolean spotCheck, long createdAtMillis, List<SwapReceipt> swaps,
+                      List<Integer> lapFrames, List<Integer> splitFrames, LaunchPolicy launchPolicy) {
+        public Job(String jobId, String roomId, int slot, String identityFingerprint, String attemptRef,
+                String determinismFingerprint, String trackKey, String character, int claimedTimeFrames,
+                int firstInputFrame, int finishFrame, String inputRecordingHashHex, String ghostStreamHashHex,
+                boolean spotCheck, long createdAtMillis, List<SwapReceipt> swaps,
+                List<Integer> lapFrames,List<Integer> splitFrames) {
+            this(jobId,roomId,slot,identityFingerprint,attemptRef,determinismFingerprint,trackKey,character,
+                    claimedTimeFrames,firstInputFrame,finishFrame,inputRecordingHashHex,ghostStreamHashHex,
+                    spotCheck,createdAtMillis,swaps,lapFrames,splitFrames,LaunchPolicy.legacyTimeAttack());
+        }
+        public Job(String jobId, String roomId, int slot, String identityFingerprint, String attemptRef,
+                String determinismFingerprint, String trackKey, String character, int claimedTimeFrames,
+                int firstInputFrame, int finishFrame, String inputRecordingHashHex, String ghostStreamHashHex,
+                boolean spotCheck, long createdAtMillis, List<SwapReceipt> swaps) {
+            this(jobId,roomId,slot,identityFingerprint,attemptRef,determinismFingerprint,trackKey,character,
+                    claimedTimeFrames,firstInputFrame,finishFrame,inputRecordingHashHex,ghostStreamHashHex,
+                    spotCheck,createdAtMillis,swaps,List.of(),List.of());
+        }
+        public Job { lapFrames = lapFrames == null ? List.of() : List.copyOf(lapFrames);
+            splitFrames = splitFrames == null ? List.of() : List.copyOf(splitFrames); swaps = swaps == null ? List.of() : List.copyOf(swaps); }
         public Job(String jobId, String roomId, int slot, String identityFingerprint, String attemptRef,
                 String determinismFingerprint, String trackKey, String character, int claimedTimeFrames,
                 int firstInputFrame, int finishFrame, String inputRecordingHashHex, String ghostStreamHashHex,
@@ -31,7 +57,12 @@ public final class VerificationJobQueue {
         }
     }
     public record SwapReceipt(long swapId, int requestFrame, int applyFrame, String outcome,
-            com.openggf.net.protocol.ControlMessage.SwapTarget target) { }
+            com.openggf.net.protocol.ControlMessage.SwapTarget target, Integer nativeRequestFrame) {
+        public SwapReceipt(long swapId,int requestFrame,int applyFrame,String outcome,
+                com.openggf.net.protocol.ControlMessage.SwapTarget target) {
+            this(swapId,requestFrame,applyFrame,outcome,target,null);
+        }
+    }
     public static List<SwapReceipt> swapReceipts(com.openggf.net.hub.RoomHost room, int slot) {
         return swapReceipts(com.openggf.net.hub.HostTeleportSwap.logFor(room), slot);
     }
@@ -41,7 +72,8 @@ public final class VerificationJobQueue {
                     var o = d.outcomes().get(slot); var c = d.command();
                     var target = c == null ? null : c.slotA() == slot ? c.targetB() : c.targetA();
                     int first = c == null ? d.requestFrame() : c.slotA() == slot ? c.sentAtFrameA() : c.sentAtFrameB();
-                    return new SwapReceipt(d.swapId(), first, o.applyFrame(), o.outcome(), target);
+                    return new SwapReceipt(d.swapId(), first, o.applyFrame(), o.outcome(), target,
+                            d.requester()==slot ? d.requestFrame() : null);
                 }).toList();
     }
 
@@ -82,7 +114,7 @@ public final class VerificationJobQueue {
                 candidate.character(), candidate.claimedTimeFrames(),
                 candidate.firstInputFrame(), candidate.finishFrame(),
                 candidate.inputRecordingHashHex(), candidate.ghostStreamHashHex(),
-                candidate.spotCheck(), now, candidate.swaps());
+                candidate.spotCheck(), now, candidate.swaps(),candidate.lapFrames(),candidate.splitFrames(),candidate.launchPolicy());
         entries.put(id, new Entry(job, uploadDeadlineAtMillis));
         return id;
     }

@@ -22,6 +22,11 @@ public final class Sonic2RaceSwapApplier extends AbstractRaceSwapApplier
     private boolean white;
     private int backdropRgb;
 
+    @Override public int maxSwapSources(GameplayModeContext context) {
+        return Math.toIntExact(context.getLevelManager().getCurrentLevel().getObjects().stream()
+                .filter(spawn -> spawn.objectId() == 0x26).count());
+    }
+
     @Override public boolean request(ObjectServices services,AbstractPlayableSprite requester) {
         if (!services.runPolicy().swapEnabled()) return false;
         // teleport_monitor (s2.asm:26003-26011) refuses routine >= 6, not routine 4.

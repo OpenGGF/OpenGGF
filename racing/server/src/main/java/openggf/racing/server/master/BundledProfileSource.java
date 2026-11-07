@@ -39,9 +39,6 @@ public final class BundledProfileSource implements com.openggf.net.hub.KeyedTrac
                     throw new IllegalStateException("invalid or duplicate track key: " + key);
                 }
             }
-            // Conservative placeholders; A3 replaces these with ROM exports before certification.
-            for (int arena = 0; arena < 5; arena++) loaded.putIfAbsent("s3k:arena:" + arena,
-                    new TrackValidationProfile(65535, 65535, 32, 60, 0, 0, 5, 12));
             profiles = Map.copyOf(loaded);
         } catch (Exception e) {
             throw new IllegalStateException("bundled track profile table unreadable", e);

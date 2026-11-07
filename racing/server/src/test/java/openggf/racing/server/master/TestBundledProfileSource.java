@@ -17,6 +17,7 @@ class TestBundledProfileSource {
         assertTrue(aiz1.levelHeightPx() > 200);
         assertEquals(TrackValidationProfile.GLOBAL_SPEED_CEILING_PX_PER_FRAME,
                 aiz1.maxSpeedPxPerFrame());
+        assertTrue(source.profileFor("s2", 0, 0).orElseThrow().maxSwapSources() > 0);
         assertTrue(source.profileFor("s3k", 99, 0).isEmpty());
         assertTrue(source.profileFor("nope", 0, 0).isEmpty());
     }

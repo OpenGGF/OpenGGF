@@ -601,6 +601,13 @@ public final class RoomHost {
         }
     }
 
+    ControlMessage.RaceLaunch frozenLaunchForParticipant(int slot, String participantId) {
+        Member member = memberForSlot(slot);
+        return member != null && member.admitted() && participantId != null
+                && java.util.Objects.equals(member.participantId, participantId)
+                ? member.launch : null;
+    }
+
     String participantIdForSlot(int slot, String fingerprint) {
         Member member = memberForSlot(slot);
         return member != null && member.fingerprint.equals(fingerprint)

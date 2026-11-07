@@ -14,6 +14,8 @@ public interface RaceSwapApplier {
     RaceSignal consumeSignal();
     RaceEventResult apply(RaceEvent event, GameplayModeContext context);
     default void reset() { }
+    /** Upper bound from the loaded ROM layout, used by hosted request admission. */
+    default int maxSwapSources(GameplayModeContext context) { return 0; }
     /** The production level VBlank, never host wall time or a trace comparison row. */
     default void afterVBlank(GameplayModeContext context) { executeQueued(context); }
     boolean hasQueuedEvent();

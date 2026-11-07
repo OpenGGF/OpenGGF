@@ -18,6 +18,7 @@ public final class S3kHostedArenaSession implements HostedArenaSession {
     private final S3kCompetitionNativeHost host;
     private final Runnable closeViews;
     private boolean closed;
+    private boolean respawned;
     private final S3kArenaSwapApplier raceSwaps;
 
     public S3kHostedArenaSession(S3kCompetitionNativeHost host, HostedArenaRequest request, Runnable closeViews) {
@@ -42,7 +43,9 @@ public final class S3kHostedArenaSession implements HostedArenaSession {
         var masked = PlayerInputState.of(input.heldMask(), input.pressedMask(),
                 input.actionHeldMask(), input.actionPressedMask(), false, false);
         raceSwaps.executeQueued(host.world().context());
+        boolean dead = host.session().player(0).routine() == 6;
         host.stepArena(LogicalInputSnapshot.ofPlayers(masked, PlayerInputState.neutral()), host.session());
+        respawned = dead && host.session().player(0).routine() != 6;
         return observation();
     }
 
@@ -73,6 +76,7 @@ public final class S3kHostedArenaSession implements HostedArenaSession {
     @Override public boolean trackFinished() {
         return host.session().finished(0) && host.session().lap(0) > S3kCompetitionSession.TOTAL_LAPS;
     }
+    @Override public boolean respawned() { return respawned; }
     @Override public boolean resultsRequested() { return host.session().resultsRequested(); }
     @Override public com.openggf.game.arena.GhostArtSource ghostArtSource() {
         return new com.openggf.game.arena.GhostArtSource() {

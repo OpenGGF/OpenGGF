@@ -34,6 +34,9 @@ class TestTeleportSwapApply {
         var player=(AbstractPlayableSprite)mode.getCamera().getFocusedSprite();
         var swaps=(Sonic2RaceSwapApplier)mode.getWorldSession().getGameModule().getGameService(RaceSwapApplier.class);
         swaps.reset();
+        assertEquals(mode.getLevelManager().getCurrentLevel().getObjects().stream()
+                .filter(spawn -> spawn.objectId()==0x26).count(),swaps.maxSwapSources(mode));
+        assertTrue(swaps.maxSwapSources(mode)>0);
         var admitted=new AtomicBoolean(true);
         var steps=new ArrayList<RunStep>();
         GameLoop loop=null; RunHandle handle=null; RecordingFrameDriver driver=null;

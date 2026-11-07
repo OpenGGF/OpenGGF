@@ -580,6 +580,9 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory, Au
                     .toList();
             var swapReceipts = new java.util.HashMap<Integer, List<VerificationJobQueue.SwapReceipt>>();
             for (var candidate : candidates) swapReceipts.put(candidate.slot(), VerificationJobQueue.swapReceipts(room, candidate.slot()));
+            var launchPolicies = new java.util.HashMap<Integer,VerificationJobQueue.LaunchPolicy>();
+            for(var candidate:candidates) launchPolicies.put(candidate.slot(),VerificationJobQueue.LaunchPolicy.from(
+                    RoomRoundAccess.frozenLaunchForParticipant(room,candidate.slot(),candidate.participantId())));
             String trackKey = trackKey(room.descriptor());
             String fingerprint = room.determinismFingerprint();
             execute(brokerLoop, WorkBudget.Task.reserved(reserved, List.of(reserved), () -> {
@@ -606,7 +609,7 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory, Au
                     submitVerification(roomId, candidate.slot(), candidate.participantId(),
                             candidate.fingerprint(),
                             candidate.finish(), trackKey, candidate.character(),
-                            fingerprint, true, swapReceipts.get(candidate.slot()));
+                            fingerprint, true, swapReceipts.get(candidate.slot()),launchPolicies.get(candidate.slot()));
                 }
             }, () -> { }));
         } catch (RuntimeException | Error failure) {
@@ -700,9 +703,11 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory, Au
                 finish.ghostStreamHashHex(), finish.inputRecordingRef());
         var swaps = access == null ? List.<VerificationJobQueue.SwapReceipt>of()
                 : VerificationJobQueue.swapReceipts(access.room(), slot);
+        var launchPolicy = access == null ? null : VerificationJobQueue.LaunchPolicy.from(
+                RoomRoundAccess.frozenLaunchForParticipant(access.room(),slot,participantId));
         Runnable submission = () -> submitVerification(roomId, slot, participantId,
                 identityFingerprint, finish, trackKey, character,
-                determinismFingerprint, spotCheck, swaps);
+                determinismFingerprint, spotCheck, swaps,launchPolicy);
         if (lifetime != null) toBroker(lifetime, bytes + swaps.size() * 256L, submission);
         else {
             synchronized (lifetimes) {
@@ -719,7 +724,7 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory, Au
             String identityFingerprint, ControlMessage.AttemptFinish finish, String trackKey,
             String character, String determinismFingerprint, boolean spotCheck) {
         submitVerification(roomId,slot,participantId,identityFingerprint,finish,trackKey,character,
-                determinismFingerprint,spotCheck,List.of());
+                determinismFingerprint,spotCheck,List.of(),null);
     }
 
     private void submitVerification(String roomId, int slot, String participantId,
@@ -727,7 +732,8 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory, Au
                                     ControlMessage.AttemptFinish finish,
                                     String trackKey, String character,
                                     String determinismFingerprint,
-                                    boolean spotCheck, List<VerificationJobQueue.SwapReceipt> swaps) {
+                                    boolean spotCheck, List<VerificationJobQueue.SwapReceipt> swaps,
+                                    VerificationJobQueue.LaunchPolicy launchPolicy) {
         if (closed || verificationConfig == null || verificationJobs == null) {
             return;
         }
@@ -741,7 +747,7 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory, Au
                 determinismFingerprint, trackKey, character, finish.timeFrames(),
                 finish.clockStartFrame(), finish.finishFrame(),
                 finish.inputRecordingHashHex(), finish.ghostStreamHashHex(),
-                spotCheck, clock.getAsLong(), swaps);
+                spotCheck, clock.getAsLong(), swaps, finish.lapFrames(),finish.splitFrames(),launchPolicy);
         RelayLifetime lifetime = rooms.get(roomId);
         WorkBudget.Reservation delivery = null;
         if (!spotCheck && lifetime != null && participantId != null) {
