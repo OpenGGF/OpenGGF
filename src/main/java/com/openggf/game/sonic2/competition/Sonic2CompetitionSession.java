@@ -40,6 +40,7 @@ public final class Sonic2CompetitionSession implements NativeCompetitionRoster,
     private boolean gameOver;
     private int presentationFrame;
     private boolean resultsPlcReady;
+    private int levelMusic;
     private List<Integer> specialRings = new ArrayList<>(Collections.nCopies(6, 0));
     private Sonic2CompetitionResults.Metrics p1Result, p2Result;
 
@@ -70,7 +71,7 @@ public final class Sonic2CompetitionSession implements NativeCompetitionRoster,
     public record Snapshot(Phase phase, int selection, int zone, int act, int firstFinisher,
                            int loserTimeLeft, boolean spinComplete, int specialIndex, int specialSector,
                            int teleportTimer, int timeOverMask, int pendingTimeOverMask, boolean gameOver, int presentationFrame,
-                           boolean resultsPlcReady,
+                           boolean resultsPlcReady, int levelMusic,
                            List<Integer> specialRings,
                            List<Sonic2CompetitionResults.Wins> ledger,
                            Sonic2CompetitionPlayerState.State player1, Sonic2CompetitionPlayerState.State player2,
@@ -86,6 +87,55 @@ public final class Sonic2CompetitionSession implements NativeCompetitionRoster,
     public void advancePresentation() { presentationFrame++; }
     public boolean resultsPlcReady() { return resultsPlcReady; }
     public void setResultsPlcReady(boolean ready) { resultsPlcReady = ready; }
+    /** Native Level_Music is gameplay state, independent of the audio driver's active song. */
+    public int levelMusic() { return levelMusic; }
+    public void playLevelMusic(com.openggf.data.Rom rom, int romZone, com.openggf.audio.AudioManager audio)
+            throws java.io.IOException {
+        // Level_GetBgm / MusicList2 (s2.asm:4730-4748,4898-4914).
+        if (romZone < 0 || romZone > 16) throw new IllegalArgumentException("S2 zone " + romZone);
+        int nativeId = rom.readByte(com.openggf.game.sonic2.Sonic2RomAddresses.address(rom, 0x3EB2) + romZone) & 0xFF;
+        levelMusic = nativeId;
+        audio.playMusic(engineMusic(nativeId));
+    }
+    public static int engineMusic(int nativeId) {
+        for (var music : com.openggf.game.sonic2.audio.Sonic2Music.values())
+            if (music.nativeId == nativeId) return music.id;
+        throw new IllegalArgumentException("Unknown S2 music " + nativeId);
+    }
+    public void playSelectMusic(com.openggf.audio.AudioManager audio) {
+        // MenuScreen (s2.asm:11813-11814) requests Options without changing Level_Music.
+        audio.playMusic(com.openggf.game.sonic2.audio.Sonic2Music.OPTIONS.id);
+    }
+    public void playResultsMusic(com.openggf.audio.AudioManager audio) {
+        // TwoPlayerResults (s2.asm:10776-10782): compare native Level_Music, not playback state.
+        var music = com.openggf.game.sonic2.audio.Sonic2Music.RESULTS_2P;
+        if (levelMusic == music.nativeId) return;
+        levelMusic = music.nativeId;
+        audio.playMusic(music.id);
+    }
+    /** Title clears emeralds; the shipped options VS branch deliberately retains them. */
+    public void initializeEntry(com.openggf.game.GameStateManager source, boolean fromOptions) {
+        reset();
+        if (fromOptions) {
+            // OptionScreen_Select_Not1P (s2.asm:12136-12156), fixBugs=0; fixed branch clears them.
+            var bank = gameState(0);
+            bank.restoreSaveProgress(bank.getLives(), bank.getContinues(),
+                    source.getCollectedChaosEmeraldIndices(), source.getCollectedSuperEmeraldIndices(),
+                    source.isEmeraldsConverted());
+        }
+        // TitleScreen_CheckIfChose2P (s2.asm:4560-4572) takes the cleared reset banks.
+    }
+    public boolean allResultsCompleted() {
+        // TwoPlayerResultsDone_ZoneOrSpecialStages (s2.asm:10885-10906).
+        // MOVE.W into zeroed D0 then ADD.L: eight unsigned words; only the high
+        // word of the sum is tested. Retail game-over $FEFF/$FFFE can carry it.
+        int sum = 0;
+        for (int z = 0; z < 4; z++) for (int row = 0; row < 2; row++) {
+            var wins = actResult(z, row);
+            sum += resultWord(wins);
+        }
+        return (sum >>> 16) == 0;
+    }
     public int selection() { return selection; }
     public int currentZone() { return zone; }
     public int act() { return act; }
@@ -164,7 +214,14 @@ public final class Sonic2CompetitionSession implements NativeCompetitionRoster,
         if (zoneIndex < 0 || zoneIndex > 3 || row < 0 || row > 2) throw new IllegalArgumentException("ledger row");
         return ledger.get(zoneIndex * 3 + row);
     }
-    public boolean completed(int zoneIndex) { return actResult(zoneIndex, 0) != null && actResult(zoneIndex, 1) != null; }
+    public boolean completed(int zoneIndex) {
+        // Chk2PZoneCompletion (s2.asm:11963-11976): ADD.W and BMI at the caller,
+        // including unsigned sentinel addition wrapping before the sign test.
+        return (short) (resultWord(actResult(zoneIndex, 0)) + resultWord(actResult(zoneIndex, 1))) >= 0;
+    }
+    private static int resultWord(Sonic2CompetitionResults.Wins wins) {
+        return wins == null ? 0xFFFF : ((wins.player1() & 255) << 8) | (wins.player2() & 255);
+    }
     public Sonic2CompetitionResults.Wins zoneWins(int zoneIndex) { return countRowWins(zoneIndex * 3, 3); }
     public Sonic2CompetitionResults.Wins gameWins() { return countRowWins(0, 12); }
     private Sonic2CompetitionResults.Wins countRowWins(int offset, int count) {
@@ -200,16 +257,23 @@ public final class Sonic2CompetitionSession implements NativeCompetitionRoster,
             case SPECIAL_ACT_RESULTS -> {
                 if (zone != 3) phase = Phase.ZONE_RESULTS;
                 else if (act == 0 || (act == 1 && countRowWins(9, 2).winner() == 0)) {
-                    act++; startSpecial(specialIndex + 1);
+                    // TwoPlayerResultsDone_SpecialStage (s2.asm:10940-10961) clears Level_Music
+                    // only for the next stage, forcing results music to restart after that stage.
+                    levelMusic = 0; act++; startSpecial(specialIndex + 1);
                 } else phase = Phase.SPECIAL_ZONE_RESULTS;
             }
             case ZONE_RESULTS, SPECIAL_ZONE_RESULTS -> {
-                boolean all = true;
-                for (int z = 0; z < 4; z++) all &= completed(z);
+                boolean all = allResultsCompleted();
                 phase = all ? Phase.GAME_RESULTS : Phase.SELECT;
                 if (!all && gameOver) {
                     Collections.fill(ledger, null);
-                    for (var state : progress) state.resetSession();
+                    // TwoPlayerResultsDone_ZoneOrSpecialStages (s2.asm:10907-10920)
+                    // resets the life bytes only; retained options emeralds survive.
+                    for (var state : progress) {
+                        var bank = state.gameState();
+                        bank.restoreSaveProgress(3, bank.getContinues(), bank.getCollectedChaosEmeraldIndices(),
+                                bank.getCollectedSuperEmeraldIndices(), bank.isEmeraldsConverted());
+                    }
                     gameOver = false;
                 }
             }
@@ -382,7 +446,7 @@ public final class Sonic2CompetitionSession implements NativeCompetitionRoster,
         phase = Phase.SELECT; selection = zone = act = specialIndex = specialSector = teleportTimer = 0;
         firstFinisher = -1; loserTimeLeft = timeOverMask = pendingTimeOverMask = 0; spinComplete = gameOver = false;
         presentationFrame = 0;
-        resultsPlcReady = false;
+        resultsPlcReady = false; levelMusic = 0;
         Collections.fill(ledger, null); specialRings = new ArrayList<>(Collections.nCopies(6, 0));
         for (var state : progress) state.resetSession();
         p1Result = p2Result = null;
@@ -391,7 +455,7 @@ public final class Sonic2CompetitionSession implements NativeCompetitionRoster,
     @Override public Snapshot capture() {
         return new Snapshot(phase, selection, zone, act, firstFinisher, loserTimeLeft, spinComplete,
                 specialIndex, specialSector, teleportTimer, timeOverMask, pendingTimeOverMask, gameOver, presentationFrame,
-                resultsPlcReady,
+                resultsPlcReady, levelMusic,
                 specialRings, ledger,
                 progress[0].capture(), progress[1].capture(), p1Result, p2Result);
     }
@@ -401,7 +465,7 @@ public final class Sonic2CompetitionSession implements NativeCompetitionRoster,
         specialIndex = s.specialIndex(); specialSector = s.specialSector(); teleportTimer = s.teleportTimer();
         timeOverMask = s.timeOverMask(); pendingTimeOverMask = s.pendingTimeOverMask(); gameOver = s.gameOver();
         presentationFrame = s.presentationFrame();
-        resultsPlcReady = s.resultsPlcReady();
+        resultsPlcReady = s.resultsPlcReady(); levelMusic = s.levelMusic();
         specialRings = new ArrayList<>(s.specialRings()); ledger.clear(); ledger.addAll(s.ledger());
         progress[0].restore(s.player1()); progress[1].restore(s.player2()); p1Result = s.p1Result(); p2Result = s.p2Result();
     }
