@@ -102,9 +102,6 @@ public final class Sonic2RaceSwapApplier extends AbstractRaceSwapApplier
         var level=context.getLevelManager().getCurrentLevel();
         var normal=new com.openggf.level.Palette[4];
         for (int line=0;line<4;line++) normal[line]=level.getPalette(line);
-        var water=context.getWaterSystem();
-        var manager=context.getLevelManager();
-        var underwater=water==null ? null : water.getUnderwaterPalette(manager.getFeatureZoneId(),manager.getFeatureActId());
         var flashed=new com.openggf.level.Palette[4];
         for (int line=0;line<4;line++) {
             flashed[line]=normal[line].deepCopy();
@@ -113,17 +110,7 @@ public final class Sonic2RaceSwapApplier extends AbstractRaceSwapApplier
         // Vint_Level (s2.asm:712-739), fixBugs=0: retain colour 32. Its extra final
         // colour write aliases already-white colour zero; model the resulting colours.
         flashed[2].setColor(0,new com.openggf.level.Palette.Color((byte)(backdropRgb>>>16),(byte)(backdropRgb>>>8),(byte)backdropRgb));
-        graphics.flush();
-        try {
-            for (int line=0;line<4;line++) graphics.cachePaletteTexture(flashed[line],line);
-            if (underwater!=null) graphics.cacheUnderwaterPaletteTexture(flashed,flashed[0]);
-            draw.run();
-            graphics.flush();
-            graphics.flushScreenSpace();
-        } finally {
-            for (int line=0;line<4;line++) graphics.cachePaletteTexture(normal[line],line);
-            if (underwater!=null) graphics.cacheUnderwaterPaletteTexture(underwater,normal[0]);
-        }
+        com.openggf.graphics.PaletteDrawPresentation.withRows(graphics,flashed,draw);
     }
     @Override public void reset() { teleportTimer=0;requestPending=false;white=false;backdropRgb=0;clearEvents(); }
     @Override public String key() { return "sonic2.race-swap"; }

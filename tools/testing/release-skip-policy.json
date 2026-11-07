@@ -666,6 +666,13 @@
       "evidence": "src/test/java/com/openggf/TestS3kSoloArenaViewPixels.java:39",
       "allowed_when_absent": "gl",
       "note": "Explicit PresentationOffscreenTestContext.requested() opt-in; run with surfaceless EGL."
+    },
+    {
+      "match": "com.openggf.graphics.TestPaletteDrawProjectionPixels#normalWaterAndPrivateRowsUseTheProjectionAndRestoreAfterFailure",
+      "category": "gl-context",
+      "evidence": "src/test/java/com/openggf/graphics/TestPaletteDrawProjectionPixels.java:16",
+      "allowed_when_absent": "gl",
+      "note": "Explicit surfaceless-egl opt-in; configured EGL must execute or fail without a desktop fallback."
     }
   ]
 }

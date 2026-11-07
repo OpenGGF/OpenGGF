@@ -70,9 +70,11 @@ hosted controller behavior.
 
 The remaining monitor/swap engine sources compile with Java 25, including all
 test sources (95s normal-memory compilation, 18:32:03 UTC). Their first lean
-selection is queued in `target/lane-b/swaps-focused-lean.log`; it selects
+selection (`target/lane-b/swaps-focused-lean.log`) was admitted after 409s but
+rejected before test execution because committing changed the frozen source
+fingerprint. It selected
 TestS2RandomisedMonitorContents, TestS3kArenaSwapApplier, TestTeleportSwapApply,
-TestModApiSignatureSurface and TestModApiPinPolicy. No pass is claimed yet.
+TestModApiSignatureSurface and TestModApiPinPolicy. No test pass is claimed for that request.
 
 These are focused, positioned tests. They do not certify a full player-input route,
 a network race or complete checkpoint-world equivalence. No full suite
@@ -125,7 +127,8 @@ explicitly transient.
 The new focused tests check field preservation, native clocks during 64 inhibited
 object passes, the white-flash phase, unsafe/dead/finished fallbacks, delayed
 requests, native empty-slot arena parity and live versus RecordingFrameDriver
-canonical snapshots over 80 steps. Their results are pending, not assumed.
+canonical snapshots over 80 steps. Their results are pending, not assumed. The replay comparison also independently
+raises the native monitor request before injecting the logged application.
 The latter uses the canonical replay frame owner; it does not wire the separate
 AttemptReplayHarness or validate server authorization of the event log.
 
@@ -137,7 +140,12 @@ VBlank/event/freeze delegates; a compatible frozen flag in GameplayRunPolicy;
 and the design-assigned NativePlayerPose capture-body update for secondary path.
 The candidate 0.7 API pin adds the generated new policy constructor/accessor/
 component and LevelManager placement/restart methods without changing the candidate
-version. Five verified explicit EGL opt-in skip rules were added earlier.
+version. Five verified explicit EGL opt-in skip rules were added earlier. The draw-only
+palette projection follow-up adds an internal PaletteDrawPresentation bridge and
+a 58-line PaletteTextureOwner scope, so underwater/appearance consumers receive
+the flash without changing native palette bytes or VBlank upload state. It includes
+an EGL pixel test of ordinary/water/private rows and cleanup after a draw failure;
+its explicit EGL opt-in has its own skip classification. LevelRenderer is untouched.
 
 No source under net/** or racing/**, S2 competition, shared competition,
 NativeCompetitionRenderer or LevelRenderer was edited. PlayableSpriteMovement

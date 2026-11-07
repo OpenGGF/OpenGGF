@@ -25,6 +25,59 @@ final class PaletteTextureOwner {
     private static final UnderwaterPaletteUploadOps OPEN_GL_UNDERWATER_PALETTE_UPLOAD_OPS =
             new OpenGlUnderwaterPaletteUploadOps();
     private final GraphicsManager graphics;
+    // Draw-only GPU projection. Native CPU banks and V-int upload generations are untouched.
+    private PaletteView[] drawPaletteRows;
+    private Integer drawPaletteTexture;
+    private int drawPaletteHeight;
+
+    void withDrawPalette(PaletteView[] rows, Runnable draw) {
+        if (drawPaletteRows != null) throw new IllegalStateException("Nested palette projection");
+        if (rows == null || rows.length != 4 || Arrays.stream(rows).anyMatch(Objects::isNull))
+            throw new IllegalArgumentException("A palette projection requires four rows");
+        graphics.flush();
+        drawPaletteRows = rows;
+        try {
+            PatternRenderCommand.resetFrameState();
+            draw.run();
+        } finally {
+            try {
+                graphics.flush();
+                graphics.flushScreenSpace();
+            } finally {
+                drawPaletteRows = null;
+                if (drawPaletteTexture != null) glDeleteTextures(drawPaletteTexture);
+                drawPaletteTexture = null;
+                drawPaletteHeight = 0;
+                PatternRenderCommand.resetFrameState();
+            }
+        }
+    }
+
+    private Integer drawPaletteTexture() {
+        int height = RenderContext.getTotalPaletteLines();
+        if (drawPaletteTexture == null) drawPaletteTexture = glGenTextures();
+        if (drawPaletteHeight == height) return drawPaletteTexture;
+        ByteBuffer bytes = MemoryUtil.memAlloc(height * COLORS_PER_PALETTE * 4);
+        try {
+            for (int row = 0; row < height; row++) {
+                var palette = drawPaletteRows[row & 3];
+                for (int color = 0; color < COLORS_PER_PALETTE; color++)
+                    writePaletteColor(bytes, palette.red(color) & 255, palette.green(color) & 255,
+                            palette.blue(color) & 255, color);
+            }
+            bytes.flip();
+            glBindTexture(GL_TEXTURE_2D, drawPaletteTexture);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, COLORS_PER_PALETTE, height, 0,
+                    GL_RGBA, GL_UNSIGNED_BYTE, bytes);
+            drawPaletteHeight = height;
+            PatternRenderCommand.resetFrameState();
+        } finally { MemoryUtil.memFree(bytes); }
+        return drawPaletteTexture;
+    }
 	private final Map<Object,ScopedPaletteLease> scopedPaletteOwners=new java.util.IdentityHashMap<>();
 	private long scopedPaletteGeneration;
     private ScopedUnderwaterBasis scopedUnderwaterBasis;
@@ -549,14 +602,14 @@ final class PaletteTextureOwner {
 
 
 	Integer getCombinedPaletteTextureId() {
-		return combinedPaletteTextureId;
+		return drawPaletteRows == null ? combinedPaletteTextureId : drawPaletteTexture();
 	}
 
 
 	private Integer underwaterPaletteTextureId;
 
 	Integer getUnderwaterPaletteTextureId() {
-		return underwaterPaletteTextureId;
+		return drawPaletteRows == null ? underwaterPaletteTextureId : drawPaletteTexture();
 	}
 
 	/**
@@ -615,6 +668,7 @@ final class PaletteTextureOwner {
 
 
 	Integer cacheUnderwaterPaletteTexture(PaletteView[] palettes, PaletteView normalLine0) {
+        if (drawPaletteRows != null) return drawPaletteTexture();
 		if (graphics.paletteHeadlessMode() && underwaterPaletteUploadOps == OPEN_GL_UNDERWATER_PALETTE_UPLOAD_OPS) {
 			return null;
 		}

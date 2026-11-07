@@ -94,6 +94,8 @@ class TestTeleportSwapApply {
         assertEquals(player.getStandXRadius(),player.getXRadius()); assertEquals(player.getStandYRadius(),player.getYRadius());
         assertEquals(0,player.getAngle()); assertEquals(0,player.getXSubpixelRaw()); assertEquals(0,player.getYSubpixelRaw());
         assertEquals(0xE,player.getTopSolidBit()); assertEquals(0xF,player.getLrbSolidBit());
+        assertTrue(run.steps().getLast().player().secondaryPath());
+        assertEquals(0,run.steps().getLast().player().shoeKind(),"act shoes are not arena shoe metadata");
         assertEquals(5,player.getPriorityBucket()); assertTrue(player.isHighPriority()); assertTrue(player.getRenderHFlip());
         assertTrue(run.mode().getCamera().getX()>0x500,"placement owner must snap to the target window");
         assertEquals(0x40,run.swaps().teleportTimer()); assertFalse(run.swaps().white());
@@ -179,13 +181,13 @@ class TestTeleportSwapApply {
         var expected=new ArrayList<Map<String,Object>>();
         var signals=new ArrayList<RaceSignal>();
         var invalid=new RaceEvent.SwapApply(38,new SwapTarget(0xFFFF,0xFFFF,0,0,false,false,2,false,0,0,0));
-        var live=open(true); localBank(live); live.handle().queueRaceEvent(command());
+        var live=open(true); nativeRequestPrelude(live); localBank(live); live.handle().queueRaceEvent(command());
         for(int frame=0;frame<80;frame++) {
             if(frame==70) live.handle().queueRaceEvent(invalid);
             step(live); expected.add(capture(live)); signals.add(live.steps().getLast().signal());
         }
         SessionManager.clear(); GameModuleRegistry.reset();
-        var replay=open(false); localBank(replay); replay.swaps().queueForStep(command());
+        var replay=open(false); nativeRequestPrelude(replay); localBank(replay); replay.swaps().queueForStep(command());
         for(int frame=0;frame<80;frame++) {
             // A rejected recorded fallback is rechecked against the logged original target.
             if(frame==70) replay.swaps().queueForStep(invalid);
@@ -197,6 +199,18 @@ class TestTeleportSwapApply {
             expected.get(frame).forEach((key,value)->assertEquals(List.of(),RewindSnapshotDiff.diffKey(key,value,actual.get(key)),key+" at "+at));
             assertEquals(frame==0 ? RaceEventResult.Outcome.APPLIED : frame==70 ? RaceEventResult.Outcome.FALLBACK : RaceEventResult.Outcome.NONE,
                     replay.swaps().consumeApplied().outcome());
+        }
+    }
+    private void nativeRequestPrelude(Run run) {
+        var level=run.mode().getLevelManager();
+        if ((level.getFrameCounter()&1)!=0) step(run);
+        level.getObjectManager().addDynamicObject(new MonitorContentsObjectInstance(
+                run.player().getCentreX(),run.player().getCentreY(),4,run.player()));
+        for(int frame=0;frame<33;frame++) {
+            step(run);
+            var signal=run.loop()==null ? run.swaps().consumeSignal() : run.steps().getLast().signal();
+            assertEquals(frame==32 ? RaceSignal.SWAP_REQUEST : RaceSignal.NONE,signal,
+                    "live and input-only replay must independently reproduce the native request");
         }
     }
     private Map<String,Object> capture(Run run) {
