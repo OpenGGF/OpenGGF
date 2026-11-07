@@ -110,32 +110,28 @@ final class NativeLevelLoadController {
             attempt.executeInitializationPlan(plan, zeroRoutineVInt, ordinal = Math.incrementExact(ordinal), admission);
             finishInitialization();
         } catch (RuntimeException | Error failure) {
-            abortInitialization(failure); throw failure;
+            closeInitialization(() -> { throw failure; }); throw failure;
+        }
+    }
+
+    @FunctionalInterface
+    private interface InitializationCleanup extends AutoCloseable {
+        @Override void close();
+    }
+
+    /** Detach once; structured cleanup preserves a terminal failure and suppresses cleanup failure. */
+    private void closeInitialization(Runnable terminalAction) {
+        var current = initialization;
+        initialization = null;
+        try (InitializationCleanup cleanup = () -> { if (current != null) current.cleanup.run(); }) {
+            terminalAction.run();
         }
     }
 
     private void finishInitialization() {
         var current = initialization;
         if (current == null || !current.attempt.isComplete()) return;
-        initialization = null;
-        Throwable primary = null;
-        try { current.completion.run(); }
-        catch (RuntimeException | Error failure) { primary = failure; throw failure; }
-        finally {
-            try { current.cleanup.run(); }
-            catch (RuntimeException | Error cleanup) {
-                if (primary != null) primary.addSuppressed(cleanup); else throw cleanup;
-            }
-        }
-    }
-
-    private void abortInitialization(Throwable failure) {
-        var current = initialization;
-        initialization = null;
-        if (current != null) {
-            try { current.cleanup.run(); }
-            catch (RuntimeException | Error cleanup) { failure.addSuppressed(cleanup); }
-        }
+        closeInitialization(current.completion);
     }
 
     com.openggf.game.internal.NativeLevelLoadPhaseAdmission.PreparedPhase preparedPhase() {
@@ -146,7 +142,7 @@ final class NativeLevelLoadController {
     void resume(LevelManager manager) {
         if (initialization != null) {
             try { initialization.attempt.resume(admission); finishInitialization(); }
-            catch (RuntimeException | Error failure) { abortInitialization(failure); throw failure; }
+            catch (RuntimeException | Error failure) { closeInitialization(() -> { throw failure; }); throw failure; }
             return;
         }
         PendingLoad current = pending;

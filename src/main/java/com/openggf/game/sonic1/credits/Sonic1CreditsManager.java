@@ -344,8 +344,8 @@ public class Sonic1CreditsManager {
             plcService.transact(primary == 0
                     ? new Sonic1PlcService.Operation[] {Sonic1PlcService.appendOperation(1)}
                     : new Sonic1PlcService.Operation[] {Sonic1PlcService.appendOperation(primary), Sonic1PlcService.appendOperation(1)});
-        } catch (Exception e) {
-            LOGGER.fine("Credits PLC queue unavailable: " + e.getMessage());
+        } catch (IOException failure) {
+            throw new java.io.UncheckedIOException(failure);
         }
     }
 

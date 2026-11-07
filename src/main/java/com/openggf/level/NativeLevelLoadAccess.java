@@ -53,15 +53,19 @@ public final class NativeLevelLoadAccess {
         if (objects != null) objects.advanceVblaCounter();
         else com.openggf.game.session.EngineTiming.vIntRunCounter().serviceRepresentedVBlank();
     }
+    private static com.openggf.game.LevelInitProfile profile(LevelManager level) {
+        var module = level.activeGameModule();
+        return module == null ? null : module.getLevelInitProfile();
+    }
     private static com.openggf.game.internal.NativeTitlelessLevelLoad titlelessOwner(LevelManager level) {
-        var profile = level.activeGameModule().getLevelInitProfile();
+        var profile = profile(level);
         return profile instanceof com.openggf.game.internal.NativeTitlelessLevelLoad owner
                 && owner.titlelessLoadSelected() ? owner : null;
     }
     /** Production loop tail, after its native PLC preparation; no timing input selects this work. */
     public static void dispatchLoopTailModeSwitch(LevelManager level, Runnable consumeRequest) {
         if (!level.getTransitions().hasZoneActRequest()) return;
-        var profile = level.activeGameModule().getLevelInitProfile();
+        var profile = profile(level);
         if (!(profile instanceof com.openggf.game.internal.NativeTitlelessLevelLoad owner)
                 || !owner.switchesAtLoopTail(level.getRequestedZone(), level.getRequestedAct())) return;
         var lifecycle = com.openggf.game.GameServices.plcFrameLifecycleOrNull();
@@ -71,14 +75,14 @@ public final class NativeLevelLoadAccess {
     /** Bind only while the real load callback executes, never across outgoing fade rows. */
     public static com.openggf.game.internal.NativeLevelLoadCallerScope beginModeSwitchLoad(
             LevelManager level, int zone, int act) {
-        var profile = level.activeGameModule().getLevelInitProfile();
+        var profile = profile(level);
         return profile instanceof com.openggf.game.internal.NativeTitlelessLevelLoad owner
                 && owner.switchesAtLoopTail(zone, act) ? owner.beginModeSwitchLoad()
                 : com.openggf.game.internal.NativeLevelLoadCallerScope.NONE;
     }
     public static void dispatchLoopTailCredits(LevelManager level, Runnable consumeRequest) {
         if (!level.getTransitions().hasCreditsRequest()) return;
-        var profile = level.activeGameModule().getLevelInitProfile();
+        var profile = profile(level);
         if (!(profile instanceof com.openggf.game.internal.NativeTitlelessLevelLoad owner)
                 || !owner.creditsSwitchesAtLoopTail()) return;
         var lifecycle = com.openggf.game.GameServices.plcFrameLifecycleOrNull();

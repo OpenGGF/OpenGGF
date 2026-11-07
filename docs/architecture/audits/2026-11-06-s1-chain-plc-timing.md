@@ -232,3 +232,58 @@ one of its 92 comparison report bodies is byte-identical to the earlier green
 candidate. The final focused set, expanded with compiled Mod API signatures and
 general fade tests, passes all 644 cases across 65 classes with zero skips.
 The final frozen-source change-based smoke gate remains pending.
+
+### Delivery-gate ownership repairs
+
+The first frozen ending candidate `637c23624` completed its change-based smoke
+selection against pre-task `34b8830b1`: 4,481 classes, all 91 ordinary batches
+and the guard batch, 37,863 cases, 39 failures, 11 errors and 49 allowed skips.
+Its raw verdict was FAILED. Full assertions identify 28 inherited occurrences
+and 22 new failures/errors; the candidate was not delivered.
+
+Matched pre-task controls run in this same worktree qualify the local ROM
+catalogue as an input separate from the six absolute ROM test properties. Both
+the 501-case pixel batch and 107-case regression selection reproduce the same
+single suspension pixel failure; the actual 491-case Three Islands batch has
+six inherited failures and one explicit balance-probe skip. The prepared main
+worktree has a different local catalogue and cannot attribute those UI outcomes.
+The pixel assertion and renderer are unchanged. Two standalone control attempts
+also omitted the test-concurrent fork temporary directories; their setup errors
+are invalid for attribution. Corrected controls reproduce the category runner's
+`fork-1` and `fork-2` preparation before running `surefire:test`.
+
+Native ending demo scopes now require both a supporting load profile and an
+ending provider that owns native assembly. Generic helpers retain their original
+immediate load and gameplay behavior. The native provider retains the ROM's
+early level-clock increment and frozen fade-loop water/event/oscillator policy.
+Title requests are consumed once after continuation completion. The launcher
+accepts absence of optional terminal-census authority without dereferencing a
+missing manifest. Unsupported profile queries do not add a mandatory module to
+older callers.
+
+The post-physics return-to-text and ending-complete checks stay inside the
+existing sprite dispatch scope. Their omission during a physics extraction was
+caught by the full S1 profile at the next credits font load, before raw 216379;
+restoring the production handoff needs no timing, fixture or wait change. New
+controls cover both native and generic running-demo returns.
+
+Initialization cleanup now uses a structured resource scope. Completion and
+admission failures retain their original RuntimeException/Error identity,
+cleanup runs once and secondary cleanup failures remain suppressed. Four
+negative controls exercise those cases. Credits PLC read failures propagate as
+unchecked IO failures. Two retired broad-catch entries and the logo's obsolete
+raw-deletion debt entry are removed; no catch allowance or guard rule is expanded.
+The ordinary DMA and credits-producer unit expectations follow the cited native
+handlers and actual outgoing fade/font-setup boundary. Trace assertions remain
+unchanged under the user's explicit unit-defect ruling.
+
+The first repaired focused run passes 792 cases across 74 classes without skips.
+Final results after the post-demo handoff repair are recorded below when complete.
+
+After restoring the handoff, the repeated 45-class S1 profile passes all 71 cases
+with zero skips; all 92 comparison report bodies are byte-identical to the earlier
+green candidate. The 74-class focused run passes 793 cases and exposes only the
+source-size ratchet: removing the duplicate consume reduces the measured method
+from 30 lines to 29. Tightening that budget makes the 87-case guard rerun pass.
+All 794 distinct focused checks are qualified by those runs; a single combined
+794-case pass is not claimed. The final frozen-source smoke rerun is pending.

@@ -7,7 +7,6 @@ import com.openggf.game.EndingPhase;
 import com.openggf.game.EndingProvider;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameModule;
-import com.openggf.game.LevelEventProvider;
 import com.openggf.game.TitleScreenProvider;
 import com.openggf.game.internal.EndingEntryPresentation;
 import com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame;
@@ -213,9 +212,10 @@ final class GameLoopEndingSession {
      * CREDITS_DEMO phase: update provider, run level physics with demo input.
      */
     private void updateEndingCreditsDemo() {
-        boolean scrollFrozenAtEntry = endingProvider.isScrollFrozen()
+        boolean nativeDemoLoop = endingProvider instanceof com.openggf.game.internal.NativeEndingVBlank;
+        boolean scrollFrozenAtEntry = nativeDemoLoop && (endingProvider.isScrollFrozen()
                 || endingProvider.plcLifecyclePhaseOverride().orElse(null)
-                    == com.openggf.game.resources.PlcLifecyclePhase.CREDITS_DEMO_FADE;
+                    == com.openggf.game.resources.PlcLifecyclePhase.CREDITS_DEMO_FADE);
         boolean shouldAdvanceFrozenScene = endingProvider.shouldAdvanceFrozenDemoScene();
         endingProvider.update();
         shouldAdvanceFrozenScene = shouldAdvanceFrozenScene || endingProvider.shouldAdvanceFrozenDemoScene();
@@ -253,57 +253,18 @@ final class GameLoopEndingSession {
         }
 
         com.openggf.sprites.managers.SpriteManagerInternalAccess.runCreditsDemoGameplay(
-                host.sprites(), host.module(), sprite, () -> runEndingCreditsGameplay(scrollFrozenAtEntry));
+                host.sprites(), host.module(), sprite, () -> {
+                    EndingDemoGameplay.run(host, endingProvider, nativeDemoLoop, scrollFrozenAtEntry);
+                    finishEndingDemoIteration();
+                });
     }
 
-    private void runEndingCreditsGameplay(boolean scrollFrozen) {
-        if (!scrollFrozen) host.level().advanceLevelFrameCounter();
-        // Run level physics — follows LevelFrameStep canonical order (steps 1-4),
-        // but steps 5-6 are conditional on scroll-freeze state during ending fadeout.
-        host.sprites().publishHeldInputForLevelEvents(host.input());
-        // Level_FDLoop (sonic.asm:3073-3090) retains ExecuteObjects and
-        // ObjPosLoad, but omits LZWaterFeatures, deformation/events and the
-        // level-loop oscillator. Preserve the last water-slide controls.
-        if (!scrollFrozen) {
-            host.level().updateZoneFeaturesPrePhysics();
-            if (host.level().advanceWaterLevelBeforePlayerPhysics())
-                host.level().advanceDynamicWaterLevel();
-        }
-        host.sprites().update(host.input());
-        host.level().updateObjectPositionsPostPhysicsWithoutTouches(null, !scrollFrozen);
-        // Camera/scroll in ROM order (DeformLayers (REV01).asm:16-18): the camera
-        // move/clamp (ScrollVertical) runs BEFORE the zone event handler, and the
-        // boundary easing (DynamicLevelEvents tail) runs AFTER it. Mirrors
-        // LevelFrameStep steps 4a/4b/4c. Camera/scroll only if not frozen (during
-        // fadeout, scroll freezes).
-        if (!scrollFrozen) {
-            host.camera().updatePosition();
-            host.camera().captureRenderCopy();
-        }
-        LevelEventProvider levelEvents = host.module().getLevelEventProvider();
-        if (!scrollFrozen && levelEvents != null) {
-            levelEvents.update();
-        }
-        if (!scrollFrozen) {
-            host.camera().updateBoundaryEasing();
-            if (levelEvents != null) {
-                levelEvents.updateAfterCameraBoundaryEasing();
-            }
-            host.level().postCameraObjectPlacementSync();
-            host.level().update();
-            host.level().refreshObjectPostCameraRenderState();
-        }
-
-        // Check if returning to text phase
+    private void finishEndingDemoIteration() {
         if (endingProvider.hasTextReturnRequest()) {
             endingProvider.consumeTextReturnRequest();
             returnFromEndingDemo();
         }
-
-        // Check if ending is complete
-        if (endingProvider.isComplete()) {
-            exitEndingToTitleScreen();
-        }
+        if (endingProvider.isComplete()) exitEndingToTitleScreen();
     }
 
     /**
@@ -346,14 +307,13 @@ final class GameLoopEndingSession {
         if (endingProvider instanceof com.openggf.game.internal.NativeEndingDemoAssembly nativeDemo)
             nativeDemo.beginDemoLoad();
         var profile = host.module().getLevelInitProfile();
-        try (var scope = profile instanceof com.openggf.game.internal.NativeEndingDemoLoadProfile nativeDemo
+        try (var scope = endingProvider instanceof com.openggf.game.internal.NativeEndingDemoAssembly
+                && profile instanceof com.openggf.game.internal.NativeEndingDemoLoadProfile nativeDemo
                 ? nativeDemo.beginEndingDemoLoad(endingProvider)
                 : com.openggf.game.internal.NativeLevelLoadCallerScope.NONE) {
             // Suppress zone music — credits music should continue playing
             host.level().setSuppressNextMusicChange(true);
             host.level().loadZoneAndAct(zone, act);
-            // Consume the title card request since we don't want a title card
-            host.level().consumeTitleCardRequest();
         } catch (IOException e) {
             com.openggf.level.DeferredLevelLoadException.rethrowCallbackAbort(e);
             LOGGER.severe("Failed to load ending demo zone " + zone + " act " + act + ": " + e.getMessage());
@@ -369,6 +329,7 @@ final class GameLoopEndingSession {
     }
 
     private void finishEndingDemoZone(int zone, int act, int startX, int startY) {
+        // Consume once, after the actual continuation has installed its request.
         host.level().consumeTitleCardRequest();
         // Suppress HUD during credits demos (ROM: HUD is never drawn during credits)
         host.level().setForceHudSuppressed(true);

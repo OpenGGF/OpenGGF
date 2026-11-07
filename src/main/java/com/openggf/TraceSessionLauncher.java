@@ -3324,6 +3324,7 @@ public final class TraceSessionLauncher {
                 deferBoundaryCommit, commitDeferredBoundaryAfterClosure,
                 observedVblankCounterAdvance,
                 disposition == TraceRunFrameDriver.Disposition.TERMINAL_TAIL
+                        && entry != null && entry.runManifest() != null
                         && entry.runManifest().terminalRowIsLagged(runTerminalTail.tailStart(),
                                 movie.getFrameCount(), movieRow));
     }

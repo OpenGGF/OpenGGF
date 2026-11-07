@@ -124694,9 +124694,10 @@ separate. Recorder publication and the pin update are user-approved after gate.
 On develop base `c1029d3b4` (pre-task `34b8830b1`), the complete-emerald chain
 now passes its unchanged full assertion through all 34 segments and 10,943
 terminal rows. Queue axes remain zero. The ending tail changes from 10,334
-errors/4,704 warnings, 4,704 native versus 4,784 engine edges, to zero differences
-and 4,704/4,704 edges. The original first edge used mapping 32 at movie 214203;
-native mapping 30 at 214287 now matches. Movie frames here are evidence only.
+errors/4,704 warnings, 4,704 native versus 4,784 engine edges, to zero error
+comparisons and 4,704/4,704 edges. The old first-edge mismatch was engine mapping
+32 at movie 214203 versus native mapping 30 at 214287. Movie frames here are
+evidence only; the passing assertion does not establish zero warnings.
 
 `GM_Ending`, credits font setup and credits demo loads now prepare real resumable
 production work through `NativeLevelLoadController`. The existing initialization
@@ -124730,3 +124731,13 @@ the [S1 chain audit](../architecture/audits/2026-11-06-s1-chain-plc-timing.md).
 Producer publication and the new develop pin remain reserved until that gate
 passes and the user approves this new producer commit; earlier approval named
 only `d54cc514`.
+
+The initial ending smoke on `637c23624` failed: 37,863 cases, 39 failures,
+11 errors and 49 allowed skips. Same-selection controls attribute 28 inherited
+occurrences and 22 new ones; that candidate was not delivered. Repairs preserve
+generic demo callers, optional admission inputs, single title-request ownership
+and structured initialization cleanup. Ordinary DMA/font unit defects follow
+the cited ROM handlers. The restored post-demo handoff is covered for native and
+generic callers. The repeated S1 profile passes 71/71 with all 92 report bodies
+exact to the earlier green candidate. Final smoke qualification is pending;
+see the audit for focused results and the CWD/catalogue attribution limit.

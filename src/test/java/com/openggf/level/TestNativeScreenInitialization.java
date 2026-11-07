@@ -49,4 +49,49 @@ class TestNativeScreenInitialization {
         assertFalse(NativeLevelLoadAccess.isPending(manager));
         assertEquals(1, cleanup[0]);
     }
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void completionFailureKeepsItsIdentityAndSuppressesCleanupFailure(boolean error) {
+        var manager = mock(LevelManager.class); manager.nativeLoads = new NativeLevelLoadController();
+        Throwable primary = error ? new AssertionError("completion") : new IllegalStateException("completion");
+        var secondary = new IllegalArgumentException("cleanup");
+        int[] cleanup = {0};
+        var plan = new NativeLevelLoadPlan(List.of(new NativeLevelLoadPlan.Section(
+                NativeLevelLoadPhaseAdmission.Phase.LEVEL_SETUP, () -> INPUTS, () -> true, List.of(), List.of())));
+        Throwable actual = assertThrows(primary.getClass(), () -> NativeLevelLoadAccess.beginScreenInitialization(
+                manager, plan, () -> fail("no interrupt selected"), () -> {
+                    if (primary instanceof Error fatal) throw fatal;
+                    throw (RuntimeException) primary;
+                }, () -> { cleanup[0]++; throw secondary; }));
+        assertSame(primary, actual);
+        assertArrayEquals(new Throwable[]{secondary}, actual.getSuppressed());
+        assertEquals(1, cleanup[0]);
+        assertFalse(NativeLevelLoadAccess.isPending(manager));
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void failedHeldAdmissionRetiresItsJobAndSuppressesCleanupFailure(boolean error) {
+        var manager = mock(LevelManager.class); manager.nativeLoads = new NativeLevelLoadController();
+        Throwable primary = error ? new AssertionError("admission") : new IllegalStateException("admission");
+        var secondary = new IllegalArgumentException("cleanup");
+        int[] admission = {0}, cleanup = {0};
+        NativeLevelLoadAccess.setAdmission(manager, phase -> {
+            if (admission[0]++ == 0) return NativeLevelLoadPhaseAdmission.Decision.HOLD;
+            if (primary instanceof Error fatal) throw fatal;
+            throw (RuntimeException) primary;
+        });
+        var plan = new NativeLevelLoadPlan(List.of(new NativeLevelLoadPlan.Section(
+                NativeLevelLoadPhaseAdmission.Phase.LEVEL_SETUP, () -> INPUTS, () -> true, List.of(), List.of())));
+        NativeLevelLoadAccess.beginScreenInitialization(manager, plan,
+                () -> fail("no interrupt selected"), () -> fail("failed job cannot complete"),
+                () -> { cleanup[0]++; throw secondary; });
+        assertTrue(NativeLevelLoadAccess.isPending(manager));
+        Throwable actual = assertThrows(primary.getClass(), () -> NativeLevelLoadAccess.resumeScreenInitialization(manager));
+        assertSame(primary, actual);
+        assertArrayEquals(new Throwable[]{secondary}, actual.getSuppressed());
+        assertEquals(1, cleanup[0]);
+        assertFalse(NativeLevelLoadAccess.isPending(manager));
+        assertFalse(NativeLevelLoadAccess.resumeScreenInitialization(manager));
+    }
 }

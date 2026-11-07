@@ -36,6 +36,8 @@ under the matching area heading; see the
   records native PLC readiness and real ending/credits initialization timing,
   clearing its four queue frontiers and terminal art frontier. Ending loads
   resume actual ROM-backed work; credits use their native wait and fade loops.
+  Generic ending callers retain their gameplay order, and failed initialization
+  preserves the original error while cleaning up its owned continuation.
   Physics, auxiliary observations and movie input are preserved exactly. New red frontiers remain visible.
   Special-stage entry honors the recorded team and production lock-on module;
   the single entry-state import consumes S2-family manifest destination rings.

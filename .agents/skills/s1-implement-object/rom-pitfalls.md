@@ -958,6 +958,11 @@ The initial delay decrement occurs in that same object pass. Expiry writes game
 mode but does not delete the logo; the later credits setup clears Object RAM.
 Ordinary unit expectations must reflect that fall-through and lifetime.
 
+Keep native demo-loop clock and water rules behind the supporting production
+capability; generic ending helpers retain their own gameplay order. Open a native
+demo-load scope only when both the ending provider and load profile support it,
+and retain the post-physics return-to-text/completion handoff inside sprite dispatch.
+
 Use the existing initialization timing contract only for independently prepared
 ROM work. Qualify selected clock/RNG-sensitive callbacks before commuting any
 zero-routine service. The [chain audit](../../../docs/architecture/audits/2026-11-06-s1-chain-plc-timing.md)
