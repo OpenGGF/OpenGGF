@@ -1679,6 +1679,8 @@ public class ObjectManager {
         return populationView.hasInlinePlaneSwitcher(spawn);
     }
 
+    ObjectPlaneSwitcherController nativeTeleportPlaneSwitcherState() { return planeSwitchers; }
+
     public int getPlaneSwitcherSideState(ObjectSpawn spawn) {
         if (planeSwitchers == null) {
             return -1;

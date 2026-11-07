@@ -32,6 +32,23 @@ public final class ObjectManagerInternalAccess {
         manager.nativeCompetitionStreaming().update();
     }
 
+    public static void swapNativePlaneSwitcherPlayers(ObjectManager manager, ObjectSpawn spawn,
+            com.openggf.game.PlayableEntity first, com.openggf.game.PlayableEntity second) {
+        var owner = manager.nativeTeleportPlaneSwitcherState();
+        if (owner != null) owner.swapNativePlayerSides(spawn, first, second);
+    }
+
+    public static void repairNativeTeleportStanding(ObjectManager manager,
+            com.openggf.sprites.playable.AbstractPlayableSprite p1,
+            com.openggf.sprites.playable.AbstractPlayableSprite p2) {
+        manager.solidContacts().repairNativeTeleportStanding(p1, p2);
+    }
+
+    /** Preserve the object's registered callback/fault owner while applying a native field write. */
+    public static void mutateNativeObject(ObjectManager manager, ObjectInstance object, Runnable write) {
+        manager.objectCallbacks().run(object, write);
+    }
+
     public static void prepareInitialPlacementWindow(ObjectManager manager, List<ObjectSpawn> spawns,
                                                      int cameraX, PersistentRespawnState respawn) {
         manager.prepareInitialPlacementWindow(spawns, cameraX, respawn);

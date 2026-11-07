@@ -1137,6 +1137,32 @@ public final class ObjectSolidContactController {
             }
     }
 
+    /** swap_players (s2.asm:26109-26121,26134-26147): P1 repair precedes P2 repair. */
+    void repairNativeTeleportStanding(AbstractPlayableSprite p1, AbstractPlayableSprite p2) {
+        var old1 = ridingStates.remove(p1);
+        var old2 = ridingStates.remove(p2);
+        AbstractPlayableSprite[] players = {p1, p2};
+        RidingState[] previous = {old2, old1};
+        for (int slot = 0; slot < 2; slot++) {
+            var player = players[slot];
+            if (!player.isOnObject()) continue;
+            int index = player.getInteractSlotIndex();
+            if (index < 0 || index >= objectManager.getLastProcessSlotExclusive()) continue;
+            var object = objectManager.currentNativeSstOwner(index);
+            if (object == null) continue;
+            int piece = previous[slot] != null && previous[slot].object == object
+                    ? previous[slot].pieceIndex : -1;
+            // Same-object case deliberately ends with P2's bit alone, as in REV01.
+            Object ownerKey = airUnseatLatchKeyFor(object);
+            var otherBits = objectStandingBitSet.get(players[1 - slot]);
+            if (otherBits != null) otherBits.removeIf(key ->
+                    java.util.Objects.equals(standingBitOwnerOf(key), ownerKey));
+            putRidingState(player, object, piece);
+            Object key = airUnseatLatchKeyFor(object, piece);
+            if (key != null) objectStandingBitSet.computeIfAbsent(player, p -> new HashSet<>()).add(key);
+        }
+    }
+
     void clearRidingObject(PlayableEntity player) {
         if (player != null) {
             ridingStates.remove(player);
