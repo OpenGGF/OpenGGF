@@ -148,10 +148,12 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
         capturedPlayerUsesRideState = secondUsesRideState; secondUsesRideState = ride;
     }
 
-    /** Teleport swaps actor state while human identities retain their native slots. */
+    /** swap_loop_objects exchanges only the $30/$34 longwords (s2.asm:26081-26085). */
     void swapPlayerOwnership() {
-        swapCaptureBanks();
-        if (prizeOwnerNativeSlot >= 0) prizeOwnerNativeSlot ^= 1;
+        // $30/$34: capture state; $32/$36: countdown. The $3E prize-owner
+        // word and object status/ride latches are outside those two longwords.
+        int state = playerState; playerState = secondPlayerState; secondPlayerState = state;
+        int timer = countdown; countdown = secondCountdown; secondCountdown = timer;
     }
 
     int[] prizeCounterForChild() { return activePrizeCount; }

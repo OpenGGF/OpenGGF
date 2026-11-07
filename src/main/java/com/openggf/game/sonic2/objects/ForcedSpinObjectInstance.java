@@ -88,7 +88,7 @@ public class ForcedSpinObjectInstance extends BoxObjectInstance implements Rewin
     // Track initialization state
     private boolean initialized;
 
-    /** Teleport transfers crossing bytes while native human identities stay in their slots. */
+    /** Pinball crossing bytes $34/$35 only: swap_loop_objects (s2.asm:26068-26079). */
     void swapPlayerOwnership() {
         boolean past = sonicPastTrigger; sonicPastTrigger = tailsPastTrigger; tailsPastTrigger = past;
     }
