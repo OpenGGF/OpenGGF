@@ -287,6 +287,41 @@ class CustodyControls(MotivatingRed):
             with self.subTest(extra=extra):
                 self.assertEqual(2,self.main(extra)[0])
 
+    def test_annotated_local_shadows_remain_incomplete_and_end_with_their_block(self):
+        for annotation in ('@Deprecated', '@SuppressWarnings("unused")', 'final @Deprecated'):
+            with self.subTest(annotation=annotation):
+                self.caller.chmod(0o644)
+                self.caller.write_text('package p; import q.R13; class Caller { R13 a; '
+                    'void check(){ { '+annotation+' Assets a=new Assets(); a.originalImage(); } '
+                    'a.originalImage(); } }')
+                data=self.caller.read_bytes()
+                flags=self.flags()[:-2]+['--caller-final',str(self.caller),self.a.sha(data),str(len(data)),'0644','--json']
+                code,out=self.main(flags=flags); result=json.loads(out)
+                self.assertEqual(3,code)
+                self.assertEqual(1,len(result['advisory_hits']))
+                self.assertIsNone(result['callers'][0]['references'][0]['receiver']['owner'])
+                self.assertEqual('unresolved_receiver',result['advisory_hits'][0]['classification'])
+                self.assertEqual(1,len(result['known_foreign_references']))
+                self.assertEqual('q.R13',result['callers'][0]['references'][1]['receiver']['owner'])
+
+    def test_member_types_shadow_imports_in_their_owner_but_not_sibling_classes(self):
+        for name in ('R13','Assets'):
+            for declaration in ('void check('+name+' a){', 'void check(){ var a=new '+name+'();'):
+                with self.subTest(name=name,declaration=declaration):
+                    self.caller.chmod(0o644)
+                    self.caller.write_text('package p; import q.R13; class Caller { '
+                        'static class '+name+' { Object originalImage(){return null;} } '
+                        +declaration+' a.originalImage(); } } '
+                        'class Other { void check(R13 a){a.originalImage();} }')
+                    data=self.caller.read_bytes()
+                    flags=self.flags()[:-2]+['--caller-final',str(self.caller),self.a.sha(data),str(len(data)),'0644','--json']
+                    code,out=self.main(flags=flags); result=json.loads(out)
+                    self.assertEqual(3,code)
+                    self.assertEqual(1,len(result['advisory_hits']))
+                    self.assertIsNone(result['callers'][0]['references'][0]['receiver']['owner'])
+                    self.assertEqual(1,len(result['known_foreign_references']))
+                    self.assertEqual('q.R13',result['callers'][0]['references'][1]['receiver']['owner'])
+
     def test_symlink_parent_final_and_hardlink_alias_reject(self):
         link = self.root/'Link.java'
         link.symlink_to(self.after)

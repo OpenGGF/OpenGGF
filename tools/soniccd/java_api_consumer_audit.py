@@ -200,6 +200,29 @@ class Consumer:
         need(stop-start <= self.limits.max_context_tokens, 'Consumer context token budget exhausted')
         return ' '.join(t.value for t in self.ts[max(0, start):stop])
 
+    def annotated_declaration_start(self, at):
+        """Recognize an annotation-bearing prefix only to install an unknown binding."""
+        k, annotated = at-1, False
+        while k >= self.scope.header_end:
+            need(at-k <= self.limits.max_context_tokens, 'Annotated declaration context budget exhausted')
+            if IDENT.fullmatch(self.v(k)) or self.v(k) == '.':
+                k -= 1
+            elif self.v(k) == '@':
+                annotated, k = True, k-1
+            elif self.v(k) == ')':
+                # Skip balanced annotation arguments, never an ordinary call.
+                name = self.java.pairs[k]-1
+                while IDENT.fullmatch(self.v(name)) or self.v(name) == '.':
+                    need(at-name <= self.limits.max_context_tokens, 'Annotated declaration context budget exhausted')
+                    name -= 1
+                if self.v(name) != '@':
+                    break
+                annotated, k = True, name-1
+            else:
+                break
+        need(at-k <= self.limits.max_context_tokens, 'Annotated declaration context budget exhausted')
+        return k if annotated and self.v(k) in ('{',';','}','(',',') else None
+
     def variables(self):
         """Only simple statement/member declarations; block unsupported shadows conservatively."""
         for i in range(self.scope.header_end, len(self.ts)-1):
@@ -221,6 +244,11 @@ class Consumer:
                 IDENT.fullmatch(w) if k % 2 == 0 else w == '.' for k, w in enumerate(words))
             boundary = self.v(j) in ('{',';','}')
             parameterish = self.v(j) in ('(', ',')
+            annotated_start = self.annotated_declaration_start(i)
+            annotated = annotated_start is not None
+            if annotated:
+                boundary = self.v(annotated_start) in ('{',';','}')
+                parameterish = self.v(annotated_start) in ('(', ',')
             # x -> ... can shadow a field/local even without a written type.
             lambda_name = self.v(i+1) == '-' and self.v(i+2) == '>'
             paren = self.java.parents[i]
@@ -228,7 +256,7 @@ class Consumer:
             pattern_shadow = self.v(i-2) == 'instanceof'
             unsupported_type = self.v(i-1) in (']', '>') and self.v(i+1) in ('=', ';', ',', ')', ':')
             comma_declarator = self.v(i-1) == ',' and self.v(i+1) in ('=', ';')
-            if not (simple and (boundary or parameterish)) and not lambda_name and not unsupported_type and not comma_declarator and not lambda_header and not pattern_shadow:
+            if not (simple and (boundary or parameterish)) and not lambda_name and not unsupported_type and not comma_declarator and not lambda_header and not pattern_shadow and not annotated:
                 continue
             stack = self.curly[i]
             if not stack:
@@ -238,7 +266,7 @@ class Consumer:
             if class_body:
                 start = stack[-1]
             evidence = 'declared_type'
-            if not boundary or lambda_name or unsupported_type or comma_declarator or lambda_header or pattern_shadow:
+            if not boundary or lambda_name or unsupported_type or comma_declarator or lambda_header or pattern_shadow or annotated:
                 # Method parameters were handled above. Keep a blocker for other
                 # headers (for/catch/lambda); never leak its type into a wider scope.
                 if i in self.parameter_tokens:
@@ -261,8 +289,10 @@ class Consumer:
                         # unsupported; block only through their first semicolon.
                         start = i
                         stop = self.statement_stop(body)
-                type_text, evidence = None, 'unsupported_header_or_lambda_shadow'
-                self.reasons.append('Header/lambda binding unsupported at line ' + str(self.ts[i].line))
+                type_text = None
+                evidence = 'unsupported_annotated_declaration' if annotated else 'unsupported_header_or_lambda_shadow'
+                self.reasons.append(('Annotated declaration' if annotated else 'Header/lambda binding')+
+                                    ' unsupported at line ' + str(self.ts[i].line))
             elif type_text == 'var':
                 type_text, evidence = None, 'unresolved_var_initializer'
                 if self.v(i+1) == '=' and self.v(i+2) == 'new':
@@ -300,10 +330,11 @@ class Consumer:
             return None
         if '.' in spelling:
             return spelling  # qualified spelling evidence, not classpath certification
-        if any(d['name'] == spelling and (d['top_level'] or d['opening'] in self.curly[at])
-               for d in self.scope.declarations):
+        containing = {d['qualified'] for d in self.scope.declarations if d['opening'] in self.curly[at]}
+        matches = [d for d in self.scope.declarations if d['name'] == spelling and
+                   (d['top_level'] or d['owner'] in containing or d['opening'] in self.curly[at])]
+        if matches:
             # Only trust a single top-level name; member/type shadows remain unresolved.
-            matches = [d for d in self.scope.declarations if d['name'] == spelling]
             if len(matches) == 1 and matches[0]['top_level']:
                 return matches[0]['qualified']
             return None
