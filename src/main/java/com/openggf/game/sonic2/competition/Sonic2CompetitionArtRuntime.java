@@ -49,6 +49,8 @@ final class Sonic2CompetitionArtRuntime implements RuntimeArtCoordinator, Player
         var next = new Sonic2CompetitionArtResidency(rom, plc, delegate);
         bindPlayers(next, roster);
         next.resetForNativeEntry();
+        try { next.loadInheritedStandardArt(); }
+        catch (java.io.IOException failure) { throw new java.io.UncheckedIOException(failure); }
         owner = next;
     }
 

@@ -113,6 +113,21 @@ public final class Sonic2CompetitionArtResidency implements RuntimeArtCoordinato
     /** swap_players (s2.asm:26035-26041) forces the next native frame-zero call to reload. */
     public void invalidatePlayerDplcs() { sonicLast = tailsLast = tailLast = 0xFF; }
 
+    /**
+     * TitleScreen loads Std1 before entering the 2P menu (s2.asm:4418-4420).
+     * Its completed patterns survive ClearScreen and Level's ClearPLC. A fresh
+     * native world has no preceding title renderer, so seed that inherited art
+     * directly from the same ROM descriptors, without submitting extra PLC work.
+     */
+    public void loadInheritedStandardArt() throws IOException {
+        var definition = PlcParser.parse(rom,
+                com.openggf.game.sonic2.Sonic2RomAddresses.address(rom,
+                        com.openggf.game.sonic2.constants.Sonic2Constants.ART_LOAD_CUES_ADDR),
+                com.openggf.game.sonic2.constants.Sonic2Constants.PLC_STD1);
+        for (var entry : definition.entries())
+            writePatterns(entry.tileIndex(), PlcParser.decompressEntryRaw(rom, entry));
+    }
+
     /** Patch exactly LoadZoneTiles' decoded span, preserving completed high PLC uploads. */
     public void loadZoneArt(Sonic2CompetitionLevelProfile profile) throws IOException {
         byte[] bytes;

@@ -1,4 +1,8 @@
-package com.openggf.game.sonic2.competition.interlace;
+package com.openggf.game.sonic2.competition.view;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 import com.openggf.game.GameModule;
 import com.openggf.game.RuntimeArtCoordinator;
@@ -18,25 +22,22 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.render.PlayerSpriteRenderer;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.TestablePlayableSprite;
+import java.util.ArrayList;
+import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Isolated;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
-
 /** Exercises the real late fixed-slot pass, without manufacturing an ordinary DPLC for a native-only tail. */
 @Isolated
-class TestSonic2InterlaceTailPublication {
-    @AfterEach void resetSession() {
+class TestSonic2CompetitionTailPublication {
+    @AfterEach
+    void resetSession() {
         TestEnvironment.resetAll();
     }
 
-    @Test void nativeOnlyS2TailPublishesStoredFrameOnAnimationAndCountdownPasses() throws Exception {
+    @Test
+    void nativeOnlyS2TailPublishesStoredFrameOnAnimationAndCountdownPasses() throws Exception {
         RecordingSink sink = new RecordingSink();
         PlayerSpriteRenderer ownerRenderer = mock(PlayerSpriteRenderer.class);
         var lifecycle = activeLifecycle();
@@ -58,7 +59,8 @@ class TestSonic2InterlaceTailPublication {
                 "the existing S2 DynamicArtDecisionOwner renderer guard stays in force");
     }
 
-    @Test void rendererBackedS2TailReportsItsActualPlanAfterTheTailAnimationPass() throws Exception {
+    @Test
+    void rendererBackedS2TailReportsItsActualPlanAfterTheTailAnimationPass() throws Exception {
         RecordingSink sink = new RecordingSink();
         PlayerSpriteRenderer renderer = mock(PlayerSpriteRenderer.class);
         var plan = new SpriteDplcFrame(List.of(new TileLoadRequest(17, 3)));
@@ -74,7 +76,8 @@ class TestSonic2InterlaceTailPublication {
         verify(renderer).dplcFrame(0x81);
     }
 
-    @Test void ordinaryS2WithoutSinkKeepsItsDynamicArtAndDrawPath() throws Exception {
+    @Test
+    void ordinaryS2WithoutSinkKeepsItsDynamicArtAndDrawPath() throws Exception {
         PlayerSpriteRenderer renderer = mock(PlayerSpriteRenderer.class);
         var plan = new SpriteDplcFrame(List.of(new TileLoadRequest(2, 1)));
         when(renderer.dplcFrame(0x81)).thenReturn(plan);
@@ -88,15 +91,16 @@ class TestSonic2InterlaceTailPublication {
         harness.tail().draw();
 
         assertFalse(first.edges().isEmpty(), "ordinary tail art still submits its production DPLC");
-        assertTrue(first.edges().stream().allMatch(edge -> edge.mappingFrame() == 0x81
-                && edge.owner().equals("tails-tails")));
+        assertTrue(first.edges().stream().allMatch(
+                edge -> edge.mappingFrame() == 0x81 && edge.owner().equals("tails-tails")));
         verify(renderer, times(2)).dplcFrame(0x81);
         verify(renderer, times(2)).applyRuntimeArtUpdate(eq(0x81), any());
-        verify(renderer).drawFrame(0x81, harness.parent().getRenderCentreX(),
-                harness.parent().getRenderCentreY(), false, false);
+        verify(renderer).drawFrame(
+                0x81, harness.parent().getRenderCentreX(), harness.parent().getRenderCentreY(), false, false);
     }
 
-    @Test void s3kWithoutRendererRetainsItsEarlyReturn() throws Exception {
+    @Test
+    void s3kWithoutRendererRetainsItsEarlyReturn() throws Exception {
         RecordingSink sink = new RecordingSink();
         PlayerSpriteRenderer ownerRenderer = mock(PlayerSpriteRenderer.class);
         var lifecycle = activeLifecycle();
@@ -110,7 +114,8 @@ class TestSonic2InterlaceTailPublication {
         verifyNoInteractions(ownerRenderer);
     }
 
-    @Test void s3kWithRendererRetainsItsDplcCallbacksAndSkipsS2DecisionOwner() throws Exception {
+    @Test
+    void s3kWithRendererRetainsItsDplcCallbacksAndSkipsS2DecisionOwner() throws Exception {
         RecordingSink sink = new RecordingSink();
         PlayerSpriteRenderer renderer = mock(PlayerSpriteRenderer.class);
         PlayerSpriteRenderer ownerRenderer = mock(PlayerSpriteRenderer.class);
@@ -126,7 +131,8 @@ class TestSonic2InterlaceTailPublication {
         verifyNoInteractions(ownerRenderer);
     }
 
-    @Test void destructiveTailRestoreReplaysTheSameLatePublicationSequence() throws Exception {
+    @Test
+    void destructiveTailRestoreReplaysTheSameLatePublicationSequence() throws Exception {
         RecordingSink sink = new RecordingSink();
         var harness = harness(sink, null, false, null, true);
         harness.advance(2);
@@ -151,28 +157,29 @@ class TestSonic2InterlaceTailPublication {
     }
 
     private static DynamicArtLifecycleService activeLifecycle() {
-        var lifecycle = new DynamicArtLifecycleService(
-                new com.openggf.game.sonic2.Sonic2GameModule().getGameService(com.openggf.game.resources.PlayerArtTransferPlan.class));
+        var lifecycle = new DynamicArtLifecycleService(new com.openggf.game.sonic2.Sonic2GameModule().getGameService(
+                com.openggf.game.resources.PlayerArtTransferPlan.class));
         lifecycle.beginRun();
         lifecycle.openComparisonSegment();
         return lifecycle;
     }
 
-    private static Harness harness(RuntimeArtCoordinator coordinator, PlayerSpriteRenderer renderer,
-            boolean isS3k, DynamicArtDecisionOwner owner, boolean sidekick) throws Exception {
+    private static Harness harness(RuntimeArtCoordinator coordinator, PlayerSpriteRenderer renderer, boolean isS3k,
+            DynamicArtDecisionOwner owner, boolean sidekick) throws Exception {
         GameModule module = isS3k ? new Sonic3kGameModule() {
-            @Override public RuntimeArtCoordinator createRuntimeArtCoordinator(HardwareTimingService timing) {
+            @Override
+            public RuntimeArtCoordinator createRuntimeArtCoordinator(HardwareTimingService timing) {
                 return coordinator;
             }
         } : new Sonic2GameModule() {
-            @Override public RuntimeArtCoordinator createRuntimeArtCoordinator(HardwareTimingService timing) {
+            @Override
+            public RuntimeArtCoordinator createRuntimeArtCoordinator(HardwareTimingService timing) {
                 return coordinator;
             }
         };
         TestEnvironment.configureGameModuleFixture(module);
         var gameplay = TestEnvironment.activeGameplayMode();
-        var objects = new ObjectManager(List.of(), null, 0, null, null, null, null,
-                TestEnvironment.objectServices());
+        var objects = new ObjectManager(List.of(), null, 0, null, null, null, null, TestEnvironment.objectServices());
         var objectManagerField = LevelManager.class.getDeclaredField("objectManager");
         objectManagerField.setAccessible(true);
         objectManagerField.set(gameplay.getLevelManager(), objects);
@@ -198,18 +205,23 @@ class TestSonic2InterlaceTailPublication {
         }
     }
 
-    private record TailCall(int mappingFrame, SpriteDplcFrame dplc) { }
+    private record TailCall(int mappingFrame, SpriteDplcFrame dplc) {}
 
     private static final class RecordingSink implements RuntimeArtCoordinator, PlayerDplcDmaSink {
         final List<TailCall> calls = new ArrayList<>();
-        List<Integer> frames() { return calls.stream().map(TailCall::mappingFrame).toList(); }
-        @Override public void tailsTailLoadPlc(int mappingFrame, SpriteDplcFrame dplc) {
+        List<Integer> frames() {
+            return calls.stream().map(TailCall::mappingFrame).toList();
+        }
+        @Override
+        public void tailsTailLoadPlc(int mappingFrame, SpriteDplcFrame dplc) {
             calls.add(new TailCall(mappingFrame, dplc));
         }
-        @Override public void playerLoadPlc(AbstractPlayableSprite player, int mappingFrame, SpriteDplcFrame dplc) {
+        @Override
+        public void playerLoadPlc(AbstractPlayableSprite player, int mappingFrame, SpriteDplcFrame dplc) {
             fail("the late tail slot must not call the body DPLC routine");
         }
-        @Override public void playerLoadPlcOwnedByObject(AbstractPlayableSprite player) {
+        @Override
+        public void playerLoadPlcOwnedByObject(AbstractPlayableSprite player) {
             fail("the late tail slot must not change body DPLC ownership");
         }
     }
