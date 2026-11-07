@@ -111,20 +111,37 @@ public final class RaceLobbyScreen {
         String plain();
     }
 
-    /** A translucent card with an accent bar, a compact title (and right-hand title) and its rows. */
+    /**
+     * A translucent card with an accent bar, a compact title (and right-hand title, in
+     * {@code titleRightColour}: amber for an UNVERIFIED board) and its rows.
+     */
     public record Card(int x, int y, int width, int height, String title, String titleRight,
-                       boolean focused, List<Row> rows) {
+                       boolean focused, List<Row> rows, int titleRightColour) {
         public Card { rows = List.copyOf(rows); }
+
+        public Card(int x, int y, int width, int height, String title, String titleRight, boolean focused,
+                    List<Row> rows) {
+            this(x, y, width, height, title, titleRight, focused, rows, HudTextLayout.MUTED);
+        }
     }
 
-    /** Everything the lobby shows, as cards plus the key hint along the bottom edge. */
+    /**
+     * Everything the lobby shows, as cards plus the key hint along the bottom edge. {@code chip} is
+     * an outlined tag beside the phase ({@code LOADING} while a mass start loads), or empty.
+     */
     public record Screen(Card header, String headerName, String phase, int phaseColour,
-                         List<Card> cards, List<MenuPage.Hint> hints) {
+                         List<Card> cards, List<MenuPage.Hint> hints, String chip) {
         public Screen { cards = List.copyOf(cards); hints = List.copyOf(hints); }
+
+        public Screen(Card header, String headerName, String phase, int phaseColour, List<Card> cards,
+                      List<MenuPage.Hint> hints) {
+            this(header, headerName, phase, phaseColour, cards, hints, "");
+        }
 
         /** The page's text in drawing order (tests and logs). */
         public String plain() {
             StringBuilder out = new StringBuilder(headerName).append(" | ").append(phase);
+            if (!chip.isEmpty()) out.append(" [").append(chip).append(']');
             for (Row row : header.rows()) out.append(" | ").append(row.plain());
             for (Card card : cards) {
                 out.append(" || ").append(card.title());
@@ -147,12 +164,25 @@ public final class RaceLobbyScreen {
     public record Model(String roomName, String track, String phase, int phaseColour, boolean verified,
                         List<Player> players, int maxPlayers, int playerPage, boolean playersFocused,
                         Secondary secondary, String menuTitle, String menuTitleRight, List<Note> status,
-                        List<Action> actions, List<MenuPage.Hint> hints) {
+                        List<Action> actions, List<MenuPage.Hint> hints, String timesLabel, String chip) {
+        public Model(String roomName, String track, String phase, int phaseColour, boolean verified,
+                     List<Player> players, int maxPlayers, int playerPage, boolean playersFocused,
+                     Secondary secondary, String menuTitle, String menuTitleRight, List<Note> status,
+                     List<Action> actions, List<MenuPage.Hint> hints) {
+            this(roomName, track, phase, phaseColour, verified, players, maxPlayers, playerPage, playersFocused,
+                    secondary, menuTitle, menuTitleRight, status, actions, hints, "", "");
+        }
     }
 
-    /** The card under the players: its title, right-hand title, rows and whether it holds the focus. */
+    /**
+     * The card under the players: its title, right-hand title (in {@code titleRightColour}), rows and
+     * whether it holds the focus.
+     */
     public record Secondary(String title, String titleRight, List<Row> rows, boolean focused,
-                            int newestFirstOffset) {
+                            int newestFirstOffset, int titleRightColour) {
+        public Secondary(String title, String titleRight, List<Row> rows, boolean focused, int newestFirstOffset) {
+            this(title, titleRight, rows, focused, newestFirstOffset, HudTextLayout.MUTED);
+        }
     }
 
     /** Players per page at this height: as many as fit beside a secondary card of at least four rows. */
@@ -172,8 +202,10 @@ public final class RaceLobbyScreen {
 
     public static Screen layout(Model model, int width, int height) {
         int inner = width - 2 * MARGIN;
-        List<Row> headerRows = List.of(new Note(model.track()
-                + (model.verified() ? "   VERIFIED TIMES" : "   NO SHARED TIMES"), HudTextLayout.MUTED, false));
+        // A Competition room publishes unverified times, labelled so (design D17); the view names them.
+        String times = !model.timesLabel().isEmpty() ? model.timesLabel()
+                : model.verified() ? "VERIFIED TIMES" : "NO SHARED TIMES";
+        List<Row> headerRows = List.of(new Note(model.track() + "   " + times, HudTextLayout.MUTED, false));
         Card header = new Card(MARGIN, MARGIN, inner, HEADER_HEIGHT, "", "", false, headerRows);
 
         int top = columnTop();
@@ -207,7 +239,7 @@ public final class RaceLobbyScreen {
             List<Row> rows = fitRows(secondRows, room, second.newestFirstOffset());
             int cardHeight = TITLE_HEIGHT + 4 + rows.stream().mapToInt(Row::height).sum();
             cards.add(new Card(MARGIN, y, leftWidth, cardHeight, second.title(), second.titleRight(),
-                    second.focused(), rows));
+                    second.focused(), rows, second.titleRightColour()));
         }
 
         // Status notes wrap by measured width inside the menu card, within the room the actions
@@ -235,7 +267,8 @@ public final class RaceLobbyScreen {
                 + (model.status().isEmpty() ? 0 : 3));
         cards.add(new Card(rightX, top, rightWidth, menuHeight, model.menuTitle(), model.menuTitleRight(),
                 false, menu));
-        return new Screen(header, model.roomName(), model.phase(), model.phaseColour(), cards, model.hints());
+        return new Screen(header, model.roomName(), model.phase(), model.phaseColour(), cards, model.hints(),
+                model.chip());
     }
 
     /** Name-font lines no wider than {@code width}, split at spaces (a single long word is fitted). */
@@ -287,14 +320,17 @@ public final class RaceLobbyScreen {
         Card header = screen.header();
         panel(canvas, header, false);
         int phaseWidth = CompactFont.width(screen.phase(), 1);
-        int nameRoom = header.width() - 2 * INSET - phaseWidth - 8;
+        int chipWidth = screen.chip().isEmpty() ? 0 : MenuPage.tagWidth(screen.chip()) + 4;
+        int nameRoom = header.width() - 2 * INSET - phaseWidth - chipWidth - 8;
         NameFont.draw(canvas, NameFont.fit(screen.headerName(), nameRoom), header.x() + INSET, header.y() + 2,
                 HudTextLayout.WHITE);
         CompactFont.draw(canvas, screen.phase(), header.x() + header.width() - INSET - phaseWidth,
                 header.y() + 5, 1, screen.phaseColour());
+        if (chipWidth > 0) MenuPage.tag(canvas, header.x() + header.width() - INSET - phaseWidth - chipWidth,
+                header.y() + 3, screen.chip(), HudTextLayout.ACCENT);
         Note track = (Note) header.rows().getFirst();
-        CompactFont.draw(canvas, CompactFont.fit(track.text(), header.width() - 2 * INSET, 1),
-                header.x() + INSET, header.y() + 4 + NameFont.LINE_HEIGHT, 1, track.colour());
+        HudTextLayout.compact(canvas, CompactFont.fit(track.text(), header.width() - 2 * INSET, 1),
+                header.x() + INSET, header.y() + 4 + NameFont.LINE_HEIGHT, track.colour());
 
         for (Card card : screen.cards()) {
             panel(canvas, card, card.focused());
@@ -303,7 +339,7 @@ public final class RaceLobbyScreen {
             if (!card.titleRight().isEmpty()) {
                 CompactFont.draw(canvas, card.titleRight(), card.x() + card.width() - INSET
                         - CompactFont.width(card.titleRight(), 1), card.y() + 3, 1,
-                        card.focused() ? HudTextLayout.GOLD : HudTextLayout.MUTED);
+                        card.focused() ? HudTextLayout.GOLD : card.titleRightColour());
             }
             int y = card.y() + TITLE_HEIGHT + 2;
             boolean afterNotes = false;
@@ -406,9 +442,109 @@ public final class RaceLobbyScreen {
                 if (note.names()) {
                     NameFont.draw(canvas, NameFont.fit(note.text(), right - left), left, y, note.colour());
                 } else {
-                    CompactFont.draw(canvas, CompactFont.fit(note.text(), right - left, 1), left, y + 1, 1,
+                    HudTextLayout.compact(canvas, CompactFont.fit(note.text(), right - left, 1), left, y + 1,
                             note.colour());
                 }
+            }
+        }
+    }
+
+    /**
+     * The Competition race menu, opened by the pause key during a race that never pauses (design
+     * D11): CHAT and LEAVE, where LEAVE asks first because leaving forfeits the round as a DNF. It is
+     * a small card in the right column above the progress strip, so the race stays in view and the
+     * room's plates stay readable; the runtime acts on its {@link Outcome} and keeps stepping.
+     */
+    public static final class RaceMenu {
+        /** What the player chose this tick. */
+        public enum Outcome { NONE, CHAT, FORFEIT, CLOSE }
+
+        private boolean confirming;
+        private int focus;
+
+        public boolean confirming() { return confirming; }
+
+        public int focus() { return focus; }
+
+        /** One tick of edge-triggered input. Back closes, or cancels the confirm. */
+        public Outcome update(boolean up, boolean down, boolean accept, boolean back) {
+            if (back) {
+                if (!confirming) return Outcome.CLOSE;
+                confirming = false;
+                focus = 1;
+                return Outcome.NONE;
+            }
+            if (up || down) focus = 1 - focus;
+            if (!accept) return Outcome.NONE;
+            if (confirming) {
+                if (focus == 1) return Outcome.FORFEIT;
+                confirming = false;
+                focus = 1;
+                return Outcome.NONE;
+            }
+            if (focus == 0) return Outcome.CHAT;
+            // The safe choice takes the focus first, so a second press never forfeits by accident.
+            confirming = true;
+            focus = 0;
+            return Outcome.NONE;
+        }
+
+        /** The card's rows: the two actions, or the forfeit question and its two answers. */
+        public List<Row> rows() {
+            if (confirming) return List.of(new Note("COUNTS AS DNF", HudTextLayout.AMBER, false),
+                    new Action("Keep racing", focus == 0, true), new Action("Forfeit and leave", focus == 1, true));
+            return List.of(new Action("Chat", focus == 0, true), new Action("Leave race", focus == 1, true));
+        }
+
+        /** The card sized to its widest row, right-aligned above the progress strip. */
+        public Card layout(int width, int height) {
+            List<Row> rows = rows();
+            String title = confirming ? "LEAVE RACE?" : "RACE";
+            String right = confirming ? "" : "LIVE";
+            int inner = CompactFont.width(title, 1) + (right.isEmpty() ? 0 : 8 + CompactFont.width(right, 1));
+            for (Row row : rows) {
+                inner = Math.max(inner, switch (row) {
+                    case Action action -> 10 + NameFont.width(action.label());
+                    case Note note -> CompactFont.width(note.text(), 1);
+                    default -> 0;
+                });
+            }
+            int cardWidth = Math.min(HudTextLayout.PANEL_WIDTH, inner + 2 * INSET);
+            int cardHeight = TITLE_HEIGHT + 4 + rows.stream().mapToInt(Row::height).sum() + (confirming ? 3 : 0);
+            // Above the progress strip (13 rows, 3 from the bottom edge) with the plates' gap.
+            int y = height - 3 - 13 - MultiplayerHudRenderer.PLATE_GAP - cardHeight;
+            return new Card(width - MARGIN - cardWidth, y, cardWidth, cardHeight, title, right, true, rows,
+                    HudTextLayout.GOLD);
+        }
+
+        /** Draws the card; in the question each answer leads with its consequence's icon. */
+        public void draw(PixelCanvas canvas) {
+            Card card = layout(canvas.width(), canvas.height());
+            panel(canvas, card, true);
+            CompactFont.draw(canvas, card.title(), card.x() + INSET, card.y() + 3, 1,
+                    confirming ? HudTextLayout.AMBER : HudTextLayout.GOLD);
+            if (!card.titleRight().isEmpty()) {
+                CompactFont.draw(canvas, card.titleRight(), card.x() + card.width() - INSET
+                        - CompactFont.width(card.titleRight(), 1), card.y() + 3, 1, HudTextLayout.ACCENT);
+            }
+            int y = card.y() + TITLE_HEIGHT + 2;
+            int left = card.x() + INSET;
+            for (Row row : card.rows()) {
+                if (row instanceof Note note) {
+                    CompactFont.draw(canvas, note.text(), left, y + 1, 1, note.colour());
+                    y += note.height() + 3;
+                    continue;
+                }
+                Action action = (Action) row;
+                if (action.focused()) canvas.fill(card.x() + 3, y, card.width() - 5, ACTION_HEIGHT - 1, FOCUS_FILL);
+                if (confirming) {
+                    MenuPage.icon(canvas, action.label().startsWith("Forfeit") ? MenuPage.Tone.WARNING
+                            : MenuPage.Tone.GOOD, left, y + 2);
+                } else if (action.focused()) {
+                    CompactFont.draw(canvas, ">", left, y + 2, 1, HudTextLayout.GOLD);
+                }
+                NameFont.draw(canvas, action.label(), left + 10, y - 1, HudTextLayout.WHITE);
+                y += ACTION_HEIGHT;
             }
         }
     }
