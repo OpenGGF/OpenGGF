@@ -1377,3 +1377,178 @@ check staged policy and citations. Both contributing models are credited in
 the final co-author block. The existing PR remains draft against develop;
 keep the task branch/worktree. No validation job remains live, and no new
 baseline worktree or destination integration is required for this repair.
+
+## Same-head reassessment of the six original trials
+
+Assessed source and ordinary contributor guides:
+`336db11fd73ac9c4db2748ab6b4ee7abb528a4b1`, 2026-11-07. User requested a fresh assessment
+after the earlier ratings covered different revisions and narrower holdouts.
+Three new Claude Opus 5.5 instances, each at maximum effort with fast mode off,
+independently walked two original trials. Their briefs contained the complete
+rubric and task statements, but withheld prior scores and acceptance targets.
+They were instructed not to read this audit, changelogs, history/diffs, the PR
+body, prior results or validation logs. All reported clean, unchanged HEAD at
+start and finish. The lead independently observed the same clean head.
+They made no source edits and ran no builds or tests. One reviewer read the
+pinned S3K disassembly from the main checkout's git objects; its temporary
+source copy was removed without changing a reference checkout.
+
+These are fresh static contributor-usability judgements, not observed human
+onboarding times, runtime certification or a repository-wide grade. Verification
+ratings concern discoverability and assertion quality, not prior execution
+success. Counts of files/concepts below are approximate reviewer observations.
+No new grade is assigned merely for moved code, documentation or passing tests.
+
+### Complete scorecard
+
+Axis order and weights are the original [rubric](#scoring-rubric):
+owner 15, browse 15, understand 15, locality 15, concepts 10, verify 10,
+rules 10, readability 10. The lead recomputed every weighted score from its
+integer 0–4 vector; no score adjustment or averaging across old results was used.
+
+| Original trial | Owner | Browse | Understand | Locality | Concepts | Verify | Rules | Readability | /100 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| A: Buzz Bomber camera-retreat lifetime | 4 | 3 | 3 | 3 | 2 | 4 | 3 | 3 | 78.75 |
+| B: Rewind low-budget overlay threshold | 4 | 4 | 3 | 3 | 3 | 3 | 4 | 3 | 85.00 |
+| C: Solid standing/pushing expiry across unload | 3 | 2 | 3 | 3 | 2 | 3 | 3 | 3 | 68.75 |
+| D: Dynamic object/linked-child rewind recreation | 2 | 2 | 2 | 2 | 1 | 2 | 1 | 2 | 45.00 |
+| E: HCZ2 moving-wall event | 3 | 2 | 2 | 3 | 2 | 3 | 3 | 3 | 65.00 |
+| F: HCZ Sonic/Tails trace divergence | 3 | 3 | 3 | 3 | 3 | 4 | 3 | 3 | 77.50 |
+
+**The 85-per-trial target is not met: one of six reaches 85.** Only B and F
+have no axis below 3. None earns 4 for owner discovery, understanding and
+readability together; no trial earns 4 for understanding or readability.
+Consequently none meets the stronger accepted contract. There is no trial-set
+mean offered as a substitute for these per-task requirements.
+
+Earlier 85/85 ratings covered narrower landing/transfer and late-shield-refresh
+holdouts. In particular, late shield completion is not the original ordinary
+dynamic-parent/constructor-child reconstruction trial. Older HCZ and trace
+ratings also came from other revisions/walk-throughs. They remain historical
+observations and do not establish the six-trial target. Differences between
+reviewers/scopes are not demonstrated runtime regressions or causal measurements
+of contributor improvement.
+
+### Evidence and remaining barriers
+
+- **A — Badnik lifetime, 78.75.** About 16 files/10 concepts. Filename search
+  finds the leaf and test readily; package/interface guidance names the range
+  boundaries. Understanding still spans the cached object camera, manager
+  camera, collision-model gate selecting S1 counter mode, retained render
+  visibility and overloaded persistence hooks. The Saw keeps a native window
+  while moving blocks widen; copying Buzz's policy would erase its anchor and
+  one-frame skip. A Buzz correction stays local, but four shared worked-example
+  comments can become stale. The ROM-free production Buzz test pins live-X,
+  unsigned edges, identity and the wider counter-mode witness. Its native-width
+  retreat case uses the compatibility manager mode. Small next steps: explain
+  the anchored-object policy exception once and make that case's manager mode
+  explicit. These do not by themselves resolve the concepts score of 2.
+
+- **B — Overlay, 85.** About 16 files/8 concepts. Prefixes, the class contract
+  and the guide identify message policy, manager eligibility/allowance and the
+  shared renderer. The threshold is local, but eligibility still needs
+  cross-reading. Implicit 60 Hz convenience defaults and the scripted allowance
+  exemption are traps. The real scripted test checks hiding with no rewind
+  step; low status lacks a low-colour pixel witness. Reflective capture-tool
+  consumers make signature changes less local than compilation suggests.
+  Small next steps: pin low-plate colour and document/test one actual scripted
+  step with exhausted allowance. A numeric 85 does not establish maximum
+  understanding/readability.
+
+- **C — Contact expiry, 68.75.** 22 files opened, roughly 10 needed/13 concepts.
+  The package and ownership guide identify contact memory, but engine-map still
+  names a nonexistent inner contact owner and another architecture paragraph
+  overstates dynamic objects' immunity to camera retirement. The state class
+  coherently distinguishes rides, object bits and uncaptured frame history.
+  Browsing still crosses duplicated retirement sequences, raw membership
+  surfaces, key kinds and dispatch-guarded callbacks. The focused command omits
+  an occurrence neighbour and a spawn-keyed dynamic retirement witness.
+  Small next steps: resolve that retirement contract with a counterexample,
+  correct the misleading comment and stale entry points, and route the
+  occurrence witness. Do not clear a shared spawn key indiscriminately: a
+  dynamic child may share it with a live parent/sibling.
+
+- **D — Ordinary linked-child rewind, 45.** About 36 files/18 concepts.
+  The lifecycle narrates reconstruction, adoption, retry, deferred fields and
+  settling, but the ordinary guide misses the global reference-policy owner.
+  Reference treatment depends on structural/final fields, global field names
+  and per-class policy. Constructor-child capture order, adoption matching and
+  reflective constructor probing impose substantial hidden knowledge. Exact
+  adoption and ordinary constructor adoption are separate mechanisms; a listed
+  test exercises the former. Marker, analyzer, guard and guide descriptions
+  conflict, including whether constructor children need a supported recreate
+  path and whether coverage is report-only. The late-shield exception is
+  bounded, but does not solve this ordinary path. Small next steps: test two
+  same-class constructor-child families, then establish one explicit supported
+  adoption/reference contract and a short guide route to its policy and guard.
+  A new marker alone would add to the concept count unless it replaces the
+  conflicting contracts.
+
+- **E — HCZ2 wall event, 65.** About 16 files/11 concepts. The named event owner
+  and three-phase explanation help. The class still mixes wall behavior with
+  palette, loading, carriers and accessor slabs. A similarly named pre-physics
+  hook is a false lead; the actual provider dispatcher and two clock sources
+  require cross-reading. The accessor block can be mistaken for the reflective
+  rewind sidecar. Direction, routine and citation comments have stale or
+  misleading cases. Tests provide meaningful delayed-shake, transition,
+  missing-handler and whole-world restore witnesses, but the command needs
+  assembling and the ROM gate can skip synthetic checks too. Small next steps:
+  expose the actual dispatcher and maintain exact source explanations; validate
+  the ROM behavior hypotheses below before changing expected output.
+
+- **F — HCZ trace diagnosis, 77.5.** Minimum route about 7 files; about 15
+  opened. The leaf-to-guide route, exact queued command, printed allocation,
+  context/aux lookup and complete/incomplete/legacy distinction are useful.
+  Conflicting lane examples, per-segment metadata notes, movie-location guidance
+  and historical scope claims remain false leads. The selected leaf is HCZ1
+  through giant-ring entry, not the HCZ2 wall route. Freshness still depends on
+  the current invocation's Surefire/process evidence, as documented. Triage's
+  suggested test names are heuristic and can miss actual naming conventions.
+  Small next steps: correct segment/lane guidance and document frontier-only,
+  context and radius controls with their incomplete-prefix meaning.
+
+### Unverified source-risk hypotheses
+
+Reviewers inspected source and, for HCZ, the pinned ROM routines; they did not
+execute counterexamples. The following are hypotheses for targeted investigation,
+not confirmed bugs, shipped-object reachability claims or attribution to this
+PR. The assessment changes no gameplay rule or fixture expectation.
+
+1. **Spawn-keyed dynamic contact retirement.** A spawn-backed dynamic solid
+   retaining the default latch-key policy may bypass instance eviction and
+   retain spawn-keyed bits. Prove or refute with a synthetic retirement/control
+   witness, including a live shared-spawn parent/sibling.
+2. **Two constructor-child families.** Class/owner/subtype matching with FIFO
+   fallback may adopt the first reconstructed parent's child for another
+   captured parent when child entries precede parent entries. Structural links
+   may remain crossed. Use two same-class dynamic parents with distinguishable
+   children and both link directions; no shipped trigger was established.
+3. **HCZ native behavior.** The stop clamp may lose a fractional overshoot pixel;
+   dead-player fallback may move/count down shake where the ROM suppresses it;
+   rumble phase may omit a counter decrement; chase-end flag/transition/shake
+   semantics may differ from the native redraw continuation. Each requires
+   pinned-disassembly interpretation and focused state/route evidence, including
+   inherited-vs-introduced attribution. A green HCZ1 leaf cannot validate them.
+4. **Other scoped unknowns.** The native Saw window may cause a wider-viewport
+   visibility inconsistency; PAL live-history duration uses a 60 Hz multiplier.
+   Neither was exercised or established as an unintended defect.
+
+The next structural priority is D, followed by C's retirement/key contract.
+Bounded correctness witnesses precede ownership redesign; stale guidance and
+missing entry routes are additional concrete work. No runtime source, test,
+policy or fixture is changed by recording this scorecard.
+
+### Delivery and measurement limits
+
+All six assessments refer to the same `336db11fd` source and ordinary guide
+revision. This evidence-only increment changes this audit and the PR summary;
+the assessed source/navigation remains unchanged. Relevant checks are score
+arithmetic, head/cleanliness, scope, Markdown structure/links and commit policy,
+not another smoke/guard/trace run. Earlier runtime evidence and inherited
+failure/frontier verdicts retain their recorded scope. No new human, runtime
+or timing measurement was performed; reviewer time and unmeasured work remain
+unknown, and no new user approval was needed.
+
+All three bounded reviewers completed with no pending children or live jobs.
+Keep `ai-code-climb` and its worktree for the open draft PR; do not merge it
+or update a destination branch as part of this assessment.
