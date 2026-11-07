@@ -334,6 +334,11 @@ matching area heading; see the
   mappings and genuine even-byte reader extents. A finite original-USA system
   programme source retains the authenticated SPX image and its initialization
   clear description without executing that clear or creating boot authority.
+  A package-private R31 loading component now preserves native Start, the first
+  selector-C wait and flower-counter reset, real PLCs, CCZ scroll and ordered
+  normal/water fades. Selector12 enables display in initial fades and retains
+  the palette actually published by its original Host callback. Boot, World and
+  ordinary-loop admission remain separate.
   A finite IPX progress
   component preserves unknown-byte and save-field alias semantics. Its actual
   boss-return join now publishes saved-zone/checkpoint state once and retains it

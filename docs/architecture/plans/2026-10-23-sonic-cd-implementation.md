@@ -1,5 +1,36 @@
 # Implement Sonic CD with complete regional parity
 
+## 7 November 2026 — retained R31 loading component qualification
+
+The package-private loader binds the actual R31 Frame/art/music/terrain/scroll
+sources to explicit Entry11 and Host11 values. It preserves native Start and
+unknown pre-clear clock knowledge, compulsory selectorC before the genuine
+ClearFlowers reset, immediate3→1 lists, real deferred work, source-ordered CCZ
+scroll, normal-before-water fades and actual CPU640 tail reads. Private original
+callback identities retire on success/failure; snapshots contain values, not
+boot, storage or ordinary-loop replay authority. Real checkpoint, ordinary and
+MMD caller boundaries remain explicit.
+
+R69 stops at four test compilation references; the exact three clock accessor
+and one import corrections compile under R70. Peer source review identifies two
+native defects. R71a observes the initial-fade display regression failing for
+the expected missing call. R72 observes the water selection regression failing
+with102 versus34 while selectorC's no-water-read control passes. Root removes
+only the nonnative initial-phase gate and makes original Host.publish return
+its actually selected input palette after native selection/publication. Core
+retains that reference, rejects invalid selectorC/foreign returns and keeps the
+original callback scope. Host method count/arity, Entry11 and State18 remain
+unchanged; the package-private publication method's return type is now explicit.
+
+R73 passes all67 selected cases with0failures/errors/skips and unchanged source:
+24 inherited loader cases,7 new regressions and36 existing full-art cases. The
+source/code comparison and exact production inverse preserve the author R1.
+After the run, the test header clarifies its author's unrun provenance and one
+extra final LF is removed from the new loader; executable tokens stay identical. All successful loading cuts here use
+constructed complete Entry/Host controls over actual immutable source data.
+No real pre-storage boot, Module/World, live Ready route, graphics, native audio
+or regional parity follows from this component pass.
+
 ## 7 November 2026 — preserve nested discovery in mixed method requests
 
 Surefire3.2.5 installs a global MethodSource filter whenever any literal method

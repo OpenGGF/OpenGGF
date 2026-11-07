@@ -206,6 +206,9 @@ public final class CdR31aSectionArt {
                 processBudgetWord, hintWord, padWord, resident, false);
     }
 
+    /** Pure exact owner/stopped validation; submits no native section or PLC work. */
+    public void validateState(State state) { checked(state); }
+
     public State clearPlcs(State state) { return kernel.clearPlcs(state); }
     public State initList(State state, int id) { return kernel.initList(state, id); }
     public State appendList(State state, int id) { return kernel.appendList(state, id); }
