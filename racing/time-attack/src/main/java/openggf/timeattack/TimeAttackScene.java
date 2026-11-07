@@ -141,6 +141,11 @@ public final class TimeAttackScene implements ModScene {
                 settings.setVotePoolChoice(gameId, name);
                 settingsChanged();
             }
+            @Override public List<String> keys(String gameId, String name) {
+                return name.isEmpty() ? VoteTrackPools.forGame(gameId)
+                        : settings.votePool(gameId, name).map(pool -> VoteTrackPools.keysOf(gameId, pool))
+                                .orElseGet(() -> VoteTrackPools.forGame(gameId));
+            }
         };
     }
 
@@ -392,7 +397,8 @@ public final class TimeAttackScene implements ModScene {
                         state.currentGameId(), state.currentCharacter(),
                         stockLine(state.currentGameId(), state.currentCharacter()));
             } else if (focus < rows && state.visibleRows().get(focus) == TimeAttackMenuState.Row.POOL) {
-                poolEditor = new VotePoolEditorView(settings, state.currentGameId(), this::settingsChanged, this::cue);
+                poolEditor = new VotePoolEditorView(settings, state.currentGameId(), state.raceMode(),
+                        this::settingsChanged, this::cue);
             } else {
                 focus = Math.min(focus + 1, go);
             }
@@ -685,6 +691,9 @@ public final class TimeAttackScene implements ModScene {
     }
 
     private static final int MENU_TOP = MenuPage.BODY_TOP - 2;
+    /** Field rows that fit above the button, the Settings row and the status line. */
+    private static final int MENU_FIELD_ROWS = 8;
+    private int menuFirst;
 
     private void drawMenu(SceneCanvas canvas) {
         if (reader.draw(canvas)) return;
@@ -708,11 +717,18 @@ public final class TimeAttackScene implements ModScene {
         int valueX = MenuPage.MARGIN + 6 + MenuPage.labelColumn(labels);
         int y = MENU_TOP;
         int index = 0;
+        // A Competition room's settings outgrow the page: the field rows scroll under the button.
+        menuFirst = MenuPage.scrollFirst(menuFirst, focus, rows.size(), MENU_FIELD_ROWS);
         for (TimeAttackMenuState.Row row : rows) {
-            MenuPage.field(canvas, y, valueX, label(row), value(row), MenuPage.TEXT, focus == index, true);
-            y += MenuPage.ROW_H;
+            if (index >= menuFirst && index < menuFirst + MENU_FIELD_ROWS) {
+                MenuPage.field(canvas, y, valueX, label(row), value(row), MenuPage.TEXT, focus == index, true);
+                if (focus == index) MenuPage.fieldBadges(canvas, y, valueX, value(row), state.focusBadges(row));
+                y += MenuPage.ROW_H;
+            }
             index++;
         }
+        MenuPage.scrollbar(canvas, width - MenuPage.MARGIN - 3, MENU_TOP, Math.min(rows.size(), MENU_FIELD_ROWS)
+                * MenuPage.ROW_H, menuFirst, MENU_FIELD_ROWS, rows.size());
         if (joining()) {
             boolean set = !joinInvite.isBlank();
             int x = MenuPage.field(canvas, y, valueX, "Invite", set ? "   Entered" : "Not entered",
@@ -763,6 +779,7 @@ public final class TimeAttackScene implements ModScene {
             case WINDOW -> (state.windowSeconds() / 60) + (state.windowSeconds() == 60 ? " minute" : " minutes");
             // Pool names are display text in any script.
             case POOL -> state.currentPoolName().isEmpty() ? "Default" : state.currentPoolName();
+            case RACE_MODE, MONITORS, CUTOFF, START_IN -> state.settingValue(row);
         };
     }
 
@@ -792,6 +809,7 @@ public final class TimeAttackScene implements ModScene {
             case POLICY -> "Characters";
             case WINDOW -> "Round length";
             case POOL -> "Vote pool";
+            case RACE_MODE, MONITORS, CUTOFF, START_IN -> TimeAttackMenuState.settingLabel(row);
         };
     }
 

@@ -145,7 +145,7 @@ class TestTimeAttackMenuState {
         state.moveFocus(-1);
         state.adjust(-1); // HOST_LAN
         state.moveFocus(1);
-        assertEquals(TimeAttackMenuState.Row.POLICY, state.focusedRow());
+        assertEquals(TimeAttackMenuState.Row.RACE_MODE, state.focusedRow());
     }
 
     @Test
@@ -185,5 +185,95 @@ class TestTimeAttackMenuState {
         while (state.focusedRow() != TimeAttackMenuState.Row.GAME) state.moveFocus(1);
         state.adjust(-1); // s2 -> s1: pools are per game
         assertEquals("", state.currentPoolName());
+    }
+
+    private static TimeAttackMenuState hosted(String game, Path root) {
+        TimeAttackMenuState state = new TimeAttackMenuState(List.of("s1", "s2", "s3k"), game, new GhostStore(root));
+        while (state.focusedRow() != TimeAttackMenuState.Row.MODE) state.moveFocus(1);
+        state.adjust(1); // HOST_LAN
+        return state;
+    }
+
+    private static void focus(TimeAttackMenuState state, TimeAttackMenuState.Row row) {
+        while (state.focusedRow() != row) state.moveFocus(1);
+    }
+
+    @Test
+    void competitionRoomsSwapTheWindowRowForMonitorsCutoffAndStartIn(@TempDir Path root) {
+        TimeAttackMenuState state = hosted("s2", root);
+        assertEquals(List.of(TimeAttackMenuState.Row.GAME, TimeAttackMenuState.Row.TRACK,
+                TimeAttackMenuState.Row.CHARACTER, TimeAttackMenuState.Row.MODE, TimeAttackMenuState.Row.RACE_MODE,
+                TimeAttackMenuState.Row.POLICY, TimeAttackMenuState.Row.WINDOW, TimeAttackMenuState.Row.POOL),
+                state.visibleRows());
+        focus(state, TimeAttackMenuState.Row.RACE_MODE);
+        state.adjust(1);
+        assertEquals(CompetitionRoomSettings.Mode.COMPETITION, state.raceMode());
+        assertEquals("Competition", state.settingValue(TimeAttackMenuState.Row.RACE_MODE));
+        assertFalse(state.visibleRows().contains(TimeAttackMenuState.Row.WINDOW), "Competition has no window");
+        assertTrue(state.visibleRows().containsAll(List.of(TimeAttackMenuState.Row.MONITORS,
+                TimeAttackMenuState.Row.CUTOFF, TimeAttackMenuState.Row.START_IN)));
+        focus(state, TimeAttackMenuState.Row.CUTOFF);
+        assertEquals(60, state.cutoffSeconds());
+        List<Integer> cutoffs = new java.util.ArrayList<>();
+        for (int i = 0; i < 4; i++) { state.adjust(1); cutoffs.add(state.cutoffSeconds()); }
+        assertEquals(List.of(90, 120, 30, 60), cutoffs);
+        focus(state, TimeAttackMenuState.Row.START_IN);
+        List<Integer> starts = new java.util.ArrayList<>();
+        for (int i = 0; i < 3; i++) { state.adjust(1); starts.add(state.startInSeconds()); }
+        assertEquals(List.of(15, 5, 10), starts);
+        assertEquals(new CompetitionRoomSettings(CompetitionRoomSettings.Mode.COMPETITION,
+                com.openggf.mods.run.MonitorRule.NORMAL, 60, 10), state.competitionSettings());
+    }
+
+    @Test
+    void soloAndJoinHaveNoRaceModeAndSonic1RacesTimeAttackOnly(@TempDir Path root) {
+        TimeAttackMenuState solo = new TimeAttackMenuState(List.of("s3k"), "s3k", new GhostStore(root));
+        assertFalse(solo.visibleRows().contains(TimeAttackMenuState.Row.RACE_MODE));
+        assertTrue(solo.currentTracks().stream().noneMatch(track -> track.kind() == com.openggf.mods.run.TrackKind.ARENA),
+                "arenas race in Competition rooms only");
+        TimeAttackMenuState s1 = hosted("s1", root);
+        assertEquals(List.of(CompetitionRoomSettings.Mode.TIME_ATTACK), s1.legalRaceModes());
+        assertEquals("Time Attack only", s1.settingValue(TimeAttackMenuState.Row.RACE_MODE));
+        focus(s1, TimeAttackMenuState.Row.RACE_MODE);
+        s1.adjust(1);
+        assertEquals(CompetitionRoomSettings.Mode.TIME_ATTACK, s1.raceMode());
+    }
+
+    @Test
+    void competitionTracksAddTheArenasGroupWithRomNamesAndFocusedBadges(@TempDir Path root) {
+        TimeAttackMenuState state = hosted("s3k", root);
+        int acts = state.currentTracks().size();
+        focus(state, TimeAttackMenuState.Row.RACE_MODE);
+        state.adjust(1);
+        List<TimeAttackTrackCatalog.Track> tracks = state.currentTracks();
+        assertEquals(acts + 5, tracks.size());
+        assertEquals(List.of("AZURE LAKE", "BALLOON PARK", "CHROME GADGET", "DESERT PALACE", "ENDLESS MINE"),
+                tracks.subList(acts, acts + 5).stream().map(TimeAttackTrackCatalog.Track::label).toList());
+        focus(state, TimeAttackMenuState.Row.TRACK);
+        assertEquals(List.of("ACT", "ANY MODE"), state.focusBadges(TimeAttackMenuState.Row.TRACK));
+        assertEquals(List.of(), state.focusBadges(TimeAttackMenuState.Row.GAME), "badges on the track row only");
+        state.adjust(-1); // wraps to the last arena
+        assertEquals("ENDLESS MINE", state.currentTrack().label());
+        assertEquals("s3k:arena:4", state.currentTrackKey());
+        assertEquals(List.of("5 LAPS", "COMP ONLY"), state.focusBadges(TimeAttackMenuState.Row.TRACK));
+        // Back to Time Attack: the arena is not raceable there, so the track falls back to the first act.
+        focus(state, TimeAttackMenuState.Row.RACE_MODE);
+        state.adjust(1);
+        assertEquals(TimeAttackTrackCatalog.tracksFor("s3k").getFirst(), state.currentTrack());
+    }
+
+    @Test
+    void monitorsOfferOnlyTheLegalChoicesForTheRoomsTracks(@TempDir Path root) {
+        TimeAttackMenuState state = hosted("s3k", root);
+        focus(state, TimeAttackMenuState.Row.RACE_MODE);
+        state.adjust(1);
+        // The default pool holds S3K acts only: normal or off (the S3K ROM has no 2P monitor rule).
+        assertEquals(List.of(com.openggf.mods.run.MonitorRule.NORMAL, com.openggf.mods.run.MonitorRule.OFF),
+                state.legalMonitors());
+        focus(state, TimeAttackMenuState.Row.MONITORS);
+        state.adjust(1);
+        assertEquals("Off", state.settingValue(TimeAttackMenuState.Row.MONITORS));
+        state.adjust(1);
+        assertEquals("Normal", state.settingValue(TimeAttackMenuState.Row.MONITORS));
     }
 }
