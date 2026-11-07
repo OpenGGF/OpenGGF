@@ -111,6 +111,13 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
             return;
         }
         initialized = true;
+        if (services().runPolicy().monitors() == com.openggf.mods.run.MonitorRule.OFF) {
+            // Hosted policy: omit the placement without setting its persistent break bit.
+            // Content zero cannot implement OFF: its native reward is Robotnik/Eggman.
+            setDestroyed(true);
+            return;
+        }
+
 
         // Check persistence: if remembered, spawn as broken
         ObjectManager objectManager = services().objectManager();
@@ -141,6 +148,7 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         ensureInitialized();
+        if (isDestroyed()) return;
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Handle falling state first (ROM: Obj26_Main routine_secondary check)
         if (falling) {
