@@ -116,7 +116,11 @@ class TestNativeCompetitionIteration {
                         assertEquals(LevelFrameResult.PAUSED, world.pauseVBlank(frame)));
                 frame.finish();
             }
-            verifyNoInteractions(level, sprites);
+            // Vint_Level can consult the world's native wait owner during a paused wait.
+            // The lookup must not execute a level or sprite body.
+            verify(level, times(2)).getWorldSession();
+            verifyNoMoreInteractions(level);
+            verifyNoInteractions(sprites);
             verify(objects, times(2)).advanceVblaCounter();
             verifyNoMoreInteractions(objects);
             assertEquals(beforePlayer, player.capture());

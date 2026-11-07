@@ -127,6 +127,10 @@ public class InvincibilityStarsObjectInstance extends AbstractObjectInstance
 
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
+        // Obj35_Layer0Update (s2.asm:42493-42503), Obj35_OtherLayersUpdate (s2.asm:42545-42555).
+        // fixBugs=0: test the parent bit only; the fixed branch also deletes under global Super.
+        if (Boolean.FALSE.equals(com.openggf.sprites.playable.PlayableSpriteInternalAccess
+                .nativeSecondaryInvincibility(this.player))) { destroy(); return; }
         if (isTrailModeEnabled()) {
             updateSonic1Trail();
             return;

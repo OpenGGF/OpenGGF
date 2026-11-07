@@ -248,7 +248,7 @@ public class BumperObjectInstance extends AbstractObjectInstance
         services().playSfx(GameSound.BUMPER);
 
         // Award 10 points and spawn points display (ROM: lines 44675-44683)
-        services().gameState().addScore(10);
+        Sonic2ObjectScore.award(services(), player, 10);
         spawnFreeChild(() -> new PointsObjectInstance(
                 new ObjectSpawn(spawn.x(), spawn.y(), 0x29, 0, 0, false, 0),
                 services(), 10));

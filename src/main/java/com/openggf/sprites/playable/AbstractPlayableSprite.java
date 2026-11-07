@@ -729,6 +729,30 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * deceleration.
          */
         protected boolean waterPhysicsActive = false;
+        @RewindTransient(reason = "structural native bit binding; the competition state adapter captures its value once")
+        private PlayableSpriteInternalAccess.SecondaryInvincibility nativeSecondaryInvincibility;
+
+        void bindNativeSecondaryInvincibility(PlayableSpriteInternalAccess.SecondaryInvincibility owner) {
+                nativeSecondaryInvincibility = owner;
+        }
+
+        PlayableSpriteInternalAccess.SecondaryInvincibility nativeSecondaryInvincibilityOwner() {
+                return nativeSecondaryInvincibility;
+        }
+
+        private Boolean nativeSecondaryInvincibility() {
+                return nativeSecondaryInvincibility == null ? null : nativeSecondaryInvincibility.read();
+        }
+
+        void writeNativeSecondaryInvincibility(boolean value) {
+                if (nativeSecondaryInvincibility() != null) nativeSecondaryInvincibility.write(value);
+        }
+
+        private boolean nativeInvincibilityOr(boolean inferred) {
+                Boolean raw = nativeSecondaryInvincibility();
+                return raw != null ? raw : inferred;
+        }
+
         final NativePlayerSpeedWords nativeSpeedWords = new NativePlayerSpeedWords();
         protected boolean preventTailsRespawn = false;
         /**
@@ -779,6 +803,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         this.invincibilityObject.destroy();
                         this.invincibilityObject = null;
                 }
+                writeNativeSecondaryInvincibility(false);
                 this.invincibleFrames = 0;
                 // Clear speed shoes
                 if (this.speedShoes) {
@@ -807,6 +832,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.speedShoes = false;
                 // Cancel any active speed shoes timer
                 currentTimerManager().removeTimerForCode("SpeedShoes-" + getCode());
+                writeNativeSecondaryInvincibility(false);
                 this.invincibleFrames = 0;
                 this.invulnerableFrames = 0;
                 // Ring count is managed by LevelGamestate and reset by LevelManager
@@ -985,6 +1011,143 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         animationId = profile.getRollAnimId();
                         skidding = false;
                 }
+        }
+
+        // teleport_swap_table (s2.asm:26169-26190). Stat/input history is deliberately absent.
+        NativeTeleportActorState captureNativeTeleportState() {
+                return new NativeTeleportActorState(
+                        getCentreX(),
+                        getCentreY(),
+                        xSubpixel,
+                        ySubpixel,
+                        xSpeed,
+                        ySpeed,
+                        gSpeed,
+                        xRadius,
+                        yRadius,
+                        priorityBucket,
+                        renderFlagWidthPixels,
+                        mappingFrame,
+                        animationId,
+                        animationFrameIndex,
+                        animationTick,
+                        direction,
+                        air,
+                        rolling,
+                        onObject,
+                        rollingJump,
+                        pushing,
+                        inWater,
+                        waterPhysicsActive,
+                        layer,
+                        preventTailsRespawn,
+                        hurt,
+                        objectRoutineOverride,
+                        angle,
+                        flipAngle,
+                        flipTurned,
+                        controller.getDrowning().getRemainingAir(),
+                        objectControlled,
+                        objectControlAllowsCpu,
+                        objectControlSuppressesMovement,
+                        objectMappingFrameControl,
+                        shield,
+                        shieldType,
+                        speedShoes,
+                        sliding,
+                        flipsRemaining,
+                        flipSpeed,
+                        moveLockTimer,
+                        invulnerableFrames,
+                        invincibleFrames,
+                        currentSpeedShoesRemainingTicks(),
+                        stickToConvex,
+                        spindash,
+                        pinballMode,
+                        pinballSpeedLock,
+                        spindashCounter,
+                        jumping,
+                        interactSlotIndex,
+                        latchedSolidObjectId,
+                        latchedSolidObjectReleased,
+                        latchedSolidObjectBound,
+                        topSolidBit,
+                        lrbSolidBit,
+                        runningMode,
+                        xHistory,
+                        yHistory,
+                        historyPos);
+        }
+
+        void applyNativeTeleportEffects(PowerUpObject shield, PowerUpObject stars) {
+                shieldObject = shield;
+                invincibilityObject = stars;
+        }
+
+        void applyNativeTeleportState(NativeTeleportActorState s) {
+                xSubpixel = s.xSub();
+                ySubpixel = s.ySub();
+                xSpeed = s.xSpeed();
+                ySpeed = s.ySpeed();
+                gSpeed = s.inertia();
+                xRadius = s.xRadius();
+                yRadius = s.yRadius();
+                priorityBucket = s.priority();
+                renderFlagWidthPixels = s.displayWidth();
+                mappingFrame = s.mappingFrame();
+                animationId = s.animation();
+                animationFrameIndex = s.animationFrame();
+                animationTick = s.animationDuration();
+                direction = s.direction();
+                air = s.air();
+                rolling = s.rolling();
+                onObject = s.onObject();
+                rollingJump = s.rollingJump();
+                pushing = s.pushing();
+                inWater = s.inWater();
+                waterPhysicsActive = s.waterPhysicsActive();
+                layer = s.layer();
+                preventTailsRespawn = s.preventRespawn();
+                hurt = s.hurt();
+                objectRoutineOverride = s.routineOverride();
+                angle = s.angle();
+                flipAngle = s.flipAngle();
+                flipTurned = s.flipTurned();
+                objectControlled = s.objectControlled();
+                objectControlAllowsCpu = s.allowsCpu();
+                objectControlSuppressesMovement = s.suppressesMovement();
+                objectMappingFrameControl = s.mappingControl();
+                shield = s.shield();
+                shieldType = s.shieldType();
+                speedShoes = s.shoes();
+                sliding = s.sliding();
+                flipsRemaining = s.flipsRemaining();
+                flipSpeed = s.flipSpeed();
+                moveLockTimer = s.moveLock();
+                invulnerableFrames = s.invulnerability();
+                invincibleFrames = s.invincibility();
+                stickToConvex = s.stickToConvex();
+                spindash = s.spindash();
+                pinballMode = s.pinball();
+                pinballSpeedLock = s.pinballLock();
+                spindashCounter = s.spindashCounter();
+                jumping = s.jumping();
+                interactSlotIndex = s.interact();
+                latchedSolidObjectId = s.latchedId();
+                latchedSolidObjectReleased = s.latchedReleased();
+                latchedSolidObjectBound = s.latchedBound();
+                topSolidBit = s.topSolidBit();
+                lrbSolidBit = s.lrbSolidBit();
+                runningMode = s.groundMode();
+                controller.getDrowning().setRemainingAirFromFixedCountdown(s.airLeft());
+                System.arraycopy(s.xHistory(), 0, xHistory, 0, xHistory.length);
+                System.arraycopy(s.yHistory(), 0, yHistory, 0, yHistory.length);
+                historyPos = s.historyIndex();
+                // Radius changes do not alter the transferred native centre words.
+                com.openggf.sprites.NativePositionOps.writeXPosResetSubpixel(this, s.x());
+                com.openggf.sprites.NativePositionOps.writeYPosResetSubpixel(this, s.y());
+                xSubpixel = s.xSub(); ySubpixel = s.ySub();
+                updateSensorOffsetsFromRadii();
         }
 
         /** Captures the mutable playable-sprite surface for rewind restore. */
@@ -1368,6 +1531,13 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * deferred until the registry's post-restore phase.
          */
         public void refreshPowerUpObjectsAfterRewindRestore() {
+                if (nativeSecondaryInvincibility() != null) {
+                        // Obj38_Shield (s2.asm:42403-42408) returns under invincibility before testing shield status.
+                        // A captured hidden shield can therefore exist with status clear, even after teleport freeze.
+                        // Rebuild the captured native slots; neither status nor global Super may mint/delete their owners.
+                        nativeSecondaryInvincibility.restoreCapturedEffects();
+                        return;
+                }
                 if (!shield || shieldType == null) {
                         if (shieldObject != null) {
                                 shieldObject.destroy();
@@ -1379,7 +1549,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         PowerUpObject liveShield = resolveLiveShieldObjectAfterRewindRestore();
                         if (liveShield != null) {
                                 shieldObject = liveShield;
-                                if (invincibleFrames > 0 || superSonic) {
+                                if (nativeInvincibilityOr(invincibleFrames > 0 || superSonic)) {
                                         shieldObject.setVisible(false);
                                 }
                                 shieldObject.refreshArtAfterRewindRestore();
@@ -1390,7 +1560,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                                 shieldObject = null;
                                 if (powerUpSpawner != null) {
                                         shieldObject = powerUpSpawner.spawnShield(this, shieldType);
-                                        if (shieldObject != null && (invincibleFrames > 0 || superSonic)) {
+                                        if (shieldObject != null && (nativeInvincibilityOr(invincibleFrames > 0 || superSonic))) {
                                                 shieldObject.setVisible(false);
                                         }
                                         if (shieldObject != null) {
@@ -1402,7 +1572,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
                 refreshPersistentInstaShieldRegistration(instaShieldRegistered);
                 refreshInvincibilityStarsAfterRewindRestore();
-                if (superSonic) {
+                if (nativeInvincibilityOr(superSonic)) {
                         setShieldVisible(false);
                 }
         }
@@ -1511,6 +1681,14 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         public void giveShield(ShieldType type) {
+                if (type == ShieldType.BASIC && nativeSecondaryInvincibility() != null) {
+                        // shield_monitor (s2.asm:25953-25967) writes the recipient's fixed ID/parent, without clearing animation.
+                        shield = true;
+                        shieldType = type;
+                        shieldObject = nativeSecondaryInvincibility.grantShield();
+                        if (shieldObject != null) shieldObject.setVisible(!nativeSecondaryInvincibility());
+                        return;
+                }
                 // Monitor shield rewards set shield status even while transformed (S2 and S3K).
                 // Remove existing shield before granting new one
                 if (hasShield()) {
@@ -1532,7 +1710,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                                 : null;
                         LOGGER.fine("DEBUG: ShieldObjectInstance created successfully: " + shieldObject);
                         // Retain the shield while powered up, but suppress its visual.
-                        if (shieldObject != null && (invincibleFrames > 0 || superSonic)) {
+                        if (shieldObject != null && (nativeInvincibilityOr(invincibleFrames > 0 || superSonic))) {
                                 shieldObject.setVisible(false);
                         }
                 } catch (Exception e) {
@@ -1646,6 +1824,14 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         public void giveInvincibility(int durationFrames) {
                 if (durationFrames < 1 || durationFrames > 3600) {
                         throw new IllegalArgumentException("Invincibility duration must be 1..3600 native frames");
+                }
+                if (nativeSecondaryInvincibility() != null) {
+                        // invincible_monitor (s2.asm:25977-26000): raw status, literal time, recipient's fixed ID/parent.
+                        writeNativeSecondaryInvincibility(true);
+                        setInvincibleFrames(durationFrames);
+                        invincibilityObject = nativeSecondaryInvincibility.grantInvincibilityStars();
+                        if (shieldObject != null) shieldObject.setVisible(false);
+                        return;
                 }
                 setInvincibleFrames(Math.max(getInvincibleFrames(), durationFrames));
                 if (shieldObject != null) {
@@ -2616,6 +2802,12 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         public boolean getInvulnerable() {
+                Boolean raw = nativeSecondaryInvincibility();
+                if (raw != null) {
+                        // Touch_ChkHurt2 (s2.asm:29494-29501) reads status, timer and routine independently.
+                        return dead || debugMode || raw || invulnerableFrames > 0 || hurt
+                                || com.openggf.game.mutators.HomingAttackRuntime.invulnerable(mutatorPolicySource, this);
+                }
                 // Dead players cannot enter object-owned hurt/ring-loss paths.
                 // Debug mode and Super Sonic also make the player invulnerable
                 return dead || debugMode || superSonic || invulnerableFrames > 0 || invincibleFrames > 0 || hurt || com.openggf.game.mutators.HomingAttackRuntime.invulnerable(mutatorPolicySource, this);
@@ -2793,15 +2985,20 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         /** Package-owned Sonic_Display invincibility expiry, before native powered-form writes. */
         void tickInvincibilityDisplayTimer() {
+                // Obj01_ChkInvin (s2.asm:36291-36296), Obj02_ChkInvinc (s2.asm:39027-39032).
+                // A clear bit freezes even a nonzero timer; a set bit with time zero remains set.
+                if (Boolean.FALSE.equals(nativeSecondaryInvincibility())) return;
                 if (invincibleFrames > 0) {
                         invincibleFrames--;
                         if (invincibleFrames == 0) {
+                                // Obj01_RmvInvin (s2.asm:36304-36305), Obj02_RmvInvin (s2.asm:39040-39041).
+                                writeNativeSecondaryInvincibility(false);
                                 if (invincibilityObject != null) {
                                         invincibilityObject.destroy();
                                         invincibilityObject = null;
                                 }
                                 if (shieldObject != null) {
-                                        shieldObject.setVisible(!superSonic);
+                                        shieldObject.setVisible(!nativeInvincibilityOr(superSonic));
                                 }
                                 restoreLevelMusicAfterInvincibility();
                         }
@@ -3008,6 +3205,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         public boolean applyHurtOrDeath(int sourceX, DamageCause cause, boolean hadRings) {
+                // TimeOver / TimeOver2 (s2.asm:88117-88131) call KillCharacter directly, bypassing Touch_ChkHurt.
+                if (nativeSecondaryInvincibility() != null && cause == DamageCause.TIME_OVER) {
+                        return !debugMode && applyDeath(cause);
+                }
                 return applyHurtOrDeath(sourceX, cause, hadRings, false);
         }
 
@@ -3037,6 +3238,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         private boolean isDamageBlocked(boolean ignoreIFrames) {
+                Boolean raw = nativeSecondaryInvincibility();
+                if (raw != null) {
+                        // Touch_ChkHurt (s2.asm:85579-85595); HurtCharacter has no global Super test.
+                        return dead || debugMode || raw || (!ignoreIFrames && invulnerableFrames > 0);
+                }
                 if (dead || debugMode || invincibleFrames > 0 || isSuperSonic()) {
                         return true;
                 }
@@ -3138,7 +3344,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 }
                 // The kill routine preserves the post-hit invulnerability timer;
                 // only the invincibility power-up status is cleared.
-                setInvincibleFrames(0);
+                // KillCharacter (s2.asm:85671-85675) clears the status byte, not invincibility_time.
+                if (nativeSecondaryInvincibility() != null) writeNativeSecondaryInvincibility(false);
+                else setInvincibleFrames(0);
                 setSpringing(0);
                 setSpindash(false);
                 // KillSonic/KillCharacter reset floor radii and native Y before death velocity.

@@ -11,6 +11,12 @@ import com.openggf.level.render.SpriteDplcFrame;
 public final class PlayerResidentBanks {
     private PlayerResidentBanks() { }
 
+    /** Semantic world capability, independent of game identity and art addresses. */
+    public interface Authority {
+        boolean ownsBank(com.openggf.sprites.playable.AbstractPlayableSprite player, Role role);
+    }
+    public enum Role { BODY, APPENDAGE, ATTACHED_EFFECT }
+
     /** Exact resident tiles and the renderer's own last-loaded frame. */
     public record Snapshot(Pattern[] tiles, int lastFrame) {
         public Snapshot {
@@ -19,14 +25,17 @@ public final class PlayerResidentBanks {
         @Override public Pattern[] tiles() { return copy(tiles); }
     }
 
-    /** Draws stop issuing implicit DPLC; the caller owns every bank write. */
+    /** Ordinary initialization, draw DPLC and runtime decisions stop publishing; explicit owner writes remain. */
     public static void claim(PlayerSpriteRenderer renderer) {
         renderer.setResidentBankExternal(true);
     }
 
     /** Submits one frame's cues from {@code source} into the resident bank. */
     public static void load(PlayerSpriteRenderer renderer, SpriteDplcFrame cues, Pattern[] source) {
-        if (cues != null && !cues.requests().isEmpty()) renderer.residentBank().applyRequests(cues.requests(), source);
+        if (cues != null && !cues.requests().isEmpty()) {
+            renderer.ensureResidentBankCached();
+            renderer.residentBank().applyRequests(cues.requests(), source);
+        }
     }
 
     public static Snapshot capture(PlayerSpriteRenderer renderer) {
@@ -35,12 +44,14 @@ public final class PlayerResidentBanks {
 
     /** Restores CPU and GPU tiles plus the last-loaded frame, without issuing cues. */
     public static void restore(PlayerSpriteRenderer renderer, Snapshot snapshot) {
+        renderer.ensureResidentBankCached();
         renderer.residentBank().restoreResident(snapshot.tiles);
         renderer.restoreResidentLastFrame(snapshot.lastFrame());
     }
 
     /** Re-uploads a bank whose atlas indices another renderer used meanwhile. */
     public static void refreshTextures(PlayerSpriteRenderer renderer) {
+        renderer.ensureResidentBankCached();
         renderer.residentBank().refreshTextures();
     }
 

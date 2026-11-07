@@ -2,8 +2,6 @@ package com.openggf.game.sonic2.competition.view;
 
 import com.openggf.camera.Camera;
 import com.openggf.data.RomByteReader;
-import com.openggf.game.sonic2.competition.interlace.Sonic2InterlaceSatBuilder;
-import com.openggf.game.sonic2.competition.interlace.Sonic2InterlaceWorkRam;
 import com.openggf.game.sonic2.objects.MCZDrawbridgeObjectInstance;
 import com.openggf.game.sonic2.objects.Sonic2SignpostSparkleObjectInstance;
 import com.openggf.graphics.GraphicsManager;
@@ -51,8 +49,8 @@ class TestSonic2NativeDisplayGroups {
             // At x=150, parent dx=-50 exceeds width8, child dx=-50 is still inside width64.
             var input=new Build(new Sonic2CompetitionDisplayInputs.Camera(150,0),
                     new Sonic2CompetitionDisplayInputs.Camera(150,0),hud,empty,empty,0,admissions,false);
-            var page=new Sonic2InterlaceSatBuilder(RomByteReader.fromRom(TestEnvironment.currentRom()))
-                    .buildPlayer1(new Sonic2InterlaceWorkRam(new byte[65536]),input);
+            var page=new Sonic2CompetitionSatBuilder(RomByteReader.fromRom(TestEnvironment.currentRom()))
+                    .buildPlayer1(input);
             assertEquals(List.of(new Visibility(40,false),new Visibility(42,true)),page.visibility());
             assertEquals(10,page.spriteCount(),"two native mask sprites plus eight child logs");
             var registry=new com.openggf.game.rewind.RewindRegistry();
@@ -105,7 +103,7 @@ class TestSonic2NativeDisplayGroups {
                     for(int i=0;i<groups.size();i++){var g=groups.get(i);admissions.add(new Admission(g.slot(),g.priorityBucket(),i,g.occupant()));}
                     var hud=new Hud(false,0,new PlayerHud(0,0,0,0),new PlayerHud(0,0,0,0),0);var empty=new RingWindow(List.of());
                     var input=new Build(new Sonic2CompetitionDisplayInputs.Camera(200,0),new Sonic2CompetitionDisplayInputs.Camera(200,0),hud,empty,empty,0,admissions,false);
-                    var page=new Sonic2InterlaceSatBuilder(r).buildPlayer1(new Sonic2InterlaceWorkRam(new byte[65536]),input);
+                    var page=new Sonic2CompetitionSatBuilder(r).buildPlayer1(input);
                     assertEquals(List.of(new Visibility(42,false),new Visibility(43,true)),page.visibility());
                     assertEquals(10,page.spriteCount(),"only the admitted eight-log group plus the two native masks");
                     var registry=new com.openggf.game.rewind.RewindRegistry();registry.register(manager.rewindSnapshottable());var saved=registry.capture();
