@@ -611,23 +611,15 @@ public abstract class AbstractTraceReplayTest {
 
             // 6. Build report
             DivergenceReport report = buildDivergenceReport(binder, meta, trace);
-            // Asserted here rather than inside writeReport: the finally block below
-            // rewrites the report best-effort and only swallows RuntimeException, so
-            // an AssertionError thrown from there would replace the real divergence
-            // failure instead of adding to it.
+            // Check accounting before the replay assertion. Publication in finally
+            // attaches any later failure to the primary replay failure.
             TraceReportWriter.assertGroupAccountingHolds(report);
 
-            // 7. Write report if there are any divergences
-            if (report.hasErrors() || report.hasWarnings()) {
-                writeReport(report, meta, new TraceReportWriter.ReplayGate(
-                        trace.frameCount(), comparisonGateReached, verificationScope));
-            }
-
-            // 8. Log summary only when explicitly requested. Failing assertions
+            // 7. Log summary only when explicitly requested. Failing assertions
             // still carry the compact frontier summary.
             TraceReplayConsole.printSummary(report, verificationScope);
 
-            // 9. Assert no errors
+            // 8. Assert no errors
             if (report.hasErrors(verificationScope) && TraceReplayConsole.shouldPrintContext()) {
                 System.err.println("\n=== Context window around first error ===");
                 System.err.println(report.getContextWindow(
@@ -638,11 +630,9 @@ public abstract class AbstractTraceReplayTest {
             replayFailure = failure;
             throw failure;
         } finally {
-            // Always (re)write the report from the latest binder state so a stale
-            // *_report.json from a prior run can never mask the current result.
-            // Equivalent publication is idempotent. A real publication failure
-            // is attached to the primary replay failure, or fails a run that
-            // otherwise had no primary failure.
+            // Publish once from the final binder state, including clean prefixes
+            // whose replay aborted. Publication precedes fixture closure; its
+            // failure is suppressed onto the primary failure or fails this run.
             Throwable reportFailure = null;
             if (binder != null) {
                 try {
@@ -652,9 +642,13 @@ public abstract class AbstractTraceReplayTest {
                     // report at all -- indistinguishable from a run that never
                     // started. Preserve whether the prescribed gate was reached;
                     // total_frames counts only gameplay comparisons.
-                    writeReport(buildDivergenceReport(binder, meta, trace), meta,
+                    TestSessionOutputPaths.ReportAllocation allocation = writeReport(
+                            buildDivergenceReport(binder, meta, trace), meta,
                             new TraceReportWriter.ReplayGate(
                                     trace.frameCount(), comparisonGateReached, verificationScope));
+                    TraceReplayConsole.printDiagnosticRoute(
+                            SessionInvocationExtension.SessionInvocation.current(),
+                            traceDir, allocation, replayFailure != null);
                 } catch (Exception | Error failure) {
                     if (replayFailure != null) {
                         replayFailure.addSuppressed(failure);
@@ -1662,14 +1656,15 @@ public abstract class AbstractTraceReplayTest {
         return sidekick.getCpuController().formatLatestNormalStepDiagnostics();
     }
 
-    private void writeReport(DivergenceReport report, TraceMetadata meta,
-                             TraceReportWriter.ReplayGate replayGate) throws IOException {
+    private TestSessionOutputPaths.ReportAllocation writeReport(
+            DivergenceReport report, TraceMetadata meta,
+            TraceReportWriter.ReplayGate replayGate) throws IOException {
         String prefix = meta.game() + "_" + meta.zone() + meta.act();
         TraceVerificationScope scope = verificationScope();
         String scopeSuffix = scope == TraceVerificationScope.ALL
                 ? ""
                 : "_" + scope.name().toLowerCase();
-        TraceReportWriter.writeReport(reportOutputDir(), report, "trace",
+        return TraceReportWriter.writeReport(reportOutputDir(), report, "trace",
                 SessionInvocationExtension.SessionInvocation.current(),
                 "single", prefix + scopeSuffix, scope,
                 TraceReplayConsole.contextRadius(), replayGate);

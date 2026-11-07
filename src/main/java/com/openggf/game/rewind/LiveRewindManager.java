@@ -41,7 +41,6 @@ public final class LiveRewindManager {
     private final java.util.ArrayDeque<PendingBoundary> deferredBoundaries = new java.util.ArrayDeque<>();
 
     private record PendingBoundary(Object installation, RewindBoundary boundary) { }
-    private final LiveRewindHudOverlay hudOverlay;
     private final LiveRewindBudget budget = new LiveRewindBudget();
     private int emptyFeedbackFrames;
     private boolean rewindKeyWasHeld;
@@ -112,7 +111,6 @@ public final class LiveRewindManager {
         this.config = Objects.requireNonNull(config, "config");
         this.audio = Objects.requireNonNull(audio, "audio");
         this.modeSupplier = modeSupplier;
-        this.hudOverlay = new LiveRewindHudOverlay(this::statusLabel, this::budgetHudState);
     }
 
     /** Lifecycle facts from the host binding boundary; parking preserves the installed history. */
@@ -519,7 +517,7 @@ public final class LiveRewindManager {
         if (!context.supported() || text == null || !enabled()) {
             return;
         }
-        hudOverlay.render(text, graphics, viewportWidth);
+        LiveRewindHudOverlay.render(text, graphics, viewportWidth, rewindFrameForHud(), budgetHudState());
     }
 
     public void renderHud(GameMode mode, PixelFontTextRenderer text) {
@@ -569,12 +567,12 @@ public final class LiveRewindManager {
         return effectEnvelope.speed();
     }
 
-    private String statusLabel() {
+    private Integer rewindFrameForHud() {
         // A scripted rewind is the game's own presentation, without the debug frame counter.
         if (!enabled() || !rewinding || scriptedRewinding || rewindController == null) {
             return null;
         }
-        return "REWIND " + rewindController.currentFrame();
+        return rewindController.currentFrame();
     }
 
     private boolean ensureInstalled(RewindContext context) {

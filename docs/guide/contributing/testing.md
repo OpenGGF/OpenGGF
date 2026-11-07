@@ -181,6 +181,48 @@ baseline changes require explicit review; an audit failure is never ignored.
 The rewind system has both ordinary regression tests and an opt-in benchmark. See
 [Rewind System](rewind-system.md) for usage, limitations, and architecture details.
 
+### Object population and contact boundaries
+
+For contact lifetime or object reconstruction changes, start with these production
+boundary checks rather than selecting every rewind test:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestSolidContactState,TestObjectSolidContactController,TestSolidObjectManager,TestObjectManagerRewindSnapshot,TestShieldRewindPendingRestore,TestObjectManagerDynamicChainRewindRestore' test
+```
+
+The first three classes cover contact memory, real solid calls and retained-SST
+transfer; the manager snapshot class covers population round trips. The last pair
+exercises late player-bound admission and children that precede their parents in
+capture order. For a transfer walkthrough, start at
+`TestObjectSolidContactController#transitionContactsRetainLiveCarriedPieceWithoutRecreatingClearedOrNoncarriedBits`:
+real landings establish the bits, an object release and continued ride leave one
+piece live, then the production transition carries only the surviving owner.
+`TestSolidObjectManager` supplies the non-surviving-object control. For late
+effects, follow reverse player-refresh/identity and retry in
+`TestShieldRewindPendingRestore`. Snapshot piece-key restoration is a separate
+boundary from live-manager transfer.
+
+For identity publication, construction-child adoption or field-order changes,
+also run the exact-adoption and forward-reference boundaries:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestObjectRewindExactAdoption,TestTwoPhaseRestoreOrdering' test
+```
+
+The late-effect witness calls actual player refresh hooks in reverse order and
+compares captured identities and the complete object snapshot. It covers the
+deferred scalar restore path; `TestTwoPhaseRestoreOrdering` covers references
+between actors reconstructed in the ordinary graph pass.
+
+Use the [ownership map](architecture.md#finding-an-object-lifecycle-owner) to find
+the production entry. Check which cases executed and why any skipped. This
+bounded command does not replace change-based smoke, guards or affected ROM/trace
+checks required by the change.
+
+### General rewind coverage
+
 Run the regular rewind suite:
 
 ```bash
@@ -523,12 +565,58 @@ Current examples:
 - `TestS1Ghz1TraceReplay`
 - `TestS1Mz1TraceReplay`
 
-Run them with:
+Run these release-6 examples with the replay profile:
 
 ```bash
-python3 tools/testing/maven_queue.py -Dmse=off \
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dsurefire.forkCount=1 \
   -Dtest=TestS1Ghz1TraceReplay,TestS1Mz1TraceReplay test
 ```
+
+### Diagnose one trace replay
+
+Start at the concrete test class: its `game()`, `zone()`, `act()` and
+`traceDirectory()` identify the engine entry and fixture. Read that fixture's
+`metadata.json` for the recorded team, row count and `source_bk2`. Shared movies
+live under the game's `src/test/resources/traces/<game>/_movies/`; the replay
+loader resolves the metadata reference. A missing movie can skip the test.
+
+Use the [release-scope policy](../../status/trace-scope-release-6.md) and the
+`trace-replay`, `trace-replay-r7` and `trace-segments` profiles in
+[root pom.xml](../../../pom.xml) to find the lane.
+These are the selection authorities; a test's historical status comment is not
+a current result. The HCZ Sonic/Tails leaf is standalone segment instrumentation;
+its lane is `trace-segments`, while run chains supply release-gate evidence:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-segments \
+  -Dsurefire.forkCount=1 -Dtrace.print.summary=true \
+  '-Dtest=TestS3kSonicTailsHczSegmentTraceReplay' test
+```
+
+Use Java 25. Check the wrapper's verified-ROM discovery line and ensure the
+fixture payload and referenced movie are available. A failed replay prints its
+concrete test, resolved fixture, exact published report and a copyable triage
+command. `trace.print.summary=true` also prints that route for a successful
+replay. Copy the command to inspect the report, its sibling context and the
+fixture's plain or compressed auxiliary evidence without finding hashed report
+names yourself.
+
+After completion, read this class's fresh Surefire result under
+`target/surefire-reports/`. The triage brief distinguishes a completed comparison
+gate, an incomplete prefix and legacy reports whose completion is unknown.
+Planned trace rows and gameplay comparisons count different boundaries; their
+totals need not match. Triage reads saved evidence and does not certify its
+freshness or process success. Confirm this invocation executed without errors
+or skips and reached its intended gate. Preserve prior evidence before clearing
+generated reports, and keep output in this worktree's `target/`.
+
+For a real divergence, read the
+[trace diagnosis procedure](../../../.agents/skills/trace-replay-bug-fixing/SKILL.md)
+and its linked measurement hazards before reporting counts or changing code.
+Reports use trace row indices, which can differ from recorded frame numbers;
+trace comparisons do not authorise copying observed gameplay state into the
+engine. Record new measured frontiers in the existing
+[frontier log](../../status/trace-frontier-log.md), with the tested commit and command.
 
 For the full workflow, including recording traces and reading divergence reports, see
 [Trace Replay Testing](trace-replay.md).

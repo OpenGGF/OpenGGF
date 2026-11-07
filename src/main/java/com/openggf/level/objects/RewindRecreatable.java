@@ -6,10 +6,21 @@ package com.openggf.level.objects;
  *
  * <p>Implementing classes appear in the dynamic-object list at capture time (i.e.
  * runtime/routine-spawned dynamics, not construction-spawned children which are
- * handled by the adoption keystone). Their recreation during a rewind restore is
+ * adopted from their reconstructed parent). Their recreation during a rewind restore is
  * delegated to this method by
  * {@link ObjectRewindDynamicCodecs#genericRecreate(com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry, DynamicObjectRecreateContext)},
- * which is the entry point for Phase-2 generic recreate (Task 4).
+ * which supplies the generic reconstruction path.
+ *
+ * <p>{@link ObjectRewindLifecycle} reconstructs the normal actor graph and
+ * registers its captured identities, adopting constructor children and retrying
+ * entries that wait for parents. It then restores graph fields/references and
+ * runs settling hooks. Native player-bound effects can defer to the later player
+ * refresh hook: they receive the existing scalar-only handoff there, do not join
+ * the earlier restore table, and cannot be required reference targets of its
+ * field/settling pass. Missing optional refs stay absent; later completion does
+ * no automatic fixup. Implementors supply reconstruction, not normal field
+ * restoration or settling. {@link ObjectManager#rewindSnapshottable()} coordinates
+ * the surrounding world clocks, placement and contact owners.
  *
  * <p><strong>Contract for implementors:</strong>
  * <ul>
@@ -39,11 +50,14 @@ public interface RewindRecreatable {
      * {@link ObjectRewindDynamicCodecs#genericRecreate} when this class is identified
      * as the captured class.
      *
-     * <p>Object-reference fields are NOT set here — they are resolved by id post-recreate.
+     * <p>Object-reference fields for normally reconstructed actors are not set here;
+     * they resolve by id in the following field pass. Deferred native player effects
+     * follow the separate scalar-only refresh contract above.
      *
      * @param ctx restore-time context carrying the captured {@link ObjectSpawn},
      *            the compact scalar state blob, and {@link ObjectServices}
-     * @return the recreated instance (may be {@code this} or a new instance)
+     * @return the recreated instance, or {@code null} for an unsupported entry or
+     *         an effect deferred under its owning native refresh policy
      */
     AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx);
 }

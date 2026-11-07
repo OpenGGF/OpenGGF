@@ -284,14 +284,10 @@ public class Sonic1GlassBlockObjectInstance extends AbstractObjectInstance
     @Override
     public void onUnload() {
         setDestroyed(true);
-        // ROM parity: In the ROM, the reflection (child object) has its own
-        // out_of_range check which fires during ExecuteObjects (before ObjPosLoad).
-        // Since the reflection shares the parent's X position, both go out of
-        // range on the same frame. The engine unloads the parent during the
-        // placement phase (syncActiveSpawnsUnload), but the reflection is a
-        // dynamic object that only self-destructs during the exec loop. By
-        // marking it destroyed here, the pre-load cleanup pass can free its
-        // slot immediately, matching the ROM's slot availability at FindFreeObj time.
+        // Parent and reflection have separate native out_of_range checks during
+        // ExecuteObjects, before ObjPosLoad. Their shared X makes both expire in
+        // the same frame. Retire the owned child at parent unload too, so the
+        // manager's pre-load cleanup frees its slot before new allocations.
         if (reflectionChild != null && !reflectionChild.isDestroyed()) {
             reflectionChild.setDestroyed(true);
         }

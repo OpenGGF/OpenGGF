@@ -1111,11 +1111,10 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * @return true if the coordinate is within range (should NOT be deleted)
      */
     protected boolean isInRangeAt(int objectX) {
-        int objAligned = objectX & 0xFF80;
-        int screenAligned = (cameraBounds.left() - 128) & 0xFF80;
-        // ROM does a 16-bit sub.w followed by unsigned bhi, so preserve wrap semantics.
-        int dist = (objAligned - screenAligned) & 0xFFFF;
-        return dist <= (128 + viewportWidth() + 192) || stageplayVisible(objectX, getY(), 128, 128);
+        int cameraX = cameraBounds.left();
+        int bound = ObjectRangeOps.viewportOutOfRangeBound(viewportWidth());
+        return !ObjectRangeOps.outOfRangeX(objectX, cameraX, bound)
+                || stageplayVisible(objectX, getY(), 128, 128);
     }
 
     /**

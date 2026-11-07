@@ -21,16 +21,17 @@ import java.util.logging.Logger;
  * these helpers with their concrete object classes.
  *
  * <p>The static {@link #genericRecreate(ObjectManagerSnapshot.DynamicObjectEntry, DynamicObjectRecreateContext)}
- * method is the Phase-2 uniform recreate entry point (Task 4). It supersedes per-object
- * restore hooks for classes that either:
+ * method reconstructs one actor for {@link ObjectRewindLifecycle}. It supports
+ * classes that either:
  * <ul>
  *   <li>Can be reconstructed from the captured {@link ObjectSpawn} via
  *       {@link ObjectRegistry#create(ObjectSpawn)} (registry path), or</li>
  *   <li>Implement {@link RewindRecreatable} and supply their own creation hook
  *       ({@link RewindRecreatable} path).</li>
  * </ul>
- * Construction-spawned children continue to use the adoption keystone; they are never
- * passed to {@code genericRecreate}.
+ * The lifecycle adopts matching construction children before using this fallback.
+ * Captured fields and references are restored only after reconstruction publishes
+ * all identities.
  */
 public final class ObjectRewindDynamicCodecs {
     private static final Logger LOG = Logger.getLogger(ObjectRewindDynamicCodecs.class.getName());
@@ -106,7 +107,7 @@ public final class ObjectRewindDynamicCodecs {
     }
 
     /**
-     * Generic recreate entry point for Phase-2 rewind (Task 4).
+     * Reconstructs one dynamic actor after construction-child adoption has failed.
      *
      * <p>Decision tree:
      * <ol>
@@ -120,8 +121,8 @@ public final class ObjectRewindDynamicCodecs {
      * </ol>
      *
      * <p><strong>Adoption safety:</strong> this method is called only AFTER
-     * {@code ObjectManager.adoptRewindReconstructionChild} returns {@code null}, so it will
-     * never be invoked for a class that the adoption keystone already handled. No additional
+     * {@code ObjectRewindLifecycle.adoptRewindReconstructionChild} returns {@code null}, so it will
+     * never be invoked for an entry already handled by child adoption. No additional
      * deduplication is needed here.
      *
      * @param entry the captured dynamic-object entry from the snapshot
