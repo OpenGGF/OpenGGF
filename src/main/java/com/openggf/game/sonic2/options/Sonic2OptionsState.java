@@ -21,6 +21,8 @@ public final class Sonic2OptionsState {
     public int playerOption() { return playerOption; }
     /** Zero selects all items; one selects teleport monitors only. */
     public int twoPlayerItems() { return twoPlayerItems; }
+    /** Obj2E_Init (s2.asm:25757-25773) treats any nonzero Two_player_items as teleport-only. */
+    public boolean teleportOnlyMonitors() { return twoPlayerItems != 0; }
     public int soundTestValue() { return soundTestValue; }
 
     public GameplayLaunchTeam launchTeam() {

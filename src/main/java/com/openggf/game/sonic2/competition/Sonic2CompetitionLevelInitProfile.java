@@ -27,6 +27,10 @@ public final class Sonic2CompetitionLevelInitProfile extends AbstractLevelInitPr
         }));
         for (var core : buildCoreSteps(context)) {
             switch (core.name()) {
+                case "InitAudio" -> steps.add(ioStep("InitCompetitionAudio", "Level_GetBgm / MusicList2", () -> {
+                    host.context().getLevelManager().configureAudio();
+                    host.session().playLevelMusic(context.getRom(), context.getZone(), com.openggf.game.GameServices.audio());
+                }));
                 case "InitGameModule" -> {
                     steps.add(core);
                     steps.add(ioStep("QueueInitialCompetitionPlcs", "Level / Level_TtlCard: native initial PLCs",
