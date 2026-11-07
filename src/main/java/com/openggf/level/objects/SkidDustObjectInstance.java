@@ -171,6 +171,14 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
         }
     }
 
+    // Obj08_Display (s2.asm:42797-42801) displays the stored mapping_frame after AnimateSprite.
+    // Obj08_SkidDust (s2.asm:42843-42854) copies mappings/art/parent to the actual allocated child.
+    // Observe that frame and parent only; never run the ordinary draw-time DPLC preload here.
+    final ObjectDrawInternalAccess.SkidDustDisplayPose nativeDisplayPose() {
+        int frame=frameIndex>=0 && frameIndex<SKID_FRAMES.length ? SKID_FRAMES[frameIndex] : -1;
+        return new ObjectDrawInternalAccess.SkidDustDisplayPose(frame,ownerCode);
+    }
+
     private PlayerSpriteRenderer resolveRenderer() {
         if (renderer == null) {
             renderer = ownerDustRenderer(tryServices(), ownerCode);

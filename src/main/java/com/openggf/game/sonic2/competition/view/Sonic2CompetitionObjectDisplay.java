@@ -66,6 +66,8 @@ public final class Sonic2CompetitionObjectDisplay {
     private static java.util.List<Sonic2NativeDisplaySource.DisplaySlot> projectNativeRole(
             com.openggf.level.objects.ObjectManager manager,AbstractObjectInstance owner,ObjectArtProvider art,Runnable draw) {
         if (owner instanceof Sonic2NativeDisplaySource) return projectAll(owner,art,draw);
+        if (owner instanceof com.openggf.level.objects.InvincibilityStarsObjectInstance stars)
+            return projectStars(manager,stars);
         if (!(owner instanceof com.openggf.level.objects.ShieldObjectInstance shield)) return projectAll(owner,art,draw);
         // LevelOnly_Object_RAM / Sonic_Shield / Tails_Shield (s2.constants.asm:1149-1165):
         // six fixed owners follow Tails_Tails at slot128. Consume the allocator's real owner, never invent a slot.
@@ -84,7 +86,55 @@ public final class Sonic2CompetitionObjectDisplay {
         projected=new ObjectSlot(projected.id(),flags,projected.x(),projected.y(),projected.width(),projected.yRadius(),
                 projected.mapping(),projected.artTile(),null);
         return java.util.List.of(new Sonic2NativeDisplaySource.DisplaySlot(owner.getSlotIndex(),
-                Sonic2CompetitionSpriteArtTable.fixedRoleRows().getFirst().priorityBucket(),projected));
+                Sonic2CompetitionSpriteArtTable.fixedRole(0x38).priorityBucket(),projected));
+    }
+
+    private static java.util.List<Sonic2NativeDisplaySource.DisplaySlot> projectStars(
+            com.openggf.level.objects.ObjectManager manager,
+            com.openggf.level.objects.InvincibilityStarsObjectInstance stars) {
+        // Sonic_InvincibilityStars / Tails_InvincibilityStars (s2.constants.asm:1166-1175)
+        // reserve four consecutive SSTs each. Obj35_Main (s2.asm:42466-42490) fills
+        // those exact groups, including the three slots represented by this aggregate owner.
+        int base=stars.getSlotIndex();
+        var roster=com.openggf.game.competition.NativeCompetitionRoster.from(manager.getObjectServices().worldSession());
+        int human=base==0x88 ? 0 : base==0x8C ? 1 : -1;
+        if(human<0 || roster==null || stars.boundPlayer()!=roster.player(human)
+                || com.openggf.level.objects.NativeSstSlotAccess.currentOwner(manager,base)!=stars)
+            throw unsupported(stars,0x35);
+        for(int layer=1;layer<4;layer++)
+            if(com.openggf.level.objects.NativeSstSlotAccess.currentOwner(manager,base+layer)!=null)
+                throw new IllegalStateException("Occupied fixed Obj35 child slot "+(base+layer));
+        var pose=com.openggf.level.objects.ObjectDrawInternalAccess.invincibilityStarsDisplayPose(stars);
+        if(pose.length==0 || stars.isDestroyed()) return java.util.List.of();
+        if(pose.length!=16) throw new IllegalStateException("Incomplete Obj35 display pose");
+        final com.openggf.data.RomByteReader rom;
+        try { rom=manager.getObjectServices().romReader(); }
+        catch(java.io.IOException failure) { throw new java.io.UncheckedIOException(failure); }
+        var row=Sonic2CompetitionSpriteArtTable.fixedRole(0x35);var entry=row.display();
+        int artTile=Sonic2CompetitionSpriteArtTable.adjust2PArtPointer(entry.artTile1P());
+        var result=new java.util.ArrayList<Sonic2NativeDisplaySource.DisplaySlot>();
+        for(int layer=0;layer<4;layer++) {
+            int x=pose[layer*4]&0xFFFF,y=pose[layer*4+1]&0xFFFF;
+            int angle=pose[layer*4+2],cursor=pose[layer*4+3];
+            // Obj35_Layers (s2.asm:42452-42463), Obj35_Layer0Frames (s2.asm:42665-42666).
+            int descriptor=0x1D992+(layer-1)*6;
+            int frames=layer==0 ? 0x1DB82 : rom.readU32BE(descriptor);
+            int primary=rom.readU8(frames+cursor);
+            int secondary=layer==0 ? primary : rom.readU8(frames+cursor+rom.readU8(descriptor+5));
+            var children=new java.util.ArrayList<Sonic2CompetitionDisplayInputs.Child>();
+            for(int child=0;child<2;child++) {
+                // Obj35_GetSpriteParams (s2.asm:42618-42626), Obj35_PositionOffsetTable (s2.asm:42628-42663).
+                int offset=0x1DB42+((angle+child*32)&0x3E);
+                children.add(new Sonic2CompetitionDisplayInputs.Child(
+                        (x+(byte)rom.readU8(offset))&0xFFFF,(y+(byte)rom.readU8(offset+1))&0xFFFF,
+                        child==0 ? secondary : primary));
+            }
+            var multi=new Sonic2CompetitionDisplayInputs.MultiSprite(0,entry.widthPixels(),0,children);
+            var slot=new ObjectSlot(0x35,entry.renderFlagsInit(),x,y,entry.widthPixels(),0,
+                    new Mapping(entry.mappingsAddress(),0),artTile,multi);
+            result.add(new Sonic2NativeDisplaySource.DisplaySlot(base+layer,row.priorityBucket(),slot));
+        }
+        return java.util.List.copyOf(result);
     }
 
     public static java.util.List<Sonic2NativeDisplaySource.DisplaySlot> projectAll(
@@ -109,7 +159,7 @@ public final class Sonic2CompetitionObjectDisplay {
                 || !(capture.calls().getFirst() instanceof SpriteFrameCaptureInternalAccess.FrameCall call))
             throw unsupported(owner, id);
         int nativeFrame=call.frameIndex();
-        var entry = id==0x38 ? Sonic2CompetitionSpriteArtTable.fixedRoleRows().getFirst().display()
+        var entry = id==0x38 ? Sonic2CompetitionSpriteArtTable.fixedRole(0x38).display()
                 : Sonic2CompetitionSpriteArtTable.entry(id);
         // AnimalObjectInstance's combined sheet indexes (mappingSet*2+artVariant)*3+frame;
         // Obj28_Properties (s2.asm:24504-24524).

@@ -35,6 +35,21 @@ public final class ObjectDrawInternalAccess {
         java.util.Objects.requireNonNull(owner);
         if(nativeDisplayOwned(owner,owner.tryServices())) owner.captureNativeDisplayVisibility(onScreen);
     }
+    /** Completed star display inputs, read without advancing their owner. */
+    public static int[] invincibilityStarsDisplayPose(InvincibilityStarsObjectInstance owner) {
+        Class<?> caller=com.openggf.util.EngineCallerAccess.callerOutside(ObjectDrawInternalAccess.class);
+        if(caller.getClassLoader()!=ObjectDrawInternalAccess.class.getClassLoader())
+            throw new SecurityException("Native display publication belongs to the engine renderer");
+        return java.util.Objects.requireNonNull(owner).nativeDisplayPose();
+    }
+    public record SkidDustDisplayPose(int frame,String parentCode) { }
+    /** Actual detached dust frame and parent identity, without invoking its renderer. */
+    public static SkidDustDisplayPose skidDustDisplayPose(SkidDustObjectInstance owner) {
+        Class<?> caller=com.openggf.util.EngineCallerAccess.callerOutside(ObjectDrawInternalAccess.class);
+        if(caller.getClassLoader()!=ObjectDrawInternalAccess.class.getClassLoader())
+            throw new SecurityException("Native display observation belongs to the engine renderer");
+        return java.util.Objects.requireNonNull(owner).nativeDisplayPose();
+    }
     public static void drawBucket(ObjectManager manager, int bucket, GraphicsManager graphics,
                                   List<SpriteSlotEmission> external) {
         Class<?> caller = com.openggf.util.EngineCallerAccess.callerOutside(ObjectDrawInternalAccess.class);
