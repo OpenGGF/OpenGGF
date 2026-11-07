@@ -5,7 +5,7 @@ import com.openggf.game.rewind.snapshot.CameraSnapshot;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.sonic2.competition.Sonic2CompetitionSession;
 import com.openggf.game.sonic2.competition.Sonic2NativeCompetitionHost;
-import com.openggf.game.sonic2.competition.interlace.Sonic2InterlaceVramService;
+import com.openggf.game.sonic2.competition.view.Sonic2CompetitionArtResidency;
 import com.openggf.game.sonic2.competition.lifecycle.Sonic2CompetitionCheckpoints;
 import com.openggf.game.sonic2.competition.lifecycle.Sonic2CompetitionLifecycle;
 import com.openggf.game.sonic2.bumpers.Sonic2NativeCNZBumpers;
@@ -77,7 +77,7 @@ public final class Sonic2CompetitionNativeState implements Sonic2NativeCompetiti
         objectFields.forEach(Runnable::run);
         // swap_players (s2.asm:26033-26041,26098-26147): art stays with identity, priority travels.
         p1.publishRunAsPreviousAnimation(); p2.publishRunAsPreviousAnimation();
-        Objects.requireNonNull(module.getGameService(Sonic2InterlaceVramService.class)).invalidatePlayerDplcs();
+        Objects.requireNonNull(module.getGameService(Sonic2CompetitionArtResidency.class)).invalidatePlayerDplcs();
         if (!p1.getRolling()) p1.applyCustomRadii(9, 0x13);
         if (!p2.getRolling()) p2.applyCustomRadii(9, 0x0F);
         ObjectManagerInternalAccess.repairNativeTeleportStanding(objects, p1, p2);
