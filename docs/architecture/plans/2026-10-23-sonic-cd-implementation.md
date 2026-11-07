@@ -1,5 +1,25 @@
 # Implement Sonic CD with complete regional parity
 
+## 7 November 2026 — preserve nested discovery in mixed method requests
+
+Surefire3.2.5 installs a global MethodSource filter whenever any literal method
+selector is present. Whole-root patterns then miss nested binary class names.
+The focused runner now adds only explicitly declared descendants of whole roots
+in that mixed opt-in case. Method-selected roots retain their exact literals;
+flat and methodless requests keep their existing selector bytes. Evidence
+topology, count, owner, identity, freshness and source checks are unchanged.
+
+Installed verification passes411 integration and41 diagnostics Python cases,
+all without skips, including11 new selector controls. Meaningful synthetic RED
+is6 failures before the change. The original real seven-root/two-method request
+then executes all62 cases with no failures/errors/skips on unchanged source.
+Its original R70 receipt remains INCOMPLETE because its per-suite declaration
+incorrectly reused methodless aggregation: mixed mode reports R31 outer1/child10
+and system outer5/child8. An explicit nine-report read-only reconciliation checks
+these source-derived counts, all62 unique actual identities, the exact Catalogue
+two, report intervals, hashes, Java25 and requested environment against the same
+completed invocation. No Maven rerun or retained-verdict rewrite is claimed.
+
 ## 7 November 2026 — original R31 music selection
 
 The finite programme wrapper authenticates the actual R31A58-byte consumer and

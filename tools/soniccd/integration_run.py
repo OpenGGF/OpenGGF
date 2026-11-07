@@ -414,8 +414,15 @@ def run_handoff(root, spec_path, *, lane='normal', execute=False, compact_output
     methods = tests.get('methods', {})
     nested = {} if 'report_groups' not in tests else dict(report_groups=tests['report_groups'])
     inventory = packet.report_inventory(tests['classes'], tests['report_groups']) if nested else None
-    selectors = [name + ('#' + '+'.join(sorted(methods[name])) if name in methods else '')
-                 for name in tests['classes']]
+    selectors = []
+    for name in tests['classes']:
+        selectors.append(name + ('#' + '+'.join(sorted(methods[name])) if name in methods else ''))
+        if methods and nested and name not in methods:
+            # Surefire 3.2.5 applies one global MethodSource class/method filter
+            # when any selector has '#'. An exact root does not match '$' children.
+            # Only whole-selected roots get their validated, explicitly declared
+            # binary report members. No discovery, globs or method-root widening.
+            selectors.extend(sorted(member for member in tests['report_groups'][name] if member != name))
     args = ['-Dmse=off','-Dtest='+','.join(selectors)]
     args.extend('-D'+key+'='+value for key,value in sorted(tests['properties'].items()))
     args += ['test','-B']

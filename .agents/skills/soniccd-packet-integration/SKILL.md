@@ -184,6 +184,20 @@ belong to roots; their `expected_cases` list is the complete literal actual-owne
 identity inventory across that root's declared reports. No method discovery or
 inherited invocation resolution is claimed.
 
+When the request combines literal `tests.methods` with explicit report groups,
+`run` adds only the declared binary descendants of whole-selected roots to its
+Maven selectors. Method-selected roots retain their exact literal method set.
+This is needed because Surefire applies its method filter globally: an exact
+outer-class pattern alone does not match a nested method's binary class name.
+Flat requests and requests without method selections retain their old selectors.
+
+Pin each physical suite's count for the exact selection mode. Surefire can put
+outer cases in the descendant report with an empty parent in a methodless run,
+then report those outer cases separately under mixed method selection. The root
+aggregate and actual case identities must remain exact in either mode. Establish
+the complete per-suite declaration from the source and independently checked
+request/report topology; do not copy another mode's per-suite aggregation.
+
 For read-only XML inspection/export, pass `junit --report-groups` naming one
 explicit JSON file containing just the `report_groups` object above, together
 with `--class` for every root. The Python `junit_summary`, `save_junit_evidence`
@@ -209,6 +223,9 @@ when later XML succeeds. `compare-junit` keeps its existing flat interface. The
 [synthetic controls](../../../tools/soniccd/test_integration_nested_reports.py)
 use temporary files and faked source/worktree/queue observations; they do not
 validate real Maven discovery, queue leases, source custody or any game behavior.
+The [mixed-selector controls](../../../tools/soniccd/test_integration_mixed_nested_selectors.py)
+also check exact declared descendants, unchanged literal method selections and
+terminal identity/source/rewrite rejection; they use the same simulated owners.
 
 ## Check explicit source selectors before a costly run
 
