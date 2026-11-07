@@ -1,5 +1,41 @@
 # Implement Sonic CD with complete regional parity
 
+## 7 November 2026 — R31 pure Main/Hurt and canonical profile qualification
+
+The distinct stepR31 entry now runs source-ordered normal Main/Hurt on complete
+explicit cuts. Main uses the existing MODE, original block helper and common
+powerup/history/animation/touch tail. Hurt stages block writes before binding air
+collision to the resulting current chunk image. Chunk aliases, finite plane
+requests, child images, scalar values and sound/music requests escape only after
+whole Body success; late throws leave every input unchanged. The isolated pool
+copy and exact current-terrain binding grant no World invocation authority.
+Legacy step overloads and the ordinary R31 Frame fence remain intact. Miniature,
+controlled warp, direct Kill and missing special/support owners stay explicit.
+
+R58/R2 stop during test compilation: one new helper omitted IOException, and
+the temporary observer called Environment.gates instead of movement().gates.
+Only those test declarations/diagnostics are corrected. No JUnit result is
+inferred from either attempt. Independent bounded Body review found no P1/P2.
+R58R3 discovers1214 cases on unchanged source: all1213 qualification cases pass,
+including22 new Body/staging,815 legacy Frame and180 save/source/shared cases;
+the one temporary controller case intentionally fails its26000 bound. There
+are no errors or skips. This is not an all-green1214 selection or a World claim.
+The temporary eighth controller case is retired byte-exact before this save.
+
+Source-join research also corrected two internal save integration assumptions.
+Storage and provider use canonical GameId.SCD.code(), preserving the native
+profile schema and leaving alternate namespaces untouched. Initialization's
+local RDSAVE/WRSAVE commands are distinct from later IPX read/progress routines;
+the pending descriptors now name those actual local commands without claiming
+backend choice or completion. A new TempDir namespace/nonfallback case passes.
+The historical running route still has unknown title/unlock/policy; these
+components do not establish its missing history.
+
+The fixed capsule approach now acquires native roll, but the observed trajectory
+crosses below the Capsule hit window. All26000 calls return; no physics change,
+Capsule activation or act completion is inferred. A short fixed jump from that
+same run-up is the next controller experiment. Broad smoke remains incomplete.
+
 ## 7 November 2026 — internal selected-slot save bootstrap
 
 An internal CD profile codec/bootstrap now uses the existing SaveManager writer

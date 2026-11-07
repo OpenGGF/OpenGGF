@@ -318,8 +318,10 @@ matching area heading; see the
   detach through the same CUE, preserving the saved bank and spawner algorithms;
   common Sonic data keeps the absent PPZ ramp explicit. An authenticated R31
   Frame entry now runs genuine normal/shrunk Init with native raw zone gates;
-  normal MODE uses real CCZ terrain while ordinary Body Main/Hurt stay gated
-  pending their actual owners. Complete R31 PLC/section/residency components and
+  normal MODE uses real CCZ terrain. A distinct pure normal Main/Hurt entry stages
+  original block, child, scalar and sound work privately, including Hurt collision
+  against the resulting chunk image; ordinary Frame/World admission stays gated.
+  Complete R31 PLC/section/residency components and
   exact-source raw2C touch/response views retain their native distinctions without
   granting World admission. Existing PPZ movement algorithms remain unchanged.
   A finite IPX progress
@@ -329,10 +331,11 @@ matching area heading; see the
   Original initial-save sources retain complete data and shorter native copy
   extents. An internal selected-slot codec/bootstrap distinguishes genuine absence
   from corrupt, quarantined or unknown history and uses the existing save writer
-  for exclusive fresh publication. Historical values, unknown native tails,
+  for exclusive fresh publication in the canonical CD namespace. Historical values, unknown native tails,
   conflicts and cleanup/completion failures stay distinct; published SaveManager
   signatures and legacy behavior remain unchanged. Frontend/Module save binding
-  and native progress completion remain separate. Data custody
+  and native progress completion remain separate; initialization-local buffer
+  commands are distinguished from later IPX progress calls. Data custody
   grants no next-zone gameplay. Natural Capsule/Results completion, full acts and
   regional parity remain separate.
   CD player headless boot loads the fixed

@@ -88,7 +88,7 @@ public class TestSaveProfileAccess {
     /** Test-only fault control: publication/lookup stay real; only the later cleanup throws. */
     public static SaveManager withCleanupFailure(Path root,IOException original){return new SaveManager(root,TestSaveProfileAccess::actualRead,path->{throw original;});}
     /** Test-only actual filesystem race after the owning missing read, before exclusive creation. */
-    public static SaveManager withParentFailureAfterMissing(Path root){int[] reads={0};return new SaveManager(root,path->{try{return actualRead(path);}catch(NoSuchFileException missing){if(++reads[0]==2)Files.writeString(root.resolve("soniccd"),"parent obstacle");throw missing;}});}
+    public static SaveManager withParentFailureAfterMissing(Path root){int[] reads={0};return new SaveManager(root,path->{try{return actualRead(path);}catch(NoSuchFileException missing){if(++reads[0]==2)Files.writeString(path.getParent(),"parent obstacle");throw missing;}});}
     public static SaveManager withOneReadError(Path root,AssertionError original){int[] calls={0};return new SaveManager(root,path->{if(calls[0]++==0)throw original;return actualRead(path);});}
     public static SaveManager withReadAction(Path root,Runnable action){boolean[] first={true};return new SaveManager(root,path->{if(first[0]){first[0]=false;action.run();}return actualRead(path);});}
     private static Map<String,Object> actualRead(Path path)throws IOException {

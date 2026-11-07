@@ -25,11 +25,27 @@ public final class CdObjectPool {
         public List<CdObjectState> slots() { return slots; }
     }
 
-    private final Object owner = new Object();
+    private final Object owner;
     private final CdObjectState[] slots = new CdObjectState[DYNAMIC_COUNT];
 
     /** Explicit fresh zeroed dynamic RAM; finding a free slot never clears it again. */
-    public CdObjectPool() { clearDynamicSlots(); }
+    public CdObjectPool() { owner = new Object(); clearDynamicSlots(); }
+
+    // BEGIN pure same-owner component staging 20261107.
+    /**
+     * Isolated mutable working DATA over the complete immutable96 images. No clear, reservation or
+     * original pool reference escapes the snapshot. Writes/clear/restore/capture affect only this copy.
+     * Like overlay, same-owner values are NOT World/invocation/capture/restore authority; an actual
+     * external owner must still validate its complete live cut before an explicit adoption.
+     */
+    public static CdObjectPool stagingCopy(Snapshot source) {
+        return new CdObjectPool(Objects.requireNonNull(source, "complete source pool snapshot"));
+    }
+    private CdObjectPool(Snapshot source) {
+        owner = source.owner;
+        for (int n = 0; n < DYNAMIC_COUNT; n++) slots[n] = source.slots.get(n);
+    }
+    // END pure same-owner component staging.
 
     public CdObjectState state(int wholeIndex) { return slots[dynamicIndex(wholeIndex)]; }
 

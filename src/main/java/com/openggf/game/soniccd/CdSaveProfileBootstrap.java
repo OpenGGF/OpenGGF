@@ -14,8 +14,8 @@ final class CdSaveProfileBootstrap {
     enum Disposition { EXISTING_VALID, CREATED, CREATED_CLEANUP_FAILED, STORAGE_COMPLETION_UNKNOWN, HOST_STORAGE_FAILURE, CORRUPT, QUARANTINED_HISTORY, UNKNOWN_HISTORY, CREATION_RECHECK_FAILED, HASH_WARNING, UNAVAILABLE, READ_ERROR,
                        INVALID_PROFILE, CREATE_CONFLICT, CREATION_REJECTED, WRITE_FAILED, TEMPORARY_OWNER_UNAVAILABLE }
     enum Origin { EXISTING, CREATED }
-    enum NextNativeOperation { READ_SAVE_DATA_REQUIRES_ACTUAL_CALLER, WRITE_SAVE_DATA_REQUIRES_ACTUAL_PROGRESS,
-                               WRITE_TEMPORARY_REQUIRES_ACTUAL_PROGRESS, HOST_TEMPORARY_CLEANUP, NONE }
+    enum NextNativeOperation { INITIALIZATION_RDSAVE, INITIALIZATION_WRSAVE,
+                               INITIALIZATION_WRSAVE_AFTER_STORAGE_FAILURE, HOST_TEMPORARY_CLEANUP, NONE }
     static final class Receipt {
         private final CdSaveProfileBootstrap owner;private final int slot;private final CdSaveProfile profile;private final Origin origin;
         private Receipt(CdSaveProfileBootstrap owner,int slot,CdSaveProfile profile,Origin origin){this.owner=owner;this.slot=slot;this.profile=profile;this.origin=origin;}
@@ -37,6 +37,7 @@ final class CdSaveProfileBootstrap {
         Optional<Boolean> persistentPublication(){return disposition==Disposition.STORAGE_COMPLETION_UNKNOWN?Optional.empty():Optional.of(persistentPublished);}
         OptionalInt nativeSaveDisabledAfterStorage(){return policy;}NextNativeOperation nextNativeOperation(){return next;}
     }
+    private static final String GAME_CODE=com.openggf.game.GameId.SCD.code();
     private final SaveManager manager;private final CdInitialSaveAssets source;
     private final AtomicBoolean running=new AtomicBoolean();private volatile Receipt current;
     private CdSaveProfileBootstrap(SaveManager manager,CdInitialSaveAssets source){this.manager=Objects.requireNonNull(manager);this.source=Objects.requireNonNull(source);Objects.requireNonNull(source.identity());}
@@ -47,15 +48,15 @@ final class CdSaveProfileBootstrap {
         if(!running.compareAndSet(false,true))throw new IllegalStateException("Profile bootstrap already active");
         try {
             current=null;
-            var observed=SaveProfileAccess.lookup(manager,"soniccd",slot);
+            var observed=SaveProfileAccess.lookup(manager,GAME_CODE,slot);
             switch(observed.disposition()){
                 case VALID -> {
                     final CdSaveProfile profile;
                     try {profile=CdSaveProfile.decode(source,observed.payload());}
                     catch(IllegalArgumentException invalid){return failure(Disposition.INVALID_PROFILE,null,invalid,null,OptionalInt.empty(),NextNativeOperation.NONE);}
                     var receipt=new Receipt(this,slot,profile,Origin.EXISTING);
-                    // Found read succeeded: native86 writes0; this does not restore the payload's historical policy.
-                    var result=new Result(Disposition.EXISTING_VALID,receipt,null,null,null,OptionalInt.of(0),NextNativeOperation.READ_SAVE_DATA_REQUIRES_ACTUAL_CALLER);
+                    // Initialization/Main.asm86: policy0, then LOCAL RDSAVE (Main CPU Functions.asm522), not IPX ReadSaveData.
+                    var result=new Result(Disposition.EXISTING_VALID,receipt,null,null,null,OptionalInt.of(0),NextNativeOperation.INITIALIZATION_RDSAVE);
                     current=receipt;return result;
                 }
                 case MISSING -> {
@@ -64,8 +65,8 @@ final class CdSaveProfileBootstrap {
                     var creation=SaveProfileAccess.createIfMissing(observed,prepared.encode());
                     if(creation.disposition()==SaveProfileAccess.CreateDisposition.CREATED){
                         var receipt=new Receipt(this,slot,prepared,Origin.CREATED);
-                        // Source100-102: successful write precedes saveDisabled0 and the still-unowned WriteSaveData.
-                        var result=new Result(Disposition.CREATED,receipt,prepared,null,null,OptionalInt.of(0),NextNativeOperation.WRITE_SAVE_DATA_REQUIRES_ACTUAL_PROGRESS,null,true);
+                        // Initialization/Main.asm100-102: policy0, then LOCAL WRSAVE (Main CPU Functions.asm545), not IPX progress stores.
+                        var result=new Result(Disposition.CREATED,receipt,prepared,null,null,OptionalInt.of(0),NextNativeOperation.INITIALIZATION_WRSAVE,null,true);
                         current=receipt;return result;
                     }
                     if(creation.disposition()==SaveProfileAccess.CreateDisposition.COMPLETION_UNKNOWN)
@@ -86,8 +87,8 @@ final class CdSaveProfileBootstrap {
                         return failure(Disposition.CREATION_REJECTED,prepared,creation.failure().orElse(null),null,OptionalInt.empty(),NextNativeOperation.NONE);
                     if(!(creation.failure().orElse(null) instanceof java.io.IOException))
                         return new Result(Disposition.HOST_STORAGE_FAILURE,null,prepared,creation.failure().orElse(null),null,OptionalInt.empty(),NextNativeOperation.NONE,creation.cleanupFailure().orElse(null),false);
-                    // Failed creation is not a created disk profile. Native95's policy1 does not finish temporary save.
-                    return new Result(Disposition.WRITE_FAILED,null,prepared,creation.failure().orElse(null),null,OptionalInt.of(1),NextNativeOperation.WRITE_TEMPORARY_REQUIRES_ACTUAL_PROGRESS,creation.cleanupFailure().orElse(null),false);
+                    // Native95 policy1 does not complete local WRSAVE or establish the later Sub backend choice.
+                    return new Result(Disposition.WRITE_FAILED,null,prepared,creation.failure().orElse(null),null,OptionalInt.of(1),NextNativeOperation.INITIALIZATION_WRSAVE_AFTER_STORAGE_FAILURE,creation.cleanupFailure().orElse(null),false);
                 }
                 case CORRUPT -> {return failure(Disposition.CORRUPT,null,observed.failure().orElse(null),observed.quarantineFailure().orElse(null),OptionalInt.empty(),NextNativeOperation.NONE);}
                 case QUARANTINED_HISTORY -> {return failure(Disposition.QUARANTINED_HISTORY,null,observed.failure().orElse(null),null,OptionalInt.empty(),NextNativeOperation.NONE);}
@@ -117,7 +118,7 @@ final class CdSaveProfileBootstrap {
                 if(receipt.owner!=CdSaveProfileBootstrap.this||receipt!=current)
                     throw new IllegalArgumentException("Not this service's current original storage receipt");
                 Objects.requireNonNull(reason);Objects.requireNonNull(context);
-                if(!"soniccd".equals(context.gameCode())||context.activeSlot().isEmpty()||context.activeSlot().getAsInt()!=receipt.slot)
+                if(!GAME_CODE.equals(context.gameCode())||context.activeSlot().isEmpty()||context.activeSlot().getAsInt()!=receipt.slot)
                     throw new IllegalArgumentException("Snapshot context differs from actual selected CD profile");
                 if(reason!=SaveReason.NEW_SLOT_START&&reason!=SaveReason.EXISTING_SLOT_LOAD)
                     throw new UnsupportedOperationException("Native live progress save producer is not owned by profile bootstrap");

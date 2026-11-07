@@ -6,6 +6,9 @@ import com.openggf.game.soniccd.level.CdR11aAsset;
 import com.openggf.game.soniccd.level.CdR11aAssets;
 import com.openggf.game.soniccd.level.CdR11aPlayerAssets;
 import com.openggf.game.soniccd.level.CdStagePlayerSource;
+import com.openggf.game.soniccd.level.CdStageTerrain;
+import com.openggf.game.soniccd.level.CdTerrainCollision;
+import com.openggf.game.soniccd.level.CdR31aAssets;
 import com.openggf.game.soniccd.level.CdSonicVisualAssets;
 import com.openggf.game.soniccd.objects.CdLevelGlobals;
 import com.openggf.game.soniccd.objects.CdObjectPool;
@@ -228,7 +231,8 @@ public final class CdPlayerBody {
         CHARGE_BEFORE_DISPATCH, INIT, EXTENDED_CAMERA, WATERFALL_SPLASH_CHECK, MODE,
         PP_SPECIAL_COLLISION, DISPLAY, RECORD_POSITION, PP_WATER, ANIMATE, SPECIAL_CHUNKS,
         OBJ_MOVE, HURT_CHECK_LAND, LEVEL_COLLISION_IN_AIR, KILL_PLAYER, LEVEL_BOUND, DRAW_OBJECT,
-        DEAD_CHECK_GONE, FIND_OBJ_SLOT, OBJ_MOVE_GRAVITY, STOP_Z80, START_Z80, TIME_WARP
+        DEAD_CHECK_GONE, FIND_OBJ_SLOT, OBJ_MOVE_GRAVITY, STOP_Z80, START_Z80, TIME_WARP,
+        R3_SPECIAL_BLOCK_COLLISION, R3_WATER_RETURN, R3_SPECIAL_CHUNKS_RETURN
     }
     /** CENTRE_*_LONG values are ObjMove's complete 16.16 longs; velocity values are signed words. */
     public enum ActorField {
@@ -262,7 +266,8 @@ public final class CdPlayerBody {
             CallReturned, DisplayEligibility, PositionHistoryWrite, AnimationPublication,
             ObjectTouchResult, ObjectTouchResponse, ObjectBossTouchResponse, TouchScanCompleted, SoundRequest,
             AirCollisionEffect, KillPlayerCall, LevelWrite, DeadCheckGone, UncheckedAliasWrite,
-            Z80RamWrite, ResetSavedObjectFlagsRequest, RestartCut, TimeWarpCall { }
+            Z80RamWrite, ResetSavedObjectFlagsRequest, RestartCut, TimeWarpCall,
+            R31Action, R31BlockCall, R31AirCollisionImage { }
     public record ActorWrite(ActorField field, int value) implements Effect {
         public ActorWrite { Objects.requireNonNull(field); }
     }
@@ -468,7 +473,8 @@ public final class CdPlayerBody {
         MINIATURE_INIT, MAPPING_BINDING, WATERFALL_SPLASH_CREATION, DEBUG_ENTRY, OBJECT_CONTROL,
         HISTORY_ADDRESS, TOUCH_SCAN, ROLL_TUNNEL_OWNER, STANDING_OBJECT_MOVE,
         TIME_WARP_TIMER_START, TIME_WARP_RESTART_WRITE, TIME_WARP_SPAWN_MODE, TIME_WARP_STAR_SLOT,
-        TIME_WARP_SLOW_RESET, TIME_WARP_STOP_RESET, LEVEL_MUSIC_GOOD_FUTURE, R3_CONTINUATION_OWNER
+        TIME_WARP_SLOW_RESET, TIME_WARP_STOP_RESET, LEVEL_MUSIC_GOOD_FUTURE, R3_CONTINUATION_OWNER,
+        R3_TIME_WARP_OWNER, R3_KILL_OWNER, R3_BLOCK_WORD_OWNER, R3_CHUNK_WRITE_OWNER, R3_MINIATURE_OWNER
     }
     /** No staged state or effects escape. */
     public static final class UnsupportedBody extends UnsupportedOperationException {
@@ -511,6 +517,9 @@ public final class CdPlayerBody {
     private final CdPlayerMovement movement;
     private final CdPlayerAnimation animator;
     private final int mappingAddress;
+    // BEGIN R31 component source relation only; no Frame/World invocation owner.
+    private final CdStagePlayerSource sourceBinding;
+    // END R31 component source relation.
 
     /** Production binding borrows the supplied products. Authentication remains the asset loader's responsibility. */
     public CdPlayerBody(CdR11aAssets assets) {
@@ -522,6 +531,7 @@ public final class CdPlayerBody {
         movement = new CdPlayerMovement(terrain, player); animator = new CdPlayerAnimation(player);
         layout = terrain.layout().ram(); variant = assets.profile().variant(); ordinaryPeriod = 1;
         ordinaryZoneAct = 0;
+        sourceBinding = null;
     }
 
     private CdPlayerBody(CdStagePlayerSource source, CdPlayerMovement movement) {
@@ -530,6 +540,7 @@ public final class CdPlayerBody {
         ordinaryZoneAct = player.sourceGraph() == CdR11aPlayerAssets.SourceGraph.R3
                 ? source.ordinaryZoneActWord() : source.stage().actNumber() - 1;
         this.movement = movement; animator = new CdPlayerAnimation(player);
+        sourceBinding = source;
     }
 
     /** Actual native act/period and immutable stage-data binding only; grants no Frame, invocation, load or touch-owner admission. */
@@ -628,6 +639,178 @@ public final class CdPlayerBody {
         }
         throw new AssertionError("Unsupported routine must throw");
     }
+
+    // BEGIN R31 SOURCE-ORDERED PURE BODY COMPONENT 20261107.
+    /** Complete explicit DATA cut. Layout/chunks are current caller-provided images, not a loading/default grant.
+     * Neither this record nor a same-owner snapshot conveys World/Frame/publication/invocation authority. */
+    public record R31Context(CdStagePlayerSource source, CdR31aAssets assets, CdStageTerrain currentTerrain,
+                             CdObjectPool.Snapshot snapshot, Optional<CdPlayerMovement.ObjectContext> objects,
+                             CdPlayerObjectTouch scanner, ResponseContext response, OptionalInt noBumperByte,
+                             OptionalInt bossStartedByte, OptionalInt goodFutureByte, int cameraXWord, int cameraYWord) {
+        public R31Context {
+            Objects.requireNonNull(source);Objects.requireNonNull(assets);Objects.requireNonNull(currentTerrain);Objects.requireNonNull(snapshot);
+            Objects.requireNonNull(objects);Objects.requireNonNull(scanner);Objects.requireNonNull(response);
+            r31OptionalByte(noBumperByte);r31OptionalByte(bossStartedByte);r31OptionalByte(goodFutureByte);wordValue(cameraXWord);wordValue(cameraYWord);
+        }
+    }
+    public record R31Values(CdStageTerrain terrain, CdObjectPool.Snapshot snapshot, OptionalInt noBumperByte,
+                            ContactGlobals contact, CdPlayerTouchResponse.WorldGlobals world) {
+        public R31Values{Objects.requireNonNull(terrain);Objects.requireNonNull(snapshot);r31OptionalByte(noBumperByte);Objects.requireNonNull(contact);Objects.requireNonNull(world);}
+    }
+    public record R31Result(Result body, R31Values nativeValues) {
+        public R31Result{Objects.requireNonNull(body);Objects.requireNonNull(nativeValues);}
+    }
+    /** Finite native semantic requests/observations. Values are not executable callbacks or completed live effects. */
+    public sealed interface R31Action extends Effect permits R31BlockStore, R31PlaceBlock, R31FmRequest, R31SubCpuRequest, R31MusicRequest { }
+    public record R31BlockStore(CdR31SpecialBlockCollision.Site site, CdR31SpecialBlockCollision.Field field,
+                                CdR31SpecialBlockCollision.Form form, OptionalInt expectedRaw, int operand, int resultRaw) implements R31Action {
+        public R31BlockStore{Objects.requireNonNull(site);Objects.requireNonNull(field);Objects.requireNonNull(form);Objects.requireNonNull(expectedRaw);}
+    }
+    /** Chunk word write precedes optional physical Plane A four-word request. Blank layout has no write. */
+    public record R31PlaceBlock(int xWord,int yWord,OptionalInt chunkByteOffset,OptionalInt previousWord,
+                                boolean onscreen,int planeColumn,int planeRow,Optional<CdAssetBytes> planeWords) implements R31Action {
+        public R31PlaceBlock{
+            wordValue(xWord);wordValue(yWord);Objects.requireNonNull(chunkByteOffset);Objects.requireNonNull(previousWord);Objects.requireNonNull(planeWords);
+            if(chunkByteOffset.isPresent()!=previousWord.isPresent()||onscreen!=planeWords.isPresent()
+                    ||planeColumn<0||planeColumn>62||(planeColumn&1)!=0||planeRow<0||planeRow>30||(planeRow&1)!=0)
+                throw new IllegalArgumentException("Finite native PlaceBlock result required");
+            chunkByteOffset.ifPresent(at->{if(at<0||at>0xD600-2||(at&1)!=0)throw new IllegalArgumentException("Complete R31 chunk WORD required");});
+            previousWord.ifPresent(CdPlayerBody::wordValue);planeWords.ifPresent(b->{if(b.length()!=8)throw new IllegalArgumentException("Actual four plane words required");});
+        }
+    }
+    public record R31FmRequest(int nativeId) implements R31Action { public R31FmRequest{if(nativeId!=0xB5&&nativeId!=0xBE)throw new IllegalArgumentException("Original R31 block FM only");} }
+    public record R31SubCpuRequest(int nativeId) implements R31Action { public R31SubCpuRequest{if(nativeId!=0x92)throw new IllegalArgumentException("Original R31 block SubCPU only");} }
+    /** Source-position PlayStageMusic request; the actual programme music owner still resolves/services it.
+     * R31 normal period1 never consumes a Future flag or PPZ row. No synthetic touch RestoreMusic. */
+    public record R31MusicRequest(int rawZoneActWord,int rawPeriodByte,int timeAttackByte) implements R31Action {
+        public R31MusicRequest{wordValue(rawZoneActWord);byteValue(rawPeriodByte);byteValue(timeAttackByte);if(rawZoneActWord!=0x100||rawPeriodByte!=1)throw new IllegalArgumentException("Original normal R31 music call cut required");}
+    }
+    public record R31BlockCall(CdR31SpecialBlockCollision.Site site,CdR31SpecialBlockCollision.Result result) implements Effect {
+        public R31BlockCall{Objects.requireNonNull(site);Objects.requireNonNull(result);}
+    }
+    /** Comparison-only actual collision image at HurtRecover, after earlier private chunk writes. */
+    public record R31AirCollisionImage(CdStageTerrain terrain,CdPlayerMotionState before,CdPlayerMovement.Environment environment,
+                                       CdPlayerMovement.AirCollisionResult result) implements Effect {
+        public R31AirCollisionImage{Objects.requireNonNull(terrain);Objects.requireNonNull(before);Objects.requireNonNull(environment);Objects.requireNonNull(result);}
+    }
+    /**
+     * Distinct normal R31 Main/Hurt component entry. Legacy step overloads KEEP their earlier R3 fence.
+     * All helper ports are private planning ports: no caller live callback is invoked. A thrown call
+     * exposes no Body result, staged pool/chunks/requests or helper prefix; original inputs stay intact.
+     */
+    public R31Result stepR31(State state,Environment environment,R31Context context) {
+        Objects.requireNonNull(state);Objects.requireNonNull(environment);Objects.requireNonNull(context);
+        if(sourceBinding==null||player.sourceGraph()!=CdR11aPlayerAssets.SourceGraph.R3||context.source()!=sourceBinding
+                ||!sourceBinding.ownsR31aAssets(context.assets())||!context.scanner().ownsR31aAssets(context.assets())
+                ||!context.response().response().ownsR31aAssets(context.assets()))throw new IllegalArgumentException("Exact authenticated R31 Body/source/helper relation required");
+        if(state.header().slotId()==0)return new R31Result(new Result(state,environment,List.of(),Optional.empty(),Boundary.SLOT_ABSENT,Optional.empty()),
+                new R31Values(context.currentTerrain(),context.snapshot(),context.noBumperByte(),context.response().contact(),context.response().world()));
+        if(state.header().slotId()!=1)unsupported(UnsupportedBoundary.SLOT_ID);
+        var gates=environment.movement().gates();if(gates.zoneAct()!=0x100||gates.timeZone()!=1)unsupported(UnsupportedBoundary.SOURCE_FAMILY);
+        if(gates.miniSonic()!=0)unsupported(UnsupportedBoundary.R3_MINIATURE_OWNER);
+        if(environment.globals().timeAttackMode()==0&&(environment.globals().debugMode()>>>8)!=0)unsupported(UnsupportedBoundary.DEBUG_UPDATE);
+        if(state.motion().routine()!=2&&state.motion().routine()!=4)unsupported(UnsupportedBoundary.R3_CONTINUATION_OWNER);
+        if(context.objects().isPresent()){
+            var support=context.objects().orElseThrow();
+            if(support.slots()!=context.snapshot()||support.standObject()!=state.objectLinks().standObject()
+                    ||support.playerSlotId()!=state.header().slotId()||support.playerWidth()!=state.header().width())
+                throw new IllegalArgumentException("Exact support/pool/header/stand-link projection required");
+        }
+        var c=new Cursor(state,environment);var plan=new R31Planning(context,c);c.r31Planning=plan;
+        c.applyCharge(CdPlayerCharge.beforeRoutineDispatch(c.chargeState()));c.returned(NativeCall.CHARGE_BEFORE_DISPATCH);
+        if(c.motion.routine()==2){r31Main(c,plan);return new R31Result(c.finish(Boundary.MAIN_RETURN),plan.values());}
+        r31Hurt(c,plan);return new R31Result(c.finish(Boundary.HURT_RETURN),plan.values());
+    }
+    private void r31Main(Cursor c,R31Planning plan) {
+        requireBoundMapping(c);extendedCamera(c);
+        // PlayerMakeSplash:161-163 returns on actual zone1, BEFORE chunk/odd-frame/creation work.
+        c.returned(NativeCall.WATERFALL_SPLASH_CHECK);
+        if(c.debugCheat!=0&&(c.controls.rawTap()&0x10)!=0)unsupported(UnsupportedBoundary.DEBUG_ENTRY);
+        if(c.controls.controlLocked()==0){c.controls=new Controls(c.controls.rawHeld(),c.controls.rawTap(),c.controls.rawHeld(),c.controls.rawTap(),c.controls.controlLocked());c.global(GlobalField.LOGICAL_HELD,c.controls.logicalHeld());c.global(GlobalField.LOGICAL_TAP,c.controls.logicalTap());}
+        if((c.motion.playerControl()&1)!=0)unsupported(UnsupportedBoundary.R3_TIME_WARP_OWNER);
+        var moved=plan.movement().step(c.motion,new CdPlayerMovement.Input(c.controls.logicalHeld(),c.controls.logicalTap()),c.env.movement(),plan.context.objects());
+        c.motion=moved.state();c.setMovementEnvironment(moved.environment());for(var effect:moved.effects()){c.effects.add(new ModeEffect(effect));if(effect instanceof CdPlayerMovement.ObjectPatch patch)plan.patch(patch.patch());}
+        if(moved.boundary()==CdPlayerMovement.Boundary.KILL_PLAYER)unsupported(UnsupportedBoundary.R3_KILL_OWNER);
+        if(moved.boundary()==CdPlayerMovement.Boundary.TIME_WARP)unsupported(UnsupportedBoundary.R3_TIME_WARP_OWNER);
+        c.modeBoundary=Optional.of(moved.boundary());c.returned(NativeCall.MODE);
+        plan.blocks(CdR31SpecialBlockCollision.Site.MAIN_AFTER_MODE);
+        display(c);recordPosition(c);
+        // PlayerCheckWater:430-435 returns on zone1; PlayerCheckChunk:2356-2364 also returns BEFORE map reads/stores.
+        c.returned(NativeCall.R3_WATER_RETURN);var g=c.env.movement().globals();c.copyAngles(g.primaryAngle(),g.secondaryAngle());
+        if(c.env.movement().gates().windTunnel()!=0&&c.motion.animation()==0)c.setAnimation(c.motion.previousAnimation());
+        animate(c);if((byte)c.motion.playerControl()>=0&&c.motion.animation()!=0x2B)plan.touch();
+        c.returned(NativeCall.R3_SPECIAL_CHUNKS_RETURN);
+    }
+    private void r31Hurt(Cursor c,R31Planning plan) {
+        requireBoundMapping(c);objMove(c,plan.context.objects());c.setYVelocity((short)(c.motion.yVelocity()+0x30));if((c.motion.flags()&0x40)!=0)c.setYVelocity((short)(c.motion.yVelocity()-0x20));
+        plan.blocks(CdR31SpecialBlockCollision.Site.HURT_BEFORE_RECOVERY);
+        if(uw(c.env.movement().bounds().bottom()+224)<c.y())unsupported(UnsupportedBoundary.R3_KILL_OWNER);
+        var before=c.motion;var env=c.env.movement();var collided=plan.movement().collideInAir(before,env);
+        c.effects.add(new R31AirCollisionImage(plan.current,before,env,collided));c.motion=collided.state();c.setMovementEnvironment(collided.environment());
+        for(var effect:collided.effects())c.effects.add(new AirCollisionEffect(effect));c.returned(NativeCall.LEVEL_COLLISION_IN_AIR);
+        if((c.motion.flags()&2)==0){c.stopMotion();c.setAnimation(0);c.setRoutine((c.motion.routine()-2)&255);c.hurt=120;c.actor(ActorField.HURT_TIMER,120);}
+        c.returned(NativeCall.HURT_CHECK_LAND);
+        var bounded=CdPlayerMovement.applyLevelBounds(c.motion,c.env.movement());c.motion=bounded.state();c.setMovementEnvironment(bounded.environment());if(bounded.killRequested())unsupported(UnsupportedBoundary.R3_KILL_OWNER);c.returned(NativeCall.LEVEL_BOUND);
+        recordPosition(c);animate(c);drawObject(c);
+    }
+    private final class R31Planning {
+        final R31Context context;final Cursor cursor;final CdObjectPool pool;
+        CdStageTerrain current;OptionalInt noBumper;ContactGlobals contact;CdPlayerTouchResponse.WorldGlobals world;
+        R31Planning(R31Context context,Cursor cursor){this.context=context;this.cursor=cursor;current=context.currentTerrain();
+            CdPlayerMovement.withR31CurrentTerrain(context.source(),current);pool=CdObjectPool.stagingCopy(context.snapshot());noBumper=context.noBumperByte();contact=context.response().contact();world=context.response().world();}
+        CdPlayerMovement movement(){return CdPlayerMovement.withR31CurrentTerrain(context.source(),current);}
+        R31Values values(){return new R31Values(current,pool.capture(),noBumper,contact,world);}
+        void patch(CdPlayerMovement.SlotPatch patch){if(!pool.state(patch.before().identity().wholeIndex()).equals(patch.before()))throw new IllegalArgumentException("Stale current MODE pool patch");pool.write(patch.after());}
+        void blocks(CdR31SpecialBlockCollision.Site site){
+            final CdR31SpecialBlockCollision[] original={null};
+            var helper=new CdR31SpecialBlockCollision(CdR31SpecialBlockCollision.Data.fromAssets(context.assets()),Optional.of(pool),new CdR31SpecialBlockCollision.Ports(){
+                @Override public int readBlock(CdR31SpecialBlockCollision.BlockRead call){call.requireOwner(original[0]);var placement=CdTerrainCollision.fromStageTerrain(current).lookup(call.xWord(),call.yWord(),call.spriteFlagsByte());
+                    if(placement instanceof CdTerrainCollision.Available a)return a.word().rawWord();
+                    if(placement instanceof CdTerrainCollision.Blank)return current.chunks().unsignedWord(0); // Native GetBlock's returned pointer IS dereferenced here.
+                    unsupported(UnsupportedBoundary.R3_BLOCK_WORD_OWNER);throw new AssertionError();}
+                @Override public void store(CdR31SpecialBlockCollision.Store call){call.requireOwner(original[0]);var effect=new R31BlockStore(call.site(),call.field(),call.form(),call.expectedRaw(),call.operand(),call.resultRaw());call.applyNative();cursor.effects.add(effect);}
+                @Override public void placeBlock(CdR31SpecialBlockCollision.PlaceBlock call){call.requireOwner(original[0]);place(call.xWord(),call.yWord());call.completedNative();}
+                @Override public void fm(CdR31SpecialBlockCollision.Fm call){call.requireOwner(original[0]);cursor.effects.add(new R31FmRequest(call.nativeId()));call.completedNative();}
+                @Override public void subCpu(CdR31SpecialBlockCollision.SubCpu call){call.requireOwner(original[0]);cursor.effects.add(new R31SubCpuRequest(call.nativeId()));call.completedNative();}
+            });original[0]=helper;
+            var result=helper.run(site,new CdR31SpecialBlockCollision.Source(cursor.env.movement().gates().zoneAct(),OptionalInt.of(cursor.env.movement().gates().timeZone()),context.goodFutureByte()),new CdR31SpecialBlockCollision.State(cursor.stateValue(),noBumper));
+            var a=result.state().actor();cursor.motion=a.motion();cursor.hurt=a.timers().hurt();noBumper=result.state().noBumperByte();
+            cursor.effects.add(new R31BlockCall(site,result));cursor.returned(NativeCall.R3_SPECIAL_BLOCK_COLLISION);
+        }
+        void place(int x,int y){
+            // PlaceBlockAtPos/GetBlockDataAbsXY: shared chunk definition BEFORE the independent screen decision.
+            int layoutAt=((y>>>1)&0x380)+((x>>>8)&0x7F);int raw=current.layout().ram().unsignedByte(layoutAt);
+            int column=(x&0x1F0)>>>3,row=(y&0xF0)>>>3;
+            if(raw==0){cursor.effects.add(new R31PlaceBlock(x,y,OptionalInt.empty(),OptionalInt.empty(),false,column,row,Optional.empty()));return;}
+            int id=(raw-1)&0x7F;int offset=(((id>>>7)|(id<<9))&0xFFFF)+((y+y)&0x1E0)+((x>>>3)&0x1E);
+            if(offset<0||offset>current.chunks().length()-2||(offset&1)!=0)unsupported(UnsupportedBoundary.R3_CHUNK_WRITE_OWNER);
+            int previous=current.chunks().unsignedWord(offset);byte[] chunks=current.chunks().copy();chunks[offset]=0;chunks[offset+1]=0;replaceChunks(chunks);
+            boolean onscreen=r31Onscreen(x,y,context.cameraXWord(),context.cameraYWord());
+            cursor.effects.add(new R31PlaceBlock(x,y,OptionalInt.of(offset),OptionalInt.of(previous),onscreen,column,row,onscreen?Optional.of(current.blocks().slice(0,8)):Optional.empty()));
+        }
+        void replaceChunks(byte[] chunks){var col=current.collision();byte[] fg=context.assets().view(CdR31aAssets.Asset.LAYOUT_FG).copy(),bg=context.assets().view(CdR31aAssets.Asset.LAYOUT_BG).copy();
+            encodeLayout(current,CdStageTerrain.Plane.FOREGROUND,fg);encodeLayout(current,CdStageTerrain.Plane.BACKGROUND,bg);
+            var next=CdStageTerrain.decode(current.shape(),current.blocks().copy(),current.patterns().copy(),chunks,fg,bg,col.ids().copy(),col.angles().copy(),col.heights().copy(),col.widths().copy());
+            if(!Arrays.equals(current.layout().ram().copy(),next.layout().ram().copy()))throw new IllegalStateException("Complete current layout changed during chunk staging");current=next;
+        }
+        void touch(){var snapshot=pool.capture();int scanControl=cursor.motion.playerControl();var selected=context.scanner().scan(new CdPlayerObjectTouch.PlayerCut(cursor.x(),cursor.y(),cursor.motion.yRadius(),cursor.animation.mapFrame(),cursor.hurt),scanControl,snapshot);
+            if(selected instanceof CdPlayerObjectTouch.HandlerBoundary handler){var g=cursor.env.movement();var pg=new CdPlayerTouchResponse.PlayerGlobals(contact.timeWarp(),cursor.invincible,contact.shield(),contact.combineRing(),cursor.debugCheat,cursor.debugMode,g.globals().scoreChain(),g.gates().miniSonic());
+                var result=handler.kind()==CdPlayerObjectTouch.Kind.SPECIAL&&context.bossStartedByte().isPresent()
+                        ?context.response().response().respondR3Special(handler,cursor.responseActor(),pg,world,context.bossStartedByte().getAsInt(),snapshot)
+                        :context.response().response().respond(handler,cursor.responseActor(),pg,world,snapshot);
+                cursor.adopt(result.actor());cursor.invincible=result.player().invincible();cursor.setScoreChain(result.player().scoreChain());contact=new ContactGlobals(result.player().timeWarp(),result.player().shield(),result.player().combineRing());world=result.world();
+                for(var image:result.changedSlots())pool.write(image);cursor.effects.add(new ObjectTouchResponse(result));
+            }else{selected.changedSlot().ifPresent(pool::write);cursor.effects.add(new ObjectTouchResult(selected));}
+            cursor.effects.add(new TouchScanCompleted((scanControl&0x40)!=0?0:selected.selectedSlot().map(slot->slot.identity().wholeIndex()-CdObjectPool.FIRST_WHOLE_INDEX+1).orElse(CdObjectPool.DYNAMIC_COUNT)));
+        }
+    }
+    private static void encodeLayout(CdStageTerrain image,CdStageTerrain.Plane plane,byte[] encoded){int width=image.layout().columns(plane),height=image.layout().rows(plane);for(int y=0;y<height;y++)for(int x=0;x<width;x++)encoded[2+y*width+x]=(byte)image.layout().cell(plane,x,y).rawByte();}
+    private static boolean r31Onscreen(int x,int y,int cameraX,int cameraY){
+        if(y<uw((cameraY&0xFFF0)-16)||(short)y>(short)(uw(cameraY+240)&0xFFF0))return false;
+        return x>=uw((cameraX&0xFFF0)-16)&&(short)x<=(short)(uw(cameraX+336)&0xFFF0);
+    }
+    private static void r31OptionalByte(OptionalInt value){Objects.requireNonNull(value);value.ifPresent(CdPlayerBody::byteValue);}
+    // END R31 SOURCE-ORDERED PURE BODY COMPONENT.
 
     /** ObjSonic_Init (135-155). No fallthrough to Main, animation, history or display. */
     private void initialize(Cursor c) {
@@ -1151,6 +1334,9 @@ public final class CdPlayerBody {
 
     /** Display expiry: raw Past fade, then the PP row of PlayLevelMusic's masked-period table. */
     private static void restoreLevelMusic(Cursor c) {
+        // BEGIN actual R31 UpdatePowerups PlayStageMusic request, kept separate from touch and PPZ table choice.
+        if(c.r31Planning!=null){c.effects.add(new R31MusicRequest(c.env.movement().gates().zoneAct(),c.env.movement().gates().timeZone(),c.timeAttack));return;}
+        // END actual R31 UpdatePowerups PlayStageMusic request.
         int raw = c.env.movement().gates().timeZone();
         if (raw == 0) c.sound(Sound.SCMD_FADECDA);
         switch (raw & 0x7F) {
@@ -1242,6 +1428,7 @@ public final class CdPlayerBody {
         final ObjectLinks objectLinks;
         private final int rotationAngle;
         boolean displayEligible;
+        private R31Planning r31Planning;
         Optional<CdPlayerMovement.Boundary> modeBoundary = Optional.empty();
         final List<Effect> effects = new ArrayList<>();
         Cursor(State state, Environment environment) {
@@ -1365,6 +1552,7 @@ public final class CdPlayerBody {
             header = new Header(header.slotId(), header.mappingAddress(), actor.tile(), actor.priority(), header.width());
             hurt = actor.hurt(); rotationDistance = actor.rotationDistance();
         }
+        State stateValue() {return new State(motion,animation,header,new Timers(hurt,invincibilityTimer,shoesTimer,resetTimer),history,rotationDistance,objectLinks,rotationAngle);}
         Result finish(Boundary boundary) {
             var state = new State(motion, animation, header, new Timers(hurt, invincibilityTimer, shoesTimer, resetTimer),
                     history, rotationDistance, objectLinks, rotationAngle);

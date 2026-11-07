@@ -3,6 +3,7 @@ package com.openggf.game.soniccd.player;
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdR11aPlayerAssets;
 import com.openggf.game.soniccd.level.CdStagePlayerSource;
+import com.openggf.game.soniccd.level.CdStageTerrain;
 import com.openggf.game.soniccd.level.CdR11aTerrain;
 import com.openggf.game.soniccd.objects.CdObjectPool;
 import com.openggf.game.soniccd.objects.CdObjectState;
@@ -235,6 +236,35 @@ public final class CdPlayerMovement {
     public static CdPlayerMovement fromStageSource(CdStagePlayerSource source) {
         return new CdPlayerMovement(source);
     }
+
+    // BEGIN R31 complete current-image component binding; no public arbitrary geometry path.
+    /** Package-private pure staging only. Layout/chunks may reflect explicit native mutations;
+     * every material, pattern and collision table must remain the exact authenticated R31 source data.
+     * These values confer no Frame/World or live current-terrain authority. */
+    static CdPlayerMovement withR31CurrentTerrain(CdStagePlayerSource source, CdStageTerrain current) {
+        Objects.requireNonNull(source, "actual stage player source"); Objects.requireNonNull(current, "complete current terrain image");
+        if (source.player().sourceGraph() != CdR11aPlayerAssets.SourceGraph.R3
+                || !source.stage().equals(com.openggf.game.soniccd.CdStagePayload.R31A.stage())
+                || source.ordinaryZoneActWord() != 0x100 || source.ordinaryPeriod() != 1
+                || current.shape() != CdStageTerrain.Shape.CCZ1_PRESENT)
+            throw new IllegalArgumentException("Current-image binding requires actual original R31A source rules");
+        var original = source.terrain(); var a = original.collision(); var b = current.collision();
+        if (!java.util.Arrays.equals(original.blocks().copy(), current.blocks().copy())
+                || !java.util.Arrays.equals(original.patterns().copy(), current.patterns().copy())
+                || !java.util.Arrays.equals(a.ids().copy(), b.ids().copy())
+                || !java.util.Arrays.equals(a.angles().copy(), b.angles().copy())
+                || !java.util.Arrays.equals(a.heights().copy(), b.heights().copy())
+                || !java.util.Arrays.equals(a.widths().copy(), b.widths().copy()))
+            throw new IllegalArgumentException("Current-image material/collision data differs from the actual source");
+        return new CdPlayerMovement(source, current, R31CurrentImage.VALIDATED);
+    }
+    private enum R31CurrentImage { VALIDATED }
+    private CdPlayerMovement(CdStagePlayerSource source, CdStageTerrain current, R31CurrentImage checked) {
+        assets = source.player(); layout = current.layout().ram(); ordinaryPeriod = source.ordinaryPeriod();
+        ordinaryZoneAct = source.ordinaryZoneActWord(); terrain = CdPlayerTerrain.fromStageTerrain(current);
+        math = new CdPlayerMath(assets); ground = new CdPlayerGroundCollision(terrain);
+    }
+    // END R31 complete current-image component binding.
 
     /**
      * The shared native collision subroutine (Main.asm:2046-2345), also called by HurtChkLand:2378.
