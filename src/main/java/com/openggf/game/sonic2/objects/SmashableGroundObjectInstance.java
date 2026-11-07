@@ -52,20 +52,6 @@ public class SmashableGroundObjectInstance extends BoxObjectInstance
     private static final int[] Y_RADIUS_BY_STATE = { 0x24, 0x20, 0x18, 0x10, 0x08 };
     private static final int[] FRAME_BY_STATE = { 0, 2, 4, 6, 8 };
 
-    // Fragment velocities from Obj2F_FragmentVelocities (per state, alternating left/right):
-    // State 0: -$100,-$800 / $100,-$800
-    // State 2: -$0E0,-$700 / $0E0,-$700
-    // State 4: -$0C0,-$600 / $0C0,-$600
-    // State 6: -$0A0,-$500 / $0A0,-$500
-    // State 8: -$080,-$400 / $080,-$400
-    private static final int[][] FRAGMENT_VELOCITIES = {
-            {-0x100, -0x800, 0x100, -0x800},  // State 0
-            {-0x0E0, -0x700, 0x0E0, -0x700},  // State 2
-            {-0x0C0, -0x600, 0x0C0, -0x600},  // State 4
-            {-0x0A0, -0x500, 0x0A0, -0x500},  // State 6
-            {-0x080, -0x400, 0x080, -0x400}   // State 8
-    };
-
     // Chain bonus scoring from SmashableObject_ScoreBonus:
     // Counter 0: 10, Counter 2: 20, Counter 4: 50, Counter 6+: 100
     // Counter 32+: 1000 (max bonus)
@@ -191,7 +177,7 @@ public class SmashableGroundObjectInstance extends BoxObjectInstance
         }
 
         if (canBreak) {
-            breakOneLayer(player);
+            breakOneLayer(player, frameCounter);
         } else {
             // Obj2F_Main assigns primary solidity when the standing player did
             // not satisfy the break branch (docs/s2disasm/s2.asm:48729-48741,
@@ -201,7 +187,7 @@ public class SmashableGroundObjectInstance extends BoxObjectInstance
         }
     }
 
-    private void breakOneLayer(AbstractPlayableSprite player) {
+    private void breakOneLayer(AbstractPlayableSprite player, int vIntRunCount) {
         if (broken) {
             return;
         }
@@ -234,7 +220,7 @@ public class SmashableGroundObjectInstance extends BoxObjectInstance
 
         // Spawn fragments for ALL pieces of the current frame
         // In the ROM, BreakObjectToPieces creates fragments for every piece
-        spawnFragments();
+        var firstFragment = spawnFragments();
 
         // Play slow smash sound effect (played by BreakObjectToPieces in ROM)
         services().playSfx(GameSound.SLOW_SMASH);
@@ -245,73 +231,26 @@ public class SmashableGroundObjectInstance extends BoxObjectInstance
         // Mark as broken in persistence table
         ObjectLifetimeOps.markSpawnRemembered(objectManager, spawn);
 
-        // The original object is destroyed and becomes fragments
+        // loc_234A4 falls through into Obj2F_Fragment after the popup attempt
+        // (s2.asm:49277-49300); a replacement at the current slot is not rescheduled.
+        Sonic2BreakIntoPieces.runFirstFragment(services(), firstFragment, vIntRunCount, player);
         setDestroyed(true);
         LOGGER.fine(() -> String.format("Smashable ground at (%d,%d) destroyed (state %d)",
                 spawn.x(), spawn.y(), destructionState));
     }
 
-    private void spawnFragments() {
-        ObjectManager objectManager = services().objectManager();
-        ObjectRenderManager renderManager = services().renderManager();
-        if (objectManager == null || renderManager == null) {
-            return;
-        }
-
-        PatternSpriteRenderer renderer = renderManager.getRenderer(Sonic2ObjectArtKeys.SMASHABLE_GROUND);
-        if (renderer == null || !renderer.isReady()) {
-            return;
-        }
-
-        ObjectSpriteSheet sheet = renderManager.getSheet(Sonic2ObjectArtKeys.SMASHABLE_GROUND);
-        if (sheet == null || sheet.getFrameCount() == 0) {
-            return;
-        }
-
-        // Get the current mapping frame's pieces
-        // ROM uses mapping_frame directly (0, 2, 4, 6, 8) but our frames are indexed (0, 1, 2, 3, 4)
-        int frameIndex = mappingFrame / 2;
-        if (frameIndex >= sheet.getFrameCount()) {
-            frameIndex = 0;
-        }
-        SpriteMappingFrame frame = sheet.getFrame(frameIndex);
-        if (frame == null || frame.pieces() == null || frame.pieces().isEmpty()) {
-            return;
-        }
-
-        // Get velocity array for current state
-        // ROM: mapping_frame * 4 to index into velocity array (each entry is 4 bytes = 2 words)
-        int stateIndex = destructionState / 2;
-        if (stateIndex >= FRAGMENT_VELOCITIES.length) {
-            stateIndex = FRAGMENT_VELOCITIES.length - 1;
-        }
-        int[] velocities = FRAGMENT_VELOCITIES[stateIndex];
-
-        // Spawn fragments for ALL pieces in the current frame
-        // ROM: BreakObjectToPieces reads piece count from mapping header and creates
-        // a fragment for each piece, cycling through the velocity array
-        List<SpriteMappingPiece> pieces = frame.pieces();
-
-        for (int i = 0; i < pieces.size(); i++) {
-            SpriteMappingPiece piece = pieces.get(i);
-
-            // Velocities alternate left/right for each piece
-            // ROM cycles through velocity array: piece 0 gets vel[0,1], piece 1 gets vel[2,3], etc.
-            // Then wraps around. Our velocity array has 4 values per state (2 left, 2 right)
-            int velIndex = (i % 2) * 2;  // 0 for even pieces, 2 for odd pieces
-            int velX = velocities[velIndex];
-            int velY = velocities[velIndex + 1];
-            int fragmentFrameIndex = frameIndex;
-            int fragmentPieceIndex = i;
-
-            // Fragment position is object position + piece offset
-            // In ROM, fragments are created at object position and inherit the piece offset
-            // from their mapping data for rendering
-            spawnFreeChild(() -> new SmashableGroundFragmentInstance(
-                    spawn.x(),  // Object center X
-                    spawn.y(),  // Object center Y
-                    velX, velY, piece, renderer, fragmentFrameIndex, fragmentPieceIndex));
-        }
+    private Sonic2BreakPieceObjectInstance spawnFragments() {
+        // loc_234A4 increments mapping_frame, then indexes its velocity table
+        // by the OLD frame *4 (s2.asm:49277-49292). No renderer owns admission.
+        int oldFrame = mappingFrame;
+        mappingFrame = (mappingFrame + 1) & 0xFF;
+        var pieces = Sonic2BreakIntoPieces.readPieces(services(), 0x236FA,
+                mappingFrame, 0x234F2 + oldFrame * 4);
+        boolean onScreen = isWithinSolidContactBounds();
+        return Sonic2BreakIntoPieces.replaceParent(this, services(), pieces.size(), index ->
+                new Sonic2BreakPieceObjectInstance(spawn, pieces.get(index),
+                        Sonic2ObjectArtKeys.SMASHABLE_GROUND, 0x18, HALF_WIDTH,
+                        index == 0 ? yRadius : 0, true, true, 4, onScreen));
     }
 
     private void awardChainBonus() {
@@ -320,6 +259,9 @@ public class SmashableGroundObjectInstance extends BoxObjectInstance
         //      addq.w #2,(Chain_Bonus_counter).w
         //      cmpi.w #6,d2 / blo.s + / moveq #6,d2  - cap at 6
         //      cmpi.w #$20,(Chain_Bonus_counter).w / blo.s + - check for max bonus
+        ObjectManager objectManager = services().objectManager();
+        int popupSlot = objectManager.allocateDynamicSlot();
+        if (popupSlot < 0) return; // SmashableObject_LoadPoints (s2.asm:49465-49487).
         int d2 = globalChainBonusCounter;
         globalChainBonusCounter += 2;  // Increment global counter
 
@@ -347,14 +289,10 @@ public class SmashableGroundObjectInstance extends BoxObjectInstance
         // Add score
         services().gameState().addScore(points);
 
-        // Spawn points display popup
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager != null) {
-            int finalPoints = points;
-            spawnFreeChild(() -> new PointsObjectInstance(
-                    new ObjectSpawn(spawn.x(), spawn.y(), 0x29, 0, 0, false, 0),
-                    services(), finalPoints));
-        }
+        int finalPoints = points;
+        var popup = ObjectConstructionContext.with(services(), popupSlot, () -> new PointsObjectInstance(
+                new ObjectSpawn(spawn.x(), spawn.y(), 0x29, 0, 0, false, 0), services(), finalPoints));
+        ObjectLifetimeOps.addDynamicAtReservedSlot(objectManager, popup, popupSlot);
     }
 
     /**
@@ -392,8 +330,8 @@ public class SmashableGroundObjectInstance extends BoxObjectInstance
             return;
         }
 
-        // Convert destruction state to frame index (0,1,2,3,4)
-        int frameIndex = mappingFrame / 2;
+        // Obj2F_Init selects the even intact ROM frame (s2.asm:49151-49157).
+        int frameIndex = mappingFrame;
         renderer.drawFrameIndex(frameIndex, spawn.x(), spawn.y(), false, false);
     }
 

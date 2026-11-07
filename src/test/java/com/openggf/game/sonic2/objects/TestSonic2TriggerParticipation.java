@@ -1018,15 +1018,15 @@ class TestSonic2TriggerParticipation {
                 "ObjC2 caches MainCharacter+anim before SolidObject and busts on cached anim==2");
     }
 
-    @Test
-    void cpzBreakableBlockBreaksFromRollAnimationNotRollingStatus() {
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_2)
+    void cpzBreakableBlockBreaksFromRollAnimationNotRollingStatus() throws Exception {
         TestablePlayableSprite main = player("sonic", 0x1000, 0x1000);
         main.setRolling(false);
         main.setAnimationId(Sonic2AnimationIds.ROLL.id());
         BreakableBlockObjectInstance block = new BreakableBlockObjectInstance(
                 new ObjectSpawn(0x1000, 0x1000, Sonic2ObjectIds.BREAKABLE_BLOCK, 0, 0, false, 0),
                 "BreakableBlock");
-        block.setServices(new QueryOnlyPlayerServices(main, List.of()).withGameState(new GameStateManager()));
+        installBreakFixture(block, main, List.of());
 
         block.onSolidContact(main, new SolidContact(true, false, false, true, false), 0);
 
@@ -1045,8 +1045,8 @@ class TestSonic2TriggerParticipation {
                 "Obj32's SolidObject bhi gate accepts relX == 2*d1");
     }
 
-    @Test
-    void cpzBreakableBlockRemainsSolidForLaterParticipantsInDestroyPass() {
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_2)
+    void cpzBreakableBlockRemainsSolidForLaterParticipantsInDestroyPass() throws Exception {
         TestablePlayableSprite main = player("sonic", 0x1000, 0x1000);
         main.setRolling(false);
         main.setAnimationId(Sonic2AnimationIds.ROLL.id());
@@ -1054,7 +1054,7 @@ class TestSonic2TriggerParticipation {
         BreakableBlockObjectInstance block = new BreakableBlockObjectInstance(
                 new ObjectSpawn(0x1000, 0x1000, Sonic2ObjectIds.BREAKABLE_BLOCK, 0, 0, false, 0),
                 "BreakableBlock");
-        block.setServices(new QueryOnlyPlayerServices(main, List.of(sidekick)).withGameState(new GameStateManager()));
+        installBreakFixture(block, main, List.of(sidekick));
 
         block.onSolidContact(main, new SolidContact(true, false, false, true, false), 0);
 
@@ -1064,8 +1064,8 @@ class TestSonic2TriggerParticipation {
                 "ROM Obj32 computes both players' standing state before the destroy branch");
     }
 
-    @Test
-    void htzSmashableGroundBreaksFromRollAnimationNotRollingStatus() {
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_2)
+    void htzSmashableGroundBreaksFromRollAnimationNotRollingStatus() throws Exception {
         TestablePlayableSprite main = player("sonic", 0x1000, 0x1000);
         main.setRolling(false);
         main.setAnimationId(Sonic2AnimationIds.ROLL.id());
@@ -1074,7 +1074,7 @@ class TestSonic2TriggerParticipation {
                 new ObjectSpawn(0x1000, 0x1000, Sonic2ObjectIds.SMASHABLE_GROUND, 0, 0, false, 0),
                 "SmashableGround");
         GameStateManager gameState = new GameStateManager();
-        ground.setServices(new QueryOnlyPlayerServices(main, List.of()).withGameState(gameState));
+        installBreakFixture(ground, main, List.of());
 
         ground.update(0, main);
         ground.onSolidContact(main, new SolidContact(true, false, false, true, false), 0);
@@ -1082,6 +1082,21 @@ class TestSonic2TriggerParticipation {
         assertTrue(ground.isDestroyed(),
                 "Obj2F snapshots player anim before SolidObject and breaks on anim==Roll");
         assertTrue(main.getAir());
+    }
+
+    private static void installBreakFixture(AbstractObjectInstance parent, TestablePlayableSprite main,
+                                            List<? extends PlayableEntity> sidekicks) throws Exception {
+        var services = new QueryOnlyPlayerServices(main, sidekicks);
+        services.withGameState(new GameStateManager()).withRomReader(
+                com.openggf.data.RomByteReader.fromRom(com.openggf.tests.TestEnvironment.currentRom()));
+        var headlessLevel = mock(LevelManager.class);
+        when(headlessLevel.getObjectRenderManager()).thenReturn(mock(com.openggf.level.objects.ObjectRenderManager.class));
+        services.withLevelManager(headlessLevel);
+        var manager = new ObjectManager(List.of(), new Sonic2ObjectRegistry(), 0, null, null, null, null, services) {
+            @Override public int getPreContactAnimationId() { return main.getAnimationId(); }
+        };
+        services.withObjectManager(manager);
+        manager.addDynamicObjectAtSlot(parent, 0x30);
     }
 
     @Test
