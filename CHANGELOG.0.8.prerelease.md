@@ -29,6 +29,10 @@ under the matching area heading; see the
 
 ## Modding and tools
 
+- **Recording audio recovery:** viewport recording retains the real audio lease
+  when detach is refused, even after switching to silence. Stopping or restarting
+  retries that lease before acquiring another, avoiding an orphaned audio tap.
+
 - **Seeded Data Select captures:** `GameplayCaptureTool --save-slots <file.json>`
   writes declared save slots through the production save manager into the
   capture's private save root before a title-first capture, and `--extra-teams`
@@ -39,6 +43,10 @@ under the matching area heading; see the
   instead of S3K's placeholders.
 
 ## Maintenance and release preparation
+
+- **Fresh-level admission:** named phases expose title completion, initial
+  boundary publication and player assembly while preserving their existing
+  timing, pause and failure behavior.
 
 - **Scripted website hero reels:** `tools/media/hero_reels.py` regenerates
   the Sonic 1, Sonic 2 and Sonic 3&K title-card reels from the current engine

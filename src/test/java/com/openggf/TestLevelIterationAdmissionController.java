@@ -406,13 +406,26 @@ class TestLevelIterationAdmissionController {
         fresh.admit(GameMode.TITLE_CARD);
         fresh.admit(GameMode.LEVEL);
         var failure = new IllegalStateException("observer failed");
-        doThrow(failure).when(fresh.assembly).accept(fresh.context);
+        doThrow(failure).doAnswer(invocation -> null).when(fresh.assembly).accept(fresh.context);
         assertSame(failure, assertThrows(IllegalStateException.class,
                 () -> fresh.admit(GameMode.LEVEL)));
         verifyNoInteractions(fresh.activateTiming);
         assertEquals(LevelFrameResult.GAMEPLAY_FRAME, fresh.admit(GameMode.LEVEL));
         verify(fresh.level).completeFreshLevelTransitionBoundary();
         verify(fresh.assembly).accept(fresh.context);
+
+        // A subsequent real load must restart title/publication admission even
+        // when the preceding assembly observer did not return successfully.
+        fresh.pending = true;
+        fresh.controller.loadedFreshBoundary(true);
+        fresh.controller.beginIteration();
+        assertEquals(LevelFrameResult.GAMEPLAY_FRAME, fresh.admit(GameMode.LEVEL));
+        assertEquals(LevelFrameResult.SETUP_ONLY, fresh.admit(GameMode.TITLE_CARD));
+        assertEquals(LevelFrameResult.SETUP_ONLY, fresh.admit(GameMode.LEVEL));
+        assertEquals(LevelFrameResult.GAMEPLAY_FRAME, fresh.admit(GameMode.LEVEL));
+        verify(fresh.level, times(2)).publishFreshLevelTransitionInitialBoundary();
+        verify(fresh.level, times(2)).completeFreshLevelTransitionBoundary();
+        verify(fresh.assembly, times(2)).accept(fresh.context);
     }
 
     @ParameterizedTest
