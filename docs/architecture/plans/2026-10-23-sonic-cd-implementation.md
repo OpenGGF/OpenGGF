@@ -1,5 +1,31 @@
 # Implement Sonic CD with complete regional parity
 
+## 7 November 2026 — same-CUE system custody and original CCZ events
+
+Stock USA preparation detaches the existing authenticated SPX source from its
+same open CUE before close. DataSource's internal canonical constructor11 adds
+that optional after R3PCM; all3..10 compatibility paths retain their omissions,
+existing public11 methods and identity remain exact, and JP/EU stay absent.
+Only three complete constructor inventories migrate. Presence remains inert
+source custody, not a selector clear, driver, boot or loading completion.
+
+The new pure CCZ12/common-events owner authenticates six actual original R31
+consumer/directory spans through one fixed private source borrow. It preserves
+the target510 store and native animation2B/up/down/air/common-tail arithmetic,
+WORD wrap, high-byte shift stores, overshoot and strict nonwrites. Gates carry
+only the actual zone/act read; no unused time-period read is invented. Existing
+63 descriptors and15 public aggregate methods remain unchanged. Ordered write
+metadata supplies no replay or live Frame/Host authority.
+
+R74 passes128cases in9classes with0failures/errors/skips on unchanged source:
+11new stock custody,24new events and93 retained source/custody cases. Actual
+configured USA/JP/EU media execute where selected. Independent bounded review
+finds no concrete P1/P2 and verifies all input pins. Tests-first exact inverses
+and native operand/media checks are retained externally; final source changes
+after the run only clarify two test headers' author provenance. Actual
+pre-storage initialization, private programme handoff, live event adoption and
+CCZ World/Ready/pixels remain separate work. Main and remotes stay untouched.
+
 ## 7 November 2026 — retained R31 loading component qualification
 
 The package-private loader binds the actual R31 Frame/art/music/terrain/scroll

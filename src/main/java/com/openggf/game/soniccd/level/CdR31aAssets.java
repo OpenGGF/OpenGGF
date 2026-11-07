@@ -164,6 +164,30 @@ public final class CdR31aAssets {
                 CdAssetBytes.copyOf(image.readFile(0x1AB0,28)));
     }
     // END fixed R31 programme music source borrow.
+    // BEGIN fixed R31 CCZ12/common-events source borrow 20261107.
+    /** Finite private construction binds these six original views to this retained aggregate only. */
+    static final class LevelEventsSource {
+        private final CdR31aAssets owner;
+        private final CdAssetBytes scrollConsumer,common,zoneDirectory,cczDispatch,actDirectory,ccz12;
+        private LevelEventsSource(CdR31aAssets owner,CdAssetBytes scrollConsumer,CdAssetBytes common,
+                                  CdAssetBytes zoneDirectory,CdAssetBytes cczDispatch,CdAssetBytes actDirectory,CdAssetBytes ccz12) {
+            this.owner=owner;this.scrollConsumer=scrollConsumer;this.common=common;this.zoneDirectory=zoneDirectory;
+            this.cczDispatch=cczDispatch;this.actDirectory=actDirectory;this.ccz12=ccz12;
+        }
+        boolean owns(CdR31aAssets expected){return owner==expected;}
+        CdAssetBytes scrollConsumer(){return scrollConsumer;}CdAssetBytes common(){return common;}
+        CdAssetBytes zoneDirectory(){return zoneDirectory;}CdAssetBytes cczDispatch(){return cczDispatch;}
+        CdAssetBytes actDirectory(){return actDirectory;}CdAssetBytes ccz12(){return ccz12;}
+    }
+    LevelEventsSource levelEventsSource() {
+        requireAuthenticated();
+        return new LevelEventsSource(this,CdAssetBytes.copyOf(image.readFile(0x299C,40)),
+                CdAssetBytes.copyOf(image.readFile(0x3626,122)),CdAssetBytes.copyOf(image.readFile(0x36A0,14)),
+                CdAssetBytes.copyOf(image.readFile(0x3748,18)),CdAssetBytes.copyOf(image.readFile(0x375A,6)),
+                CdAssetBytes.copyOf(image.readFile(0x3760,8)));
+    }
+    // END fixed R31 CCZ12/common-events source borrow 20261107.
+
     /** Same-package immutable source custody, not a public arbitrary-address reader. */
     CdMmdImage originalImage(){return image;}
     void requireAuthenticated() {

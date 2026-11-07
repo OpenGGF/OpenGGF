@@ -16,6 +16,7 @@ import com.openggf.game.soniccd.level.CdObjectPlacements;
 import com.openggf.game.soniccd.media.CdTimeWarpPrograms;
 import com.openggf.game.soniccd.media.CdInitialSaveAssets;
 import com.openggf.game.soniccd.media.CdR3PcmSource;
+import com.openggf.game.soniccd.media.CdSystemProgramSource;
 import com.openggf.game.soniccd.release.CdRetailRelease;
 
 import java.io.ByteArrayInputStream;
@@ -83,6 +84,7 @@ public final class CdGameDataSource implements GameDataSource {
     private final Optional<CdR31aAssets> r31aAssets;
     private final Optional<CdInitialSaveAssets> initialSaveAssets;
     private final Optional<CdR3PcmSource> r3PcmSource;
+    private final Optional<CdSystemProgramSource> systemProgramSource;
     private final String identity;
 
     CdGameDataSource(CdRetailRelease release, CdR11aAssets assets, Optional<CdFmSoundAssets> fmSoundAssets) {
@@ -127,12 +129,22 @@ public final class CdGameDataSource implements GameDataSource {
                 act3FutureAssets, r31aAssets, initialSaveAssets, Optional.empty());
     }
 
-    // Internal canonical data constructor; every older arity explicitly omits R3 custody.
+    // Compatibility data constructor; every older arity explicitly omits R3 custody.
     CdGameDataSource(CdRetailRelease release, CdR11aAssets assets, Optional<CdFmSoundAssets> fmSoundAssets,
                      Optional<CdTimeWarpPrograms> timeWarpPrograms, Optional<Act2Assets> act2Assets,
                      Optional<Act2PastAssets> act2PastAssets, Optional<Act3FutureAssets> act3FutureAssets,
                      Optional<CdR31aAssets> r31aAssets, Optional<CdInitialSaveAssets> initialSaveAssets,
                      Optional<CdR3PcmSource> r3PcmSource) {
+        this(release, assets, fmSoundAssets, timeWarpPrograms, act2Assets, act2PastAssets,
+                act3FutureAssets, r31aAssets, initialSaveAssets, r3PcmSource, Optional.empty());
+    }
+
+    // Internal canonical data constructor; every older arity explicitly omits system custody.
+    CdGameDataSource(CdRetailRelease release, CdR11aAssets assets, Optional<CdFmSoundAssets> fmSoundAssets,
+                     Optional<CdTimeWarpPrograms> timeWarpPrograms, Optional<Act2Assets> act2Assets,
+                     Optional<Act2PastAssets> act2PastAssets, Optional<Act3FutureAssets> act3FutureAssets,
+                     Optional<CdR31aAssets> r31aAssets, Optional<CdInitialSaveAssets> initialSaveAssets,
+                     Optional<CdR3PcmSource> r3PcmSource, Optional<CdSystemProgramSource> systemProgramSource) {
         this.release = Objects.requireNonNull(release, "release");
         this.assets = Objects.requireNonNull(assets, "assets");
         this.fmSoundAssets = Objects.requireNonNull(fmSoundAssets, "fmSoundAssets");
@@ -239,6 +251,25 @@ public final class CdGameDataSource implements GameDataSource {
             }
         }
         // END detached same-CUE original R3PCM DATA.
+        // BEGIN detached same-CUE original system-program DATA 20261107.
+        // All old relation checks and their exception order remain above this optional custody.
+        this.systemProgramSource = Objects.requireNonNull(systemProgramSource, "systemProgramSource");
+        if (systemProgramSource.isPresent()) {
+            var system = systemProgramSource.orElseThrow().source();
+            if (release.variant() != CdReleaseVariant.USA || binding.variant() != CdReleaseVariant.USA
+                    || !binding.stage().equals(CdStagePayload.R11A.stage()) || binding.file() != CdNativeFile.R11A
+                    || binding.domain() != com.openggf.game.soniccd.media.CdMmdImage.Domain.ORIGINAL_WORD_RAM
+                    || !binding.mmdSha256().equals(assets.profile().expectedMmdSha256())
+                    || system.variant() != binding.variant() || !"/SPX___.BIN;1".equals(system.filePath())
+                    || system.isoLba() != 10237 || system.fileBytes() != 17408
+                    || !"f0e9805a060fdd201e9f9e0043bd1d89d61ea69bd3de429bd4c2a83dd498f0d5".equals(system.fileSha256())
+                    || system.loadAddress() != 0xB800 || system.entryAddress() != 0xC000
+                    || !system.wholeDiscSha256().equals(binding.observedWholeDiscSha256())
+                    || !system.wholeDiscSha256().equals(release.normalizedSha256())) {
+                throw new IllegalArgumentException("Detached system program, original stage and observed retail content do not agree");
+            }
+        }
+        // END detached same-CUE original system-program DATA.
         // Whole-disc content also covers later data. Identity never certifies capability presence.
         identity = "scd:detached-stage-v1:" + release.key() + ":" + binding.stage().nativeId()
                 + ":" + binding.observedWholeDiscSha256() + ":" + binding.mmdSha256();
@@ -270,6 +301,9 @@ public final class CdGameDataSource implements GameDataSource {
 
     /** Package-private original-USA file custody only; no load/driver/audio/World authority. */
     Optional<CdR3PcmSource> r3PcmSource() { return r3PcmSource; }
+
+    /** Package-private original system-file custody only; never a boot/clear/selector completion. */
+    Optional<CdSystemProgramSource> systemProgramSource() { return systemProgramSource; }
 
     @Override public Optional<Rom> rom() { return Optional.empty(); }
     @Override public String identity() { return identity; }

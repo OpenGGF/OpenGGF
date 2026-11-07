@@ -334,6 +334,11 @@ matching area heading; see the
   mappings and genuine even-byte reader extents. A finite original-USA system
   programme source retains the authenticated SPX image and its initialization
   clear description without executing that clear or creating boot authority.
+  Stock USA preparation retains that system source before its same CUE closes;
+  legacy internal constructors and regional absences remain explicit. A pure
+  source-bound CCZ event component now preserves target and bottom-shift stores,
+  WORD wrap, native overshoot and untouched fields without creating Frame or
+  World publication authority.
   A package-private R31 loading component now preserves native Start, the first
   selector-C wait and flower-counter reset, real PLCs, CCZ scroll and ordered
   normal/water fades. Selector12 enables display in initial fades and retains

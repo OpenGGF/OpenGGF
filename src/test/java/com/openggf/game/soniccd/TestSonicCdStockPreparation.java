@@ -337,7 +337,7 @@ class TestSonicCdStockPreparation {
         assertSame(source.timeWarpPrograms().orElseThrow().r1Pcm(),full.timeWarpPrograms().orElseThrow().r1Pcm());
         var dataOnly=new CdGameDataSource(source.release(),source.assets(),source.fmSoundAssets(),Optional.empty(),Optional.of(pair));
         assertTrue(dataOnly.timeWarpPrograms().isEmpty());assertSame(pair,dataOnly.act2Assets().orElseThrow());assertEquals(source.identity(),dataOnly.identity());
-        assertEquals(java.util.List.of(3,4,5,6,7,8,9,10),java.util.Arrays.stream(CdGameDataSource.class.getDeclaredConstructors()).map(c->c.getParameterCount()).sorted().toList());
+        assertEquals(java.util.List.of(3,4,5,6,7,8,9,10,11),java.util.Arrays.stream(CdGameDataSource.class.getDeclaredConstructors()).map(c->c.getParameterCount()).sorted().toList());
         assertEquals(2,CdGameDataSource.Act2Assets.class.getRecordComponents().length);
     }
     @Test void retainedAct2AddsNoAssetPathAndTheThreeExistingStreamsStayIndependent() throws Exception {

@@ -13,6 +13,7 @@ import com.openggf.game.soniccd.media.CdProgramAssets;
 import com.openggf.game.soniccd.media.CdTimeWarpPrograms;
 import com.openggf.game.soniccd.media.CdInitialSaveAssets;
 import com.openggf.game.soniccd.media.CdR3PcmSource;
+import com.openggf.game.soniccd.media.CdSystemProgramSource;
 import com.openggf.game.soniccd.release.CdRetailRelease;
 import com.openggf.game.soniccd.release.CdRetailReleases;
 
@@ -88,7 +89,11 @@ public final class CdStockLaunch {
             // This is exact inert source custody, not PCM installation/driver/output or R31 admission.
             Optional<CdR3PcmSource> r3PcmSource = release.variant() == CdReleaseVariant.USA
                     ? Optional.of(CdR3PcmSource.fromPrograms(media)) : Optional.empty();
-            return new CdGameDataSource(release, assets, fmSoundAssets, timeWarpPrograms, act2Assets, act2Past, act3Future, r31a, initialSave, r3PcmSource);
+            // Detach the finite original system source from THIS same still-open USA CUE.
+            // Presence never acknowledges SPX startup, its clear, driver selection or boot completion.
+            Optional<CdSystemProgramSource> systemProgramSource = release.variant() == CdReleaseVariant.USA
+                    ? Optional.of(CdSystemProgramSource.fromPrograms(media)) : Optional.empty();
+            return new CdGameDataSource(release, assets, fmSoundAssets, timeWarpPrograms, act2Assets, act2Past, act3Future, r31a, initialSave, r3PcmSource, systemProgramSource);
         }
     }
 

@@ -161,7 +161,7 @@ class TestSonicCdR3PcmStockCustody {
         var field = CdGameDataSource.class.getDeclaredField("r3PcmSource");
         assertTrue(Modifier.isPrivate(field.getModifiers())); assertTrue(Modifier.isFinal(field.getModifiers()));
         assertEquals(borrow.getGenericReturnType(),field.getGenericType());
-        assertEquals(List.of(3,4,5,6,7,8,9,10),Arrays.stream(CdGameDataSource.class.getDeclaredConstructors()).map(v -> v.getParameterCount()).sorted().toList());
+        assertEquals(List.of(3,4,5,6,7,8,9,10,11),Arrays.stream(CdGameDataSource.class.getDeclaredConstructors()).map(v -> v.getParameterCount()).sorted().toList());
         assertTrue(Arrays.stream(CdGameDataSource.class.getDeclaredConstructors()).noneMatch(v -> Modifier.isPublic(v.getModifiers())));
         assertEquals(List.of("act2Assets/0","act2PastAssets/0","act3FutureAssets/0","assets/0","fmSoundAssets/0","identity/0",
                         "openAsset/1","r31aAssets/0","release/0","rom/0","timeWarpPrograms/0"),
