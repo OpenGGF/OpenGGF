@@ -3,6 +3,7 @@ package com.openggf.game.sonic2.kis2;
 import com.openggf.sprites.art.PlayerSpriteArtProvider;
 import com.openggf.data.RomByteReader;
 import com.openggf.data.compression.NemesisReader;
+import com.openggf.game.sonic2.S3kKnucklesLifeIconConversion;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
@@ -97,8 +98,10 @@ public final class Kis2PlayerArt {
 
     /**
      * Tier-one HUD life icon and 1-up monitor face: the S&amp;K
-     * {@code ArtNem_KnucklesLifeIcon} converted like the player art. KiS2's
-     * own "Knuckles lives counter.nem" lives on the chip.
+     * {@code ArtNem_KnucklesLifeIcon}, its head converted like the player art
+     * and its name recoloured to KiS2's line-0 name roles
+     * ({@link S3kKnucklesLifeIconConversion}). KiS2's own "Knuckles lives
+     * counter.nem" lives on the chip.
      */
     public Pattern[] loadLifeIcon() throws IOException {
         if (cachedLifeIcon == null) {
@@ -107,7 +110,7 @@ public final class Kis2PlayerArt {
             try (ByteArrayInputStream bais = new ByteArrayInputStream(compressed);
                  ReadableByteChannel channel = Channels.newChannel(bais)) {
                 Pattern[] tiles = PatternDecompressor.fromBytes(NemesisReader.decompress(channel));
-                convertToSonic2Layout(tiles);
+                S3kKnucklesLifeIconConversion.convert(tiles, Kis2Constants.ART_CONV_TABLE);
                 cachedLifeIcon = tiles;
             }
         }
