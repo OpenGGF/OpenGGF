@@ -33,6 +33,7 @@ public final class Sonic2CompetitionSpriteArtTable {
             Map.entry(0x18, new Pending("EHZPlatform / ARZPlatform", "Obj18_Init (s2.asm:23176)", "Subtype, child or multipart display fields require explicit projection")),
             Map.entry(0x1C, new Pending("Scenery", "Obj1C_Init (s2.asm:24079)", "Subtype, child or multipart display fields require explicit projection")),
             Map.entry(0x1F, new Pending("CollapsPform", "Obj1F_Init (s2.asm:23768)", "Native fields and ordinary draw not yet certified; explicit adoption required")),
+            Map.entry(0x25, new Pending("Signpost sparkle", "loc_19398 (s2.asm:34772-34799)", "Obj0D initializes Obj25 directly in sparkle routine 6; explicit sparkle projection required")),
             Map.entry(0x26, new Pending("Monitor", "Obj26_Init (s2.asm:25541)", "Subtype, child or multipart display fields require explicit projection")),
             Map.entry(0x28, new Pending("Animal", "Obj28_Init (s2.asm:24570)", "Subtype, child or multipart display fields require explicit projection")),
             Map.entry(0x29, new Pending("Points", "Obj29_Init (s2.asm:24918-24926)", "Current PointsObjectInstance inherits false isHighPriority; ROM Init sets art_tile bit 15")),
@@ -40,6 +41,7 @@ public final class Sonic2CompetitionSpriteArtTable {
             Map.entry(0x2E, new Pending("MonitorContents", "Obj2E_Init (s2.asm:25745)", "Subtype, child or multipart display fields require explicit projection")),
             Map.entry(0x36, new Pending("Spikes", "Obj36_Init (s2.asm:29362)", "Subtype, child or multipart display fields require explicit projection")),
             Map.entry(0x37, new Pending("LostRings", "Obj37_Init (s2.asm:25125)", "Native fields and ordinary draw not yet certified; explicit adoption required")),
+            Map.entry(0x3A, new Pending("Capsule results (conservative)", "loc_140AC (s2.asm:27803-27815)", "Placed Obj3E can call Load_EndOfAct; prove native 2P lifetime exclusion before removing this conservative child obligation")),
             Map.entry(0x3E, new Pending("EggPrison", "loc_3F212 / loc_3F228 (s2.asm:84959-84981)", "Native fields and ordinary draw not yet certified; explicit adoption required")),
             Map.entry(0x40, new Pending("Springboard", "Obj40_Init (s2.asm:52285)", "Native fields and ordinary draw not yet certified; explicit adoption required")),
             Map.entry(0x41, new Pending("Spring", "Obj41_Init (s2.asm:33824)", "Subtype, child or multipart display fields require explicit projection")),
@@ -61,16 +63,19 @@ public final class Sonic2CompetitionSpriteArtTable {
             Map.entry(0x84, new Pending("ForcedSpin", "Obj84_Init (s2.asm:46775)", "Native fields and ordinary draw not yet certified; explicit adoption required")),
             Map.entry(0x85, new Pending("LauncherSpring", "Obj85_Init (s2.asm:58026)", "Native fields and ordinary draw not yet certified; explicit adoption required")),
             Map.entry(0x86, new Pending("Flipper", "Obj86_Init (s2.asm:58433)", "Native fields and ordinary draw not yet certified; explicit adoption required")),
+            Map.entry(0x98, new Pending("Coconuts projectile", "Obj98_Init (s2.asm:74790-74791); Obj9D_SubObjData2 (s2.asm:74860-74861)", "Obj9D_CreateCoconut allocates native ID98; Java projectile helper retains parent ID and requires explicit native projection")),
             Map.entry(0x9D, new Pending("Coconuts", "Obj9D_Init (s2.asm:75252)", "Native fields and ordinary draw not yet certified; explicit adoption required")),
             Map.entry(0x9E, new Pending("Crawlton", "Obj9E_Init (s2.asm:75436)", "Native fields and ordinary draw not yet certified; explicit adoption required")),
             Map.entry(0xA3, new Pending("Flasher", "loc_3875A (s2.asm:76234-76237)", "Native fields and ordinary draw not yet certified; explicit adoption required")),
             Map.entry(0xC8, new Pending("Crawl", "ObjC8_Init (s2.asm:82476)", "Native fields and ordinary draw not yet certified; explicit adoption required")),
             Map.entry(0xD2, new Pending("CNZRectBlocks", "ObjD2_Init (s2.asm:58702)", "Native fields and ordinary draw not yet certified; explicit adoption required")),
+            Map.entry(0xD3, new Pending("BombPrize", "loc_2BC86 (s2.asm:59221-59262)", "PointPokey initializes the slot-machine bomb prize child; delayed native display requires explicit projection")),
             Map.entry(0xD4, new Pending("CNZBigBlock", "ObjD4_Init (s2.asm:58910)", "Native fields and ordinary draw not yet certified; explicit adoption required")),
             Map.entry(0xD5, new Pending("Elevator", "ObjD5_Init (s2.asm:59007)", "Native fields and ordinary draw not yet certified; explicit adoption required")),
             Map.entry(0xD6, new Pending("PointPokey", "ObjD6_Init (s2.asm:59142)", "Native fields and ordinary draw not yet certified; explicit adoption required")),
             Map.entry(0xD7, new Pending("HexBumper", "ObjD7_Init (s2.asm:59960)", "Native fields and ordinary draw not yet certified; explicit adoption required")),
-            Map.entry(0xD8, new Pending("BonusBlock", "ObjD8_Init (s2.asm:60152)", "Native fields and ordinary draw not yet certified; explicit adoption required"))
+            Map.entry(0xD8, new Pending("BonusBlock", "ObjD8_Init (s2.asm:60152)", "Native fields and ordinary draw not yet certified; explicit adoption required")),
+            Map.entry(0xDC, new Pending("RingPrize", "loc_2BD4E (s2.asm:59272-59313)", "PointPokey initializes the slot-machine ring prize child; delayed native display requires explicit projection"))
     );
 
     public static Entry entry(int id) { return ENTRIES.get(id & 0xFF); }

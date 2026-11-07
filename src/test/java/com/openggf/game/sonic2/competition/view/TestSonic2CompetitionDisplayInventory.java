@@ -90,6 +90,7 @@ class TestSonic2CompetitionDisplayInventory {
         var placement=new Sonic2ObjectPlacement(RomByteReader.fromRom(TestEnvironment.currentRom()));
         var registry=new Sonic2ObjectRegistry();
         var observed=new TreeSet<Integer>();
+        var explicit=new TreeSet<Integer>();
         for(int zone:new int[]{0,11,12}) for(int act=0;act<2;act++) {
             var level=mock(com.openggf.level.Level.class);
             when(level.getZoneIndex()).thenReturn(zone);
@@ -102,9 +103,13 @@ class TestSonic2CompetitionDisplayInventory {
             for(var spawn:spawns) {
                 ids.add(spawn.objectId());
                 // Construct every placement subtype: no updates, fallback draw or fake lifecycle.
-                assertNotNull(com.openggf.level.objects.ObjectConstructionContext.construct(services,
-                        ()->registry.create(spawn)));
-                assertTrue(Sonic2CompetitionSpriteArtTable.PENDING_ADOPTION.containsKey(spawn.objectId()),
+                var owner=com.openggf.level.objects.ObjectConstructionContext.construct(services,
+                        ()->registry.create(spawn));
+                assertNotNull(owner);
+                if(owner instanceof Sonic2NativeDisplaySource) explicit.add(spawn.objectId());
+                assertTrue(owner instanceof Sonic2NativeDisplaySource
+                                || Sonic2CompetitionSpriteArtTable.entry(spawn.objectId())!=null
+                                || Sonic2CompetitionSpriteArtTable.PENDING_ADOPTION.containsKey(spawn.objectId()),
                         ()->String.format("Unaccounted native placement $%02X",spawn.objectId()));
             }
             observed.addAll(ids);
@@ -112,21 +117,42 @@ class TestSonic2CompetitionDisplayInventory {
         }
         // Death/monitor paths: Obj37 lost rings; Obj27 explosion; Obj28 animals;
         // Obj29 points; Obj2E monitor contents. Broken parts reuse their parent id.
-        for(int id:new int[]{0x27,0x28,0x29,0x2E,0x37}) {
+        // loc_19398 (s2.asm:34772-34799): signpost sparkle Obj25.
+        // Obj9D_CreateCoconut (s2.asm:75366-75386): Obj98, not the engine helper's parent ID.
+        // loc_2BC86 (s2.asm:59221-59262), loc_2BD4E (s2.asm:59272-59313): slot prize children.
+        // Obj0D_Main_State2 (s2.asm:34759-34770) bypasses Obj3A in 2P. Retain the separate
+        // capsule path conservatively: loc_3F406 (s2.asm:85128-85139) calls Load_EndOfAct.
+        for(int id:new int[]{0x25,0x27,0x28,0x29,0x2E,0x37,0x3A,0x98,0xD3,0xDC}) {
             observed.add(id);
             var childSpawn=new ObjectSpawn(100,80,id,0,0,false,0);
-            if(id==0x28) assertNotNull(new com.openggf.level.objects.AnimalObjectInstance(
-                    childSpawn,new com.openggf.level.objects.StubObjectServices()));
-            if(id==0x2E) assertNotNull(com.openggf.level.objects.ObjectConstructionContext.construct(
-                    new com.openggf.level.objects.StubObjectServices(),()->registry.create(childSpawn)));
-            if(id==0x37) assertNotNull(com.openggf.level.rings.LostRingObjectInstance.create(childSpawn));
-            assertTrue(Sonic2CompetitionSpriteArtTable.entry(id)!=null ||
-                    Sonic2CompetitionSpriteArtTable.PENDING_ADOPTION.containsKey(id));
+            // The actual generic explosion and points owners are constructed and compared above.
+            var child=switch(id) {
+                case 0x27,0x29 -> null;
+                case 0x25 -> new com.openggf.level.objects.SignpostSparkleObjectInstance(100,80);
+                case 0x28 -> new com.openggf.level.objects.AnimalObjectInstance(
+                        childSpawn,new com.openggf.level.objects.StubObjectServices());
+                case 0x2E -> com.openggf.level.objects.ObjectConstructionContext.construct(
+                        new com.openggf.level.objects.StubObjectServices(),()->registry.create(childSpawn));
+                case 0x37 -> com.openggf.level.rings.LostRingObjectInstance.create(childSpawn);
+                case 0x3A -> new com.openggf.game.sonic2.objects.ResultsScreenObjectInstance(0,0,1,false);
+                case 0x98 -> new com.openggf.game.sonic2.objects.badniks.BadnikProjectileInstance(
+                        childSpawn,com.openggf.game.sonic2.objects.badniks.BadnikProjectileInstance.ProjectileType.COCONUT,
+                        100,80,0,-0x100,true,false);
+                case 0xD3 -> new com.openggf.game.sonic2.objects.BombPrizeObjectInstance(100,80,100,80,30,new int[]{1});
+                case 0xDC -> new com.openggf.game.sonic2.objects.RingPrizeObjectInstance(100,80,100,80,26,new int[]{1});
+                default -> throw new IllegalArgumentException("Unclassified native child");
+            };
+            if(id!=0x27 && id!=0x29) assertNotNull(child);
+            if(child instanceof Sonic2NativeDisplaySource) explicit.add(id);
+            assertTrue(child instanceof Sonic2NativeDisplaySource
+                    || Sonic2CompetitionSpriteArtTable.entry(id)!=null
+                    || Sonic2CompetitionSpriteArtTable.PENDING_ADOPTION.containsKey(id));
         }
         var classified=new TreeSet<>(Sonic2CompetitionSpriteArtTable.PENDING_ADOPTION.keySet());
         classified.addAll(Sonic2CompetitionSpriteArtTable.entries().keySet());
+        classified.addAll(explicit);
         assertEquals(observed,classified,"No silently unclassified IDs or stale pending entries");
-        assertEquals(46,Sonic2CompetitionSpriteArtTable.PENDING_ADOPTION.size());
+        assertEquals(52,observed.size(),"Native layout plus child ID inventory");
         Sonic2CompetitionSpriteArtTable.PENDING_ADOPTION.entrySet().stream().sorted(Map.Entry.comparingByKey())
                 .forEach(row->System.out.printf("PENDING_ADOPTION $%02X | %s | %s | %s%n",row.getKey(),
                         row.getValue().name(),row.getValue().initCitation(),row.getValue().reason()));
