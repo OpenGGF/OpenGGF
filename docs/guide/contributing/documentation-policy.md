@@ -47,7 +47,8 @@ Configuration-Docs: updated|n/a
 Skills: updated|n/a
 ```
 
-Each value must start with `updated` or `n/a`.
+Each value must start with `updated` or `n/a`. Complete blocks for common
+changes are under [Example Trailer Blocks](#example-trailer-blocks).
 
 ## Trailer Map
 
@@ -131,6 +132,9 @@ The seven policy lines belong before that separator. Git's
 `interpret-trailers --parse` can return only the final block, so it is not a
 replacement for policy validation.
 
+<details>
+<summary>What the checked commit helper verifies, and its limits</summary>
+
 The helper snapshots the exact message bytes, compares literal paths with the
 index, checks the final parsed coauthors, and invokes `.githooks/run-policy
 commit-msg`. That existing dispatcher validates the seven policy lines and
@@ -152,6 +156,8 @@ Run the boundary's disposable-repository controls with:
 ```bash
 python3 -m unittest discover -s tools/testing -p 'test_run_category_checked_commit.py' -v
 ```
+
+</details>
 
 ## Trace Frontier Log
 

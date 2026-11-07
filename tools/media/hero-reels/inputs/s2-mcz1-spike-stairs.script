@@ -1,0 +1,32 @@
+# Source for s2-mcz1-spike-stairs.txt (InputLogAuthorTool --script). Mystic Cave act 1,
+# positioned at x 3000 y 1370 with Tails, left of the Obj76 sliding spike stairs
+# (x $E58, y $630/$650/$670) so they load as the camera scrolls in.
+# Drop to the ledge at x 3206, then run and jump to the bridge (the jump and air
+# brake follow trace mcz rows 1303-1335).
+30 -
+62 R
+20 -
+20 L
+40 -
+54 R
+6 -
+2 R
+13 R+A
+14 R
+5 -
+18 L
+# Each block slides out of the wall when a grounded player stands level with it
+# (Obj76_CheckPlayer). Sonic waits until its spiked face is almost on him, then
+# jumps onto it; Tails, copying 16 frames late, is still standing there.
+54 -
+20 A
+105 -
+20 A
+88 -
+20 A
+# Leap right onto the ledge above the stairs and stop.
+50 -
+20 R+A
+16 R
+6 L
+60 -

@@ -478,11 +478,13 @@ public class PlayableSpriteAnimation {
         // player's animation slot; the following Animate dispatch must enter
         // Anim_Tumble even before the drum publishes its first non-zero angle.
         // sonic3k.asm:24844-24852,60697-60710.
-        if ((sprite.getFlipType() & 0x80) != 0 || flipAngle != 0) {
+        ScriptedVelocityAnimationProfile profile = resolveVelocityProfile();
+        // A profile without tumble frames (S1 Sonic as a donor) keeps walk/run.
+        if (((sprite.getFlipType() & 0x80) != 0 || flipAngle != 0)
+                && (profile == null || profile.hasTumbleFrames())) {
             updateTumble(flipAngle);
             return;
         }
-        ScriptedVelocityAnimationProfile profile = resolveVelocityProfile();
         int speed = Math.abs(sprite.getGSpeed());
         if (profile != null
                 && profile.isDoubleWalkRunAnimationSpeedWhenSliding()

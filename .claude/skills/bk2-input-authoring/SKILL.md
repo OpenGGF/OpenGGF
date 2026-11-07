@@ -81,7 +81,21 @@ GameplayInputBranchTool <ROM> s3k lrz 1 320 sonic tails <input.bk2> 35660 <new-o
 ```
 
 Arguments are ROM, game, zone, one-based act, width, main, sidekick (`none` for
-solo), input file, prefix length, output directory, and candidate scripts. The
+solo), input file, prefix length, output directory, and candidate scripts.
+Optional leading flags derive an input from a recording without editing rows:
+
+- `--input-start N` skips the first N movie rows, as `GameplayCaptureTool` does,
+  so a level inside a complete-run movie branches from its own start.
+- `--resume N` appends the movie's next N rows after each candidate, so the
+  candidate replaces only the rows it covers. `--resume-from R` takes them from
+  replayed row R instead, for example the frame a live rewind restores.
+- `--skip-rows A,B` drops declared native lag rows by absolute movie index.
+  `VBlank_Lag` (sonic.asm:711-712) does not read the pad, so a direct boot,
+  which polls every step, drifts one frame per lag row it replays. Find them
+  where the trace's `gameplay_frame_counter` repeats, list them in the input's
+  `.script`, and check that the unchanged replay matches the trace.
+
+The
 probe uses a cold entry without donor or position seeding. Each candidate has a
 compact full-prefix script, round-tripped BK2, state CSV and PNGs every30 inputs
 and at termination. `prefix-objects.txt` lists nearby active objects. It stops

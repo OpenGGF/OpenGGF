@@ -17,14 +17,19 @@ A fully supported zone needs:
 8. **Boss** -- If the zone has a boss encounter.
 
 Not all of these are needed for initial bring-up. A zone can be "loadable" with just
-level data and collision, and incrementally improved from there.
+level data and collision, and incrementally improved from there; see
+[Incremental Bring-Up](#incremental-bring-up) for a working order. Loading is not
+certification: every new zone or substantial route also owes the checks in
+[Required route and rewind coverage](#required-route-and-rewind-coverage).
 
 ## Current S3K Priority
 
 For Sonic 3 & Knuckles, prefer playable vertical slices over checklist-only zone work.
 Keep AIZ -> HCZ stable and select later-zone work from current route blockers,
 complete-run trace frontiers and the [coverage backlog](../../status/level-test-coverage.md).
-A zone's presence in the registry or a loading test is not evidence of route completion. A slice should be judged by whether a player can traverse it with coherent
+A zone's presence in the registry or a loading test is not evidence of route completion.
+Agents delivering an S3K zone end to end follow the
+[`s3k-zone-bring-up` skill](../../../.agents/skills/s3k-zone-bring-up/SKILL.md). A slice should be judged by whether a player can traverse it with coherent
 events, camera bounds, scroll/parallax, animated tiles, palette/PLC state, required
 objects, bosses or transitions, and known trace or visual parity blockers addressed
 or documented.
@@ -41,15 +46,20 @@ Before writing any code, confirm that the zone's data loads correctly from the R
 
 ### Use RomOffsetFinder
 
-Find the level data addresses:
+Find the level data addresses. This needs the matching disassembly submodule
+(`git submodule update --init docs/s2disasm`) and, without `-Drom.path`, `s2.gen`
+in the checkout root:
 
 ```bash
 # Search for the zone's resources
-python3 tools/testing/maven_queue.py exec:java -Dexec.mainClass="com.openggf.tools.disasm.RomOffsetFinder" \
-    -Dexec.args="search OOZ" -q
+python3 tools/testing/maven_queue.py -Dmse=off compile exec:java \
+    -Dexec.mainClass="com.openggf.tools.disasm.RomOffsetFinder" \
+    -Dexec.args="--game s2 search OOZ" -q
 ```
 
-This will show art, mapping, palette, and layout resources for the zone.
+This will show art, mapping, palette, and layout resources for the zone. See
+[Tooling](../cross-referencing/tooling.md#romoffsetfinder) for other games, ROM
+paths and commands.
 
 ### Check the Constants File
 
@@ -72,15 +82,17 @@ the background will scroll 1:1 with the camera (no parallax effect).
 
 ### The Interface
 
-Implement `ScrollHandler` and register it through the game's `ScrollHandlerProvider`:
+Implement `ZoneScrollHandler` (`com.openggf.level.scroll`) and register it through
+the game's `ScrollHandlerProvider` (for S2, `Sonic2ScrollHandlerProvider`).
 
-The scroll handler is called each frame with the current camera position. It returns
-scroll offsets for each scanline of the background plane.
+Its `update(...)` method is called each frame with the camera position, frame
+counter and act. It fills a 224-entry buffer with one packed foreground/background
+scroll value per scanline.
 
 ### Reference
 
 Look at existing scroll handlers for the same game. For S2:
-- `src/main/java/com/openggf/game/sonic2/scroll/` -- one handler per zone
+- `src/main/java/com/openggf/game/sonic2/scroll/` -- one `SwScrl*` handler per zone
 - EHZ is a good starting point: simple two-layer parallax with different scroll rates.
 
 The disassembly equivalent is the `Deform_` or `SwScrl_` routines. Search the disassembly
@@ -154,8 +166,8 @@ Level events handle dynamic behavior that is tied to the player's position in th
 ### The Interface
 
 Implement a zone event class and register it through the game's `LevelEventProvider`.
-The event's `update()` method is called each frame with the current camera position and
-player state.
+`initLevel(zone, act)` runs at level load and `update()` runs each frame; the
+handler reads the camera and player state it needs through its services.
 
 ### Reference
 

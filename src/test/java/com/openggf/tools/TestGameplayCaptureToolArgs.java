@@ -24,6 +24,45 @@ class TestGameplayCaptureToolArgs {
 
 
     @Test
+    void dataSelectSetupNeedsTheTitleScreen() {
+        String[] base = {"--game", "s3k", "--zone", "aiz", "--act", "1", "--out-dir", "out",
+                "--save-slots", "saves.json", "--extra-teams", "sonic,knuckles;knuckles,tails"};
+        assertThrows(IllegalArgumentException.class, () -> GameplayCaptureTool.Arguments.parse(base));
+        var flags = new java.util.ArrayList<>(java.util.List.of(base));
+        flags.add("--title-screen");
+        var args = GameplayCaptureTool.Arguments.parse(flags.toArray(String[]::new));
+        assertEquals(Path.of("saves.json"), args.saveSlots());
+        assertEquals("sonic,knuckles;knuckles,tails", args.extraTeams());
+        assertNull(GameplayCaptureTool.Arguments.parse(new String[] {
+                "--zone", "aiz", "--act", "1", "--out-dir", "out"}).saveSlots());
+    }
+
+    @Test
+    void seededSaveSlotsUseTheProductionEnvelopeOnlyUnderAnExplicitRoot(@org.junit.jupiter.api.io.TempDir Path temp)
+            throws Exception {
+        Path seeds = temp.resolve("saves.json");
+        java.nio.file.Files.writeString(seeds, """
+                {"2": {"zone": 3, "act": 1, "mainCharacter": "knuckles", "sidekicks": ["tails"],
+                       "lives": 6, "continues": 2, "chaosEmeralds": [0, 1], "clear": false}}
+                """);
+        String previous = System.getProperty(com.openggf.game.save.SavePaths.ROOT_PROPERTY);
+        try {
+            System.clearProperty(com.openggf.game.save.SavePaths.ROOT_PROPERTY);
+            assertThrows(IllegalArgumentException.class, () -> GameplayCaptureTool.seedSaveSlots(seeds, "s3k"));
+            Path root = temp.resolve("saves");
+            System.setProperty(com.openggf.game.save.SavePaths.ROOT_PROPERTY, root.toString());
+            GameplayCaptureTool.seedSaveSlots(seeds, "s3k");
+            var summary = new com.openggf.game.save.SaveManager(root).readSlotSummary("s3k", 2);
+            assertEquals(com.openggf.game.save.SaveSlotState.VALID, summary.state());
+            assertEquals("knuckles", summary.payload().get("mainCharacter"));
+            assertEquals(java.util.List.of("tails"), summary.payload().get("sidekicks"));
+        } finally {
+            if (previous == null) System.clearProperty(com.openggf.game.save.SavePaths.ROOT_PROPERTY);
+            else System.setProperty(com.openggf.game.save.SavePaths.ROOT_PROPERTY, previous);
+        }
+    }
+
+    @Test
     void parsesHexPositionsOneBasedActsAndStills() {
         GameplayCaptureTool.Arguments args = GameplayCaptureTool.Arguments.parse(new String[] {
                 "--game", "s3k", "--zone", "fbz", "--act", "2", "--x", "0x1CF0", "--y", "$76C",
@@ -44,6 +83,46 @@ class TestGameplayCaptureToolArgs {
         assertNull(args.frames());
         assertTrue(args.stopOnDeath());
         assertEquals(Path.of("out"), args.outDir());
+    }
+
+    @Test
+    void rewindHoldsTheKeyOnlyInsideItsDeclaredWindow() {
+        String[] base = {"--zone", "ghz", "--act", "1", "--out-dir", "out"};
+        GameplayCaptureTool.Arguments bare = GameplayCaptureTool.Arguments.parse(base);
+        assertFalse(bare.rewindHeldAt(0));
+        var flags = new java.util.ArrayList<>(java.util.List.of(base));
+        flags.addAll(java.util.List.of("--rewind", "640:0x5A"));
+        GameplayCaptureTool.Arguments held = GameplayCaptureTool.Arguments.parse(flags.toArray(String[]::new));
+        assertEquals(640, held.rewindFrom());
+        assertEquals(90, held.rewindFrames());
+        assertFalse(held.rewindHeldAt(639));
+        assertTrue(held.rewindHeldAt(640));
+        assertTrue(held.rewindHeldAt(729));
+        assertFalse(held.rewindHeldAt(730));
+        for (String bad : new String[] {"640", "640:0", "-1:10", "a:b"}) {
+            var wrong = new java.util.ArrayList<>(java.util.List.of(base));
+            wrong.addAll(java.util.List.of("--rewind", bad));
+            assertThrows(IllegalArgumentException.class,
+                    () -> GameplayCaptureTool.Arguments.parse(wrong.toArray(String[]::new)), bad);
+        }
+        flags.add("--interactive-pacing");
+        assertThrows(IllegalArgumentException.class,
+                () -> GameplayCaptureTool.Arguments.parse(flags.toArray(String[]::new)));
+    }
+
+    @Test
+    void timerIsUnsetUntilDeclaredAndRejectsNegativeOrTitleFirstUse() {
+        String[] base = {"--zone", "htz", "--act", "1", "--out-dir", "out"};
+        assertNull(GameplayCaptureTool.Arguments.parse(base).timerFrames());
+        var flags = new java.util.ArrayList<>(java.util.List.of(base));
+        flags.addAll(java.util.List.of("--timer", "0x1010"));
+        assertEquals(0x1010, GameplayCaptureTool.Arguments.parse(flags.toArray(String[]::new)).timerFrames());
+        var negative = new java.util.ArrayList<>(java.util.List.of(base));
+        negative.addAll(java.util.List.of("--timer", "-1"));
+        assertThrows(IllegalArgumentException.class,
+                () -> GameplayCaptureTool.Arguments.parse(negative.toArray(String[]::new)));
+        assertThrows(IllegalArgumentException.class, () -> GameplayCaptureTool.Arguments.parse(new String[] {
+                "--zone", "ehz", "--act", "1", "--out-dir", "out", "--title-screen", "--timer", "60"}));
     }
 
     @Test
@@ -140,13 +219,17 @@ class TestGameplayCaptureToolArgs {
         var flags=new String[]{"--game","s2","--zone","ehz","--act","1","--out-dir","out","--title-screen","--audio"};
         var args=GameplayCaptureTool.Arguments.parse(flags);assertTrue(args.titleScreen());assertTrue(args.audio());
         for(String[] extra:new String[][]{{"--x","100"},{"--y","100"},{"--star-post"},{"--vint-run-count","12"},
-                {"--camera-x-sub","2"},{"--rings","1"},{"--emeralds","1111111"},{"--reverse-gravity"},{"--end-of-level"},{"--donor","s1"},
+                {"--camera-x-sub","2"},{"--rings","1"},{"--emeralds","1111111"},{"--reverse-gravity"},{"--end-of-level"},
                 {"--every","2"},{"--capture-from","1"},{"--fps","50"}}) {
             var combined=new java.util.ArrayList<String>(java.util.List.of(flags));combined.addAll(java.util.List.of(extra));
             assertThrows(IllegalArgumentException.class,()->GameplayCaptureTool.Arguments.parse(combined.toArray(String[]::new)),java.util.Arrays.toString(extra));
         }
         assertThrows(IllegalArgumentException.class,()->GameplayCaptureTool.Arguments.parse(new String[]{
                 "--game","s2","--zone","ehz","--act","2","--out-dir","out","--title-screen"}));
+        // Boot activates the donor before the title, so a donated Data Select is reachable title-first.
+        var donated=GameplayCaptureTool.Arguments.parse(new String[]{"--game","s2","--zone","ehz","--act","1",
+                "--out-dir","out","--title-screen","--donor","s3k"});
+        assertTrue(donated.titleScreen());assertEquals("s3k",donated.donor());
     }
 
     @Test
@@ -168,6 +251,12 @@ class TestGameplayCaptureToolArgs {
         assertEquals(0x0B, GameplayCaptureTool.ZoneIds.resolve("s3k", "0x0B"));
         assertEquals(7, GameplayCaptureTool.ZoneIds.resolve("s3k", "7"));
         assertEquals(0, GameplayCaptureTool.ZoneIds.resolve("s1", "ghz"));
+        // Sonic 1 names index the boot's zone registry (play order), not the ROM zone ids.
+        var s1Zones = new com.openggf.game.sonic1.Sonic1ZoneRegistry();
+        java.util.Map<String, String> s1Names = java.util.Map.of("ghz", "GREEN HILL", "mz", "MARBLE",
+                "syz", "SPRING YARD", "lz", "LABYRINTH", "slz", "STAR LIGHT", "sbz", "SCRAP BRAIN");
+        s1Names.forEach((name, title) ->
+                assertEquals(title, s1Zones.getZoneName(GameplayCaptureTool.ZoneIds.resolve("s1", name)), name));
         assertEquals(0, GameplayCaptureTool.ZoneIds.resolve("s2", "ehz"));
         assertThrows(IllegalArgumentException.class, () -> GameplayCaptureTool.ZoneIds.resolve("s3k", "nowhere"));
         assertThrows(IllegalArgumentException.class, () -> GameplayCaptureTool.ZoneIds.resolve("s4", "ghz"));

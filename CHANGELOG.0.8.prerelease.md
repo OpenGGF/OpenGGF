@@ -6,6 +6,17 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Sonic 1's Sonic on Sonic 3&K tumble objects:** Sonic 1 has no tumble frames,
+  so a donated Sonic 1 Sonic riding a Flying Battery wire cage or another tumble
+  object vanished. He now keeps his own walk and run frames there, and a donor's
+  own tumble frame base (Sonic 2 Tails') carries into its translated profile.
+- **Lightning-shield rings in Sonic 3&K replays and captures:** rings pulled in
+  by the lightning shield moved and counted correctly but were never drawn, so
+  they vanished from their places instead of flying to Sonic and sparkling.
+  An object-system reset (the trace-replay start, among others) dropped the
+  ring slots' link to the object pass. The link now survives resets. This
+  regressed in 0.7.
+
 - **S3K support notice says beta:** starting Sonic 3 & Knuckles from the hub
   now shows the beta notice, matching the 0.7 release notes. 0.7 shipped with
   the alpha notice. Players who hid the alpha notice see the beta one once.
@@ -23,6 +34,15 @@ under the matching area heading; see the
 
 ## Modding and tools
 
+- **Seeded Data Select captures:** `GameplayCaptureTool --save-slots <file.json>`
+  writes declared save slots through the production save manager into the
+  capture's private save root before a title-first capture, and `--extra-teams`
+  sets the Data Select extra team combos for that capture. The Sonic 3&K hero
+  reel uses both to show custom-team saves. Title-first headless boots also run the
+  donated Data Select warm-up that Engine runs before its startup mode, so a
+  Sonic 1 or Sonic 2 capture with S3K donating shows the generated zone previews
+  instead of S3K's placeholders.
+
 ## Maintenance and release preparation
 
 - **Scripted website hero reels:** `tools/media/hero_reels.py` regenerates
@@ -32,6 +52,24 @@ under the matching area heading; see the
   BK2 headlessly, and shots are joined with hard cuts. The build fails on a
   missing ROM, a short, black or frozen shot, or a death inside a shot. It
   writes a poster, a contact sheet and provenance (engine commit, manifest hash,
+  frame ranges) beside each reel. The reels keep the 0.6 cut's feature beats as
+  well as its zones: live rewind undoing a hit or a fall, sidekick chains (ten
+  Sonics in Scrap Brain, a crowd at the Emerald Hill 2 boss), borrowed art and
+  Super Sonic in Sonic 1 and Sonic 3&K, Sonic 3&K's Super Sonic in Sonic 2
+  with Knuckles following, Knuckles climbing a Hill Top cliff in Sonic 2, Sonic 1
+  rolling under the Flying Battery elevator, a Casino Night jackpot,
+  custom-team Data Select saves, and every Sonic 3&K zone with its bonus
+  and special stages. Shots sit inside their acts, and Super Sonic transforms
+  only once the replay has collected 50 rings. `GameplayCaptureTool --rewind FRAME:LENGTH`
+  holds the live rewind key over a window and draws the rewind plate,
+  `--timer FRAMES` sets the level timer a positioned start carried in,
+  `--emeralds` also takes Sonic 1 and Sonic 2's six emeralds, and
+  `--title-screen` now accepts `--donor`, since boot activates the donor before
+  the title. `GameplayInputBranchTool` takes `--input-start`, `--resume`,
+  `--resume-from` and `--skip-rows`, so a shot's input can be derived from a
+  level inside a complete-run movie, with one change and the recording's own
+  rows after it.
+
   frame ranges) beside each reel.
 
 - **Trace coverage and canonical fixtures:** independent strict replay covers all

@@ -1,0 +1,15 @@
+# Source for s2-mtz2-lava-rewind.txt (InputLogAuthorTool --script). Metropolis act 2,
+# positioned at x 5381 y 1880 with 71 rings (the trace mtz2 ring count at row 6024):
+# run right, jump the ledge and steer left into the lava pit by the giant cog
+# (lands about frame 134 and scatters the rings). The manifest's rewind holds the
+# live rewind key from frame 190 for 120 frames; the held-left input that follows
+# walks Sonic back off the ledge with his 71 rings restored.
+10 -
+70 R
+1 R+A
+24 R
+12 -
+40 L
+143 -
+60 L
+100 -

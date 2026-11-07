@@ -103,8 +103,43 @@ public final class GameplayCaptureSession implements AutoCloseable {
     }
 
     private boolean startAtTitle;
+    private boolean liveRewindKeyHeld;
+    private com.openggf.graphics.PixelFontTextRenderer liveRewindHudText;
     private com.openggf.mods.code.DevelopmentPatchLoader.PreparedDecorator developmentMod;
     private final DevelopmentResolverScope developmentResolver = new DevelopmentResolverScope();
+    /**
+     * Records live rewind history for this capture (off by default), so {@link #holdLiveRewind}
+     * can run the production held-key rewind with its VHS picture and transport plate.
+     */
+    /**
+     * Declared capture setup: the level timer a positioned start carried in, in frames (the HUD
+     * clock's minutes, seconds and frames). Without it a shot filmed deep in an act from a
+     * positioned boot shows TIME 0:00. Written after boot, through the same setter checkpoint
+     * restores use.
+     */
+    public void declareTimer(long frames) {
+        requireBooted();
+        GameServices.level().getLevelGamestate().setTimerFrames(frames);
+    }
+
+    public void enableLiveRewind() {
+        GameServices.configuration().setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, true);
+    }
+
+    /**
+     * Holds or releases the configured live rewind key before the next step, as a player
+     * would; LiveRewindManager reads the physical key, which the recorded controller
+     * override leaves untouched.
+     */
+    public void holdLiveRewind(boolean held) {
+        requireBooted();
+        if (held == liveRewindKeyHeld) return;
+        liveRewindKeyHeld = held;
+        loop.getInputHandler().handleKeyEvent(
+                GameServices.configuration().getInt(SonicConfiguration.LIVE_REWIND_KEY),
+                held ? org.lwjgl.glfw.GLFW.GLFW_PRESS : org.lwjgl.glfw.GLFW.GLFW_RELEASE);
+    }
+
     /** Capture production title initialization and its ordinary GameLoop launch transition. */
     public void startAtTitle() { startAtTitle = true; boot.setBootToTitle(true); }
     /** Enable the existing ROM-backed SMPS presentation producer before boot. */
@@ -163,11 +198,12 @@ public final class GameplayCaptureSession implements AutoCloseable {
             }
         }
         if (settings.emeraldStates() != null) {
-            // Declared capture setup: seven ROM Collected_emeralds_array values (0-3).
+            // Declared capture setup: one Collected_emeralds_array value (0-3) per emerald,
+            // seven in S3K and six in Sonic 1 and Sonic 2 (where 1 marks a collected emerald).
             java.util.List<Integer> states = settings.emeraldStates().chars()
                     .map(c -> c - '0').boxed().toList();
-            if (states.size() != 7 || states.stream().anyMatch(v -> v < 0 || v > 3)) {
-                throw new IllegalArgumentException("--emeralds needs seven digits 0-3");
+            if (states.size() < 6 || states.size() > 7 || states.stream().anyMatch(v -> v < 0 || v > 3)) {
+                throw new IllegalArgumentException("--emeralds needs six or seven digits 0-3");
             }
             GameServices.gameState().restoreS3kEmeraldProgress(states,
                     states.stream().anyMatch(v -> v >= 2));
@@ -519,6 +555,10 @@ public final class GameplayCaptureSession implements AutoCloseable {
                     width, HEIGHT, graphics.getViewportX(), graphics.getViewportY(),
                     graphics.getViewportWidth(), graphics.getViewportHeight());
         }
+        // Engine.draw: the live rewind transport plate follows the fade and VHS passes.
+        if (liveRewindHudText == null) liveRewindHudText = com.openggf.graphics.PixelFontTextRenderer.compactMenu();
+        liveRewindHudText.setProjectionMatrix(com.openggf.mods.scene.host.SceneSurface.projection(width, HEIGHT));
+        loop.renderLiveRewindHud(liveRewindHudText);
         loop.renderHostedRunOverlay();
         glFinish();
     }

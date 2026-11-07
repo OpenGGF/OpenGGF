@@ -58,6 +58,10 @@ class ManifestValidation(unittest.TestCase):
     def test_valid_manifest_passes(self):
         hero.validate_manifest(manifest(), 's1', root=self.root)
 
+    def test_missing_save_seed_file_is_rejected(self):
+        self.assertRejected(lambda d: d['shots'][1].update(setup={'save_slots': 'inputs/missing.json'}),
+                            'save_slots inputs/missing.json not found')
+
     def test_duplicate_shot_ids_are_rejected(self):
         self.assertRejected(lambda d: d['shots'].append(copy.deepcopy(d['shots'][0])), 'duplicated')
 
@@ -107,6 +111,25 @@ class Commands(unittest.TestCase):
         self.assertEqual('774', args[args.index('--input-start') + 1])
         self.assertEqual('50', args[args.index('--rings') + 1])
         self.assertEqual('none', args[args.index('--sidekick') + 1])
+
+    def test_feature_setup_maps_donor_rewind_and_title_switches(self):
+        shot = dict(manifest()['shots'][1], sidekick='sonic,sonic',
+                    setup={'donor': 's2', 'rewind': '640:90', 'timer': 7926, 'title_screen': True,
+                           'interactive_pacing': False})
+        args = hero.capture_args('s1', shot, '/rom.gen', Path('/out'), root=Path('/repo'))
+        self.assertEqual('s2', args[args.index('--donor') + 1])
+        self.assertEqual('640:90', args[args.index('--rewind') + 1])
+        self.assertEqual('7926', args[args.index('--timer') + 1])
+        self.assertEqual('sonic,sonic', args[args.index('--sidekick') + 1])
+        self.assertIn('--title-screen', args)
+        self.assertNotIn('--interactive-pacing', args)
+
+    def test_data_select_setup_passes_seed_file_absolutely_and_extra_teams_verbatim(self):
+        shot = dict(manifest()['shots'][1],
+                    setup={'save_slots': 'inputs/saves.json', 'extra_teams': 'sonic,knuckles;knuckles,tails'})
+        args = hero.capture_args('s3k', shot, '/rom.gen', Path('/out'), root=Path('/repo'))
+        self.assertEqual('/repo/inputs/saves.json', args[args.index('--save-slots') + 1])
+        self.assertEqual('sonic,knuckles;knuckles,tails', args[args.index('--extra-teams') + 1])
 
     def test_jvm_runs_display_free_in_isolated_user_dir(self):
         command = hero.java_command('cp', Path('/work/runtime'), 'Main', ['--x'])
