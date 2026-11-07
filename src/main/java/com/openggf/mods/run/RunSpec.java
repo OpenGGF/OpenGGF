@@ -37,6 +37,10 @@ public record RunSpec(String gameId, int zone, int act, String character, Gamepl
         Objects.requireNonNull(gameId, "gameId");
         Objects.requireNonNull(character, "character");
         Objects.requireNonNull(policy, "policy");
+        // The launch descriptor owns frozen round eligibility; native services read the policy.
+        policy = new GameplayRunPolicy(policy.specialStageEntry(), policy.bonusStageEntry(),
+                policy.actCompletion(), policy.liveRewind(), policy.editorEntry(), policy.deathRestart(),
+                policy.livesCounter(), policy.zoneIntros(), policy.monitors(), swapEnabled);
         if (zone < 0 || act < 0) {
             throw new IllegalArgumentException("zone and act must be non-negative");
         }

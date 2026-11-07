@@ -91,7 +91,8 @@ public final class TimeAttackAttempt {
     public com.openggf.mods.run.RaceClock.Failure failure() { return failure; }
     public boolean continuesAcross(com.openggf.mods.run.LevelStartCause cause) {
         return timingRule != TimingRule.FIRST_INPUT
-                && cause == com.openggf.mods.run.LevelStartCause.CHECKPOINT_RESPAWN
+                && (cause == com.openggf.mods.run.LevelStartCause.CHECKPOINT_RESPAWN
+                    || cause == com.openggf.mods.run.LevelStartCause.ARENA_DEATH_RESPAWN)
                 && (phase == Phase.ARMED || phase == Phase.RUNNING);
     }
 

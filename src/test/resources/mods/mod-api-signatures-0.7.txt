@@ -3618,6 +3618,7 @@ FIELD com.openggf.mods.mutators.SpritePresentationPolicy$Target public,static,fi
 FIELD com.openggf.mods.mutators.TransportPolicy$Kind public,static,final com.openggf.mods.mutators.TransportPolicy$Kind CARRY
 FIELD com.openggf.mods.mutators.TransportPolicy$Kind public,static,final com.openggf.mods.mutators.TransportPolicy$Kind COMPANION
 FIELD com.openggf.mods.mutators.TransportPolicy$Kind public,static,final com.openggf.mods.mutators.TransportPolicy$Kind RIDE
+FIELD com.openggf.mods.run.LevelStartCause public,static,final com.openggf.mods.run.LevelStartCause ARENA_DEATH_RESPAWN
 FIELD com.openggf.mods.run.LevelStartCause public,static,final com.openggf.mods.run.LevelStartCause CHECKPOINT_RESPAWN
 FIELD com.openggf.mods.run.LevelStartCause public,static,final com.openggf.mods.run.LevelStartCause FAST_DEATH_RESTART
 FIELD com.openggf.mods.run.LevelStartCause public,static,final com.openggf.mods.run.LevelStartCause LAUNCH

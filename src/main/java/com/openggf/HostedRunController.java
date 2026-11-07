@@ -140,8 +140,8 @@ final class HostedRunController {
      * Competition acts. Opening the race menu must not pause the simulation.
      */
     boolean ownsStart(com.openggf.game.GameMode mode) {
-        return host != null && mode == com.openggf.game.GameMode.LEVEL
-                && (overlay != null || spec.policy().deathRestart()
+        return host != null && (mode == com.openggf.game.GameMode.LEVEL || mode == com.openggf.game.GameMode.COMPETITION)
+                && (overlay != null || spec.kind() == com.openggf.mods.run.TrackKind.ARENA || spec.policy().deathRestart()
                 == com.openggf.game.session.GameplayRunPolicy.DeathRestart.FAST_FROM_CHECKPOINT);
     }
 
@@ -393,6 +393,12 @@ final class HostedRunController {
 
     void afterArenaStep(com.openggf.game.arena.ArenaStep arena,boolean complete) {
         if (host == null) return;
+        if (arenaSession != null && arenaSession.respawned()) {
+            int[] size = levelSize();
+            var start = new RunLevelStart(spec,new DeterminismFingerprint(AppVersion.get(),romChecksumOrZero()).asString(),
+                    false,size[0],size[1],com.openggf.mods.run.LevelStartCause.ARENA_DEATH_RESPAWN,arenaSession.geometry());
+            guarded(() -> host.onLevelReady(start));
+        }
         actCompleteSeen |= complete;
         var step = new RunStep(stepOrdinal++,pendingHeldMask,false,arena.pose(),complete,-1,debugAssistThisStep,
                 arena.race(),raceSwaps==null ? com.openggf.mods.run.RaceSignal.NONE : raceSwaps.consumeSignal(),
