@@ -278,7 +278,10 @@ final class SonicCdR31aWorldHost implements Host,AutoCloseable {
   }finally{activePalette=null;activePublication=null;publishing=false;}
  }
  void requireLoadingPublication(Publication original,CdAssetBytes palette){current();if(!publishing||activePublication!=original||activePalette!=palette)throw new IllegalStateException("No original applied loading publication");owner.requirePublication(this,original);if(!(image.video().selected() instanceof Published p)||p.selection().inputs().palette()!=palette)throw new IllegalStateException("Original selected image changed");}
- private CdAssetBytes selectedHscroll(CdAssetBytes live){byte[] retained;if(image.video().selected() instanceof Published p)retained=p.selection().inputs().hscroll().copy();else{int[] old=((Carried)image.video().selected()).scene().packedHscroll256();var raw=java.nio.ByteBuffer.allocate(1024);for(int bits:old)raw.putInt(bits);retained=raw.array();}System.arraycopy(live.copy(),0,retained,0,0x380);return CdAssetBytes.copyOf(retained);}
+ private CdAssetBytes selectedHscroll(CdAssetBytes live){
+  CdAssetBytes previous=image.video().selected() instanceof Published p?p.selection().inputs().hscroll():CdSelectedHscroll.fromCarriedWords(((Carried)image.video().selected()).scene().packedHscroll256());
+  return CdSelectedHscroll.copyNativePrefix(previous,live);
+ }
  private void currentArt(State state){var v=image.video();var current=state.section().residency();
   if(state.phase()==Phase.START&&image.clears().contains(Action.INIT_VDP)&&!image.clears().contains(Action.INIT_CONTROLLERS)){
    // Native InitVDP clears all resident patterns, including the separate Sonic bank,

@@ -100,13 +100,30 @@ class TestSonicCdAct3FutureWorldHost {
   public SonicCdGameModule.PastSound levelMusic(SonicCdAct3FutureWorldHost h,Program p,int period,int attack){music++;return new SonicCdGameModule.PastProgrammeSound(SonicCdGameModule.ProgramSound.STOP_FM);}
   public void serviceVInt(SonicCdAct3FutureWorldHost h){vints++;if(failure!=null){observed=h.globals();throw failure;}}public void resetGoodFutureFlags(SonicCdAct3FutureWorldHost h){resets++;}
  }
+ @Test void carriedSelectedHscrollKeepsNonzeroRawTailWithoutMutatingOwners()throws Exception{
+  int[] carried=new int[256];Arrays.fill(carried,0x89ABCDEF);carried[255]=0xFEDCBA98;
+  try(var f=new Fixture(TestCdR13PlaneSources.actual().getFirst(),3,OptionalInt.empty(),OptionalInt.empty(),OptionalInt.empty(),OptionalInt.empty(),true,0,OptionalInt.empty(),carried)){
+   var host=f.host.capture();var actor=f.frame.state();var environment=f.frame.environment();var art=f.frame.artState();var clock=f.frame.vIntClock();
+   var method=SonicCdAct3FutureWorldHost.class.getDeclaredMethod("selectedHscroll",CdAssetBytes.class);method.setAccessible(true);var projected=(CdAssetBytes)method.invoke(f.host,fill(1024,0x5C));
+   assertEquals(0x5C,projected.unsignedByte(0));assertEquals(0x5C,projected.unsignedByte(0x37F));for(int word=224;word<255;word++)assertEquals(0x89ABCDEFL,projected.unsignedLong(word*4));assertEquals(0xFEDCBA98L,projected.unsignedLong(1020));
+   assertEquals(host,f.host.capture());assertSame(actor,f.frame.state());assertSame(environment,f.frame.environment());assertSame(art,f.frame.artState());assertSame(clock,f.frame.vIntClock());
+  }
+ }
+ @Test void actualOrdinaryPublicationKeepsSelectedTailAndBorrowsOldCpu()throws Exception{
+  int[] carried=new int[256];Arrays.fill(carried,0x89ABCDEF);carried[255]=0xFEDCBA98;
+  for(var assets:TestCdR13PlaneSources.actual())try(var f=new Fixture(assets,3,OptionalInt.empty(),OptionalInt.empty(),OptionalInt.empty(),OptionalInt.empty(),true,0,OptionalInt.empty(),carried)){
+   f.ready();var old=((SonicCdAct3FutureWorldHost.Published)f.host.selected()).selection().inputs();var live=f.host.scroll().background().hscrollRam().copy();var cpu=f.host.video().completedCpu();assertEquals(0x89ABCDEFL,old.hscroll().unsignedLong(0x380));assertEquals(0xFEDCBA98L,old.hscroll().unsignedLong(1020));
+   f.core.service(0);var selected=((SonicCdAct3FutureWorldHost.Published)f.host.selected()).selection().inputs();assertArrayEquals(Arrays.copyOfRange(live,0,0x380),selected.hscroll().slice(0,0x380).copy());assertArrayEquals(old.hscroll().slice(0x380,128).copy(),selected.hscroll().slice(0x380,128).copy());assertSame(cpu,selected.selectedCpu());assertEquals(1,f.frame.environment().globals().levelFrames());
+  }
+ }
  static final class Fixture implements AutoCloseable {
   final CdR13FutureAssets assets;final CdR13SectionArt art;final CdPlayerFrameRuntime frame;final SonicCdAct3FutureWorldHost host;final SonicCdAct3FutureLoadingVisit core;final SonicCdAct3FutureOrdinaryWorld world;final Authority auth=new Authority();
   Fixture(CdR13FutureAssets a,int flags){this(a,flags,OptionalInt.empty(),OptionalInt.empty(),OptionalInt.empty(),OptionalInt.empty(),true,0,OptionalInt.empty());}
   Fixture(CdR13FutureAssets a,int flags,int palFlags,OptionalInt water){this(a,flags,OptionalInt.empty(),OptionalInt.empty(),OptionalInt.empty(),OptionalInt.empty(),true,palFlags,water);}
   Fixture(CdR13FutureAssets a,int flags,boolean bind){this(a,flags,OptionalInt.empty(),OptionalInt.empty(),OptionalInt.empty(),OptionalInt.empty(),bind,0,OptionalInt.empty());}
   Fixture(CdR13FutureAssets a,int flags,OptionalInt projector,OptionalInt layer,OptionalInt boss,OptionalInt event){this(a,flags,projector,layer,boss,event,true,0,OptionalInt.empty());}
-  Fixture(CdR13FutureAssets a,int flags,OptionalInt projector,OptionalInt layer,OptionalInt boss,OptionalInt event,boolean bind,int palFlags,OptionalInt water){assets=a;art=CdR13SectionArt.fromAssets(a);
+  Fixture(CdR13FutureAssets a,int flags,OptionalInt projector,OptionalInt layer,OptionalInt boss,OptionalInt event,boolean bind,int palFlags,OptionalInt water){this(a,flags,projector,layer,boss,event,bind,palFlags,water,new int[256]);}
+  Fixture(CdR13FutureAssets a,int flags,OptionalInt projector,OptionalInt layer,OptionalInt boss,OptionalInt event,boolean bind,int palFlags,OptionalInt water,int[] carriedHscroll){assets=a;art=CdR13SectionArt.fromAssets(a);
    var motion=new CdPlayerMotionState(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0);var actor=new CdPlayerBody.State(motion,new CdPlayerBody.AnimationCursor(0,0,0),new CdPlayerBody.Header(0,0,0,0,0),new CdPlayerBody.Timers(0,0,0,0),new CdPlayerBody.History(fill(256,0x71),0x2345),0,new CdPlayerBody.ObjectLinks(0,0),0);
    var env=new CdPlayerBody.Environment(new CdPlayerMovement.Environment(new CdPlayerMovement.Physics(0x345,0x23,0x45),new CdPlayerMovement.Bounds(3,0x1234,0x456,0),new CdPlayerMovement.Gates(2,2,1,0,0,1,0xFF),new CdPlayerMovement.Globals(3,0x78,4,5,0x6789,9,10,11,12,13)),new CdPlayerBody.Controls(0x20,0x20,0x10,0x10,0),new CdPlayerBody.Globals(0x4567,0x89,0,0x2345,0,0x3456,1,1),CdPlayerBody.DynamicSlots.UNIMPLEMENTED);
    frame=CdPlayerFrameRuntime.fromAct3FutureEntry(a,actor,env,new CdPlayerArtRuntime.State(fill(768,0x55),fill(768,0x66),0xA1,true),new CdPlayerFrameRuntime.VIntClock(OptionalLong.of(0x1234),7));
@@ -114,7 +131,7 @@ class TestSonicCdAct3FutureWorldHost {
    var entry=new Entry(section,new Program(0,0,a.identity().file()==CdNativeFile.R13C?1:0,0,0,palFlags,CdProgramInitialization.KnownBit.CLEAR,128,0,0),new CdLevelGlobals(0,0,0,0,flags,0,0,0,0),fill(128,0x22),fill(128,0x44),fill(128,0x66),fill(128,0x88),fill(1984,0xA5),false);
    var fg=new CdR11aForegroundScroll.State(0x1234,0x56789ABC,2,3,4,5,6,7,8,9,10);var bg=new CdR11aBackgroundScroll.State(1,2,3,4,5,6,fill(8,0x71),7,8,9,fill(512,0x72),fill(512,0x73),fill(1024,0x74),0x12345678);var camera=new CdR11aBackgroundPlane.Camera(1,2);var scroll=new Scroll(fg,bg,new Copies(1,2,new CdR11aBackgroundPlane.CopiedCameras(camera,camera,camera),3,new CdR11aBackgroundPlane.FlagWords(4,5,6)),0x3456,0x78);
    var globals=new SonicCdAct3FutureWorldHost.Globals(new CdRingGlobals(16,3,0,0,0,0,0,0),water.isPresent()?CdCheckpointLiveAux.writeWaterFullscreen(CdCheckpointLiveAux.unknown(),water.getAsInt()):CdCheckpointLiveAux.unknown(),new CdPlayerBody.ContactGlobals(0,0,0),new CdOpeningObjectRuntime.ScoreGlobals(0,5000,0),projector,CdCheckpointSaveData.State.unknown(),OptionalInt.empty(),OptionalInt.empty(),OptionalInt.empty(),Optional.empty(),Optional.empty(),Optional.empty(),fill(7,0x77),fill(7,0x88),layer,boss,event);
-   var scene=new RetainedPlaneSceneRenderer.Scene(null,null,new int[256],0,new byte[128],false,SpritePresentation.Frame.empty(),Map.of(),32);
+   var scene=new RetainedPlaneSceneRenderer.Scene(null,null,carriedHscroll,0,new byte[128],false,SpritePresentation.Frame.empty(),Map.of(),32);
    var video=new SonicCdAct3FutureWorldHost.Video(fill(640,0xA5),Optional.empty(),frame.artState(),section.residency(),new SonicCdAct3FutureWorldHost.Carried(scene));
    host=new SonicCdAct3FutureWorldHost(auth,a,frame,art,new SonicCdAct3FutureWorldHost.Initial(globals,scroll,new CdR11aBackgroundPlane.State(fill(4096,0xA5)),new CdR11aBackgroundPlane.State(fill(4096,0xB6)),video,fill(CdObjectPlacementRuntime.SAVED_BANK_BYTES,0)));
    core=new SonicCdAct3FutureLoadingVisit(host,a,frame,art,entry);auth.f=this;host.install(core);world=bind?new SonicCdAct3FutureOrdinaryWorld(auth,core,host,frame,a,art,CdR13ObjectAssets.fromAssets(a),CdR13PlayerCollisionAssets.fromAssets(a)):null;if(bind){host.bindWorld(world);core.bindOrdinaryOwner(host,world);}

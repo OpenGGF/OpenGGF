@@ -1,5 +1,27 @@
 # Implement Sonic CD with complete regional parity
 
+## 7 November 2026 — runtime reuse decision and first caller migration
+
+One shared CD lifecycle is the selected architecture. Programme identities and
+source contracts remain separate, while semantic frame/primary/zone programmes
+represent genuine behaviour differences. See the decision and migration gates in
+the section below; this does not assert completed lifecycle consolidation.
+
+The first executable slice introduces package-private `CdSelectedHscroll`, replacing
+the duplicate prefix-copy/word-packing algorithms in both R13/R31 Hosts and the R13
+ordinary publication path. Source selection, old CPU borrowing, guards, ownership
+and fault ordering stay at their existing callers. Native VInt_Level copies only
+the first0x380 bytes; the remaining128 selected bytes retain their original values.
+
+R88 passes97 focused cases with zero failures/errors/skips and identical source
+before/after: helper8, R13 Host24, R31 Host35, R13 loop5 and R31 loop25. Twelve new
+cases cover raw signed/big-endian words, nonzero retained tails, immutable values,
+real loading/ordinary publication and preserved owner state. Existing fixture
+defaults and assertions remain intact. Queue wait0s, Maven1m52s; user wait0s, other
+time not independently measured. This is shared/component qualification, not new
+CCZ World/Ready/ordinary/pixel or full-USA/regional proof. Subsequent edits for this
+save affect only the prerelease changelog and this plan, not tested Java.
+
 ## 7 November 2026 — shared conditional HUD reads and original primary Draw
 
 The original R31 pending Body call now accepts one prebuilt bit7-only draw state,
@@ -30,11 +52,32 @@ R87 passes181/0F/E/S with source unchanged:41 pass/primary cases,49 shared HUD,
 and eight new shared-reader controls. No fresh combined935-green, actual World,
 CCZ Ready/ordinary/pixel, full-USA or regional claim follows.
 
-Per the user's explicit architect request, further copied per-act orchestration is
-held while two independent designs compare semantic runtime families against one
-composable CD runtime. Shared semantic kernels and authenticated programme-specific
-data remain the working rule. Existing qualified gameplay and restore behavior
-must survive the first extraction and subsequent caller migrations.
+The explicit architect decision is one source-bound CD lifecycle with narrow typed
+semantic programmes. Native per-act/era/region identities, tables, formats and
+operand evidence remain separate; Java World, Host, scheduler and physical-walk
+algorithms must not be copied for every programme. Both independent Sol designs
+compared that shape with land/boss/water runtime families and preferred one lifetime
+root: water-plus-boss combinations cross family boundaries, while common capture,
+admission and transfer joins should stay together. This is not corroboration from
+different model families, nor a claim that consolidation is already complete.
+
+Real differences remain explicit: standard versus Tidal deferred water service,
+direct versus pending primary publication, native Init return, zone events/scroll,
+section RTS versus camera sections, and local handler dispositions. Do not replace
+them with zone-name branches, a universal callback script, default-zero uncovered
+state or another invocation-token owner. Keep a single serviceable art owner and
+complete same-World restore schema; intermediate deferred capture remains fenced
+until the existing Frame continuation is qualified.
+
+Migrate by replacing real callers and removing displaced algorithms in the same
+slice. First share selected-HScroll prefix copying/packing across R13 and R31, then
+finite programme reading/R3 tables, ordinary scheduling and physical dispatch, and
+loading/Host/lifetime composition. Preserve qualified route/full-course/pixel
+behaviour at each affected boundary. New CCZ/Tidal source and whole-family packets
+can proceed independently; one integration owner changes the shared owners. The
+external dated rationale, complete candidate sketches, synthesis and migration map
+are retained in the private Downloads bundle. No new per-act ordinary World copy
+was admitted for this decision.
 
 ## 7 November 2026 — actual R31 loading Host and native resident clear
 

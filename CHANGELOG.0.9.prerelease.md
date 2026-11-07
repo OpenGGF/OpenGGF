@@ -365,6 +365,10 @@ matching area heading; see the
   missing input. The original pending primary call now stages genuine Draw bit7
   changes and deferred sprite construction rereads live primary state, with full
   placement nonwrites checked around coupled publication.
+  Selected horizontal-scroll image copying and raw carried-word packing now share
+  one internal implementation across the R13 and R31 Hosts, preserving the native
+  896-byte prefix and genuine 128-byte selected tail. The reuse decision keeps
+  authentic programme data separate while consolidating lifecycle algorithms.
   A finite IPX progress
   component preserves unknown-byte and save-field alias semantics. Its actual
   boss-return join now publishes saved-zone/checkpoint state once and retains it
