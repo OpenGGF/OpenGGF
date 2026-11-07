@@ -44,6 +44,7 @@ public final class GhostHub {
         GhostFrame last, previous;
         int frameIndex, shoeOnset;
         long seenAt;
+        double validatedProgress;
 
         Player(String fingerprint, HubConnection connection) {
             this.fingerprint = fingerprint;
@@ -133,6 +134,11 @@ public final class GhostHub {
                 for (int i = 0; i < batch.frameCount(); i++) {
                     GhostFrame f = GhostFrameCodec.decode(data, i * GhostFrameCodec.BYTES);
                     if (player.last == null || player.last.shoeKind() != f.shoeKind()) player.shoeOnset = batch.startFrameIndex() + i;
+                    int width = currentProfile == null ? 65536 : Math.max(1, currentProfile.wrapWidthPx() > 0
+                            ? currentProfile.wrapWidthPx() : currentProfile.levelWidthPx());
+                    player.validatedProgress = player.last == null ? f.x() / (double) width
+                            : player.validatedProgress + TrackRules.delta(f.x() - player.last.x(),
+                                currentProfile == null ? 0 : currentProfile.wrapWidthPx()) / (double) width;
                     player.previous = player.last; player.last = f;
                 }
                 player.frameIndex = batch.startFrameIndex() + batch.frameCount() - 1;
@@ -312,6 +318,10 @@ public final class GhostHub {
         return accepted;
     }
 
+    boolean plausibleClockStart(int slot, int clockStart, long go) {
+        Player p = players.get(slot);
+        return p != null && p.validator.plausibleClockStart(clockStart, go);
+    }
     TrackValidationProfile profile() { return currentProfile; }
     HostTeleportSwap.Observation observation(int slot) {
         Player p = players.get(slot);
@@ -322,15 +332,15 @@ public final class GhostHub {
         var target = new com.openggf.net.protocol.ControlMessage.SwapTarget(f.x(), f.y(), Math.clamp(dx * 256, -4096, 4096),
                 Math.clamp(dy * 256, -4096, 4096), f.hFlip(), f.secondaryPath(), f.priorityBucket(),
                 f.highPriority(), f.shoeKind(), f.shoeKind() == 0 ? 0 : Math.max(0, 75 - (p.frameIndex - p.shoeOnset) / 8), f.progress());
-        double progress = f.progress() + (currentProfile != null && currentProfile.wrapWidthPx() > 0
-                ? Math.floorMod(f.x(), currentProfile.wrapWidthPx()) / (double) currentProfile.wrapWidthPx()
-                : f.x() / (double) Math.max(1, currentProfile == null ? 65536 : currentProfile.levelWidthPx()));
+        double progress = p.validatedProgress;
         return new HostTeleportSwap.Observation(slot, p.frameIndex, p.seenAt, f.hurt() || f.finished(), progress, target);
     }
     void enableRespawns(int slot, boolean enabled, boolean arena) {
         Player p = players.get(slot);
         if (p != null) p.validator.enableRespawns(enabled, arena);
     }
+
+    void cancelSwap(int slot) { Player p = players.get(slot); if (p != null) p.validator.cancelSwap(); }
 
     void admitSwap(int slot, com.openggf.net.protocol.ControlMessage.SwapTarget target, int first) {
         Player p = players.get(slot);

@@ -4,6 +4,19 @@ import com.openggf.net.protocol.*;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 class TestGhostStreamValidatorWrap {
+ @Test void ignoredTargetFlagsAttemptWithinBoundedStream() {
+  long[] now={0}; var violations=new java.util.ArrayList<String>();
+  var v=new GhostStreamValidator(new TrackValidationProfile(1024,512,32,60),()->now[0],(k,d)->violations.add(k));
+  v.onAttemptStart(1); assertEquals(GhostStreamValidator.Verdict.ACCEPT,batch(v,0,100,100));
+  v.admitSwap(new ControlMessage.SwapTarget(500,100,0,0,false,false,0,false,0,0,0),1);
+  for(int i=1;i<=182;i++) { now[0]=i*1000L/60; batch(v,i,100,100); }
+  assertTrue(v.isAttemptFlagged()); assertTrue(violations.contains("swap-ignored"));
+ }
+ @Test void clockPrefixCannotDiscardAnArbitraryValidatedStream() {
+  var v=new GhostStreamValidator(null,()->6000,(k,d)->{}); v.onAttemptStart(1);
+  assertTrue(v.plausibleClockStart(240,10000));
+  assertFalse(v.plausibleClockStart(1200,10000));
+ }
  @Test void wrapAcceptedButUnloggedJumpRejected() {
   var v=new GhostStreamValidator(new TrackValidationProfile(512,256,32,60,512,256,5,12),()->0,(k,d)->{});
   v.onAttemptStart(1);

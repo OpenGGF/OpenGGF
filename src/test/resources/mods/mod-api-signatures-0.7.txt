@@ -2182,6 +2182,7 @@ CONSTRUCTOR com.openggf.net.protocol.ControlMessage$StandingsRow public  <init>(
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$StandingsRow public  <init>(int,java.lang.String,java.lang.String,int,int,java.lang.String,java.lang.String,int,java.util.List<java.lang.Integer>,boolean)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$SwapTarget public  <init>(int,int,int,int,boolean,boolean,int,boolean,int,int,int)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$TeleportNoPartner public  <init>(long,int,int)
+CONSTRUCTOR com.openggf.net.protocol.ControlMessage$TeleportNoPartner public  <init>(long,int,int,java.lang.String)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$TeleportOutcome public  <init>(long,int,java.lang.String)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$TeleportRequest public  <init>(int,int)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$TeleportSwap public  <init>(long,long,int,int,com.openggf.net.protocol.ControlMessage$SwapTarget,com.openggf.net.protocol.ControlMessage$SwapTarget,int,int)
@@ -14479,6 +14480,7 @@ METHOD com.openggf.net.protocol.ControlMessage$SwapTarget public,final  int hash
 METHOD com.openggf.net.protocol.ControlMessage$SwapTarget public,final  java.lang.String toString()
 METHOD com.openggf.net.protocol.ControlMessage$TeleportNoPartner public  int attemptId()
 METHOD com.openggf.net.protocol.ControlMessage$TeleportNoPartner public  int requestFrame()
+METHOD com.openggf.net.protocol.ControlMessage$TeleportNoPartner public  java.lang.String reason()
 METHOD com.openggf.net.protocol.ControlMessage$TeleportNoPartner public  long swapId()
 METHOD com.openggf.net.protocol.ControlMessage$TeleportNoPartner public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.net.protocol.ControlMessage$TeleportNoPartner public,final  int hashCode()
@@ -20068,6 +20070,7 @@ RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$SwapTarget shoeTimer in
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$SwapTarget xVel int
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$SwapTarget yVel int
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$TeleportNoPartner attemptId int
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$TeleportNoPartner reason java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$TeleportNoPartner requestFrame int
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$TeleportNoPartner swapId long
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$TeleportOutcome applyFrame int

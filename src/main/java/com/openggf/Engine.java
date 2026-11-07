@@ -875,7 +875,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			observeWindowActivation();
 			if (textInputWindow != null) textInputWindow.focus(focused);
 			if (editorChrome != null) editorChrome.focus(focused);
-			paused = applyWindowActivation(focused, inputHandler, gameLoop::pause, gameLoop::resume,
+			paused = applyWindowActivation(focused || gameLoop.continuesWithoutFocus(), inputHandler, gameLoop::pause, gameLoop::resume,
 					() -> gameLoop.modSceneHost.windowFocusChanged(focused),
 					() -> sceneFocusPresentation.withdraw(() -> glfwSwapBuffers(window)));
 		});
@@ -883,7 +883,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			observeWindowActivation();
 			if (iconified && textInputWindow != null) textInputWindow.focus(false);
 			else if (!iconified && textInputWindow != null) textInputWindow.focus(glfwGetWindowAttrib(window, GLFW_FOCUSED) == GLFW_TRUE);
-			paused = applyWindowActivation(!iconified, inputHandler, gameLoop::pause, gameLoop::resume,
+			paused = applyWindowActivation(!iconified || gameLoop.continuesWithoutFocus(), inputHandler, gameLoop::pause, gameLoop::resume,
 					() -> gameLoop.modSceneHost.windowIconifyChanged(iconified),
 					() -> sceneFocusPresentation.withdraw(() -> glfwSwapBuffers(window)));
 		});

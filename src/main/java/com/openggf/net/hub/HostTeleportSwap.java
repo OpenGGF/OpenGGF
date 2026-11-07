@@ -10,7 +10,12 @@ public final class HostTeleportSwap {
     public record Observation(int slot, int frame, long seenAt, boolean hurt, double progress, SwapTarget target) { }
     public record Decision(int requester, int attemptId, int requestFrame, long hubMillis, Observation requesterState,
                            List<Observation> candidates, long swapId, ControlMessage.TeleportSwap command,
-                           Map<Integer, ControlMessage.TeleportOutcome> outcomes, boolean tainted) {
+                           Map<Integer, ControlMessage.TeleportOutcome> outcomes, boolean tainted, String refusalReason) {
+        public Decision(int requester, int attemptId, int requestFrame, long hubMillis, Observation requesterState,
+                List<Observation> candidates, long swapId, ControlMessage.TeleportSwap command,
+                Map<Integer, ControlMessage.TeleportOutcome> outcomes, boolean tainted) {
+            this(requester, attemptId, requestFrame, hubMillis, requesterState, candidates, swapId, command, outcomes, tainted, null);
+        }
         public Decision { candidates = List.copyOf(candidates); outcomes = Map.copyOf(outcomes); }
     }
     private final List<Decision> log = new ArrayList<>();
@@ -26,11 +31,11 @@ public final class HostTeleportSwap {
     void clear() { log.clear(); pending.clear(); cooldown.clear(); requests.clear(); deferred.clear(); recordedEvents.clear(); }
     ControlMessage request(int slot, int attempt, int frame, long round, long now, int cap,
                            Collection<Observation> observations, BiConsumer<Integer, ControlMessage> send) {
-        if (deferred.containsKey(slot)) throw new IllegalArgumentException("duplicate queued swap request");
+        if (deferred.containsKey(slot)) return noPartner(slot, attempt, frame, now, null, List.of(), send, "UNAVAILABLE");
         int sourceCap = Math.min(cap, MAX_RECORDED_EVENTS);
-        if (requests.getOrDefault(slot, 0) >= sourceCap || recordedEvents.getOrDefault(slot, 0) >= MAX_RECORDED_EVENTS)
-            throw new IllegalArgumentException("swap source or recording cap");
         Observation self = observations.stream().filter(o -> o.slot() == slot).findFirst().orElse(null);
+        if (requests.getOrDefault(slot, 0) >= sourceCap || recordedEvents.getOrDefault(slot, 0) >= MAX_RECORDED_EVENTS)
+            return noPartner(slot, attempt, frame, now, self, List.of(), send, "SOURCE_CAP");
         if (self == null) {
             if (frame < 0 || frame > GhostStreamValidator.MAX_FRAME_LEAD)
                 throw new IllegalArgumentException("swap request without plausible startup frame");
@@ -49,7 +54,7 @@ public final class HostTeleportSwap {
             requests.merge(slot, 1, Integer::sum);
             return noPartner(slot, attempt, frame, now, self, List.of(), send);
         }
-        if (!eligible(self, now)) throw new IllegalArgumentException("swap cooldown or stale stream");
+        if (!eligible(self, now)) return noPartner(slot, attempt, frame, now, self, List.of(), send, "COOLDOWN");
         requests.merge(slot, 1, Integer::sum);
         List<Observation> candidates = observations.stream().filter(o -> o.slot() != slot && eligible(o, now) && !deferred.containsKey(o.slot()) && incomingCapacity(o.slot(), sourceCap)).toList();
         Comparator<Observation> order = Comparator.comparingInt((Observation o) -> o.progress() > self.progress() ? 0 : 1)
@@ -66,20 +71,39 @@ public final class HostTeleportSwap {
     }
     private ControlMessage.TeleportNoPartner noPartner(int slot, int attempt, int frame, long now,
             Observation self, List<Observation> candidates, BiConsumer<Integer, ControlMessage> send) {
-        var reply = new ControlMessage.TeleportNoPartner(++nextId, attempt, frame);
+        return noPartner(slot, attempt, frame, now, self, candidates, send, "NO_PARTNER");
+    }
+    private ControlMessage.TeleportNoPartner noPartner(int slot, int attempt, int frame, long now,
+            Observation self, List<Observation> candidates, BiConsumer<Integer, ControlMessage> send, String reason) {
+        var reply = new ControlMessage.TeleportNoPartner(++nextId, attempt, frame, reason);
         recordedEvents.merge(slot, 1, Integer::sum);
-        pending.put(slot, reply.swapId());
-        log.add(new Decision(slot, attempt, frame, now, self, candidates, reply.swapId(), null, Map.of(), false));
+        pending.putIfAbsent(slot, reply.swapId());
+        log.add(new Decision(slot, attempt, frame, now, self, candidates, reply.swapId(), null, Map.of(), false, reason));
         send.accept(slot, reply);
         return reply;
     }
     void onPlayerLeft(int slot) { deferred.remove(slot); }
     void drain(long now, Collection<Observation> observations, BiConsumer<Integer, ControlMessage> send,
                BiConsumer<Integer, String> violation) {
+        for (Decision d : List.copyOf(log)) {
+            var c = d.command();
+            var slots = c == null ? List.of(d.requester()) : List.of(c.slotA(), c.slotB());
+            for (int slot : slots) {
+                if (d.outcomes().containsKey(slot)) continue;
+                int first = c == null ? d.requestFrame() : c.slotA() == slot ? c.sentAtFrameA() : c.sentAtFrameB();
+                Observation o = observations.stream().filter(v -> v.slot() == slot).findFirst().orElse(null);
+                if (now > d.hubMillis() + 5000 || o != null && o.frame() > first + 180) {
+                    outcome(slot, new ControlMessage.TeleportOutcome(d.swapId(), first + 181, "EXPIRED"));
+                    taint(slot);
+                    violation.accept(slot, "unanswered swap expired");
+                }
+            }
+        }
         for (Deferred d : List.copyOf(deferred.values())) {
             Observation self = observations.stream().filter(o -> o.slot() == d.slot()).findFirst().orElse(null);
             if (now > d.expiresAt()) {
-                deferred.remove(d.slot()); violation.accept(d.slot(), "queued swap expired or participant left");
+                deferred.remove(d.slot());
+                noPartner(d.slot(), d.attempt(), d.frame(), now, self, List.of(), send, "DEFERRAL_EXPIRED");
             } else if (self != null && !pending.containsKey(d.slot())
                     && self.frame() >= d.frame() && self.frame() >= cooldown.getOrDefault(d.slot(), Integer.MIN_VALUE)) {
                 deferred.remove(d.slot());
@@ -99,17 +123,21 @@ public final class HostTeleportSwap {
                 && o.frame() >= cooldown.getOrDefault(o.slot(), Integer.MIN_VALUE);
     }
     void outcome(int slot, ControlMessage.TeleportOutcome outcome) {
-        if (!Objects.equals(pending.get(slot), outcome.swapId())) throw new IllegalArgumentException("unknown swap outcome");
+        if (log.stream().noneMatch(d -> d.swapId() == outcome.swapId()
+                && (d.requester() == slot || d.command() != null && d.command().slotB() == slot)
+                && (!d.outcomes().containsKey(slot) || "EXPIRED".equals(d.outcomes().get(slot).outcome())
+                    && "EXPIRED".equals(outcome.outcome()))))
+            throw new IllegalArgumentException("unknown swap outcome");
         for (int i = 0; i < log.size(); i++) {
             Decision d = log.get(i); var c = d.command();
             if (d.swapId() != outcome.swapId()) continue;
             int first = c == null ? d.requestFrame() : c.slotA() == slot ? c.sentAtFrameA() : c.sentAtFrameB();
-            if (outcome.applyFrame() < first || outcome.applyFrame() > first + 180
-                    || !("APPLIED".equals(outcome.outcome()) && c != null || "FALLBACK".equals(outcome.outcome())))
+            if (outcome.applyFrame() < first || !"EXPIRED".equals(outcome.outcome()) && outcome.applyFrame() > first + 180
+                    || !("APPLIED".equals(outcome.outcome()) && c != null || "FALLBACK".equals(outcome.outcome()) || "EXPIRED".equals(outcome.outcome()) || c == null && "REFUSED".equals(outcome.outcome())))
                 throw new IllegalArgumentException("invalid swap outcome window");
             var outcomes = new HashMap<>(d.outcomes()); outcomes.put(slot, outcome);
-            log.set(i, new Decision(d.requester(), d.attemptId(), d.requestFrame(), d.hubMillis(), d.requesterState(), d.candidates(), d.swapId(), c, outcomes, d.tainted()));
-            pending.remove(slot);
+            log.set(i, new Decision(d.requester(), d.attemptId(), d.requestFrame(), d.hubMillis(), d.requesterState(), d.candidates(), d.swapId(), c, outcomes, d.tainted(), d.refusalReason()));
+            pending.remove(slot, outcome.swapId());
             if ("APPLIED".equals(outcome.outcome())) cooldown.put(slot, outcome.applyFrame() + 64);
             return;
         }
@@ -118,7 +146,7 @@ public final class HostTeleportSwap {
         for (int i = 0; i < log.size(); i++) {
             Decision d = log.get(i); var c = d.command();
             if (c != null && (c.slotA() == source || c.slotB() == source))
-                log.set(i, new Decision(d.requester(), d.attemptId(), d.requestFrame(), d.hubMillis(), d.requesterState(), d.candidates(), d.swapId(), c, d.outcomes(), true));
+                log.set(i, new Decision(d.requester(), d.attemptId(), d.requestFrame(), d.hubMillis(), d.requesterState(), d.candidates(), d.swapId(), c, d.outcomes(), true, d.refusalReason()));
         }
     }
 }

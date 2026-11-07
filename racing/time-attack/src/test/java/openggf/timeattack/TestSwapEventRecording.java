@@ -18,7 +18,7 @@ class TestSwapEventRecording {
         for (int i = 0; i < AttemptInputRecording.MAX_EVENTS; i++) {
             a.appendEvent(i, new RaceEvent.SwapFallback(i)); a.appendFrame(0, false);
         }
-        assertThrows(IllegalArgumentException.class, () -> a.appendEvent(64, new RaceEvent.SwapFallback(64)));
+        assertThrows(IllegalArgumentException.class, () -> a.appendEvent(AttemptInputRecording.MAX_EVENTS, new RaceEvent.SwapFallback(1024)));
         for (int i = a.frameCount(); i < AttemptInputRecording.MAX_FRAMES; i++) a.appendFrame(0, false);
         assertThrows(IllegalStateException.class, () -> a.appendFrame(0, false));
         assertEquals(37800, a.frameCount());

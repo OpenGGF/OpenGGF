@@ -139,6 +139,11 @@ final class HostedRunController {
      * Start and the pause key belong to the host for scene-covered runs and checkpoint-preserving
      * Competition acts. Opening the race menu must not pause the simulation.
      */
+    boolean continuesWithoutFocus() {
+        return host != null && (spec.kind() == com.openggf.mods.run.TrackKind.ARENA
+                || spec.policy().deathRestart() == com.openggf.game.session.GameplayRunPolicy.DeathRestart.FAST_FROM_CHECKPOINT);
+    }
+
     boolean ownsStart(com.openggf.game.GameMode mode) {
         return host != null && (mode == com.openggf.game.GameMode.LEVEL || mode == com.openggf.game.GameMode.COMPETITION)
                 && (overlay != null || spec.kind() == com.openggf.mods.run.TrackKind.ARENA || spec.policy().deathRestart()

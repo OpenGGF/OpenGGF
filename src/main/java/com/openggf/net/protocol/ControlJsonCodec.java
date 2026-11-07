@@ -473,10 +473,10 @@ public final class ControlJsonCodec {
             }
             case ControlMessage.RaceCutoff cutoff -> { if (cutoff.roundId() <= 0 || cutoff.endsAtHubMillis() < 0) invalid("race cutoff"); }
             case ControlMessage.TeleportRequest request -> { validateAttempt(request.attemptId()); nonnegative(request.requestFrame()); }
-            case ControlMessage.TeleportNoPartner request -> { if (request.swapId() <= 0) invalid("swap id"); validateAttempt(request.attemptId()); nonnegative(request.requestFrame()); }
+            case ControlMessage.TeleportNoPartner request -> { if (request.swapId() <= 0) invalid("swap id"); validateAttempt(request.attemptId()); nonnegative(request.requestFrame()); token(request.reason(), "NO_PARTNER", "SOURCE_CAP", "COOLDOWN", "DEFERRAL_EXPIRED", "UNAVAILABLE"); }
             case ControlMessage.TeleportOutcome outcome -> {
                 if (outcome.swapId() <= 0 || outcome.swapId() > 0xffffffffL) invalid("swap ID");
-                nonnegative(outcome.applyFrame()); token(outcome.outcome(), "APPLIED", "FALLBACK");
+                nonnegative(outcome.applyFrame()); token(outcome.outcome(), "APPLIED", "FALLBACK", "EXPIRED", "REFUSED");
             }
             case ControlMessage.TeleportSwap swap -> {
                 if (swap.swapId() <= 0 || swap.swapId() > 0xffffffffL || swap.roundId() <= 0 || swap.slotA() == swap.slotB()) invalid("swap identity");
@@ -501,8 +501,8 @@ public final class ControlJsonCodec {
                 validateTrackKey(result.trackKey());
                 validateRoundConfig(result.nextConfig());
                 if (result.planRevision() <= 0 || !result.trackKey().equals(
-                        result.nextConfig().gameId() + ":" + result.nextConfig().zone()
-                                + ":" + result.nextConfig().act())) {
+                        new TrackKey(result.nextConfig().gameId(), result.nextConfig().trackKind(),
+                                result.nextConfig().zone(), result.nextConfig().act()).format())) {
                     invalid("committed round plan");
                 }
             }

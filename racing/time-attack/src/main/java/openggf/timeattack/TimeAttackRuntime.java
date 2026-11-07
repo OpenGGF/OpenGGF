@@ -119,6 +119,14 @@ public final class TimeAttackRuntime implements RunHost {
     private CompetitionHudState.SwapNotice swapNotice = CompetitionHudState.SwapNotice.none();
     private final java.util.Map<Long, String> swapPartners = new java.util.HashMap<>();
     private final java.util.Set<Long> queuedSwaps = new java.util.HashSet<>();
+    private final java.util.Set<Long> expiredSwaps = new java.util.HashSet<>();
+    private final java.util.Set<Long> refusedSwaps = new java.util.HashSet<>();
+    public void queueRefusedSwap(long id) {
+        if (queueSwap(new com.openggf.mods.run.RaceEvent.SwapFallback(id), "")) refusedSwaps.add(id);
+    }
+    public void queueExpiredSwap(long id) {
+        if (queueSwap(new com.openggf.mods.run.RaceEvent.SwapFallback(id), "")) expiredSwaps.add(id);
+    }
     public boolean queueSwap(com.openggf.mods.run.RaceEvent event, String partner) {
         if (!competition() || !launch.swapEnabled() || !isAttemptActive() || handle == null) return false;
         long id = event instanceof com.openggf.mods.run.RaceEvent.SwapApply a ? a.swapId()
@@ -717,7 +725,7 @@ public final class TimeAttackRuntime implements RunHost {
             swapNotice = applied ? CompetitionHudState.SwapNotice.applied(swapPartners.getOrDefault(id, "?"))
                     : CompetitionHudState.SwapNotice.fallback();
             if (attemptListener != null) attemptListener.onTeleportOutcome(id, inputRecording.frameCount(),
-                    applied ? "APPLIED" : "FALLBACK");
+                    expiredSwaps.remove(id) ? "EXPIRED" : refusedSwaps.remove(id) ? "REFUSED" : applied ? "APPLIED" : "FALLBACK");
         }
         if (isAttemptActive() && step.signal() == com.openggf.mods.run.RaceSignal.SWAP_REQUEST
                 && competition() && launch.swapEnabled() && attemptListener != null) {

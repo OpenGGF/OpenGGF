@@ -678,7 +678,10 @@ public class GameLoop {
      * Pauses the game loop due to window losing focus.
      * Audio is also paused to prevent music continuing while game is frozen.
      */
+    boolean continuesWithoutFocus() { return hostedRuns.continuesWithoutFocus(); }
+
     public synchronized void pause() {
+        if (continuesWithoutFocus()) return;
         if (!paused) {
             com.openggf.control.InputHandlerInternalAccess.discardOrderedGameplayInput(inputHandler);
             hostedRuns.suspendInput();

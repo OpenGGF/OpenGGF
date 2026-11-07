@@ -1362,7 +1362,9 @@ public final class RoomHost {
                 } catch (IllegalArgumentException invalid) { recordAttemptViolation(member, invalid.getMessage()); }
             }
             case ControlMessage.TeleportOutcome outcome -> {
-                try { swaps.outcome(member.slot, outcome); }
+                try { swaps.outcome(member.slot, outcome);
+                    if (!"APPLIED".equals(outcome.outcome())) hub.cancelSwap(member.slot);
+                }
                 catch (IllegalArgumentException invalid) { recordAttemptViolation(member, invalid.getMessage()); }
             }
             case ControlMessage.TrackVote vote ->
@@ -1376,7 +1378,8 @@ public final class RoomHost {
                 HostRoundEngine.FinishOutcome outcome = round.onAttemptFinish(
                         member.slot, member.participantId, member.fingerprint,
                         member.displayName, member.launch.effectiveCharacter(),
-                        finish, !hub.hasFinishEvidence(member.slot,
+                        finish, round.competition() && !hub.plausibleClockStart(member.slot, finish.clockStartFrame(),
+                                member.launch.countdownEndsAtHubMillis()) || !hub.hasFinishEvidence(member.slot,
                                 finish.attemptId(), finish.finishFrame(),
                                 finish.ghostStreamHashHex()));
                 if (outcome == null) round.forfeit(member.participantId, "INVALID_FINISH");
@@ -1436,7 +1439,7 @@ public final class RoomHost {
             return;
         }
         broadcast(new ControlMessage.QuickChatBroadcast(member.slot, member.displayName,
-                phrase.name(), roomGameId, roomZone, roomAct));
+                phrase.name(), roomGameId, roomZone, roomAct, roomTrackKind));
     }
 
     /** Both player message kinds spend the same per-member cooldown and trust allowance. */
@@ -1454,11 +1457,11 @@ public final class RoomHost {
     }
 
     private List<HostTeleportSwap.Observation> swapObservations() {
-        return members.values().stream().filter(m -> m.activeAttemptId >= 0)
+        return members.values().stream().filter(m -> m.activeAttemptId >= 0 && m.launch != null && m.launch.swapEnabled())
                 .map(m -> hub.observation(m.slot)).filter(java.util.Objects::nonNull).toList();
     }
     private void sendSwap(int slot, ControlMessage message) {
-        if (message instanceof ControlMessage.TeleportSwap c && !"ARENA".equals(roomTrackKind))
+        if (message instanceof ControlMessage.TeleportSwap c)
             hub.admitSwap(slot, slot == c.slotA() ? c.targetB() : c.targetA(),
                     slot == c.slotA() ? c.sentAtFrameA() : c.sentAtFrameB());
         sendToSlot(slot, message);
@@ -1533,6 +1536,7 @@ public final class RoomHost {
     private void broadcast(ControlMessage message) {
         if (closing) return;
         if (message instanceof ControlMessage.RoundStart start) {
+            roundSwapEnabled = playerCount() >= 2 && TrackRules.swapsEnabled(start.config());
             for (Member member : members.values()) {
                 if (!member.admitted()) continue;
                 if ("LOCKED".equals(start.config().characterPolicy())) {
@@ -1562,14 +1566,13 @@ public final class RoomHost {
         }
     }
 
+    private boolean roundSwapEnabled;
+
     private ControlMessage.RaceLaunch launchFor(Member member, ControlMessage.RoundConfig selected,
                                                 long countdownEndsAt, long deadline) {
         return new ControlMessage.RaceLaunch(round.roundId(), round.planRevision(), selected,
                 member.participantId, member.slot, member.fingerprint, member.character,
-                countdownEndsAt, deadline, playerCount() >= 2 && "COMPETITION".equals(selected.mode())
-                        && ("ARENA".equals(selected.trackKind()) && "ITEMS".equals(selected.monitors())
-                        || "s2".equals(selected.gameId()) && ("RANDOM".equals(selected.monitors())
-                        || "ITEMS".equals(selected.monitors()))));
+                countdownEndsAt, deadline, roundSwapEnabled);
     }
 
     /**

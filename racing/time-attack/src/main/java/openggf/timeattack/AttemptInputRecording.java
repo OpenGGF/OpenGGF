@@ -12,16 +12,17 @@ import java.security.NoSuchAlgorithmException;
 /**
  * Input and external race-event recording: one byte per executed step from spawn
  * (idle = 0). Bits 0-4 are the held input mask, bit 5 is Start. Swap payloads are
- * server commands, never comparison trace data. The canonical v2 bytes bind both.
+ * server commands, never comparison trace data. The canonical versioned bytes bind both.
  */
 public final class AttemptInputRecording {
     public static final int START_HELD_BIT = 0x20;
     /** Ten minutes thirty seconds, including native countdown and completion steps. */
     public static final int MAX_FRAMES = 37_800;
-    public static final int MAX_ENCODED_BYTES = MAX_FRAMES + 8192;
+    public static final int MAX_ENCODED_BYTES = MAX_FRAMES + 1024 * 64 + 8192;
 
-    public static final int FORMAT_VERSION = 2;
-    public static final int MAX_EVENTS = 64;
+    public static final int FORMAT_VERSION = 3;
+    public static final int MAX_EVENTS = 1024;
+    private int encodingVersion = FORMAT_VERSION;
     public record RecordedEvent(int step, com.openggf.mods.run.RaceEvent event) { }
     private final java.util.List<RecordedEvent> events = new java.util.ArrayList<>();
     public java.util.List<RecordedEvent> events() { return java.util.List.copyOf(events); }
@@ -61,7 +62,7 @@ public final class AttemptInputRecording {
     public byte[] encode() {
         try (ByteArrayOutputStream bytes = new ByteArrayOutputStream();
              DataOutputStream out = new DataOutputStream(bytes)) {
-            out.writeByte(FORMAT_VERSION);
+            out.writeByte(encodingVersion);
             out.writeUTF(start.gameId());
             out.writeByte(start.zone());
             out.writeByte(start.act());
@@ -75,7 +76,8 @@ public final class AttemptInputRecording {
             byte[] data = maskSnapshot();
             out.writeInt(data.length);
             out.write(data);
-            out.writeByte(events.size());
+            if (encodingVersion == 2) out.writeByte(events.size());
+            else out.writeShort(events.size());
             for (RecordedEvent e : events) {
                 if (e.step() >= data.length) throw new IllegalStateException("event has no recorded step");
                 out.writeInt(e.step());
@@ -110,7 +112,8 @@ public final class AttemptInputRecording {
     public static AttemptInputRecording decodeChecked(byte[] encoded) throws IOException {
         if(encoded==null || encoded.length>MAX_ENCODED_BYTES) throw new IOException("Attempt recording exceeds byte limit");
         try (DataInputStream in = new DataInputStream(new ByteArrayInputStream(encoded))) {
-            if (in.readUnsignedByte() != FORMAT_VERSION) throw new IOException("Unsupported recording version");
+            int version = in.readUnsignedByte();
+            if (version != 2 && version != FORMAT_VERSION) throw new IOException("Unsupported recording version");
             AttemptStartDescriptor start;
             try {
                 start = new AttemptStartDescriptor(in.readUTF(), in.readUnsignedByte(), in.readUnsignedByte(),
@@ -131,7 +134,8 @@ public final class AttemptInputRecording {
             ByteArrayOutputStream masks = new ByteArrayOutputStream();
             masks.write(data, 0, data.length);
             AttemptInputRecording recording=new AttemptInputRecording(start,masks);
-            int eventCount = in.readUnsignedByte();
+            recording.encodingVersion = version;
+            int eventCount = version == 2 ? in.readUnsignedByte() : in.readUnsignedShort();
             if (eventCount > MAX_EVENTS) throw new IOException("Too many race events");
             for (int i = 0; i < eventCount; i++) {
                 int step = in.readInt();

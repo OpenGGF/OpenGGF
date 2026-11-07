@@ -25,6 +25,7 @@ public final class GhostStreamValidator {
     void admitSwap(com.openggf.net.protocol.ControlMessage.SwapTarget target, int first) {
         swapTarget = target; swapFirst = first; swapLast = first + 180;
     }
+    void cancelSwap() { swapTarget = null; }
     private TrackValidationProfile profile;
     private boolean respawnsEnabled, arenaRespawns;
     // Transport admission bounds, not native gameplay constants: one marked transition,
@@ -32,6 +33,7 @@ public final class GhostStreamValidator {
     private static final int MAX_RESETS_PER_PROGRESS = 8;
     private int resetCount, lastResetFrame;
     private final java.util.Map<Integer, Integer> resetsByProgress = new java.util.HashMap<>();
+    private final java.util.Set<Integer> savedAnchors = new java.util.HashSet<>();
     private final java.util.Map<Integer, GhostFrame> anchors = new java.util.HashMap<>();
     /** Competition only. Markers cannot move beyond an already observed checkpoint. */
     void enableRespawns(boolean enabled) { enableRespawns(enabled, profile != null && profile.lapCount() > 0); }
@@ -75,7 +77,7 @@ public final class GhostStreamValidator {
         attemptFlagged = false;
         attemptStarted = true;
         previousFrame = null;
-        resetCount = 0; lastResetFrame = -120; anchors.clear(); resetsByProgress.clear();
+        resetCount = 0; lastResetFrame = -120; anchors.clear(); savedAnchors.clear(); resetsByProgress.clear();
         swapTarget = null;
         streamDigest = newDigest();
         sealedStreamHash = null;
@@ -128,6 +130,7 @@ public final class GhostStreamValidator {
         var remainingSwap = swapTarget;
         int resets = resetCount, lastReset = lastResetFrame;
         var nextAnchors = new java.util.HashMap<>(anchors);
+        var nextSavedAnchors = new java.util.HashSet<>(savedAnchors);
         var nextResets = new java.util.HashMap<>(resetsByProgress);
         byte[] frameData = batch.frameData();
         for (int i = 0; i < batch.frameCount(); i++) {
@@ -140,24 +143,43 @@ public final class GhostStreamValidator {
             int anchorKey = arena ? 0 : frame.progress();
             if (reset) {
                 GhostFrame anchor = nextAnchors.get(anchorKey);
+                // Activation samples the player, whereas SaveData stores the post centre:
+                // Obj79_CheckActivation (s2.asm:44639-44643), Obj79_SaveData
+                // (s2.asm:44738-44739), Obj79_LoadData (s2.asm:44778-44779).
+                // S3K: sub_2D028 (sonic3k.asm:61655-61663), sub_2D164
+                // (sonic3k.asm:61743-61746). First return resolves that activation
+                // envelope to a saved centre; subsequent returns use the fixed centre.
+                boolean activationAnchor = !arena && !nextSavedAnchors.contains(anchorKey);
+                int xTolerance = maxSpeed + (activationAnchor ? 8 : 0);
+                int yTolerance = maxSpeed + (activationAnchor ? 64 : 0);
                 if (!respawnsEnabled || previous == null || anchor == null || resets >= 64
                         || nextResets.getOrDefault(frame.progress(), 0) >= MAX_RESETS_PER_PROGRESS
                         || index - lastReset < 120 || frame.progress() > previous.progress()
-                        || Math.abs(TrackRules.delta(frame.x() - anchor.x(), profile == null ? 0 : profile.wrapWidthPx())) > maxSpeed
-                        || Math.abs(TrackRules.delta(frame.y() - anchor.y(), profile == null ? 0 : profile.wrapHeightPx())) > maxSpeed)
+                        || Math.abs(TrackRules.delta(frame.x() - anchor.x(), profile == null ? 0 : profile.wrapWidthPx())) > xTolerance
+                        || Math.abs(TrackRules.delta(frame.y() - anchor.y(), profile == null ? 0 : profile.wrapHeightPx())) > yTolerance)
                     return violate("respawn-reset", "unbounded or unanchored respawn");
+                if (activationAnchor) { nextAnchors.put(anchorKey, frame); nextSavedAnchors.add(anchorKey); }
                 resets++; lastReset = index;
                 nextResets.merge(frame.progress(), 1, Integer::sum);
+            }
+            if (previous != null && !reset && frame.progress() < previous.progress() && remainingSwap == null)
+                return violate("progress", "progress moved backwards without respawn or host swap");
+            boolean arenaSwap = profile != null && profile.lapCount() > 0;
+            boolean reachedSwap = remainingSwap != null && index >= swapFirst && (arenaSwap
+                    ? frame.shoeKind() == remainingSwap.shoeKind() : Math.abs(TrackRules.delta(frame.x() - remainingSwap.centreX(), profile == null ? 0 : profile.wrapWidthPx())) <= maxSpeed
+                    && Math.abs(TrackRules.delta(frame.y() - remainingSwap.centreY(), profile == null ? 0 : profile.wrapHeightPx())) <= maxSpeed);
+            if (reachedSwap) remainingSwap = null;
+            if (remainingSwap != null && index > swapLast) {
+                attemptFlagged = true;
+                violationCount++;
+                sink.onViolation("swap-ignored", "stream never reached host swap target");
+                remainingSwap = null;
             }
             if (previous != null && !reset) {
                 int dx = Math.abs(TrackRules.delta(frame.x() - previous.x(), profile == null ? 0 : profile.wrapWidthPx()));
                 int dy = Math.abs(TrackRules.delta(frame.y() - previous.y(), profile == null ? 0 : profile.wrapHeightPx()));
                 if (dx > maxSpeed || dy > maxSpeed) {
-                    if (remainingSwap != null && index >= swapFirst && index <= swapLast
-                            && Math.abs(frame.x() - remainingSwap.centreX()) <= maxSpeed
-                            && Math.abs(frame.y() - remainingSwap.centreY()) <= maxSpeed) {
-                        remainingSwap = null;
-                    } else return violate("speed",
+                    if (!reachedSwap || index > swapLast) return violate("speed",
                             "delta " + dx + "," + dy + " exceeds " + maxSpeed);
                 }
             }
@@ -174,6 +196,7 @@ public final class GhostStreamValidator {
         }
         swapTarget = remainingSwap;
         resetCount = resets; lastResetFrame = lastReset;
+        savedAnchors.clear(); savedAnchors.addAll(nextSavedAnchors);
         resetsByProgress.clear(); resetsByProgress.putAll(nextResets); anchors.clear(); anchors.putAll(nextAnchors);
         previousFrame = previous;
         streamDigest.update(frameData);
@@ -220,6 +243,13 @@ public final class GhostStreamValidator {
             return false;
         }
         return true;
+    }
+
+    boolean plausibleClockStart(int clockStart, long scheduledGo) {
+        // Allow two seconds of transport/load skew, but never discard an arbitrary
+        // prefix of the hub's contiguous validated stream as an alleged countdown.
+        long lead = Math.max(0, scheduledGo - attemptFirstSeenMillis);
+        return clockStart <= MAX_FRAME_LEAD + (lead + 2000) * RATE_REFILL_PER_SECOND / 1000;
     }
 
     public boolean isAttemptFlagged() {

@@ -592,6 +592,34 @@ simulation, so the verifier's replay reaches the same verdict.
 
 ### 8.7 Trust and security implications
 
+Review correction (R1): room-level swap enablement freezes at RoundStart, including late
+joiners. Partner ordering uses accumulated displacement from validated positions, rather
+than the untrusted progress nibble. Ordinals may not decrease except on an admitted reset
+or swap; they remain display evidence, not proof of checkpoint/goal crossings. No ROM-free
+host check can prove that a continuously streamed, speed-bounded position avoids a hazard,
+or that a shoe timer is truthful. Targets must be positions actually accepted from that
+participant. Verified replay remains the authority for those claims.
+
+Every well-formed enabled request receives an identified command or fallback receipt;
+source-cap, cooldown and expired-deferral refusals carry explicit reasons. Refusals record a REFUSED fallback. Late commands
+record an EXPIRED fallback, without applying an old target. Unanswered recipients acquire
+an expiry receipt and a violation, releasing their pending slot. Verification requires the
+receipt even if the recipient omitted it from its recording. Applied S2 commands must reach
+the target within 180 frames and maxSpeed tolerance; arenas check the exchanged shoe kind,
+since the ROM does not exchange arena positions. Fallback outcomes cancel this obligation.
+The first checkpoint return is bounded by the ROM activation envelope plus one streamed
+step, then fixes subsequent respawns to that saved centre. The ghost transport does not
+carry a post's ROM identity or centre: without exported checkpoint coordinates, the first
+centre is geometry-bounded evidence rather than an independently authenticated post.
+Recording v3 widens event counts to 1024 so repeated native pickups after deaths can retain
+refusal receipts; v2 remains readable.
+
+Pending finish claims cannot arm the verified-room cutoff. Finish admission bounds elapsed
+frames against scheduled GO and arrival (two seconds of transport slack), and bounds the
+clock prefix against AttemptStart and the hub's contiguous stream. Placement still compares
+accepted elapsed frame counts without latency adjustments.
+
+
 This section amends the 2026-07-04 designs. The amendments are scoped to Competition mode.
 
 - **Latency now affects outcomes.** Which state a swap delivers, and the step at which each side

@@ -340,6 +340,13 @@ public final class HostRoundEngine {
                 verifiedBests.put(participantId, verified);
             }
         }
+        if (competition()) {
+            winnerFrames = verifiedBests.values().stream().mapToInt(Best::timeFrames).min().orElse(-1);
+            // Pending claims cannot close the race or permanently exclude honest finishes.
+            cutoffAt = winnerFrames < 0 ? Long.MAX_VALUE : Math.min(cutoffAt,
+                    hubClockMillis.getAsLong() + config.cutoffSeconds() * 1000L);
+            if (winnerFrames >= 0) broadcaster.accept(new ControlMessage.RaceCutoff(roundId, cutoffAt));
+        }
         // A verdict on the shown claim always changes its row (state or time),
         // even outside the broadcast cap; one on a hidden claim changes nothing.
         boolean changed = showBest(participantId);
@@ -428,11 +435,13 @@ public final class HostRoundEngine {
         if (phase != Phase.RUNNING || now > deadline + FINISH_GRACE_MILLIS
                 || attemptFlagged || finish.timeFrames() <= 0
                 || !validTiming(finish)
+                || competition() && finish.timeFrames() < Math.max(0,
+                    (now - countdownEndsAt - 2000) * GhostStreamValidator.PACING_MIN_FPS / 1000)
                 || competition() && (out.containsKey(participantId)
                     || !Objects.equals(started.get(participantId), finish.attemptId())
                     || bests.containsKey(participantId)
-                    || cutoffAt != Long.MAX_VALUE && now > cutoffAt + FINISH_GRACE_MILLIS
-                    || winnerFrames >= 0 && (long) finish.timeFrames() > winnerFrames + config.cutoffSeconds() * 60L)
+                    || !verifiedRoom && cutoffAt != Long.MAX_VALUE && now > cutoffAt + FINISH_GRACE_MILLIS
+                    || !verifiedRoom && winnerFrames >= 0 && (long) finish.timeFrames() > winnerFrames + config.cutoffSeconds() * 60L)
                 || finish.attemptId() <= lastFinishedAttemptByParticipant
                 .getOrDefault(participantId, Integer.MIN_VALUE)
                 || finish.finishFrame() > 37800
@@ -460,7 +469,7 @@ public final class HostRoundEngine {
         }
         if (betterLap) lapBests.put(participantId, improved);
         if (existing == null || existing.timeFrames() > improved.timeFrames()) bests.put(participantId, improved);
-        if (competition() && winnerFrames < 0) {
+        if (competition() && !verifiedRoom && winnerFrames < 0) {
             winnerFrames = finish.timeFrames();
             cutoffAt = now + config.cutoffSeconds() * 1000L;
             broadcaster.accept(new ControlMessage.RaceCutoff(roundId, cutoffAt));

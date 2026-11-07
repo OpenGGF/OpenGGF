@@ -68,11 +68,13 @@ public final class VerificationJobQueue {
     }
     public static List<SwapReceipt> swapReceipts(List<com.openggf.net.hub.HostTeleportSwap.Decision> log, int slot) {
         return log.stream()
-                .filter(d -> d.outcomes().containsKey(slot)).map(d -> {
+                .filter(d -> d.requester() == slot || d.command() != null
+                        && (d.command().slotA() == slot || d.command().slotB() == slot)).map(d -> {
                     var o = d.outcomes().get(slot); var c = d.command();
                     var target = c == null ? null : c.slotA() == slot ? c.targetB() : c.targetA();
                     int first = c == null ? d.requestFrame() : c.slotA() == slot ? c.sentAtFrameA() : c.sentAtFrameB();
-                    return new SwapReceipt(d.swapId(), first, o.applyFrame(), o.outcome(), target,
+                    return new SwapReceipt(d.swapId(), first, o == null ? first + 181 : o.applyFrame(),
+                            o == null ? "MISSING" : o.outcome(), target,
                             d.requester()==slot ? d.requestFrame() : null);
                 }).toList();
     }

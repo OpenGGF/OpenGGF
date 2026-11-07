@@ -258,7 +258,10 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
                             int local = session.localSlot();
                             if (local == swap.slotA() || local == swap.slotB()) {
                                 int sentAt = local == swap.slotA() ? swap.sentAtFrameA() : swap.sentAtFrameB();
-                                if (runtime.nextStepIndex() < sentAt || runtime.nextStepIndex() > sentAt + 180) continue;
+                                if (runtime.nextStepIndex() > sentAt + 180) {
+                                    runtime.queueExpiredSwap(swap.swapId());
+                                    continue;
+                                }
                                 int other = local == swap.slotA() ? swap.slotB() : swap.slotA();
                                 String name = session.players().stream().filter(p -> p.slot() == other)
                                         .map(ControlMessage.PlayerInfo::displayName).findFirst().orElse("?");
@@ -272,7 +275,9 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
                         }
                     } else if (control.message() instanceof ControlMessage.TeleportNoPartner none) {
                         if (runtime != null && publisherActive && none.attemptId() == publisher.currentAttemptId()) {
-                            runtime.queueSwap(new com.openggf.mods.run.RaceEvent.SwapFallback(none.swapId()), "");
+                            if (runtime.nextStepIndex() > none.requestFrame() + 180) runtime.queueExpiredSwap(none.swapId());
+                            else if (!"NO_PARTNER".equals(none.reason())) runtime.queueRefusedSwap(none.swapId());
+                            else runtime.queueSwap(new com.openggf.mods.run.RaceEvent.SwapFallback(none.swapId()), "");
                         }
                     } else if (control.message() instanceof ControlMessage.RaceCutoff cutoff) {
                         if (session.launch() != null && cutoff.roundId() == session.launch().roundId())

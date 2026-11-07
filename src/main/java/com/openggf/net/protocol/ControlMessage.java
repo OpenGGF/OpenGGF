@@ -673,7 +673,11 @@ public sealed interface ControlMessage {
     @com.openggf.game.ModApi
     record TeleportSwap(long swapId, long roundId, int slotA, int slotB, SwapTarget targetA, SwapTarget targetB, int sentAtFrameA, int sentAtFrameB) implements ControlMessage { }
     @com.openggf.game.ModApi
-    record TeleportNoPartner(long swapId, int attemptId, int requestFrame) implements ControlMessage { }
+    record TeleportNoPartner(long swapId, int attemptId, int requestFrame, String reason) implements ControlMessage {
+        public TeleportNoPartner(long swapId, int attemptId, int requestFrame) {
+            this(swapId, attemptId, requestFrame, "NO_PARTNER");
+        }
+    }
     @com.openggf.game.ModApi
     record TeleportOutcome(long swapId, int applyFrame, String outcome) implements ControlMessage { }
     @com.openggf.game.ModApi

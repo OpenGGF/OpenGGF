@@ -215,7 +215,7 @@ public final class AttemptReplayHarness {
         // by an unconditional fallback command. No-partner receipts have no target.
         if (event instanceof com.openggf.mods.run.RaceEvent.SwapFallback fallback) {
             var receipt = receipts.stream().filter(r -> r.swapId() == fallback.swapId()).findFirst();
-            if (receipt.isPresent() && receipt.get().target() != null) {
+            if (receipt.isPresent() && !"EXPIRED".equals(receipt.get().outcome()) && receipt.get().target() != null) {
                 var t = receipt.get().target();
                 return new com.openggf.mods.run.RaceEvent.SwapApply(fallback.swapId(),
                         new com.openggf.mods.run.SwapTarget(t.centreX(),t.centreY(),t.xVel(),t.yVel(),

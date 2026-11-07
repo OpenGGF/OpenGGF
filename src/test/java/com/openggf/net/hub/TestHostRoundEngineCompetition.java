@@ -9,6 +9,21 @@ class TestHostRoundEngineCompetition {
     long now;
     List<ControlMessage> messages = new ArrayList<>();
     HostRoundEngine engine = new HostRoundEngine(() -> now, messages::add);
+    @Test void forgedFiveFrameFinishNeverArmsCutoff() {
+        start(); engine.startAttempt("p0",1); now = 30_000;
+        var f = new ControlMessage.AttemptFinish(1,5,1235,1240,List.of(1,1,1,1,1),List.of(),"ab".repeat(32),"cd".repeat(32),null);
+        assertNull(engine.onAttemptFinish(0,"p0",null,"P","sonic",f,false));
+        assertTrue(messages.stream().noneMatch(ControlMessage.RaceCutoff.class::isInstance));
+    }
+    @Test void failedPendingWinnerDoesNotExcludeHonestFinish() {
+        start(); engine.setVerifiedRoom(true);
+        engine.startAttempt("p0",1); engine.startAttempt("p1",1);
+        assertNotNull(finish(0,100)); assertNotNull(finish(1,2000));
+        assertTrue(messages.stream().noneMatch(ControlMessage.RaceCutoff.class::isInstance));
+        engine.onVerdict(0,1,false); engine.onVerdict(1,1,true);
+        assertEquals("FINISHED",engine.standings().getFirst().outcome());
+        assertEquals(2000,engine.standings().getFirst().bestTimeFrames());
+    }
     @Test void configuredStartDelayIsUsedByHost() {
         now = 123;
         engine.startRound(new ControlMessage.RoundConfig("s3k",0,0,60,"OPEN",null,"ARENA","COMPETITION","ITEMS",60,15));

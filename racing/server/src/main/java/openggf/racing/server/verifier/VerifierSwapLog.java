@@ -21,9 +21,9 @@ public final class VerifierSwapLog {
             var r = matches.getFirst();
             if(r.nativeRequestFrame()!=null && (r.nativeRequestFrame()<0 || r.nativeRequestFrame()>r.requestFrame())) return false;
             if (recorded.step() != r.applyFrame() || r.applyFrame() < r.requestFrame()
-                    || r.applyFrame() > r.requestFrame() + 180) return false;
+                    || !"EXPIRED".equals(r.outcome()) && r.applyFrame() > r.requestFrame() + 180) return false;
             if (recorded.event() instanceof RaceEvent.SwapFallback) {
-                if (!"FALLBACK".equals(r.outcome())) return false;
+                if (!"FALLBACK".equals(r.outcome()) && !"EXPIRED".equals(r.outcome()) && !"REFUSED".equals(r.outcome())) return false;
             } else {
                 if (!"APPLIED".equals(r.outcome()) || r.target() == null) return false;
                 var t = r.target();

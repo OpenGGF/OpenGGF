@@ -25,6 +25,18 @@ class TestFrozenLaunchPolicy {
                 .filter(ControlMessage.JoinAccepted.class::isInstance).map(ControlMessage.JoinAccepted.class::cast).findFirst().orElseThrow();
         return new Joined(connection,joined.playerSlot(),RoomRoundAccess.participantIdForSlot(room,joined.playerSlot(),identity.fingerprint()));
     }
+    @Test void lateJoinCannotEnableSwapsInASoloFrozenRoom() throws Exception {
+        var room=new RoomHost(new RoomHostConfig("test","s3k",0,0,"OPEN",null,8,"fp"),
+                PlayerIdentity.loadOrCreate(root.resolve("host")),()->0L,TrackValidationProfileSource.none());
+        room.configureTrackIdentity("ARENA","COMPETITION");
+        var a=join(room,"A");
+        assertTrue(room.requestStartRound(new ControlMessage.RoundConfig("s3k",0,0,600,"OPEN",null,
+                "ARENA","COMPETITION","ITEMS",30)));
+        var b=join(room,"B");
+        assertFalse(RoomRoundAccess.frozenLaunchForParticipant(room,a.slot(),a.participant()).swapEnabled());
+        assertFalse(RoomRoundAccess.frozenLaunchForParticipant(room,b.slot(),b.participant()).swapEnabled());
+        room.close("test complete");
+    }
     @Test void readerRetainsFrozenEligibilityAfterPeerLeavesAndRefusesAnotherParticipant() throws Exception {
         var room=new RoomHost(new RoomHostConfig("test","s3k",0,0,"OPEN",null,8,"fp"),
                 PlayerIdentity.loadOrCreate(root.resolve("host")),()->0L,

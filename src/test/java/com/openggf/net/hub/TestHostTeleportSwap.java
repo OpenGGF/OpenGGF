@@ -36,7 +36,7 @@ class TestHostTeleportSwap {
   host.drain(1100,List.of(player(0,1,11),player(1,2,11)),(slot,m)->sent.add(m),(slot,d)->fail(d));
   assertEquals(1,host.log().size());
   assertEquals(11,host.log().getFirst().command().sentAtFrameA());
-  assertThrows(IllegalArgumentException.class,()->host.request(2,1,10,1,1000,0,List.of(player(2,1,10)),(slot,m)->{}));
+  assertEquals("SOURCE_CAP",assertInstanceOf(ControlMessage.TeleportNoPartner.class,host.request(2,1,10,1,1000,0,List.of(player(2,1,10)),(slot,m)->{})).reason());
  }
  @Test void hurtAndFinishedPeersAreNotPartners() {
   var self = player(0,1,10);
@@ -52,11 +52,11 @@ class TestHostTeleportSwap {
  @Test void missingStartupFramesExpireAndDisconnectedWaiterIsRemoved() {
   var violations=new ArrayList<Integer>();
   assertNull(request(0,0,List.of()));
-  host.drain(1251,List.of(),(slot,m)->fail(),(slot,d)->violations.add(slot));
-  assertEquals(List.of(0),violations); assertTrue(host.log().isEmpty());
+  host.drain(1251,List.of(),(slot,m)->sent.add(m),(slot,d)->violations.add(slot));
+  assertTrue(violations.isEmpty()); assertEquals("DEFERRAL_EXPIRED",((ControlMessage.TeleportNoPartner)sent.getFirst()).reason());
   assertNull(request(1,0,List.of())); host.onPlayerLeft(1);
-  host.drain(1251,List.of(),(slot,m)->fail(),(slot,d)->violations.add(slot));
-  assertEquals(List.of(0),violations);
+  host.drain(1251,List.of(),(slot,m)->sent.add(m),(slot,d)->violations.add(slot));
+  assertTrue(violations.isEmpty());
  }
  @Test void requesterHurtWhileAwaitingFramesGetsLoggedFallback() {
   assertNull(request(0,10,List.of(player(0,1,9),player(1,2,9))));
@@ -92,9 +92,9 @@ class TestHostTeleportSwap {
   assertThrows(IllegalArgumentException.class,()->host.outcome(0,new ControlMessage.TeleportOutcome(c.swapId(),191,"APPLIED")));
   host.outcome(0,new ControlMessage.TeleportOutcome(c.swapId(),11,"APPLIED"));
   host.outcome(1,new ControlMessage.TeleportOutcome(c.swapId(),11,"FALLBACK"));
-  assertThrows(IllegalArgumentException.class,()->request(1,10,players));
+  assertInstanceOf(ControlMessage.TeleportNoPartner.class,request(1,10,players));
   host.drain(1000,List.of(player(0,1,75),player(1,2,75),player(2,3,75)),(slot,m)->sent.add(m),(slot,d)->fail(d));
-  assertEquals(2,host.log().size());
+  assertEquals(3,host.log().size());
   assertInstanceOf(ControlMessage.TeleportSwap.class,host.log().getLast().command());
   assertThrows(IllegalArgumentException.class,()->request(0,500,players));
  }

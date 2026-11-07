@@ -28,6 +28,16 @@ class TestGhostRespawnReset {
         assertEquals(GhostStreamValidator.Verdict.DROP,send(v,131,100,1,true));
         assertEquals(GhostStreamValidator.Verdict.DROP,send(v,131,4000,1,false));
     }
+    @Test void jumpThroughAtMaximumActivationHeightCanReturnToSavedPostCentre() {
+        var v = validator(true);
+        byte[] data = new byte[7];
+        for (int i=0;i<=120;i++) {
+            now = i * 1000L / 60;
+            GhostFrameCodec.encode(new GhostFrame(100,i==120 ? 164 : 100,0,false,false,false,0,false,false,1,false,0,i==120),data,0);
+            assertEquals(GhostStreamValidator.Verdict.ACCEPT,v.onBatch(new GhostPackets.FramesBatch(1,i,1,data)));
+        }
+        assertEquals(0,v.violationCount());
+    }
     @Test void timeAttackAndUnanchoredFirstFrameCannotReset() {
         var v = validator(false);
         assertEquals(GhostStreamValidator.Verdict.DROP,send(v,0,100,1,true));
