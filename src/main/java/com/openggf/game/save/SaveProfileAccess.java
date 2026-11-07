@@ -35,6 +35,17 @@ public final class SaveProfileAccess {
         public Optional<Disposition> recheckDisposition(){return actual.recheck==null?Optional.empty():Optional.of(actual.recheck.disposition);}
         public Optional<Throwable> quarantineFailure(){return actual.recheck==null?Optional.empty():Optional.ofNullable(actual.recheck.quarantineFailure);}
     }
+    // BEGIN original boot backend initialization 20261107. Point-in-time engine I/O, not firmware status.
+    public static final class BackendInitialization {
+        private final SaveManager.ProfileBackendInitialization actual;
+        private BackendInitialization(SaveManager.ProfileBackendInitialization actual){this.actual=actual;}
+        public boolean isFor(SaveManager manager,com.openggf.game.GameId game){return actual.owner==manager&&actual.game==game;}
+    }
+    public static BackendInitialization initializeBackend(SaveManager manager,com.openggf.game.GameId game)throws java.io.IOException{
+        Objects.requireNonNull(manager);Objects.requireNonNull(game);
+        return new BackendInitialization(manager.initializeProfileBackend(game));
+    }
+    // END original boot backend initialization.
     private SaveProfileAccess(){}
     public static Lookup lookup(SaveManager manager,String game,int slot){
         Objects.requireNonNull(manager);Objects.requireNonNull(game);return new Lookup(manager.profileLookup(game,slot));

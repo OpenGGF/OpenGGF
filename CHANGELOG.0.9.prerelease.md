@@ -8,6 +8,11 @@ matching area heading; see the
 ## Gameplay and presentation
 
 - **Sonic CD development support:** authenticated user-disc sources now feed an
+  Fresh selected-profile boot now performs source-ordered SPX/MDINIT/BRAM
+  initialization and real serialized storage-backend setup, preserving legacy
+  entry behavior and unknown save tails. A private R31 handoff remains fenced
+  before the missing live World;147 focused checks pass with explicit nested
+  evidence reconciliation, without a gameplay or native-driver completion claim.
   experimental Palmtree Panic player, terrain and native-object runtime with
   current-art loading, checkpoint lifecycle and rewind checks. Pre-save time
   warp now creates native history-driven stars through the existing art service,

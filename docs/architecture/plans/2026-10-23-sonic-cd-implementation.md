@@ -1,5 +1,33 @@
 # Implement Sonic CD with complete regional parity
 
+## 7 November 2026 — original boot and real storage initialization
+
+A fresh package-private entry now performs the authenticated original SPX,
+IPX, MDINIT and BRAM prefix before selected-profile storage. It retains both
+MAINVARS clears, actual controller/video/FM installation outputs and title90,
+then the broad BRAM clear and real serialized backing-store initialization.
+Only genuine missing-profile creation receives the separately proven main
+buffer tail0; valid read knowledge replaces it and temporary tails stay UNKNOWN.
+The legacy factory and completed visits retain their previous behavior.
+
+The actual applied R31 entry issues one private Module/source/World continuation.
+It need not keep the selected callback alive during later loading waits. Bind and
+consume require the original load generation, actual loading publication and
+full current pair. Failed or caught unowned entry retires the permit; no equal
+record, capture or returned effect can resume it. Actual R31 Frame/art/Host/World
+assembly is still explicitly fenced; no Ready or ordinary CCZ route is claimed.
+
+R76 Maven passes147 cases across9 selected roots,0 failures/errors/skips on
+unchanged source:34 new boot/backend cases and113 existing storage/profile/
+programme cases. The strict original receipt remains INCOMPLETE because Root
+omitted the new Boot$ActualUsa suite. Read-only reconciliation declares the
+exact12 fresh suites from that same invocation and checks all147 cases, source
+identity, timing and environment without rerunning tests or changing the verdict.
+Independent bounded static review finds no actionable P1/P2. After execution,
+only three new test headers clarify author-versus-Root qualification provenance.
+No firmware, native driver/Title execution, audio, whole-game or regional parity
+follows from this bounded qualification. Main and remotes remain untouched.
+
 ## 7 November 2026 — same-CUE system custody and original CCZ events
 
 Stock USA preparation detaches the existing authenticated SPX source from its

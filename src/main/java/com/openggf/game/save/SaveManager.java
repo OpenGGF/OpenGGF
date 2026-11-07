@@ -424,6 +424,29 @@ public final class SaveManager {
         }
     }
 
+    // BEGIN original boot backend initialization 20261107. No selected-slot lookup.
+    static final class ProfileBackendInitialization {
+        final SaveManager owner;
+        final com.openggf.game.GameId game;
+        private ProfileBackendInitialization(SaveManager owner, com.openggf.game.GameId game) {
+            this.owner=owner; this.game=game;
+        }
+    }
+
+    ProfileBackendInitialization initializeProfileBackend(com.openggf.game.GameId game) throws IOException {
+        java.util.Objects.requireNonNull(game, "configured backend game");
+        Path directory=java.util.Objects.requireNonNull(root, "configured save root").resolve(game.code());
+        return submitAndWait(() -> {
+            Files.createDirectories(directory);
+            try (var ignored=Files.newDirectoryStream(directory)) {
+                // Opening and closing are real backing-store validation; no slot or probe is read/written.
+            }
+            return new ProfileBackendInitialization(this,game);
+        });
+        // Interrupted callers receive no receipt. Queued directory work may still finish; never roll it back.
+    }
+    // END original boot backend initialization.
+
     private Path slotPath(String game, int slot) {
         return root.resolve(game).resolve("slot" + slot + ".json");
     }

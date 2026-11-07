@@ -43,6 +43,15 @@ final class CdSaveProfileBootstrap {
     private CdSaveProfileBootstrap(SaveManager manager,CdInitialSaveAssets source){this.manager=Objects.requireNonNull(manager);this.source=Objects.requireNonNull(source);Objects.requireNonNull(source.identity());}
     static CdSaveProfileBootstrap bind(SaveManager manager,CdInitialSaveAssets source){return new CdSaveProfileBootstrap(manager,source);}
     /** Genuine service selection only. Does not accept caller summaries, payloads or completion claims. */
+    // BEGIN fresh original boot storage scope 20261107. The receipt is never accepted as a supplied value.
+    private CdOriginalBootPrefix activeBoot;
+    Result openSelectedSlotFromOriginalBoot(int slot,CdOriginalBootPrefix boot){
+        Objects.requireNonNull(boot).requireStorageSearch(this,slot);
+        if(activeBoot!=null||running.get())throw new IllegalStateException("Original bootstrap is already active");
+        activeBoot=boot;
+        try{return openSelectedSlot(slot);}finally{activeBoot=null;}
+    }
+    // END fresh original boot storage scope.
     Result openSelectedSlot(int slot){
         if(slot<0)throw new IllegalArgumentException("Selected semantic slot must be nonnegative");
         if(!running.compareAndSet(false,true))throw new IllegalStateException("Profile bootstrap already active");
@@ -61,7 +70,7 @@ final class CdSaveProfileBootstrap {
                 }
                 case MISSING -> {
                     // This is the only service edge that may consume the authenticated initial template.
-                    var prepared=CdSaveProfile.fromTemplate(source);
+                    var prepared=activeBoot==null?CdSaveProfile.fromTemplate(source):activeBoot.initialProfile(this);
                     var creation=SaveProfileAccess.createIfMissing(observed,prepared.encode());
                     if(creation.disposition()==SaveProfileAccess.CreateDisposition.CREATED){
                         var receipt=new Receipt(this,slot,prepared,Origin.CREATED);

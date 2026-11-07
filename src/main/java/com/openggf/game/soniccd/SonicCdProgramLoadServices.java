@@ -47,6 +47,17 @@ final class SonicCdProgramLoadServices {
         return initial(PcmKnowledge.UNKNOWN, SelectorKnowledge.UNKNOWN);
     }
 
+    // BEGIN authenticated original SPX initialization 20261107. A pure rule; actual invocation is private Boot.
+    static State initializeOriginalSystem(State before,com.openggf.game.soniccd.media.CdSystemProgramSource source){
+        Objects.requireNonNull(before);Objects.requireNonNull(source);
+        if(!before.equals(unknown()))throw new IllegalStateException("Original system initialization requires its new unknown programme preimage");
+        var clear=source.initializationClear();
+        if(clear.instructionFileOffset()!=0x800||clear.targetAddress()!=0x7000||clear.byteCount()!=0x400
+                ||clear.selectorOffset()!=0||clear.selectorBytes()!=4)throw new IllegalArgumentException("Original SPX clear relation differs");
+        return initial(PcmKnowledge.KNOWN_ABSENT,SelectorKnowledge.CLEARED);
+    }
+    // END authenticated original SPX initialization.
+
     /** Explicit earlier DEV initial condition only; this does not execute native SPX startup. */
     static State developmentKnownAbsent() {
         return initial(PcmKnowledge.KNOWN_ABSENT, SelectorKnowledge.CLEARED);

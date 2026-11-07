@@ -100,6 +100,7 @@ public final class SonicCdGameModule implements GameModule {
     private CdGameDataSource source;
     private final CdSelectedProfileVisit selectedProfile;
     private final Object selectedProfileInvocation;
+    private final CdOriginalBootPrefix originalBoot; // Fresh factory only; never reconstructed from values/captures.
     private GameplayModeContext playerMode;
     private CdPlayerFrameRuntime playerFrame;
     private CdPlayableSonic playerActor;
@@ -1693,6 +1694,7 @@ public final class SonicCdGameModule implements GameModule {
 
     private void validateProgramServicesState(ProgramServicesState value) {
         Objects.requireNonNull(value, "program service capture");
+        if(originalBoot!=null){validateOriginalBootServices(value);return;}
         if (!coldProgramStartAdmission) {
             if (!value.equals(initialProgramServices(null))) {
                 throw new IllegalArgumentException("Legacy DEV capture cannot manufacture earlier program history");
@@ -2382,6 +2384,14 @@ public final class SonicCdGameModule implements GameModule {
     private SonicCdGameModule(boolean playerAdmission, boolean openingObjectsAdmission,
                               CdProgramInitialization.ExecutionEnvironment explicitEnvironment,
                               CdSelectedProfileVisit.Prepared selected) {
+        this(playerAdmission,openingObjectsAdmission,explicitEnvironment,selected,null);
+    }
+
+    // BEGIN actual original boot constructor bridge 20261107. Legacy ctor4 always supplies null.
+    private SonicCdGameModule(boolean playerAdmission,boolean openingObjectsAdmission,
+                              CdProgramInitialization.ExecutionEnvironment explicitEnvironment,
+                              CdSelectedProfileVisit.Prepared selected,CdOriginalBootPrefix boot) {
+        originalBoot=boot;
         coldProgramStartAdmission = explicitEnvironment != null;
         programServices = initialProgramServices(explicitEnvironment);
         this.playerAdmission = playerAdmission;
@@ -2396,8 +2406,14 @@ public final class SonicCdGameModule implements GameModule {
                         code -> { throw SonicCd.unsupported("generic playable-art loading; CD owns its complete resident bank"); }))
                 : PlayableCharacterRegistry.empty();
         selectedProfileInvocation = selected == null ? null : new Object();
-        selectedProfile = selected == null ? null : new CdSelectedProfileVisit(this, selected, selectedProfileInvocation);
+        selectedProfile = selected == null ? null : boot==null?new CdSelectedProfileVisit(this, selected, selectedProfileInvocation)
+                :new CdSelectedProfileVisit(this,selected,selectedProfileInvocation,boot);
+        if(boot!=null){
+            source=boot.source();ipxProgress=IpxProgressFacts.from(boot.state().progress());
+            programServices=new ProgramServicesState(boot.state().loads(),boot.state().initialization(),boot.environment(),List.of());
+        }
     }
+    // END actual original boot constructor bridge.
 
     // BEGIN actual selected-profile pre-level Module owner 20261107.
     /** Supplied engine-menu request only; this does not execute or certify native Title. */
@@ -2421,6 +2437,37 @@ public final class SonicCdGameModule implements GameModule {
         var module=prepared.healthy()?new SonicCdGameModule(true,true,null,prepared):null;
         return new SelectedProfileAttempt(prepared.result(),module);
     }
+    // BEGIN original pre-storage fresh factory/private continuation bridge 20261107.
+    static SelectedProfileAttempt prepareSelectedProfileFromOriginalBoot(CdGameDataSource source,
+            com.openggf.game.save.SaveManager manager,int slot,ProfileEntry entry,
+            CdProgramInitialization.ExecutionEnvironment environment)throws IOException{
+        var preparation=CdOriginalBootPrefix.prepare(source,manager,slot,entry,environment);
+        var prepared=preparation.selected();
+        var module=prepared.healthy()?new SonicCdGameModule(true,true,null,prepared,preparation.boot()):null;
+        return new SelectedProfileAttempt(prepared.result(),module);
+    }
+    private void completeOriginalBootInitialization(CdSelectedProfileVisit.Publication original){
+        originalBoot.completeInitializationReturn(this,original);
+    }
+    private void enterOriginalR31Programme(CdSelectedProfileVisit.Publication original){
+        // This is the original applied selected-entry cut. Its scope is NOT retained for later frames.
+        var permit=originalBoot.issueR31(this,original);
+        // Root must prebuild/admit the actual R31 Frame/art/Host pair and bind this private permit.
+        // A failed unowned cut retires it; catching the exception never grants a continuation.
+        throw originalBoot.unownedR31(permit);
+    }
+    void requireOriginalBootR31Loading(CdOriginalBootPrefix.Continuation permit,SonicCdR31aLoadingVisit core,
+            SonicCdR31aLoadingVisit.Host host,CdPlayerFrameRuntime frame,
+            com.openggf.game.soniccd.resources.CdR31aSectionArt art){
+        // Precise next Root seam: source/World/generation/full-current-pair validation. No data admits it.
+        throw SonicCd.unsupported("original R31 Frame/art/Host full-pair World owner");
+    }
+    private void validateOriginalBootServices(ProgramServicesState value){
+        originalBoot.requireConsumed(this,SessionManager.getCurrentWorldSession(),selectedProfileInvocation);
+        if(!value.environment().equals(originalBoot.environment()))throw new IllegalArgumentException("Another original execution environment");
+        SonicCdProgramLoadServices.validateWithR3ForCapture(value.loads(),source.timeWarpPrograms().orElseThrow(),source.r3PcmSource().orElseThrow());
+    }
+    // END original pre-storage fresh factory/private continuation bridge.
     boolean ownsSelectedProfileVisit(CdSelectedProfileVisit expected){return selectedProfile!=null&&selectedProfile==expected;}
     CdSelectedProfileVisit.State selectedProfileState(){if(selectedProfile==null)throw new IllegalStateException("No selected profile owner");return selectedProfile.state();}
     private void runSelectedProfile(CdGameDataSource candidate){
@@ -2430,6 +2477,7 @@ public final class SonicCdGameModule implements GameModule {
             throw new IllegalStateException("Actual selected fresh Module/source/World required");
         var context=world.getSaveSessionContext();
         if(context==null||!getGameCode().equals(context.gameCode())||context.activeSlot().isEmpty())throw new IllegalStateException("Actual final selected save context required");
+        if(originalBoot!=null)originalBoot.bindWorld(this,world,selectedProfileInvocation);
         // World/context/source validation in the visit precedes any initial publication or I/O.
         selectedProfile.run(world,original->{
             selectedProfile.requirePublication(this,original);
@@ -2443,7 +2491,13 @@ public final class SonicCdGameModule implements GameModule {
             if(ipxProgress!=before||programServices!=services||ipxProgressLifetime!=lifetime||this.source!=priorSource)
                 throw new IllegalStateException("Selected Module complete preimage changed");
             original.applyNative(this);this.source=candidate;ipxProgress=ready;
+            if(originalBoot!=null){
+                if(original.after().calls().getLast()==CdSelectedProfileVisit.Call.TEMPORARY_PREFIX_704)completeOriginalBootInitialization(original);
+                if(original.after().phase()==CdSelectedProfileVisit.Phase.PROGRAMME_ENTRY
+                        &&original.after().programme().orElseThrow()==CdSelectedProfileVisit.Programme.R31A)enterOriginalR31Programme(original);
+            }
         },selectedProfileInvocation);
+        if(originalBoot!=null){originalBoot.requireHandoffStarted(this,world,selectedProfileInvocation);return;}
         throw new AssertionError("Selected native programme entry must remain an explicit boundary");
     }
     private record SelectedShared(SonicCdGameModule owner,CdGameDataSource source,Object progressLifetime,
@@ -2470,7 +2524,7 @@ public final class SonicCdGameModule implements GameModule {
             @Override public void failedAssembly(LevelLoadCause cause){ }
             @Override public void closeScreens(){ }
             @Override public boolean holdsGameplay(){return true;} // no clock/ordinary level owner is admitted
-            @Override public void retire(){requireInstalled();if(SessionManager.getCurrentWorldSession()==world)throw new IllegalStateException("Actual World retirement must precede selected profile retirement");selectedProfile.retire(world);}
+            @Override public void retire(){requireInstalled();if(SessionManager.getCurrentWorldSession()==world)throw new IllegalStateException("Actual World retirement must precede selected profile retirement");selectedProfile.retire(world);if(originalBoot!=null)originalBoot.retire(world);}
         };
     }
     // END actual selected-profile pre-level Module owner.
@@ -2496,7 +2550,7 @@ public final class SonicCdGameModule implements GameModule {
 
     @Override public Game createGame(GameDataSource dataSource) {
         CdGameDataSource candidate = SonicCd.requireSource(dataSource);
-        if(selectedProfile!=null)runSelectedProfile(candidate);
+        if(selectedProfile!=null){runSelectedProfile(candidate);throw SonicCd.unsupported("original selected R31 Game/World assembly owner");}
         authenticateOpeningSource(candidate); // Actual retained media before replacing source/presentation state.
         if (source != null && !source.identity().equals(candidate.identity())) {
             throw new IllegalArgumentException("CD module is pinned to another authenticated source; open a new module/world");

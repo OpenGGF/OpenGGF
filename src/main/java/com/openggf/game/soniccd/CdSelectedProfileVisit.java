@@ -42,6 +42,16 @@ final class CdSelectedProfileVisit {
         var service=CdSaveProfileBootstrap.bind(manager,assets);var result=service.openSelectedSlot(slot);
         return new Prepared(source,manager,slot,entry,service,result);
     }
+    // BEGIN fresh original pre-storage boot bridge 20261107; old prepare4 remains exact.
+    static Prepared prepare(CdGameDataSource source,SaveManager manager,int slot,SonicCdGameModule.ProfileEntry entry,CdOriginalBootPrefix boot){
+        Objects.requireNonNull(source);Objects.requireNonNull(manager);Objects.requireNonNull(entry);Objects.requireNonNull(boot);
+        if(slot<=0)throw new IllegalArgumentException("Actual positive frontend profile slot required");
+        var assets=source.initialSaveAssets().orElseThrow(()->new IllegalArgumentException("Same-CUE original initial-save source is absent"));
+        var service=CdSaveProfileBootstrap.bind(manager,assets);
+        var result=boot.search(service,source,manager,slot,entry);
+        return new Prepared(source,manager,slot,entry,service,result);
+    }
+    // END fresh original preparation bridge.
     static final class Unowned extends UnsupportedOperationException {
         private final Programme programme;
         private Unowned(Programme programme){super(programme==Programme.LATER_ZONE?"SELECTED_LATER_ZONE_RUN_RX_SAVE_OWNER":"SELECTED_"+programme+"_PROGRAMME_ENTRY_OWNER: native cold-clock/level continuation unavailable");this.programme=programme;}
@@ -56,6 +66,7 @@ final class CdSelectedProfileVisit {
     /** Original single publication, issued only inside this visit's private current invocation. */
     final class Publication {
         private final Object issuedScope;private final State before,after;private boolean applied;
+        private boolean programmeHandoffCompleted; // Actual original callback only; never snapshot-restored.
         private Publication(State before,State after){issuedScope=scope;this.before=before;this.after=after;}
         State before(){return before;}State after(){return after;}
         void applyNative(SonicCdGameModule expected){requirePublication(expected,this);if(applied)throw new IllegalStateException("Already published selected prefix");state=after;applied=true;}
@@ -67,9 +78,34 @@ final class CdSelectedProfileVisit {
         State state(){return state;}
     }
     private final SonicCdGameModule owner;private final Prepared prepared;private final Object invocation;private final Object lifetime=new Object();
+    private CdOriginalBootPrefix originalBoot; // Only the new ctor4 binds this actual preparation.
     private State state=new State(Phase.PREPARED,CdIpxProgress.unknown(),Optional.empty(),Optional.empty(),Optional.empty(),List.of(),Optional.empty(),Optional.empty(),OptionalInt.empty());
     private WorldSession world;private boolean running,failed,retired;private Object scope;private Thread thread;private Publication pending;private Port port;private long ioOrdinal;
     CdSelectedProfileVisit(SonicCdGameModule owner,Prepared prepared,Object invocation){this.owner=Objects.requireNonNull(owner);this.invocation=Objects.requireNonNull(invocation);this.prepared=Objects.requireNonNull(prepared);if(!prepared.healthy()||!prepared.service.ownsReceipt(prepared.result.receipt().orElseThrow()))throw new IllegalArgumentException("Original current selected storage receipt required");}
+    // BEGIN fresh original boot/private applied-publication cuts 20261107.
+    CdSelectedProfileVisit(SonicCdGameModule owner,Prepared prepared,Object invocation,CdOriginalBootPrefix boot){
+        this(owner,prepared,invocation);originalBoot=Objects.requireNonNull(boot);boot.bindVisit(owner,this,invocation,prepared);
+        state=new State(state.phase(),boot.state().progress(),state.buffer(),state.temporary(),state.globals(),state.calls(),state.programme(),state.subSpecial(),state.localSubPolicyByte());
+    }
+    private void requireApplied(SonicCdGameModule expected,Publication original,Call call){
+        requireWorld(world);
+        if(expected!=owner||!running||failed||pending!=original||scope==null||original.issuedScope!=scope||thread!=Thread.currentThread()
+                ||!original.applied||state!=original.after||state.calls().isEmpty()||state.calls().getLast()!=call)
+            throw new IllegalStateException("No original applied selected publication at this native cut");
+    }
+    void requireInitializationReturn(SonicCdGameModule expected,Publication original){
+        requireApplied(expected,original,Call.TEMPORARY_PREFIX_704);
+        if(state.phase()!=Phase.INITIALIZED)throw new IllegalStateException("Not the initialization return cut");
+    }
+    void requireProgrammeHandoff(SonicCdGameModule expected,Publication original){
+        requireApplied(expected,original,Call.RUN_R31_ENTRY);
+        var g=state.globals().orElseThrow();
+        if(state.phase()!=Phase.PROGRAMME_ENTRY||state.programme().orElseThrow()!=Programme.R31A||g.zoneAct().orElse(-1)!=0x100
+                ||g.period()!=1||g.amyCaptured().orElse(-1)!=0||original.programmeHandoffCompleted)
+            throw new IllegalStateException("Not the original R31 selected load publication");
+    }
+    void completeProgrammeHandoff(SonicCdGameModule expected,Publication original){requireProgrammeHandoff(expected,original);original.programmeHandoffCompleted=true;}
+    // END fresh original boot/private applied-publication cuts.
     State state(){return state;}
     CdGameDataSource source(){return prepared.source;}
     private void requireWorld(WorldSession actual){
@@ -127,7 +163,7 @@ final class CdSelectedProfileVisit {
         } catch(Unowned original){throw original;}
         catch(IOException original){failed=true;throw new UncheckedIOException("Actual selected synchronous save did not return",original);}
         catch(RuntimeException|Error original){failed=true;throw original;}
-        finally{pending=null;port=null;scope=null;thread=null;running=false;}
+        finally{pending=null;port=null;scope=null;thread=null;running=false;if(failed&&originalBoot!=null)originalBoot.retire(world);}
     }
     private void projectRead(){update(Phase.IPX_READ,state.buffer().orElseThrow().projectAfterRead(state.progress()),state.buffer(),state.temporary(),state.globals(),Call.IPX_READ_FIELDS,state.programme());}
     private void read(Call call){
@@ -149,12 +185,13 @@ final class CdSelectedProfileVisit {
         if(write.missingRead().isPresent()||write.request().orElseThrow().mode()!=CdIpxProgress.SaveMode.BACKUP)throw new UnsupportedOperationException("Actual selected post-field write policy owner unavailable");
         write(patched);update(Phase.SAVE_FIELDS,state.progress(),state.buffer(),state.temporary(),state.globals(),Call.IPX_WRITE_ACK,state.programme());
     }
-    private void finish(Programme target,Globals globals,Call call){update(Phase.PROGRAMME_ENTRY,state.progress(),state.buffer(),state.temporary(),Optional.of(globals),call,Optional.of(target));throw new Unowned(target);}
-    private void update(Phase phase,CdIpxProgress.State progress,Optional<CdSaveProfile> buffer,Optional<CdSaveProfile> temporary,Optional<Globals> globals,Call call,Optional<Programme> programme){
-        var calls=new ArrayList<>(state.calls());calls.add(call);publish(new State(phase,progress,buffer,temporary,globals,calls,programme,state.subSpecial(),state.localSubPolicyByte()));
+    private void finish(Programme target,Globals globals,Call call){var publication=update(Phase.PROGRAMME_ENTRY,state.progress(),state.buffer(),state.temporary(),Optional.of(globals),call,Optional.of(target));if(target!=Programme.R31A||!publication.programmeHandoffCompleted)throw new Unowned(target);}
+    private Publication update(Phase phase,CdIpxProgress.State progress,Optional<CdSaveProfile> buffer,Optional<CdSaveProfile> temporary,Optional<Globals> globals,Call call,Optional<Programme> programme){
+        var calls=new ArrayList<>(state.calls());calls.add(call);return publish(new State(phase,progress,buffer,temporary,globals,calls,programme,state.subSpecial(),state.localSubPolicyByte()));
     }
-    private void publish(State next){var original=new Publication(state,next);pending=original;
+    private Publication publish(State next){var original=new Publication(state,next);pending=original;
         try{port.publish(original);if(!original.applied||state!=next)throw new IllegalStateException("Original selected prefix was not adopted");}finally{pending=null;}
+        return original;
     }
     Snapshot capture(WorldSession actual){requireWorld(actual);if(running||failed||state.phase()!=Phase.PROGRAMME_ENTRY)throw new IllegalStateException("Selected capture requires healthy completed pre-level boundary");return new Snapshot(this);}
     void validateRestore(Snapshot snapshot,WorldSession actual){requireWorld(actual);if(snapshot==null||snapshot.owner!=this||snapshot.world!=world||snapshot.lifetime!=lifetime||snapshot.ioOrdinal!=ioOrdinal)throw new IllegalArgumentException("Foreign selected profile/source/World/I-O lifetime capture");if(running||failed||state.phase()!=Phase.PROGRAMME_ENTRY||snapshot.state.phase()!=Phase.PROGRAMME_ENTRY)throw new IllegalStateException("Cannot restore an active/failed/pending save operation");}
