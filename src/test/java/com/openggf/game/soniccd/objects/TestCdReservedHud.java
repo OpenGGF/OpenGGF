@@ -90,6 +90,45 @@ class TestCdReservedHud {
         var sat=h.queue.finishAfterCamera(cameras());assertEquals(20,sat.spriteCount());assertEquals(14,sat.provenance().stream().filter(x->x.slotRef().wholeIndex()==2).count());assertEquals(3,sat.provenance().stream().filter(x->x.slotRef().wholeIndex()==3).count());assertEquals(3,sat.provenance().stream().filter(x->x.slotRef().wholeIndex()==5).count());assertEquals(0,sat.provenance().stream().filter(x->x.slotRef().wholeIndex()==31).count());
     }
 
+    @Test void lazyVIntDataValidatesWidthsWithoutReadingTheCounter(){
+        int[] reads={0};var g=new LiveGlobals(0xFFFF,0xFFFF,0xFF,0xFF,0xFFFF,0xFFFF,()->{reads[0]++;throw new AssertionError("not a reached native read");});
+        assertEquals(0,reads[0]);assertEquals(0xFFFF,g.ringsWord());
+        assertThrows(NullPointerException.class,()->new LiveGlobals(0,0,0,0,0,0,null));
+        for(int field=0;field<6;field++)for(int invalid:new int[]{-1,field==2||field==3?256:65536}){int[] v=new int[6];v[field]=invalid;assertThrows(IllegalArgumentException.class,()->new LiveGlobals(v[0],v[1],v[2],v[3],v[4],v[5],()->0));}
+    }
+    @Test void lazyVIntIsAbsentFromScoreLivesNonzeroRingsAndZeroDirectionIcon(){
+        for(int kind=0;kind<4;kind++){var h=new H();int w=kind==1?3:kind==2?5:kind==3?31:2;var b=image(kind==3?0x19:0x1C,0,kind==1?1:kind==3?10:0,kind==2?1:0,0x80);h.put(w,b);
+            var g=new LiveGlobals(0,1,0,0,0,1,()->{throw new AssertionError("native branch never reads absolute VInt");});h.body.runLive(w,g);
+            var e=kind==3?icon(b):hud(b);e[26]=(byte)(kind==0?0:kind==1?1:kind==2?3:19);if(kind!=3){e[1]&=0x7F;if(kind==1)word(e,10,0x148);if(kind==2)e[2]&=~0x20;}eq(e,h.get(w));assertEquals(kind==3?0:1,h.draws);}
+    }
+    @Test void lazyZeroRingReadOccursOnceAfterSixNativeInitStores(){
+        var h=new H();var b=image(0x1C,0,0,1,0x80);h.put(5,b);int[] reads={0};
+        h.body.runLive(5,new LiveGlobals(0,0,0,0,0,1,()->{reads[0]++;assertEquals(6,h.writes);assertEquals(2,h.get(5).unsignedByte(0x24));assertEquals(3,h.get(5).unsignedByte(26));return 0;}));
+        var e=hud(b);e[26]=3;e[2]^=0x20;e[1]&=0x7F;eq(e,h.get(5));assertEquals(1,reads[0]);assertEquals(1,h.draws);
+    }
+    @Test void lazyCounterWidthFaultRetainsTheReachedInitPrefix(){
+        for(int bad:new int[]{-1,256,Integer.MIN_VALUE,Integer.MAX_VALUE}){var h=new H();var b=image(0x1C,0,0,1,0x80);h.put(5,b);
+            assertThrows(IllegalArgumentException.class,()->h.body.runLive(5,new LiveGlobals(0,0,0,0,0,1,()->bad)));
+            var e=hud(b);e[26]=3;eq(e,h.get(5));assertEquals(6,h.writes);assertEquals(0,h.draws);}
+    }
+    @Test void lazyReadCannotMutateASelectedNonwriteOnReturn(){
+        var h=new H();h.put(5,image(0x1C,0,0,1,0x80));
+        assertThrows(IllegalStateException.class,()->h.body.runLive(5,new LiveGlobals(0,0,0,0,0,1,()->{var b=h.get(5).copy();b[63]^=1;h.put(5,b);return 0;})));assertEquals(0,h.draws);
+    }
+    @Test void lazyReadKeepsOriginalErrorWithSuppressedNonwriteViolation(){
+        var h=new H();h.put(5,image(0x1C,0,0,1,0x80));var original=new AssertionError("original counter read");
+        assertSame(original,assertThrows(AssertionError.class,()->h.body.runLive(5,new LiveGlobals(0,0,0,0,0,1,()->{var b=h.get(5).copy();b[63]^=1;h.put(5,b);throw original;}))));
+        assertEquals(1,original.getSuppressed().length);assertInstanceOf(IllegalStateException.class,original.getSuppressed()[0]);assertEquals(0,h.draws);
+    }
+    @Test void lazyReadReentryRejectsWithoutRestartingOrClosingTheOuterProducer(){
+        var h=new H();h.put(5,image(0x1C,0,0,1,0x80));
+        h.body.runLive(5,new LiveGlobals(0,0,0,0,0,1,()->{assertThrows(IllegalStateException.class,()->h.body.run(5,G));return 1;}));assertEquals(1,h.draws);assertEquals(6,h.writes);
+    }
+    @Test void lazyCounterUsesEveryActualByteAndOnlyNativeLowNibbleFlash(){
+        for(int value=0;value<256;value++){var h=new H();var b=image(0x1C,2,0,1,0x80);word(b,2,0xA53F);h.put(5,b);final int low=value;
+            h.body.runLive(5,new LiveGlobals(0,0,0,0,0,1,()->low));var e=b.clone();if((low&15)==0)e[2]^=0x20;e[1]&=0x7F;eq(e,h.get(5));assertEquals(1,h.draws);}
+    }
+
     private interface Hook {void call(int whole,CdAssetBytes expected,CdAssetBytes next);}
     private static final class H implements Slots,CdDrawSlots{
         final CdAssetBytes[] images=new CdAssetBytes[31];final CdObjectDrawQueue queue;CdReservedHud body;

@@ -355,7 +355,7 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
     }
 
     /** One original, synchronous pending Body call, never a captured/resumable capability.
-     * publication() is immutable DATA; only requireOwner/applyNative have a live operation scope.
+     * publication() is immutable DATA; requireOwner/prepareDisplayFlag/applyNative have a live scope.
      * The real World separately authenticates its own retained source/epoch/phase/full native cut. */
     public final class R31BodyCall {
         private final R31Publication publication;
@@ -367,6 +367,10 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
         private final VIntClock expectedClock;
         private final boolean expectedPaused;
         private final Thread invokingThread;
+        // BEGIN pending R31 primary display flag data 20261107.
+        private CdPlayerBody.State readyDisplayState;
+        private boolean displayPrepared;
+        // END pending R31 primary display flag data 20261107.
         private boolean applied;
 
         private R31BodyCall(R31Publication publication, CdStagePlayerSource source) {
@@ -378,7 +382,45 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
             readyState = result.state(); readyEnvironment = result.environment(); readyDisplay = result.display();
         }
 
+        /** Original Body output BEFORE caller-owned Draw, including its original state/display flags.
+         * A prepared Draw state is separate DATA returned by prepareDisplayFlag; compare that returned
+         * state against the final actual Frame after applyNative. This publication never replays Draw. */
         public R31Publication publication() { return publication; }
+
+        // BEGIN pending R31 primary display preparation 20261107.
+        /**
+         * Prebuild only the native primary oSprFlags bit7 value inside this original pending call.
+         * Native DrawObject clears bit7 (Object Functions.asm:137-138); the sprite-build tail sets it
+         * at .DrawDone (:342-346), N1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff. Actual World/Pass must
+         * prove its original Draw/queue branch, operation order, full external cut and final flags.
+         * Presence of Body display, this operand, or a successful queue DTO grants no such authority.
+         *
+         * Returned immutable State8 is DATA for the caller's complete prebuild. Preparation mutates
+         * no Frame, environment, display, art, clock, queue, Body result or effects. Only the original
+         * applyNative can adopt this private prepared reference, once, while the existing scope lives.
+         */
+        public CdPlayerBody.State prepareDisplayFlag(int spriteFlags) {
+            requireOwner(CdPlayerFrameRuntime.this);
+            if (displayPrepared) throw new IllegalStateException("Original R31 display flag already prepared");
+            if (readyDisplay.isEmpty()) throw new IllegalStateException("Original R31 Body has no display");
+            if ((spriteFlags & ~0xFF) != 0) throw new IllegalArgumentException("R31 display flag requires an unsigned byte");
+            var motion = readyState.motion();
+            if (((spriteFlags ^ motion.spriteFlags()) & 0x7F) != 0)
+                throw new IllegalArgumentException("R31 Draw may change only spriteFlags bit7");
+            var nextMotion = new CdPlayerMotionState(motion.centreX16_16(), motion.centreY16_16(),
+                    motion.xVelocity(), motion.yVelocity(), motion.groundVelocity(), motion.routine(),
+                    motion.angle(), motion.flags(), spriteFlags, motion.xRadius(), motion.yRadius(),
+                    motion.animation(), motion.previousAnimation(), motion.playerJump(), motion.charge(),
+                    motion.moveLock(), motion.stick(), motion.playerControl(), motion.previousPrimaryAngle(),
+                    motion.previousSecondaryAngle());
+            var nextState = new CdPlayerBody.State(nextMotion, readyState.animation(), readyState.header(),
+                    readyState.timers(), readyState.history(), readyState.rotationDistance(),
+                    readyState.objectLinks(), readyState.rotationAngle());
+            readyDisplayState = nextState;
+            displayPrepared = true;
+            return nextState;
+        }
+        // END pending R31 primary display preparation 20261107.
 
         /** Actual private pending identity plus complete Frame preimage, not value-CAS admission. */
         public void requireOwner(CdPlayerFrameRuntime expected) {
@@ -396,7 +438,8 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
         /** Validate first, then assign only already-built Frame references. No effects/services replay. */
         public void applyNative() {
             requireOwner(CdPlayerFrameRuntime.this);
-            state = readyState; environment = readyEnvironment; display = readyDisplay;
+            var finalState = displayPrepared ? Objects.requireNonNull(readyDisplayState, "Original prepared R31 display state") : readyState;
+            state = finalState; environment = readyEnvironment; display = readyDisplay;
             applied = true;
         }
     }

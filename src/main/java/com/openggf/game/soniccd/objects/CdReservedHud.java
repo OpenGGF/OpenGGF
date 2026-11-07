@@ -59,9 +59,14 @@ public final class CdReservedHud {
         }
     }
 
+    private interface ReadGlobals {
+        int debugCheatWord(); int ringsWord(); int vIntLowByte(); int timeAttackModeByte();
+        int timeWarpDirectionByte(); int timeWarpTimerWord(); int levelFramesWord();
+    }
+
     public record Globals(int debugCheatWord, int ringsWord, int vIntLowByte,
                           int timeAttackModeByte, int timeWarpDirectionByte,
-                          int timeWarpTimerWord, int levelFramesWord) {
+                          int timeWarpTimerWord, int levelFramesWord) implements ReadGlobals {
         public Globals {
             word(debugCheatWord, "debugCheatWord");
             word(ringsWord, "ringsWord");
@@ -70,6 +75,25 @@ public final class CdReservedHud {
             octet(timeWarpDirectionByte, "timeWarpDirectionByte");
             word(timeWarpTimerWord, "timeWarpTimerWord");
             word(levelFramesWord, "levelFramesWord");
+        }
+    }
+
+    /** Reached native counter-byte read. Supplying a callback grants no invocation authority. */
+    @FunctionalInterface
+    public interface VIntByteRead { int readLowByte(); }
+
+    /** Same native globals with the absolute V-int byte deferred until FlashRings actually reads it. */
+    public record LiveGlobals(int debugCheatWord, int ringsWord, int timeAttackModeByte,
+                              int timeWarpDirectionByte, int timeWarpTimerWord, int levelFramesWord,
+                              VIntByteRead vIntRead) implements ReadGlobals {
+        public LiveGlobals {
+            word(debugCheatWord, "debugCheatWord"); word(ringsWord, "ringsWord");
+            octet(timeAttackModeByte, "timeAttackModeByte"); octet(timeWarpDirectionByte, "timeWarpDirectionByte");
+            word(timeWarpTimerWord, "timeWarpTimerWord"); word(levelFramesWord, "levelFramesWord");
+            Objects.requireNonNull(vIntRead, "reached absolute V-int reader");
+        }
+        @Override public int vIntLowByte() {
+            int value = vIntRead.readLowByte(); octet(value, "vIntLowByte"); return value;
         }
     }
 
@@ -154,7 +178,12 @@ public final class CdReservedHud {
     }
 
     /** Globals are dereferenced only where the reached native path reads them. */
-    public Result run(int wholeIndex, Globals globals) {
+    public Result run(int wholeIndex, Globals globals) { return runInput(wholeIndex, globals); }
+
+    /** Conditional counter input; all legacy run/2 native paths and null-read ordering remain. */
+    public Result runLive(int wholeIndex, LiveGlobals globals) { return runInput(wholeIndex, globals); }
+
+    private Result runInput(int wholeIndex, ReadGlobals globals) {
         if (wholeIndex < 1 || wholeIndex > 31) {
             throw new IllegalArgumentException("Reserved whole index must be 1..31");
         }
@@ -176,7 +205,7 @@ public final class CdReservedHud {
         }
     }
 
-    private void hud(Cursor c, Globals globals) {
+    private void hud(Cursor c, ReadGlobals globals) {
         // ObjHUDPoints: signed subtype branch precedes the routine table.
         if ((c.u8(0x28) & 0x80) != 0) {
             throw c.unsupported(UnsupportedBoundary.POINTS_BRANCH, c.u8(0x28));
@@ -210,7 +239,7 @@ public final class CdReservedHud {
             if (c.u8(0x29) != 0) {
                 if (globals.ringsWord() != 0) {
                     c.storeByte(2, c.u8(2) & ~0x20);
-                } else if ((globals.vIntLowByte() & 0x0F) == 0) {
+                } else if ((vIntLow(c, globals) & 0x0F) == 0) {
                     c.storeByte(2, c.u8(2) ^ 0x20);
                 }
             } else {
@@ -223,7 +252,20 @@ public final class CdReservedHud {
         c.draw();
     }
 
-    private void monitorWrapper(Cursor c, Globals globals) {
+    /** A live counter callback may read only; retain original failures and the reached Init stores. */
+    private int vIntLow(Cursor c, ReadGlobals globals) {
+        if (!(globals instanceof LiveGlobals)) return globals.vIntLowByte();
+        c.requireCurrent();
+        try {
+            int value = globals.vIntLowByte(); c.requireCurrent(); return value;
+        } catch (RuntimeException | Error original) {
+            try { c.requireCurrent(); }
+            catch (RuntimeException | Error violation) { if (violation != original) original.addSuppressed(violation); }
+            throw original;
+        }
+    }
+
+    private void monitorWrapper(Cursor c, ReadGlobals globals) {
         int subtype = c.u8(0x28);
         // The 1UP/time-attack wrapper reaches CheckObjDespawn, not DeleteObject.
         if (subtype == 0 && globals.timeAttackModeByte() != 0) {
@@ -245,7 +287,7 @@ public final class CdReservedHud {
         timeIcon(c, globals);
     }
 
-    private void timeIcon(Cursor c, Globals globals) {
+    private void timeIcon(Cursor c, ReadGlobals globals) {
         int routine = c.u8(0x24);
         if (routine == 0) {
             c.effects.add(new RoutineEntered(NativeRoutine.TIME_ICON_INIT));

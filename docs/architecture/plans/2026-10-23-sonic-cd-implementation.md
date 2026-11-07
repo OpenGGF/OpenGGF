@@ -1,5 +1,41 @@
 # Implement Sonic CD with complete regional parity
 
+## 7 November 2026 — shared conditional HUD reads and original primary Draw
+
+The original R31 pending Body call now accepts one prebuilt bit7-only draw state,
+without changing its immutable pre-Draw publication. Actual queue entry occurs
+inside that original call; the prepared full State is adopted once with the ready
+pool/Core/Host values. Deferred sprite construction rereads the actual primary and
+uses the existing closed-cut bit7 writer. No Body result/effect is replayed, and
+this component seam grants no Module/World execution authority.
+
+Independent initial-pass review found a saved/status nonwrite omission after pool
+outputs and an eager absolute V-int read before native HUD branches. Root retained
+real behavioral RED controls. Pool publications now check original saved/status
+on return and applied-fault paths. Shared ReservedHud adds a conditional reader
+entry at the actual ring-flash read; old run/2 is preserved. Score, lives, nonzero
+rings and zero-direction icon paths need no absolute seed, while a reached missing
+counter retains Init's completed stores. Reader mutation/failure/reentry and full
+selected-image checks are covered without a zero/delta substitute.
+
+R86 stopped production compilation at two checked terrain reads. R86b caches the
+actual terrain once and declares construction IO; its unchanged935-case selection
+then ran929 passed,4 failures,2 errors,0 skips on equal source. Five Root methods
+reproduced the two review findings; one old test's constructed caller incorrectly
+cleared its outer active flag after caught nested rejection. The test Harness now
+restores its prior flag, leaving native guards unchanged. All815 old Frame cases
+and21 pending-display controls passed in R86b; that remains a separate receipt.
+R87 passes181/0F/E/S with source unchanged:41 pass/primary cases,49 shared HUD,
+37 bridge,21 pending-display and33 Host. It includes12 genuine queue/primary cases
+and eight new shared-reader controls. No fresh combined935-green, actual World,
+CCZ Ready/ordinary/pixel, full-USA or regional claim follows.
+
+Per the user's explicit architect request, further copied per-act orchestration is
+held while two independent designs compare semantic runtime families against one
+composable CD runtime. Shared semantic kernels and authenticated programme-specific
+data remain the working rule. Existing qualified gameplay and restore behavior
+must survive the first extraction and subsequent caller migrations.
+
 ## 7 November 2026 — actual R31 loading Host and native resident clear
 
 The source-bound Host now owns the actual retained placement bank, scroll/planes,

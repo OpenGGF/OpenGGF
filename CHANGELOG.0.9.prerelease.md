@@ -360,7 +360,11 @@ matching area heading; see the
   complete physical images and original palette publication, checks every Module
   callback against the borrowed native owners, and clears the actual separate
   Sonic resident bank at InitVDP while preserving CPU/cue/dirty state. Actual fresh
-  World and ordinary gameplay admission remain separate.
+  World and ordinary gameplay admission remain separate. Shared reserved HUD reads
+  the absolute counter only at native ring flashing, preserving earlier stores on
+  missing input. The original pending primary call now stages genuine Draw bit7
+  changes and deferred sprite construction rereads live primary state, with full
+  placement nonwrites checked around coupled publication.
   A finite IPX progress
   component preserves unknown-byte and save-field alias semantics. Its actual
   boss-return join now publishes saved-zone/checkpoint state once and retains it
