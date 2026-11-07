@@ -172,7 +172,7 @@ public abstract class AbstractS1SpecialStageTraceReplayTest {
 
     /** Location of the committed trace (when one exists). */
     static final Path TRACE_DIRECTORY =
-            Path.of("src", "test", "resources", "traces", "s1", "special_stage");
+            Path.of("src", "test", "resources", "traces", "s1", "runs", "s1-ghz-maze-roundtrip", "ss");
 
     private static final int CONTEXT_RADIUS = 8;
 

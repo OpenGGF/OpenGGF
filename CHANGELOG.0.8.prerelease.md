@@ -17,6 +17,16 @@ under the matching area heading; see the
   ring slots' link to the object pass. The link now survives resets. This
   regressed in 0.7.
 
+- **S3K support notice says beta:** starting Sonic 3 & Knuckles from the hub
+  now shows the beta notice, matching the 0.7 release notes. 0.7 shipped with
+  the alpha notice. Players who hid the alpha notice see the beta one once.
+
+- **S2 Crawl:** paused proximity includes its zero countdown pass, Super Sonic
+  selects ordinary enemy contact, and accepted enemy attacks retire through the
+  shared touch owner. The Sonic+Tails chain advances from CNZ2 to HTZ2; later
+  route errors and the special-stage return timing differences remain open.
+
+
 ## Modding and tools
 
 - **Seeded Data Select captures:** `GameplayCaptureTool --save-slots <file.json>`
@@ -54,3 +64,15 @@ under the matching area heading; see the
   `--resume-from` and `--skip-rows`, so a shot's input can be derived from a
   level inside a complete-run movie, with one change and the recording's own
   rows after it.
+
+  frame ranges) beside each reel.
+
+- **Trace coverage and canonical fixtures:** independent strict replay covers all
+  163 segments of the Knuckles super-emerald, Mega, Sonic+Tails and KiS2 chains,
+  plus six previously untested standalone slices. Existing canonical identities
+  replace 30 duplicate fixture directories. The S1 complete-emerald chain now
+  records native PLC readiness and clears its four queue timing frontiers;
+  its ending-load timing remains open. Physics and auxiliary observations
+  are preserved exactly. New red frontiers remain visible.
+  Special-stage entry honors the recorded team and production lock-on module;
+  the single entry-state import consumes S2-family manifest destination rings.

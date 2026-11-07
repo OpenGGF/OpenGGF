@@ -1,0 +1,3 @@
+{"event":"hardware_work_completed","raw_frame":69,"boundary":"pre_main_loop","kind":"nemesis_plc_queue","ordinal":55,"submission_fingerprint":"sha256:3224e355943f9bc261e39b7d6c550e47b9ff10050a81ea2a1488a8bdefe2855a"}
+{"event":"hardware_work_completed","raw_frame":101,"boundary":"pre_main_loop","kind":"nemesis_plc_queue","ordinal":56,"submission_fingerprint":"sha256:0495d001d7b7d63f2d70ab32c084cb31f69866a3a401d712c7ecc2861dd2206e"}
+{"event":"hardware_work_completed","raw_frame":107,"boundary":"pre_main_loop","kind":"nemesis_plc_queue","ordinal":57,"submission_fingerprint":"sha256:5ad1b2230b6ae0cfe92a4dfb3f29bf87dbf576320a4d7349f0a518d4ee1374b4"}

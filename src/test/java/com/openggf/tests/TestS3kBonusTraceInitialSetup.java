@@ -32,7 +32,8 @@ class TestS3kBonusTraceInitialSetup {
 
     @ParameterizedTest @ValueSource(strings = {"bonus_gumball", "bonus_pachinko"})
     void bonusEntryRetainsTheRealInitialPassBeforeRecordedRngPublication(String fixtureName) throws Exception {
-        var trace = TraceData.load(Path.of("src/test/resources/traces/s3k", fixtureName));
+        var trace = TraceData.load(Path.of("src/test/resources/traces/s3k/runs/s3-knux-multibonus-ss",
+                fixtureName.substring("bonus_".length())));
         var meta = trace.metadata();
         TraceReplaySessionBootstrap.prepareConfiguration(trace, meta);
         var fixture = HeadlessTestFixture.builder().withZoneAndAct(meta.zoneId(), 0)

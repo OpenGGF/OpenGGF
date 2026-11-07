@@ -3856,3 +3856,22 @@ cached object visibility. It does not undo an object's earlier clock reads in
 locked passes. The inherited Cog `$F` gate can still see the advancing
 LevelManager counter there; retain this limitation instead of claiming complete
 title-clock parity. Test release separately from actual locked object scans.
+
+
+## Special contact must hand ordinary enemy hits back to Touch_KillEnemy (2026-11-06)
+
+Crawl's `loc_3D2D4` (s2.asm:82520-82584) handles shield/direction behavior after
+`Touch_Special` publishes contact. `loc_3D36C` (s2.asm:82573-82581) selects
+ordinary enemy flags for an invincible actor, including Super Sonic with no
+timed power-up. Once `Touch_Enemy` accepts that ordinary attack,
+`Touch_KillEnemy` (s2.asm:85514-85561) owns retirement and the single rebound.
+Repeating the special shield/rolling checks in the ordinary attack callback
+can silently reject an uncurled invincible attack or bounce a rolling actor
+without killing the enemy. Keep callbacks faithful to their selected category.
+
+Read every routine's proximity call: `loc_3D2A6` (s2.asm:82505-82517) runs
+`loc_3D416` during each nonnegative pause countdown pass, including zero.
+Sharing the walking proximity helper preserves its saved prior routine;
+turning at zero or omitting the paused check changes the later touch category.
+Validate both phases and compare the already-clean trace prefix, not only the
+later successful kill. See the [handoff audit](../../../docs/architecture/audits/2026-11-06-s2-crawl-enemy-handoff.md).

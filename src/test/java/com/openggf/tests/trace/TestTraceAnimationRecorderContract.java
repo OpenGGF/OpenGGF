@@ -11,6 +11,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.zip.GZIPInputStream;
@@ -20,7 +21,7 @@ import org.junit.jupiter.api.Test;
 class TestTraceAnimationRecorderContract {
     @Test
     void allCommittedGameplayFixturesCarryV5AnimationCsv() throws IOException {
-        Map<String, Integer> expectedCounts = Map.of("s1", 21, "s2", 19, "s3k", 22);
+        Map<String, Integer> expectedCounts = Map.of("s1", 21, "s2", 19, "s3k", 19);
         for (Map.Entry<String, Integer> entry : expectedCounts.entrySet()) {
             Path gameRoot = Path.of("src/test/resources/traces", entry.getKey());
             List<Path> fixtures;
@@ -32,6 +33,14 @@ class TestTraceAnimationRecorderContract {
                         .sorted().toList();
             }
             assertEquals(entry.getValue(), fixtures.size(), entry.getKey());
+            // The three former root bonus copies now live only in the canonical
+            // run. Keep every logical payload's strict header/schema checks.
+            if ("s3k".equals(entry.getKey())) {
+                fixtures = new ArrayList<>(fixtures);
+                for (String segment : List.of("gumball", "slots", "pachinko")) {
+                    fixtures.add(gameRoot.resolve("runs/s3-knux-multibonus-ss").resolve(segment));
+                }
+            }
             for (Path fixture : fixtures) {
                 TraceMetadata metadata = TraceMetadata.load(fixture.resolve("metadata.json"));
                 assertEquals(5, metadata.traceSchema(), fixture.toString());

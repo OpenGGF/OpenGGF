@@ -14,13 +14,9 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
- * Concrete S3K special-stage trace replay against
- * {@code src/test/resources/traces/s3k/special_stage}. No trace is committed
- * there yet, so {@link AbstractS3kSpecialStageTraceReplayTest
- * #replayProducesFaithfulReport} skips (via {@code assumeTrue}) rather than
- * fabricating trace data; the harness and comparator are exercised end to
- * end once a real BizHawk capture lands in that directory. See
- * {@link AbstractS3kSpecialStageTraceReplayTest}.
+ * Concrete S3K special-stage replay of the canonical Mega run SS segment.
+ * The standalone payload was an identical copy of
+ * {@code traces/s3k/runs/s3-knux-multibonus-ss/ss}.
  */
 class TestS3kSpecialStageTraceReplay extends AbstractS3kSpecialStageTraceReplayTest {
 
