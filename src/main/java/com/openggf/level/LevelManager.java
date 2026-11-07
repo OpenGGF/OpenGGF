@@ -3567,6 +3567,37 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     }
 
     /**
+     * Rebuilds placement at an already reconstructed race target. The same camera/placement
+     * owners used by checkpoint load keep their current native boundaries and persistent banks.
+     * Power-ups and their timers remain with the local player.
+     */
+    public void reinitializeAfterRaceSwap() {
+        var player = camera.getFocusedSprite();
+        var objects = objectManager == null ? null : objectManager.capturePersistentRespawn();
+        var rings = ringManager == null ? null : ringManager.captureRingStatusTable();
+        camera.setFrozen(false);
+        camera.setFocusedSprite(player);
+        camera.updatePosition(true);
+        if (objectManager != null) objectManager.reset(camera.getX(),objects);
+        if (ringManager != null) {
+            ringManager.reset(camera.getX());
+            ringManager.restoreRingStatusTable(rings);
+            com.openggf.level.rings.RingDrawInternalAccess.bindNativeSlots(ringManager);
+        }
+        reregisterPlayerDynamicObjects(player);
+        for (var sidekick : spriteManager.getSidekicks()) reregisterPlayerDynamicObjects(sidekick);
+    }
+
+    /** Full native checkpoint restore, omitting only the initial title-card presentation.
+     * The caller owns life loss and the GAME OVER/TIME OVER decision before requesting reload.
+     * Available to live execution and input-only replay; checkpoint time is restored by the load.
+     */
+    public void restartCurrentLevelFromCheckpointAfterDeath() {
+        restartCurrentLevelAfterDeath();
+        skipPendingInitialTitleCardPresentation();
+    }
+
+    /**
      * A fast death restart ({@link com.openggf.game.session.GameplayRunPolicy.DeathRestart#FAST_FROM_START}):
      * the same full death reload as {@link #restartCurrentLevelAfterDeath()}, but from the act's
      * start with star-post progress cleared (as a hosted run's retry clears it), and its title

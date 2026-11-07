@@ -98,34 +98,51 @@ public final class S3kCompetitionSpritePages implements RewindSnapshottable<S3kC
     }
 
     private Frame build(int slot,int[] count,Map<Integer,Source> owners,S3kCompetitionScroll scroll) {
+        return build(slot,count,owners,scroll,inputPointers,scroll.view(slot).camera().y(),112,true);
+    }
+
+    /** No native pointer words, SAT pages or object visibility are changed by this projection. */
+    public Frame projectSolo(ObjectManager objects,List<S3kCompetitionPlayer> players,
+            S3kCompetitionScroll scroll,int displayY) {
+        int[] count = new int[8];
+        int[][] pointers = new int[8][63];
+        for (var admission : NativeSpriteSubmissionAccess.admissions(objects)) {
+            if (count[admission.bucket()] >= 63) throw new IllegalStateException("Native input bucket overflow");
+            pointers[admission.bucket()][count[admission.bucket()]++] = admission.slot();
+        }
+        return build(0,count,currentSources(objects,players),scroll,pointers,displayY,224,false);
+    }
+
+    private Frame build(int slot,int[] count,Map<Integer,Source> owners,S3kCompetitionScroll scroll,
+            int[][] pointers,int displayY,int height,boolean nativeVisibility) {
         var output=new ArrayList<Piece>(80);
-        if(slot==0)output.addAll(prefix());
+        if(slot==0 && nativeVisibility)output.addAll(prefix());
         var camera=scroll.view(slot).camera();
         int xMask=scroll.profile().xWrapMask(),yMask=scroll.profile().yWrapMask();
         for(int bucket=0;bucket<8;bucket++)for(int i=0;i<count[bucket];i++) {
-            int pointer=inputPointers[bucket][i];
+            int pointer=pointers[bucket][i];
             Source source=owners.get(pointer);
             if(source==null)continue;
             // P1 clears before even testing its view-skip flag; P2 only ORs successful range.
-            if(slot==0)source.visibility().accept(false);
+            if(nativeVisibility && slot==0)source.visibility().accept(false);
             int skip=slot==0?0x10:8;
             if((source.flags()&skip)!=0)continue;
             boolean world=(source.flags()&0x44)!=0;
             int originX=source.x(),originY=source.y()+slot*112;
             if(world) {
                 int qx=(source.x()-camera.x()+(source.halfWidth()&255))&xMask;
-                int qy=(source.y()-camera.y()+(source.halfHeight()&255))&yMask;
-                if(qx>=320+2*(source.halfWidth()&255)||qy>=112+2*(source.halfHeight()&255))continue;
+                int qy=(source.y()-displayY+(source.halfHeight()&255))&yMask;
+                if(qx>=320+2*(source.halfWidth()&255)||qy>=height+2*(source.halfHeight()&255))continue;
                 originX=qx+128-(source.halfWidth()&255);
                 originY=qy+128-(source.halfHeight()&255)+slot*112;
             }
-            source.visibility().accept(true); // BEFORE full SAT or empty frame tests.
+            if(nativeVisibility)source.visibility().accept(true); // BEFORE full SAT or empty frame tests.
             if(output.size()>=80)continue;
             for(Mapping mapping:source.mappings()) {
                 int mx=originX+mapping.x(),my=originY+mapping.y();
                 if(mapping.multi()) {
                     mx=(mapping.x()-camera.x()+128)&xMask;
-                    my=((mapping.y()-camera.y()+128)&yMask)+slot*112;
+                    my=((mapping.y()-displayY+128)&yMask)+slot*112;
                 }
                 emit(output,pointer,bucket,mapping,mx,my);
                 if(output.size()>=80)break;

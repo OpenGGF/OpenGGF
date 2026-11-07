@@ -9,6 +9,6 @@ public final class NativePlayerPose {
     public static PlayerPose capture(AbstractPlayableSprite sprite) {
         return new PlayerPose(sprite.getCentreX(), sprite.getCentreY(), sprite.getMappingFrame(),
                 sprite.getRenderHFlip(), sprite.getRenderVFlip(), sprite.getPriorityBucket(),
-                sprite.isHighPriority(), sprite.isHurt());
+                sprite.isHighPriority(), sprite.isHurt(),sprite.getTopSolidBit()==0xE,0);
     }
 }

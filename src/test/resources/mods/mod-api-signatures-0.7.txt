@@ -1685,6 +1685,7 @@ CONSTRUCTOR com.openggf.game.session.EngineContext public  <init>(com.openggf.co
 CONSTRUCTOR com.openggf.game.session.EngineContext public  <init>(com.openggf.configuration.SonicConfigurationService,com.openggf.graphics.GraphicsManager,com.openggf.audio.AudioManager,com.openggf.data.RomManager,com.openggf.debug.PerformanceProfiler,com.openggf.debug.DebugOverlayManager,com.openggf.debug.playback.PlaybackDebugManager,com.openggf.game.RomDetectionService,com.openggf.game.CrossGameFeatureProvider,com.openggf.game.patch.ModuleResolutionService)
 CONSTRUCTOR com.openggf.game.session.GameplayRunPolicy public  <init>(boolean,boolean,com.openggf.game.session.GameplayRunPolicy$ActCompletion,boolean,boolean,com.openggf.game.session.GameplayRunPolicy$DeathRestart,boolean,boolean)
 CONSTRUCTOR com.openggf.game.session.GameplayRunPolicy public  <init>(boolean,boolean,com.openggf.game.session.GameplayRunPolicy$ActCompletion,boolean,boolean,com.openggf.game.session.GameplayRunPolicy$DeathRestart,boolean,boolean,com.openggf.mods.run.MonitorRule)
+CONSTRUCTOR com.openggf.game.session.GameplayRunPolicy public  <init>(boolean,boolean,com.openggf.game.session.GameplayRunPolicy$ActCompletion,boolean,boolean,com.openggf.game.session.GameplayRunPolicy$DeathRestart,boolean,boolean,com.openggf.mods.run.MonitorRule,boolean)
 CONSTRUCTOR com.openggf.game.session.WorldSession public  <init>(com.openggf.game.GameModule)
 CONSTRUCTOR com.openggf.game.session.WorldSession public  <init>(com.openggf.game.GameModule,com.openggf.game.GameModule,com.openggf.game.GameDataSource,com.openggf.game.save.SaveSessionContext)
 CONSTRUCTOR com.openggf.game.session.WorldSession public  <init>(com.openggf.game.GameModule,com.openggf.game.GameModule,com.openggf.game.save.SaveSessionContext)
@@ -8652,6 +8653,7 @@ METHOD com.openggf.game.session.GameplayRunPolicy public  boolean liveRewind()
 METHOD com.openggf.game.session.GameplayRunPolicy public  boolean livesCounter()
 METHOD com.openggf.game.session.GameplayRunPolicy public  boolean returnsToHostOnActCompletion()
 METHOD com.openggf.game.session.GameplayRunPolicy public  boolean specialStageEntry()
+METHOD com.openggf.game.session.GameplayRunPolicy public  boolean swapEnabled()
 METHOD com.openggf.game.session.GameplayRunPolicy public  boolean zoneIntros()
 METHOD com.openggf.game.session.GameplayRunPolicy public  com.openggf.game.session.GameplayRunPolicy withFastRestarts()
 METHOD com.openggf.game.session.GameplayRunPolicy public  com.openggf.game.session.GameplayRunPolicy withoutZoneIntros()
@@ -9823,6 +9825,7 @@ METHOD com.openggf.level.LevelManager public  void refreshFullTilemapPlanesFromC
 METHOD com.openggf.level.LevelManager public  void refreshObjectPostCameraRenderState()
 METHOD com.openggf.level.LevelManager public  void refreshPlayablePowerUpSpawners()
 METHOD com.openggf.level.LevelManager public  void refreshPlayableSpriteArt()
+METHOD com.openggf.level.LevelManager public  void reinitializeAfterRaceSwap()
 METHOD com.openggf.level.LevelManager public  void reloadLevelPalettes()
 METHOD com.openggf.level.LevelManager public  void renderEndingBackground(int)
 METHOD com.openggf.level.LevelManager public  void renderEndingBackground(int,float[])
@@ -9860,6 +9863,7 @@ METHOD com.openggf.level.LevelManager public  void resetTileOffsetPositionActual
 METHOD com.openggf.level.LevelManager public  void resetTileOffsetPositionEffectiveForFullRefresh()
 METHOD com.openggf.level.LevelManager public  void respawnPlayer()
 METHOD com.openggf.level.LevelManager public  void restartCurrentLevelAfterDeath()
+METHOD com.openggf.level.LevelManager public  void restartCurrentLevelFromCheckpointAfterDeath()
 METHOD com.openggf.level.LevelManager public  void restartCurrentLevelFromConfiguration()
 METHOD com.openggf.level.LevelManager public  void restartCurrentLevelFromStartAfterDeath()
 METHOD com.openggf.level.LevelManager public  void restoreBackgroundVdpPlane(byte[])
@@ -18656,6 +18660,7 @@ RECORD-COMPONENT com.openggf.game.session.GameplayRunPolicy liveRewind boolean
 RECORD-COMPONENT com.openggf.game.session.GameplayRunPolicy livesCounter boolean
 RECORD-COMPONENT com.openggf.game.session.GameplayRunPolicy monitors com.openggf.mods.run.MonitorRule
 RECORD-COMPONENT com.openggf.game.session.GameplayRunPolicy specialStageEntry boolean
+RECORD-COMPONENT com.openggf.game.session.GameplayRunPolicy swapEnabled boolean
 RECORD-COMPONENT com.openggf.game.session.GameplayRunPolicy zoneIntros boolean
 RECORD-COMPONENT com.openggf.game.solid.PlayerSolidContactResult kind com.openggf.game.solid.ContactKind
 RECORD-COMPONENT com.openggf.game.solid.PlayerSolidContactResult postContact com.openggf.game.solid.PostContactState
