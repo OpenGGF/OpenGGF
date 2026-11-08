@@ -43,6 +43,13 @@
       21,
       22,
       23
+    ],
+    "float": [
+      84,
+      85,
+      86,
+      87,
+      88
     ]
   },
   "frames": [
@@ -1272,6 +1279,408 @@
       ],
       "native_composite_pieces": null,
       "group": "s2_super_hero"
+    },
+    {
+      "id": 84,
+      "file": "float-54.png",
+      "native_source_label": "Map_Sonic_099C",
+      "native_art_label": "ArtUnc_Sonic",
+      "dimensions": [
+        48,
+        32
+      ],
+      "bounds_px": [
+        -20,
+        -12,
+        48,
+        32
+      ],
+      "hotspot": [
+        20,
+        12
+      ],
+      "palette_line": 0,
+      "pieces": [
+        [
+          -20,
+          -4,
+          2,
+          2,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          -4,
+          -12,
+          3,
+          4,
+          4,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          20,
+          -12,
+          1,
+          2,
+          16,
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "native_composite_pieces": null,
+      "group": "s2_float",
+      "dplc_label": "MapRUnc_Sonic.frame84",
+      "dplc_entries": [
+        [
+          4,
+          1352
+        ],
+        [
+          12,
+          1356
+        ],
+        [
+          2,
+          1368
+        ]
+      ],
+      "tile_budget": 18,
+      "timing": {
+        "native_source_label": "SonAni_Float2",
+        "ticks": 8,
+        "order": 0
+      }
+    },
+    {
+      "id": 85,
+      "file": "float-55.png",
+      "native_source_label": "Map_Sonic_09B6",
+      "native_art_label": "ArtUnc_Sonic",
+      "dimensions": [
+        48,
+        32
+      ],
+      "bounds_px": [
+        -24,
+        -12,
+        48,
+        32
+      ],
+      "hotspot": [
+        24,
+        12
+      ],
+      "palette_line": 0,
+      "pieces": [
+        [
+          -24,
+          -12,
+          1,
+          2,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          -16,
+          -12,
+          2,
+          4,
+          2,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          -12,
+          2,
+          4,
+          2,
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          16,
+          -12,
+          1,
+          2,
+          0,
+          1,
+          0,
+          0,
+          0
+        ]
+      ],
+      "native_composite_pieces": null,
+      "group": "s2_float",
+      "dplc_label": "MapRUnc_Sonic.frame85",
+      "dplc_entries": [
+        [
+          2,
+          1370
+        ],
+        [
+          8,
+          1372
+        ]
+      ],
+      "tile_budget": 10,
+      "timing": {
+        "native_source_label": "SonAni_Float2",
+        "ticks": 8,
+        "order": 1
+      }
+    },
+    {
+      "id": 86,
+      "file": "float-56.png",
+      "native_source_label": "Map_Sonic_09D8",
+      "native_art_label": "ArtUnc_Sonic",
+      "dimensions": [
+        48,
+        32
+      ],
+      "bounds_px": [
+        -28,
+        -12,
+        48,
+        32
+      ],
+      "hotspot": [
+        28,
+        12
+      ],
+      "palette_line": 0,
+      "pieces": [
+        [
+          4,
+          -4,
+          2,
+          2,
+          0,
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          -20,
+          -12,
+          3,
+          4,
+          4,
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          -28,
+          -12,
+          1,
+          2,
+          16,
+          1,
+          0,
+          0,
+          0
+        ]
+      ],
+      "native_composite_pieces": null,
+      "group": "s2_float",
+      "dplc_label": "MapRUnc_Sonic.frame86",
+      "dplc_entries": [
+        [
+          4,
+          1352
+        ],
+        [
+          12,
+          1356
+        ],
+        [
+          2,
+          1368
+        ]
+      ],
+      "tile_budget": 18,
+      "timing": {
+        "native_source_label": "SonAni_Float2",
+        "ticks": 8,
+        "order": 2
+      }
+    },
+    {
+      "id": 87,
+      "file": "float-57.png",
+      "native_source_label": "Map_Sonic_09F2",
+      "native_art_label": "ArtUnc_Sonic",
+      "dimensions": [
+        40,
+        32
+      ],
+      "bounds_px": [
+        -28,
+        -12,
+        40,
+        32
+      ],
+      "hotspot": [
+        28,
+        12
+      ],
+      "palette_line": 0,
+      "pieces": [
+        [
+          -28,
+          -12,
+          1,
+          2,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          -20,
+          -12,
+          3,
+          4,
+          2,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          4,
+          -4,
+          1,
+          2,
+          14,
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "native_composite_pieces": null,
+      "group": "s2_float",
+      "dplc_label": "MapRUnc_Sonic.frame87",
+      "dplc_entries": [
+        [
+          2,
+          1380
+        ],
+        [
+          12,
+          1382
+        ],
+        [
+          2,
+          1394
+        ]
+      ],
+      "tile_budget": 16,
+      "timing": {
+        "native_source_label": "SonAni_Float2",
+        "ticks": 8,
+        "order": 3
+      }
+    },
+    {
+      "id": 88,
+      "file": "float-58.png",
+      "native_source_label": "Map_Sonic_0A0C",
+      "native_art_label": "ArtUnc_Sonic",
+      "dimensions": [
+        40,
+        32
+      ],
+      "bounds_px": [
+        -12,
+        -12,
+        40,
+        32
+      ],
+      "hotspot": [
+        12,
+        12
+      ],
+      "palette_line": 0,
+      "pieces": [
+        [
+          20,
+          -12,
+          1,
+          2,
+          0,
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          -4,
+          -12,
+          3,
+          4,
+          2,
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          -12,
+          -4,
+          1,
+          2,
+          14,
+          1,
+          0,
+          0,
+          0
+        ]
+      ],
+      "native_composite_pieces": null,
+      "group": "s2_float",
+      "dplc_label": "MapRUnc_Sonic.frame88",
+      "dplc_entries": [
+        [
+          2,
+          1380
+        ],
+        [
+          12,
+          1382
+        ],
+        [
+          2,
+          1394
+        ]
+      ],
+      "tile_budget": 16,
+      "timing": {
+        "native_source_label": "SonAni_Float2",
+        "ticks": 8,
+        "order": 4
+      }
     }
   ]
 }

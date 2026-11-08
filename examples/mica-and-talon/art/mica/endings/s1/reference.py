@@ -71,6 +71,8 @@ def refs(game):
    raw=b.nem(ROOT/'docs/s2disasm/art/nemesis'/name);raw=bytes(25*32)+raw;data=raw+bytes(0x493*32-len(raw))+plane
    for key,v in inv['frame_sets'].items():
     if key.startswith(group) and 'walk' not in key:
-     for f in v['frames']:out[f['label']]=render(mm[f['label']],data,[pal,p2,pal,pal])
+     for f in v['frames']:
+      cp=b.pal(ROOT/'docs/s2disasm/art/palettes/Ending Super Sonic.bin') if group=='s2_super' else pal
+      out[f['label']]=render(mm[f['label']],data,[cp,p2,cp,cp])
   for i,im in enumerate(photos(),1):out[f'MapEng_Ending{i}']=im
  return out

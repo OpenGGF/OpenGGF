@@ -158,22 +158,53 @@ def super_flight(i,size):
 
 def floating(phase,size):
  w,h=size;im=a.indexed(size);d=ImageDraw.Draw(im)
- # Horizontal falling silhouette, long armoured tail at left, face to right.
- dy=[0,1,2,1,0][phase]
- d.polygon([(22,14+dy),(26,19+dy),(14,24),(1,23),(9,19)],fill=4,outline=1)
- for x,y in [(5,22),(12,20),(19,17)]:d.line([(x,y),(x+3,y+1),(x+5,y-2)],fill=6)
- a.body(im,19,12+dy,14,12)
- a.limb(im,(23,22),(12+phase,26),3);a.boot(im,6+phase,25,11,6)
- a.limb(im,(29,22),(26-phase,27),3);a.boot(im,21-phase,26,10,6)
- a.head(im,w-24,0+dy,23,23,phase in (1,2))
- a.limb(im,(27,18),(w-5,23-dy),3);a.glove(im,w-10,19-dy,9,9)
- a.glove(im,13+phase,10+dy,8,8)
- return im
+ if phase in (0,2):
+  # Opposed side views. Keep the cheek inside the 24x32 central piece;
+  # the narrow leading piece carries only the extended white glove.
+  d.polygon([(18,17),(24,21),(15,27),(3,29),(8,23)],fill=4,outline=1)
+  d.line([(8,26),(12,25),(16,21)],fill=6)
+  a.body(im,13,13,15,12)
+  a.limb(im,(17,19),(7,14),3);a.boot(im,0,8,11,9)
+  a.limb(im,(19,23),(12,25),3);a.boot(im,6,23,12,8)
+  a.limb(im,(28,15),(40,8),3);a.glove(im,40,2,7,11)
+  a.head(im,19,0,20,23,True);a.glove(im,13,16,8,8)
+  return im.transpose(Image.Transpose.FLIP_LEFT_RIGHT) if phase==2 else im
+ if phase==1:
+  # Front-facing spread arms, paired eye whites, grin and hanging belly.
+  d.ellipse((13,0,34,24),fill=3,outline=1)
+  for yy in (3,8):
+   for xx in (16,23):
+    d.polygon([(xx,yy),(xx+3,yy-2),(xx+7,yy),(xx+5,yy+4),(xx+1,yy+4)],fill=4,outline=2)
+    d.line((xx+1,yy,xx+4,yy-1),fill=6)
+  d.polygon([(17,12),(23,16),(29,12),(33,18),(31,23),(24,25),(16,23),(14,18)],fill=7,outline=1)
+  for xx in (17,26):
+   d.ellipse((xx,11,xx+4,19),fill=12,outline=1);d.line((xx+2,13,xx+2,17),fill=15)
+  d.polygon([(19,21),(28,21),(26,24),(21,24)],fill=1);d.line((20,21,27,21),fill=12)
+  a.body(im,18,24,11,7)
+  a.limb(im,(17,22),(5,11),3);a.glove(im,0,5,8,10)
+  a.limb(im,(30,22),(42,11),3);a.glove(im,40,5,8,10)
+  # Native mapping aliases left and right halves, so draw the matching half.
+  for yy in range(h):
+   for xx in range(24):im.putpixel((47-xx,yy),im.getpixel((xx,yy)))
+  return im
+ # Rear three-quarter opposed views: three jade scale rows, tapered tail,
+ # coral heels and a forward-reaching white glove. No misleading front face.
+ a.limb(im,(18,19),(31,16),3);a.boot(im,29,12,10,10)
+ a.limb(im,(18,23),(25,27),3);a.boot(im,21,24,10,8)
+ d.ellipse((9,0,29,26),fill=3,outline=1)
+ for row,yy in enumerate((3,9,15,21)):
+  for xx in ((12,19) if row%2==0 else (10,17,23)):
+   d.polygon([(xx,yy),(xx+3,yy-2),(xx+6,yy),(xx+5,yy+4),(xx+1,yy+5)],fill=4,outline=2)
+   d.line((xx+1,yy,xx+4,yy-1),fill=6)
+ d.polygon([(15,22),(23,23),(24,28),(16,31),(11,30)],fill=4,outline=1)
+ d.line((16,25,21,27),fill=6)
+ a.limb(im,(12,15),(5,8),3);a.glove(im,0,2,8,11)
+ return im.transpose(Image.Transpose.FLIP_LEFT_RIGHT) if phase==4 else im
 
 def float_refs(inv):
- mm=r.maps(ROOT/'docs/s2disasm/mappings/sprite/Sonic.asm');dp=(ROOT/'docs/s2disasm/mappings/spriteDPLC/Sonic.asm').read_text();raw=(ROOT/'docs/s2disasm/art/uncompressed/Sonic.bin').read_bytes();pal=r.b.pal(ROOT/'docs/s2disasm/art/palettes/Sonic.bin');out={}
+ mm=r.maps(ROOT/'docs/s2disasm/mappings/sprite/Sonic.asm');dp=(ROOT/'docs/s2disasm/mappings/spriteDPLC/Sonic.asm').read_text();raw=(ROOT/"docs/s2disasm/art/uncompressed/Sonic's art.bin").read_bytes();pal=r.b.pal(ROOT/'docs/s2disasm/art/palettes/SonicAndTails.bin');out={}
  for f in inv['frame_sets']['s2_float']['frames']:
-  chunk=dp.split(f".frame{f['index']:X}:",1)[1].split('_End',1)[0];loads=[list(map(r.b.num,v)) for v in re.findall(r'dplcEntry\s+([^,]+),\s*([^\s;]+)',chunk)]
+  chunk=dp.split(f".frame{f['index']}:",1)[1].split('_End',1)[0];loads=[list(map(r.b.num,v)) for v in re.findall(r'dplcEntry\s+([^,]+),\s*([^\s;]+)',chunk)]
   out[f['label']]=r.render(mm[f['label']],b''.join(raw[t*32:(t+n)*32] for n,t in loads),[pal]*4)
  return out
 
@@ -201,6 +232,12 @@ def generate(group,inv):
     else:im=floating(i-84,(w,h))
     im=a.mask_layout(im,char,f['bounds_px']);file=f'{group}-{i:02x}.png';im.save(HERE/file,bits=4,transparency=0)
     frames.append(dict(id=i,file=file,native_source_label=f['label'],native_art_label=inv['frame_sets'][key]['native_art'],dimensions=[w,h],bounds_px=f['bounds_px'],hotspot=[-x,-y],palette_line=1 if key=='s2_normal_turn' else 0,pieces=char,native_composite_pieces=pieces if key=='s2_normal_turn' else None,group=key))
+ if group=='float':
+  dp=(ROOT/'docs/s2disasm/mappings/spriteDPLC/Sonic.asm').read_text()
+  for f in frames:
+   label=f".frame{f['id']}";chunk=dp.split(label+':',1)[1].split('_End',1)[0]
+   loads=[list(map(r.b.num,v)) for v in re.findall(r'dplcEntry\s+([^,]+),\s*([^\s;]+)',chunk)]
+   f.update(dplc_label='MapRUnc_Sonic'+label,dplc_entries=loads,tile_budget=sum(n for n,t in loads),timing=dict(native_source_label='SonAni_Float2',ticks=8,order=f['id']-84))
  return frames
 
 def main():
