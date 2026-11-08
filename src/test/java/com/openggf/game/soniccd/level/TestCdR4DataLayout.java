@@ -165,10 +165,15 @@ class TestCdR4DataLayout {
     }
 
     @Test
-    void finiteTerrainOperandsAndPlacementWidthsDoNotClaimSharedReaderAdmission() {
+    void finiteTerrainOperandsAndPlacementWidthsRemainDataWithoutRuntimeAdmission() throws Exception {
         int programmeIndex = 0; int[] activeRows = {190,162,184,184,215,189,223,223,32,32};
         for (var p : CdR4DataLayout.Programme.values()) {
             var t = p.terrain(); byte[] fg = range(p,"StageMapFg"), bg = range(p,"StageMapBg");
+            var reader = TestCdR4TerrainData.reader(p); var known = reader.terrain();
+            assertSame(known, reader.terrain()); assertEquals(t.blocksBytes(), known.blocks().length());
+            assertEquals(t.collisionIndexBytes(), known.collision().ids().length());
+            assertThrows(UnsupportedOperationException.class, known::shape);
+            assertThrows(UnsupportedOperationException.class, reader::ordinaryZoneActWord);
             assertEquals(t.foregroundColumns(), Byte.toUnsignedInt(fg[0])+1);
             assertEquals(t.foregroundRows(), Byte.toUnsignedInt(fg[1])+1);
             assertEquals(t.backgroundColumns(), Byte.toUnsignedInt(bg[0])+1);

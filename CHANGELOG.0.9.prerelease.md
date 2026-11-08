@@ -76,6 +76,10 @@ matching area heading; see the
   mechanism. The reload/terrain checkpoint qualifies1,235 distinct focused cases
   across two source-identical runs, without failures or skips in executed cases;
   the original incomplete selection receipt remains explicit.
+  All ten Tidal Tempest and all ten Quartz Quadrant initial terrain DATA
+  profiles also use the same machinery. Their641 focused checks pass without
+  failures, errors or skips, preserving typed missing block/source boundaries
+  and keeping water service, live projection and World admission separate.
   CCZ ordinary scheduling now preserves native VBlank/Main order, the old
   selected sprite list and full-word time-stop gating. Private HUD adoption
   retains the real prefix across typed callback failures;175 focused checks

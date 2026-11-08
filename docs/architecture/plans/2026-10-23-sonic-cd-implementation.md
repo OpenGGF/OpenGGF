@@ -1,5 +1,31 @@
 # Implement Sonic CD with complete regional parity
 
+## 8 November 2026 — all-ten TT and QQZ initial terrain DATA
+
+Eight exact Java payloads bind all ten canonical TT and QQZ initial terrain
+profiles through the existing semantic reader, decoder, cache and query owners.
+No shared algorithm, Reader, Definition, Shape, Frame or World implementation
+changes. Root dataOnly/payload/Optional source constraints and previous visual,
+PLC, section, placement and compressed-product contracts remain intact.
+
+R116 is one source-bound641-case/23-class pass, zero failures/errors/skips,
+on identical before/after source/index fingerprint
+`35a831dfe0b3ad132cc07ff63db69dbec6f754859ade6bf686d8f285a2702cb5`.
+Every literal case is unique; all selected XML hashes, Java25/EGL/original-media
+properties, declared suite counts and installed8 source pins match. Both first
+source reviews found no scoped P1/P2. This is focused DATA evidence, not a
+category/full-suite or live-stage result.
+
+QQZ's missing-binding test now uses actual authenticated source with only its
+Terrain definition withheld, replacing evolving R41A/R53C whole-profile negatives.
+Its12 old identities remain. R53C opens known DATA while block1019/known760 and
+collision1019/known800 retain typed failures. Seven TT originals likewise retain
+unbacked initial block reads; no padding/current-art backing or rawmax collision
+hull is invented. Native direct TT collision STORE operands remain distinct from
+QQZ's indexed pointer-table consumer. The deferred TT water service, actor/mini/
+loop/solver/projection, player/World/Ready/routes and regional admission remain
+unsupported. R7 initial terrain is prepared separately and not installed here.
+
 ## 8 November 2026 — original R31 LevelStart reload and all-ten R6 initial DATA
 
 The same source-bound World/Core/Host/Frame lifetime now transfers its completed

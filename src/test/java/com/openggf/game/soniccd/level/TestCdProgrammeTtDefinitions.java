@@ -70,7 +70,7 @@ class TestCdProgrammeTtDefinitions {
         assertArrayEquals(data.view(p.range("PlayerGfx")).copy(),data.view(p.range("PlayerArtReadView")).slice(0,76928).copy());
         assertThrows(IllegalArgumentException.class,()->CdSonicVisualAssets.decode(CdSonicVisualAssets.SourceFormat.FRAMES_188,
             data.view(p.range("PlayerSprites")).copy(),data.view(p.range("PlayerGfxScript")).copy(),data.view(p.range("PlayerGfx")).copy()));
-        assertThrows(UnsupportedOperationException.class,r::terrain);assertThrows(UnsupportedOperationException.class,r::ordinaryZoneActWord);
+        assertSame(r.terrain(),r.terrain());assertThrows(UnsupportedOperationException.class,r::ordinaryZoneActWord);
         assertThrows(UnsupportedOperationException.class,()->r.role(CdProgrammeReader.Role.MINI));
     }
     @ParameterizedTest @EnumSource(CdR4DataLayout.Programme.class)

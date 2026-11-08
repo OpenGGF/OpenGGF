@@ -106,29 +106,27 @@ class TestCdR5TerrainData {
         }
     }
     @Test void terrainBorrowsOnlySelectedInitialRolesAndUnsupportedProfilesStopBeforeDecode()throws Exception {
-        for(var p:List.of(A,B)) {
+        for(var p:CdR5DataLayout.Programme.values()) {
             // A fresh owner prevents an existing terrain cache from masking the read sequence.
             try(var actual=source()) {var r=spy(CdProgrammeReader.open(actual,p.payload().stage()));r.terrain();
                 for(var role:CdProgrammeReader.Role.values())if(!Set.of(CdProgrammeReader.Role.CHUNKS,CdProgrammeReader.Role.FG,CdProgrammeReader.Role.BG,CdProgrammeReader.Role.COLLISION,CdProgrammeReader.Role.ANGLE,CdProgrammeReader.Role.HEIGHT,CdProgrammeReader.Role.WIDTH).contains(role))verify(r,never()).role(role);
                 verify(r,never()).view(p.range("StageMaps2Read"));}
         }
-        for(var p:CdR5DataLayout.Programme.values())if(p!=A&&p!=B) {
-            var r=spy(reader(p));clearInvocations(r);assertThrows(UnsupportedOperationException.class,r::terrain);verify(r,never()).decoded(any());verify(r,never()).role(any());
-        }
-        try(var actual=source()) {assertThrows(UnsupportedOperationException.class,()->CdStageTerrain.fromProgramme(actual,CdStagePayload.R41A.stage()));}
-        // Public ingress authenticates the source-backed R53C unadmitted terrain boundary.
-        try(var actual=source()) {
-            var stage=CdStagePayload.R53C.stage();
-            assertThrows(UnsupportedOperationException.class,()->CdStageTerrain.fromProgramme(actual,stage));
-            var r=spy(CdProgrammeReader.open(actual,stage));clearInvocations(r);
-            assertThrows(UnsupportedOperationException.class,r::terrain);
+        // Purposeful migration: all ten R5 bindings now exist. Keep the missing-Terrain
+        // control post-authentication, independent of another family's evolving admission.
+        for(var p:CdR5DataLayout.Programme.values()) {
+            var r=TestCdR5RemainingTerrainData.withoutTerrain(p);
+            assertEquals(p.name()+" has no reviewed terrain DATA binding",assertThrows(UnsupportedOperationException.class,r::terrain).getMessage());
             verify(r,never()).decoded(any());verify(r,never()).role(any());
         }
     }
+
     @Test void act3ActualUnknownBlockPreimageRemainsAnUnadmittedBoundary()throws Exception {
         var p=CdR5DataLayout.Programme.R53C;var r=reader(p);var fg=r.view(p.range("StageMaps0Read"));assertEquals(7,fg.unsignedByte(2+16+2));
         var word=new BlockReference(r.view(p.range("StageChunks")).unsignedWord(6*512+15*32));assertEquals(1019,word.renderBlockIndex());
-        assertEquals(760,r.decoded(p.range("StageBlocks")).bytes().length()/8);assertThrows(UnsupportedOperationException.class,r::terrain);
+        assertEquals(760,r.decoded(p.range("StageBlocks")).bytes().length()/8);var t=r.terrain();assertEquals(1019,t.chunkWord(7,0,15).rawWord());
+        unavailable(ReadOwner.BLOCK_STAGING,1019,760,()->t.blockWord(1019,0,0));
+        unavailable(ReadOwner.COLLISION_SOURCE,1019,800,()->t.collision().idForBlock(1019));
     }
     @Test void publicIngressRejectsForeignOriginalImagesAndCannotMintAPlayerSource()throws Exception {
         try(var actual=source()) {

@@ -46,8 +46,7 @@ class TestCdR5DataLayout {
             assertArrayEquals(image.readFile(key.fileOffset(),key.length()),view.copy());
         }
         for(var op:p.operands())assertEquals(op.hex(),HexFormat.of().formatHex(image.readFile(op.fileOffset(),op.hex().length()/2)),op.target());
-        if(p==CdR5DataLayout.Programme.R51A || p==CdR5DataLayout.Programme.R51B)assertNotNull(r.terrain());
-        else assertThrows(UnsupportedOperationException.class,r::terrain);
+        assertNotNull(r.terrain());
         assertThrows(UnsupportedOperationException.class,r::ordinaryZoneActWord);
         if(p.rawTimeZone()!=2)assertTrue(p.goodFutureConstraint().isEmpty());
     }
@@ -144,11 +143,9 @@ class TestCdR5DataLayout {
         var p=CdR5DataLayout.Programme.R51A;assertEquals(178,p.range("StageMapFg").length());assertEquals(222,p.range("StageMaps0Read").length());
         assertEquals(800,p.range("StageCollision").length());assertTrue(CdR5DataLayout.Programme.R53C.range("Map0Collision").length()>800);
         for(var programme:CdR5DataLayout.Programme.values()) {
-            var r=actual().readers().get(programme);boolean bound=programme==CdR5DataLayout.Programme.R51A || programme==CdR5DataLayout.Programme.R51B;
-            if(bound)assertNotNull(r.terrain());else assertThrows(UnsupportedOperationException.class,r::terrain);
+            var r=actual().readers().get(programme);assertNotNull(r.terrain());
             var key=programme.range("StageGfx");assertThrows(IllegalArgumentException.class,()->r.nativeInput(programme.range("PlayerGfx")));
-            if(bound)assertEquals(222,r.role(CdProgrammeReader.Role.FG).length());
-            else assertThrows(UnsupportedOperationException.class,()->r.role(CdProgrammeReader.Role.FG));assertNotNull(r.decoded(key));
+            assertEquals(programme.range("StageMaps0Read").length(),r.role(CdProgrammeReader.Role.FG).length());assertNotNull(r.decoded(key));
         }
     }
     @Test void everyProgrammeRejectsForeignRegionCatalogueAndOriginalDomainBeforeAdoption()throws Exception {

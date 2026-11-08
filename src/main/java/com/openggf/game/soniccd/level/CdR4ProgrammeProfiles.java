@@ -38,10 +38,43 @@ final class CdR4ProgrammeProfiles {
     private record RtsFact(int initialQueueId) implements SectionFact { }
     private enum BackgroundKind { COPIED_AND_LIVE, DIRECT_CAMERA }
 
+    private record TerrainOperands(int collisionStore,String storeHex,List<Integer> draw,List<Integer> collision) { }
+    /** Canonical known prefixes only. Native TT LoadStageMap clears $800 then uses
+     * signed directory slots0/1, minus-one dimensions, FG+$00/BG+$40 and stride$80.
+     * r4/main.asm:434-436 stores #StageCollision directly; there is no indexed table.
+     * Dirty raw references do not establish additional block/collision staging.
+     */
+    private static void initialTerrain(Builder b,CdR4DataLayout.Programme p) {
+        var t=p.terrain();
+        b.terrain=new Terrain(new CdStageTerrain.Profile(t.blocksBytes(),t.patternsBytes(),t.chunksBytes(),
+            t.foregroundColumns(),t.foregroundRows(),t.backgroundColumns(),t.backgroundRows(),t.collisionIndexBytes(),
+            CdStageTerrain.LayoutEncoding.EXACT_READ_VIEW,CdStageTerrain.ReferencePolicy.SELECTED_KNOWN_SOURCE),
+            Optional.empty(),Map.of(CdProgrammeReader.Role.CHUNKS,p.range("StageChunks"),
+                CdProgrammeReader.Role.FG,p.range("StageMapFg"),CdProgrammeReader.Role.BG,p.range("StageMapBg"),
+                CdProgrammeReader.Role.COLLISION,p.range("StageCollision"),CdProgrammeReader.Role.ANGLE,p.range("StageCollisionAngles"),
+                CdProgrammeReader.Role.HEIGHT,p.range("StageCollisionColumns"),CdProgrammeReader.Role.WIDTH,p.range("StageCollisionRows")),
+            p.range("StageBlocks"),p.range("StageGfx"));
+        var operands=switch(p) {
+            case R41A -> new TerrainOperands(0x19b2,"21fc0023bb42f7964e75",List.of(0x3632,0x3678),List.of(0xf20,0x41ee));
+            case R41B -> new TerrainOperands(0x18f8,"21fc0023ba76f7964e75",List.of(0x341a,0x3460),List.of(0xe66,0x4108));
+            case R41C -> new TerrainOperands(0x1932,"21fc0023ba76f7964e75",List.of(0x3454,0x349a),List.of(0xea0,0x4134));
+            case R41D -> new TerrainOperands(0x1920,"21fc0023ba76f7964e75",List.of(0x3442,0x3488),List.of(0xe8e,0x4122));
+            case R42A -> new TerrainOperands(0x19b2,"21fc0023ba76f7964e75",List.of(0x34c8,0x350e),List.of(0xf20,0x41b6));
+            case R42B -> new TerrainOperands(0x18f8,"21fc0023ba76f7964e75",List.of(0x340e,0x3454),List.of(0xe66,0x40fc));
+            case R42C -> new TerrainOperands(0x1932,"21fc0023ba76f7964e75",List.of(0x3448,0x348e),List.of(0xea0,0x4120));
+            case R42D -> new TerrainOperands(0x1920,"21fc0023ba76f7964e75",List.of(0x3436,0x347c),List.of(0xe8e,0x410e));
+            case R43C -> new TerrainOperands(0x1932,"21fc0021f500f7964e75",List.of(0x3422,0x3468),List.of(0xea0,0x40fa));
+            case R43D -> new TerrainOperands(0x1920,"21fc0021f500f7964e75",List.of(0x3436,0x347c),List.of(0xe8e,0x410e));
+        };
+        b.operand(operands.collisionStore(),operands.storeHex());
+        for(int at:operands.draw())b.operand(at,"263c00210000");
+        for(int at:operands.collision())b.operand(at,"223c00210000");
+    }
     static void configure(Builder b,CdR4DataLayout.Programme p) {
         var f=facts(p);b.tt=p;
         for(var r:p.ranges())b.raw(r,r.fileOffset(),r.length(),r.sha256());
         for(var operand:p.operands())b.operand(operand.fileOffset(),operand.encodedHex());
+        initialTerrain(b,p);
         for(var line:f.sourceRows().strip().lines().toList()) {
             var words=line.split(" ");var range=p.range(words[0]);int header=Integer.parseInt(words[1],16);
             var product=product(words);var java=product.javaProduct();var nativeRead=product.nativeInput();
