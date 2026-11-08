@@ -47,3 +47,24 @@ rounder and less expansive than native Super Sonic's quills. Final bank packing,
 shared palette-line allocation, Gilded fade/controller binding, and real scene
 background/contact checks remain engine-lane work. No engine code or other
 manifest is changed by this lane.
+
+## Owner-directed native-pose redraw
+
+`native-pose.json` stores exact prompts, raw-image SHA-256 and the reduced original
+MICA pixels. `build.py` regenerates these rows instead of the earlier procedural
+art. Native art remains disposable in `/tmp/mica-np-endings-s3k-20261108/native/`;
+each reference is enlarged 8× nearest-neighbour before GPT Image receives it,
+the MICA concept and the approved pilot. Super selectors 0/1 additionally receive
+the matching normal pose because their own native art is scrambled. Gilded
+Float2 variants share the normal frame's indices and use the recorded gold ramp.
+
+With the disposable inputs available, re-reduce a group using:
+
+```sh
+python3 -I examples/mica-and-talon/art/mica/endings/s3k/native_pose_redraw.py --review /tmp/mica-np-endings-s3k-20261108 --group reunion
+```
+
+The reducer clips only to the manifest's native piece union, then inks its inside
+edge. Reviews retain native 8× inputs, full raw GPT images, and four-column
+native/raw/reduced/previous MICA pages at 1×/4×. These checks certify image storage
+and native layout only; scene backgrounds and animation contact need engine review.

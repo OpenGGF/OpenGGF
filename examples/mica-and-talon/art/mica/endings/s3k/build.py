@@ -131,6 +131,14 @@ def review(dest,group,frames):
   pages[0].save(dest/f'{group}.gif',save_all=True,append_images=pages[1:],duration=round(ticks*1000/60/10)*10,loop=0,disposal=2)
 
 def draw(f):
+ # Exact reduced GPT pixel rows supersede the earlier procedural drawings.
+ source=HERE/'native-pose.json'
+ if source.exists():
+  entry=json.loads(source.read_text())['frames'].get(f['id'])
+  if entry:
+   im=b.indexed(tuple(f['dimensions']))
+   im.putdata([int(v,16) for row in entry['rows'] for v in row])
+   return im
  w,h=f['dimensions'];im=b.indexed((w,h));d=ImageDraw.Draw(im)
  def poly(pts,c=4,o=1):d.polygon([(round(x),round(y)) for x,y in pts],fill=c,outline=o)
  def line(pts,c=1,width=1):d.line([(round(x),round(y)) for x,y in pts],fill=c,width=width)
