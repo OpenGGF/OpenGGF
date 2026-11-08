@@ -82,6 +82,8 @@ final class GoalExpander implements PrefixSearch.Expander {
             for (int h1 : HOLDS) for (int h2 : HOLDS)
                 if (h1 != h2) families.add(steer(leg, h1, h2));
         }
+        families.add(charge(leg));
+        families.add(rolling(leg));
         families.add((t, now, previous) -> PadRow.NEUTRAL);
         if(node.sample.facts().getOrDefault("input.menu",0)!=0)
             families.addFirst((t, now, previous) -> new PadRow(t==0?PhysicalButton.START.bit():0,0));
@@ -218,6 +220,39 @@ final class GoalExpander implements PrefixSearch.Expander {
                 if (hold > 0 && jumpStart[index] < 0 && !p.air() && t > 0) jumpStart[index] = t;
                 boolean jump = jumpStart[index] >= 0 && t - jumpStart[index] < hold;
                 row = row.with(slot, (direction < 0 ? LEFT : direction > 0 ? RIGHT : 0) | (jump ? A : 0));
+            }
+            return row;
+        };
+    }
+
+    /** Same native-state-gated charge policy as StageplayRouteSteering, followed by normal steering. */
+    private Policy charge(Leg leg) {
+        Policy travel=steer(leg,0,0);
+        return (t,now,previous)->{
+            PadRow row=travel.row(t,now,previous);
+            for(var slot:players(leg)) {
+                if(slot==PlayerSlot.P2 && now.p2().isEmpty()) continue;
+                var p=now.player(slot);
+                int tx=playerRegion(leg,slot).map(r->(r.left()+r.right())/2)
+                        .orElse(target(leg,now).map(ObjectView::centreX).orElse(p.centreX()));
+                var b=NativeRouteSteering.charge(p.x(),tx,t,p.groundSpeed(),p.air(),p.crouching(),
+                        p.spindash(),p.motion().friction(),p.motion().slopeImpulse());
+                if(!b.finished()) row=row.with(slot,(b.direction()<0?LEFT:b.direction()>0?RIGHT:0)
+                        |(b.down()?DOWN:0)|(b.jump()?A:0));
+            }
+            return row;
+        };
+    }
+
+    /** Down while moving requests the native roll gate; no footprint or speed is written. */
+    private Policy rolling(Leg leg) {
+        Policy travel=steer(leg,0,0);
+        return (t,now,previous)->{
+            PadRow row=travel.row(t,now,previous);
+            for(var slot:players(leg)) {
+                if(slot==PlayerSlot.P2 && now.p2().isEmpty()) continue;
+                var p=now.player(slot);
+                if(!p.air() && p.groundSpeed()!=0) row=row.with(slot,row.lane(slot)|DOWN);
             }
             return row;
         };

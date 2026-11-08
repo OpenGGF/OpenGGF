@@ -242,3 +242,33 @@ ring totals there. A menu-selected special stage does not prove a results-induce
 tiebreaker. CSV/file presence proves execution; inspect the scene and state before
 claiming an obligation is met. Keep generated movies, PNGs, CSVs and savestates
 outside Git, with a manifest mapping exact movie/frame/state/window provenance.
+
+### S2 competition goal observations
+
+`capture_s2_competition_goals.lua` extends the native reference observations with
+`goals.csv`: nonzero SlotMachineInUse plus a visible native D6 cage, and a complete
+foreground cell whose resident VRAM bytes match a non-flat ROM AniPLC pose. It
+reads controller/actor/ledger/scroll/VRAM/CRAM state only. It never authors input,
+replans, changes RAM, supplies gameplay timing or treats a counter as displayed art.
+It saves the first slot/flip goal screenshot and matching native state. Required
+outputs are `state.csv`, `goals.csv`, and `done.txt`; inspect the host receipt too.
+
+Generate the ROM-backed template Lua table with Java25 after compiling the engine:
+`java -cp "$CP" tools/bizhawk/S2CompetitionGoalTemplates.java "$ROM" "$TASK/templates.lua"`.
+The producer verifies S2 World REV01 SHA1, uses the production ROM/AniPLC pipeline,
+and refuses to overwrite. Embed its returned table under `flip_templates` in the
+native plan, rather than referencing an unhashed external asset. The plan also has
+`anchor` (completed native ordinary-Level/LFC0 rows), `last`, and optional `frames`.
+Use the common isolated2.11 host with the frozen planner-derived BK2. An observed
+lag may end state comparison; goal reachability is checked independently. Record
+explicit named qualification coverage and never label it full pixel/state parity.
+
+Validate an entire cold movie with `python3 tools/bizhawk/check_s2_competition_goals.py
+--capture DIR --movie ROUTE.bk2 --kind slot-flip --out VERDICT.json` (one shell
+command). `slot` validates a slot-only prefix; `zone-results` and `tie-special`
+require ordinary play in both EHZ acts and the corresponding native result/ledger
+state. The validator binds the completed cold host receipt to the full movie,
+ROM and observed row count. Stamp with `com.openggf.tools.RouteNativeStampTool
+ROUTE.route.json VERDICT.json`; it regenerates and hashes the route's anchored
+export before accepting named `qualification[].coverage`. The named checks do
+not certify unlisted planner waypoints or state/pixel parity beyond native lag.
