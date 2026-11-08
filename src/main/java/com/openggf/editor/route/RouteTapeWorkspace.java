@@ -56,6 +56,16 @@ public final class RouteTapeWorkspace {
             return Optional.empty();
         }
 
+        /** Only the loaded, hash-verified retail S2 REV01 image admits the title host. */
+        default boolean competitionAvailable() {
+            if (!currentLevel().map(l -> l.game().equals("s2")).orElse(false)) return false;
+            try {
+                var rom = com.openggf.game.GameServices.rom().getRom();
+                return com.openggf.data.RomFingerprint.of(rom.readAllBytes()).matches(
+                        "7B905383", "8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9");
+            } catch (IOException | RuntimeException unavailable) { return false; }
+        }
+
         /** Placed objects of the level the editor shows (layout order), for placement goal targets. */
         default List<PlacedObject> placements() {
             return List.of();
@@ -389,6 +399,9 @@ public final class RouteTapeWorkspace {
         var facts = new ArrayList<String[]>();
         facts.add(fact(UiMessages.text("editor.route_tape.fact_rom"), launch.rom().game().toUpperCase(java.util.Locale.ROOT) + " "
                 + launch.rom().crc32Hex()));
+        if (launch.inlet() instanceof Inlet.Title) {
+            facts.add(fact(UiMessages.text("editor.route_tape.field_host"), UiMessages.text("editor.route_tape.host_competition")));
+        }
         if (launch.inlet() instanceof Inlet.ColdLevel cold) {
             facts.add(fact(UiMessages.text("editor.route_tape.fact_level"), levelText(cold.level())));
         }
@@ -454,6 +467,45 @@ public final class RouteTapeWorkspace {
                 || loaded.manifest().qualification().stream()
                 .anyMatch(stamp -> stamp.scope() == ReplayScope.BIZHAWK && stamp.content().equals(content));
         return observed && !current;
+    }
+
+    /** Presentation of a goal, shared by both fronts. Global predicates concern both pads. */
+    public record GoalRow(String id, String player, String predicate) { }
+
+    public List<GoalRow> goalRows() {
+        return goals.legs().stream().map(leg -> new GoalRow(leg.id(),
+                leg.goal() instanceof com.openggf.route.RouteGoal.Achieve a ? playerChip(a.condition()) : "Both",
+                leg.goal() instanceof com.openggf.route.RouteGoal.Achieve a ? predicateText(a.condition())
+                        : UiMessages.text("editor.route_tape.goal_boundary"))).toList();
+    }
+
+    private static String playerChip(com.openggf.route.SamplePredicate predicate) {
+        return switch (predicate) {
+            case com.openggf.route.SamplePredicate.PlayerIn p -> p.player().name();
+            case com.openggf.route.SamplePredicate.Settled p -> p.player().name();
+            case com.openggf.route.SamplePredicate.Riding p -> p.player().name();
+            case com.openggf.route.SamplePredicate.Attached p -> p.player().name();
+            case com.openggf.route.SamplePredicate.All all -> {
+                var chips = all.clauses().stream().map(RouteTapeWorkspace::playerChip).distinct().toList();
+                yield chips.size() == 1 ? chips.getFirst() : "Both";
+            }
+            default -> "Both";
+        };
+    }
+
+    /** Title programmes retain the inherited tape before the programme begins. */
+    public int immutablePrefixRows() {
+        return loaded != null && loaded.launch().inlet() instanceof Inlet.Title ? goals.startRow() : 0;
+    }
+
+    public void createCompetition(Path manifest, int entry) {
+        if (!host.competitionAvailable()) throw new IllegalStateException(UiMessages.text("editor.route_tape.competition_unavailable"));
+        var prefix = com.openggf.stageplay.route.StageplayCompetitionRouteHosts.menuPrefix(entry);
+        create(manifest, com.openggf.stageplay.route.StageplayCompetitionRouteHosts.launch(), prefix.size());
+        tape = prefix;
+        goals = new com.openggf.route.GoalProgram(com.openggf.route.Guard.NONE, List.of(), prefix.size());
+        loaded = working();
+        cursor = prefix.size() - 1;
     }
 
     /** The goal program replay checks, one line per leg, in manifest words. */
@@ -828,7 +880,7 @@ public final class RouteTapeWorkspace {
     private void newForm() {
         String game = host.currentLevel().map(LevelId::game).orElse("s3k");
         int zone = host.currentLevel().map(LevelId::zone).orElse(0), act = host.currentLevel().map(LevelId::act).orElse(0);
-        menu.showForm(UiMessages.text("editor.route_tape.title_new"), List.of(
+        var fields = new ArrayList<>(List.of(
                 new EditorProjectMenu.Field("path", UiMessages.text("editor.route_tape.field_manifest"),
                         host.initialDirectory().resolve("new-route" + RouteFiles.MANIFEST_SUFFIX).toString(), MenuTextEditor.Mode.PATH),
                 new EditorProjectMenu.Field("game", UiMessages.text("editor.route_tape.field_game"), game, List.of("s1", "s2", "s3k")),
@@ -838,8 +890,19 @@ public final class RouteTapeWorkspace {
                 new EditorProjectMenu.Field("sidekick", UiMessages.text("editor.route_tape.field_sidekick"), "tails", MenuTextEditor.Mode.TEXT, 24),
                 new EditorProjectMenu.Field("width", UiMessages.text("editor.route_tape.field_width"), "320", MenuTextEditor.Mode.TEXT, 4),
                 new EditorProjectMenu.Field("vint", UiMessages.text("editor.route_tape.field_vint"), "0", MenuTextEditor.Mode.TEXT, 6),
-                new EditorProjectMenu.Field("rows", UiMessages.text("editor.route_tape.field_count"), "60", MenuTextEditor.Mode.TEXT, 7)),
+                new EditorProjectMenu.Field("rows", UiMessages.text("editor.route_tape.field_count"), "60", MenuTextEditor.Mode.TEXT, 7)));
+        fields.addFirst(new EditorProjectMenu.Field("host", UiMessages.text("editor.route_tape.field_host"),
+                UiMessages.text("editor.route_tape.host_level"), host.competitionAvailable()
+                ? List.of(UiMessages.text("editor.route_tape.host_level"), UiMessages.text("editor.route_tape.host_competition"))
+                : List.of(UiMessages.text("editor.route_tape.host_level"))));
+        if (host.competitionAvailable()) fields.add(1, new EditorProjectMenu.Field("entry",
+                UiMessages.text("editor.route_tape.field_entry"), "EHZ", List.of("EHZ", "MCZ", "CNZ", "Special Stage")));
+        menu.showForm(UiMessages.text("editor.route_tape.title_new"), fields,
                 UiMessages.text("editor.route_tape.action_create"), values -> {
+                    if (values.get("host").equals(UiMessages.text("editor.route_tape.host_competition"))) {
+                        createCompetition(Path.of(values.get("path")), List.of("EHZ", "MCZ", "CNZ", "Special Stage").indexOf(values.get("entry")));
+                        return;
+                    }
                     String chosen = values.get("game");
                     var level = new LevelId(chosen, Integer.parseInt(values.get("zone").strip()),
                             Integer.parseInt(values.get("act").strip()) - 1);
@@ -848,7 +911,8 @@ public final class RouteTapeWorkspace {
                             Integer.parseInt(values.get("width").strip()), Integer.parseInt(values.get("vint").strip()));
                     create(Path.of(values.get("path")), launch, Integer.parseInt(values.get("rows").strip()));
                 });
-        menu.setSubtitle(UiMessages.text("editor.route_tape.subtitle_new"));
+        menu.setSection(UiMessages.text("editor.route_tape.level_settings"), "game", "zone", "act", "main", "sidekick", "width", "vint", "rows");
+        menu.setHelp(UiMessages.text("editor.route_tape.setup_hint"), UiMessages.text("editor.route_tape.subtitle_new"));
     }
 
     private void openForm() {
@@ -1269,7 +1333,7 @@ public final class RouteTapeWorkspace {
         requireRoute();
         if (jobRunning()) throw new IllegalStateException(UiMessages.text("editor.route_tape.job_already_running"));
         if (goals.legs().isEmpty()) throw new IllegalStateException(UiMessages.text("editor.route_tape.plan_needs_legs"));
-        if (from < 0 || from > tape.size()) throw new IllegalArgumentException(UiMessages.text("editor.route_tape.repair_first_range"));
+        if (from < immutablePrefixRows() || from > tape.size()) throw new IllegalArgumentException(UiMessages.text("editor.route_tape.repair_first_range"));
         repairFrom = workingContent();
         host.startJob(RouteTapeJob.Request.plan(working(), from));
         job = host.pollJob();
@@ -1331,6 +1395,11 @@ public final class RouteTapeWorkspace {
 
     private void change(InputTape nextTape, com.openggf.route.GoalProgram nextGoals) {
         if (nextTape.equals(tape) && nextGoals.equals(goals)) return;
+        int locked = immutablePrefixRows();
+        if (locked > 0 && (nextTape.size() < locked || !nextTape.slice(0, locked).equals(tape.slice(0, locked))))
+            throw new IllegalArgumentException(UiMessages.text("editor.route_tape.prefix_locked"));
+        if (locked > 0 && nextGoals.startRow() != locked)
+            throw new IllegalArgumentException(UiMessages.text("editor.route_tape.prefix_locked"));
         undo.push(new State(tape, goals));
         while (undo.size() > UNDO_LIMIT) undo.removeLast();
         redo.clear();

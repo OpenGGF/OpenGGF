@@ -262,7 +262,10 @@ final class RouteHud implements RouteTapeOverlay.Painter {
         int pitch = EditorHudCanvas.lineHeight(Size.SMALL) + 3;
         int colour = qualificationColour();
         c.rect(x, y + 2, 4, 4, colour, 1);
-        c.fittedText(workspace.qualificationText(), x + 8, y, w - 8, Size.SMALL, colour, 1);
+        float badgeWidth = EditorHudCanvas.textWidth("ENGINE", Size.SMALL) + 8;
+        c.pill(x + 8, y - 1, badgeWidth, 10, PANEL_RAISED, 1);
+        c.text("ENGINE", x + 12, y, Size.SMALL, ACCENT, 1);
+        c.fittedText(workspace.qualificationText(), x + 14 + badgeWidth, y, w - 14 - badgeWidth, Size.SMALL, colour, 1);
         y += pitch + 2;
         var job = workspace.job();
         if (job != null && job.running()) {
@@ -273,7 +276,15 @@ final class RouteHud implements RouteTapeOverlay.Painter {
         }
         // Launch facts on the left; native observations and the path legend on the right.
         float half = (w - 8) / 2, bottom = panel.bottom() - 61;
-        facts(c, x, y, half, workspace.launchFacts(), TEXT, pitch);
+        float gy = facts(c, x, y, half, workspace.launchFacts(), TEXT, pitch) + 3;
+        for (var goal : workspace.goalRows()) {
+            if (gy + pitch > bottom) break;
+            float chip = EditorHudCanvas.textWidth(goal.player(), Size.SMALL) + 8;
+            c.pill(x, gy - 1, chip, 10, PANEL_RAISED, 1);
+            c.text(goal.player(), x + 4, gy, Size.SMALL, ACCENT, 1);
+            c.fittedText(goal.predicate(), x + chip + 4, gy, half - chip - 4, Size.SMALL, TEXT, 1);
+            gy += pitch;
+        }
         float rx = x + half + 8, ry = y;
         c.text(UiMessages.text("editor.route_tape.hud_native_caps"), rx, ry, Size.SMALL, TEXT_FAINT, 1);
         ry = facts(c, rx, ry + pitch, half, workspace.nativeFacts(), TEXT_DIM, pitch);
@@ -405,6 +416,14 @@ final class RouteHud implements RouteTapeOverlay.Painter {
             float rx = view.x(run.from(), left, width);
             float rw = Math.max(1, (run.to() - run.from()) * rowWidth - (run.continuesAfter() ? 0 : .5f));
             c.rect(rx, trackY(run.track()) + 1, rw, TRACK - 2, colour, lane.slot() == PlayerSlot.P1 ? 1 : .8f);
+        }
+        int locked = workspace.immutablePrefixRows();
+        if (locked > view.first()) {
+            float end = view.x(Math.min(locked, view.first() + view.rows()), left, width);
+            c.rect(left, grid.y(), end - left, grid.h(), PANEL, .6f);
+            c.menuIcon(com.openggf.game.MenuChrome.Icon.LOCK, dock.right() - 100, header, TEXT_DIM);
+            c.text(UiMessages.text("editor.route_tape.locked_prefix"), dock.right() - 89, header, Size.SMALL, TEXT_DIM, 1);
+            if (locked < view.first() + view.rows()) c.rect(end, ruler, 1, grid.bottom() - ruler, TEXT_DIM, 1);
         }
         for (var marker : view.markers()) {
             float mx = view.x(marker.from(), left, width);

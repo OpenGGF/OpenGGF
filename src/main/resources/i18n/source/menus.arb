@@ -4310,5 +4310,15 @@
   "hub.ui.playback_caps": "PLAYBACK",
   "@hub.ui.playback_caps": {
     "description": "Unified movie and trace playback action in the hub."
-  }
+  },
+  "editor.route_tape.field_host": "Host",
+  "editor.route_tape.host_level": "Level inlet",
+  "editor.route_tape.host_competition": "S2 Competition (title > 2P menu)",
+  "editor.route_tape.field_entry": "Entry",
+  "editor.route_tape.competition_unavailable": "Load S2 REV01 to use Competition.",
+  "editor.route_tape.prefix_locked": "The inherited prefix is locked.",
+  "editor.route_tape.locked_prefix": "Locked prefix",
+  "editor.route_tape.continuation": "Continuation",
+  "editor.route_tape.level_settings": "Level settings",
+  "editor.route_tape.setup_hint": "Choose a host and entry."
 }
