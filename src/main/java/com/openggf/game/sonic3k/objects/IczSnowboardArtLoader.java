@@ -29,9 +29,22 @@ public final class IczSnowboardArtLoader {
     private static PatternSpriteRenderer snowboardRenderer;
     private static PatternSpriteRenderer dustRenderer;
     private static boolean loaded;
-    private static com.openggf.game.presentation.ScreenFrameRenderer customPlayer;
-    private static com.openggf.game.presentation.PresentationPaletteBank customPlayerPalette;
-    private static com.openggf.game.presentation.PresentationPaletteBank nativePlayerPalette;
+    /** Session-module-owned private palette residency, retired at the zone reset boundary. */
+    public static final class CustomArt implements AutoCloseable {
+        private com.openggf.game.presentation.ScreenFrameRenderer customPlayer;
+        private com.openggf.game.presentation.PresentationPaletteBank customPlayerPalette;
+        private com.openggf.game.presentation.PresentationPaletteBank nativePlayerPalette;
+        @Override public void close() {
+            customPlayer = null;
+            if (customPlayerPalette != null) customPlayerPalette.close();
+            customPlayerPalette = null;
+            if (nativePlayerPalette != null) nativePlayerPalette.close();
+            nativePlayerPalette = null;
+        }
+    }
+    private static CustomArt customArt(ObjectServices services) {
+        return java.util.Objects.requireNonNull(services.gameModule().getGameService(CustomArt.class));
+    }
 
     private IczSnowboardArtLoader() {
     }
@@ -52,11 +65,6 @@ public final class IczSnowboardArtLoader {
     }
 
     public static synchronized void reset() {
-        customPlayer = null;
-        if (customPlayerPalette != null) customPlayerPalette.close();
-        customPlayerPalette = null;
-        if (nativePlayerPalette != null) nativePlayerPalette.close();
-        nativePlayerPalette = null;
         sonicRenderer = null;
         snowboardRenderer = null;
         dustRenderer = null;
@@ -64,31 +72,33 @@ public final class IczSnowboardArtLoader {
     }
 
     static synchronized boolean drawCustomPlayer(ObjectServices services, int frame, int x, int y) {
+        var customArt = customArt(services);
         loadIfNeeded(services);
-        if (customPlayer == null) return false;
+        if (customArt.customPlayer == null) return false;
         var graphics = services.graphicsManager();
         var subject = com.openggf.graphics.SpritePresentation.subject(graphics);
-        var bank = customPlayerPalette;
+        var bank = customArt.customPlayerPalette;
         var customSubject = new com.openggf.graphics.SpritePresentation.Subject(subject.id(), subject.part(),
                 subject.suppressed(), subject.headScalePercent(), subject.head(), subject.body(),
                 (host, line) -> bank.base(host) + (line & 3));
         boolean[] drawn = {false};
         com.openggf.graphics.SpritePresentation.withSubject(graphics,customSubject,
-                () -> drawn[0] = customPlayer.draw("snowboard",frame,x,y,false));
+                () -> drawn[0] = customArt.customPlayer.draw("snowboard",frame,x,y,false));
         return drawn[0];
     }
 
     /** Board and spray retain the ROM player colours while the replacement uses the playable line. */
     static synchronized void drawNative(ObjectServices services, PatternSpriteRenderer renderer, int frame,
             int x, int y) {
+        var customArt = customArt(services);
         if (renderer == null || !renderer.isReady()) return;
         var graphics = services.graphicsManager();
-        if (customPlayer == null || nativePlayerPalette == null) {
+        if (customArt.customPlayer == null || customArt.nativePlayerPalette == null) {
             renderer.drawFrameIndex(frame,x,y);
             return;
         }
         var subject = com.openggf.graphics.SpritePresentation.subject(graphics);
-        var bank = nativePlayerPalette;
+        var bank = customArt.nativePlayerPalette;
         var nativeSubject = new com.openggf.graphics.SpritePresentation.Subject(subject.id(), subject.part(),
                 subject.suppressed(), subject.headScalePercent(), subject.head(), subject.body(),
                 (host, line) -> bank.base(host) + (line & 3));
@@ -97,6 +107,7 @@ public final class IczSnowboardArtLoader {
     }
 
     private static void loadIfNeeded(ObjectServices services) {
+        var customArt = customArt(services);
         if (loaded) {
             return;
         }
@@ -135,18 +146,17 @@ public final class IczSnowboardArtLoader {
                     0);
             var custom = com.openggf.game.presentation.ScreenFrameRenderer.active(com.openggf.game.CharacterPresentation.Host.S3K);
             if (custom != null && custom.banks().containsKey("snowboard")) {
-                customPlayer = new com.openggf.game.presentation.ScreenFrameRenderer(custom, services.graphicsManager(),
+                customArt.customPlayer = new com.openggf.game.presentation.ScreenFrameRenderer(custom, services.graphicsManager(),
                         SONIC_SNOWBOARD_PATTERN_BASE + 0x800, 0, false);
-                customPlayerPalette = new com.openggf.game.presentation.PresentationPaletteBank(
+                customArt.customPlayerPalette = new com.openggf.game.presentation.PresentationPaletteBank(
                         com.openggf.game.presentation.ScreenFrameRenderer.palette(custom));
                 var nativeColours = new com.openggf.level.Palette();
                 nativeColours.fromSegaFormat(rom.readBytes(Sonic3kConstants.SONIC_PALETTE_ADDR,32));
-                nativePlayerPalette = new com.openggf.game.presentation.PresentationPaletteBank(nativeColours);
+                customArt.nativePlayerPalette = new com.openggf.game.presentation.PresentationPaletteBank(nativeColours);
             }
             loaded = true;
         } catch (Exception e) {
-            LOG.log(java.util.logging.Level.WARNING, "Failed to load ICZ snowboard intro art", e);
-            reset();
+            throw new IllegalStateException("Cannot prepare character presentation", e);
         }
     }
 
