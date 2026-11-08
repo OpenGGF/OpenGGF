@@ -188,8 +188,8 @@ appendage renderer automatically.
 
 ## Presentation contract (in progress)
 
-`CharacterDefinition` accepts an optional `PresentationSupplier` before its
-optional `SuperFormSupplier`. It receives the canonical persisted character key and
+The optional `CharacterDefinition.presentationSupplier` constructor argument follows
+`underwaterPaletteSupplier` and precedes `superFormSupplier`. It receives the canonical persisted character key and
 runs inside the character owner's fault boundary, like the art and palette
 suppliers. Existing constructors default it to `null`.
 
@@ -199,6 +199,13 @@ keyed by host and letter style. `Art` has independent HUD life icon (16×16),
 1-up face, signpost face and end-sign face slots. Null names and images mean native
 fallback. `Image` uses palette indices 0–15, with zero transparent; it copies pixel
 arrays on construction and access. Presentation maps are immutable snapshots.
+`Art.sign` optionally supplies semantic face, alternate, spin1, edge and spin3
+poses. Each pose has a character-palette face and optional native-palette backing;
+backing RGB colours are matched to its declared host palette line (0–3). Spin
+images are already oriented. Null poses retain native frames and poles remain
+native. The four-argument `Art` constructor remains supported.
+`PresentationImages` reads bounded indexed PNG assets through `ModAssetRoot`;
+MICA packages its HUD, monitor, sign and supplementary S1 HUD glyph assets this way.
 
 S1, S2 and S3K consume the HUD life icon/name, act-results name, special-stage
 results name (S2 including the Super announcement; S3K Blue Sphere) and 1-up
@@ -214,7 +221,9 @@ inventories each zone separately, including shared ZONE letters and pixel crops
 within multi-letter pieces, plus the results-name banks. Native glyphs take
 precedence over supplements: MICA needs supplementary M and A only in the S1 HUD
 font. Stock S2 results select Miles/Tails for Tails alone using the native
-graphics-region setting. GGFP presentation sections are pending.
+graphics-region setting. Sign objects in all three hosts consume the optional
+face, spin and backing poses, retaining native poles, timing and fallback frames.
+GGFP presentation sections are pending.
 
 ## Ability and super-form rules
 

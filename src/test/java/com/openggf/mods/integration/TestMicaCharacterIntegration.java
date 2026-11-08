@@ -96,6 +96,7 @@ class TestMicaCharacterIntegration {
                     com.openggf.game.session.ActiveGameplayTeamResolver.resolvePlayerCharacter(config));
             assertNotNull(GameServices.level().getCurrentLevel());
             assertNotNull(playable.getSpriteRenderer());
+            verifySignTiles(resolved, game);
             config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
             assertEquals(PlayerCharacter.SONIC_AND_TAILS,
                     com.openggf.game.session.ActiveGameplayTeamResolver.resolvePlayerCharacter(config));
@@ -136,6 +137,20 @@ class TestMicaCharacterIntegration {
             assertNotNull(water);
             var dry = GameServices.level().getCurrentLevel().getPalette(0);
             var definition = resolved.getPlayableCharacterRegistry().find(CharacterKey.parsePersisted(CODE)).orElseThrow();
+            var presentation = definition.presentationSupplier().load(CODE);
+            assertEquals("MICA", presentation.displayName());
+            for(var host:CharacterPresentation.Host.values()) {
+                var art=presentation.art().get(host);
+                assertEquals(16,art.hudLifeIcon().width());
+                assertEquals(16,art.oneUpFace().width());
+                assertEquals(48,art.sign().face().face().width());
+                assertEquals(32,art.sign().spin1().face().width());
+                assertEquals(32,art.sign().spin3().face().width());
+                assertNotNull(art.sign().face().backing());
+                assertEquals(0,art.sign().face().backing().paletteLine());
+            }
+            assertEquals(java.util.Set.of('M','A'),presentation.supplementaryGlyphs()
+                    .get(new CharacterPresentation.Font(CharacterPresentation.Host.S1,CharacterPresentation.Style.HUD)).keySet());
             var custom = definition.paletteSupplier().load(CODE);
             var current = (com.openggf.sprites.playable.AbstractPlayableSprite) GameServices.sprites().getSprite(CODE);
             var context = current.getSpriteRenderer().getRenderContext();
@@ -265,6 +280,42 @@ class TestMicaCharacterIntegration {
         return expected.dataEquals(palette);
     }
 
+    /** Exercise authored pixels against each host's actual ROM sheet, without changing native art. */
+    private void verifySignTiles(GameModule module, String game) throws Exception {
+        var definition = module.getPlayableCharacterRegistry().find(CharacterKey.parsePersisted(CODE)).orElseThrow();
+        var host = CharacterPresentation.Host.valueOf(game.toUpperCase(Locale.ROOT));
+        var art = definition.presentationSupplier().load(CODE).art().get(host);
+        var render = GameServices.level().getObjectRenderManager();
+        var nativeSheet = game.equals("s3k")
+                ? render.getSheet(com.openggf.game.sonic3k.Sonic3kObjectArtKeys.END_SIGN)
+                : render.getSignpostSheet();
+        assertNotNull(nativeSheet);
+        int[] frames = switch (host) {
+            case S1 -> new int[]{4, -1, 1, 2, 3};
+            case S2 -> new int[]{0, 1, 3, 4, 5};
+            case S3K -> new int[]{0, -1, 4, 5, 6};
+        };
+        var original = nativeSheet.getFrame(frames[0]);
+        for (int frame : new int[]{frames[0], frames[2], frames[4]}) {
+            var pose = com.openggf.game.presentation.CharacterSignRenderer.select(art, frame,
+                    frames[0], frames[1], frames[2], frames[3], frames[4]);
+            assertNotNull(pose);
+            var composed = com.openggf.game.presentation.CharacterSignRenderer.compose(nativeSheet,
+                    frame, pose, 8, GameServices.level().getCurrentLevel().getPalette(0));
+            var face = pose.face();
+            var decoded = com.openggf.game.presentation.CharacterNameComposer.extract(composed.getPatterns(),
+                    nativeSheet.getPatterns().length, face.width()/8, face.height()/8,
+                    0, 0, face.width(), face.height());
+            assertArrayEquals(face.pixels(), decoded.pixels(), game + " face/spin pixels");
+            assertTrue(!java.util.Arrays.equals(new byte[face.pixels().length], face.pixels()));
+            assertTrue(composed.getFrame(0).pieces().stream().anyMatch(piece -> piece.paletteIndex() == 8));
+            assertTrue(composed.getFrame(0).pieces().stream().anyMatch(piece -> piece.paletteIndex() == 0));
+            assertSame(original, nativeSheet.getFrame(frames[0]), "Stock mapping is unchanged");
+            for (int i=0; i<nativeSheet.getPatterns().length; i++)
+                assertSame(nativeSheet.getPatterns()[i], composed.getPatterns()[i]);
+        }
+    }
+
     private Path buildSample() throws Exception {
         Path project = Path.of("examples/mica-and-talon"), classes = temp.resolve("classes");
         Files.createDirectories(classes.resolve("art"));
@@ -281,6 +332,11 @@ class TestMicaCharacterIntegration {
                 "--image",project.resolve("src/main/mod/mica.png").toString(),
                 "--sheet",project.resolve("src/main/mod/mica-sheet.yaml").toString(),
                 "--out",classes.resolve("art/mica.ggfp").toString()},System.out));
+        Path presentation = project.resolve("art/mica/presentation");
+        Files.createDirectories(classes.resolve("art/mica/presentation"));
+        try(var files=Files.list(presentation)) {
+            for(var file:files.toList()) Files.copy(file,classes.resolve("art/mica/presentation").resolve(file.getFileName()));
+        }
         Path jar = temp.resolve("mica-and-talon.jar");
         assertEquals(0,com.openggf.tools.modsdk.GgfModCli.run(new String[]{"package","--input",
                 classes.toString(),"--out",jar.toString(),"--warnings","error"},System.out));

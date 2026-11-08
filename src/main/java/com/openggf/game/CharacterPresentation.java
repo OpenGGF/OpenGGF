@@ -24,11 +24,37 @@ public record CharacterPresentation(String displayName, String hudName,
         @Override public byte[] pixels() { return pixels.clone(); }
     }
     /** Faces are indexed images, independent of native mapping/tile layouts. */
-    @ModApi public record Art(Image hudLifeIcon, Image oneUpFace, Image signpostFace, Image endSignFace) {
+    @ModApi public record Art(Image hudLifeIcon, Image oneUpFace, Image signpostFace, Image endSignFace, Sign sign) {
+        public Art(Image hudLifeIcon, Image oneUpFace, Image signpostFace, Image endSignFace) {
+            this(hudLifeIcon, oneUpFace, signpostFace, endSignFace, null);
+        }
         public Art {
             if (hudLifeIcon != null && (hudLifeIcon.width() != 16 || hudLifeIcon.height() != 16))
                 throw new IllegalArgumentException("HUD life icon must be 16 by 16 pixels");
         }
+    }
+    /** Semantic sign poses; null poses retain the native frame. Spin images are already oriented. */
+    @ModApi public record Sign(SignFrame face, SignFrame alternate, SignFrame spin1,
+            SignFrame edge, SignFrame spin3) { }
+    @ModApi public record SignFrame(Image face, Backing backing) {
+        public SignFrame {
+            Objects.requireNonNull(face, "face");
+            if (face.width() > 48 || face.height() != 32 || face.width() % 8 != 0)
+                throw new IllegalArgumentException("Sign poses must be tile-aligned, at most 48 by 32");
+            if (backing != null && (backing.image().width() != face.width()
+                    || backing.image().height() != face.height()))
+                throw new IllegalArgumentException("Sign backing must match its face");
+        }
+    }
+    /** Backing colours are matched to the native host palette line, never the character palette. */
+    @ModApi public record Backing(Image image, int paletteLine, int[] rgb) {
+        public Backing {
+            Objects.requireNonNull(image, "image");
+            if (paletteLine < 0 || paletteLine > 3 || rgb.length != 16)
+                throw new IllegalArgumentException("Backing requires a native palette line and sixteen RGB colours");
+            rgb = rgb.clone();
+        }
+        @Override public int[] rgb() { return rgb.clone(); }
     }
     public CharacterPresentation {
         if (displayName != null && (displayName.isBlank() || displayName.length() > 32))

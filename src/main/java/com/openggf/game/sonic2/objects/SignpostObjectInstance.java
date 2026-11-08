@@ -82,6 +82,7 @@ public class SignpostObjectInstance extends BoxObjectInstance implements RewindR
     };
 
     private int routineState = STATE_IDLE;
+    private final com.openggf.game.presentation.CharacterSignRenderer characterSign = new com.openggf.game.presentation.CharacterSignRenderer();
     private int mappingFrame = FRAME_EGGMAN;
     private ObjectAnimationState animationState;
     private int currentAnimId = ANIM_IDLE;
@@ -461,6 +462,9 @@ public class SignpostObjectInstance extends BoxObjectInstance implements RewindR
             super.appendRenderCommands(commands);
             return;
         }
+        if (characterSign.draw(services(), com.openggf.game.CharacterPresentation.Host.S2,
+                renderManager.getSignpostSheet(), mappingFrame, 0, 1, 3, 4, 5,
+                spawn.x(), spawn.y())) return;
         renderer.drawFrameIndex(mappingFrame, spawn.x(), spawn.y(), false, false);
     }
 

@@ -98,12 +98,10 @@ Status S2: all four surfaces wired and tile/mapping-tested on
 Status: API foundation delivered; group 1 follow-up in progress on
 `feature/ai-mica-presentation2`. ROM readers now inventory all three small HUD
 fonts and S3K per-zone title/results-name art. S2 stock Tails-alone results select
-Miles/Tails using the native graphics-region flag. The resumed S3K lane wires HUD
-icon/name, act-results name, Blue Sphere results name and independent 1-up faces;
-focused tile/mapping and regression verification passed (310 tests, no skips).
-Other surface wiring, sign spin/backing
-contract extensions, packaged MICA presentation assets and gameplay captures remain
-pending; group 1 is not complete. The existing owner-bounded supplier, immutable
+Miles/Tails using the native graphics-region flag. All three hosts wire the HUD
+icon/name, act-results name, special-stage results name, 1-up face and signposts
+(face, spin and backing), and MICA's presentation assets are packaged. Full
+title-route captures of each surface remain pending. The existing owner-bounded supplier, immutable
 indexed images, pixel composer and S1/S2 title readers remain the foundation.
 
 Add a `CharacterPresentation` record carried by `CharacterDefinition` (and stored as
@@ -498,6 +496,10 @@ Status log (times UTC):
 
 - 2026-11-08: S3K surface lane resumed: HUD life icon/name adapter restored;
   results, Blue Sphere and independent 1-up face wiring still pending.
+
+- 2026-11-08: sign lane `feature/ai-mica-signs`: additive semantic sign poses,
+  bounded indexed PNG loader, packaged MICA HUD/monitor/sign/glyph assets and S1
+  sign consumer implemented; S2/S3K wiring and capture verification in progress.
 - 2026-11-08: merged W6 Super/Hyper forms (`e4639065d`; conflict with W4a on
   `CharacterDefinition` resolved by carrying both suppliers; 174 focused tests
   passed) and W7c sheet assembly (`e9c8350d8`; MICA plays with her art in S1 GHZ1,
@@ -593,3 +595,21 @@ Status log (times UTC):
   1m50s; user wait zero. No gameplay captures, broad smoke or release suite run.
   The lead owns remaining asset packaging, other surfaces and integration; this
   lane has made no push and keeps its worktree/branch for handoff.
+
+
+- 2026-11-08: resumed sign lane on `feature/ai-mica-signs-r2` from saved WIP;
+  checkpoint `5b2be03ac`, integrated character branch at `d2b8d5fe7` in
+  `4e7ed3101`, retaining presentation and Gilded suppliers and the tool-built sheet.
+  All three native sign consumers now support optional face/spin/native-backing
+  poses. MICA packages presentation PNGs through bounded `ModAssetRoot` loading.
+  API signature, packaged-asset/native-sheet tile checks, existing sign tests and
+  the four required S3K bootstrap/loading guards passed: 116 tests, zero skips.
+  S1/S2 coverage checkpoints: `8223e0d62`, `4897515a8`. Inspected EGL captures in
+  `/tmp/mica-signs-20261108/`: S1 GHZ1 (`s1-approach`, face 500/spin 200), S2 EHZ1
+  (`s2-approach`, face 450/spin 300), S3K HCZ1 (`s3k-hcz-arena`, face 2400).
+  These are positioned native-route witnesses, not full title-to-sign certification;
+  HCZ starts at (14080,1110) with declared 500 rings/seven emeralds, uses Gilded to
+  defeat the native miniboss, and reaches the sign/results before later act-2 death.
+  Native reference input replays through the titles did not qualify MICA's routes.
+  Full title-route sign captures remain outstanding; unrelated W4 consumers remain
+  owned by their parallel lanes. No engine physics or native route rules were changed.
