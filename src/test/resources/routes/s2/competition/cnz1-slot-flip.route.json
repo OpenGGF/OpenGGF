@@ -31,10 +31,10 @@
         "value" : 0
       }
     },
-    "startRow" : 1775,
+    "startRow" : 1200,
     "legs" : [ {
-      "id" : "retained-slot-spinning",
-      "maxRows" : 30,
+      "id" : "drop-beyond-upper-floor",
+      "maxRows" : 5000,
       "guard" : {
         "allowHurt" : true,
         "allowRingLoss" : true,
@@ -44,9 +44,50 @@
       "goal" : {
         "kind" : "achieve",
         "condition" : {
-          "kind" : "fact-equals",
-          "key" : "competition.slot.inUse",
-          "value" : 1
+          "kind" : "player-in",
+          "player" : "P1",
+          "region" : [ 1280, 820, 1312, 980 ]
+        }
+      }
+    }, {
+      "id" : "linked-cage-approach",
+      "maxRows" : 5000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : false
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "player-in",
+          "player" : "P1",
+          "region" : [ 1200, 1080, 1232, 1160 ]
+        }
+      }
+    }, {
+      "id" : "slot-spinning",
+      "maxRows" : 300,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : false
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "all",
+          "clauses" : [ {
+            "kind" : "player-in",
+            "player" : "P1",
+            "region" : [ 1180, 1060, 1252, 1180 ]
+          }, {
+            "kind" : "fact-equals",
+            "key" : "competition.slot.inUse",
+            "value" : 1
+          } ]
         }
       }
     }, {
@@ -111,21 +152,29 @@
   },
   "tape" : {
     "script" : "cnz1-slot-flip.script",
-    "rows" : 2380,
-    "sha256" : "201eb0ac3bf4b1715002f04feb1c453d6cdb6b2695f804a4b822e8ad9ff1dd23"
+    "rows" : 2321,
+    "sha256" : "7379ccf62a7d9549154e5518174b0fcdab2bacf57f4b16543fad1a1e69338a00"
   },
   "provenance" : {
     "producer" : "RoutePlanner prefix-search/3 goal program",
-    "engine" : "openggf 0.8.prerelease-b889211b3-dirty stageplay-s2-competition-title/1",
-    "source" : "authored after a 2371-row prefix toward legs [retained-slot-spinning, p2-lower-path, p2-near-native-flip-tiles, mid-flip-visible-after-two-human-traversal]",
-    "notes" : [ "PROVISIONAL native export: menu Start carry-over pause frontier. Original controller rows retained; no native goal certification." ]
+    "engine" : "openggf 0.8.prerelease-e22b16007-dirty stageplay-s2-competition-title/1",
+    "source" : "authored after a 1231-row prefix toward legs [drop-beyond-upper-floor, linked-cage-approach, slot-spinning, p2-lower-path, p2-near-native-flip-tiles, mid-flip-visible-after-two-human-traversal]",
+    "notes" : [ ]
   },
   "qualification" : [ {
     "scope" : "ENGINE",
     "passed" : true,
-    "content" : "1231f66512fbef42a7afabddb8b77c4ac763427449a93dfb9daef46430aaca70",
-    "environment" : "openggf 0.8.prerelease-b889211b3-dirty stageplay-s2-competition-title/1",
-    "rows" : 2380
+    "content" : "c039aa3fad93f48feff80c37be8571b03125142bdf83f22a3c156984af6ba014",
+    "environment" : "openggf 0.8.prerelease-e22b16007-dirty stageplay-s2-competition-title/1",
+    "rows" : 2321
+  }, {
+    "scope" : "BIZHAWK",
+    "passed" : false,
+    "divergedRow" : 1666,
+    "reason" : "physical1853: P1 lands on native Obj86 horizontal flipper slot106; y engine1603/native1596, vy2310/0, cameraY1470/1467; no native lag boundary",
+    "content" : "c039aa3fad93f48feff80c37be8571b03125142bdf83f22a3c156984af6ba014",
+    "environment" : "BizHawk2.11/GPGX cold 1FFF4585DA7F540B0C757297B71E66B2BCA917FFEEFFD94E867918E3622A9F5B",
+    "rows" : 2321
   } ],
   "native" : {
     "entry" : {
@@ -135,7 +184,6 @@
       "engineAnchorRows" : 1151,
       "anchorBoundary" : "first-ordinary-level-lfc-zero"
     },
-    "exportBlocker" : "PROVISIONAL: menu Start retained through synchronous title waits pauses engine at rowsOffered 1152; native frame 1338 is unpaused. Requires lane F fix and planner repair of affected rows.",
     "lag" : [ ]
   }
 }

@@ -338,6 +338,12 @@ does not enable production `QUALIFIED_ZONES`. Native cold replay must independen
 confirm the exported movie and its goals; synchronous engine load timing can differ
 from hardware frame timing. Never insert fitted state or hand-edit traversal rows.
 
+Native programme repairs use `StageplayRoutePlanner.repairNative` with the existing
+reference-following search and copied engine observations for both participants.
+A required seam edit tries a single changed button before wider drift repair;
+qualification always replays the resulting frozen rows. Native CSV is never a
+planning reference.
+
 Native BK2 export uses the verified witness prefix, then the engine gameplay suffix.
 Set `--native-witness FILE --native-anchor-rows N` during authoring or replay with
 `--publish NEW_STEM`. The manifest records `native.entry.prefixRows` (native anchor),
