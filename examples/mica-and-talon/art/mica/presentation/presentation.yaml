@@ -26,7 +26,7 @@
       "ticks_per_frame": 7
     }
   ],
-  "notes": "Indexed native pixels; character overlays, not replacements for sign housing. No runtime/GGFP integration.",
+  "notes": "Round 3: original busts with separate native-colour backing planes. Shared character palette unchanged. No runtime/GGFP integration.",
   "surfaces": [
     {
       "surface": "hud",
@@ -97,8 +97,19 @@
           4
         ]
       ],
-      "composition": "Character-only overlay; retain native border, backing and pole. Piece coordinates are canvas-local pixels then tile width/height.",
-      "native_art_label": "Nem_SignPost"
+      "composition": "Large bust over separate native-colour backing plane; retain pole. Coordinates are canvas-local pixels then tile width/height.",
+      "native_art_label": "Nem_SignPost",
+      "backing": {
+        "file": "s1-sign-backing.png",
+        "native_palette_line": 0,
+        "native_color_index": 15,
+        "rgb": [
+          255,
+          255,
+          0
+        ],
+        "composition": "Draw backing first, character second, pole separately. Backing has its own explicit palette; runtime needs a distinct available palette line from the MICA line. No runtime binding supplied."
+      }
     },
     {
       "surface": "sign_spin",
@@ -119,8 +130,19 @@
           4
         ]
       ],
-      "composition": "Character-only preflipped overlay; apply native frame flip only once. Edge-on 8x32 frame has no readable face and stays native.",
-      "native_art_label": "Nem_SignPost"
+      "composition": "Projected bust and separate framed backing. Preflipped spin3; apply flip only once. Retain native edge-on frame.",
+      "native_art_label": "Nem_SignPost",
+      "backing": {
+        "file": "s1-spin1-backing.png",
+        "native_palette_line": 0,
+        "native_color_index": 15,
+        "rgb": [
+          255,
+          255,
+          0
+        ],
+        "composition": "Draw backing first, character second, pole separately. Backing has its own explicit palette; runtime needs a distinct available palette line from the MICA line. No runtime binding supplied."
+      }
     },
     {
       "surface": "sign_spin",
@@ -141,8 +163,19 @@
           4
         ]
       ],
-      "composition": "Character-only preflipped overlay; apply native frame flip only once. Edge-on 8x32 frame has no readable face and stays native.",
-      "native_art_label": "Nem_SignPost"
+      "composition": "Projected bust and separate framed backing. Preflipped spin3; apply flip only once. Retain native edge-on frame.",
+      "native_art_label": "Nem_SignPost",
+      "backing": {
+        "file": "s1-spin3-backing.png",
+        "native_palette_line": 0,
+        "native_color_index": 15,
+        "rgb": [
+          255,
+          255,
+          0
+        ],
+        "composition": "Draw backing first, character second, pole separately. Backing has its own explicit palette; runtime needs a distinct available palette line from the MICA line. No runtime binding supplied."
+      }
     },
     {
       "surface": "hud",
@@ -214,8 +247,19 @@
           4
         ]
       ],
-      "composition": "Character-only overlay; retain native border, backing and pole. Piece coordinates are canvas-local pixels then tile width/height.",
-      "native_art_label": "ArtNem_Signpost"
+      "composition": "Large bust over separate native-colour backing plane; retain pole. Coordinates are canvas-local pixels then tile width/height.",
+      "native_art_label": "ArtNem_Signpost",
+      "backing": {
+        "file": "s2-sign-backing.png",
+        "native_palette_line": 0,
+        "native_color_index": 15,
+        "rgb": [
+          255,
+          146,
+          0
+        ],
+        "composition": "Draw backing first, character second, pole separately. Backing has its own explicit palette; runtime needs a distinct available palette line from the MICA line. No runtime binding supplied."
+      }
     },
     {
       "surface": "sign_spin",
@@ -236,8 +280,19 @@
           4
         ]
       ],
-      "composition": "Character-only preflipped overlay; apply native frame flip only once. Edge-on 8x32 frame has no readable face and stays native.",
-      "native_art_label": "ArtNem_Signpost"
+      "composition": "Projected bust and separate framed backing. Preflipped spin3; apply flip only once. Retain native edge-on frame.",
+      "native_art_label": "ArtNem_Signpost",
+      "backing": {
+        "file": "s2-spin1-backing.png",
+        "native_palette_line": 0,
+        "native_color_index": 15,
+        "rgb": [
+          255,
+          146,
+          0
+        ],
+        "composition": "Draw backing first, character second, pole separately. Backing has its own explicit palette; runtime needs a distinct available palette line from the MICA line. No runtime binding supplied."
+      }
     },
     {
       "surface": "sign_spin",
@@ -258,8 +313,19 @@
           4
         ]
       ],
-      "composition": "Character-only preflipped overlay; apply native frame flip only once. Edge-on 8x32 frame has no readable face and stays native.",
-      "native_art_label": "ArtNem_Signpost"
+      "composition": "Projected bust and separate framed backing. Preflipped spin3; apply flip only once. Retain native edge-on frame.",
+      "native_art_label": "ArtNem_Signpost",
+      "backing": {
+        "file": "s2-spin3-backing.png",
+        "native_palette_line": 0,
+        "native_color_index": 15,
+        "rgb": [
+          255,
+          146,
+          0
+        ],
+        "composition": "Draw backing first, character second, pole separately. Backing has its own explicit palette; runtime needs a distinct available palette line from the MICA line. No runtime binding supplied."
+      }
     },
     {
       "surface": "hud",
@@ -331,8 +397,19 @@
           4
         ]
       ],
-      "composition": "Character-only overlay; retain native border, backing and pole. Piece coordinates are canvas-local pixels then tile width/height.",
-      "native_art_label": "ArtUnc_EndSigns"
+      "composition": "Large bust over separate native-colour backing plane; retain pole. Coordinates are canvas-local pixels then tile width/height.",
+      "native_art_label": "ArtUnc_EndSigns",
+      "backing": {
+        "file": "s3k-sign-backing.png",
+        "native_palette_line": 0,
+        "native_color_index": 9,
+        "rgb": [
+          255,
+          146,
+          0
+        ],
+        "composition": "Draw backing first, character second, pole separately. Backing has its own explicit palette; runtime needs a distinct available palette line from the MICA line. No runtime binding supplied."
+      }
     },
     {
       "surface": "sign_spin",
@@ -353,8 +430,19 @@
           4
         ]
       ],
-      "composition": "Character-only preflipped overlay; apply native frame flip only once. Edge-on 8x32 frame has no readable face and stays native.",
-      "native_art_label": "ArtUnc_EndSigns"
+      "composition": "Projected bust and separate framed backing. Preflipped spin3; apply flip only once. Retain native edge-on frame.",
+      "native_art_label": "ArtUnc_EndSigns",
+      "backing": {
+        "file": "s3k-spin1-backing.png",
+        "native_palette_line": 0,
+        "native_color_index": 9,
+        "rgb": [
+          255,
+          146,
+          0
+        ],
+        "composition": "Draw backing first, character second, pole separately. Backing has its own explicit palette; runtime needs a distinct available palette line from the MICA line. No runtime binding supplied."
+      }
     },
     {
       "surface": "sign_spin",
@@ -375,8 +463,19 @@
           4
         ]
       ],
-      "composition": "Character-only preflipped overlay; apply native frame flip only once. Edge-on 8x32 frame has no readable face and stays native.",
-      "native_art_label": "ArtUnc_EndSigns"
+      "composition": "Projected bust and separate framed backing. Preflipped spin3; apply flip only once. Retain native edge-on frame.",
+      "native_art_label": "ArtUnc_EndSigns",
+      "backing": {
+        "file": "s3k-spin3-backing.png",
+        "native_palette_line": 0,
+        "native_color_index": 9,
+        "rgb": [
+          255,
+          146,
+          0
+        ],
+        "composition": "Draw backing first, character second, pole separately. Backing has its own explicit palette; runtime needs a distinct available palette line from the MICA line. No runtime binding supplied."
+      }
     },
     {
       "surface": "sign_face_alternate",
@@ -409,8 +508,19 @@
           4
         ]
       ],
-      "composition": "Optional replacement for native Tails side; preserve native border/backing.",
-      "native_art_label": "ArtNem_Signpost"
+      "composition": "Optional alternate bust with native blue backing plane; retain pole.",
+      "native_art_label": "ArtNem_Signpost",
+      "backing": {
+        "file": "s2-sign-alternate-backing.png",
+        "native_palette_line": 0,
+        "native_color_index": 2,
+        "rgb": [
+          36,
+          36,
+          182
+        ],
+        "composition": "Draw backing first, character second, pole separately. Backing has its own explicit palette; runtime needs a distinct available palette line from the MICA line. No runtime binding supplied."
+      }
     },
     {
       "surface": "hud_name_glyph",

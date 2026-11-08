@@ -121,3 +121,16 @@ outline filtering alone does not solve the tumbling read. The temporary slope
 before/after sheet explicitly labels these frames unchanged. The presentation
 head is intentionally simpler than the playable art at 16px; its scale/eye
 clusters and the dithered spin faces still need in-engine background validation.
+
+## MICA presentation round 3
+
+The round 3 pixel source in `presentation.py` replaces the six life portraits,
+four sign busts and six projected spin faces. Review is split into `faces`,
+`signs` and `spins` 1×/4× sheets. Sign backing PNGs are separate explicit-palette
+planes: S1 yellow is native line 0 index 15; S2 orange line 0 index 15;
+S3K orange line 0 index 9; alternate S2 blue line 0 index 2. These colours cannot
+fit the unchanged MICA character palette. Draw backing then character, retaining
+the native pole; integration must reserve a distinct palette line for backing.
+The backing files use their own small palette and are not character art. The
+manifest records both the native source indices and this runtime requirement.
+These are original redrawn frames, not copies of native sign pixels.

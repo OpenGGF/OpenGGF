@@ -31,81 +31,130 @@ def indexed(size, colors=COLORS):
 # Native 16x16 hand-pixelled head: hood scales, projecting muzzle, brown eye,
 # sand face and coral ear. No generated/downsampled shapes in these icons.
 ICON = [
-'0000011111000000',
-'0000145554100000',
-'0001456655410000',
-'0014545545541000',
-'0013453453451000',
-'0134545545577100',
-'0133453477cc7710',
-'013454347cfcc710',
-'013345347cfcc771',
-'013454347cc77771',
-'0133453477777710',
-'0013453478888100',
-'0012343478771000',
-'0001234477710000',
+'0000111111000000',
+'0011456654110000',
+'0146654455541000',
+'0155426654411000',
+'14522655417e7100',
+'1455454217ee7710',
+'1326654171cc1c10',
+'134554177cc1cc10',
+'12422417cc11cc71',
+'123445177cc177f1',
+'0123341777777710',
+'0122341781117100',
+'001234177ee71000',
+'0001234177710000',
 '0000111111100000',
 '0000000000000000',
 ]
 
 
 def icon(game, monitor=False):
+    # Original 14x15 portrait. Three staggered light-over-dark crest rows;
+    # four-row near eye, a narrow far eye, pink ear and open smile.
     im = indexed((16,16))
     im.putdata([int(c,16) for row in ICON for c in row])
-    # Style-specific scale glints and face silhouette; independent 16px pixels.
     if game == 's1':
-        for p in [(5,2),(4,4),(3,6)]: im.putpixel(p,6)
+        im.putpixel((4,2),5); im.putpixel((6,3),6)
     if game == 's3k':
-        im.putpixel((7,2),12); im.putpixel((8,2),6)
-        im.putpixel((11,7),7); im.putpixel((11,8),7)
-    if monitor:
-        # CRT-safe one-pixel inset, with lower chin/neck clipped as native icons.
-        src = im.copy(); im = indexed((16,16))
-        im.paste(src.crop((0,0,16,14)),(0,1))
+        im.putpixel((5,1),6); im.putpixel((4,5),6)
+    if monitor and game=='s1':
+        im.putpixel((3,12),2); im.putpixel((5,13),3)
     return im
 
 
 def sign(game, alternate=False):
-    im = indexed((48,32)); d = ImageDraw.Draw(im)
-    # Character-only plane. The native sign housing/pole is deliberately excluded.
-    # Keep a 3px clear margin for the caller's native sign border and backing.
-    hood=[(6,27),(5,20),(8,17),(7,12),(11,9),(12,5),(19,3),(26,4),
-          (31,7),(33,11),(32,18),(35,25),(31,28),(14,28)]
-    d.polygon(hood,fill=3,outline=1)
-    d.polygon([(10,14),(13,7),(20,4),(26,5),(30,9),(28,15),(25,25),(12,27)],fill=4)
-    # Interlocking pangolin scales; regular stepped edges, no isolated ink noise.
-    for y,xs in [(7,[16,22]),(11,[12,18,24]),(15,[10,16,22]),(19,[9,15,21]),(23,[10,16])]:
-        for x in xs:
-            d.line([(x-2,y-1),(x,y+1),(x+2,y-1)], fill=2)
-            d.line([(x-1,y-2),(x+1,y-2)],fill=5)
-    d.polygon([(25,8),(28,7),(30,10),(27,13),(25,11)],fill=1)
-    d.polygon([(27,9),(28,9),(29,10),(27,11)],fill=14)
-    # Long blunt snout is MICA's principal small-scale species cue.
-    d.polygon([(28,13),(33,14),(34,19),(39,21),(40,23),(37,26),(29,28),(23,26),(21,21),(23,16)],fill=7,outline=1)
-    d.line([(24,25),(29,27),(36,25)],fill=8)
-    d.polygon([(27,14),(31,14),(33,18),(32,21),(26,21),(25,18)],fill=12,outline=1)
-    d.rectangle((29,16,30,19),fill=15);d.point((29,16),fill=12)
-    d.line([(37,21),(39,22)],fill=15)
-    d.line([(30,24),(34,24),(35,23)],fill=15)
-    # Small raised glove, native S1 right / later games left.
-    glove = [(4,24),(5,21),(4,16),(6,15),(9,20),(10,14),(12,14),(12,21),(15,20),(16,22),(13,25),(13,28),(7,28)]
-    if game=='s1': glove=[(47-x,y) for x,y in glove]
+    im=indexed((48,32));d=ImageDraw.Draw(im)
+    # Large bust, near eye and narrow far eye turned toward viewer.
+    d.polygon([(7,30),(9,23),(16,20),(30,20),(38,29),(38,30)],fill=3,outline=1)
+    d.polygon([(20,23),(28,23),(32,30),(17,30)],fill=7,outline=1)
+    d.line([(20,27),(29,27)],fill=8)
+    d.polygon([(6,22),(5,12),(8,6),(13,2),(23,1),(30,3),(34,8),(34,15),(30,24),(17,26)],fill=2,outline=1)
+    # Broad overlapping scales rather than crosshatched noise.
+    for poly in [
+        [(10,6),(14,3),(20,2),(21,5),(17,8),(11,9)],
+        [(20,3),(25,2),(30,5),(31,8),(25,9),(20,6)],
+        [(7,11),(10,7),(16,7),(18,10),(14,14),(8,15)],
+        [(16,9),(21,7),(26,9),(27,12),(23,16),(18,15)],
+        [(6,17),(9,13),(14,14),(15,18),(12,22),(7,23)],
+        [(13,19),(16,14),(21,15),(23,19),(19,24),(14,25)]]:
+        d.polygon(poly,fill=4,outline=2)
+        d.line([poly[0],poly[1],poly[2]],fill=6 if game!='s1' else 5)
+    # Ear ahead of back crest, far ear at crown.
+    d.polygon([(16,11),(15,7),(17,5),(20,6),(22,11),(20,14)],fill=1)
+    d.polygon([(17,10),(17,7),(19,7),(20,11)],fill=14)
+    d.polygon([(29,7),(29,4),(31,3),(33,5),(33,9)],fill=1)
+    d.line([(31,5),(31,7)],fill=14)
+    # Cream facial plane and long blunt pangolin snout.
+    d.polygon([(22,10),(27,9),(32,11),(34,16),(39,18),(39,21),(35,24),(29,27),(23,26),(18,22),(18,17)],fill=7,outline=1)
+    d.line([(19,22),(23,25),(29,26),(35,23)],fill=8)
+    d.polygon([(21,11),(24,11),(27,14),(27,20),(21,20),(20,16)],fill=12,outline=1)
+    d.rectangle((24,14,25,18),fill=1);d.point((24,14),fill=12)
+    d.line([(20,12),(19,10)],fill=1)
+    d.polygon([(29,12),(31,12),(33,15),(33,18),(29,18)],fill=12,outline=1)
+    d.line([(31,14),(31,17)],fill=1)
+    # Jade forelock between eyes.
+    d.polygon([(24,8),(28,8),(30,11),(28,15),(26,12)],fill=4,outline=2)
+    d.line([(25,9),(27,9)],fill=6)
+    d.line([(37,18),(38,19),(37,20)],fill=1)
+    d.polygon([(25,22),(33,22),(30,25),(27,25)],fill=1)
+    d.line([(26,22),(31,22)],fill=12);d.line([(28,24),(30,24)],fill=14)
+    # Peace glove at left, with two separated raised fingers and folded thumb.
+    glove=[(8,30),(6,26),(3,22),(2,17),(3,16),(5,17),(9,21),
+           (8,14),(9,12),(11,13),(13,21),(16,20),(18,22),(17,26),(14,29),(14,30)]
+    if game=='s1':
+        # Native S1 composition puts the gesture at the right; mirror whole bust.
+        pass
     d.polygon(glove,fill=12,outline=1)
-    if game!='s1':d.line([(7,23),(10,24),(12,23)],fill=13)
-    if alternate: im=im.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+    d.line([(4,19),(7,23),(9,24)],fill=13)
+    d.line([(12,22),(15,22),(16,23)],fill=1)
+    d.line([(11,25),(14,26),(16,25)],fill=13)
+    d.line([(8,28),(13,28)],fill=13)
+    if game=='s1' or alternate: im=im.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
     return im
 
 
 def spin(face, flip=False):
-    # Native 4x4-tile spin plane; hand-tuned compression, checkerboard motion streaks.
-    im=indexed((32,32)); cut=face.crop((3,3,45,29)).resize((22,26),NEAREST)
-    im.paste(cut,(5,3)); d=ImageDraw.Draw(im)
-    for y in range(4,29):
-        for x in range(5,27):
-            if (x+y)%2 and im.getpixel((x,y)):
-                im.putpixel((x,y), 5 if y<14 else (7 if y<23 else 10))
+    # Project the same bust onto a turning panel, no dither/no new colour noise.
+    im=indexed((32,32))
+    for y in range(2,30):
+        left=5+(y-2)//14
+        width=22-(y-2)//7
+        row=face.crop((2,y,46,y+1)).resize((width,1),NEAREST)
+        im.paste(row,(left,y))
     return im.transpose(Image.Transpose.FLIP_LEFT_RIGHT) if flip else im
+
+
+# Separate native-colour backing plane: never reassign a MICA character index.
+BACKGROUNDS={'s1':[255,255,0],'s2':[255,146,0],'s3k':[255,146,0]}
+
+
+def backing(game, alternate=False, turning=False, flip=False):
+    colors=[[0,0,0],[36,36,36],[255,255,255],[182,182,182],
+            [73,73,73],([36,36,182] if alternate else BACKGROUNDS[game])]
+    im=indexed((32 if turning else 48,32),colors+[[0,0,0]]*10)
+    d=ImageDraw.Draw(im)
+    if turning:
+        d.polygon([(4,0),(28,2),(28,30),(4,31),(2,29),(2,2)],fill=1)
+        d.polygon([(4,1),(27,3),(27,29),(4,30),(3,28),(3,3)],fill=3)
+        d.line([(4,1),(26,3)],fill=2)
+        d.polygon([(5,3),(24,5),(24,27),(5,29)],fill=5)
+        d.line([(26,4),(26,28)],fill=4)
+    else:
+        d.rounded_rectangle((0,0,47,31),radius=2,fill=1)
+        d.line([(1,29),(1,2),(3,1),(45,1)],fill=2)
+        d.line([(2,30),(45,30),(46,29),(46,2)],fill=4)
+        d.rectangle((2,2,45,29),fill=3)
+        d.rectangle((3,3,44,28),fill=5)
+    return im.transpose(Image.Transpose.FLIP_LEFT_RIGHT) if flip else im
+
+
+def composed(key,face):
+    game='s3k' if key.startswith('s3k') else key[:2]
+    bg=backing(game,'alternate' in key,'spin' in key,'spin3' in key).convert('RGBA')
+    bg.alpha_composite(face.convert('RGBA'))
+    return bg
 
 
 def glyph(letter):
@@ -165,13 +214,13 @@ def main(review=None):
             emit(game+'-'+surface,icon(game,surface=='monitor'),surface,game,label,source,[[0,0,2,2]])
         label,source=sources[game]['sign'];face=sign(game)
         emit(game+'-sign',face,'sign_face',game,label,source,[[0,0,3,4],[24,0,3,4]],
-             composition='Character-only overlay; retain native border, backing and pole. Piece coordinates are canvas-local pixels then tile width/height.')
+             composition='Large bust over separate native-colour backing plane; retain pole. Coordinates are canvas-local pixels then tile width/height.')
         for n,flip in [(1,False),(3,True)]:
             label={'s1':f'Map_Sign_internal.spin{n}','s2':f'Map_obj0D_a_{"0062" if n==1 else "0086"}','s3k':f'Map_EndSigns_ / {"word_83BE4" if n==1 else "word_83BF4"}'}[game]
             emit(game+f'-spin{n}',spin(face,flip),'sign_spin',game,label,source,[[0,0,4,4]],
-                 composition='Character-only preflipped overlay; apply native frame flip only once. Edge-on 8x32 frame has no readable face and stays native.')
+                 composition='Projected bust and separate framed backing. Preflipped spin3; apply flip only once. Retain native edge-on frame.')
     emit('s2-sign-alternate',sign('s2',True),'sign_face_alternate','s2','Map_obj0D_a_0026 / Map_obj0D_b_0026',
-         sources['s2']['sign'][1],[[0,0,1,4],[8,0,4,4],[40,0,1,4]],composition='Optional replacement for native Tails side; preserve native border/backing.')
+         sources['s2']['sign'][1],[[0,0,1,4],[8,0,4,4],[40,0,1,4]],composition='Optional alternate bust with native blue backing plane; retain pole.')
     for letter in ('M','A'):
         emit('s1-name-'+letter,glyph(letter),'hud_name_glyph','s1','Nem_Lives / Map_HUD_internal.allyellow',
              'docs/s1disasm/artnem/HUD - Life Counter Icon.nem',[],palette='native S1 player line 0; index 15 yellow, index 1 shadow',advance=8 if letter=='M' else 6)
@@ -184,8 +233,15 @@ def main(review=None):
                 rec['native_tile_note'] = 'Shares life-icon tiles at VRAM 0x7d4: S2 0x680+0x154; S3K 0x4c4+0x310.'
         elif rec['surface'].startswith('sign_'):
             rec['native_art_label'] = {'s1':'Nem_SignPost','s2':'ArtNem_Signpost','s3k':'ArtUnc_EndSigns'}[game]
+            key=Path(rec['file']).stem
+            bg=backing(game,'alternate' in key,'spin' in key,'spin3' in key)
+            name=key+'-backing.png';bg.save(OUT/name,transparency=0,bits=4,optimize=True)
+            rec['backing'] = dict(file=name,native_palette_line=0,
+                native_color_index=2 if 'alternate' in key else (9 if game=='s3k' else 15),
+                rgb=[36,36,182] if 'alternate' in key else BACKGROUNDS[game],
+                composition='Draw backing first, character second, pole separately. Backing has its own explicit palette; runtime needs a distinct available palette line from the MICA line. No runtime binding supplied.')
     (OUT/'presentation.yaml').write_text(json.dumps(dict(format='openggf-presentation-art-handoff-1',palette='../palette.yaml',
-        transparent_index=0,palette_cycles=[dict(surface='super_palette',game=g,native_source_label=c['native_source_label'],source=c['source'],file='gilded.yaml',palette_line=0,entries_per_frame=16,frame_count=c['frame_count'],ticks_per_frame=c['ticks_per_frame']) for g,c in gilded()['cycles'].items()],notes='Indexed native pixels; character overlays, not replacements for sign housing. No runtime/GGFP integration.',surfaces=records),indent=2)+'\n')
+        transparent_index=0,palette_cycles=[dict(surface='super_palette',game=g,native_source_label=c['native_source_label'],source=c['source'],file='gilded.yaml',palette_line=0,entries_per_frame=16,frame_count=c['frame_count'],ticks_per_frame=c['ticks_per_frame']) for g,c in gilded()['cycles'].items()],notes='Round 3: original busts with separate native-colour backing planes. Shared character palette unchanged. No runtime/GGFP integration.',surfaces=records),indent=2)+'\n')
     cycle=gilded();(OUT/'gilded.yaml').write_text(json.dumps(cycle,indent=2)+'\n')
     for rec in records:
         im=Image.open(OUT/rec['file']);assert im.mode=='P' and im.size==tuple(rec['dimensions']) and max(im.get_flattened_data())<16
@@ -239,10 +295,15 @@ def make_review(dest,images,cycle):
         for n,(key,mica) in enumerate(images.items()):
             native=refs[key].copy();game='s3k' if key.startswith('s3k') else key[:2]
             native.putpalette(sum(native_pals[game],[])+[0]*(768-48));native.info['transparency']=0
-            for x,im in [(0,mica),(54,native)]:
+            for x,im in [(0,composed(key,mica) if 'sign' in key or 'spin' in key else mica),(54,native)]:
                 rgba=im.convert('RGBA').resize((im.width*scale,im.height*scale),NEAREST);sheet.paste(rgba,(x*scale,n*43*scale),rgba)
             d.text((106*scale,n*43*scale),key,fill='white')
         sheet.save(dest/f'presentation-{scale}x.png')
+        for group,predicate in [('faces',lambda k:'hud' in k or 'monitor' in k),('signs',lambda k:'sign' in k),('spins',lambda k:'spin' in k)]:
+            rows=[n for n,k in enumerate(images) if predicate(k)]
+            strip=Image.new('RGB',(sheet.width,len(rows)*43*scale),(109,109,109))
+            for j,n in enumerate(rows):strip.paste(sheet.crop((0,n*43*scale,sheet.width,(n+1)*43*scale)),(0,j*43*scale))
+            strip.save(dest/f'{group}-{scale}x.png')
     wait=Image.open(ART/'frames/wait-00.png');frames=[]
     for table in cycle['cycles']['s2']['frames']:
         im=wait.copy();im.putpalette(sum(table,[])+[0]*(768-48));rgba=im.convert('RGBA');bg=Image.new('RGBA',im.size,(109,109,109));bg.alpha_composite(rgba)

@@ -246,6 +246,19 @@ rotation. Temporary review material is under `/tmp/mica-art2-review-20261108/`,
 including a slope before/after sheet explicitly marked unchanged. The 16px face
 is simplified and spin dithering still needs native-background gameplay review.
 
+W7 art-lane round 3 handoff (2026-11-08, `feature/ai-mica-art3`):
+six head portraits now fill a 14×15 silhouette with cream facial planes, large
+white/ink eyes, pink ears and light-over-dark crest rows. Four signs are large
+three-quarter busts with grins and peace gloves; six spin frames project the
+same face without dither. Separate original framed backing planes supply native
+S1 yellow, S2/S3K orange and alternate S2 blue. Their native palette line is 0
+(indices 15, 15, 9 and 2 respectively). MICA's palette is unchanged; backing
+composition requires a separate available runtime palette line, recorded in
+`presentation.yaml`. No GGFP/runtime binding is supplied. Native-side-by-side
+1×/4× reviews are in `/tmp/mica-art3-review-20261108/`. Python generation and
+palette/dimension checks pass without a Java build. The 16px far eye is necessarily
+narrow; the small crest has fewer scale separations than the playable head.
+
 ### W8 — Example, tutorial and evidence (M)
 
 - `examples/<character>/` with a build script in the Mutator Lab pattern.
