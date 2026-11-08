@@ -581,6 +581,40 @@
       "reduction": "Largest alpha component at threshold 128; Lanczos to manifest canvas; nearest fixed palette; largest complete silhouette fit inside native piece union; inside outline (except tiny passengers).",
       "reference": "native_pose.py piece semantics; build.py reference decoder; pinned docs/skdisasm",
       "coverage_note": ""
+    },
+    "tiny_passenger-16": {
+      "prompt": "Use case: style-transfer. One ORIGINAL MICA pangolin ending sprite. Reference 1 supplies native pose/framing ONLY, reference 2 character identity, reference 3 approved pixel-art style. Tiny distant passenger silhouette seen from side facing LEFT, horizontal 16x8 native box: pangolin hood, muzzle and tiny red boot clusters. Very few pixels, no large upright portrait. Redraw from scratch as MICA: jade overlapping rounded scale hood and tapering scaled tail, long tan pangolin muzzle, eyelashes, tan segmented belly, white gloves, red lace-up boots. For GILDED use GOLD scale ramp instead of jade. No hedgehog/quills/Sonic face/blue. Match native pose, facing, canvas aspect and limb placement exactly, no added props/companions. Crisp 16-bit pixel art, limited flat colors, dark outline, no gradients/glow. Completely transparent background, no shadow/text.",
+      "raw_sha256": "f601e2c9b7a915991b409f624fb171625f47b3a2827a31f457e8fe26d758c19b",
+      "rows": [
+        "0000333224200000",
+        "0013452354342000",
+        "0098989323332000",
+        "019b999222222000",
+        "9d91892962100000",
+        "0001999692433200",
+        "001fb111ff222222",
+        "fbbbb1fbbb000000"
+      ],
+      "reduction": "Largest alpha component at threshold 128; Lanczos to manifest canvas; nearest fixed palette; largest complete silhouette fit inside native piece union; inside outline (except tiny passengers).",
+      "reference": "native_pose.py piece semantics; build.py reference decoder; pinned docs/skdisasm",
+      "coverage_note": ""
+    },
+    "tiny_passenger-17": {
+      "prompt": "Use case: style-transfer. One ORIGINAL MICA pangolin ending sprite. Reference 1 supplies native pose/framing ONLY, reference 2 character identity, reference 3 approved pixel-art style. Tiny distant passenger silhouette seen from side facing LEFT, compact 8x8 native box: pangolin hood, muzzle and tiny red boot clusters. Very few pixels, no large upright portrait. Redraw from scratch as MICA: jade overlapping rounded scale hood and tapering scaled tail, long tan pangolin muzzle, eyelashes, tan segmented belly, white gloves, red lace-up boots. For GILDED use GOLD scale ramp instead of jade. No hedgehog/quills/Sonic face/blue. Match native pose, facing, canvas aspect and limb placement exactly, no added props/companions. Crisp 16-bit pixel art, limited flat colors, dark outline, no gradients/glow. Completely transparent background, no shadow/text.",
+      "raw_sha256": "7480f9a0eff4b5de7c7c777155493e587060965e5cedf12155dd03de1599477c",
+      "rows": [
+        "00333300",
+        "02599430",
+        "02994430",
+        "09952320",
+        "99933100",
+        "02993300",
+        "01f11222",
+        "fbffb000"
+      ],
+      "reduction": "Largest alpha component at threshold 128; Lanczos to manifest canvas; nearest fixed palette; largest complete silhouette fit inside native piece union; inside outline (except tiny passengers).",
+      "reference": "native_pose.py piece semantics; build.py reference decoder; pinned docs/skdisasm",
+      "coverage_note": ""
     }
   }
 }
