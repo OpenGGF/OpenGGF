@@ -52,8 +52,15 @@ class TestTwoPlayerRouteProgramme {
         var route=RouteArtifact.of(launch,GoalProgram.NONE,tape,new Provenance("test","test","test",List.of()));
         var written=RouteFiles.writeDraft(dir.resolve("title"),route);
         assertEquals(launch,RouteFiles.readDraft(written.manifest()).launch());
-        var movie=RouteFiles.exportBk2(route,dir.resolve("title.bk2"));
-        assertEquals(tape,RouteFiles.tapeFromMovie(movie,tape.size()));
+        assertThrows(java.io.IOException.class,()->RouteFiles.exportBk2(route,dir.resolve("unsafe.bk2")));
+        var nativePrefix=prefix.append(InputTape.of(List.of(PadRow.NEUTRAL,PadRow.NEUTRAL,PadRow.NEUTRAL)));
+        var witness=dir.resolve("native.script");java.nio.file.Files.writeString(witness,RouteFiles.scriptText(nativePrefix));
+        var entry=new NativeFacts.NativeEntry(witness.toString(),nativePrefix.size(),nativePrefix.hash(),
+                prefix.size(),"first-ordinary-level-lfc-zero");
+        var anchored=new RouteArtifact(route.manifest().withNativeFacts(new NativeFacts(Optional.of(entry),List.of())),tape);
+        var movie=RouteFiles.exportBk2(anchored,dir.resolve("title.bk2"));
+        var expected=nativePrefix.append(tape.slice(prefix.size(),tape.size()));
+        assertEquals(expected,RouteFiles.tapeFromMovie(movie,expected.size()));
         assertEquals(PadRow.of(PlayerSlot.P1,PhysicalButton.DOWN),tape.row(900));
         assertEquals(PadRow.NEUTRAL,tape.row(901));
         assertEquals(PadRow.of(PlayerSlot.P1,PhysicalButton.DOWN),tape.row(1050));

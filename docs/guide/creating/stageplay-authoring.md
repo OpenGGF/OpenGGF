@@ -338,6 +338,17 @@ does not enable production `QUALIFIED_ZONES`. Native cold replay must independen
 confirm the exported movie and its goals; synchronous engine load timing can differ
 from hardware frame timing. Never insert fitted state or hand-edit traversal rows.
 
+Native BK2 export uses the verified witness prefix, then the engine gameplay suffix.
+Set `--native-witness FILE --native-anchor-rows N` during authoring or replay with
+`--publish NEW_STEM`. The manifest records `native.entry.prefixRows` (native anchor),
+`engineAnchorRows` (engine anchor), `anchorBoundary: "first-ordinary-level-lfc-zero"`,
+`movie` and the prefix `inputHash`. Counts mean completed rows: export is witness
+`[0,prefixRows)` plus engine `[engineAnchorRows,end)`. Replay verifies the observed
+engine boundary; it never derives a fitted offset or re-plans. A declared
+`native.exportBlocker` refuses export of provisional rows. Replays also write a
+`state.csv` timeline. A menu Start carried into native pause is a gameplay frontier;
+do not insert an unpause row to work around it.
+
 ## Render
 
 ```bash
