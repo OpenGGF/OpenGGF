@@ -842,12 +842,12 @@
       "order": 16,
       "file": "frames/walk-steep-00.png",
       "hotspot": [
-        20,
-        13
+        21,
+        16
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
-      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+      "notes": "Round 3 native pixel redraw: new bent limbs, coral boot contours/sole, ear and eye clusters; original upper-body scale/tail seed retained. Stride phase matches flat. Runtime contact unverified."
     },
     {
       "id": "walk-steep-01",
@@ -855,12 +855,12 @@
       "order": 17,
       "file": "frames/walk-steep-01.png",
       "hotspot": [
-        20,
-        12
+        21,
+        14
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
-      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+      "notes": "Round 3 native pixel redraw: new bent limbs, coral boot contours/sole, ear and eye clusters; original upper-body scale/tail seed retained. Stride phase matches flat. Runtime contact unverified."
     },
     {
       "id": "walk-steep-02",
@@ -868,12 +868,12 @@
       "order": 18,
       "file": "frames/walk-steep-02.png",
       "hotspot": [
-        20,
-        12
+        21,
+        14
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
-      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+      "notes": "Round 3 native pixel redraw: new bent limbs, coral boot contours/sole, ear and eye clusters; original upper-body scale/tail seed retained. Stride phase matches flat. Runtime contact unverified."
     },
     {
       "id": "walk-steep-03",
@@ -881,12 +881,12 @@
       "order": 19,
       "file": "frames/walk-steep-03.png",
       "hotspot": [
-        20,
-        13
+        21,
+        18
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
-      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+      "notes": "Round 3 native pixel redraw: new bent limbs, coral boot contours/sole, ear and eye clusters; original upper-body scale/tail seed retained. Stride phase matches flat. Runtime contact unverified."
     },
     {
       "id": "walk-steep-04",
@@ -894,12 +894,12 @@
       "order": 20,
       "file": "frames/walk-steep-04.png",
       "hotspot": [
-        20,
-        13
+        21,
+        16
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
-      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+      "notes": "Round 3 native pixel redraw: new bent limbs, coral boot contours/sole, ear and eye clusters; original upper-body scale/tail seed retained. Stride phase matches flat. Runtime contact unverified."
     },
     {
       "id": "walk-steep-05",
@@ -907,12 +907,12 @@
       "order": 21,
       "file": "frames/walk-steep-05.png",
       "hotspot": [
-        20,
-        12
+        21,
+        14
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
-      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+      "notes": "Round 3 native pixel redraw: new bent limbs, coral boot contours/sole, ear and eye clusters; original upper-body scale/tail seed retained. Stride phase matches flat. Runtime contact unverified."
     },
     {
       "id": "walk-steep-06",
@@ -920,12 +920,12 @@
       "order": 22,
       "file": "frames/walk-steep-06.png",
       "hotspot": [
-        20,
-        12
+        21,
+        14
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
-      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+      "notes": "Round 3 native pixel redraw: new bent limbs, coral boot contours/sole, ear and eye clusters; original upper-body scale/tail seed retained. Stride phase matches flat. Runtime contact unverified."
     },
     {
       "id": "walk-steep-07",
@@ -933,12 +933,12 @@
       "order": 23,
       "file": "frames/walk-steep-07.png",
       "hotspot": [
-        20,
-        13
+        21,
+        18
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
-      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+      "notes": "Round 3 native pixel redraw: new bent limbs, coral boot contours/sole, ear and eye clusters; original upper-body scale/tail seed retained. Stride phase matches flat. Runtime contact unverified."
     },
     {
       "id": "walk-inverted-00",
@@ -1102,12 +1102,12 @@
       "order": 8,
       "file": "frames/run-steep-00.png",
       "hotspot": [
-        15,
-        13
+        21,
+        14
       ],
       "angle_set": "steep",
       "duration_ticks": 4,
-      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+      "notes": "Round 3 native pixel redraw: new bent limbs, coral boot contours/sole, ear and eye clusters; original upper-body scale/tail seed retained. Stride phase matches flat. Runtime contact unverified."
     },
     {
       "id": "run-steep-01",
@@ -1115,12 +1115,12 @@
       "order": 9,
       "file": "frames/run-steep-01.png",
       "hotspot": [
-        15,
-        13
+        21,
+        14
       ],
       "angle_set": "steep",
       "duration_ticks": 4,
-      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+      "notes": "Round 3 native pixel redraw: new bent limbs, coral boot contours/sole, ear and eye clusters; original upper-body scale/tail seed retained. Stride phase matches flat. Runtime contact unverified."
     },
     {
       "id": "run-steep-02",
@@ -1128,12 +1128,12 @@
       "order": 10,
       "file": "frames/run-steep-02.png",
       "hotspot": [
-        15,
-        13
+        21,
+        14
       ],
       "angle_set": "steep",
       "duration_ticks": 4,
-      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+      "notes": "Round 3 native pixel redraw: new bent limbs, coral boot contours/sole, ear and eye clusters; original upper-body scale/tail seed retained. Stride phase matches flat. Runtime contact unverified."
     },
     {
       "id": "run-steep-03",
@@ -1141,12 +1141,12 @@
       "order": 11,
       "file": "frames/run-steep-03.png",
       "hotspot": [
-        15,
-        14
+        21,
+        18
       ],
       "angle_set": "steep",
       "duration_ticks": 4,
-      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+      "notes": "Round 3 native pixel redraw: new bent limbs, coral boot contours/sole, ear and eye clusters; original upper-body scale/tail seed retained. Stride phase matches flat. Runtime contact unverified."
     },
     {
       "id": "run-inverted-00",
