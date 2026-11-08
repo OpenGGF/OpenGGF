@@ -233,7 +233,7 @@ class TestMicaCharacterIntegration {
 
     @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_1)
     void micaS1EndingCapture() throws Exception {
-        Path output=Path.of("/tmp/mica-endings-s1s2-20261108/s1");
+        Path output=Path.of(System.getProperty("mica.s2.captureRoot", "target/mica-s2-ending-captures")).resolve("s1");
         Files.createDirectories(output);
         var settings=new com.openggf.tools.GameplayCaptureSession.Settings(320,CODE,"","off",null,null,null);
         try(var session=new com.openggf.tools.GameplayCaptureSession(settings)) {
@@ -273,14 +273,17 @@ class TestMicaCharacterIntegration {
     }
 
     @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_2)
-    void micaS2EndingCapture() throws Exception { captureS2Ending(false); }
+    void micaS2EndingCapture() throws Exception { captureS2Ending(false, ""); }
     @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_2)
-    void micaS2SuperEndingCapture() throws Exception { captureS2Ending(true); }
+    void micaS2SuperEndingCapture() throws Exception { captureS2Ending(true, ""); }
 
-    private void captureS2Ending(boolean powered) throws Exception {
-        Path output=Path.of("/tmp/mica-endings-s1s2-20261108").resolve(powered?"s2-super":"s2-normal");
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_2)
+    void micaS2EndingWithTailsCapture() throws Exception { captureS2Ending(false, "tails"); }
+
+    private void captureS2Ending(boolean powered, String sidekick) throws Exception {
+        Path output=Path.of(System.getProperty("mica.s2.captureRoot", "target/mica-s2-ending-captures")).resolve(powered?"s2-super":sidekick.isEmpty()?"mica-alone":"mica-tails");
         Files.createDirectories(output);
-        var settings=new com.openggf.tools.GameplayCaptureSession.Settings(320,CODE,"","off",null,null,null);
+        var settings=new com.openggf.tools.GameplayCaptureSession.Settings(320,CODE,sidekick,"off",null,null,null);
         try(var session=new com.openggf.tools.GameplayCaptureSession(settings)) {
             session.applyMod(buildSample());
             session.boot(com.openggf.tests.RomTestUtils.ensureSonic2RomAvailable().toPath(),10,0,settings);
@@ -303,11 +306,23 @@ class TestMicaCharacterIntegration {
             var adapter=privateField(manager,"presentation"); assertNotNull(adapter);
             assertEquals(powered?com.openggf.game.sonic2.credits.Sonic2EndingArt.EndingRoutine.SUPER_SONIC:
                     com.openggf.game.sonic2.credits.Sonic2EndingArt.EndingRoutine.SONIC,privateField(manager,"routine"));
+            var definition = com.openggf.game.presentation.StageCharacterPresentation.activeDefinition();
+            assertFalse(definition.presentationSupplier().load(CODE).endings().containsKey(EndingSpriteSet.Surface.S2_PHOTOS));
+            var seenPhotos = new HashSet<Integer>();
             var csv=new StringBuilder("frame,state,photo,objCe,rotation,white\n");
             String last="";
             for(int i=0;i<6000 && loop.getCurrentGameMode()==GameMode.ENDING_CUTSCENE;i++) {
                 loop.step(); renderEnding(engine);
                 String state=privateField(manager,"state").toString();
+                if (state.startsWith("PALETTE") && (int)privateField(adapter,"white")==0) {
+                    int index=(int)privateField(manager,"photoIndex");
+                    if (index>=0 && index<4 && seenPhotos.add(index)) {
+                        var display=(com.openggf.level.Palette[])privateField(manager,"displayPalettes");
+                        var photos=(com.openggf.level.Palette)privateField(manager,"photosPalette");
+                        assertTrue(photos.dataEquals(display[0]), "native photo palette on line 0");
+                        com.openggf.graphics.ScreenshotCapture.savePNG(renderEnding(engine),output.resolve("photo-"+(index+1)+".png"));
+                    }
+                }
                 String row=state+","+privateField(manager,"photoIndex")+","+privateField(manager,"objCeFrame")+","+
                         privateField(manager,"rotationDisplayFrame")+","+privateField(adapter,"white");
                 csv.append(i).append(',').append(row).append('\n');
@@ -321,6 +336,7 @@ class TestMicaCharacterIntegration {
                 }
                 last=row;
             }
+            assertEquals(Set.of(0,1,2,3),seenPhotos);
             Files.writeString(output.resolve("state.csv"),csv);
             @SuppressWarnings("unchecked")
             var renderers=(Map<EndingSpriteSet.Surface,PlayerSpriteRenderer>)privateField(adapter,"renderers");
@@ -340,8 +356,8 @@ class TestMicaCharacterIntegration {
                         assertEquals(sets.get(entry.getKey()).rgb()[i],((c.r&255)<<16)|((c.g&255)<<8)|(c.b&255));
                     }
                 } else {
-                    var definition=com.openggf.game.presentation.StageCharacterPresentation.activeDefinition();
-                    var cycle=definition.superFormSupplier().load(CODE).games().get(GameId.S2)
+                    var poweredDefinition=com.openggf.game.presentation.StageCharacterPresentation.activeDefinition();
+                    var cycle=poweredDefinition.superFormSupplier().load(CODE).games().get(GameId.S2)
                             .get(SuperFormProfile.Tier.SUPER).dryCycle();
                     var words=new ArrayList<Integer>();
                     for(int i=0;i<16;i++) words.add(com.openggf.game.palette.PaletteWriteSupport.segaWordFromColor(palette.getColor(i)));
@@ -1123,6 +1139,8 @@ class TestMicaCharacterIntegration {
         assertEquals(0,com.openggf.tools.modsdk.GgfModCli.run(new String[]{"package","--input",
                 classes.toString(),"--out",jar.toString(),"--warnings","error"},System.out));
         try (JarFile packed = new JarFile(jar.toFile())) {
+            assertFalse(packed.stream().anyMatch(entry -> entry.getName().matches(
+                    "art/mica/endings/s2/photo-[1-4]\\.png")), "Phase 1 packages no MICA photo overrides");
             var sheet = com.openggf.level.objects.PlayableSheetReader.read(
                     packed.getInputStream(packed.getJarEntry("art/mica.ggfp")).readAllBytes());
             assertEquals(98, sheet.frames().size());

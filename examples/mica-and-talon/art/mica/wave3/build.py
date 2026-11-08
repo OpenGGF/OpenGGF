@@ -22,6 +22,14 @@ def nem(path):
  spec=importlib.util.spec_from_file_location('nem',ROOT/'tools/timing/s3k-instruction-ledgers/vint/nem/nem_reference.py');m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
  return b''.join(r.to_bytes(4,'big') for r in m.decode(path.read_bytes()+bytes(8),0))
 def native(pieces,data,colors):
+ if colors and isinstance(colors[0][0], list):
+  # Explicit banks: preserve mapping palette selection instead of flattening.
+  out=Image.new('RGBA',(96,96))
+  for p in reversed(pieces):
+   line=p[7] if len(p)>7 else 0
+   tile=native([p],data,colors[line]).convert('RGBA')
+   out.alpha_composite(tile)
+  return out
  im=indexed((96,96),colors)
  for x,y,w,h,t,fx,fy,*_ in pieces:
   p=indexed((w*8,h*8),colors)

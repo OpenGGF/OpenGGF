@@ -9,7 +9,9 @@ import java.util.Objects;
 @ModApi
 public record EndingSpriteSet(StageSpriteSet sprites, int[] rgb) {
     @ModApi public enum Surface {
-        S1_ENDING, S2_ENDING, S2_FLOAT, S2_SUPER, S2_PHOTOS,
+        S1_ENDING, S2_ENDING, S2_FLOAT, S2_SUPER,
+        /** Active first sidekick supplies selectors 1..3; selector 0 always stays native. */
+        S2_PHOTOS,
         S3K_NORMAL_POSE, S3K_POWERED_POSE, S3K_PASSENGER, S3K_EYECATCH,
         S3K_PLAYER, S3K_POWERED_PLAYER
     }

@@ -5,13 +5,9 @@
   "palette": "../../palette.yaml",
   "gilded": "../../presentation/gilded.yaml",
   "tick_rate": 60,
-  "palette_binding": "Keep all MICA indices: photos/normal leap/Float2 on line 0; Tornado rider line 1 shared with native Tails pilot requires engine palette arbitration or per-piece reassignment. Plane line 0 remains ROM-owned; PNGs for 7..11 are character-only transparent overlays. Super stores unchanged indices with the first Gilded s2 palette for static viewing; install the full s2 cycle on line 0. Solo photo backgrounds redrawn in shared MICA palette; reserve entire panel line 0 and rewrite native tile palette attributes.",
+  "palette_binding": "Normal leap/Float2 use MICA line 0; rider line 1 needs private palette arbitration. Plane and all four native monochrome photos remain ROM-owned. Super uses the Gilded s2 cycle.",
   "layout": "Native piece coordinates, dimensions, flips and priorities. Reallocate original tiles into per-frame banks; do not retain inter-frame source aliases. Full composite bounds include blank plane area in character overlays.",
   "timing": {
-    "s2-photo-1": "Static 96x72 panel; native fade loop waits $180 NTSC/$100 PAL then $80; fourth panel shares same loop.",
-    "s2-photo-2": "Static 96x72 panel; native fade loop waits $180 NTSC/$100 PAL then $80; fourth panel shares same loop.",
-    "s2-photo-3": "Static 96x72 panel; native fade loop waits $180 NTSC/$100 PAL then $80; fourth panel shares same loop.",
-    "s2-photo-4": "Static 96x72 panel; native fade loop waits $180 NTSC/$100 PAL then $80; fourth panel shares same loop.",
     "s2-normal-sky-fall": "Float2 $54..$58 at 8 ticks each; 64-tick appear, 192-tick camera scroll.",
     "s2-super-sky-fall": "Native walking animation; engine cycles frames0..5 every4 ticks (explicit approximation).",
     "s2-normal-tornado-turn": "WAIT frame1 during plane hold $480 NTSC/$3D0 PAL; rotation byte_A602 has28 steps at3 ticks.",
@@ -20,12 +16,6 @@
     "s2-super-final-flight-closeup": "Frame23 held; eight position steps at3 ticks; no separate frame cycle."
   },
   "groups": {
-    "photos": [
-      "photo-1",
-      "photo-2",
-      "photo-3",
-      "photo-4"
-    ],
     "normal": [
       7,
       8,
@@ -53,86 +43,6 @@
     ]
   },
   "frames": [
-    {
-      "id": "photo-1",
-      "file": "photo-1.png",
-      "native_source_label": "MapEng_Ending1",
-      "native_art_label": "ArtNem_EndingPics",
-      "dimensions": [
-        96,
-        72
-      ],
-      "bounds_px": [
-        0,
-        0,
-        96,
-        72
-      ],
-      "palette_line": 0,
-      "timing": "Static; fade wait $180 NTSC/$100 PAL, then $80.",
-      "composition": "solo MICA victory fist in backlit burst",
-      "scene_policy": "Entire original illustration; unchanged MICA palette for character and scene. Replaces 12x9 tile panel, no reference pixels."
-    },
-    {
-      "id": "photo-2",
-      "file": "photo-2.png",
-      "native_source_label": "MapEng_Ending2",
-      "native_art_label": "ArtNem_EndingPics",
-      "dimensions": [
-        96,
-        72
-      ],
-      "bounds_px": [
-        0,
-        0,
-        96,
-        72
-      ],
-      "palette_line": 0,
-      "timing": "Static; fade wait $180 NTSC/$100 PAL, then $80.",
-      "composition": "solo MICA wing-rider closeup in slipstream",
-      "scene_policy": "Entire original illustration; unchanged MICA palette for character and scene. Replaces 12x9 tile panel, no reference pixels."
-    },
-    {
-      "id": "photo-3",
-      "file": "photo-3.png",
-      "native_source_label": "MapEng_Ending3",
-      "native_art_label": "ArtNem_EndingPics",
-      "dimensions": [
-        96,
-        72
-      ],
-      "bounds_px": [
-        0,
-        0,
-        96,
-        72
-      ],
-      "palette_line": 0,
-      "timing": "Static; fade wait $180 NTSC/$100 PAL, then $80.",
-      "composition": "solo MICA greeting from cockpit; biplane framing",
-      "scene_policy": "Entire original illustration; unchanged MICA palette for character and scene. Replaces 12x9 tile panel, no reference pixels."
-    },
-    {
-      "id": "photo-4",
-      "file": "photo-4.png",
-      "native_source_label": "MapEng_Ending4",
-      "native_art_label": "ArtNem_EndingPics",
-      "dimensions": [
-        96,
-        72
-      ],
-      "bounds_px": [
-        0,
-        0,
-        96,
-        72
-      ],
-      "palette_line": 0,
-      "timing": "Static; fade wait $180 NTSC/$100 PAL, then $80.",
-      "composition": "banked distant biplane; lone MICA wing rider",
-      "scene_policy": "Entire original illustration; unchanged MICA palette for character and scene. Replaces 12x9 tile panel, no reference pixels."
-    },
     {
       "id": 7,
       "file": "normal-07.png",
@@ -1689,5 +1599,5 @@
       }
     }
   ],
-  "photo_cast_note": "Phase 1: MICA alone in all four photo panels. TALON is deferred to phase 2; no companion stand-in or Sega character drawings."
+  "photo_cast_note": "Native sepia ROM panels in phase 1; sidekick-owned TALON panels deferred to phase 2."
 }

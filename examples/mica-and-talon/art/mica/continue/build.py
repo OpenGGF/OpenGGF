@@ -31,7 +31,7 @@ def macroplc(path):
 def sources(game):
  if game=='s1':
   mp='docs/s1disasm/_maps/Sonic.asm';dp='docs/s1disasm/_maps/Sonic - Dynamic Gfx Script.asm'
-  maps=macros(mp);plcs=macroplc(dp);raw=(ROOT/'docs/s1disasm/artunc/Sonic.unc').read_bytes();colors=b.pal(ROOT/'docs/s1disasm/palette/Sonic.bin')
+  maps=macros(mp);plcs=macroplc(dp);raw=(ROOT/'docs/s1disasm/artunc/Sonic.unc').read_bytes();colors=[b.pal(ROOT/'docs/s1disasm/palette/Special Stage Continue Bonus.bin',line) for line in range(2)]
   dedicated=macros('docs/s1disasm/_maps/Continue Screen.asm');dr=b.nem(ROOT/'docs/s1disasm/artnem/Continue Screen Sonic.nem');ir=b.nem(ROOT/'docs/s1disasm/artnem/Continue Screen Stuff.nem')
   entries=[('floor',i,dedicated[i],dr,[],None) for i in (1,2,3)]
   entries += [('icon',i,dedicated[i],ir,[],None) for i in (6,7)]

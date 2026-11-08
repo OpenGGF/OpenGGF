@@ -51,8 +51,12 @@ under the matching area heading; see the
   semantic sign faces/spins/backings, special/bonus-stage player art, continue
   poses, data-select solo/team portraits and counters, thirteen ICZ snowboard
   rider frames, and endings in all three games. S1 uses eight native-timed ending
-  poses; S2 supplies solo photos, Float2 and normal/Super poses; S3K supplies rescue
-  Float2/ride, reunion, transformation, tiny passengers and trio-eyecatch art.
+  poses; S2 retains native monochrome photos and supplies Float2 and normal/Super
+  poses; S3K supplies rescue Float2/ride, reunion, transformation, tiny passengers
+  and trio-eyecatch art.
+  S2 photo replacements belong to the active sidekick; the first panel always
+  remains native. Native art references now use the photo scene palette, S1
+  continue piece palette lines and S3K transformation palette phases.
   HUD life icons and 1-up faces share her private character palette in all three
   games; save-slot life icons retain their private frontend bank.
   Private palettes preserve native stage colours, text, board/spray, companions

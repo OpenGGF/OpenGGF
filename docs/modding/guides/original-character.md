@@ -134,6 +134,13 @@ for continue banks, portrait frame 5 and snowboard frames 0–12. Use the ending
 loaders beside it for S1, S2 and S3K sets. Preserve native frame IDs and hotspots:
 the host still owns animation, projection, timing, vehicles and companions.
 Private palettes avoid recolouring native text, stage scenery or Tails.
+S2 `S2_PHOTOS` is supplied by the first active sidekick's presentation, independently
+of the main character. Selector 0 (photo 1) always stays native; missing selectors
+also retain native panels and palette. Phase 1 MICA supplies no photo overrides.
+For native art references, select the palette used by the scene when the surface
+is drawn: the S2 photo loop copies `Ending Photos.bin` into line 0. Use the
+[palette audit tool](../../../tools/modding/playable_art/palette_audit.py) for
+review comparisons; do not infer a palette from the art's usual player bank.
 
 For water, MICA omits `underwaterPaletteSupplier`, using the current host zone's
 normal/water colour shift. Supply an authored sixteen-colour line if that derived

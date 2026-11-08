@@ -88,7 +88,7 @@ def definitions():
     frames.append(item)
  return frames
 
-def reference(f):
+def reference(f, cycle_phase=6):
  key=f['frame_set'];base=ROOT/'docs/skdisasm/General'
  if 'pose' in key:
   name='Super Sonic' if f['form']=='gilded' else 'Sonic'
@@ -99,6 +99,16 @@ def reference(f):
   raw=b.nem(base/'Ending/Nemesis Art/S3 Ending Graphics.nem');colors=b.pal(base/'Sprites/Sonic/Palettes/SonicAndTails.bin')
  else:
   raw=(base/'Sprites/Sonic/Art/Sonic.unc').read_bytes();raw=b''.join(raw[t*32:(t+n)*32] for n,t in f['dplc_entries']);colors=b.pal(base/'Sprites/Sonic/Palettes/SonicAndTails.bin')
+ # Transformation is drawn after the ROM SuperHyper palette writer, not
+ # with the dry blue startup bank. Default is the first steady Super phase;
+ # callers comparing a transition may explicitly select fade phases 0..5.
+ if key=='s3k_transform':
+  text=(ROOT/'docs/skdisasm/sonic3k.asm').read_text().split('\nPalCycle_SuperSonic:',1)[1].split('\nPalCycle_SuperSonicUnderwater',1)[0]
+  rows=re.findall(r'dc.w\s+([^\n;]+)',text)
+  if not 0<=cycle_phase<len(rows):raise ValueError('Invalid native Super palette phase')
+  colors=[c[:] for c in colors]
+  for i,word in enumerate(rows[cycle_phase].split(','),2):
+   value=b.num(word.strip());colors[i]=[round(((value>>shift)&14)*255/14) for shift in (0,4,8)]
  return native(f['pieces'],raw,colors)
 
 def review(dest,group,frames):
