@@ -21,6 +21,12 @@ public final class StageCharacterPresentation {
         return definition == null || definition.key().isBuiltin() ? null : definition;
     }
 
+    public static CharacterPresentation active() throws IOException {
+        var definition = activeDefinition();
+        return definition == null || definition.presentationSupplier() == null ? null
+                : definition.presentationSupplier().load(definition.key().persisted());
+    }
+
     public static void bindPalette(PlayerSpriteRenderer renderer, CharacterDefinition definition) throws IOException {
         if (definition == null || definition.paletteSupplier() == null) return;
         var palette = definition.paletteSupplier().load(definition.key().persisted());

@@ -84,7 +84,7 @@ import static org.mockito.Mockito.when;
  * Unit tests for the {@link RewindRegistry} integration on
  * {@link GameplayModeContext}.
  *
- * <p>Tests verify that the seventeen always-available atomic adapters are
+ * <p>Tests verify that the eighteen always-available atomic adapters are
  * registered automatically when {@link GameplayModeContext#attachGameplayManagers}
  * is called, without requiring a full level load or ROM access.
  */
@@ -206,18 +206,45 @@ class TestGameplayModeContextRewindRegistry {
                 com.openggf.game.sonic2.timing.Sonic2LevelMusicScheduler.REWIND_KEY,
                 com.openggf.game.sonic2.slotmachine.CNZPrizeSoundState.REWIND_KEY,
                 "solid-execution",
+                "homing-attack",
                 "kosinski-module-queue");
         assertTrue(snapshot.entries().keySet().containsAll(expectedKeys),
                 "Expected all atomic adapter keys to be present, got: " + snapshot.entries().keySet());
     }
 
     @Test
-    void exactlySeventeenAtomicKeysAfterAttach() {
+    void worldHomingRoundTripsThroughRegisteredAdapterAfterReattachment() {
+        var ctx = buildAttachedContext();
+        var runtime = WorldSessionPolicyAccess.getService(ctx.getWorldSession(),
+                com.openggf.game.mutators.HomingAttackRuntime.class);
+        var state = new com.openggf.game.mutators.HomingAttackRuntime.Snapshot(
+                com.openggf.game.mutators.HomingAttackRuntime.Phase.HOMING, true, 7, 123, 456,
+                com.openggf.level.objects.homing.HomingTargetKind.BADNIK,
+                com.openggf.game.mutators.HomingAttackRuntime.Mode.INSTAGIB,
+                8, 4, 32, List.of(new com.openggf.game.mutators.HomingAttackRuntime.Shard(1, 2, 3, 4, 5, 6, 7)),
+                2, true, true);
+        runtime.restore(state);
+        var saved = ctx.getRewindRegistry().capture();
+        assertTrue(saved.containsKey("homing-attack"));
+        runtime.reset();
+        ctx.getRewindRegistry().restore(saved);
+        assertEquals(state, runtime.capture());
+        ctx.attachGameplayManagers(new Camera(), new TimerManager(), new GameStateManager(),
+                new FadeManager(), new GameRng(GameRng.Flavour.S1_S2), new DefaultSolidExecutionRegistry());
+        runtime.reset();
+        ctx.getRewindRegistry().restore(saved);
+        assertEquals(state, runtime.capture());
+        assertSame(runtime, WorldSessionPolicyAccess.getService(ctx.getWorldSession(),
+                com.openggf.game.mutators.HomingAttackRuntime.class));
+    }
+
+    @Test
+    void exactlyEighteenAtomicKeysAfterAttach() {
         GameplayModeContext ctx = buildAttachedContext();
         RewindRegistry registry = ctx.getRewindRegistry();
         CompositeSnapshot snapshot = registry.capture();
-        assertEquals(17, snapshot.entries().keySet().size(),
-                "Expected exactly 17 atomic adapters, got: " + snapshot.entries().keySet());
+        assertEquals(18, snapshot.entries().keySet().size(),
+                "Expected exactly 18 atomic adapters, got: " + snapshot.entries().keySet());
     }
 
     @Test
@@ -470,7 +497,7 @@ class TestGameplayModeContextRewindRegistry {
         RewindRegistry second = ctx.getRewindRegistry();
         assertNotNull(second);
         assertNotSame(first, second, "Re-attach should produce a new RewindRegistry instance");
-        assertEquals(17, second.capture().entries().keySet().size());
+        assertEquals(18, second.capture().entries().keySet().size());
         var running = second.capture();
         previousState.setGamePaused(true);
         gameState2.setGamePaused(true);

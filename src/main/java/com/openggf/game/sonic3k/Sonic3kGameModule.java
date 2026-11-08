@@ -589,8 +589,10 @@ public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getGameService(Class<T> type) {
+        if (type == com.openggf.game.sonic3k.objects.IczSnowboardArtLoader.CustomArt.class)
+            return type.cast(levelEventManager.snowboardCustomArt());
         if (type == com.openggf.game.internal.ProfileSuperHostRules.class)
-            return type.cast(new com.openggf.game.internal.ProfileSuperHostRules(true, false, 60, com.openggf.mods.mutators.CharacterSuperFormPolicy::sonic3k));
+            return type.cast(new com.openggf.game.internal.ProfileSuperHostRules(true, false, 60, com.openggf.game.GameId.S3K));
         if (type == com.openggf.game.internal.ProfileSuperEffects.class) return type.cast(new Sonic3kProfileSuperEffects());
         if (type == com.openggf.game.internal.StandingInputPolicy.class)
             return type.cast(com.openggf.game.internal.StandingInputPolicy.DOWN_FIRST);

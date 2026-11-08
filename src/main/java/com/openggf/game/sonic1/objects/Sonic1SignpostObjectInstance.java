@@ -125,7 +125,7 @@ public class Sonic1SignpostObjectInstance extends AbstractObjectInstance
     private static final int BOSS_ACT_INDEX = 2;
 
     private int routineState = STATE_IDLE;
-    private final com.openggf.game.presentation.CharacterSignRenderer characterSign = new com.openggf.game.presentation.CharacterSignRenderer();
+    private final transient com.openggf.game.presentation.CharacterSignRenderer characterSign = new com.openggf.game.presentation.CharacterSignRenderer();
     private int currentFrame = FRAME_EGGMAN;
 
     // Spin state

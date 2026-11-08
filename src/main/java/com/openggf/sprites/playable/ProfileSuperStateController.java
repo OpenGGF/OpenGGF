@@ -2,7 +2,7 @@ package com.openggf.sprites.playable;
 
 import com.openggf.game.*;
 import com.openggf.level.Palette;
-import com.openggf.mods.mutators.*;
+import com.openggf.game.internal.ProfileSuperSettings;
 import com.openggf.sprites.animation.SpriteAnimationSet;
 import java.util.List;
 
@@ -23,7 +23,7 @@ public final class ProfileSuperStateController extends SuperStateController impl
     private final Palette normalPalette;
     private final com.openggf.graphics.PaletteView normalWater;
     private final SpriteAnimationSet normalAnimations;
-    private final CharacterSuperFormPolicy options;
+    private final ProfileSuperSettings options;
     private SuperFormProfile.Tier tier = SuperFormProfile.Tier.SUPER;
     private int phase, frame, timer;
     private int displayFrame = -1;
@@ -50,19 +50,11 @@ public final class ProfileSuperStateController extends SuperStateController impl
         options = settings(player);
     }
 
-    private static CharacterSuperFormPolicy settings(AbstractPlayableSprite player) {
-        String persisted = player.characterKey().persisted();
-        int colon = persisted.indexOf(':');
-        var defaults = new CharacterSuperFormPolicy(persisted.substring(colon + 1), true, true, true,
-                6, 50, com.openggf.audio.GameMusic.INVINCIBILITY);
-        var world = com.openggf.game.session.SessionManager.getCurrentWorldSession();
-        var state = world == null ? null : MutatorWorldAccess.state(world);
-        if (state == null) return defaults;
-        return state.effective().policies().entrySet().stream()
-                .filter(entry -> entry.getKey().startsWith(persisted.substring(0, colon + 1)))
-                .flatMap(entry -> entry.getValue().stream())
-                .filter(CharacterSuperFormPolicy.class::isInstance).map(CharacterSuperFormPolicy.class::cast)
-                .filter(policy -> policy.character().equals(defaults.character())).findFirst().orElse(defaults);
+    private static ProfileSuperSettings settings(AbstractPlayableSprite player) {
+        var level = player.currentLevelManagerIfAvailable();
+        var source = com.openggf.game.session.WorldSessionPolicyAccess.getService(
+                level == null ? null : level.getWorldSession(), ProfileSuperSettings.Source.class);
+        return source == null ? ProfileSuperSettings.DEFAULT : source.forCharacter(player.characterKey());
     }
 
     @Override public void rebindAfterArtRefresh() { restoreRewindState(captureRewindState()); }
@@ -107,7 +99,10 @@ public final class ProfileSuperStateController extends SuperStateController impl
                     || state.hasAllEmeralds() && !state.isEmeraldsConverted() : state.hasAllEmeralds();
     }
     @Override protected boolean isTransformationEnabled() {
-        return rules.enabled().test(options);
+        return switch (rules.game()) {
+            case S1 -> options.sonic1(); case S2 -> options.sonic2(); case S3K -> options.sonic3k();
+            default -> false;
+        };
     }
     @Override protected boolean passesGameSpecificTransformGates() {
         if (!rules.explicitAirTrigger()) return true;

@@ -220,6 +220,7 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
 
     @Override
     public void update(int frameCounter, Object context) {
+        if (!artLoaded) loadArt();
         this.frameCounter = Math.max(this.frameCounter, frameCounter);
         if (complete) {
             return;
@@ -547,9 +548,7 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
             return;
         }
 
-        if (!artLoaded) {
-            loadArt();
-        }
+        if (!artLoaded) return;
 
         if (combinedPatterns == null || resultsRenderer == null) {
             return;

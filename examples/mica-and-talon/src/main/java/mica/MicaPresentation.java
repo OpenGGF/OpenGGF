@@ -2,7 +2,7 @@ package mica;
 
 import com.openggf.game.CharacterPresentation;
 import com.openggf.game.CharacterPresentation.*;
-import com.openggf.game.PresentationImages;
+import com.openggf.mods.assets.PresentationImages;
 import com.openggf.io.ModAssetRoot;
 import java.io.IOException;
 import java.util.Map;

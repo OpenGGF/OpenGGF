@@ -1009,3 +1009,96 @@ Continue sets, data-select portrait/team composition, snowboard and ending inven
 remain pending at this item-1 checkpoint. Byte-identical regeneration of all five
 PNGs and the manifest passes. The design-document disassembly citation check
 passes. Rebuild instructions are in the playable-art README, round 5 section.
+
+
+## Regression lane verification (2026-11-08)
+
+Local branch `feature/ai-mica-smoke-fixes`, based on `ce401f1f2`; no merge or
+push. The supplied develop comparison at `33c3b8e56` is the baseline evidence;
+this lane did not rerun or change unrelated baseline failures. Final executable
+tree: `e74ed87801` (the runs preceded the commits but used the same code and
+final fixture contents). All 15 reported failures pass. The 57-class expanded
+selection has 666 unique cases, all passing across the combined run and the
+three repaired fixture classes, with zero skips. This is focused verification,
+not a full-suite or route certification.
+
+| Failure | Cause and repair |
+| --- | --- |
+| SOZ connected production graph | `59998a446d` copied canonical-sheet settings into the translator also used for native donation. Reverting those additions restored all 12 SOZ configurations. Keep the settings in `PlayableSheetAnimationBinding`; native donation retains its prior dispatch. Push-special dispatch can clear pushing on animation changes. Canonical host-flag retention is checked in all three hosts. No SOZ assertion changed. |
+| Mod-main archetype resolver | The design explicitly specifies Sonic-alone semantics without followers, matching native Sonic's actual-roster distinction. Correct the solo expectation while preserving the paired-team assertions. |
+| Two registry cardinality assertions | WorldSession now owns homing independently of policy admission. Deliberately expect its `homing-attack` key and eighteen adapters. A nontrivial registry round trip checks phase, aim, clocks, shards, ability latches and owner identity through reattachment. |
+| In-place restore classification | Remove the sign helper's retained character/presentation fields, then classify the stateless final helper as a construction constant in the audit pin. |
+| Transient engine references | Mark the three stateless sign helper references Java transient; no gameplay state is excluded. |
+| Production AWT blacklist | Reuse pure-Java PngCodec, preserving packed palette indices and duplicate-colour slots. Keep bounded input bytes and maximum 256-by-256 dimensions. |
+| Four architecture assertions | Move the asset facade to `com.openggf.mods.assets.PresentationImages`; keep I/O free of game dependencies. Use shared active-character presentation instead of an S3K adapter. Resolve Super options through game-owned value contracts rather than mod-host internals. Neither cycle baseline nor the explicit-mod-contract allowlist grows. |
+| Bootstrap access audit | S2 zone art uses the active session module, without an added bootstrap-capable access. |
+| Broad catch inventory | Propagate preparation failures in ICZ art, S2 ending character palettes and S3K special-stage result art. Remove their three retired catch rows. |
+| Static session state | The existing S3K event manager owns/retire ICZ's custom renderer and two palette banks, published through the module service. The pre-existing native cache debt remains unchanged. |
+| Draw writes | Prepare S1/S2 result art and name mappings during forward update. Draw only uploads/uses prepared data. Retire eleven cache rows and three S2 timeline-debt rows. |
+
+The facade package move updates example imports, creator reference and the
+normalized candidate API signature pin together. The descriptor and
+`ModApiVersion` still agree on unpublished candidate 0.7.0; no published API
+baseline or API version changes. The only growing classification pins are the
+new world rewind key/cardinality and the now-stateless sign helper type; debt
+inventories only shrink.
+
+### Commands and observed outcomes
+
+Every test invocation used `python3 tools/testing/maven_queue.py`, `-Dmse=off`
+and `-Dopenggf.headless.gl=surfaceless-egl`; none used `-Pguards`. The wrapper
+found all configured ROMs, with no missing properties. One worktree build tree
+was used throughout.
+
+The combined acceptance command was:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestSozConnectedMechanismsProduction,TestActiveGameplayTeamResolver,TestGameplayModeContextRewindRegistry,TestRewindInPlaceObjectRestore,TestRewindTransientGuard,TestProductionAwtBlacklistGuard,TestArchUnitRules,TestBootstrapModuleProviderCachingGuard,TestBroadCatchSwallowingGuard,TestBuildToolingGuard,TestDrawPathFieldWriteGuard,TestMicaCharacterIntegration,TestModApiSignatureSurface,TestHomingAttackMutator,TestSonic3kModSuperFormGate,*SuperState*,TestCharacterNameComposer,TestSonic1CharacterPresentation,TestSonic2CharacterPresentation,TestSonic3kCharacterSurfaces,TestCharacterSignRenderer,*Signpost*,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,*SpecialStageResults*,TestAnimationTranslator,TestCanonicalPlayableSheet,TestPngTransparency,TestIndexedPngCodec,TestS3kIcz1SnowboardIntroHeadless,TestIczSnowboardArtLoader' test
+```
+
+It ran 666 cases: 660 passed, one failed and five errored, zero skips. All 15
+original failures passed, as did MICA integration, signatures, homing, Super,
+presentation, signposts, ICZ and the four required S3K checks. The six newly
+exposed fixture failures came from moving CPU preparation into update: two S2
+fixtures omitted ROM services and the S1 mock renderer was marked uploaded but
+not CPU-prepared. Supply the actual ROM services and mark the prepared mock
+consistently; retain all assertions. Recheck:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=Sonic1SpecialStageResultsScreenTest,TestSonic2SpecialStageResultsPlcReadiness,TestSonic2SpecialStageResultsTallyCadence' test
+```
+
+Result: 12 passed, zero failures/errors/skips, covering all six previously red
+cases. No production code changed after the combined acceptance run.
+
+Earlier diagnostic selections used the same command prefix:
+
+- The eleven original failing classes: 238 cases, 15 reproduced failures, zero
+  errors/skips. After the first corrections plus new codec/registry tests:
+  241 cases, two remaining failures (SOZ and the I/O layer edge), zero skips.
+- SOZ alone with the former policy-only homing accessor: first blocked by an
+  introduced reset-time world lookup, then the corrected reset owner still left
+  the original SOZ failure. That experiment was rejected and fully reverted.
+- SOZ alone with pre-task playable-art initialization: 12 cases, original SOZ
+  failure remained. That experiment was rejected and fully reverted.
+- `-Dtest=TestSozConnectedMechanismsProduction,TestArchUnitRules,TestModApiSignatureSurface`
+  with pre-task translation: 58 cases, SOZ and signatures passed, one remaining
+  I/O layer edge failed; moving the facade into the mod asset layer resolved it
+  in the combined run.
+
+Queue wait and execution are distinct: the first diagnostic execution took
+2m23s; the combined acceptance execution took 3m03s; fixture recheck execution
+took 31.5s. Intermediate jobs also incurred shared queue waits (up to about two
+minutes in the captured queue logs). No user-input wait occurred. Total
+investigation/edit wall time was not separately instrumented. Raw regenerable
+logs remain only under this worktree's ignored `target/`.
+
+`git diff --check` and parsing both documented shell selectors passed. An
+additional whole-repository `python3 tools/disasm/disasm_citations.py check`
+failed with existing reference debt: 2,051 stale, 32 out-of-range and 122
+missing-file findings (plus non-failing classification categories). A diff
+check confirms this lane adds no disassembly line citations; no reference pin
+or unrelated citation was changed. That broad reference audit is not claimed
+green.

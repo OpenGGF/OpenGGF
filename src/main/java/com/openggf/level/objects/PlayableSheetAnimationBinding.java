@@ -56,6 +56,15 @@ public final class PlayableSheetAnimationBinding {
             scripts.addScript(walkId, new SpriteAnimationScript(0xFF, fallback.frames(), fallback.endAction(), fallback.endParam()));
         }
         var profile = AnimationTranslator.translate(host, nativeProfile, scripts);
+        // Canonical sheets use the host's full movement/animation dispatch. Keep
+        // these settings local: applying them in AnimationTranslator also changes
+        // native cross-game donation (notably animation-change push clearing).
+        profile.setPushUsesWalkSpecialHandler(nativeProfile.isPushUsesWalkSpecialHandler());
+        profile.setPushDelayShift(nativeProfile.getPushDelayShift());
+        profile.setDuckReleasePublishesWalk(nativeProfile.isDuckReleasePublishesWalk());
+        profile.setAirborneSlidePreservesPublishedAnimation(nativeProfile.isAirborneSlidePreservesPublishedAnimation());
+        profile.setBlinkAnimId(scripts.getScript(nativeProfile.getBlinkAnimId()) != null ? nativeProfile.getBlinkAnimId() : -1);
+        profile.setGetUpAnimId(scripts.getScript(nativeProfile.getGetUpAnimId()) != null ? nativeProfile.getGetUpAnimId() : -1);
         profile.setTumbleFrameBase(ScriptedVelocityAnimationProfile.NO_TUMBLE_FRAMES);
         profile.setSuperAlternateFrameStep(0, 0, 0);
         profile.setHighSpeedWalkRunAnimId(-1);

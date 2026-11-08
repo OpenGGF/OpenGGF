@@ -1378,7 +1378,7 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
             // Load Pal_Results (ROM line 63110-63117)
             loadPalette(rom);
         } catch (Exception e) {
-            LOG.warning("Failed to load SS results screen art: " + e.getMessage());
+            throw new IllegalStateException("Cannot prepare character presentation", e);
         }
     }
 

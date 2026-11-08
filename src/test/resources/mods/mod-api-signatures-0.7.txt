@@ -270,7 +270,6 @@ CF-ANNOTATION TYPE com.openggf.game.PowerUpObject visible @com.openggf.game.ModA
 CF-ANNOTATION TYPE com.openggf.game.PowerUpSpawner visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.PresentationFrameSet visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.PresentationFrameSet$Pose visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.game.PresentationImages visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.RespawnState visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.ResultsScreen visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.RomDataSource visible @com.openggf.game.ModApi
@@ -822,6 +821,7 @@ CF-ANNOTATION TYPE com.openggf.level.scroll.ZoneScrollHandler visible @com.openg
 CF-ANNOTATION TYPE com.openggf.level.spawn.SpawnPoint visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.ModStorage visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.TrackKey visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.assets.PresentationImages visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.code.BakedLevelRef visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.code.BakedSheetRef visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.code.GgfMod visible @com.openggf.game.ModApi
@@ -6892,8 +6892,6 @@ METHOD com.openggf.game.PresentationFrameSet$Pose public  int hotspotY()
 METHOD com.openggf.game.PresentationFrameSet$Pose public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.game.PresentationFrameSet$Pose public,final  int hashCode()
 METHOD com.openggf.game.PresentationFrameSet$Pose public,final  java.lang.String toString()
-METHOD com.openggf.game.PresentationImages public,static  com.openggf.game.CharacterPresentation$Backing backing(com.openggf.io.ModAssetRoot,java.lang.String,int) THROWS java.io.IOException
-METHOD com.openggf.game.PresentationImages public,static  com.openggf.game.CharacterPresentation$Image read(com.openggf.io.ModAssetRoot,java.lang.String) THROWS java.io.IOException
 METHOD com.openggf.game.RespawnState public  int getStarPostActivationMark()
 METHOD com.openggf.game.RespawnState public  void clearSavedActTimer()
 METHOD com.openggf.game.RespawnState public  void restoreStarPostActivationMark(int)
@@ -12338,6 +12336,8 @@ METHOD com.openggf.mods.TrackKey public  java.lang.String modId()
 METHOD com.openggf.mods.TrackKey public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.mods.TrackKey public,final  int hashCode()
 METHOD com.openggf.mods.TrackKey public,final  java.lang.String toString()
+METHOD com.openggf.mods.assets.PresentationImages public,static  com.openggf.game.CharacterPresentation$Backing backing(com.openggf.io.ModAssetRoot,java.lang.String,int) THROWS java.io.IOException
+METHOD com.openggf.mods.assets.PresentationImages public,static  com.openggf.game.CharacterPresentation$Image read(com.openggf.io.ModAssetRoot,java.lang.String) THROWS java.io.IOException
 METHOD com.openggf.mods.code.BakedLevelRef public  java.lang.String levelJsonEntry()
 METHOD com.openggf.mods.code.BakedLevelRef public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.mods.code.BakedLevelRef public,final  int hashCode()
@@ -21057,7 +21057,6 @@ TYPE class public,final com.openggf.game.CharacterKey SUPER java.lang.Object
 TYPE class public,final com.openggf.game.GameRng SUPER java.lang.Object
 TYPE class public,final com.openggf.game.GameServiceBundle SUPER java.lang.Object
 TYPE class public,final com.openggf.game.PlayableCharacterRegistry SUPER java.lang.Object
-TYPE class public,final com.openggf.game.PresentationImages SUPER java.lang.Object
 TYPE class public,final com.openggf.game.RomDataSource SUPER java.lang.Object
 TYPE class public,final com.openggf.game.SpecialStageViewport SUPER java.lang.Object
 TYPE class public,final com.openggf.game.StandaloneGameSpec SUPER java.lang.Object
@@ -21122,6 +21121,7 @@ TYPE class public,final com.openggf.level.objects.SubpixelMotion SUPER java.lang
 TYPE class public,final com.openggf.level.resources.DeferredLevelResourceTracker SUPER java.lang.Object
 TYPE class public,final com.openggf.level.resources.KosinskiModuleQueue SUPER java.lang.Object
 TYPE class public,final com.openggf.level.rings.SpillAnimationState SUPER java.lang.Object
+TYPE class public,final com.openggf.mods.assets.PresentationImages SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.code.ModContext SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.code.ModLevelDefinition SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.code.StandaloneLevelLoader SUPER java.lang.Object
@@ -22533,7 +22533,6 @@ TYPE-ANNOTATION com.openggf.game.PowerUpObject @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.PowerUpSpawner @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.PresentationFrameSet @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.PresentationFrameSet$Pose @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.game.PresentationImages @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.RespawnState @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.ResultsScreen @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.RomDataSource @com.openggf.game.ModApi
@@ -23085,6 +23084,7 @@ TYPE-ANNOTATION com.openggf.level.scroll.ZoneScrollHandler @com.openggf.game.Mod
 TYPE-ANNOTATION com.openggf.level.spawn.SpawnPoint @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.ModStorage @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.TrackKey @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.assets.PresentationImages @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.code.BakedLevelRef @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.code.BakedSheetRef @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.code.GgfMod @com.openggf.game.ModApi

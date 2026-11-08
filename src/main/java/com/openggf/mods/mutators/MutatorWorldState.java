@@ -208,6 +208,21 @@ final class MutatorWorldState implements WorldSessionPolicyState, RewindSnapshot
         };
     }
     @Override public <T> T getService(Class<T> type) {
+        if (type == com.openggf.game.internal.ProfileSuperSettings.Source.class) {
+            return type.cast((com.openggf.game.internal.ProfileSuperSettings.Source) key -> {
+                if (state.isClosed() || key.isBuiltin()) return com.openggf.game.internal.ProfileSuperSettings.DEFAULT;
+                String persisted = key.persisted();
+                int colon = persisted.indexOf(':');
+                return state.effective().policies().entrySet().stream()
+                        .filter(entry -> entry.getKey().startsWith(persisted.substring(0, colon + 1)))
+                        .flatMap(entry -> entry.getValue().stream())
+                        .filter(CharacterSuperFormPolicy.class::isInstance).map(CharacterSuperFormPolicy.class::cast)
+                        .filter(policy -> policy.character().equals(persisted.substring(colon + 1)))
+                        .map(policy -> new com.openggf.game.internal.ProfileSuperSettings(policy.sonic1(), policy.sonic2(),
+                                policy.sonic3k(), policy.sonic1Emeralds(), policy.rings(), policy.sonic1Music()))
+                        .findFirst().orElse(com.openggf.game.internal.ProfileSuperSettings.DEFAULT);
+            });
+        }
         if (type == com.openggf.game.mutators.ObjectHeadScaleSource.class) {
             return type.cast((com.openggf.game.mutators.ObjectHeadScaleSource) (role, rings) ->
                     state.isClosed() || !availableCapabilities().contains(MutatorCapability.BIG_HEAD)

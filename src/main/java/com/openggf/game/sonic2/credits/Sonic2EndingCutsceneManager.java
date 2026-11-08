@@ -2116,7 +2116,7 @@ public class Sonic2EndingCutsceneManager {
             paletteFadeDelayTimer = 4;
             LOGGER.fine("Target palette restored to character palette for " + routine);
         } catch (Exception e) {
-            LOGGER.warning("Failed to reload character palette: " + e.getMessage());
+            throw new IllegalStateException("Cannot prepare character presentation", e);
         }
     }
 
