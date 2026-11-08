@@ -60,7 +60,11 @@ under the matching area heading; see the
   rolling under the Flying Battery elevator, a Casino Night jackpot,
   custom-team Data Select saves, and every Sonic 3&K zone with its bonus
   and special stages. Shots sit inside their acts, and Super Sonic transforms
-  only once the replay has collected 50 rings. `GameplayCaptureTool --rewind FRAME:LENGTH`
+  only once the replay has collected 50 rings. Knuckles in Sonic 2 shots read the
+  verified lock-on dump, so the HUD shows the chip's own art and colours. The reels render without native
+  sprite dropout, as normal play does: `TraceCaptureTool --no-sprite-limits` turns
+  off the per-line limits that trace captures otherwise keep for ROM image
+  comparison. `GameplayCaptureTool --rewind FRAME:LENGTH`
   holds the live rewind key over a window and draws the rewind plate,
   `--timer FRAMES` sets the level timer a positioned start carried in,
   `--emeralds` also takes Sonic 1 and Sonic 2's six emeralds, and
