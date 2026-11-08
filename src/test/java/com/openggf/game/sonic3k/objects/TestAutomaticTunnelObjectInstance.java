@@ -12,6 +12,7 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -21,6 +22,7 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -32,6 +34,45 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class TestAutomaticTunnelObjectInstance {
+    @Test
+    void rewindWithRoutineSpawnedLbzExhaustDoesNotAbortPopulationRestore() {
+        AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
+        StubObjectServices services = new StubObjectServices() {
+            @Override public int currentAct() { return 1; }
+        };
+        services.withIsolatedObjectManager();
+        ObjectManager manager = services.objectManager();
+        var anchor = manager.createDynamicObject(() -> new RestoreAnchor(
+                new ObjectSpawn(0x80, 0x80, 0, 0, 0, false, 0)));
+        anchor.marker = 99;
+        var control = manager.createDynamicObject(() -> new TunnelExhaustControlObjectInstance(
+                new ObjectSpawn(0x100, 0x80, 0, 0, 0, false, 0), 0, 0, -0x1000));
+        control.update(0, new TestPlayableSprite());
+        assertFalse(control.isDestroyed(), "the live emitter must be inside the configured camera bounds");
+        var snapshot = manager.rewindSnapshottable().capture();
+        assertTrue(snapshot.dynamicObjects().stream().anyMatch(entry ->
+                entry.className().equals(TunnelExhaustParticleInstance.class.getName())),
+                "the actual act-2 controller must contribute a routine-born particle to the snapshot");
+
+        assertDoesNotThrow(() -> manager.rewindSnapshottable().restore(snapshot));
+        var restored = manager.getActiveObjects().stream().filter(RestoreAnchor.class::isInstance)
+                .map(RestoreAnchor.class::cast).toList();
+        assertEquals(1, restored.size());
+        assertEquals(99, restored.getFirst().marker,
+                "an unavailable particle must not prevent the snapshot's field-restore phase");
+    }
+
+    private static final class RestoreAnchor extends AbstractObjectInstance implements SpawnRewindRecreatable {
+        private int marker;
+
+        RestoreAnchor(ObjectSpawn spawn) {
+            super(spawn, "restore-anchor");
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) { }
+    }
+
     @Test
     void sidekickProcessingKeepsNativeP2PrefixThenProcessesExtensions() {
         AutomaticTunnelObjectInstance tunnel = new AutomaticTunnelObjectInstance(

@@ -16,7 +16,17 @@ final class RewindRecreateConstructors {
             String failureDescription,
             Class<?>[] parameterTypes,
             Object... args) {
-        Class<? extends AbstractObjectInstance> objectClass = objectClass(receiver);
+        return instantiateExact(objectClass(receiver), markerName, constructorDescription,
+                failureDescription, parameterTypes, args);
+    }
+
+    static AbstractObjectInstance instantiateExact(
+            Class<? extends AbstractObjectInstance> objectClass,
+            String markerName,
+            String constructorDescription,
+            String failureDescription,
+            Class<?>[] parameterTypes,
+            Object... args) {
         try {
             Constructor<?> constructor = objectClass.getDeclaredConstructor(parameterTypes);
             return instantiate(objectClass, constructor, args, failureDescription);

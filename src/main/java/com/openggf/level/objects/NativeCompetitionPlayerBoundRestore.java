@@ -33,7 +33,7 @@ final class NativeCompetitionPlayerBoundRestore {
                 // Identity metadata only: no constructor, actor mutation, timeline
                 // write or captured RAM application is permitted at this boundary.
                 return new DynamicObjectEntry(entry.className(), entry.spawn(), entry.slotIndex(), entry.state(),
-                        actor, entry.objectId(), entry.ownerModId(), entry.rewindableAuxiliary());
+                        actor, entry.objectId(), entry.ownerModId(), entry.rewindableAuxiliary(), entry.playerOwnerId(), entry.constructionFamily());
             }
         }
         return entry;

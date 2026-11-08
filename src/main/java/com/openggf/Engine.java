@@ -4508,17 +4508,22 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private void drawLevelScene() {
-		var controller = com.openggf.game.mode.ControlledFrameRuntime.controller(
-				com.openggf.game.session.SessionManager.getCurrentGameplayMode());
-		TitleCardProvider titleCard = gameLoop.getTitleCardProvider();
-		boolean titleCardDrawn = (controller == null || !controller.drawScene())
-				&& drawLevelWithTitleCard(titleCard != null && titleCard.isOverlayActive() ? titleCard : null);
-		if (controller != null) {
-			graphicsManager.flush();
-			controller.drawOverlay();
-			graphicsManager.flushScreenSpace();
+		if (com.openggf.game.mode.ControlledFrameRuntime.isNativeTitlePresentationActive(
+				com.openggf.game.session.SessionManager.getCurrentGameplayMode())) {
+			drawTitleCardMode();
+		} else {
+			var controller = com.openggf.game.mode.ControlledFrameRuntime.controller(
+					com.openggf.game.session.SessionManager.getCurrentGameplayMode());
+			TitleCardProvider titleCard = gameLoop.getTitleCardProvider();
+			boolean titleCardDrawn = (controller == null || !controller.drawScene())
+					&& drawLevelWithTitleCard(titleCard != null && titleCard.isOverlayActive() ? titleCard : null);
+			if (controller != null) {
+				graphicsManager.flush();
+				controller.drawOverlay();
+				graphicsManager.flushScreenSpace();
+			}
+			if (!titleCardDrawn) drawActiveLevelTitleCardOverlay();
 		}
-		if (!titleCardDrawn) drawActiveLevelTitleCardOverlay();
 		var overlay = GameLoopPauseInput.overlay(GameMode.LEVEL);
 		if (overlay != null) {
 			graphicsManager.flush();

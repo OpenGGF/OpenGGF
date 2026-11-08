@@ -412,7 +412,7 @@ class TestS3kGumballPachinkoRewardMechanics {
             assertEquals(ballSlot, recreated.getSlotIndex());
             var recreatedParent = assertInstanceOf(AbstractObjectInstance.class, field(recreated, "parentRef"));
             assertEquals(parentSlot, recreatedParent.getSlotIndex());
-            var rawRoster = (java.util.List<?>) field(objects, "dynamicObjects");
+            var rawRoster = (java.util.List<?>) field(field(objects, "population"), "dynamic");
             assertTrue(rawRoster.stream().anyMatch(actor -> actor == recreated));
             assertTrue(rawRoster.stream().anyMatch(actor -> actor == recreatedParent));
             assertFalse(rawRoster.stream().anyMatch(actor -> actor == item));
@@ -640,6 +640,10 @@ class TestS3kGumballPachinkoRewardMechanics {
         if (objects != null) assertSame(objects, GameServices.level().getObjectManager());
         assertFalse(GameServices.sprites().getMainPlayable().getDead());
         assertTrue(GameServices.gameState().getLives() >= lives, "no hidden life-loss reload");
+        if (exitObservation != null) {
+            assertFalse(exitObservation.message().contains("DIAG_INVALID"), exitObservation::message);
+            assertTrue(exitObservation.message().contains("rawDynamicCounts="), exitObservation::message);
+        }
     }
     // BEGIN GUMBALL_EXIT_OBSERVATION: test-local retained state, no exit predicates or gameplay calls.
     private static final ThreadLocal<GumballExitObservation> GUMBALL_EXIT_OBSERVATION = new ThreadLocal<>();
@@ -704,8 +708,8 @@ class TestS3kGumballPachinkoRewardMechanics {
             if (!(cameraObject instanceof com.openggf.camera.Camera camera))
                 throw new IllegalStateException("current camera binding");
             Object focus = raw(camera, "focusedSprite");
-            var dynamic = rawList(raw(retainedObjects, "dynamicObjects"));
-            var currentDynamic = rawList(raw(objects, "dynamicObjects"));
+            var dynamic = rawList(raw(raw(retainedObjects, "population"), "dynamic"));
+            var currentDynamic = rawList(raw(raw(objects, "population"), "dynamic"));
             if (retainedMode == null) {
                 retainedMode = mode;retainedWorld = world;retainedManager = manager;retainedLevel = level;retainedCamera = camera;
                 if (!(focus instanceof com.openggf.sprites.playable.AbstractPlayableSprite actual)
@@ -733,9 +737,10 @@ class TestS3kGumballPachinkoRewardMechanics {
             if (!(motion instanceof com.openggf.level.objects.SubpixelMotion.State coordinates))
                 throw new IllegalStateException("actual ball motion state type");
             Object loop = raw(session, "loop");
-            Object provider = raw(loop, "activeBonusStageProvider");
+            Object bonusSession = raw(loop, "bonusSession");
+            Object provider = raw(bonusSession, "activeBonusStageProvider");
             var exit = new ExitState(trigger, (boolean) raw(trigger, "exitFired"),
-                    (boolean) raw(trigger, "player2Deleted"), (boolean) raw(loop, "bonusStageTransitionPending"),
+                    (boolean) raw(trigger, "player2Deleted"), (boolean) raw(bonusSession, "bonusStageTransitionPending"),
                     provider, (boolean) raw(coordinator, "exitRequested"), raw(coordinator, "activeType"),
                     raw(loop, "currentGameMode"));
             Object spawnValue = raw(trigger, "spawn");

@@ -32,7 +32,7 @@ public abstract class AbstractBossChild extends AbstractObjectInstance implement
      * otherwise unused by boss children -- so rewind's dynamic-object adoption can
      * tell indistinguishable same-class siblings (e.g. EHZ's 3 {@code EHZBossWheel}
      * instances) apart even after an earlier sibling was destroyed and pruned
-     * before capture. See {@code ObjectManager.adoptRewindReconstructionChild}.
+     * before capture. See {@code ObjectRewindLifecycle.adoptRewindReconstructionChild}.
      * Not {@code final}: purely deterministic (recomputed identically by
      * construction order on every reconstruction) so it doesn't strictly need
      * round-trip capture, but a non-final scalar rides the existing generic

@@ -21,16 +21,17 @@ import java.util.logging.Logger;
  * these helpers with their concrete object classes.
  *
  * <p>The static {@link #genericRecreate(ObjectManagerSnapshot.DynamicObjectEntry, DynamicObjectRecreateContext)}
- * method is the Phase-2 uniform recreate entry point (Task 4). It supersedes per-object
- * restore hooks for classes that either:
+ * method reconstructs one actor for {@link ObjectRewindLifecycle}. It supports
+ * classes that either:
  * <ul>
  *   <li>Can be reconstructed from the captured {@link ObjectSpawn} via
  *       {@link ObjectRegistry#create(ObjectSpawn)} (registry path), or</li>
  *   <li>Implement {@link RewindRecreatable} and supply their own creation hook
  *       ({@link RewindRecreatable} path).</li>
  * </ul>
- * Construction-spawned children continue to use the adoption keystone; they are never
- * passed to {@code genericRecreate}.
+ * The lifecycle adopts matching construction children before using this fallback.
+ * Captured fields and references are restored only after reconstruction publishes
+ * all identities.
  */
 public final class ObjectRewindDynamicCodecs {
     private static final Logger LOG = Logger.getLogger(ObjectRewindDynamicCodecs.class.getName());
@@ -106,12 +107,16 @@ public final class ObjectRewindDynamicCodecs {
     }
 
     /**
-     * Generic recreate entry point for Phase-2 rewind (Task 4).
+     * Reconstructs one dynamic actor after construction-child adoption has failed.
      *
      * <p>Decision tree:
      * <ol>
      *   <li>Load the captured class name.</li>
-     *   <li>If the class implements {@link RewindRecreatable}: construct a minimal probe
+     *   <li>If the effective hook is the default {@link SpawnRewindRecreatable}
+     *       recipe or its compatibility wrapper, and its exact constructor exists:
+     *       construct directly from the captured
+     *       spawn, without a discarded probe graph.</li>
+     *   <li>For other {@link RewindRecreatable} hooks: construct a minimal probe
      *       instance via {@link ObjectConstructionContext} (trying known harmless
      *       constructor signatures) and delegate to
      *       {@link RewindRecreatable#recreateForRewind(RewindRecreateContext)}.</li>
@@ -120,8 +125,8 @@ public final class ObjectRewindDynamicCodecs {
      * </ol>
      *
      * <p><strong>Adoption safety:</strong> this method is called only AFTER
-     * {@code ObjectManager.adoptRewindReconstructionChild} returns {@code null}, so it will
-     * never be invoked for a class that the adoption keystone already handled. No additional
+     * {@code ObjectRewindLifecycle.adoptRewindReconstructionChild} returns {@code null}, so it will
+     * never be invoked for an entry already handled by child adoption. No additional
      * deduplication is needed here.
      *
      * @param entry the captured dynamic-object entry from the snapshot
@@ -151,11 +156,21 @@ public final class ObjectRewindDynamicCodecs {
 
         // Path 1: RewindRecreatable — class provides its own creation hook.
         if (RewindRecreatable.class.isAssignableFrom(cls)) {
+            if (usesDefaultSpawnRecipe(cls)) {
+                return ObjectConstructionContext.construct(ctx.objectServices(),
+                        () -> RewindRecreateConstructors.instantiateExact(
+                                cls,
+                                "SpawnRewindRecreatable",
+                                "ObjectSpawn",
+                                "spawn-based rewind recreate",
+                                new Class<?>[] {ObjectSpawn.class},
+                                entry.spawn()));
+            }
             AbstractObjectInstance probe = constructProbeForRewindRecreatable(cls, entry, ctx);
             if (probe instanceof RewindRecreatable rr) {
                 RewindRecreateContext rewindCtx = new RewindRecreateContext(
                         entry.spawn(), entry.state(), ctx.objectServices(), ctx.objectManager(), entry);
-                return rr.recreateForRewind(rewindCtx);
+                return ObjectConstructionContext.construct(ctx.objectServices(), () -> rr.recreateForRewind(rewindCtx));
             }
             LOG.fine("genericRecreate: RewindRecreatable probe construction failed for " + className);
             return null;
@@ -173,6 +188,29 @@ public final class ObjectRewindDynamicCodecs {
         } catch (Exception e) {
             LOG.fine("genericRecreate: registry.create threw for " + className + ": " + e);
             return null;
+        }
+    }
+
+    /** Assignability alone would bypass custom class, inherited and interface hooks. */
+    private static boolean usesDefaultSpawnRecipe(Class<? extends AbstractObjectInstance> cls) {
+        Class<?> recipeOwner;
+        try {
+            recipeOwner = cls.getMethod("recreateForRewind", RewindRecreateContext.class)
+                    .getDeclaringClass();
+        } catch (NoSuchMethodException e) {
+            throw new IllegalStateException(cls.getName() + " is missing its rewind recreation hook", e);
+        }
+        if (recipeOwner != SpawnRewindRecreatable.class
+                && recipeOwner != SpawnConstructionContextRewindRecreatable.class) {
+            return false;
+        }
+        try {
+            cls.getDeclaredConstructor(ObjectSpawn.class);
+            return true;
+        } catch (NoSuchMethodException unavailable) {
+            // Some existing routine effects declare the marker without this constructor.
+            // Keep their historical probe fallback, which can report unavailable with null.
+            return false;
         }
     }
 

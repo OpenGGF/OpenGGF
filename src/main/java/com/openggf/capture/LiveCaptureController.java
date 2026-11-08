@@ -45,9 +45,15 @@ public final class LiveCaptureController implements AutoCloseable {
 
     private final Dependencies deps;
     private volatile State state = State.INACTIVE;
+    // Owner lifetime is independent of the current recording's State. Guarded
+    // by this monitor so close denies admission before waiting for finalization.
+    private boolean closed;
     private volatile Throwable lastFailure;
     private CaptureViewport viewport;
     private LiveCaptureAudioHandle audio;
+    // The frame source may become silence while a refused producer detach is
+    // still owed. Only a successful caller-thread close retires this lease.
+    private LiveCaptureAudioHandle audioLease;
     private VideoFrameGrabber grabber;
     private CaptureRecorder recorder;
     private short[] pcm;
@@ -66,17 +72,29 @@ public final class LiveCaptureController implements AutoCloseable {
     }
 
     public synchronized void start(CaptureViewport viewport, int frameRate) {
+        if (closed) return;
         if (state == State.ACTIVE || state == State.STARTING || state == State.STOPPING) return;
         state = State.STARTING;
         lastFailure = null;
         audioWarningLogged = false;
         try {
-            try {
-                audio = deps.audio.open(frameRate);
-                prepareAudioHandle(frameRate);
-            } catch (Throwable audioFailure) {
-                Throwable closeFailure = closeAudioOnCaller();
-                if (closeFailure != null) audioFailure.addSuppressed(closeFailure);
+            // Never overwrite a previous recording's outstanding detach with a
+            // new acquisition. If it is still refused, video can use silence.
+            Throwable audioFailure = closeAudioOnCaller();
+            if (audioFailure == null) {
+                try {
+                    audioLease = deps.audio.open(frameRate);
+                    audio = audioLease;
+                    prepareAudioHandle(frameRate);
+                } catch (Throwable failure) {
+                    audioFailure = failure;
+                    Throwable closeFailure = closeAudioOnCaller();
+                    if (closeFailure != null && closeFailure != failure) {
+                        failure.addSuppressed(closeFailure);
+                    }
+                }
+            }
+            if (audioFailure != null) {
                 warnAudioOnce(audioFailure);
                 audio = new ClockedSilenceAudioHandle(
                         Math.max(1, deps.audioSampleRate.getAsInt()), frameRate);
@@ -196,12 +214,14 @@ public final class LiveCaptureController implements AutoCloseable {
     public Throwable lastFailure() { return lastFailure; }
     public boolean indicatorVisible() { return state == State.ACTIVE; }
 
+    /** Permanently denies new recordings; repeated calls still retry an owed audio detach. */
     @Override
     public void close() {
         long timeoutNanos = Math.max(0, deps.shutdownTimeout.toNanos());
         long deadline = System.nanoTime() + timeoutNanos;
         Future<?> pending;
         synchronized (this) {
+            closed = true;
             if (state == State.ACTIVE) requestStop(StopReason.SHUTDOWN);
             pending = finalization;
         }
@@ -265,21 +285,22 @@ public final class LiveCaptureController implements AutoCloseable {
      * <p>A capture lease can only be released on the producer's owner thread.
      * {@code AudioManager} deliberately keeps its {@code
      * activeLiveCaptureAudioHandle} when the detach is refused, so a later
-     * owner-thread stop can complete it. Nulling {@code audio} in a {@code
+     * owner-thread stop can complete it. Nulling {@code audioLease} in a {@code
      * finally} would throw away the only reference able to retry, leaving the
      * producer copying every presented packet into an orphan lease while every
      * subsequent {@code start()} is rejected with "a live capture audio handle
      * is already attached" and degrades to clocked silence for the rest of the
-     * process.
+     * process. The current frame source {@code audio} is separate: replacing
+     * it with clocked silence must not discard the real lease awaiting detach.
      */
     private Throwable closeAudioOnCaller() {
-        if (audio == null) {
-            return null;
-        }
-        try {
-            audio.close();
-        } catch (Throwable closeFailure) {
-            return closeFailure;
+        if (audioLease != null) {
+            try {
+                audioLease.close();
+            } catch (Throwable closeFailure) {
+                return closeFailure;
+            }
+            audioLease = null;
         }
         audio = null;
         return null;
@@ -340,6 +361,9 @@ public final class LiveCaptureController implements AutoCloseable {
 
     private void clearResources() {
         viewport = null;
+        // Frame data can be discarded independently of an outstanding lease;
+        // background finalization must never attempt producer-thread detach.
+        audio = null;
         if (finalizerFrame != null) finalizerFrame.release();
         finalizerFrame = null;
         closeGrabber();

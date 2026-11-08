@@ -26,6 +26,14 @@ under the matching area heading; see the
   shared touch owner. The Sonic+Tails chain advances from CNZ2 to HTZ2; later
   route errors and the special-stage return timing differences remain open.
 
+- **Knuckles' lives name in Knuckles in Sonic 2:** without the optional lock-on
+  dump, the "K.T.E" name beside his HUD head was green. The stand-in Sonic &
+  Knuckles icon was drawn for a different palette line, and its name went
+  through the same colour conversion as Knuckles' sprites. The name now takes
+  the original game's yellow-orange, white and black, matching the lock-on
+  dump's art pixel for pixel. Sonic 2 with the Sonic 3&K donor and Knuckles as
+  the lead had the same green name and is fixed too.
+
 - **S2 diagonal launcher springs:** capture both riders before deciding to
   release or decompress. A fresh Tails capture now uses the native launch force
   and can hold Sonic on the spring. The complete-chain CNZ2 segment is green;
@@ -52,6 +60,12 @@ under the matching area heading; see the
 
 ## Modding and tools
 
+- **Recording audio recovery:** viewport recording retains the real audio lease
+  when detach is refused, even after switching to silence. Stopping or restarting
+  retries that lease before acquiring another, avoiding an orphaned audio tap.
+  Closing the controller also ends admission permanently, so a delayed encoder
+  finalizer cannot clear resources acquired by a recording started after close.
+
 - **Seeded Data Select captures:** `GameplayCaptureTool --save-slots <file.json>`
   writes declared save slots through the production save manager into the
   capture's private save root before a title-first capture, and `--extra-teams`
@@ -62,6 +76,37 @@ under the matching area heading; see the
   instead of S3K's placeholders.
 
 ## Maintenance and release preparation
+
+- **Contributor readability:** live objects, slots and stable identities share
+  population storage; actor reconstruction and contact memory have separate owners
+  behind the existing runtime entry points. Retiring multipart solids expires
+  owned contact bits and frame history without releasing player state. Contact
+  restore discards uncaptured future observations. Sole spawn-keyed dynamic solids
+  now expire contact bits without clearing surviving shared owners. Constructor-child
+  rewind adoption uses captured parent families, preserving interleaved structural
+  links; independent children can recreate when a parent defers to player refresh,
+  and CNZ defeat candidates retain their ship family. Generic recreation installs
+  construction services centrally; supported exact-spawn recipes rebuild once,
+  avoiding discarded constructor graphs while preserving custom hooks and the
+  fallback for declarations without that constructor. Destroyed
+  object paths share unload and retirement phases within their existing schedules.
+  Ordinary family/reference/coverage guidance points to the actual owners.
+  Production badnik and contact witnesses, shared coarse-X arithmetic with
+  explicit native/wider bounds, and
+  a typed rewind HUD frame make contribution paths easier to follow. HCZ owns
+  its next screen-shake value without using the renderer as scratch state.
+  Failed trace replays print their exact test/report/triage route; triage reads
+  compressed fixture auxiliaries, preserves pre-trace evidence and distinguishes
+  incomplete or unknown completion from a completed comparison. Retained raw-field
+  diagnostics follow that storage and are exercised on successful test paths.
+
+- **Fresh-level admission:** named phases expose title completion, initial
+  boundary publication and player assembly while preserving their existing
+  timing, pause and failure behavior. Creator-controlled native destinations
+  now finish their normal title and player assembly before admitting gameplay,
+  sharing the ordinary host's native title iteration. HOLD and explicit
+  presentation omission remain separate choices. In-level modal overlays remain
+  visible above a controlled native title in both live and captured frames.
 
 - **Scripted website hero reels:** `tools/media/hero_reels.py` regenerates
   the Sonic 1, Sonic 2 and Sonic 3&K title-card reels from the current engine
