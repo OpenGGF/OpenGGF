@@ -53,7 +53,10 @@ under the matching area heading; see the
 
 - **Fresh-level admission:** named phases expose title completion, initial
   boundary publication and player assembly while preserving their existing
-  timing, pause and failure behavior.
+  timing, pause and failure behavior. Creator-controlled native destinations
+  now finish their normal title and player assembly before admitting gameplay,
+  sharing the ordinary host's native title iteration. HOLD and explicit
+  presentation omission remain separate choices.
 
 - **Scripted website hero reels:** `tools/media/hero_reels.py` regenerates
   the Sonic 1, Sonic 2 and Sonic 3&K title-card reels from the current engine

@@ -9,10 +9,12 @@ branch starts on fetched develop `a3ab4c74e`. The intervening upstream commit
 changes media configuration, not either lifecycle owner.
 
 The parallel code-complexity effort owns contact/population/linked-child rewind
-and draft PR 266. Its source and validation trees remain untouched. This work
-uses a separate task branch and draft delivery against develop, without merging
-or pushing develop. No rubric score is inferred from
-these changes.
+and draft PR 266. Its source and validation trees remain untouched here. This
+work initially delivered a separate draft, PR 269. On 8 November the user made
+PR 266 the sole destination for the continuing sweep. The dedicated lifecycle
+tree now supplies a bounded implementation handoff to that integration owner;
+PR 269 and its tree remain until every change is accounted for. No destination
+branch is pushed and no rubric score is inferred from these changes.
 
 ## Inventory
 
@@ -622,3 +624,72 @@ local. Draft269 still has its first-increment head. New combined Opus review and
 source-matched verification are required before its update; the earlier broad
 results cannot certify this merged source. Other inventoried families remain
 research targets, not completed remediation.
+
+### Controlled native destination: completed implementation handoff
+
+The real-entry witness on `d96dd03bc` confirmed the narrower controlled gap.
+After a public request and production 22-row fade to HCZ1, the same controller
+admitted native Right input and advanced sprite, level and both measured V-int
+clocks while normal title/player assembly remained pending and player Y stayed
+zero. Explicit finish restored native HCZ1 Y `0x20`; ordinary GameLoop finished
+title/assembly in 133 rows. Synchronous load, no timing client or injected
+comparison state. Final witness: one intended failure, two passing controls,
+no errors/skips. Queue 18s, Maven 31.065s, wrapper 49.450s, user wait zero; about
+0.385s unseparated overhead/rounding. Earlier package-access and input-observer
+placement corrections affected fixtures only.
+
+Sol's `d9754bf59980fe162ec719a83e57cfca008990d7` shares the ordinary host's
+locked-title iteration through `NativeTitleCardIteration`. A session-owned title
+lease completes the production destination assembly before gameplay admission.
+It is generation-scoped, registered for rewind and cleared at teardown. HELD
+presentation rows call `afterTick(false)`; native input is consumed after
+admission. Explicit omission remains separate from HOLD. Live and capture
+renderers select the native locked card while the controlled host stays in LEVEL.
+No ModAPI/version/signature surface or contact/reconstruction/recreation contract
+changed. The source changes include rendering selection and session registration,
+not only the controlled step, and need combined review.
+
+The strengthened pre-fix RED ran four cases with three readiness failures, no
+errors/skips. The promoted tests require bounded completion, so permanent HOLD
+is not sufficient. Final exact selections:
+
+```bash
+python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  '-Dtest=TestControlledNativeDestinationBoundary,TestControlledFrameRuntime,TestGameLoopTitleCardLifecycle' test -B
+python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestGameplayCaptureFrameRendering,TestCourseControl,TestControlledCourseInput,TestRecordingFrameDriverInputOnly,TestRecordingFrameDriverHardwareTiming,TestGameLoopTitleCardOwnership,TestGameLoopTitleCardPause,TestGameLoopFreshLevelHandoff,TestS3kFreshLevelReleaseVint,TestPlcLifecycleDriverParity,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestModApiSignatureSurface,TestBroadCatchSwallowingGuard' test -B
+```
+
+Java 25, Lua 5.4, displays unset and ROM discovery missing=none throughout. Core:
+22 passed, queue 13s, Maven 96s. Consumers: 167 passed, queue 46s, Maven 50.450s.
+Both have zero failures/errors/skips. Controls cover bounded completion, HOLD
+progress/freeze, explicit finish, repeated load, mid-title rewind, recording,
+S1/S2 entry, once-only input/clocks and EGL pixels with a negative control for
+the old overlay-only selection. All four mandatory S3K classes and the actual
+API/broad-catch checks ran. Investigation time was not separately instrumented;
+no user wait.
+
+A first repair run exposed a stale fixture engine-clock adapter during rewind.
+The corrected witness registers the actual current clock owner, without writing
+clock values or gameplay state. Only a moved inherited citation comment changed
+after GREEN; staged citation checks passed. This is no broad or trace-frontier
+claim. Evidence is in candidate
+`target/controlled-destination-{witness,red,green,green2,consumers}/maven.log`.
+
+The user consolidated the continuing sweep into PR 266. That owner retains final
+Opus review, integration, combined validation and delivery. This tree is frozen
+after the documentation handoff commit. No additional reviewer, watcher,
+candidate broad run, PR 269 update or destination push is started here. The
+first-increment review does not cover the later terminal-close, fixture or
+controlled-entry changes. Keep PR 269 and its source until fully accounted.
+
+One independent baseline remains under this thread's sole observation: commit
+`33c3b8e56c2f2970a09b339f4895b43d484295df`, fingerprint
+`ef0fe94756681a05cb0480c0da822bfda9d8b7a197f678609ed158d1c1be23d0`, run
+`20261108T091353Z-63387c64`. Selection: 4,484 smoke classes, 91 ordinary batches
+plus guards, two ordinary workers and one guard worker, default 40-minute
+execution cap excluding queue wait. It is incomplete here; no verdict or new
+candidate comparison is claimed. Keep the baseline immutable and avoid duplicate
+observers. Completed evidence will go to the PR 266 owner without a routing-only
+restart.
