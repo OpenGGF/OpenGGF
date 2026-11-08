@@ -30,6 +30,7 @@ class TestSonic2CompetitionProduct {
         var screen = new Sonic2CompetitionScreen(session, host, null, TestEnvironment.currentRom());
         var menus = new com.openggf.game.nativemenu.NativeMenuController();
         menus.open(screen);
+        Sonic2CompetitionTestFlow.finishMenuFade(screen);
         session.updateMenu(input(0, 0, true).logical(), true);
         var phases = new java.util.ArrayList<com.openggf.game.resources.PlcLifecyclePhase>();
         var lifecycle = new com.openggf.game.resources.PlcFrameLifecycleCoordinator(
@@ -93,17 +94,17 @@ class TestSonic2CompetitionProduct {
         var session = new Sonic2CompetitionSession();
         var host = new Host();
         var screen = new Sonic2CompetitionScreen(session, host, null, TestEnvironment.currentRom());
-        screen.initialize();
+        screen.initialize(); Sonic2CompetitionTestFlow.finishMenuFade(screen);
         for (boolean initialize : new boolean[]{false, true}) {
             session.updateMenu(input(0, 0, true).logical(), true);
             host.pendingTitleExit = true;
             screen.update(input(0, 0, false));
             assertFalse(host.pendingTitleExit);
-            if (initialize) screen.initialize(); else screen.reset();
+            if (initialize) { screen.initialize(); Sonic2CompetitionTestFlow.finishMenuFade(screen); } else screen.reset();
             assertEquals(com.openggf.game.nativemenu.NativeMenuScreen.Exit.NONE, screen.consumeExit());
             screen.afterFrame();
             assertNull(host.loaded);
-            if (!initialize) screen.initialize();
+            if (!initialize) { screen.initialize(); Sonic2CompetitionTestFlow.finishMenuFade(screen); }
         }
     }
 
@@ -112,11 +113,15 @@ class TestSonic2CompetitionProduct {
         var host = new Host(); var halfpipe = new Halfpipe();
         var special = new Sonic2CompetitiveSpecialStageAdapter(session, halfpipe);
         var screen = new Sonic2CompetitionScreen(session, host, special, TestEnvironment.currentRom());
-        screen.initialize();
+        screen.initialize(); Sonic2CompetitionTestFlow.finishMenuFade(screen);
         assertTrue(screen.supported());
         assertEquals(GameMode.COMPETITION_MENU, screen.mode());
         screen.update(input(1, 0, true));
         assertNull(host.loaded, "world setup waits until the outgoing frame has finished");
+        screen.afterFrame();
+        assertNull(host.loaded, "confirmation cannot skip the outgoing palette fade");
+        Sonic2CompetitionTestFlow.finishDeparture(screen);
+        assertNull(host.loaded, "the final fade frame must complete before assembly");
         screen.afterFrame();
         assertEquals("0:0", host.loaded);
         assertEquals(GameMode.COMPETITION, screen.mode());
@@ -128,6 +133,7 @@ class TestSonic2CompetitionProduct {
         screen.resultsPlcReady();
         screen.update(input(1, 0, true));
         assertEquals("0:0", host.loaded);
+        Sonic2CompetitionTestFlow.finishDeparture(screen);
         screen.afterFrame();
         assertEquals("0:1", host.loaded);
         session.gameState(0).addScore(100);
@@ -165,35 +171,35 @@ class TestSonic2CompetitionProduct {
                 new Sonic2CompetitiveSpecialStageAdapter(session, new Halfpipe()), TestEnvironment.currentRom());
         var menus = new com.openggf.game.nativemenu.NativeMenuController();
         menus.open(screen);
+        Sonic2CompetitionTestFlow.finishMenuFade(screen);
         menus.update(input(1, 0, true), false);
         menus.completeFrame();
+        Sonic2CompetitionTestFlow.finishDeparture(screen); screen.afterFrame();
         session.gameState(0).addScore(100);
         finish(session);
         var result = session.actResult(0, 0);
         assertNotNull(result);
         screen.resultsPlcReady();
         host.onLoad = () -> {
-            assertEquals(java.util.List.of("service:TWO_PLAYER_RESULTS", "prepare:TWO_PLAYER_RESULTS"), calls);
-            for (int entry = 0; entry < 26; entry++) {
-                lifecycle.runLogicalIteration(() -> { }, frame -> {
-                    frame.claim(com.openggf.game.resources.PlcLifecyclePhase.LEVEL_TITLE_CARD);
-                    frame.prepareAfterLoop(com.openggf.game.resources.PlcLifecyclePhase.LEVEL_TITLE_CARD);
-                    return null;
-                });
-            }
+            assertEquals("prepare:TWO_PLAYER_RESULTS", calls.getLast(),
+                    "the outgoing token must finish before the next act assembles");
+            assertEquals(46, calls.size(), "confirmation plus 22 native palette waits");
         };
-        menus.beginFrame();
-        lifecycle.runLogicalIteration(() -> { }, frame -> {
-            frame.claim(com.openggf.game.resources.PlcLifecyclePhase.TWO_PLAYER_RESULTS);
-            menus.update(input(1, 0, true), false);
-            assertEquals("0:0", host.loaded);
-            frame.prepareAfterLoop(com.openggf.game.resources.PlcLifecyclePhase.TWO_PLAYER_RESULTS);
-            return null;
-        });
-        menus.completeFrame();
-
+        // Level (s2.asm:4757-4765): the old results stay installed throughout the fade.
+        for (int wait = 0; wait < 23; wait++) {
+            menus.beginFrame();
+            final int index = wait;
+            lifecycle.runLogicalIteration(() -> { }, frame -> {
+                frame.claim(com.openggf.game.resources.PlcLifecyclePhase.TWO_PLAYER_RESULTS);
+                menus.update(input(1, 0, index == 0), false);
+                assertEquals("0:0", host.loaded);
+                frame.prepareAfterLoop(com.openggf.game.resources.PlcLifecyclePhase.TWO_PLAYER_RESULTS);
+                return null;
+            });
+            menus.completeFrame();
+        }
         assertEquals("0:1", host.loaded);
-        assertEquals(54, calls.size());
+        assertEquals(46, calls.size());
         assertEquals(result, session.actResult(0, 0));
         assertEquals(1, session.act());
     }
@@ -204,9 +210,9 @@ class TestSonic2CompetitionProduct {
         var halfpipe = new Halfpipe();
         var screen = new Sonic2CompetitionScreen(session, host,
                 new Sonic2CompetitiveSpecialStageAdapter(session, halfpipe), TestEnvironment.currentRom());
-        screen.initialize();
+        screen.initialize(); Sonic2CompetitionTestFlow.finishMenuFade(screen);
         screen.update(input(0, 0, true));
-        screen.initialize();
+        screen.initialize(); Sonic2CompetitionTestFlow.finishMenuFade(screen);
         screen.afterFrame();
         assertNull(host.loaded);
 
@@ -216,7 +222,7 @@ class TestSonic2CompetitionProduct {
         screen.afterFrame();
         assertEquals(-1, halfpipe.loaded);
 
-        screen.initialize();
+        screen.initialize(); Sonic2CompetitionTestFlow.finishMenuFade(screen);
         screen.update(input(1, 10, true));
         screen.afterFrame();
         assertEquals(4, halfpipe.loaded);
@@ -230,7 +236,7 @@ class TestSonic2CompetitionProduct {
         var screen = new Sonic2CompetitionScreen(s, host,
                 new Sonic2CompetitiveSpecialStageAdapter(s, halfpipe), TestEnvironment.currentRom());
         host.available = false; halfpipe.available = false;
-        screen.initialize();
+        screen.initialize(); Sonic2CompetitionTestFlow.finishMenuFade(screen);
         assertFalse(screen.supported());
         screen.update(input(0, 0, true));
         assertNull(host.loaded);

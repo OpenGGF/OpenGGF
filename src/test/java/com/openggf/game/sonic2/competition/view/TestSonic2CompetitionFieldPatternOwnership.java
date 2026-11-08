@@ -55,6 +55,13 @@ class TestSonic2CompetitionFieldPatternOwnership {
             session.updateMenu(LogicalInputSnapshot.ofPlayers(
                     PlayerInputState.of(0, 0, 0, 0, true, true), PlayerInputState.neutral()), true);
             host.loadAct(session, 0, 0);
+            Sonic2CompetitionTestFlow.finishTitle(host, () -> {
+                var titleContext = host.context();
+                titleContext.plcFrameLifecycle().runLogicalIteration(titleContext::updateFade, frame -> {
+                    NativeCompetitionIterationAccess.runAdmitted(frame, () -> host.step(input, frame));
+                    return null;
+                });
+            });
             var context = host.context();
             graphics.bindRuntimeManagedReferences(context.getCamera(), context.getFadeManager());
             var art = context.getWorldSession().getGameModule().getGameService(Sonic2CompetitionArtResidency.class);

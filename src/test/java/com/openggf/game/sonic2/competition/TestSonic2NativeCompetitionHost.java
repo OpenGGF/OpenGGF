@@ -101,12 +101,24 @@ class TestSonic2NativeCompetitionHost {
                         new com.openggf.game.sonic2.objects.Sonic2TeleportObjectFieldsAccess(), new com.openggf.game.GameStateManager());
                 try {
                     visit.initialize();
+                    input.setLogicalOverride(NEUTRAL);
+                    // MenuScreen (s2.asm:11817-11824): initial wait and 22 fade passes.
+                    for (int wait = 0; wait < 23; wait++) visit.update(input);
                     input.setLogicalOverride(directions(AbstractPlayableSprite.INPUT_DOWN, 0));
                     visit.update(input);
                     input.setLogicalOverride(startPress());
                     visit.update(input);
-                    visit.afterFrame();
+                    assertNull(visit.host().profile(), "menu departure must not assemble an act early");
+                    // Level (s2.asm:4757-4765): keep Start held through the outgoing fade.
+                    for (int wait = 0; wait < 22; wait++) { visit.update(input); visit.afterFrame(); }
                     var host = visit.host();
+                    Sonic2CompetitionTestFlow.finishTitle(host, () -> {
+                        var context = host.context();
+                        context.plcFrameLifecycle().runLogicalIteration(context::updateFade, frame -> {
+                            NativeCompetitionIterationAccess.runAdmitted(frame, () -> host.step(input, frame));
+                            return null;
+                        });
+                    });
                     var session = visit.session();
                     assertEquals(12, host.profile().romZone(), "the real menu chose CNZ");
                     assertEquals(Sonic2CompetitionSession.Phase.ACT, session.phase());
@@ -169,6 +181,7 @@ class TestSonic2NativeCompetitionHost {
                 assertNull(NativeSstSlotAccess.currentOwner(objects, 56));
                 assertEquals(0, NativeSstSlotAccess.readWord2C(objects, 56),
                         "actual native Level_ClrRam must clear an empty represented native bank SST");
+                driver.finishTitle(NEUTRAL);
                 NativeSstSlotAccess.writeWord2C(objects, 56, 0xFFFF);
                 var registry = host.context().getRewindRegistry();
                 var saved = registry.capture();
@@ -240,6 +253,7 @@ class TestSonic2NativeCompetitionHost {
                     var screen = new Sonic2CompetitionScreen(session, host, null, services.roms().getRom());
                     var menus = new NativeMenuController();
                     assertTrue(menus.open(screen));
+                    Sonic2CompetitionTestFlow.finishMenuFade(screen);
                     assertFalse(screen.supported(), "the controller fixture cannot qualify missing native views/special stages");
                     startThroughMenu(session, zone[1]);
                     assertFalse(host.supportsZone(zone[0]));
@@ -251,12 +265,16 @@ class TestSonic2NativeCompetitionHost {
                     input.setLogicalOverride(entrySample);
                     int incomingVint = com.openggf.game.session.EngineTiming.vIntRunCounter(services).objectClockSeed();
                     host.loadAct(session, zone[0], 0);
-                    assertTrue(host.initialVintRunCount() - incomingVint > 0,
-                            "actual initial PLC/title waits must advance the inherited V-int before initial deformation");
-                    assertEquals(host.initialVintRunCount() + 25, host.context().getObjectManager().getVblaCounter(),
-                            "outer load completion must retain initial waits plus the25 title leave waits");
-                    assertEquals(26, views.preparations, "one leading BuildSprites plus 25 leave iterations");
-                    assertEquals(25, driver.nativeSamples, "each real title wait must sample the shared input once");
+                    assertEquals(incomingVint, host.initialVintRunCount(),
+                            "structural load does not execute hidden title waits");
+                    assertEquals(0, host.context().getObjectManager().getFrameCounter());
+                    int titleWaits = driver.finishTitle(entrySample);
+                    assertTrue(titleWaits > 25, "arrival/upload precede the 25 native leave waits");
+                    assertEquals(incomingVint + titleWaits, host.context().getObjectManager().getVblaCounter());
+                    assertEquals(26, host.context().getObjectManager().getFrameCounter(),
+                            "one leading object pass plus the 25 native leave passes");
+                    assertEquals(1 + titleWaits, views.preparations, "load page and each visible title wait");
+                    assertEquals(titleWaits, driver.nativeSamples, "each represented title wait samples input once");
                     assertEquals(0, input.updates, "the native wait sample port never advances outer input");
                     assertEquals(Sonic2CompetitionPause.convertLogical(entrySample.player1()) & 0xFF00,
                             host.nativePause().player1ControllerWord());
@@ -384,8 +402,9 @@ class TestSonic2NativeCompetitionHost {
             assertTrue(frame.claim(PlcLifecyclePhase.TWO_PLAYER_RESULTS));
             assertEquals(NativeMenuScreen.Exit.NONE, menus.update(input, false));
             assertEquals(initialUpdates + 1, input.updates, "the actual controller advances input exactly once");
-            assertEquals(Sonic2CompetitionSession.Phase.ACT, session.phase());
-            assertEquals(1, session.act());
+            assertEquals(Sonic2CompetitionSession.Phase.ACT_RESULTS, session.phase());
+            assertEquals(0, session.act());
+            assertTrue(screen.actTransitionPending());
             assertEquals(0, host.profile().act(), "screen update must only queue the next native act");
             assertSame(outgoingObjects, mode.getObjectManager());
             assertEquals(outgoingPasses, outgoingObjects.getFrameCounter(), "the results token cannot run entry objects");
@@ -394,17 +413,30 @@ class TestSonic2NativeCompetitionHost {
             frame.prepareAfterLoop(PlcLifecyclePhase.TWO_PLAYER_RESULTS);
             return null;
         });
-        // runLogicalIteration finished the outgoing token. The real afterFrame
-        // owner can now run all 26 entry walks on this same context's lifecycle.
-        input.setLogicalOverride(NEUTRAL);
         assertTrue(menus.completeFrame());
+        assertEquals(0, host.profile().act(), "confirmation alone does not complete Pal_FadeToBlack");
+        input.setLogicalOverride(NEUTRAL);
+        // Level (s2.asm:4757-4765): each fade wait still belongs to the outgoing results world.
+        int fadeWaits = 0;
+        while (screen.actTransitionPending()) {
+            assertTrue(fadeWaits++ < 22);
+            mode.plcFrameLifecycle().runLogicalIteration(() -> { }, frame -> {
+                frame.claim(PlcLifecyclePhase.TWO_PLAYER_RESULTS);
+                menus.update(input, false);
+                frame.prepareAfterLoop(PlcLifecyclePhase.TWO_PLAYER_RESULTS);
+                return null;
+            });
+            assertTrue(menus.completeFrame());
+        }
+        assertEquals(22, fadeWaits);
         assertEquals(1, host.profile().act());
         assertSame(mode, host.context());
+        assertEquals(0, mode.getObjectManager().getFrameCounter(), "act assembly has no hidden object passes");
+        int entryWaits = driver.finishTitle(NEUTRAL);
         assertEquals(26, mode.getObjectManager().getFrameCounter());
         assertFalse(menus.completeFrame(), "the controller consumes completion once");
-        assertEquals(26, mode.getObjectManager().getFrameCounter());
-        assertEquals(initialUpdates + 1, input.updates, "afterFrame does not advance the outgoing input again");
-        assertEquals(initialSamples + 25, driver.nativeSamples);
+        assertEquals(initialUpdates + 23, input.updates, "one outer input update per confirmation/fade wait");
+        assertEquals(initialSamples + entryWaits, driver.nativeSamples);
         assertEquals(0, host.nativePause().player1ControllerWord());
         assertEquals(0, host.nativePause().player2ControllerWord());
     }
@@ -1574,6 +1606,10 @@ class TestSonic2NativeCompetitionHost {
             });
         }
 
+        private int finishTitle(LogicalInputSnapshot input) {
+            return Sonic2CompetitionTestFlow.finishTitle(host, () -> tick(input));
+        }
+
         private void ticks(int count, LogicalInputSnapshot input) {
             int completed = 0;
             for (int attempts = 0; completed < count && attempts < count + 2; attempts++) {
@@ -1618,7 +1654,13 @@ class TestSonic2NativeCompetitionHost {
             var objects = context.getObjectManager();
             var lifecycle = context.getWorldSession().getGameModule().getGameService(Sonic2CompetitionLifecycle.class);
             assertNotNull(lifecycle);
-            if (context.getLevelManager().getFrameCounter() == 0) {
+            if (context.getLevelManager().getFrameCounter() == 0 && objects.getFrameCounter() == 0) {
+                // Level_TtlCard (s2.asm:4914-4949) precedes the first player/object pass.
+                assertEquals(0, lifecycle.nativeRoutineByte(0));
+                assertEquals(0, lifecycle.nativeRoutineByte(1));
+                assertEquals(0, session.levelState(0).getTimerFrames());
+                assertEquals(0, session.levelState(1).getTimerFrames());
+            } else if (context.getLevelManager().getFrameCounter() == 0) {
                 if (objects.getFrameCounter() == 1) {
                     entryVInt = objects.getVblaCounter();
                     lastEntryPass = 0;

@@ -42,6 +42,7 @@ final class NativeTeleportTestWorld {
         session.updateMenu(LogicalInputSnapshot.ofPlayers(
                 PlayerInputState.of(0,0,0,0,true,true), PlayerInputState.neutral()), true);
         host.loadAct(session, 0, 0);
+        Sonic2CompetitionTestFlow.finishTitle(host, this::tick);
     }
     /** Qualify the transaction before its production operational gate is enabled. */
     void qualifyTeleport() {

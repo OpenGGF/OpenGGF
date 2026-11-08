@@ -156,24 +156,24 @@
     "sha256" : "54760b3bf5dbc09098925557f89920fe4060be5751c68c3bb1fc29b6b08688b2"
   },
   "provenance" : {
-    "producer" : "RoutePlanner observed-lock repair",
-    "engine" : "openggf 0.8.prerelease-b7076530a-dirty stageplay-s2-competition-title/1",
-    "source" : "preserved traversal ff20f1f07ac73e8f38926488070524502344c9363ad9f6b8ff831b16ea17153f; authored 117 neutral lock rows",
+    "producer" : "RoutePlanner prefix-search/4 goal program",
+    "engine" : "openggf 0.8.prerelease-ce26118f8-dirty stageplay-s2-competition-title/1",
+    "source" : "authored after a 2486-row prefix toward legs [drop-beyond-upper-floor, linked-cage-approach, slot-spinning, p2-lower-path, p2-near-native-flip-tiles, mid-flip-visible-after-two-human-traversal]",
     "notes" : [ ]
   },
   "qualification" : [ {
-    "scope" : "ENGINE",
-    "passed" : true,
-    "content" : "25eba36351378cfa860bd67f901a98593ad5164279cd003fca20e4b2a648daee",
-    "environment" : "openggf 0.8.prerelease-b7076530a-dirty stageplay-s2-competition-title/1",
-    "rows" : 2486
-  }, {
     "scope" : "BIZHAWK",
     "passed" : true,
     "content" : "25eba36351378cfa860bd67f901a98593ad5164279cd003fca20e4b2a648daee",
     "environment" : "BizHawk2.11/GPGX cold read-only required-goals movie 92070b90f795cdd43a8d6c66634dbc8c6421dbe3f921fddb065457864caf5891; accepted comparison boundary 2235",
     "rows" : 2486,
     "coverage" : [ "slot-in-use-in-view", "resident-nonflat-cell-in-view" ]
+  }, {
+    "scope" : "ENGINE",
+    "passed" : true,
+    "content" : "25eba36351378cfa860bd67f901a98593ad5164279cd003fca20e4b2a648daee",
+    "environment" : "openggf 0.8.prerelease-ce26118f8-dirty stageplay-s2-competition-title/1",
+    "rows" : 2486
   } ],
   "native" : {
     "entry" : {

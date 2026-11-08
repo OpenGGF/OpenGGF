@@ -85,6 +85,7 @@ class TestSonic2CompetitionViewsPixels {
             session.updateMenu(LogicalInputSnapshot.ofPlayers(
                     PlayerInputState.of(menuMask, menuMask, menuMask, menuMask, true, true), PlayerInputState.neutral()), true);
             host.loadAct(session, zone, 0);
+            Sonic2CompetitionTestFlow.finishTitle(host, () -> step(host, input));
             var resident=host.context().getWorldSession().getGameModule().getGameService(Sonic2CompetitionArtResidency.class);
             for (int tile=0;tile<22;tile++) assertArrayEquals(TestEnvironment.currentRom().readBytes(0x4134C+tile*32,32),
                     resident.patternBytes(0x6E2+tile), "Hud_Base field cell source slot "+Integer.toHexString(0x6E2+tile));
@@ -157,6 +158,7 @@ class TestSonic2CompetitionViewsPixels {
             session.updateMenu(LogicalInputSnapshot.ofPlayers(
                     PlayerInputState.of(0, 0, 0, 0, true, true), PlayerInputState.neutral()), true);
             host.loadAct(session, 0, 0);
+            Sonic2CompetitionTestFlow.finishTitle(host, () -> step(host, input));
             var human = session.player(0);
             human.setAir(true); human.setHurt(true); human.setAir(false);
             assertTrue(human.shouldRefreshRenderFlagThisFrame(), "HurtStop owns direct display on landing");

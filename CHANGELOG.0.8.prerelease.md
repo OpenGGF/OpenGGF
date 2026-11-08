@@ -49,8 +49,9 @@ under the matching area heading; see the
   It splits at progressive line 216 through the shared Competition renderer; each
   half draws its player's planes, sprites and HUD from the ROM's two-player art.
   Title and menu transitions fade, and both halves show the complete title card
-  before player control and the level clock start. Signposts publish their native
-  two-player pole and animated face art; act timers spend the interrupt before a
+  before player control and the level clock start. Stageplay's visible flip checks
+  use the same complete native cells as the progressive display. Signposts publish
+  their native two-player pole and animated face art; act timers spend the interrupt before a
   finish crossing. Teleport monitors swap the players' positions,
   speeds, cameras and backgrounds. Badnik, bumper, bonus-block and cage
   scores go to the player who earned them, and the Casino Night slot machines

@@ -93,24 +93,24 @@
     "sha256" : "4f22a8544df182474589b9d1ecaaef8246768ce291ba032e8d3e3316087ecddb"
   },
   "provenance" : {
-    "producer" : "RoutePlanner observed-lock repair",
-    "engine" : "openggf 0.8.prerelease-b7076530a-dirty stageplay-s2-competition-title/1",
-    "source" : "preserved traversal d6adb3648a2178869e3a126f4aabb1dc33550507419d2f87a627ae7fdeb1438b; authored 117 neutral lock rows",
+    "producer" : "RoutePlanner prefix-search/4 goal program",
+    "engine" : "openggf 0.8.prerelease-ce26118f8-dirty stageplay-s2-competition-title/1",
+    "source" : "authored after a 1976-row prefix toward legs [drop-beyond-upper-floor, linked-cage-approach, slot-spinning]",
     "notes" : [ ]
   },
   "qualification" : [ {
-    "scope" : "ENGINE",
-    "passed" : true,
-    "content" : "7e24b954d7f6ba3641b018b4a8690fd344805b6702da8bbf548d2432f2eb3afb",
-    "environment" : "openggf 0.8.prerelease-b7076530a-dirty stageplay-s2-competition-title/1",
-    "rows" : 1976
-  }, {
     "scope" : "BIZHAWK",
     "passed" : true,
     "content" : "7e24b954d7f6ba3641b018b4a8690fd344805b6702da8bbf548d2432f2eb3afb",
     "environment" : "BizHawk2.11/GPGX cold read-only required-goals movie 92070b90f795cdd43a8d6c66634dbc8c6421dbe3f921fddb065457864caf5891; accepted comparison boundary 2235 ; identical input prefix covers slot at native 2045",
     "rows" : 1976,
     "coverage" : [ "slot-in-use-in-view" ]
+  }, {
+    "scope" : "ENGINE",
+    "passed" : true,
+    "content" : "7e24b954d7f6ba3641b018b4a8690fd344805b6702da8bbf548d2432f2eb3afb",
+    "environment" : "openggf 0.8.prerelease-ce26118f8-dirty stageplay-s2-competition-title/1",
+    "rows" : 1976
   } ],
   "native" : {
     "entry" : {

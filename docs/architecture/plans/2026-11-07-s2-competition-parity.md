@@ -168,6 +168,29 @@ Before/after phase sheets, boundary clocks, native receipts and focused-check
 results are external under `~/Videos/OGGF/s2-competition/lanes/flow/REPORT.md`.
 The lead owns integration and wider validation.
 
+## Flow integration follow-up (2026-11-08)
+
+The follow-up branch `feature/ai-s2-competition-flow-fix` starts at integrated
+`ce26118f8`. The lead's28 failures comprise23 probes whose load/menu assumptions
+predated visible startup waits, two tests using the retired field projection,
+a timer probe injected before control release, and two CNZ route consumers of
+an outdated read-only pixel witness. Positioned probes now drive actual native
+continuations before setup; exact timer, PLC, SST, art-publication and rewind
+expectations remain. HUD and Kosinski tests compare all16 native cell rows.
+
+The CNZ witness now reads the progressive448-line views and both cell halves.
+Resident ROM payload, non-flat pose, complete-cell and framebuffer-colour checks
+remain, as do wrong-colour and missing-P2-input negative controls. Both CNZ
+routes were requalified through StageplayRoutePlanner with the entire existing
+tape as immutable prefix. Scripts, content identities, native witnesses and
+exported BK2 bytes are unchanged; the flip movie remains SHA-256
+`92070b90f795cdd43a8d6c66634dbc8c6421dbe3f921fddb065457864caf5891`.
+The prior native goal receipt remains applicable to identical input bytes.
+
+No gameplay, HUD/V-int ordering or progressive renderer code changed. The
+follow-up report appends each failure's disposition and the exact integrated
+selection/limits under `~/Videos/OGGF/s2-competition/lanes/flow/REPORT.md`.
+
 ## Rejected approaches
 
 | Approach | Evidence and replacement |
