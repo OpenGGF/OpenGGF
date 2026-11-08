@@ -898,6 +898,92 @@
       "palette": "../../palette.yaml",
       "form": "gilded",
       "file": "super_pose-02.png"
+    },
+    {
+      "id": "tiny_passenger-16",
+      "group": "passengers",
+      "frame_set": "s3k_tiny_passenger",
+      "index": 22,
+      "native_source_label": "word_6061C",
+      "native_art_label": "ArtKosM_SonicPlaneEnding",
+      "mapping_source": "docs/skdisasm/General/Ending/Map - Sonic Plane Ending.asm",
+      "dimensions": [
+        16,
+        8
+      ],
+      "hotspot": [
+        12,
+        4
+      ],
+      "bounds_px": [
+        -12,
+        -4,
+        16,
+        8
+      ],
+      "pieces": [
+        [
+          -12,
+          -4,
+          2,
+          1,
+          132,
+          0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "palette_line": 0,
+      "relative_piece_palette_lines": [
+        0
+      ],
+      "palette": "../../palette.yaml",
+      "form": "normal",
+      "file": "tiny_passenger-16.png"
+    },
+    {
+      "id": "tiny_passenger-17",
+      "group": "passengers",
+      "frame_set": "s3k_tiny_passenger",
+      "index": 23,
+      "native_source_label": "word_60624",
+      "native_art_label": "ArtKosM_SonicPlaneEnding",
+      "mapping_source": "docs/skdisasm/General/Ending/Map - Sonic Plane Ending.asm",
+      "dimensions": [
+        8,
+        8
+      ],
+      "hotspot": [
+        4,
+        4
+      ],
+      "bounds_px": [
+        -4,
+        -4,
+        8,
+        8
+      ],
+      "pieces": [
+        [
+          -4,
+          -4,
+          1,
+          1,
+          134,
+          0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "palette_line": 0,
+      "relative_piece_palette_lines": [
+        0
+      ],
+      "palette": "../../palette.yaml",
+      "form": "normal",
+      "file": "tiny_passenger-17.png"
     }
   ]
 }
