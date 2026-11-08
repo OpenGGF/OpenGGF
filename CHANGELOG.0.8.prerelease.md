@@ -46,7 +46,8 @@ under the matching area heading; see the
   Custom team archetypes now use the solo Sonic route without a sidekick.
   Presentation font inventories now include the native small HUD letters in all
   three hosts and S3K per-zone title/results-name letters. S3K HUD presentation
-  now consumes custom life icons and native-font names. Remaining surface wiring and
+  now consumes custom life icons and native-font names; act/Blue Sphere results
+  and independent 1-up faces also consume presentation slots. Remaining surface wiring and
   packaging MICA’s presentation art remain pending. Stock S2 Tails-alone results
   now show the region-selected Miles/Tails name instead of Sonic.
   MICA's Gilded Super/Hyper forms use owner-bound profiles and her jade-to-gold

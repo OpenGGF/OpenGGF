@@ -453,3 +453,6 @@ Status log (times UTC):
 
 - 2026-11-08: W4 S3K Blue Sphere results now use the same composed name bank,
   preserving the native special-stage tile compensation and palette selection.
+
+- 2026-11-08: W4 S3K 1-up art uses its independent presentation slot at the
+  existing monitor life-icon mapping offset. Missing slots retain the native face.

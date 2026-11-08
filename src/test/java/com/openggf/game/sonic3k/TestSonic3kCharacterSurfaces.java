@@ -73,6 +73,22 @@ class TestSonic3kCharacterSurfaces {
             }
         }
     }
+    @Test void oneUpFaceIsIndependentOfHudAndPreservesNativeFallback() throws Exception {
+        var rom = GameServices.rom().getRom();
+        byte[] face = new byte[256];
+        java.util.Arrays.fill(face, (byte) 3);
+        var presentation = new CharacterPresentation("MICA", null, Map.of(Host.S3K,
+                new Art(mica().art().get(Host.S3K).hudLifeIcon(), new Image(16,16,face), null, null)), Map.of());
+        for (int address : new int[]{Sonic3kConstants.ART_NEM_SONIC_LIFE_ICON_ADDR,
+                Sonic3kConstants.ART_NEM_TAILS_LIFE_ICON_ADDR, Sonic3kConstants.ART_NEM_KNUCKLES_LIFE_ICON_ADDR}) {
+            var stock = PatternDecompressor.nemesis(rom, address);
+            assertSame(stock, Sonic3kCharacterPresentation.oneUp(stock, null));
+            assertSame(stock, Sonic3kCharacterPresentation.oneUp(stock, mica()));
+            var custom = Sonic3kCharacterPresentation.oneUp(stock, presentation);
+            assertArrayEquals(face, CharacterNameComposer.extract(custom,0,2,2,0,0,16,16).pixels());
+            for (int tile = 4; tile < stock.length; tile++) assertSame(stock[tile], custom[tile]);
+        }
+    }
     private static Map<Character, Image> resultsFont(com.openggf.data.Rom rom) throws Exception {
         var font = new java.util.LinkedHashMap<>(Sonic3kCharacterFont.results(rom));
         Sonic3kCharacterFont.title(rom).forEach(font::putIfAbsent);

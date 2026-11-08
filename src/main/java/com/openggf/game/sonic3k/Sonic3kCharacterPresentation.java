@@ -44,6 +44,19 @@ public final class Sonic3kCharacterPresentation {
         return result;
     }
 
+    /** Monitor face has its own slot; an absent slot retains the native face. */
+    public static Pattern[] oneUp(Pattern[] nativeTiles, CharacterPresentation presentation) {
+        if (presentation == null) return nativeTiles;
+        var art = presentation.art().get(Host.S3K);
+        if (art == null || art.oneUpFace() == null) return nativeTiles;
+        var face = art.oneUpFace();
+        if (face.width() != 16 || face.height() != 16)
+            throw new IllegalArgumentException("S3K 1-up face must be 16 by 16 pixels");
+        var result = nativeTiles.clone();
+        System.arraycopy(CharacterNameComposer.tiles(face), 0, result, 0, 4);
+        return result;
+    }
+
     /** Derived render data only: native queued jobs and their timing remain unchanged. */
     public record ResultsArt(Pattern[] patterns,
             java.util.List<com.openggf.level.render.SpriteMappingFrame> mappings) { }

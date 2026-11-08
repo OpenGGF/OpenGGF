@@ -448,17 +448,20 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
 
         // Extend pattern array to cover life icon at offset 0x310
         // (1-Up monitor icon uses ArtTile_Player_Life_Icon = ArtTile_Monitors + $310)
+        Pattern[] monitorLifePatterns = Sonic3kCharacterPresentation.oneUp(
+                PatternDecompressor.nemesis(rom, resolveLifeIconAddr()),
+                Sonic3kCharacterPresentation.active());
         int lifeArtOffset = 0x310;
-        int requiredSize = lifeArtOffset + (hudLivesPatterns != null ? hudLivesPatterns.length : 0);
+        int requiredSize = lifeArtOffset + (monitorLifePatterns != null ? monitorLifePatterns.length : 0);
         requiredSize = Math.max(requiredSize, monitorBasePatterns.length);
 
         Pattern[] monitorPatterns = new Pattern[requiredSize];
         System.arraycopy(monitorBasePatterns, 0, monitorPatterns, 0, monitorBasePatterns.length);
 
         // Copy life icon patterns at offset 0x310
-        if (hudLivesPatterns != null && hudLivesPatterns.length > 0) {
-            System.arraycopy(hudLivesPatterns, 0, monitorPatterns, lifeArtOffset,
-                    Math.min(hudLivesPatterns.length, monitorPatterns.length - lifeArtOffset));
+        if (monitorLifePatterns != null && monitorLifePatterns.length > 0) {
+            System.arraycopy(monitorLifePatterns, 0, monitorPatterns, lifeArtOffset,
+                    Math.min(monitorLifePatterns.length, monitorPatterns.length - lifeArtOffset));
         }
 
         // Fill gaps with empty patterns to prevent NPEs
