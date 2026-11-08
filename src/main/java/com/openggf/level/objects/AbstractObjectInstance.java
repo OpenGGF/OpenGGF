@@ -755,6 +755,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * @return true if the object is within the camera viewport
      */
     protected boolean isOnScreen() {
+        if (ObjectDrawInternalAccess.nativeDisplayOwned(this,tryServices())) return renderFlagOnScreen;
         return cameraBounds.contains(getX(), getY()) || stageplayVisible(getX(), getY(), 0, 0);
     }
 
@@ -790,7 +791,14 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * first pass.
      */
     public boolean isWithinSolidContactBounds() {
+        if (ObjectDrawInternalAccess.nativeDisplayOwned(this,tryServices())) return renderFlagOnScreen;
         return renderFlagPassSeen ? renderFlagOnScreen : isWithinOnScreenRenderBounds();
+    }
+
+    /** Native publication uses the same captured render bit read by object and solid logic. */
+    final void captureNativeDisplayVisibility(boolean onScreen) {
+        renderFlagOnScreen = onScreen;
+        renderFlagPassSeen = true;
     }
 
     /**
@@ -808,6 +816,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      *                         {@code height_pixels} (S3K Render_Sprites)
      */
     final void captureRenderFlagOnScreen(boolean heightPixelsTest) {
+        if (ObjectDrawInternalAccess.nativeDisplayOwned(this,tryServices())) return;
         if (getSpawn() == null) return;
         int yRadius = heightPixelsTest || usesCustomRenderHeight()
                 ? getOnScreenHalfHeight()
@@ -1021,6 +1030,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * @return true if the object is within the extended camera viewport
      */
     protected boolean isOnScreen(int margin) {
+        if (ObjectDrawInternalAccess.nativeDisplayOwned(this,tryServices())) return renderFlagOnScreen;
         return cameraBounds.contains(getX(), getY(), margin) || stageplayVisible(getX(), getY(), margin, margin);
     }
 

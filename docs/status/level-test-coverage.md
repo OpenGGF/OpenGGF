@@ -1,5 +1,13 @@
 # Level test coverage backlog
 
+S2 Competition (2026-11-08): the [Competition parity plan](../architecture/plans/2026-11-07-s2-competition-parity.md#route-and-act-obligations)
+records the EHZ/MCZ/CNZ and special-stage route obligations as an LTS-08
+auxiliary-mode increment. Native state prefixes match for EHZ 1, MCZ 1, CNZ 1
+and the competitive special stage up to the first native lag frame or open
+frontier; act 2 routes, results, tiebreaker and native pictures beyond the
+sampled cuts remain open. Participants are fixed by the ROM; viewport width is
+unassessed and held rewind is off by decision. No act is certified.
+
 LRZ title-owned enemy art (2026-11-07): the [submission audit](../architecture/audits/2026-11-07-lrz-enemy-art-submission.md)
 and [Act1](../architecture/validation/levels/s3k-lrz-act1.md) /
 [Act2](../architecture/validation/levels/s3k-lrz-act2.md) matrices record the native

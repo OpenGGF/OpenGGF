@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.game.sonic2.competition.view.Sonic2NativeDisplaySource;
+import com.openggf.game.sonic2.competition.view.Sonic2CompetitionDisplayInputs.*;
 import com.openggf.level.objects.ObjectVisualFacing;
 
 import com.openggf.game.PlayableEntity;
@@ -37,7 +39,7 @@ import java.util.Map;
  * one log at a time toward the sidekick index while Tails is standing.
  */
 public class BridgeObjectInstance extends BoxObjectInstance
-        implements SlopedSolidProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+        implements Sonic2NativeDisplaySource, SlopedSolidProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
     // Obj11 owns bridge logs and log-segment children; sag is geometric, not facing.
 
     private static final int LOG_WIDTH = 16;
@@ -460,6 +462,32 @@ public class BridgeObjectInstance extends BoxObjectInstance
             return 0;
         }
         return Math.min(index, logCount - 1);
+    }
+
+    @Override
+    public ObjectSlot nativeDisplaySlot() {
+        // Obj11_EHZ / Obj11_Unload (s2.asm:22106-22122; s2.asm:22053-22076):
+        // parent runs collision/unload only; allocated segments call DisplaySprite3.
+        return null;
+    }
+
+    ObjectSlot nativeSegmentDisplay(int firstLogX,int count) {
+        if (isDestroyed()) return null;
+        if (count<=0 || count>8 || (count&1)!=0)
+            throw new IllegalStateException("Unqualified Obj11 segment count: "+count);
+        var children=new java.util.ArrayList<Child>(count);
+        int first=(firstLogX-romLeftEdgeX())/LOG_WIDTH;
+        for(int i=0;i<count;i++) {
+            int index=first+i;
+            int offset=index<logYOffsets.length ? logYOffsets[index] : 0;
+            children.add(new Child((firstLogX+i*LOG_WIDTH)&0xFFFF,(spawn.y()+offset)&0xFFFF,0));
+        }
+        // Obj11_Init (s2.asm:21964-21988): first centre=sub6_x-8; second
+        // centre=sub2_x + remainder*3 byte offset, then -8. For reached even
+        // remainders this is the middle log's X-8. Both centres remain at Init Y.
+        int centre=firstLogX+(count/2)*LOG_WIDTH-8;
+        return new ObjectSlot(0x11,0x44,centre&0xFFFF,spawn.y()&0xFFFF,64,0,
+                new Mapping(0xFC70,0),0x41DB,new MultiSprite(0,64,0,children));
     }
 
     @Override

@@ -1052,6 +1052,8 @@ public final class LevelRenderer {
         }
     }
 
+    private com.openggf.game.internal.RetainedPlaneDescriptorSource nativeViewPlanes;
+
     void withNativeCompetitionView(NativeCompetitionRenderer.View view, Runnable draw) {
         if (nativeCompetitionScroll != null) throw new IllegalStateException("Nested native competition view");
         var camera = lm.camera;
@@ -1071,10 +1073,14 @@ public final class LevelRenderer {
         nativeCompetitionScroll = new LevelScrollPresentation(registers, view.horizontalScroll(),
                 null, null, null, null);
         lm.camera = projection;
+        nativeViewPlanes = view.planes();
+        lm.tilemapManager.setRetainedPlaneOverride(view.planes());
         try { draw.run(); }
         finally {
             lm.camera = camera;
             nativeCompetitionScroll = null;
+            nativeViewPlanes = null;
+            lm.tilemapManager.setRetainedPlaneOverride(null);
             currentScrollPresentation = previousScroll;
             currentAdvancedRenderFrameState = previousMode;
         }
@@ -1463,6 +1469,11 @@ public final class LevelRenderer {
             var image = layer == TilemapGpuRenderer.Layer.FOREGROUND
                     ? parameters.retainedForeground() : parameters.retainedBackground();
             return image.active() ? image : null;
+        }
+        if (nativeViewPlanes != null) {
+            var plane = layer == TilemapGpuRenderer.Layer.FOREGROUND
+                    ? nativeViewPlanes.foregroundPlane() : nativeViewPlanes.backgroundPlane();
+            return plane != null && plane.revision() != 0 ? plane : null;
         }
         if (!(lm.zoneFeatureProvider instanceof com.openggf.game.internal.RetainedPlaneDescriptorSource source)) {
             return null;

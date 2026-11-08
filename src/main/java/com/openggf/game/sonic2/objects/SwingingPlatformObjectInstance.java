@@ -1,5 +1,8 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.game.sonic2.competition.view.Sonic2NativeDisplaySource;
+import com.openggf.game.sonic2.competition.view.Sonic2CompetitionDisplayInputs.*;
+
 import com.openggf.level.objects.ObjectVisualFacing;
 
 import com.openggf.game.PlayableEntity;
@@ -66,7 +69,7 @@ import java.util.logging.Logger;
  * </ul>
  */
 public class SwingingPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+        implements Sonic2NativeDisplaySource, SolidObjectProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.NonDirectional {
     // Obj15 owns platforms, anchors and chains; swing/flight phase does not face a body.
 
     private static final Logger LOGGER = Logger.getLogger(SwingingPlatformObjectInstance.class.getName());
@@ -768,7 +771,7 @@ public class SwingingPlatformObjectInstance extends AbstractObjectInstance
         ctx.drawLine(x, y - 4, x, y + 4, 1.0f, 0.0f, 0.0f);
     }
 
-    private static final class SwingingPlatformDisplayChild extends AbstractObjectInstance implements RewindRecreatable {
+    private static final class SwingingPlatformDisplayChild extends AbstractObjectInstance implements RewindRecreatable, Sonic2NativeDisplaySource {
         private final SwingingPlatformObjectInstance parent;
         private int x;
         private int y;
@@ -801,6 +804,13 @@ public class SwingingPlatformObjectInstance extends AbstractObjectInstance
                     .orElse(null);
         }
 
+        @Override public java.util.List<DisplaySlot> nativeDisplaySlots() {
+            ObjectSlot display=nativeDisplaySlot();
+            return display==null ? java.util.List.of() : java.util.List.of(new DisplaySlot(getSlotIndex(),4,display));
+        }
+        @Override public ObjectSlot nativeDisplaySlot() {
+            return isDestroyed() || parent.isDestroyed() ? null : parent.nativeChainDisplay();
+        }
         private void syncFromParent() {
             this.x = parent.displayChildX;
             this.y = parent.displayChildY;
@@ -840,6 +850,24 @@ public class SwingingPlatformObjectInstance extends AbstractObjectInstance
         public boolean isHighPriority() {
             return false;
         }
+    }
+
+
+    // Obj15_Init (s2.asm:22466-22568): MCZ platform SST, independent of its display child.
+    @Override public ObjectSlot nativeDisplaySlot() {
+        if(isDestroyed()) return null;
+        int mapping=behaviorMode==BehaviorMode.TRAP ? 0x102DE : 0x10256;
+        return new ObjectSlot(0x15,4,x&0xFFFF,y&0xFFFF,24,8,
+                new Mapping(mapping,platformMappingFrame),0,null);
+    }
+    private ObjectSlot nativeChainDisplay() {
+        var children=new java.util.ArrayList<Child>();
+        for(int i=0;i<chainCount;i++) children.add(new Child(
+                (i==0 ? baseX : chainX[i-1])&0xFFFF,(i==0 ? baseY : chainY[i-1])&0xFFFF,i==0 ? 2 : 1));
+        // sub6 is overwritten with the chain's outer endpoint after selecting the SST culling centre.
+        if(children.size()>4) children.set(4,new Child(chainX[chainCount-1]&0xFFFF,chainY[chainCount-1]&0xFFFF,1));
+        return new ObjectSlot(0x15,0x54,displayChildX&0xFFFF,displayChildY&0xFFFF,0,0,
+                new Mapping(0x10256,0),0,new MultiSprite(1,72,80,children));
     }
 
 }

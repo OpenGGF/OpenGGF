@@ -80,8 +80,42 @@ class TestSonic2NativeMenuLaunch {
         }
     }
 
+    @Test
+    void titleTwoPlayerOpensTheCompetitionMenuAndStartsATwoHumanAct() throws Exception {
+        var settings = new GameplayCaptureSession.Settings(320, "sonic", "", "off", null, null, null);
+        try (var session = new GameplayCaptureSession(settings)) {
+            session.startAtTitle();
+            session.boot(RomTestUtils.ensureSonic2RomAvailable().toPath(), 0, 0, settings);
+            var modes = GameServices.module().getGameService(Sonic2NativeModeProvider.class);
+            assertTrue(modes.competitionAvailable(), "production qualification offers 2 PLAYER");
+            waitForTitle(session);
+            press(session, INPUT_DOWN, false);
+            assertEquals(1, ((TitleScreenManager) session.loop().getTitleScreenProvider()).getNativeMenuSelection());
+            assertNonblank(session.render());
+            press(session, 0, true);
+            for (int i = 0; i < 300 && session.loop().getCurrentGameMode() != GameMode.COMPETITION_MENU; i++) {
+                session.step(null);
+            }
+            assertEquals(GameMode.COMPETITION_MENU, session.loop().getCurrentGameMode());
+            for (int i = 0; i < 60; i++) session.step(null);
+            assertNonblank(session.render());
+            // LevelSelect2P: Start on the default EHZ cell (s2.asm:11844-11849).
+            press(session, 0, true);
+            for (int i = 0; i < 600 && session.loop().getCurrentGameMode() != GameMode.COMPETITION; i++) {
+                session.step(null);
+            }
+            assertEquals(GameMode.COMPETITION, session.loop().getCurrentGameMode());
+            for (int i = 0; i < 240; i++) session.step(null);
+            assertEquals(GameMode.COMPETITION, session.loop().getCurrentGameMode());
+            assertNonblank(session.render());
+        }
+    }
+
     private static void enterOptions(GameplayCaptureSession session) {
         waitForTitle(session);
+        // ONE PLAYER -> 2 PLAYER -> OPTIONS: the 2 PLAYER row is offered now that Competition is qualified.
+        press(session, INPUT_DOWN, false);
+        assertEquals(1, ((TitleScreenManager) session.loop().getTitleScreenProvider()).getNativeMenuSelection());
         press(session, INPUT_DOWN, false);
         assertEquals(2, ((TitleScreenManager) session.loop().getTitleScreenProvider()).getNativeMenuSelection());
         press(session, 0, true);

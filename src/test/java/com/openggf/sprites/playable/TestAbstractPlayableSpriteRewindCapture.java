@@ -58,18 +58,31 @@ class TestAbstractPlayableSpriteRewindCapture {
     void rewindReplaysNormalAndPoweredAwardsAcrossBonusAndWordWrapBoundaries() {
         for (int killsBeforeCapture : new int[] {15, 0x7FFF}) {
             Sonic sonic = new Sonic("sonic", (short) 100, (short) 200);
+            // 50bc64259/ec6c22055: Touch_KillEnemy and ResetOnFloor own a
+            // world-shared word (s2.asm:85514-85534, 38142-38147). Actor
+            // snapshots alone must not restore or clear another actor's chain.
+            var chain = GameModuleRegistry.getCurrent().getGameService(
+                    com.openggf.game.internal.BadnikChainPolicy.class);
+            chain.reset();
+            var registry = new com.openggf.game.rewind.RewindRegistry();
+            GameModuleRegistry.getCurrent().rewindAdapters().forEach(registry::register);
             for (int kill = 0; kill < killsBeforeCapture; kill++) {
                 sonic.incrementBadnikChain();
             }
             var saved = sonic.captureRewindState();
+            var worldSaved = registry.capture();
             int firstAward = killsBeforeCapture == 15 ? 10_000 : 1000;
             int secondAward = killsBeforeCapture == 15 ? 10_000 : 100;
             for (int replay = 0; replay < 2; replay++) {
+                registry.restore(worldSaved);
                 sonic.restoreRewindState(saved);
                 assertEquals(firstAward, sonic.incrementBadnikChain());
                 assertEquals(secondAward, PoweredBadnikScoring.incrementChain(sonic));
                 sonic.setAir(true);
                 sonic.setAir(false);
+                assertEquals(killsBeforeCapture == 15 ? 34 : 2, chain.word(),
+                        "direct airborne-bit writes do not own ResetOnFloor");
+                PlayableNativeFloorReset.resetChain(sonic);
                 assertEquals(100, sonic.incrementBadnikChain());
             }
         }

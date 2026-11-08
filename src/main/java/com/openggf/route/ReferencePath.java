@@ -152,7 +152,37 @@ public final class ReferencePath {
             }
             b[i] = p2.isEmpty() ? null : p2.get(i);
         }
-        return new ReferencePath(launch, source, xs, ys, epochs, environment, from, to, a, b);
+        return retainParticipants(new ReferencePath(launch, source, xs, ys, epochs, environment, from, to, a, b));
+    }
+
+    private int[] participantXs, participantYs;
+    private boolean[] participantPresent;
+
+    /** Copied P2 centre observations, when a two-human reference must retain both lanes. */
+    public ReferencePath withParticipantPositions(int[] xs, int[] ys) {
+        boolean[] present=new boolean[xs.length];Arrays.fill(present,true);
+        return withParticipantPositions(xs,ys,present);
+    }
+
+    public ReferencePath withParticipantPositions(int[] xs,int[] ys,boolean[] present) {
+        if(xs.length!=this.xs.length || ys.length!=xs.length || present.length!=xs.length) throw new IllegalArgumentException("one P2 centre/presence per row");
+        var copy=new ReferencePath(launch,source,this.xs,this.ys,epochs,environment,from,to,p1States,p2States);
+        copy.participantXs=xs.clone();copy.participantYs=ys.clone();copy.participantPresent=present.clone();return copy;
+    }
+
+    private ReferencePath retainParticipants(ReferencePath copy) {
+        copy.participantXs=participantXs;copy.participantYs=participantYs;copy.participantPresent=participantPresent;
+        return copy;
+    }
+
+    double participantDistance(RouteSample sample,int index) {
+        if(participantXs==null) return 0;
+        if(!participantPresent[index]) return sample.p2().isEmpty()?0:1_000_000;
+        if(sample.p2().isEmpty()) return 1_000_000;
+        var p=sample.p2().get();
+        int dy=participantYs[index]-p.centreY();int range=sample.verticalWrap();
+        if(range>0) {dy=Math.floorMod(dy,range);if(dy>range/2)dy-=range;}
+        return Math.hypot(participantXs[index]-p.centreX(),dy);
     }
 
     /** Whether the reference carries exact player states. */
@@ -181,7 +211,7 @@ public final class ReferencePath {
 
     /** The same path, followed from index {@code from} until index {@code to} is reached. */
     public ReferencePath window(int from, int to) {
-        return new ReferencePath(launch, source, xs, ys, epochs, environment, from, to, p1States, p2States);
+        return retainParticipants(new ReferencePath(launch, source, xs, ys, epochs, environment, from, to, p1States, p2States));
     }
 
     public int size() {

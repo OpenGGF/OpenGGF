@@ -58,6 +58,27 @@ public class SignpostSparkleObjectInstance extends AbstractObjectInstance
         }
     }
 
+    /** Native subclasses may retain an explicit placement identity without changing animation. */
+    protected SignpostSparkleObjectInstance(ObjectSpawn spawn) {
+        super(spawn, "signpost_sparkle_" + spawn.x() + "_" + spawn.y());
+        this.worldX = spawn.x();
+        this.worldY = spawn.y();
+
+        // Try to get actual sparkle frame info from RingManager
+        ObjectServices owner = tryServices();
+        RingManager ringManager = owner != null ? owner.ringManager() : null;
+        if (ringManager != null) {
+            int count = ringManager.getSparkleFrameCount();
+            if (count > 0) {
+                totalFrames = count;
+            }
+            sparkleStartIndex = ringManager.getSparkleStartIndex();
+        }
+    }
+
+    /** Current mapping frame, including the owning ring sheet’s sparkle prefix. */
+    protected final int displayedMappingFrame() { return sparkleStartIndex + animFrame; }
+
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
         // Ring_Delete is its own routine, so DeleteObject costs one further execution

@@ -1,5 +1,9 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.game.sonic2.competition.view.Sonic2NativeDisplaySource;
+import com.openggf.game.sonic2.competition.view.Sonic2CompetitionDisplayInputs.*;
+
+
 import com.openggf.level.objects.ObjectVisualFacing;
 
 import com.openggf.debug.DebugRenderContext;
@@ -58,7 +62,7 @@ import java.util.logging.Logger;
  * </ul>
  */
 public class MCZDrawbridgeObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+        implements Sonic2NativeDisplaySource, SolidObjectProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
     // Obj81 rotates eight logs; hinge placement and angular direction are geometric, not facing.
 
     private static final Logger LOGGER = Logger.getLogger(MCZDrawbridgeObjectInstance.class.getName());
@@ -122,6 +126,7 @@ public class MCZDrawbridgeObjectInstance extends AbstractObjectInstance
     // ROM Obj81_Init allocates a SECOND SST slot for its multi-sprite log child
     // (see reserveMultiSpriteChildSlot). Tracked so it is allocated exactly once.
     private boolean childSlotReserved;
+    private int nativeChildSlot=-1;
 
     public MCZDrawbridgeObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
@@ -289,7 +294,8 @@ public class MCZDrawbridgeObjectInstance extends AbstractObjectInstance
             return;
         }
         childSlotReserved = true;
-        svc.objectManager().allocateChildSlotsAfter(spawn, 1, parentSlot);
+        int[] slots=svc.objectManager().allocateChildSlotsAfter(spawn, 1, parentSlot);
+        if(slots.length>0) nativeChildSlot=slots[0];
     }
 
     /**
@@ -473,6 +479,26 @@ public class MCZDrawbridgeObjectInstance extends AbstractObjectInstance
         // Draw angle indicator
         String angleText = String.format("A:%02X", angle & 0xFF);
         // (Text rendering not available in GLCommand, but could add later)
+    }
+
+
+    /** Obj81_Init (s2.asm:57063-57115): parent SST and allocated subsprite SST cull independently. */
+    @Override public ObjectSlot nativeDisplaySlot() {
+        throw new IllegalStateException("Obj81 has multiple SST owners; use projectAll");
+    }
+    @Override public java.util.List<DisplaySlot> nativeDisplaySlots() {
+        if(isDestroyed()) return java.util.List.of();
+        var slots=new java.util.ArrayList<DisplaySlot>();
+        // loc_2A154 (s2.asm:57141-57150): completion changes parent width8 to64.
+        slots.add(new DisplaySlot(getSlotIndex(),5,new ObjectSlot(0x81,4,collisionX&0xFFFF,
+                collisionY&0xFFFF,bridgeDown?64:8,0,new Mapping(0x2A24E,0),0x621E,null)));
+        if(nativeChildSlot>=0) {
+            var children=new java.util.ArrayList<Child>();
+            for(int i=0;i<NUM_LOG_SEGMENTS;i++) children.add(new Child(logX[i]&0xFFFF,logY[i]&0xFFFF,1));
+            slots.add(new DisplaySlot(nativeChildSlot,5,new ObjectSlot(0x81,0x54,logX[4]&0xFFFF,
+                    logY[4]&0xFFFF,0,0,new Mapping(0x2A24E,0),0x621E,new MultiSprite(0,64,64,children))));
+        }
+        return java.util.List.copyOf(slots);
     }
 
 }

@@ -37,16 +37,11 @@ public final class Sonic2CompetitionTerrain extends AbstractLevel {
             palettes[line].fromSegaFormat(Arrays.copyOfRange(zonePalette, (line - 1) * 32, line * 32));
         }
 
-        byte[] initialArt = source.patternBytes();
-        patternCount = records(initialArt, Pattern.PATTERN_SIZE_IN_ROM);
+        // Native art is installed by the competition module before publication.
+        // Geometry decode has no authority to publish the unrelated ordinary pattern bank.
+        patternCount = 2048;
         patterns = new Pattern[patternCount];
-        for (int i = 0; i < patternCount; i++) {
-            patterns[i] = new Pattern();
-            patterns[i].fromSegaFormat(record(initialArt, i, Pattern.PATTERN_SIZE_IN_ROM));
-        }
-        // These are native 8x16 VRAM references, including PLC/animated slots
-        // outside LoadZoneTiles' initial art. Do not validate them against or
-        // pad the unrelated ordinary 8x8 pattern cache. Native views read VRAM.
+        java.util.Arrays.setAll(patterns, i -> new Pattern());
         byte[] blockTable = art.blockTableBytes();
         chunkCount = records(blockTable, Chunk.CHUNK_SIZE_IN_ROM);
         int[] primary = indices(source.primaryCollisionBytes(), chunkCount);
@@ -77,6 +72,10 @@ public final class Sonic2CompetitionTerrain extends AbstractLevel {
         objects = profile.objects();
         rings = profile.rings();
         ringSpriteSheet = new Sonic2RingArt(rom, RomByteReader.fromRom(rom)).load();
+    }
+
+    void bindFieldPatterns(com.openggf.game.sonic2.competition.view.Sonic2CompetitionFieldPatterns fields) {
+        patterns = fields.live(); patternCount = patterns.length;
     }
 
     public static Sonic2CompetitionTerrain decode(Rom rom, Sonic2CompetitionNativeArt art) throws IOException {

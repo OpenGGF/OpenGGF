@@ -1672,7 +1672,7 @@ CONSTRUCTOR com.openggf.game.rules.DrowningBubbleRules public  <init>(int,int,bo
 CONSTRUCTOR com.openggf.game.rules.GameRules public  <init>(com.openggf.game.rules.PlayerMovementRules,com.openggf.game.rules.PlayerCapabilityRules,com.openggf.game.rules.CollisionRules,com.openggf.game.rules.PlayerAnimationRules,com.openggf.game.rules.CameraRules,com.openggf.game.rules.RingRules,com.openggf.game.rules.ObjectInteractionRules,com.openggf.game.rules.SidekickCpuRules,com.openggf.game.rules.PowerUpRules,com.openggf.game.rules.DrowningBubbleRules)
 CONSTRUCTOR com.openggf.game.rules.GameRules public  <init>(com.openggf.game.rules.PlayerMovementRules,com.openggf.game.rules.PlayerCapabilityRules,com.openggf.game.rules.CollisionRules,com.openggf.game.rules.PlayerAnimationRules,com.openggf.game.rules.CameraRules,com.openggf.game.rules.RingRules,com.openggf.game.rules.ObjectInteractionRules,com.openggf.game.rules.SidekickCpuRules,com.openggf.game.rules.PowerUpRules,com.openggf.game.rules.DrowningBubbleRules,com.openggf.game.rules.DynamicArtDmaServiceModel)
 CONSTRUCTOR com.openggf.game.rules.GameRules public  <init>(com.openggf.game.rules.PlayerMovementRules,com.openggf.game.rules.PlayerCapabilityRules,com.openggf.game.rules.CollisionRules,com.openggf.game.rules.PlayerAnimationRules,com.openggf.game.rules.CameraRules,com.openggf.game.rules.RingRules,com.openggf.game.rules.ObjectInteractionRules,com.openggf.game.rules.SidekickCpuRules,com.openggf.game.rules.PowerUpRules,com.openggf.game.rules.DrowningBubbleRules,com.openggf.game.rules.DynamicArtDmaServiceModel,com.openggf.game.rules.PaletteWhiteFadeModel)
-CONSTRUCTOR com.openggf.game.rules.ObjectInteractionRules public  <init>(boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,int,int,boolean)
+CONSTRUCTOR com.openggf.game.rules.ObjectInteractionRules public  <init>(boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,int,int,boolean)
 CONSTRUCTOR com.openggf.game.rules.PlayerAirMovementRules public  <init>(boolean,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.game.rules.PlayerAirMovementRules public  <init>(boolean,boolean,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.game.rules.PlayerAnimationRules public  <init>(boolean,boolean,boolean,boolean,boolean,boolean,com.openggf.game.rules.TailsTailPushDetection)
@@ -8505,6 +8505,7 @@ METHOD com.openggf.game.rules.ObjectInteractionRules public  boolean solidPushRe
 METHOD com.openggf.game.rules.ObjectInteractionRules public  boolean solidPushReleaseWritesWalkRunAnimationWord()
 METHOD com.openggf.game.rules.ObjectInteractionRules public  boolean touchResponseUsesPreviousCollisionResponseList()
 METHOD com.openggf.game.rules.ObjectInteractionRules public  boolean touchResponseUsesRenderFlagYGate()
+METHOD com.openggf.game.rules.ObjectInteractionRules public  boolean touchScanRequiresObjectRenderBit()
 METHOD com.openggf.game.rules.ObjectInteractionRules public  int bossDuckTouchBoxMappingFrame()
 METHOD com.openggf.game.rules.ObjectInteractionRules public  int duckTouchBoxMappingFrame()
 METHOD com.openggf.game.rules.ObjectInteractionRules public,final  boolean equals(java.lang.Object)
@@ -18608,6 +18609,7 @@ RECORD-COMPONENT com.openggf.game.rules.ObjectInteractionRules solidPushReleaseS
 RECORD-COMPONENT com.openggf.game.rules.ObjectInteractionRules solidPushReleaseWritesWalkRunAnimationWord boolean
 RECORD-COMPONENT com.openggf.game.rules.ObjectInteractionRules touchResponseUsesPreviousCollisionResponseList boolean
 RECORD-COMPONENT com.openggf.game.rules.ObjectInteractionRules touchResponseUsesRenderFlagYGate boolean
+RECORD-COMPONENT com.openggf.game.rules.ObjectInteractionRules touchScanRequiresObjectRenderBit boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerAirMovementRules airAbilityAcceptsOverlappingJumpPress boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerAirMovementRules airSuperspeedPreserved boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerAirMovementRules glideFloorContactPrecedesWallGrab boolean

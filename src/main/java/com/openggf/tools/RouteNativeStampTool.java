@@ -37,6 +37,9 @@ public final class RouteNativeStampTool {
         Path manifest = Path.of(args[0]);
         JsonNode result = new ObjectMapper().readTree(Files.readString(Path.of(args[1])));
         RouteArtifact route = RouteFiles.read(manifest);
+        if (result.path("format").asText().equals("openggf-native-goals/1")) {
+            stampGoals(manifest,route,result);return;
+        }
         String harness = result.get("harness").asText();
         String movie = result.get("entryMovie").asText();
         int prefix = result.get("prefixRows").asInt();
@@ -64,4 +67,30 @@ public final class RouteNativeStampTool {
         RouteFiles.addStamp(manifest, stamp, new NativeFacts(Optional.of(entry), lag));
         System.out.println(manifest + ": " + stamp + ", " + lag.size() + " lag facts");
     }
+    /** Named native observations, independently checked after a cold replay; never a full-state claim. */
+    private static void stampGoals(Path manifest,RouteArtifact route,JsonNode result) throws Exception {
+        var entry=route.manifest().nativeFacts().entry().orElseThrow(()->new IllegalArgumentException("native anchors required"));
+        int expected=RouteFiles.nativeInputTape(route).size();
+        if(result.path("nativeRows").asInt(-1)!=expected
+                || !route.launch().rom().sha1().equalsIgnoreCase(result.path("romSha1").asText()))
+            throw new IllegalArgumentException("native goal evidence launch/row identity differs");
+        Path derived=Files.createTempFile("openggf-native-goal-identity-",".bk2");
+        try {
+            RouteFiles.exportBk2(route,derived);
+            String hash=java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(derived)));
+            if(!hash.equalsIgnoreCase(result.path("movieSha256").asText()))
+                throw new IllegalArgumentException("native goal evidence is for another frozen movie");
+        } finally {Files.deleteIfExists(derived);}
+        var coverage=new ArrayList<String>();
+        for(JsonNode check:result.path("coverage")) coverage.add(check.asText());
+        String environment=result.path("harness").asText()+" movie "+result.path("movieSha256").asText()
+                +"; accepted comparison boundary "+result.path("acceptedComparisonBoundary");
+        QualificationStamp stamp=result.path("passed").asBoolean()
+                ? QualificationStamp.passedChecks(ReplayScope.BIZHAWK,route.content(),environment,route.tape().size(),coverage)
+                : new QualificationStamp(ReplayScope.BIZHAWK,false,java.util.OptionalInt.of(route.tape().size()-1),
+                    "required native goals missing: "+result.path("missing"),route.content(),environment,route.tape().size(),coverage);
+        RouteFiles.addStamp(manifest,stamp,route.manifest().nativeFacts());
+        System.out.println(manifest+": "+stamp);
+    }
+
 }

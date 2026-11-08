@@ -24,7 +24,7 @@ final class ReferenceProgress {
             dy = ((dy % range) + range) % range;
             if (dy > range / 2) dy -= range;
         }
-        return Math.hypot(dx, dy);
+        return Math.max(Math.hypot(dx, dy),reference.participantDistance(sample,index));
     }
 
     /** Latest index in {@code [lo, hi]} within {@code radius} of P1, or -1. */

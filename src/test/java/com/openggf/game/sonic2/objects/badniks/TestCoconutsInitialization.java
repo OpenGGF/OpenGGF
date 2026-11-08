@@ -101,4 +101,43 @@ class TestCoconutsInitialization {
         }
     }
 
+
+    @Test
+    void coconutChildOwnsObj98SpawnAndKeepsTheLoadSubObjectMovementDelay() {
+        var object=create();
+        var player=mock(AbstractPlayableSprite.class);
+        when(player.getCentreX()).thenReturn((short)0x2B0);
+        var camera=mock(com.openggf.camera.Camera.class);
+        when(camera.getFocusedSprite()).thenReturn(player);
+        var manager=mock(com.openggf.level.objects.ObjectManager.class);
+        object.setServices(new com.openggf.level.objects.TestObjectServices()
+                .withCamera(camera).withDirectObjectManager(manager));
+        object.update(0,player);
+        object.update(1,player);
+        for(int i=2;i<=10;i++) object.update(i,player);
+        var captured=org.mockito.ArgumentCaptor.forClass(com.openggf.level.objects.ObjectInstance.class);
+        org.mockito.Mockito.verify(manager).addDynamicObject(captured.capture());
+        var child=org.junit.jupiter.api.Assertions.assertInstanceOf(
+                Sonic2CoconutProjectileInstance.class,captured.getValue());
+        // Obj9D_CreateCoconut (s2.asm:75366-75386): native $98, subobject row $20, x+11,y-13.
+        assertEquals(0x98,child.getSpawn().objectId());
+        assertEquals(0x20,child.getSpawn().subtype());
+        assertEquals(0x30B,child.getX());assertEquals(0x1F3,child.getY());
+        child.update(11,player);
+        assertEquals(0x30B,child.getX());assertEquals(0x1F3,child.getY());
+        var nativeDisplay=child.nativeDisplaySlot();
+        assertEquals(0x84,nativeDisplay.renderFlags());assertEquals(3,nativeDisplay.mapping().frame());
+        assertEquals(0x37D96,nativeDisplay.mapping().address());assertEquals(0x1F7,nativeDisplay.artTile());
+        var snapshot=child.captureRewindState();
+        var restored=child.recreateForRewind(new com.openggf.level.objects.RewindRecreateContext(
+                child.getSpawn(),snapshot,new com.openggf.level.objects.StubObjectServices()));
+        restored.restoreRewindState(snapshot);
+        assertEquals(snapshot,restored.captureRewindState());
+        assertEquals(child.getSpawn(),restored.getSpawn());
+        assertEquals(nativeDisplay,restored.nativeDisplaySlot());
+        child.update(12,player);
+        restored.update(12,player);
+        assertEquals(child.nativeDisplaySlot(),restored.nativeDisplaySlot());
+        assertEquals(0x30A,child.getX());assertEquals(0x1F2,child.getY());
+    }
 }

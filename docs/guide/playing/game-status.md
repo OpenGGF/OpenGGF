@@ -78,6 +78,8 @@ This documentation review did not rerun those gameplay checks.
 - Special Stage checkpoint wings remain fixed while the independent hand peer
   bobs for both successful and failed ring checks.
 - Demo playback.
+- Two-player Competition: Emerald Hill, Mystic Cave, Casino Night and the
+  special stage, with results.
 - SMPS music and sound effects.
 
 ### Known gaps
@@ -87,8 +89,11 @@ This documentation review did not rerun those gameplay checks.
   slightly from the original.
 - Oil Ocean surface collision and oil slides are implemented; complete act,
   character/team, donor and viewport coverage remains incomplete.
-- Native Sonic 2 competition mode and item-placement debug mode are unavailable.
-  Player 2 bindings control the configured sidekick/manual-input path.
+- Item-placement debug mode is unavailable.
+- Two-player Competition shows one interlace field, splits exactly at line 108,
+  never shows the original's lag-frame slowdown or torn sprites, and has no
+  live rewind. Outside Competition, Player 2 bindings control the configured
+  sidekick/manual-input path.
 
 ### Notable quirks
 

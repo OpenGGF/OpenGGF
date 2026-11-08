@@ -8,6 +8,12 @@ import java.util.Map;
 import java.util.Set;
 
 final class DefaultObjectRewindPolicies {
+    private static final FieldKey CNZ_RING_PRIZE_COUNTER = new FieldKey(
+            "com.openggf.game.sonic2.objects.RingPrizeObjectInstance", "prizeCounter");
+    // The one-word array keeps its ordinary parent/caller alias. Native prizes
+    // can rebind the field by exact parent slot before their next update.
+    private static final Set<FieldKey> IN_PLACE_ARRAYS = Set.of(CNZ_RING_PRIZE_COUNTER);
+
     private static final FieldKey REXON_PARENT = new FieldKey(
             "com.openggf.game.sonic2.objects.badniks.RexonHeadObjectInstance", "parent");
     private static final FieldKey REXON_NEXT_HEAD = new FieldKey(
@@ -123,6 +129,7 @@ final class DefaultObjectRewindPolicies {
     );
 
     private static final Map<FieldKey, RewindFieldPolicy> EXACT_FIELD_POLICIES = Map.ofEntries(
+            Map.entry(CNZ_RING_PRIZE_COUNTER, RewindFieldPolicy.CAPTURED),
             // Original-slot fan platform retains its allocated fan by stable object identity.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.HCZCGZFanObjectInstance$FanPlatformChild", "fanChild"), RewindFieldPolicy.CAPTURED),
             // HCZ independently lived ship family: exact parent3/$44, including after boss removal.
@@ -971,6 +978,10 @@ final class DefaultObjectRewindPolicies {
     /** Read-only view of the exact-field policy table for guard tests. */
     static Map<FieldKey, RewindFieldPolicy> exactFieldPoliciesForAudit() {
         return EXACT_FIELD_POLICIES;
+    }
+
+    static boolean restoresArrayInPlace(Field field) {
+        return IN_PLACE_ARRAYS.contains(FieldKey.of(field));
     }
 
     static boolean isOptionalObjectReference(Field field) {

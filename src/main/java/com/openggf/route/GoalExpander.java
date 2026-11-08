@@ -29,7 +29,7 @@ final class GoalExpander implements PrefixSearch.Expander {
     private static final int DOWN = PhysicalButton.DOWN.bit();
 
     private final GoalProgram goals;
-    private final int prefixRows;
+    private final GoalProgram.Cursor prefixCursor;
 
     /** Controller cursor: the current leg, where it began, and the target's hits when it began. */
     record State(int leg, int legStart, int startHits, int jumpEnd) { }
@@ -37,15 +37,17 @@ final class GoalExpander implements PrefixSearch.Expander {
     GoalExpander(GoalProgram goals, int prefixRows) {
         if (goals.legs().isEmpty()) throw new IllegalArgumentException("an authored route needs at least one leg");
         this.goals = goals;
-        this.prefixRows = prefixRows;
+        this.prefixCursor = goals.cursor();
     }
 
+    @Override public void beginPrefix(RouteSample entry) { prefixCursor.begin(entry); }
+
     @Override public String checkPrefixRow(int row, RouteSample sample) {
-        return null;
+        return prefixCursor.afterRow(row,sample);
     }
 
     @Override public int rootProgress(RouteSample sample) {
-        return 0;
+        return prefixCursor.completedLegs()*1000;
     }
 
     @Override public int target() {
@@ -57,12 +59,13 @@ final class GoalExpander implements PrefixSearch.Expander {
     }
 
     @Override public boolean done(PrefixSearch.Node node) {
-        return node.data instanceof State state && state.leg() >= goals.legs().size();
+        return node.data instanceof State state ? state.leg() >= goals.legs().size() : prefixCursor.completedLegs() >= goals.legs().size();
     }
 
     private State state(PrefixSearch.Node node) {
         if (node.data instanceof State state) return state;
-        return new State(0, prefixRows, hits(goals.legs().getFirst(), node.sample), -1);
+        int leg=prefixCursor.completedLegs();
+        return new State(leg, prefixCursor.legStartRow(), hits(goals.legs().get(leg), node.sample), -1);
     }
 
     @Override public PrefixSearch.Node expand(PrefixSearch search, PrefixSearch.Node node, TreeSet<PrefixSearch.Node> frontier) {
@@ -71,15 +74,39 @@ final class GoalExpander implements PrefixSearch.Expander {
         if (node.rows - state.legStart() >= leg.maxRows()) return null;
         search.materialize(node);
         search.ensureCheckpoint(node);
+        // A guarded, fact-only menu observation is a bounded neutral trial, not
+        // a request to navigate. Keep its complete observed hold if it succeeds;
+        // menu hosts may deliberately refuse checkpoints outside gameplay.
+        if (node.sample.facts().getOrDefault("input.menu",0)!=0 && leg.guard().holds().isPresent()
+                && leg.goal() instanceof RouteGoal.Achieve a && factsOnly(a.condition())) {
+            PrefixSearch.Node child=trial(search,node,state,leg,(t,now,previous)->PadRow.NEUTRAL,leg.maxRows());
+            if(child!=null) search.push(frontier,child);
+            return null;
+        }
         boolean encounter = defeatTarget(leg).isPresent();
         int horizon = encounter ? ENCOUNTER_HORIZON : HORIZON;
         var families = new ArrayList<Policy>();
-        for (int hold : HOLDS) families.add(steer(leg, hold));
+        for (int hold : HOLDS) families.add(steer(leg, hold, hold));
+        if (players(leg).size() > 1) {
+            for (int h1 : HOLDS) for (int h2 : HOLDS)
+                if (h1 != h2) families.add(steer(leg, h1, h2));
+        }
+        families.add(charge(leg));
+        families.add(rolling(leg));
         families.add((t, now, previous) -> PadRow.NEUTRAL);
+        // A menu observation held under a leg invariant requests no menu advance.
+        if(node.sample.facts().getOrDefault("input.menu",0)!=0 && leg.guard().holds().isEmpty())
+            families.addFirst((t, now, previous) -> new PadRow(t==0?PhysicalButton.START.bit():0,0));
         if (encounter) for (int p = 0; p < ENCOUNTER_POLICIES; p++) families.add(encounter(leg, p));
         for (Policy family : families) {
             if (search.cancelled() || search.outOfSteps()) break;
             PrefixSearch.Node child = trial(search, node, state, leg, family, horizon);
+            if (child != null && child.sample.epoch()!=node.sample.epoch()) {
+                child.segmentRoot=true;
+                search.dropCheckpoints();
+                search.arrivedAt(child);
+                return child;
+            }
             if (child != null) search.push(frontier, child);
         }
         return null;
@@ -104,6 +131,7 @@ final class GoalExpander implements PrefixSearch.Expander {
         int completedAt = -1;
         boolean boundaryLeg = leg.goal() instanceof RouteGoal.EnterBoundary;
         for (int t = 0; t < horizon; t++) {
+            if(search.cancelled() || search.outOfSteps() || node.rows+t-state.legStart()>=leg.maxRows()) break;
             PadRow row = search.step(policy.row(t, search.last, lastRow));
             rows.add(row);
             lastRow = row;
@@ -167,22 +195,131 @@ final class GoalExpander implements PrefixSearch.Expander {
             return encounterScore(p.dead(), state.startHits(), boss.map(ObjectView::hitsRemaining).orElse(null),
                     p.rings(), hurt, Math.abs(targetX - p.centreX()));
         }
-        double distance = Math.abs(targetX - p.centreX()) + Math.abs(targetY - p.centreY());
+        double distance = 0;
+        for (PlayerSlot slot : players(leg)) {
+            if(slot==PlayerSlot.P2 && end.p2().isEmpty()) { distance+=1_000_000;continue; }
+            var actor = end.player(slot);
+            var region = playerRegion(leg, slot);
+            int x = region.map(r -> (r.left() + r.right()) / 2).orElse(targetX);
+            int y = region.map(r -> (r.top() + r.bottom()) / 2).orElse(targetY);
+            distance += Math.abs(x - actor.centreX()) + Math.abs(y - actor.centreY());
+        }
+        // Copied numeric facts can express a deliberate wait for an owner's counter.
+        // This ranks bounded candidates only; the exact predicate and linear replay
+        // still decide completion, and missing facts are never inferred.
+        if (leg.goal() instanceof RouteGoal.Achieve a) distance += factDistance(a.condition(), end);
         return -distance - (hurt ? 100 : 0);
     }
 
-    /** Steer toward the leg's target at full speed, jumping from the ground for {@code hold} rows. */
-    private Policy steer(Leg leg, int hold) {
-        int[] jumpStart = {-1};
+    private static boolean factsOnly(SamplePredicate predicate) {
+        return switch (predicate) {
+            case SamplePredicate.FactEquals ignored -> true;
+            case SamplePredicate.FactsEqual ignored -> true;
+            case SamplePredicate.All all -> !all.clauses().isEmpty() && all.clauses().stream().allMatch(GoalExpander::factsOnly);
+            default -> false;
+        };
+    }
+
+    private static long factDistance(SamplePredicate predicate, RouteSample sample) {
+        return switch (predicate) {
+            case SamplePredicate.FactEquals f -> sample.facts().containsKey(f.key())
+                    ? Math.abs((long) sample.facts().get(f.key()) - f.value()) : 1_000_000;
+            case SamplePredicate.FactsEqual f -> sample.facts().containsKey(f.left()) && sample.facts().containsKey(f.right())
+                    ? Math.abs((long) sample.facts().get(f.left()) - sample.facts().get(f.right())) : 1_000_000;
+            case SamplePredicate.All all -> all.clauses().stream().mapToLong(p -> factDistance(p, sample)).sum();
+            default -> 0;
+        };
+    }
+
+    private Policy steer(Leg leg, int hold1, int hold2) {
+        int[] jumpStart = {-1, -1};
         return (t, now, previous) -> {
-            PlayerView p = now.p1();
-            int tx = target(leg, now).map(ObjectView::centreX).orElse(regionX(leg).orElse(p.centreX()));
-            int direction = NativeRouteSteering.movementDirection(Math.floor(p.x()), p.xSpeed(), p.motion().runAccel(),
-                    p.motion().runDecel(), Math.max(p.motion().maxSpeed(), 0x600), p.air(), tx, 1);
-            if (hold > 0 && jumpStart[0] < 0 && !p.air() && t > 0) jumpStart[0] = t;
-            boolean jump = jumpStart[0] >= 0 && t - jumpStart[0] < hold;
-            int lane = (direction < 0 ? LEFT : direction > 0 ? RIGHT : 0) | (jump ? A : 0);
-            return new PadRow(lane, 0);
+            PadRow row = PadRow.NEUTRAL;
+            for (PlayerSlot slot : players(leg)) {
+                if(slot==PlayerSlot.P2 && now.p2().isEmpty()) continue;
+                var p = now.player(slot);
+                int index = slot == PlayerSlot.P1 ? 0 : 1;
+                int hold = index == 0 ? hold1 : hold2;
+                int tx = playerRegion(leg, slot).map(r -> (r.left() + r.right()) / 2)
+                        .orElse(target(leg, now).map(ObjectView::centreX).orElse(p.centreX()));
+                // Same native numeric owner used by StageplayRouteSteering.
+                int direction = NativeRouteSteering.movementDirection(Math.floor(p.x()), p.xSpeed(),
+                        p.motion().runAccel(), p.motion().runDecel(), Math.max(p.motion().maxSpeed(), 0x600),
+                        p.air(), tx, 1);
+                var region = playerRegion(leg, slot);
+                if (direction == 0 && Math.abs(p.xSpeed()) < 64 && region.isPresent()) {
+                    if(p.centreX() < region.get().left()) direction = 1;
+                    if(p.centreX() > region.get().right()) direction = -1;
+                }
+                if (hold > 0 && jumpStart[index] < 0 && !p.air() && t > 0) jumpStart[index] = t;
+                boolean jump = jumpStart[index] >= 0 && t - jumpStart[index] < hold;
+                row = row.with(slot, (direction < 0 ? LEFT : direction > 0 ? RIGHT : 0) | (jump ? A : 0));
+            }
+            return row;
+        };
+    }
+
+    /** Same native-state-gated charge policy as StageplayRouteSteering, followed by normal steering. */
+    private Policy charge(Leg leg) {
+        Policy travel=steer(leg,0,0);
+        return (t,now,previous)->{
+            PadRow row=travel.row(t,now,previous);
+            for(var slot:players(leg)) {
+                if(slot==PlayerSlot.P2 && now.p2().isEmpty()) continue;
+                var p=now.player(slot);
+                int tx=playerRegion(leg,slot).map(r->(r.left()+r.right())/2)
+                        .orElse(target(leg,now).map(ObjectView::centreX).orElse(p.centreX()));
+                var b=NativeRouteSteering.charge(p.x(),tx,t,p.groundSpeed(),p.air(),p.crouching(),
+                        p.spindash(),p.motion().friction(),p.motion().slopeImpulse());
+                if(!b.finished()) row=row.with(slot,(b.direction()<0?LEFT:b.direction()>0?RIGHT:0)
+                        |(b.down()?DOWN:0)|(b.jump()?A:0));
+            }
+            return row;
+        };
+    }
+
+    /** Down while moving requests the native roll gate; no footprint or speed is written. */
+    private Policy rolling(Leg leg) {
+        Policy travel=steer(leg,0,0);
+        return (t,now,previous)->{
+            PadRow row=travel.row(t,now,previous);
+            for(var slot:players(leg)) {
+                if(slot==PlayerSlot.P2 && now.p2().isEmpty()) continue;
+                var p=now.player(slot);
+                if(!p.air() && p.groundSpeed()!=0) row=row.with(slot,row.lane(slot)|DOWN);
+            }
+            return row;
+        };
+    }
+
+    private static java.util.List<PlayerSlot> players(Leg leg) {
+        var slots = new java.util.LinkedHashSet<PlayerSlot>();
+        if (leg.goal() instanceof RouteGoal.Achieve a) collectPlayers(a.condition(), slots);
+        if (slots.isEmpty()) slots.add(PlayerSlot.P1);
+        return java.util.List.copyOf(slots);
+    }
+
+    private static void collectPlayers(SamplePredicate p, java.util.Set<PlayerSlot> slots) {
+        switch (p) {
+            case SamplePredicate.PlayerIn in -> slots.add(in.player());
+            case SamplePredicate.Attached a -> slots.add(a.player());
+            case SamplePredicate.Riding r -> slots.add(r.player());
+            case SamplePredicate.Settled s -> slots.add(s.player());
+            case SamplePredicate.All all -> all.clauses().forEach(c -> collectPlayers(c, slots));
+            default -> { }
+        }
+    }
+
+    private static Optional<Region> playerRegion(Leg leg, PlayerSlot slot) {
+        return leg.goal() instanceof RouteGoal.Achieve a ? playerRegion(a.condition(), slot) : Optional.empty();
+    }
+
+    private static Optional<Region> playerRegion(SamplePredicate predicate, PlayerSlot slot) {
+        return switch (predicate) {
+            case SamplePredicate.PlayerIn in -> in.player() == slot ? Optional.of(in.region()) : Optional.empty();
+            case SamplePredicate.All all -> all.clauses().stream().map(p -> playerRegion(p, slot))
+                    .flatMap(Optional::stream).findFirst();
+            default -> Optional.empty();
         };
     }
 

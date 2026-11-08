@@ -649,6 +649,19 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                 levelManager != null ? levelManager.getObjectManager() : null);
     }
 
+    NativeCompetitionRingStreaming nativeDisplayStreaming() {
+        if (!nativeCompetitionStreamingActive())
+            throw new IllegalStateException("Native competition ring streaming is inactive");
+        return nativeCompetitionStreaming;
+    }
+
+    int nativeDisplayStageFrame(int frameCounter) {
+        if (levelManager != null && levelManager.getAnimatedPatternManager()
+                instanceof com.openggf.level.animation.StageRingAnimationFrameProvider provider)
+            return provider.stageRingAnimationFrame();
+        return -1; // No retained native phase owner; never substitute the ordinary presentation clock.
+    }
+
     private int stageRingFrame(int frameCounter) {
         // A provider owns retained ROM state; S1/S2 retain their existing
         // counter-derived presentation when no such provider is installed.
@@ -2302,6 +2315,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                     } else {
                         objectManager.spawnLostRingObjectAtSlot(ringObject, slotIndex);
                     }
+                    ringObject.initializeNativeDisplayState();
                     if (applyInitialObjectStep
                             && (logicalOverflow || appliesInitialObj37Step(slotIndex, firstReservedSlot))) {
                         ringObject.updateMovement();
