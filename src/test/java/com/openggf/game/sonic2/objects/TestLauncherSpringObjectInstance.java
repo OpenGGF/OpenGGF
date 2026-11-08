@@ -9,6 +9,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.sprites.playable.Tails;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.TestablePlayableSprite;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.SonicGame;
@@ -21,6 +22,8 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 class TestLauncherSpringObjectInstance {
 
@@ -202,6 +205,142 @@ class TestLauncherSpringObjectInstance {
             assertFalse(player.isObjectControlSuppressesMovement());
             assertEquals(!initial, player.getPinballMode());
             assertEquals(!initial, player.getSpindash());
+        }
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {1, 0x81})
+    void diagonalFreshP2CaptureJoinsTheSamePassReleaseDecision(int subtype) {
+        var riders = captureP2AsP1Releases(subtype, false);
+        // loc_2AF06 returns immediately after capture; the aggregate release
+        // check then sees both riders. loc_2B018 launches on the next dispatch
+        // using (one compression step + four) << 7 (s2.asm:58249-58281, 58375-58400).
+        assertEquals(0x280, riders[0].getXSpeed());
+        assertEquals(0x280, riders[1].getXSpeed(),
+                "a newly captured P2 joins P1's release without another held-seat pass");
+        assertFalse(riders[1].isObjectControlSuppressesMovement());
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {1, 0x81})
+    void diagonalFreshP2HoldingJumpPreventsEitherRiderLaunching(int subtype) {
+        var riders = captureP2AsP1Releases(subtype, true);
+        // Obj85_Diagonal samples both captured-state/input bytes only after
+        // the two per-player calls (s2.asm:58261-58281). P2's fresh held input
+        // therefore vetoes P1's otherwise released jump in this same pass.
+        assertEquals(0, riders[0].getXSpeed(),
+                "new P2 held input must be considered before committing P1's release");
+        assertEquals(0, riders[1].getXSpeed());
+        assertTrue(riders[0].isObjectControlSuppressesMovement());
+        assertTrue(riders[1].isObjectControlSuppressesMovement());
+    }
+
+    private static AbstractPlayableSprite[] captureP2AsP1Releases(int subtype, boolean p2HoldsJump) {
+        var spring = new LauncherSpringObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, Sonic2ObjectIds.LAUNCHER_SPRING,
+                        subtype, 0, false, 0), "LauncherSpring");
+        var main = new TestablePlayableSprite("sonic", (short) 0x1000, (short) 0x1000);
+        var sidekick = new Tails("tails", (short) 0x1300, (short) 0x1000);
+        var services = new QueryOnlyPlayerServices(main, List.of(sidekick));
+        var camera = new com.openggf.camera.Camera();
+        camera.setX((short) 0x0F00);
+        camera.setY((short) 0x0F80);
+        services.withCamera(camera)
+                .withSolidExecutionRegistry(new com.openggf.game.solid.DefaultSolidExecutionRegistry())
+                .withIsolatedObjectManager();
+        var manager = services.objectManager();
+        manager.addDynamicObject(spring);
+        spring.onSolidContact(main, new SolidContact(true, false, false, true, false), 0);
+        main.setJumpInputPressed(true);
+        manager.update(0x0F00, main, List.of(sidekick), 0, false, true, true);
+
+        main.setJumpInputPressed(false);
+        sidekick.setCentreX((short) 0x1013);
+        sidekick.setCentreY((short) (0x1000 - 8 - sidekick.getYRadius() - 1));
+        sidekick.setAir(true);
+        sidekick.setYSpeed((short) 0x100);
+        sidekick.setJumpInputPressed(p2HoldsJump);
+        manager.update(0x0F00, main, List.of(sidekick), 1, false, true, true);
+        assertTrue(sidekick.isObjectControlSuppressesMovement(),
+                "the real solid pass must capture the previously absent P2");
+        manager.update(0x0F00, main, List.of(sidekick), 2, false, true, true);
+        return new AbstractPlayableSprite[] {main, sidekick};
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {1, 0x81})
+    void diagonalCooldownStillResolvesSolidGeometry(int subtype) {
+        var scene = captureDiagonalMainThroughSolidPass(subtype);
+        var player = scene.player();
+        player.setJumpInputPressed(false);
+        scene.step(2);
+        scene.step(3);
+        assertTrue(player.getXSpeed() > 0, "the setup must have launched the rider");
+        assertFalse(player.isOnObject());
+
+        player.setRolling(false);
+        player.setCentreX((short) (scene.spring().getX() + 0x13));
+        player.setCentreY((short) (scene.spring().getY() - 8 - player.getYRadius() - 1));
+        player.setAir(true);
+        player.setXSpeed((short) 0);
+        player.setYSpeed((short) 0x100);
+        scene.step(4);
+
+        assertTrue(player.isOnObject(), "capture cooldown must not make the head intangible");
+        assertSame(scene.spring(), scene.manager().getRidingObject(player));
+        assertEquals(0, player.getYSpeed());
+        assertFalse(player.isObjectControlSuppressesMovement(),
+                "retain the inherited capture cooldown while still resolving the solid helper");
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {1, 0x81})
+    void diagonalOffscreenReleaseClearsItsRideImmediately(int subtype) {
+        var scene = captureDiagonalMainThroughSolidPass(subtype);
+        scene.camera().setX((short) 0x3000);
+        scene.step(2);
+
+        assertTrue(scene.player().getAir());
+        assertFalse(scene.player().isObjectControlSuppressesMovement());
+        assertFalse(scene.player().isOnObject(), "the native offscreen tail clears OnObject");
+        assertNull(scene.manager().getRidingObject(scene.player()),
+                "manual release must retire its own standing/ride ownership in this pass");
+    }
+
+    private static DiagonalSpringScene captureDiagonalMainThroughSolidPass(int subtype) {
+        var spring = new LauncherSpringObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, Sonic2ObjectIds.LAUNCHER_SPRING,
+                        subtype, 0, false, 0), "LauncherSpring");
+        var player = new TestablePlayableSprite("sonic", (short) 0x1000, (short) 0x1000);
+        var services = new QueryOnlyPlayerServices(player, List.of());
+        var camera = new com.openggf.camera.Camera();
+        camera.setX((short) 0x0F00);
+        camera.setY((short) 0x0F80);
+        services.withCamera(camera)
+                .withSolidExecutionRegistry(new com.openggf.game.solid.DefaultSolidExecutionRegistry())
+                .withIsolatedObjectManager();
+        var manager = services.objectManager();
+        manager.addDynamicObject(spring);
+        player.setCentreX((short) 0x1013);
+        player.setCentreY((short) (0x1000 - 8 - player.getYRadius() - 1));
+        player.setAir(true);
+        player.setYSpeed((short) 0x100);
+        player.setJumpInputPressed(true);
+        var scene = new DiagonalSpringScene(spring, player, camera, manager);
+        scene.step(0);
+        scene.step(1);
+        assertTrue(player.isOnObject(), "the setup must establish a real captured ride");
+        assertSame(spring, manager.getRidingObject(player));
+        assertTrue(player.isObjectControlSuppressesMovement());
+        return scene;
+    }
+
+    private record DiagonalSpringScene(LauncherSpringObjectInstance spring,
+                                      TestablePlayableSprite player,
+                                      com.openggf.camera.Camera camera,
+                                      com.openggf.level.objects.ObjectManager manager) {
+        void step(int frame) {
+            manager.update(camera.getX(), player, List.of(), frame, false, true, true);
         }
     }
 

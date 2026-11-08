@@ -490,3 +490,22 @@ the evidence above was preserved. Both commands exited zero with “Diagnostics
 deleted.” No raw Maven logs, build trees, generated comparison JSON or pass
 receipts are committed. All required validation is consumed; draft publication
 and the supplied baseline's final cleanup follow under the stated ownership.
+
+## Second increment: wider lifecycle research (8 November)
+
+The user authorized continuing the wider work. Develop advanced to
+`33c3b8e56`; that upstream fix restores the original trace-capture setup methods
+and their pinned cleanup handlers. The task tree merges that base before new
+workers edit it. Consequently the two signature-key adjustments from the first
+increment are retired in favor of upstream's original rows; only the three
+reviewed capture fingerprints remain different. Historical validation above
+still describes its original inputs, not this new merged source. No catch
+allowance is added.
+
+This increment investigates terminal capture close/finalizer ownership, checks
+whether tool-armed fresh boundaries really leave admission state stale, and
+examines networking pending-work retirement beginning with the inherited
+HostMasterLink close witness. The existing PR266 contact/population/reconstruction
+owners remain outside scope. New source requires focused checks, Opus review
+and a new appropriate source-matched comparison before updating draft269.
+No validation of the new merged tree is claimed yet.

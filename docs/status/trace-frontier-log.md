@@ -124765,3 +124765,124 @@ is verified at `161e45ac` before the develop push. This qualification changes
 prose only; all five axes are clear and the original chain reaches EOF. Final
 remote verification and accounted worktree cleanup are recorded in the task
 artifact; the S1 chain loop stops after delivery.
+
+
+## 2026-11-08 — Diagonal launcher capture and native LRZ/AIZ art owners
+
+This wave retains the S2 diagonal launcher correction, LRZ enemy-art batch and
+Knuckles' AIZ terrain-only branch. The ordinary S3K boss-glide component
+`60b2e6137` is held after its maintained Knuckles SOZ route regresses; its local
+27561 initialization frontier is historical evidence, not delivered progress.
+Current-source art-only trace qualification and delivery are pending below.
+
+Obj85 now resolves each diagonal rider's native solid/capture call before its
+shared release/decompression decision. A fresh P2 holding jump can veto release;
+cooldown solidity and owner-scoped ride retirement remain covered. The chain's
+CNZ2 removes all 49,194 raw ERRORs on the same 13,045 rows, with no added ERROR
+on 10,361 previously ERROR-free rows. ARZ2's 6,409 rows/4,442 errors are exact;
+both level-select controls pass. The whole S2 chain remains red on ten axes and
+its unchanged HTZ2 boundary 155218. Conditional dynamic-art coverage is explicit,
+not treated as agreement. [Native evidence and commands](../architecture/audits/2026-11-07-s2-diagonal-launcher-capture.md).
+
+LRZ's title owner submits Fireworm, Iwamodoki and Toxomister in native order for
+both acts. Its component removes the Knuckles replay's later module-FIFO abort
+and reaches 8,825 comparisons, first remaining row 604 mapping mismatch. The 2,869
+new rows are unpaired with the old aborting source, and 120 planned rows remain
+unobserved. [Owner, actual-row gates and limits](../architecture/audits/2026-11-07-lrz-enemy-art-submission.md).
+AIZ preserves the native character branch: Knuckles submits terrain without the
+extra Sonic ship archive. Its art-only Mega control improves the common segment 8
+errors 10,012→3,447 and first 897→1117, while the old death/reload ownership frontier
+25811 remains. The missing EggRobo-head submission is still open.
+[Art-only and held-component evidence](../architecture/validation/levels/s3k-aiz2.md#native-resize-art-owners--2026-11-07).
+
+The four shrine routine 0/2 fronts are found, not fixed. Actual1701 loads reject
+phase admission; routine 2 is constructed state, not proof of Sonic/HPZS initial
+dispatch. Five payloads and 6,998 measured rows stay unchanged. A real titleless
+load continuation and native phase observations are needed.
+[Shrine obligations](../architecture/validation/levels/s3k-mhz-act1.md).
+
+The historical combined source `bdd26b098` completes one serial sweep:
+trace-replay 957 tests / 58F / 0E / 7 allowed skips, trace-replay-r7 214 / 133F / 1E / 0S,
+trace-segments 70 / 40F / 0E / 0S. Its source-specific 14-pair raw check adds no ERROR
+on 21,987 baseline ERROR-free observations; its large later mixed changes and
+unpaired fields remain disclosed. These are not final art-only-source totals.
+S1's delivered profile remains 71/71, all 34 segments and 10,943 terminal rows;
+published TraceChaser pin `161e45ac` and all fixture bytes are unchanged.
+
+The one shared smoke at `bdd26b098` completes 4,484 classes, all 91 ordinary
+batches and 836 passing guards: 37,912 tests / 31F / 1E / 49 allowed skips, missing ROMs
+none, unexplained skips 0. Its raw verdict is FAILED. Twenty-nine negative
+outcomes are attributed to qualified baselines (three differ only in verified
+Set order); the audio oracle reproduces literally on current develop with the
+same config-free input. The AIZ rewind fixture's obsolete private signature is
+repaired. A deterministic racing unit proves that the old control wait discarded
+unmatched/coalesced events; the test now retains them, and both hosts pass.
+Historical packet-loss causality is not claimed. The third new outcome is the
+SOZ route; two bounded controller hypotheses also fail and are rejected. The
+whole glide component, including its candidate-only tests, is excluded. All
+existing destination tests and the original SOZ inputs remain unchanged.
+
+Reconciled source `cb1688812` plus this held-component/test patch passes 348
+focused cases with zero failures/errors/skips, including all six maintained SOZ
+teams, 83 original touch cases, 56 AIZ event cases, eight queue/rewind cases,
+all four S3K keep-greens, racing's two hosts/new retention unit and 27 upstream
+capture-tool checks. The 25 media Python tests pass. Upstream's new sprite-limit
+capture choice is opt-in; default compatibility and stock replay are unchanged.
+No second broad smoke or profile sweep is claimed. Final targeted source/row
+qualification, integration, remote verification and accounted cleanup remain
+pending; their result must precede a delivery claim.
+
+
+Final targeted qualification on committed `bd417678a` completes two fixed
+`-Ptrace-replay-r7` invocations selecting the 14 concrete standalone owners and
+all three `TestS3kMegaRunChain` methods: each 17 cases, 2 PASS/15 inherited strict
+FAILURE/0 ERROR/0 SKIP. Every whole outcome and all 74 report/context/owner files
+are literally equal between unobserved and comparison-only observed runs. No
+new baseline run or broad sweep is substituted. Source/bytecode restoration
+succeeds with original hashes and no observer markers.
+
+Against the real pure `60aa1d658` row streams, 187,494 common observations retain
+all baseline row IDs. There are zero additions on 21,987 baseline ERROR-free
+rows, including 21,985 all-MATCH rows, with nonzero clean coverage in every
+fixture. All common-row gameplay fields are unchanged. The 669 added/88,947
+removed ERROR tuples are queue/hardware diagnostics on already-red rows;
+shared expected values and verification groups are unchanged. All four LRZ
+component report bodies and complete actual row/field inventories reproduce
+exactly. Target common raw errors fall 47,413→18,027; the 2,869 unpaired suffix
+rows contain 55,643 errors, and 120 planned rows are still unobserved. Conditional
+pending-submission fields at Knuckles AIZ row 3991, Knuckles LRZ row 3322 and standalone
+Mega AIZ row 3611 are absent, so their coverage is unknown. The late Sonic/Tails LRZ
+pending producer's exact identity remains unresolved. These limits are retained,
+not treated as matches or unrestricted native parity.
+
+Both Mega prefixes pass. All ten full-chain report bodies and the whole
+throwable equal the art-only component: the valid ownership frontier remains
+25811 and the missing EggRobo-head producer remains open. AIZ3's complete report
+still has zero errors/warnings/bootstrap errors and matches its 7,430-row
+component witness; no fresh final Mega raw stream was exported, so this is the
+explicit unchanged-source/report coverage bridge. The held 27561 result is not a
+delivered frontier. Integration, postintegration checks and remote verification
+follow this bounded gate; no final whole-profile or full-suite pass is inferred.
+
+
+Postintegration checks on develop `7c3128f89` pass the same 348 focused ordinary
+cases with zero failures/errors/skips. The queued Java 25/EGL trace control uses
+`-Ptrace-replay -Dtest=TestS2CompleteEmeraldRunChain,TestS2Arz2LevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS1CompleteEmeraldRunChain#ghz1ToScrapBrainAcrossEverySpecialStage`
+with one alphabetical fork, isolated report/temp directories and the seven
+verified ROM properties. It completes four cases: S1 chain and both S2
+level-select controls PASS; the S2 chain retains its qualified failure on ten
+axes and HTZ2 boundary 155218. No errors or skips occur. All 112 JSONs match the
+delivered S1 and repaired S2 controls: 56 report bodies are equal and the other
+56 owner files differ only in their individually verified report-directory
+paths. All four complete testcase outcomes match after those same literal path
+replacements. S1's 34 segments and 10,943 terminal rows remain delivered green;
+this focused check is not another full-profile run.
+
+The postintegration owner verifies unchanged tracked source, all four user
+reference HEADs/raw indices/staged and working diffs, untracked inputs,
+configuration and saves. Reported queue wait totals 1,346 seconds; Maven execution
+reports 225 seconds; the overall postintegration wall time is about 1,577 seconds. User wait is
+zero; exact lease hold and off-job time are unknown. The final certification
+commit adds only this prose. Remote push and accounted worktree cleanup are
+recorded in the lead's delivery receipt; no unrestricted parity or full-suite
+pass is claimed.
