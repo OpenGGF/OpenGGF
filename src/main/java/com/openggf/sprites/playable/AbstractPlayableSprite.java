@@ -132,8 +132,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         // ROM: Sonic_Pos_Record_Buf is $100 bytes (256 bytes / 4 bytes per entry = 64 entries)
         // Used for spindash camera lag and Tails CPU following
-        private short[] xHistory = new short[64];
-        private short[] yHistory = new short[64];
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
 
         // ROM: Sonic_Stat_Record_Buf is $100 bytes (256 bytes / 4 bytes per entry = 64 entries)
         // Records input buttons and status flags each frame for Tails CPU input replay.
@@ -167,7 +167,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         public static final byte STATUS_PREVENT_TAILS_RESPAWN = (byte) 0x80;
 
         // ROM: Sonic_Pos_Record_Index - wraps at 256 (64 entries * 4 bytes)
-        private byte historyPos = 0;
+        byte historyPos = 0;
 
         /** Whether this sprite is controlled by CPU AI (e.g., Tails follower) */
         private boolean cpuControlled = false;
@@ -325,9 +325,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          */
         protected int latchedSolidObjectId = 0;
         /** Released-contact provenance survives rewind even after the SST slot is reused. */
-        private boolean latchedSolidObjectReleased;
+        boolean latchedSolidObjectReleased;
         /** Contact identity exists independently of the spawn ID (dynamic S3K objects use zero). */
-        private boolean latchedSolidObjectBound;
+        boolean latchedSolidObjectBound;
 
         /**
          * ROM SST {@code interact(a0)} (s2.constants.asm:69 "last object stood
@@ -399,11 +399,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * Frames remaining for post-hit invulnerability.
          */
         protected int invulnerableFrames = 0;
-        private boolean suppressNextInvulnerabilityDecrement = false;
-        private boolean invulnerabilityDisplayTimerTickedThisFrame = false;
-        private boolean invulnerabilityDisplayTimerDecrementedThisFrame = false;
+        boolean suppressNextInvulnerabilityDecrement = false;
+        boolean invulnerabilityDisplayTimerTickedThisFrame = false;
+        boolean invulnerabilityDisplayTimerDecrementedThisFrame = false;
         /** HurtStop's unconditional DisplaySprite ownership for this BuildSprites pass. */
-        private boolean hurtRoutineOwnedDisplayThisFrame = false;
+        boolean hurtRoutineOwnedDisplayThisFrame = false;
 
         /**
          * Frames remaining for invincibility power-up.
@@ -515,16 +515,16 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         protected int rightWallPenetrationTimer = 0;
 
         private PlayerSpriteRenderer spriteRenderer;
-        private int mappingFrame = 0;
-        private int renderFlagWidthPixels = 0x18;
+        int mappingFrame = 0;
+        int renderFlagWidthPixels = 0x18;
         private boolean renderFlagOnScreen = true;
         private boolean renderFlagOnScreenValid = false;
         private int animationFrameCount = 0;
         private SpriteAnimationProfile animationProfile;
         private SpriteAnimationSet animationSet;
-        private int animationId = 0;
+        int animationId = 0;
         /** When >= 0, overrides profile-based animation resolution (e.g., Tails CPU fly anim). */
-        private int forcedAnimationId = -1;
+        int forcedAnimationId = -1;
         /** Resolved native animation ID for CanonicalAnimation.BUBBLE. -1 if unsupported. */
         private int bubbleAnimId = -1;
         /**
@@ -535,20 +535,20 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         // Package access: PlayableSpriteInternalAccess reads the bit-1 owner alone (engine-internal, not Mod API).
         boolean objectMappingFrameControl = false;
         /** Movement-owned raw frames; separate from an object's native bit-1 gate. */
-        private boolean abilityMappingFrameControl = false;
-        private int animationFrameIndex = 0;
-        private int animationTick = 0;
+        boolean abilityMappingFrameControl = false;
+        int animationFrameIndex = 0;
+        int animationTick = 0;
         private boolean renderHFlip = false;
         private boolean renderVFlip = false;
         private boolean highPriority = false;
-        private int priorityBucket = RenderPriority.PLAYER_DEFAULT;
+        int priorityBucket = RenderPriority.PLAYER_DEFAULT;
 
         protected boolean shield = false;
-        private ShieldType shieldType = null;
-        private PowerUpObject shieldObject;
+        ShieldType shieldType = null;
+        PowerUpObject shieldObject;
         private InstaShieldHandle instaShieldObject;
         private boolean instaShieldRegistered = false;
-        private PowerUpObject invincibilityObject;
+        PowerUpObject invincibilityObject;
         private PowerUpSpawner powerUpSpawner;
         protected boolean speedShoes = false;
         /**
@@ -711,11 +711,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          */
         protected boolean movementInputActive = false;
         private int spiralActiveFrame = Integer.MIN_VALUE;
-        private byte flipAngle = 0;
+        byte flipAngle = 0;
         private byte flipType = 0;
-        private byte flipSpeed = 0;
-        private byte flipsRemaining = 0;
-        private boolean flipTurned = false;
+        byte flipSpeed = 0;
+        byte flipsRemaining = 0;
+        boolean flipTurned = false;
 
         /**
          * Whether this sprite is currently underwater.
@@ -730,7 +730,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          */
         protected boolean waterPhysicsActive = false;
         @RewindTransient(reason = "structural native bit binding; the competition state adapter captures its value once")
-        private PlayableSpriteInternalAccess.SecondaryInvincibility nativeSecondaryInvincibility;
+        PlayableSpriteInternalAccess.SecondaryInvincibility nativeSecondaryInvincibility;
 
         void bindNativeSecondaryInvincibility(PlayableSpriteInternalAccess.SecondaryInvincibility owner) {
                 nativeSecondaryInvincibility = owner;
@@ -740,7 +740,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 return nativeSecondaryInvincibility;
         }
 
-        private Boolean nativeSecondaryInvincibility() {
+        Boolean nativeSecondaryInvincibility() {
                 return nativeSecondaryInvincibility == null ? null : nativeSecondaryInvincibility.read();
         }
 
@@ -748,9 +748,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 if (nativeSecondaryInvincibility() != null) nativeSecondaryInvincibility.write(value);
         }
 
-        private boolean nativeInvincibilityOr(boolean inferred) {
-                Boolean raw = nativeSecondaryInvincibility();
-                return raw != null ? raw : inferred;
+        boolean nativeInvincibilityOr(boolean inferred) {
+                return PlayableNativeActorState.nativeInvincibilityOr(this, inferred);
         }
 
         final NativePlayerSpeedWords nativeSpeedWords = new NativePlayerSpeedWords();
@@ -1015,139 +1014,15 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         // teleport_swap_table (s2.asm:26169-26190). Stat/input history is deliberately absent.
         NativeTeleportActorState captureNativeTeleportState() {
-                return new NativeTeleportActorState(
-                        getCentreX(),
-                        getCentreY(),
-                        xSubpixel,
-                        ySubpixel,
-                        xSpeed,
-                        ySpeed,
-                        gSpeed,
-                        xRadius,
-                        yRadius,
-                        priorityBucket,
-                        renderFlagWidthPixels,
-                        mappingFrame,
-                        animationId,
-                        animationFrameIndex,
-                        animationTick,
-                        direction,
-                        air,
-                        rolling,
-                        onObject,
-                        rollingJump,
-                        pushing,
-                        inWater,
-                        waterPhysicsActive,
-                        layer,
-                        preventTailsRespawn,
-                        hurt,
-                        objectRoutineOverride,
-                        angle,
-                        flipAngle,
-                        flipTurned,
-                        controller.getDrowning().getRemainingAir(),
-                        objectControlled,
-                        objectControlAllowsCpu,
-                        objectControlSuppressesMovement,
-                        objectMappingFrameControl,
-                        shield,
-                        shieldType,
-                        speedShoes,
-                        sliding,
-                        flipsRemaining,
-                        flipSpeed,
-                        moveLockTimer,
-                        invulnerableFrames,
-                        invincibleFrames,
-                        currentSpeedShoesRemainingTicks(),
-                        stickToConvex,
-                        spindash,
-                        pinballMode,
-                        pinballSpeedLock,
-                        spindashCounter,
-                        jumping,
-                        interactSlotIndex,
-                        latchedSolidObjectId,
-                        latchedSolidObjectReleased,
-                        latchedSolidObjectBound,
-                        topSolidBit,
-                        lrbSolidBit,
-                        runningMode,
-                        xHistory,
-                        yHistory,
-                        historyPos);
+                return PlayableNativeActorState.captureNativeTeleportState(this);
         }
 
         void applyNativeTeleportEffects(PowerUpObject shield, PowerUpObject stars) {
-                shieldObject = shield;
-                invincibilityObject = stars;
+                PlayableNativeActorState.applyNativeTeleportEffects(this, shield, stars);
         }
 
         void applyNativeTeleportState(NativeTeleportActorState s) {
-                xSubpixel = s.xSub();
-                ySubpixel = s.ySub();
-                xSpeed = s.xSpeed();
-                ySpeed = s.ySpeed();
-                gSpeed = s.inertia();
-                xRadius = s.xRadius();
-                yRadius = s.yRadius();
-                priorityBucket = s.priority();
-                renderFlagWidthPixels = s.displayWidth();
-                mappingFrame = s.mappingFrame();
-                animationId = s.animation();
-                animationFrameIndex = s.animationFrame();
-                animationTick = s.animationDuration();
-                direction = s.direction();
-                air = s.air();
-                rolling = s.rolling();
-                onObject = s.onObject();
-                rollingJump = s.rollingJump();
-                pushing = s.pushing();
-                inWater = s.inWater();
-                waterPhysicsActive = s.waterPhysicsActive();
-                layer = s.layer();
-                preventTailsRespawn = s.preventRespawn();
-                hurt = s.hurt();
-                objectRoutineOverride = s.routineOverride();
-                angle = s.angle();
-                flipAngle = s.flipAngle();
-                flipTurned = s.flipTurned();
-                objectControlled = s.objectControlled();
-                objectControlAllowsCpu = s.allowsCpu();
-                objectControlSuppressesMovement = s.suppressesMovement();
-                objectMappingFrameControl = s.mappingControl();
-                shield = s.shield();
-                shieldType = s.shieldType();
-                speedShoes = s.shoes();
-                sliding = s.sliding();
-                flipsRemaining = s.flipsRemaining();
-                flipSpeed = s.flipSpeed();
-                moveLockTimer = s.moveLock();
-                invulnerableFrames = s.invulnerability();
-                invincibleFrames = s.invincibility();
-                stickToConvex = s.stickToConvex();
-                spindash = s.spindash();
-                pinballMode = s.pinball();
-                pinballSpeedLock = s.pinballLock();
-                spindashCounter = s.spindashCounter();
-                jumping = s.jumping();
-                interactSlotIndex = s.interact();
-                latchedSolidObjectId = s.latchedId();
-                latchedSolidObjectReleased = s.latchedReleased();
-                latchedSolidObjectBound = s.latchedBound();
-                topSolidBit = s.topSolidBit();
-                lrbSolidBit = s.lrbSolidBit();
-                runningMode = s.groundMode();
-                controller.getDrowning().setRemainingAirFromFixedCountdown(s.airLeft());
-                System.arraycopy(s.xHistory(), 0, xHistory, 0, xHistory.length);
-                System.arraycopy(s.yHistory(), 0, yHistory, 0, yHistory.length);
-                historyPos = s.historyIndex();
-                // Radius changes do not alter the transferred native centre words.
-                com.openggf.sprites.NativePositionOps.writeXPosResetSubpixel(this, s.x());
-                com.openggf.sprites.NativePositionOps.writeYPosResetSubpixel(this, s.y());
-                xSubpixel = s.xSub(); ySubpixel = s.ySub();
-                updateSensorOffsetsFromRadii();
+                PlayableNativeActorState.applyNativeTeleportState(this, s);
         }
 
         /** Captures the mutable playable-sprite surface for rewind restore. */
@@ -1796,7 +1671,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * timer, for capture into {@link PlayerRewindExtra#speedShoesRemainingTicks()}.
          * Zero when speed shoes are not active.
          */
-        private int currentSpeedShoesRemainingTicks() {
+        int currentSpeedShoesRemainingTicks() {
                 return PlayableSpeedShoesLifecycle.remainingTicks(this, speedShoes);
         }
 
@@ -2193,60 +2068,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         private void setAir(boolean air, boolean preserveAbilityProperty) {
-                boolean changed = air != this.air;
-                boolean landed = !air && this.air;
-                // HurtCharacter/HurtStop do not write art_tile. Preserve any priority bit
-                // owned by a path switcher or scripted sequence (notably AIZ2's waterfall
-                // arena) when the hurt routine lands.
-                // (invulnerableFrames already set in applyHurt() per ROM behavior)
-                if (!air && this.air && hurt) {
-                        hurt = false;
-                        PlayableHurtRecovery.clearObjectControlAfterLanding(this);
-                        forcedAnimationId = -1;
-                        // HurtStop's direct draw path delays decrementing the reset timer by one frame.
-                        invulnerableFrames = 0x78;
-                        suppressNextInvulnerabilityDecrement = true;
-                        hurtRoutineOwnedDisplayThisFrame = true;
-                }
-                // Reset rolling jump flag when landing
-                if (!air && this.air) {
-                        rollingJump = false;
-                }
-                // Clear jumping flag and double-jump flag when landing
-                if (!air && this.air) {
-                        jumping = false;
-                        // Restore standing radii if coming out of a glide state
-                        // (glide uses custom 10x10 radii that won't be restored by
-                        // setRolling(false) since rolling was already false)
-                        if (doubleJumpFlag > 0 && !rolling) {
-                                applyStandingRadii(false);
-                                objectMappingFrameControl = false;
-                                abilityMappingFrameControl = false;
-                                forcedAnimationId = -1;
-                        }
-                        doubleJumpFlag = 0;
-                        if (!preserveAbilityProperty) doubleJumpProperty = 0;
-                        // S1 ROM parity (Sonic_ResetOnFloor):
-                        // move.w #0,(v_itembonus).w ; clear enemy/block score chain.
-                        currentGameState().resetItemBonus();
-                }
-                this.air = air;
-                if (landed) {
-                        controller.publishLandingAnimationWrite();
-                }
-                // SPG: Push sensor Y offset changes based on air state
-                updatePushSensorYOffset();
-                if (air) {
-                        setGroundMode(GroundMode.GROUND);
-                        // SPG: Angle should gradually return to 0 while airborne,
-                        // NOT immediately reset. See returnAngleToZero() called during air updates.
-                } else {
-                        // S2 resets its shared word only at explicit ResetOnFloor owners.
-                        // Other hosts retain their existing setter behavior.
-                        if (PlayableNativeFloorReset.chain(this) == null) resetBadnikChain();
-                        else badnikChainCounter = 0;
-                }
-                publishGroundTransition(changed, landed);
+                PlayableNativeActorState.setAir(this, air, preserveAbilityProperty);
         }
 
         /**
@@ -2301,7 +2123,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         /** Called after level initialization resets native character state, separately from landing. */
         protected void onLevelReset() { }
 
-        private void publishGroundTransition(boolean changed, boolean landed) {
+        void publishGroundTransition(boolean changed, boolean landed) {
                 PlayableSpriteController.publishGroundTransition(this, changed, landed, air, characterCallbackInvoker);
         }
 
@@ -2608,7 +2430,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         // Actor-local fallback: half the native even word. S2 owns its shared word
         // through the host policy, captured once independently of actor snapshots.
-        private int badnikChainCounter = 0;
+        int badnikChainCounter = 0;
 
         public void resetBadnikChain() {
                 badnikChainCounter = 0;
@@ -2813,15 +2635,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         public boolean getInvulnerable() {
-                Boolean raw = nativeSecondaryInvincibility();
-                if (raw != null) {
-                        // Touch_ChkHurt2 (s2.asm:29494-29501) reads status, timer and routine independently.
-                        return dead || debugMode || raw || invulnerableFrames > 0 || hurt
-                                || com.openggf.game.mutators.HomingAttackRuntime.invulnerable(mutatorPolicySource, this);
-                }
-                // Dead players cannot enter object-owned hurt/ring-loss paths.
-                // Debug mode and Super Sonic also make the player invulnerable
-                return dead || debugMode || superSonic || invulnerableFrames > 0 || invincibleFrames > 0 || hurt || com.openggf.game.mutators.HomingAttackRuntime.invulnerable(mutatorPolicySource, this);
+                return PlayableNativeActorState.getInvulnerable(this);
         }
 
         public int getInvulnerableFrames() {
@@ -2976,44 +2790,12 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         private void tickInvulnerabilityDisplayTimer() {
-                if (invulnerabilityDisplayTimerTickedThisFrame) {
-                        return;
-                }
-                invulnerabilityDisplayTimerTickedThisFrame = true;
-                // ROM: invulnerable_time only decrements in Sonic_Display (routine 2).
-                // During hurt routine (routine 4), DisplaySprite is called directly,
-                // so the timer stays frozen until Sonic lands. Routine 6 also draws
-                // directly and leaves this timer frozen throughout death.
-                if (invulnerableFrames > 0 && !hurt && !dead) {
-                        if (suppressNextInvulnerabilityDecrement) {
-                                suppressNextInvulnerabilityDecrement = false;
-                        } else {
-                                invulnerableFrames--;
-                                invulnerabilityDisplayTimerDecrementedThisFrame = true;
-                        }
-                }
+                PlayableNativeActorState.tickInvulnerabilityDisplayTimer(this);
         }
 
         /** Package-owned Sonic_Display invincibility expiry, before native powered-form writes. */
         void tickInvincibilityDisplayTimer() {
-                // Obj01_ChkInvin (s2.asm:36291-36296), Obj02_ChkInvinc (s2.asm:39027-39032).
-                // A clear bit freezes even a nonzero timer; a set bit with time zero remains set.
-                if (Boolean.FALSE.equals(nativeSecondaryInvincibility())) return;
-                if (invincibleFrames > 0) {
-                        invincibleFrames--;
-                        if (invincibleFrames == 0) {
-                                // Obj01_RmvInvin (s2.asm:36304-36305), Obj02_RmvInvin (s2.asm:39040-39041).
-                                writeNativeSecondaryInvincibility(false);
-                                if (invincibilityObject != null) {
-                                        invincibilityObject.destroy();
-                                        invincibilityObject = null;
-                                }
-                                if (shieldObject != null) {
-                                        shieldObject.setVisible(!nativeInvincibilityOr(superSonic));
-                                }
-                                restoreLevelMusicAfterInvincibility();
-                        }
-                }
+                PlayableNativeActorState.tickInvincibilityDisplayTimer(this);
         }
 
         public void tickStatus() {
@@ -3065,7 +2847,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * reaches this path by setting {@code invincibility_timer} to 1 rather
          * than playing music itself.
          */
-        private void restoreLevelMusicAfterInvincibility() {
+        void restoreLevelMusicAfterInvincibility() {
                 // Music belongs to the host mode, not the player's donated physics profile.
                 GameModule module = currentGameModule();
                 GameRules rules = module != null ? module.getRules() : getGameRules();
@@ -3249,27 +3031,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         private boolean isDamageBlocked(boolean ignoreIFrames) {
-                Boolean raw = nativeSecondaryInvincibility();
-                if (raw != null) {
-                        // Touch_ChkHurt (s2.asm:85579-85595); HurtCharacter has no global Super test.
-                        return dead || debugMode || raw || (!ignoreIFrames && invulnerableFrames > 0);
-                }
-                if (dead || debugMode || invincibleFrames > 0 || isSuperSonic()) {
-                        return true;
-                }
-                // ROM Touch_Hurt (sonic3k.asm:21080-21083, s2.asm Touch_Hurt) gates
-                // purely on a NONZERO invulnerability_timer: `tst.b
-                // invulnerability_timer(a0); bne.s Touch_ChkHurt_Return`. The timer is
-                // decremented earlier in the same object slot by *_Display
-                // (Sonic_Display sonic3k.asm:22074-22077, Tails_Display
-                // sonic3k.asm:26319-26322), which the engine mirrors via
-                // tickInvulnerabilityDisplayTimerBeforeTouchResponse() before
-                // applyTouchResponses (SpriteManager.java:1414). So invulnerableFrames at
-                // touch time already holds the post-decrement value, and any nonzero
-                // value blocks the hit -- matching the ROM `bne` exactly. This applies
-                // identically to the CPU sidekick, whose Tails_Display performs the same
-                // pre-touch decrement.
-                return !ignoreIFrames && invulnerableFrames > 0;
+                return PlayableNativeActorState.isDamageBlocked(this, ignoreIFrames);
         }
 
         /**
@@ -4954,7 +4716,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 updateSensorOffsetsFromRadii();
         }
 
-        private void updateSensorOffsetsFromRadii() {
+        void updateSensorOffsetsFromRadii() {
                 PlayableSpriteGeometry.updateSensorOffsets(this, groundSensors, ceilingSensors,
                         pushSensors, characterPhysicsSpec);
         }
