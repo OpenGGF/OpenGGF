@@ -117,7 +117,31 @@ def super_flight(i,size):
   a.boot(im,27,79,17,12);a.boot(im,61,82,19,12)
   a.limb(im,(42,56),(16,76),7);a.glove(im,0,73,26,22)
   a.limb(im,(63,55),(88,51),8);a.glove(im,77,36,33,30)
-  a.head(im,21,1,52,54,True)
+  a.head(im,24,16,49,43,True)
+  return im
+ if i in (21,22):
+  rows=[
+   '0000011111000000',
+   '0000145654100000',
+   '0001454455410000',
+   '0001446744410000',
+   '00017c77c7710000',
+   '00017f77f7710000',
+   '0001777777710000',
+   '000017cc77100000',
+   '0110011111100110',
+   '1cc1147774411cc1',
+   '1cc1447874441cc1',
+   '0110147774100110',
+   '0000014441000000',
+   '00001a101a100000',
+   '00001a101a100000',
+   '0000111011100000']
+  im.putdata([int(v,16) for row in rows for v in row])
+  if i==22:
+   # Raised hands and separated boot endpoints as she opens toward the viewer.
+   for xx,yy in [(0,7),(1,6),(14,7),(14,6)]:im.putpixel((xx,yy),12)
+   im.putpixel((7,3),5);im.putpixel((8,3),6)
   return im
  # Five hand-placed distant flight angles, not scaled copies of hero pose.
  if i==18:

@@ -35,6 +35,14 @@
       12,
       13,
       14
+    ],
+    "super": [
+      18,
+      19,
+      20,
+      21,
+      22,
+      23
     ]
   },
   "frames": [
@@ -883,6 +891,387 @@
       ],
       "native_composite_pieces": null,
       "group": "s2_normal_leap"
+    },
+    {
+      "id": 18,
+      "file": "super-12.png",
+      "native_source_label": "Map_objCF_0378",
+      "native_art_label": "ArtNem_EndingSuperSonic",
+      "dimensions": [
+        24,
+        16
+      ],
+      "bounds_px": [
+        -12,
+        -8,
+        24,
+        16
+      ],
+      "hotspot": [
+        12,
+        8
+      ],
+      "palette_line": 0,
+      "pieces": [
+        [
+          -4,
+          -8,
+          2,
+          1,
+          25,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          -12,
+          0,
+          3,
+          1,
+          27,
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "native_composite_pieces": null,
+      "group": "s2_super_depart"
+    },
+    {
+      "id": 19,
+      "file": "super-13.png",
+      "native_source_label": "Map_objCF_038A",
+      "native_art_label": "ArtNem_EndingSuperSonic",
+      "dimensions": [
+        16,
+        16
+      ],
+      "bounds_px": [
+        -8,
+        -8,
+        16,
+        16
+      ],
+      "hotspot": [
+        8,
+        8
+      ],
+      "palette_line": 0,
+      "pieces": [
+        [
+          -8,
+          -8,
+          2,
+          2,
+          30,
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "native_composite_pieces": null,
+      "group": "s2_super_depart"
+    },
+    {
+      "id": 20,
+      "file": "super-14.png",
+      "native_source_label": "Map_objCF_0394",
+      "native_art_label": "ArtNem_EndingSuperSonic",
+      "dimensions": [
+        16,
+        16
+      ],
+      "bounds_px": [
+        -8,
+        -8,
+        16,
+        16
+      ],
+      "hotspot": [
+        8,
+        8
+      ],
+      "palette_line": 0,
+      "pieces": [
+        [
+          -8,
+          -8,
+          2,
+          2,
+          34,
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "native_composite_pieces": null,
+      "group": "s2_super_depart"
+    },
+    {
+      "id": 21,
+      "file": "super-15.png",
+      "native_source_label": "Map_objCF_039E",
+      "native_art_label": "ArtNem_EndingSuperSonic",
+      "dimensions": [
+        16,
+        16
+      ],
+      "bounds_px": [
+        -8,
+        -8,
+        16,
+        16
+      ],
+      "hotspot": [
+        8,
+        8
+      ],
+      "palette_line": 0,
+      "pieces": [
+        [
+          -8,
+          -8,
+          2,
+          2,
+          38,
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "native_composite_pieces": null,
+      "group": "s2_super_depart"
+    },
+    {
+      "id": 22,
+      "file": "super-16.png",
+      "native_source_label": "Map_objCF_03A8",
+      "native_art_label": "ArtNem_EndingSuperSonic",
+      "dimensions": [
+        16,
+        16
+      ],
+      "bounds_px": [
+        -8,
+        -8,
+        16,
+        16
+      ],
+      "hotspot": [
+        8,
+        8
+      ],
+      "palette_line": 0,
+      "pieces": [
+        [
+          -8,
+          -8,
+          2,
+          2,
+          42,
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "native_composite_pieces": null,
+      "group": "s2_super_depart"
+    },
+    {
+      "id": 23,
+      "file": "super-17.png",
+      "native_source_label": "Map_objCF_03B2",
+      "native_art_label": "ArtNem_EndingSuperSonic",
+      "dimensions": [
+        112,
+        96
+      ],
+      "bounds_px": [
+        0,
+        0,
+        112,
+        96
+      ],
+      "hotspot": [
+        0,
+        0
+      ],
+      "palette_line": 0,
+      "pieces": [
+        [
+          40,
+          0,
+          1,
+          1,
+          46,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          32,
+          8,
+          3,
+          1,
+          47,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          24,
+          16,
+          4,
+          4,
+          50,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          56,
+          16,
+          2,
+          2,
+          66,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          56,
+          32,
+          3,
+          4,
+          70,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          80,
+          40,
+          4,
+          4,
+          82,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          24,
+          48,
+          4,
+          4,
+          98,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          56,
+          64,
+          3,
+          1,
+          114,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          0,
+          72,
+          3,
+          3,
+          117,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          24,
+          80,
+          2,
+          1,
+          126,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          24,
+          88,
+          1,
+          1,
+          128,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          56,
+          72,
+          4,
+          1,
+          129,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          48,
+          80,
+          2,
+          2,
+          133,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          64,
+          80,
+          3,
+          1,
+          137,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          72,
+          88,
+          2,
+          1,
+          140,
+          0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "native_composite_pieces": null,
+      "group": "s2_super_hero"
     }
   ]
 }
