@@ -92,11 +92,10 @@ class TestStandingsPaging {
         // Stable sorting of newly achieved bests independently models the tie rule.
         expected.sort(Comparator.comparingInt(ExpectedBest::frames));
         List<ControlMessage.StandingsRow> rows = expectedRows(expected);
-        int rank = 1;
-        while (!expected.get(rank - 1).participantId().equals(participantId)) rank++;
+        int rank = 1 + (int) expected.stream().filter(best -> best.frames() < frames).count();
         int before = broadcast.size();
 
-        assertEquals(new HostRoundEngine.FinishOutcome(slot, rank, rank > 10, attempt),
+        assertEquals(new HostRoundEngine.FinishOutcome(slot, rank, expected.indexOf(expected.stream().filter(b -> b.participantId().equals(participantId)).findFirst().orElseThrow()) >= 10, attempt),
                 engine.onAttemptFinish(slot, participantId, null, participantId, "tails",
                         finish(attempt, frames), false));
         assertEquals(before + 1, broadcast.size(), "each improvement emits exactly one delta");
@@ -113,7 +112,7 @@ class TestStandingsPaging {
         List<ControlMessage.StandingsRow> rows = new ArrayList<>();
         for (ExpectedBest best : expected) {
             rows.add(new ControlMessage.StandingsRow(best.slot(), best.name(), "tails",
-                    best.frames(), rows.size() + 1, "NONE"));
+                    best.frames(), 1 + (int) expected.stream().filter(other -> other.frames() < best.frames()).count(), "UNVERIFIED"));
         }
         return rows;
     }

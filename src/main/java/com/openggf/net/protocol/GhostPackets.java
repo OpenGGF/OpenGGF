@@ -80,6 +80,7 @@ public final class GhostPackets {
         }
     }
 
+    /** Status low nibble is lifecycle, high nibble is progress (0-15). */
     @com.openggf.game.ModApi
     public record RosterEntry(int playerSlot, int cellX, int cellY, int status) {
     }
@@ -224,7 +225,8 @@ public final class GhostPackets {
             requireRange(entry.playerSlot(), 0xFF, "roster slot");
             requireRange(entry.cellX(), 0xFFFF, "roster cellX");
             requireRange(entry.cellY(), 0xFF, "roster cellY");
-            requireRange(entry.status(), ROSTER_STATUS_FINISHED, "roster status");
+            requireRange(entry.status(), 0xFF, "roster status");
+            if ((entry.status() & 0x0F) > ROSTER_STATUS_FINISHED) throw new ProtocolViolationException("roster status");
             out.put((byte) entry.playerSlot()).putShort((short) entry.cellX())
                     .put((byte) entry.cellY()).put((byte) entry.status());
         }
@@ -244,7 +246,7 @@ public final class GhostPackets {
             int cellX = in.getShort() & 0xFFFF;
             int cellY = in.get() & 0xFF;
             int status = in.get() & 0xFF;
-            if (status > ROSTER_STATUS_FINISHED) {
+            if ((status & 0x0F) > ROSTER_STATUS_FINISHED) {
                 throw new ProtocolViolationException(
                         "roster status out of range: " + status);
             }

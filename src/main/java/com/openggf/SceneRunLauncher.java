@@ -77,6 +77,13 @@ final class SceneRunLauncher implements SceneGameplay {
         if (!games.contains(spec.gameId())) {
             throw new IllegalArgumentException("Game is not available: " + spec.gameId());
         }
+        if (spec.kind() == com.openggf.mods.run.TrackKind.ARENA) {
+            var module = com.openggf.game.GameModuleRegistry.createStockModule(
+                    com.openggf.game.GameId.fromCode(spec.gameId()));
+            var provider = module.getGameService(com.openggf.game.arena.HostedArenaProvider.class);
+            if (provider == null || !provider.characters().contains(spec.character()))
+                throw new IllegalArgumentException("Game has no hosted arena for this character");
+        }
         if (!stockCharacters(spec.gameId()).contains(spec.character())) {
             throw new IllegalArgumentException(spec.character() + " is not a stock character of " + spec.gameId());
         }

@@ -225,6 +225,27 @@ both human input lanes, destructive state/pixel replay and authored goal-boundar
 Match/Time Attack consumers. Its [obligation matrix](../architecture/validation/2026-10-28-tas-support-competition.md#act-obligations-in-this-bounded-host-increment)
 keeps full traversal/GP, viewport, donor, roster and native-pixel obligations open;
 this is an LTS-08 auxiliary-mode increment, not completed act certification.
+
+Hosted Competition lane F (2026-11-07): positioned BPZ crossings now exercise five
+lap durations through the Time Attack runtime, host finish validation, best lap
+and HUD state. All five arena profiles are exported from the ROM, including
+wrap geometry, five laps and twelve swap sources; S2 act source caps count ROM
+monitor placements. The input-only BPZ planner fallback is a compressed 327-row
+controller tape: the [bounded input author](../../racing/server/src/main/java/openggf/racing/server/tools/ArenaRouteAuthor.java)
+made two attempts with no completed lap. It covers GO
+at frame 240, the start crossing and a backward crossing, and replays to the
+live native ghost hash with no booked laps. **Arena verified finishes remain
+uncovered. The fallback does not contain a death**, so arena death-to-ghost-reset
+replay remains an explicit gap. A positioned native death separately verifies
+ARENA_DEATH_RESPAWN, clock continuation and the single ghost reset marker.
+The two-attempt kill condition forbids further
+route-authoring loops in this lane. Positioned state never enters replay.
+A separate CPZ2 input-only Competition recording includes native deaths under
+FAST_FROM_CHECKPOINT and matches the live ghost hash. Native arena swap apply
+and fallback events replay at their logged frames; the network portion uses
+two real loopback clients with synthetic engine observations. This does not
+certify a ROM-backed two-client full race, GP, other characters, viewport or
+native-pixel breadth.
 [Standalone SK startup](../architecture/validation/2026-10-28-tas-support-standalone.md#parent-integration-scope)
 separately covers Sonic/Knuckles title-to-MHZ1 entry, Knuckles intro/checkpoint
 restart and short ordinary control at native 320. It does not supersede the

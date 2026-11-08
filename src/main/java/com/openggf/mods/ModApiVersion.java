@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Objects;
 
 public final class ModApiVersion {
+    // Candidate 0.7: race observations/events/monitor policy are game.arena-owned.
+    // Rebuild matching creator artifacts after this intentional package migration.
     /**
      * Current unpublished compiled-mod API candidate, including the grouped landing animation rule,
      * saved rewind budget scope,
@@ -86,11 +88,20 @@ public final class ModApiVersion {
      * Hub preferences include optional title music, its volume, last focused game,
      * dismissed game support notices, and per-game last-act/leader history for
      * zone-start Continue.
+     * Competition fallback receipts carry a host refusal reason. RunStep exposes the
+     * saved checkpoint centre and the room wire binds it to its activation frame.
      * Shared network contracts include direct/relay room clients, JDK room hosting,
      * identity, bounded ghost transport and protocol messages/codecs. Protocol 6 adds
      * Full/Quick/Off communication with semantic quick content, a local English
      * catalogue and read-only global personal chat display preferences. Protocol 7 combines
      * these controls with private admission, invite authority and correlated master requests.
+     * RunSpec carries neutral-default swap enablement. Competition rounds carry start-in,
+     * standings swap taint and host-assigned solo-fallback IDs. Ghost streams reserve layer
+     * bit 7 for bounded anchored respawns; RaceSignal exposes arena death respawn to hosts.
+     * Protocol 9 adds competition track kinds, race clocks, monitor policies, lap/progress
+     * metadata, standings boards and bounded teleport event contracts. Remote ghost registries
+     * accept explicit local-track wrap geometry for playback and extrapolation; room hosts
+     * accept initial track kind/mode without changing legacy constructor defaults.
      * Protocol 8 adds broker-bound listed joins, explicit listener admission states,
      * complete direct registration ownership, acknowledged route retirement,
      * local broker-granted owner self-join, committed round revisions and

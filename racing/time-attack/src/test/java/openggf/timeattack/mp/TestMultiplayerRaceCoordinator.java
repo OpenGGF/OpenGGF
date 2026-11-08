@@ -165,6 +165,50 @@ class TestMultiplayerRaceCoordinator {
     }
 
     @Test
+    void competitionArenaReleasesDuringCountdownAndPublishesStart(@TempDir Path root) {
+        FakeTransport transport = new FakeTransport();
+        ClientRaceSession session = new ClientRaceSession(() -> now);
+        session.applyJoin(new ControlMessage.JoinAccepted("tok", 0,
+                new ControlMessage.RoomDescriptor("LAN", "s3k", 0, 0, "OPEN", null, 8, false),
+                new ControlMessage.RoundSnapshot("LOBBY", null, 0, 0, List.of())));
+        var config = new ControlMessage.RoundConfig("s3k", 0, 0, 630, "OPEN", null,
+                "ARENA", "COMPETITION", "OFF", 60);
+        session.onControl(start(config, 1, now + 10000, now + 640000));
+        var runtime = new TimeAttackRuntime(new GhostStore(root), root.resolve("id"), () -> false);
+        runtime.armForLaunch(new TimeAttackLaunchRequest("s3k", 0, 0, "sonic", List.of(),
+                com.openggf.mods.run.TrackKind.ARENA, openggf.timeattack.CompetitionRoomSettings.Mode.COMPETITION,
+                com.openggf.game.arena.MonitorRule.OFF, false));
+        var coordinator = new MultiplayerRaceCoordinator(transport, session, () -> now);
+        coordinator.attachRuntime(runtime);
+        levelReady(runtime);
+        assertFalse(runtime.admitStep(keys()));
+        now += 5999;
+        assertFalse(runtime.admitStep(keys()));
+        now++;
+        assertTrue(runtime.admitStep(keys()));
+        assertEquals(1, transport.sentControl.stream().filter(ControlMessage.AttemptStart.class::isInstance).count());
+        runtime.afterStep(new RunStep(0, 0, false, new PlayerPose(100, 100, 0, false, false, 2, false),
+                false, -1, false, new com.openggf.game.arena.RaceClock(false, 0, 0,
+                        com.openggf.game.arena.RaceClock.Failure.NONE), com.openggf.game.arena.RaceSignal.NONE,
+                com.openggf.game.arena.RaceEventResult.NONE));
+        assertTrue(runtime.isAttemptActive());
+        assertFalse(coordinator.mayRetry());
+        assertFalse(coordinator.continueAfterActCompletion());
+        transport.inbound.add(new RaceClient.Control(new ControlMessage.RaceCutoff(1, now + 60000)));
+        coordinator.pump();
+        var hud = runtime.competitionHudState();
+        assertTrue(hud.cutoffArmed()); assertEquals(60000, hud.cutoffRemainingMillis());
+        assertEquals(openggf.timeattack.CompetitionHudState.MassStartPhase.COUNTDOWN, hud.massStartPhase());
+        assertTrue(hud.unverified());
+        var row = new ControlMessage.StandingsRow(0, "Racer", "sonic", 100, 1, "UNVERIFIED", "FINISHED", 10,
+                List.of(10, 20, 20, 20, 30));
+        transport.inbound.add(new RaceClient.Control(new ControlMessage.RoundEnd(List.of(row))));
+        coordinator.pump();
+        assertEquals(1, runtime.competitionHudState().placements().size());
+        assertEquals(100, runtime.competitionHudState().placements().getFirst().totalFrames());
+    }
+
+    @Test
     void attemptLifecyclePublishesEveryFrameAndHashes(@TempDir Path root) {
         Rig rig = rig(root);
         TimeAttackRuntimeTestBridge.begin(rig.runtime(), "0.6:cafe");

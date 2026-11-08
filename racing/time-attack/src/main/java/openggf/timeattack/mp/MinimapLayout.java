@@ -2,7 +2,7 @@ package openggf.timeattack.mp;
 
 import java.util.List;
 
-/** Pure 40-column progress-strip composition. */
+/** Pure progress-strip composition: the 40-column text strip, and the lap-aware pixel strip's positions. */
 public final class MinimapLayout {
     public static final int COLUMNS = 40;
 
@@ -24,6 +24,24 @@ public final class MinimapLayout {
             }
         }
         return new String(strip);
+    }
+
+    /** A racer's share of the whole race, in thousandths ({@code CompetitionHudState.progressPermille}). */
+    public static final int PERMILLE = 1000;
+
+    /**
+     * Where a racer at {@code permille} of the race sits on a strip {@code width} pixels wide; the
+     * last two pixels are the marker's own width, as for level-x positions.
+     */
+    public static int permilleX(int permille, int width) {
+        return (int) ((long) clamp(permille, 0, PERMILLE) * Math.max(0, width - 2) / PERMILLE);
+    }
+
+    /** The x of each lap line inside the strip: {@code lapCount - 1} evenly spaced ticks (none for acts). */
+    public static List<Integer> lapTicks(int lapCount, int width) {
+        List<Integer> ticks = new java.util.ArrayList<>();
+        for (int lap = 1; lap < lapCount; lap++) ticks.add(permilleX(lap * PERMILLE / lapCount, width));
+        return List.copyOf(ticks);
     }
 
     public static char glyphForFarStatus(int status) {

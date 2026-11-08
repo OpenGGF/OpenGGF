@@ -18,23 +18,23 @@ class TestGhostFileCodec {
         byte[] before=Files.readAllBytes(path);
         int[][] clocks={{-1,100},{100,99},{Integer.MIN_VALUE,Integer.MAX_VALUE},{0,GhostFileCodec.MAX_FRAMES+1}};
         for (int[] clock:clocks) {
-            var invalid=new GhostRecording(new GhostHeader(1,"s3k",0,0,"sonic","x",clock[0],clock[1],
+            var invalid=new GhostRecording(new GhostHeader(GhostFileCodec.FORMAT_VERSION,"s3k",0,0,"sonic","x",clock[0],clock[1],
                     new int[0],new byte[32]),new byte[7]);
             assertThrows(IOException.class,()->GhostFileCodec.write(invalid,path));
             assertArrayEquals(before,Files.readAllBytes(path));
         }
         for (int[] splits:new int[][]{new int[256],{-1},{101},{50,40}}) {
-            var invalid=new GhostRecording(new GhostHeader(1,"s3k",0,0,"sonic","x",0,100,
+            var invalid=new GhostRecording(new GhostHeader(GhostFileCodec.FORMAT_VERSION,"s3k",0,0,"sonic","x",0,100,
                     splits,new byte[32]),new byte[7]);
             assertThrows(IOException.class,()->GhostFileCodec.write(invalid,path));
             assertArrayEquals(before,Files.readAllBytes(path));
         }
         for (GhostHeader header:java.util.List.of(
                 new GhostHeader(99,"s3k",0,0,"sonic","x",0,100,new int[0],new byte[32]),
-                new GhostHeader(1,"../outside",0,0,"sonic","x",0,100,new int[0],new byte[32]),
-                new GhostHeader(1,"s3k",256,-1,"sonic","x",0,100,new int[0],new byte[32]),
-                new GhostHeader(1,"s3k",0,0,"../outside","x",0,100,new int[0],new byte[32]),
-                new GhostHeader(1,"s3k",0,0,"sonic","x",0,100,new int[0],new byte[31]))) {
+                new GhostHeader(GhostFileCodec.FORMAT_VERSION,"../outside",0,0,"sonic","x",0,100,new int[0],new byte[32]),
+                new GhostHeader(GhostFileCodec.FORMAT_VERSION,"s3k",256,-1,"sonic","x",0,100,new int[0],new byte[32]),
+                new GhostHeader(GhostFileCodec.FORMAT_VERSION,"s3k",0,0,"../outside","x",0,100,new int[0],new byte[32]),
+                new GhostHeader(GhostFileCodec.FORMAT_VERSION,"s3k",0,0,"sonic","x",0,100,new int[0],new byte[31]))) {
             assertThrows(IOException.class,()->GhostFileCodec.write(new GhostRecording(header,new byte[7]),path));
             assertArrayEquals(before,Files.readAllBytes(path));
         }
@@ -46,6 +46,7 @@ class TestGhostFileCodec {
         byte[] bytes=Files.readAllBytes(path);
         var in=new java.io.DataInputStream(new java.io.ByteArrayInputStream(bytes));
         in.skipNBytes(10);in.readUTF();in.skipNBytes(2);in.readUTF();in.readUTF();
+        in.readUTF();in.readUTF();in.readUTF();in.skipNBytes(1);
         int clockOffset=bytes.length-in.available();
         java.nio.ByteBuffer.wrap(bytes).putInt(clockOffset,-1);
         Files.write(path,bytes);
@@ -76,6 +77,19 @@ class TestGhostFileCodec {
         assertEquals(3, back.frameCount());
         assertEquals(original.frameAt(2), back.frameAt(2));
         assertEquals(3600, back.header().finalTimeFrames());
+    }
+
+    @Test
+    void v2ArenaMetadataAndLapPartitionRoundTrip(@TempDir Path dir) throws IOException {
+        var h = new GhostHeader(GhostFileCodec.FORMAT_VERSION, "s3k", 1, 0, "sonic", "Racer",
+                240, 255, new int[0], new byte[32], com.openggf.mods.run.TrackKind.ARENA,
+                openggf.timeattack.CompetitionRoomSettings.Mode.COMPETITION,
+                com.openggf.game.arena.MonitorRule.COMPETITION_ITEMS, new int[]{1,2,3,4,5});
+        Path path = dir.resolve("arena.ggfghost");
+        GhostFileCodec.write(new GhostRecording(h, new byte[7]), path);
+        assertEquals(h, GhostFileCodec.read(path).header());
+        byte[] bytes = Files.readAllBytes(path); bytes[9] = 1; Files.write(path, bytes);
+        assertThrows(IOException.class, () -> GhostFileCodec.read(path));
     }
 
     @Test
@@ -112,6 +126,7 @@ class TestGhostFileCodec {
             out.writeShort(GhostFileCodec.FORMAT_VERSION);
             out.writeUTF("s3k"); out.writeByte(0); out.writeByte(0);
             out.writeUTF("sonic"); out.writeUTF("x");
+            out.writeUTF("ACT"); out.writeUTF("TIME_ATTACK"); out.writeUTF("NORMAL"); out.writeByte(0);
             out.writeInt(0); out.writeInt(1);
             out.writeByte(0);                 // no splits
             out.writeByte(32); out.write(new byte[32]);
@@ -125,7 +140,7 @@ class TestGhostFileCodec {
     void headerAndRecordingAreDefensivelyCopied() {
         int[] splits = {900};
         byte[] hash = new byte[32];
-        GhostHeader h = new GhostHeader(1, "s3k", 0, 0, "sonic", "x", 0, 1000, splits, hash);
+        GhostHeader h = new GhostHeader(GhostFileCodec.FORMAT_VERSION, "s3k", 0, 0, "sonic", "x", 0, 1000, splits, hash);
         splits[0] = 7; hash[0] = 7;                       // mutate sources
         assertEquals(900, h.splitFrames()[0]);
         assertEquals(0, h.inputRecordingHash()[0]);
@@ -143,7 +158,7 @@ class TestGhostFileCodec {
     @Test
     void writeRejectsOverCapRecording(@TempDir Path dir) {
         byte[] frames = new byte[(GhostFileCodec.MAX_FRAMES + 1) * GhostFrameCodec.BYTES];
-        GhostHeader h = new GhostHeader(1, "s3k", 0, 0, "sonic", "x", 0, 1, new int[0], new byte[32]);
+        GhostHeader h = new GhostHeader(GhostFileCodec.FORMAT_VERSION, "s3k", 0, 0, "sonic", "x", 0, 1, new int[0], new byte[32]);
         GhostRecording overCap = new GhostRecording(h, frames);
         IOException ex = assertThrows(IOException.class,
                 () -> GhostFileCodec.write(overCap, dir.resolve("big.ggfghost")));
@@ -152,7 +167,7 @@ class TestGhostFileCodec {
 
     @Test
     void rejectsEmptyFrameData() {
-        GhostHeader h = new GhostHeader(1, "s3k", 0, 0, "sonic", "x", 0, 1, new int[0], new byte[32]);
+        GhostHeader h = new GhostHeader(GhostFileCodec.FORMAT_VERSION, "s3k", 0, 0, "sonic", "x", 0, 1, new int[0], new byte[32]);
         assertThrows(IllegalArgumentException.class, () -> new GhostRecording(h, new byte[0]));
     }
 }

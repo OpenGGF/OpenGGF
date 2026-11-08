@@ -12,12 +12,12 @@ import java.nio.file.Path;
 
 /** Reader/writer for .ggfghost files: header + 7-byte frame stream (main spec §3/§7). */
 public final class GhostFileCodec {
-    public static final int FORMAT_VERSION = 1;
-    /** Ten minutes at 60fps — the ROM act time-over cap; also bounds hostile-file allocations. */
-    public static final int MAX_FRAMES = 36_000;
+    public static final int FORMAT_VERSION = 2;
+    /** Ten minutes thirty seconds; also bounds hostile-file allocations. */
+    public static final int MAX_FRAMES = 37_800;
     public static final int MAX_SPLITS = 255;
     public static final int MAX_TEXT_BYTES = 576;
-    public static final int MAX_FILE_BYTES = MAX_FRAMES * GhostFrameCodec.BYTES + MAX_SPLITS * 4 + 3 * MAX_TEXT_BYTES + 64;
+    public static final int MAX_FILE_BYTES = MAX_FRAMES * GhostFrameCodec.BYTES + MAX_SPLITS * 4 + 3 * MAX_TEXT_BYTES + 256;
     private static final int HASH_LENGTH = 32;
     private static final String MAGIC_TEXT = "GGFGHOST";
 
@@ -40,6 +40,11 @@ public final class GhostFileCodec {
             out.writeByte(h.act());
             out.writeUTF(h.character());
             out.writeUTF(h.displayName());
+            out.writeUTF(h.trackKind().name());
+            out.writeUTF(h.mode().name());
+            out.writeUTF(h.monitors().name());
+            out.writeByte(h.lapFrames().length);
+            for (int lap : h.lapFrames()) out.writeInt(lap);
             out.writeInt(h.firstInputFrame());
             out.writeInt(h.finishFrame());
             out.writeByte(h.splitFrames().length);
@@ -68,6 +73,18 @@ public final class GhostFileCodec {
             int act = in.readUnsignedByte();
             String character = readText(in);
             String displayName = readText(in);
+            com.openggf.mods.run.TrackKind kind;
+            openggf.timeattack.CompetitionRoomSettings.Mode mode;
+            com.openggf.game.arena.MonitorRule monitors;
+            try {
+                kind = com.openggf.mods.run.TrackKind.valueOf(readText(in));
+                mode = openggf.timeattack.CompetitionRoomSettings.Mode.valueOf(readText(in));
+                monitors = com.openggf.game.arena.MonitorRule.valueOf(readText(in));
+            } catch (IllegalArgumentException invalid) { throw new IOException("Invalid ghost rules", invalid); }
+            int lapCount = in.readUnsignedByte();
+            if (lapCount > 5) throw new IOException("Too many ghost laps");
+            int[] laps = new int[lapCount];
+            for (int i = 0; i < lapCount; i++) laps[i] = in.readInt();
             int firstInput = in.readInt();
             int finish = in.readInt();
             int[] splits = new int[in.readUnsignedByte()];
@@ -86,7 +103,7 @@ public final class GhostFileCodec {
             in.readFully(frames);
             if (in.read()!=-1) throw new IOException(path+" has trailing ghost bytes");
             GhostHeader header=new GhostHeader(version, gameId, zone, act, character,
-                    displayName, firstInput, finish, splits, hash);
+                    displayName, firstInput, finish, splits, hash, kind, mode, monitors, laps);
             validateHeader(header);
             return new GhostRecording(header, frames);
         }
@@ -107,6 +124,13 @@ public final class GhostFileCodec {
         }
         if (h.firstInputFrame()<0 || h.finishFrame()<h.firstInputFrame() || h.finishFrame()>MAX_FRAMES)
             throw new IOException("Invalid ghost first/finish frame bounds");
+        int[] laps = h.lapFrames();
+        if (laps.length > 5 || java.util.Arrays.stream(laps).anyMatch(lap -> lap < 1)
+                || laps.length > 0 && java.util.Arrays.stream(laps).asLongStream().sum() != h.finalTimeFrames())
+            throw new IOException("Invalid ghost lap partition");
+        if (h.trackKind() == com.openggf.mods.run.TrackKind.ARENA
+                && (!h.gameId().equals("s3k") || h.zone() > 4 || h.act() != 0 || laps.length != 5))
+            throw new IOException("Invalid arena ghost route/laps");
         int[] splits=h.splitFrames();
         if (splits.length>MAX_SPLITS) throw new IOException("Ghost split count exceeds byte limit");
         int previous=h.firstInputFrame();

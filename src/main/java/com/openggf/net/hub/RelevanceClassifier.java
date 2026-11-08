@@ -20,6 +20,12 @@ public final class RelevanceClassifier {
     public record Pos(int x, int y) {
     }
 
+    private int wrapWidth, wrapHeight;
+    void geometry(TrackValidationProfile profile) {
+        wrapWidth = profile == null ? 0 : profile.wrapWidthPx();
+        wrapHeight = profile == null ? 0 : profile.wrapHeightPx();
+        previousNear.clear();
+    }
     private final Map<Integer, Pos> positions = new HashMap<>();
     private final Map<Integer, List<Integer>> buckets = new HashMap<>();
     private static final int[] NO_NEAR = new int[0];
@@ -88,8 +94,8 @@ public final class RelevanceClassifier {
         int bucketRange = Math.floorDiv(NEAR_EXIT_PX, BUCKET_PX) + 1;
         int selfBucket = Math.floorDiv(self.x(), BUCKET_PX);
         int count = 0;
-        for (int bucketIndex = selfBucket - bucketRange;
-             bucketIndex <= selfBucket + bucketRange; bucketIndex++) {
+        for (int bucketIndex = wrapWidth > 0 ? 0 : selfBucket - bucketRange;
+             bucketIndex <= (wrapWidth > 0 ? Math.floorDiv(wrapWidth + 1024, BUCKET_PX) : selfBucket + bucketRange); bucketIndex++) {
             for (int peer : buckets.getOrDefault(bucketIndex, List.of())) {
                 if (peer == slot) {
                     continue;
@@ -149,8 +155,8 @@ public final class RelevanceClassifier {
         return slots;
     }
 
-    private static int distance(Pos left, Pos right) {
-        return Math.max(Math.abs(right.x() - left.x()),
-                Math.abs(right.y() - left.y()));
+    private int distance(Pos left, Pos right) {
+        return Math.max(Math.abs(TrackRules.delta(right.x() - left.x(), wrapWidth)),
+                Math.abs(TrackRules.delta(right.y() - left.y(), wrapHeight)));
     }
 }

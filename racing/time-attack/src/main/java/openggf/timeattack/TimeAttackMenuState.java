@@ -1,7 +1,11 @@
 package openggf.timeattack;
 
 
+import com.openggf.game.arena.MonitorRule;
+import openggf.timeattack.mp.VoteTrackPools;
+
 import java.io.IOException;
+import java.util.ArrayList;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
@@ -19,7 +23,12 @@ public final class TimeAttackMenuState {
     /** Ghosts raced alongside the player, in addition to the auto-loaded best. */
     static final int MAX_GHOSTS_RACED = 7;
 
-    public enum Row { GAME, TRACK, CHARACTER, MODE, POLICY, WINDOW, POOL }
+    /**
+     * Menu rows. RACE_MODE picks Time Attack or Competition for a hosted room; MONITORS, CUTOFF and
+     * START_IN are Competition's host settings and WINDOW is Time Attack's, so each mode hides the
+     * other's rows.
+     */
+    public enum Row { GAME, TRACK, CHARACTER, MODE, RACE_MODE, POLICY, WINDOW, MONITORS, CUTOFF, START_IN, POOL }
 
     /**
      * The saved custom vote pools a hosted room can use, and the one chosen per game (the
@@ -34,6 +43,14 @@ public final class TimeAttackMenuState {
 
         /** Records the choice (empty selects the default pool). */
         void choose(String gameId, String name);
+
+        /**
+         * The protocol track keys of pool {@code name} of {@code gameId} (empty name: the default
+         * pool), which decide the Competition monitor choices the room may offer.
+         */
+        default List<String> keys(String gameId, String name) {
+            return name == null || name.isEmpty() ? VoteTrackPools.forGame(gameId) : List.of();
+        }
 
         /** No saved pools: every room uses its game's default pool. */
         static PoolChoices none() {
@@ -58,6 +75,12 @@ public final class TimeAttackMenuState {
     private int modeIndex;
     private int policyIndex;
     private int windowIndex = 2;
+    private CompetitionRoomSettings.Mode raceMode = CompetitionRoomSettings.Mode.TIME_ATTACK;
+    private MonitorRule monitors = MonitorRule.NORMAL;
+    private int cutoffIndex = CompetitionRoomSettings.cutoffChoices().indexOf(
+            CompetitionRoomSettings.defaults().cutoffSeconds());
+    private int startInIndex = CompetitionRoomSettings.startInChoices().indexOf(
+            CompetitionRoomSettings.defaults().startInSeconds());
     private Row focusedRow = Row.GAME;
     private boolean closeRequested;
     private TimeAttackLaunchRequest launchRequest;
@@ -118,10 +141,18 @@ public final class TimeAttackMenuState {
         focusedRow = rows.get(index);
     }
 
-    List<Row> visibleRows() {
-        return mode() == Mode.HOST_LAN || mode() == Mode.BROWSE
-                ? List.of(Row.GAME, Row.TRACK, Row.CHARACTER, Row.MODE, Row.POLICY, Row.WINDOW, Row.POOL)
-                : List.of(Row.GAME, Row.TRACK, Row.CHARACTER, Row.MODE);
+    public List<Row> visibleRows() {
+        if (!hosting()) return List.of(Row.GAME, Row.TRACK, Row.CHARACTER, Row.MODE);
+        return raceMode() == CompetitionRoomSettings.Mode.COMPETITION
+                ? List.of(Row.GAME, Row.TRACK, Row.CHARACTER, Row.MODE, Row.RACE_MODE, Row.POLICY, Row.MONITORS,
+                        Row.CUTOFF, Row.START_IN, Row.POOL)
+                : List.of(Row.GAME, Row.TRACK, Row.CHARACTER, Row.MODE, Row.RACE_MODE, Row.POLICY, Row.WINDOW,
+                        Row.POOL);
+    }
+
+    /** True for the modes that open a room, whose host settings the menu shows. */
+    private boolean hosting() {
+        return mode() == Mode.HOST_LAN || mode() == Mode.BROWSE;
     }
 
     public void adjust(int delta) {
@@ -130,6 +161,8 @@ public final class TimeAttackMenuState {
                 gameIndex = wrap(gameIndex + delta, games.size());
                 trackIndex = 0;
                 characterIndex = 0;
+                if (!legalRaceModes().contains(raceMode)) raceMode = CompetitionRoomSettings.Mode.TIME_ATTACK;
+                snapMonitors();
                 refreshGhostSummary();
             }
             case TRACK -> {
@@ -139,6 +172,7 @@ public final class TimeAttackMenuState {
                 }
                 trackIndex = wrap(trackIndex + delta, trackCount);
                 characterIndex = 0;
+                snapMonitors();
                 refreshGhostSummary();
             }
             case CHARACTER -> {
@@ -149,16 +183,56 @@ public final class TimeAttackMenuState {
                 characterIndex = wrap(characterIndex + delta, characterCount);
                 refreshGhostSummary();
             }
-            case MODE -> modeIndex = wrap(modeIndex + delta, Mode.values().length);
+            case MODE -> {
+                TimeAttackTrackCatalog.Track before = currentTrack();
+                modeIndex = wrap(modeIndex + delta, Mode.values().length);
+                keepTrack(before);
+            }
+            case RACE_MODE -> {
+                List<CompetitionRoomSettings.Mode> modes = legalRaceModes();
+                TimeAttackTrackCatalog.Track before = currentTrack();
+                raceMode = modes.get(wrap(modes.indexOf(raceMode) + delta, modes.size()));
+                keepTrack(before);
+            }
             case POLICY -> policyIndex = wrap(policyIndex + delta, 2);
             case WINDOW -> windowIndex = wrap(windowIndex + delta, WINDOW_MINUTES.length);
+            case MONITORS -> {
+                List<MonitorRule> legal = legalMonitors();
+                if (!legal.isEmpty()) monitors = legal.get(wrap(legal.indexOf(monitors) + delta, legal.size()));
+            }
+            case CUTOFF -> cutoffIndex = wrap(cutoffIndex + delta, CompetitionRoomSettings.cutoffChoices().size());
+            case START_IN -> startInIndex = wrap(startInIndex + delta, CompetitionRoomSettings.startInChoices().size());
             case POOL -> {
                 List<String> names = pools.names(currentGameId());
                 int index = names.indexOf(currentPoolName()) + 1; // 0 = the default pool
                 int next = wrap(index + delta, names.size() + 1);
                 pools.choose(currentGameId(), next == 0 ? "" : names.get(next - 1));
+                snapMonitors();
             }
         }
+    }
+
+    /**
+     * After the track list changes (mode or race mode), stays on the same track when the new list
+     * has it; an arena left behind by Time Attack falls back to the first track.
+     */
+    private void keepTrack(TimeAttackTrackCatalog.Track before) {
+        List<TimeAttackTrackCatalog.Track> tracks = currentTracks();
+        int index = before == null ? -1 : tracks.indexOf(before);
+        if (index < 0) {
+            trackIndex = 0;
+            characterIndex = 0;
+        } else {
+            trackIndex = index;
+        }
+        snapMonitors();
+        refreshGhostSummary();
+    }
+
+    /** Keeps the monitor choice legal for the race mode, track and pool (D13, D21). */
+    private void snapMonitors() {
+        List<MonitorRule> legal = legalMonitors();
+        if (!legal.contains(monitors)) monitors = legal.isEmpty() ? MonitorRule.NORMAL : legal.getFirst();
     }
 
     public void pressGo() {
@@ -178,7 +252,7 @@ public final class TimeAttackMenuState {
             LOGGER.log(Level.WARNING, "Failed listing ghost imports for " + currentGameId(), e);
             extraGhosts = List.of();
         }
-        launchRequest = new TimeAttackLaunchRequest(currentGameId(), track.zone(), track.act(), character, extraGhosts);
+        launchRequest = new TimeAttackLaunchRequest(currentGameId(), track.zone(), track.act(), character, extraGhosts, track.kind(), raceMode(), competitionSettings().monitors(), false);
     }
 
     private boolean matchesTrack(Path path, TimeAttackTrackCatalog.Track track) {
@@ -227,13 +301,152 @@ public final class TimeAttackMenuState {
         return games.get(gameIndex);
     }
 
+    /**
+     * The track row's choices: the curated acts, and in a Competition room also the acts' ARENAS
+     * group (S3K's five Competition arenas, which race in no other mode). Acts that do not race
+     * in the room's mode (Sonic 1 in Competition) are left out.
+     */
     public List<TimeAttackTrackCatalog.Track> currentTracks() {
-        return TimeAttackTrackCatalog.tracksFor(currentGameId());
+        CompetitionRoomSettings.Mode mode = raceMode();
+        List<TimeAttackTrackCatalog.Track> tracks = new ArrayList<>();
+        for (TimeAttackTrackCatalog.Track track : TimeAttackTrackCatalog.tracksFor(currentGameId())) {
+            if (track.modes().contains(mode)) tracks.add(track);
+        }
+        if (mode == CompetitionRoomSettings.Mode.COMPETITION && "s3k".equals(currentGameId())) {
+            tracks.addAll(TimeAttackTrackCatalog.arenas());
+        }
+        return List.copyOf(tracks);
+    }
+
+    /** The race modes the current game offers: Sonic 1 races Time Attack only (D2). */
+    public List<CompetitionRoomSettings.Mode> legalRaceModes() {
+        List<CompetitionRoomSettings.Mode> modes = new ArrayList<>();
+        for (CompetitionRoomSettings.Mode mode : CompetitionRoomSettings.Mode.values()) {
+            boolean raced = TimeAttackTrackCatalog.tracksFor(currentGameId()).stream()
+                    .anyMatch(track -> track.modes().contains(mode))
+                    || mode == CompetitionRoomSettings.Mode.COMPETITION && "s3k".equals(currentGameId());
+            if (raced) modes.add(mode);
+        }
+        return modes.isEmpty() ? List.of(CompetitionRoomSettings.Mode.TIME_ATTACK) : List.copyOf(modes);
+    }
+
+    /** The room's race mode: the chosen one while hosting; solo runs and joins are Time Attack. */
+    public CompetitionRoomSettings.Mode raceMode() {
+        return hosting() ? raceMode : CompetitionRoomSettings.Mode.TIME_ATTACK;
+    }
+
+    /**
+     * The tracks the room can race: the chosen pool's tracks and the menu's track. The monitor
+     * choices are the ones every one of them permits.
+     */
+    private List<TimeAttackTrackCatalog.Track> roomTracks() {
+        List<TimeAttackTrackCatalog.Track> tracks = new ArrayList<>();
+        for (String key : pools.keys(currentGameId(), currentPoolName())) {
+            TimeAttackTrackCatalog.forKey(key).filter(track -> !tracks.contains(track)).ifPresent(tracks::add);
+        }
+        TimeAttackTrackCatalog.Track track = currentTrack();
+        if (track != null && !tracks.contains(track)) tracks.add(track);
+        return tracks;
+    }
+
+    /**
+     * The monitor settings the room may use (design 7): only the values every track of the room
+     * permits in its mode; empty when the pool cannot race in this mode at all.
+     */
+    public List<MonitorRule> legalMonitors() {
+        return CompetitionRoomSettings.legalMonitors(raceMode(), roomTracks());
+    }
+
+    /** The chosen pool holds a track that does not race in the room's mode (arenas in Time Attack). */
+    public boolean poolIllegalForMode() {
+        return legalMonitors().isEmpty();
+    }
+
+    /**
+     * The room's Competition settings as the host chose them. Time Attack always races normal
+     * monitors; a choice the room's tracks no longer permit falls back to the first legal one.
+     */
+    public CompetitionRoomSettings competitionSettings() {
+        CompetitionRoomSettings.Mode mode = raceMode();
+        MonitorRule rule = mode == CompetitionRoomSettings.Mode.TIME_ATTACK ? MonitorRule.NORMAL : monitors;
+        return new CompetitionRoomSettings(mode, rule, cutoffSeconds(), startInSeconds());
+    }
+
+    public MonitorRule monitors() {
+        return competitionSettings().monitors();
+    }
+
+    public int cutoffSeconds() {
+        return CompetitionRoomSettings.cutoffChoices().get(cutoffIndex);
+    }
+
+    public int startInSeconds() {
+        return CompetitionRoomSettings.startInChoices().get(startInIndex);
+    }
+
+    /** The label of a host-settings row this class owns ({@code RACE_MODE}, {@code MONITORS}, ...). */
+    public static String settingLabel(Row row) {
+        return switch (row) {
+            case RACE_MODE -> "Race mode";
+            case MONITORS -> "Monitors";
+            case CUTOFF -> "Cutoff";
+            case START_IN -> "Start in";
+            default -> row.name();
+        };
+    }
+
+    /** The value of a host-settings row, in sentence case as the menu shows it. */
+    public String settingValue(Row row) {
+        return switch (row) {
+            case RACE_MODE -> legalRaceModes().size() < 2 ? raceModeName(raceMode()) + " only"
+                    : raceModeName(raceMode());
+            case MONITORS -> poolIllegalForMode() ? "Pool not raceable" : monitorName(monitors());
+            case CUTOFF -> cutoffSeconds() + " s after the winner";
+            case START_IN -> startInSeconds() + " s";
+            default -> "";
+        };
+    }
+
+    public static String raceModeName(CompetitionRoomSettings.Mode mode) {
+        return mode == CompetitionRoomSettings.Mode.COMPETITION ? "Competition" : "Time Attack";
+    }
+
+    public static String monitorName(MonitorRule rule) {
+        return switch (rule) {
+            case NORMAL -> "Normal";
+            case RANDOMISED -> "Randomised";
+            case COMPETITION_ITEMS -> "Competition items";
+            case OFF -> "Off";
+        };
+    }
+
+    /**
+     * Tags the menu draws on the focused track row of a hosted room: the track's kind and the modes
+     * it races in ({@link openggf.timeattack.ui.TrackBadges}). Every other row has none.
+     */
+    public List<String> focusBadges(Row row) {
+        TimeAttackTrackCatalog.Track track = currentTrack();
+        if (row != Row.TRACK || track == null || !hosting()) return List.of();
+        return openggf.timeattack.ui.TrackBadges.of(track);
+    }
+
+    /** The track's group as the pool editor captions it. */
+    public static String groupName(TimeAttackTrackCatalog.Group group) {
+        return group == TimeAttackTrackCatalog.Group.ARENAS ? "Arenas" : "Acts";
     }
 
     public TimeAttackTrackCatalog.Track currentTrack() {
         List<TimeAttackTrackCatalog.Track> tracks = currentTracks();
         return trackIndex < tracks.size() ? tracks.get(trackIndex) : null;
+    }
+
+    /**
+     * The protocol key of the chosen track ({@code game:zone:act} or {@code game:arena:N}): an
+     * arena's menu index shares the zone field with acts, so only the key tells them apart.
+     */
+    public String currentTrackKey() {
+        TimeAttackTrackCatalog.Track track = currentTrack();
+        return track == null ? null : track.key();
     }
 
     public List<String> currentCharacters() {

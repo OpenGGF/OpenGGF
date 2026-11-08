@@ -39,6 +39,9 @@ import java.util.logging.Logger;
  * ({@link AppearancePalettes}) and keeps its colours, fading only with distance.
  */
 public final class GhostRenderer {
+    @com.openggf.game.rewind.RewindTransient(reason="Draw-scope palette projection, never simulation authority")
+    private boolean paletteFlash;
+    public void setPaletteFlash(boolean enabled) { paletteFlash=enabled; }
     private static final Logger LOGGER = Logger.getLogger(GhostRenderer.class.getName());
     private static final int FULL_OPACITY_DISTANCE = 32;
 
@@ -62,6 +65,12 @@ public final class GhostRenderer {
                         int textTop, int textRgb) { }
     private final Map<String, Nameplate> pendingNameplates = new LinkedHashMap<>();
     private int frame;
+    private com.openggf.game.arena.GhostArtSource artSource;
+
+    void setArtSource(com.openggf.game.arena.GhostArtSource source) {
+        clearSlots();
+        artSource = source;
+    }
 
     public static boolean layerMatches(GhostFrame frame, int bucket, boolean highPriority) {
         return frame.priorityBucket() == bucket && frame.highPriority() == highPriority;
@@ -103,7 +112,8 @@ public final class GhostRenderer {
             graphics.beginGhostRenderEffect(alpha, colour);
             graphics.beginPatternBatch();
             try {
-                slot.renderer.drawFrame(frame.mappingFrame(), frame.x(), frame.y(),
+                slot.renderer.drawFrame(frame.mappingFrame(), frame.x() - (artSource == null ? 0 : artSource.cameraX()),
+                        frame.y() - (artSource == null ? 0 : artSource.cameraY()),
                         frame.hFlip(), frame.vFlip());
             } finally {
                 graphics.flushPatternBatch();
@@ -112,7 +122,8 @@ public final class GhostRenderer {
             }
             var camera = GameServices.cameraOrNull();
             if (camera != null) {
-                queueNameplate(ghost, camera.getXWithShake(), camera.getYWithShake(), alpha);
+                queueNameplate(ghost, artSource == null ? camera.getXWithShake() : artSource.cameraX(),
+                        artSource == null ? camera.getYWithShake() : artSource.cameraY(), alpha);
             }
         }
     }
@@ -205,11 +216,11 @@ public final class GhostRenderer {
      */
     private boolean applyLook(Slot slot, PlayerAppearance look, String localCharacter) {
         slot.lastUsedFrame = frame;
-        String key = look.encode();
+        String key = paletteFlash ? "native-white-flash" : look.encode();
         if (!key.equals(slot.lookKey)) {
             slot.releasePalette();
             slot.lookKey = key;
-            if (!look.isStock()) {
+            if (!paletteFlash && !look.isStock()) {
                 slot.palette = acquirePalette(slot.code, look, localCharacter);
                 if (slot.palette == null && releaseIdlePalettes(frame) > 0) {
                     slot.palette = acquirePalette(slot.code, look, localCharacter);
@@ -221,16 +232,17 @@ public final class GhostRenderer {
         return context != null;
     }
 
-    private static AppearancePalettes.Block acquirePalette(String code, PlayerAppearance look, String localCharacter) {
+    private AppearancePalettes.Block acquirePalette(String code, PlayerAppearance look, String localCharacter) {
         LevelManager level = GameServices.levelOrNull();
-        if (level == null || !(level.getGame() instanceof PlayerSpriteArtProvider artProvider)) {
-            return null;
-        }
-        Palette stock = artProvider.loadCharacterPalette(code);
+        if (level == null) return null;
+        var artProvider = level.getGame() instanceof PlayerSpriteArtProvider provider ? provider : null;
+        if (artSource == null && artProvider == null) return null;
+        Palette stock = artSource != null ? artSource.palette(code) : artProvider.loadCharacterPalette(code);
         if (stock == null) {
             return null;
         }
-        Palette local = localCharacter == null ? null : artProvider.loadCharacterPalette(localCharacter);
+        Palette local = localCharacter == null ? null : artSource != null
+                ? artSource.palette(localCharacter) : artProvider.loadCharacterPalette(localCharacter);
         // The level's line 0 holds the local character's stock line. A ghost that shares it (Tails
         // beside Sonic) recolours the live line, so palette cycles show; another character
         // (Knuckles in a Sonic race) is composed from its own stock colours.
@@ -266,11 +278,11 @@ public final class GhostRenderer {
             return existing;
         }
         LevelManager level = GameServices.levelOrNull();
-        if (level == null || !(level.getGame() instanceof PlayerSpriteArtProvider artProvider)) {
-            return null;
-        }
+        if (level == null) return null;
+        var artProvider = level.getGame() instanceof PlayerSpriteArtProvider provider ? provider : null;
+        if (artSource == null && artProvider == null) return null;
         try {
-            SpriteArtSet sourceArt = artProvider.loadPlayerSpriteArt(code);
+            SpriteArtSet sourceArt = artSource != null ? artSource.art(code) : artProvider.loadPlayerSpriteArt(code);
             if (sourceArt == null || sourceArt.isEmpty() || sourceArt.bankSize() <= 0) {
                 return null;
             }
@@ -279,7 +291,7 @@ public final class GhostRenderer {
             Slot slot = new Slot(new PlayerSpriteRenderer(ghostArt), code);
             slots.put(key, slot);
             return slot;
-        } catch (IOException | RuntimeException e) {
+        } catch (IOException e) {
             LOGGER.log(Level.WARNING, "Failed to create ghost slot for " + characterCode, e);
             return null;
         }
