@@ -45,6 +45,9 @@ public final class LiveCaptureController implements AutoCloseable {
 
     private final Dependencies deps;
     private volatile State state = State.INACTIVE;
+    // Owner lifetime is independent of the current recording's State. Guarded
+    // by this monitor so close denies admission before waiting for finalization.
+    private boolean closed;
     private volatile Throwable lastFailure;
     private CaptureViewport viewport;
     private LiveCaptureAudioHandle audio;
@@ -69,6 +72,7 @@ public final class LiveCaptureController implements AutoCloseable {
     }
 
     public synchronized void start(CaptureViewport viewport, int frameRate) {
+        if (closed) return;
         if (state == State.ACTIVE || state == State.STARTING || state == State.STOPPING) return;
         state = State.STARTING;
         lastFailure = null;
@@ -210,12 +214,14 @@ public final class LiveCaptureController implements AutoCloseable {
     public Throwable lastFailure() { return lastFailure; }
     public boolean indicatorVisible() { return state == State.ACTIVE; }
 
+    /** Permanently denies new recordings; repeated calls still retry an owed audio detach. */
     @Override
     public void close() {
         long timeoutNanos = Math.max(0, deps.shutdownTimeout.toNanos());
         long deadline = System.nanoTime() + timeoutNanos;
         Future<?> pending;
         synchronized (this) {
+            closed = true;
             if (state == State.ACTIVE) requestStop(StopReason.SHUTDOWN);
             pending = finalization;
         }

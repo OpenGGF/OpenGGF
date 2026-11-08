@@ -358,6 +358,46 @@ class LiveCaptureControllerTest {
         assertTrue(h.audioClosed, "the retry released the lease");
     }
 
+    @Test void repeatedTerminalCloseRetriesRealLeaseRefusedOnForeignThread() throws Exception {
+        Harness h = new Harness();
+        h.sampleRate = 5;
+        AudioPresentationProducer producer = captureProducer();
+        try {
+            h.audioFactory = producer::attachCapture;
+            LiveCaptureController c = h.controller();
+            try {
+                c.start(h.viewport, 2);
+                AtomicReference<Throwable> closeFailure = new AtomicReference<>();
+                Thread foreignCloser = new Thread(() -> {
+                    try {
+                        c.close();
+                    } catch (Throwable failure) {
+                        closeFailure.set(failure);
+                    }
+                }, "foreign-capture-close");
+                foreignCloser.start();
+                foreignCloser.join(5_000);
+                assertFalse(foreignCloser.isAlive());
+                assertNull(closeFailure.get());
+                assertEquals(LiveCaptureController.State.INACTIVE, c.state());
+                assertEquals(1, producer.transactionFingerprint().captureCount(),
+                        "terminal close must retain the refused real detach");
+
+                c.close();
+                assertEquals(0, producer.transactionFingerprint().captureCount(),
+                        "repeated close on the producer thread must still retry the lease");
+                try (LiveCaptureAudioHandle fresh = producer.attachCapture(2)) {
+                    assertEquals(1, producer.transactionFingerprint().captureCount());
+                }
+                assertEquals(0, producer.transactionFingerprint().captureCount());
+            } finally {
+                c.close();
+            }
+        } finally {
+            producer.close();
+        }
+    }
+
     @Test void drainFallbackRetainsRefusedRealLeaseUntilOwnerThreadStop() throws Exception {
         Harness h = new Harness();
         h.sampleRate = 5;
