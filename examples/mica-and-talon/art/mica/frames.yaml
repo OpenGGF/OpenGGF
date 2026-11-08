@@ -1277,6 +1277,19 @@
       "angle_set": "flat",
       "duration_ticks": 5,
       "notes": ""
+    },
+    {
+      "id": "roll-blur",
+      "animation": "ROLL",
+      "order": 4,
+      "file": "frames/roll-blur.png",
+      "hotspot": [
+        14,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Solid jade interleave, hints of scale and coral boot; SonAni_Roll (s2.asm:38696)."
     }
   ],
   "scripts": {
@@ -1314,6 +1327,19 @@
         8,
         18,
         24
+      ],
+      "end": "loop"
+    },
+    "ROLL": {
+      "frames": [
+        "roll-00",
+        "roll-blur",
+        "roll-01",
+        "roll-blur",
+        "roll-02",
+        "roll-blur",
+        "roll-03",
+        "roll-blur"
       ],
       "end": "loop"
     }

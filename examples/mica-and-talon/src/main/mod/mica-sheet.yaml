@@ -3749,6 +3749,23 @@
           "priority": false
         }
       ]
+    },
+    {
+      "delay": 1,
+      "pieces": [
+        {
+          "sourceX": 128,
+          "sourceY": 576,
+          "widthPixels": 32,
+          "heightPixels": 32,
+          "xOffset": -14,
+          "yOffset": -14,
+          "hFlip": false,
+          "vFlip": false,
+          "paletteIndex": 0,
+          "priority": false
+        }
+      ]
     }
   ],
   "animations": {
@@ -3792,9 +3809,13 @@
     "ROLL": {
       "frames": [
         6,
+        98,
         7,
+        98,
         8,
-        9
+        98,
+        9,
+        98
       ],
       "end": "loop",
       "speedDriven": true

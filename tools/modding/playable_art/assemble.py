@@ -97,6 +97,13 @@ def assemble(root, output):
                         spec['next'] = authored['next']
             if name == 'GET_AIR':
                 spec.update(frames=[indices[0], indices[0], indices[1], indices[1]], durations=[12]*4)
+        if name in ('ROLL', 'SPINDASH'):
+            authored = handoff.get('scripts', {}).get(name)
+            if authored:
+                by_id = {f['id']: i for f, i in entries}
+                spec['frames'] = [by_id[key] for key in authored['frames']]
+                if name == 'SPINDASH':
+                    spec['durations'] = [1] * len(spec['frames'])
         animations[name] = spec
     if custom.get('HOMING_DIVE'):
         animations['HOMING_DIVE'] = dict(frames=custom['HOMING_DIVE'],

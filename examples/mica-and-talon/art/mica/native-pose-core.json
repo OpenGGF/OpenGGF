@@ -5251,6 +5251,38 @@
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
       "native_support": 19.79899
+    },
+    "roll-blur": {
+      "geometry_reference": {
+        "size": [
+          29,
+          29
+        ],
+        "hotspot": [
+          14,
+          14
+        ]
+      },
+      "native_size": [
+        29,
+        29
+      ],
+      "hotspot": [
+        14,
+        14
+      ],
+      "owner_fix": "Solid jade interleave, hints of scale and coral boot; SonAni_Roll (s2.asm:38696).",
+      "reference": {
+        "custom": true,
+        "size": [
+          29,
+          29
+        ],
+        "hotspot": [
+          14,
+          14
+        ]
+      }
     }
   },
   "source_pins": {
