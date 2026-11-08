@@ -359,3 +359,9 @@ Status log (times UTC):
   `33c3b8e56` when the class runs alone, so they predate this work. Art round 2's
   presentation art was rejected on review (blob-like 16x16 faces, sign faces without
   native composition, noise spin frames, slopes unchanged); round 3 is redoing it.
+- 2026-11-08: merged art rounds 2–3 (`8a2351954`: redrawn faces, native-composition
+  sign busts, spin frames, all 36 slope frames, Gilded palette), the W4a presentation
+  foundation (`62ff3951d`: contract, ROM name composer, S1/S2 title fonts; on-screen
+  surfaces still pending in W4b) and the W5 homing facade (`13515a986`). Lead check of
+  the merged tree passed: homing (15), name composer, signature pin, Mutator Lab
+  package, character registry and MICA integration tests, all ROMs found.
