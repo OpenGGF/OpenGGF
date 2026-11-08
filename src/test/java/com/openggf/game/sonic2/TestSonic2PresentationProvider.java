@@ -26,12 +26,12 @@ class TestSonic2PresentationProvider {
                             hudPresentation.art().get(CharacterPresentation.Host.S2).hudLifeIcon(),
                             new CharacterPresentation.Image(16, 16, face), null, null)), java.util.Map.of());
         });
-        var module=mock(GameModule.class);
+        var module=spy(GameServices.module());
         var registry = PlayableCharacterRegistry.empty().register(key, definition);
         when(module.getPlayableCharacterRegistry()).thenReturn(registry);
         try(var games=mockStatic(GameServices.class,CALLS_REAL_METHODS);
             var teams=mockStatic(ActiveGameplayTeamResolver.class,CALLS_REAL_METHODS)) {
-            games.when(GameServices::currentOrBootstrapGameModule).thenReturn(module);
+            games.when(GameServices::module).thenReturn(module);
             teams.when(() -> ActiveGameplayTeamResolver.resolveMainCharacterCode(GameServices.configuration())).thenReturn(key.persisted());
             var provider=new Sonic2ObjectArtProvider();
             provider.loadArtForZone(0);
@@ -46,12 +46,12 @@ class TestSonic2PresentationProvider {
     }
     @Test void stockSonicAndTailsKeepNativeHudMonitorAndResults() throws Exception {
         var rom = com.openggf.tests.TestEnvironment.currentRom();
-        var module = mock(GameModule.class);
+        var module = spy(GameServices.module());
         when(module.getPlayableCharacterRegistry()).thenReturn(PlayableCharacterRegistry.empty());
         var nativeArt = new Sonic2ObjectArt(rom, com.openggf.data.RomByteReader.fromRom(rom)).loadForZone(0);
         try (var games = mockStatic(GameServices.class, CALLS_REAL_METHODS);
              var teams = mockStatic(ActiveGameplayTeamResolver.class, CALLS_REAL_METHODS)) {
-            games.when(GameServices::currentOrBootstrapGameModule).thenReturn(module);
+            games.when(GameServices::module).thenReturn(module);
             for (String character : new String[]{"sonic", "tails"}) {
                 teams.when(() -> ActiveGameplayTeamResolver.resolveMainCharacterCode(GameServices.configuration()))
                         .thenReturn(character);

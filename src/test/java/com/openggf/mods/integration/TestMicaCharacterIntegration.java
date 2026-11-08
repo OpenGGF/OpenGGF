@@ -44,6 +44,53 @@ class TestMicaCharacterIntegration {
     @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
     void sonic3k() throws Exception { acceptance(new com.openggf.game.sonic3k.Sonic3kGameModule(), "s3k", 1, 0); }
 
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_2)
+    void sonic2SessionHudAndOneUpCapture() throws Exception {
+        Path output = Path.of(System.getProperty("mica.hud.captureRoot",
+                "target/mica-s2-hud-capture"));
+        Files.createDirectories(output);
+        var settings = new com.openggf.tools.GameplayCaptureSession.Settings(320, CODE, "", "off", null, null, null);
+        try (var session = new com.openggf.tools.GameplayCaptureSession(settings)) {
+            session.applyMod(buildSample());
+            session.boot(com.openggf.tests.RomTestUtils.ensureSonic2RomAvailable().toPath(), 0, 0, settings);
+            var presentation = com.openggf.game.sonic2.Sonic2CharacterPresentation.resolve(
+                    GameServices.module(), GameServices.configuration());
+            assertNotNull(presentation);
+            assertEquals("MICA", presentation.displayName());
+            var art = presentation.art().get(CharacterPresentation.Host.S2);
+            var provider = GameServices.module().getObjectArtProvider();
+            var hud = provider.getHudLivesPatterns();
+            var icon = com.openggf.game.presentation.CharacterNameComposer.tiles(art.hudLifeIcon());
+            var face = com.openggf.game.presentation.CharacterNameComposer.tiles(art.oneUpFace());
+            var monitor = provider.getSheet(com.openggf.level.objects.ObjectArtKeys.MONITOR).getPatterns();
+            for (int tile = 0; tile < 4; tile++) for (int x = 0; x < 8; x++) for (int y = 0; y < 8; y++) {
+                assertEquals(icon[tile].getPixel(x, y), hud[tile].getPixel(x, y), "session HUD icon");
+                assertEquals(face[tile].getPixel(x, y), monitor[
+                        com.openggf.game.sonic2.Sonic2ObjectArt.MONITOR_LIFE_ICON_TILE + tile].getPixel(x, y),
+                        "session 1-up face");
+            }
+            var name = com.openggf.game.sonic2.Sonic2CharacterPresentation.name(GameServices.rom().getRom(),
+                    presentation, CharacterPresentation.Style.HUD);
+            for (int x = 0; x < name.width(); x++) for (int y = 0; y < name.height(); y++)
+                assertEquals(name.pixels()[y * name.width() + x], hud[4 + x / 8 * 2].getPixel(x % 8, y),
+                        "session HUD name");
+            // Declared setup: place a native 1-up beside the starting player to expose its face.
+            var objects = GameServices.level().getObjectManager();
+            assertNotNull(objects.createDynamicObject(() -> new com.openggf.game.sonic2.objects.MonitorObjectInstance(
+                    new com.openggf.level.objects.ObjectSpawn(session.player().getCentreX() + 80,
+                            session.player().getCentreY(), 0x26, 1, 0, false, 0), "HUD check 1-up")));
+            var csv = new StringBuilder(com.openggf.tools.GameplayCaptureSession.stateHeader()).append('\n');
+            for (int frame = 0; frame < 90; frame++) {
+                session.step(null);
+                session.renderFrame();
+                csv.append(session.stateLine(frame, null)).append('\n');
+                if (frame == 30 || frame == 60 || frame == 89)
+                    com.openggf.graphics.ScreenshotCapture.savePNG(session.render(), output.resolve("frame-" + frame + ".png"));
+            }
+            Files.writeString(output.resolve("state.csv"), csv);
+        }
+    }
+
     @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
     void titleRouteKeepsExplicitDevelopmentCharacter() throws Exception {
         Path input = temp.resolve("title.txt");

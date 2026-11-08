@@ -43,7 +43,8 @@ under the matching area heading; see the
   a shared palette and a breathing/fidget idle. Gilded Super/Hyper forms cycle
   jade to gold, retain her sheet, and expose host settings for their gates. S1's
   donor-free six-emerald form is explicitly mod-defined. MICA supplies HUD/name,
-  act and special-stage results (including S2's Super announcement), 1-up faces,
+  act and special-stage results (including S2's Super announcement, with tally
+  logic independent of ROM presentation availability), 1-up faces,
   semantic sign faces/spins/backings, special/bonus-stage player art, continue
   poses, data-select solo/team portraits and counters, thirteen ICZ snowboard
   rider frames, and endings in all three games. S1 uses eight native-timed ending
@@ -51,7 +52,8 @@ under the matching area heading; see the
   Float2/ride, reunion, transformation, tiny passengers and trio-eyecatch art.
   Private palettes preserve native stage colours, text, board/spray, companions
   and vehicles; powered ending poses use her Gilded cycle. Acceptance covers
-  launch/save/rewind/disabled-owner fallback, with three-game headless footage
+  launch/save/rewind/disabled-owner fallback and session-owned S2 HUD/1-up art,
+  with three-game headless footage
   of movement, springs, normal/powered strikes and a GHZ airborne chain. The
   [tutorial](docs/modding/guides/original-character.md) explains the workflow.
   TALON is planned for phase 2; this is not a released mod or full-route certification.
