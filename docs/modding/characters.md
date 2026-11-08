@@ -292,7 +292,7 @@ only for a matching owner and local character; inactive overrides retain profile
 defaults. No creator callback receives world mutation authority.
 
 An ability can read `isSuperSonic()` (including the transformation) and
-`getSuperStateController().isHyperFormActive()`. MICA's homing lane should select
+`getSuperStateController().isHyperFormActive()`. MICA selects
 `INSTAGIB` when `isSuperSonic()` is true. The controller captures palette cursor,
 phase, display frame, tier and ring drain for whole-player rewind.
 
@@ -446,3 +446,12 @@ implicit native tumble or Super alternate frames.
 
 ROM-free standalone modules have no native ID vocabulary; their default presentation
 retains the authored `WAIT` cycle. Native profile binding applies to stock hosts.
+
+`HOMING_DIVE` is an optional fixed-duration canonical sheet animation for a
+character-owned `HomingAttack` strike (targeted or forward dash). The host binds it
+to a reserved creator script ID outside stock animation bytes and selects it only
+while that character's world-owned strike is active. Without it the native roll
+remains. Landing, hurt, control takeover and strike completion return selection to
+the native profile. No per-character animation latch is needed for rewind: the
+world strike phase and ordinary script cursor are already captured. All four MICA
+dive frames loop at two ticks each; collision remains the native attacking roll.

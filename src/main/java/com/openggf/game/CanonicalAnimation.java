@@ -233,5 +233,8 @@ public enum CanonicalAnimation {
     // -------------------------------------------------------------------------
 
     /** Super Sonic transformation sequence. */
-    SUPER_TRANSFORM
+    SUPER_TRANSFORM,
+
+    /** Optional creator-authored pose during a world-owned homing strike or dash. */
+    HOMING_DIVE
 }

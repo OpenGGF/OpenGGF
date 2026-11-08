@@ -12,6 +12,9 @@ import java.util.Map;
 public final class PlayableSheetAnimationBinding {
     private PlayableSheetAnimationBinding() { }
 
+    /** Outside every stock host animation byte; private to installed creator sheets. */
+    public static final int HOMING_DIVE_ID = 0x100;
+
     static final class CanonicalProfile implements SpriteAnimationProfile {
         final Map<CanonicalAnimation, Integer> strides;
         CanonicalProfile(Map<CanonicalAnimation, Integer> strides) { this.strides = Map.copyOf(strides); }
@@ -41,6 +44,9 @@ public final class PlayableSheetAnimationBinding {
             if (next < 0) next = host.resolveNativeId(CanonicalAnimation.WAIT);
             scripts.addScript(id, new SpriteAnimationScript(script.delay(), script.frames(), script.endAction(), next));
         }
+        var strike = art.animationSet().getScript(CanonicalAnimation.HOMING_DIVE.ordinal());
+        if (strike != null) scripts.addScript(HOMING_DIVE_ID,
+                new SpriteAnimationScript(strike.delay(), strike.frames(), SpriteAnimationEndAction.LOOP, 0));
         // Native movement keeps the Walk byte even at running speed. A sheet
         // with RUN but no WALK still needs that dispatch to reach its run tier.
         if (art.animationSet().getScript(CanonicalAnimation.WALK.ordinal()) == null

@@ -98,13 +98,16 @@ def assemble(root, output):
             if name == 'GET_AIR':
                 spec.update(frames=[indices[0], indices[0], indices[1], indices[1]], durations=[12]*4)
         animations[name] = spec
+    if custom.get('HOMING_DIVE'):
+        animations['HOMING_DIVE'] = dict(frames=custom['HOMING_DIVE'],
+                                       durations=[2]*len(custom['HOMING_DIVE']), end='loop')
     manifest = dict(formatVersion=1, paletteLine=0,
                     palette=['#%02X%02X%02X' % tuple(c) for c in colors],
                     frames=frames, animations=animations)
     output.mkdir(parents=True, exist_ok=True)
     sheet.save(output / 'mica.png', transparency=0, bits=8)
     (output / 'mica-sheet.yaml').write_text(json.dumps(manifest, indent=2)+'\n')
-    # Separate hook, deliberately not a canonical animation enum or converter input.
+    # Frame inventory for reviewers and custom animation consumers.
     (output / 'mica-custom-frames.json').write_text(json.dumps(custom, indent=2)+'\n')
     stats = dict(frames=len(frames), maxTilesPerFrame=max_tiles, animations=len(animations))
     print(json.dumps(stats))

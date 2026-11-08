@@ -41,7 +41,7 @@ under the matching area heading; see the
 
 - Added the maintained MICA character skeleton for all three stock games, with
   character-owned homing (including a forward dash without a target) and Super/Hyper
-  Instagib strikes through the supported facade,
+  Instagib strikes through the supported facade, an optional HOMING_DIVE sheet pose,
   headless launch/save/rewind/fallback acceptance and a rerunnable 96-frame original
   playable sheet with 17 canonical animations, shared palette and slope cycles.
   Headless native Data Select retains explicitly loaded development characters.

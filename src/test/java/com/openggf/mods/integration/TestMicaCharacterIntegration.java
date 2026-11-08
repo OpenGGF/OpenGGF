@@ -197,6 +197,10 @@ class TestMicaCharacterIntegration {
         assertEquals(com.openggf.game.mutators.HomingAttackRuntime.Phase.HOMING, runtime.phase());
         assertEquals(powered ? com.openggf.game.mutators.HomingAttackRuntime.Mode.INSTAGIB
                 : com.openggf.game.mutators.HomingAttackRuntime.Mode.HOMING, runtime.capture().launchMode());
+        assertTrue(List.of(28, 29, 30, 31).contains(player.getMappingFrame()),
+                "The strike selects the authored dive pose");
+        assertEquals(player.resolveAnimationId(CanonicalAnimation.ROLL), player.getAnimationId(),
+                "The visual dive must retain native roll attack semantics");
         var strike = registry.capture();
         var expected = new ArrayList<String>();
         for (int i = 0; i < 18; i++) {
@@ -339,8 +343,9 @@ class TestMicaCharacterIntegration {
             var sheet = com.openggf.level.objects.PlayableSheetReader.read(
                     packed.getInputStream(packed.getJarEntry("art/mica.ggfp")).readAllBytes());
             assertEquals(98, sheet.frames().size());
-            assertEquals(17, sheet.animations().size());
-            assertFalse(sheet.animations().containsKey("HOMING_DIVE"));
+            assertEquals(18, sheet.animations().size());
+            assertEquals(List.of(28, 29, 30, 31), sheet.animations().get("HOMING_DIVE").steps()
+                    .stream().map(com.openggf.level.objects.PlayableSheetReader.AnimationStep::frameIndex).toList());
             assertEquals(List.of(8, 8, 8, 8), sheet.animations().get("WALK").slopes()
                     .stream().map(List::size).toList());
             var base = com.openggf.level.objects.BakedSheetReader.read(sheet.baseSheetV1());

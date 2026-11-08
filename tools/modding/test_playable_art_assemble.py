@@ -24,9 +24,9 @@ class PlayableArtAssemblyTest(unittest.TestCase):
             self.assertEqual(before, {name:(committed/name).read_bytes() for name in before})
             assembler.assemble(art, out)
             self.assertEqual(before, {p.name:p.read_bytes() for p in out.iterdir()})
-            self.assertEqual(stats, dict(frames=98, maxTilesPerFrame=36, animations=17))
+            self.assertEqual(stats, dict(frames=98, maxTilesPerFrame=36, animations=18))
             self.assertEqual(len(custom['HOMING_DIVE']), 4)
-            self.assertNotIn('HOMING_DIVE', manifest['animations'])
+            self.assertEqual(custom['HOMING_DIVE'], manifest['animations']['HOMING_DIVE']['frames'])
             with Image.open(out/'mica.png') as atlas:
                 for frame, baked in zip(source, manifest['frames']):
                     original = Image.open(art/frame['file'])

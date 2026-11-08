@@ -523,3 +523,12 @@ Status log (times UTC):
 - 2026-11-08: abilities lane outcome 1 wires MICA’s air hook to `HomingAttack.start`,
   selecting Instagib when powered. No-target presses dash because the strike is her
   own move, rather than preserving Sonic’s unrelated native air fallback.
+
+- 2026-11-08: abilities lane outcome 2 adds optional `HOMING_DIVE` canonical
+  sheet binding outside native animation IDs; the world strike phase selects its
+  four two-tick frames. No gameplay or character-local animation latch was added.
+  Validation: 42 focused Java tests passed without skips (MICA, homing,
+  materializer, canonical mapping, API signatures), plus the assembler test.
+  Rejected: publishing the synthetic dive ID as gameplay state failed the real
+  Buzzer kill because native touch requires anim=Roll. The visual script now runs
+  with a temporary ID restored before returning; native contact retains Roll.

@@ -106,6 +106,12 @@ public final class HomingAttackRuntime implements RewindSnapshottable<HomingAtta
 
     public Phase phase() { return phase; }
 
+    /** Presentation follows the captured world phase, without a second character latch. */
+    public boolean isStriking(AbstractPlayableSprite sprite) {
+        return leader(sprite) && characterStrike && (phase == Phase.HOMING || phase == Phase.DASH)
+                && free(sprite);
+    }
+
     /** True while a launch is homing or its trail is still fading; Instagib burns, Homing glows blue. */
     public boolean flameActive() { return launchMode != Mode.OFF && flameTicks > 0; }
 
