@@ -88,6 +88,40 @@ class TestAnimalObjectRngOwnership {
                 "the allocated animal must consume the following result only when its own slot dispatches");
     }
 
+    @Test
+    void destructiveRestoreReplaysPointsBirthAndFollowingDynamicIdentity() {
+        RecordingServices services = new RecordingServices(INITIAL_SEED);
+        ObjectManager manager = new ObjectManager(List.of(), new NoOpObjectRegistry(), 0,
+                null, null, null, services.camera, services);
+        services.objectManager = manager;
+        manager.setRewindInPlaceRestoreEnabledForTest(false);
+        var spawn = new ObjectSpawn(256, 288, 0x28, 0, 0, false, 100);
+        var births = new java.util.concurrent.atomic.AtomicInteger();
+        var animal = manager.createDynamicObject(() -> AnimalObjectInstance.deferredArtVariant(spawn,
+                services, (pointSpawn, svc, value) -> {
+                    births.incrementAndGet();
+                    return new RecordingRngConsumer(pointSpawn);
+                }));
+        var registry = new com.openggf.game.rewind.RewindRegistry();
+        registry.register(manager.rewindSnapshottable()); registry.register(services.rng());
+        var saved = registry.capture();
+        animal.update(0, null);
+        manager.createDynamicObject(() -> new RecordingRngConsumer(new ObjectSpawn(512, 768, 0x41, 0, 0, false, 0)));
+        var first = manager.rewindSnapshottable().capture();
+        registry.restore(saved);
+        var restored = manager.getActiveObjects().stream().filter(AnimalObjectInstance.class::isInstance)
+                .map(AnimalObjectInstance.class::cast).findFirst().orElseThrow();
+        org.junit.jupiter.api.Assertions.assertNotSame(animal, restored);
+        restored.update(0, null);
+        manager.createDynamicObject(() -> new RecordingRngConsumer(new ObjectSpawn(512, 768, 0x41, 0, 0, false, 0)));
+        var replayed = manager.rewindSnapshottable().capture();
+        assertEquals(2, births.get(), "the original custom callback must execute on both edges");
+        assertEquals(first.dynamicObjectIdCounter(), replayed.dynamicObjectIdCounter());
+        assertEquals(first.dynamicObjects().stream().map(e -> e.objectId()).toList(),
+                replayed.dynamicObjects().stream().map(e -> e.objectId()).toList(),
+                "points birth and following placement-like birth must retain exact IDs");
+    }
+
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
     void walkingFlyingLaunchUsesActualFixedRenderFlipForBothVelocitySigns(boolean parentFlipX) throws Exception {
