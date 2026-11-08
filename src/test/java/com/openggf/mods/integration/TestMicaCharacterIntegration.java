@@ -44,6 +44,34 @@ class TestMicaCharacterIntegration {
     @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
     void sonic3k() throws Exception { acceptance(new com.openggf.game.sonic3k.Sonic3kGameModule(), "s3k", 1, 0); }
 
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void titleRouteKeepsExplicitDevelopmentCharacter() throws Exception {
+        Path input = temp.resolve("title.txt");
+        com.openggf.tools.InputLogAuthorTool.main(new String[]{"--inline",
+                "121 -; 4 S; 18 -; 5 S; 25 -; 5 S; 200 -; 1 D; 60 -; 1 S; 240 -",
+                "--out", input.toString()});
+        String previous = System.getProperty("openggf.saveRoot");
+        System.setProperty("openggf.saveRoot", temp.resolve("capture-saves").toString());
+        try {
+            com.openggf.tools.GameplayCaptureTool.run(
+                    com.openggf.tools.GameplayCaptureTool.Arguments.parse(new String[]{
+                            "--game", "s3k", "--zone", "aiz", "--act", "1", "--mod", buildSample().toString(),
+                            "--main", CODE, "--extra-teams", CODE, "--title-screen", "--interactive-pacing",
+                            "--input", input.toString(), "--every", "400", "--no-video",
+                            "--out-dir", temp.resolve("capture").toString()}));
+            var rows = Files.readAllLines(temp.resolve("capture/state.csv"));
+            assertTrue(rows.stream().anyMatch(row -> row.contains(",DATA_SELECT,")));
+            // Session teardown retires the world; inspect the final native mapping frame.
+            // MICA's four idle frames are 0..3; stock Sonic's idle is 186.
+            var last = rows.getLast().split(",");
+            assertEquals("LEVEL", last[19]);
+            assertTrue(Integer.parseInt(last[12]) < 4, rows.getLast());
+        } finally {
+            if (previous == null) System.clearProperty("openggf.saveRoot");
+            else System.setProperty("openggf.saveRoot", previous);
+        }
+    }
+
     private void acceptance(GameModule base, String game, int waterZone, int waterAct) throws Exception {
         try (CatalogFixture fixture = load(buildSample())) {
             var config = SonicConfigurationService.getInstance();
@@ -114,7 +142,7 @@ class TestMicaCharacterIntegration {
             assertTrue(custom.dataEquals(context.getPalette(0)));
             assertNull(context.getUnderwaterPalette(0), "Absent authored palette retains live host derivation");
             var derived = com.openggf.graphics.RenderContext.deriveUnderwaterPalette(custom, dry, water[0]);
-            assertFalse(custom.dataEquals(derived), "Water must change the jade placeholder");
+            assertFalse(custom.dataEquals(derived), "Water must change the jade art");
 
             // Disabled owner: use the stock registry and preserve the persisted slot.
             var findings = new ArrayList<com.openggf.game.session.GameplayTeamBootstrap.CharacterFinding>();
@@ -151,6 +179,21 @@ class TestMicaCharacterIntegration {
         Path jar = temp.resolve("mica-and-talon.jar");
         assertEquals(0,com.openggf.tools.modsdk.GgfModCli.run(new String[]{"package","--input",
                 classes.toString(),"--out",jar.toString(),"--warnings","error"},System.out));
+        try (JarFile packed = new JarFile(jar.toFile())) {
+            var sheet = com.openggf.level.objects.PlayableSheetReader.read(
+                    packed.getInputStream(packed.getJarEntry("art/mica.ggfp")).readAllBytes());
+            assertEquals(96, sheet.frames().size());
+            assertEquals(17, sheet.animations().size());
+            assertFalse(sheet.animations().containsKey("HOMING_DIVE"));
+            assertEquals(List.of(8, 8, 8, 8), sheet.animations().get("WALK").slopes()
+                    .stream().map(List::size).toList());
+            var base = com.openggf.level.objects.BakedSheetReader.read(sheet.baseSheetV1());
+            assertArrayEquals(new int[]{0x0000, 0x0222, 0x0440, 0x0660, 0x0680, 0x08A2,
+                    0x0AC6, 0x08CE, 0x06AC, 0x068A, 0x044E, 0x022A, 0x0EEE, 0x0CCC,
+                    0x088E, 0x0024}, base.palette().orElseThrow().colors());
+            assertTrue(sheet.frames().stream().allMatch(f -> f.runs().stream()
+                    .mapToInt(r -> r.tileCount()).sum() <= 36));
+        }
         return jar;
     }
 

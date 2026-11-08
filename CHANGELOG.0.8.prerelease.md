@@ -36,7 +36,9 @@ under the matching area heading; see the
 ## Modding and tools
 
 - Added the maintained MICA character skeleton for all three stock games, with
-  headless launch/save/rewind/fallback acceptance and temporary original art.
+  headless launch/save/rewind/fallback acceptance and a rerunnable 96-frame original
+  playable sheet with 17 canonical animations, shared palette and slope cycles.
+  Headless native Data Select retains explicitly loaded development characters.
   Custom team archetypes now use the solo Sonic route without a sidekick.
 - Character definitions can supply an authored underwater palette through the
   owner fault boundary; absent suppliers retain zone-aware host water derivation.
