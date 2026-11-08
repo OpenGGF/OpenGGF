@@ -158,8 +158,16 @@ public class Sonic3kSpecialStagePalette {
         }
     }
 
+    private com.openggf.graphics.RenderContext characterContext;
+    void bindCharacterContext(com.openggf.graphics.RenderContext context) { characterContext=context; }
+    private void uploadCharacterPalette() {
+        if(characterContext!=null) com.openggf.game.GameServices.graphics().cachePaletteTexture(
+                characterContext.getPalette(0),characterContext.getEffectivePaletteLine(0));
+    }
     public void fadeTowardWhiteOneStep(int step) {
-        for (Palette palette : palettes) {
+        var fading=new java.util.ArrayList<Palette>(java.util.Arrays.asList(palettes));
+        if(characterContext!=null) fading.add(characterContext.getPalette(0));
+        for (Palette palette : fading) {
             if (palette == null) {
                 continue;
             }
@@ -177,6 +185,7 @@ public class Sonic3kSpecialStagePalette {
                 }
             }
         }
+        uploadCharacterPalette();
     }
 
     public void setFadeActive(boolean active) {
@@ -195,12 +204,16 @@ public class Sonic3kSpecialStagePalette {
         return new Sonic3kSpecialStageSnapshot.PaletteSnapshot(
                 palettes,
                 stagePaletteData != null ? stagePaletteData.clone() : null,
-                fadeActive);
+                fadeActive, characterContext==null ? null : characterContext.getPalette(0));
     }
 
     void restoreRewindSnapshot(Sonic3kSpecialStageSnapshot.PaletteSnapshot snapshot) {
         Sonic3kSpecialStageSnapshot.copyPalettesInto(snapshot.palettes(), palettes);
         stagePaletteData = snapshot.stagePaletteData() != null ? snapshot.stagePaletteData().clone() : null;
         fadeActive = snapshot.fadeActive();
+        if(characterContext!=null && snapshot.characterPalette()!=null) {
+            characterContext.setPalette(0,snapshot.characterPalette().deepCopy());
+            uploadCharacterPalette();
+        }
     }
 }

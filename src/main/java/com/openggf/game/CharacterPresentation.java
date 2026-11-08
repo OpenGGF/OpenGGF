@@ -6,7 +6,12 @@ import java.util.Objects;
 /** Optional character-owned presentation. Null slots retain the native host presentation. */
 @ModApi
 public record CharacterPresentation(String displayName, String hudName,
-        Map<Host, Art> art, Map<Font, Map<Character, Image>> supplementaryGlyphs) {
+        Map<Host, Art> art, Map<Font, Map<Character, Image>> supplementaryGlyphs,
+        Map<StageSpriteSet.Surface, StageSpriteSet> stages) {
+    public CharacterPresentation(String displayName, String hudName, Map<Host, Art> art,
+            Map<Font, Map<Character, Image>> supplementaryGlyphs) {
+        this(displayName, hudName, art, supplementaryGlyphs, Map.of());
+    }
     @ModApi public enum Host { S1, S2, S3K }
     @ModApi public enum Style { HUD, TITLE, RESULTS }
     @ModApi public record Font(Host host, Style style) {
@@ -62,6 +67,7 @@ public record CharacterPresentation(String displayName, String hudName,
         if (hudName != null && (hudName.isBlank() || hudName.length() > 5))
             throw new IllegalArgumentException("HUD name must contain 1..5 characters");
         art = Map.copyOf(art);
+        stages = Map.copyOf(stages);
         var copy = new java.util.LinkedHashMap<Font, Map<Character, Image>>();
         supplementaryGlyphs.forEach((font, glyphs) -> copy.put(Objects.requireNonNull(font), Map.copyOf(glyphs)));
         supplementaryGlyphs = Map.copyOf(copy);

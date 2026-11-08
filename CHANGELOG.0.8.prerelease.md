@@ -45,6 +45,9 @@ under the matching area heading; see the
   playable sheet with 17 canonical animations, shared palette and slope cycles.
   Headless native Data Select retains explicitly loaded development characters.
   Custom team archetypes now use the solo Sonic route without a sidekick.
+  Special stages can use character-owned playable roll art (S1) and indexed
+  stage frames (S2 half-pipe, S3K Blue Sphere and slot machine), with private
+  player palette rows that preserve native stage colours. MICA packages these sets.
   S1 HUD life icons/names, act/special-stage results names and 1-up monitor faces
   now consume character presentation slots while retaining native Sonic fallbacks.
   Presentation font inventories now include the native small HUD letters in all

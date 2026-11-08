@@ -86,6 +86,27 @@ the S3K water zones.
 
 ### W4 — Character presentation contract (L)
 
+Stage lane `feature/ai-mica-stages`: S1 uses the bound canonical playable roll
+sheet; additive `StageSpriteSet` slots supply S2 half-pipe, S3K Blue Sphere and
+slot-machine frames by native frame ID. MICA's wave3 PNGs are packaged by the
+example and loaded through bounded `ModAssetRoot` presentation APIs. Verification
+and capture status is recorded in the status log below.
+
+**Stage palette ownership audit.** Preserve all four native stage palette lines;
+only the custom player resolves to a private render-context palette row. This is
+an engine presentation extension, not an attempt to simulate extra CRAM.
+S1 loads the whole special-stage palette, not just Sonic's colours, and its maze
+and background continue to use those native lines. S2 `SSInitPalAndData`
+(s2.asm:10232-10250) loads `PalID_SS`; the stage's sprite assembly also shares
+player lines with messages/hand/wing art. S3K copies `Pal_SStage_Main` over the
+whole target palette at `loc_8284 (sonic3k.asm:10650-10665)` and only overwrites
+Knuckles' subset. Blue Sphere's red spheres use player line 0, so replacing it
+would recolour the field. Slots retains native player line 0 and stage palette
+cycling (`AnPal_Slots (sonic3k.asm:3876-3892)` updates line 3). Private player rows
+leave every native colour, background, object and stock companion untouched;
+no fixed-native recolouring or quantization is used.
+
+
 Status: S1 HUD icon/name, act-results name, special-stage results name and 1-up
 monitor face are wired and tile/mapping-tested on `feature/ai-mica-s1-surfaces-r2`.
 Native Sonic fallback tiles and mappings remain unchanged. S1 HUD MICA uses native
@@ -476,6 +497,58 @@ Phase 1 waves:
    endings and credits.
 
 Status log (times UTC):
+
+- 2026-11-08: W4 stage lane on `feature/ai-mica-stages`: S1 canonical roll and
+  private player palette committed in `dda7b29aa`; S2 half-pipe now installs the
+  indexed behind-view set in the shared native SAT assembly, retaining stage
+  animation, flips, shadows, admission and painter order. Complete working-tree
+  stage/integration/S3K guard selection: 173 passed, no skips. S1 manager 17/17,
+  S2 manager 16/16, compiler 3/3 and MICA integration 8/8. All four production-session
+  stage captures were inspected; final API/native regression results follow below.
+  S2 is committed in `e6a5ac02e`. Blue Sphere now uses MICA's SStage frames with
+  unchanged native projection/animation. Its isolated palette participates in the
+  native channel-ordered white fade and palette rewind snapshot; snapshot tests
+  passed 11/11 (including private-palette fade/restore), renderer 6/6.
+- 2026-11-08: W4 stage lane complete. Blue Sphere committed in `1c8ce9035`.
+  Slot-machine art now uses MICA's five native-ID roll replacements, with low tile
+  priority so native foreground glass still occludes her. Its private palette
+  follows the native black fade and resident-art rewind state. Stock fallback
+  branches remain unchanged. API/native-rendering selection passed 35/35, no
+  skips; corrected slot capture recheck passed 1/1, no skips. Original attempt
+  failures were implementation-time example/engine compilation errors; both
+  were repaired before the passing checks. No baseline failure is being waived.
+  Four local stage commits; no merge or push. Production `GameplayCaptureSession`
+  boots the packaged mod, then uses `GameLoop.enterSpecialStage()` or
+  `LevelManager.requestBonusStageEntry(SLOT_MACHINE)` and neutral input. This
+  proves stage presentation, not traversal of a physical entry trigger.
+  Inspected captures: `/tmp/mica-stages-20261108/{s1,s2,s3k,s3k-slots}/frame-239.png`,
+  with frame 120/180 stills and per-frame `state.csv` alongside them. Slot frame
+  120 is still the native entry title card; frames 180/239 are the bonus stage.
+  Native stage palette rows stay unchanged by custom binding; private rows take
+  character-supplier colours without native recolouring. The new indexed frame
+  sets reconstruct byte-for-byte from their tile/mapping representation.
+
+  Verification commands (Java 25, verified S1/S2/S3K ROMs found; no skips):
+
+  ```bash
+  python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=Sonic1SpecialStageManagerTest,Sonic2SpecialStageManagerTest,TestSonic3kSpecialStageRenderer,TestSonic3kSpecialStageManagerSnapshot,TestMicaCharacterIntegration,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestStageSpriteCompiler,TestS3kSlotBonusStageRuntime,TestS3kSlotPlayerRuntime,TestS3kSlotBonusPlayer' test
+  # 173 passed; two matching LevelLoading classes and two SlotBonusStageRuntime classes selected.
+  python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestModApiSignatureSurface,TestSonic2SpecialStageSpriteAssembly,TestSonic2SpecialStagePaletteNativeChannels,TestS3kSpecialStageSpritePixels,TestS3kSlotGlassPriority,TestS3kSlotMachineRenderer' test
+  # 35 passed.
+  python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestMicaCharacterIntegration#micaSlotsCapture' -Dmica.stage.captureRoot=/tmp/mica-stages-20261108 test
+  # 1 passed after the custom slot tile-priority correction.
+  python3 tools/disasm/disasm_citations.py check docs/architecture/designs/2026-11-08-original-character-mod.md src/main/java/com/openggf/game/sonic3k/bonusstage/slots/S3kSlotPlayerArt.java
+  # 6 checked, 2 existing unverifiable citations; no stale citations.
+  ```
+
+  These are bounded checks, not a full-suite run. Queue wait and execution are
+  separate: the 173-test run last reported 361s waiting, then executed in 1m45s;
+  the 35-test run last reported 180s waiting, then executed in 1m41s. The slot
+  recheck executed in 43s. Admission timestamps between queue reports are unknown;
+  there was no user-approval wait. No category run was launched, so no category
+  `VERDICT` is applicable.
+
+
 
 - 2026-11-08: design agreed; wave 1 launched.
 - 2026-11-08: merged W7 core art (`391684f4f`), W1+W3 skeleton and water palettes

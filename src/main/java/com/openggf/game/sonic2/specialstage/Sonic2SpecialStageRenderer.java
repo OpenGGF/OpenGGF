@@ -58,6 +58,22 @@ public class Sonic2SpecialStageRenderer {
     }
 
 
+    private com.openggf.sprites.art.SpriteArtSet characterStageArt;
+    private int characterStagePalette;
+    void loadCharacterStageArt() throws java.io.IOException {
+        var set = com.openggf.game.presentation.StageCharacterPresentation.stage(
+                com.openggf.game.StageSpriteSet.Surface.S2_HALF_PIPE);
+        if (set == null) return;
+        characterStageArt = com.openggf.game.presentation.StageSpriteCompiler.compile(set, null);
+        var paletteOwner = new com.openggf.sprites.render.PlayerSpriteRenderer(characterStageArt, graphicsManager);
+        com.openggf.game.presentation.StageCharacterPresentation.bindPalette(paletteOwner,
+                com.openggf.game.presentation.StageCharacterPresentation.activeDefinition());
+        var context = paletteOwner.getRenderContext();
+        characterStagePalette = context == null ? 1 : context.getEffectivePaletteLine(0);
+        for (int i=0;i<characterStageArt.artTiles().length;i++)
+            graphicsManager.cachePatternTexture(characterStageArt.artTiles()[i],characterStageArt.basePatternIndex()+i);
+    }
+
     /** One native SAT for bodies, UI, objects and shadows; geometry comes from live owners. */
     void renderNativeSprites(List<Sonic2SpecialStageSlotPool.RenderState> states,
                              RingHudState composition) {
@@ -68,6 +84,7 @@ public class Sonic2SpecialStageRenderer {
                 shadowFlatPatternBase, shadowDiagPatternBase, shadowSidePatternBase);
         int origin = specialStageViewport.innerH32OriginX();
         var assembly = new Sonic2SpecialStageSpriteAssembly(dataLoader, art, origin);
+        assembly.setCharacterArt(characterStageArt, characterStagePalette);
         var groups = assembly.assemble(states, composition,
                 intro == null ? List.of() : intro.getNativeCounterPayloads(),
                 intro == null ? 0 : intro.getNativeRingsToGoBcd(),

@@ -160,8 +160,12 @@ record Sonic3kSpecialStageSnapshot(
                        int displayedSphereCount, int displayedRingCount) { }
     record BannerSnapshot(Sonic3kSpecialStageBanner.Phase phase, int slideOffset,
                           int displayTimer, boolean triggeredAdvance, boolean showPerfect) { }
-    record PaletteSnapshot(Palette[] palettes, byte[] stagePaletteData, boolean fadeActive) {
+    record PaletteSnapshot(Palette[] palettes, byte[] stagePaletteData, boolean fadeActive, Palette characterPalette) {
+        PaletteSnapshot(Palette[] palettes, byte[] stagePaletteData, boolean fadeActive) {
+            this(palettes,stagePaletteData,fadeActive,null);
+        }
         PaletteSnapshot {
+            characterPalette=characterPalette==null ? null : characterPalette.deepCopy();
             palettes = Sonic3kSpecialStageSnapshot.clonePalettes(palettes);
             stagePaletteData = stagePaletteData != null ? stagePaletteData.clone() : null;
         }

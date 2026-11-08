@@ -286,6 +286,9 @@ CF-ANNOTATION TYPE com.openggf.game.SpecialStageProvider visible @com.openggf.ga
 CF-ANNOTATION TYPE com.openggf.game.SpecialStageStartupPolicy visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.SpecialStageViewport visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.SpecialStageViewport$Region visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.StageSpriteSet visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.StageSpriteSet$Frame visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.StageSpriteSet$Surface visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.StandaloneGameSpec visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.StandaloneGameSpec$Act visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.StandaloneGameSpec$Builder visible @com.openggf.game.ModApi
@@ -1489,6 +1492,7 @@ CONSTRUCTOR com.openggf.game.CharacterDefinition public  <init>(com.openggf.game
 CONSTRUCTOR com.openggf.game.CharacterDefinition public  <init>(com.openggf.game.CharacterKey,java.lang.String,com.openggf.game.CharacterDefinition$PlayableFactory,com.openggf.game.CharacterDefinition$RespawnStrategyFactory,com.openggf.game.PlayerCharacter,com.openggf.sprites.playable.SecondaryAbility,boolean,com.openggf.game.CharacterDefinition$ArtSupplier,com.openggf.game.CharacterDefinition$PaletteSupplier,java.util.Set<com.openggf.game.CharacterDefinition$MovementAbility>,com.openggf.game.CharacterDefinition$PaletteSupplier,com.openggf.game.CharacterDefinition$PresentationSupplier,com.openggf.game.CharacterDefinition$SuperFormSupplier)
 CONSTRUCTOR com.openggf.game.CharacterPresentation public  <init>(java.lang.String)
 CONSTRUCTOR com.openggf.game.CharacterPresentation public  <init>(java.lang.String,java.lang.String,java.util.Map<com.openggf.game.CharacterPresentation$Host,com.openggf.game.CharacterPresentation$Art>,java.util.Map<com.openggf.game.CharacterPresentation$Font,java.util.Map<java.lang.Character,com.openggf.game.CharacterPresentation$Image>>)
+CONSTRUCTOR com.openggf.game.CharacterPresentation public  <init>(java.lang.String,java.lang.String,java.util.Map<com.openggf.game.CharacterPresentation$Host,com.openggf.game.CharacterPresentation$Art>,java.util.Map<com.openggf.game.CharacterPresentation$Font,java.util.Map<java.lang.Character,com.openggf.game.CharacterPresentation$Image>>,java.util.Map<com.openggf.game.StageSpriteSet$Surface,com.openggf.game.StageSpriteSet>)
 CONSTRUCTOR com.openggf.game.CharacterPresentation$Art public  <init>(com.openggf.game.CharacterPresentation$Image,com.openggf.game.CharacterPresentation$Image,com.openggf.game.CharacterPresentation$Image,com.openggf.game.CharacterPresentation$Image)
 CONSTRUCTOR com.openggf.game.CharacterPresentation$Art public  <init>(com.openggf.game.CharacterPresentation$Image,com.openggf.game.CharacterPresentation$Image,com.openggf.game.CharacterPresentation$Image,com.openggf.game.CharacterPresentation$Image,com.openggf.game.CharacterPresentation$Sign)
 CONSTRUCTOR com.openggf.game.CharacterPresentation$Backing public  <init>(com.openggf.game.CharacterPresentation$Image,int,int[])
@@ -1522,6 +1526,8 @@ CONSTRUCTOR com.openggf.game.RomDataSource public  <init>(com.openggf.data.Rom,j
 CONSTRUCTOR com.openggf.game.SidekickSpawnOffset public  <init>(int,int)
 CONSTRUCTOR com.openggf.game.SpecialStageEntryRequest public  <init>(java.lang.Integer,com.openggf.game.EmeraldRewardKind)
 CONSTRUCTOR com.openggf.game.SpecialStageViewport$Region public  <init>(int,int,int,int)
+CONSTRUCTOR com.openggf.game.StageSpriteSet public  <init>(java.util.Map<java.lang.Integer,com.openggf.game.StageSpriteSet$Frame>)
+CONSTRUCTOR com.openggf.game.StageSpriteSet$Frame public  <init>(com.openggf.game.CharacterPresentation$Image,int,int)
 CONSTRUCTOR com.openggf.game.StandaloneGameSpec$Act public  <init>(int,com.openggf.level.Level,int,int,com.openggf.game.MusicReference)
 CONSTRUCTOR com.openggf.game.StaticFixup public  <init>(java.lang.String,java.lang.String,java.lang.Runnable)
 CONSTRUCTOR com.openggf.game.SuperFormProfile public  <init>(java.util.Map<com.openggf.game.GameId,java.util.Map<com.openggf.game.SuperFormProfile$Tier,com.openggf.game.SuperFormProfile$Form>>)
@@ -2966,6 +2972,9 @@ FIELD com.openggf.game.SpecialStageStartupPolicy public,static,final com.openggf
 FIELD com.openggf.game.SpecialStageViewport public,static,final int H32_WIDTH
 FIELD com.openggf.game.SpecialStageViewport public,static,final int NATIVE_HEIGHT
 FIELD com.openggf.game.SpecialStageViewport public,static,final int NATIVE_WIDTH
+FIELD com.openggf.game.StageSpriteSet$Surface public,static,final com.openggf.game.StageSpriteSet$Surface S2_HALF_PIPE
+FIELD com.openggf.game.StageSpriteSet$Surface public,static,final com.openggf.game.StageSpriteSet$Surface S3K_BLUE_SPHERE
+FIELD com.openggf.game.StageSpriteSet$Surface public,static,final com.openggf.game.StageSpriteSet$Surface S3K_SLOT_MACHINE
 FIELD com.openggf.game.SuperFormProfile$Tier public,static,final com.openggf.game.SuperFormProfile$Tier HYPER
 FIELD com.openggf.game.SuperFormProfile$Tier public,static,final com.openggf.game.SuperFormProfile$Tier SUPER
 FIELD com.openggf.game.TitleScreenProvider$State public,static,final com.openggf.game.TitleScreenProvider$State ACTIVE
@@ -3188,6 +3197,7 @@ FIELD com.openggf.graphics.PaletteFadePresentation$Mode public,static,final com.
 FIELD com.openggf.graphics.PaletteFadePresentation$Mode public,static,final com.openggf.graphics.PaletteFadePresentation$Mode TO_BLACK
 FIELD com.openggf.graphics.PaletteFadePresentation$Mode public,static,final com.openggf.graphics.PaletteFadePresentation$Mode TO_WHITE
 FIELD com.openggf.graphics.PatternAtlas public,static,final int TILE_SIZE
+FIELD com.openggf.graphics.PatternAtlasRange public,static,final com.openggf.graphics.PatternAtlasRange CHARACTER_STAGE_PRESENTATION
 FIELD com.openggf.graphics.PatternAtlasRange public,static,final com.openggf.graphics.PatternAtlasRange CONTINUE_SCREEN
 FIELD com.openggf.graphics.PatternAtlasRange public,static,final com.openggf.graphics.PatternAtlasRange HUD
 FIELD com.openggf.graphics.PatternAtlasRange public,static,final com.openggf.graphics.PatternAtlasRange LEVEL_TILES
@@ -5946,6 +5956,7 @@ METHOD com.openggf.game.CharacterPresentation public  java.lang.String displayNa
 METHOD com.openggf.game.CharacterPresentation public  java.lang.String hudName()
 METHOD com.openggf.game.CharacterPresentation public  java.util.Map<com.openggf.game.CharacterPresentation$Font,java.util.Map<java.lang.Character,com.openggf.game.CharacterPresentation$Image>> supplementaryGlyphs()
 METHOD com.openggf.game.CharacterPresentation public  java.util.Map<com.openggf.game.CharacterPresentation$Host,com.openggf.game.CharacterPresentation$Art> art()
+METHOD com.openggf.game.CharacterPresentation public  java.util.Map<com.openggf.game.StageSpriteSet$Surface,com.openggf.game.StageSpriteSet> stages()
 METHOD com.openggf.game.CharacterPresentation public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.game.CharacterPresentation public,final  int hashCode()
 METHOD com.openggf.game.CharacterPresentation public,final  java.lang.String toString()
@@ -6995,6 +7006,18 @@ METHOD com.openggf.game.SpecialStageViewport$Region public  int y()
 METHOD com.openggf.game.SpecialStageViewport$Region public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.game.SpecialStageViewport$Region public,final  int hashCode()
 METHOD com.openggf.game.SpecialStageViewport$Region public,final  java.lang.String toString()
+METHOD com.openggf.game.StageSpriteSet public  java.util.Map<java.lang.Integer,com.openggf.game.StageSpriteSet$Frame> frames()
+METHOD com.openggf.game.StageSpriteSet public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.StageSpriteSet public,final  int hashCode()
+METHOD com.openggf.game.StageSpriteSet public,final  java.lang.String toString()
+METHOD com.openggf.game.StageSpriteSet$Frame public  com.openggf.game.CharacterPresentation$Image image()
+METHOD com.openggf.game.StageSpriteSet$Frame public  int hotspotX()
+METHOD com.openggf.game.StageSpriteSet$Frame public  int hotspotY()
+METHOD com.openggf.game.StageSpriteSet$Frame public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.StageSpriteSet$Frame public,final  int hashCode()
+METHOD com.openggf.game.StageSpriteSet$Frame public,final  java.lang.String toString()
+METHOD com.openggf.game.StageSpriteSet$Surface public,static  com.openggf.game.StageSpriteSet$Surface valueOf(java.lang.String)
+METHOD com.openggf.game.StageSpriteSet$Surface public,static  com.openggf.game.StageSpriteSet$Surface[] values()
 METHOD com.openggf.game.StandaloneGameSpec public  boolean supportsSidekick()
 METHOD com.openggf.game.StandaloneGameSpec public  com.openggf.audio.GameAudioProfile audio()
 METHOD com.openggf.game.StandaloneGameSpec public  com.openggf.game.AbstractStandaloneGameModule module()
@@ -16973,6 +16996,8 @@ NESTED com.openggf.game.PlayableCharacterRegistry com.openggf.game.PlayableChara
 NESTED com.openggf.game.PlayableCharacterRegistry com.openggf.game.PlayableCharacterRegistry$Resolution
 NESTED com.openggf.game.ScrollHandlerProvider com.openggf.game.ScrollHandlerProvider$ZoneConstants
 NESTED com.openggf.game.SpecialStageViewport com.openggf.game.SpecialStageViewport$Region
+NESTED com.openggf.game.StageSpriteSet com.openggf.game.StageSpriteSet$Frame
+NESTED com.openggf.game.StageSpriteSet com.openggf.game.StageSpriteSet$Surface
 NESTED com.openggf.game.StandaloneGameSpec com.openggf.game.StandaloneGameSpec$Act
 NESTED com.openggf.game.StandaloneGameSpec com.openggf.game.StandaloneGameSpec$Builder
 NESTED com.openggf.game.SuperFormProfile com.openggf.game.SuperFormProfile$Form
@@ -17889,6 +17914,7 @@ RECORD-COMPONENT com.openggf.game.CharacterDefinition underwaterPaletteSupplier 
 RECORD-COMPONENT com.openggf.game.CharacterPresentation art java.util.Map<com.openggf.game.CharacterPresentation$Host,com.openggf.game.CharacterPresentation$Art>
 RECORD-COMPONENT com.openggf.game.CharacterPresentation displayName java.lang.String
 RECORD-COMPONENT com.openggf.game.CharacterPresentation hudName java.lang.String
+RECORD-COMPONENT com.openggf.game.CharacterPresentation stages java.util.Map<com.openggf.game.StageSpriteSet$Surface,com.openggf.game.StageSpriteSet>
 RECORD-COMPONENT com.openggf.game.CharacterPresentation supplementaryGlyphs java.util.Map<com.openggf.game.CharacterPresentation$Font,java.util.Map<java.lang.Character,com.openggf.game.CharacterPresentation$Image>>
 RECORD-COMPONENT com.openggf.game.CharacterPresentation$Art endSignFace com.openggf.game.CharacterPresentation$Image
 RECORD-COMPONENT com.openggf.game.CharacterPresentation$Art hudLifeIcon com.openggf.game.CharacterPresentation$Image
@@ -18031,6 +18057,10 @@ RECORD-COMPONENT com.openggf.game.SpecialStageViewport$Region height int
 RECORD-COMPONENT com.openggf.game.SpecialStageViewport$Region width int
 RECORD-COMPONENT com.openggf.game.SpecialStageViewport$Region x int
 RECORD-COMPONENT com.openggf.game.SpecialStageViewport$Region y int
+RECORD-COMPONENT com.openggf.game.StageSpriteSet frames java.util.Map<java.lang.Integer,com.openggf.game.StageSpriteSet$Frame>
+RECORD-COMPONENT com.openggf.game.StageSpriteSet$Frame hotspotX int
+RECORD-COMPONENT com.openggf.game.StageSpriteSet$Frame hotspotY int
+RECORD-COMPONENT com.openggf.game.StageSpriteSet$Frame image com.openggf.game.CharacterPresentation$Image
 RECORD-COMPONENT com.openggf.game.StandaloneGameSpec$Act level com.openggf.level.Level
 RECORD-COMPONENT com.openggf.game.StandaloneGameSpec$Act levelIndex int
 RECORD-COMPONENT com.openggf.game.StandaloneGameSpec$Act music com.openggf.game.MusicReference
@@ -21296,6 +21326,7 @@ TYPE enum public,static,final com.openggf.game.GameplayObservation$Phase SUPER j
 TYPE enum public,static,final com.openggf.game.LevelInputOverlay$Command SUPER java.lang.Enum<com.openggf.game.LevelInputOverlay$Command>
 TYPE enum public,static,final com.openggf.game.LevelSelectProvider$State SUPER java.lang.Enum<com.openggf.game.LevelSelectProvider$State>
 TYPE enum public,static,final com.openggf.game.PlayableCharacterRegistry$FallbackReason SUPER java.lang.Enum<com.openggf.game.PlayableCharacterRegistry$FallbackReason>
+TYPE enum public,static,final com.openggf.game.StageSpriteSet$Surface SUPER java.lang.Enum<com.openggf.game.StageSpriteSet$Surface>
 TYPE enum public,static,final com.openggf.game.SuperFormProfile$Tier SUPER java.lang.Enum<com.openggf.game.SuperFormProfile$Tier>
 TYPE enum public,static,final com.openggf.game.TitleScreenProvider$State SUPER java.lang.Enum<com.openggf.game.TitleScreenProvider$State>
 TYPE enum public,static,final com.openggf.game.TitleScreenProvider$TitleScreenAction SUPER java.lang.Enum<com.openggf.game.TitleScreenProvider$TitleScreenAction>
@@ -21638,6 +21669,7 @@ TYPE record public,final com.openggf.game.PhysicsModifiers SUPER java.lang.Recor
 TYPE record public,final com.openggf.game.PhysicsProfile SUPER java.lang.Record
 TYPE record public,final com.openggf.game.SidekickSpawnOffset SUPER java.lang.Record
 TYPE record public,final com.openggf.game.SpecialStageEntryRequest SUPER java.lang.Record
+TYPE record public,final com.openggf.game.StageSpriteSet SUPER java.lang.Record
 TYPE record public,final com.openggf.game.StaticFixup SUPER java.lang.Record
 TYPE record public,final com.openggf.game.SuperFormProfile SUPER java.lang.Record
 TYPE record public,final com.openggf.game.animation.ChannelContext SUPER java.lang.Record
@@ -21863,6 +21895,7 @@ TYPE record public,static,final com.openggf.game.MusicReference$Namespaced SUPER
 TYPE record public,static,final com.openggf.game.MusicReference$Stock SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.PlayableCharacterRegistry$Resolution SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.SpecialStageViewport$Region SUPER java.lang.Record
+TYPE record public,static,final com.openggf.game.StageSpriteSet$Frame SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.StandaloneGameSpec$Act SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.SuperFormProfile$Form SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.ZoneArtProvider$ArtLoadRequest SUPER java.lang.Record
@@ -22460,6 +22493,9 @@ TYPE-ANNOTATION com.openggf.game.SpecialStageProvider @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.SpecialStageStartupPolicy @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.SpecialStageViewport @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.SpecialStageViewport$Region @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.StageSpriteSet @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.StageSpriteSet$Frame @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.StageSpriteSet$Surface @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.StandaloneGameSpec @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.StandaloneGameSpec$Act @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.StandaloneGameSpec$Builder @com.openggf.game.ModApi
