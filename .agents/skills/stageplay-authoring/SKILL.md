@@ -208,3 +208,18 @@ Down/roll policies on either targeted human pad. Those remain bounded candidates
 in the same search. Native physics owns admission/speed; saved routes replay rows
 only. An object instance-ID checkpoint mismatch is a host frontier: retain strict
 identity equality and report it instead of normalizing IDs or removing objects.
+
+A fact-only menu goal with a leg `holds` invariant requests a bounded neutral
+observation hold. The same goal expander may keep the complete successful hold;
+linear qualification still checks every row. `competition.presentationFrame`
+copies the production presentation counter. Numeric fact distance ranks candidates
+only; missing facts cannot satisfy a goal. Deliberate result holds may use the
+ROM's full finish-grace period; never fit waits, seeds or clocks to native CSV.
+
+Multi-act cold exports may declare additive `native.inlets[]`: `engineFromRows`
+plus movie/prefixRows/inputHash/engineAnchorRows/anchorBoundary. Each is an observed
+ordinary Level/LFC0 boundary. Native history before the replaced load must equal
+already-composed frozen inputs; never fit offsets or change gameplay rows. CLI
+supports the four native-inlet/engine-inlet flags documented in the guide. Both
+editors preserve, list and resolve imported inlet witnesses. Replays validate
+`input.levelAnchorRows` without opening native data.

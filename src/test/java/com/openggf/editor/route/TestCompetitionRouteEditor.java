@@ -43,6 +43,7 @@ class TestCompetitionRouteEditor {
             workspace.open(Path.of(stem + ".route.json"));
             assertTrue(workspace.nativeFacts().stream().noneMatch(f -> f[0].equals("PROVISIONAL")));
             assertTrue(workspace.exportBlocker().isEmpty());
+            assertTrue(workspace.nativeFacts().stream().anyMatch(f -> f[1].contains("slot-in-use-in-view")));
             Path movie=dir.resolve(name+".bk2");
             workspace.exportBk2(movie);
             var entry=route.manifest().nativeFacts().entry().orElseThrow();

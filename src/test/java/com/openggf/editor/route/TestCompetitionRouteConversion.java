@@ -113,6 +113,21 @@ class TestCompetitionRouteConversion {
         w.invoke(RouteTapeWorkspace.Action.REDO);assertTrue(w.working().manifest().nativeFacts().entry().isPresent());
     }
 
+    @Test void laterNativeInletsResolveAtProjectRootAndPreserveVerifiedHistory() throws Exception {
+        Path root=dir.resolve("later-project"),folder=root.resolve("routes");Files.createDirectories(folder);
+        var first=RouteFiles.tapeFromScript("2 -\n");var tape=RouteFiles.tapeFromScript("1 S\n1 R / B\n1 S\n1 L / A\n");
+        var later=first.append(tape.slice(1,2)).append(RouteFiles.tapeFromScript("1 S\n1 -\n"));
+        Files.writeString(root.resolve("first.script"),RouteFiles.scriptText(first));Files.writeString(root.resolve("later.script"),RouteFiles.scriptText(later));
+        var start=new NativeFacts.NativeEntry("first.script",2,first.hash(),1,"first-ordinary-level-lfc-zero");
+        var inlet=new NativeFacts.NativeInlet(2,new NativeFacts.NativeEntry("later.script",5,later.hash(),3,"first-ordinary-level-lfc-zero"));
+        var route=RouteArtifact.of(com.openggf.stageplay.route.StageplayCompetitionRouteHosts.launch(),tape,new Provenance("test","","",List.of()));
+        route=new RouteArtifact(route.manifest().withNativeFacts(new NativeFacts(Optional.of(start),List.of(),"",List.of(inlet))),tape);
+        var expected=later.append(tape.slice(3,4));Path output=dir.resolve("later-export.bk2");
+        RouteEditorFiles.export(route,folder.resolve("test.route.json"),output);
+        assertEquals(expected,RouteFiles.tapeFromMovie(output,expected.size()));
+        RouteCompetitionFacts.requireKey("competition.presentationFrame");RouteCompetitionFacts.requireKey("input.levelAnchorRows");
+    }
+
     @Test void exportResolvesWitnessAtRouteRootAndSplicesBothPads() throws Exception {
         Path root=dir.resolve("project"), folder=root.resolve("src/test/resources/routes/s2/competition");
         Files.createDirectories(folder);

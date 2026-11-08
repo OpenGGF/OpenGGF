@@ -70,7 +70,7 @@ public final class RouteNativeStampTool {
     /** Named native observations, independently checked after a cold replay; never a full-state claim. */
     private static void stampGoals(Path manifest,RouteArtifact route,JsonNode result) throws Exception {
         var entry=route.manifest().nativeFacts().entry().orElseThrow(()->new IllegalArgumentException("native anchors required"));
-        int expected=entry.prefixRows()+route.tape().size()-entry.engineAnchorRows();
+        int expected=RouteFiles.nativeInputTape(route).size();
         if(result.path("nativeRows").asInt(-1)!=expected
                 || !route.launch().rom().sha1().equalsIgnoreCase(result.path("romSha1").asText()))
             throw new IllegalArgumentException("native goal evidence launch/row identity differs");
