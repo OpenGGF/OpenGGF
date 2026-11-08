@@ -348,12 +348,12 @@
       "order": 0,
       "file": "frames/homing_dive-00.png",
       "hotspot": [
-        14,
+        15,
         15
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": "Original integer-pixel down-right scales-first dive; fixed attack axis, sheltered readable eye, trailing coral boots."
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 3; no painted pixel patches."
     },
     {
       "id": "homing_dive-01",
@@ -361,12 +361,12 @@
       "order": 1,
       "file": "frames/homing_dive-01.png",
       "hotspot": [
-        14,
+        15,
         15
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": "Original integer-pixel down-right scales-first dive; fixed attack axis, sheltered readable eye, trailing coral boots."
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 3; no painted pixel patches."
     },
     {
       "id": "homing_dive-02",
@@ -379,7 +379,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": "Original integer-pixel down-right scales-first dive; fixed attack axis, sheltered readable eye, trailing coral boots."
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 6; no painted pixel patches."
     },
     {
       "id": "homing_dive-03",
@@ -387,12 +387,12 @@
       "order": 3,
       "file": "frames/homing_dive-03.png",
       "hotspot": [
-        14,
-        15
+        15,
+        14
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": "Original integer-pixel down-right scales-first dive; fixed attack axis, sheltered readable eye, trailing coral boots."
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 2; no painted pixel patches."
     },
     {
       "id": "push-00",

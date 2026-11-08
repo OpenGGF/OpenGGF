@@ -3434,8 +3434,6 @@
       "material_box_change": true
     },
     "homing_dive-00": {
-      "prompt": "Use case: style-transfer. Asset: ONE isolated 16-bit pixel sprite, transparent background. Image 1 is ONLY native pose/rotation/silhouette and facing reference, NOT the character to reproduce. Image 2 is MICA's original pangolin identity concept. Image 3 is approved pixel-art style/proportion anchor. Redraw image 1 pose as MICA, a NEW DRAWING, NOT a recolour. Preserve pose, framing and silhouette extent of reference, NOT standing concept pose. Jade rounded overlapping scales, long scaled tail, tan pangolin muzzle/belly, readable dark eye, white gloves, red hiking boots with tan soles and jade laces. NO hedgehog/quills/blue/Sonic features, no text, no shadows or scenery. Crisp simple native pixel clusters and continuous dark outline. Pose: Custom scales-FIRST dive, curling pose based on native roll reference but point shell and scaled head DOWN-right, face and gloves hidden behind armour, tucked red boots upper-left. Sharp diagonal down-right attack.",
-      "raw_sha256": "e24410e11b2707bf23982b1c87571d6ff4166042f674cefd8bd0e59b76091d8f",
       "reference": {
         "id": "homing_dive-00",
         "size": [
@@ -3458,38 +3456,53 @@
       },
       "geometry_reference": {
         "size": [
-          31,
-          32
+          29,
+          30
         ],
         "hotspot": [
-          14,
+          15,
           15
         ]
       },
       "native_size": [
-        31,
-        32
-      ],
-      "previous_size": [
-        38,
-        29
-      ],
-      "previous_hotspot": [
-        19,
-        14
+        29,
+        30
       ],
       "hotspot": [
-        14,
+        15,
         15
       ],
-      "source": "new built-in GPT Image",
-      "cleanup": "leading muzzle tucked behind jade shell",
-      "material_box_change": true,
-      "owner_fix": "Original integer-pixel down-right scales-first dive; fixed attack axis, sheltered readable eye, trailing coral boots."
+      "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, homing_dive-00, candidate 3 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Custom scales-first diving pose based on native roll/air reference. Direction DOWN-RIGHT unmistakable: rounded jade shell's tapered scale-armour nose leads lower-right, cream face and gloves tucked behind shell at upper-left, coral boots trail upper-left. No muzzle at leading tip. Match compactness and tumbling phase of reference, no spikes.\n\nWill reduce to native 29x30 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 3: prioritize small-scale readability and consistent identity with the approved face anchors, keeping exact phase placement.",
+      "raw_sha256": "e52f60f42db3a0c94321eb4e7fdd062d8320f204a9cbdefcb394ce4d9cd4790e",
+      "source": "built-in GPT Image, latest exposed; exact version unavailable",
+      "cleanup": "Transparent-margin crop; Lanczos native box reduction; unchanged fixed palette; inside silhouette ink. No painted pixels.",
+      "regeneration": {
+        "attempts": [
+          {
+            "attempt": 1,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, homing_dive-00, candidate 1 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Custom scales-first diving pose based on native roll/air reference. Direction DOWN-RIGHT unmistakable: rounded jade shell's tapered scale-armour nose leads lower-right, cream face and gloves tucked behind shell at upper-left, coral boots trail upper-left. No muzzle at leading tip. Match compactness and tumbling phase of reference, no spikes.\n\nWill reduce to native 29x30 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 1: strict fidelity to reference limb/boot positions and silhouette.",
+            "raw_sha256": "cab794318d3dfd39f011ca6c66d02b13a6d1ce5c75f707faeef4842592e2b236",
+            "chosen": false
+          },
+          {
+            "attempt": 2,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, homing_dive-00, candidate 2 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Custom scales-first diving pose based on native roll/air reference. Direction DOWN-RIGHT unmistakable: rounded jade shell's tapered scale-armour nose leads lower-right, cream face and gloves tucked behind shell at upper-left, coral boots trail upper-left. No muzzle at leading tip. Match compactness and tumbling phase of reference, no spikes.\n\nWill reduce to native 29x30 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 2: prioritize coherent rounded hood/head, compact shapes and clean shading while keeping EXACT native limb pose.",
+            "raw_sha256": "b500a4b0a3f68d093d1561924d3e391a56f1345a0a716d28a3e03413f1603c2b",
+            "chosen": false
+          },
+          {
+            "attempt": 3,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, homing_dive-00, candidate 3 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Custom scales-first diving pose based on native roll/air reference. Direction DOWN-RIGHT unmistakable: rounded jade shell's tapered scale-armour nose leads lower-right, cream face and gloves tucked behind shell at upper-left, coral boots trail upper-left. No muzzle at leading tip. Match compactness and tumbling phase of reference, no spikes.\n\nWill reduce to native 29x30 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 3: prioritize small-scale readability and consistent identity with the approved face anchors, keeping exact phase placement.",
+            "raw_sha256": "e52f60f42db3a0c94321eb4e7fdd062d8320f204a9cbdefcb394ce4d9cd4790e",
+            "chosen": true
+          }
+        ],
+        "chosen": 3,
+        "reason": "Armoured lower-right shell leads; face and gloves are tucked behind it, coral boots trail upper-left; rounded consistent scales.",
+        "review_directory": "$HOME/scratch/agent-tmp/mica-regen-20261108"
+      }
     },
     "homing_dive-01": {
-      "prompt": "Use case: style-transfer. Asset: ONE isolated 16-bit pixel sprite, transparent background. Image 1 is ONLY native pose/rotation/silhouette and facing reference, NOT the character to reproduce. Image 2 is MICA's original pangolin identity concept. Image 3 is approved pixel-art style/proportion anchor. Redraw image 1 pose as MICA, a NEW DRAWING, NOT a recolour. Preserve pose, framing and silhouette extent of reference, NOT standing concept pose. Jade rounded overlapping scales, long scaled tail, tan pangolin muzzle/belly, readable dark eye, white gloves, red hiking boots with tan soles and jade laces. NO hedgehog/quills/blue/Sonic features, no text, no shadows or scenery. Crisp simple native pixel clusters and continuous dark outline. Pose: Custom scales-FIRST dive second step, native rolled silhouette, jade overlapping shell leads DOWN-right; tail curls over upper-left, muzzle tucked behind shell, NO face leading attack.",
-      "raw_sha256": "3cffb6f994cbc4e6ee6efc5d65fcc21e5f5f4f8f6fb972de4e503ad64c4e475a",
       "reference": {
         "id": "homing_dive-01",
         "size": [
@@ -3512,38 +3525,53 @@
       },
       "geometry_reference": {
         "size": [
-          31,
-          32
+          30,
+          29
         ],
         "hotspot": [
-          14,
+          15,
           15
         ]
       },
       "native_size": [
-        31,
-        32
-      ],
-      "previous_size": [
-        36,
+        30,
         29
       ],
-      "previous_hotspot": [
-        18,
-        14
-      ],
       "hotspot": [
-        14,
+        15,
         15
       ],
-      "source": "new built-in GPT Image",
-      "cleanup": "connected alpha; shared palette; inside ink outline",
-      "material_box_change": true,
-      "owner_fix": "Original integer-pixel down-right scales-first dive; fixed attack axis, sheltered readable eye, trailing coral boots."
+      "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, homing_dive-01, candidate 3 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Custom scales-first diving pose based on native roll/air reference. Direction DOWN-RIGHT unmistakable: rounded jade shell's tapered scale-armour nose leads lower-right, cream face and gloves tucked behind shell at upper-left, coral boots trail upper-left. No muzzle at leading tip. Match compactness and tumbling phase of reference, no spikes.\n\nWill reduce to native 30x29 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 3: prioritize small-scale readability and consistent identity with the approved face anchors, keeping exact phase placement.",
+      "raw_sha256": "08d44d792cecd493637b90aed824970c99bfa8e439d4e4fddd57ed03908e10c3",
+      "source": "built-in GPT Image, latest exposed; exact version unavailable",
+      "cleanup": "Transparent-margin crop; Lanczos native box reduction; unchanged fixed palette; inside silhouette ink. No painted pixels.",
+      "regeneration": {
+        "attempts": [
+          {
+            "attempt": 1,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, homing_dive-01, candidate 1 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Custom scales-first diving pose based on native roll/air reference. Direction DOWN-RIGHT unmistakable: rounded jade shell's tapered scale-armour nose leads lower-right, cream face and gloves tucked behind shell at upper-left, coral boots trail upper-left. No muzzle at leading tip. Match compactness and tumbling phase of reference, no spikes.\n\nWill reduce to native 30x29 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 1: strict fidelity to reference limb/boot positions and silhouette.",
+            "raw_sha256": "30b5ddcc122ec74200a50d2f0acfeaa4a838c25a18647d3b2007c9f8542e0c66",
+            "chosen": false
+          },
+          {
+            "attempt": 2,
+            "prompt": "Use case: style-transfer. Create ONE original MICA pangolin game sprite, homing_dive-01, candidate 2. First image is a native 8x pixel pose reference; preserve that pose. Second image defines original MICA identity, third/fourth approved MICA pixel face style. A compact curled pangolin dive pointing down-right: jade scale armour leads lower-right, tiny face, gloves and coral boots tucked at upper-left behind the shell. Rounded scales, clear downward-right direction. Jade green overlapping rounded armour scales, cream muzzle if visible, coral boots/tan soles, white gloves. Crisp simple 16-bit pixel clusters and black silhouette outline, consistent top-left light. Single sprite isolated on transparent background. No text, no ground, no shadow, no extra poses, no golden form.",
+            "raw_sha256": "a70cb2689354ed8fb2e664f7bf7952cc119a4affd23ba71e50fa7c6d2227c404",
+            "chosen": false
+          },
+          {
+            "attempt": 3,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, homing_dive-01, candidate 3 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Custom scales-first diving pose based on native roll/air reference. Direction DOWN-RIGHT unmistakable: rounded jade shell's tapered scale-armour nose leads lower-right, cream face and gloves tucked behind shell at upper-left, coral boots trail upper-left. No muzzle at leading tip. Match compactness and tumbling phase of reference, no spikes.\n\nWill reduce to native 30x29 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 3: prioritize small-scale readability and consistent identity with the approved face anchors, keeping exact phase placement.",
+            "raw_sha256": "08d44d792cecd493637b90aed824970c99bfa8e439d4e4fddd57ed03908e10c3",
+            "chosen": true
+          }
+        ],
+        "chosen": 3,
+        "reason": "Clear diagonal scales-first dive with tucked upper-left boots; rejects candidate 2 trailing streak-like glove shape.",
+        "review_directory": "$HOME/scratch/agent-tmp/mica-regen-20261108"
+      }
     },
     "homing_dive-02": {
-      "prompt": "Use case: style-transfer. ONE transparent original MICA pangolin sprite. Image1 is a strict UPSIDE-DOWN, HEAD-DOWN pose base: boots at TOP, head at BOTTOM. Replace it with MICA from concept image2, pixel style image3. Custom scales-first straight DOWN dive: a narrow pointed overlapping jade armour shell at BOTTOM, folded body above it, red boots together at TOP. Face, tan muzzle and gloves COMPLETELY hidden within armour; only jade scales point downwards. Keep image1's narrow tall silhouette and exact DOWNWARD orientation. NOT standing, NOT face-first, NO hedgehog/quills/blue, no text, shadow or effects. Crisp 16-bit pixel clusters; transparent background.",
-      "raw_sha256": "44c9b442a0a87f00dbeeb353bc1c14c0e8a7dc0b0d2ad5df300693878b1841c1",
       "reference": {
         "id": "homing_dive-02",
         "size": [
@@ -3567,8 +3595,8 @@
       },
       "geometry_reference": {
         "size": [
-          31,
-          32
+          29,
+          30
         ],
         "hotspot": [
           14,
@@ -3576,29 +3604,62 @@
         ]
       },
       "native_size": [
-        31,
-        32
-      ],
-      "previous_size": [
-        35,
-        29
-      ],
-      "previous_hotspot": [
-        17,
-        14
+        29,
+        30
       ],
       "hotspot": [
         14,
         15
       ],
-      "source": "new built-in GPT Image",
-      "cleanup": "Hand clustered overlapping jade scale rows; retained native envelope, boots and shell-first facing.",
-      "material_box_change": true,
-      "owner_fix": "Original integer-pixel down-right scales-first dive; fixed attack axis, sheltered readable eye, trailing coral boots."
+      "prompt": "Use case: style-transfer. Single original 16-bit MICA pangolin sprite diving scales-first DOWN-RIGHT, candidate 6. Input 1 is inverted native airborne pose for tucked limb attitude ONLY; input 2 is native rolling ball for compact 29x30 pixel envelope. Input 3 MICA concept defines jade scales/cream muzzle/coral boots. Inputs 4/5 are approved MICA face style anchors. Draw an almost round/short diagonal oval pangolin curl inside the native rolling footprint, NOT the tall stretched silhouette of input 1. The smooth rounded jade shell leads LOWER RIGHT, with its armoured tapered end pointing down-right. Small coral boots and white gloves trail UPPER LEFT, tiny cream face hidden behind the shell on upper-left, never leading the dive. Round overlapping scales, no quill spikes. Compact enough to loop among three similar curled dive poses without size pop. Hard simple native pixel clusters, dark outline, consistent top-left shading. Transparent background, exactly one sprite, no motion streaks/text/shadow/ground. Make a clean compact armoured diving teardrop, with trailing face and limbs mostly occluded by scales.",
+      "raw_sha256": "9adaaa9881eb5ff70356a1a286525b0ed23c8a3297826d4f4d116b6ded77cae3",
+      "source": "built-in GPT Image, latest exposed; exact version unavailable",
+      "cleanup": "Transparent-margin crop; Lanczos native box reduction; unchanged fixed palette; inside silhouette ink. No painted pixels.",
+      "regeneration": {
+        "attempts": [
+          {
+            "attempt": 1,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, homing_dive-02, candidate 1 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Custom scales-first diving pose based on native roll/air reference. Direction DOWN-RIGHT unmistakable: rounded jade shell's tapered scale-armour nose leads lower-right, cream face and gloves tucked behind shell at upper-left, coral boots trail upper-left. No muzzle at leading tip. Match compactness and tumbling phase of reference, no spikes.\n\nWill reduce to native 24x45 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 1: strict fidelity to reference limb/boot positions and silhouette.",
+            "raw_sha256": "c7a7a6d301c4022f1a0242eeabf5aa64654582884267eb1e230541b3b727b7d6",
+            "chosen": false
+          },
+          {
+            "attempt": 2,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, homing_dive-02, candidate 2 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Custom scales-first diving pose based on native roll/air reference. Direction DOWN-RIGHT unmistakable: rounded jade shell's tapered scale-armour nose leads lower-right, cream face and gloves tucked behind shell at upper-left, coral boots trail upper-left. No muzzle at leading tip. Match compactness and tumbling phase of reference, no spikes.\n\nWill reduce to native 24x45 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 2: prioritize coherent rounded hood/head, compact shapes and clean shading while keeping EXACT native limb pose.",
+            "raw_sha256": "2892e5817ebf23bf32c1ededc95b8d708a89883457d1406dc5fda961994e589e",
+            "chosen": false
+          },
+          {
+            "attempt": 3,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, homing_dive-02, candidate 3 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Custom scales-first diving pose based on native roll/air reference. Direction DOWN-RIGHT unmistakable: rounded jade shell's tapered scale-armour nose leads lower-right, cream face and gloves tucked behind shell at upper-left, coral boots trail upper-left. No muzzle at leading tip. Match compactness and tumbling phase of reference, no spikes.\n\nWill reduce to native 24x45 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 3: prioritize small-scale readability and consistent identity with the approved face anchors, keeping exact phase placement.",
+            "raw_sha256": "7073683089c2dd09527869f79ac8e1160ede6ae15f272dfb8cbe31b9258a04ff",
+            "chosen": false
+          },
+          {
+            "attempt": 4,
+            "prompt": "Use case: style-transfer. Single original 16-bit MICA pangolin sprite diving scales-first DOWN-RIGHT, candidate 4. Input 1 is inverted native airborne pose for tucked limb attitude ONLY; input 2 is native rolling ball for compact 29x30 pixel envelope. Input 3 MICA concept defines jade scales/cream muzzle/coral boots. Inputs 4/5 are approved MICA face style anchors. Draw an almost round/short diagonal oval pangolin curl inside the native rolling footprint, NOT the tall stretched silhouette of input 1. The smooth rounded jade shell leads LOWER RIGHT, with its armoured tapered end pointing down-right. Small coral boots and white gloves trail UPPER LEFT, tiny cream face hidden behind the shell on upper-left, never leading the dive. Round overlapping scales, no quill spikes. Compact enough to loop among three similar curled dive poses without size pop. Hard simple native pixel clusters, dark outline, consistent top-left shading. Transparent background, exactly one sprite, no motion streaks/text/shadow/ground. Make shell a smooth compact diagonal oval.",
+            "raw_sha256": "9e130a607d5d2877bcbe96eb89a4442183c20d0987eaaf70bd364860efe09444",
+            "chosen": false
+          },
+          {
+            "attempt": 5,
+            "prompt": "Use case: style-transfer. Single original 16-bit MICA pangolin sprite diving scales-first DOWN-RIGHT, candidate 5. Input 1 is inverted native airborne pose for tucked limb attitude ONLY; input 2 is native rolling ball for compact 29x30 pixel envelope. Input 3 MICA concept defines jade scales/cream muzzle/coral boots. Inputs 4/5 are approved MICA face style anchors. Draw an almost round/short diagonal oval pangolin curl inside the native rolling footprint, NOT the tall stretched silhouette of input 1. The smooth rounded jade shell leads LOWER RIGHT, with its armoured tapered end pointing down-right. Small coral boots and white gloves trail UPPER LEFT, tiny cream face hidden behind the shell on upper-left, never leading the dive. Round overlapping scales, no quill spikes. Compact enough to loop among three similar curled dive poses without size pop. Hard simple native pixel clusters, dark outline, consistent top-left shading. Transparent background, exactly one sprite, no motion streaks/text/shadow/ground. Make a compact near-circular shell with tapered lower-right end and tucked boots.",
+            "raw_sha256": "b96a3a5dcdaf3aff495b4353188cb2ee384b516cfff55564e5086d03cbdebccd",
+            "chosen": false
+          },
+          {
+            "attempt": 6,
+            "prompt": "Use case: style-transfer. Single original 16-bit MICA pangolin sprite diving scales-first DOWN-RIGHT, candidate 6. Input 1 is inverted native airborne pose for tucked limb attitude ONLY; input 2 is native rolling ball for compact 29x30 pixel envelope. Input 3 MICA concept defines jade scales/cream muzzle/coral boots. Inputs 4/5 are approved MICA face style anchors. Draw an almost round/short diagonal oval pangolin curl inside the native rolling footprint, NOT the tall stretched silhouette of input 1. The smooth rounded jade shell leads LOWER RIGHT, with its armoured tapered end pointing down-right. Small coral boots and white gloves trail UPPER LEFT, tiny cream face hidden behind the shell on upper-left, never leading the dive. Round overlapping scales, no quill spikes. Compact enough to loop among three similar curled dive poses without size pop. Hard simple native pixel clusters, dark outline, consistent top-left shading. Transparent background, exactly one sprite, no motion streaks/text/shadow/ground. Make a clean compact armoured diving teardrop, with trailing face and limbs mostly occluded by scales.",
+            "raw_sha256": "9adaaa9881eb5ff70356a1a286525b0ed23c8a3297826d4f4d116b6ded77cae3",
+            "chosen": true
+          }
+        ],
+        "chosen": 6,
+        "reason": "Compact generated air/roll hybrid in native roll-02 box; clear armoured lower-right leading end without the tall air-reference size pop. No painted/rotated art.",
+        "review_directory": "$HOME/scratch/agent-tmp/mica-regen-20261108"
+      }
     },
     "homing_dive-03": {
-      "prompt": "Use case: style-transfer. Asset: ONE isolated 16-bit pixel sprite, transparent background. Image 1 is ONLY native pose/rotation/silhouette and facing reference, NOT the character to reproduce. Image 2 is MICA's original pangolin identity concept. Image 3 is approved pixel-art style/proportion anchor. Redraw image 1 pose as MICA, a NEW DRAWING, NOT a recolour. Preserve pose, framing and silhouette extent of reference, NOT standing concept pose. Jade rounded overlapping scales, long scaled tail, tan pangolin muzzle/belly, readable dark eye, white gloves, red hiking boots with tan soles and jade laces. NO hedgehog/quills/blue/Sonic features, no text, no shadows or scenery. Crisp simple native pixel clusters and continuous dark outline. Pose: Custom scales-FIRST dive final step: tight shell projectile pointing DOWN-right, tail wraps back upper-left, muzzle hidden inside armour, no extended gloves/feet, no face-first attack.",
-      "raw_sha256": "5967ceafc5248971912fa9ed55dbe03a0e8a2bc736361c44b9cb23c299802995",
       "reference": {
         "id": "homing_dive-03",
         "size": [
@@ -3621,34 +3682,51 @@
       },
       "geometry_reference": {
         "size": [
-          31,
-          32
+          30,
+          29
         ],
         "hotspot": [
-          14,
-          15
+          15,
+          14
         ]
       },
       "native_size": [
-        31,
-        32
-      ],
-      "previous_size": [
         30,
         29
       ],
-      "previous_hotspot": [
+      "hotspot": [
         15,
         14
       ],
-      "hotspot": [
-        14,
-        15
-      ],
-      "source": "new built-in GPT Image",
-      "cleanup": "connected alpha; shared palette; inside ink outline",
-      "material_box_change": false,
-      "owner_fix": "Original integer-pixel down-right scales-first dive; fixed attack axis, sheltered readable eye, trailing coral boots."
+      "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, homing_dive-03, candidate 2 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Custom scales-first diving pose based on native roll/air reference. Direction DOWN-RIGHT unmistakable: rounded jade shell's tapered scale-armour nose leads lower-right, cream face and gloves tucked behind shell at upper-left, coral boots trail upper-left. No muzzle at leading tip. Match compactness and tumbling phase of reference, no spikes.\n\nWill reduce to native 30x29 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 2: prioritize coherent rounded hood/head, compact shapes and clean shading while keeping EXACT native limb pose.",
+      "raw_sha256": "73a1d352206d079e0c98ca1b1df0e1bc2498e6770366e32f7e194e1b3f8fb5a3",
+      "source": "built-in GPT Image, latest exposed; exact version unavailable",
+      "cleanup": "Transparent-margin crop; Lanczos native box reduction; unchanged fixed palette; inside silhouette ink. No painted pixels.",
+      "regeneration": {
+        "attempts": [
+          {
+            "attempt": 1,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, homing_dive-03, candidate 1 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Custom scales-first diving pose based on native roll/air reference. Direction DOWN-RIGHT unmistakable: rounded jade shell's tapered scale-armour nose leads lower-right, cream face and gloves tucked behind shell at upper-left, coral boots trail upper-left. No muzzle at leading tip. Match compactness and tumbling phase of reference, no spikes.\n\nWill reduce to native 30x29 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 1: strict fidelity to reference limb/boot positions and silhouette.",
+            "raw_sha256": "5c19eaa8fe5a5660adf12f5ecd640684bc5880e1430a652c1685db34a9e391f9",
+            "chosen": false
+          },
+          {
+            "attempt": 2,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, homing_dive-03, candidate 2 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Custom scales-first diving pose based on native roll/air reference. Direction DOWN-RIGHT unmistakable: rounded jade shell's tapered scale-armour nose leads lower-right, cream face and gloves tucked behind shell at upper-left, coral boots trail upper-left. No muzzle at leading tip. Match compactness and tumbling phase of reference, no spikes.\n\nWill reduce to native 30x29 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 2: prioritize coherent rounded hood/head, compact shapes and clean shading while keeping EXACT native limb pose.",
+            "raw_sha256": "73a1d352206d079e0c98ca1b1df0e1bc2498e6770366e32f7e194e1b3f8fb5a3",
+            "chosen": true
+          },
+          {
+            "attempt": 3,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, homing_dive-03, candidate 3 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Custom scales-first diving pose based on native roll/air reference. Direction DOWN-RIGHT unmistakable: rounded jade shell's tapered scale-armour nose leads lower-right, cream face and gloves tucked behind shell at upper-left, coral boots trail upper-left. No muzzle at leading tip. Match compactness and tumbling phase of reference, no spikes.\n\nWill reduce to native 30x29 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 3: prioritize small-scale readability and consistent identity with the approved face anchors, keeping exact phase placement.",
+            "raw_sha256": "171e8f3f8ac00e39c9aad12448eb55f6283ce09533880f21308797824b2b5409",
+            "chosen": false
+          }
+        ],
+        "chosen": 2,
+        "reason": "Strong down-right diagonal with rounded leading shell and upper-left trailing boots; face stays behind the armour.",
+        "review_directory": "$HOME/scratch/agent-tmp/mica-regen-20261108"
+      }
     },
     "walk-up45-00": {
       "reference": {
