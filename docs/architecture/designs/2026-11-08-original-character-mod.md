@@ -1279,11 +1279,12 @@ presentation banks, not this normal-playable table.
 | S1 | Sonic1EndingEvents | $03 (post-BuildSprites wait) | authored WAIT-03 (`wait/fidget`) |
 | S2 | TornadoObjectInstance ride capture | $01 | authored WAIT-00 (`wait/stand`); separate vehicle/pilot art retained |
 | S2 | Sonic2CompetitionSession reset | $00 | invisible; competitive presentation remains outside MICA coverage |
+| S3K | AIZ plane intro actor (independent renderer) | normal $BA, $96–$9A; Super bank $21/$22 | existing MICA ride/roll art; powered ROLL fallback with owned Gilded palette |
 | S3K | AIZ/MHZ ride vines; LBZ grapple; MHZ pulley | $90–$92 | authored `hang/0`–`hang/2` |
 | S3K | AIZ/MHZ vine swing | $78–$7F | HANG fallback (`swing/0`–`swing/7`) |
 | S3K | AIZ hollow tree; CNZ wire cage; MGZ twisting loop; FBZ wire cages; DEZ gravity tube | $69–$77 / $6C–$77 | ROLL fallback (`tumble/*`) |
-| S3K | CNZ cylinder; HCZ spinning column; LBZ cup/tube elevators; DEZ teleporter | $55–$5B | ROLL fallback (`twist/*`) |
-| S3K | CNZ cage release; FBZ spinning pole; MHZ vertical bar | $5C–$61; vertical initial $62, release $24 | HANG fallback (`pole/*`), WALK on release |
+| S3K | CNZ cylinder; HCZ spinning column; LBZ cup/tube elevators; DEZ teleporter | $55–$5B | existing MICA continue-player poses at $55–$57/$59–$5A (`twist/*`); $58/$5B WAIT fallback |
+| S3K | CNZ cage release; FBZ spinning pole; MHZ vertical bar | $5C–$61; vertical initial $62, release $24 | HANG fallback (`pole/*`), existing MICA continue-player $24 on release |
 | S3K | MHZ horizontal bar; HCZ conveyor; LRZ turbine | $63–$68, $94/$95 | HANG fallback (`bar/*`, `bar-end/*`) |
 | S3K | FBZ chain link | $80–$85, $91; release $96 | HANG fallback (`chain/*`), authored hang/1, authored ROLL-00 |
 | S3K | FBZ stationary cage entry | $49, $52–$54 | RUN fallback (`cage-entry/*`) |
@@ -1291,13 +1292,13 @@ presentation banks, not this normal-playable table.
 | S3K | DEZ gravity hub | $31–$3C, $6C–$77 | ROLL fallback (`gravity-loop/*`, `tumble/*`) |
 | S3K | LRZ corkscrew / wall ride | $EF–$FA; $DF–$E3 | ROLL / RUN fallback (`corkscrew/*`, `wall-run/*`) |
 | S3K | MHZ mushroom parachute; SSZ elevator bar | $E4–$E7; $E5/$E9 | HANG fallback (`parachute/*`) |
-| S3K | LBZ final boss 2; LRZ cutscene boulder | $8A–$8D | HANG fallback (`carry/*`) |
+| S3K | LBZ final boss 2; LRZ cutscene boulder | $8A–$8D | ROLL fallback (`carry/*`); native art is a carried curl |
 | S3K | MHZ Knuckles cutscene player | $B4/$B5 (Sonic archetype) | HURT fallback (`cutscene-hurt/*`) |
-| S3K | HPZ entry/ceremony/theft; LBZ Robotnik ship | $BA / $C4 (Sonic archetype) | WAIT / LOOK_UP fallback (`wait/stand`, `emerald/look`) |
-| S3K | SSZ crane claw | $CB | HANG fallback (`hang/crane`) |
+| S3K | HPZ entry/ceremony/theft; LBZ Robotnik ship | $BA / $C4 (Sonic archetype) | existing native MICA ride pose (`ride/stand`) / LOOK_UP fallback (`emerald/look`) |
+| S3K | SSZ crane claw | $CB | existing native MICA $CB art (`hang/crane`) |
 | S3K | SOZ rapel wire | $90–$93 HANG/SWING, $E4–$EA FLIP | authored $90–$92; $93 HANG fallback and `parachute/*` HANG fallback |
-| S3K | DEZ miniboss transport | $55–$5B (verified ROM table $7EF2E, 12 entries) | ROLL fallback (`twist/*`) |
-| S3K | SSZ launch / carried-player / crane release | $EF–$FA (table $587A8); $55–$5B (12 pairs at $468C4); $C0/$CA/$CB release | ROLL fallback (`corkscrew/*`, `twist/*`); release $C0 SPRING / $CA HURT / $CB HANG |
+| S3K | DEZ miniboss transport | $55–$5B (verified ROM table $7EF2E, 12 entries) | existing $55–$57/$59–$5A MICA turn art; $58/$5B WAIT fallback (`twist/*`) |
+| S3K | SSZ launch / carried-player / crane release | $EF–$FA (table $587A8); $55–$5B (12 pairs at $468C4); $C0/$CA/$CB release | ROLL fallback (`corkscrew/*`), existing turn art except $58/$5B WAIT; release $C0 WAIT fallback; existing native MICA $CA/$CB art |
 | S3K | LBZ1 ground launch / cup initial capture | first frame of installed script | already relocated authored script frame |
 | S3K | LBZ final boss 1 player presentation | installed presentation frame | existing presentation owner; no object-local art copied |
 | S3K | AIZ plane, CNZ teleporter, HPZ route/entry, ICZ snowboard intro, SSZ arrival/launch/HPZ teleporter, SS entry ring, Mecha Sonic release | $00 | invisible native frame |
@@ -1305,21 +1306,22 @@ presentation banks, not this normal-playable table.
 | S3K | slot runtime / competition miniature | copies current player's mapping | copies the already selected namespace; no second translation |
 
 Fallback art debt is explicit: every semantic key above except `hang/0`–`hang/2`, `wait/stand`,
-`wait/fidget` and `roll/0`–`roll/4`
+`wait/fidget`, `roll/0`–`roll/4`, `ride/stand`, `crane/fall`, `hang/crane`,
+`bar/release`, and `twist/0/1/2/4/5`
 currently uses its named canonical fallback's first pose. No MICA drawing exists
-for the native twist, tumble, pole, bar, chain, cage-entry, gravity-loop, carry,
+for native $58/$5B twists, tumble, pole, bar, chain, cage-entry, gravity-loop, carry,
 wall-run, corkscrew, parachute, crane and cutscene-specific phases. The SSZ/DEZ table IDs were read from the verified locked-on ROM
-(SHA-1 CFBF98C36C776677290A872547AC47C53D2761D6). SSZ crane release $C0/$CA
-use SPRING/HURT fallbacks and still need dedicated poses. Unknown byte slots
+(SHA-1 CFBF98C36C776677290A872547AC47C53D2761D6). SSZ crane release $C0 still uses WAIT fallback; $CA/$CB now reuse the existing
+normal-mapping MICA art. Unknown byte slots
 intentionally use WAIT rather than arbitrary sheet frames. Object route captures
 remain coverage gaps, not certified replacements for those presentations. The source-call scan is in the task's scratch folder.
 
 Acceptance: the production AIZ ride vine transitions from native $91 to
 $78–$7F; its aliased DPLC selects MICA's HANG source rather than an inverted WALK
 frame. The capture is positioned at a spawned production handle; it is not a
-cold route certification. All 108 selected Java tests pass, zero skips after the vocabulary
-expansion and new art adoption. Required
-additional raw-object route captures and the ROM-table audit remain outstanding.
+cold route certification. The initial 108-test checkpoint passed without skips;
+subsequent FBZ/MHZ/Tornado probes and the ROM-table audit are recorded below.
+Uncaptured full object routes remain coverage gaps.
 
 W2 contour follow-up: twelve steep WALK/RUN frames have their hood/back contours
 completed in native indexed rows. Original reference metadata remains intact;
@@ -1355,8 +1357,8 @@ archetypes; separate Tails/Knuckles raw vocabularies are future work.
 
 MICA now declares those aliases as symbolic frame IDs in recipe/frames.yaml
 `nativeFrames`; the reducer preserves them and the assembler resolves packed
-indices. Existing WAIT and ROLL art is explicitly bound, with roll/4 repeating
-ROLL-00 for MICA's four-phase cycle. The normal-Sonic S2 Tornado waiting helper
+indices. Existing WAIT and ROLL art is explicitly bound, with roll/0–roll/4 now binding
+the five existing normal-Sonic MICA slot poses. The normal-Sonic S2 Tornado waiting helper
 was executed as a component pose probe in WFZ; native frame $01 selects MICA's
 standing art. This is not a completed WFZ exit/landing route.
 
@@ -1365,3 +1367,96 @@ tests without skips after adding FBZ/MHZ/Tornado captures. After moving alias
 declarations into recipe metadata, the directly affected 15 Java tests passed
 without skips, Python modding discovery passed 44 tests, and palette/geometry/
 regeneration verification passed. The final broad smoke run remains separate.
+
+Native-asset reuse audit: accepted ending art already covers normal-Sonic
+$BA/$CA/$CB, and the slot bank covers $96–$9A. These eight images are now
+packed as nonanimated normal-sheet frames, using semantic aliases instead of
+canonical fallbacks. A reproducible `art/mica/reuse_native_art.py` imports only
+original creator pixels and records hashes; no rescale or visible pixel changes
+were needed. Core coverage is now 106 frames / 18 canonical animations / max
+36 tiles per frame. Exact native art wins over fallbacks in an integration test.
+
+Rejected approach: inferring poses from carrier/column object names produced
+an inappropriate HANG fallback for $8A–$8D and a SPRING fallback for $C0 in
+250b7b9f51. The native atlas shows a curl and standing pose respectively;
+the final vocabulary uses ROLL and WAIT. Source image references remain in
+scratch `native/raw-pose-audit.png`; native pixels are not committed.
+
+
+The AIZ intro's independent actor renderer now binds creator art and its private
+palette. Its normal bank uses the same semantic aliases; its separate Super
+$21/$22 bank uses canonical ROLL with the creator's authored Super dry cycle.
+Intro eligibility and title suppression use the registered Sonic archetype,
+so MICA is admitted while stock Tails/Knuckles keep their native skip path.
+Native routine flow, motion and normal/Super source bank IDs are unchanged.
+
+
+Baseline attribution for the smoke run used the same build tree with all tracked
+source restored temporarily to `ed3f6b39be847ae89b0362431e17024eda7aec7a`,
+then restored to the task HEAD without switching branches or stashing. On that
+exact baseline, `TestModZoneRuntimeProfile` has 9 tests / 1 error / no skips:
+`customS3kZoneInstallsExplicitEmptyRuntimeContracts` throws the same
+`CharacterIconPalette` NPE through a null `GameModule.getGameId()`. Likewise,
+`TestThreeIslandsScene` has 12 tests / 8 failures / no skips. The matching
+failure identities are `tailsJoinsInTheFieldAndTheTravellingShopReturnsToTheSameSpot`,
+`aSonic1ZonePlaysItsOwnRomSongWithoutPlaceholderSwitches`,
+`startupIsPlayableAndArrivalDialogueAndRestStayInTheField`,
+`greenHillMysteriesUseRealInteractionsAndPersistThroughContinue`,
+`physicalTrailsConnectFieldsAndBattleUsesTheEncounterField`,
+`allStoryLandmarksHavePlayableInteriorsWithIndependentGatesSavesAndRewards`,
+`travellerDialogueWaitsForTheDiscoveryOrRescueItDescribes`, and
+`explorationUsesTwoAxesAndStoryDiscoveriesPersistAcrossContinue`.
+Assertions match the task-tree reports, including the scene mismatch categories;
+object identity suffixes vary normally. Baseline XML/text are in scratch.
+
+The earlier 250b7b9f51 smoke invocation inherited `DISPLAY=:0`; eight extra
+assertions in native competition/interlace/halfpipe tests required no display.
+Those are environment failures. The final run removes `DISPLAY` and
+`WAYLAND_DISPLAY`, uses Lua 5.4 and explicit surfaceless EGL, and redirects all
+MICA capture properties into `$MICA_POSES_CAPTURE_ROOT/`.
+That interrupted invocation completed 64 batches; the subsequent interrupted
+retry completed 12/91 batches, 5435 tests, zero failures/errors, 12 allowed skips
+and no unexplained skips, VERDICT INCOMPLETE. Guards had not run. Both failed/
+incomplete diagnostics were inspected before acknowledgement; no pass is inferred.
+
+
+A final close-up review found four remaining lower-tail crop edges after the
+hood correction. `walk-steep-00/04` and `run-steep-01/02` now end in tapered
+jade tips on taller canvases, with original anchors and steep X support intact.
+The final `steep-after-tail.png` contact sheet was inspected. All 44 Python
+modding tests and palette/ink/geometry/deterministic rebuild verification pass
+on the final 106-frame sheet (maximum still 36 tiles). The new AIZ actor test
+also runs through plane retirement and native Knuckles control release; its
+final focused assertion passes without skips.
+
+
+The complete presentation-manifest cross-check also found exact normal-Sonic
+$24/$55–$57/$59–$5A drawings in the S3K continue player bank. These six original
+assets now precede canonical fallbacks through `bar/release` and five `twist/*`
+aliases. Normal $58/$5B remain WAIT fallbacks. The final normal sheet contains
+112 frames, 18 canonical animations and fourteen reused native-pose assets,
+with the same maximum 36 tiles per frame. Separate stage/screen/ending mapping
+banks with coincident IDs were excluded from this reuse inventory.
+
+
+Frozen 112-frame verification: the nine-class queued selection (the eight
+requested classes plus `TestS3kAizIntroCoverage`) passes **115 tests, zero
+failures/errors/skips** with verified ROM inputs and surfaceless EGL. It also
+checks complete native AIZ actor/Knuckles control handoff. Execution was 69s,
+queue wait 335s, user wait zero; other elapsed investigation time is not folded
+into those figures. The preceding 106/112 mixed-source run is invalid: the
+queued compiler had read the prior frame-count assertion before atlas update.
+The frozen rerun is the authoritative result. Python discovery passes 44 tests,
+and indexed-art/deterministic rebuild verification passes for 112 frames.
+
+Inspected captures live under the task-supplied external scratch directory
+`$MICA_POSES_CAPTURE_ROOT/`: `s2-spindash/`,
+`s3k-spindash/`, `aiz-vine/`, `fbz-chain/`, `mhz-pulley/`,
+`s2-tornado-wait/`, `aiz-plane-intro/`, and `endings/s1/`; state CSVs accompany
+the gameplay probes. Source-pose contact sheets are `reused-original-poses.png`,
+`reused-continue-poses.png` and `steep-after-tail.png`. Native references remain
+only in scratch. Vine/chain/pulley encounters are positioned production-object
+probes, Tornado is its production waiting helper, and intro is a natural native
+sequence. These do not certify unrelated cold routes. S1 has one implemented
+normal-playable raw writer; S2 has one plus the competitive invisible reset,
+so there are not two or three distinct gameplay raw setters to capture there.

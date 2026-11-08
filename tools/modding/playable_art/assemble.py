@@ -56,7 +56,7 @@ def assemble(root, output):
             custom.setdefault('HOMING_DIVE', []).append(i)
         elif frame['animation'] in SPEED | FIXED.keys():
             groups[frame['animation']].append((frame, i))
-        else:
+        elif frame['animation'] != 'NATIVE_POSE':
             raise ValueError('Unknown animation: ' + frame['animation'])
     if set(groups) != SPEED | FIXED.keys():
         raise ValueError('Missing canonical core animations')

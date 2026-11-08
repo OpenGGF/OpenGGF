@@ -604,3 +604,8 @@ When aliases are supplied, bound canonical scripts move above the 256 native
 byte slots, including slope sets and DPLCs. Index zero stays invisible for native
 cutscenes. Creator code should use the installed scripts rather than cache the
 unbound sheet's mapping indices. Authored native aliases remain in byte slots.
+
+The AIZ intro actor also binds the custom normal sheet. Its riding and lift-off
+native mappings use aliases; its separate powered bank falls back to canonical
+ROLL with the authored S3K Super palette cycle. The native intro gate follows
+the registered Sonic archetype, including custom Sonic stand-ins.

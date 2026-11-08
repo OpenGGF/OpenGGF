@@ -43,3 +43,8 @@ UTF-8 bytes. Keys match `[a-z][a-z0-9-]*/[a-z0-9-]+`, maximum 128 characters;
 targets must exist in FRAM. Duplicate keys, trailing bytes and dangling targets
 are rejected. YAML names this map `nativeFrames`. No game name selects behavior
 in shared runtime: the host provides its native mapping-byte vocabulary.
+
+Alias targets may be frames unreferenced by ANIM. The native-pose authoring
+handoff uses `NATIVE_POSE` for such images; this tag is not serialized as a
+canonical animation. The assembler packs their normal BASE/FRAM entries and
+resolves symbolic `nativeFrames` IDs.

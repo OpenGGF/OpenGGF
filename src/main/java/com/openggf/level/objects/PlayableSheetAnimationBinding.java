@@ -30,6 +30,11 @@ public final class PlayableSheetAnimationBinding {
         @Override public int resolveFrame(AbstractPlayableSprite sprite, int clock, int count) { return 0; }
     }
 
+    /** Whether the source sheet explicitly supplies normal native-frame aliases. */
+    public static boolean hasNativeFrameAliases(SpriteArtSet art) {
+        return art != null && art.animationProfile() instanceof CanonicalProfile profile && !profile.nativeFrames.isEmpty();
+    }
+
     public static boolean requiresBinding(SpriteArtSet art) {
         return art != null && art.animationProfile() instanceof CanonicalProfile;
     }

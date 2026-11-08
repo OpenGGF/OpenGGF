@@ -37,12 +37,15 @@ under the matching area heading; see the
 
 - **MICA, an original character framework example:** the maintained
   `examples/mica-and-talon` demo plays in all three stock games with Sonic's
-  single-player physics, native S2/S3K spindash (disabled in S1), character-owned homing (including an untargeted forward
+  single-player physics, native S2/S3K spindash (disabled in S1), character-owned
+  homing (including an untargeted forward
   dash), a four-frame HOMING_DIVE pose, and powered Instagib strikes. Its
-  rerunnable original sheet has 98 frames, 18 canonical animations, slope cycles,
+  rerunnable original sheet has 112 frames, 18 canonical animations, slope cycles,
   a shared palette and a breathing/fidget idle. Native object mapping bytes can
   bind semantic sheet poses; MICA supplies three native-reference hang poses for
-  vines and grapples, with explicit canonical fallbacks for other raw poses. The 36 rotated WALK/RUN poses
+  vines and grapples, reuses fourteen existing native mapping poses for turns, rolls, riding,
+  bar release and crane release, and names canonical fallbacks for remaining raw poses. The
+  AIZ intro retains MICA's own art and powered palette. The 36 rotated WALK/RUN poses
   use native phase coordinates and pixel-edited contact edges; all 12 steep
   WALK/RUN hood contours are completed without changing sole support. S3K transformation
   art uses clustered gold scales and a clearer face, and the second dive shell

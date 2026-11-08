@@ -163,6 +163,82 @@ class TestMicaCharacterIntegration {
         }
     }
 
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void existingNativePoseArtWinsOverCanonicalFallback() throws Exception {
+        var settings = new com.openggf.tools.GameplayCaptureSession.Settings(320, CODE, "", "off", null, null, null);
+        try (var session = new com.openggf.tools.GameplayCaptureSession(settings)) {
+            session.applyMod(buildSample());
+            session.boot(Path.of(System.getProperty("s3k.rom.path")), 0, 0, settings);
+            byte[] encoded = Files.readAllBytes(temp.resolve("classes/art/mica.ggfp"));
+            var sheet = com.openggf.level.objects.PlayableSheetReader.read(encoded);
+            var source = com.openggf.level.objects.PlayableSheetMaterializer.read(encoded).art();
+            var expected = new LinkedHashMap<Integer,String>();
+            expected.put(0x24, "bar/release");
+            for (int frame : new int[]{0x55, 0x56, 0x57, 0x59, 0x5A}) expected.put(frame, "twist/" + (frame - 0x55));
+            expected.put(0xBA, "ride/stand"); expected.put(0xCA, "crane/fall"); expected.put(0xCB, "hang/crane");
+            for (int i = 0; i < 5; i++) expected.put(0x96 + i, "roll/" + i);
+            for (var entry : expected.entrySet()) {
+                int target = sheet.nativeFrames().get(entry.getValue());
+                assertTrue(target >= 98, "reuse the existing native-pose asset instead of a core fallback");
+                assertEquals(source.dplcFrames().get(target), session.player().getSpriteRenderer().dplcFrame(entry.getKey()), entry.getValue());
+            }
+        }
+    }
+
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void aizPlaneIntroUsesMicaAndOwnedPoweredPalette() throws Exception {
+        Path output = Path.of(System.getProperty("mica.poses.captureRoot", "target/mica-poses")).resolve("aiz-plane-intro");
+        Files.createDirectories(output);
+        var settings = new com.openggf.tools.GameplayCaptureSession.Settings(320, CODE, "", "off", null, null, null);
+        try (var session = new com.openggf.tools.GameplayCaptureSession(settings)) {
+            session.applyMod(buildSample());
+            GameServices.configuration().setSessionOverride(SonicConfiguration.S3K_SKIP_INTROS, false);
+            GameServices.configuration().setSessionOverride(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT, true);
+            session.boot(Path.of(System.getProperty("s3k.rom.path")), 0, 0, settings);
+            byte[] encoded = Files.readAllBytes(temp.resolve("classes/art/mica.ggfp"));
+            var sheet = com.openggf.level.objects.PlayableSheetReader.read(encoded);
+            var source = com.openggf.level.objects.PlayableSheetMaterializer.read(encoded).art();
+            boolean normal = false, powered = false;
+            var csv = new StringBuilder(com.openggf.tools.GameplayCaptureSession.stateHeader()).append('\n');
+            for (int i = 0; i < 900; i++) {
+                session.step(null); session.renderFrame();
+                for (var actor : GameServices.level().getObjectManager().activeObjectsOfType(com.openggf.game.sonic3k.objects.AizPlaneIntroInstance.class)) {
+                    var renderer = (PlayerSpriteRenderer) privateField(actor, "sonicRenderer");
+                    if (renderer == null) continue;
+                    assertEquals(source.dplcFrames().get(sheet.nativeFrames().get("ride/stand")), renderer.dplcFrame(0xBA));
+                    assertTrue(renderer.getRenderContext().getEffectivePaletteLine(renderer.paletteLine()) > 3);
+                    boolean superPose = (boolean)privateField(actor, "superSonicActive");
+                    int actorX = (int) privateField(actor, "currentX");
+                    int actorY = (int) privateField(actor, "currentY");
+                    boolean visible = actorX >= 0xC0 && actorX <= 0x180 && actorY >= 0xA0 && actorY <= 0x140;
+                    if (!superPose && !normal && visible && (int) privateField(actor, "mappingFrame") == 0xBA) {
+                        normal = true;
+                        com.openggf.graphics.ScreenshotCapture.savePNG(session.render(), output.resolve("normal.png"));
+                    }
+                    if (superPose && !powered && visible) {
+                        powered = true;
+                        var colour = renderer.getRenderContext().getPalette(renderer.paletteLine()).getColor(4);
+                        assertTrue(Byte.toUnsignedInt(colour.r) > Byte.toUnsignedInt(colour.b), "Gilded actor uses the authored gold cycle");
+                        com.openggf.graphics.ScreenshotCapture.savePNG(session.render(), output.resolve("powered.png"));
+                    }
+                }
+                csv.append(session.stateLine(i, null)).append('\n');
+                if (normal && powered) break;
+            }
+            Files.writeString(output.resolve("state.csv"), csv);
+            assertTrue(normal && powered, "native intro must reach both actor banks");
+            int remaining = 2400;
+            while (remaining-- > 0 && !GameServices.level().getObjectManager()
+                    .activeObjectsOfType(com.openggf.game.sonic3k.objects.AizPlaneIntroInstance.class).isEmpty()) {
+                session.step(null);
+            }
+            assertTrue(remaining > 0, "custom Sonic intro must reach native retirement");
+            // The plane hands control to the native Knuckles finale before retirement.
+            while (remaining-- > 0 && session.player().isControlLocked()) session.step(null);
+            assertFalse(session.player().isControlLocked(), "native Knuckles finale releases MICA");
+        }
+    }
+
     private void captureSpindash(String game, String romProperty) throws Exception {
         Path output = Path.of(System.getProperty("mica.poses.captureRoot", "target/mica-poses")).resolve(game + "-spindash");
         Files.createDirectories(output);
@@ -1295,7 +1371,7 @@ class TestMicaCharacterIntegration {
         try (JarFile packed = new JarFile(jar.toFile())) {
             var sheet = com.openggf.level.objects.PlayableSheetReader.read(
                     packed.getInputStream(packed.getJarEntry("art/mica.ggfp")).readAllBytes());
-            assertEquals(98, sheet.frames().size());
+            assertEquals(112, sheet.frames().size());
             assertEquals(18, sheet.animations().size());
             assertEquals(List.of(28, 29, 30, 31), sheet.animations().get("HOMING_DIVE").steps()
                     .stream().map(com.openggf.level.objects.PlayableSheetReader.AnimationStep::frameIndex).toList());

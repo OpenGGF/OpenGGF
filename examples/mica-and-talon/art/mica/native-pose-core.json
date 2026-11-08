@@ -3996,7 +3996,7 @@
       "geometry_reference": {
         "size": [
           42,
-          29
+          34
         ],
         "hotspot": [
           22,
@@ -4005,7 +4005,7 @@
       },
       "native_size": [
         42,
-        29
+        34
       ],
       "previous_size": [
         40,
@@ -4019,7 +4019,7 @@
         22,
         16
       ],
-      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact. Follow-up: redraw cropped hood crown and back attachment on an expanded native canvas; no scale/rotation; original reference and native support retained.",
+      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact. Follow-up: redraw cropped hood crown and back attachment on an expanded native canvas; no scale/rotation; original reference and native support retained. Complete the cropped lower tail tip as a tapered jade contour; anchor and X sole support unchanged.",
       "native_support": 19.0
     },
     "walk-steep-01": {
@@ -4172,7 +4172,7 @@
       "geometry_reference": {
         "size": [
           42,
-          29
+          34
         ],
         "hotspot": [
           22,
@@ -4181,7 +4181,7 @@
       },
       "native_size": [
         42,
-        29
+        34
       ],
       "previous_size": [
         40,
@@ -4195,7 +4195,7 @@
         22,
         16
       ],
-      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact. Follow-up: redraw cropped hood crown and back attachment on an expanded native canvas; no scale/rotation; original reference and native support retained.",
+      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact. Follow-up: redraw cropped hood crown and back attachment on an expanded native canvas; no scale/rotation; original reference and native support retained. Complete the cropped lower tail tip as a tapered jade contour; anchor and X sole support unchanged.",
       "native_support": 19.0
     },
     "walk-steep-05": {
@@ -4920,7 +4920,7 @@
       "geometry_reference": {
         "size": [
           39,
-          34
+          40
         ],
         "hotspot": [
           19,
@@ -4929,7 +4929,7 @@
       },
       "native_size": [
         39,
-        34
+        40
       ],
       "previous_size": [
         39,
@@ -4943,7 +4943,7 @@
         19,
         19
       ],
-      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact. Follow-up: redraw cropped hood crown and back attachment on an expanded native canvas; no scale/rotation; original reference and native support retained.",
+      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact. Follow-up: redraw cropped hood crown and back attachment on an expanded native canvas; no scale/rotation; original reference and native support retained. Complete the cropped lower tail tip as a tapered jade contour; anchor and X sole support unchanged.",
       "native_support": 19.0
     },
     "run-steep-02": {
@@ -4964,7 +4964,7 @@
       "geometry_reference": {
         "size": [
           38,
-          33
+          37
         ],
         "hotspot": [
           18,
@@ -4973,7 +4973,7 @@
       },
       "native_size": [
         38,
-        33
+        37
       ],
       "previous_size": [
         39,
@@ -4987,7 +4987,7 @@
         18,
         19
       ],
-      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact. Follow-up: redraw cropped hood crown and back attachment on an expanded native canvas; no scale/rotation; original reference and native support retained.",
+      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact. Follow-up: redraw cropped hood crown and back attachment on an expanded native canvas; no scale/rotation; original reference and native support retained. Complete the cropped lower tail tip as a tapered jade contour; anchor and X sole support unchanged.",
       "native_support": 19.0
     },
     "run-steep-03": {
@@ -5209,6 +5209,566 @@
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
       "native_support": 19.79899
+    },
+    "native-pose-ba": {
+      "source": "existing original MICA native-pose art",
+      "source_asset": "endings/s3k/ride-ba.png",
+      "source_sha256": "26bdd5ad7ce12d3d9d016768df0b9076e328c20051488d5888b5f61c226b4bf0",
+      "reference": {
+        "game": "S3K",
+        "mapping": 186,
+        "label": "word_147828",
+        "size": [
+          32,
+          40
+        ],
+        "hotspot": [
+          16,
+          20
+        ]
+      },
+      "geometry_reference": {
+        "game": "S3K",
+        "mapping": 186,
+        "label": "word_147828",
+        "size": [
+          32,
+          40
+        ],
+        "hotspot": [
+          16,
+          20
+        ]
+      },
+      "native_size": [
+        32,
+        40
+      ],
+      "hotspot": [
+        16,
+        20
+      ],
+      "cleanup": "Original indexed pixels; inside-ink convention; opaque crop and corresponding hotspot adjustment; no rescale/rotation."
+    },
+    "native-pose-ca": {
+      "source": "existing original MICA native-pose art",
+      "source_asset": "endings/s3k/rescue_float-ca.png",
+      "source_sha256": "4d1a7ea8084aaf94325d2e5097fee493d322fa5472567f57d34cde4654ffc6bc",
+      "reference": {
+        "game": "S3K",
+        "mapping": 202,
+        "label": "word_1479A4",
+        "size": [
+          32,
+          24
+        ],
+        "hotspot": [
+          17,
+          12
+        ]
+      },
+      "geometry_reference": {
+        "game": "S3K",
+        "mapping": 202,
+        "label": "word_1479A4",
+        "size": [
+          32,
+          24
+        ],
+        "hotspot": [
+          17,
+          12
+        ]
+      },
+      "native_size": [
+        32,
+        24
+      ],
+      "hotspot": [
+        17,
+        12
+      ],
+      "cleanup": "Original indexed pixels; inside-ink convention; opaque crop and corresponding hotspot adjustment; no rescale/rotation."
+    },
+    "native-pose-cb": {
+      "source": "existing original MICA native-pose art",
+      "source_asset": "endings/s3k/rescue_float-cb.png",
+      "source_sha256": "df91d96d5f8287ef24b9a8b1a7a0f37a3936b76d17548c77b2193429d7496b17",
+      "reference": {
+        "game": "S3K",
+        "mapping": 203,
+        "label": "word_1479B2",
+        "size": [
+          38,
+          24
+        ],
+        "hotspot": [
+          21,
+          12
+        ]
+      },
+      "geometry_reference": {
+        "game": "S3K",
+        "mapping": 203,
+        "label": "word_1479B2",
+        "size": [
+          38,
+          24
+        ],
+        "hotspot": [
+          21,
+          12
+        ]
+      },
+      "native_size": [
+        38,
+        24
+      ],
+      "hotspot": [
+        21,
+        12
+      ],
+      "cleanup": "Original indexed pixels; inside-ink convention; opaque crop and corresponding hotspot adjustment; no rescale/rotation."
+    },
+    "native-pose-96": {
+      "source": "existing original MICA native-pose art",
+      "source_asset": "wave3/s3k-slot-96.png",
+      "source_sha256": "4cc39e1228a996aab5deb817f58fdf09b130f5c79fb3e74149129eb956b1536f",
+      "reference": {
+        "game": "S3K",
+        "mapping": 150,
+        "label": "word_14756A",
+        "size": [
+          30,
+          30
+        ],
+        "hotspot": [
+          15,
+          15
+        ]
+      },
+      "geometry_reference": {
+        "game": "S3K",
+        "mapping": 150,
+        "label": "word_14756A",
+        "size": [
+          30,
+          30
+        ],
+        "hotspot": [
+          15,
+          15
+        ]
+      },
+      "native_size": [
+        30,
+        30
+      ],
+      "hotspot": [
+        15,
+        15
+      ],
+      "cleanup": "Original indexed pixels; inside-ink convention; opaque crop and corresponding hotspot adjustment; no rescale/rotation."
+    },
+    "native-pose-97": {
+      "source": "existing original MICA native-pose art",
+      "source_asset": "wave3/s3k-slot-97.png",
+      "source_sha256": "cc87fabe2886d0a6123ae07319df7b1e5877b2acd44e1841173159f649619b41",
+      "reference": {
+        "game": "S3K",
+        "mapping": 151,
+        "label": "word_147572",
+        "size": [
+          30,
+          30
+        ],
+        "hotspot": [
+          15,
+          15
+        ]
+      },
+      "geometry_reference": {
+        "game": "S3K",
+        "mapping": 151,
+        "label": "word_147572",
+        "size": [
+          30,
+          30
+        ],
+        "hotspot": [
+          15,
+          15
+        ]
+      },
+      "native_size": [
+        30,
+        30
+      ],
+      "hotspot": [
+        15,
+        15
+      ],
+      "cleanup": "Original indexed pixels; inside-ink convention; opaque crop and corresponding hotspot adjustment; no rescale/rotation."
+    },
+    "native-pose-98": {
+      "source": "existing original MICA native-pose art",
+      "source_asset": "wave3/s3k-slot-98.png",
+      "source_sha256": "0a37df7640df1cb4a8238006faef7e577779eae910089b30b97742faf8c75a84",
+      "reference": {
+        "game": "S3K",
+        "mapping": 152,
+        "label": "word_14757A",
+        "size": [
+          30,
+          30
+        ],
+        "hotspot": [
+          15,
+          15
+        ]
+      },
+      "geometry_reference": {
+        "game": "S3K",
+        "mapping": 152,
+        "label": "word_14757A",
+        "size": [
+          30,
+          30
+        ],
+        "hotspot": [
+          15,
+          15
+        ]
+      },
+      "native_size": [
+        30,
+        30
+      ],
+      "hotspot": [
+        15,
+        15
+      ],
+      "cleanup": "Original indexed pixels; inside-ink convention; opaque crop and corresponding hotspot adjustment; no rescale/rotation."
+    },
+    "native-pose-99": {
+      "source": "existing original MICA native-pose art",
+      "source_asset": "wave3/s3k-slot-99.png",
+      "source_sha256": "3e2ee993686a0fcb05bf700b693c4666ffad52ea84c10980dffbda99073c1437",
+      "reference": {
+        "game": "S3K",
+        "mapping": 153,
+        "label": "word_147582",
+        "size": [
+          30,
+          30
+        ],
+        "hotspot": [
+          15,
+          15
+        ]
+      },
+      "geometry_reference": {
+        "game": "S3K",
+        "mapping": 153,
+        "label": "word_147582",
+        "size": [
+          30,
+          30
+        ],
+        "hotspot": [
+          15,
+          15
+        ]
+      },
+      "native_size": [
+        30,
+        30
+      ],
+      "hotspot": [
+        15,
+        15
+      ],
+      "cleanup": "Original indexed pixels; inside-ink convention; opaque crop and corresponding hotspot adjustment; no rescale/rotation."
+    },
+    "native-pose-9a": {
+      "source": "existing original MICA native-pose art",
+      "source_asset": "wave3/s3k-slot-9a.png",
+      "source_sha256": "96f2accef9d4f70dc767075bd84c2c5626cc1984d32421c09ea92469c693fe51",
+      "reference": {
+        "game": "S3K",
+        "mapping": 154,
+        "label": "word_14758A",
+        "size": [
+          30,
+          30
+        ],
+        "hotspot": [
+          15,
+          15
+        ]
+      },
+      "geometry_reference": {
+        "game": "S3K",
+        "mapping": 154,
+        "label": "word_14758A",
+        "size": [
+          30,
+          30
+        ],
+        "hotspot": [
+          15,
+          15
+        ]
+      },
+      "native_size": [
+        30,
+        30
+      ],
+      "hotspot": [
+        15,
+        15
+      ],
+      "cleanup": "Original indexed pixels; inside-ink convention; opaque crop and corresponding hotspot adjustment; no rescale/rotation."
+    },
+    "native-pose-24": {
+      "source": "existing original MICA native-pose art",
+      "source_asset": "continue/s3k-player-24.png",
+      "source_sha256": "620630f44184307ee95262a437b27628d6125b543a8872612fe1568ebe6c02c7",
+      "reference": {
+        "game": "S3K",
+        "mapping": 36,
+        "label": "word_146D06",
+        "size": [
+          32,
+          36
+        ],
+        "hotspot": [
+          16,
+          16
+        ]
+      },
+      "geometry_reference": {
+        "game": "S3K",
+        "mapping": 36,
+        "label": "word_146D06",
+        "size": [
+          32,
+          36
+        ],
+        "hotspot": [
+          16,
+          16
+        ]
+      },
+      "native_size": [
+        32,
+        36
+      ],
+      "hotspot": [
+        16,
+        16
+      ],
+      "cleanup": "Original indexed pixels; inside-ink convention; opaque crop and corresponding hotspot adjustment; no rescale/rotation."
+    },
+    "native-pose-55": {
+      "source": "existing original MICA native-pose art",
+      "source_asset": "continue/s3k-player-55.png",
+      "source_sha256": "838e9caac1cd67f85ab4406af919ec5bcbdb9ae28142619bf7fd9d5a7b9177d0",
+      "reference": {
+        "game": "S3K",
+        "mapping": 85,
+        "label": "word_147092",
+        "size": [
+          27,
+          39
+        ],
+        "hotspot": [
+          15,
+          19
+        ]
+      },
+      "geometry_reference": {
+        "game": "S3K",
+        "mapping": 85,
+        "label": "word_147092",
+        "size": [
+          27,
+          39
+        ],
+        "hotspot": [
+          15,
+          19
+        ]
+      },
+      "native_size": [
+        27,
+        39
+      ],
+      "hotspot": [
+        15,
+        19
+      ],
+      "cleanup": "Original indexed pixels; inside-ink convention; opaque crop and corresponding hotspot adjustment; no rescale/rotation."
+    },
+    "native-pose-56": {
+      "source": "existing original MICA native-pose art",
+      "source_asset": "continue/s3k-player-56.png",
+      "source_sha256": "fecaea7f5607c660fa5e12acfc742b5322d8652ebcb4f8d36cfb4dbb8464eb79",
+      "reference": {
+        "game": "S3K",
+        "mapping": 86,
+        "label": "word_1470AC",
+        "size": [
+          27,
+          39
+        ],
+        "hotspot": [
+          14,
+          19
+        ]
+      },
+      "geometry_reference": {
+        "game": "S3K",
+        "mapping": 86,
+        "label": "word_1470AC",
+        "size": [
+          27,
+          39
+        ],
+        "hotspot": [
+          14,
+          19
+        ]
+      },
+      "native_size": [
+        27,
+        39
+      ],
+      "hotspot": [
+        14,
+        19
+      ],
+      "cleanup": "Original indexed pixels; inside-ink convention; opaque crop and corresponding hotspot adjustment; no rescale/rotation."
+    },
+    "native-pose-57": {
+      "source": "existing original MICA native-pose art",
+      "source_asset": "continue/s3k-player-57.png",
+      "source_sha256": "e3112264c6dc7856b92e74c6555dfe4e6d0f6fbcec588dda76366fe56537d84a",
+      "reference": {
+        "game": "S3K",
+        "mapping": 87,
+        "label": "word_1470C0",
+        "size": [
+          27,
+          39
+        ],
+        "hotspot": [
+          16,
+          19
+        ]
+      },
+      "geometry_reference": {
+        "game": "S3K",
+        "mapping": 87,
+        "label": "word_1470C0",
+        "size": [
+          27,
+          39
+        ],
+        "hotspot": [
+          16,
+          19
+        ]
+      },
+      "native_size": [
+        27,
+        39
+      ],
+      "hotspot": [
+        16,
+        19
+      ],
+      "cleanup": "Original indexed pixels; inside-ink convention; opaque crop and corresponding hotspot adjustment; no rescale/rotation."
+    },
+    "native-pose-59": {
+      "source": "existing original MICA native-pose art",
+      "source_asset": "continue/s3k-player-59.png",
+      "source_sha256": "16ce730f0820260d8fdc1392e8bfc9d6423141f14defe306300e739a18e84e31",
+      "reference": {
+        "game": "S3K",
+        "mapping": 89,
+        "label": "word_1470DC",
+        "size": [
+          27,
+          39
+        ],
+        "hotspot": [
+          12,
+          19
+        ]
+      },
+      "geometry_reference": {
+        "game": "S3K",
+        "mapping": 89,
+        "label": "word_1470DC",
+        "size": [
+          27,
+          39
+        ],
+        "hotspot": [
+          12,
+          19
+        ]
+      },
+      "native_size": [
+        27,
+        39
+      ],
+      "hotspot": [
+        12,
+        19
+      ],
+      "cleanup": "Original indexed pixels; inside-ink convention; opaque crop and corresponding hotspot adjustment; no rescale/rotation."
+    },
+    "native-pose-5a": {
+      "source": "existing original MICA native-pose art",
+      "source_asset": "continue/s3k-player-5a.png",
+      "source_sha256": "b8f58fdb1ad5a1df1bf1655f9fd5bce3217eae35260ee77f240738248a84822f",
+      "reference": {
+        "game": "S3K",
+        "mapping": 90,
+        "label": "word_1470F6",
+        "size": [
+          26,
+          40
+        ],
+        "hotspot": [
+          12,
+          20
+        ]
+      },
+      "geometry_reference": {
+        "game": "S3K",
+        "mapping": 90,
+        "label": "word_1470F6",
+        "size": [
+          26,
+          40
+        ],
+        "hotspot": [
+          12,
+          20
+        ]
+      },
+      "native_size": [
+        26,
+        40
+      ],
+      "hotspot": [
+        12,
+        20
+      ],
+      "cleanup": "Original indexed pixels; inside-ink convention; opaque crop and corresponding hotspot adjustment; no rescale/rotation."
     }
   },
   "source_pins": {
