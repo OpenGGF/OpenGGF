@@ -625,6 +625,9 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
         // reset word at body tail makes expiry one pass early. TimeOver2
         // (s2.asm:88125-88135) also kills before this body's actor dispatch.
         // Pause waits do not enter this ordinary-wait service.
+        if (pause.gamePaused()) return;
+        for (int slot = 0; slot < 2; slot++) session.playerState(slot).updateNativeHudTimer();
+        session.advanceNaturalTimeOver();
         session.advanceLoserCountdown();
         applyPendingTimeOver();
     }
@@ -680,8 +683,6 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
             module.nativeFeatures().updateNativeCursors();
             if (!context().getLevelManager().isLevelInactiveForTransition())
                 for (int slot = 0; slot < 2; slot++) module.scroll().owner().setCoarseX(slot, session.camera(slot).getX());
-            // Preserve the shared canonical bank timer's existing publication boundary.
-            session.advanceNaturalTimeOver();
             applyPendingTimeOver();
         }
         @Override public void failedAssembly(LevelLoadCause cause) { resetLoadState(); resetNativePause(); }

@@ -6,7 +6,11 @@ auxiliary-mode increment. Native state prefixes match for EHZ 1, MCZ 1, CNZ 1
 and the competitive special stage up to the first native lag frame or open
 frontier; act 2 routes, results, tiebreaker and native pictures beyond the
 sampled cuts remain open. Participants are fixed by the ROM; viewport width is
-unassessed and held rewind is off by decision. No act is certified.
+unassessed and held rewind is off by decision. No act is certified. ROM-backed Competition HUD tests cover signpost pole/face
+uploads and rewind, digit-five SAT mapping selection, and the interrupt-before-goal
+timer boundary. Scattered-ring recollection remains V-int-origin dependent under
+[S2 Whole-Run V-int Clock Cannot Be Made Exact](known-discrepancies.md#s2-whole-run-v-int-clock-cannot-be-made-exact);
+progressive HUD pixels and integrated recollection remain lead qualification work.
 
 LRZ title-owned enemy art (2026-11-07): the [submission audit](../architecture/audits/2026-11-07-lrz-enemy-art-submission.md)
 and [Act1](../architecture/validation/levels/s3k-lrz-act1.md) /

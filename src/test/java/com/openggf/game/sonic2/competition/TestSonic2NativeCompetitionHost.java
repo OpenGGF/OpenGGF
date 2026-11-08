@@ -581,7 +581,8 @@ class TestSonic2NativeCompetitionHost {
                 WorldState beforeSingleBody = state(driver);
                 assertEquals(LevelFrameResult.GAMEPLAY_FRAME, driver.tick(NEUTRAL));
                 WorldState singleBody = state(driver);
-                assertOneNativeBody(beforeSingleBody, singleBody);
+                // loc_40F50 returns while Game_paused is set, even when SlowMo permits RunObjects.
+                assertOneNativeBody(beforeSingleBody, singleBody, false);
                 assertNativePauseFlags(driver, true);
                 assertEquals(LevelFrameResult.PAUSED, driver.tick(NEUTRAL));
                 assertOneNativePauseWait(singleBody, state(driver));
@@ -671,12 +672,16 @@ class TestSonic2NativeCompetitionHost {
     }
 
     private static void assertOneNativeBody(WorldState before, WorldState after) {
+        assertOneNativeBody(before, after, true);
+    }
+
+    private static void assertOneNativeBody(WorldState before, WorldState after, boolean timerTicks) {
         assertEquals(before.levelFrame() + 1, after.levelFrame());
         assertEquals(before.spriteFrame() + 1, after.spriteFrame());
         assertEquals(before.objectPass() + 1, after.objectPass());
         assertEquals(before.objectClock() + 1, after.objectClock());
-        assertEquals(before.firstBank().metrics().timerFrames() + 1, after.firstBank().metrics().timerFrames());
-        assertEquals(before.secondBank().metrics().timerFrames() + 1, after.secondBank().metrics().timerFrames());
+        assertEquals(before.firstBank().metrics().timerFrames() + (timerTicks ? 1 : 0), after.firstBank().metrics().timerFrames());
+        assertEquals(before.secondBank().metrics().timerFrames() + (timerTicks ? 1 : 0), after.secondBank().metrics().timerFrames());
     }
 
     private static void assertOneNativePauseWait(WorldState before, WorldState after) {
