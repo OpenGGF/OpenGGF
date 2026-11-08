@@ -211,7 +211,7 @@ def generate(group,inv):
  frames=[]
  if group=='photos':
   for i,im in enumerate(photos(),1):
-   file=f'photo-{i}.png';im.save(HERE/file,bits=4,transparency=0)
+   file=f'photo-{i}.png';im=a.native_pose(im,file,HERE);im.save(HERE/file,bits=4,transparency=0)
    frames.append(dict(id=f'photo-{i}',file=file,native_source_label=f'MapEng_Ending{i}',native_art_label='ArtNem_EndingPics',dimensions=[96,72],bounds_px=[0,0,96,72],palette_line=0,timing='Static; fade wait $180 NTSC/$100 PAL, then $80.',composition=['solo MICA victory fist in backlit burst','solo MICA wing-rider closeup in slipstream','solo MICA greeting from cockpit; biplane framing','banked distant biplane; lone MICA wing rider'][i-1],scene_policy='Entire original illustration; unchanged MICA palette for character and scene. Replaces 12x9 tile panel, no reference pixels.'))
  else:
   keys={'normal':['s2_normal_turn','s2_normal_leap'],'super':['s2_super_depart','s2_super_hero'],'float':['s2_float']}[group]
@@ -231,7 +231,7 @@ def generate(group,inv):
     else:im=floating(i-84,(w,h))
     im=a.mask_layout(im,char,f['bounds_px'])
     if group=='super':im.putpalette(sum(json.loads((ART/'presentation/gilded.yaml').read_text())['cycles']['s2']['frames'][0],[])+[0]*720)
-    file=f'{group}-{i:02x}.png';im.save(HERE/file,bits=4,transparency=0)
+    file=f'{group}-{i:02x}.png';im=a.native_pose(im,file,HERE);im.save(HERE/file,bits=4,transparency=0)
     frames.append(dict(id=i,file=file,native_source_label=f['label'],native_art_label=inv['frame_sets'][key]['native_art'],dimensions=[w,h],bounds_px=f['bounds_px'],hotspot=[-x,-y],palette_line=1 if key=='s2_normal_turn' else 0,pieces=char,native_composite_pieces=pieces if key=='s2_normal_turn' else None,group=key,**({'form':'gilded'} if group=='super' else {})))
  if group=='float':
   dp=(ROOT/'docs/s2disasm/mappings/spriteDPLC/Sonic.asm').read_text()
