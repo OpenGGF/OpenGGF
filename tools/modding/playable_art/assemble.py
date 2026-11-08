@@ -14,7 +14,7 @@ from PIL import Image
 # Native timer values are delay-minus-one. Art phases are original MICA phases.
 FIXED = {'WAIT': (6, 'loop'), 'SPINDASH': (1, 'loop'), 'DUCK': (6, 'hold'),
          'LOOK_UP': (6, 'hold'), 'SKID': (6, 'next'), 'STOP': (6, 'next'),
-         'SPRING': (24, 'next'), 'BALANCE': (10, 'loop'), 'HURT': (65, 'loop'),
+         'SPRING': (48, 'next'), 'BALANCE': (10, 'loop'), 'HURT': (65, 'loop'),
          'DEATH': (33, 'loop'), 'DROWN': (33, 'loop'), 'GET_AIR': (12, 'next'),
          'HANG': (2, 'loop')}
 SPEED = {'WALK', 'RUN', 'ROLL', 'PUSH'}

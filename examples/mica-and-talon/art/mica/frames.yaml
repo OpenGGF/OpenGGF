@@ -300,21 +300,8 @@
         22
       ],
       "angle_set": "flat",
-      "duration_ticks": 24,
-      "notes": "Right-profile stretched launch, shared WALK head and delighted grin; staggered overhead gloves, long pointed boots and hanging fluttering tail."
-    },
-    {
-      "id": "spring-01",
-      "animation": "SPRING",
-      "order": 1,
-      "file": "frames/spring-01.png",
-      "hotspot": [
-        12,
-        22
-      ],
-      "angle_set": "flat",
-      "duration_ticks": 24,
-      "notes": "Right-profile stretched launch, shared WALK head and delighted grin; staggered overhead gloves, long pointed boots and hanging fluttering tail."
+      "duration_ticks": 48,
+      "notes": "Single launch pose for 48 ticks then WALK; SonAni_Spring (s2.asm:38736)."
     },
     {
       "id": "hurt-00",
