@@ -205,6 +205,8 @@ class TestGameplayModeContextRewindRegistry {
                 ctx.seamlessTransitionResourceHandoffs().key(),
                 com.openggf.game.sonic2.timing.Sonic2LevelMusicScheduler.REWIND_KEY,
                 com.openggf.game.sonic2.slotmachine.CNZPrizeSoundState.REWIND_KEY,
+                // 50bc64259: S2 Chain_Bonus_counter is shared even in 1P.
+                "sonic2_badnik_chain",
                 "solid-execution",
                 "kosinski-module-queue");
         assertTrue(snapshot.entries().keySet().containsAll(expectedKeys),
@@ -212,12 +214,12 @@ class TestGameplayModeContextRewindRegistry {
     }
 
     @Test
-    void exactlySeventeenAtomicKeysAfterAttach() {
+    void exactlyEighteenAtomicKeysAfterAttach() {
         GameplayModeContext ctx = buildAttachedContext();
         RewindRegistry registry = ctx.getRewindRegistry();
         CompositeSnapshot snapshot = registry.capture();
-        assertEquals(17, snapshot.entries().keySet().size(),
-                "Expected exactly 17 atomic adapters, got: " + snapshot.entries().keySet());
+        assertEquals(18, snapshot.entries().keySet().size(),
+                "Expected exactly 18 atomic adapters, got: " + snapshot.entries().keySet());
     }
 
     @Test
@@ -470,7 +472,7 @@ class TestGameplayModeContextRewindRegistry {
         RewindRegistry second = ctx.getRewindRegistry();
         assertNotNull(second);
         assertNotSame(first, second, "Re-attach should produce a new RewindRegistry instance");
-        assertEquals(17, second.capture().entries().keySet().size());
+        assertEquals(18, second.capture().entries().keySet().size());
         var running = second.capture();
         previousState.setGamePaused(true);
         gameState2.setGamePaused(true);

@@ -310,7 +310,10 @@ class TestSonic2CompetitionProduct {
         assertEquals(17, s.levelState(1).getRings()); assertSame(sonic, s.player(0)); assertSame(tails, s.player(1));
         assertTrue(s.teleportWhite());
         var snapshot = s.capture();
-        for (int i = 0; i < 49; i++) s.advanceActFlow();
+        // 0f405cd59: Vint_Level (s2.asm:702-713), not act flow, spends the timer.
+        s.advanceActFlow();
+        assertEquals(0x40, s.teleportTimer());
+        for (int i = 0; i < 49; i++) s.teleportClock().afterNativeWait(false);
         assertFalse(s.teleportWhite());
         s.restore(snapshot); assertTrue(s.teleportWhite());
         assertEquals(0x40, s.teleportTimer());
