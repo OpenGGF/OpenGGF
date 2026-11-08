@@ -271,6 +271,25 @@ checks pass. The broader crest scales are simpler than the flat art, arm swing
 is restrained, and runtime foot contact remains unverified. The 16px far eye is necessarily
 narrow; the small crest has fewer scale separations than the playable head.
 
+W7 art-lane round 4 handoff (2026-11-08, `feature/ai-mica-art4`):
+`art/mica/wave3/wave3.yaml` and its hand-authored `build.py` now supply the
+18 S2 half-pipe frames, with native per-frame piece layouts and DPLC budgets.
+Owning references: `Obj09_MapUnc_34212`, `Obj09_MapRUnc_345FA`, `off_341E4`,
+`SSHurt_Animation` and `dword_33AA2` in `docs/s2disasm/s2.asm`.
+The sequence is 4 upright, 8 diagonal, 4 horizontal, 2 ball; hurt reuses run
+frames with native flips. Run entries last 4 ticks, ball entries 2 ticks.
+Character originals retain every shared palette index; optional `-fixed.png`
+files quantize to native `Pal_SS` line 1. That fixed line has no jade and cannot
+preserve MICA's colours. Binding a character palette remains integration work.
+The 1×/4× native comparisons and five sequence GIFs are disposable files in
+`/tmp/mica-art4-review-20261108/`. Pixel/palette/layout/aliased-tile/budget and
+byte-for-byte rebuild checks pass without Java. Leaning heads were repositioned
+after the first review clipped their crests; balls were redrawn inside their
+native oval. Scales on the ball are simplified; torso motion is restrained.
+No GGFP, stage palette binding or gameplay certification is claimed.
+Remaining round-4 items: Blue Sphere, S1 reuse audit, slot bonus, all continue
+screens and data-select/team composition.
+
 ### W8 — Example, tutorial and evidence (M)
 
 - `examples/<character>/` with a build script in the Mutator Lab pattern.

@@ -1,0 +1,1598 @@
+{
+  "format": "openggf-wave3-art-handoff-1",
+  "palette": "../palette.yaml",
+  "tick_rate": 60,
+  "notes": "Original hand-authored native-coordinate pixel source. Not GGFP or runtime certification.",
+  "surfaces": [
+    {
+      "surface": "half_pipe",
+      "game": "s2",
+      "native_source_label": "Obj09 / Obj09_MapUnc_34212 / Obj09_MapRUnc_345FA / off_341E4",
+      "source": "docs/s2disasm/s2.asm",
+      "mapping_source": "docs/s2disasm/mappings/sprite/obj09.asm",
+      "native_art_label": "ArtNem_SpecialSonicAndTails",
+      "palette_line": 1,
+      "palette": "../palette.yaml",
+      "fixed_palette": {
+        "source": "docs/s2disasm/art/palettes/Special Stage Main.bin",
+        "line": 1,
+        "colors": [
+          [
+            0,
+            0,
+            73
+          ],
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            109
+          ],
+          [
+            36,
+            36,
+            182
+          ],
+          [
+            36,
+            73,
+            219
+          ],
+          [
+            73,
+            109,
+            255
+          ],
+          [
+            109,
+            146,
+            255
+          ],
+          [
+            146,
+            182,
+            255
+          ],
+          [
+            255,
+            255,
+            255
+          ],
+          [
+            182,
+            182,
+            182
+          ],
+          [
+            146,
+            146,
+            146
+          ],
+          [
+            73,
+            73,
+            73
+          ],
+          [
+            255,
+            0,
+            0
+          ],
+          [
+            146,
+            0,
+            0
+          ],
+          [
+            255,
+            182,
+            146
+          ],
+          [
+            182,
+            109,
+            73
+          ]
+        ],
+        "index_lut": [
+          0,
+          1,
+          11,
+          11,
+          11,
+          10,
+          9,
+          14,
+          14,
+          10,
+          15,
+          13,
+          8,
+          8,
+          14,
+          1
+        ],
+        "note": "Nearest RGB approximation loses jade and cream: native Sonic line has no green. Shared-palette originals require a character palette binding; fixed variants are layout-compatible but not colour-faithful."
+      },
+      "timing": {
+        "source": "byte_341EE / byte_341F4 / byte_341FE / byte_34204 / byte_34208 / SSHurt_Animation",
+        "run_ticks": 4,
+        "ball_ticks": 2,
+        "hurt": "SSHurt_Animation uses angle + timer in 8-unit steps and render flips; no dedicated hurt art"
+      },
+      "sequences": [
+        {
+          "name": "upright",
+          "frames": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "ticks": 4
+        },
+        {
+          "name": "diagonal",
+          "frames": [
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11
+          ],
+          "ticks": 4
+        },
+        {
+          "name": "horizontal",
+          "frames": [
+            12,
+            13,
+            14,
+            15
+          ],
+          "ticks": 4
+        },
+        {
+          "name": "ball",
+          "frames": [
+            16,
+            17
+          ],
+          "ticks": 2
+        },
+        {
+          "name": "hurt",
+          "frames": [
+            0,
+            4,
+            12,
+            4,
+            0,
+            4,
+            12,
+            4
+          ],
+          "ticks": 4
+        }
+      ],
+      "frames": [
+        {
+          "id": 0,
+          "file": "s2-halfpipe-00.png",
+          "dimensions": [
+            32,
+            56
+          ],
+          "hotspot": [
+            16,
+            28
+          ],
+          "native_source_label": "Map_obj09_0024",
+          "pieces": [
+            [
+              -16,
+              -28,
+              4,
+              4,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -16,
+              4,
+              3,
+              3,
+              16,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              8,
+              4,
+              1,
+              2,
+              25,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "dplc_label": "Obj09_MapRUnc_345FA.sonic_0",
+          "dplc_entries": [
+            [
+              16,
+              0
+            ],
+            [
+              9,
+              16
+            ],
+            [
+              2,
+              25
+            ]
+          ],
+          "tile_budget": 27,
+          "fixed_palette_file": "s2-halfpipe-00-fixed.png"
+        },
+        {
+          "id": 1,
+          "file": "s2-halfpipe-01.png",
+          "dimensions": [
+            32,
+            56
+          ],
+          "hotspot": [
+            16,
+            28
+          ],
+          "native_source_label": "Map_obj09_003E",
+          "pieces": [
+            [
+              -14,
+              -28,
+              3,
+              3,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -16,
+              -4,
+              4,
+              2,
+              9,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -9,
+              12,
+              2,
+              2,
+              17,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "dplc_label": "Obj09_MapRUnc_345FA.sonic_1",
+          "dplc_entries": [
+            [
+              9,
+              27
+            ],
+            [
+              8,
+              36
+            ],
+            [
+              4,
+              44
+            ]
+          ],
+          "tile_budget": 21,
+          "fixed_palette_file": "s2-halfpipe-01-fixed.png"
+        },
+        {
+          "id": 2,
+          "file": "s2-halfpipe-02.png",
+          "dimensions": [
+            32,
+            56
+          ],
+          "hotspot": [
+            16,
+            28
+          ],
+          "native_source_label": "Map_obj09_0058",
+          "pieces": [
+            [
+              -16,
+              -28,
+              4,
+              3,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -16,
+              -4,
+              4,
+              2,
+              12,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -16,
+              12,
+              3,
+              2,
+              20,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "dplc_label": "Obj09_MapRUnc_345FA.sonic_2",
+          "dplc_entries": [
+            [
+              12,
+              48
+            ],
+            [
+              8,
+              60
+            ],
+            [
+              6,
+              68
+            ]
+          ],
+          "tile_budget": 26,
+          "fixed_palette_file": "s2-halfpipe-02-fixed.png"
+        },
+        {
+          "id": 3,
+          "file": "s2-halfpipe-03.png",
+          "dimensions": [
+            32,
+            56
+          ],
+          "hotspot": [
+            16,
+            28
+          ],
+          "native_source_label": "Map_obj09_0072",
+          "pieces": [
+            [
+              -10,
+              -28,
+              3,
+              3,
+              0,
+              1,
+              0,
+              0,
+              1
+            ],
+            [
+              -16,
+              -4,
+              4,
+              2,
+              9,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -8,
+              12,
+              3,
+              2,
+              17,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "dplc_label": "Obj09_MapRUnc_345FA.sonic_3",
+          "dplc_entries": [
+            [
+              9,
+              27
+            ],
+            [
+              8,
+              74
+            ],
+            [
+              6,
+              82
+            ]
+          ],
+          "tile_budget": 23,
+          "fixed_palette_file": "s2-halfpipe-03-fixed.png"
+        },
+        {
+          "id": 4,
+          "file": "s2-halfpipe-04.png",
+          "dimensions": [
+            48,
+            48
+          ],
+          "hotspot": [
+            28,
+            28
+          ],
+          "native_source_label": "Map_obj09_008C",
+          "pieces": [
+            [
+              -20,
+              -28,
+              3,
+              3,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              4,
+              -28,
+              1,
+              4,
+              9,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              12,
+              -20,
+              1,
+              2,
+              13,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -28,
+              -4,
+              4,
+              3,
+              15,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "dplc_label": "Obj09_MapRUnc_345FA.sonic_4",
+          "dplc_entries": [
+            [
+              9,
+              0
+            ],
+            [
+              4,
+              9
+            ],
+            [
+              2,
+              13
+            ],
+            [
+              12,
+              15
+            ]
+          ],
+          "tile_budget": 27,
+          "fixed_palette_file": "s2-halfpipe-04-fixed.png"
+        },
+        {
+          "id": 5,
+          "file": "s2-halfpipe-05.png",
+          "dimensions": [
+            46,
+            56
+          ],
+          "hotspot": [
+            26,
+            28
+          ],
+          "native_source_label": "Map_obj09_00AE",
+          "pieces": [
+            [
+              -12,
+              -28,
+              3,
+              2,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              12,
+              -20,
+              1,
+              2,
+              6,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -20,
+              -12,
+              4,
+              2,
+              8,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -26,
+              4,
+              4,
+              2,
+              16,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -18,
+              20,
+              1,
+              1,
+              24,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "dplc_label": "Obj09_MapRUnc_345FA.sonic_5",
+          "dplc_entries": [
+            [
+              6,
+              27
+            ],
+            [
+              2,
+              33
+            ],
+            [
+              8,
+              35
+            ],
+            [
+              8,
+              43
+            ],
+            [
+              1,
+              51
+            ]
+          ],
+          "tile_budget": 25,
+          "fixed_palette_file": "s2-halfpipe-05-fixed.png"
+        },
+        {
+          "id": 6,
+          "file": "s2-halfpipe-06.png",
+          "dimensions": [
+            45,
+            56
+          ],
+          "hotspot": [
+            25,
+            28
+          ],
+          "native_source_label": "Map_obj09_00D8",
+          "pieces": [
+            [
+              -5,
+              -28,
+              2,
+              1,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -20,
+              -20,
+              4,
+              3,
+              2,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              12,
+              -20,
+              1,
+              3,
+              14,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -25,
+              4,
+              2,
+              3,
+              17,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -9,
+              4,
+              2,
+              2,
+              23,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "dplc_label": "Obj09_MapRUnc_345FA.sonic_6",
+          "dplc_entries": [
+            [
+              2,
+              52
+            ],
+            [
+              12,
+              54
+            ],
+            [
+              3,
+              66
+            ],
+            [
+              6,
+              69
+            ],
+            [
+              4,
+              75
+            ]
+          ],
+          "tile_budget": 27,
+          "fixed_palette_file": "s2-halfpipe-06-fixed.png"
+        },
+        {
+          "id": 7,
+          "file": "s2-halfpipe-07.png",
+          "dimensions": [
+            48,
+            56
+          ],
+          "hotspot": [
+            28,
+            28
+          ],
+          "native_source_label": "Map_obj09_0102",
+          "pieces": [
+            [
+              -4,
+              -28,
+              2,
+              1,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -20,
+              -20,
+              4,
+              4,
+              2,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              12,
+              -20,
+              1,
+              3,
+              18,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -28,
+              4,
+              1,
+              1,
+              21,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -22,
+              12,
+              2,
+              2,
+              22,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "dplc_label": "Obj09_MapRUnc_345FA.sonic_7",
+          "dplc_entries": [
+            [
+              2,
+              79
+            ],
+            [
+              16,
+              81
+            ],
+            [
+              3,
+              97
+            ],
+            [
+              1,
+              100
+            ],
+            [
+              4,
+              101
+            ]
+          ],
+          "tile_budget": 26,
+          "fixed_palette_file": "s2-halfpipe-07-fixed.png"
+        },
+        {
+          "id": 8,
+          "file": "s2-halfpipe-08.png",
+          "dimensions": [
+            40,
+            56
+          ],
+          "hotspot": [
+            20,
+            28
+          ],
+          "native_source_label": "Map_obj09_012C",
+          "pieces": [
+            [
+              -4,
+              -28,
+              2,
+              2,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              12,
+              -20,
+              1,
+              4,
+              4,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -20,
+              -12,
+              4,
+              3,
+              8,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -20,
+              12,
+              2,
+              2,
+              20,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "dplc_label": "Obj09_MapRUnc_345FA.sonic_8",
+          "dplc_entries": [
+            [
+              4,
+              105
+            ],
+            [
+              4,
+              109
+            ],
+            [
+              12,
+              113
+            ],
+            [
+              4,
+              125
+            ]
+          ],
+          "tile_budget": 24,
+          "fixed_palette_file": "s2-halfpipe-08-fixed.png"
+        },
+        {
+          "id": 9,
+          "file": "s2-halfpipe-09.png",
+          "dimensions": [
+            44,
+            48
+          ],
+          "hotspot": [
+            24,
+            28
+          ],
+          "native_source_label": "Map_obj09_014E",
+          "pieces": [
+            [
+              -4,
+              -28,
+              2,
+              2,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              12,
+              -20,
+              1,
+              3,
+              4,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -20,
+              -12,
+              4,
+              2,
+              7,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -24,
+              4,
+              4,
+              2,
+              15,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -12,
+              -20,
+              1,
+              1,
+              23,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "dplc_label": "Obj09_MapRUnc_345FA.sonic_9",
+          "dplc_entries": [
+            [
+              4,
+              129
+            ],
+            [
+              3,
+              133
+            ],
+            [
+              8,
+              136
+            ],
+            [
+              8,
+              144
+            ],
+            [
+              1,
+              152
+            ]
+          ],
+          "tile_budget": 24,
+          "fixed_palette_file": "s2-halfpipe-09-fixed.png"
+        },
+        {
+          "id": 10,
+          "file": "s2-halfpipe-10.png",
+          "dimensions": [
+            47,
+            56
+          ],
+          "hotspot": [
+            25,
+            28
+          ],
+          "native_source_label": "Map_obj09_0178",
+          "pieces": [
+            [
+              -5,
+              -28,
+              3,
+              2,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              14,
+              -12,
+              1,
+              2,
+              6,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -18,
+              -12,
+              4,
+              2,
+              8,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -25,
+              4,
+              4,
+              2,
+              16,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -17,
+              20,
+              1,
+              1,
+              24,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "dplc_label": "Obj09_MapRUnc_345FA.sonic_10",
+          "dplc_entries": [
+            [
+              6,
+              153
+            ],
+            [
+              2,
+              159
+            ],
+            [
+              8,
+              161
+            ],
+            [
+              8,
+              169
+            ],
+            [
+              1,
+              177
+            ]
+          ],
+          "tile_budget": 25,
+          "fixed_palette_file": "s2-halfpipe-10-fixed.png"
+        },
+        {
+          "id": 11,
+          "file": "s2-halfpipe-11.png",
+          "dimensions": [
+            48,
+            56
+          ],
+          "hotspot": [
+            28,
+            28
+          ],
+          "native_source_label": "Map_obj09_01A2",
+          "pieces": [
+            [
+              2,
+              -28,
+              1,
+              1,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -12,
+              -20,
+              4,
+              2,
+              1,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              12,
+              -4,
+              1,
+              1,
+              9,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -28,
+              4,
+              1,
+              2,
+              10,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -20,
+              -4,
+              2,
+              4,
+              12,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -4,
+              -4,
+              2,
+              3,
+              20,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "dplc_label": "Obj09_MapRUnc_345FA.sonic_11",
+          "dplc_entries": [
+            [
+              1,
+              178
+            ],
+            [
+              8,
+              179
+            ],
+            [
+              1,
+              187
+            ],
+            [
+              2,
+              188
+            ],
+            [
+              8,
+              190
+            ],
+            [
+              6,
+              198
+            ]
+          ],
+          "tile_budget": 26,
+          "fixed_palette_file": "s2-halfpipe-11-fixed.png"
+        },
+        {
+          "id": 12,
+          "file": "s2-halfpipe-12.png",
+          "dimensions": [
+            48,
+            32
+          ],
+          "hotspot": [
+            24,
+            16
+          ],
+          "native_source_label": "Map_obj09_01D4",
+          "pieces": [
+            [
+              -24,
+              -16,
+              2,
+              3,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -16,
+              8,
+              1,
+              1,
+              6,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -8,
+              -16,
+              4,
+              4,
+              7,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "dplc_label": "Obj09_MapRUnc_345FA.sonic_12",
+          "dplc_entries": [
+            [
+              6,
+              0
+            ],
+            [
+              1,
+              6
+            ],
+            [
+              16,
+              7
+            ]
+          ],
+          "tile_budget": 23,
+          "fixed_palette_file": "s2-halfpipe-12-fixed.png"
+        },
+        {
+          "id": 13,
+          "file": "s2-halfpipe-13.png",
+          "dimensions": [
+            48,
+            33
+          ],
+          "hotspot": [
+            24,
+            16
+          ],
+          "native_source_label": "Map_obj09_01EE",
+          "pieces": [
+            [
+              -24,
+              -16,
+              2,
+              3,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -8,
+              -15,
+              1,
+              4,
+              6,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              0,
+              -16,
+              3,
+              4,
+              10,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "dplc_label": "Obj09_MapRUnc_345FA.sonic_13",
+          "dplc_entries": [
+            [
+              6,
+              23
+            ],
+            [
+              4,
+              29
+            ],
+            [
+              12,
+              33
+            ]
+          ],
+          "tile_budget": 22,
+          "fixed_palette_file": "s2-halfpipe-13-fixed.png"
+        },
+        {
+          "id": 14,
+          "file": "s2-halfpipe-14.png",
+          "dimensions": [
+            48,
+            32
+          ],
+          "hotspot": [
+            24,
+            16
+          ],
+          "native_source_label": "Map_obj09_0208",
+          "pieces": [
+            [
+              -24,
+              -15,
+              1,
+              3,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -16,
+              -16,
+              1,
+              3,
+              3,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -8,
+              -16,
+              4,
+              4,
+              6,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "dplc_label": "Obj09_MapRUnc_345FA.sonic_14",
+          "dplc_entries": [
+            [
+              3,
+              45
+            ],
+            [
+              3,
+              48
+            ],
+            [
+              16,
+              51
+            ]
+          ],
+          "tile_budget": 22,
+          "fixed_palette_file": "s2-halfpipe-14-fixed.png"
+        },
+        {
+          "id": 15,
+          "file": "s2-halfpipe-15.png",
+          "dimensions": [
+            48,
+            33
+          ],
+          "hotspot": [
+            24,
+            17
+          ],
+          "native_source_label": "Map_obj09_0222",
+          "pieces": [
+            [
+              -24,
+              -8,
+              2,
+              3,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -8,
+              -17,
+              1,
+              4,
+              6,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              0,
+              -16,
+              3,
+              4,
+              10,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "dplc_label": "Obj09_MapRUnc_345FA.sonic_15",
+          "dplc_entries": [
+            [
+              6,
+              67
+            ],
+            [
+              4,
+              73
+            ],
+            [
+              12,
+              33
+            ]
+          ],
+          "tile_budget": 22,
+          "fixed_palette_file": "s2-halfpipe-15-fixed.png"
+        },
+        {
+          "id": 16,
+          "file": "s2-halfpipe-16.png",
+          "dimensions": [
+            32,
+            40
+          ],
+          "hotspot": [
+            16,
+            20
+          ],
+          "native_source_label": "Map_obj09_023C",
+          "pieces": [
+            [
+              -16,
+              -20,
+              2,
+              4,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -16,
+              12,
+              2,
+              1,
+              8,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              0,
+              -20,
+              2,
+              4,
+              0,
+              1,
+              0,
+              0,
+              1
+            ],
+            [
+              0,
+              12,
+              2,
+              1,
+              8,
+              1,
+              0,
+              0,
+              1
+            ]
+          ],
+          "dplc_label": "Obj09_MapRUnc_345FA.sonic_16",
+          "dplc_entries": [
+            [
+              8,
+              0
+            ],
+            [
+              2,
+              8
+            ]
+          ],
+          "tile_budget": 10,
+          "fixed_palette_file": "s2-halfpipe-16-fixed.png"
+        },
+        {
+          "id": 17,
+          "file": "s2-halfpipe-17.png",
+          "dimensions": [
+            32,
+            40
+          ],
+          "hotspot": [
+            16,
+            20
+          ],
+          "native_source_label": "Map_obj09_025E",
+          "pieces": [
+            [
+              -16,
+              -20,
+              2,
+              4,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -16,
+              12,
+              2,
+              1,
+              8,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              0,
+              -20,
+              2,
+              4,
+              0,
+              1,
+              0,
+              0,
+              1
+            ],
+            [
+              0,
+              12,
+              2,
+              1,
+              8,
+              1,
+              0,
+              0,
+              1
+            ]
+          ],
+          "dplc_label": "Obj09_MapRUnc_345FA.sonic_17",
+          "dplc_entries": [
+            [
+              8,
+              10
+            ],
+            [
+              2,
+              8
+            ]
+          ],
+          "tile_budget": 10,
+          "fixed_palette_file": "s2-halfpipe-17-fixed.png"
+        }
+      ]
+    }
+  ]
+}
