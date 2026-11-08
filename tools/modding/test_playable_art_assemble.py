@@ -53,6 +53,14 @@ class PlayableArtAssemblyTest(unittest.TestCase):
             self.assertEqual('hold',manifest['animations']['DUCK']['end'])
             self.assertEqual('WALK',manifest['animations']['SPRING']['next'])
             self.assertEqual([48],manifest['animations']['SPRING']['durations'])
+            by_id = {f['id']:i for i,f in enumerate(source)}
+            roll = manifest['animations']['ROLL']
+            self.assertTrue(roll['speedDriven'])
+            self.assertEqual([by_id[k] for i in range(4) for k in (f'roll-{i:02}', 'roll-blur')],roll['frames'])
+            charge = manifest['animations']['SPINDASH']
+            self.assertEqual([by_id[k] for i in range(5) for k in ('spindash-blur',f'spindash-{i:02}')],charge['frames'])
+            self.assertEqual([1]*10,charge['durations'])
+            self.assertEqual([by_id['hurt-00']],manifest['animations']['HURT']['frames'])
 
 
 if __name__ == '__main__':

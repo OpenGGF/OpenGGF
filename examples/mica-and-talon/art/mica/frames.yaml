@@ -738,12 +738,12 @@
       "order": 8,
       "file": "frames/walk-up45-00.png",
       "hotspot": [
-        20,
+        13,
         18
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
+      "notes": "Deterministic Scale2x slope from walk-00; +45 degrees CCW, native support, integer contact alignment."
     },
     {
       "id": "walk-up45-01",
@@ -751,12 +751,12 @@
       "order": 9,
       "file": "frames/walk-up45-01.png",
       "hotspot": [
-        19,
-        17
+        15,
+        18
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
+      "notes": "Deterministic Scale2x slope from walk-01; +45 degrees CCW, native support, integer contact alignment."
     },
     {
       "id": "walk-up45-02",
@@ -764,12 +764,12 @@
       "order": 10,
       "file": "frames/walk-up45-02.png",
       "hotspot": [
-        20,
-        15
+        17,
+        20
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
+      "notes": "Deterministic Scale2x slope from walk-02; +45 degrees CCW, native support, integer contact alignment."
     },
     {
       "id": "walk-up45-03",
@@ -777,12 +777,12 @@
       "order": 11,
       "file": "frames/walk-up45-03.png",
       "hotspot": [
-        19,
+        17,
         18
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
+      "notes": "Deterministic Scale2x slope from walk-03; +45 degrees CCW, native support, integer contact alignment."
     },
     {
       "id": "walk-up45-04",
@@ -790,12 +790,12 @@
       "order": 12,
       "file": "frames/walk-up45-04.png",
       "hotspot": [
-        20,
-        18
+        13,
+        19
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
+      "notes": "Deterministic Scale2x slope from walk-04; +45 degrees CCW, native support, integer contact alignment."
     },
     {
       "id": "walk-up45-05",
@@ -803,12 +803,12 @@
       "order": 13,
       "file": "frames/walk-up45-05.png",
       "hotspot": [
-        21,
-        17
+        14,
+        18
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
+      "notes": "Deterministic Scale2x slope from walk-05; +45 degrees CCW, native support, integer contact alignment."
     },
     {
       "id": "walk-up45-06",
@@ -816,12 +816,12 @@
       "order": 14,
       "file": "frames/walk-up45-06.png",
       "hotspot": [
-        21,
-        14
+        20,
+        19
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
+      "notes": "Deterministic Scale2x slope from walk-06; +45 degrees CCW, native support, integer contact alignment."
     },
     {
       "id": "walk-up45-07",
@@ -829,12 +829,12 @@
       "order": 15,
       "file": "frames/walk-up45-07.png",
       "hotspot": [
-        20,
-        18
+        16,
+        19
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
+      "notes": "Deterministic Scale2x slope from walk-07; +45 degrees CCW, native support, integer contact alignment."
     },
     {
       "id": "walk-steep-00",
@@ -842,12 +842,12 @@
       "order": 16,
       "file": "frames/walk-steep-00.png",
       "hotspot": [
-        19,
+        18,
         13
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
+      "notes": "Deterministic Scale2x slope from walk-00; +90 degrees CCW, native support, integer contact alignment."
     },
     {
       "id": "walk-steep-01",
@@ -855,12 +855,12 @@
       "order": 17,
       "file": "frames/walk-steep-01.png",
       "hotspot": [
-        20,
+        19,
         14
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
+      "notes": "Deterministic Scale2x slope from walk-01; +90 degrees CCW, native support, integer contact alignment."
     },
     {
       "id": "walk-steep-02",
@@ -869,11 +869,11 @@
       "file": "frames/walk-steep-02.png",
       "hotspot": [
         21,
-        16
+        21
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
+      "notes": "Deterministic Scale2x slope from walk-02; +90 degrees CCW, native support, integer contact alignment."
     },
     {
       "id": "walk-steep-03",
@@ -882,11 +882,11 @@
       "file": "frames/walk-steep-03.png",
       "hotspot": [
         20,
-        20
+        13
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
+      "notes": "Deterministic Scale2x slope from walk-03; +90 degrees CCW, native support, integer contact alignment."
     },
     {
       "id": "walk-steep-04",
@@ -894,12 +894,12 @@
       "order": 20,
       "file": "frames/walk-steep-04.png",
       "hotspot": [
-        19,
+        18,
         13
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
+      "notes": "Deterministic Scale2x slope from walk-04; +90 degrees CCW, native support, integer contact alignment."
     },
     {
       "id": "walk-steep-05",
@@ -907,12 +907,12 @@
       "order": 21,
       "file": "frames/walk-steep-05.png",
       "hotspot": [
-        20,
+        19,
         14
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
+      "notes": "Deterministic Scale2x slope from walk-05; +90 degrees CCW, native support, integer contact alignment."
     },
     {
       "id": "walk-steep-06",
@@ -920,12 +920,12 @@
       "order": 22,
       "file": "frames/walk-steep-06.png",
       "hotspot": [
-        21,
-        15
+        23,
+        20
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
+      "notes": "Deterministic Scale2x slope from walk-06; +90 degrees CCW, native support, integer contact alignment."
     },
     {
       "id": "walk-steep-07",
@@ -934,11 +934,11 @@
       "file": "frames/walk-steep-07.png",
       "hotspot": [
         20,
-        20
+        13
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
+      "notes": "Deterministic Scale2x slope from walk-07; +90 degrees CCW, native support, integer contact alignment."
     },
     {
       "id": "walk-inverted-00",
@@ -946,12 +946,12 @@
       "order": 24,
       "file": "frames/walk-inverted-00.png",
       "hotspot": [
-        18,
-        17
+        16,
+        18
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
+      "notes": "Deterministic Scale2x slope from walk-00; +135 degrees CCW, native support, integer contact alignment."
     },
     {
       "id": "walk-inverted-01",
@@ -959,12 +959,12 @@
       "order": 25,
       "file": "frames/walk-inverted-01.png",
       "hotspot": [
-        18,
-        19
+        16,
+        22
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
+      "notes": "Deterministic Scale2x slope from walk-01; +135 degrees CCW, native support, integer contact alignment."
     },
     {
       "id": "walk-inverted-02",
@@ -972,12 +972,12 @@
       "order": 26,
       "file": "frames/walk-inverted-02.png",
       "hotspot": [
-        12,
-        17
+        20,
+        25
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
+      "notes": "Deterministic Scale2x slope from walk-02; +135 degrees CCW, native support, integer contact alignment."
     },
     {
       "id": "walk-inverted-03",
@@ -985,12 +985,12 @@
       "order": 27,
       "file": "frames/walk-inverted-03.png",
       "hotspot": [
-        16,
-        18
+        18,
+        19
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
+      "notes": "Deterministic Scale2x slope from walk-03; +135 degrees CCW, native support, integer contact alignment."
     },
     {
       "id": "walk-inverted-04",
@@ -998,12 +998,12 @@
       "order": 28,
       "file": "frames/walk-inverted-04.png",
       "hotspot": [
-        18,
+        17,
         18
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
+      "notes": "Deterministic Scale2x slope from walk-04; +135 degrees CCW, native support, integer contact alignment."
     },
     {
       "id": "walk-inverted-05",
@@ -1012,11 +1012,11 @@
       "file": "frames/walk-inverted-05.png",
       "hotspot": [
         16,
-        18
+        22
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
+      "notes": "Deterministic Scale2x slope from walk-05; +135 degrees CCW, native support, integer contact alignment."
     },
     {
       "id": "walk-inverted-06",
@@ -1024,12 +1024,12 @@
       "order": 30,
       "file": "frames/walk-inverted-06.png",
       "hotspot": [
-        12,
-        17
+        21,
+        25
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
+      "notes": "Deterministic Scale2x slope from walk-06; +135 degrees CCW, native support, integer contact alignment."
     },
     {
       "id": "walk-inverted-07",
@@ -1037,12 +1037,12 @@
       "order": 31,
       "file": "frames/walk-inverted-07.png",
       "hotspot": [
-        16,
-        16
+        19,
+        19
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
+      "notes": "Deterministic Scale2x slope from walk-07; +135 degrees CCW, native support, integer contact alignment."
     },
     {
       "id": "run-up45-00",
@@ -1050,12 +1050,12 @@
       "order": 4,
       "file": "frames/run-up45-00.png",
       "hotspot": [
-        17,
-        19
+        13,
+        18
       ],
       "angle_set": "up45",
       "duration_ticks": 4,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
+      "notes": "Deterministic Scale2x slope from run-00; +45 degrees CCW, native support, integer contact alignment."
     },
     {
       "id": "run-up45-01",
@@ -1063,12 +1063,12 @@
       "order": 5,
       "file": "frames/run-up45-01.png",
       "hotspot": [
-        15,
-        20
+        13,
+        18
       ],
       "angle_set": "up45",
       "duration_ticks": 4,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
+      "notes": "Deterministic Scale2x slope from run-01; +45 degrees CCW, native support, integer contact alignment."
     },
     {
       "id": "run-up45-02",
@@ -1076,12 +1076,12 @@
       "order": 6,
       "file": "frames/run-up45-02.png",
       "hotspot": [
-        17,
-        19
+        13,
+        18
       ],
       "angle_set": "up45",
       "duration_ticks": 4,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
+      "notes": "Deterministic Scale2x slope from run-02; +45 degrees CCW, native support, integer contact alignment."
     },
     {
       "id": "run-up45-03",
@@ -1089,12 +1089,12 @@
       "order": 7,
       "file": "frames/run-up45-03.png",
       "hotspot": [
-        15,
-        20
+        13,
+        18
       ],
       "angle_set": "up45",
       "duration_ticks": 4,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
+      "notes": "Deterministic Scale2x slope from run-03; +45 degrees CCW, native support, integer contact alignment."
     },
     {
       "id": "run-steep-00",
@@ -1107,7 +1107,7 @@
       ],
       "angle_set": "steep",
       "duration_ticks": 4,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
+      "notes": "Deterministic Scale2x slope from run-00; +90 degrees CCW, native support, integer contact alignment."
     },
     {
       "id": "run-steep-01",
@@ -1115,12 +1115,12 @@
       "order": 9,
       "file": "frames/run-steep-01.png",
       "hotspot": [
-        16,
+        15,
         16
       ],
       "angle_set": "steep",
       "duration_ticks": 4,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
+      "notes": "Deterministic Scale2x slope from run-01; +90 degrees CCW, native support, integer contact alignment."
     },
     {
       "id": "run-steep-02",
@@ -1133,7 +1133,7 @@
       ],
       "angle_set": "steep",
       "duration_ticks": 4,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
+      "notes": "Deterministic Scale2x slope from run-02; +90 degrees CCW, native support, integer contact alignment."
     },
     {
       "id": "run-steep-03",
@@ -1141,12 +1141,12 @@
       "order": 11,
       "file": "frames/run-steep-03.png",
       "hotspot": [
-        16,
+        15,
         16
       ],
       "angle_set": "steep",
       "duration_ticks": 4,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
+      "notes": "Deterministic Scale2x slope from run-03; +90 degrees CCW, native support, integer contact alignment."
     },
     {
       "id": "run-inverted-00",
@@ -1154,12 +1154,12 @@
       "order": 12,
       "file": "frames/run-inverted-00.png",
       "hotspot": [
-        19,
+        18,
         20
       ],
       "angle_set": "inverted",
       "duration_ticks": 4,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
+      "notes": "Deterministic Scale2x slope from run-00; +135 degrees CCW, native support, integer contact alignment."
     },
     {
       "id": "run-inverted-01",
@@ -1167,12 +1167,12 @@
       "order": 13,
       "file": "frames/run-inverted-01.png",
       "hotspot": [
-        20,
-        20
+        18,
+        19
       ],
       "angle_set": "inverted",
       "duration_ticks": 4,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
+      "notes": "Deterministic Scale2x slope from run-01; +135 degrees CCW, native support, integer contact alignment."
     },
     {
       "id": "run-inverted-02",
@@ -1180,12 +1180,12 @@
       "order": 14,
       "file": "frames/run-inverted-02.png",
       "hotspot": [
-        19,
-        19
+        18,
+        22
       ],
       "angle_set": "inverted",
       "duration_ticks": 4,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
+      "notes": "Deterministic Scale2x slope from run-02; +135 degrees CCW, native support, integer contact alignment."
     },
     {
       "id": "run-inverted-03",
@@ -1193,12 +1193,12 @@
       "order": 15,
       "file": "frames/run-inverted-03.png",
       "hotspot": [
-        20,
-        20
+        18,
+        19
       ],
       "angle_set": "inverted",
       "duration_ticks": 4,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
+      "notes": "Deterministic Scale2x slope from run-03; +135 degrees CCW, native support, integer contact alignment."
     },
     {
       "id": "stop-00",

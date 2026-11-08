@@ -3347,31 +3347,30 @@
     "walk-up45-00": {
       "reference": {
         "id": "walk-up45-00",
-        "game": "S2",
         "mapping": 23,
         "label": "Map_Sonic_0412",
-        "size": [
-          38,
-          39
-        ],
         "hotspot": [
           20,
           18
+        ],
+        "size": [
+          38,
+          39
         ]
       },
       "geometry_reference": {
         "size": [
-          36,
-          37
+          33,
+          33
         ],
         "hotspot": [
-          20,
+          13,
           18
         ]
       },
       "native_size": [
-        36,
-        37
+        33,
+        33
       ],
       "previous_size": [
         46,
@@ -3382,40 +3381,42 @@
         16
       ],
       "hotspot": [
-        20,
+        13,
         18
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
-      "native_support": 19.091883
+      "native_support": 19.091883092036785,
+      "owner_fix": "Deterministic Scale2x slope from walk-00; +45 degrees CCW, native support, integer contact alignment.",
+      "derived_from": "walk-00",
+      "rotation_degrees": 45
     },
     "walk-up45-01": {
       "reference": {
         "id": "walk-up45-01",
-        "game": "S2",
         "mapping": 24,
         "label": "Map_Sonic_0434",
-        "size": [
-          38,
-          40
-        ],
         "hotspot": [
           19,
           20
+        ],
+        "size": [
+          38,
+          40
         ]
       },
       "geometry_reference": {
         "size": [
-          38,
-          34
+          39,
+          33
         ],
         "hotspot": [
-          19,
-          17
+          15,
+          18
         ]
       },
       "native_size": [
-        38,
-        34
+        39,
+        33
       ],
       "previous_size": [
         43,
@@ -3426,40 +3427,42 @@
         16
       ],
       "hotspot": [
-        19,
-        17
+        15,
+        18
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
-      "native_support": 19.091883
+      "native_support": 19.091883092036785,
+      "owner_fix": "Deterministic Scale2x slope from walk-01; +45 degrees CCW, native support, integer contact alignment.",
+      "derived_from": "walk-01",
+      "rotation_degrees": 45
     },
     "walk-up45-02": {
       "reference": {
         "id": "walk-up45-02",
-        "game": "S2",
         "mapping": 25,
         "label": "Map_Sonic_0456",
-        "size": [
-          37,
-          48
-        ],
         "hotspot": [
           20,
           21
+        ],
+        "size": [
+          37,
+          48
         ]
       },
       "geometry_reference": {
         "size": [
-          37,
-          35
+          42,
+          41
         ],
         "hotspot": [
-          20,
-          15
+          17,
+          20
         ]
       },
       "native_size": [
-        37,
-        35
+        42,
+        41
       ],
       "previous_size": [
         48,
@@ -3470,40 +3473,42 @@
         16
       ],
       "hotspot": [
-        20,
-        15
+        17,
+        20
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
-      "native_support": 17.67767
+      "native_support": 17.677669529663692,
+      "owner_fix": "Deterministic Scale2x slope from walk-02; +45 degrees CCW, native support, integer contact alignment.",
+      "derived_from": "walk-02",
+      "rotation_degrees": 45
     },
     "walk-up45-03": {
       "reference": {
         "id": "walk-up45-03",
-        "game": "S2",
         "mapping": 26,
         "label": "Map_Sonic_0480",
-        "size": [
-          41,
-          45
-        ],
         "hotspot": [
           19,
           20
+        ],
+        "size": [
+          41,
+          45
         ]
       },
       "geometry_reference": {
         "size": [
-          41,
-          41
+          36,
+          37
         ],
         "hotspot": [
-          19,
+          17,
           18
         ]
       },
       "native_size": [
-        41,
-        41
+        36,
+        37
       ],
       "previous_size": [
         44,
@@ -3514,40 +3519,42 @@
         16
       ],
       "hotspot": [
-        19,
+        17,
         18
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
-      "native_support": 17.67767
+      "native_support": 17.67766952966369,
+      "owner_fix": "Deterministic Scale2x slope from walk-03; +45 degrees CCW, native support, integer contact alignment.",
+      "derived_from": "walk-03",
+      "rotation_degrees": 45
     },
     "walk-up45-04": {
       "reference": {
         "id": "walk-up45-04",
-        "game": "S2",
         "mapping": 27,
         "label": "Map_Sonic_04AA",
-        "size": [
-          38,
-          39
-        ],
         "hotspot": [
           20,
           18
+        ],
+        "size": [
+          38,
+          39
         ]
       },
       "geometry_reference": {
         "size": [
-          38,
-          36
+          33,
+          34
         ],
         "hotspot": [
-          20,
-          18
+          13,
+          19
         ]
       },
       "native_size": [
-        38,
-        36
+        33,
+        34
       ],
       "previous_size": [
         46,
@@ -3558,40 +3565,42 @@
         16
       ],
       "hotspot": [
-        20,
-        18
+        13,
+        19
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
-      "native_support": 19.091883
+      "native_support": 19.091883092036785,
+      "owner_fix": "Deterministic Scale2x slope from walk-04; +45 degrees CCW, native support, integer contact alignment.",
+      "derived_from": "walk-04",
+      "rotation_degrees": 45
     },
     "walk-up45-05": {
       "reference": {
         "id": "walk-up45-05",
-        "game": "S2",
         "mapping": 28,
         "label": "Map_Sonic_04CC",
-        "size": [
-          40,
-          39
-        ],
         "hotspot": [
           21,
           19
+        ],
+        "size": [
+          40,
+          39
         ]
       },
       "geometry_reference": {
         "size": [
-          40,
-          34
+          38,
+          33
         ],
         "hotspot": [
-          21,
-          17
+          14,
+          18
         ]
       },
       "native_size": [
-        40,
-        34
+        38,
+        33
       ],
       "previous_size": [
         43,
@@ -3602,40 +3611,42 @@
         16
       ],
       "hotspot": [
-        21,
-        17
+        14,
+        18
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
-      "native_support": 19.091883
+      "native_support": 19.091883092036785,
+      "owner_fix": "Deterministic Scale2x slope from walk-05; +45 degrees CCW, native support, integer contact alignment.",
+      "derived_from": "walk-05",
+      "rotation_degrees": 45
     },
     "walk-up45-06": {
       "reference": {
         "id": "walk-up45-06",
-        "game": "S2",
         "mapping": 21,
         "label": "Map_Sonic_03C6",
-        "size": [
-          39,
-          46
-        ],
         "hotspot": [
           22,
           20
+        ],
+        "size": [
+          39,
+          46
         ]
       },
       "geometry_reference": {
         "size": [
-          38,
-          34
+          43,
+          40
         ],
         "hotspot": [
-          21,
-          14
+          20,
+          19
         ]
       },
       "native_size": [
-        38,
-        34
+        43,
+        40
       ],
       "previous_size": [
         48,
@@ -3646,40 +3657,42 @@
         16
       ],
       "hotspot": [
-        21,
-        14
+        20,
+        19
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
-      "native_support": 16.263456
+      "native_support": 16.263455967290597,
+      "owner_fix": "Deterministic Scale2x slope from walk-06; +45 degrees CCW, native support, integer contact alignment.",
+      "derived_from": "walk-06",
+      "rotation_degrees": 45
     },
     "walk-up45-07": {
       "reference": {
         "id": "walk-up45-07",
-        "game": "S2",
         "mapping": 22,
         "label": "Map_Sonic_03E8",
-        "size": [
-          44,
-          44
-        ],
         "hotspot": [
           21,
           19
+        ],
+        "size": [
+          44,
+          44
         ]
       },
       "geometry_reference": {
         "size": [
-          43,
-          41
+          35,
+          38
         ],
         "hotspot": [
-          20,
-          18
+          16,
+          19
         ]
       },
       "native_size": [
-        43,
-        41
+        35,
+        38
       ],
       "previous_size": [
         44,
@@ -3690,40 +3703,42 @@
         16
       ],
       "hotspot": [
-        20,
-        18
+        16,
+        19
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
-      "native_support": 17.67767
+      "native_support": 17.67766952966369,
+      "owner_fix": "Deterministic Scale2x slope from walk-07; +45 degrees CCW, native support, integer contact alignment.",
+      "derived_from": "walk-07",
+      "rotation_degrees": 45
     },
     "walk-steep-00": {
       "reference": {
         "id": "walk-steep-00",
-        "game": "S2",
         "mapping": 31,
         "label": "Map_Sonic_052A",
-        "size": [
-          39,
-          26
-        ],
         "hotspot": [
           19,
           13
+        ],
+        "size": [
+          39,
+          26
         ]
       },
       "geometry_reference": {
         "size": [
-          39,
-          26
+          38,
+          24
         ],
         "hotspot": [
-          19,
+          18,
           13
         ]
       },
       "native_size": [
-        39,
-        26
+        38,
+        24
       ],
       "previous_size": [
         40,
@@ -3734,128 +3749,134 @@
         16
       ],
       "hotspot": [
-        19,
+        18,
         13
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
-      "native_support": 19.0
+      "native_support": 19.0,
+      "owner_fix": "Deterministic Scale2x slope from walk-00; +90 degrees CCW, native support, integer contact alignment.",
+      "derived_from": "walk-00",
+      "rotation_degrees": 90
     },
     "walk-steep-01": {
       "reference": {
         "id": "walk-steep-01",
-        "game": "S2",
         "mapping": 32,
         "label": "Map_Sonic_0544",
-        "size": [
-          40,
-          29
-        ],
         "hotspot": [
           20,
           14
-        ]
-      },
-      "geometry_reference": {
+        ],
         "size": [
           40,
           29
-        ],
-        "hotspot": [
-          20,
-          14
-        ]
-      },
-      "native_size": [
-        40,
-        29
-      ],
-      "previous_size": [
-        40,
-        30
-      ],
-      "previous_hotspot": [
-        21,
-        14
-      ],
-      "hotspot": [
-        20,
-        14
-      ],
-      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
-      "native_support": 19.0
-    },
-    "walk-steep-02": {
-      "reference": {
-        "id": "walk-steep-02",
-        "game": "S2",
-        "mapping": 33,
-        "label": "Map_Sonic_0556",
-        "size": [
-          40,
-          39
-        ],
-        "hotspot": [
-          21,
-          20
-        ]
-      },
-      "geometry_reference": {
-        "size": [
-          40,
-          30
-        ],
-        "hotspot": [
-          21,
-          16
-        ]
-      },
-      "native_size": [
-        40,
-        30
-      ],
-      "previous_size": [
-        40,
-        30
-      ],
-      "previous_hotspot": [
-        21,
-        14
-      ],
-      "hotspot": [
-        21,
-        16
-      ],
-      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
-      "native_support": 18.0
-    },
-    "walk-steep-03": {
-      "reference": {
-        "id": "walk-steep-03",
-        "game": "S2",
-        "mapping": 34,
-        "label": "Map_Sonic_0570",
-        "size": [
-          39,
-          39
-        ],
-        "hotspot": [
-          20,
-          20
         ]
       },
       "geometry_reference": {
         "size": [
           39,
-          39
+          27
         ],
         "hotspot": [
-          20,
-          20
+          19,
+          14
         ]
       },
       "native_size": [
         39,
-        39
+        27
+      ],
+      "previous_size": [
+        40,
+        30
+      ],
+      "previous_hotspot": [
+        21,
+        14
+      ],
+      "hotspot": [
+        19,
+        14
+      ],
+      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
+      "native_support": 19.0,
+      "owner_fix": "Deterministic Scale2x slope from walk-01; +90 degrees CCW, native support, integer contact alignment.",
+      "derived_from": "walk-01",
+      "rotation_degrees": 90
+    },
+    "walk-steep-02": {
+      "reference": {
+        "id": "walk-steep-02",
+        "mapping": 33,
+        "label": "Map_Sonic_0556",
+        "hotspot": [
+          21,
+          20
+        ],
+        "size": [
+          40,
+          39
+        ]
+      },
+      "geometry_reference": {
+        "size": [
+          40,
+          38
+        ],
+        "hotspot": [
+          21,
+          21
+        ]
+      },
+      "native_size": [
+        40,
+        38
+      ],
+      "previous_size": [
+        40,
+        30
+      ],
+      "previous_hotspot": [
+        21,
+        14
+      ],
+      "hotspot": [
+        21,
+        21
+      ],
+      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
+      "native_support": 18.0,
+      "owner_fix": "Deterministic Scale2x slope from walk-02; +90 degrees CCW, native support, integer contact alignment.",
+      "derived_from": "walk-02",
+      "rotation_degrees": 90
+    },
+    "walk-steep-03": {
+      "reference": {
+        "id": "walk-steep-03",
+        "mapping": 34,
+        "label": "Map_Sonic_0570",
+        "hotspot": [
+          20,
+          20
+        ],
+        "size": [
+          39,
+          39
+        ]
+      },
+      "geometry_reference": {
+        "size": [
+          39,
+          31
+        ],
+        "hotspot": [
+          20,
+          13
+        ]
+      },
+      "native_size": [
+        39,
+        31
       ],
       "previous_size": [
         40,
@@ -3867,38 +3888,40 @@
       ],
       "hotspot": [
         20,
-        20
+        13
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
-      "native_support": 18.0
+      "native_support": 18.0,
+      "owner_fix": "Deterministic Scale2x slope from walk-03; +90 degrees CCW, native support, integer contact alignment.",
+      "derived_from": "walk-03",
+      "rotation_degrees": 90
     },
     "walk-steep-04": {
       "reference": {
         "id": "walk-steep-04",
-        "game": "S2",
         "mapping": 35,
         "label": "Map_Sonic_058A",
-        "size": [
-          39,
-          26
-        ],
         "hotspot": [
           19,
           13
+        ],
+        "size": [
+          39,
+          26
         ]
       },
       "geometry_reference": {
         "size": [
-          39,
+          38,
           26
         ],
         "hotspot": [
-          19,
+          18,
           13
         ]
       },
       "native_size": [
-        39,
+        38,
         26
       ],
       "previous_size": [
@@ -3910,39 +3933,41 @@
         16
       ],
       "hotspot": [
-        19,
+        18,
         13
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
-      "native_support": 19.0
+      "native_support": 19.0,
+      "owner_fix": "Deterministic Scale2x slope from walk-04; +90 degrees CCW, native support, integer contact alignment.",
+      "derived_from": "walk-04",
+      "rotation_degrees": 90
     },
     "walk-steep-05": {
       "reference": {
         "id": "walk-steep-05",
-        "game": "S2",
         "mapping": 36,
         "label": "Map_Sonic_05A4",
-        "size": [
-          40,
-          28
-        ],
         "hotspot": [
           20,
           14
+        ],
+        "size": [
+          40,
+          28
         ]
       },
       "geometry_reference": {
         "size": [
-          40,
+          39,
           28
         ],
         "hotspot": [
-          20,
+          19,
           14
         ]
       },
       "native_size": [
-        40,
+        39,
         28
       ],
       "previous_size": [
@@ -3954,40 +3979,42 @@
         14
       ],
       "hotspot": [
-        20,
+        19,
         14
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
-      "native_support": 19.0
+      "native_support": 19.0,
+      "owner_fix": "Deterministic Scale2x slope from walk-05; +90 degrees CCW, native support, integer contact alignment.",
+      "derived_from": "walk-05",
+      "rotation_degrees": 90
     },
     "walk-steep-06": {
       "reference": {
         "id": "walk-steep-06",
-        "game": "S2",
         "mapping": 29,
         "label": "Map_Sonic_04F6",
-        "size": [
-          38,
-          40
-        ],
         "hotspot": [
           21,
           20
+        ],
+        "size": [
+          38,
+          40
         ]
       },
       "geometry_reference": {
         "size": [
-          38,
-          30
+          40,
+          39
         ],
         "hotspot": [
-          21,
-          15
+          23,
+          20
         ]
       },
       "native_size": [
-        38,
-        30
+        40,
+        39
       ],
       "previous_size": [
         40,
@@ -3998,40 +4025,42 @@
         14
       ],
       "hotspot": [
-        21,
-        15
+        23,
+        20
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
-      "native_support": 16.0
+      "native_support": 16.0,
+      "owner_fix": "Deterministic Scale2x slope from walk-06; +90 degrees CCW, native support, integer contact alignment.",
+      "derived_from": "walk-06",
+      "rotation_degrees": 90
     },
     "walk-steep-07": {
       "reference": {
         "id": "walk-steep-07",
-        "game": "S2",
         "mapping": 30,
         "label": "Map_Sonic_0510",
-        "size": [
-          39,
-          39
-        ],
         "hotspot": [
           20,
           20
+        ],
+        "size": [
+          39,
+          39
         ]
       },
       "geometry_reference": {
         "size": [
           39,
-          39
+          30
         ],
         "hotspot": [
           20,
-          20
+          13
         ]
       },
       "native_size": [
         39,
-        39
+        30
       ],
       "previous_size": [
         40,
@@ -4043,347 +4072,179 @@
       ],
       "hotspot": [
         20,
-        20
+        13
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
-      "native_support": 18.0
+      "native_support": 18.0,
+      "owner_fix": "Deterministic Scale2x slope from walk-07; +90 degrees CCW, native support, integer contact alignment.",
+      "derived_from": "walk-07",
+      "rotation_degrees": 90
     },
     "walk-inverted-00": {
       "reference": {
         "id": "walk-inverted-00",
-        "game": "S2",
         "mapping": 39,
         "label": "Map_Sonic_0602",
+        "hotspot": [
+          18,
+          18
+        ],
         "size": [
           39,
           38
-        ],
-        "hotspot": [
-          18,
-          18
-        ]
-      },
-      "geometry_reference": {
-        "size": [
-          37,
-          37
-        ],
-        "hotspot": [
-          18,
-          17
-        ]
-      },
-      "native_size": [
-        37,
-        37
-      ],
-      "previous_size": [
-        43,
-        46
-      ],
-      "previous_hotspot": [
-        16,
-        24
-      ],
-      "hotspot": [
-        18,
-        17
-      ],
-      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
-      "native_support": 19.79899
-    },
-    "walk-inverted-01": {
-      "reference": {
-        "id": "walk-inverted-01",
-        "game": "S2",
-        "mapping": 40,
-        "label": "Map_Sonic_0624",
-        "size": [
-          40,
-          38
-        ],
-        "hotspot": [
-          20,
-          19
-        ]
-      },
-      "geometry_reference": {
-        "size": [
-          35,
-          38
-        ],
-        "hotspot": [
-          18,
-          19
-        ]
-      },
-      "native_size": [
-        35,
-        38
-      ],
-      "previous_size": [
-        36,
-        43
-      ],
-      "previous_hotspot": [
-        16,
-        21
-      ],
-      "hotspot": [
-        18,
-        19
-      ],
-      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
-      "native_support": 19.79899
-    },
-    "walk-inverted-02": {
-      "reference": {
-        "id": "walk-inverted-02",
-        "game": "S2",
-        "mapping": 41,
-        "label": "Map_Sonic_0646",
-        "size": [
-          48,
-          37
-        ],
-        "hotspot": [
-          21,
-          17
-        ]
-      },
-      "geometry_reference": {
-        "size": [
-          35,
-          37
-        ],
-        "hotspot": [
-          12,
-          17
-        ]
-      },
-      "native_size": [
-        35,
-        37
-      ],
-      "previous_size": [
-        40,
-        39
-      ],
-      "previous_hotspot": [
-        16,
-        17
-      ],
-      "hotspot": [
-        12,
-        17
-      ],
-      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
-      "native_support": 18.384776
-    },
-    "walk-inverted-03": {
-      "reference": {
-        "id": "walk-inverted-03",
-        "game": "S2",
-        "mapping": 42,
-        "label": "Map_Sonic_0668",
-        "size": [
-          45,
-          41
-        ],
-        "hotspot": [
-          20,
-          22
-        ]
-      },
-      "geometry_reference": {
-        "size": [
-          32,
-          35
-        ],
-        "hotspot": [
-          16,
-          18
-        ]
-      },
-      "native_size": [
-        32,
-        35
-      ],
-      "previous_size": [
-        41,
-        43
-      ],
-      "previous_hotspot": [
-        16,
-        21
-      ],
-      "hotspot": [
-        16,
-        18
-      ],
-      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
-      "native_support": 18.384776
-    },
-    "walk-inverted-04": {
-      "reference": {
-        "id": "walk-inverted-04",
-        "game": "S2",
-        "mapping": 43,
-        "label": "Map_Sonic_0692",
-        "size": [
-          39,
-          38
-        ],
-        "hotspot": [
-          18,
-          18
-        ]
-      },
-      "geometry_reference": {
-        "size": [
-          36,
-          38
-        ],
-        "hotspot": [
-          18,
-          18
-        ]
-      },
-      "native_size": [
-        36,
-        38
-      ],
-      "previous_size": [
-        41,
-        46
-      ],
-      "previous_hotspot": [
-        16,
-        24
-      ],
-      "hotspot": [
-        18,
-        18
-      ],
-      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
-      "native_support": 19.79899
-    },
-    "walk-inverted-05": {
-      "reference": {
-        "id": "walk-inverted-05",
-        "game": "S2",
-        "mapping": 44,
-        "label": "Map_Sonic_06B4",
-        "size": [
-          39,
-          40
-        ],
-        "hotspot": [
-          19,
-          19
-        ]
-      },
-      "geometry_reference": {
-        "size": [
-          32,
-          38
-        ],
-        "hotspot": [
-          16,
-          18
-        ]
-      },
-      "native_size": [
-        32,
-        38
-      ],
-      "previous_size": [
-        36,
-        43
-      ],
-      "previous_hotspot": [
-        16,
-        21
-      ],
-      "hotspot": [
-        16,
-        18
-      ],
-      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
-      "native_support": 19.79899
-    },
-    "walk-inverted-06": {
-      "reference": {
-        "id": "walk-inverted-06",
-        "game": "S2",
-        "mapping": 37,
-        "label": "Map_Sonic_05B6",
-        "size": [
-          46,
-          39
-        ],
-        "hotspot": [
-          20,
-          17
-        ]
-      },
-      "geometry_reference": {
-        "size": [
-          34,
-          38
-        ],
-        "hotspot": [
-          12,
-          17
-        ]
-      },
-      "native_size": [
-        34,
-        38
-      ],
-      "previous_size": [
-        39,
-        38
-      ],
-      "previous_hotspot": [
-        16,
-        16
-      ],
-      "hotspot": [
-        12,
-        17
-      ],
-      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
-      "native_support": 16.970563
-    },
-    "walk-inverted-07": {
-      "reference": {
-        "id": "walk-inverted-07",
-        "game": "S2",
-        "mapping": 38,
-        "label": "Map_Sonic_05D8",
-        "size": [
-          44,
-          44
-        ],
-        "hotspot": [
-          19,
-          23
         ]
       },
       "geometry_reference": {
         "size": [
           33,
-          34
+          33
         ],
         "hotspot": [
           16,
-          16
+          18
         ]
       },
       "native_size": [
         33,
-        34
+        33
+      ],
+      "previous_size": [
+        43,
+        46
+      ],
+      "previous_hotspot": [
+        16,
+        24
+      ],
+      "hotspot": [
+        16,
+        18
+      ],
+      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
+      "native_support": 19.79898987322333,
+      "owner_fix": "Deterministic Scale2x slope from walk-00; +135 degrees CCW, native support, integer contact alignment.",
+      "derived_from": "walk-00",
+      "rotation_degrees": 135
+    },
+    "walk-inverted-01": {
+      "reference": {
+        "id": "walk-inverted-01",
+        "mapping": 40,
+        "label": "Map_Sonic_0624",
+        "hotspot": [
+          20,
+          19
+        ],
+        "size": [
+          40,
+          38
+        ]
+      },
+      "geometry_reference": {
+        "size": [
+          33,
+          39
+        ],
+        "hotspot": [
+          16,
+          22
+        ]
+      },
+      "native_size": [
+        33,
+        39
+      ],
+      "previous_size": [
+        36,
+        43
+      ],
+      "previous_hotspot": [
+        16,
+        21
+      ],
+      "hotspot": [
+        16,
+        22
+      ],
+      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
+      "native_support": 19.79898987322333,
+      "owner_fix": "Deterministic Scale2x slope from walk-01; +135 degrees CCW, native support, integer contact alignment.",
+      "derived_from": "walk-01",
+      "rotation_degrees": 135
+    },
+    "walk-inverted-02": {
+      "reference": {
+        "id": "walk-inverted-02",
+        "mapping": 41,
+        "label": "Map_Sonic_0646",
+        "hotspot": [
+          21,
+          17
+        ],
+        "size": [
+          48,
+          37
+        ]
+      },
+      "geometry_reference": {
+        "size": [
+          41,
+          42
+        ],
+        "hotspot": [
+          20,
+          25
+        ]
+      },
+      "native_size": [
+        41,
+        42
+      ],
+      "previous_size": [
+        40,
+        39
+      ],
+      "previous_hotspot": [
+        16,
+        17
+      ],
+      "hotspot": [
+        20,
+        25
+      ],
+      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
+      "native_support": 18.38477631085024,
+      "owner_fix": "Deterministic Scale2x slope from walk-02; +135 degrees CCW, native support, integer contact alignment.",
+      "derived_from": "walk-02",
+      "rotation_degrees": 135
+    },
+    "walk-inverted-03": {
+      "reference": {
+        "id": "walk-inverted-03",
+        "mapping": 42,
+        "label": "Map_Sonic_0668",
+        "hotspot": [
+          20,
+          22
+        ],
+        "size": [
+          45,
+          41
+        ]
+      },
+      "geometry_reference": {
+        "size": [
+          37,
+          36
+        ],
+        "hotspot": [
+          18,
+          19
+        ]
+      },
+      "native_size": [
+        37,
+        36
       ],
       "previous_size": [
         41,
@@ -4394,39 +4255,225 @@
         21
       ],
       "hotspot": [
+        18,
+        19
+      ],
+      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
+      "native_support": 18.384776310850235,
+      "owner_fix": "Deterministic Scale2x slope from walk-03; +135 degrees CCW, native support, integer contact alignment.",
+      "derived_from": "walk-03",
+      "rotation_degrees": 135
+    },
+    "walk-inverted-04": {
+      "reference": {
+        "id": "walk-inverted-04",
+        "mapping": 43,
+        "label": "Map_Sonic_0692",
+        "hotspot": [
+          18,
+          18
+        ],
+        "size": [
+          39,
+          38
+        ]
+      },
+      "geometry_reference": {
+        "size": [
+          34,
+          33
+        ],
+        "hotspot": [
+          17,
+          18
+        ]
+      },
+      "native_size": [
+        34,
+        33
+      ],
+      "previous_size": [
+        41,
+        46
+      ],
+      "previous_hotspot": [
+        16,
+        24
+      ],
+      "hotspot": [
+        17,
+        18
+      ],
+      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
+      "native_support": 19.79898987322333,
+      "owner_fix": "Deterministic Scale2x slope from walk-04; +135 degrees CCW, native support, integer contact alignment.",
+      "derived_from": "walk-04",
+      "rotation_degrees": 135
+    },
+    "walk-inverted-05": {
+      "reference": {
+        "id": "walk-inverted-05",
+        "mapping": 44,
+        "label": "Map_Sonic_06B4",
+        "hotspot": [
+          19,
+          19
+        ],
+        "size": [
+          39,
+          40
+        ]
+      },
+      "geometry_reference": {
+        "size": [
+          33,
+          38
+        ],
+        "hotspot": [
+          16,
+          22
+        ]
+      },
+      "native_size": [
+        33,
+        38
+      ],
+      "previous_size": [
+        36,
+        43
+      ],
+      "previous_hotspot": [
+        16,
+        21
+      ],
+      "hotspot": [
+        16,
+        22
+      ],
+      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
+      "native_support": 19.79898987322333,
+      "owner_fix": "Deterministic Scale2x slope from walk-05; +135 degrees CCW, native support, integer contact alignment.",
+      "derived_from": "walk-05",
+      "rotation_degrees": 135
+    },
+    "walk-inverted-06": {
+      "reference": {
+        "id": "walk-inverted-06",
+        "mapping": 37,
+        "label": "Map_Sonic_05B6",
+        "hotspot": [
+          20,
+          17
+        ],
+        "size": [
+          46,
+          39
+        ]
+      },
+      "geometry_reference": {
+        "size": [
+          40,
+          43
+        ],
+        "hotspot": [
+          21,
+          25
+        ]
+      },
+      "native_size": [
+        40,
+        43
+      ],
+      "previous_size": [
+        39,
+        38
+      ],
+      "previous_hotspot": [
         16,
         16
       ],
+      "hotspot": [
+        21,
+        25
+      ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
-      "native_support": 18.384776
+      "native_support": 16.970562748477143,
+      "owner_fix": "Deterministic Scale2x slope from walk-06; +135 degrees CCW, native support, integer contact alignment.",
+      "derived_from": "walk-06",
+      "rotation_degrees": 135
+    },
+    "walk-inverted-07": {
+      "reference": {
+        "id": "walk-inverted-07",
+        "mapping": 38,
+        "label": "Map_Sonic_05D8",
+        "hotspot": [
+          19,
+          23
+        ],
+        "size": [
+          44,
+          44
+        ]
+      },
+      "geometry_reference": {
+        "size": [
+          38,
+          35
+        ],
+        "hotspot": [
+          19,
+          19
+        ]
+      },
+      "native_size": [
+        38,
+        35
+      ],
+      "previous_size": [
+        41,
+        43
+      ],
+      "previous_hotspot": [
+        16,
+        21
+      ],
+      "hotspot": [
+        19,
+        19
+      ],
+      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
+      "native_support": 18.384776310850235,
+      "owner_fix": "Deterministic Scale2x slope from walk-07; +135 degrees CCW, native support, integer contact alignment.",
+      "derived_from": "walk-07",
+      "rotation_degrees": 135
     },
     "run-up45-00": {
       "reference": {
         "id": "run-up45-00",
-        "game": "S2",
         "mapping": 49,
         "label": "Map_Sonic_071E",
-        "size": [
-          37,
-          39
-        ],
         "hotspot": [
           17,
           19
+        ],
+        "size": [
+          37,
+          39
         ]
       },
       "geometry_reference": {
         "size": [
-          37,
+          33,
           38
         ],
         "hotspot": [
-          17,
-          19
+          13,
+          18
         ]
       },
       "native_size": [
-        37,
+        33,
         38
       ],
       "previous_size": [
@@ -4438,40 +4485,42 @@
         18
       ],
       "hotspot": [
-        17,
-        19
+        13,
+        18
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
-      "native_support": 19.091883
+      "native_support": 19.091883092036785,
+      "owner_fix": "Deterministic Scale2x slope from run-00; +45 degrees CCW, native support, integer contact alignment.",
+      "derived_from": "run-00",
+      "rotation_degrees": 45
     },
     "run-up45-01": {
       "reference": {
         "id": "run-up45-01",
-        "game": "S2",
         "mapping": 50,
         "label": "Map_Sonic_0740",
-        "size": [
-          35,
-          40
-        ],
         "hotspot": [
           15,
           20
+        ],
+        "size": [
+          35,
+          40
         ]
       },
       "geometry_reference": {
         "size": [
-          35,
-          39
+          32,
+          37
         ],
         "hotspot": [
-          15,
-          20
+          13,
+          18
         ]
       },
       "native_size": [
-        35,
-        39
+        32,
+        37
       ],
       "previous_size": [
         41,
@@ -4482,39 +4531,41 @@
         18
       ],
       "hotspot": [
-        15,
-        20
+        13,
+        18
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
-      "native_support": 19.091883
+      "native_support": 19.091883092036785,
+      "owner_fix": "Deterministic Scale2x slope from run-01; +45 degrees CCW, native support, integer contact alignment.",
+      "derived_from": "run-01",
+      "rotation_degrees": 45
     },
     "run-up45-02": {
       "reference": {
         "id": "run-up45-02",
-        "game": "S2",
         "mapping": 51,
         "label": "Map_Sonic_075A",
-        "size": [
-          36,
-          39
-        ],
         "hotspot": [
           17,
           19
+        ],
+        "size": [
+          36,
+          39
         ]
       },
       "geometry_reference": {
         "size": [
-          36,
+          35,
           38
         ],
         "hotspot": [
-          17,
-          19
+          13,
+          18
         ]
       },
       "native_size": [
-        36,
+        35,
         38
       ],
       "previous_size": [
@@ -4526,40 +4577,42 @@
         18
       ],
       "hotspot": [
-        17,
-        19
+        13,
+        18
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
-      "native_support": 19.091883
+      "native_support": 19.091883092036785,
+      "owner_fix": "Deterministic Scale2x slope from run-02; +45 degrees CCW, native support, integer contact alignment.",
+      "derived_from": "run-02",
+      "rotation_degrees": 45
     },
     "run-up45-03": {
       "reference": {
         "id": "run-up45-03",
-        "game": "S2",
         "mapping": 52,
         "label": "Map_Sonic_077C",
-        "size": [
-          35,
-          40
-        ],
         "hotspot": [
           15,
           20
+        ],
+        "size": [
+          35,
+          40
         ]
       },
       "geometry_reference": {
         "size": [
-          35,
-          40
+          32,
+          37
         ],
         "hotspot": [
-          15,
-          20
+          13,
+          18
         ]
       },
       "native_size": [
-        35,
-        40
+        32,
+        37
       ],
       "previous_size": [
         41,
@@ -4570,31 +4623,33 @@
         18
       ],
       "hotspot": [
-        15,
-        20
+        13,
+        18
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
-      "native_support": 19.091883
+      "native_support": 19.091883092036785,
+      "owner_fix": "Deterministic Scale2x slope from run-03; +45 degrees CCW, native support, integer contact alignment.",
+      "derived_from": "run-03",
+      "rotation_degrees": 45
     },
     "run-steep-00": {
       "reference": {
         "id": "run-steep-00",
-        "game": "S2",
         "mapping": 53,
         "label": "Map_Sonic_0796",
-        "size": [
-          35,
-          31
-        ],
         "hotspot": [
           15,
           16
+        ],
+        "size": [
+          35,
+          31
         ]
       },
       "geometry_reference": {
         "size": [
           35,
-          31
+          32
         ],
         "hotspot": [
           15,
@@ -4603,7 +4658,7 @@
       },
       "native_size": [
         35,
-        31
+        32
       ],
       "previous_size": [
         39,
@@ -4618,71 +4673,29 @@
         16
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
-      "native_support": 19.0
+      "native_support": 19.0,
+      "owner_fix": "Deterministic Scale2x slope from run-00; +90 degrees CCW, native support, integer contact alignment.",
+      "derived_from": "run-00",
+      "rotation_degrees": 90
     },
     "run-steep-01": {
       "reference": {
         "id": "run-steep-01",
-        "game": "S2",
         "mapping": 54,
         "label": "Map_Sonic_07A8",
-        "size": [
-          36,
-          31
-        ],
         "hotspot": [
           16,
           16
-        ]
-      },
-      "geometry_reference": {
+        ],
         "size": [
           36,
           31
-        ],
-        "hotspot": [
-          16,
-          16
-        ]
-      },
-      "native_size": [
-        36,
-        31
-      ],
-      "previous_size": [
-        39,
-        39
-      ],
-      "previous_hotspot": [
-        20,
-        17
-      ],
-      "hotspot": [
-        16,
-        16
-      ],
-      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
-      "native_support": 19.0
-    },
-    "run-steep-02": {
-      "reference": {
-        "id": "run-steep-02",
-        "game": "S2",
-        "mapping": 55,
-        "label": "Map_Sonic_07BA",
-        "size": [
-          35,
-          30
-        ],
-        "hotspot": [
-          15,
-          16
         ]
       },
       "geometry_reference": {
         "size": [
           35,
-          30
+          32
         ],
         "hotspot": [
           15,
@@ -4691,7 +4704,7 @@
       },
       "native_size": [
         35,
-        30
+        32
       ],
       "previous_size": [
         39,
@@ -4706,36 +4719,38 @@
         16
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
-      "native_support": 19.0
+      "native_support": 19.0,
+      "owner_fix": "Deterministic Scale2x slope from run-01; +90 degrees CCW, native support, integer contact alignment.",
+      "derived_from": "run-01",
+      "rotation_degrees": 90
     },
-    "run-steep-03": {
+    "run-steep-02": {
       "reference": {
-        "id": "run-steep-03",
-        "game": "S2",
-        "mapping": 56,
-        "label": "Map_Sonic_07CC",
-        "size": [
-          36,
-          31
-        ],
+        "id": "run-steep-02",
+        "mapping": 55,
+        "label": "Map_Sonic_07BA",
         "hotspot": [
-          16,
+          15,
           16
+        ],
+        "size": [
+          35,
+          30
         ]
       },
       "geometry_reference": {
         "size": [
-          36,
-          31
+          35,
+          32
         ],
         "hotspot": [
-          16,
+          15,
           16
         ]
       },
       "native_size": [
-        36,
-        31
+        35,
+        32
       ],
       "previous_size": [
         39,
@@ -4746,40 +4761,88 @@
         17
       ],
       "hotspot": [
-        16,
+        15,
         16
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
-      "native_support": 19.0
+      "native_support": 19.0,
+      "owner_fix": "Deterministic Scale2x slope from run-02; +90 degrees CCW, native support, integer contact alignment.",
+      "derived_from": "run-02",
+      "rotation_degrees": 90
+    },
+    "run-steep-03": {
+      "reference": {
+        "id": "run-steep-03",
+        "mapping": 56,
+        "label": "Map_Sonic_07CC",
+        "hotspot": [
+          16,
+          16
+        ],
+        "size": [
+          36,
+          31
+        ]
+      },
+      "geometry_reference": {
+        "size": [
+          35,
+          32
+        ],
+        "hotspot": [
+          15,
+          16
+        ]
+      },
+      "native_size": [
+        35,
+        32
+      ],
+      "previous_size": [
+        39,
+        39
+      ],
+      "previous_hotspot": [
+        20,
+        17
+      ],
+      "hotspot": [
+        15,
+        16
+      ],
+      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
+      "native_support": 19.0,
+      "owner_fix": "Deterministic Scale2x slope from run-03; +90 degrees CCW, native support, integer contact alignment.",
+      "derived_from": "run-03",
+      "rotation_degrees": 90
     },
     "run-inverted-00": {
       "reference": {
         "id": "run-inverted-00",
-        "game": "S2",
         "mapping": 57,
         "label": "Map_Sonic_07DE",
-        "size": [
-          39,
-          37
-        ],
         "hotspot": [
           19,
           20
+        ],
+        "size": [
+          39,
+          37
         ]
       },
       "geometry_reference": {
         "size": [
           38,
-          37
+          33
         ],
         "hotspot": [
-          19,
+          18,
           20
         ]
       },
       "native_size": [
         38,
-        37
+        33
       ],
       "previous_size": [
         42,
@@ -4790,40 +4853,42 @@
         19
       ],
       "hotspot": [
-        19,
+        18,
         20
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
-      "native_support": 19.79899
+      "native_support": 19.79898987322333,
+      "owner_fix": "Deterministic Scale2x slope from run-00; +135 degrees CCW, native support, integer contact alignment.",
+      "derived_from": "run-00",
+      "rotation_degrees": 135
     },
     "run-inverted-01": {
       "reference": {
         "id": "run-inverted-01",
-        "game": "S2",
         "mapping": 58,
         "label": "Map_Sonic_07F8",
-        "size": [
-          40,
-          35
-        ],
         "hotspot": [
           20,
           20
+        ],
+        "size": [
+          40,
+          35
         ]
       },
       "geometry_reference": {
         "size": [
-          38,
-          35
+          37,
+          32
         ],
         "hotspot": [
-          20,
-          20
+          18,
+          19
         ]
       },
       "native_size": [
-        38,
-        35
+        37,
+        32
       ],
       "previous_size": [
         42,
@@ -4834,40 +4899,42 @@
         19
       ],
       "hotspot": [
-        20,
-        20
+        18,
+        19
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
-      "native_support": 19.79899
+      "native_support": 19.79898987322333,
+      "owner_fix": "Deterministic Scale2x slope from run-01; +135 degrees CCW, native support, integer contact alignment.",
+      "derived_from": "run-01",
+      "rotation_degrees": 135
     },
     "run-inverted-02": {
       "reference": {
         "id": "run-inverted-02",
-        "game": "S2",
         "mapping": 59,
         "label": "Map_Sonic_080A",
-        "size": [
-          39,
-          36
-        ],
         "hotspot": [
           19,
           19
+        ],
+        "size": [
+          39,
+          36
         ]
       },
       "geometry_reference": {
         "size": [
           38,
-          36
+          35
         ],
         "hotspot": [
-          19,
-          19
+          18,
+          22
         ]
       },
       "native_size": [
         38,
-        36
+        35
       ],
       "previous_size": [
         42,
@@ -4878,40 +4945,42 @@
         19
       ],
       "hotspot": [
-        19,
-        19
+        18,
+        22
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
-      "native_support": 19.79899
+      "native_support": 19.79898987322333,
+      "owner_fix": "Deterministic Scale2x slope from run-02; +135 degrees CCW, native support, integer contact alignment.",
+      "derived_from": "run-02",
+      "rotation_degrees": 135
     },
     "run-inverted-03": {
       "reference": {
         "id": "run-inverted-03",
-        "game": "S2",
         "mapping": 60,
         "label": "Map_Sonic_0824",
-        "size": [
-          40,
-          35
-        ],
         "hotspot": [
           20,
           20
+        ],
+        "size": [
+          40,
+          35
         ]
       },
       "geometry_reference": {
         "size": [
-          38,
-          35
+          37,
+          32
         ],
         "hotspot": [
-          20,
-          20
+          18,
+          19
         ]
       },
       "native_size": [
-        38,
-        35
+        37,
+        32
       ],
       "previous_size": [
         43,
@@ -4922,11 +4991,14 @@
         19
       ],
       "hotspot": [
-        20,
-        20
+        18,
+        19
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
-      "native_support": 19.79899
+      "native_support": 19.79898987322333,
+      "owner_fix": "Deterministic Scale2x slope from run-03; +135 degrees CCW, native support, integer contact alignment.",
+      "derived_from": "run-03",
+      "rotation_degrees": 135
     },
     "roll-blur": {
       "geometry_reference": {
