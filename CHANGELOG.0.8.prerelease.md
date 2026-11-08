@@ -36,8 +36,9 @@ under the matching area heading; see the
 ## Modding and tools
 
 - Added the optional character presentation data contract and pixel-level name
-  composition foundation. Stock HUD/results/monitor/signpost consumption and
-  presentation asset packaging remain pending; this does not yet change on-screen art.
+  composition foundation. MICA now packages indexed presentation art and S1 signs
+  consume optional face/spin/backing poses while preserving native poles and timing.
+  HUD/results/monitor wiring remains in parallel lanes.
 
 - Added the maintained MICA character skeleton for all three stock games, with
   headless launch/save/rewind/fallback acceptance and temporary original art.

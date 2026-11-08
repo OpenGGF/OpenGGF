@@ -411,3 +411,7 @@ Status log (times UTC):
   surfaces still pending in W4b) and the W5 homing facade (`13515a986`). Lead check of
   the merged tree passed: homing (15), name composer, signature pin, Mutator Lab
   package, character registry and MICA integration tests, all ROMs found.
+
+- 2026-11-08: sign lane `feature/ai-mica-signs`: additive semantic sign poses,
+  bounded indexed PNG loader, packaged MICA HUD/monitor/sign/glyph assets and S1
+  sign consumer implemented; S2/S3K wiring and capture verification in progress.

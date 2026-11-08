@@ -107,6 +107,20 @@ class TestMicaCharacterIntegration {
             assertNotNull(water);
             var dry = GameServices.level().getCurrentLevel().getPalette(0);
             var definition = resolved.getPlayableCharacterRegistry().find(CharacterKey.parsePersisted(CODE)).orElseThrow();
+            var presentation = definition.presentationSupplier().load(CODE);
+            assertEquals("MICA", presentation.displayName());
+            for(var host:CharacterPresentation.Host.values()) {
+                var art=presentation.art().get(host);
+                assertEquals(16,art.hudLifeIcon().width());
+                assertEquals(16,art.oneUpFace().width());
+                assertEquals(48,art.sign().face().face().width());
+                assertEquals(32,art.sign().spin1().face().width());
+                assertEquals(32,art.sign().spin3().face().width());
+                assertNotNull(art.sign().face().backing());
+                assertEquals(0,art.sign().face().backing().paletteLine());
+            }
+            assertEquals(java.util.Set.of('M','A'),presentation.supplementaryGlyphs()
+                    .get(new CharacterPresentation.Font(CharacterPresentation.Host.S1,CharacterPresentation.Style.HUD)).keySet());
             var custom = definition.paletteSupplier().load(CODE);
             var current = (com.openggf.sprites.playable.AbstractPlayableSprite) GameServices.sprites().getSprite(CODE);
             var context = current.getSpriteRenderer().getRenderContext();
@@ -148,6 +162,11 @@ class TestMicaCharacterIntegration {
                 "--image",project.resolve("src/main/mod/mica.png").toString(),
                 "--sheet",project.resolve("src/main/mod/mica-sheet.yaml").toString(),
                 "--out",classes.resolve("art/mica.ggfp").toString()},System.out));
+        Path presentation = project.resolve("art/mica/presentation");
+        Files.createDirectories(classes.resolve("art/mica/presentation"));
+        try(var files=Files.list(presentation)) {
+            for(var file:files.toList()) Files.copy(file,classes.resolve("art/mica/presentation").resolve(file.getFileName()));
+        }
         Path jar = temp.resolve("mica-and-talon.jar");
         assertEquals(0,com.openggf.tools.modsdk.GgfModCli.run(new String[]{"package","--input",
                 classes.toString(),"--out",jar.toString(),"--warnings","error"},System.out));

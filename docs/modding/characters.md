@@ -199,6 +199,13 @@ keyed by host and letter style. `Art` has independent HUD life icon (16×16),
 1-up face, signpost face and end-sign face slots. Null names and images mean native
 fallback. `Image` uses palette indices 0–15, with zero transparent; it copies pixel
 arrays on construction and access. Presentation maps are immutable snapshots.
+`Art.sign` optionally supplies semantic face, alternate, spin1, edge and spin3
+poses. Each pose has a character-palette face and optional native-palette backing;
+backing RGB colours are matched to its declared host palette line (0–3). Spin
+images are already oriented. Null poses retain native frames and poles remain
+native. The four-argument `Art` constructor remains supported.
+`PresentationImages` reads bounded indexed PNG assets through `ModAssetRoot`;
+MICA packages its HUD, monitor, sign and supplementary S1 HUD glyph assets this way.
 
 This is currently an API foundation: stock surfaces do not yet consume these
 slots. The internal name composer reports native, supplementary and missing glyph

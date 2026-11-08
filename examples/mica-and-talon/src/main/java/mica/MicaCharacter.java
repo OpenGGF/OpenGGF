@@ -10,11 +10,12 @@ public final class MicaCharacter extends AbstractPlayableSprite {
     }
 
     static CharacterDefinition definition(String owner,
-            PlayableSheetMaterializer.MaterializedArt materialized) {
+            PlayableSheetMaterializer.MaterializedArt materialized, CharacterPresentation presentation) {
         CharacterKey key = CharacterKey.mod(owner, "mica");
         return new CharacterDefinition(key, "MICA", MicaCharacter::new, null,
                 PlayerCharacter.SONIC_AND_TAILS, SecondaryAbility.NONE, false,
-                ignored -> materialized.art(), ignored -> materialized.palette());
+                ignored -> materialized.art(), ignored -> materialized.palette(),
+                java.util.Set.of(), null, ignored -> presentation);
     }
 
     static CharacterPhysicsSpec physicsSpec() {

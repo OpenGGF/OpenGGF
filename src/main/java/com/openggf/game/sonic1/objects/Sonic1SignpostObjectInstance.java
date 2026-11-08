@@ -125,6 +125,7 @@ public class Sonic1SignpostObjectInstance extends AbstractObjectInstance
     private static final int BOSS_ACT_INDEX = 2;
 
     private int routineState = STATE_IDLE;
+    private final com.openggf.game.presentation.CharacterSignRenderer characterSign = new com.openggf.game.presentation.CharacterSignRenderer();
     private int currentFrame = FRAME_EGGMAN;
 
     // Spin state
@@ -458,6 +459,9 @@ public class Sonic1SignpostObjectInstance extends AbstractObjectInstance
         if (renderer == null || !renderer.isReady()) {
             return;
         }
+        if (characterSign.draw(services(), com.openggf.game.CharacterPresentation.Host.S1,
+                renderManager.getSignpostSheet(), currentFrame, FRAME_SONIC, -1,
+                FRAME_SPIN1, FRAME_SPIN2, FRAME_SPIN3, spawn.x(), spawn.y())) return;
         renderer.drawFrameIndex(currentFrame, spawn.x(), spawn.y(), false, false);
     }
 

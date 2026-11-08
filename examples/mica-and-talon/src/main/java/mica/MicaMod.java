@@ -11,7 +11,7 @@ public final class MicaMod implements GgfMod {
                     "art/mica.ggfp", context.modAssets().limits().maxAssetBytes());
             var materialized = PlayableSheetMaterializer.read(bytes);
             context.registerCharacter("mica", MicaCharacter.definition(
-                    context.ownerModId(), materialized));
+                    context.ownerModId(), materialized, MicaPresentation.load(context.modAssets())));
         } catch (java.io.IOException failure) {
             throw new IllegalStateException("Unable to load sample playable art", failure);
         }
