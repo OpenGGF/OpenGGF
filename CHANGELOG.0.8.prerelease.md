@@ -34,6 +34,12 @@ under the matching area heading; see the
 
 ## Modding and tools
 
+- **Recording audio recovery:** viewport recording retains the real audio lease
+  when detach is refused, even after switching to silence. Stopping or restarting
+  retries that lease before acquiring another, avoiding an orphaned audio tap.
+  Closing the controller also ends admission permanently, so a delayed encoder
+  finalizer cannot clear resources acquired by a recording started after close.
+
 - **Seeded Data Select captures:** `GameplayCaptureTool --save-slots <file.json>`
   writes declared save slots through the production save manager into the
   capture's private save root before a title-first capture, and `--extra-teams`
@@ -56,15 +62,23 @@ under the matching area heading; see the
   and CNZ defeat candidates retain their ship family. Generic recreation installs
   construction services centrally; unchanged exact-spawn recipes rebuild once,
   avoiding discarded constructor graphs while preserving custom hooks. Destroyed
-  object paths share unload and retirement phases within their existing schedules. Ordinary
-  family/reference/coverage guidance points to the actual owners. Production badnik and contact
-  witnesses, shared coarse-X arithmetic with explicit native/wider bounds, and
+  object paths share unload and retirement phases within their existing schedules.
+  Ordinary family/reference/coverage guidance points to the actual owners.
+  Production badnik and contact witnesses, shared coarse-X arithmetic with
+  explicit native/wider bounds, and
   a typed rewind HUD frame make contribution paths easier to follow. HCZ owns
   its next screen-shake value without using the renderer as scratch state.
   Failed trace replays print their exact test/report/triage route; triage reads
   compressed fixture auxiliaries, preserves pre-trace evidence and distinguishes
   incomplete or unknown completion from a completed comparison. Retained raw-field
   diagnostics follow that storage and are exercised on successful test paths.
+
+- **Fresh-level admission:** named phases expose title completion, initial
+  boundary publication and player assembly while preserving their existing
+  timing, pause and failure behavior. Creator-controlled native destinations
+  now finish their normal title and player assembly before admitting gameplay,
+  sharing the ordinary host's native title iteration. HOLD and explicit
+  presentation omission remain separate choices.
 
 - **Scripted website hero reels:** `tools/media/hero_reels.py` regenerates
   the Sonic 1, Sonic 2 and Sonic 3&K title-card reels from the current engine

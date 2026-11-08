@@ -511,11 +511,13 @@ public final class GameplayCaptureSession implements AutoCloseable {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         var controller = includeSprites ? com.openggf.game.mode.ControlledFrameRuntime.controller(
                 com.openggf.game.session.SessionManager.getCurrentGameplayMode()) : null;
+        boolean nativeTitle = com.openggf.game.mode.ControlledFrameRuntime.isNativeTitlePresentationActive(
+                com.openggf.game.session.SessionManager.getCurrentGameplayMode());
         var shown = showTitleCard ? loop.getTitleCardProvider() : null;
         var titleCard = shown != null && (loop.getCurrentGameMode() == GameMode.TITLE_CARD
-                || shown.isOverlayActive()) ? shown : null;
+                || nativeTitle || shown.isOverlayActive()) ? shown : null;
         boolean titleCardDrawn = false;
-        if (controller == null || !controller.drawScene()) {
+        if (nativeTitle || controller == null || !controller.drawScene()) {
             Runnable levelDraw = () -> level.drawWithSpritePriority(GameServices.sprites(), includeSprites);
             if (com.openggf.game.internal.TitleCardBeneathLevelHud.appliesTo(titleCard)) {
                 // Engine.drawLevelWithTitleCard: the card sits beneath the level HUD.
@@ -530,7 +532,7 @@ public final class GameplayCaptureSession implements AutoCloseable {
             }
         }
         graphics.flush();
-        if (controller != null) {
+        if (controller != null && !nativeTitle) {
             graphics.resetForFixedFunction();
             controller.drawOverlay();
             graphics.flushScreenSpace();

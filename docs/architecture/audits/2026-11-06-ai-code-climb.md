@@ -2221,3 +2221,49 @@ were not touched or observed. Root must select and run the combined validation
 and baseline comparison after reconciliation, then deliver on the existing PR.
 The recorded C68.75/D60 targets remain unmet; the other four trials were not
 regraded. No new score or completion of the continuing goal is claimed.
+
+### Unified lifecycle integration — 2026-11-08
+
+The scoped increment above was committed locally as
+`8b1ad5b34d93e9771f9ced35e229776b204cef97`. Root received a clean, frozen
+lifecycle handoff at `e7c919250fdef31d26415a1c7713f3f4ad776dc3`, including all
+ten task commits relative to develop `33c3b8e56`. Its controlled-entry source fix
+is `d9754bf59980fe162ec719a83e57cfca008990d7`; the last commit changes only
+audit/changelog prose. The lifecycle implementation and focused jobs are complete.
+Its evidence and review limits remain in the existing
+[implicit-state audit](2026-11-07-implicit-state-machines.md).
+
+Root first merged develop `33c3b8e56` into ai-code-climb as `dbd7c0d69`.
+There were no conflicts. The merged ObjectManager retains both population-owned
+reset operations and upstream's fixed-object reset option/native sprite resolver
+wiring. The subsequent lifecycle merge preserves the full accounted history,
+including the earlier merge's reversal of two obsolete trace-cleanup catch pins.
+Against develop, only the three reviewed capture catch fingerprints differ.
+Its sole conflict is the 0.8 maintenance list: both the contributor-readability
+and fresh-level admission entries are retained. No runtime conflict was resolved
+by selecting one side or reconstructing a partial patch.
+
+The unified source includes the shared native title iteration, generation-scoped
+rewind-registered controlled presentation owner, terminal capture close, capture
+audio lease repair and the physical host-retirement test correction. Lifecycle
+focused evidence is 22 core and 167 consumer passes with no failures/errors/skips;
+these are that owner's observations on its frozen source, not yet a result on
+the combined tree. Its RED evidence and limits are preserved in its task tree.
+
+Root owns combined-source review, validation and delivery to PR 266. The existing
+33c baseline smoke/guards run remains solely observed by the lifecycle owner;
+neither its source nor its job is edited, built or duplicated here. No combined
+runtime result, fresh rubric score, task-branch push or destination merge is
+claimed by this integration record. Draft 269 and its source trees are retained
+until the unified delivery accounts for every change.
+
+Two read-only follow-up sweeps inform later increments. HCZ's current counter name
+and phase boundaries are already truthful; a small wall-helper extraction would
+retain the protocol or introduce another state/schema owner. Its unchanged
+pre-physics/fallback/scroll scheduling needs a separately evidenced canonical
+dispatcher before it can be simplified. No HCZ edit or grade follows. The trace
+sweep identified a concrete later removal: put replay-gate wire representation
+in DivergenceReport, removing test-writer JSON reparse/patch/reserialize and the
+triage tool's duplicate value/parser. Driver completion decisions, strict scope
+values, legacy absence, malformed-present rejection and fresh Surefire evidence
+must remain distinct. Neither proposal is added to this frozen source batch.

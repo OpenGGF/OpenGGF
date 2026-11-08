@@ -4495,6 +4495,11 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private void drawLevel() {
+		if (com.openggf.game.mode.ControlledFrameRuntime.isNativeTitlePresentationActive(
+				com.openggf.game.session.SessionManager.getCurrentGameplayMode())) {
+			drawTitleCardMode();
+			return;
+		}
 		var controller = com.openggf.game.mode.ControlledFrameRuntime.controller(
 				com.openggf.game.session.SessionManager.getCurrentGameplayMode());
 		TitleCardProvider titleCard = gameLoop.getTitleCardProvider();
