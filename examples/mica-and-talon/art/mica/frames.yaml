@@ -140,12 +140,12 @@
       "order": 0,
       "file": "frames/walk-00.png",
       "hotspot": [
-        11,
+        13,
         19
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Native SonAni_Walk phase 0; near coral foot phase 0, far shadow foot phase 4; explicit half-cycle alternation."
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 1; no painted pixel patches."
     },
     {
       "id": "walk-01",
@@ -153,12 +153,12 @@
       "order": 1,
       "file": "frames/walk-01.png",
       "hotspot": [
-        13,
+        15,
         20
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Native SonAni_Walk phase 1; near coral foot phase 1, far shadow foot phase 5; explicit half-cycle alternation."
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 1; no painted pixel patches."
     },
     {
       "id": "walk-02",
@@ -166,12 +166,12 @@
       "order": 2,
       "file": "frames/walk-02.png",
       "hotspot": [
-        17,
+        18,
         21
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Native SonAni_Walk phase 2; near coral foot phase 2, far shadow foot phase 6; explicit half-cycle alternation."
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 3; no painted pixel patches."
     },
     {
       "id": "walk-03",
@@ -179,12 +179,12 @@
       "order": 3,
       "file": "frames/walk-03.png",
       "hotspot": [
-        18,
+        19,
         20
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Native SonAni_Walk phase 3; near coral foot phase 3, far shadow foot phase 7; explicit half-cycle alternation."
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 1; no painted pixel patches."
     },
     {
       "id": "walk-04",
@@ -197,7 +197,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Native SonAni_Walk phase 4; near coral foot phase 4, far shadow foot phase 0; explicit half-cycle alternation."
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 3; no painted pixel patches."
     },
     {
       "id": "walk-05",
@@ -210,7 +210,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Native SonAni_Walk phase 5; near coral foot phase 5, far shadow foot phase 1; explicit half-cycle alternation."
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 2; no painted pixel patches."
     },
     {
       "id": "walk-06",
@@ -218,12 +218,12 @@
       "order": 6,
       "file": "frames/walk-06.png",
       "hotspot": [
-        19,
+        20,
         21
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Native SonAni_Walk phase 6; near coral foot phase 6, far shadow foot phase 2; explicit half-cycle alternation."
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 2; no painted pixel patches."
     },
     {
       "id": "walk-07",
@@ -231,12 +231,12 @@
       "order": 7,
       "file": "frames/walk-07.png",
       "hotspot": [
-        17,
+        19,
         20
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Native SonAni_Walk phase 7; near coral foot phase 7, far shadow foot phase 3; explicit half-cycle alternation."
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 3; no painted pixel patches."
     },
     {
       "id": "run-00",
@@ -738,7 +738,7 @@
       "order": 8,
       "file": "frames/walk-up45-00.png",
       "hotspot": [
-        13,
+        15,
         18
       ],
       "angle_set": "up45",
@@ -751,8 +751,8 @@
       "order": 9,
       "file": "frames/walk-up45-01.png",
       "hotspot": [
-        15,
-        18
+        18,
+        19
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
@@ -764,8 +764,8 @@
       "order": 10,
       "file": "frames/walk-up45-02.png",
       "hotspot": [
-        17,
-        20
+        18,
+        18
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
@@ -790,7 +790,7 @@
       "order": 12,
       "file": "frames/walk-up45-04.png",
       "hotspot": [
-        13,
+        15,
         19
       ],
       "angle_set": "up45",
@@ -803,8 +803,8 @@
       "order": 13,
       "file": "frames/walk-up45-05.png",
       "hotspot": [
-        14,
-        18
+        17,
+        19
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
@@ -816,8 +816,8 @@
       "order": 14,
       "file": "frames/walk-up45-06.png",
       "hotspot": [
-        20,
-        19
+        16,
+        20
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
@@ -829,8 +829,8 @@
       "order": 15,
       "file": "frames/walk-up45-07.png",
       "hotspot": [
-        16,
-        19
+        17,
+        18
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
@@ -842,7 +842,7 @@
       "order": 16,
       "file": "frames/walk-steep-00.png",
       "hotspot": [
-        18,
+        19,
         13
       ],
       "angle_set": "steep",
@@ -855,7 +855,7 @@
       "order": 17,
       "file": "frames/walk-steep-01.png",
       "hotspot": [
-        19,
+        20,
         14
       ],
       "angle_set": "steep",
@@ -882,7 +882,7 @@
       "file": "frames/walk-steep-03.png",
       "hotspot": [
         20,
-        13
+        20
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
@@ -894,7 +894,7 @@
       "order": 20,
       "file": "frames/walk-steep-04.png",
       "hotspot": [
-        18,
+        19,
         13
       ],
       "angle_set": "steep",
@@ -907,7 +907,7 @@
       "order": 21,
       "file": "frames/walk-steep-05.png",
       "hotspot": [
-        19,
+        20,
         14
       ],
       "angle_set": "steep",
@@ -920,7 +920,7 @@
       "order": 22,
       "file": "frames/walk-steep-06.png",
       "hotspot": [
-        23,
+        21,
         20
       ],
       "angle_set": "steep",
@@ -934,7 +934,7 @@
       "file": "frames/walk-steep-07.png",
       "hotspot": [
         20,
-        13
+        20
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
@@ -946,8 +946,8 @@
       "order": 24,
       "file": "frames/walk-inverted-00.png",
       "hotspot": [
-        16,
-        18
+        18,
+        20
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
@@ -959,8 +959,8 @@
       "order": 25,
       "file": "frames/walk-inverted-01.png",
       "hotspot": [
-        16,
-        22
+        19,
+        21
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
@@ -972,8 +972,8 @@
       "order": 26,
       "file": "frames/walk-inverted-02.png",
       "hotspot": [
-        20,
-        25
+        18,
+        19
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
@@ -986,7 +986,7 @@
       "file": "frames/walk-inverted-03.png",
       "hotspot": [
         18,
-        19
+        23
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
@@ -998,8 +998,8 @@
       "order": 28,
       "file": "frames/walk-inverted-04.png",
       "hotspot": [
-        17,
-        18
+        19,
+        16
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
@@ -1011,8 +1011,8 @@
       "order": 29,
       "file": "frames/walk-inverted-05.png",
       "hotspot": [
-        16,
-        22
+        19,
+        19
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
@@ -1024,8 +1024,8 @@
       "order": 30,
       "file": "frames/walk-inverted-06.png",
       "hotspot": [
-        21,
-        25
+        19,
+        19
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
@@ -1037,8 +1037,8 @@
       "order": 31,
       "file": "frames/walk-inverted-07.png",
       "hotspot": [
-        19,
-        19
+        18,
+        22
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
