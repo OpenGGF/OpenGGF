@@ -239,8 +239,9 @@ New in 0.7. Experimental. Time Attack is a bundled mod. Open it from
   Attack only.
 - **Sonic 3&K Competition arenas.** New in 0.8. Azure Lake, Balloon Park, Chrome
   Gadget, Desert Palace and Endless Mine are Competition tracks. You race them alone
-  in a full-screen view under the original five-lap rules, and lap times, total
-  time and best lap are ranked. Rooms without a verifier label their results
+  under the original five-lap rules, and lap times, total time and best lap are
+  ranked. The view is the original top half's camera, magnified twice, with
+  full-size characters and ghosts. Rooms without a verifier label their results
   UNVERIFIED.
 - **Chat.** Players can chat, and an optional filter masks profanity.
 

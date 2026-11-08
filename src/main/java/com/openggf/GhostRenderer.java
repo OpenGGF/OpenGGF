@@ -101,10 +101,11 @@ public final class GhostRenderer {
                 continue;
             }
             boolean colour = applyLook(slot, ghost.appearance(), localCharacter);
-            if (frame.mappingFrame() < slot.lastMappingFrame) {
+            int artFrame = artSource == null ? frame.mappingFrame() : artSource.artFrame(slot.code, frame.mappingFrame());
+            if (artFrame < slot.lastMappingFrame) {
                 slot.renderer.invalidateDplcCache(); // backwards jump (retry snap): force fresh DPLC
             }
-            slot.lastMappingFrame = frame.mappingFrame();
+            slot.lastMappingFrame = artFrame;
             GraphicsManager graphics = GameServices.graphics();
             graphics.flushPatternBatch();
             boolean previousHighPriority = graphics.getCurrentSpriteHighPriority();
@@ -112,8 +113,8 @@ public final class GhostRenderer {
             graphics.beginGhostRenderEffect(alpha, colour);
             graphics.beginPatternBatch();
             try {
-                slot.renderer.drawFrame(frame.mappingFrame(), frame.x() - (artSource == null ? 0 : artSource.cameraX()),
-                        frame.y() - (artSource == null ? 0 : artSource.cameraY()),
+                slot.renderer.drawFrame(artFrame, artSource == null ? frame.x() : artSource.frameScreenX(slot.code, frame),
+                        artSource == null ? frame.y() : artSource.frameScreenY(slot.code, frame),
                         frame.hFlip(), frame.vFlip());
             } finally {
                 graphics.flushPatternBatch();
@@ -121,9 +122,10 @@ public final class GhostRenderer {
                 graphics.setCurrentSpriteHighPriority(previousHighPriority);
             }
             var camera = GameServices.cameraOrNull();
-            if (camera != null) {
-                queueNameplate(ghost, artSource == null ? camera.getXWithShake() : artSource.cameraX(),
-                        artSource == null ? camera.getYWithShake() : artSource.cameraY(), alpha);
+            if (artSource != null) {
+                queueNameplateAt(ghost, artSource.screenX(frame.x()), artSource.screenY(frame.y()), alpha);
+            } else if (camera != null) {
+                queueNameplate(ghost, camera.getXWithShake(), camera.getYWithShake(), alpha);
             }
         }
     }
@@ -131,12 +133,15 @@ public final class GhostRenderer {
     // Sprite rendering only prepares commands. Immediate drawing here would be
     // overwritten when those world commands execute later in the frame.
     void queueNameplate(ActiveGhost ghost, int cameraX, int cameraY, float alpha) {
+        queueNameplateAt(ghost, ghost.frame().x() - cameraX, ghost.frame().y() - cameraY, alpha);
+    }
+
+    private void queueNameplateAt(ActiveGhost ghost, int screenX, int screenY, float alpha) {
         if (ghost.nameplate() == null || ghost.nameplate().isBlank()) {
             return;
         }
         pendingNameplates.put(ghost.slotId(), new Nameplate(ghost.nameplate(),
-                ghost.frame().x() - cameraX, ghost.frame().y() - cameraY - NAMEPLATE_LIFT, alpha,
-                ghost.appearance().nameArgb() & 0xFFFFFF));
+                screenX, screenY - NAMEPLATE_LIFT, alpha, ghost.appearance().nameArgb() & 0xFFFFFF));
     }
 
     /** Draw only labels collected by the sprite pass, after the world and before the host HUD. */
