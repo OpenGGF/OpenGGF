@@ -72,6 +72,12 @@ class DebugSonic2CompetitionDivergence {
             var prefixRows=readRows(refs.resolve("ehz-finish-cold/state.csv"));
             int start=nativeRows.firstKey();prefixRows.forEach((frame,row)->{if(frame<start)nativeRows.put(frame,row);});
         }
+        int nativeEnd=Math.min(nativeRows.lastKey(),movie.getFrameCount());
+        var nativeLag=com.openggf.tests.NativeReplayLagBoundary.first(nativeRows,route.anchor()+1,nativeEnd,"lfc",
+                (before,after)->before.get("mode")==12 && after.get("mode")==12
+                        && before.get("two_player")==1 && after.get("two_player")==1
+                        && before.get("zoneact").equals(after.get("zoneact")));
+        int comparisonEnd=nativeLag==null?nativeEnd:nativeLag.frame()-1;
         Path out=Path.of(System.getProperty("s2comp.out","target/s2comp-divergence"));Files.createDirectories(out);
         var report=new StringBuilder("route="+route+"\nCSV="+csv+" movie="+bk2+"\n");
         GameServices.audio().setBackend(new NullAudioBackend());
@@ -98,8 +104,9 @@ class DebugSonic2CompetitionDivergence {
             session.updateMenu(LogicalInputSnapshot.ofPlayers(PlayerInputState.of(0,0,0,0,true,true),PlayerInputState.neutral()),true);
             host.loadAct(session,session.romZone(),0);
             if(Boolean.getBoolean("s2comp.instrument")) services.debugOverlay().setEnabled(com.openggf.debug.DebugOverlayToggle.TOUCH_RESPONSE,true);
-            int last=Math.min(nativeRows.lastKey(),movie.getFrameCount());
-            for(int physical=route.anchor()+1;physical<=last;physical++) {
+            // Lead U-2 ruling: stop BEFORE the unsupported native lag input.
+            // No loop selection, skipping, timing input or re-alignment occurs.
+            for(int physical=route.anchor()+1;physical<=comparisonEnd;physical++) {
                 var context=host.context();input.setLogicalOverride(at(movie,physical));
                 LevelFrameStep.updateTimers(LevelFrameContext.from(context));
                 context.plcFrameLifecycle().runLogicalIteration(context::updateFade,frame->{
@@ -128,11 +135,18 @@ class DebugSonic2CompetitionDivergence {
                 if(first==null&&!diff.isEmpty()){first="frame="+physical+" "+diff;remaining=3;}
                 else if(remaining>=0&&--remaining==0)break;
             }
-            report.append("compared=").append(compared).append(" first=").append(first==null?"exact through "+lastCompared:first)
+            String result=first==null?"exact through "+lastCompared:first;
+            if(first==null && nativeLag!=null && lastCompared==comparisonEnd)
+                result+="; native lag at "+nativeLag.frame()+" (unsupported: BuildSprites_2P overrun)";
+            report.append("native lag boundary=").append(nativeLag==null?"none through "+nativeEnd:nativeLag).append("\n");
+            report.append("compared=").append(compared).append(" first=").append(result)
                 .append("\nfirst raw clock mismatch=").append(firstClock).append("\n");
             window.forEach(report::append);
         } finally {config.setConfigValue(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT,limits);TestEnvironment.resetAll();Files.writeString(out.resolve(route.movie()+".txt"),report);}
-        System.out.println("FRONTIER "+route.movie()+" compared="+compared+" "+(first==null?"exact through "+lastCompared:first)+" rawClock="+firstClock);
+        String result=first==null?"exact through "+lastCompared:first;
+        if(first==null && nativeLag!=null && lastCompared==comparisonEnd)
+            result+="; native lag at "+nativeLag.frame()+" (unsupported: BuildSprites_2P overrun)";
+        System.out.println("FRONTIER "+route.movie()+" compared="+compared+" "+result+" rawClock="+firstClock);
     }
     static TreeMap<Integer,Map<String,Long>> readRows(Path csv) throws Exception {
         var lines=Files.readAllLines(csv);String[] keys=lines.getFirst().split(",");var rows=new TreeMap<Integer,Map<String,Long>>();

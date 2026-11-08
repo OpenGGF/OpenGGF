@@ -29,4 +29,30 @@ class TestSonic2CompetitionDivergenceComparison {
         Files.writeString(csv,"frame,p1_x\n1\n");
         assertThrows(IllegalArgumentException.class,()->DebugSonic2CompetitionDivergence.readRows(csv));
     }
+    @Test void nativeLagNeedsConsecutivePhysicalRowsRepeatedBodyAndOneVint() {
+        var rows=new TreeMap<Integer,Map<String,Long>>();
+        rows.put(1,Map.of("lfc",7L,"vint",99L));rows.put(2,Map.of("lfc",8L,"vint",100L));
+        rows.put(3,Map.of("lfc",8L,"vint",101L));rows.put(4,Map.of("lfc",9L,"vint",102L));
+        var lag=com.openggf.tests.NativeReplayLagBoundary.first(rows,2,4,"lfc",(a,b)->true);
+        assertEquals(3,lag.frame());assertEquals(8,lag.bodyCounter());
+        var executed=new ArrayList<Integer>();
+        for(int physical=2;physical<=lag.frame()-1;physical++)executed.add(physical);
+        assertEquals(List.of(2),executed,"never run the lag input or re-align beyond it");
+        for(long brokenVint:new long[]{100,102}) {
+            rows.put(3,Map.of("lfc",8L,"vint",brokenVint));
+            assertNull(com.openggf.tests.NativeReplayLagBoundary.first(rows,2,4,"lfc",(a,b)->true),
+                    "negative V-int evidence control");
+        }
+        rows.put(3,Map.of("lfc",8L,"vint",101L));rows.remove(2);
+        assertNull(com.openggf.tests.NativeReplayLagBoundary.first(rows,2,4,"lfc",(a,b)->true),"missing predecessor is not a lag observation");
+    }
+    @Test void bodyPhaseChangesAreNotLagAndVintWrapIsUnsigned() {
+        var rows=new TreeMap<Integer,Map<String,Long>>();
+        rows.put(1,Map.of("lfc",0L,"vint",0xFFFFFFFFL));rows.put(2,Map.of("lfc",0L,"vint",0L));
+        assertNull(com.openggf.tests.NativeReplayLagBoundary.first(rows,2,2,"lfc",(a,b)->false));
+        assertEquals(2,com.openggf.tests.NativeReplayLagBoundary.first(rows,2,2,"lfc",(a,b)->true).frame());
+        rows.put(2,Map.of("vint",0L));
+        assertThrows(IllegalArgumentException.class,()->com.openggf.tests.NativeReplayLagBoundary.first(rows,2,2,"lfc",(a,b)->true));
+    }
+
 }
