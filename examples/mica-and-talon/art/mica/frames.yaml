@@ -218,12 +218,12 @@
       "order": 0,
       "file": "frames/run-00.png",
       "hotspot": [
-        24,
-        15
+        28,
+        17
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+      "notes": "Sprint blur phase; swept arms/crest, narrowed eye, streaming tail. Flat contact centre+18."
     },
     {
       "id": "run-01",
@@ -231,12 +231,12 @@
       "order": 1,
       "file": "frames/run-01.png",
       "hotspot": [
-        23,
-        15
+        28,
+        16
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+      "notes": "Sprint blur phase; swept arms/crest, narrowed eye, streaming tail. Flat contact centre+18."
     },
     {
       "id": "run-02",
@@ -244,12 +244,12 @@
       "order": 2,
       "file": "frames/run-02.png",
       "hotspot": [
-        23,
-        15
+        28,
+        17
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+      "notes": "Sprint blur phase; swept arms/crest, narrowed eye, streaming tail. Flat contact centre+18."
     },
     {
       "id": "run-03",
@@ -257,12 +257,12 @@
       "order": 3,
       "file": "frames/run-03.png",
       "hotspot": [
-        25,
-        15
+        28,
+        16
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+      "notes": "Sprint blur phase; swept arms/crest, narrowed eye, streaming tail. Flat contact centre+18."
     },
     {
       "id": "spring-00",
@@ -1050,12 +1050,12 @@
       "order": 4,
       "file": "frames/run-up45-00.png",
       "hotspot": [
-        21,
-        16
+        20,
+        18
       ],
       "angle_set": "up45",
       "duration_ticks": 4,
-      "notes": "Round 3 native pixel redraw: new crest, eyes, gloves, bent limbs and coral boot contours/sole; torso/tail seed retained. Stride phase matches flat. Runtime contact unverified."
+      "notes": "Hand-authored contours rasterized in slope basis about flat hotspot, with matching blur phase; no bitmap rotation. Runtime contact unverified."
     },
     {
       "id": "run-up45-01",
@@ -1063,12 +1063,12 @@
       "order": 5,
       "file": "frames/run-up45-01.png",
       "hotspot": [
-        21,
-        16
+        20,
+        18
       ],
       "angle_set": "up45",
       "duration_ticks": 4,
-      "notes": "Round 3 native pixel redraw: new crest, eyes, gloves, bent limbs and coral boot contours/sole; torso/tail seed retained. Stride phase matches flat. Runtime contact unverified."
+      "notes": "Hand-authored contours rasterized in slope basis about flat hotspot, with matching blur phase; no bitmap rotation. Runtime contact unverified."
     },
     {
       "id": "run-up45-02",
@@ -1076,12 +1076,12 @@
       "order": 6,
       "file": "frames/run-up45-02.png",
       "hotspot": [
-        21,
-        16
+        20,
+        18
       ],
       "angle_set": "up45",
       "duration_ticks": 4,
-      "notes": "Round 3 native pixel redraw: new crest, eyes, gloves, bent limbs and coral boot contours/sole; torso/tail seed retained. Stride phase matches flat. Runtime contact unverified."
+      "notes": "Hand-authored contours rasterized in slope basis about flat hotspot, with matching blur phase; no bitmap rotation. Runtime contact unverified."
     },
     {
       "id": "run-up45-03",
@@ -1089,12 +1089,12 @@
       "order": 7,
       "file": "frames/run-up45-03.png",
       "hotspot": [
-        21,
-        16
+        20,
+        18
       ],
       "angle_set": "up45",
       "duration_ticks": 4,
-      "notes": "Round 3 native pixel redraw: new crest, eyes, gloves, bent limbs and coral boot contours/sole; torso/tail seed retained. Stride phase matches flat. Runtime contact unverified."
+      "notes": "Hand-authored contours rasterized in slope basis about flat hotspot, with matching blur phase; no bitmap rotation. Runtime contact unverified."
     },
     {
       "id": "run-steep-00",
@@ -1102,12 +1102,12 @@
       "order": 8,
       "file": "frames/run-steep-00.png",
       "hotspot": [
-        21,
-        14
+        17,
+        19
       ],
       "angle_set": "steep",
       "duration_ticks": 4,
-      "notes": "Round 3 native pixel redraw: new crest, eyes, gloves, bent limbs and coral boot contours/sole; torso/tail seed retained. Stride phase matches flat. Runtime contact unverified."
+      "notes": "Hand-authored contours rasterized in slope basis about flat hotspot, with matching blur phase; no bitmap rotation. Runtime contact unverified."
     },
     {
       "id": "run-steep-01",
@@ -1115,12 +1115,12 @@
       "order": 9,
       "file": "frames/run-steep-01.png",
       "hotspot": [
-        21,
-        14
+        16,
+        19
       ],
       "angle_set": "steep",
       "duration_ticks": 4,
-      "notes": "Round 3 native pixel redraw: new crest, eyes, gloves, bent limbs and coral boot contours/sole; torso/tail seed retained. Stride phase matches flat. Runtime contact unverified."
+      "notes": "Hand-authored contours rasterized in slope basis about flat hotspot, with matching blur phase; no bitmap rotation. Runtime contact unverified."
     },
     {
       "id": "run-steep-02",
@@ -1128,12 +1128,12 @@
       "order": 10,
       "file": "frames/run-steep-02.png",
       "hotspot": [
-        21,
-        14
+        17,
+        19
       ],
       "angle_set": "steep",
       "duration_ticks": 4,
-      "notes": "Round 3 native pixel redraw: new crest, eyes, gloves, bent limbs and coral boot contours/sole; torso/tail seed retained. Stride phase matches flat. Runtime contact unverified."
+      "notes": "Hand-authored contours rasterized in slope basis about flat hotspot, with matching blur phase; no bitmap rotation. Runtime contact unverified."
     },
     {
       "id": "run-steep-03",
@@ -1141,12 +1141,12 @@
       "order": 11,
       "file": "frames/run-steep-03.png",
       "hotspot": [
-        21,
-        18
+        16,
+        19
       ],
       "angle_set": "steep",
       "duration_ticks": 4,
-      "notes": "Round 3 native pixel redraw: new crest, eyes, gloves, bent limbs and coral boot contours/sole; torso/tail seed retained. Stride phase matches flat. Runtime contact unverified."
+      "notes": "Hand-authored contours rasterized in slope basis about flat hotspot, with matching blur phase; no bitmap rotation. Runtime contact unverified."
     },
     {
       "id": "run-inverted-00",
@@ -1154,12 +1154,12 @@
       "order": 12,
       "file": "frames/run-inverted-00.png",
       "hotspot": [
-        16,
-        21
+        18,
+        18
       ],
       "angle_set": "inverted",
       "duration_ticks": 4,
-      "notes": "Round 3 native pixel redraw: new crest, eyes, gloves, bent limbs and coral boot contours/sole; torso/tail seed retained. Stride phase matches flat. Runtime contact unverified."
+      "notes": "Hand-authored contours rasterized in slope basis about flat hotspot, with matching blur phase; no bitmap rotation. Runtime contact unverified."
     },
     {
       "id": "run-inverted-01",
@@ -1167,12 +1167,12 @@
       "order": 13,
       "file": "frames/run-inverted-01.png",
       "hotspot": [
-        16,
-        21
+        18,
+        18
       ],
       "angle_set": "inverted",
       "duration_ticks": 4,
-      "notes": "Round 3 native pixel redraw: new crest, eyes, gloves, bent limbs and coral boot contours/sole; torso/tail seed retained. Stride phase matches flat. Runtime contact unverified."
+      "notes": "Hand-authored contours rasterized in slope basis about flat hotspot, with matching blur phase; no bitmap rotation. Runtime contact unverified."
     },
     {
       "id": "run-inverted-02",
@@ -1180,12 +1180,12 @@
       "order": 14,
       "file": "frames/run-inverted-02.png",
       "hotspot": [
-        16,
-        16
+        18,
+        18
       ],
       "angle_set": "inverted",
       "duration_ticks": 4,
-      "notes": "Round 3 native pixel redraw: new crest, eyes, gloves, bent limbs and coral boot contours/sole; torso/tail seed retained. Stride phase matches flat. Runtime contact unverified."
+      "notes": "Hand-authored contours rasterized in slope basis about flat hotspot, with matching blur phase; no bitmap rotation. Runtime contact unverified."
     },
     {
       "id": "run-inverted-03",
@@ -1193,12 +1193,12 @@
       "order": 15,
       "file": "frames/run-inverted-03.png",
       "hotspot": [
-        16,
-        20
+        18,
+        17
       ],
       "angle_set": "inverted",
       "duration_ticks": 4,
-      "notes": "Round 3 native pixel redraw: new crest, eyes, gloves, bent limbs and coral boot contours/sole; torso/tail seed retained. Stride phase matches flat. Runtime contact unverified."
+      "notes": "Hand-authored contours rasterized in slope basis about flat hotspot, with matching blur phase; no bitmap rotation. Runtime contact unverified."
     },
     {
       "id": "stop-00",

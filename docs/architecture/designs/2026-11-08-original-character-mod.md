@@ -232,6 +232,20 @@ Slope frames are rigid native-pixel rotations; W2 still owns slope-stride and
 runtime contact validation. `HOMING_DIVE` is an explicit custom handoff key,
 not a new canonical enum member. No final GGFP or runtime certification yet.
 
+W7 motion feedback handoff (2026-11-08, `feature/ai-mica-art-motion`):
+RUN replaces all sixteen frames with a four-phase coral boot blur, forward lean,
+swept arms/crest and streaming tail. `art/mica/motion.py` is the editable original
+contour source; slope contours are rasterized in their 0/45/90/135-degree bases
+about the shared engine hotspot, without bitmap rotation. Flat support remains
+centre+18. Palette indices are unchanged. The flat RUN/SPRING checkpoint was
+compared at 1×/4× beside decoded S1 art before expanding slopes. Review sheets
+and GIFs live only in `/tmp/mica-art-motion-20261108/`; fastest native RUN is one
+tick (GIF rounds to 20ms). The first closed tyre read was rejected and replaced
+with changing cutouts/crossing strokes. Runtime slope contact remains unverified;
+the hood/scale clusters are simpler than the generated core artwork. Python
+assembly roundtrip passes (96 frames, 17 scripts, at most 36 tiles/frame); no
+Java build, GGFP bake or gameplay certification is claimed.
+
 W7 art-lane round 2 handoff (2026-11-08, `feature/ai-mica-art2`):
 `art/mica/presentation/presentation.yaml` now describes 18 native-size indexed
 images: three 16×16 HUD faces, three 16×16 monitor faces, S1 supplementary M/A
