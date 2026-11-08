@@ -259,6 +259,24 @@ palette/geometry/deterministic rebuild and assembler roundtrip/script checks pas
 Review GIFs cover each RUN set, both SPRING phases and the full WAIT script;
 small mouth/eye clusters and runtime presentation remain integration limitations.
 
+W7 motion round 2 checkpoint (2026-11-08, `feature/ai-mica-art-motion2`):
+The lead rejected the previous horizontal RUN and front-facing SPRING. Flat RUN
+now retains the approved WALK profile/head at native scale above an upright,
+slightly leaning torso. Four hip-attached coral wheel phases exchange bent arms
+and bob the short diagonal tail. SPRING faces right with the same WALK head in
+both phases, an open grin, staggered overhead gloves, hanging tail and long boots.
+SPRING metadata now agrees with assembly's native 24+24 ticks and WALK exit.
+WAIT's approved six frames/script are unchanged. `art/mica/motion.py` remains the
+editable pixel source; no generated/native Sonic pixels enter new runtime art.
+Reviews at 1×/4× beside decoded S1 RUN/SPRING and timing GIFs are disposable in
+`/tmp/mica-art-motion2-20261108/`. RUN previews use fastest native one-tick timing
+(rounded to 20ms by GIF); actual RUN timing is speed-driven. SPRING uses 400ms
+per authored phase. Palette/outline/geometry/deterministic rebuild verification
+and the isolated Python assembler unittest pass (98 frames, 17 animations,
+maximum 36 tiles/frame). No Java build or gameplay certification. The head is
+prominent at 1×; open RUN wheel phases remain more alike than crossed phases,
+and small grin/lace details simplify. Slope replacements follow separately.
+
 W7 art-lane round 2 handoff (2026-11-08, `feature/ai-mica-art2`):
 `art/mica/presentation/presentation.yaml` now describes 18 native-size indexed
 images: three 16×16 HUD faces, three 16×16 monitor faces, S1 supplementary M/A

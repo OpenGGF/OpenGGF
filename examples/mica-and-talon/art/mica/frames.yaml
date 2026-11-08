@@ -244,12 +244,12 @@
       "order": 0,
       "file": "frames/run-00.png",
       "hotspot": [
-        28,
-        17
+        21,
+        19
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": "Sprint blur phase; swept arms/crest, narrowed eye, streaming tail. Flat contact centre+18."
+      "notes": "Upright WALK-profile sprint; hip-attached coral wheel, alternating bent arms and diagonal bobbing tail. Flat contact centre+18."
     },
     {
       "id": "run-01",
@@ -257,12 +257,12 @@
       "order": 1,
       "file": "frames/run-01.png",
       "hotspot": [
-        28,
-        16
+        21,
+        19
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": "Sprint blur phase; swept arms/crest, narrowed eye, streaming tail. Flat contact centre+18."
+      "notes": "Upright WALK-profile sprint; hip-attached coral wheel, alternating bent arms and diagonal bobbing tail. Flat contact centre+18."
     },
     {
       "id": "run-02",
@@ -270,12 +270,12 @@
       "order": 2,
       "file": "frames/run-02.png",
       "hotspot": [
-        28,
-        17
+        21,
+        19
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": "Sprint blur phase; swept arms/crest, narrowed eye, streaming tail. Flat contact centre+18."
+      "notes": "Upright WALK-profile sprint; hip-attached coral wheel, alternating bent arms and diagonal bobbing tail. Flat contact centre+18."
     },
     {
       "id": "run-03",
@@ -283,12 +283,12 @@
       "order": 3,
       "file": "frames/run-03.png",
       "hotspot": [
-        28,
-        16
+        21,
+        19
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": "Sprint blur phase; swept arms/crest, narrowed eye, streaming tail. Flat contact centre+18."
+      "notes": "Upright WALK-profile sprint; hip-attached coral wheel, alternating bent arms and diagonal bobbing tail. Flat contact centre+18."
     },
     {
       "id": "spring-00",
@@ -297,11 +297,11 @@
       "file": "frames/spring-00.png",
       "hotspot": [
         13,
-        26
+        24
       ],
       "angle_set": "flat",
-      "duration_ticks": 8,
-      "notes": "Stretched launch: identical delighted head, open raised gloves, paired pointed boots and hanging tail; reach/extension second beat."
+      "duration_ticks": 24,
+      "notes": "Right-profile stretched launch, shared WALK head and delighted grin; staggered overhead gloves, long pointed boots and hanging fluttering tail."
     },
     {
       "id": "spring-01",
@@ -310,11 +310,11 @@
       "file": "frames/spring-01.png",
       "hotspot": [
         13,
-        27
+        24
       ],
       "angle_set": "flat",
-      "duration_ticks": 8,
-      "notes": "Stretched launch: identical delighted head, open raised gloves, paired pointed boots and hanging tail; reach/extension second beat."
+      "duration_ticks": 24,
+      "notes": "Right-profile stretched launch, shared WALK head and delighted grin; staggered overhead gloves, long pointed boots and hanging fluttering tail."
     },
     {
       "id": "hurt-00",

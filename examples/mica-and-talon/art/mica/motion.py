@@ -74,72 +74,107 @@ def head(p, x, y, happy=False):
         p.line([(x-12,y-5),(x-6,y-6)],6)
 
 
+# Approved WALK head, retained at native scale: hood, ear and profile muzzle.
+WALK_HEAD = ['0000000000111000000000000', '0000000111343111100000000', '0000011313444324311000000', '0000133222222124441000000', '00012224441f1422342111000', '00122244429e914421341b100', '01343244418a9122332441100', '0144411221991479934231100', '135422333212399b88222f110', '0121144442442119199241110', '122224444244319cf17931100', '14441444224441dcf19711100', '144411111122199cf1d781100', '144323232223297dd97777910', '12213444234417777977777f1', '01212444123219777f1977910', '014313412211119878b111100', '014411112122211119f100011']
+
+
+def walk_head(p, x, y, happy=False):
+    if p.a:
+        # Redrawn slope hood/face: continuous contours rather than rotated pixels.
+        head(p,x+13,y+8,happy)
+        return
+    for yy,row in enumerate(WALK_HEAD):
+        for xx,v in enumerate(row):
+            if v != '0':p.im.putpixel((x+xx,y+yy),int(v,16))
+    if happy:
+        p.poly([(x+15,y+14),(x+21,y+14),(x+19,y+17),(x+16,y+16)],15)
+        p.line([(x+17,y+16),(x+19,y+16)],14)
+    else:
+        # Forward-looking lowered upper lid, leaving the original eye white.
+        p.line([(x+15,y+9),(x+19,y+10)],1)
+
+
+def glove(p,x,y,shade=12):
+    p.poly([(x,y+1),(x+2,y),(x+5,y+1),(x+6,y+3),
+            (x+5,y+5),(x+1,y+5),(x,y+3)],shade)
+    p.line([(x+2,y+3),(x+4,y+3)],13)
+
+
 def run(phase, angle=0):
-    p = Pen(angle)
-    # Streaming tapered scale tail, parallel to travel.
-    p.poly([(12,40),(22,36),(33,36),(39,40),(32,43),(22,42)],3)
-    for x in (18,24,30): scale(p,x,37,8,4)
-    # Far swept arm.
-    p.poly([(41,36),(34,37),(29,34),(27,36),(32,41),(40,41)],3)
-    p.oval((25,33,32,38),13)
-    # Fast figure-eight boot smear. Four different arc endpoints and crossing
-    # diagonals keep phases legible even at the native one-tick minimum.
-    p.oval((30,43,53,58),11)
-    holes = [(34,46,49,54),(36,46,47,55),(34,47,49,55),(35,45,48,54)]
-    p.oval(holes[phase],0)
-    # A moving cut in the outer smear stops it reading as a static red tyre.
-    gaps = [[(48,44),(54,44),(54,48),(50,48)],
-            [(30,43),(35,43),(35,47),(30,49)],
-            [(30,53),(35,53),(36,59),(30,59)],
-            [(48,53),(54,51),(54,59),(48,59)]]
-    p.poly(gaps[phase],0,False)
-    routes = [([(33,47),(38,44),(46,45),(51,49)],[(33,54),(40,57),(48,55)]),
-              ([(36,44),(43,48),(49,55)],[(33,53),(39,49),(49,46)]),
-              ([(32,51),(37,56),(46,57),(51,53)],[(34,46),(41,44),(48,46)]),
-              ([(34,56),(40,51),(48,45)],[(33,47),(40,50),(49,54)])]
-    for points in routes[phase]:
-        p.line(points,10,3)
-        p.line([(x,y+1) for x,y in points],9)
-    # Distinct moving boot/toe highlight, kept inside the blur contour.
-    bx,by=[(46,46),(45,52),(32,51),(35,44)][phase]
-    p.poly([(bx,by),(bx+5,by),(bx+6,by+3),(bx,by+3)],10)
-    p.line([(bx+1,by+1),(bx+4,by+1)],14)
-    # ~20 degree lean; pelvis back, chest ahead. Opposite arm streams back.
-    p.poly([(35,46),(36,39),(41,34),(46,36),(45,43),(40,48)],4)
-    p.poly([(41,37),(46,36),(46,42),(41,46),(38,45)],7)
-    p.line([(41,41),(44,42)],8)
-    p.poly([(40,38),(35,41),(31,40),(29,42),(34,45),(41,42)],4)
-    p.oval((26,39,33,44),12)
-    p.line([(28,41),(31,42)],13)
-    head(p,47,32+(phase%2))
+    p=Pen(angle)
+    bob=(0,-1,0,1)[phase]
+    # Short tail leaves the pelvis diagonally down/back, with a moving tip.
+    p.poly([(38,43),(33,44),(24,47+bob),(19,52+bob),
+            (28,50+bob),(35,49),(40,47)],3)
+    for x,y in ((24,48+bob),(29,46+bob),(34,45)):scale(p,x,y,6,3)
+    # Far bent arm: exchanged with near arm on alternate phases.
+    forward=phase%2
+    if forward:
+        p.poly([(44,37),(49,40),(50,36),(53,36),(53,43),(49,45),(42,41)],3)
+        glove(p,51,39,13)
+    else:
+        p.poly([(40,37),(34,39),(31,37),(29,39),(34,44),(41,41)],3)
+        glove(p,27,35,13)
+    # Compact boot wheel shares its top arc with the pelvis; never a floating ring.
+    p.oval((33,44,54,58),11)
+    p.oval((38,48,49,54),0)
+    arcs=[([(35,48),(39,45),(48,45),(52,48)],[(35,54),(42,57),(50,55)]),
+          ([(37,45),(42,49),(50,55)],[(35,54),(41,50),(51,47)]),
+          ([(34,51),(39,56),(48,57),(53,53)],[(36,47),(43,45),(50,47)]),
+          ([(36,56),(42,52),(50,46)],[(35,47),(41,50),(51,54)])]
+    for path in arcs[phase]:
+        p.line(path,10,3)
+        p.line([(x,y+1) for x,y in path],14)
+    # Break the wheel at four travelling arc positions, inside the fixed floor.
+    cut=[[(52,49),(55,48),(55,52),(53,52)],
+         [(34,44),(37,44),(35,48),(32,48)],
+         [(32,51),(35,51),(36,54),(32,55)],
+         [(50,54),(55,52),(55,56),(52,57)]][phase]
+    p.poly(cut,0,False)
+    # Upright torso: chest three pixels ahead of pelvis across eleven vertical.
+    p.poly([(38,47),(36,42),(39,36),(45,35),(48,39),(46,45),(43,48)],4)
+    p.poly([(43,37),(47,38),(46,43),(43,46),(40,45)],7)
+    p.line([(41,41),(46,41)],8)
+    p.line([(40,44),(44,44)],8)
+    if forward:
+        p.poly([(41,37),(36,40),(32,39),(30,41),(35,44),(42,41)],4)
+        glove(p,27,38)
+    else:
+        p.poly([(43,38),(48,42),(52,40),(51,36),(48,37),(48,39),(45,36)],4)
+        glove(p,51,39)
+    walk_head(p,30,21)
+    # A small crest sweep joins the WALK hood without flattening the skull.
+    p.poly([(32,25),(28,23),(35,22),(38,23)],4)
+    p.line([(31,23),(35,23)],5)
     return p.im
 
 
 def spring(phase):
     p=Pen()
-    # Same head in both phases. Arm reach/glove fingers and boot extension carry
-    # the second launch beat, rather than changing the skull/hood.
-    p.poly([(34,43),(36,48),(36,55),(34,60),(33,55)],3)
-    p.line([(34,48),(34,55)],5)
-    for x in (36,42):
-        p.poly([(x,43),(x+4,43),(x+3,54),(x,54)],4)
-        p.poly([(x-1,51),(x+4,51),(x+4,57+phase),(x+2,59+phase),(x-1,57+phase)],10)
-        p.line([(x,57+phase),(x+3,57+phase)],9)
-        p.line([(x,53),(x+2,53)],5)
-    p.poly([(35,34),(43,34),(46,42),(43,48),(36,47),(33,41)],4)
-    p.poly([(39,34),(43,36),(43,44),(40,46),(37,42)],7)
-    p.line([(38,39),(42,39)],8)
-    for side in (-1,1):
-        x=40+side*6
-        p.poly([(x,36),(x+side*4,31),(x+side*4,22),(x+side*1,21),
-                (x+side*1,29),(x-side*2,33)],4)
-        gx=x+side*3; gy=19-phase
-        p.poly([(gx-3,gy+4),(gx-4,gy),(gx-3,gy-3),(gx-2,gy),
-                (gx-1,gy-5),(gx,gy-5),(gx+1,gy-1),(gx+2,gy-4),
-                (gx+3,gy-3),(gx+3,gy),(gx+4,gy-1),(gx+5,gy),
-                (gx+3,gy+4)],12)
-        p.line([(gx-1,gy+1),(gx+2,gy+2)],13)
-    head(p,40,28,True)
+    # Profile: staggered far/near arms run vertically along the torso line.
+    p.poly([(40,43),(38,33),(38,20),(41,18),(43,22),(42,34),(44,42)],3)
+    glove(p,40,19-phase,13)
+    # Hanging tail, separate from the two long pointed boot silhouettes.
+    p.poly([(37,43),(36,49),(35+phase,56),(33+phase,62),
+            (32,56),(33,47)],3)
+    p.line([(34,49),(34,56)],5)
+    p.poly([(37,39),(44,38),(46,44),(44,51),(38,51),(35,46)],4)
+    p.poly([(41,39),(45,41),(44,48),(41,50),(39,46)],7)
+    p.line([(40,44),(44,44)],8)
+    # Far boot then nearer boot: cuffs, coral shafts, toe and heavy tan sole.
+    for x,y in ((37,49),(44,50)):
+        p.poly([(x,y),(x+4,y),(x+3,y+6),(x,y+6)],3)
+        p.poly([(x-1,y+4),(x+4,y+4),(x+5,y+10),(x+3,y+13),
+                (x,y+12),(x-1,y+9)],11)
+        p.poly([(x,y+5),(x+3,y+5),(x+4,y+10),(x+2,y+11),(x,y+9)],10,False)
+        p.line([(x,y+6),(x+2,y+7)],5)
+        p.line([(x,y+11),(x+3,y+12)],9)
+    walk_head(p,27,23,True)
+    # Near arm in front of hood; both hands above head, staggered in profile.
+    p.poly([(39,42),(34,33),(34,22),(37,21),(38,25),(37,33),(42,40)],4)
+    p.line([(35,25),(35,32)],5)
+    glove(p,32+phase,18,12)
+    p.line([(34+phase,19),(34+phase,16)],12,2)
     return p.im
 
 
@@ -148,7 +183,8 @@ def store(recipe, ident, im, note, **extra):
     bbox=im.getbbox(); x,y,xx,yy=bbox
     rows=[''.join(format(im.getpixel((a,b)),'x') for a in range(x,xx)) for b in range(y,yy)]
     keep={k:rec[k] for k in ('id','animation','order','angle_set','ticks') if k in rec}
-    rec.clear();rec.update(keep,notes=note,native_pixels=dict(rows=rows,anchor=[40-x,40-y]),**extra)
+    keep.update(extra)
+    rec.clear();rec.update(keep,notes=note,native_pixels=dict(rows=rows,anchor=[40-x,40-y]))
 
 
 WAIT_SEEDS = {
@@ -287,13 +323,13 @@ def main():
     recipe=json.loads((ROOT/'recipe.json').read_text())
     if args.item in ('checkpoint','run'):
         for n in range(4):
-            store(recipe,f'run-{n:02}',run(n),'Sprint blur phase; swept arms/crest, narrowed eye, streaming tail. Flat contact centre+18.')
+            store(recipe,f'run-{n:02}',run(n),'Upright WALK-profile sprint; hip-attached coral wheel, alternating bent arms and diagonal bobbing tail. Flat contact centre+18.')
         if args.item=='run':
             for s,a in [('up45',45),('steep',90),('inverted',135)]:
                 for n in range(4):
                     store(recipe,f'run-{s}-{n:02}',run(n,a),'Hand-authored contours rasterized in slope basis about flat hotspot, with matching blur phase; no bitmap rotation. Runtime contact unverified.')
     if args.item in ('checkpoint','spring'):
-        for n in range(2):store(recipe,f'spring-{n:02}',spring(n),'Stretched launch: identical delighted head, open raised gloves, paired pointed boots and hanging tail; reach/extension second beat.')
+        for n in range(2):store(recipe,f'spring-{n:02}',spring(n),'Right-profile stretched launch, shared WALK head and delighted grin; staggered overhead gloves, long pointed boots and hanging fluttering tail.',ticks=24)
     if args.item=='wait':
         for n in range(4,6):
             if not any(f['id']==f'wait-{n:02}' for f in recipe['frames']):
