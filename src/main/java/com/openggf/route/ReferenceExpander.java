@@ -69,13 +69,18 @@ final class ReferenceExpander implements PrefixSearch.Expander {
         if (node.stuck >= hints.stuckLimit) return null;
         search.materialize(node);
         search.ensureCheckpoint(node);
+        if (required.isPresent() && node.k+1==required.get().sourceFrom()
+                && node.authored<task.scope().maxAuthoredRows() && node.windows<task.scope().maxWindows()) {
+            var local=singleRowSeam(search,node);
+            if(local!=null) {search.arrivedAt(local);return local;}
+        }
         int base = node.origin instanceof PrefixSearch.Origin.Authored ? rejoinIndex(node) : node.k;
         var rows = new InputTape.Builder();
         int n = 0;
         boolean tracked = base >= -1;
         boolean crossed = false;
         boolean contaminated = false;
-        for (; tracked && n < hints.commit && base + 1 + n < ref.size(); n++) {
+        for (; tracked && n < hints.commit && base + 1 + n < ref.size() && !search.cancelled() && !search.outOfSteps(); n++) {
             int src = base + 1 + n;
             if (required.isPresent() && src >= required.get().sourceFrom() && !passedRequired(node)) {
                 tracked = false;
@@ -97,6 +102,7 @@ final class ReferenceExpander implements PrefixSearch.Expander {
                 break;
             }
         }
+        if(search.cancelled() || search.outOfSteps()) return null;
         if (tracked && n > 0) {
             int k = base + n;
             PrefixSearch.Node child = search.node(node, rows.build(), new PrefixSearch.Origin.Source(base + 1, n), k,
@@ -119,6 +125,39 @@ final class ReferenceExpander implements PrefixSearch.Expander {
             if (search.cancelled() || search.outOfSteps()) break;
             PrefixSearch.Node child = trial(search, node, family.get(), horizon, commit);
             if (child != null) search.push(frontier, child);
+        }
+        return null;
+    }
+
+    /** A bounded one-button seam family; its literal suffix must track or satisfy the stored goals. */
+    private PrefixSearch.Node singleRowSeam(PrefixSearch search,PrefixSearch.Node node) {
+        int from=node.k+1;
+        var buttons=new PhysicalButton[]{PhysicalButton.START,PhysicalButton.A,PhysicalButton.B,PhysicalButton.C,
+                PhysicalButton.LEFT,PhysicalButton.RIGHT,PhysicalButton.UP,PhysicalButton.DOWN};
+        for(var slot:PlayerSlot.values()) for(var button:buttons) {
+            if(search.cancelled() || search.outOfSteps()) return null;
+            search.materialize(node);search.dirty();search.trials++;
+            var original=ref.sourceRow(from);
+            var edited=original.with(slot,(slot==PlayerSlot.P1?original.p1():original.p2())^button.bit());
+            search.step(edited);var first=search.last;
+            if(first.epoch()!=node.sample.epoch() || progress.distance(first,from)>hints.syncTolerance) continue;
+            var suffix=new InputTape.Builder();boolean tracks=true;
+            boolean goalCandidate=!task.original().checks().legs().isEmpty() && task.original().checks().startRow()>=node.rows;
+            var goals=task.original().checks().cursor();goals.begin(node.sample);
+            String violation=goalCandidate?goals.afterRow(node.rows,first):null;
+            for(int i=from+1;i<=ref.to();i++) {
+                if(search.cancelled() || search.outOfSteps()) {tracks=false;break;}
+                suffix.add(search.step(ref.sourceRow(i)));
+                if(search.last.epoch()!=first.epoch() || search.last.p1().dead()) {tracks=false;break;}
+                if(goalCandidate && violation==null) violation=goals.afterRow(node.rows+i-from,search.last);
+                if(!goalCandidate && progress.distance(search.last,i)>hints.syncTolerance) {tracks=false;break;}
+            }
+            if(!tracks || (goalCandidate && (violation!=null || goals.finish(search.last)!=null))) continue;
+            var edit=search.node(node,InputTape.of(List.of(edited)),new PrefixSearch.Origin.Authored(1),from,
+                    from*1000L,0,from,null,first);
+            if(suffix.size()==0) return edit;
+            return search.node(edit,suffix.build(),new PrefixSearch.Origin.Source(from+1,suffix.size()),ref.to(),
+                    ref.to()*1000L,0,ref.to(),null,search.last);
         }
         return null;
     }
@@ -180,6 +219,7 @@ final class ReferenceExpander implements PrefixSearch.Expander {
         var rows = new InputTape.Builder();
         PadRow previous = node.lastRow();
         for (int t = 0; t < horizon; t++) {
+            if(search.cancelled() || search.outOfSteps()) break;
             PadRow row = search.step(policy.row(t, search.last, previous, prog));
             rows.add(row);
             previous = row;
@@ -204,6 +244,7 @@ final class ReferenceExpander implements PrefixSearch.Expander {
                 break;
             }
         }
+        if(rows.size()==0) return null;
         double[] near = progress.nearest(search.last, node.k - 10, Math.max(prog, node.k) + hints.look);
         int lost = rings - search.last.p1().rings();
         double value = 0.5 * prog + 0.5 * (near[1] <= 64 ? near[0] : node.k - 100);
