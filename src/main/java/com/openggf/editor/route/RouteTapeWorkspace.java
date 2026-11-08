@@ -478,6 +478,8 @@ public final class RouteTapeWorkspace {
 
     private static String predicateText(com.openggf.route.SamplePredicate predicate) {
         return switch (predicate) {
+            case com.openggf.route.SamplePredicate.FactsEqual equal -> equal.left() + " = " + equal.right();
+            case com.openggf.route.SamplePredicate.FactEquals fact -> fact.key() + " = " + fact.value();
             case com.openggf.route.SamplePredicate.PlayerIn in -> UiMessages.text("editor.route_tape.goal_reach",
                     Map.of("player", in.player().name(), "left", String.valueOf(in.region().left()),
                             "top", String.valueOf(in.region().top()), "right", String.valueOf(in.region().right()),

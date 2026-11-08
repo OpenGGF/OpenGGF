@@ -10,6 +10,23 @@ import java.util.Objects;
 public sealed interface SamplePredicate {
     boolean test(RouteSample sample);
 
+    /** Host-owned copied integer fact, absent facts never satisfy a condition. */
+    record FactEquals(String key, int value) implements SamplePredicate {
+        public FactEquals { Objects.requireNonNull(key, "key"); }
+        @Override public boolean test(RouteSample sample) {
+            return sample.facts().containsKey(key) && sample.facts().get(key) == value;
+        }
+    }
+
+    /** Both copied facts exist and are equal, for tied metrics or other actor comparisons. */
+    record FactsEqual(String left, String right) implements SamplePredicate {
+        public FactsEqual { Objects.requireNonNull(left,"left");Objects.requireNonNull(right,"right"); }
+        @Override public boolean test(RouteSample sample) {
+            return sample.facts().containsKey(left) && sample.facts().containsKey(right)
+                    && sample.facts().get(left).equals(sample.facts().get(right));
+        }
+    }
+
     /** The player's centre is inside {@code region}. */
     record PlayerIn(PlayerSlot player, Region region) implements SamplePredicate {
         public PlayerIn {
