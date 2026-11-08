@@ -42,6 +42,8 @@ under the matching area heading; see the
   accept optional native-frame poses with a separate character palette, retaining
   native timing, departure movement, text and stock Tails. S3K data select
   composes MICA’s portrait with stock team portraits using isolated colours.
+  Her 13-frame ICZ snowboard set retains the native intro choreography, with
+  isolated rider and native board/spray palettes.
 
 - Added the maintained MICA character skeleton for all three stock games, with
   headless launch/save/rewind/fallback acceptance and a rerunnable 96-frame original

@@ -79,12 +79,37 @@ class TestMicaCharacterIntegration {
     @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
     void continuePixelsS3k() throws Exception { captureContinue("s3k", "s3k.rom.path"); }
 
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void snowboardPixelsS3k() throws Exception {
+        Path jar=buildSample();
+        var settings=new com.openggf.tools.GameplayCaptureSession.Settings(320,CODE,"","off",null,null,null);
+        try(var session=new com.openggf.tools.GameplayCaptureSession(settings)) {
+            session.applyMod(jar);
+            GameServices.configuration().setSessionOverride(SonicConfiguration.S3K_SKIP_INTROS,false);
+            session.boot(Path.of(System.getProperty("s3k.rom.path")),5,0,settings);
+            var set=com.openggf.game.presentation.ScreenFrameRenderer.active(CharacterPresentation.Host.S3K);
+            assertEquals(13,set.banks().get("snowboard").size());
+            boolean overlaySeen=false;
+            for(int frame=0;frame<360;frame++) {
+                session.step(null);
+                if(frame>0 && frame%60==0) writeCapture(session.render(),"s3k-icz1-snowboard-"+frame);
+                var objects=GameServices.level().getObjectManager();
+                for(var object:objects.getActiveObjects()) {
+                    if(object instanceof com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance) overlaySeen=true;
+                }
+            }
+            assertTrue(overlaySeen,"Native ICZ intro controller must run for MICA");
+        }
+    }
+
     private void captureContinue(String game, String romProperty) throws Exception {
         Path jar=buildSample();
         var settings=new com.openggf.tools.GameplayCaptureSession.Settings(320,CODE,"tails","off",null,null,null);
         try(var session=new com.openggf.tools.GameplayCaptureSession(settings)) {
             session.applyMod(jar);
             session.boot(Path.of(System.getProperty(romProperty)),0,0,settings);
+            // Enter from a revealed level, rather than carrying its initial line-1..3 black fade into the menu.
+            for (int i=0;i<120;i++) session.step(null);
             var state=GameServices.gameState();
             while(state.getLives()>0) state.loseLife();
             state.addContinue(); state.addContinue(); state.addContinue();
@@ -92,7 +117,14 @@ class TestMicaCharacterIntegration {
             for(int i=0;i<120 && session.loop().getCurrentGameMode()!=GameMode.CONTINUE_SCREEN;i++) session.step(null);
             assertEquals(GameMode.CONTINUE_SCREEN,session.loop().getCurrentGameMode());
             for(int i=0;i<140;i++) session.step(null);
-            writeCapture(drawContinue(session),game+"-continue-wait");
+            var waiting = drawContinue(session);
+            long jade=0;
+            for(int y=120;y<195;y++) for(int x=100;x<200;x++) {
+                int pixel=waiting.argb(x,y),r=(pixel>>16)&255,g=(pixel>>8)&255,b=pixel&255;
+                if(g>r+25 && g>=b) jade++;
+            }
+            assertTrue(jade>15,"MICA jade body pixels must be visible in continue screen");
+            writeCapture(waiting,game+"-continue-wait");
             var screen=session.loop().getContinueScreenProvider();
             screen.update(true,false);
             for(int i=0;i<25;i++) screen.update(false,false);
@@ -127,6 +159,7 @@ class TestMicaCharacterIntegration {
         }
         var presentation=new com.openggf.game.sonic3k.dataselect.S3kDataSelectPresentation(saves,GameServices.configuration());
         GameServices.graphics().clearPaletteFadePresentation();
+        com.openggf.graphics.PaletteUploadPresentation.release(GameServices.graphics());
         presentation.initialize();
         assertEquals(DataSelectProvider.State.FADE_IN,presentation.getState());
         var method=presentation.getClass().getDeclaredMethod("resolveCustomPortraitFrame",com.openggf.game.save.SelectedTeam.class);

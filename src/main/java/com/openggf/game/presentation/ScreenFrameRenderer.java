@@ -19,6 +19,9 @@ public final class ScreenFrameRenderer {
         return art == null ? null : art.screenFrames();
     }
     public ScreenFrameRenderer(PresentationFrameSet set, GraphicsManager graphics, int base, int line) {
+        this(set,graphics,base,line,true);
+    }
+    public ScreenFrameRenderer(PresentationFrameSet set, GraphicsManager graphics, int base, int line, boolean uploadPalette) {
         var patterns = new ArrayList<Pattern>();
         var frames = new ArrayList<SpriteMappingFrame>();
         set.banks().forEach((bank, poses) -> {
@@ -32,7 +35,7 @@ public final class ScreenFrameRenderer {
         });
         renderer = new PatternSpriteRenderer(new ObjectSpriteSheet(patterns.toArray(Pattern[]::new), frames, 0, 1), graphics);
         renderer.ensurePatternsCached(graphics, base);
-        graphics.cachePaletteTexture(palette(set), line);
+        if (uploadPalette) graphics.cachePaletteTexture(palette(set), line);
     }
     public static Palette palette(PresentationFrameSet set) {
         var palette = new Palette();

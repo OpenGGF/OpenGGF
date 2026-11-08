@@ -232,6 +232,9 @@ back to ROM art. Existing four/five-argument `Art` constructors remain supported
 The S3K `portrait` bank (frame 5) supplies the data-select bust, composed with
 stock team portraits using its authored hotspot. Its palette is isolated in a
 renderer-owned graphics bank; no native menu line is replaced.
+The S3K `snowboard` bank supplies the 13 native rider mapping IDs (0–12).
+The host retains intro timing, movement, separate board/spray and snow occlusion;
+private renderer palettes keep rider and native effects independent.
 GGFP presentation sections are pending.
 
 ## Ability and super-form rules
