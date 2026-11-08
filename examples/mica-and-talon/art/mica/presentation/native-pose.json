@@ -1,0 +1,204 @@
+{
+  "method": "Owner-approved native 8x reference + concept + approved pilot; built-in GPT Image latest exposed; native-size fixed-palette reduction. Raw/reference images in /tmp only.",
+  "palette": "../palette.yaml",
+  "images": {
+    "s1-hud": {
+      "prompt": "Use case: style-transfer. Redraw the FIRST input native game image as MICA, the ORIGINAL female pangolin in the second input concept sheet. Third and fourth images are owner-approved MICA pixel-art style anchors. This is a NEW drawing, never recolour: no hedgehog quills, no Sonic face. Jade overlapping round leaf-shaped scales forming a hood, cream long pangolin muzzle, small rounded coral inner ears, expressive brown eyes with lashes. Use clean chunky 16-bit pixel clusters, deep brown ink, teal/jade ramps, cream face and white highlights. Match FIRST image composition, facing, camera, silhouette placement and canvas aspect exactly; use full canvas, no added padding, no text. Transparent background. No checkerboard. Crisp readable at final native dimensions. Asset s1-hud, final 16x16 HUD/one-up face: head only, facing right as native, compact rounded scaled hood behind eye and projecting cream snout. Prioritize big clear eye and smile.",
+      "raw_sha256": "da03433fe6492ee3ebf8f1457aaa4453bdcb73a1f6a05efca5cd5895c15eb66b",
+      "native_dimensions": [
+        16,
+        16
+      ],
+      "reduction": "alpha>=128 bounding box; Lanczos to native composition rectangle; nearest fixed palette; inside one-pixel outline; portrait mapping mask",
+      "rectangle": [
+        0,
+        0,
+        16,
+        16
+      ],
+      "rows": [
+        "0000001111000000",
+        "0000116566110000",
+        "0001633255561100",
+        "001559e914654910",
+        "012329eb45353910",
+        "01542f9565525100",
+        "1553443999545410",
+        "0123551f99935910",
+        "01335419d9993100",
+        "154233999fd89100",
+        "15332177dfdd7100",
+        "0125528dd9dd7711",
+        "01254218dbb97711",
+        "144225428ea91100",
+        "0111145111810000",
+        "0000011000100000"
+      ]
+    },
+    "s1-monitor": {
+      "prompt": "Use case: style-transfer. Redraw the FIRST input native game image as MICA, the ORIGINAL female pangolin in the second input concept sheet. Third and fourth images are owner-approved MICA pixel-art style anchors. This is a NEW drawing, never recolour: no hedgehog quills, no Sonic face. Jade overlapping round leaf-shaped scales forming a hood, cream long pangolin muzzle, small rounded coral inner ears, expressive brown eyes with lashes. Use clean chunky 16-bit pixel clusters, deep brown ink, teal/jade ramps, cream face and white highlights. Match FIRST image composition, facing, camera, silhouette placement and canvas aspect exactly; use full canvas, no added padding, no text. Transparent background. No checkerboard. Crisp readable at final native dimensions. Asset s1-monitor, final 16x16 HUD/one-up face: head only, facing right as native, compact rounded scaled hood behind eye and projecting cream snout. Prioritize big clear eye and smile.",
+      "raw_sha256": "11f462c70d4e08f39e69886f54fa61402638e85364490b1aacac56bea383c112",
+      "native_dimensions": [
+        16,
+        16
+      ],
+      "reduction": "alpha>=128 bounding box; Lanczos to native composition rectangle; nearest fixed palette; inside one-pixel outline; portrait mapping mask",
+      "rectangle": [
+        0,
+        0,
+        16,
+        16
+      ],
+      "rows": [
+        "0000000111000000",
+        "0000111655110000",
+        "0001531355541000",
+        "0016498f23453110",
+        "001418e942455910",
+        "01532b9454234100",
+        "1555424599542910",
+        "1555353191955910",
+        "13425531d9993910",
+        "01334529df189100",
+        "15552297db9d7910",
+        "1552431777877d71",
+        "0122462f779b9711",
+        "0134222219891100",
+        "0011113541110000",
+        "0000001110000000"
+      ]
+    },
+    "s2-hud": {
+      "prompt": "Use case: style-transfer. Redraw the FIRST input native game image as MICA, the ORIGINAL female pangolin in the second input concept sheet. Third and fourth images are owner-approved MICA pixel-art style anchors. This is a NEW drawing, never recolour: no hedgehog quills, no Sonic face. Jade overlapping round leaf-shaped scales forming a hood, cream long pangolin muzzle, small rounded coral inner ears, expressive brown eyes with lashes. Use clean chunky 16-bit pixel clusters, deep brown ink, teal/jade ramps, cream face and white highlights. Match FIRST image composition, facing, camera, silhouette placement and canvas aspect exactly; use full canvas, no added padding, no text. Transparent background. No checkerboard. Crisp readable at final native dimensions. Asset s2-hud, final 16x16 HUD/one-up face: head only, facing right as native, compact rounded scaled hood behind eye and projecting cream snout. Prioritize big clear eye and smile.",
+      "raw_sha256": "241f54f3dfcce5273ee2a991369a00ee5ad3b812079f257fd0720318be51d06b",
+      "native_dimensions": [
+        16,
+        16
+      ],
+      "reduction": "alpha>=128 bounding box; Lanczos to native composition rectangle; nearest fixed palette; inside one-pixel outline; portrait mapping mask",
+      "rectangle": [
+        0,
+        0,
+        16,
+        16
+      ],
+      "rows": [
+        "0000011111000000",
+        "0000145556100000",
+        "0001539255611000",
+        "001549eb1453f100",
+        "01552ea955259e10",
+        "1553293556556100",
+        "0114544995335100",
+        "0135542199553f10",
+        "1542232999945100",
+        "1423254991992100",
+        "11355217df989100",
+        "14354297d9d77811",
+        "1531242879b97781",
+        "0124254198991110",
+        "0014211429910000",
+        "0001111111100000"
+      ]
+    },
+    "s2-monitor": {
+      "prompt": "Use case: style-transfer. Redraw the FIRST input native game image as MICA, the ORIGINAL female pangolin in the second input concept sheet. Third and fourth images are owner-approved MICA pixel-art style anchors. This is a NEW drawing, never recolour: no hedgehog quills, no Sonic face. Jade overlapping round leaf-shaped scales forming a hood, cream long pangolin muzzle, small rounded coral inner ears, expressive brown eyes with lashes. Use clean chunky 16-bit pixel clusters, deep brown ink, teal/jade ramps, cream face and white highlights. Match FIRST image composition, facing, camera, silhouette placement and canvas aspect exactly; use full canvas, no added padding, no text. Transparent background. No checkerboard. Crisp readable at final native dimensions. Asset s2-monitor, final 16x16 HUD/one-up face: head only, facing right as native, compact rounded scaled hood behind eye and projecting cream snout. Prioritize big clear eye and smile.",
+      "raw_sha256": "2cf1a06c66f3c386366d92eb0cd883e1b7391364de5d411aa07a94beb4317b15",
+      "native_dimensions": [
+        16,
+        16
+      ],
+      "reduction": "alpha>=128 bounding box; Lanczos to native composition rectangle; nearest fixed palette; inside one-pixel outline; portrait mapping mask",
+      "rectangle": [
+        0,
+        0,
+        16,
+        16
+      ],
+      "rows": [
+        "0000011110000000",
+        "0000145541100000",
+        "0001522246511100",
+        "001549eb35445910",
+        "0133299343445100",
+        "0153332592553100",
+        "1543552fb9344f10",
+        "1223549f99944910",
+        "1442233b19d33100",
+        "15334439f9c9f100",
+        "1223539c98d77911",
+        "01422228d9b97771",
+        "0132432f88991110",
+        "0012332989910000",
+        "0001125487910000",
+        "0000111111100000"
+      ]
+    },
+    "s3k-hud": {
+      "prompt": "Use case: style-transfer. Redraw the FIRST input native game image as MICA, the ORIGINAL female pangolin in the second input concept sheet. Third and fourth images are owner-approved MICA pixel-art style anchors. This is a NEW drawing, never recolour: no hedgehog quills, no Sonic face. Jade overlapping round leaf-shaped scales forming a hood, cream long pangolin muzzle, small rounded coral inner ears, expressive brown eyes with lashes. Use clean chunky 16-bit pixel clusters, deep brown ink, teal/jade ramps, cream face and white highlights. Match FIRST image composition, facing, camera, silhouette placement and canvas aspect exactly; use full canvas, no added padding, no text. Transparent background. No checkerboard. Crisp readable at final native dimensions. Asset s3k-hud, final 16x16 HUD/one-up face: head only, facing right as native, compact rounded scaled hood behind eye and projecting cream snout. Prioritize big clear eye and smile.",
+      "raw_sha256": "6b71f7de1d62568e60f55a122bdd5c6a4e00969c95af2f414b0950608e4fa734",
+      "native_dimensions": [
+        16,
+        16
+      ],
+      "reduction": "alpha>=128 bounding box; Lanczos to native composition rectangle; nearest fixed palette; inside one-pixel outline; portrait mapping mask",
+      "rectangle": [
+        0,
+        0,
+        16,
+        16
+      ],
+      "rows": [
+        "0000001110000000",
+        "0000115551100000",
+        "0001654325611000",
+        "0015529935552100",
+        "001329ee22563910",
+        "0165299354455100",
+        "0155334499335100",
+        "0122563199945110",
+        "01335532d9f54910",
+        "15523343d1f82100",
+        "15333249d9f77100",
+        "012553bcdd97d711",
+        "013222297d9b9d11",
+        "01422352b7791100",
+        "0011222421110000",
+        "0000111110000000"
+      ]
+    },
+    "s3k-monitor": {
+      "prompt": "Use case: style-transfer. Redraw the FIRST input native game image as MICA, the ORIGINAL female pangolin in the second input concept sheet. Third and fourth images are owner-approved MICA pixel-art style anchors. This is a NEW drawing, never recolour: no hedgehog quills, no Sonic face. Jade overlapping round leaf-shaped scales forming a hood, cream long pangolin muzzle, small rounded coral inner ears, expressive brown eyes with lashes. Use clean chunky 16-bit pixel clusters, deep brown ink, teal/jade ramps, cream face and white highlights. Match FIRST image composition, facing, camera, silhouette placement and canvas aspect exactly; use full canvas, no added padding, no text. Transparent background. No checkerboard. Crisp readable at final native dimensions. Asset s3k-monitor, final 16x16 HUD/one-up face: head only, facing right as native, compact rounded scaled hood behind eye and projecting cream snout. Prioritize big clear eye and smile.",
+      "raw_sha256": "be02d58004a22ee3150d75c264c06a71dcf413d6f3a4edc32dd6e8a2458d4dbc",
+      "native_dimensions": [
+        16,
+        16
+      ],
+      "reduction": "alpha>=128 bounding box; Lanczos to native composition rectangle; nearest fixed palette; inside one-pixel outline; portrait mapping mask",
+      "rectangle": [
+        0,
+        0,
+        16,
+        16
+      ],
+      "rows": [
+        "0000011111100000",
+        "0000153554510000",
+        "0011442235661000",
+        "001539e923443110",
+        "01542ee934245510",
+        "14422b3493335100",
+        "0124423999943910",
+        "0132343199934910",
+        "15422441d1993910",
+        "13244239df188100",
+        "01233297789d7711",
+        "01423429d7997c71",
+        "12324531979b9110",
+        "0113223421911000",
+        "0011122322100000",
+        "0000011111000000"
+      ]
+    }
+  }
+}
