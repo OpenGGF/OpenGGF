@@ -63,18 +63,34 @@ def player(index):
     bbox = canvas.getbbox()
     return canvas.crop(bbox), [64-bbox[0],64-bbox[1]], labels[index]
 
-def references(dest):
+def references(dest, core=False):
     dest = dest.resolve()
     if not dest.is_relative_to(Path('/tmp')): raise ValueError('Native references must stay in /tmp')
     dest.mkdir(parents=True,exist_ok=True)
     oracle = load(ROOT/'tools/timing/s3k-instruction-ledgers/vint/nem/nem_reference.py','nem')
     groups = [('wait', [1,2,3,4,5,6]), ('walk',[15,16,17,18,19,20,13,14]),
               ('run',[45,46,47,48]), ('spring',[91,91]), ('roll',[61,62,63,64])]
+    if core:
+        # Original handoff phase counts stay fixed; repeated native drawings are
+        # independently adapted. STOP aliases SKID, not another native source.
+        groups += [('spindash',[66,67,68,69]), ('push',[72,74]),
+                   ('duck',[76,77]), ('look_up',[11,12]),
+                   ('skid',[210,211,212,213]), ('balance',[204,205,206,205]),
+                   ('hurt',[78,79]), ('death',[92,92]), ('drown',[93,93,93]),
+                   ('get_air',[90,90]), ('hang',[80,81,80]),
+                   ('homing_dive',[61,62,91,64])]
     records = []
     for group, indices in groups:
         for i,index in enumerate(indices):
             im,hotspot,label = player(index)
-            records.append((f'{group}-{i:02}',im,hotspot,dict(game='S2',mapping=index,label=label)))
+            source = dict(game='S2',mapping=index,label=label)
+            if group == 'homing_dive' and i == 2:
+                # Custom pose has no native animation. Invert the long spring
+                # reference so scales lead downward instead of copying a stand.
+                im = im.transpose(Image.Transpose.ROTATE_180)
+                hotspot = [im.width-hotspot[0], im.height-hotspot[1]]
+                source['custom_reference_rotation_degrees'] = 180
+            records.append((f'{group}-{i:02}',im,hotspot,source))
     for key, path, pal in [
         ('s3k-hud','docs/skdisasm/General/Sprites/HUD Icon/Sonic Life Icon.nem',
          'docs/skdisasm/General/Sprites/Sonic/Palettes/SonicAndTails.bin'),
@@ -103,4 +119,6 @@ def references(dest):
 if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--output',type=Path,required=True)
-    references(p.parse_args().output)
+    p.add_argument('--core',action='store_true',help='Include all nonslope core pose bases')
+    args = p.parse_args()
+    references(args.output, core=args.core)

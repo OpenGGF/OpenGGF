@@ -1192,3 +1192,22 @@ tests: 42 pass and the creator-kit export test errors because the inherited
 certification. Remaining groups and rotation/scale consistency review continue
 in this lane; native timing across all speeds and background/contact remain
 integration checks.
+
+W7 core native-anchor correction and grounded actions (same lane): the owner
+explicitly superseded the earlier compatibility-box choice. Native dimensions
+and numeric native hotspots now govern every adopted frame. This rechecks the
+pilot WAIT/WALK/RUN/SPRING and supplies corrected quarter-turn ROLL plus new
+SPINDASH, PUSH, DUCK, LOOK_UP, SKID/STOP, BALANCE and HURT. STOP remains an exact
+SKID alias; all 36 slope frames remain unchanged. The native exporter now has
+an optional `--core` inventory; its default 26-frame pilot contract is unchanged.
+The retained `native_pose_core.py` method is indexed in the playable-art README.
+
+An initial extra-reference export accidentally used Pillow's default resize
+filter. Those new generations were rejected and repeated against explicit 8x
+nearest-neighbour exports; temporary rejected originals are preserved in the
+review directory, never in Git. A custom dive attempt that stayed upright was
+also rejected. Provenance records accepted raw hashes and exact prompts only.
+`verify.py` checks recorded native geometry for adopted frames, retaining the
+older geometry rules for historical handoffs. The final airborne/water/custom
+pose group and its checks follow below; this checkpoint is not runtime contact
+or animation certification.
