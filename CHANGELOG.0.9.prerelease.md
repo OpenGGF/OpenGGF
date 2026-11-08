@@ -26,7 +26,7 @@ matching area heading; see the
   oracle requires both original capture-palette publications and Amy's next-pass
   retirement; an early unsupported edge cannot count as success. Four focused
   route/reload checks pass. A following input recipe now traverses the original
-  lower passage and genuine RollTunnel boost before its first unbound Time Post.
+  lower passage and genuine RollTunnel boost before its first Time Post.
   Its six route/reload checks pass; the first returned death is checked before
   any pending full/course replay. No terrain or physics change crosses the wall.
   Full/course restore retains
@@ -112,6 +112,14 @@ matching area heading; see the
   The213-case component/World/legacy/route cohort passes without failures, errors
   or skips after a test-only name-shadow correction. Natural contact, selected
   Bumper pixels and completed reward/act/regional coverage remain separate.
+  Cached Time Post now joins that same physical pass through its original
+  operation, direction-byte, saved-bank, sound and Draw publications. The lower
+  route requires its returned Init before classifying another frontier. One
+  1,072-case run passes without failures, errors or skips, including815 existing
+  Frame cases and the protected Bumper, enemy, effect, intro and reload controls.
+  Original missing-owner RED remains recorded; no new World or sound owner is
+  added. Completed time warp, audible output and full-act/regional coverage remain
+  separate.
   CCZ ordinary scheduling now preserves native VBlank/Main order, the old
   selected sprite list and full-word time-stop gating. Private HUD adoption
   retains the real prefix across typed callback failures;175 focused checks

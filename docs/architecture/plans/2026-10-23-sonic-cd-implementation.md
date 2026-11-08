@@ -1,5 +1,55 @@
 # Implement Sonic CD with complete regional parity
 
+## 8 November 2026 — original Time Post publication through the common World
+
+One cached `CdTimePost` now receives dynamic ID19/subtype>=8 through the existing
+physical pass. Reserved ID19 still belongs to HUD; dynamic subtypes below8 still
+use Monitor. The same kernel retains legacy constructors and pure paths while
+exposing its current private original-operation call to the pass observer. Equal
+records, completed effects or inert Frame plans cannot mint an invocation.
+Source, receiver, phase/thread/physical slot/site/ordinal and exact-once fences
+bind the original direction, sound and Draw operations to existing owners.
+
+The finite Frame direction builder prepares a complete State/Environment pair;
+the old apply entry delegates through it. Native Future activation retains FF,
+then01, then one existing typed SubCPU request before Draw. Time Post Init,
+conditional zone/layer reads, raw era/saved aliases, live postDraw reload and
+despawn remain in the shared kernel. No World, Host, Module, sound alternative,
+secondary actor, capture partition or hardware model is added. Sound inventory38,
+all13 common asset getters and prior Bumper/Kama/effect/P2 regions stay exact.
+
+Six Java sources compose over the saved Bumper checkpoint. The lower recipe is
+unchanged and now requires a returned Time Post Init after original intro,
+lower-passage and RollTunnel obligations. Returned death and owner/generation/
+lives/READY guards still precede any pending full/course replay. The original
+palette-Adoption observer and strict two-reload1,200-service contract remain.
+An independent first source review found no new P1/P2 and explicitly identified
+that existing death-stop correction as a composition obligation.
+
+R133 first compiles the genuine public-World Init probe on prior production;
+it fails at OBJECT_FAMILY/whole127/ID19 as intended, with one error, no failure
+or skip, and unchanged source. That original receipt stays failed. The full
+candidate then passes R134:1,072 cases across15 flat classes, zero failures,
+errors or skips. This includes815 complete Frame cases,87 Time Post cases,
+16 Past Time Post cases,10 new original-operation cases,4 constructed World
+cases, the positive lower continuation and protected existing bindings. Source
+and index remain unchanged with fingerprint
+`96709ebfb4fb26d59a45b7b505462e4cd893317e1f34501690f0a72fdbef596d`.
+Bounded import checks remain incomplete with no hints; the actual successful
+compiler and JUnit run supply the observed execution evidence. No compiled-class
+before/after custody manifest was recorded, so no such equality is claimed.
+
+The new constructed World checks cover Init/full-course next state, contact's
+two direction stores and one request, unknown-routine failure, and inert finite
+preparation. The public lower route proves actual Time Post Init, but this run
+exports no fresh exact ordinal or later frontier. Supplied1118/first1119 remains
+earlier context rather than a new measured endpoint. Existing source headers
+label the worker-authored candidates UNRUN; this section records their later
+installed qualification. `TIME_WARP_ACTIVE`, completed warp/reload, audible
+output, selected Time Post pixels, natural PPZ-to-CCZ transfer, whole acts, full
+USA and JP/EU remain unfinished. Flower1F and historical IPX progress source
+work continue independently; no remote or public delivery occurs.
+
 ## 8 November 2026 — genuine primary-only Bumper through shared owners
 
 One Context staging/invocation kernel now supports genuine primary-only Bumper

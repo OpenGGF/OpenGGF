@@ -1883,14 +1883,23 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
      * art, inputs, clocks, sounds and capture shape remain unchanged.
      */
     public void applyObjectTimePostDirection(int expectedRawDirection, int rawDirection) {
-        validateObjectTimePostDirection(expectedRawDirection, rawDirection);
-        var m = environment.movement(); var g = m.gates();
-        var gates = new CdPlayerMovement.Gates(g.zoneAct(), g.timeZone(), g.miniSonic(), g.waterSlide(),
-                g.windTunnel(), g.speedShoes(), rawDirection);
-        var movement = new CdPlayerMovement.Environment(m.physics(), m.bounds(), gates, m.globals());
-        var next = new CdPlayerBody.Environment(movement, environment.controls(), environment.globals(),
-                environment.dynamicSlots());
-        environment = next;
+        var ready=prepareObjectTimePostDirection(state,environment,expectedRawDirection,rawDirection);
+        applyPreparedObjectSolidPublication(ready);
+    }
+
+    /** Inert finite direction plan at the complete existing closed object cut. No native authority.
+     * R31's original pass binds the current kernel call; legacy apply retains all its old guards. */
+    public ObjectSolidPublication prepareObjectTimePostDirection(CdPlayerBody.State expectedState,
+            CdPlayerBody.Environment expectedEnvironment,int expectedRawDirection,int rawDirection){
+        validateObjectTimePostDirection(expectedRawDirection,rawDirection);
+        if(state!=expectedState||environment!=expectedEnvironment)
+            throw new IllegalArgumentException("Stale complete Time Post Frame pair");
+        var m=expectedEnvironment.movement();var g=m.gates();
+        var gates=new CdPlayerMovement.Gates(g.zoneAct(),g.timeZone(),g.miniSonic(),g.waterSlide(),
+                g.windTunnel(),g.speedShoes(),rawDirection);
+        var movement=new CdPlayerMovement.Environment(m.physics(),m.bounds(),gates,m.globals());
+        var next=new CdPlayerBody.Environment(movement,expectedEnvironment.controls(),expectedEnvironment.globals(),expectedEnvironment.dynamicSlots());
+        return new ObjectSolidPublication(expectedState,expectedEnvironment,expectedState,next);
     }
 
     /**
@@ -3208,3 +3217,4 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
     }
 
 }
+// Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>

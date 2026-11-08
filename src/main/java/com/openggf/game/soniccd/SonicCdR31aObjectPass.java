@@ -56,7 +56,7 @@ final class SonicCdR31aObjectPass {
         Boundary boundary(){return boundary;}int wholeIndex(){return wholeIndex;}int value(){return value;}
     }
     private enum Phase { READY,WALKING,WALKED,DRAINING,DONE,FAILED,DISCARDED }
-    private enum Kind { PRIMARY,HUD,TITLE,MONITOR,RING,INTRO,METAL,AMY,HEART,EXHAUST,ROLL,CC_SPIKES,BLOCK,HIDDEN,METAL_PLATFORM,DOOR,FIRE,DRUM,GAME_OVER,KAMA,SICKLE,EXPLOSION,POINTS,BUMPER }
+    private enum Kind { PRIMARY,HUD,TITLE,MONITOR,RING,INTRO,METAL,AMY,HEART,EXHAUST,ROLL,CC_SPIKES,BLOCK,HIDDEN,METAL_PLATFORM,DOOR,FIRE,DRUM,GAME_OVER,KAMA,SICKLE,EXPLOSION,POINTS,BUMPER,TIME_POST }
     private static final class Dispatch {
         final Kind kind;final int whole,routine;final Object body;final Thread thread=Thread.currentThread();
         final Set<Object> calls=Collections.newSetFromMap(new IdentityHashMap<>());
@@ -73,6 +73,8 @@ final class SonicCdR31aObjectPass {
         private final CdObjectPlacementRuntime.Snapshot placed;
         private final CdObjectPool.Snapshot poolOutput;
         private final CdPlayerFrameRuntime.ObjectSolidPublication frameOutput;
+        private final TimePostInvocation timePostOwner=timePostInvocation;
+        private final ReadFrame timePostReadyFrame;
         private final boolean introPalette=intro!=null&&intro.op==IntroOp.PALETTE;
         private final GameOverOperation gameOverOwner=gameOverOperation;
         private final CdGameOver.ScalarCall gameOverScalar=gameOverOwner!=null&&gameOverOwner.call instanceof CdGameOver.ScalarCall c?c:null;
@@ -88,6 +90,8 @@ final class SonicCdR31aObjectPass {
         // END original primary drain flag publication 20261107.
         private Adoption(Cut e,Cut n,CdObjectPool.Snapshot p,CdPlayerFrameRuntime.ObjectSolidPublication f){
             expected=e;next=n;poolOutput=p;frameOutput=f;before=readFrame();placed=placement.capture();
+            timePostReadyFrame=timePostOwner==null?null:f==null?before:new ReadFrame(f.finalState(),f.finalEnvironment(),before.display(),before.art(),before.clock(),before.paused());
+            if(timePostOwner!=null){if(timePostOwner.current==null||!timePostOwner.used)throw new IllegalStateException("No actual Time Post callback publication");timePost.requireCurrent(timePostOwner.current);}
             if(p!=null)placement.pool().validateRestore(p);if(f!=null)frame.validatePreparedObjectSolidPublication(f);
         }
         SonicCdR31aObjectPass owner(){return SonicCdR31aObjectPass.this;}Cut expected(){return expected;}Cut next(){return next;}boolean introPalette(){return introPalette;}
@@ -96,6 +100,7 @@ final class SonicCdR31aObjectPass {
             return gameOverScalar;
         }
         void validateBefore(){currentAdoption(this);
+            if(timePostOwner!=null){if(timePostOwner!=timePostInvocation||timePostOwner.current==null||!timePostOwner.used)throw new IllegalStateException("Expired Time Post adoption");timePost.requireCurrent(timePostOwner.current);}
             if(gameOverOwner!=null){requireGameOverOperation(gameOverOwner);if(!gameOverOwner.prepared||!gameOverOwner.used||!gameOver.isCurrentPrimitive(gameOverOwner.call))throw new IllegalStateException("Expired Game Over primitive adoption");}
             requireCut(expected);requireFrame(before);requirePlacement(placed);
             if(poolOutput!=null)placement.pool().validateRestore(poolOutput);
@@ -114,6 +119,7 @@ final class SonicCdR31aObjectPass {
             }
             // END original primary drain flag application 20261107.
             applied=true;
+            if(timePostOwner!=null){timePostOwner.frameCut=timePostReadyFrame;timePostOwner.cut=next;}
             if(gameOverOwner!=null){gameOverOwner.current=next;if(poolOutput!=null)gameOverOwner.reached=poolOutput;}
         }
     }
@@ -276,6 +282,7 @@ final class SonicCdR31aObjectPass {
     private final CdKamaSickle sickle;
     private ChildInvocation childEffect;
     private final CdExplosion explosion;private final CdPoints points;
+    private final CdTimePost timePost;private TimePostInvocation timePostInvocation;
     private IntroInvocation intro;private IntroPlcSubmission introPlc;
     private Phase phase=Phase.READY;private CdObjectDrawQueue queue;private Dispatch dispatch;
     private boolean checking,reading,adopting,drawing,plc;private Thread walkingThread;
@@ -325,6 +332,12 @@ final class SonicCdR31aObjectPass {
             public CdAssetBytes read(int w){requireWhole(Kind.TITLE,w);return reserved(SonicCdR31aObjectPass.this.read(),w);}
             public void write(int w,CdAssetBytes e,CdAssetBytes n){reservedWrite(Kind.TITLE,w,e,n);}},
             this::titleRead,this::titleRead,this::titleStore,this::titlePlc,this::titleDraw);
+        timePost=CdTimePost.withOriginalOperations(placement,common.monitorAssets(),this::timePostDirection,
+            this::timePostSound,this::timePostDraw,new CdTimePost.NativeObserver(){
+                public void before(CdTimePost.OriginalCall c){beforeTimePost(c);}
+                public void after(CdTimePost.OriginalCall c){afterTimePost(c);}
+                public void failed(CdTimePost.OriginalCall c,Throwable original){failedTimePost(c,original);}
+            });
         monitor=CdMonitor.withPastOwner(placement,common.monitorAssets(),solid,terrain,new CdMonitor.PrefixSolidOwner(){
             public CdMonitor.LiveSolid preflight(CdMonitor.PrefixSolidCut c){requireKind(Kind.MONITOR);identity(c.objectIdentity());poolCut(c.callCut());
                 monitorSite(2);
@@ -355,7 +368,7 @@ final class SonicCdR31aObjectPass {
                 finally{dispatch=null;}
             }phase=Phase.WALKED;
         }catch(RuntimeException|Error original){phase=Phase.FAILED;queue.close();throw original;}
-        finally{walkingThread=null;dispatch=null;primaryPending=null;pending=null;plcPending=null;primaryDraw=null;intro=null;introPlc=null;gameOverOperation=null;enemy=null;childEffect=null;}
+        finally{walkingThread=null;dispatch=null;primaryPending=null;pending=null;plcPending=null;primaryDraw=null;intro=null;introPlc=null;gameOverOperation=null;enemy=null;childEffect=null;timePostInvocation=null;}
     }
     CdObjectDrawQueue.CpuSat finishDraw(CdObjectDrawQueue.DrawCameras cameras){
         if(phase!=Phase.WALKED||busy()||dispatch!=null)throw new IllegalStateException("No complete R31 walk to drain");
@@ -374,11 +387,12 @@ final class SonicCdR31aObjectPass {
         queue.close();queue=null;phase=Phase.DONE;
     }
     void discard(){if(busy()||phase==Phase.WALKING||phase==Phase.DRAINING||dispatch!=null)throw new IllegalStateException("Active R31 pass");if(queue!=null)queue.close();queue=null;phase=Phase.DISCARDED;}
-    private boolean busy(){return bumper!=null||enemy!=null||childEffect!=null||gameOverOperation!=null||p2!=null||intro!=null||introPlc!=null||primaryInvocation!=null||placeCall!=null||checking||reading||adopting||drawing||plc||pending!=null||primaryPending!=null||plcPending!=null||primaryDraw!=null;}
-    private Object body(Kind k){return switch(k){case PRIMARY->frame;case HUD->hud;case TITLE->title;case MONITOR->monitor;case RING->ring;case INTRO->spikes;case METAL,EXHAUST->metal;case AMY,HEART->amy;case ROLL->roll;case CC_SPIKES->ccSpikes;case BLOCK->block;case HIDDEN->hidden;case METAL_PLATFORM->metalPlatform;case DOOR->door;case FIRE->fire;case DRUM->drum;case GAME_OVER->gameOver;case KAMA->kama;case SICKLE->sickle;case EXPLOSION->explosion;case POINTS->points;case BUMPER->CdBumper.class;};}
+    private boolean busy(){return timePostInvocation!=null||bumper!=null||enemy!=null||childEffect!=null||gameOverOperation!=null||p2!=null||intro!=null||introPlc!=null||primaryInvocation!=null||placeCall!=null||checking||reading||adopting||drawing||plc||pending!=null||primaryPending!=null||plcPending!=null||primaryDraw!=null;}
+    private Object body(Kind k){return switch(k){case PRIMARY->frame;case HUD->hud;case TITLE->title;case MONITOR->monitor;case RING->ring;case INTRO->spikes;case METAL,EXHAUST->metal;case AMY,HEART->amy;case ROLL->roll;case CC_SPIKES->ccSpikes;case BLOCK->block;case HIDDEN->hidden;case METAL_PLATFORM->metalPlatform;case DOOR->door;case FIRE->fire;case DRUM->drum;case GAME_OVER->gameOver;case KAMA->kama;case SICKLE->sickle;case EXPLOSION->explosion;case POINTS->points;case BUMPER->CdBumper.class;case TIME_POST->timePost;};}
     private void execute(Kind kind,int w,int levelFrames){var c=read();var e=frame.environment();var g=e.movement().gates();switch(kind){
         case PRIMARY->runPrimary(levelFrames);
         case BUMPER->runBumper(w);
+        case TIME_POST->runTimePost(w);
         case GAME_OVER->{var result=gameOver.run(w,new CdGameOver.GlobalsPort(){
             public CdGameOver.Globals read(){var op=gameOverPrimitive(CdGameOver.ReadCall.class);var current=op.current;return new CdGameOver.Globals(current.ring().lives(),current.core().level().powerup(),current.core().level().timeOver());}
             public void writePowerup(int value){gameOverStore(CdGameOver.Scalar.POWERUP,value);}
@@ -1241,7 +1255,7 @@ final class SonicCdR31aObjectPass {
         if(id==0x10){if(w<32)throw stop(Boundary.PHYSICAL_OWNER,w,id);return Kind.RING;}
         if(id==0x18){if(w<32)throw stop(Boundary.PHYSICAL_OWNER,w,id);return Kind.EXPLOSION;}
         if(id==0x1C){if(w>=32){if((placement.pool().state(w).subtype()&128)!=0)return Kind.POINTS;throw stop(Boundary.PHYSICAL_OWNER,w,id);}return Kind.HUD;}
-        if(id==0x19){if(w<32)return Kind.HUD;if(placement.pool().state(w).subtype()>=8)throw stop(Boundary.OBJECT_FAMILY,w,id);return Kind.MONITOR;}
+        if(id==0x19){if(w<32)return Kind.HUD;return placement.pool().state(w).subtype()>=8?Kind.TIME_POST:Kind.MONITOR;}
         throw stop(Boundary.OBJECT_FAMILY,w,id);
     }
 
@@ -1318,6 +1332,88 @@ final class SonicCdR31aObjectPass {
         var cut=read();var sounds=new ArrayList<>(cut.sounds());for(var s:fm)sounds.add(new SonicCdGameModule.PastFrameSound(new CdPlayerFrameRuntime.ContactFmSound(s)));
         publish(cut,copy(cut,cut.core(),cut.scrollLockWord(),cut.cpuSat(),cut.completedCpu(),sounds),output,ready);
     }
+    /** Only the cached kernel's current private operation may borrow this actual dispatch.
+     * Per-call snapshots are comparison cuts, never a second placement/Frame or capture owner. */
+    private final class TimePostInvocation {
+        final Thread thread=Thread.currentThread();final int whole;final CdObjectState source;
+        Cut cut;ReadFrame frameCut;CdObjectPlacementRuntime.Snapshot placed;
+        CdTimePost.OriginalCall current;long ordinal;boolean used;
+        TimePostInvocation(int whole){this.whole=whole;source=placement.pool().state(whole);cut=read();frameCut=readFrame();placed=placement.capture();}
+    }
+    private TimePostInvocation timePostScope(){
+        var i=timePostInvocation;
+        if(i==null||i.thread!=Thread.currentThread()||dispatch==null||dispatch.kind!=Kind.TIME_POST
+                ||dispatch.body!=timePost||dispatch.whole!=i.whole||dispatch.thread!=Thread.currentThread()
+                ||walkingThread!=Thread.currentThread()||phase!=Phase.WALKING||adopting||drawing||plc)
+            throw new IllegalStateException("No original current cached Time Post producer");
+        guard();return i;
+    }
+    private void beforeTimePost(CdTimePost.OriginalCall c){
+        var i=timePostScope();timePost.requireCurrent(c);
+        if(i.current!=null||c.ordinal()!=i.ordinal+1)throw new IllegalStateException("Wrong/repeated native Time Post cursor");
+        requireCut(i.cut);requireFrame(i.frameCut);requirePlacement(i.placed);requirePlacement(c.before());
+        i.current=c;i.ordinal=c.ordinal();i.used=false;
+    }
+    private CdTimePost.OriginalCall timePostCall(CdTimePost.Site site,Object argument,boolean hasArgument){
+        var i=timePostScope();var c=hasArgument?timePost.requireCurrentArgument(site,argument):timePost.requireCurrentSite(site);
+        if(c!=i.current||i.used)throw new IllegalStateException("Expired/clone/repeated Time Post native site");
+        requireCut(i.cut);requireFrame(i.frameCut);requirePlacement(i.placed);c.verifyNativePrefix();
+        claim(c);i.used=true;return c;
+    }
+    private void afterTimePost(CdTimePost.OriginalCall c){
+        var i=timePostScope();timePost.requireCurrent(c);
+        if(i.current!=c||!c.returned())throw new IllegalStateException("Missing actual Time Post operation return");
+        switch(c.site()){
+            case OBJECT_STORE,SAVED_STORE,DELETE -> { }
+            default -> {if(!i.used)throw new IllegalStateException("Original Time Post callback omitted");}
+        }
+        requireCut(i.cut);requireFrame(i.frameCut);c.verifyNativePrefix();
+        // All fallible comparison capture is before these invocation-local reference assignments.
+        var reached=placement.capture();i.placed=reached;i.current=null;checkpoint();
+    }
+    private void failedTimePost(CdTimePost.OriginalCall c,Throwable original){
+        // The kernel captured original BEFORE any fallible observer/preparation, including read faults.
+        // Distinct suppression belongs to that kernel; never replace it or suppress the same instance.
+        var i=timePostScope();timePost.requireCurrent(c);
+        requireCut(i.cut);requireFrame(i.frameCut);c.verifyNativePrefix();
+        var reached=placement.capture();i.placed=reached;i.current=null;
+    }
+    private void runTimePost(int whole){
+        requireWhole(Kind.TIME_POST,whole);
+        if(timePostInvocation!=null)throw new IllegalStateException("Recursive Time Post body");
+        var i=new TimePostInvocation(whole);timePostInvocation=i;
+        try{
+            var result=timePost.runWithReads(whole,new CdTimePost.PastGlobals(){
+                public int timeAttackMode(){timePostCall(CdTimePost.Site.TIME_ATTACK_READ,null,false);return frame.environment().globals().timeAttackMode();}
+                public int zone(){timePostCall(CdTimePost.Site.ZONE_READ,null,false);return frame.environment().movement().gates().zoneAct()>>>8;}
+                public int rawTimeZone(){timePostCall(CdTimePost.Site.TIME_ZONE_READ,null,false);return frame.environment().movement().gates().timeZone();}
+                public int rawTimeWarpDirection(){timePostCall(CdTimePost.Site.DIRECTION_READ,null,false);return frame.environment().movement().gates().timeWarpDirection();}
+                public int cameraXWord(){timePostCall(CdTimePost.Site.CAMERA_READ,null,false);return read().cameraXWord();}
+                public OptionalInt layer(){timePostCall(CdTimePost.Site.LAYER_READ,null,false);return read().layerByte();}
+            });
+            if(i.current!=null||!result.state().equals(placement.pool().state(whole)))throw new IllegalStateException("Incomplete original Time Post body");
+            requireCut(i.cut);requireFrame(i.frameCut);requirePlacement(i.placed);
+        }catch(RuntimeException|Error original){
+            verify(original,()->{requireCut(i.cut);requireFrame(i.frameCut);
+                if(i.current!=null)i.current.verifyNativePrefix();else requirePlacement(i.placed);});throw original;
+        }finally{timePostInvocation=null;}
+    }
+    private void timePostDirection(CdTimePost.DirectionCall actual){
+        timePostCall(CdTimePost.Site.DIRECTION_STORE,actual,true);identity(actual.identity());
+        var i=timePostScope();var before=read();
+        var ready=frame.prepareObjectTimePostDirection(frame.state(),frame.environment(),actual.expectedRawDirection(),actual.rawDirection());
+        publish(before,before,null,ready);
+        // Adoption prebuilt and advanced the original invocation fence in its callback-free suffix.
+    }
+    private void timePostSound(CdTimePost.SubCpuCommand actual){
+        timePostCall(CdTimePost.Site.SUB_CPU,actual,true);
+        sound(new SonicCdGameModule.PastTimePostSubCpu(actual));
+    }
+    private void timePostDraw(CdObjectPool pool,CdObjectState.Identity actual){
+        timePostCall(CdTimePost.Site.DRAW,actual,true);
+        drawDynamic(Kind.TIME_POST,pool,actual);
+    }
+
     private CdMonitor.PastGlobals monitorReads(){return new CdMonitor.PastGlobals(){
         public int rawTimeZone(){requireKind(Kind.MONITOR);return frame.environment().movement().gates().timeZone();}
         public int rawTimeWarpDirection(){requireKind(Kind.MONITOR);return frame.environment().movement().gates().timeWarpDirection();}
@@ -1394,3 +1490,4 @@ final class SonicCdR31aObjectPass {
     private static void verify(Throwable original,Runnable check){try{check.run();}catch(RuntimeException|Error fault){if(fault!=original){for(var old:original.getSuppressed())if(old==fault)return;original.addSuppressed(fault);}}}
     private static Unowned stop(Boundary b,int w,int v){return new Unowned(b,w,v);}
 }
+// Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>

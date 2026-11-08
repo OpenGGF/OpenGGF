@@ -68,8 +68,8 @@ import static org.junit.jupiter.api.Assertions.*;
      * Return left off the upper ledge after Metal has retired the barriers, and turn
      * right only when the actual head is below that ceiling. No additional action tap.
      * Ordinals/captured records are diagnostics, never controller or engine values. */
-    @Test void ordinaryBacktrackEntersTheOriginalLowerPassageBeforeItsFirstNewOwner()throws Exception{
-        var csv=new StringBuilder(TestSonicCdR31aOrdinaryRoute.header());int returned=0,closedIntro=-1,firstCapture=-1,retired=-1,amyWhole=-1,turned=-1,entered=-1,boosted=-1;Throwable frontier=null;boolean backtracking=false;String last="";CdAssetBytes firstCaptureNormal=null;
+    @Test void ordinaryBacktrackClosesTimePostInitBeforeTheNextGenuineOwner()throws Exception{
+        var csv=new StringBuilder(TestSonicCdR31aOrdinaryRoute.header());int returned=0,closedIntro=-1,firstCapture=-1,retired=-1,amyWhole=-1,turned=-1,entered=-1,boosted=-1,postInitialised=-1;Throwable frontier=null;boolean backtracking=false;String last="";CdAssetBytes firstCaptureNormal=null;
         try(var b=fixture.start(1,0x80)){
             TestSonicCdR31aSelectedProfileLoading.ready(b);var host=b.module.r31WorldHost();var core=b.module.r31LoadingVisit();var f=b.module.requirePlayerFrame();var placement=host.placement();var source=f.stageSource();
             long generation=b.mode.getLevelManager().getCompletedProductionLoadGeneration();int lives=host.globals().ring().lives();var intro=new TestSonicCdR31aOrdinaryRoute.FirstWallJump();
@@ -113,13 +113,18 @@ import static org.junit.jupiter.api.Assertions.*;
                     final int actualX=x,actualY=y;assertTrue(afterPool.slots().stream().anyMatch(s->s.id()==0x35&&s.subtype()==0&&((actualX-s.centreX()+0x28)&0xFFFF)<0x50&&((actualY-s.centreY()+0x28)&0xFFFF)<0x50));
                     boosted=n;picture(b,n,"original-roll-tunnel-speed");pending=TestSonicCdR31aOrdinaryRoute.comparison(b);
                 }
+                if(postInitialised<0&&boosted>=0&&afterPool.slots().stream().anyMatch(s->s.id()==0x19&&s.subtype()==9&&s.routine()==2)){
+                    postInitialised=n;documents.put("time-post-original-init-closed.txt",TestSonicCdR31aOrdinaryRoute.cut(b,n));pending=TestSonicCdR31aOrdinaryRoute.comparison(b);
+                }
                 last=TestSonicCdR31aOrdinaryRoute.cut(b,n);
             }
             String partial=frontier==null?"none":frontier+"\n"+Arrays.toString(frontier.getStackTrace())+"\nState8="+f.state()+"\nEnvironment="+f.environment()+"\nPool="+placement.capture().pool().slots().stream().map(s->s.identity().wholeIndex()+":"+HexFormat.of().formatHex(s.copyBytes())).toList();
-            documents.put("lower-route-result.txt","Single new recipe: qualified intro prefix; left off upper lip; right after actual head clears ceiling. returned="+returned+" attempted="+(frontier==null?"none":returned+1)+" introClosed="+closedIntro+" turned="+turned+" entered="+entered+" boosted="+boosted+"\nLAST_CLOSED\n"+last+"\nFIRST_UNOWNED_PARTIAL(no closed snapshot/picture/retry)\n"+partial);
+            documents.put("lower-route-result.txt","Existing unchanged recipe; SOURCE-ONLY Time Post continuation: qualified intro prefix; left off upper lip; right after actual head clears ceiling. returned="+returned+" attempted="+(frontier==null?"none":returned+1)+" introClosed="+closedIntro+" turned="+turned+" entered="+entered+" boosted="+boosted+" postInit="+postInitialised+"\nLAST_CLOSED\n"+last+"\nFIRST_UNOWNED_PARTIAL(no closed snapshot/picture/retry)\n"+partial);
             assertTrue(firstCapture>0);assertEquals(firstCapture+1,retired);assertEquals(retired,closedIntro);assertTrue(turned>closedIntro);assertTrue(entered>turned,"Require genuine passage traversal before classifying a later frontier");assertTrue(boosted>entered);
-            if(frontier!=null){assertTrue(f.closed());var reached=assertInstanceOf(SonicCdR31aObjectPass.Unowned.class,frontier);assertEquals(SonicCdR31aObjectPass.Boundary.OBJECT_FAMILY,reached.boundary());assertEquals(0x19,reached.value());var post=placement.capture().pool().slots().stream().filter(s->s.identity().wholeIndex()==reached.wholeIndex()).findFirst().orElseThrow();assertEquals(9,post.subtype());assertEquals(0,post.routine());}
+            assertTrue(postInitialised>boosted,"Positive original Time Post Init closure is required before any later frontier; SOURCE-ONLY UNRUN, no endpoint claimed");
+            if(frontier!=null){assertTrue(f.closed());documents.put("next-owner-source-only-observation.txt",partial);}
             else assertTrue(f.state().motion().routine()<6,"Returned death stops this recipe; never extend reload cycles as route progress");
         }finally{documents.put("lower-route.csv",csv.toString());}
     }
 }
+// Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>

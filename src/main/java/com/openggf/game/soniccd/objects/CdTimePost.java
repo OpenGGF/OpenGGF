@@ -4,6 +4,7 @@ import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.function.IntSupplier;
+import java.util.function.Supplier;
 import java.util.List;
 import java.util.Objects;
 import java.util.OptionalInt;
@@ -113,6 +114,90 @@ public final class CdTimePost {
         public int value() { return value; }
     }
 
+    /** Finite original kernel sites. None is a generic source, state-adoption or replay port. */
+    public enum Site { OBJECT_STORE,SAVED_STORE,DELETE,TIME_ATTACK_READ,ZONE_READ,TIME_ZONE_READ,
+        DIRECTION_READ,CAMERA_READ,LAYER_READ,DIRECTION_STORE,SUB_CPU,DRAW }
+    public interface NativeObserver {
+        void before(OriginalCall original);
+        void after(OriginalCall original);
+        void failed(OriginalCall original,Throwable failure);
+    }
+    /** Private producer plus current invocation/thread/ordinal. Complete cut DATA is comparison-only.
+     * A completed call has no authority. No public constructor, deserializer or capture is provided. */
+    public final class OriginalCall {
+        private final Site site;private final Object argument;private final long ordinal;
+        private final Thread thread=Thread.currentThread();private final Object invocation=originalInvocation;
+        private final CdObjectPlacementRuntime.Snapshot before;
+        private final CdObjectPool.Snapshot poolReady;private final byte[] savedReady;
+        private boolean returned;
+        private OriginalCall(Site site,Object argument,CdObjectPool.Snapshot poolReady,byte[] savedReady){
+            this.site=site;this.argument=argument;this.poolReady=poolReady;this.savedReady=savedReady;
+            ordinal=++originalOrdinal;before=runtime.capture();
+        }
+        public Site site(){return site;}public Object argument(){return argument;}public long ordinal(){return ordinal;}
+        public CdObjectPlacementRuntime.Snapshot before(){return before;}
+        public boolean returned(){return returned;}
+        /** Recheck the original planned prefix; cannot issue a store or refresh the original call. */
+        public void verifyNativePrefix(){
+            requireCurrent(this);
+            var actual=runtime.capture();
+            if(!before.status().equals(actual.status())||!Arrays.equals(returned&&savedReady!=null?savedReady:before.savedFlags().copy(),actual.savedFlags().copy()))
+                throw new IllegalStateException("Original Time Post changed status/saved nonwrites");
+            if(!returned){requireStorage(before,before.pool());return;}
+            if(site==Site.DRAW){requireDrawStorage(before,((CdObjectState.Identity)argument).wholeIndex());return;}
+            if(site==Site.DELETE){
+                int whole=(Integer)argument;
+                for(var source:before.pool().slots()){
+                    var now=runtime.pool().state(source.identity().wholeIndex());
+                    if(source.identity().wholeIndex()==whole){if(!Arrays.equals(new byte[64],now.copyBytes()))throw new IllegalStateException("Incomplete original DeleteObject");}
+                    else if(!source.equals(now))throw new IllegalStateException("Delete changed another physical slot");
+                }
+                return;
+            }
+            var expected=poolReady==null?before.pool():poolReady;
+            runtime.pool().validateRestore(expected);
+            if(!expected.slots().equals(actual.pool().slots()))throw new IllegalStateException("Original Time Post changed full96 nonwrites");
+        }
+    }
+    private NativeObserver originalObserver;private Object originalInvocation;private Thread originalThread;
+    private OriginalCall originalCall;private long originalOrdinal;
+    public void requireCurrent(OriginalCall call){
+        if(call==null||call!=originalCall||!pastRunning||originalObserver==null||originalInvocation==null
+                ||call.invocation!=originalInvocation||call.thread!=Thread.currentThread()||originalThread!=Thread.currentThread())
+            throw new IllegalStateException("No current original Time Post kernel operation");
+    }
+    public OriginalCall requireCurrentArgument(Site site,Object argument){
+        var call=originalCall;requireCurrent(call);
+        if(call.site!=site||call.argument!=argument)throw new IllegalArgumentException("Not original Time Post operation argument");
+        return call;
+    }
+    public OriginalCall requireCurrentSite(Site site){
+        var call=originalCall;requireCurrent(call);if(call.site!=site)throw new IllegalArgumentException("Wrong original Time Post site");return call;
+    }
+    /** Same body and callbacks; only actual native operations issue this observer's private scopes. */
+    public static CdTimePost withOriginalOperations(CdObjectPlacementRuntime runtime,CdMonitor.Assets assets,
+            DirectionCommit direction,SubCpuCall sound,CdMonitor.DrawObjectCall draw,NativeObserver observer){
+        var body=withSourceOwner(runtime,assets,direction,sound,draw);body.originalObserver=Objects.requireNonNull(observer);return body;
+    }
+    private <T>T original(Site site,Object argument,CdObjectPool.Snapshot poolReady,byte[] savedReady,Supplier<T> action){
+        if(originalObserver==null)return action.get();
+        if(originalCall!=null||originalThread!=Thread.currentThread())throw new IllegalStateException("Recursive Time Post operation");
+        var call=new OriginalCall(site,argument,poolReady,savedReady);originalCall=call;
+        try{
+            originalObserver.before(call);call.verifyNativePrefix();
+            T value=action.get();call.returned=true;call.verifyNativePrefix();
+            originalObserver.after(call);call.verifyNativePrefix();return value;
+        }catch(RuntimeException|Error failure){
+            verifySuppressed(failure,()->originalObserver.failed(call,failure));
+            verifySuppressed(failure,call::verifyNativePrefix);throw failure;
+        }finally{originalCall=null;}
+    }
+    private void objectStore(Cursor c){
+        if(originalObserver==null){c.pool.write(c.state);return;}
+        var ready=CdObjectPool.overlay(runtime.capture().pool(),List.of(c.state));
+        original(Site.OBJECT_STORE,c.state,ready,null,()->{c.pool.write(c.state);return null;});
+    }
+
     /** Actual globals, read lazily at native cuts; a missing MMZ layer is never defaulted. */
     public interface PastGlobals {
         int rawTimeZone();
@@ -182,9 +267,11 @@ public final class CdTimePost {
 
     private Result runPastGuarded(int wholeIndex, NativeGlobals globals) {
         if (pastRunning) throw new IllegalStateException("Reentrant Past Time Post invocation");
-        pastRunning = true;
+        Object invocation=originalObserver==null?null:new Object();
+        pastRunning = true;originalInvocation=invocation;
+        originalThread=invocation==null?null:Thread.currentThread();originalOrdinal=0;
         try { return runNative(wholeIndex, globals); }
-        finally { pastRunning = false; }
+        finally { originalCall=null;originalInvocation=null;originalThread=null;pastRunning = false; }
     }
 
     /** Outer Monitor subtype comparison (:279-280), then post/time-icon wrapper (:64-90). */
@@ -256,7 +343,7 @@ public final class CdTimePost {
         }
         c.publish();
         var selectedCommand = command;
-        if (pastMode) callPastReadOnly(() -> subCpu.request(selectedCommand));
+        if (pastMode) original(Site.SUB_CPU,selectedCommand,null,null,()->{callPastReadOnly(() -> subCpu.request(selectedCommand));return null;});
         else subCpu.request(command);
         requireUnchangedSlot(c, "SubCPU callback");
         c.effects.add(new SubCpuRequest(command));
@@ -265,7 +352,7 @@ public final class CdTimePost {
     private void direction(Cursor c, int value, NativeGlobals globals) {
         c.publish();
         var call = new DirectionCall(c.state.identity(), directionValue(c, globals), value);
-        if (pastMode) callPastReadOnly(() -> directionCommit.commit(call));
+        if (pastMode) original(Site.DIRECTION_STORE,call,null,null,()->{callPastReadOnly(() -> directionCommit.commit(call));return null;});
         else directionCommit.commit(call);
         requireUnchangedSlot(c, "Direction callback");
         c.direction = value; // Invocation-local observation of the completed Frame store, not another global owner.
@@ -342,7 +429,7 @@ public final class CdTimePost {
     /** ObjTimePost wrapper (:81-82): actual DrawObject, then reload its live sprite-bit7 writes. */
     private void draw(Cursor c) {
         c.publish();
-        if (pastMode) drawPast(c);
+        if (pastMode) original(Site.DRAW,c.state.identity(),null,null,()->{drawPast(c);return null;});
         else drawObject.drawObject(c.pool, c.state.identity());
         c.state = c.pool.state(c.wholeIndex); c.effects.add(new CallReturned(NativeCall.DRAW_OBJECT));
     }
@@ -358,13 +445,19 @@ public final class CdTimePost {
         }
         c.effects.add(new CallReturned(NativeCall.CHECK_OBJ_DESPAWN));
     }
-    private static void delete(Cursor c) {
-        c.pool.deleteObject(c.wholeIndex); c.state = c.pool.state(c.wholeIndex); c.effects.add(new Deleted());
+    private void delete(Cursor c) {
+        original(Site.DELETE,Integer.valueOf(c.wholeIndex),null,null,()->{c.pool.deleteObject(c.wholeIndex);return null;});
+        c.state = c.pool.state(c.wholeIndex); c.effects.add(new Deleted());
     }
     private void saved(Cursor c, SavedAddress at, CdObjectPlacementRuntime.SavedBit bit, boolean set) {
         int old = runtime.savedFlag(at.id(), at.period());
-        if (set) runtime.bsetSavedFlag(at.id(), at.period(), bit);
-        else runtime.bclrSavedFlag(at.id(), at.period(), bit);
+        byte[] ready=null;
+        if(originalObserver!=null){ready=runtime.capture().savedFlags().copy();int mask=bit==CdObjectPlacementRuntime.SavedBit.LOADED?128:bit==CdObjectPlacementRuntime.SavedBit.MEMBER_1?1:0;
+            if(mask==0)throw new IllegalArgumentException("Not a native Time Post saved bit");
+            ready[at.byteIndex()]=(byte)(set?(old|mask):(old&~mask));}
+        original(Site.SAVED_STORE,at,null,ready,()->{
+            if (set) runtime.bsetSavedFlag(at.id(), at.period(), bit);
+            else runtime.bclrSavedFlag(at.id(), at.period(), bit);return null;});
         c.effects.add(new SavedFlagChanged(at.byteIndex(), old, runtime.savedFlag(at.id(), at.period())));
     }
     private record SavedAddress(int id, int period, int byteIndex) { }
@@ -440,13 +533,14 @@ public final class CdTimePost {
         private final PastGlobals past;
         NativeGlobals(Globals legacy) { this.legacy = legacy; this.past = null; }
         NativeGlobals(PastGlobals past) { this.legacy = null; this.past = past; }
-        int rawTimeZone() { return legacy != null ? legacy.rawTimeZone() : read(past::rawTimeZone, false); }
-        int rawTimeWarpDirection() { return legacy != null ? legacy.rawTimeWarpDirection() : read(past::rawTimeWarpDirection, false); }
-        int cameraXWord() { return legacy != null ? legacy.cameraXWord() : read(past::cameraXWord, true); }
-        int timeAttackMode() { return legacy != null ? legacy.timeAttackMode() : read(past::timeAttackMode, false); }
-        int zone() { return legacy != null ? legacy.zone() : read(past::zone, false); }
+        int rawTimeZone() { return legacy != null ? legacy.rawTimeZone() : original(Site.TIME_ZONE_READ,null,null,null,()->read(past::rawTimeZone, false)); }
+        int rawTimeWarpDirection() { return legacy != null ? legacy.rawTimeWarpDirection() : original(Site.DIRECTION_READ,null,null,null,()->read(past::rawTimeWarpDirection, false)); }
+        int cameraXWord() { return legacy != null ? legacy.cameraXWord() : original(Site.CAMERA_READ,null,null,null,()->read(past::cameraXWord, true)); }
+        int timeAttackMode() { return legacy != null ? legacy.timeAttackMode() : original(Site.TIME_ATTACK_READ,null,null,null,()->read(past::timeAttackMode, false)); }
+        int zone() { return legacy != null ? legacy.zone() : original(Site.ZONE_READ,null,null,null,()->read(past::zone, false)); }
         OptionalInt layer() {
             if (legacy != null) return legacy.layer();
+            return original(Site.LAYER_READ,null,null,null,()->{
             var before = runtime.capture();
             try {
                 var value = Objects.requireNonNull(past.layer(), "actual optional layer source");
@@ -456,7 +550,7 @@ public final class CdTimePost {
             } catch (RuntimeException | Error failure) {
                 verifySuppressed(failure, () -> requireStorage(before, before.pool()));
                 throw failure;
-            }
+            }});
         }
         private int read(IntSupplier source, boolean word) {
             var before = runtime.capture();
@@ -478,7 +572,7 @@ public final class CdTimePost {
     private static UnsupportedTimePost unsupported(UnsupportedBoundary boundary, Cursor c, int value) {
         return new UnsupportedTimePost(boundary, c.wholeIndex, value);
     }
-    private static final class Cursor {
+    private final class Cursor {
         final CdObjectPool pool;
         final int wholeIndex;
         final List<Effect> effects = new ArrayList<>();
@@ -488,7 +582,7 @@ public final class CdTimePost {
             this.pool = pool; this.state = state; this.direction = direction; wholeIndex = state.identity().wholeIndex();
         }
         void enter(NativeRoutine routine) { effects.add(new RoutineEntered(routine)); }
-        void publish() { pool.write(state); }
+        void publish() { objectStore(this); }
         Result finish() { return new Result(state, effects); }
     }
     private static void byteValue(int value) {
@@ -498,3 +592,4 @@ public final class CdTimePost {
         if ((value & ~0xFFFF) != 0) throw new IllegalArgumentException("Expected an unsigned native word");
     }
 }
+// Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>
