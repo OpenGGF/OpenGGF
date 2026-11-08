@@ -65,16 +65,32 @@ public final class ObjectManagerInternalAccess {
     public interface NativeExecution {
         void afterNativeWait();
         boolean objectsFrozen();
+        /** The world explicitly completes placement after its camera/display work. */
+        default boolean placementAtWorldTail() { return false; }
     }
     public static NativeExecution nativeExecution(com.openggf.LevelFrameContext context) {
         return com.openggf.game.session.WorldSessionPolicyAccess.getService(
                 context.levelManager() == null ? null : context.levelManager().getWorldSession(),
                 NativeExecution.class);
     }
-    /** RunObjects was skipped; V-int and ObjectsManager still run. */
+    static boolean placementAtWorldTail(ObjectManager manager) {
+        var execution = com.openggf.game.session.WorldSessionPolicyAccess.getService(
+                manager.services().worldSession(), NativeExecution.class);
+        return execution != null && execution.placementAtWorldTail();
+    }
+
+    /** Complete the admitted world's deferred placement without executing an object or clock. */
+    public static void completeDeferredPlacement(ObjectManager manager) {
+        Class<?> caller = com.openggf.util.EngineCallerAccess.callerOutside(ObjectManagerInternalAccess.class);
+        if (caller.getClassLoader() != ObjectManagerInternalAccess.class.getClassLoader())
+            throw new SecurityException("World-tail placement belongs to the engine host");
+        manager.completeDeferredPlacement();
+    }
+
+    /** RunObjects was skipped; V-int and placement still belong to their actual owners. */
     public static void runFrozenPlacementPass(ObjectManager manager) {
         manager.advanceVblaCounter();
-        manager.nativeCompetitionStreaming().update();
+        if (!placementAtWorldTail(manager)) manager.nativeCompetitionStreaming().update();
     }
 
     public static void prepareInitialPlacementWindow(ObjectManager manager, List<ObjectSpawn> spawns,

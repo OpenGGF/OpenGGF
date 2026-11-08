@@ -301,8 +301,14 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
         }
         // A failed presentation preparation cannot undo the world body or its
         // completed pause/title continuation. The view owner handles its fault.
-        if (result == LevelFrameResult.GAMEPLAY_FRAME)
+        if (result == LevelFrameResult.GAMEPLAY_FRAME) {
             views.prepare(context(), session, profile, art);
+            // Level_MainLoop (s2.asm:5098-5113): DeformBgLayer, BuildSprites,
+            // THEN ObjectsManager. New placements first execute next RunObjects.
+            // Level_Inactive_flag branches to Level before this tail.
+            if (!context().getLevelManager().isLevelInactiveForTransition())
+                ObjectManagerInternalAccess.completeDeferredPlacement(context().getObjectManager());
+        }
         return result;
     }
 
@@ -624,6 +630,7 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
                         }
                     }
                     @Override public boolean objectsFrozen() { return session.teleportClock().active(); }
+                    @Override public boolean placementAtWorldTail() { return true; }
                 });
             if (type == NativeCompetitionRoster.class || type == Sonic2CompetitionSession.class) return type.cast(session);
             if (type == Sonic2CompetitionObjectHost.class) return type.cast(Sonic2NativeCompetitionHost.this);
