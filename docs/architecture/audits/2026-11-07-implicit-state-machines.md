@@ -509,3 +509,116 @@ HostMasterLink close witness. The existing PR266 contact/population/reconstructi
 owners remain outside scope. New source requires focused checks, Opus review
 and a new appropriate source-matched comparison before updating draft269.
 No validation of the new merged tree is claimed yet.
+
+### Fresh-boundary ownership: corrected hypothesis
+
+Read-only Sol research on `4eb5d5e55` did not establish the suspected stale
+ordinary-admission defect from the two cited tool/controlled load paths. The
+live GameLoop retains one admission controller, but controlled stepping returns
+through ControlledLevelIteration before using it. HOLD-to-ADVANCE stays in the
+controlled runtime. RecordingFrameDriver owns a separate normal-title, initial
+publication and ordinary-boundary protocol; it does not share that live
+controller. Ordinary `doZoneAct`, reset and title completion overwrite the
+relevant observations. A mock changing pending false-to-true alone would not
+prove a production stale-phase path.
+
+| Host | Authority and progression |
+| --- | --- |
+| Ordinary live | LevelManager owns the boundary; GameLoop's controller observes title completion, publication admission and assembly. |
+| Controlled live or recording | ControlledFrameRuntime remains the dispatcher across HOLD/release; it bypasses ordinary admission. |
+| Recording/headless | RecordingFrameDriver owns its own title/load-row/publication observations. |
+| Full visual trace | Prepared-level adoption keeps the live controller and observes its launch barrier. |
+| Special-stage return | Its actual load/assembly/title callbacks explicitly enter title presentation before live admission resumes. |
+
+External clearing can leave a phase inert; no concrete rearming path before
+notification, reset or another title observation was established. A different
+controlled-native-destination question remains: which owner consumes the new
+normal title request and finishes a fresh boundary before ADVANCE? Explicit
+`CourseControl.finishInitialPresentation()` is not evidence that passive native
+destination handling supplies it. A real S3K transition witness, including the
+synchronous-load and explicit-omission contracts, is still required. Do not
+reset ordinary admission or introduce a shared dispatcher on this evidence.
+
+### Capture terminal owner lifetime
+
+Sol's `8e6fc3547` adds one monitor-guarded closed fact, separate from the public
+recording phase and the retained real audio lease. Close marks owner closure
+before waiting. Start cannot acquire audio, GL or encoder resources afterward,
+including while close is in progress. Ordinary user-stop/FAILED restart remains
+possible while the owner is open; repeated terminal close still retries an owed
+audio detach. This removes the demonstrated later-session target of an old
+finalizer without adding an enum value or generation framework.
+
+Eight RED cases on original runtime first produced four assertion failures and
+two stale-viewport NPE errors, with zero skips. The asserted RED made those
+observed NPEs explicit expectations, exposing all six intended failure cases
+without runtime changes. GREEN passed 92 cases without failures/errors/skips,
+including real AudioManager backend swaps, bounded shutdown, caller-thread
+cleanup, clocked silence and final-frame ownership controls. Exact selectors:
+
+```bash
+python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  '-Dtest=LiveCaptureTerminalCloseTest,LiveCaptureControllerTest#repeatedTerminalCloseRetriesRealLeaseRefusedOnForeignThread' test -B
+python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  '-Dtest=LiveCaptureTerminalCloseTest,LiveCaptureControllerTest,CaptureBufferOwnershipTest,TestLiveCaptureCadenceBoundary,CapturedFrameTest,CaptureRecorderTest,LiveCapturePresentationCoordinatorTest,EncoderSinkTest,DrainPcmAudioTapTest,TestLiveCaptureSurvivesBackendSwap' test -B
+```
+
+All used Java 25, Lua 5.4 and unset displays. Initial RED queue/Maven: 36s/90s;
+asserted RED: 13s/32.648s; GREEN: 32s/95s. Wrapper walls were 126.763s, 46.294s
+and 128.147s; residual overhead is unseparated, user wait zero. The parse-only
+catch comparison found all ten fingerprints unchanged; an executed combined
+guard pass is still pending. No broad validation of this source is claimed.
+
+### Networking completion witness, not runtime leakage
+
+Sol used a real host with a held authority-completion callback. Pending open
+admission charged five items; host close discarded queued work and retained two
+running obligations; authority publication retained one profile cell; room
+executor termination returned to zero. The remaining cell was attributed to
+this host's profile account. Late opens and repeated retirement did not change
+it. The inherited fixture asserted zero immediately after authority publication,
+which precedes profile release. That controlled old-fixture witness failed with
+`expected: <0> but was: <1>`. No networking runtime defect was established.
+
+Parent's `fe3c58f4f` therefore changes the fixture completion predicate to the
+existing public `retirementReceipt().ioReleased()` and then retains the exact
+zero-retention assertion. The bounded wait is unchanged; it does not wait for
+the ledger itself to become zero. A promoted latch-controlled test pins the
+distinction between authority and physical cleanup, including account attribution
+and late-open/repeated-retirement controls. No runtime source, protocol or
+reservation allowance changes.
+
+The worker's RED selector was
+`TestHostMasterLink#controlledAuthorityPublicationExposesInheritedTeardownWitness`
+(one expected assertion failure, no errors/skips; queue 92s, Maven 35.080s). Its
+original single pending-open test passed (queue 81s, Maven about 92s); the three
+class diagnostic control run passed 25 cases (queue zero, Maven 35.881s). Parent's
+corrected fixture and promoted test then passed all 25 cases with no failures,
+errors or skips, Maven 34.054s:
+
+```bash
+env JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  '-Dtest=TestHostMasterLink,TestWorkBudget,TestOutboundRetirement' test -B
+```
+
+This demonstrates a sufficient explanation for the same inherited assertion, not
+a unique retrospective attribution of historical runs without account evidence.
+The runtime must not release a running profile cell merely to satisfy teardown.
+
+### Capacity and current delivery boundary
+
+The first controlled-transition witness delegate never started: T3 failed to
+provision its worktree, without a more specific Git error. The worktree filesystem
+had roughly 526 MB free. Parent reclaimed only generated target directories from
+the two completed first-wave workers after verifying their source commits were
+accounted for in draft269. All source, branches and inherited submodule changes
+were preserved; a cleanup receipt remains outside the source tree. The witness
+will use the existing isolated parent task checkout rather than allocate another
+copy on that filesystem. This is an infrastructure failure, not a test outcome.
+
+The merge, capture repair, fixture correction and these research notes remain
+local. Draft269 still has its first-increment head. New combined Opus review and
+source-matched verification are required before its update; the earlier broad
+results cannot certify this merged source. Other inventoried families remain
+research targets, not completed remediation.

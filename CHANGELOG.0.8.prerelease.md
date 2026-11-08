@@ -37,6 +37,8 @@ under the matching area heading; see the
 - **Recording audio recovery:** viewport recording retains the real audio lease
   when detach is refused, even after switching to silence. Stopping or restarting
   retries that lease before acquiring another, avoiding an orphaned audio tap.
+  Closing the controller also ends admission permanently, so a delayed encoder
+  finalizer cannot clear resources acquired by a recording started after close.
 
 - **Seeded Data Select captures:** `GameplayCaptureTool --save-slots <file.json>`
   writes declared save slots through the production save manager into the
