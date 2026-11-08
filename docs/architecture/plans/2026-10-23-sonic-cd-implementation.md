@@ -1,5 +1,34 @@
 # Implement Sonic CD with complete regional parity
 
+## 8 November 2026 — remaining CCZ programme DATA through the shared reader
+
+Six Java payloads register R31B/C/D, R32B/C/D and R33C/D without duplicating the
+existing R31A/R32A producers, reader, decoder, parser or cache algorithms. Their
+368 compressed roots retain separate canonical, Java-product and native-read
+contracts; the R32B retained compressed-file tail remains raw, without a new
+stream header. Existing Root NoSections and SOURCE_RTS9 are reused; only the
+distinct fixed standard-script metadata STANDARD_CONFIGURED is appended at11,
+after SOURCE_ACT_GATED10. LoadTables remains byte-exact. Reader18 and TT43 retain
+their newer controls, including the actual TT terrain-positive case.
+
+The first source review found a P2: all eight Placement1 ranges included two
+GetOff instruction bytes after the native three-WORD null sentinel. Root verified
+the declarations and eight complete original MMD identities, reproduced the old
+raw goldens and recalculated aggregates with only those extents shortened8→6.
+Placement0's physical order/eight-byte sentinels and complete ObjectLayouts bounds
+remain intact. The new boundary assertions first fail all8 intended Java cases
+at expected6/actual8, with0 errors/skips and unchanged source. That original
+failed receipt stays failed.
+
+R123 then passes295 focused cases across14 flat roots, zero failures/errors/skips,
+including every literal RED identity. Source/index before and after is identical:
+`81f8d0dbb598b78b3186328fbb07735aa538968755f1ba5ec1485aa6aaa65751`.
+All selected counts,295 unique literal identities, fresh XML hashes, Java25/media
+properties and six installed source/dependency pins match. Explicit lean execution
+follows normal-heap preparation; this is no peak-RSS, registry, category or
+full-suite qualification. No terrain, player, World, Ready, route, current-pixel,
+native-execution or regional admission follows from the new DATA registrations.
+
 ## 8 November 2026 — all-ten Stardust Speedway initial terrain DATA
 
 Three exact Java payloads bind the ten R7 canonical initial terrain profiles

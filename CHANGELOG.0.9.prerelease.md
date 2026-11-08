@@ -83,6 +83,10 @@ matching area heading; see the
   All ten Stardust Speedway initial terrain DATA profiles now use those shared
   owners as well. Their329 focused checks pass on the queued lean lane, retaining
   the R73C missing block and separate actor/priority/scroll admission boundaries.
+  The remaining eight CCZ programme DATA profiles now reuse the same reader and
+  parser, preserving both original Present producers. Native null-placement
+  ranges stop at their six-byte sentinel;295 affected checks pass after an
+  eight-case boundary regression. Live player/World admission remains separate.
   CCZ ordinary scheduling now preserves native VBlank/Main order, the old
   selected sprite list and full-word time-stop gating. Private HUD adoption
   retains the real prefix across typed callback failures;175 focused checks

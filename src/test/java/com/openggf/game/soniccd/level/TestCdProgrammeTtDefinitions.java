@@ -159,11 +159,16 @@ class TestCdProgrammeTtDefinitions {
         }
         assertEquals(419,total);
     }
-    @Test void unsupportedSourceFamiliesStillRejectBeforeAnyProgrammeOwnerRead() {
+    @Test void unsupportedSourceFamiliesStillRejectBeforeAnyProgrammeOwnerRead() throws Exception {
         var source=mock(CdProgramAssets.class);
-        for(var payload:List.of(CdStagePayload.R31B,CdStagePayload.R12A,CdStagePayload.R11A))
+        for(var payload:List.of(CdStagePayload.R12A,CdStagePayload.R11A))
             assertThrows(UnsupportedOperationException.class,()->CdProgrammeReader.open(source,payload.stage()));
         verifyNoInteractions(source);
+        // R31B now has authenticated DATA; preserve its still-unadmitted source-family boundary.
+        try(var actual=TestCdCczProgrammeData.open()) {
+            var probe=spy(actual);var reader=CdProgrammeReader.open(probe,CdStagePayload.R31B.stage());
+            clearInvocations(probe);assertThrows(UnsupportedOperationException.class,()->CdStagePlayerSource.fromProgramme(reader));verifyNoInteractions(probe);
+        }
     }
     private static CdProgramAssets negativeSource(CdR4DataLayout.Programme p,CdMmdImage image)throws Exception {
         var f=actual();var source=mock(CdProgramAssets.class);when(source.header()).thenReturn(f.header());when(source.identity()).thenReturn(f.identity());

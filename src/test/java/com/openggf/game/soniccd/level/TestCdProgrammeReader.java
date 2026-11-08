@@ -13,9 +13,12 @@ class TestCdProgrammeReader {
   assertEquals(0,CdProgrammeReader.class.getConstructors().length);
  }
  @Test void unsupportedStageDoesNotTouchProgrammeOwner() throws Exception {
-  var actual=mock(CdProgramAssets.class);
-  assertThrows(UnsupportedOperationException.class,()->CdProgrammeReader.open(actual,CdStagePayload.R31B.stage()));
-  verifyNoInteractions(actual);
+  // Identity retained: CCZ DATA is now registered; its legacy player/source family is not.
+  try(var actual=TestCdCczProgrammeData.open()) {
+   var probe=spy(actual);var reader=CdProgrammeReader.open(probe,CdStagePayload.R31B.stage());
+   clearInvocations(probe);assertThrows(UnsupportedOperationException.class,()->CdStagePlayerSource.fromProgramme(reader));
+   verifyNoInteractions(probe);
+  }
  }
  @Test void explicitStageAndActualOwnerAreRequiredBeforeReads() {
   var actual=mock(CdProgramAssets.class);

@@ -38,7 +38,7 @@ final class CdProgrammeDefinition {
     record Slice(Object key, int offset, int length) { }
     record Palette(Object key, int destination, int counter) { }
     enum CycleKind { STANDARD, UPPER, BYTE_HEADER_4 }
-    enum CycleProgramme { STANDARD_FOUR, UPPER_SIX_OR_STANDARD_FOUR, STANDARD_FOUR_WITH_RETAINED_UPPER, THREE_SOURCE_ACT_GATED, R5_PRESENT_BACKGROUND_CONVEYOR, R5_PAST_BACKGROUND_CONVEYOR, R5_FUTURE_BOSS_GATED_CONVEYOR, FOUR_WITH_BOSS_COLOR_OVERRIDE, THREE_MIRRORED, SOURCE_RTS, SOURCE_ACT_GATED }
+    enum CycleProgramme { STANDARD_FOUR, UPPER_SIX_OR_STANDARD_FOUR, STANDARD_FOUR_WITH_RETAINED_UPPER, THREE_SOURCE_ACT_GATED, R5_PRESENT_BACKGROUND_CONVEYOR, R5_PAST_BACKGROUND_CONVEYOR, R5_FUTURE_BOSS_GATED_CONVEYOR, FOUR_WITH_BOSS_COLOR_OVERRIDE, THREE_MIRRORED, SOURCE_RTS, SOURCE_ACT_GATED, STANDARD_CONFIGURED }
     record Cycle(CycleKind kind, Slice script, Slice colors) { }
     record SectionRow(int threshold, int initial, int update) { }
     sealed interface Sections permits CameraSections, InitQueueUpdateRts, NoSections { }
@@ -220,6 +220,10 @@ final class CdProgrammeDefinition {
             for(var p:CdR8DataLayout.Programme.values()) {
                 var b=new Builder(p.payload(),p.file(),262144,p.fileSha256(),originalHeader());
                 CdR8ProgrammeProfiles.configure(b,p);result.add(new CdProgrammeDefinition(b));
+            }
+            for(var p:CdCczDataLayout.Programme.values()) {
+                var b=new Builder(p.payload(),p.file(),262144,p.fileSha256(),originalHeader());
+                CdCczProgrammeProfiles.configure(b,p);result.add(new CdProgrammeDefinition(b));
             }
             return List.copyOf(result);
         }
