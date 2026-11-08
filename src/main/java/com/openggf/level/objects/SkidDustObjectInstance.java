@@ -176,7 +176,7 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
     // Observe that frame and parent only; never run the ordinary draw-time DPLC preload here.
     final ObjectDrawInternalAccess.SkidDustDisplayPose nativeDisplayPose() {
         int frame=frameIndex>=0 && frameIndex<SKID_FRAMES.length ? SKID_FRAMES[frameIndex] : -1;
-        return new ObjectDrawInternalAccess.SkidDustDisplayPose(frame,ownerCode);
+        return new ObjectDrawInternalAccess.SkidDustDisplayPose(frame,ownerCode,frameIndex,animTimer);
     }
 
     private PlayerSpriteRenderer resolveRenderer() {

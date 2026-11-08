@@ -26,7 +26,7 @@ public final class Sonic2CompetitionObjectDisplay {
         return java.util.List.copyOf(result);
     }
 
-    /** Native FIFO prefixes and the inferred legacy suffix share one display-list budget. */
+    /** Preserve native FIFO prefixes and the inferred legacy SST suffix; the latter is not call-coverage proof. */
     public static java.util.List<Sonic2CompetitionDisplayInputs.Admission> admissions(
             com.openggf.level.objects.ObjectManager manager, ObjectArtProvider art) {
         record Source(int bucket,int slot,AbstractObjectInstance owner,boolean nativeCall,int order) { }
@@ -66,6 +66,13 @@ public final class Sonic2CompetitionObjectDisplay {
     private static java.util.List<Sonic2NativeDisplaySource.DisplaySlot> projectNativeRole(
             com.openggf.level.objects.ObjectManager manager,AbstractObjectInstance owner,ObjectArtProvider art,Runnable draw) {
         if (owner instanceof Sonic2NativeDisplaySource) return projectAll(owner,art,draw);
+        if (owner instanceof com.openggf.level.objects.SkidDustObjectInstance skid) {
+            var source=manager.getObjectServices().gameModule().getGameService(Sonic2CompetitionDustDisplay.class);
+            if(source==null)throw unsupported(owner,8);
+            var display=source.child(skid);
+            return display==null?java.util.List.of():java.util.List.of(
+                    new Sonic2NativeDisplaySource.DisplaySlot(owner.getSlotIndex(),1,display));
+        }
         if (owner instanceof com.openggf.level.objects.InvincibilityStarsObjectInstance stars)
             return projectStars(manager,stars);
         if (!(owner instanceof com.openggf.level.objects.ShieldObjectInstance shield)) return projectAll(owner,art,draw);

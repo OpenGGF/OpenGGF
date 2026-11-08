@@ -1264,6 +1264,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		setSpindashAnimation();
 		com.openggf.sprites.playable.PlayerAbilityAudio.play(sprite, GameSound.SPINDASH_CHARGE, audioManager);
 		sprite.setSpindash(true);
+		// Native fixed-Dust mode writer; ordinary worlds have no capability receiver.
+		NativeDustDisplayInternalAccess.chargeStarted(sprite);
 		sprite.setSpindashCounter((short) 0);
 		doLevelBoundaryAndAnglePos();
 		return true;
@@ -1336,6 +1338,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// (sonic3k.asm:23732-23737; Tails loc_1527C :28788).
 		applyRollRadiusShift(preReleaseCentreY, true);
 		sprite.setSpindash(false);
+		// The explicit release write is distinct from a transferred spindash flag.
+		NativeDustDisplayInternalAccess.chargeReleased(sprite);
 
 		short[] table = getSpindashSpeedTable();
 		int speedIndex = Math.min((sprite.getSpindashCounter() >> 8) & 0xFF, table.length - 1);

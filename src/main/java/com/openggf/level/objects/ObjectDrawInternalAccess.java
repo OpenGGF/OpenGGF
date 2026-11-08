@@ -42,7 +42,7 @@ public final class ObjectDrawInternalAccess {
             throw new SecurityException("Native display publication belongs to the engine renderer");
         return java.util.Objects.requireNonNull(owner).nativeDisplayPose();
     }
-    public record SkidDustDisplayPose(int frame,String parentCode) { }
+    public record SkidDustDisplayPose(int frame,String parentCode,int cursor,int timer) { }
     /** Actual detached dust frame and parent identity, without invoking its renderer. */
     public static SkidDustDisplayPose skidDustDisplayPose(SkidDustObjectInstance owner) {
         Class<?> caller=com.openggf.util.EngineCallerAccess.callerOutside(ObjectDrawInternalAccess.class);

@@ -40,6 +40,10 @@ public final class Sonic2CompetitionSpriteArtTable {
 
     /** Fixed player accessories are not object-layout IDs; their existing SST owner supplies identity. */
     private static final java.util.List<Row> FIXED_ROLE_ROWS = java.util.List.of(
+            new Row("sonic-dust",0x08,new Entry(Sonic2Constants.MAP_UNC_OBJ08_ADDR,
+                    Sonic2Constants.ART_TILE_SONIC_DUST,0x10,4,0,"","Obj08_Init (s2.asm:42721-42739)"),1,0,0),
+            new Row("tails-dust",0x08,new Entry(Sonic2Constants.MAP_UNC_OBJ08_ADDR,
+                    Sonic2Constants.ART_TILE_TAILS_DUST,0x10,4,0,"","Obj08_Init (s2.asm:42721-42739)"),1,0,0),
             new Row("shield",0x38,new Entry(Sonic2Constants.MAP_UNC_SHIELD_ADDR,
                     0x04BE,0x18,4,0,ObjectArtKeys.SHIELD,"Obj38_Main (s2.asm:42393-42401)"),1,0,0),
             // ArtTile_ArtNem_Invincible_stars (s2.constants.asm:2611); Obj35's explicit DisplaySprite3 bucket1.

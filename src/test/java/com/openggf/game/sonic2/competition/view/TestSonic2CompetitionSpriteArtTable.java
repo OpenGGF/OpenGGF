@@ -90,6 +90,15 @@ class TestSonic2CompetitionSpriteArtTable {
 
     private static void verifyRow(RomByteReader r,Sonic2CompetitionSpriteArtTable.Row row) {
         var e=row.display(); int id=row.id(), start, end;
+        if(id==0x08) {
+            int init=0x1DD36,endInit=0x1DD90;
+            has(r,init,endInit,"217c%08x0004".formatted(e.mappingsAddress()));
+            has(r,init,endInit,"317c%04x0002".formatted(e.artTile1P()));
+            has(r,init,endInit,"117c%04x0019".formatted(e.widthPixels()));
+            has(r,init,endInit,"117c%04x0018".formatted(row.priorityBucket()));
+            has(r,init,endInit,"002800040001");
+            assertEquals(4,e.renderFlagsInit());assertEquals(16,e.widthPixels());return;
+        }
         if(id==0x35) {
             int init=0x1D9A4;
             assertEquals(e.mappingsAddress(),r.readU32BE(init+24));

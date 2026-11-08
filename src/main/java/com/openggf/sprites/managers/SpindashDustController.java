@@ -137,7 +137,8 @@ public class SpindashDustController {
         updateSplash();
         boolean active = isActive();
         if (!active) {
-            reset();
+            if (!NativeDustDisplayInternalAccess.holdsAnimation(sprite)) reset();
+            NativeDustDisplayInternalAccess.completed(sprite, frameIndex, frameTick, false);
             return;
         }
         if (!activeLastTick) {
@@ -155,6 +156,7 @@ public class SpindashDustController {
         if (advance) {
             frameIndex = (frameIndex + 1) % DASH_FRAMES.length;
         }
+        NativeDustDisplayInternalAccess.completed(sprite, frameIndex, frameTick, true);
     }
 
     public void draw() {
@@ -246,10 +248,11 @@ public class SpindashDustController {
     }
 
     private boolean isActive() {
-        return sprite != null
+        boolean ordinary = sprite != null
                 && sprite.getSpindash()
                 && !sprite.getAir()
                 && !(sprite.getPinballMode() && sprite.getRolling());
+        return NativeDustDisplayInternalAccess.active(sprite,ordinary);
     }
 
     private void reset() {
