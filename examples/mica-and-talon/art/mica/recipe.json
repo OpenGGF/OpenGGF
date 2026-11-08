@@ -1,0 +1,2299 @@
+{
+  "palette": "palette.yaml",
+  "frames": [
+    {
+      "id": "wait-00",
+      "animation": "WAIT",
+      "order": 0,
+      "source": "generated/checkpoint.png",
+      "grid": [
+        8,
+        2
+      ],
+      "cell": [
+        0,
+        0
+      ],
+      "height": 39,
+      "ticks": 100,
+      "patches": [
+        [
+          40,
+          30,
+          12
+        ],
+        [
+          40,
+          31,
+          12
+        ],
+        [
+          40,
+          32,
+          12
+        ],
+        [
+          41,
+          30,
+          15
+        ],
+        [
+          41,
+          31,
+          15
+        ],
+        [
+          41,
+          32,
+          15
+        ],
+        [
+          33,
+          53,
+          4
+        ]
+      ],
+      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+    },
+    {
+      "id": "wait-01",
+      "animation": "WAIT",
+      "order": 1,
+      "source": "generated/checkpoint.png",
+      "grid": [
+        8,
+        2
+      ],
+      "cell": [
+        1,
+        0
+      ],
+      "height": 39,
+      "ticks": 7,
+      "patches": [
+        [
+          33,
+          53,
+          4
+        ]
+      ],
+      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+    },
+    {
+      "id": "wait-02",
+      "animation": "WAIT",
+      "order": 2,
+      "source": "generated/checkpoint.png",
+      "grid": [
+        8,
+        2
+      ],
+      "cell": [
+        2,
+        0
+      ],
+      "height": 39,
+      "ticks": 12,
+      "patches": [
+        [
+          40,
+          30,
+          12
+        ],
+        [
+          40,
+          31,
+          12
+        ],
+        [
+          40,
+          32,
+          12
+        ],
+        [
+          41,
+          30,
+          15
+        ],
+        [
+          41,
+          31,
+          15
+        ],
+        [
+          41,
+          32,
+          15
+        ],
+        [
+          33,
+          53,
+          4
+        ]
+      ],
+      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+    },
+    {
+      "id": "wait-03",
+      "animation": "WAIT",
+      "order": 3,
+      "source": "generated/checkpoint.png",
+      "grid": [
+        8,
+        2
+      ],
+      "cell": [
+        3,
+        0
+      ],
+      "height": 39,
+      "ticks": 50,
+      "patches": [
+        [
+          40,
+          30,
+          12
+        ],
+        [
+          40,
+          31,
+          12
+        ],
+        [
+          40,
+          32,
+          12
+        ],
+        [
+          41,
+          30,
+          15
+        ],
+        [
+          41,
+          31,
+          15
+        ],
+        [
+          41,
+          32,
+          15
+        ],
+        [
+          33,
+          53,
+          4
+        ]
+      ],
+      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+    },
+    {
+      "id": "roll-00",
+      "animation": "ROLL",
+      "order": 0,
+      "source": "generated/checkpoint.png",
+      "grid": [
+        8,
+        2
+      ],
+      "cell": [
+        4,
+        0
+      ],
+      "height": 29,
+      "ticks": 4,
+      "width": 29,
+      "anchor": [
+        14,
+        14
+      ]
+    },
+    {
+      "id": "roll-01",
+      "animation": "ROLL",
+      "order": 1,
+      "source": "generated/checkpoint.png",
+      "grid": [
+        8,
+        2
+      ],
+      "cell": [
+        5,
+        0
+      ],
+      "height": 29,
+      "ticks": 4,
+      "width": 29,
+      "anchor": [
+        14,
+        14
+      ]
+    },
+    {
+      "id": "roll-02",
+      "animation": "ROLL",
+      "order": 2,
+      "source": "generated/checkpoint.png",
+      "grid": [
+        8,
+        2
+      ],
+      "cell": [
+        6,
+        0
+      ],
+      "height": 29,
+      "ticks": 4,
+      "width": 29,
+      "anchor": [
+        14,
+        14
+      ]
+    },
+    {
+      "id": "roll-03",
+      "animation": "ROLL",
+      "order": 3,
+      "source": "generated/checkpoint.png",
+      "grid": [
+        8,
+        2
+      ],
+      "cell": [
+        7,
+        0
+      ],
+      "height": 29,
+      "ticks": 4,
+      "width": 29,
+      "anchor": [
+        14,
+        14
+      ]
+    },
+    {
+      "id": "walk-00",
+      "animation": "WALK",
+      "order": 0,
+      "source": "generated/walk-dive.png",
+      "grid": [
+        4,
+        3
+      ],
+      "cell": [
+        0,
+        0
+      ],
+      "height": 39,
+      "ticks": 6,
+      "patches": [
+        [
+          39,
+          30,
+          12
+        ],
+        [
+          39,
+          31,
+          12
+        ],
+        [
+          39,
+          32,
+          12
+        ],
+        [
+          40,
+          30,
+          15
+        ],
+        [
+          40,
+          31,
+          15
+        ],
+        [
+          40,
+          32,
+          15
+        ],
+        [
+          43,
+          54,
+          4
+        ]
+      ],
+      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+    },
+    {
+      "id": "walk-01",
+      "animation": "WALK",
+      "order": 1,
+      "source": "generated/walk-dive.png",
+      "grid": [
+        4,
+        3
+      ],
+      "cell": [
+        1,
+        0
+      ],
+      "height": 39,
+      "ticks": 6,
+      "patches": [
+        [
+          41,
+          30,
+          12
+        ],
+        [
+          41,
+          31,
+          12
+        ],
+        [
+          41,
+          32,
+          12
+        ],
+        [
+          42,
+          30,
+          15
+        ],
+        [
+          42,
+          31,
+          15
+        ],
+        [
+          42,
+          32,
+          15
+        ],
+        [
+          41,
+          54,
+          4
+        ]
+      ],
+      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+    },
+    {
+      "id": "walk-02",
+      "animation": "WALK",
+      "order": 2,
+      "source": "generated/walk-dive.png",
+      "grid": [
+        4,
+        3
+      ],
+      "cell": [
+        2,
+        0
+      ],
+      "height": 39,
+      "ticks": 6,
+      "patches": [
+        [
+          42,
+          30,
+          12
+        ],
+        [
+          42,
+          31,
+          12
+        ],
+        [
+          42,
+          32,
+          12
+        ],
+        [
+          43,
+          30,
+          15
+        ],
+        [
+          43,
+          31,
+          15
+        ],
+        [
+          43,
+          32,
+          15
+        ],
+        [
+          34,
+          53,
+          4
+        ]
+      ],
+      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+    },
+    {
+      "id": "walk-03",
+      "animation": "WALK",
+      "order": 3,
+      "source": "generated/walk-dive.png",
+      "grid": [
+        4,
+        3
+      ],
+      "cell": [
+        3,
+        0
+      ],
+      "height": 39,
+      "ticks": 6,
+      "patches": [
+        [
+          38,
+          30,
+          12
+        ],
+        [
+          38,
+          31,
+          12
+        ],
+        [
+          38,
+          32,
+          12
+        ],
+        [
+          39,
+          30,
+          15
+        ],
+        [
+          39,
+          31,
+          15
+        ],
+        [
+          39,
+          32,
+          15
+        ],
+        [
+          47,
+          52,
+          4
+        ]
+      ],
+      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+    },
+    {
+      "id": "walk-04",
+      "animation": "WALK",
+      "order": 4,
+      "source": "generated/walk-dive.png",
+      "grid": [
+        4,
+        3
+      ],
+      "cell": [
+        0,
+        1
+      ],
+      "height": 39,
+      "ticks": 6,
+      "patches": [
+        [
+          40,
+          30,
+          12
+        ],
+        [
+          40,
+          31,
+          12
+        ],
+        [
+          40,
+          32,
+          12
+        ],
+        [
+          41,
+          30,
+          15
+        ],
+        [
+          41,
+          31,
+          15
+        ],
+        [
+          41,
+          32,
+          15
+        ],
+        [
+          44,
+          54,
+          4
+        ]
+      ],
+      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+    },
+    {
+      "id": "walk-05",
+      "animation": "WALK",
+      "order": 5,
+      "source": "generated/walk-dive.png",
+      "grid": [
+        4,
+        3
+      ],
+      "cell": [
+        1,
+        1
+      ],
+      "height": 39,
+      "ticks": 6,
+      "patches": [
+        [
+          40,
+          30,
+          12
+        ],
+        [
+          40,
+          31,
+          12
+        ],
+        [
+          40,
+          32,
+          12
+        ],
+        [
+          41,
+          30,
+          15
+        ],
+        [
+          41,
+          31,
+          15
+        ],
+        [
+          41,
+          32,
+          15
+        ],
+        [
+          41,
+          54,
+          4
+        ]
+      ],
+      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+    },
+    {
+      "id": "walk-06",
+      "animation": "WALK",
+      "order": 6,
+      "source": "generated/walk-dive.png",
+      "grid": [
+        4,
+        3
+      ],
+      "cell": [
+        2,
+        1
+      ],
+      "height": 39,
+      "ticks": 6,
+      "patches": [
+        [
+          40,
+          30,
+          12
+        ],
+        [
+          40,
+          31,
+          12
+        ],
+        [
+          40,
+          32,
+          12
+        ],
+        [
+          41,
+          30,
+          15
+        ],
+        [
+          41,
+          31,
+          15
+        ],
+        [
+          41,
+          32,
+          15
+        ],
+        [
+          32,
+          53,
+          4
+        ]
+      ],
+      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+    },
+    {
+      "id": "walk-07",
+      "animation": "WALK",
+      "order": 7,
+      "source": "generated/walk-dive.png",
+      "grid": [
+        4,
+        3
+      ],
+      "cell": [
+        3,
+        1
+      ],
+      "height": 39,
+      "ticks": 6,
+      "patches": [
+        [
+          38,
+          30,
+          12
+        ],
+        [
+          38,
+          31,
+          12
+        ],
+        [
+          38,
+          32,
+          12
+        ],
+        [
+          39,
+          30,
+          15
+        ],
+        [
+          39,
+          31,
+          15
+        ],
+        [
+          39,
+          32,
+          15
+        ],
+        [
+          47,
+          52,
+          4
+        ]
+      ],
+      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+    },
+    {
+      "id": "run-00",
+      "animation": "RUN",
+      "order": 0,
+      "source": "generated/actions.png",
+      "grid": [
+        8,
+        4
+      ],
+      "cell": [
+        0,
+        0
+      ],
+      "height": 34,
+      "ticks": 4,
+      "patches": [
+        [
+          42,
+          36,
+          12
+        ],
+        [
+          42,
+          37,
+          12
+        ],
+        [
+          42,
+          38,
+          12
+        ],
+        [
+          43,
+          36,
+          15
+        ],
+        [
+          43,
+          37,
+          15
+        ],
+        [
+          43,
+          38,
+          15
+        ]
+      ],
+      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+    },
+    {
+      "id": "run-01",
+      "animation": "RUN",
+      "order": 1,
+      "source": "generated/actions.png",
+      "grid": [
+        8,
+        4
+      ],
+      "cell": [
+        1,
+        0
+      ],
+      "height": 34,
+      "ticks": 4,
+      "patches": [
+        [
+          43,
+          36,
+          12
+        ],
+        [
+          43,
+          37,
+          12
+        ],
+        [
+          43,
+          38,
+          12
+        ],
+        [
+          44,
+          36,
+          15
+        ],
+        [
+          44,
+          37,
+          15
+        ],
+        [
+          44,
+          38,
+          15
+        ]
+      ],
+      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+    },
+    {
+      "id": "run-02",
+      "animation": "RUN",
+      "order": 2,
+      "source": "generated/actions.png",
+      "grid": [
+        8,
+        4
+      ],
+      "cell": [
+        2,
+        0
+      ],
+      "height": 34,
+      "ticks": 4,
+      "patches": [
+        [
+          42,
+          36,
+          12
+        ],
+        [
+          42,
+          37,
+          12
+        ],
+        [
+          42,
+          38,
+          12
+        ],
+        [
+          43,
+          36,
+          15
+        ],
+        [
+          43,
+          37,
+          15
+        ],
+        [
+          43,
+          38,
+          15
+        ]
+      ],
+      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+    },
+    {
+      "id": "run-03",
+      "animation": "RUN",
+      "order": 3,
+      "source": "generated/actions.png",
+      "grid": [
+        8,
+        4
+      ],
+      "cell": [
+        3,
+        0
+      ],
+      "height": 34,
+      "ticks": 4,
+      "patches": [
+        [
+          40,
+          36,
+          12
+        ],
+        [
+          40,
+          37,
+          12
+        ],
+        [
+          40,
+          38,
+          12
+        ],
+        [
+          41,
+          36,
+          15
+        ],
+        [
+          41,
+          37,
+          15
+        ],
+        [
+          41,
+          38,
+          15
+        ]
+      ],
+      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+    },
+    {
+      "id": "spring-00",
+      "animation": "SPRING",
+      "order": 0,
+      "source": "generated/actions.png",
+      "grid": [
+        8,
+        4
+      ],
+      "cell": [
+        4,
+        0
+      ],
+      "height": 42,
+      "ticks": 8,
+      "anchor": [
+        -1,
+        -1
+      ]
+    },
+    {
+      "id": "spring-01",
+      "animation": "SPRING",
+      "order": 1,
+      "source": "generated/actions.png",
+      "grid": [
+        8,
+        4
+      ],
+      "cell": [
+        5,
+        0
+      ],
+      "height": 42,
+      "ticks": 8,
+      "anchor": [
+        -1,
+        -1
+      ]
+    },
+    {
+      "id": "hurt-00",
+      "animation": "HURT",
+      "order": 0,
+      "source": "generated/actions.png",
+      "grid": [
+        8,
+        4
+      ],
+      "cell": [
+        6,
+        0
+      ],
+      "height": 35,
+      "ticks": 10,
+      "anchor": [
+        -1,
+        -1
+      ]
+    },
+    {
+      "id": "hurt-01",
+      "animation": "HURT",
+      "order": 1,
+      "source": "generated/actions.png",
+      "grid": [
+        8,
+        4
+      ],
+      "cell": [
+        7,
+        0
+      ],
+      "height": 32,
+      "ticks": 10,
+      "anchor": [
+        -1,
+        -1
+      ]
+    },
+    {
+      "id": "death-00",
+      "animation": "DEATH",
+      "order": 0,
+      "source": "generated/actions.png",
+      "grid": [
+        8,
+        4
+      ],
+      "cell": [
+        0,
+        1
+      ],
+      "height": 35,
+      "ticks": 12,
+      "anchor": [
+        -1,
+        -1
+      ]
+    },
+    {
+      "id": "death-01",
+      "animation": "DEATH",
+      "order": 1,
+      "source": "generated/actions.png",
+      "grid": [
+        8,
+        4
+      ],
+      "cell": [
+        1,
+        1
+      ],
+      "height": 32,
+      "ticks": 12,
+      "anchor": [
+        -1,
+        -1
+      ]
+    },
+    {
+      "id": "homing_dive-00",
+      "animation": "HOMING_DIVE",
+      "order": 0,
+      "source": "generated/walk-dive.png",
+      "grid": [
+        4,
+        3
+      ],
+      "cell": [
+        0,
+        2
+      ],
+      "height": 29,
+      "ticks": 4,
+      "anchor": [
+        -1,
+        -1
+      ],
+      "notes": "Custom ability pose; HOMING_DIVE is a handoff key, not an existing CanonicalAnimation enum. Integration must bind explicitly."
+    },
+    {
+      "id": "homing_dive-01",
+      "animation": "HOMING_DIVE",
+      "order": 1,
+      "source": "generated/walk-dive.png",
+      "grid": [
+        4,
+        3
+      ],
+      "cell": [
+        1,
+        2
+      ],
+      "height": 29,
+      "ticks": 4,
+      "anchor": [
+        -1,
+        -1
+      ],
+      "notes": "Custom ability pose; HOMING_DIVE is a handoff key, not an existing CanonicalAnimation enum. Integration must bind explicitly."
+    },
+    {
+      "id": "homing_dive-02",
+      "animation": "HOMING_DIVE",
+      "order": 2,
+      "source": "generated/walk-dive.png",
+      "grid": [
+        4,
+        3
+      ],
+      "cell": [
+        2,
+        2
+      ],
+      "height": 29,
+      "ticks": 4,
+      "anchor": [
+        -1,
+        -1
+      ],
+      "notes": "Custom ability pose; HOMING_DIVE is a handoff key, not an existing CanonicalAnimation enum. Integration must bind explicitly."
+    },
+    {
+      "id": "homing_dive-03",
+      "animation": "HOMING_DIVE",
+      "order": 3,
+      "source": "generated/walk-dive.png",
+      "grid": [
+        4,
+        3
+      ],
+      "cell": [
+        3,
+        2
+      ],
+      "height": 29,
+      "ticks": 4,
+      "anchor": [
+        -1,
+        -1
+      ],
+      "notes": "Custom ability pose; HOMING_DIVE is a handoff key, not an existing CanonicalAnimation enum. Integration must bind explicitly."
+    },
+    {
+      "id": "push-00",
+      "animation": "PUSH",
+      "order": 0,
+      "source": "generated/actions.png",
+      "grid": [
+        8,
+        4
+      ],
+      "cell": [
+        6,
+        1
+      ],
+      "height": 37,
+      "ticks": 8
+    },
+    {
+      "id": "push-01",
+      "animation": "PUSH",
+      "order": 1,
+      "source": "generated/actions.png",
+      "grid": [
+        8,
+        4
+      ],
+      "cell": [
+        7,
+        1
+      ],
+      "height": 37,
+      "ticks": 8
+    },
+    {
+      "id": "duck-00",
+      "animation": "DUCK",
+      "order": 0,
+      "source": "generated/actions.png",
+      "grid": [
+        8,
+        4
+      ],
+      "cell": [
+        0,
+        2
+      ],
+      "height": 27,
+      "ticks": 10
+    },
+    {
+      "id": "duck-01",
+      "animation": "DUCK",
+      "order": 1,
+      "source": "generated/actions.png",
+      "grid": [
+        8,
+        4
+      ],
+      "cell": [
+        1,
+        2
+      ],
+      "height": 27,
+      "ticks": 10
+    },
+    {
+      "id": "look_up-00",
+      "animation": "LOOK_UP",
+      "order": 0,
+      "source": "generated/actions.png",
+      "grid": [
+        8,
+        4
+      ],
+      "cell": [
+        2,
+        2
+      ],
+      "height": 39,
+      "ticks": 12
+    },
+    {
+      "id": "look_up-01",
+      "animation": "LOOK_UP",
+      "order": 1,
+      "source": "generated/actions.png",
+      "grid": [
+        8,
+        4
+      ],
+      "cell": [
+        3,
+        2
+      ],
+      "height": 41,
+      "ticks": 12
+    },
+    {
+      "id": "skid-00",
+      "animation": "SKID",
+      "order": 0,
+      "source": "generated/actions.png",
+      "grid": [
+        8,
+        4
+      ],
+      "cell": [
+        4,
+        2
+      ],
+      "height": 34,
+      "ticks": 5
+    },
+    {
+      "id": "skid-01",
+      "animation": "SKID",
+      "order": 1,
+      "source": "generated/actions.png",
+      "grid": [
+        8,
+        4
+      ],
+      "cell": [
+        5,
+        2
+      ],
+      "height": 30,
+      "ticks": 5
+    },
+    {
+      "id": "skid-02",
+      "animation": "SKID",
+      "order": 2,
+      "source": "generated/actions.png",
+      "grid": [
+        8,
+        4
+      ],
+      "cell": [
+        6,
+        2
+      ],
+      "height": 30,
+      "ticks": 5
+    },
+    {
+      "id": "skid-03",
+      "animation": "SKID",
+      "order": 3,
+      "source": "generated/actions.png",
+      "grid": [
+        8,
+        4
+      ],
+      "cell": [
+        7,
+        2
+      ],
+      "height": 30,
+      "ticks": 5
+    },
+    {
+      "id": "balance-00",
+      "animation": "BALANCE",
+      "order": 0,
+      "source": "generated/actions.png",
+      "grid": [
+        8,
+        4
+      ],
+      "cell": [
+        0,
+        3
+      ],
+      "height": 39,
+      "ticks": 8
+    },
+    {
+      "id": "balance-01",
+      "animation": "BALANCE",
+      "order": 1,
+      "source": "generated/actions.png",
+      "grid": [
+        8,
+        4
+      ],
+      "cell": [
+        1,
+        3
+      ],
+      "height": 39,
+      "ticks": 8
+    },
+    {
+      "id": "balance-02",
+      "animation": "BALANCE",
+      "order": 2,
+      "source": "generated/actions.png",
+      "grid": [
+        8,
+        4
+      ],
+      "cell": [
+        2,
+        3
+      ],
+      "height": 39,
+      "ticks": 8
+    },
+    {
+      "id": "balance-03",
+      "animation": "BALANCE",
+      "order": 3,
+      "source": "generated/actions.png",
+      "grid": [
+        8,
+        4
+      ],
+      "cell": [
+        3,
+        3
+      ],
+      "height": 39,
+      "ticks": 8
+    },
+    {
+      "id": "spindash-00",
+      "animation": "SPINDASH",
+      "order": 0,
+      "source": "generated/actions.png",
+      "grid": [
+        8,
+        4
+      ],
+      "cell": [
+        4,
+        3
+      ],
+      "height": 27,
+      "ticks": 3
+    },
+    {
+      "id": "spindash-01",
+      "animation": "SPINDASH",
+      "order": 1,
+      "source": "generated/actions.png",
+      "grid": [
+        8,
+        4
+      ],
+      "cell": [
+        5,
+        3
+      ],
+      "height": 27,
+      "ticks": 3
+    },
+    {
+      "id": "spindash-02",
+      "animation": "SPINDASH",
+      "order": 2,
+      "source": "generated/actions.png",
+      "grid": [
+        8,
+        4
+      ],
+      "cell": [
+        6,
+        3
+      ],
+      "height": 27,
+      "ticks": 3
+    },
+    {
+      "id": "spindash-03",
+      "animation": "SPINDASH",
+      "order": 3,
+      "source": "generated/actions.png",
+      "grid": [
+        8,
+        4
+      ],
+      "cell": [
+        7,
+        3
+      ],
+      "height": 27,
+      "ticks": 3
+    },
+    {
+      "id": "drown-00",
+      "animation": "DROWN",
+      "order": 0,
+      "source": "generated/water-hang.png",
+      "grid": [
+        4,
+        2
+      ],
+      "cell": [
+        0,
+        0
+      ],
+      "height": 39,
+      "ticks": 10
+    },
+    {
+      "id": "drown-01",
+      "animation": "DROWN",
+      "order": 1,
+      "source": "generated/water-hang.png",
+      "grid": [
+        4,
+        2
+      ],
+      "cell": [
+        1,
+        0
+      ],
+      "height": 39,
+      "ticks": 10
+    },
+    {
+      "id": "drown-02",
+      "animation": "DROWN",
+      "order": 2,
+      "source": "generated/water-hang.png",
+      "grid": [
+        4,
+        2
+      ],
+      "cell": [
+        2,
+        0
+      ],
+      "height": 39,
+      "ticks": 10
+    },
+    {
+      "id": "get_air-00",
+      "animation": "GET_AIR",
+      "order": 0,
+      "source": "generated/water-hang.png",
+      "grid": [
+        4,
+        2
+      ],
+      "cell": [
+        3,
+        0
+      ],
+      "height": 39,
+      "ticks": 12
+    },
+    {
+      "id": "get_air-01",
+      "animation": "GET_AIR",
+      "order": 1,
+      "source": "generated/water-hang.png",
+      "grid": [
+        4,
+        2
+      ],
+      "cell": [
+        0,
+        1
+      ],
+      "height": 39,
+      "ticks": 12
+    },
+    {
+      "id": "hang-00",
+      "animation": "HANG",
+      "order": 0,
+      "source": "generated/water-hang.png",
+      "grid": [
+        4,
+        2
+      ],
+      "cell": [
+        1,
+        1
+      ],
+      "height": 44,
+      "ticks": 10,
+      "patches": [
+        [
+          36,
+          15,
+          0
+        ],
+        [
+          37,
+          15,
+          0
+        ],
+        [
+          38,
+          15,
+          0
+        ],
+        [
+          39,
+          15,
+          0
+        ],
+        [
+          40,
+          15,
+          0
+        ],
+        [
+          36,
+          16,
+          0
+        ],
+        [
+          37,
+          16,
+          0
+        ],
+        [
+          38,
+          16,
+          0
+        ],
+        [
+          39,
+          16,
+          0
+        ],
+        [
+          40,
+          16,
+          0
+        ],
+        [
+          36,
+          17,
+          0
+        ],
+        [
+          37,
+          17,
+          0
+        ],
+        [
+          38,
+          17,
+          0
+        ],
+        [
+          39,
+          17,
+          0
+        ],
+        [
+          40,
+          17,
+          0
+        ],
+        [
+          36,
+          18,
+          0
+        ],
+        [
+          37,
+          18,
+          0
+        ],
+        [
+          38,
+          18,
+          0
+        ],
+        [
+          39,
+          18,
+          0
+        ],
+        [
+          40,
+          18,
+          0
+        ],
+        [
+          36,
+          19,
+          0
+        ],
+        [
+          37,
+          19,
+          0
+        ],
+        [
+          38,
+          19,
+          0
+        ],
+        [
+          39,
+          19,
+          0
+        ],
+        [
+          40,
+          19,
+          0
+        ]
+      ],
+      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+    },
+    {
+      "id": "hang-01",
+      "animation": "HANG",
+      "order": 1,
+      "source": "generated/water-hang.png",
+      "grid": [
+        4,
+        2
+      ],
+      "cell": [
+        2,
+        1
+      ],
+      "height": 44,
+      "ticks": 10,
+      "patches": [
+        [
+          31,
+          15,
+          0
+        ],
+        [
+          32,
+          15,
+          0
+        ],
+        [
+          33,
+          15,
+          0
+        ],
+        [
+          34,
+          15,
+          0
+        ],
+        [
+          35,
+          15,
+          0
+        ],
+        [
+          31,
+          16,
+          0
+        ],
+        [
+          32,
+          16,
+          0
+        ],
+        [
+          33,
+          16,
+          0
+        ],
+        [
+          34,
+          16,
+          0
+        ],
+        [
+          35,
+          16,
+          0
+        ],
+        [
+          31,
+          17,
+          0
+        ],
+        [
+          32,
+          17,
+          0
+        ],
+        [
+          33,
+          17,
+          0
+        ],
+        [
+          34,
+          17,
+          0
+        ],
+        [
+          35,
+          17,
+          0
+        ],
+        [
+          31,
+          18,
+          0
+        ],
+        [
+          32,
+          18,
+          0
+        ],
+        [
+          33,
+          18,
+          0
+        ],
+        [
+          34,
+          18,
+          0
+        ],
+        [
+          35,
+          18,
+          0
+        ],
+        [
+          31,
+          19,
+          0
+        ],
+        [
+          32,
+          19,
+          0
+        ],
+        [
+          33,
+          19,
+          0
+        ],
+        [
+          34,
+          19,
+          0
+        ],
+        [
+          35,
+          19,
+          0
+        ]
+      ],
+      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+    },
+    {
+      "id": "hang-02",
+      "animation": "HANG",
+      "order": 2,
+      "source": "generated/water-hang.png",
+      "grid": [
+        4,
+        2
+      ],
+      "cell": [
+        3,
+        1
+      ],
+      "height": 44,
+      "ticks": 10,
+      "patches": [
+        [
+          32,
+          15,
+          0
+        ],
+        [
+          33,
+          15,
+          0
+        ],
+        [
+          34,
+          15,
+          0
+        ],
+        [
+          35,
+          15,
+          0
+        ],
+        [
+          36,
+          15,
+          0
+        ],
+        [
+          32,
+          16,
+          0
+        ],
+        [
+          33,
+          16,
+          0
+        ],
+        [
+          34,
+          16,
+          0
+        ],
+        [
+          35,
+          16,
+          0
+        ],
+        [
+          36,
+          16,
+          0
+        ],
+        [
+          32,
+          17,
+          0
+        ],
+        [
+          33,
+          17,
+          0
+        ],
+        [
+          34,
+          17,
+          0
+        ],
+        [
+          35,
+          17,
+          0
+        ],
+        [
+          36,
+          17,
+          0
+        ],
+        [
+          32,
+          18,
+          0
+        ],
+        [
+          33,
+          18,
+          0
+        ],
+        [
+          34,
+          18,
+          0
+        ],
+        [
+          35,
+          18,
+          0
+        ],
+        [
+          36,
+          18,
+          0
+        ],
+        [
+          32,
+          19,
+          0
+        ],
+        [
+          33,
+          19,
+          0
+        ],
+        [
+          34,
+          19,
+          0
+        ],
+        [
+          35,
+          19,
+          0
+        ],
+        [
+          36,
+          19,
+          0
+        ]
+      ],
+      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+    },
+    {
+      "id": "walk-up45-00",
+      "animation": "WALK",
+      "order": 8,
+      "derive": "walk-00",
+      "angle": 45,
+      "angle_set": "up45",
+      "ticks": 6,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "walk-up45-01",
+      "animation": "WALK",
+      "order": 9,
+      "derive": "walk-01",
+      "angle": 45,
+      "angle_set": "up45",
+      "ticks": 6,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "walk-up45-02",
+      "animation": "WALK",
+      "order": 10,
+      "derive": "walk-02",
+      "angle": 45,
+      "angle_set": "up45",
+      "ticks": 6,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "walk-up45-03",
+      "animation": "WALK",
+      "order": 11,
+      "derive": "walk-03",
+      "angle": 45,
+      "angle_set": "up45",
+      "ticks": 6,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "walk-up45-04",
+      "animation": "WALK",
+      "order": 12,
+      "derive": "walk-04",
+      "angle": 45,
+      "angle_set": "up45",
+      "ticks": 6,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "walk-up45-05",
+      "animation": "WALK",
+      "order": 13,
+      "derive": "walk-05",
+      "angle": 45,
+      "angle_set": "up45",
+      "ticks": 6,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "walk-up45-06",
+      "animation": "WALK",
+      "order": 14,
+      "derive": "walk-06",
+      "angle": 45,
+      "angle_set": "up45",
+      "ticks": 6,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "walk-up45-07",
+      "animation": "WALK",
+      "order": 15,
+      "derive": "walk-07",
+      "angle": 45,
+      "angle_set": "up45",
+      "ticks": 6,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "walk-steep-00",
+      "animation": "WALK",
+      "order": 16,
+      "derive": "walk-00",
+      "angle": 90,
+      "angle_set": "steep",
+      "ticks": 6,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "walk-steep-01",
+      "animation": "WALK",
+      "order": 17,
+      "derive": "walk-01",
+      "angle": 90,
+      "angle_set": "steep",
+      "ticks": 6,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "walk-steep-02",
+      "animation": "WALK",
+      "order": 18,
+      "derive": "walk-02",
+      "angle": 90,
+      "angle_set": "steep",
+      "ticks": 6,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "walk-steep-03",
+      "animation": "WALK",
+      "order": 19,
+      "derive": "walk-03",
+      "angle": 90,
+      "angle_set": "steep",
+      "ticks": 6,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "walk-steep-04",
+      "animation": "WALK",
+      "order": 20,
+      "derive": "walk-04",
+      "angle": 90,
+      "angle_set": "steep",
+      "ticks": 6,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "walk-steep-05",
+      "animation": "WALK",
+      "order": 21,
+      "derive": "walk-05",
+      "angle": 90,
+      "angle_set": "steep",
+      "ticks": 6,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "walk-steep-06",
+      "animation": "WALK",
+      "order": 22,
+      "derive": "walk-06",
+      "angle": 90,
+      "angle_set": "steep",
+      "ticks": 6,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "walk-steep-07",
+      "animation": "WALK",
+      "order": 23,
+      "derive": "walk-07",
+      "angle": 90,
+      "angle_set": "steep",
+      "ticks": 6,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "walk-inverted-00",
+      "animation": "WALK",
+      "order": 24,
+      "derive": "walk-00",
+      "angle": 135,
+      "angle_set": "inverted",
+      "ticks": 6,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "walk-inverted-01",
+      "animation": "WALK",
+      "order": 25,
+      "derive": "walk-01",
+      "angle": 135,
+      "angle_set": "inverted",
+      "ticks": 6,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "walk-inverted-02",
+      "animation": "WALK",
+      "order": 26,
+      "derive": "walk-02",
+      "angle": 135,
+      "angle_set": "inverted",
+      "ticks": 6,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "walk-inverted-03",
+      "animation": "WALK",
+      "order": 27,
+      "derive": "walk-03",
+      "angle": 135,
+      "angle_set": "inverted",
+      "ticks": 6,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "walk-inverted-04",
+      "animation": "WALK",
+      "order": 28,
+      "derive": "walk-04",
+      "angle": 135,
+      "angle_set": "inverted",
+      "ticks": 6,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "walk-inverted-05",
+      "animation": "WALK",
+      "order": 29,
+      "derive": "walk-05",
+      "angle": 135,
+      "angle_set": "inverted",
+      "ticks": 6,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "walk-inverted-06",
+      "animation": "WALK",
+      "order": 30,
+      "derive": "walk-06",
+      "angle": 135,
+      "angle_set": "inverted",
+      "ticks": 6,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "walk-inverted-07",
+      "animation": "WALK",
+      "order": 31,
+      "derive": "walk-07",
+      "angle": 135,
+      "angle_set": "inverted",
+      "ticks": 6,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "run-up45-00",
+      "animation": "RUN",
+      "order": 4,
+      "derive": "run-00",
+      "angle": 45,
+      "angle_set": "up45",
+      "ticks": 4,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "run-up45-01",
+      "animation": "RUN",
+      "order": 5,
+      "derive": "run-01",
+      "angle": 45,
+      "angle_set": "up45",
+      "ticks": 4,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "run-up45-02",
+      "animation": "RUN",
+      "order": 6,
+      "derive": "run-02",
+      "angle": 45,
+      "angle_set": "up45",
+      "ticks": 4,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "run-up45-03",
+      "animation": "RUN",
+      "order": 7,
+      "derive": "run-03",
+      "angle": 45,
+      "angle_set": "up45",
+      "ticks": 4,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "run-steep-00",
+      "animation": "RUN",
+      "order": 8,
+      "derive": "run-00",
+      "angle": 90,
+      "angle_set": "steep",
+      "ticks": 4,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "run-steep-01",
+      "animation": "RUN",
+      "order": 9,
+      "derive": "run-01",
+      "angle": 90,
+      "angle_set": "steep",
+      "ticks": 4,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "run-steep-02",
+      "animation": "RUN",
+      "order": 10,
+      "derive": "run-02",
+      "angle": 90,
+      "angle_set": "steep",
+      "ticks": 4,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "run-steep-03",
+      "animation": "RUN",
+      "order": 11,
+      "derive": "run-03",
+      "angle": 90,
+      "angle_set": "steep",
+      "ticks": 4,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "run-inverted-00",
+      "animation": "RUN",
+      "order": 12,
+      "derive": "run-00",
+      "angle": 135,
+      "angle_set": "inverted",
+      "ticks": 4,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "run-inverted-01",
+      "animation": "RUN",
+      "order": 13,
+      "derive": "run-01",
+      "angle": 135,
+      "angle_set": "inverted",
+      "ticks": 4,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "run-inverted-02",
+      "animation": "RUN",
+      "order": 14,
+      "derive": "run-02",
+      "angle": 135,
+      "angle_set": "inverted",
+      "ticks": 4,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "run-inverted-03",
+      "animation": "RUN",
+      "order": 15,
+      "derive": "run-03",
+      "angle": 135,
+      "angle_set": "inverted",
+      "ticks": 4,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "stop-00",
+      "animation": "STOP",
+      "order": 0,
+      "derive": "skid-00",
+      "ticks": 5,
+      "notes": "S1 STOP shares SKID artwork."
+    },
+    {
+      "id": "stop-01",
+      "animation": "STOP",
+      "order": 1,
+      "derive": "skid-01",
+      "ticks": 5,
+      "notes": "S1 STOP shares SKID artwork."
+    },
+    {
+      "id": "stop-02",
+      "animation": "STOP",
+      "order": 2,
+      "derive": "skid-02",
+      "ticks": 5,
+      "notes": "S1 STOP shares SKID artwork."
+    },
+    {
+      "id": "stop-03",
+      "animation": "STOP",
+      "order": 3,
+      "derive": "skid-03",
+      "ticks": 5,
+      "notes": "S1 STOP shares SKID artwork."
+    }
+  ]
+}

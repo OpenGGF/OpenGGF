@@ -213,6 +213,17 @@ Pipeline, as a maintained `ggfmod` preprocessing step:
 Art is produced in fallback order: core playable sheet, then HUD/1-up/signpost, then
 special stages, then super set, then continue/portrait, then cutscenes and endings.
 
+W7 art-lane handoff (2026-11-08, `feature/ai-mica-art`): 96 indexed core frames
+and a [repeatable Python/Pillow pipeline](../../../tools/modding/playable_art/README.md).
+Source prompts, native pixel patches and `frames.yaml` are under
+`examples/mica-and-talon/art/mica/`. The first walk atlas was rejected for weak
+strides; the first dive for an exposed leading muzzle. Replacement atlas cells
+and pixel patches are recorded in `generated/prompts.json` and `recipe.json`.
+Shared-palette, alpha, outline, geometry and deterministic rebuild checks pass.
+Slope frames are rigid native-pixel rotations; W2 still owns slope-stride and
+runtime contact validation. `HOMING_DIVE` is an explicit custom handoff key,
+not a new canonical enum member. No final GGFP or runtime certification yet.
+
 ### W8 — Example, tutorial and evidence (M)
 
 - `examples/<character>/` with a build script in the Mutator Lab pattern.

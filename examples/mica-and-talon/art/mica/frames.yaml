@@ -1,0 +1,1256 @@
+{
+  "format": "openggf-playable-art-handoff-1",
+  "palette": "palette.yaml",
+  "facing": "right",
+  "tick_rate": 60,
+  "frames": [
+    {
+      "id": "wait-00",
+      "animation": "WAIT",
+      "order": 0,
+      "file": "frames/wait-00.png",
+      "hotspot": [
+        22,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 100,
+      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+    },
+    {
+      "id": "wait-01",
+      "animation": "WAIT",
+      "order": 1,
+      "file": "frames/wait-01.png",
+      "hotspot": [
+        22,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 7,
+      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+    },
+    {
+      "id": "wait-02",
+      "animation": "WAIT",
+      "order": 2,
+      "file": "frames/wait-02.png",
+      "hotspot": [
+        22,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 12,
+      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+    },
+    {
+      "id": "wait-03",
+      "animation": "WAIT",
+      "order": 3,
+      "file": "frames/wait-03.png",
+      "hotspot": [
+        22,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 50,
+      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+    },
+    {
+      "id": "roll-00",
+      "animation": "ROLL",
+      "order": 0,
+      "file": "frames/roll-00.png",
+      "hotspot": [
+        14,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 4,
+      "notes": ""
+    },
+    {
+      "id": "roll-01",
+      "animation": "ROLL",
+      "order": 1,
+      "file": "frames/roll-01.png",
+      "hotspot": [
+        14,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 4,
+      "notes": ""
+    },
+    {
+      "id": "roll-02",
+      "animation": "ROLL",
+      "order": 2,
+      "file": "frames/roll-02.png",
+      "hotspot": [
+        14,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 4,
+      "notes": ""
+    },
+    {
+      "id": "roll-03",
+      "animation": "ROLL",
+      "order": 3,
+      "file": "frames/roll-03.png",
+      "hotspot": [
+        14,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 4,
+      "notes": ""
+    },
+    {
+      "id": "walk-00",
+      "animation": "WALK",
+      "order": 0,
+      "file": "frames/walk-00.png",
+      "hotspot": [
+        24,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+    },
+    {
+      "id": "walk-01",
+      "animation": "WALK",
+      "order": 1,
+      "file": "frames/walk-01.png",
+      "hotspot": [
+        22,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+    },
+    {
+      "id": "walk-02",
+      "animation": "WALK",
+      "order": 2,
+      "file": "frames/walk-02.png",
+      "hotspot": [
+        20,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+    },
+    {
+      "id": "walk-03",
+      "animation": "WALK",
+      "order": 3,
+      "file": "frames/walk-03.png",
+      "hotspot": [
+        24,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+    },
+    {
+      "id": "walk-04",
+      "animation": "WALK",
+      "order": 4,
+      "file": "frames/walk-04.png",
+      "hotspot": [
+        22,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+    },
+    {
+      "id": "walk-05",
+      "animation": "WALK",
+      "order": 5,
+      "file": "frames/walk-05.png",
+      "hotspot": [
+        22,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+    },
+    {
+      "id": "walk-06",
+      "animation": "WALK",
+      "order": 6,
+      "file": "frames/walk-06.png",
+      "hotspot": [
+        22,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+    },
+    {
+      "id": "walk-07",
+      "animation": "WALK",
+      "order": 7,
+      "file": "frames/walk-07.png",
+      "hotspot": [
+        24,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+    },
+    {
+      "id": "run-00",
+      "animation": "RUN",
+      "order": 0,
+      "file": "frames/run-00.png",
+      "hotspot": [
+        24,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 4,
+      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+    },
+    {
+      "id": "run-01",
+      "animation": "RUN",
+      "order": 1,
+      "file": "frames/run-01.png",
+      "hotspot": [
+        23,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 4,
+      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+    },
+    {
+      "id": "run-02",
+      "animation": "RUN",
+      "order": 2,
+      "file": "frames/run-02.png",
+      "hotspot": [
+        23,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 4,
+      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+    },
+    {
+      "id": "run-03",
+      "animation": "RUN",
+      "order": 3,
+      "file": "frames/run-03.png",
+      "hotspot": [
+        25,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 4,
+      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+    },
+    {
+      "id": "spring-00",
+      "animation": "SPRING",
+      "order": 0,
+      "file": "frames/spring-00.png",
+      "hotspot": [
+        13,
+        21
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": ""
+    },
+    {
+      "id": "spring-01",
+      "animation": "SPRING",
+      "order": 1,
+      "file": "frames/spring-01.png",
+      "hotspot": [
+        12,
+        21
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": ""
+    },
+    {
+      "id": "hurt-00",
+      "animation": "HURT",
+      "order": 0,
+      "file": "frames/hurt-00.png",
+      "hotspot": [
+        17,
+        17
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 10,
+      "notes": ""
+    },
+    {
+      "id": "hurt-01",
+      "animation": "HURT",
+      "order": 1,
+      "file": "frames/hurt-01.png",
+      "hotspot": [
+        19,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 10,
+      "notes": ""
+    },
+    {
+      "id": "death-00",
+      "animation": "DEATH",
+      "order": 0,
+      "file": "frames/death-00.png",
+      "hotspot": [
+        18,
+        17
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 12,
+      "notes": ""
+    },
+    {
+      "id": "death-01",
+      "animation": "DEATH",
+      "order": 1,
+      "file": "frames/death-01.png",
+      "hotspot": [
+        19,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 12,
+      "notes": ""
+    },
+    {
+      "id": "homing_dive-00",
+      "animation": "HOMING_DIVE",
+      "order": 0,
+      "file": "frames/homing_dive-00.png",
+      "hotspot": [
+        19,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 4,
+      "notes": "Custom ability pose; HOMING_DIVE is a handoff key, not an existing CanonicalAnimation enum. Integration must bind explicitly."
+    },
+    {
+      "id": "homing_dive-01",
+      "animation": "HOMING_DIVE",
+      "order": 1,
+      "file": "frames/homing_dive-01.png",
+      "hotspot": [
+        18,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 4,
+      "notes": "Custom ability pose; HOMING_DIVE is a handoff key, not an existing CanonicalAnimation enum. Integration must bind explicitly."
+    },
+    {
+      "id": "homing_dive-02",
+      "animation": "HOMING_DIVE",
+      "order": 2,
+      "file": "frames/homing_dive-02.png",
+      "hotspot": [
+        17,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 4,
+      "notes": "Custom ability pose; HOMING_DIVE is a handoff key, not an existing CanonicalAnimation enum. Integration must bind explicitly."
+    },
+    {
+      "id": "homing_dive-03",
+      "animation": "HOMING_DIVE",
+      "order": 3,
+      "file": "frames/homing_dive-03.png",
+      "hotspot": [
+        15,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 4,
+      "notes": "Custom ability pose; HOMING_DIVE is a handoff key, not an existing CanonicalAnimation enum. Integration must bind explicitly."
+    },
+    {
+      "id": "push-00",
+      "animation": "PUSH",
+      "order": 0,
+      "file": "frames/push-00.png",
+      "hotspot": [
+        27,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": ""
+    },
+    {
+      "id": "push-01",
+      "animation": "PUSH",
+      "order": 1,
+      "file": "frames/push-01.png",
+      "hotspot": [
+        26,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": ""
+    },
+    {
+      "id": "duck-00",
+      "animation": "DUCK",
+      "order": 0,
+      "file": "frames/duck-00.png",
+      "hotspot": [
+        22,
+        8
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 10,
+      "notes": ""
+    },
+    {
+      "id": "duck-01",
+      "animation": "DUCK",
+      "order": 1,
+      "file": "frames/duck-01.png",
+      "hotspot": [
+        24,
+        8
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 10,
+      "notes": ""
+    },
+    {
+      "id": "look_up-00",
+      "animation": "LOOK_UP",
+      "order": 0,
+      "file": "frames/look_up-00.png",
+      "hotspot": [
+        22,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 12,
+      "notes": ""
+    },
+    {
+      "id": "look_up-01",
+      "animation": "LOOK_UP",
+      "order": 1,
+      "file": "frames/look_up-01.png",
+      "hotspot": [
+        20,
+        22
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 12,
+      "notes": ""
+    },
+    {
+      "id": "skid-00",
+      "animation": "SKID",
+      "order": 0,
+      "file": "frames/skid-00.png",
+      "hotspot": [
+        20,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 5,
+      "notes": ""
+    },
+    {
+      "id": "skid-01",
+      "animation": "SKID",
+      "order": 1,
+      "file": "frames/skid-01.png",
+      "hotspot": [
+        21,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 5,
+      "notes": ""
+    },
+    {
+      "id": "skid-02",
+      "animation": "SKID",
+      "order": 2,
+      "file": "frames/skid-02.png",
+      "hotspot": [
+        23,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 5,
+      "notes": ""
+    },
+    {
+      "id": "skid-03",
+      "animation": "SKID",
+      "order": 3,
+      "file": "frames/skid-03.png",
+      "hotspot": [
+        26,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 5,
+      "notes": ""
+    },
+    {
+      "id": "balance-00",
+      "animation": "BALANCE",
+      "order": 0,
+      "file": "frames/balance-00.png",
+      "hotspot": [
+        22,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": ""
+    },
+    {
+      "id": "balance-01",
+      "animation": "BALANCE",
+      "order": 1,
+      "file": "frames/balance-01.png",
+      "hotspot": [
+        23,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": ""
+    },
+    {
+      "id": "balance-02",
+      "animation": "BALANCE",
+      "order": 2,
+      "file": "frames/balance-02.png",
+      "hotspot": [
+        25,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": ""
+    },
+    {
+      "id": "balance-03",
+      "animation": "BALANCE",
+      "order": 3,
+      "file": "frames/balance-03.png",
+      "hotspot": [
+        27,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": ""
+    },
+    {
+      "id": "spindash-00",
+      "animation": "SPINDASH",
+      "order": 0,
+      "file": "frames/spindash-00.png",
+      "hotspot": [
+        20,
+        8
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 3,
+      "notes": ""
+    },
+    {
+      "id": "spindash-01",
+      "animation": "SPINDASH",
+      "order": 1,
+      "file": "frames/spindash-01.png",
+      "hotspot": [
+        19,
+        8
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 3,
+      "notes": ""
+    },
+    {
+      "id": "spindash-02",
+      "animation": "SPINDASH",
+      "order": 2,
+      "file": "frames/spindash-02.png",
+      "hotspot": [
+        19,
+        8
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 3,
+      "notes": ""
+    },
+    {
+      "id": "spindash-03",
+      "animation": "SPINDASH",
+      "order": 3,
+      "file": "frames/spindash-03.png",
+      "hotspot": [
+        19,
+        8
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 3,
+      "notes": ""
+    },
+    {
+      "id": "drown-00",
+      "animation": "DROWN",
+      "order": 0,
+      "file": "frames/drown-00.png",
+      "hotspot": [
+        24,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 10,
+      "notes": ""
+    },
+    {
+      "id": "drown-01",
+      "animation": "DROWN",
+      "order": 1,
+      "file": "frames/drown-01.png",
+      "hotspot": [
+        19,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 10,
+      "notes": ""
+    },
+    {
+      "id": "drown-02",
+      "animation": "DROWN",
+      "order": 2,
+      "file": "frames/drown-02.png",
+      "hotspot": [
+        22,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 10,
+      "notes": ""
+    },
+    {
+      "id": "get_air-00",
+      "animation": "GET_AIR",
+      "order": 0,
+      "file": "frames/get_air-00.png",
+      "hotspot": [
+        21,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 12,
+      "notes": ""
+    },
+    {
+      "id": "get_air-01",
+      "animation": "GET_AIR",
+      "order": 1,
+      "file": "frames/get_air-01.png",
+      "hotspot": [
+        19,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 12,
+      "notes": ""
+    },
+    {
+      "id": "hang-00",
+      "animation": "HANG",
+      "order": 0,
+      "file": "frames/hang-00.png",
+      "hotspot": [
+        15,
+        25
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 10,
+      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+    },
+    {
+      "id": "hang-01",
+      "animation": "HANG",
+      "order": 1,
+      "file": "frames/hang-01.png",
+      "hotspot": [
+        20,
+        25
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 10,
+      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+    },
+    {
+      "id": "hang-02",
+      "animation": "HANG",
+      "order": 2,
+      "file": "frames/hang-02.png",
+      "hotspot": [
+        19,
+        25
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 10,
+      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+    },
+    {
+      "id": "walk-up45-00",
+      "animation": "WALK",
+      "order": 8,
+      "file": "frames/walk-up45-00.png",
+      "hotspot": [
+        20,
+        15
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 6,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "walk-up45-01",
+      "animation": "WALK",
+      "order": 9,
+      "file": "frames/walk-up45-01.png",
+      "hotspot": [
+        20,
+        16
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 6,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "walk-up45-02",
+      "animation": "WALK",
+      "order": 10,
+      "file": "frames/walk-up45-02.png",
+      "hotspot": [
+        19,
+        17
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 6,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "walk-up45-03",
+      "animation": "WALK",
+      "order": 11,
+      "file": "frames/walk-up45-03.png",
+      "hotspot": [
+        21,
+        15
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 6,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "walk-up45-04",
+      "animation": "WALK",
+      "order": 12,
+      "file": "frames/walk-up45-04.png",
+      "hotspot": [
+        20,
+        17
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 6,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "walk-up45-05",
+      "animation": "WALK",
+      "order": 13,
+      "file": "frames/walk-up45-05.png",
+      "hotspot": [
+        20,
+        17
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 6,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "walk-up45-06",
+      "animation": "WALK",
+      "order": 14,
+      "file": "frames/walk-up45-06.png",
+      "hotspot": [
+        20,
+        17
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 6,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "walk-up45-07",
+      "animation": "WALK",
+      "order": 15,
+      "file": "frames/walk-up45-07.png",
+      "hotspot": [
+        20,
+        15
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 6,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "walk-steep-00",
+      "animation": "WALK",
+      "order": 16,
+      "file": "frames/walk-steep-00.png",
+      "hotspot": [
+        20,
+        13
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 6,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "walk-steep-01",
+      "animation": "WALK",
+      "order": 17,
+      "file": "frames/walk-steep-01.png",
+      "hotspot": [
+        20,
+        12
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 6,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "walk-steep-02",
+      "animation": "WALK",
+      "order": 18,
+      "file": "frames/walk-steep-02.png",
+      "hotspot": [
+        20,
+        12
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 6,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "walk-steep-03",
+      "animation": "WALK",
+      "order": 19,
+      "file": "frames/walk-steep-03.png",
+      "hotspot": [
+        20,
+        13
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 6,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "walk-steep-04",
+      "animation": "WALK",
+      "order": 20,
+      "file": "frames/walk-steep-04.png",
+      "hotspot": [
+        20,
+        13
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 6,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "walk-steep-05",
+      "animation": "WALK",
+      "order": 21,
+      "file": "frames/walk-steep-05.png",
+      "hotspot": [
+        20,
+        12
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 6,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "walk-steep-06",
+      "animation": "WALK",
+      "order": 22,
+      "file": "frames/walk-steep-06.png",
+      "hotspot": [
+        20,
+        12
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 6,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "walk-steep-07",
+      "animation": "WALK",
+      "order": 23,
+      "file": "frames/walk-steep-07.png",
+      "hotspot": [
+        20,
+        13
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 6,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "walk-inverted-00",
+      "animation": "WALK",
+      "order": 24,
+      "file": "frames/walk-inverted-00.png",
+      "hotspot": [
+        15,
+        22
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 6,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "walk-inverted-01",
+      "animation": "WALK",
+      "order": 25,
+      "file": "frames/walk-inverted-01.png",
+      "hotspot": [
+        16,
+        18
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 6,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "walk-inverted-02",
+      "animation": "WALK",
+      "order": 26,
+      "file": "frames/walk-inverted-02.png",
+      "hotspot": [
+        17,
+        13
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 6,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "walk-inverted-03",
+      "animation": "WALK",
+      "order": 27,
+      "file": "frames/walk-inverted-03.png",
+      "hotspot": [
+        15,
+        18
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 6,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "walk-inverted-04",
+      "animation": "WALK",
+      "order": 28,
+      "file": "frames/walk-inverted-04.png",
+      "hotspot": [
+        17,
+        22
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 6,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "walk-inverted-05",
+      "animation": "WALK",
+      "order": 29,
+      "file": "frames/walk-inverted-05.png",
+      "hotspot": [
+        17,
+        17
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 6,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "walk-inverted-06",
+      "animation": "WALK",
+      "order": 30,
+      "file": "frames/walk-inverted-06.png",
+      "hotspot": [
+        17,
+        12
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 6,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "walk-inverted-07",
+      "animation": "WALK",
+      "order": 31,
+      "file": "frames/walk-inverted-07.png",
+      "hotspot": [
+        15,
+        18
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 6,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "run-up45-00",
+      "animation": "RUN",
+      "order": 4,
+      "file": "frames/run-up45-00.png",
+      "hotspot": [
+        14,
+        15
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 4,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "run-up45-01",
+      "animation": "RUN",
+      "order": 5,
+      "file": "frames/run-up45-01.png",
+      "hotspot": [
+        14,
+        15
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 4,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "run-up45-02",
+      "animation": "RUN",
+      "order": 6,
+      "file": "frames/run-up45-02.png",
+      "hotspot": [
+        14,
+        15
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 4,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "run-up45-03",
+      "animation": "RUN",
+      "order": 7,
+      "file": "frames/run-up45-03.png",
+      "hotspot": [
+        15,
+        15
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 4,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "run-steep-00",
+      "animation": "RUN",
+      "order": 8,
+      "file": "frames/run-steep-00.png",
+      "hotspot": [
+        15,
+        13
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 4,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "run-steep-01",
+      "animation": "RUN",
+      "order": 9,
+      "file": "frames/run-steep-01.png",
+      "hotspot": [
+        15,
+        13
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 4,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "run-steep-02",
+      "animation": "RUN",
+      "order": 10,
+      "file": "frames/run-steep-02.png",
+      "hotspot": [
+        15,
+        13
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 4,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "run-steep-03",
+      "animation": "RUN",
+      "order": 11,
+      "file": "frames/run-steep-03.png",
+      "hotspot": [
+        15,
+        14
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 4,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "run-inverted-00",
+      "animation": "RUN",
+      "order": 12,
+      "file": "frames/run-inverted-00.png",
+      "hotspot": [
+        15,
+        12
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 4,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "run-inverted-01",
+      "animation": "RUN",
+      "order": 13,
+      "file": "frames/run-inverted-01.png",
+      "hotspot": [
+        15,
+        13
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 4,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "run-inverted-02",
+      "animation": "RUN",
+      "order": 14,
+      "file": "frames/run-inverted-02.png",
+      "hotspot": [
+        15,
+        12
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 4,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "run-inverted-03",
+      "animation": "RUN",
+      "order": 15,
+      "file": "frames/run-inverted-03.png",
+      "hotspot": [
+        15,
+        17
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 4,
+      "notes": "Nearest-neighbour rotation about engine centre; native runtime supplies facing/remaining orientation. Needs slope-stride integration check."
+    },
+    {
+      "id": "stop-00",
+      "animation": "STOP",
+      "order": 0,
+      "file": "frames/stop-00.png",
+      "hotspot": [
+        20,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 5,
+      "notes": "S1 STOP shares SKID artwork."
+    },
+    {
+      "id": "stop-01",
+      "animation": "STOP",
+      "order": 1,
+      "file": "frames/stop-01.png",
+      "hotspot": [
+        21,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 5,
+      "notes": "S1 STOP shares SKID artwork."
+    },
+    {
+      "id": "stop-02",
+      "animation": "STOP",
+      "order": 2,
+      "file": "frames/stop-02.png",
+      "hotspot": [
+        23,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 5,
+      "notes": "S1 STOP shares SKID artwork."
+    },
+    {
+      "id": "stop-03",
+      "animation": "STOP",
+      "order": 3,
+      "file": "frames/stop-03.png",
+      "hotspot": [
+        26,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 5,
+      "notes": "S1 STOP shares SKID artwork."
+    }
+  ]
+}
