@@ -124863,3 +124863,26 @@ component witness; no fresh final Mega raw stream was exported, so this is the
 explicit unchanged-source/report coverage bridge. The held 27561 result is not a
 delivered frontier. Integration, postintegration checks and remote verification
 follow this bounded gate; no final whole-profile or full-suite pass is inferred.
+
+
+Postintegration checks on develop `7c3128f89` pass the same 348 focused ordinary
+cases with zero failures/errors/skips. The queued Java 25/EGL trace control uses
+`-Ptrace-replay -Dtest=TestS2CompleteEmeraldRunChain,TestS2Arz2LevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS1CompleteEmeraldRunChain#ghz1ToScrapBrainAcrossEverySpecialStage`
+with one alphabetical fork, isolated report/temp directories and the seven
+verified ROM properties. It completes four cases: S1 chain and both S2
+level-select controls PASS; the S2 chain retains its qualified failure on ten
+axes and HTZ2 boundary 155218. No errors or skips occur. All 112 JSONs match the
+delivered S1 and repaired S2 controls: 56 report bodies are equal and the other
+56 owner files differ only in their individually verified report-directory
+paths. All four complete testcase outcomes match after those same literal path
+replacements. S1's 34 segments and 10,943 terminal rows remain delivered green;
+this focused check is not another full-profile run.
+
+The postintegration owner verifies unchanged tracked source, all four user
+reference HEADs/raw indices/staged and working diffs, untracked inputs,
+configuration and saves. Reported queue wait totals 1,346 seconds; Maven execution
+reports 225 seconds; the overall postintegration wall time is about 1,577 seconds. User wait is
+zero; exact lease hold and off-job time are unknown. The final certification
+commit adds only this prose. Remote push and accounted worktree cleanup are
+recorded in the lead's delivery receipt; no unrestricted parity or full-suite
+pass is claimed.
