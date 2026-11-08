@@ -1,5 +1,45 @@
 # Implement Sonic CD with complete regional parity
 
+## 8 November 2026 — strict ordinary CCZ Title and intro route
+
+Two test-only payloads preserve the Root reload contract and add the actual
+ordinary-input Title/death and two-jump intro recipe. Public logical A/B/C masks
+are mapped to the existing native held-byte adapter; no actor, terrain, source,
+private snapshot or invocation authority supplies gameplay state. Both genuine
+LevelStart reloads and1,200 returned services remain mandatory. Historical
+save1/platform80 entry remains explicitly constructed, not natural PPZ-to-CCZ.
+
+The first bounded source review identified two P2 oracle gaps. Root fixes the
+positive recipe to reject every earlier unsupported edge and require actual
+closure followed by another returned ordinary service. When Metal first publishes
+FF, earlier-slot Amy must still be live at routine4 and Metal's entire slot must
+be clear. Amy then retires on the next physical pass. Both original32-byte capture
+palette publications are required even when their values are equal.
+
+A test-only comparison spy is installed/restored while idle and immediately
+forwards every original World-port operation once, with unchanged arguments,
+return and exception identity. At original palette Adoption it records only inert
+producer/slot/palette comparisons after the genuine owner returns. It constructs,
+retains, acknowledges and replays no receipt or private authority. Observing that
+call before ordinary palette cycling prevents a later equal-value cycle from
+masking an omitted copy. Closed full/course restore and actual selected engine
+pixels continue through the original fixture. Runtime code and APIs are unchanged.
+
+R126 passes all4 cases across2 flat classes, zero failures/errors/skips, with exact
+installed/dependency pins, fresh XML/properties and source/index fingerprint
+`4545f3752051bdd3d0db11e7b1cad1be75ff3646c9c03ef6db5b8b7e1e152cda`
+unchanged before/after. The normal queue waits27s; Maven lifecycle is1:10 and the
+terminal callback interval71.019s. Separate compilation and end-to-end user wait
+are not measured. This is focused route/restore/EGL evidence, not a category or
+full-suite run. Separate negative production perturbations remain UNRUN.
+
+The author supplied actual returned intro observations929/930/931 and five ENGINE
+captures from the earlier qualified source. Root's fresh positive requires dynamic
+next-pass ordering rather than those ordinal literals. The next owned wall at
+X1088 remains untraversed; no new unowned family was reached by this positive.
+The lower-route author continues separately. No full act, native-image comparison,
+regional parity or completed-USA claim is made; nothing is pushed.
+
 ## 8 November 2026 — cached CCZ KamaKama/Sickle World publication
 
 The existing increasing physical pass now calls one cached native KamaKama `$24`

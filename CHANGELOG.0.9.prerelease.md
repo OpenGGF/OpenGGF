@@ -21,7 +21,11 @@ matching area heading; see the
   entry now completes1,200 controller services through Ring, the intro family,
   guarded Solid publication, shared native death/Game Over and two genuine
   LevelStart reloads. Ready reenters at541 and1082 through the same World lifetime;
-  this verifies repeated-death reloads, with forward-route work continuing.
+  this verifies repeated-death reloads. A separate ordinary jump recipe preserves
+  lives through native intro closure and the following returned service. Its
+  oracle requires both original capture-palette publications and Amy's next-pass
+  retirement; an early unsupported edge cannot count as success. Four focused
+  route/reload checks pass; the next owned terrain wall remains untraversed.
   Full/course restore retains
   selected closed state and pixels. Compound Solid preparation faults preserve
   the original native exception; available prefixes publish after preparation;
