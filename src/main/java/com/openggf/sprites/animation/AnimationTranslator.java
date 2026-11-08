@@ -37,6 +37,10 @@ public final class AnimationTranslator {
 
         ScriptedVelocityAnimationProfile result = new ScriptedVelocityAnimationProfile();
 
+        result.setPushUsesWalkSpecialHandler(donorProfile.isPushUsesWalkSpecialHandler());
+        result.setPushDelayShift(donorProfile.getPushDelayShift());
+        result.setDuckReleasePublishesWalk(donorProfile.isDuckReleasePublishesWalk());
+        result.setAirborneSlidePreservesPublishedAnimation(donorProfile.isAirborneSlidePreservesPublishedAnimation());
         // Copy non-animation properties
         result.setAnglePreAdjust(donorProfile.isAnglePreAdjust());
         result.setCompactSuperRunSlope(donorProfile.isCompactSuperRunSlope());
@@ -66,6 +70,8 @@ public final class AnimationTranslator {
         // walkId is kept as a variable because airAnimId reuses it
         int walkId = resolve(CanonicalAnimation.WALK, fallbacks, donor, donorAnimSet);
 
+        result.setBlinkAnimId(donorAnimSet.getScript(donorProfile.getBlinkAnimId()) != null ? donorProfile.getBlinkAnimId() : -1);
+        result.setGetUpAnimId(donorAnimSet.getScript(donorProfile.getGetUpAnimId()) != null ? donorProfile.getGetUpAnimId() : -1);
         result.setIdleAnimId(resolve(CanonicalAnimation.WAIT,      fallbacks, donor, donorAnimSet));
         result.setWalkAnimId(walkId);
         result.setRunAnimId(resolve(CanonicalAnimation.RUN,        fallbacks, donor, donorAnimSet));

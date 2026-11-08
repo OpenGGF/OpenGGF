@@ -40,12 +40,30 @@ public final class PlayableArtConverter {
                         List.of(new PlayableSheetReader.DplcRun(first, count, first))));
             }
             Map<String, PlayableSheetReader.Animation> animations = new LinkedHashMap<>();
-            List<PlayableSheetReader.AnimationStep> steps = new ArrayList<>();
-            for (int i = 0; i < base.frames().size(); i++) {
-                steps.add(new PlayableSheetReader.AnimationStep(i,
-                        Math.max(1, base.frames().get(i).delay()), i + 1 == base.frames().size()));
+            var table = new ArtConverter().readManifest(sheetManifest).animations();
+            if (table == null || !table.containsKey("WAIT"))
+                throw new IllegalArgumentException("Playable animation table requires WAIT");
+            for (var entry : table.entrySet()) {
+                com.openggf.game.CanonicalAnimation.valueOf(entry.getKey());
+                var spec = entry.getValue();
+                if (spec.frames() == null || spec.frames().isEmpty()
+                        || (!spec.speedDriven() && (spec.durations() == null
+                        || spec.durations().size() != spec.frames().size())))
+                    throw new IllegalArgumentException("Animation requires frames and matching durations or speedDriven");
+                List<PlayableSheetReader.AnimationStep> steps = new ArrayList<>();
+                for (int i = 0; i < spec.frames().size(); i++)
+                    steps.add(new PlayableSheetReader.AnimationStep(spec.frames().get(i),
+                            spec.speedDriven() ? 1 : spec.durations().get(i), false));
+                var action = switch (spec.end() == null ? "loop" : spec.end()) {
+                    case "loop" -> com.openggf.sprites.animation.SpriteAnimationEndAction.LOOP;
+                    case "hold" -> com.openggf.sprites.animation.SpriteAnimationEndAction.HOLD;
+                    case "next" -> com.openggf.sprites.animation.SpriteAnimationEndAction.SWITCH;
+                    default -> throw new IllegalArgumentException("Unknown animation end action");
+                };
+                animations.put(entry.getKey(), new PlayableSheetReader.Animation(steps, spec.speedDriven(),
+                        action, spec.next() == null ? "WAIT" : spec.next(),
+                        spec.slopes() == null ? List.of() : spec.slopes()));
             }
-            animations.put("idle", new PlayableSheetReader.Animation(steps));
             int paletteLine = base.palette().map(BakedSheetReader.Palette::line).orElseThrow(
                     () -> new IllegalArgumentException("Playable art requires a 16-color palette"));
             byte[] encoded = PlayableSheetWriter.write(new PlayableSheetReader.PlayableSheet(

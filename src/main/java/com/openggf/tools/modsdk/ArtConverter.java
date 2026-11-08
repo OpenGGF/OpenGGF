@@ -199,7 +199,22 @@ public final class ArtConverter {
     }
 
     public record Result(Path output, int patternCount, int frameCount) {}
-    public record Manifest(int formatVersion, int paletteLine, List<String> palette, List<Frame> frames) {}
+    public record Manifest(int formatVersion, int paletteLine, List<String> palette, List<Frame> frames,
+            Map<String, PlayableAnimation> animations) {
+        public Manifest(int formatVersion, int paletteLine, List<String> palette, List<Frame> frames) {
+            this(formatVersion, paletteLine, palette, frames, null);
+        }
+    }
+    public record PlayableAnimation(List<Integer> frames, List<Integer> durations, boolean speedDriven,
+            String end, String next, List<List<Integer>> slopes) {}
+
+    Manifest readManifest(Path path) throws IOException {
+        try (var parser = yaml.createParser(readBounded(path, limits.maxMetadataBytes(), "Art manifest exceeds metadata byte limit"))) {
+            Manifest value = yaml.readValue(parser, Manifest.class);
+            if (parser.nextToken() != null) throw invalid("trailing YAML document is not allowed");
+            return value;
+        }
+    }
     public record Frame(int delay, List<Piece> pieces) {
         public Frame { pieces = List.copyOf(Objects.requireNonNull(pieces, "pieces")); }
     }

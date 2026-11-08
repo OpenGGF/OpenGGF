@@ -20,3 +20,17 @@ Always create these containers through `ggfmod convert art`; do not hand-encode 
 Container versions are compatibility contracts. Unknown required sections, duplicate
 sections/keys, invalid indices, reserved bits, trailing bytes, and all size/count
 violations fail validation.
+
+### GGFP canonical animations (unpublished v2)
+
+The revised, unpublished `ANIM` table uses exact uppercase `CanonicalAnimation`
+names in sorted UTF-8 order; `WAIT` is required. Older experimental tables are
+not supported. See [character animation manifests](../characters.md#canonical-animation-table).
+After each existing step list (`u16 frame`, `u16 duration`, `u8 loop flag`,
+`u8 reserved=0`), each entry stores `u8 speedDriven` (0/1), `u8 end` (0 loop,
+1 hold, 2 switch), a length-prefixed UTF-8 canonical next-animation name, and
+`u8 slopeSetCount` (0 or 4). Each slope set contains one `u16` frame index per
+step. End metadata controls playback; legacy step-loop flags must occur only
+on the last step. All indices, counts, targets and speed/slope combinations
+are validated. Canonical scripts stay unbound until the host installs the art;
+raw native animation IDs are never serialized in this table.

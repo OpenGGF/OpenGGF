@@ -40,7 +40,9 @@ under the matching area heading; see the
   Custom team archetypes now use the solo Sonic route without a sidekick.
 - Character definitions can supply an authored underwater palette through the
   owner fault boundary; absent suppliers retain zone-aware host water derivation.
-
+- Playable mod sheets now declare canonical animation tables shared by Sonic 1,
+  Sonic 2 and Sonic 3 & Knuckles, with native speed timing, slope cycles,
+  explicit end actions and host animation fallbacks.
 
 - **Seeded Data Select captures:** `GameplayCaptureTool --save-slots <file.json>`
   writes declared save slots through the production save manager into the

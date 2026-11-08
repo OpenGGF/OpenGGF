@@ -84,6 +84,18 @@ public final class PlayableSheetWriter {
                     out.writeByte(step.loop() ? 1 : 0);
                     out.writeByte(0);
                 }
+                out.writeByte(animation.speedDriven() ? 1 : 0);
+                out.writeByte(switch (animation.endAction()) {
+                    case LOOP -> 0; case HOLD -> 1; case SWITCH -> 2;
+                    default -> throw new IllegalArgumentException("Unsupported playable end action");
+                });
+                writeString(out, animation.nextAnimation());
+                out.writeByte(animation.slopes().size());
+                for (var slope : animation.slopes()) {
+                    if (slope.size() != animation.steps().size())
+                        throw new IllegalArgumentException("Slope sets must match cycle length");
+                    for (int frame : slope) { requireU16(frame, "slope frame"); out.writeShort(frame); }
+                }
             }
         });
     }
@@ -159,7 +171,7 @@ public final class PlayableSheetWriter {
         }
         requireU16(sheet.animations().size(), "animation count");
         for (var entry : sheet.animations().entrySet()) {
-            ModKeySyntax.requireLocalName(entry.getKey());
+            com.openggf.game.CanonicalAnimation.valueOf(entry.getKey());
             requirePositiveU16(entry.getValue().steps().size(), "animation step count");
             for (var step : entry.getValue().steps()) {
                 requireU16(step.frameIndex(), "animation frame");
