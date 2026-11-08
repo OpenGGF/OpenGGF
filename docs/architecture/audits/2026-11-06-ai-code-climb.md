@@ -2056,3 +2056,168 @@ The review handoff remains PR 266 against develop, with the task worktree kept.
 The 85-per-task target and stronger per-axis requirements remain unmet; the next
 structural increment must address the recorded ordinary-construction and contact
 navigation barriers, without treating runtime passes as usability credit.
+
+### Continuing codebase sweeps — 2026-11-08
+
+The user requested a continuing orchestration goal and specified that all work
+goes in the same PR. The active goal therefore retains draft PR 266 on
+`ai-code-climb` against develop as its sole delivery destination. This supersedes
+the earlier recommendation to deliver related lifecycle work separately in draft
+269. Its owner has been asked for an integration handoff; its existing source,
+worktree and live baseline job remain under that owner's control until accounted
+for. No second worker or observer has been started on those files or that job.
+
+Each sweep starts with a bounded contributor task or a demonstrated runtime risk.
+Sol investigators identify a concrete source obstacle and propose the smallest
+coherent removal; Sol implementation preserves the affected contracts and records
+rejected alternatives. One delivery lead reconciles upstream changes, selects
+focused and domain checks, and owns the combined-source validation plan. Opus
+continues independent correctness review and fresh assessments of affected
+original trials. Passing tests, smaller files and documentation alone do not earn
+usability credit. The accepted per-trial and per-axis targets above still apply.
+
+The first two read-only sweeps examine the remaining ordinary reconstruction and
+contact-retirement barriers at bc97e6022. They run independently of the owned
+controlled-destination presentation/assembly repair. Later sweeps can cover other
+owners as evidence warrants; the six original tasks remain regression journeys,
+not a claim to have measured the whole repository. Each delivered increment is
+followed by another bounded sweep. No new PR, destination-branch push, merge or
+release is part of this goal's delivery authority.
+
+The first source increment has two bounded parts. Contact self-destruction keeps
+its execution schedules but shares three named phases inside ObjectManager:
+capture/unload, placed destruction completion and dynamic fallback retirement.
+Counter execution still samples placement before execution; ordinary execution
+still samples it after unload. Slot release, execution-array clearing and the
+slot-only reserved-child release stay with their existing callers. A universal
+retirement operation was rejected because direct removal, cleanup and range
+unload have different observable ordering. No new contact policy is introduced.
+
+For ordinary reconstruction, the proposed change invokes the existing exact-spawn
+recipe directly only when the effective recreation method is the unchanged
+SpawnRewindRecreatable default or its compatibility wrapper. This removes the
+discarded probe graph from that route. Concrete and inherited custom overrides
+retain their probe-and-hook path. A class-based overload of the existing
+constructor helper shares selection and failures with the interface default;
+there is no new public recipe, registry or snapshot field. Replacing every hook
+with a static factory was rejected as a larger ABI/authoring migration. Replacing
+structural link lookup with allocating-family identity was rejected because
+sibling, legacy and missing-owner cases do not have equivalent contracts.
+
+Both parts await focused verification, integration with the lifecycle handoff,
+independent Opus review and combined-source validation. No new grade or runtime
+success is claimed by this design record.
+
+### Bounded contact/reconstruction increment — 2026-11-08
+
+Sol owns this increment in the existing `ai-code-climb` checkout, based on
+`bc97e6022a31fec78c6afad63cfee99a7f144a82`. It includes the authorized
+ObjectManager extraction and the preceding 51-line continuing-goal record.
+The contact source remains byte-for-byte the handed-off extraction: ten unload
+bodies, six placed tails and four dynamic fallbacks now use three private helpers.
+The counter schedule's pre-execution placement sample and ordinary schedule's
+post-unload sample remain distinct. Slot release/clear, slot-only reserved-child
+release, predicate/virtual-call cadence, pre-unregister callback capture and
+exception-abort ordering remain in their original paths. No other retirement
+paths were unified.
+
+Reconstruction now checks the declaring owner of the effective public
+`recreateForRewind(RewindRecreateContext)` method. Only the exact
+`SpawnRewindRecreatable` default and the existing
+`SpawnConstructionContextRewindRecreatable` compatibility wrapper take the
+probe-free path. A package-private Class overload of
+`RewindRecreateConstructors.instantiateExact` shares constructor lookup,
+diagnostics and invocation with the existing default hook. Direct construction
+still runs inside `ObjectConstructionContext.construct`; the surrounding lifecycle
+creator callback scope is unchanged. The compatibility interface's direct-call
+wrapper is unchanged. Concrete, inherited and other-interface custom hooks,
+including intentional null, still use the existing probe/hook route. Registry
+fallback, other marker recipes, family metadata/adoption, independent retry and
+terminal passes, deferred effects, snapshots, strict fields/references and public
+ABI/signature pins are unchanged.
+
+The ordinary constructor-family fixture now uses `SpawnRewindRecreatable`.
+Parent/child constructor counters reset after capture and between restores;
+these measure observable repeated constructor side effects from a discarded
+graph, not the existence of a private helper. The same witnesses retain moving
+scalars, stable IDs/slots and both final structural links over repeated restores.
+The separate alias direct-call witness remains. Generic controls cover concrete,
+inherited and other-interface custom results and intentional null, nested
+constructor services, typed spawn configuration, caller construction context/slot
+restoration and visible constructor failure. Existing mod controls cover
+independent creator recreation and class resolution; they do not establish
+creator-family adoption coverage.
+
+The following commands run from this checkout with Java 25.0.5.0.3, Lua 5.4.9,
+no DISPLAY/WAYLAND_DISPLAY, MSE off and surfaceless EGL. Wrapper discovery reports
+all six verified ROM properties found, none missing; no ROM was copied or linked.
+Outputs stay under this checkout's `target/` and are not committed.
+
+RED, before reconstruction runtime edits (the authorized contact extraction was
+already present):
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 /usr/bin/time -p python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestConstructorChildFamilyRewind,TestGenericRecreate' test > target/code-climb/reconstruction-red.log 2>&1
+```
+
+25 tests, 2 intended failures, 0 errors, 0 skips. The single-family test observed
+2 parent and 2 child constructions instead of 1 each; the two-family test observed
+4 instead of 2 each. All 16 generic controls passed, including concrete/inherited/
+other-interface custom hooks and constructor failure. The alias direct-call
+compatibility witness also passed. These were assertion failures from duplicate
+construction, not fixture/compiler/setup errors. Admission wait 11 seconds;
+Maven execution 95 seconds (reported rounded); total wall 108.05 seconds;
+remaining approximately 2.05 seconds is wrapper/launch/rounding time, not separately
+measured. User wait 0.
+
+GREEN focused selection (23 classes; the LevelLoading simple name selects two):
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 /usr/bin/time -p python3 tools/testing/maven_queue.py --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestConstructorChildFamilyRewind,TestGenericRecreate,TestObjectRemovalCallbackOwnership,TestDynamicSolidContactRetirement,TestSolidContactState,TestObjectSolidContactController,TestTasS3kOrtExhaustion,TestObjectManagerDynamicChainRewindRestore,TestTwoPhaseRestoreOrdering,TestObjectManagerRewindSnapshot,TestBossChildNoDoubleSpawnParity,TestBossChildExactStateRewind,TestS3kCnzEndBossGraphRewind,TestShieldRewindPendingRestore,TestLightningSparkArtRewind,TestModOwnedDynamicObjectRewind,TestModClassResolverRecreate,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestSpawnRewindRecreatableCleanup' test > target/code-climb/reconstruction-contact-green.log 2>&1
+```
+
+GREEN passed: 257 tests in 23 classes, 0 failures, 0 errors, 0 skips. Both
+LevelLoading classes ran. This includes 25 family/generic tests, 67 contact/
+retirement tests, 34 other graph/snapshot/order tests, 19 shield/lightning tests,
+6 mod recreation/resolver tests, 60 mandatory startup tests and 46 recipe migration
+checks. The 15 removal-owner tests cover both execution schedules, placed/dynamic
+slot and fallback retirement, reentry, unload errors and callback owner handoff.
+The single-family and interleaved-family witnesses each complete three restores
+with once-per-family parent/child construction and captured links/scalars intact.
+Admission wait 305 seconds; Maven execution 99 seconds (reported rounded); total
+wall 404.91 seconds; remaining approximately 0.91 seconds is wrapper/launch/rounding
+time, not separately measured. User wait 0. No lean OOM or rerun occurred. These
+are focused results, not smoke, guards, full-suite or route certification; the
+Maven wrapper emits no category VERDICT line. No new source failure was observed
+that required baseline attribution.
+
+Tested source was base `bc97e6022a31fec78c6afad63cfee99a7f144a82` plus the
+following modified Git blobs (unchanged between GREEN and the local commit):
+
+| File | Git blob |
+| --- | --- |
+| `src/main/java/com/openggf/level/objects/ObjectManager.java` | `a4b043a3adb18f97ba0af3872e04019e4b8b3919` |
+| `src/main/java/com/openggf/level/objects/ObjectRewindDynamicCodecs.java` | `36b6c6d60848a1724c5e3082e8d4d617aa48214f` |
+| `src/main/java/com/openggf/level/objects/RewindRecreateConstructors.java` | `5c5ca0b513304aa5a86756c5e72415666ea9b583` |
+| `src/test/java/com/openggf/level/objects/TestConstructorChildFamilyRewind.java` | `4d74f803dd392ad476b758bfd0e31c80af1e5341` |
+| `src/test/java/com/openggf/level/objects/TestGenericRecreate.java` | `32d829f394b9d9e23355f96296343c7309759d44` |
+
+The other committed files are this existing audit (including the root-authorized
+record) and the folded contributor-readability entry in
+`CHANGELOG.0.8.prerelease.md`. No release-index, guide, configuration, discrepancy,
+agent instruction, skill/mirror or public API update is needed for this internal
+simplification. `git diff --check` passes. Hooks were installed with
+`bash tools/testing/install-hooks.sh`; the exact prepared local message passes
+`git interpret-trailers --parse`, including the final
+`Co-authored-by: OpenAI Codex GPT-6.1 <noreply@openai.com>` line.
+
+Handoff: Sol's scoped test job is finished, with no live owned jobs or observers.
+No push, merge, new PR/worktree, destination switch or delegate was performed.
+Remote PR 266 remains at bc97e6022. Root owns independent review, reconciliation
+of fetched `origin/develop` at `33c3b8e56`, and eventual integration of the final
+lifecycle handoff; mutable lifecycle candidate `d96dd03bc` was not integrated or
+validated here. Its baseline job and ControlledFrameRuntime/CourseControl tree
+were not touched or observed. Root must select and run the combined validation
+and baseline comparison after reconciliation, then deliver on the existing PR.
+The recorded C68.75/D60 targets remain unmet; the other four trials were not
+regraded. No new score or completion of the continuing goal is claimed.

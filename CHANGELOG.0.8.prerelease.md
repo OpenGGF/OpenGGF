@@ -29,7 +29,9 @@ under the matching area heading; see the
   rewind adoption uses captured parent families, preserving interleaved structural
   links; independent children can recreate when a parent defers to player refresh,
   and CNZ defeat candidates retain their ship family. Generic recreation installs
-  construction services centrally. Ordinary
+  construction services centrally; unchanged exact-spawn recipes rebuild once,
+  avoiding discarded constructor graphs while preserving custom hooks. Destroyed
+  object paths share unload and retirement phases within their existing schedules. Ordinary
   family/reference/coverage guidance points to the actual owners. Production badnik and contact
   witnesses, shared coarse-X arithmetic with explicit native/wider bounds, and
   a typed rewind HUD frame make contribution paths easier to follow. HCZ owns

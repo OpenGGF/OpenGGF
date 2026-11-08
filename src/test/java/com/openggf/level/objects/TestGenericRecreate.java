@@ -7,6 +7,8 @@ import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.objects.HtzGroundFireObjectInstance;
 import com.openggf.game.sonic2.objects.Sonic2ObjectRegistry;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.graphics.GLCommand;
+import com.openggf.level.objects.authored.AuthoredObjectProperties;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -216,6 +218,76 @@ class TestGenericRecreate {
                 "without a live parent or alternate probe constructor, genericRecreate should report no recreate path");
     }
 
+    @Test
+    void concreteSpawnOverrideWinsIncludingIntentionalNull() {
+        assertCustomSpawnHook(ConcreteSpawnOverride.class);
+    }
+
+    @Test
+    void inheritedSpawnOverrideWinsIncludingIntentionalNull() {
+        assertCustomSpawnHook(InheritedSpawnOverride.class);
+    }
+
+    @Test
+    void otherInterfaceSpawnOverrideWinsIncludingIntentionalNull() {
+        assertCustomSpawnHook(InterfaceSpawnOverride.class);
+    }
+
+    private void assertCustomSpawnHook(Class<? extends AbstractObjectInstance> type) {
+        for (int subtype : List.of(0, 1)) {
+            ObjectSpawn spawn = new ObjectSpawn(42, 77, 0x70, subtype, 0, false, 0);
+            var entry = new DynamicObjectEntry(type.getName(), spawn, -1, null);
+            ObjectInstance result = ObjectRewindDynamicCodecs.genericRecreate(entry, ctx);
+            if (subtype == 1) {
+                assertNull(result, "an intentional hook rejection must not construct or fall through to registry");
+            } else {
+                var restored = assertInstanceOf(HookResult.class, result);
+                assertEquals(0xCAFE, restored.marker);
+                assertSame(spawn, restored.getSpawn());
+            }
+        }
+    }
+
+    @Test
+    void exactSpawnConstructionRetainsNestedServicesTypedConfigurationAndCallerContext() {
+        var properties = new AuthoredObjectProperties.Warp(24, 16, "restore-link", true);
+        var spawn = new ObjectSpawn(42, 77, 0, 0, 0, false, 0, -1,
+                "openggf", "openggf:warp", properties);
+        ObjectServices outerServices = new StubObjectServices();
+        ObjectConstructionContext.with(outerServices, 17, () -> {
+            var entry = new DynamicObjectEntry(ConfiguredSpawnObject.class.getName(), spawn, -1, null);
+            var restored = assertInstanceOf(ConfiguredSpawnObject.class,
+                    ObjectRewindDynamicCodecs.genericRecreate(entry, ctx));
+            assertSame(ctx.objectServices(), restored.constructorServices);
+            assertSame(ctx.objectServices(), restored.child.constructorServices);
+            assertSame(properties, restored.getSpawn().authoredProperties());
+            assertEquals("restore-link", restored.link);
+            assertEquals("restore-link", restored.child.link);
+            assertTrue(objectManager.getActiveObjects().contains(restored.child));
+            assertSame(outerServices, AbstractObjectInstance.currentConstructionContext());
+            assertEquals(17, AbstractObjectInstance.PRE_ALLOCATED_SLOT.get());
+        });
+    }
+
+    @Test
+    void exactSpawnConstructorFailureRemainsVisibleAndRestoresCallerContext() {
+        var entry = new DynamicObjectEntry(FailingSpawnObject.class.getName(),
+                new ObjectSpawn(42, 77, 0, 0, 0, false, 0), -1, null);
+        ObjectServices outerServices = new StubObjectServices();
+        ObjectConstructionContext.with(outerServices, 17, () -> {
+            RuntimeException failure = assertThrows(RuntimeException.class,
+                    () -> ObjectRewindDynamicCodecs.genericRecreate(entry, ctx));
+            Throwable cause = failure;
+            while (cause.getCause() != null) {
+                cause = cause.getCause();
+            }
+            assertInstanceOf(IllegalArgumentException.class, cause);
+            assertEquals("fixture constructor failure", cause.getMessage());
+            assertSame(outerServices, AbstractObjectInstance.currentConstructionContext());
+            assertEquals(17, AbstractObjectInstance.PRE_ALLOCATED_SLOT.get());
+        });
+    }
+
     // =========================================================================
     // Path 2 — Registry path (direct genericRecreate call)
     // =========================================================================
@@ -374,6 +446,98 @@ class TestGenericRecreate {
         public void appendRenderCommands(java.util.List<com.openggf.graphics.GLCommand> commands) {
             // no-op
         }
+    }
+
+    private static class ConcreteSpawnOverride extends AbstractObjectInstance implements SpawnRewindRecreatable {
+        ConcreteSpawnOverride(ObjectSpawn spawn) {
+            super(spawn, "custom-spawn");
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext context) {
+            return customHookResult(context);
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) { }
+    }
+
+    private static final class InheritedSpawnOverride extends ConcreteSpawnOverride {
+        InheritedSpawnOverride(ObjectSpawn spawn) {
+            super(spawn);
+        }
+    }
+
+    private interface CustomSpawnRecipe extends SpawnRewindRecreatable {
+        @Override
+        default AbstractObjectInstance recreateForRewind(RewindRecreateContext context) {
+            return customHookResult(context);
+        }
+    }
+
+    private static final class InterfaceSpawnOverride extends AbstractObjectInstance implements CustomSpawnRecipe {
+        InterfaceSpawnOverride(ObjectSpawn spawn) {
+            super(spawn, "custom-interface-spawn");
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) { }
+    }
+
+    private static AbstractObjectInstance customHookResult(RewindRecreateContext context) {
+        return context.spawn().subtype() == 1 ? null : new HookResult(context.spawn(), 0xCAFE);
+    }
+
+    private static final class HookResult extends AbstractObjectInstance {
+        final int marker;
+
+        HookResult(ObjectSpawn spawn, int marker) {
+            super(spawn, "hook-result");
+            this.marker = marker;
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) { }
+    }
+
+    private static final class ConfiguredSpawnObject extends AbstractObjectInstance implements SpawnRewindRecreatable {
+        final ObjectServices constructorServices;
+        final ConfiguredChild child;
+        final String link;
+
+        ConfiguredSpawnObject(ObjectSpawn spawn) {
+            super(spawn, "configured-spawn");
+            constructorServices = services();
+            link = ((AuthoredObjectProperties.Warp) spawn.authoredProperties()).link();
+            child = spawnChild(() -> new ConfiguredChild(spawn));
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) { }
+    }
+
+    private static final class ConfiguredChild extends AbstractObjectInstance {
+        final ObjectServices constructorServices;
+        final String link;
+
+        ConfiguredChild(ObjectSpawn spawn) {
+            super(spawn, "configured-child");
+            constructorServices = services();
+            link = ((AuthoredObjectProperties.Warp) spawn.authoredProperties()).link();
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) { }
+    }
+
+    private static final class FailingSpawnObject extends AbstractObjectInstance implements SpawnRewindRecreatable {
+        FailingSpawnObject(ObjectSpawn spawn) {
+            super(spawn, "failing-spawn");
+            throw new IllegalArgumentException("fixture constructor failure");
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) { }
     }
 
     private static final class SpawnIntRewindRecreatableObject

@@ -112,7 +112,10 @@ public final class ObjectRewindDynamicCodecs {
      * <p>Decision tree:
      * <ol>
      *   <li>Load the captured class name.</li>
-     *   <li>If the class implements {@link RewindRecreatable}: construct a minimal probe
+     *   <li>If the effective hook is the default {@link SpawnRewindRecreatable}
+     *       recipe or its compatibility wrapper: construct directly from the captured
+     *       spawn, without a discarded probe graph.</li>
+     *   <li>For other {@link RewindRecreatable} hooks: construct a minimal probe
      *       instance via {@link ObjectConstructionContext} (trying known harmless
      *       constructor signatures) and delegate to
      *       {@link RewindRecreatable#recreateForRewind(RewindRecreateContext)}.</li>
@@ -152,6 +155,16 @@ public final class ObjectRewindDynamicCodecs {
 
         // Path 1: RewindRecreatable — class provides its own creation hook.
         if (RewindRecreatable.class.isAssignableFrom(cls)) {
+            if (usesDefaultSpawnRecipe(cls)) {
+                return ObjectConstructionContext.construct(ctx.objectServices(),
+                        () -> RewindRecreateConstructors.instantiateExact(
+                                cls,
+                                "SpawnRewindRecreatable",
+                                "ObjectSpawn",
+                                "spawn-based rewind recreate",
+                                new Class<?>[] {ObjectSpawn.class},
+                                entry.spawn()));
+            }
             AbstractObjectInstance probe = constructProbeForRewindRecreatable(cls, entry, ctx);
             if (probe instanceof RewindRecreatable rr) {
                 RewindRecreateContext rewindCtx = new RewindRecreateContext(
@@ -174,6 +187,18 @@ public final class ObjectRewindDynamicCodecs {
         } catch (Exception e) {
             LOG.fine("genericRecreate: registry.create threw for " + className + ": " + e);
             return null;
+        }
+    }
+
+    /** Assignability alone would bypass custom class, inherited and interface hooks. */
+    private static boolean usesDefaultSpawnRecipe(Class<? extends AbstractObjectInstance> cls) {
+        try {
+            Class<?> recipeOwner = cls.getMethod("recreateForRewind", RewindRecreateContext.class)
+                    .getDeclaringClass();
+            return recipeOwner == SpawnRewindRecreatable.class
+                    || recipeOwner == SpawnConstructionContextRewindRecreatable.class;
+        } catch (NoSuchMethodException e) {
+            throw new IllegalStateException(cls.getName() + " is missing its rewind recreation hook", e);
         }
     }
 

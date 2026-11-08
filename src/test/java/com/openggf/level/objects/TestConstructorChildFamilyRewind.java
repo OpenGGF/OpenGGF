@@ -58,9 +58,18 @@ class TestConstructorChildFamilyRewind {
         assertNotEquals(source.getX() + 0x10, family.child().spawn().x(),
                 "a moving child's captured spawn need not match its constructor offset");
 
+        // Counts begin after capture: rebuilding a discarded graph repeats constructor
+        // side effects even when adoption hides it from the final population.
+        FamilyParent.constructions = 0;
+        FamilyChild.constructions = 0;
         for (int restore = 0; restore < 3; restore++) {
             manager.rewindSnapshottable().restore(snapshot);
             assertRestoredFamily(manager, family);
+            assertAll("one constructor execution per restored family",
+                    () -> assertEquals(1, FamilyParent.constructions),
+                    () -> assertEquals(1, FamilyChild.constructions));
+            FamilyParent.constructions = 0;
+            FamilyChild.constructions = 0;
             FamilyParent restored = restoredParent(manager, family);
             assertNotSame(source, restored);
             assertNotSame(source.child, restored.child);
@@ -93,8 +102,15 @@ class TestConstructorChildFamilyRewind {
         assertSame(first, first.child.parent);
         assertSame(second, second.child.parent);
 
+        FamilyParent.constructions = 0;
+        FamilyChild.constructions = 0;
         for (int restore = 0; restore < 3; restore++) {
             manager.rewindSnapshottable().restore(snapshot);
+            assertAll("two families execute each constructor twice per restore",
+                    () -> assertEquals(2, FamilyParent.constructions),
+                    () -> assertEquals(2, FamilyChild.constructions));
+            FamilyParent.constructions = 0;
+            FamilyChild.constructions = 0;
             assertEquals(4, manager.getActiveObjects().size(),
                     "restoration must neither duplicate nor discard a family member");
             assertAll("captured families after restore " + restore,
@@ -350,11 +366,13 @@ class TestConstructorChildFamilyRewind {
     private record CapturedFamily(DynamicObjectEntry parent, DynamicObjectEntry child, int updates) { }
 
     static final class FamilyParent extends AbstractObjectInstance
-            implements SpawnConstructionContextRewindRecreatable {
+            implements SpawnRewindRecreatable {
+        static int constructions;
         final FamilyChild child;
 
         FamilyParent(ObjectSpawn spawn) {
             super(spawn, "ConstructorFamilyParent");
+            constructions++;
             child = spawnChild(() -> new FamilyChild(this));
         }
 
@@ -362,12 +380,14 @@ class TestConstructorChildFamilyRewind {
     }
 
     static final class FamilyChild extends AbstractObjectInstance {
+        static int constructions;
         final FamilyParent parent;
         int updates;
 
         FamilyChild(FamilyParent parent) {
             super(new ObjectSpawn(parent.getX() + 0x10, parent.getY(), 0x7002, 0, 0, false, 0),
                     "ConstructorFamilyChild");
+            constructions++;
             this.parent = parent;
         }
 

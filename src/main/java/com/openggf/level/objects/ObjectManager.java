@@ -1109,16 +1109,12 @@ public class ObjectManager {
                             && objectCallbacks.call(instance, aoi3::getSlotIndex) == slotIndex) {
                         releaseSlot(slotIndex);
                     }
-                    var removalCallback = objectCallbacks.captureRemovalCallback(instance);
-                    objectCallbacks.runAndUnregister(instance, instance::onUnload);
+                    var removalCallback = unloadDestroyedObject(instance);
                     population.executionOrder[currentExecSlot] = null;
 
                     if (spawn != null) {
                         freeAllReservedChildSlots(spawn);
-                        placement.clearStayActive(spawn);
-                        resetRespawnStateForOffscreenSelfDelete(instance, spawn);
-                        dispatchDestroyRemoveFromActive(instance, spawn);
-                        removeActiveObject(spawn, removalCallback);
+                        finishDestroyedPlacement(instance, spawn, removalCallback);
                     } else {
                         removeDynamicObjectInstance(instance, removalCallback);
                     }
@@ -1136,10 +1132,7 @@ public class ObjectManager {
                     continue;
                 }
                 if (objectCallbacks.call(inst, inst::isDestroyed)) {
-                    releaseSlotIfManaged(inst);
-                    var removalCallback = objectCallbacks.captureRemovalCallback(inst);
-                    objectCallbacks.runAndUnregister(inst, inst::onUnload);
-                    removeDynamicObjectInstance(inst, removalCallback);
+                    retireDestroyedDynamicFallback(inst);
                     objectsRemoved = true;
                     continue;
                 }
@@ -1150,10 +1143,7 @@ public class ObjectManager {
                     continue;
                 }
                 if (objectCallbacks.call(inst, inst::isDestroyed)) {
-                    releaseSlotIfManaged(inst);
-                    var removalCallback = objectCallbacks.captureRemovalCallback(inst);
-                    objectCallbacks.runAndUnregister(inst, inst::onUnload);
-                    removeDynamicObjectInstance(inst, removalCallback);
+                    retireDestroyedDynamicFallback(inst);
                     objectsRemoved = true;
                 } else {
                     publishInitialCollisionResponse(inst);
@@ -1171,12 +1161,8 @@ public class ObjectManager {
                     continue;
                 }
                 if (objectCallbacks.call(inst, inst::isDestroyed)) {
-                    var removalCallback = objectCallbacks.captureRemovalCallback(inst);
-                    objectCallbacks.runAndUnregister(inst, inst::onUnload);
-                    placement.clearStayActive(spawn);
-                    resetRespawnStateForOffscreenSelfDelete(inst, spawn);
-                    dispatchDestroyRemoveFromActive(inst, spawn);
-                    removeActiveObject(spawn, removalCallback);
+                    var removalCallback = unloadDestroyedObject(inst);
+                    finishDestroyedPlacement(inst, spawn, removalCallback);
                     objectsRemoved = true;
                     continue;
                 }
@@ -1187,12 +1173,8 @@ public class ObjectManager {
                     continue;
                 }
                 if (objectCallbacks.call(inst, inst::isDestroyed)) {
-                    var removalCallback = objectCallbacks.captureRemovalCallback(inst);
-                    objectCallbacks.runAndUnregister(inst, inst::onUnload);
-                    placement.clearStayActive(spawn);
-                    resetRespawnStateForOffscreenSelfDelete(inst, spawn);
-                    dispatchDestroyRemoveFromActive(inst, spawn);
-                    removeActiveObject(spawn, removalCallback);
+                    var removalCallback = unloadDestroyedObject(inst);
+                    finishDestroyedPlacement(inst, spawn, removalCallback);
                     objectsRemoved = true;
                 } else {
                     publishInitialCollisionResponse(inst);
@@ -1323,17 +1305,13 @@ public class ObjectManager {
                             && objectCallbacks.call(instance, aoi3::getSlotIndex) == slotIndex) {
                         releaseSlot(slotIndex);
                     }
-                    var removalCallback = objectCallbacks.captureRemovalCallback(instance);
-                    objectCallbacks.runAndUnregister(instance, instance::onUnload);
+                    var removalCallback = unloadDestroyedObject(instance);
                     population.executionOrder[currentExecSlot] = null;
 
                     ObjectSpawn spawn = population.spawnByInstance.get(instance);
                     if (spawn != null) {
                         freeAllReservedChildSlots(spawn);
-                        placement.clearStayActive(spawn);
-                        resetRespawnStateForOffscreenSelfDelete(instance, spawn);
-                        dispatchDestroyRemoveFromActive(instance, spawn);
-                        removeActiveObject(spawn, removalCallback);
+                        finishDestroyedPlacement(instance, spawn, removalCallback);
                     } else {
                         removeDynamicObjectInstance(instance, removalCallback);
                     }
@@ -1351,10 +1329,7 @@ public class ObjectManager {
                     continue;
                 }
                 if (objectCallbacks.call(inst, inst::isDestroyed)) {
-                    releaseSlotIfManaged(inst);
-                    var removalCallback = objectCallbacks.captureRemovalCallback(inst);
-                    objectCallbacks.runAndUnregister(inst, inst::onUnload);
-                    removeDynamicObjectInstance(inst, removalCallback);
+                    retireDestroyedDynamicFallback(inst);
                     objectsRemoved = true;
                     continue;
                 }
@@ -1366,10 +1341,7 @@ public class ObjectManager {
                     continue;
                 }
                 if (objectCallbacks.call(inst, inst::isDestroyed)) {
-                    releaseSlotIfManaged(inst);
-                    var removalCallback = objectCallbacks.captureRemovalCallback(inst);
-                    objectCallbacks.runAndUnregister(inst, inst::onUnload);
-                    removeDynamicObjectInstance(inst, removalCallback);
+                    retireDestroyedDynamicFallback(inst);
                     objectsRemoved = true;
                 } else {
                     publishInitialCollisionResponse(inst);
@@ -1391,12 +1363,8 @@ public class ObjectManager {
                     continue;
                 }
                 if (objectCallbacks.call(inst, inst::isDestroyed)) {
-                    var removalCallback = objectCallbacks.captureRemovalCallback(inst);
-                    objectCallbacks.runAndUnregister(inst, inst::onUnload);
-                    placement.clearStayActive(spawn);
-                    resetRespawnStateForOffscreenSelfDelete(inst, spawn);
-                    dispatchDestroyRemoveFromActive(inst, spawn);
-                    removeActiveObject(spawn, removalCallback);
+                    var removalCallback = unloadDestroyedObject(inst);
+                    finishDestroyedPlacement(inst, spawn, removalCallback);
                     objectsRemoved = true;
                     continue;
                 }
@@ -1408,12 +1376,8 @@ public class ObjectManager {
                     continue;
                 }
                 if (objectCallbacks.call(inst, inst::isDestroyed)) {
-                    var removalCallback = objectCallbacks.captureRemovalCallback(inst);
-                    objectCallbacks.runAndUnregister(inst, inst::onUnload);
-                    placement.clearStayActive(spawn);
-                    resetRespawnStateForOffscreenSelfDelete(inst, spawn);
-                    dispatchDestroyRemoveFromActive(inst, spawn);
-                    removeActiveObject(spawn, removalCallback);
+                    var removalCallback = unloadDestroyedObject(inst);
+                    finishDestroyedPlacement(inst, spawn, removalCallback);
                     objectsRemoved = true;
                 } else {
                     publishInitialCollisionResponse(inst);
@@ -3150,6 +3114,32 @@ public class ObjectManager {
 
     boolean hadSpecialTouchThisFrame(PlayableEntity player) {
         return touchResponses != null && touchResponses.hadSpecialTouchThisFrame(player);
+    }
+
+    /** Capture the removal owner before onUnload unregisters the destroyed object. */
+    private ObjectCallbackRouter.RemovalCallback unloadDestroyedObject(ObjectInstance instance) {
+        var removalCallback = objectCallbacks.captureRemovalCallback(instance);
+        objectCallbacks.runAndUnregister(instance, instance::onUnload);
+        return removalCallback;
+    }
+
+    /**
+     * Completes placed self-destruction after unload. Callers retain their original
+     * placement lookup timing and release reserved children only on the slot path.
+     */
+    private void finishDestroyedPlacement(ObjectInstance instance, ObjectSpawn spawn,
+            ObjectCallbackRouter.RemovalCallback removalCallback) {
+        placement.clearStayActive(spawn);
+        resetRespawnStateForOffscreenSelfDelete(instance, spawn);
+        dispatchDestroyRemoveFromActive(instance, spawn);
+        removeActiveObject(spawn, removalCallback);
+    }
+
+    /** Dynamic fallbacks release any managed slot before unload and population retirement. */
+    private void retireDestroyedDynamicFallback(ObjectInstance instance) {
+        releaseSlotIfManaged(instance);
+        var removalCallback = unloadDestroyedObject(instance);
+        removeDynamicObjectInstance(instance, removalCallback);
     }
 
     /**
