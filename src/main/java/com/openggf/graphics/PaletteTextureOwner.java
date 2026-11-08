@@ -29,6 +29,13 @@ final class PaletteTextureOwner {
     private PaletteView[] drawPaletteRows;
     private Integer drawPaletteTexture;
     private int drawPaletteHeight;
+    // Copy the submitted colors, never the mutable palette waiting for the next V-int.
+    private final int[][] displayedPaletteArgb = new int[64][];
+
+    int[] copyDisplayedPaletteArgb(int line) {
+        if (line < 0 || line >= displayedPaletteArgb.length || displayedPaletteArgb[line] == null) return null;
+        return displayedPaletteArgb[line].clone();
+    }
 
     void withDrawPalette(PaletteView[] rows, Runnable draw) {
         if (drawPaletteRows != null) throw new IllegalStateException("Nested palette projection");
@@ -243,6 +250,7 @@ final class PaletteTextureOwner {
 				for(int line=lease.base();line<lease.base()+4;line++) {
 					uploadPaletteLine(ScopedUnderwaterBasis.blankLine(),line);paletteTextureMap.remove("palette_"+line);
 					if(line<lastCachedPaletteLines.length)lastCachedPaletteLines[line]=null;
+                    displayedPaletteArgb[line] = null;
 					pendingPaletteUploads[line]=false;
 				}
 				RenderContext.releaseScopedPaletteBank(lease.token());
@@ -452,6 +460,15 @@ final class PaletteTextureOwner {
 			writePaletteColor(paletteBuffer, r, g, b, i);
 		}
 		paletteBuffer.flip();
+        if (paletteId >= 0 && paletteId < displayedPaletteArgb.length) {
+            int[] submitted = new int[COLORS_PER_PALETTE];
+            for (int color = 0; color < COLORS_PER_PALETTE; color++) {
+                int offset = color * 4;
+                submitted[color] = 0xFF000000 | (paletteBuffer.get(offset) & 255) << 16
+                        | (paletteBuffer.get(offset + 1) & 255) << 8 | paletteBuffer.get(offset + 2) & 255;
+            }
+            displayedPaletteArgb[paletteId] = submitted;
+        }
 
 		glBindTexture(GL_TEXTURE_2D, combinedPaletteTextureId);
 		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, paletteId, 16, 1, GL_RGBA, GL_UNSIGNED_BYTE, paletteBuffer);
@@ -630,6 +647,7 @@ final class PaletteTextureOwner {
 		paletteFadePublicationPending = false;
 		displayedPaletteFadeHeld = false;
 		lastCachedPaletteLines = new PaletteView[0];
+        java.util.Arrays.fill(displayedPaletteArgb, null);
 		if (!graphics.paletteHeadlessMode() && graphics.paletteGlInitialized()) {
 			if (combinedPaletteTextureId != null) {
 				glDeleteTextures(combinedPaletteTextureId);

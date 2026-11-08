@@ -25,6 +25,28 @@ class TestPaletteDrawProjectionPixels {
         glReadPixels(x,223-y,1,1,GL_RGBA,GL_UNSIGNED_BYTE,bytes);
         assertArrayEquals(new int[]{red,green,blue,255},new int[]{bytes.get(0)&255,bytes.get(1)&255,bytes.get(2)&255,bytes.get(3)&255});
     }
+    @Test void displayedColorsHoldTheirGenerationUntilPublicationAndAreDefensive() throws Exception {
+        RenderContext.reset();
+        try (var context = PresentationOffscreenTestContext.openConfigured(320, 224,
+                PresentationOffscreenTestContext.LegacyProfile.CORE_41)) {
+            var graphics = new GraphicsManager();
+            try {
+                graphics.init("shaders/shader_the_hedgehog.glsl");
+                var live = row(255, 0, 0);
+                graphics.cachePaletteTexture(live, 1);
+                PaletteUploadPresentation.publishAndLatch(graphics);
+                live.setColor(1, new Palette.Color((byte) 0, (byte) 0, (byte) 255));
+                PaletteUploadPresentation.cacheLevelPalette(graphics, live, 1);
+                var displayed = PaletteUploadPresentation.copyDisplayedPaletteArgb(graphics, 1);
+                assertEquals(0xFFFF0000, displayed[1], "pending CPU colors must not replace displayed colors");
+                displayed[1] = 0;
+                assertEquals(0xFFFF0000, PaletteUploadPresentation.copyDisplayedPaletteArgb(graphics, 1)[1]);
+                PaletteUploadPresentation.publishAndLatch(graphics);
+                assertEquals(0xFF0000FF, PaletteUploadPresentation.copyDisplayedPaletteArgb(graphics, 1)[1]);
+                assertNull(PaletteUploadPresentation.copyDisplayedPaletteArgb(graphics, 3));
+            } finally { graphics.cleanup(); RenderContext.reset(); }
+        }
+    }
     @Test void normalWaterAndPrivateRowsUseTheProjectionAndRestoreAfterFailure() throws Exception {
         RenderContext.reset();
         try(var context=PresentationOffscreenTestContext.openConfigured(320,224,

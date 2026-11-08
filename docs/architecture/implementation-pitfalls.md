@@ -2534,6 +2534,19 @@ architecture guard repair; existing native component/22-V-int and immediate-scen
 rewind-release semantics are unchanged.
 
 
+**Scene capture must observe the uploaded palette generation.** CPU palette colors
+may already contain the next cycle while production drawing still uses the
+previous V-int publication. Copying live colors into a scene can rotate only
+animated colors, despite identical tile and player geometry. Keep a defensive
+color copy at the existing upload owner and read it through
+`PaletteUploadPresentation.copyDisplayedPaletteArgb`; never publish pending
+writes just to capture a picture. Headless rows without an upload retain the
+live-palette fallback. Origin: Competition fix lane G, 2026-11-08; exact smoke
+batch 17 reproduced 24,783 waterfall pixel differences, and texture readback
+identified only indices 19,20,30,31. See the
+[lane validation](validation/2026-11-07-s3k-hosted-arena-lane-b.md#fix-lane-g--2026-11-08).
+
+
 **A restored palette owner can rebind without submitting new work.** Whole-world
 restore first reinstalls the displayed fade and its captured pending bit, then
 restores the logical animation owner. A matching mode/steps/line-mask request

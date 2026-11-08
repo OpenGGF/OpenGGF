@@ -322,3 +322,71 @@ The bounded follow-ups use the same flags and these exact selectors, respectivel
 Each request used timeout 7200 in the background, with logs under target/lane-b.
 The merged report set and its skip classification are disposable target outputs.
 No branch was pushed or merged.
+
+
+## Fix lane G — 2026-11-08
+
+The local `competition-smoke-regressions` worktree began at develop `33c3b8e56`,
+then merged feature `ef7d28cd1` as `8f0f46005`. This base already contains the
+TraceCapturePresentationSetup catch-signature repair; do not re-add the older
+baseline's four catch-inventory differences. No excluded native competition
+renderer/gameplay files were edited.
+
+`2506f005f` moves race policy/event/value contracts to `game.arena`, translates
+arena poses through the mod host's `NativePlayerPose`, and replaces the net
+stack's game calls with `TrackRulesProvider` and exported catalogue data. Its
+candidate API signatures move in place; the descriptor remains candidate 0.7.
+Monitor OFF uses `ObjectLifetimeOps.deleteNoRespawn`, preserving deletion without
+respawn marking. `fb1b8b354` extracts camera-relative race placement, uses the
+hosted focus-input collaborator, and lets ghost-slot runtime errors propagate;
+the checked IO boundary remains and its retired broad-catch row is pruned.
+
+The 37 original smoke failure identities were compared with the supplied
+baseline log: all 30 out-of-scope failures match baseline identities (29 assertions also match
+after normalizing JVM object IDs and unordered-set rendering), and the
+seven remaining identities are the assigned regressions (the broad-catch case
+also contains the older baseline's TraceCapturePresentationSetup debt).
+
+The 250-class feature/regression selection ran 2,259 tests with zero skips.
+Four migration mistakes were corrected (one expected pose type and the three
+policy-parser cases caused by an invalid descriptor comment); their four-class,
+22-test rerun passed. All original S3K competition guards and new hosted tests
+were selected. A deliberately wrong catalogue countdown comparison failed at
+241 versus 240, then was restored and passed.
+
+Golf passed in isolation and in that selection. The exact original 50-candidate
+batch, using normal heap, `-Psmoke -Ptest-concurrent`, alphabetical order and the
+same verified ROM/EGL environment, reproduced 24,783 mismatches twice (431 tests,
+one failure each). Failure PNG analysis showed only four waterfall colors in a
+cycle rotation. Temporary texture readback measured captured/uploaded ARGB:
+
+| Palette index | Captured CPU color | Uploaded color |
+| --- | --- | --- |
+| 19 | ffb6dbff | ff6d92b6 |
+| 20 | ff6d92b6 | ff6d92ff |
+| 30 | ff6d92ff | ff92b6ff |
+| 31 | ff92b6ff | ffb6dbff |
+
+The proposed flash/solo-view change was not used as a speculative fix. The
+measured cause was `LoadedLevelScene` copying the newer mutable palette while
+production retained its previous upload. The repair observes a defensive color
+copy at the existing palette upload owner, with live fallback only before any
+upload. It never advances a publication or changes native drawing. Temporary raw
+texture instrumentation was removed. The exact failing batch then passed all
+431 tests with zero skips. The new focused palette control holds old colors
+across a pending CPU write, rejects aliasing and observes new colors only after
+publication. Final feature and guards qualification follows below.
+
+Final feature qualification: the same selection after the palette repair passed
+250 executed classes / 2,260 tests, zero failures/errors/skips, using normal heap,
+verified ROM discovery and surfaceless EGL. Command:
+`python3 tools/testing/maven_queue.py --normal -Dmse=off -Dtest=<feature selection> test -B`.
+The selection includes every net, racing/server, racing/time-attack and S3K
+competition test, the named hosted/replay/swap/iteration/PLC classes, Mod API
+policy/pin tests and the seven requested regression/presentation classes.
+Queue wait was 348 seconds; Maven execution including compilation was 4m13s.
+The exact repaired batch waited 293 seconds and executed in 1m38s. The pre-fix
+reproductions waited 389/8 seconds and executed in 8.472/8.692 seconds; the
+instrumented reproduction waited 29 seconds and executed in 41.157 seconds.
+These timings separate queue wait from execution; they are not whole-task wall
+time or a full-suite certification. Final guards are reported at handoff.
