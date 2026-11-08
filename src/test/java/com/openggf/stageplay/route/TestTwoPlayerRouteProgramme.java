@@ -1,4 +1,5 @@
-package com.openggf.stageplay.route;
+package com.openggf.tools;
+import com.openggf.tools.StageplayCompetitionRouteHosts;
 
 import com.openggf.route.*;
 
@@ -46,7 +47,7 @@ class TestTwoPlayerRouteProgramme {
         assertFalse(both.test(new World().observe()),"negative control: neither actor has reached the goal");
     }
     @Test void titleInletAndExportPreservePrefixAndBothLanes(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir) throws Exception {
-        var prefix=com.openggf.stageplay.route.StageplayCompetitionRouteHosts.menuPrefix(2);
+        var prefix=com.openggf.tools.StageplayCompetitionRouteHosts.menuPrefix(2);
         var launch=new LaunchContract(RomIdentity.standard("s2"),new Inlet.Title(),new Roster("sonic","tails"),320,"off",new InitialState(0,Seeds.NONE));
         var tape=prefix.append(InputTape.of(List.of(new PadRow(PhysicalButton.RIGHT.bit(),PhysicalButton.LEFT.bit()))));
         var route=RouteArtifact.of(launch,GoalProgram.NONE,tape,new Provenance("test","test","test",List.of()));

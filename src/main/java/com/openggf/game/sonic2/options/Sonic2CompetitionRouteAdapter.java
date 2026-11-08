@@ -9,6 +9,17 @@ import com.openggf.game.sonic2.competition.Sonic2CompetitionVisit;
 
 /** Isolated route-qualification composition. Does not activate any production qualified zone. */
 public final class Sonic2CompetitionRouteAdapter extends DelegatingGameModule {
+    /** Hash verification belongs to the ROM-consuming host, not editor UI. */
+    public static boolean loadedRetailImage() {
+        try {
+            var rom = com.openggf.game.GameServices.rom().getRom();
+            return com.openggf.data.RomFingerprint.of(rom.readAllBytes()).matches(
+                    "7B905383", "8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9");
+        } catch (java.io.IOException failure) {
+            throw new java.io.UncheckedIOException(failure);
+        }
+    }
+
     private Sonic2CompetitionVisit visit;
     private final com.openggf.game.sonic2.titlescreen.TitleScreenManager title;
     private final NativeTitleModeProvider provider = new NativeTitleModeProvider() {

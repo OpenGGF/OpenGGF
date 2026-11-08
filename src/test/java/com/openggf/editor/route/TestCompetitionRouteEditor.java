@@ -1,7 +1,7 @@
 package com.openggf.editor.route;
 
 import com.openggf.route.*;
-import com.openggf.stageplay.route.StageplayCompetitionRouteHosts;
+import com.openggf.tools.StageplayCompetitionRouteHosts;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 

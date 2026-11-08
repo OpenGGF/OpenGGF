@@ -1,4 +1,5 @@
 package com.openggf.editor.route;
+import com.openggf.route.RouteEditorFiles;
 
 import com.openggf.game.MenuTextEditor;
 import com.openggf.editor.project.EditorProjectMenu;
@@ -59,11 +60,7 @@ public final class RouteTapeWorkspace {
         /** Only the loaded, hash-verified retail S2 REV01 image admits the title host. */
         default boolean competitionAvailable() {
             if (!currentLevel().map(l -> l.game().equals("s2")).orElse(false)) return false;
-            try {
-                var rom = com.openggf.game.GameServices.rom().getRom();
-                return com.openggf.data.RomFingerprint.of(rom.readAllBytes()).matches(
-                        "7B905383", "8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9");
-            } catch (IOException | RuntimeException unavailable) { return false; }
+            return com.openggf.game.sonic2.options.Sonic2CompetitionRouteAdapter.loadedRetailImage();
         }
 
         /** Placed objects of the level the editor shows (layout order), for placement goal targets. */
@@ -547,8 +544,8 @@ public final class RouteTapeWorkspace {
 
     public void createCompetition(Path manifest, int entry) {
         if (!host.competitionAvailable()) throw new IllegalStateException(UiMessages.text("editor.route_tape.competition_unavailable"));
-        var prefix = com.openggf.stageplay.route.StageplayCompetitionRouteHosts.menuPrefix(entry);
-        create(manifest, com.openggf.stageplay.route.StageplayCompetitionRouteHosts.launch(), prefix.size());
+        var prefix = com.openggf.route.CompetitionRouteEntry.menuPrefix(entry);
+        create(manifest, com.openggf.route.CompetitionRouteEntry.launch(), prefix.size());
         tape = prefix;
         goals = new com.openggf.route.GoalProgram(com.openggf.route.Guard.NONE, List.of(), prefix.size());
         loaded = working();
