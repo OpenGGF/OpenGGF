@@ -203,6 +203,19 @@ def review(game,frames,refs,dest):
  gif[0].save(dest/f'{game}.gif',save_all=True,append_images=gif[1:],duration=dur,loop=0,disposal=2)
 
 def build(game,dest):
+ # Accepted GPT redraws supersede the earlier procedural art, game by game.
+ source=HERE/'native-pose.json'
+ if source.exists():
+  accepted=json.loads(source.read_text())['frames']
+  surface=next(s for s in json.loads((HERE/'continue.yaml').read_text())['games'] if s['game']==game)
+  if all(f['file'] in accepted for f in surface['frames']):
+   surface=module('continue_native_pose',HERE/'native_pose.py').rebuild(game)
+   verify(surface)
+   if dest:
+    entries,colors,_,_=sources(game)
+    refs=[b.native(ps,data,colors) for bank,i,(label,ps),data,loads,pl in entries]
+    review(game,surface['frames'],refs,dest)
+   return
  entries,colors,mp,dp=sources(game);frames=[];refs=[];shared={}
  for bank,i,(label,ps),data,loads,pl in entries:
   im=draw_pose(game,bank,i,ps);out,hot,box=b.crop_mapping(im,ps)
