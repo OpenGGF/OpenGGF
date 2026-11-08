@@ -432,7 +432,7 @@ final class RouteHud implements RouteTapeOverlay.Painter {
                     Math.max(1, (split - run.from()) * rowWidth - .5f), TRACK - 2,
                     com.openggf.editor.route.RouteEditorStyle.lockedColour(colour), 1);
             if (run.to() > split) c.rect(view.x(split, left, width), trackY(run.track()) + 1,
-                    Math.max(1, (run.to() - split) * rowWidth - .5f), TRACK - 2, colour, 1);
+                    Math.max(1, (run.to() - split) * rowWidth - (run.continuesAfter() ? 0 : .5f)), TRACK - 2, colour, lane.slot() == PlayerSlot.P1 ? 1 : .8f);
         }
         if (locked > 0) {
             c.menuIcon(com.openggf.game.MenuChrome.Icon.LOCK, dock.right() - 100, header, TEXT_DIM);
