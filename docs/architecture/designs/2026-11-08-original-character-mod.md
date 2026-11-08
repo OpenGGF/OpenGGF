@@ -552,13 +552,13 @@ Status log (times UTC):
   The code is `db3781859` (homing `9d606cda4`, dive `320f6a1d5`, physics
   `0ae6e7d5b`, S3K input gate `db3781859`). No merge or push by this lane.
   Title-first clips retain the real launch/input path and owned save roots:
-  `s1-route-final/capture.mp4` (idle, full-speed run, spring at frame 2392),
-  `s1-chain/capture.mp4` (normal strikes 1364–1367 and 1397–1408, with no
+  `s1-verified-route/capture.mp4` (idle, full-speed run, spring at frame 2392),
+  `s1-verified-chain/capture.mp4` (normal strikes 1364–1367 and 1397–1408, with no
   intervening grounded row; second native kill awards 200 points),
-  `s2-normal-kill/capture.mp4` (idle, full-speed run, normal Coconuts homing
+  `s2-verified-kill/capture.mp4` (idle, full-speed run, normal Coconuts homing
   kill at frames 1553–1555; native 100-point defeat at 1560), and
-  `s3k-route/capture.mp4` (idle/run, monkey kill at 1137–1142, native spring
-  launch at 1562 with y velocity -0xA00). `s2-powered-spring/capture.mp4`
+  `s3k-verified-route/capture.mp4` (idle/run, monkey kill at 1137–1142, native spring
+  launch at 1562 with y velocity -0xA00). `s2-verified-powered/capture.mp4`
   demonstrates transformation, gold-palette Instagib strikes and the authored
   spring pose (frame 845). That last clip deliberately uses direct EHZ1 boot
   with supported capture debug setup `--emeralds 1111111 --rings 80`, not a
