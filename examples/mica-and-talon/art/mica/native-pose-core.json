@@ -968,8 +968,6 @@
       }
     },
     "run-00": {
-      "prompt": "Use case: style-transfer. Asset: one animation frame, transparent background, no text, no ground or shadow. Image 1 is the NATIVE POSE TARGET. Image 2 is the MICA CHARACTER IDENTITY reference (use jade version only). Redraw image 1 as the ORIGINAL pangolin MICA: jade overlapping rounded scales, sand-cream face and belly, coral-red boots with tan soles, white gloves, big friendly brown eye, scaled tail. New drawing, not a recolour. NO blue, spikes or Sonic facial features. Keep the exact body pose, limb placement, framing, silhouette SIZE and facing of image 1; fit tail within the same bounds. Crisp 16-bit pixel sprite, clean dark outline, flat clustered shading, simple readable eyes, no antialiasing. One sprite only, filling the same proportional bounds. Frame: run-00. Critical: reproduce image 1's leg stride/blur and hand positions; do not substitute the concept standing pose. Match the target proportions and head-to-body ratio.",
-      "raw_sha256": "c1655e5230527b06b62b9162759340777d9229eb1795ba31941690d5d1c90719",
       "reference": {
         "id": "run-00",
         "size": [
@@ -992,38 +990,59 @@
       },
       "geometry_reference": {
         "size": [
-          32,
+          31,
           35
         ],
         "hotspot": [
-          16,
+          15,
           15
         ]
       },
       "native_size": [
-        32,
+        31,
         35
       ],
-      "previous_size": [
-        39,
-        38
-      ],
-      "previous_hotspot": [
-        21,
-        19
-      ],
       "hotspot": [
-        16,
+        15,
         15
       ],
-      "source": "approved pilot adoption",
-      "cleanup": "connected alpha; shared palette; inside ink outline",
-      "material_box_change": true,
-      "owner_fix": "Stable rounded scale hood, bounded four-phase arm swing; separate rear tail above coral-only boot orbit; no resized pixels."
+      "prompt": "Use case: style-transfer. ONE original 16-bit sprite of MICA the jade pangolin running RIGHT at very high speed. Candidate 4 for phase 0. Input 1 is the exact native run frame: preserve its pose and fast-motion composition. Input 2 is MICA's character identity, NOT a pose template; inputs 3/4 only establish approved face style. Previous candidates looked like jogging: explicitly correct that. Native S2 high-speed run has compact torso, upright head with slight forward lean, and boots sweeping a wide circular crescent UNDER the body. Draw MICA's CORAL hiking boots as that native red boot-sweep shape, TAN sole edges, JADE laces; NO white anywhere on shoes. Do not draw an ordinary walk/jog. Match native sweep phase 0 exactly. Keep jade tail as a DISTINCT short curved scaled tail trailing LEFT ABOVE and SEPARATE from the boot sweep, never curling around the shoes. White gloves/arm swing at the EXACT positions of native hands. Small cream muzzle facing right, rounded overlapping jade hood scales, NEVER pointed quills. Consistent head size and top-left flat shading, crisp hard pixel clusters and black silhouette outline. Transparent background; single compact sprite, no ground, no words, no extra poses.",
+      "raw_sha256": "88ab4527c1ff0590c799a5ec4b5b1b91bf4413e0343bf2b7bef50cdacac5c5af",
+      "source": "built-in GPT Image, latest exposed; exact version unavailable",
+      "cleanup": "Transparent-margin crop; Lanczos native box reduction; unchanged fixed palette; inside silhouette ink. No painted pixels.",
+      "regeneration": {
+        "attempts": [
+          {
+            "attempt": 1,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, run-00, candidate 1 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Upright torso with mild forward lean exactly like native run, never hunched. Match native boot-loop phase, coral boots and tan soles with NO WHITE. Distinct tail clearly separate from shoes. Arm swing matches native, rounded scale rows NEVER quill spikes.\n\nWill reduce to native 31x35 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 1: strict fidelity to reference limb/boot positions and silhouette.",
+            "raw_sha256": "a0ac5372b24ea97dfba2c786fdbaaec83b07ca938590fdd9b2d8fc16a7365cae",
+            "chosen": false
+          },
+          {
+            "attempt": 2,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, run-00, candidate 2 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Upright torso with mild forward lean exactly like native run, never hunched. Match native boot-loop phase, coral boots and tan soles with NO WHITE. Distinct tail clearly separate from shoes. Arm swing matches native, rounded scale rows NEVER quill spikes.\n\nWill reduce to native 31x35 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 2: prioritize coherent rounded hood/head, compact shapes and clean shading while keeping EXACT native limb pose.",
+            "raw_sha256": "0167a91244c4ed8051371fb282662cf6a76ba44baf3f234d4550e6c872c11b84",
+            "chosen": false
+          },
+          {
+            "attempt": 3,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, run-00, candidate 3 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Upright torso with mild forward lean exactly like native run, never hunched. Match native boot-loop phase, coral boots and tan soles with NO WHITE. Distinct tail clearly separate from shoes. Arm swing matches native, rounded scale rows NEVER quill spikes.\n\nWill reduce to native 31x35 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 3: prioritize small-scale readability and consistent identity with the approved face anchors, keeping exact phase placement.",
+            "raw_sha256": "69d60e11f12b2e9fa21f09bd7742939eafb6f9091a15943ab2d2bfbfd34d32d3",
+            "chosen": false
+          },
+          {
+            "attempt": 4,
+            "prompt": "Use case: style-transfer. ONE original 16-bit sprite of MICA the jade pangolin running RIGHT at very high speed. Candidate 4 for phase 0. Input 1 is the exact native run frame: preserve its pose and fast-motion composition. Input 2 is MICA's character identity, NOT a pose template; inputs 3/4 only establish approved face style. Previous candidates looked like jogging: explicitly correct that. Native S2 high-speed run has compact torso, upright head with slight forward lean, and boots sweeping a wide circular crescent UNDER the body. Draw MICA's CORAL hiking boots as that native red boot-sweep shape, TAN sole edges, JADE laces; NO white anywhere on shoes. Do not draw an ordinary walk/jog. Match native sweep phase 0 exactly. Keep jade tail as a DISTINCT short curved scaled tail trailing LEFT ABOVE and SEPARATE from the boot sweep, never curling around the shoes. White gloves/arm swing at the EXACT positions of native hands. Small cream muzzle facing right, rounded overlapping jade hood scales, NEVER pointed quills. Consistent head size and top-left flat shading, crisp hard pixel clusters and black silhouette outline. Transparent background; single compact sprite, no ground, no words, no extra poses.",
+            "raw_sha256": "88ab4527c1ff0590c799a5ec4b5b1b91bf4413e0343bf2b7bef50cdacac5c5af",
+            "chosen": true
+          }
+        ],
+        "chosen": 4,
+        "reason": "Fourth candidate replaces generic jog with native phase boot sweep; upright forward-facing hood, rounded scales, coral/tan shoes without white and separate trailing tail. Checked beside all other selected run phases.",
+        "review_directory": "$HOME/scratch/agent-tmp/mica-regen-20261108"
+      }
     },
     "run-01": {
-      "prompt": "Use case: style-transfer. Asset: one animation frame, transparent background, no text, no ground or shadow. Image 1 is the NATIVE POSE TARGET. Image 2 is the MICA CHARACTER IDENTITY reference (use jade version only). Redraw image 1 as the ORIGINAL pangolin MICA: jade overlapping rounded scales, sand-cream face and belly, coral-red boots with tan soles, white gloves, big friendly brown eye, scaled tail. New drawing, not a recolour. NO blue, spikes or Sonic facial features. Keep the exact body pose, limb placement, framing, silhouette SIZE and facing of image 1; fit tail within the same bounds. Crisp 16-bit pixel sprite, clean dark outline, flat clustered shading, simple readable eyes, no antialiasing. One sprite only, filling the same proportional bounds. Frame: run-01. Critical: reproduce image 1's leg stride/blur and hand positions; do not substitute the concept standing pose. Match the target proportions and head-to-body ratio.",
-      "raw_sha256": "34dc97c0630089e9d0661406bdac759bb4541cccccb3f1867e5f09244b8d9263",
       "reference": {
         "id": "run-01",
         "size": [
@@ -1046,38 +1065,59 @@
       },
       "geometry_reference": {
         "size": [
-          32,
-          35
+          31,
+          36
         ],
         "hotspot": [
-          16,
-          15
+          15,
+          16
         ]
       },
       "native_size": [
-        32,
-        35
-      ],
-      "previous_size": [
-        39,
-        38
-      ],
-      "previous_hotspot": [
-        21,
-        19
+        31,
+        36
       ],
       "hotspot": [
-        16,
-        15
+        15,
+        16
       ],
-      "source": "approved pilot adoption",
-      "cleanup": "connected alpha; shared palette; inside ink outline",
-      "material_box_change": true,
-      "owner_fix": "Stable rounded scale hood, bounded four-phase arm swing; separate rear tail above coral-only boot orbit; no resized pixels."
+      "prompt": "Use case: style-transfer. ONE original 16-bit sprite of MICA the jade pangolin running RIGHT at very high speed. Candidate 4 for phase 1. Input 1 is the exact native run frame: preserve its pose and fast-motion composition. Input 2 is MICA's character identity, NOT a pose template; inputs 3/4 only establish approved face style. Previous candidates looked like jogging: explicitly correct that. Native S2 high-speed run has compact torso, upright head with slight forward lean, and boots sweeping a wide circular crescent UNDER the body. Draw MICA's CORAL hiking boots as that native red boot-sweep shape, TAN sole edges, JADE laces; NO white anywhere on shoes. Do not draw an ordinary walk/jog. Match native sweep phase 1 exactly. Keep jade tail as a DISTINCT short curved scaled tail trailing LEFT ABOVE and SEPARATE from the boot sweep, never curling around the shoes. White gloves/arm swing at the EXACT positions of native hands. Small cream muzzle facing right, rounded overlapping jade hood scales, NEVER pointed quills. Consistent head size and top-left flat shading, crisp hard pixel clusters and black silhouette outline. Transparent background; single compact sprite, no ground, no words, no extra poses.",
+      "raw_sha256": "e402817e9eb1b8cb2c65847c15530087b1c8ce6d54aceb388e0c5b3e67f6b933",
+      "source": "built-in GPT Image, latest exposed; exact version unavailable",
+      "cleanup": "Transparent-margin crop; Lanczos native box reduction; unchanged fixed palette; inside silhouette ink. No painted pixels.",
+      "regeneration": {
+        "attempts": [
+          {
+            "attempt": 1,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, run-01, candidate 1 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Upright torso with mild forward lean exactly like native run, never hunched. Match native boot-loop phase, coral boots and tan soles with NO WHITE. Distinct tail clearly separate from shoes. Arm swing matches native, rounded scale rows NEVER quill spikes.\n\nWill reduce to native 31x36 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 1: strict fidelity to reference limb/boot positions and silhouette.",
+            "raw_sha256": "4e90b26c8f988f333a25dd562699d0592b16b267cdcfacd99e77543a206eff16",
+            "chosen": false
+          },
+          {
+            "attempt": 2,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, run-01, candidate 2 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Upright torso with mild forward lean exactly like native run, never hunched. Match native boot-loop phase, coral boots and tan soles with NO WHITE. Distinct tail clearly separate from shoes. Arm swing matches native, rounded scale rows NEVER quill spikes.\n\nWill reduce to native 31x36 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 2: prioritize coherent rounded hood/head, compact shapes and clean shading while keeping EXACT native limb pose.",
+            "raw_sha256": "2bacb5a0af815daa88e804187957573ddf5fc1f09158ed6a2fb985b234b47a09",
+            "chosen": false
+          },
+          {
+            "attempt": 3,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, run-01, candidate 3 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Upright torso with mild forward lean exactly like native run, never hunched. Match native boot-loop phase, coral boots and tan soles with NO WHITE. Distinct tail clearly separate from shoes. Arm swing matches native, rounded scale rows NEVER quill spikes.\n\nWill reduce to native 31x36 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 3: prioritize small-scale readability and consistent identity with the approved face anchors, keeping exact phase placement.",
+            "raw_sha256": "19c0dfca4fd333602cf0a71dc2c4a9bfc7e14e91a70b5dd226e5494fa36c3851",
+            "chosen": false
+          },
+          {
+            "attempt": 4,
+            "prompt": "Use case: style-transfer. ONE original 16-bit sprite of MICA the jade pangolin running RIGHT at very high speed. Candidate 4 for phase 1. Input 1 is the exact native run frame: preserve its pose and fast-motion composition. Input 2 is MICA's character identity, NOT a pose template; inputs 3/4 only establish approved face style. Previous candidates looked like jogging: explicitly correct that. Native S2 high-speed run has compact torso, upright head with slight forward lean, and boots sweeping a wide circular crescent UNDER the body. Draw MICA's CORAL hiking boots as that native red boot-sweep shape, TAN sole edges, JADE laces; NO white anywhere on shoes. Do not draw an ordinary walk/jog. Match native sweep phase 1 exactly. Keep jade tail as a DISTINCT short curved scaled tail trailing LEFT ABOVE and SEPARATE from the boot sweep, never curling around the shoes. White gloves/arm swing at the EXACT positions of native hands. Small cream muzzle facing right, rounded overlapping jade hood scales, NEVER pointed quills. Consistent head size and top-left flat shading, crisp hard pixel clusters and black silhouette outline. Transparent background; single compact sprite, no ground, no words, no extra poses.",
+            "raw_sha256": "e402817e9eb1b8cb2c65847c15530087b1c8ce6d54aceb388e0c5b3e67f6b933",
+            "chosen": true
+          }
+        ],
+        "chosen": 4,
+        "reason": "Fourth candidate replaces generic jog with native phase boot sweep; upright forward-facing hood, rounded scales, coral/tan shoes without white and separate trailing tail. Checked beside all other selected run phases.",
+        "review_directory": "$HOME/scratch/agent-tmp/mica-regen-20261108"
+      }
     },
     "run-02": {
-      "prompt": "Use case: style-transfer. Asset: one animation frame, transparent background, no text, no ground or shadow. Image 1 is the NATIVE POSE TARGET. Image 2 is the MICA CHARACTER IDENTITY reference (use jade version only). Redraw image 1 as the ORIGINAL pangolin MICA: jade overlapping rounded scales, sand-cream face and belly, coral-red boots with tan soles, white gloves, big friendly brown eye, scaled tail. New drawing, not a recolour. NO blue, spikes or Sonic facial features. Keep the exact body pose, limb placement, framing, silhouette SIZE and facing of image 1; fit tail within the same bounds. Crisp 16-bit pixel sprite, clean dark outline, flat clustered shading, simple readable eyes, no antialiasing. One sprite only, filling the same proportional bounds. Frame: run-02. Critical: reproduce image 1's leg stride/blur and hand positions; do not substitute the concept standing pose. Match the target proportions and head-to-body ratio.",
-      "raw_sha256": "7fdb963b033bbc4949210f5116246dc7e0ccd17254745afd76b2b15d0e3204a9",
       "reference": {
         "id": "run-02",
         "size": [
@@ -1100,38 +1140,59 @@
       },
       "geometry_reference": {
         "size": [
-          32,
+          30,
           35
         ],
         "hotspot": [
-          16,
+          14,
           15
         ]
       },
       "native_size": [
-        32,
+        30,
         35
       ],
-      "previous_size": [
-        39,
-        38
-      ],
-      "previous_hotspot": [
-        21,
-        19
-      ],
       "hotspot": [
-        16,
+        14,
         15
       ],
-      "source": "approved pilot adoption",
-      "cleanup": "connected alpha; shared palette; inside ink outline",
-      "material_box_change": true,
-      "owner_fix": "Stable rounded scale hood, bounded four-phase arm swing; separate rear tail above coral-only boot orbit; no resized pixels."
+      "prompt": "Use case: style-transfer. ONE original 16-bit sprite of MICA the jade pangolin running RIGHT at very high speed. Candidate 4 for phase 2. Input 1 is the exact native run frame: preserve its pose and fast-motion composition. Input 2 is MICA's character identity, NOT a pose template; inputs 3/4 only establish approved face style. Previous candidates looked like jogging: explicitly correct that. Native S2 high-speed run has compact torso, upright head with slight forward lean, and boots sweeping a wide circular crescent UNDER the body. Draw MICA's CORAL hiking boots as that native red boot-sweep shape, TAN sole edges, JADE laces; NO white anywhere on shoes. Do not draw an ordinary walk/jog. Match native sweep phase 2 exactly. Keep jade tail as a DISTINCT short curved scaled tail trailing LEFT ABOVE and SEPARATE from the boot sweep, never curling around the shoes. White gloves/arm swing at the EXACT positions of native hands. Small cream muzzle facing right, rounded overlapping jade hood scales, NEVER pointed quills. Consistent head size and top-left flat shading, crisp hard pixel clusters and black silhouette outline. Transparent background; single compact sprite, no ground, no words, no extra poses.",
+      "raw_sha256": "d871f20fdf5b6b980be030b8373f9b52aa8f9acfb705fb8e8bc3faa991684667",
+      "source": "built-in GPT Image, latest exposed; exact version unavailable",
+      "cleanup": "Transparent-margin crop; Lanczos native box reduction; unchanged fixed palette; inside silhouette ink. No painted pixels.",
+      "regeneration": {
+        "attempts": [
+          {
+            "attempt": 1,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, run-02, candidate 1 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Upright torso with mild forward lean exactly like native run, never hunched. Match native boot-loop phase, coral boots and tan soles with NO WHITE. Distinct tail clearly separate from shoes. Arm swing matches native, rounded scale rows NEVER quill spikes.\n\nWill reduce to native 30x35 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 1: strict fidelity to reference limb/boot positions and silhouette.",
+            "raw_sha256": "d66ddf552a4dc65bce72300dc65cbf4ec42214302755e57691a52d6490ea5867",
+            "chosen": false
+          },
+          {
+            "attempt": 2,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, run-02, candidate 2 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Upright torso with mild forward lean exactly like native run, never hunched. Match native boot-loop phase, coral boots and tan soles with NO WHITE. Distinct tail clearly separate from shoes. Arm swing matches native, rounded scale rows NEVER quill spikes.\n\nWill reduce to native 30x35 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 2: prioritize coherent rounded hood/head, compact shapes and clean shading while keeping EXACT native limb pose.",
+            "raw_sha256": "2ab0588b4c1693ffe9ef92c0429944549a73a200e4df10bff65c5a8c86b763b6",
+            "chosen": false
+          },
+          {
+            "attempt": 3,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, run-02, candidate 3 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Upright torso with mild forward lean exactly like native run, never hunched. Match native boot-loop phase, coral boots and tan soles with NO WHITE. Distinct tail clearly separate from shoes. Arm swing matches native, rounded scale rows NEVER quill spikes.\n\nWill reduce to native 30x35 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 3: prioritize small-scale readability and consistent identity with the approved face anchors, keeping exact phase placement.",
+            "raw_sha256": "e2d0bc94cc1357ce1df211449e41a3508f9c47a93789f736c9a9f4e520573686",
+            "chosen": false
+          },
+          {
+            "attempt": 4,
+            "prompt": "Use case: style-transfer. ONE original 16-bit sprite of MICA the jade pangolin running RIGHT at very high speed. Candidate 4 for phase 2. Input 1 is the exact native run frame: preserve its pose and fast-motion composition. Input 2 is MICA's character identity, NOT a pose template; inputs 3/4 only establish approved face style. Previous candidates looked like jogging: explicitly correct that. Native S2 high-speed run has compact torso, upright head with slight forward lean, and boots sweeping a wide circular crescent UNDER the body. Draw MICA's CORAL hiking boots as that native red boot-sweep shape, TAN sole edges, JADE laces; NO white anywhere on shoes. Do not draw an ordinary walk/jog. Match native sweep phase 2 exactly. Keep jade tail as a DISTINCT short curved scaled tail trailing LEFT ABOVE and SEPARATE from the boot sweep, never curling around the shoes. White gloves/arm swing at the EXACT positions of native hands. Small cream muzzle facing right, rounded overlapping jade hood scales, NEVER pointed quills. Consistent head size and top-left flat shading, crisp hard pixel clusters and black silhouette outline. Transparent background; single compact sprite, no ground, no words, no extra poses.",
+            "raw_sha256": "d871f20fdf5b6b980be030b8373f9b52aa8f9acfb705fb8e8bc3faa991684667",
+            "chosen": true
+          }
+        ],
+        "chosen": 4,
+        "reason": "Fourth candidate replaces generic jog with native phase boot sweep; upright forward-facing hood, rounded scales, coral/tan shoes without white and separate trailing tail. Checked beside all other selected run phases.",
+        "review_directory": "$HOME/scratch/agent-tmp/mica-regen-20261108"
+      }
     },
     "run-03": {
-      "prompt": "Use case: style-transfer. Asset: one animation frame, transparent background, no text, no ground or shadow. Image 1 is the NATIVE POSE TARGET. Image 2 is the MICA CHARACTER IDENTITY reference (use jade version only). Redraw image 1 as the ORIGINAL pangolin MICA: jade overlapping rounded scales, sand-cream face and belly, coral-red boots with tan soles, white gloves, big friendly brown eye, scaled tail. New drawing, not a recolour. NO blue, spikes or Sonic facial features. Keep the exact body pose, limb placement, framing, silhouette SIZE and facing of image 1; fit tail within the same bounds. Crisp 16-bit pixel sprite, clean dark outline, flat clustered shading, simple readable eyes, no antialiasing. One sprite only, filling the same proportional bounds. Frame: run-03. Critical: reproduce image 1's leg stride/blur and hand positions; do not substitute the concept standing pose. Match the target proportions and head-to-body ratio.",
-      "raw_sha256": "e5fd3aeec4fd1821c77c3dc91ecf9a806cd802b0d1ee08e2ea23138a25766bdf",
       "reference": {
         "id": "run-03",
         "size": [
@@ -1154,34 +1215,57 @@
       },
       "geometry_reference": {
         "size": [
-          32,
-          35
+          31,
+          36
         ],
         "hotspot": [
-          16,
-          15
+          15,
+          16
         ]
       },
       "native_size": [
-        32,
-        35
-      ],
-      "previous_size": [
-        39,
-        38
-      ],
-      "previous_hotspot": [
-        21,
-        19
+        31,
+        36
       ],
       "hotspot": [
-        16,
-        15
+        15,
+        16
       ],
-      "source": "approved pilot adoption",
-      "cleanup": "connected alpha; shared palette; inside ink outline",
-      "material_box_change": true,
-      "owner_fix": "Stable rounded scale hood, bounded four-phase arm swing; separate rear tail above coral-only boot orbit; no resized pixels."
+      "prompt": "Use case: style-transfer. ONE original 16-bit sprite of MICA the jade pangolin running RIGHT at very high speed. Candidate 4 for phase 3. Input 1 is the exact native run frame: preserve its pose and fast-motion composition. Input 2 is MICA's character identity, NOT a pose template; inputs 3/4 only establish approved face style. Previous candidates looked like jogging: explicitly correct that. Native S2 high-speed run has compact torso, upright head with slight forward lean, and boots sweeping a wide circular crescent UNDER the body. Draw MICA's CORAL hiking boots as that native red boot-sweep shape, TAN sole edges, JADE laces; NO white anywhere on shoes. Do not draw an ordinary walk/jog. Match native sweep phase 3 exactly. Keep jade tail as a DISTINCT short curved scaled tail trailing LEFT ABOVE and SEPARATE from the boot sweep, never curling around the shoes. White gloves/arm swing at the EXACT positions of native hands. Small cream muzzle facing right, rounded overlapping jade hood scales, NEVER pointed quills. Consistent head size and top-left flat shading, crisp hard pixel clusters and black silhouette outline. Transparent background; single compact sprite, no ground, no words, no extra poses.",
+      "raw_sha256": "ef914f0e49282acb6572b13614c4fdb0945e6efefae823a3a65b0261d9052ea4",
+      "source": "built-in GPT Image, latest exposed; exact version unavailable",
+      "cleanup": "Transparent-margin crop; Lanczos native box reduction; unchanged fixed palette; inside silhouette ink. No painted pixels.",
+      "regeneration": {
+        "attempts": [
+          {
+            "attempt": 1,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, run-03, candidate 1 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Upright torso with mild forward lean exactly like native run, never hunched. Match native boot-loop phase, coral boots and tan soles with NO WHITE. Distinct tail clearly separate from shoes. Arm swing matches native, rounded scale rows NEVER quill spikes.\n\nWill reduce to native 31x36 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 1: strict fidelity to reference limb/boot positions and silhouette.",
+            "raw_sha256": "ff94a93793330b20d749f63fdafbaaa4c99fcb380396bed4ce0931e5ac0a0cc5",
+            "chosen": false
+          },
+          {
+            "attempt": 2,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, run-03, candidate 2 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Upright torso with mild forward lean exactly like native run, never hunched. Match native boot-loop phase, coral boots and tan soles with NO WHITE. Distinct tail clearly separate from shoes. Arm swing matches native, rounded scale rows NEVER quill spikes.\n\nWill reduce to native 31x36 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 2: prioritize coherent rounded hood/head, compact shapes and clean shading while keeping EXACT native limb pose.",
+            "raw_sha256": "dc08e4b43d7c73f7356515c0a4ebba1b5c7a05d8d0f86f7ba68080d626bacb1e",
+            "chosen": false
+          },
+          {
+            "attempt": 3,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, run-03, candidate 3 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Upright torso with mild forward lean exactly like native run, never hunched. Match native boot-loop phase, coral boots and tan soles with NO WHITE. Distinct tail clearly separate from shoes. Arm swing matches native, rounded scale rows NEVER quill spikes.\n\nWill reduce to native 31x36 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 3: prioritize small-scale readability and consistent identity with the approved face anchors, keeping exact phase placement.",
+            "raw_sha256": "f3ec10cb766162780e99b3ef4100dbd856ee3fa1c2c037b684520cfd6837bf17",
+            "chosen": false
+          },
+          {
+            "attempt": 4,
+            "prompt": "Use case: style-transfer. ONE original 16-bit sprite of MICA the jade pangolin running RIGHT at very high speed. Candidate 4 for phase 3. Input 1 is the exact native run frame: preserve its pose and fast-motion composition. Input 2 is MICA's character identity, NOT a pose template; inputs 3/4 only establish approved face style. Previous candidates looked like jogging: explicitly correct that. Native S2 high-speed run has compact torso, upright head with slight forward lean, and boots sweeping a wide circular crescent UNDER the body. Draw MICA's CORAL hiking boots as that native red boot-sweep shape, TAN sole edges, JADE laces; NO white anywhere on shoes. Do not draw an ordinary walk/jog. Match native sweep phase 3 exactly. Keep jade tail as a DISTINCT short curved scaled tail trailing LEFT ABOVE and SEPARATE from the boot sweep, never curling around the shoes. White gloves/arm swing at the EXACT positions of native hands. Small cream muzzle facing right, rounded overlapping jade hood scales, NEVER pointed quills. Consistent head size and top-left flat shading, crisp hard pixel clusters and black silhouette outline. Transparent background; single compact sprite, no ground, no words, no extra poses.",
+            "raw_sha256": "ef914f0e49282acb6572b13614c4fdb0945e6efefae823a3a65b0261d9052ea4",
+            "chosen": true
+          }
+        ],
+        "chosen": 4,
+        "reason": "Fourth candidate replaces generic jog with native phase boot sweep; upright forward-facing hood, rounded scales, coral/tan shoes without white and separate trailing tail. Checked beside all other selected run phases.",
+        "review_directory": "$HOME/scratch/agent-tmp/mica-regen-20261108"
+      }
     },
     "spring-00": {
       "reference": {
@@ -4680,17 +4764,17 @@
       },
       "geometry_reference": {
         "size": [
-          33,
-          38
+          30,
+          37
         ],
         "hotspot": [
-          13,
-          18
+          10,
+          19
         ]
       },
       "native_size": [
-        33,
-        38
+        30,
+        37
       ],
       "previous_size": [
         41,
@@ -4701,8 +4785,8 @@
         18
       ],
       "hotspot": [
-        13,
-        18
+        10,
+        19
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
       "native_support": 19.091883092036785,
@@ -4726,17 +4810,17 @@
       },
       "geometry_reference": {
         "size": [
-          32,
-          37
+          30,
+          36
         ],
         "hotspot": [
-          13,
+          10,
           18
         ]
       },
       "native_size": [
-        32,
-        37
+        30,
+        36
       ],
       "previous_size": [
         41,
@@ -4747,7 +4831,7 @@
         18
       ],
       "hotspot": [
-        13,
+        10,
         18
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
@@ -4772,17 +4856,17 @@
       },
       "geometry_reference": {
         "size": [
-          35,
-          38
+          29,
+          34
         ],
         "hotspot": [
-          13,
-          18
+          10,
+          17
         ]
       },
       "native_size": [
-        35,
-        38
+        29,
+        34
       ],
       "previous_size": [
         41,
@@ -4793,8 +4877,8 @@
         18
       ],
       "hotspot": [
-        13,
-        18
+        10,
+        17
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
       "native_support": 19.091883092036785,
@@ -4818,17 +4902,17 @@
       },
       "geometry_reference": {
         "size": [
-          32,
-          37
+          30,
+          35
         ],
         "hotspot": [
-          13,
-          18
+          10,
+          17
         ]
       },
       "native_size": [
-        32,
-        37
+        30,
+        35
       ],
       "previous_size": [
         41,
@@ -4839,8 +4923,8 @@
         18
       ],
       "hotspot": [
-        13,
-        18
+        10,
+        17
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
       "native_support": 19.091883092036785,
@@ -4865,7 +4949,7 @@
       "geometry_reference": {
         "size": [
           35,
-          32
+          31
         ],
         "hotspot": [
           15,
@@ -4874,7 +4958,7 @@
       },
       "native_size": [
         35,
-        32
+        31
       ],
       "previous_size": [
         39,
@@ -4910,17 +4994,17 @@
       },
       "geometry_reference": {
         "size": [
-          35,
-          32
+          36,
+          31
         ],
         "hotspot": [
-          15,
+          16,
           16
         ]
       },
       "native_size": [
-        35,
-        32
+        36,
+        31
       ],
       "previous_size": [
         39,
@@ -4931,7 +5015,7 @@
         17
       ],
       "hotspot": [
-        15,
+        16,
         16
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
@@ -4957,7 +5041,7 @@
       "geometry_reference": {
         "size": [
           35,
-          32
+          30
         ],
         "hotspot": [
           15,
@@ -4966,7 +5050,7 @@
       },
       "native_size": [
         35,
-        32
+        30
       ],
       "previous_size": [
         39,
@@ -5002,17 +5086,17 @@
       },
       "geometry_reference": {
         "size": [
-          35,
-          32
+          36,
+          31
         ],
         "hotspot": [
-          15,
+          16,
           16
         ]
       },
       "native_size": [
-        35,
-        32
+        36,
+        31
       ],
       "previous_size": [
         39,
@@ -5023,7 +5107,7 @@
         17
       ],
       "hotspot": [
-        15,
+        16,
         16
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
@@ -5048,17 +5132,17 @@
       },
       "geometry_reference": {
         "size": [
-          38,
-          33
+          37,
+          30
         ],
         "hotspot": [
-          18,
+          19,
           20
         ]
       },
       "native_size": [
-        38,
-        33
+        37,
+        30
       ],
       "previous_size": [
         42,
@@ -5069,7 +5153,7 @@
         19
       ],
       "hotspot": [
-        18,
+        19,
         20
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
@@ -5094,17 +5178,17 @@
       },
       "geometry_reference": {
         "size": [
-          37,
-          32
+          36,
+          30
         ],
         "hotspot": [
           18,
-          19
+          20
         ]
       },
       "native_size": [
-        37,
-        32
+        36,
+        30
       ],
       "previous_size": [
         42,
@@ -5116,7 +5200,7 @@
       ],
       "hotspot": [
         18,
-        19
+        20
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
       "native_support": 19.79898987322333,
@@ -5140,17 +5224,17 @@
       },
       "geometry_reference": {
         "size": [
-          38,
-          35
+          34,
+          29
         ],
         "hotspot": [
-          18,
-          22
+          17,
+          19
         ]
       },
       "native_size": [
-        38,
-        35
+        34,
+        29
       ],
       "previous_size": [
         42,
@@ -5161,8 +5245,8 @@
         19
       ],
       "hotspot": [
-        18,
-        22
+        17,
+        19
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
       "native_support": 19.79898987322333,
@@ -5186,17 +5270,17 @@
       },
       "geometry_reference": {
         "size": [
-          37,
-          32
+          35,
+          30
         ],
         "hotspot": [
-          18,
-          19
+          17,
+          20
         ]
       },
       "native_size": [
-        37,
-        32
+        35,
+        30
       ],
       "previous_size": [
         43,
@@ -5207,8 +5291,8 @@
         19
       ],
       "hotspot": [
-        18,
-        19
+        17,
+        20
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
       "native_support": 19.79898987322333,

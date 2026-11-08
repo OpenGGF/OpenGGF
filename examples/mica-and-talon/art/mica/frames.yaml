@@ -244,12 +244,12 @@
       "order": 0,
       "file": "frames/run-00.png",
       "hotspot": [
-        16,
+        15,
         15
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": "Stable rounded scale hood, bounded four-phase arm swing; separate rear tail above coral-only boot orbit; no resized pixels."
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 4; no painted pixel patches."
     },
     {
       "id": "run-01",
@@ -257,12 +257,12 @@
       "order": 1,
       "file": "frames/run-01.png",
       "hotspot": [
-        16,
-        15
+        15,
+        16
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": "Stable rounded scale hood, bounded four-phase arm swing; separate rear tail above coral-only boot orbit; no resized pixels."
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 4; no painted pixel patches."
     },
     {
       "id": "run-02",
@@ -270,12 +270,12 @@
       "order": 2,
       "file": "frames/run-02.png",
       "hotspot": [
-        16,
+        14,
         15
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": "Stable rounded scale hood, bounded four-phase arm swing; separate rear tail above coral-only boot orbit; no resized pixels."
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 4; no painted pixel patches."
     },
     {
       "id": "run-03",
@@ -283,12 +283,12 @@
       "order": 3,
       "file": "frames/run-03.png",
       "hotspot": [
-        16,
-        15
+        15,
+        16
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": "Stable rounded scale hood, bounded four-phase arm swing; separate rear tail above coral-only boot orbit; no resized pixels."
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 4; no painted pixel patches."
     },
     {
       "id": "spring-00",
@@ -1050,8 +1050,8 @@
       "order": 4,
       "file": "frames/run-up45-00.png",
       "hotspot": [
-        13,
-        18
+        10,
+        19
       ],
       "angle_set": "up45",
       "duration_ticks": 4,
@@ -1063,7 +1063,7 @@
       "order": 5,
       "file": "frames/run-up45-01.png",
       "hotspot": [
-        13,
+        10,
         18
       ],
       "angle_set": "up45",
@@ -1076,8 +1076,8 @@
       "order": 6,
       "file": "frames/run-up45-02.png",
       "hotspot": [
-        13,
-        18
+        10,
+        17
       ],
       "angle_set": "up45",
       "duration_ticks": 4,
@@ -1089,8 +1089,8 @@
       "order": 7,
       "file": "frames/run-up45-03.png",
       "hotspot": [
-        13,
-        18
+        10,
+        17
       ],
       "angle_set": "up45",
       "duration_ticks": 4,
@@ -1115,7 +1115,7 @@
       "order": 9,
       "file": "frames/run-steep-01.png",
       "hotspot": [
-        15,
+        16,
         16
       ],
       "angle_set": "steep",
@@ -1141,7 +1141,7 @@
       "order": 11,
       "file": "frames/run-steep-03.png",
       "hotspot": [
-        15,
+        16,
         16
       ],
       "angle_set": "steep",
@@ -1154,7 +1154,7 @@
       "order": 12,
       "file": "frames/run-inverted-00.png",
       "hotspot": [
-        18,
+        19,
         20
       ],
       "angle_set": "inverted",
@@ -1168,7 +1168,7 @@
       "file": "frames/run-inverted-01.png",
       "hotspot": [
         18,
-        19
+        20
       ],
       "angle_set": "inverted",
       "duration_ticks": 4,
@@ -1180,8 +1180,8 @@
       "order": 14,
       "file": "frames/run-inverted-02.png",
       "hotspot": [
-        18,
-        22
+        17,
+        19
       ],
       "angle_set": "inverted",
       "duration_ticks": 4,
@@ -1193,8 +1193,8 @@
       "order": 15,
       "file": "frames/run-inverted-03.png",
       "hotspot": [
-        18,
-        19
+        17,
+        20
       ],
       "angle_set": "inverted",
       "duration_ticks": 4,
