@@ -41,13 +41,21 @@ class TestCompetitionRouteEditor {
                     RouteCodec.formatManifest(route.manifest(), name + ".script"));
             var workspace = new RouteTapeWorkspace(new RouteTapeWorkspace.Host() { });
             workspace.open(Path.of(stem + ".route.json"));
-            assertTrue(workspace.nativeFacts().stream().anyMatch(f -> f[0].equals("PROVISIONAL")));
-            assertThrows(java.io.IOException.class, () -> workspace.exportBk2(dir.resolve(name + ".bk2")));
+            assertTrue(workspace.nativeFacts().stream().noneMatch(f -> f[0].equals("PROVISIONAL")));
+            assertTrue(workspace.exportBlocker().isEmpty());
+            Path movie=dir.resolve(name+".bk2");
+            workspace.exportBk2(movie);
+            var entry=route.manifest().nativeFacts().entry().orElseThrow();
+            var expected=RouteFiles.inputPrefix(Path.of(entry.movie()),entry.prefixRows())
+                    .append(route.tape().slice(entry.engineAnchorRows(),route.tape().size()));
+            assertEquals(expected,RouteFiles.tapeFromMovie(movie,expected.size()));
+            assertTrue(route.manifest().qualification().stream().anyMatch(q ->
+                    q.scope()==ReplayScope.BIZHAWK && q.passed() && !q.coverage().isEmpty()));
             assertEquals(route.checks().startRow(), workspace.immutablePrefixRows());
             if (name.endsWith("prefix")) assertTrue(workspace.goalRows().stream().anyMatch(row -> row.player().equals("P1")));
             if (name.endsWith("flip")) {
                 assertTrue(workspace.goalRows().stream().anyMatch(row -> row.player().equals("P2")));
-                workspace.setCursor(1800);
+                workspace.setCursor(route.tape().size()-1);
                 assertTrue(workspace.timeline().runs().stream().anyMatch(run ->
                         RouteTapeTimeline.TRACKS.get(run.track()).slot() == PlayerSlot.P2));
             }

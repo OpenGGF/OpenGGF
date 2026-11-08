@@ -342,7 +342,9 @@ Native programme repairs use `StageplayRoutePlanner.repairNative` with the exist
 reference-following search and copied engine observations for both participants.
 A required seam edit tries a single changed button before wider drift repair;
 qualification always replays the resulting frozen rows. Native CSV is never a
-planning reference.
+planning reference. Goal expansion also tries the existing native-state-gated
+charge policy and moving Down/roll requests on each targeted human pad; native
+physics owns their effects, and the saved result is still just controller rows.
 
 Native BK2 export uses the verified witness prefix, then the engine gameplay suffix.
 Set `--native-witness FILE --native-anchor-rows N` during authoring or replay with
@@ -351,9 +353,21 @@ Set `--native-witness FILE --native-anchor-rows N` during authoring or replay wi
 `movie` and the prefix `inputHash`. Counts mean completed rows: export is witness
 `[0,prefixRows)` plus engine `[engineAnchorRows,end)`. Replay verifies the observed
 engine boundary; it never derives a fitted offset or re-plans. A declared
-`native.exportBlocker` refuses export of provisional rows. Replays also write a
+`native.exportBlocker` refuses export of provisional rows. Optional
+`qualification[].coverage` lists the checks a stamp actually establishes;
+a native goal pass does not claim unlisted state/pixel parity. Accepted native
+lag boundaries are recorded separately and never create input fillers. Replays also write a
 `state.csv` timeline. A menu Start carried into native pause is a gameplay frontier;
 do not insert an unpause row to work around it.
+
+`ehz1-p1-finish-prefix` is a qualified partial programme, not zone-results or
+special-stage certification. Continue its frozen rows with
+`--native-route src/test/resources/routes/s2/competition/ehz1-p1-finish-prefix.route.json
+--goals src/test/resources/routes/s2/competition/ehz1-both-finish-goals.json
+--nodes 5000 --ticks 800000 --s2-rom ROM --out NEW_STEM` (one CLI command).
+It currently exposes an object instance-ID checkpoint mismatch while human P2
+stands on a spring. Preserve strict identity equality and report the frontier;
+do not drop objects, normalize IDs or weaken rewind checks to finish a route.
 
 ## Render
 

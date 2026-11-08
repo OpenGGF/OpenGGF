@@ -105,6 +105,9 @@ public final class RouteCodec {
             node.put("content", stamp.content().sha256());
             node.put("environment", stamp.environment());
             node.put("rows", stamp.rows());
+            if(!stamp.coverage().isEmpty()) {
+                ArrayNode coverage=node.putArray("coverage");stamp.coverage().forEach(coverage::add);
+            }
         }
         ObjectNode nativeNode = root.putObject("native");
         manifest.nativeFacts().entry().ifPresent(entry -> {
@@ -164,11 +167,16 @@ public final class RouteCodec {
         if (root.has("qualification")) {
             for (JsonNode node : array(root.get("qualification"), "qualification")) {
                 object(node, "qualification stamp", Set.of("scope", "passed", "divergedRow", "reason", "content",
-                        "environment", "rows"), Set.of("scope", "passed", "content", "environment", "rows"));
+                        "environment", "rows", "coverage"), Set.of("scope", "passed", "content", "environment", "rows"));
+                var coverage=new ArrayList<String>();
+                if(node.has("coverage")) for(JsonNode c:array(node.get("coverage"),"coverage")) {
+                    if(!c.isTextual())throw new IOException("qualification coverage must name checks");
+                    coverage.add(c.asText());
+                }
                 stamps.add(new QualificationStamp(ReplayScope.valueOf(text(node, "scope")), bool(node, "passed"),
                         node.has("divergedRow") ? java.util.OptionalInt.of(integer(node, "divergedRow"))
                                 : java.util.OptionalInt.empty(), optionalText(node, "reason"),
-                        new ContentHash(text(node, "content")), text(node, "environment"), integer(node, "rows")));
+                        new ContentHash(text(node, "content")), text(node, "environment"), integer(node, "rows"),coverage));
             }
         }
         NativeFacts facts = NativeFacts.NONE;

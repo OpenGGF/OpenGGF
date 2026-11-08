@@ -2,7 +2,9 @@
 
 **Date:** 2026-08-09
 
-**Disposition:** materially narrowed; runtime capability unavailable
+**Disposition:** materially narrowed; runtime capability unavailable on
+2026-08-09. The capability was later implemented; see the
+[2026-11-07 Competition parity plan](../plans/2026-11-07-s2-competition-parity.md).
 
 ## Delivery boundary
 
@@ -65,7 +67,8 @@ The audit covered these native owners:
 - two-camera object loading and CNZ 2P layout: `s2.asm:32920-33535`;
 - per-player state: `s2.constants.asm:1754-1782` and representative live
   uses at `s2.asm:25069-25205,25756-25888,41151-41217,44768-44770`;
-- human-P2/CPU-Tails monitor gate: `s2.asm:85333-85343`.
+- human-P2/CPU-Tails monitor gate: `Touch_Monitor` (s2.asm:85439-85475),
+  second-player gate and roll check at `s2.asm:85463-85470`.
 
 The current engine audit followed `TitleScreenManager`,
 `StartupRouteResolver`, `GameLoop`, `WorldSession`, `GameplayTeamBootstrap`,

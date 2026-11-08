@@ -152,29 +152,28 @@
   },
   "tape" : {
     "script" : "cnz1-slot-flip.script",
-    "rows" : 2321,
-    "sha256" : "7379ccf62a7d9549154e5518174b0fcdab2bacf57f4b16543fad1a1e69338a00"
+    "rows" : 2369,
+    "sha256" : "5d320e567d71294163834b66ec4741489738f708d43edc3558543f8a2a1ec370"
   },
   "provenance" : {
     "producer" : "RoutePlanner prefix-search/3 goal program",
-    "engine" : "openggf 0.8.prerelease-e22b16007-dirty stageplay-s2-competition-title/1",
-    "source" : "authored after a 1231-row prefix toward legs [drop-beyond-upper-floor, linked-cage-approach, slot-spinning, p2-lower-path, p2-near-native-flip-tiles, mid-flip-visible-after-two-human-traversal]",
+    "engine" : "openggf 0.8.prerelease-bf56fe962 stageplay-s2-competition-title/1",
+    "source" : "authored after a 1666-row prefix toward legs [drop-beyond-upper-floor, linked-cage-approach, slot-spinning, p2-lower-path, p2-near-native-flip-tiles, mid-flip-visible-after-two-human-traversal]",
     "notes" : [ ]
   },
   "qualification" : [ {
     "scope" : "ENGINE",
     "passed" : true,
-    "content" : "c039aa3fad93f48feff80c37be8571b03125142bdf83f22a3c156984af6ba014",
-    "environment" : "openggf 0.8.prerelease-e22b16007-dirty stageplay-s2-competition-title/1",
-    "rows" : 2321
+    "content" : "ff20f1f07ac73e8f38926488070524502344c9363ad9f6b8ff831b16ea17153f",
+    "environment" : "openggf 0.8.prerelease-bf56fe962-dirty stageplay-s2-competition-title/1",
+    "rows" : 2369
   }, {
     "scope" : "BIZHAWK",
-    "passed" : false,
-    "divergedRow" : 1666,
-    "reason" : "physical1853: P1 lands on native Obj86 horizontal flipper slot106; y engine1603/native1596, vy2310/0, cameraY1470/1467; no native lag boundary",
-    "content" : "c039aa3fad93f48feff80c37be8571b03125142bdf83f22a3c156984af6ba014",
-    "environment" : "BizHawk2.11/GPGX cold 1FFF4585DA7F540B0C757297B71E66B2BCA917FFEEFFD94E867918E3622A9F5B",
-    "rows" : 2321
+    "passed" : true,
+    "content" : "ff20f1f07ac73e8f38926488070524502344c9363ad9f6b8ff831b16ea17153f",
+    "environment" : "BizHawk2.11/GPGX cold read-only required-goals movie 92070b90f795cdd43a8d6c66634dbc8c6421dbe3f921fddb065457864caf5891; accepted comparison boundary 2235",
+    "rows" : 2369,
+    "coverage" : [ "slot-in-use-in-view", "resident-nonflat-cell-in-view" ]
   } ],
   "native" : {
     "entry" : {

@@ -1,0 +1,14 @@
+# Purpose: two-controller S2 REV01 native route
+# Inputs: verified S2 REV01 ROM, power-on start; P1 / P2 held states.
+# Origin: S2 competition, 2026-11-07; starts at power-on
+900 - / -
+1 D / -
+49 - / -
+1 S / -
+99 - / -
+1 - / -
+99 - / -
+1 S / -
+500 - / -
+650 - / R
+200 R / R

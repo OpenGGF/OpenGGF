@@ -205,3 +205,70 @@ marker. Compare cold/warm completed samples before accepting a warm observation.
 NLua callable methods are userdata, so the exporter tests API presence and actual
 registration rather than Lua's `function` type. All output stays in the external
 capture root; observations never supply engine gameplay or timing authority.
+
+### S2 Competition reference observer
+
+`capture_s2_competition_reference.lua` observes original REV01 S2 RAM without
+writes and saves raw framebuffer PNGs plus native states. Supply the ordinary
+host and a two-controller power-on BK2. `inputs/*-route.script` supplies the four
+menu entries; `ehz-flow.script`, `ehz-finish.script` and `ehz-zone.script` are
+bounded traversal attempts, not certified complete routes. The scripts use the
+InputLogAuthorTool grammar. Native movies must additionally carry the verified
+S2 game identity and matching two-pad GPGX sync settings; the original native
+six-button log orders A/B/C before Start, unlike the minimal engine log.
+
+The Lua plan accepts `last` (absolute completed emulator frame), `frames` (explicit
+screenshots), `every` (optional screenshot interval), `events` (first ring/life
+changes per player and later mode changes), and `state_frame` when the host supplies
+`--fixture-state`. Each PNG has a same-frame `.State`; `state.csv` records every
+completed frame in the window. Load only a checkpoint whose original movie prefix
+matches the supplied movie. `done.txt` and `state.csv` must both be required outputs.
+Lua writes files only; console printing slows the Linux host.
+
+The native 2P menu is a grid: Right selects MCZ, Down CNZ, Down+Right Special
+Stage. Title entry is Down then Start after the title admits controls. Competition
+level/title-card raw output measured **320×448** in BizHawk 2.11, while menu and
+results output measured **320×224**, and special stage **256×224**. Retain those dimensions;
+do not fold fields or rescale. The first frame after a state load can contain a
+stale interlace field: inspect later frames and use a cold run for pixel acceptance.
+
+Player level x/y are object centre words; velocities are signed 8.8 words. Camera
+words include both foreground and background pairs. Time is the raw four-byte HUD
+clock, score the raw score units (display scales by ten). `card0`–`card5` observe
+reserved title-card slots; `anim_counter0`–`15` observe `Anim_Counters`; `slot_*`
+observe the native slot-machine owner. Standard player slots and HUD fields have
+special-stage-specific meanings in mode 0x10; do not infer level coordinates or
+ring totals there. A menu-selected special stage does not prove a results-induced
+tiebreaker. CSV/file presence proves execution; inspect the scene and state before
+claiming an obligation is met. Keep generated movies, PNGs, CSVs and savestates
+outside Git, with a manifest mapping exact movie/frame/state/window provenance.
+
+### S2 competition goal observations
+
+`capture_s2_competition_goals.lua` extends the native reference observations with
+`goals.csv`: nonzero SlotMachineInUse plus a visible native D6 cage, and a complete
+foreground cell whose resident VRAM bytes match a non-flat ROM AniPLC pose. It
+reads controller/actor/ledger/scroll/VRAM/CRAM state only. It never authors input,
+replans, changes RAM, supplies gameplay timing or treats a counter as displayed art.
+It saves the first slot/flip goal screenshot and matching native state. Required
+outputs are `state.csv`, `goals.csv`, and `done.txt`; inspect the host receipt too.
+
+Generate the ROM-backed template Lua table with Java25 after compiling the engine:
+`java -cp "$CP" tools/bizhawk/S2CompetitionGoalTemplates.java "$ROM" "$TASK/templates.lua"`.
+The producer verifies S2 World REV01 SHA1, uses the production ROM/AniPLC pipeline,
+and refuses to overwrite. Embed its returned table under `flip_templates` in the
+native plan, rather than referencing an unhashed external asset. The plan also has
+`anchor` (completed native ordinary-Level/LFC0 rows), `last`, and optional `frames`.
+Use the common isolated2.11 host with the frozen planner-derived BK2. An observed
+lag may end state comparison; goal reachability is checked independently. Record
+explicit named qualification coverage and never label it full pixel/state parity.
+
+Validate an entire cold movie with `python3 tools/bizhawk/check_s2_competition_goals.py
+--capture DIR --movie ROUTE.bk2 --kind slot-flip --out VERDICT.json` (one shell
+command). `slot` validates a slot-only prefix; `zone-results` and `tie-special`
+require ordinary play in both EHZ acts and the corresponding native result/ledger
+state. The validator binds the completed cold host receipt to the full movie,
+ROM and observed row count. Stamp with `com.openggf.tools.RouteNativeStampTool
+ROUTE.route.json VERDICT.json`; it regenerates and hashes the route's anchored
+export before accepting named `qualification[].coverage`. The named checks do
+not certify unlisted planner waypoints or state/pixel parity beyond native lag.
