@@ -1363,6 +1363,11 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
                 // Art is loaded at $4F1 base (VRAM_SS_RESULTS_BASE), adjust mapping tile indices
                 List<SpriteMappingFrame> adjustedMappings = Sonic3kObjectArt.adjustTileIndices(
                         rawMappings, -Sonic3kConstants.VRAM_SS_RESULTS_BASE);
+                var custom = com.openggf.game.sonic3k.Sonic3kCharacterPresentation.results(
+                        rom, combinedPatterns, adjustedMappings,
+                        com.openggf.game.sonic3k.Sonic3kCharacterPresentation.active(), CHAR_NAME_TILE_OFFSET);
+                combinedPatterns = custom.patterns();
+                adjustedMappings = custom.mappings();
                 spriteSheet = new ObjectSpriteSheet(combinedPatterns, adjustedMappings, 0, 1);
                 renderer = new PatternSpriteRenderer(spriteSheet);
                 artLoaded = true;

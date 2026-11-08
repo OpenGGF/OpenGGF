@@ -450,3 +450,6 @@ Status log (times UTC):
 - 2026-11-08: W4 S3K act-results adapter composes the presentation name into
   derived tiles/mappings after native art readiness, including rewind rebuilds.
   Focused tile checks pending; stock names and GOT THROUGH ACT mappings retained.
+
+- 2026-11-08: W4 S3K Blue Sphere results now use the same composed name bank,
+  preserving the native special-stage tile compensation and palette selection.

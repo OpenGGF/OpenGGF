@@ -52,6 +52,27 @@ class TestSonic3kCharacterSurfaces {
                     stock.length, pieces.size(), 2, 0, 0, expected.width(), expected.height()).pixels());
         }
     }
+    @Test void blueSphereConsumerUsesCustomNameWithNativeTileCompensation() throws Exception {
+        try (var adapter = org.mockito.Mockito.mockStatic(Sonic3kCharacterPresentation.class,
+                org.mockito.Mockito.CALLS_REAL_METHODS)) {
+            adapter.when(Sonic3kCharacterPresentation::active).thenReturn(mica());
+            for (var character : com.openggf.game.PlayerCharacter.values()) {
+                var screen = new com.openggf.game.sonic3k.specialstage.S3kSpecialStageResultsScreen(
+                        0, false, 1, 0, 0, character);
+                var field = screen.getClass().getDeclaredField("spriteSheet");
+                field.setAccessible(true);
+                var sheet = (com.openggf.level.objects.ObjectSpriteSheet) field.get(screen);
+                assertNotNull(sheet);
+                var piece = sheet.getFrame(0x13).pieces().getFirst();
+                var expected = CharacterNameComposer.compose("MICA",
+                        resultsFont(GameServices.rom().getRom()), Map.of(), 0).image();
+                assertArrayEquals(expected.pixels(), CharacterNameComposer.extract(sheet.getPatterns(),
+                        piece.tileIndex() - 0x87, sheet.getFrame(0x13).pieces().size(),
+                        piece.heightTiles(), 0, 0, expected.width(), expected.height()).pixels());
+                adapter.verify(Sonic3kCharacterPresentation::active, org.mockito.Mockito.atLeastOnce());
+            }
+        }
+    }
     private static Map<Character, Image> resultsFont(com.openggf.data.Rom rom) throws Exception {
         var font = new java.util.LinkedHashMap<>(Sonic3kCharacterFont.results(rom));
         Sonic3kCharacterFont.title(rom).forEach(font::putIfAbsent);
