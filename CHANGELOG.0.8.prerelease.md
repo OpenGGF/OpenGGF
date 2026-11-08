@@ -39,7 +39,9 @@ under the matching area heading; see the
   composition foundation. The HUD life icon/name, act and special-stage results
   names, 1-up faces and signposts (face, spin and backing) consume it in all three
   hosts, and MICA packages her indexed presentation art. Her S1 ending actor now
-  uses her eight native-timed poses on a private palette row.
+  uses her eight native-timed poses on a private palette row. S2 adds her solo
+  photos, Float2 and normal/Super ending poses, retaining native choreography,
+  separate Tails roles and her Gilded powered palette cycle.
 
 - Added the maintained MICA character skeleton for all three stock games, with
   character-owned homing (including a forward dash without a target) and Super/Hyper

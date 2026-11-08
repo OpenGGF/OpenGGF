@@ -482,3 +482,17 @@ by native ending selector and hotspot, with a private sixteen-colour RGB palette
 S1's ending actor consumes `S1_ENDING`; absent slots retain its ROM art. Images
 are bounded to 256×256 to cover the native leap close-up. Shared native palettes
 remain intact for the emeralds, flowers, logo and companions.
+
+S2 consumes `S2_ENDING` (normal ObjCF selectors), `S2_SUPER` (powered
+ObjCF selectors), `S2_FLOAT` (native Float2 frame IDs), and `S2_PHOTOS` (0–3).
+Photo panels are complete solo illustrations. Normal rider overlays contain no
+vehicle pixels: the host retains the native Tornado pieces and separate Tails
+pilot. Normal and Super paths retain their native choreography. Powered poses
+use the character's S2 Super profile palette cycle; native fade steps also apply
+to the private rows. The existing KiS2 presentation keeps its own route behavior.
+
+Palette ownership follows `Pal_AC7E / Pal_AC9E / Pal_ACDE / Pal_AD1E / Pal_AD3E`
+(docs/s2disasm/s2.asm:14332-14336) and the line-1 rider versus line-0 vehicle
+pieces in `Map_objCF_0132` (docs/s2disasm/mappings/sprite/objCF.asm:80-89).
+Private rows preserve all of these ROM-owned colours, including the native Tails
+pilot drawn separately from MICA's solo photo panels.
