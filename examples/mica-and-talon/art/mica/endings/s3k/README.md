@@ -1,7 +1,7 @@
 # MICA — locked-on S3K ending art
 
-Original native-coordinate pixel drawings, generated without raster scaling or
-native artwork in the output. Run from repository root:
+Original MICA native-coordinate pixel drawings. The native-pose redraw uses
+GPT Image and palette reduction; native artwork is review-only. Run from repository root:
 
 ```sh
 python3 -I examples/mica-and-talon/art/mica/endings/s3k/build.py --review /tmp/mica-art-endings-s3k-20261108
@@ -47,3 +47,34 @@ rounder and less expansive than native Super Sonic's quills. Final bank packing,
 shared palette-line allocation, Gilded fade/controller binding, and real scene
 background/contact checks remain engine-lane work. No engine code or other
 manifest is changed by this lane.
+
+## Owner-directed native-pose redraw
+
+`native-pose.json` stores exact prompts, raw-image SHA-256 and the reduced original
+MICA pixels. `build.py` regenerates these rows instead of the earlier procedural
+art. Native art remains disposable in `/tmp/mica-np-endings-s3k-20261108/native/`;
+each reference is enlarged 8× nearest-neighbour before GPT Image receives it,
+the MICA concept and the approved pilot. Super selectors 0/1 additionally receive
+the matching normal pose because their own native art is scrambled. Gilded
+Float2 variants share the normal frame's indices and use the recorded gold ramp.
+
+With the disposable inputs available, re-reduce a group using:
+
+```sh
+python3 -I examples/mica-and-talon/art/mica/endings/s3k/native_pose_redraw.py --review /tmp/mica-np-endings-s3k-20261108 --group reunion
+```
+
+The reducer fits reunion portraits as complete silhouettes inside the irregular
+piece union; these may be smaller within the unchanged canvas. Other groups
+preserve native height and compact rows that exceed native piece spans. This
+can narrow hood, glove or boot clusters; compare the raw column when judging
+that compromise. All silhouettes receive an inside ink edge. Reviews retain native 8× inputs, full raw GPT images, and four-column
+native/raw/reduced/previous MICA pages at 1×/4×. These checks certify image storage
+and native layout only; scene backgrounds and animation contact need engine review.
+
+Current redraw weak points: the complete Super reunion portrait fits smaller
+inside its irregular piece union; tiny passenger faces reduce to clusters;
+horizontal compaction narrows some glove/boot/hood rows. Float2 rear three-quarter
+views retain more face than the native poses. These need an art/scene review,
+not a runtime parity claim. The 25 exact prompts and raw-image hashes live in
+`native-pose.json`; full raws and all comparisons remain outside Git.
