@@ -256,7 +256,10 @@ S1 yellow, S2/S3K orange and alternate S2 blue. Their native palette line is 0
 composition requires a separate available runtime palette line, recorded in
 `presentation.yaml`. No GGFP/runtime binding is supplied. Native-side-by-side
 1×/4× reviews are in `/tmp/mica-art3-review-20261108/`. Python generation and
-palette/dimension checks pass without a Java build. The 16px far eye is necessarily
+palette/dimension checks pass without a Java build. The first 12 WALK/RUN `up45` frames now use explicit native pixel rows in
+`recipe.json`, with redrawn broad-scale heads, eyes, bent legs and coral boots;
+flat-cycle stride order is retained. The remaining 24 steep/inverted frames
+still await this pass. The 16px far eye is necessarily
 narrow; the small crest has fewer scale separations than the playable head.
 
 ### W8 — Example, tutorial and evidence (M)

@@ -134,3 +134,10 @@ the native pole; integration must reserve a distinct palette line for backing.
 The backing files use their own small palette and are not character art. The
 manifest records both the native source indices and this runtime requirement.
 These are original redrawn frames, not copies of native sign pixels.
+
+Round 3 slope revisions are stored as explicit `native_pixels` hex-index rows and
+an engine-centre anchor in `recipe.json`. The pipeline places these native pixels
+without rotating a bitmap; the common silhouette ink pass still applies.
+The redraw retains upper-body/tail seeds and replaces the head and lower limbs,
+using the matching flat frame's support/lift phase. The broad crest scales are
+simpler than the flat artwork. Pixel validation does not certify runtime contact.
