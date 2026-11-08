@@ -86,6 +86,27 @@ the S3K water zones.
 
 ### W4 — Character presentation contract (L)
 
+Stage lane `feature/ai-mica-stages`: S1 uses the bound canonical playable roll
+sheet; additive `StageSpriteSet` slots supply S2 half-pipe, S3K Blue Sphere and
+slot-machine frames by native frame ID. MICA's wave3 PNGs are packaged by the
+example and loaded through bounded `ModAssetRoot` presentation APIs. Verification
+and capture status is recorded in the status log below.
+
+**Stage palette ownership audit.** Preserve all four native stage palette lines;
+only the custom player resolves to a private render-context palette row. This is
+an engine presentation extension, not an attempt to simulate extra CRAM.
+S1 loads the whole special-stage palette, not just Sonic's colours, and its maze
+and background continue to use those native lines. S2 `SSInitPalAndData`
+(s2.asm:10232-10250) loads `PalID_SS`; the stage's sprite assembly also shares
+player lines with messages/hand/wing art. S3K copies `Pal_SStage_Main` over the
+whole target palette at `loc_8284 (sonic3k.asm:10650-10665)` and only overwrites
+Knuckles' subset. Blue Sphere's red spheres use player line 0, so replacing it
+would recolour the field. Slots retains native player line 0 and stage palette
+cycling (`AnPal_Slots (sonic3k.asm:3876-3892)` updates line 3). Private player rows
+leave every native colour, background, object and stock companion untouched;
+no fixed-native recolouring or quantization is used.
+
+
 Status: S1 HUD icon/name, act-results name, special-stage results name and 1-up
 monitor face are wired and tile/mapping-tested on `feature/ai-mica-s1-surfaces-r2`.
 Native Sonic fallback tiles and mappings remain unchanged. S1 HUD MICA uses native
@@ -476,6 +497,12 @@ Phase 1 waves:
    endings and credits.
 
 Status log (times UTC):
+
+- 2026-11-08: W4 stage lane implementation in progress on `feature/ai-mica-stages`.
+  S1 focused manager check: 17 passed, no skips. Initial integration run overlapped
+  an API source change and failed example compilation; superseded by the queued
+  complete-source verification. Captures and final checks remain pending.
+
 
 - 2026-11-08: design agreed; wave 1 launched.
 - 2026-11-08: merged W7 core art (`391684f4f`), W1+W3 skeleton and water palettes

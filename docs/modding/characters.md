@@ -223,6 +223,15 @@ precedence over supplements: MICA needs supplementary M and A only in the S1 HUD
 font. Stock S2 results select Miles/Tails for Tails alone using the native
 graphics-region setting. Sign objects in all three hosts consume the optional
 face, spin and backing poses, retaining native poles, timing and fallback frames.
+`CharacterPresentation.stages` optionally supplies `StageSpriteSet` entries for
+`S2_HALF_PIPE`, `S3K_BLUE_SPHERE` and `S3K_SLOT_MACHINE`. Each entry maps the host's
+native mapping-frame ID to a bounded indexed image and its hotspot. Animation,
+movement, jump projection and flips stay with the native stage owner. Empty maps
+retain stock art; supplied sets must cover every frame used by their archetype.
+S1 instead binds the ordinary canonical playable sheet to its native roll scripts.
+The stage player uses the character palette supplier in an isolated render-context
+row; native palette lines remain available to stage art and stock sidekicks.
+MICA packages the wave3 PNG sets through `PresentationImages` and `ModAssetRoot`.
 GGFP presentation sections are pending.
 
 ## Ability and super-form rules
