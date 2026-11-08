@@ -500,6 +500,9 @@ public final class CdObjectMappings implements CdDrawMappings {
         var pair=common.kamaSickleAssets();
         for(var key:List.of(CdCczEnemyPorts.Mapping.KAMA_NORMAL,CdCczEnemyPorts.Mapping.KAMA_DAMAGED,CdCczEnemyPorts.Mapping.SICKLE))
             tables.add(pair.mapping(key).table());
+        var explosion=common.explosionAssets();var points=common.pointsAssets();
+        tables.add(new DeclaredTable(explosion.mappingsAddress(),explosion.explosion().mappings(),0,7));
+        tables.add(new DeclaredTable(points.mappingsAddress(),points.points().mappings(),0,6));
         return declaredSourceViews(tables, List.of());
     }
     // END R31 COMMON COUNTED METADATA JOIN 20261107

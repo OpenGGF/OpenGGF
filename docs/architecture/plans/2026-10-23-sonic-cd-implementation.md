@@ -1,5 +1,52 @@
 # Implement Sonic CD with complete regional parity
 
+## 8 November 2026 — original CCZ Explosion and Points physical publication
+
+The same physical pass now calls cached native Explosion `$18` and dynamic Points
+`$1C` with subtype bit7. Existing component kernels, original shared animation,
+pool/placement/Frame/Core/Host/Draw/clock owners and existing art remain. Same-source
+factories and finite authenticated reader views admit the two mappings and
+Explosion animation without another image, data loader or authority owner. The
+first-free SpawnObject target is the actual A1 dirty slot. Later children run only
+when their physical visit is reached; earlier children wait. Init/MakePoints,
+animation, Draw, delete and two-store Flower conversion retain native order and
+failure prefixes. No completed effect can authorize invocation or redispatch.
+
+A new genuine public-World test first compiles against the prior production and
+reaches exactly OBJECT_FAMILY/whole32/ID18. R127's one-error RED receipt remains
+failed. After intent composition preserves qualified Kama/Sickle and all existing
+CCZ DATA, R128 executes121 cases:119 pass, zero failures/skips, two test errors.
+All3 new actual World cases pass, including source construction and full/course
+restore. Actual original-media checks confirm the selected factory/data operands;
+source-derived proposals alone were not substituted as runtime confirmation.
+
+Both errors are in test expectations. Deleted Points still submits its zero-ID
+Draw reference; later allocation can reuse that same physical slot before drain.
+The native queue reloads live ID1C with its still-uninitialized mapping0, so the
+selected mapping must fault rather than gain an invented generation or padded
+asset. The corrected test requires that deferred fault and retained dirty child.
+The migrated Kama World test correctly returns actual18->1F conversion with
+unchanged score/nonwrites, then reaches Flower on its next visit. Its later
+Host.globals call was invalid after genuine failure retirement; the correction
+requires that reborrow to reject and retains the returned-score assertion. It
+makes no post-retirement public score-observation claim.
+
+R129 then passes both corrected whole classes:28 cases, zero failures/errors/skips.
+Production Java and all13,562 class products are unchanged across that test-only
+correction. The identity union is119+28-26 =121 distinct passing cases, not one
+121-case GREEN execution; the original failed R128 stays failed. Exact installed
+11 Java/dependency pins, selected fresh reports and Java25/media/EGL properties
+match. Source/index is unchanged during each request, with final fingerprint
+`6f6289d540c5544b0411c009bdb9880305318b1afdcc79697b31f4c5ee5ba8fd`.
+This is bounded private component/binding/restore qualification, not a category,
+full-suite, heap certification, natural kill/reward chain or pixel/audio parity.
+
+The bounded independent first source review of the actual11-file FINAL map found
+no concrete P1/P2 source defect; it did not inspect execution results and does not
+certify coverage or native parity. Flower `$1F` remains the next reward owner. The supplied lower-route test-only packet and Bumper primary-
+only Context packet are external, unimported and separately reviewed. Full USA
+then JP/EU remains unfinished; no public or remote delivery occurs here.
+
 ## 8 November 2026 — strict ordinary CCZ Title and intro route
 
 Two test-only payloads preserve the Root reload contract and add the actual

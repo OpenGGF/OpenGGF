@@ -97,7 +97,12 @@ matching area heading; see the
   the focused cohort and one corrected test-hook rerun,206 distinct cases are
   qualified without errors or skips; the original failed result remains explicit.
   Constructed World vectors verify binding and restore, with natural reach,
-  Explosion/reward continuation and current enemy pixels still separate.
+  completed rewards and current enemy pixels still separate. Cached Explosion and
+  Points now use that same physical pass, original child/Draw receipts and shared
+  kernels. Their focused cohort plus two corrected test classes qualifies121
+  distinct cases; native dirty-slot reuse retains its deferred mapping failure.
+  Explosion's actual Flower conversion returns without redispatch; Flower remains
+  an explicit next-owner boundary.
   CCZ ordinary scheduling now preserves native VBlank/Main order, the old
   selected sprite list and full-word time-stop gating. Private HUD adoption
   retains the real prefix across typed callback failures;175 focused checks

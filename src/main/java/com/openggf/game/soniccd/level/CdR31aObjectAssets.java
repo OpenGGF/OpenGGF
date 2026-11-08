@@ -11,6 +11,8 @@ import com.openggf.game.soniccd.objects.CdCczEnemyAssets;
 import com.openggf.game.soniccd.objects.CdCczEnemyPorts;
 import com.openggf.game.soniccd.objects.CdObjectAnimation;
 import com.openggf.game.soniccd.objects.CdObjectMappings;
+import com.openggf.game.soniccd.objects.CdExplosion;
+import com.openggf.game.soniccd.objects.CdPoints;
 
 import java.util.Arrays;
 import java.util.Objects;
@@ -40,6 +42,16 @@ public final class CdR31aObjectAssets {
         KAMA_CODE(0xCFFA,0x260), SICKLE_CODE(0xD27A,0x150);
         final int offset,length;
         KamaView(int offset,int length){this.offset=offset;this.length=length;}
+    }
+    private CdExplosion.Assets explosion;
+    private CdPoints.Assets points;
+    /** Finite original R31A views; public Asset keys/ordinals and other programmes stay exact. */
+    enum EffectView {
+        EXPLOSION_ANIMATIONS(0x3A6A0,20), EXPLOSION_MAPPINGS(0x3A6B4,146),
+        EXPLOSION_CODE(0x5FD6,0x74), MAKE_POINTS_CODE(0x5FA4,0x32),
+        POINTS_CODE(0xA6FA,0x54), POINTS_SELECTOR(0xA7A0,8);
+        final int offset,length;
+        EffectView(int offset,int length){this.offset=offset;this.length=length;}
     }
 
     private CdR31aObjectAssets(CdR31aAssets assets) {
@@ -163,6 +175,40 @@ public final class CdR31aObjectAssets {
     private void operand(KamaView view,int fileOffset,String hex){
         var bytes=kamaRead(view);var expected=java.util.HexFormat.of().parseHex(hex);int at=fileOffset-view.offset;
         if(!Arrays.equals(expected,bytes.slice(at,expected.length).copy()))throw new IllegalArgumentException("Original R31A Kama/Sickle operand differs at "+Integer.toHexString(fileOffset));
+    }
+
+    /** Actual original-media DATA only, not a World invocation or current-art grant.
+     * N1ecc5f3a R3 Legacy Act1 Shared:25,36,110,130; Explosion/Main:14-106; HUD/Points:15-69. */
+    public synchronized CdExplosion.Assets explosionAssets(){effectsData();return explosion;}
+    public synchronized CdPoints.Assets pointsAssets(){effectsData();return points;}
+    private void effectsData(){
+        if(explosion!=null)return;
+        assets.requireAuthenticated();var index=assets.view(CdR31aAssets.Asset.OBJECT_INDEX);
+        if(index.unsignedLong((0x18-1)*4)!=0x205FD6L||index.unsignedLong((0x1C-1)*4)!=0x20A7A0L)
+            throw new IllegalArgumentException("Original R31A Explosion/Points dispatch differs");
+        effectOperand(EffectView.EXPLOSION_CODE,0x5FD6,"700010280024303b00064efb0002000600560066");
+        effectOperand(EffectView.EXPLOSION_CODE,0x600C,"217c0023a6b40004618e");
+        effectOperand(EffectView.EXPLOSION_CODE,0x603A,"43f90023a6a06100fc284ef900203a72");
+        effectOperand(EffectView.MAKE_POINTS_CODE,0x5FA4,"4a280025662a72003228003ee20900010080");
+        // The called FindObjSlot is R31's SpawnObject alias: native result is A1, never A0.
+        effectOperand(EffectView.MAKE_POINTS_CODE,0x5FB6,"4eb9");
+        effectOperand(EffectView.MAKE_POINTS_CODE,0x5FBC,"6616137c001c00003368000800083368000c000c134100284e75");
+        effectOperand(EffectView.POINTS_CODE,0xA6FA,"700010280024303b000c4ebb00084ef900203a720004002e");
+        effectOperand(EffectView.POINTS_CODE,0xA722,"217c0020a74e0004");
+        effectOperand(EffectView.POINTS_CODE,0xA736,"117c0018002a5328002a");
+        effectOperand(EffectView.POINTS_CODE,0xA748,"5568000c4e75");
+        effectOperand(EffectView.POINTS_SELECTOR,0xA7A0,"4a2800286b00ff54");
+        var e=new CdExplosion.Assets(CdObjectVisualAssets.decode(effectRead(EffectView.EXPLOSION_MAPPINGS).copy(),7,
+            effectRead(EffectView.EXPLOSION_ANIMATIONS).copy(),2,70),0x23A6B4);
+        var p=new CdPoints.Assets(CdObjectVisualAssets.decodeStatic(assets.view(CdR31aAssets.Asset.POINTS_MAPPINGS).copy(),6,5),0x20A74E);
+        // Prepare both immutable data values before either cache assignment; failure leaves no partial pair.
+        explosion=e;points=p;
+    }
+    private CdAssetBytes effectRead(EffectView view){return assets.internalReader().view(view);}
+    private void effectOperand(EffectView view,int fileOffset,String hex){
+        var expected=java.util.HexFormat.of().parseHex(hex);var bytes=effectRead(view);
+        if(!Arrays.equals(expected,bytes.slice(fileOffset-view.offset,expected.length).copy()))
+            throw new IllegalArgumentException("Original R31A effect operand differs at "+Integer.toHexString(fileOffset));
     }
 
 }

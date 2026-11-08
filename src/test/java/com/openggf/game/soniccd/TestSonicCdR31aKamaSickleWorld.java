@@ -49,9 +49,23 @@ import static com.openggf.game.soniccd.objects.CdObjectState.LongField.*;
     @Test void unsupportedExplosionIsReachedOnTheNextPhysicalVisitWithoutRewardReplay() throws Exception {
         try(var b=fixture.start(1,0x80)) {
             TestSonicCdR31aSelectedProfileLoading.ready(b);TestSonicCdR31aSelectedProfileLoading.step(b,8);constructedParent(b,32);
-            var pool=b.module.r31WorldHost().placement().pool();pool.write(pool.state(32).moveByte(ID,0x18));
+            var host=b.module.r31WorldHost();var frame=b.module.requirePlayerFrame();var core=b.module.r31LoadingVisit();var pool=host.placement().pool();
+            pool.write(pool.state(32).moveByte(ID,0x18));var explosion=pool.state(32);var placed=host.placement().capture();var score=host.globals().score();
+            assertEquals(0x18,explosion.id());assertEquals(4,explosion.routine());assertEquals(0,explosion.unsignedByte(ROUTINE_2));
+            // Existing constructed enemy vector now reaches the real cached Explosion Done.
+            // Its ID/routine stores return; completed metadata cannot redispatch Flower here.
+            TestSonicCdR31aSelectedProfileLoading.step(b,8);
+            var expected=explosion.copyBytes();expected[0]=0x1F;expected[0x24]=0;
+            assertArrayEquals(expected,pool.state(32).copyBytes());assertFalse(frame.closed());
+            assertSame(frame,b.module.requirePlayerFrame());assertSame(host,b.module.r31WorldHost());assertSame(core,b.module.r31LoadingVisit());
+            assertEquals(SonicCdR31aLoadingVisit.Phase.READY,core.state().phase());assertEquals(score,host.globals().score());
+            assertEquals(placed.status(),host.placement().status());assertArrayEquals(placed.savedFlags().copy(),host.placement().capture().savedFlags().copy());
             var error=assertThrows(SonicCdR31aObjectPass.Unowned.class,()->TestSonicCdR31aSelectedProfileLoading.step(b,8));
-            assertEquals(SonicCdR31aObjectPass.Boundary.OBJECT_FAMILY,error.boundary());assertEquals(32,error.wholeIndex());assertEquals(0x18,error.value());
+            assertEquals(SonicCdR31aObjectPass.Boundary.OBJECT_FAMILY,error.boundary());assertEquals(32,error.wholeIndex());assertEquals(0x1F,error.value());
+            assertArrayEquals(expected,pool.state(32).copyBytes());
+            // The genuine failed owner is terminal. The returned conversion's unchanged
+            // score was required above; do not reborrow globals through the retired Host.
+            assertThrows(IllegalStateException.class,host::globals);
         }
     }
     private static void constructedParent(TestSonicCdR31aSelectedProfileLoading.Booted b,int whole) {

@@ -55,7 +55,7 @@ final class SonicCdR31aObjectPass {
         Boundary boundary(){return boundary;}int wholeIndex(){return wholeIndex;}int value(){return value;}
     }
     private enum Phase { READY,WALKING,WALKED,DRAINING,DONE,FAILED,DISCARDED }
-    private enum Kind { PRIMARY,HUD,TITLE,MONITOR,RING,INTRO,METAL,AMY,HEART,EXHAUST,ROLL,CC_SPIKES,BLOCK,HIDDEN,METAL_PLATFORM,DOOR,FIRE,DRUM,GAME_OVER,KAMA,SICKLE }
+    private enum Kind { PRIMARY,HUD,TITLE,MONITOR,RING,INTRO,METAL,AMY,HEART,EXHAUST,ROLL,CC_SPIKES,BLOCK,HIDDEN,METAL_PLATFORM,DOOR,FIRE,DRUM,GAME_OVER,KAMA,SICKLE,EXPLOSION,POINTS }
     private static final class Dispatch {
         final Kind kind;final int whole,routine;final Object body;final Thread thread=Thread.currentThread();
         final Set<Object> calls=Collections.newSetFromMap(new IdentityHashMap<>());
@@ -271,6 +271,8 @@ final class SonicCdR31aObjectPass {
     private CdStageTerrain kamaTerrain;
     private CdKamaKama kama;
     private final CdKamaSickle sickle;
+    private ChildInvocation childEffect;
+    private final CdExplosion explosion;private final CdPoints points;
     private IntroInvocation intro;private IntroPlcSubmission introPlc;
     private Phase phase=Phase.READY;private CdObjectDrawQueue queue;private Dispatch dispatch;
     private boolean checking,reading,adopting,drawing,plc;private Thread walkingThread;
@@ -297,6 +299,18 @@ final class SonicCdR31aObjectPass {
             });
         introAssets=CdR31IntroAssets.fromAssets(assets);spikes=new CdIntroSpikes(introAssets);amy=new CdAmyRose(introAssets);metal=new CdMetalSonic(introAssets);roll=new CdRollTunnel(CdRollTunnel.Assets.fromAssets(introAssets));despawn=new CdSpinTunnelTag(new CdSpinTunnelTag.Assets(introAssets.rollMappings()));
         solidsSource=CdR31aSolidsSource.fromAssets(assets);solidsData=solidsSource.data();ccSpikes=new CdCcSpikes(solidsData);block=new CdBlock(solidsData);hidden=new CdHiddenBlock(solidsData);metalPlatform=new CdMetalPlatform(solidsData);door=new CdDoor(solidsData);fire=new CdFireShooter(solidsData);drum=new CdDrumPlatform(solidsData);
+        explosion=CdExplosion.fromR31aAssets(placement,assets,common,new CdExplosion.DispatchObserver(){
+            public void beforePublication(CdExplosion.Publication c){childPublication(c,c.ordinal(),c.cut(),c.source(),c.before(),c.output());}
+            public void afterPublication(CdExplosion.Publication c){childAfter(c);}
+            public void beforeCall(Object c){var draw=(CdExplosion.DrawCall)c;childDrawBegin(c,draw.cut(),draw.source());}
+            public void afterCall(Object c){childAfter(c);}
+        },c->childDraw(c,c.source()),new CdExplosion.ReceiptGuard(){public void prepared(Object c){childPrepared(c);}public void completed(Object c){childCompleted(c);}});
+        points=CdPoints.fromR31aAssets(placement,assets,common,new CdPoints.DispatchObserver(){
+            public void beforePublication(CdPoints.Publication c){childPublication(c,c.ordinal(),c.cut(),c.source(),c.before(),c.output());}
+            public void afterPublication(CdPoints.Publication c){childAfter(c);}
+            public void beforeCall(Object c){var draw=(CdPoints.DrawCall)c;childDrawBegin(c,draw.cut(),draw.source());}
+            public void afterCall(Object c){childAfter(c);}
+        },c->childDraw(c,c.source()),new CdPoints.ReceiptGuard(){public void prepared(Object c){childPrepared(c);}public void completed(Object c){childCompleted(c);}});
         originalTerrain=assets.terrain();terrain=CdPlayerTerrain.fromStageTerrain(originalTerrain);solid=new CdSolidObject(CdPlayerMovement.fromStageSource(frame.stageSource()));
         bindKama(originalTerrain);
         var sicklePorts=new EnemyPorts(Kind.SICKLE);sickle=new CdKamaSickle(placement,sicklePorts,sicklePorts);sicklePorts.bind(sickle);
@@ -337,7 +351,7 @@ final class SonicCdR31aObjectPass {
                 finally{dispatch=null;}
             }phase=Phase.WALKED;
         }catch(RuntimeException|Error original){phase=Phase.FAILED;queue.close();throw original;}
-        finally{walkingThread=null;dispatch=null;primaryPending=null;pending=null;plcPending=null;primaryDraw=null;intro=null;introPlc=null;gameOverOperation=null;enemy=null;}
+        finally{walkingThread=null;dispatch=null;primaryPending=null;pending=null;plcPending=null;primaryDraw=null;intro=null;introPlc=null;gameOverOperation=null;enemy=null;childEffect=null;}
     }
     CdObjectDrawQueue.CpuSat finishDraw(CdObjectDrawQueue.DrawCameras cameras){
         if(phase!=Phase.WALKED||busy()||dispatch!=null)throw new IllegalStateException("No complete R31 walk to drain");
@@ -356,8 +370,8 @@ final class SonicCdR31aObjectPass {
         queue.close();queue=null;phase=Phase.DONE;
     }
     void discard(){if(busy()||phase==Phase.WALKING||phase==Phase.DRAINING||dispatch!=null)throw new IllegalStateException("Active R31 pass");if(queue!=null)queue.close();queue=null;phase=Phase.DISCARDED;}
-    private boolean busy(){return enemy!=null||gameOverOperation!=null||p2!=null||intro!=null||introPlc!=null||primaryInvocation!=null||placeCall!=null||checking||reading||adopting||drawing||plc||pending!=null||primaryPending!=null||plcPending!=null||primaryDraw!=null;}
-    private Object body(Kind k){return switch(k){case PRIMARY->frame;case HUD->hud;case TITLE->title;case MONITOR->monitor;case RING->ring;case INTRO->spikes;case METAL,EXHAUST->metal;case AMY,HEART->amy;case ROLL->roll;case CC_SPIKES->ccSpikes;case BLOCK->block;case HIDDEN->hidden;case METAL_PLATFORM->metalPlatform;case DOOR->door;case FIRE->fire;case DRUM->drum;case GAME_OVER->gameOver;case KAMA->kama;case SICKLE->sickle;};}
+    private boolean busy(){return enemy!=null||childEffect!=null||gameOverOperation!=null||p2!=null||intro!=null||introPlc!=null||primaryInvocation!=null||placeCall!=null||checking||reading||adopting||drawing||plc||pending!=null||primaryPending!=null||plcPending!=null||primaryDraw!=null;}
+    private Object body(Kind k){return switch(k){case PRIMARY->frame;case HUD->hud;case TITLE->title;case MONITOR->monitor;case RING->ring;case INTRO->spikes;case METAL,EXHAUST->metal;case AMY,HEART->amy;case ROLL->roll;case CC_SPIKES->ccSpikes;case BLOCK->block;case HIDDEN->hidden;case METAL_PLATFORM->metalPlatform;case DOOR->door;case FIRE->fire;case DRUM->drum;case GAME_OVER->gameOver;case KAMA->kama;case SICKLE->sickle;case EXPLOSION->explosion;case POINTS->points;};}
     private void execute(Kind kind,int w,int levelFrames){var c=read();var e=frame.environment();var g=e.movement().gates();switch(kind){
         case PRIMARY->runPrimary(levelFrames);
         case GAME_OVER->{var result=gameOver.run(w,new CdGameOver.GlobalsPort(){
@@ -366,6 +380,7 @@ final class SonicCdR31aObjectPass {
             public void writeTimeOver(int value){gameOverStore(CdGameOver.Scalar.TIME_OVER,value);}
         });if(result!=dispatch.gameOverResult||!result.state().equals(placement.pool().state(w))||gameOverOperation!=null)throw new IllegalStateException("No original Game Over completion");}
         case KAMA,SICKLE->runKamaSickle(kind,w);
+        case EXPLOSION,POINTS->runChildEffect(kind,w);
         case CC_SPIKES,BLOCK,HIDDEN,METAL_PLATFORM,DOOR,FIRE,DRUM->runP2(kind,w);
         case INTRO,METAL,AMY,HEART,EXHAUST,ROLL->runIntro(kind,w);
         case HUD->hud.runLive(w,new CdReservedHud.LiveGlobals(e.globals().debugCheat(),c.ring().rings(),e.globals().timeAttackMode(),g.timeWarpDirection(),e.globals().timeWarpTimer(),levelFrames,this::vIntLow));
@@ -659,6 +674,130 @@ final class SonicCdR31aObjectPass {
             drawDynamic(kind,pool,identity);checkpoint();return null;
         });}
     }
+    // Original Explosion/Points invocation only. Result/effects are completed metadata, never commands.
+    private final class ChildInvocation {
+        final Kind kind;final int whole,routine;final Object receiver;final Dispatch visit;final Thread thread=Thread.currentThread();
+        ReadFrame frameCut;Cut cut;CdObjectPlacementRuntime.Snapshot placed;ChildOperation operation;
+        long publications;Object lastStore;boolean header,child,animated,terminal,drew,returned;
+        ChildInvocation(Kind kind,int whole){this.kind=kind;this.whole=whole;routine=dispatch.routine;receiver=body(kind);visit=dispatch;sync();}
+        void sync(){var nextFrame=readFrame();var nextCut=read();var nextPlacement=placement.capture();frameCut=nextFrame;cut=nextCut;placed=nextPlacement;}
+    }
+    private final class ChildOperation {
+        final Object call;final long ordinal;final boolean publication;final Object store;
+        final ReadFrame frameCut;final Cut cut;final CdObjectPlacementRuntime.Snapshot placed;
+        final List<byte[]> expected;boolean prepared,used,after;
+        ChildOperation(Object call,long ordinal,boolean publication,Object store,CdObjectPlacementRuntime.Snapshot placed,List<byte[]> expected){
+            this.call=call;this.ordinal=ordinal;this.publication=publication;this.store=store;this.placed=placed;this.expected=List.copyOf(expected);frameCut=readFrame();cut=read();}
+    }
+    private void requireChildInvocation(){var current=childEffect;
+        if(current==null||dispatch==null||current.visit!=dispatch||current.whole!=dispatch.whole||current.receiver!=dispatch.body
+                ||current.receiver!=body(current.kind)||current.thread!=Thread.currentThread()||current.returned)
+            throw new IllegalStateException("No original cached child-effect physical invocation");
+        requireKind(current.kind);
+    }
+    private boolean actualChild(Object call){return call!=null&&childEffect!=null&&switch(childEffect.kind){
+        case EXPLOSION->explosion.isCurrentCall(call);case POINTS->points.isCurrentCall(call);default->false;};}
+    private ChildOperation currentChild(Object call){requireChildInvocation();var op=childEffect.operation;
+        if(op==null||op.call!=call||!actualChild(call))throw new IllegalStateException("No original pending child-effect site");return op;}
+    private void runChildEffect(Kind kind,int whole){
+        requireWhole(kind,whole);if(childEffect!=null)throw new IllegalStateException("Child-effect reentry");
+        var original=new ChildInvocation(kind,whole);childEffect=original;
+        try{CdObjectState result;if(kind==Kind.EXPLOSION)result=explosion.run(whole).state();else if(kind==Kind.POINTS)result=points.run(whole).state();else throw new IllegalStateException("Foreign child effect");
+            requireChildInvocation();if(original.operation!=null||result!=placement.pool().state(whole)||!original.terminal&&!original.drew)
+                throw new IllegalStateException("No completed original child-effect return");
+            requireFrame(original.frameCut);requireCut(original.cut);requirePlacement(original.placed);original.returned=true;
+        }catch(RuntimeException|Error fault){verify(fault,()->childFailed(original));throw fault;}
+        finally{childEffect=null;}
+    }
+    private void childPublication(Object call,long ordinal,CdObjectPlacementRuntime.Snapshot placed,CdObjectState source,CdObjectState before,CdObjectState output){
+        requireChildInvocation();var current=childEffect;
+        if(current.operation!=null||!actualChild(call)||ordinal!=current.publications+1)throw new IllegalStateException("Not next original child publication");
+        requireFrame(current.frameCut);requireCut(current.cut);requirePlacement(current.placed);requirePlacement(placed);
+        if(source!=placement.pool().state(current.whole)||before==null||before!=placement.pool().state(before.identity().wholeIndex()))throw new IllegalArgumentException("Foreign child source/preimage");
+        Object store;
+        if(call instanceof CdExplosion.Publication c){if(current.kind!=Kind.EXPLOSION)throw new IllegalStateException("Foreign Explosion receiver");store=c.kind();childExplosionOrder(c);}
+        else if(call instanceof CdPoints.Publication c){if(current.kind!=Kind.POINTS||current.publications!=0)throw new IllegalStateException("Foreign/repeated Points publication");store=c.kind();
+            if(c.kind()==CdPoints.StoreKind.DELETE){if(current.routine!=2||source.unsignedByte(POINTS_TIMER)!=1||output!=null)throw new IllegalStateException("No original Points delete site");}
+            else if(current.routine!=0&&current.routine!=2||output==null)throw new IllegalStateException("No original Points rise site");
+        }else throw new IllegalStateException("Foreign child publication type");
+        int target=before.identity().wholeIndex();
+        if(call instanceof CdExplosion.Publication c&&c.kind()==CdExplosion.StoreKind.POINTS_CHILD){
+            // Source FindObjSlot=SpawnObject returns A1; validate that actual first-free result,
+            // never reinterpret its child as A0, clear it, reserve it or dispatch it recursively.
+            if(placement.pool().findObjSlot().orElse(-1)!=target||before.id()!=0||output==null||output.id()!=0x1C)throw new IllegalArgumentException("Not actual first-free A1 child");
+        }else if(target!=current.whole)throw new IllegalArgumentException("Foreign child-effect store target");
+        if(output!=null){if(!output.identity().equals(before.identity()))throw new IllegalArgumentException("Changed physical output");CdObjectPool.overlay(placed.pool(),List.of(output));}
+        var expected=childRows(placed);expected.set(target-32,output==null?new byte[64]:output.copyBytes());
+        childEffect.operation=new ChildOperation(call,ordinal,true,store,placed,expected);
+    }
+    private void childExplosionOrder(CdExplosion.Publication c){var i=childEffect;var kind=c.kind();
+        boolean start=i.routine==0&&i.header&&!i.animated&&(i.lastStore==CdExplosion.StoreKind.INIT_HEADER||i.lastStore==CdExplosion.StoreKind.POINTS_CHILD)
+            ||i.routine==2&&i.publications==0;
+        switch(kind){
+            case INIT_HEADER->{if(i.routine!=0||i.publications!=0||c.output()==null)throw new IllegalStateException("No original Explosion header");}
+            case POINTS_CHILD->{if(i.routine!=0||!i.header||i.child||i.lastStore!=CdExplosion.StoreKind.INIT_HEADER||c.source().unsignedByte(ROUTINE_2)!=0)throw new IllegalStateException("No original MakePoints site");}
+            case ANIMATION_RESULT,FAILURE_RESET->{if(!start||c.output()==null)throw new IllegalStateException("No original animation start");}
+            case FAILURE_TIMER->{if(!(start||i.lastStore==CdExplosion.StoreKind.FAILURE_RESET)||c.output()==null)throw new IllegalStateException("No original animation timer prefix");}
+            case FAILURE_SPEED->{if(i.lastStore!=CdExplosion.StoreKind.FAILURE_TIMER||c.output()==null)throw new IllegalStateException("No original animation speed prefix");}
+            case FLOWER->{if(i.routine!=4||i.publications!=0||c.source().unsignedByte(ROUTINE_2)!=0||c.output()==null||c.output().id()!=0x1F||c.output().routine()!=0)throw new IllegalStateException("No original Flower conversion");}
+            case DELETE->{if(i.routine!=4||i.publications!=0||c.source().unsignedByte(ROUTINE_2)==0||c.output()!=null)throw new IllegalStateException("No original Explosion delete");}
+        }
+        // A free result at the authentic MakePoints cut must have its original child store receipt.
+        if(start&&(kind==CdExplosion.StoreKind.ANIMATION_RESULT||kind==CdExplosion.StoreKind.FAILURE_RESET||kind==CdExplosion.StoreKind.FAILURE_TIMER)&&i.routine==0&&!i.child&&c.source().unsignedByte(ROUTINE_2)==0&&placement.pool().findObjSlot().isPresent())
+            throw new IllegalStateException("Omitted original A1 child publication");
+    }
+    private void childDrawBegin(Object call,CdObjectPlacementRuntime.Snapshot placed,CdObjectState source){
+        requireChildInvocation();var i=childEffect;
+        if(i.operation!=null||!actualChild(call)||i.drew||i.terminal||i.kind==Kind.EXPLOSION&&!i.animated||i.kind==Kind.POINTS&&i.publications!=1)
+            throw new IllegalStateException("No original next child Draw site");
+        requireFrame(i.frameCut);requireCut(i.cut);requirePlacement(i.placed);requirePlacement(placed);
+        if(source!=placement.pool().state(i.whole))throw new IllegalArgumentException("Foreign physical Draw source");
+        var expected=childRows(placed);var row=source.copyBytes();row[1]&=127;expected.set(i.whole-32,row);
+        i.operation=new ChildOperation(call,0,false,null,placed,expected);
+    }
+    private static ArrayList<byte[]> childRows(CdObjectPlacementRuntime.Snapshot placed){var out=new ArrayList<byte[]>(96);for(var s:placed.pool().slots())out.add(s.copyBytes());return out;}
+    private void childPrepared(Object call){var op=currentChild(call);if(op.prepared||op.after)throw new IllegalStateException("Repeated child preparation");
+        requireFrame(op.frameCut);requireCut(op.cut);requirePlacement(op.placed);claim(call);op.prepared=true;}
+    private void childDraw(Object call,CdObjectState source){var op=currentChild(call);
+        if(op.publication||!op.prepared||op.used||op.after||source!=placement.pool().state(childEffect.whole))throw new IllegalStateException("No unconsumed original child Draw");
+        requireFrame(op.frameCut);requireCut(op.cut);requirePlacement(op.placed);op.used=true;
+        drawDynamic(childEffect.kind,placement.pool(),source.identity());
+    }
+    private void childAfter(Object call){var op=currentChild(call);if(!op.prepared||op.after||!op.publication&&!op.used)throw new IllegalStateException("Missing original child operation receipt");
+        childPost(op);op.after=true;
+    }
+    private void childCompleted(Object call){var op=currentChild(call);if(!op.after)throw new IllegalStateException("Missing original child completion");childPost(op);
+        var i=childEffect;
+        // Keep the original operation alive until all next cut references and verification reads
+        // have completed. A checkpoint fault still verifies its actual reached native prefix.
+        i.sync();checkpoint();
+        if(op.publication){i.publications=op.ordinal;i.lastStore=op.store;
+            if(op.store==CdExplosion.StoreKind.INIT_HEADER)i.header=true;if(op.store==CdExplosion.StoreKind.POINTS_CHILD)i.child=true;
+            if(op.store==CdExplosion.StoreKind.ANIMATION_RESULT)i.animated=true;
+            if(op.store==CdExplosion.StoreKind.FLOWER||op.store==CdExplosion.StoreKind.DELETE)i.terminal=true;
+        }else i.drew=true;
+        i.operation=null;
+    }
+    private void childPost(ChildOperation op){requireFrame(op.frameCut);requireCut(op.cut);placement.validateRestore(op.placed);var actual=placement.capture();
+        if(!op.placed.status().equals(actual.status())||!same(op.placed.savedFlags(),actual.savedFlags()))throw new IllegalArgumentException("Child changed full status/saved nonwrites");
+        for(int n=0;n<96;n++)if(!Arrays.equals(op.expected.get(n),actual.pool().slots().get(n).copyBytes()))throw new IllegalArgumentException("Child changed an unowned full96 byte at "+(n+32));
+    }
+    /** Fault verification admits only the old cut or the prebuilt single reached store/Draw prefix.
+     * It never grants completion: healthy continuation still needs every opaque after/completed receipt. */
+    private void childFailed(ChildInvocation original){
+        if(childEffect!=original||dispatch!=original.visit||Thread.currentThread()!=original.thread)throw new IllegalStateException("Foreign failed child invocation");
+        var op=original.operation;
+        if(op==null){requireFrame(original.frameCut);requireCut(original.cut);requirePlacement(original.placed);return;}
+        requireFrame(op.frameCut);requireCut(op.cut);
+        if(!op.prepared){requirePlacement(op.placed);return;}
+        if(op.after){childPost(op);return;}
+        // A direct native write is atomic over one immutable slot; a throwing observer may have
+        // stopped immediately before or after it. Preserve that exact prefix, never replay it.
+        var actual=placement.capture();placement.validateRestore(op.placed);
+        if(!op.placed.status().equals(actual.status())||!same(op.placed.savedFlags(),actual.savedFlags()))throw new IllegalArgumentException("Failed child changed status/saved nonwrites");
+        boolean before=true,after=true;for(int n=0;n<96;n++){var row=actual.pool().slots().get(n).copyBytes();before&=Arrays.equals(row,op.placed.pool().slots().get(n).copyBytes());after&=Arrays.equals(row,op.expected.get(n));}
+        if(!before&&!after)throw new IllegalArgumentException("Failed child is outside its exact native prefix");
+    }
     private enum P2Op { NONE,PREFIX,READ,CONTACT,REWIND,HURT,LAUNCH,SINE,FM,DRAW,DESPAWN,PROJECTILE,PARENT_X,PARENT_Y,ANIMATE }
     /** Original current cached-body stack only. Staging/results are never an ingress token. */
     private final class P2Invocation {
@@ -937,7 +1076,8 @@ final class SonicCdR31aObjectPass {
         if(id==0x3B){if(w<32)throw stop(Boundary.PHYSICAL_OWNER,w,id);return Kind.GAME_OVER;}
         if(id==0x3C)return Kind.TITLE;
         if(id==0x10){if(w<32)throw stop(Boundary.PHYSICAL_OWNER,w,id);return Kind.RING;}
-        if(id==0x1C){if(w>=32)throw stop(Boundary.PHYSICAL_OWNER,w,id);return Kind.HUD;}
+        if(id==0x18){if(w<32)throw stop(Boundary.PHYSICAL_OWNER,w,id);return Kind.EXPLOSION;}
+        if(id==0x1C){if(w>=32){if((placement.pool().state(w).subtype()&128)!=0)return Kind.POINTS;throw stop(Boundary.PHYSICAL_OWNER,w,id);}return Kind.HUD;}
         if(id==0x19){if(w<32)return Kind.HUD;if(placement.pool().state(w).subtype()>=8)throw stop(Boundary.OBJECT_FAMILY,w,id);return Kind.MONITOR;}
         throw stop(Boundary.OBJECT_FAMILY,w,id);
     }

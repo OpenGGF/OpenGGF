@@ -13,6 +13,8 @@ import com.openggf.game.soniccd.level.CdR12aProfile;
 import com.openggf.game.soniccd.media.CdMmdImage;
 import com.openggf.game.soniccd.level.CdObjectVisualAssets;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
+import com.openggf.game.soniccd.level.CdR31aAssets;
+import com.openggf.game.soniccd.level.CdR31aObjectAssets;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -239,6 +241,16 @@ public final class CdPoints {
         });
         body.observer = Objects.requireNonNull(observer); body.sourceDraw = Objects.requireNonNull(draw);
         body.receiptGuard = Objects.requireNonNull(guard); return body;
+    }
+
+    /** Finite original R31A source join; same kernel and existing pending-call protocol.
+     * Equal pointsAssets/records grant no World authority. Actual World owns observer/receipt callbacks. */
+    public static CdPoints fromR31aAssets(CdObjectPlacementRuntime runtime,CdR31aAssets source,CdR31aObjectAssets common,
+            DispatchObserver observer,SourceDraw draw,ReceiptGuard guard){
+        Objects.requireNonNull(runtime,"actual placement");Objects.requireNonNull(source,"actual original R31A");Objects.requireNonNull(common,"same retained metadata");
+        if(!runtime.ownsR31aAssets(source)||!common.ownsAssets(source))throw new IllegalArgumentException("R31 effect source/placement/metadata differs");
+        var body=new CdPoints(runtime,common.pointsAssets(),(pool,id)->{throw new IllegalStateException("Original R31 effect requires source Draw receipt");});
+        body.observer=Objects.requireNonNull(observer);body.sourceDraw=Objects.requireNonNull(draw);body.receiptGuard=Objects.requireNonNull(guard);return body;
     }
 
     public Assets assets() { return assets; }

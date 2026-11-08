@@ -29,8 +29,8 @@ class TestCdR31aObjectAssets {
     @Test void wrapperIsFinitePrivateSourceBindingWithExactlyTenPublicMethods() {
         assertEquals(0,CdR31aObjectAssets.class.getConstructors().length);
         assertEquals(1,CdR31aObjectAssets.class.getDeclaredConstructors().length);
-        assertEquals(List.of("fromAssets/1","hudVisuals/0","identity/0","kamaSickleAssets/0","monitorAssets/0","monitorTime/0",
-                        "ownsAssets/1","reservedHudAssets/0","ringData/0","titleCard/0","titleCardAssets/0"),
+        assertEquals(List.of("explosionAssets/0","fromAssets/1","hudVisuals/0","identity/0","kamaSickleAssets/0","monitorAssets/0","monitorTime/0",
+                        "ownsAssets/1","pointsAssets/0","reservedHudAssets/0","ringData/0","titleCard/0","titleCardAssets/0"),
                 Arrays.stream(CdR31aObjectAssets.class.getDeclaredMethods()).filter(m->Modifier.isPublic(m.getModifiers()))
                         .map(m->m.getName()+"/"+m.getParameterCount()).sorted().toList());
         assertThrows(NullPointerException.class,()->CdR31aObjectAssets.fromAssets(null));
