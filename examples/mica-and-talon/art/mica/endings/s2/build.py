@@ -167,7 +167,11 @@ def generate(group,inv):
     i=f['index'];x,y,w,h=f['bounds_px'];pieces=mm[f['label']];char=[p for p in pieces if p[7]==1] if key=='s2_normal_turn' else pieces
     if key=='s2_normal_turn':
      cx=min(p[0] for p in char);cy=min(p[1] for p in char);cw=max(p[0]+p[2]*8 for p in char)-cx;ch=max(p[1]+p[3]*8 for p in char)-cy
-     im=a.indexed((w,h));im.paste(rider((cw,ch),i-7),(cx-x,cy-y))
+     im=a.indexed((w,h))
+     if i in (9,10):
+      pp=char[0];im.paste(rider((8,16),i-7),(pp[0]-x,pp[1]-y))
+      pp=char[1];a.glove(im,pp[0]-x+1,pp[1]-y+1,6,6)
+     else:im.paste(rider((cw,ch),i-7),(cx-x,cy-y))
     elif group=='normal':im=normal_leap(i,(w,h))
     elif group=='super':im=super_flight(i,(w,h))
     else:im=floating(i-84,(w,h))
@@ -193,6 +197,7 @@ def main():
       refplane=r.render(plane,raw,[pal]*4);canvas=Image.new('RGBA',tuple(f['dimensions']));bx=min(pp[0] for pp in plane)-f['bounds_px'][0];by=min(pp[1] for pp in plane)-f['bounds_px'][1];canvas.alpha_composite(refplane,(bx,by));overlay=Image.open(HERE/f['file']).convert('RGBA');canvas.alpha_composite(overlay);canvas.save(args.review/f'normal-{f["id"]:02x}-composite.png')
    colors=None
    if group=='super':colors=json.loads((ART/'presentation/gilded.yaml').read_text())['cycles']['s2']['frames'][0]
-   a.review(args.review,'s2-'+group,fs,refs,HERE,colors)
+   reviewfs=[dict(f,file=str(args.review/f'normal-{f["id"]:02x}-composite.png')) if group=='normal' and f['id']<12 else f for f in fs]
+   a.review(args.review,'s2-'+group,reviewfs,refs,HERE,colors)
  dest.write_text(json.dumps(m,indent=2)+'\n')
 if __name__=='__main__':main()

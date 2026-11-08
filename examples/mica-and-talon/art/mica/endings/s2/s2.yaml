@@ -25,6 +25,16 @@
       "photo-2",
       "photo-3",
       "photo-4"
+    ],
+    "normal": [
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14
     ]
   },
   "frames": [
@@ -107,6 +117,772 @@
       "timing": "Static; fade wait $180 NTSC/$100 PAL, then $80.",
       "composition": "banked distant biplane; tiny MICA wing rider",
       "scene_policy": "Entire original illustration; unchanged MICA palette for character and scene. Replaces 12x9 tile panel, no reference pixels."
+    },
+    {
+      "id": 7,
+      "file": "normal-07.png",
+      "native_source_label": "Map_objCF_0132",
+      "native_art_label": "ArtNem_EndingSonic + ArtNem_EndingMiniTornado",
+      "dimensions": [
+        64,
+        48
+      ],
+      "bounds_px": [
+        -32,
+        -32,
+        64,
+        48
+      ],
+      "hotspot": [
+        32,
+        32
+      ],
+      "palette_line": 1,
+      "pieces": [
+        [
+          6,
+          -32,
+          2,
+          3,
+          25,
+          0,
+          0,
+          1,
+          0
+        ]
+      ],
+      "native_composite_pieces": [
+        [
+          6,
+          -32,
+          2,
+          3,
+          25,
+          0,
+          0,
+          1,
+          0
+        ],
+        [
+          -32,
+          -16,
+          2,
+          1,
+          1171,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          -32,
+          -8,
+          3,
+          2,
+          1173,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          -8,
+          -16,
+          2,
+          2,
+          1179,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          -8,
+          0,
+          2,
+          1,
+          1183,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          8,
+          -16,
+          2,
+          1,
+          1185,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          8,
+          -8,
+          3,
+          2,
+          1187,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          8,
+          8,
+          1,
+          1,
+          1193,
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "group": "s2_normal_turn"
+    },
+    {
+      "id": 8,
+      "file": "normal-08.png",
+      "native_source_label": "Map_objCF_0174",
+      "native_art_label": "ArtNem_EndingSonic + ArtNem_EndingMiniTornado",
+      "dimensions": [
+        48,
+        37
+      ],
+      "bounds_px": [
+        -24,
+        -25,
+        48,
+        37
+      ],
+      "hotspot": [
+        24,
+        25
+      ],
+      "palette_line": 1,
+      "pieces": [
+        [
+          4,
+          -25,
+          1,
+          2,
+          31,
+          0,
+          0,
+          1,
+          0
+        ]
+      ],
+      "native_composite_pieces": [
+        [
+          4,
+          -25,
+          1,
+          2,
+          31,
+          0,
+          0,
+          1,
+          0
+        ],
+        [
+          -24,
+          -12,
+          2,
+          2,
+          1194,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          -8,
+          -12,
+          2,
+          2,
+          1198,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          -8,
+          4,
+          2,
+          1,
+          1202,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          8,
+          -12,
+          2,
+          3,
+          1204,
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "group": "s2_normal_turn"
+    },
+    {
+      "id": 9,
+      "file": "normal-09.png",
+      "native_source_label": "Map_objCF_019E",
+      "native_art_label": "ArtNem_EndingSonic + ArtNem_EndingMiniTornado",
+      "dimensions": [
+        40,
+        31
+      ],
+      "bounds_px": [
+        -20,
+        -19,
+        40,
+        31
+      ],
+      "hotspot": [
+        20,
+        19
+      ],
+      "palette_line": 1,
+      "pieces": [
+        [
+          -5,
+          -19,
+          1,
+          2,
+          33,
+          0,
+          0,
+          1,
+          0
+        ],
+        [
+          5,
+          -11,
+          1,
+          1,
+          35,
+          0,
+          0,
+          1,
+          0
+        ]
+      ],
+      "native_composite_pieces": [
+        [
+          -5,
+          -19,
+          1,
+          2,
+          33,
+          0,
+          0,
+          1,
+          0
+        ],
+        [
+          5,
+          -11,
+          1,
+          1,
+          35,
+          0,
+          0,
+          1,
+          0
+        ],
+        [
+          -20,
+          -12,
+          4,
+          3,
+          1210,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          12,
+          -12,
+          1,
+          3,
+          1222,
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "group": "s2_normal_turn"
+    },
+    {
+      "id": 10,
+      "file": "normal-0a.png",
+      "native_source_label": "Map_objCF_01C0",
+      "native_art_label": "ArtNem_EndingSonic + ArtNem_EndingMiniTornado",
+      "dimensions": [
+        40,
+        31
+      ],
+      "bounds_px": [
+        -20,
+        -19,
+        40,
+        31
+      ],
+      "hotspot": [
+        20,
+        19
+      ],
+      "palette_line": 1,
+      "pieces": [
+        [
+          -8,
+          -19,
+          1,
+          2,
+          36,
+          0,
+          0,
+          1,
+          0
+        ],
+        [
+          0,
+          -11,
+          1,
+          1,
+          38,
+          0,
+          0,
+          1,
+          0
+        ]
+      ],
+      "native_composite_pieces": [
+        [
+          -8,
+          -19,
+          1,
+          2,
+          36,
+          0,
+          0,
+          1,
+          0
+        ],
+        [
+          0,
+          -11,
+          1,
+          1,
+          38,
+          0,
+          0,
+          1,
+          0
+        ],
+        [
+          -20,
+          -12,
+          4,
+          3,
+          1225,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          12,
+          -12,
+          1,
+          1,
+          1237,
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "group": "s2_normal_turn"
+    },
+    {
+      "id": 11,
+      "file": "normal-0b.png",
+      "native_source_label": "Map_objCF_01E2",
+      "native_art_label": "ArtNem_EndingSonic + ArtNem_EndingMiniTornado",
+      "dimensions": [
+        40,
+        27
+      ],
+      "bounds_px": [
+        -20,
+        -15,
+        40,
+        27
+      ],
+      "hotspot": [
+        20,
+        15
+      ],
+      "palette_line": 1,
+      "pieces": [
+        [
+          -9,
+          -15,
+          2,
+          2,
+          39,
+          0,
+          0,
+          1,
+          0
+        ]
+      ],
+      "native_composite_pieces": [
+        [
+          -9,
+          -15,
+          2,
+          2,
+          39,
+          0,
+          0,
+          1,
+          0
+        ],
+        [
+          -20,
+          -4,
+          2,
+          2,
+          1238,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          -4,
+          -12,
+          3,
+          2,
+          1242,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          -4,
+          4,
+          2,
+          1,
+          1248,
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "group": "s2_normal_turn"
+    },
+    {
+      "id": 12,
+      "file": "normal-0c.png",
+      "native_source_label": "Map_objCF_0204",
+      "native_art_label": "ArtNem_EndingSonic",
+      "dimensions": [
+        32,
+        40
+      ],
+      "bounds_px": [
+        0,
+        0,
+        32,
+        40
+      ],
+      "hotspot": [
+        0,
+        0
+      ],
+      "palette_line": 0,
+      "pieces": [
+        [
+          0,
+          0,
+          3,
+          4,
+          43,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          24,
+          8,
+          1,
+          3,
+          55,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          8,
+          32,
+          2,
+          1,
+          58,
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "native_composite_pieces": null,
+      "group": "s2_normal_leap"
+    },
+    {
+      "id": 13,
+      "file": "normal-0d.png",
+      "native_source_label": "Map_objCF_021E",
+      "native_art_label": "ArtNem_EndingSonic",
+      "dimensions": [
+        32,
+        48
+      ],
+      "bounds_px": [
+        0,
+        0,
+        32,
+        48
+      ],
+      "hotspot": [
+        0,
+        0
+      ],
+      "palette_line": 0,
+      "pieces": [
+        [
+          0,
+          0,
+          3,
+          1,
+          60,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          8,
+          4,
+          3,
+          63,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          8,
+          32,
+          3,
+          1,
+          75,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          16,
+          40,
+          2,
+          1,
+          78,
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "native_composite_pieces": null,
+      "group": "s2_normal_leap"
+    },
+    {
+      "id": 14,
+      "file": "normal-0e.png",
+      "native_source_label": "Map_objCF_0240",
+      "native_art_label": "ArtNem_EndingSonic",
+      "dimensions": [
+        80,
+        104
+      ],
+      "bounds_px": [
+        0,
+        0,
+        80,
+        104
+      ],
+      "hotspot": [
+        0,
+        0
+      ],
+      "palette_line": 0,
+      "pieces": [
+        [
+          8,
+          0,
+          3,
+          1,
+          80,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          8,
+          4,
+          4,
+          83,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          32,
+          8,
+          3,
+          4,
+          99,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          56,
+          16,
+          2,
+          3,
+          111,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          40,
+          2,
+          1,
+          117,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          16,
+          40,
+          2,
+          3,
+          119,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          32,
+          40,
+          4,
+          4,
+          125,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          64,
+          40,
+          1,
+          1,
+          141,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          64,
+          48,
+          2,
+          3,
+          142,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          40,
+          72,
+          4,
+          1,
+          148,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          56,
+          80,
+          3,
+          2,
+          152,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          64,
+          96,
+          2,
+          1,
+          158,
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "native_composite_pieces": null,
+      "group": "s2_normal_leap"
     }
   ]
 }
