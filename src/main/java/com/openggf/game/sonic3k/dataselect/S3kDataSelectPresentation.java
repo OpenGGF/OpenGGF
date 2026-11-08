@@ -388,6 +388,7 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
     private S3kSaveScreenObjectState cachedObjectState;
     private int cachedAnimBits = -1;
     private int cachedSelectedRow = -1;
+    private int cachedSelectedTeamIndex = -1;
     private int cachedDeleteWorldX = Integer.MIN_VALUE;
     private DeleteRobotnikState cachedDeleteState;
     private int cachedDeleteAnimFrame = -1;
@@ -405,6 +406,7 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
         if (cachedObjectState != null
                 && animBits == cachedAnimBits
                 && displayedSelectedRow == cachedSelectedRow
+                && menuModel().getSelectedTeamIndex() == cachedSelectedTeamIndex
                 && deleteWorldX == cachedDeleteWorldX
                 && deleteRobotnikState == cachedDeleteState
                 && deleteMainAnimFrameIndex == cachedDeleteAnimFrame
@@ -417,6 +419,7 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
 
         cachedAnimBits = animBits;
         cachedSelectedRow = displayedSelectedRow;
+        cachedSelectedTeamIndex = menuModel().getSelectedTeamIndex();
         cachedDeleteWorldX = deleteWorldX;
         cachedDeleteState = deleteRobotnikState;
         cachedDeleteAnimFrame = deleteMainAnimFrameIndex;

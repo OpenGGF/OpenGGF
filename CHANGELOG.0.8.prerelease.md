@@ -42,7 +42,8 @@ under the matching area heading; see the
   accept optional native-frame poses with a separate character palette, retaining
   native timing, departure movement, text and stock Tails. S3K data select
   composes MICA’s portrait with stock team portraits using isolated colours,
-  and save-slot life counters consume her HUD life icon.
+  and save-slot life counters consume her HUD life icon. NO SAVE portrait
+  selection refreshes immediately for custom solo and partner teams.
   Her 13-frame ICZ snowboard set retains the native intro choreography, with
   isolated rider and native board/spray palettes.
 

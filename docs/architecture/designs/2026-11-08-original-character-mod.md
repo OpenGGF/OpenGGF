@@ -841,3 +841,12 @@ Status log (times UTC):
   saved MICA slots show the jade HUD face beside lives; native continues icons
   remain a separate surface. Queue wait 393s, execution 95s, user wait zero.
   Initial compile raced a newly added S2 helper; the fresh source build passed.
+
+- 2026-11-08: W4 sweep surface 2: NO SAVE already used the portrait composer,
+  but team selection was absent from the object-state cache key. Team changes
+  now rebuild its custom frame immediately, including within an animation tick.
+  The integration fixture selects MICA solo and MICA/Tails through the real
+  controller roster; stock NO SAVE retains its native mapping. Same 91-test
+  selection passed without skips (queue 196s; execution 94s). Inspected
+  `/tmp/mica-sweep-20261108/s3k-no-save-mica.png` and
+  `s3k-no-save-mica-tails.png`: both NO SAVE variants show MICA; Tails remains native.
