@@ -16,13 +16,13 @@ import static org.junit.jupiter.api.Assertions.*;import static com.openggf.game.
    assertTrue(floor.distance()<0,"Constructed landing vector requires the genuine current-terrain read");
    assertEquals(1,frame.environment().movement().gates().timeZone()&0x7F);assertEquals(0,core.state().level().flowerCount());
    var saved=placement.capture().savedFlags();
-   var stop=assertThrows(SonicCdR31aObjectPass.Unowned.class,()->TestSonicCdR31aSelectedProfileLoading.step(b,8));
-   assertEquals(SonicCdR31aObjectPass.Boundary.FLOWER_POSITION_OWNER,stop.boundary());assertEquals(32,stop.wholeIndex());assertEquals(0x100,stop.value());
-   // Actual Core count publication completes before the first unowned X WORD store.
+   TestSonicCdR31aSelectedProfileLoading.step(b,8);
+   // Same authentic count/angle obligation; now the original X then Y stores return.
    assertEquals(0x100,core.state().level().flowerCount());assertEquals((selected.centreY()+floor.distance())&0xFFFF,pool.state(32).centreY());
-   assertEquals(floor.primaryAngle(),frame.environment().movement().globals().primaryAngle());assertEquals(2,pool.state(32).routine());assertEquals(0,pool.state(32).unsignedByte(ANIMATION));
-   assertArrayEquals(saved.copy(),placement.capture().savedFlags().copy());assertTrue(frame.closed());
-   // Failed component diagnostics only: no closed World capture, rendering, restore or retry.
+   assertEquals(floor.primaryAngle(),frame.environment().movement().globals().primaryAngle());assertEquals(4,pool.state(32).routine());assertEquals(1,pool.state(32).unsignedByte(ANIMATION));
+   assertEquals(selected.centreX(),core.state().flowerPositions().word(0x100));assertEquals(pool.state(32).centreY(),core.state().flowerPositions().word(0x102));
+   assertTrue(core.state().flowerPositions().clearedByOriginal());assertArrayEquals(saved.copy(),placement.capture().savedFlags().copy());assertFalse(frame.closed());
+
   }
  }
  private static void ready(TestSonicCdR31aSelectedProfileLoading.Booted b){TestSonicCdR31aSelectedProfileLoading.ready(b);TestSonicCdR31aSelectedProfileLoading.step(b,8);}

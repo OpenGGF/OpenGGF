@@ -22,7 +22,7 @@ import static com.openggf.game.soniccd.SonicCdR31aLoadingVisit.*;
  * Author Java was UNRUN; Root qualification is recorded in the implementation plan. Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>
  */
 class TestSonicCdR31aLoadingVisit {
- @Test void finitePrivateSurfaceDoesNotMintAnInvocationFromCompleteRecords(){assertFalse(java.lang.reflect.Modifier.isPublic(SonicCdR31aLoadingVisit.class.getModifiers()));assertEquals(1,SonicCdR31aLoadingVisit.class.getDeclaredConstructors().length);assertEquals(5,SonicCdR31aLoadingVisit.class.getDeclaredConstructors()[0].getParameterCount());assertEquals(11,Entry.class.getRecordComponents().length);assertEquals(9,Program.class.getRecordComponents().length);assertEquals(18,State.class.getRecordComponents().length);assertEquals(12,Host.class.getDeclaredMethods().length);assertTrue(Arrays.stream(NativeClearCall.class.getDeclaredConstructors()).allMatch(c->java.lang.reflect.Modifier.isPrivate(c.getModifiers())));assertFalse(Snapshot.class.isRecord());assertTrue(Arrays.stream(Snapshot.class.getDeclaredConstructors()).allMatch(c->java.lang.reflect.Modifier.isPrivate(c.getModifiers())));assertTrue(Arrays.stream(OrdinaryAccess.class.getDeclaredConstructors()).allMatch(c->java.lang.reflect.Modifier.isPrivate(c.getModifiers())));}
+ @Test void finitePrivateSurfaceDoesNotMintAnInvocationFromCompleteRecords(){assertFalse(java.lang.reflect.Modifier.isPublic(SonicCdR31aLoadingVisit.class.getModifiers()));assertEquals(1,SonicCdR31aLoadingVisit.class.getDeclaredConstructors().length);assertEquals(5,SonicCdR31aLoadingVisit.class.getDeclaredConstructors()[0].getParameterCount());assertEquals(11,Entry.class.getRecordComponents().length);assertEquals(9,Program.class.getRecordComponents().length);assertEquals(19,State.class.getRecordComponents().length);assertEquals(12,Host.class.getDeclaredMethods().length);assertTrue(Arrays.stream(NativeClearCall.class.getDeclaredConstructors()).allMatch(c->java.lang.reflect.Modifier.isPrivate(c.getModifiers())));assertFalse(Snapshot.class.isRecord());assertTrue(Arrays.stream(Snapshot.class.getDeclaredConstructors()).allMatch(c->java.lang.reflect.Modifier.isPrivate(c.getModifiers())));assertTrue(Arrays.stream(OrdinaryAccess.class.getDeclaredConstructors()).allMatch(c->java.lang.reflect.Modifier.isPrivate(c.getModifiers())));}
  @Test void constructorIsDataOnlyAndRetainsUnknownAbsoluteClock()throws Exception{
   try(var h=new Harness(3,0,0)){var s=h.core.state();assertEquals(Phase.START,s.phase());assertSame(h.entry.section(),s.section());assertSame(h.entry.initialization(),s.initialization());assertSame(h.entry.reserved(),s.reserved());assertTrue(h.frame.vIntClock().absoluteSeed().isEmpty());assertEquals(7,h.frame.vIntClock().deltaSinceAdmittedCut());assertTrue(h.order.isEmpty());assertFalse(h.frame.closed());assertEquals(0,known(s.section()));}
  }
@@ -257,8 +257,16 @@ class TestSonicCdR31aLoadingVisit {
  }
  private static void ordinaryInstall(OrdinaryAccess access,State before,CdR31aSectionArt.State section){var ready=access.prepare(before,section,before.level(),before.reserved(),before.normalPalette(),before.displayedPalette());access.validatePrepared(before,ready);access.adoptAfterNative(before,ready);}
  private static CdR31aSectionArt.State ordinaryQueued(Harness h,CdR31aSectionArt.State before,long source,int destination){var queue=CdR11aPlcBuffer.replace(before.queue(),List.of(new CdR11aPlcBuffer.Entry(source,destination)));return h.art.fromValues(before.codeTable(),before.residency(),before.sectionWord(),queue,Optional.empty(),before.savedDecoder(),0,before.processBudgetWord(),before.hintWord(),before.padWord());}
- private static State ordinaryClone(State s){return new State(s.phase(),s.initialization(),s.section(),s.program(),s.level(),s.normalPalette(),s.fadePalette(),s.waterPalette(),s.displayedPalette(),s.reserved(),s.blocksRam(),s.layoutRam(),s.initialFadeSteps(),s.fromFadeSteps(),s.displayEnabled(),s.calls(),s.returnKind(),s.music());}
- private static void ordinaryNonwrites(State before,State after){assertSame(before.phase(),after.phase());assertSame(before.initialization(),after.initialization());assertSame(before.program(),after.program());assertSame(before.fadePalette(),after.fadePalette());assertSame(before.waterPalette(),after.waterPalette());assertSame(before.blocksRam(),after.blocksRam());assertSame(before.layoutRam(),after.layoutRam());assertEquals(before.initialFadeSteps(),after.initialFadeSteps());assertEquals(before.fromFadeSteps(),after.fromFadeSteps());assertEquals(before.displayEnabled(),after.displayEnabled());assertEquals(before.calls(),after.calls());assertSame(before.returnKind(),after.returnKind());assertSame(before.music(),after.music());}
+ @Test void legacyEighteenComponentStateDoesNotBorrowTheOriginalClearedPositionBytes()throws Exception{
+  try(var h=new Harness(1,0,0)){
+   ordinaryReady(h,h,a->{var s=a.state();assertTrue(s.flowerPositions().clearedByOriginal());assertEquals(768,s.flowerPositions().knownBytes());
+    var legacy=new State(s.phase(),s.initialization(),s.section(),s.program(),s.level(),s.normalPalette(),s.fadePalette(),s.waterPalette(),s.displayedPalette(),s.reserved(),s.blocksRam(),s.layoutRam(),s.initialFadeSteps(),s.fromFadeSteps(),s.displayEnabled(),s.calls(),s.returnKind(),s.music());
+    assertEquals(0,legacy.flowerPositions().knownBytes());assertFalse(legacy.flowerPositions().clearedByOriginal());assertThrows(CdFlowerPositions.Unavailable.class,()->legacy.flowerPositions().word(0));assertNotEquals(s,legacy);assertSame(s,a.state());
+   });h.core.service(0);
+  }
+ }
+ private static State ordinaryClone(State s){return new State(s.phase(),s.initialization(),s.section(),s.program(),s.level(),s.normalPalette(),s.fadePalette(),s.waterPalette(),s.displayedPalette(),s.reserved(),s.blocksRam(),s.layoutRam(),s.initialFadeSteps(),s.fromFadeSteps(),s.displayEnabled(),s.calls(),s.returnKind(),s.music(),s.flowerPositions());}
+ private static void ordinaryNonwrites(State before,State after){assertSame(before.phase(),after.phase());assertSame(before.initialization(),after.initialization());assertSame(before.program(),after.program());assertSame(before.fadePalette(),after.fadePalette());assertSame(before.waterPalette(),after.waterPalette());assertSame(before.blocksRam(),after.blocksRam());assertSame(before.layoutRam(),after.layoutRam());assertEquals(before.initialFadeSteps(),after.initialFadeSteps());assertEquals(before.fromFadeSteps(),after.fromFadeSteps());assertEquals(before.displayEnabled(),after.displayEnabled());assertEquals(before.calls(),after.calls());assertSame(before.returnKind(),after.returnKind());assertSame(before.music(),after.music());assertSame(before.flowerPositions(),after.flowerPositions());}
  private static OrdinaryHostProbe ordinaryProbe(Harness h)throws Exception{var probe=new OrdinaryHostProbe(h);h.core=new SonicCdR31aLoadingVisit(probe,h.assets,h.frame,h.art,h.entry);return probe;}
  private static final class OrdinaryHostProbe implements Host{
   private final Harness delegate;private boolean forbid;private int callbacks;private Runnable onValidate;
@@ -420,6 +428,12 @@ class TestSonicCdR31aLoadingVisit {
    coreHudGlyph(h,coreHudInput(retained,0,0,0,CdCheckpointLiveAux.unknown(),0),0xB4A0,3);
    assertTrue(h.core.failed());assertTrue(h.frame.closed());
   }
+ }
+
+ @Test void originalClearPreparesKnowledgeBeforeActualCoreAdoptionAndRetiresItsAuthority()throws Exception{
+  try(var h=new Harness(3,0,0)){assertEquals(0,h.core.state().flowerPositions().knownBytes());var seen=new NativeClearCall[1];
+   h.onClear=c->{if(c.action()==Action.CLEAR_FLOWERS){seen[0]=c;assertEquals(0,h.core.state().flowerPositions().knownBytes());assertEquals(768,c.ready().flowerPositions().knownBytes());}};
+   h.core.begin();h.core.service(0);assertNotNull(seen[0]);assertEquals(768,h.core.state().flowerPositions().knownBytes());assertThrows(IllegalStateException.class,()->CdFlowerPositions.originalClear(seen[0]));}
  }
 
 }

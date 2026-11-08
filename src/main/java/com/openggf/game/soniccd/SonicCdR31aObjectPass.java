@@ -79,6 +79,7 @@ final class SonicCdR31aObjectPass {
         private final GameOverOperation gameOverOwner=gameOverOperation;
         private final FlowerOperation flowerCountOwner=flowerEffect!=null&&!flowerEffect.operations.isEmpty()
             &&flowerEffect.operations.peek().call instanceof CdFlower.SavedCall c&&c.site()==CdFlower.SavedSite.COUNT_INCREMENT?flowerEffect.operations.peek():null;
+        private final FlowerPositionStore flowerPosition=flowerEffect!=null&&!flowerEffect.operations.isEmpty()?flowerEffect.operations.peek().positionStore:null;
         private final CdGameOver.ScalarCall gameOverScalar=gameOverOwner!=null&&gameOverOwner.call instanceof CdGameOver.ScalarCall c?c:null;
         private final Thread thread=Thread.currentThread();private boolean applied;
         // BEGIN original primary drain flag publication 20261107.
@@ -105,9 +106,10 @@ final class SonicCdR31aObjectPass {
             currentAdoption(this);requireFlowerReceiver();
             if(flowerEffect.operations.peek()!=flowerCountOwner||!flower.isCurrentCall(c)||!flowerCountOwner.prepared||!flowerCountOwner.used||flowerCountOwner.after)
                 throw new IllegalStateException("Expired original Flower count store");return c;}
+        FlowerPositionStore flowerPositionStore(){if(flowerPosition==null)return null;currentAdoption(this);flowerPosition.requirePositionSource(expected.core().flowerPositions());return flowerPosition;}
         void validateBefore(){currentAdoption(this);
             if(timePostOwner!=null){if(timePostOwner!=timePostInvocation||timePostOwner.current==null||!timePostOwner.used)throw new IllegalStateException("Expired Time Post adoption");timePost.requireCurrent(timePostOwner.current);}
-            if(flowerCountOwner!=null)flowerCountStore();
+            if(flowerCountOwner!=null)flowerCountStore();if(flowerPosition!=null)flowerPositionStore();
             if(gameOverOwner!=null){requireGameOverOperation(gameOverOwner);if(!gameOverOwner.prepared||!gameOverOwner.used||!gameOver.isCurrentPrimitive(gameOverOwner.call))throw new IllegalStateException("Expired Game Over primitive adoption");}
             requireCut(expected);requireFrame(before);requirePlacement(placed);
             if(poolOutput!=null)placement.pool().validateRestore(poolOutput);
@@ -1000,9 +1002,23 @@ final class SonicCdR31aObjectPass {
         int savedStage,period,oldCount;boolean drew;
         FlowerInvocation(){sync();}void sync(){var f=readFrame();var c=read();var p=placement.capture();frameCut=f;cut=c;placed=p;}
     }
+    final class FlowerPositionStore {
+        private final FlowerOperation operation;private final CdFlower.SavedCall call;private final Thread thread=Thread.currentThread();
+        private FlowerPositionStore(FlowerOperation operation,CdFlower.SavedCall call){this.operation=operation;this.call=call;}
+        CdR31aAssets requirePositionSource(CdFlowerPositions before){requireFlowerReceiver();
+            if(thread!=Thread.currentThread()||flowerEffect.operations.peek()!=operation||operation.positionStore!=this||!flower.isCurrentCall(call)||!operation.prepared||!operation.used||operation.after||before!=operation.beforeCut.core().flowerPositions())throw new IllegalStateException("No original current Flower position store");
+            if(call.site()!=CdFlower.SavedSite.POSITION_X&&call.site()!=CdFlower.SavedSite.POSITION_Y)throw new IllegalStateException("Wrong original Flower position site");return assets;
+        }
+        int offset(){return call.offset();}int value(){return call.value();}
+        SonicCdR31aLoadingVisit.State project(SonicCdR31aLoadingVisit.State before){requirePositionSource(before.flowerPositions());if(before!=operation.beforeCut.core())throw new IllegalArgumentException("Stale whole Core position cut");
+            if(offset()<CdFlowerPositions.BYTES)return before.positions(CdFlowerPositions.originalStore(before.flowerPositions(),this));
+            if(offset()==0x300||offset()==0x302)return before.level(CdFlowerPositions.aliasWord(before.level(),offset(),value()));
+            throw stop(Boundary.FLOWER_POSITION_OWNER,flowerEffect.whole,offset());
+        }
+    }
     private final class FlowerOperation {
         final Object call;final CdObjectPlacementRuntime.Snapshot placed;final ReadFrame beforeFrame;final Cut beforeCut;
-        final List<byte[]> expected;ReadFrame readyFrame;Cut readyCut;boolean prepared,used,after;
+        final List<byte[]> expected;ReadFrame readyFrame;Cut readyCut;FlowerPositionStore positionStore;boolean prepared,used,after;
         FlowerOperation(Object call,CdObjectPlacementRuntime.Snapshot p,List<byte[]> rows){this.call=call;placed=p;expected=List.copyOf(rows);beforeFrame=readFrame();beforeCut=read();readyFrame=beforeFrame;readyCut=beforeCut;}
     }
     private void bindFlower(CdStageTerrain current){
@@ -1063,8 +1079,10 @@ final class SonicCdR31aObjectPass {
             case COUNT_INCREMENT->{if(i.savedStage!=2||c.offset()!=i.period||c.value()!=((i.oldCount+1)&255))throw new IllegalStateException("No original count increment");if(c.offset()>3)throw stop(Boundary.FLOWER_COUNT_ALIAS,i.whole,c.offset());
                 var core=op.beforeCut.core();var next=flowerCountLevel(core.level(),c);op.readyCut=copy(op.beforeCut,core.level(next),op.beforeCut.scrollLockWord(),op.beforeCut.cpuSat(),op.beforeCut.completedCpu(),op.beforeCut.sounds());
                 publish(op.beforeCut,op.readyCut,null,null);i.savedStage=3;return c.value();}
-            case POSITION_X,POSITION_Y->{if(i.savedStage!=4)throw new IllegalStateException("No original position site");int offset=((i.oldCount&63)*4+(i.period<<8))&65535;if(c.offset()!=(c.site()==CdFlower.SavedSite.POSITION_X?offset:(offset+2)&65535))throw new IllegalStateException("Wrong native position offset");
-                throw stop(Boundary.FLOWER_POSITION_OWNER,i.whole,c.offset());}
+            case POSITION_X,POSITION_Y->{boolean x=c.site()==CdFlower.SavedSite.POSITION_X;if(i.savedStage!=(x?4:5))throw new IllegalStateException("No original position site/order");int offset=((i.oldCount&63)*4+(i.period<<8))&65535;
+                if(c.offset()!=(x?offset:(offset+2)&65535)||c.value()!=(x?c.source().centreX():c.source().centreY()))throw new IllegalStateException("Wrong native position operand");
+                op.positionStore=new FlowerPositionStore(op,c);var next=op.positionStore.project(op.beforeCut.core());op.readyCut=copy(op.beforeCut,next,op.beforeCut.scrollLockWord(),op.beforeCut.cpuSat(),op.beforeCut.completedCpu(),op.beforeCut.sounds());
+                publish(op.beforeCut,op.readyCut,null,null);i.savedStage=x?5:6;return c.value();}
         }throw new IllegalStateException("Unknown Flower saved site");
     }
     private void flowerPost(FlowerOperation op){requireFrame(op.readyFrame);requireCut(op.readyCut);placement.validateRestore(op.placed);var actual=placement.capture();if(!actual.status().equals(op.placed.status())||!same(actual.savedFlags(),op.placed.savedFlags()))throw new IllegalArgumentException("Flower changed placement/saved nonwrites");for(int n=0;n<96;n++)if(!Arrays.equals(op.expected.get(n),actual.pool().slots().get(n).copyBytes()))throw new IllegalArgumentException("Flower full96 nonwrite violation "+(n+32));}
@@ -1392,7 +1410,7 @@ final class SonicCdR31aObjectPass {
         var next=new Cut(cut.core(),cut.ring(),cut.currentTerrain(),new CdPlayerBody.ContactGlobals(result.player().timeWarp(),result.player().shield(),result.player().combineRing()),result.world(),cut.noBumperByte(),cut.cameraXWord(),cut.cameraYWord(),cut.scrollLockWord(),cut.layerByte(),cut.cpuSat(),cut.completedCpu(),sounds,cut.amyCapturedByte());publish(cut,next,output,ready);
     }
     private static Cut introCut(Cut c,SonicCdR31aLoadingVisit.State core,OptionalInt captured){return new Cut(core,c.ring(),c.currentTerrain(),c.contact(),c.world(),c.noBumperByte(),c.cameraXWord(),c.cameraYWord(),c.scrollLockWord(),c.layerByte(),c.cpuSat(),c.completedCpu(),c.sounds(),captured);}
-    private static SonicCdR31aLoadingVisit.State withNormal(SonicCdR31aLoadingVisit.State c,CdAssetBytes n){return new SonicCdR31aLoadingVisit.State(c.phase(),c.initialization(),c.section(),c.program(),c.level(),n,c.fadePalette(),c.waterPalette(),c.displayedPalette(),c.reserved(),c.blocksRam(),c.layoutRam(),c.initialFadeSteps(),c.fromFadeSteps(),c.displayEnabled(),c.calls(),c.returnKind(),c.music());}
+    private static SonicCdR31aLoadingVisit.State withNormal(SonicCdR31aLoadingVisit.State c,CdAssetBytes n){return new SonicCdR31aLoadingVisit.State(c.phase(),c.initialization(),c.section(),c.program(),c.level(),n,c.fadePalette(),c.waterPalette(),c.displayedPalette(),c.reserved(),c.blocksRam(),c.layoutRam(),c.initialFadeSteps(),c.fromFadeSteps(),c.displayEnabled(),c.calls(),c.returnKind(),c.music(),c.flowerPositions());}
     /** Original conditional AddGfxQueue invocation; no public constructor or value authority. */
     final class IntroPlcSubmission {
         final IntroInvocation invocation=intro;final Thread thread=Thread.currentThread();final Cut before=read();final ReadFrame frameBefore=readFrame();final CdObjectPlacementRuntime.Snapshot placed=placement.capture();boolean acknowledged;Cut after;
@@ -1647,8 +1665,8 @@ final class SonicCdR31aObjectPass {
                 var p=placement.pool().capture();var s=placement.pool().state(w);publish(c,c,CdObjectPool.overlay(p,List.of(s.moveByte(SPRITE_FLAGS,(s.spriteFlags()&127)|bit))),null);}}
     }
 
-    private static Cut withReserved(Cut c,CdAssetBytes bank){extent(bank,1984);var s=c.core();var next=new SonicCdR31aLoadingVisit.State(s.phase(),s.initialization(),s.section(),s.program(),s.level(),s.normalPalette(),s.fadePalette(),s.waterPalette(),s.displayedPalette(),bank,s.blocksRam(),s.layoutRam(),s.initialFadeSteps(),s.fromFadeSteps(),s.displayEnabled(),s.calls(),s.returnKind(),s.music());return copy(c,next,c.scrollLockWord(),c.cpuSat(),c.completedCpu(),c.sounds());}
-    private static Cut withSectionAndCalls(Cut c,com.openggf.game.soniccd.resources.CdR31aSectionArt.State section,List<SonicCdR31aLoadingVisit.Call> calls){var s=c.core();var next=new SonicCdR31aLoadingVisit.State(s.phase(),s.initialization(),section,s.program(),s.level(),s.normalPalette(),s.fadePalette(),s.waterPalette(),s.displayedPalette(),s.reserved(),s.blocksRam(),s.layoutRam(),s.initialFadeSteps(),s.fromFadeSteps(),s.displayEnabled(),calls,s.returnKind(),s.music());return copy(c,next,c.scrollLockWord(),c.cpuSat(),c.completedCpu(),c.sounds());}
+    private static Cut withReserved(Cut c,CdAssetBytes bank){extent(bank,1984);var s=c.core();var next=new SonicCdR31aLoadingVisit.State(s.phase(),s.initialization(),s.section(),s.program(),s.level(),s.normalPalette(),s.fadePalette(),s.waterPalette(),s.displayedPalette(),bank,s.blocksRam(),s.layoutRam(),s.initialFadeSteps(),s.fromFadeSteps(),s.displayEnabled(),s.calls(),s.returnKind(),s.music(),s.flowerPositions());return copy(c,next,c.scrollLockWord(),c.cpuSat(),c.completedCpu(),c.sounds());}
+    private static Cut withSectionAndCalls(Cut c,com.openggf.game.soniccd.resources.CdR31aSectionArt.State section,List<SonicCdR31aLoadingVisit.Call> calls){var s=c.core();var next=new SonicCdR31aLoadingVisit.State(s.phase(),s.initialization(),section,s.program(),s.level(),s.normalPalette(),s.fadePalette(),s.waterPalette(),s.displayedPalette(),s.reserved(),s.blocksRam(),s.layoutRam(),s.initialFadeSteps(),s.fromFadeSteps(),s.displayEnabled(),calls,s.returnKind(),s.music(),s.flowerPositions());return copy(c,next,c.scrollLockWord(),c.cpuSat(),c.completedCpu(),c.sounds());}
     private static Cut copy(Cut c,SonicCdR31aLoadingVisit.State core,int scroll,CdAssetBytes cpu,Optional<CdObjectDrawQueue.CpuSat> completed,List<SonicCdGameModule.PastSound> sounds){return new Cut(core,c.ring(),c.currentTerrain(),c.contact(),c.world(),c.noBumperByte(),c.cameraXWord(),c.cameraYWord(),scroll,c.layerByte(),cpu,completed,sounds,c.amyCapturedByte());}
     private static CdAssetBytes reserved(Cut c,int w){if(w<1||w>31)throw new IllegalArgumentException("Reserved whole1..31");return c.core().reserved().slice((w-1)*64,64);}
     private static CdAssetBytes replace(CdAssetBytes bank,int w,CdAssetBytes row){extent(bank,1984);extent(row,64);if(w<1||w>31)throw new IllegalArgumentException("Reserved whole1..31");var next=bank.copy();System.arraycopy(row.copy(),0,next,(w-1)*64,64);return CdAssetBytes.copyOf(next);}

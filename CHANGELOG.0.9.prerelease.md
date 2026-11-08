@@ -110,9 +110,13 @@ matching area heading; see the
   Its finite original-source views add no art residency or reward allocator.
   Source-coherent qualification covers185 distinct cases across three runs after
   a stale Points-mapper assertion and explicit nested-report inventory correction;
-  the original incomplete/failed receipts remain. A public-World Seed check retains
-  landing, angle and the actual count increment before the first unsupported
-  position store. The native768-byte position-buffer owner remains separate.
+  the original incomplete/failed receipts remain. The public-World Seed check now
+  completes its ordered X/Y position stores after landing, angle and count writes.
+  One immutable768-byte knowledge value receives only the original clear/stores
+  and participates in existing full/course restore. After a test-only full-state
+  clone migration,310 distinct cases qualify across the focused cohort and one
+  corrected loading-class rerun, with no errors or skips. The original failed
+  receipts remain; natural Seed birth/rewards and later routes remain separate.
   Bumper now uses a primary-only path through
   the same pinball kernel, retaining its legacy paired API without constructing a
   secondary actor. Original Frame, saved-bank, score and Draw publications share

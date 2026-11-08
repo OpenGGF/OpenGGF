@@ -1,5 +1,59 @@
 # Implement Sonic CD with complete regional parity
 
+## 8 November 2026 — original Flower position stores through existing World owners
+
+The same cached Flower now completes its native X then Y position stores after
+current-terrain landing, primary angle and count writes. One immutable semantic
+value contains768 position bytes with explicit knowledge; the legacy18-component
+Core constructor retains UNKNOWN positions, while canonical19 and every ordinary
+copy preserve the actual value. Original loading clear projects only the covered
+position slice from the source's2560-byte clear; no general RAM, padding, default
+zero knowledge, dormant restore caller or reward allocator is introduced.
+
+Original SavedCall and private current occurrence/prebuilt Core/World adoption
+retain source, receiver, slot, thread, site, sequence and full-cut guards. X and Y
+publish independently, retaining reached prefixes across failure. Raw periods and
+count/fade aliases keep their source meanings and explicit unsupported boundaries.
+Actual loading/World controls cover original clear, constructed public-pool Seed
+landing, completed native growth, and full/course replay through the same owners.
+Those constructed controls are not natural Seed birth or a completed reward route.
+
+R146 first executes the existing-API public Seed assertion before installing the
+position sources:1 failure,0 errors/skips, exactly FLOWER_POSITION_OWNER at whole32
+and first X offset100. Its source/index remains unchanged and the failed receipt
+is preserved. Independent SOURCE review reports no concrete P1/P2 findings.
+R147 compiles and executes309 cases:308 pass,1 failure,0 errors/skips across16
+whole roots/17 declared reports. The failed identity is the inherited equal-value
+ordinaryClone helper: its legacy18 constructor correctly leaves positions UNKNOWN
+instead of retaining the newly known value. Root changes only this private test
+helper to canonical19, adds positions to the nonwrite assertion, and adds one
+explicit legacy18 UNKNOWN control. All production bytes remain exactly R147.
+
+R147b passes all88 affected LoadingVisit cases,0 failures/errors/skips. All87 old
+loading identities are retained. Combining the unchanged earlier passes with this
+rerun qualifies310 distinct identities; this is not one310-case green invocation.
+The R147b source/index fingerprint is
+`0506579921fb505723c82d240f6f6b1fc8240a532740572c60144ab8ce99716c`.
+The original309-case failed result is never promoted. Complete test-byte forward
+and inverse checks preserve all inherited assertions outside the declared helper,
+nonwrite and added compatibility control. No compiled-class before-manifest exists.
+
+Both commands use `integration_packet.py run --worktree <private-I> --spec
+<external>/r147-flower-position-root-positive-20261108/handoff.json` or the separate
+`r147b-flower-position-loading-fixture-20261108/handoff.json`, with `--execute
+--lane normal --compact-output --maven-progress concise --evidence <new external
+JSON>`, Java25/-Dmse=off, original media, surfaceless EGL and the existing Maven
+queue. R147 waits310s then reports1:59 Maven; R147b waits262s. Queue, Maven execution
+and wrapper/unknown time remain separate in the retained records. Root's source
+and actual case/identity/environment/XML/dependency observations stay external.
+
+Qualified Spring/TimePost/physical pass, immutable copies, current terrain and
+capture lifetime remain intact. Retail entry and its two review corrections stay
+external and unexecuted during this qualification. No new exact controller ordinal,
+Spring/Flower pixels, completed warp, whole act, full-USA or JP/EU result follows.
+Fresh remote next38c69fae remains an ancestor; MAIN is untouched and nothing is
+pushed or publicly delivered.
+
 ## 8 November 2026 — original Spring through the shared physical pass
 
 One cached source-bound `CdSpring` now receives ordinary dynamic ID0A through

@@ -101,21 +101,27 @@ final class SonicCdR31aLoadingVisit {
     record State(Phase phase,CdProgramInitialization.State initialization,CdR31aSectionArt.State section,Program program,
                  CdLevelGlobals level,CdAssetBytes normalPalette,CdAssetBytes fadePalette,CdAssetBytes waterPalette,
                  CdAssetBytes displayedPalette,CdAssetBytes reserved,Optional<CdAssetBytes> blocksRam,Optional<CdAssetBytes> layoutRam,
-                 int initialFadeSteps,int fromFadeSteps,boolean displayEnabled,List<Call> calls,ReturnKind returnKind,Optional<CdCommand> music){
-        State{Objects.requireNonNull(phase);Objects.requireNonNull(initialization);Objects.requireNonNull(section);Objects.requireNonNull(program);Objects.requireNonNull(level);palette(normalPalette);palette(fadePalette);palette(waterPalette);palette(displayedPalette);extent(reserved,1984);Objects.requireNonNull(blocksRam);Objects.requireNonNull(layoutRam);layoutRam.ifPresent(b->extent(b,2048));if(initialFadeSteps<0||initialFadeSteps>22||fromFadeSteps<0||fromFadeSteps>22)throw new IllegalArgumentException("Native fade progress0..22");calls=List.copyOf(calls);Objects.requireNonNull(returnKind);Objects.requireNonNull(music);}
-        private State phase(Phase p){return new State(p,initialization,section,program,level,normalPalette,fadePalette,waterPalette,displayedPalette,reserved,blocksRam,layoutRam,initialFadeSteps,fromFadeSteps,displayEnabled,calls,returnKind,music);}
-        private State initialization(CdProgramInitialization.State i){return new State(phase,i,section,program,level,normalPalette,fadePalette,waterPalette,displayedPalette,reserved,blocksRam,layoutRam,initialFadeSteps,fromFadeSteps,displayEnabled,calls,returnKind,music);}
-        private State art(CdR31aSectionArt.State a){return new State(phase,initialization,a,program,level,normalPalette,fadePalette,waterPalette,displayedPalette,reserved,blocksRam,layoutRam,initialFadeSteps,fromFadeSteps,displayEnabled,calls,returnKind,music);}
-        private State program(Program p){return new State(phase,initialization,section,p,level,normalPalette,fadePalette,waterPalette,displayedPalette,reserved,blocksRam,layoutRam,initialFadeSteps,fromFadeSteps,displayEnabled,calls,returnKind,music);}
+                 int initialFadeSteps,int fromFadeSteps,boolean displayEnabled,List<Call> calls,ReturnKind returnKind,Optional<CdCommand> music,CdFlowerPositions flowerPositions){
+        State{Objects.requireNonNull(flowerPositions);Objects.requireNonNull(phase);Objects.requireNonNull(initialization);Objects.requireNonNull(section);Objects.requireNonNull(program);Objects.requireNonNull(level);palette(normalPalette);palette(fadePalette);palette(waterPalette);palette(displayedPalette);extent(reserved,1984);Objects.requireNonNull(blocksRam);Objects.requireNonNull(layoutRam);layoutRam.ifPresent(b->extent(b,2048));if(initialFadeSteps<0||initialFadeSteps>22||fromFadeSteps<0||fromFadeSteps>22)throw new IllegalArgumentException("Native fade progress0..22");calls=List.copyOf(calls);Objects.requireNonNull(returnKind);Objects.requireNonNull(music);}
+        State(Phase phase,CdProgramInitialization.State initialization,CdR31aSectionArt.State section,Program program,
+              CdLevelGlobals level,CdAssetBytes normalPalette,CdAssetBytes fadePalette,CdAssetBytes waterPalette,CdAssetBytes displayedPalette,CdAssetBytes reserved,
+              Optional<CdAssetBytes> blocksRam,Optional<CdAssetBytes> layoutRam,int initialFadeSteps,int fromFadeSteps,boolean displayEnabled,List<Call> calls,ReturnKind returnKind,Optional<CdCommand> music){
+            this(phase,initialization,section,program,level,normalPalette,fadePalette,waterPalette,displayedPalette,reserved,blocksRam,layoutRam,initialFadeSteps,fromFadeSteps,displayEnabled,calls,returnKind,music,CdFlowerPositions.unknown());
+        }
+        State positions(CdFlowerPositions positions){return new State(phase,initialization,section,program,level,normalPalette,fadePalette,waterPalette,displayedPalette,reserved,blocksRam,layoutRam,initialFadeSteps,fromFadeSteps,displayEnabled,calls,returnKind,music,positions);}
+        private State phase(Phase p){return new State(p,initialization,section,program,level,normalPalette,fadePalette,waterPalette,displayedPalette,reserved,blocksRam,layoutRam,initialFadeSteps,fromFadeSteps,displayEnabled,calls,returnKind,music,flowerPositions);}
+        private State initialization(CdProgramInitialization.State i){return new State(phase,i,section,program,level,normalPalette,fadePalette,waterPalette,displayedPalette,reserved,blocksRam,layoutRam,initialFadeSteps,fromFadeSteps,displayEnabled,calls,returnKind,music,flowerPositions);}
+        private State art(CdR31aSectionArt.State a){return new State(phase,initialization,a,program,level,normalPalette,fadePalette,waterPalette,displayedPalette,reserved,blocksRam,layoutRam,initialFadeSteps,fromFadeSteps,displayEnabled,calls,returnKind,music,flowerPositions);}
+        private State program(Program p){return new State(phase,initialization,section,p,level,normalPalette,fadePalette,waterPalette,displayedPalette,reserved,blocksRam,layoutRam,initialFadeSteps,fromFadeSteps,displayEnabled,calls,returnKind,music,flowerPositions);}
         // Immutable candidate DATA only; current OrdinaryAccess alone can prepare/adopt it.
-        State level(CdLevelGlobals l){return new State(phase,initialization,section,program,l,normalPalette,fadePalette,waterPalette,displayedPalette,reserved,blocksRam,layoutRam,initialFadeSteps,fromFadeSteps,displayEnabled,calls,returnKind,music);}
-        private State colours(CdAssetBytes n,CdAssetBytes f,CdAssetBytes w,CdAssetBytes d){return new State(phase,initialization,section,program,level,n,f,w,d,reserved,blocksRam,layoutRam,initialFadeSteps,fromFadeSteps,displayEnabled,calls,returnKind,music);}
-        private State reserved(CdAssetBytes h){return new State(phase,initialization,section,program,level,normalPalette,fadePalette,waterPalette,displayedPalette,h,blocksRam,layoutRam,initialFadeSteps,fromFadeSteps,displayEnabled,calls,returnKind,music);}
-        private State geometry(Optional<CdAssetBytes> b,Optional<CdAssetBytes> l){return new State(phase,initialization,section,program,level,normalPalette,fadePalette,waterPalette,displayedPalette,reserved,b,l,initialFadeSteps,fromFadeSteps,displayEnabled,calls,returnKind,music);}
-        private State progress(int i,int f,boolean e){return new State(phase,initialization,section,program,level,normalPalette,fadePalette,waterPalette,displayedPalette,reserved,blocksRam,layoutRam,i,f,e,calls,returnKind,music);}
-        private State calls(List<Call> c){return new State(phase,initialization,section,program,level,normalPalette,fadePalette,waterPalette,displayedPalette,reserved,blocksRam,layoutRam,initialFadeSteps,fromFadeSteps,displayEnabled,c,returnKind,music);}
-        private State returnKind(ReturnKind k){return new State(phase,initialization,section,program,level,normalPalette,fadePalette,waterPalette,displayedPalette,reserved,blocksRam,layoutRam,initialFadeSteps,fromFadeSteps,displayEnabled,calls,k,music);}
-        private State music(Optional<CdCommand> c){return new State(phase,initialization,section,program,level,normalPalette,fadePalette,waterPalette,displayedPalette,reserved,blocksRam,layoutRam,initialFadeSteps,fromFadeSteps,displayEnabled,calls,returnKind,c);}
+        State level(CdLevelGlobals l){return new State(phase,initialization,section,program,l,normalPalette,fadePalette,waterPalette,displayedPalette,reserved,blocksRam,layoutRam,initialFadeSteps,fromFadeSteps,displayEnabled,calls,returnKind,music,flowerPositions);}
+        private State colours(CdAssetBytes n,CdAssetBytes f,CdAssetBytes w,CdAssetBytes d){return new State(phase,initialization,section,program,level,n,f,w,d,reserved,blocksRam,layoutRam,initialFadeSteps,fromFadeSteps,displayEnabled,calls,returnKind,music,flowerPositions);}
+        private State reserved(CdAssetBytes h){return new State(phase,initialization,section,program,level,normalPalette,fadePalette,waterPalette,displayedPalette,h,blocksRam,layoutRam,initialFadeSteps,fromFadeSteps,displayEnabled,calls,returnKind,music,flowerPositions);}
+        private State geometry(Optional<CdAssetBytes> b,Optional<CdAssetBytes> l){return new State(phase,initialization,section,program,level,normalPalette,fadePalette,waterPalette,displayedPalette,reserved,b,l,initialFadeSteps,fromFadeSteps,displayEnabled,calls,returnKind,music,flowerPositions);}
+        private State progress(int i,int f,boolean e){return new State(phase,initialization,section,program,level,normalPalette,fadePalette,waterPalette,displayedPalette,reserved,blocksRam,layoutRam,i,f,e,calls,returnKind,music,flowerPositions);}
+        private State calls(List<Call> c){return new State(phase,initialization,section,program,level,normalPalette,fadePalette,waterPalette,displayedPalette,reserved,blocksRam,layoutRam,initialFadeSteps,fromFadeSteps,displayEnabled,c,returnKind,music,flowerPositions);}
+        private State returnKind(ReturnKind k){return new State(phase,initialization,section,program,level,normalPalette,fadePalette,waterPalette,displayedPalette,reserved,blocksRam,layoutRam,initialFadeSteps,fromFadeSteps,displayEnabled,calls,k,music,flowerPositions);}
+        private State music(Optional<CdCommand> c){return new State(phase,initialization,section,program,level,normalPalette,fadePalette,waterPalette,displayedPalette,reserved,blocksRam,layoutRam,initialFadeSteps,fromFadeSteps,displayEnabled,calls,returnKind,c,flowerPositions);}
     }
     static final class Snapshot {
         private final SonicCdR31aLoadingVisit owner;private final State state;private final CdPlayerFrameRuntime.ActorState actor;
@@ -144,6 +150,9 @@ final class SonicCdR31aLoadingVisit {
             State ready=expected.art(section).level(level).reserved(reserved)
                     .colours(normal,expected.fadePalette(),expected.waterPalette(),displayed);
             preparedBefore=expected;prepared=ready;return ready;
+        }
+        State prepareFlowerPosition(State expected,SonicCdR31aObjectPass.FlowerPositionStore original){
+            validate(expected);var ready=original.project(expected);ready.flowerPositions().requireSource(assets);preparedBefore=expected;prepared=ready;return ready;
         }
         /** Validate the original pending full pair before any coupled native owner assignment. */
         void validatePrepared(State expected,State ready){
@@ -221,12 +230,16 @@ final class SonicCdR31aLoadingVisit {
         private final Action action;private final State before=values,ready;
         private final CdPlayerFrameRuntime.LevelStartClear frameReady;
         private final Scroll scrollBefore,scrollReady;private final Object hostBefore;
-        private final Thread thread=Thread.currentThread();private boolean applied;
+        private final Thread thread=Thread.currentThread();private boolean applied,preparing;
         private NativeClearCall(Action a){
-            action=a;ready=a==Action.CLEAR_OBJECTS?before.reserved(zero(1984)):before;
+            action=a;preparing=true;ready=a==Action.CLEAR_OBJECTS?before.reserved(zero(1984)):a==Action.CLEAR_FLOWERS?before.positions(CdFlowerPositions.originalClear(this)):before;
             frameReady=switch(a){case CLEAR_FLOWERS->frame.prepareLevelStartFlowersClear();case CLEAR_OBJECTS->frame.prepareLevelStartObjectClear();case CLEAR_CAMERA->frame.prepareLevelStartCameraClear();default->throw new IllegalArgumentException("Not a native clear loop");};
             scrollBefore=readScroll();scrollReady=switch(a){case CLEAR_FLOWERS->flowersCleared(scrollBefore);case CLEAR_CAMERA->cameraCleared(scrollBefore);default->scrollBefore;};
-            hostBefore=Objects.requireNonNull(host.capture());
+            hostBefore=Objects.requireNonNull(host.capture());preparing=false;
+        }
+        CdR31aAssets flowerPositionClearSource(){
+            if(action!=Action.CLEAR_FLOWERS||thread!=Thread.currentThread()||!running||failed||values!=before)throw new IllegalStateException("No original Flower clear source");
+            if(!preparing)requireOwner(host);validateHost();return assets;
         }
         Action action(){return action;}State before(){return before;}State ready(){return ready;}Scroll scroll(){return scrollReady;}Object externalBefore(){return hostBefore;}
         void requireOwner(Host expected){
@@ -453,7 +466,7 @@ final class SonicCdR31aLoadingVisit {
     Snapshot capture(){current();var external=Objects.requireNonNull(observe(host::capture));validateHost();return new Snapshot(this,values,frame.captureActor(),frame.captureShared(),external);}
     void validateRestore(Snapshot s){
         current();Objects.requireNonNull(s);if(s.owner!=this)throw new IllegalArgumentException("Another R31 visit capture");
-        frame.validateActorRestore(s.actor);frame.validateSharedRestore(s.shared);observe(()->{host.validateRestore(s.host);return Boolean.TRUE;});art.validateState(s.state.section());
+        frame.validateActorRestore(s.actor);frame.validateSharedRestore(s.shared);observe(()->{host.validateRestore(s.host);return Boolean.TRUE;});art.validateState(s.state.section());s.state.flowerPositions().requireSource(assets);
         var g=s.shared.environment().movement().gates();var v=s.state;
         if(g.zoneAct()!=0x100||g.timeZone()!=1||(v.phase()==Phase.READY&&v.fromFadeSteps()!=22)||(v.phase()==Phase.INITIAL_TO_BLACK||v.phase()==Phase.INITIAL_TO_WHITE)&&v.initialFadeSteps()>=22||(v.phase()==Phase.RETURNED||v.phase()==Phase.CLEAR_RETURN_WAIT)!=(v.returnKind()!=ReturnKind.NONE))throw new IllegalArgumentException("Captured R31 source/phase/progress differs");
     }
