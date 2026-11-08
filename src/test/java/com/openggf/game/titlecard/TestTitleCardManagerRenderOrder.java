@@ -79,11 +79,15 @@ class TestTitleCardManagerRenderOrder {
         var before = com.openggf.game.sonic2.titlecard.TitleCardNativeDisplayAccess.read(manager);
         manager.draw();
         assertEquals(before, com.openggf.game.sonic2.titlecard.TitleCardNativeDisplayAccess.read(manager));
-        // Reverse native slot submission: left stripes first, zone name last/front.
-        assertEquals(PatternAtlasRange.TITLE_CARDS.base() + 0x54,
+        // Omitted arrival retains DrawLevelTitleCard's plane writes. The red
+        // cell fill ($580+$58) precedes sprites, as in the native full-card image.
+        assertEquals(PatternAtlasRange.TITLE_CARDS.base() + 0x58,
                 graphics.submissions.getFirst().patternId());
-        assertEquals(112 + offset, graphics.submissions.getFirst().x());
-        assertEquals(0, graphics.submissions.getFirst().y());
+        // Reverse native sprite submission: left stripes first, zone name last/front.
+        var firstStripe = graphics.submissions.stream().filter(p ->
+                p.patternId() == PatternAtlasRange.TITLE_CARDS.base() + 0x54).findFirst().orElseThrow();
+        assertEquals(112 + offset, firstStripe.x());
+        assertEquals(0, firstStripe.y());
         assertTrue(graphics.submissions.stream().anyMatch(p -> p.y() == 56));
     }
 

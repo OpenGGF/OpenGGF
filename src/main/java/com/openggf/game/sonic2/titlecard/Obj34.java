@@ -88,15 +88,14 @@ final class Obj34 {
         parts[5]=new Part(6,0x16,8,21,0x80,0xf0,0xf0);
     }
     void settle() {
-        initializeParts();
-        parts[NAME].frame=zoneFrame;parts[ACT].frame=actFrame;
-        for(int i=0;i<6;i++) {
-            Part p=parts[i];p.x=p.target;p.duration=i==BACKGROUND?0:0x100;p.displayed=p.alive && i!=BACKGROUND;
+        // An omitted presentation resumes with the actual arrived plane image.
+        // Derive it with the same routines/fills, without another animation clock
+        // or a parallel hand-authored rectangle layout.
+        while (parts[NAME].routine == 0 || parts[NAME].x != parts[NAME].target
+                || parts[BACKGROUND].location != (twoPlayer ? 32 : 16)) {
+            tick();
+            consumeFills();
         }
-        if(singleAct) parts[ACT].delete();
-        parts[BACKGROUND].location=twoPlayer?32:16;
-        parts[BOTTOM].location=0xff06;parts[BOTTOM].split=6;
-        parts[LEFT].location=0xff0e;parts[LEFT].split=14;
     }
     /** The omitted load resumes at Level_StartGame, after the plane parts died. */
     void settleAfterLeave() {
@@ -217,9 +216,9 @@ final class Obj34 {
         }
         return List.copyOf(result);
     }
-    /** loc_15714 / loc_15758 (s2.asm:29125-29179): P2 rows first, using its
-     * retained camera copy; Vint_TitleCard refreshes only the P1 copy.
-     * The consumer owns world-plane lookup; these requests carry no terrain data.
+    /** loc_15714 / loc_15758 (s2.asm:29125-29179): P2 rows first, using live
+     * camera banks. The consumer owns world-plane lookup; these requests carry
+     * no terrain data. VInt's retained copies are not the row routine's inputs.
      */
     List<TitleCardNativeDisplayAccess.RowReveal> pendingRowReveals() {
         if(!leave || parts[BACKGROUND].dest==null) return List.of();

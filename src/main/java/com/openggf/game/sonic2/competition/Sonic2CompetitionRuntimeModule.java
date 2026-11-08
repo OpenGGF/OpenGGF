@@ -85,6 +85,7 @@ public final class Sonic2CompetitionRuntimeModule extends DelegatingGameModule {
         initializeDisplay();
     }
     void initializeHudArt() throws IOException {
+        Sonic2CompetitionTitleCardDisplay.initializeArt(host.rom(), host.profile().romZone(), nativeVramOwner());
         hudArt = new Sonic2CompetitionHudArt(host.rom(), nativeVramOwner());
         hudArt.initialize(
                 host.session().gameState(0).getLives(), host.session().gameState(1).getLives());
@@ -123,8 +124,7 @@ public final class Sonic2CompetitionRuntimeModule extends DelegatingGameModule {
         var registers = new Sonic2CompetitionViewRegisters(session.camera(0).capture(), session.camera(1).capture());
         scroll.applyLoadedLayerDefinition(host.nativeArt());
         var draw = new Sonic2CompetitionPlaneDraw(host.nativeArt().workRamBytes());
-        // C1 has terrain planes only during the title card. A2-S owns the live
-        // Obj34 fill/reveal hook, without a draw-time plane reconstruction.
+        // Loaded world planes; Obj34 fills/reveals mutate these same captured tables.
         planes.apply(draw.initialForeground(new Sonic2CompetitionPlaneDraw.CameraCopy(
                 session.camera(0).getX(), session.camera(0).getY()),
                 new Sonic2CompetitionPlaneDraw.CameraCopy(session.camera(1).getX(), session.camera(1).getY())));
@@ -138,6 +138,14 @@ public final class Sonic2CompetitionRuntimeModule extends DelegatingGameModule {
                     pages, registers, this::displaySample);
             videoFrame.bindCameraCopies(scroll.owner()::copyBackgroundsAtVInt);
             videoFrame.bindSpriteSource(com.openggf.data.RomByteReader.fromRom(host.rom()));
+            var titlePlanes = new Sonic2CompetitionTitleCardPlanes(nativeTitle, planes, draw, planeScroll);
+            var titleSprites = new Sonic2CompetitionTitleCardDisplay(nativeTitle,
+                    com.openggf.data.RomByteReader.fromRom(host.rom()));
+            videoFrame.setTitleCardPlanes(titlePlanes::serviceVBlank);
+            videoFrame.setTitleCardSprites(() -> {
+                titlePlanes.initializeOmittedArrival();
+                return titleSprites.admissions();
+            });
             videoFrame.setHudPatterns(()->hudArt.update(session.gameState(0).getLives(),
                     session.gameState(1).getLives(),videoFrame.displayState().gamePaused()));
             videoFrame.bindDisplayState(new Sonic2CompetitionDisplayState() {

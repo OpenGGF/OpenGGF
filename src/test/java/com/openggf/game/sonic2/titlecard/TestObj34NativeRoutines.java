@@ -44,6 +44,40 @@ class TestObj34NativeRoutines {
   org.junit.jupiter.api.Assertions.assertEquals(768,comparisons);
  }
 
+ @org.junit.jupiter.api.Test
+ void matchesColdTwoPlayerEntryLeaveAndTailEveryFrame() throws Exception {
+  Obj34 o=new Obj34();o.init(0,0x12,true);
+  var stream=getClass().getResourceAsStream("/sonic2/titlecard/ehz1-2p-obj34-native.csv.gz");
+  java.util.List<String> lines;
+  try(var reader=new java.io.BufferedReader(new java.io.InputStreamReader(new java.util.zip.GZIPInputStream(stream)))) {
+   lines=reader.lines().skip(1).toList();
+  }
+  var exported=new StringBuilder("frame,part,routine,x,y,duration,target,source,location,dest,dest2,split\n");
+  for(String line:lines) {
+   String[] a=line.split(",");int frame=Integer.parseInt(a[0]),i=Integer.parseInt(a[1]);
+   if(i==0) {
+    o.consumeFills();
+    // Explicit native load boundaries: comparison rows never drive the owner.
+    if(frame>=1185 && (frame<=1229 || frame>=1304)) o.tick();
+    if(frame==1304)o.armLeave();
+    if(frame==1329)o.armTail();
+   }
+   Obj34.Part p=o.parts[i];
+   if(frame==1184 && i==0) org.junit.jupiter.api.Assertions.assertThrows(AssertionError.class,
+     ()->org.junit.jupiter.api.Assertions.assertEquals(Integer.parseInt(a[4]),p.x+1),"negative position control");
+   org.junit.jupiter.api.Assertions.assertEquals(Integer.parseInt(a[2])==52,p.alive,"alive "+frame+" "+i);
+   int[] actual={p.routine,p.x,p.y,p.duration,p.target,p.source,p.location,referenceWord(p.dest),referenceWord(p.dest2),p.split};
+   for(int j=0;j<actual.length;j++) org.junit.jupiter.api.Assertions.assertEquals(Integer.parseInt(a[j+3]),actual[j],"frame "+frame+" part "+i+" field "+j);
+   org.junit.jupiter.api.Assertions.assertEquals(Integer.parseInt(a[14]),p.frame,"mapping "+frame+" "+i);
+   org.junit.jupiter.api.Assertions.assertEquals(Integer.parseInt(a[15]),p.width,"width "+frame+" "+i);
+   org.junit.jupiter.api.Assertions.assertEquals(Integer.parseInt(a[13]),i==0 && o.leave ? 65535 : 0,"leave "+frame+" "+i);
+   exported.append(frame).append(',').append(i);
+   for(int value:actual)exported.append(',').append(value);
+   exported.append('\n');
+  }
+  Files.createDirectories(Path.of("target/obj34-2p-pixels"));
+  Files.writeString(Path.of("target/obj34-2p-pixels/engine-parts.csv"),exported);
+ }
  /** Comparison-only reconstruction of native RAM words; runtime targets are semantic. */
  private static int referenceWord(Obj34.Target target) {
   if(target==null)return 0;
@@ -139,7 +173,7 @@ class TestObj34NativeRoutines {
     org.junit.jupiter.api.Assertions.assertEquals(2,reveals.get(0).blockRows());
     org.junit.jupiter.api.Assertions.assertThrows(AssertionError.class,
       ()->org.junit.jupiter.api.Assertions.assertEquals(TitleCardNativeDisplayAccess.Foreground.PLAYER_ONE,reveals.get(0).plane()),
-      "negative control: reversing the stale-P2 row publication is incorrect");
+      "negative control: reversing the P2-first row publication is incorrect");
    } else org.junit.jupiter.api.Assertions.assertTrue(reveals.isEmpty());
   }
  }
