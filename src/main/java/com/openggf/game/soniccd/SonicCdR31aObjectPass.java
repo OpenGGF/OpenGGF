@@ -55,7 +55,7 @@ final class SonicCdR31aObjectPass {
         Boundary boundary(){return boundary;}int wholeIndex(){return wholeIndex;}int value(){return value;}
     }
     private enum Phase { READY,WALKING,WALKED,DRAINING,DONE,FAILED,DISCARDED }
-    private enum Kind { PRIMARY,HUD,TITLE,MONITOR,RING,INTRO,METAL,AMY,HEART,EXHAUST,ROLL,CC_SPIKES,BLOCK,HIDDEN,METAL_PLATFORM,DOOR,FIRE,DRUM,GAME_OVER }
+    private enum Kind { PRIMARY,HUD,TITLE,MONITOR,RING,INTRO,METAL,AMY,HEART,EXHAUST,ROLL,CC_SPIKES,BLOCK,HIDDEN,METAL_PLATFORM,DOOR,FIRE,DRUM,GAME_OVER,KAMA,SICKLE }
     private static final class Dispatch {
         final Kind kind;final int whole,routine;final Object body;final Thread thread=Thread.currentThread();
         final Set<Object> calls=Collections.newSetFromMap(new IdentityHashMap<>());
@@ -267,6 +267,10 @@ final class SonicCdR31aObjectPass {
     private final CdR31aGameOverSource gameOverSource;private final CdGameOver gameOver;
     private GameOverOperation gameOverOperation;
     private P2Invocation p2;
+    private EnemyInvocation enemy;
+    private CdStageTerrain kamaTerrain;
+    private CdKamaKama kama;
+    private final CdKamaSickle sickle;
     private IntroInvocation intro;private IntroPlcSubmission introPlc;
     private Phase phase=Phase.READY;private CdObjectDrawQueue queue;private Dispatch dispatch;
     private boolean checking,reading,adopting,drawing,plc;private Thread walkingThread;
@@ -294,6 +298,8 @@ final class SonicCdR31aObjectPass {
         introAssets=CdR31IntroAssets.fromAssets(assets);spikes=new CdIntroSpikes(introAssets);amy=new CdAmyRose(introAssets);metal=new CdMetalSonic(introAssets);roll=new CdRollTunnel(CdRollTunnel.Assets.fromAssets(introAssets));despawn=new CdSpinTunnelTag(new CdSpinTunnelTag.Assets(introAssets.rollMappings()));
         solidsSource=CdR31aSolidsSource.fromAssets(assets);solidsData=solidsSource.data();ccSpikes=new CdCcSpikes(solidsData);block=new CdBlock(solidsData);hidden=new CdHiddenBlock(solidsData);metalPlatform=new CdMetalPlatform(solidsData);door=new CdDoor(solidsData);fire=new CdFireShooter(solidsData);drum=new CdDrumPlatform(solidsData);
         originalTerrain=assets.terrain();terrain=CdPlayerTerrain.fromStageTerrain(originalTerrain);solid=new CdSolidObject(CdPlayerMovement.fromStageSource(frame.stageSource()));
+        bindKama(originalTerrain);
+        var sicklePorts=new EnemyPorts(Kind.SICKLE);sickle=new CdKamaSickle(placement,sicklePorts,sicklePorts);sicklePorts.bind(sickle);
         hud=new CdReservedHud(common.reservedHudAssets(),new CdReservedHud.Slots(){
             public CdAssetBytes read(int w){requireWhole(Kind.HUD,w);return reserved(SonicCdR31aObjectPass.this.read(),w);}
             public void write(int w,CdAssetBytes e,CdAssetBytes n){reservedWrite(Kind.HUD,w,e,n);}},w->drawReserved(Kind.HUD,w));
@@ -324,14 +330,14 @@ final class SonicCdR31aObjectPass {
         queue=new CdObjectDrawQueue(new DrawSlots(),mappings,cut.cpuSat().copy(),reservedRefs);
         phase=Phase.WALKING;walkingThread=Thread.currentThread();
         try{queue.beginPass();for(int w=0;w<128;w++){
-                guard();int id=id(w);if(id==0)continue;var kind=kind(w,id);int routine=routine(w);
+                guard();int id=id(w);if(id==0)continue;var kind=kind(w,id);if(kind==Kind.KAMA)bindKama(read().currentTerrain());int routine=routine(w);
                 dispatch=new Dispatch(kind,w,routine,body(kind));
                 try{if(kind!=Kind.PRIMARY)checkpoint();execute(kind,w,levelFrames);
                     if(dispatch.solidCut!=null)throw new IllegalStateException("Unretired original Solid call");}
                 finally{dispatch=null;}
             }phase=Phase.WALKED;
         }catch(RuntimeException|Error original){phase=Phase.FAILED;queue.close();throw original;}
-        finally{walkingThread=null;dispatch=null;primaryPending=null;pending=null;plcPending=null;primaryDraw=null;intro=null;introPlc=null;gameOverOperation=null;}
+        finally{walkingThread=null;dispatch=null;primaryPending=null;pending=null;plcPending=null;primaryDraw=null;intro=null;introPlc=null;gameOverOperation=null;enemy=null;}
     }
     CdObjectDrawQueue.CpuSat finishDraw(CdObjectDrawQueue.DrawCameras cameras){
         if(phase!=Phase.WALKED||busy()||dispatch!=null)throw new IllegalStateException("No complete R31 walk to drain");
@@ -350,8 +356,8 @@ final class SonicCdR31aObjectPass {
         queue.close();queue=null;phase=Phase.DONE;
     }
     void discard(){if(busy()||phase==Phase.WALKING||phase==Phase.DRAINING||dispatch!=null)throw new IllegalStateException("Active R31 pass");if(queue!=null)queue.close();queue=null;phase=Phase.DISCARDED;}
-    private boolean busy(){return gameOverOperation!=null||p2!=null||intro!=null||introPlc!=null||primaryInvocation!=null||placeCall!=null||checking||reading||adopting||drawing||plc||pending!=null||primaryPending!=null||plcPending!=null||primaryDraw!=null;}
-    private Object body(Kind k){return switch(k){case PRIMARY->frame;case HUD->hud;case TITLE->title;case MONITOR->monitor;case RING->ring;case INTRO->spikes;case METAL,EXHAUST->metal;case AMY,HEART->amy;case ROLL->roll;case CC_SPIKES->ccSpikes;case BLOCK->block;case HIDDEN->hidden;case METAL_PLATFORM->metalPlatform;case DOOR->door;case FIRE->fire;case DRUM->drum;case GAME_OVER->gameOver;};}
+    private boolean busy(){return enemy!=null||gameOverOperation!=null||p2!=null||intro!=null||introPlc!=null||primaryInvocation!=null||placeCall!=null||checking||reading||adopting||drawing||plc||pending!=null||primaryPending!=null||plcPending!=null||primaryDraw!=null;}
+    private Object body(Kind k){return switch(k){case PRIMARY->frame;case HUD->hud;case TITLE->title;case MONITOR->monitor;case RING->ring;case INTRO->spikes;case METAL,EXHAUST->metal;case AMY,HEART->amy;case ROLL->roll;case CC_SPIKES->ccSpikes;case BLOCK->block;case HIDDEN->hidden;case METAL_PLATFORM->metalPlatform;case DOOR->door;case FIRE->fire;case DRUM->drum;case GAME_OVER->gameOver;case KAMA->kama;case SICKLE->sickle;};}
     private void execute(Kind kind,int w,int levelFrames){var c=read();var e=frame.environment();var g=e.movement().gates();switch(kind){
         case PRIMARY->runPrimary(levelFrames);
         case GAME_OVER->{var result=gameOver.run(w,new CdGameOver.GlobalsPort(){
@@ -359,6 +365,7 @@ final class SonicCdR31aObjectPass {
             public void writePowerup(int value){gameOverStore(CdGameOver.Scalar.POWERUP,value);}
             public void writeTimeOver(int value){gameOverStore(CdGameOver.Scalar.TIME_OVER,value);}
         });if(result!=dispatch.gameOverResult||!result.state().equals(placement.pool().state(w))||gameOverOperation!=null)throw new IllegalStateException("No original Game Over completion");}
+        case KAMA,SICKLE->runKamaSickle(kind,w);
         case CC_SPIKES,BLOCK,HIDDEN,METAL_PLATFORM,DOOR,FIRE,DRUM->runP2(kind,w);
         case INTRO,METAL,AMY,HEART,EXHAUST,ROLL->runIntro(kind,w);
         case HUD->hud.runLive(w,new CdReservedHud.LiveGlobals(e.globals().debugCheat(),c.ring().rings(),e.globals().timeAttackMode(),g.timeWarpDirection(),e.globals().timeWarpTimer(),levelFrames,this::vIntLow));
@@ -549,6 +556,109 @@ final class SonicCdR31aObjectPass {
         }finally{pending=null;adopting=false;}
     }
     // END original primary source-cut and flag helpers 20261107.
+    // Original R31A Kama/Sickle joins: one physical walk, no completed-effect replay.
+    private enum EnemyOp { NONE,GLOBAL,PLAYER,MAPPING,ANIMATION,ANGLE,SOUND,DRAW }
+    private final class EnemyInvocation {
+        final Kind kind;final int whole;final Object receiver;final Thread thread=Thread.currentThread();
+        final CdStageTerrain terrainAtVisit;EnemyOp op=EnemyOp.NONE;
+        EnemyInvocation(Kind kind,int whole){this.kind=kind;this.whole=whole;receiver=body(kind);terrainAtVisit=read().currentTerrain();}
+    }
+    /** These factories borrow immutable references only, with NO query/decode/native byte read.
+     * Native PlaceBlock may publish a new authenticated current terrain before this visit.
+     * Keep one cached receiver for that exact reference; all authoritative object state stays in
+     * the same pool. Do not replace its receiver during an invocation or reuse an old port. */
+    private void bindKama(CdStageTerrain current){
+        if(enemy!=null)throw new IllegalStateException("Active Kama source borrow");
+        if(kama==null||kamaTerrain!=current){var port=new EnemyPorts(Kind.KAMA);
+            var next=new CdKamaKama(placement,port,CdPlayerTerrain.fromStageTerrain(Objects.requireNonNull(current)),port);
+            port.bind(next);kamaTerrain=current;kama=next;}
+    }
+    private void runKamaSickle(Kind kind,int whole){
+        requireWhole(kind,whole);if(enemy!=null)throw new IllegalStateException("Enemy invocation reentry");
+        var original=new EnemyInvocation(kind,whole);enemy=original;
+        try{if(kind==Kind.KAMA){if(kamaTerrain!=original.terrainAtVisit)throw new IllegalStateException("Stale current Kama terrain");kama.run(whole);}
+            else if(kind==Kind.SICKLE)sickle.run(whole);else throw new IllegalStateException("Foreign enemy receiver");
+            if(enemy!=original||original.op!=EnemyOp.NONE)throw new IllegalStateException("Unretired enemy site");
+            requireKind(kind);
+        }finally{enemy=null;}
+    }
+    private void requireEnemy(EnemyPorts port){
+        var current=enemy;
+        if(current==null||dispatch==null||current.kind!=port.kind||current.whole!=dispatch.whole||current.receiver!=port.receiver
+                ||current.receiver!=dispatch.body||current.receiver!=body(current.kind)||current.thread!=Thread.currentThread())
+            throw new IllegalStateException("No original cached enemy receiver/physical visit");
+        requireKind(current.kind);
+        if(read().currentTerrain()!=current.terrainAtVisit||current.kind==Kind.KAMA&&kamaTerrain!=current.terrainAtVisit)
+            throw new IllegalArgumentException("Changed current terrain during original enemy invocation");
+    }
+    private <T>T enemyAt(EnemyPorts port,EnemyOp site,java.util.function.Supplier<T> action){
+        requireEnemy(port);var current=enemy;if(current.op!=EnemyOp.NONE)throw new IllegalStateException("Enemy site reentry");current.op=site;
+        try{return action.get();}finally{current.op=EnemyOp.NONE;}
+    }
+    /** Native reads have a complete read-only World/Frame/environment/full96/status/bank cut.
+     * Preserve the original throwable and attach only distinct verification faults; never undo. */
+    private <T>T enemyRead(EnemyPorts port,EnemyOp site,java.util.function.Supplier<T> action){return enemyAt(port,site,()->{
+        var f=readFrame();var placed=placement.capture();var cut=read();
+        try{var result=action.get();requireFrame(f);requirePlacement(placed);requireCut(cut);return result;}
+        catch(RuntimeException|Error original){verify(original,()->{requireFrame(f);requirePlacement(placed);requireCut(cut);});throw original;}
+    });}
+    private void enemySource(CdObjectState expected,CdObjectPlacementRuntime.Snapshot placed){
+        if(expected!=placement.pool().state(enemy.whole)||expected.id()!=(enemy.kind==Kind.KAMA?0x24:0x25))throw new IllegalArgumentException("Not the actual enemy source image");
+        identity(expected.identity());requirePlacement(placed);
+    }
+    /** One private port per cached receiver, bound exactly once and never exported. Enum/value
+     * equality, a retained component call or completed sound metadata cannot enter this scope. */
+    private final class EnemyPorts implements CdCczEnemyPorts,CdCczEnemyPorts.Assets {
+        private final Kind kind;private Object receiver;
+        private EnemyPorts(Kind kind){this.kind=kind;}
+        private void bind(Object original){if(receiver!=null||original==null)throw new IllegalStateException("Enemy receiver already bound");receiver=original;}
+        public int global(CdCczEnemyPorts.Global field){return enemyRead(this,EnemyOp.GLOBAL,()->{
+            var e=frame.environment();var g=e.movement().gates();
+            return switch(field){
+                case GOOD_FUTURE->{if(kind!=Kind.KAMA)throw new IllegalStateException("No Sickle GoodFuture site");yield read().core().program().goodFutureByte();}
+                case TIME_ZONE->g.timeZone();case WARP_DIRECTION->g.timeWarpDirection();case CAMERA_X->read().cameraXWord();
+                case INVINCIBLE->{if(kind!=Kind.SICKLE||placement.pool().state(enemy.whole).routine()!=4)throw new IllegalStateException("No current Sickle invincible site");yield e.globals().invincible();}
+            };
+        });}
+        public int player(CdCczEnemyPorts.Player field){return enemyRead(this,EnemyOp.PLAYER,()->{
+            int routine=placement.pool().state(enemy.whole).routine();
+            if(kind==Kind.KAMA&&(routine!=4||field!=CdCczEnemyPorts.Player.X&&field!=CdCczEnemyPorts.Player.Y)
+                    ||kind==Kind.SICKLE&&routine!=4)throw new IllegalStateException("No original enemy player-read site");
+            var m=frame.state().motion();return switch(field){case X->m.centreX16_16()>>>16;case Y->m.centreY16_16()>>>16;case FLAGS->m.flags();case X_VELOCITY->m.xVelocity()&65535;};
+        });}
+        public CdPlayerMath.SineCosine sine(int angle){requireEnemy(this);throw new IllegalStateException("Kama/Sickle native graph has no sine read");}
+        public CdCczEnemyPorts.MappingView mapping(CdCczEnemyPorts.Mapping which){return enemyRead(this,EnemyOp.MAPPING,()->{
+            var source=placement.pool().state(enemy.whole);
+            if(source.routine()!=0||kind==Kind.KAMA&&which!=CdCczEnemyPorts.Mapping.KAMA_NORMAL&&which!=CdCczEnemyPorts.Mapping.KAMA_DAMAGED
+                    ||kind==Kind.SICKLE&&which!=CdCczEnemyPorts.Mapping.SICKLE)throw new IllegalStateException("No original enemy mapping STORE");
+            return common.kamaSickleAssets().mapping(which);
+        });}
+        public CdObjectAnimation.AnimationTable animation(CdCczEnemyPorts.Animation which){return enemyRead(this,EnemyOp.ANIMATION,()->{
+            if(which!=(kind==Kind.KAMA?CdCczEnemyPorts.Animation.KAMA:CdCczEnemyPorts.Animation.SICKLE))throw new IllegalStateException("Foreign selected enemy animation");
+            return common.kamaSickleAssets().animation(which);
+        });}
+        public int chainLinkCount(){requireEnemy(this);throw new IllegalStateException("Kama/Sickle native graph has no chain-count read");}
+        public void primaryAngle(CdCczEnemyPorts.AngleCall call){enemyAt(this,EnemyOp.ANGLE,()->{
+            if(kind!=Kind.KAMA||call==null||!call.isCurrent())throw new IllegalStateException("No original Kama collision-angle call");
+            enemySource(call.expectedSource(),call.callCut());claim(call);
+            int routine=call.expectedSource().routine();if(routine!=2&&routine!=10)throw new IllegalStateException("No original Kama terrain-probe routine");
+            // Prepare the existing complete Frame pair BEFORE publication. Each distinct native
+            // same-value store still gets its own original call and adoption, never coalesced.
+            var ready=frame.prepareObjectPrimaryAngle(frame.environment().movement().globals().primaryAngle(),call.value());
+            var cut=read();publish(cut,cut,null,ready);return null;
+        });}
+        public void sound(CdCczEnemyPorts.SoundCall call){enemyAt(this,EnemyOp.SOUND,()->{
+            if(kind!=Kind.SICKLE||call==null||!call.isCurrent()||call.sound()!=CdCczEnemyPorts.Sound.SICKLE)
+                throw new IllegalStateException("No original Sickle FM B9 call");
+            enemySource(call.expectedSource(),call.callCut());claim(call);var source=call.expectedSource();
+            if(source.routine()!=4||source.unsignedByte(MAP_FRAME)!=0||(source.spriteFlags()&128)==0||dispatch.fm)
+                throw new IllegalStateException("Wrong/repeated original Sickle FM site");
+            dispatch.fm=true;SonicCdR31aObjectPass.this.sound(new SonicCdGameModule.PastKamaSickleFm());return null;
+        });}
+        public void draw(CdObjectPool pool,CdObjectState.Identity identity){enemyAt(this,EnemyOp.DRAW,()->{
+            drawDynamic(kind,pool,identity);checkpoint();return null;
+        });}
+    }
     private enum P2Op { NONE,PREFIX,READ,CONTACT,REWIND,HURT,LAUNCH,SINE,FM,DRAW,DESPAWN,PROJECTILE,PARENT_X,PARENT_Y,ANIMATE }
     /** Original current cached-body stack only. Staging/results are never an ingress token. */
     private final class P2Invocation {
@@ -822,7 +932,7 @@ final class SonicCdR31aObjectPass {
     private int routine(int w){return w==0?frame.state().motion().routine():w<32?reserved(read(),w).unsignedByte(0x24):placement.pool().state(w).routine();}
     private Kind kind(int w,int id){if(id<1||id>0x3C)throw stop(Boundary.OBJECT_INDEX,w,id);
         if(w==0){if(id!=1)throw stop(Boundary.PHYSICAL_OWNER,w,id);return Kind.PRIMARY;}
-        if(w>=32){var selected=switch(id){case 0x20->Kind.CC_SPIKES;case 0x21->Kind.BLOCK;case 0x22->Kind.HIDDEN;case 0x23->Kind.METAL_PLATFORM;case 0x26->Kind.DOOR;case 0x27->Kind.FIRE;case 0x28->Kind.DRUM;default->null;};if(selected!=null)return selected;if(id==0x0A)throw stop(Boundary.SPRING_CHILD_OWNER,w,id);}
+        if(w>=32){var selected=switch(id){case 0x20->Kind.CC_SPIKES;case 0x21->Kind.BLOCK;case 0x22->Kind.HIDDEN;case 0x23->Kind.METAL_PLATFORM;case 0x24->Kind.KAMA;case 0x25->Kind.SICKLE;case 0x26->Kind.DOOR;case 0x27->Kind.FIRE;case 0x28->Kind.DRUM;default->null;};if(selected!=null)return selected;if(id==0x0A)throw stop(Boundary.SPRING_CHILD_OWNER,w,id);}
         if(w>=32&&id>=0x30&&id<=0x35)return switch(id){case 0x30->Kind.INTRO;case 0x31->Kind.METAL;case 0x32->Kind.AMY;case 0x33->Kind.HEART;case 0x34->Kind.EXHAUST;default->Kind.ROLL;};
         if(id==0x3B){if(w<32)throw stop(Boundary.PHYSICAL_OWNER,w,id);return Kind.GAME_OVER;}
         if(id==0x3C)return Kind.TITLE;

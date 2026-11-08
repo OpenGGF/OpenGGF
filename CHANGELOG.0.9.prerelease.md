@@ -87,6 +87,13 @@ matching area heading; see the
   parser, preserving both original Present producers. Native null-placement
   ranges stop at their six-byte sentinel;295 affected checks pass after an
   eight-case boundary regression. Live player/World admission remains separate.
+  Cached CCZ KamaKama and Sickle receivers now join the existing physical World
+  pass through original Frame, terrain, child, Draw and sound publications. The
+  same source reader supplies their finite mapping and animation views. Across
+  the focused cohort and one corrected test-hook rerun,206 distinct cases are
+  qualified without errors or skips; the original failed result remains explicit.
+  Constructed World vectors verify binding and restore, with natural reach,
+  Explosion/reward continuation and current enemy pixels still separate.
   CCZ ordinary scheduling now preserves native VBlank/Main order, the old
   selected sprite list and full-word time-stop gating. Private HUD adoption
   retains the real prefix across typed callback failures;175 focused checks

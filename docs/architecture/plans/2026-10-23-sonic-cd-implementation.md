@@ -1,5 +1,44 @@
 # Implement Sonic CD with complete regional parity
 
+## 8 November 2026 — cached CCZ KamaKama/Sickle World publication
+
+The existing increasing physical pass now calls one cached native KamaKama `$24`
+and Sickle `$25` receiver, using current terrain at each visit and the same Frame,
+placement, queue, saved storage and shared animation owners. Original private
+operation calls bind the actual receiver, source, thread, site, order and once-only
+completion. Full Frame/Core/reserved/96-slot/status/bank cuts remain guarded;
+completed values do not authorize later replay. One same-source DATA getter and
+finite reader views supply mappings/animations without a second raw image owner,
+art residency, default pixels or lifecycle. The sound alternative appends once;
+three stale historical sound-census controls migrate by their actual inventories.
+
+R125 executes206 cases:205 pass and one new generic test hook fails because it
+also runs for Draw after the original FM scope retires. The production operation
+is correct. Root changes only that test to observe the actual Sound adoption,
+assert one original call and require its later retirement. R125b then passes all23
+cases, zero failures/errors/skips. All13,555 production class paths and hashes are
+unchanged across that correction; the other nine original XML reports remain
+exact. The identity union is205+23-22 =206 distinct qualified cases, not one206-case
+green execution. Original R125 stays failed. R124 retains its API assertion fault
+and INCOMPLETE verdict because Root declared a literal identity with parentheses
+absent from the actual report; it is not promoted into a clean RED receipt.
+
+R125 normal queue wait is261s and Maven lifecycle1:59; separate preparation is not
+measured. R125b normal-memory preparation is47.539s, queue39s and Maven test
+execution2.694s. User wait and unrecorded overhead remain unknown. Source/index is
+stable inside each execution, with final fingerprint
+`f11897c41787dd388180ecbbdd144aa49a5f73755240286a3f6283602df63ec5`.
+All11 installed Java/dependency pins and fresh selected reports match. This is
+focused private qualification, not a category/full-suite or heap-size certification.
+
+The bounded first source review found no new P1/P2. The actual World vectors are
+explicitly constructed through existing public ingress; they establish binding,
+original sound/child ordering and full/course restore, not natural enemy reach.
+Explosion `$18` remains the next unsupported reward owner in this saved packet.
+Later reward/Flower, current enemy pixels, native audio, forward act completion,
+full USA and JP/EU remain separate. The independent intro route candidate and its
+two source-review oracle fixes are external and UNRUN here.
+
 ## 8 November 2026 — remaining CCZ programme DATA through the shared reader
 
 Six Java payloads register R31B/C/D, R32B/C/D and R33C/D without duplicating the

@@ -292,6 +292,7 @@ final class CdProgrammeDefinition {
         b.borrow(CdProgrammeReader.Borrow.HUD_VINT,0x1DFA,6);
         for(var view:CdR31IntroAssets.View.values())b.borrow(view,view.offset,view.length);
         for(var view:CdR31aSolidsSource.View.values())b.borrow(view,view.offset,view.length);
+        for(var view:CdR31aObjectAssets.KamaView.values())b.borrow(view,view.offset,view.length);
         r3Bindings(b,0x100,CdStageTerrain.Shape.CCZ1_PRESENT,CdProgrammeReader.Blocks.R31,CdR31aLoadMetadata.SourceId.STAGE_GFX,
             new Object[]{CdR31aAssets.Asset.ANI_SONIC,CdR31aAssets.Asset.MINI_ANIMATIONS,CdR31aAssets.Asset.SPEC_CHUNKS,CdR31aAssets.Asset.SINE_TABLE,CdR31aAssets.Asset.ARC_TAN_TABLE,CdR31aAssets.Asset.MAP_SPR_SONIC,CdR31aAssets.Asset.DPLC_SONIC,CdR31aAssets.Asset.ART_SONIC,CdR31aAssets.Asset.LEVEL_CHUNKS,CdR31aAssets.Asset.LAYOUT_FG,CdR31aAssets.Asset.LAYOUT_BG,CdR31aAssets.Asset.LEVEL_COLLISION,CdR31aAssets.Asset.COL_ANGLE_MAP,CdR31aAssets.Asset.COL_HEIGHT_MAP,CdR31aAssets.Asset.COL_WIDTH_MAP,CdR31aAssets.Asset.OBJECT_LAYOUTS},
             new Object[]{CdR31aAssets.Asset.PLC_LISTS,CdR31aAssets.Asset.PALETTE_TABLE,CdR31aAssets.Asset.PALETTE_CYCLES,CdR31aAssets.Asset.SECTIONS,CdR31aAssets.Asset.BG_POINTERS,CdR31aAssets.Asset.PAL_S1_TITLE,CdR31aAssets.Asset.PAL_S1_LEVEL_SELECT,CdR31aAssets.Asset.PAL_SONIC,CdR31aAssets.Asset.PAL_LEVEL,CdR31aAssets.Asset.PAL_LEVEL_END});

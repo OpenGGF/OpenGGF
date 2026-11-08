@@ -210,11 +210,11 @@ class TestSonicCdAct2MonitorItemRingsWorld {
         assertEquals(130,SonicCdGameModule.Act2LoadCall.values().length);
         assertEquals(118,SonicCdGameModule.Act2LoadCall.SHIELD_ACTIVE.ordinal());
         assertEquals(119,SonicCdGameModule.Act2LoadCall.MONITOR_ITEM_RING_AWARD.ordinal());
-        assertEquals(List.of("PastCheckpointFm","PastFrameSound","PastSubCpuSound","PastRingFm","PastRingSubCpu","PastSpringFm",
+        assertEquals(List.of("PastIntroFm","PastIntroSubCpu","PastCcFm","PastKamaSickleFm","PastCheckpointFm","PastFrameSound","PastSubCpuSound","PastRingFm","PastRingSubCpu","PastSpringFm",
                 "PastTunnelDoorFm","PastMonitorFm","PastTimePostSubCpu","PastTamabbohFm","PastCollapsePlatformFm","PastMosquiFm",
                 "PastLostRingFm","PastRobotGeneratorFm","PastProjectorFm","PastSignpostSound","PastBigRingFm","PastResultsSound",
                 "PastProgrammeSound","PastWallFm","PastTunnelPathFm","PastMonitorItemShieldFm","PastMonitorItemRing","PastTunnelDoorSplashFm",
-                "PastDiscFm","PastVerticalDoorFm","PastSpeedShoesSubCpu","PastLevelMusic","PastR13BossFm","PastR13BossSubCpu","PastR13CapsuleExplosion","PastR13CapsuleSubCpu"),
+                "PastDiscFm","PastVerticalDoorFm","PastSpeedShoesSubCpu","PastLevelMusic","PastR13BossFm","PastR13BossSubCpu","PastR13CapsuleExplosion","PastR13CapsuleSubCpu","PastGameOverSubCpu"),
                 Arrays.stream(SonicCdGameModule.PastSound.class.getPermittedSubclasses()).map(Class::getSimpleName).toList());
         assertThrows(NullPointerException.class,()->new SonicCdGameModule.PastMonitorItemRing(null));
         assertEquals(1,ringSounds(s).size());retired(s);

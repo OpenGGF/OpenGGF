@@ -497,6 +497,9 @@ public final class CdObjectMappings implements CdDrawMappings {
         tables.add(new DeclaredTable(intro.rollMappings(),intro.rollMappingBytes(),0,13));
         tables.addAll(CdR31aSolidsSource.fromAssets(assets).mappings());
         appendGameOver(tables,CdR31aGameOverSource.fromAssets(assets).data());
+        var pair=common.kamaSickleAssets();
+        for(var key:List.of(CdCczEnemyPorts.Mapping.KAMA_NORMAL,CdCczEnemyPorts.Mapping.KAMA_DAMAGED,CdCczEnemyPorts.Mapping.SICKLE))
+            tables.add(pair.mapping(key).table());
         return declaredSourceViews(tables, List.of());
     }
     // END R31 COMMON COUNTED METADATA JOIN 20261107
