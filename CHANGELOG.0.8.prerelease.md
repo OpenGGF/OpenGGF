@@ -34,6 +34,10 @@ under the matching area heading; see the
 
 ## Modding and tools
 
+- Playable mod sheets now declare canonical animation tables shared by Sonic 1,
+  Sonic 2 and Sonic 3 & Knuckles, with native speed timing, slope cycles,
+  explicit end actions and host animation fallbacks.
+
 - **Seeded Data Select captures:** `GameplayCaptureTool --save-slots <file.json>`
   writes declared save slots through the production save manager into the
   capture's private save root before a title-first capture, and `--extra-teams`

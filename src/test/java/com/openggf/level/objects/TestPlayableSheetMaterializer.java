@@ -17,7 +17,7 @@ class TestPlayableSheetMaterializer {
                 new PlayableSheetReader.Meta(0x120000, 4, 0),
                 List.of(new PlayableSheetReader.Frame(-3, 4, 16, 20,
                         List.of(new PlayableSheetReader.DplcRun(0, 1, 2)))),
-                Map.of("idle", new PlayableSheetReader.Animation(List.of(
+                Map.of("WAIT", new PlayableSheetReader.Animation(List.of(
                         new PlayableSheetReader.AnimationStep(0, 2, true)))), Map.of());
 
         PlayableSheetMaterializer.MaterializedArt materialized =
@@ -41,7 +41,7 @@ class TestPlayableSheetMaterializer {
                 new PlayableSheetReader.Meta(0, 1, 0),
                 List.of(new PlayableSheetReader.Frame(0, 0, 16, 16,
                         List.of(new PlayableSheetReader.DplcRun(0, 1, 0)))),
-                Map.of("idle", new PlayableSheetReader.Animation(List.of(
+                Map.of("WAIT", new PlayableSheetReader.Animation(List.of(
                         new PlayableSheetReader.AnimationStep(0, 1, true),
                         new PlayableSheetReader.AnimationStep(0, 1, false)))), Map.of());
 
@@ -56,26 +56,26 @@ class TestPlayableSheetMaterializer {
                 List.of(new PlayableSheetReader.Frame(0, 0, 16, 16,
                         List.of(new PlayableSheetReader.DplcRun(0, 1, 0)))),
                 new java.util.TreeMap<>(Map.of(
-                        "duration129", new PlayableSheetReader.Animation(List.of(
+                        "WAIT", new PlayableSheetReader.Animation(List.of(
                                 new PlayableSheetReader.AnimationStep(0, 129, true))),
-                        "duration300", new PlayableSheetReader.Animation(List.of(
+                        "SPRING", new PlayableSheetReader.Animation(List.of(
                                 new PlayableSheetReader.AnimationStep(0, 300, true))),
-                        "large_divisor", new PlayableSheetReader.Animation(List.of(
+                        "HURT", new PlayableSheetReader.Animation(List.of(
                                 new PlayableSheetReader.AnimationStep(0, 65535, false),
                                 new PlayableSheetReader.AnimationStep(0, 65535, true))),
-                        "mixed_hold", new PlayableSheetReader.Animation(List.of(
+                        "DEATH", new PlayableSheetReader.Animation(List.of(
                                 new PlayableSheetReader.AnimationStep(0, 129, false),
                                 new PlayableSheetReader.AnimationStep(0, 300, false))))), Map.of());
 
         var animations = PlayableSheetMaterializer.read(PlayableSheetWriter.write(sheet))
                 .art().animationSet();
 
-        assertExactOrdinaryTiming(animations.getScript(0), 129);
-        assertExactOrdinaryTiming(animations.getScript(1), 300);
-        assertExactOrdinaryTiming(animations.getScript(2), 131070);
-        assertExactOrdinaryTiming(animations.getScript(3), 429);
+        assertExactOrdinaryTiming(animations.getScript(com.openggf.game.CanonicalAnimation.WAIT.ordinal()), 129);
+        assertExactOrdinaryTiming(animations.getScript(com.openggf.game.CanonicalAnimation.SPRING.ordinal()), 300);
+        assertExactOrdinaryTiming(animations.getScript(com.openggf.game.CanonicalAnimation.HURT.ordinal()), 131070);
+        assertExactOrdinaryTiming(animations.getScript(com.openggf.game.CanonicalAnimation.DEATH.ordinal()), 429);
         assertEquals(com.openggf.sprites.animation.SpriteAnimationEndAction.HOLD,
-                animations.getScript(3).endAction());
+                animations.getScript(com.openggf.game.CanonicalAnimation.DEATH.ordinal()).endAction());
     }
 
     @Test

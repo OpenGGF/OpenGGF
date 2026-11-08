@@ -651,7 +651,22 @@ final class LevelPlayableArtInitializer {
                                          PlayerSpriteArtProvider fallback) throws IOException {
         CharacterDefinition definition = activeRegistry().find(playable.characterKey()).orElse(null);
         if (definition != null && !definition.key().isBuiltin()) {
-            return definition.artSupplier().load(playable.characterKey().persisted());
+            var art = definition.artSupplier().load(playable.characterKey().persisted());
+            if (com.openggf.level.objects.PlayableSheetAnimationBinding.requiresBinding(art)) {
+                var host = levelManager.activeGameModule();
+                if (host != null && host.getGameId() == GameId.STANDALONE) return art;
+                if (host == null || host.getDonorCapabilities() == null
+                        || !(levelManager.game instanceof PlayerSpriteArtProvider hostProvider))
+                    throw new IOException("Host cannot bind canonical playable animations");
+                String archetype = switch (definition.behavesLike()) {
+                    case TAILS_ALONE -> "tails"; case KNUCKLES -> "knuckles"; default -> "sonic";
+                };
+                var nativeArt = hostProvider.loadPlayerSpriteArt(archetype);
+                if (nativeArt == null || !(nativeArt.animationProfile() instanceof com.openggf.sprites.animation.ScriptedVelocityAnimationProfile profile))
+                    throw new IOException("Host cannot bind canonical playable animations");
+                art = com.openggf.level.objects.PlayableSheetAnimationBinding.bind(art, host.getDonorCapabilities(), profile);
+            }
+            return art;
         }
         var provider = artProviderFor(playable, fallback);
         return provider == null ? null : provider.loadPlayerSpriteArt(playable.getCode());

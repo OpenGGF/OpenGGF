@@ -307,3 +307,47 @@ with its donor's enabled native rules. Stageplay uses that result to offer and
 validate route starting actions, without branching on actor or game names. The
 contract is extensible to future moves and mod actors; Stageplay's current stock
 cast/asset limits still apply.
+
+### Canonical animation table
+
+Playable sheet manifests require an `animations` table with uppercase
+`CanonicalAnimation` names. `WAIT` is mandatory; there is no `idle` alias.
+One baked sheet works in all three hosts. The host binds native animation IDs
+at installation, using its native velocity profile and canonical fallback map;
+an authored equivalent sharing a host fallback destination (for example STOP/SKID)
+can serve that destination. An absent pose whose fallback is unavailable uses `WAIT`.
+
+```yaml
+animations:
+  WAIT: { frames: [0], durations: [8], end: loop }
+  WALK:
+    frames: [1, 2, 3, 4]
+    speedDriven: true
+    end: loop
+    slopes:
+      - [1, 2, 3, 4]
+      - [5, 6, 7, 8]
+      - [9, 10, 11, 12]
+      - [13, 14, 15, 16]
+  RUN: { frames: [17, 18], speedDriven: true, end: loop }
+  ROLL: { frames: [19, 20], speedDriven: true, end: loop }
+  SPRING: { frames: [21], durations: [8], end: hold }
+  HURT: { frames: [22, 23], durations: [4, 8], end: next, next: WAIT }
+```
+
+Frame indices refer to the manifest's top-level `frames`. Fixed `durations` are
+positive ticks per frame and must match the frame list length. `speedDriven`
+is required for `WALK`, `RUN`, `ROLL`, `ROLL2`, and `PUSH`, selecting native
+walk/run, roll or push timing. Other poses require fixed durations. End actions are `loop` (default), `hold`, or `next`
+with an authored canonical `next` target. WALK and RUN share the host's speed
+threshold and native slope orientation rules.
+
+Optional WALK/RUN `slopes` contains four equal, even-length cycles in native
+slope-selector order (0, 2, 4, 6), including the flat cycle first. Their length
+must equal `frames`; they require speed timing. Without slopes, the flat cycle
+is repeated in all four orientations. Mapping and DPLC references are packed
+into strides at materialization; source tiles are shared. Mod sheets have no
+implicit native tumble or Super alternate frames.
+
+ROM-free standalone modules have no native ID vocabulary; their default presentation
+retains the authored `WAIT` cycle. Native profile binding applies to stock hosts.

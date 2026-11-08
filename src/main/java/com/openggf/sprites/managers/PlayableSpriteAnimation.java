@@ -971,6 +971,10 @@ public class PlayableSpriteAnimation {
         }
         d0 = (d0 >> 4) & 0x6;
 
+        // A synthesized fallback or fixed-pose sheet has no adjacent slope
+        // mappings. Negative explicitly disables offsets; zero retains native
+        // script-length-derived stride behavior.
+        if (configuredStride < 0) return 0;
         if (configuredStride > 0) {
             return d0 * configuredStride;
         }
