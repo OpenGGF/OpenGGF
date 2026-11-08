@@ -188,8 +188,8 @@ appendage renderer automatically.
 
 ## Presentation contract (in progress)
 
-The optional final `CharacterDefinition` constructor argument is a
-`PresentationSupplier`. It receives the canonical persisted character key and
+The optional `CharacterDefinition.presentationSupplier` constructor argument follows
+`underwaterPaletteSupplier` and precedes `superFormSupplier`. It receives the canonical persisted character key and
 runs inside the character owner's fault boundary, like the art and palette
 suppliers. Existing constructors default it to `null`.
 
@@ -207,16 +207,16 @@ native. The four-argument `Art` constructor remains supported.
 `PresentationImages` reads bounded indexed PNG assets through `ModAssetRoot`;
 MICA packages its HUD, monitor, sign and supplementary S1 HUD glyph assets this way.
 
-This is currently an API foundation: stock surfaces do not yet consume these
-slots. The internal name composer reports native, supplementary and missing glyph
+S1, S2 and S3K native sign objects consume the optional face/spin/backing poses,
+retaining native timing and fallback frames. Other surfaces remain in progress. The internal name composer reports native, supplementary and missing glyph
 coverage and extracts pixel crops across tile boundaries. Title-font readers for
 all three hosts and small HUD-font readers use the ROM pipeline. The S3K reader inventories each zone separately, including shared ZONE
 letters and pixel crops within multi-letter pieces, plus the results-name banks.
 Native glyphs take precedence over supplements: MICA needs supplementary M and A
-only in the S1 HUD font. The HUD/results/monitor/signpost consumers remain to be
+only in the S1 HUD font. The HUD/results/monitor consumers remain to be
 implemented. Stock S2 results now select Miles/Tails for Tails alone using the
 native graphics-region setting; this does not enable custom results names.
-Do not assume supplying this record changes an on-screen name or face yet. GGFP presentation sections are also pending.
+Supplying only names does not yet change the native name consumers. GGFP presentation sections are also pending.
 
 ## Ability and super-form rules
 

@@ -6,7 +6,6 @@ import com.openggf.level.Pattern;
 import com.openggf.level.Palette;
 import com.openggf.level.objects.*;
 import com.openggf.level.render.*;
-import com.openggf.sprites.playable.AbstractPlayableSprite;
 import java.io.IOException;
 import java.util.*;
 
@@ -31,6 +30,9 @@ public final class CharacterSignRenderer {
         }
         Art art=presentation==null ? null : presentation.art().get(host);
         SignFrame pose=select(art,frame,faceFrame,alternateFrame,spin1Frame,edgeFrame,spin3Frame);
+        if (art != null && art.sign() == null && host == Host.S3K && frame == faceFrame) {
+            pose = art.endSignFace() == null ? null : new SignFrame(art.endSignFace(), null);
+        }
         if (pose==null) return false;
         var graphics=services.graphicsManager();
         var context=player.getSpriteRenderer()==null ? null : player.getSpriteRenderer().getRenderContext();

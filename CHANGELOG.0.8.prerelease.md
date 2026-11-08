@@ -36,7 +36,7 @@ under the matching area heading; see the
 ## Modding and tools
 
 - Added the optional character presentation data contract and pixel-level name
-  composition foundation. MICA now packages indexed presentation art and S1 signs
+  composition foundation. MICA now packages indexed presentation art and all three hosts’ signs
   consume optional face/spin/backing poses while preserving native poles and timing.
   HUD/results/monitor wiring remains in parallel lanes.
 
@@ -46,8 +46,7 @@ under the matching area heading; see the
   Headless native Data Select retains explicitly loaded development characters.
   Custom team archetypes now use the solo Sonic route without a sidekick.
   Presentation font inventories now include the native small HUD letters in all
-  three hosts and S3K per-zone title/results-name letters. Surface wiring and
-  packaging MICA’s presentation art remain pending. Stock S2 Tails-alone results
+  three hosts and S3K per-zone title/results-name letters. HUD/results/monitor surface wiring remains pending. Stock S2 Tails-alone results
   now show the region-selected Miles/Tails name instead of Sonic.
   MICA's Gilded Super/Hyper forms use owner-bound profiles and her jade-to-gold
   palette cycles; host settings configure the gates. S1's donor-free six-emerald

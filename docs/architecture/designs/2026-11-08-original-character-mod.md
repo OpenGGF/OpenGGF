@@ -89,9 +89,9 @@ the S3K water zones.
 Status: API foundation delivered; group 1 follow-up in progress on
 `feature/ai-mica-presentation2`. ROM readers now inventory all three small HUD
 fonts and S3K per-zone title/results-name art. S2 stock Tails-alone results select
-Miles/Tails using the native graphics-region flag. Surface wiring, sign spin/backing
-contract extensions, packaged MICA presentation assets and gameplay captures remain
-pending; group 1 is not complete. The existing owner-bounded supplier, immutable
+Miles/Tails using the native graphics-region flag. Sign face/spin/backing contract extensions, all three native sign consumers and
+packaged MICA presentation assets are implemented. Other surface wiring and full
+title-route sign captures remain pending; group 1 is not complete. The existing owner-bounded supplier, immutable
 indexed images, pixel composer and S1/S2 title readers remain the foundation.
 
 Add a `CharacterPresentation` record carried by `CharacterDefinition` (and stored as
@@ -447,3 +447,20 @@ Status log (times UTC):
   endings inventory and art, MICA ability wiring (homing, Instagib when Super,
   HOMING_DIVE binding, Sonic-equivalent physics), phase 2 (TALON), broad smoke run.
 
+
+- 2026-11-08: resumed sign lane on `feature/ai-mica-signs-r2` from saved WIP;
+  checkpoint `5b2be03ac`, integrated character branch at `d2b8d5fe7` in
+  `4e7ed3101`, retaining presentation and Gilded suppliers and the tool-built sheet.
+  All three native sign consumers now support optional face/spin/native-backing
+  poses. MICA packages presentation PNGs through bounded `ModAssetRoot` loading.
+  API signature, packaged-asset/native-sheet tile checks, existing sign tests and
+  the four required S3K bootstrap/loading guards passed: 116 tests, zero skips.
+  S1/S2 coverage checkpoints: `8223e0d62`, `4897515a8`. Inspected EGL captures in
+  `/tmp/mica-signs-20261108/`: S1 GHZ1 (`s1-approach`, face 500/spin 200), S2 EHZ1
+  (`s2-approach`, face 450/spin 300), S3K HCZ1 (`s3k-hcz-arena`, face 2400).
+  These are positioned native-route witnesses, not full title-to-sign certification;
+  HCZ starts at (14080,1110) with declared 500 rings/seven emeralds, uses Gilded to
+  defeat the native miniboss, and reaches the sign/results before later act-2 death.
+  Native reference input replays through the titles did not qualify MICA's routes.
+  Full title-route sign captures remain outstanding; unrelated W4 consumers remain
+  owned by their parallel lanes. No engine physics or native route rules were changed.
