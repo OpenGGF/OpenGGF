@@ -390,3 +390,21 @@ reproductions waited 389/8 seconds and executed in 8.472/8.692 seconds; the
 instrumented reproduction waited 29 seconds and executed in 41.157 seconds.
 These timings separate queue wait from execution; they are not whole-task wall
 time or a full-suite certification. Final guards are reported at handoff.
+
+
+The requested final `python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B`
+ran once against `656dfa996`: 103 classes,836 tests,835 passed,one failure,zero
+errors/skips; queue wait301s,execution2m58s. Its sole failure was
+`TestNativeImageResourceGuard.everyRuntimeResourceIsReachableFromTheNativeImageConfig`:
+the new `net/track-rules.properties` lacked a native-image include. Added the
+exact resource include as the guard directs; no allowance or guard changed.
+The affected guard plus `TestCatalogTrackRules,TestNetIsolationRules` then
+passed all five tests,zero skips (wait37s,execution32.554s). The full guards lane
+was not repeated; its other835 checks passed on unchanged source. No remaining
+guard failures are known. In particular,the old baseline's
+TraceCapturePresentationSetup rows are absent because develop `33c3b8e56`
+already repaired those owning methods before this task's setup merge.
+
+Final source qualification is bounded feature/guard coverage,not a full smoke
+or public-release full-suite claim. Task commits remain local; no delivery
+merge or push was performed. The task worktree is retained for the lead.
