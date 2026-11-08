@@ -150,7 +150,10 @@ matching area heading; see the
   prepared launch receipts retain their original ordering. One1,419-case cohort
   passes with zero failures/errors/skips, including the unchanged controller
   requiring Spring Init after Time Post. Original RED/incomplete results remain
-  recorded; exact route ordinals, Spring pixels and later gameplay stay separate.
+  recorded. A five-case observer/filesystem check confirms returned Spring Init
+  at1131 and1,158 recipe returns before unsupported object$2E/whole54 on attempt
+  1159. One actual healthy ENGINE image retains its old selected-CPU provenance;
+  diagnostic success does not claim the failed attempt returned, parity or an act.
   CCZ ordinary scheduling now preserves native VBlank/Main order, the old
   selected sprite list and full-word time-stop gating. Private HUD adoption
   retains the real prefix across typed callback failures;175 focused checks

@@ -1,5 +1,71 @@
 # Implement Sonic CD with complete regional parity
 
+## 8 November 2026 — measured after-Spring CCZ boundary and healthy engine image
+
+One appended diagnostic observer retains both old LowerRoute cases/imports/helpers
+byte-exact, the same two jumps/backtrack/right8 recipe and positive original intro,
+palette, passage, RollTunnel, TimePost and canonical Spring obligations. The bound
+counts all loading/ordinary/replay work; death stops before pending replay and an
+unowned attempt cannot become a returned service or early positive. The first
+unsupported Throwable remains original; only component diagnostics are read from
+the failed World, separately from the prior healthy returned row. No failed-World
+closed capture/restore/draw/retry occurs.
+
+Independent SOURCE review finds one P2: normalized setup can select a different
+leaf from raw cleanup export through a symlink/traversal path. Root extracts one
+private shared path fence: original absolute evidence/capture paths must already
+be normalized with a canonical parent and the same exclusive E-only leaf. The old
+cleanup and both inherited tests remain exact. Four real filesystem controls cover
+symlink traversal, dot/parent/relative aliases, normalized symlink parents, and
+canonical CREATE_NEW directory/file export without overwrite. Tests are written
+before corrected source; no separately executed baseline path RED is claimed.
+
+R150b executes5 cases: the one method-selected observer plus4 filesystem controls,
+all passed with0 failures/errors/skips. The actual selected original USA R31A
+historical-save fixture is explicitly constructed, not natural PPZ-to-CCZ. Returned
+recipe ordinals are intro930, passage1102, RollTunnel1116, TimePost1119, Spring1131.
+The canonical Spring actually initializes at whole49 from the prior cleared slot.
+Forward recipe calls return through1158. Attempt1159 fails at OBJECT_FAMILY,
+whole54, ID$2E. It did not return. Loading24 plus forward1158 plus replay6 gives
+1188 completed controller calls;1189 total attempts includes that failed primary.
+Passing this observer qualifies its diagnostics and earlier positive prefix only.
+
+Exactly one actual ENGINE PNG is taken at healthy returned Spring1131, through the
+configured selected renderer/current art/cameras and OLD selected CPU. Complete
+state before/after drawing is equal; export occurs after session/GL cleanup. Its
+pixels may predate returned State8 and do not establish a visible Spring or native
+parity. The PNG is14477 bytes/SHA256
+`7b0e49f3b44eb6175ff792d1b16d358b53c33c789e7612fe16ccde612b4d419e`.
+All outputs remain under the exclusive external engine-capture leaf; no outputs
+feed gameplay. Daytime visual is distinct from the already delivered Nov8 digest.
+
+The source-bound run uses integration_packet.py run with the external R150b
+handoff, --execute --lane normal --compact-output --maven-progress concise
+--evidence, Java25/-Dmse=off and media/EGL properties through Maven queue. The
+output-only JAVA_TOOL_OPTIONS paths and capture-root environment are separately
+pinned; actual fresh XML confirms both exact paths without expanding the runner's
+property allowlist. Source/index is unchanged before/after at
+`0a46294f8c7945c7d8993d31a71c520fa23521f011fb5fab68c14c7903a6c14b`.
+No production Java changes or compiled-class custody claim. Normal commit policy
+rejects the new machine-local output-root literal before saving; Root replaces
+that one expression with the existing portable user.home/Downloads/Sonic-CD form.
+R150c lean preflight refuses the JVM output properties before Maven/tests, with no
+receipt; the refusal log remains. The required normal R150d rerun passes its one
+observer,0 failures/errors/skips, with actual user.home and both output properties
+verified from fresh XML. The four filesystem cases/helper remain byte-identical
+and qualified in R150b; this is not one new5-case run on the final expression.
+The new exclusive leaf produces the same actual PNG hash and1158/first1159 edge.
+Final source/index fingerprint is
+`5d3106a3377e61e3f72d2148eef3ce6ce561db4e526d6bae0e09a3e759e8e950`.
+The complete exact receipts, output hashes, CSV/raw64/prefix data and observation
+limits stay external. No hook bypass or failed result promotion occurs.
+
+Next is source-authenticating and binding reached CCZ object$2E through existing
+owners. Original R11 shared-LevelStart/current-art/loading work remains a separate
+uninstalled partial SOURCE lane. Historical21931/first21932 IPX, natural transfer,
+full-act, full-USA and JP/EU remain unfinished. Private local branch, no MAIN or
+coordinator source mutation, no push/PR/publication.
+
 ## 8 November 2026 — guarded original selected R11 Start
 
 The public factory5 and actual selected-slot session retain the real source,
