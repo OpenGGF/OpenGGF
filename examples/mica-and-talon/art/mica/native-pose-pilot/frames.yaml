@@ -1,0 +1,385 @@
+{
+  "format": "openggf-playable-art-handoff-1",
+  "palette": "../palette.yaml",
+  "facing": "right",
+  "tick_rate": 60,
+  "frames": [
+    {
+      "id": "wait-00",
+      "animation": "WAIT",
+      "order": 0,
+      "file": "frames/wait-00.png",
+      "hotspot": [
+        16,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "GPT Image native-pose pilot; not runtime integrated"
+    },
+    {
+      "id": "wait-01",
+      "animation": "WAIT",
+      "order": 1,
+      "file": "frames/wait-01.png",
+      "hotspot": [
+        15,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "GPT Image native-pose pilot; not runtime integrated"
+    },
+    {
+      "id": "wait-02",
+      "animation": "WAIT",
+      "order": 2,
+      "file": "frames/wait-02.png",
+      "hotspot": [
+        14,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "GPT Image native-pose pilot; not runtime integrated"
+    },
+    {
+      "id": "wait-03",
+      "animation": "WAIT",
+      "order": 3,
+      "file": "frames/wait-03.png",
+      "hotspot": [
+        14,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "GPT Image native-pose pilot; not runtime integrated"
+    },
+    {
+      "id": "wait-04",
+      "animation": "WAIT",
+      "order": 4,
+      "file": "frames/wait-04.png",
+      "hotspot": [
+        14,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "GPT Image native-pose pilot; not runtime integrated"
+    },
+    {
+      "id": "wait-05",
+      "animation": "WAIT",
+      "order": 5,
+      "file": "frames/wait-05.png",
+      "hotspot": [
+        14,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "GPT Image native-pose pilot; not runtime integrated"
+    },
+    {
+      "id": "walk-00",
+      "animation": "WALK",
+      "order": 0,
+      "file": "frames/walk-00.png",
+      "hotspot": [
+        13,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "GPT Image native-pose pilot; not runtime integrated"
+    },
+    {
+      "id": "walk-01",
+      "animation": "WALK",
+      "order": 1,
+      "file": "frames/walk-01.png",
+      "hotspot": [
+        15,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "GPT Image native-pose pilot; not runtime integrated"
+    },
+    {
+      "id": "walk-02",
+      "animation": "WALK",
+      "order": 2,
+      "file": "frames/walk-02.png",
+      "hotspot": [
+        18,
+        21
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "GPT Image native-pose pilot; not runtime integrated"
+    },
+    {
+      "id": "walk-03",
+      "animation": "WALK",
+      "order": 3,
+      "file": "frames/walk-03.png",
+      "hotspot": [
+        19,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "GPT Image native-pose pilot; not runtime integrated"
+    },
+    {
+      "id": "walk-04",
+      "animation": "WALK",
+      "order": 4,
+      "file": "frames/walk-04.png",
+      "hotspot": [
+        13,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "GPT Image native-pose pilot; not runtime integrated"
+    },
+    {
+      "id": "walk-05",
+      "animation": "WALK",
+      "order": 5,
+      "file": "frames/walk-05.png",
+      "hotspot": [
+        14,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "GPT Image native-pose pilot; not runtime integrated"
+    },
+    {
+      "id": "walk-06",
+      "animation": "WALK",
+      "order": 6,
+      "file": "frames/walk-06.png",
+      "hotspot": [
+        20,
+        21
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "GPT Image native-pose pilot; not runtime integrated"
+    },
+    {
+      "id": "walk-07",
+      "animation": "WALK",
+      "order": 7,
+      "file": "frames/walk-07.png",
+      "hotspot": [
+        19,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "GPT Image native-pose pilot; not runtime integrated"
+    },
+    {
+      "id": "run-00",
+      "animation": "RUN",
+      "order": 0,
+      "file": "frames/run-00.png",
+      "hotspot": [
+        15,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "GPT Image native-pose pilot; not runtime integrated"
+    },
+    {
+      "id": "run-01",
+      "animation": "RUN",
+      "order": 1,
+      "file": "frames/run-01.png",
+      "hotspot": [
+        15,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "GPT Image native-pose pilot; not runtime integrated"
+    },
+    {
+      "id": "run-02",
+      "animation": "RUN",
+      "order": 2,
+      "file": "frames/run-02.png",
+      "hotspot": [
+        14,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "GPT Image native-pose pilot; not runtime integrated"
+    },
+    {
+      "id": "run-03",
+      "animation": "RUN",
+      "order": 3,
+      "file": "frames/run-03.png",
+      "hotspot": [
+        15,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "GPT Image native-pose pilot; not runtime integrated"
+    },
+    {
+      "id": "spring-00",
+      "animation": "SPRING",
+      "order": 0,
+      "file": "frames/spring-00.png",
+      "hotspot": [
+        12,
+        22
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "GPT Image native-pose pilot; not runtime integrated"
+    },
+    {
+      "id": "spring-01",
+      "animation": "SPRING",
+      "order": 1,
+      "file": "frames/spring-01.png",
+      "hotspot": [
+        12,
+        22
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "GPT Image native-pose pilot; not runtime integrated"
+    },
+    {
+      "id": "roll-00",
+      "animation": "ROLL",
+      "order": 0,
+      "file": "frames/roll-00.png",
+      "hotspot": [
+        15,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "GPT Image native-pose pilot; not runtime integrated"
+    },
+    {
+      "id": "roll-01",
+      "animation": "ROLL",
+      "order": 1,
+      "file": "frames/roll-01.png",
+      "hotspot": [
+        15,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "GPT Image native-pose pilot; not runtime integrated"
+    },
+    {
+      "id": "roll-02",
+      "animation": "ROLL",
+      "order": 2,
+      "file": "frames/roll-02.png",
+      "hotspot": [
+        14,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "GPT Image native-pose pilot; not runtime integrated"
+    },
+    {
+      "id": "roll-03",
+      "animation": "ROLL",
+      "order": 3,
+      "file": "frames/roll-03.png",
+      "hotspot": [
+        15,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "GPT Image native-pose pilot; not runtime integrated"
+    },
+    {
+      "id": "s3k-hud",
+      "animation": "S3K",
+      "order": 0,
+      "file": "frames/s3k-hud.png",
+      "hotspot": [
+        8,
+        8
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "GPT Image native-pose pilot; not runtime integrated"
+    },
+    {
+      "id": "s2-sign",
+      "animation": "S2",
+      "order": 0,
+      "file": "frames/s2-sign.png",
+      "hotspot": [
+        24,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "GPT Image native-pose pilot; not runtime integrated"
+    }
+  ],
+  "scripts": {
+    "WAIT": {
+      "frames": [
+        "wait-00",
+        "wait-01",
+        "wait-00",
+        "wait-01",
+        "wait-02",
+        "wait-00",
+        "wait-01",
+        "wait-00",
+        "wait-03",
+        "wait-04",
+        "wait-05",
+        "wait-04",
+        "wait-05",
+        "wait-03",
+        "wait-00"
+      ],
+      "durations": [
+        24,
+        24,
+        24,
+        24,
+        6,
+        24,
+        24,
+        36,
+        18,
+        8,
+        8,
+        8,
+        8,
+        18,
+        24
+      ],
+      "end": "loop"
+    }
+  }
+}
