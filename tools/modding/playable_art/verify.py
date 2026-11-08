@@ -38,6 +38,9 @@ def verify(root):
         provenance = core.get(f['id'], {})
         if 'alias' in provenance:
             provenance = core[provenance['alias']]
+        if 'source_asset' in provenance:
+            import hashlib
+            assert hashlib.sha256((root/provenance['source_asset']).read_bytes()).hexdigest()==provenance['source_sha256'], f['id']
         if 'native_size' in provenance:
             geometry=provenance.get('geometry_reference',provenance['reference'])
             assert list(im.size)==geometry['size'], f['id']
@@ -50,7 +53,7 @@ def verify(root):
         counts[f['animation']]+=1
     assert counts['WALK']==32 and counts['RUN']==16
     required={'WAIT','WALK','RUN','ROLL','SPINDASH','PUSH','DUCK','LOOK_UP','SKID','STOP','SPRING','BALANCE','HURT','DEATH','DROWN','GET_AIR','HANG','HOMING_DIVE'}
-    assert required==set(counts)
+    assert required==set(counts)-{'NATIVE_POSE'}
     # Flood-fill removal must not erase an enclosed eye-white pixel of same colour.
     test=Image.new('RGBA',(5,5),'white')
     for x,y in ((1,1),(2,1),(3,1),(1,2),(3,2),(1,3),(2,3),(3,3)):

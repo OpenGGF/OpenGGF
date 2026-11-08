@@ -32,6 +32,18 @@ public interface DonorCapabilities {
      */
     Set<PlayerCharacter> getPlayableCharacters();
 
+    /** Object-owned native mapping vocabulary; canonical sheets may override each semantic pose. */
+    default Map<Integer, NativeFramePose> getNativeFramePoses() { return Map.of(); }
+
+    @com.openggf.game.ModApi
+    record NativeFramePose(String key, CanonicalAnimation fallback) {
+        public NativeFramePose {
+            java.util.Objects.requireNonNull(key);
+            java.util.Objects.requireNonNull(fallback);
+        }
+    }
+
+
     /**
      * Returns whether this game's player sprite sheet includes a spindash
      * charging animation that can be donated to other games.

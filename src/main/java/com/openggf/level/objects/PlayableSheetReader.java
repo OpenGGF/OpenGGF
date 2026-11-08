@@ -15,7 +15,7 @@ import java.util.*;
 @ModApi
 public final class PlayableSheetReader {
     static final int BASE = tag("BASE"), META = tag("META"), FRAM = tag("FRAM"),
-            ANIM = tag("ANIM"), APND = tag("APND");
+            ANIM = tag("ANIM"), APND = tag("APND"), NFRM = tag("NFRM");
     private PlayableSheetReader() {}
 
     public static PlayableSheet read(byte[] bytes) throws IOException {
@@ -47,7 +47,7 @@ public final class PlayableSheetReader {
             byte[] framePayload = required(sections, FRAM);
             byte[] animPayload = required(sections, ANIM);
             for (int tag : sections.keySet()) {
-                if (tag != BASE && tag != META && tag != FRAM && tag != ANIM && tag != APND
+                if (tag != BASE && tag != META && tag != FRAM && tag != ANIM && tag != APND && tag != NFRM
                         && (tag & 0x80000000) == 0) throw invalid("unknown required section");
             }
             byte[] ggfs = parseBase(basePayload, limits);
@@ -58,7 +58,8 @@ public final class PlayableSheetReader {
             Map<String, Animation> animations = parseAnimations(animPayload, frames.size(), limits);
             Map<String, List<Integer>> appendages = sections.containsKey(APND)
                     ? parseAppendages(sections.get(APND), frames.size(), limits) : Map.of();
-            return new PlayableSheet(ggfs, meta, frames, animations, appendages);
+            return new PlayableSheet(ggfs, meta, frames, animations, appendages,
+                    sections.containsKey(NFRM) ? parseNativeFrames(sections.get(NFRM), frames.size()) : Map.of());
         } catch (EOFException failure) {
             throw invalid("truncated container", failure);
         }
@@ -198,14 +199,36 @@ public final class PlayableSheetReader {
         }
     }
 
+    private static Map<String, Integer> parseNativeFrames(byte[] payload, int frames) throws IOException {
+        try (var in = input(payload)) {
+            int count = in.readUnsignedShort();
+            if (count > 1024) throw invalid("too many native poses");
+            var result = new LinkedHashMap<String, Integer>();
+            String prior = null;
+            for (int i = 0; i < count; i++) {
+                String key = string(in);
+                if (!key.matches("[a-z][a-z0-9-]*/[a-z0-9-]+") || key.length() > 128
+                        || prior != null && compareUtf8(prior, key) >= 0) throw invalid("invalid native pose key/order");
+                int frame = in.readUnsignedShort();
+                if (frame >= frames) throw invalid("dangling native pose frame");
+                result.put(key, frame); prior = key;
+            }
+            requireEnd(in, "NFRM");
+            return Collections.unmodifiableMap(result);
+        }
+    }
+
     private static void requireOrder(Set<Integer> tags) throws IOException {
         List<Integer> list = new ArrayList<>(tags);
         if (list.size() < 4 || list.get(0) != BASE || list.get(1) != META || list.get(2) != FRAM || list.get(3) != ANIM)
             throw invalid("required sections out of order");
-        boolean sawOptionalUnknown = false;
+        boolean sawOptionalUnknown = false, sawNativeFrames = false;
         for (int i = 4; i < list.size(); i++) {
             int tag = list.get(i);
-            if (tag == APND) { if (sawOptionalUnknown) throw invalid("APND out of order"); }
+            if (tag == APND || tag == NFRM) {
+                if (sawOptionalUnknown || tag == APND && sawNativeFrames) throw invalid("optional known section out of order");
+                if (tag == NFRM) sawNativeFrames = true;
+            }
             else { sawOptionalUnknown = true; if ((tag & 0x80000000) == 0) throw invalid("unknown required section"); }
         }
     }
@@ -249,8 +272,12 @@ public final class PlayableSheetReader {
         }
     }
     @ModApi public record PlayableSheet(byte[] baseSheetV1, Meta meta, List<Frame> frames,
-            Map<String, Animation> animations, Map<String, List<Integer>> appendages) {
+            Map<String, Animation> animations, Map<String, List<Integer>> appendages, Map<String, Integer> nativeFrames) {
+        public PlayableSheet(byte[] baseSheetV1, Meta meta, List<Frame> frames, Map<String, Animation> animations, Map<String, List<Integer>> appendages) {
+            this(baseSheetV1, meta, frames, animations, appendages, Map.of());
+        }
         public PlayableSheet {
+            nativeFrames = Map.copyOf(nativeFrames);
             baseSheetV1 = baseSheetV1.clone();
             frames = List.copyOf(frames);
             animations = Collections.unmodifiableMap(new LinkedHashMap<>(animations));
@@ -262,7 +289,7 @@ public final class PlayableSheetReader {
         @Override public boolean equals(Object other) { return other instanceof PlayableSheet that
                 && Arrays.equals(baseSheetV1, that.baseSheetV1) && meta.equals(that.meta)
                 && frames.equals(that.frames) && animations.equals(that.animations)
-                && appendages.equals(that.appendages); }
-        @Override public int hashCode() { return Objects.hash(Arrays.hashCode(baseSheetV1), meta, frames, animations, appendages); }
+                && appendages.equals(that.appendages) && nativeFrames.equals(that.nativeFrames); }
+        @Override public int hashCode() { return Objects.hash(Arrays.hashCode(baseSheetV1), meta, frames, animations, appendages, nativeFrames); }
     }
 }

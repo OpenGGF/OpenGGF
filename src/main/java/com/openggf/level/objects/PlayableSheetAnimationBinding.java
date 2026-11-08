@@ -17,13 +17,22 @@ public final class PlayableSheetAnimationBinding {
 
     static final class CanonicalProfile implements SpriteAnimationProfile {
         final Map<CanonicalAnimation, Integer> strides;
-        CanonicalProfile(Map<CanonicalAnimation, Integer> strides) { this.strides = Map.copyOf(strides); }
+        final Map<String, Integer> nativeFrames;
+        CanonicalProfile(Map<CanonicalAnimation, Integer> strides) { this(strides, Map.of()); }
+        CanonicalProfile(Map<CanonicalAnimation, Integer> strides, Map<String, Integer> nativeFrames) {
+            this.strides = Map.copyOf(strides); this.nativeFrames = Map.copyOf(nativeFrames);
+        }
         // ROM-free standalone modules have no native animation vocabulary. Retain
         // their authored WAIT cycle until they supply their own runtime profile.
         @Override public Integer resolveAnimationId(AbstractPlayableSprite sprite, int clock, int count) {
             return CanonicalAnimation.WAIT.ordinal();
         }
         @Override public int resolveFrame(AbstractPlayableSprite sprite, int clock, int count) { return 0; }
+    }
+
+    /** Whether the source sheet explicitly supplies normal native-frame aliases. */
+    public static boolean hasNativeFrameAliases(SpriteArtSet art) {
+        return art != null && art.animationProfile() instanceof CanonicalProfile profile && !profile.nativeFrames.isEmpty();
     }
 
     public static boolean requiresBinding(SpriteArtSet art) {
@@ -63,8 +72,12 @@ public final class PlayableSheetAnimationBinding {
         profile.setPushDelayShift(nativeProfile.getPushDelayShift());
         profile.setDuckReleasePublishesWalk(nativeProfile.isDuckReleasePublishesWalk());
         profile.setAirborneSlidePreservesPublishedAnimation(nativeProfile.isAirborneSlidePreservesPublishedAnimation());
-        profile.setBlinkAnimId(scripts.getScript(nativeProfile.getBlinkAnimId()) != null ? nativeProfile.getBlinkAnimId() : -1);
-        profile.setGetUpAnimId(scripts.getScript(nativeProfile.getGetUpAnimId()) != null ? nativeProfile.getGetUpAnimId() : -1);
+        // Native deep-wait interruption requires an authored finite exit script.
+        // A looping WAIT fallback cannot finish Blink/GetUp and would lock input.
+        profile.setBlinkAnimId(art.animationSet().getScript(CanonicalAnimation.BLINK.ordinal()) != null
+                ? nativeProfile.getBlinkAnimId() : -1);
+        profile.setGetUpAnimId(art.animationSet().getScript(CanonicalAnimation.GET_UP.ordinal()) != null
+                ? nativeProfile.getGetUpAnimId() : -1);
         profile.setTumbleFrameBase(ScriptedVelocityAnimationProfile.NO_TUMBLE_FRAMES);
         profile.setSuperAlternateFrameStep(0, 0, 0);
         profile.setHighSpeedWalkRunAnimId(-1);
@@ -72,6 +85,27 @@ public final class PlayableSheetAnimationBinding {
             profile.setRoll2AnimId(-1);
         profile.setWalkSlopeFrameStride(canonicalProfile.strides.getOrDefault(resolve(CanonicalAnimation.WALK, art.animationSet(), host), -1));
         profile.setRunSlopeFrameStride(canonicalProfile.strides.getOrDefault(resolve(CanonicalAnimation.RUN, art.animationSet(), host), -1));
+        var nativePoses = host.getNativeFramePoses();
+        if (!nativePoses.isEmpty() && !canonicalProfile.nativeFrames.isEmpty()) {
+            // Keep object-owned bytes and authored indices in disjoint namespaces.
+            // Scripts (including slope bases) move together; stock art never enters this path.
+            var mappings = new java.util.ArrayList<com.openggf.level.render.SpriteMappingFrame>();
+            var dplcs = new java.util.ArrayList<com.openggf.level.render.SpriteDplcFrame>();
+            int idle = art.animationSet().getScript(CanonicalAnimation.WAIT.ordinal()).frames().getFirst();
+            for (int frame = 0; frame < 256; frame++) {
+                var pose = nativePoses.get(frame);
+                int target = pose == null ? idle : canonicalProfile.nativeFrames.getOrDefault(pose.key(),
+                        art.animationSet().getScript(resolve(pose.fallback(), art.animationSet(), host).ordinal()).frames().getFirst());
+                mappings.add(frame == 0 ? new com.openggf.level.render.SpriteMappingFrame(java.util.List.of()) : art.mappingFrames().get(target));
+                dplcs.add(frame == 0 ? new com.openggf.level.render.SpriteDplcFrame(java.util.List.of()) : art.dplcFrames().get(target));
+            }
+            mappings.addAll(art.mappingFrames()); dplcs.addAll(art.dplcFrames());
+            var relocated = new SpriteAnimationSet();
+            scripts.getAllScripts().forEach((id, script) -> relocated.addScript(id,
+                    new SpriteAnimationScript(script.delay(), script.frames().stream().map(f -> f + 256).toList(), script.endAction(), script.endParam())));
+            return new SpriteArtSet(art.artTiles(), mappings, dplcs, art.paletteIndex(), art.basePatternIndex(),
+                    art.frameDelay(), art.bankSize(), profile, relocated);
+        }
         return new SpriteArtSet(art.artTiles(), art.mappingFrames(), art.dplcFrames(), art.paletteIndex(),
                 art.basePatternIndex(), art.frameDelay(), art.bankSize(), profile, scripts);
     }

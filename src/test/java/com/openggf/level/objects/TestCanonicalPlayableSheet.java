@@ -33,6 +33,20 @@ class TestCanonicalPlayableSheet {
         var host = module.getDonorCapabilities();
         var nativeArt = host.getPlayerArtProvider(RomByteReader.fromRom(TestEnvironment.currentRom())).loadPlayerSpriteArt("sonic");
         var source = sheet();
+        assertSame(nativeArt, PlayableSheetAnimationBinding.bind(nativeArt, host,
+                (ScriptedVelocityAnimationProfile) nativeArt.animationProfile()), "stock art is untouched");
+        var aliasKey = host.getNativeFramePoses().entrySet().iterator().next();
+        var aliasSource = new SpriteArtSet(source.artTiles(), source.mappingFrames(), source.dplcFrames(),
+                source.paletteIndex(), source.basePatternIndex(), source.frameDelay(), source.bankSize(),
+                new PlayableSheetAnimationBinding.CanonicalProfile(Map.of(), Map.of(aliasKey.getValue().key(), 3)), source.animationSet());
+        var aliasBound = PlayableSheetAnimationBinding.bind(aliasSource, host, (ScriptedVelocityAnimationProfile) nativeArt.animationProfile());
+        assertEquals(source.mappingFrames().get(3), aliasBound.mappingFrames().get(aliasKey.getKey()));
+        assertTrue(aliasBound.mappingFrames().getFirst().pieces().isEmpty(), "native zero stays invisible");
+        assertTrue(aliasBound.dplcFrames().getFirst().requests().isEmpty());
+        assertEquals(source.dplcFrames().get(3), aliasBound.dplcFrames().get(aliasKey.getKey()));
+        assertEquals(source.animationSet().getScript(CanonicalAnimation.WAIT.ordinal()).frames().stream().map(f -> f + 256).toList(),
+                aliasBound.animationSet().getScript(host.resolveNativeId(CanonicalAnimation.WAIT)).frames());
+
         var art = PlayableSheetAnimationBinding.bind(source, host,
                 (ScriptedVelocityAnimationProfile) nativeArt.animationProfile());
         for (var pose : List.of(CanonicalAnimation.WALK, CanonicalAnimation.RUN, CanonicalAnimation.ROLL,
@@ -72,6 +86,8 @@ class TestCanonicalPlayableSheet {
         assertEquals(nativeProfile.getPushDelayShift(), profile.getPushDelayShift());
         assertEquals(nativeProfile.isDuckReleasePublishesWalk(), profile.isDuckReleasePublishesWalk());
         assertEquals(nativeProfile.isAirborneSlidePreservesPublishedAnimation(), profile.isAirborneSlidePreservesPublishedAnimation());
+        assertEquals(-1, profile.getBlinkAnimId(), "WAIT fallback cannot serve a native input-locking Blink");
+        assertEquals(-1, profile.getGetUpAnimId(), "WAIT fallback cannot serve a native input-locking GetUp");
         int slow = changes(art, module, 0x100);
         int fast = changes(art, module, 0x500);
         assertTrue(fast > slow, "native ground-speed walk timing: " + slow + " / " + fast);

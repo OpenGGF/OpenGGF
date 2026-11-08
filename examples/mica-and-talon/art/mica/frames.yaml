@@ -725,8 +725,8 @@
       "order": 0,
       "file": "frames/hang-00.png",
       "hotspot": [
-        24,
-        18
+        16,
+        24
       ],
       "angle_set": "flat",
       "duration_ticks": 10,
@@ -738,8 +738,8 @@
       "order": 1,
       "file": "frames/hang-01.png",
       "hotspot": [
-        24,
-        18
+        16,
+        24
       ],
       "angle_set": "flat",
       "duration_ticks": 10,
@@ -751,8 +751,8 @@
       "order": 2,
       "file": "frames/hang-02.png",
       "hotspot": [
-        24,
-        18
+        16,
+        24
       ],
       "angle_set": "flat",
       "duration_ticks": 10,
@@ -868,12 +868,12 @@
       "order": 16,
       "file": "frames/walk-steep-00.png",
       "hotspot": [
-        19,
-        13
+        22,
+        16
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
+      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels. Complete tapered tail tip below the former crop; sole support and anchor retained."
     },
     {
       "id": "walk-steep-01",
@@ -881,7 +881,7 @@
       "order": 17,
       "file": "frames/walk-steep-01.png",
       "hotspot": [
-        20,
+        23,
         14
       ],
       "angle_set": "steep",
@@ -894,7 +894,7 @@
       "order": 18,
       "file": "frames/walk-steep-02.png",
       "hotspot": [
-        21,
+        24,
         16
       ],
       "angle_set": "steep",
@@ -907,7 +907,7 @@
       "order": 19,
       "file": "frames/walk-steep-03.png",
       "hotspot": [
-        20,
+        23,
         20
       ],
       "angle_set": "steep",
@@ -920,12 +920,12 @@
       "order": 20,
       "file": "frames/walk-steep-04.png",
       "hotspot": [
-        19,
-        13
+        22,
+        16
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
+      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels. Complete tapered tail tip below the former crop; sole support and anchor retained."
     },
     {
       "id": "walk-steep-05",
@@ -934,7 +934,7 @@
       "file": "frames/walk-steep-05.png",
       "hotspot": [
         20,
-        14
+        17
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
@@ -946,8 +946,8 @@
       "order": 22,
       "file": "frames/walk-steep-06.png",
       "hotspot": [
-        21,
-        15
+        24,
+        18
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
@@ -959,7 +959,7 @@
       "order": 23,
       "file": "frames/walk-steep-07.png",
       "hotspot": [
-        20,
+        23,
         20
       ],
       "angle_set": "steep",
@@ -1128,8 +1128,8 @@
       "order": 8,
       "file": "frames/run-steep-00.png",
       "hotspot": [
-        15,
-        16
+        18,
+        19
       ],
       "angle_set": "steep",
       "duration_ticks": 4,
@@ -1141,12 +1141,12 @@
       "order": 9,
       "file": "frames/run-steep-01.png",
       "hotspot": [
-        16,
-        16
+        19,
+        19
       ],
       "angle_set": "steep",
       "duration_ticks": 4,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
+      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels. Complete tapered tail tip below the former crop; sole support and anchor retained."
     },
     {
       "id": "run-steep-02",
@@ -1154,12 +1154,12 @@
       "order": 10,
       "file": "frames/run-steep-02.png",
       "hotspot": [
-        15,
-        16
+        18,
+        19
       ],
       "angle_set": "steep",
       "duration_ticks": 4,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
+      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels. Complete tapered tail tip below the former crop; sole support and anchor retained."
     },
     {
       "id": "run-steep-03",
@@ -1167,8 +1167,8 @@
       "order": 11,
       "file": "frames/run-steep-03.png",
       "hotspot": [
-        16,
-        16
+        19,
+        19
       ],
       "angle_set": "steep",
       "duration_ticks": 4,
@@ -1277,6 +1277,188 @@
       "angle_set": "flat",
       "duration_ticks": 5,
       "notes": ""
+    },
+    {
+      "id": "native-pose-ba",
+      "animation": "NATIVE_POSE",
+      "order": 0,
+      "file": "frames/native-pose-ba.png",
+      "hotspot": [
+        16,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Reuse original MICA normal-Sonic mapping art from endings/s3k/ride-ba.png; no scaling or native pixel copying."
+    },
+    {
+      "id": "native-pose-ca",
+      "animation": "NATIVE_POSE",
+      "order": 1,
+      "file": "frames/native-pose-ca.png",
+      "hotspot": [
+        17,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Reuse original MICA normal-Sonic mapping art from endings/s3k/rescue_float-ca.png; no scaling or native pixel copying."
+    },
+    {
+      "id": "native-pose-cb",
+      "animation": "NATIVE_POSE",
+      "order": 2,
+      "file": "frames/native-pose-cb.png",
+      "hotspot": [
+        21,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Reuse original MICA normal-Sonic mapping art from endings/s3k/rescue_float-cb.png; no scaling or native pixel copying."
+    },
+    {
+      "id": "native-pose-96",
+      "animation": "NATIVE_POSE",
+      "order": 3,
+      "file": "frames/native-pose-96.png",
+      "hotspot": [
+        15,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Reuse original MICA normal-Sonic mapping art from wave3/s3k-slot-96.png; no scaling or native pixel copying."
+    },
+    {
+      "id": "native-pose-97",
+      "animation": "NATIVE_POSE",
+      "order": 4,
+      "file": "frames/native-pose-97.png",
+      "hotspot": [
+        15,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Reuse original MICA normal-Sonic mapping art from wave3/s3k-slot-97.png; no scaling or native pixel copying."
+    },
+    {
+      "id": "native-pose-98",
+      "animation": "NATIVE_POSE",
+      "order": 5,
+      "file": "frames/native-pose-98.png",
+      "hotspot": [
+        15,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Reuse original MICA normal-Sonic mapping art from wave3/s3k-slot-98.png; no scaling or native pixel copying."
+    },
+    {
+      "id": "native-pose-99",
+      "animation": "NATIVE_POSE",
+      "order": 6,
+      "file": "frames/native-pose-99.png",
+      "hotspot": [
+        15,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Reuse original MICA normal-Sonic mapping art from wave3/s3k-slot-99.png; no scaling or native pixel copying."
+    },
+    {
+      "id": "native-pose-9a",
+      "animation": "NATIVE_POSE",
+      "order": 7,
+      "file": "frames/native-pose-9a.png",
+      "hotspot": [
+        15,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Reuse original MICA normal-Sonic mapping art from wave3/s3k-slot-9a.png; no scaling or native pixel copying."
+    },
+    {
+      "id": "native-pose-24",
+      "animation": "NATIVE_POSE",
+      "order": 8,
+      "file": "frames/native-pose-24.png",
+      "hotspot": [
+        16,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Reuse original MICA normal-Sonic mapping art from continue/s3k-player-24.png; no scaling or native pixel copying."
+    },
+    {
+      "id": "native-pose-55",
+      "animation": "NATIVE_POSE",
+      "order": 9,
+      "file": "frames/native-pose-55.png",
+      "hotspot": [
+        15,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Reuse original MICA normal-Sonic mapping art from continue/s3k-player-55.png; no scaling or native pixel copying."
+    },
+    {
+      "id": "native-pose-56",
+      "animation": "NATIVE_POSE",
+      "order": 10,
+      "file": "frames/native-pose-56.png",
+      "hotspot": [
+        14,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Reuse original MICA normal-Sonic mapping art from continue/s3k-player-56.png; no scaling or native pixel copying."
+    },
+    {
+      "id": "native-pose-57",
+      "animation": "NATIVE_POSE",
+      "order": 11,
+      "file": "frames/native-pose-57.png",
+      "hotspot": [
+        16,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Reuse original MICA normal-Sonic mapping art from continue/s3k-player-57.png; no scaling or native pixel copying."
+    },
+    {
+      "id": "native-pose-59",
+      "animation": "NATIVE_POSE",
+      "order": 12,
+      "file": "frames/native-pose-59.png",
+      "hotspot": [
+        12,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Reuse original MICA normal-Sonic mapping art from continue/s3k-player-59.png; no scaling or native pixel copying."
+    },
+    {
+      "id": "native-pose-5a",
+      "animation": "NATIVE_POSE",
+      "order": 13,
+      "file": "frames/native-pose-5a.png",
+      "hotspot": [
+        12,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Reuse original MICA normal-Sonic mapping art from continue/s3k-player-5a.png; no scaling or native pixel copying."
     }
   ],
   "scripts": {
@@ -1317,5 +1499,26 @@
       ],
       "end": "loop"
     }
+  },
+  "nativeFrames": {
+    "hang/0": "hang-00",
+    "hang/1": "hang-01",
+    "hang/2": "hang-02",
+    "wait/stand": "wait-00",
+    "wait/fidget": "wait-03",
+    "roll/0": "native-pose-96",
+    "roll/1": "native-pose-97",
+    "roll/2": "native-pose-98",
+    "roll/3": "native-pose-99",
+    "roll/4": "native-pose-9a",
+    "ride/stand": "native-pose-ba",
+    "crane/fall": "native-pose-ca",
+    "hang/crane": "native-pose-cb",
+    "bar/release": "native-pose-24",
+    "twist/0": "native-pose-55",
+    "twist/1": "native-pose-56",
+    "twist/2": "native-pose-57",
+    "twist/4": "native-pose-59",
+    "twist/5": "native-pose-5a"
   }
 }

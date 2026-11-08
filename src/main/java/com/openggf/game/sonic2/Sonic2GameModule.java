@@ -630,6 +630,10 @@ public class Sonic2GameModule implements GameModule, com.openggf.game.internal.S
 
         static final Sonic2DonorCapabilities INSTANCE = new Sonic2DonorCapabilities();
 
+        @Override public java.util.Map<Integer, NativeFramePose> getNativeFramePoses() {
+            return java.util.Map.of(1, new NativeFramePose("wait/stand", CanonicalAnimation.WAIT));
+        }
+
         private static final java.util.Set<PlayerCharacter> CHARACTERS =
                 java.util.Set.of(
                         PlayerCharacter.SONIC_ALONE,

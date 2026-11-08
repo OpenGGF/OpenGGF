@@ -390,6 +390,16 @@ SONIC/MILES/TAILS letters in a 40×8 cell, with HUD-style supplements only for
 missing letters. Stock and unsupported names retain their native art.
 GGFP presentation sections are pending.
 
+## Native ground abilities
+
+Declare `CharacterDefinition.MovementAbility.SPINDASH` in the definition's
+movement-ability set to use the host's native charge/release path. The registry
+intersects declarations with native host capabilities: MICA can spindash in S2
+and S3K; S1 retains its native no-spindash rule. A canonical sheet should supply
+SPINDASH poses. Canonical sheets enable native deep-wait Blink/GetUp interrupts
+only when those scripts are authored; a looping WAIT fallback cannot finish an
+input-locking native interrupt.
+
 ## Ability and super-form rules
 
 Characters can own the world-session homing capability independently of Mutator Lab.
@@ -578,3 +588,24 @@ GGFP presentation sections are pending: keep using bounded sidecar PNG assets.
 MICA is a framework demonstration, with TALON planned for phase 2. Focused
 acceptance and surface captures do not establish complete title-to-ending routes.
 For a build-along, see [an original character across three games](guides/original-character.md).
+
+### Object-owned native mapping poses
+
+Playable YAML optionally supplies `nativeFrames`, a map from semantic pose keys
+(for example `hang/0`) to authored mapping indices. The GGFP v2 `NFRM` section
+retains these aliases. Each host declares its native bytes through
+`DonorCapabilities.getNativeFramePoses()`; shared binding consumes semantic keys
+and canonical fallbacks rather than game-name branches. The current stock host
+vocabularies describe the normal Sonic archetype; character-specific Tails and
+Knuckles raw mapping vocabularies are not yet supplied. Missing poses use the
+host descriptor's canonical fallback; stock art bypasses binding.
+
+When aliases are supplied, bound canonical scripts move above the 256 native
+byte slots, including slope sets and DPLCs. Index zero stays invisible for native
+cutscenes. Creator code should use the installed scripts rather than cache the
+unbound sheet's mapping indices. Authored native aliases remain in byte slots.
+
+The AIZ intro actor also binds the custom normal sheet. Its riding and lift-off
+native mappings use aliases; its separate powered bank falls back to canonical
+ROLL with the authored S3K Super palette cycle. The native intro gate follows
+the registered Sonic archetype, including custom Sonic stand-ins.

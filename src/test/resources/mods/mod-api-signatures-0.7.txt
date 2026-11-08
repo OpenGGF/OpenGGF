@@ -207,6 +207,7 @@ CF-ANNOTATION TYPE com.openggf.game.DebugOverlayProvider$TouchResponseDebugInfo 
 CF-ANNOTATION TYPE com.openggf.game.DelegatingZoneRegistry visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.DemoLamppostState visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.DonorCapabilities visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.DonorCapabilities$NativeFramePose visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.DynamicWaterHandler visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.EmeraldRewardKind visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.EndingPhase visible @com.openggf.game.ModApi
@@ -1512,6 +1513,7 @@ CONSTRUCTOR com.openggf.game.DebugOverlayProvider$ObjectDebugLabel public  <init
 CONSTRUCTOR com.openggf.game.DebugOverlayProvider$ObjectDebugLabel public  <init>(int,int,java.lang.String,float,float,float)
 CONSTRUCTOR com.openggf.game.DelegatingZoneRegistry public  <init>(com.openggf.game.ZoneRegistry)
 CONSTRUCTOR com.openggf.game.DemoLamppostState public  <init>(int,int,int,int,int,int,int,int)
+CONSTRUCTOR com.openggf.game.DonorCapabilities$NativeFramePose public  <init>(java.lang.String,com.openggf.game.CanonicalAnimation)
 CONSTRUCTOR com.openggf.game.EndingSpriteSet public  <init>(com.openggf.game.StageSpriteSet,int[])
 CONSTRUCTOR com.openggf.game.Game public  <init>()
 CONSTRUCTOR com.openggf.game.GameRng public  <init>(com.openggf.game.GameRng$Flavour)
@@ -1853,6 +1855,7 @@ CONSTRUCTOR com.openggf.level.objects.PlayableSheetReader$DplcRun public  <init>
 CONSTRUCTOR com.openggf.level.objects.PlayableSheetReader$Frame public  <init>(int,int,int,int,java.util.List<com.openggf.level.objects.PlayableSheetReader$DplcRun>)
 CONSTRUCTOR com.openggf.level.objects.PlayableSheetReader$Meta public  <init>(int,int,int)
 CONSTRUCTOR com.openggf.level.objects.PlayableSheetReader$PlayableSheet public  <init>(byte[],com.openggf.level.objects.PlayableSheetReader$Meta,java.util.List<com.openggf.level.objects.PlayableSheetReader$Frame>,java.util.Map<java.lang.String,com.openggf.level.objects.PlayableSheetReader$Animation>,java.util.Map<java.lang.String,java.util.List<java.lang.Integer>>)
+CONSTRUCTOR com.openggf.level.objects.PlayableSheetReader$PlayableSheet public  <init>(byte[],com.openggf.level.objects.PlayableSheetReader$Meta,java.util.List<com.openggf.level.objects.PlayableSheetReader$Frame>,java.util.Map<java.lang.String,com.openggf.level.objects.PlayableSheetReader$Animation>,java.util.Map<java.lang.String,java.util.List<java.lang.Integer>>,java.util.Map<java.lang.String,java.lang.Integer>)
 CONSTRUCTOR com.openggf.level.objects.RomObjectSnapshot public  <init>(java.util.Map<java.lang.Integer,java.lang.Integer>,java.util.Map<java.lang.Integer,java.lang.Integer>)
 CONSTRUCTOR com.openggf.level.objects.ShieldObjectInstance public  <init>(com.openggf.game.PlayableEntity)
 CONSTRUCTOR com.openggf.level.objects.ShieldProjectileMotion$Velocity public  <init>(int,int)
@@ -6179,6 +6182,7 @@ METHOD com.openggf.game.DemoLamppostState public  int waterRoutine()
 METHOD com.openggf.game.DemoLamppostState public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.game.DemoLamppostState public,final  int hashCode()
 METHOD com.openggf.game.DemoLamppostState public,final  java.lang.String toString()
+METHOD com.openggf.game.DonorCapabilities public  java.util.Map<java.lang.Integer,com.openggf.game.DonorCapabilities$NativeFramePose> getNativeFramePoses()
 METHOD com.openggf.game.DonorCapabilities public,abstract  boolean hasElementalShields()
 METHOD com.openggf.game.DonorCapabilities public,abstract  boolean hasHyperTransform()
 METHOD com.openggf.game.DonorCapabilities public,abstract  boolean hasInstaShield()
@@ -6191,6 +6195,11 @@ METHOD com.openggf.game.DonorCapabilities public,abstract  int resolveNativeId(c
 METHOD com.openggf.game.DonorCapabilities public,abstract  java.util.Map<com.openggf.game.CanonicalAnimation,com.openggf.game.CanonicalAnimation> getAnimationFallbacks()
 METHOD com.openggf.game.DonorCapabilities public,abstract  java.util.Set<com.openggf.game.PlayerCharacter> getPlayableCharacters()
 METHOD com.openggf.game.DonorCapabilities public,static <E extends java.lang.Enum<E>&com.openggf.game.AnimationId> java.util.Map<com.openggf.game.CanonicalAnimation,com.openggf.game.CanonicalAnimation> buildFallbackMap(E[],java.util.function.Function<E,com.openggf.game.CanonicalAnimation>,java.util.Map<com.openggf.game.CanonicalAnimation,com.openggf.game.CanonicalAnimation>)
+METHOD com.openggf.game.DonorCapabilities$NativeFramePose public  com.openggf.game.CanonicalAnimation fallback()
+METHOD com.openggf.game.DonorCapabilities$NativeFramePose public  java.lang.String key()
+METHOD com.openggf.game.DonorCapabilities$NativeFramePose public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.DonorCapabilities$NativeFramePose public,final  int hashCode()
+METHOD com.openggf.game.DonorCapabilities$NativeFramePose public,final  java.lang.String toString()
 METHOD com.openggf.game.DynamicWaterHandler public  boolean shakeTimerOccupiesObjectSlot()
 METHOD com.openggf.game.DynamicWaterHandler public,abstract  void update(com.openggf.level.WaterSystem$DynamicWaterState,int,int)
 METHOD com.openggf.game.EmeraldRewardKind public,static  com.openggf.game.EmeraldRewardKind valueOf(java.lang.String)
@@ -11634,6 +11643,7 @@ METHOD com.openggf.level.objects.PlayableSheetReader$PlayableSheet public  com.o
 METHOD com.openggf.level.objects.PlayableSheetReader$PlayableSheet public  int hashCode()
 METHOD com.openggf.level.objects.PlayableSheetReader$PlayableSheet public  java.util.List<com.openggf.level.objects.PlayableSheetReader$Frame> frames()
 METHOD com.openggf.level.objects.PlayableSheetReader$PlayableSheet public  java.util.Map<java.lang.String,com.openggf.level.objects.PlayableSheetReader$Animation> animations()
+METHOD com.openggf.level.objects.PlayableSheetReader$PlayableSheet public  java.util.Map<java.lang.String,java.lang.Integer> nativeFrames()
 METHOD com.openggf.level.objects.PlayableSheetReader$PlayableSheet public  java.util.Map<java.lang.String,java.util.List<java.lang.Integer>> appendages()
 METHOD com.openggf.level.objects.PlayableSheetReader$PlayableSheet public,final  java.lang.String toString()
 METHOD com.openggf.level.objects.PlayerBoundShieldRewindRecreatable public  com.openggf.level.objects.AbstractObjectInstance recreateForRewind(com.openggf.level.objects.RewindRecreateContext)
@@ -17024,6 +17034,7 @@ NESTED com.openggf.game.DebugModeProvider com.openggf.game.DebugModeProvider$Spe
 NESTED com.openggf.game.DebugOverlayProvider com.openggf.game.DebugOverlayProvider$ArtViewerTarget
 NESTED com.openggf.game.DebugOverlayProvider com.openggf.game.DebugOverlayProvider$ObjectDebugLabel
 NESTED com.openggf.game.DebugOverlayProvider com.openggf.game.DebugOverlayProvider$TouchResponseDebugInfo
+NESTED com.openggf.game.DonorCapabilities com.openggf.game.DonorCapabilities$NativeFramePose
 NESTED com.openggf.game.EndingSpriteSet com.openggf.game.EndingSpriteSet$Surface
 NESTED com.openggf.game.GameRng com.openggf.game.GameRng$Flavour
 NESTED com.openggf.game.GameServiceBundle com.openggf.game.GameServiceBundle$Builder
@@ -18020,6 +18031,8 @@ RECORD-COMPONENT com.openggf.game.DemoLamppostState playerY int
 RECORD-COMPONENT com.openggf.game.DemoLamppostState rings int
 RECORD-COMPONENT com.openggf.game.DemoLamppostState waterHeight int
 RECORD-COMPONENT com.openggf.game.DemoLamppostState waterRoutine int
+RECORD-COMPONENT com.openggf.game.DonorCapabilities$NativeFramePose fallback com.openggf.game.CanonicalAnimation
+RECORD-COMPONENT com.openggf.game.DonorCapabilities$NativeFramePose key java.lang.String
 RECORD-COMPONENT com.openggf.game.EndingSpriteSet rgb int[]
 RECORD-COMPONENT com.openggf.game.EndingSpriteSet sprites com.openggf.game.StageSpriteSet
 RECORD-COMPONENT com.openggf.game.GameplayLaunchTeam main com.openggf.game.CharacterKey
@@ -19191,6 +19204,7 @@ RECORD-COMPONENT com.openggf.level.objects.PlayableSheetReader$PlayableSheet app
 RECORD-COMPONENT com.openggf.level.objects.PlayableSheetReader$PlayableSheet baseSheetV1 byte[]
 RECORD-COMPONENT com.openggf.level.objects.PlayableSheetReader$PlayableSheet frames java.util.List<com.openggf.level.objects.PlayableSheetReader$Frame>
 RECORD-COMPONENT com.openggf.level.objects.PlayableSheetReader$PlayableSheet meta com.openggf.level.objects.PlayableSheetReader$Meta
+RECORD-COMPONENT com.openggf.level.objects.PlayableSheetReader$PlayableSheet nativeFrames java.util.Map<java.lang.String,java.lang.Integer>
 RECORD-COMPONENT com.openggf.level.objects.ShieldProjectileMotion$Velocity x int
 RECORD-COMPONENT com.openggf.level.objects.ShieldProjectileMotion$Velocity y int
 RECORD-COMPONENT com.openggf.level.objects.SolidContact movingInto boolean
@@ -21945,6 +21959,7 @@ TYPE record public,static,final com.openggf.game.CharacterPresentation$SignFrame
 TYPE record public,static,final com.openggf.game.CheckpointState$RewindState SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.DebugOverlayProvider$ArtViewerTarget SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.DebugOverlayProvider$ObjectDebugLabel SUPER java.lang.Record
+TYPE record public,static,final com.openggf.game.DonorCapabilities$NativeFramePose SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.GameplayObservation$Player SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.MusicReference$Namespaced SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.MusicReference$Stock SUPER java.lang.Record
@@ -22470,6 +22485,7 @@ TYPE-ANNOTATION com.openggf.game.DebugOverlayProvider$TouchResponseDebugInfo @co
 TYPE-ANNOTATION com.openggf.game.DelegatingZoneRegistry @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.DemoLamppostState @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.DonorCapabilities @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.DonorCapabilities$NativeFramePose @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.DynamicWaterHandler @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.EmeraldRewardKind @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.EndingPhase @com.openggf.game.ModApi

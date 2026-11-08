@@ -34,3 +34,17 @@ step. End metadata controls playback; legacy step-loop flags must occur only
 on the last step. All indices, counts, targets and speed/slope combinations
 are validated. Canonical scripts stay unbound until the host installs the art;
 raw native animation IDs are never serialized in this table.
+
+### Playable native-frame aliases (NFRM)
+
+Optional GGFP v2 section after ANIM/APND: u16 pose count (0–1024), followed by
+UTF-8 u16-length semantic key and u16 authored frame index, sorted by unsigned
+UTF-8 bytes. Keys match `[a-z][a-z0-9-]*/[a-z0-9-]+`, maximum 128 characters;
+targets must exist in FRAM. Duplicate keys, trailing bytes and dangling targets
+are rejected. YAML names this map `nativeFrames`. No game name selects behavior
+in shared runtime: the host provides its native mapping-byte vocabulary.
+
+Alias targets may be frames unreferenced by ANIM. The native-pose authoring
+handoff uses `NATIVE_POSE` for such images; this tag is not serialized as a
+canonical animation. The assembler packs their normal BASE/FRAM entries and
+resolves symbolic `nativeFrames` IDs.

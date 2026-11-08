@@ -36,6 +36,19 @@ class TestPlayableSheetMaterializer {
     }
 
     @Test
+    void nativePoseTableRoundTripsAndRejectsDanglingTargets() throws Exception {
+        var sheet = new PlayableSheetReader.PlayableSheet(base(), new PlayableSheetReader.Meta(0, 1, 0),
+                List.of(new PlayableSheetReader.Frame(0, 0, 1, 1, List.of(new PlayableSheetReader.DplcRun(0, 1, 0)))),
+                Map.of("WAIT", new PlayableSheetReader.Animation(List.of(new PlayableSheetReader.AnimationStep(0, 1, true)))),
+                Map.of(), Map.of("hang/front", 0));
+        assertEquals(sheet, PlayableSheetReader.read(PlayableSheetWriter.write(sheet)));
+        assertThrows(UnsupportedOperationException.class, () -> sheet.nativeFrames().put("hang/back", 0));
+        var invalid = new PlayableSheetReader.PlayableSheet(sheet.baseSheetV1(), sheet.meta(), sheet.frames(), sheet.animations(),
+                sheet.appendages(), Map.of("hang/front", 1));
+        assertThrows(java.io.IOException.class, () -> PlayableSheetWriter.write(invalid));
+    }
+
+    @Test
     void rejectsLoopMarkerBeforeFinalAnimationStep() throws Exception {
         var sheet = new PlayableSheetReader.PlayableSheet(base(),
                 new PlayableSheetReader.Meta(0, 1, 0),

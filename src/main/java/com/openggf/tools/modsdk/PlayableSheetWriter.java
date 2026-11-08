@@ -23,9 +23,17 @@ public final class PlayableSheetWriter {
         byte[] appendages = sheet.appendages().isEmpty() ? null : appendages(sheet.appendages());
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
         try (DataOutputStream out = new DataOutputStream(bytes)) {
-            out.writeBytes("GGFP"); out.writeShort(2); out.writeShort(appendages == null ? 4 : 5);
+            out.writeBytes("GGFP"); out.writeShort(2); out.writeShort(4 + (appendages == null ? 0 : 1) + (sheet.nativeFrames().isEmpty() ? 0 : 1));
             section(out, "BASE", base); section(out, "META", meta); section(out, "FRAM", frames);
             section(out, "ANIM", animations); if (appendages != null) section(out, "APND", appendages);
+            if (!sheet.nativeFrames().isEmpty()) section(out, "NFRM", payload(data -> {
+                data.writeShort(sheet.nativeFrames().size());
+                for (String key : sortedKeys(sheet.nativeFrames())) {
+                    writeString(data, key);
+                    requireU16(sheet.nativeFrames().get(key), "native pose frame");
+                    data.writeShort(sheet.nativeFrames().get(key));
+                }
+            }));
         }
         byte[] encoded = bytes.toByteArray();
         if (encoded.length > ModInputLimits.DEFAULT_MAX_ASSET_BYTES) throw new IllegalArgumentException("playable sheet exceeds production byte limit");

@@ -40,7 +40,8 @@ public final class PlayableArtConverter {
                         List.of(new PlayableSheetReader.DplcRun(first, count, first))));
             }
             Map<String, PlayableSheetReader.Animation> animations = new LinkedHashMap<>();
-            var table = new ArtConverter().readManifest(sheetManifest).animations();
+            var manifest = new ArtConverter().readManifest(sheetManifest);
+            var table = manifest.animations();
             if (table == null || !table.containsKey("WAIT"))
                 throw new IllegalArgumentException("Playable animation table requires WAIT");
             for (var entry : table.entrySet()) {
@@ -68,7 +69,7 @@ public final class PlayableArtConverter {
                     () -> new IllegalArgumentException("Playable art requires a 16-color palette"));
             byte[] encoded = PlayableSheetWriter.write(new PlayableSheetReader.PlayableSheet(
                     ggfs, new PlayableSheetReader.Meta(0, bankSize, paletteLine),
-                    frames, animations, Map.of()));
+                    frames, animations, Map.of(), manifest.nativeFrames() == null ? Map.of() : manifest.nativeFrames()));
             if (Files.exists(output)) throw new IOException("Playable art output already exists: " + output);
             Path staging = Files.createTempFile(parent, ".ggfmod-playable-", ".ggfp");
             boolean published = false;

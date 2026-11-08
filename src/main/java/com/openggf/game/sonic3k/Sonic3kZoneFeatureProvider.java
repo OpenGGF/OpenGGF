@@ -1435,8 +1435,7 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
                 || !com.openggf.game.session.GameplayRunRouting.currentPolicy().zoneIntros()) {
             return false;
         }
-        String mainCharacter = ActiveGameplayTeamResolver.resolveMainCharacterCode(configService);
-        return "sonic".equalsIgnoreCase(mainCharacter);
+        return Sonic3kBootstrapResolver.isSonicMain(configService);
     }
 
     @Override

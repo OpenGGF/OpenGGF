@@ -156,7 +156,8 @@ def build(recipe_path, review=None):
                             notes=frame.get('notes','')))
     (root/'frames.yaml').write_text(json.dumps(dict(format='openggf-playable-art-handoff-1',
         palette=recipe['palette'], facing='right', tick_rate=60, frames=records,
-        **({'scripts': recipe['scripts']} if 'scripts' in recipe else {})), indent=2)+'\n')
+        **({'scripts': recipe['scripts']} if 'scripts' in recipe else {}),
+        **({'nativeFrames': recipe['nativeFrames']} if 'nativeFrames' in recipe else {})), indent=2)+'\n')
     if review:
         make_review(images, records, Path(review), colors)
     print(f'Built {len(records)} indexed frames; one shared 15-colour palette + transparent index 0')

@@ -196,7 +196,7 @@ The build reruns assembly before conversion. The atlas uses 8-bit indexed PNG
 (the converter codec requires 8-bit storage), with only the same 16 indices. Replace/rebuild source frames, then
 rerun it; no sheet coordinates are maintained by hand. Assembly preserves indexed
 pixels and hotspots, pads each crop to tiles and cuts pieces at 32 pixels (4 tiles).
-The current 98-frame sheet uses at most 36 tiles per frame. The converter's bank
+The current 106-frame sheet uses at most 36 tiles per frame. The converter's bank
 report is the total resident source bank, not a 36-tile streaming bank: its current
 full-frame runs retain distinct destination offsets. Do not confuse the two costs.
 
@@ -363,3 +363,50 @@ bank. S2 photos use `Ending Photos.bin` on line 0 after ObjC9's copy; S1 continu
 floor pieces select their own palette line. S3K transformation references accept
 an explicit native Super cycle phase (default 6, first steady phase); a static
 reference cannot certify every fade/Hyper cycle colour.
+
+## Object-owned native hang poses
+
+MICA's three HANG rows were redrawn from S3K normal-player mapping $90–$92 using
+the native-pose method and the approved concept. `native-pose-core.json` records
+the exact prompt, generation hash, native reference label, tight size and anchor.
+The original rows are in `recipe.json`; regeneration needs no reference art or
+raw generation. The assembler's `nativeFrames` table binds semantic `hang/0`–
+`hang/2`; host vocabulary translation and canonical fallbacks are documented in
+`docs/modding/characters.md` and the W2 follow-up inventory in the design.
+
+## Steep contour completion
+
+All twelve steep WALK/RUN recipes complete the previously clipped hood crown
+and left/back attachment with original indexed pixel rows. The authored canvas
+expands above/behind the character and the hotspot moves with it; the engine
+centre and sole support remain fixed. This is contour drawing, without scaling
+or rotating the finished frame. `native-pose-core.json` retains the original
+native reference alongside the expanded authored geometry. Palette, inside ink,
+regeneration, tile bounds and native support regression checks pass. Lower tail
+crop edges in `walk-steep-00`, `walk-steep-04`, `run-steep-01` and `run-steep-02`
+are completed as tapered jade tips on taller canvases; their anchors and X sole
+support remain fixed. The indexed recipe rows are the reproducible source.
+
+The optional recipe/`frames.yaml` `nativeFrames` map uses semantic keys and
+symbolic frame IDs, e.g. `"hang/0": "hang-00"`. Reduction preserves the map;
+assembly rejects unknown IDs and converts known IDs to packed mapping indices.
+MICA also binds existing WAIT/ROLL art explicitly. A raw phase with no matching
+art uses the host descriptor's documented canonical fallback.
+
+## Reuse existing normal-mapping art
+
+```sh
+python3 examples/mica-and-talon/art/mica/reuse_native_art.py
+python3 tools/modding/playable_art/pipeline.py examples/mica-and-talon/art/mica/recipe.json
+python3 tools/modding/playable_art/assemble.py examples/mica-and-talon/art/mica examples/mica-and-talon/src/main/mod
+```
+
+This preserves the original MICA pixels/hotspots of ending mappings $BA/$CA/$CB
+the five normal-Sonic slot mappings $96–$9A, and continue player mappings
+$24/$55–$57/$59–$5A in the normal sheet. It reads no
+ROM/reference pixels. Fourteen `NATIVE_POSE` handoff frames are packed without an
+ANIM script; that tag is not a `CanonicalAnimation` member. The sheet now has
+112 frames, 18 animations and the unchanged maximum 36 tiles per frame.
+`native-pose-core.json` records original asset hashes; verification rejects stale
+reuse after those assets change. The shared palette and visible pixels remain
+unchanged; transparent margins are cropped with the matching hotspot shift.
