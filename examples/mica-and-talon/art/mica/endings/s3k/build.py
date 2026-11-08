@@ -114,6 +114,22 @@ def review(dest,group,frames):
  for scale in (1,4):sheet.resize((w*scale,sheet.height*scale),Image.Resampling.NEAREST).save(dest/f'{group}-{scale}x.png')
 
 
+ # Disposable animation uses native step timings (GIF rounds to 10ms).
+ if group in ('float2','transformation','trio','passengers','float2-gilded'):
+  if group=='transformation':seq=TIMINGS[group]['frames'];ticks=3
+  elif group=='trio':seq=[1,1,3,4];ticks=8
+  else:seq=[f['index'] for f in frames];ticks=2 if group=='passengers' else 8
+  pages=[]
+  for step,index in enumerate(seq):
+   f=next(f for f in frames if f['index']==index);im=Image.open(HERE/f['file'])
+   if f['form']=='gilded' or group=='float2-gilded':
+    colors=GOLD['cycles']['s3k']['frames'][(step*ticks//7)%3]
+    im.putpalette(sum(colors,[])+[0]*720)
+   ref=reference(f).convert('RGBA');im=im.convert('RGBA');page=Image.new('RGB',(160,64),'#9299a1')
+   page.paste(im,(40-im.width//2,32-im.height//2),im);page.paste(ref,(120-ref.width//2,32-ref.height//2),ref)
+   pages.append(page.resize((640,256),Image.Resampling.NEAREST))
+  pages[0].save(dest/f'{group}.gif',save_all=True,append_images=pages[1:],duration=round(ticks*1000/60/10)*10,loop=0,disposal=2)
+
 def draw(f):
  w,h=f['dimensions'];im=b.indexed((w,h));d=ImageDraw.Draw(im)
  def poly(pts,c=4,o=1):d.polygon([(round(x),round(y)) for x,y in pts],fill=c,outline=o)
@@ -223,20 +239,24 @@ def draw(f):
    else:
     glove(cx-9,20,.65);glove(cx+9,20,.65)
  elif f['group']=='transformation':
-  phase=f['index']-210;cx=w/2;cy=14 if phase else 12
+  phase=f['index']-210;cx=13 if phase>=3 else w/2;cy=20 if phase else 10
   tail([(cx-3,cy+10),(cx-11,cy+13),(cx-13,cy+20),(cx-7,cy+18),(cx+2,cy+14)])
   poly([(cx-6,cy+4),(cx+5,cy+4),(cx+7,cy+16),(cx,cy+20),(cx-7,cy+16)],4)
   ellipse((cx-3,cy+6,cx+4,cy+16),7)
   for x,dy in [(-5,0),(5,-1)]:
    poly([(cx+x-2,cy+15),(cx+x+2,cy+15),(cx+x+2,cy+23+dy),(cx+x-3,cy+23+dy)],3)
-   boot(cx+x,cy+23+dy,.72)
+   boot(cx+x,(26+dy) if not phase else cy+23+dy,.72)
   if phase>=2:
    for side in (-1,1):
     poly([(cx+side*4,cy+7),(cx+side*11,cy+1),(cx+side*12,cy+5),(cx+side*6,cy+12)],4)
-    glove(cx+side*11,cy+(1 if phase%2 else 3),.75)
+    glove(cx+side*9,cy+(1 if phase%2 else 5),.75)
   else:
    for side in (-1,1):glove(cx+side*7,cy+10,.75)
-  head(cx,cy,.72 if phase==0 else .88,1,phase)
+  head(cx,cy,.62 if phase==0 else .88,1,phase)
+  if phase>=2:
+   glove(cx-9,cy+7,.65);glove(cx+9,cy+7,.65)
+   poly([(cx+5,cy+2),(cx+10,cy+2),(cx+8,cy+6),(cx+5,cy+4)],1)
+   line([(cx+6,cy+5),(cx+8,cy+5)],14)
  else:
   phase=f['index']-1 if f['group']=='trio' else 0;cx=16 if w==32 else 23;cy=13
   tail([(cx-4,cy+9),(cx-12,cy+13),(cx-14,cy+23),(cx-8,cy+20),(cx+1,cy+15)])
@@ -279,8 +299,17 @@ def verify(frames):
   im=Image.open(HERE/f['file']);assert im.mode=='P' and im.info['transparency']==0
   assert im.getpalette()[:48]==sum(COLORS,[]) and max(im.get_flattened_data())<16
   assert list(im.size)==f['dimensions'] and im.getbbox()
-  # Native alias consistency within each static bank; dynamic frames have an
-  # independently streamed tile address space. Original tile capacity retained.
+  assert (HERE/f['file']).read_bytes()[24:26]==bytes([4,3]),'Expected 4-bit indexed PNG'
+  assert draw(f).tobytes()==im.tobytes(),(f['id'],'regeneration drift')
+  expected=next(x for x in definitions() if x['id']==f['id'])
+  for field in ('pieces','dimensions','hotspot','palette_line','native_source_label'):
+   assert f[field]==expected[field],(f['id'],field)
+  if f['group']!='passengers':
+   for y in range(im.height):
+    for x in range(im.width):
+     if im.getpixel((x,y)) and any(not (0<=x+dx<im.width and 0<=y+dy<im.height) or im.getpixel((x+dx,y+dy))==0 for dx,dy in ((0,1),(0,-1),(1,0),(-1,0))):assert im.getpixel((x,y))==1,(f['id'],'outline',x,y)
+  # Each replacement frame owns its tiles; the engine repacks static banks.
+  # Reject aliases within a frame; retain native dynamic tile capacities.
   bank=f['id'];tiles=banks.setdefault(bank,{})
   hx,hy=f['hotspot'];reconstructed=b.indexed(im.size)
   for x,y,w,h,t,fx,fy,*_ in f['pieces']:
@@ -304,7 +333,9 @@ def main():
   return
  path=HERE/'s3k.yaml'
  if a.verify:
-  verify(json.loads(path.read_text())['frames']);return
+  frames=json.loads(path.read_text())['frames']
+  assert {f['id'] for f in frames}=={f['id'] for f in definitions()} and len(frames)==25
+  verify(frames);return
  frames=definitions();chosen=[f for f in frames if not a.group or f['group']==a.group]
  for f in chosen:
   f['file']=f['id']+'.png';draw(f).save(HERE/f['file'],bits=4,transparency=0)
@@ -316,5 +347,7 @@ def main():
  if a.review:
   for group in GROUPS:
    subset=[f for f in chosen if f['group']==group]
-   if subset:review(a.review,group,subset)
+   if subset:
+    review(a.review,group,subset)
+    if group=='float2':review(a.review,'float2-gilded',[dict(f,form='gilded') for f in subset])
 if __name__=='__main__':main()

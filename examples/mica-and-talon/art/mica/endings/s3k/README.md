@@ -28,3 +28,21 @@ Palette line 2 belongs to reunion portraits; the other surfaces use line 0.
 Companions, plane art and the trio banner must retain their own palettes; the
 engine lane must reserve/remap shared lines rather than recolouring those assets.
 These are art handoff images, not runtime or ending-route certification.
+
+All 25 inventory drawings are present: five reunion portraits, two passengers,
+four trio eyecatch poses, eight shared Float2 views, one plane ride and five
+transformation poses. Float2 turns in depth through side/front/back views; it
+is not a screen-space tumble. Transformation retains the native repeated-frame
+script rather than treating repeats as new drawings. Reviews include GIFs of
+Float2, its Gilded palette variant, passengers, trio and transformation (GIF
+frame durations round to 10ms).
+
+Review repairs reduced/repositioned reunion hands and boots to fit the native
+piece union, replaced a rejected Float2 tumble with depth turns, and moved the
+transformation gloves forward of the hood. Weak points: small 8px passenger
+facial details reduce to colour clusters; trio's idle change is mostly a boot
+lift; Float2 rear views have restrained depth changes; gold crest flare is
+rounder and less expansive than native Super Sonic's quills. Final bank packing,
+shared palette-line allocation, Gilded fade/controller binding, and real scene
+background/contact checks remain engine-lane work. No engine code or other
+manifest is changed by this lane.

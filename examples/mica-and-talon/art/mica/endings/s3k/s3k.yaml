@@ -1939,6 +1939,366 @@
       ],
       "tile_budget": 17,
       "file": "ride-ba.png"
+    },
+    {
+      "id": "transform-d2",
+      "group": "transformation",
+      "frame_set": "s3k_transform",
+      "index": 210,
+      "native_source_label": "word_148130",
+      "native_art_label": "ArtUnc_Sonic",
+      "mapping_source": "docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm",
+      "dimensions": [
+        24,
+        32
+      ],
+      "hotspot": [
+        12,
+        16
+      ],
+      "bounds_px": [
+        -12,
+        -16,
+        24,
+        32
+      ],
+      "pieces": [
+        [
+          -12,
+          -16,
+          3,
+          4,
+          0,
+          0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "palette_line": 0,
+      "relative_piece_palette_lines": [
+        0
+      ],
+      "palette": "../../palette.yaml",
+      "form": "gilded",
+      "dplc_label": "word_148E96",
+      "dplc_entries": [
+        [
+          12,
+          3868
+        ]
+      ],
+      "tile_budget": 12,
+      "file": "transform-d2.png"
+    },
+    {
+      "id": "transform-d3",
+      "group": "transformation",
+      "frame_set": "s3k_transform",
+      "index": 211,
+      "native_source_label": "word_148138",
+      "native_art_label": "ArtUnc_Sonic",
+      "mapping_source": "docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm",
+      "dimensions": [
+        32,
+        48
+      ],
+      "hotspot": [
+        13,
+        24
+      ],
+      "bounds_px": [
+        -13,
+        -24,
+        32,
+        48
+      ],
+      "pieces": [
+        [
+          -13,
+          -24,
+          3,
+          2,
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -13,
+          -8,
+          4,
+          2,
+          6,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -13,
+          8,
+          3,
+          2,
+          14,
+          0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "palette_line": 0,
+      "relative_piece_palette_lines": [
+        0
+      ],
+      "palette": "../../palette.yaml",
+      "form": "gilded",
+      "dplc_label": "word_148E9A",
+      "dplc_entries": [
+        [
+          6,
+          3880
+        ],
+        [
+          8,
+          3886
+        ],
+        [
+          6,
+          3894
+        ]
+      ],
+      "tile_budget": 20,
+      "file": "transform-d3.png"
+    },
+    {
+      "id": "transform-d4",
+      "group": "transformation",
+      "frame_set": "s3k_transform",
+      "index": 212,
+      "native_source_label": "word_14814C",
+      "native_art_label": "ArtUnc_Sonic",
+      "mapping_source": "docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm",
+      "dimensions": [
+        32,
+        48
+      ],
+      "hotspot": [
+        16,
+        24
+      ],
+      "bounds_px": [
+        -16,
+        -24,
+        32,
+        48
+      ],
+      "pieces": [
+        [
+          -16,
+          -24,
+          4,
+          4,
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -16,
+          8,
+          3,
+          2,
+          16,
+          0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "palette_line": 0,
+      "relative_piece_palette_lines": [
+        0
+      ],
+      "palette": "../../palette.yaml",
+      "form": "gilded",
+      "dplc_label": "word_148EA2",
+      "dplc_entries": [
+        [
+          16,
+          3900
+        ],
+        [
+          6,
+          3916
+        ]
+      ],
+      "tile_budget": 22,
+      "file": "transform-d4.png"
+    },
+    {
+      "id": "transform-d5",
+      "group": "transformation",
+      "frame_set": "s3k_transform",
+      "index": 213,
+      "native_source_label": "word_14815A",
+      "native_art_label": "ArtUnc_Sonic",
+      "mapping_source": "docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm",
+      "dimensions": [
+        32,
+        48
+      ],
+      "hotspot": [
+        16,
+        24
+      ],
+      "bounds_px": [
+        -16,
+        -24,
+        32,
+        48
+      ],
+      "pieces": [
+        [
+          -16,
+          -24,
+          3,
+          3,
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -16,
+          0,
+          4,
+          1,
+          9,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -16,
+          8,
+          3,
+          2,
+          13,
+          0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "palette_line": 0,
+      "relative_piece_palette_lines": [
+        0
+      ],
+      "palette": "../../palette.yaml",
+      "form": "gilded",
+      "dplc_label": "word_148EA8",
+      "dplc_entries": [
+        [
+          9,
+          3922
+        ],
+        [
+          4,
+          3931
+        ],
+        [
+          6,
+          3935
+        ]
+      ],
+      "tile_budget": 19,
+      "file": "transform-d5.png"
+    },
+    {
+      "id": "transform-d6",
+      "group": "transformation",
+      "frame_set": "s3k_transform",
+      "index": 214,
+      "native_source_label": "word_14816E",
+      "native_art_label": "ArtUnc_Sonic",
+      "mapping_source": "docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm",
+      "dimensions": [
+        32,
+        48
+      ],
+      "hotspot": [
+        16,
+        24
+      ],
+      "bounds_px": [
+        -16,
+        -24,
+        32,
+        48
+      ],
+      "pieces": [
+        [
+          -16,
+          -24,
+          3,
+          3,
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -16,
+          0,
+          4,
+          1,
+          9,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -16,
+          8,
+          3,
+          2,
+          13,
+          0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "palette_line": 0,
+      "relative_piece_palette_lines": [
+        0
+      ],
+      "palette": "../../palette.yaml",
+      "form": "gilded",
+      "dplc_label": "word_148EB0",
+      "dplc_entries": [
+        [
+          9,
+          3941
+        ],
+        [
+          4,
+          3931
+        ],
+        [
+          6,
+          3935
+        ]
+      ],
+      "tile_budget": 19,
+      "file": "transform-d6.png"
     }
   ]
 }
