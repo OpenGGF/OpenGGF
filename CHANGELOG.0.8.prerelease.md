@@ -46,6 +46,7 @@ under the matching area heading; see the
   three hosts and S3K per-zone title/results-name letters. Surface wiring and
   packaging MICA’s presentation art remain pending. Stock S2 Tails-alone results
   now show the region-selected Miles/Tails name instead of Sonic.
+  S2 HUD life icons and small names now consume character presentations.
 - Character definitions can supply an authored underwater palette through the
   owner fault boundary; absent suppliers retain zone-aware host water derivation.
 - Playable mod sheets now declare canonical animation tables shared by Sonic 1,

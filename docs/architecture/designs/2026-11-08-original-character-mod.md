@@ -86,6 +86,8 @@ the S3K water zones.
 
 ### W4 — Character presentation contract (L)
 
+Status S2: HUD icon/name wired; results, special-stage results and 1-up pending.
+
 Status: API foundation delivered; group 1 follow-up in progress on
 `feature/ai-mica-presentation2`. ROM readers now inventory all three small HUD
 fonts and S3K per-zone title/results-name art. S2 stock Tails-alone results select
