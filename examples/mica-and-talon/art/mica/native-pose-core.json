@@ -1967,8 +1967,6 @@
       "material_box_change": true
     },
     "roll-00": {
-      "prompt": "Use case: style-transfer. Asset: one animation frame, transparent background, no text, no ground or shadow. Image 1 is the NATIVE POSE TARGET. Image 2 is the MICA CHARACTER IDENTITY reference (use jade version only). Redraw image 1 as the ORIGINAL pangolin MICA: jade overlapping rounded scales, sand-cream face and belly, coral-red boots with tan soles, white gloves, big friendly brown eye, scaled tail. New drawing, not a recolour. NO blue, spikes or Sonic facial features. Keep the exact body pose, limb placement, framing, silhouette SIZE and facing of image 1; fit tail within the same bounds. Crisp 16-bit pixel sprite, clean dark outline, flat clustered shading, simple readable eyes, no antialiasing. One sprite only, filling the same proportional bounds. Frame: roll-00 Curled spherical pangolin, same rotation and visible eye/glove/boot orientation as target, tail wrapped into scale armour. No spiky silhouette.",
-      "raw_sha256": "9ff630c57567fc57ab9a02e2ad0fceab6dc520e11a371b1721fd0e36bbe4f5b2",
       "reference": {
         "id": "roll-00",
         "size": [
@@ -1990,7 +1988,6 @@
         "label": "Map_Sonic_0836"
       },
       "geometry_reference": {
-        "id": "roll-00",
         "size": [
           29,
           30
@@ -1998,40 +1995,47 @@
         "hotspot": [
           15,
           15
-        ],
-        "bbox_relative_to_hotspot": [
-          -15,
-          -15,
-          14,
-          15
-        ],
-        "game": "S2",
-        "mapping": 61,
-        "label": "Map_Sonic_0836"
+        ]
       },
       "native_size": [
         29,
         30
       ],
-      "previous_size": [
-        29,
-        29
-      ],
-      "previous_hotspot": [
-        14,
-        14
-      ],
       "hotspot": [
         15,
         15
       ],
-      "source": "approved pilot adoption",
-      "cleanup": "accepted pilot roll-00 rotated in exact quarter turns with expanded bounds",
-      "material_box_change": false
+      "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, roll-00, candidate 3 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Match this exact native tumbling phase with rounded pangolin shell. Show small tucked coral boot/glove/cream face in the location of native details, rounded jade scale rows. Compact circular curled ball.\n\nWill reduce to native 29x30 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 3: prioritize small-scale readability and consistent identity with the approved face anchors, keeping exact phase placement.",
+      "raw_sha256": "fdff2c0f3a0c622db486f690e74f25c23c850305274670c3b0fc58c939a391c2",
+      "source": "built-in GPT Image, latest exposed; exact version unavailable",
+      "cleanup": "Transparent-margin crop; Lanczos native box reduction; unchanged fixed palette; inside silhouette ink. No painted pixels.",
+      "regeneration": {
+        "attempts": [
+          {
+            "attempt": 1,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, roll-00, candidate 1 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Match this exact native tumbling phase with rounded pangolin shell. Show small tucked coral boot/glove/cream face in the location of native details, rounded jade scale rows. Compact circular curled ball.\n\nWill reduce to native 29x30 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 1: strict fidelity to reference limb/boot positions and silhouette.",
+            "raw_sha256": "9144facc62a2850c8d3bcf56b11181ea9ce4acebc92d749b924b392e88bbf489",
+            "chosen": false
+          },
+          {
+            "attempt": 2,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, roll-00, candidate 2 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Match this exact native tumbling phase with rounded pangolin shell. Show small tucked coral boot/glove/cream face in the location of native details, rounded jade scale rows. Compact circular curled ball.\n\nWill reduce to native 29x30 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 2: prioritize coherent rounded hood/head, compact shapes and clean shading while keeping EXACT native limb pose.",
+            "raw_sha256": "9448ad83a3c1e772484ee5fb64f832b8740ab2e19f43dc7853f084257185b307",
+            "chosen": false
+          },
+          {
+            "attempt": 3,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, roll-00, candidate 3 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Match this exact native tumbling phase with rounded pangolin shell. Show small tucked coral boot/glove/cream face in the location of native details, rounded jade scale rows. Compact circular curled ball.\n\nWill reduce to native 29x30 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 3: prioritize small-scale readability and consistent identity with the approved face anchors, keeping exact phase placement.",
+            "raw_sha256": "fdff2c0f3a0c622db486f690e74f25c23c850305274670c3b0fc58c939a391c2",
+            "chosen": true
+          }
+        ],
+        "chosen": 3,
+        "reason": "Tucked face/boots at lower right, compact rounded scales and stable hood size; closest native initial curl phase.",
+        "review_directory": "$HOME/scratch/agent-tmp/mica-regen-20261108"
+      }
     },
     "roll-01": {
-      "prompt": "Use case: style-transfer. Asset: one animation frame, transparent background, no text, no ground or shadow. Image 1 is the NATIVE POSE TARGET. Image 2 is the MICA CHARACTER IDENTITY reference (use jade version only). Redraw image 1 as the ORIGINAL pangolin MICA: jade overlapping rounded scales, sand-cream face and belly, coral-red boots with tan soles, white gloves, big friendly brown eye, scaled tail. New drawing, not a recolour. NO blue, spikes or Sonic facial features. Keep the exact body pose, limb placement, framing, silhouette SIZE and facing of image 1; fit tail within the same bounds. Crisp 16-bit pixel sprite, clean dark outline, flat clustered shading, simple readable eyes, no antialiasing. One sprite only, filling the same proportional bounds. Frame: roll-01 Curled spherical pangolin, same rotation and visible eye/glove/boot orientation as target, tail wrapped into scale armour. No spiky silhouette.",
-      "raw_sha256": "1505f6e90ce0ae841fb70f8e08386d6e4776d7b532bcc0eca66cb64322980953",
       "reference": {
         "id": "roll-01",
         "size": [
@@ -2053,7 +2057,6 @@
         "label": "Map_Sonic_0840"
       },
       "geometry_reference": {
-        "id": "roll-01",
         "size": [
           30,
           29
@@ -2061,40 +2064,53 @@
         "hotspot": [
           15,
           15
-        ],
-        "bbox_relative_to_hotspot": [
-          -15,
-          -15,
-          15,
-          14
-        ],
-        "game": "S2",
-        "mapping": 62,
-        "label": "Map_Sonic_0840"
+        ]
       },
       "native_size": [
         30,
         29
       ],
-      "previous_size": [
-        29,
-        29
-      ],
-      "previous_hotspot": [
-        14,
-        14
-      ],
       "hotspot": [
         15,
         15
       ],
-      "source": "approved pilot adoption",
-      "cleanup": "accepted pilot roll-00 rotated in exact quarter turns with expanded bounds",
-      "material_box_change": true
+      "prompt": "Use case: style-transfer. Generate an original MICA pangolin curled SPIN sprite by redrawing the exact pose in input 1. Input 1's pose/composition OVERRIDES the standing character reference in input 2; inputs 3/4 define only face palette/style. Replace hedgehog quills with a smooth round hood of overlapping rounded jade pangolin scales; coral hiking boot with tan sole instead of striped red shoe. Cream muzzle, white glove. Preserve every limb's location in input 1. The coral boots and white glove lie along the LEFT edge, muzzle tucked LOWER LEFT, jade shell dominates the RIGHT. Face is sideways/downward and mostly hidden. NO upright forward-facing head. The original character must be tumbling, not a portrait pasted on a ball! Compact curled circular silhouette, hard simple 16-bit pixel clusters, black outline, top-left shading, transparent background. One sprite, no ground/text/motion lines. Candidate 4, correction of rejected upright-face candidates.",
+      "raw_sha256": "26265e47d5c42de1fc46c0e7ebafcc91b1257d6ae55cd321cf4af36599bf57a8",
+      "source": "built-in GPT Image, latest exposed; exact version unavailable",
+      "cleanup": "Transparent-margin crop; Lanczos native box reduction; unchanged fixed palette; inside silhouette ink. No painted pixels.",
+      "regeneration": {
+        "attempts": [
+          {
+            "attempt": 1,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, roll-01, candidate 1 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Match this exact native tumbling phase with rounded pangolin shell. Show small tucked coral boot/glove/cream face in the location of native details, rounded jade scale rows. Compact circular curled ball.\n\nWill reduce to native 30x29 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 1: strict fidelity to reference limb/boot positions and silhouette.",
+            "raw_sha256": "969dca33a6d9a5a6b8fd19567b2888853f690d04e345a9d457e7d1789c7378f9",
+            "chosen": false
+          },
+          {
+            "attempt": 2,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, roll-01, candidate 2 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Match this exact native tumbling phase with rounded pangolin shell. Show small tucked coral boot/glove/cream face in the location of native details, rounded jade scale rows. Compact circular curled ball.\n\nWill reduce to native 30x29 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 2: prioritize coherent rounded hood/head, compact shapes and clean shading while keeping EXACT native limb pose.",
+            "raw_sha256": "5490aff6c52e5c6e2f1b10d7432acb5aa54b2c3a4c160e479fb5ceb32cfd8f2a",
+            "chosen": false
+          },
+          {
+            "attempt": 3,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, roll-01, candidate 3 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Match this exact native tumbling phase with rounded pangolin shell. Show small tucked coral boot/glove/cream face in the location of native details, rounded jade scale rows. Compact circular curled ball.\n\nWill reduce to native 30x29 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 3: prioritize small-scale readability and consistent identity with the approved face anchors, keeping exact phase placement.",
+            "raw_sha256": "b7561c7ec2a1195d6e592e6d163540c8c3d269d9798403a4ebe8647a7ecb431e",
+            "chosen": false
+          },
+          {
+            "attempt": 4,
+            "prompt": "Use case: style-transfer. Generate an original MICA pangolin curled SPIN sprite by redrawing the exact pose in input 1. Input 1's pose/composition OVERRIDES the standing character reference in input 2; inputs 3/4 define only face palette/style. Replace hedgehog quills with a smooth round hood of overlapping rounded jade pangolin scales; coral hiking boot with tan sole instead of striped red shoe. Cream muzzle, white glove. Preserve every limb's location in input 1. The coral boots and white glove lie along the LEFT edge, muzzle tucked LOWER LEFT, jade shell dominates the RIGHT. Face is sideways/downward and mostly hidden. NO upright forward-facing head. The original character must be tumbling, not a portrait pasted on a ball! Compact curled circular silhouette, hard simple 16-bit pixel clusters, black outline, top-left shading, transparent background. One sprite, no ground/text/motion lines. Candidate 4, correction of rejected upright-face candidates.",
+            "raw_sha256": "26265e47d5c42de1fc46c0e7ebafcc91b1257d6ae55cd321cf4af36599bf57a8",
+            "chosen": true
+          }
+        ],
+        "chosen": 4,
+        "reason": "Generated correction moves tucked boots/glove/face to native left/lower-left quadrant; rejects earlier upright-face candidates. Checked in sequence with quiet blur.",
+        "review_directory": "$HOME/scratch/agent-tmp/mica-regen-20261108"
+      }
     },
     "roll-02": {
-      "prompt": "Use case: style-transfer. Asset: one animation frame, transparent background, no text, no ground or shadow. Image 1 is the NATIVE POSE TARGET. Image 2 is the MICA CHARACTER IDENTITY reference (use jade version only). Redraw image 1 as the ORIGINAL pangolin MICA: jade overlapping rounded scales, sand-cream face and belly, coral-red boots with tan soles, white gloves, big friendly brown eye, scaled tail. New drawing, not a recolour. NO blue, spikes or Sonic facial features. Keep the exact body pose, limb placement, framing, silhouette SIZE and facing of image 1; fit tail within the same bounds. Crisp 16-bit pixel sprite, clean dark outline, flat clustered shading, simple readable eyes, no antialiasing. One sprite only, filling the same proportional bounds. Frame: roll-02 Curled spherical pangolin, same rotation and visible eye/glove/boot orientation as target, tail wrapped into scale armour. No spiky silhouette.",
-      "raw_sha256": "0575154cfccbc98d02947c4843a4ec705e1d0364eae51328abe80e0b5252bc7e",
       "reference": {
         "id": "roll-02",
         "size": [
@@ -2116,7 +2132,6 @@
         "label": "Map_Sonic_084A"
       },
       "geometry_reference": {
-        "id": "roll-02",
         "size": [
           29,
           30
@@ -2124,40 +2139,53 @@
         "hotspot": [
           14,
           15
-        ],
-        "bbox_relative_to_hotspot": [
-          -14,
-          -15,
-          15,
-          15
-        ],
-        "game": "S2",
-        "mapping": 63,
-        "label": "Map_Sonic_084A"
+        ]
       },
       "native_size": [
         29,
         30
       ],
-      "previous_size": [
-        29,
-        29
-      ],
-      "previous_hotspot": [
-        14,
-        14
-      ],
       "hotspot": [
         14,
         15
       ],
-      "source": "approved pilot adoption",
-      "cleanup": "accepted pilot roll-00 rotated in exact quarter turns with expanded bounds",
-      "material_box_change": false
+      "prompt": "Use case: style-transfer. Generate an original MICA pangolin curled SPIN sprite by redrawing the exact pose in input 1. Input 1's pose/composition OVERRIDES the standing character reference in input 2; inputs 3/4 define only face palette/style. Replace hedgehog quills with a smooth round hood of overlapping rounded jade pangolin scales; coral hiking boot with tan sole instead of striped red shoe. Cream muzzle, white glove. Preserve every limb's location in input 1. Coral boot at TOP LEFT, white glove immediately below at UPPER LEFT, tiny tucked cream muzzle on LEFT, shell dominates RIGHT and BOTTOM. NO upright head on right. The original character must be tumbling, not a portrait pasted on a ball! Compact curled circular silhouette, hard simple 16-bit pixel clusters, black outline, top-left shading, transparent background. One sprite, no ground/text/motion lines. Candidate 4, correction of rejected upright-face candidates.",
+      "raw_sha256": "2b85c37983bbba3fa6df086a13c05a39f01b3163efd7a68a17c756cd007cfbcc",
+      "source": "built-in GPT Image, latest exposed; exact version unavailable",
+      "cleanup": "Transparent-margin crop; Lanczos native box reduction; unchanged fixed palette; inside silhouette ink. No painted pixels.",
+      "regeneration": {
+        "attempts": [
+          {
+            "attempt": 1,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, roll-02, candidate 1 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Match this exact native tumbling phase with rounded pangolin shell. Show small tucked coral boot/glove/cream face in the location of native details, rounded jade scale rows. Compact circular curled ball.\n\nWill reduce to native 29x30 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 1: strict fidelity to reference limb/boot positions and silhouette.",
+            "raw_sha256": "069591e60d8b2f9024102b54ce58c46e4914ad7dc0715bfa63938e0910cca58f",
+            "chosen": false
+          },
+          {
+            "attempt": 2,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, roll-02, candidate 2 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Match this exact native tumbling phase with rounded pangolin shell. Show small tucked coral boot/glove/cream face in the location of native details, rounded jade scale rows. Compact circular curled ball.\n\nWill reduce to native 29x30 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 2: prioritize coherent rounded hood/head, compact shapes and clean shading while keeping EXACT native limb pose.",
+            "raw_sha256": "d294a5beb3ae84cb23d60e09ecad29a1876a2566bb6cb59695653a1b3c5ac4c2",
+            "chosen": false
+          },
+          {
+            "attempt": 3,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, roll-02, candidate 3 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Match this exact native tumbling phase with rounded pangolin shell. Show small tucked coral boot/glove/cream face in the location of native details, rounded jade scale rows. Compact circular curled ball.\n\nWill reduce to native 29x30 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 3: prioritize small-scale readability and consistent identity with the approved face anchors, keeping exact phase placement.",
+            "raw_sha256": "bbd9d01b4a18e223267c8fa8ba169f6c0bd37576daa31ac8ca9323e7ab6beb6a",
+            "chosen": false
+          },
+          {
+            "attempt": 4,
+            "prompt": "Use case: style-transfer. Generate an original MICA pangolin curled SPIN sprite by redrawing the exact pose in input 1. Input 1's pose/composition OVERRIDES the standing character reference in input 2; inputs 3/4 define only face palette/style. Replace hedgehog quills with a smooth round hood of overlapping rounded jade pangolin scales; coral hiking boot with tan sole instead of striped red shoe. Cream muzzle, white glove. Preserve every limb's location in input 1. Coral boot at TOP LEFT, white glove immediately below at UPPER LEFT, tiny tucked cream muzzle on LEFT, shell dominates RIGHT and BOTTOM. NO upright head on right. The original character must be tumbling, not a portrait pasted on a ball! Compact curled circular silhouette, hard simple 16-bit pixel clusters, black outline, top-left shading, transparent background. One sprite, no ground/text/motion lines. Candidate 4, correction of rejected upright-face candidates.",
+            "raw_sha256": "2b85c37983bbba3fa6df086a13c05a39f01b3163efd7a68a17c756cd007cfbcc",
+            "chosen": true
+          }
+        ],
+        "chosen": 4,
+        "reason": "Generated correction moves tucked boots/glove/face to native upper-left quadrant; rejects earlier upright-face candidates. Checked in sequence with quiet blur.",
+        "review_directory": "$HOME/scratch/agent-tmp/mica-regen-20261108"
+      }
     },
     "roll-03": {
-      "prompt": "Use case: style-transfer. Asset: one animation frame, transparent background, no text, no ground or shadow. Image 1 is the NATIVE POSE TARGET. Image 2 is the MICA CHARACTER IDENTITY reference (use jade version only). Redraw image 1 as the ORIGINAL pangolin MICA: jade overlapping rounded scales, sand-cream face and belly, coral-red boots with tan soles, white gloves, big friendly brown eye, scaled tail. New drawing, not a recolour. NO blue, spikes or Sonic facial features. Keep the exact body pose, limb placement, framing, silhouette SIZE and facing of image 1; fit tail within the same bounds. Crisp 16-bit pixel sprite, clean dark outline, flat clustered shading, simple readable eyes, no antialiasing. One sprite only, filling the same proportional bounds. Frame: roll-03 Curled spherical pangolin, same rotation and visible eye/glove/boot orientation as target, tail wrapped into scale armour. No spiky silhouette.",
-      "raw_sha256": "022593c23a1c89ef56f96491d58259f7aaa71b7303de9842f223a789d0187f41",
       "reference": {
         "id": "roll-03",
         "size": [
@@ -2179,7 +2207,6 @@
         "label": "Map_Sonic_0854"
       },
       "geometry_reference": {
-        "id": "roll-03",
         "size": [
           30,
           29
@@ -2187,36 +2214,51 @@
         "hotspot": [
           15,
           14
-        ],
-        "bbox_relative_to_hotspot": [
-          -15,
-          -14,
-          15,
-          15
-        ],
-        "game": "S2",
-        "mapping": 64,
-        "label": "Map_Sonic_0854"
+        ]
       },
       "native_size": [
         30,
         29
       ],
-      "previous_size": [
-        29,
-        29
-      ],
-      "previous_hotspot": [
-        14,
-        14
-      ],
       "hotspot": [
         15,
         14
       ],
-      "source": "approved pilot adoption",
-      "cleanup": "accepted pilot roll-00 rotated in exact quarter turns with expanded bounds",
-      "material_box_change": true
+      "prompt": "Use case: style-transfer. Generate an original MICA pangolin curled SPIN sprite by redrawing the exact pose in input 1. Input 1's pose/composition OVERRIDES the standing character reference in input 2; inputs 3/4 define only face palette/style. Replace hedgehog quills with a smooth round hood of overlapping rounded jade pangolin scales; coral hiking boot with tan sole instead of striped red shoe. Cream muzzle, white glove. Preserve every limb's location in input 1. Coral boot at TOP RIGHT, white glove directly underneath at UPPER RIGHT, tiny cream face tucked into UPPER RIGHT behind glove, jade shell dominates LEFT and BOTTOM. Character is curled upside down; NO upright head. The original character must be tumbling, not a portrait pasted on a ball! Compact curled circular silhouette, hard simple 16-bit pixel clusters, black outline, top-left shading, transparent background. One sprite, no ground/text/motion lines. Candidate 4, correction of rejected upright-face candidates.",
+      "raw_sha256": "e2d9f927e9e513e68fdd8374e2d68160c4420067c121457c38e624c4228c1563",
+      "source": "built-in GPT Image, latest exposed; exact version unavailable",
+      "cleanup": "Transparent-margin crop; Lanczos native box reduction; unchanged fixed palette; inside silhouette ink. No painted pixels.",
+      "regeneration": {
+        "attempts": [
+          {
+            "attempt": 1,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, roll-03, candidate 1 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Match this exact native tumbling phase with rounded pangolin shell. Show small tucked coral boot/glove/cream face in the location of native details, rounded jade scale rows. Compact circular curled ball.\n\nWill reduce to native 30x29 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 1: strict fidelity to reference limb/boot positions and silhouette.",
+            "raw_sha256": "76969b796147b011537570145b696b4235b900a5d4982a4216ba9e4f32a5500c",
+            "chosen": false
+          },
+          {
+            "attempt": 2,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, roll-03, candidate 2 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Match this exact native tumbling phase with rounded pangolin shell. Show small tucked coral boot/glove/cream face in the location of native details, rounded jade scale rows. Compact circular curled ball.\n\nWill reduce to native 30x29 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 2: prioritize coherent rounded hood/head, compact shapes and clean shading while keeping EXACT native limb pose.",
+            "raw_sha256": "561560f615b7eb6fdb2b0a5c14266f8893b22788b8a8ece6f534d23266156d9e",
+            "chosen": false
+          },
+          {
+            "attempt": 3,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, roll-03, candidate 3 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Match this exact native tumbling phase with rounded pangolin shell. Show small tucked coral boot/glove/cream face in the location of native details, rounded jade scale rows. Compact circular curled ball.\n\nWill reduce to native 30x29 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 3: prioritize small-scale readability and consistent identity with the approved face anchors, keeping exact phase placement.",
+            "raw_sha256": "883d69aa681aaa19a876d67d14a10cc0a6e37a05905087a4c1a26ad758cabaf2",
+            "chosen": false
+          },
+          {
+            "attempt": 4,
+            "prompt": "Use case: style-transfer. Generate an original MICA pangolin curled SPIN sprite by redrawing the exact pose in input 1. Input 1's pose/composition OVERRIDES the standing character reference in input 2; inputs 3/4 define only face palette/style. Replace hedgehog quills with a smooth round hood of overlapping rounded jade pangolin scales; coral hiking boot with tan sole instead of striped red shoe. Cream muzzle, white glove. Preserve every limb's location in input 1. Coral boot at TOP RIGHT, white glove directly underneath at UPPER RIGHT, tiny cream face tucked into UPPER RIGHT behind glove, jade shell dominates LEFT and BOTTOM. Character is curled upside down; NO upright head. The original character must be tumbling, not a portrait pasted on a ball! Compact curled circular silhouette, hard simple 16-bit pixel clusters, black outline, top-left shading, transparent background. One sprite, no ground/text/motion lines. Candidate 4, correction of rejected upright-face candidates.",
+            "raw_sha256": "e2d9f927e9e513e68fdd8374e2d68160c4420067c121457c38e624c4228c1563",
+            "chosen": true
+          }
+        ],
+        "chosen": 4,
+        "reason": "Generated correction moves tucked boots/glove/face to native upper-right quadrant; rejects earlier upright-face candidates. Checked in sequence with quiet blur.",
+        "review_directory": "$HOME/scratch/agent-tmp/mica-regen-20261108"
+      }
     },
     "skid-00": {
       "prompt": "Use case: style-transfer. Asset: ONE isolated 16-bit pixel sprite, transparent background. Image 1 is ONLY native pose/rotation/silhouette and facing reference, NOT the character to reproduce. Image 2 is MICA's original pangolin identity concept. Image 3 is approved pixel-art style/proportion anchor. Redraw image 1 pose as MICA, a NEW DRAWING, NOT a recolour. Preserve pose, framing and silhouette extent of reference, NOT standing concept pose. Jade rounded overlapping scales, long scaled tail, tan pangolin muzzle/belly, readable dark eye, white gloves, red hiking boots with tan soles and jade laces. NO hedgehog/quills/blue/Sonic features, no text, no shadows or scenery. Crisp simple native pixel clusters and continuous dark outline. Pose: Skid stop, right-facing: body leans BACK left sharply, arms extended behind left, both feet thrust forward right and soles angled up. Tail trails left. Match native lean.",
@@ -5385,35 +5427,84 @@
       "rotation_degrees": 135
     },
     "roll-blur": {
-      "geometry_reference": {
+      "reference": {
+        "id": "roll-blur",
         "size": [
-          29,
-          29
+          30,
+          30
         ],
         "hotspot": [
-          14,
-          14
+          15,
+          15
+        ],
+        "mapping": 65,
+        "label": "Map_Sonic_085E",
+        "game": "S2"
+      },
+      "geometry_reference": {
+        "size": [
+          30,
+          30
+        ],
+        "hotspot": [
+          15,
+          15
         ]
       },
       "native_size": [
-        29,
-        29
+        30,
+        30
       ],
       "hotspot": [
-        14,
-        14
+        15,
+        15
       ],
-      "owner_fix": "Solid jade interleave, hints of scale and coral boot; SonAni_Roll (s2.asm:38696).",
-      "reference": {
-        "custom": true,
-        "size": [
-          29,
-          29
+      "prompt": "Use case: style-transfer. Single 16-bit pixel-art animation asset: a nearly SOLID FLAT JADE CIRCULAR SPIN BLUR for original MICA pangolin. Candidate 5. Input 1 native solid blue ball is the EXACT pose/composition: replace BLUE with JADE and preserve the simple round silhouette. Input 2 MICA concept establishes jade colour and her completely curled shell; inputs 3/4 face images are PALETTE/style references only, NEVER draw their faces. This blur has NO FACE, NO EYES, NO MUZZLE, NO EARS, NO HEAD, NO HANDS, NO GLOVES. Nearly featureless soft jade disc, very subtle darker jade rim, just a tiny coral boot smear at lower edge and at most one faint curved scale hint. NOT a detailed shell, NOT visible overlapping scale rows, NOT a curled character portrait. It must read as a translucent spin when interleaved with detailed curled sprites. Simple hard pixel silhouette, dark outline, limited jade colours, no bright white shine. Opaque sprite on genuinely transparent background, one sprite, no ground/text/motion lines. Quiet light jade centre with one faint darker scale crescent near lower-left.",
+      "raw_sha256": "0db8de9c0e64d42386a265c541fbb68f293a90ec98eb88c46727822f89a21265",
+      "source": "built-in GPT Image, latest exposed; exact version unavailable",
+      "cleanup": "Transparent-margin crop; Lanczos native box reduction; unchanged fixed palette; inside silhouette ink. No painted pixels.",
+      "regeneration": {
+        "attempts": [
+          {
+            "attempt": 1,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, roll-blur, candidate 1 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Match this exact native tumbling phase with rounded pangolin shell. Show small tucked coral boot/glove/cream face in the location of native details, rounded jade scale rows. Compact circular curled ball.\nThis is the interleaved solid blur frame: almost flat jade oval with a tiny scale/boot suggestion, translucent-spinning read through interleaving; do not draw a detailed character or sharp scale lines.\nWill reduce to native 30x30 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 1: strict fidelity to reference limb/boot positions and silhouette.",
+            "raw_sha256": "5b0c75f5573b27f74945b2fc4c1403ce462e0cb9e60c8f71365f8c8ed7823af2",
+            "chosen": false
+          },
+          {
+            "attempt": 2,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, roll-blur, candidate 2 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Match this exact native tumbling phase with rounded pangolin shell. Show small tucked coral boot/glove/cream face in the location of native details, rounded jade scale rows. Compact circular curled ball.\nThis is the interleaved solid blur frame: almost flat jade oval with a tiny scale/boot suggestion, translucent-spinning read through interleaving; do not draw a detailed character or sharp scale lines.\nWill reduce to native 30x30 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 2: prioritize coherent rounded hood/head, compact shapes and clean shading while keeping EXACT native limb pose.",
+            "raw_sha256": "66478892f22ff34b17aff407f20ea7484600c2a79f52a35d18fd1dc5e326c721",
+            "chosen": false
+          },
+          {
+            "attempt": 3,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, roll-blur, candidate 3 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Match this exact native tumbling phase with rounded pangolin shell. Show small tucked coral boot/glove/cream face in the location of native details, rounded jade scale rows. Compact circular curled ball.\nThis is the interleaved solid blur frame: almost flat jade oval with a tiny scale/boot suggestion, translucent-spinning read through interleaving; do not draw a detailed character or sharp scale lines.\nWill reduce to native 30x30 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 3: prioritize small-scale readability and consistent identity with the approved face anchors, keeping exact phase placement.",
+            "raw_sha256": "fa88a06249c27eed782bbbc9738a66d5775e42df5f5f8e2fe7a6d8eb7cb12484",
+            "chosen": false
+          },
+          {
+            "attempt": 4,
+            "prompt": "Use case: style-transfer. Single 16-bit pixel-art animation asset: a nearly SOLID FLAT JADE CIRCULAR SPIN BLUR for original MICA pangolin. Candidate 4. Input 1 native solid blue ball is the EXACT pose/composition: replace BLUE with JADE and preserve the simple round silhouette. Input 2 MICA concept establishes jade colour and her completely curled shell; inputs 3/4 face images are PALETTE/style references only, NEVER draw their faces. This blur has NO FACE, NO EYES, NO MUZZLE, NO EARS, NO HEAD, NO HANDS, NO GLOVES. Nearly featureless soft jade disc, very subtle darker jade rim, just a tiny coral boot smear at lower edge and at most one faint curved scale hint. NOT a detailed shell, NOT visible overlapping scale rows, NOT a curled character portrait. It must read as a translucent spin when interleaved with detailed curled sprites. Simple hard pixel silhouette, dark outline, limited jade colours, no bright white shine. Opaque sprite on genuinely transparent background, one sprite, no ground/text/motion lines. Almost uniform medium jade interior.",
+            "raw_sha256": "04be273d471f9f2c2f48866dfd0b0a0d3a0b4bb0297c149d1b6f5cee9c13e93d",
+            "chosen": false
+          },
+          {
+            "attempt": 5,
+            "prompt": "Use case: style-transfer. Single 16-bit pixel-art animation asset: a nearly SOLID FLAT JADE CIRCULAR SPIN BLUR for original MICA pangolin. Candidate 5. Input 1 native solid blue ball is the EXACT pose/composition: replace BLUE with JADE and preserve the simple round silhouette. Input 2 MICA concept establishes jade colour and her completely curled shell; inputs 3/4 face images are PALETTE/style references only, NEVER draw their faces. This blur has NO FACE, NO EYES, NO MUZZLE, NO EARS, NO HEAD, NO HANDS, NO GLOVES. Nearly featureless soft jade disc, very subtle darker jade rim, just a tiny coral boot smear at lower edge and at most one faint curved scale hint. NOT a detailed shell, NOT visible overlapping scale rows, NOT a curled character portrait. It must read as a translucent spin when interleaved with detailed curled sprites. Simple hard pixel silhouette, dark outline, limited jade colours, no bright white shine. Opaque sprite on genuinely transparent background, one sprite, no ground/text/motion lines. Quiet light jade centre with one faint darker scale crescent near lower-left.",
+            "raw_sha256": "0db8de9c0e64d42386a265c541fbb68f293a90ec98eb88c46727822f89a21265",
+            "chosen": true
+          },
+          {
+            "attempt": 6,
+            "prompt": "Use case: style-transfer. Single 16-bit pixel-art animation asset: a nearly SOLID FLAT JADE CIRCULAR SPIN BLUR for original MICA pangolin. Candidate 6. Input 1 native solid blue ball is the EXACT pose/composition: replace BLUE with JADE and preserve the simple round silhouette. Input 2 MICA concept establishes jade colour and her completely curled shell; inputs 3/4 face images are PALETTE/style references only, NEVER draw their faces. This blur has NO FACE, NO EYES, NO MUZZLE, NO EARS, NO HEAD, NO HANDS, NO GLOVES. Nearly featureless soft jade disc, very subtle darker jade rim, just a tiny coral boot smear at lower edge and at most one faint curved scale hint. NOT a detailed shell, NOT visible overlapping scale rows, NOT a curled character portrait. It must read as a translucent spin when interleaved with detailed curled sprites. Simple hard pixel silhouette, dark outline, limited jade colours, no bright white shine. Opaque sprite on genuinely transparent background, one sprite, no ground/text/motion lines. Flat jade disc with a tiny dark-jade scale hint and small coral smear at lower-right.",
+            "raw_sha256": "79f80a4625bb605cabffb4b32a879c208f3f3046153e36e6353ba0f49c3cdd8d",
+            "chosen": false
+          }
         ],
-        "hotspot": [
-          14,
-          14
-        ]
+        "chosen": 5,
+        "reason": "Nearly flat jade disc with tiny lower-edge coral/scale hint, no face or glove, native circular envelope. Rejects detailed portrait candidates and candidate 6 transparent-centre ring.",
+        "review_directory": "$HOME/scratch/agent-tmp/mica-regen-20261108"
       }
     },
     "spindash-04": {
