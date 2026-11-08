@@ -51,7 +51,10 @@ final class OwnerAwareCharacterDefinition {
                 definition.underwaterPaletteSupplier() == null ? null
                         : code -> callIo(owner, faultBoundary, () -> Objects.requireNonNull(
                                 definition.underwaterPaletteSupplier().load(code),
-                                "Mod character underwater palette supplier returned null for " + key.persisted())));
+                                "Mod character underwater palette supplier returned null for " + key.persisted())),
+                definition.superFormSupplier() == null ? null
+                        : code -> callIo(owner, faultBoundary, () -> Objects.requireNonNull(
+                                definition.superFormSupplier().load(code), "Mod super profile returned null")));
     }
 
     private static <T> T callIo(String owner, ModFaultBoundary boundary, ModFaultBoundary.IoSupplier<T> callback) {

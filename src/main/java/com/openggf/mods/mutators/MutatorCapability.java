@@ -3,6 +3,7 @@ package com.openggf.mods.mutators;
 /** Bounded semantic policies implemented by the host, not arbitrary world callbacks. */
 @com.openggf.game.ModApi
 public enum MutatorCapability {
+    CHARACTER_SUPER_FORM(MutatorScope.LOAD),
     DRY_SONIC_GRAVITY(MutatorScope.LIVE),
     PLAYER_STEALTH(MutatorScope.LIVE),
     RINGFALL(MutatorScope.LIVE),

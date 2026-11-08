@@ -17,8 +17,8 @@ import java.util.Objects;
  * {@code ModContext.registerCharacter}. The factories and suppliers are invoked
  * through that owner's fault boundary. A null respawn factory selects
  * {@link SonicRespawnStrategy}; a null palette supplier retains the host-game
- * palette fallback. Mod characters must set {@code supportsSuperForm} to false in
- * playable format v2, and the {@link PlayerCharacter#KNUCKLES} archetype requires
+ * palette fallback. Mod characters enabling super forms must supply a profile.
+ * The {@link PlayerCharacter#KNUCKLES} archetype requires
  * {@link SecondaryAbility#GLIDE}.</p>
  */
 @ModApi
@@ -32,7 +32,20 @@ public record CharacterDefinition(
         boolean supportsSuperForm,
         ArtSupplier artSupplier,
         PaletteSupplier paletteSupplier, java.util.Set<MovementAbility> movementAbilities,
-        PaletteSupplier underwaterPaletteSupplier) {
+        PaletteSupplier underwaterPaletteSupplier, SuperFormSupplier superFormSupplier) {
+
+    /** Profile supplier is resolved once per playable assembly through the owner boundary. */
+    public CharacterDefinition(CharacterKey key, String displayName, PlayableFactory spriteFactory,
+            RespawnStrategyFactory respawnStrategyFactory, PlayerCharacter behavesLike,
+            SecondaryAbility secondaryAbility, boolean supportsSuperForm, ArtSupplier artSupplier,
+            PaletteSupplier paletteSupplier, java.util.Set<MovementAbility> movementAbilities,
+            PaletteSupplier underwaterPaletteSupplier) {
+        this(key, displayName, spriteFactory, respawnStrategyFactory, behavesLike, secondaryAbility,
+                supportsSuperForm, artSupplier, paletteSupplier, movementAbilities, underwaterPaletteSupplier, null);
+    }
+
+    @ModApi @FunctionalInterface
+    public interface SuperFormSupplier { SuperFormProfile load(String persistedCode) throws IOException; }
 
     /** Null underwater supplier uses the renderer's zone-specific host palette derivation. */
     public CharacterDefinition(CharacterKey key, String displayName, PlayableFactory spriteFactory,
@@ -75,8 +88,8 @@ public record CharacterDefinition(
         Objects.requireNonNull(behavesLike, "behavesLike");
         Objects.requireNonNull(secondaryAbility, "secondaryAbility");
         Objects.requireNonNull(artSupplier, "artSupplier");
-        if (!key.isBuiltin() && supportsSuperForm) {
-            throw new IllegalArgumentException("Mod characters cannot enable super forms in playable v2");
+        if (!key.isBuiltin() && supportsSuperForm && superFormSupplier == null) {
+            throw new IllegalArgumentException("Mod super forms require an authored profile");
         }
         if (behavesLike == PlayerCharacter.KNUCKLES && secondaryAbility != SecondaryAbility.GLIDE) {
             throw new IllegalArgumentException("KNUCKLES archetype requires GLIDE");

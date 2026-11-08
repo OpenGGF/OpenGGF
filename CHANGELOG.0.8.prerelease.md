@@ -38,6 +38,9 @@ under the matching area heading; see the
 - Added the maintained MICA character skeleton for all three stock games, with
   headless launch/save/rewind/fallback acceptance and temporary original art.
   Custom team archetypes now use the solo Sonic route without a sidekick.
+  MICA's Gilded Super/Hyper forms use owner-bound profiles and her jade-to-gold
+  palette cycles; host settings configure the gates. S1's donor-free six-emerald
+  form is a mod-defined rule. Powered-form state and palettes participate in rewind.
 - Character definitions can supply an authored underwater palette through the
   owner fault boundary; absent suppliers retain zone-aware host water derivation.
 - Playable mod sheets now declare canonical animation tables shared by Sonic 1,
