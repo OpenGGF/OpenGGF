@@ -29,7 +29,10 @@ public record CharacterPresentation(String displayName, String hudName,
         @Override public byte[] pixels() { return pixels.clone(); }
     }
     /** Faces are indexed images, independent of native mapping/tile layouts. */
-    @ModApi public record Art(Image hudLifeIcon, Image oneUpFace, Image signpostFace, Image endSignFace, Sign sign) {
+    @ModApi public record Art(Image hudLifeIcon, Image oneUpFace, Image signpostFace, Image endSignFace, Sign sign, PresentationFrameSet screenFrames) {
+        public Art(Image hudLifeIcon, Image oneUpFace, Image signpostFace, Image endSignFace, Sign sign) {
+            this(hudLifeIcon, oneUpFace, signpostFace, endSignFace, sign, null);
+        }
         public Art(Image hudLifeIcon, Image oneUpFace, Image signpostFace, Image endSignFace) {
             this(hudLifeIcon, oneUpFace, signpostFace, endSignFace, null);
         }

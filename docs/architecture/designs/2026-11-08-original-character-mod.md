@@ -741,3 +741,83 @@ Status log (times UTC):
   actions are demonstrated across the set; an airborne chain is filmed in GHZ1,
   not separately certified in every host. No broad smoke or full-suite claim:
   cross-lane validation/integration remain with the delivery lead.
+
+
+- 2026-11-08: W4 screen lane on `feature/ai-mica-screens`: optional indexed
+  continue banks preserve the native frame/timing owners in S1/S2/S3K. MICA
+  packages every authored continue pose; native text and stock Tails retain their
+  original palettes (custom line 2 in S1/S2, line 1 in S3K). Focused tests and
+  captures in progress. Portrait and snowboard consumers remain pending.
+  Continue palette evidence: S1 `.cont_text` and `.cont_Sonic1` share line 0,
+  while the oval uses line 1: Map_ContScr_internal (docs/s1disasm/_maps/Continue Screen.asm:14-56).
+  S2 `ContinueScreen` retains the player lines and loads `PalID_SS1` for its
+  backdrop: ContinueScreen (s2.asm:10350-10368). S3K loads all four
+  native lines and renders text on line 0: loc_5C3BC (sonic3k.asm:122909-122919);
+  the actor/icon mapping bytes use line 0; Knuckles' actor adds line 3.
+  Native screen text/partners therefore keep their ROM palette while MICA
+  binds to an unused screen line. Initial capture images were rejected because
+  GameplayCaptureSession's generic render path draws a level in continue mode;
+  the component fixture now explicitly draws the production continue provider.
+- 2026-11-08: W4 portrait adapter resolves character-owned portrait poses by
+  canonical key before the native Sonic/Tails/Knuckles fallback. Team layouts
+  retain the native Tails frame. A renderer-owned scoped palette bank isolates
+  MICA from every menu palette line; these are derived graphics resources,
+  released on reset and recreated when their context generation retires.
+  Menu/background and character lines load separately:
+  loc_C710 (sonic3k.asm:16118-16132). Portrait and continue pixel checks are
+  in progress; the continue custom bank was moved clear of native allocations.
+  Rejected captures also exposed the fixture retaining a level camera during
+  intermediate frontend batch flushes; frontend capture must set camera (0,0).
+- 2026-11-08: W4 ICZ adapter uses the 13-frame `snowboard` bank while retaining
+  `IczSnowboardIntroInstance`'s native animation, movement and handoff. Both the
+  custom rider and native board/spray have renderer-owned palette banks; deferred
+  sprite commands carry the palette replay, so no live level palette is replaced.
+  Palette-sharing evidence: the rider selects player line 0 at
+  loc_393EE (sonic3k.asm:76793-76804); the board selects line 0 in
+  Obj_LevelIntroICZ1 (sonic3k.asm:77047-77055); spray selects line 0 in
+  sub_39924 (sonic3k.asm:77196-77205). Rider-frame DPLC selection belongs to
+  sub_3968E (sonic3k.asm:76991-77007). Big snow pile terrain/priority and constants remain
+  native owners; neither needs a character-code special case. Capture/checks pending.
+  Capture diagnosis: resetting the camera alone did not restore S3K's missing
+  rows. Instrumentation showed `DisplayedFade[mode=FROM_BLACK, steps=0,
+  lineMask=14, pending=false]`, with no GL errors. The fixture had requested
+  game over immediately after boot, before the initial level reveal. Continue
+  captures now step that reveal first; direct data-select captures explicitly
+  release its predecessor's palette publication. Debug-only probes are removed.
+  ICZ runtime captures at ticks 60/120/180/240/300 show the authored rider;
+  tick 0 was rejected because the native level fade is still black.
+
+- 2026-11-08: W4 screens lane complete, owned by `feature/ai-mica-screens`.
+  Checkpoints: continue `e7d2fb27a`, portrait `9ab76f309`; final snowboard
+  adapter and capture fixture verified together before the final surface commit.
+  All three continues, S3K solo/team portraits and ICZ1 rider art are wired.
+  Native animation/movement/timing and stock fallback remain with their owners.
+  No changes were needed in ICZ events, BigSnowPile or the existing 13-frame constant.
+  Capture witnesses were inspected at 320×224 under surfaceless EGL in
+  `/tmp/mica-screens-20261108/`: `s1-continue-{wait,depart}.png`,
+  `s2-continue-{wait,depart}.png`, `s3k-continue-{wait,depart}.png`,
+  `s3k-data-select-solo-and-tails.png` (both saved-slot variants in one image),
+  and `s3k-icz1-snowboard-{60,120,180,240,300}.png`. The data-select zone-preview
+  images retain the existing native/frontend path; this is portrait certification,
+  not certification of every menu preview. No full-route or release-suite claim.
+
+  Final focused check: 213 tests passed, zero failures/errors/skips; all ROMs found.
+  Production sources are the portrait checkpoint plus the final snowboard adapter;
+  only this status entry follows the successful run. Final queue wait 16s,
+  Maven execution 1m45s, user wait zero; other elapsed work was not separately timed.
+  Earlier focused runs passed 42 continue/API/integration checks and 96 portrait
+  regressions; rejected fixture captures are explained above. The prior expanded
+  181-test run had only the incomplete-fade capture assertion failure, now repaired.
+
+  ```bash
+  python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dmica.captureDir=/tmp/mica-screens-20261108/ '-Dtest=TestSonic1ContinueScreen,TestSonic2ContinueScreen,TestSonic3kContinueScreenProvider,TestSonic3kContinueScreenArt,TestContinueScreenRoundTrip,TestMicaCharacterIntegration,TestIczSnowboardArtLoader,TestRewindFixS3KIczBigSnowPileCodec,TestS3kCustomTeamPortraitComposer,TestS3kDataSelectPresentation,TestModApiSignatureSurface,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' test
+  python3 tools/disasm/disasm_citations.py check docs/architecture/designs/2026-11-08-original-character-mod.md
+  git diff --check
+  ```
+
+  Citation check: 8 exact, 3 within owning routines, 1 inherited unanchored citation;
+  no stale/out-of-range/missing findings. Whitespace check clean. All validation
+  jobs finished. No merge or push; lead owns integration, cross-lane contract
+  reconciliation and broad validation. The `Art.screenFrames` component is additive
+  and retains the previous four/five-argument constructors; the other presentation
+  lane may need to combine its added components at integration.

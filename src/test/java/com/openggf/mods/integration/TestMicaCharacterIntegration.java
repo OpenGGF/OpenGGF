@@ -189,6 +189,124 @@ class TestMicaCharacterIntegration {
         return field.get(owner);
     }
 
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_1)
+    void continuePixelsS1() throws Exception { captureContinue("s1", "sonic1.rom.path"); }
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_2)
+    void continuePixelsS2() throws Exception { captureContinue("s2", "sonic2.rom.path"); }
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void continuePixelsS3k() throws Exception { captureContinue("s3k", "s3k.rom.path"); }
+
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void snowboardPixelsS3k() throws Exception {
+        Path jar=buildSample();
+        var settings=new com.openggf.tools.GameplayCaptureSession.Settings(320,CODE,"","off",null,null,null);
+        try(var session=new com.openggf.tools.GameplayCaptureSession(settings)) {
+            session.applyMod(jar);
+            GameServices.configuration().setSessionOverride(SonicConfiguration.S3K_SKIP_INTROS,false);
+            session.boot(Path.of(System.getProperty("s3k.rom.path")),5,0,settings);
+            var set=com.openggf.game.presentation.ScreenFrameRenderer.active(CharacterPresentation.Host.S3K);
+            assertEquals(13,set.banks().get("snowboard").size());
+            boolean overlaySeen=false;
+            for(int frame=0;frame<360;frame++) {
+                session.step(null);
+                if(frame>0 && frame%60==0) writeCapture(session.render(),"s3k-icz1-snowboard-"+frame);
+                var objects=GameServices.level().getObjectManager();
+                for(var object:objects.getActiveObjects()) {
+                    if(object instanceof com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance) overlaySeen=true;
+                }
+            }
+            assertTrue(overlaySeen,"Native ICZ intro controller must run for MICA");
+        }
+    }
+
+    private void captureContinue(String game, String romProperty) throws Exception {
+        Path jar=buildSample();
+        var settings=new com.openggf.tools.GameplayCaptureSession.Settings(320,CODE,"tails","off",null,null,null);
+        try(var session=new com.openggf.tools.GameplayCaptureSession(settings)) {
+            session.applyMod(jar);
+            session.boot(Path.of(System.getProperty(romProperty)),0,0,settings);
+            // Enter from a revealed level, rather than carrying its initial line-1..3 black fade into the menu.
+            for (int i=0;i<120;i++) session.step(null);
+            var state=GameServices.gameState();
+            while(state.getLives()>0) state.loseLife();
+            state.addContinue(); state.addContinue(); state.addContinue();
+            GameServices.level().requestGameOverExit(GameOverExit.CONTINUE_SCREEN);
+            for(int i=0;i<120 && session.loop().getCurrentGameMode()!=GameMode.CONTINUE_SCREEN;i++) session.step(null);
+            assertEquals(GameMode.CONTINUE_SCREEN,session.loop().getCurrentGameMode());
+            for(int i=0;i<140;i++) session.step(null);
+            var waiting = drawContinue(session);
+            long jade=0;
+            for(int y=120;y<195;y++) for(int x=100;x<200;x++) {
+                int pixel=waiting.argb(x,y),r=(pixel>>16)&255,g=(pixel>>8)&255,b=pixel&255;
+                if(g>r+25 && g>=b) jade++;
+            }
+            assertTrue(jade>15,"MICA jade body pixels must be visible in continue screen");
+            writeCapture(waiting,game+"-continue-wait");
+            var screen=session.loop().getContinueScreenProvider();
+            screen.update(true,false);
+            for(int i=0;i<25;i++) screen.update(false,false);
+            writeCapture(drawContinue(session),game+"-continue-depart");
+            assertTrue(screen.isAccepted());
+            if(game.equals("s3k")) capturePortraits();
+        }
+    }
+
+    private static com.openggf.graphics.RgbaImage drawContinue(com.openggf.tools.GameplayCaptureSession session) {
+        var graphics=GameServices.graphics();
+        org.lwjgl.opengl.GL11.glClearColor(0,0,0,1);
+        org.lwjgl.opengl.GL11.glClear(org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT | org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT);
+        graphics.resetForFixedFunction();
+        GameServices.camera().setX((short)0); GameServices.camera().setY((short)0);
+        session.loop().getContinueScreenProvider().draw();
+        graphics.flushScreenSpace();
+        org.lwjgl.opengl.GL11.glFinish();
+        return com.openggf.graphics.ScreenshotCapture.captureFramebuffer(320,224);
+    }
+
+    private void capturePortraits() throws Exception {
+        Path saves=temp.resolve("portrait-saves");
+        var manager=new SaveManager(saves);
+        for(int slot=1;slot<=2;slot++) {
+            Map<String,Object> payload=new LinkedHashMap<>();
+            payload.put("act",0);payload.put("zone",0);payload.put("lives",3);
+            payload.put("mainCharacter",CODE);payload.put("sidekicks",slot==1?List.of():List.of("tails"));
+            payload.put("chaosEmeralds",List.of());payload.put("clear",false);
+            payload.put("progressCode",1);payload.put("clearState",0);
+            manager.writeSlot("s3k",slot,payload);
+        }
+        var presentation=new com.openggf.game.sonic3k.dataselect.S3kDataSelectPresentation(saves,GameServices.configuration());
+        GameServices.graphics().clearPaletteFadePresentation();
+        com.openggf.graphics.PaletteUploadPresentation.release(GameServices.graphics());
+        presentation.initialize();
+        assertEquals(DataSelectProvider.State.FADE_IN,presentation.getState());
+        var method=presentation.getClass().getDeclaredMethod("resolveCustomPortraitFrame",com.openggf.game.save.SelectedTeam.class);
+        method.setAccessible(true);
+        for(var sidekicks:List.of(List.<String>of(),List.of("tails"))) {
+            var frame=(com.openggf.level.render.SpriteMappingFrame)method.invoke(presentation,new com.openggf.game.save.SelectedTeam(CODE,sidekicks));
+            assertTrue(frame.pieces().stream().anyMatch(piece->piece.tileIndex()>=0x2000));
+            if(!sidekicks.isEmpty()) assertTrue(frame.pieces().stream().anyMatch(piece->piece.tileIndex()<0x2000),"Stock Tails remains in team composition");
+        }
+        for(int i=0;i<24;i++) presentation.update(new com.openggf.control.InputHandler());
+        GameServices.camera().setX((short)0); GameServices.camera().setY((short)0);
+        presentation.setClearColor();
+        org.lwjgl.opengl.GL11.glClear(org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT | org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT);
+        GameServices.graphics().resetForFixedFunction();
+        presentation.draw();GameServices.graphics().flushScreenSpace();
+        org.lwjgl.opengl.GL11.glFinish();
+        writeCapture(com.openggf.graphics.ScreenshotCapture.captureFramebuffer(320,224),"s3k-data-select-solo-and-tails");
+        presentation.reset();
+    }
+
+    private static void writeCapture(com.openggf.graphics.RgbaImage image,String name) throws Exception {
+        Path root=Path.of(System.getProperty("mica.captureDir","target/mica-screen-captures"));
+        Files.createDirectories(root);
+        var png=new java.awt.image.BufferedImage(image.width(),image.height(),java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        png.setRGB(0,0,image.width(),image.height(),image.pixels(),0,image.width());
+        javax.imageio.ImageIO.write(png,"PNG",root.resolve(name+".png").toFile());
+        long visible=java.util.Arrays.stream(image.pixels()).filter(pixel->(pixel&0xffffff)!=0).count();
+        assertTrue(visible>100,"Capture must contain rendered art");
+    }
+
     private void acceptance(GameModule base, String game, int waterZone, int waterAct) throws Exception {
         try (CatalogFixture fixture = load(buildSample())) {
             var config = SonicConfigurationService.getInstance();
@@ -217,6 +335,7 @@ class TestMicaCharacterIntegration {
             assertNotNull(GameServices.level().getCurrentLevel());
             assertNotNull(playable.getSpriteRenderer());
             verifySignTiles(resolved, game);
+            verifyContinuePresentation(resolved, game);
             config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
             assertEquals(PlayerCharacter.SONIC_AND_TAILS,
                     com.openggf.game.session.ActiveGameplayTeamResolver.resolvePlayerCharacter(config));
@@ -464,6 +583,28 @@ class TestMicaCharacterIntegration {
         }
     }
 
+    private void verifyContinuePresentation(GameModule module, String game) throws Exception {
+        var host=CharacterPresentation.Host.valueOf(game.toUpperCase(Locale.ROOT));
+        var definition=module.getPlayableCharacterRegistry().find(CharacterKey.parsePersisted(CODE)).orElseThrow();
+        var set=definition.presentationSupplier().load(CODE).art().get(host).screenFrames();
+        assertNotNull(set);
+        assertFalse(set.banks().get("continue/player").isEmpty());
+        var palette=com.openggf.game.presentation.ScreenFrameRenderer.palette(set);
+        assertTrue(palette.dataEquals(definition.paletteSupplier().load(CODE)), "Screen art uses MICA's unchanged palette");
+        ContinueScreenProvider screen=switch(host) {
+            case S1 -> new com.openggf.game.sonic1.continuescreen.Sonic1ContinueScreenProvider();
+            case S2 -> new com.openggf.game.sonic2.continuescreen.Sonic2ContinueScreenProvider();
+            case S3K -> new com.openggf.game.sonic3k.continuescreen.Sonic3kContinueScreenProvider();
+        };
+        screen.initialize(3);
+        for(int i=0;i<100;i++) { screen.update(false,false); screen.draw(); }
+        screen.update(true,false);
+        for(int i=0;i<150 && !screen.isFinished();i++) { screen.update(false,false); screen.draw(); }
+        assertTrue(screen.isAccepted());
+        assertTrue(screen.isFinished());
+        screen.reset();
+    }
+
     private static boolean paletteMatches(com.openggf.level.Palette palette, List<Integer> words) {
         var expected = new com.openggf.level.Palette();
         for (int i = 0; i < 16; i++) expected.getColor(i).fromSegaFormat(words.get(i));
@@ -522,6 +663,14 @@ class TestMicaCharacterIntegration {
                 "--image",project.resolve("src/main/mod/mica.png").toString(),
                 "--sheet",project.resolve("src/main/mod/mica-sheet.yaml").toString(),
                 "--out",classes.resolve("art/mica.ggfp").toString()},System.out));
+        for (String surface : List.of("continue", "portrait", "snowboard")) {
+            Path source = project.resolve("art/mica/" + surface);
+            Path destination = classes.resolve("art/mica/" + surface);
+            Files.createDirectories(destination);
+            try (var files = Files.list(source)) {
+                for (var file : files.toList()) Files.copy(file, destination.resolve(file.getFileName()));
+            }
+        }
         Path presentation = project.resolve("art/mica/presentation");
         Files.createDirectories(classes.resolve("art/mica/presentation"));
         try(var files=Files.list(presentation)) {

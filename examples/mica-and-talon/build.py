@@ -51,6 +51,8 @@ def main():
     for frame in (PROJECT / "art/mica/wave3").glob("*.png"):
         if not frame.stem.endswith("-fixed"):
             shutil.copy2(frame, stage_assets / frame.name)
+    for surface in ("continue", "portrait", "snowboard"):
+        shutil.copytree(PROJECT / "art/mica" / surface, classes / "art/mica" / surface, dirs_exist_ok=True)
     jar = OUTPUT / "mica-and-talon.jar"
     jar.unlink(missing_ok=True)
     cli = [java_tool("java"), "--enable-native-access=ALL-UNNAMED", "-cp", classpath,

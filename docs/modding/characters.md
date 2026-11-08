@@ -232,6 +232,19 @@ S1 instead binds the ordinary canonical playable sheet to its native roll script
 The stage player uses the character palette supplier in an isolated render-context
 row; native palette lines remain available to stage art and stock sidekicks.
 MICA packages the wave3 PNG sets through `PresentationImages` and `ModAssetRoot`.
+
+`Art.screenFrames` optionally supplies immutable indexed poses with hotspots and
+sixteen RGB colours. Continue consumers use `continue/player`, `continue/icon`
+and the S1 `continue/floor` / S3K `continue/team-idle` banks, keyed by native
+mapping frame. They retain the native animation and movement owners. Separate
+screen palette lines preserve native text and Tails; omitted banks/frames fall
+back to ROM art. Existing four/five-argument `Art` constructors remain supported.
+The S3K `portrait` bank (frame 5) supplies the data-select bust, composed with
+stock team portraits using its authored hotspot. Its palette is isolated in a
+renderer-owned graphics bank; no native menu line is replaced.
+The S3K `snowboard` bank supplies the 13 native rider mapping IDs (0–12).
+The host retains intro timing, movement, separate board/spray and snow occlusion;
+private renderer palettes keep rider and native effects independent.
 GGFP presentation sections are pending.
 
 ## Ability and super-form rules

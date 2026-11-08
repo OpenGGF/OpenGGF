@@ -18,7 +18,7 @@ final class MicaPresentation {
             art.put(host,new Art(image(assets,prefix+"-hud"), image(assets,prefix+"-monitor"),
                     face.face(), face.face(), new Sign(face,
                     host==Host.S2 ? pose(assets,prefix+"-sign-alternate") : null,
-                    pose(assets,prefix+"-spin1"),null,pose(assets,prefix+"-spin3"))));
+                    pose(assets,prefix+"-spin1"),null,pose(assets,prefix+"-spin3")),MicaScreenFrames.load(assets,host)));
         }
         return new CharacterPresentation("MICA","MICA",art,Map.of(new Font(Host.S1,Style.HUD),
                 Map.of('M',image(assets,"s1-name-M"),'A',image(assets,"s1-name-A"))), stages(assets));

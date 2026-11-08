@@ -35,6 +35,7 @@ final class Sonic3kContinueScreenArt {
     static final int TEXT_MAPPING = 0x5B566;
     private static final int[] ICON_X = {288, 312, 264, 336, 240, 360, 216, 384, 192};
     private static final int BASE = PatternAtlasRange.CONTINUE_SCREEN.base();
+    private final com.openggf.game.presentation.ScreenFrameRenderer replacement;
     private final GraphicsManager graphics;
     private final RomByteReader reader;
     private final PatternDesc desc = new PatternDesc();
@@ -65,6 +66,9 @@ final class Sonic3kContinueScreenArt {
         for (int line = 0; line < 4; line++) {
             S3kFrontendPaletteUploader.cacheLineFromBytes(graphics, reader.slice(PALETTE + line * 32, 32), line);
         }
+        var custom = com.openggf.game.presentation.ScreenFrameRenderer.active(com.openggf.game.CharacterPresentation.Host.S3K);
+        // ContinueScreen's line 1 is unused by its sprite/text mappings; line 0 stays native for Tails.
+        replacement = custom == null ? null : new com.openggf.game.presentation.ScreenFrameRenderer(custom, graphics, BASE + 0x2000, 1);
         var spriteFrames = S3kSpriteDataLoader.loadMappingFrames(reader, MAP_SPRITES);
         var iconFrames = S3kSpriteDataLoader.loadMappingFrames(reader, MAP_ICONS);
         Pattern[] spriteArt = PatternDecompressor.nemesis(rom, ART_SPRITES);
@@ -134,6 +138,7 @@ final class Sonic3kContinueScreenArt {
         int mode = screen.playerMode();
         for (int i = 0; i < screen.iconCount(); i++) {
             int frame = (mode == 3 ? 7 : mode == 2 ? 2 : 0) + blink;
+            if (mode < 2 && replacement != null && replacement.draw("continue/icon", frame, ox + ICON_X[i] - 128, 88, false)) continue;
             (mode == 3 ? knucklesIcons : icons).drawFrameIndex(frame, ox + ICON_X[i] - 128, 88);
             if (mode == 2) {
                 // Obj_5CA78 / byte_5CBBB: separate Tails icon's swishing tail.
@@ -188,12 +193,14 @@ final class Sonic3kContinueScreenArt {
         int knuxX = Math.min(484, 64 + age * 6);
 
         if (screen.skAlone()) {
-            sonic.drawFrame(screen.soloFrame(), ox + 160 + Math.max(0, age - 47) * 6, 160, false, false);
+            drawSonic(screen.soloFrame(), ox + 160 + Math.max(0, age - 47) * 6, 160, false);
             knuckles.drawFrame(screen.knucklesFrame(), ox + knuxX - 128, 160, false, false);
             return;
         }
         if (age == 0) {
-            sprites.drawFrameIndex((screen.vintRunCount() >>> 4) & 1, ox + 152, 160);
+            int idle = (screen.vintRunCount() >>> 4) & 1;
+            if (replacement == null || !replacement.draw("continue/team-idle", idle, ox + 152, 160, false))
+                sprites.drawFrameIndex(idle, ox + 152, 160);
             sprites.drawFrameIndex(5 + ((screen.vintRunCount() >>> 5) & 1), ox + 172, 160);
             knuckles.drawFrame(screen.knucklesFrame(), ox + knuxX - 128, 160, false, false);
             return;
@@ -211,12 +218,17 @@ final class Sonic3kContinueScreenArt {
         } else {
             sonicFrame = runFrame(sonicRun, age - 37);
         }
-        sonic.drawFrame(sonicFrame, ox + 152 + Math.max(0, age - 52) * 6, 160, sonicFlip, false);
+        drawSonic(sonicFrame, ox + 152 + Math.max(0, age - 52) * 6, 160, sonicFlip);
         int tailsX = ox + 172 + Math.max(0, age - 60) * 6;
         tails.drawFrame(age < 41 ? 0xAD : runFrame(tailsRun, age - 41), tailsX, 164, false, false);
         // Obj_Tails_Tail selects Swish during Wait; Walk switches to blank.
         tail.drawFrame(age < 41 ? 0x22 + ((age - 1) / 8) % 5 : 0, tailsX, 164, false, false);
         knuckles.drawFrame(screen.knucklesFrame(), ox + knuxX - 128, 160, false, false);
+    }
+
+    private void drawSonic(int frame, int x, int y, boolean flip) {
+        if (replacement == null || !replacement.draw("continue/player", frame, x, y, flip))
+            sonic.drawFrame(frame,x,y,flip,false);
     }
 
     private static int runFrame(List<Integer> frames, int elapsed) {
