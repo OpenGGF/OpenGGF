@@ -303,3 +303,12 @@ Phase 1 waves:
 Status log (times UTC):
 
 - 2026-11-08: design agreed; wave 1 launched.
+- 2026-11-08: merged W7 core art (`391684f4f`), W1+W3 skeleton and water palettes
+  (`5e21ef547`), W2 canonical animation sheets (`59998a446`); MICA placeholder sheet
+  given its required WAIT (`838c9743d`). Lead check of the merged tree: the MICA,
+  sample-character, sheet, converter and signature tests pass;
+  `TestLevelPlayableArtInitializerModArt` has 4 errors (NPE `crossGameFeatures` under
+  `mockStatic(CrossGameFeatureProvider)`) that reproduce identically on develop
+  `33c3b8e56` when the class runs alone, so they predate this work. Art round 2's
+  presentation art was rejected on review (blob-like 16x16 faces, sign faces without
+  native composition, noise spin frames, slopes unchanged); round 3 is redoing it.
