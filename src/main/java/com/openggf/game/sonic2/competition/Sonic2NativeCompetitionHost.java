@@ -417,7 +417,10 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
     private void runNativeEntry() {
         var mode = context();
         var title = module.nativeTitle();
-        LogicalInputSnapshot[] lastWaitSample = {null};
+        // Level_TtlCard (s2.asm:4914-4949) clears both native controller words.
+        // Each represented ReadJoypads then owns a fresh held-to-press edge,
+        // even when the outer logical input spans every synchronous wait.
+        LogicalInputSnapshot[] lastWaitSample = {LogicalInputSnapshot.neutral()};
         title.beginOmittedPresentationLeave(logicalZone(profile.romZone()), profile.act());
         for (int slot = 0; slot < 2; slot++) {
             session.player(slot).setControlLocked(true);
@@ -441,7 +444,7 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
                                 // VintRet (s2.asm:507-508): art service precedes
                                 // the counter increment read by RunObjects.
                                 mode.getObjectManager().advanceVblaCounter();
-                                lastWaitSample[0] = sampleNativeInput();
+                                lastWaitSample[0] = Sonic2NativeControllerSample.poll(lastWaitSample[0], sampleNativeInput());
                                 runNativeEntryObjectPass(true);
                             });
                     title.completeLockedIteration();
