@@ -550,6 +550,46 @@ class TestObjectManagerRewindSnapshot {
     }
 
     @Test
+    void placedSolidRemovalExpiresBothPlayersObjectBitsWithoutReleasingTheirRide() {
+        ObjectSpawn spawn = spawn(100, 100);
+        TrackingRegistry registry = new TrackingRegistry();
+        ObjectManager manager = makeManager(List.of(spawn), registry);
+        manager.reset(0);
+        manager.update(0, null, null, 1);
+        TrackableObject original = registry.instances.get(spawn);
+        assertNotNull(original);
+
+        Sonic p1 = contactPlayer("sonic");
+        Sonic p2 = contactPlayer("tails");
+        // Seed both object-side bits and retained player rides at the deletion boundary.
+        // Removing either latch clear, or clearing player-side state, must fail this test.
+        manager.solidContacts().restoreRewindState(
+                contactState(p1, p2, spawn, original.getSlotIndex()));
+        assertTrue(manager.hasObjectStandingBit(p1, original));
+        assertTrue(manager.hasObjectStandingBit(p2, original));
+        assertTrue(manager.hasObjectPushingBit(p1));
+        assertTrue(manager.hasObjectPushingBit(p2));
+
+        manager.removeActiveObject(spawn);
+
+        var state = manager.solidContacts().captureRewindState();
+        assertTrue(state.standingBits().isEmpty());
+        assertTrue(state.pushingBits().isEmpty());
+        for (Sonic player : List.of(p1, p2)) {
+            assertSame(original, manager.getRidingObject(player), "object deletion does not release the player");
+            assertTrue(player.isOnObject());
+            assertTrue(player.getPushing());
+        }
+
+        TrackableObject reloaded = new TrackableObject(spawn);
+        manager.registerActiveObject(spawn, reloaded);
+        assertFalse(manager.hasObjectStandingBit(p1, reloaded), "a spawn key cannot carry its predecessor's bit");
+        assertFalse(manager.hasObjectStandingBit(p2, reloaded));
+        assertFalse(manager.hasObjectPushingBit(p1));
+        assertFalse(manager.hasObjectPushingBit(p2));
+    }
+
+    @Test
     void deletingAnInstanceLatchedDynamicSolidClearsItsObjectSideLatches() {
         ObjectManager manager = makeManager(List.of(), new TrackingRegistry());
         manager.reset(0);

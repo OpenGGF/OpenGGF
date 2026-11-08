@@ -201,6 +201,56 @@ class TestHostMasterLink {
   }
  }
 
+ @Test void profileCleanupOutlivesAuthorityRetirement() throws Exception {
+  var f=new Fixture(dir);
+  CountDownLatch authorityPublished=new CountDownLatch(1),finishCleanup=new CountDownLatch(1);
+  var completionField=JdkRaceHostServer.class.getDeclaredField("ownerRetirement");
+  completionField.setAccessible(true);
+  CompletableFuture<?> authority=(CompletableFuture<?>)completionField.get(f.host);
+  CompletableFuture<?> held=authority.thenRun(()->{
+   authorityPublished.countDown();
+   boolean interrupted=false;
+   while(finishCleanup.getCount()!=0)try{finishCleanup.await();}
+    catch(InterruptedException stopped){interrupted=true;}
+   if(interrupted)Thread.currentThread().interrupt();
+  });
+  var executorField=JdkRaceHostServer.class.getDeclaredField("roomExecutor");
+  executorField.setAccessible(true);
+  ExecutorService owner=(ExecutorService)executorField.get(f.host);
+  CountDownLatch release=f.block();
+  try {
+   f.link.onMasterControl(f.open(7));
+   assertEquals(f.before+5,WorkBudget.PROCESS.retainedItems());
+   f.host.close();
+   assertFalse(f.host.retirementReceipt().authorityRetired(),"blocked owner is still authoritative");
+   assertFalse(f.host.retirementReceipt().ioReleased());
+   assertEquals(f.before+2,WorkBudget.PROCESS.retainedItems(),
+     "running action and profile cell stay charged after queued open/cleanup are discarded");
+   release.countDown();
+   assertTrue(authorityPublished.await(3,TimeUnit.SECONDS));
+   assertTrue(f.host.retirementReceipt().authorityRetired());
+   assertFalse(f.host.retirementReceipt().ioReleased(),"authority publication is not executor retirement");
+   assertEquals(f.before+1,WorkBudget.PROCESS.retainedItems(),"profile cell still has a live cleanup owner");
+   var profileField=JdkRaceHostServer.class.getDeclaredField("profileWork");
+   profileField.setAccessible(true);
+   assertEquals(1,((WorkBudget.Account)profileField.get(f.host)).retainedItems(),
+     "the remaining item belongs to this host's profile account, not the guest or another test");
+   f.link.onMasterControl(f.open(8));
+   f.link.onMasterLost();
+   assertEquals(f.before+1,WorkBudget.PROCESS.retainedItems(),
+     "late opens and repeated retirement neither acquire nor release the running profile cell");
+  } finally {
+   release.countDown();
+   finishCleanup.countDown();
+   held.get(3,TimeUnit.SECONDS);
+   assertTrue(owner.awaitTermination(3,TimeUnit.SECONDS));
+   assertTrue(f.host.retirementReceipt().ioReleased());
+   assertEquals(f.before,WorkBudget.PROCESS.retainedItems(),"actual owner retirement releases the profile cell");
+   f.close();
+  }
+ }
+
+
  private static final class Fixture implements AutoCloseable {
   final BlockingQueue<ControlMessage> outbound=new LinkedBlockingQueue<>();
   final List<CountDownLatch> releases=new ArrayList<>();
@@ -266,9 +316,12 @@ class TestHostMasterLink {
    releases.forEach(CountDownLatch::countDown);
    link.onMasterLost();host.close();
    long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(3);
-   while(!host.retirementReceipt().authorityRetired()&&System.nanoTime()<deadline)
+   // Authority publication precedes profile cleanup. The ledger assertion
+   // belongs after the room executor and I/O owners actually retire.
+   while(!host.retirementReceipt().ioReleased()&&System.nanoTime()<deadline)
     TimeUnit.MILLISECONDS.sleep(10);
    assertTrue(host.retirementReceipt().authorityRetired());
+   assertTrue(host.retirementReceipt().ioReleased(),"host cleanup must finish before budget accounting");
    assertEquals(before,WorkBudget.PROCESS.retainedItems());
   }
  }

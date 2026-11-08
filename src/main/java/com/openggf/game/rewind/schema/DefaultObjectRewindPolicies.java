@@ -954,6 +954,10 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.level.objects.AbstractMonitorObjectInstance", "effectTarget"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.level.objects.AbstractObjectInstance", "dynamicSpawn"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.level.objects.AbstractObjectInstance", "spawn"), RewindFieldPolicy.TRANSIENT),
+            // Lifecycle metadata is represented by DynamicObjectEntry.constructionFamily,
+            // not captured a second time as a compact/raw Java reference.
+            Map.entry(new FieldKey("com.openggf.level.objects.AbstractObjectInstance", "rewindConstructionParent"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.level.objects.AbstractObjectInstance", "rewindConstructionFamily"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.level.objects.boss.AbstractBossChild", "dynamicSpawn"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.level.objects.boss.AbstractBossInstance", "dynamicSpawn"), RewindFieldPolicy.DEFERRED),
             // Future child identity depends on all prior constructions, including

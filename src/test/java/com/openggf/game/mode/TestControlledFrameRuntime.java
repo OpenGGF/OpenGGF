@@ -34,8 +34,9 @@ class TestControlledFrameRuntime {
         SonicConfigurationService.getInstance().clearSessionOverrides();
     }
 
-    void load() throws Exception {
-        bootstrap = SharedLevel.load(SonicGame.SONIC_2, 0, 0);
+    void load() throws Exception { load(SonicGame.SONIC_2); }
+    void load(SonicGame game) throws Exception {
+        bootstrap = SharedLevel.load(game, 0, 0);
         var config = SonicConfigurationService.getInstance();
         config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
         config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
@@ -179,6 +180,51 @@ class TestControlledFrameRuntime {
         input.clearLogicalOverride();
         ControlledFrameRuntime.step(fixture.runtime(), input, snapshot);
         assertFalse(input.hasLogicalOverride());
+    }
+
+    @Test void sonic2NativeDestinationRunsItsLockedPresentationWithoutConsumingControlledInput() throws Exception {
+        nativeDestination(SonicGame.SONIC_2);
+    }
+
+    @Test @RequiresRom(SonicGame.SONIC_1)
+    void sonic1NativeDestinationRunsItsLockedPresentationWithoutConsumingControlledInput() throws Exception {
+        nativeDestination(SonicGame.SONIC_1);
+    }
+
+    private void nativeDestination(SonicGame game) throws Exception {
+        load(game);
+        var decision = new Decision(GameplayFrameDisposition.ADVANCE_NATIVE_INPUT);
+        controller(decision);
+        var context = fixture.runtime();
+        var level = context.getLevelManager();
+        long previousLoad = level.getCompletedProductionLoadGeneration();
+        level.requestZoneAndAct(0, 0);
+        var input = new InputHandler();
+        boolean titleObserved = false;
+        int rows = 0;
+        for (; rows < 500; rows++) {
+            assertEquals(LevelFrameResult.HELD, ControlledFrameRuntime.step(context, input, right(true, true)));
+            titleObserved |= level.isTitleCardRequested() || context.controlledPresentation().capture().active();
+            assertEquals(0, decision.advanced, "locked native presentation is not a gameplay callback");
+            assertFalse(context.getCamera().getFocusedSprite().isRightPressed());
+            if (level.getCompletedProductionLoadGeneration() != previousLoad
+                    && !context.controlledPresentation().hasPendingWork(context)
+                    && !context.getFadeManager().isActive()) break;
+        }
+        assertTrue(titleObserved);
+        assertTrue(rows < 500, "native presentation releases in bounded time");
+        assertEquals(0, context.getSpriteManager().getFrameCounter(), "native release resets the gameplay mirrors");
+        assertEquals(0, level.getFrameCounter());
+        int vint = level.getObjectManager().getVblaCounter();
+        int[] filtered = {0};
+        GameplayInputFilterAccess.install(context, raw -> { filtered[0]++; return raw; });
+        assertEquals(LevelFrameResult.GAMEPLAY_FRAME, ControlledFrameRuntime.step(context, input, right(false, false)));
+        assertEquals(1, filtered[0]);
+        assertEquals(1, decision.advanced);
+        assertEquals(1, context.getSpriteManager().getFrameCounter());
+        assertEquals(1, level.getFrameCounter());
+        assertEquals(vint + 1, level.getObjectManager().getVblaCounter());
+        assertTrue(context.getCamera().getFocusedSprite().isRightPressed());
     }
 
     @Test void callbackFailureRevokesTheServicesItPublished() throws Exception {

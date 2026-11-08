@@ -26,8 +26,7 @@ class TestNativeObjectQueries {
         var manager = services.objectManager();
         var owner = new Occupant(1, 1);
         manager.addDynamicObjectAtSlot(owner, 40);
-        var execField = ObjectManager.class.getDeclaredField("execOrder"); execField.setAccessible(true);
-        var exec = (ObjectInstance[]) execField.get(manager);
+        var exec = manager.population().executionOrder;
         exec[15] = owner; // A consolidated execution alias is never the owned SST.
         var updating = ObjectManager.class.getDeclaredField("updating"); updating.setAccessible(true);
         var cursor = ObjectManager.class.getDeclaredField("currentExecSlot"); cursor.setAccessible(true);

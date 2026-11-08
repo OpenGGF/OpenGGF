@@ -48,7 +48,11 @@ com.openggf/
     objects/                 -- Base object classes, registry interface, spawn records
       AbstractObjectInstance.java  -- Base class for all game objects
       ObjectRegistry.java         -- Interface: maps object IDs to factories
-      ObjectManager.java          -- Active object tracking, spawn/despawn
+      ObjectManager.java          -- Runtime entry: admission, execution, removal
+      ObjectPopulation.java       -- Live membership, slots, child reservations, identities
+      ObjectRewindLifecycle.java  -- Reconstruct captured populations and restore their state
+      ObjectSolidContactController.java -- Solid geometry and gameplay contact decisions
+      contact/                    -- Ride/latch state, frame lifetime, expiry and snapshot codec
       ObjectServices.java         -- Contextual services available to objects
       ObjectSpawn.java            -- Data record: x, y, objectId, subtype, flags
     render/                  -- Sprite rendering (PatternSpriteRenderer)
@@ -79,6 +83,91 @@ com.openggf/
   debug/                     -- Debug overlays and visualization
   tools/                     -- Offline tools (RomOffsetFinder, rewind inventory, etc.)
 ```
+
+### Finding an object lifecycle owner
+
+Start at the responsibility, rather than reading `ObjectManager` end to end:
+
+| Change or investigation | Owner |
+| --- | --- |
+| Correct one object's movement, lifetime tail or render-flag branch | Its existing `game.sonic*/objects` routine and production-entity test |
+| Live membership, slot and identity storage, and ordinary admission/retirement | `ObjectPopulation`; trusted placement-transfer, streaming, adoption and native-overwrite writers remain |
+| Recreate linked objects, adopt construction children, or order a restore | `ObjectRewindLifecycle` |
+| Standing/pushing latch identity, ride lifetime, frame markers, or saved contacts | `contact.SolidContactState` |
+| Classify a solid contact or decide its gameplay response | `ObjectSolidContactController` |
+| Coarse X-range arithmetic or its native/viewport bound | `ObjectRangeOps`; the calling object/manager still chooses lifetime policy |
+| When a manager range check runs and how retirement releases slots/respawn state | `ObjectManager.updateCounterBasedExecThenLoad`, `runExecLoop` and `unloadIfOutsideLifetimeWindow` |
+
+`ObjectManager` keeps the existing runtime entry points. The capability owners
+hold the state and rules behind them; they are not alternate public creator APIs.
+Their Javadoc defines the local invariants. For example, removing a solid clears
+its object-side bits without clearing the player's riding flags.
+
+For an ordinary badnik correction, stay in the existing leaf routine unless the
+failure crosses one of these shared boundaries. Placement loading decides which
+entries may be created; leaving that candidate window does not retire an existing
+actor. Lifetime retirement and the retained render flag are also separate:
+an actor can remain alive outside the visible sprite rectangle, and a ROM branch
+may read visibility from the previous render pass.
+
+| ROM difference being modelled | Existing hook or owner |
+| --- | --- |
+| Same range comparison, different current/original/parent X | `ObjectInstance.getOutOfRangeReferenceX` |
+| Different delete predicate | `usesCustomOutOfRangeCheck` / `isCustomOutOfRange`; preserve existing object-owned delete tails |
+| Object must survive the manager's range decision | `isPersistent` veto; it can be conditional on the object's own window |
+| Check before or after movement in S1's slot pass | `checksOutOfRangeAfterRoutine`; the non-counter pass already checks afterward |
+| Prior-render visibility controls a branch or self-delete | The object's retained render-state path, separate from coarse range arithmetic |
+
+The two bounds are intentionally distinct. S1 counter placement keeps native
+640. A viewport-aware object tail uses `128 + width + 192`, which is 848 at width
+528. Buzz Bomber's persistence veto can therefore keep its live chunk at distance
+768 after the manager's native check rejects it. Removing that hook as redundant
+would change widescreen lifetime. `TestBuzzBomberLifecycle` exercises the actual
+badnik and this manager boundary; `TestObjectRangeHelpers` and
+`TestAbstractObjectInstanceRange` cover the arithmetic and word-wrap boundaries.
+Use an anchored-object check such as `TestSonic1LavaGeyserOutOfRange` when changing
+shared range behavior. An object-local update test alone cannot prove manager
+retirement timing or slot/respawn effects.
+
+Contact changes start with three different lifetimes:
+
+| State | Authority and lifetime |
+| --- | --- |
+| Player's ride and piece index | The player's support; clearing an object's bit alone does not release it |
+| Object's standing/pushing bits | Persist until the owning routine clears them or the object retires; transfer only with that exact surviving owner |
+| Fresh landing and pre-clear observations | Explain later calls in the same frame; expire at the next frame and are not restored from a snapshot |
+
+The controller decides when those states change. A newly landed airborne rider
+can retain a fresh bit when its collision rules or provider permit it; the same
+bit is stale on the next frame. Start at `retainsFreshStandingContact` for that
+policy, then follow only the relevant entry, continued-ride or multipart caller.
+
+Ordinary gameplay clears frame observations in `beginInlineFrame` before object
+loading or execution. Placement order then depends on the selected mode:
+counter placement advances at the separate post-camera call; non-counter
+exec-then-load places after execution unless the slot layout selects two-axis
+placement, which loads before execution. Post-camera admission does not itself
+run a solid helper. A newly admitted post-execution replacement first executes
+after the next frame's observation clear. Do not infer a same-frame history leak
+from an equal spawn key alone, or describe all S3K placement as exec-then-load.
+`LevelManager` selects counter mode from the collision model independently of
+the slot layout; follow its setup when diagnosing a production route.
+
+Reconstruction has one ordinary order: create/adopt actors and register their
+identities, restore their fields/references, then settle derived state. Deferred
+player effects are an explicit exception. Their recreation hook queues a
+captured entry; `AbstractPlayableSprite.refreshPowerUpObjectsAfterRewindRestore` later creates the
+effect, and `ObjectRewindLifecycle.completePendingPlayerBoundObject` matches its
+concrete class and current player, admits it with its captured identity/order,
+then restores scalar state. Such a pending effect is unavailable as a required
+reference target during the earlier graph restore; there is no later reference
+fixup. Start at the completion method for matching/publication changes, and at
+`restorePopulation` for graph ordering or constructor-child adoption.
+
+Use the [focused object lifecycle checks](testing.md#object-population-and-contact-boundaries)
+to follow those boundaries through real production calls. See
+[`level.objects` package documentation](../../../src/main/java/com/openggf/level/objects/package-info.java)
+for the short source entry map.
 
 ## The GameModule / Provider Pattern
 
@@ -365,7 +454,21 @@ or another `level.objects` compatibility wrapper so construction context and lif
 semantics stay centralized. Direct `ObjectManager.addDynamicObject(obj)` is reserved
 for documented bridge code and unusual allocation paths that cannot use the standard
 helpers. Dynamic objects follow the same
-update/render/destroy lifecycle but are not subject to camera-based spawn/despawn.
+update/render/destroy lifecycle. They bypass layout spawn windows, but their own
+routine or the manager's lifetime policy can still retire them off camera.
+Dynamic retirement resolves the solid's contact key and expires its bits/history
+only when no surviving solid owns that same resolved spawn key. Non-solid children
+with a borrowed spawn do not own it; instance and occurrence owners remain separate.
+This surviving-owner check applies to dynamic retirement. Placed range-unload
+releases live bits; latched destruction also evicts the key's frame observations.
+Those placed paths do not apply the dynamic surviving-owner check, so aliases
+across placed/dynamic boundaries remain a separate limitation. Player ride/status
+survives object-side expiry. Start at
+`ObjectSolidContactController.evictRetiredDynamic`, then `ObjectPopulation` for the
+explicit-removal versus destroyed-cleanup ordering. Focused witnesses:
+`TestDynamicSolidContactRetirement`, `TestSolidContactState`,
+`TestObjectSolidContactController`, `TestTasS3kOrtExhaustion`,
+and `TestObjectRemovalCallbackOwnership`.
 
 ## Rendering Pipeline
 

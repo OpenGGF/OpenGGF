@@ -1,26 +1,45 @@
 package com.openggf.tools;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.openggf.tests.SessionInvocationExtension.SessionInvocation;
+import com.openggf.tests.trace.TraceReportWriter;
 import com.openggf.tools.TraceTriageTool.Bootstrap;
 import com.openggf.tools.TraceTriageTool.Divergence;
 import com.openggf.tools.TraceTriageTool.Subsystem;
 import com.openggf.tools.TraceTriageTool.TraceReport;
+import com.openggf.trace.DivergenceReport;
+import com.openggf.trace.BootstrapDivergence;
+import com.openggf.trace.FieldComparison;
+import com.openggf.trace.FrameComparison;
+import com.openggf.trace.Severity;
+import com.openggf.trace.TraceVerificationScope;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.zip.GZIPOutputStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Unit tests for {@link TraceTriageTool}. Uses a synthetic report JSON string
- * matching the real {@code DivergenceReport.toJson()} schema. No ROM, no
- * OpenGL, no real trace run. JUnit 5 / Jupiter only.
+ * Unit tests for {@link TraceTriageTool}. Exercises both published producer
+ * reports and a synthetic divergence catalogue. No ROM, OpenGL, or trace replay.
  */
 class TestTraceTriageTool {
 
@@ -90,6 +109,121 @@ class TestTraceTriageTool {
         assertEquals(2, report.bootstrap().size());
         assertEquals(2, report.errors().size());
         assertEquals(1, report.warnings().size());
+    }
+
+    @Test
+    void readsPublishedDivergenceAndItsContext(@TempDir Path tempDir) throws Exception {
+        DivergenceReport produced = new DivergenceReport(List.of(new FrameComparison(7,
+                Map.of("x", new FieldComparison(
+                        "x", "0x0100", "0x0101", Severity.ERROR, 1)),
+                "routine=02 object=0x41", "routine=04 object=0x41")));
+        Path reportPath = publishReport(tempDir, produced, true);
+
+        TraceReport parsed = TraceTriageTool.parseReport(Files.readString(reportPath));
+        String context = Files.readString(TraceTriageTool.contextPathForReport(reportPath));
+        String excerpt = TraceTriageTool.extractContextNearFrame(context, 7, 2, 12);
+        String brief = TraceTriageTool.renderBrief("s2", "ehz1", parsed, excerpt, "");
+
+        assertEquals(1, parsed.errorCount());
+        assertEquals(1, parsed.totalFrames());
+        assertEquals(7, parsed.firstDivergence().startFrame());
+        assertEquals("0x0100", parsed.firstDivergence().expectedAtStart());
+        assertEquals("0x0101", parsed.firstDivergence().actualAtStart());
+        assertTrue(brief.contains("ROM: routine=02 object=0x41"));
+        assertTrue(brief.contains("ENG: routine=04 object=0x41"));
+    }
+
+    @Test
+    void publishedCleanPrefixIsReportedAsIncomplete(@TempDir Path tempDir) throws Exception {
+        DivergenceReport cleanPrefix = new DivergenceReport(List.of(new FrameComparison(0,
+                Map.of("x", new FieldComparison(
+                        "x", "0x0100", "0x0100", Severity.MATCH, 0)))));
+        Path reportPath = publishReport(tempDir, cleanPrefix, false);
+        TraceReport parsed = TraceTriageTool.parseReport(Files.readString(reportPath));
+
+        String brief = TraceTriageTool.renderBrief("s2", "ehz1", parsed, "", "");
+
+        assertEquals(0, parsed.errorCount());
+        assertEquals(1, parsed.totalFrames());
+        assertTrue(brief.toLowerCase(Locale.ROOT).contains("incomplete"),
+                "A matching prefix whose published replay gate was not reached must be visibly incomplete.");
+    }
+
+    @Test
+    void declaredGateCompletionDoesNotDependOnComparisonCount(@TempDir Path tempDir) throws Exception {
+        Path reportPath = publishReport(tempDir, new DivergenceReport(List.of()), true);
+        TraceReport parsed = TraceTriageTool.parseReport(Files.readString(reportPath));
+
+        assertEquals(0, parsed.totalFrames());
+        assertTrue(parsed.replayGate().comparisonGateReached());
+        assertEquals(10, parsed.replayGate().plannedTraceRows());
+        assertTrue(TraceTriageTool.renderBrief("s2", "ehz1", parsed, "", "")
+                .contains("Replay completion: COMPLETE"));
+    }
+
+    @Test
+    void legacyReportHasUnknownCompletion() throws Exception {
+        TraceReport parsed = TraceTriageTool.parseReport(new DivergenceReport(List.of()).toJson());
+
+        assertNull(parsed.replayGate());
+        assertTrue(TraceTriageTool.renderBrief("s2", "ehz1", parsed, "", "")
+                .contains("Replay completion: UNKNOWN"));
+    }
+
+    @Test
+    void rejectsProducerSerializationErrorDocument() {
+        // DivergenceReport.toJson() returns this document shape on serialization failure.
+        assertThrows(IOException.class,
+                () -> TraceTriageTool.parseReport(
+                        "{\"error\":\"Failed to serialise report: producer failure\"}"),
+                "A producer error document must not become a zero-error matching trace.");
+    }
+
+    @Test
+    void rejectsPublishedReportWithMissingComparisonCount(@TempDir Path tempDir) throws Exception {
+        Path reportPath = publishReport(tempDir, new DivergenceReport(List.of()), true);
+        ObjectNode payload = (ObjectNode) new ObjectMapper().readTree(reportPath.toFile());
+        payload.remove("error_count");
+
+        assertThrows(IOException.class,
+                () -> TraceTriageTool.parseReport(payload.toString()),
+                "A missing comparison count must not be replaced with a clean zero.");
+    }
+
+    @Test
+    void rejectsMalformedGateInsteadOfTreatingItAsLegacy(@TempDir Path tempDir) throws Exception {
+        Path reportPath = publishReport(tempDir, new DivergenceReport(List.of()), true);
+        ObjectNode payload = (ObjectNode) new ObjectMapper().readTree(reportPath.toFile());
+        ((ObjectNode) payload.get("replay_gate")).put("comparison_gate_reached", "true");
+
+        assertThrows(IOException.class, () -> TraceTriageTool.parseReport(payload.toString()));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"bootstrap", "errors", "warnings"})
+    void rejectsMalformedDivergenceArrays(String field) throws Exception {
+        ObjectNode payload = (ObjectNode) new ObjectMapper().readTree(new DivergenceReport(List.of()).toJson());
+        payload.putObject(field);
+
+        assertThrows(IOException.class, () -> TraceTriageTool.parseReport(payload.toString()));
+    }
+
+    @Test
+    void rejectsStringComparisonCount() throws Exception {
+        ObjectNode payload = (ObjectNode) new ObjectMapper().readTree(new DivergenceReport(List.of()).toJson());
+        payload.put("error_count", "0");
+
+        assertThrows(IOException.class, () -> TraceTriageTool.parseReport(payload.toString()));
+    }
+
+    private Path publishReport(Path directory, DivergenceReport report, boolean completed)
+            throws IOException {
+        SessionInvocation invocation = new SessionInvocation(
+                getClass().getName(), "publishedReport", 0, "0123456789abcdef", "published report");
+        return TraceReportWriter.writeReport(directory, report, "trace", invocation,
+                "single", "s2_ehz1", TraceVerificationScope.ALL, 2,
+                new TraceReportWriter.ReplayGate(10, completed, TraceVerificationScope.ALL))
+                .physicalPath();
     }
 
     @Test
@@ -236,10 +370,128 @@ class TestTraceTriageTool {
     }
 
     @Test
-    void extractJsonIntFieldReadsHexAndQuotedAndPlainValues() {
-        assertEquals(375, TraceTriageTool.extractJsonIntField("{\"frame\":375}", "frame"));
-        assertEquals(7, TraceTriageTool.extractJsonIntField("{\"slot\": 7 }", "slot"));
-        assertEquals(-1, TraceTriageTool.extractJsonIntField("{\"frame\":12}", "missing"));
+    void crowdedPrecedingRowDoesNotHideActualAuxFocus() {
+        StringBuilder aux = new StringBuilder();
+        for (int slot = 0; slot < 30; slot++) {
+            aux.append("{\"frame\":374,\"event\":\"object_state_snapshot\",\"slot\":")
+                    .append(slot).append("}\n");
+        }
+        aux.append("{\"frame\":375,\"event\":\"velocity_write\",\"routine\":\"0x1234\"}\n");
+        aux.append("{\"frame\":900,\"event\":\"object_removed\"}\n");
+
+        String excerpt = TraceTriageTool.extractAuxNearFrame(aux.toString(), 375, 3, 4);
+
+        assertEquals(4, excerpt.lines().count());
+        assertTrue(excerpt.lines().findFirst().orElseThrow().contains("\"frame\":375"));
+        assertTrue(excerpt.contains("0x1234"));
+        assertFalse(excerpt.contains("\"frame\":900"));
+    }
+
+    @Test
+    void auxWindowRetainsRecordedBootstrapRow() {
+        String excerpt = TraceTriageTool.extractAuxNearFrame("""
+                {"frame":-1,"event":"cpu_state_snapshot","cpu_routine":6}
+                {"frame":0,"event":"zone_act_state","actual_zone_id":1}
+                """, 0, 1, 4);
+
+        assertTrue(excerpt.contains("\"frame\":-1"));
+        assertTrue(excerpt.lines().findFirst().orElseThrow().contains("\"frame\":0"));
+    }
+
+    @Test
+    void bootstrapBriefPrioritizesPreTraceAuxOverCrowdedFrameZero(@TempDir Path tempDir) throws Exception {
+        DivergenceReport bootstrap = new DivergenceReport(List.of(), null, List.of(
+                new BootstrapDivergence("object_slot[37].routine", BootstrapDivergence.Severity.ERROR,
+                        "02", "04", "pre-trace object state")));
+        Path report = publishReport(tempDir, bootstrap, false);
+        StringBuilder aux = new StringBuilder();
+        for (int slot = 0; slot < 40; slot++) {
+            aux.append("{\"frame\":0,\"event\":\"object_state_snapshot\",\"slot\":")
+                    .append(slot).append("}\n");
+        }
+        aux.append("{\"frame\":-1,\"event\":\"object_state_snapshot\",\"slot\":37}\n");
+        Path auxFile = tempDir.resolve("aux_state.jsonl");
+        Files.writeString(auxFile, aux);
+        var output = new ByteArrayOutputStream();
+        var errors = new ByteArrayOutputStream();
+
+        int status = TraceTriageTool.run(new String[]{"--report", report.toString(), "--aux", auxFile.toString()},
+                new PrintStream(output), new PrintStream(errors));
+
+        assertEquals(0, status, errors.toString(StandardCharsets.UTF_8));
+        String brief = output.toString(StandardCharsets.UTF_8);
+        assertTrue(brief.contains("\"frame\":-1"),
+                "bootstrap object evidence must survive a crowded first gameplay row");
+        assertTrue(brief.indexOf("\"frame\":-1") < brief.indexOf("\"frame\":0"),
+                "pre-trace evidence is the auxiliary focus for a bootstrap error");
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void explicitReportFindsPublishedContextAndFixtureAux(boolean compressed, @TempDir Path tempDir)
+            throws Exception {
+        Path fixture = tempDir.resolve("fixture with spaces");
+        Files.createDirectories(fixture);
+        Files.copy(Path.of("src/test/resources/traces/s2/ehz1_fullrun/metadata.json"),
+                fixture.resolve("metadata.json"));
+        String aux = "{\"frame\":7,\"event\":\"velocity_write\",\"routine\":\"0x1234\"}\n";
+        if (compressed) {
+            try (var stream = new GZIPOutputStream(Files.newOutputStream(fixture.resolve("aux_state.jsonl.gz")))) {
+                stream.write(aux.getBytes(StandardCharsets.UTF_8));
+            }
+        } else {
+            Files.writeString(fixture.resolve("aux_state.jsonl"), aux);
+        }
+        DivergenceReport produced = new DivergenceReport(List.of(new FrameComparison(7,
+                Map.of("x", new FieldComparison("x", "0x0100", "0x0101", Severity.ERROR, 1)),
+                "routine=02 object=0x41", "routine=04 object=0x41")));
+        Path report = publishReport(tempDir.resolve("reports"), produced, true);
+
+        TriageResult result = runTriage("--report", report.toString(), "--fixture", fixture.toString());
+
+        assertEquals(0, result.status(), result.errors());
+        assertEquals("", result.errors());
+        assertTrue(result.output().contains("Game/Zone: s2 / ehz1"));
+        assertTrue(result.output().contains("ROM: routine=02 object=0x41"));
+        assertTrue(result.output().contains("ENG: routine=04 object=0x41"));
+        assertTrue(result.output().contains("0x1234"));
+    }
+
+    @Test
+    void positionalGameAndZoneStillReadLegacyReport(@TempDir Path tempDir) throws Exception {
+        publishReport(tempDir, new DivergenceReport(List.of()), true);
+
+        TriageResult result = runTriage("s2", "ehz1", "--dir", tempDir.toString());
+
+        assertEquals(0, result.status(), result.errors());
+        assertTrue(result.output().contains("Game/Zone: s2 / ehz1"));
+        assertTrue(result.output().contains("Replay completion: COMPLETE"));
+    }
+
+    @Test
+    void missingReportAndMissingOptionValueReturnFailure(@TempDir Path tempDir) {
+        TriageResult missingReport = runTriage("--report", tempDir.resolve("absent.json").toString());
+        assertEquals(1, missingReport.status());
+        assertTrue(missingReport.errors().contains("Report not found"));
+        assertEquals("", missingReport.output());
+
+        TriageResult missingValue = runTriage("--report", "--fixture", tempDir.toString());
+        assertEquals(2, missingValue.status());
+        assertTrue(missingValue.errors().contains("Missing value for --report"));
+    }
+
+    private record TriageResult(int status, String output, String errors) {
+    }
+
+    private static TriageResult runTriage(String... arguments) {
+        var output = new ByteArrayOutputStream();
+        var errors = new ByteArrayOutputStream();
+        try (var out = new PrintStream(output, true, StandardCharsets.UTF_8);
+             var err = new PrintStream(errors, true, StandardCharsets.UTF_8)) {
+            int status = TraceTriageTool.run(arguments, out, err);
+            return new TriageResult(status, output.toString(StandardCharsets.UTF_8),
+                    errors.toString(StandardCharsets.UTF_8));
+        }
     }
 
     @Test

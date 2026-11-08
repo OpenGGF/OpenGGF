@@ -1,5 +1,15 @@
 package com.openggf.tools;
 
+import com.openggf.Engine;
+import com.openggf.control.InputHandler;
+import com.openggf.control.LogicalInputSnapshot;
+import com.openggf.game.LevelInputOverlay;
+import com.openggf.game.mode.CourseControl;
+import com.openggf.game.mode.ControlledFrameRuntime;
+import com.openggf.game.mode.GameplayFrameController;
+import com.openggf.game.patch.DelegatingGameModule;
+import com.openggf.game.session.SessionManager;
+
 import com.openggf.graphics.RgbaImage;
 import com.openggf.graphics.ScreenshotCapture;
 import com.openggf.game.GameMode;
@@ -13,10 +23,147 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
+import static org.lwjgl.opengl.GL11.*;
 
 /** Pixel readback must be optional without suppressing any frame's real drawing. */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestGameplayCaptureFrameRendering {
+    @Test
+    void modalOverlayRemainsVisibleInLiveAndCapturedControlledNativeTitle() throws Exception {
+        var settings = new GameplayCaptureSession.Settings(320, "sonic", "", "off",
+                null, null, null, null, true, false);
+        try (var session = new GameplayCaptureSession(settings)) {
+            session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 0, 1, settings);
+            var context = SessionManager.getCurrentGameplayMode();
+            var world = context.getWorldSession();
+            var base = world.getGameModule();
+            boolean[] opened = {false};
+            int[] draws = {0};
+            var overlay = new LevelInputOverlay() {
+                @Override public boolean handleInput(InputHandler input) { return opened[0]; }
+                @Override public boolean pausesGameplay() { return opened[0]; }
+                @Override public void drawOverlay() {
+                    if (!opened[0]) return;
+                    draws[0]++;
+                    glEnable(GL_SCISSOR_TEST);
+                    glScissor(8, 8, 16, 16);
+                    glClearColor(1, 0, 1, 1);
+                    glClear(GL_COLOR_BUFFER_BIT);
+                    glDisable(GL_SCISSOR_TEST);
+                }
+            };
+            var controller = new GameplayFrameController() {
+                @Override public boolean beforeTick(CourseControl course,
+                        LogicalInputSnapshot input) { return false; }
+                @Override public void afterTick(CourseControl course, boolean advanced) {
+                    assertFalse(advanced);
+                }
+            };
+            var module = new DelegatingGameModule(base, "test:native-title-modal") {
+                @Override public GameplayFrameController gameplayFrameController() {
+                    return controller;
+                }
+                @Override public <T> T getGameService(Class<T> type) {
+                    return type == LevelInputOverlay.class ? type.cast(overlay)
+                            : super.getGameService(type);
+                }
+            };
+            var moduleField = world.getClass().getDeclaredField("gameModule");
+            moduleField.setAccessible(true);
+            moduleField.set(world, module);
+            context.getLevelManager().requestZoneAndAct(1, 0);
+            int rows = 0;
+            while (!ControlledFrameRuntime.isNativeTitlePresentationActive(context)
+                    && rows++ < 100) session.step(null);
+            assertTrue(rows < 100);
+            for (int row = 0; row < 20; row++) session.step(null);
+            opened[0] = true;
+            assertTrue(ControlledFrameRuntime.isNativeTitlePresentationActive(context),
+                    "capture must exercise the locked native-title branch");
+            RgbaImage captured = session.render();
+            int pixelY = GameplayCaptureSession.HEIGHT - 12;
+            assertEquals(0xFFFF00FF, captured.argb(12, pixelY), "capture shows the modal pixels");
+            assertEquals(1, draws[0], "capture draws the input-owning modal over the locked title");
+
+            var engine = new Engine();
+            try {
+                setEngineOwner(engine, "levelManager", context.getLevelManager());
+                setEngineOwner(engine, "spriteManager", context.getSpriteManager());
+                setEngineOwner(engine, "camera", context.getCamera());
+                assertSame(session.loop().getTitleCardProvider(), engine.getGameLoop().getTitleCardProvider());
+                var draw = Engine.class.getDeclaredMethod("drawLevel");
+                draw.setAccessible(true);
+                glClearColor(0, 0, 0, 1);
+                glClear(GL_COLOR_BUFFER_BIT);
+                assertTrue(ControlledFrameRuntime.isNativeTitlePresentationActive(context),
+                        "live rendering must exercise the locked native-title branch");
+                draw.invoke(engine);
+                assertEquals(2, draws[0], "live Engine must draw the same modal after the native title");
+                RgbaImage live = ScreenshotCapture.captureFramebuffer(320, GameplayCaptureSession.HEIGHT);
+                assertEquals(captured.argb(12, pixelY), live.argb(12, pixelY),
+                        "live and captured frames show the input-owning modal above the locked title");
+            } finally {
+                Engine.clearGlobalInstance();
+            }
+        }
+    }
+
+    private static void setEngineOwner(Engine engine, String name, Object owner) throws Exception {
+        var field = Engine.class.getDeclaredField(name);
+        field.setAccessible(true);
+        field.set(engine, owner);
+    }
+
+    @Test
+    void controlledLockedDestinationDrawsNativeTitleBeforeItsReleasedOverlay() throws Exception {
+        var settings = new GameplayCaptureSession.Settings(320, "sonic", "", "off",
+                null, null, null, null, true, false);
+        try (var session = new GameplayCaptureSession(settings)) {
+            session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 0, 1, settings);
+            var context = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+            var world = context.getWorldSession();
+            var base = world.getGameModule();
+            int[] creatorDraws = {0};
+            var controller = new com.openggf.game.mode.GameplayFrameController() {
+                @Override public boolean beforeTick(com.openggf.game.mode.CourseControl course,
+                        com.openggf.control.LogicalInputSnapshot input) { return false; }
+                @Override public void afterTick(com.openggf.game.mode.CourseControl course, boolean advanced) {
+                    assertFalse(advanced);
+                }
+                @Override public boolean drawScene() { creatorDraws[0]++; return false; }
+                @Override public void drawOverlay() { creatorDraws[0]++; }
+            };
+            var module = new com.openggf.game.patch.DelegatingGameModule(base, "test:controlled-title-pixels") {
+                @Override public com.openggf.game.mode.GameplayFrameController gameplayFrameController() {
+                    return controller;
+                }
+            };
+            var moduleField = world.getClass().getDeclaredField("gameModule");
+            moduleField.setAccessible(true);
+            moduleField.set(world, module);
+            context.getLevelManager().requestZoneAndAct(1, 0);
+            int rows = 0;
+            while (!com.openggf.game.mode.ControlledFrameRuntime.isNativeTitlePresentationActive(context)
+                    && rows++ < 100) session.step(null);
+            assertTrue(rows < 100, "real controlled native fade enters a title");
+            for (int row = 0; row < 20; row++) session.step(null);
+            assertFalse(base.getTitleCardProvider().isOverlayActive(), "locked card precedes released text");
+            var nativeTitle = session.render();
+            assertEquals(0, creatorDraws[0], "native entry owns the scene and overlay while locked");
+            session.loop().setGameMode(GameMode.TITLE_CARD);
+            var ordinaryTitle = session.render();
+            assertArrayEquals(ordinaryTitle.pixels(), nativeTitle.pixels());
+            session.loop().setGameMode(GameMode.LEVEL);
+            try (var ownership = mockStatic(com.openggf.game.mode.ControlledFrameRuntime.class, CALLS_REAL_METHODS)) {
+                ownership.when(() -> com.openggf.game.mode.ControlledFrameRuntime.isNativeTitlePresentationActive(context))
+                        .thenReturn(false);
+                var missingTitle = session.render();
+                assertFalse(java.util.Arrays.equals(nativeTitle.pixels(), missingTitle.pixels()),
+                        "negative control: released-overlay selection alone omits the locked card pixels");
+            }
+        }
+    }
+
     @Test
     void interactiveCaptureUsesTheProductionPresentationCallbackOncePerFrame() throws Exception {
         var settings = new GameplayCaptureSession.Settings(320, "sonic", "", "off",

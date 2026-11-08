@@ -317,6 +317,8 @@ class TestS3kBonusPortalMechanismProducts {
         final String rewardRetirement = slotRewardRetirementDiagnostic(runtime);
         assertTrue(runtime.activeSlotRingRewardsForTest().isEmpty(), () -> "ring-list retirement: " + rewardRetirement);
         assertTrue(runtime.activeSlotSpikeRewardsForTest().isEmpty(), () -> "spike-list retirement: " + rewardRetirement);
+        assertFalse(rewardRetirement.startsWith("DIAG_INVALID"), () -> rewardRetirement);
+        assertTrue(rewardRetirement.contains("rawDynamicCount="), () -> rewardRetirement);
         // END BONUS_RETIREMENT_OBSERVATION_ASSERTIONS
         var payoutAfter=registry.capture();
         for(int cycle=0;cycle<2;cycle++) {
@@ -343,7 +345,7 @@ class TestS3kBonusPortalMechanismProducts {
             Object controller = observation.raw(runtime, "slotStageController");
             Object state = observation.raw(runtime, "slotStageState");
             Object cage = observation.raw(runtime, "slotCage");
-            var dynamic = observation.list(observation.raw(objects, "dynamicObjects"));
+            var dynamic = observation.list(observation.raw(observation.raw(objects, "population"), "dynamic"));
             observation.add("runtime=" + observation.ref(runtime) + " currentWorld=" + observation.ref(world)
                     + " currentMode=" + observation.ref(mode) + " modeWorld="
                     + observation.ref(observation.raw(mode, "worldSession")) + " levelManager="

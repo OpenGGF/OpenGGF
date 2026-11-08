@@ -24,8 +24,17 @@ final class LevelIterationAdmissionController {
     private final Consumer<GameplayModeContext> initialAssemblyCompleted;
     private boolean seamlessBoundaryCompletionPending;
     private boolean freshLoadThisIteration;
-    private boolean freshTitleCompleted;
-    private boolean freshOrdinaryBoundaryObserved;
+    // LevelManager owns whether a fresh boundary is pending. While it is,
+    // admission progresses from title completion to one unpaused ordinary
+    // boundary, then assembly. The load-iteration hold is independent: even a
+    // completed title cannot admit LEVEL again in the iteration that loaded it.
+    private FreshAdmissionPhase freshAdmissionPhase = FreshAdmissionPhase.AWAITING_TITLE;
+
+    private enum FreshAdmissionPhase {
+        AWAITING_TITLE,
+        AWAITING_ORDINARY_BOUNDARY,
+        AWAITING_ASSEMBLY
+    }
 
     LevelIterationAdmissionController() {
         this(context -> { });
@@ -41,8 +50,7 @@ final class LevelIterationAdmissionController {
 
     void loadedFreshBoundary(boolean pending) {
         freshLoadThisIteration = pending;
-        freshTitleCompleted = false;
-        freshOrdinaryBoundaryObserved = false;
+        freshAdmissionPhase = FreshAdmissionPhase.AWAITING_TITLE;
     }
 
     private int lastAppliedPlaybackFrame = -1;
@@ -88,8 +96,7 @@ final class LevelIterationAdmissionController {
                 return LevelFrameResult.SETUP_ONLY;
             }
             if (levelManager.hasPendingFreshLevelTransitionBoundary()) {
-                freshTitleCompleted = true;
-                freshOrdinaryBoundaryObserved = false;
+                freshAdmissionPhase = FreshAdmissionPhase.AWAITING_ORDINARY_BOUNDARY;
             }
             LevelFrameResult releaseResult = titleReleaseResult.get();
             if (TraceSessionLauncher.claimTitleCardControlReleaseBarrierIfActive()) {
@@ -111,7 +118,7 @@ final class LevelIterationAdmissionController {
                 // remains owned by PaletteFade. Title init belongs to the next.
                 return LevelFrameResult.SETUP_ONLY;
             }
-            if (!freshTitleCompleted) {
+            if (freshAdmissionPhase == FreshAdmissionPhase.AWAITING_TITLE) {
                 // Let the level dispatcher consume its pending title request;
                 // never consume initial Process_Sprites against held players.
                 return LevelFrameResult.GAMEPLAY_FRAME;
@@ -123,8 +130,9 @@ final class LevelIterationAdmissionController {
                 return LevelFrameResult.PAUSED;
             }
             pauseAlreadyChecked = true;
-            if (!freshOrdinaryBoundaryObserved) {
-                freshOrdinaryBoundaryObserved = true;
+            if (freshAdmissionPhase == FreshAdmissionPhase.AWAITING_ORDINARY_BOUNDARY) {
+                // Observation precedes publication, including if publication throws.
+                freshAdmissionPhase = FreshAdmissionPhase.AWAITING_ASSEMBLY;
                 levelManager.publishFreshLevelTransitionInitialBoundary();
                 return LevelFrameResult.SETUP_ONLY;
             }
@@ -132,8 +140,8 @@ final class LevelIterationAdmissionController {
             // Fresh title loads retain player assembly past the release row;
             // capture frame zero after that assembly and before its first tick.
             initialAssemblyCompleted.accept(gameplayMode);
-            freshTitleCompleted = false;
-            freshOrdinaryBoundaryObserved = false;
+            // Retire this progression only after assembly and its observer return.
+            freshAdmissionPhase = FreshAdmissionPhase.AWAITING_TITLE;
         }
         SeamlessLevelTransitionRequest request =
                 levelManager.consumeSeamlessTransitionRequest();
@@ -182,8 +190,7 @@ final class LevelIterationAdmissionController {
     void reset() {
         seamlessBoundaryCompletionPending = false;
         freshLoadThisIteration = false;
-        freshTitleCompleted = false;
-        freshOrdinaryBoundaryObserved = false;
+        freshAdmissionPhase = FreshAdmissionPhase.AWAITING_TITLE;
     }
 
     void finishPlaybackBoundary(

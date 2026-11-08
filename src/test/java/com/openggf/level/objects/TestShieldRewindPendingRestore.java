@@ -15,6 +15,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -234,6 +235,83 @@ class TestShieldRewindPendingRestore {
         var next = (ObjectInstance) spawner.spawnShield(freshP1, ShieldType.BASIC);
         assertEquals(saved.dynamicObjectIdCounter(), owners.manager.captureIdentityContext()
                 .requireIdentityTable().idFor(next).dynamicId());
+    }
+
+    @Test
+    void actualPlayerRefreshHooksCompleteReversedLateShieldsAndPreserveWholeSnapshot() {
+        var owners = new RegisteredOwners();
+        owners.manager.setRewindClassResolver(new RewindClassResolver() {
+            @Override
+            public Optional<Class<?>> resolve(String ownerModId, String binaryName) {
+                if (("creator-p1".equals(ownerModId) || "creator-p2".equals(ownerModId))
+                        && ShieldObjectInstance.class.getName().equals(binaryName)) {
+                    return Optional.of(ShieldObjectInstance.class);
+                }
+                return ENGINE_ONLY.resolve(ownerModId, binaryName);
+            }
+
+            @Override
+            public Optional<String> ownerOf(Class<?> type) {
+                return ENGINE_ONLY.ownerOf(type);
+            }
+        });
+        var p1 = player("sonic");
+        var p2 = player("tails");
+        owners.roster(p1, p2);
+        var spawner = new DefaultPowerUpSpawner(owners.manager);
+        p1.setPowerUpSpawner(spawner);
+        p2.setPowerUpSpawner(spawner);
+        p1.giveShield(ShieldType.BASIC);
+        p2.giveShield(ShieldType.BASIC);
+        var originalP1 = (ShieldObjectInstance) p1.getShieldObject();
+        var originalP2 = (ShieldObjectInstance) p2.getShieldObject();
+        owners.manager.restoreDynamicCallbackOwner(originalP1, "creator-p1");
+        owners.manager.restoreDynamicCallbackOwner(originalP2, "creator-p2");
+        for (int tick = 0; tick < 3; tick++) originalP1.update(tick, p1);
+        for (int tick = 0; tick < 5; tick++) originalP2.update(tick, p2);
+        var savedPlayer1 = p1.captureRewindState();
+        var savedPlayer2 = p2.captureRewindState();
+        var saved = owners.manager.rewindSnapshottable().capture();
+        var p1Entry = saved.dynamicObjects().stream()
+                .filter(entry -> PlayerRefId.mainPlayer().equals(entry.playerOwnerId()))
+                .findFirst().orElseThrow();
+        var p2Entry = saved.dynamicObjects().stream()
+                .filter(entry -> PlayerRefId.sidekick(0).equals(entry.playerOwnerId()))
+                .findFirst().orElseThrow();
+        assertNotEquals(p1Entry.objectId(), p2Entry.objectId());
+
+        var freshP1 = player("sonic");
+        var freshP2 = player("tails");
+        freshP1.setPowerUpSpawner(spawner);
+        freshP2.setPowerUpSpawner(spawner);
+        // Production ordering: the sprite adapters restore first, then actors,
+        // then each player's actual post-restore refresh hook. No direct spawn
+        // or hand-written pending selection stands in for the boundary under test.
+        freshP1.restoreRewindState(savedPlayer1);
+        freshP2.restoreRewindState(savedPlayer2);
+        owners.roster(freshP1, freshP2);
+        owners.manager.rewindSnapshottable().restore(saved);
+        freshP2.refreshPowerUpObjectsAfterRewindRestore();
+        freshP1.refreshPowerUpObjectsAfterRewindRestore();
+
+        var restoredP1 = assertInstanceOf(ShieldObjectInstance.class, freshP1.getShieldObject());
+        var restoredP2 = assertInstanceOf(ShieldObjectInstance.class, freshP2.getShieldObject());
+        assertSame(freshP1, restoredP1.getPlayer());
+        assertSame(freshP2, restoredP2.getPlayer());
+        var identities = owners.manager.captureIdentityContext().requireIdentityTable();
+        assertEquals(p1Entry.objectId(), identities.idFor(restoredP1));
+        assertEquals(p2Entry.objectId(), identities.idFor(restoredP2));
+        var restored = owners.manager.rewindSnapshottable().capture();
+        assertTrue(RewindSnapshotDiff.keyEquals("object-manager", saved, restored),
+                () -> RewindSnapshotDiff.diffKey("object-manager", saved, restored).toString());
+        assertEquals(saved.dynamicObjects().stream().map(ObjectManagerSnapshot.DynamicObjectEntry::objectId).toList(),
+                restored.dynamicObjects().stream().map(ObjectManagerSnapshot.DynamicObjectEntry::objectId).toList());
+        assertEquals(saved.dynamicObjectIdCounter(), restored.dynamicObjectIdCounter());
+
+        freshP1.giveShield(ShieldType.BASIC);
+        assertEquals(saved.dynamicObjectIdCounter(), owners.manager.captureIdentityContext()
+                .requireIdentityTable().idFor((ObjectInstance) freshP1.getShieldObject()).dynamicId(),
+                "a genuine grant after refresh mints the next identity; no deferred entry remains");
     }
 
     @Test

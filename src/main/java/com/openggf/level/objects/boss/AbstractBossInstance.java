@@ -801,7 +801,7 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
      * Called by {@link AbstractBossChild}'s constructor so indistinguishable
      * same-class siblings (e.g. EHZ's 3 {@code EHZBossWheel} instances) can carry a
      * stable per-position identity through {@link ObjectSpawn#subtype()} -- otherwise
-     * unused by boss children -- for {@code ObjectManager.adoptRewindReconstructionChild}
+     * unused by boss children -- for {@code ObjectRewindLifecycle.adoptRewindReconstructionChild}
      * to match against after a rewind restore, instead of falling back to a plain
      * FIFO-by-class-name match that silently shifts captured state onto the wrong
      * sibling once an earlier one has been destroyed and pruned before capture.

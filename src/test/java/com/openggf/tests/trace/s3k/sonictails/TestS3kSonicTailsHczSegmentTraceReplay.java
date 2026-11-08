@@ -11,16 +11,32 @@ import java.nio.file.Path;
  * {@code s3k-sonic-tails-complete-emeralds} run -- zone_id 1, act 1,
  * bk2 offset 53608, 3574 rows.
  *
- * <p><b>New frontier harness: expected RED.</b> It was added deliberately, to
- * say WHERE this third S3K route diverges, not as a regression. Nothing is
- * weakened, tolerance-fitted or trimmed to reach a green. The measured stop
- * point and first error for this run are recorded in
- * {@code docs/status/trace-frontier-log.md}.
+ * <p>The release lane and regression policy are owned by
+ * {@code docs/status/trace-scope-release-6.md}. Dated measurements and first
+ * errors belong in {@code docs/status/trace-frontier-log.md}; this fixture
+ * declaration does not duplicate mutable pass/fail status. For the focused
+ * command and result checks, see the trace diagnosis entry in
+ * {@code docs/guide/contributing/testing.md}.
  */
 @RequiresRom(SonicGame.SONIC_3K)
 public class TestS3kSonicTailsHczSegmentTraceReplay extends AbstractTraceReplayTest {
-    @Override protected SonicGame game() { return SonicGame.SONIC_3K; }
-    @Override protected int zone() { return 1; }
-    @Override protected int act() { return 0; }
-    @Override protected Path traceDirectory() { return Path.of("src/test/resources/traces/s3k/runs/s3k-sonic-tails-complete-emeralds/hcz"); }
+    @Override
+    protected SonicGame game() {
+        return SonicGame.SONIC_3K;
+    }
+
+    @Override
+    protected int zone() {
+        return 1;
+    }
+
+    @Override
+    protected int act() {
+        return 0;
+    }
+
+    @Override
+    protected Path traceDirectory() {
+        return Path.of("src/test/resources/traces/s3k/runs/s3k-sonic-tails-complete-emeralds/hcz");
+    }
 }

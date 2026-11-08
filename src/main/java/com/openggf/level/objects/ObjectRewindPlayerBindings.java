@@ -12,6 +12,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 /**
  * Resolves captured player roles for dynamic recreation and retains entries that
@@ -59,7 +60,7 @@ final class ObjectRewindPlayerBindings {
                 return new DynamicObjectEntry(
                         captured.className(), captured.spawn(), captured.slotIndex(), captured.state(), owner,
                         captured.objectId(), captured.ownerModId(), captured.rewindableAuxiliary(),
-                        captured.playerOwnerId());
+                        captured.playerOwnerId(), captured.constructionFamily());
             });
         }
         return preparedEntries;
@@ -107,6 +108,15 @@ final class ObjectRewindPlayerBindings {
             }
         }
         queue.add(entry);
+    }
+
+    /** The ordinary refresh path selects by concrete effect class and resolved player identity. */
+    DynamicObjectEntry consumeForOwnerAndClass(Class<?> baseType, Class<?> concreteClass,
+                                              Supplier<PlayableEntity> resolvedOwner) {
+        // Preserve the refresh path's class-first short circuit and owner reread
+        // for each candidate; creator-supplied effects can override this getter.
+        return consume(baseType, entry -> concreteClass.getName().equals(entry.className())
+                && entry.playerOwner() == resolvedOwner.get());
     }
 
     DynamicObjectEntry consume(Class<?> baseType, Predicate<DynamicObjectEntry> matcher) {
