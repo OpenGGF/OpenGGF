@@ -28,4 +28,15 @@ class TestSonic2CharacterFont {
    x+=width;
   }
  }
+ @Test void hudMicaUsesLifeCounterLettersWithoutSupplements() throws Exception {
+  var rom=TestEnvironment.currentRom();
+  var font=Sonic2CharacterFont.hud(rom);
+  var mica=CharacterNameComposer.compose("MICA",font,Map.of(),0);
+  assertTrue(mica.complete());
+  assertEquals(Set.of('M','I','C','A'),mica.nativeGlyphs());
+  var sonic=PatternDecompressor.nemesis(rom,Sonic2Constants.ART_NEM_SONIC_LIFE_ADDR);
+  var nativeC=CharacterNameComposer.extract(sonic,4,4,2,25,0,7,8);
+  assertArrayEquals(nativeC.pixels(),font.get('C').pixels());
+ }
+
 }

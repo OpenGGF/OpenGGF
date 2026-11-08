@@ -202,10 +202,14 @@ arrays on construction and access. Presentation maps are immutable snapshots.
 
 This is currently an API foundation: stock surfaces do not yet consume these
 slots. The internal name composer reports native, supplementary and missing glyph
-coverage and extracts pixel crops across tile boundaries. S1 and S2 title-font
-readers use the ROM pipeline; S3K fonts and the HUD/results/monitor/signpost
-consumers remain to be implemented. Do not assume supplying this record changes
-an on-screen name or face yet. GGFP presentation sections are also pending.
+coverage and extracts pixel crops across tile boundaries. Title-font readers for
+all three hosts and small HUD-font readers use the ROM pipeline. The S3K reader inventories each zone separately, including shared ZONE
+letters and pixel crops within multi-letter pieces, plus the results-name banks.
+Native glyphs take precedence over supplements: MICA needs supplementary M and A
+only in the S1 HUD font. The HUD/results/monitor/signpost consumers remain to be
+implemented. Stock S2 results now select Miles/Tails for Tails alone using the
+native graphics-region setting; this does not enable custom results names.
+Do not assume supplying this record changes an on-screen name or face yet. GGFP presentation sections are also pending.
 
 ## Ability and super-form rules
 

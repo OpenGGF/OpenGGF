@@ -24,4 +24,17 @@ public final class Sonic2CharacterFont {
         }
         return Map.copyOf(glyphs);
     }
+    /** The upper row of the native life-counter name cell; no large-font substitutions. */
+    public static Map<Character, Image> hud(Rom rom) throws IOException {
+        var glyphs = new LinkedHashMap<Character, Image>();
+        var sonic = PatternDecompressor.nemesis(rom, Sonic2Constants.ART_NEM_SONIC_LIFE_ADDR);
+        var tails = PatternDecompressor.nemesis(rom, Sonic2Constants.ART_NEM_TAILS_LIFE_ADDR);
+        // ArtNem_Miles_life_counter is the domestic name bank in REV01.
+        var miles = PatternDecompressor.nemesis(rom, 0x7B946);
+        com.openggf.game.presentation.HudNameFont.collect(glyphs, sonic, "SONIC", 0, 7, 14, 21, 25, 32);
+        com.openggf.game.presentation.HudNameFont.collect(glyphs, miles, "MILES", 0, 9, 13, 19, 25, 32);
+        com.openggf.game.presentation.HudNameFont.collect(glyphs, tails, "TAILS", 4, 10, 16, 19, 23, 29);
+        return Map.copyOf(glyphs);
+    }
+
 }

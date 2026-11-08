@@ -28,4 +28,11 @@ class TestSonic1CharacterFont {
    x+=width;
   }
  }
+ @Test void hudReportsOnlyNativeSonicLetters() throws Exception {
+  var font=Sonic1CharacterFont.hud(TestEnvironment.currentRom());
+  assertEquals(Set.of('S','O','N','I','C'),font.keySet());
+  var mica=CharacterNameComposer.compose("MICA",font,Map.of(),0);
+  assertEquals(Set.of('M','A'),mica.missingGlyphs());
+ }
+
 }

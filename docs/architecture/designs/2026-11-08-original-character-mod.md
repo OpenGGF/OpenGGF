@@ -86,10 +86,13 @@ the S3K water zones.
 
 ### W4 — Character presentation contract (L)
 
-Status: API foundation in progress on `feature/ai-mica-presentation`; optional
-owner-bounded supplier, immutable indexed images, pixel composer and S1/S2 title
-font readers implemented. Surface wiring, S3K font inventory, small HUD fonts,
-S2 Tails results correction and MICA presentation assets are not delivered yet.
+Status: API foundation delivered; group 1 follow-up in progress on
+`feature/ai-mica-presentation2`. ROM readers now inventory all three small HUD
+fonts and S3K per-zone title/results-name art. S2 stock Tails-alone results select
+Miles/Tails using the native graphics-region flag. Surface wiring, sign spin/backing
+contract extensions, packaged MICA presentation assets and gameplay captures remain
+pending; group 1 is not complete. The existing owner-bounded supplier, immutable
+indexed images, pixel composer and S1/S2 title readers remain the foundation.
 
 Add a `CharacterPresentation` record carried by `CharacterDefinition` (and stored as
 GGFP v3 sections), modelled on KiS2's internal seams (`Sonic2ArtOverlays`, the S2
