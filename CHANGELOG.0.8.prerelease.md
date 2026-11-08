@@ -31,9 +31,7 @@ under the matching area heading; see the
   and can hold Sonic on the spring. The complete-chain CNZ2 segment is green;
   later campaign and art-gap failures remain open.
 
-- **S2 Competition (two-player mode):** <!-- LEAD: activation status. The title's
-  2 PLAYER row stays hidden until the zones are qualified; finalize this sentence
-  at activation. --> Sonic 2's own two-player mode runs natively, with Sonic on
+- **S2 Competition (two-player mode):** Choose 2 PLAYER on the Sonic 2 title. Sonic 2's own two-player mode runs natively, with Sonic on
   controller 1 and Tails on controller 2. Its menu selects Emerald Hill, Mystic
   Cave, Casino Night or the special stage. Each zone plays two acts with
   separate rings, lives, score, time and results, then zone and game results

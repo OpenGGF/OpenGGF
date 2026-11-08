@@ -27,13 +27,16 @@ class TestSonic2CompetitionVisit {
     private static final LogicalInputSnapshot NEUTRAL = LogicalInputSnapshot.neutral();
     private static final LogicalInputSnapshot START = LogicalInputSnapshot.ofPlayers(
             PlayerInputState.of(0,0,0,0,true,true),PlayerInputState.neutral());
-    @Test void productionQualificationIsEmpty() throws Exception {
+    @Test void productionQualificationOffersTheThreeTwoPlayerZones() throws Exception {
         try {
             HeadlessTestFixture.builder().withZoneAndAct(0,0).build();
             var input = new InputHandler(); input.setLogicalOverride(NEUTRAL);
             var context = new NativeMenuHostContext(EngineServices.current(),
                     SessionManager.getCurrentWorldSession().rootGameModule(), input, ignored -> { });
-            assertNull(new Sonic2NativeModeProvider().competitionScreen(context));
+            var provider = new Sonic2NativeModeProvider();
+            assertTrue(provider.competitionAvailable());
+            assertInstanceOf(com.openggf.game.sonic2.competition.Sonic2CompetitionVisit.class,
+                    provider.competitionScreen(context));
         } finally { TestEnvironment.resetAll(); }
     }
     @Test void optionsTypedExitRetainsEmeraldsAndTitleEntryClearsThem() throws Exception {

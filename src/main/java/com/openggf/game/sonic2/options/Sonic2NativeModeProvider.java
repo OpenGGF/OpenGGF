@@ -11,7 +11,9 @@ public final class Sonic2NativeModeProvider implements NativeTitleModeProvider {
     private com.openggf.game.GameStateManager entryProgress;
     private final boolean overseas;
     private final java.util.function.IntPredicate qualified;
-    private static final java.util.Set<Integer> QUALIFIED_ZONES = java.util.Set.of();
+    // LevelSelect2P_LevelOrder (s2.asm:11848-11887): EHZ, MCZ and CNZ by ROM zone id. Qualified
+    // against cold native BizHawk 2P references; see docs/architecture/plans/2026-11-07-s2-competition-parity.md.
+    private static final java.util.Set<Integer> QUALIFIED_ZONES = java.util.Set.of(0, 11, 12);
     private final com.openggf.game.nativemenu.NativeMenuScreen optionsVisit;
 
     public Sonic2NativeModeProvider() { this(true); }
@@ -59,10 +61,15 @@ public final class Sonic2NativeModeProvider implements NativeTitleModeProvider {
 
     public Sonic2OptionsState optionsState() { return optionsState; }
 
+    /** True when at least one 2P level-select zone is qualified; the title then offers 2 PLAYER. */
+    public boolean competitionAvailable() {
+        return qualified.test(0) || qualified.test(11) || qualified.test(12);
+    }
+
     @Override public com.openggf.game.nativemenu.NativeMenuScreen competitionScreen(
             com.openggf.game.nativemenu.NativeMenuHostContext context) {
         java.util.Objects.requireNonNull(context);
-        if (!qualified.test(0) && !qualified.test(11) && !qualified.test(12)) return null;
+        if (!competitionAvailable()) return null;
         var liveProgress = com.openggf.game.GameServices.gameStateOrNull();
         if (liveProgress != null) entryProgress = liveProgress;
         java.util.Objects.requireNonNull(entryProgress, "native persistent entry progress owner");

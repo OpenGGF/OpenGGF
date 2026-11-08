@@ -2,8 +2,7 @@
 
 **Date:** 2026-08-09
 
-<!-- LEAD: activation status -->
-**Status:** Implemented; title activation pending. The [2026-11-07 Competition parity plan](../plans/2026-11-07-s2-competition-parity.md)
+**Status:** Implemented and offered on the title (2 PLAYER) since 2026-11-08. The [2026-11-07 Competition parity plan](../plans/2026-11-07-s2-competition-parity.md)
 records what was built, the user decisions that changed this design, and the
 evidence. The product contract here still applies. The "Current engine
 boundary" and "Current disposition" sections describe the engine on 2026-08-09.

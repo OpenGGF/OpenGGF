@@ -593,10 +593,8 @@ accepted.
 
 ## S2 Competition Split Screen, Native Lag and Rewind Scope
 
-<!-- LEAD: activation status -->
-**Activation:** pending lead activation. At this revision
-`Sonic2NativeModeProvider.QUALIFIED_ZONES` is empty, so the title does not
-offer 2 PLAYER and the Competition visit runs only under tests.
+**Activation:** the title offers 2 PLAYER for Emerald Hill, Mystic Cave and
+Casino Night (and the special stage) since 2026-11-08.
 
 **Location:** `game/sonic2/competition/` (`Sonic2CompetitionVisit`,
 `Sonic2NativeCompetitionHost`, `specialstage/Sonic2CompetitiveHalfpipe`) and
