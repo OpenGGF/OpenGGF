@@ -1,0 +1,133 @@
+{
+  "format" : "openggf-route/1",
+  "launch" : {
+    "rom" : {
+      "game" : "s2",
+      "crc32" : "7B905383",
+      "sha1" : "8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9"
+    },
+    "inlet" : {
+      "kind" : "title"
+    },
+    "roster" : {
+      "main" : "sonic",
+      "sidekick" : "tails"
+    },
+    "width" : 320,
+    "donor" : "off",
+    "initial" : {
+      "vIntStart" : 0
+    }
+  },
+  "checks" : {
+    "guard" : {
+      "allowHurt" : true,
+      "allowRingLoss" : true,
+      "allowDeath" : false,
+      "allowBoundary" : false,
+      "holds" : {
+        "kind" : "fact-equals",
+        "key" : "competition.p2.dead",
+        "value" : 0
+      }
+    },
+    "startRow" : 1775,
+    "legs" : [ {
+      "id" : "retained-slot-spinning",
+      "maxRows" : 30,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : false
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "fact-equals",
+          "key" : "competition.slot.inUse",
+          "value" : 1
+        }
+      }
+    }, {
+      "id" : "p2-lower-path",
+      "maxRows" : 5000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : false
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "player-in",
+          "player" : "P2",
+          "region" : [ 1280, 820, 1312, 980 ]
+        }
+      }
+    }, {
+      "id" : "p2-near-native-flip-tiles",
+      "maxRows" : 5000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : false
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "player-in",
+          "player" : "P2",
+          "region" : [ 1700, 1580, 1900, 1800 ]
+        }
+      }
+    }, {
+      "id" : "mid-flip-visible-after-two-human-traversal",
+      "maxRows" : 600,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : false
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "all",
+          "clauses" : [ {
+            "kind" : "player-in",
+            "player" : "P2",
+            "region" : [ 1700, 1580, 1900, 1800 ]
+          }, {
+            "kind" : "fact-equals",
+            "key" : "competition.flip.visible",
+            "value" : 1
+          } ]
+        }
+      }
+    } ]
+  },
+  "tape" : {
+    "script" : "cnz1-slot-flip.script",
+    "rows" : 2380,
+    "sha256" : "201eb0ac3bf4b1715002f04feb1c453d6cdb6b2695f804a4b822e8ad9ff1dd23"
+  },
+  "provenance" : {
+    "producer" : "RoutePlanner prefix-search/3 goal program",
+    "engine" : "openggf 0.8.prerelease-b889211b3-dirty stageplay-s2-competition-title/1",
+    "source" : "authored after a 2371-row prefix toward legs [retained-slot-spinning, p2-lower-path, p2-near-native-flip-tiles, mid-flip-visible-after-two-human-traversal]",
+    "notes" : [ ]
+  },
+  "qualification" : [ {
+    "scope" : "ENGINE",
+    "passed" : true,
+    "content" : "1231f66512fbef42a7afabddb8b77c4ac763427449a93dfb9daef46430aaca70",
+    "environment" : "openggf 0.8.prerelease-b889211b3-dirty stageplay-s2-competition-title/1",
+    "rows" : 2380
+  } ],
+  "native" : {
+    "lag" : [ ]
+  }
+}

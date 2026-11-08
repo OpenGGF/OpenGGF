@@ -114,3 +114,53 @@ hand-edit generated IDs or split intervals across shots.
 For an explicitly requested promo, use [promo-direction](../promo-direction/SKILL.md)
 and [gameplay-highlights](../gameplay-highlights/SKILL.md). A scene request alone
 does not imply publishing a reel or sending messages.
+
+## Native two-human route programmes
+
+`StageplayRoutePlanner.planNative(hosts, launch, prefix, goals, budget, cancelled,
+progress)` submits an ordered goal programme to the existing bounded native-input
+search and qualifies the resulting frozen rows with a fresh linear replay. It
+keeps every prefix row verbatim. Use P1/P2 `PlayerIn`, `Settled`, attachment goals,
+and `All` for joint goals. Never author competition traversal rows by hand or
+extend the older `ReferencePathInputAuthor` search.
+
+The experimental S2 adapter is `StageplayCompetitionRouteHosts`: production title
+entry, the native menu Visit, two human pads, read-only object observations and
+copied `competition.*` facts. It enables the title row only in the isolated
+qualification module; `QUALIFIED_ZONES` remains empty. Its `menuPrefix(entry)`
+generates the native 2x2 menu input prefix (0 EHZ, 1 MCZ, 2 CNZ, 3 special).
+The prefix is a native replay hypothesis until BizHawk confirms the whole movie.
+No native qualification follows from engine qualification alone.
+
+`StageplayRouteTool --native-route <draft.route.json> --s2-rom <ROM> --out <new-stem>`
+plans from the draft's frozen prefix and goal programme. Optional `--prefix-rows`,
+`--nodes`, `--ticks`, and `--bk2 <new-file>` bound work/export. Use only an isolated
+worker with `DISPLAY`/`WAYLAND_DISPLAY` unset and
+`-Dopenggf.headless.gl=surfaceless-egl`. A `title` inlet names the production title
+entry; rows include title/menu input. `.route.json` remains the launch/goals/hash
+and qualification authority; `.script` keeps both pads' exact held states.
+`fact-equals` goals have `key`/`value`; missing facts fail. Tests and native checks
+replay the saved rows, never re-plan. Native power-on timing and visibility goals
+still need independent confirmation; do not label an unconfirmed prefix cold
+native evidence.
+
+For a new S2 programme, `StageplayRouteTool --competition-entry <0..3>
+--goals <goal-program.json> --s2-rom <ROM> --out <new-stem>` generates the menu
+prefix and plans its continuation. A programme normally begins checks at
+`startRow:1200`, after the generated prefix. `competition.paused` observes the
+native pause owner. The semantic `input.menu` fact admits a searched Start tap
+when a menu or native pause needs one; it never clears pause by writing state.
+Competition checkpoints use the complete registry and previous input row inside
+one stable act, and refuse fades, pending loads and other modes. Boundary legs
+retire earlier checkpoints before continuing. Existing P1 guard semantics remain;
+add explicit P2 conditions when the programme needs to protect P2.
+
+`facts-equal` (`left`/`right`) compares copied owner metrics, including
+`competition.zoneWins.p1` / `.p2`. For a continuation, retain the original rows:
+its completed goal cursor is evaluated over the prefix before any new search.
+`--replay-native-route FILE --s2-rom ROM --out NEW_DIRECTORY` replays only and
+writes engine witnesses; `--publish NEW_STEM` saves that same frozen tape with
+fresh engine evidence. CNZ `competition.flip.visible` requires resident ROM art
+in a non-flat pose, a full cell in a view, and a matching framebuffer pixel.
+The native programme entry is separate from the scene `--worker` protocol;
+editor jobs must select the S2 host for a title inlet and preserve both pad lanes.

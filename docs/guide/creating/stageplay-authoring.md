@@ -299,6 +299,45 @@ gaps, walls, larger steps, low ceilings, background-layer collision and moving
 solids fail. The object's own behaviour, contact and effects stay off: it is a
 visual route, not a controller.
 
+### Native two-human competition programmes
+
+The Java `StageplayRouteTool` also authors native controller programmes through
+`StageplayRoutePlanner.planNative`. This uses the existing bounded route search;
+qualification is a fresh, strictly linear replay of the frozen rows on the same
+production host. Existing scene point routes keep their current format and behaviour.
+Both editor frontends must run native programmes in an isolated worker.
+
+For S2, use `--competition-entry N --goals goals.json --s2-rom ROM --out NEW_STEM`,
+where the retail 2×2 menu entries are 0 EHZ, 1 MCZ, 2 CNZ and 3 special stage.
+Alternatively, `--native-route existing.route.json` continues its frozen rows;
+`--prefix-rows N` selects the immutable prefix and `--goals` optionally supplies a
+replacement programme. Completed prefix goals are evaluated, never reauthored.
+`--nodes` and `--ticks` bound search; `--bk2 NEW_FILE` exports exact two-pad rows.
+Use `-Dopenggf.headless.gl=surfaceless-egl` with `DISPLAY` and
+`WAYLAND_DISPLAY` unset on Linux. Compile changed sources before running the tool.
+
+The `.route.json` manifest retains `openggf-route/1` and adds the inlet
+`{"kind":"title"}`. Its sibling `.script` holds the entire power-on/menu/controller
+sequence. `PlayerIn`/`Settled`/attachment predicates select P1 or P2; `All` combines
+both. Copied owner facts use `{"kind":"fact-equals","key":"...","value":1}`
+or `{"kind":"facts-equal","left":"...","right":"..."}` for ties.
+The S2 adapter publishes `competition.phase`, selection, act, ROM zone, results
+readiness, both ordinary actors' routines/rings/time/score/lives, zone wins, cage
+and slot-machine facts. Ordinary sprite coordinates are not special-stage avatar
+coordinates; use phase, special-stage and progress facts for special-stage entry.
+
+`--replay-native-route FILE --s2-rom ROM --out NEW_DIRECTORY` never plans: it
+replays the saved rows and writes engine pictures plus a report. Optional
+`--publish NEW_STEM` writes a freshly engine-qualified copy of those same rows.
+The CNZ flip witness matches resident art to ROM poses, excludes flat poses,
+requires a full projected cell inside a view, and checks actual framebuffer pixels.
+See `src/test/resources/routes/s2/competition/` for frozen examples.
+
+Engine qualification is not BizHawk confirmation. The title qualification override
+does not enable production `QUALIFIED_ZONES`. Native cold replay must independently
+confirm the exported movie and its goals; synchronous engine load timing can differ
+from hardware frame timing. Never insert fitted state or hand-edit traversal rows.
+
 ## Render
 
 ```bash
