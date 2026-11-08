@@ -96,6 +96,7 @@ class TestMicaCharacterIntegration {
                     com.openggf.game.session.ActiveGameplayTeamResolver.resolvePlayerCharacter(config));
             assertNotNull(GameServices.level().getCurrentLevel());
             assertNotNull(playable.getSpriteRenderer());
+            if (game.equals("s1")) verifySignTiles(resolved, game);
             config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
             assertEquals(PlayerCharacter.SONIC_AND_TAILS,
                     com.openggf.game.session.ActiveGameplayTeamResolver.resolvePlayerCharacter(config));
@@ -277,6 +278,42 @@ class TestMicaCharacterIntegration {
         var expected = new com.openggf.level.Palette();
         for (int i = 0; i < 16; i++) expected.getColor(i).fromSegaFormat(words.get(i));
         return expected.dataEquals(palette);
+    }
+
+    /** Exercise authored pixels against each host's actual ROM sheet, without changing native art. */
+    private void verifySignTiles(GameModule module, String game) throws Exception {
+        var definition = module.getPlayableCharacterRegistry().find(CharacterKey.parsePersisted(CODE)).orElseThrow();
+        var host = CharacterPresentation.Host.valueOf(game.toUpperCase(Locale.ROOT));
+        var art = definition.presentationSupplier().load(CODE).art().get(host);
+        var render = GameServices.level().getObjectRenderManager();
+        var nativeSheet = game.equals("s3k")
+                ? render.getSheet(com.openggf.game.sonic3k.Sonic3kObjectArtKeys.END_SIGN)
+                : render.getSignpostSheet();
+        assertNotNull(nativeSheet);
+        int[] frames = switch (host) {
+            case S1 -> new int[]{4, -1, 1, 2, 3};
+            case S2 -> new int[]{0, 1, 3, 4, 5};
+            case S3K -> new int[]{0, -1, 4, 5, 6};
+        };
+        var original = nativeSheet.getFrame(frames[0]);
+        for (int frame : new int[]{frames[0], frames[2], frames[4]}) {
+            var pose = com.openggf.game.presentation.CharacterSignRenderer.select(art, frame,
+                    frames[0], frames[1], frames[2], frames[3], frames[4]);
+            assertNotNull(pose);
+            var composed = com.openggf.game.presentation.CharacterSignRenderer.compose(nativeSheet,
+                    frame, pose, 8, GameServices.level().getCurrentLevel().getPalette(0));
+            var face = pose.face();
+            var decoded = com.openggf.game.presentation.CharacterNameComposer.extract(composed.getPatterns(),
+                    nativeSheet.getPatterns().length, face.width()/8, face.height()/8,
+                    0, 0, face.width(), face.height());
+            assertArrayEquals(face.pixels(), decoded.pixels(), game + " face/spin pixels");
+            assertTrue(!java.util.Arrays.equals(new byte[face.pixels().length], face.pixels()));
+            assertTrue(composed.getFrame(0).pieces().stream().anyMatch(piece -> piece.paletteIndex() == 8));
+            assertTrue(composed.getFrame(0).pieces().stream().anyMatch(piece -> piece.paletteIndex() == 0));
+            assertSame(original, nativeSheet.getFrame(frames[0]), "Stock mapping is unchanged");
+            for (int i=0; i<nativeSheet.getPatterns().length; i++)
+                assertSame(nativeSheet.getPatterns()[i], composed.getPatterns()[i]);
+        }
     }
 
     private Path buildSample() throws Exception {
