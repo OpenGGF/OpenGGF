@@ -12,6 +12,18 @@ ROOT=r.ROOT;ART=r.ART;COLORS=json.loads((ART/'palette.yaml').read_text())['color
 
 def indexed(size):return r.b.indexed(size)
 
+def native_pose(im,file,folder):
+ """Replay approved GPT redraw rows; no native/reference pixels are retained."""
+ source=folder/'native-pose.json'
+ if not source.exists():return im
+ frame=json.loads(source.read_text())['frames'].get(file)
+ if frame is None:return im
+ assert frame['dimensions']==list(im.size)
+ assert len(frame['rows'])==im.height and all(len(row)==im.width for row in frame['rows'])
+ im.putdata([int(c,16) for row in frame['rows'] for c in row])
+ return im
+
+
 def head(im,x,y,w,h,look=False,front=False):
  d=ImageDraw.Draw(im)
  def pts(p):return [(x+round(a*w/40),y+round(b*h/40)) for a,b in p]
@@ -188,7 +200,7 @@ def main():
    # Native repeats a mirrored head/arm half; author symmetrical face-on takeoff.
    for yy in range(24):
     for xx in range(16):im.putpixel((31-xx,yy),im.getpixel((xx,yy)))
-  im=mask_layout(im,pieces,f['bounds_px']);file=f'ending-{i:02}.png';im.save(HERE/file,bits=4,transparency=0)
+  im=mask_layout(im,pieces,f['bounds_px']);file=f'ending-{i:02}.png';im=native_pose(im,file,HERE);im.save(HERE/file,bits=4,transparency=0)
   frames.append(dict(id=i,file=file,native_source_label=f['label'],dimensions=[w,h],bounds_px=f['bounds_px'],hotspot=[-x,-y],palette_line=0,pieces=pieces))
  m=dict(format='openggf-ending-art-handoff-1',game='s1',native_source_label='Nem_EndSonic / Map_ESon / Ani_ESon',palette='../../palette.yaml',palette_line=0,tick_rate=60,palette_binding='Install unchanged MICA line 0. Audit sharing with emeralds, flowers, logo; do not recolour MICA to Sonic blue.',layout='Native piece coordinates and flips; independent per-selector banks required (shared native source tiles are not an instruction to alias MICA frames).',timing=[s['animation_timing'] for s in inv['sequences'] if s['id'] in ('s1-good-celebration','s1-bad-celebration')],animations=[dict(name='hold',frames=[1,0,1,0,1,0,1,0,1,0,1,2],ticks=4),dict(name='confused',frames=[3,4,3,4,3,4,3],ticks=6),dict(name='leap',frames=[5,5,5,6,7],ticks=4,hold_last=True)],frames=frames)
  (HERE/'s1.yaml').write_text(json.dumps(m,indent=2)+'\n');verify(HERE,m)
