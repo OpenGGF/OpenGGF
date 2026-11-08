@@ -180,6 +180,7 @@ final class LevelPlayableArtInitializer {
             List<AbstractPlayableSprite> sidekicks = spriteManager.getSidekicks();
             List<SpriteArtSet> sidekickArts = new ArrayList<>(sidekicks.size());
             List<Palette> sidekickPalettes = new ArrayList<>(sidekicks.size());
+            List<Palette> sidekickWaterPalettes = new ArrayList<>(sidekicks.size());
             List<String> sidekickNames = new ArrayList<>(sidekicks.size());
             for (AbstractPlayableSprite sidekick : sidekicks) {
                 String name = spriteManager.getSidekickCharacterName(sidekick);
@@ -189,6 +190,7 @@ final class LevelPlayableArtInitializer {
                 sidekickNames.add(name);
                 sidekickArts.add(loadPlayableArt(sidekick, artProvider));
                 sidekickPalettes.add(loadCharacterPalette(sidekick, name, artProvider));
+                sidekickWaterPalettes.add(loadNativeDonorWater(sidekick, name));
             }
             if (!validArt(mainArt) || sidekickArts.stream().anyMatch(art -> !validArt(art))) {
                 return;
@@ -236,7 +238,7 @@ final class LevelPlayableArtInitializer {
             SpriteArtSet publishedMainArt = mainShiftedBase == null
                     ? mainArt : shiftToBank(mainArt, mainShiftedBase);
             RenderContext mainCharacterContext = createCharacterPaletteContext(
-                    playable, publishedMainArt, mainPalette);
+                    playable, publishedMainArt, mainPalette, mainWaterPalette);
             initializeMainPlayable(playable, publishedMainArt, crossGame, mainCharacterContext,
                     auxiliaries.getFirst());
             String mainName = resolveMainCharacterCode();
@@ -244,7 +246,7 @@ final class LevelPlayableArtInitializer {
                 initializeSidekick(sidekicks.get(i), sidekickNames.get(i), mainName,
                         sidekickArts.get(i), crossGame,
                         sidekickBases.get(i),
-                        sidekickPalettes.get(i), mainPalette, mainWaterPalette, mainCharacterContext,
+                        sidekickPalettes.get(i), sidekickWaterPalettes.get(i), mainPalette, mainWaterPalette, mainCharacterContext,
                         auxiliaries.get(i + 1));
             }
         } catch (IOException e) {
@@ -260,6 +262,14 @@ final class LevelPlayableArtInitializer {
     }
 
     private Palette loadNativeDonorWater(AbstractPlayableSprite playable, String character) {
+        CharacterDefinition definition = activeRegistry().find(playable.characterKey()).orElse(null);
+        if (definition != null && !definition.key().isBuiltin() && definition.underwaterPaletteSupplier() != null) {
+            try {
+                return definition.underwaterPaletteSupplier().load(playable.characterKey().persisted());
+            } catch (IOException failure) {
+                throw new java.io.UncheckedIOException(failure);
+            }
+        }
         return playable.characterKey().isBuiltin() && usesDonation(playable)
                 ? crossGameFeatures.loadUnderwaterCharacterPalette(character) : null;
     }
@@ -557,16 +567,15 @@ final class LevelPlayableArtInitializer {
                                    SpriteArtSet sourceArt,
                                    CrossGameFeatureProvider crossGame,
                                    int shiftedBase,
-                                   Palette sidekickPalette, Palette mainPalette, Palette mainWaterPalette,
+                                   Palette sidekickPalette, Palette sidekickWaterPalette, Palette mainPalette, Palette mainWaterPalette,
                                    RenderContext mainCharacterContext,
                                    PreparedAuxiliaryArt auxiliary) throws IOException {
             SpriteArtSet sidekickArt = shiftToBank(sourceArt, shiftedBase);
             PlayerSpriteRenderer sidekickRenderer = new PlayerSpriteRenderer(sidekickArt, graphicsManager);
-            Palette sidekickWaterPalette = loadNativeDonorWater(sidekick, sidekickCharName);
             RenderContext sidekickPaletteCtx = createSidekickPaletteContext(
                     sidekickCharName, mainCharName, sidekickPalette, mainPalette,
-                    usesDonation(sidekick) ? mainWaterPalette : null, sidekickWaterPalette,
-                    mainCharacterContext, sourceArt.paletteIndex());
+                    !sidekick.characterKey().isBuiltin() || usesDonation(sidekick) ? mainWaterPalette : null,
+                    sidekickWaterPalette, mainCharacterContext, sourceArt.paletteIndex());
             if (sidekickPaletteCtx != null) {
                 sidekickRenderer.setRenderContext(sidekickPaletteCtx);
             } else if (usesDonation(sidekick)) {
@@ -669,12 +678,13 @@ final class LevelPlayableArtInitializer {
 
     private RenderContext createCharacterPaletteContext(AbstractPlayableSprite playable,
                                                          SpriteArtSet artSet,
-                                                         Palette palette) {
+                                                         Palette palette, Palette underwaterPalette) {
         if (palette == null || playable.characterKey().isBuiltin()) return null;
         GameModule module = levelManager.activeGameModule();
         RenderContext context = RenderContext.createSidekickContext(
                 module == null ? null : module.getGameId());
         context.setPalette(artSet.paletteIndex(), palette);
+        context.setUnderwaterPalette(artSet.paletteIndex(), underwaterPalette);
         return context;
     }
 

@@ -1465,6 +1465,7 @@ CONSTRUCTOR com.openggf.game.BonusStageState public  <init>(int,int,int,int,int,
 CONSTRUCTOR com.openggf.game.CharacterDefinition public  <init>(com.openggf.game.CharacterKey,java.lang.String,com.openggf.game.CharacterDefinition$PlayableFactory,com.openggf.game.CharacterDefinition$RespawnStrategyFactory,com.openggf.game.PlayerCharacter,com.openggf.sprites.playable.SecondaryAbility,boolean,com.openggf.game.CharacterDefinition$ArtSupplier)
 CONSTRUCTOR com.openggf.game.CharacterDefinition public  <init>(com.openggf.game.CharacterKey,java.lang.String,com.openggf.game.CharacterDefinition$PlayableFactory,com.openggf.game.CharacterDefinition$RespawnStrategyFactory,com.openggf.game.PlayerCharacter,com.openggf.sprites.playable.SecondaryAbility,boolean,com.openggf.game.CharacterDefinition$ArtSupplier,com.openggf.game.CharacterDefinition$PaletteSupplier)
 CONSTRUCTOR com.openggf.game.CharacterDefinition public  <init>(com.openggf.game.CharacterKey,java.lang.String,com.openggf.game.CharacterDefinition$PlayableFactory,com.openggf.game.CharacterDefinition$RespawnStrategyFactory,com.openggf.game.PlayerCharacter,com.openggf.sprites.playable.SecondaryAbility,boolean,com.openggf.game.CharacterDefinition$ArtSupplier,com.openggf.game.CharacterDefinition$PaletteSupplier,java.util.Set<com.openggf.game.CharacterDefinition$MovementAbility>)
+CONSTRUCTOR com.openggf.game.CharacterDefinition public  <init>(com.openggf.game.CharacterKey,java.lang.String,com.openggf.game.CharacterDefinition$PlayableFactory,com.openggf.game.CharacterDefinition$RespawnStrategyFactory,com.openggf.game.PlayerCharacter,com.openggf.sprites.playable.SecondaryAbility,boolean,com.openggf.game.CharacterDefinition$ArtSupplier,com.openggf.game.CharacterDefinition$PaletteSupplier,java.util.Set<com.openggf.game.CharacterDefinition$MovementAbility>,com.openggf.game.CharacterDefinition$PaletteSupplier)
 CONSTRUCTOR com.openggf.game.CheckpointState$RewindState public  <init>(int,int,int,int,int,int,boolean,boolean,int,int,boolean,int,int,boolean,byte,byte,boolean,long,boolean,int,int)
 CONSTRUCTOR com.openggf.game.DebugOverlayProvider$ArtViewerTarget public  <init>(java.lang.String,java.lang.String,int,int)
 CONSTRUCTOR com.openggf.game.DebugOverlayProvider$ObjectDebugLabel public  <init>(int,int,java.lang.String)
@@ -5865,6 +5866,7 @@ METHOD com.openggf.game.CanonicalAnimation public,static  com.openggf.game.Canon
 METHOD com.openggf.game.CharacterDefinition public  boolean supportsSuperForm()
 METHOD com.openggf.game.CharacterDefinition public  com.openggf.game.CharacterDefinition$ArtSupplier artSupplier()
 METHOD com.openggf.game.CharacterDefinition public  com.openggf.game.CharacterDefinition$PaletteSupplier paletteSupplier()
+METHOD com.openggf.game.CharacterDefinition public  com.openggf.game.CharacterDefinition$PaletteSupplier underwaterPaletteSupplier()
 METHOD com.openggf.game.CharacterDefinition public  com.openggf.game.CharacterDefinition$PlayableFactory spriteFactory()
 METHOD com.openggf.game.CharacterDefinition public  com.openggf.game.CharacterDefinition$RespawnStrategyFactory respawnStrategyFactory()
 METHOD com.openggf.game.CharacterDefinition public  com.openggf.game.CharacterKey key()
@@ -17725,6 +17727,7 @@ RECORD-COMPONENT com.openggf.game.CharacterDefinition respawnStrategyFactory com
 RECORD-COMPONENT com.openggf.game.CharacterDefinition secondaryAbility com.openggf.sprites.playable.SecondaryAbility
 RECORD-COMPONENT com.openggf.game.CharacterDefinition spriteFactory com.openggf.game.CharacterDefinition$PlayableFactory
 RECORD-COMPONENT com.openggf.game.CharacterDefinition supportsSuperForm boolean
+RECORD-COMPONENT com.openggf.game.CharacterDefinition underwaterPaletteSupplier com.openggf.game.CharacterDefinition$PaletteSupplier
 RECORD-COMPONENT com.openggf.game.CheckpointState$RewindState cameraLock boolean
 RECORD-COMPONENT com.openggf.game.CheckpointState$RewindState hasS3kRuntimeState boolean
 RECORD-COMPONENT com.openggf.game.CheckpointState$RewindState hasSavedTimer boolean

@@ -1,0 +1,13 @@
+formatVersion: 1
+id: mica-and-talon
+name: MICA and TALON
+version: 0.1.0
+authors: [OpenGGF contributors]
+description: Original character framework example with temporary MICA art.
+engineApiRange: ">=0.7.0 <0.8.0"
+type: patch
+baseGame: any
+entrypoint: mica.MicaMod
+dependencies: []
+audioOverrides: {}
+artOverrides: {}
