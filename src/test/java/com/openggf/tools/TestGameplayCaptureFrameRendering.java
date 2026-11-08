@@ -78,6 +78,8 @@ class TestGameplayCaptureFrameRendering {
             assertTrue(rows < 100);
             for (int row = 0; row < 20; row++) session.step(null);
             opened[0] = true;
+            assertTrue(ControlledFrameRuntime.isNativeTitlePresentationActive(context),
+                    "capture must exercise the locked native-title branch");
             RgbaImage captured = session.render();
             int pixelY = GameplayCaptureSession.HEIGHT - 12;
             assertEquals(0xFFFF00FF, captured.argb(12, pixelY), "capture shows the modal pixels");
@@ -93,6 +95,8 @@ class TestGameplayCaptureFrameRendering {
                 draw.setAccessible(true);
                 glClearColor(0, 0, 0, 1);
                 glClear(GL_COLOR_BUFFER_BIT);
+                assertTrue(ControlledFrameRuntime.isNativeTitlePresentationActive(context),
+                        "live rendering must exercise the locked native-title branch");
                 draw.invoke(engine);
                 assertEquals(2, draws[0], "live Engine must draw the same modal after the native title");
                 RgbaImage live = ScreenshotCapture.captureFramebuffer(320, GameplayCaptureSession.HEIGHT);

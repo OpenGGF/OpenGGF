@@ -89,18 +89,6 @@ import static org.mockito.Mockito.when;
  * is called, without requiring a full level load or ROM access.
  */
 class TestGameplayModeContextRewindRegistry {
-    private static final Set<String> CORE_REWIND_KEYS = Set.of(
-            "camera",
-            "controlled-native-presentation",
-            "directed-player-lease",
-            "gamestate",
-            "gamerng",
-            "timermanager",
-            "fademanager",
-            "oscillation",
-            "kosinski-module-queue",
-            "solid-execution");
-
     @BeforeEach
     void configureServices() {
         TestEnvironment.resetEngineOnly();

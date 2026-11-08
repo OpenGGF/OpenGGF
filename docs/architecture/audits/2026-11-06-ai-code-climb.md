@@ -2396,3 +2396,45 @@ The final repair Java diff against b63 has SHA-256
 `f4ee0d33412fd9d3ae686a7042aa41cc83c21dfc0a547423e213dff55579d1f2`.
 No public API/version, strict schema/reference policy, debt budget or skip gate
 was changed. Review-delta and final broad validation remain required.
+
+### Repair recheck, witness hardening and EHZ1 — 2026-11-08
+
+Opus rechecked only b63..42243358f and necessary callers, read-only. All three
+findings are resolved; no residual or new regression was found in that delta.
+Its constructor lookup agrees with the shared invocation helper, matching
+constructor failures still propagate, and custom hooks retain precedence. Native
+title rendering reaches the common modal exactly once and still excludes creator
+scene/overlay drawing. The new anchor proves that field restoration completes.
+The scan was not exhaustive for inherited marker declarations; no test was run
+by the reviewer. The earlier non-fresh S3K hypothesis remains outside this proof.
+
+Root applied the optional witness hardening: assert native title ownership
+immediately before capture and live draws, so a changed hold duration cannot
+silently exercise the ordinary branch. The unused CORE_REWIND_KEYS test constant
+was removed; the explicit expected keyset and attach/reattach counts enforce the
+registry contract. The two-class selection passed 31 cases, zero failures/errors/
+skips; log target/code-climb/422-review-witness-hardening.log. No production Java
+diff exists relative to reviewed 42243358f. This small test-only follow-up does
+not require another review of unchanged runtime code.
+
+The fresh candidate EHZ1 replay ran at 42243358f with unique Surefire/report
+directories, the normal queue, Java 25/Lua 5.4 and unset displays:
+
+```bash
+python3 tools/testing/maven_queue.py --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical -Dtrace.print.summary=true -Dopenggf.surefire.reports=target/code-climb/422-ehz1-candidate-surefire -Dopenggf.trace.reports=target/code-climb/422-ehz1-candidate-reports '-Dtest=TestS2Ehz1TraceReplay' test -B
+```
+
+Fresh XML and the actual printed report were inspected: one case passed with
+zero skips; 5852 compared/planned rows, gate reached, verification all, zero
+gameplay/bootstrap errors or warnings. The report contains physics and animation
+groups. Queue waited 43 seconds; Maven reported 1m33, testcase 3.813 seconds;
+wall time was not separately measured. Engine logs also state that the FAST
+load-time profile has no manifest and uses NONE; this does not certify missing
+timing inputs or broader parity. The test-only hardening changes neither runtime
+nor this fixture/profile, so this replay remains attributable to its exact tested
+source without claiming it ran on a later commit.
+
+Matching EHZ1 and HCZ1/HCZ2 baseline replays were requested only after the existing
+33c smoke job terminates, with its current sole owner. Candidate HCZ and fresh
+final-source smoke/guards remain to run. No baseline job was duplicated, no queue
+policy was changed and no source was edited during a category run.
