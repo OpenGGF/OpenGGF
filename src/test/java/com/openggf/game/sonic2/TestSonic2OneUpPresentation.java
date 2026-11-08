@@ -15,6 +15,8 @@ class TestSonic2OneUpPresentation {
         var tiles=Sonic2CharacterPresentation.oneUp(presentation);
         assertEquals(4,tiles.length);
         for(var tile:tiles) for(int x=0;x<8;x++) for(int y=0;y<8;y++) assertEquals(5,tile.getPixel(x,y));
+        assertNull(Sonic2CharacterPresentation.oneUp(new CharacterPresentation("MICA", null,
+                Map.of(Host.S2, new Art(null, new Image(8, 8, new byte[64]), null, null)), Map.of())));
         assertNull(Sonic2CharacterPresentation.oneUp(null));
         assertNull(Sonic2CharacterPresentation.oneUp(new CharacterPresentation("MICA")));
     }

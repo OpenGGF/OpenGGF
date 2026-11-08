@@ -296,9 +296,11 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
         registerSheet(ObjectArtKeys.GAME_OVER, artLoader.loadGameOverSheet());
 
         // === Results screen (separate namespace) ===
+        var characterPresentation = Sonic2CharacterPresentation.resolve(
+                GameServices.currentOrBootstrapGameModule(), GameServices.configuration());
         resultsSheet = Sonic2ResultsName.apply(GameServices.rom().getRom(),
                 java.util.Objects.requireNonNull(resultsSheetOverlay.apply(artData.resultsSheet())),
-                Sonic2CharacterPresentation.resolve(GameServices.currentOrBootstrapGameModule(), GameServices.configuration()));
+                characterPresentation);
         resultsRenderer = new PatternSpriteRenderer(resultsSheet);
         sheets.put(ObjectArtKeys.RESULTS, resultsSheet);
         renderers.put(ObjectArtKeys.RESULTS, resultsRenderer);
@@ -326,13 +328,12 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
         if (!overrideLivesArtFromPatch()) {
             overrideLivesArtFromDonor();
         }
-        var characterPresentation = Sonic2CharacterPresentation.resolve(GameServices.currentOrBootstrapGameModule(), GameServices.configuration());
         hudLivesPatterns = Sonic2CharacterPresentation.hud(GameServices.rom().getRom(), hudLivesPatterns, characterPresentation);
         rebuildHudStaticArt();
 
         // The 1-up monitor icon shares VRAM with the life counter, so it must show
         // the same main-character face the HUD does (Tails-alone / Knuckles lock-on).
-        overrideMonitorIconArtForMainCharacter();
+        overrideMonitorIconArtForMainCharacter(characterPresentation);
         applySheetPatches();
 
         // Obj28 and Obj58 consume native tile ranges, not private asset identities.
@@ -711,12 +712,14 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
      * replace it for Tails-alone and Knuckles games. We mirror that here so the standard
      * monitor shows the lead character's face. (s2.asm:89193, 89271)
      */
-    private void overrideMonitorIconArtForMainCharacter() throws IOException {
+    private void overrideMonitorIconArtForMainCharacter(
+            com.openggf.game.CharacterPresentation presentation) throws IOException {
         if (artData == null || artData.monitorSheet() == null) {
             return;
         }
         String mainChar = ActiveGameplayTeamResolver.resolveMainCharacterCode(GameServices.configuration());
-        Pattern[] lifeArt = resolveMonitorIconLifeArt(mainChar);
+        Pattern[] lifeArt = Sonic2CharacterPresentation.oneUp(presentation);
+        if (lifeArt == null) lifeArt = resolveMonitorIconLifeArt(mainChar);
         if (lifeArt == null || lifeArt.length == 0) {
             return; // Sonic (the default already loaded), or Knuckles without an active donor
         }
@@ -735,10 +738,7 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
      * or {@code null} to keep the Sonic default. Tails uses native S2 art; Knuckles
      * uses the palette-remapped S3K donor art (only when the donor is active).
      */
-    private Pattern[] resolveMonitorIconLifeArt(String mainChar) throws IOException {
-        var custom = Sonic2CharacterPresentation.oneUp(Sonic2CharacterPresentation.resolve(
-                GameServices.currentOrBootstrapGameModule(), GameServices.configuration()));
-        if (custom != null) return custom;
+    private Pattern[] resolveMonitorIconLifeArt(String mainChar) {
         Pattern[] patchIcon = patchLifeIcon();
         if (patchIcon != null) {
             return patchIcon;

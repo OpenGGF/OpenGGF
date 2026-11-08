@@ -188,7 +188,7 @@ appendage renderer automatically.
 
 ## Presentation contract (in progress)
 
-The optional final `CharacterDefinition` constructor argument is a
+`CharacterDefinition.presentationSupplier()` is an optional
 `PresentationSupplier`. It receives the canonical persisted character key and
 runs inside the character owner's fault boundary, like the art and palette
 suppliers. Existing constructors default it to `null`.
@@ -200,16 +200,19 @@ keyed by host and letter style. `Art` has independent HUD life icon (16×16),
 fallback. `Image` uses palette indices 0–15, with zero transparent; it copies pixel
 arrays on construction and access. Presentation maps are immutable snapshots.
 
-This is currently an API foundation: stock surfaces do not yet consume these
-slots. The internal name composer reports native, supplementary and missing glyph
+S2 consumes these slots for HUD life icons and names, act-results names,
+special-stage results names (including the Super announcement), and 1-up faces.
+Names use the small HUD font or the title-card alphabet; missing glyphs retain
+the native name, and HUD names wider than 32 pixels retain the native HUD name.
+The S2 1-up face must be 16×16; other sizes retain the native face.
+The internal name composer reports native, supplementary and missing glyph
 coverage and extracts pixel crops across tile boundaries. Title-font readers for
 all three hosts and small HUD-font readers use the ROM pipeline. The S3K reader inventories each zone separately, including shared ZONE
 letters and pixel crops within multi-letter pieces, plus the results-name banks.
 Native glyphs take precedence over supplements: MICA needs supplementary M and A
-only in the S1 HUD font. The HUD/results/monitor/signpost consumers remain to be
-implemented. Stock S2 results now select Miles/Tails for Tails alone using the
-native graphics-region setting; this does not enable custom results names.
-Do not assume supplying this record changes an on-screen name or face yet. GGFP presentation sections are also pending.
+only in the S1 HUD font. Other hosts and signposts are separate delivery lanes.
+Stock S2 results retain the native graphics-region selection of Miles/Tails for
+Tails alone. GGFP presentation sections are also pending.
 
 ## Ability and super-form rules
 
