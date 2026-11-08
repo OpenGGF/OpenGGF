@@ -587,7 +587,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 3,
-      "notes": ""
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 3; no painted pixel patches."
     },
     {
       "id": "spindash-01",
@@ -600,7 +600,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 3,
-      "notes": ""
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 1; no painted pixel patches."
     },
     {
       "id": "spindash-02",
@@ -613,7 +613,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 3,
-      "notes": ""
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 3; no painted pixel patches."
     },
     {
       "id": "spindash-03",
@@ -626,7 +626,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 3,
-      "notes": ""
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 3; no painted pixel patches."
     },
     {
       "id": "drown-00",
@@ -1276,7 +1276,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Fifth tucked charge phase; coral boot travels through lower shell."
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 3; no painted pixel patches."
     },
     {
       "id": "spindash-blur",
@@ -1284,12 +1284,12 @@
       "order": 5,
       "file": "frames/spindash-blur.png",
       "hotspot": [
-        14,
-        12
+        11,
+        7
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Quiet jade charge interleave corresponding to native $42."
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 3; no painted pixel patches."
     }
   ],
   "scripts": {

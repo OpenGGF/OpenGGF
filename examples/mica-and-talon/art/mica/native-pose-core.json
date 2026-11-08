@@ -1337,71 +1337,69 @@
       }
     },
     "spindash-00": {
-      "prompt": "Use case: style-transfer. Asset: ONE isolated 16-bit pixel sprite, transparent background. Image 1 is ONLY native pose/rotation/silhouette and facing reference, NOT the character to reproduce. Image 2 is MICA's original pangolin identity concept. Image 3 is approved pixel-art style/proportion anchor. Redraw image 1 pose as MICA, a NEW DRAWING, NOT a recolour. Preserve pose, framing and silhouette extent of reference, NOT standing concept pose. Jade rounded overlapping scales, long scaled tail, tan pangolin muzzle/belly, readable dark eye, white gloves, red hiking boots with tan soles and jade laces. NO hedgehog/quills/blue/Sonic features, no text, no shadows or scenery. Crisp simple native pixel clusters and continuous dark outline. Pose: Compact oval curled pangolin armour ball, long axis lower-left to upper-right; scales foremost, tucked face on right, no extended limbs.",
-      "raw_sha256": "1fdadadccc7e3d88eda91df9b8938e36c4aa6709da3d76c7862c3841059628b7",
       "reference": {
         "id": "spindash-00",
         "size": [
-          30,
+          29,
           27
         ],
         "hotspot": [
           11,
           7
         ],
-        "bbox_relative_to_hotspot": [
-          -11,
-          -7,
-          19,
-          20
-        ],
-        "game": "S2",
-        "mapping": 66,
-        "label": "Map_Sonic_0868"
+        "mapping": 67,
+        "label": "Map_Sonic_0872",
+        "game": "S2"
       },
       "geometry_reference": {
-        "id": "spindash-00",
         "size": [
-          30,
+          29,
           27
         ],
         "hotspot": [
           11,
           7
-        ],
-        "bbox_relative_to_hotspot": [
-          -11,
-          -7,
-          19,
-          20
-        ],
-        "game": "S2",
-        "mapping": 66,
-        "label": "Map_Sonic_0868"
+        ]
       },
       "native_size": [
-        30,
+        29,
         27
-      ],
-      "previous_size": [
-        31,
-        27
-      ],
-      "previous_hotspot": [
-        20,
-        8
       ],
       "hotspot": [
         11,
         7
       ],
-      "source": "new built-in GPT Image",
-      "cleanup": "connected alpha; shared palette; inside ink outline",
-      "material_box_change": false
+      "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, spindash-00, candidate 3 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Match this native spin-charge phase's exact envelope, orientation and progression. Mostly jade spin mass, restrained soft rounded scale/boot hint. Native image may be nearly solid blur; follow its silhouette/highlight placement, no face pasted onto ball.\n\nWill reduce to native 29x27 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 3: prioritize small-scale readability and consistent identity with the approved face anchors, keeping exact phase placement.",
+      "raw_sha256": "5e277a6695227654b280cb0c6be43caa6210e7b6b89455b1273b4ace28097f30",
+      "source": "built-in GPT Image, latest exposed; exact version unavailable",
+      "cleanup": "Transparent-margin crop; Lanczos native box reduction; unchanged fixed palette; inside silhouette ink. No painted pixels.",
+      "regeneration": {
+        "attempts": [
+          {
+            "attempt": 1,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, spindash-00, candidate 1 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Match this native spin-charge phase's exact envelope, orientation and progression. Mostly jade spin mass, restrained soft rounded scale/boot hint. Native image may be nearly solid blur; follow its silhouette/highlight placement, no face pasted onto ball.\n\nWill reduce to native 29x27 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 1: strict fidelity to reference limb/boot positions and silhouette.",
+            "raw_sha256": "eb055f34f1ac35642adf4b34b65a648acc63ff8d807732c47842d59468fdfc1e",
+            "chosen": false
+          },
+          {
+            "attempt": 2,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, spindash-00, candidate 2 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Match this native spin-charge phase's exact envelope, orientation and progression. Mostly jade spin mass, restrained soft rounded scale/boot hint. Native image may be nearly solid blur; follow its silhouette/highlight placement, no face pasted onto ball.\n\nWill reduce to native 29x27 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 2: prioritize coherent rounded hood/head, compact shapes and clean shading while keeping EXACT native limb pose.",
+            "raw_sha256": "f0317e7821695e9eccacccb3ab726376eaf1b5033b246b5e81917a322dbb3b49",
+            "chosen": false
+          },
+          {
+            "attempt": 3,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, spindash-00, candidate 3 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Match this native spin-charge phase's exact envelope, orientation and progression. Mostly jade spin mass, restrained soft rounded scale/boot hint. Native image may be nearly solid blur; follow its silhouette/highlight placement, no face pasted onto ball.\n\nWill reduce to native 29x27 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 3: prioritize small-scale readability and consistent identity with the approved face anchors, keeping exact phase placement.",
+            "raw_sha256": "5e277a6695227654b280cb0c6be43caa6210e7b6b89455b1273b4ace28097f30",
+            "chosen": true
+          }
+        ],
+        "chosen": 3,
+        "reason": "Near-complete jade shell, native diagonal envelope and top-right highlight, tiny lower-left boot hint.",
+        "review_directory": "$HOME/scratch/agent-tmp/mica-regen-20261108"
+      }
     },
     "spindash-01": {
-      "prompt": "Use case: style-transfer. Asset: ONE isolated 16-bit pixel sprite, transparent background. Image 1 is ONLY native pose/rotation/silhouette and facing reference, NOT the character to reproduce. Image 2 is MICA's original pangolin identity concept. Image 3 is approved pixel-art style/proportion anchor. Redraw image 1 pose as MICA, a NEW DRAWING, NOT a recolour. Preserve pose, framing and silhouette extent of reference, NOT standing concept pose. Jade rounded overlapping scales, long scaled tail, tan pangolin muzzle/belly, readable dark eye, white gloves, red hiking boots with tan soles and jade laces. NO hedgehog/quills/blue/Sonic features, no text, no shadows or scenery. Crisp simple native pixel clusters and continuous dark outline. Pose: Compact oval curled pangolin armour ball, long axis lower-left to upper-right, shell scale ridges advance one rotation step, boots tucked.",
-      "raw_sha256": "9d74a00aad65082adf760a4e631eb6fe9bdbf20046e8449e6200851c1ec0c03b",
       "reference": {
         "id": "spindash-01",
         "size": [
@@ -1412,18 +1410,11 @@
           11,
           7
         ],
-        "bbox_relative_to_hotspot": [
-          -11,
-          -7,
-          18,
-          20
-        ],
-        "game": "S2",
-        "mapping": 67,
-        "label": "Map_Sonic_0872"
+        "mapping": 68,
+        "label": "Map_Sonic_087C",
+        "game": "S2"
       },
       "geometry_reference": {
-        "id": "spindash-01",
         "size": [
           29,
           27
@@ -1431,40 +1422,47 @@
         "hotspot": [
           11,
           7
-        ],
-        "bbox_relative_to_hotspot": [
-          -11,
-          -7,
-          18,
-          20
-        ],
-        "game": "S2",
-        "mapping": 67,
-        "label": "Map_Sonic_0872"
+        ]
       },
       "native_size": [
         29,
         27
       ],
-      "previous_size": [
-        29,
-        27
-      ],
-      "previous_hotspot": [
-        19,
-        8
-      ],
       "hotspot": [
         11,
         7
       ],
-      "source": "new built-in GPT Image",
-      "cleanup": "connected alpha; shared palette; inside ink outline",
-      "material_box_change": false
+      "prompt": "Use case: style-transfer. Create ONE original MICA pangolin game sprite, spindash-01, candidate 1. First image is a native 8x pixel pose reference; preserve that pose. Second image defines original MICA identity, third/fourth approved MICA pixel face style. A mostly jade oval charge-spin mass, following the reference's exact orientation and highlight placement. Restrained rounded scale and coral boot suggestions, soft quiet centre, no face pasted on the ball. Jade green overlapping rounded armour scales, cream muzzle if visible, coral boots/tan soles, white gloves. Crisp simple 16-bit pixel clusters and black silhouette outline, consistent top-left light. Single sprite isolated on transparent background. No text, no ground, no shadow, no extra poses, no golden form.",
+      "raw_sha256": "90a066f0f3754c5484907cb84f2286977404261fec243eabdbda43a1bea377b1",
+      "source": "built-in GPT Image, latest exposed; exact version unavailable",
+      "cleanup": "Transparent-margin crop; Lanczos native box reduction; unchanged fixed palette; inside silhouette ink. No painted pixels.",
+      "regeneration": {
+        "attempts": [
+          {
+            "attempt": 1,
+            "prompt": "Use case: style-transfer. Create ONE original MICA pangolin game sprite, spindash-01, candidate 1. First image is a native 8x pixel pose reference; preserve that pose. Second image defines original MICA identity, third/fourth approved MICA pixel face style. A mostly jade oval charge-spin mass, following the reference's exact orientation and highlight placement. Restrained rounded scale and coral boot suggestions, soft quiet centre, no face pasted on the ball. Jade green overlapping rounded armour scales, cream muzzle if visible, coral boots/tan soles, white gloves. Crisp simple 16-bit pixel clusters and black silhouette outline, consistent top-left light. Single sprite isolated on transparent background. No text, no ground, no shadow, no extra poses, no golden form.",
+            "raw_sha256": "90a066f0f3754c5484907cb84f2286977404261fec243eabdbda43a1bea377b1",
+            "chosen": true
+          },
+          {
+            "attempt": 2,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, spindash-01, candidate 2 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Match this native spin-charge phase's exact envelope, orientation and progression. Mostly jade spin mass, restrained soft rounded scale/boot hint. Native image may be nearly solid blur; follow its silhouette/highlight placement, no face pasted onto ball.\n\nWill reduce to native 29x27 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 2: prioritize coherent rounded hood/head, compact shapes and clean shading while keeping EXACT native limb pose.",
+            "raw_sha256": "352fcdca95f7328668f1e62103779b99640543e57cc257c919253dd79aa23c19",
+            "chosen": false
+          },
+          {
+            "attempt": 3,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, spindash-01, candidate 3 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Match this native spin-charge phase's exact envelope, orientation and progression. Mostly jade spin mass, restrained soft rounded scale/boot hint. Native image may be nearly solid blur; follow its silhouette/highlight placement, no face pasted onto ball.\n\nWill reduce to native 29x27 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 3: prioritize small-scale readability and consistent identity with the approved face anchors, keeping exact phase placement.",
+            "raw_sha256": "663c0f2699b587dc7d1f4efae17fc25a3467d4d7399875dc649920bccf333cd4",
+            "chosen": false
+          }
+        ],
+        "chosen": 1,
+        "reason": "Closed shell progression, rounded scale rows and no exposed face, matching native phase.",
+        "review_directory": "$HOME/scratch/agent-tmp/mica-regen-20261108"
+      }
     },
     "spindash-02": {
-      "prompt": "Use case: style-transfer. Asset: ONE isolated 16-bit pixel sprite, transparent background. Image 1 is ONLY native pose/rotation/silhouette and facing reference, NOT the character to reproduce. Image 2 is MICA's original pangolin identity concept. Image 3 is approved pixel-art style/proportion anchor. Redraw image 1 pose as MICA, a NEW DRAWING, NOT a recolour. Preserve pose, framing and silhouette extent of reference, NOT standing concept pose. Jade rounded overlapping scales, long scaled tail, tan pangolin muzzle/belly, readable dark eye, white gloves, red hiking boots with tan soles and jade laces. NO hedgehog/quills/blue/Sonic features, no text, no shadows or scenery. Crisp simple native pixel clusters and continuous dark outline. Pose: Compact oval curled pangolin armour ball, long axis lower-left to upper-right, different rotating overlapping scale bands, tucked face barely visible.",
-      "raw_sha256": "625d07d8cd15001f3837df91c61e5ba4a5274cce7578896e137ffb8c61611da4",
       "reference": {
         "id": "spindash-02",
         "size": [
@@ -1475,18 +1473,11 @@
           11,
           7
         ],
-        "bbox_relative_to_hotspot": [
-          -11,
-          -7,
-          18,
-          20
-        ],
-        "game": "S2",
-        "mapping": 68,
-        "label": "Map_Sonic_087C"
+        "mapping": 69,
+        "label": "Map_Sonic_0886",
+        "game": "S2"
       },
       "geometry_reference": {
-        "id": "spindash-02",
         "size": [
           29,
           27
@@ -1494,40 +1485,47 @@
         "hotspot": [
           11,
           7
-        ],
-        "bbox_relative_to_hotspot": [
-          -11,
-          -7,
-          18,
-          20
-        ],
-        "game": "S2",
-        "mapping": 68,
-        "label": "Map_Sonic_087C"
+        ]
       },
       "native_size": [
         29,
         27
       ],
-      "previous_size": [
-        29,
-        27
-      ],
-      "previous_hotspot": [
-        19,
-        8
-      ],
       "hotspot": [
         11,
         7
       ],
-      "source": "new built-in GPT Image",
-      "cleanup": "connected alpha; shared palette; inside ink outline",
-      "material_box_change": false
+      "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, spindash-02, candidate 3 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Match this native spin-charge phase's exact envelope, orientation and progression. Mostly jade spin mass, restrained soft rounded scale/boot hint. Native image may be nearly solid blur; follow its silhouette/highlight placement, no face pasted onto ball.\n\nWill reduce to native 29x27 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 3: prioritize small-scale readability and consistent identity with the approved face anchors, keeping exact phase placement.",
+      "raw_sha256": "b5255e09b05e6f0e9f4ded4719d04ce3635f567083d646ffcfe18527567ace3e",
+      "source": "built-in GPT Image, latest exposed; exact version unavailable",
+      "cleanup": "Transparent-margin crop; Lanczos native box reduction; unchanged fixed palette; inside silhouette ink. No painted pixels.",
+      "regeneration": {
+        "attempts": [
+          {
+            "attempt": 1,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, spindash-02, candidate 1 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Match this native spin-charge phase's exact envelope, orientation and progression. Mostly jade spin mass, restrained soft rounded scale/boot hint. Native image may be nearly solid blur; follow its silhouette/highlight placement, no face pasted onto ball.\n\nWill reduce to native 29x27 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 1: strict fidelity to reference limb/boot positions and silhouette.",
+            "raw_sha256": "89eec64a3e049125f276796cfbc48c79d8ae150dbcfd41db6b0719f2315d19c9",
+            "chosen": false
+          },
+          {
+            "attempt": 2,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, spindash-02, candidate 2 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Match this native spin-charge phase's exact envelope, orientation and progression. Mostly jade spin mass, restrained soft rounded scale/boot hint. Native image may be nearly solid blur; follow its silhouette/highlight placement, no face pasted onto ball.\n\nWill reduce to native 29x27 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 2: prioritize coherent rounded hood/head, compact shapes and clean shading while keeping EXACT native limb pose.",
+            "raw_sha256": "228c8a32a4e88127fa5910926179c2dbe55e042764fbeb60e6c36fa5f5701edc",
+            "chosen": false
+          },
+          {
+            "attempt": 3,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, spindash-02, candidate 3 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Match this native spin-charge phase's exact envelope, orientation and progression. Mostly jade spin mass, restrained soft rounded scale/boot hint. Native image may be nearly solid blur; follow its silhouette/highlight placement, no face pasted onto ball.\n\nWill reduce to native 29x27 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 3: prioritize small-scale readability and consistent identity with the approved face anchors, keeping exact phase placement.",
+            "raw_sha256": "b5255e09b05e6f0e9f4ded4719d04ce3635f567083d646ffcfe18527567ace3e",
+            "chosen": true
+          }
+        ],
+        "chosen": 3,
+        "reason": "Closed diagonal shell with moving lower-edge cream/coral hint and native highlight position; avoids upright portrait.",
+        "review_directory": "$HOME/scratch/agent-tmp/mica-regen-20261108"
+      }
     },
     "spindash-03": {
-      "prompt": "Use case: style-transfer. Asset: ONE isolated 16-bit pixel sprite, transparent background. Image 1 is ONLY native pose/rotation/silhouette and facing reference, NOT the character to reproduce. Image 2 is MICA's original pangolin identity concept. Image 3 is approved pixel-art style/proportion anchor. Redraw image 1 pose as MICA, a NEW DRAWING, NOT a recolour. Preserve pose, framing and silhouette extent of reference, NOT standing concept pose. Jade rounded overlapping scales, long scaled tail, tan pangolin muzzle/belly, readable dark eye, white gloves, red hiking boots with tan soles and jade laces. NO hedgehog/quills/blue/Sonic features, no text, no shadows or scenery. Crisp simple native pixel clusters and continuous dark outline. Pose: Compact oval curled pangolin armour ball, long axis lower-left to upper-right, fourth rotation phase of scales.",
-      "raw_sha256": "fa94a655aa6122d66d941490463b49570066eec306d76746c807432dc6916c39",
       "reference": {
         "id": "spindash-03",
         "size": [
@@ -1538,18 +1536,11 @@
           11,
           7
         ],
-        "bbox_relative_to_hotspot": [
-          -11,
-          -7,
-          18,
-          20
-        ],
-        "game": "S2",
-        "mapping": 69,
-        "label": "Map_Sonic_0886"
+        "mapping": 70,
+        "label": "Map_Sonic_0890",
+        "game": "S2"
       },
       "geometry_reference": {
-        "id": "spindash-03",
         "size": [
           29,
           27
@@ -1557,36 +1548,45 @@
         "hotspot": [
           11,
           7
-        ],
-        "bbox_relative_to_hotspot": [
-          -11,
-          -7,
-          18,
-          20
-        ],
-        "game": "S2",
-        "mapping": 69,
-        "label": "Map_Sonic_0886"
+        ]
       },
       "native_size": [
         29,
         27
       ],
-      "previous_size": [
-        29,
-        27
-      ],
-      "previous_hotspot": [
-        19,
-        8
-      ],
       "hotspot": [
         11,
         7
       ],
-      "source": "new built-in GPT Image",
-      "cleanup": "connected alpha; shared palette; inside ink outline",
-      "material_box_change": false
+      "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, spindash-03, candidate 3 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Match this native spin-charge phase's exact envelope, orientation and progression. Mostly jade spin mass, restrained soft rounded scale/boot hint. Native image may be nearly solid blur; follow its silhouette/highlight placement, no face pasted onto ball.\n\nWill reduce to native 29x27 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 3: prioritize small-scale readability and consistent identity with the approved face anchors, keeping exact phase placement.",
+      "raw_sha256": "51aa7cff189a9047e895feb17656621f78adcc983d571e560f315ab26c27cf9d",
+      "source": "built-in GPT Image, latest exposed; exact version unavailable",
+      "cleanup": "Transparent-margin crop; Lanczos native box reduction; unchanged fixed palette; inside silhouette ink. No painted pixels.",
+      "regeneration": {
+        "attempts": [
+          {
+            "attempt": 1,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, spindash-03, candidate 1 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Match this native spin-charge phase's exact envelope, orientation and progression. Mostly jade spin mass, restrained soft rounded scale/boot hint. Native image may be nearly solid blur; follow its silhouette/highlight placement, no face pasted onto ball.\n\nWill reduce to native 29x27 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 1: strict fidelity to reference limb/boot positions and silhouette.",
+            "raw_sha256": "f52a6847520d8f163cf94811e116f7699859dd67985a839855cc3c7c2c1c48cd",
+            "chosen": false
+          },
+          {
+            "attempt": 2,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, spindash-03, candidate 2 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Match this native spin-charge phase's exact envelope, orientation and progression. Mostly jade spin mass, restrained soft rounded scale/boot hint. Native image may be nearly solid blur; follow its silhouette/highlight placement, no face pasted onto ball.\n\nWill reduce to native 29x27 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 2: prioritize coherent rounded hood/head, compact shapes and clean shading while keeping EXACT native limb pose.",
+            "raw_sha256": "f54da333f0c9e19ade0a436b51e0b2bd797abd799cc96b47e8982d6cff37d9be",
+            "chosen": false
+          },
+          {
+            "attempt": 3,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, spindash-03, candidate 3 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Match this native spin-charge phase's exact envelope, orientation and progression. Mostly jade spin mass, restrained soft rounded scale/boot hint. Native image may be nearly solid blur; follow its silhouette/highlight placement, no face pasted onto ball.\n\nWill reduce to native 29x27 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 3: prioritize small-scale readability and consistent identity with the approved face anchors, keeping exact phase placement.",
+            "raw_sha256": "51aa7cff189a9047e895feb17656621f78adcc983d571e560f315ab26c27cf9d",
+            "chosen": true
+          }
+        ],
+        "chosen": 3,
+        "reason": "Rounded armoured oval, broader highlight and shell turn matching native fourth phase.",
+        "review_directory": "$HOME/scratch/agent-tmp/mica-regen-20261108"
+      }
     },
     "push-00": {
       "prompt": "Use case: style-transfer. Asset: ONE isolated 16-bit pixel sprite, transparent background. Image 1 is ONLY native pose/rotation/silhouette and facing reference, NOT the character to reproduce. Image 2 is MICA's original pangolin identity concept. Image 3 is approved pixel-art style/proportion anchor. Redraw image 1 pose as MICA, a NEW DRAWING, NOT a recolour. Preserve pose, framing and silhouette extent of reference, NOT standing concept pose. Jade rounded overlapping scales, long scaled tail, tan pangolin muzzle/belly, readable dark eye, white gloves, red hiking boots with tan soles and jade laces. NO hedgehog/quills/blue/Sonic features, no text, no shadows or scenery. Crisp simple native pixel clusters and continuous dark outline. Pose: Pushing hard right against an unseen wall: both glove palms forward at chest height, elbows bent, head down and right, legs widely braced, rear left boot far behind, long tail behind left. Do not draw the wall.",
@@ -5417,6 +5417,20 @@
       }
     },
     "spindash-04": {
+      "reference": {
+        "id": "spindash-04",
+        "size": [
+          29,
+          27
+        ],
+        "hotspot": [
+          11,
+          7
+        ],
+        "mapping": 71,
+        "label": "Map_Sonic_089A",
+        "game": "S2"
+      },
       "geometry_reference": {
         "size": [
           29,
@@ -5435,49 +5449,97 @@
         11,
         7
       ],
-      "owner_fix": "Fifth tucked charge phase; coral boot travels through lower shell.",
+      "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, spindash-04, candidate 3 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Match this native spin-charge phase's exact envelope, orientation and progression. Mostly jade spin mass, restrained soft rounded scale/boot hint. Native image may be nearly solid blur; follow its silhouette/highlight placement, no face pasted onto ball.\n\nWill reduce to native 29x27 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 3: prioritize small-scale readability and consistent identity with the approved face anchors, keeping exact phase placement.",
+      "raw_sha256": "fb2681c48ec471e532420173b0af8a800366e8547c4d12a91c5c01914ab12c40",
+      "source": "built-in GPT Image, latest exposed; exact version unavailable",
+      "cleanup": "Transparent-margin crop; Lanczos native box reduction; unchanged fixed palette; inside silhouette ink. No painted pixels.",
+      "regeneration": {
+        "attempts": [
+          {
+            "attempt": 1,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, spindash-04, candidate 1 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Match this native spin-charge phase's exact envelope, orientation and progression. Mostly jade spin mass, restrained soft rounded scale/boot hint. Native image may be nearly solid blur; follow its silhouette/highlight placement, no face pasted onto ball.\n\nWill reduce to native 29x27 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 1: strict fidelity to reference limb/boot positions and silhouette.",
+            "raw_sha256": "eb0bc27a1afd6fc45cc2367965aeb81a5b50dfd8ad56a3700f44d35e9c324129",
+            "chosen": false
+          },
+          {
+            "attempt": 2,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, spindash-04, candidate 2 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Match this native spin-charge phase's exact envelope, orientation and progression. Mostly jade spin mass, restrained soft rounded scale/boot hint. Native image may be nearly solid blur; follow its silhouette/highlight placement, no face pasted onto ball.\n\nWill reduce to native 29x27 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 2: prioritize coherent rounded hood/head, compact shapes and clean shading while keeping EXACT native limb pose.",
+            "raw_sha256": "4e1a87d732a97599129967b0db14f1b99281e293f9230dcc337f79e1f7d194be",
+            "chosen": false
+          },
+          {
+            "attempt": 3,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, spindash-04, candidate 3 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Match this native spin-charge phase's exact envelope, orientation and progression. Mostly jade spin mass, restrained soft rounded scale/boot hint. Native image may be nearly solid blur; follow its silhouette/highlight placement, no face pasted onto ball.\n\nWill reduce to native 29x27 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 3: prioritize small-scale readability and consistent identity with the approved face anchors, keeping exact phase placement.",
+            "raw_sha256": "fb2681c48ec471e532420173b0af8a800366e8547c4d12a91c5c01914ab12c40",
+            "chosen": true
+          }
+        ],
+        "chosen": 3,
+        "reason": "Final charge phase returns coral/cream hint under shell; consistent rounded rows and native tilted envelope.",
+        "review_directory": "$HOME/scratch/agent-tmp/mica-regen-20261108"
+      }
+    },
+    "spindash-blur": {
       "reference": {
-        "custom": true,
+        "id": "spindash-blur",
         "size": [
-          29,
+          30,
+          27
+        ],
+        "hotspot": [
+          11,
+          7
+        ],
+        "mapping": 66,
+        "label": "Map_Sonic_0868",
+        "game": "S2"
+      },
+      "geometry_reference": {
+        "size": [
+          30,
           27
         ],
         "hotspot": [
           11,
           7
         ]
-      }
-    },
-    "spindash-blur": {
-      "geometry_reference": {
-        "size": [
-          30,
-          25
-        ],
-        "hotspot": [
-          14,
-          12
-        ]
       },
       "native_size": [
         30,
-        25
+        27
       ],
       "hotspot": [
-        14,
-        12
+        11,
+        7
       ],
-      "owner_fix": "Quiet jade charge interleave corresponding to native $42.",
-      "reference": {
-        "custom": true,
-        "size": [
-          30,
-          25
+      "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, spindash-blur, candidate 3 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Match this native spin-charge phase's exact envelope, orientation and progression. Mostly jade spin mass, restrained soft rounded scale/boot hint. Native image may be nearly solid blur; follow its silhouette/highlight placement, no face pasted onto ball.\nThis is the interleaved solid blur frame: almost flat jade oval with a tiny scale/boot suggestion, translucent-spinning read through interleaving; do not draw a detailed character or sharp scale lines.\nWill reduce to native 30x27 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 3: prioritize small-scale readability and consistent identity with the approved face anchors, keeping exact phase placement.",
+      "raw_sha256": "8c8e938cdd9f1767a14858a12f8e4a99fdc822bad81e99ebe37d20058fa5f967",
+      "source": "built-in GPT Image, latest exposed; exact version unavailable",
+      "cleanup": "Transparent-margin crop; Lanczos native box reduction; unchanged fixed palette; inside silhouette ink. No painted pixels.",
+      "regeneration": {
+        "attempts": [
+          {
+            "attempt": 1,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, spindash-blur, candidate 1 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Match this native spin-charge phase's exact envelope, orientation and progression. Mostly jade spin mass, restrained soft rounded scale/boot hint. Native image may be nearly solid blur; follow its silhouette/highlight placement, no face pasted onto ball.\nThis is the interleaved solid blur frame: almost flat jade oval with a tiny scale/boot suggestion, translucent-spinning read through interleaving; do not draw a detailed character or sharp scale lines.\nWill reduce to native 30x27 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 1: strict fidelity to reference limb/boot positions and silhouette.",
+            "raw_sha256": "3b4d56d693e6ef5fe4de1d56e06250813db2887006d3e5cb55825eac711fe7cb",
+            "chosen": false
+          },
+          {
+            "attempt": 2,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, spindash-blur, candidate 2 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Match this native spin-charge phase's exact envelope, orientation and progression. Mostly jade spin mass, restrained soft rounded scale/boot hint. Native image may be nearly solid blur; follow its silhouette/highlight placement, no face pasted onto ball.\nThis is the interleaved solid blur frame: almost flat jade oval with a tiny scale/boot suggestion, translucent-spinning read through interleaving; do not draw a detailed character or sharp scale lines.\nWill reduce to native 30x27 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 2: prioritize coherent rounded hood/head, compact shapes and clean shading while keeping EXACT native limb pose.",
+            "raw_sha256": "592098075f81a870ae4d7e414ee8d2acc3e058d84f22f35c63fb97eb009739cf",
+            "chosen": false
+          },
+          {
+            "attempt": 3,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, spindash-blur, candidate 3 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Match this native spin-charge phase's exact envelope, orientation and progression. Mostly jade spin mass, restrained soft rounded scale/boot hint. Native image may be nearly solid blur; follow its silhouette/highlight placement, no face pasted onto ball.\nThis is the interleaved solid blur frame: almost flat jade oval with a tiny scale/boot suggestion, translucent-spinning read through interleaving; do not draw a detailed character or sharp scale lines.\nWill reduce to native 30x27 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 3: prioritize small-scale readability and consistent identity with the approved face anchors, keeping exact phase placement.",
+            "raw_sha256": "8c8e938cdd9f1767a14858a12f8e4a99fdc822bad81e99ebe37d20058fa5f967",
+            "chosen": true
+          }
         ],
-        "hotspot": [
-          14,
-          12
-        ]
+        "chosen": 3,
+        "reason": "Mostly flat jade oval, tiny coral boot smear, restrained scale boundary; quiet enough to interleave between charge phases.",
+        "review_directory": "$HOME/scratch/agent-tmp/mica-regen-20261108"
       }
     }
   },
