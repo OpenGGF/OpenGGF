@@ -32,4 +32,28 @@ class TestSonic2CharacterPresentation {
             assertEquals(stock[5+x/8*2].getPixel(x%8,y),custom[5+x/8*2].getPixel(x%8,y));
         }
     }
+    @Test void stockNamesAndIconsRemainByteIdenticalWithoutPresentation() throws Exception {
+        var rom = TestEnvironment.currentRom();
+        for (int address : new int[]{Sonic2Constants.ART_NEM_SONIC_LIFE_ADDR,
+                Sonic2Constants.ART_NEM_TAILS_LIFE_ADDR}) {
+            var stock = PatternDecompressor.nemesis(rom, address);
+            assertSame(stock, Sonic2CharacterPresentation.hud(rom, stock, null));
+            assertSame(stock, Sonic2CharacterPresentation.hud(rom, stock,
+                    new CharacterPresentation(null)));
+        }
+    }
+
+    @Test void missingOrOversizedNameRetainsNativeNameAndCustomIconDoesNotMutateStock() throws Exception {
+        var rom = TestEnvironment.currentRom();
+        var stock = PatternDecompressor.nemesis(rom, Sonic2Constants.ART_NEM_SONIC_LIFE_ADDR);
+        var icon = mica().art();
+        for (String name : new String[]{"QQ", "MMMMM"}) {
+            var custom = Sonic2CharacterPresentation.hud(rom, stock,
+                    new CharacterPresentation(name, null, icon, Map.of()));
+            for (int i = 4; i < stock.length; i++) for (int x = 0; x < 8; x++) for (int y = 0; y < 8; y++)
+                assertEquals(stock[i].getPixel(x, y), custom[i].getPixel(x, y));
+            custom[0].setPixel(0, 0, (byte) 15);
+            assertNotEquals(15, stock[0].getPixel(0, 0));
+        }
+    }
 }
