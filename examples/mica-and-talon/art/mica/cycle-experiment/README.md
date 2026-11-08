@@ -58,3 +58,9 @@ ROLL is the strongest result: readable quarter turns and an explicit blur.
 SPINDASH's closed shell matches native pose intent, but scale travel reads as
 texture shimmer rather than strong rotation/charge. Whole-strip generation helps
 consistency; it does not solve animation mechanics automatically.
+
+## Follow-up
+
+[Experiment 2](exp2/README.md) adds the explicit native leg-depth table and 15 new
+whole-cycle attempts, with separate reduced candidates and review. First-round
+results above remain intact.

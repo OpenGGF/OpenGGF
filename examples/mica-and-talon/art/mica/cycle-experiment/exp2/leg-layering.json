@@ -1,0 +1,95 @@
+{
+  "convention": "Right-facing fixed camera. Near is camera-side (anatomical right in a true side view), always in front/lit; far is opposite, behind/shaded. Forward means screen-right, not depth. Native RUN is a smear: near/far identify bright/dark arc ownership, not two separate planted feet. Native palette contrast and occlusion are the visual evidence; script supplies order only.",
+  "owners": {
+    "walk": "SonAni_Walk (s2.asm:38692)",
+    "run": "SonAni_Run (s2.asm:38694)"
+  },
+  "walk": [
+    {
+      "frame": 0,
+      "mapping": 15,
+      "forward": "far planted; near lifted passing",
+      "near_lit_front": "near raised forward",
+      "far_shaded_behind": "far planted below"
+    },
+    {
+      "frame": 1,
+      "mapping": 16,
+      "forward": "near swings forward",
+      "near_lit_front": "near right forward",
+      "far_shaded_behind": "far left trailing"
+    },
+    {
+      "frame": 2,
+      "mapping": 17,
+      "forward": "near extended forward",
+      "near_lit_front": "near right extended",
+      "far_shaded_behind": "far left extended"
+    },
+    {
+      "frame": 3,
+      "mapping": 18,
+      "forward": "near heel strike forward",
+      "near_lit_front": "near right heel strike",
+      "far_shaded_behind": "far left trailing"
+    },
+    {
+      "frame": 4,
+      "mapping": 19,
+      "forward": "near planted; far passes behind",
+      "near_lit_front": "near planted below",
+      "far_shaded_behind": "far tucked passing"
+    },
+    {
+      "frame": 5,
+      "mapping": 20,
+      "forward": "far swings forward",
+      "near_lit_front": "near left pushing back",
+      "far_shaded_behind": "far right lifted"
+    },
+    {
+      "frame": 6,
+      "mapping": 13,
+      "forward": "far extended forward",
+      "near_lit_front": "near left extended",
+      "far_shaded_behind": "far right extended"
+    },
+    {
+      "frame": 7,
+      "mapping": 14,
+      "forward": "far heel strike forward",
+      "near_lit_front": "near left trailing",
+      "far_shaded_behind": "far right heel strike"
+    }
+  ],
+  "run": [
+    {
+      "frame": 0,
+      "mapping": 45,
+      "forward": "far forward arc",
+      "near_lit_front": "near left/back arc",
+      "far_shaded_behind": "far right/front arc"
+    },
+    {
+      "frame": 1,
+      "mapping": 46,
+      "forward": "far lower-forward arc",
+      "near_lit_front": "near upper-left/back arc",
+      "far_shaded_behind": "far lower-right/front arc"
+    },
+    {
+      "frame": 2,
+      "mapping": 47,
+      "forward": "near forward arc",
+      "near_lit_front": "near lower-right/front arc",
+      "far_shaded_behind": "far left/back arc"
+    },
+    {
+      "frame": 3,
+      "mapping": 48,
+      "forward": "near upper-forward arc",
+      "near_lit_front": "near upper-right/front arc",
+      "far_shaded_behind": "far lower-left/back arc"
+    }
+  ]
+}

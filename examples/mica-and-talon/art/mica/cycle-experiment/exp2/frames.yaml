@@ -1,0 +1,398 @@
+{
+  "format": "openggf-playable-art-handoff-1",
+  "palette": "palette.yaml",
+  "facing": "right",
+  "tick_rate": 60,
+  "frames": [
+    {
+      "id": "walk-00",
+      "animation": "WALK",
+      "order": 0,
+      "file": "frames/walk-00.png",
+      "hotspot": [
+        13,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 5,
+      "notes": "Experiment 2 only; no live adoption."
+    },
+    {
+      "id": "walk-01",
+      "animation": "WALK",
+      "order": 1,
+      "file": "frames/walk-01.png",
+      "hotspot": [
+        15,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 5,
+      "notes": "Experiment 2 only; no live adoption."
+    },
+    {
+      "id": "walk-02",
+      "animation": "WALK",
+      "order": 2,
+      "file": "frames/walk-02.png",
+      "hotspot": [
+        18,
+        21
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 5,
+      "notes": "Experiment 2 only; no live adoption."
+    },
+    {
+      "id": "walk-03",
+      "animation": "WALK",
+      "order": 3,
+      "file": "frames/walk-03.png",
+      "hotspot": [
+        19,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 5,
+      "notes": "Experiment 2 only; no live adoption."
+    },
+    {
+      "id": "walk-04",
+      "animation": "WALK",
+      "order": 4,
+      "file": "frames/walk-04.png",
+      "hotspot": [
+        13,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 5,
+      "notes": "Experiment 2 only; no live adoption."
+    },
+    {
+      "id": "walk-05",
+      "animation": "WALK",
+      "order": 5,
+      "file": "frames/walk-05.png",
+      "hotspot": [
+        14,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 5,
+      "notes": "Experiment 2 only; no live adoption."
+    },
+    {
+      "id": "walk-06",
+      "animation": "WALK",
+      "order": 6,
+      "file": "frames/walk-06.png",
+      "hotspot": [
+        20,
+        21
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 5,
+      "notes": "Experiment 2 only; no live adoption."
+    },
+    {
+      "id": "walk-07",
+      "animation": "WALK",
+      "order": 7,
+      "file": "frames/walk-07.png",
+      "hotspot": [
+        19,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 5,
+      "notes": "Experiment 2 only; no live adoption."
+    },
+    {
+      "id": "run-00",
+      "animation": "RUN",
+      "order": 0,
+      "file": "frames/run-00.png",
+      "hotspot": [
+        15,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 3,
+      "notes": "Experiment 2 only; no live adoption."
+    },
+    {
+      "id": "run-01",
+      "animation": "RUN",
+      "order": 1,
+      "file": "frames/run-01.png",
+      "hotspot": [
+        15,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 3,
+      "notes": "Experiment 2 only; no live adoption."
+    },
+    {
+      "id": "run-02",
+      "animation": "RUN",
+      "order": 2,
+      "file": "frames/run-02.png",
+      "hotspot": [
+        14,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 3,
+      "notes": "Experiment 2 only; no live adoption."
+    },
+    {
+      "id": "run-03",
+      "animation": "RUN",
+      "order": 3,
+      "file": "frames/run-03.png",
+      "hotspot": [
+        15,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 3,
+      "notes": "Experiment 2 only; no live adoption."
+    },
+    {
+      "id": "roll-00",
+      "animation": "ROLL",
+      "order": 0,
+      "file": "frames/roll-00.png",
+      "hotspot": [
+        15,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Experiment 2 only; no live adoption."
+    },
+    {
+      "id": "roll-01",
+      "animation": "ROLL",
+      "order": 1,
+      "file": "frames/roll-01.png",
+      "hotspot": [
+        15,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Experiment 2 only; no live adoption."
+    },
+    {
+      "id": "roll-02",
+      "animation": "ROLL",
+      "order": 2,
+      "file": "frames/roll-02.png",
+      "hotspot": [
+        15,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Experiment 2 only; no live adoption."
+    },
+    {
+      "id": "roll-03",
+      "animation": "ROLL",
+      "order": 3,
+      "file": "frames/roll-03.png",
+      "hotspot": [
+        15,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Experiment 2 only; no live adoption."
+    },
+    {
+      "id": "roll-04",
+      "animation": "ROLL",
+      "order": 4,
+      "file": "frames/roll-04.png",
+      "hotspot": [
+        14,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Experiment 2 only; no live adoption."
+    },
+    {
+      "id": "roll-05",
+      "animation": "ROLL",
+      "order": 5,
+      "file": "frames/roll-05.png",
+      "hotspot": [
+        15,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Experiment 2 only; no live adoption."
+    },
+    {
+      "id": "roll-06",
+      "animation": "ROLL",
+      "order": 6,
+      "file": "frames/roll-06.png",
+      "hotspot": [
+        15,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Experiment 2 only; no live adoption."
+    },
+    {
+      "id": "roll-07",
+      "animation": "ROLL",
+      "order": 7,
+      "file": "frames/roll-07.png",
+      "hotspot": [
+        15,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Experiment 2 only; no live adoption."
+    },
+    {
+      "id": "spindash-00",
+      "animation": "SPINDASH",
+      "order": 0,
+      "file": "frames/spindash-00.png",
+      "hotspot": [
+        11,
+        7
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Experiment 2 only; no live adoption."
+    },
+    {
+      "id": "spindash-01",
+      "animation": "SPINDASH",
+      "order": 1,
+      "file": "frames/spindash-01.png",
+      "hotspot": [
+        11,
+        7
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Experiment 2 only; no live adoption."
+    },
+    {
+      "id": "spindash-02",
+      "animation": "SPINDASH",
+      "order": 2,
+      "file": "frames/spindash-02.png",
+      "hotspot": [
+        11,
+        7
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Experiment 2 only; no live adoption."
+    },
+    {
+      "id": "spindash-03",
+      "animation": "SPINDASH",
+      "order": 3,
+      "file": "frames/spindash-03.png",
+      "hotspot": [
+        11,
+        7
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Experiment 2 only; no live adoption."
+    },
+    {
+      "id": "spindash-04",
+      "animation": "SPINDASH",
+      "order": 4,
+      "file": "frames/spindash-04.png",
+      "hotspot": [
+        11,
+        7
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Experiment 2 only; no live adoption."
+    },
+    {
+      "id": "spindash-05",
+      "animation": "SPINDASH",
+      "order": 5,
+      "file": "frames/spindash-05.png",
+      "hotspot": [
+        11,
+        7
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Experiment 2 only; no live adoption."
+    },
+    {
+      "id": "spindash-06",
+      "animation": "SPINDASH",
+      "order": 6,
+      "file": "frames/spindash-06.png",
+      "hotspot": [
+        11,
+        7
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Experiment 2 only; no live adoption."
+    },
+    {
+      "id": "spindash-07",
+      "animation": "SPINDASH",
+      "order": 7,
+      "file": "frames/spindash-07.png",
+      "hotspot": [
+        11,
+        7
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Experiment 2 only; no live adoption."
+    },
+    {
+      "id": "spindash-08",
+      "animation": "SPINDASH",
+      "order": 8,
+      "file": "frames/spindash-08.png",
+      "hotspot": [
+        11,
+        7
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Experiment 2 only; no live adoption."
+    },
+    {
+      "id": "spindash-09",
+      "animation": "SPINDASH",
+      "order": 9,
+      "file": "frames/spindash-09.png",
+      "hotspot": [
+        11,
+        7
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Experiment 2 only; no live adoption."
+    }
+  ]
+}
