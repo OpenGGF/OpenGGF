@@ -16,6 +16,8 @@ def verify(root):
     manifest=json.loads((root/'frames.yaml').read_text())
     palette=json.loads((root/'palette.yaml').read_text())['colors']
     expected=sum(palette,[])
+    core_path = root/'native-pose-core.json'
+    core = json.loads(core_path.read_text())['frames'] if core_path.exists() else {}
     assert all(v in LEVELS for c in palette for v in c)
     ids=set()
     counts=Counter()
@@ -33,10 +35,17 @@ def verify(root):
             for x in range(im.width):
                 if im.getpixel((x,y)) and any(not (0<=a<im.width and 0<=b<im.height) or im.getpixel((a,b))==0 for a,b in ((x-1,y),(x+1,y),(x,y-1),(x,y+1))):
                     assert im.getpixel((x,y))==1,(f['id'],x,y)
-        if f['animation'] in ('WAIT','WALK') and f['angle_set']=='flat':
+        provenance = core.get(f['id'], {})
+        if 'alias' in provenance:
+            provenance = core[provenance['alias']]
+        if 'native_size' in provenance:
+            geometry=provenance.get('geometry_reference',provenance['reference'])
+            assert list(im.size)==geometry['size'], f['id']
+            assert f['hotspot']==geometry['hotspot'], f['id']
+        elif f['animation'] in ('WAIT','WALK') and f['angle_set']=='flat':
             assert (im.height in ((39,40) if f['animation']=='WAIT' else (39,))
                     and im.height-f['hotspot'][1]==19),f['id']
-        if f['animation']=='ROLL':
+        if f['animation']=='ROLL' and 'native_size' not in provenance:
             assert im.size==(29,29) and f['hotspot']==[14,14],f['id']
         counts[f['animation']]+=1
     assert counts['WALK']==32 and counts['RUN']==16

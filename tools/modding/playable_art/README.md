@@ -290,3 +290,32 @@ poses map perfectly onto Sonic's. Both SPRING phases use mapping $5B, because
 stock S2 has only one spring drawing. Presentation hotspots are canvas centres.
 Full runtime timing, contact, tile capacity and presentation palette composition
 remain integration work. This art-only workflow never builds Java.
+
+## Native-pose core adoption
+
+`native_pose.py --core --output /tmp/mica-np-core-20261108/native` exports 60
+reference images: all 58 unique nonslope playable pose bases plus the two pilot
+presentation references. STOP shares SKID. Every enlargement explicitly uses
+nearest-neighbour. HOMING_DIVE is custom: its third pose uses an inverted spring
+reference, fitted into the native ROLL-02 envelope to avoid a tall-frame pop.
+`native-pose-core.json` distinguishes pose and geometry references in that case.
+
+Before editing, snapshot `frames.yaml` as `previous-manifest.json`, and frame PNGs
+under `previous/` in the temporary review directory. Supply per-frame built-in
+GPT Image outputs under `raw/` and exact prompts in `prompts.json`. Then run:
+
+```sh
+python3 tools/modding/playable_art/native_pose_core.py --review /tmp/mica-np-core-20261108 wait walk run spring roll spindash push duck look_up skid balance hurt death drown get_air hang homing_dive
+python3 tools/modding/playable_art/assemble.py examples/mica-and-talon/art/mica examples/mica-and-talon/src/main/mod
+python3 tools/modding/playable_art/verify.py examples/mica-and-talon/art/mica
+```
+
+Pilot adoption also needs its raw review directory (`--pilot-review` defaults to
+`/tmp/mica-native-pose-20261108`). The helper stores only original MICA rows,
+source hashes, prompts, reference metadata and cleanup descriptions in Git;
+ordinary `pipeline.py` regeneration needs no temporary references or GPT outputs.
+The native boxes/hotspots supersede the earlier art anchors by owner direction.
+`previous_size`, `previous_hotspot` and `material_box_change` flag capture review
+obligations. This preserves IDs, order, script timing and all shared palette
+indices; slope rows and PNGs are unchanged. Palette/ink verification checks the
+new recorded native geometry instead of the historical standing/29x29 rules.

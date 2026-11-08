@@ -1170,3 +1170,82 @@ WAIT/WALK/RUN durations 4630/130/70ms after format rounding. Python compilation
 and whitespace checks pass. No Java build, bake, gameplay or route tests were
 run. The whole-tree citation diagnostic reports inherited stale/missing references;
 this handoff adds no numeric disassembly citations. Commit hooks check the delta.
+
+W7 native-pose core lane (2026-11-08, `feature/ai-mica-np-core`): adopts the
+approved six WAIT, eight flat WALK, four flat RUN and two SPRING pilot redraws.
+Existing frame IDs, manifest order, numeric hotspots and palette indices stay
+unchanged; compatibility reduction fits the generated art to the existing frame
+boxes. WAIT reuses the approved first head/hood cluster across the cycle, with
+a closed-eye blink, to remove independent-generation head-size wobble. The
+native fidget bodies remain distinct. Flat cycles only; slope artwork is untouched.
+`art/mica/native-pose-core.json` records exact source prompts, raw hashes and
+native mapping references; `recipe.json` retains final original MICA pixel rows.
+Disposable references, raw generation, per-frame four-column 1x/4x sheets and
+paired animation GIFs live in `/tmp/mica-np-core-20261108/`. Speed-driven GIFs
+use the fastest one-tick native interval; WAIT uses the existing authored script.
+
+Checkpoint verification: palette/ink/binary-alpha/geometry checks and exact
+recipe regeneration pass for all 98 frames. Assembly remains 98 frames, 18
+animations, maximum 36 tiles. The requested Python discovery baseline has 43
+tests: 42 pass and the creator-kit export test errors because the inherited
+`examples/mica-and-talon/LICENSE` is absent. No Java build, bake or gameplay
+certification. Remaining groups and rotation/scale consistency review continue
+in this lane; native timing across all speeds and background/contact remain
+integration checks.
+
+W7 core native-anchor correction and grounded actions (same lane): the owner
+explicitly superseded the earlier compatibility-box choice. Native dimensions
+and numeric native hotspots now govern every adopted frame. This rechecks the
+pilot WAIT/WALK/RUN/SPRING and supplies corrected quarter-turn ROLL plus new
+SPINDASH, PUSH, DUCK, LOOK_UP, SKID/STOP, BALANCE and HURT. STOP remains an exact
+SKID alias; all 36 slope frames remain unchanged. The native exporter now has
+an optional `--core` inventory; its default 26-frame pilot contract is unchanged.
+The retained `native_pose_core.py` method is indexed in the playable-art README.
+
+An initial extra-reference export accidentally used Pillow's default resize
+filter. Those new generations were rejected and repeated against explicit 8x
+nearest-neighbour exports; temporary rejected originals are preserved in the
+review directory, never in Git. A custom dive attempt that stayed upright was
+also rejected. Provenance records accepted raw hashes and exact prompts only.
+`verify.py` checks recorded native geometry for adopted frames, retaining the
+older geometry rules for historical handoffs. The final airborne/water/custom
+pose group and its checks follow below; this checkpoint is not runtime contact
+or animation certification.
+
+W7 core completion (same lane): all 62 assigned nonslope PNGs are replaced,
+including the four STOP aliases; 36 WALK/RUN slope PNGs remain byte-identical to
+the starting tree. The final group supplies DEATH (2), DROWN (3), GET_AIR (2),
+HANG (3) and HOMING_DIVE (4). WAIT and SPRING reuse generated head/hood clusters
+to stabilize adjacent phases; ROLL uses expanded-bounds quarter turns of the
+accepted face-in-ball base. Custom dive-00 tucks its small leading muzzle cluster
+behind jade scales. Dive-02 uses the regenerated inverted spring pose, reduced
+into ROLL-02's native envelope/anchor to avoid a tall-frame pop; its separate
+pose and geometry references are explicit. HOMING_DIVE has no native animation.
+
+Native box changes require in-engine capture review, particularly HANG: old
+23x44 / 32x44 / 29x44 become 48x25 / 47x26 / 48x25, native hotspots [24,18].
+Both SPRING boxes change 25x48 -> 24x45, hotspot [13,24] -> [12,22]. PUSH changes
+42x37 / 41x37 -> native boxes; all old/new sizes and anchors are recorded per
+frame in `art/mica/native-pose-core.json`, with material-change flags. Disposable
+`/tmp/mica-np-core-20261108/geometry-changes.json` also lists per-frame tile counts
+and expands STOP aliases. Native centres supersede every earlier MICA anchor.
+
+The review directory has each frame's native 8x source, raw GPT original,
+engine-centred four-column 1x/4x comparisons, and 18 paired animation GIFs.
+WAIT follows its retained authored script; fixed animations retain the assembler's
+native timer intervals and original adaptation phase counts. WALK/RUN/ROLL/PUSH
+use fastest one-tick previews, not all-speed certification. Tiny eye/glove/lace
+clusters still merge at 1x; the pointed custom dive phase remains stylistically
+more angular than its round neighbours. HANG grip, PUSH wall alignment, spring
+contact and all changed native anchors need the integrating lane's gameplay
+captures; no in-engine capture is claimed here.
+
+Final bounded verification: `verify.py` passes all 98 palette/alpha/outline/
+geometry and byte-identical recipe checks; assembly remains 98 frames, 18
+animations, maximum 36 tiles per frame. A per-frame audit checks all 62 native
+anchors, accepted raw hashes, IDs/order/scripts, unchanged slopes, review/GIF
+coverage and tile counts <=36. The three isolated native-pose tests pass.
+`python3 -I -m unittest discover -s tools/modding -p 'test_*.py'` runs 43 tests:
+42 pass; the same inherited creator-kit missing-LICENSE error remains, compared
+by test identity and exception with the pre-edit baseline. Python compilation
+and whitespace checks pass. No Java build, GGFP bake, merge or push.
