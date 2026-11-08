@@ -237,6 +237,60 @@ Slope frames are rigid native-pixel rotations; W2 still owns slope-stride and
 runtime contact validation. `HOMING_DIVE` is an explicit custom handoff key,
 not a new canonical enum member. No final GGFP or runtime certification yet.
 
+W7 motion feedback handoff (2026-11-08, `feature/ai-mica-art-motion`):
+RUN replaces all sixteen frames with a four-phase coral boot blur, forward lean,
+swept arms/crest and streaming tail. `art/mica/motion.py` is the editable original
+contour source; slope contours are rasterized in their 0/45/90/135-degree bases
+about the shared engine hotspot, without bitmap rotation. Flat support remains
+centre+18. Palette indices are unchanged. The flat RUN/SPRING checkpoint was
+compared at 1×/4× beside decoded S1 art before expanding slopes. Review sheets
+and GIFs live only in `/tmp/mica-art-motion-20261108/`; fastest native RUN is one
+tick (GIF rounds to 20ms). The first closed tyre read was rejected and replaced
+with changing cutouts/crossing strokes. Runtime slope contact remains unverified;
+the hood/scale clusters are simpler than the generated core artwork. Python
+assembly roundtrip passes (96 frames, 17 scripts, at most 36 tiles/frame); no
+Java build, GGFP bake or gameplay certification is claimed.
+SPRING now has two stretched launch poses with an identical head contour, open
+raised gloves, paired downward boots and hanging tail. Glove reach and boot
+extension change in the second beat; the existing 24+24-tick exit to WALK stays.
+WAIT now uses six unique poses: rest, 1px inhale/crest rise, blink/tail fall,
+camera glance, raised boot and toe tap. Its 15-step loop animates the initial
+186 ticks, then fidgets and returns to breathing. Only two mappings were added:
+the reassembled sheet has 98 frames, 17 scripts, unchanged palette order and
+maximum 36 tiles/frame. `scripts.WAIT` in the handoff carries symbolic IDs and
+canonical durations/end actions; no new runtime animation state is needed.
+`mica-custom-frames.json` was regenerated after the mapping shifts. Python
+palette/geometry/deterministic rebuild and assembler roundtrip/script checks pass.
+Review GIFs cover each RUN set, both SPRING phases and the full WAIT script;
+small mouth/eye clusters and runtime presentation remain integration limitations.
+
+W7 motion round 2 checkpoint (2026-11-08, `feature/ai-mica-art-motion2`):
+The lead rejected the previous horizontal RUN and front-facing SPRING. Flat RUN
+now retains the approved WALK profile/head at native scale above an upright,
+slightly leaning torso. Four hip-attached coral wheel phases exchange bent arms
+and bob the short diagonal tail. SPRING faces right with the same WALK head in
+both phases, an open grin, staggered overhead gloves, hanging tail and long boots.
+SPRING metadata now agrees with assembly's native 24+24 ticks and WALK exit.
+WAIT's approved six frames/script are unchanged. `art/mica/motion.py` remains the
+editable pixel source; no generated/native Sonic pixels enter new runtime art.
+Reviews at 1×/4× beside decoded S1 RUN/SPRING and timing GIFs are disposable in
+`/tmp/mica-art-motion2-20261108/`. RUN previews use fastest native one-tick timing
+(rounded to 20ms by GIF); actual RUN timing is speed-driven. SPRING uses 400ms
+per authored phase. Palette/outline/geometry/deterministic rebuild verification
+and the isolated Python assembler unittest pass (98 frames, 17 animations,
+maximum 36 tiles/frame). No Java build or gameplay certification. The head is
+prominent at 1×; open RUN wheel phases remain more alike than crossed phases,
+and small grin/lace details simplify.
+The twelve RUN slope replacements are now complete: authored contours in
+45°/90°/135° bases, redrawn hood/face clusters, continuous ink outlines and the
+matching flat wheel/arm/tail phases. Each RUN frame has one connected silhouette.
+Support measured along the rotated ground normal is centre+18 for flat/steep
+and centre+18.38 for diagonals (native pixel rounding); all keep the common engine
+hotspot. The diagonal crops reach 43px; flat crops are 39×38 and SPRING 25×48.
+Slope heads/scales are simpler than the detailed flat WALK-derived head; runtime
+slope contact and orientation remain unverified. No changes outside RUN/SPRING
+frames were made, and the approved WAIT script is byte-for-byte unchanged.
+
 W7 art-lane round 2 handoff (2026-11-08, `feature/ai-mica-art2`):
 `art/mica/presentation/presentation.yaml` now describes 18 native-size indexed
 images: three 16×16 HUD faces, three 16×16 monitor faces, S1 supplementary M/A

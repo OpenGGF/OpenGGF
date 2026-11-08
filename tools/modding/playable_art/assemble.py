@@ -22,7 +22,8 @@ SLOPES = ('flat', 'up45', 'steep', 'inverted')
 
 
 def assemble(root, output):
-    source = json.loads((root / 'frames.yaml').read_text())['frames']
+    handoff = json.loads((root / 'frames.yaml').read_text())
+    source = handoff['frames']
     colors = json.loads((root / 'palette.yaml').read_text())['colors']
     palette = sum(colors, [])
     sheet = Image.new('P', (512, ((len(source) + 7) // 8) * 48), 0)
@@ -77,9 +78,23 @@ def assemble(root, output):
             if end == 'next':
                 spec['next'] = 'WALK'
             if name == 'WAIT':
-                # Stock idle waits 31*6 ticks before its first expression. MICA's
-                # four poses condense the later stock fidget; do not use preview timing.
+                # Legacy four-pose handoffs retain the 31*6-tick stock wait.
+                # Authored scripts can animate that interval using repeated poses.
                 spec['durations'] = [186, 6, 30, 18]
+                authored = handoff.get('scripts', {}).get('WAIT')
+                if authored:
+                    by_id = {f['id']: i for f, i in entries}
+                    steps, durations = authored['frames'], authored['durations']
+                    if (not steps or len(steps) != len(durations)
+                            or any(type(t) is not int or not 1 <= t <= 256 for t in durations)
+                            or authored['end'] not in ('loop', 'hold', 'next')):
+                        raise ValueError('Invalid authored WAIT script')
+                    spec = dict(frames=[by_id[key] for key in steps],
+                                durations=durations, end=authored['end'])
+                    if spec['end'] == 'next':
+                        if authored.get('next') not in SPEED | FIXED.keys():
+                            raise ValueError('Invalid WAIT next animation')
+                        spec['next'] = authored['next']
             if name == 'GET_AIR':
                 spec.update(frames=[indices[0], indices[0], indices[1], indices[1]], durations=[12]*4)
         animations[name] = spec

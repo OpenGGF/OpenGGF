@@ -24,7 +24,7 @@ class PlayableArtAssemblyTest(unittest.TestCase):
             self.assertEqual(before, {name:(committed/name).read_bytes() for name in before})
             assembler.assemble(art, out)
             self.assertEqual(before, {p.name:p.read_bytes() for p in out.iterdir()})
-            self.assertEqual(stats, dict(frames=96, maxTilesPerFrame=36, animations=17))
+            self.assertEqual(stats, dict(frames=98, maxTilesPerFrame=36, animations=17))
             self.assertEqual(len(custom['HOMING_DIVE']), 4)
             self.assertNotIn('HOMING_DIVE', manifest['animations'])
             with Image.open(out/'mica.png') as atlas:
@@ -43,6 +43,13 @@ class PlayableArtAssemblyTest(unittest.TestCase):
                 self.assertEqual([stride]*4, list(map(len,cycles)))
                 for slope, cycle in zip(assembler.SLOPES,cycles):
                     self.assertTrue(all(source[i]['angle_set']==slope for i in cycle))
+            idle = manifest['animations']['WAIT']
+            self.assertEqual('loop', idle['end'])
+            self.assertEqual(186, sum(idle['durations'][:8]))
+            self.assertEqual([0,1,0,1,2,0,1,0],
+                             [source[i]['order'] for i in idle['frames'][:8]])
+            self.assertEqual(6, len(set(idle['frames'])))
+            self.assertEqual(len(idle['frames']), len(idle['durations']))
             self.assertEqual('hold',manifest['animations']['DUCK']['end'])
             self.assertEqual('WALK',manifest['animations']['SPRING']['next'])
             self.assertEqual([24,24],manifest['animations']['SPRING']['durations'])
