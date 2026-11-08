@@ -27,3 +27,9 @@ landing. This closes that object geometry edge only; supported width/donor
 products, complete native slot/flip goals and whole-act certification remain
 outside this local check. Existing flipper graph rewind and both rewind guards
 are included in the focused validation selection.
+
+The same two-human route exercises Obj44 with human P2 after the landing.
+`TestBumperObjectInstance.touchLatchUsesNativePlayerSlotForHumanAndCpuTails`
+asserts the ROM's slot-based pending bits for both human and CPU P2; complete
+slot-machine/flip goals still require a fresh planner qualification. This adds
+no whole-act or viewport/donor coverage claim.
