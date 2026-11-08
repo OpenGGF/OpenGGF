@@ -3313,28 +3313,18 @@
         "label": "Map_Sonic_0836"
       },
       "geometry_reference": {
-        "id": "homing_dive-00",
         "size": [
-          29,
-          30
+          31,
+          32
         ],
         "hotspot": [
-          15,
-          15
-        ],
-        "bbox_relative_to_hotspot": [
-          -15,
-          -15,
           14,
           15
-        ],
-        "game": "S2",
-        "mapping": 61,
-        "label": "Map_Sonic_0836"
+        ]
       },
       "native_size": [
-        29,
-        30
+        31,
+        32
       ],
       "previous_size": [
         38,
@@ -3345,12 +3335,13 @@
         14
       ],
       "hotspot": [
-        15,
+        14,
         15
       ],
       "source": "new built-in GPT Image",
       "cleanup": "leading muzzle tucked behind jade shell",
-      "material_box_change": true
+      "material_box_change": true,
+      "owner_fix": "Original integer-pixel down-right scales-first dive; fixed attack axis, sheltered readable eye, trailing coral boots."
     },
     "homing_dive-01": {
       "prompt": "Use case: style-transfer. Asset: ONE isolated 16-bit pixel sprite, transparent background. Image 1 is ONLY native pose/rotation/silhouette and facing reference, NOT the character to reproduce. Image 2 is MICA's original pangolin identity concept. Image 3 is approved pixel-art style/proportion anchor. Redraw image 1 pose as MICA, a NEW DRAWING, NOT a recolour. Preserve pose, framing and silhouette extent of reference, NOT standing concept pose. Jade rounded overlapping scales, long scaled tail, tan pangolin muzzle/belly, readable dark eye, white gloves, red hiking boots with tan soles and jade laces. NO hedgehog/quills/blue/Sonic features, no text, no shadows or scenery. Crisp simple native pixel clusters and continuous dark outline. Pose: Custom scales-FIRST dive second step, native rolled silhouette, jade overlapping shell leads DOWN-right; tail curls over upper-left, muzzle tucked behind shell, NO face leading attack.",
@@ -3376,28 +3367,18 @@
         "label": "Map_Sonic_0840"
       },
       "geometry_reference": {
-        "id": "homing_dive-01",
         "size": [
-          30,
-          29
+          31,
+          32
         ],
         "hotspot": [
-          15,
+          14,
           15
-        ],
-        "bbox_relative_to_hotspot": [
-          -15,
-          -15,
-          15,
-          14
-        ],
-        "game": "S2",
-        "mapping": 62,
-        "label": "Map_Sonic_0840"
+        ]
       },
       "native_size": [
-        30,
-        29
+        31,
+        32
       ],
       "previous_size": [
         36,
@@ -3408,12 +3389,13 @@
         14
       ],
       "hotspot": [
-        15,
+        14,
         15
       ],
       "source": "new built-in GPT Image",
       "cleanup": "connected alpha; shared palette; inside ink outline",
-      "material_box_change": true
+      "material_box_change": true,
+      "owner_fix": "Original integer-pixel down-right scales-first dive; fixed attack axis, sheltered readable eye, trailing coral boots."
     },
     "homing_dive-02": {
       "prompt": "Use case: style-transfer. ONE transparent original MICA pangolin sprite. Image1 is a strict UPSIDE-DOWN, HEAD-DOWN pose base: boots at TOP, head at BOTTOM. Replace it with MICA from concept image2, pixel style image3. Custom scales-first straight DOWN dive: a narrow pointed overlapping jade armour shell at BOTTOM, folded body above it, red boots together at TOP. Face, tan muzzle and gloves COMPLETELY hidden within armour; only jade scales point downwards. Keep image1's narrow tall silhouette and exact DOWNWARD orientation. NOT standing, NOT face-first, NO hedgehog/quills/blue, no text, shadow or effects. Crisp 16-bit pixel clusters; transparent background.",
@@ -3440,28 +3422,18 @@
         "custom_reference_rotation_degrees": 180
       },
       "geometry_reference": {
-        "id": "roll-02",
         "size": [
-          29,
-          30
+          31,
+          32
         ],
         "hotspot": [
           14,
           15
-        ],
-        "bbox_relative_to_hotspot": [
-          -14,
-          -15,
-          15,
-          15
-        ],
-        "game": "S2",
-        "mapping": 63,
-        "label": "Map_Sonic_084A"
+        ]
       },
       "native_size": [
-        29,
-        30
+        31,
+        32
       ],
       "previous_size": [
         35,
@@ -3477,7 +3449,8 @@
       ],
       "source": "new built-in GPT Image",
       "cleanup": "Hand clustered overlapping jade scale rows; retained native envelope, boots and shell-first facing.",
-      "material_box_change": true
+      "material_box_change": true,
+      "owner_fix": "Original integer-pixel down-right scales-first dive; fixed attack axis, sheltered readable eye, trailing coral boots."
     },
     "homing_dive-03": {
       "prompt": "Use case: style-transfer. Asset: ONE isolated 16-bit pixel sprite, transparent background. Image 1 is ONLY native pose/rotation/silhouette and facing reference, NOT the character to reproduce. Image 2 is MICA's original pangolin identity concept. Image 3 is approved pixel-art style/proportion anchor. Redraw image 1 pose as MICA, a NEW DRAWING, NOT a recolour. Preserve pose, framing and silhouette extent of reference, NOT standing concept pose. Jade rounded overlapping scales, long scaled tail, tan pangolin muzzle/belly, readable dark eye, white gloves, red hiking boots with tan soles and jade laces. NO hedgehog/quills/blue/Sonic features, no text, no shadows or scenery. Crisp simple native pixel clusters and continuous dark outline. Pose: Custom scales-FIRST dive final step: tight shell projectile pointing DOWN-right, tail wraps back upper-left, muzzle hidden inside armour, no extended gloves/feet, no face-first attack.",
@@ -3503,28 +3476,18 @@
         "label": "Map_Sonic_0854"
       },
       "geometry_reference": {
-        "id": "homing_dive-03",
         "size": [
-          30,
-          29
+          31,
+          32
         ],
         "hotspot": [
-          15,
-          14
-        ],
-        "bbox_relative_to_hotspot": [
-          -15,
-          -14,
-          15,
+          14,
           15
-        ],
-        "game": "S2",
-        "mapping": 64,
-        "label": "Map_Sonic_0854"
+        ]
       },
       "native_size": [
-        30,
-        29
+        31,
+        32
       ],
       "previous_size": [
         30,
@@ -3535,12 +3498,13 @@
         14
       ],
       "hotspot": [
-        15,
-        14
+        14,
+        15
       ],
       "source": "new built-in GPT Image",
       "cleanup": "connected alpha; shared palette; inside ink outline",
-      "material_box_change": false
+      "material_box_change": false,
+      "owner_fix": "Original integer-pixel down-right scales-first dive; fixed attack axis, sheltered readable eye, trailing coral boots."
     },
     "walk-up45-00": {
       "reference": {
