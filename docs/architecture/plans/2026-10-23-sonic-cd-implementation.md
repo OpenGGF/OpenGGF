@@ -1,5 +1,58 @@
 # Implement Sonic CD with complete regional parity
 
+## 8 November 2026 — original cold progress producer and ordered RunR1
+
+The actual source-authenticated, once-only named cold MAINVARS clear now projects
+its covered progress facts into the existing Module owner before the following
+fallible PCM read. The native interval is `[FF0F00,FF2000)`,4352 bytes/1088 LONGs;
+the existing boot-prefix data projection is shared. This establishes the clear's
+zero values, not a later Title90 store or an original save-read completion. Plain
+later DEV entry remains UNKNOWN; neither later NewGame nor current Frame state
+is used to reconstruct missing history. A missing PCM source retains the reached
+clear and consumed attempt rather than authorizing a retry or a new lifetime.
+
+After the original boss return, the existing pure `CdIpxProgress` kernel supplies
+RunR1 arithmetic. A private original caller and its exact source/receiver/thread/
+full-cut/candidate cursor authenticate publication. All suffix references are
+prepared first; assignments then retain native unlock/title, checkpoint,
+projector, live goodFuture-bit clear and conditional historical-goodFutures
+order. Live goodFuture atFF156A, level goodFutureFlags atFF1590 and historical
+goodFutures atFF0F1A remain distinct. UNKNOWN reads retain only their reached
+prefix. Closed title/history/save cursors do not replay the completed prefix.
+Existing FULL/course captures retain their owner/source/lifetime pairing.
+
+The initial public Cold probe first observes actual CLEAR_MAIN_VARIABLES count1
+on prior production, then fails because the covered unlock remains UNKNOWN.
+R140 records that one assertion failure with zero errors/skips; its original
+failed receipt remains unchanged. The installed R141 cohort passes95 distinct
+cases with zero failures/errors/skips across12 Maven roots and13 explicitly
+declared fresh reports. The BootPrefix outer report has0 cases and ActualUsa12,
+with actual raw owners outer2/inner10. Source before/after is exactly
+`ab97e777e82670d21f2040b7cb2ebb942ad14897b80982b4645267a715e6cc28`
+at saved6e plus the ten IPX candidates. The stronger Cold prerequisite assertion
+precedes the historical checks; all other nine sources remain author-exact.
+
+The command is `integration_packet.py run --worktree <private-worktree>
+--spec <external>/r141-ipx-original-producer-root-validation-20261108/handoff.json
+--execute --lane normal --compact-output --maven-progress concise --evidence
+<external>/research/cd-ipx-original-history-producer95-r141-run-evidence-20261108.json`,
+using Java25, `-Dmse=off`, actual media, surfaceless EGL and the existing Maven
+queue. Its exact class inventory, source/dependency/XML pins and literal95
+identities are retained in the external receipt and reconciliation. One
+independent source review finds no concrete P1/P2; it inspected no execution
+results. No before-manifest of compiled classes exists for this production
+change, so compiled-class custody is not claimed.
+
+The next original operation is RunR3.WriteSaveData, before Amy clear and R31.
+Known save policy0 does not create a selected slot or backend lifetime. Existing
+selected-profile NewGame/save handling owns that real context, but its original
+R11A programme entry/loading/Frame birth is still a separate gap. The existing
+natural-route regressions continue to assert21931; constructed Results World
+controls exercise the original private RunR1 caller. No new21932 return, actual
+save completion, natural PPZ-to-CCZ transfer, full-USA or regional success is
+claimed. Spring composition continues separately without changing these ten
+sources or the newer Flower/TimePost/Bumper/Frame/World owners.
+
 ## 8 November 2026 — original Flower through existing count and terrain owners
 
 Cached Flower joins the increasing physical pass through the unchanged shared

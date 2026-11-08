@@ -19,8 +19,8 @@ import java.util.function.Supplier;
  * This component creates no Module/World/GPU/clock owner or public admission factory.
  */
 final class SonicCdAct3FutureLoadingVisit {
-    enum Phase { ENTRY, INITIAL_TO_WHITE, INITIAL_TO_BLACK, FIRST_PLC, LEVEL_PLC, FROM_WHITE, FROM_BLACK, READY, OLD_EXIT_PRELUDE, OLD_BLACK_FADE, OLD_CLEAR_WAIT, OLD_RETURNED, OLD_IPX_RETURNED, OLD_IPX_BOSS_RETURNED }
-    enum Boundary { ENTRY, PAL_CLEAR_KNOWLEDGE, CHECKPOINT_LOAD, LEVEL_RESTART_RETURN, NO_LIVES_RETURN, DEMO_RETURN, ACTIVE_POWERUP, ORDINARY_OWNER, OLD_EXIT_ENTRY, OLD_EXIT_WHITE_RETURN, IPX_BOSS_GAME_OVER, IPX_BOSS_SAVED_ZONE_OWNER, IPX_RUN_R1_TIME_ATTACK_UNLOCK_OWNER, IPX_RUN_R1_UNLOCK_CONTINUATION_OWNER }
+    enum Phase { ENTRY, INITIAL_TO_WHITE, INITIAL_TO_BLACK, FIRST_PLC, LEVEL_PLC, FROM_WHITE, FROM_BLACK, READY, OLD_EXIT_PRELUDE, OLD_BLACK_FADE, OLD_CLEAR_WAIT, OLD_RETURNED, OLD_IPX_RETURNED, OLD_IPX_BOSS_RETURNED, OLD_IPX_RUN_R3_SAVE, OLD_IPX_RUN_R1_TITLE_STOP, OLD_IPX_RUN_R1_GOOD_FUTURES_STOP }
+    enum Boundary { ENTRY, PAL_CLEAR_KNOWLEDGE, CHECKPOINT_LOAD, LEVEL_RESTART_RETURN, NO_LIVES_RETURN, DEMO_RETURN, ACTIVE_POWERUP, ORDINARY_OWNER, OLD_EXIT_ENTRY, OLD_EXIT_WHITE_RETURN, IPX_BOSS_GAME_OVER, IPX_BOSS_SAVED_ZONE_OWNER, IPX_RUN_R1_TIME_ATTACK_UNLOCK_OWNER, IPX_RUN_R1_UNLOCK_CONTINUATION_OWNER, IPX_RUN_R1_TITLE_FLAGS_OWNER, IPX_RUN_R1_GOOD_FUTURES_OWNER, IPX_RUN_R3_WRITE_SAVE_OWNER }
     enum Action {
         ENTRY_STORES,FRESH_RESET_PREFIX,RESET_SAVED_OBJECT_FLAGS,FRESH_RESET_SUFFIX,INITIAL_FADE_SETUP,PRELUDE_END,
         NORMAL_LOAD_PALETTE,PLAY_LEVEL_MUSIC,CLEAR_POWERUP_FLOWERS,CLEAR_DRAW_QUEUE,CLEAR_FLOWERS,CLEAR_OBJECTS,
@@ -40,7 +40,7 @@ final class SonicCdAct3FutureLoadingVisit {
         IMMEDIATE_STANDARD,PALETTE_SONIC,BLOCKS_RAM,PALETTE_LEVEL,QUEUED_LEVEL,LOAD_PLAYER,LIFE_ICON,
         FROM_FADE_SERVICE,FROM_FADE_COLOURS,TITLE_PLC_APPEND,BOSS_PLC_APPEND,RESULTS_PLC_APPEND,
         OLD_EXIT_FADE_SETUP,OLD_EXIT_SETTLE_CURRENT,OLD_EXIT_BLANK,OLD_EXIT_BEGIN,OLD_EXIT_BLACK_SERVICE,
-        OLD_EXIT_BLACK_COLOURS,OLD_EXIT_CLEAR,OLD_EXIT_CLEAR_SERVICE,OLD_EXIT_RTS,OLD_EXIT_IPX_RETURN,IPX_BOSS_RETURN
+        OLD_EXIT_BLACK_COLOURS,OLD_EXIT_CLEAR,OLD_EXIT_CLEAR_SERVICE,OLD_EXIT_RTS,OLD_EXIT_IPX_RETURN,IPX_BOSS_RETURN,IPX_RUN_R1_PREFIX
     }
     static final class UnsupportedLoading extends UnsupportedOperationException {
         private final Boundary boundary;
@@ -252,7 +252,7 @@ final class SonicCdAct3FutureLoadingVisit {
     }
     // BEGIN R13 retained old-programme exit. No public State or raw destination grants this scope.
     boolean oldProgrammeSelected(){return oldPhase(values.phase());}
-    private static boolean oldPhase(Phase p){return p==Phase.OLD_EXIT_PRELUDE||p==Phase.OLD_BLACK_FADE||p==Phase.OLD_CLEAR_WAIT||p==Phase.OLD_RETURNED||p==Phase.OLD_IPX_RETURNED||p==Phase.OLD_IPX_BOSS_RETURNED;}
+    private static boolean oldPhase(Phase p){return p==Phase.OLD_EXIT_PRELUDE||p==Phase.OLD_BLACK_FADE||p==Phase.OLD_CLEAR_WAIT||p==Phase.OLD_RETURNED||p==Phase.OLD_IPX_RETURNED||p==Phase.OLD_IPX_BOSS_RETURNED||runR1Closed(p);}
     int oldExitSteps(){return Collections.frequency(values.calls(),Call.OLD_EXIT_BLACK_COLOURS);}
     private void requireRetainedExitGates(){
         var g=frame.environment().movement().gates();
@@ -351,6 +351,75 @@ final class SonicCdAct3FutureLoadingVisit {
         if(expected!=host||!running||failed||!runR1UnlockRead||values.phase()!=Phase.OLD_IPX_BOSS_RETURNED)
             throw new IllegalStateException("No original returned RunR1 unlock read");validateHost();
     }
+    /** Original returned RunR13 stack only; no public result/capture can create this call. */
+    static final class IpxRunR1Call {
+        private final Observation before;private final Thread thread=Thread.currentThread();
+        private IpxRunR1Call(Observation before){this.before=before;}
+        State state(){return before.core();}Object hostSnapshot(){return before.host();}
+    }
+    private IpxRunR1Call ipxRunR1Call;private SonicCdAct3FutureWorldHost.IpxRunR1 ipxRunR1Prepared;
+    private boolean ipxRunR1Committing;
+    private void requireRunR1Base(Host expected,IpxRunR1Call actual){
+        if(expected!=host||!running||failed||actual==null||actual!=ipxRunR1Call
+                ||actual.thread!=Thread.currentThread()||ipxRunR1Committing||values!=actual.before.core()
+                ||values.phase()!=Phase.OLD_IPX_BOSS_RETURNED)throw new IllegalStateException("No original live RunR1 caller");
+        unchanged(actual.before);
+    }
+    void requireRunR1Preparation(Host expected,IpxRunR1Call actual){requireRunR1Base(expected,actual);if(ipxRunR1Prepared!=null)throw new IllegalStateException("RunR1 already prepared");}
+    void requireRunR1Candidate(Host expected,SonicCdAct3FutureWorldHost.IpxRunR1 actual){requireRunR1Base(expected,ipxRunR1Call);if(actual==null||actual!=ipxRunR1Prepared)throw new IllegalStateException("Not original RunR1 candidate");}
+    void requireRunR1ProgressCandidate(Host expected,IpxRunR1Call call,SonicCdAct3FutureWorldHost.IpxRunR1Store store){requireRunR1Base(expected,call);if(ipxRunR1Prepared==null||!ipxRunR1Prepared.owns(store))throw new IllegalStateException("Not original Module RunR1 pair");}
+    void requireRunR1Commit(Host expected,SonicCdAct3FutureWorldHost.IpxRunR1 actual){
+        if(expected!=host||!running||failed||!ipxRunR1Committing||ipxRunR1Call==null
+                ||ipxRunR1Call.thread!=Thread.currentThread()||actual==null||actual!=ipxRunR1Prepared)throw new IllegalStateException("RunR1 commit expired");
+    }
+    void requireRunR1ProgressCommit(Host expected,IpxRunR1Call call,SonicCdAct3FutureWorldHost.IpxRunR1Store store){
+        requireRunR1Commit(expected,ipxRunR1Prepared);if(call!=ipxRunR1Call||!ipxRunR1Prepared.owns(store))throw new IllegalStateException("Foreign Module RunR1 commit");
+    }
+    static boolean runR1Closed(Phase p){return p==Phase.OLD_IPX_RUN_R3_SAVE||p==Phase.OLD_IPX_RUN_R1_TITLE_STOP||p==Phase.OLD_IPX_RUN_R1_GOOD_FUTURES_STOP;}
+    private void stopRunR1Closed(){switch(values.phase()){
+        case OLD_IPX_RUN_R1_TITLE_STOP -> stop(Boundary.IPX_RUN_R1_TITLE_FLAGS_OWNER);
+        case OLD_IPX_RUN_R1_GOOD_FUTURES_STOP -> stop(Boundary.IPX_RUN_R1_GOOD_FUTURES_OWNER);
+        default -> stop(Boundary.IPX_RUN_R3_WRITE_SAVE_OWNER);
+    }}
+    private void serviceRunR1(){
+        if(runR1Closed(values.phase())){stopRunR1Closed();return;}
+        if(!(host instanceof SonicCdAct3FutureWorldHost))stop(Boundary.IPX_RUN_R1_UNLOCK_CONTINUATION_OWNER);
+        var actual=(SonicCdAct3FutureWorldHost)host;Boundary missing=null;running=true;
+        try{
+            ipxRunR1Call=new IpxRunR1Call(observation());var prepared=actual.prepareRunR1(ipxRunR1Call);
+            if(prepared.isEmpty()){requireRunR1Preparation(host,ipxRunR1Call);missing=Boundary.IPX_RUN_R1_UNLOCK_CONTINUATION_OWNER;}
+            else{
+                ipxRunR1Prepared=prepared.orElseThrow();var result=ipxRunR1Prepared.result();
+                if(result.missingRead().equals(Optional.of(CdIpxProgress.Read.TIME_ATTACK_UNLOCK))){
+                    if(!result.stores().isEmpty())throw new IllegalStateException("Unlock read cannot have a prefix");
+                    actual.validateRunR1(ipxRunR1Prepared); // missing read is still a complete nonwrite cut
+                    missing=Boundary.IPX_RUN_R1_TIME_ATTACK_UNLOCK_OWNER; // genuine no-write unknown read, healthy/repeatable
+                }else{
+                    Phase next;
+                    if(result.missingRead().isEmpty()){
+                        if(result.cut()!=CdIpxProgress.Cut.RUN_R3_WRITE_SAVE_DATA)throw new IllegalStateException("Not the RunR3 save entry");next=Phase.OLD_IPX_RUN_R3_SAVE;
+                    }else next=switch(result.missingRead().orElseThrow()){
+                        case TITLE_FLAGS -> Phase.OLD_IPX_RUN_R1_TITLE_STOP;
+                        case GOOD_FUTURES -> Phase.OLD_IPX_RUN_R1_GOOD_FUTURES_STOP;
+                        default -> throw new IllegalStateException("Not a RunR1 read edge");};
+                    var w=result.writes();var checkpoint=values;
+                    if(w.checkpointByte().isPresent()){var l=values.level();checkpoint=values.level(level(l,l.levelRestart(),l.updateHudTime(),w.checkpointByte().getAsInt(),l.spawnMode(),l.plcLoadFlags(),l.flowerCount(),l.fadeEnableDisplay(),l.powerup(),l.timeOver()));}
+                    var flagged=checkpoint;
+                    if(w.goodFutureByte().isPresent()){
+                        var p=values.program();flagged=checkpoint.program(new Program(p.demoModeWord(),p.timeStonesByte(),w.goodFutureByte().getAsInt(),p.usePlayer2Byte(),p.specialStageByte(),p.palFadeFlagsByte(),p.palClearFlagBit0(),p.gameModeByte(),p.levelStartedByte(),p.demoDataIndexWord()));
+                    }
+                    var calls=new ArrayList<>(values.calls());calls.add(Call.IPX_RUN_R1_PREFIX);var ready=flagged.phase(next).calls(calls);
+                    actual.validateRunR1(ipxRunR1Prepared);ipxRunR1Committing=true;
+                    // Native semantic order; every value/reference above and in Host/Module is ready.
+                    actual.adoptRunR1Header(ipxRunR1Prepared);values=checkpoint;
+                    actual.adoptRunR1Projector(ipxRunR1Prepared);values=flagged;
+                    actual.adoptRunR1History(ipxRunR1Prepared);values=ready;
+                }
+            }
+        }catch(RuntimeException|Error original){terminal(original);throw original;}
+        finally{ipxRunR1Committing=false;ipxRunR1Prepared=null;ipxRunR1Call=null;running=false;}
+        if(missing!=null)stop(missing);else stopRunR1Closed();
+    }
     private void serviceIpxBossReturn(){
         int lives=-1;
         if(values.phase()==Phase.OLD_IPX_RETURNED){lives=observe(host::livesByte);octet(lives);if(lives==0)stop(Boundary.IPX_BOSS_GAME_OVER);}
@@ -388,17 +457,13 @@ final class SonicCdAct3FutureLoadingVisit {
             finally{ipxBossCommitting=false;ipxBossPrepared=null;ipxBossCall=null;running=false;}
             if(missing!=null)stop(missing); // actual missing-owner stops keep healthy retained owners open
         }
-        OptionalInt unlock;running=true;runR1UnlockRead=true;
-        try{unlock=Objects.requireNonNull(observe(actual::runR1UnlockByte));unlock.ifPresent(SonicCdAct3FutureLoadingVisit::octet);}
-        catch(RuntimeException|Error original){terminal(original);throw original;}
-        finally{runR1UnlockRead=false;running=false;}
-        // Current fresh/unknown retained lineages have no historical unlock producer. No title/save default.
-        stop(unlock.isEmpty()?Boundary.IPX_RUN_R1_TIME_ATTACK_UNLOCK_OWNER:Boundary.IPX_RUN_R1_UNLOCK_CONTINUATION_OWNER);
+        serviceRunR1();
     }
     // END IPX BOSS RETURN OWNER 20261107
 
     void service(int held){
         current();octet(held);if(values.phase()==Phase.ENTRY)throw new IllegalStateException("Begin before service");if(values.phase()==Phase.READY&&ordinary==null)stop(Boundary.ORDINARY_OWNER);
+        if(runR1Closed(values.phase())){stopRunR1Closed();return;}
         if(values.phase()==Phase.OLD_IPX_RETURNED||values.phase()==Phase.OLD_IPX_BOSS_RETURNED){serviceIpxBossReturn();return;}
         running=true;try{switch(values.phase()){
             case INITIAL_TO_WHITE,INITIAL_TO_BLACK -> fadeService(held,true);
@@ -482,11 +547,13 @@ final class SonicCdAct3FutureLoadingVisit {
     void validateRestore(Snapshot snapshot){current();Objects.requireNonNull(snapshot);if(snapshot.owner!=this)throw new IllegalArgumentException("Another R13 visit capture");frame.validateActorRestore(snapshot.actor);frame.validateSharedRestore(snapshot.shared);observe(()->{host.validateRestore(snapshot.host);return Boolean.TRUE;});validateHost();art.initSection(snapshot.state.section());var g=snapshot.shared.environment().movement().gates();var s=snapshot.state;
         if(oldPhase(s.phase())){
             int returned=Collections.frequency(s.calls(),Call.IPX_BOSS_RETURN);
-            if(returned!=(s.phase()==Phase.OLD_IPX_BOSS_RETURNED?1:0)||(s.phase()==Phase.OLD_IPX_BOSS_RETURNED&&s.level().checkpoint()!=0))throw new IllegalArgumentException("Captured native boss caller stack/checkpoint differs");
+            if(returned!=(s.phase()==Phase.OLD_IPX_BOSS_RETURNED||runR1Closed(s.phase())?1:0)||((s.phase()==Phase.OLD_IPX_BOSS_RETURNED||runR1Closed(s.phase()))&&s.level().checkpoint()!=0))throw new IllegalArgumentException("Captured native boss caller stack/checkpoint differs");
+            if(Collections.frequency(s.calls(),Call.IPX_RUN_R1_PREFIX)!=(runR1Closed(s.phase())?1:0))throw new IllegalArgumentException("Captured RunR1 cursor differs");
+            if((s.phase()==Phase.OLD_IPX_RUN_R3_SAVE||s.phase()==Phase.OLD_IPX_RUN_R1_GOOD_FUTURES_STOP)&&(s.program().goodFutureByte()&1)!=0)throw new IllegalArgumentException("Captured RunR1 lacks original goodFuture bit clear");
             int steps=Collections.frequency(s.calls(),Call.OLD_EXIT_BLACK_COLOURS);
             if(g.zoneAct()!=0x100||g.timeZone()!=1||s.section().stopped()||s.phase()==Phase.OLD_EXIT_PRELUDE||s.fromFadeSteps()!=22||steps<0||steps>22||s.program().demoModeWord()!=0||s.program().usePlayer2Byte()!=0||s.program().levelStartedByte()!=0||(s.program().gameModeByte()&128)==0||(s.level().plcLoadFlags()&1)==0||Collections.frequency(s.calls(),Call.OLD_EXIT_BEGIN)!=1
                     ||(s.phase()==Phase.OLD_BLACK_FADE?(steps>=22||s.level().levelRestart()!=2||(s.program().palFadeFlagsByte()&1)==0):(s.level().levelRestart()!=0||s.program().palFadeFlagsByte()!=0))
-                    ||((s.phase()==Phase.OLD_IPX_RETURNED||s.phase()==Phase.OLD_IPX_BOSS_RETURNED)&&s.displayEnabled()))throw new IllegalArgumentException("Captured retained R13 exit source/phase/progress differs");return;
+                    ||((s.phase()==Phase.OLD_IPX_RETURNED||s.phase()==Phase.OLD_IPX_BOSS_RETURNED||runR1Closed(s.phase()))&&s.displayEnabled()))throw new IllegalArgumentException("Captured retained R13 exit source/phase/progress differs");return;
         }
         if(g.zoneAct()!=2||(g.timeZone()!=2&&g.timeZone()!=0x82)||s.section().stopped()||(s.phase()==Phase.READY?s.fromFadeSteps()!=22:s.fromFadeSteps()==22)||(s.phase()==Phase.INITIAL_TO_BLACK||s.phase()==Phase.INITIAL_TO_WHITE)&&s.initialFadeSteps()>=22)throw new IllegalArgumentException("Captured R13 source/phase/progress differs");}
     void restore(Snapshot snapshot){validateRestore(snapshot);running=true;try{host.restore(snapshot.host);validateHost();frame.restoreActor(snapshot.actor);frame.restoreShared(snapshot.shared);values=snapshot.state;}catch(RuntimeException|Error f){terminal(f);throw f;}finally{running=false;}}

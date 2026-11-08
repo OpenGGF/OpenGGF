@@ -227,7 +227,7 @@ final class CdOriginalBootPrefix {
     }
     private void clearMain(){
         var mainReady=new MainClears(zero(766),zero(512),0,0,0,0,0,0,0,0,0,0,0,0,0,zero(0x480)); // MAINVARS21-192, before selected reads.
-        var z=OptionalInt.of(0);var p=new CdIpxProgress.State(new CdIpxProgress.SavedLevel(z,z),z,z,z,z,z,z,z);
+        var p=CdIpxProgress.mainVariablesCleared();
         var main=new MainImage(new CdLevelGlobals(0,0,0,0,0,0,0,0,0),0,0,0,0,0);
         replace(CdProgramInitialization.clearMainVariables(state.initialization()),state.loads(),p,Optional.of(main),state.video(),state.cpuPalettes(),state.wordRam(),state.fm());mainClears=mainReady;call(Call.MAIN_VARIABLES_CLEAR);
     }

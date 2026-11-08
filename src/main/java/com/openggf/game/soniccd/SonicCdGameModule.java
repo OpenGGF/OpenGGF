@@ -355,12 +355,18 @@ public final class SonicCdGameModule implements GameModule {
         catch(RuntimeException|Error failure){
             boolean returned=failure instanceof SonicCdAct3FutureLoadingVisit.UnsupportedLoading stopped
                     &&(act3FutureLoading.state().phase()==SonicCdAct3FutureLoadingVisit.Phase.OLD_IPX_RETURNED
-                        ||act3FutureLoading.state().phase()==SonicCdAct3FutureLoadingVisit.Phase.OLD_IPX_BOSS_RETURNED)
+                        ||act3FutureLoading.state().phase()==SonicCdAct3FutureLoadingVisit.Phase.OLD_IPX_BOSS_RETURNED
+                        ||act3FutureLoading.state().phase()==SonicCdAct3FutureLoadingVisit.Phase.OLD_IPX_RUN_R3_SAVE
+                        ||act3FutureLoading.state().phase()==SonicCdAct3FutureLoadingVisit.Phase.OLD_IPX_RUN_R1_TITLE_STOP
+                        ||act3FutureLoading.state().phase()==SonicCdAct3FutureLoadingVisit.Phase.OLD_IPX_RUN_R1_GOOD_FUTURES_STOP)
                     &&!act3FutureLoading.failed()
                     &&(stopped.boundary()==SonicCdAct3FutureLoadingVisit.Boundary.IPX_BOSS_SAVED_ZONE_OWNER
                     ||stopped.boundary()==SonicCdAct3FutureLoadingVisit.Boundary.IPX_BOSS_GAME_OVER
                     ||stopped.boundary()==SonicCdAct3FutureLoadingVisit.Boundary.IPX_RUN_R1_TIME_ATTACK_UNLOCK_OWNER
-                    ||stopped.boundary()==SonicCdAct3FutureLoadingVisit.Boundary.IPX_RUN_R1_UNLOCK_CONTINUATION_OWNER);
+                    ||stopped.boundary()==SonicCdAct3FutureLoadingVisit.Boundary.IPX_RUN_R1_UNLOCK_CONTINUATION_OWNER
+                    ||stopped.boundary()==SonicCdAct3FutureLoadingVisit.Boundary.IPX_RUN_R1_TITLE_FLAGS_OWNER
+                    ||stopped.boundary()==SonicCdAct3FutureLoadingVisit.Boundary.IPX_RUN_R1_GOOD_FUTURES_OWNER
+                    ||stopped.boundary()==SonicCdAct3FutureLoadingVisit.Boundary.IPX_RUN_R3_WRITE_SAVE_OWNER);
             if(!returned)closePlayerCycleAfterFailure(failure);throw failure;
         }
     }
@@ -511,6 +517,33 @@ public final class SonicCdGameModule implements GameModule {
             if(host!=act3FutureHost)throw new IllegalStateException("Foreign returned RunR1 Host");
             requireAct3FutureLoadingVisit(act3FutureLoading);act3FutureLoading.requireRunR1UnlockRead(host);
             return ipxProgress.timeAttackUnlockByte(); // actual historical operand; empty is UNKNOWN, never zero
+        }
+        @Override public Optional<SonicCdAct3FutureWorldHost.IpxRunR1Store> prepareRunR1(
+                SonicCdAct3FutureWorldHost host,SonicCdAct3FutureLoadingVisit.IpxRunR1Call call){
+            if(host!=act3FutureHost)throw new IllegalStateException("Foreign RunR1 Host");
+            host.requireRunR1AuthorityPreparation(call);requireAct3FutureLoadingVisit(act3FutureLoading);
+            var core=act3FutureLoading;var before=ipxProgress;var programme=levelProgram;var services=programServices;var media=source;var lifetime=ipxProgressLifetime;
+            if(call.state()!=core.state())throw new IllegalStateException("Stale original RunR1 Core cut");
+            var result=CdIpxProgress.runR1AfterR13(before.project(core.state().program().timeStonesByte()),OptionalInt.of(call.state().program().goodFutureByte()));
+            boolean headerWrite=result.stores().contains(CdIpxProgress.Store.TIME_ATTACK_UNLOCK_WRITE)||result.stores().contains(CdIpxProgress.Store.TITLE_BIT6_SET);
+            var data=IpxProgressFacts.from(result.progress());
+            var header=headerWrite?new IpxProgressFacts(data.savedLevel(),before.goodFuturesByte(),data.titleFlagsByte(),data.timeAttackUnlockByte(),data.unknownBackupByte(),data.currentSpecialStageByte(),data.saveDisabledByte()):before;
+            var finalFacts=result.stores().contains(CdIpxProgress.Store.GOOD_FUTURES_BIT0_SET)?data:header;
+
+            return Optional.of(new SonicCdAct3FutureWorldHost.IpxRunR1Store(){
+                private int step;
+                public CdIpxProgress.Result result(){return result;}
+                public void validate(){
+                    if(step!=0||ipxProgress!=before||levelProgram!=programme||programServices!=services||source!=media||ipxProgressLifetime!=lifetime)throw new IllegalStateException("RunR1 complete Module preimage expired");
+                    requireAct3FutureLoadingVisit(core);core.requireRunR1ProgressCandidate(host,call,this);
+                }
+                private void commit(int expected,IpxProgressFacts facts,LevelProgramState program){
+                    core.requireRunR1ProgressCommit(host,call,this);
+                    if(step!=expected||ipxProgress!=facts||levelProgram!=program||programServices!=services||source!=media||ipxProgressLifetime!=lifetime)throw new IllegalStateException("RunR1 prevalidated Module suffix expired");
+                }
+                public void adoptHeader(){commit(0,before,programme);ipxProgress=header;step=1;}
+                public void adoptHistory(){commit(1,header,programme);ipxProgress=finalFacts;step=2;}
+            });
         }
         // END ORIGINAL IPX MODULE RECEIPT 20261107
 
@@ -1815,8 +1848,15 @@ public final class SonicCdGameModule implements GameModule {
         // the retained original source before the first clear projection; no file instructions,
         // FM installation, hardware protocol, input, video or clock work execute here.
         requireColdMainVariableSource(candidate);
-        var cleared = CdProgramInitialization.clearMainVariables(programServices.initialization());
-        programServices = withProgramCall(ProgramStartCall.CLEAR_MAIN_VARIABLES, programServices.loads(), cleared);
+        var servicesBefore=programServices;var progressBefore=ipxProgress;var lifetimeBefore=ipxProgressLifetime;
+        var cleared = CdProgramInitialization.clearMainVariables(servicesBefore.initialization());
+        var progressReady=IpxProgressFacts.from(CdIpxProgress.mainVariablesCleared());
+        var servicesReady=withProgramCall(ProgramStartCall.CLEAR_MAIN_VARIABLES, servicesBefore.loads(), cleared);
+        // Genuine authenticated once-only clear, before the following fallible PCM source read.
+        // Prebuild both existing owners; never retrofit a current level/capture or mint a new lifetime.
+        if(programServices!=servicesBefore||ipxProgress!=progressBefore||ipxProgressLifetime!=lifetimeBefore
+                ||programWorld!=world)throw new IllegalStateException("Named MAINVARS complete preimage changed");
+        ipxProgress=progressReady;programServices=servicesReady;
         var required = candidate.timeWarpPrograms().orElseThrow(
                 () -> new IllegalStateException("Named program Start requires its authenticated PCM source"));
         SonicCdProgramLoadServices.State loaded;
@@ -1959,7 +1999,7 @@ public final class SonicCdGameModule implements GameModule {
                         case OLD_BLACK_FADE -> LevelProgramPhase.OLD_BLACK_FADE;
                         case OLD_CLEAR_WAIT -> LevelProgramPhase.OLD_CLEAR_WAIT;
                         case OLD_RETURNED -> LevelProgramPhase.OLD_RETURNED;
-                        case OLD_IPX_RETURNED, OLD_IPX_BOSS_RETURNED -> LevelProgramPhase.OLD_IPX_RETURNED;
+                        case OLD_IPX_RETURNED, OLD_IPX_BOSS_RETURNED, OLD_IPX_RUN_R3_SAVE, OLD_IPX_RUN_R1_TITLE_STOP, OLD_IPX_RUN_R1_GOOD_FUTURES_STOP -> LevelProgramPhase.OLD_IPX_RETURNED;
                         default -> LevelProgramPhase.ACT3_FUTURE_LOADING;
                     },levelProgram.goodFutureFlags());
         }
@@ -2427,9 +2467,12 @@ public final class SonicCdGameModule implements GameModule {
             if(act3FutureLoading!=null) {
                 if(!(value instanceof Act3FutureShared future))throw new IllegalArgumentException("Foreign programme epoch in R13");
                 validateAct3FutureLoadingCut();act3FutureWorld.validateRestore(future.loading());validateProgramServicesState(future.services());validateIpxProgress(future.ipxProgress(),future.loading().state());
-                if(future.loading().state().phase()==SonicCdAct3FutureLoadingVisit.Phase.OLD_IPX_BOSS_RETURNED
+                if((future.loading().state().phase()==SonicCdAct3FutureLoadingVisit.Phase.OLD_IPX_BOSS_RETURNED||SonicCdAct3FutureLoadingVisit.runR1Closed(future.loading().state().phase()))
                         &&future.ipxProgress().facts().savedLevel().zoneByte().isEmpty())
                     throw new IllegalArgumentException("Returned boss capture requires its original known saved high BYTE");
+                var phase=future.loading().state().phase();var progress=future.ipxProgress().facts();
+                if(phase==SonicCdAct3FutureLoadingVisit.Phase.OLD_IPX_RUN_R3_SAVE
+                        &&(progress.timeAttackUnlockByte().isEmpty()||progress.timeAttackUnlockByte().getAsInt()<3||progress.titleFlagsByte().isEmpty()||(progress.titleFlagsByte().getAsInt()&0x60)!=0x60))throw new IllegalArgumentException("Captured RunR1 completion lacks original unlock/title prefix");
                 if(future.goodFutureFlags().isPresent()&&(future.goodFutureFlags().getAsInt()&~255)!=0)
                     throw new IllegalArgumentException("Captured R13 flag exceeds BYTE");
                 return;

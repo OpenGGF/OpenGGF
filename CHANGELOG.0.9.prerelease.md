@@ -442,7 +442,7 @@ matching area heading; see the
   removal cuts and renders its selected defeat picture. The fixed controller now
   activates the actual Capsule, runs Results and reaches the old-programme/IPX
   return, with twelve full/course edges and selected Capsule/Results pixel
-  omission checks; the missing historical unlock still fences the next call.
+  omission checks; subsequent IPX progress and save admission remain separate.
   Native Dead/Restart now rejoin the actual
   caller with paired death-camera bounds, original no-draw restart and complete
   restore checks. Cached native GameOver now preserves original sound, allocation,
@@ -497,8 +497,15 @@ matching area heading; see the
   Invalid held input is rejected before borrowing or retiring a healthy loop.
   A finite IPX progress
   component preserves unknown-byte and save-field alias semantics. Its actual
-  boss-return join now publishes saved-zone/checkpoint state once and retains it
-  through existing capture lifetimes, stopping at unknown unlock history.
+  boss-return join publishes saved-zone/checkpoint state once and retains it
+  through existing capture lifetimes. The authenticated, once-only cold MAINVARS
+  clear now establishes its covered progress facts before the following fallible
+  PCM read; plain later development entry retains unknown history. Original
+  RunR1 uses the same progress kernel and private current-call authority for
+  ordered unlock/title/checkpoint/projector/live-flag/history publication,
+  preserving reached prefixes and existing full/course capture ownership.
+  Component World controls reach the explicit RunR3 save boundary; the real
+  selected-slot/save context and a fresh natural continuation remain separate.
   Original initial-save sources retain complete data and shorter native copy
   extents, detached from the same authenticated stock disc before it closes.
   Legacy constructors and regional absences remain explicit. An internal selected-slot codec/bootstrap distinguishes genuine absence

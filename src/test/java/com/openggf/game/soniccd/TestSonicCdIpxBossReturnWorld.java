@@ -61,35 +61,35 @@ class TestSonicCdIpxBossReturnWorld {
         assertEquals(0,module.ipxProgressState().savedLevel().word().orElseThrow());assertFalse(frame.closed());
     }
 
-    @Test void freshSemanticEntryOwnsOnlySourceNewGameFactsAndNeverLevelFlagsOrHistoricalBytes() throws Exception {
+    @Test void earlierSourceClearOwnsHistoryAndLaterNewGameDoesNotRecreateIt() throws Exception {
         var p=module.ipxProgressState();assertEquals(0,p.savedLevel().word().orElseThrow());assertEquals(OptionalInt.of(0),p.goodFuturesByte());
         assertEquals(OptionalInt.of(0),p.currentSpecialStageByte());assertEquals(OptionalInt.of(core.state().program().timeStonesByte()),p.timeStonesByte());
-        assertTrue(p.titleFlagsByte().isEmpty());assertTrue(p.timeAttackUnlockByte().isEmpty());assertTrue(p.unknownBackupByte().isEmpty());assertTrue(p.saveDisabledByte().isEmpty());
+        assertEquals(OptionalInt.of(0),p.titleFlagsByte());assertEquals(OptionalInt.of(0),p.timeAttackUnlockByte());assertEquals(OptionalInt.of(0),p.unknownBackupByte());assertEquals(OptionalInt.of(0),p.saveDisabledByte());
         assertTrue(module.levelProgramState().goodFutureFlags().isEmpty());
         var facts=actualField(module,"ipxProgress");assertTrue(facts.getClass().isRecord());
         assertFalse(Arrays.stream(facts.getClass().getRecordComponents()).anyMatch(c->c.getName().equals("timeStonesByte")),"Core is the live timeStones owner");
         same.invoke(null,readyFull,h.mode().getRewindRegistry().capture(),"fresh progress observation FULL nonwrite");
         same.invoke(null,readyCourse,h.mode().getRewindRegistry().captureCourse(),"fresh progress observation course nonwrite");
     }
-    @Test void originalBossReturnPublishesSavedHighAndCoreCheckpointWithoutAnotherFrameOrHostStore() throws Exception {
+    @Test void originalBossAndRunR1PublishSourceProgressWithoutAnotherFrame() throws Exception {
         toIpx();var state=core.state();var actor=frame.captureActor();var shared=frame.captureShared();var hostImage=actualField(host,"image");
         var actorValue=frame.state();var environment=frame.environment();var artValue=frame.artState();var clock=frame.vIntClock();
         var pool=host.placement().capture();var selection=host.selected();var source=frame.stageSource();var beforeProgram=module.levelProgramState();
         var epoch=actualField(module,"ipxProgressLifetime");var world=h.mode().getWorldSession();long generation=h.mode().getLevelManager().getCompletedProductionLoadGeneration();
-        expectUnlock();assertEquals(SonicCdAct3FutureLoadingVisit.Phase.OLD_IPX_BOSS_RETURNED,core.state().phase());
-        assertEquals(0x100,module.ipxProgressState().savedLevel().word().orElseThrow());assertEquals(0,core.state().level().checkpoint());
+        expectUnlock();assertEquals(SonicCdAct3FutureLoadingVisit.Phase.OLD_IPX_RUN_R3_SAVE,core.state().phase());
+        assertEquals(0x100,module.ipxProgressState().savedLevel().word().orElseThrow());assertEquals(OptionalInt.of(3),module.ipxProgressState().timeAttackUnlockByte());assertEquals(OptionalInt.of(0x60),module.ipxProgressState().titleFlagsByte());assertEquals(1,Collections.frequency(core.state().calls(),SonicCdAct3FutureLoadingVisit.Call.IPX_RUN_R1_PREFIX));assertEquals(0,core.state().level().checkpoint());
         assertEquals(1,Collections.frequency(core.state().calls(),SonicCdAct3FutureLoadingVisit.Call.IPX_BOSS_RETURN));
-        assertSame(state.program(),core.state().program());assertSame(state.section(),core.state().section());assertSame(state.normalPalette(),core.state().normalPalette());
+        assertEquals(state.program(),core.state().program());assertEquals(0,core.state().program().goodFutureByte()&1);assertSame(state.section(),core.state().section());assertSame(state.normalPalette(),core.state().normalPalette());
         assertEquals(actor,frame.captureActor());assertEquals(shared,frame.captureShared());assertSame(actorValue,frame.state());assertSame(environment,frame.environment());assertSame(artValue,frame.artState());assertSame(clock,frame.vIntClock());
-        assertSame(hostImage,actualField(host,"image"));assertSame(selection,host.selected());
+        assertNotSame(hostImage,actualField(host,"image"));assertEquals(OptionalInt.of(0),host.globals().projectorByte());assertSame(selection,host.selected());
         assertEquals(pool.status(),host.placement().status());assertEquals(pool.pool().slots(),host.placement().pool().capture().slots());assertArrayEquals(pool.savedFlags().copy(),host.placement().capture().savedFlags().copy());
         assertEquals(beforeProgram,module.levelProgramState());assertSame(epoch,actualField(module,"ipxProgressLifetime"));assertSame(source,frame.stageSource());assertSame(world,h.mode().getWorldSession());
         assertEquals(generation,h.mode().getLevelManager().getCompletedProductionLoadGeneration());assertFalse(core.failed());assertFalse(frame.closed());
     }
-    @Test void repeatedRejectedServicesReadOnlyUnlockAndNeverIncrementSavedLevelTwice() throws Exception {
+    @Test void repeatedSaveOwnerStopsNeverReplayRunR1OrIncrementSavedLevelTwice() throws Exception {
         toIpx();expectUnlock();var p=module.ipxProgressState();var full=h.mode().getRewindRegistry().capture();var course=h.mode().getRewindRegistry().captureCourse();
         for(int n=0;n<4;n++){expectUnlock();assertEquals(p,module.ipxProgressState());assertEquals(1,Collections.frequency(core.state().calls(),SonicCdAct3FutureLoadingVisit.Call.IPX_BOSS_RETURN));
-            same.invoke(null,full,h.mode().getRewindRegistry().capture(),"repeated unknown unlock FULL nonwrite");same.invoke(null,course,h.mode().getRewindRegistry().captureCourse(),"repeated unknown unlock course nonwrite");}
+            same.invoke(null,full,h.mode().getRewindRegistry().capture(),"repeated actual save-owner FULL nonwrite");same.invoke(null,course,h.mode().getRewindRegistry().captureCourse(),"repeated actual save-owner course nonwrite");}
         assertFalse(core.failed());assertFalse(frame.closed());
     }
     @Test void fullRestoreRewindsProgressAndOriginalReturnedStackThenReplaysExactlyOnce() throws Exception {
@@ -130,6 +130,35 @@ class TestSonicCdIpxBossReturnWorld {
         assertEquals(0,module.ipxProgressState().savedLevel().word().orElseThrow());assertFalse(frame.closed());
     }
 
+    @Test void originalRunR1CallHasNoPublicConstructorAndIdleForeignOrThreadCallsCannotAdopt() throws Exception {
+        var type=SonicCdAct3FutureLoadingVisit.IpxRunR1Call.class;
+        assertEquals(0,type.getConstructors().length);assertEquals(1,type.getDeclaredConstructors().length);
+        assertTrue(Modifier.isPrivate(type.getDeclaredConstructors()[0].getModifiers()));assertFalse(type.isRecord());
+        var full=h.mode().getRewindRegistry().capture();var course=h.mode().getRewindRegistry().captureCourse();
+        var authority=(SonicCdAct3FutureWorldHost.Authority)actualField(module,"act3Authority");
+        assertThrows(IllegalStateException.class,()->host.prepareRunR1(null));
+        assertThrows(IllegalStateException.class,()->authority.prepareRunR1(host,null));
+        assertThrows(IllegalStateException.class,()->authority.prepareRunR1(null,null));
+        assertThrows(IllegalStateException.class,()->core.requireRunR1Preparation(host,null));
+        assertThrows(IllegalStateException.class,()->core.requireRunR1Commit(host,null));
+        var observed=new java.util.concurrent.atomic.AtomicReference<Throwable>();
+        var thread=new Thread(()->{try{core.requireRunR1Preparation(host,null);}catch(Throwable failure){observed.set(failure);}});
+        thread.start();thread.join();assertInstanceOf(IllegalStateException.class,observed.get());
+        // Passive wrong-thread/absent-call control only: no private issued receiver is fabricated.
+        same.invoke(null,full,h.mode().getRewindRegistry().capture(),"idle original RunR1 FULL nonwrite");
+        same.invoke(null,course,h.mode().getRewindRegistry().captureCourse(),"idle original RunR1 course nonwrite");
+    }
+    @Test void originalRunR1PrefixRetiresItsPrivateScopeAndBothCaptureCutsRemainStable() throws Exception {
+        toIpx();expectUnlock();assertEquals(SonicCdAct3FutureLoadingVisit.Phase.OLD_IPX_RUN_R3_SAVE,core.state().phase());
+        assertNull(actualField(core,"ipxRunR1Call"));assertNull(actualField(core,"ipxRunR1Prepared"));assertEquals(false,actualField(core,"ipxRunR1Committing"));
+        assertThrows(IllegalStateException.class,()->core.requireRunR1Commit(host,null));
+        assertThrows(IllegalStateException.class,()->host.prepareRunR1(null));
+        var full=h.mode().getRewindRegistry().capture();var course=h.mode().getRewindRegistry().captureCourse();
+        expectUnlock();assertEquals(1,Collections.frequency(core.state().calls(),SonicCdAct3FutureLoadingVisit.Call.IPX_RUN_R1_PREFIX));
+        same.invoke(null,full,h.mode().getRewindRegistry().capture(),"closed RunR1 FULL nonwrite");
+        same.invoke(null,course,h.mode().getRewindRegistry().captureCourse(),"closed RunR1 course nonwrite");
+    }
+
     /** Sole constructed public-pool component ingress; genuine cached Results emits programme stores/exit. */
     private void toIpx() throws Exception {
         assertEquals(SonicCdAct3FutureLoadingVisit.Phase.READY,core.state().phase());
@@ -141,6 +170,7 @@ class TestSonicCdIpxBossReturnWorld {
         for(int n=0;n<24;n++)module.serviceAct3FutureLoading(8);
         assertEquals(SonicCdAct3FutureLoadingVisit.Phase.OLD_IPX_RETURNED,core.state().phase());assertEquals(0,module.ipxProgressState().savedLevel().word().orElseThrow());
     }
+    /** Current known-history route stops at genuine missing save ingress, not an unlock default. */
     private void expectUnlock(){var stop=assertThrows(SonicCdAct3FutureLoadingVisit.UnsupportedLoading.class,()->module.serviceAct3FutureLoading(8));
-        assertEquals(SonicCdAct3FutureLoadingVisit.Boundary.IPX_RUN_R1_TIME_ATTACK_UNLOCK_OWNER,stop.boundary());}
+        assertEquals(SonicCdAct3FutureLoadingVisit.Boundary.IPX_RUN_R3_WRITE_SAVE_OWNER,stop.boundary());}
 }

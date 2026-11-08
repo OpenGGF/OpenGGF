@@ -33,6 +33,7 @@ final class SonicCdAct3FutureWorldHost implements Host,AutoCloseable {
   default Optional<IpxProgressStore> prepareIpxBossReturn(SonicCdAct3FutureWorldHost host,SonicCdAct3FutureLoadingVisit.IpxBossReturnCall call){return Optional.empty();}
   /** Reached RunR1/UnlockTimeAttackLevel operand; no native return/store authority from the value. */
   default OptionalInt runR1UnlockByte(SonicCdAct3FutureWorldHost host){return OptionalInt.empty();}
+  default Optional<IpxRunR1Store> prepareRunR1(SonicCdAct3FutureWorldHost host,SonicCdAct3FutureLoadingVisit.IpxRunR1Call call){return Optional.empty();}
   // END IPX BOSS RETURN AUTHORITY 20261107
   /** Actual Module/knowledge image only; absence means the owner is unavailable, not byte zero. */
   default Optional<SonicCdAct3FutureObjectPass.ResultsFlagsImage> resultsFlags(SonicCdAct3FutureWorldHost host,SonicCdAct3FutureObjectPass pass){return Optional.empty();}
@@ -263,6 +264,32 @@ final class SonicCdAct3FutureWorldHost implements Host,AutoCloseable {
   p.progress.adoptAfterNative();p.applied=true; // no Host scalar/image/pool/bank/selected/current write exists here
  }
  OptionalInt runR1UnlockByte(){current();owner.requireRunR1UnlockRead(this);return Objects.requireNonNull(authority.runR1UnlockByte(this));}
+ interface IpxRunR1Store {
+  CdIpxProgress.Result result();void validate();void adoptHeader();void adoptHistory();
+ }
+ static final class IpxRunR1 {
+  private final Image before,ready;private final IpxRunR1Store progress;private int step;
+  private IpxRunR1(Image before,Image ready,IpxRunR1Store progress){this.before=before;this.ready=ready;this.progress=progress;}
+  CdIpxProgress.Result result(){return progress.result();}boolean owns(IpxRunR1Store actual){return actual==progress;}
+ }
+ private boolean preparingRunR1;
+ Optional<IpxRunR1> prepareRunR1(SonicCdAct3FutureLoadingVisit.IpxRunR1Call call){
+  current();owner.requireRunR1Preparation(this,call);
+  if(preparingRunR1||acting||publishing)throw new IllegalStateException("RunR1 preparation active");
+  if(!(call.hostSnapshot() instanceof Snapshot captured)||captured.image()!=image)throw new IllegalStateException("Not original full RunR1 Host cut");
+  var before=image;preparingRunR1=true;
+  try{
+   var store=Objects.requireNonNull(authority.prepareRunR1(this,call));if(store.isEmpty())return Optional.empty();
+   var p=store.orElseThrow();var ready=before;var projector=p.result().writes().projectorByte();
+   if(projector.isPresent()){var g=before.globals();var next=new Globals(g.ring(),g.live(),g.contact(),g.score(),projector,g.checkpointSaved(),g.drownTimerWord(),g.debugBlockWord(),g.pauseMusicBit(),g.bonus(),g.tail(),g.animations(),g.paletteSteps7(),g.paletteTimers7(),g.layerByte(),g.bossFlagsByte(),g.eventRoutineWord());ready=copy(next,before.scroll(),before.foreground(),before.background(),before.video(),before.sounds());}
+   return Optional.of(new IpxRunR1(before,ready,p));
+  }finally{preparingRunR1=false;}
+ }
+ void requireRunR1AuthorityPreparation(SonicCdAct3FutureLoadingVisit.IpxRunR1Call call){if(!preparingRunR1)throw new IllegalStateException("No Host-to-Module RunR1 preparation");owner.requireRunR1Preparation(this,call);}
+ void validateRunR1(IpxRunR1 p){current();owner.requireRunR1Candidate(this,p);if(p.step!=0||p.before!=image)throw new IllegalStateException("Stale RunR1 Host image");p.progress.validate();}
+ void adoptRunR1Header(IpxRunR1 p){owner.requireRunR1Commit(this,p);if(p.step!=0||image!=p.before)throw new IllegalStateException("RunR1 header expired");p.progress.adoptHeader();p.step=1;}
+ void adoptRunR1Projector(IpxRunR1 p){owner.requireRunR1Commit(this,p);if(p.step!=1||image!=p.before)throw new IllegalStateException("RunR1 projector expired");image=p.ready;p.step=2;}
+ void adoptRunR1History(IpxRunR1 p){owner.requireRunR1Commit(this,p);if(p.step!=2||image!=p.ready)throw new IllegalStateException("RunR1 flags expired");p.progress.adoptHistory();p.step=3;}
  // END IPX BOSS RETURN HOST 20261107
 
  // Original private Core blank scope retains this complete prebuild; public values cannot adopt it.

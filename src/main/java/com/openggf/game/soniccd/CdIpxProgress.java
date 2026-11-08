@@ -29,7 +29,7 @@ final class CdIpxProgress {
 
     /**
      * Named semantic save/progress facts, not an addressable RAM image or an actual save receipt.
-     * goodFutures (Main CPU Variables.inc:32) is DISTINCT from level goodFutureFlags (:143).
+     * goodFutures (Main CPU Variables.inc:32) is DISTINCT from goodFuture (:119) and goodFutureFlags (:143).
      */
     record State(SavedLevel savedLevel, OptionalInt goodFuturesByte, OptionalInt titleFlagsByte,
                  OptionalInt timeAttackUnlockByte, OptionalInt unknownBackupByte,
@@ -166,6 +166,13 @@ final class CdIpxProgress {
 
     /** Explicit unknown retained/save-loaded history. This executes no clear or source operation. */
     static State unknown(){return new State(new SavedLevel(u(),u()),u(),u(),u(),u(),u(),u(),u());}
+
+    /** Data projection of the actually selected IPX/MDINIT MAINVARS clear over
+     * [FF0F00,FF2000),1088 LONGs. Its caller must own the original semantic ingress.
+     * This does not run MDINIT's later title90 store, a save read, Title or NewGame. */
+    static State mainVariablesCleared(){
+        var z=k(0);return new State(new SavedLevel(z,z),z,z,z,z,z,z,z);
+    }
 
     /**
      * NewGame/RunR1:165-170 postconditions only. The live caller owns selecting this semantic entry.
