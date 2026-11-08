@@ -140,12 +140,12 @@
       "order": 0,
       "file": "frames/walk-00.png",
       "hotspot": [
-        13,
+        11,
         19
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+      "notes": "Native SonAni_Walk phase 0; near coral foot phase 0, far shadow foot phase 4; explicit half-cycle alternation."
     },
     {
       "id": "walk-01",
@@ -153,12 +153,12 @@
       "order": 1,
       "file": "frames/walk-01.png",
       "hotspot": [
-        15,
+        13,
         20
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+      "notes": "Native SonAni_Walk phase 1; near coral foot phase 1, far shadow foot phase 5; explicit half-cycle alternation."
     },
     {
       "id": "walk-02",
@@ -166,12 +166,12 @@
       "order": 2,
       "file": "frames/walk-02.png",
       "hotspot": [
-        18,
+        17,
         21
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+      "notes": "Native SonAni_Walk phase 2; near coral foot phase 2, far shadow foot phase 6; explicit half-cycle alternation."
     },
     {
       "id": "walk-03",
@@ -179,12 +179,12 @@
       "order": 3,
       "file": "frames/walk-03.png",
       "hotspot": [
-        19,
+        18,
         20
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+      "notes": "Native SonAni_Walk phase 3; near coral foot phase 3, far shadow foot phase 7; explicit half-cycle alternation."
     },
     {
       "id": "walk-04",
@@ -197,7 +197,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+      "notes": "Native SonAni_Walk phase 4; near coral foot phase 4, far shadow foot phase 0; explicit half-cycle alternation."
     },
     {
       "id": "walk-05",
@@ -210,7 +210,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+      "notes": "Native SonAni_Walk phase 5; near coral foot phase 5, far shadow foot phase 1; explicit half-cycle alternation."
     },
     {
       "id": "walk-06",
@@ -218,12 +218,12 @@
       "order": 6,
       "file": "frames/walk-06.png",
       "hotspot": [
-        20,
+        19,
         21
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+      "notes": "Native SonAni_Walk phase 6; near coral foot phase 6, far shadow foot phase 2; explicit half-cycle alternation."
     },
     {
       "id": "walk-07",
@@ -231,12 +231,12 @@
       "order": 7,
       "file": "frames/walk-07.png",
       "hotspot": [
-        19,
+        17,
         20
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+      "notes": "Native SonAni_Walk phase 7; near coral foot phase 7, far shadow foot phase 3; explicit half-cycle alternation."
     },
     {
       "id": "run-00",
