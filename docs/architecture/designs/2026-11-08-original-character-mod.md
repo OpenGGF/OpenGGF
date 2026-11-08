@@ -429,3 +429,17 @@ Status log (times UTC):
   surfaces still pending in W4b) and the W5 homing facade (`13515a986`). Lead check of
   the merged tree passed: homing (15), name composer, signature pin, Mutator Lab
   package, character registry and MICA integration tests, all ROMs found.
+- 2026-11-08: merged W6 Super/Hyper forms (`e4639065d`; conflict with W4a on
+  `CharacterDefinition` resolved by carrying both suppliers; 174 focused tests
+  passed) and W7c sheet assembly (`e9c8350d8`; MICA plays with her art in S1 GHZ1,
+  S2 EHZ1 and S3K AIZ1). Sheet rebuilt from the round-3 slope frames; 39 focused tests
+  and the assembler test passed. Also merged art round 4 (S2 half-pipe, Blue Sphere,
+  S1 maze audit) and round 5 item 1 (S3K slot stage).
+- 2026-11-08: Sol (`gpt-6.1-sol`) reached its usage limit until 2026-11-14 10:38.
+  Lanes stopped mid-work: W4c0 signs/assets, W4c1 S1 surfaces (one unverified commit
+  `290c96d7c`, not merged), W4c2 S2 surfaces, W4c3 S3K surfaces. Their uncommitted
+  work is saved as patches under `~/scratch/agent-tmp/mica-wip-20261108/<lane>/`
+  with base SHA and worktree path. Not started: continue/portrait/snowboard art,
+  endings inventory and art, MICA ability wiring (homing, Instagib when Super,
+  HOMING_DIVE binding, Sonic-equivalent physics), phase 2 (TALON), broad smoke run.
+
