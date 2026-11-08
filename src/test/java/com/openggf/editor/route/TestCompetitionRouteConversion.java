@@ -73,7 +73,11 @@ class TestCompetitionRouteConversion {
         Path source=Path.of("src/test/resources/routes/s2/competition/cnz1-slot-flip.route.json");
         Path manifest=dir.resolve("unknown.route.json");
         var original=RouteFiles.readDraft(source);
-        String text=RouteCodec.formatManifest(original.manifest(),"unknown.script")
+        // Isolate fact editing from the traversal route's evolving waypoint order.
+        var oneFact=GoalProgram.of(Guard.NONE,Leg.of("fact",new RouteGoal.Achieve(
+                new SamplePredicate.FactEquals("competition.slot.inUse",1)),300));
+        var factRoute=original.withChecks(oneFact);
+        String text=RouteCodec.formatManifest(factRoute.manifest(),"unknown.script")
                 .replace("competition.slot.inUse","competition.slot.unknown");
         Files.writeString(manifest,text);Files.copy(source.resolveSibling("cnz1-slot-flip.script"),dir.resolve("unknown.script"));
         var w=new RouteTapeWorkspace(new RouteTapeWorkspace.Host(){}); w.open(manifest);
