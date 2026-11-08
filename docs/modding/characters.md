@@ -229,6 +229,9 @@ and the S1 `continue/floor` / S3K `continue/team-idle` banks, keyed by native
 mapping frame. They retain the native animation and movement owners. Separate
 screen palette lines preserve native text and Tails; omitted banks/frames fall
 back to ROM art. Existing four/five-argument `Art` constructors remain supported.
+The S3K `portrait` bank (frame 5) supplies the data-select bust, composed with
+stock team portraits using its authored hotspot. Its palette is isolated in a
+renderer-owned graphics bank; no native menu line is replaced.
 GGFP presentation sections are pending.
 
 ## Ability and super-form rules

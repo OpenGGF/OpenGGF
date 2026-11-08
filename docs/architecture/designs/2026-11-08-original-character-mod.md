@@ -622,10 +622,20 @@ Status log (times UTC):
   Continue palette evidence: S1 `.cont_text` and `.cont_Sonic1` share line 0,
   while `.cont_oval` uses line 1 (docs/s1disasm/_maps/Continue Screen.asm:14-56).
   S2 `ContinueScreen` retains the player lines and loads `PalID_SS1` for its
-  backdrop (docs/s2disasm/s2.asm:10350-10368). S3K `loc_5C3BC` loads all four
-  native lines and renders text on line 0 (docs/skdisasm/sonic3k.asm:122909-122919);
+  backdrop (s2.asm:10350-10368). S3K `loc_5C3BC` loads all four
+  native lines and renders text on line 0 (sonic3k.asm:122909-122919);
   the actor/icon mapping bytes use line 0; Knuckles' actor adds line 3.
   Native screen text/partners therefore keep their ROM palette while MICA
   binds to an unused screen line. Initial capture images were rejected because
   GameplayCaptureSession's generic render path draws a level in continue mode;
   the component fixture now explicitly draws the production continue provider.
+- 2026-11-08: W4 portrait adapter resolves character-owned portrait poses by
+  canonical key before the native Sonic/Tails/Knuckles fallback. Team layouts
+  retain the native Tails frame. A renderer-owned scoped palette bank isolates
+  MICA from every menu palette line; these are derived graphics resources,
+  released on reset and recreated when their context generation retires.
+  `loc_C710` / `loc_C71C` load menu/background and character lines separately
+  (sonic3k.asm:16118-16132). Portrait and continue pixel checks are
+  in progress; the continue custom bank was moved clear of native allocations.
+  Rejected captures also exposed the fixture retaining a level camera during
+  intermediate frontend batch flushes; frontend capture must set camera (0,0).

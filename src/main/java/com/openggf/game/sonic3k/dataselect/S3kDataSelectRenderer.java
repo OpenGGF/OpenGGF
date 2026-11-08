@@ -255,6 +255,9 @@ public class S3kDataSelectRenderer {
     }
 
     public void reset() {
+        characterPortraitTiles.values().forEach(tiles -> tiles.palette().close());
+        characterPortraitTiles.clear();
+        nextCharacterPortraitTile = 0x2000;
         cached = false;
         characterPalettesBuilt = false;
         cachedCharLine1 = null;
@@ -1048,9 +1051,32 @@ public class S3kDataSelectRenderer {
         }
     }
 
+    private record CharacterPortraitTiles(Pattern[] tiles, com.openggf.game.presentation.PresentationPaletteBank palette) { }
+    private final java.util.Map<Integer, CharacterPortraitTiles> characterPortraitTiles = new java.util.LinkedHashMap<>();
+    private int nextCharacterPortraitTile = 0x2000;
+
+    SpriteMappingFrame registerCharacterPortrait(com.openggf.game.PresentationFrameSet.Pose pose,
+            com.openggf.game.PresentationFrameSet set) {
+        int first = nextCharacterPortraitTile;
+        Pattern[] tiles = com.openggf.game.presentation.CharacterNameComposer.tiles(pose.image());
+        nextCharacterPortraitTile += tiles.length;
+        characterPortraitTiles.put(first, new CharacterPortraitTiles(tiles,
+                new com.openggf.game.presentation.PresentationPaletteBank(com.openggf.game.presentation.ScreenFrameRenderer.palette(set))));
+        return com.openggf.game.presentation.ScreenFrameRenderer.mapping(pose, first, 1);
+    }
+
     private void renderMappingPiece(GraphicsManager graphics, SpriteMappingPiece piece, int worldX, int worldY,
                                     int patternBase,
                                     int baseDescBits) {
+        CharacterPortraitTiles custom = null;
+        for (var entry : characterPortraitTiles.entrySet()) {
+            if (piece.tileIndex() >= entry.getKey() && piece.tileIndex() < entry.getKey() + entry.getValue().tiles().length) {
+                custom = entry.getValue();
+                for (int i=0;i<custom.tiles().length;i++)
+                    graphics.cachePatternTexture(custom.tiles()[i],patternBase+entry.getKey()+i);
+                break;
+            }
+        }
         for (int tx = 0; tx < piece.widthTiles(); tx++) {
             for (int ty = 0; ty < piece.heightTiles(); ty++) {
                 int tileOffset = tx * piece.heightTiles() + ty;
@@ -1069,7 +1095,9 @@ public class S3kDataSelectRenderer {
                     descBits |= 0x8000;
                 }
                 descBits |= baseDescBits;
-                graphics.renderPatternWithId(patternId, new PatternDesc(descBits), tileX, tileY);
+                var desc = new PatternDesc(descBits);
+                if (custom != null) desc.setPaletteIndex(custom.palette().base(graphics));
+                graphics.renderPatternWithId(patternId, desc, tileX, tileY);
             }
         }
     }

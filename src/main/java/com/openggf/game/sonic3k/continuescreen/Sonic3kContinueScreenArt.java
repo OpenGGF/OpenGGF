@@ -68,7 +68,7 @@ final class Sonic3kContinueScreenArt {
         }
         var custom = com.openggf.game.presentation.ScreenFrameRenderer.active(com.openggf.game.CharacterPresentation.Host.S3K);
         // ContinueScreen's line 1 is unused by its sprite/text mappings; line 0 stays native for Tails.
-        replacement = custom == null ? null : new com.openggf.game.presentation.ScreenFrameRenderer(custom, graphics, BASE + 0xA00, 1);
+        replacement = custom == null ? null : new com.openggf.game.presentation.ScreenFrameRenderer(custom, graphics, BASE + 0x2000, 1);
         var spriteFrames = S3kSpriteDataLoader.loadMappingFrames(reader, MAP_SPRITES);
         var iconFrames = S3kSpriteDataLoader.loadMappingFrames(reader, MAP_ICONS);
         Pattern[] spriteArt = PatternDecompressor.nemesis(rom, ART_SPRITES);

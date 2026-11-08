@@ -307,6 +307,7 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
         state = State.INACTIVE;
         launchErrorMessage = null;
         renderer.reset();
+        characterPortraits.clear();
         if (sessionController != null) {
             sessionController.reset();
         }
@@ -940,9 +941,34 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
 
     private S3kCustomTeamPortraitComposer portraitComposer() {
         if (cachedPortraitComposer == null) {
-            cachedPortraitComposer = new S3kCustomTeamPortraitComposer(assets.getSaveScreenMappings());
+            cachedPortraitComposer = new S3kCustomTeamPortraitComposer(assets.getSaveScreenMappings(), this::characterPortrait);
         }
         return cachedPortraitComposer;
+    }
+
+    private final java.util.Map<String, SpriteMappingFrame> characterPortraits = new java.util.HashMap<>();
+
+    private SpriteMappingFrame characterPortrait(String code) {
+        if (characterPortraits.containsKey(code)) return characterPortraits.get(code);
+        SpriteMappingFrame frame = null;
+        var world = com.openggf.game.session.SessionManager.getCurrentWorldSession();
+        if (world != null) {
+            var definition = world.getPlayableCharacterRegistry()
+                    .find(com.openggf.game.CharacterKey.parsePersisted(code)).orElse(null);
+            if (definition != null && definition.presentationSupplier() != null) {
+                try {
+                    var presentation = definition.presentationSupplier().load(code);
+                    var art = presentation == null ? null : presentation.art().get(com.openggf.game.CharacterPresentation.Host.S3K);
+                    var set = art == null ? null : art.screenFrames();
+                    var pose = set == null ? null : set.banks().getOrDefault("portrait", java.util.Map.of()).get(5);
+                    if (pose != null) frame = renderer.registerCharacterPortrait(pose, set);
+                } catch (java.io.IOException e) {
+                    throw new IllegalStateException("Cannot load character portrait: " + code, e);
+                }
+            }
+        }
+        characterPortraits.put(code, frame);
+        return frame;
     }
 
     private SpriteMappingFrame resolveCustomPortraitFrame(SelectedTeam team) {

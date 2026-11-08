@@ -98,6 +98,7 @@ class TestMicaCharacterIntegration {
             for(int i=0;i<25;i++) screen.update(false,false);
             writeCapture(drawContinue(session),game+"-continue-depart");
             assertTrue(screen.isAccepted());
+            if(game.equals("s3k")) capturePortraits();
         }
     }
 
@@ -106,10 +107,44 @@ class TestMicaCharacterIntegration {
         org.lwjgl.opengl.GL11.glClearColor(0,0,0,1);
         org.lwjgl.opengl.GL11.glClear(org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT | org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT);
         graphics.resetForFixedFunction();
+        GameServices.camera().setX((short)0); GameServices.camera().setY((short)0);
         session.loop().getContinueScreenProvider().draw();
         graphics.flushScreenSpace();
         org.lwjgl.opengl.GL11.glFinish();
         return com.openggf.graphics.ScreenshotCapture.captureFramebuffer(320,224);
+    }
+
+    private void capturePortraits() throws Exception {
+        Path saves=temp.resolve("portrait-saves");
+        var manager=new SaveManager(saves);
+        for(int slot=1;slot<=2;slot++) {
+            Map<String,Object> payload=new LinkedHashMap<>();
+            payload.put("act",0);payload.put("zone",0);payload.put("lives",3);
+            payload.put("mainCharacter",CODE);payload.put("sidekicks",slot==1?List.of():List.of("tails"));
+            payload.put("chaosEmeralds",List.of());payload.put("clear",false);
+            payload.put("progressCode",1);payload.put("clearState",0);
+            manager.writeSlot("s3k",slot,payload);
+        }
+        var presentation=new com.openggf.game.sonic3k.dataselect.S3kDataSelectPresentation(saves,GameServices.configuration());
+        GameServices.graphics().clearPaletteFadePresentation();
+        presentation.initialize();
+        assertEquals(DataSelectProvider.State.FADE_IN,presentation.getState());
+        var method=presentation.getClass().getDeclaredMethod("resolveCustomPortraitFrame",com.openggf.game.save.SelectedTeam.class);
+        method.setAccessible(true);
+        for(var sidekicks:List.of(List.<String>of(),List.of("tails"))) {
+            var frame=(com.openggf.level.render.SpriteMappingFrame)method.invoke(presentation,new com.openggf.game.save.SelectedTeam(CODE,sidekicks));
+            assertTrue(frame.pieces().stream().anyMatch(piece->piece.tileIndex()>=0x2000));
+            if(!sidekicks.isEmpty()) assertTrue(frame.pieces().stream().anyMatch(piece->piece.tileIndex()<0x2000),"Stock Tails remains in team composition");
+        }
+        for(int i=0;i<24;i++) presentation.update(new com.openggf.control.InputHandler());
+        GameServices.camera().setX((short)0); GameServices.camera().setY((short)0);
+        presentation.setClearColor();
+        org.lwjgl.opengl.GL11.glClear(org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT | org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT);
+        GameServices.graphics().resetForFixedFunction();
+        presentation.draw();GameServices.graphics().flushScreenSpace();
+        org.lwjgl.opengl.GL11.glFinish();
+        writeCapture(com.openggf.graphics.ScreenshotCapture.captureFramebuffer(320,224),"s3k-data-select-solo-and-tails");
+        presentation.reset();
     }
 
     private static void writeCapture(com.openggf.graphics.RgbaImage image,String name) throws Exception {

@@ -31,9 +31,16 @@ final class S3kCustomTeamPortraitComposer {
     private static final int TARGET_SINGLE_SIDEKICK_OVERLAP = 10;
 
     private final List<SpriteMappingFrame> mappings;
+    private final java.util.function.Function<String, SpriteMappingFrame> customFrames;
 
     S3kCustomTeamPortraitComposer(List<SpriteMappingFrame> mappings) {
+        this(mappings, code -> null);
+    }
+
+    S3kCustomTeamPortraitComposer(List<SpriteMappingFrame> mappings,
+            java.util.function.Function<String, SpriteMappingFrame> customFrames) {
         this.mappings = List.copyOf(Objects.requireNonNull(mappings, "mappings"));
+        this.customFrames = Objects.requireNonNull(customFrames);
     }
 
     List<PortraitLayer> layoutLayers(SelectedTeam team) {
@@ -157,6 +164,8 @@ final class S3kCustomTeamPortraitComposer {
     }
 
     private SpriteMappingFrame baseFrameFor(String characterCode) {
+        SpriteMappingFrame custom = customFrames.apply(characterCode);
+        if (custom != null) return custom;
         int frameIndex = switch (canonical(characterCode)) {
             case "tails" -> FRAME_TAILS;
             case "knuckles" -> FRAME_KNUCKLES;
