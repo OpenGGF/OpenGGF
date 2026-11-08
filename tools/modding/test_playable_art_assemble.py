@@ -57,3 +57,27 @@ class PlayableArtAssemblyTest(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class SlopeContactTests(unittest.TestCase):
+    def test_native_contact_and_hotspot_in_all_rotated_phases(self):
+        import math
+        art = ROOT / 'examples/mica-and-talon/art/mica'
+        manifest = json.loads((art / 'frames.yaml').read_text())
+        provenance = json.loads((art / 'native-pose-core.json').read_text())['frames']
+        slopes = [f for f in manifest['frames'] if f['angle_set'] != 'flat']
+        self.assertEqual(len(slopes), 36)
+        for f in slopes:
+            with self.subTest(frame=f['id']):
+                source = provenance[f['id']]
+                hx, hy = f['hotspot']
+                geometry = source['geometry_reference']
+                self.assertEqual(f['hotspot'], geometry['hotspot'])
+                angle = math.radians({'up45': 45, 'steep': 90, 'inverted': 135}[f['angle_set']])
+                with Image.open(art / f['file']) as im:
+                    self.assertEqual(list(im.size), geometry['size'])
+                    support = max((x-hx)*math.sin(angle) + (y-hy)*math.cos(angle)
+                                  for y in range(im.height) for x in range(im.width)
+                                  if im.getpixel((x, y)))
+                self.assertLessEqual(support, source['native_support'] + 0.00001)
+                self.assertLessEqual(source['native_support'] - support, 0.71)

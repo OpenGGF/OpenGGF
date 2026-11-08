@@ -10,14 +10,58 @@
       "prompt": "Use case: style-transfer. Draw ONE original 16-bit pixel sprite of MICA the jade pangolin on transparent background. Image 1 is this frame's stock native pose: match its exact stride phase, limb/boot positions, rotation, framing and silhouette size, redrawing all anatomy as MICA; never recolour Sonic. Image 2 is MICA concept (jade form). Images 3/4 are approved flat WALK and RUN style anchors. MICA: rounded overlapping jade pangolin scales, small round ears, long tapered scaled tail, cream muzzle/belly, white gloves, coral hiking boots with tan lug soles. No Sonic spines, ears, face or shoes. Frame walk-steep-00: 90-degree wall run, head left and feet right. Keep the native rotated pose, do NOT turn upright. Keep the native support/lift legs distinct and match the extended boot angles precisely. New drawing consistent with the flat pilot, compact crisp pixel clusters, dark native one-pixel outline, restrained scale highlights. One character only; no ground, shadow, text, grid or extra frames.\n\nHead correction prompt:\nEdit this ORIGINAL MICA pangolin pixel sprite to match its native pose reference. Input 1 is MICA drawing; input 2 is the native 8x pose guide; input 3 MICA concept; input 4 approved flat pixel style. Change only the head orientation and neck join. MICA's muzzle, nose and gaze must point UPPER RIGHT, toward 1 o'clock, exactly as the native reference's face. Current face points left/down incorrectly. Keep head on the left of the hips, and keep the legs and boots on the right in their exact current stride/rotation, including coral speed arcs if present. Preserve the full body orientation, framing, silhouette size, tail, glove positions, palette/style, overlapping round jade pangolin scales, white gloves, coral hiking boots, small round ears. Only turn the head within its existing place to look upward/right toward travel direction. Do not rotate or stand the body upright. No hedgehog spines, no Sonic face or shoes. Transparent background; one sprite; no ground, labels or added elements. Frame walk-steep-00.",
       "raw_sha256": "51d6efa97522cb1ed0795515dc1765871cc39bbae4596b4d4c3618084f9c0e14",
       "size": [
-        40,
-        40
+        39,
+        26
       ],
       "hotspot": [
-        21,
-        16
+        19,
+        13
       ],
-      "reduction": "largest alpha component; Lanczos to existing box; fixed palette indices; inside outline; support normalization (at most 10% shrink around unchanged hotspot or transparent right padding)"
+      "reduction": "largest alpha component; Lanczos to existing box; fixed palette indices; inside outline; support normalization (at most 10% shrink around unchanged hotspot or transparent right padding)",
+      "finish": {
+        "reference": {
+          "id": "walk-steep-00",
+          "game": "S2",
+          "mapping": 31,
+          "label": "Map_Sonic_052A",
+          "size": [
+            39,
+            26
+          ],
+          "hotspot": [
+            19,
+            13
+          ]
+        },
+        "geometry_reference": {
+          "size": [
+            39,
+            26
+          ],
+          "hotspot": [
+            19,
+            13
+          ]
+        },
+        "native_size": [
+          39,
+          26
+        ],
+        "previous_size": [
+          40,
+          40
+        ],
+        "previous_hotspot": [
+          21,
+          16
+        ],
+        "hotspot": [
+          19,
+          13
+        ],
+        "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
+        "native_support": 19.0
+      }
     },
     {
       "id": "walk-steep-01",
@@ -27,13 +71,57 @@
       "raw_sha256": "58a95316eba52513809f4e1b992beb4215be32e238c8346d069c06c52eab01d6",
       "size": [
         40,
-        30
+        29
       ],
       "hotspot": [
-        21,
+        20,
         14
       ],
-      "reduction": "largest alpha component; Lanczos to existing box; fixed palette indices; inside outline; support normalization (at most 10% shrink around unchanged hotspot or transparent right padding)"
+      "reduction": "largest alpha component; Lanczos to existing box; fixed palette indices; inside outline; support normalization (at most 10% shrink around unchanged hotspot or transparent right padding)",
+      "finish": {
+        "reference": {
+          "id": "walk-steep-01",
+          "game": "S2",
+          "mapping": 32,
+          "label": "Map_Sonic_0544",
+          "size": [
+            40,
+            29
+          ],
+          "hotspot": [
+            20,
+            14
+          ]
+        },
+        "geometry_reference": {
+          "size": [
+            40,
+            29
+          ],
+          "hotspot": [
+            20,
+            14
+          ]
+        },
+        "native_size": [
+          40,
+          29
+        ],
+        "previous_size": [
+          40,
+          30
+        ],
+        "previous_hotspot": [
+          21,
+          14
+        ],
+        "hotspot": [
+          20,
+          14
+        ],
+        "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
+        "native_support": 19.0
+      }
     },
     {
       "id": "walk-steep-02",
@@ -47,9 +135,53 @@
       ],
       "hotspot": [
         21,
-        14
+        16
       ],
-      "reduction": "largest alpha component; Lanczos to existing box; fixed palette indices; inside outline; support normalization (at most 10% shrink around unchanged hotspot or transparent right padding)"
+      "reduction": "largest alpha component; Lanczos to existing box; fixed palette indices; inside outline; support normalization (at most 10% shrink around unchanged hotspot or transparent right padding)",
+      "finish": {
+        "reference": {
+          "id": "walk-steep-02",
+          "game": "S2",
+          "mapping": 33,
+          "label": "Map_Sonic_0556",
+          "size": [
+            40,
+            39
+          ],
+          "hotspot": [
+            21,
+            20
+          ]
+        },
+        "geometry_reference": {
+          "size": [
+            40,
+            30
+          ],
+          "hotspot": [
+            21,
+            16
+          ]
+        },
+        "native_size": [
+          40,
+          30
+        ],
+        "previous_size": [
+          40,
+          30
+        ],
+        "previous_hotspot": [
+          21,
+          14
+        ],
+        "hotspot": [
+          21,
+          16
+        ],
+        "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
+        "native_support": 18.0
+      }
     },
     {
       "id": "walk-steep-03",
@@ -58,14 +190,58 @@
       "prompt": "Use case: style-transfer. Draw ONE original 16-bit pixel sprite of MICA the jade pangolin on transparent background. Image 1 is this frame's stock native pose: match its exact stride phase, limb/boot positions, rotation, framing and silhouette size, redrawing all anatomy as MICA; never recolour Sonic. Image 2 is MICA concept (jade form). Images 3/4 are approved flat WALK and RUN style anchors. MICA: rounded overlapping jade pangolin scales, small round ears, long tapered scaled tail, cream muzzle/belly, white gloves, coral hiking boots with tan lug soles. No Sonic spines, ears, face or shoes. Frame walk-steep-03: 90-degree wall run, head left and feet right. Keep the native rotated pose, do NOT turn upright. Keep the native support/lift legs distinct and match the extended boot angles precisely. New drawing consistent with the flat pilot, compact crisp pixel clusters, dark native one-pixel outline, restrained scale highlights. One character only; no ground, shadow, text, grid or extra frames.",
       "raw_sha256": "0de06fee89580b9bf7714b25ae19369369d38b121fc86c30892b375784fc46aa",
       "size": [
-        40,
-        42
+        39,
+        39
       ],
       "hotspot": [
-        21,
-        18
+        20,
+        20
       ],
-      "reduction": "largest alpha component; Lanczos to existing box; fixed palette indices; inside outline; support normalization (at most 10% shrink around unchanged hotspot or transparent right padding)"
+      "reduction": "largest alpha component; Lanczos to existing box; fixed palette indices; inside outline; support normalization (at most 10% shrink around unchanged hotspot or transparent right padding)",
+      "finish": {
+        "reference": {
+          "id": "walk-steep-03",
+          "game": "S2",
+          "mapping": 34,
+          "label": "Map_Sonic_0570",
+          "size": [
+            39,
+            39
+          ],
+          "hotspot": [
+            20,
+            20
+          ]
+        },
+        "geometry_reference": {
+          "size": [
+            39,
+            39
+          ],
+          "hotspot": [
+            20,
+            20
+          ]
+        },
+        "native_size": [
+          39,
+          39
+        ],
+        "previous_size": [
+          40,
+          42
+        ],
+        "previous_hotspot": [
+          21,
+          18
+        ],
+        "hotspot": [
+          20,
+          20
+        ],
+        "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
+        "native_support": 18.0
+      }
     },
     {
       "id": "walk-steep-04",
@@ -74,14 +250,58 @@
       "prompt": "Use case: style-transfer. Draw ONE original 16-bit pixel sprite of MICA the jade pangolin on transparent background. Image 1 is this frame's stock native pose: match its exact stride phase, limb/boot positions, rotation, framing and silhouette size, redrawing all anatomy as MICA; never recolour Sonic. Image 2 is MICA concept (jade form). Images 3/4 are approved flat WALK and RUN style anchors. MICA: rounded overlapping jade pangolin scales, small round ears, long tapered scaled tail, cream muzzle/belly, white gloves, coral hiking boots with tan lug soles. No Sonic spines, ears, face or shoes. Frame walk-steep-04: 90-degree wall run, head left and feet right. Keep the native rotated pose, do NOT turn upright. Keep the native support/lift legs distinct and match the extended boot angles precisely. New drawing consistent with the flat pilot, compact crisp pixel clusters, dark native one-pixel outline, restrained scale highlights. One character only; no ground, shadow, text, grid or extra frames.\n\nHead correction prompt:\nEdit this ORIGINAL MICA pangolin pixel sprite to match its native pose reference. Input 1 is MICA drawing; input 2 is the native 8x pose guide; input 3 MICA concept; input 4 approved flat pixel style. Change only the head orientation and neck join. MICA's muzzle, nose and gaze must point UPPER RIGHT, toward 1 o'clock, exactly as the native reference's face. Current face points left/down incorrectly. Keep head on the left of the hips, and keep the legs and boots on the right in their exact current stride/rotation, including coral speed arcs if present. Preserve the full body orientation, framing, silhouette size, tail, glove positions, palette/style, overlapping round jade pangolin scales, white gloves, coral hiking boots, small round ears. Only turn the head within its existing place to look upward/right toward travel direction. Do not rotate or stand the body upright. No hedgehog spines, no Sonic face or shoes. Transparent background; one sprite; no ground, labels or added elements. Frame walk-steep-04.",
       "raw_sha256": "607a7e3860a4bbdd2855f5b2a99c1f2f42ce0dffbf47b7084d7172fa0be0486d",
       "size": [
-        40,
-        38
+        39,
+        26
       ],
       "hotspot": [
-        21,
-        16
+        19,
+        13
       ],
-      "reduction": "largest alpha component; Lanczos to existing box; fixed palette indices; inside outline; support normalization (at most 10% shrink around unchanged hotspot or transparent right padding)"
+      "reduction": "largest alpha component; Lanczos to existing box; fixed palette indices; inside outline; support normalization (at most 10% shrink around unchanged hotspot or transparent right padding)",
+      "finish": {
+        "reference": {
+          "id": "walk-steep-04",
+          "game": "S2",
+          "mapping": 35,
+          "label": "Map_Sonic_058A",
+          "size": [
+            39,
+            26
+          ],
+          "hotspot": [
+            19,
+            13
+          ]
+        },
+        "geometry_reference": {
+          "size": [
+            39,
+            26
+          ],
+          "hotspot": [
+            19,
+            13
+          ]
+        },
+        "native_size": [
+          39,
+          26
+        ],
+        "previous_size": [
+          40,
+          38
+        ],
+        "previous_hotspot": [
+          21,
+          16
+        ],
+        "hotspot": [
+          19,
+          13
+        ],
+        "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
+        "native_support": 19.0
+      }
     },
     {
       "id": "walk-steep-05",
@@ -91,13 +311,57 @@
       "raw_sha256": "6a32ed6d0975e8249af40c4d8068392c9a7256e89b92be4320e530cb238b577b",
       "size": [
         40,
-        30
+        28
       ],
       "hotspot": [
-        21,
+        20,
         14
       ],
-      "reduction": "largest alpha component; Lanczos to existing box; fixed palette indices; inside outline; support normalization (at most 10% shrink around unchanged hotspot or transparent right padding)"
+      "reduction": "largest alpha component; Lanczos to existing box; fixed palette indices; inside outline; support normalization (at most 10% shrink around unchanged hotspot or transparent right padding)",
+      "finish": {
+        "reference": {
+          "id": "walk-steep-05",
+          "game": "S2",
+          "mapping": 36,
+          "label": "Map_Sonic_05A4",
+          "size": [
+            40,
+            28
+          ],
+          "hotspot": [
+            20,
+            14
+          ]
+        },
+        "geometry_reference": {
+          "size": [
+            40,
+            28
+          ],
+          "hotspot": [
+            20,
+            14
+          ]
+        },
+        "native_size": [
+          40,
+          28
+        ],
+        "previous_size": [
+          40,
+          30
+        ],
+        "previous_hotspot": [
+          21,
+          14
+        ],
+        "hotspot": [
+          20,
+          14
+        ],
+        "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
+        "native_support": 19.0
+      }
     },
     {
       "id": "walk-steep-06",
@@ -106,14 +370,58 @@
       "prompt": "Use case: style-transfer. Draw ONE original 16-bit pixel sprite of MICA the jade pangolin on transparent background. Image 1 is this frame's stock native pose: match its exact stride phase, limb/boot positions, rotation, framing and silhouette size, redrawing all anatomy as MICA; never recolour Sonic. Image 2 is MICA concept (jade form). Images 3/4 are approved flat WALK and RUN style anchors. MICA: rounded overlapping jade pangolin scales, small round ears, long tapered scaled tail, cream muzzle/belly, white gloves, coral hiking boots with tan lug soles. No Sonic spines, ears, face or shoes. Frame walk-steep-06: 90-degree wall run, head left and feet right. Keep the native rotated pose, do NOT turn upright. Keep the native support/lift legs distinct and match the extended boot angles precisely. New drawing consistent with the flat pilot, compact crisp pixel clusters, dark native one-pixel outline, restrained scale highlights. One character only; no ground, shadow, text, grid or extra frames.",
       "raw_sha256": "6ce1385db66c10a3b7b044624fa476c6a07da65601aecc2960743aa1e8b41ecc",
       "size": [
-        40,
+        38,
         30
       ],
       "hotspot": [
         21,
-        14
+        15
       ],
-      "reduction": "largest alpha component; Lanczos to existing box; fixed palette indices; inside outline; support normalization (at most 10% shrink around unchanged hotspot or transparent right padding)"
+      "reduction": "largest alpha component; Lanczos to existing box; fixed palette indices; inside outline; support normalization (at most 10% shrink around unchanged hotspot or transparent right padding)",
+      "finish": {
+        "reference": {
+          "id": "walk-steep-06",
+          "game": "S2",
+          "mapping": 29,
+          "label": "Map_Sonic_04F6",
+          "size": [
+            38,
+            40
+          ],
+          "hotspot": [
+            21,
+            20
+          ]
+        },
+        "geometry_reference": {
+          "size": [
+            38,
+            30
+          ],
+          "hotspot": [
+            21,
+            15
+          ]
+        },
+        "native_size": [
+          38,
+          30
+        ],
+        "previous_size": [
+          40,
+          30
+        ],
+        "previous_hotspot": [
+          21,
+          14
+        ],
+        "hotspot": [
+          21,
+          15
+        ],
+        "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
+        "native_support": 16.0
+      }
     },
     {
       "id": "walk-steep-07",
@@ -122,14 +430,58 @@
       "prompt": "Use case: style-transfer. Draw ONE original 16-bit pixel sprite of MICA the jade pangolin on transparent background. Image 1 is this frame's stock native pose: match its exact stride phase, limb/boot positions, rotation, framing and silhouette size, redrawing all anatomy as MICA; never recolour Sonic. Image 2 is MICA concept (jade form). Images 3/4 are approved flat WALK and RUN style anchors. MICA: rounded overlapping jade pangolin scales, small round ears, long tapered scaled tail, cream muzzle/belly, white gloves, coral hiking boots with tan lug soles. No Sonic spines, ears, face or shoes. Frame walk-steep-07: 90-degree wall run, head left and feet right. Keep the native rotated pose, do NOT turn upright. Keep the native support/lift legs distinct and match the extended boot angles precisely. New drawing consistent with the flat pilot, compact crisp pixel clusters, dark native one-pixel outline, restrained scale highlights. One character only; no ground, shadow, text, grid or extra frames.",
       "raw_sha256": "6d2bfcac7de14c8bb26d567eecfa5b65efaf9dcdbfb251645af717598203f5e2",
       "size": [
-        40,
-        42
+        39,
+        39
       ],
       "hotspot": [
-        21,
-        18
+        20,
+        20
       ],
-      "reduction": "largest alpha component; Lanczos to existing box; fixed palette indices; inside outline; support normalization (at most 10% shrink around unchanged hotspot or transparent right padding)"
+      "reduction": "largest alpha component; Lanczos to existing box; fixed palette indices; inside outline; support normalization (at most 10% shrink around unchanged hotspot or transparent right padding)",
+      "finish": {
+        "reference": {
+          "id": "walk-steep-07",
+          "game": "S2",
+          "mapping": 30,
+          "label": "Map_Sonic_0510",
+          "size": [
+            39,
+            39
+          ],
+          "hotspot": [
+            20,
+            20
+          ]
+        },
+        "geometry_reference": {
+          "size": [
+            39,
+            39
+          ],
+          "hotspot": [
+            20,
+            20
+          ]
+        },
+        "native_size": [
+          39,
+          39
+        ],
+        "previous_size": [
+          40,
+          42
+        ],
+        "previous_hotspot": [
+          21,
+          18
+        ],
+        "hotspot": [
+          20,
+          20
+        ],
+        "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
+        "native_support": 18.0
+      }
     }
   ]
 }

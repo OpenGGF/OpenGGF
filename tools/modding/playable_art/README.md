@@ -319,3 +319,36 @@ The native boxes/hotspots supersede the earlier art anchors by owner direction.
 obligations. This preserves IDs, order, script timing and all shared palette
 indices; slope rows and PNGs are unchanged. Palette/ink verification checks the
 new recorded native geometry instead of the historical standing/29x29 rules.
+
+## Native-pose finishing checkpoint (2026-11-08)
+
+The 36 slope recipes now use the corresponding S2 phase's native canvas and
+hotspot, with integer contour/sole edits instead of another resize. Export still
+removes transparent margins; `native-pose-core.json` records both the full native
+reference and the resulting crop geometry. Each slope provenance file retains
+its original prompt/hash and records the finish separately. `native_support` is
+the furthest opaque native pixel along the slope normal, measured relative to
+the native hotspot. The Python assembly regression checks every slope's exported
+hotspot and support (no crossing; at most one diagonal pixel of clearance).
+
+The S3K `native-pose.json` rows contain the transformation cleanup: flat gold
+scale clusters, connected cream muzzle/eye and coral boots. The core recipe
+contains the rounded `homing_dive-02` shell rows. Both rebuild without raw GPT
+outputs. Assembly remains 98 frames / 18 animations / maximum 36 tiles per frame.
+
+Headless review outputs are at `/tmp/mica-art-final-20261108/` (a symlink to this
+task's disk-backed scratch directory because the shared tmpfs filled). GHZ1,
+EHZ1 and AIZ1 title-first clips show movement; additional clips show powered
+strikes, pushing, springs and a positioned AIZ vine. This checkpoint does **not**
+certify all requested states: the AIZ vine's object-owned native `$90/$91`
+mapping writes select MICA's inverted-walk aliases instead of HANG, and the
+attempted EHZ spindash inputs jumped without charging. These clips document
+remaining behavior, not successful hang/spindash pose acceptance. Tight native
+boxes also leave truncated hood/tail contours in some steep phases; those need
+a deliberate redraw rather than further cropping or scaling.
+
+Validation: Python discovery 44 tests passed; native reference tests 3 passed;
+core palette/geometry/regeneration and S3K 25-frame piece/palette verification
+passed; queued `TestMicaCharacterIntegration` 18 passed, zero skips with explicit
+verified ROM paths and surfaceless EGL. The first `surefire:test` attempt omitted
+ROM properties (four path-setup errors); the explicit-path rerun passed.
