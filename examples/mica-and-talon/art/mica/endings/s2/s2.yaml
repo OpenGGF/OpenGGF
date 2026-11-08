@@ -5,7 +5,7 @@
   "palette": "../../palette.yaml",
   "gilded": "../../presentation/gilded.yaml",
   "tick_rate": 60,
-  "palette_binding": "Keep all MICA indices: photos/normal leap/Float2 on line 0; Tornado rider line 1 shared with native Tails pilot requires engine palette arbitration or per-piece reassignment. Plane line 0 remains ROM-owned; PNGs for 7..11 are character-only transparent overlays. Super stores unchanged indices; install Gilded s2 cycle on line 0. Photo backgrounds/companions redrawn in shared MICA palette; reserve entire panel line 0 and rewrite native tile palette attributes.",
+  "palette_binding": "Keep all MICA indices: photos/normal leap/Float2 on line 0; Tornado rider line 1 shared with native Tails pilot requires engine palette arbitration or per-piece reassignment. Plane line 0 remains ROM-owned; PNGs for 7..11 are character-only transparent overlays. Super stores unchanged indices with the first Gilded s2 palette for static viewing; install the full s2 cycle on line 0. Photo backgrounds/companions redrawn in shared MICA palette; reserve entire panel line 0 and rewrite native tile palette attributes.",
   "layout": "Native piece coordinates, dimensions, flips and priorities. Reallocate original tiles into per-frame banks; do not retain inter-frame source aliases. Full composite bounds include blank plane area in character overlays.",
   "timing": {
     "s2-photo-1": "Static 96x72 panel; native fade loop waits $180 NTSC/$100 PAL then $80; fourth panel shares same loop.",
@@ -944,7 +944,8 @@
         ]
       ],
       "native_composite_pieces": null,
-      "group": "s2_super_depart"
+      "group": "s2_super_depart",
+      "form": "gilded"
     },
     {
       "id": 19,
@@ -980,7 +981,8 @@
         ]
       ],
       "native_composite_pieces": null,
-      "group": "s2_super_depart"
+      "group": "s2_super_depart",
+      "form": "gilded"
     },
     {
       "id": 20,
@@ -1016,7 +1018,8 @@
         ]
       ],
       "native_composite_pieces": null,
-      "group": "s2_super_depart"
+      "group": "s2_super_depart",
+      "form": "gilded"
     },
     {
       "id": 21,
@@ -1052,7 +1055,8 @@
         ]
       ],
       "native_composite_pieces": null,
-      "group": "s2_super_depart"
+      "group": "s2_super_depart",
+      "form": "gilded"
     },
     {
       "id": 22,
@@ -1088,7 +1092,8 @@
         ]
       ],
       "native_composite_pieces": null,
-      "group": "s2_super_depart"
+      "group": "s2_super_depart",
+      "form": "gilded"
     },
     {
       "id": 23,
@@ -1278,7 +1283,8 @@
         ]
       ],
       "native_composite_pieces": null,
-      "group": "s2_super_hero"
+      "group": "s2_super_hero",
+      "form": "gilded"
     },
     {
       "id": 84,

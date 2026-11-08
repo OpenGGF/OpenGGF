@@ -172,7 +172,8 @@ def review(dest,key,frames,refs,folder,colors=None):
 def verify(folder,m):
  for f in m['frames']:
   im=Image.open(folder/f['file']);assert im.mode=='P' and list(im.size)==f['dimensions'];assert im.info['transparency']==0
-  assert im.getpalette()[:48]==sum(COLORS,[]);assert max(im.get_flattened_data())<16;assert im.getbbox()
+  colors=json.loads((ART/'presentation/gilded.yaml').read_text())['cycles']['s2']['frames'][0] if f.get('form')=='gilded' else COLORS
+  assert im.getpalette()[:48]==sum(colors,[]);assert max(im.get_flattened_data())<16;assert im.getbbox()
   if 'pieces' in f:
    assert mask_layout(im,f['pieces'],f['bounds_px']).tobytes()==im.tobytes(),f['id']
  print(folder.name,len(m['frames']),'indexed palette, alpha, dimensions and piece coverage PASS')

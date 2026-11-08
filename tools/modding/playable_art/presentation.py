@@ -171,7 +171,8 @@ def glyph(letter):
 
 def gilded():
     levels=[0,36,73,109,146,182,219,255]
-    gold=[[109,73,0],[146,109,0],[182,146,36],[219,182,73],[255,219,146]]
+    # Warm amber shadows, saturated yellow midtones and cream specular light.
+    gold=[[182,73,0],[255,146,0],[255,219,0],[255,255,73],[255,255,219]]
     frames=[]
     for phase in [0,1,2,3,4,3,2,1,0]:
         table=[c[:] for c in COLORS]
@@ -181,13 +182,15 @@ def gilded():
                 table[idx]=[levels[min(7,levels.index(v)+1)] for v in gold[n]]
         frames.append(table)
     fade=[]
+    # Preserve the approved six native fade tables, including their endpoint.
+    fade_target=[[146,109,36],[146,109,0],[182,146,36],[219,182,73],[255,219,146]]
     for step in range(6):
         table=[c[:] for c in COLORS]
         for idx in range(2,7):
-            table[idx]=[min(levels,key=lambda v:abs(v-(a+(b-a)*step/5))) for a,b in zip(COLORS[idx],frames[0][idx])]
+            table[idx]=[min(levels,key=lambda v:abs(v-(a+(b-a)*step/5))) for a,b in zip(COLORS[idx],fade_target[idx-2])]
         fade.append(table)
     return dict(format='openggf-mica-gilded-1',palette='../palette.yaml',changed_indices=list(range(2,7)),
-        note='Dry Super only. Full 16-entry index tables; all other slots preserved. No Hyper or underwater claim.',
+        note='Dry Super only. Full 16-entry index tables; all other slots preserved. No Hyper or underwater claim. Warm gold steady ramp; original fade tables retained.',
         fade_frames=fade,cycles={
         's2':dict(native_source_label='PalCycle_SuperSonic.normal / CyclingPal_SSTransformation',source='docs/s2disasm/s2.asm',
             native_offsets=list(range(0x30,0x78,8)),fix_bugs=0,frame_count=9,ticks_per_frame=8,fade_ticks_per_frame=4,frames=frames),

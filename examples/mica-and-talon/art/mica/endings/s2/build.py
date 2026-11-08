@@ -230,8 +230,10 @@ def generate(group,inv):
     elif group=='normal':im=normal_leap(i,(w,h))
     elif group=='super':im=super_flight(i,(w,h))
     else:im=floating(i-84,(w,h))
-    im=a.mask_layout(im,char,f['bounds_px']);file=f'{group}-{i:02x}.png';im.save(HERE/file,bits=4,transparency=0)
-    frames.append(dict(id=i,file=file,native_source_label=f['label'],native_art_label=inv['frame_sets'][key]['native_art'],dimensions=[w,h],bounds_px=f['bounds_px'],hotspot=[-x,-y],palette_line=1 if key=='s2_normal_turn' else 0,pieces=char,native_composite_pieces=pieces if key=='s2_normal_turn' else None,group=key))
+    im=a.mask_layout(im,char,f['bounds_px'])
+    if group=='super':im.putpalette(sum(json.loads((ART/'presentation/gilded.yaml').read_text())['cycles']['s2']['frames'][0],[])+[0]*720)
+    file=f'{group}-{i:02x}.png';im.save(HERE/file,bits=4,transparency=0)
+    frames.append(dict(id=i,file=file,native_source_label=f['label'],native_art_label=inv['frame_sets'][key]['native_art'],dimensions=[w,h],bounds_px=f['bounds_px'],hotspot=[-x,-y],palette_line=1 if key=='s2_normal_turn' else 0,pieces=char,native_composite_pieces=pieces if key=='s2_normal_turn' else None,group=key,**({'form':'gilded'} if group=='super' else {})))
  if group=='float':
   dp=(ROOT/'docs/s2disasm/mappings/spriteDPLC/Sonic.asm').read_text()
   for f in frames:
@@ -242,9 +244,10 @@ def generate(group,inv):
 
 def main():
  p=argparse.ArgumentParser();p.add_argument('--group',choices=['photos','normal','super','float','all'],default='all');p.add_argument('--review',type=Path);args=p.parse_args();inv=__import__('yaml').safe_load((ART/'endings/endings-inventory.yaml').read_text())
- dest=HERE/'s2.yaml';m=json.loads(dest.read_text()) if dest.exists() else dict(format='openggf-ending-art-handoff-1',game='s2',native_source_label='ArtNem_EndingPics / ArtNem_EndingSonic / ArtNem_EndingSuperSonic / SonAni_Float2',palette='../../palette.yaml',gilded='../../presentation/gilded.yaml',tick_rate=60,palette_binding='Keep all MICA indices: photos/normal leap/Float2 on line 0; Tornado rider line 1 shared with native Tails pilot requires engine palette arbitration or per-piece reassignment. Plane line 0 remains ROM-owned; PNGs for 7..11 are character-only transparent overlays. Super stores unchanged indices; install Gilded s2 cycle on line 0. Photo backgrounds/companions redrawn in shared MICA palette; reserve entire panel line 0 and rewrite native tile palette attributes.',layout='Native piece coordinates, dimensions, flips and priorities. Reallocate original tiles into per-frame banks; do not retain inter-frame source aliases. Full composite bounds include blank plane area in character overlays.',timing={s['id']:s['animation_timing'] for s in inv['sequences'] if s['game']=='s2'},groups={})
+ dest=HERE/'s2.yaml';m=json.loads(dest.read_text()) if dest.exists() else dict(format='openggf-ending-art-handoff-1',game='s2',native_source_label='ArtNem_EndingPics / ArtNem_EndingSonic / ArtNem_EndingSuperSonic / SonAni_Float2',palette='../../palette.yaml',gilded='../../presentation/gilded.yaml',tick_rate=60,palette_binding='Keep all MICA indices: photos/normal leap/Float2 on line 0; Tornado rider line 1 shared with native Tails pilot requires engine palette arbitration or per-piece reassignment. Plane line 0 remains ROM-owned; PNGs for 7..11 are character-only transparent overlays. Super stores unchanged indices with the first Gilded s2 palette for static viewing; install the full s2 cycle on line 0. Photo backgrounds/companions redrawn in shared MICA palette; reserve entire panel line 0 and rewrite native tile palette attributes.',layout='Native piece coordinates, dimensions, flips and priorities. Reallocate original tiles into per-frame banks; do not retain inter-frame source aliases. Full composite bounds include blank plane area in character overlays.',timing={s['id']:s['animation_timing'] for s in inv['sequences'] if s['game']=='s2'},groups={})
+ m['palette_binding']=m['palette_binding'].replace('Super stores unchanged indices; install Gilded s2 cycle on line 0.', 'Super stores unchanged indices with the first Gilded s2 palette for static viewing; install the full s2 cycle on line 0.')
  for group in (['photos','normal','super','float'] if args.group=='all' else [args.group]):
-  fs=generate(group,inv);m['groups'][group]=[f['id'] for f in fs];old=[f for f in m.get('frames',[]) if f['id'] not in m['groups'][group]];m['frames']=old+fs;a.verify(HERE,dict(frames=fs))
+  fs=generate(group,inv);m['groups'][group]=[f['id'] for f in fs];updates={f['id']:f for f in fs};old=m.get('frames',[]);m['frames']=[updates.pop(f['id'],f) for f in old]+list(updates.values());a.verify(HERE,dict(frames=fs))
   if args.review:
    args.review.mkdir(parents=True,exist_ok=True)
    refs=float_refs(inv) if group=='float' else r.refs('s2')
