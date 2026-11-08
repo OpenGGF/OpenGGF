@@ -29,14 +29,17 @@ public final class StageplayRouteTool {
         if (code != 0) System.exit(code);
     }
     public static int execute(String[] args, PrintStream output) {
+        if (args.length > 0 && Set.of("--replay-native-route", "--native-route", "--competition-entry").contains(args[0])) {
+            try {
+                return args[0].equals("--replay-native-route") ? replayNative(args, output) : nativeRoute(args, output);
+            } catch (IOException failure) { throw new UncheckedIOException(failure); }
+        }
         try {
             if (Arrays.equals(args,new String[]{"--worker"})) {
                 var result = worker();
                 output.println(StageplayRouteProtocol.encodeResult(result)); output.flush();
                 return 0;
             }
-            if(args.length>0 && args[0].equals("--replay-native-route")) return replayNative(args,output);
-            if (args.length > 0 && (args[0].equals("--native-route") || args[0].equals("--competition-entry"))) return nativeRoute(args, output);
             var flags = flags(args);
             Path destination=Path.of(required(flags,"out")).toAbsolutePath().normalize();
             if(java.nio.file.Files.exists(destination,java.nio.file.LinkOption.NOFOLLOW_LINKS)) throw new IOException("Choose a new route output; existing files are never overwritten");

@@ -165,7 +165,7 @@ public class BreakableBlockObjectInstance extends BoxObjectInstance
         Sonic2BreakIntoPieces.runFirstFragment(services(), firstFragment, vIntRunCount, null);
 
         // Mark this object as destroyed so it stops rendering/updating
-        setDestroyed(true);
+        com.openggf.level.objects.ObjectLifetimeOps.destroyLatched(this);
 
         LOGGER.fine(() -> String.format("Breakable block at (%d,%d) broken by player", spawn.x(), spawn.y()));
     }

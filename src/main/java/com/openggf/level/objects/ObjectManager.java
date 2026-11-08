@@ -3420,21 +3420,12 @@ public class ObjectManager {
      * explicit ROM reference X, defaulting to its centre-aligned {@code getX()}),
      * never a sprite top-left bound, so the window is not shifted by half-width.
      */
-    // MarkObjGone_P2 (s2.asm:30303-30324): unsigned word distances from both published coarse banks.
-    static boolean nativeRoutineOutOfRange(ObjectInstance instance, ObjectRoutineLifetime profile) {
-        if (profile == null || profile.tail(instance) != ObjectRoutineLifetime.Tail.MARK_OBJ_GONE_P1)
-            return false;
-        int x = instance.getX() & 0xFF00;
-        return ((x - profile.coarseCameraX(0)) & 0xFFFF) > 0x300
-                && ((x - profile.coarseCameraX(1)) & 0xFFFF) > 0x300;
-    }
-
     private boolean isObjectOutOfRange(ObjectInstance instance, ObjectSpawn spawn, int cameraX) {
         // Block retirement and routine-tail lifetime are independent authorities.
         if (competitionStreaming.active()) {
             var profile = com.openggf.game.session.WorldSessionPolicyAccess.getService(
                     objectServices.worldSession(), ObjectRoutineLifetime.class);
-            return nativeRoutineOutOfRange(instance, profile);
+            return ObjectRoutineLifetime.outOfRange(instance, profile);
         }
         if (stageplayActivation != null && objectCallbacks.call(instance, () -> stageplayActivation.keepsOutsideNativeView(instance, camera))) return false;
         int referenceX = outOfRangeReferenceX(instance, spawn);
@@ -3531,7 +3522,7 @@ public class ObjectManager {
         try {
             persistent = objectCallbacks.call(instance, instance::isPersistent);
         } catch (NullPointerException e) {
-            throw new IllegalStateException(describeCounterBasedUnloadObject(instance, spawn), e);
+            throw new IllegalStateException(objectCallbacks.describeCounterBasedUnloadObject(instance, spawn), e);
         }
         boolean outOfRange = objectCallbacks.call(instance, instance::usesCustomOutOfRangeCheck)
                 ? objectCallbacks.call(instance, () -> instance.isCustomOutOfRange(cameraX))
@@ -3590,34 +3581,10 @@ public class ObjectManager {
             // Use the object's explicit ROM reference X when provided.
             return objectCallbacks.call(instance, instance::getOutOfRangeReferenceX);
         } catch (NullPointerException e) {
-            throw new IllegalStateException(describeCounterBasedUnloadObject(instance, spawn), e);
+            throw new IllegalStateException(objectCallbacks.describeCounterBasedUnloadObject(instance, spawn), e);
         }
     }
 
-    private String describeCounterBasedUnloadObject(ObjectInstance instance, ObjectSpawn spawn) {
-        StringBuilder sb = new StringBuilder("Counter-based out_of_range check failed for ");
-        sb.append(instance.getClass().getName());
-        if (instance instanceof AbstractObjectInstance aoi) {
-            sb.append(" slot=").append(objectCallbacks.call(instance, aoi::getSlotIndex));
-            sb.append(" name=").append(objectCallbacks.call(instance, aoi::getName));
-        }
-        sb.append(" managerSpawn=");
-        if (spawn == null) {
-            sb.append("null");
-        } else {
-            sb.append(String.format("0x%04X,0x%04X id=0x%02X",
-                    spawn.x() & 0xFFFF, spawn.y() & 0xFFFF, spawn.objectId() & 0xFF));
-        }
-        ObjectSpawn instanceSpawn = objectCallbacks.call(instance, instance::getSpawn);
-        sb.append(" instanceSpawn=");
-        if (instanceSpawn == null) {
-            sb.append("null");
-        } else {
-            sb.append(String.format("0x%04X,0x%04X id=0x%02X",
-                    instanceSpawn.x() & 0xFFFF, instanceSpawn.y() & 0xFFFF, instanceSpawn.objectId() & 0xFF));
-        }
-        return sb.toString();
-    }
 
     /**
      * Phase 2 of spawn window sync: load new objects from the ObjectPlacementController window.

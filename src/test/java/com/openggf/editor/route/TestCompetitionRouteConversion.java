@@ -1,4 +1,5 @@
 package com.openggf.editor.route;
+import com.openggf.route.RouteEditorFiles;
 
 import com.openggf.route.*;
 import org.junit.jupiter.api.Test;
@@ -120,7 +121,7 @@ class TestCompetitionRouteConversion {
         Files.writeString(root.resolve("first.script"),RouteFiles.scriptText(first));Files.writeString(root.resolve("later.script"),RouteFiles.scriptText(later));
         var start=new NativeFacts.NativeEntry("first.script",2,first.hash(),1,"first-ordinary-level-lfc-zero");
         var inlet=new NativeFacts.NativeInlet(2,new NativeFacts.NativeEntry("later.script",5,later.hash(),3,"first-ordinary-level-lfc-zero"));
-        var route=RouteArtifact.of(com.openggf.stageplay.route.StageplayCompetitionRouteHosts.launch(),tape,new Provenance("test","","",List.of()));
+        var route=RouteArtifact.of(com.openggf.tools.StageplayCompetitionRouteHosts.launch(),tape,new Provenance("test","","",List.of()));
         route=new RouteArtifact(route.manifest().withNativeFacts(new NativeFacts(Optional.of(start),List.of(),"",List.of(inlet))),tape);
         var expected=later.append(tape.slice(3,4));Path output=dir.resolve("later-export.bk2");
         RouteEditorFiles.export(route,folder.resolve("test.route.json"),output);
@@ -134,7 +135,7 @@ class TestCompetitionRouteConversion {
         var witness=RouteFiles.tapeFromScript("2 R / L+A\n");
         Path file=root.resolve("native.script"); Files.writeString(file,RouteFiles.scriptText(witness));
         var tape=RouteFiles.tapeFromScript("1 S\n2 L / R+B\n");
-        var launch=com.openggf.stageplay.route.StageplayCompetitionRouteHosts.launch();
+        var launch=com.openggf.tools.StageplayCompetitionRouteHosts.launch();
         var source=RouteArtifact.of(launch,tape,new Provenance("test","","",List.of()));
         var entry=new NativeFacts.NativeEntry("native.script",2,witness.hash(),1,"first-ordinary-level-lfc-zero");
         var route=new RouteArtifact(source.manifest().withNativeFacts(new NativeFacts(Optional.of(entry),List.of())),tape);

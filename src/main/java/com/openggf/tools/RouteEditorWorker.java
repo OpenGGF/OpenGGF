@@ -101,7 +101,7 @@ public final class RouteEditorWorker {
         switch (result) {
             case ReplayResult.Passed passed -> {
                 if (request.kind() == RouteEditorProtocol.Kind.SAVE) {
-                    var written = com.openggf.editor.route.RouteEditorFiles.save(request.target(), route, passed.evidence(), request.replace());
+                    var written = com.openggf.route.RouteEditorFiles.save(request.target(), route, passed.evidence(), request.replace());
                     output.println(RouteEditorProtocol.saved(written.manifest().toAbsolutePath()));
                 }
                 output.println(RouteEditorProtocol.result(new RouteEditorProtocol.Result(
@@ -256,7 +256,7 @@ public final class RouteEditorWorker {
                 public com.openggf.route.ReplayWorld openColdReplay(com.openggf.route.LaunchContract launch) { throw unavailable(); }
                 public String environment() { return "S2 unavailable"; }
             };
-            return new com.openggf.stageplay.route.StageplayCompetitionRouteHosts(rom);
+            return new com.openggf.tools.StageplayCompetitionRouteHosts(rom);
         }
         return EngineRouteHosts.withRoms(request.roms());
     }

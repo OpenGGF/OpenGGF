@@ -545,7 +545,7 @@
   "tape" : {
     "script" : "ehz-tied-act-wins-special.script",
     "rows" : 18724,
-    "sha256" : "72cf8717aa6519becf4100e42e45deab96618a69fbb84b16845b637a338847d2"
+    "sha256" : "384c8e1b4c14c67757e230908e355e53ec928e8d5dcd5480c081277bdb50729b"
   },
   "provenance" : {
     "producer" : "RoutePlanner prefix-search/3 goal program",
@@ -556,14 +556,14 @@
   "qualification" : [ {
     "scope" : "ENGINE",
     "passed" : true,
-    "content" : "dc34f120c6be1ed23c33744be7f3a88b1ad2a0f3a73d20deecbf36fc463d5629",
-    "environment" : "openggf 0.8.prerelease-fb572165e-dirty stageplay-s2-competition-title/1",
+    "content" : "c91661a51bd98c02b01438c2b9b64ec13af88fda9709d03a46ada7d8a67d8d13",
+    "environment" : "openggf 0.8.prerelease-8711ae3cb-dirty stageplay-s2-competition-title/1",
     "rows" : 18724
   }, {
     "scope" : "BIZHAWK",
     "passed" : true,
-    "content" : "dc34f120c6be1ed23c33744be7f3a88b1ad2a0f3a73d20deecbf36fc463d5629",
-    "environment" : "BizHawk2.11/GPGX cold read-only required-goals movie a91f3f1b89ab0923a76cf6a76da87d0d1af5811bcec37494aea22d70caa1d47a; accepted comparison boundary null",
+    "content" : "c91661a51bd98c02b01438c2b9b64ec13af88fda9709d03a46ada7d8a67d8d13",
+    "environment" : "BizHawk2.11/GPGX cold read-only required-goals movie 2142adf36ff3dc7d11514259310576b1a1cc7a15973d94c2091bd77d73ff0a04; accepted comparison boundary null",
     "rows" : 18724,
     "coverage" : [ "ehz-act1-play", "ehz-act2-play", "tied-act-wins-to-competitive-special-stage" ]
   } ],
@@ -579,7 +579,7 @@
       "engineFromRows" : 10009,
       "movie" : "src/test/resources/routes/s2/competition/witnesses/ehz-act2-native-prefix.script",
       "prefixRows" : 10364,
-      "inputHash" : "4f13d68aab05c8164dab1d8eb45a79630ed46934baaff228d0b6865726df561e",
+      "inputHash" : "b3a5948dccabd7dd96a6fcc38bc281c02c37c380d6e26d8c847919b9a550d01b",
       "engineAnchorRows" : 10010,
       "anchorBoundary" : "first-ordinary-level-lfc-zero"
     } ],

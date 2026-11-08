@@ -19,7 +19,7 @@ final class Sonic2SmashableChain {
         if (roll) {
             short y = player.getCentreY();
             player.setRolling(true);
-            player.setCentreYPreserveSubpixel(y);
+            com.openggf.sprites.NativePositionOps.writeYPosPreserveSubpixel(player, y);
             if (bounce) player.setYSpeed((short)-0x300);
         }
         player.setAir(true);
@@ -36,7 +36,7 @@ final class Sonic2SmashableChain {
         int points = policy(services).incrementAndAward();
         var popup = ObjectConstructionContext.with(services, slot, () -> new PointsObjectInstance(
                 new ObjectSpawn(x,y,0x29,0,0,false,0), services, points));
-        manager.addDynamicObjectAtSlot(popup, slot);
+        ObjectLifetimeOps.addDynamicAtReservedSlot(manager, popup, slot);
         // This routine calls AddPoints, not AddPoints2, even for a P2 smash.
         var roster = com.openggf.game.competition.NativeCompetitionRoster.from(services.worldSession());
         (roster != null ? roster.gameState(0) : services.gameState()).addScore(points);

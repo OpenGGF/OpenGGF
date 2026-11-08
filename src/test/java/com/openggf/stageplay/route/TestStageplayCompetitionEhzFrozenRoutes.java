@@ -1,4 +1,5 @@
 package com.openggf.stageplay.route;
+import com.openggf.tools.StageplayCompetitionRouteHosts;
 
 import com.openggf.route.*;
 import com.openggf.tests.rules.RequiresRom;

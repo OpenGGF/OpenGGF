@@ -195,7 +195,7 @@ public class SmashableGroundObjectInstance extends BoxObjectInstance
         // loc_234A4 falls through into Obj2F_Fragment after the popup attempt
         // (s2.asm:49277-49300); a replacement at the current slot is not rescheduled.
         Sonic2BreakIntoPieces.runFirstFragment(services(), firstFragment, vIntRunCount, player);
-        setDestroyed(true);
+        com.openggf.level.objects.ObjectLifetimeOps.destroyLatched(this);
         LOGGER.fine(() -> String.format("Smashable ground at (%d,%d) destroyed (state %d)",
                 spawn.x(), spawn.y(), destructionState));
     }

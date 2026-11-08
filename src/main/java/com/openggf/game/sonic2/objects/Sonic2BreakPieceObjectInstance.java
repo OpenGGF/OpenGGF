@@ -70,7 +70,7 @@ public final class Sonic2BreakPieceObjectInstance extends AbstractObjectInstance
         yVelocity = (short) (yVelocity + gravity);
         boolean onScreen = firstUpdate ? birthOnScreen : isWithinSolidContactBounds();
         firstUpdate = false;
-        if (!onScreen) setDestroyed(true);
+        if (!onScreen) com.openggf.level.objects.ObjectLifetimeOps.destroyLatched(this);
     }
 
     @Override public int getX() { return (short) (subX >> 8); }
