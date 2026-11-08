@@ -775,7 +775,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
      * Mapping tile IDs are relative to ArtTile_Title_Card ($580).
      * Array index = tile_id + RESULTS_TILE_ADJUST (0x10).
      */
-    private void loadResultsScreenArt(Sonic1ObjectArt art) {
+    private void loadResultsScreenArt(Sonic1ObjectArt art) throws IOException {
         Pattern[] titleCardPatterns = art.loadNemesisPatterns(
                 Sonic1Constants.ART_NEM_TITLE_CARD_ADDR);
         if (titleCardPatterns.length == 0) {
@@ -816,7 +816,8 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
         copyResultsScoreDigitTiles(compositePatterns, hudScoreDigitsStartIndex);
 
         List<SpriteMappingFrame> mappings = Sonic1ResultsMappingLoader.load(romReader);
-        ObjectSpriteSheet sheet = new ObjectSpriteSheet(compositePatterns, mappings, 0, 1);
+        ObjectSpriteSheet sheet = Sonic1CharacterPresentation.results(GameServices.rom().getRom(),
+                compositePatterns, mappings, Sonic1CharacterPresentation.active(), 0);
         registerSheet(ObjectArtKeys.RESULTS, sheet);
 
         LOGGER.info("Results screen art loaded: " + totalSize + " composite patterns, "

@@ -7,6 +7,12 @@ import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.presentation.CharacterNameComposer;
 import com.openggf.level.Pattern;
 import java.io.IOException;
+import com.openggf.level.objects.ObjectSpriteSheet;
+import com.openggf.level.render.SpriteMappingFrame;
+import com.openggf.level.render.SpriteMappingPiece;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Map;
 
 /** S1-owned adapters from optional character art to native surface tile layouts. */
@@ -59,5 +65,37 @@ public final class Sonic1CharacterPresentation {
             }
         }
         return tiles;
+    }
+
+    /** Replace only SONIC's five native pieces; retain HAS and every other native piece. */
+    public static ObjectSpriteSheet results(Rom rom, Pattern[] patterns,
+            List<SpriteMappingFrame> frames,
+            CharacterPresentation presentation, int nameFrame) throws IOException {
+        var name = name(rom, presentation, CharacterPresentation.Style.RESULTS);
+        if (name == null || !name.complete() || name.image().height() > 16 || name.image().width() > 144)
+            return new ObjectSpriteSheet(patterns, frames, 0, 1);
+        var image = name.image();
+        var appended = CharacterNameComposer.tiles(new CharacterPresentation.Image(image.width(), 16,
+                padHeight(image, 16)));
+        Pattern[] combined = Arrays.copyOf(patterns, patterns.length + appended.length);
+        System.arraycopy(appended, 0, combined, patterns.length, appended.length);
+        var nativePieces = frames.get(nameFrame).pieces();
+        var last = nativePieces.get(4);
+        int right = last.xOffset() + last.widthTiles() * 8;
+        int columns = (image.width() + 7) / 8;
+        var pieces = new ArrayList<SpriteMappingPiece>();
+        for (int x = 0; x < columns; x += 4) {
+            pieces.add(new SpriteMappingPiece(
+                    right - image.width() + x * 8, last.yOffset(), Math.min(4, columns - x), 2,
+                    patterns.length + x * 2, false, false, last.paletteIndex(), last.priority()));
+        }
+        pieces.addAll(nativePieces.subList(5, nativePieces.size()));
+        var replaced = new ArrayList<>(frames);
+        replaced.set(nameFrame, new SpriteMappingFrame(pieces));
+        return new ObjectSpriteSheet(combined, replaced, 0, 1);
+    }
+
+    private static byte[] padHeight(CharacterPresentation.Image image, int height) {
+        return Arrays.copyOf(image.pixels(), image.width() * height);
     }
 }

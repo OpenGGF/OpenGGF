@@ -50,4 +50,32 @@ class TestSonic1CharacterPresentation {
         var result = Sonic1CharacterPresentation.hud(rom,nativeTiles,new CharacterPresentation("MICA"));
         for (int i=0;i<nativeTiles.length;i++) assertSame(nativeTiles[i],result[i]);
     }
+
+    @Test void actResultsReplaceOnlySonicWithNativeTitleLetters() throws Exception {
+        assertResultsName(0);
+    }
+    private void assertResultsName(int frameIndex) throws Exception {
+        Rom rom = rom();
+        var frames = Sonic1ResultsMappingLoader.load(com.openggf.data.RomByteReader.fromRom(rom));
+        var patterns = lives(rom);
+        var stock = Sonic1CharacterPresentation.results(rom,patterns,frames,null,frameIndex);
+        assertSame(patterns,stock.getPatterns());
+        for (int i=0;i<frames.size();i++) assertSame(frames.get(i),stock.getFrame(i));
+        var result = Sonic1CharacterPresentation.results(rom,patterns,frames,mica(),frameIndex);
+        var name = Sonic1CharacterPresentation.name(rom,mica(),Style.RESULTS);
+        assertEquals(Set.of('M','I','C','A'),name.nativeGlyphs());
+        assertTrue(name.supplementaryGlyphs().isEmpty());
+        assertTrue(name.complete());
+        var pieces = result.getFrame(frameIndex).pieces();
+        int columns = (name.image().width()+7)/8;
+        assertArrayEquals(name.image().pixels(), CharacterNameComposer.extract(result.getPatterns(),
+                patterns.length,columns,2,0,0,name.image().width(),16).pixels());
+        int generatedPieces = (columns+3)/4;
+        assertEquals(frames.get(frameIndex).pieces().subList(5,frames.get(frameIndex).pieces().size()),
+                pieces.subList(generatedPieces,pieces.size()));
+        var lastNative = frames.get(frameIndex).pieces().get(4);
+        assertEquals(lastNative.xOffset()+lastNative.widthTiles()*8-name.image().width(),pieces.getFirst().xOffset());
+        for (int i=0;i<frames.size();i++) if(i!=frameIndex) assertSame(frames.get(i),result.getFrame(i));
+        for (int i=0;i<patterns.length;i++) assertSame(patterns[i],result.getPatterns()[i]);
+    }
 }
