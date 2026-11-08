@@ -29,8 +29,7 @@ import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.game.sonic2.bumpers.CNZBumperDataLoader;
 import com.openggf.game.sonic2.bumpers.CNZBumperType;
 import com.openggf.game.sonic2.bumpers.CNZNativeBumperTable;
-import com.openggf.game.sonic2.competition.interlace.Sonic2InterlaceVram;
-import com.openggf.game.sonic2.competition.interlace.Sonic2InterlaceVramService;
+import com.openggf.game.sonic2.competition.view.Sonic2CompetitionArtResidency;
 import com.openggf.game.sonic2.competition.lifecycle.Sonic2CompetitionLifecycle;
 import com.openggf.game.sonic2.objects.Sonic2GameOverCardObjectInstance;
 import com.openggf.game.sonic2.resources.Sonic2PlcService;
@@ -72,6 +71,70 @@ class TestSonic2NativeCompetitionHost {
     private static final String RING_STREAMING = "native_competition_ring_streaming";
     private static final String NATIVE_BUMPERS = "sonic2_native_cnz_bumpers";
     private static final LogicalInputSnapshot NEUTRAL = LogicalInputSnapshot.neutral();
+
+    @Test
+    void menuStartDoesNotBecomeANewPressAtEverySynchronousTitleWait() throws Exception {
+        // LevelSelect2P_Main (s2.asm:11828-11842) accepts the press;
+        // Joypad_Read (s2.asm:1368-1386) polls held state anew at every wait;
+        // PauseGame (s2.asm:1572-1590) therefore cannot reuse that menu edge.
+        assertNull(System.getenv("DISPLAY"));
+        assertNull(System.getenv("WAYLAND_DISPLAY"));
+        var services = EngineServices.current();
+        var configuration = services.configuration();
+        var previous = new EnumMap<SonicConfiguration, Object>(SonicConfiguration.class);
+        for (var key : SonicConfiguration.values()) previous.put(key, configuration.getConfigValue(key));
+        try {
+            configuration.setConfigValue(SonicConfiguration.AUDIO_ENABLED, false);
+            configuration.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
+            configuration.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
+            configuration.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
+            configuration.setConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
+            configuration.setConfigValue(SonicConfiguration.DISPLAY_ASPECT, "NATIVE_4_3");
+            configuration.resolveDisplayAspect();
+            try (var boot = new HeadlessGameBoot(320, 224, services)) {
+                var loop = boot.boot(RomTestUtils.ensureSonic2RomAvailable().toPath().toAbsolutePath(), 0, 0);
+                var input = new CountingInput();
+                var visit = new Sonic2CompetitionVisit(
+                        new com.openggf.game.nativemenu.NativeMenuHostContext(services,
+                                SessionManager.getCurrentWorldSession().rootGameModule(), input, loop::setGameplayMode),
+                        new com.openggf.game.sonic2.options.Sonic2OptionsState(), true, false, zone -> true,
+                        new com.openggf.game.sonic2.objects.Sonic2TeleportObjectFieldsAccess(), new com.openggf.game.GameStateManager());
+                try {
+                    visit.initialize();
+                    input.setLogicalOverride(directions(AbstractPlayableSprite.INPUT_DOWN, 0));
+                    visit.update(input);
+                    input.setLogicalOverride(startPress());
+                    visit.update(input);
+                    visit.afterFrame();
+                    var host = visit.host();
+                    var session = visit.session();
+                    assertEquals(12, host.profile().romZone(), "the real menu chose CNZ");
+                    assertEquals(Sonic2CompetitionSession.Phase.ACT, session.phase());
+                    var pause = host.nativePause();
+                    System.out.println("MENU_START_ENTRY words=" + Integer.toHexString(pause.player1ControllerWord())
+                            + "," + Integer.toHexString(pause.player2ControllerWord())
+                            + " continuation=" + pause.continuation());
+                    assertEquals(0x8000, pause.player2ControllerWord(),
+                            "held Start remains held; repeated Joypad_Read must retire its press edge");
+                    input.setLogicalOverride(NEUTRAL);
+                    var mode = host.context();
+                    LevelFrameStep.updateTimers(LevelFrameContext.from(mode));
+                    var result = mode.plcFrameLifecycle().runLogicalIteration(mode::updateFade, frame -> {
+                        var value = new LevelFrameResult[1];
+                        NativeCompetitionIterationAccess.runAdmitted(frame, () -> value[0] = host.step(input, frame));
+                        return value[0];
+                    });
+                    assertEquals(LevelFrameResult.GAMEPLAY_FRAME, result);
+                    assertFalse(pause.gamePaused());
+                    assertEquals(1, mode.getLevelManager().getFrameCounter());
+                } finally { visit.reset(); }
+            }
+        } finally {
+            TestEnvironment.resetAll();
+            previous.forEach(configuration::setConfigValue);
+            configuration.resolveDisplayAspect();
+        }
+    }
 
     @Test
     void freshNativeObjectRamClearBelongsOnlyToTheActualHostInitializer() throws Exception {
@@ -186,12 +249,18 @@ class TestSonic2NativeCompetitionHost {
                             PlayerInputState.of(AbstractPlayableSprite.INPUT_DOWN | AbstractPlayableSprite.INPUT_LEFT,
                                     AbstractPlayableSprite.INPUT_LEFT, 0, 0, false, false));
                     input.setLogicalOverride(entrySample);
+                    int incomingVint = com.openggf.game.session.EngineTiming.vIntRunCounter(services).objectClockSeed();
                     host.loadAct(session, zone[0], 0);
+                    assertTrue(host.initialVintRunCount() - incomingVint > 0,
+                            "actual initial PLC/title waits must advance the inherited V-int before initial deformation");
+                    assertEquals(host.initialVintRunCount() + 25, host.context().getObjectManager().getVblaCounter(),
+                            "outer load completion must retain initial waits plus the25 title leave waits");
+                    assertEquals(26, views.preparations, "one leading BuildSprites plus 25 leave iterations");
                     assertEquals(25, driver.nativeSamples, "each real title wait must sample the shared input once");
                     assertEquals(0, input.updates, "the native wait sample port never advances outer input");
-                    assertEquals(Sonic2CompetitionPause.convertLogical(entrySample.player1()),
+                    assertEquals(Sonic2CompetitionPause.convertLogical(entrySample.player1()) & 0xFF00,
                             host.nativePause().player1ControllerWord());
-                    assertEquals(Sonic2CompetitionPause.convertLogical(entrySample.player2()),
+                    assertEquals(Sonic2CompetitionPause.convertLogical(entrySample.player2()) & 0xFF00,
                             host.nativePause().player2ControllerWord());
                     assertEquals(Sonic2CompetitionPause.Continuation.ENTRY, host.nativePause().continuation());
                     assertEquals(savedCharacter, configuration.getString(SonicConfiguration.MAIN_CHARACTER_CODE),
@@ -202,6 +271,7 @@ class TestSonic2NativeCompetitionHost {
                     assertNotSame(ordinaryActor, session.player(0), "native assembly supplies a fresh human body");
                     assertNativeAssembly(host, session, zone[0], 0, zone[2]);
                     verifyIndependentHumansAndTimers(driver);
+                    if (zone[0] == 0) verifyGraceHudRunsBeforePlayers(driver);
                     if (zone[0] == 0) verifyNativePauseAndContinuation(driver, menus, screen, views);
                     assertEquals(savedCharacter, configuration.getString(SonicConfiguration.MAIN_CHARACTER_CODE));
                     if (zone[0] == 0) verifyRegistryRestoreAndForwardReplay(driver);
@@ -408,11 +478,11 @@ class TestSonic2NativeCompetitionHost {
         nativeVramOwner(host, session);
     }
 
-    private static Sonic2InterlaceVramService nativeVramOwner(Sonic2NativeCompetitionHost host,
+    private static Sonic2CompetitionArtResidency nativeVramOwner(Sonic2NativeCompetitionHost host,
                                                             Sonic2CompetitionSession session) {
         var mode = host.context();
         var module = mode.getWorldSession().getGameModule();
-        var owner = module.getGameService(Sonic2InterlaceVramService.class);
+        var owner = module.getGameService(Sonic2CompetitionArtResidency.class);
         assertNotNull(owner, "the runtime module must expose its selected physical VRAM owner");
         assertInstanceOf(PlayerDplcDmaSink.class, mode.runtimeArtCoordinator());
         assertNotSame(owner, mode.runtimeArtCoordinator(), "the context needs a stable forwarder across act owners");
@@ -421,7 +491,11 @@ class TestSonic2NativeCompetitionHost {
         var snapshot = owner.capture();
         assertSame(session.player(0), snapshot.sonic(), "Sonic DMA must bind the actual current P1");
         assertSame(session.player(1), snapshot.tails(), "Tails DMA must bind the actual current human P2");
-        assertSame(owner.current(), snapshot.vram());
+        var currentSlots = owner.capture().slots();
+        var snapshotSlots = snapshot.slots();
+        assertEquals(currentSlots.length, snapshotSlots.length);
+        for (int index = 0; index < currentSlots.length; index++)
+            assertSame(currentSlots[index], snapshotSlots[index], "native snapshot shares slot " + index);
         assertEquals(owner.plcService().capture(), snapshot.plc());
         return owner;
     }
@@ -1146,6 +1220,28 @@ class TestSonic2NativeCompetitionHost {
                 + " wallProbes=" + wallProbes;
     }
 
+    private static void verifyGraceHudRunsBeforePlayers(Driver driver) throws Exception {
+        // Do_Updates (s2.asm:805-808) services HUD before objects:
+        // TimeOver2 (s2.asm:88126-88135) calls the kill owner. The same body
+        // then runs Obj02_Dead, ObjectMoveAndFall: -$700 + $38.
+        var registry = driver.host.context().getRewindRegistry();
+        var saved = registry.capture();
+        try {
+            var session = driver.session;
+            assertTrue(session.observeGoal(0, 100, 100));
+            for (int pass = 0; pass < 3659; pass++) session.advanceActFlow();
+            assertEquals(1, session.loserTimeLeft());
+            var actor = session.player(1);
+            position(actor, 200, 128);
+            driver.tick(NEUTRAL);
+            assertTrue(actor.getDead());
+            assertEquals(-0x700 + 0x38, actor.getYSpeed(), "HUD expiry must precede this body's death movement");
+            assertEquals(121, actor.getCentreY());
+        } finally {
+            registry.restore(saved);
+        }
+    }
+
     private static void verifyCanonicalTimeOverRequests(Driver driver) throws Exception {
         var session = driver.session;
         for (int slot = 0; slot < 2; slot++) session.levelState(slot).setTimerFrames(35999);
@@ -1371,8 +1467,8 @@ class TestSonic2NativeCompetitionHost {
     private record Bank(Sonic2CompetitionResults.Metrics metrics, int lives, int continues,
             int nextLife, Sonic2CompetitionPlayerState.Checkpoint checkpoint, boolean paused, boolean timeOver) { }
 
-    private record NativeArtState(Sonic2InterlaceVramService owner, Sonic2InterlaceVram vram,
-            NemesisPlcQueueSnapshot plc, List<Sonic2InterlaceVramService.DmaTransfer> pending,
+    private record NativeArtState(Sonic2CompetitionArtResidency owner, List<Sonic2CompetitionArtResidency.Slot> slots,
+            NemesisPlcQueueSnapshot plc, List<Sonic2CompetitionArtResidency.Upload> pending,
             int sonicLast, int tailsLast, int tailLast) { }
 
     private static WorldState state(Driver driver) throws Exception {
@@ -1385,11 +1481,11 @@ class TestSonic2NativeCompetitionHost {
         Object bumperState = snapshot.get(NATIVE_BUMPERS);
         if (driver.host.profile().romZone() == 12) assertNotNull(bumperState);
         else assertNull(bumperState, "other native zones do not own CNZ bumper state");
-        assertNotNull(snapshot.get(Sonic2InterlaceVramService.REWIND_KEY),
+        assertNotNull(snapshot.get(Sonic2CompetitionArtResidency.REWIND_KEY),
                 "the stable early art binding must participate in actual registry capture");
         var owner = nativeVramOwner(driver.host, session);
         var art = owner.capture();
-        var nativeArt = new NativeArtState(owner, art.vram(), art.plc(), art.pending(),
+        var nativeArt = new NativeArtState(owner, List.of(art.slots()), art.plc(), art.pending(),
                 art.sonicLast(), art.tailsLast(), art.tailLast());
         var pause = snapshot.get(driver.host.nativePause().key());
         assertNotNull(pause, "the actual pause continuation and consumable exit must be captured");
@@ -1517,18 +1613,11 @@ class TestSonic2NativeCompetitionHost {
             var objects = context.getObjectManager();
             var lifecycle = context.getWorldSession().getGameModule().getGameService(Sonic2CompetitionLifecycle.class);
             assertNotNull(lifecycle);
-            if (objects.getFrameCounter() == 0) {
-                entryVInt = objects.getVblaCounter();
-                lastEntryPass = 0;
-                for (int slot = 0; slot < 2; slot++) {
-                    assertEquals(0, lifecycle.nativeRoutineByte(slot), "the initial view observes actual native Init");
-                    var player = session.player(slot);
-                    assertEquals(0, player.getXSpeed());
-                    assertEquals(0, player.getYSpeed());
-                    assertEquals(0, player.getGSpeed());
-                    assertEquals(0, player.getAngle());
+            if (context.getLevelManager().getFrameCounter() == 0) {
+                if (objects.getFrameCounter() == 1) {
+                    entryVInt = objects.getVblaCounter();
+                    lastEntryPass = 0;
                 }
-            } else if (context.getLevelManager().getFrameCounter() == 0) {
                 if (objects.getFrameCounter() != lastEntryPass) {
                     assertEquals(lastEntryPass + 1, objects.getFrameCounter(),
                             "the actual view must observe the leading pass and each of the 25 native waits");

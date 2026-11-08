@@ -169,8 +169,21 @@ public final class Sonic2CompetitionLifecycle implements NativePlayerDeathPass,
     /** Host must supply actual signed word displacements, also on zero-motion passes. */
     public void recordCameraDisplacement(int slot, int xDiff, int yDiff) {
         checkSlot(slot);
-        cameraXDiff[slot] = (short) xDiff;
-        cameraYDiff[slot] = (short) yDiff;
+        recordCameraDisplacement(slot, xDiff, yDiff, true, true);
+    }
+
+    /** ScrollHoriz may return without a WORD write while ScrollVerti still writes its own WORD. */
+    public void recordCameraDisplacement(int slot, int xDiff, int yDiff, boolean writeX, boolean writeY) {
+        checkSlot(slot);
+        if (writeX) cameraXDiff[slot] = (short) xDiff;
+        if (writeY) cameraYDiff[slot] = (short) yDiff;
+    }
+
+    /** Camera_Difference alone belongs to teleport_swap_table (s2.asm:26188). */
+    public void swapCameraDifferences() {
+        int x = cameraXDiff[0], y = cameraYDiff[0];
+        cameraXDiff[0] = cameraXDiff[1]; cameraYDiff[0] = cameraYDiff[1];
+        cameraXDiff[1] = x; cameraYDiff[1] = y;
     }
 
     /** Logical native art word: fixed ROM tile/palette bits plus the actor's live priority. */

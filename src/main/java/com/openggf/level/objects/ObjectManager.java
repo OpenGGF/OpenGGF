@@ -117,6 +117,7 @@ public class ObjectManager {
         return objectLoopBudget.reaches(population.slots.lastProcessSlotExclusive());
     }
     private final boolean skipVerticalSpawnLoadFilterForGame;
+    private final ObjectSlotLayout allocationLayout;
 
     final ObjectServices objectServices;
     StageplayObjectDirection stageplayDirection;
@@ -224,6 +225,8 @@ public class ObjectManager {
         this.placementAdmission = new ObjectPlacementAdmission(registry, objectServices);
         this.objectCallbacks = new ObjectCallbackRouter(registry, initialDispatch);
         ObjectSlotLayout slots = registry != null ? registry.objectSlotLayout() : ObjectSlotLayout.SONIC_1;
+        this.allocationLayout = registry instanceof ObjectManagerInternalAccess.AllocationSemantics semantics
+                ? semantics.allocationLayout() : slots;
         this.population = new ObjectPopulation(objectCallbacks, slots,
                 this::markActiveObjectCachesDirty, this::projectPublishedPopulationIdentity,
                 () -> stageplayDirection);
@@ -266,7 +269,7 @@ public class ObjectManager {
         this.touchResponses = touchResponseTable != null
                 ? new ObjectTouchResponseController(this, touchResponseTable)
                 : null;
-        this.skipVerticalSpawnLoadFilterForGame = population.slots == ObjectSlotLayout.SONIC_2;
+        this.skipVerticalSpawnLoadFilterForGame = allocationLayout == ObjectSlotLayout.SONIC_2;
         // Initialize bucket arrays
         for (int i = 0; i < BUCKET_COUNT; i++) {
             lowPriorityBuckets[i] = new ArrayList<>();
@@ -830,7 +833,8 @@ public class ObjectManager {
             if (!execThenLoad || !population.slots.twoAxisCursorPlacement()) {
                 if (!competitionStreaming.active()) placement.update(cameraX);
             }
-            if (execThenLoad && !population.slots.twoAxisCursorPlacement()) {
+            if (execThenLoad && !population.slots.twoAxisCursorPlacement()
+                    && !ObjectManagerInternalAccess.placementAtWorldTail(this)) {
                 cleanupDestroyedDynamicObjects();
                 syncActiveSpawnsLoad(true);
             }
@@ -900,7 +904,7 @@ public class ObjectManager {
     }
 
     void runNativeCompetitionTitleObjectPass() {
-        initialDispatch.runNativeCompetitionTitleObjectPass(population.slots, () -> updating);
+        initialDispatch.runNativeCompetitionTitleObjectPass(allocationLayout, () -> updating);
     }
 
     int firstDynamicSlot() {
@@ -1403,7 +1407,7 @@ public class ObjectManager {
     }
 
     private int objectUnloadCameraX(int cameraX) {
-        if (population.slots != ObjectSlotLayout.SONIC_2) {
+        if (allocationLayout != ObjectSlotLayout.SONIC_2) {
             return cameraX;
         }
         // S2 RunObjects consumes Camera_X_pos_coarse from the previous
@@ -1444,7 +1448,7 @@ public class ObjectManager {
      */
     public void postCameraPlacementUpdate(int postCameraX) {
         if (competitionStreaming.active() || competitionStreaming.upfrontActive()) return;
-        if (population.slots == ObjectSlotLayout.SONIC_2) {
+        if (allocationLayout == ObjectSlotLayout.SONIC_2) {
             s2LatchedObjectManagerCameraX = postCameraX;
         }
         if (population.slots.twoAxisCursorPlacement()) {
@@ -1558,6 +1562,8 @@ public class ObjectManager {
         return population.hasInlinePlaneSwitcher(spawn);
     }
 
+    ObjectPlaneSwitcherController nativeTeleportPlaneSwitcherState() { return planeSwitchers; }
+
     public int getPlaneSwitcherSideState(ObjectSpawn spawn) {
         if (planeSwitchers == null) {
             return -1;
@@ -1625,6 +1631,10 @@ public class ObjectManager {
      */
     public void drawUnifiedBucketWithPriority(int bucket, GraphicsManager gfx) {
         objectDrawing.drawUnifiedBucketWithPriority(bucket, gfx);
+    }
+
+    ObjectDrawInternalAccess.Drawing nativeDisplayDrawing() {
+        return objectDrawing;
     }
 
     void drawBucketWithSlotEmissions(int bucket, GraphicsManager graphics,
@@ -3196,8 +3206,12 @@ public class ObjectManager {
      * never a sprite top-left bound, so the window is not shifted by half-width.
      */
     private boolean isObjectOutOfRange(ObjectInstance instance, ObjectSpawn spawn, int cameraX) {
-        // Native block ownership replaces MarkObjGone in competition.
-        if (competitionStreaming.active()) return false;
+        // Block retirement and routine-tail lifetime are independent authorities.
+        if (competitionStreaming.active()) {
+            var profile = com.openggf.game.session.WorldSessionPolicyAccess.getService(
+                    objectServices.worldSession(), ObjectRoutineLifetime.class);
+            return ObjectRoutineLifetime.outOfRange(instance, profile);
+        }
         if (stageplayActivation != null && objectCallbacks.call(instance, () -> stageplayActivation.keepsOutsideNativeView(instance, camera))) return false;
         int referenceX = outOfRangeReferenceX(instance, spawn);
         if (competitionStreaming.upfrontActive()) return competitionStreaming.isOutsideUpfrontUnloadWindow(referenceX);
@@ -3230,7 +3244,7 @@ public class ObjectManager {
     private void dispatchDestroyRemoveFromActive(ObjectInstance instance, ObjectSpawn spawn) {
         boolean latchedDestroy = objectCallbacks.call(instance,
                 () -> placement.dispatchDestroyRemoveFromActive(
-                        instance, spawn, population.slots == ObjectSlotLayout.SONIC_2));
+                        instance, spawn, allocationLayout == ObjectSlotLayout.SONIC_2));
         if (latchedDestroy) {
             if (usesOccurrenceSolidStateKey(instance)) {
                 solidContacts.evictLatchForDestroyedInstance(instance);
@@ -3300,7 +3314,7 @@ public class ObjectManager {
         try {
             vetoesRangeUnload = objectCallbacks.call(instance, instance::isPersistent);
         } catch (NullPointerException e) {
-            throw new IllegalStateException(describeOutOfRangeObject(instance, spawn), e);
+            throw new IllegalStateException(objectCallbacks.describeCounterBasedUnloadObject(instance, spawn), e);
         }
         boolean outOfRange = objectCallbacks.call(instance, instance::usesCustomOutOfRangeCheck)
                 ? objectCallbacks.call(instance, () -> instance.isCustomOutOfRange(cameraX))
@@ -3315,6 +3329,8 @@ public class ObjectManager {
                 releaseSlot(slotIndex);
             }
         }
+        if (competitionStreaming.active() && instance instanceof AbstractObjectInstance nativeOwner)
+            placement.clearNativeCompetitionRespawnLatch(nativeOwner.getRespawnStateIndex());
         var removalCallback = objectCallbacks.captureRemovalCallback(instance);
         objectCallbacks.runAndUnregister(instance, instance::onUnload);
         if (spawn != null) {
@@ -3357,34 +3373,10 @@ public class ObjectManager {
             // Use the object's explicit ROM reference X when provided.
             return objectCallbacks.call(instance, instance::getOutOfRangeReferenceX);
         } catch (NullPointerException e) {
-            throw new IllegalStateException(describeOutOfRangeObject(instance, spawn), e);
+            throw new IllegalStateException(objectCallbacks.describeCounterBasedUnloadObject(instance, spawn), e);
         }
     }
 
-    private String describeOutOfRangeObject(ObjectInstance instance, ObjectSpawn spawn) {
-        StringBuilder sb = new StringBuilder("Object out_of_range check failed for ");
-        sb.append(instance.getClass().getName());
-        if (instance instanceof AbstractObjectInstance aoi) {
-            sb.append(" slot=").append(objectCallbacks.call(instance, aoi::getSlotIndex));
-            sb.append(" name=").append(objectCallbacks.call(instance, aoi::getName));
-        }
-        sb.append(" managerSpawn=");
-        if (spawn == null) {
-            sb.append("null");
-        } else {
-            sb.append(String.format("0x%04X,0x%04X id=0x%02X",
-                    spawn.x() & 0xFFFF, spawn.y() & 0xFFFF, spawn.objectId() & 0xFF));
-        }
-        ObjectSpawn instanceSpawn = objectCallbacks.call(instance, instance::getSpawn);
-        sb.append(" instanceSpawn=");
-        if (instanceSpawn == null) {
-            sb.append("null");
-        } else {
-            sb.append(String.format("0x%04X,0x%04X id=0x%02X",
-                    instanceSpawn.x() & 0xFFFF, instanceSpawn.y() & 0xFFFF, instanceSpawn.objectId() & 0xFF));
-        }
-        return sb.toString();
-    }
 
     /**
      * Materializes the ObjectPlacementController's candidate window. Candidates
@@ -3528,6 +3520,14 @@ public class ObjectManager {
             bucketsDirty = true;
             markActiveObjectCachesDirty();
         }
+    }
+
+    /** An opted-in world owns this sole post-camera/display placement boundary. */
+    void completeDeferredPlacement() {
+        if (!competitionStreaming.active() || !ObjectManagerInternalAccess.placementAtWorldTail(this))
+            throw new IllegalStateException("This world does not own deferred placement");
+        cleanupDestroyedDynamicObjects();
+        syncActiveSpawnsLoad(true);
     }
 
     ObjectManagerInternalAccess.Streaming nativeCompetitionStreaming() {

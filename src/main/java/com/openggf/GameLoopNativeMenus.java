@@ -274,6 +274,17 @@ final class GameLoopNativeMenus {
                 nativeMenus.close();
                 loop.initializeTitleScreenMode();
             }
+            case SEGA_SCREEN -> {
+                nativeMenus.close();
+                // TwoPlayerResultsDone_Game enters SegaScreen. The title provider's
+                // initialize() begins at SEGA_LOGO, as the GAME OVER exit does.
+                GameLoopGameOverExit.startToBlack(GameOverExit.TITLE_SCREEN, loop.levelManager,
+                        audioManager, loop.resolveFadeManager(), loop.resolveGameplayModeContext(),
+                        () -> GameLoopGameOverExit.exitToTitleScreen(loop.spriteManager, loop.levelManager,
+                                loop.camera, () -> loop.setGameMode(GameMode.TITLE_SCREEN),
+                                loop.getTitleScreenProviderLazy(), loop.resolveFadeManager(),
+                                loop.resolveGameplayModeContext()));
+            }
             case COMPETITION -> {
                 var module = GameServices.module();
                 var provider = module == null ? null : module.getGameService(

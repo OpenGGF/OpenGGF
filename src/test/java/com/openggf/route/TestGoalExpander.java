@@ -48,6 +48,40 @@ class TestGoalExpander {
     }
 
     @Test
+    void goalProgrammeCommitsBoundaryBeforeTryingAnotherPolicyOnTheOldEpoch() {
+        var world = new SyntheticRouteWorlds(List.of(), 20, Integer.MIN_VALUE, false);
+        var goals = GoalProgram.of(Guard.NONE,
+                RouteGoals.reach("new-epoch",PlayerSlot.P1,new Region(30,990,40,1010),100),
+                RouteGoals.reach("after",PlayerSlot.P1,new Region(50,990,70,1010),100));
+        assertTrue(plan(world,InputTape.empty(),goals).tape().size()>0);
+    }
+
+    @Test
+    void completedPrefixLegsAreNotReauthored() {
+        var prefix=SyntheticRouteWorlds.right(100);
+        var goals=GoalProgram.of(Guard.safe(),
+                RouteGoals.reach("earlier",PlayerSlot.P1,new Region(20,990,30,1010),150),
+                RouteGoals.reach("later",PlayerSlot.P1,new Region(200,990,210,1010),500));
+        var route=plan(SyntheticRouteWorlds.flat(),prefix,goals);
+        assertEquals(prefix,route.tape().slice(0,prefix.size()));
+        assertTrue(route.tape().slice(prefix.size(),route.tape().size()).rows().stream()
+                .noneMatch(row->row.held(PlayerSlot.P1,PhysicalButton.LEFT)),
+                "the completed earlier leg must not send the actor back through the prefix");
+    }
+
+    @Test
+    void prefixAndTrialsRespectTheirExactStepBudget() {
+        for(int prefixRows:new int[]{0,100}) {
+            var task=new RouteTask.Author(SyntheticRouteWorlds.launch(),SyntheticRouteWorlds.right(prefixRows),
+                    GoalProgram.of(Guard.safe(),RouteGoals.reach("far",PlayerSlot.P1,new Region(200,990,210,1010),500)),
+                    new SearchBudget(10,20,4,0));
+            var stopped=assertInstanceOf(PlanResult.Stopped.class,new RoutePlanner(SyntheticRouteWorlds.flat()).plan(task,Cancellation.NONE));
+            assertEquals(StopReason.BUDGET_EXHAUSTED,stopped.reason());
+            assertEquals(20,stopped.work().searchSteps());
+        }
+    }
+
+    @Test
     void objectGoalsSurviveTheCanonicalCodec() throws Exception {
         var goals = new GoalProgram(Guard.safe().holding(new SamplePredicate.Riding(PlayerSlot.P1, PLATFORM)), List.of(
                 RouteGoals.board("board", PlayerSlot.P1, PLATFORM, 100),

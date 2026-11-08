@@ -30,7 +30,9 @@ class TestNativeCompetitionObjectStreaming {
 
     private static final class Actor extends AbstractObjectInstance implements RewindRecreatable {
         int ticks;
-        Actor(ObjectSpawn spawn) { super(spawn, "native-stream-test"); }
+        int centreX;
+        Actor(ObjectSpawn spawn) { super(spawn, "native-stream-test"); centreX = spawn.x(); }
+        @Override public int getX() { return centreX; }
         @Override public void update(int vIntRunCount, PlayableEntity player) { ticks++; }
         @Override public void appendRenderCommands(List<GLCommand> commands) { }
         @Override public AbstractObjectInstance recreateForRewind(RewindRecreateContext context) {
@@ -46,12 +48,14 @@ class TestNativeCompetitionObjectStreaming {
         Fixture(List<ObjectSpawn> spawns) {
             this(spawns, true);
         }
-        Fixture(List<ObjectSpawn> spawns, boolean enableStreaming) {
+        Fixture(List<ObjectSpawn> spawns, boolean enableStreaming) { this(spawns, enableStreaming, null); }
+        Fixture(List<ObjectSpawn> spawns, boolean enableStreaming, ObjectRoutineLifetime lifetime) {
             when(roster.camera(0)).thenReturn(cameras[0]);
             when(roster.camera(1)).thenReturn(cameras[1]);
             GameModule module = mock(GameModule.class);
             WorldSessionPolicyState policies = mock(WorldSessionPolicyState.class);
             when(policies.getService(NativeCompetitionRoster.class)).thenReturn(roster);
+            when(policies.getService(ObjectRoutineLifetime.class)).thenReturn(lifetime);
             when(module.getGameService(WorldSessionPolicyProvider.class)).thenReturn(world -> policies);
             WorldSession world = new WorldSession(module);
             ObjectRegistry registry = new ObjectRegistry() {
@@ -83,6 +87,59 @@ class TestNativeCompetitionObjectStreaming {
                     .sorted(Comparator.comparingInt(Actor::getSlotIndex))
                     .map(o -> o.getSlotIndex() + ":" + o.getSpawn().layoutIndex() + ":" + o.getRespawnStateIndex() + ":" + o.ticks)
                     .toList();
+        }
+    }
+
+    private static ObjectRoutineLifetime lifetime(ObjectRoutineLifetime.Tail tail, int p1, int p2) {
+        return new ObjectRoutineLifetime() {
+            public Tail tail(ObjectInstance object) { return tail; }
+            public int coarseCameraX(int slot) { return slot == 0 ? p1 : p2; }
+        };
+    }
+
+    @Test void p1TailDeletesClearsRespawnAndReloadsAfterNativeBlockCrossing() {
+        // MarkObjGone_P2 (s2.asm:30303-30324): live x=$841 -> bucket$800,
+        // coarse$900/$000: both unsigned distances exceed$300.
+        var f = new Fixture(List.of(spawn(0x20, 0, true)), true,
+                lifetime(ObjectRoutineLifetime.Tail.MARK_OBJ_GONE_P1, 0x900, 0));
+        var original = (Actor) f.manager.getActiveObjects().iterator().next();
+        int respawn = original.getRespawnStateIndex();
+        original.centreX = 0x841;
+        f.at(0, 0);
+        assertTrue(f.manager.getActiveObjects().isEmpty());
+        assertEquals(0, f.manager.rewindSnapshottable().capture().placement().objState()[respawn] & 0x80);
+        for (int block = 1; block <= 3; block++) f.at(block, block);
+        for (int block = 2; block >= 0; block--) f.at(block, block);
+        assertEquals(1, f.manager.getActiveObjects().size());
+        assertNotSame(original, f.manager.getActiveObjects().iterator().next());
+    }
+
+    @Test void p1TailRetainsObjectInsideSecondPublishedCoarseWindow() {
+        var f = new Fixture(List.of(spawn(0x20, 0, true)), true,
+                lifetime(ObjectRoutineLifetime.Tail.MARK_OBJ_GONE_P1, 0x900, 0x800));
+        var actor = (Actor) f.manager.getActiveObjects().iterator().next();
+        actor.centreX = 0x841;
+        f.at(0, 0);
+        assertTrue(f.manager.getActiveObjects().contains(actor), "P2 coarse word, not camera recomputation, retains it");
+    }
+
+    @Test void plainTailsNeverRunRangeDeletionInCompetition() {
+        for (var tail : List.of(ObjectRoutineLifetime.Tail.MARK_OBJ_GONE,
+                ObjectRoutineLifetime.Tail.MARK_OBJ_GONE_2, ObjectRoutineLifetime.Tail.MARK_OBJ_GONE_3)) {
+            var f = new Fixture(List.of(spawn(0x20, 0, true)), true, lifetime(tail, 0x900, 0));
+            var actor = (Actor) f.manager.getActiveObjects().iterator().next();
+            actor.centreX = 0x841; f.at(0, 0);
+            assertTrue(f.manager.getActiveObjects().contains(actor));
+        }
+    }
+
+    @Test void ordinaryLifetimeDoesNotConsumeCompetitionTailDeclaration() {
+        for (var tail : ObjectRoutineLifetime.Tail.values()) {
+            var f = new Fixture(List.of(spawn(0x20, 0, true)), false, lifetime(tail, 0x900, 0));
+            f.at(0, 0);
+            var actor = (Actor) f.manager.getActiveObjects().iterator().next();
+            actor.centreX = 0x841; f.at(0, 0);
+            assertTrue(f.manager.getActiveObjects().isEmpty());
         }
     }
 

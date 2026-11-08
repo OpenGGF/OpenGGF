@@ -116,7 +116,10 @@ class TestNativeCompetitionIteration {
                         assertEquals(LevelFrameResult.PAUSED, world.pauseVBlank(frame)));
                 frame.finish();
             }
-            verifyNoInteractions(level, sprites);
+            // Pause_Loop (s2.asm:1571-1597) never consults level objects;
+            // Vint_Level (s2.asm:702-713) holds Teleport_timer while paused.
+            verifyNoInteractions(level);
+            verifyNoInteractions(sprites);
             verify(objects, times(2)).advanceVblaCounter();
             verifyNoMoreInteractions(objects);
             assertEquals(beforePlayer, player.capture());

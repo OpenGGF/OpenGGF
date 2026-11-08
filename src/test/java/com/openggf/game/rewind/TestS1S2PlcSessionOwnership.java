@@ -44,7 +44,11 @@ class TestS1S2PlcSessionOwnership {
         sonic2.createGame(fixtureRom());
         Sonic2PlcService s2Service = sonic2.getGameService(Sonic2PlcService.class);
         assertFalse(s2Service.isBusy(), "the next session must start with an empty PLC FIFO");
-        assertEquals(3, sonic2.rewindAdapters().size());
+        // 50bc64259: Touch_KillEnemy (s2.asm:85514-85534) owns one shared
+        // chain word even in 1P; this is not another PLC or competition adapter.
+        assertEquals(4, sonic2.rewindAdapters().size());
+        assertSame(sonic2.getGameService(com.openggf.game.internal.BadnikChainPolicy.class),
+                sonic2.rewindAdapters().get(3));
         assertSame(sonic2.getGameService(com.openggf.game.sonic2.slotmachine.CNZPrizeSoundState.class),
                 sonic2.rewindAdapters().get(2));
         assertSame(s2Service, sonic2.rewindAdapters().get(0));

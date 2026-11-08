@@ -50,7 +50,13 @@ The engine also has these:
 - **Each game's own screens.** Title screens, level select, title cards, results
   and continue screens all come from the game's own data.
 
-Sonic 2's two-player competition mode is not available yet.
+Sonic 2's two-player Competition mode is available: choose 2 PLAYER on the
+Sonic 2 title for the game's own split-screen mode, with Sonic on controller 1
+and Tails on controller 2, Emerald Hill, Mystic Cave, Casino Night or the
+special stage, each player's rings, lives, score and time, and the game's
+results screens. Live rewind is off in this mode. See
+[known discrepancies](../status/known-discrepancies.md#s2-competition-split-screen-native-lag-and-rewind-scope)
+for how the split screen differs from the original.
 
 ## Accuracy
 

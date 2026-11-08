@@ -34,6 +34,15 @@ final class ObjectPlaneSwitcherController {
         this.config = config;
     }
 
+    /** swap_loop_objects (s2.asm:26070-26079): objoff_34/35 alone, no legacy observation write. */
+    void swapNativePlayerSides(ObjectSpawn spawn, PlayableEntity first, PlayableEntity second) {
+        var state = states.get(spawn);
+        if (state == null) return;
+        Byte a = state.sideStates.get(first), b = state.sideStates.get(second);
+        if (b == null) state.sideStates.remove(first); else state.sideStates.put(first, b);
+        if (a == null) state.sideStates.remove(second); else state.sideStates.put(second, a);
+    }
+
     void reset() {
         states.clear();
     }

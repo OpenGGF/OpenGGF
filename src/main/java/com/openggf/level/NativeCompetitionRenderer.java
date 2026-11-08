@@ -1,6 +1,7 @@
 package com.openggf.level;
 
 import com.openggf.game.rewind.snapshot.CameraSnapshot;
+import com.openggf.game.internal.RetainedPlaneDescriptorSource;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.GraphicsProjectionAccess;
@@ -23,9 +24,15 @@ import static org.lwjgl.opengl.GL30.*;
 public final class NativeCompetitionRenderer implements AutoCloseable {
     public static final int WIDTH = 320, HEIGHT = 224;
 
+    /**
+     * When planes is non-null, this view's foreground and background are that source's complete
+     * retained images, independent of the zone feature provider. A null source keeps the zone
+     * provider's retained planes or the ordinary layout.
+     */
     public record View(CameraSnapshot camera, int rasterStart, int rasterHeight,
                        int foregroundVScroll, int backgroundVScroll, int backgroundX,
-                       int backgroundPeriod, int[] horizontalScroll, SpritePresentation.Frame sprites) {
+                       int backgroundPeriod, int[] horizontalScroll, SpritePresentation.Frame sprites,
+                       RetainedPlaneDescriptorSource planes) {
         public View {
             Objects.requireNonNull(camera, "camera");
             Objects.requireNonNull(sprites, "sprites");
@@ -34,6 +41,13 @@ public final class NativeCompetitionRenderer implements AutoCloseable {
                 throw new IllegalArgumentException("Native view needs a full packed scroll page and positive BG period");
             }
             horizontalScroll = horizontalScroll.clone();
+        }
+        /** Existing callers retain the zone provider's planes. */
+        public View(CameraSnapshot camera, int rasterStart, int rasterHeight,
+                    int foregroundVScroll, int backgroundVScroll, int backgroundX,
+                    int backgroundPeriod, int[] horizontalScroll, SpritePresentation.Frame sprites) {
+            this(camera, rasterStart, rasterHeight, foregroundVScroll, backgroundVScroll, backgroundX,
+                    backgroundPeriod, horizontalScroll, sprites, null);
         }
         @Override public int[] horizontalScroll() { return horizontalScroll.clone(); }
     }

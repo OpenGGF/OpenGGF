@@ -33,23 +33,17 @@ class TestS2TitleCardManagerWidescreenGuard {
                 "S2 title cards must center the native 320-wide composition");
         assertTrue(src.contains("GameServices.graphics().getProjectionWidth()"),
                 "viewportWidth() must use the active projection width");
-        assertTrue(src.contains("element.getCurrentX() + xOffset()"),
-                "sprite elements must render in centered 320-space");
+        assertTrue(src.contains("part.x()-128+xOffset()"),
+                "the projection centers ROM sprite coordinates without changing Obj34 state");
     }
 
     @Test
-    void managerKeepsViewportSpanningRectsAndExitMargin() throws IOException {
+    void canonicalPositionsRemainIndependentOfViewportWidth() throws IOException {
         String src = source();
-
-        assertTrue(src.contains("element.setEdgeMargin(edgeMargin)"),
-                "S2 title-card elements must exit far enough to clear widescreen side bands");
-        assertTrue(src.contains("0, 0, viewportWidth(), SCREEN_HEIGHT"),
-                "slide-in blackout must cover the full viewport");
-        assertTrue(src.contains("0, blueTop, vw, blueBottom"),
-                "blue background must span the full viewport");
-        assertTrue(src.contains("int yellowRight = vw + 50"),
-                "yellow title-card plane must extend past the full viewport");
-        assertTrue(src.contains("leftSwooshElement.getCurrentX() + xOff"),
-                "red plane must follow the centered swoosh position");
+        assertTrue(src.contains("obj34.consumeFills()"));
+        assertTrue(src.contains("obj34.tick()"));
+        assertTrue(src.contains("viewportWidth(), SCREEN_HEIGHT"));
+        org.junit.jupiter.api.Assertions.assertFalse(src.contains("setEdgeMargin("),
+                "viewport extensions must not change ROM coordinates or phase timing");
     }
 }

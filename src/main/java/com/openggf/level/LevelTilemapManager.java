@@ -534,14 +534,21 @@ public class LevelTilemapManager {
         uploadForegroundTilemap();
     }
 
+    RetainedPlaneDescriptorSource retainedPlaneOverride;
+
+    void setRetainedPlaneOverride(RetainedPlaneDescriptorSource source) {
+        retainedPlaneOverride = source;
+    }
+
     /** Complete owner-authored planes bypass all layout/window/ring heuristics. */
     private boolean ensureRetainedPlane(ZoneFeatureProvider provider, boolean foreground) {
         int layer = foreground ? 0 : 1;
         if (cinematicBackground && cinematicParameters == null)
             throw new IllegalStateException("Private plane build requires captured background authority");
         // Captured inactive is authoritative too: never fall through to a newly active live provider.
-        RetainedPlaneDescriptorSource source = cinematicParameters == null
-                && provider instanceof RetainedPlaneDescriptorSource owner ? owner : null;
+        RetainedPlaneDescriptorSource source = cinematicParameters != null ? null
+                : retainedPlaneOverride != null ? retainedPlaneOverride
+                : provider instanceof RetainedPlaneDescriptorSource owner ? owner : null;
         RetainedPlaneDescriptorSource.Plane plane;
         if (cinematicParameters != null) {
             var image = foreground ? cinematicParameters.retainedForeground() : cinematicParameters.retainedBackground();

@@ -17,6 +17,39 @@ import static org.lwjgl.opengl.GL11.GL_LINES;
 /** Native render-slot composition kept outside the creator ObjectManager contract. */
 public final class ObjectDrawInternalAccess {
     private ObjectDrawInternalAccess() { }
+    /** Semantic capability supplied only by a world that owns native display publication. */
+    public interface NativeDisplayOwner { boolean owns(ObjectInstance owner); }
+    public static final NativeDisplayOwner NATIVE_DISPLAY_OWNER = owner -> true;
+
+    static boolean nativeDisplayOwned(ObjectInstance owner,ObjectServices services) {
+        var module=services==null ? null : services.gameModule();
+        var display=module==null ? null : module.getGameService(NativeDisplayOwner.class);
+        return display!=null && display.owns(owner);
+    }
+
+    /** Commit BuildSprites' result after object execution, for the following object's pass. */
+    public static void commitNativeDisplayVisibility(AbstractObjectInstance owner,boolean onScreen) {
+        Class<?> caller=com.openggf.util.EngineCallerAccess.callerOutside(ObjectDrawInternalAccess.class);
+        if(caller.getClassLoader()!=ObjectDrawInternalAccess.class.getClassLoader())
+            throw new SecurityException("Native display publication belongs to the engine renderer");
+        java.util.Objects.requireNonNull(owner);
+        if(nativeDisplayOwned(owner,owner.tryServices())) owner.captureNativeDisplayVisibility(onScreen);
+    }
+    /** Completed star display inputs, read without advancing their owner. */
+    public static int[] invincibilityStarsDisplayPose(InvincibilityStarsObjectInstance owner) {
+        Class<?> caller=com.openggf.util.EngineCallerAccess.callerOutside(ObjectDrawInternalAccess.class);
+        if(caller.getClassLoader()!=ObjectDrawInternalAccess.class.getClassLoader())
+            throw new SecurityException("Native display publication belongs to the engine renderer");
+        return java.util.Objects.requireNonNull(owner).nativeDisplayPose();
+    }
+    public record SkidDustDisplayPose(int frame,String parentCode,int cursor,int timer) { }
+    /** Actual detached dust frame and parent identity, without invoking its renderer. */
+    public static SkidDustDisplayPose skidDustDisplayPose(SkidDustObjectInstance owner) {
+        Class<?> caller=com.openggf.util.EngineCallerAccess.callerOutside(ObjectDrawInternalAccess.class);
+        if(caller.getClassLoader()!=ObjectDrawInternalAccess.class.getClassLoader())
+            throw new SecurityException("Native display observation belongs to the engine renderer");
+        return java.util.Objects.requireNonNull(owner).nativeDisplayPose();
+    }
     public static void drawBucket(ObjectManager manager, int bucket, GraphicsManager graphics,
                                   List<SpriteSlotEmission> external) {
         Class<?> caller = com.openggf.util.EngineCallerAccess.callerOutside(ObjectDrawInternalAccess.class);
@@ -24,6 +57,20 @@ public final class ObjectDrawInternalAccess {
             throw new SecurityException("Native slot composition belongs to the engine renderer");
         }
         manager.drawBucketWithSlotEmissions(bucket, graphics, external);
+    }
+
+    public interface NativeDisplayOrderVisitor {
+        void admission(int bucket, int slot, ObjectInstance owner, boolean nativeSubmission);
+    }
+
+    /** Read-only unified bucket/FIFO order, with the ordinary SAT path's slot suppression. */
+    public static void visitNativeDisplayOrder(ObjectManager manager, NativeDisplayOrderVisitor visitor) {
+        Class<?> caller = com.openggf.util.EngineCallerAccess.callerOutside(ObjectDrawInternalAccess.class);
+        if (caller.getClassLoader() != ObjectDrawInternalAccess.class.getClassLoader()) {
+            throw new SecurityException("Native display observation belongs to the engine renderer");
+        }
+        java.util.Objects.requireNonNull(visitor);
+        java.util.Objects.requireNonNull(manager).nativeDisplayDrawing().visitNativeDisplayOrder(visitor);
     }
 
     /** Manager-owned presentation collaborator; all lists and callbacks retain their identity. */
@@ -66,6 +113,21 @@ public final class ObjectDrawInternalAccess {
                 NativeSpriteSubmissionQueue queue) {
             ObjectRenderParts.populateBuckets(active, dynamic, queue, currentOwner, externalResolver,
                     manager.stageplayDirection, unifiedBuckets, lowPriorityBuckets, highPriorityBuckets);
+        }
+
+        void visitNativeDisplayOrder(NativeDisplayOrderVisitor visitor) {
+            ensureBuckets.run();
+            var nativeSlots = new java.util.HashSet<Integer>();
+            var queue = manager.nativeSpriteSubmissions();
+            for (int ordinal = 0; ordinal < queue.size(); ordinal++) nativeSlots.add(queue.slotAt(ordinal));
+            for (int bucket = RenderPriority.MIN; bucket <= RenderPriority.MAX; bucket++) {
+                var entries = unifiedBuckets[bucket - RenderPriority.MIN];
+                for (int i = entries.size() - 1; i >= 0; i--) {
+                    var entry = entries.get(i);
+                    if (!entry.nativeSubmission() && nativeSlots.contains(entry.slot())) continue;
+                    visitor.admission(bucket, entry.slot(), entry.instance(), entry.nativeSubmission());
+                }
+            }
         }
 
         void drawLowPriority() {

@@ -189,6 +189,8 @@ public final class LevelFrameStep {
         // A repeated or losing claim must not spend their clock tick again.
         if (claimed && (phase == PlcLifecyclePhase.NORMAL_PAUSE
                 || phase == PlcLifecyclePhase.SPECIAL_STAGE_PAUSE)) {
+            // Pause_Loop (s2.asm:1571-1597) does not run level objects;
+            // Vint_Level also holds Teleport_timer while Game_paused is set.
             advancePauseClock.run();
         }
     }
@@ -295,13 +297,17 @@ public final class LevelFrameStep {
 
         if (phase == PlcLifecyclePhase.ORDINARY_LEVEL)
             com.openggf.game.session.WorldSessionPolicyAccess.beforeNativeTick(context);
-        frame.claim(phase);
+        boolean claimed = frame.claim(phase);
         if (frame.consumedHeldLoopTailPreparation()) {
             context.runtimeArtCoordinator()
                     .deferProductionSubmissionForHeldLoopTailClosure();
         }
         dispatchGameVBlank(context, frame);
         serviceBoundary(context, HardwareServiceBoundary.VINT_SERVICE);
+
+        var nativeExecution = com.openggf.level.objects.ObjectManagerInternalAccess.nativeExecution(context);
+        if (claimed && nativeExecution != null) nativeExecution.afterNativeWait();
+        boolean objectsFrozen = nativeExecution != null && nativeExecution.objectsFrozen();
 
         // Retire runtime-art work submitted by an earlier object pass before
         // this frame's objects poll it. A request made below during object
@@ -391,28 +397,32 @@ public final class LevelFrameStep {
         // 2. Player slots first (ExecuteObjects / RunObjects / Process_Sprites
         //    dispatch slot 0, then slot 1). Touch responses run per player inside
         //    tickPlayablePhysics after movement.
-        wrapper.wrap("physics", spriteUpdate);
+        if (!objectsFrozen) wrapper.wrap("physics", spriteUpdate);
 
         LevelEventProvider fixedSlotEvents = context.levelEventProvider();
-        if (fixedSlotEvents != null) {
+        if (!objectsFrozen && fixedSlotEvents != null) {
             wrapper.wrap("fixed-objects-pre", fixedSlotEvents::updateFixedInLevelObjectsBeforeDynamicObjects);
         }
-        runNativeFixedObjectsBeforeDynamic(context, wrapper);
+        if (!objectsFrozen) runNativeFixedObjectsBeforeDynamic(context, wrapper);
 
         // 3. Object slots in slot order; each object resolves its own solid
         //    calls, so later objects see earlier contact adjustments.
         Runnable zoneFeaturesAfterObjects = runsLevelScrollAndEvents
                 ? levelManager::updateZoneFeaturesAfterObjectExecution
                 : () -> { };
-        Runnable afterExecBeforePlacement = levelOnlyFixedSlots != null
+        Runnable afterExecBeforePlacement = !objectsFrozen && levelOnlyFixedSlots != null
                 ? () -> {
                     levelOnlyFixedSlots.advancePlayableFixedSlotsAfterObjectExecution();
                     zoneFeaturesAfterObjects.run();
                 }
                 : zoneFeaturesAfterObjects;
-        wrapper.wrap("objects",
-                () -> levelManager.updateObjectPositionsPostPhysicsWithoutTouches(
-                        afterExecBeforePlacement, false));
+        wrapper.wrap("objects", () -> {
+            if (objectsFrozen) {
+                afterExecBeforePlacement.run();
+                com.openggf.level.objects.ObjectManagerInternalAccess.runFrozenPlacementPass(
+                        levelManager.getObjectManager());
+            } else levelManager.updateObjectPositionsPostPhysicsWithoutTouches(afterExecBeforePlacement, false);
+        });
 
         // 4. Camera scroll + dynamic level events, in ROM order.
         //

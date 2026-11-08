@@ -2,7 +2,10 @@
 
 **Date:** 2026-08-09
 
-**Status:** Design-ready; runtime capability unavailable
+**Status:** Implemented and offered on the title (2 PLAYER) since 2026-11-08. The [2026-11-07 Competition parity plan](../plans/2026-11-07-s2-competition-parity.md)
+records what was built, the user decisions that changed this design, and the
+evidence. The product contract here still applies. The "Current engine
+boundary" and "Current disposition" sections describe the engine on 2026-08-09.
 
 ## Outcome
 
@@ -61,7 +64,7 @@ The minimum authoritative catalog is:
 | CNZ selects its 2P object layout while the other competition zones share their native layout | `s2.asm:32943-32952`, `33780-33798` |
 | Ring draw/build and many object art paths use the compressed 2P presentation | `s2.asm:31456-31485`, `31882-32195`, `Adjust2PArtPointer*` / `BuildRings` |
 | Rings, lives, time, score, checkpoints, collected rings, and monitors are per player | `s2.constants.asm:1754-1782`; representative behavior at `s2.asm:25069-25205`, `25756-25888`, `41151-41217`, `44768-44770` |
-| Human P2 may break a monitor; CPU Tails in one-player mode may not | `s2.asm:85333-85343`, `Touch_Monitor` |
+| Human P2 may break a monitor; CPU Tails in one-player mode may not | `Touch_Monitor` (s2.asm:85439-85475); the second-player gate and roll check are at `s2.asm:85463-85470` |
 | Act/zone/game/special-stage results own competition progression | `s2.asm:10708-11210`, `TwoPlayerResults*` |
 
 The ROM also clears `Two_player_mode` for water levels during level
@@ -70,6 +73,8 @@ those levels. This is evidence that the supported product is the native
 competition route, not an arbitrary two-human launch into every ordinary act.
 
 ## Current engine boundary
+
+As of 2026-08-09; see the status line for the current state.
 
 | Area | Current owner | Why it cannot represent native competition |
 |---|---|---|
@@ -367,7 +372,10 @@ following together:
 9. The complete state/reference graph survives rewind and every session/level
    reset boundary.
 10. Dedicated trace-v5 and rendered evidence passes for EHZ, MCZ, CNZ, and the
-    2P special-stage/results path on the verified REV01 ROM.
+    2P special-stage/results path on the verified REV01 ROM. The user replaced
+    this gate on 2026-11-07: activation evidence is BizHawk native screenshots
+    plus position/state checks, and the two-player V5 recorder is deferred. See
+    the [parity plan](../plans/2026-11-07-s2-competition-parity.md#user-decisions).
 11. The JDK 21 focused suites, all S2 ROM-backed tests, architecture/rewind
     guards, and the full regression comparison introduce no failure.
 
@@ -395,6 +403,11 @@ exception. If a prerequisite migration cannot replace a live current owner in
 the same change, keep it in design/tests rather than `src/main`.
 
 ## Current disposition
+
+Superseded: the role, state, view and two-camera lifetime work and the S2
+product route were delivered by the
+[2026-11-07 Competition parity plan](../plans/2026-11-07-s2-competition-parity.md).
+The text below is the 2026-08-09 disposition.
 
 The audit closes the ambiguity but not the runtime gap. A complete native
 competition implementation is defensible only after the role/state/view and

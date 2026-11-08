@@ -125,6 +125,26 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
         this.currentSpriteY = spawn.y();
     }
 
+    /** Pressure-spring state bytes $36/$37 only: swap_loop_objects (s2.asm:26087-26092). */
+    void swapPlayerOwnership() {
+        var roster = com.openggf.game.competition.NativeCompetitionRoster.from(services().worldSession());
+        if (roster == null) return;
+        var firstPlayer = roster.player(0);
+        var secondPlayer = roster.player(1);
+        var first = playerStates.get(firstPlayer);
+        var second = playerStates.get(secondPlayer);
+        int firstState = first != null ? first.state : STATE_EMPTY;
+        int secondState = second != null ? second.state : STATE_EMPTY;
+        // Keep each actor's Java cooldown and map-entry identity. An absent
+        // entry represents the native zero byte, not another field to exchange.
+        if (first == null && secondState != STATE_EMPTY)
+            first = playerStates.computeIfAbsent(firstPlayer, ignored -> new PlayerState());
+        if (second == null && firstState != STATE_EMPTY)
+            second = playerStates.computeIfAbsent(secondPlayer, ignored -> new PlayerState());
+        if (first != null) first.state = secondState;
+        if (second != null) second.state = firstState;
+    }
+
     @Override
     public void releasePlayersForVisualDirection() {
         for (var entry : playerStates.entrySet()) if (entry.getValue().state != STATE_EMPTY)

@@ -114,3 +114,112 @@ hand-edit generated IDs or split intervals across shots.
 For an explicitly requested promo, use [promo-direction](../promo-direction/SKILL.md)
 and [gameplay-highlights](../gameplay-highlights/SKILL.md). A scene request alone
 does not imply publishing a reel or sending messages.
+
+## Native two-human route programmes
+
+`StageplayRoutePlanner.planNative(hosts, launch, prefix, goals, budget, cancelled,
+progress)` submits an ordered goal programme to the existing bounded native-input
+search and qualifies the resulting frozen rows with a fresh linear replay. It
+keeps every prefix row verbatim. Use P1/P2 `PlayerIn`, `Settled`, attachment goals,
+and `All` for joint goals. Never author competition traversal rows by hand or
+extend the older `ReferencePathInputAuthor` search.
+
+The experimental S2 adapter is `StageplayCompetitionRouteHosts`: production title
+entry, the native menu Visit, two human pads, read-only object observations and
+copied `competition.*` facts. It enables the title row only in the isolated
+qualification module; `QUALIFIED_ZONES` remains empty. Its `menuPrefix(entry)`
+generates the native 2x2 menu input prefix (0 EHZ, 1 MCZ, 2 CNZ, 3 special).
+The prefix is a native replay hypothesis until BizHawk confirms the whole movie.
+No native qualification follows from engine qualification alone.
+
+`StageplayRouteTool --native-route <draft.route.json> --s2-rom <ROM> --out <new-stem>`
+plans from the draft's frozen prefix and goal programme. Optional `--prefix-rows`,
+`--nodes`, `--ticks`, and `--bk2 <new-file>` bound work/export. Use only an isolated
+worker with `DISPLAY`/`WAYLAND_DISPLAY` unset and
+`-Dopenggf.headless.gl=surfaceless-egl`. A `title` inlet names the production title
+entry; rows include title/menu input. `.route.json` remains the launch/goals/hash
+and qualification authority; `.script` keeps both pads' exact held states.
+`fact-equals` goals have `key`/`value`; missing facts fail. Tests and native checks
+replay the saved rows, never re-plan. Native power-on timing and visibility goals
+still need independent confirmation; do not label an unconfirmed prefix cold
+native evidence.
+
+For a new S2 programme, `StageplayRouteTool --competition-entry <0..3>
+--goals <goal-program.json> --s2-rom <ROM> --out <new-stem>` generates the menu
+prefix and plans its continuation. A programme normally begins checks at
+`startRow:1200`, after the generated prefix. `competition.paused` observes the
+native pause owner. The semantic `input.menu` fact admits a searched Start tap
+when a non-act menu needs one; it never authors an act unpause workaround. A pause
+carried from a synchronous menu load is a gameplay frontier, not a route repair.
+Competition checkpoints use the complete registry and previous input row inside
+one stable act, and refuse fades, pending loads and other modes. Boundary legs
+retire earlier checkpoints before continuing. Existing P1 guard semantics remain;
+add explicit P2 conditions when the programme needs to protect P2.
+
+`facts-equal` (`left`/`right`) compares copied owner metrics, including
+`competition.zoneWins.p1` / `.p2`. For a continuation, retain the original rows:
+its completed goal cursor is evaluated over the prefix before any new search.
+`--replay-native-route FILE --s2-rom ROM --out NEW_DIRECTORY` replays only and
+writes engine witnesses; `--publish NEW_STEM` saves that same frozen tape with
+fresh engine evidence. CNZ `competition.flip.visible` requires resident ROM art
+in a non-flat pose, a full cell in a view, and a matching framebuffer pixel.
+The native programme entry is separate from the scene `--worker` protocol;
+editor jobs must select the S2 host for a title inlet and preserve both pad lanes.
+
+### Native export anchors
+
+Do not export engine title/load rows 1:1. A native programme export replaces engine
+rows before its first ordinary Level boundary (LFC 0) with the verified native
+witness prefix. `native.entry.prefixRows` is the native anchor count;
+`native.entry.engineAnchorRows` is the observed engine anchor count;
+`native.entry.anchorBoundary` is `first-ordinary-level-lfc-zero`. Both counts name
+completed rows. Native movie row `prefixRows` (zero-based) plays engine tape row
+`engineAnchorRows`; no fitted delays or lag fillers are inferred. `movie` identifies
+frozen BK2/input-log/.script rows and `inputHash` binds exactly the witness prefix.
+
+Supply `--native-witness FILE --native-anchor-rows N` with authoring, or with
+`--replay-native-route ... --publish NEW_STEM`. The tool reads the engine anchor
+from `input.gameplayAnchorRows`, an observation of the actual production boundary.
+Replay checks declared anchors against that observation. Title exports without
+anchors, changed witness hashes, and `native.exportBlocker` are refused. The blocker
+marks provisional routes while preserving their rows and historical engine evidence.
+Replay writes `state.csv` with offered rows, LFC, phase, pause and anchor observations.
+
+`StageplayRoutePlanner.repairNative(hosts, original, reference, scope, budget,
+cancelled, progress)` exposes the same source-preserving repair core for native
+programmes. `ReferencePath.withParticipantPositions` accepts copied P2 centres
+and explicit presence; normal reference progress measures both participants before source reuse.
+A required edit first tries one native-button seam change with the original suffix,
+then broader existing candidates. Goal-bearing suffix candidates must pass the
+stored goal programme and fresh linear qualification; a budget failure proves no
+impossibility. References are prior engine observations only, never native CSV.
+
+Native goal stamps may include additive `qualification[].coverage` names. A
+BIZHAWK goal pass states only the listed read-only observations; an accepted
+native lag boundary ends state comparison without inventing filler inputs.
+Record that boundary and any unmet authoring-only waypoints explicitly. Empty
+coverage retains legacy unspecified scope. `passedChecks` requires named coverage.
+Use the read-only S2 goal observer documented in tools/bizhawk/README.md for native
+slot/cell proof, generated from verified ROM templates. Never treat an animation
+counter alone or an engine image as native goal evidence.
+
+Goal expansion can request the existing native-state-gated charge and moving
+Down/roll policies on either targeted human pad. Those remain bounded candidates
+in the same search. Native physics owns admission/speed; saved routes replay rows
+only. An object instance-ID checkpoint mismatch is a host frontier: retain strict
+identity equality and report it instead of normalizing IDs or removing objects.
+
+A fact-only menu goal with a leg `holds` invariant requests a bounded neutral
+observation hold. The same goal expander may keep the complete successful hold;
+linear qualification still checks every row. `competition.presentationFrame`
+copies the production presentation counter. Numeric fact distance ranks candidates
+only; missing facts cannot satisfy a goal. Deliberate result holds may use the
+ROM's full finish-grace period; never fit waits, seeds or clocks to native CSV.
+
+Multi-act cold exports may declare additive `native.inlets[]`: `engineFromRows`
+plus movie/prefixRows/inputHash/engineAnchorRows/anchorBoundary. Each is an observed
+ordinary Level/LFC0 boundary. Native history before the replaced load must equal
+already-composed frozen inputs; never fit offsets or change gameplay rows. CLI
+supports the four native-inlet/engine-inlet flags documented in the guide. Both
+editors preserve, list and resolve imported inlet witnesses. Replays validate
+`input.levelAnchorRows` without opening native data.

@@ -1,0 +1,86 @@
+package com.openggf.game.sonic2.competition.state;
+
+import com.openggf.game.rewind.RewindSnapshottable;
+import com.openggf.game.rewind.RewindTransient;
+import com.openggf.game.session.GameplayModeContext;
+import com.openggf.game.sonic2.competition.Sonic2CompetitionSession;
+import com.openggf.sprites.playable.PlayableSpriteInternalAccess;
+
+/** Independent actor status_secondary bit 1; Super_Sonic_flag and its timer have different owners. */
+public final class Sonic2SecondaryInvincibility implements RewindSnapshottable<Sonic2SecondaryInvincibility.State> {
+    private boolean primary;
+    private boolean secondary;
+    @RewindTransient(reason = "structural live-world binding, not gameplay values")
+    private GameplayModeContext context;
+    @RewindTransient(reason = "structural native roster; actors are resolved again after recreation")
+    private Sonic2CompetitionSession session;
+    @RewindTransient(reason = "structural ownership lifetime; retired actors return to ordinary inference")
+    private boolean bound;
+
+    public record State(boolean primary, boolean secondary) { }
+
+    public void initialize(GameplayModeContext context, Sonic2CompetitionSession session) {
+        retire();
+        this.context = context;
+        this.session = session;
+        bound = true;
+        // Fresh actor RAM has a clear status byte, even when emerald progress was retained by options VS.
+        primary = secondary = false;
+        bindActors();
+    }
+
+    private void bindActors() {
+        for (int slot = 0; slot < 2; slot++) {
+            final int index = slot;
+            final var actor = session.player(slot);
+            PlayableSpriteInternalAccess.bindNativeSecondaryInvincibility(actor,
+                    new PlayableSpriteInternalAccess.SecondaryInvincibility() {
+                        @Override public Boolean read() {
+                            return bound && session.player(index) == actor
+                                    && com.openggf.game.competition.NativeCompetitionRoster.from(context.getWorldSession()) == session
+                                    ? (index == 0 ? primary : secondary) : null;
+                        }
+                        @Override public void write(boolean value) {
+                            if (read() == null) return;
+                            if (index == 0) primary = value; else secondary = value;
+                        }
+                        @Override public com.openggf.game.PowerUpObject grantShield() {
+                            if (read() == null) throw new IllegalStateException("Retired native effect producer");
+                            // shield_monitor (s2.asm:25953-25967): Sonic_Shield / Tails_Shield.
+                            return Sonic2CompetitionNativeState.grantShield(context, actor, 0x86 + index);
+                        }
+                        @Override public com.openggf.game.PowerUpObject grantInvincibilityStars() {
+                            if (read() == null) throw new IllegalStateException("Retired native effect producer");
+                            // invincible_monitor (s2.asm:25987-26000): Sonic_InvincibilityStars / Tails_InvincibilityStars.
+                            return Sonic2CompetitionNativeState.grantStars(context, actor, index == 0 ? 0x88 : 0x8C);
+                        }
+                        @Override public void restoreCapturedEffects() {
+                            if (read() == null) throw new IllegalStateException("Retired native effect restore");
+                            Sonic2CompetitionNativeState.restoreCapturedPlayerEffects(context, session, index, false);
+                        }
+                    });
+        }
+    }
+
+    public void retire() {
+        bound = false;
+        primary = secondary = false;
+    }
+
+    public void swapPlayers() {
+        // teleport_swap_table (s2.asm:26169-26171): actor bytes include status_secondary; global Super does not travel.
+        boolean previous = primary;
+        primary = secondary;
+        secondary = previous;
+    }
+
+    @Override public String key() { return "s2-native-secondary-invincibility"; }
+    @Override public State capture() { return new State(primary, secondary); }
+    @Override public void restore(State state) {
+        primary = state.primary();
+        secondary = state.secondary();
+        // Canonical sprite restore may have recreated either stable human slot before this adapter runs.
+        if (bound) bindActors();
+    }
+    @Override public void resetForMissingSnapshot() { primary = secondary = false; if (bound) bindActors(); }
+}

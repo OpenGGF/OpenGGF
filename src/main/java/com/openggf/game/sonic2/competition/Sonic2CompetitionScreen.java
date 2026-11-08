@@ -20,15 +20,30 @@ public final class Sonic2CompetitionScreen implements NativeMenuScreen {
     private Sonic2CompetitionPresentation presentation;
     private Exit exit = Exit.NONE;
     private PendingLoad pendingLoad;
+    private final java.util.function.Supplier<com.openggf.game.sonic2.resources.Sonic2PlcService> plcOwner;
+    private com.openggf.game.GameStateManager entryProgress;
+    private boolean optionsEntry;
+
+    /** Resolve the current PLC owner after each world/load replacement, never a retired queue. */
+    public Sonic2CompetitionScreen(Sonic2CompetitionSession session, Sonic2CompetitionHost host,
+            Sonic2CompetitiveSpecialStageAdapter special, Rom rom,
+            java.util.function.Supplier<com.openggf.game.sonic2.resources.Sonic2PlcService> plcOwner) {
+        this.session = java.util.Objects.requireNonNull(session);
+        this.host = java.util.Objects.requireNonNull(host);
+        this.special = special;
+        this.rom = java.util.Objects.requireNonNull(rom);
+        this.plcOwner = java.util.Objects.requireNonNull(plcOwner);
+    }
+    /** Called by the provider before initialize; options retains emeralds, title clears them. */
+    public void setEntryProgress(com.openggf.game.GameStateManager progress, boolean fromOptions) {
+        entryProgress = java.util.Objects.requireNonNull(progress); optionsEntry = fromOptions;
+    }
 
     private record PendingLoad(Sonic2CompetitionSession.Phase phase, int zone, int act, int specialIndex) { }
 
     public Sonic2CompetitionScreen(Sonic2CompetitionSession session, Sonic2CompetitionHost host,
                                    Sonic2CompetitiveSpecialStageAdapter special, Rom rom) {
-        this.session = java.util.Objects.requireNonNull(session);
-        this.host = java.util.Objects.requireNonNull(host);
-        this.special = special;
-        this.rom = java.util.Objects.requireNonNull(rom);
+        this(session, host, special, rom, () -> null);
     }
     public Sonic2CompetitionSession session() { return session; }
     /** A full zone includes its native tiebreaker, not just decodable terrain. */
@@ -50,7 +65,8 @@ public final class Sonic2CompetitionScreen implements NativeMenuScreen {
         };
     }
     @Override public void initialize() {
-        session.reset(); exit = Exit.NONE; pendingLoad = null;
+        session.initializeEntry(entryProgress, optionsEntry);
+        session.playSelectMusic(GameServices.audio()); exit = Exit.NONE; pendingLoad = null;
         try { assets = Sonic2CompetitionAssets.load(rom); }
         catch (IOException failure) { throw new IllegalStateException("Cannot load native competition assets", failure); }
         presentation = null;
@@ -62,6 +78,9 @@ public final class Sonic2CompetitionScreen implements NativeMenuScreen {
         if (assets == null) throw new IllegalStateException("Competition screen not initialized");
         var before = session.phase();
         int beforeAct = session.act(), beforeSpecial = session.specialStageIndex();
+        syncResultsAudio();
+        var plc = plcOwner.get();
+        if (plc != null) session.setResultsPlcReady(!plc.isBusy());
         session.advancePresentation();
         switch (before) {
             case ACT -> {
@@ -73,7 +92,13 @@ public final class Sonic2CompetitionScreen implements NativeMenuScreen {
                 }
             }
             case SPECIAL_STAGE -> special.step(input);
-            case SELECT -> session.updateMenu(input.logical(), supportsSelection(nextSelection(input)));
+            case SELECT -> {
+                int selected = nextSelection(input);
+                if (session.completed(selected) && (input.logical().player1().startPressed()
+                        || input.logical().player2().startPressed()))
+                    GameServices.audio().playSfx(com.openggf.audio.GameSound.ERROR);
+                session.updateMenu(input.logical(), supportsSelection(selected));
+            }
             default -> session.updateMenu(input.logical(), session.resultsPlcReady());
         }
         if (session.phase() == Sonic2CompetitionSession.Phase.ACT
@@ -85,9 +110,18 @@ public final class Sonic2CompetitionScreen implements NativeMenuScreen {
         if (session.phase() != before) {
             session.setResultsPlcReady(false);
             if (presentation != null) presentation.invalidate();
+            if (session.phase() == Sonic2CompetitionSession.Phase.SELECT) session.playSelectMusic(GameServices.audio());
+            syncResultsAudio();
         }
         if (session.phase() == Sonic2CompetitionSession.Phase.FINISHED)
-            exit = new Exit(Destination.TITLE_SCREEN, null, false);
+            exit = new Exit(Destination.SEGA_SCREEN, null, false);
+    }
+    private void syncResultsAudio() {
+        switch (session.phase()) {
+            case ACT_RESULTS, ZONE_RESULTS, GAME_RESULTS, SPECIAL_ACT_RESULTS, SPECIAL_ZONE_RESULTS ->
+                    session.playResultsMusic(GameServices.audio());
+            default -> { }
+        }
     }
     @Override public void afterFrame() {
         var load = pendingLoad;
