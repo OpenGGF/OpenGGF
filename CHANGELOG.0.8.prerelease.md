@@ -47,8 +47,10 @@ under the matching area heading; see the
   S1 HUD life icons/names, act/special-stage results names and 1-up monitor faces
   now consume character presentation slots while retaining native Sonic fallbacks.
   Presentation font inventories now include the native small HUD letters in all
-  three hosts and S3K per-zone title/results-name letters. Remaining surface wiring
-  and packaging MICA’s presentation art remain pending. Stock S2 Tails-alone results
+  three hosts and S3K per-zone title/results-name letters. S3K HUD presentation
+  now consumes custom life icons and native-font names; act/Blue Sphere results
+  and independent 1-up faces also consume presentation slots. Remaining surface wiring and
+  packaging MICA’s presentation art remain pending. Stock S2 Tails-alone results
   now show the region-selected Miles/Tails name instead of Sonic.
   S2 HUD icons/names, act and special-stage results names, and 1-up faces now consume character presentations.
   MICA's Gilded Super/Hyper forms use owner-bound profiles and her jade-to-gold

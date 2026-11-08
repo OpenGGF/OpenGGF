@@ -188,8 +188,8 @@ appendage renderer automatically.
 
 ## Presentation contract (in progress)
 
-`CharacterDefinition.presentationSupplier()` is an optional
-`PresentationSupplier`. It receives the canonical persisted character key and
+`CharacterDefinition` accepts an optional `PresentationSupplier` before its
+optional `SuperFormSupplier`. It receives the canonical persisted character key and
 runs inside the character owner's fault boundary, like the art and palette
 suppliers. Existing constructors default it to `null`.
 
@@ -200,14 +200,16 @@ keyed by host and letter style. `Art` has independent HUD life icon (16×16),
 fallback. `Image` uses palette indices 0–15, with zero transparent; it copies pixel
 arrays on construction and access. Presentation maps are immutable snapshots.
 
-S1 and S2 consume the HUD life icon/name, act-results name, special-stage results
-name (in S2 including the Super announcement) and 1-up monitor face slots. Names
-use each host's small HUD font or title-card alphabet; absent slots, names with
-unsupported glyphs and S2 HUD names wider than 32 pixels retain the native
-presentation. 1-up faces must be 16×16; other sizes retain the native face.
-The internal name composer reports native, supplementary and missing glyph
-coverage and extracts pixel crops across tile boundaries. Title-font readers for
-all three hosts and small HUD-font readers use the ROM pipeline. The S3K reader
+S1, S2 and S3K consume the HUD life icon/name, act-results name, special-stage
+results name (S2 including the Super announcement; S3K Blue Sphere) and 1-up
+monitor face slots. Names use each host's small HUD font or title-card/results
+alphabet inside the native HUD cell (32×16 pixels); the HUD uses the short name when
+supplied. Absent slots, names with unsupported glyphs and HUD names that do not fit
+retain the native presentation. 1-up faces must be 16×16; other sizes retain the
+native face. Stock characters without a supplier keep their native tiles and
+mappings. The internal name composer reports native, supplementary and missing
+glyph coverage and extracts pixel crops across tile boundaries. Title-font readers
+for all three hosts and small HUD-font readers use the ROM pipeline. The S3K reader
 inventories each zone separately, including shared ZONE letters and pixel crops
 within multi-letter pieces, plus the results-name banks. Native glyphs take
 precedence over supplements: MICA needs supplementary M and A only in the S1 HUD

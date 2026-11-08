@@ -98,7 +98,10 @@ Status S2: all four surfaces wired and tile/mapping-tested on
 Status: API foundation delivered; group 1 follow-up in progress on
 `feature/ai-mica-presentation2`. ROM readers now inventory all three small HUD
 fonts and S3K per-zone title/results-name art. S2 stock Tails-alone results select
-Miles/Tails using the native graphics-region flag. Remaining surface wiring, sign spin/backing
+Miles/Tails using the native graphics-region flag. The resumed S3K lane wires HUD
+icon/name, act-results name, Blue Sphere results name and independent 1-up faces;
+focused tile/mapping and regression verification passed (310 tests, no skips).
+Other surface wiring, sign spin/backing
 contract extensions, packaged MICA presentation assets and gameplay captures remain
 pending; group 1 is not complete. The existing owner-bounded supplier, immutable
 indexed images, pixel composer and S1/S2 title readers remain the foundation.
@@ -492,6 +495,9 @@ Status log (times UTC):
   surfaces still pending in W4b) and the W5 homing facade (`13515a986`). Lead check of
   the merged tree passed: homing (15), name composer, signature pin, Mutator Lab
   package, character registry and MICA integration tests, all ROMs found.
+
+- 2026-11-08: S3K surface lane resumed: HUD life icon/name adapter restored;
+  results, Blue Sphere and independent 1-up face wiring still pending.
 - 2026-11-08: merged W6 Super/Hyper forms (`e4639065d`; conflict with W4a on
   `CharacterDefinition` resolved by carrying both suppliers; 174 focused tests
   passed) and W7c sheet assembly (`e9c8350d8`; MICA plays with her art in S1 GHZ1,
@@ -561,3 +567,29 @@ Status log (times UTC):
   S2 snapshot reuse and special-stage name additions committed by this lane.
   No live jobs or blockers. Next action: lead integrates the lane branch; no
   destination merge or push was performed here.
+
+
+- 2026-11-08: W4 S3K act-results adapter composes the presentation name into
+  derived tiles/mappings after native art readiness, including rewind rebuilds.
+  Focused tile checks pending; stock names and GOT THROUGH ACT mappings retained.
+
+- 2026-11-08: W4 S3K Blue Sphere results now use the same composed name bank,
+  preserving the native special-stage tile compensation and palette selection.
+
+- 2026-11-08: W4 S3K 1-up art uses its independent presentation slot at the
+  existing monitor life-icon mapping offset. Missing slots retain the native face.
+
+- 2026-11-08: W4 S3K surface lane complete on
+  `feature/ai-mica-s3k-surfaces-r2`: HUD life icon/name, act-results name,
+  Blue Sphere results name and independent 1-up face. Native slots retain stock
+  tiles/mappings. No contract, other-host or signpost changes in this lane.
+  Tested source `a67bbed5f` with queued Maven (`-Dmse=off`, surfaceless EGL):
+  310 tests passed, zero failures/errors/skips, including five new tile/mapping
+  surface cases, S3K HUD/results/monitor regressions, MICA integration, signature
+  surface and all four required S3K loading checks. Checkpoint compilation passed.
+  The initial focused attempt failed test compilation because a newly added test
+  ran against main classes compiled before the 1-up method was added; the fresh
+  fixed-tree run above passed. Final validation queued about 5.5 minutes, executed
+  1m50s; user wait zero. No gameplay captures, broad smoke or release suite run.
+  The lead owns remaining asset packaging, other surfaces and integration; this
+  lane has made no push and keeps its worktree/branch for handoff.
