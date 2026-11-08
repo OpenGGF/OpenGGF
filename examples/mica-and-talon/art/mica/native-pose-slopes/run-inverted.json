@@ -10,14 +10,58 @@
       "prompt": "Use case: style-transfer. Draw ONE original 16-bit pixel sprite of MICA the jade pangolin on transparent background. Image 1 is this frame's stock native pose: match its exact stride phase, limb/boot positions, rotation, framing and silhouette size, redrawing all anatomy as MICA; never recolour Sonic. Image 2 is MICA concept (jade form). Images 3/4 are approved flat WALK and RUN style anchors. MICA: rounded overlapping jade pangolin scales, small round ears, long tapered scaled tail, cream muzzle/belly, white gloves, coral hiking boots with tan lug soles. No Sonic spines, ears, face or shoes. Frame run-inverted-00: 135-degree inverted slope, head lower-left and feet upper-right. Keep the native rotated pose, do NOT turn upright. Preserve the native phase of the circular coral boot-speed streak, with anatomically connected bent limbs. New drawing consistent with the flat pilot, compact crisp pixel clusters, dark native one-pixel outline, restrained scale highlights. One character only; no ground, shadow, text, grid or extra frames.\n\nHead correction prompt:\nEdit this ORIGINAL MICA pangolin pixel sprite to match its native pose reference. Input 1 is MICA drawing; input 2 is the native 8x pose guide; input 3 MICA concept; input 4 approved flat pixel style. Change only the head orientation and neck join. MICA's muzzle, nose and gaze must point UPPER RIGHT, toward 1 o'clock, exactly as the native reference's face. Current face points left/down incorrectly. Keep head on the left of the hips, and keep the legs and boots on the right in their exact current stride/rotation, including coral speed arcs if present. Preserve the full body orientation, framing, silhouette size, tail, glove positions, palette/style, overlapping round jade pangolin scales, white gloves, coral hiking boots, small round ears. Only turn the head within its existing place to look upward/right toward travel direction. Do not rotate or stand the body upright. No hedgehog spines, no Sonic face or shoes. Transparent background; one sprite; no ground, labels or added elements. Frame run-inverted-00.",
       "raw_sha256": "f11ddda2a761ef9b10d66faeb23c327a00301e5862b5b03837777498ec34a130",
       "size": [
-        42,
-        41
+        38,
+        37
       ],
       "hotspot": [
-        18,
-        19
+        19,
+        20
       ],
-      "reduction": "largest alpha component; Lanczos to existing box; fixed palette indices; inside outline; support normalization (at most 10% shrink around unchanged hotspot or transparent right padding)"
+      "reduction": "largest alpha component; Lanczos to existing box; fixed palette indices; inside outline; support normalization (at most 10% shrink around unchanged hotspot or transparent right padding)",
+      "finish": {
+        "reference": {
+          "id": "run-inverted-00",
+          "game": "S2",
+          "mapping": 57,
+          "label": "Map_Sonic_07DE",
+          "size": [
+            39,
+            37
+          ],
+          "hotspot": [
+            19,
+            20
+          ]
+        },
+        "geometry_reference": {
+          "size": [
+            38,
+            37
+          ],
+          "hotspot": [
+            19,
+            20
+          ]
+        },
+        "native_size": [
+          38,
+          37
+        ],
+        "previous_size": [
+          42,
+          41
+        ],
+        "previous_hotspot": [
+          18,
+          19
+        ],
+        "hotspot": [
+          19,
+          20
+        ],
+        "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
+        "native_support": 19.79899
+      }
     },
     {
       "id": "run-inverted-01",
@@ -26,14 +70,58 @@
       "prompt": "Use case: style-transfer. Draw ONE original 16-bit pixel sprite of MICA the jade pangolin on transparent background. Image 1 is this frame's stock native pose: match its exact stride phase, limb/boot positions, rotation, framing and silhouette size, redrawing all anatomy as MICA; never recolour Sonic. Image 2 is MICA concept (jade form). Images 3/4 are approved flat WALK and RUN style anchors. MICA: rounded overlapping jade pangolin scales, small round ears, long tapered scaled tail, cream muzzle/belly, white gloves, coral hiking boots with tan lug soles. No Sonic spines, ears, face or shoes. Frame run-inverted-01: 135-degree inverted slope, head lower-left and feet upper-right. Keep the native rotated pose, do NOT turn upright. Preserve the native phase of the circular coral boot-speed streak, with anatomically connected bent limbs. New drawing consistent with the flat pilot, compact crisp pixel clusters, dark native one-pixel outline, restrained scale highlights. One character only; no ground, shadow, text, grid or extra frames.\n\nHead correction prompt:\nEdit this ORIGINAL MICA pangolin pixel sprite to match its native pose reference. Input 1 is MICA drawing; input 2 is the native 8x pose guide; input 3 MICA concept; input 4 approved flat pixel style. Change only the head orientation and neck join. MICA's muzzle, nose and gaze must point UPPER RIGHT, toward 1 o'clock, exactly as the native reference's face. Current face points left/down incorrectly. Keep head on the left of the hips, and keep the legs and boots on the right in their exact current stride/rotation, including coral speed arcs if present. Preserve the full body orientation, framing, silhouette size, tail, glove positions, palette/style, overlapping round jade pangolin scales, white gloves, coral hiking boots, small round ears. Only turn the head within its existing place to look upward/right toward travel direction. Do not rotate or stand the body upright. No hedgehog spines, no Sonic face or shoes. Transparent background; one sprite; no ground, labels or added elements. Frame run-inverted-01.",
       "raw_sha256": "fd3c0a2f35d3b94974104368f0bbbfa643fb75f0edf6ad0a99309e566d5a9f9b",
       "size": [
-        42,
-        41
+        38,
+        35
       ],
       "hotspot": [
-        18,
-        19
+        20,
+        20
       ],
-      "reduction": "largest alpha component; Lanczos to existing box; fixed palette indices; inside outline; support normalization (at most 10% shrink around unchanged hotspot or transparent right padding)"
+      "reduction": "largest alpha component; Lanczos to existing box; fixed palette indices; inside outline; support normalization (at most 10% shrink around unchanged hotspot or transparent right padding)",
+      "finish": {
+        "reference": {
+          "id": "run-inverted-01",
+          "game": "S2",
+          "mapping": 58,
+          "label": "Map_Sonic_07F8",
+          "size": [
+            40,
+            35
+          ],
+          "hotspot": [
+            20,
+            20
+          ]
+        },
+        "geometry_reference": {
+          "size": [
+            38,
+            35
+          ],
+          "hotspot": [
+            20,
+            20
+          ]
+        },
+        "native_size": [
+          38,
+          35
+        ],
+        "previous_size": [
+          42,
+          41
+        ],
+        "previous_hotspot": [
+          18,
+          19
+        ],
+        "hotspot": [
+          20,
+          20
+        ],
+        "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
+        "native_support": 19.79899
+      }
     },
     {
       "id": "run-inverted-02",
@@ -42,14 +130,58 @@
       "prompt": "Use case: style-transfer. Draw ONE original 16-bit pixel sprite of MICA the jade pangolin on transparent background. Image 1 is this frame's stock native pose: match its exact stride phase, limb/boot positions, rotation, framing and silhouette size, redrawing all anatomy as MICA; never recolour Sonic. Image 2 is MICA concept (jade form). Images 3/4 are approved flat WALK and RUN style anchors. MICA: rounded overlapping jade pangolin scales, small round ears, long tapered scaled tail, cream muzzle/belly, white gloves, coral hiking boots with tan lug soles. No Sonic spines, ears, face or shoes. Frame run-inverted-02: 135-degree inverted slope, head lower-left and feet upper-right. Keep the native rotated pose, do NOT turn upright. Preserve the native phase of the circular coral boot-speed streak, with anatomically connected bent limbs. New drawing consistent with the flat pilot, compact crisp pixel clusters, dark native one-pixel outline, restrained scale highlights. One character only; no ground, shadow, text, grid or extra frames.\n\nHead correction prompt:\nEdit this ORIGINAL MICA pangolin pixel sprite to match its native pose reference. Input 1 is MICA drawing; input 2 is the native 8x pose guide; input 3 MICA concept; input 4 approved flat pixel style. Change only the head orientation and neck join. MICA's muzzle, nose and gaze must point UPPER RIGHT, toward 1 o'clock, exactly as the native reference's face. Current face points left/down incorrectly. Keep head on the left of the hips, and keep the legs and boots on the right in their exact current stride/rotation, including coral speed arcs if present. Preserve the full body orientation, framing, silhouette size, tail, glove positions, palette/style, overlapping round jade pangolin scales, white gloves, coral hiking boots, small round ears. Only turn the head within its existing place to look upward/right toward travel direction. Do not rotate or stand the body upright. No hedgehog spines, no Sonic face or shoes. Transparent background; one sprite; no ground, labels or added elements. Frame run-inverted-02.",
       "raw_sha256": "a5132b72e15ef4cdd925fda3c2bd11632a7d6ca2a292dbd4e2354a46c892615e",
       "size": [
-        42,
-        41
+        38,
+        36
       ],
       "hotspot": [
-        18,
+        19,
         19
       ],
-      "reduction": "largest alpha component; Lanczos to existing box; fixed palette indices; inside outline; support normalization (at most 10% shrink around unchanged hotspot or transparent right padding)"
+      "reduction": "largest alpha component; Lanczos to existing box; fixed palette indices; inside outline; support normalization (at most 10% shrink around unchanged hotspot or transparent right padding)",
+      "finish": {
+        "reference": {
+          "id": "run-inverted-02",
+          "game": "S2",
+          "mapping": 59,
+          "label": "Map_Sonic_080A",
+          "size": [
+            39,
+            36
+          ],
+          "hotspot": [
+            19,
+            19
+          ]
+        },
+        "geometry_reference": {
+          "size": [
+            38,
+            36
+          ],
+          "hotspot": [
+            19,
+            19
+          ]
+        },
+        "native_size": [
+          38,
+          36
+        ],
+        "previous_size": [
+          42,
+          41
+        ],
+        "previous_hotspot": [
+          18,
+          19
+        ],
+        "hotspot": [
+          19,
+          19
+        ],
+        "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
+        "native_support": 19.79899
+      }
     },
     {
       "id": "run-inverted-03",
@@ -58,14 +190,58 @@
       "prompt": "Use case: style-transfer. Draw ONE original 16-bit pixel sprite of MICA the jade pangolin on transparent background. Image 1 is this frame's stock native pose: match its exact stride phase, limb/boot positions, rotation, framing and silhouette size, redrawing all anatomy as MICA; never recolour Sonic. Image 2 is MICA concept (jade form). Images 3/4 are approved flat WALK and RUN style anchors. MICA: rounded overlapping jade pangolin scales, small round ears, long tapered scaled tail, cream muzzle/belly, white gloves, coral hiking boots with tan lug soles. No Sonic spines, ears, face or shoes. Frame run-inverted-03: 135-degree inverted slope, head lower-left and feet upper-right. Keep the native rotated pose, do NOT turn upright. Preserve the native phase of the circular coral boot-speed streak, with anatomically connected bent limbs. New drawing consistent with the flat pilot, compact crisp pixel clusters, dark native one-pixel outline, restrained scale highlights. One character only; no ground, shadow, text, grid or extra frames.\n\nHead correction prompt:\nEdit this ORIGINAL MICA pangolin pixel sprite to match its native pose reference. Input 1 is MICA drawing; input 2 is the native 8x pose guide; input 3 MICA concept; input 4 approved flat pixel style. Change only the head orientation and neck join. MICA's muzzle, nose and gaze must point UPPER RIGHT, toward 1 o'clock, exactly as the native reference's face. Current face points left/down incorrectly. Keep head on the left of the hips, and keep the legs and boots on the right in their exact current stride/rotation, including coral speed arcs if present. Preserve the full body orientation, framing, silhouette size, tail, glove positions, palette/style, overlapping round jade pangolin scales, white gloves, coral hiking boots, small round ears. Only turn the head within its existing place to look upward/right toward travel direction. Do not rotate or stand the body upright. No hedgehog spines, no Sonic face or shoes. Transparent background; one sprite; no ground, labels or added elements. Frame run-inverted-03.",
       "raw_sha256": "436dc80aeb6b26eb0b905a34736fd9b749fdf69a6d05a4fa4a8d2799dbabb800",
       "size": [
-        43,
-        41
+        38,
+        35
       ],
       "hotspot": [
-        18,
-        19
+        20,
+        20
       ],
-      "reduction": "largest alpha component; Lanczos to existing box; fixed palette indices; inside outline; support normalization (at most 10% shrink around unchanged hotspot or transparent right padding)"
+      "reduction": "largest alpha component; Lanczos to existing box; fixed palette indices; inside outline; support normalization (at most 10% shrink around unchanged hotspot or transparent right padding)",
+      "finish": {
+        "reference": {
+          "id": "run-inverted-03",
+          "game": "S2",
+          "mapping": 60,
+          "label": "Map_Sonic_0824",
+          "size": [
+            40,
+            35
+          ],
+          "hotspot": [
+            20,
+            20
+          ]
+        },
+        "geometry_reference": {
+          "size": [
+            38,
+            35
+          ],
+          "hotspot": [
+            20,
+            20
+          ]
+        },
+        "native_size": [
+          38,
+          35
+        ],
+        "previous_size": [
+          43,
+          41
+        ],
+        "previous_hotspot": [
+          18,
+          19
+        ],
+        "hotspot": [
+          20,
+          20
+        ],
+        "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
+        "native_support": 19.79899
+      }
     }
   ]
 }

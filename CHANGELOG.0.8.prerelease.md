@@ -40,7 +40,10 @@ under the matching area heading; see the
   single-player physics, character-owned homing (including an untargeted forward
   dash), a four-frame HOMING_DIVE pose, and powered Instagib strikes. Its
   rerunnable original sheet has 98 frames, 18 canonical animations, slope cycles,
-  a shared palette and a breathing/fidget idle. Gilded Super/Hyper forms cycle
+  a shared palette and a breathing/fidget idle. The 36 rotated WALK/RUN poses
+  use native phase coordinates and pixel-edited contact edges; S3K transformation
+  art uses clustered gold scales and a clearer face, and the second dive shell
+  has rounded scale rows. Gilded Super/Hyper forms cycle
   jade to gold, retain her sheet, and expose host settings for their gates. S1's
   donor-free six-emerald form is explicitly mod-defined. MICA supplies HUD/name,
   act and special-stage results (including S2's Super announcement), 1-up faces,
