@@ -2505,3 +2505,54 @@ owned baseline's target/code-climb/422-baseline-handoff.json and accompanying
 category evidence/light export. No baseline artifacts have been acknowledged or
 removed. Candidate HCZ, final-source smoke/guards and exact comparisons remain
 required before push.
+
+### Matched HCZ reports and executed diagnosis command — 2026-11-08
+
+At clean 7a93b4f2e the candidate HCZ pair used the requested trace-segments lane,
+unique output directories and the same Java 25/Lua 5.4/EGL/displays-unset setup:
+
+```bash
+python3 tools/testing/maven_queue.py --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Ptrace-segments -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical -Dtrace.print.summary=true -Dopenggf.surefire.reports=target/code-climb/7a93-hcz-candidate-surefire -Dopenggf.trace.reports=target/code-climb/7a93-hcz-candidate-reports '-Dtest=TestS3kSonicTailsHczSegmentTraceReplay,TestS3kSonicTailsHcz2SegmentTraceReplay' test -B
+```
+
+Two cases executed: HCZ1 passed, HCZ2 failed its inherited comparison assertion,
+zero errors or skips. Queue 42s, Maven 44.871s; XML case times 1.870s and 9.244s.
+The candidate and baseline report JSON files are byte-for-byte identical for
+EHZ1, HCZ1 and HCZ2. Pairing used each full JUnit identity and verified owner key,
+not the shared HCZ logical prefix. Baseline artifact hashes match the handoff.
+The owner sidecars' physical paths correctly differ between worktrees/output
+directories and were checked against their actual report paths separately.
+
+HCZ1 has 3519 comparisons/3574 planned rows with its all-scope gate reached.
+HCZ2 has 14149 comparisons/14208 planned rows with its all-scope gate reached and
+26 errors (2 physics, 24 animation). Its first error remains player_animation_id
+at trace frame 6640, expected 0x0013 versus 0x0005; camera_y remains the first
+physics divergence over 6784–6792, 0x0638 versus 0x0640. Gameplay report warnings
+and bootstrap errors/warnings are zero. Eight advertised aux schemas remain
+missing; engine logs separately warn about FAST without a manifest and blocked
+presentation-shadow SFX. Matching bounded reports do not certify those missing
+inputs, another route, hardware timing or a warning-free invocation.
+
+Root then executed the actual POSIX command printed for the HCZ2 failure,
+including its emitted Maven argument quoting:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off exec:java -Dexec.mainClass=com.openggf.tools.TraceTriageTool '-Dexec.args=--report "target/code-climb/7a93-hcz-candidate-reports/trace/s3k_hcz1-single-badb4640061d43c8.json" --fixture "src/test/resources/traces/s3k/runs/s3k-sonic-tails-complete-emeralds/hcz_2"'
+```
+
+Exit zero: the tool opened that report/fixture, reported COMPLETE saved-report
+evidence, retained the process/Surefire caveat, identified the first animation
+divergence and owning subsystem, and showed the expected context/aux rows. Queue
+231s, Maven 0.561s. This exercises ordinary POSIX paths, not paths containing
+spaces/quotes or Windows argument passing. The brief intentionally truncates
+long context lines; it is not a complete aux-schema certificate or a new trace
+frontier result. Log: target/code-climb/7a93-hcz2-emitted-triage.log; exact paired
+hash/JSON evidence: target/code-climb/7a93-domain-paired-comparison.json.
+
+The final candidate smoke plan retains all 4484 baseline classes and adds six,
+for 4490 classes across the same ten smoke categories plus guards, with workers
+2 and surfaceless EGL. No baseline class was removed. Final combined comparison
+must still inspect all negative assertions and complete skip dictionaries against
+the retained 33c evidence. Only audit prose changed after the domain run; no
+runtime code differs from reviewed 42243358f. The next beauty/trace cleanup
+patches are being prepared externally and are excluded from this candidate.
