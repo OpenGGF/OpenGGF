@@ -477,7 +477,9 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
 
         // Create and register sprite sheet
         ObjectSpriteSheet monitorSheet = new ObjectSpriteSheet(monitorPatterns, frames, 0, 1);
-        registerSheet(Sonic3kObjectArtKeys.MONITOR, monitorSheet);
+        registerSheet(Sonic3kObjectArtKeys.MONITOR, com.openggf.game.presentation.CharacterIconPalette.monitor(
+                monitorSheet, Sonic3kCharacterPresentation.active(),
+                com.openggf.game.CharacterPresentation.Host.S3K, lifeArtOffset));
 
         // Build and register animation set (Anim - Monitor.asm)
         SpriteAnimationSet monitorAnimations = buildMonitorAnimations();

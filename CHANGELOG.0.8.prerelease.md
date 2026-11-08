@@ -50,6 +50,8 @@ under the matching area heading; see the
   rider frames, and endings in all three games. S1 uses eight native-timed ending
   poses; S2 supplies solo photos, Float2 and normal/Super poses; S3K supplies rescue
   Float2/ride, reunion, transformation, tiny passengers and trio-eyecatch art.
+  HUD life icons and 1-up faces share her private character palette in all three
+  games; save-slot life icons retain their private frontend bank.
   Private palettes preserve native stage colours, text, board/spray, companions
   and vehicles; powered ending poses use her Gilded cycle. Acceptance covers
   launch/save/rewind/disabled-owner fallback and session-owned S2 HUD/1-up art,

@@ -91,6 +91,109 @@ class TestMicaCharacterIntegration {
         }
     }
 
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_1)
+    void iconPaletteS1() throws Exception { captureIconPalette("s1", "sonic1.rom.path", 0x1C, 2); }
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_2)
+    void iconPaletteS2() throws Exception { captureIconPalette("s2", "sonic2.rom.path",
+            com.openggf.game.sonic2.Sonic2ObjectArt.MONITOR_LIFE_ICON_TILE, 1); }
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void iconPaletteS3k() throws Exception { captureIconPalette("s3k", "s3k.rom.path", 0x310, 1); }
+
+    private void captureIconPalette(String game, String romProperty, int faceTile, int subtype) throws Exception {
+        Path output = Path.of(System.getProperty("mica.icon.captureRoot", "target/mica-icon-palettes")).resolve(game);
+        Files.createDirectories(output);
+        var settings = new com.openggf.tools.GameplayCaptureSession.Settings(320, CODE, "", "off", null, null, null);
+        try (var session = new com.openggf.tools.GameplayCaptureSession(settings)) {
+            session.applyMod(buildSample());
+            GameServices.configuration().setSessionOverride(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT, true);
+            session.boot(Path.of(System.getProperty(romProperty)), 0, 0, settings);
+            // Declared setup: native 1-up placed beside the leader, without changing stage palettes.
+            var spawn = new com.openggf.level.objects.ObjectSpawn(session.player().getCentreX() + 80,
+                    session.player().getCentreY(), 0x26, subtype, 0, false, 0);
+            assertNotNull(GameServices.level().getObjectManager().createDynamicObject(() -> switch (game) {
+                case "s1" -> new com.openggf.game.sonic1.objects.Sonic1MonitorObjectInstance(spawn);
+                case "s2" -> new com.openggf.game.sonic2.objects.MonitorObjectInstance(spawn, "palette check 1-up");
+                default -> new com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance(spawn);
+            }));
+            var sheet = GameServices.level().getObjectRenderManager().getArtProvider().getSheet(com.openggf.level.objects.ObjectArtKeys.MONITOR);
+            int privateLine = com.openggf.game.presentation.CharacterIconPalette.activeLine(0);
+            assertTrue(privateLine >= 4);
+            boolean found = false;
+            for (int frame = 0; frame < sheet.getFrameCount(); frame++) for (var piece : sheet.getFrame(frame).pieces()) {
+                if (piece.tileIndex() >= faceTile && piece.tileIndex() < faceTile + 4) {
+                    found = true;
+                    assertEquals(privateLine, piece.paletteIndex());
+                } else assertTrue(piece.paletteIndex() < 4, "native shell keeps its palette");
+            }
+            assertTrue(found);
+            var csv = new StringBuilder(com.openggf.tools.GameplayCaptureSession.stateHeader()).append('\n');
+            for (int frame = 0; frame < 90; frame++) {
+                session.step(null);
+                csv.append(session.stateLine(frame, null)).append('\n');
+                if (frame == 30 || frame == 60 || frame == 89) {
+                    var image = session.render();
+                    com.openggf.graphics.ScreenshotCapture.savePNG(image, output.resolve("frame-" + frame + ".png"));
+                    var renderer = session.player().getSpriteRenderer();
+                    var palette = renderer.getRenderContext().getPalette(renderer.paletteLine());
+                    var provider = GameServices.level().getObjectRenderManager().getArtProvider();
+                    assertIconPixels(image, provider.getHudLivesPatterns(), 0, palette, 16, 200);
+                    if (frame == 89) assertFacePresent(image, sheet.getPatterns(), faceTile, palette);
+                }
+            }
+            Files.writeString(output.resolve("state.csv"), csv);
+        }
+    }
+
+    private static int paletteRgb(com.openggf.level.Palette palette, int index) {
+        var colour = palette.getColor(index);
+        return (Byte.toUnsignedInt(colour.r) << 16) | (Byte.toUnsignedInt(colour.g) << 8) | Byte.toUnsignedInt(colour.b);
+    }
+
+    private static boolean matchesIcon(com.openggf.graphics.RgbaImage image, com.openggf.level.Pattern[] tiles,
+            int first, com.openggf.level.Palette palette, int left, int top) {
+        for (int y = 0; y < 16; y++) for (int x = 0; x < 16; x++) {
+            int colour = Byte.toUnsignedInt(tiles[first + x / 8 * 2 + y / 8].getPixel(x % 8, y % 8));
+            if (colour != 0 && (image.argb(left + x, top + y) & 0xFFFFFF) != paletteRgb(palette, colour)) return false;
+        }
+        return true;
+    }
+
+    private static void assertIconPixels(com.openggf.graphics.RgbaImage image, com.openggf.level.Pattern[] tiles,
+            int first, com.openggf.level.Palette palette, int left, int top) {
+        assertTrue(matchesIcon(image, tiles, first, palette, left, top), "HUD opaque pixels must use the character palette");
+    }
+
+    private static void assertFacePresent(com.openggf.graphics.RgbaImage image, com.openggf.level.Pattern[] tiles,
+            int first, com.openggf.level.Palette palette) {
+        // The declared monitor is right of the player; exclude the HUD and player themselves.
+        for (int y = 64; y < 180; y++) for (int x = 128; x < 296; x++)
+            if (matchesIcon(image, tiles, first, palette, x, y)) return;
+        fail("1-up monitor opaque face pixels must use the character palette");
+    }
+
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_1)
+    void stockIconPaletteS1() throws Exception { stockIconPalette("sonic1.rom.path", List.of("sonic")); }
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_2)
+    void stockIconPaletteS2() throws Exception { stockIconPalette("sonic2.rom.path", List.of("sonic", "tails")); }
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void stockIconPaletteS3k() throws Exception { stockIconPalette("s3k.rom.path", List.of("sonic", "tails", "knuckles")); }
+
+    private void stockIconPalette(String romProperty, List<String> characters) throws Exception {
+        for (String character : characters) {
+            var settings = new com.openggf.tools.GameplayCaptureSession.Settings(320, character, "", "off", null, null, null);
+            try (var session = new com.openggf.tools.GameplayCaptureSession(settings)) {
+                session.boot(Path.of(System.getProperty(romProperty)), 0, 0, settings);
+                for (int frame = 0; frame < 90; frame++) session.step(null);
+                var provider = GameServices.level().getObjectRenderManager().getArtProvider();
+                var sheet = provider.getSheet(com.openggf.level.objects.ObjectArtKeys.MONITOR);
+                assertEquals(com.openggf.level.objects.ObjectSpriteSheet.class, sheet.getClass(), "stock monitor sheet stays native");
+                assertFalse(com.openggf.game.presentation.CharacterIconPalette.hasHudIcon());
+                assertIconPixels(session.render(), provider.getHudLivesPatterns(), 0,
+                        GameServices.level().getCurrentLevel().getPalette(0), 16, 200);
+            }
+        }
+    }
+
     @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
     void titleRouteKeepsExplicitDevelopmentCharacter() throws Exception {
         Path input = temp.resolve("title.txt");
@@ -588,7 +691,16 @@ class TestMicaCharacterIntegration {
         GameServices.graphics().resetForFixedFunction();
         presentation.draw();GameServices.graphics().flushScreenSpace();
         org.lwjgl.opengl.GL11.glFinish();
-        writeCapture(com.openggf.graphics.ScreenshotCapture.captureFramebuffer(320,224),"s3k-data-select-solo-and-tails");
+        var saveImage = com.openggf.graphics.ScreenshotCapture.captureFramebuffer(320,224);
+        var definition = com.openggf.game.presentation.StageCharacterPresentation.activeDefinition();
+        var iconArt = definition.presentationSupplier().load(CODE).art().get(CharacterPresentation.Host.S3K).hudLifeIcon();
+        var iconTiles = com.openggf.game.presentation.CharacterNameComposer.tiles(iconArt);
+        var iconPalette = definition.paletteSupplier().load(CODE);
+        int matches = 0;
+        for (int y = 0; y <= 208; y++) for (int x = 0; x <= 304; x++)
+            if (matchesIcon(saveImage, iconTiles, 0, iconPalette, x, y)) matches++;
+        assertTrue(matches >= 2, "both saved MICA slots use her private life-icon colours");
+        writeCapture(saveImage,"s3k-data-select-solo-and-tails");
         var controller=presentation.getSessionController();
         controller.moveSelection(-controller.menuModel().getSelectedRow());
         controller.loadAvailableTeams("" );

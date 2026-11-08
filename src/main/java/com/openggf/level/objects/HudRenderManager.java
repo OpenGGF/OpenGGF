@@ -61,6 +61,9 @@ public class HudRenderManager {
     private PatternDesc livesNumberPatternDesc = iconPatternDesc;
     private int iconPaletteLine;
     private Palette livesPaletteOverride;
+    private boolean characterLifeIcon;
+
+    void setCharacterLifeIcon(boolean enabled) { characterLifeIcon = enabled; }
     private Palette lastAppliedLivesPaletteOverride;
     private Supplier<Palette> livesPaletteOverrideSupplier;
     private boolean routeLivesPaletteOverrideThroughOwnership;
@@ -598,6 +601,11 @@ public class HudRenderManager {
         }
         descIndex |= (paletteIndex & 0x3) << 13;
         staticPieceDesc.set(descIndex);
+        if (characterLifeIcon && staticHudArt != null && staticHudArt.livesFrame() != null) {
+            int first = staticHudPatternIndex + staticHudArt.livesFrame().pieces().getFirst().tileIndex();
+            if (patternId >= first && patternId < first + 4)
+                staticPieceDesc.setPaletteIndex(com.openggf.game.presentation.CharacterIconPalette.activeLine(paletteIndex));
+        }
         // renderPatternWithId consumes the desc immediately (batch copies
         // floats; PatternRenderCommand.init copies fields), so the reusable
         // desc can be passed without a copy.

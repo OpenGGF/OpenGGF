@@ -32,6 +32,14 @@ class TestSpritePieceRendererSatPreparation {
     }
 
     @Test
+    void privatePiecePaletteSurvivesNativeSheetBase() {
+        List<SpritePieceRenderer.PreparedPiece> prepared = new ArrayList<>();
+        SpritePieceRenderer.preparePiece(piece(0, 0, 2, 2, 0x120, false, false, 12, false),
+                100, 200, 0x20000, 0, false, false, false, prepared::add);
+        assertEquals(12, prepared.getFirst().paletteIndex());
+    }
+
+    @Test
     @SuppressWarnings("unchecked")
     void satMaskDetection_usesRawTileWordNotAtlasPatternIndex() throws Exception {
         GraphicsManager graphics = new GraphicsManager();
