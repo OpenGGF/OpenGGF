@@ -141,6 +141,11 @@ public abstract class AbstractTraceReplayTest {
         return TestSessionOutputPaths.traceReports();
     }
 
+    /** Test observer invoked after the report and its owner metadata have been published. */
+    protected void onReportPublished(TestSessionOutputPaths.ReportAllocation allocation) {
+        // test observer hook
+    }
+
     /** Override only for explicitly diagnostic trace fixtures that are not release gates. */
     protected boolean allowDiagnosticOnlyTraceReplay() {
         return false;
@@ -304,6 +309,10 @@ public abstract class AbstractTraceReplayTest {
 
     @Test
     public void replayMatchesTrace() throws Exception {
+        TraceVerificationScope verificationScope = verificationScope();
+        Path reportDirectory = reportOutputDir();
+        TraceReportWriter.retireStandaloneAttemptReports(reportDirectory,
+                SessionInvocationExtension.SessionInvocation.current(), verificationScope);
         // 0. Skip if trace directory or required files are missing
         Path traceDir = TraceFixtureRoot.resolve(traceDirectory());
         Assumptions.assumeTrue(Files.isDirectory(traceDir), "Trace directory not found: " + traceDir);
@@ -313,7 +322,6 @@ public abstract class AbstractTraceReplayTest {
         // 1. Load trace data (metadata is needed to resolve a shared, deduplicated BK2)
         TraceData trace = TraceData.load(traceDir);
         TraceMetadata meta = trace.metadata();
-        TraceVerificationScope verificationScope = verificationScope();
         if (verificationScope == TraceVerificationScope.ANIMATION
                 && !meta.hasPerFrameCharacterAnimation()) {
             fail("Animation-only verification requires CSV v7 character animation fields: "
@@ -352,10 +360,9 @@ public abstract class AbstractTraceReplayTest {
             // leave the session untouched.
             TraceReplayTestSession.reopenForRecordedTeam(meta);
         }
-        // Hoisted so the finally block can always regenerate the report, even when
-        // the run short-circuits via fail() (e.g. input-alignment) before the
-        // normal report-write at step 7. Previously such failures left a STALE
-        // *_report.json from an earlier run, silently masking the real result.
+        // Once a binder exists, finally publishes its comparison prefix even
+        // when replay fails. Earlier method exits rely on entry retirement;
+        // conditions/extensions that prevent method entry cannot retire here.
         TraceBinder binder = null;
         HeadlessTestFixture fixture = null;
         boolean hardwareTimingReplayClosed = false;
@@ -643,7 +650,7 @@ public abstract class AbstractTraceReplayTest {
                     // report at all -- indistinguishable from a run that never
                     // started. Preserve whether the prescribed gate was reached;
                     // total_frames counts only gameplay comparisons.
-                    TestSessionOutputPaths.ReportAllocation allocation = writeReport(
+                    TestSessionOutputPaths.ReportAllocation allocation = writeReport(reportDirectory,
                             buildDivergenceReport(binder, meta, trace), meta,
                             new ReplayGate(
                                     trace.frameCount(), comparisonGateReached, verificationScope));
@@ -989,12 +996,6 @@ public abstract class AbstractTraceReplayTest {
     }
 
     /**
-     * Records recorded hardware-completion edges the engine never submitted as
-     * an error on the row that produced them. The edge itself released
-     * nothing; only its severity and ordering change, so an earlier physics
-     * divergence stays the first reported error.
-     */
-    /**
      * Records production submissions the recorded stream never completed as an
      * error on the closing row. Nothing was admitted or released; only the
      * severity and ordering of the complaint change, so an earlier physics
@@ -1009,6 +1010,12 @@ public abstract class AbstractTraceReplayTest {
                 fixture.drainPendingRecordedHardwareSubmissions());
     }
 
+    /**
+     * Records recorded hardware-completion edges the engine never submitted as
+     * an error on the row that produced them. The edge itself released
+     * nothing; only its severity and ordering change, so an earlier physics
+     * divergence stays the first reported error.
+     */
     private static void recordUnmatchedHardwareCompletions(
             HeadlessTestFixture fixture, TraceBinder binder, int frame) {
         if (fixture == null) {
@@ -1018,18 +1025,6 @@ public abstract class AbstractTraceReplayTest {
                 frame, fixture.drainUnmatchedRecordedHardwareCompletions());
     }
 
-    /**
-     * Compares the ROM's recorded {@code SlotMachineVariables} against the
-     * engine's whenever the fixture carries the event and this session has a
-     * CNZ slot manager. A no-op on every other fixture and game.
-     *
-     * <p>The recording has always carried this block on every row of both CNZ
-     * captures and nothing read it. It is the instrument that makes a clock or
-     * call-ordering error at the slot site show up as a field mismatch on the
-     * frame it happens, instead of surfacing thousands of rows later as a ring
-     * or speed divergence: see the 2026-08-21 tick-ownership entries in
-     * docs/status/trace-frontier-log.md, where exactly that cost three rounds.
-     */
     /**
      * Compares ObjB2's recorded SST against the engine's whenever the fixture
      * carries the event. Identity is by content, not by the recorded slot index:
@@ -1061,6 +1056,18 @@ public abstract class AbstractTraceReplayTest {
         binder.compareS2Tornado(frame, expected, found.snapshot());
     }
 
+    /**
+     * Compares the ROM's recorded {@code SlotMachineVariables} against the
+     * engine's whenever the fixture carries the event and this session has a
+     * CNZ slot manager. A no-op on every other fixture and game.
+     *
+     * <p>The recording has always carried this block on every row of both CNZ
+     * captures and nothing read it. It is the instrument that makes a clock or
+     * call-ordering error at the slot site show up as a field mismatch on the
+     * frame it happens, instead of surfacing thousands of rows later as a ring
+     * or speed divergence: see the 2026-08-21 tick-ownership entries in
+     * docs/status/trace-frontier-log.md, where exactly that cost three rounds.
+     */
     private static void compareCnzSlotMachineIfRecorded(
             TraceData trace, TraceBinder binder, int frame) {
         TraceEvent.CnzSlotMachineState expected =
@@ -1658,17 +1665,15 @@ public abstract class AbstractTraceReplayTest {
     }
 
     private TestSessionOutputPaths.ReportAllocation writeReport(
-            DivergenceReport report, TraceMetadata meta,
+            Path outputDirectory, DivergenceReport report, TraceMetadata meta,
             ReplayGate replayGate) throws IOException {
-        String prefix = meta.game() + "_" + meta.zone() + meta.act();
-        TraceVerificationScope scope = verificationScope();
-        String scopeSuffix = scope == TraceVerificationScope.ALL
-                ? ""
-                : "_" + scope.name().toLowerCase();
-        return TraceReportWriter.writeReport(reportOutputDir(), report, "trace",
-                SessionInvocationExtension.SessionInvocation.current(),
-                "single", prefix + scopeSuffix, scope,
+        TraceVerificationScope scope = replayGate.verification();
+        TestSessionOutputPaths.ReportAllocation allocation = TraceReportWriter.writeReport(
+                outputDirectory, report, "trace", SessionInvocationExtension.SessionInvocation.current(),
+                "single", TraceReportWriter.standaloneLogicalKey(meta, scope), scope,
                 TraceReplayConsole.contextRadius(), replayGate);
+        onReportPublished(allocation);
+        return allocation;
     }
 
 }

@@ -4,6 +4,9 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openggf.game.session.SessionManager;
 import com.openggf.tests.rules.SonicGame;
+import com.openggf.trace.DivergenceReport.ReplayGate;
+import com.openggf.trace.TraceVerificationScope;
+import com.openggf.tests.TestSessionOutputPaths.ReportAllocation;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -55,6 +58,9 @@ class TestAbstractTraceReplayDynamicArtTerminal
 
         assertEquals(1, reportPublications, "a divergent replay publishes its final report once");
         String report = Files.readString(reportPath());
+        assertEquals(new ReplayGate(FINAL_FRAME + 1, true, TraceVerificationScope.ALL),
+                ReplayGate.readOptionalFrom(new ObjectMapper().readTree(report)),
+                "the completed driver publishes its gate despite the terminal mismatch");
         assertTrue(report.contains("\"field\" : \"dynamic_art.frame\""));
         assertTrue(report.contains("\"end_frame\" : " + FINAL_FRAME),
                 "completed replay must report the terminal expectation");
@@ -71,6 +77,9 @@ class TestAbstractTraceReplayDynamicArtTerminal
 
         assertEquals(1, reportPublications, "an early frontier publishes its final report once");
         String report = Files.readString(reportPath());
+        assertEquals(new ReplayGate(FINAL_FRAME + 1, false, TraceVerificationScope.ALL),
+                ReplayGate.readOptionalFrom(new ObjectMapper().readTree(report)),
+                "the actual frontier stop publishes an incomplete gate");
         assertTrue(report.contains("\"field\" : \"dynamic_art.frame\""));
         assertFalse(report.contains("\"end_frame\" : " + FINAL_FRAME),
                 "an actually-taken early frontier must not invent terminal data");
@@ -154,7 +163,12 @@ class TestAbstractTraceReplayDynamicArtTerminal
     @Override protected Path traceDirectory() { return activeTrace; }
     @Override
     protected Path reportOutputDir() {
-        reportPublications++;
         return activeReports;
+    }
+
+    @Override
+    protected void onReportPublished(ReportAllocation allocation) {
+        assertEquals(reportPath(), allocation.physicalPath());
+        reportPublications++;
     }
 }

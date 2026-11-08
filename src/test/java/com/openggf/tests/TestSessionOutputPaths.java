@@ -1,14 +1,23 @@
 package com.openggf.tests;
 
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.openggf.tests.SessionInvocationExtension.SessionInvocation;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.Objects;
 
 /** Resolves test-owned diagnostic output below the current worktree's target tree. */
@@ -115,6 +124,16 @@ public final class TestSessionOutputPaths {
             String logicalKey,
             String suffix,
             boolean includeProfileDirectory) throws IOException {
+        ReportAllocation allocation = reportAllocation(outputDirectory, profile, className, methodName,
+                parameterIndex, invocationId, laneId, logicalKey, suffix, includeProfileDirectory);
+        Files.createDirectories(reportDirectory(outputDirectory, profile, includeProfileDirectory));
+        return allocation;
+    }
+
+    private static ReportAllocation reportAllocation(
+            Path outputDirectory, String profile, String className, String methodName,
+            int parameterIndex, String invocationId, String laneId, String logicalKey,
+            String suffix, boolean includeProfileDirectory) {
         Objects.requireNonNull(profile, "profile");
         Objects.requireNonNull(className, "className");
         Objects.requireNonNull(methodName, "methodName");
@@ -132,13 +151,86 @@ public final class TestSessionOutputPaths {
                 ? safeComponent(logicalKey) + "-" + safeComponent(laneId)
                     + "-" + ownerKey.substring(0, 16) + suffix
                 : safeComponent(logicalKey) + "_report" + suffix;
-        Path directory = includeProfileDirectory
-                ? outputDirectory.resolve(safeComponent(profile))
-                : outputDirectory;
-        Files.createDirectories(directory);
+        Path directory = reportDirectory(outputDirectory, profile, includeProfileDirectory);
         Path physicalPath = directory.resolve(filename);
         Path metadataPath = physicalPath.resolveSibling(filename + ".owner.json");
         return new ReportAllocation(logicalKey, ownerKey, physicalPath, metadataPath);
+    }
+
+    private static Path reportDirectory(Path outputDirectory, String profile, boolean includeProfileDirectory) {
+        return includeProfileDirectory ? outputDirectory.resolve(safeComponent(profile)) : outputDirectory;
+    }
+
+    /** Finds JSON reports whose complete sidecar owner matches this invocation and lane. */
+    public static List<ReportAllocation> findOwnedReports(
+            String profile, SessionInvocation invocation, String laneId) throws IOException {
+        return findOwnedReports(traceReports(), profile, invocation, laneId, true);
+    }
+
+    /** Explicit output directories retain the allocator's legacy basename convention. */
+    public static List<ReportAllocation> findOwnedReports(
+            Path outputDirectory, String profile, SessionInvocation invocation, String laneId)
+            throws IOException {
+        return findOwnedReports(outputDirectory, profile, invocation, laneId, false);
+    }
+
+    private static List<ReportAllocation> findOwnedReports(
+            Path outputDirectory, String profile, SessionInvocation invocation, String laneId,
+            boolean includeProfileDirectory) throws IOException {
+        Path root = outputDirectory.toAbsolutePath().normalize();
+        Path directory = reportDirectory(root, profile, includeProfileDirectory);
+        if (!Files.isDirectory(directory, LinkOption.NOFOLLOW_LINKS) || hasSymbolicAncestor(directory)) {
+            return List.of();
+        }
+        ObjectMapper mapper = new ObjectMapper()
+                .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
+                .enable(JsonParser.Feature.STRICT_DUPLICATE_DETECTION);
+        List<ReportAllocation> owned = new ArrayList<>();
+        try (var sidecars = Files.newDirectoryStream(directory, "*.json.owner.json")) {
+            for (Path sidecar : sidecars) {
+                ReportAllocation allocation = verifiedAllocation(sidecar, root, profile, invocation,
+                        laneId, includeProfileDirectory, mapper);
+                if (allocation != null) owned.add(allocation);
+            }
+        }
+        return List.copyOf(owned);
+    }
+
+    private static ReportAllocation verifiedAllocation(
+            Path sidecar, Path root, String profile, SessionInvocation invocation, String laneId,
+            boolean includeProfileDirectory, ObjectMapper mapper) {
+        if (!Files.isRegularFile(sidecar, LinkOption.NOFOLLOW_LINKS)) return null;
+        try {
+            JsonNode owner = mapper.readTree(Files.readString(sidecar, StandardCharsets.UTF_8));
+            if (owner == null || !owner.isObject() || owner.size() != 3
+                    || !owner.path("logical_key").isTextual() || owner.path("logical_key").textValue().isBlank()
+                    || !owner.path("owner_key").isTextual() || !owner.path("physical_path").isTextual()) {
+                return null;
+            }
+            ReportAllocation expected = reportAllocation(root, profile, invocation.className(),
+                    invocation.methodName(), invocation.parameterIndex(), invocation.invocationId(),
+                    laneId, owner.path("logical_key").textValue(), ".json", includeProfileDirectory);
+            // Only canonical allocator paths are returned. The sidecar's path
+            // participates in verification and is never used as a deletion target.
+            if (!sidecar.equals(expected.metadataPath())
+                    || !owner.path("owner_key").textValue().equals(expected.ownerKey())
+                    || !Path.of(owner.path("physical_path").textValue()).toAbsolutePath().normalize()
+                            .equals(expected.physicalPath())
+                    || !Files.isRegularFile(expected.physicalPath(), LinkOption.NOFOLLOW_LINKS)) {
+                return null;
+            }
+            return expected;
+        } catch (IOException | IllegalArgumentException untrustedOwner) {
+            // Malformed, unreadable and invalid-path sidecars do not establish ownership.
+            return null;
+        }
+    }
+
+    private static boolean hasSymbolicAncestor(Path path) {
+        for (Path current = path; current != null; current = current.getParent()) {
+            if (Files.isSymbolicLink(current)) return true;
+        }
+        return false;
     }
 
     /** Publishes the owner sidecar after the report itself has been published. */

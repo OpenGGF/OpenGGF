@@ -2776,3 +2776,323 @@ PR269 was already closed when final accounting checked its unchanged 8fbf86ea
 head; no closure write was needed. Its later lifecycle source and that head are
 ancestors of merged PR266. Old source trees and diagnostics remain retained;
 no cleanup of unknown or user-owned files was performed.
+
+### Original trace journey after df33 publication — 2026-11-08
+
+PR271 is the authorised follow-up draft, published initially at df33ea098.
+A fresh Opus blind assessment of original trial F and its report-completion
+holdouts read normal source/guides, not task audits, history, target artifacts or
+earlier reviews. It returned [2,2,2,5/3,5/3,2,5/3,2], weighted 565/12 =
+47.0833/100. The displayed 1.67 ratings are rounded thirds. Earlier assessments
+used integer ratings; this fresh reader also examined the complete entry/movie/
+lane/evidence journey. The raw judgment is retained rather than rounded upward,
+replaced by a narrower parser trial, or presented as a measured causal regression.
+The wider per-task/per-axis goal remains unmet.
+
+The report-owned gate was judged clean, but the surrounding route still imposed
+false choices. Root verified the omitted trace-segments lane and triage link in
+the owning skill, incomplete movie-placement guidance, stale flat paths/raw Maven
+commands and removed collision-owner names in the old runbook/index, the obsolete
+HCZ slice class name and ungrounded fixed BOM/CRLF claim. Report comparison keys
+come from TraceFrame.frame(), parsed from the CSV frame column; loop ordinals and
+native clocks are separate. The skill's blanket "not the CSV frame" wording was
+incorrect. These are routing/source facts, not new runtime parity measurements.
+
+The entry skill now routes to the existing diagnosis guide for all three lanes,
+movie resolution and the printed exact triage command. The old runbook becomes
+a short routing/checklist page instead of a second command/report specification.
+The tool index points to that canonical entry. The guide and HCZ2 leaf comment
+explain that hcz_2 is a segment ordinal entering engine act0 and crossing the act
+transition, not an act-2-only label. Recorded fixture notes/payloads were not edited.
+Skill changes remain canonical under .agents and are mirrored by sync_skills.py.
+New/changed Markdown local targets resolve and fences balance; six distinct
+pre-existing links target the optional, uninitialised TraceChaser checkout.
+
+Sol's separate two-file triage change makes no-gate UNKNOWN truthful for current
+producers too, exposes advertised-but-missing aux schemas as reference limits and
+states when no gameplay comparison coverage exists. It does not infer an
+incomplete gate from zero comparisons, change mismatch/warning counts, require
+optional metadata, or alter exit/lookup/loading behavior. Actual CLI cases cover
+those distinctions and the existing multiple-report refusal with explicit-path
+recovery. Execution is recorded below; source review alone was not counted as a
+pass.
+
+The same investigation confirmed a reachable stale-evidence risk: stable JUnit
+identity gives repeated selections the same allocation; prerequisite/setup exits
+before binder creation can leave the old report/context/sidecar untouched. No
+timestamp, owner hash or saved-report brief proves invocation freshness. Existing
+fresh-directory/Surefire guidance remains necessary. Sol prepared a bounded
+method-entry retirement using the existing owner-sidecar protocol, preserving
+foreign, scoped, malformed/orphaned and linked artifacts rather than deleting by
+logical filename. It introduces no new provenance registry and fabricates no
+comparison report for an early failure. Pre-method conditions/extensions and
+invalid scope/output resolution remain outside that boundary.
+
+The tests-first artifact is code-climb-attempt-retirement-test-only.patch in the
+external agent scratch directory (SHA256 c39df1a89c077f32ddbf8235844290bd0bddf8c565da60c1a9e8adb524be534e).
+It contains only a new Launcher witness of the real inherited HCZ replay method,
+using existing APIs. Root preserved the GREEN five-file source with hashes, then
+temporarily restored only the four owned existing harness/helper/unit-test files
+to df33 for a discriminating RED run. Other workers' changes are unaffected.
+The new witness covers six early exits, with separate preservation controls;
+execution outcomes and subsequent GREEN/restoration evidence follow below.
+
+The assessment's command-execution gap concerns committed automated checks.
+The earlier actual emitted HCZ POSIX command execution remains its own bounded
+evidence, not a new quote/Windows test or reason to discard that gap. Likewise,
+strict native measurement acceptance in measure_native.py is intentionally
+stronger than a diagnostic brief's factual gate display; no consumer policy was
+weakened to harmonise their labels.
+
+The inherited-entry RED run completed at 17:12:53Z: six cases, exactly six stale
+artifact assertion failures, zero errors/skips. Child Launcher summaries first
+verified the intended missing-fixture abort, malformed-metadata IOException or
+sentinel hook failure, so these were not fixture/setup failures presented as a
+retirement witness. Queue wait was 0s; Maven reported 1m34s. Wrapper wall time and
+investigation time were not separately measured; user wait was 0.
+
+After exact hash-verified restoration of the five GREEN files, one focused
+trace-segments selection completed at 17:18:11Z: 212 cases in 14 fresh XML suites,
+zero failures/errors/skips. It includes all six entry witnesses, owner discovery,
+invocation, publication/gate/triage policy, dynamic-art terminal behavior, both
+Sonic3kLevelLoading classes and the other three required S3K startup selectors,
+comparison-only and hardware-timing authority guards. TestTraceReplayConsole was
+also named in the selector but no such test class exists; no console test pass is
+claimed. Queue 0s, Maven 44.751s; wrapper wall and investigation not separately
+measured, user wait 0. ROM discovery reported missing=none. The actual six
+retirement cases preserve separate class/method/parameter/invocation/lane/profile/
+scope artifacts plus malformed, orphaned, tampered and linked evidence.
+
+The real trace-segments HCZ pair then ran into fresh XML/report directories:
+HCZ1 passes with 3519/3574 comparisons/planned rows; HCZ2 retains one assertion
+failure, 14149/14208 comparisons/planned rows, 26 errors (2 physics, 24 animation),
+zero counted trace warnings. Both publish an ALL gate reached, no invocation
+errors or skips. First mismatch remains frame6640 player_animation_id expected
+0x0013/actual0x0005. Both JSON reports are byte-for-byte identical to the retained
+33c baseline reports, SHA256 b43925e671d1c573d152c6a69bd07ee5c8acdf6fbdc757e35d08a3f6f8004ad2
+and dc73d662529d145fc96f67211ddaaf7b09a160deb326e362ba70692d9c1b98eb respectively.
+All eight advertised missing aux schemas remain visible coverage limits; FAST
+without a manifest and blocked presentation-shadow SFX remain log warnings. The
+pair is not a route certification or warning-free log. Queue 0s, Maven 41.136s;
+wrapper wall not separately measured, user wait 0.
+
+Root executed the HCZ2 triage command exactly as printed, passing its tokenized
+argument array without shell evaluation: exit0, COMPLETE, first mismatch6640 and
+the eight missing schemas shown as reference limits. Its receipt records command,
+UTC start and wall1.236s; queue0, Maven0.517s, user wait0, remaining0.719s wrapper
+and admission overhead not separated. This is an ordinary Linux path execution,
+not Windows/embedded-quote command certification. The native documentation fact
+check caught one overbroad printed-route promise: it is provided by the standalone
+AbstractTraceReplayTest driver, not the current special-stage/credits producers.
+The skill, guide and routing runbook now state that boundary explicitly.
+
+Raw logs/fresh XML and reports are under target/code-climb/attempt-retirement-red-*
+and trace-journey-{green,hcz,emitted-triage}-*. Existing failed RED diagnostics are
+retained. No test counts are substituted for a fresh contributor assessment.
+
+Opus scrutiny of the frozen 17-file increment (HEAD df33, tracked-diff fingerprint
+41538832f6691e5eb8f69086bab6b4659343419e935921675ec96ae586372532,
+plus individual tracked/untracked hashes) found no blocking runtime defect and
+confirmed canonical deletion targets, scope/identity/lane/profile isolation and
+unchanged strict triage/count/gate/exit behavior. It found a weakened publication
+count witness and an untested explicit-directory owner-key boundary. Root repaired
+both: reportOutputDir is again only a query; a no-op post-publication observer in
+the private write helper counts actual completed writes, and an explicit legacy
+basename case rejects another invocation and lane without changing bytes.
+
+Two isolated negative-control mutations then demonstrated discrimination: inserting
+a second actual final report write made both terminal tests report 2 instead of1;
+removing the owner-key comparison made the explicit-directory negative case fail.
+The RED command ran 13 cases, exactly3 intended failures, zero errors/skips.
+Queue75s, Maven35.143s; wrapper wall not separately measured, user wait0. Both
+source mutations were removed by exact hash restoration before GREEN.
+
+The final focused selection passed214 cases in15 fresh XML suites, zero failures,
+errors or skips, at17:50:44Z. It repeats the earlier 212-case selection with the
+new ownership case and hydrate-default guard; it includes the repaired terminal
+observer and new link/directory-context preservation controls in all three scopes.
+Queue12s, Maven49.004s; wrapper wall and investigation not separately measured,
+user wait0. These are root verification results, not tests performed by Opus.
+Small bounded review repairs were made by root without commissioning another
+review round; the review itself predates the observer/tests/docs corrections.
+
+The S2 release-gate lane also passed EHZ1 and the hydrate-default guard (2 cases,
+zero failures/errors/skips):5852/5852 comparisons, ALL gate reached, zero counted
+errors/warnings, report byte-identical to retained33c baseline with SHA256
+4a9945c494d44ce80b5cf37760cc847c05a19578defbab6208b4d1a322ec72d6.
+Queue0s, Maven37.483s; wrapper wall not separately measured, user wait0. This
+EHZ/HCZ evidence predates the later no-op publication observer; only the terminal
+test overrides that observer, and the final focused run executes both S2 terminal
+paths after it. No new gameplay implementation changed.
+
+Review documentation corrections restore scope selection/default/CSVv7 guidance,
+qualify standalone route/entry promises, correct the framework-reference
+finalization overclaim and explain that clean credits reruns can leave an older
+failing report. Conservative retirement deliberately refuses linked report trees
+(including symbolic ancestors), unverified owners and whole triples whose context
+is a link/directory; publication still follows its existing path rules. These are
+now explicit limits, not a freshness guarantee for macOS/IDE/linked layouts.
+Malformed optional auxiliary-limit shapes remain best effort and ignored; no
+absence of a note certifies reference coverage. Windows/macOS behavior was not
+executed. The Probe name exclusion is documented next to the Launcher-only child.
+The existing sidecar schema remains implemented by publisher, Java verifier and
+Python validation; no new ownership/provenance registry was introduced.
+
+Because TestSessionOutputPaths and the shared replay harness changed, the category
+planner selects all4491 smoke classes plus guards. The final source will be frozen
+for one --base df33 --workers2 surfaceless-EGL run, default40-minute execution cap
+excluding queue waits. Existing qualified negative/skip evidence is retained for
+exact identity/assertion/skip/selection comparison. No standalone full-guards run
+will duplicate that lane. The broad verdict and comparison remain pending here;
+this focused/domain evidence is not a smoke/full-suite pass or a new trial grade.
+
+### Frozen trace journey reassessment and recovery accounting — 2026-11-08
+
+The independent HCZ2 main-journey assessment read the same frozen source at
+18:56:45Z and 19:09:52Z: HEAD df33ea098, tracked-diff fingerprint caca2a864ecbcec0935ffc65c659ab0946d93c14bacaa8fe656d4615962e95a8,
+and untracked entry-witness SHA256 544b8e56f317ade9ec00d28c2b4b734695e86ba8b3c76506f0aec087622eccdf.
+Its vector was [3,8/3,8/3,8/3,8/3,8/3,7/3,7/3], weighted 795/12 = 265/4 =
+66.25/100. Holdouts were separate. The target remains unmet; this is static
+source usability, not runtime certification or a whole-repository grade.
+
+Root introduced a granularity ambiguity: the formal rubric names 1 and 3 as
+intermediate ratings, while later briefs used "1/3" and the latest explicitly
+permitted thirds. Preserve this raw judgment without rounding or claiming a
+causal trend. Future briefs should quote the written scale verbatim. The
+historical all-six b63 table and earlier HCZ2 assessment retain their own
+readers, source/coverage and interpolation qualifications. The first/second HCZ
+leaves are not interchangeable runtime fixtures, though both exercise diagnosis.
+
+Verified residual gaps: the two real terminal-driver tests do not assert their
+published completion gates; movie-placement statements and a frame-count line
+still contradict the canonical diagnosis route; one aux method name is stale.
+Root added the small real-driver gate assertions and reference/routing corrections
+only after the terminal handoff; their separate final verification is recorded below. An uninitialised disassembly is not a replay/build
+prerequisite: root AGENTS makes those references optional. Manual execution of
+the printed HCZ command is retained evidence, while a committed command/quoting
+round-trip test remains absent. Do not confuse either qualification with an
+assessor-run runtime check.
+
+Source inspection also confirms a pre-existing scoped-triage concern: reports
+publish all verification groups, the writer selects context by scope, but the
+CLI discards per-divergence verification_group and chooses the earliest group
+globally. A producer-backed RED is required before a later behavioral repair;
+no new test job or runtime fix was added during the frozen run. Broad provenance,
+producer-schema or comparison-driver suggestions remain separate work, not
+automatic requirements applied from a static usability assessment.
+
+The first category attempt, 20261108T175521Z-7caa2b80, exited143 while batch52
+queued: 51/91 batches, 20849 cases, no observed failures/errors, 24 allowed skips,
+no guards and no final VERDICT. Both whole-run comparisons refused this coverage.
+Its artifacts remain unchanged and unacknowledged. Execution including prep was
+630.96s; reported queue wait at least649s; user wait0; termination/wrapper overhead
+is not exactly separated. The 40-minute execution budget was not exhausted.
+No cause was attributed from143 or the empty known-PID journal queries.
+
+One complete replacement, 20261108T182506Z-5a0cf1b9, finished under the single
+Sol-owned detached user service with the same frozen source/selection/environment/
+execution cap. It selected4491 classes and completed91/91 ordinary batches plus
+1/1 full guards:37228 ordinary cases/29 failures/0errors/49allowed skips, and843
+guards/0failures/errors/skips in103 suites. Raw verdict, retained without relabeling:
+
+```text
+VERDICT FAILED: head=df33ea09864e source=93fb43728f6e change-based 4491/4491 candidate classes; ordinary 91/91 batches; guards 1/1 batches; tests=38071 failures=29 errors=0 skipped=49 (allowed=49 unexplained=0); missing ROM properties=none; skip inputs audio_reference_files=false,gl=false,s1_bizhawk_reference=false,s2_bk2=false,s3k_observations=false; bounded smoke selection, not a full-suite pass
+```
+
+Root consumed the source, selection, full negative/skip and omission exports.
+Compared with the prior qualification, all29 failure identities/kinds/types match;
+25 assertions are literal matches and4 are the same explicitly reviewed display
+classes (default identity hashes and Set order). Exact before/after values and
+unchanged source proofs are retained; there is no blanket normalization. All49
+complete skip dictionaries, including projection metadata, match both retained
+references. No omissions or causal truncation were reported. All4490 prior classes
+remain plus the upstream KIS2 lives-name test; the 33c reference additionally
+retains the previously documented network TEST-fixture improvement. These are
+retained qualified references, not fresh exact-df33 baseline executions or proof
+of a closed transitive source graph. A selection is not a claim every source
+class produced XML. The runner deletes completed-batch XML; complete runner
+exports and receipts are distinguished from unavailable full raw XML.
+
+Queue1624s across92 admissions; execution/preparation1820.04s; wall3462.848s;
+user wait0; overhead/unknown18.808s. The raw terminal source fingerprint is
+93fb43728f6e89e14dc43d432ebf4035cdca9bcfc224d307e37a15f1906b5ab6.
+Full exports/commands/dispositions are under target/code-climb/
+trace-journey-category-recovery. Root verified source hashes on ownership return.
+After exporting terminal properties (no PID/cgroup members), root stopped/reset
+only its completed user unit; it is now not-found/inactive/dead, no live jobs.
+
+
+Read-only next-boundary work recovered the historical all-six assessment and
+verified unchanged blobs for ObjectPopulation, ObjectSolidContactController and
+SolidContactState against b63. Contact retirement is the next structural priority.
+The older placed-reload investigation at422 supplied only an unexecuted reply
+sketch and established no observable history defect: ordinary execution follows
+another beginInlineFrame. A manager-driven range-unload/re-entry witness remains
+the safe next characterization; the score does not authorize unifying lifetimes.
+
+Other bounded candidates remain secondary: a lexical inventory parsed all609
+exact policy entries and showed that deriving the existing six special CAPTURED
+fields reproduces the same complete mapping; this is not Java/wire validation.
+Keep registry precedence/cache behavior and both schema routes. Removing the
+generic recreate registry branch or collapsing two resolver calls was rejected:
+direct helper callers test that behavior and ModAPI resolver lifetime is observable.
+Dense native-overwrite operations can be expanded while preserving their exact
+registration/callback order; ordinary DeleteObject retirement is a different path.
+
+All ten lifecycle handoff commits through e7c919250 and PR269 head8fbf86ea4 are
+ancestors of published ce574 and merged develop f628. GitHub reports269 already
+merged/closed; root performed no write/merge. Candidate cleanup remains pending:
+ignored ROM/config/save/reference/documentation contents are preserved, not
+assumed generated. Baseline33c and the old ai-code-climb tree remain comparison
+inputs. No unknown work, ROM, source tree or branch was discarded.
+
+### Final trace-only assertions and routing corrections
+
+After that frozen broad run, root added exact ReplayGate record assertions to the
+two real-driver terminal tests: planned5852/ALL/true for completed comparison,
+planned5852/ALL/false for actual frontier stop. Missing metadata cannot pass as
+false. The skill now starts at the canonical class/lane command rather than a
+release-gate placeholder. Other guides link the movie lookup, name the actual
+getEventsForFrame API, read completion from the gate, and label old scope tables
+as history with pom profile authority. Agent workflow text routes tests through
+the queue. Two detached Javadocs were attached to their owning methods with
+all non-comment Java tokens identical.
+
+The final focused run passed58 cases in5 fresh XML suites, no failures/errors/
+skips, at19:28:33Z. It covers the two real terminal paths, writer-gate/policy,
+comparison-only and hardware-timing authority. Queue3s; Maven52.929s; wrapper wall
+not separately measured, user wait0. Missing ROM properties none. Exact command:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --normal -Dmse=off -Ptrace-replay -Dsurefire.forkCount=1 -Dopenggf.headless.gl=surfaceless-egl -Dtrace.verification=all -Dopenggf.surefire.reports=target/code-climb/post-smoke-delta/surefire -Dtest=TestAbstractTraceReplayDynamicArtTerminal,TestTraceGateCompletionReport,TestTraceReplayReportPolicy,TestTraceReplayInvariantGuard,TestHardwareTimingAuthorityGuard test -B
+```
+
+Production Java remains byte-identical as source to the broad-tested snapshot.
+Post-broad executable changes are assertions in the trace-only terminal test,
+which is excluded from ordinary smoke; the shared driver change is comments only.
+Relevant source guards are included in the58-case run. No new all-category verdict
+is manufactured for this scoped composition. The full843-guard evidence refers
+to the frozen broad source; final changed scope is qualified separately.
+
+Skill mirror and whitespace checks pass. Markdown fences balance and275 local
+links resolve; seven inherited file/link pairs remain unresolved in optional or
+existing reference material, with no new missing target. No provenance schema,
+ModAPI/version/signature, fixture, timing authority, tolerance or gameplay input
+was changed. The static66.25 assessment precedes these final small corrections;
+no new grade or achieved target is inferred. Scoped triage's global-first-error
+selection remains a source-identified pre-existing gap requiring its own
+producer-backed RED; it was not silently changed in this publication batch.
+
+After consuming the complete exported plans/results/negatives/skips and exact
+comparison evidence, root acknowledged only these two owned category run
+directories through run_categories.py --acknowledge. Original terminal exports
+and raw-verdict/source receipts remain in target/code-climb, including the
+interrupted run's incomplete identity. Baseline/reference trees and unrelated
+diagnostics were retained. No ROM, config, save or unknown content was deleted.
+
+Before publication, origin/develop was observed at c4ca46472e75a0df6f23dfd410e347ab8ed52a70,
+after the tested f628 base. The stage-to-PR snapshot is not qualified as a merge
+with that newer upstream. PR271 is open/draft and reported MERGEABLE; task remote
+head remained df33. Preserve the source-specific checks here and reconcile the
+newer development line explicitly before the next structural increment, rather
+than claim the completed run covered it. No destination branch was changed.

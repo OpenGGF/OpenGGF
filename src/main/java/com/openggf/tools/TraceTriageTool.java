@@ -89,7 +89,8 @@ public final class TraceTriageTool {
             List<Bootstrap> bootstrap,
             List<Divergence> errors,
             List<Divergence> warnings,
-            ReplayGate replayGate) {
+            ReplayGate replayGate,
+            List<String> missingAdvertisedAuxSchemas) {
 
         /**
          * The earliest per-frame hard error, otherwise the earliest per-frame
@@ -170,8 +171,21 @@ public final class TraceTriageTool {
             throw new IOException("Divergence counts disagree with the published error/warning groups");
         }
 
+        // Optional reference diagnostics are best effort; primary fields and
+        // a present replay gate retain their strict wire validation.
+        List<String> missingAuxSchemas = new ArrayList<>();
+        JsonNode missingAuxNode = root.get("missing_advertised_aux_schemas");
+        if (missingAuxNode != null && missingAuxNode.isArray()) {
+            for (JsonNode schema : missingAuxNode) {
+                if (schema.isTextual() && !schema.textValue().isBlank()) {
+                    missingAuxSchemas.add(schema.textValue());
+                }
+            }
+        }
+
         return new TraceReport(errorCount, warningCount, totalFrames, summary,
-                List.copyOf(bootstrap), errors, warnings, ReplayGate.readOptionalFrom(root));
+                List.copyOf(bootstrap), errors, warnings, ReplayGate.readOptionalFrom(root),
+                List.copyOf(missingAuxSchemas));
     }
 
     private static List<Divergence> parseGroups(JsonNode array, String severity) throws IOException {
@@ -509,12 +523,20 @@ public final class TraceTriageTool {
                 .append(report.totalFrames()).append(" frames compared\n");
         ReplayGate gate = report.replayGate();
         if (gate == null) {
-            sb.append("Replay completion: UNKNOWN (legacy report has no replay_gate).\n");
+            sb.append("Replay completion: UNKNOWN (no replay_gate published).\n");
         } else {
             sb.append("Replay completion: ")
                     .append(gate.comparisonGateReached() ? "COMPLETE" : "INCOMPLETE")
                     .append(" (").append(gate.plannedTraceRows()).append(" planned trace rows; ")
                     .append(gate.verification().name().toLowerCase(Locale.ROOT)).append(" verification).\n");
+        }
+        if (report.totalFrames() == 0) {
+            sb.append("Comparison coverage: absent (0 frames compared); gameplay comparison coverage is not established.\n");
+        }
+        if (!report.missingAdvertisedAuxSchemas().isEmpty()) {
+            sb.append("Reference/coverage limits: missing advertised aux schemas: ")
+                    .append(String.join(", ", report.missingAdvertisedAuxSchemas())).append(".\n");
+            sb.append("Aux reference evidence is limited; replay gate and mismatch totals remain as published.\n");
         }
         sb.append("Saved report only; check this invocation's Surefire result and process completion.\n");
         sb.append("Report summary: ").append(blankToDash(report.summary())).append("\n");

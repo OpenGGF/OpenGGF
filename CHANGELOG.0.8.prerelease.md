@@ -77,10 +77,15 @@ under the matching area heading; see the
   explicit native/wider bounds, and
   a typed rewind HUD frame make contribution paths easier to follow. HCZ owns
   its next screen-shake value without using the renderer as scratch state.
-  Failed trace replays print their exact test/report/triage route; triage reads
+  Standalone trace replays print their exact test/report/triage route; triage reads
   compressed fixture auxiliaries, preserves pre-trace evidence and distinguishes
-  incomplete or unknown completion from a completed comparison. Replay completion
-  metadata has one report-owned value and strict wire codec; ordinary publication
+  incomplete or unknown completion from a completed comparison. Standalone replay
+  method entry retires verified prior evidence for the same invocation and scope
+  before loading the fixture; pre-method conditions and extensions remain outside
+  that boundary. Triage exposes missing auxiliary references and absent comparison
+  coverage without changing the published gate or mismatch totals. Replay guidance
+  routes segment diagnosis through the correct lane, movie and report owners.
+  Replay completion metadata has one report-owned value and strict wire codec; ordinary publication
   no longer reparses and rewrites its own JSON. Scene presentation spells out
   capture, restoration and failure cleanup in operation order. Retained raw-field
   diagnostics follow that storage and are exercised on successful test paths.

@@ -4,11 +4,14 @@ import com.openggf.tests.SessionInvocationExtension.SessionInvocation;
 import com.openggf.tests.TestSessionOutputPaths;
 import com.openggf.trace.DivergenceReport;
 import com.openggf.trace.DivergenceReport.ReplayGate;
+import com.openggf.trace.TraceMetadata;
 import com.openggf.trace.TraceVerificationScope;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -21,6 +24,57 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public final class TraceReportWriter {
 
     private TraceReportWriter() {
+    }
+
+    /** The standalone driver's key convention, including its independent verification scope. */
+    static String standaloneLogicalKey(TraceMetadata metadata, TraceVerificationScope scope) {
+        return metadata.game() + "_" + metadata.zone() + metadata.act() + standaloneScopeSuffix(scope);
+    }
+
+    /** Retires only verified earlier evidence for a standalone method attempt that is now starting. */
+    static void retireStandaloneAttemptReports(
+            Path outputDirectory, SessionInvocation invocation, TraceVerificationScope scope) throws IOException {
+        List<TestSessionOutputPaths.ReportAllocation> owned = usesDefaultOutputDirectory(outputDirectory)
+                ? TestSessionOutputPaths.findOwnedReports("trace", invocation, "single")
+                : TestSessionOutputPaths.findOwnedReports(outputDirectory, "trace", invocation, "single");
+        for (TestSessionOutputPaths.ReportAllocation allocation : owned) {
+            if (!hasStandaloneScope(allocation.logicalKey(), scope)) continue;
+            Path context = contextPath(allocation.physicalPath());
+            if (Files.exists(context, LinkOption.NOFOLLOW_LINKS)
+                    && !Files.isRegularFile(context, LinkOption.NOFOLLOW_LINKS)) {
+                continue; // A symlink or directory is not this writer's context artifact.
+            }
+            for (Path artifact : List.of(allocation.physicalPath(), context, allocation.metadataPath())) {
+                try {
+                    Files.deleteIfExists(artifact);
+                } catch (IOException failure) {
+                    throw publicationFailure(allocation, artifact, "prior attempt retirement", failure);
+                }
+            }
+        }
+    }
+
+    private static String standaloneScopeSuffix(TraceVerificationScope scope) {
+        return switch (scope) {
+            case ALL -> "";
+            case PHYSICS -> "_physics";
+            case ANIMATION -> "_animation";
+        };
+    }
+
+    private static boolean hasStandaloneScope(String logicalKey, TraceVerificationScope scope) {
+        String suffix = standaloneScopeSuffix(scope);
+        if (!logicalKey.endsWith(suffix)) return false;
+        String prefix = logicalKey.substring(0, logicalKey.length() - suffix.length());
+        // The unsuffixed key ends in metadata's decimal act number. Requiring
+        // that boundary also preserves unknown/noncanonical scope conventions.
+        return !prefix.isEmpty() && prefix.charAt(prefix.length() - 1) >= '0'
+                && prefix.charAt(prefix.length() - 1) <= '9';
+    }
+
+    private static boolean usesDefaultOutputDirectory(Path outputDirectory) {
+        return outputDirectory == null || outputDirectory.toAbsolutePath().normalize().equals(
+                TestSessionOutputPaths.traceReports().toAbsolutePath().normalize());
     }
 
     public static TestSessionOutputPaths.ReportAllocation writeSpecialStageReport(
@@ -76,9 +130,7 @@ public final class TraceReportWriter {
         }
         assertGroupAccountingHolds(report);
         TestSessionOutputPaths.ReportAllocation allocation =
-                outputDirectory == null
-                        || outputDirectory.toAbsolutePath().normalize().equals(
-                                TestSessionOutputPaths.traceReports().toAbsolutePath().normalize())
+                usesDefaultOutputDirectory(outputDirectory)
                         ? TestSessionOutputPaths.allocateReport(profile,
                                 invocation.className(), invocation.methodName(),
                                 invocation.parameterIndex(), invocation.invocationId(),

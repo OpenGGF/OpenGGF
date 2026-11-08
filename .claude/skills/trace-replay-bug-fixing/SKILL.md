@@ -22,25 +22,31 @@ Before reporting suite numbers, read the measurement-hazard table in
 [briefing-trace-rounds.md](../../../docs/agent-workflow/briefing-trace-rounds.md).
 Confirm the requested concrete test exists and which fixture/segments it drives.
 
-Example focused run (a real class; the wrapper discovers verified ROMs and prints which
-properties it found):
-
-```bash
-python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dsurefire.forkCount=1 \
-  -Dsurefire.runOrder=alphabetical "-Dtest=$TRACE_TEST" test
-```
+Choose the concrete invocation through
+[diagnose one trace replay](../../../docs/guide/contributing/testing.md#diagnose-one-trace-replay),
+which gives the HCZ2 segment command, fixture/movie lookup and printed triage route.
 
 The ordinary suite excludes replay tests. `trace-replay` covers the release-6
-scope; `trace-replay-r7` covers the deferred scope. Check
-[trace-scope-release-6.md](../../../docs/status/trace-scope-release-6.md)
-and `pom.xml` for the test's lane; run both separately when shared behavior
-reaches both. Do not hide an empty selection with `failIfNoTests=false`.
+gate, `trace-replay-r7` the deferred gate, and `trace-segments` standalone run
+segments such as the Sonic/Tails HCZ leaves. Check
+`pom.xml` for current profile membership; the
+[scope record](../../../docs/status/trace-scope-release-6.md) retains release policy
+and historical coverage. Run affected lanes separately when shared behavior
+reaches several. Do not rely on an exact selector overriding another lane's
+filters, or hide an empty selection with `failIfNoTests=false`.
 Use fresh reports below this worktree's `target/`; save prior evidence before
 clearing generated reports. The pom binds fork count to `surefire.forkCount`
 and reports to `openggf.surefire.reports`, not the similarly named bare flags.
 
-Read the class's Surefire result and the corresponding JSON/context files in
-`target/trace-reports/`. Check errors, skips, compared rows, and process completion;
+The standalone `AbstractTraceReplayTest` driver prints the concrete class,
+fixture and exact owner-keyed report path plus a copyable `triage:` command for
+`TraceTriageTool` after a failed comparison. `-Dtrace.print.summary=true` also
+prints that route on a successful standalone replay.
+The tool reads saved evidence, not the live invocation: check the class's fresh
+Surefire result and process completion alongside its JSON/context. Failures or
+skips before report setup may leave an older report untouched. Prefer fresh
+per-invocation report directories when retaining evidence.
+Check errors, skips, compared rows, and the prescribed completion gate;
 stale XML, a skipped ROM test, or a crashed fork is not a pass. Reproduce suspected
 order/native/config contamination in isolation and report it until resolved.
 
@@ -48,10 +54,12 @@ order/native/config contamination in isolation and report it until resolved.
 
 1. Parse error spans and cascades, including predecessor segment reports. An early
    self-healing blip may be separate from the later cascade. Record both.
-2. Inspect existing physics and aux evidence before adding probes. Trace report
-   and aux frames are row indices, not the CSV `frame` column. Numeric physics
-   columns are generally hexadecimal; boolean/enum columns are exceptions. Use
-   `TraceFrame`'s parser as the format authority.
+2. Inspect existing physics and aux evidence before adding probes. Comparison
+   spans use `TraceFrame.frame()`, parsed from the CSV `frame` column; replay
+   loops also have a separate row ordinal. Check the binder and each aux lookup
+   before assuming those keys coincide. Neither is automatically a ROM clock.
+   Numeric physics columns are generally hexadecimal; boolean/enum columns are
+   exceptions. Use `TraceFrame`'s parser as the format authority.
 3. Align sampling boundaries and name each clock: trace row, manager execution
    count, ROM `V_int_run_count`, and `Level_frame_counter` can differ. Compare a
    shared event/value before calling anything “N frames late.”

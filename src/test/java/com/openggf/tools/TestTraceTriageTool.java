@@ -14,6 +14,9 @@ import com.openggf.trace.BootstrapDivergence;
 import com.openggf.trace.FieldComparison;
 import com.openggf.trace.FrameComparison;
 import com.openggf.trace.Severity;
+import com.openggf.trace.TraceEvent;
+import com.openggf.trace.TraceFixtures;
+import com.openggf.trace.TraceMetadata;
 import com.openggf.trace.TraceVerificationScope;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -133,6 +136,7 @@ class TestTraceTriageTool {
         assertEquals("0x0100", parsed.firstDivergence().expectedAtStart());
         assertEquals("0x0101", parsed.firstDivergence().actualAtStart());
         assertTrue(brief.contains("Replay completion: COMPLETE"));
+        assertFalse(brief.contains("Comparison coverage: absent"));
         assertTrue(brief.contains("ROM: routine=02 object=0x41"));
         assertTrue(brief.contains("ENG: routine=04 object=0x41"));
     }
@@ -154,6 +158,7 @@ class TestTraceTriageTool {
         TriageResult result = runTriage("--report", reportPath.toString());
         assertEquals(0, result.status(), result.errors());
         assertTrue(result.output().contains("Replay completion: INCOMPLETE"));
+        assertFalse(result.output().contains("Comparison coverage: absent"));
     }
 
     @ParameterizedTest
@@ -172,19 +177,91 @@ class TestTraceTriageTool {
         assertEquals("", result.errors());
         assertTrue(result.output().contains("Replay completion: COMPLETE"));
         assertTrue(result.output().contains("10 planned trace rows; " + scopeLabel + " verification"));
+        assertTrue(result.output().contains("Totals: 0 errors, 0 warnings, 0 frames compared"));
+        assertTrue(result.output().contains("Comparison coverage: absent (0 frames compared)"));
+        assertTrue(result.output().contains("gameplay comparison coverage is not established"));
+        assertFalse(result.output().contains("Replay completion: INCOMPLETE"),
+                "No compared frames must not override the driver's completed gate.");
         assertTrue(result.output().contains("check this invocation's Surefire result and process completion"));
     }
 
     @Test
-    void legacyReportHasUnknownCompletion(@TempDir Path tempDir) throws Exception {
-        Path reportPath = tempDir.resolve("legacy_report.json");
+    void currentProducerWithoutReplayGateHasUnknownCompletion(@TempDir Path tempDir) throws Exception {
+        Path reportPath = tempDir.resolve("report_without_gate.json");
         Files.writeString(reportPath, new DivergenceReport(List.of()).toJson());
         TraceReport parsed = TraceTriageTool.parseReport(Files.readString(reportPath));
 
         assertNull(parsed.replayGate());
         TriageResult result = runTriage("--report", reportPath.toString());
         assertEquals(0, result.status(), result.errors());
-        assertTrue(result.output().contains("Replay completion: UNKNOWN"));
+        assertEquals("", result.errors());
+        assertTrue(result.output().contains("Replay completion: UNKNOWN (no replay_gate published)"));
+        assertFalse(result.output().contains("legacy report"),
+                "Current report producers also legitimately omit the optional gate.");
+        assertTrue(result.output().contains("Comparison coverage: absent (0 frames compared)"));
+        assertFalse(result.output().contains("Replay completion: INCOMPLETE"));
+    }
+
+    @ParameterizedTest
+    @CsvSource({"true, false, COMPLETE", "false, false, INCOMPLETE", "true, true, COMPLETE"})
+    void advertisedAuxAvailabilityLimitsReferencesWithoutChangingGateOrMismatchTotals(
+            boolean completed, boolean hasAuxEvidence, String completion, @TempDir Path tempDir)
+            throws Exception {
+        TraceMetadata metadata = new ObjectMapper().readValue("""
+                {
+                  "game": "s2", "zone": "ehz", "zone_id": 0, "act": 1,
+                  "trace_schema": 5, "trace_frame_count": 10,
+                  "start_x": "0x0080", "start_y": "0x03A0",
+                  "aux_schema_extras": ["velocity_write_per_frame", "position_write_per_frame"]
+                }
+                """, TraceMetadata.class);
+        Map<Integer, List<TraceEvent>> events = hasAuxEvidence
+                ? Map.of(7, List.of(
+                        new TraceEvent.VelocityWrite(7, "sonic", List.of(), List.of()),
+                        new TraceEvent.PositionWrite(7, "sonic", List.of(), List.of())))
+                : Map.of();
+        DivergenceReport produced = new DivergenceReport(List.of(new FrameComparison(7, Map.of(
+                "x", new FieldComparison("x", "0x0100", "0x0101", Severity.ERROR, 1),
+                "camera_x", new FieldComparison("camera_x", "0x0200", "0x0201", Severity.WARNING, 1)))),
+                TraceFixtures.trace(metadata, List.of(), events));
+        Path reportPath = publishReport(tempDir, produced, completed);
+
+        TriageResult result = runTriage("--report", reportPath.toString());
+
+        assertEquals(0, result.status(), result.errors());
+        assertEquals("", result.errors());
+        assertTrue(result.output().contains("Replay completion: " + completion + " (10 planned trace rows"));
+        assertTrue(result.output().contains("Totals: 1 errors, 1 warnings, 1 frames compared"));
+        assertTrue(result.output().contains("FIRST DIVERGENCE"));
+        assertTrue(result.output().contains("frame    : 7"));
+        assertFalse(result.output().contains("Comparison coverage: absent"));
+        if (hasAuxEvidence) {
+            assertFalse(result.output().contains("Reference/coverage limits:"));
+        } else {
+            assertTrue(result.output().contains(
+                    "Reference/coverage limits: missing advertised aux schemas: "
+                            + "velocity_write_per_frame, position_write_per_frame"));
+            assertTrue(result.output().contains("replay gate and mismatch totals remain as published"));
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"null", "[]", "{}", "\"unknown optional shape\"", "[null, 7, true]"})
+    void unrecognizedOrEmptyOptionalAuxLimitsDoNotInvalidateReport(
+            String optionalJson, @TempDir Path tempDir) throws Exception {
+        Path reportPath = publishReport(tempDir, new DivergenceReport(List.of()), true);
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode payload = (ObjectNode) mapper.readTree(reportPath.toFile());
+        payload.set("missing_advertised_aux_schemas", mapper.readTree(optionalJson));
+        Files.writeString(reportPath, payload.toString());
+
+        TriageResult result = runTriage("--report", reportPath.toString());
+
+        assertEquals(0, result.status(), result.errors());
+        assertEquals("", result.errors());
+        assertTrue(result.output().contains("Replay completion: COMPLETE"));
+        assertTrue(result.output().contains("Totals: 0 errors, 0 warnings, 0 frames compared"));
+        assertFalse(result.output().contains("Reference/coverage limits:"));
     }
 
     @Test
@@ -679,5 +756,28 @@ class TestTraceTriageTool {
 
         assertEquals(sessionReport, TraceTriageTool.resolveDefaultReportPath(
                 tempDir.toString(), "s2", "mtz1"));
+    }
+
+    @Test
+    void positionalLookupRefusesMultipleReportsEvenWithLegacyFallback(@TempDir Path tempDir)
+            throws Exception {
+        Files.writeString(tempDir.resolve("s2_mtz1_report.json"), SYNTHETIC_REPORT);
+        Path first = tempDir.resolve("trace/s2_mtz1-first-0123456789abcdef.json");
+        Path second = tempDir.resolve("trace/s2_mtz1-second-fedcba9876543210.json");
+        Files.createDirectories(first.getParent());
+        Files.writeString(first, SYNTHETIC_REPORT);
+        Files.writeString(second, SYNTHETIC_REPORT);
+
+        TriageResult ambiguous = runTriage("s2", "mtz1", "--dir", tempDir.toString());
+
+        assertEquals(1, ambiguous.status());
+        assertEquals("", ambiguous.output(), "Ambiguous evidence must not produce a chosen report's brief.");
+        assertTrue(ambiguous.errors().contains("multiple nested reports match s2 mtz1"));
+        assertTrue(ambiguous.errors().contains("--report <path>"));
+
+        TriageResult explicit = runTriage("--report", first.toString());
+        assertEquals(0, explicit.status(), explicit.errors());
+        assertTrue(explicit.output().contains("Report: " + first));
+        assertTrue(explicit.output().contains("FIRST DIVERGENCE"));
     }
 }

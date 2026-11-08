@@ -317,8 +317,9 @@ Trace replay tests require:
   - Sonic 1: `s1.gen`, World REV01, CRC32 `AFE05EEE` (or `-Dsonic1.rom.path=...`)
   - Sonic 2: `s2.gen`, World REV01, CRC32 `7B905383` (or `-Dsonic2.rom.path=...`)
   - Sonic 3 & Knuckles: `s3k.gen`, World lock-on combined ROM, CRC32 `63522553` (or `-Ds3k.rom.path=...`)
-- the `.bk2` file to be present in the trace directory (except for ROM-driven credits demo
-  traces)
+- the fixture's referenced movie to resolve through the
+  [diagnosis guide's lookup](testing.md#diagnose-one-trace-replay); ROM-driven
+  credits demos do not use a `.bk2`
 
 Select the affected fixtures for the change. A complete trace sweep is a separate,
 explicit validation task, not the routine development default. A small cross-game
@@ -326,6 +327,7 @@ selection, when shared physics/timing changes require it, is:
 
 ```bash
 python3 tools/testing/maven_queue.py -Dmse=off \
+  -Ptrace-replay \
   '-Dtest=TestS1Ghz1TraceReplay,TestS1Mz1TraceReplay,TestS2Ehz1TraceReplay,TestS3kAizTraceReplay,TestS3kCnzTraceReplay' \
   test
 ```
@@ -333,7 +335,7 @@ python3 tools/testing/maven_queue.py -Dmse=off \
 Run one trace:
 
 ```bash
-python3 tools/testing/maven_queue.py -Dmse=off test -Dtest=TestS1Mz1TraceReplay
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay test -Dtest=TestS1Mz1TraceReplay
 ```
 
 Check the selected test identities, skips and actual replay reports. A successful
@@ -347,7 +349,7 @@ first divergent frame in the context file.
 Useful optional override while tuning S1 oscillation alignment:
 
 ```bash
-python3 tools/testing/maven_queue.py -Dmse=off test -Dtest=TestS1Mz1TraceReplay -Dosc.override=0
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay test -Dtest=TestS1Mz1TraceReplay -Dosc.override=0
 ```
 
 Reports use the owner-keyed physical layout
@@ -371,7 +373,7 @@ by gravity), the fingerprint maps to one of two ROM paths: terrain
 `Sonic_HitFloor` or solid-object `SolidObjectTopSloped2` /
 `SolidObject_Landed`. Add a `setGSpeed` velocity-probe in
 `AbstractPlayableSprite` that prints the call site and check the stack;
-if it points into `ObjectManager.SolidContacts.resolveContactInternal`,
+if it points into `ObjectSolidContactController`'s contact-resolution path,
 the offender is a solid object whose state machine has drifted from ROM
 (e.g. AIZ F7127 was the AIZ collapsing platform stuck in
 `state==2`/solid-stay forever; ROM's `loc_205DE` at sonic3k.asm:44895-44899
@@ -726,7 +728,7 @@ Typical debugging pattern:
 
 1. Open the first error in the context file.
 2. Check whether the first mismatch is terrain, object contact, hurt/bounce, or spawn timing.
-3. Cross-reference the same frame in the aux event stream (use `TraceData.eventsForFrame(K)` or
+3. Cross-reference the same frame in the aux event stream (use `TraceData.getEventsForFrame(K)` or
    open the JSONL/JSONL.gz directly with `gzip -d -c | grep '"frame":K'`).
 4. Trace the divergence **backward** to the earliest divergent frame — that's the real bug, not
    necessarily the first-error frame.
@@ -777,10 +779,10 @@ ROM-citation requirements and per-game parity rules.
   `tst.w y_vel(a1) / bmi.s loc_1E198` test only on S3K; S1 `Solid_Landed`
   (s1disasm/_incObj/sub SolidObject.asm:278) and S2 `SolidObject_Landed` (s2.asm:35589-35590)
   bail on upward y_vel BEFORE any lift, so the rule stays false there.
-- **Edit-tool BOM/CRLF silent failure.** Some files (e.g. `CnzCylinderInstance.java`,
-  `AbstractTraceReplayTest.java`) have UTF-8 BOM + CRLF endings. The Claude Code Edit tool
-  has been observed to silently fail on these — it returns "successfully" but doesn't write.
-  Fall back to Python `open(path, 'rb').read().replace(...)`-style edits if you suspect this.
+- **Verify edits against actual file bytes.** Do not assume a file has a BOM or
+  CRLF from historical notes. Check its present encoding/line endings when an
+  edit fails, then inspect the resulting diff; tool success alone is not proof
+  that the intended source changed.
 - **Misreading aux trace `cpu_state` event field semantics.** S3K's `cpu_state` event
   reports `cpu_routine` as the raw `Tails_CPU_routine` byte — `0x06` is the NORMAL
   ground-following AI (`loc_13D4A`, sonic3k.asm:26696), NOT a "FLY" routine. Similarly,
