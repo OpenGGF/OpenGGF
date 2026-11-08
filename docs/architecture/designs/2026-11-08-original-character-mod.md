@@ -498,10 +498,13 @@ Phase 1 waves:
 
 Status log (times UTC):
 
-- 2026-11-08: W4 stage lane implementation in progress on `feature/ai-mica-stages`.
-  S1 focused manager check: 17 passed, no skips. Initial integration run overlapped
-  an API source change and failed example compilation; superseded by the queued
-  complete-source verification. Captures and final checks remain pending.
+- 2026-11-08: W4 stage lane on `feature/ai-mica-stages`: S1 canonical roll and
+  private player palette committed in `dda7b29aa`; S2 half-pipe now installs the
+  indexed behind-view set in the shared native SAT assembly, retaining stage
+  animation, flips, shadows, admission and painter order. Complete working-tree
+  stage/integration/S3K guard selection: 173 passed, no skips. S1 manager 17/17,
+  S2 manager 16/16, compiler 3/3 and MICA integration 8/8. All four production-session
+  stage captures were inspected; API pin and native-rendering regressions pending.
 
 
 - 2026-11-08: design agreed; wave 1 launched.

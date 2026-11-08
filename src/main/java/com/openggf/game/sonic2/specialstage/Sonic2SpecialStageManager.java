@@ -1021,6 +1021,7 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
         GraphicsManager graphicsManager = graphicsManager();
         renderer = new Sonic2SpecialStageRenderer(graphicsManager);
         renderer.setDataLoader(dataLoader);
+        renderer.loadCharacterStageArt();
         renderer.setSpecialStageViewport(specialStageViewport);
         renderer.beginStaticBackgroundStage(backgroundStageGeneration);
         renderer.onRenderContextGenerationChanged(graphicsManager.getPatternAtlas());
