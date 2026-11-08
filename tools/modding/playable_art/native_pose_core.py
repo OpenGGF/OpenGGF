@@ -41,6 +41,9 @@ def apply(group):
   if group=='roll':
    im=Image.open(A/'native-pose-pilot/frames/roll-00.png').rotate(-90*int(key[-2:]),resample=N,expand=True).resize(size,N)
    im=p.outline(im)
+  if key=='spring-01':
+   head=Image.open(A/'frames/spring-00.png')
+   im.paste(head.crop((0,0,head.width,25)),(0,0));im=p.outline(im)
   if key=='homing_dive-00':
    # Tuck the small leading muzzle cluster behind the generated jade shell.
    for y in range(im.height//2,im.height):
@@ -59,7 +62,7 @@ def apply(group):
   im.save(A/f['file'],transparency=0,optimize=True,bits=4)
   rf=next(x for x in recipe['frames'] if x['id']==key)
   rf.clear();rf.update(id=key,animation=f['animation'],order=f['order'],angle_set=f['angle_set'],ticks=f['duration_ticks'],notes=f['notes'],native_pixels={'rows':[''.join(format(im.getpixel((x,y)),'x') for x in range(im.width)) for y in range(im.height)],'anchor':f['hotspot']})
-  meta['frames'][key]={'prompt':prompt,'raw_sha256':hashlib.sha256(raw.read_bytes()).hexdigest(),'reference':refs[key],'geometry_reference':geometry,'native_size':list(size),'previous_size':list(target.size),'previous_hotspot':old_hot,'hotspot':f['hotspot'],'source':'approved pilot adoption' if raw.parent!=R/'raw' else 'new built-in GPT Image','cleanup':('shared generated head/hood; blink eye ink' if group=='wait' else 'accepted pilot roll-00 rotated in exact quarter turns with expanded bounds' if group=='roll' else 'spring-derived downward shell in native roll envelope for cycle consistency' if key=='homing_dive-02' else 'leading muzzle tucked behind jade shell' if key=='homing_dive-00' else 'connected alpha; shared palette; inside ink outline')}
+  meta['frames'][key]={'prompt':prompt,'raw_sha256':hashlib.sha256(raw.read_bytes()).hexdigest(),'reference':refs[key],'geometry_reference':geometry,'native_size':list(size),'previous_size':list(target.size),'previous_hotspot':old_hot,'hotspot':f['hotspot'],'source':'approved pilot adoption' if raw.parent!=R/'raw' else 'new built-in GPT Image','cleanup':('shared generated head/hood; blink eye ink' if group=='wait' else 'accepted pilot roll-00 rotated in exact quarter turns with expanded bounds' if group=='roll' else 'spring-derived downward shell in native roll envelope for cycle consistency' if key=='homing_dive-02' else 'leading muzzle tucked behind jade shell' if key=='homing_dive-00' else 'shared spring-00 generated head/hood; lower launch phase retained' if key=='spring-01' else 'connected alpha; shared palette; inside ink outline')}
   page=Image.new('RGB',(320,100),'#929292');d=ImageDraw.Draw(page)
   native=Image.open(R/'native'/f'{key}.png')
   for col,(img,hot,label) in enumerate([(native,refs[key]['hotspot'],'native 8x ref'),(clean.resize(size,Image.Resampling.LANCZOS),f['hotspot'],'raw GPT'),(im,f['hotspot'],'reduced'),(target,old_hot,'previous')]):

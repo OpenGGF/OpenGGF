@@ -1258,7 +1258,7 @@
         22
       ],
       "source": "approved pilot adoption",
-      "cleanup": "connected alpha; shared palette; inside ink outline",
+      "cleanup": "shared spring-00 generated head/hood; lower launch phase retained",
       "material_box_change": false
     },
     "spindash-00": {
@@ -2784,6 +2784,889 @@
       "source": "new built-in GPT Image",
       "cleanup": "connected alpha; shared palette; inside ink outline",
       "material_box_change": true
+    },
+    "death-00": {
+      "prompt": "Use case: style-transfer. Asset: ONE isolated 16-bit pixel sprite, transparent background. Image 1 is ONLY native pose/rotation/silhouette and facing reference, NOT the character to reproduce. Image 2 is MICA's original pangolin identity concept. Image 3 is approved pixel-art style/proportion anchor. Redraw image 1 pose as MICA, a NEW DRAWING, NOT a recolour. Preserve pose, framing and silhouette extent of reference, NOT standing concept pose. Jade rounded overlapping scales, long scaled tail, tan pangolin muzzle/belly, readable dark eye, white gloves, red hiking boots with tan soles and jade laces. NO hedgehog/quills/blue/Sonic features, no text, no shadows or scenery. Crisp simple native pixel clusters and continuous dark outline. Pose: Front-facing airborne defeat pose: eyes wide, mouth open, BOTH arms raised diagonally out/up, legs spread with boots dangling down-left/down-right, tail tucked behind. Exact native frontal pose.",
+      "raw_sha256": "bb31ccd7f4bcfa9da6b643dc6d416979d08ce96da159cce5369198022cc2fc46",
+      "reference": {
+        "id": "death-00",
+        "size": [
+          34,
+          43
+        ],
+        "hotspot": [
+          18,
+          22
+        ],
+        "bbox_relative_to_hotspot": [
+          -18,
+          -22,
+          16,
+          21
+        ],
+        "game": "S2",
+        "mapping": 92,
+        "label": "Map_Sonic_0A6C"
+      },
+      "geometry_reference": {
+        "id": "death-00",
+        "size": [
+          34,
+          43
+        ],
+        "hotspot": [
+          18,
+          22
+        ],
+        "bbox_relative_to_hotspot": [
+          -18,
+          -22,
+          16,
+          21
+        ],
+        "game": "S2",
+        "mapping": 92,
+        "label": "Map_Sonic_0A6C"
+      },
+      "native_size": [
+        34,
+        43
+      ],
+      "previous_size": [
+        37,
+        35
+      ],
+      "previous_hotspot": [
+        18,
+        17
+      ],
+      "hotspot": [
+        18,
+        22
+      ],
+      "source": "new built-in GPT Image",
+      "cleanup": "connected alpha; shared palette; inside ink outline",
+      "material_box_change": true
+    },
+    "death-01": {
+      "prompt": "Use case: style-transfer. Asset: ONE isolated 16-bit pixel sprite, transparent background. Image 1 is ONLY native pose/rotation/silhouette and facing reference, NOT the character to reproduce. Image 2 is MICA's original pangolin identity concept. Image 3 is approved pixel-art style/proportion anchor. Redraw image 1 pose as MICA, a NEW DRAWING, NOT a recolour. Preserve pose, framing and silhouette extent of reference, NOT standing concept pose. Jade rounded overlapping scales, long scaled tail, tan pangolin muzzle/belly, readable dark eye, white gloves, red hiking boots with tan soles and jade laces. NO hedgehog/quills/blue/Sonic features, no text, no shadows or scenery. Crisp simple native pixel clusters and continuous dark outline. Pose: Front-facing airborne defeat second phase: both arms raised out/up, legs spread, eyes closed and mouth open, boots dangling, scale hood same size.",
+      "raw_sha256": "7ddd351374abb2b63eb1b4012d0b5e8e00bbc1ded3b2db8fe06bdb738dc7ac16",
+      "reference": {
+        "id": "death-01",
+        "size": [
+          34,
+          43
+        ],
+        "hotspot": [
+          18,
+          22
+        ],
+        "bbox_relative_to_hotspot": [
+          -18,
+          -22,
+          16,
+          21
+        ],
+        "game": "S2",
+        "mapping": 92,
+        "label": "Map_Sonic_0A6C"
+      },
+      "geometry_reference": {
+        "id": "death-01",
+        "size": [
+          34,
+          43
+        ],
+        "hotspot": [
+          18,
+          22
+        ],
+        "bbox_relative_to_hotspot": [
+          -18,
+          -22,
+          16,
+          21
+        ],
+        "game": "S2",
+        "mapping": 92,
+        "label": "Map_Sonic_0A6C"
+      },
+      "native_size": [
+        34,
+        43
+      ],
+      "previous_size": [
+        39,
+        32
+      ],
+      "previous_hotspot": [
+        19,
+        16
+      ],
+      "hotspot": [
+        18,
+        22
+      ],
+      "source": "new built-in GPT Image",
+      "cleanup": "connected alpha; shared palette; inside ink outline",
+      "material_box_change": true
+    },
+    "drown-00": {
+      "prompt": "Use case: style-transfer. Asset: ONE isolated 16-bit pixel sprite, transparent background. Image 1 is ONLY native pose/rotation/silhouette and facing reference, NOT the character to reproduce. Image 2 is MICA's original pangolin identity concept. Image 3 is approved pixel-art style/proportion anchor. Redraw image 1 pose as MICA, a NEW DRAWING, NOT a recolour. Preserve pose, framing and silhouette extent of reference, NOT standing concept pose. Jade rounded overlapping scales, long scaled tail, tan pangolin muzzle/belly, readable dark eye, white gloves, red hiking boots with tan soles and jade laces. NO hedgehog/quills/blue/Sonic features, no text, no shadows or scenery. Crisp simple native pixel clusters and continuous dark outline. Pose: Front-facing drowning gasp: head tilted straight UP with open O mouth as highest facial feature, eyes squeezed shut, both arms raised out/up, legs apart dangling. Match native head thrown back.",
+      "raw_sha256": "11ec1fdee64662583687994d9e7ffa3912b6fee8d4f11e6f5e62143b2f3ea61d",
+      "reference": {
+        "id": "drown-00",
+        "size": [
+          34,
+          40
+        ],
+        "hotspot": [
+          18,
+          19
+        ],
+        "bbox_relative_to_hotspot": [
+          -18,
+          -19,
+          16,
+          21
+        ],
+        "game": "S2",
+        "mapping": 93,
+        "label": "Map_Sonic_0A8E"
+      },
+      "geometry_reference": {
+        "id": "drown-00",
+        "size": [
+          34,
+          40
+        ],
+        "hotspot": [
+          18,
+          19
+        ],
+        "bbox_relative_to_hotspot": [
+          -18,
+          -19,
+          16,
+          21
+        ],
+        "game": "S2",
+        "mapping": 93,
+        "label": "Map_Sonic_0A8E"
+      },
+      "native_size": [
+        34,
+        40
+      ],
+      "previous_size": [
+        37,
+        39
+      ],
+      "previous_hotspot": [
+        24,
+        20
+      ],
+      "hotspot": [
+        18,
+        19
+      ],
+      "source": "new built-in GPT Image",
+      "cleanup": "connected alpha; shared palette; inside ink outline",
+      "material_box_change": false
+    },
+    "drown-01": {
+      "prompt": "Use case: style-transfer. Asset: ONE isolated 16-bit pixel sprite, transparent background. Image 1 is ONLY native pose/rotation/silhouette and facing reference, NOT the character to reproduce. Image 2 is MICA's original pangolin identity concept. Image 3 is approved pixel-art style/proportion anchor. Redraw image 1 pose as MICA, a NEW DRAWING, NOT a recolour. Preserve pose, framing and silhouette extent of reference, NOT standing concept pose. Jade rounded overlapping scales, long scaled tail, tan pangolin muzzle/belly, readable dark eye, white gloves, red hiking boots with tan soles and jade laces. NO hedgehog/quills/blue/Sonic features, no text, no shadows or scenery. Crisp simple native pixel clusters and continuous dark outline. Pose: Front-facing drowning gasp second phase, head thrown straight UP, open round mouth, shut eyes, raised gloves, legs apart; same silhouette and head size.",
+      "raw_sha256": "ca82c65e139e902a5f2ccd28b0f3d569c6b7eaf92e6d5951e7ede38d6b86b2e3",
+      "reference": {
+        "id": "drown-01",
+        "size": [
+          34,
+          40
+        ],
+        "hotspot": [
+          18,
+          19
+        ],
+        "bbox_relative_to_hotspot": [
+          -18,
+          -19,
+          16,
+          21
+        ],
+        "game": "S2",
+        "mapping": 93,
+        "label": "Map_Sonic_0A8E"
+      },
+      "geometry_reference": {
+        "id": "drown-01",
+        "size": [
+          34,
+          40
+        ],
+        "hotspot": [
+          18,
+          19
+        ],
+        "bbox_relative_to_hotspot": [
+          -18,
+          -19,
+          16,
+          21
+        ],
+        "game": "S2",
+        "mapping": 93,
+        "label": "Map_Sonic_0A8E"
+      },
+      "native_size": [
+        34,
+        40
+      ],
+      "previous_size": [
+        30,
+        39
+      ],
+      "previous_hotspot": [
+        19,
+        20
+      ],
+      "hotspot": [
+        18,
+        19
+      ],
+      "source": "new built-in GPT Image",
+      "cleanup": "connected alpha; shared palette; inside ink outline",
+      "material_box_change": true
+    },
+    "drown-02": {
+      "prompt": "Use case: style-transfer. Asset: ONE isolated 16-bit pixel sprite, transparent background. Image 1 is ONLY native pose/rotation/silhouette and facing reference, NOT the character to reproduce. Image 2 is MICA's original pangolin identity concept. Image 3 is approved pixel-art style/proportion anchor. Redraw image 1 pose as MICA, a NEW DRAWING, NOT a recolour. Preserve pose, framing and silhouette extent of reference, NOT standing concept pose. Jade rounded overlapping scales, long scaled tail, tan pangolin muzzle/belly, readable dark eye, white gloves, red hiking boots with tan soles and jade laces. NO hedgehog/quills/blue/Sonic features, no text, no shadows or scenery. Crisp simple native pixel clusters and continuous dark outline. Pose: Front-facing drowning gasp third phase, head thrown UP, open round mouth, raised gloves, legs apart dangling, slightly folded elbows. Same character proportions.",
+      "raw_sha256": "85b50da818caafe425a1ea0cc900ee0fe7919a7fc5bc86ce0ba91e8f5d87a756",
+      "reference": {
+        "id": "drown-02",
+        "size": [
+          34,
+          40
+        ],
+        "hotspot": [
+          18,
+          19
+        ],
+        "bbox_relative_to_hotspot": [
+          -18,
+          -19,
+          16,
+          21
+        ],
+        "game": "S2",
+        "mapping": 93,
+        "label": "Map_Sonic_0A8E"
+      },
+      "geometry_reference": {
+        "id": "drown-02",
+        "size": [
+          34,
+          40
+        ],
+        "hotspot": [
+          18,
+          19
+        ],
+        "bbox_relative_to_hotspot": [
+          -18,
+          -19,
+          16,
+          21
+        ],
+        "game": "S2",
+        "mapping": 93,
+        "label": "Map_Sonic_0A8E"
+      },
+      "native_size": [
+        34,
+        40
+      ],
+      "previous_size": [
+        34,
+        39
+      ],
+      "previous_hotspot": [
+        22,
+        20
+      ],
+      "hotspot": [
+        18,
+        19
+      ],
+      "source": "new built-in GPT Image",
+      "cleanup": "connected alpha; shared palette; inside ink outline",
+      "material_box_change": false
+    },
+    "get_air-00": {
+      "prompt": "Use case: style-transfer. Asset: ONE isolated 16-bit pixel sprite, transparent background. Image 1 is ONLY native pose/rotation/silhouette and facing reference, NOT the character to reproduce. Image 2 is MICA's original pangolin identity concept. Image 3 is approved pixel-art style/proportion anchor. Redraw image 1 pose as MICA, a NEW DRAWING, NOT a recolour. Preserve pose, framing and silhouette extent of reference, NOT standing concept pose. Jade rounded overlapping scales, long scaled tail, tan pangolin muzzle/belly, readable dark eye, white gloves, red hiking boots with tan soles and jade laces. NO hedgehog/quills/blue/Sonic features, no text, no shadows or scenery. Crisp simple native pixel clusters and continuous dark outline. Pose: Air bubble breath: body airborne diagonal with feet down-left and down-right, head tilted UP-right, mouth wide open above muzzle, hands behind left, chest expanded. No bubble or water.",
+      "raw_sha256": "eff2ceecca4ce95d42a16f906c278799e8c95daaac3fe41c8e0ec56fd3715dc0",
+      "reference": {
+        "id": "get_air-00",
+        "size": [
+          36,
+          36
+        ],
+        "hotspot": [
+          18,
+          17
+        ],
+        "bbox_relative_to_hotspot": [
+          -18,
+          -17,
+          18,
+          19
+        ],
+        "game": "S2",
+        "mapping": 90,
+        "label": "Map_Sonic_0A40"
+      },
+      "geometry_reference": {
+        "id": "get_air-00",
+        "size": [
+          36,
+          36
+        ],
+        "hotspot": [
+          18,
+          17
+        ],
+        "bbox_relative_to_hotspot": [
+          -18,
+          -17,
+          18,
+          19
+        ],
+        "game": "S2",
+        "mapping": 90,
+        "label": "Map_Sonic_0A40"
+      },
+      "native_size": [
+        36,
+        36
+      ],
+      "previous_size": [
+        33,
+        39
+      ],
+      "previous_hotspot": [
+        21,
+        20
+      ],
+      "hotspot": [
+        18,
+        17
+      ],
+      "source": "new built-in GPT Image",
+      "cleanup": "connected alpha; shared palette; inside ink outline",
+      "material_box_change": false
+    },
+    "get_air-01": {
+      "prompt": "Use case: style-transfer. Asset: ONE isolated 16-bit pixel sprite, transparent background. Image 1 is ONLY native pose/rotation/silhouette and facing reference, NOT the character to reproduce. Image 2 is MICA's original pangolin identity concept. Image 3 is approved pixel-art style/proportion anchor. Redraw image 1 pose as MICA, a NEW DRAWING, NOT a recolour. Preserve pose, framing and silhouette extent of reference, NOT standing concept pose. Jade rounded overlapping scales, long scaled tail, tan pangolin muzzle/belly, readable dark eye, white gloves, red hiking boots with tan soles and jade laces. NO hedgehog/quills/blue/Sonic features, no text, no shadows or scenery. Crisp simple native pixel clusters and continuous dark outline. Pose: Air breath second step: body airborne diagonal, head UP-right, open mouth, arms extend behind left, legs spread below, slight relief expression. No bubble/water.",
+      "raw_sha256": "f052047bdb8fbf917150d553b83e70d7646f88779d1c99b0d58ea257f9752869",
+      "reference": {
+        "id": "get_air-01",
+        "size": [
+          36,
+          36
+        ],
+        "hotspot": [
+          18,
+          17
+        ],
+        "bbox_relative_to_hotspot": [
+          -18,
+          -17,
+          18,
+          19
+        ],
+        "game": "S2",
+        "mapping": 90,
+        "label": "Map_Sonic_0A40"
+      },
+      "geometry_reference": {
+        "id": "get_air-01",
+        "size": [
+          36,
+          36
+        ],
+        "hotspot": [
+          18,
+          17
+        ],
+        "bbox_relative_to_hotspot": [
+          -18,
+          -17,
+          18,
+          19
+        ],
+        "game": "S2",
+        "mapping": 90,
+        "label": "Map_Sonic_0A40"
+      },
+      "native_size": [
+        36,
+        36
+      ],
+      "previous_size": [
+        29,
+        39
+      ],
+      "previous_hotspot": [
+        19,
+        20
+      ],
+      "hotspot": [
+        18,
+        17
+      ],
+      "source": "new built-in GPT Image",
+      "cleanup": "connected alpha; shared palette; inside ink outline",
+      "material_box_change": true
+    },
+    "hang-00": {
+      "prompt": "Use case: style-transfer. Asset: ONE isolated 16-bit pixel sprite, transparent background. Image 1 is ONLY native pose/rotation/silhouette and facing reference, NOT the character to reproduce. Image 2 is MICA's original pangolin identity concept. Image 3 is approved pixel-art style/proportion anchor. Redraw image 1 pose as MICA, a NEW DRAWING, NOT a recolour. Preserve pose, framing and silhouette extent of reference, NOT standing concept pose. Jade rounded overlapping scales, long scaled tail, tan pangolin muzzle/belly, readable dark eye, white gloves, red hiking boots with tan soles and jade laces. NO hedgehog/quills/blue/Sonic features, no text, no shadows or scenery. Crisp simple native pixel clusters and continuous dark outline. Pose: Hanging horizontally to the RIGHT from BOTH gloves at far LEFT. Arms stretch LEFT, head next to gloves, body and legs trail horizontally RIGHT. Face points down-left. No bar/rope, no object. IMPORTANT horizontal, not upright hanging.",
+      "raw_sha256": "9910908726e28d3c9225202b3e73fb3c067c4b086cfcd8a2e49c2c5bdc37765a",
+      "reference": {
+        "id": "hang-00",
+        "size": [
+          48,
+          25
+        ],
+        "hotspot": [
+          24,
+          18
+        ],
+        "bbox_relative_to_hotspot": [
+          -24,
+          -18,
+          24,
+          7
+        ],
+        "game": "S2",
+        "mapping": 80,
+        "label": "Map_Sonic_0944"
+      },
+      "geometry_reference": {
+        "id": "hang-00",
+        "size": [
+          48,
+          25
+        ],
+        "hotspot": [
+          24,
+          18
+        ],
+        "bbox_relative_to_hotspot": [
+          -24,
+          -18,
+          24,
+          7
+        ],
+        "game": "S2",
+        "mapping": 80,
+        "label": "Map_Sonic_0944"
+      },
+      "native_size": [
+        48,
+        25
+      ],
+      "previous_size": [
+        23,
+        44
+      ],
+      "previous_hotspot": [
+        15,
+        25
+      ],
+      "hotspot": [
+        24,
+        18
+      ],
+      "source": "new built-in GPT Image",
+      "cleanup": "connected alpha; shared palette; inside ink outline",
+      "material_box_change": true
+    },
+    "hang-01": {
+      "prompt": "Use case: style-transfer. Asset: ONE isolated 16-bit pixel sprite, transparent background. Image 1 is ONLY native pose/rotation/silhouette and facing reference, NOT the character to reproduce. Image 2 is MICA's original pangolin identity concept. Image 3 is approved pixel-art style/proportion anchor. Redraw image 1 pose as MICA, a NEW DRAWING, NOT a recolour. Preserve pose, framing and silhouette extent of reference, NOT standing concept pose. Jade rounded overlapping scales, long scaled tail, tan pangolin muzzle/belly, readable dark eye, white gloves, red hiking boots with tan soles and jade laces. NO hedgehog/quills/blue/Sonic features, no text, no shadows or scenery. Crisp simple native pixel clusters and continuous dark outline. Pose: Hanging horizontally to RIGHT from BOTH gloves at far LEFT. Head tucked down-left, torso and both red boots trail right, slight leg curl. No bar/rope, no object.",
+      "raw_sha256": "4a76ab541c9adc0807a1890d27aa4f63247ae4a72a58e8d544db48f98571f34b",
+      "reference": {
+        "id": "hang-01",
+        "size": [
+          47,
+          26
+        ],
+        "hotspot": [
+          24,
+          18
+        ],
+        "bbox_relative_to_hotspot": [
+          -24,
+          -18,
+          23,
+          8
+        ],
+        "game": "S2",
+        "mapping": 81,
+        "label": "Map_Sonic_095E"
+      },
+      "geometry_reference": {
+        "id": "hang-01",
+        "size": [
+          47,
+          26
+        ],
+        "hotspot": [
+          24,
+          18
+        ],
+        "bbox_relative_to_hotspot": [
+          -24,
+          -18,
+          23,
+          8
+        ],
+        "game": "S2",
+        "mapping": 81,
+        "label": "Map_Sonic_095E"
+      },
+      "native_size": [
+        47,
+        26
+      ],
+      "previous_size": [
+        32,
+        44
+      ],
+      "previous_hotspot": [
+        20,
+        25
+      ],
+      "hotspot": [
+        24,
+        18
+      ],
+      "source": "new built-in GPT Image",
+      "cleanup": "connected alpha; shared palette; inside ink outline",
+      "material_box_change": true
+    },
+    "hang-02": {
+      "prompt": "Use case: style-transfer. Asset: ONE isolated 16-bit pixel sprite, transparent background. Image 1 is ONLY native pose/rotation/silhouette and facing reference, NOT the character to reproduce. Image 2 is MICA's original pangolin identity concept. Image 3 is approved pixel-art style/proportion anchor. Redraw image 1 pose as MICA, a NEW DRAWING, NOT a recolour. Preserve pose, framing and silhouette extent of reference, NOT standing concept pose. Jade rounded overlapping scales, long scaled tail, tan pangolin muzzle/belly, readable dark eye, white gloves, red hiking boots with tan soles and jade laces. NO hedgehog/quills/blue/Sonic features, no text, no shadows or scenery. Crisp simple native pixel clusters and continuous dark outline. Pose: Hanging horizontal right from both white gloves far LEFT, face down-left, body and red boots extend right with bent knees. No bar or rope.",
+      "raw_sha256": "581766376f4768ae58b75c7e2c0817c7bc39909c45b98df6340d2dc45c8b9ca0",
+      "reference": {
+        "id": "hang-02",
+        "size": [
+          48,
+          25
+        ],
+        "hotspot": [
+          24,
+          18
+        ],
+        "bbox_relative_to_hotspot": [
+          -24,
+          -18,
+          24,
+          7
+        ],
+        "game": "S2",
+        "mapping": 80,
+        "label": "Map_Sonic_0944"
+      },
+      "geometry_reference": {
+        "id": "hang-02",
+        "size": [
+          48,
+          25
+        ],
+        "hotspot": [
+          24,
+          18
+        ],
+        "bbox_relative_to_hotspot": [
+          -24,
+          -18,
+          24,
+          7
+        ],
+        "game": "S2",
+        "mapping": 80,
+        "label": "Map_Sonic_0944"
+      },
+      "native_size": [
+        48,
+        25
+      ],
+      "previous_size": [
+        29,
+        44
+      ],
+      "previous_hotspot": [
+        19,
+        25
+      ],
+      "hotspot": [
+        24,
+        18
+      ],
+      "source": "new built-in GPT Image",
+      "cleanup": "connected alpha; shared palette; inside ink outline",
+      "material_box_change": true
+    },
+    "homing_dive-00": {
+      "prompt": "Use case: style-transfer. Asset: ONE isolated 16-bit pixel sprite, transparent background. Image 1 is ONLY native pose/rotation/silhouette and facing reference, NOT the character to reproduce. Image 2 is MICA's original pangolin identity concept. Image 3 is approved pixel-art style/proportion anchor. Redraw image 1 pose as MICA, a NEW DRAWING, NOT a recolour. Preserve pose, framing and silhouette extent of reference, NOT standing concept pose. Jade rounded overlapping scales, long scaled tail, tan pangolin muzzle/belly, readable dark eye, white gloves, red hiking boots with tan soles and jade laces. NO hedgehog/quills/blue/Sonic features, no text, no shadows or scenery. Crisp simple native pixel clusters and continuous dark outline. Pose: Custom scales-FIRST dive, curling pose based on native roll reference but point shell and scaled head DOWN-right, face and gloves hidden behind armour, tucked red boots upper-left. Sharp diagonal down-right attack.",
+      "raw_sha256": "e24410e11b2707bf23982b1c87571d6ff4166042f674cefd8bd0e59b76091d8f",
+      "reference": {
+        "id": "homing_dive-00",
+        "size": [
+          29,
+          30
+        ],
+        "hotspot": [
+          15,
+          15
+        ],
+        "bbox_relative_to_hotspot": [
+          -15,
+          -15,
+          14,
+          15
+        ],
+        "game": "S2",
+        "mapping": 61,
+        "label": "Map_Sonic_0836"
+      },
+      "geometry_reference": {
+        "id": "homing_dive-00",
+        "size": [
+          29,
+          30
+        ],
+        "hotspot": [
+          15,
+          15
+        ],
+        "bbox_relative_to_hotspot": [
+          -15,
+          -15,
+          14,
+          15
+        ],
+        "game": "S2",
+        "mapping": 61,
+        "label": "Map_Sonic_0836"
+      },
+      "native_size": [
+        29,
+        30
+      ],
+      "previous_size": [
+        38,
+        29
+      ],
+      "previous_hotspot": [
+        19,
+        14
+      ],
+      "hotspot": [
+        15,
+        15
+      ],
+      "source": "new built-in GPT Image",
+      "cleanup": "leading muzzle tucked behind jade shell",
+      "material_box_change": true
+    },
+    "homing_dive-01": {
+      "prompt": "Use case: style-transfer. Asset: ONE isolated 16-bit pixel sprite, transparent background. Image 1 is ONLY native pose/rotation/silhouette and facing reference, NOT the character to reproduce. Image 2 is MICA's original pangolin identity concept. Image 3 is approved pixel-art style/proportion anchor. Redraw image 1 pose as MICA, a NEW DRAWING, NOT a recolour. Preserve pose, framing and silhouette extent of reference, NOT standing concept pose. Jade rounded overlapping scales, long scaled tail, tan pangolin muzzle/belly, readable dark eye, white gloves, red hiking boots with tan soles and jade laces. NO hedgehog/quills/blue/Sonic features, no text, no shadows or scenery. Crisp simple native pixel clusters and continuous dark outline. Pose: Custom scales-FIRST dive second step, native rolled silhouette, jade overlapping shell leads DOWN-right; tail curls over upper-left, muzzle tucked behind shell, NO face leading attack.",
+      "raw_sha256": "3cffb6f994cbc4e6ee6efc5d65fcc21e5f5f4f8f6fb972de4e503ad64c4e475a",
+      "reference": {
+        "id": "homing_dive-01",
+        "size": [
+          30,
+          29
+        ],
+        "hotspot": [
+          15,
+          15
+        ],
+        "bbox_relative_to_hotspot": [
+          -15,
+          -15,
+          15,
+          14
+        ],
+        "game": "S2",
+        "mapping": 62,
+        "label": "Map_Sonic_0840"
+      },
+      "geometry_reference": {
+        "id": "homing_dive-01",
+        "size": [
+          30,
+          29
+        ],
+        "hotspot": [
+          15,
+          15
+        ],
+        "bbox_relative_to_hotspot": [
+          -15,
+          -15,
+          15,
+          14
+        ],
+        "game": "S2",
+        "mapping": 62,
+        "label": "Map_Sonic_0840"
+      },
+      "native_size": [
+        30,
+        29
+      ],
+      "previous_size": [
+        36,
+        29
+      ],
+      "previous_hotspot": [
+        18,
+        14
+      ],
+      "hotspot": [
+        15,
+        15
+      ],
+      "source": "new built-in GPT Image",
+      "cleanup": "connected alpha; shared palette; inside ink outline",
+      "material_box_change": true
+    },
+    "homing_dive-02": {
+      "prompt": "Use case: style-transfer. ONE transparent original MICA pangolin sprite. Image1 is a strict UPSIDE-DOWN, HEAD-DOWN pose base: boots at TOP, head at BOTTOM. Replace it with MICA from concept image2, pixel style image3. Custom scales-first straight DOWN dive: a narrow pointed overlapping jade armour shell at BOTTOM, folded body above it, red boots together at TOP. Face, tan muzzle and gloves COMPLETELY hidden within armour; only jade scales point downwards. Keep image1's narrow tall silhouette and exact DOWNWARD orientation. NOT standing, NOT face-first, NO hedgehog/quills/blue, no text, shadow or effects. Crisp 16-bit pixel clusters; transparent background.",
+      "raw_sha256": "44c9b442a0a87f00dbeeb353bc1c14c0e8a7dc0b0d2ad5df300693878b1841c1",
+      "reference": {
+        "id": "homing_dive-02",
+        "size": [
+          24,
+          45
+        ],
+        "hotspot": [
+          12,
+          23
+        ],
+        "bbox_relative_to_hotspot": [
+          -12,
+          -23,
+          12,
+          22
+        ],
+        "game": "S2",
+        "mapping": 91,
+        "label": "Map_Sonic_0A5A",
+        "custom_reference_rotation_degrees": 180
+      },
+      "geometry_reference": {
+        "id": "roll-02",
+        "size": [
+          29,
+          30
+        ],
+        "hotspot": [
+          14,
+          15
+        ],
+        "bbox_relative_to_hotspot": [
+          -14,
+          -15,
+          15,
+          15
+        ],
+        "game": "S2",
+        "mapping": 63,
+        "label": "Map_Sonic_084A"
+      },
+      "native_size": [
+        29,
+        30
+      ],
+      "previous_size": [
+        35,
+        29
+      ],
+      "previous_hotspot": [
+        17,
+        14
+      ],
+      "hotspot": [
+        14,
+        15
+      ],
+      "source": "new built-in GPT Image",
+      "cleanup": "spring-derived downward shell in native roll envelope for cycle consistency",
+      "material_box_change": true
+    },
+    "homing_dive-03": {
+      "prompt": "Use case: style-transfer. Asset: ONE isolated 16-bit pixel sprite, transparent background. Image 1 is ONLY native pose/rotation/silhouette and facing reference, NOT the character to reproduce. Image 2 is MICA's original pangolin identity concept. Image 3 is approved pixel-art style/proportion anchor. Redraw image 1 pose as MICA, a NEW DRAWING, NOT a recolour. Preserve pose, framing and silhouette extent of reference, NOT standing concept pose. Jade rounded overlapping scales, long scaled tail, tan pangolin muzzle/belly, readable dark eye, white gloves, red hiking boots with tan soles and jade laces. NO hedgehog/quills/blue/Sonic features, no text, no shadows or scenery. Crisp simple native pixel clusters and continuous dark outline. Pose: Custom scales-FIRST dive final step: tight shell projectile pointing DOWN-right, tail wraps back upper-left, muzzle hidden inside armour, no extended gloves/feet, no face-first attack.",
+      "raw_sha256": "5967ceafc5248971912fa9ed55dbe03a0e8a2bc736361c44b9cb23c299802995",
+      "reference": {
+        "id": "homing_dive-03",
+        "size": [
+          30,
+          29
+        ],
+        "hotspot": [
+          15,
+          14
+        ],
+        "bbox_relative_to_hotspot": [
+          -15,
+          -14,
+          15,
+          15
+        ],
+        "game": "S2",
+        "mapping": 64,
+        "label": "Map_Sonic_0854"
+      },
+      "geometry_reference": {
+        "id": "homing_dive-03",
+        "size": [
+          30,
+          29
+        ],
+        "hotspot": [
+          15,
+          14
+        ],
+        "bbox_relative_to_hotspot": [
+          -15,
+          -14,
+          15,
+          15
+        ],
+        "game": "S2",
+        "mapping": 64,
+        "label": "Map_Sonic_0854"
+      },
+      "native_size": [
+        30,
+        29
+      ],
+      "previous_size": [
+        30,
+        29
+      ],
+      "previous_hotspot": [
+        15,
+        14
+      ],
+      "hotspot": [
+        15,
+        14
+      ],
+      "source": "new built-in GPT Image",
+      "cleanup": "connected alpha; shared palette; inside ink outline",
+      "material_box_change": false
     }
   },
   "source_pins": {

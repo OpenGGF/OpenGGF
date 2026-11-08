@@ -1211,3 +1211,41 @@ also rejected. Provenance records accepted raw hashes and exact prompts only.
 older geometry rules for historical handoffs. The final airborne/water/custom
 pose group and its checks follow below; this checkpoint is not runtime contact
 or animation certification.
+
+W7 core completion (same lane): all 62 assigned nonslope PNGs are replaced,
+including the four STOP aliases; 36 WALK/RUN slope PNGs remain byte-identical to
+the starting tree. The final group supplies DEATH (2), DROWN (3), GET_AIR (2),
+HANG (3) and HOMING_DIVE (4). WAIT and SPRING reuse generated head/hood clusters
+to stabilize adjacent phases; ROLL uses expanded-bounds quarter turns of the
+accepted face-in-ball base. Custom dive-00 tucks its small leading muzzle cluster
+behind jade scales. Dive-02 uses the regenerated inverted spring pose, reduced
+into ROLL-02's native envelope/anchor to avoid a tall-frame pop; its separate
+pose and geometry references are explicit. HOMING_DIVE has no native animation.
+
+Native box changes require in-engine capture review, particularly HANG: old
+23x44 / 32x44 / 29x44 become 48x25 / 47x26 / 48x25, native hotspots [24,18].
+Both SPRING boxes change 25x48 -> 24x45, hotspot [13,24] -> [12,22]. PUSH changes
+42x37 / 41x37 -> native boxes; all old/new sizes and anchors are recorded per
+frame in `art/mica/native-pose-core.json`, with material-change flags. Disposable
+`/tmp/mica-np-core-20261108/geometry-changes.json` also lists per-frame tile counts
+and expands STOP aliases. Native centres supersede every earlier MICA anchor.
+
+The review directory has each frame's native 8x source, raw GPT original,
+engine-centred four-column 1x/4x comparisons, and 18 paired animation GIFs.
+WAIT follows its retained authored script; fixed animations retain the assembler's
+native timer intervals and original adaptation phase counts. WALK/RUN/ROLL/PUSH
+use fastest one-tick previews, not all-speed certification. Tiny eye/glove/lace
+clusters still merge at 1x; the pointed custom dive phase remains stylistically
+more angular than its round neighbours. HANG grip, PUSH wall alignment, spring
+contact and all changed native anchors need the integrating lane's gameplay
+captures; no in-engine capture is claimed here.
+
+Final bounded verification: `verify.py` passes all 98 palette/alpha/outline/
+geometry and byte-identical recipe checks; assembly remains 98 frames, 18
+animations, maximum 36 tiles per frame. A per-frame audit checks all 62 native
+anchors, accepted raw hashes, IDs/order/scripts, unchanged slopes, review/GIF
+coverage and tile counts <=36. The three isolated native-pose tests pass.
+`python3 -I -m unittest discover -s tools/modding -p 'test_*.py'` runs 43 tests:
+42 pass; the same inherited creator-kit missing-LICENSE error remains, compared
+by test identity and exception with the pre-edit baseline. Python compilation
+and whitespace checks pass. No Java build, GGFP bake, merge or push.

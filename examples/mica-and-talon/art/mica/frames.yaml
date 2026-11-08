@@ -349,7 +349,7 @@
       "file": "frames/death-00.png",
       "hotspot": [
         18,
-        17
+        22
       ],
       "angle_set": "flat",
       "duration_ticks": 12,
@@ -361,8 +361,8 @@
       "order": 1,
       "file": "frames/death-01.png",
       "hotspot": [
-        19,
-        16
+        18,
+        22
       ],
       "angle_set": "flat",
       "duration_ticks": 12,
@@ -374,8 +374,8 @@
       "order": 0,
       "file": "frames/homing_dive-00.png",
       "hotspot": [
-        19,
-        14
+        15,
+        15
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
@@ -387,8 +387,8 @@
       "order": 1,
       "file": "frames/homing_dive-01.png",
       "hotspot": [
-        18,
-        14
+        15,
+        15
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
@@ -400,8 +400,8 @@
       "order": 2,
       "file": "frames/homing_dive-02.png",
       "hotspot": [
-        17,
-        14
+        14,
+        15
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
@@ -660,8 +660,8 @@
       "order": 0,
       "file": "frames/drown-00.png",
       "hotspot": [
-        24,
-        20
+        18,
+        19
       ],
       "angle_set": "flat",
       "duration_ticks": 10,
@@ -673,8 +673,8 @@
       "order": 1,
       "file": "frames/drown-01.png",
       "hotspot": [
-        19,
-        20
+        18,
+        19
       ],
       "angle_set": "flat",
       "duration_ticks": 10,
@@ -686,8 +686,8 @@
       "order": 2,
       "file": "frames/drown-02.png",
       "hotspot": [
-        22,
-        20
+        18,
+        19
       ],
       "angle_set": "flat",
       "duration_ticks": 10,
@@ -699,8 +699,8 @@
       "order": 0,
       "file": "frames/get_air-00.png",
       "hotspot": [
-        21,
-        20
+        18,
+        17
       ],
       "angle_set": "flat",
       "duration_ticks": 12,
@@ -712,8 +712,8 @@
       "order": 1,
       "file": "frames/get_air-01.png",
       "hotspot": [
-        19,
-        20
+        18,
+        17
       ],
       "angle_set": "flat",
       "duration_ticks": 12,
@@ -725,8 +725,8 @@
       "order": 0,
       "file": "frames/hang-00.png",
       "hotspot": [
-        15,
-        25
+        24,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 10,
@@ -738,8 +738,8 @@
       "order": 1,
       "file": "frames/hang-01.png",
       "hotspot": [
-        20,
-        25
+        24,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 10,
@@ -751,8 +751,8 @@
       "order": 2,
       "file": "frames/hang-02.png",
       "hotspot": [
-        19,
-        25
+        24,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 10,
