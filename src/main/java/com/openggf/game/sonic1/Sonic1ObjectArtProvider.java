@@ -122,6 +122,9 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
         hudLivesPatterns = art.loadNemesisPatterns(Sonic1Constants.ART_NEM_LIFE_ICON_ADDR);
         rebuildHudStaticArt();
         overrideLivesArtFromDonor();
+        hudLivesPatterns = Sonic1CharacterPresentation.hud(rom, hudLivesPatterns,
+                Sonic1CharacterPresentation.active());
+        rebuildHudStaticArt();
 
         hudLivesNumbers = art.loadUncompressedPatterns(
                 Sonic1Constants.ART_UNC_LIVES_NUMBERS_ADDR,

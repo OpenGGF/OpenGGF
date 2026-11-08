@@ -86,7 +86,9 @@ the S3K water zones.
 
 ### W4 — Character presentation contract (L)
 
-Status: API foundation delivered; group 1 follow-up in progress on
+Status: S1 HUD icon/name wired and tile-tested on `feature/ai-mica-s1-surfaces`;
+S1 results, special-stage results and 1-up faces pending.
+API foundation delivered; group 1 follow-up in progress on
 `feature/ai-mica-presentation2`. ROM readers now inventory all three small HUD
 fonts and S3K per-zone title/results-name art. S2 stock Tails-alone results select
 Miles/Tails using the native graphics-region flag. Surface wiring, sign spin/backing
