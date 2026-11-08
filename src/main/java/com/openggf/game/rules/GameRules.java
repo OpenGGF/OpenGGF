@@ -151,6 +151,7 @@ public record GameRules(
                     false, // sidekickDespawnUsesInteractCodeWordChange (S3K-only)
                     false,
                     false,
+                    true, // touchScanRequiresObjectRenderBit
                     true,
                     false,
                     false,
@@ -308,6 +309,7 @@ public record GameRules(
                     false, // sidekickDespawnUsesInteractCodeWordChange (S3K-only)
                     true,
                     false,
+                    false, // touchScanRequiresObjectRenderBit
                     false,
                     false,
                     true,
@@ -459,6 +461,7 @@ public record GameRules(
                     true, // sidekickDespawnUsesInteractCodeWordChange (S3K sub_13EFC word compare)
                     true,
                     true,
+                    true, // touchScanRequiresObjectRenderBit
                     false,
                     true,
                     false,

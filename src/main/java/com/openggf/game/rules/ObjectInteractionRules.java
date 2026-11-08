@@ -11,6 +11,11 @@ public record ObjectInteractionRules(
         boolean sidekickDespawnUsesInteractCodeWordChange,
         boolean sidekickNormalCpuSkipsHurtRoutine,
         boolean permanentRespawnTableLatch,
+        // Touch_Loop (s2.asm:85209-85219) and KiS2 Touch_Loop
+        // (docs/kis2disasm/s2.asm:88464-88474) scan collision_flags without a render gate.
+        // S1 React_LoopObjects (_incObj/Sonic ReactToItem.asm:47-53) tests obRender bit7.
+        // Separate from the geometry of that bit and collision-response-list admission.
+        boolean touchScanRequiresObjectRenderBit,
         boolean touchResponseUsesRenderFlagYGate,
         boolean touchResponseUsesPreviousCollisionResponseList,
         boolean animalObjectPreservesObjectMoveXSubpixel,
