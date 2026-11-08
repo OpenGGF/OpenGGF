@@ -476,3 +476,33 @@ These details matter when you investigate a problem or write tools.
 
 Agents should also read the
 [stageplay-authoring skill](../../../.agents/skills/stageplay-authoring/SKILL.md).
+
+### Two-player programmes in both editors
+
+Open the existing Route / Tape workspace in either editor. With S2 World REV01
+loaded, New route offers the Competition title/menu host and EHZ, MCZ, CNZ or
+Special Stage entry. Both pads share a ruler; darker lanes, desaturated buttons
+and a lock mark the immutable prefix. A different level's scenery is covered by
+a neutral preview. P1 is blue, P2 purple, and joint goals teal.
+
+Add leg supports P1, P2 and Both, plus fact-equals and facts-equal with the S2
+observer key picker. Unknown/empty keys are errors. Scan copies ENGINE facts at
+the cursor; a known key absent from that observation is an inline fact-form
+error. Edit a desktop player chip, or choose an individual leg in the HUD Goals
+menu. The programme text editor preserves compound conditions and per-leg guards.
+
+Plan, replay, qualifying save, repair and scan use the isolated EGL worker and
+the shared planner. Native programmes retain their original goal cursor across
+completed prefix legs. An unchanged qualified save replays first and preserves
+both files byte for byte, including comments. Goal-only writes retain unchanged
+script spelling. Draft safety is unchanged.
+
+ENGINE qualification is distinct from BIZHAWK evidence. Native anchors records
+an observed witness, completed native/engine row counts and their shared gameplay
+boundary. Replay verifies the engine anchor; export verifies the witness hash and
+uses the shared native-prefix splice. Relative witness paths resolve from the
+route's ancestry. Changed anchors require replay before export. Provisional
+export controls are disabled, with the full reason in hover/Details; the anchor
+form preserves blockers. The frozen CNZ routes remain provisional pending lane
+F's production pause handoff correction and subsequent planner repair/native
+confirmation. These editor controls do not certify native success.

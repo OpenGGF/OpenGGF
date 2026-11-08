@@ -34,6 +34,14 @@ under the matching area heading; see the
 
 ## Modding and tools
 
+- **Two-player Competition routes in both editors:** the existing Route / Tape
+  workspace now authors S2 REV01 title/menu programmes, P1/P2/joint goals and copied
+  fact predicates. Isolated workers plan, replay, repair and qualify both pads;
+  untouched route pairs keep their exact bytes. Locked inputs and player colours
+  are shared across HUD/desktop, unrelated scenery is hidden, and observed native
+  anchors use the shared BK2 splice. Provisional exports remain visibly blocked;
+  engine qualification does not imply native parity.
+
 - **Seeded Data Select captures:** `GameplayCaptureTool --save-slots <file.json>`
   writes declared save slots through the production save manager into the
   capture's private save root before a title-first capture, and `--extra-teams`

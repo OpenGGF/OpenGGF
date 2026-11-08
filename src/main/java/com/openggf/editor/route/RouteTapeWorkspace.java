@@ -92,10 +92,11 @@ public final class RouteTapeWorkspace {
     }
 
     public enum Action {
-        OPEN, NEW, SAVE, SAVE_DRAFT, REPLAY, REPAIR, PLAN, GOALS, ADD_LEG, EDIT_GOALS, SCAN, USE_ATTEMPT, APPLY_ROWS, CANCEL_JOB, EXPORT_BK2, UNDO, REDO, TOGGLE, MARK, ROWS, INSERT_ROWS, DELETE_ROWS, DUPLICATE_ROWS, CLEAR_LANE, GO_TO_ROW, NEXT_FACT, MENU, EXIT;
+        OPEN, NEW, SAVE, SAVE_DRAFT, NATIVE_FACTS, REPLAY, REPAIR, PLAN, GOALS, ADD_LEG, EDIT_GOALS, SCAN, USE_ATTEMPT, APPLY_ROWS, CANCEL_JOB, EXPORT_BK2, UNDO, REDO, TOGGLE, MARK, ROWS, INSERT_ROWS, DELETE_ROWS, DUPLICATE_ROWS, CLEAR_LANE, GO_TO_ROW, NEXT_FACT, MENU, EXIT;
 
         public String label() {
             return switch (this) {
+                case NATIVE_FACTS -> UiMessages.text("editor.route_tape.native_anchors");
                 case OPEN -> UiMessages.text("editor.route_tape.action_open");
                 case NEW -> UiMessages.text("editor.route_tape.action_new");
                 case SAVE -> UiMessages.text("editor.route_tape.action_save");
@@ -170,7 +171,10 @@ public final class RouteTapeWorkspace {
     private final Host host;
     private final EditorProjectMenu menu = new EditorProjectMenu();
     /** Rows and goals change together under undo: a plan replaces both in one step. */
-    private record State(InputTape tape, com.openggf.route.GoalProgram goals) { }
+    private record State(InputTape tape, com.openggf.route.GoalProgram goals, NativeFacts facts) { }
+    private NativeFacts currentNativeFacts = NativeFacts.NONE;
+    private NativeFacts jobFacts = NativeFacts.NONE;
+    private NativeFacts resultFacts = NativeFacts.NONE;
 
     private final Deque<State> undo = new ArrayDeque<>();
     private final Deque<State> redo = new ArrayDeque<>();
@@ -257,7 +261,7 @@ public final class RouteTapeWorkspace {
 
     public boolean dirty() {
         if (scene != null) return !tape.equals(scene.original());
-        return loaded != null && (unsaved || !tape.equals(loaded.tape()) || !goals.equals(loaded.checks()));
+        return loaded != null && (unsaved || !tape.equals(loaded.tape()) || !goals.equals(loaded.checks()) || !currentNativeFacts.equals(loaded.manifest().nativeFacts()));
     }
 
     /** The working goal program replay checks and Plan completes. */
@@ -283,7 +287,7 @@ public final class RouteTapeWorkspace {
         if (loaded == null) return null;
         RouteManifest source = loaded.manifest();
         return new RouteArtifact(new RouteManifest(source.launch(), tape.hash(), tape.size(), goals,
-                source.draft(), source.provenance(), source.qualification(), source.nativeFacts()), tape);
+                source.draft(), source.provenance(), source.qualification(), currentNativeFacts), tape);
     }
 
     public String workingContent() {
@@ -301,7 +305,7 @@ public final class RouteTapeWorkspace {
 
     /** The last completed job for the working content, or null when the rows changed since. */
     public RouteTapeJob.Update result() {
-        return result != null && Objects.equals(result.content(), workingContent()) ? result : null;
+        return result != null && resultFacts.equals(currentNativeFacts) && Objects.equals(result.content(), workingContent()) ? result : null;
     }
 
     /** The last observed path, which may describe earlier content; see {@link #pathStale()}. */
@@ -342,7 +346,7 @@ public final class RouteTapeWorkspace {
         if (scene != null) return Qualification.SCENE;
         if (loaded == null) return Qualification.EMPTY;
         RouteTapeJob.Update current = result();
-        boolean stamped = !unsaved && working().engineQualified();
+        boolean stamped = !unsaved && currentNativeFacts.equals(loaded.manifest().nativeFacts()) && working().engineQualified();
         if (current != null) {
             switch (current.phase()) {
                 case PASSED -> { return stamped ? Qualification.QUALIFIED : Qualification.PASSES_UNSAVED; }
@@ -423,7 +427,7 @@ public final class RouteTapeWorkspace {
      */
     public List<String[]> nativeFacts() {
         if (loaded == null) return List.of();
-        NativeFacts facts = loaded.manifest().nativeFacts();
+        NativeFacts facts = currentNativeFacts;
         var content = working().content();
         var lines = new ArrayList<String[]>();
         if (!facts.exportBlocker().isBlank()) lines.add(fact("PROVISIONAL", facts.exportBlocker()));
@@ -461,7 +465,7 @@ public final class RouteTapeWorkspace {
     public boolean needsNativeCheck() {
         if (loaded == null) return false;
         var content = working().content();
-        var facts = loaded.manifest().nativeFacts();
+        var facts = currentNativeFacts;
         boolean observed = !facts.lag().isEmpty() || loaded.manifest().qualification().stream()
                 .anyMatch(stamp -> stamp.scope() == ReplayScope.BIZHAWK);
         boolean current = facts.lag().stream().anyMatch(lag -> lag.content().equals(content))
@@ -470,20 +474,54 @@ public final class RouteTapeWorkspace {
         return observed && !current;
     }
 
+    public String exportBlocker() {
+        if (loaded == null) return "";
+        if (!currentNativeFacts.exportBlocker().isBlank()) return currentNativeFacts.exportBlocker();
+        if (loaded.launch().inlet() instanceof Inlet.Title && (currentNativeFacts.entry().isEmpty() ||
+                currentNativeFacts.entry().get().anchorBoundary().isBlank())) return UiMessages.text("editor.route_tape.missing_anchors");
+        if (!currentNativeFacts.equals(loaded.manifest().nativeFacts()) &&
+                (result() == null || result().phase() != RouteTapeJob.Phase.PASSED)) return UiMessages.text("editor.route_tape.changed_anchors");
+        return "";
+    }
+
+    public String exportSummary() {
+        return !currentNativeFacts.exportBlocker().isBlank() ? UiMessages.text("editor.route_tape.export_blocked_short") : exportBlocker();
+    }
+
+    public String evidenceSummary() {
+        if (loaded == null) return UiMessages.text("editor.route_tape.bizhawk_none");
+        var content = working().content();
+        return loaded.manifest().qualification().stream()
+                .filter(q -> q.scope() == ReplayScope.BIZHAWK && q.content().equals(content))
+                .reduce((a,b) -> b).map(q -> q.passed() ? "BIZHAWK · Passed" : "BIZHAWK · Diverged")
+                .orElse(UiMessages.text("editor.route_tape.bizhawk_none"));
+    }
+
     /** Presentation of a goal, shared by both fronts. Global predicates concern both pads. */
     public record GoalRow(String id, String player, String predicate) { }
 
     public List<GoalRow> goalRows() {
         return goals.legs().stream().map(leg -> new GoalRow(leg.id(),
                 leg.goal() instanceof com.openggf.route.RouteGoal.Achieve a ? playerChip(a.condition()) : "Both",
-                leg.goal() instanceof com.openggf.route.RouteGoal.Achieve a ? predicateText(a.condition())
+                leg.goal() instanceof com.openggf.route.RouteGoal.Achieve a ? goalSummary(a.condition())
                         : UiMessages.text("editor.route_tape.goal_boundary"))).toList();
+    }
+
+    private String goalSummary(com.openggf.route.SamplePredicate predicate) {
+        if (loaded != null && loaded.launch().inlet() instanceof Inlet.Title) {
+            try { RouteCompetitionFacts.keys(predicate).forEach(RouteCompetitionFacts::requireKey); }
+            catch (IllegalArgumentException bad) { return "Error: " + bad.getMessage(); }
+        }
+        return predicateText(predicate);
     }
 
     private static String playerChip(com.openggf.route.SamplePredicate predicate) {
         return switch (predicate) {
             case com.openggf.route.SamplePredicate.PlayerIn p -> p.player().name();
             case com.openggf.route.SamplePredicate.Settled p -> p.player().name();
+            case com.openggf.route.SamplePredicate.FactEquals f -> factPlayer(f.key());
+            case com.openggf.route.SamplePredicate.FactsEqual f -> factPlayer(f.left()).equals(factPlayer(f.right()))
+                    ? factPlayer(f.left()) : "Both";
             case com.openggf.route.SamplePredicate.Riding p -> p.player().name();
             case com.openggf.route.SamplePredicate.Attached p -> p.player().name();
             case com.openggf.route.SamplePredicate.All all -> {
@@ -492,6 +530,12 @@ public final class RouteTapeWorkspace {
             }
             default -> "Both";
         };
+    }
+
+    private static String factPlayer(String key) {
+        if (key.startsWith("competition.p1.") || key.endsWith(".p1")) return "P1";
+        if (key.startsWith("competition.p2.") || key.endsWith(".p2")) return "P2";
+        return "Both";
     }
 
     /** Title programmes retain the inherited tape before the programme begins. */
@@ -532,11 +576,10 @@ public final class RouteTapeWorkspace {
     private static String predicateText(com.openggf.route.SamplePredicate predicate) {
         return switch (predicate) {
             case com.openggf.route.SamplePredicate.FactsEqual equal -> equal.left() + " = " + equal.right();
-            case com.openggf.route.SamplePredicate.FactEquals fact -> fact.key() + " = " + fact.value();
-            case com.openggf.route.SamplePredicate.PlayerIn in -> UiMessages.text("editor.route_tape.goal_reach",
-                    Map.of("player", in.player().name(), "left", String.valueOf(in.region().left()),
-                            "top", String.valueOf(in.region().top()), "right", String.valueOf(in.region().right()),
-                            "bottom", String.valueOf(in.region().bottom())));
+            case com.openggf.route.SamplePredicate.FactEquals fact -> fact.key().equals("competition.flip.visible") && fact.value() == 1
+                    ? "flip visible" : fact.key() + " = " + fact.value();
+            case com.openggf.route.SamplePredicate.PlayerIn in -> in.player() + " in (" + in.region().left() + "," + in.region().top()
+                    + ")–(" + in.region().right() + "," + in.region().bottom() + ")";
             case com.openggf.route.SamplePredicate.Settled settled -> UiMessages.text("editor.route_tape.goal_settled",
                     Map.of("player", settled.player().name()));
             case com.openggf.route.SamplePredicate.LevelIs level -> UiMessages.text("editor.route_tape.goal_level",
@@ -699,6 +742,7 @@ public final class RouteTapeWorkspace {
         try {
             host.finishPendingEdits();
             switch (action) {
+                case NATIVE_FACTS -> nativeAnchorForm();
                 case OPEN -> beforeReplace(this::openForm);
                 case APPLY_ROWS -> applySceneRows();
                 case NEW -> beforeReplace(this::newForm);
@@ -759,6 +803,7 @@ public final class RouteTapeWorkspace {
         stem = stemOf(absolute);
         unsaved = false;
         loaded = candidate;
+        currentNativeFacts = candidate.manifest().nativeFacts();
         tape = candidate.tape();
         goals = candidate.checks();
         picked = null;
@@ -780,6 +825,7 @@ public final class RouteTapeWorkspace {
         cancelJob();
         scene = Objects.requireNonNull(rows, "rows");
         loaded = null;
+        currentNativeFacts = NativeFacts.NONE;
         stem = null;
         unsaved = false;
         tape = rows.original();
@@ -818,6 +864,7 @@ public final class RouteTapeWorkspace {
         Runnable back = () -> {
             scene = null;
             loaded = null;
+        currentNativeFacts = NativeFacts.NONE;
             tape = InputTape.empty();
             deactivate();
             rows.back().run();
@@ -839,6 +886,7 @@ public final class RouteTapeWorkspace {
         stem = stemOf(saved.toAbsolutePath().normalize());
         unsaved = false;
         loaded = candidate;
+        currentNativeFacts = candidate.manifest().nativeFacts();
         goals = candidate.checks();
     }
 
@@ -862,6 +910,7 @@ public final class RouteTapeWorkspace {
         var fresh = RouteArtifact.of(launch, rowsTape, new com.openggf.route.Provenance("openggf-editor", "", "", List.of()));
         loaded = new RouteArtifact(new RouteManifest(launch, rowsTape.hash(), rowsTape.size(), fresh.checks(), true,
                 fresh.manifest().provenance(), List.of(), fresh.manifest().nativeFacts()), rowsTape);
+        currentNativeFacts = fresh.manifest().nativeFacts();
         tape = rowsTape;
         goals = com.openggf.route.GoalProgram.NONE;
         picked = null;
@@ -962,7 +1011,7 @@ public final class RouteTapeWorkspace {
     private void saveDraft() {
         requireRoute();
         io(() -> {
-            var written = RouteFiles.writeDraft(stem, working());
+            var written = RouteEditorFiles.draft(stem, working());
             reload(written.manifest());
             status = UiMessages.text("editor.route_tape.status_saved_draft", Map.of("path",
                     written.manifest().getFileName().toString()));
@@ -979,6 +1028,7 @@ public final class RouteTapeWorkspace {
         if (tape.size() == 0) throw new IllegalStateException(UiMessages.text("editor.route_tape.empty_tape"));
         var request = new RouteTapeJob.Request(kind, working(), kind == RouteTapeJob.Kind.SAVE ? stem : null,
                 kind == RouteTapeJob.Kind.SAVE && Files.exists(manifestPath()));
+        jobFacts = currentNativeFacts;
         io(() -> host.startJob(request));
         job = host.pollJob();
         status = UiMessages.text(kind == RouteTapeJob.Kind.SAVE ? "editor.route_tape.status_saving"
@@ -996,6 +1046,11 @@ public final class RouteTapeWorkspace {
         if (next == null || next.equals(job)) return;
         job = next;
         if (next.running()) return;
+        if (!jobFacts.equals(currentNativeFacts)) {
+            status = "Route anchors changed while the worker ran; replay again.";
+            return;
+        }
+        resultFacts = currentNativeFacts;
         switch (next.phase()) {
             case SOLVED, STOPPED -> {
                 if (next.kind() == RouteTapeJob.Kind.PLAN) finishPlan(next);
@@ -1117,10 +1172,11 @@ public final class RouteTapeWorkspace {
     private void submitRepair(RouteTapeJob.Request request, RouteTapeJob.RepairBounds bounds) throws IOException {
         requireRows();
         if (jobRunning()) throw new IllegalStateException(UiMessages.text("editor.route_tape.job_already_running"));
-        if (bounds.firstEditable() > tape.size()) {
+        if (bounds.firstEditable() < immutablePrefixRows() || bounds.firstEditable() > tape.size()) {
             throw new IllegalArgumentException(UiMessages.text("editor.route_tape.repair_first_range"));
         }
         repairFrom = workingContent();
+        jobFacts = currentNativeFacts;
         host.startJob(request);
         job = host.pollJob();
         status = UiMessages.text("editor.route_tape.status_repairing");
@@ -1151,6 +1207,10 @@ public final class RouteTapeWorkspace {
         var actions = new ArrayList<EditorProjectMenu.Action>();
         actions.add(action(Action.ADD_LEG));
         actions.add(action(Action.EDIT_GOALS));
+        for (int i=0;i<goals.legs().size();i++) {
+            int index=i;
+            actions.add(new EditorProjectMenu.Action("Edit " + goals.legs().get(i).id(), () -> editGoal(index)));
+        }
         if (!goals.legs().isEmpty()) {
             var last = goals.legs().getLast();
             actions.add(new EditorProjectMenu.Action(UiMessages.text("editor.route_tape.action_remove_leg",
@@ -1170,6 +1230,45 @@ public final class RouteTapeWorkspace {
                 actions);
     }
 
+    /** Opens one leg through the same typed fact editor or lossless programme field. */
+    public void editGoal(int index) {
+        requireRoute();
+        var old=goals.legs().get(index);
+        com.openggf.route.SamplePredicate predicate = old.goal() instanceof com.openggf.route.RouteGoal.Achieve a ? a.condition() : null;
+        String key = predicate instanceof com.openggf.route.SamplePredicate.FactEquals f ? f.key()
+                : predicate instanceof com.openggf.route.SamplePredicate.FactsEqual f ? f.left() : null;
+        if(key != null) {
+            boolean equal = predicate instanceof com.openggf.route.SamplePredicate.FactsEqual;
+            var fields=new ArrayList<EditorProjectMenu.Field>();
+            fields.add(new EditorProjectMenu.Field("id",UiMessages.text("editor.route_tape.field_leg_id"),old.id(),MenuTextEditor.Mode.TEXT,32));
+            fields.add(new EditorProjectMenu.Field("fact",UiMessages.text("editor.route_tape.fact_key"),key,RouteCompetitionFacts.KEYS));
+            if(equal) fields.add(new EditorProjectMenu.Field("otherFact",UiMessages.text("editor.route_tape.other_fact"),
+                    ((com.openggf.route.SamplePredicate.FactsEqual)predicate).right(),RouteCompetitionFacts.KEYS));
+            else fields.add(new EditorProjectMenu.Field("factValue",UiMessages.text("editor.route_tape.fact_value"),String.valueOf(
+                    ((com.openggf.route.SamplePredicate.FactEquals)predicate).value()),MenuTextEditor.Mode.TEXT,12));
+            fields.add(new EditorProjectMenu.Field("rows",UiMessages.text("editor.route_tape.field_leg_rows"),String.valueOf(old.maxRows()),MenuTextEditor.Mode.TEXT,9));
+            menu.showForm("Edit " + old.id(),fields,UiMessages.text("editor.route_tape.action_apply"), values -> replaceGoal(index,
+                    new com.openggf.route.Leg(values.get("id"),new com.openggf.route.RouteGoal.Achieve(
+                            factPredicate(values.get("fact"),values.get("factValue"),equal?values.get("otherFact"):null)),
+                            old.guard(),Integer.parseInt(values.get("rows")))));
+        } else {
+            String text=com.openggf.route.RouteCodec.formatGoals(new com.openggf.route.GoalProgram(
+                    com.openggf.route.Guard.NONE,List.of(old),goals.startRow()));
+            menu.showForm("Edit " + old.id(),List.of(new EditorProjectMenu.Field("leg","Leg",text,MenuTextEditor.Mode.TEXT,8192)),
+                    UiMessages.text("editor.route_tape.action_apply"),values -> io(() -> {
+                        var parsed=com.openggf.route.RouteCodec.parseGoals(values.get("leg"));
+                        if(parsed.legs().size()!=1) throw new IllegalArgumentException("Edit exactly one leg");
+                        replaceGoal(index,parsed.legs().getFirst());
+                    }));
+            menu.setMultilinePreview("leg");
+        }
+    }
+
+    private void replaceGoal(int index, com.openggf.route.Leg replacement) {
+        var copy=new ArrayList<>(goals.legs()); copy.set(index,replacement);
+        setGoals(new com.openggf.route.GoalProgram(goals.routeGuard(),copy,goals.startRow()));
+    }
+
     /** The goal program as the codec's text, edited whole; parsing errors leave the goals unchanged. */
     private void goalsTextForm() {
         requireRoute();
@@ -1185,7 +1284,7 @@ public final class RouteTapeWorkspace {
     }
 
     private static final List<String> LEG_KINDS = List.of("reach", "board", "ride", "attach", "hold", "await-phase",
-            "defeat", "cross");
+            "defeat", "cross", "fact-equals", "facts-equal");
 
     private void legForm() {
         requireRoute();
@@ -1199,7 +1298,10 @@ public final class RouteTapeWorkspace {
                         "leg" + (goals.legs().size() + 1), MenuTextEditor.Mode.TEXT, 32),
                 new EditorProjectMenu.Field("goal", UiMessages.text("editor.route_tape.field_leg_goal"), "reach", LEG_KINDS),
                 new EditorProjectMenu.Field("player", UiMessages.text("editor.route_tape.field_leg_player"), "P1",
-                        List.of("P1", "P2")),
+                        List.of("P1", "P2", "Both")),
+                new EditorProjectMenu.Field("fact", UiMessages.text("editor.route_tape.fact_key"), "competition.slot.inUse", RouteCompetitionFacts.KEYS),
+                new EditorProjectMenu.Field("factValue", UiMessages.text("editor.route_tape.fact_value"), "1", MenuTextEditor.Mode.TEXT, 12),
+                new EditorProjectMenu.Field("otherFact", UiMessages.text("editor.route_tape.other_fact"), "competition.zoneWins.p2", RouteCompetitionFacts.KEYS),
                 new EditorProjectMenu.Field("target", UiMessages.text("editor.route_tape.field_leg_target"), targets.getFirst(),
                         List.copyOf(targets)),
                 new EditorProjectMenu.Field("x", UiMessages.text("editor.route_tape.field_leg_x"), String.valueOf(at[0]),
@@ -1217,12 +1319,14 @@ public final class RouteTapeWorkspace {
                 new EditorProjectMenu.Field("rows", UiMessages.text("editor.route_tape.field_leg_rows"), "600",
                         MenuTextEditor.Mode.TEXT, 7)),
                 UiMessages.text("editor.route_tape.action_add"), values -> setGoals(appendLeg(values, targets)));
-        menu.setSubtitle(UiMessages.text("editor.route_tape.subtitle_leg"));
+        menu.setSection(UiMessages.text("editor.route_tape.movement_objects"), "target", "x", "y", "radius", "interaction", "phase", "until");
+        menu.setHelp(UiMessages.text("editor.route_tape.leg_hint"), UiMessages.text("editor.route_tape.subtitle_leg") +
+                " " + UiMessages.text("editor.route_tape.fact_help"));
     }
 
     private com.openggf.route.GoalProgram appendLeg(Map<String, String> values, List<String> targets) {
         String id = values.get("id").strip();
-        var player = com.openggf.route.PlayerSlot.valueOf(values.get("player"));
+        var player = values.get("player").equals("Both") ? com.openggf.route.PlayerSlot.P1 : com.openggf.route.PlayerSlot.valueOf(values.get("player"));
         int x = Integer.parseInt(values.get("x").strip()), y = Integer.parseInt(values.get("y").strip());
         int radius = Integer.parseInt(values.get("radius").strip());
         int rows = Integer.parseInt(values.get("rows").strip());
@@ -1235,6 +1339,10 @@ public final class RouteTapeWorkspace {
                 : new com.openggf.route.SamplePredicate.PhaseIs(target.get(), requirePhase(phase));
         var interaction = com.openggf.route.InteractionKind.valueOf(values.get("interaction"));
         com.openggf.route.Leg leg = switch (values.get("goal")) {
+            case "fact-equals" -> com.openggf.route.Leg.of(id, new com.openggf.route.RouteGoal.Achieve(
+                    factPredicate(values.get("fact"), values.get("factValue"), null)), rows);
+            case "facts-equal" -> com.openggf.route.Leg.of(id, new com.openggf.route.RouteGoal.Achieve(
+                    factPredicate(values.get("fact"), null, values.get("otherFact"))), rows);
             case "reach" -> com.openggf.route.RouteGoals.reach(id, player, region, rows);
             case "board" -> com.openggf.route.RouteGoals.board(id, player, target.get(), rows);
             case "ride" -> com.openggf.route.RouteGoals.ride(id, player, target.get(), until.get(), rows);
@@ -1245,9 +1353,36 @@ public final class RouteTapeWorkspace {
             case "cross" -> com.openggf.route.RouteGoals.cross(id, rows);
             default -> throw new IllegalArgumentException(values.get("goal"));
         };
+        if (values.get("player").equals("Both") && !values.get("goal").startsWith("fact") &&
+                leg.goal() instanceof com.openggf.route.RouteGoal.Achieve) {
+            var other = new java.util.HashMap<>(values); other.put("player", "P2");
+            var p2 = appendLeg(other, targets).legs().getLast();
+            leg = new com.openggf.route.Leg(id, new com.openggf.route.RouteGoal.Achieve(
+                    new com.openggf.route.SamplePredicate.All(List.of(
+                            ((com.openggf.route.RouteGoal.Achieve)leg.goal()).condition(),
+                            ((com.openggf.route.RouteGoal.Achieve)p2.goal()).condition()))),leg.guard(),rows);
+        }
         var legs = new ArrayList<>(goals.legs());
         legs.add(leg);
         return new com.openggf.route.GoalProgram(goals.routeGuard(), legs, goals.startRow());
+    }
+
+    private com.openggf.route.SamplePredicate factPredicate(String key, String value, String right) {
+        RouteCompetitionFacts.requireKey(key);
+        if (right != null) RouteCompetitionFacts.requireKey(right);
+        var observed = observedFacts();
+        if (!observed.isEmpty()) {
+            if (!observed.containsKey(key)) throw new IllegalArgumentException("Missing fact at cursor: " + key);
+            if (right != null && !observed.containsKey(right)) throw new IllegalArgumentException("Missing fact at cursor: " + right);
+        }
+        return right == null ? new com.openggf.route.SamplePredicate.FactEquals(key,Integer.parseInt(value.strip()))
+                : new com.openggf.route.SamplePredicate.FactsEqual(key,right);
+    }
+
+    public Map<String,Integer> observedFacts() {
+        return job != null && Objects.equals(job.content(),workingContent()) &&
+                (job.kind() == RouteTapeJob.Kind.REPLAY || job.kind() == RouteTapeJob.Kind.SCAN)
+                && job.row() == cursor + 1 ? job.facts() : Map.of();
     }
 
     private static String requirePhase(String phase) {
@@ -1277,6 +1412,7 @@ public final class RouteTapeWorkspace {
     private void startScan() {
         requireRoute();
         if (jobRunning()) throw new IllegalStateException(UiMessages.text("editor.route_tape.job_already_running"));
+        jobFacts = currentNativeFacts;
         io(() -> host.startJob(RouteTapeJob.Request.scan(working(), Math.min(cursor + 1, tape.size()))));
         job = host.pollJob();
         status = UiMessages.text("editor.route_tape.status_scanning", Map.of("row", String.valueOf(cursor)));
@@ -1323,7 +1459,7 @@ public final class RouteTapeWorkspace {
         requireRoute();
         if (goals.legs().isEmpty()) throw new IllegalStateException(UiMessages.text("editor.route_tape.plan_needs_legs"));
         menu.showForm(UiMessages.text("editor.route_tape.title_plan"), List.of(new EditorProjectMenu.Field("from",
-                UiMessages.text("editor.route_tape.field_plan_from"), String.valueOf(cursor), MenuTextEditor.Mode.TEXT, 8)),
+                UiMessages.text("editor.route_tape.field_plan_from"), String.valueOf(Math.max(cursor, immutablePrefixRows())), MenuTextEditor.Mode.TEXT, 8)),
                 UiMessages.text("editor.route_tape.action_plan"), values -> io(() ->
                         startPlan(Integer.parseInt(values.get("from").strip()))));
         menu.setSubtitle(UiMessages.text("editor.route_tape.subtitle_plan"));
@@ -1336,6 +1472,7 @@ public final class RouteTapeWorkspace {
         if (goals.legs().isEmpty()) throw new IllegalStateException(UiMessages.text("editor.route_tape.plan_needs_legs"));
         if (from < immutablePrefixRows() || from > tape.size()) throw new IllegalArgumentException(UiMessages.text("editor.route_tape.repair_first_range"));
         repairFrom = workingContent();
+        jobFacts = currentNativeFacts;
         host.startJob(RouteTapeJob.Request.plan(working(), from));
         job = host.pollJob();
         status = UiMessages.text("editor.route_tape.status_planning");
@@ -1361,8 +1498,33 @@ public final class RouteTapeWorkspace {
         status = UiMessages.text("editor.route_tape.status_planned", Map.of("rows", String.valueOf(planned.tape().size())));
     }
 
+    private void nativeAnchorForm() {
+        requireRoute();
+        if (jobRunning()) throw new IllegalStateException(UiMessages.text("editor.route_tape.job_already_running"));
+        var entry = currentNativeFacts.entry();
+        menu.showForm(UiMessages.text("editor.route_tape.native_anchors"), List.of(
+                new EditorProjectMenu.Field("movie", UiMessages.text("editor.route_tape.native_witness"), entry.map(NativeFacts.NativeEntry::movie).orElse(""), MenuTextEditor.Mode.PATH),
+                new EditorProjectMenu.Field("nativeRows", UiMessages.text("editor.route_tape.native_rows"), entry.map(e->String.valueOf(e.prefixRows())).orElse("0"), MenuTextEditor.Mode.TEXT, 9),
+                new EditorProjectMenu.Field("engineRows", UiMessages.text("editor.route_tape.engine_rows"), entry.map(e->String.valueOf(e.engineAnchorRows())).orElse("0"), MenuTextEditor.Mode.TEXT, 9),
+                new EditorProjectMenu.Field("boundary", UiMessages.text("editor.route_tape.anchor_boundary"), entry.map(NativeFacts.NativeEntry::anchorBoundary).orElse("first-ordinary-level-lfc-zero"),
+                        List.of("first-ordinary-level-lfc-zero"))), UiMessages.text("editor.route_tape.apply_anchors"), values -> io(() -> {
+                    Path witness = RouteEditorFiles.resolveWitness(manifestPath(), values.get("movie"));
+                    int nativeRows=Integer.parseInt(values.get("nativeRows")), engineRows=Integer.parseInt(values.get("engineRows"));
+                    if(nativeRows < 1 || engineRows < 1 || engineRows > tape.size()) throw new IllegalArgumentException("Anchor rows outside the tape");
+                    var prefix = RouteFiles.inputPrefix(witness,nativeRows);
+                    var previous=currentNativeFacts;
+                    var facts = new NativeFacts(Optional.of(new NativeFacts.NativeEntry(witness.toString(), nativeRows,
+                            prefix.hash(), engineRows, values.get("boundary"))), previous.lag(), previous.exportBlocker());
+                    undo.push(new State(tape, goals, currentNativeFacts)); redo.clear();
+                    currentNativeFacts=facts;
+                    result=null;
+                }));
+        menu.setHelp(UiMessages.text("editor.route_tape.anchor_hint"), UiMessages.text("editor.route_tape.anchor_help"));
+    }
+
     private void exportForm() {
         requireRoute();
+        if (!exportBlocker().isBlank()) throw new IllegalStateException(exportBlocker());
         String name = stem.getFileName() + ".bk2";
         Path suggested = Path.of("target", "route-exports", name).toAbsolutePath().normalize();
         menu.showForm(UiMessages.text("editor.route_tape.title_export"), List.of(new EditorProjectMenu.Field("path",
@@ -1374,10 +1536,11 @@ public final class RouteTapeWorkspace {
     /** Derives a BizHawk movie of the working rows; never overwrites an existing file. */
     public Path exportBk2(Path destination) throws IOException {
         requireRoute();
+        if (!exportBlocker().isBlank()) throw new IOException(exportBlocker());
         Path target = destination.toAbsolutePath().normalize();
         if (Files.exists(target)) throw new IOException(UiMessages.text("editor.route_tape.export_exists"));
         if (target.getParent() != null) Files.createDirectories(target.getParent());
-        RouteFiles.exportBk2(working(), target);
+        RouteEditorFiles.export(working(), manifestPath(), target);
         status = UiMessages.text("editor.route_tape.status_exported", Map.of("path", target.toString()));
         return target;
     }
@@ -1391,7 +1554,9 @@ public final class RouteTapeWorkspace {
     /** Replaces the goal program as one undo step. */
     public void setGoals(com.openggf.route.GoalProgram next) {
         if (scene != null) throw new IllegalStateException(UiMessages.text("editor.route_tape.scene_rows_only"));
-        change(tape, Objects.requireNonNull(next, "next"));
+        Objects.requireNonNull(next, "next");
+        if (loaded != null && loaded.launch().inlet() instanceof Inlet.Title) RouteCompetitionFacts.validate(next);
+        change(tape, next);
     }
 
     private void change(InputTape nextTape, com.openggf.route.GoalProgram nextGoals) {
@@ -1401,7 +1566,7 @@ public final class RouteTapeWorkspace {
             throw new IllegalArgumentException(UiMessages.text("editor.route_tape.prefix_locked"));
         if (locked > 0 && nextGoals.startRow() != locked)
             throw new IllegalArgumentException(UiMessages.text("editor.route_tape.prefix_locked"));
-        undo.push(new State(tape, goals));
+        undo.push(new State(tape, goals, currentNativeFacts));
         while (undo.size() > UNDO_LIMIT) undo.removeLast();
         redo.clear();
         tape = nextTape;
@@ -1420,19 +1585,20 @@ public final class RouteTapeWorkspace {
 
     private void undo() {
         if (undo.isEmpty()) return;
-        redo.push(new State(tape, goals));
+        redo.push(new State(tape, goals, currentNativeFacts));
         restore(undo.pop());
     }
 
     private void redo() {
         if (redo.isEmpty()) return;
-        undo.push(new State(tape, goals));
+        undo.push(new State(tape, goals, currentNativeFacts));
         restore(redo.pop());
     }
 
     private void restore(State state) {
         tape = state.tape();
         goals = state.goals();
+        currentNativeFacts = state.facts();
         cursor = Math.min(cursor, Math.max(0, tape.size() - 1));
         if (mark >= tape.size()) mark = -1;
     }
@@ -1533,7 +1699,8 @@ public final class RouteTapeWorkspace {
                 actions.add(action(Action.REPAIR));
             }
             if (repairOutcome() != null && !repairOutcome().solved()) actions.add(action(Action.USE_ATTEMPT));
-            actions.add(action(Action.EXPORT_BK2));
+            actions.add(action(Action.NATIVE_FACTS));
+            if (exportBlocker().isBlank()) actions.add(action(Action.EXPORT_BK2));
             actions.add(action(Action.GO_TO_ROW));
         }
         actions.add(action(Action.EXIT));
@@ -1565,6 +1732,11 @@ public final class RouteTapeWorkspace {
         if (!repairText().isEmpty()) text.append(repairText()).append('\n');
         text.append('\n').append(UiMessages.text("editor.route_tape.native_heading")).append('\n');
         for (String[] fact : nativeFacts()) text.append(fact[0]).append(": ").append(fact[1]).append('\n');
+        if (!observedFacts().isEmpty()) {
+            text.append("\nENGINE facts at cursor\n");
+            observedFacts().entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(e ->
+                    text.append(e.getKey()).append(": ").append(e.getValue()).append('\n'));
+        }
         text.append('\n').append(status);
         return text.toString();
     }
