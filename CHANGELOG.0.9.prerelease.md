@@ -551,6 +551,11 @@ matching area heading; see the
   The census can also require exact direct ordinary test names before a costly
   run, preserving requested order and reporting missing names only for complete
   supported inventories. Unsupported Java scopes remain explicitly incomplete.
+  An optional immutable-source preflight now checks conventional JUnit roots,
+  literal method selections and explicit nested report groups. Split header
+  identifiers and unresolved source scopes remain incomplete; it grants no
+  discovery, invocation-count or execution authority. Its27 focused tooling
+  tests pass without skips, and Maven admission remains with the existing queue.
 
 - **Source research and integration tools:** immutable disassembly label lookup,
   frozen-source packet imports and byte-preservation checks, fresh JUnit report
