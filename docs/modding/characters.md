@@ -188,8 +188,8 @@ appendage renderer automatically.
 
 ## Presentation contract (in progress)
 
-The optional final `CharacterDefinition` constructor argument is a
-`PresentationSupplier`. It receives the canonical persisted character key and
+`CharacterDefinition` accepts an optional `PresentationSupplier` before its
+optional `SuperFormSupplier`. It receives the canonical persisted character key and
 runs inside the character owner's fault boundary, like the art and palette
 suppliers. Existing constructors default it to `null`.
 
@@ -200,16 +200,20 @@ keyed by host and letter style. `Art` has independent HUD life icon (16×16),
 fallback. `Image` uses palette indices 0–15, with zero transparent; it copies pixel
 arrays on construction and access. Presentation maps are immutable snapshots.
 
-This is currently an API foundation: stock surfaces do not yet consume these
-slots. The internal name composer reports native, supplementary and missing glyph
+S3K consumes these slots for the HUD icon/name, act-results name, Blue Sphere
+results name and 1-up monitor face. The HUD uses the short name when supplied,
+otherwise the display name, inside its native 32×16 pixel cell. The 1-up face
+is independently supplied as a 16×16 image; an absent slot retains native art.
+Results combine native results-name and title-card glyphs. Stock characters
+without a supplier retain their native tiles and mappings. Other surfaces remain
+in progress. The internal name composer reports native, supplementary and missing glyph
 coverage and extracts pixel crops across tile boundaries. Title-font readers for
 all three hosts and small HUD-font readers use the ROM pipeline. The S3K reader inventories each zone separately, including shared ZONE
 letters and pixel crops within multi-letter pieces, plus the results-name banks.
 Native glyphs take precedence over supplements: MICA needs supplementary M and A
-only in the S1 HUD font. The HUD/results/monitor/signpost consumers remain to be
-implemented. Stock S2 results now select Miles/Tails for Tails alone using the
+only in the S1 HUD font. Stock S2 results now select Miles/Tails for Tails alone using the
 native graphics-region setting; this does not enable custom results names.
-Do not assume supplying this record changes an on-screen name or face yet. GGFP presentation sections are also pending.
+GGFP presentation sections and the remaining surface consumers are still pending.
 
 ## Ability and super-form rules
 

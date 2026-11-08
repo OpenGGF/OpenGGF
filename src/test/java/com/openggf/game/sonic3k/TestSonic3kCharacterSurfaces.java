@@ -89,6 +89,26 @@ class TestSonic3kCharacterSurfaces {
             for (int tile = 4; tile < stock.length; tile++) assertSame(stock[tile], custom[tile]);
         }
     }
+    @Test void providerPublishesHudAndIndependentMonitorTiles() throws Exception {
+        byte[] face = new byte[256];
+        java.util.Arrays.fill(face, (byte) 3);
+        var presentation = new CharacterPresentation("MICA", null, Map.of(Host.S3K,
+                new Art(mica().art().get(Host.S3K).hudLifeIcon(), new Image(16,16,face), null, null)), Map.of());
+        try (var adapter = org.mockito.Mockito.mockStatic(Sonic3kCharacterPresentation.class,
+                org.mockito.Mockito.CALLS_REAL_METHODS)) {
+            adapter.when(Sonic3kCharacterPresentation::active).thenReturn(presentation);
+            var provider = new Sonic3kObjectArtProvider();
+            for (String method : new String[]{"loadHudArt", "loadMonitorArt"}) {
+                var load = provider.getClass().getDeclaredMethod(method);
+                load.setAccessible(true);
+                load.invoke(provider);
+            }
+            assertArrayEquals(presentation.art().get(Host.S3K).hudLifeIcon().pixels(),
+                    CharacterNameComposer.extract(provider.getHudLivesPatterns(),0,2,2,0,0,16,16).pixels());
+            var monitor = provider.getSheet(com.openggf.game.sonic3k.Sonic3kObjectArtKeys.MONITOR);
+            assertArrayEquals(face, CharacterNameComposer.extract(monitor.getPatterns(),0x310,2,2,0,0,16,16).pixels());
+        }
+    }
     private static Map<Character, Image> resultsFont(com.openggf.data.Rom rom) throws Exception {
         var font = new java.util.LinkedHashMap<>(Sonic3kCharacterFont.results(rom));
         Sonic3kCharacterFont.title(rom).forEach(font::putIfAbsent);

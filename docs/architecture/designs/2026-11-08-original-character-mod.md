@@ -89,7 +89,9 @@ the S3K water zones.
 Status: API foundation delivered; group 1 follow-up in progress on
 `feature/ai-mica-presentation2`. ROM readers now inventory all three small HUD
 fonts and S3K per-zone title/results-name art. S2 stock Tails-alone results select
-Miles/Tails using the native graphics-region flag. Surface wiring, sign spin/backing
+Miles/Tails using the native graphics-region flag. The resumed S3K lane wires HUD
+icon/name, act-results name, Blue Sphere results name and independent 1-up faces;
+focused verification is pending. Other surface wiring, sign spin/backing
 contract extensions, packaged MICA presentation assets and gameplay captures remain
 pending; group 1 is not complete. The existing owner-bounded supplier, immutable
 indexed images, pixel composer and S1/S2 title readers remain the foundation.

@@ -24,6 +24,9 @@ public final class Sonic3kCharacterFont {
                 "MILES", 0, 9, 13, 19, 25, 32);
         HudNameFont.collect(glyphs, PatternDecompressor.nemesis(rom,
                 Sonic3kConstants.ART_NEM_TAILS_LIFE_ICON_ADDR), "TAILS", 0, 8, 15, 19, 25, 32);
+        // Knuckles' native K.T.E abbreviation contributes K; T and E are above.
+        HudNameFont.collect(glyphs, PatternDecompressor.nemesis(rom,
+                Sonic3kConstants.ART_NEM_KNUCKLES_LIFE_ICON_ADDR), "K", 0, 8);
         return Map.copyOf(glyphs);
     }
 
