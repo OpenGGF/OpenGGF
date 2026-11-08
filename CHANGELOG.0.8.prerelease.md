@@ -34,6 +34,11 @@ under the matching area heading; see the
   dump's art pixel for pixel. Sonic 2 with the Sonic 3&K donor and Knuckles as
   the lead had the same green name and is fixed too.
 
+- **S2 diagonal launcher springs:** capture both riders before deciding to
+  release or decompress. A fresh Tails capture now uses the native launch force
+  and can hold Sonic on the spring. The complete-chain CNZ2 segment is green;
+  later campaign and art-gap failures remain open.
+
 
 ## Modding and tools
 
@@ -88,6 +93,13 @@ under the matching area heading; see the
   resume actual ROM-backed work; credits use their native wait and fade loops.
   Generic ending callers retain their gameplay order, and failed initialization
   preserves the original error while cleaning up its owned continuation.
-  Physics, auxiliary observations and movie input are preserved exactly. New red frontiers remain visible.
+  Recorded physics, auxiliary observations and movie input are preserved exactly.
+  The LRZ title owner submits its three enemy archives in native order,
+  preventing a later results-art FIFO overflow. AIZ2 art preparation preserves
+  Knuckles' terrain-only branch; Sonic/Tails also submit the battleship object
+  art. The boss-glide continuation remains open pending the Knuckles SOZ route.
+  Existing animation and route frontiers remain visible, including
+  the fresh sanctuary's intermediate load state; its routine comparison does
+  not establish player dispatch.
   Special-stage entry honors the recorded team and production lock-on module;
   the single entry-state import consumes S2-family manifest destination rings.
