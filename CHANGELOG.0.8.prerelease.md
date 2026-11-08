@@ -41,8 +41,13 @@ under the matching area heading; see the
   hosts, and MICA packages her indexed presentation art.
 
 - Added the maintained MICA character skeleton for all three stock games, with
-  headless launch/save/rewind/fallback acceptance and a rerunnable 96-frame original
-  playable sheet with 17 canonical animations, shared palette and slope cycles.
+  character-owned homing (including a forward dash without a target) and Super/Hyper
+  Instagib strikes through the supported facade, an optional HOMING_DIVE sheet pose,
+  and stock Sonic physics in every single-player host; S3K retains its transformation
+  press before the character-owned strike. Three-game headless footage covers
+  native movement, springs, normal and powered strikes, and a GHZ airborne chain. Includes
+  headless launch/save/rewind/fallback acceptance and a rerunnable 98-frame original
+  playable sheet with 18 canonical animations, shared palette and slope cycles.
   Headless native Data Select retains explicitly loaded development characters.
   Custom team archetypes now use the solo Sonic route without a sidekick.
   Special stages can use character-owned playable roll art (S1) and indexed

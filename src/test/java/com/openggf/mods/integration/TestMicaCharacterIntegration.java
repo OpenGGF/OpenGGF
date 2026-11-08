@@ -207,7 +207,10 @@ class TestMicaCharacterIntegration {
             GameModuleRegistry.setCurrent(resolved);
             com.openggf.game.session.SessionManager.clear();
             TestEnvironment.activeGameplayMode();
-            var playable = com.openggf.tests.HeadlessTestFixture.builder().withZoneAndAct(0, 0).build().sprite();
+            var fixtureWorld = com.openggf.tests.HeadlessTestFixture.builder().withZoneAndAct(0, 0).build();
+            var playable = fixtureWorld.sprite();
+            assertEquals(base.getPhysicsProvider().getProfile("sonic"), playable.getPhysicsProfile(),
+                    "MICA retains every native Sonic physics constant in " + game);
             assertEquals(CODE, playable.characterKey().persisted());
             assertEquals(PlayerCharacter.SONIC_ALONE,
                     com.openggf.game.session.ActiveGameplayTeamResolver.resolvePlayerCharacter(config));
@@ -218,7 +221,10 @@ class TestMicaCharacterIntegration {
             assertEquals(PlayerCharacter.SONIC_AND_TAILS,
                     com.openggf.game.session.ActiveGameplayTeamResolver.resolvePlayerCharacter(config));
             config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
+            if (game.equals("s2")) verifyHoming(fixtureWorld, false);
+            if (game.equals("s3k")) verifyTransformationHook(fixtureWorld);
             verifyGilded(playable, resolved, game);
+            if (game.equals("s2")) verifyHoming(fixtureWorld, true);
             var sprites = GameServices.sprites();
             var rewind = sprites.rewindSnapshottable();
             var state = rewind.capture();
@@ -291,6 +297,73 @@ class TestMicaCharacterIntegration {
             assertArrayEquals(saved, Files.readAllBytes(temp.resolve("saves").resolve(game).resolve("slot1.json")));
             assertTrue(fixture.runtime().runtimeDisabledOwners().isEmpty());
         }
+    }
+
+    private void verifyTransformationHook(com.openggf.tests.HeadlessTestFixture fixture) {
+        var registry = com.openggf.game.session.SessionManager.getCurrentGameplayMode().getRewindRegistry();
+        var before = registry.capture();
+        var player = fixture.sprite();
+        fixture.stepIdleFrames(60);
+        player.currentLevelState().resumeTimer();
+        for (int i = 0; i < 7; i++) player.currentGameState().markEmeraldCollected(i);
+        player.addRings(50 - player.getRingCount());
+        fixture.stepFrame(false, false, false, false, true);
+        fixture.stepIdleFrames(6);
+        fixture.stepFrame(false, false, false, false, true);
+        assertTrue(player.isSuperSonic(), "MICA's hook must preserve the S3K transformation press");
+        registry.restore(before);
+    }
+
+    /** Execute MICA's actual air hook against native touch/defeat, then replay the strike. */
+    private void verifyHoming(com.openggf.tests.HeadlessTestFixture fixture, boolean powered) {
+        var player = fixture.sprite();
+        var registry = com.openggf.game.session.SessionManager.getCurrentGameplayMode().getRewindRegistry();
+        var original = registry.capture();
+        player.getSuperStateController().debugDeactivate();
+        for (int i = 0; i < 40; i++) player.getSuperStateController().update();
+        player.addRings(-player.getRingCount());
+        fixture.stepIdleFrames(60);
+        if (powered) {
+            for (int i = 0; i < player.currentGameState().getChaosEmeraldCount(); i++)
+                player.currentGameState().markEmeraldCollected(i);
+            player.addRings(50);
+            player.setAir(true); player.setJumping(true); player.setYSpeed((short) 0x28);
+            player.getSuperStateController().checkTransformationBeforeMove();
+            for (int i = 0; i < 80; i++) player.getSuperStateController().update();
+            assertTrue(player.isSuperSonic());
+            player.setAir(false); player.setJumping(false); player.setYSpeed((short) 0);
+        }
+        var enemy = GameServices.level().getObjectManager().createDynamicObject(() ->
+                new com.openggf.game.sonic2.objects.badniks.BuzzerBadnikInstance(new com.openggf.level.objects.ObjectSpawn(
+                        player.getCentreX() + 96, player.getCentreY() - 72,
+                        com.openggf.game.sonic2.constants.Sonic2ObjectIds.BUZZER, 0, 0, false, 0)));
+        fixture.stepIdleFrames(2);
+        fixture.stepFrame(false, false, false, false, true);
+        fixture.stepIdleFrames(6);
+        fixture.stepFrame(false, false, false, false, true);
+        var runtime = com.openggf.game.session.WorldSessionPolicyAccess.getService(
+                com.openggf.game.session.SessionManager.getCurrentWorldSession(),
+                com.openggf.game.mutators.HomingAttackRuntime.class);
+        assertEquals(com.openggf.game.mutators.HomingAttackRuntime.Phase.HOMING, runtime.phase());
+        assertEquals(powered ? com.openggf.game.mutators.HomingAttackRuntime.Mode.INSTAGIB
+                : com.openggf.game.mutators.HomingAttackRuntime.Mode.HOMING, runtime.capture().launchMode());
+        assertTrue(List.of(28, 29, 30, 31).contains(player.getMappingFrame()),
+                "The strike selects the authored dive pose");
+        assertEquals(player.resolveAnimationId(CanonicalAnimation.ROLL), player.getAnimationId(),
+                "The visual dive must retain native roll attack semantics");
+        var strike = registry.capture();
+        var expected = new ArrayList<String>();
+        for (int i = 0; i < 18; i++) {
+            fixture.stepIdleFrames(1);
+            expected.add(player.getCentreX() + ":" + player.getCentreY() + ":" + runtime.capture());
+        }
+        assertTrue(enemy.isDestroyed(), "MICA kills through native touch");
+        registry.restore(strike);
+        for (int i = 0; i < 18; i++) {
+            fixture.stepIdleFrames(1);
+            assertEquals(expected.get(i), player.getCentreX() + ":" + player.getCentreY() + ":" + runtime.capture());
+        }
+        registry.restore(original);
     }
 
     private void verifyGilded(com.openggf.sprites.playable.AbstractPlayableSprite player,
@@ -467,8 +540,9 @@ class TestMicaCharacterIntegration {
             var sheet = com.openggf.level.objects.PlayableSheetReader.read(
                     packed.getInputStream(packed.getJarEntry("art/mica.ggfp")).readAllBytes());
             assertEquals(98, sheet.frames().size());
-            assertEquals(17, sheet.animations().size());
-            assertFalse(sheet.animations().containsKey("HOMING_DIVE"));
+            assertEquals(18, sheet.animations().size());
+            assertEquals(List.of(28, 29, 30, 31), sheet.animations().get("HOMING_DIVE").steps()
+                    .stream().map(com.openggf.level.objects.PlayableSheetReader.AnimationStep::frameIndex).toList());
             assertEquals(List.of(8, 8, 8, 8), sheet.animations().get("WALK").slopes()
                     .stream().map(List::size).toList());
             var base = com.openggf.level.objects.BakedSheetReader.read(sheet.baseSheetV1());

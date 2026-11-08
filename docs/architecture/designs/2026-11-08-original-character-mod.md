@@ -689,3 +689,55 @@ Status log (times UTC):
 - 2026-11-08 (lead review): the S2 special-stage HUD still prints the native
   "SONIC" label above the ring count (seen in the W4 stages capture). Not yet in the
   surface inventory; add it to the next presentation lane.
+
+- 2026-11-08: abilities lane outcome 1 wires MICA’s air hook to `HomingAttack.start`,
+  selecting Instagib when powered. No-target presses dash because the strike is her
+  own move, rather than preserving Sonic’s unrelated native air fallback.
+
+- 2026-11-08: abilities lane outcome 2 adds optional `HOMING_DIVE` canonical
+  sheet binding outside native animation IDs; the world strike phase selects its
+  four two-tick frames. No gameplay or character-local animation latch was added.
+  Validation: 42 focused Java tests passed without skips (MICA, homing,
+  materializer, canonical mapping, API signatures), plus the assembler test.
+  Rejected: publishing the synthetic dive ID as gameplay state failed the real
+  Buzzer kill because native touch requires anim=Roll. The visual script now runs
+  with a temporary ID restored before returning; native contact retains Roll.
+
+- 2026-11-08: abilities lane outcome 3 replaces placeholder tuning with the shared
+  `PhysicsProfile.SONIC_2_SONIC` used by all three stock single-player providers.
+  `CharacterPhysicsSpec` remains instance-owned; host rules/modifiers still apply.
+  Acceptance compares the entire physics record against each host Sonic provider.
+  Validation: the requested queued Maven selection passed 96 tests, zero skips,
+  including all three MICA hosts, homing, API pin, Super-form gate and S3K guards.
+  Capture packaging validates with zero findings. Outcome 4 remains in progress.
+
+- 2026-11-08: abilities capture audit found that the character hook precedes the
+  S3K Super gate. MICA now tries the supported transformation controller first;
+  an input-driven S3K acceptance guards against homing consuming that press.
+  Input-driven transformation regression and all requested checks pass again:
+  96 tests, no failures/errors/skips. Queue wait 400s; execution 45s; user wait 0.
+
+- 2026-11-08: abilities lane outcome 4 records production gameplay evidence under
+  `/tmp/mica-abilities-20261108/`, using `gameplay-capture` and surfaceless EGL.
+  The code is `db3781859` (homing `9d606cda4`, dive `320f6a1d5`, physics
+  `0ae6e7d5b`, S3K input gate `db3781859`). No merge or push by this lane.
+  Title-first clips retain the real launch/input path and owned save roots:
+  `s1-verified-route/capture.mp4` (idle, full-speed run, spring at frame 2392),
+  `s1-verified-chain/capture.mp4` (normal strikes 1364–1367 and 1397–1408, with no
+  intervening grounded row; second native kill awards 200 points),
+  `s2-verified-kill/capture.mp4` (idle, full-speed run, normal Coconuts homing
+  kill at frames 1553–1555; native 100-point defeat at 1560), and
+  `s3k-verified-route/capture.mp4` (idle/run, monkey kill at 1137–1142, native spring
+  launch at 1562 with y velocity -0xA00). `s2-verified-powered/capture.mp4`
+  demonstrates transformation, gold-palette Instagib strikes and the authored
+  spring pose (frame 845). That last clip deliberately uses direct EHZ1 boot
+  with supported capture debug setup `--emeralds 1111111 --rings 80`, not a
+  title-first saved route. No positioned starts or mod gameplay hacks are used.
+  All clips are 640×448, 60 fps; ffprobe frame counts match their state CSVs.
+  Reviewed selected before/strike/defeat/spring pixels as well as input/state rows.
+  Inputs, state CSVs, selected review stills and `evidence.json` remain beside the
+  videos; regenerable PNG frame directories were removed after review because
+  shared `/tmp` filled. Earlier probes are not acceptance clips. The requested
+  actions are demonstrated across the set; an airborne chain is filmed in GHZ1,
+  not separately certified in every host. No broad smoke or full-suite claim:
+  cross-lane validation/integration remain with the delivery lead.

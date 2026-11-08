@@ -4,9 +4,9 @@ This maintained Mod API 0.7 candidate example currently registers **MICA** in So
 1, Sonic 2 and Sonic 3 & Knuckles. TALON and the approved concept art in
 [concept](concept/) are reserved for later work.
 
-The playable sheet contains 96 original indexed poses and 17 canonical animations,
-including four slope cycles for WALK and RUN. Super form and character abilities
-are off. Python 3 with Pillow is required to rebuild the sheet.
+The playable sheet contains 98 original indexed poses and 18 canonical animations,
+including four slope cycles for WALK and RUN, the breathing idle loop, and
+HOMING_DIVE. Homing is MICA’s air move; powered Gilded forms use Instagib. Python 3 with Pillow is required to rebuild the sheet.
 
 ## Build and run
 
@@ -35,8 +35,8 @@ enable trusted code for this example.
 The canonical save identity is `mica-and-talon:mica`.
 `MicaCharacter.definition` declares the `SONIC_AND_TAILS` route, resolved to
 `SONIC_ALONE` when launched without a follower. A stock follower may accompany
-MICA where the host supports it. The per-instance physics are deliberately simple;
-extend this class for the later ability lane.
+MICA where the host supports it. The instance-owned `CharacterPhysicsSpec` uses `PhysicsProfile.SONIC_2_SONIC`,
+the normal single-player Sonic profile in all three hosts.
 
 The dry palette comes from the playable sheet. With no underwater supplier, the
 renderer derives water colours from the current host zone's normal/water palette
@@ -47,16 +47,16 @@ fault boundary. Presentation surfaces still use stock fallback art.
 ## Acceptance
 
 `TestMicaCharacterIntegration` compiles and packages these exact sources, then
-checks the packed 96-frame/17-animation sheet and full palette, the roster,
-first-level load, identity, save retention, rewind and disabled
+checks the packed 98-frame/18-animation sheet and full palette, the roster,
+first-level load, identity, native Sonic physics equality, homing kills, powered
+Instagib, dive pose selection, strike rewind replay, save retention and disabled
 owner fallback for each host, plus real LZ, CPZ2 and HCZ water palette inputs.
 `TestLevelPlayableArtInitializerModArt` checks explicit water palette installation
 and isolation between equal dry palettes.
 
 The build reruns `tools/modding/playable_art/assemble.py` from `art/mica/frames.yaml`.
 `src/main/mod/mica-custom-frames.json` lists the four HOMING_DIVE mapping indices
-for the ability lane; these frames are packed but intentionally have no canonical
-animation binding. See the [assembler notes](../../tools/modding/playable_art/README.md).
+and the assembler binds them as a fixed two-tick canonical strike cycle. See the [assembler notes](../../tools/modding/playable_art/README.md).
 
 Headless title-route captures use `--interactive-pacing`. The capture host advertises
 its explicitly decorated character registry to native Data Select admission, then
@@ -64,9 +64,7 @@ re-registers the jar for the selected launch team; it does not install it global
 
 Core sheet acceptance uses real title-first GHZ1/EHZ1/AIZ1 captures. Upright and
 ball anchors retain the native standing/rolling baselines; rotated slope cycles
-use selectors 0/2/4/6. The example retains its skeleton physics tuning (five-pixel
-flat top speed), so native RUN timing remains speed-gated rather than forcing a
-run pose at a lower speed just for the artwork.
+use selectors 0/2/4/6. MICA retains native Sonic physics and speed-gated RUN timing.
 
 A spring launch need not select SPRING: subtype bit 0 deliberately selects WALK
 and native twirl state. S2's `loc_189FE` (s2.asm:33937-33953) and S3K's

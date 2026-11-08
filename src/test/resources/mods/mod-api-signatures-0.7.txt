@@ -2807,6 +2807,7 @@ FIELD com.openggf.game.CanonicalAnimation public,static,final com.openggf.game.C
 FIELD com.openggf.game.CanonicalAnimation public,static,final com.openggf.game.CanonicalAnimation GLIDE_SLIDE
 FIELD com.openggf.game.CanonicalAnimation public,static,final com.openggf.game.CanonicalAnimation HANG
 FIELD com.openggf.game.CanonicalAnimation public,static,final com.openggf.game.CanonicalAnimation HANG2
+FIELD com.openggf.game.CanonicalAnimation public,static,final com.openggf.game.CanonicalAnimation HOMING_DIVE
 FIELD com.openggf.game.CanonicalAnimation public,static,final com.openggf.game.CanonicalAnimation HURT
 FIELD com.openggf.game.CanonicalAnimation public,static,final com.openggf.game.CanonicalAnimation HURT2
 FIELD com.openggf.game.CanonicalAnimation public,static,final com.openggf.game.CanonicalAnimation HURT_FALL

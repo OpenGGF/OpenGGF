@@ -303,7 +303,19 @@ public class PlayableSpriteAnimation {
                 // entirely for object_control bit 1 (e.g. MGZ's spiral).
                 return;
             }
-            updateScriptedAnimation(frameCounter);
+            int nativeAnimation = sprite.getAnimationId();
+            int strikeId = com.openggf.level.objects.PlayableSheetAnimationBinding.HOMING_DIVE_ID;
+            var homing = com.openggf.sprites.playable.PlayableSpriteInternalAccess.homingAttack(sprite);
+            boolean strikePose = homing != null && homing.isStriking(sprite)
+                    && sprite.getAnimationSet().getScript(strikeId) != null;
+            // Only script execution sees the creator pose. Touch/solids still see
+            // the native attacking Roll byte, including after rewind restores.
+            if (strikePose) sprite.setAnimationId(strikeId);
+            try {
+                updateScriptedAnimation(frameCounter);
+            } finally {
+                if (strikePose) sprite.setAnimationId(nativeAnimation);
+            }
             applyReverseGravityRenderFlipAfterAnimation();
             return;
         }
@@ -896,6 +908,7 @@ public class PlayableSpriteAnimation {
     }
 
     private Integer resolveDesiredAnimationId(SpriteAnimationProfile profile, int frameCounter) {
+
         if (profile == null) {
             return null;
         }

@@ -4526,6 +4526,21 @@
         6
       ],
       "next": "WALK"
+    },
+    "HOMING_DIVE": {
+      "frames": [
+        28,
+        29,
+        30,
+        31
+      ],
+      "durations": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "end": "loop"
     }
   }
 }
