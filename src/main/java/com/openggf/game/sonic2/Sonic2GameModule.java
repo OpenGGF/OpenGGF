@@ -367,6 +367,8 @@ public class Sonic2GameModule implements GameModule, com.openggf.game.internal.S
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getGameService(Class<T> type) {
+        if (type == com.openggf.game.internal.ProfileSuperHostRules.class)
+            return type.cast(new com.openggf.game.internal.ProfileSuperHostRules(false, false, 0, com.openggf.mods.mutators.CharacterSuperFormPolicy::sonic2));
         if (type == com.openggf.game.resources.PlayerArtTransferPlan.class) {
             return type.cast(new com.openggf.game.resources.PlayerArtTransferPlan(java.util.Map.of(
                     "sonic", new com.openggf.game.resources.PlayerArtBank(

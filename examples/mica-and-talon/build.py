@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build/package the MICA skeleton mod against this checkout (Java 25 + Maven).
+"""Build/package the MICA mod against this checkout (Java 25 + Maven).
 
 Origin: MICA skeleton project, 2026-10-07. No ROM data is included in the jar.
 """
@@ -41,6 +41,8 @@ def main():
     (classes / "art").mkdir(exist_ok=True)
     cli = [java_tool("java"), "--enable-native-access=ALL-UNNAMED", "-cp", classpath,
            "com.openggf.tools.modsdk.GgfModCli"]
+    run([sys.executable, "tools/modding/playable_art/assemble.py",
+         str(PROJECT / "art/mica"), str(PROJECT / "src/main/mod")])
     run([*cli, "convert", "art", "--playable", "--image", str(PROJECT / "src/main/mod/mica.png"),
          "--sheet", str(PROJECT / "src/main/mod/mica-sheet.yaml"), "--out", str(classes / "art/mica.ggfp")])
     jar = OUTPUT / "mica-and-talon.jar"

@@ -215,6 +215,8 @@ public final class DdzFlightControllerObjectInstance extends AbstractDdzObjectIn
         // move.b #$81,object_control / anim $1F / Max_speed... / invincibility / sfx_Whistle.
         if (player.getSuperStateController() instanceof Sonic3kSuperStateController superState) {
             superState.startDoomsdayTransformation();
+        } else if (player.getSuperStateController() instanceof com.openggf.sprites.playable.ProfileSuperStateController authored) {
+            authored.startDoomsdayTransformation();
         }
         if (player.getSuperStateController() == null || !player.getSuperStateController().isSuper()) {
             // Engine extension for donor characters without an S3K powered form: the ROM only reaches
@@ -229,7 +231,8 @@ public final class DdzFlightControllerObjectInstance extends AbstractDdzObjectIn
             flags |= 1 << 7;
             // loc_8160A (sonic3k.asm:173393) writes the anim byte directly, after
             // Player_1's own pass; Animate_Sonic sees it change on the next pass.
-            player.setAnimationId(0x1F);
+            if (!(player.getSuperStateController() instanceof com.openggf.sprites.playable.ProfileSuperStateController))
+                player.setAnimationId(0x1F);
         }
         player.setInvincibleFrames(0);
     }
@@ -258,7 +261,7 @@ public final class DdzFlightControllerObjectInstance extends AbstractDdzObjectIn
         if (gameState != null && gameState.hasAllSuperEmeralds()
                 && player.getSuperStateController() instanceof Sonic3kSuperStateController superState) {
             superState.upgradeDoomsdayFormToHyper();
-        } else if (player.isSuperSonic()) {
+        } else if (player.isSuperSonic() && !(player.getSuperStateController() instanceof com.openggf.sprites.playable.ProfileSuperStateController)) {
             // loc_8167C writes Super_stars directly, outside AllocateObject's pool.
             // Keep native slot order and leave formless donor characters without stars.
             var stars = new DdzSuperStarsObjectInstance(new ObjectSpawn(0, 0, 0, 0, 0, false, 0));

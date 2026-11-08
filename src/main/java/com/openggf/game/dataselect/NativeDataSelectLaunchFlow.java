@@ -31,6 +31,8 @@ public final class NativeDataSelectLaunchFlow {
         ModuleResolutionService.PreparedLaunch prepareLaunch();
         GameModule resolve(ModuleResolutionService.PreparedLaunch launch, GameModule root,
                            GameplayLaunchRequest request);
+        /** Explicit host-owned development registrations outside the installed catalogue. */
+        default List<String> additionalMainCharacters() { return List.of(); }
         void initialize(GameplayModeContext gameplay);
         RuntimeException unavailableCharacter(String owner, String message, RuntimeException cause);
     }
@@ -45,6 +47,7 @@ public final class NativeDataSelectLaunchFlow {
         var prepared = host.prepareLaunch();
         List<String> available = new ArrayList<>(stockCharacters(game));
         available.addAll(services.moduleResolutionService().availableMainCharacters(prepared, game));
+        available.addAll(host.additionalMainCharacters());
         if (CrossGameFeatureProvider.isActive()) {
             available.addAll(stockCharacters(services.crossGameFeatures().getDonorGameId()));
         }
