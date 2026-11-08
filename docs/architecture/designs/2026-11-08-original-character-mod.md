@@ -821,3 +821,11 @@ Status log (times UTC):
   reconciliation and broad validation. The `Art.screenFrames` component is additive
   and retains the previous four/five-argument constructors; the other presentation
   lane may need to combine its added components at integration.
+- 2026-11-08 (lead): merged W5/W6 abilities (`632861a37`), special/bonus stages
+  (`bcdbe781e`) and continue/portrait/snowboard (`c6fa45fdf`). Combined focused run
+  on `4f467117f`: 1,663 tests, 14 failures + 1 error, 2 skipped, all in KiS2 and S3K
+  special/bonus-stage trace replays. The same 15 classes on develop `33c3b8e56` and on
+  pre-stages integration `f9729bc43` fail identically (same identities, first
+  divergence and error totals), so they predate this work. Remaining presentation
+  surfaces seen in captures: S3K data-select save-slot life icons and NO SAVE slot,
+  S2 special-stage HUD "SONIC" label.
