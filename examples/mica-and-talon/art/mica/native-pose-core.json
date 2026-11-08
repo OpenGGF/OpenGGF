@@ -2735,8 +2735,6 @@
       "material_box_change": true
     },
     "hurt-00": {
-      "prompt": "Use case: style-transfer. Asset: ONE isolated 16-bit pixel sprite, transparent background. Image 1 is ONLY native pose/rotation/silhouette and facing reference, NOT the character to reproduce. Image 2 is MICA's original pangolin identity concept. Image 3 is approved pixel-art style/proportion anchor. Redraw image 1 pose as MICA, a NEW DRAWING, NOT a recolour. Preserve pose, framing and silhouette extent of reference, NOT standing concept pose. Jade rounded overlapping scales, long scaled tail, tan pangolin muzzle/belly, readable dark eye, white gloves, red hiking boots with tan soles and jade laces. NO hedgehog/quills/blue/Sonic features, no text, no shadows or scenery. Crisp simple native pixel clusters and continuous dark outline. Pose: Airborne hurt recoil: face looks right, torso tilted backward LEFT, mouth open, both white gloves flung up/out, knees up and red boot soles thrust right toward viewer. No effects.",
-      "raw_sha256": "8b31dcc35edaaca2877c4b8033559b71434f4e50b578df29eafe357b0713bf92",
       "reference": {
         "id": "hurt-00",
         "size": [
@@ -2758,7 +2756,6 @@
         "label": "Map_Sonic_0920"
       },
       "geometry_reference": {
-        "id": "hurt-00",
         "size": [
           40,
           28
@@ -2766,36 +2763,45 @@
         "hotspot": [
           20,
           12
-        ],
-        "bbox_relative_to_hotspot": [
-          -20,
-          -12,
-          20,
-          16
-        ],
-        "game": "S2",
-        "mapping": 78,
-        "label": "Map_Sonic_0920"
+        ]
       },
       "native_size": [
         40,
         28
       ],
-      "previous_size": [
-        34,
-        35
-      ],
-      "previous_hotspot": [
-        17,
-        17
-      ],
       "hotspot": [
         20,
         12
       ],
-      "source": "new built-in GPT Image",
-      "cleanup": "connected alpha; shared palette; inside ink outline",
-      "material_box_change": true
+      "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, hurt-00, candidate 3 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Exact native recoiling hurt pose: limbs flung outward, coral boots forward, small surprised face facing right, rounded jade scale hood and tail. Same top-left shading as approved anchors.\n\nWill reduce to native 40x28 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 3: prioritize small-scale readability and consistent identity with the approved face anchors, keeping exact phase placement.",
+      "raw_sha256": "24970bb27294e717b9a133e0873551bc19a9da8fa15400ae3e193f1dbc105394",
+      "source": "built-in GPT Image, latest exposed; exact version unavailable",
+      "cleanup": "Transparent-margin crop; Lanczos native box reduction; unchanged fixed palette; inside silhouette ink. No painted pixels.",
+      "regeneration": {
+        "attempts": [
+          {
+            "attempt": 1,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, hurt-00, candidate 1 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Exact native recoiling hurt pose: limbs flung outward, coral boots forward, small surprised face facing right, rounded jade scale hood and tail. Same top-left shading as approved anchors.\n\nWill reduce to native 40x28 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 1: strict fidelity to reference limb/boot positions and silhouette.",
+            "raw_sha256": "1a7570a98949bd7c9e90d73ae50a60b5f84494c77d3b63da96bfe0831e6ec304",
+            "chosen": false
+          },
+          {
+            "attempt": 2,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, hurt-00, candidate 2 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Exact native recoiling hurt pose: limbs flung outward, coral boots forward, small surprised face facing right, rounded jade scale hood and tail. Same top-left shading as approved anchors.\n\nWill reduce to native 40x28 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 2: prioritize coherent rounded hood/head, compact shapes and clean shading while keeping EXACT native limb pose.",
+            "raw_sha256": "de67afa278069f68f22524564c13a63642c549272b20dace1159a61bdc608688",
+            "chosen": false
+          },
+          {
+            "attempt": 3,
+            "prompt": "Use case: style-transfer. Asset: ONE original 16-bit MICA pangolin animation sprite, hurt-00, candidate 3 of 3.\nInput 1: exact native S2 Sonic pose reference (8x nearest-neighbour) ONLY for pose, NEVER copy native pixels or Sonic quills. Input 2: MICA concept identity. Inputs 3/4: owner-approved MICA sign/presentation faces for sprite style.\nRedraw input 1 as MICA: jade overlapping ROUNDED scale hood, cream muzzle/belly, expressive brown eye, white gloves, coral hiking boots with tan soles and jade laces, long scaled tail. Consistent small head/hood proportions, top-left light, flat limited palette with black silhouette ink. NOT golden form. Exact native recoiling hurt pose: limbs flung outward, coral boots forward, small surprised face facing right, rounded jade scale hood and tail. Same top-left shading as approved anchors.\n\nWill reduce to native 40x28 pixel box. Simple coherent pixel clusters, native resolution legibility. Exactly one sprite isolated on genuinely transparent background, no text, no frame, no motion lines, no ground/shadow. Candidate 3: prioritize small-scale readability and consistent identity with the approved face anchors, keeping exact phase placement.",
+            "raw_sha256": "24970bb27294e717b9a133e0873551bc19a9da8fa15400ae3e193f1dbc105394",
+            "chosen": true
+          }
+        ],
+        "chosen": 3,
+        "reason": "Native recoil has both boot soles forward and arms flung back; this candidate preserves that pose with consistent rounded hood and top-left jade shading.",
+        "review_directory": "$HOME/scratch/agent-tmp/mica-regen-20261108"
+      }
     },
     "death-00": {
       "prompt": "Use case: style-transfer. Asset: ONE isolated 16-bit pixel sprite, transparent background. Image 1 is ONLY native pose/rotation/silhouette and facing reference, NOT the character to reproduce. Image 2 is MICA's original pangolin identity concept. Image 3 is approved pixel-art style/proportion anchor. Redraw image 1 pose as MICA, a NEW DRAWING, NOT a recolour. Preserve pose, framing and silhouette extent of reference, NOT standing concept pose. Jade rounded overlapping scales, long scaled tail, tan pangolin muzzle/belly, readable dark eye, white gloves, red hiking boots with tan soles and jade laces. NO hedgehog/quills/blue/Sonic features, no text, no shadows or scenery. Crisp simple native pixel clusters and continuous dark outline. Pose: Front-facing airborne defeat pose: eyes wide, mouth open, BOTH arms raised diagonally out/up, legs spread with boots dangling down-left/down-right, tail tucked behind. Exact native frontal pose.",
