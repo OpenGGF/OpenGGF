@@ -67,6 +67,18 @@ public final class Sonic1CharacterPresentation {
         return tiles;
     }
 
+    /** Map_Monitor_internal's .sonic face uses four tiles at $1C; the shell is shared. */
+    static ObjectSpriteSheet monitor(ObjectSpriteSheet nativeSheet, CharacterPresentation presentation) {
+        var art = art(presentation);
+        var face = art == null ? null : art.oneUpFace();
+        if (face == null || face.width() != 16 || face.height() != 16) return nativeSheet;
+        Pattern[] patterns = nativeSheet.getPatterns().clone();
+        System.arraycopy(CharacterNameComposer.tiles(face), 0, patterns, 0x1C, 4);
+        var frames = new ArrayList<SpriteMappingFrame>();
+        for (int i = 0; i < nativeSheet.getFrameCount(); i++) frames.add(nativeSheet.getFrame(i));
+        return new ObjectSpriteSheet(patterns, frames, nativeSheet.getPaletteIndex(), nativeSheet.getFrameDelay());
+    }
+
     /** Replace only SONIC's five native pieces; retain HAS and every other native piece. */
     public static ObjectSpriteSheet results(Rom rom, Pattern[] patterns,
             List<SpriteMappingFrame> frames,

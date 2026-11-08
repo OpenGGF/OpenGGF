@@ -88,7 +88,8 @@ the S3K water zones.
 
 Status: S1 HUD icon/name wired and tile-tested on `feature/ai-mica-s1-surfaces`;
 S1 act-results and special-stage results names wired; tile/mapping verification pending on
-`feature/ai-mica-s1-surfaces-r2`. The S1 1-up face remains pending.
+`feature/ai-mica-s1-surfaces-r2`. S1 1-up faces now replace only the dedicated
+monitor face tiles, retaining native shell mappings and reward animation.
 API foundation delivered; group 1 follow-up in progress on
 `feature/ai-mica-presentation2`. ROM readers now inventory all three small HUD
 fonts and S3K per-zone title/results-name art. S2 stock Tails-alone results select

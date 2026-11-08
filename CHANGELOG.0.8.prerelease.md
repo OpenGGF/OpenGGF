@@ -44,7 +44,8 @@ under the matching area heading; see the
   playable sheet with 17 canonical animations, shared palette and slope cycles.
   Headless native Data Select retains explicitly loaded development characters.
   Custom team archetypes now use the solo Sonic route without a sidekick.
-  S1 HUD life icons, small-font names, act-results and special-stage results names now consume character presentation slots.
+  S1 HUD life icons/names, act/special-stage results names and 1-up monitor faces
+  now consume character presentation slots while retaining native Sonic fallbacks.
   Presentation font inventories now include the native small HUD letters in all
   three hosts and S3K per-zone title/results-name letters. Surface wiring and
   packaging MICA’s presentation art remain pending. Stock S2 Tails-alone results

@@ -508,10 +508,11 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
      * Mappings from docs/s1disasm/_maps/Monitor.asm (Map_Monitor_internal).
      * Animations from docs/s1disasm/_anim/Monitor.asm (Ani_Monitor).
      */
-    private void loadMonitorArt(Sonic1ObjectArt art) {
+    private void loadMonitorArt(Sonic1ObjectArt art) throws IOException {
         ObjectSpriteSheet sheet = art.buildArtSheetFromRom(
                 Sonic1Constants.ART_NEM_MONITOR_ADDR, Sonic1Constants.MAP_MONITOR_ADDR, 0, 1);
-        registerSheet(ObjectArtKeys.MONITOR, sheet);
+        registerSheet(ObjectArtKeys.MONITOR,
+                Sonic1CharacterPresentation.monitor(sheet, Sonic1CharacterPresentation.active()));
         animations.put(ObjectArtKeys.ANIM_MONITOR, createMonitorAnimations());
     }
 

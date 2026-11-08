@@ -51,6 +51,27 @@ class TestSonic1CharacterPresentation {
         for (int i=0;i<nativeTiles.length;i++) assertSame(nativeTiles[i],result[i]);
     }
 
+    @Test void oneUpFaceChangesOnlyDedicatedSonicTilesAndKeepsAllMappings() throws Exception {
+        Rom rom = rom();
+        var art = new Sonic1ObjectArt(rom, com.openggf.data.RomByteReader.fromRom(rom));
+        var stock = art.buildArtSheetFromRom(
+                com.openggf.game.sonic1.constants.Sonic1Constants.ART_NEM_MONITOR_ADDR,
+                com.openggf.game.sonic1.constants.Sonic1Constants.MAP_MONITOR_ADDR, 0, 1);
+        assertSame(stock, Sonic1CharacterPresentation.monitor(stock, null));
+        assertSame(stock, Sonic1CharacterPresentation.monitor(stock, new CharacterPresentation("MICA")));
+        var result = Sonic1CharacterPresentation.monitor(stock, mica());
+        var facePiece = result.getFrame(4).pieces().getFirst();
+        assertEquals(0x1C, facePiece.tileIndex());
+        assertArrayEquals(image(16,16,4).pixels(), CharacterNameComposer.extract(result.getPatterns(),
+                facePiece.tileIndex(),2,2,0,0,16,16).pixels());
+        for (int i=0;i<stock.getPatterns().length;i++) {
+            if (i < 0x1C || i >= 0x20) assertSame(stock.getPatterns()[i],result.getPatterns()[i]);
+        }
+        for (int i=0;i<stock.getFrameCount();i++) assertSame(stock.getFrame(i),result.getFrame(i));
+        assertEquals(stock.getPaletteIndex(),result.getPaletteIndex());
+        assertEquals(stock.getFrameDelay(),result.getFrameDelay());
+    }
+
     @Test void actResultsReplaceOnlySonicWithNativeTitleLetters() throws Exception {
         assertResultsName(0);
     }
