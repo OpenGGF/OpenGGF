@@ -3,6 +3,7 @@ package com.openggf.tools;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.openggf.trace.DivergenceReport.ReplayGate;
 import com.openggf.trace.TraceFiles;
 import com.openggf.trace.TraceMetadata;
 
@@ -77,11 +78,6 @@ public final class TraceTriageTool {
             String expected,
             String actual,
             String context) {
-    }
-
-    /** The replay driver's declared completion; comparison counts use a different row domain. */
-    public record ReplayGate(boolean comparisonGateReached, int plannedTraceRows,
-                             String verification) {
     }
 
     /** Immutable view of a parsed trace report. */
@@ -175,7 +171,7 @@ public final class TraceTriageTool {
         }
 
         return new TraceReport(errorCount, warningCount, totalFrames, summary,
-                List.copyOf(bootstrap), errors, warnings, parseReplayGate(root));
+                List.copyOf(bootstrap), errors, warnings, ReplayGate.readOptionalFrom(root));
     }
 
     private static List<Divergence> parseGroups(JsonNode array, String severity) throws IOException {
@@ -197,26 +193,6 @@ public final class TraceTriageTool {
                     requiredBoolean(n, "cascading")));
         }
         return List.copyOf(out);
-    }
-
-    private static ReplayGate parseReplayGate(JsonNode root) throws IOException {
-        if (!root.has("replay_gate")) {
-            return null;
-        }
-        JsonNode gate = root.get("replay_gate");
-        if (requiredCount(gate, "schema") != 1) {
-            throw new IOException("Unsupported replay_gate schema");
-        }
-        int plannedRows = requiredCount(gate, "planned_trace_rows");
-        if (plannedRows == 0) {
-            throw new IOException("replay_gate.planned_trace_rows must be positive");
-        }
-        String verification = requiredText(gate, "verification");
-        if (!Set.of("all", "physics", "animation").contains(verification)) {
-            throw new IOException("Unsupported replay_gate verification: " + verification);
-        }
-        return new ReplayGate(requiredBoolean(gate, "comparison_gate_reached"),
-                plannedRows, verification);
     }
 
     private static JsonNode requiredArray(JsonNode parent, String field) throws IOException {
@@ -538,7 +514,7 @@ public final class TraceTriageTool {
             sb.append("Replay completion: ")
                     .append(gate.comparisonGateReached() ? "COMPLETE" : "INCOMPLETE")
                     .append(" (").append(gate.plannedTraceRows()).append(" planned trace rows; ")
-                    .append(gate.verification()).append(" verification).\n");
+                    .append(gate.verification().name().toLowerCase(Locale.ROOT)).append(" verification).\n");
         }
         sb.append("Saved report only; check this invocation's Surefire result and process completion.\n");
         sb.append("Report summary: ").append(blankToDash(report.summary())).append("\n");

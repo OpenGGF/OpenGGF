@@ -9,6 +9,7 @@ import com.openggf.tools.TraceTriageTool.Divergence;
 import com.openggf.tools.TraceTriageTool.Subsystem;
 import com.openggf.tools.TraceTriageTool.TraceReport;
 import com.openggf.trace.DivergenceReport;
+import com.openggf.trace.DivergenceReport.ReplayGate;
 import com.openggf.trace.BootstrapDivergence;
 import com.openggf.trace.FieldComparison;
 import com.openggf.trace.FrameComparison;
@@ -17,6 +18,8 @@ import com.openggf.trace.TraceVerificationScope;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.ByteArrayOutputStream;
@@ -120,15 +123,16 @@ class TestTraceTriageTool {
         Path reportPath = publishReport(tempDir, produced, true);
 
         TraceReport parsed = TraceTriageTool.parseReport(Files.readString(reportPath));
-        String context = Files.readString(TraceTriageTool.contextPathForReport(reportPath));
-        String excerpt = TraceTriageTool.extractContextNearFrame(context, 7, 2, 12);
-        String brief = TraceTriageTool.renderBrief("s2", "ehz1", parsed, excerpt, "");
+        TriageResult result = runTriage("--report", reportPath.toString());
+        assertEquals(0, result.status(), result.errors());
+        String brief = result.output();
 
         assertEquals(1, parsed.errorCount());
         assertEquals(1, parsed.totalFrames());
         assertEquals(7, parsed.firstDivergence().startFrame());
         assertEquals("0x0100", parsed.firstDivergence().expectedAtStart());
         assertEquals("0x0101", parsed.firstDivergence().actualAtStart());
+        assertTrue(brief.contains("Replay completion: COMPLETE"));
         assertTrue(brief.contains("ROM: routine=02 object=0x41"));
         assertTrue(brief.contains("ENG: routine=04 object=0x41"));
     }
@@ -147,27 +151,40 @@ class TestTraceTriageTool {
         assertEquals(1, parsed.totalFrames());
         assertTrue(brief.toLowerCase(Locale.ROOT).contains("incomplete"),
                 "A matching prefix whose published replay gate was not reached must be visibly incomplete.");
+        TriageResult result = runTriage("--report", reportPath.toString());
+        assertEquals(0, result.status(), result.errors());
+        assertTrue(result.output().contains("Replay completion: INCOMPLETE"));
     }
 
-    @Test
-    void declaredGateCompletionDoesNotDependOnComparisonCount(@TempDir Path tempDir) throws Exception {
-        Path reportPath = publishReport(tempDir, new DivergenceReport(List.of()), true);
+    @ParameterizedTest
+    @EnumSource(TraceVerificationScope.class)
+    void declaredGateCompletionDoesNotDependOnComparisonCount(
+            TraceVerificationScope scope, @TempDir Path tempDir) throws Exception {
+        String scopeLabel = scope.name().toLowerCase(Locale.ROOT);
+        Path reportPath = publishReport(tempDir, new DivergenceReport(List.of()), true, scope);
         TraceReport parsed = TraceTriageTool.parseReport(Files.readString(reportPath));
 
         assertEquals(0, parsed.totalFrames());
         assertTrue(parsed.replayGate().comparisonGateReached());
         assertEquals(10, parsed.replayGate().plannedTraceRows());
-        assertTrue(TraceTriageTool.renderBrief("s2", "ehz1", parsed, "", "")
-                .contains("Replay completion: COMPLETE"));
+        TriageResult result = runTriage("--report", reportPath.toString());
+        assertEquals(0, result.status(), result.errors());
+        assertEquals("", result.errors());
+        assertTrue(result.output().contains("Replay completion: COMPLETE"));
+        assertTrue(result.output().contains("10 planned trace rows; " + scopeLabel + " verification"));
+        assertTrue(result.output().contains("check this invocation's Surefire result and process completion"));
     }
 
     @Test
-    void legacyReportHasUnknownCompletion() throws Exception {
-        TraceReport parsed = TraceTriageTool.parseReport(new DivergenceReport(List.of()).toJson());
+    void legacyReportHasUnknownCompletion(@TempDir Path tempDir) throws Exception {
+        Path reportPath = tempDir.resolve("legacy_report.json");
+        Files.writeString(reportPath, new DivergenceReport(List.of()).toJson());
+        TraceReport parsed = TraceTriageTool.parseReport(Files.readString(reportPath));
 
         assertNull(parsed.replayGate());
-        assertTrue(TraceTriageTool.renderBrief("s2", "ehz1", parsed, "", "")
-                .contains("Replay completion: UNKNOWN"));
+        TriageResult result = runTriage("--report", reportPath.toString());
+        assertEquals(0, result.status(), result.errors());
+        assertTrue(result.output().contains("Replay completion: UNKNOWN"));
     }
 
     @Test
@@ -200,6 +217,93 @@ class TestTraceTriageTool {
     }
 
     @ParameterizedTest
+    @ValueSource(strings = {
+            "null",
+            "{\"schema\":2,\"comparison_gate_reached\":true,\"planned_trace_rows\":10,\"verification\":\"all\"}",
+            "{\"schema\":1,\"comparison_gate_reached\":true,\"planned_trace_rows\":0,\"verification\":\"all\"}",
+            "{\"schema\":1,\"comparison_gate_reached\":true,\"planned_trace_rows\":10,\"verification\":\"both\"}",
+            "{\"schema\":1,\"comparison_gate_reached\":true,\"planned_trace_rows\":10,\"verification\":\"\"}"
+    })
+    void malformedPresentGateFailsCliInsteadOfLookingLikeLegacy(String gateJson, @TempDir Path tempDir)
+            throws Exception {
+        Path reportPath = publishReport(tempDir, new DivergenceReport(List.of()), true);
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode payload = (ObjectNode) mapper.readTree(reportPath.toFile());
+        payload.set("replay_gate", mapper.readTree(gateJson));
+        Files.writeString(reportPath, payload.toString());
+
+        TriageResult result = runTriage("--report", reportPath.toString());
+
+        assertEquals(1, result.status());
+        assertEquals("", result.output(), "malformed completion evidence must not produce a reassuring brief");
+        assertTrue(result.errors().contains("Failed to read diagnostic evidence"));
+    }
+
+    @Test
+    void extraGateEvidenceDoesNotPreventCliDiagnosis(@TempDir Path tempDir) throws Exception {
+        Path reportPath = publishReport(tempDir, new DivergenceReport(List.of()), true);
+        ObjectNode payload = (ObjectNode) new ObjectMapper().readTree(reportPath.toFile());
+        ((ObjectNode) payload.get("replay_gate")).put("future_observation", "retained by another reader");
+        Files.writeString(reportPath, payload.toString());
+
+        TriageResult result = runTriage("--report", reportPath.toString());
+
+        assertEquals(0, result.status(), result.errors());
+        assertTrue(result.output().contains("Replay completion: COMPLETE"));
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+            "schema | \"1\"",
+            "schema | 1.0",
+            "schema | -1",
+            "schema | 2147483648",
+            "schema | null",
+            "planned_trace_rows | \"10\"",
+            "planned_trace_rows | 10.5",
+            "planned_trace_rows | -1",
+            "planned_trace_rows | 2147483648",
+            "planned_trace_rows | null",
+            "comparison_gate_reached | \"true\"",
+            "comparison_gate_reached | 1",
+            "verification | \"ALL\"",
+            "verification | \" all\"",
+            "verification | \"all \"",
+            "verification | null"
+    })
+    void gateWireTypesAndCanonicalScopeCannotBeCoerced(
+            String field, String jsonValue, @TempDir Path tempDir) throws Exception {
+        Path reportPath = publishReport(tempDir, new DivergenceReport(List.of()), true);
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode payload = (ObjectNode) mapper.readTree(reportPath.toFile());
+        ((ObjectNode) payload.get("replay_gate")).set(field, mapper.readTree(jsonValue));
+        Files.writeString(reportPath, payload.toString());
+
+        TriageResult result = runTriage("--report", reportPath.toString());
+
+        assertEquals(1, result.status());
+        assertEquals("", result.output());
+        assertTrue(result.errors().contains("Failed to read diagnostic evidence"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"schema", "planned_trace_rows", "comparison_gate_reached", "verification"})
+    void missingGateFieldsCannotDefaultToCompletedEvidence(String field, @TempDir Path tempDir)
+            throws Exception {
+        Path reportPath = publishReport(tempDir, new DivergenceReport(List.of()), true);
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode payload = (ObjectNode) mapper.readTree(reportPath.toFile());
+        ((ObjectNode) payload.get("replay_gate")).remove(field);
+        Files.writeString(reportPath, payload.toString());
+
+        TriageResult result = runTriage("--report", reportPath.toString());
+
+        assertEquals(1, result.status());
+        assertEquals("", result.output());
+        assertTrue(result.errors().contains("Failed to read diagnostic evidence"));
+    }
+
+    @ParameterizedTest
     @ValueSource(strings = {"bootstrap", "errors", "warnings"})
     void rejectsMalformedDivergenceArrays(String field) throws Exception {
         ObjectNode payload = (ObjectNode) new ObjectMapper().readTree(new DivergenceReport(List.of()).toJson());
@@ -218,11 +322,16 @@ class TestTraceTriageTool {
 
     private Path publishReport(Path directory, DivergenceReport report, boolean completed)
             throws IOException {
+        return publishReport(directory, report, completed, TraceVerificationScope.ALL);
+    }
+
+    private Path publishReport(Path directory, DivergenceReport report, boolean completed,
+                               TraceVerificationScope scope) throws IOException {
         SessionInvocation invocation = new SessionInvocation(
                 getClass().getName(), "publishedReport", 0, "0123456789abcdef", "published report");
         return TraceReportWriter.writeReport(directory, report, "trace", invocation,
-                "single", "s2_ehz1", TraceVerificationScope.ALL, 2,
-                new TraceReportWriter.ReplayGate(10, completed, TraceVerificationScope.ALL))
+                "single", "s2_ehz1", scope, 2,
+                new ReplayGate(10, completed, scope))
                 .physicalPath();
     }
 

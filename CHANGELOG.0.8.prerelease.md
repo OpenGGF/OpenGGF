@@ -79,7 +79,10 @@ under the matching area heading; see the
   its next screen-shake value without using the renderer as scratch state.
   Failed trace replays print their exact test/report/triage route; triage reads
   compressed fixture auxiliaries, preserves pre-trace evidence and distinguishes
-  incomplete or unknown completion from a completed comparison. Retained raw-field
+  incomplete or unknown completion from a completed comparison. Replay completion
+  metadata has one report-owned value and strict wire codec; ordinary publication
+  no longer reparses and rewrites its own JSON. Scene presentation spells out
+  capture, restoration and failure cleanup in operation order. Retained raw-field
   diagnostics follow that storage and are exercised on successful test paths.
 
 - **Fresh-level admission:** named phases expose title completion, initial

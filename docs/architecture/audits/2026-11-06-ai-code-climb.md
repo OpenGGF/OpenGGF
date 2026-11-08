@@ -2666,3 +2666,113 @@ lifecycle branch/worktree and PR269 are retained for unified delivery accounting
 Only ai-code-climb is authorized for publication to existing draft PR266; no
 destination branch merge/push, new PR, additional review or future-sweep patch
 belongs to this batch. The wider contributor-score goal remains unmet.
+
+### Follow-up: report gate ownership and visible scene operations — 2026-11-08
+
+PR266 was published at ce5742f69 and then merged into develop as f6287642a.
+The user explicitly selected a new follow-up draft PR for this local cleanup
+and subsequent increments. Its isolated branch is feature/ai-code-climb-followup,
+based on updated origin/develop at f6287642a. The unrelated upstream KIS2 life-icon
+conversion, art provider/player-art, test and discrepancy changes are retained.
+The main workspace's branch and its dirty submodules/untracked files were not
+changed. The new worktree uses tracked-file reflinks, with no build-tree copying.
+
+Sol's bounded implementation removes two competing ReplayGate models and the
+normal writer-side serialize/parse/append/re-encode stage. DivergenceReport now
+owns the value and strict optional wire codec. The replay driver still declares
+completion; zero comparisons never imply an incomplete gate, and a matching
+prefix never implies completion. The writer retains scope agreement and ordered
+report/context/owner publication; triage consumes the report-owned observation.
+Absent legacy metadata remains UNKNOWN. Present malformed metadata, wrong types,
+missing fields, nonpositive/overflow rows and noncanonical scope values fail;
+extra fields remain accepted. Internal Java gate references migrated together;
+there is no Mod API descriptor/signature/version change.
+
+ScenePresentationPass's existing owner now spells out setup, terrain boundaries,
+capture, restoration and abort in operation order, with braced control bodies.
+The source token order and comments are preserved apart from braces around the
+existing single-statement bodies. Opus independently checked this, including GL
+queries/field initialization, texture units 0–6, draw/read framebuffers, viewport
+and shader caches, and saved-state retirement before cleanup. No new scene state,
+facade or renderer helper was introduced. This is a local readability change;
+no contributor-trial score is inferred from it.
+
+The first seven-class focused run passed 105 cases without failures/errors/skips.
+Opus nevertheless found a genuine guard regression: the initial refactor changed
+the old broad-catch fingerprint and introduced a second catch-and-fallback site.
+A targeted guard witness executed four cases with exactly that one assertion
+failure and no errors/skips. Its three exact key differences are retained in
+the original worktree's target/code-climb/gate-broad-catch-red-surefire.
+Queue/Maven times were 54s/89s for the first selection and 25s/33.360s for RED.
+
+The repair uses one serialization attempt and one existing broad error-document
+boundary for both overloads. A private Serialization result carries the existing
+success/error-document distinction; only the error-document path performs the
+historical parse/append/re-encode. Malformed error documents still fail before
+publication, while formerly valid error documents retain their gate. The original
+error literal is unchanged. The inventory rekeys exactly one row from toJson()
+hash 825b6185 to serialize(ReplayGate) hash ac044080. All 1015 allowances across
+1013 rows remain; scanner, guard and budgets are unchanged. Opus explicitly
+approved this as relocation of the same owning boundary, not an additional
+recovery allowance. Its original unresolved-debt reason is retained as a prefix:
+this cleanup does not decide whether returning an error document is the right
+legacy policy or remove it from unresolved debt. Independent prefix counts remain
+525 rows on both the new base and this follow-up.
+
+Other review repairs seed distinguishable prior-owner bytes before a failed
+republish, exercise the actual producer-to-CLI path for malformed wire values,
+cover every enum scope, and correct the design's obsolete test-only wording.
+The repaired eight-class selection passed 125 cases, zero failures/errors/skips,
+at the frozen ce574-plus-diff source approved by Opus. Queue/Maven: 26s/93s.
+The final follow-up adds four missing-field CLI cases and retains the debt wording;
+reviewed production files are byte-identical after transfer to the new base.
+
+The source-specific HCZ pair used trace-segments with Java25/Lua5.4, unset
+displays, surfaceless EGL, one alphabetical fork and fresh output directories.
+Both reports are byte-identical to the retained 33c baseline: HCZ1 passes with
+3519 comparisons/3574 planned rows; HCZ2 retains 26 errors across 14149
+comparisons/14208 planned rows. All-scope gates are reached, bootstrap and report
+warnings remain zero, and eight advertised auxiliary schemas remain absent.
+The pair exits1 from the inherited HCZ2 assertion, not from an invocation error
+or skip. Exact paths: original ai-code-climb worktree's
+target/code-climb/gate-scene-hcz-{surefire,reports}; log gate-scene-hcz.log.
+These checks ran before the upstream KIS2-only reconciliation and are not claimed
+as new-base route certification. No trace frontier moved.
+
+Limits: reviews were static. No repository subclass overrides toJson(), but the
+gated path no longer dispatches that overridable method. Removing normal JSON
+reparsing also removes its incidental Jackson read limit for strings exceeding
+20 million characters; this is not exercised by the bounded report fixtures.
+The error-document fallback remains unresolved debt. No score reassessment or
+new whole-suite pass is claimed. The old complete broad qualification and its
+raw FAILED verdict remain prior-source evidence only.
+
+Current-worktree focused checks and final publication evidence follow below.
+
+On the updated f6287642a base, the eight named classes executed 129 cases with
+zero failures/errors/skips. Fresh XML includes all four BroadCatchSwallowingGuard
+cases and all 65 triage cases. The command was:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dopenggf.surefire.reports=target/code-climb/followup-focused-surefire '-Dtest=TestDivergenceReport,TestTraceGateCompletionReport,TestTraceTriageTool,TestTraceReplayReportPolicy,TestScenePresentationPass,TestBackgroundRendererStateRestoration,TestBackgroundPlaneSpriteOcclusion,TestBroadCatchSwallowingGuard' test
+```
+
+Queue waited 123s; Maven reported 100s. Wall/user wait were not separately
+measured. The final production source matches the source Opus approved; only
+the four missing-field test cases, restored debt-reason prefix and prose changed
+after that review. No additional review loop was needed for those bounded P3
+corrections. The full guard profile is checked separately because its inventory
+changed; no new broad-smoke verdict is implied by this focused selection.
+
+The current-worktree full guard profile also passed: 843 cases across 103 suites,
+zero failures/errors/skips. Command: `python3 tools/testing/maven_queue.py
+-Dmse=off -Pguards -Dopenggf.headless.gl=surfaceless-egl
+-Dopenggf.surefire.reports=target/code-climb/followup-guards-surefire test -B`
+with the same Java25/Lua5.4 and displays-unset environment. Queue waited 334s;
+Maven reported 183s. Fresh XML and terminal exit0 were inspected. There is no
+new category VERDICT or full-suite claim. Log: target/code-climb/followup-guards.log.
+
+PR269 was already closed when final accounting checked its unchanged 8fbf86ea
+head; no closure write was needed. Its later lifecycle source and that head are
+ancestors of merged PR266. Old source trees and diagnostics remain retained;
+no cleanup of unknown or user-owned files was performed.

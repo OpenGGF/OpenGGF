@@ -402,7 +402,8 @@ input playback, gameplay, tolerances or assertions.
 The observation unit is one completed existing trace gate. Recorded row counts
 are 3,905, 5,852 and 20,798, respectively. They are not denominators for grouped
 error counts or guarantees that every row compares gameplay state. A small
-test-only `replay_gate` record marks arrival at the prescribed verification gate
+report-owned `replay_gate` value marks the test driver's arrival at the prescribed
+verification gate
 after dynamic-art and hardware closure, without a frontier stop. Final report
 publication preserves incomplete prefixes. Other report writers retain their
 existing output without the optional record.

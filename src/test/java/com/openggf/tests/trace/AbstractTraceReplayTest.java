@@ -36,6 +36,7 @@ import com.openggf.tests.trace.s3k.S3kCheckpointProbe;
 import com.openggf.tests.trace.s3k.S3kSidekickCylinderDiagnostics;
 import com.openggf.trace.DivergenceGroup;
 import com.openggf.trace.DivergenceReport;
+import com.openggf.trace.DivergenceReport.ReplayGate;
 import com.openggf.trace.EngineDiagnostics;
 import com.openggf.trace.EngineSnapshot;
 import com.openggf.trace.EngineSidekickCpuState;
@@ -644,7 +645,7 @@ public abstract class AbstractTraceReplayTest {
                     // total_frames counts only gameplay comparisons.
                     TestSessionOutputPaths.ReportAllocation allocation = writeReport(
                             buildDivergenceReport(binder, meta, trace), meta,
-                            new TraceReportWriter.ReplayGate(
+                            new ReplayGate(
                                     trace.frameCount(), comparisonGateReached, verificationScope));
                     TraceReplayConsole.printDiagnosticRoute(
                             SessionInvocationExtension.SessionInvocation.current(),
@@ -1658,7 +1659,7 @@ public abstract class AbstractTraceReplayTest {
 
     private TestSessionOutputPaths.ReportAllocation writeReport(
             DivergenceReport report, TraceMetadata meta,
-            TraceReportWriter.ReplayGate replayGate) throws IOException {
+            ReplayGate replayGate) throws IOException {
         String prefix = meta.game() + "_" + meta.zone() + meta.act();
         TraceVerificationScope scope = verificationScope();
         String scopeSuffix = scope == TraceVerificationScope.ALL

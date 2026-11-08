@@ -129,29 +129,42 @@ public final class ScenePresentationPass {
         private void begin() {
             saved = new State(graphics);
             glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
-            glPixelStorei(GL_UNPACK_ALIGNMENT, 1); glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-            glPixelStorei(GL_UNPACK_SKIP_ROWS, 0); glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
+            glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+            glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+            glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
+            glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
             ensureResources(saved.viewport[2], saved.viewport[3]);
             glDisable(GL_SCISSOR_TEST);
             glBindFramebuffer(GL_READ_FRAMEBUFFER, saved.drawFbo);
             glBindFramebuffer(GL_DRAW_FRAMEBUFFER, worldFbo);
             glBlitFramebuffer(saved.viewport[0], saved.viewport[1], saved.viewport[0] + width,
                     saved.viewport[1] + height, 0, 0, width, height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
-            glBindFramebuffer(GL_FRAMEBUFFER, worldFbo); glViewport(0, 0, width, height);
+            glBindFramebuffer(GL_FRAMEBUFFER, worldFbo);
+            glViewport(0, 0, width, height);
             graphics.setViewport(0, 0, width, height);
-            if (scenery != null) drawScenery(scenery, logicalWidth, logicalHeight);
+            if (scenery != null) {
+                drawScenery(scenery, logicalWidth, logicalHeight);
+            }
             PatternRenderCommand.resetFrameState();
         }
         private void beginTerrain() {
-            if (frame.outline() < 0) return;
-            terrainOpen = true; glBindFramebuffer(GL_FRAMEBUFFER, terrainFbo);
-            glDisable(GL_SCISSOR_TEST); glClearColor(0, 0, 0, 0); glColorMask(true, true, true, true);
+            if (frame.outline() < 0) {
+                return;
+            }
+            terrainOpen = true;
+            glBindFramebuffer(GL_FRAMEBUFFER, terrainFbo);
+            glDisable(GL_SCISSOR_TEST);
+            glClearColor(0, 0, 0, 0);
+            glColorMask(true, true, true, true);
             glClear(GL_COLOR_BUFFER_BIT);
         }
         private void endTerrain() {
-            if (!terrainOpen) return;
+            if (!terrainOpen) {
+                return;
+            }
             terrainOpen = false;
-            glBindFramebuffer(GL_FRAMEBUFFER, worldFbo); glViewport(0, 0, width, height);
+            glBindFramebuffer(GL_FRAMEBUFFER, worldFbo);
+            glViewport(0, 0, width, height);
             drawTexture(terrainTexture, Frame.stock(frame.anchorX(), frame.anchorY()), logicalWidth,
                     logicalHeight, frame.outline(), true, saved.clearColor);
         }
@@ -161,12 +174,24 @@ public final class ScenePresentationPass {
                 glBindFramebuffer(GL_DRAW_FRAMEBUFFER, saved.drawFbo);
                 glViewport(saved.viewport[0], saved.viewport[1], width, height);
                 drawTexture(worldTexture, frame, logicalWidth, logicalHeight, -1, false, saved.clearColor);
-            } finally { abort(); }
+            } finally {
+                abort();
+            }
         }
         private void abort() {
-            if (saved == null) return;
-            State restore = saved; saved = null; terrainOpen = false;
-            try { restore.restore(graphics); } finally { PatternRenderCommand.resetFrameState(); }
+            if (saved == null) {
+                return;
+            }
+
+            State restore = saved;
+            saved = null;
+            terrainOpen = false;
+
+            try {
+                restore.restore(graphics);
+            } finally {
+                PatternRenderCommand.resetFrameState();
+            }
         }
     }
 
@@ -282,60 +307,118 @@ public final class ScenePresentationPass {
 
     /** Captures only state this pass and its nested native producers can disturb. */
     private static final class State {
-        final int drawFbo = glGetInteger(GL_DRAW_FRAMEBUFFER_BINDING), readFbo = glGetInteger(GL_READ_FRAMEBUFFER_BINDING);
-        final int program = glGetInteger(GL_CURRENT_PROGRAM), vao = glGetInteger(GL_VERTEX_ARRAY_BINDING);
-        final int activeTexture = glGetInteger(GL_ACTIVE_TEXTURE), arrayBuffer = glGetInteger(GL_ARRAY_BUFFER_BINDING);
-        final int renderbuffer = glGetInteger(GL_RENDERBUFFER_BINDING), unpackBuffer = glGetInteger(GL_PIXEL_UNPACK_BUFFER_BINDING),
-                unpackAlignment = glGetInteger(GL_UNPACK_ALIGNMENT), unpackRowLength = glGetInteger(GL_UNPACK_ROW_LENGTH),
-                unpackSkipRows = glGetInteger(GL_UNPACK_SKIP_ROWS), unpackSkipPixels = glGetInteger(GL_UNPACK_SKIP_PIXELS);
-        final int[] viewport = new int[4], cachedViewport = new int[4], scissorBox = new int[4],
-                textures = new int[7], textures1d = new int[7];
+        final int drawFbo = glGetInteger(GL_DRAW_FRAMEBUFFER_BINDING),
+                readFbo = glGetInteger(GL_READ_FRAMEBUFFER_BINDING);
+
+        final int program = glGetInteger(GL_CURRENT_PROGRAM),
+                vao = glGetInteger(GL_VERTEX_ARRAY_BINDING);
+        final int activeTexture = glGetInteger(GL_ACTIVE_TEXTURE),
+                arrayBuffer = glGetInteger(GL_ARRAY_BUFFER_BINDING);
+
+        final int renderbuffer = glGetInteger(GL_RENDERBUFFER_BINDING),
+                unpackBuffer = glGetInteger(GL_PIXEL_UNPACK_BUFFER_BINDING),
+                unpackAlignment = glGetInteger(GL_UNPACK_ALIGNMENT),
+                unpackRowLength = glGetInteger(GL_UNPACK_ROW_LENGTH),
+                unpackSkipRows = glGetInteger(GL_UNPACK_SKIP_ROWS),
+                unpackSkipPixels = glGetInteger(GL_UNPACK_SKIP_PIXELS);
+
+        final int[] viewport = new int[4],
+                cachedViewport = new int[4],
+                scissorBox = new int[4],
+                textures = new int[7],
+                textures1d = new int[7];
         final float[] clearColor = new float[4];
         final boolean[] colorMask = new boolean[4];
-        final boolean blend = glIsEnabled(GL_BLEND), depth = glIsEnabled(GL_DEPTH_TEST), scissor = glIsEnabled(GL_SCISSOR_TEST),
-                stencil = glIsEnabled(GL_STENCIL_TEST), cull = glIsEnabled(GL_CULL_FACE);
-        final int srcRgb = glGetInteger(GL_BLEND_SRC_RGB), dstRgb = glGetInteger(GL_BLEND_DST_RGB),
-                srcAlpha = glGetInteger(GL_BLEND_SRC_ALPHA), dstAlpha = glGetInteger(GL_BLEND_DST_ALPHA),
-                eqRgb = glGetInteger(GL_BLEND_EQUATION_RGB), eqAlpha = glGetInteger(GL_BLEND_EQUATION_ALPHA);
-        final boolean waterShader, underwaterBackground, spritePriority;
+
+        final boolean blend = glIsEnabled(GL_BLEND),
+                depth = glIsEnabled(GL_DEPTH_TEST),
+                scissor = glIsEnabled(GL_SCISSOR_TEST),
+                stencil = glIsEnabled(GL_STENCIL_TEST),
+                cull = glIsEnabled(GL_CULL_FACE);
+        final int srcRgb = glGetInteger(GL_BLEND_SRC_RGB),
+                dstRgb = glGetInteger(GL_BLEND_DST_RGB),
+                srcAlpha = glGetInteger(GL_BLEND_SRC_ALPHA),
+                dstAlpha = glGetInteger(GL_BLEND_DST_ALPHA),
+                eqRgb = glGetInteger(GL_BLEND_EQUATION_RGB),
+                eqAlpha = glGetInteger(GL_BLEND_EQUATION_ALPHA);
+
+        final boolean waterShader,
+                underwaterBackground,
+                spritePriority;
+
         State(GraphicsManager graphics) {
-            waterShader = graphics.getWaterShaderProgram() != null && graphics.getShaderProgram() == graphics.getWaterShaderProgram();
+            waterShader = graphics.getWaterShaderProgram() != null
+                    && graphics.getShaderProgram() == graphics.getWaterShaderProgram();
             underwaterBackground = graphics.isUseUnderwaterPaletteForBackground();
             spritePriority = graphics.isUseSpritePriorityShader();
-            glGetIntegerv(GL_VIEWPORT, viewport); glGetIntegerv(GL_SCISSOR_BOX, scissorBox);
+
+            glGetIntegerv(GL_VIEWPORT, viewport);
+            glGetIntegerv(GL_SCISSOR_BOX, scissorBox);
             glGetFloatv(GL_COLOR_CLEAR_VALUE, clearColor);
-            ByteBuffer mask = BufferUtils.createByteBuffer(4); glGetBooleanv(GL_COLOR_WRITEMASK, mask);
-            for (int i = 0; i < 4; i++) colorMask[i] = mask.get(i) != 0;
-            cachedViewport[0] = graphics.getViewportX(); cachedViewport[1] = graphics.getViewportY();
-            cachedViewport[2] = graphics.getViewportWidth(); cachedViewport[3] = graphics.getViewportHeight();
+            ByteBuffer mask = BufferUtils.createByteBuffer(4);
+            glGetBooleanv(GL_COLOR_WRITEMASK, mask);
+            for (int i = 0; i < 4; i++) {
+                colorMask[i] = mask.get(i) != 0;
+            }
+
+            cachedViewport[0] = graphics.getViewportX();
+            cachedViewport[1] = graphics.getViewportY();
+            cachedViewport[2] = graphics.getViewportWidth();
+            cachedViewport[3] = graphics.getViewportHeight();
+
             for (int i = 0; i < textures.length; i++) {
-                glActiveTexture(GL_TEXTURE0 + i); textures[i] = glGetInteger(GL_TEXTURE_BINDING_2D);
+                glActiveTexture(GL_TEXTURE0 + i);
+                textures[i] = glGetInteger(GL_TEXTURE_BINDING_2D);
                 textures1d[i] = glGetInteger(GL_TEXTURE_BINDING_1D);
             }
             glActiveTexture(activeTexture);
         }
+
         void restore(GraphicsManager graphics) {
-            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, drawFbo); glBindFramebuffer(GL_READ_FRAMEBUFFER, readFbo);
+            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, drawFbo);
+            glBindFramebuffer(GL_READ_FRAMEBUFFER, readFbo);
             glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
             glScissor(scissorBox[0], scissorBox[1], scissorBox[2], scissorBox[3]);
             graphics.setViewport(cachedViewport[0], cachedViewport[1], cachedViewport[2], cachedViewport[3]);
             glClearColor(clearColor[0], clearColor[1], clearColor[2], clearColor[3]);
             glColorMask(colorMask[0], colorMask[1], colorMask[2], colorMask[3]);
-            glBindVertexArray(vao); org.lwjgl.opengl.GL15.glBindBuffer(GL_ARRAY_BUFFER, arrayBuffer); glUseProgram(program);
+
+            glBindVertexArray(vao);
+            org.lwjgl.opengl.GL15.glBindBuffer(GL_ARRAY_BUFFER, arrayBuffer);
+            glUseProgram(program);
             glBindRenderbuffer(GL_RENDERBUFFER, renderbuffer);
-            glBindBuffer(GL_PIXEL_UNPACK_BUFFER, unpackBuffer); glPixelStorei(GL_UNPACK_ALIGNMENT, unpackAlignment);
-            glPixelStorei(GL_UNPACK_ROW_LENGTH, unpackRowLength); glPixelStorei(GL_UNPACK_SKIP_ROWS, unpackSkipRows);
+            glBindBuffer(GL_PIXEL_UNPACK_BUFFER, unpackBuffer);
+            glPixelStorei(GL_UNPACK_ALIGNMENT, unpackAlignment);
+            glPixelStorei(GL_UNPACK_ROW_LENGTH, unpackRowLength);
+            glPixelStorei(GL_UNPACK_SKIP_ROWS, unpackSkipRows);
             glPixelStorei(GL_UNPACK_SKIP_PIXELS, unpackSkipPixels);
-            graphics.setUseWaterShader(waterShader); graphics.setUseUnderwaterPaletteForBackground(underwaterBackground);
+
+            graphics.setUseWaterShader(waterShader);
+            graphics.setUseUnderwaterPaletteForBackground(underwaterBackground);
             graphics.setUseSpritePriorityShader(spritePriority);
+
             for (int i = 0; i < textures.length; i++) {
-                glActiveTexture(GL_TEXTURE0 + i); glBindTexture(GL_TEXTURE_2D, textures[i]); glBindTexture(GL_TEXTURE_1D, textures1d[i]);
+                glActiveTexture(GL_TEXTURE0 + i);
+                glBindTexture(GL_TEXTURE_2D, textures[i]);
+                glBindTexture(GL_TEXTURE_1D, textures1d[i]);
             }
-            glActiveTexture(activeTexture); glBlendEquationSeparate(eqRgb, eqAlpha);
+            glActiveTexture(activeTexture);
+
+            glBlendEquationSeparate(eqRgb, eqAlpha);
             glBlendFuncSeparate(srcRgb, dstRgb, srcAlpha, dstAlpha);
-            enabled(GL_BLEND, blend); enabled(GL_DEPTH_TEST, depth); enabled(GL_SCISSOR_TEST, scissor);
-            enabled(GL_STENCIL_TEST, stencil); enabled(GL_CULL_FACE, cull);
+            enabled(GL_BLEND, blend);
+            enabled(GL_DEPTH_TEST, depth);
+            enabled(GL_SCISSOR_TEST, scissor);
+            enabled(GL_STENCIL_TEST, stencil);
+            enabled(GL_CULL_FACE, cull);
         }
-        private static void enabled(int capability, boolean value) { if (value) glEnable(capability); else glDisable(capability); }
+
+        private static void enabled(int capability, boolean value) {
+            if (value) {
+                glEnable(capability);
+            } else {
+                glDisable(capability);
+            }
+        }
     }
 }
