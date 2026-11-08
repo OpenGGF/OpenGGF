@@ -485,7 +485,10 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
 
             // Create results sprite sheet and renderer
             List<SpriteMappingFrame> mappings = Sonic1ResultsMappingLoader.load(RomByteReader.fromRom(rom));
-            ObjectSpriteSheet sheet = new ObjectSpriteSheet(combinedPatterns, mappings, 0, 1);
+            ObjectSpriteSheet sheet = com.openggf.game.sonic1.Sonic1CharacterPresentation.results(
+                    rom, combinedPatterns, mappings,
+                    com.openggf.game.sonic1.Sonic1CharacterPresentation.active(), 12);
+            combinedPatterns = sheet.getPatterns();
             resultsRenderer = new PatternSpriteRenderer(sheet);
 
             // Load emerald art and create emerald renderer

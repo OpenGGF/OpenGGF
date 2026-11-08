@@ -54,6 +54,9 @@ class TestSonic1CharacterPresentation {
     @Test void actResultsReplaceOnlySonicWithNativeTitleLetters() throws Exception {
         assertResultsName(0);
     }
+    @Test void specialStageResultsReplaceOnlySonicAndKeepGotThemAll() throws Exception {
+        assertResultsName(12);
+    }
     private void assertResultsName(int frameIndex) throws Exception {
         Rom rom = rom();
         var frames = Sonic1ResultsMappingLoader.load(com.openggf.data.RomByteReader.fromRom(rom));
