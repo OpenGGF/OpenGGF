@@ -1009,3 +1009,71 @@ Continue sets, data-select portrait/team composition, snowboard and ending inven
 remain pending at this item-1 checkpoint. Byte-identical regeneration of all five
 PNGs and the manifest passes. The design-document disassembly citation check
 passes. Rebuild instructions are in the playable-art README, round 5 section.
+
+W7 native-pose pilot handoff (2026-11-08,
+`feature/ai-mica-art-native-pose`): owner-directed enlarge → GPT Image transform
+→ shared-palette reduction. The isolated
+`examples/mica-and-talon/art/mica/native-pose-pilot/` supplies 26 choices: six
+WAIT, eight flat WALK, four flat RUN, two SPRING, four ROLL, S3K HUD and S2 sign.
+Existing frames, assembled sheet and Java stay untouched. No merge or push.
+
+`tools/modding/playable_art/native_pose.py` reassembles stock S2 mapped player
+frames from the pinned uncompressed bank/DPLC, and decodes the S3K HUD/S2 sign
+with the existing Nemesis oracle under isolated Python. It emits transparent
+8× nearest-neighbour references, tight native bounds and engine-centre hotspots
+only into `/tmp`. Pins are recorded beside the exact transformation prompts in
+`provenance.json`; no decoded native art is committed. Each built-in GPT Image
+call receives its individual enlarged native pose plus the approved concept.
+Model identifier, token usage and billed cost are not exposed by this tool.
+
+`native_pose_pilot.py` uses the existing pipeline's connected-alpha cleanup,
+Lanczos reduction, fixed 15-colour assignment and inside silhouette ink. Local
+pixel corrections are recorded in `patches.json`; final native rows in
+`recipe.json` rebuild the indexed PNGs without temporary generation files.
+Review originals and four-column native/raw/reduced/current sheets at 1×/4×,
+plus WAIT/WALK/RUN paired GIFs, live in `/tmp/mica-native-pose-20261108/`.
+Raw review columns are normalized to native bounds but retain unquantized colour.
+WAIT uses MICA's actual authored script; WALK/RUN use native fastest one-tick
+steps with cumulative GIF-centisecond rounding. They do not certify all speeds.
+Both SPRING phases use the same native mapping; S2 has one launch drawing.
+
+Rollout estimate (planning assumptions, not a price quotation): the current
+inventory contains 62 nonslope core PNGs, 36 slopes, 28 presentation planes,
+65 stage variants, 53 continue images, one portrait, 13 snowboard images and
+64 ending PNGs: 322 existing files, including backing/fixed-palette/shared
+variants that should be deduplicated before transformation. Budget 250–330
+unique transformations plus 25–75% retries: roughly 315–580 generation calls.
+Allow 2–4 minutes of service time per call (10–39 serial service-hours),
+parallelizable in bounded batches; 35–70 hours of art/inspection/cleanup and
+10–20 hours for reference extraction, reduction and handoff: 45–90 active hours,
+roughly 6–12 working days. Broken down: core 8–14h; slopes 7–13h;
+presentation 3–6h; stages 5–9h; continue 6–11h; portrait 1–2h;
+snowboard 3–6h; endings 12–29h, including composite reference work.
+At a hypothetical effective $0.10–$0.25 per generation, 315–580 calls would
+cost $31.50–$145; actual built-in billing may differ and was not measured.
+This excludes runtime integration and route/background/contact certification.
+Per-frame generation improves shapes but needs cycle-level consistency review;
+independent calls must not automatically replace a coherent existing set.
+
+Visual assessment: the pilot WALK opens the stride and RUN follows the native
+boot arc more closely; the sign gains a softer, larger eye and layered hood.
+WAIT has richer scales but head size and tail angle wobble between independent
+calls. SPRING follows the low-glove native silhouette rather than the current
+raised-arm interpretation. ROLL exposes face/gloves/boots instead of the
+current closed armour ball, but some generated phases lose the exact native
+rotation. The sign glove and very small HUD eye still simplify at native size.
+The first HUD attempt was rejected for drawing a full body; the stricter
+head-only retry and original prompt are recorded. This pilot supports the new
+method as a source of better shapes and motion, with consistent head/scale
+clusters still requiring attention before a whole-set replacement. Light
+cleanup darkens selected pupils, restores eye whites and inks the blink; the
+rest remains generated and reduced rather than hand-redrawn.
+
+Verification for this checkpoint: isolated Python reference/containment tests and
+all 26 PNG palette/index/alpha/outline/native-size/hotspot checks pass (three
+unittest cases). Ordinary pipeline regeneration is byte-identical for the frame
+manifest and all 26 PNGs. The paired GIFs contain 15/8/4 frames, with total
+WAIT/WALK/RUN durations 4630/130/70ms after format rounding. Python compilation
+and whitespace checks pass. No Java build, bake, gameplay or route tests were
+run. The whole-tree citation diagnostic reports inherited stale/missing references;
+this handoff adds no numeric disassembly citations. Commit hooks check the delta.

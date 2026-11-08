@@ -247,3 +247,46 @@ pipeline's per-pose review GIF is illustrative; `WAIT-script-*.gif` contains the
 complete breathing/delay/fidget sequence. Runtime slope contact, the simpler
 crest clusters and the small spring mouth remain the main visual checks for
 integration. No Java build or GGFP bake was performed for this art-only pass.
+
+## Native-pose transformation pilot (W7)
+
+```sh
+python3 -I tools/modding/playable_art/native_pose.py --output /tmp/mica-native-pose-20261108/native
+# Built-in GPT Image: for EACH reference, pass <id>-8x.png + concept/mica.png.
+# Save raw MICA PNGs to /tmp/mica-native-pose-20261108/raw/<id>.png and
+# exact prompts as an id->prompt JSON object at /tmp/mica-native-pose-20261108/prompts.json.
+python3 -I tools/modding/playable_art/native_pose_pilot.py --review /tmp/mica-native-pose-20261108
+python3 -I tools/modding/playable_art/pipeline.py examples/mica-and-talon/art/mica/native-pose-pilot/recipe.json
+python3 -I tools/modding/playable_art/test_native_pose.py
+```
+
+The reference exporter restricts output to `/tmp`, uses pinned S2 player
+art/mappings/DPLC and the existing Nemesis oracle for S3K HUD/S2 sign tiles.
+The playable bank is already uncompressed in the pinned disassembly; it is
+assembled through its native DPLC and mapping pieces, never recompressed.
+Nemesis uses the reference decoder's bounded-header output with an eight-byte
+zero lookahead guard. `references.json` records mapping labels, native tight
+size, relative bounding box and hotspot; the 8× PNGs use nearest-neighbour.
+The sign reference includes native furniture as context, but the transformation
+prompt requests only MICA. No native pixels may enter the pilot or generated
+sources. Only transformed MICA pixel rows, final indexed PNGs, provenance,
+exact prompts and cleanup patches are retained in the repository.
+
+The pilot is isolated in `native-pose-pilot/` and is not assembled into the mod.
+Its `recipe.json` captures the final reduced pixel rows, making ordinary pipeline
+rebuilds independent of temporary raw generation files. Re-running reduction
+requires the raw files and native references in `/tmp`. `patches.json` uses
+reduced-frame-local coordinates. The review's raw column is the unquantized GPT
+alpha crop normalized to the target bounds; full-resolution originals are in
+`raw/`. Both sheet scales share engine-centre alignment, rather than aligning
+by crop corners. Each frame also has a separate four-column sheet.
+
+WAIT compares the existing authored MICA script, which is not stock S2 idle
+script timing. WALK/RUN use the fastest native speed-driven one-tick interval;
+there is no single fixed native walk period. GIF centiseconds are rounded
+cumulatively (10/20ms steps), preserving total cycle time as closely as possible.
+WAIT source poses are S2 mappings 1–6, not a claim that MICA's six semantic
+poses map perfectly onto Sonic's. Both SPRING phases use mapping $5B, because
+stock S2 has only one spring drawing. Presentation hotspots are canvas centres.
+Full runtime timing, contact, tile capacity and presentation palette composition
+remain integration work. This art-only workflow never builds Java.
