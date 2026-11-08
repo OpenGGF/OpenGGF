@@ -15,7 +15,7 @@ import java.util.Objects;
  */
 public final class RoutePlanner {
     /** Bumped when search semantics change; recorded in provenance. */
-    static final String PLANNER_REVISION = "prefix-search/2";
+    static final String PLANNER_REVISION = "prefix-search/3";
 
     private final RouteWorldFactory hosts;
     private final RouteWorldFactory draft;

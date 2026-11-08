@@ -551,6 +551,12 @@ public final class EditorProjectMenu {
     private void options(PixelFont font, Field field, int y) {
         var labels = field.choices().stream().map(value -> displayValue(field, value)).toList();
         int selectedOption = field.choices().indexOf(values.get(field.key()));
+        if (selectedOption < 0) {
+            // Imported/temporarily invalid values must not look like the first valid choice.
+            MenuChrome.compact(font, MenuChrome.fitCompact(displayValue(field, values.get(field.key())), valueWidth()),
+                    valueColumn(), y, MenuChrome.TEXT);
+            return;
+        }
         if (labels.size() == 1) {
             MenuStyle.text(font, labels.getFirst(), valueColumn(), y, valueWidth(), .88f, .92f, .98f); return;
         }

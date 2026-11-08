@@ -61,3 +61,23 @@ its next missing level-advance boundary is at moviecursor155218. Newly reached
 HTZ1/HTZ2 and their art gaps lack a matched pre-fix suffix and are not certified.
 Both existing ARZ2/CNZ2 level-select controls retain their passing outcomes.
 The original row7849 frontier in the table above is the historical before state.
+
+## Diagonal launcher capture and release follow-up, 2026-11-07
+
+The [native ordering audit](../../audits/2026-11-07-s2-diagonal-launcher-capture.md)
+records the independently reproduced CURRENT `8afbc8b7c` control, executed Obj85
+capture/decompression ordering and four discriminating two-player regressions.
+The diagonal spring now resolves each player's solid/capture checkpoint before
+its aggregate release decision, preserving a fresh P2's held-input veto and the
+native compression used for launch. The vertical variant and shared collision
+controller are unchanged; no persistent state is added.
+
+The continuous chain's CNZ2 segment is green on all13,045 actual compared rows:
+49,194 raw ERRORs are removed, zero are added, shared expected values are unchanged
+and row coverage is preserved. Conditional dynamic-art field sets remain explicit
+coverage differences. ARZ2's6,409 actual rows and both level-select controls are
+unchanged. The chain still stops at HTZ2 segment23/movie155218 with ten failing
+axes, including inherited physical and art-gap failures; no whole-route, pixel,
+donor/team or viewport certification is implied. Existing launcher graph rewind
+and focused collision/retail/source checks pass259 cases without skips. The
+previous row10361 paragraph is the historical before state for this correction.

@@ -38,6 +38,54 @@ class TestDirectConnectEndToEnd {
     private static final String FP = "0.6:cafe1234";
     private RaceRoomHost server;
     private LatencyProxy proxy;
+    private final java.util.Map<RaceClient, EventInbox> incoming = new java.util.IdentityHashMap<>();
+
+    /** A control wait and the ghost renderer consume the same coalesced socket batches. */
+    private static final class EventInbox {
+        private final java.util.function.Supplier<List<RaceClient.InboundEvent>> source;
+        private final java.util.ArrayDeque<RaceClient.InboundEvent> pending = new java.util.ArrayDeque<>();
+
+        EventInbox(java.util.function.Supplier<List<RaceClient.InboundEvent>> source) {
+            this.source = source;
+        }
+
+        RaceClient.InboundEvent poll(Predicate<RaceClient.InboundEvent> match) {
+            pending.addAll(source.get());
+            for (var iterator = pending.iterator(); iterator.hasNext();) {
+                RaceClient.InboundEvent event = iterator.next();
+                if (match.test(event)) {
+                    iterator.remove();
+                    return event;
+                }
+            }
+            return null;
+        }
+
+        List<RaceClient.InboundEvent> drain() {
+            pending.addAll(source.get());
+            var events = List.copyOf(pending);
+            pending.clear();
+            return events;
+        }
+    }
+
+    private EventInbox inbox(RaceClient client) {
+        return incoming.computeIfAbsent(client, key -> new EventInbox(key::drainInbound));
+    }
+
+    @org.junit.jupiter.api.Test
+    void controlWaitRetainsEarlierAndLaterInboundEvents() {
+        var before = new RaceClient.Control(new ControlMessage.Pong(1, 0));
+        var wanted = new RaceClient.Control(new ControlMessage.Pong(2, 0));
+        var after = new RaceClient.Control(new ControlMessage.Pong(3, 0));
+        var batches = new java.util.ArrayDeque<List<RaceClient.InboundEvent>>();
+        batches.add(List.of(before, wanted, after));
+        var inbox = new EventInbox(() -> batches.isEmpty() ? List.of() : batches.removeFirst());
+
+        assertEquals(wanted, inbox.poll(event -> event == wanted));
+        assertEquals(List.of(before, after), inbox.drain(),
+                "waiting for a control must retain other events for the next consumer");
+    }
 
     @AfterEach
     void tearDown() throws Exception {
@@ -45,14 +93,13 @@ class TestDirectConnectEndToEnd {
         if (server != null) server.close();
     }
 
-    private static RaceClient.InboundEvent await(
+    private RaceClient.InboundEvent await(
             RaceClient client, Predicate<RaceClient.InboundEvent> match,
             long timeoutMillis) throws InterruptedException {
         long deadline = System.currentTimeMillis() + timeoutMillis;
         while (System.currentTimeMillis() < deadline) {
-            for (RaceClient.InboundEvent event : client.drainInbound()) {
-                if (match.test(event)) return event;
-            }
+            RaceClient.InboundEvent event = inbox(client).poll(match);
+            if (event != null) return event;
             Thread.sleep(20);
         }
         throw new AssertionError("timed out waiting for inbound event");
@@ -67,7 +114,7 @@ class TestDirectConnectEndToEnd {
         return new GhostFrame(x, 100, 1, false, false, false, 2, false);
     }
 
-    private static void runAttempt(
+    private void runAttempt(
             RaceClient client, ControlledRaceHost clock, int attemptId,
             int frames, int timeFrames) throws Exception {
         GhostStreamPublisher publisher = new GhostStreamPublisher(client::sendBinary);
@@ -142,7 +189,7 @@ class TestDirectConnectEndToEnd {
         long ghostDeadline = System.currentTimeMillis() + 15_000;
         boolean rendered = playback.advance().isPresent();
         while (!rendered && System.currentTimeMillis() < ghostDeadline) {
-            for (RaceClient.InboundEvent event : guest.drainInbound()) {
+            for (RaceClient.InboundEvent event : inbox(guest).drain()) {
                 if (event instanceof RaceClient.GhostData ghost) {
                     ghost.aggregate().entries().forEach(playback::onEntry);
                 }

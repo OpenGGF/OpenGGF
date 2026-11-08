@@ -112,7 +112,13 @@ public final class RouteCodec {
             node.put("movie", entry.movie());
             node.put("prefixRows", entry.prefixRows());
             node.put("inputHash", entry.inputHash().sha256());
+            if (!entry.anchorBoundary().isEmpty()) {
+                node.put("engineAnchorRows", entry.engineAnchorRows());
+                node.put("anchorBoundary", entry.anchorBoundary());
+            }
         });
+        if (!manifest.nativeFacts().exportBlocker().isEmpty())
+            nativeNode.put("exportBlocker", manifest.nativeFacts().exportBlocker());
         ArrayNode lag = nativeNode.putArray("lag");
         for (NativeFacts.LagFact fact : manifest.nativeFacts().lag()) {
             ObjectNode node = lag.addObject();
@@ -168,13 +174,16 @@ public final class RouteCodec {
         NativeFacts facts = NativeFacts.NONE;
         if (root.has("native")) {
             JsonNode node = root.get("native");
-            object(node, "native", Set.of("entry", "lag"), Set.of());
+            object(node, "native", Set.of("entry", "lag", "exportBlocker"), Set.of());
             Optional<NativeFacts.NativeEntry> entry = Optional.empty();
             if (node.has("entry")) {
                 JsonNode e = node.get("entry");
-                object(e, "native entry", Set.of("movie", "prefixRows", "inputHash"), Set.of("movie", "prefixRows", "inputHash"));
+                object(e, "native entry", Set.of("movie", "prefixRows", "inputHash", "engineAnchorRows", "anchorBoundary"), Set.of("movie", "prefixRows", "inputHash"));
+                if (e.has("engineAnchorRows") != e.has("anchorBoundary"))
+                    throw new IOException("native entry needs both engineAnchorRows and anchorBoundary");
                 entry = Optional.of(new NativeFacts.NativeEntry(text(e, "movie"), integer(e, "prefixRows"),
-                        new ContentHash(text(e, "inputHash"))));
+                        new ContentHash(text(e, "inputHash")), e.has("engineAnchorRows") ? integer(e, "engineAnchorRows") : 0,
+                        optionalText(e, "anchorBoundary")));
             }
             var lag = new ArrayList<NativeFacts.LagFact>();
             if (node.has("lag")) {
@@ -184,7 +193,7 @@ public final class RouteCodec {
                             new ContentHash(text(l, "content"))));
                 }
             }
-            facts = new NativeFacts(entry, lag);
+            facts = new NativeFacts(entry, lag, optionalText(node, "exportBlocker"));
         }
         return new RouteManifest(launch, new ContentHash(text(tape, "sha256")), integer(tape, "rows"), checks, draft,
                 provenance, stamps, facts);
@@ -208,6 +217,7 @@ public final class RouteCodec {
         rom.put("sha1", launch.rom().sha1());
         ObjectNode inlet = node.putObject("inlet");
         switch (launch.inlet()) {
+            case Inlet.Title ignored -> inlet.put("kind", "title");
             case Inlet.ColdLevel cold -> {
                 inlet.put("kind", "cold-level");
                 inlet.put("zone", cold.level().zone());
@@ -251,6 +261,10 @@ public final class RouteCodec {
         var identity = new RomIdentity(game, Long.parseLong(text(rom, "crc32"), 16), text(rom, "sha1"));
         JsonNode inlet = node.get("inlet");
         Inlet parsedInlet = switch (text(inlet, "kind")) {
+            case "title" -> {
+                object(inlet, "inlet", Set.of("kind"), Set.of("kind"));
+                yield new Inlet.Title();
+            }
             case "cold-level" -> {
                 object(inlet, "inlet", Set.of("kind", "zone", "act", "showTitleCard"), Set.of("kind", "zone", "act"));
                 yield new Inlet.ColdLevel(new LevelId(game, integer(inlet, "zone"), integer(inlet, "act")),
@@ -346,6 +360,14 @@ public final class RouteCodec {
     private static ObjectNode predicate(SamplePredicate predicate) {
         ObjectNode node = MAPPER.createObjectNode();
         switch (predicate) {
+            case SamplePredicate.FactsEqual equal -> {
+                node.put("kind","facts-equal");node.put("left",equal.left());node.put("right",equal.right());
+            }
+            case SamplePredicate.FactEquals fact -> {
+                node.put("kind", "fact-equals");
+                node.put("key", fact.key());
+                node.put("value", fact.value());
+            }
             case SamplePredicate.PlayerIn in -> {
                 node.put("kind", "player-in");
                 node.put("player", in.player().name());
@@ -453,6 +475,14 @@ public final class RouteCodec {
 
     private static SamplePredicate predicate(JsonNode node) throws IOException {
         return switch (text(node, "kind")) {
+            case "facts-equal" -> {
+                object(node,"condition",Set.of("kind","left","right"),Set.of("kind","left","right"));
+                yield new SamplePredicate.FactsEqual(text(node,"left"),text(node,"right"));
+            }
+            case "fact-equals" -> {
+                object(node, "condition", Set.of("kind", "key", "value"), Set.of("kind", "key", "value"));
+                yield new SamplePredicate.FactEquals(text(node, "key"), integer(node, "value"));
+            }
             case "player-in" -> {
                 object(node, "condition", Set.of("kind", "player", "region"), Set.of("kind", "player", "region"));
                 ArrayNode r = array(node.get("region"), "region");

@@ -41,7 +41,10 @@ class TestS3kZoneKosRewind {
         var timing = GameServices.hardwareTiming();
         Sonic3kAIZEvents events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
         events.init(1);
-        invoke(events, "queueBattleshipKosArt");
+        Method queueArt = Sonic3kAIZEvents.class.getDeclaredMethod(
+                "queueBattleshipKosArt", boolean.class);
+        queueArt.setAccessible(true);
+        queueArt.invoke(events, true);
 
         List<HardwareWorkHandle> originalHandles = timing.pendingHandles();
         assertEquals(List.of(HardwareWorkKind.KOS_DECOMPRESSION_QUEUE,

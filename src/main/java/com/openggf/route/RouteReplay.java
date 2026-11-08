@@ -61,6 +61,14 @@ public final class RouteReplay {
                     if (failure != null) return new ReplayResult.Failed(i, check.name() + ": " + failure);
                 }
             }
+            var nativeEntry = route.manifest().nativeFacts().entry();
+            if (nativeEntry.isPresent() && !nativeEntry.get().anchorBoundary().isEmpty()) {
+                var entry = nativeEntry.get();
+                Integer observed = sample.facts().get("input.gameplayAnchorRows");
+                if (!entry.anchorBoundary().equals("first-ordinary-level-lfc-zero") || observed == null
+                        || observed != entry.engineAnchorRows())
+                    return new ReplayResult.Failed(tape.size(), "engine gameplay anchor disagrees with native export metadata");
+            }
             var coverage = new ArrayList<String>();
             coverage.add("rows");
             for (ReplayCheck check : checks) {

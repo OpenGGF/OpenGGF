@@ -215,6 +215,8 @@ public final class RouteEditorProtocol {
         return "rows " + text(script);
     }
 
+    public static String fact(String key, int value) { return "fact " + text(key) + " " + value; }
+
     public static String result(Result result) {
         return "result " + result.verdict() + ' ' + result.row() + ' ' + text(result.detail()) + ' '
                 + text(result.content());
@@ -222,7 +224,11 @@ public final class RouteEditorProtocol {
 
     /** One decoded response record: exactly one of the fields is set. */
     public record Response(Progress progress, Plan plan, Point point, Span span, Path saved, String rows,
-                           Result result, String planned, ScannedObject object) {
+                           Result result, String planned, ScannedObject object, java.util.Map<String,Integer> facts) {
+        public Response(Progress progress, Plan plan, Point point, Span span, Path saved, String rows,
+                        Result result, String planned, ScannedObject object) {
+            this(progress,plan,point,span,saved,rows,result,planned,object,java.util.Map.of());
+        }
         Response(Progress progress, Plan plan, Point point, Span span, Path saved, String rows, Result result) {
             this(progress, plan, point, span, saved, rows, result, null, null);
         }
@@ -247,6 +253,8 @@ public final class RouteEditorProtocol {
                 case "result" -> new Response(null, null, null, null, null, null, new Result(Verdict.valueOf(field[1]),
                         Integer.parseInt(field[2]), untext(field[3]), untext(field[4])));
                 case "planned" -> new Response(null, null, null, null, null, null, null, untext(field[1]), null);
+                case "fact" -> new Response(null,null,null,null,null,null,null,null,null,
+                        java.util.Map.of(untext(field[1]),Integer.parseInt(field[2])));
                 case "object" -> {
                     String[] o = untext(field[1]).split("\u001f", -1);
                     yield new Response(null, null, null, null, null, null, null, null, new ScannedObject(o[0],
