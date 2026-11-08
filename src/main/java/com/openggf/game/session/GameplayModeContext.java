@@ -89,6 +89,13 @@ public final class GameplayModeContext implements ModeContext {
 
     /** Engine-owned direction cleanup, separate from creator callbacks and their availability. */
     public com.openggf.game.mode.DirectedPlayerLease directedPlayerLease() { return directedPlayerLease; }
+    private final com.openggf.game.mode.ControlledFrameRuntime.PresentationOwner controlledPresentation =
+            new com.openggf.game.mode.ControlledFrameRuntime.PresentationOwner();
+
+    /** Engine-owned native destination title/assembly, separate from controller decisions. */
+    public com.openggf.game.mode.ControlledFrameRuntime.PresentationOwner controlledPresentation() {
+        return controlledPresentation;
+    }
     private final List<com.openggf.audio.AudioReplay> audioReplays = new ArrayList<>();
 
     /** Engine lifetime owner for controlled-mode PCM recordings; use CourseControl in creator code. */
@@ -399,6 +406,7 @@ public final class GameplayModeContext implements ModeContext {
         this.rewindRegistry.register(seamlessTransitionResourceHandoffs);
         this.rewindRegistry.register(camera);
         this.rewindRegistry.register(com.openggf.camera.CameraSubpixelAccess.rewindAdapter(camera));
+        this.rewindRegistry.register(controlledPresentation);
         this.rewindRegistry.register(directedPlayerLease);
         this.rewindRegistry.registerPostRestoreCallback(directedPlayerLease.key(), directedPlayerLease::afterRestore);
         this.rewindRegistry.register(gameStateManager);
@@ -1331,6 +1339,7 @@ public final class GameplayModeContext implements ModeContext {
         managersTearingDown = true;
         var cleanup = new GameplayCleanup();
         // Native state is still available here even if the creator controller is quarantined.
+        cleanup.run(controlledPresentation::resetForMissingSnapshot);
         cleanup.run(directedPlayerLease::abort);
         managersTornDown = true;
         scheduledPlaybackInputPublisher = null;

@@ -538,6 +538,61 @@ class TestObjectPhysicsStandardizationGuard {
     }
 
     @Test
+    void rewindIdentityRosterReadIsLimitedToItsRegistrationMethodAndOwner() {
+        SourceText source = ObjectGuardSourceScanner.sourceWithoutCommentOnlyLines(List.of(
+                "class Sample {",
+                "  private void registerPlayersInto(Table table) {",
+                "    List<PlayableEntity> serviceSidekicks = services.sidekicks();",
+                "  }",
+                "}"));
+        assertEquals(List.of(), scanSource("com/openggf/level/objects/ObjectRewindLifecycle.java", source));
+        assertEquals(List.of(new SourceViolation("com/openggf/level/objects/Sample.java",
+                        "List<PlayableEntity> serviceSidekicks = services.sidekicks();",
+                        ViolationKind.RAW_NATIVE_P2_SIDEKICK_ACCESS)),
+                scanSource("com/openggf/level/objects/Sample.java", source));
+
+        SourceText outsideRegistration = ObjectGuardSourceScanner.sourceWithoutCommentOnlyLines(List.of(
+                "class Sample {",
+                "  private void registerPlayersInto(Table table) {}",
+                "  void update() {",
+                "    List<PlayableEntity> serviceSidekicks = services.sidekicks();",
+                "  }",
+                "}"));
+        assertEquals(List.of(new SourceViolation("com/openggf/level/objects/ObjectRewindLifecycle.java",
+                        "List<PlayableEntity> serviceSidekicks = services.sidekicks();",
+                        ViolationKind.RAW_NATIVE_P2_SIDEKICK_ACCESS)),
+                scanSource("com/openggf/level/objects/ObjectRewindLifecycle.java", outsideRegistration));
+    }
+
+    @Test
+    void rewindIdentityOwnerStillRejectsNativeP2ShortcutsAndRawAdmission() {
+        String path = "com/openggf/level/objects/ObjectRewindLifecycle.java";
+        SourceText source = ObjectGuardSourceScanner.sourceWithoutCommentOnlyLines(List.of(
+                "class Sample {",
+                "  private void registerPlayersInto(Table table) {",
+                "    List<PlayableEntity> serviceSidekicks = services.sidekicks();",
+                "    var p2 = serviceSidekicks.getFirst();",
+                "    manager.addDynamicObjectAtSlot(object, 0);",
+                "  }",
+                "}"));
+        assertEquals(List.of(
+                        new SourceViolation(path, "var p2 = serviceSidekicks.getFirst();",
+                                ViolationKind.RAW_NATIVE_P2_SIDEKICK_ACCESS),
+                        new SourceViolation(path, "manager.addDynamicObjectAtSlot(object, 0);",
+                                ViolationKind.DIRECT_LIFECYCLE_OPERATION)),
+                scanSource(path, source));
+    }
+
+    @Test
+    void rewindIdentityRegistrationPreservesTheFullIndexedRoster() throws IOException {
+        String body = methodBody(source("com/openggf/level/objects/ObjectRewindLifecycle.java"),
+                "registerPlayersInto");
+        assertTrue(body.contains("for (int i = 0; i < sidekicks.size(); i++)"));
+        assertTrue(body.contains("table.registerPlayer(sidekick, com.openggf.game.rewind.identity.PlayerRefId.sidekick(i))"));
+        assertTrue(body.contains("table.registerPlayer(main, com.openggf.game.rewind.identity.PlayerRefId.mainPlayer())"));
+    }
+
+    @Test
     void guardDetectsDirectLifecycleOperationInSampleSource() {
         SourceText source = ObjectGuardSourceScanner.sourceWithoutCommentOnlyLines(List.of(
                 "class Sample {",
@@ -800,7 +855,8 @@ class TestObjectPhysicsStandardizationGuard {
                 violations.add(new SourceViolation(path, trimmed,
                         ViolationKind.DIRECT_OBJECT_CONTROL_SETTER));
             }
-            if (physicsStandardizationPath && isRawNativeP2SidekickAccess(trimmed, nativeP2SidekickAliases)) {
+            if (physicsStandardizationPath && isRawNativeP2SidekickAccess(trimmed, nativeP2SidekickAliases)
+                    && !isRewindIdentityRosterRead(path, source, trimmed)) {
                 violations.add(new SourceViolation(path, trimmed,
                         ViolationKind.RAW_NATIVE_P2_SIDEKICK_ACCESS));
             }
@@ -822,6 +878,19 @@ class TestObjectPhysicsStandardizationGuard {
             }
         }
         return violations;
+    }
+
+    private static boolean isRewindIdentityRosterRead(String path, SourceText source, String line) {
+        if (!path.equals("com/openggf/level/objects/ObjectRewindLifecycle.java")
+                || !line.equals("List<PlayableEntity> serviceSidekicks = services.sidekicks();")
+                || !source.text().contains("void registerPlayersInto(")) {
+            return false;
+        }
+        // Stable PlayerRefId.sidekick(i) registration needs every roster index,
+        // rather than a native Player_2 selection. Admit this one read only in
+        // its identity owner; alias use and all other operations remain scanned.
+        return methodBody(source, "registerPlayersInto").contains(line)
+                && source.text().indexOf(line) == source.text().lastIndexOf(line);
     }
 
     private static Map<String, Integer> scanLifecycleRatchetSource(String path, SourceText source) throws IOException {

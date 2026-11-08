@@ -1039,7 +1039,7 @@ A known cosmetic consequence at widescreen: when the camera is locked at `maxX`,
 
 ## Object Despawn and Visibility Windows
 
-**Location:** `AbstractObjectInstance.isInRange()`, `AbstractObjectInstance.isChkObjectVisible()`
+**Location:** `ObjectRangeOps`, `AbstractObjectInstance.isInRangeAt()`, `AbstractObjectInstance.isChkObjectVisible()`, `ObjectManager.isOutOfRangeS1()`
 **ROM Reference:** `Macros.asm` (`out_of_range` macro: `cmpi.w #128+320+192,d0`); `docs/s1disasm/_incObj/sub ChkObjectVisible.asm`
 
 ### Original Implementation
@@ -1052,7 +1052,7 @@ Both constants encode the native Mega Drive screen dimensions: 320 × 224 pixels
 
 ### Our Implementation
 
-Both limits are derived from the cached `cameraBounds` rectangle rather than hardcoded constants:
+The object-side range and visibility helpers use the cached `cameraBounds` rectangle. The shared unsigned calculation lives in `ObjectRangeOps`; its caller chooses the bound:
 
 ```java
 // isInRange — despawn window scales with viewport width
@@ -1066,7 +1066,18 @@ if (dx < 0 || dx >= viewportWidth)  return false;
 return dy >= 0 && dy < viewportHeight;
 ```
 
-`cameraBounds` is updated once per frame by `ObjectManager.updateCameraBounds()` from `camera.getX() / getY() / getWidth() / getHeight()`, so the window always matches the configured viewport.
+`cameraBounds` is updated once per frame by `ObjectManager.updateCameraBounds()` from `camera.getX() / getY() / getWidth() / getHeight()`, so these object-side helpers use the configured viewport.
+
+The manager's standard S1 counter-placement check keeps the native bound **640**
+even at widescreen. Its other legacy paths select the viewport-aware bound;
+injected per-game windowing strategies keep their own rules. An object's
+`isPersistent()` hook can veto manager range retirement. Buzz Bomber uses that
+hook with its live X and the viewport-aware helper: at width 528, the helper's
+bound is **848**, so coarse distance 768 is retained even when the manager's
+native bound rejects it. This is an existing caller-policy difference, not a
+second arithmetic implementation. A different reference X alone belongs in
+`getOutOfRangeReferenceX()`. Render-flag visibility and object-owned self-delete
+routines retain their separate semantics.
 
 Objects that run their own `Sprite_OnScreen_Test2`-style delete-touch check
 (FBZ screw doors, elevator cars, magnetic spike balls and pendulums, platform
@@ -1078,7 +1089,7 @@ same `$80 + viewportWidth + $C0` window (`$280` at native width). A bare
 them at 640 and 800 pixels. Objects with a ROM-specific range (the FBZ piston's
 travel-derived `$200 + travel`) keep their own constant.
 
-**Load-ahead window is capped (intentionally narrower than the despawn window).** The despawn/visibility windows above scale by the *full* viewport width so on-screen objects at the wider right edge are never culled. The *spawn load-ahead* window (`AbstractPlacementManager.loadAheadFor`), however, grows only by the minimum pre-load lead — `max(320 + extraAhead, viewportWidth + 128)` — NOT by `viewportWidth + extraAhead`. The object slot pool is a fixed ROM-sized table (`ObjectSlotLayout`: S1=96, S2=112, S3K=89); a window that grew by the full extra width overran the pool in dense areas, so `allocateSlot()` returned −1 and spawns were silently dropped (objects intermittently failing to load when scrolling right at widescreen, in all games). Capping the load-ahead keeps the live-object count close to native (≈+2% at ULTRA_21_9 vs +27% before) so the pool no longer overruns, while the wider despawn/visibility windows still prevent right-edge culling. This narrower load window is deliberate — do not widen it to match the despawn window. Native (320) is byte-identical (load-ahead = `0x280`).
+**Load-ahead window is capped (intentionally narrower than the despawn window).** The viewport-aware despawn/visibility helpers above scale by the *full* viewport width. The *spawn load-ahead* window (`AbstractPlacementManager.loadAheadFor`), however, grows only by the minimum pre-load lead — `max(320 + extraAhead, viewportWidth + 128)` — NOT by `viewportWidth + extraAhead`. The object slot pool is a fixed ROM-sized table (`ObjectSlotLayout`: S1=96, S2=112, S3K=89); a window that grew by the full extra width overran the pool in dense areas, so `allocateSlot()` returned −1 and spawns were silently dropped (objects intermittently failing to load when scrolling right at widescreen, in all games). Capping the load-ahead keeps the live-object count close to native (≈+2% at ULTRA_21_9 vs +27% before) so the pool no longer overruns, while viewport-aware lifetime and visibility callers retain their wider windows. This narrower load window is deliberate — do not widen it to match the despawn window. Native (320) is byte-identical (load-ahead = `0x280`).
 
 Stage rings in Sonic 2 and Sonic 3 & Knuckles use their separate raw-camera
 window: `[cameraX - 8, cameraX + viewportWidth + 8)`, with the existing left
@@ -1116,11 +1127,25 @@ At `DISPLAY_ASPECT = NATIVE_4_3` (viewport width 320, height 224):
 
 ### Rationale
 
-At widescreen viewport widths (e.g. `ULTRA_21_9` = 528 px) the ROM's hardcoded 640 despawn distance is smaller than the distance from the camera to the visible right edge of the widened viewport (~656 px), causing objects near the right edge to be incorrectly deleted mid-screen. Similarly, `ChkObjectVisible` with `dx >= 320` would report objects past the native right edge as invisible even though they are fully in view. Scaling both checks with `viewportWidth` is the correct design decision for the widescreen extension — an object genuinely in view on the wider screen must not be culled or despawned. Note this is the opposite of the [Right-Boundary Is Viewport-Independent (Level Edge)](#right-boundary-is-viewport-independent-level-edge) entry above: despawn/visibility track what is *on screen* (so they widen), whereas the right level boundary tracks the *level's wall* (so it stays native).
+Viewport-aware lifetime and visibility helpers allow their callers to keep
+objects across the wider screen. `ChkObjectVisible` with the native `dx >= 320`
+would otherwise reject positions visible at width 528. The lifetime extension
+preserves the ROM's chunk alignment and unsigned comparison while changing the
+selected bound from 640 to 848 at that width. S1 counter placement still uses its
+native bound; object-specific persistence decides whether a wider lifetime
+applies. Preserve that decision at each caller. The
+[Right-Boundary Is Viewport-Independent (Level Edge)](#right-boundary-is-viewport-independent-level-edge)
+entry describes the separate level-wall boundary, which remains native.
 
 ### Verification
 
 `TestObjectViewportWindowWidth` covers all four cases: native `isInRange` at 640 and just past, widescreen `isInRange` at 768 (in range) and 896 (out of range); native `isChkObjectVisible` at dx/dy just inside and at exclusive bounds; widescreen `isChkObjectVisible` at dx=321/400 (visible past old 320 limit) and dx=528 (invisible at exclusive widescreen bound).
+
+`TestBuzzBomberLifecycle` covers the production badnik's current-position and
+manager-retirement boundary, including survival between the native and widened
+bounds and retirement after movement beyond both. `TestObjectRangeHelpers` and
+`TestAbstractObjectInstanceRange` cover unsigned word wrap; anchored-object and
+Stageplay checks remain separate caller-policy coverage.
 
 ### Removal Condition
 
@@ -3430,7 +3455,11 @@ Tier one (no dump) instead:
   `$33F06E`/`$33F74C`), with one logged warning per act.
 - Uses the S&K `ArtNem_KnucklesLifeIcon` for the HUD and 1-up monitor face
   and keeps the stock signpost, monitor icons, shield/stars, continue icon
-  and underwater palettes.
+  and underwater palettes. The icon's head is S&K's drawing, converted
+  through `ArtConvTable`; its "K.T.E" name was drawn for S&K's palette
+  line 1 and is recoloured to the chip name's line-0 colours, which makes it
+  identical to the chip's name tiles (`KnucklesLifeIconConversion`,
+  `TestKis2LivesNameColours`).
 
 Known deviations from the shipped lock-on game in both tiers (each cites
 the owning KiS2 routine in the catalogue):

@@ -159,8 +159,10 @@ class TraceCapturePresentationSetupTest {
     void promotionalCaptureRendersWithoutNativeScanlineLimitsAndRestoresTheCaller(boolean callerEnabled) {
         configuration.setConfigValue(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT, callerEnabled);
         var caller = TraceCapturePresentationSetup.snapshot(configuration);
-        try (var ignored = TraceCapturePresentationSetup.open(configuration,
-                TraceCaptureDimensions.resolve(320, 1), caller, false)) {
+        try (var setup = TraceCapturePresentationSetup.open(configuration,
+                TraceCaptureDimensions.resolve(320, 1), caller)) {
+            assertTrue(configuration.getBoolean(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT));
+            setup.disableNativeSpriteLimits();
             assertFalse(configuration.getBoolean(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT));
         }
         assertEquals(callerEnabled,

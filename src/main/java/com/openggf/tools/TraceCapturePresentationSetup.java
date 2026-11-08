@@ -40,25 +40,15 @@ final class TraceCapturePresentationSetup implements AutoCloseable {
 
     static TraceCapturePresentationSetup open(SonicConfigurationService configuration,
             TraceCaptureDimensions dimensions, CallerState callerState) {
-        return open(configuration, dimensions, callerState, true);
-    }
-
-    /**
-     * {@code nativeSpriteLimits=false} renders without native sprite dropout, as normal
-     * play does by default; promotional footage uses it, ROM image comparison does not.
-     */
-    static TraceCapturePresentationSetup open(SonicConfigurationService configuration,
-            TraceCaptureDimensions dimensions, CallerState callerState, boolean nativeSpriteLimits) {
         Objects.requireNonNull(configuration, "configuration");
         Objects.requireNonNull(dimensions, "dimensions");
         Objects.requireNonNull(callerState, "callerState");
         Object previousAspect = callerState.aspect();
         Object previousTestMode = callerState.testMode();
         Object previousScanlineLimit = callerState.scanlineLimit();
-        var setup = new TraceCapturePresentationSetup(configuration, previousAspect, previousTestMode, previousScanlineLimit);
-        try (var rollback = new Rollback(setup)) {
+        try {
             // ROM image comparisons need native dropout even when normal play disables it.
-            configuration.setConfigValue(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT, nativeSpriteLimits);
+            configuration.setConfigValue(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT, true);
             if (configuration.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)) {
                 configuration.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
             }
@@ -70,7 +60,11 @@ final class TraceCapturePresentationSetup implements AutoCloseable {
                 throw new IllegalStateException("capture presentation resolved width "
                         + resolvedWidth + " instead of " + dimensions.logicalWidth());
             }
-            return rollback.commit();
+            return new TraceCapturePresentationSetup(configuration, previousAspect, previousTestMode, previousScanlineLimit);
+        } catch (Throwable failure) {
+            try { restore(configuration, previousAspect, previousTestMode, previousScanlineLimit); }
+            catch (Throwable cleanup) { failure.addSuppressed(cleanup); }
+            throw rethrow(failure);
         }
     }
 
@@ -78,27 +72,24 @@ final class TraceCapturePresentationSetup implements AutoCloseable {
     static TraceCapturePresentationSetup open(SonicConfigurationService configuration,
             TraceCaptureDimensions dimensions, CallerState callerState,
             com.openggf.audio.AudioManager audio, int requestedFps) {
-        return open(configuration, dimensions, callerState, audio, requestedFps, true);
-    }
-
-    static TraceCapturePresentationSetup open(SonicConfigurationService configuration,
-            TraceCaptureDimensions dimensions, CallerState callerState,
-            com.openggf.audio.AudioManager audio, int requestedFps, boolean nativeSpriteLimits) {
-        var setup = open(configuration, dimensions, callerState, nativeSpriteLimits);
-        try (var rollback = new Rollback(setup)) {
+        var setup = open(configuration, dimensions, callerState);
+        try {
             int hz = com.openggf.configuration.FrameRateResolver.simulation(configuration) == 50 ? 50 : requestedFps;
             setup.audioCadence = com.openggf.audio.AudioManagerInternalAccess.offlineServiceCadence(audio, hz);
-            return rollback.commit();
+            return setup;
+        } catch (Throwable failure) {
+            try { setup.close(); } catch (Throwable cleanup) { failure.addSuppressed(cleanup); }
+            throw rethrow(failure);
         }
     }
 
-    /** Java's resource boundary preserves the original failure and suppresses cleanup failure. */
-    private static final class Rollback implements AutoCloseable {
-        private final TraceCapturePresentationSetup setup;
-        private boolean committed;
-        Rollback(TraceCapturePresentationSetup setup) { this.setup = setup; }
-        TraceCapturePresentationSetup commit() { committed = true; return setup; }
-        @Override public void close() { if (!committed) setup.close(); }
+    /**
+     * Render this capture without native sprite dropout, as normal play does by default.
+     * Promotional footage uses it; ROM image comparison keeps the limits {@link #open}
+     * enforces. Closing restores the caller's setting either way.
+     */
+    void disableNativeSpriteLimits() {
+        configuration.setConfigValue(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT, false);
     }
 
     @Override

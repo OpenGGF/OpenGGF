@@ -45,7 +45,7 @@ final class ObjectStageplayController {
 
     void activateWindows(Camera camera, BooleanSupplier freeSlot, Predicate<ObjectSpawn> admit) {
         if (objects.stageplayActivation == null) return;
-        objects.placement.activateStageplayWindows(sourceSpawns, objects.activeObjects.keySet(), camera,
+        objects.placement.activateStageplayWindows(sourceSpawns, objects.population().placed.keySet(), camera,
                 objects::stageplayAllowsPlacement, freeSlot, admit);
     }
 
@@ -56,7 +56,7 @@ final class ObjectStageplayController {
     }
 
     Optional<ObjectInstance> find(StageplayObjectDirection.PlacementIdentity identity) {
-        return objects.activeObjects.entrySet().stream()
+        return objects.population().placed.entrySet().stream()
                 .filter(entry -> entry.getKey().layoutIndex() >= 0 && identity(entry.getKey()).equals(identity))
                 .map(java.util.Map.Entry::getValue).findFirst();
     }
@@ -70,7 +70,7 @@ final class ObjectStageplayController {
 
     void retire(ObjectInstance object) {
         objects.suspendStageplayContacts(object);
-        ObjectSpawn placementSpawn = objects.instanceToSpawn.get(object);
+        ObjectSpawn placementSpawn = objects.population().spawnByInstance.get(object);
         objects.releaseSlotIfManaged(object);
         if (object instanceof AbstractObjectInstance nativeObject)
             ObjectLifetimeOps.clearPreviousManagerSlot(nativeObject);

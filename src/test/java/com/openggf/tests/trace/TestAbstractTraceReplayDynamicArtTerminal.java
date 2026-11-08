@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.zip.GZIPInputStream;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -31,6 +32,7 @@ class TestAbstractTraceReplayDynamicArtTerminal
     Path tempDir;
     private Path activeTrace;
     private Path activeReports;
+    private int reportPublications;
 
     @AfterEach
     void clearFrontierProperties() {
@@ -51,6 +53,7 @@ class TestAbstractTraceReplayDynamicArtTerminal
 
         assertThrows(AssertionError.class, super::replayMatchesTrace);
 
+        assertEquals(1, reportPublications, "a divergent replay publishes its final report once");
         String report = Files.readString(reportPath());
         assertTrue(report.contains("\"field\" : \"dynamic_art.frame\""));
         assertTrue(report.contains("\"end_frame\" : " + FINAL_FRAME),
@@ -66,6 +69,7 @@ class TestAbstractTraceReplayDynamicArtTerminal
 
         assertThrows(AssertionError.class, super::replayMatchesTrace);
 
+        assertEquals(1, reportPublications, "an early frontier publishes its final report once");
         String report = Files.readString(reportPath());
         assertTrue(report.contains("\"field\" : \"dynamic_art.frame\""));
         assertFalse(report.contains("\"end_frame\" : " + FINAL_FRAME),
@@ -83,6 +87,7 @@ class TestAbstractTraceReplayDynamicArtTerminal
     private void prepareAdvertisedFixture() throws IOException {
         activeTrace = tempDir.resolve("trace");
         activeReports = tempDir.resolve("reports");
+        reportPublications = 0;
         Files.createDirectories(activeTrace);
         // The committed payload is gzipped -- TestTraceFixtureCompressionGuard
         // forbids an uncompressed physics.csv under src/test/resources/traces,
@@ -147,5 +152,9 @@ class TestAbstractTraceReplayDynamicArtTerminal
     @Override protected int zone() { return 0; }
     @Override protected int act() { return 0; }
     @Override protected Path traceDirectory() { return activeTrace; }
-    @Override protected Path reportOutputDir() { return activeReports; }
+    @Override
+    protected Path reportOutputDir() {
+        reportPublications++;
+        return activeReports;
+    }
 }

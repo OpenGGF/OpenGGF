@@ -3215,7 +3215,7 @@ than as an occupancy defect -- so when a single reward in a batch is late and th
 rest are on cadence, check the parent's slot before the child's timer.
 
 **Diagnostic that settles it in one run.** Probe the object's phase machine each
-dispatch AND probe `ObjectManager.unloadCounterBasedOutOfRange` for that class. If the
+dispatch AND probe `ObjectManager.unloadIfOutsideLifetimeWindow` for that class. If the
 phase log simply stops with a countdown still running, and the unload probe's last line
 is `outOfRange=true custom=false`, you have it.
 

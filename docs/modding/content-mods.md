@@ -469,9 +469,15 @@ Initial setup rows are excluded from movie/history input; subsequent HOLD rows
 are included. Released native title-card text continues its presentation exit,
 including its normal control-lock ownership, on controlled rows. Pending entry
 music also retains its native presentation countdown. Native destination fades remain
-host-owned presentation work while the source world is held. Modal `LevelInputOverlay`
-input is dispatched before configured host pause. `presentationReady()`
-waits for the entry fade and title overlay to finish; capture the first reusable
+host-owned presentation work while the source world is held. A requested native destination
+retains its normal title and assembly: controlled rows service that presentation even under
+HOLD, and admit native or controlled gameplay input only after its production release and
+player assembly. Those presentation rows report `afterTick(false)`; their native title/PLC
+clocks may advance without counting as destination gameplay. `finishInitialPresentation()`
+explicitly omits a still-pending initial card; HOLD alone does not omit it. Released overlay
+text can continue over gameplay. Modal `LevelInputOverlay` input is dispatched before
+configured host pause. `presentationReady()` waits for native loading, pending and active
+initial title work, player assembly, the entry fade and title overlay to finish; capture the first reusable
 course checkpoint after that boundary so rollback cannot bring an entry card back.
 `advanceEntryPresentation()` returns whether it serviced an active fade on this
 row. A mode can settle its initial ball through those fade rows, then hold the

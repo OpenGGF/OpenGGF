@@ -241,4 +241,19 @@ class TestObjectRangeHelpers {
         assertFalse(obj.checkIsInRange(),     "isInRange() on getX()=768 must be false");
         assertTrue(obj.checkIsInRangeAt(640), "isInRangeAt(640) must be true at native limit 640");
     }
+
+    @Test
+    void explicitBoundsPreserveNativeAndWidescreenEdgesAcrossSignedCameraWrap() {
+        int cameraX = Short.MIN_VALUE;
+        int wideBound = ObjectRangeOps.viewportOutOfRangeBound(528);
+
+        // Camera's coarse word is $7F80. These chunks have unsigned distances
+        // $280, $300 and $380 even though the camera's Java short is negative.
+        assertFalse(ObjectRangeOps.outOfRangeX(0x827F, cameraX));
+        assertTrue(ObjectRangeOps.outOfRangeX(0x8280, cameraX));
+        assertFalse(ObjectRangeOps.outOfRangeX(0x82FF, cameraX, wideBound));
+        assertTrue(ObjectRangeOps.outOfRangeX(0x8300, cameraX, wideBound));
+        assertTrue(ObjectRangeOps.outOfRangeX(0x7F00, cameraX, wideBound),
+                "the chunk left of the camera base must still wrap to an unsigned rejection");
+    }
 }

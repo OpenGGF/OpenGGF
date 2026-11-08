@@ -147,6 +147,12 @@ final class ObjectCallbackRouter {
 
         boolean isFor(ObjectInstance instance) { return receiver == instance; }
 
+        void runRetirement(Runnable callback) {
+            var original = initialDispatch != null ? initialDispatch.currentReservation() : null;
+            callWithOwner(owner, () -> { callback.run(); return null; });
+            InitialObjectDispatchController.requireCurrent(original);
+        }
+
         void invoke() {
             if (!(receiver instanceof AbstractObjectInstance instance)) return;
             // Only this exact removal receiver may reuse this router's active owner.
@@ -307,7 +313,7 @@ final class ObjectCallbackRouter {
     }
 
     String describeCounterBasedUnloadObject(ObjectInstance instance, ObjectSpawn spawn) {
-        StringBuilder sb = new StringBuilder("Counter-based out_of_range check failed for ");
+        StringBuilder sb = new StringBuilder("Object out_of_range check failed for ");
         sb.append(instance.getClass().getName());
         if (instance instanceof AbstractObjectInstance aoi) {
             sb.append(" slot=").append(call(instance, aoi::getSlotIndex));

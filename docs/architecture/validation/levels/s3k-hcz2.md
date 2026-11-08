@@ -1,5 +1,20 @@
 # S3K Hydrocity Act 2 coverage matrix
 
+Contributor cleanup (2026-11-07): `Sonic3kHCZEvents` retains the next shake
+locally and publishes the preceding value once; post-physics end signalling
+cannot repeat wall movement or the timer decrement. `TestSonic3kHCZEvents`
+adds natural stop/countdown, timed exit/transition/refresh, absent and disappearing
+handler, and post-physics-only fallback witnesses. The signed countdown follows
+`ScreenShakeArray`; these component checks supplement the existing whole-world
+moving-wall rewind witness. Exact executions and the act-spanning replay
+comparison belong to the [cleanup audit](../../audits/2026-11-06-ai-code-climb.md#next-increment-remaining-contributor-paths-2026-11-07).
+The final combined selection passed 372 cases without skips, including these
+component and full-world rewind witnesses. Baseline/candidate act-spanning HCZ2
+reports are exactly equal: 26 inherited errors at frame 6640, 14,149 compared
+rows and reached 14,208-row gate; eight advertised aux schemas are absent.
+The route, viewport, donor, team and audiovisual gaps below remain inherited;
+this cleanup does not certify the act.
+
 Screen-shake maintenance (2026-11-03):
 `TestSonic3kHCZEvents.wallShakePublishesPreviousSetupAndRestoresPendingPhase`
 checks the HCZ2 screen-event/setup ordering and restored pending phase; the existing

@@ -1,18 +1,17 @@
 package com.openggf.tools;
 
 import com.openggf.game.GameServices;
+import com.openggf.game.rewind.LiveRewindManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.game.recording.UserRecordingHud;
 import com.openggf.game.recording.UserRecordingHudState;
 import com.openggf.graphics.PixelFontTextRenderer;
-import com.openggf.graphics.PixelFontVariant;
 import com.openggf.graphics.RgbaImage;
 import com.openggf.graphics.ScreenshotCapture;
 import com.openggf.mods.scene.host.SceneSurface;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.function.Supplier;
 
 import static org.lwjgl.opengl.GL11.glFinish;
 
@@ -51,33 +50,20 @@ public final class TransportHudDesignCaptureTool {
             text.setProjectionMatrix(SceneSurface.projection(width, 224));
             // Reach the existing package-private drawing owner without adding a runtime API.
             var type = Class.forName("com.openggf.game.rewind.LiveRewindHudOverlay");
-            var constructor = type.getDeclaredConstructor(Supplier.class);
-            constructor.setAccessible(true);
-            var render = type.getDeclaredMethod("render", PixelFontTextRenderer.class, GraphicsManager.class, int.class);
+            var render = type.getDeclaredMethod("render", PixelFontTextRenderer.class, GraphicsManager.class,
+                    int.class, Integer.class, LiveRewindManager.BudgetHudState.class);
             render.setAccessible(true);
-            Object rewind = constructor.newInstance((Supplier<String>) () -> "REWIND 1248");
-            // Finite budget states, built through the runtime's BudgetHudState record.
-            var budgetType = Class.forName("com.openggf.game.rewind.LiveRewindManager$BudgetHudState");
-            var budgetConstructor = budgetType.getDeclaredConstructor(boolean.class, boolean.class, int.class, int.class, boolean.class);
-            budgetConstructor.setAccessible(true);
-            var budgetOverlay = type.getDeclaredConstructor(Supplier.class, Supplier.class);
-            budgetOverlay.setAccessible(true);
-            Object full = budgetOverlay.newInstance((Supplier<String>) () -> "REWIND 1248",
-                    (Supplier<Object>) () -> budget(budgetConstructor, 600, false));
-            Object mid = budgetOverlay.newInstance((Supplier<String>) () -> "REWIND 1248",
-                    (Supplier<Object>) () -> budget(budgetConstructor, 384, false));
-            Object low = budgetOverlay.newInstance((Supplier<String>) () -> "REWIND 1248",
-                    (Supplier<Object>) () -> budget(budgetConstructor, 107, false));
-            // Denied press: no active rewind, so the frame status is absent.
-            Object empty = budgetOverlay.newInstance((Supplier<String>) () -> null,
-                    (Supplier<Object>) () -> budget(budgetConstructor, 0, true));
+            var full = budget(600, false);
+            var mid = budget(384, false);
+            var low = budget(107, false);
+            var empty = budget(0, true);
             try {
                 save(session, out, width, "00-gameplay", () -> { });
-                save(session, out, width, "04-live-rewind", () -> render.invoke(rewind, text, GameServices.graphics(), width));
-                save(session, out, width, "05-rewind-budget-full", () -> render.invoke(full, text, GameServices.graphics(), width));
-                save(session, out, width, "06-rewind-budget-mid", () -> render.invoke(mid, text, GameServices.graphics(), width));
-                save(session, out, width, "07-rewind-budget-low", () -> render.invoke(low, text, GameServices.graphics(), width));
-                save(session, out, width, "08-rewind-budget-empty", () -> render.invoke(empty, text, GameServices.graphics(), width));
+                save(session, out, width, "04-live-rewind", () -> render.invoke(null, text, GameServices.graphics(), width, 1248, null));
+                save(session, out, width, "05-rewind-budget-full", () -> render.invoke(null, text, GameServices.graphics(), width, 1248, full));
+                save(session, out, width, "06-rewind-budget-mid", () -> render.invoke(null, text, GameServices.graphics(), width, 1248, mid));
+                save(session, out, width, "07-rewind-budget-low", () -> render.invoke(null, text, GameServices.graphics(), width, 1248, low));
+                save(session, out, width, "08-rewind-budget-empty", () -> render.invoke(null, text, GameServices.graphics(), width, null, empty));
                 save(session, out, width, "13-recording-hold", () -> UserRecordingHud.render(text, GameServices.graphics(),
                         UserRecordingHud.holdPromptState(30, 60)));
                 var active = new UserRecordingHudState(true, "REC frame 1248", "ehz1-review.bk2", 1248, false, false);
@@ -85,7 +71,7 @@ public final class TransportHudDesignCaptureTool {
                 save(session, out, width, "15-recording-playback", () -> UserRecordingHud.render(text, GameServices.graphics(),
                         new UserRecordingHudState(true, "PLAYBACK 1248/3600", "VERIFY clean", 1248, false, false)));
                 save(session, out, width, "22-simultaneous-transports", () -> {
-                    render.invoke(rewind, text, GameServices.graphics(), width);
+                    render.invoke(null, text, GameServices.graphics(), width, 1248, null);
                     UserRecordingHud.render(text, GameServices.graphics(), active);
                 });
                 save(session, out, width, "23-playback-warning", () -> UserRecordingHud.render(text, GameServices.graphics(),
@@ -96,11 +82,11 @@ public final class TransportHudDesignCaptureTool {
                         new UserRecordingHudState(true, "PLAYBACK FF 2147483646/2147483647", "VERIFY truncated-sidecar",
                                 Integer.MAX_VALUE - 1, true, false)));
                 save(session, out, width, "26-simultaneous-budget-low", () -> {
-                    render.invoke(low, text, GameServices.graphics(), width);
+                    render.invoke(null, text, GameServices.graphics(), width, 1248, low);
                     UserRecordingHud.render(text, GameServices.graphics(), active);
                 });
                 save(session, out, width, "27-simultaneous-budget-empty", () -> {
-                    render.invoke(empty, text, GameServices.graphics(), width);
+                    render.invoke(null, text, GameServices.graphics(), width, null, empty);
                     UserRecordingHud.render(text, GameServices.graphics(),
                             new UserRecordingHudState(true, "PLAYBACK FF 1248/3600", "VERIFY missing-sidecar", 1248, true, false));
                 });
@@ -118,12 +104,8 @@ public final class TransportHudDesignCaptureTool {
         }
     }
 
-    private static Object budget(java.lang.reflect.Constructor<?> constructor, int remaining, boolean empty) {
-        try {
-            return constructor.newInstance(true, false, remaining, 600, empty);
-        } catch (ReflectiveOperationException e) {
-            throw new IllegalStateException(e);
-        }
+    private static LiveRewindManager.BudgetHudState budget(int remaining, boolean empty) {
+        return new LiveRewindManager.BudgetHudState(true, false, remaining, 600, empty);
     }
 
     @FunctionalInterface
