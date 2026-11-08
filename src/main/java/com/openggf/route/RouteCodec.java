@@ -112,7 +112,13 @@ public final class RouteCodec {
             node.put("movie", entry.movie());
             node.put("prefixRows", entry.prefixRows());
             node.put("inputHash", entry.inputHash().sha256());
+            if (!entry.anchorBoundary().isEmpty()) {
+                node.put("engineAnchorRows", entry.engineAnchorRows());
+                node.put("anchorBoundary", entry.anchorBoundary());
+            }
         });
+        if (!manifest.nativeFacts().exportBlocker().isEmpty())
+            nativeNode.put("exportBlocker", manifest.nativeFacts().exportBlocker());
         ArrayNode lag = nativeNode.putArray("lag");
         for (NativeFacts.LagFact fact : manifest.nativeFacts().lag()) {
             ObjectNode node = lag.addObject();
@@ -168,13 +174,16 @@ public final class RouteCodec {
         NativeFacts facts = NativeFacts.NONE;
         if (root.has("native")) {
             JsonNode node = root.get("native");
-            object(node, "native", Set.of("entry", "lag"), Set.of());
+            object(node, "native", Set.of("entry", "lag", "exportBlocker"), Set.of());
             Optional<NativeFacts.NativeEntry> entry = Optional.empty();
             if (node.has("entry")) {
                 JsonNode e = node.get("entry");
-                object(e, "native entry", Set.of("movie", "prefixRows", "inputHash"), Set.of("movie", "prefixRows", "inputHash"));
+                object(e, "native entry", Set.of("movie", "prefixRows", "inputHash", "engineAnchorRows", "anchorBoundary"), Set.of("movie", "prefixRows", "inputHash"));
+                if (e.has("engineAnchorRows") != e.has("anchorBoundary"))
+                    throw new IOException("native entry needs both engineAnchorRows and anchorBoundary");
                 entry = Optional.of(new NativeFacts.NativeEntry(text(e, "movie"), integer(e, "prefixRows"),
-                        new ContentHash(text(e, "inputHash"))));
+                        new ContentHash(text(e, "inputHash")), e.has("engineAnchorRows") ? integer(e, "engineAnchorRows") : 0,
+                        optionalText(e, "anchorBoundary")));
             }
             var lag = new ArrayList<NativeFacts.LagFact>();
             if (node.has("lag")) {
@@ -184,7 +193,7 @@ public final class RouteCodec {
                             new ContentHash(text(l, "content"))));
                 }
             }
-            facts = new NativeFacts(entry, lag);
+            facts = new NativeFacts(entry, lag, optionalText(node, "exportBlocker"));
         }
         return new RouteManifest(launch, new ContentHash(text(tape, "sha256")), integer(tape, "rows"), checks, draft,
                 provenance, stamps, facts);
