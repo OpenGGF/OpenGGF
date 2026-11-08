@@ -49,7 +49,8 @@ final class S3kSlotPlayerArt {
     private int playerPrevFrameP2;
 
     record RewindState(int characterId, int playerPrevFrame, int playerPrevFrameP2,
-            PlayerResidentBanks.Snapshot body, PlayerResidentBanks.Snapshot tail) { }
+            PlayerResidentBanks.Snapshot body, PlayerResidentBanks.Snapshot tail,
+            com.openggf.level.Palette palette) { }
 
     private S3kSlotPlayerArt(int bodyCharacter, SpriteArtSet bodyArt, SpriteArtSet sonicArt,
             SpriteArtSet tailArt, AbstractPlayableSprite slotPlayer) {
@@ -73,6 +74,22 @@ final class S3kSlotPlayerArt {
                 case KNUCKLES -> art.loadKnuckles();
                 default -> art.loadSonic();
             };
+            var custom = com.openggf.game.presentation.StageCharacterPresentation.stage(
+                    com.openggf.game.StageSpriteSet.Surface.S3K_SLOT_MACHINE);
+            if (custom != null) {
+                body = com.openggf.game.presentation.StageSpriteCompiler.compile(custom, body);
+                // loc_4B9E8 uses low-priority player art; foreground glass must still occlude it.
+                var maps = body.mappingFrames().stream().map(frame -> new com.openggf.level.render.SpriteMappingFrame(
+                        frame.pieces().stream().map(piece -> new com.openggf.level.render.SpriteMappingPiece(
+                                piece.xOffset(),piece.yOffset(),piece.widthTiles(),piece.heightTiles(),piece.tileIndex(),
+                                piece.hFlip(),piece.vFlip(),piece.paletteIndex(),false)).toList())).toList();
+                body = new SpriteArtSet(body.artTiles(),maps,body.dplcFrames(),body.paletteIndex(),body.basePatternIndex(),
+                        body.frameDelay(),body.bankSize(),body.animationProfile(),body.animationSet());
+                var result = new S3kSlotPlayerArt(SONIC, body, body, null, slotPlayer);
+                com.openggf.game.presentation.StageCharacterPresentation.bindPalette(result.body,
+                        com.openggf.game.presentation.StageCharacterPresentation.activeDefinition());
+                return result;
+            }
             if (body == null || body.mappingFrames().isEmpty()) {
                 throw new IllegalStateException("Slot sprite requires host player mappings");
             }
@@ -128,16 +145,41 @@ final class S3kSlotPlayerArt {
     RewindState capture() {
         return new RewindState(characterId, playerPrevFrame, playerPrevFrameP2,
                 PlayerResidentBanks.capture(body),
-                tail == null ? null : PlayerResidentBanks.capture(tail.getRenderer()));
+                tail == null ? null : PlayerResidentBanks.capture(tail.getRenderer()),
+                body.getRenderContext()==null ? null : body.getRenderContext().getPalette(0).deepCopy());
     }
 
     /** Restores VRAM and DPLC RAM exactly; no animation tick or cue submission. */
     void restore(RewindState state) {
+        if(body.getRenderContext()!=null && state.palette()!=null) {
+            body.getRenderContext().setPalette(0,state.palette().deepCopy());
+            uploadPalette();
+        }
         characterId = state.characterId();
         playerPrevFrame = state.playerPrevFrame();
         playerPrevFrameP2 = state.playerPrevFrameP2();
         PlayerResidentBanks.restore(body, state.body());
         if (tail != null) PlayerResidentBanks.restore(tail.getRenderer(), state.tail());
+    }
+
+    void fadePaletteToBlack() {
+        var context=body.getRenderContext();
+        if(context==null) return;
+        var palette=context.getPalette(0);
+        byte[] data=new byte[32];
+        for(int i=0;i<16;i++) {
+            int word=com.openggf.game.palette.PaletteWriteSupport.segaWordFromColor(palette.getColor(i));
+            if((word&0x00E)!=0) word-=2;
+            else if((word&0x0E0)!=0) word-=0x20;
+            else if((word&0xE00)!=0) word-=0x200;
+            data[i*2]=(byte)(word>>>8); data[i*2+1]=(byte)word;
+        }
+        palette.fromSegaFormat(data);
+        uploadPalette();
+    }
+    private void uploadPalette() {
+        var context=body.getRenderContext();
+        GameServices.graphics().cachePaletteTexture(context.getPalette(0),context.getEffectivePaletteLine(0));
     }
 
     static int characterIdFor(AbstractPlayableSprite player) {

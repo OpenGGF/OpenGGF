@@ -72,6 +72,123 @@ class TestMicaCharacterIntegration {
         }
     }
 
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_1)
+    void micaMazeCapture() throws Exception { captureStage("s1", false); }
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_2)
+    void micaHalfPipeCapture() throws Exception { captureStage("s2", false); }
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void micaBlueSphereCapture() throws Exception { captureStage("s3k", false); }
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void micaSlotsCapture() throws Exception { captureStage("s3k", true); }
+
+    private void captureStage(String game, boolean bonus) throws Exception {
+        Path jar=buildSample();
+        var settings=new com.openggf.tools.GameplayCaptureSession.Settings(320,CODE,"","off",null,null,null,null,false,false);
+        Path rom=switch(game) {
+            case "s1" -> com.openggf.tests.RomTestUtils.ensureSonic1RomAvailable().toPath();
+            case "s2" -> com.openggf.tests.RomTestUtils.ensureSonic2RomAvailable().toPath();
+            default -> com.openggf.tests.RomTestUtils.ensureSonic3kRomAvailable().toPath();
+        };
+        Path output=Path.of(System.getProperty("mica.stage.captureRoot","target/mica-stage-captures")).resolve(bonus?"s3k-slots":game);
+        Files.createDirectories(output);
+        String old=System.getProperty("openggf.saveRoot");
+        System.setProperty("openggf.saveRoot",temp.resolve("capture-saves").toString());
+        try(var session=new com.openggf.tools.GameplayCaptureSession(settings)) {
+            session.applyMod(jar);
+            session.boot(rom,0,0,settings);
+            for(int i=0;i<240;i++) { session.step(null); session.renderFrame(); }
+            if(bonus) GameServices.level().requestBonusStageEntry(BonusStageType.SLOT_MACHINE);
+            else session.loop().enterSpecialStage();
+            var csv=new StringBuilder(com.openggf.tools.GameplayCaptureSession.stateHeader()).append('\n');
+            for(int i=0;i<240;i++) {
+                session.step(null); session.renderFrame();
+                csv.append(session.stateLine(i,null)).append('\n');
+                if(i==120 || i==180 || i==239)
+                    com.openggf.graphics.ScreenshotCapture.savePNG(session.render(),output.resolve("frame-"+i+".png"));
+            }
+            Files.writeString(output.resolve("state.csv"),csv);
+            assertEquals(bonus?GameMode.BONUS_STAGE:GameMode.SPECIAL_STAGE,session.loop().getCurrentGameMode());
+            var definition=com.openggf.game.presentation.StageCharacterPresentation.activeDefinition();
+            assertNotNull(definition);
+            var palette=definition.paletteSupplier().load(CODE);
+            if(!bonus) {
+                var provider=session.loop().getActiveSpecialStageProvider();
+                var manager=privateField(provider,"manager");
+                if(game.equals("s1")) {
+                    var actual=(PlayerSpriteRenderer)privateField(manager,"sonicSpriteRenderer");
+                    assertTrue(palette.dataEquals(actual.getRenderContext().getPalette(0)));
+                    var expected=com.openggf.game.presentation.StageCharacterPresentation.playable(
+                            new com.openggf.game.sonic1.Sonic1PlayerArt(com.openggf.data.RomByteReader.fromRom(GameServices.rom().getRom())).loadSonic());
+                    var actualArt=(com.openggf.sprites.art.SpriteArtSet)privateField(actual,"artSet");
+                    assertEquals(expected.mappingFrames(),actualArt.mappingFrames());
+                } else {
+                    var actual=privateField(manager,"renderer");
+                    if(game.equals("s2")) {
+                        assertNotNull(privateField(actual,"characterStageArt"));
+                        int line=(int)privateField(actual,"characterStagePalette");
+                        assertTrue(line>3);
+                        assertTrue(com.openggf.graphics.RenderContext.getSidekickContexts().stream()
+                                .anyMatch(c -> c.getEffectivePaletteLine(0)==line && palette.dataEquals(c.getPalette(0))));
+                    } else {
+                        var player=(PlayerSpriteRenderer)privateField(actual,"characterStageRenderer");
+                        assertNotNull(player);
+                        assertTrue(palette.dataEquals(player.getRenderContext().getPalette(0)));
+                    }
+                }
+            } else {
+                var player=GameServices.sprites().getMainPlayable();
+                assertNotNull(player);
+                assertInstanceOf(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotBonusPlayer.class,player);
+                assertTrue(palette.dataEquals(player.getSpriteRenderer().getRenderContext().getPalette(0)));
+                var actualArt=(com.openggf.sprites.art.SpriteArtSet)privateField(player.getSpriteRenderer(),"artSet");
+                var expected=com.openggf.game.presentation.StageSpriteCompiler.compile(
+                        definition.presentationSupplier().load(CODE).stages().get(StageSpriteSet.Surface.S3K_SLOT_MACHINE),null);
+                for(int id=150;id<=154;id++) {
+                    var wanted=expected.mappingFrames().get(id).pieces();
+                    var actual=actualArt.mappingFrames().get(id).pieces();
+                    assertEquals(wanted.size(),actual.size());
+                    for(int i=0;i<wanted.size();i++) {
+                        assertFalse(actual.get(i).priority(),"slot art stays behind native foreground glass");
+                        assertEquals(wanted.get(i).xOffset(),actual.get(i).xOffset());
+                        assertEquals(wanted.get(i).yOffset(),actual.get(i).yOffset());
+                        assertEquals(wanted.get(i).tileIndex(),actual.get(i).tileIndex());
+                    }
+                }
+            }
+            var presentation=definition.presentationSupplier().load(CODE);
+            for(var surface:StageSpriteSet.Surface.values()) {
+                var set=presentation.stages().get(surface);
+                assertNotNull(set);
+                var art=com.openggf.game.presentation.StageSpriteCompiler.compile(set,null);
+                for(var entry:set.frames().entrySet()) {
+                    var frame=entry.getValue();
+                    var cue=art.dplcFrames().get(entry.getKey()).requests().getFirst();
+                    byte[] decoded=new byte[frame.image().width()*frame.image().height()];
+                    for(var piece:art.mappingFrames().get(entry.getKey()).pieces())
+                        for(int x=0;x<piece.widthTiles()*8;x++) for(int y=0;y<piece.heightTiles()*8;y++) {
+                            int dx=piece.xOffset()+frame.hotspotX()+x, dy=piece.yOffset()+frame.hotspotY()+y;
+                            if(dx<frame.image().width() && dy<frame.image().height()) {
+                                int tile=cue.startTile()+piece.tileIndex()+(x/8)*piece.heightTiles()+y/8;
+                                decoded[dy*frame.image().width()+dx]=(byte)art.artTiles()[tile].getPixel(x%8,y%8);
+                            }
+                        }
+                    assertArrayEquals(frame.image().pixels(),decoded,surface+" frame "+entry.getKey());
+                }
+            }
+            var renderer=com.openggf.game.presentation.StageCharacterPresentation.renderer(StageSpriteSet.Surface.S3K_BLUE_SPHERE);
+            assertNotNull(renderer.getRenderContext());
+            assertTrue(palette.dataEquals(renderer.getRenderContext().getPalette(0)));
+        } finally {
+            if(old==null) System.clearProperty("openggf.saveRoot"); else System.setProperty("openggf.saveRoot",old);
+        }
+    }
+
+    private static Object privateField(Object owner,String name) throws Exception {
+        var field=owner.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        return field.get(owner);
+    }
+
     private void acceptance(GameModule base, String game, int waterZone, int waterAct) throws Exception {
         try (CatalogFixture fixture = load(buildSample())) {
             var config = SonicConfigurationService.getInstance();
@@ -336,6 +453,12 @@ class TestMicaCharacterIntegration {
         Files.createDirectories(classes.resolve("art/mica/presentation"));
         try(var files=Files.list(presentation)) {
             for(var file:files.toList()) Files.copy(file,classes.resolve("art/mica/presentation").resolve(file.getFileName()));
+        }
+        Path stages = project.resolve("art/mica/wave3");
+        Files.createDirectories(classes.resolve("art/mica/wave3"));
+        try(var files=Files.list(stages)) {
+            for(var file:files.filter(p -> p.toString().endsWith(".png") && !p.toString().endsWith("-fixed.png")).toList())
+                Files.copy(file,classes.resolve("art/mica/wave3").resolve(file.getFileName()));
         }
         Path jar = temp.resolve("mica-and-talon.jar");
         assertEquals(0,com.openggf.tools.modsdk.GgfModCli.run(new String[]{"package","--input",

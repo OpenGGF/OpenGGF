@@ -504,11 +504,50 @@ Status log (times UTC):
   animation, flips, shadows, admission and painter order. Complete working-tree
   stage/integration/S3K guard selection: 173 passed, no skips. S1 manager 17/17,
   S2 manager 16/16, compiler 3/3 and MICA integration 8/8. All four production-session
-  stage captures were inspected; API pin and native-rendering regressions pending.
+  stage captures were inspected; final API/native regression results follow below.
   S2 is committed in `e6a5ac02e`. Blue Sphere now uses MICA's SStage frames with
   unchanged native projection/animation. Its isolated palette participates in the
   native channel-ordered white fade and palette rewind snapshot; snapshot tests
   passed 11/11 (including private-palette fade/restore), renderer 6/6.
+- 2026-11-08: W4 stage lane complete. Blue Sphere committed in `1c8ce9035`.
+  Slot-machine art now uses MICA's five native-ID roll replacements, with low tile
+  priority so native foreground glass still occludes her. Its private palette
+  follows the native black fade and resident-art rewind state. Stock fallback
+  branches remain unchanged. API/native-rendering selection passed 35/35, no
+  skips; corrected slot capture recheck passed 1/1, no skips. Original attempt
+  failures were implementation-time example/engine compilation errors; both
+  were repaired before the passing checks. No baseline failure is being waived.
+  Four local stage commits; no merge or push. Production `GameplayCaptureSession`
+  boots the packaged mod, then uses `GameLoop.enterSpecialStage()` or
+  `LevelManager.requestBonusStageEntry(SLOT_MACHINE)` and neutral input. This
+  proves stage presentation, not traversal of a physical entry trigger.
+  Inspected captures: `/tmp/mica-stages-20261108/{s1,s2,s3k,s3k-slots}/frame-239.png`,
+  with frame 120/180 stills and per-frame `state.csv` alongside them. Slot frame
+  120 is still the native entry title card; frames 180/239 are the bonus stage.
+  Native stage palette rows stay unchanged by custom binding; private rows take
+  character-supplier colours without native recolouring. The new indexed frame
+  sets reconstruct byte-for-byte from their tile/mapping representation.
+
+  Verification commands (Java 25, verified S1/S2/S3K ROMs found; no skips):
+
+  ```bash
+  python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=Sonic1SpecialStageManagerTest,Sonic2SpecialStageManagerTest,TestSonic3kSpecialStageRenderer,TestSonic3kSpecialStageManagerSnapshot,TestMicaCharacterIntegration,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestStageSpriteCompiler,TestS3kSlotBonusStageRuntime,TestS3kSlotPlayerRuntime,TestS3kSlotBonusPlayer' test
+  # 173 passed; two matching LevelLoading classes and two SlotBonusStageRuntime classes selected.
+  python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestModApiSignatureSurface,TestSonic2SpecialStageSpriteAssembly,TestSonic2SpecialStagePaletteNativeChannels,TestS3kSpecialStageSpritePixels,TestS3kSlotGlassPriority,TestS3kSlotMachineRenderer' test
+  # 35 passed.
+  python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestMicaCharacterIntegration#micaSlotsCapture' -Dmica.stage.captureRoot=/tmp/mica-stages-20261108 test
+  # 1 passed after the custom slot tile-priority correction.
+  python3 tools/disasm/disasm_citations.py check docs/architecture/designs/2026-11-08-original-character-mod.md src/main/java/com/openggf/game/sonic3k/bonusstage/slots/S3kSlotPlayerArt.java
+  # 6 checked, 2 existing unverifiable citations; no stale citations.
+  ```
+
+  These are bounded checks, not a full-suite run. Queue wait and execution are
+  separate: the 173-test run last reported 361s waiting, then executed in 1m45s;
+  the 35-test run last reported 180s waiting, then executed in 1m41s. The slot
+  recheck executed in 43s. Admission timestamps between queue reports are unknown;
+  there was no user-approval wait. No category run was launched, so no category
+  `VERDICT` is applicable.
+
 
 
 - 2026-11-08: design agreed; wave 1 launched.
