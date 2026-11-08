@@ -1,5 +1,48 @@
 # Implement Sonic CD with complete regional parity
 
+## 8 November 2026 — original lower passage, RollTunnel and first Time Post
+
+Two test-only payloads reuse eight package-visible support declarations while
+preserving every stronger Root intro/palette-Adoption oracle and the strict two-
+reload1,200-service contract. The new terrain audit reads the actual original and
+current foreground words, collision IDs/angles and complete16-pixel side profiles
+at the returned intro cut. Native StageEvents only sets destination bottom0510;
+intro shards do not own a terrain mutation. The original lower passage is real.
+A public-input recipe walks left after intro retirement, turns right when the
+actual head clears ceiling976, then reaches the real RollTunnel half-open window.
+Its signed/unsigned WORD assertion includes-40 and excludes+40, preserving the
+source predicate rather than the former erroneous absolute-distance assertion.
+No actor, terrain, physics, source, clock, lives or captured/CSV state is assigned.
+
+The first bounded source review found one P2 in the test: a pending milestone
+comparison was replayed before checking a returned death. Root now accounts for
+the successful return/CSV, stops and abandons pending on the first returned death,
+and requires original owner/generation, alive/lives and READY guards before FULL/
+course replay. A failed service still stops immediately without a new closed
+snapshot, picture or retry. The fixed recipe's positive runs do not exercise a
+pending-milestone next-return death; that separate adversary remains UNRUN and
+was not fabricated by setting actor fields or forging an invocation/snapshot.
+
+R130 passes all6 cases across3 flat classes, zero failures/errors/skips, with exact
+2 installed source/dependency pins, fresh selected XML, Java25/media/EGL properties
+and source/index fingerprint
+`00bec91d96a3b24289ab8d4f872eca03610078e03f6f1f6bd634ffa725a9f00f`
+unchanged before/after. Normal admission waits31s; Maven lifecycle1:30 and callback
+interval91.591s. Separate compilation/CPU/user wait are not measured. This is one
+six-case focused controller/restore/EGL result, not a category/full-suite result.
+Production is unchanged; legitimate original full/course and next-state/pixel
+replay follows actual returned passage/boost services.
+
+The author separately measured1,118 returned services alive, with attempted1,119
+stopping at Time Post19/subtype09/whole33 before its native timeAttack read/Init.
+Its final2P plus214 unchanged cases remain separate requests with two earlier
+oracle errors retained. Root's fresh six cases verify the same positive passage,
+boost and exact first Time Post boundary; these ordinal/position capture details
+remain attributed author observations rather than an additional exported Root cut.
+Historical save1/platform80 entry remains constructed, not a natural PPZ-to-CCZ
+transition. Natural PlaceBlock, Time Post activation/World warp, a complete act,
+full USA and JP/EU remain unfinished; nothing is pushed.
+
 ## 8 November 2026 — original CCZ Explosion and Points physical publication
 
 The same physical pass now calls cached native Explosion `$18` and dynamic Points

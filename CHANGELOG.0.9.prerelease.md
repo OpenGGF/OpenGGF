@@ -25,7 +25,10 @@ matching area heading; see the
   lives through native intro closure and the following returned service. Its
   oracle requires both original capture-palette publications and Amy's next-pass
   retirement; an early unsupported edge cannot count as success. Four focused
-  route/reload checks pass; the next owned terrain wall remains untraversed.
+  route/reload checks pass. A following input recipe now traverses the original
+  lower passage and genuine RollTunnel boost before its first unbound Time Post.
+  Its six route/reload checks pass; the first returned death is checked before
+  any pending full/course replay. No terrain or physics change crosses the wall.
   Full/course restore retains
   selected closed state and pixels. Compound Solid preparation faults preserve
   the original native exception; available prefixes publish after preparation;

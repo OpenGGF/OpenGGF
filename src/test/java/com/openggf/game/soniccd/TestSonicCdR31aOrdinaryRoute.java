@@ -35,7 +35,7 @@ import static org.junit.jupiter.api.Assertions.*;
         }
         for(var e:documents.entrySet())Files.writeString(dest.resolve(e.getKey()),e.getValue(),StandardOpenOption.CREATE_NEW);
     }
-    private static void step(TestSonicCdR31aSelectedProfileLoading.Booted b,int held){
+    static void step(TestSonicCdR31aSelectedProfileLoading.Booted b,int held){
         // Public logical controls use A/B/C order1/2/4; native held uses A40/B10/C20.
         int action=((held&0x40)!=0?InputActionMasks.ACTION_A:0)|((held&0x10)!=0?InputActionMasks.ACTION_B:0)|((held&0x20)!=0?InputActionMasks.ACTION_C:0);
         var input=LogicalInputSnapshot.ofPlayers(PlayerInputState.of(held&15,0,action,0,(held&0x80)!=0,false),PlayerInputState.neutral());
@@ -53,12 +53,12 @@ import static org.junit.jupiter.api.Assertions.*;
         return rows.toString();
     }
     private static int title(SonicCdR31aLoadingVisit core,int at){return core.state().reserved().unsignedByte(3*64+at);}
-    private static String header(){return "recipeOrdinal,levelFrames,phase,x,y,xVelocity,yVelocity,groundVelocity,flags,routine,rawHeld,rawTap,logicalHeld,logicalTap,controlLocked,titleId,titleRoutine,titleY,titleTimer,plcHead,lives,cameraX,cameraY,bottom\n";}
-    private static String row(TestSonicCdR31aSelectedProfileLoading.Booted b,int ordinal){
+    static String header(){return "recipeOrdinal,levelFrames,phase,x,y,xVelocity,yVelocity,groundVelocity,flags,routine,rawHeld,rawTap,logicalHeld,logicalTap,controlLocked,titleId,titleRoutine,titleY,titleTimer,plcHead,lives,cameraX,cameraY,bottom\n";}
+    static String row(TestSonicCdR31aSelectedProfileLoading.Booted b,int ordinal){
         var f=b.module.requirePlayerFrame();var m=f.state().motion();var c=f.environment().controls();var core=b.module.r31LoadingVisit();var h=b.module.r31WorldHost();var s=h.scroll().foreground();
         return ordinal+","+f.environment().globals().levelFrames()+","+core.state().phase()+","+x(f.state())+","+y(f.state())+","+m.xVelocity()+","+m.yVelocity()+","+m.groundVelocity()+","+m.flags()+","+m.routine()+","+c.rawHeld()+","+c.rawTap()+","+c.logicalHeld()+","+c.logicalTap()+","+c.controlLocked()+","+title(core,0)+","+title(core,0x24)+","+core.state().reserved().unsignedWord(192+0xA)+","+title(core,0x1E)+","+core.state().section().queue().headSource()+","+h.globals().ring().lives()+","+s.cameraX()+","+s.cameraYWord()+","+f.environment().movement().bounds().bottom()+"\n";
     }
-    private static String cut(TestSonicCdR31aSelectedProfileLoading.Booted b,int ordinal){
+    static String cut(TestSonicCdR31aSelectedProfileLoading.Booted b,int ordinal){
         var f=b.module.requirePlayerFrame();var h=b.module.r31WorldHost();var p=h.placement().capture();
         var selected=assertInstanceOf(SonicCdR31aWorldHost.Published.class,h.selected()).selection().inputs();
         return "ACTUAL RETURNED engine cut; recipeOrdinal="+ordinal+"; generation="+b.mode.getLevelManager().getCompletedProductionLoadGeneration()+"\nprogramme="+b.module.r31LoadingVisit().assets().identity()+"\nCore="+b.module.r31LoadingVisit().state()+"\nState8="+f.state()+"\nHistory="+HexFormat.of().formatHex(f.state().history().bytes().copy())+"\nEnvironment="+f.environment()+"\nClock="+f.vIntClock()+"\nScroll="+h.scroll()+"\nGlobals="+h.globals()+"\nAmyCaptured="+h.amyCapturedByte()+"\nStatus="+p.status()+"\nSaved="+HexFormat.of().formatHex(p.savedFlags().copy())+"\nPool96="+p.pool().slots().stream().map(s->s.identity().wholeIndex()+":"+HexFormat.of().formatHex(s.copyBytes())).toList()+"\nCompletedCPU="+h.video().completedCpu().map(c->HexFormat.of().formatHex(c.bytes()))+"\nOLD_selectedCPU="+selected.selectedCpu().map(c->HexFormat.of().formatHex(c.bytes()))+"\nTerrainChunksSHA256="+sha(h.currentTerrain().chunks().copy())+"\nForegroundComparisonWords="+nearbyForeground(b)+"\nPlaneASHA256="+sha(h.foreground().nameTable().copy())+"\nPlaneBSHA256="+sha(h.background().nameTable().copy())+"\nPlayerCPU_SHA256="+sha(f.artState().cpuBuffer().copy())+"\nPlayerBankSHA256="+sha(f.artState().residentBank().copy())+"\nPixels use the actual OLD selected CPU/current-art publication; returned State8 may be newer.\n";
@@ -72,13 +72,13 @@ import static org.junit.jupiter.api.Assertions.*;
         for(boolean c:new boolean[]{false,true}){if(c)r.restoreCourse(course);else r.restore(full);assertEquals(before,TestSonicCdR31aSelectedProfileLoading.values(b));assertArrayEquals(pixels,TestSonicCdR31aSelectedProfileLoading.draw(b));step(b,held);assertEquals(after,TestSonicCdR31aSelectedProfileLoading.values(b));assertArrayEquals(next,TestSonicCdR31aSelectedProfileLoading.draw(b));}
         r.restore(full);assertEquals(before,TestSonicCdR31aSelectedProfileLoading.values(b));
     }
-    private record ClosedComparison(CompositeSnapshot full,CompositeSnapshot course,Object values,byte[] pixels) { }
-    private static ClosedComparison comparison(TestSonicCdR31aSelectedProfileLoading.Booted b)throws Exception{
+    record ClosedComparison(CompositeSnapshot full,CompositeSnapshot course,Object values,byte[] pixels) { }
+    static ClosedComparison comparison(TestSonicCdR31aSelectedProfileLoading.Booted b)throws Exception{
         var r=b.mode.getRewindRegistry();return new ClosedComparison(r.capture(),r.captureCourse(),TestSonicCdR31aSelectedProfileLoading.values(b),TestSonicCdR31aSelectedProfileLoading.draw(b));
     }
     /** Verify only after the ordinary next service actually returned. A first unowned edge is
      * never retried/restored; its last closed comparison stays diagnostic metadata only. */
-    private static void verifyReturnedNext(TestSonicCdR31aSelectedProfileLoading.Booted b,int held,ClosedComparison before)throws Exception{
+    static void verifyReturnedNext(TestSonicCdR31aSelectedProfileLoading.Booted b,int held,ClosedComparison before)throws Exception{
         var r=b.mode.getRewindRegistry();var closed=r.capture();var after=TestSonicCdR31aSelectedProfileLoading.values(b);var pixels=TestSonicCdR31aSelectedProfileLoading.draw(b);
         for(boolean c:new boolean[]{false,true}){if(c)r.restoreCourse(before.course());else r.restore(before.full());assertEquals(before.values(),TestSonicCdR31aSelectedProfileLoading.values(b));assertArrayEquals(before.pixels(),TestSonicCdR31aSelectedProfileLoading.draw(b));step(b,held);assertEquals(after,TestSonicCdR31aSelectedProfileLoading.values(b));assertArrayEquals(pixels,TestSonicCdR31aSelectedProfileLoading.draw(b));}
         r.restore(closed);
@@ -107,7 +107,7 @@ import static org.junit.jupiter.api.Assertions.*;
      * Native $30 subtype!=1 is ordinary Solid; native widths/radii locate its leading edge.
      * A96-pixel approach leaves time for CheckJump's native$680 launch to clear its32-pixel halfheight.
      * No frame ordinal, actor store, terrain edit, physics change or fake player is used. */
-    private static final class FirstWallJump {
+    static final class FirstWallJump {
         boolean jumped,landed,justRequested,rejected;int wallWhole=-1,wallRight,wallTop,jumps,lastLaunchX=-1,lastLaunchY=-1;
         int input(TestSonicCdR31aSelectedProfileLoading.Booted b){
             justRequested=false;var f=b.module.requirePlayerFrame();var s=f.state();var m=s.motion();
