@@ -546,3 +546,28 @@ Status log (times UTC):
   an input-driven S3K acceptance guards against homing consuming that press.
   Input-driven transformation regression and all requested checks pass again:
   96 tests, no failures/errors/skips. Queue wait 400s; execution 45s; user wait 0.
+
+- 2026-11-08: abilities lane outcome 4 records production gameplay evidence under
+  `/tmp/mica-abilities-20261108/`, using `gameplay-capture` and surfaceless EGL.
+  The code is `db3781859` (homing `9d606cda4`, dive `320f6a1d5`, physics
+  `0ae6e7d5b`, S3K input gate `db3781859`). No merge or push by this lane.
+  Title-first clips retain the real launch/input path and owned save roots:
+  `s1-route-final/capture.mp4` (idle, full-speed run, spring at frame 2392),
+  `s1-chain/capture.mp4` (normal strikes 1364–1367 and 1397–1408, with no
+  intervening grounded row; second native kill awards 200 points),
+  `s2-normal-kill/capture.mp4` (idle, full-speed run, normal Coconuts homing
+  kill at frames 1553–1555; native 100-point defeat at 1560), and
+  `s3k-route/capture.mp4` (idle/run, monkey kill at 1137–1142, native spring
+  launch at 1562 with y velocity -0xA00). `s2-powered-spring/capture.mp4`
+  demonstrates transformation, gold-palette Instagib strikes and the authored
+  spring pose (frame 845). That last clip deliberately uses direct EHZ1 boot
+  with supported capture debug setup `--emeralds 1111111 --rings 80`, not a
+  title-first saved route. No positioned starts or mod gameplay hacks are used.
+  All clips are 640×448, 60 fps; ffprobe frame counts match their state CSVs.
+  Reviewed selected before/strike/defeat/spring pixels as well as input/state rows.
+  Inputs, state CSVs, selected review stills and `evidence.json` remain beside the
+  videos; regenerable PNG frame directories were removed after review because
+  shared `/tmp` filled. Earlier probes are not acceptance clips. The requested
+  actions are demonstrated across the set; an airborne chain is filmed in GHZ1,
+  not separately certified in every host. No broad smoke or full-suite claim:
+  cross-lane validation/integration remain with the delivery lead.

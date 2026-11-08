@@ -43,7 +43,8 @@ under the matching area heading; see the
   character-owned homing (including a forward dash without a target) and Super/Hyper
   Instagib strikes through the supported facade, an optional HOMING_DIVE sheet pose,
   and stock Sonic physics in every single-player host; S3K retains its transformation
-  press before the character-owned strike,
+  press before the character-owned strike. Three-game headless footage covers
+  native movement, springs, normal and powered strikes, and a GHZ airborne chain,
   headless launch/save/rewind/fallback acceptance and a rerunnable 96-frame original
   playable sheet with 17 canonical animations, shared palette and slope cycles.
   Headless native Data Select retains explicitly loaded development characters.
