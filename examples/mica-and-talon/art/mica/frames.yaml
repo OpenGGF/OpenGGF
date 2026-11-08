@@ -314,20 +314,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 10,
-      "notes": ""
-    },
-    {
-      "id": "hurt-01",
-      "animation": "HURT",
-      "order": 1,
-      "file": "frames/hurt-01.png",
-      "hotspot": [
-        20,
-        12
-      ],
-      "angle_set": "flat",
-      "duration_ticks": 10,
-      "notes": ""
+      "notes": "Single hurt pose with stable upper-left lighting; SonAni_Hurt (s2.asm:38754)."
     },
     {
       "id": "death-00",
