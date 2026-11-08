@@ -39,7 +39,7 @@ class TestObjectSolidContactController {
         var owner = new PieceSolid(spawn(), false, true);
         var manager = boundaryEnabledManager(owner);
         owner.snapshotPreUpdatePosition();
-        var player = new ContactKnuckles();
+        var player = com.openggf.sprites.playable.SolidContactActorFixture.construct(ContactKnuckles::new);
         player.setAir(true);
         player.setRolling(false);
         player.applyCustomRadii(10, 10);
@@ -212,7 +212,7 @@ class TestObjectSolidContactController {
     }
 
     private static Sonic landOnPiece(ObjectManager manager, PieceSolid owner, int piece, String code) {
-        var player = new ContactSonic(code);
+        var player = com.openggf.sprites.playable.SolidContactActorFixture.construct(() -> new ContactSonic(code));
         player.setCentreX((short) owner.getPieceX(piece));
         int maxTop = owner.getPieceParams(piece).groundHalfHeight() + player.getYRadius();
         player.setCentreY((short) (owner.getPieceY(piece) - 4 - maxTop + 8));
