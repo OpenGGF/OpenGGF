@@ -138,6 +138,36 @@ results; lane C ran its 7 affected traces (chain and fragment changes) against
 a clean baseline with identical identities. Lane F rounds 3 and 4 changed only
 Competition host paths and did not repeat the run.
 
+## Pre-act semantic flow lane (2026-11-08)
+
+The flow lane starts from `b7076530a`, on local branch
+`feature/ai-s2-competition-flow`; no push or PR is part of its delivery.
+Title-to-menu and menu-to-level transitions now execute their native palette
+passes. The shared Obj34 owner runs visible arrival, upload and leave waits
+for both acts; player control and LFC remain frozen until release. The
+campaign title/card paths are unchanged. Renderer overlap is confined to
+runtime/video-frame wiring for title-only admissions; the renderer, views and
+SAT builder remain owned by the progressive-output lane.
+
+All five frozen routes were re-authored by the Stageplay planner's bounded
+observed-lock repair, preserving traversal inputs and cold-qualifying goals.
+Their native BK2 input tapes and witnesses remain byte-identical. EHZ's
+residual pre-act inlets shrink to 68 and 66 physical frames; CNZ1's to 69.
+BizHawk 2.11 confirms CNZ slot use at 2045 and its visible flip at 2513, EHZ
+zone results at 18628, and tied act wins entering the special stage at 18909.
+These are goal confirmations, not full-route state parity. The final display
+counter goals were rebased by 131 to preserve their original hold durations.
+
+The base V-int surplus reported by the object lane is confirmed: 137 at EHZ1
+LFC 0 and at native 5823. Semantic waits change it to 168 at the first anchor
+and 121 at the second. No fitted clock correction is authorized. The native
+20-frame masked menu initialization, EHZ 41/39-frame assembly spans, further
+decode interruptions and resulting clock limits are recorded in
+[known discrepancies](../../status/known-discrepancies.md#pre-act-physical-timing).
+Before/after phase sheets, boundary clocks, native receipts and focused-check
+results are external under `~/Videos/OGGF/s2-competition/lanes/flow/REPORT.md`.
+The lead owns integration and wider validation.
+
 ## Rejected approaches
 
 | Approach | Evidence and replacement |
@@ -152,6 +182,8 @@ Competition host paths and did not repeat the run.
 | Independent per-player badnik chains | The ROM shares one `Chain_Bonus_counter`; the salvaged branch's independent-chain expectation was archived as an observation, not committed. |
 | A game-module decorator for the animation owners | Two native-world owners (pattern projection and palette-only, distinct rewind keys) replace the ordinary combined manager in Competition; the 1P manager is unchanged. |
 | Clearing controller state at load transitions to stop the menu-Start pause | The press latch is recomputed at every synchronous wait instead (`9b1e8fc9e`). The planner route's engine-only unpause Start at row 1200 was then removed by a one-row planner repair. |
+| Fitted pre-act delay or V-int reset | Physical initialization lag is outside the semantic reimplementation boundary. Visible ROM loops are represented, and witnessed native input inlets absorb only the measured export residue; no native value enters gameplay. |
+| From-scratch planner replacement of the preserved complex CNZ traversal | Search exhausted two million offered rows before the complex slot leg. Use bounded, cold-qualified observed-lock repair, preserving every traversal row and authoring only live control-lock waits. |
 | Lag admission, re-alignment or a fitted selector after native lag | Comparisons stop before the first lag frame; no timing value is supplied to gameplay. |
 | Image-based object identification at the EHZ 1976 frontier | Picture suggested Coconuts; the engine inventory showed Masher (`$5C`). Identify frontier objects from the object list, not screenshots. |
 

@@ -48,9 +48,10 @@ under the matching area heading; see the
   preserving every row of the native 8x16 cells without interlace combing.
   It splits at progressive line 216 through the shared Competition renderer; each
   half draws its player's planes, sprites and HUD from the ROM's two-player art.
-  Title cards run in both halves. Signposts publish their native two-player pole
-  and animated face art; act timers spend the interrupt before a finish crossing.
-  Teleport monitors swap the players' positions,
+  Title and menu transitions fade, and both halves show the complete title card
+  before player control and the level clock start. Signposts publish their native
+  two-player pole and animated face art; act timers spend the interrupt before a
+  finish crossing. Teleport monitors swap the players' positions,
   speeds, cameras and backgrounds. Badnik, bumper, bonus-block and cage
   scores go to the player who earned them, and the Casino Night slot machines
   and cages serve both players. Enemies whose ROM routine ends in

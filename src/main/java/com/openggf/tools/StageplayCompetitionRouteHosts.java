@@ -129,11 +129,13 @@ public final class StageplayCompetitionRouteHosts implements RouteWorldFactory {
             if (visit != null) {
                 var state = visit.session();
                 facts.put("competition.phase", state.phase().ordinal());
+                facts.put("competition.titleCard", visit.host().titleCardActive()?1:0);
+                facts.put("input.locked", visit.inputLocked()?1:0);
                 // loadAct has returned from its real title owner, before the ordinary LFC increment.
                 if (gameplayAnchorRows < 0 && state.phase()==com.openggf.game.sonic2.competition.Sonic2CompetitionSession.Phase.ACT
-                        && lm.getFrameCounter()==0) gameplayAnchorRows=rows;
+                        && !visit.host().titleCardActive() && lm.getFrameCounter()==0) gameplayAnchorRows=rows;
                 if(state.phase()==com.openggf.game.sonic2.competition.Sonic2CompetitionSession.Phase.ACT
-                        && lm.getFrameCounter()==0)levelAnchorRows=rows;
+                        && !visit.host().titleCardActive() && lm.getFrameCounter()==0)levelAnchorRows=rows;
                 if(levelAnchorRows>=0)facts.put("input.levelAnchorRows",levelAnchorRows);
                 if (gameplayAnchorRows >= 0) facts.put("input.gameplayAnchorRows",gameplayAnchorRows);
                 facts.put("competition.paused",state.gameState(0).isGamePaused()?1:0);
@@ -302,24 +304,25 @@ public final class StageplayCompetitionRouteHosts implements RouteWorldFactory {
         private record Saved(World owner, long epoch, Object level,
                 com.openggf.game.rewind.RewindRegistry registry, long layout,
                 com.openggf.game.rewind.CompositeSnapshot state,
-                com.openggf.debug.playback.Bk2FrameInput previous, int rows, int levelAnchorRows) implements WorldCheckpoint { }
+                com.openggf.debug.playback.Bk2FrameInput previous, int rows, int levelAnchorRows, int gameplayAnchorRows) implements WorldCheckpoint { }
         @Override public WorldCheckpoint capture() {
             var visit = adapter[0].visit();
             var context = SessionManager.getCurrentGameplayMode();
             if(visit==null || visit.session().phase()!=com.openggf.game.sonic2.competition.Sonic2CompetitionSession.Phase.ACT
+                    || visit.host().titleOnly()
                     || loop.getCurrentGameMode()!=com.openggf.game.GameMode.COMPETITION
                     || context.getLevelManager().hasPendingFreshLevelTransitionBoundary()
                     || GameServices.graphics().getFadeManager().isActive())
                 throw new RouteHostException(RouteHostException.Reason.CHECKPOINT_REFUSED,"outside stable competition act");
             var registry=context.getRewindRegistry();
-            return new Saved(this,epoch,level,registry,registry.courseLayoutVersion(),registry.capture(),previous,rows,levelAnchorRows);
+            return new Saved(this,epoch,level,registry,registry.courseLayoutVersion(),registry.capture(),previous,rows,levelAnchorRows,gameplayAnchorRows);
         }
         @Override public void restore(WorldCheckpoint checkpoint) {
             var context=SessionManager.getCurrentGameplayMode();
             if(!(checkpoint instanceof Saved c) || c.owner()!=this || c.epoch()!=epoch || c.level()!=level
                     || c.registry()!=context.getRewindRegistry() || c.layout()!=c.registry().courseLayoutVersion())
                 throw new RouteHostException(RouteHostException.Reason.CHECKPOINT_MISMATCH,"competition checkpoint belongs to another epoch/layout");
-            c.registry().restore(c.state()); previous=c.previous(); rows=c.rows(); levelAnchorRows=c.levelAnchorRows();
+            c.registry().restore(c.state()); previous=c.previous(); rows=c.rows(); levelAnchorRows=c.levelAnchorRows(); gameplayAnchorRows=c.gameplayAnchorRows();
         }
         @Override public void close() {
             try { diagnostic.accept(observe()); }

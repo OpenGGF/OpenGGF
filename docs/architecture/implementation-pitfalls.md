@@ -23,6 +23,15 @@ owner, report success only after real completion, and preserve primary/suppresse
 failure identity. Verify a real return route as well as once-only cleanup; see
 [load ownership evidence](designs/2026-11-03-synchronous-load-vint-accounting.md#enclosing-ownership-corrections).
 
+**Observation anchors can become rewind state.** A host's first gameplay anchor
+looked immutable when synchronous loading always completed before route search.
+Visible title waits let lookahead cross that anchor and restore an earlier leave
+checkpoint. Capture both first-gameplay and latest-level anchors in the host's
+checkpoint, or the earlier observation acquires a future fact and deterministic
+search fails. Refuse planner checkpoints while initialization is still registering
+owners; replay neutral rows through that phase. `TestCompetitionTitleRoute` covers
+restoring a leave checkpoint after lookahead has passed control release.
+
 **A counter's name does not establish its native clock.** In S2 continuous
 loads, title object passes and gameplay have distinct clock ownership. Obj2C
 needs the native level word (held at zero during the locked title), not execution

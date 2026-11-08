@@ -159,7 +159,7 @@ public final class StageplayRouteTool {
     /** Native routes use the existing manifest vocabulary, including both-player goal clauses. */
     private static int nativeRoute(String[] args, PrintStream output) throws IOException {
         var flags = new LinkedHashMap<String,String>();
-        var allowed = Set.of("native-route", "out", "s2-rom", "prefix-rows", "nodes", "ticks", "bk2", "competition-entry", "goals", "native-witness", "native-anchor-rows", "native-inlet-witness", "native-inlet-anchor-rows", "engine-inlet-from-rows", "engine-inlet-anchor-rows");
+        var allowed = Set.of("retime-locks", "native-route", "out", "s2-rom", "prefix-rows", "nodes", "ticks", "bk2", "competition-entry", "goals", "native-witness", "native-anchor-rows", "native-inlet-witness", "native-inlet-anchor-rows", "engine-inlet-from-rows", "engine-inlet-anchor-rows");
         for (int i=0;i<args.length;i+=2) {
             if(i+1>=args.length || !args[i].startsWith("--") || !allowed.contains(args[i].substring(2))
                     || flags.put(args[i].substring(2),args[i+1])!=null) throw new IOException("Expected unique native route flags");
@@ -181,7 +181,9 @@ public final class StageplayRouteTool {
                     java.nio.file.Files.readString(Path.of(flags.get("goals")))),source.tape(),source.manifest().provenance());
         var lastObserved=new com.openggf.route.RouteSample[1];
         var hosts=new StageplayCompetitionRouteHosts(Path.of(required(flags,"s2-rom")),sample->lastObserved[0]=sample);
-        var result = StageplayRoutePlanner.planNative(hosts,
+        var result = flags.containsKey("retime-locks")
+                ? StageplayRoutePlanner.retimeNativeLocks(hosts,source,integer(flags,"retime-locks",512),Thread.currentThread()::isInterrupted)
+                : StageplayRoutePlanner.planNative(hosts,
                 source.launch(), source.tape().slice(0,integer(flags,"prefix-rows",source.tape().size())),
                 source.checks(), new com.openggf.route.SearchBudget(integer(flags,"nodes",1024),
                         integer(flags,"ticks",120000),256,64), Thread.currentThread()::isInterrupted,
