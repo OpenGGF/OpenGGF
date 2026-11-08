@@ -3369,7 +3369,11 @@ Tier one (no dump) instead:
   `$33F06E`/`$33F74C`), with one logged warning per act.
 - Uses the S&K `ArtNem_KnucklesLifeIcon` for the HUD and 1-up monitor face
   and keeps the stock signpost, monitor icons, shield/stars, continue icon
-  and underwater palettes.
+  and underwater palettes. The icon's head is S&K's drawing, converted
+  through `ArtConvTable`; its "K.T.E" name was drawn for S&K's palette
+  line 1 and is recoloured to the chip name's line-0 colours, which makes it
+  identical to the chip's name tiles (`KnucklesLifeIconConversion`,
+  `TestKis2LivesNameColours`).
 
 Known deviations from the shipped lock-on game in both tiers (each cites
 the owning KiS2 routine in the catalogue):

@@ -26,6 +26,14 @@ under the matching area heading; see the
   shared touch owner. The Sonic+Tails chain advances from CNZ2 to HTZ2; later
   route errors and the special-stage return timing differences remain open.
 
+- **Knuckles' lives name in Knuckles in Sonic 2:** without the optional lock-on
+  dump, the "K.T.E" name beside his HUD head was green. The stand-in Sonic &
+  Knuckles icon was drawn for a different palette line, and its name went
+  through the same colour conversion as Knuckles' sprites. The name now takes
+  the original game's yellow-orange, white and black, matching the lock-on
+  dump's art pixel for pixel. Sonic 2 with the Sonic 3&K donor and Knuckles as
+  the lead had the same green name and is fixed too.
+
 - **S2 diagonal launcher springs:** capture both riders before deciding to
   release or decompress. A fresh Tails capture now uses the native launch force
   and can hold Sonic on the spring. The complete-chain CNZ2 segment is green;
