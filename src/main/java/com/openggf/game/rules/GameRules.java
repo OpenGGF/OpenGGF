@@ -468,7 +468,7 @@ public record GameRules(
                     true,
                     ObjectInteractionRules.NO_DUCK_TOUCH_BOX, // S3K removed the duck touch-box shrink
                     ObjectInteractionRules.NO_DUCK_TOUCH_BOX, // bossDuckTouchBoxMappingFrame
-                    true // Touch_Enemy .bossnotdefeated: active Knuckles glide ends on ordinary boss hits
+                    false
             ),
             new SidekickCpuRules(
                     48,

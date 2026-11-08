@@ -89,9 +89,8 @@ under the matching area heading; see the
   The LRZ title owner submits its three enemy archives in native order,
   preventing a later results-art FIFO overflow. AIZ2 art preparation preserves
   Knuckles' terrain-only branch; Sonic/Tails also submit the battleship object
-  art. Ordinary S3K boss rebounds end active Knuckles glide with the native
-  falling pose, facing and radii; velocity-only boss contacts retain their
-  behavior. Existing animation and route frontiers remain visible, including
+  art. The boss-glide continuation remains open pending the Knuckles SOZ route.
+  Existing animation and route frontiers remain visible, including
   the fresh sanctuary's intermediate load state; its routine comparison does
   not establish player dispatch.
   Special-stage entry honors the recorded team and production lock-on module;

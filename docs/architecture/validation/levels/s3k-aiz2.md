@@ -25,7 +25,7 @@ The initial native/default binding covers all three solo mains at 320; the finit
 | OBJECT / EVENT / CAMERA: battleship loop and bomb child | `TestAiz2ShipLoopRewindRoundTrip#battleshipSurvivesRewindRestoreAndCameraLockIsNotOrphaned`, `TestAiz2TransientChildRewind#shipBombSurvivesRewindRestoreWithMidFlightState` | Constructed ship/child plus declared camera/autoscroll state; active graph checks do not prove natural placement admission. Listed bindings were setup-inspected, not independently rerun as a whole in this slice. |
 | OBJECT / SLOT: battleship propellers, ship exit and tree maker | `TestAiz2BattleshipSlotOwnership`, `TestAizBattleshipPropellerSlots` (a28c5ab47); `TestAiz2MakeTreeScriptOwnership`, `TestSonic3kAIZEvents#aiz2TreeSpawnerReadsAizMakeTreeScriptFromTheRom` | Propellers and ship exit (a28c5ab47) match native SST occupancy on `aiz_5` sample rows 2377-2830 and 3861-3951 (comparison-only slot probe); their old-source witnesses failed 5/5 on f96d31379. The tree maker reads AIZMakeTreeScript from ROM $23C13C: all 17 entries, one after-current attempt per pass, retry on failed allocation, deletion on the following pass, script priority. Its old-source witnesses failed 8 of 9 by assertion on a28c5ab47 (the rewind case is completeness, not a witness), and a same-pass-delete mutation failed the lifetime witness. Native occupancy on `aiz_5` rows 4001-4096 now equals the engine on every sample (was none), and the boss sits in slot 7 at 4109; on `aiz_completerun` the tree slots equal native at every sampled row 22768-22860 and tree screen X equals native `x_pos` - 128 to row 22816. Chain segment 8 went from 1692 errors (first 6111) to 35 (first 6989 `camera_y` +2 in the Knuckles cutscene); see the trace frontier log, 2026-10-16. LIMITED/RAW_RGB pictures against native (BK2 23700-23860) show the two formerly dropped trunks; whole frames still differ through the AnPal_AIZ2 cycle phase (engine one frame late, index two steps ahead; owner open) and player pose. Inherited gaps: the Translate_Camera2ObjX shake term for propellers and bombs (Y +-4 on shake rows); the small craft's bucket 2 against ROM priority $300; the tree X source is the engine smooth scroll, its Events_fg_1 model (3 px from `aiz_completerun` row 22837); bomb/explosion slot rows from 2861/3149/3215; the `loc_69482` child (ChildObjDat_69D66, native slot 9 at row 24683), so the engine capsule sits in slot 9 against native 10. The bridge display SST (`b96ef2c4d`: `TestAizCollapsingLogBridgeDisplaySst`, old source 4/4 red) and the ship's escape signal (`cdeb2dbc0`: `TestAizEndBossInstance#shipEscapeSignalWaitsForStartDefeatAfterTheFadeToLevelMusicWait`) put the bridge child, StillSprite, drawbridge and Robotnik's ship in their native slots; the zone slice falls from 9 errors (first 25038) to 1 (26179) and chain segment 8, after the spin dash camera fix (`11af51ca0`), to 4 errors on the HCZ destination row 7126 (engine PLC drain one row late). Chain rows 6111 and 6989 now match. |
 | EVENT / ART: character-specific resize submission | `TestSonic3kAIZEvents#aiz2ResizeArtSubmissionsFollowNativeCharacterBranch` | [November 7 owner check](#native-resize-art-owners--2026-11-07): real direct/KosM submissions at both thresholds, native source/destination identities, registered restore and no resubmission. Knuckles omits the Sonic-only object archive; broader art and route obligations remain open. |
-| BOSS / HIT: ordinary active-glide rebound | `TestTouchResponseManager#s3kOrdinaryBossReboundEndsOnlyActiveGlide`, `#realS3kBossAndKnucklesRestoreNativeGlidePose` | [November 7 rebound check](#ordinary-boss-glide-rebound--2026-11-07): native flag/animation/facing/radii and no position/air write, real AIZ and CNZ touch owners, other ability states/characters and stock S1/S2 negatives; existing KiS2 controls preserved. Route suffix and presentation breadth remain open. |
+| BOSS / HIT: ordinary active-glide rebound — HELD | Historical component `60b2e6137`; [November 7 rebound check](#ordinary-boss-glide-rebound--2026-11-07) | The native correction and its discriminators are preserved, but the component is excluded from delivery after the maintained Knuckles SOZ route became red. Original shared rules/touch tests are retained. No claim that the final delivered wave advances Mega past its death/reload frontier25811. |
 | BOSS / LOAD: end-boss graph, splash and sequence | `TestS3kAizEndBossGraphRewind`, `TestAiz2BossEndSequenceObjects`, `TestAizEndBossInstance` | Component/late boss contracts; independent arena entry and all required character routes remain open. Listed bindings were setup-inspected, not independently rerun as a whole in this slice. |
 | OBJECT / CAMERA: forest ring and team bounds | `TestAiz2ForestRingCameraGeneration`, `TestS3kAiz2BigRingFormation`, `TestS3kAiz2BigRingCollision`, `TestS3kAiz2SidekickBoundsSync` | Local scene/bounds contracts; configuration and before/active/after placement breadth remain open. Listed bindings were setup-inspected, not independently rerun as a whole in this slice. |
 | LIFE / LOAD: physical post, actual death/restart and incoming/outgoing worlds | Native checkpoint/death/reload owners and the edges listed above | All 140 supported preset/donor/main/roster products are qualified by `TestS3kAiz2EntryMatrix#actualDeathReloadPreservesTheSupportedProductAndReplaysEachIncomingWorldTwice`: two actual deaths/reloads, exactly one life lost per restart, new world owners, outgoing live-history retirement, restored current roster/camera and two complete-world 45-frame restore/replay cycles after each released destination. Physical post activation and incoming/outgoing route edges remain separate obligations. |
@@ -1552,11 +1552,35 @@ The wave lead owns frontier-log updates and combined delivery qualification.
 
 ## Ordinary boss glide rebound — 2026-11-07
 
+**HELD after final smoke, 2026-11-08.** The following records the local historical
+component `60b2e6137`, not delivered runtime behavior. The completed smoke exposes
+a new failure in the existing solo Knuckles/800px/native SOZ end-boss route;
+unchanged `60aa` passes all six maintained teams and both racing controls.
+The original Knuckles input now dies at tick4845 after four hits. A comparison-only
+observation reproduces that primary assertion and records four forward ordinary
+boss hits plus their graph replays: centres/InAir unchanged, all three velocities
+reflected, flag1→2, animation32→33, radii10/10→9/19. These measured writes agree
+with the native tail, but do not qualify the whole encounter or its fatal contact.
+The prior route relies on an interaction that needs further ownership work.
+
+Two bounded controller hypotheses retain every eight-hit/capsule/results/redraw,
+graph-recreation/replay and playable LRZ assertion. Ground-only short presses
+still die after seven hits; full-height ground presses die after one. Both are
+rejected and the original controller is restored. No periods, offsets, runtime
+constants, tolerance or limits are tuned. Delivery restores `GameRules`,
+`ObjectTouchResponseController` and their tests exactly to `60aa`, while retaining
+the independent terrain-only art branch. The commit and complete local evidence
+remain available for a later bounded native/route follow-up. Final source-specific
+art-only qualification is lead-owned; the historical27561 advance below must not
+be quoted as a delivered frontier.
+
+Historical component evidence follows:
+
 `Touch_Enemy`'s `.bossnotdefeated` tail (sonic3k.asm:20961-20977) requires
 character 2 and active glide flag 1, then writes flag 2, animation `$21`, facing
 from reflected signed X velocity (zero faces left), and the default radii.
 It does not change position or set airborne status. This shipped `FixBugs=0`
-tail has no conditional alternate. S3K now enables the existing semantic
+tail has no conditional alternate. The held component enables the existing semantic
 `bossHitEndsActiveGlide` rule; the rebound tail retains the native Knuckles
 predicate. KiS2's rule and ordinary/multi-sprite distinction, all glide/history
 code, and S1/S2 rule values are unchanged. No new rule, API field or trace input

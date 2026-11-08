@@ -247,6 +247,16 @@ replay, native graphics, diagnostics, performance profiles and TraceChaser integ
 their existing commands and prerequisites. Gameplay category coverage does not replace affected
 replay fixtures or the domain skill's required checks. A category run is never a full trace sweep.
 
+When reproducing a recorded category batch with a direct `surefire:test` goal,
+keep its profiles, fork shape and inputs. Prepare the command's actual temporary
+directories before launch: `test-concurrent` needs both `fork-1` and `fork-2`
+under its configured `openggf.test.tmpdir`. The plugin goal skips lifecycle
+initialization; an earlier `test-compile` using the default directory does not
+prepare a different custom directory. Missing directories can appear as Mockito
+agent-attachment failures or JUnit `TempDir` errors. Check the causal I/O error,
+repair that prerequisite and retain the failed control before a justified rerun.
+Ordinary focused checks should continue to use the queue wrapper's `test` lifecycle.
+
 Use `--workers 2` to opt into the `test-concurrent` Maven profile for the ordinary lane.
 The default is one reused JVM; the opt-in uses two reused JVMs with serial JUnit
 execution. Normal batches retain 3 GiB heaps. Reviewed low-heap classes are grouped
