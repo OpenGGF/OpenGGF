@@ -66,7 +66,12 @@ class TestCanonicalPlayableSheet {
                 "missing RUN uses WAIT without indexing neighboring slope frames");
 
         var profile = (ScriptedVelocityAnimationProfile) art.animationProfile();
-        assertEquals(((ScriptedVelocityAnimationProfile) nativeArt.animationProfile()).isAnglePreAdjust(), profile.isAnglePreAdjust());
+        var nativeProfile = (ScriptedVelocityAnimationProfile) nativeArt.animationProfile();
+        assertEquals(nativeProfile.isAnglePreAdjust(), profile.isAnglePreAdjust());
+        assertEquals(nativeProfile.isPushUsesWalkSpecialHandler(), profile.isPushUsesWalkSpecialHandler());
+        assertEquals(nativeProfile.getPushDelayShift(), profile.getPushDelayShift());
+        assertEquals(nativeProfile.isDuckReleasePublishesWalk(), profile.isDuckReleasePublishesWalk());
+        assertEquals(nativeProfile.isAirborneSlidePreservesPublishedAnimation(), profile.isAirborneSlidePreservesPublishedAnimation());
         int slow = changes(art, module, 0x100);
         int fast = changes(art, module, 0x500);
         assertTrue(fast > slow, "native ground-speed walk timing: " + slow + " / " + fast);
