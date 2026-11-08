@@ -588,3 +588,17 @@ GGFP presentation sections are pending: keep using bounded sidecar PNG assets.
 MICA is a framework demonstration, with TALON planned for phase 2. Focused
 acceptance and surface captures do not establish complete title-to-ending routes.
 For a build-along, see [an original character across three games](guides/original-character.md).
+
+### Object-owned native mapping poses
+
+Playable YAML optionally supplies `nativeFrames`, a map from semantic pose keys
+(for example `hang/0`) to authored mapping indices. The GGFP v2 `NFRM` section
+retains these aliases. Each host declares its native bytes through
+`DonorCapabilities.getNativeFramePoses()`; shared binding consumes semantic keys
+and canonical fallbacks rather than game-name branches. Missing poses use the
+host descriptor's canonical fallback; stock art bypasses binding.
+
+When aliases are supplied, bound canonical scripts move above the 256 native
+byte slots, including slope sets and DPLCs. Index zero stays invisible for native
+cutscenes. Creator code should use the installed scripts rather than cache the
+unbound sheet's mapping indices. Authored native aliases remain in byte slots.

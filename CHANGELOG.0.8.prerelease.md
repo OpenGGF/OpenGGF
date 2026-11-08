@@ -40,7 +40,9 @@ under the matching area heading; see the
   single-player physics, native S2/S3K spindash (disabled in S1), character-owned homing (including an untargeted forward
   dash), a four-frame HOMING_DIVE pose, and powered Instagib strikes. Its
   rerunnable original sheet has 98 frames, 18 canonical animations, slope cycles,
-  a shared palette and a breathing/fidget idle. The 36 rotated WALK/RUN poses
+  a shared palette and a breathing/fidget idle. Native object mapping bytes can
+  bind semantic sheet poses; MICA supplies three native-reference hang poses for
+  vines and grapples, with explicit canonical fallbacks for other raw poses. The 36 rotated WALK/RUN poses
   use native phase coordinates and pixel-edited contact edges; S3K transformation
   art uses clustered gold scales and a clearer face, and the second dive shell
   has rounded scale rows. Gilded Super/Hyper forms cycle

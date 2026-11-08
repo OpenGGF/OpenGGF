@@ -352,3 +352,13 @@ core palette/geometry/regeneration and S3K 25-frame piece/palette verification
 passed; queued `TestMicaCharacterIntegration` 18 passed, zero skips with explicit
 verified ROM paths and surfaceless EGL. The first `surefire:test` attempt omitted
 ROM properties (four path-setup errors); the explicit-path rerun passed.
+
+## Object-owned native hang poses
+
+MICA's three HANG rows were redrawn from S3K normal-player mapping $90–$92 using
+the native-pose method and the approved concept. `native-pose-core.json` records
+the exact prompt, generation hash, native reference label, tight size and anchor.
+The original rows are in `recipe.json`; regeneration needs no reference art or
+raw generation. The assembler's `nativeFrames` table binds semantic `hang/0`–
+`hang/2`; host vocabulary translation and canonical fallbacks are documented in
+`docs/modding/characters.md` and the W2 follow-up inventory in the design.

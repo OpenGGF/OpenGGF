@@ -725,8 +725,8 @@
       "order": 0,
       "file": "frames/hang-00.png",
       "hotspot": [
-        24,
-        18
+        16,
+        24
       ],
       "angle_set": "flat",
       "duration_ticks": 10,
@@ -738,8 +738,8 @@
       "order": 1,
       "file": "frames/hang-01.png",
       "hotspot": [
-        24,
-        18
+        16,
+        24
       ],
       "angle_set": "flat",
       "duration_ticks": 10,
@@ -751,8 +751,8 @@
       "order": 2,
       "file": "frames/hang-02.png",
       "hotspot": [
-        24,
-        18
+        16,
+        24
       ],
       "angle_set": "flat",
       "duration_ticks": 10,

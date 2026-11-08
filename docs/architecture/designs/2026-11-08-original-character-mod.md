@@ -1249,3 +1249,72 @@ coverage and tile counts <=36. The three isolated native-pose tests pass.
 42 pass; the same inherited creator-kit missing-LICENSE error remains, compared
 by test identity and exception with the pre-edit baseline. Python compilation
 and whitespace checks pass. No Java build, GGFP bake, merge or push.
+
+### W2 follow-up — object-owned mapping vocabulary (2026-11-08)
+
+The canonical animation table cannot translate an object's mapping-byte writes.
+GGFP v2 now has an optional bounded `NFRM` table, authored as YAML `nativeFrames`.
+Hosts publish native-byte → semantic-pose descriptors through
+`DonorCapabilities.getNativeFramePoses`; descriptors carry a canonical fallback.
+Binding reserves byte slots 0–255 and relocates authored animation/slope frames
+and their DPLCs by 256. Objects still publish their native bytes. Native zero is
+empty (hide/cutscene); stock art and sheets without aliases retain their layout.
+MICA binds `hang/0`, `hang/1`, `hang/2` to its three original native-pose redraws
+of S3K $90/$91/$92. Exact prompts, hashes and native anchor metadata are in
+`art/mica/native-pose-core.json`; only original MICA indexed rows enter Git.
+Native references and raw generation remain in disk-backed scratch.
+
+Source inventory below concerns **playable** mappings, not similarly named
+object-local mapping setters. `setAnimationId`, forced animation and script
+cursor resets already go through canonical binding. This includes S1 poles,
+S2 moving vines/flippers/CPZ tubes, and S3K breakable bars: forcing a native
+animation is not an unaliased native mapping write. Movement's native tumble
+and super alternate-frame selectors are already disabled for canonical sheets;
+their authored slope/roll scripts remain the owner. Continue, snowboard,
+special/bonus stages and ending scene renderers use their separate existing
+presentation banks, not this normal-playable table.
+
+| Host | Native mapping writer / object | Native IDs or owner expression | MICA binding |
+| --- | --- | --- | --- |
+| S1 | Sonic1EndingEvents | $03 (post-BuildSprites wait) | WAIT fallback (`wait/fidget`) |
+| S2 | TornadoObjectInstance ride capture | $01 | WAIT fallback (`wait/stand`); separate vehicle/pilot art retained |
+| S2 | Sonic2CompetitionSession reset | $00 | invisible; competitive presentation remains outside MICA coverage |
+| S3K | AIZ/MHZ ride vines; LBZ grapple; MHZ pulley | $90–$92 | authored `hang/0`–`hang/2` |
+| S3K | AIZ/MHZ vine swing | $78–$7F | HANG fallback (`swing/0`–`swing/7`) |
+| S3K | AIZ hollow tree; CNZ wire cage; MGZ twisting loop; FBZ wire cages; DEZ gravity tube | $69–$77 / $6C–$77 | ROLL fallback (`tumble/*`) |
+| S3K | CNZ cylinder; HCZ spinning column; LBZ cup/tube elevators; DEZ teleporter | $55–$5B | ROLL fallback (`twist/*`) |
+| S3K | CNZ cage release; FBZ spinning pole; MHZ vertical bar | $5C–$61; vertical initial $62, release $24 | HANG fallback (`pole/*`), WALK on release |
+| S3K | MHZ horizontal bar; HCZ conveyor; LRZ turbine | $63–$68, $94/$95 | HANG fallback (`bar/*`, `bar-end/*`) |
+| S3K | FBZ chain link | $80–$85, $91; release $96 | HANG fallback (`chain/*`), authored hang/1, ROLL fallback |
+| S3K | FBZ stationary cage entry | $49, $52–$54 | RUN fallback (`cage-entry/*`) |
+| S3K | DEZ gravity hub | $31–$3C, $6C–$77 | ROLL fallback (`gravity-loop/*`, `tumble/*`) |
+| S3K | LRZ corkscrew / wall ride | $EF–$FA; $DF–$E3 | ROLL / RUN fallback (`corkscrew/*`, `wall-run/*`) |
+| S3K | MHZ mushroom parachute; SSZ elevator bar | $E4–$E7; $E5/$E9 | HANG fallback (`parachute/*`) |
+| S3K | LBZ final boss 2; LRZ cutscene boulder | $8A–$8D | HANG fallback (`carry/*`) |
+| S3K | MHZ Knuckles cutscene player | $B4/$B5 (Sonic archetype) | HURT fallback (`cutscene-hurt/*`) |
+| S3K | HPZ entry/ceremony/theft; LBZ Robotnik ship | $BA / $C4 (Sonic archetype) | WAIT / LOOK_UP fallback (`wait/stand`, `emerald/look`) |
+| S3K | SSZ crane claw | $CB | HANG fallback (`hang/crane`) |
+| S3K | SOZ rapel wire | HANG / SWING / FLIP tables selected by rope mode | corresponding hang, swing, tumble fallbacks; authored $90–$92 |
+| S3K | DEZ miniboss transport | $55–$5B (verified ROM table $7EF2E, 12 entries) | ROLL fallback (`twist/*`) |
+| S3K | SSZ launch / carried-player / crane release | $EF–$FA (table $587A8); $55–$5B (12 pairs at $468C4); $C0/$CA/$CB release | ROLL fallback (`corkscrew/*`, `twist/*`); release $C0/$CA still WAIT, $CB HANG |
+| S3K | LBZ1 ground launch / cup initial capture | first frame of installed script | already relocated authored script frame |
+| S3K | LBZ final boss 1 player presentation | installed presentation frame | existing presentation owner; no object-local art copied |
+| S3K | AIZ plane, CNZ teleporter, HPZ route/entry, ICZ snowboard intro, SSZ arrival/launch/HPZ teleporter, SS entry ring, Mecha Sonic release | $00 | invisible native frame |
+| S3K | EndingRescueDirector / EndingKnucklesFlight | $BA, $58, $00; ending-bank selection | existing ending presentation bank; zero invisible |
+| S3K | slot runtime / competition miniature | copies current player's mapping | copies the already selected namespace; no second translation |
+
+Fallback art debt is explicit: every semantic key above except `hang/0`–`hang/2`
+currently uses its named canonical fallback's first pose. No MICA drawing exists
+for the native twist, tumble, pole, bar, chain, cage-entry, gravity-loop, carry,
+wall-run, corkscrew, parachute, crane and cutscene-specific phases. The SSZ/DEZ table IDs were read from the verified locked-on ROM
+(SHA-1 CFBF98C36C776677290A872547AC47C53D2761D6). SSZ crane release $C0/$CA
+remain unspecified WAIT fallbacks and need dedicated poses. Unknown byte slots
+intentionally use WAIT rather than arbitrary sheet frames. Object route captures
+remain coverage gaps, not certified replacements for those presentations. The source-call scan is in the task's scratch folder.
+
+Acceptance: the production AIZ ride vine transitions from native $91 to
+$78–$7F; its aliased DPLC selects MICA's HANG source rather than an inverted WALK
+frame. The capture is positioned at a spawned production handle; it is not a
+cold route certification. All 108 selected Java tests pass, zero skips after the vocabulary
+expansion and new art adoption. Required
+additional raw-object route captures and the ROM-table audit remain outstanding.

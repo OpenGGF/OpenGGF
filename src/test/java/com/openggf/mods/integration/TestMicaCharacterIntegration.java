@@ -49,6 +49,52 @@ class TestMicaCharacterIntegration {
     @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
     void spindashCaptureS3k() throws Exception { captureSpindash("s3k", "s3k.rom.path"); }
 
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void aizVineUsesMicaHangMapping() throws Exception {
+        Path output = Path.of(System.getProperty("mica.poses.captureRoot", "target/mica-poses")).resolve("aiz-vine");
+        Files.createDirectories(output);
+        var settings = new com.openggf.tools.GameplayCaptureSession.Settings(320, CODE, "", "off", null, null, null);
+        try (var session = new com.openggf.tools.GameplayCaptureSession(settings)) {
+            session.applyMod(buildSample());
+            GameServices.configuration().setSessionOverride(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT, true);
+            session.boot(Path.of(System.getProperty("s3k.rom.path")), 0, 0, settings);
+            for (int i = 0; i < 120; i++) session.step(null);
+            var player = session.player();
+            var vine = new com.openggf.game.sonic3k.objects.AizRideVineObjectInstance(new com.openggf.level.objects.ObjectSpawn(
+                    player.getCentreX() + 48, player.getCentreY() - 100, 6, 0, 0, false, 0));
+            assertNotNull(GameServices.level().getObjectManager().createDynamicObject(() -> vine));
+            session.step(null);
+            // Declared positioned grab at the production handle; no gameplay state is supplied by a trace.
+            var field = vine.getClass().getDeclaredField("handle"); field.setAccessible(true);
+            Object handle = field.get(vine);
+            var hx = handle.getClass().getDeclaredField("x"); hx.setAccessible(true);
+            var hy = handle.getClass().getDeclaredField("y"); hy.setAccessible(true);
+            player.setCentreX((short) hx.getInt(handle)); player.setCentreY((short) (hy.getInt(handle) + 4));
+            player.setAir(true); player.setXSpeed((short) 0); player.setYSpeed((short) 0);
+            var source = com.openggf.level.objects.PlayableSheetMaterializer.read(Files.readAllBytes(temp.resolve("classes/art/mica.ggfp"))).art();
+            var hangFrames = source.animationSet().getScript(CanonicalAnimation.HANG.ordinal()).frames();
+            var csv = new StringBuilder(com.openggf.tools.GameplayCaptureSession.stateHeader()).append('\n');
+            int observed = 0, swings = 0;
+            for (int i = 0; i < 90; i++) {
+                session.step(null);
+                int frame = player.getMappingFrame();
+                if (frame >= 0x90 && frame <= 0x92) {
+                    observed++;
+                    assertEquals(source.dplcFrames().get(hangFrames.get(frame - 0x90)), player.getSpriteRenderer().dplcFrame(frame));
+                    com.openggf.graphics.ScreenshotCapture.savePNG(session.render(), output.resolve("frame-" + i + ".png"));
+                }
+                if (frame >= 0x78 && frame <= 0x7F) {
+                    swings++;
+                    assertEquals(source.dplcFrames().get(hangFrames.getFirst()), player.getSpriteRenderer().dplcFrame(frame));
+                    if (i % 10 == 0) com.openggf.graphics.ScreenshotCapture.savePNG(session.render(), output.resolve("swing-" + i + ".png"));
+                }
+                csv.append(session.stateLine(i, null)).append('\n');
+            }
+            Files.writeString(output.resolve("state.csv"), csv);
+            assertTrue(observed > 0 && swings > 10, "native vine must progress from hang into sustained swing");
+        }
+    }
+
     private void captureSpindash(String game, String romProperty) throws Exception {
         Path output = Path.of(System.getProperty("mica.poses.captureRoot", "target/mica-poses")).resolve(game + "-spindash");
         Files.createDirectories(output);
@@ -251,7 +297,7 @@ class TestMicaCharacterIntegration {
             // MICA's six WAIT frames are 0..5; stock Sonic's idle is 186.
             var last = rows.getLast().split(",");
             assertEquals("LEVEL", last[19]);
-            assertTrue(Integer.parseInt(last[12]) < 6, rows.getLast());
+            assertTrue(Integer.parseInt(last[12]) >= 256 && Integer.parseInt(last[12]) < 262, rows.getLast());
         } finally {
             if (previous == null) System.clearProperty("openggf.saveRoot");
             else System.setProperty("openggf.saveRoot", previous);
@@ -952,7 +998,7 @@ class TestMicaCharacterIntegration {
         assertEquals(com.openggf.game.mutators.HomingAttackRuntime.Phase.HOMING, runtime.phase());
         assertEquals(powered ? com.openggf.game.mutators.HomingAttackRuntime.Mode.INSTAGIB
                 : com.openggf.game.mutators.HomingAttackRuntime.Mode.HOMING, runtime.capture().launchMode());
-        assertTrue(List.of(28, 29, 30, 31).contains(player.getMappingFrame()),
+        assertTrue(List.of(284, 285, 286, 287).contains(player.getMappingFrame()),
                 "The strike selects the authored dive pose");
         assertEquals(player.resolveAnimationId(CanonicalAnimation.ROLL), player.getAnimationId(),
                 "The visual dive must retain native roll attack semantics");

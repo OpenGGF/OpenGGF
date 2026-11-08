@@ -61,7 +61,7 @@ public final class PlayableSheetMaterializer {
             }
             animations.addScript(canonical.ordinal(), script);
         }
-        SpriteAnimationProfile profile = new PlayableSheetAnimationBinding.CanonicalProfile(strides);
+        SpriteAnimationProfile profile = new PlayableSheetAnimationBinding.CanonicalProfile(strides, sheet.nativeFrames());
         int delay = base.frames().isEmpty() ? 0 : base.frames().getFirst().delay();
         SpriteArtSet art = new SpriteArtSet(base.patterns(),
                 mappings, dplcs,

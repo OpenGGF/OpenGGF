@@ -33,6 +33,18 @@ class TestCanonicalPlayableSheet {
         var host = module.getDonorCapabilities();
         var nativeArt = host.getPlayerArtProvider(RomByteReader.fromRom(TestEnvironment.currentRom())).loadPlayerSpriteArt("sonic");
         var source = sheet();
+        assertSame(nativeArt, PlayableSheetAnimationBinding.bind(nativeArt, host,
+                (ScriptedVelocityAnimationProfile) nativeArt.animationProfile()), "stock art is untouched");
+        var aliasKey = host.getNativeFramePoses().entrySet().iterator().next();
+        var aliasSource = new SpriteArtSet(source.artTiles(), source.mappingFrames(), source.dplcFrames(),
+                source.paletteIndex(), source.basePatternIndex(), source.frameDelay(), source.bankSize(),
+                new PlayableSheetAnimationBinding.CanonicalProfile(Map.of(), Map.of(aliasKey.getValue().key(), 0)), source.animationSet());
+        var aliasBound = PlayableSheetAnimationBinding.bind(aliasSource, host, (ScriptedVelocityAnimationProfile) nativeArt.animationProfile());
+        assertEquals(source.mappingFrames().getFirst(), aliasBound.mappingFrames().get(aliasKey.getKey()));
+        assertEquals(source.dplcFrames().getFirst(), aliasBound.dplcFrames().get(aliasKey.getKey()));
+        assertEquals(source.animationSet().getScript(CanonicalAnimation.WAIT.ordinal()).frames().stream().map(f -> f + 256).toList(),
+                aliasBound.animationSet().getScript(host.resolveNativeId(CanonicalAnimation.WAIT)).frames());
+
         var art = PlayableSheetAnimationBinding.bind(source, host,
                 (ScriptedVelocityAnimationProfile) nativeArt.animationProfile());
         for (var pose : List.of(CanonicalAnimation.WALK, CanonicalAnimation.RUN, CanonicalAnimation.ROLL,

@@ -649,6 +649,10 @@ public class Sonic1GameModule implements com.openggf.game.internal.RetailRomAwar
 
         static final Sonic1DonorCapabilities INSTANCE = new Sonic1DonorCapabilities();
 
+        @Override public java.util.Map<Integer, NativeFramePose> getNativeFramePoses() {
+            return java.util.Map.of(3, new NativeFramePose("wait/fidget", CanonicalAnimation.WAIT));
+        }
+
         private static final java.util.Set<PlayerCharacter> CHARACTERS =
                 java.util.Set.of(PlayerCharacter.SONIC_ALONE);
 

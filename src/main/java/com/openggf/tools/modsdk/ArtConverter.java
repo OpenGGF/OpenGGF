@@ -200,7 +200,10 @@ public final class ArtConverter {
 
     public record Result(Path output, int patternCount, int frameCount) {}
     public record Manifest(int formatVersion, int paletteLine, List<String> palette, List<Frame> frames,
-            Map<String, PlayableAnimation> animations) {
+            Map<String, PlayableAnimation> animations, Map<String, Integer> nativeFrames) {
+        public Manifest(int formatVersion, int paletteLine, List<String> palette, List<Frame> frames, Map<String, PlayableAnimation> animations) {
+            this(formatVersion, paletteLine, palette, frames, animations, null);
+        }
         public Manifest(int formatVersion, int paletteLine, List<String> palette, List<Frame> frames) {
             this(formatVersion, paletteLine, palette, frames, null);
         }

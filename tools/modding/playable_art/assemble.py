@@ -103,7 +103,7 @@ def assemble(root, output):
                                        durations=[2]*len(custom['HOMING_DIVE']), end='loop')
     manifest = dict(formatVersion=1, paletteLine=0,
                     palette=['#%02X%02X%02X' % tuple(c) for c in colors],
-                    frames=frames, animations=animations)
+                    frames=frames, animations=animations, nativeFrames={f"hang/{i}": next(j for j, frame in enumerate(source) if frame["id"] == f"hang-{i:02}") for i in range(3)})
     output.mkdir(parents=True, exist_ok=True)
     sheet.save(output / 'mica.png', transparency=0, bits=8)
     (output / 'mica-sheet.yaml').write_text(json.dumps(manifest, indent=2)+'\n')
