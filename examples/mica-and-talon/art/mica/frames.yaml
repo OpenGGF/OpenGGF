@@ -301,7 +301,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 48,
-      "notes": "Single launch pose for 48 ticks then WALK; SonAni_Spring (s2.asm:38736)."
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 3; no painted pixel patches."
     },
     {
       "id": "hurt-00",

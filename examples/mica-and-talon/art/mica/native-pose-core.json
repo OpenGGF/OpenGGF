@@ -974,8 +974,6 @@
       "owner_fix": "Stable rounded scale hood, bounded four-phase arm swing; separate rear tail above coral-only boot orbit; no resized pixels."
     },
     "spring-00": {
-      "prompt": "Use case: style-transfer. Asset: one animation frame, transparent background, no text, no ground or shadow. Image 1 is the NATIVE POSE TARGET. Image 2 is the MICA CHARACTER IDENTITY reference (use jade version only). Redraw image 1 as the ORIGINAL pangolin MICA: jade overlapping rounded scales, sand-cream face and belly, coral-red boots with tan soles, white gloves, big friendly brown eye, scaled tail. New drawing, not a recolour. NO blue, spikes or Sonic facial features. Keep the exact body pose, limb placement, framing, silhouette SIZE and facing of image 1; fit tail within the same bounds. Crisp 16-bit pixel sprite, clean dark outline, flat clustered shading, simple readable eyes, no antialiasing. One sprite only, filling the same proportional bounds. Frame: spring-00 Extended vertical spring launch, boots together pointing down, hands low, head looking up. First launch phase.",
-      "raw_sha256": "6c387e5cfa73a4560cbbd9791dde2a56a6a04e209877071f96f7b8eb17f2a32f",
       "reference": {
         "id": "spring-00",
         "size": [
@@ -997,7 +995,6 @@
         "label": "Map_Sonic_0A5A"
       },
       "geometry_reference": {
-        "id": "spring-00",
         "size": [
           24,
           45
@@ -1005,36 +1002,45 @@
         "hotspot": [
           12,
           22
-        ],
-        "bbox_relative_to_hotspot": [
-          -12,
-          -22,
-          12,
-          23
-        ],
-        "game": "S2",
-        "mapping": 91,
-        "label": "Map_Sonic_0A5A"
+        ]
       },
       "native_size": [
         24,
         45
       ],
-      "previous_size": [
-        25,
-        48
-      ],
-      "previous_hotspot": [
-        13,
-        24
-      ],
       "hotspot": [
         12,
         22
       ],
-      "source": "approved pilot adoption",
-      "cleanup": "connected alpha; shared palette; inside ink outline",
-      "material_box_change": false
+      "prompt": "Use case: style-transfer. Create ONE original MICA pangolin SPRING launch sprite. Inputs: first image is native Sonic S2 SPRING pose, exact pose reference ONLY. Second is MICA concept, identity reference; third and fourth are owner-approved MICA pixel face style anchors. Redraw the first image's exact upright airborne spring pose as the jade pangolin from the concept: rounded overlapping scale hood, cream muzzle and belly, small white gloves, coral boots with tan soles and jade laces, NO WHITE ON BOOTS, long scaled tail. Preserve native limb placement and silhouette proportions, same orientation facing right; hood rounded scales NEVER spiky quills. Consistent top-left lighting and crisp native 16-bit pixel clusters, black ink outline, limited colours. Single sprite isolated on transparent background, no text, no ground, no shadow, no extra poses. This will reduce to 23x48 native pixels: keep details simple and legible. Attempt 3 of 3: Native spring has narrow width and long body: small rounded head, face facing right, both gloved hands held at hips, legs together and coral boots pointing down. Small rounded scale groups. NO golden form.",
+      "raw_sha256": "bd0a053887264e47d692a35a5d7eeaa23ded0e6fd5ebf23459f77246dc198118",
+      "source": "built-in GPT Image, latest exposed; exact version unavailable",
+      "cleanup": "Transparent-margin crop; Lanczos native box reduction; unchanged fixed palette; inside silhouette ink. No painted pixels.",
+      "regeneration": {
+        "attempts": [
+          {
+            "attempt": 1,
+            "prompt": "Use case: style-transfer. Create ONE original MICA pangolin SPRING launch sprite. Inputs: first image is native Sonic S2 SPRING pose, exact pose reference ONLY. Second is MICA concept, identity reference; third and fourth are owner-approved MICA pixel face style anchors. Redraw the first image's exact upright airborne spring pose as the jade pangolin from the concept: rounded overlapping scale hood, cream muzzle and belly, small white gloves, coral boots with tan soles and jade laces, NO WHITE ON BOOTS, long scaled tail. Preserve native limb placement and silhouette proportions, same orientation facing right; hood rounded scales NEVER spiky quills. Consistent top-left lighting and crisp native 16-bit pixel clusters, black ink outline, limited colours. Single sprite isolated on transparent background, no text, no ground, no shadow, no extra poses. This will reduce to 23x48 native pixels: keep details simple and legible. Attempt 1 of 3: faithful compact spring pose and consistent cheerful face. NO golden form.",
+            "raw_sha256": "d6ad89731614e079aa37ab7708bc1ada6d505b7abd1d3998fc4fb5cd582912ab",
+            "chosen": false
+          },
+          {
+            "attempt": 2,
+            "prompt": "Use case: style-transfer. Create ONE original MICA pangolin SPRING launch sprite. Inputs: first image is native Sonic S2 SPRING pose, exact pose reference ONLY. Second is MICA concept, identity reference; third and fourth are owner-approved MICA pixel face style anchors. Redraw the first image's exact upright airborne spring pose as the jade pangolin from the concept: rounded overlapping scale hood, cream muzzle and belly, small white gloves, coral boots with tan soles and jade laces, NO WHITE ON BOOTS, long scaled tail. Preserve native limb placement and silhouette proportions, same orientation facing right; hood rounded scales NEVER spiky quills. Consistent top-left lighting and crisp native 16-bit pixel clusters, black ink outline, limited colours. Single sprite isolated on transparent background, no text, no ground, no shadow, no extra poses. This will reduce to 23x48 native pixels: keep details simple and legible. Attempt 2 of 3: Match native Sonic spring EXACTLY: hands close to waist, legs extended down, feet overlapping vertically. Reduce hood width; compact scale clusters, long slim body. NO golden form.",
+            "raw_sha256": "7a1968a6ab9e5bb8e3b85c104b24a231988a935a5278a13291d2fa73cccb812c",
+            "chosen": false
+          },
+          {
+            "attempt": 3,
+            "prompt": "Use case: style-transfer. Create ONE original MICA pangolin SPRING launch sprite. Inputs: first image is native Sonic S2 SPRING pose, exact pose reference ONLY. Second is MICA concept, identity reference; third and fourth are owner-approved MICA pixel face style anchors. Redraw the first image's exact upright airborne spring pose as the jade pangolin from the concept: rounded overlapping scale hood, cream muzzle and belly, small white gloves, coral boots with tan soles and jade laces, NO WHITE ON BOOTS, long scaled tail. Preserve native limb placement and silhouette proportions, same orientation facing right; hood rounded scales NEVER spiky quills. Consistent top-left lighting and crisp native 16-bit pixel clusters, black ink outline, limited colours. Single sprite isolated on transparent background, no text, no ground, no shadow, no extra poses. This will reduce to 23x48 native pixels: keep details simple and legible. Attempt 3 of 3: Native spring has narrow width and long body: small rounded head, face facing right, both gloved hands held at hips, legs together and coral boots pointing down. Small rounded scale groups. NO golden form.",
+            "raw_sha256": "bd0a053887264e47d692a35a5d7eeaa23ded0e6fd5ebf23459f77246dc198118",
+            "chosen": true
+          }
+        ],
+        "chosen": 3,
+        "reason": "Closest narrow upright native launch silhouette; hands at hips and boots pointing down; rounded consistent hood. Other candidates have broader glove/face shapes.",
+        "review_directory": "$HOME/scratch/agent-tmp/mica-regen-20261108"
+      }
     },
     "spindash-00": {
       "prompt": "Use case: style-transfer. Asset: ONE isolated 16-bit pixel sprite, transparent background. Image 1 is ONLY native pose/rotation/silhouette and facing reference, NOT the character to reproduce. Image 2 is MICA's original pangolin identity concept. Image 3 is approved pixel-art style/proportion anchor. Redraw image 1 pose as MICA, a NEW DRAWING, NOT a recolour. Preserve pose, framing and silhouette extent of reference, NOT standing concept pose. Jade rounded overlapping scales, long scaled tail, tan pangolin muzzle/belly, readable dark eye, white gloves, red hiking boots with tan soles and jade laces. NO hedgehog/quills/blue/Sonic features, no text, no shadows or scenery. Crisp simple native pixel clusters and continuous dark outline. Pose: Compact oval curled pangolin armour ball, long axis lower-left to upper-right; scales foremost, tucked face on right, no extended limbs.",
