@@ -5,6 +5,10 @@ public final class HudPaletteBridgeAccess {
     private HudPaletteBridgeAccess() {
     }
 
+    public static void setCharacterLifeIcon(HudRenderManager hud, boolean enabled) {
+        hud.setCharacterLifeIcon(enabled);
+    }
+
     public static void setLivesNumberPaletteLine(HudRenderManager hud, int paletteLine) {
         hud.setLivesNumberPaletteLine(paletteLine);
     }

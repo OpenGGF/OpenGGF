@@ -76,7 +76,9 @@ public final class Sonic1CharacterPresentation {
         System.arraycopy(CharacterNameComposer.tiles(face), 0, patterns, 0x1C, 4);
         var frames = new ArrayList<SpriteMappingFrame>();
         for (int i = 0; i < nativeSheet.getFrameCount(); i++) frames.add(nativeSheet.getFrame(i));
-        return new ObjectSpriteSheet(patterns, frames, nativeSheet.getPaletteIndex(), nativeSheet.getFrameDelay());
+        return com.openggf.game.presentation.CharacterIconPalette.monitor(
+                new ObjectSpriteSheet(patterns, frames, nativeSheet.getPaletteIndex(), nativeSheet.getFrameDelay()),
+                presentation, CharacterPresentation.Host.S1, 0x1C);
     }
 
     /** Replace only SONIC's five native pieces; retain HAS and every other native piece. */

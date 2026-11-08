@@ -215,8 +215,13 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
         sheetOrder.clear();
         rendererOrder.clear();
 
+        var characterPresentation = Sonic2CharacterPresentation.resolve(
+                GameServices.module(), GameServices.configuration());
+
         // === Manual art (not in PLCs or needs complex construction) ===
-        registerSheet(ObjectArtKeys.MONITOR, artData.monitorSheet());
+        registerSheet(ObjectArtKeys.MONITOR, com.openggf.game.presentation.CharacterIconPalette.monitor(
+                artData.monitorSheet(), characterPresentation,
+                com.openggf.game.CharacterPresentation.Host.S2, Sonic2ObjectArt.MONITOR_LIFE_ICON_TILE));
         registerSheet(Sonic2ObjectArtKeys.WATERFALL, artData.waterfallSheet());
         registerSheet(ObjectArtKeys.ANIMAL, Sonic2PlcArtSlots.detached(artData.animalSheet()));
         registerEagerSheets(zoneIndex);
@@ -296,8 +301,6 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
         registerSheet(ObjectArtKeys.GAME_OVER, artLoader.loadGameOverSheet());
 
         // === Results screen (separate namespace) ===
-        var characterPresentation = Sonic2CharacterPresentation.resolve(
-                GameServices.module(), GameServices.configuration());
         resultsSheet = Sonic2ResultsName.apply(GameServices.rom().getRom(),
                 java.util.Objects.requireNonNull(resultsSheetOverlay.apply(artData.resultsSheet())),
                 characterPresentation);
