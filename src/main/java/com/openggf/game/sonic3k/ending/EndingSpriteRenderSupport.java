@@ -34,6 +34,14 @@ public final class EndingSpriteRenderSupport {
     public static void draw(ObjectServices services, String key, int mappingAddress,
                             int tileBase, int paletteBase, int frame, int worldX, int worldY,
                             boolean flipX, boolean flipY, boolean highPriority, int priorityBucket) {
+        var surface = mappingAddress == S3kEndingResources.MAP_SONIC_TAILS_POSE && frame <= 2
+                ? (S3kEndingCoordinator.state(services).progress() < 0
+                    ? com.openggf.game.EndingSpriteSet.Surface.S3K_NORMAL_POSE
+                    : com.openggf.game.EndingSpriteSet.Surface.S3K_POWERED_POSE)
+                : mappingAddress == S3kEndingResources.MAP_ENDING_PLANE_EXTRA && (frame == 22 || frame == 23)
+                    ? com.openggf.game.EndingSpriteSet.Surface.S3K_PASSENGER : null;
+        if (surface != null && EndingCharacterPresentation.draw(services, surface, frame, worldX, worldY,
+                flipX, flipY, highPriority, priorityBucket)) return;
         if (!(services.currentLevel() instanceof Sonic3kLevel level)) return;
         if (!(services.levelManager().getGameModule().getObjectArtProvider()
                 instanceof Sonic3kObjectArtProvider provider)) return;

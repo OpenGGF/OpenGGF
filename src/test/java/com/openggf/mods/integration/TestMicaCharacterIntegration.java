@@ -81,6 +81,103 @@ class TestMicaCharacterIntegration {
     @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
     void micaSlotsCapture() throws Exception { captureStage("s3k", true); }
 
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void micaS3kEndingNormal() throws Exception { captureS3kEnding(-2); }
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void micaS3kEndingSuper() throws Exception { captureS3kEnding(0); }
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void micaS3kEndingHyper() throws Exception { captureS3kEnding(2); }
+
+    private void captureS3kEnding(int progress) throws Exception {
+        Path output = Path.of(System.getProperty("mica.ending.captureRoot", "target/mica-ending-captures"))
+                .resolve(progress < 0 ? "normal" : progress == 0 ? "super" : "hyper");
+        Files.createDirectories(output);
+        var settings = new com.openggf.tools.GameplayCaptureSession.Settings(320,CODE,"","off",null,null,null,null,false,false);
+        String previous = System.getProperty("openggf.saveRoot");
+        System.setProperty("openggf.saveRoot",temp.resolve("ending-saves").toString());
+        try (var session = new com.openggf.tools.GameplayCaptureSession(settings)) {
+            session.applyMod(buildSample());
+            session.boot(com.openggf.tests.RomTestUtils.ensureSonic3kRomAvailable().toPath(),13,1,settings);
+            if (progress >= 0) for (int i=0;i<7;i++) GameServices.gameState().markEmeraldCollected(i);
+            if (progress == 2) GameServices.gameState().restoreS3kEmeraldProgress(java.util.Collections.nCopies(7,3),true);
+            var definition = com.openggf.game.presentation.StageCharacterPresentation.activeDefinition();
+            assertNotNull(definition);
+            var presentation = definition.presentationSupplier().load(CODE);
+            assertEquals(6,presentation.endings().size());
+            for (var entry : presentation.endings().entrySet()) {
+                var compiled = com.openggf.game.presentation.StageSpriteCompiler.compile(entry.getValue().sprites(),null);
+                for (var frame : entry.getValue().sprites().frames().entrySet()) {
+                    assertFalse(compiled.mappingFrames().get(frame.getKey()).pieces().isEmpty());
+                    var image = frame.getValue().image();
+                    var decoded = new byte[image.width()*image.height()];
+                    int start = compiled.dplcFrames().get(frame.getKey()).requests().getFirst().startTile();
+                    for (var piece : compiled.mappingFrames().get(frame.getKey()).pieces())
+                        for (int col=0;col<piece.widthTiles();col++) for (int row=0;row<piece.heightTiles();row++)
+                            for (int x=0;x<8;x++) for (int y=0;y<8;y++) {
+                                int px=piece.xOffset()+frame.getValue().hotspotX()+col*8+x;
+                                int py=piece.yOffset()+frame.getValue().hotspotY()+row*8+y;
+                                if (px<image.width() && py<image.height()) decoded[py*image.width()+px]=compiled.artTiles()[
+                                        start+piece.tileIndex()+col*piece.heightTiles()+row].getPixel(x,y);
+                            }
+                    assertArrayEquals(image.pixels(),decoded,entry.getKey()+"/"+frame.getKey());
+                }
+            }
+            var cacheField = Class.forName("com.openggf.game.sonic3k.ending.EndingCharacterPresentation").getDeclaredField("CACHE");
+            cacheField.setAccessible(true);
+            @SuppressWarnings("unchecked") var cache = (Map<Object,Map<EndingSpriteSet.Surface,PlayerSpriteRenderer>>)cacheField.get(null);
+            cache.clear();
+            var drawn = java.util.EnumSet.noneOf(EndingSpriteSet.Surface.class);
+            var csv = new StringBuilder(com.openggf.tools.GameplayCaptureSession.stateHeader()).append('\n');
+            boolean floatSeen=false, rideSeen=false, transformSeen=false;
+            int lastMapping=-1;
+            for (int i=0;i<18000;i++) {
+                session.step(null);
+                if (session.loop().getCurrentGameMode() == GameMode.TITLE_SCREEN) break;
+                var player = GameServices.sprites().getMainPlayable();
+                assertNotNull(player,"ending player retained until title return");
+                int mapping = player.getMappingFrame();
+                floatSeen |= mapping >= 200 && mapping <= 207;
+                rideSeen |= mapping == 186;
+                transformSeen |= mapping >= 210 && mapping <= 214;
+                csv.append(session.stateLine(i,null)).append('\n');
+                if (i % 120 == 0 || mapping != lastMapping && (mapping == 186 || mapping >= 200 && mapping <= 214)) {
+                    session.renderFrame();
+                    com.openggf.graphics.ScreenshotCapture.savePNG(session.render(),output.resolve("frame-"+i+".png"));
+                }
+                for (var renderers : cache.values()) {
+                    drawn.addAll(renderers.keySet());
+                    for (var entry : renderers.entrySet()) {
+                        var context = entry.getValue().getRenderContext();
+                        assertNotNull(context);
+                        assertTrue(context.getEffectivePaletteLine(0)>3,"private character palette row");
+                        if (entry.getKey() == EndingSpriteSet.Surface.S3K_NORMAL_POSE
+                                || entry.getKey() == EndingSpriteSet.Surface.S3K_PASSENGER
+                                || entry.getKey() == EndingSpriteSet.Surface.S3K_EYECATCH) {
+                            int[] rgb = presentation.endings().get(entry.getKey()).palette().rgb();
+                            for (int color=0;color<16;color++) {
+                                var actual=context.getPalette(0).getColor(color);
+                                assertEquals(rgb[color],(Byte.toUnsignedInt(actual.r)<<16)
+                                        | (Byte.toUnsignedInt(actual.g)<<8) | Byte.toUnsignedInt(actual.b));
+                            }
+                        }
+                    }
+                }
+                lastMapping=mapping;
+            }
+            assertTrue(drawn.contains(EndingSpriteSet.Surface.S3K_PLAYER));
+            assertTrue(drawn.contains(EndingSpriteSet.Surface.S3K_PASSENGER));
+            assertTrue(drawn.contains(progress < 0 ? EndingSpriteSet.Surface.S3K_NORMAL_POSE : EndingSpriteSet.Surface.S3K_POWERED_POSE));
+            if (progress >= 0) assertTrue(drawn.contains(EndingSpriteSet.Surface.S3K_POWERED_PLAYER));
+            if (progress == 2) assertTrue(drawn.contains(EndingSpriteSet.Surface.S3K_EYECATCH));
+            Files.writeString(output.resolve("state.csv"),csv);
+            if (progress < 2) assertTrue(floatSeen,"native Float2 frames must run");
+            assertTrue(rideSeen,"native plane ride must run");
+            if (progress >= 0) assertTrue(transformSeen,"native reunion transform frames must run");
+        } finally {
+            if (previous == null) System.clearProperty("openggf.saveRoot"); else System.setProperty("openggf.saveRoot",previous);
+        }
+    }
+
     private void captureStage(String game, boolean bonus) throws Exception {
         Path jar=buildSample();
         var settings=new com.openggf.tools.GameplayCaptureSession.Settings(320,CODE,"","off",null,null,null,null,false,false);
@@ -532,6 +629,12 @@ class TestMicaCharacterIntegration {
         try(var files=Files.list(stages)) {
             for(var file:files.filter(p -> p.toString().endsWith(".png") && !p.toString().endsWith("-fixed.png")).toList())
                 Files.copy(file,classes.resolve("art/mica/wave3").resolve(file.getFileName()));
+        }
+        Path endings = project.resolve("art/mica/endings/s3k");
+        Files.createDirectories(classes.resolve("art/mica/endings/s3k"));
+        try (var files = Files.list(endings)) {
+            for (var file : files.filter(p -> p.toString().endsWith(".png")).toList())
+                Files.copy(file, classes.resolve("art/mica/endings/s3k").resolve(file.getFileName()));
         }
         Path jar = temp.resolve("mica-and-talon.jar");
         assertEquals(0,com.openggf.tools.modsdk.GgfModCli.run(new String[]{"package","--input",

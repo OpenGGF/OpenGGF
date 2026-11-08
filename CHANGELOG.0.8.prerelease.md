@@ -62,6 +62,9 @@ under the matching area heading; see the
   MICA's Gilded Super/Hyper forms use owner-bound profiles and her jade-to-gold
   palette cycles; host settings configure the gates. S1's donor-free six-emerald
   form is a mod-defined rule. Powered-form state and palettes participate in rewind.
+  Optional S3K ending sets supply MICA's rescue Float2/ride, reunion poses,
+  transformation, tiny passengers and trio-eyecatch art. Scene-form operations
+  support authored controllers without changing the stock ending dispatch.
 - Character definitions can supply an authored underwater palette through the
   owner fault boundary; absent suppliers retain zone-aware host water derivation.
 - Playable mod sheets now declare canonical animation tables shared by Sonic 1,

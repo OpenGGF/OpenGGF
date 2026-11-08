@@ -232,6 +232,15 @@ S1 instead binds the ordinary canonical playable sheet to its native roll script
 The stage player uses the character palette supplier in an isolated render-context
 row; native palette lines remain available to stage art and stock sidekicks.
 MICA packages the wave3 PNG sets through `PresentationImages` and `ModAssetRoot`.
+`CharacterPresentation.endings` adds optional `EndingSpriteSet` entries. S3K
+supports normal/powered reunion poses, tiny passengers, the Sonic trio-eyecatch
+child, and normal/powered player ending frames. Frames retain native mapping IDs
+and hotspots; missing entries fall back to the native host renderer. Indexed
+images are bounded to 256×256 pixels to include the enlarged reunion art. Each
+set carries an indexed palette image; the renderer keeps it on a private palette
+row. Powered player/reunion frames use the live authored form palette. Vehicle,
+companion, banner, choreography and script timing stay native. Existing four- and
+five-argument presentation constructors retain empty ending maps.
 GGFP presentation sections are pending.
 
 ## Ability and super-form rules

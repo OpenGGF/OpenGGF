@@ -2724,3 +2724,8 @@ landing window cases. Mega segment 4 removes all 2,589 errors on 7,430 actual
 compared rows with zero added ERROR tuples and unchanged coverage. Segment 8's
 movie-25811 ownership failure remains outside this repair. Existing act-route,
 donor/team/viewport and full-route rewind obligations remain open.
+
+MICA authored S3K ending presentation (2026-11-08): the
+[ending matrix](../architecture/validation/levels/s3k-ending.md#authored-sonic-route-ending-presentation-2026-11-08)
+records passing declared-entry normal/Super/Hyper mapping and capture checks.
+Doomsday route entry, mod rewind and broader team/viewport certification remain open.

@@ -741,3 +741,34 @@ Status log (times UTC):
   actions are demonstrated across the set; an airborne chain is filmed in GHZ1,
   not separately certified in every host. No broad smoke or full-suite claim:
   cross-lane validation/integration remain with the delivery lead.
+
+- 2026-11-08: W4/W6 S3K ending lane `feature/ai-mica-endings-s3k` adds
+  optional native-ID ending sets through the owner-bounded presentation supplier,
+  packaged MICA S3K PNGs and private palette contexts. Rescue/reunion callers use
+  semantic scene-form operations for both native and profile controllers; the
+  profile retains authored palette cycles and no scene ring drain. Native ROM
+  Float2 and transformation scripts drive the added frames. Verification and
+  capture results are recorded in the follow-up below; this remains declared-entry
+  scene verification rather than Doomsday route certification.
+
+- 2026-11-08: W4 S3K ending verification on the same lane covers normal and
+  Gilded rescue/reunion poses, Float2, ride, transform, tiny passengers and the
+  Hyper-progress trio child. All three production capture sessions return to the
+  title (15,088 / 15,798 / 15,538 recorded level frames), with screenshots and
+  CSVs under `/tmp/mica-endings-s3k-20261108/`. The final visual review caught and
+  corrected the native hidden-frame-zero / authored WAIT collision; focused
+  regressions preserve ordinary idle outside scene ownership. Long credits also
+  exposed fresh native input callback identities exhausting the owner wrapper
+  cache; stable native identities fix it without relaxing the bound.
+  The original ending/API/S3K run had 402 passes and three capture aborts from
+  that cache issue; the capture rerun passed 4/0/0/0, the remaining MICA/DDZ/API
+  and required S3K checks passed 100/0/0/0, and the corrected final captures plus
+  hidden-frame/input regressions passed 6/0/0/0. No full-suite or campaign claim.
+  New citations pass the focused strict checker; Python build syntax and diff
+  whitespace checks pass. This lane neither merges nor pushes.
+
+  The strengthened production-render assertions also pass 3/0/0/0: every required
+  ending slot reaches the renderer, fixed-palette slots match their packaged
+  colours, and private palette rows stay outside native lines 0–3. Across the
+  five focused test jobs, queue wait was 15m12s and Maven execution was 8m42s;
+  user wait was zero. Other investigation/build wall time was not fully timed.
