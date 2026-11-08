@@ -82,7 +82,7 @@ public class SignpostObjectInstance extends BoxObjectInstance implements RewindR
     };
 
     private int routineState = STATE_IDLE;
-    private final com.openggf.game.presentation.CharacterSignRenderer characterSign = new com.openggf.game.presentation.CharacterSignRenderer();
+    private final transient com.openggf.game.presentation.CharacterSignRenderer characterSign = new com.openggf.game.presentation.CharacterSignRenderer();
     private int mappingFrame = FRAME_EGGMAN;
     private ObjectAnimationState animationState;
     private int currentAnimId = ANIM_IDLE;

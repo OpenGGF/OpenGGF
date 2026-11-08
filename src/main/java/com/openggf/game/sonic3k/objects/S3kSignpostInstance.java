@@ -97,7 +97,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance
     // ---- Animation ----
     private int animFrame;
     private int animIndex;
-    private final com.openggf.game.presentation.CharacterSignRenderer characterSign = new com.openggf.game.presentation.CharacterSignRenderer();
+    private final transient com.openggf.game.presentation.CharacterSignRenderer characterSign = new com.openggf.game.presentation.CharacterSignRenderer();
     private int animTimer;
 
     /**

@@ -11,8 +11,6 @@ import java.util.*;
 
 /** Character-owned sign pixels; native consumers own pose selection, motion and timing. */
 public final class CharacterSignRenderer {
-    private CharacterDefinition definition;
-    private CharacterPresentation presentation;
 
     public boolean draw(ObjectServices services, Host host, ObjectSpriteSheet nativeSheet,
             int frame, int faceFrame, int alternateFrame,
@@ -21,12 +19,10 @@ public final class CharacterSignRenderer {
         var player = services.spriteManager().getMainPlayable();
         if (player == null) return false;
         var current = services.gameModule().getPlayableCharacterRegistry().find(player.characterKey()).orElse(null);
-        if (current != definition) {
-            definition=current; presentation=null;
-            if (current != null && current.presentationSupplier()!=null) {
-                try { presentation=current.presentationSupplier().load(player.characterKey().persisted()); }
-                catch (IOException failure) { throw new IllegalStateException("Unable to load sign presentation",failure); }
-            }
+        CharacterPresentation presentation = null;
+        if (current != null && current.presentationSupplier() != null) {
+            try { presentation = current.presentationSupplier().load(player.characterKey().persisted()); }
+            catch (IOException failure) { throw new IllegalStateException("Unable to load sign presentation", failure); }
         }
         Art art=presentation==null ? null : presentation.art().get(host);
         SignFrame pose=select(art,frame,faceFrame,alternateFrame,spin1Frame,edgeFrame,spin3Frame);
