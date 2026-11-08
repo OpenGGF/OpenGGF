@@ -66,10 +66,11 @@ matching area heading; see the
   original R31/R13 publications and dirty-slot allocation semantics. The combined
   1,008 World, component and DATA checks pass without failures, errors or skips;
   reload and live later-zone palette/section service remain separate.
-  Metallic Madness1 Present/Past initial terrain DATA now uses that same terrain
-  decoder, cache and query machinery, retaining raw unknown staging references
-  and native collision bounds. Its271 focused checks pass without failures,
-  errors or skips; live R8 player and World admission remain unsupported.
+  Wacky Workbench1 Present/Past and all ten Metallic Madness initial terrain DATA
+  profiles use that same decoder, cache and query machinery, retaining raw unknown
+  staging references and native collision bounds. Across the terrain cohort and
+  its test-only fixture recheck,457 distinct focused identities are qualified;
+  live R6/R8 player and World admission remain unsupported.
   CCZ ordinary scheduling now preserves native VBlank/Main order, the old
   selected sprite list and full-word time-stop gating. Private HUD adoption
   retains the real prefix across typed callback failures;175 focused checks

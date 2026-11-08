@@ -116,9 +116,9 @@ class TestCdR5TerrainData {
             var r=spy(reader(p));clearInvocations(r);assertThrows(UnsupportedOperationException.class,r::terrain);verify(r,never()).decoded(any());verify(r,never()).role(any());
         }
         try(var actual=source()) {assertThrows(UnsupportedOperationException.class,()->CdStageTerrain.fromProgramme(actual,CdStagePayload.R41A.stage()));}
-        // R6 is registered in the combined catalogue: authenticate a genuine source before its unsupported terrain query.
+        // Public ingress authenticates the source-backed R53C unadmitted terrain boundary.
         try(var actual=source()) {
-            var stage=CdStagePayload.R61A.stage();
+            var stage=CdStagePayload.R53C.stage();
             assertThrows(UnsupportedOperationException.class,()->CdStageTerrain.fromProgramme(actual,stage));
             var r=spy(CdProgrammeReader.open(actual,stage));clearInvocations(r);
             assertThrows(UnsupportedOperationException.class,r::terrain);

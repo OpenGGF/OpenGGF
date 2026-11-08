@@ -25,33 +25,56 @@ final class CdR8ProgrammeProfiles {
                 Optional.of(new ReadExtent(Integer.parseInt(w[7]),w[10])),true));
         }
     }
-    /** Initial directory slots 0/1 only. Native LoadStageMap clears $800, then copies
-     * minus-one byte dimensions at FG+$00/BG+$40 with row stride $80.
-     * N1ecc5f3: r8/stage_data_load_1a.asm:40-76 (1b has the same read contract).
-     * Known source prefixes are not claims about later/actor-specific staging.
+    private record InitialTerrain(CdStageTerrain.Profile profile,int collisionPointers,String collisionHex,
+                                  List<Integer> draw,List<Integer> collision) { }
+    /** Initial signed directory slots 0/1 only. All ten native LoadStageMap routines
+     * clear $800 and copy minus-one dimensions at FG+$00/BG+$40, row stride $80.
+     * N1ecc5f3: r8/stage_data_load_1a.asm:40-76; corresponding 1b-3d routines.
+     * Extents are original known source prefixes, not later/actor staging claims.
      */
     private static void initialTerrain(Builder b,CdR8DataLayout.Programme p) {
-        int blocks,patterns,collisionPointers;
-        switch(p) {
-            case R81A -> { blocks=3872;patterns=17440;collisionPointers=0x1A82; }
-            case R81B -> { blocks=3840;patterns=17408;collisionPointers=0x1A0A; }
-            default -> { return; }
-        }
-        b.terrain=new Terrain(new CdStageTerrain.Profile(blocks,patterns,56832,32,8,24,3,600,
-            CdStageTerrain.LayoutEncoding.EXACT_READ_VIEW,CdStageTerrain.ReferencePolicy.SELECTED_KNOWN_SOURCE),
-            Optional.empty(),Map.of(CdProgrammeReader.Role.CHUNKS,p.range("StageChunks"),
-                CdProgrammeReader.Role.FG,p.range("StageMapFg"),CdProgrammeReader.Role.BG,p.range("StageMapBg"),
-                CdProgrammeReader.Role.COLLISION,p.range("StageCollision"),CdProgrammeReader.Role.ANGLE,p.range("StageCollisionAngles"),
-                CdProgrammeReader.Role.HEIGHT,p.range("StageCollisionColumns"),CdProgrammeReader.Role.WIDTH,p.range("StageCollisionRows")),
-            p.range("StageBlocks"),p.range("StageGfx"));
-        // Literal LoadStageCollision selection/store and eight original source pointers.
-        b.operand(collisionPointers-18,"7000103900ff1506e54821fb0006f7964e75");
-        b.operand(collisionPointers,"0023844a".repeat(8));
-        // Immediate StageChunks operands are distinct from the catalogue's LEA census.
-        int[] draw=p==CdR8DataLayout.Programme.R81A?new int[]{0x3216,0x325C}:new int[]{0x31B8,0x31FE};
-        int[] collide=p==CdR8DataLayout.Programme.R81A?new int[]{0xFD0,0x3CA0}:new int[]{0xF58,0x3C42};
-        for(int at:draw)b.operand(at,"263c00210000");
-        for(int at:collide)b.operand(at,"223c00210000");
+        var source=switch(p) {
+            case R81A -> new InitialTerrain(new CdStageTerrain.Profile(3872,17440,56832,32,8,24,3,600,
+                CdStageTerrain.LayoutEncoding.EXACT_READ_VIEW,CdStageTerrain.ReferencePolicy.SELECTED_KNOWN_SOURCE),
+                0x1a82,"0023844a",List.of(0x3216,0x325c),List.of(0xfd0,0x3ca0));
+            case R81B -> new InitialTerrain(new CdStageTerrain.Profile(3840,17408,56832,32,8,24,3,600,
+                CdStageTerrain.LayoutEncoding.EXACT_READ_VIEW,CdStageTerrain.ReferencePolicy.SELECTED_KNOWN_SOURCE),
+                0x1a0a,"0023844a",List.of(0x31b8,0x31fe),List.of(0xf58,0x3c42));
+            case R81C -> new InitialTerrain(new CdStageTerrain.Profile(4128,18112,56832,32,8,24,3,800,
+                CdStageTerrain.LayoutEncoding.EXACT_READ_VIEW,CdStageTerrain.ReferencePolicy.SELECTED_KNOWN_SOURCE),
+                0x1b3c,"002378ca",List.of(0x32d0,0x3316),List.of(0x108a,0x3d5a));
+            case R81D -> new InitialTerrain(new CdStageTerrain.Profile(3872,18816,56832,32,8,24,3,700,
+                CdStageTerrain.LayoutEncoding.EXACT_READ_VIEW,CdStageTerrain.ReferencePolicy.SELECTED_KNOWN_SOURCE),
+                0x1c84,"00236134",List.of(0x3418,0x345e),List.of(0x11d2,0x3ea2));
+            case R82A -> new InitialTerrain(new CdStageTerrain.Profile(4480,18752,55808,33,8,24,2,600,
+                CdStageTerrain.LayoutEncoding.EXACT_READ_VIEW,CdStageTerrain.ReferencePolicy.SELECTED_KNOWN_SOURCE),
+                0x1a82,"00235a8c",List.of(0x321a,0x3260),List.of(0xfd0,0x3c94));
+            case R82B -> new InitialTerrain(new CdStageTerrain.Profile(4256,18368,56320,33,8,24,2,600,
+                CdStageTerrain.LayoutEncoding.EXACT_READ_VIEW,CdStageTerrain.ReferencePolicy.SELECTED_KNOWN_SOURCE),
+                0x1a0a,"00238d7e",List.of(0x31d6,0x321c),List.of(0xf58,0x3f24));
+            case R82C -> new InitialTerrain(new CdStageTerrain.Profile(4864,18624,55808,33,8,24,2,700,
+                CdStageTerrain.LayoutEncoding.EXACT_READ_VIEW,CdStageTerrain.ReferencePolicy.SELECTED_KNOWN_SOURCE),
+                0x1b3c,"00238d7e",List.of(0x329c,0x32e2),List.of(0x108a,0x3fea));
+            case R82D -> new InitialTerrain(new CdStageTerrain.Profile(4416,19360,55808,33,8,24,2,700,
+                CdStageTerrain.LayoutEncoding.EXACT_READ_VIEW,CdStageTerrain.ReferencePolicy.SELECTED_KNOWN_SOURCE),
+                0x1c84,"00238d7e",List.of(0x3442,0x3488),List.of(0x11d2,0x3ebc));
+            case R83C -> new InitialTerrain(new CdStageTerrain.Profile(3488,17056,56832,16,4,9,2,700,
+                CdStageTerrain.LayoutEncoding.EXACT_READ_VIEW,CdStageTerrain.ReferencePolicy.SELECTED_KNOWN_SOURCE),
+                0x1b3c,"00239426",List.of(0x32e8,0x332e),List.of(0x108a,0x3d52));
+            case R83D -> new InitialTerrain(new CdStageTerrain.Profile(3840,16224,56832,16,4,9,2,700,
+                CdStageTerrain.LayoutEncoding.EXACT_READ_VIEW,CdStageTerrain.ReferencePolicy.SELECTED_KNOWN_SOURCE),
+                0x1c84,"00238e78",List.of(0x3370,0x33b6),List.of(0x11d2,0x3dda));
+        };
+        b.terrain=new Terrain(source.profile(),Optional.empty(),Map.of(
+            CdProgrammeReader.Role.CHUNKS,p.range("StageChunks"),CdProgrammeReader.Role.FG,p.range("StageMapFg"),
+            CdProgrammeReader.Role.BG,p.range("StageMapBg"),CdProgrammeReader.Role.COLLISION,p.range("StageCollision"),
+            CdProgrammeReader.Role.ANGLE,p.range("StageCollisionAngles"),CdProgrammeReader.Role.HEIGHT,p.range("StageCollisionColumns"),
+            CdProgrammeReader.Role.WIDTH,p.range("StageCollisionRows")),p.range("StageBlocks"),p.range("StageGfx"));
+        // Literal selected LoadStageCollision/STORE/table plus immediate chunk operands, beyond LEA.
+        b.operand(source.collisionPointers()-18,"7000103900ff1506e54821fb0006f7964e75");
+        b.operand(source.collisionPointers(),source.collisionHex().repeat(8));
+        for(int at:source.draw())b.operand(at,"263c00210000");
+        for(int at:source.collision())b.operand(at,"223c00210000");
     }
     static void configure(Builder b,CdR8DataLayout.Programme p) {
         for(var r:p.ranges())b.raw(r,r.fileOffset(),r.length(),r.sha256());

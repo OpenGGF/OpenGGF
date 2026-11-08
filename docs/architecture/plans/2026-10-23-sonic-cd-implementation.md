@@ -1,5 +1,45 @@
 # Implement Sonic CD with complete regional parity
 
+## 8 November 2026 — R61A/B and all-ten R8 initial terrain DATA
+
+Eight exact Java payloads qualify this checkpoint: three R61A/B bindings/tests,
+four remaining-R8 bindings/tests, and one test-only R5 negative-vector migration.
+All shared decoder, reader, cache, query, visual, placement and runtime algorithms
+remain unchanged. Root retains dataOnly/payload and Optional-goodFuture context,
+the complete51-case R6 DATA class, cycle ordinal10 and every earlier source guard.
+
+R114 ran457 cases across21 classes on identical before/after source fingerprint
+`407b115d549e1bbb3ea7b912016e2304653dd9cdeaf96027776cfbe12d95cdda`:
+456 passed, one fixture failed, zero errors/skips. The R5 test still treated newly
+admitted R61A as an unsupported foreign programme. Only its public negative-vector
+and comment changed to source-backed, still-unadmitted R53C; authentication and
+production behavior were not changed. R114b then passed all12 cases in that class,
+with identical source fingerprint
+`8b033e3bd2c76e15680c1dcb196c62c29fc8d9ee06ab7abbfbd7732fc9a4a40d`.
+
+The coherent qualification contains445 unchanged-suite identities from R114 and
+12 final fixture-class identities from R114b:457 distinct cases. All13,537
+production class files and37 other selected test/nested class files are byte-exact
+across the repair, and all eight installed source pins match. The original failed
+receipt remains failed; this is not a new single457-case green run. Repeated11
+positive fixture cases are not counted twice. Exact source/case/class composition
+is retained in the external task evidence.
+
+All ten R8 immutable initial terrain profiles are available through existing
+algorithms. Canonical layouts, signed samples, raw masks and unbacked unused
+references remain source-authenticated. The intentionally renamed R8 role-borrow
+test now covers all ten bindings; its other12 prior case identities remain.
+R61A/B retains canonical collision600/800 and raw B1019 against known700 blocks;
+solidity0 grants no collision1019 read authority. Other eight R6 terrain profiles
+remain unsupported in this checkpoint. No fake staging, padding or source tail
+is used to make a selected read succeed.
+
+Both first source reviews establish no scoped P1/P2 issues. Live player, actor
+remapping, Shape projection, Frame/World/Ready, physics, current pixels, route and
+regional admission remain separate. The protected selected CCZ recipe remains
+494 returned / first495 reload ownership. New checked author reload and remaining
+R6 packets are prepared independently; they are not installed at this save.
+
 ## 8 November 2026 — R81A/B initial terrain through existing shared owners
 
 R113 qualifies three exact owned R8 Java files against saved1d2e064e3:

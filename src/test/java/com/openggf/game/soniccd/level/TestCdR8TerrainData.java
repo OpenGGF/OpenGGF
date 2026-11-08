@@ -147,19 +147,13 @@ class TestCdR8TerrainData {
             doReturn(fg).when(other).role(CdProgrammeReader.Role.FG);var retried=other.terrain();assertSame(retried,other.terrain());
         }
     }
-    @Test void onlyTwoInitialBindingsBorrowExactlySevenTerrainRoles()throws Exception {
+    @Test void allInitialBindingsBorrowExactlySevenTerrainRoles()throws Exception {
         try(var source=open()) {
             for(var p:CdR8DataLayout.Programme.values()) {
                 var r=spy(CdProgrammeReader.open(source,p.payload().stage()));clearInvocations(r);
-                if(p==CdR8DataLayout.Programme.R81A || p==CdR8DataLayout.Programme.R81B) {
-                    var t=r.terrain();assertSame(t,r.terrain());
-                    for(var role:CdProgrammeReader.Role.values())verify(r,contains(role)?times(1):never()).role(role);
-                    verify(r).decoded(p.range("StageBlocks"));verify(r).decoded(p.range("StageGfx"));
-                } else {
-                    assertEquals(p.name()+" has no reviewed terrain DATA binding",assertThrows(UnsupportedOperationException.class,r::terrain).getMessage());
-                    verify(r,never()).decoded(any());verify(r,never()).role(any());
-                    assertThrows(UnsupportedOperationException.class,()->CdStageTerrain.fromProgramme(source,p.payload().stage()));
-                }
+                var t=r.terrain();assertSame(t,r.terrain());
+                for(var role:CdProgrammeReader.Role.values())verify(r,contains(role)?times(1):never()).role(role);
+                verify(r).decoded(p.range("StageBlocks"));verify(r).decoded(p.range("StageGfx"));
             }
         }
     }

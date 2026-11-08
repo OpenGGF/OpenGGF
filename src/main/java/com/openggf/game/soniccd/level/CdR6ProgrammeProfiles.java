@@ -41,6 +41,7 @@ final class CdR6ProgrammeProfiles {
                     Optional.of(v.javaProduct()),Optional.of(v.nativeInput()),v.plc()));
         }
         CdProgrammePlacementProfiles.configure(b,p.payload());
+        initialTerrain(p).ifPresent(binding->b.terrain=binding);
         b.visual=new Visual(CdSonicVisualAssets.SourceFormat.FRAMES_167,
                 p.range("PlayerMapRead"),p.range("DataDplc"),p.range("DataArt"));
         b.loadRole(CdProgrammeReader.LoadRole.PLC,p.range("PlcRead"));
@@ -57,6 +58,30 @@ final class CdR6ProgrammeProfiles {
                 f.palettes().stream().map(v->new Palette(p.range(v.key()),v.destination(),v.counter())).toList(),
                 cycles,f.bossPaletteOverride()?CycleProgramme.FOUR_WITH_BOSS_COLOR_OVERRIDE:CycleProgramme.STANDARD_FOUR,
                 new InitQueueUpdateRts(2),background);
+    }
+    /** Initial immutable source profiles only. Other originals have no terrain DATA binding.
+     * N LoadLevelData (Level/Wacky Workbench/Load Level Data.asm:11-32,52-93),
+     * LoadStageData/LoadStageMap (r6/stage_data_load_1b.asm:3-69).
+     * Native collision tests solidity13/14 before its BYTE read; raw render1019 in R61B stays unowned.
+     */
+    private static Optional<Terrain> initialTerrain(CdR6DataLayout.Programme p) {
+        return switch(p) {
+            case R61A -> Optional.of(initialTerrain(p,"LevelBlocks","Art_LevelTiles","LevelCollision","ColAngleMap","ColHeightMap","ColWidthMap"));
+            case R61B -> Optional.of(initialTerrain(p,"StageBlocks","StageGfx","StageCollision","StageCollisionAngles","StageCollisionColumns","StageCollisionRows"));
+            case R61C,R61D,R62A,R62B,R62C,R62D,R63C,R63D -> Optional.empty();
+        };
+    }
+    private static Terrain initialTerrain(CdR6DataLayout.Programme p,String blocks,String patterns,String ids,
+                                           String angles,String heights,String widths) {
+        var d=p.terrain();
+        var profile=new CdStageTerrain.Profile(d.blockBytes(),d.patternBytes(),d.chunkBytes(),d.foregroundColumns(),d.foregroundRows(),
+                d.backgroundColumns(),d.backgroundRows(),d.collisionIds(),CdStageTerrain.LayoutEncoding.EXACT_READ_VIEW,
+                CdStageTerrain.ReferencePolicy.SELECTED_KNOWN_SOURCE);
+        return new Terrain(profile,Optional.empty(),Map.of(
+                CdProgrammeReader.Role.CHUNKS,p.range("DataChunks"),CdProgrammeReader.Role.FG,p.range("LayoutRead0"),
+                CdProgrammeReader.Role.BG,p.range("LayoutRead1"),CdProgrammeReader.Role.COLLISION,p.range(ids),
+                CdProgrammeReader.Role.ANGLE,p.range(angles),CdProgrammeReader.Role.HEIGHT,p.range(heights),
+                CdProgrammeReader.Role.WIDTH,p.range(widths)),p.range(blocks),p.range(patterns));
     }
     private static Facts facts(CdR6DataLayout.Programme p) {
         return switch(p) {
