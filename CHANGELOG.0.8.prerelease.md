@@ -36,8 +36,8 @@ under the matching area heading; see the
 ## Modding and tools
 
 - Added the optional character presentation data contract and pixel-level name
-  composition foundation. Stock HUD/results/monitor/signpost consumption and
-  presentation asset packaging remain pending; this does not yet change on-screen art.
+  composition foundation. S2 HUD/results/monitor consumption is available; remaining surfaces and
+  presentation asset packaging remain pending.
 
 - Added the maintained MICA character skeleton for all three stock games, with
   headless launch/save/rewind/fallback acceptance and a rerunnable 96-frame original
@@ -47,9 +47,10 @@ under the matching area heading; see the
   S1 HUD life icons/names, act/special-stage results names and 1-up monitor faces
   now consume character presentation slots while retaining native Sonic fallbacks.
   Presentation font inventories now include the native small HUD letters in all
-  three hosts and S3K per-zone title/results-name letters. Surface wiring and
-  packaging MICA’s presentation art remain pending. Stock S2 Tails-alone results
+  three hosts and S3K per-zone title/results-name letters. Remaining surface wiring
+  and packaging MICA’s presentation art remain pending. Stock S2 Tails-alone results
   now show the region-selected Miles/Tails name instead of Sonic.
+  S2 HUD icons/names, act and special-stage results names, and 1-up faces now consume character presentations.
   MICA's Gilded Super/Hyper forms use owner-bound profiles and her jade-to-gold
   palette cycles; host settings configure the gates. S1's donor-free six-emerald
   form is a mod-defined rule. Powered-form state and palettes participate in rewind.

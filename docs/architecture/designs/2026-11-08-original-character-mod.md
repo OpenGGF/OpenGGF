@@ -91,7 +91,11 @@ monitor face are wired and tile/mapping-tested on `feature/ai-mica-s1-surfaces-r
 Native Sonic fallback tiles and mappings remain unchanged. S1 HUD MICA uses native
 I/C and supplementary M/A only; results use native title letters. Monitor changes
 retain the shell mappings and reward animation.
-API foundation delivered; group 1 follow-up in progress on
+
+Status S2: all four surfaces wired and tile/mapping-tested on
+`feature/ai-mica-s2-surfaces-r2`. Native Sonic/Tails fallbacks are retained.
+
+Status: API foundation delivered; group 1 follow-up in progress on
 `feature/ai-mica-presentation2`. ROM readers now inventory all three small HUD
 fonts and S3K per-zone title/results-name art. S2 stock Tails-alone results select
 Miles/Tails using the native graphics-region flag. Remaining surface wiring, sign spin/backing
@@ -519,3 +523,41 @@ Status log (times UTC):
   Earlier attempts stopped at compilation because an edit during compilation left
   stale main classes; refreshing the two source timestamps forced the successful
   rebuild. No unresolved S1 surface work; lead owns cross-lane delivery and smoke.
+
+- 2026-11-08: S2 surface lane resumed from saved WIP, compiled and checkpointed
+  (`a41c16e3e`), then merged the character integration branch (`41277b704`).
+  Merge resolution retained both the S2 and Gilded changelog entries; no contract
+  changes. HUD uses the native small letters, act/results use title-card letters,
+  and the monitor uses its independent 16×16 face slot. Special-stage headings
+  include GOT A, HAS ALL THE, NOW … CAN and SUPER …; native suffixes and timing
+  remain with their existing owners. Initial five-class check: four pass, one
+  Mockito unfinished-stubbing error in the new provider fixture (registry creation
+  nested inside a stub); corrected before expanded verification. Owner: S2 lane.
+
+  Validation selection (all queued with Java 25 and verified ROMs; tile/mapping
+  assertions, no GL fixture):
+
+  ```bash
+  python3 tools/testing/maven_queue.py -Dmse=off -DskipTests compile
+  python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestSonic2CharacterPresentation,TestSonic2OneUpPresentation,TestSonic2PresentationProvider,TestSonic2ResultsPresentation,TestSonic2SpecialStageNamePresentation,TestSonic2LivesHudDonation,TestSonic2ResultsCharacterName,TestSonic2ResultsPlcReadiness,TestSonic2ResultsFixedZeroArt,TestSonic2SpecialStageResultsPlcReadiness,TestSonic2SpecialStageSuperResults,TestSonic2SpecialStageResultsWidescreenCommands,TestSonic2SpecialStageResultsTallyCadence,TestSonic2MonitorIconArt,TestMonitorObjectInstance,TestSonic2MonitorMusicAdmission,TestSonic2RetailRingMonitor,TestSonic2CompetitionMonitorConsumer,TestMicaCharacterIntegration,TestModApiSignatureSurface' test
+  python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestSonic2PresentationProvider test
+  ```
+
+  Expanded run: 79 tests, one new-fixture assertion failure, zero skips; all
+  existing tests and the custom-surface assertions passed. The new stock HUD
+  assertion incorrectly expected Tails tiles in the provider's initial view;
+  `Sonic2ObjectArt.loadForZone` initializes that view from the Sonic bank. Corrected
+  the test to compare with the unchanged native loader output and retained the
+  independent native Tails monitor assertion. No production change followed this
+  run. Expanded queue wait: 378 seconds; Maven execution: 102 seconds. No user wait;
+  other elapsed work time was not separately measured. This is focused evidence,
+  not full-suite or gameplay-capture certification. Packaged presentation assets
+  and the other game/signpost lanes remain outside this lane.
+
+  Final provider rerun: 2 passed, zero failures/errors/skips (35.163 seconds Maven
+  execution). All 79 selected tests are covered by the expanded run plus this
+  fixture-only rerun. Citation validation: 2 citations valid; whitespace check
+  clean. The tested production source is the `41277b704` merged tree plus the
+  S2 snapshot reuse and special-stage name additions committed by this lane.
+  No live jobs or blockers. Next action: lead integrates the lane branch; no
+  destination merge or push was performed here.
