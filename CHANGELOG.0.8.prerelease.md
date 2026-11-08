@@ -41,7 +41,10 @@ under the matching area heading; see the
   Title cards run in both halves. Teleport monitors swap the players' positions,
   speeds, cameras and backgrounds. Badnik, bumper, bonus-block and cage
   scores go to the player who earned them, and the Casino Night slot machines
-  and cages serve both players. The competitive special stage runs both players
+  and cages serve both players. Enemies whose ROM routine ends in
+  `MarkObjGone_P1` retire once both cameras are more than `$300` away and
+  reload when revisited; the finish-grace countdown runs before players move;
+  GAME OVER and TIME OVER cards appear in both views. The competitive special stage runs both players
   on one halfpipe with its checkpoints and results. Held rewind is off in
   Competition; the interlace field, seam and lag-frame limits are in
   [known discrepancies](docs/status/known-discrepancies.md#s2-competition-split-screen-native-lag-and-rewind-scope).

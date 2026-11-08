@@ -35,8 +35,14 @@ No shared game-name or zone-name branch selects the new behavior.
 - `ObjectsManager_2P_UnloadObjectBlock` (s2.asm:33511-33580) deletes actual
   bank occupants, including moved objects, and clears only their nonzero live
   respawn latches. A failed allocation has no occupant to clear its latch.
-- `MarkObjGone` (s2.asm:30215-30271) bypasses ordinary object-side culling
-  in competition. Native bank ownership supplies the standard delete path.
+- `MarkObjGone`, `MarkObjGone2` and `MarkObjGone3` (s2.asm:30215-30280) only
+  display or return in competition; native bank ownership supplies their
+  delete path. **Corrected 2026-11-08:** `MarkObjGone_P1` (s2.asm:30281 onward)
+  is different. In two-player mode it branches to `MarkObjGone_P2`, which
+  deletes the object (clearing respawn bit 7) when its `$FF00`-aligned X is more
+  than `$300` from both coarse cameras. Objects declare which variant their
+  routine tail uses; see the
+  [S2 Competition parity plan](../plans/2026-11-07-s2-competition-parity.md).
 
 `Sonic2CompetitionRingStreaming` owns two start/end cursor pairs into the
 single shared ring table. `RingsManager_Init` / `RingsManager_Main`
