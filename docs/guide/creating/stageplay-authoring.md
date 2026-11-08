@@ -313,6 +313,12 @@ Alternatively, `--native-route existing.route.json` continues its frozen rows;
 `--prefix-rows N` selects the immutable prefix and `--goals` optionally supplies a
 replacement programme. Completed prefix goals are evaluated, never reauthored.
 `--nodes` and `--ticks` bound search; `--bk2 NEW_FILE` exports exact two-pad rows.
+For a preserved traversal whose production pre-act locks changed, pass
+`--native-route FILE --retime-locks MAX_ROWS`. The Stageplay planner preserves
+every traversal row, authors bounded neutral waits from the live `input.locked`
+observation, and cold-qualifies the entire original goal program. Previous
+native stamps and anchors are discarded and need independent confirmation.
+
 Use `-Dopenggf.headless.gl=surfaceless-egl` with `DISPLAY` and
 `WAYLAND_DISPLAY` unset on Linux. Compile changed sources before running the tool.
 
@@ -321,6 +327,10 @@ The `.route.json` manifest retains `openggf-route/1` and adds the inlet
 sequence. `PlayerIn`/`Settled`/attachment predicates select P1 or P2; `All` combines
 both. Copied owner facts use `{"kind":"fact-equals","key":"...","value":1}`
 or `{"kind":"facts-equal","left":"...","right":"..."}` for ties.
+A host may publish `input.locked=1` while a production control lock is active.
+The planner authors neutral rows until that lock releases, preserving fresh button
+edges across witnessed native timing inlets. The S2 title card uses this contract.
+
 The S2 adapter publishes `competition.phase`, selection, act, ROM zone, results
 readiness, both ordinary actors' routines/rings/time/score/lives, zone wins, cage
 and slot-machine facts. Ordinary sprite coordinates are not special-stage avatar

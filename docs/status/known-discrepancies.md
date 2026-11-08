@@ -622,6 +622,44 @@ the V-int counter advances. `Touch_Monitor`'s break branch accepts a second
 player only while `Two_player_mode` is set (s2.asm:85463-85470), so CPU Tails
 cannot break monitors in one-player play and human Tails can in Competition.
 
+### Pre-act physical timing
+
+The frozen tie movie's native capture has synchronous initialization spans
+outside the semantic fade and Obj34 loops. Counts below are observations of
+that movie, not runtime delays.
+
+| Span | Native physical frames | Frames | `V_int_run_count` |
+| --- | --- | ---: | --- |
+| Title-to-menu masked initialization | 974–993 | 20 | unchanged |
+| EHZ1 title asset initialization | 1174–1183 | 10 | unchanged |
+| EHZ1 post-arrival decode | 1240–1254 | 15 | advances |
+| EHZ1 post-upload assembly | 1263–1303 | 41 | advances |
+| EHZ2 title asset initialization | 10211–10220 | 10 | unchanged |
+| EHZ2 post-arrival decode | 10277–10291 | 15 | advances |
+| EHZ2 post-upload assembly | 10300–10338 | 39 | advances |
+
+Each act also has two single counted initialization interruptions outside its
+semantic loops. The exported movie therefore retains a witnessed inlet of
+68 physical frames before EHZ1 ordinary play and 66 before EHZ2, reduced from
+178 and 176 when the whole visible card phase was omitted. CNZ1's corresponding
+inlet is 69, reduced from 186. The separate 20-frame menu span stays in the
+cold-prefix witness. The engine does not simulate CPU/decompression timing.
+The ROM fade passes and title-card waits belong to the semantic engine
+timeline, with gameplay held and `Level_frame_counter` zero until title release.
+`Level_TtlCard` (s2.asm:4914-4949) and `Level_FromCheckpoint`
+(s2.asm:4980-5086) own those waits. No native state is supplied to gameplay.
+
+The global V-int clocks remain different. On the tie route, the base engine
+was 137 ticks ahead at EHZ1 ordinary play; representing the real semantic
+waits makes the surplus 168, rather than preserving the base's accidental
+cancellation between startup overcount and omitted title waits. At EHZ2
+ordinary play the surplus is 121 (base 59). Startup's approximated SEGA/title
+phases and masked native initialization are not a clock authority. Nine
+uncounted native result-initialization frames add another nine ticks of
+surplus between acts. No fitted counter reset or offset is applied. Objects
+that read the global V-int clock can consequently differ after otherwise
+matching movement; this lane does not establish ring-recollection parity.
+
 ### Engine Implementation
 
 S2 Competition is a native two-human product: Sonic on controller 1, Tails on

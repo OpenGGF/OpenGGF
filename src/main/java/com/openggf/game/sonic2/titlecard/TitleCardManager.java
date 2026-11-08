@@ -797,6 +797,31 @@ public class TitleCardManager implements TitleCardProvider, TitleCardLoopTail,
         enterLeftSwooshExit();
     }
 
+    /** Competition owns Level_TtlCard's waits; the campaign state machine is unchanged.
+     * Level_TtlCard (s2.asm:4914-4927), Obj34_Init (s2.asm:27328-27375).
+     */
+    public void beginCompetitionArrival(int zoneIndex, int actIndex) {
+        reset();
+        currentZone = zoneIndex;
+        currentAct = actIndex;
+        createElements();
+        state = TitleCardState.SLIDE_IN;
+    }
+
+    public void stepCompetitionArrival() {
+        obj34.consumeFills();
+        obj34.tick();
+    }
+
+    public boolean competitionArrivalReady() {
+        var name = obj34.parts[Obj34.NAME];
+        return name.routine != 0 && name.x == name.target && !plcQueueBusy();
+    }
+
+    public void beginCompetitionLeave() {
+        enterLeftSwooshExit();
+    }
+
     /** Obj34_BackgroundOutInit owns one DeformBgLayer call before its first out pass. */
     public boolean isFirstBackgroundLeavePass() {
         return obj34 != null && obj34.parts[Obj34.BACKGROUND].routine == 18;

@@ -74,6 +74,15 @@ final class GoalExpander implements PrefixSearch.Expander {
         if (node.rows - state.legStart() >= leg.maxRows()) return null;
         search.materialize(node);
         search.ensureCheckpoint(node);
+        // A production control lock is an observation, not an invitation to
+        // navigate. Author neutral input until it releases, preserving button
+        // edges when native movie export inserts unsupported physical waits.
+        if (node.sample.facts().getOrDefault("input.locked", 0) != 0) {
+            PrefixSearch.Node child = trial(search, node, state, leg,
+                    (t, now, previous) -> PadRow.NEUTRAL, HORIZON);
+            if (child != null) search.push(frontier, child);
+            return null;
+        }
         // A guarded, fact-only menu observation is a bounded neutral trial, not
         // a request to navigate. Keep its complete observed hold if it succeeds;
         // menu hosts may deliberately refuse checkpoints outside gameplay.

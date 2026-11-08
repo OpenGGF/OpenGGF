@@ -93,6 +93,15 @@ class TestObj34CompetitionPixels {
             var session=new Sonic2CompetitionSession();session.updateMenu(LogicalInputSnapshot.ofPlayers(
                     PlayerInputState.of(0,0,0,0,true,true),PlayerInputState.neutral()),true);
             host.loadAct(session,0,0);
+            for (int wait=0;wait<300 && host.titleCardActive();wait++) {
+                var mode=host.context();
+                mode.plcFrameLifecycle().runLogicalIteration(()->{},frame->{
+                    com.openggf.game.competition.NativeCompetitionIterationAccess.runAdmitted(frame,
+                            ()->host.step(session,input));
+                    return null;
+                });
+            }
+            assertFalse(host.titleCardActive());
             assertTrue(restored[0]);assertTrue(forwardChecked[0]);
             for(int i=0;i<50;i++)step(host,input);
             capture(views,host.context(),session,"f1380-engine");

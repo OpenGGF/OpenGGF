@@ -518,34 +518,34 @@
         "condition" : {
           "kind" : "fact-equals",
           "key" : "competition.presentationFrame",
-          "value" : 17443
+          "value" : 17574
         }
       }
     } ]
   },
   "tape" : {
     "script" : "ehz-zone-results.script",
-    "rows" : 18394,
-    "sha256" : "9fb1d51a8836567e4f6988567b01a02b3c015baffa3038090139d1db893758de"
+    "rows" : 18614,
+    "sha256" : "5a4b9f13d4437c16f0053b713fa49102666c2795e4fb261ff2ee7dcadb8ae472"
   },
   "provenance" : {
-    "producer" : "RoutePlanner prefix-search/3 goal program",
-    "engine" : "openggf 0.8.prerelease-fb572165e-dirty stageplay-s2-competition-title/1",
-    "source" : "authored after a 14613-row prefix toward legs [p1-upper-approach, p1-over-lower-wall, p1-act1-finish, p2-early-upper-path, p2-upper-midpoint, p2-upper-wall-approach, p2-over-lower-wall, p2-act1-finish, act1-results-ready, act1-results-finish-grace-hold, act2-native-entry, p1-act2-upper-approach, p1-act2-spring-approach, p1-act2-upper-spring-exit, p1-act2-second-half, p1-act2-finish, p2-act2-approach, p2-act2-spring-approach, p2-act2-upper-spring-exit, p2-act2-second-half, p2-act2-finish, act2-results-ready, act2-results-finish-grace-hold, zone-results, show-zone-results]",
+    "producer" : "RoutePlanner observed-lock repair",
+    "engine" : "openggf 0.8.prerelease-b7076530a-dirty stageplay-s2-competition-title/1",
+    "source" : "preserved traversal 6bbeb38b2a495bf389dba57cea1c84f95ac5ab149cdf35b330b85fc73cb98245; authored 220 neutral lock rows",
     "notes" : [ ]
   },
   "qualification" : [ {
     "scope" : "ENGINE",
     "passed" : true,
-    "content" : "882561c55604796d33be1260f92c34a71bd0630f60b362631477697d218d1c4c",
-    "environment" : "openggf 0.8.prerelease-8711ae3cb-dirty stageplay-s2-competition-title/1",
-    "rows" : 18394
+    "content" : "0b3eb2defcba7437331c25eeec841abacb672a8ef90f91ccd61412b0b37f3b77",
+    "environment" : "openggf 0.8.prerelease-b7076530a-dirty stageplay-s2-competition-title/1",
+    "rows" : 18614
   }, {
     "scope" : "BIZHAWK",
     "passed" : true,
-    "content" : "882561c55604796d33be1260f92c34a71bd0630f60b362631477697d218d1c4c",
-    "environment" : "BizHawk2.11/GPGX cold read-only required-goals movie 478d01dcc1d4b7f6a1043be18ef1ad138779d384f9c62628c7c3a8a268a619aa; accepted comparison boundary null",
-    "rows" : 18394,
+    "content" : "0b3eb2defcba7437331c25eeec841abacb672a8ef90f91ccd61412b0b37f3b77",
+    "environment" : "BizHawk2.11/GPGX cold read-only required-goals movie 478d01dcc1d4b7f6a1043be18ef1ad138779d384f9c62628c7c3a8a268a619aa; accepted comparison boundary None",
+    "rows" : 18614,
     "coverage" : [ "ehz-act1-play", "ehz-act2-play", "ehz-zone-results" ]
   } ],
   "native" : {
@@ -553,15 +553,15 @@
       "movie" : "src/test/resources/routes/s2/competition/witnesses/ehz-native-prefix.script",
       "prefixRows" : 1329,
       "inputHash" : "8f8669ed648d485c9dfc349e1bdba91d2a29743b76a3be7b5644ade8e3d30c34",
-      "engineAnchorRows" : 1151,
+      "engineAnchorRows" : 1261,
       "anchorBoundary" : "first-ordinary-level-lfc-zero"
     },
     "inlets" : [ {
-      "engineFromRows" : 10009,
+      "engineFromRows" : 10119,
       "movie" : "src/test/resources/routes/s2/competition/witnesses/ehz-act2-native-prefix.script",
       "prefixRows" : 10364,
       "inputHash" : "b3a5948dccabd7dd96a6fcc38bc281c02c37c380d6e26d8c847919b9a550d01b",
-      "engineAnchorRows" : 10010,
+      "engineAnchorRows" : 10230,
       "anchorBoundary" : "first-ordinary-level-lfc-zero"
     } ],
     "lag" : [ ]
