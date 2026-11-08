@@ -1,0 +1,1155 @@
+{
+  "format": "openggf-mica-snowboard-1",
+  "palette": "../palette.yaml",
+  "palette_line": 0,
+  "native_source_label": "Map_SonicSnowboard / DPLC_SonicSnowboard / Ani_SonicSnowboard / sub_3968E",
+  "mapping_source": "docs/skdisasm/General/Sprites/Sonic/Map - Sonic Snowboarding.asm",
+  "dplc_source": "docs/skdisasm/General/Sprites/Sonic/DPLC - Sonic Snowboarding.asm",
+  "animation_source": "docs/skdisasm/General/Sprites/Sonic/Anim - Sonic Snowboard.asm",
+  "native_art_label": "ArtUnc_SonicSnowboard",
+  "frames": [
+    {
+      "id": 0,
+      "file": "mica-00.png",
+      "native_source_label": "Frame_347E4A",
+      "dimensions": [
+        1,
+        1
+      ],
+      "native_dimensions": [
+        0,
+        0
+      ],
+      "hotspot": [
+        0,
+        0
+      ],
+      "pieces": [],
+      "dplc_label": "Frame_347FA4",
+      "dplc_entries": [],
+      "tile_budget": 0,
+      "use": "empty sentinel; 1x1 transparent transport"
+    },
+    {
+      "id": 1,
+      "file": "mica-01.png",
+      "native_source_label": "Frame_347E4C",
+      "dimensions": [
+        48,
+        64
+      ],
+      "native_dimensions": [
+        48,
+        64
+      ],
+      "hotspot": [
+        22,
+        36
+      ],
+      "pieces": [
+        [
+          -6,
+          -4,
+          4,
+          4,
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -22,
+          -20,
+          2,
+          4,
+          16,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -6,
+          -20,
+          3,
+          2,
+          24,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -14,
+          -36,
+          3,
+          2,
+          30,
+          0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "dplc_label": "Frame_347FA6",
+      "dplc_entries": [
+        [
+          16,
+          0
+        ],
+        [
+          8,
+          16
+        ],
+        [
+          6,
+          24
+        ],
+        [
+          6,
+          30
+        ]
+      ],
+      "tile_budget": 36,
+      "use": "native bank coverage; not selected by current ICZ animation scripts"
+    },
+    {
+      "id": 2,
+      "file": "mica-02.png",
+      "native_source_label": "Frame_347E66",
+      "dimensions": [
+        32,
+        56
+      ],
+      "native_dimensions": [
+        32,
+        56
+      ],
+      "hotspot": [
+        16,
+        18
+      ],
+      "pieces": [
+        [
+          -16,
+          -18,
+          3,
+          1,
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -16,
+          -10,
+          4,
+          2,
+          3,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -8,
+          6,
+          3,
+          1,
+          11,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -8,
+          14,
+          2,
+          3,
+          14,
+          0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "dplc_label": "Frame_347FB0",
+      "dplc_entries": [
+        [
+          3,
+          36
+        ],
+        [
+          8,
+          39
+        ],
+        [
+          3,
+          47
+        ],
+        [
+          6,
+          50
+        ]
+      ],
+      "tile_budget": 20,
+      "use": "native bank coverage; not selected by current ICZ animation scripts"
+    },
+    {
+      "id": 3,
+      "file": "mica-03.png",
+      "native_source_label": "Frame_347E80",
+      "dimensions": [
+        48,
+        56
+      ],
+      "native_dimensions": [
+        48,
+        56
+      ],
+      "hotspot": [
+        23,
+        23
+      ],
+      "pieces": [
+        [
+          -15,
+          -23,
+          3,
+          3,
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          9,
+          -7,
+          2,
+          1,
+          9,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -15,
+          1,
+          4,
+          2,
+          11,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -23,
+          17,
+          3,
+          2,
+          19,
+          0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "dplc_label": "Frame_347FBA",
+      "dplc_entries": [
+        [
+          9,
+          56
+        ],
+        [
+          2,
+          65
+        ],
+        [
+          8,
+          67
+        ],
+        [
+          6,
+          75
+        ]
+      ],
+      "tile_budget": 25,
+      "use": "native bank coverage; not selected by current ICZ animation scripts"
+    },
+    {
+      "id": 4,
+      "file": "mica-04.png",
+      "native_source_label": "Frame_347E9A",
+      "dimensions": [
+        40,
+        56
+      ],
+      "native_dimensions": [
+        40,
+        56
+      ],
+      "hotspot": [
+        21,
+        22
+      ],
+      "pieces": [
+        [
+          -13,
+          -22,
+          4,
+          4,
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -13,
+          10,
+          3,
+          1,
+          16,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -21,
+          18,
+          4,
+          1,
+          19,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -21,
+          26,
+          3,
+          1,
+          23,
+          0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "dplc_label": "Frame_347FC4",
+      "dplc_entries": [
+        [
+          16,
+          81
+        ],
+        [
+          3,
+          97
+        ],
+        [
+          4,
+          100
+        ],
+        [
+          3,
+          104
+        ]
+      ],
+      "tile_budget": 26,
+      "use": "native bank coverage; not selected by current ICZ animation scripts"
+    },
+    {
+      "id": 5,
+      "file": "mica-05.png",
+      "native_source_label": "Frame_347EB4",
+      "dimensions": [
+        40,
+        56
+      ],
+      "native_dimensions": [
+        40,
+        56
+      ],
+      "hotspot": [
+        19,
+        22
+      ],
+      "pieces": [
+        [
+          -11,
+          -22,
+          3,
+          1,
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -19,
+          -14,
+          4,
+          3,
+          3,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -11,
+          10,
+          3,
+          1,
+          15,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -11,
+          18,
+          4,
+          2,
+          18,
+          0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "dplc_label": "Frame_347FCE",
+      "dplc_entries": [
+        [
+          3,
+          107
+        ],
+        [
+          12,
+          110
+        ],
+        [
+          3,
+          122
+        ],
+        [
+          8,
+          125
+        ]
+      ],
+      "tile_budget": 26,
+      "use": "native bank coverage; not selected by current ICZ animation scripts"
+    },
+    {
+      "id": 6,
+      "file": "mica-06.png",
+      "native_source_label": "Frame_347ECE",
+      "dimensions": [
+        56,
+        40
+      ],
+      "native_dimensions": [
+        56,
+        40
+      ],
+      "hotspot": [
+        28,
+        17
+      ],
+      "pieces": [
+        [
+          -20,
+          -17,
+          4,
+          4,
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -28,
+          15,
+          4,
+          1,
+          16,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          4,
+          15,
+          3,
+          1,
+          20,
+          0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "dplc_label": "Frame_347FD8",
+      "dplc_entries": [
+        [
+          16,
+          133
+        ],
+        [
+          4,
+          149
+        ],
+        [
+          3,
+          153
+        ]
+      ],
+      "tile_budget": 23,
+      "use": "live ICZ intro animation"
+    },
+    {
+      "id": 7,
+      "file": "mica-07.png",
+      "native_source_label": "Frame_347EE2",
+      "dimensions": [
+        56,
+        40
+      ],
+      "native_dimensions": [
+        56,
+        40
+      ],
+      "hotspot": [
+        28,
+        17
+      ],
+      "pieces": [
+        [
+          -20,
+          -17,
+          4,
+          4,
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -28,
+          15,
+          4,
+          1,
+          16,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          4,
+          15,
+          3,
+          1,
+          20,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          20,
+          7,
+          1,
+          1,
+          23,
+          0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "dplc_label": "Frame_347FE0",
+      "dplc_entries": [
+        [
+          16,
+          156
+        ],
+        [
+          4,
+          172
+        ],
+        [
+          3,
+          176
+        ],
+        [
+          1,
+          179
+        ]
+      ],
+      "tile_budget": 24,
+      "use": "live ICZ intro animation"
+    },
+    {
+      "id": 8,
+      "file": "mica-08.png",
+      "native_source_label": "Frame_347EFC",
+      "dimensions": [
+        56,
+        40
+      ],
+      "native_dimensions": [
+        56,
+        40
+      ],
+      "hotspot": [
+        28,
+        17
+      ],
+      "pieces": [
+        [
+          -20,
+          -17,
+          4,
+          4,
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          12,
+          7,
+          2,
+          1,
+          16,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -28,
+          15,
+          4,
+          1,
+          18,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          4,
+          15,
+          1,
+          1,
+          22,
+          0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "dplc_label": "Frame_347FEA",
+      "dplc_entries": [
+        [
+          16,
+          180
+        ],
+        [
+          2,
+          196
+        ],
+        [
+          4,
+          198
+        ],
+        [
+          1,
+          202
+        ]
+      ],
+      "tile_budget": 23,
+      "use": "live ICZ intro animation"
+    },
+    {
+      "id": 9,
+      "file": "mica-09.png",
+      "native_source_label": "Frame_347F16",
+      "dimensions": [
+        48,
+        56
+      ],
+      "native_dimensions": [
+        48,
+        56
+      ],
+      "hotspot": [
+        27,
+        15
+      ],
+      "pieces": [
+        [
+          -27,
+          -15,
+          4,
+          3,
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          5,
+          -15,
+          2,
+          3,
+          12,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -19,
+          9,
+          4,
+          1,
+          18,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -19,
+          17,
+          3,
+          3,
+          22,
+          0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "dplc_label": "Frame_347FF4",
+      "dplc_entries": [
+        [
+          12,
+          203
+        ],
+        [
+          6,
+          215
+        ],
+        [
+          4,
+          221
+        ],
+        [
+          9,
+          225
+        ]
+      ],
+      "tile_budget": 31,
+      "use": "live ICZ intro animation"
+    },
+    {
+      "id": 10,
+      "file": "mica-10.png",
+      "native_source_label": "Frame_347F30",
+      "dimensions": [
+        56,
+        56
+      ],
+      "native_dimensions": [
+        56,
+        56
+      ],
+      "hotspot": [
+        34,
+        21
+      ],
+      "pieces": [
+        [
+          -10,
+          -21,
+          4,
+          4,
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -34,
+          -13,
+          3,
+          3,
+          16,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -18,
+          11,
+          4,
+          1,
+          25,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -10,
+          19,
+          3,
+          2,
+          29,
+          0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "dplc_label": "Frame_347FFE",
+      "dplc_entries": [
+        [
+          16,
+          234
+        ],
+        [
+          9,
+          250
+        ],
+        [
+          4,
+          259
+        ],
+        [
+          6,
+          263
+        ]
+      ],
+      "tile_budget": 35,
+      "use": "live ICZ intro animation"
+    },
+    {
+      "id": 11,
+      "file": "mica-11.png",
+      "native_source_label": "Frame_347F4A",
+      "dimensions": [
+        56,
+        48
+      ],
+      "native_dimensions": [
+        56,
+        48
+      ],
+      "hotspot": [
+        28,
+        18
+      ],
+      "pieces": [
+        [
+          -20,
+          -18,
+          4,
+          4,
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          12,
+          -2,
+          1,
+          1,
+          16,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -28,
+          14,
+          4,
+          1,
+          17,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          4,
+          14,
+          1,
+          1,
+          21,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -4,
+          22,
+          4,
+          1,
+          22,
+          0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "dplc_label": "Frame_348008",
+      "dplc_entries": [
+        [
+          16,
+          269
+        ],
+        [
+          1,
+          285
+        ],
+        [
+          4,
+          286
+        ],
+        [
+          1,
+          290
+        ],
+        [
+          4,
+          291
+        ]
+      ],
+      "tile_budget": 26,
+      "use": "live ICZ intro animation"
+    },
+    {
+      "id": 12,
+      "file": "mica-12.png",
+      "native_source_label": "Frame_347F6A",
+      "dimensions": [
+        56,
+        56
+      ],
+      "native_dimensions": [
+        56,
+        56
+      ],
+      "hotspot": [
+        26,
+        22
+      ],
+      "pieces": [
+        [
+          -18,
+          -22,
+          3,
+          1,
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -18,
+          -14,
+          4,
+          3,
+          3,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -26,
+          10,
+          4,
+          1,
+          15,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -18,
+          18,
+          4,
+          1,
+          19,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -2,
+          26,
+          4,
+          1,
+          23,
+          0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "dplc_label": "Frame_348014",
+      "dplc_entries": [
+        [
+          3,
+          295
+        ],
+        [
+          12,
+          298
+        ],
+        [
+          4,
+          310
+        ],
+        [
+          4,
+          314
+        ],
+        [
+          4,
+          318
+        ]
+      ],
+      "tile_budget": 27,
+      "use": "live ICZ intro animation"
+    }
+  ],
+  "timing": {
+    "tick_rate": 60,
+    "animations": [
+      {
+        "id": 0,
+        "label": "byte_39482",
+        "frames": [
+          6,
+          7,
+          8
+        ],
+        "ticks": 8,
+        "loop_start": 2
+      },
+      {
+        "id": 1,
+        "label": "byte_39488",
+        "frames": [
+          9
+        ],
+        "ticks": 32,
+        "loop_start": 0
+      },
+      {
+        "id": 2,
+        "label": "byte_3948B",
+        "frames": [
+          10
+        ],
+        "ticks": 32,
+        "loop_start": 0
+      },
+      {
+        "id": 3,
+        "label": "byte_3948E",
+        "frames": [
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          7,
+          8,
+          7
+        ],
+        "ticks": 8,
+        "loop_start": 0
+      },
+      {
+        "id": 4,
+        "label": "byte_3949A",
+        "frames": [
+          11
+        ],
+        "ticks": 32,
+        "loop_start": 0
+      },
+      {
+        "id": 5,
+        "label": "byte_3949D",
+        "frames": [
+          12
+        ],
+        "ticks": 32,
+        "loop_start": 0
+      }
+    ],
+    "angle_table": [
+      4,
+      5,
+      2,
+      1,
+      1,
+      1,
+      1,
+      1,
+      0,
+      1,
+      2,
+      0,
+      1,
+      2,
+      0,
+      4
+    ],
+    "note": "Animate_Sprite timer byte + 1; animation 0 FE,1 holds frame 8; animation 3 loops. Frame changes also select the board DPLC in sub_3968E."
+  },
+  "engine_owners": [
+    "Sonic3kICZEvents.spawnSonicSnowboardIntro",
+    "IczSnowboardIntroInstance.SONIC_SNOWBOARD_ANIMATION_FRAMES",
+    "IczBigSnowPileInstance (post-crash terrain/priority; not frame owner)",
+    "Sonic3kConstants.MAP_SONIC_SNOWBOARD_FRAMES = 13"
+  ],
+  "palette_binding": "Install unchanged MICA palette on player line 0. Native snow/board/dust can share player line: engine must audit and split palettes/art; no fixed-blue variants supplied.",
+  "separate_board": "These player frames include their own deck pixels. Map_Snowboard / DPLC_Snowboard is the separate child board bank and crash fly-away, not these thirteen mappings; remains native.",
+  "weak_points": "Compact crest and front-view frames 2/4 simplified to three-quarter read. Mapping masks and per-pose support checked in pixel review only; runtime snow occlusion, board handoff and custom palette sharing remain engine lane."
+}
