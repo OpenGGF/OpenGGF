@@ -5283,6 +5283,70 @@
           14
         ]
       }
+    },
+    "spindash-04": {
+      "geometry_reference": {
+        "size": [
+          29,
+          27
+        ],
+        "hotspot": [
+          11,
+          7
+        ]
+      },
+      "native_size": [
+        29,
+        27
+      ],
+      "hotspot": [
+        11,
+        7
+      ],
+      "owner_fix": "Fifth tucked charge phase; coral boot travels through lower shell.",
+      "reference": {
+        "custom": true,
+        "size": [
+          29,
+          27
+        ],
+        "hotspot": [
+          11,
+          7
+        ]
+      }
+    },
+    "spindash-blur": {
+      "geometry_reference": {
+        "size": [
+          30,
+          25
+        ],
+        "hotspot": [
+          14,
+          12
+        ]
+      },
+      "native_size": [
+        30,
+        25
+      ],
+      "hotspot": [
+        14,
+        12
+      ],
+      "owner_fix": "Quiet jade charge interleave corresponding to native $42.",
+      "reference": {
+        "custom": true,
+        "size": [
+          30,
+          25
+        ],
+        "hotspot": [
+          14,
+          12
+        ]
+      }
     }
   },
   "source_pins": {
