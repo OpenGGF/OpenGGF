@@ -15,7 +15,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 100,
-      "notes": "Shared unscaled native hood raster; integer 1px breathing lift, eye blink; original lower fidget retained."
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 2; no painted pixel patches."
     },
     {
       "id": "wait-01",
@@ -24,11 +24,11 @@
       "file": "frames/wait-01.png",
       "hotspot": [
         15,
-        20
+        19
       ],
       "angle_set": "flat",
       "duration_ticks": 7,
-      "notes": "Shared unscaled native hood raster; integer 1px breathing lift, eye blink; original lower fidget retained."
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 2; no painted pixel patches."
     },
     {
       "id": "wait-02",
@@ -37,11 +37,11 @@
       "file": "frames/wait-02.png",
       "hotspot": [
         14,
-        19
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 12,
-      "notes": "Shared unscaled native hood raster; integer 1px breathing lift, eye blink; original lower fidget retained."
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 2; no painted pixel patches."
     },
     {
       "id": "wait-03",
@@ -50,11 +50,11 @@
       "file": "frames/wait-03.png",
       "hotspot": [
         14,
-        19
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 50,
-      "notes": "Shared unscaled native hood raster; integer 1px breathing lift, eye blink; original lower fidget retained."
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 3; no painted pixel patches."
     },
     {
       "id": "wait-04",
@@ -63,11 +63,11 @@
       "file": "frames/wait-04.png",
       "hotspot": [
         14,
-        19
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Shared unscaled native hood raster; integer 1px breathing lift, eye blink; original lower fidget retained."
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 3; no painted pixel patches."
     },
     {
       "id": "wait-05",
@@ -76,11 +76,11 @@
       "file": "frames/wait-05.png",
       "hotspot": [
         14,
-        19
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Shared unscaled native hood raster; integer 1px breathing lift, eye blink; original lower fidget retained."
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 3; no painted pixel patches."
     },
     {
       "id": "roll-00",
