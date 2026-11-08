@@ -573,7 +573,20 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
             camera.setMinX((short) bounds.minX()); camera.setMaxX((short) bounds.maxX());
             camera.setMinY((short) bounds.minY()); camera.setMaxY((short) bounds.maxY());
             camera.setLevelStarted(true);
-            camera.updatePosition(true);
+            if (slot == 0) {
+                camera.updatePosition(true);
+            } else {
+                // LevelSizeLoad (s2.asm:14796-14813) writes P1's start-derived
+                // camera words to BOTH banks, before InitPlayers. The leading
+                // DeformBgLayer (s2.asm:15097-15175) therefore
+                // scrolls P2 against its cleared SST, not initialized Tails.
+                camera.setX(session.camera(0).getX());
+                camera.setY(session.camera(0).getY());
+                // Reuse the coordinate-record scroll path for that zero-slot
+                // read; never alter the already-assembled human's gameplay state.
+                camera.requestForcedScroll(0, 0);
+                camera.updatePosition();
+            }
             camera.captureRenderCopy();
         }
         // Reset native interest from the actual initial camera, after both actors exist.
