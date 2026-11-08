@@ -271,11 +271,11 @@
       "file": "frames/spring-00.png",
       "hotspot": [
         13,
-        21
+        26
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": ""
+      "notes": "Stretched launch: identical delighted head, open raised gloves, paired pointed boots and hanging tail; reach/extension second beat."
     },
     {
       "id": "spring-01",
@@ -283,12 +283,12 @@
       "order": 1,
       "file": "frames/spring-01.png",
       "hotspot": [
-        12,
-        21
+        13,
+        27
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": ""
+      "notes": "Stretched launch: identical delighted head, open raised gloves, paired pointed boots and hanging tail; reach/extension second beat."
     },
     {
       "id": "hurt-00",

@@ -245,6 +245,9 @@ with changing cutouts/crossing strokes. Runtime slope contact remains unverified
 the hood/scale clusters are simpler than the generated core artwork. Python
 assembly roundtrip passes (96 frames, 17 scripts, at most 36 tiles/frame); no
 Java build, GGFP bake or gameplay certification is claimed.
+SPRING now has two stretched launch poses with an identical head contour, open
+raised gloves, paired downward boots and hanging tail. Glove reach and boot
+extension change in the second beat; the existing 24+24-tick exit to WALK stays.
 
 W7 art-lane round 2 handoff (2026-11-08, `feature/ai-mica-art2`):
 `art/mica/presentation/presentation.yaml` now describes 18 native-size indexed
