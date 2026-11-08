@@ -92,6 +92,8 @@ class TestMicaCharacterIntegration {
             TestEnvironment.activeGameplayMode();
             var fixtureWorld = com.openggf.tests.HeadlessTestFixture.builder().withZoneAndAct(0, 0).build();
             var playable = fixtureWorld.sprite();
+            assertEquals(base.getPhysicsProvider().getProfile("sonic"), playable.getPhysicsProfile(),
+                    "MICA retains every native Sonic physics constant in " + game);
             assertEquals(CODE, playable.characterKey().persisted());
             assertEquals(PlayerCharacter.SONIC_ALONE,
                     com.openggf.game.session.ActiveGameplayTeamResolver.resolvePlayerCharacter(config));

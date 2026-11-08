@@ -19,9 +19,9 @@ public final class MicaCharacter extends AbstractPlayableSprite {
     }
 
     static CharacterPhysicsSpec physicsSpec() {
-        return new CharacterPhysicsSpec(PhysicsProfile.builder()
-                .movement(0x10, 0x80, 0x10, 0x500, 0x640)
-                .rolling(0x20, 0x80, 0x80, 0xE00).build());
+        // Sonic1/2/3kPhysicsProvider all use this profile for single-player Sonic.
+        // S3K's Character_Speeds init table belongs to Competition mode only.
+        return new CharacterPhysicsSpec(PhysicsProfile.SONIC_2_SONIC);
     }
     @Override protected boolean onAbilityActivate(boolean up, boolean down, boolean left, boolean right) {
         // Homing is MICA's own move: an empty target set still gives the forward dash.

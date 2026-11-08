@@ -532,3 +532,11 @@ Status log (times UTC):
   Rejected: publishing the synthetic dive ID as gameplay state failed the real
   Buzzer kill because native touch requires anim=Roll. The visual script now runs
   with a temporary ID restored before returning; native contact retains Roll.
+
+- 2026-11-08: abilities lane outcome 3 replaces placeholder tuning with the shared
+  `PhysicsProfile.SONIC_2_SONIC` used by all three stock single-player providers.
+  `CharacterPhysicsSpec` remains instance-owned; host rules/modifiers still apply.
+  Acceptance compares the entire physics record against each host Sonic provider.
+  Validation: the requested queued Maven selection passed 96 tests, zero skips,
+  including all three MICA hosts, homing, API pin, Super-form gate and S3K guards.
+  Capture packaging validates with zero findings. Outcome 4 remains in progress.
