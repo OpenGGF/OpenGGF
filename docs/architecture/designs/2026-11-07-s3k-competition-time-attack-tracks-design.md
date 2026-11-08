@@ -43,7 +43,7 @@ monitor setting.
 | D3 | Track identity | Track keys become `game:zone:act` for acts and **`game:arena:N`** for arenas, where N is the `Comp_ZoneList` menu index (0 ALZ, 1 BPZ, 2 CGZ, 3 DPZ, 4 EMZ). They are parsed in one place, a new `net.protocol.TrackKey`. `RunSpec` gains `TrackKind {ACT, ARENA}`. The kind travels into `RoundConfig`, recordings, ghost headers, profiles and verifier jobs. |
 | D4 | Arena rules | The native **solo Match Race**: `Config(MATCH_RACE, arena, items, participantCount=1)` (`S3kCompetitionSession.java:68-77`). This is a ROM path: P2 never pressed on the menu, `loc_AA54 (sonic3k.asm:13612-13621)`. Match Race never calls the record save `sub_37430 (sonic3k.asm:74676-74724)`. As a second guard, the host still receives a no-op save consumer. No cartridge records are written by any hosted run. |
 | D5 | Arena monitor setting | The ROM switch `Competition_items`: 0 means the item set is live, `sub_36FAA (sonic3k.asm:74302-74304)`; the menu toggles it, `Obj_Competition_AB00 (sonic3k.asm:13696-13697)`. **Competition items** sets it ON, which is the menu default because RAM is cleared to 0. **Off** sets it OFF. *Normal* and *randomised* do not apply, because arenas have no monitors (decoded layouts hold only the `Obj_2PItem` cluster). |
-| D6 | Presentation | One full-screen view of P1. The ROM camera, both native sprite pages (whose culling writes object visibility) and P2's empty view keep running unchanged. The extra 112 rows are a read-only projection: display only. |
+| D6 | Presentation | One full-screen view of P1: the ROM's own P1 window (camera Y and 112 rows, P1's scroll and deformation), magnified 2x, central half of its columns. Playable bodies use full-size main-game art at screen scale (user decision, 2026-11-08). The ROM camera, both native sprite pages (whose culling writes object visibility) and P2's empty view keep running unchanged. Display only. |
 | D7 | Timing authority | Each client's own frames. **Clock start** is the GO frame. On arenas that is the native neon GO, `sub_371BE (sonic3k.asm:74437-74457)`. On acts in Competition mode it is the first step after the mass-start release. In Time Attack mode it stays the first input. `timeFrames = finishFrame − clockStartFrame`, the same equation the host and verifier already check. The wire field `firstInputFrame` is renamed `clockStartFrame`. |
 | D8 | Lap capture | A lap closes on the step where the session's **highest lap** rises. Raw `lap` is not used, because it falls on backward crossings and deaths. A lap's frame count is the steps since the previous boundary, so the laps partition `[clockStart, finish)` exactly as the ROM's `Timer` does. Best lap is the minimum of the five lap frame counts; the ROM has no best lap. Display uses the ROM per-lap centisecond truncation, `byte_37E52 (sonic3k.asm:74906-…)`, and the total is shown as the ROM shows it: the sum of truncated laps. |
 | D9 | Ranking | Placement and boards use **frames**. Frames are displayed as ROM centiseconds. Equal frames are a tie, as `Result.winner` treats equal times (`S3kCompetitionSession.java:133-142`). A ROM display total can differ by up to about 3 frames from frame order (§5.3). |
@@ -53,7 +53,7 @@ monitor setting.
 | D13 | Monitor setting, normal acts | Competition mode only, chosen by the host: NORMAL / RANDOMISED / COMPETITION_ITEMS / OFF, mapped per game in §7. Time Attack mode is always NORMAL. The setting is part of `GameplayRunPolicy`, so objects read it through `services().runPolicy()`. It is bound into the recording hash. |
 | D14 | Teleport | A **server-mediated swap** (user decision, §8), in Competition mode only:<br>• The breaker's client requests a swap at the break step. The host picks the nearest running rival by progress, preferring the one ahead, and sends **one `TeleportSwap` command to both clients**.<br>• Each client applies the other's hub-observed state at its next step boundary.<br>• Each application is a recorded input event bound into the recording hash, and the verifier checks it against the host's swap log.<br>• With no eligible partner, the ROM's solo outcome applies: invincibility on S2 acts (`s2.asm:25766-25772`), and the empty-slot shoe swap on arenas.<br>The S3K arena swap item (`loc_3652A`) uses the same mechanism, with its own swapped fields. |
 | D15 | Live positions | Estimates for display, never used for placement. They come from a 4-bit **progress ordinal** in ghost-frame byte 5, bits 4-7 (the arena's current lap, or an act's highest star post + 1, clamped to 15). The ordinal is mirrored by the hub into the roster status byte's high nibble. Within an ordinal, progress is wrap-aware distance along the lap (arenas) or x / level width (acts). Byte 6 bits 4-6, reserved today, carry the swap-relevant pose: bit 4 is the secondary collision path, and bits 5-6 are the arena shoe kind (§8.3). Bit 7 marks an admitted respawn reset. The 2026-07-04 design held these bits for a mapping-frame extension; no character needs one today. |
-| D16 | Ghost art | Every player in a round runs the same track, so the **local track picks the art family**. In an arena, ghosts draw with the ROM miniature art and mappings, the same family as `S3kMiniatureSprite`. `GhostPose` is unchanged. |
+| D16 | Ghost art | Every player in a round runs the same track, so the **local track picks the art family**. In an arena, ghosts carry miniature frames on the wire but draw with the full-size main-game art, through a ROM-derived miniature-to-main pose map (`S3kArenaPoseMap`). `GhostPose` and the stream are unchanged. |
 | D17 | Standings visibility | User decision. **Unverified rooms publish the Competition finish order, lap times and best lap, clearly labelled UNVERIFIED.** Verified rooms remain the only trusted boards: `PENDING` → `VERIFIED` as today. This deliberately amends the trust decision of the 2026-07-04 security design, which `RoomHost.java:212-216` implements by never publishing unverified standings. The amendment is scoped to Competition-mode placement boards (§8.7). **Time Attack-mode standings in unverified rooms:** the user's decision covers Competition only. This design recommends the same UNVERIFIED publication for Time Attack boards, for consistency: one room should not label one mode's board and hide the other's. It is flagged for the lead and kept behind the same host switch, so it can land with this work or be held back. |
 | D18 | Protocol | Version 9 (`Protocol.java:12`). The strict codec is kept, with no compatibility path; clients, hosts and master upgrade together. |
 | D19 | Solo arena practice | **Not in v1.** Arenas are reached only through Competition rooms. A later solo mode would use the native `TIME_ATTACK` mode with mod-owned `.ggfghost` bests, and never cartridge records. |
@@ -267,29 +267,44 @@ For `RELEASE` and `RACE_CLOCK` the attempt **survives level reloads**: `onLevelR
 ### 4.6 Full-screen arena view (S3K, presentation only)
 
 The solo `S3kCompetitionNativeHost.Views` is injected through the existing constructor
-(`S3kCompetitionNativeHost.java:59-77`). It does three things:
+(`S3kCompetitionNativeHost.java:59-77`). `S3kSoloArenaViews` does four things:
 
 1. It delegates `prepareNativeSpritePages` and `publishNativeSpritePages` unchanged, so the
-   112-line native pages and their visibility writeback still run.
-2. It draws one `NativeCompetitionRenderer.View(rasterStart 0, rasterHeight 224)`
-   (`NativeCompetitionRenderer.java:25-38`), built from:
-   - **Camera:** P1's native camera, displayed with a top row of
-     `clamp(camY − 56, minY, maxY + 112 − 224)`. This is the native window centred and kept
-     inside the designed rows. CGZ wraps its 256-px loop instead of clamping. The native camera is
-     never written, because `resolveDeadPlayer` reads P1 `Camera_Y`
-     (`S3kCompetitionSession.java:360-370`).
-   - **H-scroll:** a new read-only 224-line P1 projection on `S3kCompetitionScroll`.
-   - **Sprites:** a new read-only 224-line projection on `S3kCompetitionSpritePages`, with the same
-     sources and bucket order, **no visibility writes** and no page mutation. It is produced
-     through `NativeCompetitionRenderer.prepareSprites` (`:50-57`).
-3. It inserts ghosts into that projection at P1's bucket, through the gameplay ghost registry: the
-   same SAT-path hook LEVEL uses (`LevelRenderer.java:2138-2146`).
+   112-line native pages, their visibility writeback and the split registers still run.
+2. At the same VInt publication it keeps a read-only image of P1's window: the world sprites
+   (`S3kCompetitionSpritePages.projectZoomed`, no pointer, page or visibility writes), the
+   screen-space HUD pieces, the admitted playable bodies, P1's camera, VScroll and H-scroll.
+   The zoom therefore shows the same frame as the split view, which trails the logic by one
+   VInt. A lag publication keeps the image; a draw with no image (before the first VInt, or
+   after a rewind restore) projects the live state.
+3. It draws P1's window through `NativeCompetitionRenderer` (unchanged): camera top = native
+   camera Y, 112 rows. It magnifies the central `logicalWidth / 2` columns around native column
+   $98 (the middle of MoveCameraX's $90-$A0 hold band) twice, with nearest sampling, onto the
+   full screen. The P1 high-priority tile mask is magnified the same way into the shared
+   priority texture.
+4. Over that, at screen scale and in native SAT bucket order: the HUD pieces at their
+   full-screen 1x positions (centred in a wider screen), the local body and Tails' tail with
+   the main-game art (`S3kArenaFullSizeArt`, read through `Sonic3kPlayerArt`), then the ghosts
+   from the gameplay ghost registry. Bodies keep the miniature's priority bit, so they pass
+   behind high-priority tiles where the miniature would. A body is shifted toward the ground
+   by the difference between the doubled miniature standing radius (2 x $B) and the main
+   radius ($13, Tails $F); rolling radii already agree.
 
-The slot-0 HUD (running total, lap number, item icon) stays at its native screen position.
-P2-band HUD pieces are not presented. The shared `NativeCompetitionRenderer` file is **not
-changed**; the S2 parity session also needs it. If ghost translucency cannot pass through SAT
-collection, the lane stops and reports. The fallback is an additive overload, flagged to the lead
-before anyone touches that file.
+Poses come from `S3kArenaPoseMap`, built from both ROM animation tables: each miniature script
+step pairs with the main script step at the same point, walk and run keep their slope-angle
+group (miniature stride 3/2, main 8/4), and tumbles map frame $15+f to $31+2f. The local body
+also uses its animation id, which resolves frames the miniature table shares. Tails' tail uses
+`TailsTailPose` (Obj_Tails_Tail's selection and scripts) on the arena's level frame counter.
+The item icon moves under TIME and is hidden when monitors are off. The native split view
+(`S3kCompetitionViews`) is unchanged.
+
+Residual pose ambiguity: a ghost frame carries no animation id, so a miniature frame shared by
+several animations takes the first Competition animation (frame $15 is the spring pose, not
+the upright tumble; the waiting frames are WAIT, not LOOK_UP or BALANCE). Shorter miniature
+scripts show a subset of the main frames (walk shows four of eight steps). The miniature has no
+fast-run tier, so Tails never shows AniTails1F. Frames no script reaches ($27 for Sonic and
+Tails, $2C-$31 for Knuckles) fall back to standing. Ghost Tails draw the body only. The
+full-size art lives in the S&K half, so the zoom requires the locked-on cartridge.
 
 ### 4.7 Ghosts on wrapping tracks
 
@@ -309,9 +324,12 @@ before anyone touches that file.
   `x' = localX + wrapDelta(ghostX − localX)`. This is the ROM's `(x AND mask) + $400` wrap
   (`loc_107AE (sonic3k.asm:21605-21608)`); the layout's padding columns cover the edge.
 - **Art.** `GhostRenderer.slotFor` (`GhostRenderer.java:260-285`) resolves art through a
-  `GhostArtSource`. The world session's source comes first; competition installs a miniature
-  source with ROM art, mappings, DPLCs and palettes from `S3kCompetitionAssets`. Otherwise the
-  level game's `PlayerSpriteArtProvider` is used, as today.
+  `GhostArtSource`. The world session's source comes first; the hosted arena zoom installs the
+  full-size main-game art, maps each streamed miniature frame through `S3kArenaPoseMap`
+  (`artFrame`) and places it at its doubled screen position (`frameScreenX/Y`, with the same
+  ground shift as the local body, derived from the frame's angle group and flips). A native
+  split view keeps the miniature source. Otherwise the level game's `PlayerSpriteArtProvider`
+  is used, as today.
 - **Tails.** A Tails ghost draws its body frame only, as 1P ghosts do; the separate tail object
   (`S3kMiniatureTail`) is not streamed.
 

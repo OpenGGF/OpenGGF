@@ -111,6 +111,11 @@ under the matching area heading; see the
     Each player races them alone in one full-screen view, under the shipped
     Match Race rules: five laps, losing a lap for a backwards crossing or a
     death, false starts and the 9'59"99 limit.
+  - The arena view shows exactly what the original top half shows, magnified
+    twice, with full-size Sonic, Tails and Knuckles (and ghosts) posed and angled
+    from the original animations. They still pass behind foreground scenery, and
+    TIME, laps and the countdown keep their screen size. The item icon sits under
+    TIME and is hidden when monitors are off.
   - Lap times, the total and the best lap are shown and ranked.
   - A teleport monitor swaps you with the nearest racer through the host.
   - Rooms without a verifier show the finish order labelled UNVERIFIED.
