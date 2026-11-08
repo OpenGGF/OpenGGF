@@ -593,10 +593,8 @@ accepted.
 
 ## S2 Competition Split Screen, Native Lag and Rewind Scope
 
-<!-- LEAD: activation status -->
-**Activation:** pending lead activation. At this revision
-`Sonic2NativeModeProvider.QUALIFIED_ZONES` is empty, so the title does not
-offer 2 PLAYER and the Competition visit runs only under tests.
+**Activation:** the title offers 2 PLAYER for Emerald Hill, Mystic Cave and
+Casino Night (and the special stage) since 2026-11-08.
 
 **Location:** `game/sonic2/competition/` (`Sonic2CompetitionVisit`,
 `Sonic2NativeCompetitionHost`, `specialstage/Sonic2CompetitiveHalfpipe`) and
@@ -686,7 +684,14 @@ These are state-prefix checks, not complete act, results or pixel
 certification. The headless diagnostic enters at the Competition menu, so its
 raw V-int counter starts far below native (EHZ 80 against 1094); that origin
 is reported separately and never offset into gameplay. Production entry
-through the title carries the real counter.
+through the title counts V-ints from power-on, but it still cannot equal the
+console's count, because engine loads do not take the console's frame-exact
+frontend and decompression time (see
+[S2 Whole-Run V-int Clock Cannot Be Made Exact](#s2-whole-run-v-int-clock-cannot-be-made-exact)).
+Anything the ROM seeds from `V_int_run_count` can therefore differ from a
+native run: the CNZ slot machine's reels, rewards and payout timing differ
+from CNZ physical frame 2228 in the planner route, even though reaching the
+slot and spinning it match native.
 
 Pixel evidence is fixed-field-0 comparisons of engine views with BizHawk
 references: 1.1-1.4% normalised differences on four cold EHZ gameplay pairs,

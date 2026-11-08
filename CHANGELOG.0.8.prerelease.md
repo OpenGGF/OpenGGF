@@ -31,9 +31,7 @@ under the matching area heading; see the
   and can hold Sonic on the spring. The complete-chain CNZ2 segment is green;
   later campaign and art-gap failures remain open.
 
-- **S2 Competition (two-player mode):** <!-- LEAD: activation status. The title's
-  2 PLAYER row stays hidden until the zones are qualified; finalize this sentence
-  at activation. --> Sonic 2's own two-player mode runs natively, with Sonic on
+- **S2 Competition (two-player mode):** Choose 2 PLAYER on the Sonic 2 title. Sonic 2's own two-player mode runs natively, with Sonic on
   controller 1 and Tails on controller 2. Its menu selects Emerald Hill, Mystic
   Cave, Casino Night or the special stage. Each zone plays two acts with
   separate rings, lives, score, time and results, then zone and game results
@@ -72,6 +70,14 @@ under the matching area heading; see the
 - **S2 Casino Night conveyor belts carry the sidekick:** `Obj72` moves both
   players, as the ROM does, so a CPU sidekick rides the belts too, in Sonic 2
   and Knuckles in Sonic 2.
+
+- **S2 Casino Night horizontal flippers accept the full landing width:**
+  horizontal `Obj86` uses the ROM's `$18` landing half-width instead of 8, so
+  players land on the flipper's whole top. Vertical flippers are unchanged.
+
+- **Freed animals keep their points popup across rewind:** a destructive
+  rewind restore now keeps how an animal spawns its points child, so the popup
+  appears and later objects keep their identities after restore and replay.
 
 - **S2 title cards follow Obj34:** the card's parts enter, wait and leave in the
   ROM's slot order and timing. Native Emerald Hill 1 recordings match its part

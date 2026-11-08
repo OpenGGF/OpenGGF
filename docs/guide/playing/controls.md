@@ -26,10 +26,9 @@ Keyboard B and C action bindings are intentionally unbound by default. All
 three Mega Drive actions act as jump buttons during platforming gameplay when
 bound.
 
-In Sonic 2, these Player 2 bindings control the configured sidekick/manual-input
-path; they do not enable the ROM's native two-player/competition mode. Human-P2
-competition gameplay, including its monitor-break branch, is not currently
-available.
+In Sonic 2, outside Competition, these Player 2 bindings control the configured
+sidekick/manual-input path. In Competition (2 PLAYER on the title) they control
+Tails.
 
 ## Continue screens
 

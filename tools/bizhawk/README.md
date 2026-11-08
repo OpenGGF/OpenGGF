@@ -272,3 +272,8 @@ ROM and observed row count. Stamp with `com.openggf.tools.RouteNativeStampTool
 ROUTE.route.json VERDICT.json`; it regenerates and hashes the route's anchored
 export before accepting named `qualification[].coverage`. The named checks do
 not certify unlisted planner waypoints or state/pixel parity beyond native lag.
+
+Tiebreaker start additionally requires native `SpecialStage_Started` ($DB23) and
+initialized SonicSS/TailsSS actors ($09/$10, routine at least2), alongside mode,
+ledger, stage, zone and results flags. The mode switch during a black load is not
+sufficient. This is the same REV01 flag owner used by the canonical SS recorder.

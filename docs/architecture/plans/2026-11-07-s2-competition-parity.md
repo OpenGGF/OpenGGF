@@ -4,10 +4,9 @@
 
 **Branch:** `feature/ai-s2-competition-parity`, based on develop `60aa1d658`
 
-<!-- LEAD: activation status -->
-**Status:** runtime implemented; title activation pending.
-`Sonic2NativeModeProvider.QUALIFIED_ZONES` is empty, so the title's 2 PLAYER row
-stays hidden and the Competition visit runs only under tests.
+**Status:** activated 2026-11-08. `Sonic2NativeModeProvider.QUALIFIED_ZONES` is
+`{0, 11, 12}` (EHZ, MCZ, CNZ), so the title offers 2 PLAYER and opens the
+Competition visit through the production title route.
 
 ## Goal
 
@@ -185,10 +184,16 @@ Held rewind is off (D2).
    `SolidObject_Landed` re-reads for a new landing, while the engine used a
    default width of 8 for the horizontal flipper. The fix also changes 1P S2
    and needs its own trace attribution and changelog line.
-   <!-- LEAD: round 6 outcome -->
+   Fixed in `8dc022263` (plus the human-P2 `Obj44` bumper latch `30baceb1d`); the
+   56-class S2 trace attribution was identical before and after, and the CNZ
+   planner witness is exact through all 2,507 native frames.
 
-3. Lane P routes (b) EHZ zone results and (c) tied acts to the special stage,
-   with native confirmation of all three routes.
+3. Done 2026-11-08 (lane P `8fbac68aa`): cold BizHawk runs confirm the CNZ slot
+   in use (2045) and a visible mid-flip tile (2513), the EHZ zone results
+   (18628) and tied act wins entering the special stage (18909). Open: the
+   divergence tool's next frontier on that route (frame 4274, P2 velocity and
+   score), and V-int-seeded slot reel/payout differences, which follow the
+   existing V-int clock discrepancy.
 4. Desktop editor branch `feature/ai-route-planner-2p` (`b323b53`) in the
    OpenGGF-Editor repository is not merged.
 5. Native-reference branch `feature/ai-s2comp-native-refs` (`0df9ebf85`:

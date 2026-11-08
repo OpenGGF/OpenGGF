@@ -53,6 +53,45 @@ class TestRouteNativeAnchors {
         assertThrows(java.io.IOException.class,()->RouteCodec.parseTransport(partial));
     }
 
+    @Test void laterInletSplicesOnlyItsVerifiedLoadAndBindsThePrecedingGameplay() throws Exception {
+        var tape=RouteFiles.tapeFromScript("3 -\n1 R\n1 - / A\n1 S\n1 R / B\n1 -\n");
+        var route=RouteArtifact.of(launch(),tape,new Provenance("test","","",List.of()));
+        var first=RouteFiles.tapeFromScript("2 -\n1 S\n2 -\n");
+        Path f=dir.resolve("first.script");Files.writeString(f,RouteFiles.scriptText(first));
+        var start=new NativeFacts.NativeEntry(f.toString(),5,first.hash(),3,"first-ordinary-level-lfc-zero");
+        var later=first.append(tape.slice(3,5)).append(RouteFiles.tapeFromScript("1 S\n3 -\n"));
+        Path l=dir.resolve("later.script");Files.writeString(l,RouteFiles.scriptText(later));
+        var inlet=new NativeFacts.NativeInlet(5,new NativeFacts.NativeEntry(l.toString(),11,later.hash(),6,"first-ordinary-level-lfc-zero"));
+        var anchored=new RouteArtifact(route.manifest().withNativeFacts(new NativeFacts(Optional.of(start),List.of(),"",List.of(inlet))),tape);
+        assertEquals(anchored,RouteCodec.parseTransport(RouteCodec.formatTransport(anchored)));
+        for(boolean corruptAnchor:List.of(false,true)) {
+            var hosts=new RouteWorldFactory() {
+                public RouteWorld openSearch(LaunchContract l){throw new UnsupportedOperationException();}
+                public ReplayWorld openColdReplay(LaunchContract l){return new TestGoalNativeCharge.World(){
+                    @Override public RouteSample observe(){var o=super.observe();return new RouteSample(rows,1,o.level(),
+                        new RouteSample.Clocks(rows,rows==6?0:rows),o.p1(),o.p2(),0,0,0,List.of(),List.of(),
+                        java.util.Map.of("input.gameplayAnchorRows",3,"input.levelAnchorRows",corruptAnchor?5:6));}
+                };}
+                public String environment(){return "inlet-anchor-test";}
+            };
+            var replay=new RouteReplay(hosts).replay(anchored,Cancellation.NONE);
+            if(corruptAnchor)assertInstanceOf(ReplayResult.Failed.class,replay);
+            else assertInstanceOf(ReplayResult.Passed.class,replay);
+        }
+        var expected=later.append(tape.slice(6,8));
+        assertEquals(expected,RouteFiles.nativeInputTape(anchored));
+        var movie=RouteFiles.exportBk2(anchored,dir.resolve("two-inlets.bk2"));
+        assertEquals(expected,RouteFiles.tapeFromMovie(movie,13));
+        var changed=InputTape.of(java.util.stream.IntStream.range(0,tape.size()).mapToObj(n->n==4?PadRow.NEUTRAL:tape.row(n)).toList());
+        var edited=RouteArtifact.of(launch(),changed,route.manifest().provenance());
+        edited=new RouteArtifact(edited.manifest().withNativeFacts(anchored.manifest().nativeFacts()),changed);
+        var corrupt=edited;
+        assertThrows(java.io.IOException.class,()->RouteFiles.nativeInputTape(corrupt),"changed earlier gameplay invalidates later witness history");
+        Files.writeString(l,RouteFiles.scriptText(later.slice(0,10).append(InputTape.of(List.of(new PadRow(8,0))))));
+        assertThrows(java.io.IOException.class,()->RouteFiles.nativeInputTape(anchored),"changed load rows invalidate their witness hash");
+        assertThrows(IllegalArgumentException.class,()->new NativeFacts(Optional.of(start),List.of(),"",List.of(inlet,inlet)));
+    }
+
     private static LaunchContract launch() {
         return new LaunchContract(RomIdentity.standard("s2"),new Inlet.Title(),new Roster("sonic","tails"),320,"off",new InitialState(0,Seeds.NONE));
     }

@@ -55,7 +55,9 @@ def analyse(state, goals, kind):
                 if a>b: wins[0]+=1
                 elif b>a: wins[1]+=1
             if (s['mode']==16 and s['results']==3 and s['act_2p']==2
-                and wins[0]==wins[1] and s['ss_stage']==1):
+                and wins[0]==wins[1] and s['ss_stage']==1 and s.get('ss_started',0)!=0
+                and s.get('p1_id')==9 and s.get('p2_id')==16
+                and s['p1_routine']>=2 and s['p2_routine']>=2):
                 found.setdefault('tied-act-wins-to-competitive-special-stage',s['frame'])
         required=['ehz-act1-play','ehz-act2-play', 'ehz-zone-results' if kind=='zone-results'
                   else 'tied-act-wins-to-competitive-special-stage']

@@ -472,7 +472,7 @@ public class Sonic2GameModule implements GameModule, com.openggf.game.internal.S
 
     @Override
     public TitleScreenProvider getTitleScreenProvider() {
-        titleScreenProvider.setNativeMenuAvailability(nativeModes.competitionScreen() != null);
+        titleScreenProvider.setNativeMenuAvailability(nativeModes.competitionAvailable());
         return titleScreenProvider;
     }
 

@@ -435,6 +435,7 @@ public final class RouteTapeWorkspace {
                 .map(entry -> UiMessages.text("editor.route_tape.native_entry_value",
                         Map.of("movie", entry.movie(), "rows", String.valueOf(entry.prefixRows()))))
                 .orElse(UiMessages.text("editor.route_tape.native_entry_none"))));
+        for(var inlet:facts.inlets()) lines.add(fact("Native inlet", "engine ["+inlet.engineFromRows()+","+inlet.anchor().engineAnchorRows()+") → "+inlet.anchor().movie()+" through "+inlet.anchor().prefixRows()));
         long matching = facts.lag().stream().filter(lag -> lag.content().equals(content)).count();
         lines.add(fact(UiMessages.text("editor.route_tape.fact_native_lag"), facts.lag().isEmpty()
                 ? UiMessages.text("editor.route_tape.native_lag_none")
@@ -450,6 +451,7 @@ public final class RouteTapeWorkspace {
             if (!stamp.content().equals(content)) verdict = UiMessages.text("editor.route_tape.native_other_content",
                     Map.of("verdict", verdict));
             lines.add(fact(UiMessages.text("editor.route_tape.fact_native_check"), verdict));
+            if(!stamp.coverage().isEmpty())lines.add(fact(UiMessages.text("editor.route_tape.fact_native_check"),String.join(", ",stamp.coverage())));
         }
         if (needsNativeCheck()) {
             lines.add(fact(UiMessages.text("editor.route_tape.fact_native_check"),
@@ -1522,7 +1524,7 @@ public final class RouteTapeWorkspace {
                     var prefix = RouteFiles.inputPrefix(witness,nativeRows);
                     var previous=currentNativeFacts;
                     var facts = new NativeFacts(Optional.of(new NativeFacts.NativeEntry(witness.toString(), nativeRows,
-                            prefix.hash(), engineRows, values.get("boundary"))), previous.lag(), previous.exportBlocker());
+                            prefix.hash(), engineRows, values.get("boundary"))), previous.lag(), previous.exportBlocker(),previous.inlets());
                     undo.push(new State(tape, goals, currentNativeFacts)); redo.clear();
                     currentNativeFacts=facts;
                     result=null;

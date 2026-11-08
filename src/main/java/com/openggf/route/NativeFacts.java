@@ -9,17 +9,36 @@ import java.util.Optional;
  * engine, never used to plan and never predicted.
  *
  * @param entry the native boot witness that reaches row 0, if one exists
- * @param lag   observed lag VBlanks; each makes the composed movie repeat the previous row once
+ * @param lag observed lag comparison facts; never input to engine replay
+ * @param inlets verified later cold pre-level witnesses; export only, never gameplay state
  */
-public record NativeFacts(Optional<NativeEntry> entry, List<LagFact> lag, String exportBlocker) {
+public record NativeFacts(Optional<NativeEntry> entry, List<LagFact> lag, String exportBlocker, List<NativeInlet> inlets) {
     public static final NativeFacts NONE = new NativeFacts(Optional.empty(), List.of());
 
-    public NativeFacts(Optional<NativeEntry> entry, List<LagFact> lag) { this(entry, lag, ""); }
+    public NativeFacts(Optional<NativeEntry> entry, List<LagFact> lag) { this(entry, lag, "", List.of()); }
+    public NativeFacts(Optional<NativeEntry> entry, List<LagFact> lag, String exportBlocker) {
+        this(entry,lag,exportBlocker,List.of());
+    }
+    /** Replace a later engine load span with its verified cold-native pre-level witness. */
+    public record NativeInlet(int engineFromRows, NativeEntry anchor) {
+        public NativeInlet {
+            Objects.requireNonNull(anchor,"anchor");
+            if(engineFromRows<0 || engineFromRows>=anchor.engineAnchorRows()
+                    || !anchor.anchorBoundary().equals("first-ordinary-level-lfc-zero"))
+                throw new IllegalArgumentException("invalid later native inlet boundary");
+        }
+    }
 
     public NativeFacts {
         Objects.requireNonNull(exportBlocker, "exportBlocker");
         Objects.requireNonNull(entry, "entry");
         lag = List.copyOf(lag);
+        inlets=List.copyOf(inlets);
+        int lastAnchor=entry.map(NativeEntry::engineAnchorRows).orElse(0);
+        for(var inlet:inlets) {
+            if(inlet.engineFromRows()<lastAnchor)throw new IllegalArgumentException("overlapping native inlets");
+            lastAnchor=inlet.anchor().engineAnchorRows();
+        }
         int previous = -1;
         for (LagFact fact : lag) {
             if (fact.beforeRow() < previous) throw new IllegalArgumentException("lag facts out of order: " + lag);

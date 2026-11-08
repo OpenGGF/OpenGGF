@@ -74,6 +74,15 @@ final class GoalExpander implements PrefixSearch.Expander {
         if (node.rows - state.legStart() >= leg.maxRows()) return null;
         search.materialize(node);
         search.ensureCheckpoint(node);
+        // A guarded, fact-only menu observation is a bounded neutral trial, not
+        // a request to navigate. Keep its complete observed hold if it succeeds;
+        // menu hosts may deliberately refuse checkpoints outside gameplay.
+        if (node.sample.facts().getOrDefault("input.menu",0)!=0 && leg.guard().holds().isPresent()
+                && leg.goal() instanceof RouteGoal.Achieve a && factsOnly(a.condition())) {
+            PrefixSearch.Node child=trial(search,node,state,leg,(t,now,previous)->PadRow.NEUTRAL,leg.maxRows());
+            if(child!=null) search.push(frontier,child);
+            return null;
+        }
         boolean encounter = defeatTarget(leg).isPresent();
         int horizon = encounter ? ENCOUNTER_HORIZON : HORIZON;
         var families = new ArrayList<Policy>();
@@ -85,7 +94,8 @@ final class GoalExpander implements PrefixSearch.Expander {
         families.add(charge(leg));
         families.add(rolling(leg));
         families.add((t, now, previous) -> PadRow.NEUTRAL);
-        if(node.sample.facts().getOrDefault("input.menu",0)!=0)
+        // A menu observation held under a leg invariant requests no menu advance.
+        if(node.sample.facts().getOrDefault("input.menu",0)!=0 && leg.guard().holds().isEmpty())
             families.addFirst((t, now, previous) -> new PadRow(t==0?PhysicalButton.START.bit():0,0));
         if (encounter) for (int p = 0; p < ENCOUNTER_POLICIES; p++) families.add(encounter(leg, p));
         for (Policy family : families) {
@@ -194,7 +204,31 @@ final class GoalExpander implements PrefixSearch.Expander {
             int y = region.map(r -> (r.top() + r.bottom()) / 2).orElse(targetY);
             distance += Math.abs(x - actor.centreX()) + Math.abs(y - actor.centreY());
         }
+        // Copied numeric facts can express a deliberate wait for an owner's counter.
+        // This ranks bounded candidates only; the exact predicate and linear replay
+        // still decide completion, and missing facts are never inferred.
+        if (leg.goal() instanceof RouteGoal.Achieve a) distance += factDistance(a.condition(), end);
         return -distance - (hurt ? 100 : 0);
+    }
+
+    private static boolean factsOnly(SamplePredicate predicate) {
+        return switch (predicate) {
+            case SamplePredicate.FactEquals ignored -> true;
+            case SamplePredicate.FactsEqual ignored -> true;
+            case SamplePredicate.All all -> !all.clauses().isEmpty() && all.clauses().stream().allMatch(GoalExpander::factsOnly);
+            default -> false;
+        };
+    }
+
+    private static long factDistance(SamplePredicate predicate, RouteSample sample) {
+        return switch (predicate) {
+            case SamplePredicate.FactEquals f -> sample.facts().containsKey(f.key())
+                    ? Math.abs((long) sample.facts().get(f.key()) - f.value()) : 1_000_000;
+            case SamplePredicate.FactsEqual f -> sample.facts().containsKey(f.left()) && sample.facts().containsKey(f.right())
+                    ? Math.abs((long) sample.facts().get(f.left()) - sample.facts().get(f.right())) : 1_000_000;
+            case SamplePredicate.All all -> all.clauses().stream().mapToLong(p -> factDistance(p, sample)).sum();
+            default -> 0;
+        };
     }
 
     private Policy steer(Leg leg, int hold1, int hold2) {
