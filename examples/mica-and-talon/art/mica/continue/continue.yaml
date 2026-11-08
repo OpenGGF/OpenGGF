@@ -1,0 +1,1262 @@
+{
+  "format": "openggf-continue-art-handoff-1",
+  "tick_rate": 60,
+  "palette": "../palette.yaml",
+  "games": [
+    {
+      "game": "s1",
+      "palette": "../palette.yaml",
+      "palette_line": 0,
+      "piece_schema": [
+        "x",
+        "y",
+        "width_tiles",
+        "height_tiles",
+        "tile",
+        "flip_x",
+        "flip_y",
+        "palette_line",
+        "priority"
+      ],
+      "sequences": [
+        {
+          "name": "fall",
+          "frames": [
+            "player-3c",
+            "player-3d",
+            "player-53",
+            "player-3e",
+            "player-54"
+          ],
+          "ticks": 4
+        },
+        {
+          "name": "waiting",
+          "frames": [
+            "floor-01",
+            "floor-01",
+            "floor-01",
+            "floor-01",
+            "floor-02",
+            "floor-02",
+            "floor-02",
+            "floor-03",
+            "floor-03"
+          ],
+          "ticks": 5
+        },
+        {
+          "name": "rise",
+          "frames": [
+            "player-3c"
+          ],
+          "ticks": 4,
+          "end": "switch to walk"
+        },
+        {
+          "name": "walk",
+          "frames": [
+            "player-08",
+            "player-09",
+            "player-0a",
+            "player-0b",
+            "player-06",
+            "player-07"
+          ],
+          "ticks": 4,
+          "preview_inertia": 1280
+        },
+        {
+          "name": "run",
+          "frames": [
+            "player-1e",
+            "player-1f",
+            "player-20",
+            "player-21"
+          ],
+          "ticks": 3,
+          "preview_inertia": 1536
+        },
+        {
+          "name": "icons",
+          "frames": [
+            "icon-06",
+            "icon-07"
+          ],
+          "ticks": 16
+        }
+      ],
+      "native_source_label": "ContSonic / CSon_ShowFall / CSon_Animate / CSon_RunRight / Ani_CSon / CSI_ShowMiniSonic",
+      "source": "docs/s1disasm/_incObj/80, 81 Continue Screen Elements and Sonic.asm",
+      "animation_source": [
+        "docs/s1disasm/_anim/Continue Screen Sonic.asm",
+        "docs/s1disasm/_anim/Sonic.asm"
+      ],
+      "timing": {
+        "wait_timer_byte": 4,
+        "fall_timer_byte": 3,
+        "fall_dy": 4,
+        "land_y": 416,
+        "rise_dy": -8,
+        "acceleration": 32,
+        "movement": "At inertia $800: x += 16; otherwise inertia += $20",
+        "walk_run": "1 + (max(0,$800-abs(inertia)) >> 8); walk below $600, run from $600",
+        "countdown": "659 initial ticks, timer/60; no countdown-specific character frames"
+      },
+      "palette_binding": "MICA line 0 also serves native CONTINUE text/countdown and mini icons. Preserve MICA colours; engine must allocate/rebind text/digits separately. Floor oval/stars line 1 remain native.",
+      "review_notes": "Sheets compare native mapping canvases at common hotspots, 1x and 4x. GIF concatenates each sequence once, not a full screen recording; walk/run preview uses the stated fixed inertia, with native timer+1 duration. GIF times quantize to 10ms. Native fall movement/countdown/departure waits remain engine-owned. Weakest: run cycle is restrained, small scales/laces merge at 1x, and shared-palette background validation remains engine lane.",
+      "scope": "Sonic-role normal continue art, including all normal walk/run departure mappings and mini icons. No Talon/Tails, Knuckles/EggRobo replacement. Retained-super FixBugs=0 invalid-script/mismatched-DPLC artifacts are native bugs, not additional authored poses.",
+      "mapping_source": "docs/s1disasm/_maps/Sonic.asm",
+      "dplc_source": "docs/s1disasm/_maps/Sonic - Dynamic Gfx Script.asm",
+      "frames": [
+        {
+          "key": "floor-01",
+          "id": 1,
+          "bank": "floor",
+          "file": "s1-floor-01.png",
+          "dimensions": [
+            40,
+            32
+          ],
+          "hotspot": [
+            20,
+            12
+          ],
+          "native_source_label": ".cont_Sonic1",
+          "pieces": [
+            [
+              -4,
+              4,
+              2,
+              2,
+              21,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -20,
+              -12,
+              3,
+              3,
+              6,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              -12,
+              2,
+              3,
+              15,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s1disasm/_maps/Continue Screen.asm"
+        },
+        {
+          "key": "floor-02",
+          "id": 2,
+          "bank": "floor",
+          "file": "s1-floor-02.png",
+          "dimensions": [
+            40,
+            32
+          ],
+          "hotspot": [
+            20,
+            12
+          ],
+          "native_source_label": ".cont_Sonic2",
+          "pieces": [
+            [
+              -4,
+              4,
+              2,
+              2,
+              25,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -20,
+              -12,
+              3,
+              3,
+              6,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              -12,
+              2,
+              3,
+              15,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s1disasm/_maps/Continue Screen.asm"
+        },
+        {
+          "key": "floor-03",
+          "id": 3,
+          "bank": "floor",
+          "file": "s1-floor-03.png",
+          "dimensions": [
+            40,
+            32
+          ],
+          "hotspot": [
+            20,
+            12
+          ],
+          "native_source_label": ".cont_Sonic3",
+          "pieces": [
+            [
+              -4,
+              4,
+              2,
+              2,
+              29,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -20,
+              -12,
+              3,
+              3,
+              6,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              -12,
+              2,
+              3,
+              15,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s1disasm/_maps/Continue Screen.asm"
+        },
+        {
+          "key": "icon-06",
+          "id": 6,
+          "bank": "icon",
+          "file": "s1-icon-06.png",
+          "dimensions": [
+            16,
+            24
+          ],
+          "hotspot": [
+            0,
+            0
+          ],
+          "native_source_label": ".cont_Mini1",
+          "pieces": [
+            [
+              0,
+              0,
+              2,
+              3,
+              18,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s1disasm/_maps/Continue Screen.asm"
+        },
+        {
+          "key": "icon-07",
+          "id": 7,
+          "bank": "icon",
+          "file": "s1-icon-07.png",
+          "dimensions": [
+            16,
+            24
+          ],
+          "hotspot": [
+            0,
+            0
+          ],
+          "native_source_label": ".cont_Mini2",
+          "pieces": [
+            [
+              0,
+              0,
+              2,
+              3,
+              24,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s1disasm/_maps/Continue Screen.asm"
+        },
+        {
+          "key": "player-3c",
+          "id": 60,
+          "bank": "player",
+          "file": "s1-player-3c.png",
+          "dimensions": [
+            48,
+            24
+          ],
+          "hotspot": [
+            20,
+            12
+          ],
+          "native_source_label": "MS_Float1",
+          "pieces": [
+            [
+              -4,
+              -12,
+              4,
+              2,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -20,
+              -4,
+              2,
+              2,
+              8,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -4,
+              4,
+              3,
+              1,
+              12,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s1disasm/_maps/Sonic.asm",
+          "dplc_label": "SonPLC_Float1",
+          "dplc_entries": [
+            [
+              8,
+              901
+            ],
+            [
+              4,
+              909
+            ],
+            [
+              3,
+              913
+            ]
+          ],
+          "tile_budget": 15
+        },
+        {
+          "key": "player-3d",
+          "id": 61,
+          "bank": "player",
+          "file": "s1-player-3d.png",
+          "dimensions": [
+            48,
+            24
+          ],
+          "hotspot": [
+            24,
+            12
+          ],
+          "native_source_label": "MS_Float2",
+          "pieces": [
+            [
+              -24,
+              -12,
+              3,
+              3,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              -12,
+              3,
+              3,
+              0,
+              1,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s1disasm/_maps/Sonic.asm",
+          "dplc_label": "SonPLC_Float2",
+          "dplc_entries": [
+            [
+              9,
+              916
+            ]
+          ],
+          "tile_budget": 9
+        },
+        {
+          "key": "player-53",
+          "id": 83,
+          "bank": "player",
+          "file": "s1-player-53.png",
+          "dimensions": [
+            48,
+            24
+          ],
+          "hotspot": [
+            28,
+            12
+          ],
+          "native_source_label": "MS_Float5",
+          "pieces": [
+            [
+              -28,
+              -12,
+              4,
+              2,
+              0,
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              -4,
+              2,
+              2,
+              8,
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              -20,
+              4,
+              3,
+              1,
+              12,
+              1,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s1disasm/_maps/Sonic.asm",
+          "dplc_label": "SonPLC_Float1",
+          "dplc_entries": [
+            [
+              8,
+              901
+            ],
+            [
+              4,
+              909
+            ],
+            [
+              3,
+              913
+            ]
+          ],
+          "tile_budget": 15
+        },
+        {
+          "key": "player-3e",
+          "id": 62,
+          "bank": "player",
+          "file": "s1-player-3e.png",
+          "dimensions": [
+            40,
+            24
+          ],
+          "hotspot": [
+            28,
+            12
+          ],
+          "native_source_label": "MS_Float3",
+          "pieces": [
+            [
+              -28,
+              -12,
+              4,
+              2,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              -4,
+              1,
+              1,
+              8,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -20,
+              4,
+              4,
+              1,
+              9,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s1disasm/_maps/Sonic.asm",
+          "dplc_label": "SonPLC_Float3",
+          "dplc_entries": [
+            [
+              8,
+              925
+            ],
+            [
+              1,
+              933
+            ],
+            [
+              4,
+              934
+            ]
+          ],
+          "tile_budget": 13
+        },
+        {
+          "key": "player-54",
+          "id": 84,
+          "bank": "player",
+          "file": "s1-player-54.png",
+          "dimensions": [
+            40,
+            24
+          ],
+          "hotspot": [
+            12,
+            12
+          ],
+          "native_source_label": "MS_Float6",
+          "pieces": [
+            [
+              -4,
+              -12,
+              4,
+              2,
+              0,
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              -12,
+              -4,
+              1,
+              1,
+              8,
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              -12,
+              4,
+              4,
+              1,
+              9,
+              1,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s1disasm/_maps/Sonic.asm",
+          "dplc_label": "SonPLC_Float3",
+          "dplc_entries": [
+            [
+              8,
+              925
+            ],
+            [
+              1,
+              933
+            ],
+            [
+              4,
+              934
+            ]
+          ],
+          "tile_budget": 13
+        },
+        {
+          "key": "player-06",
+          "id": 6,
+          "bank": "player",
+          "file": "s1-player-06.png",
+          "dimensions": [
+            40,
+            40
+          ],
+          "hotspot": [
+            20,
+            21
+          ],
+          "native_source_label": "MS_Walk11",
+          "pieces": [
+            [
+              -20,
+              -21,
+              4,
+              2,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -20,
+              -5,
+              3,
+              2,
+              8,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              -5,
+              2,
+              3,
+              14,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -20,
+              11,
+              2,
+              1,
+              20,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s1disasm/_maps/Sonic.asm",
+          "dplc_label": "SonPLC_Walk11",
+          "dplc_entries": [
+            [
+              8,
+              50
+            ],
+            [
+              6,
+              58
+            ],
+            [
+              6,
+              64
+            ],
+            [
+              2,
+              70
+            ]
+          ],
+          "tile_budget": 22
+        },
+        {
+          "key": "player-07",
+          "id": 7,
+          "bank": "player",
+          "file": "s1-player-07.png",
+          "dimensions": [
+            40,
+            40
+          ],
+          "hotspot": [
+            19,
+            20
+          ],
+          "native_source_label": "MS_Walk12",
+          "pieces": [
+            [
+              -19,
+              -20,
+              4,
+              2,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -11,
+              -4,
+              4,
+              3,
+              8,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s1disasm/_maps/Sonic.asm",
+          "dplc_label": "SonPLC_Walk12",
+          "dplc_entries": [
+            [
+              8,
+              50
+            ],
+            [
+              12,
+              72
+            ]
+          ],
+          "tile_budget": 20
+        },
+        {
+          "key": "player-08",
+          "id": 8,
+          "bank": "player",
+          "file": "s1-player-08.png",
+          "dimensions": [
+            24,
+            40
+          ],
+          "hotspot": [
+            13,
+            19
+          ],
+          "native_source_label": "MS_Walk13",
+          "pieces": [
+            [
+              -13,
+              -19,
+              3,
+              2,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -13,
+              -3,
+              3,
+              3,
+              6,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s1disasm/_maps/Sonic.asm",
+          "dplc_label": "SonPLC_Walk13",
+          "dplc_entries": [
+            [
+              6,
+              84
+            ],
+            [
+              9,
+              90
+            ]
+          ],
+          "tile_budget": 15
+        },
+        {
+          "key": "player-09",
+          "id": 9,
+          "bank": "player",
+          "file": "s1-player-09.png",
+          "dimensions": [
+            40,
+            40
+          ],
+          "hotspot": [
+            20,
+            21
+          ],
+          "native_source_label": "MS_Walk14",
+          "pieces": [
+            [
+              -12,
+              -21,
+              3,
+              2,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -20,
+              -5,
+              3,
+              2,
+              6,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              -5,
+              2,
+              3,
+              12,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -20,
+              11,
+              2,
+              1,
+              18,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s1disasm/_maps/Sonic.asm",
+          "dplc_label": "SonPLC_Walk14",
+          "dplc_entries": [
+            [
+              6,
+              84
+            ],
+            [
+              6,
+              99
+            ],
+            [
+              6,
+              105
+            ],
+            [
+              2,
+              111
+            ]
+          ],
+          "tile_budget": 20
+        },
+        {
+          "key": "player-0a",
+          "id": 10,
+          "bank": "player",
+          "file": "s1-player-0a.png",
+          "dimensions": [
+            32,
+            40
+          ],
+          "hotspot": [
+            21,
+            20
+          ],
+          "native_source_label": "MS_Walk15",
+          "pieces": [
+            [
+              -13,
+              -20,
+              3,
+              2,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -21,
+              -4,
+              4,
+              3,
+              6,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s1disasm/_maps/Sonic.asm",
+          "dplc_label": "SonPLC_Walk15",
+          "dplc_entries": [
+            [
+              6,
+              84
+            ],
+            [
+              12,
+              113
+            ]
+          ],
+          "tile_budget": 18
+        },
+        {
+          "key": "player-0b",
+          "id": 11,
+          "bank": "player",
+          "file": "s1-player-0b.png",
+          "dimensions": [
+            40,
+            40
+          ],
+          "hotspot": [
+            20,
+            19
+          ],
+          "native_source_label": "MS_Walk16",
+          "pieces": [
+            [
+              -20,
+              -19,
+              4,
+              2,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -12,
+              -3,
+              4,
+              1,
+              8,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -12,
+              5,
+              3,
+              2,
+              12,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s1disasm/_maps/Sonic.asm",
+          "dplc_label": "SonPLC_Walk16",
+          "dplc_entries": [
+            [
+              8,
+              50
+            ],
+            [
+              4,
+              125
+            ],
+            [
+              6,
+              129
+            ]
+          ],
+          "tile_budget": 18
+        },
+        {
+          "key": "player-1e",
+          "id": 30,
+          "bank": "player",
+          "file": "s1-player-1e.png",
+          "dimensions": [
+            32,
+            40
+          ],
+          "hotspot": [
+            20,
+            18
+          ],
+          "native_source_label": "MS_Run11",
+          "pieces": [
+            [
+              -12,
+              -18,
+              3,
+              2,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -20,
+              -2,
+              4,
+              3,
+              6,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s1disasm/_maps/Sonic.asm",
+          "dplc_label": "SonPLC_Run11",
+          "dplc_entries": [
+            [
+              6,
+              426
+            ],
+            [
+              12,
+              432
+            ]
+          ],
+          "tile_budget": 18
+        },
+        {
+          "key": "player-1f",
+          "id": 31,
+          "bank": "player",
+          "file": "s1-player-1f.png",
+          "dimensions": [
+            32,
+            40
+          ],
+          "hotspot": [
+            20,
+            18
+          ],
+          "native_source_label": "MS_Run12",
+          "pieces": [
+            [
+              -12,
+              -18,
+              3,
+              2,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -20,
+              -2,
+              4,
+              3,
+              6,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s1disasm/_maps/Sonic.asm",
+          "dplc_label": "SonPLC_Run12",
+          "dplc_entries": [
+            [
+              6,
+              84
+            ],
+            [
+              12,
+              444
+            ]
+          ],
+          "tile_budget": 18
+        },
+        {
+          "key": "player-20",
+          "id": 32,
+          "bank": "player",
+          "file": "s1-player-20.png",
+          "dimensions": [
+            32,
+            40
+          ],
+          "hotspot": [
+            20,
+            18
+          ],
+          "native_source_label": "MS_Run13",
+          "pieces": [
+            [
+              -12,
+              -18,
+              3,
+              2,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -20,
+              -2,
+              4,
+              3,
+              6,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s1disasm/_maps/Sonic.asm",
+          "dplc_label": "SonPLC_Run13",
+          "dplc_entries": [
+            [
+              6,
+              426
+            ],
+            [
+              12,
+              456
+            ]
+          ],
+          "tile_budget": 18
+        },
+        {
+          "key": "player-21",
+          "id": 33,
+          "bank": "player",
+          "file": "s1-player-21.png",
+          "dimensions": [
+            32,
+            40
+          ],
+          "hotspot": [
+            20,
+            18
+          ],
+          "native_source_label": "MS_Run14",
+          "pieces": [
+            [
+              -12,
+              -18,
+              3,
+              2,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -20,
+              -2,
+              4,
+              3,
+              6,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s1disasm/_maps/Sonic.asm",
+          "dplc_label": "SonPLC_Run14",
+          "dplc_entries": [
+            [
+              6,
+              84
+            ],
+            [
+              12,
+              468
+            ]
+          ],
+          "tile_budget": 18
+        }
+      ],
+      "native_art_labels": {
+        "floor": "Nem_ContSonic / ArtTile_Continue_Sonic",
+        "icon": "Nem_MiniSonic / ArtTile_Mini_Sonic",
+        "player": "Art_Sonic / Map_Sonic"
+      }
+    }
+  ]
+}
