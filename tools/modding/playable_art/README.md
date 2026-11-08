@@ -156,3 +156,30 @@ All 36 revised slopes retain the unchanged shared palette. Their floor support
 is authored at local centre+18 (last occupied row), before orientation. Runtime
 contact remains an integration check. Arm motion is restrained and the simpler
 head/crest may need another art pass beside the more detailed flat cycles.
+
+## MICA native surfaces round 5
+
+```bash
+python3 -I examples/mica-and-talon/art/mica/wave3/round5.py --review /tmp/mica-art5-review-20261108
+```
+
+This item-1 checkpoint supplies five original 32×32 slot-stage curl frames,
+normal Sonic mappings $96–$9A. `Obj_Sonic_RotatingSlotBonus` forces animation 2;
+`AniSonic02`/03 repeat $96 between each of the other four mappings. There is no
+separate native Sonic slot-stage art bank. Every frame retains the shared MICA
+palette and its original indices; the engine must install that palette on the
+player line. No fixed-palette variants are emitted.
+
+`round5.py` reads the pinned S3K mapping/DPLC tables, draws original pixels and
+checks palette identity, tile aliases and native DPLC capacity. Reference art
+is decoded only for disposable side-by-side 1×/4× sheets and the eight-step GIF.
+The preview uses five ticks per step (zero ground velocity); gameplay timing
+remains native and speed-driven. GIF durations round to 10ms units.
+The generator updates its surface while preserving earlier manifest entries.
+The older `wave3/build.py` rebuilds the round-4 manifest from scratch: run it
+**before** `round5.py` when regenerating both rounds. No Java build is needed.
+
+The round-5 checkpoint stops after slot art. Continue screens, data-select solo/
+team composition, ICZ snowboard and `endings-inventory.yaml` remain undelivered.
+Curl scale travel is restrained, and the small eye/mitten clusters simplify at
+1×. This is native-layout art handoff, without GGFP or in-engine certification.
