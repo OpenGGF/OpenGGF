@@ -23,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -96,6 +97,28 @@ class TestSonic1PlcService {
 
         assertThrows(IllegalStateException.class, service::clearQueued);
         assertThrows(IllegalStateException.class, () -> service.replaceQueued(replacement.plcId()));
+    }
+
+    @Test
+    void countedEntryWaitServicesThreePatternsWithoutAnyPreparationTail() throws IOException {
+        PlcDefinition definition = firstPlcWhoseFirstEntryHasAtLeast(10);
+        int patterns = NemesisPlcPatternCounts.derive(rom, definition).getFirst();
+        var service = new Sonic1PlcService(rom);
+        var lifecycle = new com.openggf.game.resources.PlcFrameLifecycleCoordinator(service);
+        service.append(definition.plcId());
+        assertFalse(service.hasPreparationBoundary(PlcLifecyclePhase.LEVEL_ENTRY_WAIT));
+        // Level_Delay (sonic.asm:2957-2967) selects the level VBlank but never RunPLC.
+        lifecycle.runLogicalIteration(() -> { }, frame -> {
+            frame.claim(PlcLifecyclePhase.LEVEL_ENTRY_WAIT);
+            return null;
+        });
+        assertNull(service.capture().activeEntry(), "a counted wait cannot arm a queued head");
+        service.prepare();
+        lifecycle.runLogicalIteration(() -> { }, frame -> {
+            frame.claim(PlcLifecyclePhase.LEVEL_ENTRY_WAIT);
+            return null;
+        });
+        assertEquals(patterns - 3, service.capture().activeEntry().remainingPatterns());
     }
 
     @Test

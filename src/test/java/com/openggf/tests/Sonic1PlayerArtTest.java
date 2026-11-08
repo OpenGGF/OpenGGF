@@ -38,6 +38,8 @@ public class Sonic1PlayerArtTest {
         assertEquals(expectedTiles, sonic.artTiles().length, "Tile count should match ROM art size");
         assertTrue(((ScriptedVelocityAnimationProfile) sonic.animationProfile())
                 .isPushUsesWalkSpecialHandler());
+        assertFalse(((ScriptedVelocityAnimationProfile) sonic.animationProfile()).hasTumbleFrames(),
+                "SonicMap stops at frame $57; the tumble range ($5F+) does not exist");
     }
 
     @Test

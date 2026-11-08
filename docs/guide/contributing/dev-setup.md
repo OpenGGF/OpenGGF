@@ -1,6 +1,14 @@
 # Developer Setup
 
-This page gets you from a fresh clone to running tests.
+This page gets you from a fresh clone to a passing test and a running engine.
+
+```mermaid
+flowchart LR
+    A[Install JDK 25 and Maven] --> B[Clone, install hooks, build]
+    B --> C[Add ROM files]
+    C --> D[Run one focused test]
+    D --> E[Run the engine]
+```
 
 ## Prerequisites
 
@@ -8,6 +16,7 @@ This page gets you from a fresh clone to running tests.
 |-------------|---------|-------|
 | Java (JDK) | 25 | [Adoptium](https://adoptium.net/) recommended. Run `java -version` to check. |
 | Maven | 3.8+ | Use `python3 tools/testing/maven_queue.py -v` to check Maven and its selected JDK. |
+| Python | 3 | Runs the queue wrapper and category runner in `tools/testing/`. |
 | GPU | OpenGL 4.1+ | Required for rendering, including offscreen tests. Logic-only headless tests do not need a GL context. |
 | ROM files | See below | Required for ROM-dependent tests and running the engine. |
 
@@ -25,30 +34,9 @@ tools/testing/install-hooks.sh
 python3 tools/testing/maven_queue.py -Dmse=off -DskipTests package
 ```
 
-The pinned Sonic Retro disassemblies are optional development references. The engine,
-Maven build, and ordinary tests do not require them. Contributors doing disassembly-backed
-parity research can initialize the exact reference revisions after cloning:
-
-```bash
-git submodule update --init docs/s1disasm docs/s2disasm docs/skdisasm
-```
-
-Trace recording and analysis are also optional. Those workflows use the exact
-TraceChaser release pinned by OpenGGF and the verified official BizHawk 2.11
-installation documented there:
-
-```bash
-git submodule update --init --recursive tools/tracechaser
-tools/tracechaser-bootstrap.sh --check
-```
-
-The submodule never initializes itself and normal builds do not require it.
-Compatibility launchers resolve each command through
-`tools/tracechaser-bootstrap.sh --require <relative-path>` before execution.
-That resolver derives the expected commit from the gitlink and refuses a dirty
-checkout, symbolic-link or non-directory path component, or a target that
-resolves outside the pinned checkout. Status 2 means uninitialized, status 3
-means the wrong commit, and status 4 means an unsafe or missing path.
+On Windows, install the hooks with `tools/testing/install-hooks.ps1`. The hooks
+check commit trailers and policy; see
+[Documentation and Branch Policy](documentation-policy.md).
 
 The executable OpenGGF JAR with all dependencies is written to the current
 worktree's Maven output tree:
@@ -69,18 +57,25 @@ Place ROM files in the project root directory (next to `pom.xml`):
 | Sonic 2 | `s2.gen` | World, REV01; CRC32 `7B905383`; SHA-1 `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9` |
 | Sonic 3&K | `s3k.gen` | World, lock-on; CRC32 `63522553`; SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6` |
 
-ROM files are gitignored. Test classes annotated `@RequiresRom` are disabled (reported as
-skipped) when their ROM cannot be found, so you can build and run most tests without any
-ROMs. This includes `TestS2CompleteRunStateDecoder` and
-`TestS3kCompleteRunStateDecoder`, which use assumptions when their ROM is absent.
-Explicit external-reference lanes have stricter prerequisites; see [Testing](testing.md).
+The queue wrapper identifies any root `*.gen` file by SHA-1, so these names matter
+only when you run tests without the wrapper. ROM files are gitignored. Test classes
+annotated `@RequiresRom` are disabled (reported as skipped) when their ROM cannot be
+found, so you can build and run most tests without any ROMs. This includes
+`TestS2CompleteRunStateDecoder` and `TestS3kCompleteRunStateDecoder`, which use
+assumptions when their ROM is absent. Explicit external-reference lanes have stricter
+prerequisites; see [Testing](testing.md).
 
-The queue wrapper finds these ROMs by SHA-1 in the repository root (and, from a linked
-worktree, the main checkout) and passes absolute per-game system properties:
+The queue wrapper finds these ROMs in the repository root (and, from a linked
+worktree, the main checkout) and passes absolute per-game system properties.
+Run one ROM-backed class to check your setup:
 
 ```bash
 python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestSonic3kLevelLoading test
 ```
+
+**It worked if** the wrapper's `ROM properties found=` line includes `s3k.rom.path`
+and Maven reports the class as run, not skipped. A missing ROM appears as skipped tests,
+not as a failure.
 
 To pin another dump, pass the property yourself -- note the S3K property is
 `s3k.rom.path`, not `sonic3k.rom.path` -- and use **absolute** paths. From a git worktree (or any directory that is not the repository
@@ -116,14 +111,18 @@ Linux developers can launch a RenderDoc capture with `scripts/run_renderdoc.sh` 
 `renderdoccmd` is installed and available on `PATH`.
 
 The engine will open a window showing the master title screen. Select a game with the
-arrow keys and press Space. If a ROM file is missing, you will see an error message.
+arrow keys and press Enter. A game whose ROM is missing stays on the shelf and offers
+**Locate ROM**; see [Getting Started](../playing/getting-started.md#first-launch).
 
 ## Run Tests
 
 ```bash
-# Inspect the change-based smoke selection against your pinned integration base.
-python3 tools/testing/run_categories.py --base <pre-task-commit>
-python3 tools/testing/run_categories.py --base <pre-task-commit> --run
+# Run once before editing. Keep this SHA for validation; do not recalculate it later.
+BASE=$(git rev-parse HEAD)
+
+# Inspect the change-based smoke selection, then run it.
+python3 tools/testing/run_categories.py --base "$BASE"
+python3 tools/testing/run_categories.py --base "$BASE" --workers 2 --run
 
 # Run a single test class or method.
 python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestCollisionLogic test
@@ -143,6 +142,41 @@ for selection, queue admission and diagnostics.
 Tests use one reused 3 GiB JVM by default. The optional `test-concurrent` profile
 uses two forks; tests remain serial within each fork. ROM-dependent tests are
 gated as described under "ROM files" above. Maven's JDK must be Java 25 exactly.
+
+## Optional References
+
+The pinned Sonic Retro disassemblies are optional development references. The engine,
+Maven build, and ordinary tests do not require them. Contributors doing disassembly-backed
+parity research can initialize the exact reference revisions after cloning:
+
+```bash
+git submodule update --init docs/s1disasm docs/s2disasm docs/skdisasm
+```
+
+Trace recording and analysis are also optional. Those workflows use the exact
+TraceChaser release pinned by OpenGGF and the verified official BizHawk 2.11
+installation documented there:
+
+```bash
+git submodule update --init --recursive tools/tracechaser
+tools/tracechaser-bootstrap.sh --check
+```
+
+To record a trace from your own BizHawk movie, see
+[Making your own traces](making-traces.md).
+
+<details>
+<summary>How TraceChaser commands are resolved and what the bootstrap status codes mean</summary>
+
+The submodule never initializes itself and normal builds do not require it.
+Compatibility launchers resolve each command through
+`tools/tracechaser-bootstrap.sh --require <relative-path>` before execution.
+That resolver derives the expected commit from the gitlink and refuses a dirty
+checkout, symbolic-link or non-directory path component, or a target that
+resolves outside the pinned checkout. Status 2 means uninitialized, status 3
+means the wrong commit, and status 4 means an unsafe or missing path.
+
+</details>
 
 ## Project Structure
 

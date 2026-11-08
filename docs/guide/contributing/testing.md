@@ -4,24 +4,31 @@ This page covers the engine's test infrastructure and how to write tests for new
 
 All new or updated tests must use JUnit 5 / Jupiter. Do not add JUnit 4 tests, rules, runners, or `org.junit.*` imports.
 
-Published Sonic TAS tricks are indexed in the
-[representative verdict record](../../architecture/validation/2026-10-26-tas-trick-verdicts.md).
-Each completed assessment records an independent native expectation, an executed
-production scenario, a relevant control and a supported or unsupported verdict.
-The record explicitly identifies any remaining named mechanism under investigation.
-A passing
-current-limitation regression confirms an engine mismatch; it is not proof that
-the trick works. Broad families retain their original IDs and can contain
-different named tricks with different outcomes. Publication-route and whole-movie
-synchronization remain separate from representative mechanism support. The
-[first regression pass](../../architecture/validation/2026-10-26-tas-trick-regressions.md)
-preserves the earlier component-evidence assessment.
+Pick the check from what you changed:
+
+| Change | Run |
+|---|---|
+| One class or a bounded fix | The focused test: `python3 tools/testing/maven_queue.py -Dmse=off -Dtest=<TestClass> test` |
+| Shared code, or impact you are unsure of | The change-based smoke selection: `python3 tools/testing/run_categories.py --base <pre-task-commit> --workers 2 --run` |
+| Structural rules (guards) | `python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B` |
+| A public release | `-Pfull-suite`, through the [release workflow](#release-builds-in-github) only |
+
+`<pre-task-commit>` is the commit your branch started from, for example the output
+of `git rev-parse HEAD` before your first edit. Keep that SHA for validation,
+including after integrating upstream changes. Read the category runner's final `VERDICT`
+line: unexplained or required skips mean the run is incomplete.
 
 ## Running Tests
 
 ```bash
+# Before editing, record the starting commit once. Keep BASE for later validation.
+BASE=$(git rev-parse HEAD)
+
+# After editing, inspect the selection, then run it.
+python3 tools/testing/run_categories.py --base "$BASE"
+python3 tools/testing/run_categories.py --base "$BASE" --workers 2 --run
 # Routine broad coverage: all smoke candidates, yielding admission between batches.
-python3 tools/testing/run_categories.py --category all --run
+python3 tools/testing/run_categories.py --category all --workers 2 --run
 # Focused regression (reviewed small classes select lean automatically).
 python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestCollisionLogic test
 # Single method.
@@ -89,6 +96,20 @@ python3 tools/testing/maven_queue.py -Dmse=off -Ptracechaser-integration \
   '-Dtest=com.openggf.trace.TestTraceChaserV5ConsumerContract#initializedCheckoutPreservesConsumerCopiesFromDeclaredImmutableOrigin' test -B
 ```
 
+### TAS trick verdicts
+
+Published Sonic TAS tricks are indexed in the
+[representative verdict record](../../architecture/validation/2026-10-26-tas-trick-verdicts.md).
+Each completed assessment records an independent native expectation, an executed
+production scenario, a relevant control and a supported or unsupported verdict.
+The record explicitly identifies any remaining named mechanism under investigation.
+A passing current-limitation regression confirms an engine mismatch; it is not
+proof that the trick works. Broad families retain their original IDs and can contain
+different named tricks with different outcomes. Publication-route and whole-movie
+synchronization remain separate from representative mechanism support. The
+[first regression pass](../../architecture/validation/2026-10-26-tas-trick-regressions.md)
+preserves the earlier component-evidence assessment.
+
 ## CI in GitHub
 
 | Event | What runs |
@@ -99,12 +120,17 @@ python3 tools/testing/maven_queue.py -Dmse=off -Ptracechaser-integration \
 | Push to a feature or bugfix branch | Nothing. Open a pull request, or run CI by hand. |
 | Manual dispatch | Smoke and guards on the chosen ref. `trace_replay` adds the ROM-fixture develop trace replay on the self-hosted runner. |
 
+<details>
+<summary>How the 30-minute quiet period works</summary>
+
 The 30-minute quiet period is the `ci-quiet-period` environment's wait timer
 (repository Settings -> Environments). The smoke job waits there without using a
 runner, and a newer push to the same branch cancels the wait and starts another,
 so a burst of pushes produces one smoke run for its last commit. Edit the timer
 there to change the delay. Deleting the environment removes the delay: GitHub
 recreates it on the next run without a timer.
+
+</details>
 
 Guards are not part of push CI, so run `-Pguards` locally before pushing
 straight to `develop` or `next`. Pull requests do not build native packages;
@@ -131,6 +157,9 @@ cloud builds. The no-regression policy in
 [release 6 trace scope](../../status/trace-scope-release-6.md) still applies to
 ROM-backed sign-off.
 
+<details>
+<summary>History boundary and content audit for release checks</summary>
+
 Release checks use the fixed reviewed `develop` snapshot
 `45cecf566825aa50612f5e687b2682fc9681aed1` as the 0.6 history boundary, as
 approved by the maintainer on September 11, 2026. They audit every entry of
@@ -144,6 +173,8 @@ resource cutover remains the fallback for histories before this snapshot.
 The baseline is an immutable commit, not a moving branch name. Existing
 trailer debt is preserved without rewriting published history. Future
 baseline changes require explicit review; an audit failure is never ignored.
+
+</details>
 
 ## Rewind Tests And Benchmark
 
@@ -596,7 +627,11 @@ Visual regression tests capture rendered frames and compare them against referen
 They verify that changes to the rendering pipeline or art loading do not introduce visual
 regressions.
 
-These tests require ROM files and a GPU context. They typically:
+These tests require ROM files and a GPU context. On Linux, add
+`-Dopenggf.headless.gl=surfaceless-egl` to the queued Maven command so they render
+offscreen without a display; see
+[offscreen rendering prerequisites](headless-testing.md#offscreen-rendering-prerequisites).
+They typically:
 1. Load a level and set the camera to a known position.
 2. Render one or more frames.
 3. Compare the rendered output against a stored reference image.

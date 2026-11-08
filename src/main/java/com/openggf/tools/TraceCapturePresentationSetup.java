@@ -83,6 +83,15 @@ final class TraceCapturePresentationSetup implements AutoCloseable {
         }
     }
 
+    /**
+     * Render this capture without native sprite dropout, as normal play does by default.
+     * Promotional footage uses it; ROM image comparison keeps the limits {@link #open}
+     * enforces. Closing restores the caller's setting either way.
+     */
+    void disableNativeSpriteLimits() {
+        configuration.setConfigValue(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT, false);
+    }
+
     @Override
     public void close() {
         if (closed) return;

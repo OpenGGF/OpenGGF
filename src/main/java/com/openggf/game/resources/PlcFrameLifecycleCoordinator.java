@@ -468,6 +468,17 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
     }
 
     public final class PlcLifecycleFrame {
+        private boolean alternateNativeClockServiced;
+        /** An alternate native loop owns one clock tick, even when a fade callback changes mode. */
+        public void serviceAlternateNativeVBlankClock(Runnable service) {
+            requireOpen();
+            if (owner == null) throw new IllegalStateException("unowned native VBlank clock");
+            if (!alternateNativeClockServiced) {
+                alternateNativeClockServiced = true;
+                java.util.Objects.requireNonNull(service).run();
+            }
+        }
+
         private final PlcLifecycleService service;
         private PlcLifecyclePhase owner;
         private boolean prepared;

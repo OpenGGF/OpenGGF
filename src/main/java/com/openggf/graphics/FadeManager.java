@@ -215,6 +215,14 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
      * @param onComplete Callback to execute when fade completes (can be null)
      */
     public void startFadeFromWhite(Runnable onComplete) {
+        startFadeFromWhite(onComplete, 0);
+    }
+
+    /** Optional final waits after the colour changes, as in S1 PaletteWhiteIn. */
+    void startFadeFromWhite(Runnable onComplete, int terminalNoOpFrames) {
+        if (terminalNoOpFrames < 0) {
+            throw new IllegalArgumentException("terminalNoOpFrames must not be negative");
+        }
         this.holdRestoredFrameForNextUpdate = false;
         this.state = FadeState.FADING_FROM_WHITE;
         this.fadeType = FadeType.WHITE;
@@ -223,7 +231,7 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
         this.fadeG = 1f;
         this.fadeB = 1f;
         this.onFadeComplete = onComplete;
-        this.holdDuration = 0;
+        this.holdDuration = terminalNoOpFrames;
         this.holdFrameCount = 0;
         syncWhitePalettePresentation();
     }
@@ -499,6 +507,10 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
             fadeR = 0f;
             fadeG = 0f;
             fadeB = 0f;
+            if (holdFrameCount < holdDuration) {
+                holdFrameCount++;
+                return;
+            }
             completeFade();
         }
     }

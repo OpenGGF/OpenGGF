@@ -59,6 +59,22 @@ class TestAnimationTranslator {
     }
 
     @Test
+    void translatedProfileCarriesTheDonorTumbleFrameBase() {
+        DonorCapabilities donor = buildS1Donor();
+        SpriteAnimationSet donorSet = buildAnimSet(0, 1, 2, 3, 4, 5, 6, 7, 8,
+                0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x17, 0x18, 0x1A);
+
+        ScriptedVelocityAnimationProfile none = AnimationTranslator.translate(donor,
+                buildS1Profile().setTumbleFrameBase(ScriptedVelocityAnimationProfile.NO_TUMBLE_FRAMES),
+                donorSet);
+        ScriptedVelocityAnimationProfile tails = AnimationTranslator.translate(donor,
+                buildS1Profile().setTumbleFrameBase(0x75), donorSet);
+
+        assertFalse(none.hasTumbleFrames());
+        assertEquals(0x75, tails.getTumbleFrameBase());
+    }
+
+    @Test
     void translatedProfilePreservesWalkRunPublicationOrder() {
         DonorCapabilities donor = buildS1Donor();
         ScriptedVelocityAnimationProfile donorProfile = buildS1Profile()

@@ -112,6 +112,8 @@ public class Sonic1EndingSTHObjectInstance extends AbstractObjectInstance
             routine = 4;
             // ESth_Delay uses two seconds in REV00, five in REV01.
             timer = com.openggf.game.sonic1.Sonic1RomProfile.isRev00(services()) ? 120 : CREDITS_DELAY;
+            // ESth_Delay falls directly into ESth_GotoCredits on this pass.
+            updateGotoCredits();
             return;
         }
         screenX += SLIDE_SPEED;
@@ -124,7 +126,8 @@ public class Sonic1EndingSTHObjectInstance extends AbstractObjectInstance
             // ROM: move.b #id_Credits,(v_gamemode).w
             // Signal GameLoop to begin the credits sequence via fade-to-black.
             services().requestCreditsTransition();
-            setDestroyed(true);
+            // ESth_GotoCredits returns with this slot intact. GM_Credits
+            // clears Object_RAM only after its outgoing palette routine.
         }
     }
 

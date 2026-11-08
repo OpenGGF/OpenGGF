@@ -162,7 +162,7 @@ public final class Sonic1PlcService
             case TITLE_SCREEN, LEVEL_SELECT, LEVEL_TITLE_CARD, PALETTE_FADE,
                     SPECIAL_STAGE_RESULTS, CREDITS_TEXT, ENDING, POST_CREDITS ->
                     serviceFastVBlank();
-            case ORDINARY_LEVEL, CREDITS_DEMO, CREDITS_DEMO_FADE, NORMAL_PAUSE ->
+            case ORDINARY_LEVEL, LEVEL_ENTRY_WAIT, CREDITS_DEMO, CREDITS_DEMO_FADE, NORMAL_PAUSE ->
                     serviceLevelVBlank();
             case CONTINUE_SCREEN, LAG, SPECIAL_STAGE, TWO_PLAYER_RESULTS, SPECIAL_STAGE_PAUSE -> {
                 // The selected S1 VBlank handler does not service PLCs.
@@ -182,7 +182,7 @@ public final class Sonic1PlcService
         return switch (phase) {
             case TITLE_SCREEN, LEVEL_SELECT, LEVEL_TITLE_CARD, ORDINARY_LEVEL,
                     PALETTE_FADE, SPECIAL_STAGE_RESULTS, CREDITS_TEXT, CREDITS_DEMO -> true;
-            case CONTINUE_SCREEN, LAG, SPECIAL_STAGE, TWO_PLAYER_RESULTS, CREDITS_DEMO_FADE,
+            case CONTINUE_SCREEN, LAG, SPECIAL_STAGE, TWO_PLAYER_RESULTS, LEVEL_ENTRY_WAIT, CREDITS_DEMO_FADE,
                     ENDING, POST_CREDITS, NORMAL_PAUSE, SPECIAL_STAGE_PAUSE -> false;
         };
     }

@@ -879,6 +879,21 @@ public class SpriteManager implements PlayableSstDispatcher {
 		}
 	}
 
+	/** Ordinary playable physics inside an already-owned initial object scope, with no clock advance. */
+	void runNativeUncountedPlayablePass() {
+		LevelManager level = getLevelManager();
+		ObjectManager objects = level != null ? level.getObjectManager() : null;
+		if (objects == null || !objects.hasActiveInitialProcessSpritesDispatch())
+			throw new IllegalStateException("Native uncounted playable pass requires the actual initial object scope");
+		// Level_FDLoop keeps executing objects after it stops incrementing
+		// v_framecount (sonic.asm:3073-3090). The next uncounted assembly
+		// therefore inherits independently owned level and sprite clocks.
+		// Preserve both until the native post-pass clear; do not use the
+		// synchronized fresh Process_Sprites epoch validator here.
+		var epoch = new ProcessSpritesEpoch(level.getFrameCounter(), objects.getFrameCounter(), false);
+		processPlayableSlots(PlayableDispatchContext.nativeUncounted(epoch));
+	}
+
 	private void processPlayableSlots(PlayableDispatchContext context) {
 		// Note: bucketsDirty is already marked in addSprite()/removeSprite(),
 		// no need to unconditionally mark dirty every frame.

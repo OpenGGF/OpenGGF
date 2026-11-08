@@ -9,7 +9,7 @@ public final class RingDrawInternalAccess {
             throw new SecurityException("Native ring emission belongs to the engine renderer");
         }
     }
-    /** Rebind the live external SST lookup after object-manager replacement/reset. */
+    /** Rebind the live external SST lookup after object-manager replacement. */
     public static void bindNativeSlots(RingManager manager) {
         engineCaller();
         manager.bindNativeSlots();

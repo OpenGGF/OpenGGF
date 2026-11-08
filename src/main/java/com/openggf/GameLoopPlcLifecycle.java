@@ -71,6 +71,13 @@ final class GameLoopPlcLifecycle {
     static void runLogicalIteration(PlcFrameLifecycleCoordinator lifecycle,
                                     GameplayModeContext context, boolean sourceGameplayHeld,
                                     Runnable updateFade, Function<PlcLifecycleFrame, Void> body) {
+        runLogicalIteration(lifecycle, context, sourceGameplayHeld, updateFade, body, frame -> { });
+    }
+
+    static void runLogicalIteration(PlcFrameLifecycleCoordinator lifecycle,
+                                    GameplayModeContext context, boolean sourceGameplayHeld,
+                                    Runnable updateFade, Function<PlcLifecycleFrame, Void> body,
+                                    java.util.function.Consumer<PlcLifecycleFrame> beforeFade) {
         lifecycle.runLogicalIteration(
                 frame -> {
                     if (frame.isOwnedBy(PlcLifecyclePhase.PALETTE_FADE)) {
@@ -85,8 +92,66 @@ final class GameLoopPlcLifecycle {
                         } else {
                             LevelFrameStep.dispatchGameVBlank(source, frame);
                         }
+                        beforeFade.accept(frame);
                     }
                 }, updateFade, body);
+    }
+
+    /** Live/headless token wiring and native-lag selection share one owner. */
+    static void runProductionIteration(GameplayModeContext context, LevelManager level,
+            boolean sourceGameplayHeld, Runnable updateFade,
+            java.util.function.Consumer<PlcLifecycleFrame> bindFrame, Runnable body,
+            java.util.function.Consumer<PlcLifecycleFrame> beforeFade,
+            Runnable completeMenu, Runnable completeLagInput) {
+        if (context.traceRunFrameDriver()
+                .map(com.openggf.trace.replay.runs.TraceRunFrameDriver::currentRowIsObservedLag).orElse(false)
+                && !com.openggf.level.NativeLevelLoadAccess.isPending(level)) {
+            runObservedLagIteration(context, completeLagInput);
+            return;
+        }
+        runLogicalIteration(context.plcFrameLifecycle(), context, sourceGameplayHeld, updateFade, frame -> {
+            bindFrame.accept(frame);
+            try { body.run(); return null; }
+            finally { bindFrame.accept(null); }
+        }, beforeFade);
+        completeMenu.run();
+    }
+
+    static boolean resumeNativeInitialization(LevelManager level,
+            Supplier<GameplayModeContext> context, PlcLifecycleFrame frame) {
+        return level != null && (com.openggf.level.NativeLevelLoadAccess.resumeScreenInitialization(level)
+                || com.openggf.level.NativeLevelLoadAccess.resumeTitleless(level, context.get(), frame));
+    }
+
+    /** The completed native continuation or existing title owner chooses its reveal. */
+    static void revealLoadedLevel(LevelManager level, Supplier<GameModule> module,
+            Supplier<GameplayModeContext> context, FadeManager fade, Supplier<TitleCardProvider> title,
+            int zone, int act, boolean nativeRevealCompleted) {
+        if (nativeRevealCompleted) return;
+        if (usesWhiteLevelEntry(module.get(), zone, act)) {
+            startFromWhite(context.get(), fade, null);
+        } else if (level.hasPendingFreshLevelTransitionBoundary()
+                && title.get() instanceof FreshLevelTitleBoundaryPublication boundary
+                && boundary.installsImmediateFreshLevelPalette()) {
+            // The outgoing fade still owns this row; the incoming title will
+            // install its black field on the next admitted iteration.
+            fade.holdBlack();
+        } else {
+            startFromBlack(context.get(), fade, null);
+        }
+    }
+
+    /** Existing Contract-1 lag handler for a recorded physical row outside comparison segments. */
+    static void runObservedLagIteration(GameplayModeContext context, Runnable finishInput) {
+        context.plcFrameLifecycle().runSuppressedLagIteration(frame -> {
+            var source = LevelFrameContext.from(context);
+            LevelFrameStep.serviceVBlankOnly(source, frame, PlcLifecyclePhase.LAG);
+            var objects = source.levelManager().getObjectManager();
+            if (objects == null) com.openggf.game.session.EngineTiming.vIntRunCounter().serviceRepresentedVBlank();
+            else objects.advanceVblaCounter();
+            finishInput.run();
+            return null;
+        });
     }
 
     static void runPhase(PlcLifecycleFrame frame, PlcLifecyclePhase phase, Runnable body) {

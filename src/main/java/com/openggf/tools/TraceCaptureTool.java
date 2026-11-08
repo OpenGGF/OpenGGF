@@ -83,7 +83,13 @@ public final class TraceCaptureTool {
      */
     public record Args(String trace, Path outDir, int width, int scale, int fps, String codec,
                        boolean showGhosts, int[] verifyFrames,
-                       String clip, int tailFrames) {
+                       String clip, int tailFrames, boolean nativeSpriteLimits) {
+
+        /** Without a sprite-limit choice: native dropout stays on for ROM image comparison. */
+        public Args(String trace, Path outDir, int width, int scale, int fps, String codec,
+                    boolean showGhosts, int[] verifyFrames, String clip, int tailFrames) {
+            this(trace, outDir, width, scale, fps, codec, showGhosts, verifyFrames, clip, tailFrames, true);
+        }
 
         public static Args parse(String[] argv) {
             SonicConfigurationService config = GameServices.configuration();
@@ -102,6 +108,7 @@ public final class TraceCaptureTool {
             int[] verifyFrames = null;
             String clip = null;
             int tailFrames = 150;
+            boolean nativeSpriteLimits = true;
 
             for (int i = 0; i < argv.length; i++) {
                 String arg = argv[i];
@@ -115,6 +122,7 @@ public final class TraceCaptureTool {
                     case "--codec" -> codec = CliArguments.requireValue(argv, ++i, arg);
                     case "--no-ghosts" -> showGhosts = false;
                     case "--ghosts" -> showGhosts = true;
+                    case "--no-sprite-limits" -> nativeSpriteLimits = false;
                     case "--verify" -> verifyFrames = parseFrameList(CliArguments.requireValue(argv, ++i, arg));
                     case "--clip" -> clip = CliArguments.requireValue(argv, ++i, arg);
                     case "--tail-frames" -> tailFrames = CliArguments.parseInt(CliArguments.requireValue(argv, ++i, arg));
@@ -126,7 +134,7 @@ public final class TraceCaptureTool {
             }
             TraceCaptureDimensions.validateLogicalWidth(width);
             return new Args(trace, Path.of(outDir), width, scale, fps, codec, showGhosts,
-                    verifyFrames, clip, tailFrames);
+                    verifyFrames, clip, tailFrames, nativeSpriteLimits);
         }
 
         private static int[] parseFrameList(String spec) {
@@ -272,6 +280,9 @@ public final class TraceCaptureTool {
                 entry.gameId(), GameServices.configuration(), Path.of(""));
         TraceCapturePresentationSetup presentation = TraceCapturePresentationSetup.open(
                 GameServices.configuration(), dimensions, callerPresentation, GameServices.audio(), args.fps());
+        if (!args.nativeSpriteLimits()) {
+            presentation.disableNativeSpriteLimits();
+        }
         // --- boot headless gameplay session -------------------------------
         try (CaptureBootScope<HeadlessGameBoot> scope = CaptureBootScope.open(
                 presentation,

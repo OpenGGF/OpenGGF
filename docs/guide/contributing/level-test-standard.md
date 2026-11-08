@@ -59,8 +59,8 @@ of the documented rejection or fallback when that behavior is part of the API.
 Derive maxima and donor support from current production contracts. Update the matrix
 when those contracts change; do not preserve an obsolete fixed list silently.
 
-Raw `SCREEN_WIDTH_PIXELS` overrides at512/640 may retain useful custom-width
-geometry regressions. They do not cover the production352/528 presets or the
+Raw `SCREEN_WIDTH_PIXELS` overrides at 512/640 may retain useful custom-width
+geometry regressions. They do not cover the production 352/528 presets or the
 configuration-resolution path. Keep those custom-width checks distinct when
 migrating existing evidence; do not discard unique assertions merely because
 the supported preset inventory changed.

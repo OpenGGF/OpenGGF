@@ -22,6 +22,11 @@ public final class ObjectManagerInternalAccess {
     }
     private ObjectManagerInternalAccess() { }
 
+    public static void clearNativeScreen(ObjectManager manager) {
+        manager.resyncSpawnList(java.util.List.of());
+        manager.reset(0, null, false, false);
+    }
+
     public static void installDeferredFixedLevelObjects(ObjectManager manager) {
         manager.installDeferredFixedLevelObjects();
     }

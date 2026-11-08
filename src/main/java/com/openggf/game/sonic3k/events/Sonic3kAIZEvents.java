@@ -1937,7 +1937,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         if (camera().getX() < AIZ2_SONIC_RESIZE4_TRIGGER_X) {
             return;
         }
-        queueBattleshipKosArt();
+        queueBattleshipKosArt(true);
         eventsFg5 = true; // Signal to background event
         // ROM: AIZ2BGE_Normal applies a one-time BG camera Y adjustment when eventsFg5 fires.
         // If Camera_Y_pos < $400: add $A8; otherwise: add -$198.
@@ -2077,7 +2077,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         if (camera().getX() < AIZ2_KNUX_RESIZE4_TRIGGER_X) {
             return;
         }
-        queueBattleshipKosArt();
+        queueBattleshipKosArt(false);
         camera().setMinX((short) AIZ2_KNUX_RESIZE4_TRIGGER_X);
         camera().setMaxYTarget((short) AIZ2_KNUX_RESIZE4_TARGET_MAX_Y);
         eventsFg5 = true;
@@ -2199,7 +2199,12 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         }
     }
 
-    private void queueBattleshipKosArt() {
+    /**
+     * AIZ2_SonicResize4 (sonic3k.asm:39151-39159) queues terrain and object art;
+     * AIZ2_KnuxResize4 (sonic3k.asm:39262-39268) queues terrain only.
+     * Both are the shipped FixBugs=0 path; neither has a FixBugs alternate.
+     */
+    private void queueBattleshipKosArt(boolean includeShipObjectArt) {
         if (battleshipTerrainKosHandle != null
                 || battleshipTerrainArtHandle != null
                 || battleshipObjectArtHandle != null) {
@@ -2219,11 +2224,13 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
                     Sonic3kConstants.AIZ2_8X8_BOMBERSHIP_ADDR,
                     Sonic3kConstants.AIZ2_8X8_BOMBERSHIP_DEST_TILE);
             battleshipTerrainArtOrdinal = battleshipTerrainArtHandle.ordinal();
-            battleshipObjectArtHandle = battleshipKosQueue.queue(
-                    rom(),
-                    Sonic3kConstants.ART_KOSM_AIZ2_BOMBERSHIP_ADDR,
-                    Sonic3kConstants.ART_TILE_AIZ2_BOMBERSHIP);
-            battleshipObjectArtOrdinal = battleshipObjectArtHandle.ordinal();
+            if (includeShipObjectArt) {
+                battleshipObjectArtHandle = battleshipKosQueue.queue(
+                        rom(),
+                        Sonic3kConstants.ART_KOSM_AIZ2_BOMBERSHIP_ADDR,
+                        Sonic3kConstants.ART_TILE_AIZ2_BOMBERSHIP);
+                battleshipObjectArtOrdinal = battleshipObjectArtHandle.ordinal();
+            }
         } catch (Exception e) {
             throw new IllegalStateException(
                     "Unable to queue AIZ2 battleship KosM art", e);

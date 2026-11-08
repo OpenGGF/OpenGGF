@@ -1,5 +1,15 @@
 # S3K Lava Reef Act 2 coverage matrix
 
+Title-owned enemy-art batch (2026-11-07): the [LRZ submission audit](../../audits/2026-11-07-lrz-enemy-art-submission.md)
+records the missing native Fireworm-segments/Iwamodoki/Toxomister recipe for both
+acts. `TestLrzEnemyKosOwner` proves admission, ROM order/destinations, completion
+and restore/forward replay in both acts. The Knuckles `lrz_2` fixture is native
+Act 1 despite its suffix: its results-art FIFO abort is resolved; the existing
+row 604 mapping frontier remains. The Act 2 `lrz_3` witness retains its row 49 ring
+frontier. Exact common-row comparisons add no ERROR on baseline clean rows;
+newly reached suffix rows have no paired baseline. These bounded witnesses do
+not renew the cold-route, viewport, donor/team or native pixel obligations below.
+
 Routine selection update (2026-10-27): the reviewed full configuration products
 and long cold-campaign qualifications in the [local budget record](../../research/2026-10-27-local-validation-cost.md#thirty-minute-local-command-target)
 now require explicit `exhaustive-audit`. Short real contact, lifecycle and

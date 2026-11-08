@@ -154,6 +154,21 @@ class TraceCapturePresentationSetupTest {
                 configuration.getBoolean(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT));
     }
 
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void promotionalCaptureRendersWithoutNativeScanlineLimitsAndRestoresTheCaller(boolean callerEnabled) {
+        configuration.setConfigValue(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT, callerEnabled);
+        var caller = TraceCapturePresentationSetup.snapshot(configuration);
+        try (var setup = TraceCapturePresentationSetup.open(configuration,
+                TraceCaptureDimensions.resolve(320, 1), caller)) {
+            assertTrue(configuration.getBoolean(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT));
+            setup.disableNativeSpriteLimits();
+            assertFalse(configuration.getBoolean(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT));
+        }
+        assertEquals(callerEnabled,
+                configuration.getBoolean(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT));
+    }
+
     private static int privateInt(Object target, String fieldName) throws Exception {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);

@@ -96,6 +96,10 @@ public class Sonic1PlayerArt {
                 .setBalanceAnimId(Sonic1AnimationIds.BALANCE)
                 .setWalkSpeedThreshold(0x40)
                 .setRunSpeedThreshold(0x600)
+                // SAnim_WalkRun (01 Sonic.asm:2254-2300) has no flip_angle/flip_type
+                // branch and SonicMap has no tumble frames. A donated S1 Sonic on a
+                // host tumble object (S3K FBZ wire cage, MGZ spiral) keeps walk/run.
+                .setTumbleFrameBase(ScriptedVelocityAnimationProfile.NO_TUMBLE_FRAMES)
                 .setFallbackFrame(0);
 
         cachedSonic = new SpriteArtSet(

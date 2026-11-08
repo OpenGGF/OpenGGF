@@ -264,17 +264,24 @@ Every field and its default is in the [reference](stageplay-reference.md#screenp
 The terminal tools need Java 25 and a build of the engine. From the
 repository:
 
+Set your ROM paths and an output folder once, then run the steps in order:
+
 ```bash
+S1_ROM=/path/to/sonic1.gen
+S2_ROM=/path/to/sonic2.gen
+FILMS=/your/films
+mkdir -p "$FILMS"
+
 python3 tools/stageplay/stageplay.py --build help
 python3 tools/stageplay/stageplay.py compile \
   --script examples/stageplay-demo/first-take.screenplay.json \
-  --out /your/films/first-take.stageplay
+  --out "$FILMS/first-take.stageplay"
 python3 tools/stageplay/stageplay.py simulate \
-  --scene /your/films/first-take.stageplay --out /your/films/first-take.jsonl \
-  --s1-rom /path/to/sonic1.gen --s2-rom /path/to/sonic2.gen
+  --scene "$FILMS/first-take.stageplay" --out "$FILMS/first-take.jsonl" \
+  --s1-rom "$S1_ROM" --s2-rom "$S2_ROM"
 python3 tools/stageplay/stageplay.py render \
-  --scene /your/films/first-take.stageplay --out /your/films/first-take.mkv \
-  --s1-rom /path/to/sonic1.gen --s2-rom /path/to/sonic2.gen --scale 3
+  --scene "$FILMS/first-take.stageplay" --out "$FILMS/first-take.mkv" \
+  --s1-rom "$S1_ROM" --s2-rom "$S2_ROM" --scale 3
 ```
 
 - `--build` packages the engine once; leave it out afterwards until the engine
@@ -291,14 +298,14 @@ text, use **Export screenplay** in the editor, or:
 
 ```bash
 python3 tools/stageplay/stageplay.py decompile \
-  --scene /your/films/first-take.stageplay --out /your/films/first-take-v2.screenplay.json
+  --scene "$FILMS/first-take.stageplay" --out "$FILMS/first-take-v2.screenplay.json"
 ```
 
 ### Find positions and floors without an editor
 
 ```bash
-python3 tools/stageplay/stageplay.py catalog --game s1 --rom /path/to/sonic1.gen --zone 0 --act 0
-python3 tools/stageplay/stageplay.py ground --set s1/0/0 --queries floors.json --s1-rom /path/to/sonic1.gen
+python3 tools/stageplay/stageplay.py catalog --game s1 --rom "$S1_ROM" --zone 0 --act 0
+python3 tools/stageplay/stageplay.py ground --set s1/0/0 --queries floors.json --s1-rom "$S1_ROM"
 ```
 
 `catalog` lists the zones, their start positions and music, every song's name and

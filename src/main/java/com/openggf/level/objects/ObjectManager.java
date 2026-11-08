@@ -401,7 +401,7 @@ public class ObjectManager {
     }
 
     public void reset(int cameraX) {
-        reset(cameraX, null, true);
+        reset(cameraX, null, true, true);
     }
 
     /**
@@ -410,7 +410,7 @@ public class ObjectManager {
      * live in the next frame's ExecuteObjects pass.
      */
     public void resetForSynchronousActTransition(int cameraX) {
-        reset(cameraX, null, false);
+        reset(cameraX, null, false, true);
     }
 
     /**
@@ -420,7 +420,7 @@ public class ObjectManager {
      * to reproduce the native Level_Init-before-ObjPosLoad allocation order.
      */
     public void resetForPreludeHydration(int cameraX) {
-        reset(cameraX, null, false);
+        reset(cameraX, null, false, true);
     }
 
     /**
@@ -430,19 +430,22 @@ public class ObjectManager {
      * and left live by a later bit-only restore.
      */
     public void reset(int cameraX, PersistentRespawnState persistentRespawnState) {
-        reset(cameraX, persistentRespawnState, true);
+        reset(cameraX, persistentRespawnState, true, true);
     }
 
-    private void reset(int cameraX, PersistentRespawnState persistentRespawnState,
-            boolean materializeInitialWindow) {
+    void reset(int cameraX, PersistentRespawnState persistentRespawnState,
+            boolean materializeInitialWindow, boolean installFixedObjects) {
         initialDispatch.retireState();
         if (stageplayDirection != null) {
             stageplayDirection.close();
         }
         rewind.clearPendingPlayerBindings();
         nativeSpriteSubmissions.clear();
-        nativeSpriteExternalResolver = null;
-        nativeSpriteExternalSlotDispatch = null;
+        // The external resolver/dispatch is owner wiring, not SST state: keep it.
+        // Resets that leave the RingManager alive (trace-replay prelude, S3K
+        // title-only object system) never rebind, and an unbound pass leaves
+        // Obj_Attracted_Ring (sonic3k.asm:35750-35787) without its Draw_Sprite.
+        // A replacement RingManager rebinds itself on construction.
         clearActiveObjects();
         population.clearDynamicForReset(objectCallbacks::clear);
         deferredDynamicExecThisFrame.clear();
@@ -473,7 +476,8 @@ public class ObjectManager {
         if (touchResponses != null) {
             touchResponses.reset();
         }
-        ConfiguredObjectInstaller.install(fixedSstObjects, placement, this::addRewindableAuxiliaryDynamicObject);
+        if (installFixedObjects)
+            ConfiguredObjectInstaller.install(fixedSstObjects, placement, this::addRewindableAuxiliaryDynamicObject);
         // Materialize the current ObjectPlacementController window immediately after reset.
         // S1 needs this for ROM parity at level start; for S2/S3K it keeps
         // manual camera resets and headless probes from sitting on an empty
@@ -570,8 +574,7 @@ public class ObjectManager {
             freeAllReservedChildSlots(entry.getKey());
         }
         nativeSpriteSubmissions.clear();
-        nativeSpriteExternalResolver = null;
-        nativeSpriteExternalSlotDispatch = null;
+        // External slot wiring survives a spawn-list resync, as in reset().
         clearActiveObjects();
         cachedActiveObjects.clear();
         nativeObjectIndex.clear();

@@ -1,5 +1,21 @@
 # Level test coverage backlog
 
+LRZ title-owned enemy art (2026-11-07): the [submission audit](../architecture/audits/2026-11-07-lrz-enemy-art-submission.md)
+and [Act1](../architecture/validation/levels/s3k-lrz-act1.md) /
+[Act2](../architecture/validation/levels/s3k-lrz-act2.md) matrices record the native
+three-archive recipe, two-act title/queue/rewind regression and matched Knuckles /
+Tails segment controls. The Knuckles `lrz_2` FIFO abort is resolved, with first
+remaining error 604; no actual common baseline clean row gains ERROR. Its newly
+observed suffix has no paired baseline, and broader coverage gaps remain inherited.
+
+Fresh sanctuary load interval (2026-11-07): the
+[MHZ handoff record](../architecture/validation/levels/s3k-mhz-act1.md#fresh-shrine-routine-frontier--2026-11-07)
+reproduces all four current routine-zero fronts and separates native cleared
+player slots from constructed engine state before the initial sprite scan.
+The executed rejection is missing phase admission; titleless terrain-load
+continuation and native initialization observations remain a shared load/timing
+owner obligation. No runtime fix or wider route qualification is claimed.
+
 ICZ2 rider-order maintenance (2026-11-05): the
 [Act2 matrix](../architecture/validation/levels/s3k-icz-act2.md#native-rider-impulse-order--2026-11-05)
 records deterministic native P1/P2 tension-platform impulses, existing extra
@@ -876,7 +892,7 @@ matrices; never collapse skipped or unrun into pass.
 | S2 | `AQUATIC_RUIN_1` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |
 | S2 | `AQUATIC_RUIN_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |
 | S2 | `CASINO_NIGHT_1` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); [partial Sonic matrix](../architecture/validation/levels/s2-cnz1-sonic.md); [object roll ownership](../architecture/research/2026-10-16-s2-object-roll-ownership.md) adds bounded launcher/flipper/cage release and graph-rewind checks; whole-act breadth remains inherited |
-| S2 | `CASINO_NIGHT_2` | [Partial Sonic+Tails matrix](../architecture/validation/levels/s2-cnz2-sonic-tails.md): native off-screen Crawl touch, pause/attack handoff and recorded-chain matching prefix; later physics, exit and width/donor/team/lifecycle breadth remain open |
+| S2 | `CASINO_NIGHT_2` | [Partial Sonic+Tails matrix](../architecture/validation/levels/s2-cnz2-sonic-tails.md): native off-screen Crawl touch, pause/attack handoff and diagonal launcher capture ordering; recorded-chain CNZ2 is green on13,045 compared rows. Later campaign physics/art gaps and independent exit/width/donor/team/lifecycle breadth remain open |
 | S2 | `CASINO_NIGHT_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending. Shared [object roll ownership](../architecture/research/2026-10-16-s2-object-roll-ownership.md) checks cover local launcher/flipper/cage contracts; complete Act 2 route breadth remains inherited |
 | S2 | `HILL_TOP_1` | [Partial Sonic matrix](../architecture/validation/levels/s2-htz1-sonic.md): positioned natural-earthquake crossing; cold traversal and configuration/rewind breadth remain open |
 | S2 | `HILL_TOP_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |

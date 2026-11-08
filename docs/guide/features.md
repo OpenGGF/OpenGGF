@@ -1,9 +1,9 @@
 # OpenGGF features
 
 This page lists what OpenGGF can do, with a link to the guide for each feature. It
-covers version 0.7, which is still in development. Items marked "New in 0.7" aren't
-in the 0.6 release. Items marked "Experimental" work, but have limits listed in their
-guides and may change.
+covers the 0.7.20261105 release and the 0.8 development line that follows it. Items
+marked "New in 0.7" aren't in the 0.6 release. Items marked "Experimental" work, but
+have limits listed in their guides and may change.
 
 We haven't tested every feature in every game, level and setting yet.
 [Game status](playing/game-status.md) says how complete each game is, and the
@@ -250,7 +250,8 @@ Time Attack comes with every build, including the native packages. See
 - **Operating systems.** OpenGGF runs on Windows, macOS and Linux, on any system with
   an OpenGL 4.1 driver.
 - **Native packages.** Packages for Windows x64, Linux x64 and Apple Silicon macOS
-  need no Java install. They load mods that contain code and include Time Attack.
+  need no Java install. The 0.7.20261105 release has Windows and Linux packages
+  only; use the `.jar` build on macOS for that release. They load mods that contain code and include Time Attack.
   This support is new, so a mod that relies on unusual Java features may still need
   the `.jar` build.
 - **The JVM build.** The `.jar` build needs Java 25. It runs on every platform,

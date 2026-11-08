@@ -4,6 +4,16 @@ OpenGGF's menus and built-in editor use UTF-8 ARB catalogs with ICU MessageForma
 You can improve any useful subset or add a language without changing Java. Original
 game text and artwork remain ROM-owned; creator-authored content is separate.
 
+The usual route, with no ROM, engine build or translation account needed until
+step 4:
+
+1. Create or open the catalog for your language (below).
+2. Translate complete messages, keeping message IDs and named arguments.
+3. Run the quick Python checks in [Check, refresh and review](#check-refresh-and-review).
+4. With Java 25 set up, run `python3 tools/i18n/catalogs.py check --runtime` and
+   preview the real screens.
+5. Submit the catalog through the normal contribution workflow.
+
 ## Add or improve a language
 
 Edit an existing file in `src/main/resources/i18n/locales/`, preserving message IDs
@@ -90,11 +100,18 @@ joined scripts and mixed-direction paths/numbers.
 
 Ellipsis fitting logs a `WARNING` with the language, font role, available and
 required pixel widths, and the original text (up to 160 code points). Check these
-warnings during screen previews, including English. Repeated frames and resizing
+warnings during screen previews, including English. Use the reported text and
+widths to identify layout constraints before shortening a translation.
+
+<details>
+<summary>When fitting warnings repeat or stay silent</summary>
+
+Repeated frames and resizing
 share one warning per text, role and language in a bounded 4,096-entry cache;
 evicted entries can warn again. Text that fits, including a literal ellipsis,
-does not warn. Use the reported text and widths to identify layout constraints
-before shortening a translation.
+does not warn.
+
+</details>
 
 Source fingerprints include wording, meaning-bearing notes and argument contracts.
 When English changes, check the new source and revise your translation before
@@ -134,6 +151,10 @@ Fonts are ordered in `src/main/resources/fonts/host-fonts.json`. A language usin
 existing script needs no renderer changes. A new script may need a redistributable
 font, licence, manifest entry and shaping/render checks: glyph presence alone is
 insufficient for joined scripts. See the [font design and platform limits](../../architecture/designs/2026-10-29-host-text-shaping-and-fonts.md).
+
+<details>
+<summary>Text-field editing, IME support and verified platforms</summary>
+
 Text-field Left/Right navigation follows visual order, including mixed RTL text;
 Home/End select the visual left/right edges. Backspace/Delete remove logical
 grapheme clusters. Scrolling preserves the full shaped line. Text fields draw OS IME
@@ -143,6 +164,8 @@ X11/IBus check verifies composition, one commit and release before Enter accepts
 the field. Windows, macOS and Wayland IMEs remain unverified locally. The
 experimental GLFW extension also limits Wayland reset and X11 candidate placement.
 See the linked font design for platform evidence and limits.
+
+</details>
 
 Runtime translation is offline. No API key or paid translator is required to
 contribute. Submit catalog and licensed font-resource changes through the normal
