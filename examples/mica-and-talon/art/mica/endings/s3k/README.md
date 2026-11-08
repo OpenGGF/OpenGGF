@@ -1,7 +1,7 @@
 # MICA — locked-on S3K ending art
 
-Original native-coordinate pixel drawings, generated without raster scaling or
-native artwork in the output. Run from repository root:
+Original MICA native-coordinate pixel drawings. The native-pose redraw uses
+GPT Image and palette reduction; native artwork is review-only. Run from repository root:
 
 ```sh
 python3 -I examples/mica-and-talon/art/mica/endings/s3k/build.py --review /tmp/mica-art-endings-s3k-20261108
@@ -71,3 +71,10 @@ can narrow hood, glove or boot clusters; compare the raw column when judging
 that compromise. All silhouettes receive an inside ink edge. Reviews retain native 8× inputs, full raw GPT images, and four-column
 native/raw/reduced/previous MICA pages at 1×/4×. These checks certify image storage
 and native layout only; scene backgrounds and animation contact need engine review.
+
+Current redraw weak points: the complete Super reunion portrait fits smaller
+inside its irregular piece union; tiny passenger faces reduce to clusters;
+horizontal compaction narrows some glove/boot/hood rows. Float2 rear three-quarter
+views retain more face than the native poses. These need an art/scene review,
+not a runtime parity claim. The 25 exact prompts and raw-image hashes live in
+`native-pose.json`; full raws and all comparisons remain outside Git.
