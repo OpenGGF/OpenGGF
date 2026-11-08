@@ -185,7 +185,10 @@ public final class DestructionEffects {
         // --- Calculate and award chain score ---
         int pointsValue = 100;
         if (player != null) {
-            pointsValue = poweredAttack
+            var host = services != null ? services.gameModule() : null;
+            var chain = host != null ? host.getGameService(com.openggf.game.internal.BadnikChainPolicy.class) : null;
+            // Touch_KillEnemy (s2.asm:85514-85534) owns the S2 shared word.
+            pointsValue = chain != null ? chain.incrementAndAward() : poweredAttack
                     ? PoweredBadnikScoring.incrementChain(player)
                     : player.incrementBadnikChain();
             if (services != null) {

@@ -41,6 +41,27 @@ class TestSonic2CompetitionObjectLifetimeGates {
                 "new custom owners need an explicit native lifetime audit");
     }
 
+    @Test @RequiresRom(SonicGame.SONIC_2)
+    void leftoverObj3CIsUnplacedAcrossEveryShippedDirectoryEntry() throws Exception {
+        var rom = RomByteReader.fromRom(TestEnvironment.currentRom());
+        var addresses = new TreeSet<Integer>();
+        // Off_Objects (s2.asm:91270-91328) includes all 34 entries, including
+        // null zones, MTZ3's alias, HPZ and spare single-act lists.
+        for (int index = 0; index < 34; index++)
+            addresses.add(rom.readPointer16(Sonic2ObjectPlacement.OFF_OBJECTS_REV01, index));
+        // ObjectsManager_Init (s2.asm:32943-32952) selects the two lists.
+        // Objects_CNZ1_2P / Objects_CNZ2_2P (s2.asm:33780-33798).
+        addresses.add(0x1802A);
+        addresses.add(0x18492);
+        assertEquals(28, addresses.size(), "all distinct 1P and competition placement lists");
+        for (int address : addresses) {
+            var spawns = com.openggf.game.common.CommonPlacementParser.parseObjectRecords(rom, address);
+            assertTrue(spawns.stream().noneMatch(spawn -> spawn.objectId() == 0x3C),
+                    String.format("Obj3C placed at list 0x%06X", address));
+            System.out.printf("Obj3C-placement-audit list=0x%06X records=%d matches=0%n", address, spawns.size());
+        }
+    }
+
     @Test void customEndpointAndInlineMarkObjGone2RetainNativeObjectsOnly() throws Exception {
         var module = mock(GameModule.class);
         var policy = mock(WorldSessionPolicyState.class);
