@@ -89,21 +89,29 @@
   },
   "tape" : {
     "script" : "cnz1-slot-prefix.script",
-    "rows" : 1775,
-    "sha256" : "ad840bde685f556bf570ffdc37a9e86b86654b18e24c71f019b8de5f538dd128"
+    "rows" : 1778,
+    "sha256" : "a852a4aaa1ef077ebfc8bf5256b1a820b67895d0d9b31bc468f0692f27df1c64"
   },
   "provenance" : {
-    "producer" : "RoutePlanner prefix-search/2 goal program",
-    "engine" : "openggf 0.8.prerelease-b889211b3-dirty stageplay-s2-competition-title/1",
-    "source" : "authored after a 1200-row prefix toward legs [drop-beyond-upper-floor, linked-cage-approach, slot-spinning]",
-    "notes" : [ "PROVISIONAL native export: menu Start carry-over pause frontier. Original controller rows retained; no native goal certification." ]
+    "producer" : "RoutePlanner prefix-search/3 goal program",
+    "engine" : "openggf 0.8.prerelease-e22b16007-dirty stageplay-s2-competition-title/1",
+    "source" : "authored after a 1231-row prefix toward legs [drop-beyond-upper-floor, linked-cage-approach, slot-spinning, p2-lower-path, p2-near-native-flip-tiles, mid-flip-visible-after-two-human-traversal]",
+    "notes" : [ ]
   },
   "qualification" : [ {
     "scope" : "ENGINE",
     "passed" : true,
-    "content" : "dcfb56a7f63c46388c37ac868bf9f176870157534cea4a564df0c438a7b9ee87",
-    "environment" : "openggf 0.8.prerelease-b889211b3-dirty stageplay-s2-competition-title/1",
-    "rows" : 1775
+    "content" : "688a901c330e0ab5b530b1d5f6b42765f937ee4e6e59e49cea28765ec5622ddf",
+    "environment" : "openggf 0.8.prerelease-e22b16007-dirty stageplay-s2-competition-title/1",
+    "rows" : 1778
+  }, {
+    "scope" : "BIZHAWK",
+    "passed" : false,
+    "divergedRow" : 1666,
+    "reason" : "physical1853: P1 lands on native Obj86 horizontal flipper slot106; y engine1603/native1596, vy2310/0, cameraY1470/1467; no native lag boundary",
+    "content" : "688a901c330e0ab5b530b1d5f6b42765f937ee4e6e59e49cea28765ec5622ddf",
+    "environment" : "BizHawk2.11/GPGX cold 1FFF4585DA7F540B0C757297B71E66B2BCA917FFEEFFD94E867918E3622A9F5B",
+    "rows" : 1778
   } ],
   "native" : {
     "entry" : {
@@ -113,7 +121,6 @@
       "engineAnchorRows" : 1151,
       "anchorBoundary" : "first-ordinary-level-lfc-zero"
     },
-    "exportBlocker" : "PROVISIONAL: menu Start retained through synchronous title waits pauses engine at rowsOffered 1152; native frame 1338 is unpaused. Requires lane F fix and planner repair of affected rows.",
     "lag" : [ ]
   }
 }
