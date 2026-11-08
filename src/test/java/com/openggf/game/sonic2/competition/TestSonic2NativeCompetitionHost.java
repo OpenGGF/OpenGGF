@@ -73,6 +73,70 @@ class TestSonic2NativeCompetitionHost {
     private static final LogicalInputSnapshot NEUTRAL = LogicalInputSnapshot.neutral();
 
     @Test
+    void menuStartDoesNotBecomeANewPressAtEverySynchronousTitleWait() throws Exception {
+        // LevelSelect2P_Main (s2.asm:11828-11842) accepts the press;
+        // Joypad_Read (s2.asm:1368-1386) polls held state anew at every wait;
+        // PauseGame (s2.asm:1572-1590) therefore cannot reuse that menu edge.
+        assertNull(System.getenv("DISPLAY"));
+        assertNull(System.getenv("WAYLAND_DISPLAY"));
+        var services = EngineServices.current();
+        var configuration = services.configuration();
+        var previous = new EnumMap<SonicConfiguration, Object>(SonicConfiguration.class);
+        for (var key : SonicConfiguration.values()) previous.put(key, configuration.getConfigValue(key));
+        try {
+            configuration.setConfigValue(SonicConfiguration.AUDIO_ENABLED, false);
+            configuration.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
+            configuration.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
+            configuration.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
+            configuration.setConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
+            configuration.setConfigValue(SonicConfiguration.DISPLAY_ASPECT, "NATIVE_4_3");
+            configuration.resolveDisplayAspect();
+            try (var boot = new HeadlessGameBoot(320, 224, services)) {
+                var loop = boot.boot(RomTestUtils.ensureSonic2RomAvailable().toPath().toAbsolutePath(), 0, 0);
+                var input = new CountingInput();
+                var visit = new Sonic2CompetitionVisit(
+                        new com.openggf.game.nativemenu.NativeMenuHostContext(services,
+                                SessionManager.getCurrentWorldSession().rootGameModule(), input, loop::setGameplayMode),
+                        new com.openggf.game.sonic2.options.Sonic2OptionsState(), true, false, zone -> true,
+                        new com.openggf.game.sonic2.objects.Sonic2TeleportObjectFieldsAccess(), new com.openggf.game.GameStateManager());
+                try {
+                    visit.initialize();
+                    input.setLogicalOverride(directions(AbstractPlayableSprite.INPUT_DOWN, 0));
+                    visit.update(input);
+                    input.setLogicalOverride(startPress());
+                    visit.update(input);
+                    visit.afterFrame();
+                    var host = visit.host();
+                    var session = visit.session();
+                    assertEquals(12, host.profile().romZone(), "the real menu chose CNZ");
+                    assertEquals(Sonic2CompetitionSession.Phase.ACT, session.phase());
+                    var pause = host.nativePause();
+                    System.out.println("MENU_START_ENTRY words=" + Integer.toHexString(pause.player1ControllerWord())
+                            + "," + Integer.toHexString(pause.player2ControllerWord())
+                            + " continuation=" + pause.continuation());
+                    assertEquals(0x8000, pause.player2ControllerWord(),
+                            "held Start remains held; repeated Joypad_Read must retire its press edge");
+                    input.setLogicalOverride(NEUTRAL);
+                    var mode = host.context();
+                    LevelFrameStep.updateTimers(LevelFrameContext.from(mode));
+                    var result = mode.plcFrameLifecycle().runLogicalIteration(mode::updateFade, frame -> {
+                        var value = new LevelFrameResult[1];
+                        NativeCompetitionIterationAccess.runAdmitted(frame, () -> value[0] = host.step(input, frame));
+                        return value[0];
+                    });
+                    assertEquals(LevelFrameResult.GAMEPLAY_FRAME, result);
+                    assertFalse(pause.gamePaused());
+                    assertEquals(1, mode.getLevelManager().getFrameCounter());
+                } finally { visit.reset(); }
+            }
+        } finally {
+            TestEnvironment.resetAll();
+            previous.forEach(configuration::setConfigValue);
+            configuration.resolveDisplayAspect();
+        }
+    }
+
+    @Test
     void freshNativeObjectRamClearBelongsOnlyToTheActualHostInitializer() throws Exception {
         assertNull(System.getenv("DISPLAY"));
         assertNull(System.getenv("WAYLAND_DISPLAY"));
@@ -194,9 +258,9 @@ class TestSonic2NativeCompetitionHost {
                     assertEquals(26, views.preparations, "one leading BuildSprites plus 25 leave iterations");
                     assertEquals(25, driver.nativeSamples, "each real title wait must sample the shared input once");
                     assertEquals(0, input.updates, "the native wait sample port never advances outer input");
-                    assertEquals(Sonic2CompetitionPause.convertLogical(entrySample.player1()),
+                    assertEquals(Sonic2CompetitionPause.convertLogical(entrySample.player1()) & 0xFF00,
                             host.nativePause().player1ControllerWord());
-                    assertEquals(Sonic2CompetitionPause.convertLogical(entrySample.player2()),
+                    assertEquals(Sonic2CompetitionPause.convertLogical(entrySample.player2()) & 0xFF00,
                             host.nativePause().player2ControllerWord());
                     assertEquals(Sonic2CompetitionPause.Continuation.ENTRY, host.nativePause().continuation());
                     assertEquals(savedCharacter, configuration.getString(SonicConfiguration.MAIN_CHARACTER_CODE),
