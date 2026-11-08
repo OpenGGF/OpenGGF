@@ -1588,6 +1588,12 @@ public final class RewindRoundTripHarness {
             return ObjectConstructionContext.construct(stub, () -> new AuthoredGizmoInstance(spawn));
         }
 
+        if (cls == com.openggf.game.sonic2.objects.Sonic2SignpostSparkleObjectInstance.class) {
+            return ObjectConstructionContext.construct(stub, () ->
+                    new com.openggf.game.sonic2.objects.Sonic2SignpostSparkleObjectInstance(
+                            new ObjectSpawn(0x100, 0x100, 0x25, 0, 0, false, 0)));
+        }
+
         // Strategy 1: zero-arg
         Constructor<? extends AbstractObjectInstance> ctor0 = findCtor(cls);
         if (ctor0 != null) {
