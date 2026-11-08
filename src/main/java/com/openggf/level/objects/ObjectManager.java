@@ -3420,9 +3420,22 @@ public class ObjectManager {
      * explicit ROM reference X, defaulting to its centre-aligned {@code getX()}),
      * never a sprite top-left bound, so the window is not shifted by half-width.
      */
+    // MarkObjGone_P2 (s2.asm:30303-30324): unsigned word distances from both published coarse banks.
+    static boolean nativeRoutineOutOfRange(ObjectInstance instance, ObjectRoutineLifetime profile) {
+        if (profile == null || profile.tail(instance) != ObjectRoutineLifetime.Tail.MARK_OBJ_GONE_P1)
+            return false;
+        int x = instance.getX() & 0xFF00;
+        return ((x - profile.coarseCameraX(0)) & 0xFFFF) > 0x300
+                && ((x - profile.coarseCameraX(1)) & 0xFFFF) > 0x300;
+    }
+
     private boolean isObjectOutOfRange(ObjectInstance instance, ObjectSpawn spawn, int cameraX) {
-        // Native block ownership replaces MarkObjGone in competition.
-        if (competitionStreaming.active()) return false;
+        // Block retirement and routine-tail lifetime are independent authorities.
+        if (competitionStreaming.active()) {
+            var profile = com.openggf.game.session.WorldSessionPolicyAccess.getService(
+                    objectServices.worldSession(), ObjectRoutineLifetime.class);
+            return nativeRoutineOutOfRange(instance, profile);
+        }
         if (stageplayActivation != null && objectCallbacks.call(instance, () -> stageplayActivation.keepsOutsideNativeView(instance, camera))) return false;
         int referenceX = outOfRangeReferenceX(instance, spawn);
         if (competitionStreaming.upfrontActive()) return competitionStreaming.isOutsideUpfrontUnloadWindow(referenceX);
@@ -3533,6 +3546,8 @@ public class ObjectManager {
                 releaseSlot(slotIndex);
             }
         }
+        if (competitionStreaming.active() && instance instanceof AbstractObjectInstance nativeOwner)
+            placement.clearNativeCompetitionRespawnLatch(nativeOwner.getRespawnStateIndex());
         var removalCallback = objectCallbacks.captureRemovalCallback(instance);
         objectCallbacks.runAndUnregister(instance, instance::onUnload);
         if (spawn != null) {

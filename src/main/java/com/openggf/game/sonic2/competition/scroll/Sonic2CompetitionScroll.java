@@ -95,6 +95,8 @@ public final class Sonic2CompetitionScroll implements RewindSnapshottable<Sonic2
         firstWords = firstWords.copy(p1);
         if (!title) secondWords = secondWords.copy(p2);
     }
+    /** Published camera word consumed by routine-tail lifetime checks. */
+    public int coarseX(int slot) { return (slot == 0 ? firstWords : secondWords).coarseX(); }
     public void setCoarseX(int slot, int x) {
         var old = slot == 0 ? firstWords : secondWords;
         var next = new CameraWords(old.foregroundFractions(), old.copiedForegroundFractions(),

@@ -26,7 +26,9 @@ public final class Sonic2CompetitionSpriteArtTable {
                     ObjectArtKeys.EXPLOSION, "Obj27_Init (s2.asm:46722-46732)"),
             0x29, new Entry(Sonic2Constants.MAP_UNC_POINTS_ADDR, 0x84AC, 8, 4, 0,
                     ObjectArtKeys.POINTS, "Obj29_Init (s2.asm:24918-24926)"),
-            0x37, LOST_RING);
+            0x37, LOST_RING,
+            0x39, new Entry(Sonic2Constants.MAPPINGS_GAME_OVER_ADDR, 0x84DE, 0, 0, 0,
+                    ObjectArtKeys.GAME_OVER, "Obj39_Init (s2.asm:27682-27699)"));
 
     public record Pending(String name, String initCitation, String reason) { }
 

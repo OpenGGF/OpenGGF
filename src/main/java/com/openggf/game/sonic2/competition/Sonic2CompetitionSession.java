@@ -301,12 +301,23 @@ public final class Sonic2CompetitionSession implements NativeCompetitionRoster,
     public void initializeSignpost() { if (phase == Phase.ACT) loserTimeLeft = 0x3C3C; }
     /** Called once after canonical LevelState.update; never advances either bank's timer itself. */
     public void advanceActFlow() {
+        advanceNaturalTimeOver();
+        advanceLoserCountdown();
+        tryActResults();
+    }
+    /** Canonical level timers still publish at the shared body's existing timer boundary. */
+    void advanceNaturalTimeOver() {
         if (phase != Phase.ACT) return;
         if (progress[0].isTimeOver() && !timeOver(0)) {
             requestTimeOver(0);
             if (!progress[1].isTimerPaused()) requestTimeOver(1);
         }
         if (progress[1].isTimeOver() && !timeOver(1)) requestTimeOver(1);
+        tryActResults();
+    }
+    /** loc_40FE4 (s2.asm:88079-88100): independent HUD countdown before RunObjects. */
+    void advanceLoserCountdown() {
+        if (phase != Phase.ACT) return;
         if (loserTimeLeft != 0 && (!progress[0].isTimerPaused() || !progress[1].isTimerPaused())) {
             int sub = (loserTimeLeft & 0xFF) - 1;
             if (sub > 0) loserTimeLeft = (loserTimeLeft & 0xFF00) | sub;

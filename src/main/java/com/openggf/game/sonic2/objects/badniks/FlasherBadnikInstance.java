@@ -130,6 +130,14 @@ public class FlasherBadnikInstance extends AbstractBadnikInstance implements Son
         currentY = yPosFixed >> 8;
     }
 
+    com.openggf.level.objects.ObjectRoutineLifetime.Tail routineTail() {
+        if (state == State.WAITING && stateTimer == WAIT_TIMER_INIT)
+            return com.openggf.level.objects.ObjectRoutineLifetime.Tail.CUSTOM;
+        if (state == State.ELECTRIFIED_HOLD && stateTimer == ELECTRIFIED_TIMER_INIT)
+            return com.openggf.level.objects.ObjectRoutineLifetime.Tail.MARK_OBJ_GONE;
+        return com.openggf.level.objects.ObjectRoutineLifetime.Tail.MARK_OBJ_GONE_P1;
+    }
+
     private void updateInit() {
         // ObjA3 loc_3875A (s2.asm:76234-76237): routine 0 only sets the wait
         // timer (objoff_2A=$40) and returns; the routine advances to 2 so the
