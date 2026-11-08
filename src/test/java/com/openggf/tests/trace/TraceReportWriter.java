@@ -16,10 +16,9 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * Shared report-writing helper for the special-stage trace replay bases
- * (S1/S2/S3K). Their {@code writeReport(report, ssIndex)} bodies were identical
- * except for the filename prefix; this hoists the body and parameterizes it by
- * output directory, prefix, and context radius so the three bases cannot drift.
+ * Shared report publication for standalone level and special-stage replay drivers.
+ * Owns the session-allocated report, context and owner-sidecar paths, including
+ * verification-scoped context and retirement of verified earlier standalone attempts.
  */
 public final class TraceReportWriter {
 

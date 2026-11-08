@@ -27,6 +27,19 @@ import java.util.function.BiConsumer;
  * newly-established standing history expires at the next {@link #beginFrame()}.
  * Rewind captures live bits and rides, never that frame-only history.
  *
+ * <p>Retirement callers choose the lifetime they are ending:
+ * <ul>
+ *   <li>Placed unload releases live bits through
+ *       {@link #releaseObjectLatchesForAllPlayers}; frame history lasts until the next frame.</li>
+ *   <li>Permanent placed destruction evicts bits and history by spawn or instance.</li>
+ *   <li>Dynamic removal evicts bits and history after the controller checks for
+ *       another live owner of the same key.</li>
+ * </ul>
+ * Key lookups can call overridable object/provider methods. The dispatch guard
+ * validates the original {@link InitialObjectDispatchController} reservation after
+ * each callback, before its result is used. Keep separate key reads and their
+ * guard order when changing an expiry path.
+ *
  * <p>Package-private memory for {@link ObjectSolidContactController}; the immutable
  * saved form remains {@link ObjectManagerSnapshot.SolidContactState}.
  */

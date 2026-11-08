@@ -23,6 +23,7 @@ import javax.tools.DiagnosticCollector;
 import javax.tools.JavaFileObject;
 import javax.tools.ToolProvider;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -418,9 +419,6 @@ class TestRewindArchitectureGuard {
                 TestRewindArchitectureGuard.class.getClassLoader())));
         assertFalse(containsObjectType(ObjectManager.class));
         assertFalse(containsObjectType(NonActorFactory.class));
-        assertTrue(java.lang.reflect.Modifier.isPublic(NonActorFactory.class
-                .getDeclaredMethod("restoreRewindState", Object.class).getModifiers()),
-                "a public-shaped restore helper must not incur actor override debt");
     }
 
     @Test
@@ -435,10 +433,18 @@ class TestRewindArchitectureGuard {
 
     @Test
     void objectOverrideClassificationIncludesSecondaryTopLevelActors() throws IOException {
-        assertTrue(containsObjectType(Path.of(
-                "src/test/java/com/openggf/game/rewind/RewindActorSourceFixture.java")));
+        Path actorSource = Path.of(
+                "src/test/java/com/openggf/game/rewind/RewindActorSourceFixture.java");
+        Path helperSource = Path.of(
+                "src/test/java/com/openggf/game/rewind/RewindNonActorSourceFixture.java");
+        assertTrue(containsObjectType(actorSource));
+        assertFalse(containsObjectType(helperSource));
         assertFalse(containsObjectType(Path.of(
                 "src/main/java/com/openggf/level/objects/SolidContactMemory.java")));
+        assertEquals(Map.of(
+                        "src/test/java/com/openggf/game/rewind/RewindActorSourceFixture.java#restoreRewindState", 1),
+                objectRewindOverrideCounts(List.of(actorSource, helperSource)),
+                "count actor overrides while excluding restore-shaped non-actor helpers");
     }
 
     private static final class ActorContainer {
@@ -469,9 +475,6 @@ class TestRewindArchitectureGuard {
     }
 
     private static final class NonActorFactory {
-        // Preserve the public restore-helper shape that originally triggered false actor debt.
-        public void restoreRewindState(Object state) { }
-
         Class<?> helperType() {
             class LocalHelper { }
             return LocalHelper.class;
@@ -541,8 +544,12 @@ class TestRewindArchitectureGuard {
     }
 
     private static Map<String, Integer> objectRewindOverrideCounts() throws IOException {
+        return objectRewindOverrideCounts(objectSources());
+    }
+
+    private static Map<String, Integer> objectRewindOverrideCounts(List<Path> sources) throws IOException {
         Map<String, Integer> counts = new LinkedHashMap<>();
-        for (Path source : objectSources()) {
+        for (Path source : sources) {
             String text = Files.readString(source);
             long captureCount = CAPTURE_OVERRIDE.matcher(text).results().count();
             long restoreCount = RESTORE_OVERRIDE.matcher(text).results().count();

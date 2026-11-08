@@ -3206,12 +3206,13 @@ rewind guard loads the actual nonpublic class via
 No genuine external consumer, API descriptor/signature-pin edit or guard
 allowance/budget change was found or needed.
 
-The existing guard's `NonActorFactory` now declares
-`public void restoreRewindState(Object state)` and its existing classification
-case asserts that public method shape while still rejecting the helper as an
-actor. Narrowing production restores therefore does not remove the original
-public-shaped nonactor regression boundary. No new test case or test class was
-added for that boundary.
+At `4086b7d545`, the existing guard's `NonActorFactory` declared
+`public void restoreRewindState(Object state)` and its classification case checked
+that declaration while rejecting the helper as an actor. Independent review
+subsequently found that this did not exercise the override counter's nonactor
+filter: the counter scans main sources, not this nested test fixture. The initial
+claim that the original regression boundary remained covered was incorrect. The
+counter-level witness and mutation check are recorded in the follow-up below.
 
 Exact JUnit identity mapping follows. Every row maps the old class
 `com.openggf.level.objects.contact.TestSolidContactState` to the new class
@@ -3301,3 +3302,110 @@ cancelled or relaunched here. No delegate, reviewer, watcher, task/destination
 push, PR write or integration was performed. Local commit identity, source/test
 manifest and the exact remaining handoff are recorded in
 `target/code-climb/contact-memory-boundary/handoff.json`.
+
+### Original C/F measurement and counter-coverage repair — 2026-11-08
+
+Both independent Opus 5.5 tasks completed at clean
+`4086b7d5455c3344b0954fa03edbb1514c874e14`, tree
+`120cd795820e160e4a5e36d6ed3e69aa400b0f0f`, with maximum effort and fast mode off.
+Neither ran tests or JVMs, edited source, observed the baseline job or read the
+remote. The correctness reviewer checked the contact move and upstream merge;
+the separate blind assessor read ordinary source/guides/tests, without the diff,
+audits, validation results, prior scores or targets. Both reported the same clean
+source at start and finish.
+
+The exact original trial statements were recovered before this assessment.
+Original F uses `TestS3kSonicTailsHczSegmentTraceReplay` as its primary journey;
+the later act-spanning HCZ2 leaf is a holdout. Earlier HCZ2-first readings remain
+variant evidence and do not establish a new original-F grade. The rubric uses
+integer 0–4 ratings, with 1 and 3 interpolating between the written anchors.
+
+| Original trial at 4086 | Owner | Browse | Understand | Locality | Concepts | Verify | Rules | Readability | /100 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| C: standing/pushing expiry across unload | 3 | 3 | 3 | 2 | 2 | 4 | 3 | 3 | 71.25 |
+| F: first HCZ Sonic/Tails trace diagnosis | 3 | 2 | 3 | 2 | 2 | 3 | 2 | 3 | 62.50 |
+
+Sol independently recomputed both weighted totals. The per-trial target remains
+unmet, including the minimum-axis and owner/understanding/readability requirements.
+A/B/D/E were not regraded. These are static task-specific judgments, not human
+onboarding measurements, runtime certification or a whole-repository score.
+Different reviewers and revisions do not establish a causal improvement trend.
+
+C's bounded reading set is the memory owner, population retirement, three manager
+sites, dynamic surviving-owner expiry, one entry guide and focused tests. Its
+remaining burdens include the three retirement schedules, callback guards,
+shared-key policies and forwarding methods. Multipart and occurrence holdouts
+were kept separate. The placed-to-dynamic shared-key policy and missing-owner
+restore fallback were hypotheses, not demonstrated defects; no runtime rule was
+changed on their account.
+
+F found the actual `hcz` fixture, segment 9 and its giant-ring transition into
+`ss_5`. Its remaining burdens include the long driver/run-chain harness, repeated
+comparison arguments, duplicate filename conventions and unreported carried-state
+conditions. The run-wide fixture notes remain insufficient to identify this leaf's
+span; fixture payloads were not hand-edited. A complete segment comparison remains
+conditional instrumentation, not run-chain evidence.
+
+#### Review finding and actual counter witness
+
+The correctness review found no runtime blocker. Its P3 was valid: narrowing the
+memory's public restores removed the only main-source nonactor reaching the
+public capture/restore counter. The nested declaration-only fixture did not
+exercise that filter. A future removal of the filter could therefore pass all
+eight guard cases. The earlier coverage statement above and the 4086 commit's
+claim are superseded by this finding and repair.
+
+The normal counter now delegates to an overload accepting source paths, with the
+same `objectSources()` input and unchanged classifier, patterns and budgets.
+The existing secondary-top-level classification case feeds real actor and
+restore-shaped nonactor fixture sources into that counter and expects only the
+actor's restore entry. The actor fixture supplies a real override; the helper
+fixture supplies a public restore-shaped method. The tautological nested method
+and declaration assertion were removed. All eight existing JUnit identities remain.
+No production operation, allowance or baseline was changed.
+
+Root verified the new witness by temporarily bypassing the real nonactor filter.
+The case failed because the actual map included
+`RewindNonActorSourceFixture.java#restoreRewindState`, while the expected map
+contained only the actor. Root then restored the exact filter and ran the whole
+guard class. Exact wrapper argument arrays, environment, source hashes, XML,
+causal assertion and timings are retained under
+`target/code-climb/guard-exclusion-repair/{red,green}/`.
+
+```bash
+python3 target/code-climb/guard-exclusion-repair/run-phase.py red
+python3 target/code-climb/guard-exclusion-repair/run-phase.py green
+```
+
+Both commands invoke the queued normal-memory wrapper with Java 25, Lua 5.4,
+`-Dmse=off`, displays unset and surfaceless EGL. RED selects the existing
+secondary-top-level classification case; GREEN selects `TestRewindArchitectureGuard`.
+
+| Witness | Cases | Failures / errors / skips | Queue | Maven execution | Wall | User wait | Unseparated overhead |
+| --- | ---: | --- | ---: | ---: | ---: | ---: | ---: |
+| Filter bypassed, RED | 1 | 1 intended / 0 / 0 | 30s | 34.964s | 65.798s | 0s | 0.834s |
+| Exact filter restored, GREEN | 8 | 0 / 0 / 0 | 74s | 35.048s | 110.138s | 0s | 1.090s |
+
+These are focused results, not a complete guards lane or smoke verdict. Queue
+values are rounded wrapper reports; investigation time was not separately timed.
+
+#### Routing corrections after the assessment
+
+Small source/guide corrections address demonstrated false leads: the object
+reference names the actual contact/touch controllers; the memory Javadoc states
+which trigger clears live bits versus history and explains dispatch-guard order;
+the first HCZ leaf describes its act mapping and real span; the testing guide
+provides its exact selector, current POM authority and diagnostic switches; and
+`TraceReportWriter` describes both standalone level and special-stage consumers.
+These follow the assessment and receive no automatic score increase. Java
+noncomment-token equality is checked separately for the comment-only edits.
+No carried-state publication, fixture regeneration, lifetime-policy change or
+additional review round is included.
+
+The existing root-owned c4 baseline is still the qualification input. Candidate
+selection plans retain all 4,625 smoke classes modulo the explicit 11-case contact
+class mapping. Trace-driver controls are outside ordinary smoke; the ccf focused
+322-case selection included the real attempt and terminal driver tests. Combined
+candidate smoke/guards and matched new-source EHZ/HCZ checks remain pending here.
+The durable launcher requires an exact-source review-clearance receipt before it
+can start. No destination branch was changed or pushed.

@@ -601,27 +601,37 @@ movie beside the segment directories, then a retained `.bk2` in the fixture
 directory. Sonic/Tails run segments use the run-root placement; not every movie
 lives in the game's `_movies/` pool. A missing movie can skip the test.
 
-Use the [release-scope policy](../../status/trace-scope-release-6.md) and the
-`trace-replay`, `trace-replay-r7` and `trace-segments` profiles in
-[root pom.xml](../../../pom.xml) to find the lane.
-These are the selection authorities; a test's historical status comment is not
-a current result. The HCZ Sonic/Tails leaf is standalone segment instrumentation;
-its lane is `trace-segments`, while run chains supply release-gate evidence:
+Find the current lane in the `trace-replay`, `trace-replay-r7` and
+`trace-segments` profiles in [root pom.xml](../../../pom.xml).
+The [release-scope record](../../status/trace-scope-release-6.md) describes historical
+scope; its status table and a test's comments are not current results. The first
+HCZ Sonic/Tails leaf (`hcz`, recorded act 1 / engine act index 0) is standalone
+segment instrumentation. Its lane is `trace-segments`, while run chains supply
+release-gate evidence:
 
 ```bash
 python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-segments \
   -Dsurefire.forkCount=1 -Dtrace.print.summary=true \
-  '-Dtest=TestS3kSonicTailsHcz2SegmentTraceReplay' test
+  '-Dtest=TestS3kSonicTailsHczSegmentTraceReplay' test
 ```
 
-`Hcz2` here identifies directory `hcz_2`, the second HCZ segment, not an
-act-2-only test. It enters engine act index 0 and crosses the act transition.
+This leaf ends at the giant-ring transition into `ss_5`. For the act-spanning
+neighbour, select `TestS3kSonicTailsHcz2SegmentTraceReplay` with the same command.
+Its `Hcz2` identifies directory `hcz_2`, the second HCZ segment, not an act-2-only
+test. It enters engine act index 0 and crosses the act transition.
 Use metadata and recorded `zone_act_state` events to locate the mismatch's act;
 the copied run-wide notes and the report's initial logical key are insufficient.
 
 `-Dtrace.verification=all|physics|animation` selects the verification scope
 (default `all`); animation-only requires CSV v7 character-animation fields.
 Standalone reports use a separate scope suffix for physics and animation.
+
+For a shorter diagnostic run, `-Dtrace.frontierOnly=true` stops after the first
+selected error and its context window; an early stop publishes an INCOMPLETE
+gate. `-Dtrace.print.context=true` prints the first error's context to stderr.
+`-Dtrace.context.radius=<frames>` sets the context radius (default 2), used by
+both report windows and frontier stopping. These switches do not relax assertions
+or make a shortened prefix complete.
 
 Use Java 25. Check the wrapper's verified-ROM discovery line and ensure the
 fixture payload and referenced movie are available. The standalone
