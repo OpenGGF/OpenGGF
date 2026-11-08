@@ -38,6 +38,15 @@ public final class CdR31aObjectAssets {
     enum FlowerView { DISPATCH(0x6064,20), MAPPING_STORE(0x60A6,8), ANIMATION_LEA(0x612E,6);
         final int offset,length;FlowerView(int o,int n){offset=o;length=n;} }
 
+    private com.openggf.game.soniccd.objects.CdSpring.FiniteProfile spring;
+    enum SpringView {
+        MAP(0x968A,199,"f1c0f43ac8925447d88d33fed86d98062d4156d7430802e4c0de37ed620753fd"),
+        ANIMATION(0x967C,14,"7f641336673d1419b30d9555fa0e2ff3a12a95811b26f2d12d96e8b32befb6b5"),
+        SPEED(0x93D2,4,"5eda02f69ae1d12606f936787ccebdac8133522694513985847a115cc00f2621"),
+        TILE_SET(0xBF60,8,"48d4bc013390e36d7bbe8f75e44b3994fe5cff24bfe67a64288f30de697f7e9c"),
+        CONSUMERS(0x9298,0x10A,null);
+        final int offset,length;final String sha;SpringView(int offset,int length,String sha){this.offset=offset;this.length=length;this.sha=sha;}
+    }
     private CdCczEnemyAssets kamaSickle;
     /** Fixed borrowed keys; append no public R31A Asset enum or R32A range identity. */
     enum KamaView {
@@ -213,6 +222,23 @@ public final class CdR31aObjectAssets {
         var expected=java.util.HexFormat.of().parseHex(hex);var bytes=effectRead(view);
         if(!Arrays.equals(expected,bytes.slice(fileOffset-view.offset,expected.length).copy()))
             throw new IllegalArgumentException("Original R31A effect operand differs at "+Integer.toHexString(fileOffset));
+    }
+    /** Actual original R31A P1 metadata; genuine199/14/speed4, no invented tile table.
+     * N Spring/Main.asm:130-244,492-496; R3 Compatibility:584-591 and section_gfx_1a:72-74. */
+    public synchronized com.openggf.game.soniccd.objects.CdSpring.FiniteProfile springAssets(){
+        if(spring==null){assets.requireAuthenticated();if(assets.view(CdR31aAssets.Asset.OBJECT_INDEX).unsignedLong(9*4)!=0x209298L)throw new IllegalArgumentException("Original R31A Spring dispatch differs");
+            var reader=assets.internalReader();var code=reader.view(SpringView.CONSUMERS);
+            if(!java.util.HexFormat.of().formatHex(code.slice(0x9326-0x9298,8).copy()).equals("217c0020968a0004")
+                ||!java.util.HexFormat.of().formatHex(code.slice(0x936E-0x9298,8).copy()).equals("217c002096900004")
+                ||!java.util.HexFormat.of().formatHex(code.slice(0x9390-0x9298,8).copy()).equals("217c002096da0004")
+                ||!java.util.HexFormat.of().formatHex(code.slice(0x939C-0x9298,6).copy()).equals("4eb90020bf60"))throw new IllegalArgumentException("Original R31A Spring mapping/tile operands differ");
+            var map=reader.view(SpringView.MAP);var ani=reader.view(SpringView.ANIMATION);var helper=reader.view(SpringView.TILE_SET);
+            if(!java.util.HexFormat.of().formatHex(helper.copy()).equals("317c04f200024e75"))throw new IllegalArgumentException("Original R31A SetObjectSpriteTile differs");
+            spring=new com.openggf.game.soniccd.objects.CdSpring.FiniteProfile(
+                CdObjectVisualAssets.decodeIndexed(map.copy(),0,3,12,46,ani.copy(),1,36),
+                CdObjectVisualAssets.decodeIndexed(map.copy(),6,3,46,80,ani.copy(),1,36),
+                CdObjectVisualAssets.decodeIndexed(map.copy(),80,3,86,199,ani.copy(),1,46),0x20968A,reader.view(SpringView.SPEED),helper.unsignedWord(2));
+        }return spring;
     }
 
     /** Original R31A DATA only; P6's finite adapter supplies the existing eight/four/39 format.

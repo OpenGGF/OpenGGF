@@ -1,5 +1,77 @@
 # Implement Sonic CD with complete regional parity
 
+## 8 November 2026 — original Spring through the shared physical pass
+
+One cached source-bound `CdSpring` now receives ordinary dynamic ID0A through
+this same World physical walk. The native unsaved placement row33 at0690/0497
+is authenticated independently; the old SPRING_CHILD_OWNER diagnostic was not
+a child-birth receipt. Spring allocates nothing. Block/HiddenBlock parent-child
+ownership and later MovingSpring admission remain distinct. Native Init,
+DisplayOnly, four directions, mirror, raw represented parent links, signed
+postDraw offsets and plain deletion reuse the existing algorithm and owners.
+
+The common reader retains canonical map199/animation14/speed4 and the original
+finite tile helper; there is no padding to legacy200. Exact counted mapping
+roots20968A/209690/2096DA use one source base plus table offsets0/6/80. A direct
+nine-frame cross-decoder check retains all raw pieces, full-address rejection,
+static-mode rejection and frame bounds. Legacy strict200/table72-or74 contracts
+remain. The actual getter union14->15 preserves Flower; sounds remain38.
+
+Private source/receiver/thread/Dispatch/site/ordinal/once occurrences authenticate
+actual Solid, launch, animation, FM, Draw and parent work. Completed values cannot
+replay a call. A reached SOLID_OWNER occurrence checks the retained current
+terrain before computing Solid, without rejecting Init/DisplayOnly/mirror paths.
+Bottom-solid Prefix stores native type2 then uses the existing cursor/algorithm;
+the selected-player seven-argument contract remains TOP-only. Reached native
+stops are retained before every later DTO/receipt/preparation/publication fault,
+with distinct subordinate faults suppressed and no rollback or second attempt.
+The source full-cut/physical96/status/saved-bank and Frame/Core guards remain.
+
+R142 first compiles the public constructed-pool World control on prior production
+and records its actual unowned0A/whole32 error. Independent source review finds
+two P1 and two P2 issues. R143 then reproduces all four findings with seven
+selected controls:4 failures,3 errors,0 skips. Two controls need an actual present
+primary and native hull; their assertions are preserved while those explicit
+fixture preconditions are repaired through the existing Frame entry/Init path.
+Other regressions cover actual down launch/FM/same-visit animation, stopped
+cause identity across three publication-fault positions, and current-terrain
+rejection before a Spring player prefix. Original failed receipts stay failed.
+
+R144 compiles and actually executes1418 cases:1416 pass,1 failure,1 error,0 skips.
+Its wrapper remains INCOMPLETE because Root overcounted58 already-uncommitted
+Solid cases from older evidence (expected349 versus actual291). Separate fresh
+18-report observations retain the actual identities and outcomes; the original
+receipt is never promoted. The runtime error exposes a factory adding the map
+root offset twice; the one-line registration correction uses the true source
+base. The test failure assumed a nonzero animation timer, but native Spring
+Animations.asm `.Compress` has delay0. The strengthened test requires actual
+original animation occurrences and timer/frame0. R145's test-only nonexistent
+pieceCount accessor stops testCompile with zero tests; its receipt remains
+incomplete. R145b changes only that test accessor to the real pieces().size().
+
+R145b passes1419 distinct cases,0 failures/errors/skips, across17 whole Maven
+roots/18 explicitly declared fresh reports. This includes full shared Frame815,
+Solid291, legacy Spring133 and actual pass/World/route controls. Methodless asset
+topology is root0/ActualUsa11, with outer/inner ownership retained. Source/index
+before and after is exactly
+`f8c7b17357b2b2c4e92dd222d36bd5ee3790f0a06764feebd71f3826e8a88f90`
+at saved672 plus13 frozen candidates. Original R142/R143/R144/R145 evidence is
+retained. No before-manifest of compiled class files exists; class-byte custody
+is not claimed.
+
+The source-bound command uses `integration_packet.py run --worktree <private-I>
+--spec <external>/r145b-ccz-spring-mapping-timer-root-positive-20261108/handoff.json
+--execute --lane normal --compact-output --maven-progress concise --evidence
+<external>/research/cd-original-spring-mapping-timer1419-r145b-run-evidence-20261108.json`,
+with Java25/-Dmse=off, actual original media, surfaceless EGL and the existing
+Maven queue. Exact class/identity/environment/XML/source/dependency observations
+are external. The unchanged controller now requires returned canonical Spring
+Init after TimePost, but no fresh exact service ordinal or Spring picture was
+exported in this run. Prior measured1130/first1131 is historical; a further
+bounded observation is separate. No completed warp, later natural route, whole
+act, full-USA or JP/EU result follows. Parent next38c69fae is still remote HEAD
+and already an ancestor; MAIN remains untouched with no public delivery.
+
 ## 8 November 2026 — original cold progress producer and ordered RunR1
 
 The actual source-authenticated, once-only named cold MAINVARS clear now projects

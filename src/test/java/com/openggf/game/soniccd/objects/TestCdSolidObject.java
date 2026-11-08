@@ -1198,7 +1198,7 @@ class TestCdSolidObject {
         assertEquals(cut.slots(), s.pool.capture().slots());
     }
 
-    @ParameterizedTest @ValueSource(strings = {"BTM_SOLID_OBJECT", "STAND_ON_OBJECT"})
+    @ParameterizedTest @ValueSource(strings = {"STAND_ON_OBJECT"})
     void prefixUnsupportedEntriesRejectBeforeTouchingAnyOtherInput(String entry) {
         var owner = new Scene().terrain.owner();
         assertThrows(IllegalArgumentException.class,
@@ -2079,4 +2079,39 @@ class TestCdSolidObject {
         return new Player(new CdPlayerTouchResponse.Actor(new CdPlayerMotionState(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), 0, 0, 0, 0), 0, 0, 0);
     }
     // END selected-player TOP-only prefix additions.
+
+    @Test void bottomPrefixUsesTheEntireLegacyCompleteResultAndNativeTypeStore() {
+        for (int vector = 0; vector < 3; vector++) {
+            var s = vector == 1 ? below() : new Scene();
+            s.object(o -> o.moveByte(ByteField.ID, 0x0A));
+            if (vector == 2) s.p.id = 0;
+            var owner = s.terrain.owner(); var cut = s.pool.capture();
+            var legacy = owner.run(Entry.BTM_SOLID_OBJECT, s.object(), s.p.player(), s.gates(), s.globals(), cut);
+            var result = assertInstanceOf(CdSolidObject.Completed.class,
+                    owner.runWithPrefix(Entry.BTM_SOLID_OBJECT, s.object(), s.p.player(), s.gates(), s.globals(), cut));
+            assertEquals(legacy, result.completedResult());
+            assertTrue(result.completedResult().objectWrites().contains(ByteField.SOLID_TYPE));
+            assertEquals(cut.slots(), s.pool.capture().slots());
+        }
+    }
+    @Test void bottomPrefixRetainsItsActualStandReleaseStopAndEveryReachedStore() {
+        var s = new Scene(); s.object(o -> o.moveByte(ByteField.ID, 0x0A));
+        s.p.flags = 8; s.p.stand = 2; s.p.yv = 0;
+        var owner = s.terrain.owner(); var cut = s.pool.capture();
+        var result = assertInstanceOf(CdSolidObject.NativeStopped.class,
+                owner.runWithPrefix(Entry.BTM_SOLID_OBJECT, s.object(), s.p.player(), s.gates(), s.globals(), cut));
+        assertEquals(CdSolidObject.StopSite.STAND_RELEASE, result.stop().site());
+        var original = assertInstanceOf(UnsupportedSolidObject.class, result.stop().originalException());
+        assertEquals(UnsupportedBoundary.RESERVED_SLOT_ADDRESS, original.boundary());
+        assertEquals(2, original.slotByte());
+        assertEquals(Entry.BTM_SOLID_OBJECT, result.prefix().entry());
+        assertEquals(8, result.prefix().object().flags() & 8);
+        assertEquals(0, result.prefix().object().unsignedByte(ByteField.SOLID_TYPE));
+        assertEquals(0x00611234, result.prefix().player().actor().motion().centreY16_16());
+        assertTrue(result.prefix().objectWrites().containsAll(Set.of(ByteField.SOLID_TYPE, ByteField.FLAGS)));
+        var legacy = assertThrows(UnsupportedSolidObject.class,
+                () -> owner.run(Entry.BTM_SOLID_OBJECT, s.object(), s.p.player(), s.gates(), s.globals(), cut));
+        assertEquals(original.getMessage(), legacy.getMessage());
+        assertEquals(cut.slots(), s.pool.capture().slots());
+    }
 }

@@ -56,7 +56,7 @@ final class SonicCdR31aObjectPass {
         Boundary boundary(){return boundary;}int wholeIndex(){return wholeIndex;}int value(){return value;}
     }
     private enum Phase { READY,WALKING,WALKED,DRAINING,DONE,FAILED,DISCARDED }
-    private enum Kind { PRIMARY,HUD,TITLE,MONITOR,RING,INTRO,METAL,AMY,HEART,EXHAUST,ROLL,CC_SPIKES,BLOCK,HIDDEN,METAL_PLATFORM,DOOR,FIRE,DRUM,GAME_OVER,KAMA,SICKLE,EXPLOSION,POINTS,BUMPER,TIME_POST,FLOWER }
+    private enum Kind { PRIMARY,HUD,TITLE,MONITOR,RING,INTRO,METAL,AMY,HEART,EXHAUST,ROLL,CC_SPIKES,BLOCK,HIDDEN,METAL_PLATFORM,DOOR,FIRE,DRUM,GAME_OVER,KAMA,SICKLE,EXPLOSION,POINTS,BUMPER,TIME_POST,FLOWER,SPRING }
     private static final class Dispatch {
         final Kind kind;final int whole,routine;final Object body;final Thread thread=Thread.currentThread();
         final Set<Object> calls=Collections.newSetFromMap(new IdentityHashMap<>());
@@ -277,6 +277,7 @@ final class SonicCdR31aObjectPass {
     private final CdReservedHud hud;private final CdTitleCard title;private final CdMonitor monitor;private final CdRing ring;
     private final CdR31IntroAssets introAssets;private final CdIntroSpikes spikes;private final CdAmyRose amy;private final CdMetalSonic metal;private final CdRollTunnel roll;private final CdSpinTunnelTag despawn;
     private final CdR31aSolidsSource solidsSource;private final CdR31SolidHazardAssets solidsData;
+    private final CdSpring spring;private SpringInvocation springInvocation;
     private final CdCcSpikes ccSpikes;private final CdBlock block;private final CdHiddenBlock hidden;private final CdMetalPlatform metalPlatform;private final CdDoor door;private final CdFireShooter fire;private final CdDrumPlatform drum;
     private final CdR31aGameOverSource gameOverSource;private final CdGameOver gameOver;
     private GameOverOperation gameOverOperation;
@@ -331,6 +332,13 @@ final class SonicCdR31aObjectPass {
             public void afterCall(Object c){childAfter(c);}
         },c->childDraw(c,c.source()),new CdPoints.ReceiptGuard(){public void prepared(Object c){childPrepared(c);}public void completed(Object c){childCompleted(c);}});
         originalTerrain=assets.terrain();terrain=CdPlayerTerrain.fromStageTerrain(originalTerrain);solid=new CdSolidObject(CdPlayerMovement.fromStageSource(frame.stageSource()));
+        spring=CdSpring.fromR31aAssets(placement,assets,common,bumperMath,solid,new CdSpring.LivePorts(){
+            public void checkSolid(CdSpring.OriginalCall c,CdSolidObject.Entry e){springCheckSolid(c,e);}
+            public int read(CdSpring.OriginalCall c){return springRead(c);}public void solid(CdSpring.OriginalCall c,CdSpring.PrefixSolidCall p){springSolid(c,p);}
+            public void launch(CdSpring.OriginalCall c,CdSpring.LaunchCall p){springLaunch(c,p);}public void draw(CdSpring.OriginalCall c){springDraw(c);}
+            public void sound(CdSpring.OriginalCall c,CdSpring.FmSound sound){springSound(c,sound);}
+        },new CdSpring.NativeObserver(){public void before(CdSpring.OriginalCall c){beforeSpring(c);}public void after(CdSpring.OriginalCall c){afterSpring(c);}},
+        new CdSpring.ReceiptGuard(){public void prepared(CdSpring.OriginalCall c){prepareSpring(c);}public void completed(CdSpring.OriginalCall c){completeSpring(c);}});
         bindKama(originalTerrain);
         bindFlower(originalTerrain);
         var sicklePorts=new EnemyPorts(Kind.SICKLE);sickle=new CdKamaSickle(placement,sicklePorts,sicklePorts);sicklePorts.bind(sickle);
@@ -396,11 +404,12 @@ final class SonicCdR31aObjectPass {
         queue.close();queue=null;phase=Phase.DONE;
     }
     void discard(){if(busy()||phase==Phase.WALKING||phase==Phase.DRAINING||dispatch!=null)throw new IllegalStateException("Active R31 pass");if(queue!=null)queue.close();queue=null;phase=Phase.DISCARDED;}
-    private boolean busy(){return flowerEffect!=null||timePostInvocation!=null||bumper!=null||enemy!=null||childEffect!=null||gameOverOperation!=null||p2!=null||intro!=null||introPlc!=null||primaryInvocation!=null||placeCall!=null||checking||reading||adopting||drawing||plc||pending!=null||primaryPending!=null||plcPending!=null||primaryDraw!=null;}
-    private Object body(Kind k){return switch(k){case PRIMARY->frame;case HUD->hud;case TITLE->title;case MONITOR->monitor;case RING->ring;case INTRO->spikes;case METAL,EXHAUST->metal;case AMY,HEART->amy;case ROLL->roll;case CC_SPIKES->ccSpikes;case BLOCK->block;case HIDDEN->hidden;case METAL_PLATFORM->metalPlatform;case DOOR->door;case FIRE->fire;case DRUM->drum;case GAME_OVER->gameOver;case KAMA->kama;case SICKLE->sickle;case EXPLOSION->explosion;case POINTS->points;case BUMPER->CdBumper.class;case TIME_POST->timePost;case FLOWER->flower;};}
+    private boolean busy(){return springInvocation!=null||flowerEffect!=null||timePostInvocation!=null||bumper!=null||enemy!=null||childEffect!=null||gameOverOperation!=null||p2!=null||intro!=null||introPlc!=null||primaryInvocation!=null||placeCall!=null||checking||reading||adopting||drawing||plc||pending!=null||primaryPending!=null||plcPending!=null||primaryDraw!=null;}
+    private Object body(Kind k){return switch(k){case PRIMARY->frame;case HUD->hud;case TITLE->title;case MONITOR->monitor;case RING->ring;case INTRO->spikes;case METAL,EXHAUST->metal;case AMY,HEART->amy;case ROLL->roll;case CC_SPIKES->ccSpikes;case BLOCK->block;case HIDDEN->hidden;case METAL_PLATFORM->metalPlatform;case DOOR->door;case FIRE->fire;case DRUM->drum;case GAME_OVER->gameOver;case KAMA->kama;case SICKLE->sickle;case EXPLOSION->explosion;case POINTS->points;case BUMPER->CdBumper.class;case TIME_POST->timePost;case FLOWER->flower;case SPRING->spring;};}
     private void execute(Kind kind,int w,int levelFrames){var c=read();var e=frame.environment();var g=e.movement().gates();switch(kind){
         case PRIMARY->runPrimary(levelFrames);
         case BUMPER->runBumper(w);
+        case SPRING->runSpring(w);
         case TIME_POST->runTimePost(w);
         case GAME_OVER->{var result=gameOver.run(w,new CdGameOver.GlobalsPort(){
             public CdGameOver.Globals read(){var op=gameOverPrimitive(CdGameOver.ReadCall.class);var current=op.current;return new CdGameOver.Globals(current.ring().lives(),current.core().level().powerup(),current.core().level().timeOver());}
@@ -1075,6 +1084,63 @@ final class SonicCdR31aObjectPass {
         var actual=placement.capture();placement.validateRestore(op.placed);if(!actual.status().equals(op.placed.status())||!same(actual.savedFlags(),op.placed.savedFlags()))throw new IllegalArgumentException("Failed Flower changed bank/status");
         boolean before=true,after=true;for(int n=0;n<96;n++){var b=actual.pool().slots().get(n).copyBytes();before&=Arrays.equals(b,op.placed.pool().slots().get(n).copyBytes());after&=Arrays.equals(b,op.expected.get(n));}if(!before&&(!op.prepared||!after))throw new IllegalArgumentException("Failed Flower outside exact prepared prefix");
     }
+    /** Only the actual cached Spring in this physical Dispatch can issue/complete a site. */
+    private final class SpringInvocation {
+        final Dispatch visit=dispatch;final CdSpring receiver=spring;final Thread thread=Thread.currentThread();final int whole=dispatch.whole;
+        long ordinal;SpringOperation operation;Cut cut;ReadFrame frameCut;CdObjectPlacementRuntime.Snapshot placed;
+        SpringInvocation(){var c=read();var f=readFrame();var p=placement.capture();cut=c;frameCut=f;placed=p;}
+    }
+    private final class SpringOperation {
+        final CdSpring.OriginalCall call;final Cut beforeCut;final ReadFrame beforeFrame;final CdObjectPlacementRuntime.Snapshot placed;
+        Cut readyCut;ReadFrame readyFrame;CdObjectPool.Snapshot output;CdPlayerFrameRuntime.ObjectSolidPublication frameOutput;List<byte[]> rows;
+        boolean prepared,used,after;
+        SpringOperation(CdSpring.OriginalCall call){this.call=call;beforeCut=read();beforeFrame=readFrame();placed=call.cut();readyCut=beforeCut;readyFrame=beforeFrame;rows=childRows(placed);}
+    }
+    private SpringInvocation requireSpring(){var i=springInvocation;if(i==null||i.visit!=dispatch||i.receiver!=spring||i.thread!=Thread.currentThread())throw new IllegalStateException("No original Spring receiver/visit/thread");requireWhole(Kind.SPRING,i.whole);return i;}
+    private SpringOperation currentSpring(CdSpring.OriginalCall c){var i=requireSpring();var op=i.operation;if(op==null||op.call!=c||!spring.isCurrentCall(c))throw new IllegalStateException("No original pending Spring site");return op;}
+    private void runSpring(int whole){requireWhole(Kind.SPRING,whole);if(springInvocation!=null)throw new IllegalStateException("Spring reentry");var i=new SpringInvocation();springInvocation=i;
+        try{var result=spring.run(whole,new CdSpring.Globals(i.cut.cameraXWord()),new CdSpring.SolidInputs(primary(),gates(),solidGlobals()));requireSpring();if(i.operation!=null||result.state()!=placement.pool().state(whole)||!result.finalPlayer().equals(primary())||!result.finalGlobals().equals(solidGlobals()))throw new IllegalStateException("Incomplete original Spring return");requireCut(i.cut);requireFrame(i.frameCut);requirePlacement(i.placed);}
+        catch(RuntimeException|Error original){verify(original,()->failedSpring(i));throw original;}finally{springInvocation=null;}}
+    private void beforeSpring(CdSpring.OriginalCall c){var i=requireSpring();if(i.operation!=null||!spring.isCurrentCall(c)||c.ordinal()!=i.ordinal+1||c.source()!=placement.pool().state(i.whole)||c.completed())throw new IllegalStateException("Foreign/repeated Spring source/ordinal");
+        requireCut(i.cut);requireFrame(i.frameCut);requirePlacement(i.placed);requirePlacement(c.cut());var op=new SpringOperation(c);
+        if(c.site()==CdSpring.Site.STORE||c.site()==CdSpring.Site.ANIMATION&&c.output()!=null){if(c.output()==null||!c.output().identity().equals(c.source().identity()))throw new IllegalStateException("Foreign Spring store");op.output=CdObjectPool.overlay(c.cut().pool(),List.of(c.output()));}
+        else if(c.site()==CdSpring.Site.DELETE){var pool=CdObjectPool.stagingCopy(c.cut().pool());pool.deleteObject(i.whole);op.output=pool.capture();}
+        else if(c.site()==CdSpring.Site.DRAW){var row=c.source().copyBytes();row[1]&=127;op.rows.set(i.whole-32,row);}
+        else if(c.site()==CdSpring.Site.SOLID){var p=(CdSpring.PrefixSolidCall)c.payload();if(!p.cut().slots().equals(c.cut().pool().slots())||!p.player().equals(primary())||!p.globals().equals(solidGlobals()))throw new IllegalArgumentException("Foreign Spring Solid cut");
+            CdObjectState own;List<CdObjectState> others;List<CdPlayerTouchResponse.FmSound> fm;
+            if(p.outcome() instanceof CdSolidObject.Completed done){var r=done.completedResult();own=r.object();others=r.otherSlots();fm=r.fmRequests();op.frameOutput=frame.prepareObjectSolidResult(p.player(),p.globals(),r);}
+            else{var r=((CdSolidObject.NativeStopped)p.outcome()).prefix();own=r.object();others=r.otherSlots();fm=r.fmRequests();op.frameOutput=frame.prepareObjectSolidPrefix(p.player(),p.globals(),r);}
+            identity(own.identity());var writes=new ArrayList<CdObjectState>();writes.add(own);writes.addAll(others);op.output=CdObjectPool.overlay(c.cut().pool(),writes);
+            var sounds=new ArrayList<>(op.beforeCut.sounds());for(var sound:fm)sounds.add(new SonicCdGameModule.PastFrameSound(new CdPlayerFrameRuntime.ContactFmSound(sound)));op.readyCut=copy(op.beforeCut,op.beforeCut.core(),op.beforeCut.scrollLockWord(),op.beforeCut.cpuSat(),op.beforeCut.completedCpu(),sounds);
+        }else if(c.site()==CdSpring.Site.LAUNCH){var p=(CdSpring.LaunchCall)c.payload();identity(p.identity());op.frameOutput=frame.prepareObjectSpringLaunch(p);}
+        else if(c.site()==CdSpring.Site.SOUND){if(c.payload()!=CdSpring.FmSound.FM_SPRING)throw new IllegalStateException("No original Spring FM operand");var sounds=new ArrayList<>(op.beforeCut.sounds());sounds.add(new SonicCdGameModule.PastSpringFm((CdSpring.FmSound)c.payload()));op.readyCut=copy(op.beforeCut,op.beforeCut.core(),op.beforeCut.scrollLockWord(),op.beforeCut.cpuSat(),op.beforeCut.completedCpu(),sounds);}
+        if(op.output!=null){placement.pool().validateRestore(op.output);op.rows=op.output.slots().stream().map(CdObjectState::copyBytes).toList();}
+        if(op.frameOutput!=null)op.readyFrame=new ReadFrame(op.frameOutput.finalState(),op.frameOutput.finalEnvironment(),op.beforeFrame.display(),op.beforeFrame.art(),op.beforeFrame.clock(),op.beforeFrame.paused());
+        i.operation=op;i.ordinal=c.ordinal();
+    }
+    private void prepareSpring(CdSpring.OriginalCall c){var op=currentSpring(c);if(op.prepared||c.completed())throw new IllegalStateException("Repeated Spring preparation");requireCut(op.beforeCut);requireFrame(op.beforeFrame);requirePlacement(op.placed);claim(c);op.prepared=true;}
+    private SpringOperation useSpring(CdSpring.OriginalCall c){var op=currentSpring(c);if(!op.prepared||op.used||op.after||c.completed())throw new IllegalStateException("Unprepared/repeated Spring native callback");requireCut(op.beforeCut);requireFrame(op.beforeFrame);requirePlacement(op.placed);op.used=true;return op;}
+    private int springRead(CdSpring.OriginalCall c){currentSpring(c);if(c.site()!=CdSpring.Site.CAMERA_X&&c.site()!=CdSpring.Site.PARENT_X&&c.site()!=CdSpring.Site.PARENT_Y)throw new IllegalStateException("Wrong original Spring read site");useSpring(c);if(c.site()==CdSpring.Site.CAMERA_X)return read().cameraXWord();
+        int parent=c.source().word(SPRING_PARENT);if(parent<0xD000||parent>=0xF000||((parent-0xD000)&63)!=0)throw new IllegalStateException("Unbounded Spring physical parent");int whole=(parent-0xD000)>>>6;boolean x=c.site()==CdSpring.Site.PARENT_X;
+        if(whole==0){var motion=frame.state().motion();return(x?motion.centreX16_16():motion.centreY16_16())>>>16;}
+        if(whole<32)return reserved(read(),whole).unsignedWord(x?8:12);var source=placement.pool().state(whole);return x?source.centreX():source.centreY();
+    }
+    private void springCheckSolid(CdSpring.OriginalCall c,CdSolidObject.Entry entry){
+        currentSpring(c);if(c.site()!=CdSpring.Site.SOLID_OWNER||c.payload()!=entry)throw new IllegalStateException("No original Spring Solid-owner check");
+        useSpring(c);requireOriginalTerrain(); // Only reached Solid calls borrow this retained collision image.
+    }
+    private void springSolid(CdSpring.OriginalCall c,CdSpring.PrefixSolidCall p){var op=currentSpring(c);if(c.site()!=CdSpring.Site.SOLID||c.payload()!=p||op.frameOutput==null||op.output==null)throw new IllegalStateException("No original Spring Solid producer");useSpring(c);publish(op.beforeCut,op.readyCut,op.output,op.frameOutput);}
+    private void springLaunch(CdSpring.OriginalCall c,CdSpring.LaunchCall p){var op=currentSpring(c);if(c.site()!=CdSpring.Site.LAUNCH||c.payload()!=p||op.frameOutput==null)throw new IllegalStateException("No original Spring launch producer");useSpring(c);publish(op.beforeCut,op.readyCut,null,op.frameOutput);}
+    private void springSound(CdSpring.OriginalCall c,CdSpring.FmSound p){var op=currentSpring(c);if(c.site()!=CdSpring.Site.SOUND||c.payload()!=p)throw new IllegalStateException("No original Spring sound producer");useSpring(c);publish(op.beforeCut,op.readyCut,null,null);}
+    private void springDraw(CdSpring.OriginalCall c){currentSpring(c);if(c.site()!=CdSpring.Site.DRAW)throw new IllegalStateException("No original Spring Draw producer");useSpring(c);drawDynamic(Kind.SPRING,placement.pool(),c.source().identity());}
+    private void springPost(SpringOperation op){requireCut(op.readyCut);requireFrame(op.readyFrame);placement.validateRestore(op.placed);var now=placement.capture();if(!now.status().equals(op.placed.status())||!same(now.savedFlags(),op.placed.savedFlags()))throw new IllegalArgumentException("Spring changed status/saved nonwrites");for(int n=0;n<96;n++)if(!Arrays.equals(op.rows.get(n),now.pool().slots().get(n).copyBytes()))throw new IllegalArgumentException("Spring full96 nonwrite/prefix mismatch "+(n+32));}
+    private void afterSpring(CdSpring.OriginalCall c){var op=currentSpring(c);if(!op.prepared||op.after||!c.completed())throw new IllegalStateException("No original Spring return");if(c.site()!=CdSpring.Site.STORE&&c.site()!=CdSpring.Site.DELETE&&c.site()!=CdSpring.Site.ANIMATION&&!op.used)throw new IllegalStateException("Omitted original Spring callback");springPost(op);op.after=true;}
+    private void completeSpring(CdSpring.OriginalCall c){var op=currentSpring(c);if(!op.after)throw new IllegalStateException("Missing original Spring completion");springPost(op);var i=springInvocation;var readyCut=read();var readyFrame=readFrame();var placed=placement.capture();dispatch.cut=readyCut;dispatch.frame=readyFrame;i.cut=readyCut;i.frameCut=readyFrame;i.placed=placed;i.operation=null;}
+    private void failedSpring(SpringInvocation i){if(springInvocation!=i||dispatch!=i.visit||i.thread!=Thread.currentThread())throw new IllegalStateException("Foreign failed Spring visit");var op=i.operation;if(op==null){requireCut(i.cut);requireFrame(i.frameCut);requirePlacement(i.placed);return;}
+        var cut=read();if(!sameCut(cut,op.beforeCut)&&(!op.prepared||!sameCut(cut,op.readyCut)))throw new IllegalArgumentException("Failed Spring outside Core/Host prefix");
+        boolean old=frame.state()==op.beforeFrame.state()&&frame.environment()==op.beforeFrame.environment();requireFrame(old?op.beforeFrame:op.readyFrame);if(!old&&!op.prepared)throw new IllegalArgumentException("Unprepared Spring Frame change");
+        var p=placement.capture();placement.validateRestore(op.placed);if(!p.status().equals(op.placed.status())||!same(p.savedFlags(),op.placed.savedFlags()))throw new IllegalArgumentException("Failed Spring changed bank/status");boolean before=true,after=true;for(int n=0;n<96;n++){var row=p.pool().slots().get(n).copyBytes();before&=Arrays.equals(row,op.placed.pool().slots().get(n).copyBytes());after&=Arrays.equals(row,op.rows.get(n));}if(!before&&(!op.prepared||!after))throw new IllegalArgumentException("Failed Spring outside exact native pool prefix");
+    }
     private enum P2Op { NONE,PREFIX,READ,CONTACT,REWIND,HURT,LAUNCH,SINE,FM,DRAW,DESPAWN,PROJECTILE,PARENT_X,PARENT_Y,ANIMATE }
     /** Original current cached-body stack only. Staging/results are never an ingress token. */
     private final class P2Invocation {
@@ -1349,7 +1415,7 @@ final class SonicCdR31aObjectPass {
     private Kind kind(int w,int id){if(id<1||id>0x3C)throw stop(Boundary.OBJECT_INDEX,w,id);
         if(w==0){if(id!=1)throw stop(Boundary.PHYSICAL_OWNER,w,id);return Kind.PRIMARY;}
         if(w>=32&&id==0x1d)return Kind.BUMPER;
-        if(w>=32){var selected=switch(id){case 0x20->Kind.CC_SPIKES;case 0x21->Kind.BLOCK;case 0x22->Kind.HIDDEN;case 0x23->Kind.METAL_PLATFORM;case 0x24->Kind.KAMA;case 0x25->Kind.SICKLE;case 0x26->Kind.DOOR;case 0x27->Kind.FIRE;case 0x28->Kind.DRUM;default->null;};if(selected!=null)return selected;if(id==0x0A)throw stop(Boundary.SPRING_CHILD_OWNER,w,id);}
+        if(w>=32){var selected=switch(id){case 0x20->Kind.CC_SPIKES;case 0x21->Kind.BLOCK;case 0x22->Kind.HIDDEN;case 0x23->Kind.METAL_PLATFORM;case 0x24->Kind.KAMA;case 0x25->Kind.SICKLE;case 0x26->Kind.DOOR;case 0x27->Kind.FIRE;case 0x28->Kind.DRUM;default->null;};if(selected!=null)return selected;if(id==0x0A)return Kind.SPRING;}
         if(w>=32&&id>=0x30&&id<=0x35)return switch(id){case 0x30->Kind.INTRO;case 0x31->Kind.METAL;case 0x32->Kind.AMY;case 0x33->Kind.HEART;case 0x34->Kind.EXHAUST;default->Kind.ROLL;};
         if(id==0x3B){if(w<32)throw stop(Boundary.PHYSICAL_OWNER,w,id);return Kind.GAME_OVER;}
         if(id==0x3C)return Kind.TITLE;

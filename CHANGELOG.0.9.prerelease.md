@@ -128,6 +128,15 @@ matching area heading; see the
   Original missing-owner RED remains recorded; no new World or sound owner is
   added. Completed time warp, audible output and full-act/regional coverage remain
   separate.
+  Cached native Spring now uses that physical pass and the same shared Spring,
+  Solid, animation, Frame and sound owners. Canonical199-byte mappings retain
+  their three actual roots without legacy padding. Bottom-solid prefixes use
+  the existing cursor; reached native stops keep precedence over later faults,
+  and reached Solid checks current terrain ownership. Parent/Draw/delete and
+  prepared launch receipts retain their original ordering. One1,419-case cohort
+  passes with zero failures/errors/skips, including the unchanged controller
+  requiring Spring Init after Time Post. Original RED/incomplete results remain
+  recorded; exact route ordinals, Spring pixels and later gameplay stay separate.
   CCZ ordinary scheduling now preserves native VBlank/Main order, the old
   selected sprite list and full-word time-stop gating. Private HUD adoption
   retains the real prefix across typed callback failures;175 focused checks

@@ -53,7 +53,9 @@ class TestSonicCdR31aP2ObjectPass {
     @Test void blockCreatesDirtySpringThenStopsAtTheRealUnqualifiedChildOwner()throws Exception{
         try(var h=h()){
             h.dynamic(40,0x21,0,2);h.placement.pool().write(h.placement.pool().state(41).moveWord(X_FRACTION,0xCAFE).moveByte(ROUTINE,0xD7));
-            var error=assertThrows(SonicCdR31aObjectPass.Unowned.class,h::walk);assertEquals(SonicCdR31aObjectPass.Boundary.SPRING_CHILD_OWNER,error.boundary());assertEquals(41,error.wholeIndex());
+            // Historical identifier retained: actual dirty routineD7/bit7-clear now follows
+            // native DisplayOnly, without inventing Init, a mapping or a cleared free slot.
+            h.walk();
             var child=h.placement.pool().state(41);assertEquals(0x0A,child.id());assertEquals(0xD7,child.routine());assertEquals(0xCAFE,child.word(X_FRACTION));assertEquals(0xDA00,child.word(SWING_MAX));assertEquals(2,h.placement.pool().state(40).routine());
         }
     }

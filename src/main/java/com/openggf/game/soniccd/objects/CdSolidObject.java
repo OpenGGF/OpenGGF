@@ -834,8 +834,8 @@ public final class CdSolidObject {
     }
 
     /**
-     * Opt-in SolidObject/TopSolidObject/GetOffObject call. Uses the same native algorithms and one detached Cursor as run.
-     * Plain SolidObject reads the incoming byte $25; only TopSolidObject stores 1 before dispatch.
+     * Opt-in SolidObject/TopSolidObject/BtmSolidObject/GetOffObject call. Uses the same native algorithms and one detached Cursor as run.
+     * Plain SolidObject reads incoming byte $25; Top stores1 and Bottom stores2 before the same dispatch.
      * Collision Check.asm:27-28,92-108,305-314 raw stores reach that cursor synchronously, including stores inside
      * an unfinished terrain leaf. Only origin-tagged terrain reads and StandOnObject:117-118's unowned a2 address
      * can stop natively. Host exceptions and Errors propagate; this entry has no caller callback or publication.
@@ -843,8 +843,9 @@ public final class CdSolidObject {
     public Outcome runWithPrefix(Entry entry, CdObjectState object, Player player, Gates gates, Globals globals,
                                  CdObjectPool.Snapshot callCut) {
         Objects.requireNonNull(entry, "entry");
-        if (entry != Entry.SOLID_OBJECT && entry != Entry.TOP_SOLID_OBJECT && entry != Entry.GET_OFF_OBJECT) {
-            throw new IllegalArgumentException("Native prefixes support only SolidObject, TopSolidObject and GetOffObject");
+        if (entry != Entry.SOLID_OBJECT && entry != Entry.TOP_SOLID_OBJECT
+                && entry != Entry.BTM_SOLID_OBJECT && entry != Entry.GET_OFF_OBJECT) {
+            throw new IllegalArgumentException("Native prefixes support only SolidObject, TopSolidObject, BtmSolidObject and GetOffObject");
         }
         Objects.requireNonNull(object, "object"); Objects.requireNonNull(player, "player");
         Objects.requireNonNull(gates, "gates"); Objects.requireNonNull(globals, "globals");
@@ -856,6 +857,8 @@ public final class CdSolidObject {
                 solidObject(c);
             } else if (entry == Entry.TOP_SOLID_OBJECT) {
                 c.objectByte(ByteField.SOLID_TYPE, 1); solidObject(c);
+            } else if (entry == Entry.BTM_SOLID_OBJECT) {
+                c.objectByte(ByteField.SOLID_TYPE, 2); solidObject(c); // BtmSolidObject:160-161, same native cursor.
             } else {
                 getOffObject(c); c.routineReturn();
             }

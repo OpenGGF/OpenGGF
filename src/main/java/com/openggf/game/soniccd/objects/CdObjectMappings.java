@@ -504,6 +504,7 @@ public final class CdObjectMappings implements CdDrawMappings {
         var explosion=common.explosionAssets();var points=common.pointsAssets();
         tables.add(new DeclaredTable(explosion.mappingsAddress(),explosion.explosion().mappings(),0,7));
         tables.add(new DeclaredTable(points.mappingsAddress(),points.points().mappings(),0,6));
+        var spring=common.springAssets();for(int root:new int[]{0,6,80})tables.add(new DeclaredTable(spring.mappingsAddress(),spring.vertical().mappings(),root,3));
         tables.add(CdR31aBumperSource.fromAssets(assets).mapping());
         var flower=common.flowerAssets();
         tables.add(new DeclaredTable(flower.mappingsAddress(),flower.flower().mappings(),0,8));

@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.OptionalInt;
 import java.util.Set;
+import java.util.function.*;
 
 import static com.openggf.game.soniccd.objects.CdObjectState.ByteField.*;
 import static com.openggf.game.soniccd.objects.CdObjectState.WordField.*;
@@ -45,6 +46,10 @@ import static com.openggf.game.soniccd.objects.CdObjectState.LongField.MAPPINGS;
  * is replayed. Spring's following action has a separate typed LaunchCommit after its object prefix is
  * live, then the dedicated FM_SPRING port. Down and diagonal fall through from the returning sound call into
  * AnimateObject in the same dispatch. Root owns phase/CAS validation and sound forwarding.</p>
+ *
+ * <p>The additive original R31 entry uses finite199/14 DATA and the existing shared
+ * animation Prefix. Its opaque original occurrences bracket source stores/reads/Solid/launch/FM/
+ * Draw/delete, with all live authority retained by the actual World caller. Legacy APIs stay intact.</p>
  *
  * <p>No Player, Globals or Snapshot is retained between invocations. Source/port failures propagate
  * with already committed prefixes intact. There is no rollback, physics/probe/kill duplication,
@@ -323,22 +328,32 @@ public final class CdSpring {
 
     // BEGIN R13 FINITE SPRING PROFILE 20261106
     /** Private format split: the public legacy Assets constructor remains strict200/72-or74. */
+    /** Uniform lazy declarative metadata; retains every old selected-read boundary. */
     private static final class SourceProfile {
-        private final Assets legacy;
-        private final com.openggf.game.soniccd.level.CdR13ObjectAssets future;
-        SourceProfile(Assets legacy) { this.legacy=legacy;this.future=null; }
-        SourceProfile(com.openggf.game.soniccd.level.CdR13ObjectAssets future) {
-            this.future=Objects.requireNonNull(future);this.legacy=null;
-            if(future.springMappings().length()!=199 || future.view(com.openggf.game.soniccd.level.CdR13ObjectAssets.View.OBJECT_TILE_IDS).length()!=68
-                    ||future.view(com.openggf.game.soniccd.level.CdR13ObjectAssets.View.SPRING_SPEEDS).length()!=4)
+        final Supplier<CdObjectVisualAssets> v,h,d;final IntSupplier address;final IntUnaryOperator speed,tile;
+        SourceProfile(Assets legacy){v=legacy::vertical;h=legacy::horizontal;d=legacy::diagonal;address=legacy::mappingsAddress;speed=legacy::speedWord;tile=legacy::diagonalTileWord;}
+        SourceProfile(com.openggf.game.soniccd.level.CdR13ObjectAssets future){
+            Objects.requireNonNull(future);
+            if(future.springMappings().length()!=199||future.view(com.openggf.game.soniccd.level.CdR13ObjectAssets.View.OBJECT_TILE_IDS).length()!=68||future.view(com.openggf.game.soniccd.level.CdR13ObjectAssets.View.SPRING_SPEEDS).length()!=4)
                 throw new IllegalArgumentException("R13 Spring requires genuine199/68/4 metadata");
+            v=future::springVertical;h=future::springHorizontal;d=future::springDiagonal;
+            address=()->com.openggf.game.soniccd.level.CdR13ObjectAssets.View.MAP_SPRING.range(future.identity().file()).nativeAddress();
+            speed=subtype->{if((subtype&~255)!=0)throw new IllegalArgumentException("Spring subtype exceeds a native byte");return(short)future.view(com.openggf.game.soniccd.level.CdR13ObjectAssets.View.SPRING_SPEEDS).unsignedWord(subtype&2);};
+            tile=subtype->{if(subtype!=0)throw new UnsupportedOperationException("Only primary diagonal Spring selector $F at subtype2 0 is reviewed");var bytes=future.view(com.openggf.game.soniccd.level.CdR13ObjectAssets.View.OBJECT_TILE_IDS);int target=(short)bytes.unsignedWord(30);if(CdObjectTileIds.endOfBody(bytes,15)-target<2)throw new IllegalArgumentException("R13 diagonal tile read exceeds its actual selected body");return bytes.unsignedWord(target);};
         }
-        CdObjectVisualAssets vertical(){return legacy!=null?legacy.vertical():future.springVertical();}
-        CdObjectVisualAssets horizontal(){return legacy!=null?legacy.horizontal():future.springHorizontal();}
-        CdObjectVisualAssets diagonal(){return legacy!=null?legacy.diagonal():future.springDiagonal();}
-        int mappingsAddress(){return legacy!=null?legacy.mappingsAddress():com.openggf.game.soniccd.level.CdR13ObjectAssets.View.MAP_SPRING.range(future.identity().file()).nativeAddress();}
-        int speedWord(int subtype){if(legacy!=null)return legacy.speedWord(subtype);if((subtype&~255)!=0)throw new IllegalArgumentException("Spring subtype exceeds a native byte");return (short)future.view(com.openggf.game.soniccd.level.CdR13ObjectAssets.View.SPRING_SPEEDS).unsignedWord(subtype&2);}
-        int diagonalTileWord(int subtype){if(legacy!=null)return legacy.diagonalTileWord(subtype);if(subtype!=0)throw new UnsupportedOperationException("Only primary diagonal Spring selector $F at subtype2 0 is reviewed");var bytes=future.view(com.openggf.game.soniccd.level.CdR13ObjectAssets.View.OBJECT_TILE_IDS);int target=(short)bytes.unsignedWord(30);if(CdObjectTileIds.endOfBody(bytes,15)-target<2)throw new IllegalArgumentException("R13 diagonal tile read exceeds its actual selected body");return bytes.unsignedWord(target);}
+        SourceProfile(FiniteProfile p){v=p::vertical;h=p::horizontal;d=p::diagonal;address=p::mappingsAddress;speed=subtype->{if((subtype&~255)!=0)throw new IllegalArgumentException("Spring subtype exceeds a native byte");return(short)p.speedWords().unsignedWord(subtype&2);};tile=subtype->p.diagonalTileWord();}
+        CdObjectVisualAssets vertical(){return v.get();}CdObjectVisualAssets horizontal(){return h.get();}CdObjectVisualAssets diagonal(){return d.get();}
+        int mappingsAddress(){return address.getAsInt();}int speedWord(int subtype){return speed.applyAsInt(subtype);}int diagonalTileWord(int subtype){return tile.applyAsInt(subtype);}
+    }
+    /** Semantic finite199/14/speed4 metadata with an actual constant tile-helper result.
+     * DATA equality authenticates neither media nor an original invocation. Legacy Assets stays200. */
+    public record FiniteProfile(CdObjectVisualAssets vertical,CdObjectVisualAssets horizontal,CdObjectVisualAssets diagonal,
+            int mappingsAddress,CdAssetBytes speedWords,int diagonalTileWord){
+        public FiniteProfile{Objects.requireNonNull(vertical);Objects.requireNonNull(horizontal);Objects.requireNonNull(diagonal);Objects.requireNonNull(speedWords);
+            if(vertical.mappingTableOffset()!=0||horizontal.mappingTableOffset()!=6||diagonal.mappingTableOffset()!=80||speedWords.length()!=4||mappingsAddress<0||mappingsAddress>0xFFFFFF-198||(diagonalTileWord&~65535)!=0)
+                throw new IllegalArgumentException("Finite Spring roots/words differ");
+            for(var visual:List.of(vertical,horizontal,diagonal))if(visual.mappings().length()!=199||visual.animationTable().length()!=14||visual.mappingFrames().size()!=3||visual.animations().size()!=1||!Arrays.equals(vertical.mappings().copy(),visual.mappings().copy())||!Arrays.equals(vertical.animationTable().copy(),visual.animationTable().copy()))throw new IllegalArgumentException("Finite Spring needs actual199/14 includes");
+        }
     }
     private CdSpring(CdObjectPlacementRuntime runtime, SourceProfile profile, CdPlayerMath math, CdSolidObject solid,
                      SolidCommit solidCommit, LaunchCommit launchCommit, DrawObjectCall drawObject, PlayFmCall playFm, boolean actualFuture) {
@@ -353,14 +368,49 @@ public final class CdSpring {
         if(!runtime.ownsAct3FutureAssets(owner)||!objects.ownsAssets(owner))throw new IllegalArgumentException("Spring requires the exact retained R13 source/placement");
         return new CdSpring(runtime,new SourceProfile(objects),math,solid,solidCommit,launchCommit,drawObject,playFm,true);
     }
+    public record PrefixSolidCall(CdObjectPool.Snapshot cut,CdSolidObject.Player player,CdSolidObject.Globals globals,CdSolidObject.Outcome outcome){public PrefixSolidCall{Objects.requireNonNull(cut);Objects.requireNonNull(player);Objects.requireNonNull(globals);Objects.requireNonNull(outcome);}}
+    public enum Site { STORE,DELETE,SOLID,LAUNCH,SOUND,DRAW,PARENT_X,PARENT_Y,CAMERA_X,ANIMATION,SOLID_OWNER }
+    /** Only this cached producer issues an occurrence; completed values cannot issue another. */
+    public static final class OriginalCall {
+        private final CdSpring owner;private final Thread thread=Thread.currentThread();private final long ordinal;private final Site site;
+        private final CdObjectPlacementRuntime.Snapshot cut;private final CdObjectState source,output;private final Object payload;private boolean completed;
+        private OriginalCall(CdSpring owner,long ordinal,Site site,CdObjectPlacementRuntime.Snapshot cut,CdObjectState source,CdObjectState output,Object payload){this.owner=owner;this.ordinal=ordinal;this.site=site;this.cut=cut;this.source=source;this.output=output;this.payload=payload;}
+        public long ordinal(){return ordinal;}public Site site(){return site;}public CdObjectPlacementRuntime.Snapshot cut(){return cut;}
+        public CdObjectState source(){return source;}public CdObjectState output(){return output;}public Object payload(){return payload;}public boolean completed(){return completed;}
+    }
+    public interface LivePorts {void checkSolid(OriginalCall call,CdSolidObject.Entry entry);int read(OriginalCall call);void solid(OriginalCall call,PrefixSolidCall solid);void launch(OriginalCall call,LaunchCall launch);void sound(OriginalCall call,FmSound sound);void draw(OriginalCall call);}
+    public interface NativeObserver {void before(OriginalCall call);void after(OriginalCall call);}
+    public interface ReceiptGuard {void prepared(OriginalCall call);void completed(OriginalCall call);}
+    private LivePorts livePorts;private NativeObserver observer;private ReceiptGuard receiptGuard;
+    private boolean running;private long ordinal;private OriginalCall pending;private CdObjectAnimation.Prefix liveAnimation;
+    public boolean isCurrentCall(OriginalCall call){return livePorts!=null&&running&&call!=null&&pending==call&&call.owner==this&&call.thread==Thread.currentThread()&&(call.site!=Site.ANIMATION||liveAnimation!=null&&liveAnimation.isCurrent((CdObjectAnimation.Operation)call.payload));}
+    public static CdSpring fromR31aAssets(CdObjectPlacementRuntime runtime,com.openggf.game.soniccd.level.CdR31aAssets source,
+            com.openggf.game.soniccd.level.CdR31aObjectAssets objects,CdPlayerMath math,CdSolidObject solid,LivePorts ports,NativeObserver observer,ReceiptGuard guard){
+        Objects.requireNonNull(runtime);Objects.requireNonNull(source);Objects.requireNonNull(objects);
+        if(!runtime.ownsR31aAssets(source)||!objects.ownsAssets(source))throw new IllegalArgumentException("Spring requires actual retained R31A source/placement");
+        var body=new CdSpring(runtime,new SourceProfile(objects.springAssets()),math,solid,c->{throw new IllegalStateException("Original prefix Solid required");},c->{throw new IllegalStateException("Original launch required");},(p,id)->{throw new IllegalStateException("Original Draw required");},sound->{throw new IllegalStateException("Original FM required");},true);
+        body.livePorts=Objects.requireNonNull(ports);body.observer=Objects.requireNonNull(observer);body.receiptGuard=Objects.requireNonNull(guard);return body;
+    }
+    private int original(Cursor c,Site site,CdObjectState output,Object payload,IntSupplier action){
+        if(pending!=null)throw new IllegalStateException("Nested original Spring call");
+        var call=new OriginalCall(this,++ordinal,site,runtime.capture(),c.pool.state(c.wholeIndex),output,payload);pending=call;
+        try{observer.before(call);receiptGuard.prepared(call);int result=action.getAsInt();call.completed=true;observer.after(call);receiptGuard.completed(call);return result;}finally{pending=null;}
+    }
+    private void store(Cursor c){if(livePorts==null)c.pool.write(c.state);else original(c,Site.STORE,c.state,null,()->{c.pool.write(c.state);return 0;});}
+    private void delete(Cursor c){if(livePorts==null)c.pool.deleteObject(c.wholeIndex);else original(c,Site.DELETE,null,null,()->{c.pool.deleteObject(c.wholeIndex);return 0;});}
+    private int read(Cursor c,Site site){int value=original(c,site,null,null,()->livePorts.read(pending));if((value&~65535)!=0)throw new IllegalArgumentException("Spring native WORD read");return value;}
     // END R13 FINITE SPRING PROFILE 20261106
 
     /** ObjSpring (:130-169), including the reached control-table lookup and the special ObjSpring2 branch. */
     public Result run(int wholeIndex, Globals globals, SolidInputs inputs) {
+        if(livePorts!=null&&running)throw new IllegalStateException("Reentrant original Spring dispatch");running=true;ordinal=0;
+        try{return runSelected(wholeIndex,globals,inputs);}finally{running=false;pending=null;liveAnimation=null;}
+    }
+    private Result runSelected(int wholeIndex,Globals globals,SolidInputs inputs){
         Objects.requireNonNull(globals); Objects.requireNonNull(inputs);
         var pool = runtime.pool(); var state = pool.state(wholeIndex);
         if (state.id() != OBJECT_ID) throw new IllegalArgumentException("Spring dispatch requires live ID $0A, slot " + wholeIndex);
-        var c = new Cursor(pool, state, inputs);
+        var c = new Cursor(this,pool, state, inputs);
         if (state.unsignedByte(ROUTINE_2) == 5) {
             mirror(c); // CMPI.B #5,oRoutine2 / BEQ ObjSpring2: no ordinary wrapper or offscreen gate.
         } else {
@@ -368,9 +418,9 @@ public final class CdSpring {
             draw(c);                                                     // BSR.W DrawObject BEFORE following a1.
             followParent(c);
             int d0 = c.state.word(SPRING_ANCHOR_X) & 0xFF80;
-            int d1 = ((globals.cameraXWord() - 0x80) & 0xFFFF) & 0xFF80;
+            int d1 = (((livePorts==null?globals.cameraXWord():read(c,Site.CAMERA_X)) - 0x80) & 0xFFFF) & 0xFF80;
             if (((d0 - d1) & 0xFFFF) > 0x280) {                           // CMPI.W #$280 / BHI, equality keeps.
-                c.pool.deleteObject(c.wholeIndex);
+                delete(c);
                 c.state = c.pool.state(c.wholeIndex); c.effects.add(new Deleted());
             }
         }
@@ -428,9 +478,18 @@ public final class CdSpring {
     /** ObjSpring_SolidObject/2/3 (:248-252,296-300,362-368): d3/d4 loads are unused by shared Solid. */
     private CdSolidObject.Result solid(Cursor c, CdSolidObject.Entry entry) {
         c.publish();
+        // Owner admission for this reached original Solid call; no native value or alternate collision body.
+        if(livePorts!=null)original(c,Site.SOLID_OWNER,null,entry,()->{livePorts.checkSolid(pending,entry);return 0;});
         var cut = c.pool.capture();
-        var result = solid.run(entry, c.state, c.player, c.gates, c.globals, cut);
-        solidCommit.commit(new SolidCall(cut, c.player, c.globals, result));
+        CdSolidObject.Result result;
+        if(livePorts==null){result=solid.run(entry,c.state,c.player,c.gates,c.globals,cut);solidCommit.commit(new SolidCall(cut,c.player,c.globals,result));}
+        else{var outcome=solid.runWithPrefix(entry,c.state,c.player,c.gates,c.globals,cut);
+            var nativeStop=outcome instanceof CdSolidObject.NativeStopped stopped?stopped.stop().originalException():null;
+            // Retain the reached native cause before any fallible DTO/receipt/preparation/publication work.
+            try{var call=new PrefixSolidCall(cut,c.player,c.globals,outcome);
+                original(c,Site.SOLID,null,call,()->{livePorts.solid(pending,call);return 0;});
+            }catch(RuntimeException|Error fault){if(nativeStop!=null){if(fault!=nativeStop)nativeStop.addSuppressed(fault);throw nativeStop;}throw fault;}
+            if(nativeStop!=null)throw nativeStop;result=((CdSolidObject.Completed)outcome).completedResult();}
         if (!c.pool.state(c.wholeIndex).equals(result.object())) {
             throw new IllegalStateException("Spring SolidCommit did not publish a0");
         }
@@ -532,13 +591,13 @@ public final class CdSpring {
     private void launch(Cursor c, PlayerPatch p) {
         c.publish();
         var call = new LaunchCall(c.state.identity(), c.player, c.globals, p.player(), c.globals, p.writes, Set.of());
-        launchCommit.commit(call);
+        if(livePorts==null)launchCommit.commit(call);else original(c,Site.LAUNCH,null,call,()->{livePorts.launch(pending,call);return 0;});
         c.player = call.finalPlayer(); c.globals = call.finalGlobals();
         c.effects.add(new Launched(call));
     }
 
     private void sound(Cursor c) {
-        playFm.playFm(FmSound.FM_SPRING);
+        if(livePorts==null)playFm.playFm(FmSound.FM_SPRING);else original(c,Site.SOUND,null,FmSound.FM_SPRING,()->{livePorts.sound(pending,FmSound.FM_SPRING);return 0;});
         c.effects.add(new PlayedFm(FmSound.FM_SPRING));
     }
 
@@ -551,6 +610,7 @@ public final class CdSpring {
             default -> assets.vertical();
         };
         var table = new CdObjectAnimation.AnimationTable(visual.animationTable(), 0, visual.animations().size());
+        if(livePorts!=null){animateOriginal(c,table);c.effects.add(new CallReturned(NativeCall.ANIMATE_OBJECT));return;}
         var s = c.state;
         var out = CdObjectAnimation.step(new CdObjectAnimation.State(s.unsignedByte(ANIMATION),
                 s.unsignedByte(PREVIOUS_ANIMATION), s.unsignedByte(ANIMATION_FRAME), s.unsignedByte(ANIMATION_TIME),
@@ -563,6 +623,15 @@ public final class CdSpring {
         c.effects.add(new CallReturned(NativeCall.ANIMATE_OBJECT));
     }
 
+    private void animateOriginal(Cursor c,CdObjectAnimation.AnimationTable table){
+        if(pending!=null||liveAnimation!=null)throw new IllegalStateException("Nested original Spring animation");
+        liveAnimation=new CdObjectAnimation.Prefix(c.pool,c.wholeIndex,new CdObjectAnimation.Guard(){
+            public void before(CdObjectAnimation.Operation op){if(pending!=null||!liveAnimation.isCurrent(op))throw new IllegalStateException("Foreign animation occurrence");var source=c.pool.state(c.wholeIndex);var out=op.kind()==CdObjectAnimation.Kind.STORE?source.moveByte(op.field(),op.value()):null;
+                var call=new OriginalCall(CdSpring.this,++ordinal,Site.ANIMATION,runtime.capture(),source,out,op);pending=call;observer.before(call);receiptGuard.prepared(call);}
+            public void after(CdObjectAnimation.Operation op){try{var call=pending;if(call==null||call.payload!=op||!liveAnimation.isCurrent(op))throw new IllegalStateException("Foreign animation return");if(op.completed()){call.completed=true;observer.after(call);receiptGuard.completed(call);}}finally{pending=null;}}
+        });
+        try{liveAnimation.step(table);}finally{c.state=c.pool.state(c.wholeIndex);liveAnimation=null;}
+    }
     /** ObjSpring_Reset_Up/Side/Down/Diag (:287-292,353-357,406-409,477-481); only Up clears object flag3. */
     private static void reset(Cursor c, NativeRoutine routine, boolean clearStanding) {
         c.enter(routine);
@@ -589,48 +658,43 @@ public final class CdSpring {
 
     private void draw(Cursor c) {
         c.publish();
-        drawObject.drawObject(c.pool, c.state.identity());
+        if(livePorts==null)drawObject.drawObject(c.pool,c.state.identity());else original(c,Site.DRAW,null,null,()->{livePorts.draw(pending);return 0;});
         c.state = c.pool.state(c.wholeIndex);
         c.effects.add(new CallReturned(NativeCall.DRAW_OBJECT));
     }
 
     /** ObjSpring .DisplayOnly (:149-159). Native a1 = $FFFF0000 | parentWord, then signed byte offsets. */
     private static void followParent(Cursor c) {
-        int parent = c.state.word(SPRING_PARENT);
-        if (parent == 0) return;
-        int address = 0xFF0000 | parent;
-        int x, y;
-        if (address == 0xFFD000) {
-            x = c.player.actor().motion().centreX16_16() >>> 16;
-            y = c.player.actor().motion().centreY16_16() >>> 16;
-        } else if (address >= 0xFFD800 && address < 0xFFF000 && ((address - 0xFFD000) & 0x3F) == 0) {
-            var live = c.pool.state((address - 0xFFD000) >>> 6);
-            x = live.centreX(); y = live.centreY();                         // Real live image, even if its ID is zero.
-        } else {
-            throw new UnsupportedSpring(UnsupportedBoundary.PARENT_READ, c.wholeIndex, parent,
-                    OptionalInt.of((address + 8) & 0xFFFFFF));             // First reached MOVE.W oX(a1), not a zero fill.
-        }
-        c.state = c.state.moveWord(X, x).moveWord(Y, y)
-                .addWord(X, c.state.signedByte(SPRING_PARENT_X_OFFSET))
-                .addWord(Y, c.state.signedByte(SPRING_PARENT_Y_OFFSET));
-        c.publish();
-        c.effects.add(new FollowedParent(address));
+        int parent=c.state.word(SPRING_PARENT);if(parent==0)return;
+        int x=parentWord(c,parent,Site.PARENT_X);c.state=c.state.moveWord(X,x);c.publish();
+        int y=parentWord(c,parent,Site.PARENT_Y);c.state=c.state.moveWord(Y,y);c.publish();
+        c.state=c.state.addWord(X,c.state.signedByte(SPRING_PARENT_X_OFFSET));c.publish();
+        c.state=c.state.addWord(Y,c.state.signedByte(SPRING_PARENT_Y_OFFSET));c.publish();
+        c.effects.add(new FollowedParent(0xFF0000|parent));
     }
-
+    private static int parentWord(Cursor c,int parent,Site site){
+        int address=0xFF0000|parent;if(c.owner.livePorts!=null){
+            if(address<0xFFD000||address>=0xFFF000||((address-0xFFD000)&63)!=0)throw new UnsupportedSpring(UnsupportedBoundary.PARENT_READ,c.wholeIndex,parent,OptionalInt.of((address+(site==Site.PARENT_X?8:12))&0xFFFFFF));
+            return c.owner.read(c,site);
+        }
+        if(address==0xFFD000)return(site==Site.PARENT_X?c.player.actor().motion().centreX16_16():c.player.actor().motion().centreY16_16())>>>16;
+        if(address>=0xFFD800&&address<0xFFF000&&((address-0xFFD000)&63)==0){var live=c.pool.state((address-0xFFD000)>>>6);return site==Site.PARENT_X?live.centreX():live.centreY();}
+        throw new UnsupportedSpring(UnsupportedBoundary.PARENT_READ,c.wholeIndex,parent,OptionalInt.of((address+(site==Site.PARENT_X?8:12))&0xFFFFFF));
+    }
     /** Invocation-local values only; not retained in this owner or reused after an exception. */
     private static final class Cursor {
-        final CdObjectPool pool;
+        final CdSpring owner;final CdObjectPool pool;
         final int wholeIndex;
         final CdSolidObject.Gates gates;
         final List<Effect> effects = new ArrayList<>();
         CdObjectState state;
         CdSolidObject.Player player;
         CdSolidObject.Globals globals;
-        Cursor(CdObjectPool pool, CdObjectState state, SolidInputs inputs) {
-            this.pool = pool; this.state = state; wholeIndex = state.identity().wholeIndex();
+        Cursor(CdSpring owner,CdObjectPool pool, CdObjectState state, SolidInputs inputs) {
+            this.owner=owner;this.pool = pool; this.state = state; wholeIndex = state.identity().wholeIndex();
             player = inputs.player(); gates = inputs.gates(); globals = inputs.globals();
         }
-        void publish() { pool.write(state); }
+        void publish() { owner.store(this); }
         void enter(NativeRoutine routine) { effects.add(new RoutineEntered(routine)); }
         UnsupportedSpring unsupported(UnsupportedBoundary boundary, int value) {
             return new UnsupportedSpring(boundary, wholeIndex, value, OptionalInt.empty());

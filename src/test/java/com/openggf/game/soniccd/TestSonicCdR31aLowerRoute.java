@@ -69,7 +69,7 @@ import static org.junit.jupiter.api.Assertions.*;
      * right only when the actual head is below that ceiling. No additional action tap.
      * Ordinals/captured records are diagnostics, never controller or engine values. */
     @Test void ordinaryBacktrackClosesTimePostInitBeforeTheNextGenuineOwner()throws Exception{
-        var csv=new StringBuilder(TestSonicCdR31aOrdinaryRoute.header());int returned=0,closedIntro=-1,firstCapture=-1,retired=-1,amyWhole=-1,turned=-1,entered=-1,boosted=-1,postInitialised=-1;Throwable frontier=null;boolean backtracking=false;String last="";CdAssetBytes firstCaptureNormal=null;
+        var csv=new StringBuilder(TestSonicCdR31aOrdinaryRoute.header());int returned=0,closedIntro=-1,firstCapture=-1,retired=-1,amyWhole=-1,turned=-1,entered=-1,boosted=-1,postInitialised=-1,springInitialised=-1;Throwable frontier=null;boolean backtracking=false;String last="";CdAssetBytes firstCaptureNormal=null;
         try(var b=fixture.start(1,0x80)){
             TestSonicCdR31aSelectedProfileLoading.ready(b);var host=b.module.r31WorldHost();var core=b.module.r31LoadingVisit();var f=b.module.requirePlayerFrame();var placement=host.placement();var source=f.stageSource();
             long generation=b.mode.getLevelManager().getCompletedProductionLoadGeneration();int lives=host.globals().ring().lives();var intro=new TestSonicCdR31aOrdinaryRoute.FirstWallJump();
@@ -117,11 +117,18 @@ import static org.junit.jupiter.api.Assertions.*;
                     postInitialised=n;documents.put("time-post-original-init-closed.txt",TestSonicCdR31aOrdinaryRoute.cut(b,n));pending=TestSonicCdR31aOrdinaryRoute.comparison(b);
                 }
                 last=TestSonicCdR31aOrdinaryRoute.cut(b,n);
+                // New SOURCE-only positive obligation after the genuine next0A read.
+                // The controller expression/recipe above is byte-exact; no diagnostic is input.
+                // Native StageObjects has unsaved0690/0497/0A/subtype0, independent of observed whole49.
+                if(postInitialised>=0&&afterPool.slots().stream().anyMatch(s->s.id()==0x0A&&s.centreX()==0x690&&s.centreY()==0x497&&s.routine()==2&&s.longBits(com.openggf.game.soniccd.objects.CdObjectState.LongField.MAPPINGS)==0x20968A&&s.word(com.openggf.game.soniccd.objects.CdObjectState.WordField.TILE)==0x520)){
+                    springInitialised=n;break; // No new picture, retry, later endpoint or warp bypass.
+                }
             }
             String partial=frontier==null?"none":frontier+"\n"+Arrays.toString(frontier.getStackTrace())+"\nState8="+f.state()+"\nEnvironment="+f.environment()+"\nPool="+placement.capture().pool().slots().stream().map(s->s.identity().wholeIndex()+":"+HexFormat.of().formatHex(s.copyBytes())).toList();
-            documents.put("lower-route-result.txt","Existing unchanged recipe; SOURCE-ONLY Time Post continuation: qualified intro prefix; left off upper lip; right after actual head clears ceiling. returned="+returned+" attempted="+(frontier==null?"none":returned+1)+" introClosed="+closedIntro+" turned="+turned+" entered="+entered+" boosted="+boosted+" postInit="+postInitialised+"\nLAST_CLOSED\n"+last+"\nFIRST_UNOWNED_PARTIAL(no closed snapshot/picture/retry)\n"+partial);
+            documents.put("lower-route-result.txt","Existing unchanged recipe; SOURCE-ONLY Time Post continuation: qualified intro prefix; left off upper lip; right after actual head clears ceiling. returned="+returned+" attempted="+(frontier==null?"none":returned+1)+" introClosed="+closedIntro+" turned="+turned+" entered="+entered+" boosted="+boosted+" postInit="+postInitialised+" springInit="+springInitialised+"\nLAST_CLOSED\n"+last+"\nFIRST_UNOWNED_PARTIAL(no closed snapshot/picture/retry)\n"+partial);
             assertTrue(firstCapture>0);assertEquals(firstCapture+1,retired);assertEquals(retired,closedIntro);assertTrue(turned>closedIntro);assertTrue(entered>turned,"Require genuine passage traversal before classifying a later frontier");assertTrue(boosted>entered);
             assertTrue(postInitialised>boosted,"Positive original Time Post Init closure is required before any later frontier; SOURCE-ONLY UNRUN, no endpoint claimed");
+            assertTrue(springInitialised>postInitialised,"Actual controller must return the genuine next placed Spring Init; SOURCE-ONLY UNRUN, no completed1131 claim");
             if(frontier!=null){assertTrue(f.closed());documents.put("next-owner-source-only-observation.txt",partial);}
             else assertTrue(f.state().motion().routine()<6,"Returned death stops this recipe; never extend reload cycles as route progress");
         }finally{documents.put("lower-route.csv",csv.toString());}
