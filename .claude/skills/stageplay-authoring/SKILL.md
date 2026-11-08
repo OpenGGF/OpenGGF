@@ -184,3 +184,12 @@ Replay checks declared anchors against that observation. Title exports without
 anchors, changed witness hashes, and `native.exportBlocker` are refused. The blocker
 marks provisional routes while preserving their rows and historical engine evidence.
 Replay writes `state.csv` with offered rows, LFC, phase, pause and anchor observations.
+
+`StageplayRoutePlanner.repairNative(hosts, original, reference, scope, budget,
+cancelled, progress)` exposes the same source-preserving repair core for native
+programmes. `ReferencePath.withParticipantPositions` accepts copied P2 centres
+and explicit presence; normal reference progress measures both participants before source reuse.
+A required edit first tries one native-button seam change with the original suffix,
+then broader existing candidates. Goal-bearing suffix candidates must pass the
+stored goal programme and fresh linear qualification; a budget failure proves no
+impossibility. References are prior engine observations only, never native CSV.

@@ -56,6 +56,15 @@ public final class StageplayRoutePlanner {
                 cancelled::getAsBoolean, progress);
     }
 
+    /** Repair through the existing source-preserving search; the reference is engine-only scoring data. */
+    public static PlanResult repairNative(com.openggf.route.RouteWorldFactory hosts,
+            com.openggf.route.RouteArtifact original, com.openggf.route.ReferencePath reference,
+            com.openggf.route.RepairScope scope, SearchBudget budget, BooleanSupplier cancelled,
+            PlanProgress.Listener progress) {
+        return new RoutePlanner(hosts).plan(new RouteTask.Repair(original,reference,scope,
+                com.openggf.route.AuthorHints.referenceFollowing(),budget),cancelled::getAsBoolean,progress);
+    }
+
     public static StageplayRouteResult plan(
             StageplayResources resources,
             SceneRomLibrary library,
