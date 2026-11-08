@@ -101,28 +101,62 @@
         "index_lut": [
           0,
           1,
-          11,
-          11,
-          11,
-          10,
-          9,
+          2,
+          3,
+          4,
+          5,
+          6,
           14,
-          14,
-          10,
           15,
+          15,
+          12,
           13,
           8,
-          8,
+          9,
           14,
           1
         ],
-        "note": "Nearest RGB approximation loses jade and cream: native Sonic line has no green. Shared-palette originals require a character palette binding; fixed variants are layout-compatible but not colour-faithful."
+        "note": "Semantic fixed-line quantization maps jade ramps to blue and preserves red boots/white gloves; native Sonic line has no green. Shared-palette originals require a character palette binding; fixed variants are layout-compatible but not colour-faithful."
       },
       "timing": {
         "source": "byte_341EE / byte_341F4 / byte_341FE / byte_34204 / byte_34208 / SSHurt_Animation",
         "run_ticks": 4,
         "ball_ticks": 2,
-        "hurt": "SSHurt_Animation uses angle + timer in 8-unit steps and render flips; no dedicated hurt art"
+        "hurt": "SSHurt_Animation uses angle + timer in 8-unit steps and render flips; no dedicated hurt art",
+        "hurt_flips": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            0
+          ]
+        ]
       },
       "sequences": [
         {
@@ -170,14 +204,14 @@
         {
           "name": "hurt",
           "frames": [
-            0,
-            4,
-            12,
             4,
             0,
             4,
             12,
-            4
+            4,
+            0,
+            4,
+            12
           ],
           "ticks": 4
         }
@@ -1689,23 +1723,23 @@
         ],
         "index_lut": [
           0,
-          5,
           11,
           11,
-          15,
-          15,
+          10,
+          9,
+          8,
           15,
           14,
-          14,
-          14,
-          2,
           13,
+          13,
+          2,
+          4,
           1,
-          1,
+          15,
           14,
           5
         ],
-        "note": "Fixed native approximation; shared-palette originals require a character palette binding."
+        "note": "Semantic fixed-line quantization maps jade to blue, preserves red boots/white gloves; shared-palette originals require a character palette binding."
       },
       "frame_count_correction": "Pinned S3K has 12 mapping entries (0 blank, 1 standing, 2-8 run, 9-11 curl), not 24. The run sequence has 12 steps and jumping another 12 steps, reusing these entries. Turning rotates the stage via Special_stage_angle; no additional player turn art.",
       "timing": {
@@ -2365,6 +2399,199 @@
           "fixed_palette_file": "s3k-blue-sphere-11-fixed.png"
         }
       ]
+    },
+    {
+      "surface": "rotating_maze",
+      "game": "s1",
+      "native_source_label": "SonicSS_Main / SonicSS_Control / SonicSS_Display / Sonic_Animate / Sonic_LoadGfx / Map_Sonic",
+      "source": "docs/s1disasm/_incObj/09 Sonic in Special Stage.asm",
+      "mapping_source": "docs/s1disasm/_maps/Sonic.asm",
+      "animation_source": "docs/s1disasm/_anim/Sonic.asm",
+      "palette_line": 0,
+      "palette": "../palette.yaml",
+      "native_palette_source": "docs/s1disasm/palette/Special Stage.bin",
+      "frames": [],
+      "native_frames": [
+        {
+          "id": 46,
+          "native_source_label": "MS_Roll1",
+          "dplc_label": "SonPLC_Roll1",
+          "pieces": [
+            [
+              -16,
+              -16,
+              4,
+              4,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "dplc_entries": [
+            [
+              16,
+              668
+            ]
+          ],
+          "tile_budget": 16
+        },
+        {
+          "id": 47,
+          "native_source_label": "MS_Roll2",
+          "dplc_label": "SonPLC_Roll2",
+          "pieces": [
+            [
+              -16,
+              -16,
+              4,
+              4,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "dplc_entries": [
+            [
+              16,
+              684
+            ]
+          ],
+          "tile_budget": 16
+        },
+        {
+          "id": 48,
+          "native_source_label": "MS_Roll3",
+          "dplc_label": "SonPLC_Roll3",
+          "pieces": [
+            [
+              -16,
+              -16,
+              4,
+              4,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "dplc_entries": [
+            [
+              16,
+              700
+            ]
+          ],
+          "tile_budget": 16
+        },
+        {
+          "id": 49,
+          "native_source_label": "MS_Roll4",
+          "dplc_label": "SonPLC_Roll4",
+          "pieces": [
+            [
+              -16,
+              -16,
+              4,
+              4,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "dplc_entries": [
+            [
+              16,
+              716
+            ]
+          ],
+          "tile_budget": 16
+        },
+        {
+          "id": 50,
+          "native_source_label": "MS_Roll5",
+          "dplc_label": "SonPLC_Roll5",
+          "pieces": [
+            [
+              -16,
+              -16,
+              4,
+              4,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "dplc_entries": [
+            [
+              16,
+              732
+            ]
+          ],
+          "tile_budget": 16
+        }
+      ],
+      "reuse": [
+        {
+          "file": "../frames/roll-00.png",
+          "hotspot": [
+            14,
+            14
+          ],
+          "id": "roll-00"
+        },
+        {
+          "file": "../frames/roll-01.png",
+          "hotspot": [
+            14,
+            14
+          ],
+          "id": "roll-01"
+        },
+        {
+          "file": "../frames/roll-02.png",
+          "hotspot": [
+            14,
+            14
+          ],
+          "id": "roll-02"
+        },
+        {
+          "file": "../frames/roll-03.png",
+          "hotspot": [
+            14,
+            14
+          ],
+          "id": "roll-03"
+        }
+      ],
+      "timing": {
+        "source": "Sonic_Animate.rolljump / SonAni_Roll / SonAni_Roll2",
+        "slow_native_frames": [
+          46,
+          47,
+          48,
+          49,
+          50
+        ],
+        "fast_native_frames": [
+          46,
+          47,
+          50,
+          48,
+          49,
+          50
+        ],
+        "ticks": "1 + (max(0, 0x400 - abs(inertia)) >> 8), with native word arithmetic; consult owning routine for state"
+      },
+      "audit": "No dedicated maze art: normal mapping, DPLC loader and id_Roll. No additional MICA drawing needed. Existing four canonical ROLL frames reused. Native has five distinct roll mappings; GIF repeats MICA phase 0 for the fifth comparison and does not certify W2 native/canonical remapping. Stage rotates, not the playable image. Shared MICA palette must bind to player line; fixed native palette colour conversion remains W4 if the stage does not admit a custom player line."
     }
   ]
 }

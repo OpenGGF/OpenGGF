@@ -298,8 +298,21 @@ accompany shared-palette originals. `loc_907E` derives phase from velocity;
 GIF timings are illustrative. Three native-side-by-side GIFs and both-size
 sheets join the S2 reviews. Lower limbs were redrawn for the narrow mapping
 pieces; stride remains restrained and boots are blockier than the core sheet.
-Remaining round-4 items: S1 reuse audit, slot bonus, all continue screens and
-data-select/team composition.
+The S1 reuse audit confirms `SonicSS_Main` installs `Map_Sonic` and `id_Roll`,
+then uses `Sonic_Animate` and `Sonic_LoadGfx`. No dedicated maze set is missing.
+`SonAni_Roll` / `SonAni_Roll2` select five normal roll mappings; existing MICA
+canonical ROLL has four images. The S1 comparison repeats phase 0 for the fifth
+native mapping, explicitly a size/readability comparison rather than certified
+native-phase remapping. Two GIFs show the slow/fast native sequence selections.
+No new S1 pixels are committed. Native source labels and reuse paths are in the
+wave-3 manifest. Runtime W2 binding remains responsible for canonical phases.
+Fixed-palette reviews were also added for both special stages. RGB-nearest
+quantization was rejected after it turned red boots tan and erased scale values;
+the final explicit semantic LUTs retain red boots/white gloves and map jade to
+native blues. Original shared-palette files remain unchanged in colour.
+**Partial stopping point after item 3:** slot-machine bonus, S1/S2/S3K continue
+sets and data-select/team portrait are not delivered. No stage integration,
+Java build, merge or push was performed.
 
 ### W8 — Example, tutorial and evidence (M)
 

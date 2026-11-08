@@ -117,8 +117,13 @@ def review(dest,key,frames,refs,sequences):
   sheet.save(dest/f'{key}-{scale}x.png')
  for name,indices,ticks in sequences:
   pages=[]
-  for i in indices:
-   page=Image.new('RGB',(202,96),'#969696');im=Image.open(HERE/frames[i]['file']).convert('RGBA');page.paste(im,(48-frames[i]['hotspot'][0],48-frames[i]['hotspot'][1]),im);r=refs[i].convert('RGBA');page.paste(r,(106,0),r);pages.append(page.resize((808,384),Image.Resampling.NEAREST))
+  for step,i in enumerate(indices):
+   page=Image.new('RGB',(202,96),'#969696');im=Image.open(HERE/frames[i]['file']).convert('RGBA');left=Image.new('RGBA',(96,96));left.alpha_composite(im,(48-frames[i]['hotspot'][0],48-frames[i]['hotspot'][1]));r=refs[i].convert('RGBA')
+   if name=='hurt':
+    fx,fy=[(1,0),(0,0),(0,0),(0,0),(0,1),(0,1),(1,1),(1,0)][step]
+    if fx:left=left.transpose(Image.Transpose.FLIP_LEFT_RIGHT);r=r.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+    if fy:left=left.transpose(Image.Transpose.FLIP_TOP_BOTTOM);r=r.transpose(Image.Transpose.FLIP_TOP_BOTTOM)
+   page.paste(left,(0,0),left);page.paste(r,(106,0),r);pages.append(page.resize((808,384),Image.Resampling.NEAREST))
   pages[0].save(dest/f'{key}-{name}.gif',save_all=True,append_images=pages[1:],duration=round(ticks*1000/60),loop=0,disposal=2)
 
 def s2(dest):
@@ -127,7 +132,7 @@ def s2(dest):
  raw=nem(ROOT/'docs/s2disasm/art/nemesis/Sonic and Tails animation frames in special stage.nem') if dest else None
  fixed=pal(ROOT/'docs/s2disasm/art/palettes/Special Stage Main.bin',1)
  # Keep shared palette untouched; optional fixed-line approximation is explicit.
- lut=[0]+[min(range(1,16),key=lambda j:sum((COLORS[i][k]-fixed[j][k])**2 for k in range(3))) for i in range(1,16)]
+ lut=[0,1,2,3,4,5,6,14,15,15,12,13,8,9,14,1]
  for i,label in enumerate(labels):
   block=text.split(label+':')[1].split(label+'_End')[0];pieces=[list(map(num,a.split(','))) for a in re.findall(r'spritePiece\s+([^\n;]+)',block)]
   plc=asm.split(f'.sonic_{i}:')[1].split(f'.sonic_{i}_End')[0];loads=[list(map(num,a)) for a in re.findall(r'dplcEntry\s+([^,]+),\s*([^\s;]+)',plc)]
@@ -139,9 +144,11 @@ def s2(dest):
   if dest:
    base=0 if i<4 else 0x58 if i<12 else 0x124 if i<16 else 0x171
    data=b''.join(raw[(base+t)*32:(base+t+n)*32] for n,t in loads);refs.append(native(pieces,data,fixed))
- sequences=[('upright',list(range(4)),4),('diagonal',list(range(4,12)),4),('horizontal',list(range(12,16)),4),('ball',[16,17],2),('hurt',[0,4,12,4,0,4,12,4],4)]
- surface=dict(surface='half_pipe',game='s2',native_source_label='Obj09 / Obj09_MapUnc_34212 / Obj09_MapRUnc_345FA / off_341E4',source='docs/s2disasm/s2.asm',mapping_source='docs/s2disasm/mappings/sprite/obj09.asm',native_art_label='ArtNem_SpecialSonicAndTails',palette_line=1,palette='../palette.yaml',fixed_palette=dict(source='docs/s2disasm/art/palettes/Special Stage Main.bin',line=1,colors=fixed,index_lut=lut,note='Nearest RGB approximation loses jade and cream: native Sonic line has no green. Shared-palette originals require a character palette binding; fixed variants are layout-compatible but not colour-faithful.'),timing=dict(source='byte_341EE / byte_341F4 / byte_341FE / byte_34204 / byte_34208 / SSHurt_Animation',run_ticks=4,ball_ticks=2,hurt='SSHurt_Animation uses angle + timer in 8-unit steps and render flips; no dedicated hurt art'),sequences=[dict(name=n,frames=f,ticks=t) for n,f,t in sequences],frames=frames)
- if dest:review(dest,'s2-halfpipe',frames,refs,sequences)
+ sequences=[('upright',list(range(4)),4),('diagonal',list(range(4,12)),4),('horizontal',list(range(12,16)),4),('ball',[16,17],2),('hurt',[4,0,4,12,4,0,4,12],4)]
+ surface=dict(surface='half_pipe',game='s2',native_source_label='Obj09 / Obj09_MapUnc_34212 / Obj09_MapRUnc_345FA / off_341E4',source='docs/s2disasm/s2.asm',mapping_source='docs/s2disasm/mappings/sprite/obj09.asm',native_art_label='ArtNem_SpecialSonicAndTails',palette_line=1,palette='../palette.yaml',fixed_palette=dict(source='docs/s2disasm/art/palettes/Special Stage Main.bin',line=1,colors=fixed,index_lut=lut,note='Semantic fixed-line quantization maps jade ramps to blue and preserves red boots/white gloves; native Sonic line has no green. Shared-palette originals require a character palette binding; fixed variants are layout-compatible but not colour-faithful.'),timing=dict(source='byte_341EE / byte_341F4 / byte_341FE / byte_34204 / byte_34208 / SSHurt_Animation',run_ticks=4,ball_ticks=2,hurt='SSHurt_Animation uses angle + timer in 8-unit steps and render flips; no dedicated hurt art',hurt_flips=[[1,0],[0,0],[0,0],[0,0],[0,1],[0,1],[1,1],[1,0]]),sequences=[dict(name=n,frames=f,ticks=t) for n,f,t in sequences],frames=frames)
+ if dest:
+  review(dest,'s2-halfpipe',frames,refs,sequences)
+  review(dest,'s2-halfpipe-fixed',[dict(f,file=f['fixed_palette_file']) for f in frames],refs,sequences)
  return surface
 
 def blue(dest):
@@ -150,7 +157,7 @@ def blue(dest):
  maps=re.findall(r'dc.w (word_\w+)-Map_SStageSonic_',text)
  plcs=re.findall(r'dc.w (word_\w+)-PLC_SStageSonic_',text)
  fixed=pal(ROOT/'docs/skdisasm/General/Special Stage/Palettes/Main.bin')
- lut=[0]+[min(range(1,16),key=lambda j:sum((COLORS[i][k]-fixed[j][k])**2 for k in range(3))) for i in range(1,16)]
+ lut=[0,11,11,10,9,8,15,14,13,13,2,4,1,15,14,5]
  raw=(ROOT/'docs/skdisasm/General/Sprites/Sonic/Art/SStage Sonic.unc').read_bytes() if dest else None
  frames=[];refs=[]
  def block(label):return text.split(label+':')[1].split('\nword_')[0]
@@ -201,12 +208,32 @@ def blue(dest):
   frames.append(dict(id=i,file=file,dimensions=list(out.size),hotspot=hot,native_source_label=label,pieces=pieces,dplc_label=plc,dplc_entries=loads,tile_budget=sum(n for n,t in loads),fixed_palette_file=f's3k-blue-sphere-{i:02}-fixed.png'))
   if dest:refs.append(native(pieces,b''.join(raw[t*32:(t+n)*32] for n,t in loads),fixed))
  sequences=[('run',[2,6,7,8,7,6,2,3,4,5,4,3],5),('jump',[9,11,10,11],5),('stationary',[1],20)]
- surface=dict(surface='blue_sphere',game='s3k',native_source_label='Map_SStageSonic / PLC_SStageSonic / ArtUnc_SStageSonic / byte_91E8 / byte_91F6',source='docs/skdisasm/sonic3k.asm',mapping_source=path,palette='../palette.yaml',palette_line=0,fixed_palette=dict(source='docs/skdisasm/General/Special Stage/Palettes/Main.bin',line=0,colors=fixed,index_lut=lut,note='Fixed native approximation; shared-palette originals require a character palette binding.'),frame_count_correction='Pinned S3K has 12 mapping entries (0 blank, 1 standing, 2-8 run, 9-11 curl), not 24. The run sequence has 12 steps and jumping another 12 steps, reusing these entries. Turning rotates the stage via Special_stage_angle; no additional player turn art.',timing=dict(source='loc_907E / loc_90A8 / byte_91E8 / byte_91F6 / sub_9580',run='anim_frame_timer += Special_stage_velocity >> 5; wrap 12; preview ticks illustrative',jump='same phase timer; stationary jump uses Level_frame_counter & 3'),sequences=[dict(name=n,frames=f,preview_ticks=t) for n,f,t in sequences],frames=frames)
- if dest:review(dest,'s3k-blue-sphere',frames,refs,sequences)
+ surface=dict(surface='blue_sphere',game='s3k',native_source_label='Map_SStageSonic / PLC_SStageSonic / ArtUnc_SStageSonic / byte_91E8 / byte_91F6',source='docs/skdisasm/sonic3k.asm',mapping_source=path,palette='../palette.yaml',palette_line=0,fixed_palette=dict(source='docs/skdisasm/General/Special Stage/Palettes/Main.bin',line=0,colors=fixed,index_lut=lut,note='Semantic fixed-line quantization maps jade to blue, preserves red boots/white gloves; shared-palette originals require a character palette binding.'),frame_count_correction='Pinned S3K has 12 mapping entries (0 blank, 1 standing, 2-8 run, 9-11 curl), not 24. The run sequence has 12 steps and jumping another 12 steps, reusing these entries. Turning rotates the stage via Special_stage_angle; no additional player turn art.',timing=dict(source='loc_907E / loc_90A8 / byte_91E8 / byte_91F6 / sub_9580',run='anim_frame_timer += Special_stage_velocity >> 5; wrap 12; preview ticks illustrative',jump='same phase timer; stationary jump uses Level_frame_counter & 3'),sequences=[dict(name=n,frames=f,preview_ticks=t) for n,f,t in sequences],frames=frames)
+ if dest:
+  review(dest,'s3k-blue-sphere',frames,refs,sequences)
+  review(dest,'s3k-blue-sphere-fixed',[dict(f,file=f['fixed_palette_file']) for f in frames],refs,sequences)
  return surface
+
+def s1_audit(dest):
+ maptext=(ROOT/'docs/s1disasm/_maps/Sonic.asm').read_text();plctext=(ROOT/'docs/s1disasm/_maps/Sonic - Dynamic Gfx Script.asm').read_text()
+ raw=(ROOT/'docs/s1disasm/artunc/Sonic.unc').read_bytes() if dest else None
+ fixed=pal(ROOT/'docs/s1disasm/palette/Special Stage.bin')
+ core=[f for f in json.loads((ART/'frames.yaml').read_text())['frames'] if f['animation']=='ROLL']
+ native_frames=[];comparisons=[];refs=[]
+ for i in range(5):
+  key=f'Roll{i+1}'
+  block=maptext.split('MS_'+key+':')[1].split('MS_'+key+'_End')[0]
+  pieces=[list(map(num,a.split(','))) for a in re.findall(r'spritePiece\s+([^\n;]+)',block)]
+  block=plctext.split('SonPLC_'+key+':')[1].split('SonPLC_'+key+'_End')[0]
+  loads=[list(map(num,a)) for a in re.findall(r'dplcEntry\s+([^,]+),\s*([^\s;]+)',block)]
+  native_frames.append(dict(id=46+i,native_source_label='MS_'+key,dplc_label='SonPLC_'+key,pieces=pieces,dplc_entries=loads,tile_budget=sum(n for n,t in loads)))
+  f=core[i%4];comparisons.append(dict(id=f['id'],file='../'+f['file'],hotspot=f['hotspot']))
+  if dest:refs.append(native(pieces,b''.join(raw[t*32:(t+n)*32] for n,t in loads),fixed))
+ if dest:review(dest,'s1-maze-reuse',comparisons,refs,[('slow-roll',list(range(5)),5),('fast-roll',[0,1,4,2,3,4],3)])
+ return dict(surface='rotating_maze',game='s1',native_source_label='SonicSS_Main / SonicSS_Control / SonicSS_Display / Sonic_Animate / Sonic_LoadGfx / Map_Sonic',source='docs/s1disasm/_incObj/09 Sonic in Special Stage.asm',mapping_source='docs/s1disasm/_maps/Sonic.asm',animation_source='docs/s1disasm/_anim/Sonic.asm',palette_line=0,palette='../palette.yaml',native_palette_source='docs/s1disasm/palette/Special Stage.bin',frames=[],native_frames=native_frames,reuse=[dict(file='../'+f['file'],hotspot=f['hotspot'],id=f['id']) for f in core],timing=dict(source='Sonic_Animate.rolljump / SonAni_Roll / SonAni_Roll2',slow_native_frames=[46,47,48,49,50],fast_native_frames=[46,47,50,48,49,50],ticks='1 + (max(0, 0x400 - abs(inertia)) >> 8), with native word arithmetic; consult owning routine for state'),audit='No dedicated maze art: normal mapping, DPLC loader and id_Roll. No additional MICA drawing needed. Existing four canonical ROLL frames reused. Native has five distinct roll mappings; GIF repeats MICA phase 0 for the fifth comparison and does not certify W2 native/canonical remapping. Stage rotates, not the playable image. Shared MICA palette must bind to player line; fixed native palette colour conversion remains W4 if the stage does not admit a custom player line.')
 
 def main():
  p=argparse.ArgumentParser();p.add_argument('--review',type=Path);a=p.parse_args()
- manifest=dict(format='openggf-wave3-art-handoff-1',palette='../palette.yaml',tick_rate=60,notes='Original hand-authored native-coordinate pixel source. Not GGFP or runtime certification.',surfaces=[s2(a.review),blue(a.review)])
+ manifest=dict(format='openggf-wave3-art-handoff-1',palette='../palette.yaml',tick_rate=60,notes='Original hand-authored native-coordinate pixel source. Not GGFP or runtime certification.',surfaces=[s2(a.review),blue(a.review),s1_audit(a.review)])
  (HERE/'wave3.yaml').write_text(json.dumps(manifest,indent=2)+'\n')
 if __name__=='__main__':main()
