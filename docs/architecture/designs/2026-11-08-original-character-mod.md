@@ -686,3 +686,6 @@ Status log (times UTC):
   Native reference input replays through the titles did not qualify MICA's routes.
   Full title-route sign captures remain outstanding; unrelated W4 consumers remain
   owned by their parallel lanes. No engine physics or native route rules were changed.
+- 2026-11-08 (lead review): the S2 special-stage HUD still prints the native
+  "SONIC" label above the ring count (seen in the W4 stages capture). Not yet in the
+  surface inventory; add it to the next presentation lane.
