@@ -8,10 +8,13 @@ import com.openggf.net.protocol.ControlMessage;
 import com.openggf.net.protocol.Protocol;
 import com.openggf.net.protocol.ReadyRules;
 import com.openggf.net.protocol.ChatMode;
+import com.openggf.net.protocol.TrackKey;
+import openggf.timeattack.CompetitionHudState;
 import openggf.timeattack.ProfileView;
 import openggf.timeattack.ui.MenuCue;
 import openggf.timeattack.ui.MenuPage;
 import openggf.timeattack.ui.FullTextReader;
+import openggf.timeattack.ui.LapTimeFormat;
 import openggf.timeattack.ui.TextEntry;
 import openggf.timeattack.ui.ViewInput;
 
@@ -34,7 +37,10 @@ public final class RaceLobbyView {
     private static final int VALUE = 0xFFFFFFFF;
     private static final int DIM = 0xFF8C8C8C;
 
-    private enum Focus { PLAYERS, HISTORY, READY, START, RULE, CHAT, QUICK_CHAT, CHAT_MODE, PROFILE, INVITE, LEAVE }
+    private enum Focus { PLAYERS, HISTORY, READY, START, RESULTS, RULE, CHAT, QUICK_CHAT, CHAT_MODE, PROFILE, INVITE, LEAVE }
+
+    /** The results pages: none, the placement table, or every row's lap splits and notes. */
+    private enum ResultsPage { NONE, TABLE, DETAILS }
 
     private final MultiplayerRaceCoordinator coordinator;
     private final boolean host;
@@ -62,6 +68,12 @@ public final class RaceLobbyView {
     private Consumer<ReadyRules> readyRuleChosen = rule -> { };
     private Consumer<ChatMode> chatModeChosen = mode -> { };
     private boolean levelBehind;
+    /** The Competition round's display state (lane C fills it); Time Attack rooms read it inactive. */
+    private Supplier<CompetitionHudState> competition;
+    private ResultsPage resultsPage = ResultsPage.NONE;
+    private int resultsScroll;
+    private int resultsVisible = 1;
+    private int resultsTotal;
     /** Players on one page of the roster card, from the last drawn screen height. */
     private int playersPerPage = RaceLobbyScreen.playersPerPage(224, true);
 
@@ -88,6 +100,12 @@ public final class RaceLobbyView {
         this.leaveHandler = Objects.requireNonNull(leaveHandler, "leaveHandler");
         this.cues = Objects.requireNonNull(cues, "cues");
         this.focus = Focus.READY;
+        this.competition = () -> coordinator.hudState().competition();
+    }
+
+    /** Where the view reads the Competition round's state (by default the coordinator's HUD state). */
+    public void setCompetitionSource(Supplier<CompetitionHudState> source) {
+        competition = Objects.requireNonNull(source, "source");
     }
 
     public void setInviteAction(Runnable open) {
@@ -114,7 +132,8 @@ public final class RaceLobbyView {
      * Start and Enter toggle between the menu and the character.
      */
     public boolean isOnMainPage() {
-        return profile == null && editor == null && !details && !quickChat.isOpen();
+        return profile == null && editor == null && !details && !quickChat.isOpen()
+                && resultsPage == ResultsPage.NONE;
     }
 
     /**
@@ -154,6 +173,10 @@ public final class RaceLobbyView {
                 if (profile.wasSaved()) announceProfile(profile);
                 profile = null;
             }
+            return;
+        }
+        if (resultsPage != ResultsPage.NONE) {
+            updateResults(input);
             return;
         }
         if (details) {
@@ -269,6 +292,11 @@ public final class RaceLobbyView {
                 case RULE -> changeReadyRule(1);
                 case INVITE -> { inviteAction.run(); cues.accept(MenuCue.CONFIRM); }
                 case HISTORY -> openDetails(true);
+                case RESULTS -> {
+                    resultsPage = ResultsPage.TABLE;
+                    resultsScroll = 0;
+                    cues.accept(MenuCue.CONFIRM);
+                }
                 case PLAYERS -> { }
             }
         }
@@ -325,10 +353,9 @@ public final class RaceLobbyView {
 
     private List<Focus> choices() {
         List<Focus> choices = new ArrayList<>(List.of(Focus.PLAYERS, Focus.HISTORY, Focus.READY));
-        if (host) {
-            choices.add(Focus.START);
-            choices.add(Focus.RULE);
-        }
+        if (host) choices.add(Focus.START);
+        if (!competition.get().placements().isEmpty()) choices.add(Focus.RESULTS);
+        if (host) choices.add(Focus.RULE);
         if (coordinator.session().chatMode().allowsText()) choices.add(Focus.CHAT);
         if (coordinator.session().chatMode().allowsQuickChat()) choices.add(Focus.QUICK_CHAT);
         if (host) choices.add(Focus.CHAT_MODE);
@@ -395,6 +422,10 @@ public final class RaceLobbyView {
 
     public void draw(SceneCanvas canvas) {
         reconcileChatMode();
+        if (resultsPage != ResultsPage.NONE) {
+            drawResults(canvas);
+            return;
+        }
         if (quickChat.isOpen()) {
             canvas.clear(BACKGROUND);
             ControlMessage.RoundConfig current = coordinator.session().roundConfig();
@@ -447,6 +478,11 @@ public final class RaceLobbyView {
             status.add(new RaceLobbyScreen.Note("Room chat: " + MenuPage.sentence(race.chatMode().label()),
                     HudTextLayout.ACCENT, true));
         }
+        CompetitionHudState round = competition.get();
+        if (round.lateJoin()) {
+            status.add(new RaceLobbyScreen.Note("You joined after the start: you race the next round",
+                    HudTextLayout.GOLD, true));
+        }
         status.add(readiness(race));
         if (notice != null) status.add(new RaceLobbyScreen.Note(notice, HudTextLayout.GOLD, true));
 
@@ -468,6 +504,8 @@ public final class RaceLobbyView {
                         betweenRounds()));
                 case PROFILE -> actions.add(action(item, "Name and look", canEditProfile()));
                 case INVITE -> actions.add(action(item, "Room invite", true));
+                case RESULTS -> actions.add(action(item, race.phase() == ClientRaceSession.Phase.ROUND_END
+                        ? "Results" : "Finish order", true));
                 case LEAVE -> actions.add(action(item, "Leave room", true));
                 case PLAYERS, HISTORY -> { }
             }
@@ -489,7 +527,9 @@ public final class RaceLobbyView {
                 room == null ? "Connecting..." : room.name(), nextTrack(room), phaseLabel(),
                 phaseColour(), room != null && room.verified(), rows, room == null ? 0 : room.maxPlayers(),
                 playerPage, focus == Focus.PLAYERS, secondary(), "READY " + ruleLabel(race.readyRule()),
-                readyCount + "/" + players.size(), status, actions, hints);
+                readyCount + "/" + players.size(), status, actions, hints, timesLabel(room, round),
+                massStarting(round) && round.massStartPhase() == CompetitionHudState.MassStartPhase.LOADING
+                        ? "LOADING" : "");
         return RaceLobbyScreen.layout(model, width, height);
     }
 
@@ -530,6 +570,19 @@ public final class RaceLobbyView {
             }
             return new RaceLobbyScreen.Secondary("NEXT TRACK", Math.max(0, race.voteRemainingMillis() / 1000) + "S",
                     rows, focused, -1);
+        }
+        CompetitionHudState round = competition.get();
+        if (round.isCompetition() && !round.placements().isEmpty()) {
+            // While the round runs this is the live finish order; at its end, the placements.
+            List<RaceLobbyScreen.Row> rows = new ArrayList<>();
+            for (CompetitionHudState.PlacementRow row : MultiplayerHudRenderer.displayOrder(round.placements())) {
+                if (rows.size() == 3) break;
+                rows.add(new RaceLobbyScreen.Note(placementLine(round, row), HudTextLayout.WHITE, true));
+            }
+            boolean ended = race.phase() == ClientRaceSession.Phase.ROUND_END;
+            return new RaceLobbyScreen.Secondary(ended ? "RESULTS" : "FINISH ORDER",
+                    round.unverified() ? "UNVERIFIED" : "", rows, focused, -1,
+                    round.unverified() ? HudTextLayout.AMBER : HudTextLayout.MUTED);
         }
         if (race.phase() == ClientRaceSession.Phase.ROUND_END && !race.podiumTop(3).isEmpty()) {
             List<RaceLobbyScreen.Row> rows = new ArrayList<>();
@@ -575,7 +628,39 @@ public final class RaceLobbyView {
     /** What happens next: the voted track, else the room's own. */
     private static String nextTrackKey(ControlMessage.RoomDescriptor room, String voted) {
         if (voted != null) return voted;
-        return room == null ? null : room.gameId() + ":" + room.zone() + ":" + room.act();
+        return room == null ? null : trackKey(room.gameId(), room.trackKind(), room.zone(), room.act());
+    }
+
+    /** The protocol key of a room's or round's track (an arena's index shares the zone field). */
+    static String trackKey(String gameId, String kind, int zone, int act) {
+        try {
+            return new TrackKey(gameId, kind == null ? "ACT" : kind, zone, act).format();
+        } catch (IllegalArgumentException malformed) {
+            return gameId + ":" + zone + ":" + act;
+        }
+    }
+
+    /** {@code 1 Tails 0'21"50}: rank (or a dash when unfinished), name with any swap mark, and the time. */
+    private static String placementLine(CompetitionHudState round, CompetitionHudState.PlacementRow row) {
+        String rank = row.outcome() == CompetitionHudState.Outcome.FINISHED ? Integer.toString(row.rank()) : "-";
+        return rank + " " + row.name() + (row.taintedSwap() ? " *" : "") + "  "
+                + MultiplayerHudRenderer.placementTime(round, row);
+    }
+
+    /** A Competition mass start that has not released yet. */
+    private boolean massStarting(CompetitionHudState round) {
+        return round.isCompetition() && round.massStartPhase() != CompetitionHudState.MassStartPhase.RELEASED
+                && coordinator.session().phase() != ClientRaceSession.Phase.ROUND_END;
+    }
+
+    /**
+     * The header's times label: a Competition room without verification publishes its times, labelled
+     * UNVERIFIED (design D17); the mode tag precedes it. Time Attack rooms keep the default wording.
+     */
+    private static String timesLabel(ControlMessage.RoomDescriptor room, CompetitionHudState round) {
+        boolean competitionRoom = round.isCompetition() || room != null && "COMPETITION".equals(room.mode());
+        if (!competitionRoom) return "";
+        return "COMPETITION  " + (room != null && room.verified() ? "VERIFIED" : "UNVERIFIED");
     }
 
     private String nextTrack(ControlMessage.RoomDescriptor room) {
@@ -588,6 +673,9 @@ public final class RaceLobbyView {
 
     private String phaseLabel() {
         ClientRaceSession race = coordinator.session();
+        CompetitionHudState round = competition.get();
+        if (round.lateJoin() && race.phase() != ClientRaceSession.Phase.ROUND_END) return "NEXT ROUND";
+        if (massStarting(round)) return MultiplayerHudRenderer.startLabel(round);
         return switch (race.phase()) {
             case LOBBY -> "LOBBY";
             case VOTE -> "VOTE";
@@ -598,8 +686,8 @@ public final class RaceLobbyView {
     }
 
     private int phaseColour() {
-        return coordinator.session().phase() == ClientRaceSession.Phase.LOBBY ? HudTextLayout.ACCENT
-                : HudTextLayout.GOLD;
+        return coordinator.session().phase() == ClientRaceSession.Phase.LOBBY && !massStarting(competition.get())
+                ? HudTextLayout.ACCENT : HudTextLayout.GOLD;
     }
 
     private static String ruleLabel(String rule) {
@@ -806,6 +894,221 @@ public final class RaceLobbyView {
         String position = lines.size() > detailsVisible
                 ? (first + 1) + "-" + (first + shown) + " of " + lines.size() : "";
         MenuPage.footer(canvas, position, MenuPage.DIM, hints);
+    }
+
+    // ── Results: the placement table and its lap-split details page ──────────
+
+    private void updateResults(ViewInput input) {
+        if (input.back()) {
+            resultsPage = resultsPage == ResultsPage.DETAILS ? ResultsPage.TABLE : ResultsPage.NONE;
+            resultsScroll = 0;
+            cues.accept(MenuCue.CANCEL);
+            return;
+        }
+        if (input.accept() || input.details()) {
+            resultsPage = resultsPage == ResultsPage.TABLE ? ResultsPage.DETAILS : ResultsPage.TABLE;
+            resultsScroll = 0;
+            cues.accept(MenuCue.CONFIRM);
+            return;
+        }
+        int step = input.up() ? -1 : input.down() ? 1 : 0;
+        int next = Math.clamp(resultsScroll + step, 0, Math.max(0, resultsTotal - resultsVisible));
+        if (next != resultsScroll) cues.accept(MenuCue.NAVIGATE);
+        resultsScroll = next;
+    }
+
+    /** True while a results page is open (tests). */
+    boolean isShowingResults() { return resultsPage != ResultsPage.NONE; }
+
+    /** The shown results lines as drawn, cells joined by " | " (tests). */
+    List<String> resultsVisibleLines() { return resultsShown; }
+
+    private List<String> resultsShown = List.of();
+
+    /** Width of a time column: every ROM clock and Time Attack time is seven tabular cells. */
+    private static int timeColumn() { return com.openggf.mods.ui.CompactFont.width("0'00\"00", 1); }
+
+    /** Width of the state column: its widest value. */
+    private static int stateColumn() { return com.openggf.mods.ui.CompactFont.width("UNVERIFIED", 1); }
+
+    private static final int COLUMN_GAP = 8;
+    private static final int HEADER_ROW = 11;
+
+    private void drawResults(SceneCanvas canvas) {
+        int width = canvas.width();
+        CompetitionHudState round = competition.get();
+        boolean arena = round.isArena();
+        boolean ended = coordinator.session().phase() == ClientRaceSession.Phase.ROUND_END;
+        String title = resultsPage == ResultsPage.DETAILS ? arena ? "LAP SPLITS" : "RESULT NOTES"
+                : ended ? "RESULTS" : "FINISH ORDER";
+        String subtitle = roundTrackWords(round);
+        if (round.unverified()) MenuPage.page(canvas, title, "UNVERIFIED", MenuPage.AMBER, subtitle);
+        else MenuPage.page(canvas, title, ended ? null : "LIVE", subtitle);
+        List<CompetitionHudState.PlacementRow> rows = MultiplayerHudRenderer.displayOrder(round.placements());
+        if (resultsPage == ResultsPage.TABLE) drawTable(canvas, round, rows);
+        else drawSplits(canvas, round, rows);
+        List<MenuPage.Hint> hints = new ArrayList<>();
+        if (resultsTotal > resultsVisible) hints.add(MenuPage.hint(MenuPage.ARROWS_UD, "Scroll"));
+        hints.add(MenuPage.hint(keys.confirm(), resultsPage == ResultsPage.TABLE ? arena ? "Splits" : "Notes" : "Table"));
+        hints.add(MenuPage.hint(keys.back(), "Back"));
+        String position = resultsTotal > resultsVisible ? (resultsScroll + 1) + "-"
+                + Math.min(resultsTotal, resultsScroll + resultsVisible) + " of " + resultsTotal : "";
+        MenuPage.footer(canvas, position, MenuPage.DIM, hints);
+    }
+
+    /** The round's track in words ("Azure Lake, 5 laps"), from the round's configuration. */
+    private String roundTrackWords(CompetitionHudState round) {
+        ControlMessage.RoundConfig config = coordinator.session().roundConfig();
+        if (config == null) config = configuredRound;
+        String key = trackKey(config.gameId(), config.trackKind(), config.zone(), config.act());
+        String words = MenuPage.words(MultiplayerHudRenderer.trackLabel(key));
+        return round.isArena() && round.lapCount() > 0 ? words + ", " + round.lapCount() + " laps" : words;
+    }
+
+    /**
+     * Rank, name (with a dim {@code *} on a swap-tainted run), the character's initial, total, best
+     * lap on arenas, and the state: the verify state for a finisher, else DNF or DNS. Unfinished rows
+     * come last.
+     */
+    private void drawTable(SceneCanvas canvas, CompetitionHudState round, List<CompetitionHudState.PlacementRow> rows) {
+        int width = canvas.width();
+        int x = MenuPage.MARGIN + 6;
+        int right = width - MenuPage.MARGIN - 6;
+        int stateX = right - stateColumn();
+        int bestX = round.isArena() ? stateX - COLUMN_GAP - timeColumn() : stateX;
+        int totalX = bestX - COLUMN_GAP - timeColumn();
+        int characterX = totalX - COLUMN_GAP - 5;
+        int nameX = x + com.openggf.mods.ui.CompactFont.width("00", 1) + 4;
+        int y = MenuPage.BODY_TOP + 1;
+        com.openggf.mods.ui.CompactFont.draw(canvas, "#", x, y + 1, 1, MenuPage.DIM);
+        com.openggf.mods.ui.CompactFont.draw(canvas, "NAME", nameX, y + 1, 1, MenuPage.DIM);
+        com.openggf.mods.ui.CompactFont.draw(canvas, "TOTAL", totalX, y + 1, 1, MenuPage.DIM);
+        if (round.isArena()) com.openggf.mods.ui.CompactFont.draw(canvas, "BEST", bestX, y + 1, 1, MenuPage.DIM);
+        com.openggf.mods.ui.CompactFont.draw(canvas, "STATE", stateX, y + 1, 1, MenuPage.DIM);
+        canvas.fill(x, y + HEADER_ROW - 2, right - x, 1, 0xFF24418A);
+        y += HEADER_ROW;
+        resultsVisible = Math.max(1, (MenuPage.FOOTER_Y - 2 - y) / NameFont.LINE_HEIGHT);
+        resultsTotal = rows.size();
+        resultsScroll = Math.clamp(resultsScroll, 0, Math.max(0, resultsTotal - resultsVisible));
+        List<String> shown = new ArrayList<>();
+        int localSlot = coordinator.session().localSlot();
+        for (int i = resultsScroll; i < Math.min(rows.size(), resultsScroll + resultsVisible); i++) {
+            CompetitionHudState.PlacementRow row = rows.get(i);
+            boolean finished = row.outcome() == CompetitionHudState.Outcome.FINISHED;
+            if (row.slot() >= 0 && row.slot() == localSlot) {
+                canvas.fill(MenuPage.MARGIN + 2, y, width - 2 * MenuPage.MARGIN - 4, NameFont.LINE_HEIGHT, 0x26FFFFFF);
+            }
+            String rank = finished ? Integer.toString(row.rank()) : "-";
+            String character = row.character().isEmpty() ? "?" : row.character().substring(0, 1)
+                    .toUpperCase(java.util.Locale.ROOT);
+            String total = finished ? MultiplayerHudRenderer.placementTime(round, row) : "--";
+            String best = row.bestLapFrames() > 0 ? LapTimeFormat.lap(row.bestLapFrames()) : "--";
+            String state = finished ? switch (row.verifyState()) {
+                case VERIFIED -> "VERIFIED";
+                case PENDING -> "PENDING";
+                case UNVERIFIED -> "UNVERIFIED";
+            } : row.outcome().name();
+            int stateColour = !finished ? row.outcome() == CompetitionHudState.Outcome.DNF ? MenuPage.RED : MenuPage.DIM
+                    : switch (row.verifyState()) {
+                        case VERIFIED -> MenuPage.GREEN;
+                        case PENDING -> MenuPage.DIM;
+                        case UNVERIFIED -> MenuPage.AMBER;
+                    };
+            int compactY = y + NameFont.BASELINE - 7 - 1;
+            com.openggf.mods.ui.CompactFont.draw(canvas, rank, x, compactY, 1, finished ? MenuPage.TEXT : MenuPage.DIM);
+            int markWidth = row.taintedSwap() ? com.openggf.mods.ui.CompactFont.width("*", 1) + 3 : 0;
+            String name = NameFont.fit(FullTextReader.readable(row.name()), characterX - 6 - nameX - markWidth);
+            NameFont.draw(canvas, name, nameX, y - 1, row.slot() >= 0 ? nameColour(row.slot()) : VALUE);
+            if (row.taintedSwap()) com.openggf.mods.ui.CompactFont.draw(canvas, "*", nameX + NameFont.width(name) + 3,
+                    compactY, 1, MenuPage.DIM);
+            com.openggf.mods.ui.CompactFont.draw(canvas, character, characterX, compactY, 1, MenuPage.MUTED);
+            HudTextLayout.compact(canvas, total, totalX, compactY, finished ? MenuPage.TEXT : MenuPage.DIM);
+            if (round.isArena()) HudTextLayout.compact(canvas, best, bestX, compactY, MenuPage.MUTED);
+            com.openggf.mods.ui.CompactFont.draw(canvas, state, stateX, compactY, 1, stateColour);
+            shown.add(String.join(" | ", rank, row.name() + (row.taintedSwap() ? " *" : ""), character, total,
+                    round.isArena() ? best : "", state));
+            y += NameFont.LINE_HEIGHT;
+        }
+        MenuPage.scrollbar(canvas, width - MenuPage.MARGIN - 2, MenuPage.BODY_TOP + 1 + HEADER_ROW,
+                resultsVisible * NameFont.LINE_HEIGHT, resultsScroll, resultsVisible, resultsTotal);
+        resultsShown = List.copyOf(shown);
+    }
+
+    /** One line of the splits page: a racer's heading, their laps, or a quiet note. */
+    private record SplitLine(CompetitionHudState.PlacementRow row, String text, boolean laps) { }
+
+    /**
+     * Every row in placement order: its rank, name, character and total, then (arenas) all five lap
+     * times with the best in gold, then why it did not finish and whether a teleport swap touched it.
+     */
+    private void drawSplits(SceneCanvas canvas, CompetitionHudState round, List<CompetitionHudState.PlacementRow> rows) {
+        int width = canvas.width();
+        int x = MenuPage.MARGIN + 6;
+        int right = width - MenuPage.MARGIN - 6;
+        List<SplitLine> lines = new ArrayList<>();
+        boolean tainted = false;
+        for (CompetitionHudState.PlacementRow row : rows) {
+            lines.add(new SplitLine(row, "", false));
+            if (round.isArena() && !row.lapFrames().isEmpty()) lines.add(new SplitLine(row, "", true));
+            if (!row.reason().isBlank()) lines.add(new SplitLine(null, row.outcome().name() + ": " + row.reason(), false));
+            if (row.taintedSwap()) {
+                lines.add(new SplitLine(null, "* A teleport swap moved this run", false));
+                tainted = true;
+            }
+        }
+        if (tainted) lines.add(new SplitLine(null, "* The swap exchanged this racer's position with a rival's, "
+                + "so the time is not the racer's alone", false));
+        // Long notes wrap into extra lines, whole.
+        List<SplitLine> wrapped = new ArrayList<>();
+        for (SplitLine line : lines) {
+            if (line.row() != null) wrapped.add(line);
+            else for (String part : MenuPage.wrap(line.text(), right - x - 6)) wrapped.add(new SplitLine(null, part, false));
+        }
+        int y = MenuPage.BODY_TOP + 1;
+        resultsVisible = Math.max(1, (MenuPage.FOOTER_Y - 2 - y) / NameFont.LINE_HEIGHT);
+        resultsTotal = wrapped.size();
+        resultsScroll = Math.clamp(resultsScroll, 0, Math.max(0, resultsTotal - resultsVisible));
+        List<String> shown = new ArrayList<>();
+        for (int i = resultsScroll; i < Math.min(wrapped.size(), resultsScroll + resultsVisible); i++) {
+            SplitLine line = wrapped.get(i);
+            int compactY = y + NameFont.BASELINE - 7 - 1;
+            if (line.row() == null) {
+                NameFont.draw(canvas, line.text(), x + DETAIL_INDENT, y - 1, MenuPage.DIM);
+                shown.add(line.text());
+            } else if (!line.laps()) {
+                CompetitionHudState.PlacementRow row = line.row();
+                boolean finished = row.outcome() == CompetitionHudState.Outcome.FINISHED;
+                String rank = finished ? Integer.toString(row.rank()) : "-";
+                String total = MultiplayerHudRenderer.placementTime(round, row);
+                String character = MenuPage.sentence(row.character());
+                int totalX = right - com.openggf.mods.ui.CompactFont.width(total, 1);
+                int characterWidth = NameFont.width(character);
+                com.openggf.mods.ui.CompactFont.draw(canvas, rank, x, compactY, 1, MenuPage.TEXT);
+                int nameX = x + com.openggf.mods.ui.CompactFont.width("00", 1) + 4;
+                String name = NameFont.fit(FullTextReader.readable(row.name()) + (row.taintedSwap() ? " *" : ""),
+                        totalX - 8 - characterWidth - 6 - nameX);
+                NameFont.draw(canvas, name, nameX, y - 1, row.slot() >= 0 ? nameColour(row.slot()) : VALUE);
+                NameFont.draw(canvas, character, nameX + NameFont.width(name) + 6, y - 1, MenuPage.MUTED);
+                HudTextLayout.compact(canvas, total, totalX, compactY, finished ? MenuPage.TEXT : MenuPage.DIM);
+                shown.add(rank + " | " + row.name() + " | " + character + " | " + total);
+            } else {
+                CompetitionHudState.PlacementRow row = line.row();
+                int lapX = x + DETAIL_INDENT + com.openggf.mods.ui.CompactFont.width("00", 1) + 4;
+                int bestIndex = row.lapFrames().indexOf(row.lapFrames().stream().min(Integer::compare).orElse(-1));
+                List<String> laps = new ArrayList<>();
+                for (int lap = 0; lap < row.lapFrames().size(); lap++) {
+                    String time = LapTimeFormat.lap(row.lapFrames().get(lap));
+                    HudTextLayout.compact(canvas, time, lapX, compactY, lap == bestIndex ? MenuPage.GOLD : MenuPage.MUTED);
+                    lapX += timeColumn() + 6;
+                    laps.add(time);
+                }
+                shown.add("  " + String.join(" ", laps));
+            }
+            y += NameFont.LINE_HEIGHT;
+        }
+        MenuPage.scrollbar(canvas, width - MenuPage.MARGIN - 2, MenuPage.BODY_TOP + 1,
+                resultsVisible * NameFont.LINE_HEIGHT, resultsScroll, resultsVisible, resultsTotal);
+        resultsShown = List.copyOf(shown);
     }
 
     /** The shown Room details lines as drawn: a fact's label then its text (tests read the whole page). */

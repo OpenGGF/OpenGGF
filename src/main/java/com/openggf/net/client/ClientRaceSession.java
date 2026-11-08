@@ -422,7 +422,7 @@ public final class ClientRaceSession {
         ChatMode parsed = ChatMode.parse(mode);
         if (room == null || parsed == null || mode.equals(room.chatMode())) return;
         room = new ControlMessage.RoomDescriptor(room.name(), room.gameId(), room.zone(), room.act(),
-                room.characterPolicy(), room.lockedCharacter(), room.maxPlayers(), room.verified(), accessPolicy, mode);
+                room.characterPolicy(), room.lockedCharacter(), room.maxPlayers(), room.verified(), accessPolicy, mode, room.trackKind(), room.mode());
         if (parsed == ChatMode.OFF) clearChat();
     }
 

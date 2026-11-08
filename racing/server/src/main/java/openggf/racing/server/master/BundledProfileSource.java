@@ -12,7 +12,7 @@ import java.util.Map;
 import java.util.Optional;
 
 /** Checked-in numeric track bounds consumed by the ROM-free master. */
-public final class BundledProfileSource implements TrackValidationProfileSource {
+public final class BundledProfileSource implements com.openggf.net.hub.KeyedTrackValidationProfileSource {
     private static final String RESOURCE = "/net/track-validation-profiles.json";
     private final Map<String, TrackValidationProfile> profiles;
 
@@ -28,12 +28,13 @@ public final class BundledProfileSource implements TrackValidationProfileSource 
                 throw new IllegalStateException("profile table has no profiles array");
             }
             for (JsonNode node : entries) {
-                String key = node.path("key").asText();
+                String key = com.openggf.net.protocol.TrackKey.parse(node.path("key").asText()).format();
                 TrackValidationProfile profile = new TrackValidationProfile(
                         node.path("levelWidthPx").asInt(),
                         node.path("levelHeightPx").asInt(),
                         node.path("maxSpeedPxPerFrame").asInt(),
-                        node.path("maxFramesPerSecond").asInt());
+                        node.path("maxFramesPerSecond").asInt(), node.path("wrapWidthPx").asInt(),
+                        node.path("wrapHeightPx").asInt(), node.path("lapCount").asInt(), node.path("maxSwapSources").asInt());
                 if (key.isBlank() || loaded.putIfAbsent(key, profile) != null) {
                     throw new IllegalStateException("invalid or duplicate track key: " + key);
                 }
@@ -45,7 +46,7 @@ public final class BundledProfileSource implements TrackValidationProfileSource 
     }
 
     @Override
-    public Optional<TrackValidationProfile> profileFor(String gameId, int zone, int act) {
-        return Optional.ofNullable(profiles.get(gameId + ":" + zone + ":" + act));
+    public Optional<TrackValidationProfile> profileFor(com.openggf.net.protocol.TrackKey key) {
+        return Optional.ofNullable(profiles.get(key.format()));
     }
 }

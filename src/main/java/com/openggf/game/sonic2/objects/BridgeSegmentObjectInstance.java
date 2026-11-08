@@ -1,6 +1,8 @@
 package com.openggf.game.sonic2.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic2.competition.view.Sonic2NativeDisplaySource;
+import com.openggf.game.sonic2.competition.view.Sonic2CompetitionDisplayInputs.ObjectSlot;
 import com.openggf.game.rewind.GenericFieldCapturer;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.graphics.GLCommand;
@@ -57,7 +59,7 @@ import java.util.List;
  * object so the SST it models is not a fiction, and the parent's draw is
  * unchanged.
  */
-public class BridgeSegmentObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class BridgeSegmentObjectInstance extends AbstractObjectInstance implements Sonic2NativeDisplaySource, RewindRecreatable {
 
     /** {@code Obj11_MakeBdgSegment}: {@code move.b #$40,mainspr_width(a1)} (s2.asm:21997). */
     private static final int ROM_MAINSPR_WIDTH = 0x40;
@@ -133,6 +135,13 @@ public class BridgeSegmentObjectInstance extends AbstractObjectInstance implemen
     @Override
     public boolean isPersistent() {
         return true;
+    }
+
+    @Override
+    public ObjectSlot nativeDisplaySlot() {
+        // Obj11_MakeBdgSegment (s2.asm:21993-22016) creates this actual SST owner;
+        // Obj11 (s2.asm:21918-21928) admits each segment separately in bucket3.
+        return isDestroyed() || parent==null ? null : parent.nativeSegmentDisplay(firstLogX,childSpriteCount);
     }
 
     @Override

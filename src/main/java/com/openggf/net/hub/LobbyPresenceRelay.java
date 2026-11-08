@@ -131,7 +131,9 @@ final class LobbyPresenceRelay {
         byte[] data = batch.frameData();
         GhostFrame last = null;
         for (int i = 0; i < batch.frameCount(); i++) {
-            GhostFrame frame = GhostFrameCodec.decode(data, i * GhostFrameCodec.BYTES);
+            GhostFrame frame;
+            try { frame = GhostFrameCodec.decode(data, i * GhostFrameCodec.BYTES); }
+            catch (IllegalArgumentException invalid) { return violate(slot, sender, "invalid lobby pose bits"); }
             if (previous != null && (Math.abs(frame.x() - previous.x())
                     > TrackValidationProfile.GLOBAL_SPEED_CEILING_PX_PER_FRAME
                     || Math.abs(frame.y() - previous.y())

@@ -848,6 +848,32 @@ public final class SolidContactState {
         return ridingStates.get(player);
     }
 
+    /** Rebind exchanged standing ownership in player order, retaining native same-owner precedence. */
+    public void repairSwappedStanding(com.openggf.sprites.playable.AbstractPlayableSprite p1,
+            com.openggf.sprites.playable.AbstractPlayableSprite p2,
+            java.util.function.Function<com.openggf.sprites.playable.AbstractPlayableSprite, ObjectInstance> occupant) {
+        var old1 = ridingStates.remove(p1);
+        var old2 = ridingStates.remove(p2);
+        com.openggf.sprites.playable.AbstractPlayableSprite[] players = {p1, p2};
+        Ride[] previous = {old2, old1};
+        for (int slot = 0; slot < 2; slot++) {
+            var player = players[slot];
+            if (!player.isOnObject()) continue;
+            var object = occupant.apply(player);
+            if (object == null) continue;
+            int piece = previous[slot] != null && previous[slot].object == object
+                    ? previous[slot].pieceIndex : -1;
+            // Same-object case deliberately ends with P2's bit alone, as in REV01.
+            Object ownerKey = latchKeyFor(object);
+            var otherBits = objectStandingBitSet.get(players[1 - slot]);
+            if (otherBits != null) otherBits.removeIf(key ->
+                    java.util.Objects.equals(ownerOf(key), ownerKey));
+            putRide(player, object, piece);
+            Object key = latchKeyFor(object, piece);
+            if (key != null) objectStandingBitSet.computeIfAbsent(player, p -> new HashSet<>()).add(key);
+        }
+    }
+
     public void ride(PlayableEntity player, ObjectInstance object, int pieceIndex) {
         putRide(player, object, pieceIndex);
     }

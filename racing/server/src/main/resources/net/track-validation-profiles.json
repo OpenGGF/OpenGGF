@@ -106,103 +106,120 @@
     "levelWidthPx" : 16384,
     "levelHeightPx" : 2048,
     "maxSpeedPxPerFrame" : 32,
-    "maxFramesPerSecond" : 60
+    "maxFramesPerSecond" : 60,
+    "maxSwapSources" : 13
   }, {
     "key" : "s2:0:1",
     "levelWidthPx" : 16384,
     "levelHeightPx" : 2048,
     "maxSpeedPxPerFrame" : 32,
-    "maxFramesPerSecond" : 60
+    "maxFramesPerSecond" : 60,
+    "maxSwapSources" : 12
   }, {
     "key" : "s2:1:0",
     "levelWidthPx" : 16384,
     "levelHeightPx" : 2048,
     "maxSpeedPxPerFrame" : 32,
-    "maxFramesPerSecond" : 60
+    "maxFramesPerSecond" : 60,
+    "maxSwapSources" : 19
   }, {
     "key" : "s2:1:1",
     "levelWidthPx" : 16384,
     "levelHeightPx" : 2048,
     "maxSpeedPxPerFrame" : 32,
-    "maxFramesPerSecond" : 60
+    "maxFramesPerSecond" : 60,
+    "maxSwapSources" : 19
   }, {
     "key" : "s2:2:0",
     "levelWidthPx" : 16384,
     "levelHeightPx" : 2048,
     "maxSpeedPxPerFrame" : 32,
-    "maxFramesPerSecond" : 60
+    "maxFramesPerSecond" : 60,
+    "maxSwapSources" : 13
   }, {
     "key" : "s2:2:1",
     "levelWidthPx" : 16384,
     "levelHeightPx" : 2048,
     "maxSpeedPxPerFrame" : 32,
-    "maxFramesPerSecond" : 60
+    "maxFramesPerSecond" : 60,
+    "maxSwapSources" : 18
   }, {
     "key" : "s2:3:0",
     "levelWidthPx" : 16384,
     "levelHeightPx" : 2048,
     "maxSpeedPxPerFrame" : 32,
-    "maxFramesPerSecond" : 60
+    "maxFramesPerSecond" : 60,
+    "maxSwapSources" : 13
   }, {
     "key" : "s2:3:1",
     "levelWidthPx" : 16384,
     "levelHeightPx" : 2048,
     "maxSpeedPxPerFrame" : 32,
-    "maxFramesPerSecond" : 60
+    "maxFramesPerSecond" : 60,
+    "maxSwapSources" : 16
   }, {
     "key" : "s2:4:0",
     "levelWidthPx" : 16384,
     "levelHeightPx" : 2048,
     "maxSpeedPxPerFrame" : 32,
-    "maxFramesPerSecond" : 60
+    "maxFramesPerSecond" : 60,
+    "maxSwapSources" : 8
   }, {
     "key" : "s2:4:1",
     "levelWidthPx" : 16384,
     "levelHeightPx" : 2048,
     "maxSpeedPxPerFrame" : 32,
-    "maxFramesPerSecond" : 60
+    "maxFramesPerSecond" : 60,
+    "maxSwapSources" : 14
   }, {
     "key" : "s2:5:0",
     "levelWidthPx" : 16384,
     "levelHeightPx" : 2048,
     "maxSpeedPxPerFrame" : 32,
-    "maxFramesPerSecond" : 60
+    "maxFramesPerSecond" : 60,
+    "maxSwapSources" : 12
   }, {
     "key" : "s2:5:1",
     "levelWidthPx" : 16384,
     "levelHeightPx" : 2048,
     "maxSpeedPxPerFrame" : 32,
-    "maxFramesPerSecond" : 60
+    "maxFramesPerSecond" : 60,
+    "maxSwapSources" : 13
   }, {
     "key" : "s2:6:0",
     "levelWidthPx" : 16384,
     "levelHeightPx" : 2048,
     "maxSpeedPxPerFrame" : 32,
-    "maxFramesPerSecond" : 60
+    "maxFramesPerSecond" : 60,
+    "maxSwapSources" : 11
   }, {
     "key" : "s2:6:1",
     "levelWidthPx" : 16384,
     "levelHeightPx" : 2048,
     "maxSpeedPxPerFrame" : 32,
-    "maxFramesPerSecond" : 60
+    "maxFramesPerSecond" : 60,
+    "maxSwapSources" : 16
   }, {
     "key" : "s2:7:0",
     "levelWidthPx" : 16384,
     "levelHeightPx" : 2048,
     "maxSpeedPxPerFrame" : 32,
-    "maxFramesPerSecond" : 60
+    "maxFramesPerSecond" : 60,
+    "maxSwapSources" : 10
   }, {
     "key" : "s2:7:1",
     "levelWidthPx" : 16384,
     "levelHeightPx" : 2048,
     "maxSpeedPxPerFrame" : 32,
-    "maxFramesPerSecond" : 60
+    "maxFramesPerSecond" : 60,
+    "maxSwapSources" : 13
   }, {
     "key" : "s2:7:2",
     "levelWidthPx" : 16384,
     "levelHeightPx" : 2048,
     "maxSpeedPxPerFrame" : 32,
-    "maxFramesPerSecond" : 60
+    "maxFramesPerSecond" : 60,
+    "maxSwapSources" : 11
   }, {
     "key" : "s3k:0:0",
     "levelWidthPx" : 12416,
@@ -335,5 +352,55 @@
     "levelHeightPx" : 4096,
     "maxSpeedPxPerFrame" : 32,
     "maxFramesPerSecond" : 60
+  }, {
+    "key" : "s3k:arena:0",
+    "levelWidthPx" : 5632,
+    "levelHeightPx" : 896,
+    "maxSpeedPxPerFrame" : 32,
+    "maxFramesPerSecond" : 60,
+    "wrapWidthPx" : 1024,
+    "wrapHeightPx" : 0,
+    "lapCount" : 5,
+    "maxSwapSources" : 12
+  }, {
+    "key" : "s3k:arena:1",
+    "levelWidthPx" : 3072,
+    "levelHeightPx" : 1024,
+    "maxSpeedPxPerFrame" : 32,
+    "maxFramesPerSecond" : 60,
+    "wrapWidthPx" : 512,
+    "wrapHeightPx" : 0,
+    "lapCount" : 5,
+    "maxSwapSources" : 12
+  }, {
+    "key" : "s3k:arena:2",
+    "levelWidthPx" : 3072,
+    "levelHeightPx" : 512,
+    "maxSpeedPxPerFrame" : 32,
+    "maxFramesPerSecond" : 60,
+    "wrapWidthPx" : 1024,
+    "wrapHeightPx" : 256,
+    "lapCount" : 5,
+    "maxSwapSources" : 12
+  }, {
+    "key" : "s3k:arena:3",
+    "levelWidthPx" : 3072,
+    "levelHeightPx" : 512,
+    "maxSpeedPxPerFrame" : 32,
+    "maxFramesPerSecond" : 60,
+    "wrapWidthPx" : 1024,
+    "wrapHeightPx" : 0,
+    "lapCount" : 5,
+    "maxSwapSources" : 12
+  }, {
+    "key" : "s3k:arena:4",
+    "levelWidthPx" : 3072,
+    "levelHeightPx" : 512,
+    "maxSpeedPxPerFrame" : 32,
+    "maxFramesPerSecond" : 60,
+    "wrapWidthPx" : 1024,
+    "wrapHeightPx" : 0,
+    "lapCount" : 5,
+    "maxSwapSources" : 12
   } ]
 }

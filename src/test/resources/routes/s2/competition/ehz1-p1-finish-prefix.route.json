@@ -1,0 +1,123 @@
+{
+  "format" : "openggf-route/1",
+  "launch" : {
+    "rom" : {
+      "game" : "s2",
+      "crc32" : "7B905383",
+      "sha1" : "8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9"
+    },
+    "inlet" : {
+      "kind" : "title"
+    },
+    "roster" : {
+      "main" : "sonic",
+      "sidekick" : "tails"
+    },
+    "width" : 320,
+    "donor" : "off",
+    "initial" : {
+      "vIntStart" : 0
+    }
+  },
+  "checks" : {
+    "guard" : {
+      "allowHurt" : true,
+      "allowRingLoss" : true,
+      "allowDeath" : false,
+      "allowBoundary" : true,
+      "holds" : {
+        "kind" : "fact-equals",
+        "key" : "competition.p2.dead",
+        "value" : 0
+      }
+    },
+    "startRow" : 1200,
+    "legs" : [ {
+      "id" : "p1-upper-approach",
+      "maxRows" : 6000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "player-in",
+          "player" : "P1",
+          "region" : [ 4600, 0, 4800, 700 ]
+        }
+      }
+    }, {
+      "id" : "p1-over-lower-wall",
+      "maxRows" : 6000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "player-in",
+          "player" : "P1",
+          "region" : [ 6300, 0, 6500, 800 ]
+        }
+      }
+    }, {
+      "id" : "p1-act1-finish",
+      "maxRows" : 7000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "all",
+          "clauses" : [ {
+            "kind" : "player-in",
+            "player" : "P1",
+            "region" : [ 10816, 0, 11328, 850 ]
+          }, {
+            "kind" : "fact-equals",
+            "key" : "competition.p1.timerPaused",
+            "value" : 1
+          } ]
+        }
+      }
+    } ]
+  },
+  "tape" : {
+    "script" : "ehz1-p1-finish-prefix.script",
+    "rows" : 3639,
+    "sha256" : "4ab591f4e410e6f2ed9f60c81d1f2877054bb1a269b16c8b5e35bbb4ed3dd1a2"
+  },
+  "provenance" : {
+    "producer" : "RoutePlanner prefix-search/3 goal program",
+    "engine" : "openggf 0.8.prerelease-bf56fe962-dirty stageplay-s2-competition-title/1",
+    "source" : "authored after a 2541-row prefix toward legs [p1-upper-approach, p1-over-lower-wall, p1-act1-finish]",
+    "notes" : [ ]
+  },
+  "qualification" : [ {
+    "scope" : "ENGINE",
+    "passed" : true,
+    "content" : "19e82d311abed5f2f0918a95572fd807213fefca7e8ffe7a19888e097eabe5cc",
+    "environment" : "openggf 0.8.prerelease-bf56fe962-dirty stageplay-s2-competition-title/1",
+    "rows" : 3639
+  } ],
+  "native" : {
+    "entry" : {
+      "movie" : "src/test/resources/routes/s2/competition/witnesses/ehz-native-prefix.script",
+      "prefixRows" : 1329,
+      "inputHash" : "8f8669ed648d485c9dfc349e1bdba91d2a29743b76a3be7b5644ade8e3d30c34",
+      "engineAnchorRows" : 1151,
+      "anchorBoundary" : "first-ordinary-level-lfc-zero"
+    },
+    "lag" : [ ]
+  }
+}

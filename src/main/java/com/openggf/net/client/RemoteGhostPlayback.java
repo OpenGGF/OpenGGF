@@ -35,6 +35,12 @@ public final class RemoteGhostPlayback {
     private int velocityY;
     private int cleanStreak;
     private boolean stalled;
+    private int wrapWidth, wrapHeight;
+    void geometry(int width, int height) { wrapWidth = width; wrapHeight = height; }
+    private static int delta(int value, int wrap) {
+        return wrap > 0 ? Math.floorMod(value + wrap / 2, wrap) - wrap / 2 : value;
+    }
+    private static int position(int value, int wrap) { return wrap > 0 ? Math.floorMod(value, wrap) : clampU16(value); }
 
     public void onEntry(GhostPackets.AggregateEntry entry) {
         if (entry.startFrameIndex() < 0 || entry.frameCount() < 1
@@ -114,8 +120,8 @@ public final class RemoteGhostPlayback {
         }
         GhostFrame previous = frames.get(index - 1);
         if (previous != null) {
-            velocityX = frame.x() - previous.x();
-            velocityY = frame.y() - previous.y();
+            velocityX = delta(frame.x() - previous.x(), wrapWidth);
+            velocityY = delta(frame.y() - previous.y(), wrapHeight);
         }
         extrapolated = 0;
         stalled = false;
@@ -137,10 +143,10 @@ public final class RemoteGhostPlayback {
         if (extrapolated < EXTRAPOLATE_MAX_FRAMES) {
             extrapolated++;
             GhostFrame projected = new GhostFrame(
-                    clampU16(last.x() + velocityX * extrapolated),
-                    clampU16(last.y() + velocityY * extrapolated),
+                    position(last.x() + velocityX * extrapolated, wrapWidth),
+                    position(last.y() + velocityY * extrapolated, wrapHeight),
                     last.mappingFrame(), last.hFlip(), last.vFlip(), last.finished(),
-                    last.priorityBucket(), last.highPriority(), last.hurt());
+                    last.priorityBucket(), last.highPriority(), last.hurt(), last.progress(), last.secondaryPath(), last.shoeKind());
             return Optional.of(new RenderState(projected, 1.0f, false));
         }
         stalled = true;

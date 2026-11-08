@@ -107,6 +107,13 @@ public class BuzzerBadnikInstance extends AbstractBadnikInstance implements Rewi
         }
     }
 
+    com.openggf.level.objects.ObjectRoutineLifetime.Tail routineTail() {
+        // Obj4B_Init returns; all body updates then reach Obj4B_Main's tail.
+        return moveTimer == MOVE_TIMER_INIT && turnDelay == 0 && shotTimer == 0
+                ? com.openggf.level.objects.ObjectRoutineLifetime.Tail.CUSTOM
+                : com.openggf.level.objects.ObjectRoutineLifetime.Tail.MARK_OBJ_GONE_P1;
+    }
+
     private void runInitRoutine() {
         initPending = false;
         state = State.ROAMING;
@@ -262,7 +269,7 @@ public class BuzzerBadnikInstance extends AbstractBadnikInstance implements Rewi
         renderer.drawFrameIndex(animFrame, currentX, currentY, !facingLeft, false);
     }
 
-    private static final class BuzzerFlameChild extends AbstractObjectInstance implements RewindRecreatable {
+    static final class BuzzerFlameChild extends AbstractObjectInstance implements RewindRecreatable {
         private final BuzzerBadnikInstance parent;
         private int parentSlotIndex;
         private int currentX;

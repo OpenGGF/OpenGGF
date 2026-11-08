@@ -1,5 +1,8 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.game.sonic2.competition.view.Sonic2NativeDisplaySource;
+import com.openggf.game.sonic2.competition.view.Sonic2CompetitionDisplayInputs.*;
+
 import com.openggf.level.objects.ObjectVisualFacing;
 
 import com.openggf.graphics.GLCommand;
@@ -30,7 +33,7 @@ import java.util.List;
  * Behavior: Depresses 8 pixels when player lands on it, triggers parent
  */
 public class EggPrisonButtonObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider,
+        implements Sonic2NativeDisplaySource, SolidObjectProvider,
         SpawnNullableReferenceRewindRecreatable, ObjectVisualFacing.NonDirectional {
     // Obj3E button only depresses vertically; it does not share the released animals' facing.
 
@@ -261,4 +264,11 @@ public class EggPrisonButtonObjectInstance extends AbstractObjectInstance
         return String.format("EggPrisonButton[x=%d, y=%d, triggered=%b]",
             spawn.x(), currentY, triggered);
     }
+
+    // loc_3F228 (s2.asm:84973-84988), button row of Obj3E_ObjLoadData (s2.asm:84951-84956).
+    @Override public ObjectSlot nativeDisplaySlot() {
+        return isDestroyed() ? null : new ObjectSlot(0x3E,0x84,spawn.x()&0xFFFF,currentY&0xFFFF,
+                16,0,new Mapping(0x3F436,4),0x2680,null);
+    }
+
 }

@@ -13,6 +13,13 @@ import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestGhostStore {
+    @org.junit.jupiter.api.Test void arenaPathsDoNotCollideWithActs(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir) throws Exception {
+        var store = new GhostStore(dir);
+        assertNotEquals(store.pathFor(com.openggf.net.protocol.TrackKey.parse("s3k:arena:1"), "sonic"),
+                store.pathFor(com.openggf.net.protocol.TrackKey.parse("s3k:1:0"), "sonic"));
+        assertEquals("arena-1-sonic.ggfghost", store.pathFor(com.openggf.net.protocol.TrackKey.parse("s3k:arena:1"), "sonic").getFileName().toString());
+    }
+
     @Test
     void rejectedCandidateNeverMovesOrReplacesExistingPrimaryPair(@TempDir Path root) throws IOException {
         GhostStore store=new GhostStore(root);
@@ -69,7 +76,7 @@ class TestGhostStore {
     void hashSidecarKeepsCommittedPairUsableWhenLegacyAliasMaintenanceFails(@TempDir Path root) throws IOException {
         GhostStore initial=new GhostStore(root);initial.saveIfBest(ghost(0,4000),inputs());
         AttemptInputRecording changed=inputs();changed.appendFrame(0x04,false);
-        GhostRecording faster=new GhostRecording(new GhostHeader(1,"s3k",0,0,"sonic","x",0,3000,
+        GhostRecording faster=new GhostRecording(new GhostHeader(GhostFileCodec.FORMAT_VERSION,"s3k",0,0,"sonic","x",0,3000,
                 new int[0],changed.sha256()),new byte[7]);
         Path alias=root.resolve("s3k/0-0-sonic.ggfinputs").toAbsolutePath();
         byte[] original=Files.readAllBytes(alias);
@@ -112,7 +119,7 @@ class TestGhostStore {
         for(int i=0;i<8;i++) {
             AttemptInputRecording recording=new AttemptInputRecording(new AttemptStartDescriptor("s3k",0,0,"sonic","fp"));
             recording.appendFrame(i,false);
-            GhostRecording candidate=new GhostRecording(new GhostHeader(1,"s3k",0,0,"sonic","x",0,6000-i*500,
+            GhostRecording candidate=new GhostRecording(new GhostHeader(GhostFileCodec.FORMAT_VERSION,"s3k",0,0,"sonic","x",0,6000-i*500,
                     new int[0],recording.sha256()),new byte[7]);
             assertTrue(store.saveIfBest(candidate,recording));
             if(i==0)oldestHash=java.util.HexFormat.of().formatHex(recording.sha256());
@@ -134,7 +141,7 @@ class TestGhostStore {
     private static GhostRecording ghost(int firstInput, int finish) {
         byte[] frames = new byte[7];
         // Header hash must match the inputs the store persists alongside (binding enforced).
-        return new GhostRecording(new GhostHeader(1, "s3k", 0, 0, "sonic", "p",
+        return new GhostRecording(new GhostHeader(GhostFileCodec.FORMAT_VERSION, "s3k", 0, 0, "sonic", "p",
                 firstInput, finish, new int[0], inputs().sha256()), frames);
     }
 
@@ -172,7 +179,7 @@ class TestGhostStore {
     @Test
     void rejectsGhostWhoseHashDoesNotMatchInputs(@TempDir Path root) {
         GhostStore store = new GhostStore(root);
-        GhostRecording mismatched = new GhostRecording(new GhostHeader(1, "s3k", 0, 0, "sonic", "p",
+        GhostRecording mismatched = new GhostRecording(new GhostHeader(GhostFileCodec.FORMAT_VERSION, "s3k", 0, 0, "sonic", "p",
                 0, 3600, new int[0], new byte[32]), new byte[7]); // zero hash != inputs().sha256()
         assertThrows(IllegalArgumentException.class, () -> store.saveIfBest(mismatched, inputs()));
     }

@@ -253,6 +253,10 @@ public class OilSurfaceManager {
             // Check if player should land on oil surface
             // ROM: PlatformObject_SingleCharacter does the landing check
             if (shouldLandOnOil(player, state)) {
+                // Obj07 (s2.asm:50166-50200) calls PlatformObject_SingleCharacter;
+                // PlatformObject_ChkYRange falls into RideObject_SetRide and
+                // ResetOnFloor_Part2 (s2.asm:35968-36030) on airborne arrival.
+                com.openggf.sprites.playable.PlayableNativeFloorReset.resetChain(player);
                 boolean wasHurt = player.isHurt();
                 state.standingOnOil = true;
                 clearAirForOilSupport(player);

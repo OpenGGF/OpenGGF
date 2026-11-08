@@ -289,4 +289,34 @@ class TestServerBrowserView {
         assertEquals(0, actions.backs);
     }
 
+
+    @Test
+    void roomsShowTheirTrackAndACompetitionModeTag() {
+        ControlMessage.RoomSummary arena = new ControlMessage.RoomSummary("a", "Arena night", "s3k", 2, 0, "OPEN", 3, 8,
+                "RELAY", false, "FULL_CHAT", "ARENA", "COMPETITION");
+        ControlMessage.RoomSummary act = new ControlMessage.RoomSummary("b", "Practice", "s3k", 0, 0, "OPEN", 1, 8,
+                "DIRECT", true, "FULL_CHAT");
+        RoomDirectory directory = new RoomDirectory() {
+            @Override public boolean isOpen() { return true; }
+            @Override public CompletableFuture<ControlMessage.RoomListResult> listRooms(String gameId, int page) {
+                return CompletableFuture.completedFuture(new ControlMessage.RoomListResult(List.of(arena, act), 0, 1));
+            }
+        };
+        ServerBrowserView view = new ServerBrowserView(directory, "s3k", actions, cues::add, () -> 0L);
+        input.idle(view::update);
+        input.idle(view::update);
+        for (int width : new int[] {320, 400}) {
+            RecordingSceneCanvas canvas = new RecordingSceneCanvas(width);
+            view.draw(canvas);
+            assertTrue(canvas.shows("CHROME GADGET"), "the arena's ROM zone name, from its track key");
+            assertTrue(canvas.shows("ANGEL ISLAND 1"));
+            assertTrue(canvas.shows("COMPETITION") && canvas.shows("TIME ATTACK"),
+                    "listed modes differ, so every room carries its mode tag");
+            assertTrue(canvas.shows("UNVERIFIED"), "an unverified Competition room publishes labelled times");
+        }
+        input.tapKey(view::update, SceneKeys.F1);
+        String details = openggf.timeattack.ui.FullTextReaderProbe.readAll(input, view::update, view::draw,
+                view::detailsVisibleLines, view::detailsFirstLine);
+        assertTrue(details.contains("Competition") && details.contains("Chrome Gadget"), details);
+    }
 }

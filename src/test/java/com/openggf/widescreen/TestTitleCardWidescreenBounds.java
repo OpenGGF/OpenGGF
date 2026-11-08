@@ -20,13 +20,38 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestTitleCardWidescreenBounds {
 
     @Test
-    void s2ExitTailsKeepRomPassTimingAtEveryViewportWidth() throws IOException {
-        String source = Files.readString(Path.of(
-                "src/main/java/com/openggf/game/sonic2/titlecard/TitleCardManager.java"));
-
-        assertTrue(source.contains("leaveLoopPass() >= LEAVE_LEFT_PASSES"));
-        assertTrue(source.contains(
-                "leaveLoopPass() >= LEAVE_LEFT_PASSES + LEAVE_BOTTOM_PASSES"));
+    void s2ExitTailsKeepRomPassTimingAtEveryViewportWidth() {
+        var graphics = GameServices.graphics();
+        int previousWidth = graphics.getProjectionWidth();
+        var baseline = new java.util.ArrayList<com.openggf.game.sonic2.titlecard.TitleCardNativeDisplayAccess.Display>();
+        try {
+            for (int width : new int[]{320, 424, 528}) {
+                graphics.setProjectionWidth(width);
+                var manager = new com.openggf.game.sonic2.titlecard.TitleCardManager();
+                manager.beginOmittedPresentationLeave(0, 0);
+                manager.completeLockedIteration();
+                for (int wait = 1; wait <= 25; wait++) {
+                    manager.update();
+                    manager.completeLockedIteration();
+                    var parts = com.openggf.game.sonic2.titlecard.TitleCardNativeDisplayAccess.read(manager);
+                    if (width == 320) baseline.add(parts);
+                    else assertEquals(baseline.get(wait - 1), parts, "native slots are independent of viewport width");
+                    // Obj34_LeftPartOut / BottomPartOut / BackgroundOut
+                    // (s2.asm:27518-27604): native slot order delays each handoff.
+                    if (wait == 5) {
+                        assertFalse(parts.parts().get(5).alive());
+                        assertEquals(16, parts.parts().get(4).routine());
+                    }
+                    if (wait == 16) {
+                        assertFalse(parts.parts().get(4).alive());
+                        assertEquals(18, parts.parts().get(3).routine());
+                    }
+                    assertEquals(wait == 25, manager.shouldReleaseControl(), "native background deletion releases control");
+                }
+            }
+        } finally {
+            graphics.setProjectionWidth(previousWidth);
+        }
     }
 
     @Test

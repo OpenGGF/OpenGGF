@@ -118,7 +118,8 @@ class TestSonic2OptionsControls {
         var provider = new Sonic2NativeModeProvider();
         assertSame(provider.optionsScreen(), provider.optionsScreen());
         assertSame(provider.optionsState(), provider.optionsState());
-        assertNull(provider.competitionScreen());
+        assertNull(provider.competitionScreen(), "a visit needs the host context");
+        assertTrue(provider.competitionAvailable(), "EHZ, MCZ and CNZ are qualified");
     }
 
     static void press(Sonic2OptionsState state, int directions, int actions) {

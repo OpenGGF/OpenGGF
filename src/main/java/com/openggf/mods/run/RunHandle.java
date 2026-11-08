@@ -1,5 +1,7 @@
 package com.openggf.mods.run;
 
+import com.openggf.game.arena.RaceEvent;
+
 import com.openggf.game.ModApi;
 import com.openggf.net.identity.PlayerAppearance;
 
@@ -73,4 +75,7 @@ public interface RunHandle {
 
     /** True until the run has ended. */
     boolean isActive();
+
+    /** Queues an external event before the next executed step; engine support is opt-in. */
+    default void queueRaceEvent(RaceEvent event) { }
 }

@@ -43,4 +43,35 @@ class TestHudTextLayout {
         assertEquals("NEXT: LBL s3k:1:0",
                 HudTextLayout.voteResultLine("s3k:1:0", key -> "LBL " + key));
     }
+
+    @Test
+    void plainRowsCarryARightAlignedSuffixInItsOwnColour() {
+        HudTextLayout.Line line = HudTextLayout.Line.split("P4/37", HudTextLayout.MUTED, "UNVERIFIED", HudTextLayout.AMBER);
+        assertEquals("P4/37 UNVERIFIED", line.plain());
+        assertEquals(com.openggf.mods.ui.CompactFont.width("P4/37", 1) + 6
+                + com.openggf.mods.ui.CompactFont.width("UNVERIFIED", 1), line.width());
+        HudTextLayout.Panel panel = HudTextLayout.panel(320, 4, 140, List.of(line), HudTextLayout.ACCENT);
+        assertEquals("UNVERIFIED", panel.lines().getFirst().suffix(), "kept while it fits");
+        HudTextLayout.Panel narrow = HudTextLayout.panelAt(0, 4, 60, List.of(line), HudTextLayout.ACCENT);
+        assertEquals("", narrow.lines().getFirst().suffix(), "a suffix that cannot fit is left out, not overlapped");
+    }
+
+    @Test
+    void romClockMarksDrawInOneCellEach() {
+        List<int[]> fills = new java.util.ArrayList<>();
+        com.openggf.mods.ui.PixelCanvas canvas = new com.openggf.mods.ui.PixelCanvas() {
+            public int width() { return 320; }
+            public int height() { return 224; }
+            public void fill(int x, int y, int w, int h, int argb) { fills.add(new int[] {x, y, w, h}); }
+        };
+        HudTextLayout.compact(canvas, "0'21\"50", 10, 20, HudTextLayout.WHITE);
+        // The seconds mark sits in the fifth cell (x 34..38) and draws no '?' fallback.
+        assertTrue(fills.stream().anyMatch(fill -> fill[0] >= 34 && fill[0] + fill[2] <= 39 && fill[1] == 20));
+        assertTrue(fills.stream().noneMatch(fill -> fill[0] >= 34 && fill[0] < 39 && fill[1] > 22),
+                "two short strokes at the top of the cell only");
+        fills.clear();
+        HudTextLayout.compact(canvas, "" + HudTextLayout.SWAP_MARK, 0, 0, HudTextLayout.WHITE);
+        assertTrue(fills.stream().allMatch(fill -> fill[0] >= 0 && fill[0] + fill[2] <= 5 && fill[1] < 7));
+        assertEquals(6, fills.size(), "two arrows: heads and shafts");
+    }
 }

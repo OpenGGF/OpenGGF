@@ -57,6 +57,22 @@ class TestFlipperRollOwnership {
         }
     }
 
+    @Test
+    @com.openggf.tests.rules.RequiresRom(SonicGame.SONIC_2)
+    void bothFlipperTypesRetainTheirRomWidthByteForNewLandings() throws Exception {
+        // Obj86_Init (s2.asm:58433-58445) writes width_pixels=$18 even though
+        // Obj86_HorizontalType (s2.asm:58588-58605) passes d1=$13.
+        // SolidObject_Landed (s2.asm:35588-35601) re-reads that width byte.
+        int width = TestEnvironment.currentRom().readByte(0x2B177) & 0xff;
+        assertEquals(24, width);
+        for (int subtype : new int[]{0, 1}) {
+            var flipper = new FlipperObjectInstance(new ObjectSpawn(512, 768, 0x86, subtype, 0, false, 0), "Flipper");
+            int collisionWidth = flipper.getSolidParams().halfWidth();
+            assertEquals(subtype == 0 ? 35 : 19, collisionWidth);
+            assertEquals(width, flipper.getTopLandingHalfWidth(null, collisionWidth));
+        }
+    }
+
     private static void contact(FlipperObjectInstance flipper, AbstractPlayableSprite player, boolean standing)
             throws Exception {
         Method method = FlipperObjectInstance.class.getDeclaredMethod(

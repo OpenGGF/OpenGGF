@@ -20,6 +20,11 @@ public final class PaletteUploadPresentation {
         }
     }
 
+    /** Defensive displayed colors for state-free scene capture; null until this row is uploaded. */
+    public static int[] copyDisplayedPaletteArgb(GraphicsManager graphics, int line) {
+        return graphics == null ? null : graphics.paletteTextures().copyDisplayedPaletteArgb(line);
+    }
+
     /** Uploads everything written since the previous publication and keeps latching. */
     public static void publishAndLatch(GraphicsManager graphics) {
         if (graphics != null) {

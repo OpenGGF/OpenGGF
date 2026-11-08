@@ -1,5 +1,8 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.game.sonic2.competition.view.Sonic2NativeDisplaySource;
+import com.openggf.game.sonic2.competition.view.Sonic2CompetitionDisplayInputs.*;
+
 import com.openggf.level.objects.ObjectVisualFacing;
 
 import com.openggf.configuration.SonicConfiguration;
@@ -52,7 +55,7 @@ import java.util.List;
  * Uses MCZ level art tiles (palette 2).
  */
 public class StomperObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+        implements Sonic2NativeDisplaySource, SolidObjectProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
     // Obj2A crushes vertically with no horizontal-facing body or child.
 
     private static final boolean DEBUG_VIEW_ENABLED = staticDebugViewEnabled();
@@ -263,6 +266,13 @@ public class StomperObjectInstance extends AbstractObjectInstance
         int crossHalf = Math.min(halfWidth, halfHeight) / 4;
         ctx.drawLine(x - crossHalf, y, x + crossHalf, y, r, g, b);
         ctx.drawLine(x, y - crossHalf, x, y + crossHalf, r, g, b);
+    }
+
+
+    // Obj2A_Init (s2.asm:24215-24228): direct level-art owner; ordinary drawing bypasses frame capture.
+    @Override public ObjectSlot nativeDisplaySlot() {
+        return isDestroyed() ? null : new ObjectSlot(0x2A,0x14|(spawn.renderFlags()&3),
+                getX()&0xFFFF,getY()&0xFFFF,16,80,new Mapping(0x11666,0),0x4000,null);
     }
 
 }

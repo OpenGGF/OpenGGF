@@ -182,6 +182,16 @@ public final class SessionRegistry {
     }
 
     public boolean updateTrack(String roomId, String hostFingerprint, int zone, int act) {
+        RoomEntry room = rooms.get(roomId);
+        return updateTrack(roomId, hostFingerprint, zone, act, room == null ? "ACT" : room.descriptor().trackKind());
+    }
+
+    public boolean updateTrack(String roomId, String hostFingerprint, int zone, int act, String kind) {
+        RoomEntry room = rooms.get(roomId);
+        return updateTrack(roomId, hostFingerprint, zone, act, kind, room == null ? "TIME_ATTACK" : room.descriptor().mode());
+    }
+
+    public boolean updateTrack(String roomId, String hostFingerprint, int zone, int act, String kind, String mode) {
         RoomEntry entry = rooms.get(roomId);
         if (entry == null || !entry.hostFingerprint().equals(hostFingerprint)) {
             return false;
@@ -189,7 +199,7 @@ public final class SessionRegistry {
         ControlMessage.RoomDescriptor old = entry.descriptor();
         ControlMessage.RoomDescriptor updated = new ControlMessage.RoomDescriptor(
                 old.name(), old.gameId(), zone, act, old.characterPolicy(),
-                old.lockedCharacter(), old.maxPlayers(), old.verified(), old.accessPolicy(), old.chatMode());
+                old.lockedCharacter(), old.maxPlayers(), old.verified(), old.accessPolicy(), old.chatMode(), kind, mode);
         rooms.put(roomId, new RoomEntry(entry.roomId(), updated, entry.routing(),
                 entry.hostFingerprint(), entry.hostAddress(), entry.directPort(),
                 entry.determinismFingerprint(), entry.playerCount(),
@@ -206,7 +216,7 @@ public final class SessionRegistry {
         ControlMessage.RoomDescriptor old = entry.descriptor();
         ControlMessage.RoomDescriptor updated = new ControlMessage.RoomDescriptor(
                 old.name(), old.gameId(), old.zone(), old.act(), old.characterPolicy(),
-                old.lockedCharacter(), old.maxPlayers(), old.verified(), policy, old.chatMode());
+                old.lockedCharacter(), old.maxPlayers(), old.verified(), policy, old.chatMode(), old.trackKind(), old.mode());
         rooms.put(roomId, new RoomEntry(entry.roomId(), updated, entry.routing(),
                 entry.hostFingerprint(), entry.hostAddress(), entry.directPort(),
                 entry.determinismFingerprint(), entry.playerCount(), entry.lastHeartbeatMillis(),
@@ -235,7 +245,7 @@ public final class SessionRegistry {
                                                                String mode) {
         return new ControlMessage.RoomDescriptor(room.name(), room.gameId(), room.zone(), room.act(),
                 room.characterPolicy(), room.lockedCharacter(), room.maxPlayers(), room.verified(),
-                room.accessPolicy(), mode);
+                room.accessPolicy(), mode, room.trackKind(), room.mode());
     }
 
     public int expireStale() {

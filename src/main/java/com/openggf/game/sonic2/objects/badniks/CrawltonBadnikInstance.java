@@ -1,5 +1,8 @@
 package com.openggf.game.sonic2.objects.badniks;
 
+import com.openggf.game.sonic2.competition.view.Sonic2NativeDisplaySource;
+import com.openggf.game.sonic2.competition.view.Sonic2CompetitionDisplayInputs.*;
+
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.AbstractBadnikInstance;
 
@@ -33,7 +36,7 @@ import java.util.List;
  * persist between frames and accumulate velocity offsets during the lunge.
  * We simulate this by tracking persistent segment positions in arrays.
  */
-public class CrawltonBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable, ObjectVisualFacing.Source {
+public class CrawltonBadnikInstance extends AbstractBadnikInstance implements Sonic2NativeDisplaySource, RewindRecreatable, ObjectVisualFacing.Source {
     @Override public ObjectVisualFacing.Basis nativeFacing() {
         return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
     }
@@ -41,6 +44,7 @@ public class CrawltonBadnikInstance extends AbstractBadnikInstance implements Re
     // ROM Obj9E_Init allocates a second SST slot for the multi-sprite body child
     // (see reserveMultiSpriteChildSlot). Tracked so it is allocated exactly once.
     private boolean childSlotReserved;
+    private int nativeChildSlot=-1;
     // Collision from Obj9E_SubObjData (s2.asm:75587): collision_flags = $0B
     private static final int COLLISION_SIZE_INDEX = 0x0B;
 
@@ -151,7 +155,8 @@ public class CrawltonBadnikInstance extends AbstractBadnikInstance implements Re
             return;
         }
         childSlotReserved = true;
-        svc.objectManager().allocateChildSlots(spawn, 1);
+        int[] slots=svc.objectManager().allocateChildSlots(spawn, 1);
+        if(slots.length>0) nativeChildSlot=slots[0];
     }
 
     @Override
@@ -367,6 +372,28 @@ public class CrawltonBadnikInstance extends AbstractBadnikInstance implements Re
 
         // Render head on top, using frame 0
         renderer.drawFrameIndex(0, currentX, currentY, hFlip, false);
+    }
+
+
+    // Obj9E_Init (s2.asm:75436-75440); loc_37F74 (s2.asm:75556-75586).
+    @Override public ObjectSlot nativeDisplaySlot() {
+        throw new IllegalStateException("Obj9E head and body require projectAll");
+    }
+    @Override public java.util.List<DisplaySlot> nativeDisplaySlots() {
+        if(isDestroyed()) return java.util.List.of();
+        var slots=new java.util.ArrayList<DisplaySlot>();
+        slots.add(new DisplaySlot(getSlotIndex(),4,new ObjectSlot(0x9E,4|(!facingLeft ? 1 : 0),
+                currentX&0xFFFF,currentY&0xFFFF,128,128,new Mapping(0x37FF2,animFrame),0x21E0,null)));
+        if(nativeChildSlot>=0) {
+            var children=new java.util.ArrayList<Child>();
+            for(int i=0;i<NUM_BODY_SEGMENTS;i++) children.add(new Child(segX[i]&0xFFFF,segY[i]&0xFFFF,2));
+            // Child SST x/y remain its allocation origin; segment updates do not move its culling centre.
+            slots.add(new DisplaySlot(nativeChildSlot,5,new ObjectSlot(0x9E,0x54|(spawn.renderFlags()&3),
+                    spawn.x()&0xFFFF,spawn.y()&0xFFFF,0,0,new Mapping(0x37FF2,0),0x21E0,
+                    new MultiSprite(0,128,128,children))));
+        }
+        slots.sort(java.util.Comparator.comparingInt(DisplaySlot::priorityBucket).thenComparingInt(DisplaySlot::slot));
+        return java.util.List.copyOf(slots);
     }
 
 }

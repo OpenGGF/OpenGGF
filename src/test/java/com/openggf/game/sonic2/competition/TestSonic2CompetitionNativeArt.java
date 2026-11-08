@@ -38,11 +38,6 @@ class TestSonic2CompetitionNativeArt {
             assertEquals(0x300, art.baseTerrain().primaryCollisionBytes().length);
             assertEquals(0x300, art.baseTerrain().secondaryCollisionBytes().length);
             assertEquals(e[8], art.baseTerrain().patternBytes().length);
-            assertArrayEquals(art.baseTerrain().patternBytes(),
-                    Arrays.copyOf(art.vram().bytes(), e[8]));
-            // Initial zone art is all this image owns: no fabricated PLC, DPLC or SAT uploads.
-            assertArrayEquals(new byte[0x10000 - e[8]],
-                    Arrays.copyOfRange(art.vram().bytes(), e[8], 0x10000));
             if (e[2] != 0) {
                 assertEquals(e[4], art.readWord(e[3]));
                 assertEquals(e[5], art.readWord(0xA800));

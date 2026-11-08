@@ -33,10 +33,15 @@ public record VotePool(String name, List<String> acts) {
             throw new IllegalArgumentException("duplicate act in pool");
         }
         for (String act : acts) {
-            if (!isActText(act)) {
+            if (!isActText(act) && !isArenaText(act)) {
                 throw new IllegalArgumentException("bad act " + act);
             }
         }
+    }
+
+    /** Arena menu index in the same game-local pool grammar as acts. */
+    public static boolean isArenaText(String text) {
+        return text != null && text.matches("arena:[0-4]");
     }
 
     /** True for {@code zone:act} with 1-3 digit engine ints. */

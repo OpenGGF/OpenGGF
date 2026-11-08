@@ -84,7 +84,7 @@ import static org.mockito.Mockito.when;
  * Unit tests for the {@link RewindRegistry} integration on
  * {@link GameplayModeContext}.
  *
- * <p>Tests verify that the eighteen always-available atomic adapters are
+ * <p>Tests verify that the twenty always-available atomic adapters are
  * registered automatically when {@link GameplayModeContext#attachGameplayManagers}
  * is called, without requiring a full level load or ROM access.
  */
@@ -195,19 +195,22 @@ class TestGameplayModeContextRewindRegistry {
                 ctx.seamlessTransitionResourceHandoffs().key(),
                 com.openggf.game.sonic2.timing.Sonic2LevelMusicScheduler.REWIND_KEY,
                 com.openggf.game.sonic2.slotmachine.CNZPrizeSoundState.REWIND_KEY,
+                // 50bc64259: S2 Chain_Bonus_counter is shared even in 1P.
+                "sonic2_badnik_chain",
                 "solid-execution",
+                "sonic2.race-swap",
                 "kosinski-module-queue");
         assertTrue(snapshot.entries().keySet().containsAll(expectedKeys),
                 "Expected all atomic adapter keys to be present, got: " + snapshot.entries().keySet());
     }
 
     @Test
-    void exactlyEighteenAtomicKeysAfterAttach() {
+    void exactlyTwentyAtomicKeysAfterAttach() {
         GameplayModeContext ctx = buildAttachedContext();
         RewindRegistry registry = ctx.getRewindRegistry();
         CompositeSnapshot snapshot = registry.capture();
-        assertEquals(18, snapshot.entries().keySet().size(),
-                "Expected exactly 18 atomic adapters, got: " + snapshot.entries().keySet());
+        assertEquals(20, snapshot.entries().keySet().size(),
+                "Expected exactly 20 atomic adapters, got: " + snapshot.entries().keySet());
     }
 
     @Test
@@ -460,7 +463,8 @@ class TestGameplayModeContextRewindRegistry {
         RewindRegistry second = ctx.getRewindRegistry();
         assertNotNull(second);
         assertNotSame(first, second, "Re-attach should produce a new RewindRegistry instance");
-        assertEquals(18, second.capture().entries().keySet().size());
+        assertEquals(20, second.capture().entries().keySet().size());
+        assertTrue(second.capture().containsKey("sonic2.race-swap"),"reattachment must retain the timer/request adapter");
         var running = second.capture();
         previousState.setGamePaused(true);
         gameState2.setGamePaused(true);

@@ -56,10 +56,22 @@ public final class RouteReplay {
                 if (cancellation.cancelled()) return new ReplayResult.Failed(i, "cancelled");
                 sample = world.step(tape.row(i)).after();
                 observer.afterRow(i, sample);
+                for(var inlet:route.manifest().nativeFacts().inlets()) if(i+1==inlet.anchor().engineAnchorRows()) {
+                    if(sample.facts().getOrDefault("input.levelAnchorRows",-1)!=i+1 || sample.clocks().levelFrameCounter()!=0)
+                        return new ReplayResult.Failed(i,"later engine gameplay anchor disagrees with native inlet metadata");
+                }
                 for (ReplayCheck check : checks) {
                     String failure = check.afterRow(i, sample);
                     if (failure != null) return new ReplayResult.Failed(i, check.name() + ": " + failure);
                 }
+            }
+            var nativeEntry = route.manifest().nativeFacts().entry();
+            if (nativeEntry.isPresent() && !nativeEntry.get().anchorBoundary().isEmpty()) {
+                var entry = nativeEntry.get();
+                Integer observed = sample.facts().get("input.gameplayAnchorRows");
+                if (!entry.anchorBoundary().equals("first-ordinary-level-lfc-zero") || observed == null
+                        || observed != entry.engineAnchorRows())
+                    return new ReplayResult.Failed(tape.size(), "engine gameplay anchor disagrees with native export metadata");
             }
             var coverage = new ArrayList<String>();
             coverage.add("rows");

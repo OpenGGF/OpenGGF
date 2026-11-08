@@ -143,6 +143,13 @@ class TestRewindArchitectureGuard {
             // The typed extra preserves their exact configuration and all explosion scalars;
             // context-aware overrides retain generic capture for subtype state. Focused
             // recreation tests cover custom child order, once-only effects and S1 subtype state.
+            // Lead-authorized 2026-11-08 triage: a caller-supplied ModApi PointsFactory
+            // is executable construction policy, not reconstructible from score alone.
+            // Like ExplosionObjectInstance, retain the exact configured callback while
+            // generic scalar/RNG capture stays intact. TestAnimalObjectRngOwnership's
+            // destructive restore/birth regression pins child and subsequent IDs.
+            Map.entry("src/main/java/com/openggf/level/objects/AnimalObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/level/objects/AnimalObjectInstance.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/level/objects/ExplosionObjectInstance.java#captureRewindState", 1),
             Map.entry("src/main/java/com/openggf/level/objects/ExplosionObjectInstance.java#restoreRewindState", 1),
             // Shared badnik base keeps the no-arg compatibility overrides and

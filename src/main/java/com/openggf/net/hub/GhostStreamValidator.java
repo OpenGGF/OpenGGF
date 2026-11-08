@@ -20,7 +20,36 @@ public final class GhostStreamValidator {
     public static final long PACING_WARMUP_MILLIS = 3000;
     public static final int PACING_MIN_FPS = 54;
 
+    private int swapFirst = -1, swapLast;
+    private com.openggf.net.protocol.ControlMessage.SwapTarget swapTarget;
+    void admitSwap(com.openggf.net.protocol.ControlMessage.SwapTarget target, int first) {
+        swapTarget = target; swapFirst = first; swapLast = first + 180;
+    }
+    void cancelSwap() { swapTarget = null; }
     private TrackValidationProfile profile;
+    private boolean respawnsEnabled, arenaRespawns, checkpointReceiptsRequired;
+    private record Checkpoint(int progress, int x, int y) { }
+    private final java.util.Map<Integer, Checkpoint> checkpointReceipts = new java.util.HashMap<>();
+    void requireCheckpointReceipts(boolean required) { checkpointReceiptsRequired = required; }
+    boolean checkpoint(int attempt, int frame, int progress, int x, int y) {
+        if (!attemptStarted || attempt != currentAttemptId || !checkpointReceiptsRequired
+                || frame < nextExpectedFrameIndex || frame > nextExpectedFrameIndex + MAX_FRAME_LEAD
+                || progress < 1 || progress > 15 || checkpointReceipts.containsKey(frame)
+                || x < 0 || y < 0 || x > 65535 || y > 65535) {
+            violate("checkpoint", "invalid saved checkpoint receipt"); return false;
+        }
+        checkpointReceipts.put(frame,new Checkpoint(progress,x,y)); return true;
+    }
+    // Transport admission bounds, not native gameplay constants: one marked transition,
+    // at most eight returns per lap/checkpoint and 64 per attempt, spaced two seconds apart.
+    private static final int MAX_RESETS_PER_PROGRESS = 8;
+    private int resetCount, lastResetFrame;
+    private final java.util.Map<Integer, Integer> resetsByProgress = new java.util.HashMap<>();
+    private final java.util.Set<Integer> savedAnchors = new java.util.HashSet<>();
+    private final java.util.Map<Integer, GhostFrame> anchors = new java.util.HashMap<>();
+    /** Competition only. Markers cannot move beyond an already observed checkpoint. */
+    void enableRespawns(boolean enabled) { enableRespawns(enabled, profile != null && profile.lapCount() > 0); }
+    void enableRespawns(boolean enabled, boolean arena) { respawnsEnabled = enabled; arenaRespawns = arena; }
     private final LongSupplier wallClockMillis;
     private final ViolationSink sink;
 
@@ -60,6 +89,8 @@ public final class GhostStreamValidator {
         attemptFlagged = false;
         attemptStarted = true;
         previousFrame = null;
+        resetCount = 0; lastResetFrame = -120; anchors.clear(); savedAnchors.clear(); resetsByProgress.clear();
+        swapTarget = null; checkpointReceipts.clear();
         streamDigest = newDigest();
         sealedStreamHash = null;
     }
@@ -108,15 +139,77 @@ public final class GhostStreamValidator {
                 ? profile.maxSpeedPxPerFrame()
                 : TrackValidationProfile.GLOBAL_SPEED_CEILING_PX_PER_FRAME;
         GhostFrame previous = previousFrame;
+        var remainingSwap = swapTarget;
+        int resets = resetCount, lastReset = lastResetFrame;
+        var nextAnchors = new java.util.HashMap<>(anchors);
+        var nextSavedAnchors = new java.util.HashSet<>(savedAnchors);
+        var nextResets = new java.util.HashMap<>(resetsByProgress);
         byte[] frameData = batch.frameData();
         for (int i = 0; i < batch.frameCount(); i++) {
-            GhostFrame frame = GhostFrameCodec.decode(
-                    frameData, i * GhostFrameCodec.BYTES);
-            if (previous != null) {
-                int dx = Math.abs(frame.x() - previous.x());
-                int dy = Math.abs(frame.y() - previous.y());
+            GhostFrame frame;
+            try { frame = GhostFrameCodec.decode(frameData, i * GhostFrameCodec.BYTES); }
+            catch (IllegalArgumentException invalid) { return violate("pose", "invalid ghost pose bits"); }
+            int index = batch.startFrameIndex() + i;
+            boolean reset = frame.respawnReset();
+            boolean arena = arenaRespawns;
+            int anchorKey = arena ? 0 : frame.progress();
+            Checkpoint checkpoint = checkpointReceipts.get(index);
+            if (checkpoint != null) {
+                int dx = TrackRules.delta(frame.x() - checkpoint.x(), profile == null ? 0 : profile.wrapWidthPx());
+                int dy = TrackRules.delta(frame.y() - checkpoint.y(), profile == null ? 0 : profile.wrapHeightPx());
+                // Obj79_CheckActivation (s2.asm:44634-44643), sub_2D028
+                // (sonic3k.asm:61655-61663): [-8,7] x [-64,39], plus the
+                // movement between activation and the post-step streamed pose.
+                if (frame.progress() != checkpoint.progress() || dx < -8-maxSpeed || dx > 7+maxSpeed
+                        || dy < -64-maxSpeed || dy > 39+maxSpeed)
+                    return violate("checkpoint", "saved centre outside ROM activation geometry");
+                nextAnchors.put(checkpoint.progress(),new GhostFrame(checkpoint.x(),checkpoint.y(),0,false,false,false,0,false));
+                nextSavedAnchors.add(checkpoint.progress());
+            }
+            if (checkpointReceiptsRequired && frame.progress() > 0 && !nextSavedAnchors.contains(frame.progress()))
+                return violate("checkpoint", "progress without a validated saved checkpoint");
+            if (reset) {
+                GhostFrame anchor = nextAnchors.get(anchorKey);
+                // Activation samples the player, whereas SaveData stores the post centre:
+                // Obj79_CheckActivation (s2.asm:44639-44643), Obj79_SaveData
+                // (s2.asm:44738-44739), Obj79_LoadData (s2.asm:44778-44779).
+                // S3K: sub_2D028 (sonic3k.asm:61655-61663), sub_2D164
+                // (sonic3k.asm:61743-61746). Hosted acts use the validated saved
+                // centre; standalone legacy callers resolve the activation envelope on return.
+                boolean activationAnchor = !checkpointReceiptsRequired && !arena && !nextSavedAnchors.contains(anchorKey);
+                int xTolerance = maxSpeed + (activationAnchor ? 8 : 0);
+                int yTolerance = maxSpeed + (activationAnchor ? 64 : 0);
+                if (!respawnsEnabled || previous == null || anchor == null || resets >= 64
+                        || nextResets.getOrDefault(frame.progress(), 0) >= MAX_RESETS_PER_PROGRESS
+                        || index - lastReset < 120 || frame.progress() > previous.progress()
+                        || Math.abs(TrackRules.delta(frame.x() - anchor.x(), profile == null ? 0 : profile.wrapWidthPx())) > xTolerance
+                        || Math.abs(TrackRules.delta(frame.y() - anchor.y(), profile == null ? 0 : profile.wrapHeightPx())) > yTolerance)
+                    return violate("respawn-reset", "unbounded or unanchored respawn");
+                if (activationAnchor) { nextAnchors.put(anchorKey, frame); nextSavedAnchors.add(anchorKey); }
+                resets++; lastReset = index;
+                nextResets.merge(frame.progress(), 1, Integer::sum);
+            }
+            // sub_36DFC (sonic3k.asm:74097-74207): native arena currentLap can fall
+            // on a backwards goal crossing. It is
+            // display-only here; swap ordering comes from validated displacement.
+            if (!arenaRespawns && previous != null && !reset && frame.progress() < previous.progress() && remainingSwap == null)
+                return violate("progress", "progress moved backwards without respawn or host swap");
+            boolean arenaSwap = arenaRespawns;
+            boolean reachedSwap = remainingSwap != null && index >= swapFirst && (arenaSwap
+                    ? frame.shoeKind() == remainingSwap.shoeKind() : Math.abs(TrackRules.delta(frame.x() - remainingSwap.centreX(), profile == null ? 0 : profile.wrapWidthPx())) <= maxSpeed
+                    && Math.abs(TrackRules.delta(frame.y() - remainingSwap.centreY(), profile == null ? 0 : profile.wrapHeightPx())) <= maxSpeed);
+            if (reachedSwap) remainingSwap = null;
+            if (remainingSwap != null && index > swapLast) {
+                attemptFlagged = true;
+                violationCount++;
+                sink.onViolation("swap-ignored", "stream never reached host swap target");
+                remainingSwap = null;
+            }
+            if (previous != null && !reset) {
+                int dx = Math.abs(TrackRules.delta(frame.x() - previous.x(), profile == null ? 0 : profile.wrapWidthPx()));
+                int dy = Math.abs(TrackRules.delta(frame.y() - previous.y(), profile == null ? 0 : profile.wrapHeightPx()));
                 if (dx > maxSpeed || dy > maxSpeed) {
-                    return violate("speed",
+                    if (arenaSwap || !reachedSwap || index > swapLast) return violate("speed",
                             "delta " + dx + "," + dy + " exceeds " + maxSpeed);
                 }
             }
@@ -128,11 +221,17 @@ public final class GhostStreamValidator {
                 return violate("bounds",
                         "position " + frame.x() + "," + frame.y() + " outside level");
             }
+            nextAnchors.putIfAbsent(anchorKey, frame);
             previous = frame;
         }
+        swapTarget = remainingSwap;
+        resetCount = resets; lastResetFrame = lastReset;
+        savedAnchors.clear(); savedAnchors.addAll(nextSavedAnchors);
+        resetsByProgress.clear(); resetsByProgress.putAll(nextResets); anchors.clear(); anchors.putAll(nextAnchors);
         previousFrame = previous;
         streamDigest.update(frameData);
         nextExpectedFrameIndex = batch.startFrameIndex() + batch.frameCount();
+        checkpointReceipts.keySet().removeIf(frame -> frame < nextExpectedFrameIndex);
         rateTokens = availableTokens - batch.frameCount();
         if (rateLastRefillMillis == Long.MIN_VALUE || now > rateLastRefillMillis) {
             rateLastRefillMillis = now;
@@ -175,6 +274,13 @@ public final class GhostStreamValidator {
             return false;
         }
         return true;
+    }
+
+    boolean plausibleClockStart(int clockStart, long scheduledGo) {
+        // Allow two seconds of transport/load skew, but never discard an arbitrary
+        // prefix of the hub's contiguous validated stream as an alleged countdown.
+        long lead = Math.max(0, scheduledGo - attemptFirstSeenMillis);
+        return clockStart <= MAX_FRAME_LEAD + (lead + 2000) * RATE_REFILL_PER_SECOND / 1000;
     }
 
     public boolean isAttemptFlagged() {

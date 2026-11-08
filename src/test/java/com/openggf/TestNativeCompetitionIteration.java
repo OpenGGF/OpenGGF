@@ -95,6 +95,7 @@ class TestNativeCompetitionIteration {
         when(mode.getObjectManager()).thenReturn(objects);
         when(mode.getGameStateManager()).thenReturn(gameState);
         when(mode.getCamera()).thenReturn(camera);
+        when(mode.getRunPolicy()).thenReturn(com.openggf.game.session.GameplayRunPolicy.stock());
         when(mode.hardwareTiming()).thenReturn(new HardwareTimingService());
         when(mode.hardwareTimingBoundaryObserver()).thenReturn(boundary -> calls.add(boundary.name()));
         var roster = mock(com.openggf.game.competition.NativeCompetitionRoster.class);
@@ -116,7 +117,10 @@ class TestNativeCompetitionIteration {
                         assertEquals(LevelFrameResult.PAUSED, world.pauseVBlank(frame)));
                 frame.finish();
             }
-            verifyNoInteractions(level, sprites);
+            // Pause_Loop (s2.asm:1571-1597) never consults level objects;
+            // Vint_Level (s2.asm:702-713) holds Teleport_timer while paused.
+            verifyNoInteractions(level);
+            verifyNoInteractions(sprites);
             verify(objects, times(2)).advanceVblaCounter();
             verifyNoMoreInteractions(objects);
             assertEquals(beforePlayer, player.capture());

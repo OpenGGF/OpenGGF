@@ -1,0 +1,188 @@
+{
+  "format" : "openggf-route/1",
+  "launch" : {
+    "rom" : {
+      "game" : "s2",
+      "crc32" : "7B905383",
+      "sha1" : "8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9"
+    },
+    "inlet" : {
+      "kind" : "title"
+    },
+    "roster" : {
+      "main" : "sonic",
+      "sidekick" : "tails"
+    },
+    "width" : 320,
+    "donor" : "off",
+    "initial" : {
+      "vIntStart" : 0
+    }
+  },
+  "checks" : {
+    "guard" : {
+      "allowHurt" : true,
+      "allowRingLoss" : true,
+      "allowDeath" : false,
+      "allowBoundary" : false,
+      "holds" : {
+        "kind" : "fact-equals",
+        "key" : "competition.p2.dead",
+        "value" : 0
+      }
+    },
+    "startRow" : 1200,
+    "legs" : [ {
+      "id" : "drop-beyond-upper-floor",
+      "maxRows" : 5000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : false
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "player-in",
+          "player" : "P1",
+          "region" : [ 1280, 820, 1312, 980 ]
+        }
+      }
+    }, {
+      "id" : "linked-cage-approach",
+      "maxRows" : 5000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : false
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "player-in",
+          "player" : "P1",
+          "region" : [ 1200, 1080, 1232, 1160 ]
+        }
+      }
+    }, {
+      "id" : "slot-spinning",
+      "maxRows" : 300,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : false
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "all",
+          "clauses" : [ {
+            "kind" : "player-in",
+            "player" : "P1",
+            "region" : [ 1180, 1060, 1252, 1180 ]
+          }, {
+            "kind" : "fact-equals",
+            "key" : "competition.slot.inUse",
+            "value" : 1
+          } ]
+        }
+      }
+    }, {
+      "id" : "p2-lower-path",
+      "maxRows" : 5000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : false
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "player-in",
+          "player" : "P2",
+          "region" : [ 1280, 820, 1312, 980 ]
+        }
+      }
+    }, {
+      "id" : "p2-near-native-flip-tiles",
+      "maxRows" : 5000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : false
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "player-in",
+          "player" : "P2",
+          "region" : [ 1700, 1580, 1900, 1800 ]
+        }
+      }
+    }, {
+      "id" : "mid-flip-visible-after-two-human-traversal",
+      "maxRows" : 600,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : false
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "all",
+          "clauses" : [ {
+            "kind" : "player-in",
+            "player" : "P2",
+            "region" : [ 1700, 1580, 1900, 1800 ]
+          }, {
+            "kind" : "fact-equals",
+            "key" : "competition.flip.visible",
+            "value" : 1
+          } ]
+        }
+      }
+    } ]
+  },
+  "tape" : {
+    "script" : "cnz1-slot-flip.script",
+    "rows" : 2369,
+    "sha256" : "5d320e567d71294163834b66ec4741489738f708d43edc3558543f8a2a1ec370"
+  },
+  "provenance" : {
+    "producer" : "RoutePlanner prefix-search/3 goal program",
+    "engine" : "openggf 0.8.prerelease-bf56fe962 stageplay-s2-competition-title/1",
+    "source" : "authored after a 1666-row prefix toward legs [drop-beyond-upper-floor, linked-cage-approach, slot-spinning, p2-lower-path, p2-near-native-flip-tiles, mid-flip-visible-after-two-human-traversal]",
+    "notes" : [ ]
+  },
+  "qualification" : [ {
+    "scope" : "ENGINE",
+    "passed" : true,
+    "content" : "ff20f1f07ac73e8f38926488070524502344c9363ad9f6b8ff831b16ea17153f",
+    "environment" : "openggf 0.8.prerelease-bf56fe962-dirty stageplay-s2-competition-title/1",
+    "rows" : 2369
+  }, {
+    "scope" : "BIZHAWK",
+    "passed" : true,
+    "content" : "ff20f1f07ac73e8f38926488070524502344c9363ad9f6b8ff831b16ea17153f",
+    "environment" : "BizHawk2.11/GPGX cold read-only required-goals movie 92070b90f795cdd43a8d6c66634dbc8c6421dbe3f921fddb065457864caf5891; accepted comparison boundary 2235",
+    "rows" : 2369,
+    "coverage" : [ "slot-in-use-in-view", "resident-nonflat-cell-in-view" ]
+  } ],
+  "native" : {
+    "entry" : {
+      "movie" : "src/test/resources/routes/s2/competition/witnesses/cnz-native-prefix.script",
+      "prefixRows" : 1337,
+      "inputHash" : "1b70915f57ed43f379cf8104f8917b80417a79dd1017d7efa4856e801993c66f",
+      "engineAnchorRows" : 1151,
+      "anchorBoundary" : "first-ordinary-level-lfc-zero"
+    },
+    "lag" : [ ]
+  }
+}
