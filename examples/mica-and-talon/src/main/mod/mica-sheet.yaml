@@ -2066,7 +2066,7 @@
         {
           "sourceX": 288,
           "sourceY": 336,
-          "widthPixels": 8,
+          "widthPixels": 16,
           "heightPixels": 32,
           "xOffset": 11,
           "yOffset": -16,
@@ -2090,7 +2090,7 @@
         {
           "sourceX": 288,
           "sourceY": 368,
-          "widthPixels": 8,
+          "widthPixels": 16,
           "heightPixels": 8,
           "xOffset": 11,
           "yOffset": 16,
@@ -2278,7 +2278,7 @@
         {
           "sourceX": 32,
           "sourceY": 384,
-          "widthPixels": 8,
+          "widthPixels": 16,
           "heightPixels": 32,
           "xOffset": 11,
           "yOffset": -16,
@@ -2302,7 +2302,7 @@
         {
           "sourceX": 32,
           "sourceY": 416,
-          "widthPixels": 8,
+          "widthPixels": 16,
           "heightPixels": 8,
           "xOffset": 11,
           "yOffset": 16,
