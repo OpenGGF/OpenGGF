@@ -95,6 +95,7 @@ class TestNativeCompetitionIteration {
         when(mode.getObjectManager()).thenReturn(objects);
         when(mode.getGameStateManager()).thenReturn(gameState);
         when(mode.getCamera()).thenReturn(camera);
+        when(mode.getRunPolicy()).thenReturn(com.openggf.game.session.GameplayRunPolicy.stock());
         when(mode.hardwareTiming()).thenReturn(new HardwareTimingService());
         when(mode.hardwareTimingBoundaryObserver()).thenReturn(boundary -> calls.add(boundary.name()));
         var roster = mock(com.openggf.game.competition.NativeCompetitionRoster.class);
