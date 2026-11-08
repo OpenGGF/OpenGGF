@@ -2,7 +2,7 @@
 """Original native-pixel S2 ending panels and selectors.
 Inputs: shared MICA palette, inventory, native piece coordinates. No Java.
 Origin: design lane 2026-11-08; native decoded pixels are review-only.
-Use --group photos/normal/super/float in delivery order, or all to regenerate.
+Use --group normal/super/float in delivery order, or all to regenerate.
 """
 import argparse,importlib.util,json,re,math
 from pathlib import Path
@@ -10,72 +10,6 @@ from PIL import Image,ImageDraw
 HERE=Path(__file__).resolve().parent
 s=importlib.util.spec_from_file_location('art',HERE.parent/'s1/build.py');a=importlib.util.module_from_spec(s);s.loader.exec_module(a)
 r=a.r;ROOT=a.ROOT;ART=a.ART
-
-def plane(im,points=None):
- d=ImageDraw.Draw(im)
- # Original banked biplane silhouette, composed like the distant photo.
- d.polygon([(12,49),(24,39),(51,32),(70,37),(59,48),(29,59)],fill=10,outline=1)
- d.polygon([(9,33),(80,12),(86,15),(16,39)],fill=12,outline=1)
- d.line([(17,35),(81,15)],fill=10,width=2)
- d.polygon([(20,59),(86,33),(90,36),(25,65)],fill=10,outline=1)
- d.line([(25,61),(86,35)],fill=12)
- for p,q in [((27,35),(38,57)),((65,21),(74,43)),((24,37),(29,57)),((73,19),(81,41))]:d.line([p,q],fill=1)
- d.line([(14,49),(10,59)],fill=1,width=2);d.line([(8,53),(18,50)],fill=13)
- d.ellipse((40,56,44,61),fill=1)
-
-def photos():
- out=[]
- # 1: a solo victory fist against the same moment's backlit burst.
- im=a.indexed((96,72));d=ImageDraw.Draw(im);d.rectangle((0,0,95,71),fill=2)
- star=[]
- for i in range(36):
-  an=i*math.pi/18;rad=34 if i%2==0 else 23;star.append((48+round(math.cos(an)*rad),33+round(math.sin(an)*rad)))
- d.polygon(star,fill=6);d.ellipse((23,8,75,58),fill=5)
- # Broad tail and planted boots ground the single central silhouette.
- d.polygon([(38,48),(49,56),(31,64),(9,65),(24,56)],fill=4,outline=1)
- for x,y in [(17,61),(25,57),(33,53)]:d.line((x,y,x+5,y+1),fill=6)
- a.body(im,36,36,27,29)
- a.limb(im,(40,62),(36,67),5);a.limb(im,(57,62),(63,67),5)
- a.boot(im,28,65,18,7);a.boot(im,57,65,18,7)
- a.limb(im,(59,43),(72,25),6);a.glove(im,66,10,20,22)
- a.limb(im,(38,44),(29,51),5);a.glove(im,22,46,14,15)
- a.head(im,24,5,42,43)
- out.append(im)
- # 2: MICA close-up alone in the slipstream, her hand on the wing.
- im=a.indexed((96,72));d=ImageDraw.Draw(im);d.rectangle((0,0,95,71),fill=3)
- for x,y,length in [(0,8,29),(5,16,21),(0,30,17),(5,47,19),(66,5,28)]:
-  d.line((x,y,x+length,y),fill=6)
- d.polygon([(23,48),(44,59),(23,67),(2,64),(12,56)],fill=4,outline=1)
- for x,y in [(10,60),(18,57),(26,54)]:d.line((x,y,x+6,y-1),fill=6)
- a.body(im,41,44,31,29);a.head(im,22,2,58,55,True)
- # Wing occupies the foreground; no distant second character silhouette.
- d.polygon([(0,66),(94,55),(95,64),(21,71),(0,71)],fill=10,outline=1)
- d.line((3,68,91,58),fill=12,width=2)
- a.limb(im,(66,50),(78,59),5);a.glove(im,71,51,15,15)
- out.append(im)
- # 3: solo cockpit portrait, a raised greeting framed by biplane struts.
- im=a.indexed((96,72));d=ImageDraw.Draw(im);d.rectangle((0,0,95,71),fill=6)
- d.rectangle((0,22,95,65),fill=3)
- for box in [(-10,27,17,36),(73,25,108,35)]:d.ellipse(box,fill=5)
- d.polygon([(0,54),(96,43),(96,72),(0,72)],fill=10)
- a.body(im,38,42,24,25);a.head(im,23,18,38,39)
- a.limb(im,(60,48),(74,35),5);a.glove(im,68,23,15,20,True)
- a.limb(im,(40,51),(34,58),4);a.glove(im,28,51,13,13)
- d.polygon([(0,10),(68,4),(96,11),(96,22),(0,22)],fill=12,outline=1)
- d.line((0,19,95,19),fill=10,width=3)
- for p,q in [((4,22),(22,71)),((90,22),(89,68))]:
-  d.line([p,q],fill=1,width=3);d.line([p,q],fill=13)
- d.polygon([(0,63),(95,51),(95,58),(0,71)],fill=12,outline=1)
- d.line((3,67,93,55),fill=10,width=2)
- out.append(im)
- # 4: lone jade rider on an original banked biplane above the clouds.
- im=a.indexed((96,72));d=ImageDraw.Draw(im);d.rectangle((0,0,95,71),fill=3)
- for box in [(-16,52,45,90),(28,49,76,84),(61,39,116,88),(-13,-12,37,15),(23,-8,61,14)]:d.ellipse(box,fill=5)
- for y in (59,64,69):d.line((48,y,95,y-9),fill=6,width=2)
- plane(im);a.body(im,37,37,7,8);a.head(im,33,26,13,15)
- a.limb(im,(42,39),(49,31),2);a.glove(im,47,27,5,6,True)
- out.append(im)
- return out
 
 def rider(size,phase):
  # Explicit tiny views; the plane remains the independently ROM-owned layer.
@@ -201,7 +135,7 @@ def floating(phase,size):
  return im.transpose(Image.Transpose.FLIP_LEFT_RIGHT) if phase==4 else im
 
 def float_refs(inv):
- mm=r.maps(ROOT/'docs/s2disasm/mappings/sprite/Sonic.asm');dp=(ROOT/'docs/s2disasm/mappings/spriteDPLC/Sonic.asm').read_text();raw=(ROOT/"docs/s2disasm/art/uncompressed/Sonic's art.bin").read_bytes();pal=r.b.pal(ROOT/'docs/s2disasm/art/palettes/SonicAndTails.bin');out={}
+ mm=r.maps(ROOT/'docs/s2disasm/mappings/sprite/Sonic.asm');dp=(ROOT/'docs/s2disasm/mappings/spriteDPLC/Sonic.asm').read_text();raw=(ROOT/"docs/s2disasm/art/uncompressed/Sonic's art.bin").read_bytes();pal=r.b.pal(ROOT/'docs/s2disasm/art/palettes/Ending Sonic.bin');out={}
  for f in inv['frame_sets']['s2_float']['frames']:
   chunk=dp.split(f".frame{f['index']}:",1)[1].split('_End',1)[0];loads=[list(map(r.b.num,v)) for v in re.findall(r'dplcEntry\s+([^,]+),\s*([^\s;]+)',chunk)]
   out[f['label']]=r.render(mm[f['label']],b''.join(raw[t*32:(t+n)*32] for n,t in loads),[pal]*4)
@@ -210,9 +144,7 @@ def float_refs(inv):
 def generate(group,inv):
  frames=[]
  if group=='photos':
-  for i,im in enumerate(photos(),1):
-   file=f'photo-{i}.png';im=a.native_pose(im,file,HERE);im.save(HERE/file,bits=4,transparency=0)
-   frames.append(dict(id=f'photo-{i}',file=file,native_source_label=f'MapEng_Ending{i}',native_art_label='ArtNem_EndingPics',dimensions=[96,72],bounds_px=[0,0,96,72],palette_line=0,timing='Static; fade wait $180 NTSC/$100 PAL, then $80.',composition=['solo MICA victory fist in backlit burst','solo MICA wing-rider closeup in slipstream','solo MICA greeting from cockpit; biplane framing','banked distant biplane; lone MICA wing rider'][i-1],scene_policy='Entire original illustration; unchanged MICA palette for character and scene. Replaces 12x9 tile panel, no reference pixels.'))
+  raise ValueError('S2 photos are native in phase 1 and sidekick-owned in phase 2')
  else:
   keys={'normal':['s2_normal_turn','s2_normal_leap'],'super':['s2_super_depart','s2_super_hero'],'float':['s2_float']}[group]
   mm=r.maps(ROOT/('docs/s2disasm/mappings/sprite/Sonic.asm' if group=='float' else 'docs/s2disasm/mappings/sprite/objCF.asm'))
@@ -243,11 +175,10 @@ def generate(group,inv):
 
 def main():
  p=argparse.ArgumentParser();p.add_argument('--group',choices=['photos','normal','super','float','all'],default='all');p.add_argument('--review',type=Path);args=p.parse_args();inv=__import__('yaml').safe_load((ART/'endings/endings-inventory.yaml').read_text())
- dest=HERE/'s2.yaml';m=json.loads(dest.read_text()) if dest.exists() else dict(format='openggf-ending-art-handoff-1',game='s2',native_source_label='ArtNem_EndingPics / ArtNem_EndingSonic / ArtNem_EndingSuperSonic / SonAni_Float2',palette='../../palette.yaml',gilded='../../presentation/gilded.yaml',tick_rate=60,palette_binding='Keep all MICA indices: photos/normal leap/Float2 on line 0; Tornado rider line 1 shared with native Tails pilot requires engine palette arbitration or per-piece reassignment. Plane line 0 remains ROM-owned; PNGs for 7..11 are character-only transparent overlays. Super stores unchanged indices with the first Gilded s2 palette for static viewing; install the full s2 cycle on line 0. Solo photo backgrounds redrawn in shared MICA palette; reserve entire panel line 0 and rewrite native tile palette attributes.',layout='Native piece coordinates, dimensions, flips and priorities. Reallocate original tiles into per-frame banks; do not retain inter-frame source aliases. Full composite bounds include blank plane area in character overlays.',timing={s['id']:s['animation_timing'] for s in inv['sequences'] if s['game']=='s2'},groups={})
- m['photo_cast_note']='Phase 1: MICA alone in all four photo panels. TALON is deferred to phase 2; no companion stand-in or Sega character drawings.'
- m['palette_binding']=m['palette_binding'].replace('Photo backgrounds/companions redrawn','Solo photo backgrounds redrawn')
+ dest=HERE/'s2.yaml';m=json.loads(dest.read_text()) if dest.exists() else dict(format='openggf-ending-art-handoff-1',game='s2',native_source_label='ArtNem_EndingPics / ArtNem_EndingSonic / ArtNem_EndingSuperSonic / SonAni_Float2',palette='../../palette.yaml',gilded='../../presentation/gilded.yaml',tick_rate=60,palette_binding='Keep all MICA indices: normal leap/Float2 on line 0; Tornado rider line 1 shared with native Tails pilot requires engine palette arbitration or per-piece reassignment. Plane line 0 remains ROM-owned; PNGs for 7..11 are character-only transparent overlays. Super stores unchanged indices with the first Gilded s2 palette for static viewing; install the full s2 cycle on line 0. All four photos remain native ROM art with their native palette.',layout='Native piece coordinates, dimensions, flips and priorities. Reallocate original tiles into per-frame banks; do not retain inter-frame source aliases. Full composite bounds include blank plane area in character overlays.',timing={s['id']:s['animation_timing'] for s in inv['sequences'] if s['game']=='s2'},groups={})
+ m['photo_cast_note']='Native monochrome ROM photos; TALON sidekick overrides deferred to phase 2.'
  m['palette_binding']=m['palette_binding'].replace('Super stores unchanged indices; install Gilded s2 cycle on line 0.', 'Super stores unchanged indices with the first Gilded s2 palette for static viewing; install the full s2 cycle on line 0.')
- for group in (['photos','normal','super','float'] if args.group=='all' else [args.group]):
+ for group in (['normal','super','float'] if args.group=='all' else [args.group]):
   fs=generate(group,inv);m['groups'][group]=[f['id'] for f in fs];updates={f['id']:f for f in fs};old=m.get('frames',[]);m['frames']=[updates.pop(f['id'],f) for f in old]+list(updates.values());a.verify(HERE,dict(frames=fs))
   if args.review:
    args.review.mkdir(parents=True,exist_ok=True)

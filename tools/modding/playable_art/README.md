@@ -352,3 +352,14 @@ core palette/geometry/regeneration and S3K 25-frame piece/palette verification
 passed; queued `TestMicaCharacterIntegration` 18 passed, zero skips with explicit
 verified ROM paths and surfaceless EGL. The first `surefire:test` attempt omitted
 ROM properties (four path-setup errors); the explicit-path rerun passed.
+
+Native palette audit: `python3 tools/modding/playable_art/palette_audit.py
+--output $HOME/scratch/agent-tmp/<task>/audit` decodes representative
+references beside the historical `/tmp/mica-np-*-20261108` inputs (`--used-root`
+can relocate that archive). It writes review-only PNGs and `results.json` outside
+Git and never regenerates MICA art. Surface palettes must follow scene-time
+palette copies and mapping palette bits, rather than the art's usual player
+bank. S2 photos use `Ending Photos.bin` on line 0 after ObjC9's copy; S1 continue
+floor pieces select their own palette line. S3K transformation references accept
+an explicit native Super cycle phase (default 6, first steady phase); a static
+reference cannot certify every fade/Hyper cycle colour.

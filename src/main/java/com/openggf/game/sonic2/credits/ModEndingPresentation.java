@@ -32,21 +32,37 @@ final class ModEndingPresentation implements Sonic2EndingCutsceneManager.Present
 
     static ModEndingPresentation create(Rom rom) throws IOException {
         var definition = StageCharacterPresentation.activeDefinition();
-        if (definition == null || definition.presentationSupplier() == null) return null;
-        var presentation = definition.presentationSupplier().load(definition.key().persisted());
-        if (presentation == null || !presentation.endings().containsKey(EndingSpriteSet.Surface.S2_ENDING)) return null;
-        return new ModEndingPresentation(rom, definition, presentation.endings());
+        var sets = new EnumMap<EndingSpriteSet.Surface, EndingSpriteSet>(EndingSpriteSet.Surface.class);
+        if (definition != null && definition.presentationSupplier() != null) {
+            var presentation = definition.presentationSupplier().load(definition.key().persisted());
+            if (presentation != null) sets.putAll(presentation.endings());
+        }
+        // Photos depict the search party, not the missing main character.
+        sets.remove(EndingSpriteSet.Surface.S2_PHOTOS);
+        var world = com.openggf.game.session.SessionManager.getCurrentWorldSession();
+        var sidekicks = com.openggf.game.session.ActiveGameplayTeamResolver.resolveSidekicks(GameServices.configuration());
+        var photos = world == null ? null : sidekickPhotos(world.getPlayableCharacterRegistry(), sidekicks);
+        if (photos != null) sets.put(EndingSpriteSet.Surface.S2_PHOTOS, photos);
+        if (!sets.containsKey(EndingSpriteSet.Surface.S2_ENDING) && !sets.containsKey(EndingSpriteSet.Surface.S2_PHOTOS)) return null;
+        return new ModEndingPresentation(rom, definition, sets);
+    }
+    static EndingSpriteSet sidekickPhotos(PlayableCharacterRegistry registry, List<String> sidekicks) throws IOException {
+        if (sidekicks.isEmpty()) return null;
+        var sidekick = registry.find(CharacterKey.parsePersisted(sidekicks.getFirst())).orElse(null);
+        if (sidekick == null || sidekick.presentationSupplier() == null) return null;
+        var presentation = sidekick.presentationSupplier().load(sidekick.key().persisted());
+        return presentation == null ? null : presentation.endings().get(EndingSpriteSet.Surface.S2_PHOTOS);
     }
     private ModEndingPresentation(Rom rom, CharacterDefinition definition,
             Map<EndingSpriteSet.Surface, EndingSpriteSet> sets) throws IOException {
         this.rom=rom; this.definition=definition; this.sets=sets;
         nativePlayer = new Sonic2PlayerArt(RomByteReader.fromRom(rom)).loadSonic();
-        characterArt=definition.artSupplier().load(definition.key().persisted());
+        characterArt=definition == null ? nativePlayer : definition.artSupplier().load(definition.key().persisted());
         playable = new PlayerSpriteRenderer(StageCharacterPresentation.playable(nativePlayer));
         StageCharacterPresentation.bindPalette(playable, definition);
         for (var entry:sets.entrySet()) if(entry.getKey()!=EndingSpriteSet.Surface.S1_ENDING)
             renderers.put(entry.getKey(),EndingCharacterPresentation.renderer(entry.getValue()));
-        var profile=definition.superFormSupplier()==null?null:definition.superFormSupplier().load(definition.key().persisted());
+        var profile=definition==null || definition.superFormSupplier()==null?null:definition.superFormSupplier().load(definition.key().persisted());
         powered=profile==null?null:profile.games().getOrDefault(GameId.S2,Map.of()).get(SuperFormProfile.Tier.SUPER);
         updatePalettes();
     }
@@ -60,18 +76,19 @@ final class ModEndingPresentation implements Sonic2EndingCutsceneManager.Present
     }
     @Override public int[] floatingFrames() { return new int[]{84,85,86,87,88}; }
     @Override public int floatingFrameDuration() { return 8; }
-    @Override public int[] walkingFrames() { return characterArt.animationSet().getScript(CanonicalAnimation.WALK.ordinal()).frames().stream().mapToInt(Integer::intValue).toArray(); }
-    @Override public int waitingFrame() { return characterArt.animationSet().getScript(CanonicalAnimation.WAIT.ordinal()).frames().getFirst(); }
-    @Override public String playerCode() { return definition.key().persisted(); }
+    @Override public int[] walkingFrames() { return definition == null ? new int[]{0,1,2,3,4,5} : characterArt.animationSet().getScript(CanonicalAnimation.WALK.ordinal()).frames().stream().mapToInt(Integer::intValue).toArray(); }
+    @Override public int waitingFrame() { return definition == null ? 1 : characterArt.animationSet().getScript(CanonicalAnimation.WAIT.ordinal()).frames().getFirst(); }
+    @Override public String playerCode() { return definition == null ? "sonic" : definition.key().persisted(); }
     @Override public Palette[] palettes() { return Arrays.stream(nativePalettes).map(Palette::deepCopy).toArray(Palette[]::new); }
     @Override public Sonic2EndingArt.EndingRoutine endingRoutine() { return Sonic2EndingArt.determineEndingRoutine(); }
     @Override public Sonic2LogoFlashManager.Presentation logo() { return null; }
     @Override public boolean drawPlayer(int frame,int x,int y) {
         if (draw(EndingSpriteSet.Surface.S2_FLOAT,frame,x,y)) return true;
+        if (definition == null) return false;
         playable.drawFrame(frame,x,y,false,false); return true;
     }
     @Override public boolean hasObjectFrame(int frame) {
-        return sets.get(EndingSpriteSet.Surface.S2_ENDING).sprites().frames().containsKey(frame)
+        return sets.containsKey(EndingSpriteSet.Surface.S2_ENDING) && sets.get(EndingSpriteSet.Surface.S2_ENDING).sprites().frames().containsKey(frame)
                 || sets.containsKey(EndingSpriteSet.Surface.S2_SUPER)
                 && sets.get(EndingSpriteSet.Surface.S2_SUPER).sprites().frames().containsKey(frame);
     }
@@ -81,7 +98,7 @@ final class ModEndingPresentation implements Sonic2EndingCutsceneManager.Present
     }
     @Override public boolean drawPhoto(int index,int x,int y) {
         var set=sets.get(EndingSpriteSet.Surface.S2_PHOTOS);
-        if(set==null || !set.sprites().frames().containsKey(index)) return false;
+        if(index == 0 || set==null || !set.sprites().frames().containsKey(index)) return false;
         var graphics=GameServices.graphics(); graphics.beginPatternBatch();
         draw(EndingSpriteSet.Surface.S2_PHOTOS,index,x,y); graphics.flushPatternBatch();
         return true;

@@ -53,7 +53,7 @@ def eni(data):
    if not mode:inc+=n
 
 def photos():
- raw=b.nem(ROOT/'docs/s2disasm/art/nemesis/Movie sequence at end of game.nem');pals=[b.pal(ROOT/'docs/s2disasm/art/palettes'/p) for p in ['Ending Sonic.bin','Ending Tails.bin','Ending Background.bin','Ending Photos.bin']];out=[]
+ raw=b.nem(ROOT/'docs/s2disasm/art/nemesis/Movie sequence at end of game.nem');pals=[b.pal(ROOT/'docs/s2disasm/art/palettes'/p) for p in ['Ending Photos.bin']*4];out=[]
  for i in range(1,5):
   words=eni((ROOT/f'docs/s2disasm/mappings/misc/End of game sequence frame {i}.eni').read_bytes());assert len(words)==108,len(words)
   out.append(render([[j%12*8,j//12*8,1,1,v&2047,(v>>11)&1,(v>>12)&1,(v>>13)&3,0] for j,v in enumerate(words)],raw,pals))
@@ -62,7 +62,7 @@ def photos():
 def refs(game):
  inv=__import__('yaml').safe_load((ART/'endings/endings-inventory.yaml').read_text());out={}
  if game=='s1':
-  mm=maps(ROOT/'docs/s1disasm/_maps/Ending Sequence Sonic.asm');raw=b.nem(ROOT/'docs/s1disasm/artnem/Ending - Sonic.nem');pal=b.pal(ROOT/'docs/s1disasm/palette/Sonic.bin')
+  mm=maps(ROOT/'docs/s1disasm/_maps/Ending Sequence Sonic.asm');raw=b.nem(ROOT/'docs/s1disasm/artnem/Ending - Sonic.nem');pal=b.pal(ROOT/'docs/s1disasm/palette/Ending.bin')
   for f in inv['frame_sets']['s1_celebration']['frames']:out[f['label']]=render(mm[f['label']],raw,[pal]*4)
  else:
   mm=maps(ROOT/'docs/s2disasm/mappings/sprite/objCF.asm');plane=b.nem(ROOT/'docs/s2disasm/art/nemesis/Small pictures of Tornado in final ending sequence.nem')

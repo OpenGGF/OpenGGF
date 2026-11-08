@@ -12,8 +12,7 @@ final class MicaEndings {
         return Map.of(EndingSpriteSet.Surface.S1_ENDING, s1(assets),
                 EndingSpriteSet.Surface.S2_ENDING, s2normal(assets),
                 EndingSpriteSet.Surface.S2_SUPER, s2super(assets),
-                EndingSpriteSet.Surface.S2_FLOAT, s2float(assets),
-                EndingSpriteSet.Surface.S2_PHOTOS, s2photos(assets));
+                EndingSpriteSet.Surface.S2_FLOAT, s2float(assets));
     }
     private static EndingSpriteSet s1(ModAssetRoot assets) throws IOException {
         return new EndingSpriteSet(new StageSpriteSet(Map.ofEntries(
@@ -53,12 +52,5 @@ final class MicaEndings {
             Map.entry(86, new StageSpriteSet.Frame(PresentationImages.read(assets,"art/mica/endings/s2/float-56.png"), 28, 12)),
             Map.entry(87, new StageSpriteSet.Frame(PresentationImages.read(assets,"art/mica/endings/s2/float-57.png"), 28, 12)),
             Map.entry(88, new StageSpriteSet.Frame(PresentationImages.read(assets,"art/mica/endings/s2/float-58.png"), 12, 12)))), PresentationImages.backing(assets,"art/mica/endings/s2/float-54.png",0).rgb());
-    }
-    private static EndingSpriteSet s2photos(ModAssetRoot assets) throws IOException {
-        return new EndingSpriteSet(new StageSpriteSet(Map.ofEntries(
-            Map.entry(0, new StageSpriteSet.Frame(PresentationImages.read(assets,"art/mica/endings/s2/photo-1.png"), 0, 0)),
-            Map.entry(1, new StageSpriteSet.Frame(PresentationImages.read(assets,"art/mica/endings/s2/photo-2.png"), 0, 0)),
-            Map.entry(2, new StageSpriteSet.Frame(PresentationImages.read(assets,"art/mica/endings/s2/photo-3.png"), 0, 0)),
-            Map.entry(3, new StageSpriteSet.Frame(PresentationImages.read(assets,"art/mica/endings/s2/photo-4.png"), 0, 0)))), PresentationImages.backing(assets,"art/mica/endings/s2/photo-1.png",0).rgb());
     }
 }

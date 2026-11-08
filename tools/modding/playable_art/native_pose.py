@@ -2,7 +2,7 @@
 """Purpose: export mapped stock Sonic pose references, 8x nearest-neighbour.
 Inputs: pinned S2 raw player art/mapping/DPLC; S3K HUD and S2 sign Nemesis art.
 Origin: W7 MICA native-pose pilot, owner-directed enlarge/transform/reduce, 2026-11-08.
-Native pixels are disposable comparison inputs: output is restricted to /tmp.
+Native pixels are disposable comparison inputs: output is restricted to disposable /tmp or scratch directories.
 Run with python3 -I; no Java, ROM copying or native assets in the repository.
 """
 import argparse
@@ -24,10 +24,30 @@ def load(path, name):
 def num(v):
     return int(v.strip().replace('$', '0x'), 0)
 
-def palette(path):
-    data = path.read_bytes()
+def palette(path, line=0):
+    data = path.read_bytes()[line*32:(line+1)*32]
+    if len(data) != 32: raise ValueError(f"Missing palette line {line}: {path}")
     return [[round(((int.from_bytes(data[i:i+2], 'big') >> s) & 14)*255/14)
              for s in (0, 4, 8)] for i in range(0, 32, 2)]
+
+def surface_palette(surface):
+    """Select the steady in-game surface palette, including scene-time copies.
+
+    Never infer colours from the art filename or a startup palette bank.
+    Per-piece exporters must apply mapping palette bits to explicit banks.
+    """
+    paths = {
+        's2-photos': 'docs/s2disasm/art/palettes/Ending Photos.bin',
+        's1-continue': 'docs/s1disasm/palette/Special Stage Continue Bonus.bin',
+        's3k-continue': 'docs/skdisasm/General/Continue/Palettes/Palette.bin',
+        's1-ending': 'docs/s1disasm/palette/Ending.bin',
+        's2-ending-float': 'docs/s2disasm/art/palettes/Ending Sonic.bin',
+        's2-halfpipe': 'docs/s2disasm/art/palettes/Special Stage Main.bin',
+        's3k-blue-sphere': 'docs/skdisasm/General/Special Stage/Palettes/Main.bin',
+        's3k-portrait': 'docs/skdisasm/General/Save Menu/Palettes/Chars.bin',
+    }
+    path = ROOT / paths[surface]
+    return [palette(path, line) for line in range(path.stat().st_size // 32)]
 
 def piece(data, start, w, h, colors):
     im = Image.new('P', (w*8, h*8))
@@ -65,7 +85,7 @@ def player(index):
 
 def references(dest, core=False):
     dest = dest.resolve()
-    if not dest.is_relative_to(Path('/tmp')): raise ValueError('Native references must stay in /tmp')
+    if not any(dest.is_relative_to(p) for p in (Path('/tmp'), Path.home()/'scratch/agent-tmp')): raise ValueError('Native references must stay in /tmp or scratch agent-tmp')
     dest.mkdir(parents=True,exist_ok=True)
     oracle = load(ROOT/'tools/timing/s3k-instruction-ledgers/vint/nem/nem_reference.py','nem')
     groups = [('wait', [1,2,3,4,5,6]), ('walk',[15,16,17,18,19,20,13,14]),

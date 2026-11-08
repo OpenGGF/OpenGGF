@@ -323,6 +323,16 @@ TALON's wings are drawn into his body frames, so he needs no separate appendage 
 - Tails-only presentation: Tails results variants, Tails special-stage sets, the data
   select team portrait, and Tails' ending roles (for example piloting the S2 Tornado).
 
+S2 ending photos belong to the sidekick's presentation (`S2_PHOTOS`), using the
+first active sidekick, independently of the main character. Phase 1 MICA with
+stock Tails or alone leaves all four native panels unchanged. Phase 2 TALON:
+photo 1 never changes; photos 2 and 3 replace Tails with TALON; photo 4 changes
+only if the back of TALON's head reads differently from Tails'. Selector 0 is
+always native, even if a supplier includes it. Missing selectors fall back to
+the native panel and its native palette. No main-character photo override.
+The shipped photo palette is monochrome (often described as sepia); preserve
+ROM values rather than adding a brown tint.
+
 ## Open items
 
 - S2 competitive 2P presentation.
@@ -706,7 +716,7 @@ current workstream summaries above.
 
 - 2026-11-08: W4 S1/S2 ending lane `feature/ai-mica-endings-s1s2` complete.
   S1 commit `6f5d7a49f` supplies eight native-timed ending poses. S2 supplies all
-  four solo photos, five Float2 frames, eight normal and six powered selectors;
+  native ROM photos, five Float2 frames, eight normal and six powered selectors;
   native vehicles and separate Tails roles remain ROM-owned. Palette rows are
   private, with native white fade steps and W6 Gilded cycling. Captures inspected
   at `/tmp/mica-endings-s1s2-20261108/{s1,s2-normal,s2-super}/` include per-frame CSVs.
@@ -1249,3 +1259,65 @@ coverage and tile counts <=36. The three isolated native-pose tests pass.
 42 pass; the same inherited creator-kit missing-LICENSE error remains, compared
 by test identity and exception with the pre-edit baseline. Python compilation
 and whitespace checks pass. No Java build, GGFP bake, merge or push.
+
+### S2 photo correction and native-reference palette audit (2026-11-08)
+
+The original reference export treated palette attributes in the photo maps as
+indices into the ending startup banks. ObjCA_Init (s2.asm:13357-13374) submits
+palette changer subtype 4; off_133A4 (s2.asm:26988-26989) selects `Pal_AD1E`, and
+ObjC9_Init (s2.asm:26923-26946) copies it into target line 0. Thus all four photos
+use `Ending Photos.bin`, not blue `Ending Sonic.bin`. Its words are grayscale,
+not brown sepia. The bad reference plus the incorrect solo-MICA brief led to
+invalid panels; deleting those panels restores the native cast and composition.
+
+`palette_audit.py` in `tools/modding/playable_art/` freshly decodes representative
+references beside the exact archived generation inputs. Its index is in that
+directory's README. Outputs for this lane are under
+`$HOME/scratch/agent-tmp/mica-s2-photos-20261108/audit/` (PNG sheets and
+`results.json`); decoded native pixels remain outside Git. No art was regenerated.
+The table records palette risk, not certification of anatomy or mapping fidelity.
+
+| Set | Palette used by generation reference | Correct in-game palette | Plausibly misled generation; evidence |
+| --- | --- | --- | --- |
+| Core | S2 SonicAndTails line 0 | Same | No; four freshly decoded core samples match. |
+| Slopes | S2 SonicAndTails line 0 | Same (these references used S2 slope mappings) | No; four native slope samples match. |
+| Presentation signs/HUD | Per-game Sonic player line | Same for character faces; backing separately native | No; S1 HUD, S2/S3K signs match. |
+| Portrait | Save Menu Chars line 0 | Same | No; fresh portrait matches. |
+| S2 half-pipe | Special Stage Main line 1 | Same | No; four samples match. |
+| S3K blue sphere | Special Stage Main line 0 | Same | No; four samples match. |
+| S3K slot bonus | SonicAndTails line 0 | Same | No; four samples match. |
+| Snowboard | SonicAndTails line 0 | Same | No; four samples match. |
+| S1 continue | Sonic line flattened over every piece | Continue Bonus lines 0/1, selected by mapping bits | Yes, possible on the three prone floor poses: glove/shadow clusters change. Two floor samples differ; player fall samples match. Continue line 0 equals Sonic except scene background semantics. |
+| S2 continue | SonicAndTails line 0 | Same normal inherited character bank; SS1 loads line 3 | No; icon and player samples match. Retained-Super FixBugs=0 artifacts are outside this normal reference set. |
+| S3K continue | Continue Palette line 0 | Same | No; team idle and player samples match. |
+| S1 ending | Sonic line 0 | Ending line 0 | No; only transparent index 0 differs; four visible references match. |
+| S2 ending photos | Ending Sonic line 0 | Ending Photos copied to line 0 | Yes; all four blue/white references differ, and the invalid MICA scene prompts confirm misinterpretation. Removed overrides. |
+| S2 normal/Super/Float2 ending | Ending Sonic/Tails, Ending Super Sonic; Float2 ordinary player | Same scene palettes; Float2 Ending Sonic | No; representative normal, powered and Float2 pixels match (Float2 only index 0 changes). |
+| S3K reunion | Sonic/Super Sonic End Pose | Same | No palette issue; samples match. Existing scrambled Super selectors 0/1 are a separate art/mapping caveat. |
+| S3K passengers/trio/Float2/ride | SonicAndTails | Same character line (vehicles/logos use separate scene banks) | No; samples match. |
+| S3K transformation | Blue SonicAndTails | Sonic base plus ROM Super cycle entries 2..4 | Yes, possible: d2/d3/d5 change from blue to gold in the first steady phase; d4 uses none of those entries. Owner decides whether this warrants redoing art already reduced to Gilded colours. |
+
+The S3K reference exporter now accepts an explicit cycle phase, defaulting to 6,
+the first steady Super row. SuperHyper_PalCycle_SonicApply
+(sonic3k.asm:4674-4678) writes entries 2..4 from PalCycle_SuperSonic
+(sonic3k.asm:4865-4875). This is a representative native phase, not a claim that
+all transition frames or Hyper colour phases share one static palette.
+
+Lane verification: queued Java 25 command
+`python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dmica.s2.captureRoot=$HOME/scratch/agent-tmp/mica-s2-photos-20261108/captures '-Dtest=TestMicaCharacterIntegration,TestSonic2*Ending*,TestSonic2*Credits*,TestSonic2SidekickPhotos,TestModApiSignatureSurface' test`
+passed 78 tests, zero failures/errors/skips (all ROMs found). Final queue wait was
+313 seconds, Maven execution 133 seconds; no user wait. This is focused coverage,
+not a full-suite claim. Python discovery passed 44 modding plus 7 native-reference
+tests. The signature pin is unchanged and verified. Modified guide/tool links,
+JSON manifests, staged whitespace, and new disassembly citations were checked.
+The repository-wide citation scan reports historical findings; the design's
+scoped JSON scan has no findings. The first Java attempt failed due to an overly
+broad test edit, corrected before successful reruns; no baseline regression was
+attributed to that authoring error.
+
+Headless full-ending captures are in `captures/mica-alone/` and
+`captures/mica-tails/` beneath the lane scratch root above: `photo-1.png` through
+`photo-4.png`, plus frame CSVs. `captures/photos-contact.png` shows all eight
+inspected frames. Corresponding full-frame images are byte-identical between
+teams, retain the native cast, and show the exact ROM monochrome palette. Tests
+also assert the native photo palette on line 0 and no packaged MICA photo PNGs.
