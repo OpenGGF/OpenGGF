@@ -279,8 +279,10 @@ public final class TraceCaptureTool {
         Path romPath = TraceToolRomLocations.resolve(
                 entry.gameId(), GameServices.configuration(), Path.of(""));
         TraceCapturePresentationSetup presentation = TraceCapturePresentationSetup.open(
-                GameServices.configuration(), dimensions, callerPresentation, GameServices.audio(), args.fps(),
-                args.nativeSpriteLimits());
+                GameServices.configuration(), dimensions, callerPresentation, GameServices.audio(), args.fps());
+        if (!args.nativeSpriteLimits()) {
+            presentation.disableNativeSpriteLimits();
+        }
         // --- boot headless gameplay session -------------------------------
         try (CaptureBootScope<HeadlessGameBoot> scope = CaptureBootScope.open(
                 presentation,
