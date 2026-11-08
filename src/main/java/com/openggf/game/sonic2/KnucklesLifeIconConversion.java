@@ -28,7 +28,7 @@ import java.util.Objects;
  * {@code Pal_BGND} line 0. The S&amp;K name tiles use no other index; any other
  * index is rejected rather than guessed.
  */
-public final class S3kKnucklesLifeIconConversion {
+public final class KnucklesLifeIconConversion {
 
     /** Tiles in {@code ArtNem_KnucklesLifeIcon} (its Nemesis header). */
     public static final int TILE_COUNT = 12;
@@ -43,7 +43,7 @@ public final class S3kKnucklesLifeIconConversion {
         UNMAPPED, UNMAPPED, UNMAPPED, UNMAPPED, UNMAPPED, UNMAPPED, 0x1, 0x1
     };
 
-    private S3kKnucklesLifeIconConversion() {
+    private KnucklesLifeIconConversion() {
     }
 
     /**

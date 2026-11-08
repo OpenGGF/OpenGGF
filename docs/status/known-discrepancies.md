@@ -3372,7 +3372,7 @@ Tier one (no dump) instead:
   and underwater palettes. The icon's head is S&K's drawing, converted
   through `ArtConvTable`; its "K.T.E" name was drawn for S&K's palette
   line 1 and is recoloured to the chip name's line-0 colours, which makes it
-  identical to the chip's name tiles (`S3kKnucklesLifeIconConversion`,
+  identical to the chip's name tiles (`KnucklesLifeIconConversion`,
   `TestKis2LivesNameColours`).
 
 Known deviations from the shipped lock-on game in both tiers (each cites

@@ -12,7 +12,7 @@ import com.openggf.game.patch.LogicalRomResolver;
 import com.openggf.game.save.SaveSessionContext;
 import com.openggf.game.save.SelectedTeam;
 import com.openggf.game.session.SessionManager;
-import com.openggf.game.sonic2.S3kKnucklesLifeIconConversion;
+import com.openggf.game.sonic2.KnucklesLifeIconConversion;
 import com.openggf.game.sonic2.Sonic2ObjectArtProvider;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.level.Pattern;
@@ -50,8 +50,8 @@ import static org.mockito.Mockito.mockStatic;
 @RequiresRom(SonicGame.SONIC_2)
 class TestKis2LivesNameColours {
 
-    private static final int NAME_FIRST_TILE = S3kKnucklesLifeIconConversion.HEAD_TILE_COUNT;
-    private static final int NAME_END_TILE = S3kKnucklesLifeIconConversion.TILE_COUNT;
+    private static final int NAME_FIRST_TILE = KnucklesLifeIconConversion.HEAD_TILE_COUNT;
+    private static final int NAME_END_TILE = KnucklesLifeIconConversion.TILE_COUNT;
 
     private static RomByteReader sk;
     private static RomByteReader s2;
