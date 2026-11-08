@@ -24,4 +24,13 @@ public final class Sonic1CharacterFont {
         }
         return Map.copyOf(glyphs);
     }
+    /** The upper row of the native life-counter name cell; no large-font substitutions. */
+    public static Map<Character, Image> hud(Rom rom) throws IOException {
+        var glyphs = new LinkedHashMap<Character, Image>();
+        var sonic = PatternDecompressor.nemesis(rom,
+                Sonic1RomProfile.resolve(rom, Sonic1Constants.ART_NEM_LIFE_ICON_ADDR));
+        com.openggf.game.presentation.HudNameFont.collect(glyphs, sonic, "SONIC", 0, 7, 14, 21, 25, 32);
+        return Map.copyOf(glyphs);
+    }
+
 }

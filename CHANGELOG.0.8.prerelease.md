@@ -37,11 +37,15 @@ under the matching area heading; see the
 
 - Added the optional character presentation data contract and pixel-level name
   composition foundation. Stock HUD/results/monitor/signpost consumption and
-  the S3K font readers remain pending; this does not yet change on-screen art.
+  presentation asset packaging remain pending; this does not yet change on-screen art.
 
 - Added the maintained MICA character skeleton for all three stock games, with
   headless launch/save/rewind/fallback acceptance and temporary original art.
   Custom team archetypes now use the solo Sonic route without a sidekick.
+  Presentation font inventories now include the native small HUD letters in all
+  three hosts and S3K per-zone title/results-name letters. Surface wiring and
+  packaging MICA’s presentation art remain pending. Stock S2 Tails-alone results
+  now show the region-selected Miles/Tails name instead of Sonic.
 - Character definitions can supply an authored underwater palette through the
   owner fault boundary; absent suppliers retain zone-aware host water derivation.
 - Playable mod sheets now declare canonical animation tables shared by Sonic 1,

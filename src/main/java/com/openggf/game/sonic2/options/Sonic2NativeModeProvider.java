@@ -7,11 +7,13 @@ public final class Sonic2NativeModeProvider implements NativeTitleModeProvider {
     private final Sonic2OptionsState optionsState = new Sonic2OptionsState();
     private final Sonic2OptionsScreen optionsScreen;
     private boolean optionsOpened;
+    private final boolean overseas;
 
     public Sonic2NativeModeProvider() { this(true); }
 
     /** The host's overseas Graphics_Flags selects Tails; domestic selects Miles wording. */
     public Sonic2NativeModeProvider(boolean overseas) {
+        this.overseas = overseas;
         optionsScreen = new Sonic2OptionsScreen(optionsState, overseas);
     }
 
@@ -30,6 +32,9 @@ public final class Sonic2NativeModeProvider implements NativeTitleModeProvider {
                 com.openggf.game.nativemenu.NativeMenuScreen.Destination.LEVEL,
                 optionsState.launchTeam(), true);
     }
+
+    /** Graphics_Flags bit 7, shared by native menu wording and result name selection. */
+    public boolean overseasGraphics() { return overseas; }
 
     public Sonic2OptionsState optionsState() { return optionsState; }
 

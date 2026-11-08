@@ -314,10 +314,14 @@ public class ResultsScreenObjectInstance extends AbstractResultsScreen
         // 0 = "SONIC GOT", 3 = "THROUGH", 4 = "ACT", 6-8 = act numbers
         // 10 = "TIME BONUS", 11 = "RING BONUS", 9 = "TOTAL", 14 = "PERFECT"
 
-        // "SONIC GOT" (frame 0) - slides from left: start=-96, target=160, distance=256
+        // Native name + GOT (frames 0..2), sliding left to right.
         int gotOffset = getSlideOffset(256);  // starts 256 pixels left of target
         int gotX = SCREEN_CENTER_X - gotOffset;
-        renderer.drawFrameIndex(0, worldBaseX + gotX, worldBaseY + TEXT_Y_GOT_THROUGH, false, false);
+        var nativeModes = services().gameService(
+                com.openggf.game.sonic2.options.Sonic2NativeModeProvider.class);
+        renderer.drawFrameIndex(nativeNameFrame(
+                com.openggf.game.session.ActiveGameplayTeamResolver.resolvePlayerCharacter(services().configuration()),
+                nativeModes == null || nativeModes.overseasGraphics()), worldBaseX + gotX, worldBaseY + TEXT_Y_GOT_THROUGH, false, false);
 
         // "THROUGH" (frame 3) - slides from right: start=384, target=128, distance=256
         int throughOffset = getSlideOffset(256);
@@ -356,6 +360,11 @@ public class ResultsScreenObjectInstance extends AbstractResultsScreen
         // "TOTAL" (frame 9) - slides from right: start=720, target=160, distance=560
         int totalOffset = getSlideOffset(560);
         renderer.drawFrameIndex(9, worldBaseX + SCREEN_CENTER_X + totalOffset, worldBaseY + TEXT_Y_TOTAL, false, false);
+    }
+
+    /** loc_14102 (s2.asm:27836-27843): only Tails alone advances the name frame. */
+    static int nativeNameFrame(com.openggf.game.PlayerCharacter character, boolean overseas) {
+        return character == com.openggf.game.PlayerCharacter.TAILS_ALONE ? (overseas ? 2 : 1) : 0;
     }
 
     private void updateBonusPatterns(ObjectRenderManager renderManager) {
