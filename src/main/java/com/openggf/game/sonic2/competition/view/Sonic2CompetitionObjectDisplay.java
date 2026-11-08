@@ -155,7 +155,25 @@ public final class Sonic2CompetitionObjectDisplay {
     public static ObjectSlot project(AbstractObjectInstance owner, ObjectArtProvider art, Runnable draw) {
         Objects.requireNonNull(owner);
         if (owner instanceof Sonic2NativeDisplaySource source) return source.nativeDisplaySlot();
+        if (owner instanceof com.openggf.level.rings.LostRingObjectInstance ring) return projectLostRing(ring);
         return projectCaptured(owner,art,draw,owner.getLiveObjectId()&255);
+    }
+
+    private static ObjectSlot projectLostRing(com.openggf.level.rings.LostRingObjectInstance ring) {
+        // Closed owner-specific observation: use RingManager's actual spin/sparkle
+        // request, with its retained mapping frame, without a second animation clock.
+        var capture = SpriteFrameCaptureInternalAccess.capture(() ->
+                com.openggf.level.rings.RingManagerInternalAccess.appendLostRingNativeDisplayArt(ring));
+        if (capture.calls().isEmpty()) return null;
+        if (capture.calls().size() != 1
+                || !(capture.calls().getFirst() instanceof SpriteFrameCaptureInternalAccess.FrameCall call)
+                || call.frameIndex() < 0 || call.frameIndex() >= call.sheet().getFrameCount())
+            throw unsupported(ring, 0x37);
+        var entry = Sonic2CompetitionSpriteArtTable.lostRing();
+        return new ObjectSlot(0x37, entry.renderFlagsInit(), call.originX() & 0xFFFF,
+                call.originY() & 0xFFFF, entry.widthPixels(), entry.yRadius(),
+                new Mapping(entry.mappingsAddress(), call.frameIndex()),
+                Sonic2CompetitionSpriteArtTable.adjust2PArtPointer(entry.artTile1P()), null);
     }
 
     private static ObjectSlot projectCaptured(AbstractObjectInstance owner,ObjectArtProvider art,Runnable draw,int id) {

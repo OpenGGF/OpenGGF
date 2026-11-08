@@ -2315,6 +2315,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                     } else {
                         objectManager.spawnLostRingObjectAtSlot(ringObject, slotIndex);
                     }
+                    ringObject.initializeNativeDisplayState();
                     if (applyInitialObjectStep
                             && (logicalOverflow || appliesInitialObj37Step(slotIndex, firstReservedSlot))) {
                         ringObject.updateMovement();
