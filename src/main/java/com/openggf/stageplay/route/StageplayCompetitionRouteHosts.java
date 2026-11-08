@@ -85,6 +85,7 @@ public final class StageplayCompetitionRouteHosts implements RouteWorldFactory {
         });
         private int rows;
         private int gameplayAnchorRows = -1;
+        private int levelAnchorRows=-1;
         private long epoch;
         private Object level;
         private Object mode;
@@ -145,6 +146,9 @@ public final class StageplayCompetitionRouteHosts implements RouteWorldFactory {
                 // loadAct has returned from its real title owner, before the ordinary LFC increment.
                 if (gameplayAnchorRows < 0 && state.phase()==com.openggf.game.sonic2.competition.Sonic2CompetitionSession.Phase.ACT
                         && lm.getFrameCounter()==0) gameplayAnchorRows=rows;
+                if(state.phase()==com.openggf.game.sonic2.competition.Sonic2CompetitionSession.Phase.ACT
+                        && lm.getFrameCounter()==0)levelAnchorRows=rows;
+                if(levelAnchorRows>=0)facts.put("input.levelAnchorRows",levelAnchorRows);
                 if (gameplayAnchorRows >= 0) facts.put("input.gameplayAnchorRows",gameplayAnchorRows);
                 facts.put("competition.paused",state.gameState(0).isGamePaused()?1:0);
                 facts.put("input.menu",state.phase()==com.openggf.game.sonic2.competition.Sonic2CompetitionSession.Phase.ACT?0:1);
@@ -167,6 +171,7 @@ public final class StageplayCompetitionRouteHosts implements RouteWorldFactory {
                 facts.put("competition.selection", state.selection());
                 facts.put("competition.romZone",state.romZone());facts.put("competition.act",state.act());
                 facts.put("competition.resultsReady",state.resultsPlcReady()?1:0);
+                facts.put("competition.presentationFrame",state.presentationFrame());
                 if(state.currentZone()>=0 && state.currentZone()<3) {
                     var wins=state.zoneWins(state.currentZone());
                     facts.put("competition.zoneWins.p1",wins.player1());facts.put("competition.zoneWins.p2",wins.player2());
@@ -285,7 +290,7 @@ public final class StageplayCompetitionRouteHosts implements RouteWorldFactory {
         private record Saved(World owner, long epoch, Object level,
                 com.openggf.game.rewind.RewindRegistry registry, long layout,
                 com.openggf.game.rewind.CompositeSnapshot state,
-                com.openggf.debug.playback.Bk2FrameInput previous, int rows) implements WorldCheckpoint { }
+                com.openggf.debug.playback.Bk2FrameInput previous, int rows, int levelAnchorRows) implements WorldCheckpoint { }
         @Override public WorldCheckpoint capture() {
             var visit = adapter[0].visit();
             var context = SessionManager.getCurrentGameplayMode();
@@ -295,14 +300,14 @@ public final class StageplayCompetitionRouteHosts implements RouteWorldFactory {
                     || GameServices.graphics().getFadeManager().isActive())
                 throw new RouteHostException(RouteHostException.Reason.CHECKPOINT_REFUSED,"outside stable competition act");
             var registry=context.getRewindRegistry();
-            return new Saved(this,epoch,level,registry,registry.courseLayoutVersion(),registry.capture(),previous,rows);
+            return new Saved(this,epoch,level,registry,registry.courseLayoutVersion(),registry.capture(),previous,rows,levelAnchorRows);
         }
         @Override public void restore(WorldCheckpoint checkpoint) {
             var context=SessionManager.getCurrentGameplayMode();
             if(!(checkpoint instanceof Saved c) || c.owner()!=this || c.epoch()!=epoch || c.level()!=level
                     || c.registry()!=context.getRewindRegistry() || c.layout()!=c.registry().courseLayoutVersion())
                 throw new RouteHostException(RouteHostException.Reason.CHECKPOINT_MISMATCH,"competition checkpoint belongs to another epoch/layout");
-            c.registry().restore(c.state()); previous=c.previous(); rows=c.rows();
+            c.registry().restore(c.state()); previous=c.previous(); rows=c.rows(); levelAnchorRows=c.levelAnchorRows();
         }
         @Override public void close() {
             try { diagnostic.accept(observe()); }

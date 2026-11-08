@@ -7,7 +7,8 @@ local state=os.getenv('OGGF_NATIVE_FIXTURE_STATE')
 client.speedmode(6400)
 client.invisibleemulation(false)
 if state then assert(savestate.load(state)); assert(emu.framecount()==p.state_frame) end
-local fields={{'ss_stage',0xfe16,1},{'zone_2p',0xff88,1},{'act_2p',0xff89,1},{'act1_result',0xff20,2},{'act2_result',0xff22,2},{'act_wins',0xff38,2},{'mode',0xf600,1},{'zoneact',0xfe10,2},{'two_player',0xffd8,2},{'title_option',0xff86,1},{'selection',0xff88,1},{'lfc',0xfe04,2},{'vint',0xfe0c,4},{'results',0xff10,2},{'game_paused',0xf63a,2},{'p1_pad',0xf604,2},{'p2_pad',0xf606,2}}
+-- SpecialStage_Started: same REV01 RAM owner as s2_ss_trace_recorder.lua; not merely Game_Mode.
+local fields={{'ss_started',0xdb23,1},{'p1_id',0xb000,1},{'p2_id',0xb040,1},{'ss_stage',0xfe16,1},{'zone_2p',0xff88,1},{'act_2p',0xff89,1},{'act1_result',0xff20,2},{'act2_result',0xff22,2},{'act_wins',0xff38,2},{'mode',0xf600,1},{'zoneact',0xfe10,2},{'two_player',0xffd8,2},{'title_option',0xff86,1},{'selection',0xff88,1},{'lfc',0xfe04,2},{'vint',0xfe0c,4},{'results',0xff10,2},{'game_paused',0xf63a,2},{'p1_pad',0xf604,2},{'p2_pad',0xf606,2}}
 for i,base in ipairs({0xb000,0xb040}) do
  for _,v in ipairs({{'x',8,2},{'y',12,2},{'vx',16,-2},{'vy',18,-2},{'status',34,1},{'anim',28,1},{'routine',36,1}}) do fields[#fields+1]={'p'..i..'_'..v[1],base+v[2],v[3]} end
 end

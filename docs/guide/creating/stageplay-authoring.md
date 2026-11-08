@@ -360,14 +360,38 @@ lag boundaries are recorded separately and never create input fillers. Replays a
 `state.csv` timeline. A menu Start carried into native pause is a gameplay frontier;
 do not insert an unpause row to work around it.
 
+`competition.presentationFrame` is the production screen's copied presentation
+counter. A fact-only menu goal with a leg `holds` invariant is an observation hold:
+the existing expander tries bounded neutral input through that leg's row limit,
+then qualifies the complete frozen rows. It never guesses missing counters or
+navigates a menu while maintaining the invariant. Other numeric fact goals use
+copied-value distance only to rank candidates; exact predicates decide success.
+This can author an intentional results dwell based on the ROM finish-grace period
+before the next Start edge, without a clock offset or native state injection.
+
 `ehz1-p1-finish-prefix` is a qualified partial programme, not zone-results or
-special-stage certification. Continue its frozen rows with
-`--native-route src/test/resources/routes/s2/competition/ehz1-p1-finish-prefix.route.json
---goals src/test/resources/routes/s2/competition/ehz1-both-finish-goals.json
---nodes 5000 --ticks 800000 --s2-rom ROM --out NEW_STEM` (one CLI command).
-It currently exposes an object instance-ID checkpoint mismatch while human P2
-stands on a spring. Preserve strict identity equality and report the frontier;
-do not drop objects, normalize IDs or weaken rewind checks to finish a route.
+special-stage certification. Its earlier checkpoint instance-ID frontier was
+fixed by restoring the animal's points-child construction policy; strict identity
+equality remains mandatory. Continue frozen prefixes through the same planner.
+
+Later native loads use optional `native.inlets[]`. Each entry has `engineFromRows`
+(the first engine load/menu row replaced), plus the same anchor fields `movie`,
+`prefixRows`, `inputHash`, `engineAnchorRows`, `anchorBoundary`. The native witness
+binds its entire cold prefix through the later first ordinary Level/LFC0 boundary.
+Export verifies that all rows before the replacement equal the already-composed
+frozen input history, then substitutes the witnessed pre-level span and resumes
+engine rows at the later engine anchor. It never shifts gameplay state or inserts
+lag fillers. Changing any preceding gameplay row invalidates that witness history.
+Engine replay checks each later anchor using copied `input.levelAnchorRows` and LFC0.
+
+CLI author/replay publication can append one inlet with all four flags:
+`--native-inlet-witness FILE --native-inlet-anchor-rows N
+--engine-inlet-from-rows F --engine-inlet-anchor-rows A` (one command).
+`F` and `A` are observed engine counts; `N` is the observed native completed count.
+Do not fit them. Existing entry fields and input rows remain unchanged. Both editor
+surfaces preserve and list these imported inlets, resolve their witnesses relative
+to the route project and use the same export validation. Ordinary engine replays
+never read native witness data.
 
 ## Render
 

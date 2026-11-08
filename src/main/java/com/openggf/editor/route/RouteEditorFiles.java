@@ -52,12 +52,15 @@ public final class RouteEditorFiles {
     public static Path export(RouteArtifact route, Path manifest, Path destination) throws IOException {
         var facts=route.manifest().nativeFacts();
         if(!facts.exportBlocker().isBlank()) return RouteFiles.exportBk2(route,destination);
-        if(facts.entry().isPresent()) {
-            var e=facts.entry().get();
-            Path found=resolveWitness(manifest,e.movie());
-            var resolved=new NativeFacts.NativeEntry(found.toString(),e.prefixRows(),e.inputHash(),e.engineAnchorRows(),e.anchorBoundary());
-            route=new RouteArtifact(route.manifest().withNativeFacts(new NativeFacts(java.util.Optional.of(resolved),facts.lag(),facts.exportBlocker())),route.tape());
-        }
+        var entry=facts.entry();
+        if(entry.isPresent())entry=java.util.Optional.of(resolveEntry(manifest,entry.get()));
+        var inlets=new java.util.ArrayList<NativeFacts.NativeInlet>();
+        for(var inlet:facts.inlets())inlets.add(new NativeFacts.NativeInlet(inlet.engineFromRows(),resolveEntry(manifest,inlet.anchor())));
+        route=new RouteArtifact(route.manifest().withNativeFacts(new NativeFacts(entry,facts.lag(),facts.exportBlocker(),inlets)),route.tape());
         return RouteFiles.exportBk2(route,destination);
     }
+    private static NativeFacts.NativeEntry resolveEntry(Path manifest,NativeFacts.NativeEntry e)throws IOException {
+        return new NativeFacts.NativeEntry(resolveWitness(manifest,e.movie()).toString(),e.prefixRows(),e.inputHash(),e.engineAnchorRows(),e.anchorBoundary());
+    }
+
 }

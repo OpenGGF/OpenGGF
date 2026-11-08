@@ -122,6 +122,15 @@ public final class RouteCodec {
         });
         if (!manifest.nativeFacts().exportBlocker().isEmpty())
             nativeNode.put("exportBlocker", manifest.nativeFacts().exportBlocker());
+        if(!manifest.nativeFacts().inlets().isEmpty()) {
+            ArrayNode inlets=nativeNode.putArray("inlets");
+            for(var inlet:manifest.nativeFacts().inlets()) {
+                var n=inlets.addObject();var a=inlet.anchor();
+                n.put("engineFromRows",inlet.engineFromRows()).put("movie",a.movie())
+                    .put("prefixRows",a.prefixRows()).put("inputHash",a.inputHash().sha256())
+                    .put("engineAnchorRows",a.engineAnchorRows()).put("anchorBoundary",a.anchorBoundary());
+            }
+        }
         ArrayNode lag = nativeNode.putArray("lag");
         for (NativeFacts.LagFact fact : manifest.nativeFacts().lag()) {
             ObjectNode node = lag.addObject();
@@ -182,7 +191,7 @@ public final class RouteCodec {
         NativeFacts facts = NativeFacts.NONE;
         if (root.has("native")) {
             JsonNode node = root.get("native");
-            object(node, "native", Set.of("entry", "lag", "exportBlocker"), Set.of());
+            object(node, "native", Set.of("entry", "lag", "exportBlocker", "inlets"), Set.of());
             Optional<NativeFacts.NativeEntry> entry = Optional.empty();
             if (node.has("entry")) {
                 JsonNode e = node.get("entry");
@@ -201,7 +210,15 @@ public final class RouteCodec {
                             new ContentHash(text(l, "content"))));
                 }
             }
-            facts = new NativeFacts(entry, lag, optionalText(node, "exportBlocker"));
+            var inlets=new ArrayList<NativeFacts.NativeInlet>();
+            if(node.has("inlets")) for(var n:array(node.get("inlets"),"native inlets")) {
+                var fields=Set.of("engineFromRows","movie","prefixRows","inputHash","engineAnchorRows","anchorBoundary");
+                object(n,"native inlet",fields,fields);
+                inlets.add(new NativeFacts.NativeInlet(integer(n,"engineFromRows"),new NativeFacts.NativeEntry(
+                    text(n,"movie"),integer(n,"prefixRows"),new ContentHash(text(n,"inputHash")),
+                    integer(n,"engineAnchorRows"),text(n,"anchorBoundary"))));
+            }
+            facts = new NativeFacts(entry, lag, optionalText(node, "exportBlocker"),inlets);
         }
         return new RouteManifest(launch, new ContentHash(text(tape, "sha256")), integer(tape, "rows"), checks, draft,
                 provenance, stamps, facts);

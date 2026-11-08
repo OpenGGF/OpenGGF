@@ -3,6 +3,7 @@ from check_s2_competition_goals import analyse
 
 def state(i,**kw):
     return dict(frame=i,mode=12,zoneact=12<<8,two_player=1,lfc=i,vint=i,game_paused=0,
+                ss_started=1,p1_id=9,p2_id=16,p1_routine=2,p2_routine=2,
                 zone_2p=2,act_2p=0,act1_result=65535,act2_result=65535,results=0,ss_stage=0,**kw)
 def goal(i):
     return dict(frame=i,slot_inuse=65535,slot_visible=1,slot_player=1,slot_object_slot=109,
@@ -27,6 +28,12 @@ class NativeGoals(unittest.TestCase):
         self.assertFalse(analyse([a,b,c],[],'tie-special')['passed'])
         c.update(mode=16,results=3,ss_stage=1)
         self.assertTrue(analyse([a,b,c],[],'tie-special')['passed'])
+        c['ss_started']=0
+        self.assertFalse(analyse([a,b,c],[],'tie-special')['passed'])
+        c['ss_started']=1
+        c['p2_id']=0
+        self.assertFalse(analyse([a,b,c],[],'tie-special')['passed'])
+        c['p2_id']=16
         c['act2_result']=0x0500
         self.assertFalse(analyse([a,b,c],[],'tie-special')['passed'])
 if __name__=='__main__':unittest.main()

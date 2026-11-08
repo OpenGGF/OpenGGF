@@ -9,8 +9,8 @@ public final class RouteCompetitionFacts {
     public static final List<String> KEYS;
     static {
         var keys=new ArrayList<String>(List.of("competition.phase","competition.selection","competition.romZone",
-                "competition.act","competition.resultsReady","competition.firstFinisher","competition.specialStage",
-                "competition.paused","input.menu","input.gameplayAnchorRows","title.state","title.selection",
+                "competition.act","competition.presentationFrame","competition.resultsReady","competition.firstFinisher","competition.specialStage",
+                "competition.paused","input.menu","input.gameplayAnchorRows","input.levelAnchorRows","title.state","title.selection",
                 "competition.zoneWins.p1","competition.zoneWins.p2","competition.slot.inUse","competition.slot.routine",
                 "competition.slot.timer","competition.slot.position0","competition.slot.position1","competition.slot.position2"));
         for(String player:List.of("p1","p2")) for(String metric:List.of("rings","totalRings","monitors","lives",

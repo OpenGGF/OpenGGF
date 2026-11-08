@@ -115,7 +115,7 @@ public final class StageplayRouteTool {
     private static int replayNative(String[] args, PrintStream output) throws IOException {
         var flags=new LinkedHashMap<String,String>();
         for(int i=0;i<args.length;i+=2) {
-            if(i+1>=args.length || !Set.of("--replay-native-route","--s2-rom","--out","--publish","--native-witness","--native-anchor-rows").contains(args[i])
+            if(i+1>=args.length || !Set.of("--replay-native-route","--s2-rom","--out","--publish","--native-witness","--native-anchor-rows","--native-inlet-witness","--native-inlet-anchor-rows","--engine-inlet-from-rows","--engine-inlet-anchor-rows").contains(args[i])
                     || flags.put(args[i].substring(2),args[i+1])!=null) throw new IOException("Expected unique replay flags");
         }
         var route=com.openggf.route.RouteFiles.read(Path.of(required(flags,"replay-native-route")));
@@ -156,7 +156,7 @@ public final class StageplayRouteTool {
     /** Native routes use the existing manifest vocabulary, including both-player goal clauses. */
     private static int nativeRoute(String[] args, PrintStream output) throws IOException {
         var flags = new LinkedHashMap<String,String>();
-        var allowed = Set.of("native-route", "out", "s2-rom", "prefix-rows", "nodes", "ticks", "bk2", "competition-entry", "goals", "native-witness", "native-anchor-rows");
+        var allowed = Set.of("native-route", "out", "s2-rom", "prefix-rows", "nodes", "ticks", "bk2", "competition-entry", "goals", "native-witness", "native-anchor-rows", "native-inlet-witness", "native-inlet-anchor-rows", "engine-inlet-from-rows", "engine-inlet-anchor-rows");
         for (int i=0;i<args.length;i+=2) {
             if(i+1>=args.length || !args[i].startsWith("--") || !allowed.contains(args[i].substring(2))
                     || flags.put(args[i].substring(2),args[i+1])!=null) throw new IOException("Expected unique native route flags");
@@ -201,16 +201,27 @@ public final class StageplayRouteTool {
             com.openggf.route.RouteSample end, Map<String,String> flags) throws IOException {
         if(flags.containsKey("native-witness")!=flags.containsKey("native-anchor-rows"))
             throw new IOException("native-witness and native-anchor-rows must be supplied together");
-        if(!flags.containsKey("native-witness")) return route;
-        Integer engine=end.facts().get("input.gameplayAnchorRows");
-        if(engine==null) throw new IOException("no observed first ordinary Level frame with LFC zero");
-        int nativeRows=integer(flags,"native-anchor-rows",-1);
-        var input=com.openggf.route.RouteFiles.inputPrefix(Path.of(flags.get("native-witness")),nativeRows);
-        var entry=new com.openggf.route.NativeFacts.NativeEntry(flags.get("native-witness"),nativeRows,
-                input.hash(),engine,"first-ordinary-level-lfc-zero");
-        var facts=route.manifest().nativeFacts();
+        var facts=route.manifest().nativeFacts();var entry=facts.entry();
+        if(flags.containsKey("native-witness")) {
+            Integer engine=end.facts().get("input.gameplayAnchorRows");
+            if(engine==null)throw new IOException("no observed first ordinary Level frame with LFC zero");
+            int rows=integer(flags,"native-anchor-rows",-1);var input=com.openggf.route.RouteFiles.inputPrefix(Path.of(flags.get("native-witness")),rows);
+            entry=Optional.of(new com.openggf.route.NativeFacts.NativeEntry(flags.get("native-witness"),rows,input.hash(),engine,"first-ordinary-level-lfc-zero"));
+        }
+        var inlets=new ArrayList<>(facts.inlets());
+        var inletKeys=List.of("native-inlet-witness","native-inlet-anchor-rows","engine-inlet-from-rows","engine-inlet-anchor-rows");
+        long supplied=inletKeys.stream().filter(flags::containsKey).count();
+        if(supplied!=0 && supplied!=inletKeys.size())throw new IOException("all four later native inlet flags are required");
+        if(supplied!=0) {
+            int engine=integer(flags,"engine-inlet-anchor-rows",-1);
+            if(end.facts().getOrDefault("input.levelAnchorRows",-1)!=engine)throw new IOException("later inlet is not the last observed ordinary Level/LFC-zero anchor");
+            int rows=integer(flags,"native-inlet-anchor-rows",-1);String movie=flags.get("native-inlet-witness");
+            var input=com.openggf.route.RouteFiles.inputPrefix(Path.of(movie),rows);
+            inlets.add(new com.openggf.route.NativeFacts.NativeInlet(integer(flags,"engine-inlet-from-rows",-1),
+                new com.openggf.route.NativeFacts.NativeEntry(movie,rows,input.hash(),engine,"first-ordinary-level-lfc-zero")));
+        }
         return new com.openggf.route.RouteArtifact(route.manifest().withNativeFacts(
-                new com.openggf.route.NativeFacts(Optional.of(entry),facts.lag(),facts.exportBlocker())),route.tape());
+                new com.openggf.route.NativeFacts(entry,facts.lag(),facts.exportBlocker(),inlets)),route.tape());
     }
 
     private static StageplayRouteResult worker() throws IOException {
