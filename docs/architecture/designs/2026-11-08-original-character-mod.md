@@ -86,6 +86,10 @@ the S3K water zones.
 
 ### W4 — Character presentation contract (L)
 
+Ending lane `feature/ai-mica-endings-s1s2`: S1 ending actor uses additive native-ID
+frames and private palette ownership; stock emerald/flower/logo art is unchanged.
+Verification and capture results are recorded in the lane handoff.
+
 Stage lane `feature/ai-mica-stages`: S1 uses the bound canonical playable roll
 sheet; additive `StageSpriteSet` slots supply S2 half-pipe, S3K Blue Sphere and
 slot-machine frames by native frame ID. MICA's wave3 PNGs are packaged by the

@@ -51,6 +51,10 @@ def main():
     for frame in (PROJECT / "art/mica/wave3").glob("*.png"):
         if not frame.stem.endswith("-fixed"):
             shutil.copy2(frame, stage_assets / frame.name)
+    ending_assets = classes / "art/mica/endings/s1"
+    ending_assets.mkdir(parents=True, exist_ok=True)
+    for frame in (PROJECT / "art/mica/endings/s1").glob("*.png"):
+        shutil.copy2(frame, ending_assets / frame.name)
     jar = OUTPUT / "mica-and-talon.jar"
     jar.unlink(missing_ok=True)
     cli = [java_tool("java"), "--enable-native-access=ALL-UNNAMED", "-cp", classpath,

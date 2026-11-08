@@ -476,3 +476,9 @@ remains. Landing, hurt, control takeover and strike completion return selection 
 the native profile. No per-character animation latch is needed for rewind: the
 world strike phase and ordinary script cursor are already captured. All four MICA
 dive frames loop at two ticks each; collision remains the native attacking roll.
+
+`CharacterPresentation.endings` optionally supplies `EndingSpriteSet` frames keyed
+by native ending selector and hotspot, with a private sixteen-colour RGB palette.
+S1's ending actor consumes `S1_ENDING`; absent slots retain its ROM art. Images
+are bounded to 256×256 to cover the native leap close-up. Shared native palettes
+remain intact for the emeralds, flowers, logo and companions.

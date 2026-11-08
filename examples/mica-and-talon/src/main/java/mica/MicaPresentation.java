@@ -21,7 +21,7 @@ final class MicaPresentation {
                     pose(assets,prefix+"-spin1"),null,pose(assets,prefix+"-spin3"))));
         }
         return new CharacterPresentation("MICA","MICA",art,Map.of(new Font(Host.S1,Style.HUD),
-                Map.of('M',image(assets,"s1-name-M"),'A',image(assets,"s1-name-A"))), stages(assets));
+                Map.of('M',image(assets,"s1-name-M"),'A',image(assets,"s1-name-A"))), stages(assets), MicaEndings.load(assets));
     }
     private static Map<com.openggf.game.StageSpriteSet.Surface,com.openggf.game.StageSpriteSet> stages(ModAssetRoot assets) throws IOException {
         return Map.ofEntries(Map.entry(com.openggf.game.StageSpriteSet.Surface.S2_HALF_PIPE, new com.openggf.game.StageSpriteSet(Map.ofEntries(

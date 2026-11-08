@@ -27,7 +27,7 @@ public final class PresentationImages {
             try {
                 reader.setInput(input);
                 int width = reader.getWidth(0), height = reader.getHeight(0);
-                if (width < 1 || width > 256 || height < 1 || height > 64)
+                if (width < 1 || width > 256 || height < 1 || height > 256)
                     throw new IOException("Presentation image outside dimension budget: " + entry);
                 var image = reader.read(0);
                 if (!(image.getColorModel() instanceof IndexColorModel palette))
