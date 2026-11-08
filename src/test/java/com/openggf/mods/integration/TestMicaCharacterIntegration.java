@@ -62,10 +62,10 @@ class TestMicaCharacterIntegration {
             var rows = Files.readAllLines(temp.resolve("capture/state.csv"));
             assertTrue(rows.stream().anyMatch(row -> row.contains(",DATA_SELECT,")));
             // Session teardown retires the world; inspect the final native mapping frame.
-            // MICA's four idle frames are 0..3; stock Sonic's idle is 186.
+            // MICA's six WAIT frames are 0..5; stock Sonic's idle is 186.
             var last = rows.getLast().split(",");
             assertEquals("LEVEL", last[19]);
-            assertTrue(Integer.parseInt(last[12]) < 4, rows.getLast());
+            assertTrue(Integer.parseInt(last[12]) < 6, rows.getLast());
         } finally {
             if (previous == null) System.clearProperty("openggf.saveRoot");
             else System.setProperty("openggf.saveRoot", previous);
@@ -343,7 +343,7 @@ class TestMicaCharacterIntegration {
         try (JarFile packed = new JarFile(jar.toFile())) {
             var sheet = com.openggf.level.objects.PlayableSheetReader.read(
                     packed.getInputStream(packed.getJarEntry("art/mica.ggfp")).readAllBytes());
-            assertEquals(96, sheet.frames().size());
+            assertEquals(98, sheet.frames().size());
             assertEquals(17, sheet.animations().size());
             assertFalse(sheet.animations().containsKey("HOMING_DIVE"));
             assertEquals(List.of(8, 8, 8, 8), sheet.animations().get("WALK").slopes()
