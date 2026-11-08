@@ -12,7 +12,8 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestSonic2CompetitionSpriteArtTable {
     @Test void everyAdoptedRowHasItsInitMappingArtWidthFlagsAndBucketInRom() throws Exception {
         var rom=RomByteReader.fromRom(TestEnvironment.currentRom());
-        for(var row:Sonic2CompetitionSpriteArtTable.captureRows()) {
+        for(var row:java.util.stream.Stream.concat(Sonic2CompetitionSpriteArtTable.captureRows().stream(),
+                Sonic2CompetitionSpriteArtTable.fixedRoleRows().stream()).toList()) {
             try { verifyRow(rom,row); }
             catch(AssertionError failure) { throw new AssertionError(row.role()+": "+failure.getMessage(),failure); }
         }
@@ -89,6 +90,26 @@ class TestSonic2CompetitionSpriteArtTable {
 
     private static void verifyRow(RomByteReader r,Sonic2CompetitionSpriteArtTable.Row row) {
         var e=row.display(); int id=row.id(), start, end;
+        if(id==0x08) {
+            int init=0x1DD36,endInit=0x1DD90;
+            has(r,init,endInit,"217c%08x0004".formatted(e.mappingsAddress()));
+            has(r,init,endInit,"317c%04x0002".formatted(e.artTile1P()));
+            has(r,init,endInit,"117c%04x0019".formatted(e.widthPixels()));
+            has(r,init,endInit,"117c%04x0018".formatted(row.priorityBucket()));
+            has(r,init,endInit,"002800040001");
+            assertEquals(4,e.renderFlagsInit());assertEquals(16,e.widthPixels());return;
+        }
+        if(id==0x35) {
+            int init=0x1D9A4;
+            assertEquals(e.mappingsAddress(),r.readU32BE(init+24));
+            assertEquals(e.artTile1P(),r.readU16BE(init+32));
+            has(r,init,0x1DA0C,"137c0010000e");
+            has(r,init,0x1DA0C,"137c0002000f");
+            has(r,init,0x1DA0C,"137c00040001");
+            has(r,init,0x1DA0C,"08e900060001");
+            has(r,0x1DA0C,0x1DA80,"303c0080");
+            assertEquals(16,e.widthPixels());assertEquals(0x44,e.renderFlagsInit());assertEquals(1,row.priorityBucket());return;
+        }
         if(id==0x1C) {
             // Obj1C_InitData subtype2 (s2.asm:24023-24026): objsubdecl packs frame in pointer high byte.
             int p=0x111E6+2*8;
@@ -128,7 +149,7 @@ class TestSonic2CompetitionSpriteArtTable {
             case 0x18->new int[]{0x104CE,0x1056A};case 0x1F->new int[]{0x10A24,0x10AD6};
             case 0x25->new int[]{0x19398,0x19406};case 0x26->new int[]{0x12694,0x12710};
             case 0x2A->new int[]{0x115D6,0x11610};case 0x2E->new int[]{0x1286C,0x128EC};
-            case 0x36->new int[]{0x15926,0x15996};case 0x40->new int[]{0x2638C,0x26410};
+            case 0x38->new int[]{0x1D904,0x1D92C};case 0x36->new int[]{0x15926,0x15996};case 0x40->new int[]{0x2638C,0x26410};
             case 0x41->new int[]{0x188A8,0x1897C};case 0x49->new int[]{0x20BB0,0x20BEA};
             case 0x4B->new int[]{0x2D0C8,0x2D174};case 0x5C->new int[]{0x2D3AA,0x2D3E0};
             case 0x6A->new int[]{0x27AD2,0x27BD0};case 0x75->new int[]{0x28BEE,0x28CCA};

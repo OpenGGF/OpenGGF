@@ -38,6 +38,23 @@ public final class Sonic2CompetitionSpriteArtTable {
             Map.entry(0xDC, new Pending("RingPrize", "loc_2BD4E (s2.asm:59272-59313)", "Lane C owns this object; display adoption deferred"))
     );
 
+    /** Fixed player accessories are not object-layout IDs; their existing SST owner supplies identity. */
+    private static final java.util.List<Row> FIXED_ROLE_ROWS = java.util.List.of(
+            new Row("sonic-dust",0x08,new Entry(Sonic2Constants.MAP_UNC_OBJ08_ADDR,
+                    Sonic2Constants.ART_TILE_SONIC_DUST,0x10,4,0,"","Obj08_Init (s2.asm:42721-42739)"),1,0,0),
+            new Row("tails-dust",0x08,new Entry(Sonic2Constants.MAP_UNC_OBJ08_ADDR,
+                    Sonic2Constants.ART_TILE_TAILS_DUST,0x10,4,0,"","Obj08_Init (s2.asm:42721-42739)"),1,0,0),
+            new Row("shield",0x38,new Entry(Sonic2Constants.MAP_UNC_SHIELD_ADDR,
+                    0x04BE,0x18,4,0,ObjectArtKeys.SHIELD,"Obj38_Main (s2.asm:42393-42401)"),1,0,0),
+            // ArtTile_ArtNem_Invincible_stars (s2.constants.asm:2611); Obj35's explicit DisplaySprite3 bucket1.
+            new Row("invincibility-stars",0x35,new Entry(Sonic2Constants.MAP_UNC_INVINCIBILITY_STARS_ADDR,
+                    0x04DE,0x10,0x44,0,ObjectArtKeys.INVINCIBILITY_STARS,
+                    "Obj35_Main (s2.asm:42466-42490); loc_1DA44 (s2.asm:42517-42542)"),1,0,0));
+    public static Row fixedRole(int id) {
+        return FIXED_ROLE_ROWS.stream().filter(row->row.id()==id).findFirst().orElseThrow();
+    }
+    public static java.util.List<Row> fixedRoleRows() { return FIXED_ROLE_ROWS; }
+
     /** One ROM Init variant; masks are the actual placement byte selectors. */
     public record Row(String role, int id, Entry display, int priorityBucket, int subtypeMask, int subtypeValue) {
         public boolean accepts(int subtype) { return (subtype & subtypeMask)==subtypeValue; }

@@ -1256,11 +1256,11 @@ public class SpriteManager implements PlayableSstDispatcher {
 	 */
 	public void advanceTailsTailsAfterObjectExecution() {
 		AbstractPlayableSprite main = getMainPlayable();
-		if (main != null && main.getTailsTailsController() != null) {
+		if (main != null && main.getTailsTailsController() != null && !NativeDustDisplayInternalAccess.owns(main)) {
 			main.getTailsTailsController().update();
 		}
 		for (AbstractPlayableSprite sidekick : getRegisteredSidekicks()) {
-			if (sidekick != null && sidekick.getTailsTailsController() != null) {
+			if (sidekick != null && sidekick.getTailsTailsController() != null && !NativeDustDisplayInternalAccess.owns(sidekick)) {
 				sidekick.getTailsTailsController().update();
 			}
 		}
@@ -1271,6 +1271,9 @@ public class SpriteManager implements PlayableSstDispatcher {
 				sprites, sidekicks, isCpuSidekickSuppressed(),
 				playableOrderScratch, playableScheduledScratch, playableAvailableScratch);
 		for (AbstractPlayableSprite playable : playables) {
+            // Native capability-owned controllers run at their actual reserved SSTs,
+            // inside the admitted object walk, not a second broad tail callback.
+            if (NativeDustDisplayInternalAccess.owns(playable)) continue;
 			if (!(playable.getMovementManager() instanceof PlayableSpriteMovement movement)) {
 				continue;
 			}
