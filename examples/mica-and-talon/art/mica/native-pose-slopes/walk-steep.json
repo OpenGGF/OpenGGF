@@ -1,0 +1,135 @@
+{
+  "tool": "built-in GPT Image, latest exposed; model version not returned",
+  "concept": "../../../concept/mica.png",
+  "native_pin": "34fc7f130a96db171e1a1c43e28e0bad81cd6ca7",
+  "frames": [
+    {
+      "id": "walk-steep-00",
+      "mapping": 31,
+      "label": "Map_Sonic_052A",
+      "prompt": "Use case: style-transfer. Draw ONE original 16-bit pixel sprite of MICA the jade pangolin on transparent background. Image 1 is this frame's stock native pose: match its exact stride phase, limb/boot positions, rotation, framing and silhouette size, redrawing all anatomy as MICA; never recolour Sonic. Image 2 is MICA concept (jade form). Images 3/4 are approved flat WALK and RUN style anchors. MICA: rounded overlapping jade pangolin scales, small round ears, long tapered scaled tail, cream muzzle/belly, white gloves, coral hiking boots with tan lug soles. No Sonic spines, ears, face or shoes. Frame walk-steep-00: 90-degree wall run, head left and feet right. Keep the native rotated pose, do NOT turn upright. Keep the native support/lift legs distinct and match the extended boot angles precisely. New drawing consistent with the flat pilot, compact crisp pixel clusters, dark native one-pixel outline, restrained scale highlights. One character only; no ground, shadow, text, grid or extra frames.",
+      "raw_sha256": "d9dd96c6572c5d1d3a13f45ebbc5853d5e29763c33558a34b5fec0437855f386",
+      "size": [
+        40,
+        40
+      ],
+      "hotspot": [
+        21,
+        16
+      ],
+      "reduction": "largest alpha component; Lanczos to unchanged handoff box; fixed palette indices; inside outline"
+    },
+    {
+      "id": "walk-steep-01",
+      "mapping": 32,
+      "label": "Map_Sonic_0544",
+      "prompt": "Use case: style-transfer. Draw ONE original 16-bit pixel sprite of MICA the jade pangolin on transparent background. Image 1 is this frame's stock native pose: match its exact stride phase, limb/boot positions, rotation, framing and silhouette size, redrawing all anatomy as MICA; never recolour Sonic. Image 2 is MICA concept (jade form). Images 3/4 are approved flat WALK and RUN style anchors. MICA: rounded overlapping jade pangolin scales, small round ears, long tapered scaled tail, cream muzzle/belly, white gloves, coral hiking boots with tan lug soles. No Sonic spines, ears, face or shoes. Frame walk-steep-01: 90-degree wall run, head left and feet right. Keep the native rotated pose, do NOT turn upright. Keep the native support/lift legs distinct and match the extended boot angles precisely. New drawing consistent with the flat pilot, compact crisp pixel clusters, dark native one-pixel outline, restrained scale highlights. One character only; no ground, shadow, text, grid or extra frames.",
+      "raw_sha256": "58a95316eba52513809f4e1b992beb4215be32e238c8346d069c06c52eab01d6",
+      "size": [
+        40,
+        30
+      ],
+      "hotspot": [
+        21,
+        14
+      ],
+      "reduction": "largest alpha component; Lanczos to unchanged handoff box; fixed palette indices; inside outline"
+    },
+    {
+      "id": "walk-steep-02",
+      "mapping": 33,
+      "label": "Map_Sonic_0556",
+      "prompt": "Use case: style-transfer. Draw ONE original 16-bit pixel sprite of MICA the jade pangolin on transparent background. Image 1 is this frame's stock native pose: match its exact stride phase, limb/boot positions, rotation, framing and silhouette size, redrawing all anatomy as MICA; never recolour Sonic. Image 2 is MICA concept (jade form). Images 3/4 are approved flat WALK and RUN style anchors. MICA: rounded overlapping jade pangolin scales, small round ears, long tapered scaled tail, cream muzzle/belly, white gloves, coral hiking boots with tan lug soles. No Sonic spines, ears, face or shoes. Frame walk-steep-02: 90-degree wall run, head left and feet right. Keep the native rotated pose, do NOT turn upright. Keep the native support/lift legs distinct and match the extended boot angles precisely. New drawing consistent with the flat pilot, compact crisp pixel clusters, dark native one-pixel outline, restrained scale highlights. One character only; no ground, shadow, text, grid or extra frames.",
+      "raw_sha256": "bf55fabbd1b1fa1b415c87bf2265ec393fd7beaaf4f4630bf83453876e2f0365",
+      "size": [
+        40,
+        30
+      ],
+      "hotspot": [
+        21,
+        14
+      ],
+      "reduction": "largest alpha component; Lanczos to unchanged handoff box; fixed palette indices; inside outline"
+    },
+    {
+      "id": "walk-steep-03",
+      "mapping": 34,
+      "label": "Map_Sonic_0570",
+      "prompt": "Use case: style-transfer. Draw ONE original 16-bit pixel sprite of MICA the jade pangolin on transparent background. Image 1 is this frame's stock native pose: match its exact stride phase, limb/boot positions, rotation, framing and silhouette size, redrawing all anatomy as MICA; never recolour Sonic. Image 2 is MICA concept (jade form). Images 3/4 are approved flat WALK and RUN style anchors. MICA: rounded overlapping jade pangolin scales, small round ears, long tapered scaled tail, cream muzzle/belly, white gloves, coral hiking boots with tan lug soles. No Sonic spines, ears, face or shoes. Frame walk-steep-03: 90-degree wall run, head left and feet right. Keep the native rotated pose, do NOT turn upright. Keep the native support/lift legs distinct and match the extended boot angles precisely. New drawing consistent with the flat pilot, compact crisp pixel clusters, dark native one-pixel outline, restrained scale highlights. One character only; no ground, shadow, text, grid or extra frames.",
+      "raw_sha256": "0de06fee89580b9bf7714b25ae19369369d38b121fc86c30892b375784fc46aa",
+      "size": [
+        40,
+        42
+      ],
+      "hotspot": [
+        21,
+        18
+      ],
+      "reduction": "largest alpha component; Lanczos to unchanged handoff box; fixed palette indices; inside outline"
+    },
+    {
+      "id": "walk-steep-04",
+      "mapping": 35,
+      "label": "Map_Sonic_058A",
+      "prompt": "Use case: style-transfer. Draw ONE original 16-bit pixel sprite of MICA the jade pangolin on transparent background. Image 1 is this frame's stock native pose: match its exact stride phase, limb/boot positions, rotation, framing and silhouette size, redrawing all anatomy as MICA; never recolour Sonic. Image 2 is MICA concept (jade form). Images 3/4 are approved flat WALK and RUN style anchors. MICA: rounded overlapping jade pangolin scales, small round ears, long tapered scaled tail, cream muzzle/belly, white gloves, coral hiking boots with tan lug soles. No Sonic spines, ears, face or shoes. Frame walk-steep-04: 90-degree wall run, head left and feet right. Keep the native rotated pose, do NOT turn upright. Keep the native support/lift legs distinct and match the extended boot angles precisely. New drawing consistent with the flat pilot, compact crisp pixel clusters, dark native one-pixel outline, restrained scale highlights. One character only; no ground, shadow, text, grid or extra frames.",
+      "raw_sha256": "7dd506787c307528ded972520ffb147b157a0783aad4b6300f61644c55d11f46",
+      "size": [
+        40,
+        38
+      ],
+      "hotspot": [
+        21,
+        16
+      ],
+      "reduction": "largest alpha component; Lanczos to unchanged handoff box; fixed palette indices; inside outline"
+    },
+    {
+      "id": "walk-steep-05",
+      "mapping": 36,
+      "label": "Map_Sonic_05A4",
+      "prompt": "Use case: style-transfer. Draw ONE original 16-bit pixel sprite of MICA the jade pangolin on transparent background. Image 1 is this frame's stock native pose: match its exact stride phase, limb/boot positions, rotation, framing and silhouette size, redrawing all anatomy as MICA; never recolour Sonic. Image 2 is MICA concept (jade form). Images 3/4 are approved flat WALK and RUN style anchors. MICA: rounded overlapping jade pangolin scales, small round ears, long tapered scaled tail, cream muzzle/belly, white gloves, coral hiking boots with tan lug soles. No Sonic spines, ears, face or shoes. Frame walk-steep-05: 90-degree wall run, head left and feet right. Keep the native rotated pose, do NOT turn upright. Keep the native support/lift legs distinct and match the extended boot angles precisely. New drawing consistent with the flat pilot, compact crisp pixel clusters, dark native one-pixel outline, restrained scale highlights. One character only; no ground, shadow, text, grid or extra frames.",
+      "raw_sha256": "6a32ed6d0975e8249af40c4d8068392c9a7256e89b92be4320e530cb238b577b",
+      "size": [
+        40,
+        30
+      ],
+      "hotspot": [
+        21,
+        14
+      ],
+      "reduction": "largest alpha component; Lanczos to unchanged handoff box; fixed palette indices; inside outline"
+    },
+    {
+      "id": "walk-steep-06",
+      "mapping": 29,
+      "label": "Map_Sonic_04F6",
+      "prompt": "Use case: style-transfer. Draw ONE original 16-bit pixel sprite of MICA the jade pangolin on transparent background. Image 1 is this frame's stock native pose: match its exact stride phase, limb/boot positions, rotation, framing and silhouette size, redrawing all anatomy as MICA; never recolour Sonic. Image 2 is MICA concept (jade form). Images 3/4 are approved flat WALK and RUN style anchors. MICA: rounded overlapping jade pangolin scales, small round ears, long tapered scaled tail, cream muzzle/belly, white gloves, coral hiking boots with tan lug soles. No Sonic spines, ears, face or shoes. Frame walk-steep-06: 90-degree wall run, head left and feet right. Keep the native rotated pose, do NOT turn upright. Keep the native support/lift legs distinct and match the extended boot angles precisely. New drawing consistent with the flat pilot, compact crisp pixel clusters, dark native one-pixel outline, restrained scale highlights. One character only; no ground, shadow, text, grid or extra frames.",
+      "raw_sha256": "6ce1385db66c10a3b7b044624fa476c6a07da65601aecc2960743aa1e8b41ecc",
+      "size": [
+        40,
+        30
+      ],
+      "hotspot": [
+        21,
+        14
+      ],
+      "reduction": "largest alpha component; Lanczos to unchanged handoff box; fixed palette indices; inside outline"
+    },
+    {
+      "id": "walk-steep-07",
+      "mapping": 30,
+      "label": "Map_Sonic_0510",
+      "prompt": "Use case: style-transfer. Draw ONE original 16-bit pixel sprite of MICA the jade pangolin on transparent background. Image 1 is this frame's stock native pose: match its exact stride phase, limb/boot positions, rotation, framing and silhouette size, redrawing all anatomy as MICA; never recolour Sonic. Image 2 is MICA concept (jade form). Images 3/4 are approved flat WALK and RUN style anchors. MICA: rounded overlapping jade pangolin scales, small round ears, long tapered scaled tail, cream muzzle/belly, white gloves, coral hiking boots with tan lug soles. No Sonic spines, ears, face or shoes. Frame walk-steep-07: 90-degree wall run, head left and feet right. Keep the native rotated pose, do NOT turn upright. Keep the native support/lift legs distinct and match the extended boot angles precisely. New drawing consistent with the flat pilot, compact crisp pixel clusters, dark native one-pixel outline, restrained scale highlights. One character only; no ground, shadow, text, grid or extra frames.",
+      "raw_sha256": "6d2bfcac7de14c8bb26d567eecfa5b65efaf9dcdbfb251645af717598203f5e2",
+      "size": [
+        40,
+        42
+      ],
+      "hotspot": [
+        21,
+        18
+      ],
+      "reduction": "largest alpha component; Lanczos to unchanged handoff box; fixed palette indices; inside outline"
+    }
+  ]
+}
