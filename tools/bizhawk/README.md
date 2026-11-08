@@ -205,3 +205,40 @@ marker. Compare cold/warm completed samples before accepting a warm observation.
 NLua callable methods are userdata, so the exporter tests API presence and actual
 registration rather than Lua's `function` type. All output stays in the external
 capture root; observations never supply engine gameplay or timing authority.
+
+### S2 Competition reference observer
+
+`capture_s2_competition_reference.lua` observes original REV01 S2 RAM without
+writes and saves raw framebuffer PNGs plus native states. Supply the ordinary
+host and a two-controller power-on BK2. `inputs/*-route.script` supplies the four
+menu entries; `ehz-flow.script`, `ehz-finish.script` and `ehz-zone.script` are
+bounded traversal attempts, not certified complete routes. The scripts use the
+InputLogAuthorTool grammar. Native movies must additionally carry the verified
+S2 game identity and matching two-pad GPGX sync settings; the original native
+six-button log orders A/B/C before Start, unlike the minimal engine log.
+
+The Lua plan accepts `last` (absolute completed emulator frame), `frames` (explicit
+screenshots), `every` (optional screenshot interval), `events` (first ring/life
+changes per player and later mode changes), and `state_frame` when the host supplies
+`--fixture-state`. Each PNG has a same-frame `.State`; `state.csv` records every
+completed frame in the window. Load only a checkpoint whose original movie prefix
+matches the supplied movie. `done.txt` and `state.csv` must both be required outputs.
+Lua writes files only; console printing slows the Linux host.
+
+The native 2P menu is a grid: Right selects MCZ, Down CNZ, Down+Right Special
+Stage. Title entry is Down then Start after the title admits controls. Competition
+level/title-card raw output measured **320×448** in BizHawk 2.11, while menu and
+results output measured **320×224**, and special stage **256×224**. Retain those dimensions;
+do not fold fields or rescale. The first frame after a state load can contain a
+stale interlace field: inspect later frames and use a cold run for pixel acceptance.
+
+Player level x/y are object centre words; velocities are signed 8.8 words. Camera
+words include both foreground and background pairs. Time is the raw four-byte HUD
+clock, score the raw score units (display scales by ten). `card0`–`card5` observe
+reserved title-card slots; `anim_counter0`–`15` observe `Anim_Counters`; `slot_*`
+observe the native slot-machine owner. Standard player slots and HUD fields have
+special-stage-specific meanings in mode 0x10; do not infer level coordinates or
+ring totals there. A menu-selected special stage does not prove a results-induced
+tiebreaker. CSV/file presence proves execution; inspect the scene and state before
+claiming an obligation is met. Keep generated movies, PNGs, CSVs and savestates
+outside Git, with a manifest mapping exact movie/frame/state/window provenance.

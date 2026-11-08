@@ -26,8 +26,74 @@ under the matching area heading; see the
   shared touch owner. The Sonic+Tails chain advances from CNZ2 to HTZ2; later
   route errors and the special-stage return timing differences remain open.
 
+- **S2 diagonal launcher springs:** capture both riders before deciding to
+  release or decompress. A fresh Tails capture now uses the native launch force
+  and can hold Sonic on the spring. The complete-chain CNZ2 segment is green;
+  later campaign and art-gap failures remain open.
+
+- **S2 Competition (two-player mode):** <!-- LEAD: activation status. The title's
+  2 PLAYER row stays hidden until the zones are qualified; finalize this sentence
+  at activation. --> Sonic 2's own two-player mode runs natively, with Sonic on
+  controller 1 and Tails on controller 2. Its menu selects Emerald Hill, Mystic
+  Cave, Casino Night or the special stage. Each zone plays two acts with
+  separate rings, lives, score, time and results, then zone and game results
+  with their own music; a tied zone goes to a special-stage tiebreaker. The
+  screen splits at line 108 through the shared Competition renderer, and each
+  half draws its player's planes, sprites and HUD from the ROM's two-player art.
+  Title cards run in both halves. Teleport monitors swap the players' positions,
+  speeds, cameras and backgrounds. Badnik, bumper, bonus-block and cage
+  scores go to the player who earned them, and the Casino Night slot machines
+  and cages serve both players. The competitive special stage runs both players
+  on one halfpipe with its checkpoints and results. Held rewind is off in
+  Competition; the interlace field, seam and lag-frame limits are in
+  [known discrepancies](docs/status/known-discrepancies.md#s2-competition-split-screen-native-lag-and-rewind-scope).
+
+- **S2 and KiS2 badnik chains are shared:** one chain counter serves both
+  players, as in the ROM, so CPU Tails' kills and landings now continue or reset
+  Sonic's chain. Every ROM landing that clears it does so, including Knuckles'
+  landings in Knuckles in Sonic 2. Smashable ground and breakable blocks score
+  through player 1, and only once their points popup has an object slot.
+
+- **S2 breakable fragments use native slots:** smashable ground, breakable
+  blocks and Oil Ocean launchers put their first piece in the parent's slot and
+  later pieces after it, stopping at the first full slot. Fragments no longer
+  depend on whether their art is ready to draw.
+
+- **S2 points popups draw in front:** the score popup sets the high-priority
+  art bit, as `Obj29_Init` does, so it is no longer hidden behind
+  high-priority terrain.
+
+- **S2 and KiS2 touch checks reach off-screen objects:** the ROM's touch scan
+  has no on-screen test, so objects outside the main camera can now hurt,
+  give rings or be destroyed. Sonic 1 keeps its on-screen test. The rule is a
+  new `ObjectInteractionRules` component, which changes that record in the
+  unpublished 0.7 candidate Mod API.
+
+- **S2 Casino Night conveyor belts carry the sidekick:** `Obj72` moves both
+  players, as the ROM does, so a CPU sidekick rides the belts too, in Sonic 2
+  and Knuckles in Sonic 2.
+
+- **S2 title cards follow Obj34:** the card's parts enter, wait and leave in the
+  ROM's slot order and timing. Native Emerald Hill 1 recordings match its part
+  positions on every frame and its pixels at seven sampled frames.
+
+- **S2 signpost sparkles and thrown coconuts keep their native identities:**
+  signpost sparkles stay ring-sparkle objects and Coconuts' coconuts stay their
+  own child object, so rewind recreates both with their animation.
+
 
 ## Modding and tools
+
+- **Two-player Competition routes in both editors:** the existing Route / Tape
+  workspace now authors S2 REV01 title/menu programmes, P1/P2/joint goals and copied
+  fact predicates. Isolated workers plan, replay, repair and qualify both pads;
+  untouched route pairs keep their exact bytes. Locked inputs and player colours
+  are shared across HUD/desktop, unrelated scenery is hidden, and observed native
+  anchors use the shared BK2 splice. Provisional exports remain visibly blocked;
+  engine qualification does not imply native parity. The Stageplay route planner
+  behind them plans two-player goals and repairs or continues a route after a
+  frozen prefix. The desktop editor's side of this lives in the separate
+  OpenGGF-Editor repository.
 
 - **Seeded Data Select captures:** `GameplayCaptureTool --save-slots <file.json>`
   writes declared save slots through the production save manager into the
@@ -55,7 +121,11 @@ under the matching area heading; see the
   rolling under the Flying Battery elevator, a Casino Night jackpot,
   custom-team Data Select saves, and every Sonic 3&K zone with its bonus
   and special stages. Shots sit inside their acts, and Super Sonic transforms
-  only once the replay has collected 50 rings. `GameplayCaptureTool --rewind FRAME:LENGTH`
+  only once the replay has collected 50 rings. Knuckles in Sonic 2 shots read the
+  verified lock-on dump, so the HUD shows the chip's own art and colours. The reels render without native
+  sprite dropout, as normal play does: `TraceCaptureTool --no-sprite-limits` turns
+  off the per-line limits that trace captures otherwise keep for ROM image
+  comparison. `GameplayCaptureTool --rewind FRAME:LENGTH`
   holds the live rewind key over a window and draws the rewind plate,
   `--timer FRAMES` sets the level timer a positioned start carried in,
   `--emeralds` also takes Sonic 1 and Sonic 2's six emeralds, and
@@ -76,6 +146,13 @@ under the matching area heading; see the
   resume actual ROM-backed work; credits use their native wait and fade loops.
   Generic ending callers retain their gameplay order, and failed initialization
   preserves the original error while cleaning up its owned continuation.
-  Physics, auxiliary observations and movie input are preserved exactly. New red frontiers remain visible.
+  Recorded physics, auxiliary observations and movie input are preserved exactly.
+  The LRZ title owner submits its three enemy archives in native order,
+  preventing a later results-art FIFO overflow. AIZ2 art preparation preserves
+  Knuckles' terrain-only branch; Sonic/Tails also submit the battleship object
+  art. The boss-glide continuation remains open pending the Knuckles SOZ route.
+  Existing animation and route frontiers remain visible, including
+  the fresh sanctuary's intermediate load state; its routine comparison does
+  not establish player dispatch.
   Special-stage entry honors the recorded team and production lock-on module;
   the single entry-state import consumes S2-family manifest destination rings.

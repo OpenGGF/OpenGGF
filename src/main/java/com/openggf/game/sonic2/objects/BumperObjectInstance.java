@@ -295,10 +295,10 @@ public class BumperObjectInstance extends AbstractObjectInstance
 
     @Override
     public void onTouchResponse(PlayableEntity playerEntity, TouchResponseResult result, int frameCounter) {
-        // S2 Touch_Special loc_3FA00 increments collision_property once for
-        // P1 and twice for the sidekick; Obj44_Main then tests bits 0/1
-        // (s2.asm:44653-44667, 85073-85098).
-        if (playerEntity instanceof AbstractPlayableSprite sprite && sprite.isCpuControlled()) {
+        // loc_3FA00 (s2.asm:85758-85765) compares the actor with MainCharacter:
+        // P1 adds one, native P2 adds two. CPU control does not identify the slot;
+        // the second human must set the same Obj44 pending bit as CPU Tails.
+        if (playerEntity != null && playerEntity == services().playerQuery().nativeP2OrNull()) {
             collisionProperty += 2;
         } else {
             collisionProperty += 1;

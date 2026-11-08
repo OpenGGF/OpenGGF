@@ -97,11 +97,12 @@ class ManifestValidation(unittest.TestCase):
 
 
 class Commands(unittest.TestCase):
-    def test_trace_shot_uses_inclusive_clip_window_without_ghosts(self):
+    def test_trace_shot_uses_inclusive_clip_window_without_ghosts_or_sprite_limits(self):
         args = hero.trace_args('s1', manifest()['shots'][0], Path('/out'), root=Path('/repo'))
         self.assertEqual('/repo/src/test/resources/traces/s1/ghz1_completerun', args[1])
         self.assertIn('frames:600:839', args)
         self.assertIn('--no-ghosts', args)
+        self.assertIn('--no-sprite-limits', args)
         self.assertEqual('1', args[args.index('--scale') + 1])
 
     def test_capture_shot_steps_through_window_end_and_captures_every_frame(self):
@@ -145,6 +146,12 @@ class Commands(unittest.TestCase):
         self.assertIn('sonic1: "/roms/s1.gen"', text)
         self.assertIn('catalogDir: "/repo/src/test/resources/traces"', text)
         self.assertNotIn('sonic2', text)
+
+    def test_runtime_config_lists_the_lock_on_dump_folder_only_when_found(self):
+        self.assertIn('directory: "empty-rom-dir"', hero.runtime_config({'s2': '/roms/s2.gen'}))
+        text = hero.runtime_config({'s2': '/roms/s2.gen', 'kis2': '/dumps/kis2.gen'}, root=Path('/repo'))
+        self.assertIn('directory: "/dumps"', text)
+        self.assertNotIn('kis2', text)
 
     def test_missing_rom_fails_loudly(self):
         with self.assertRaisesRegex(hero.ReelError, 'no verified s2 ROM'):
