@@ -113,7 +113,8 @@ public final class ObjectRewindDynamicCodecs {
      * <ol>
      *   <li>Load the captured class name.</li>
      *   <li>If the effective hook is the default {@link SpawnRewindRecreatable}
-     *       recipe or its compatibility wrapper: construct directly from the captured
+     *       recipe or its compatibility wrapper, and its exact constructor exists:
+     *       construct directly from the captured
      *       spawn, without a discarded probe graph.</li>
      *   <li>For other {@link RewindRecreatable} hooks: construct a minimal probe
      *       instance via {@link ObjectConstructionContext} (trying known harmless
@@ -192,13 +193,24 @@ public final class ObjectRewindDynamicCodecs {
 
     /** Assignability alone would bypass custom class, inherited and interface hooks. */
     private static boolean usesDefaultSpawnRecipe(Class<? extends AbstractObjectInstance> cls) {
+        Class<?> recipeOwner;
         try {
-            Class<?> recipeOwner = cls.getMethod("recreateForRewind", RewindRecreateContext.class)
+            recipeOwner = cls.getMethod("recreateForRewind", RewindRecreateContext.class)
                     .getDeclaringClass();
-            return recipeOwner == SpawnRewindRecreatable.class
-                    || recipeOwner == SpawnConstructionContextRewindRecreatable.class;
         } catch (NoSuchMethodException e) {
             throw new IllegalStateException(cls.getName() + " is missing its rewind recreation hook", e);
+        }
+        if (recipeOwner != SpawnRewindRecreatable.class
+                && recipeOwner != SpawnConstructionContextRewindRecreatable.class) {
+            return false;
+        }
+        try {
+            cls.getDeclaredConstructor(ObjectSpawn.class);
+            return true;
+        } catch (NoSuchMethodException unavailable) {
+            // Some existing routine effects declare the marker without this constructor.
+            // Keep their historical probe fallback, which can report unavailable with null.
+            return false;
         }
     }
 

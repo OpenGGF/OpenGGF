@@ -693,3 +693,19 @@ execution cap excluding queue wait. It is incomplete here; no verdict or new
 candidate comparison is claimed. Keep the baseline immutable and avoid duplicate
 observers. Completed evidence will go to the PR 266 owner without a routing-only
 restart.
+
+### Unified review follow-up — 2026-11-08
+
+After this handoff was merged into ai-code-climb, Opus found that the registry
+fixture still expected 17 atomic owners instead of 18, and that Engine's native
+title early return skipped the in-level modal drawn by capture. Root reproduced
+both, updated the explicit owner expectations, and kept modal drawing after
+either scene path. A real controlled-title EGL witness checks live Engine and
+capture callbacks/pixels. The ordinary native title and admission algorithms are
+unchanged by this repair. The same review also caught an object-recreation
+shortcut regression outside this lifecycle increment.
+
+The [unified task audit](2026-11-06-ai-code-climb.md) records the five-failure RED,
+repair checks, corrected emitter-witness limitation and interrupted obsolete
+smoke run. Fresh final-source review, smoke/guards, exact baseline comparison and
+PR 266 delivery remain pending. The independently owned 33c baseline is unchanged.

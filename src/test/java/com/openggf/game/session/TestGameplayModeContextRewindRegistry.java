@@ -84,13 +84,14 @@ import static org.mockito.Mockito.when;
  * Unit tests for the {@link RewindRegistry} integration on
  * {@link GameplayModeContext}.
  *
- * <p>Tests verify that the seventeen always-available atomic adapters are
+ * <p>Tests verify that the eighteen always-available atomic adapters are
  * registered automatically when {@link GameplayModeContext#attachGameplayManagers}
  * is called, without requiring a full level load or ROM access.
  */
 class TestGameplayModeContextRewindRegistry {
     private static final Set<String> CORE_REWIND_KEYS = Set.of(
             "camera",
+            "controlled-native-presentation",
             "directed-player-lease",
             "gamestate",
             "gamerng",
@@ -193,6 +194,7 @@ class TestGameplayModeContextRewindRegistry {
                 "camera",
                 com.openggf.camera.CameraSubpixelAccess.REWIND_KEY,
                 "directed-player-lease",
+                "controlled-native-presentation",
                 "gamestate",
                 com.openggf.game.internal.NativePauseRewindAccess.KEY,
                 "gamerng",
@@ -212,12 +214,12 @@ class TestGameplayModeContextRewindRegistry {
     }
 
     @Test
-    void exactlySeventeenAtomicKeysAfterAttach() {
+    void exactlyEighteenAtomicKeysAfterAttach() {
         GameplayModeContext ctx = buildAttachedContext();
         RewindRegistry registry = ctx.getRewindRegistry();
         CompositeSnapshot snapshot = registry.capture();
-        assertEquals(17, snapshot.entries().keySet().size(),
-                "Expected exactly 17 atomic adapters, got: " + snapshot.entries().keySet());
+        assertEquals(18, snapshot.entries().keySet().size(),
+                "Expected exactly 18 atomic adapters, got: " + snapshot.entries().keySet());
     }
 
     @Test
@@ -470,7 +472,7 @@ class TestGameplayModeContextRewindRegistry {
         RewindRegistry second = ctx.getRewindRegistry();
         assertNotNull(second);
         assertNotSame(first, second, "Re-attach should produce a new RewindRegistry instance");
-        assertEquals(17, second.capture().entries().keySet().size());
+        assertEquals(18, second.capture().entries().keySet().size());
         var running = second.capture();
         previousState.setGamePaused(true);
         gameState2.setGamePaused(true);

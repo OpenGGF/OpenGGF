@@ -219,6 +219,15 @@ class TestGenericRecreate {
     }
 
     @Test
+    void defaultSpawnHookWithoutExactConstructorRetainsUnsupportedFallback() {
+        var entry = new DynamicObjectEntry(UnsupportedSpawnDefault.class.getName(),
+                new ObjectSpawn(42, 77, 0, 0, 0, false, 0), -1, null);
+
+        assertNull(assertDoesNotThrow(() -> ObjectRewindDynamicCodecs.genericRecreate(entry, ctx)),
+                "a default marker without a usable constructor must retain the old unavailable path");
+    }
+
+    @Test
     void concreteSpawnOverrideWinsIncludingIntentionalNull() {
         assertCustomSpawnHook(ConcreteSpawnOverride.class);
     }
@@ -431,6 +440,17 @@ class TestGenericRecreate {
             @Override public short getHeight() { return 224; }
             @Override public boolean isVerticalWrapEnabled() { return false; }
         };
+    }
+
+    /** Existing default declarations can have no supported probe constructor. */
+    private static final class UnsupportedSpawnDefault extends AbstractObjectInstance
+            implements SpawnRewindRecreatable {
+        UnsupportedSpawnDefault(ObjectSpawn spawn, long unsupportedParameter) {
+            super(spawn, "unsupported-spawn-default");
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) { }
     }
 
     /**

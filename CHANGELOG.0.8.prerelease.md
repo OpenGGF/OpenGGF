@@ -60,8 +60,9 @@ under the matching area heading; see the
   rewind adoption uses captured parent families, preserving interleaved structural
   links; independent children can recreate when a parent defers to player refresh,
   and CNZ defeat candidates retain their ship family. Generic recreation installs
-  construction services centrally; unchanged exact-spawn recipes rebuild once,
-  avoiding discarded constructor graphs while preserving custom hooks. Destroyed
+  construction services centrally; supported exact-spawn recipes rebuild once,
+  avoiding discarded constructor graphs while preserving custom hooks and the
+  fallback for declarations without that constructor. Destroyed
   object paths share unload and retirement phases within their existing schedules.
   Ordinary family/reference/coverage guidance points to the actual owners.
   Production badnik and contact witnesses, shared coarse-X arithmetic with
@@ -78,7 +79,8 @@ under the matching area heading; see the
   timing, pause and failure behavior. Creator-controlled native destinations
   now finish their normal title and player assembly before admitting gameplay,
   sharing the ordinary host's native title iteration. HOLD and explicit
-  presentation omission remain separate choices.
+  presentation omission remain separate choices. In-level modal overlays remain
+  visible above a controlled native title in both live and captured frames.
 
 - **Scripted website hero reels:** `tools/media/hero_reels.py` regenerates
   the Sonic 1, Sonic 2 and Sonic 3&K title-card reels from the current engine

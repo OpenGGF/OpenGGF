@@ -2267,3 +2267,132 @@ in DivergenceReport, removing test-writer JSON reparse/patch/reserialize and the
 triage tool's duplicate value/parser. Driver completion decisions, strict scope
 values, legacy absence, malformed-present rejection and fresh Surefire evidence
 must remain distinct. Neither proposal is added to this frozen source batch.
+
+### Fresh blind six-task reading at b63 — 2026-11-08
+
+Opus 5.5 (maximum effort, fast mode off) assessed all six original journeys at
+`b63cb44c7090876c55aec95b54851c7cb6ba0af4`. It read ordinary source, tests,
+guides and skills, without builds, edits, history/diffs, prior scores or dated
+audits. While following HCZ2 obligations it saw that matrix's dated opening
+paragraphs and did not use their claims. Start/end worktree status was clean.
+These are static reviewer judgments, not measured onboarding cost or runtime
+certification. Differences from earlier readings are not causal measurements of
+improvement or regression.
+
+Weights remain 15/15/15/15/10/10/10/10. Root independently recomputed each total.
+
+| Original task | Owner | Browse | Understand | Locality | Concepts | Verify | Rules | Readability | /100 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| A: Buzz Bomber retreat lifetime | 3 | 2 | 2 | 3 | 2 | 3 | 3 | 3 | 65.00 |
+| B: Rewind low-budget overlay | 4 | 3 | 3 | 3 | 3 | 3 | 4 | 3 | 81.25 |
+| C: Contact expiry across unload | 2 | 1 | 1 | 2 | 1 | 2 | 3 | 2 | 42.50 |
+| D: Ordinary constructor-child rewind | 3 | 2 | 3 | 3 | 1 | 3 | 2 | 3 | 63.75 |
+| E: HCZ2 wall shake/end event | 3 | 2 | 2 | 3 | 2 | 3 | 2 | 3 | 62.50 |
+| F: HCZ segment trace diagnosis | 3 | 2 | 3 | 3 | 2 | 3 | 2 | 3 | 66.25 |
+
+None meets the per-task/per-axis target. C is the next priority: placed and
+dynamic retirement expose different history/surviving-owner policies across
+state, controller, population and manager paths. Its manager-driven placed
+range-unload followed by equal-spawn replacement remains unwitnessed. A proposed
+uniform clearing operation is a design candidate, not authority to change native
+ordering or shared-key semantics; first reproduce the boundary and inspect its
+ROM/lifetime evidence. The suggested same-frame history issue is unexecuted.
+
+A still requires learning manager/native versus object/widened windows, a
+persistence hook with transition duties and a touch-named visibility query.
+B retains reflective capture coupling and implicit 60 Hz overloads. D's main
+flow is clearer, but constructor recipes, restore paths, reference policies and
+the undefined adoption-only coverage disposition impose overlapping concepts.
+E still crosses provider/event/scroll owners and has no production-wired dead
+player clock witness. F has lane/movie-location false leads, split gate ownership
+and command quoting checked only as strings. Proposed clock unification,
+metadata cross-checking and recipe consolidation require evidence before edits.
+No assessment claim alone establishes a gameplay defect.
+
+A separate read-only Sol sweep found a bounded source-beauty increment outside
+these owners: expand ScenePresentationPass.State capture/restore and Scope.abort
+inside their existing owner. Explicit straight-line GL operations would expose
+native/cached state and cleanup order, without removing concepts or justifying a
+new grade. Cinematic residency and audio-manifest validation are further dense
+sources. Those recommendations remain outside the current remediation.
+
+### Opus correctness findings and root remediation — 2026-11-08
+
+The separate b63 correctness review covered the 107-file diff against develop
+33c, focusing fully on new/integrated work and spot-checking areas already
+reviewed. It ran no builds/tests or target probes. Root's independent b63
+test-compilation succeeded (Maven 1m47), prerequisites/push policy passed, and
+the skill mirror and added relative link checked cleanly. The global strict
+citation catalogue still fails inherited debt; comparing the 106 changed text
+files as Git blobs against 33c found no increases in stale, missing-file or
+out-of-range counts and no reference problems. Dirty reference checkouts remain
+untouched; classification uses pinned revisions.
+
+Opus identified two P2 findings and one P3: registry tests still expected 17
+owners after controlled presentation added the eighteenth; direct default-spawn
+construction threw for the existing LBZ exhaust particle without that constructor;
+Engine's early native-title return skipped an input-owning modal still drawn by
+capture. The other checked destruction/callback/default-hook/merge/title/audio
+boundaries were preserved by inspection. Its non-fresh S3K title ordering concern
+remains an unexecuted hypothesis, not a finding or a new support claim.
+
+Root stopped its now-obsolete candidate run by SIGINT to the sole owned runner,
+then confirmed terminal handle/cleanup before editing. Run
+`20261108T095830Z-41e8ab42` at b63 ended `VERDICT INCOMPLETE`: 7/91 ordinary
+batches, 3046 tests, zero failures/errors/skips, guards not run, 156.62 seconds
+reported batch execution; preparation 38.04 seconds. Queue time is separate and
+not summed here. Its diagnostics were inspected and acknowledged, without
+deleting queue locks or touching the separately owned baseline. This prefix is
+not a delivery pass and will not be substituted for final-source validation.
+
+RED used Java 25/Lua 5.4, unset displays, surfaceless EGL and the normal queue:
+
+```bash
+python3 tools/testing/maven_queue.py --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestGameplayModeContextRewindRegistry,TestGenericRecreate,TestAutomaticTunnelObjectInstance,TestGameplayCaptureFrameRendering#modalOverlayRemainsVisibleInLiveAndCapturedControlledNativeTitle' test
+```
+
+Result: 65 cases, exactly five intended assertion failures, no errors/skips:
+two registry counts; unsupported default constructor; real act-2 exhaust emitted
+by its production controller; live Engine overlay draw missing after capture's
+draw. Queue waited 56 seconds; Maven reported 36.131 seconds. Wall time was not
+separately measured. Logs remain under target/code-climb/opus-findings-red.log.
+
+Root repaired the small findings directly. Exact default-hook dispatch now also
+requires the declared ObjectSpawn constructor; its absence retains the old
+probe fallback, while a matching constructor that throws remains an error.
+Custom hook precedence, constructor services and compatibility wrappers are
+unchanged. Registry expectations explicitly include controlled presentation and
+18 owners, including reattachment. Engine selects its native or creator scene,
+then always draws the in-level modal; ordinary controller/title order is intact.
+
+The EGL witness uses a real controlled destination/title, real Engine drawLevel
+and capture rendering, checking both modal callback delivery and pixels after
+clearing the prior framebuffer. It replaces neither title state nor clocks with
+mock flags. Engine receives the already-live renderer owners through the same
+test reflection idiom as the existing Engine presentation test.
+
+The first repair selection executed 165 cases across 13 classes: 164 passed,
+with one overstrong new emitter assertion. Root had assumed that emitter itself
+was independently probe-recreatable, beyond existing coverage. No runtime code
+was altered for that assertion. The corrected witness keeps a live emitter,
+captures its actual routine-born particle, then requires a supported anchor's
+captured marker to survive the complete restore. It makes no complete LBZ graph,
+particle persistence or ROM-route parity claim. Its 17-case class rerun passed
+with zero failures/errors/skips. The other 148 cases in 12 unchanged classes
+passed, including all mandatory S3K startup classes, custom/default constructor,
+family/deferred restore and live/capture modal pixels. Final runtime source is
+identical between those checks. First repair run queue/Maven: 17s/101s; corrected
+class: 56s/33.257s. Wall times were not separately measured.
+
+Commands/logs: target/code-climb/opus-findings-green.log records the 13-class
+selection; opus-findings-emitter-green.log records the corrected class. These
+focused observations do not replace fresh final-source smoke/guards, exact
+baseline comparison, domain replay or review of the repair delta. The independent
+33c baseline remains with its sole owner. Nothing has been pushed; PR 266 remains
+the sole draft destination and the continuing goal remains active.
+
+After those checks, only the shortcut's Javadoc and audit/changelog prose changed.
+The final repair Java diff against b63 has SHA-256
+`f4ee0d33412fd9d3ae686a7042aa41cc83c21dfc0a547423e213dff55579d1f2`.
+No public API/version, strict schema/reference policy, debt budget or skip gate
+was changed. Review-delta and final broad validation remain required.
